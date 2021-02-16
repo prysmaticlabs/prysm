@@ -5,10 +5,10 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	bolt "github.com/prysmaticlabs/bbolt"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
 

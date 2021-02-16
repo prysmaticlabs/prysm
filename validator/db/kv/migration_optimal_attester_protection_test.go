@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/prysmaticlabs/eth2-types"
-	bolt "go.etcd.io/bbolt"
+	bolt "github.com/prysmaticlabs/bbolt"
+	types "github.com/prysmaticlabs/eth2-types"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"

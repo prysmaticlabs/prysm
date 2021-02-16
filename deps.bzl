@@ -3681,3 +3681,9 @@ def prysm_deps():
         sum = "h1:VsBPFP1AI068pPrMxtb/S8Zkgf9xEmTLJjfM+P5UIEo=",
         version = "v2.2.0+incompatible",
     )
+    go_repository(
+        name = "com_github_prysmaticlabs_bbolt",
+        importpath = "github.com/prysmaticlabs/bbolt",
+        sum = "h1:gUtlLwGtly7Vr3oT3AsKUGe3gz14XBOSbmE5cEKFEEQ=",
+        version = "v1.3.6-0.20210216004628-a74bbffcfa01",
+    )

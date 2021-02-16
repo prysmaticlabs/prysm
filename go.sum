@@ -1103,6 +1103,8 @@ github.com/prometheus/tsdb v0.10.0 h1:If5rVCMTp6W2SiRAQFlbpJNgVlgMEd+U2GZckwK38i
 github.com/prometheus/tsdb v0.10.0/go.mod h1:oi49uRhEe9dPUTlS3JRZOwJuVi6tmh10QSgwXEyGCt4=
 github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20201126065335-1fb46e307951 h1:Jncuyb/nIJgXbEe0iGz3MN5JmijPVGzwk3G5FR01phI=
 github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20201126065335-1fb46e307951/go.mod h1:JIfVb6esrqALTExdz9hRYvrP0xBDf6wCncIu1hNwHpM=
+github.com/prysmaticlabs/bbolt v1.3.6-0.20210216004628-a74bbffcfa01 h1:gUtlLwGtly7Vr3oT3AsKUGe3gz14XBOSbmE5cEKFEEQ=
+github.com/prysmaticlabs/bbolt v1.3.6-0.20210216004628-a74bbffcfa01/go.mod h1:GMYMGIk08oFxUUVJuNoVieG44EhmNdeAexvowIQU7gg=
 github.com/prysmaticlabs/eth2-types v0.0.0-20210127031309-22cbe426eba6 h1:n/ZI+/bZfkMoGoV2Rult3YvS5LT4dvpAFOuISq+I+GY=
 github.com/prysmaticlabs/eth2-types v0.0.0-20210127031309-22cbe426eba6/go.mod h1:kOmQ/zdobQf7HUohDTifDNFEZfNaSCIY5fkONPL+dWU=
 github.com/prysmaticlabs/ethereumapis v0.0.0-20210209145421-7f5672c50eaa h1:AjiLsftpd4nv8D/nd12ZhGBTxV64P3UNSEMfAt8rS70=

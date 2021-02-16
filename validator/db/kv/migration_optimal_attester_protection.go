@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/prysmaticlabs/eth2-types"
+	bolt "github.com/prysmaticlabs/bbolt"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/progressutil"
-	bolt "go.etcd.io/bbolt"
 )
 
 var migrationOptimalAttesterProtectionKey = []byte("optimal_attester_protection_0")

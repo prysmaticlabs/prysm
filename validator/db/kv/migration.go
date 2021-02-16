@@ -3,7 +3,7 @@ package kv
 import (
 	"context"
 
-	bolt "go.etcd.io/bbolt"
+	bolt "github.com/prysmaticlabs/bbolt"
 )
 
 type migration func(*bolt.Tx) error

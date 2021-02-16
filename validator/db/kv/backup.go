@@ -6,9 +6,9 @@ import (
 	"path"
 	"time"
 
+	bolt "github.com/prysmaticlabs/bbolt"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
 

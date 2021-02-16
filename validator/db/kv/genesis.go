@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	bolt "go.etcd.io/bbolt"
+	bolt "github.com/prysmaticlabs/bbolt"
 )
 
 // SaveGenesisValidatorsRoot saves the genesis validator root to db.
