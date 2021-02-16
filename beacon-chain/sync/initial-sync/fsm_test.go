@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -95,20 +96,20 @@ func TestStateMachine_trigger(t *testing.T) {
 	type args struct {
 		name        eventID
 		returnState stateID
-		epoch       uint64
+		epoch       types.Epoch
 		data        interface{}
 	}
 	tests := []struct {
 		name   string
 		events []event
-		epochs []uint64
+		epochs []types.Epoch
 		args   args
 		err    error
 	}{
 		{
 			name:   "event not found",
 			events: []event{},
-			epochs: []uint64{12, 13},
+			epochs: []types.Epoch{12, 13},
 			args:   args{name: eventTick, epoch: 12, data: nil, returnState: stateNew},
 			err:    errors.New("no event handlers registered for event: tick, state: new"),
 		},
@@ -117,7 +118,7 @@ func TestStateMachine_trigger(t *testing.T) {
 			events: []event{
 				{stateNew, eventTick, stateScheduled, false},
 			},
-			epochs: []uint64{12, 13},
+			epochs: []types.Epoch{12, 13},
 			args:   args{name: eventTick, epoch: 12, data: nil, returnState: stateScheduled},
 			err:    nil,
 		},
@@ -128,7 +129,7 @@ func TestStateMachine_trigger(t *testing.T) {
 				{stateScheduled, eventTick, stateSent, true},
 				{stateSent, eventTick, stateSkipped, false},
 			},
-			epochs: []uint64{12, 13},
+			epochs: []types.Epoch{12, 13},
 			args:   args{name: eventTick, epoch: 12, data: nil, returnState: stateScheduled},
 			err:    nil,
 		},
@@ -139,7 +140,7 @@ func TestStateMachine_trigger(t *testing.T) {
 				{stateScheduled, eventTick, stateSent, false},
 				{stateSent, eventTick, stateSkipped, false},
 			},
-			epochs: []uint64{12, 13},
+			epochs: []types.Epoch{12, 13},
 			args:   args{name: eventTick, epoch: 12, data: nil, returnState: stateScheduled},
 			err:    nil,
 		},
@@ -150,7 +151,7 @@ func TestStateMachine_trigger(t *testing.T) {
 				{stateScheduled, eventTick, stateSent, false},
 				{stateNew, eventTick, stateSkipped, false},
 			},
-			epochs: []uint64{12, 13},
+			epochs: []types.Epoch{12, 13},
 			args:   args{name: eventTick, epoch: 12, data: nil, returnState: stateScheduled},
 			err:    nil,
 		},
@@ -174,9 +175,9 @@ func TestStateMachine_trigger(t *testing.T) {
 				}
 			}
 			for _, epoch := range tt.epochs {
-				smm.addStateMachine(epoch * 32)
+				smm.addStateMachine(uint64(epoch) * 32)
 			}
-			state := smm.machines[tt.args.epoch*32]
+			state := smm.machines[uint64(tt.args.epoch)*32]
 			err := state.trigger(tt.args.name, tt.args.data)
 			if tt.err != nil && (err == nil || tt.err.Error() != err.Error()) {
 				t.Errorf("unexpected error = '%v', want '%v'", err, tt.err)
@@ -185,7 +186,7 @@ func TestStateMachine_trigger(t *testing.T) {
 				if err != nil && !expectHandlerError {
 					t.Error(err)
 				}
-				ind := tt.args.epoch * 32
+				ind := uint64(tt.args.epoch) * 32
 				if smm.machines[ind].state != tt.args.returnState {
 					t.Errorf("unexpected final state: %v, want: %v (%v)",
 						smm.machines[ind].state, tt.args.returnState, smm.machines)

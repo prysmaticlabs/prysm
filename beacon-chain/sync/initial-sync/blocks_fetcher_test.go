@@ -268,7 +268,8 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 			err := beaconDB.SaveBlock(context.Background(), testutil.NewBeaconBlock())
 			require.NoError(t, err)
 
-			st := testutil.NewBeaconState()
+			st, err := testutil.NewBeaconState()
+			require.NoError(t, err)
 
 			mc := &mock.ChainService{
 				State: st,

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
@@ -75,7 +76,7 @@ type Service struct {
 	initSyncBlocksLock    sync.RWMutex
 	justifiedBalances     []uint64
 	justifiedBalancesLock sync.RWMutex
-	wsEpoch               uint64
+	wsEpoch               types.Epoch
 	wsRoot                []byte
 	wsVerified            bool
 }
@@ -96,12 +97,12 @@ type Config struct {
 	OpsService        *attestations.Service
 	StateGen          *stategen.State
 	WspBlockRoot      []byte
-	WspEpoch          uint64
+	WspEpoch          types.Epoch
 }
 
-// New instantiates a new block service instance that will
+// NewService instantiates a new block service instance that will
 // be registered into a running beacon node.
-func New(ctx context.Context, cfg *Config) (*Service, error) {
+func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:                  ctx,
@@ -323,7 +324,7 @@ func (s *Service) initializeBeaconChain(
 	if err := helpers.UpdateCommitteeCache(genesisState, 0 /* genesis epoch */); err != nil {
 		return nil, err
 	}
-	if err := helpers.UpdateProposerIndicesInCache(genesisState, 0 /* genesis epoch */); err != nil {
+	if err := helpers.UpdateProposerIndicesInCache(genesisState); err != nil {
 		return nil, err
 	}
 
@@ -458,7 +459,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 			return errors.Wrap(err, "could not retrieve head block")
 		}
 		headEpoch := helpers.SlotToEpoch(headBlock.Block.Slot)
-		var epochsSinceFinality uint64
+		var epochsSinceFinality types.Epoch
 		if headEpoch > finalized.Epoch {
 			epochsSinceFinality = headEpoch - finalized.Epoch
 		}

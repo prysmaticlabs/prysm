@@ -7,7 +7,7 @@ import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 message Status {
   bytes fork_digest = 1 [(gogoproto.moretags) = "ssz-size:\"4\""];
   bytes finalized_root = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
-  uint64 finalized_epoch = 3;
+  uint64 finalized_epoch = 3 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Epoch"];
   bytes head_root = 4 [(gogoproto.moretags) = "ssz-size:\"32\""];
   uint64 head_slot = 5;
 }
@@ -21,7 +21,7 @@ message BeaconBlocksByRangeRequest {
 message ENRForkID {
   bytes current_fork_digest = 1 [(gogoproto.moretags) = "ssz-size:\"4\""];
   bytes next_fork_version = 2 [(gogoproto.moretags) = "ssz-size:\"4\""];
-  uint64 next_fork_epoch = 3;
+  uint64 next_fork_epoch = 3 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Epoch"];
 }
 /*
  Spec Definition:

@@ -197,12 +197,12 @@ func (s *Service) restartBeaconConnection(ctx context.Context) error {
 				log.Info("Beacon node is still down")
 				continue
 			}
-			status, err := s.nodeClient.GetSyncStatus(ctx, &ptypes.Empty{})
+			s, err := s.nodeClient.GetSyncStatus(ctx, &ptypes.Empty{})
 			if err != nil {
 				log.WithError(err).Error("Could not fetch sync status")
 				continue
 			}
-			if status == nil || status.Syncing {
+			if s == nil || s.Syncing {
 				log.Info("Waiting for beacon node to be fully synced...")
 				continue
 			}

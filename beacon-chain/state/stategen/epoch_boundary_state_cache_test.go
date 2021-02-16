@@ -20,7 +20,8 @@ func TestEpochBoundaryStateCache_BadRootKey(t *testing.T) {
 
 func TestEpochBoundaryStateCache_CanSave(t *testing.T) {
 	e := newBoundaryStateCache()
-	s := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, s.SetSlot(1))
 	r := [32]byte{'a'}
 	require.NoError(t, e.put(r, s))
@@ -50,7 +51,8 @@ func TestEpochBoundaryStateCache_CanTrim(t *testing.T) {
 	e := newBoundaryStateCache()
 	offSet := uint64(10)
 	for i := uint64(0); i < maxCacheSize+offSet; i++ {
-		s := testutil.NewBeaconState()
+		s, err := testutil.NewBeaconState()
+		require.NoError(t, err)
 		require.NoError(t, s.SetSlot(i))
 		r := [32]byte{byte(i)}
 		require.NoError(t, e.put(r, s))

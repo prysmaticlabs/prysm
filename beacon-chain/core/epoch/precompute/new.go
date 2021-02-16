@@ -45,8 +45,8 @@ func New(ctx context.Context, state *stateTrie.BeaconState) ([]*Validator, *Bala
 		}
 		// Set inclusion slot and inclusion distance to be max, they will be compared and replaced
 		// with the lower values
-		pVal.InclusionSlot = params.BeaconConfig().FarFutureEpoch
-		pVal.InclusionDistance = params.BeaconConfig().FarFutureEpoch
+		pVal.InclusionSlot = uint64(params.BeaconConfig().FarFutureEpoch)
+		pVal.InclusionDistance = uint64(params.BeaconConfig().FarFutureEpoch)
 
 		pValidators[idx] = pVal
 		return nil
