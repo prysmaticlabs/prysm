@@ -104,10 +104,12 @@ func (s *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey [48]byte,
 
 	err := s.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicProposalsBucket)
+		bucket.FillPercent = 1.0
 		valBucket, err := bucket.CreateBucketIfNotExists(pubKey[:])
 		if err != nil {
 			return fmt.Errorf("could not create bucket for public key %#x", pubKey)
 		}
+		valBucket.FillPercent = 1.0
 
 		// If the incoming slot is lower than the lowest signed proposal slot, override.
 		lowestSignedBkt := tx.Bucket(lowestSignedProposalsBucket)
