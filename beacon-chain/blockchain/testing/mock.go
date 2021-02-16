@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -48,7 +48,7 @@ type ChainService struct {
 	ValidAttestation            bool
 	ForkChoiceStore             *protoarray.Store
 	VerifyBlkDescendantErr      error
-	Slot                        *uint64 // Pointer because 0 is a useful value, so checking against it can be incorrect.
+	Slot                        *types.Slot // Pointer because 0 is a useful value, so checking against it can be incorrect.
 }
 
 // StateNotifier mocks the same method in the chain service.
@@ -230,7 +230,7 @@ func (s *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeac
 }
 
 // HeadSlot mocks HeadSlot method in chain service.
-func (s *ChainService) HeadSlot() uint64 {
+func (s *ChainService) HeadSlot() types.Slot {
 	if s.State == nil {
 		return 0
 	}
@@ -324,11 +324,11 @@ func (s *ChainService) GenesisValidatorRoot() [32]byte {
 }
 
 // CurrentSlot mocks the same method in the chain service.
-func (s *ChainService) CurrentSlot() uint64 {
+func (s *ChainService) CurrentSlot() types.Slot {
 	if s.Slot != nil {
 		return *s.Slot
 	}
-	return uint64(time.Now().Unix()-s.Genesis.Unix()) / params.BeaconConfig().SecondsPerSlot
+	return types.Slot(uint64(time.Now().Unix()-s.Genesis.Unix()) / params.BeaconConfig().SecondsPerSlot)
 }
 
 // Participation mocks the same method in the chain service.

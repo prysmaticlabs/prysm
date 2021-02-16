@@ -129,7 +129,7 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 
 	step := func(i int, setup *beaconstate.BeaconState) {
 		// go at least 1 past problemSlot, to ensure problem slot state root is available
-		outState, err := state.ProcessSlots(context.Background(), setup, problemSlot+1+uint64(i)) // keep increasing, to hit and extend the cache
+		outState, err := state.ProcessSlots(context.Background(), setup, problemSlot.Add(1+uint64(i))) // keep increasing, to hit and extend the cache
 		require.NoError(t, err, "Could not process state transition")
 		roots := outState.StateRoots()
 		gotRoot := roots[problemSlot]

@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -105,7 +106,7 @@ func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) 
 }
 
 // StateBySlot retrieves the state using input slot.
-func (s *State) StateBySlot(ctx context.Context, slot uint64) (*state.BeaconState, error) {
+func (s *State) StateBySlot(ctx context.Context, slot types.Slot) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.StateBySlot")
 	defer span.End()
 
@@ -124,7 +125,7 @@ func (s *State) StateByStateRoot(
 
 	for i, root := range headState.StateRoots() {
 		if bytes.Equal(root, stateRoot[:]) {
-			slot := (headState.Slot()/params.BeaconConfig().SlotsPerHistoricalRoot)*params.BeaconConfig().SlotsPerHistoricalRoot + uint64(i)
+			slot := ((headState.Slot() / params.BeaconConfig().SlotsPerHistoricalRoot) * params.BeaconConfig().SlotsPerHistoricalRoot).Add(uint64(i))
 			return s.StateBySlot(ctx, slot)
 		}
 	}
@@ -221,7 +222,7 @@ func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (*state
 }
 
 // This loads a state by slot.
-func (s *State) loadStateBySlot(ctx context.Context, slot uint64) (*state.BeaconState, error) {
+func (s *State) loadStateBySlot(ctx context.Context, slot types.Slot) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.loadStateBySlot")
 	defer span.End()
 

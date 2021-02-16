@@ -11,6 +11,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/slashutil"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -174,7 +175,7 @@ func (s *Store) CheckSlashableAttestation(
 			existingSourceEpoch := bytesutil.BytesToEpochBigEndian(sourceEpochBytes)
 
 			// There can be multiple target epochs attested per source epoch.
-			attestedTargetEpochs := make([]types.Epoch, 0)
+			attestedTargetEpochs := make([]types.Epoch, 0, len(targetEpochsBytes)/8)
 			for i := 0; i < len(targetEpochsBytes); i += 8 {
 				targetEpoch := bytesutil.BytesToEpochBigEndian(targetEpochsBytes[i : i+8])
 				attestedTargetEpochs = append(attestedTargetEpochs, targetEpoch)
@@ -215,6 +216,8 @@ func (s *Store) CheckSlashableAttestation(
 			return nil
 		})
 	})
+
+	traceutil.AnnotateError(span, err)
 	return slashKind, err
 }
 

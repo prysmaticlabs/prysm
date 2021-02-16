@@ -222,7 +222,7 @@ func (b *BeaconState) genesisUnixTime() time.Time {
 }
 
 // Slot of the current beacon chain state.
-func (b *BeaconState) Slot() uint64 {
+func (b *BeaconState) Slot() types.Slot {
 	if !b.HasInnerState() {
 		return 0
 	}
@@ -235,7 +235,7 @@ func (b *BeaconState) Slot() uint64 {
 
 // slot of the current beacon chain state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) slot() uint64 {
+func (b *BeaconState) slot() types.Slot {
 	if !b.HasInnerState() {
 		return 0
 	}

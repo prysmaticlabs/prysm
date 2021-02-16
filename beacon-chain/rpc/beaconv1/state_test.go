@@ -168,7 +168,7 @@ func TestGetStateRoot(t *testing.T) {
 		// We fill state roots with hex representations of natural numbers starting with 1.
 		// Example: 16 becomes 0x00...0f
 		fillStateRoots := func(state *pb.BeaconState) {
-			rootsLen := params.MainnetConfig().SlotsPerHistoricalRoot
+			rootsLen := uint64(params.MainnetConfig().SlotsPerHistoricalRoot)
 			roots := make([][]byte, rootsLen)
 			for i := uint64(0); i < rootsLen; i++ {
 				roots[i] = make([]byte, 32)
@@ -283,7 +283,7 @@ func TestGetStateFork(t *testing.T) {
 	fillStateRoots := func(state *pb.BeaconState) {
 		rootsLen := params.MainnetConfig().SlotsPerHistoricalRoot
 		roots := make([][]byte, rootsLen)
-		for i := uint64(0); i < rootsLen; i++ {
+		for i := types.Slot(0); i < rootsLen; i++ {
 			roots[i] = make([]byte, 32)
 		}
 		for j := 0; j < len(roots); j++ {
@@ -302,7 +302,7 @@ func TestGetStateFork(t *testing.T) {
 			Epoch:           123,
 		}
 	}
-	headSlot := uint64(123)
+	headSlot := types.Slot(123)
 	fillSlot := func(state *pb.BeaconState) {
 		state.Slot = headSlot
 	}
@@ -417,7 +417,7 @@ func TestGetStateFork(t *testing.T) {
 		}
 
 		resp, err := s.GetStateFork(ctx, &ethpb.StateRequest{
-			StateId: []byte(strconv.FormatUint(headSlot, 10)),
+			StateId: []byte(strconv.FormatUint(uint64(headSlot), 10)),
 		})
 		require.NoError(t, err)
 		assert.DeepEqual(t, []byte("previous"), resp.Data.PreviousVersion)

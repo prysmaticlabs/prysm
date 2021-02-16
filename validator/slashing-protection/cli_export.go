@@ -37,7 +37,7 @@ func ExportSlashingProtectionJSONCli(cliCtx *cli.Context) error {
 			return err
 		}
 	}
-	validatorDB, err := kv.NewKVStore(cliCtx.Context, dataDir, nil)
+	validatorDB, err := kv.NewKVStore(cliCtx.Context, dataDir, &kv.Config{})
 	if err != nil {
 		return errors.Wrapf(err, "could not access validator database at path %s", dataDir)
 	}

@@ -7,6 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gogo/protobuf/proto"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -57,7 +58,7 @@ func TestStateByRoot_HotStateUsingEpochBoundaryCacheNoReplay(t *testing.T) {
 	require.NoError(t, service.epochBoundaryStateCache.put(blkRoot, beaconState))
 	loadedState, err := service.StateByRoot(ctx, blkRoot)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(10), loadedState.Slot(), "Did not correctly load state")
+	assert.Equal(t, types.Slot(10), loadedState.Slot(), "Did not correctly load state")
 }
 
 func TestStateByRoot_HotStateUsingEpochBoundaryCacheWithReplay(t *testing.T) {
@@ -71,7 +72,7 @@ func TestStateByRoot_HotStateUsingEpochBoundaryCacheWithReplay(t *testing.T) {
 	blkRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.epochBoundaryStateCache.put(blkRoot, beaconState))
-	targetSlot := uint64(10)
+	targetSlot := types.Slot(10)
 	targetBlock := testutil.NewBeaconBlock()
 	targetBlock.Block.Slot = 11
 	targetBlock.Block.ParentRoot = blkRoot[:]
@@ -110,7 +111,7 @@ func TestStateByRootInitialSync_UseEpochStateCache(t *testing.T) {
 	service := New(beaconDB)
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	targetSlot := uint64(10)
+	targetSlot := types.Slot(10)
 	require.NoError(t, beaconState.SetSlot(targetSlot))
 	blk := testutil.NewBeaconBlock()
 	blkRoot, err := blk.Block.HashTreeRoot()
@@ -152,7 +153,7 @@ func TestStateByRootInitialSync_CanProcessUpTo(t *testing.T) {
 	blkRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.epochBoundaryStateCache.put(blkRoot, beaconState))
-	targetSlot := uint64(10)
+	targetSlot := types.Slot(10)
 	targetBlk := testutil.NewBeaconBlock()
 	targetBlk.Block.Slot = 11
 	targetBlk.Block.ParentRoot = blkRoot[:]
@@ -195,7 +196,7 @@ func TestStateBySlot_ColdState(t *testing.T) {
 	r := [32]byte{}
 	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: service.slotsPerArchivedPoint, Root: r[:]}))
 
-	slot := uint64(20)
+	slot := types.Slot(20)
 	loadedState, err := service.StateBySlot(ctx, slot)
 	require.NoError(t, err)
 	assert.Equal(t, slot, loadedState.Slot(), "Did not correctly save state")
@@ -217,7 +218,7 @@ func TestStateBySlot_HotStateDB(t *testing.T) {
 	assert.NoError(t, beaconDB.SaveState(ctx, beaconState, gRoot))
 	assert.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
 
-	slot := uint64(10)
+	slot := types.Slot(10)
 	loadedState, err := service.StateBySlot(ctx, slot)
 	require.NoError(t, err)
 	assert.Equal(t, slot, loadedState.Slot(), "Did not correctly load state")
@@ -291,7 +292,7 @@ func TestLoadeStateByRoot_EpochBoundaryStateCanProcess(t *testing.T) {
 	// This tests where hot state was not cached and needs processing.
 	loadedState, err := service.loadStateByRoot(ctx, blkRoot)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(10), loadedState.Slot(), "Did not correctly load state")
+	assert.Equal(t, types.Slot(10), loadedState.Slot(), "Did not correctly load state")
 }
 
 func TestLoadeStateByRoot_FromDBBoundaryCase(t *testing.T) {
@@ -317,7 +318,7 @@ func TestLoadeStateByRoot_FromDBBoundaryCase(t *testing.T) {
 	// This tests where hot state was not cached and needs processing.
 	loadedState, err := service.loadStateByRoot(ctx, blkRoot)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(10), loadedState.Slot(), "Did not correctly load state")
+	assert.Equal(t, types.Slot(10), loadedState.Slot(), "Did not correctly load state")
 }
 
 func TestLoadeStateBySlot_CanAdvanceSlotUsingDB(t *testing.T) {
@@ -332,7 +333,7 @@ func TestLoadeStateBySlot_CanAdvanceSlotUsingDB(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
 	require.NoError(t, service.beaconDB.SaveState(ctx, beaconState, gRoot))
 
-	slot := uint64(10)
+	slot := types.Slot(10)
 	loadedState, err := service.loadStateBySlot(ctx, slot)
 	require.NoError(t, err)
 	assert.Equal(t, slot, loadedState.Slot(), "Did not correctly load state")
@@ -363,7 +364,7 @@ func TestLoadeStateBySlot_CanReplayBlock(t *testing.T) {
 
 	loadedState, err := service.loadStateBySlot(ctx, 2)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(2), loadedState.Slot(), "Did not correctly load state")
+	assert.Equal(t, types.Slot(2), loadedState.Slot(), "Did not correctly load state")
 }
 
 func TestLastAncestorState_CanGetUsingDB(t *testing.T) {
@@ -514,7 +515,7 @@ func TestState_StateByStateRoot(t *testing.T) {
 	fillStateRoots := func(state *pb.BeaconState) {
 		rootsLen := params.MainnetConfig().SlotsPerHistoricalRoot
 		roots := make([][]byte, rootsLen)
-		for i := uint64(0); i < rootsLen; i++ {
+		for i := types.Slot(0); i < rootsLen; i++ {
 			roots[i] = make([]byte, 32)
 		}
 		for j := 0; j < len(roots); j++ {
@@ -532,7 +533,7 @@ func TestState_StateByStateRoot(t *testing.T) {
 	t.Run("Slot smaller than SLOTS_PER_HISTORICAL_ROOT", func(t *testing.T) {
 		beaconDB := testDB.SetupDB(t)
 		service := New(beaconDB)
-		slot := uint64(5)
+		slot := types.Slot(5)
 
 		err = headState.SetSlot(slot)
 		require.NoError(t, err)
@@ -545,7 +546,7 @@ func TestState_StateByStateRoot(t *testing.T) {
 		assert.NoError(t, beaconDB.SaveState(ctx, headState, gRoot))
 		assert.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
 
-		s := fmt.Sprintf("%064s", hexutil.EncodeUint64(slot)[2:])
+		s := fmt.Sprintf("%064s", hexutil.EncodeUint64(uint64(slot))[2:])
 		h, err := hexutil.Decode("0x" + s)
 		require.NoError(t, err, "Failed to decode root "+s)
 		rootState, err := service.StateByStateRoot(ctx, bytesutil.ToBytes32(h), headState)

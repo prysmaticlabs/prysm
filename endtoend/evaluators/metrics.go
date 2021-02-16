@@ -117,7 +117,7 @@ func metricsTest(conns ...*grpc.ClientConn) error {
 		if err != nil {
 			return err
 		}
-		if chainHead.HeadSlot != uint64(timeSlot) {
+		if uint64(chainHead.HeadSlot) != uint64(timeSlot) {
 			return fmt.Errorf("expected metrics slot to equal chain head slot, expected %d, received %d", chainHead.HeadSlot, timeSlot)
 		}
 

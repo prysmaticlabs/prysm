@@ -3,6 +3,7 @@ package stategen
 import (
 	"context"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -12,7 +13,7 @@ import (
 type MockStateManager struct {
 	StatesByRoot      map[[32]byte]*state.BeaconState
 	StatesByStateRoot map[[32]byte]*state.BeaconState
-	StatesBySlot      map[uint64]*state.BeaconState
+	StatesBySlot      map[types.Slot]*state.BeaconState
 }
 
 // NewMockService --
@@ -20,7 +21,7 @@ func NewMockService() *MockStateManager {
 	return &MockStateManager{
 		StatesByRoot:      make(map[[32]byte]*state.BeaconState),
 		StatesByStateRoot: make(map[[32]byte]*state.BeaconState),
-		StatesBySlot:      make(map[uint64]*state.BeaconState),
+		StatesBySlot:      make(map[types.Slot]*state.BeaconState),
 	}
 }
 
@@ -30,7 +31,7 @@ func (m *MockStateManager) Resume(ctx context.Context) (*state.BeaconState, erro
 }
 
 // SaveFinalizedState --
-func (m *MockStateManager) SaveFinalizedState(fSlot uint64, fRoot [32]byte, fState *state.BeaconState) {
+func (m *MockStateManager) SaveFinalizedState(fSlot types.Slot, fRoot [32]byte, fState *state.BeaconState) {
 	panic("implement me")
 }
 
@@ -44,7 +45,7 @@ func (m *MockStateManager) ReplayBlocks(
 	ctx context.Context,
 	state *state.BeaconState,
 	signed []*eth.SignedBeaconBlock,
-	targetSlot uint64,
+	targetSlot types.Slot,
 ) (*state.BeaconState, error) {
 	panic("implement me")
 }
@@ -52,7 +53,7 @@ func (m *MockStateManager) ReplayBlocks(
 // LoadBlocks --
 func (m *MockStateManager) LoadBlocks(
 	ctx context.Context,
-	startSlot, endSlot uint64,
+	startSlot, endSlot types.Slot,
 	endBlockRoot [32]byte,
 ) ([]*eth.SignedBeaconBlock, error) {
 	panic("implement me")
@@ -87,7 +88,7 @@ func (m *MockStateManager) StateByStateRoot(
 }
 
 // StateBySlot --
-func (m *MockStateManager) StateBySlot(ctx context.Context, slot uint64) (*state.BeaconState, error) {
+func (m *MockStateManager) StateBySlot(ctx context.Context, slot types.Slot) (*state.BeaconState, error) {
 	return m.StatesBySlot[slot], nil
 }
 
@@ -125,6 +126,6 @@ func (m *MockStateManager) AddStateForRoot(state *state.BeaconState, blockRoot [
 }
 
 // AddStateForSlot --
-func (m *MockStateManager) AddStateForSlot(state *state.BeaconState, slot uint64) {
+func (m *MockStateManager) AddStateForSlot(state *state.BeaconState, slot types.Slot) {
 	m.StatesBySlot[slot] = state
 }

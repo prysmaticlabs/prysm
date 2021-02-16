@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -18,7 +19,7 @@ import (
 )
 
 // CurrentSlot returns the current slot based on time.
-func (s *Service) CurrentSlot() uint64 {
+func (s *Service) CurrentSlot() types.Slot {
 	return helpers.CurrentSlot(uint64(s.genesisTime.Unix()))
 }
 
@@ -256,7 +257,7 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 //    else:
 //        # root is older than queried slot, thus a skip slot. Return most recent root prior to slot
 //        return root
-func (s *Service) ancestor(ctx context.Context, root []byte, slot uint64) ([]byte, error) {
+func (s *Service) ancestor(ctx context.Context, root []byte, slot types.Slot) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.ancestor")
 	defer span.End()
 
@@ -277,7 +278,7 @@ func (s *Service) ancestor(ctx context.Context, root []byte, slot uint64) ([]byt
 }
 
 // This retrieves an ancestor root using fork choice store. The look up is looping through the a flat array structure.
-func (s *Service) ancestorByForkChoiceStore(ctx context.Context, r [32]byte, slot uint64) ([]byte, error) {
+func (s *Service) ancestorByForkChoiceStore(ctx context.Context, r [32]byte, slot types.Slot) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.ancestorByForkChoiceStore")
 	defer span.End()
 
@@ -288,7 +289,7 @@ func (s *Service) ancestorByForkChoiceStore(ctx context.Context, r [32]byte, slo
 }
 
 // This retrieves an ancestor root using DB. The look up is recursively looking up DB. Slower than `ancestorByForkChoiceStore`.
-func (s *Service) ancestorByDB(ctx context.Context, r [32]byte, slot uint64) ([]byte, error) {
+func (s *Service) ancestorByDB(ctx context.Context, r [32]byte, slot types.Slot) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.ancestorByDB")
 	defer span.End()
 

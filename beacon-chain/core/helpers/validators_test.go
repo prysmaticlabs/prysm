@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -242,7 +242,7 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 	require.NoError(t, err)
 
 	tests := []struct {
-		slot  uint64
+		slot  types.Slot
 		index uint64
 	}{
 		{
@@ -289,7 +289,7 @@ func TestBeaconProposerIndex_BadState(t *testing.T) {
 		}
 	}
 	roots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
-	for i := uint64(0); i < params.BeaconConfig().SlotsPerHistoricalRoot; i++ {
+	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerHistoricalRoot); i++ {
 		roots[i] = make([]byte, 32)
 	}
 
@@ -329,7 +329,7 @@ func TestComputeProposerIndex_Compatibility(t *testing.T) {
 	var proposerIndices []uint64
 	seed, err := Seed(state, 0, params.BeaconConfig().DomainBeaconProposer)
 	require.NoError(t, err)
-	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
+	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerEpoch); i++ {
 		seedWithSlot := append(seed[:], bytesutil.Bytes8(i)...)
 		seedWithSlotHash := hashutil.Hash(seedWithSlot)
 		index, err := ComputeProposerIndex(state, indices, seedWithSlotHash)
@@ -340,7 +340,7 @@ func TestComputeProposerIndex_Compatibility(t *testing.T) {
 	var wantedProposerIndices []uint64
 	seed, err = Seed(state, 0, params.BeaconConfig().DomainBeaconProposer)
 	require.NoError(t, err)
-	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
+	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerEpoch); i++ {
 		seedWithSlot := append(seed[:], bytesutil.Bytes8(i)...)
 		seedWithSlotHash := hashutil.Hash(seedWithSlot)
 		index, err := computeProposerIndexWithValidators(state.Validators(), indices, seedWithSlotHash)

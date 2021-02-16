@@ -326,6 +326,21 @@ func BytesToEpochBigEndian(b []byte) types.Epoch {
 	return types.Epoch(BytesToUint64BigEndian(b))
 }
 
+// SlotToBytesLittleEndian conversion.
+func SlotToBytesLittleEndian(i types.Slot) []byte {
+	return Uint64ToBytesLittleEndian(uint64(i))
+}
+
+// SlotToBytesBigEndian conversion.
+func SlotToBytesBigEndian(i types.Slot) []byte {
+	return Uint64ToBytesBigEndian(uint64(i))
+}
+
+// BytesToSlotBigEndian conversion.
+func BytesToSlotBigEndian(b []byte) types.Slot {
+	return types.Slot(BytesToUint64BigEndian(b))
+}
+
 // IsBytes32Hex checks whether the byte array is a 32-byte long hex number.
 func IsBytes32Hex(b []byte) (bool, error) {
 	if b == nil {
