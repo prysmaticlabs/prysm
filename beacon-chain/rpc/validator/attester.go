@@ -74,6 +74,8 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)
 	}
+	// Release state after its work is done.
+	defer headState.ReleaseStateReference()
 	headRoot, err := vs.HeadFetcher.HeadRoot(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve head root: %v", err)

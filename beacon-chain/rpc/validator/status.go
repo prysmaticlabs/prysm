@@ -36,6 +36,8 @@ func (vs *Server) ValidatorStatus(
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
+	// Release state after its work is done.
+	defer headState.ReleaseStateReference()
 	vStatus, _ := vs.validatorStatus(ctx, headState, req.PublicKey)
 	return vStatus, nil
 }
@@ -53,6 +55,8 @@ func (vs *Server) MultipleValidatorStatus(
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
+	// Release state after its work is done.
+	defer headState.ReleaseStateReference()
 	responseCap := len(req.PublicKeys) + len(req.Indices)
 	pubKeys := make([][]byte, 0, responseCap)
 	filtered := make(map[[48]byte]bool)

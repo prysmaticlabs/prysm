@@ -317,6 +317,8 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState *stateTrie.
 		if err := helpers.UpdateProposerIndicesInCache(copied); err != nil {
 			return err
 		}
+		// Release state after its work is done.
+		copied.ReleaseStateReference()
 	} else if postState.Slot() >= s.nextEpochBoundarySlot {
 		if err := reportEpochMetrics(ctx, postState, s.head.state); err != nil {
 			return err

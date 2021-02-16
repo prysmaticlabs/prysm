@@ -120,6 +120,8 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
+	// Release state after its work is done.
+	defer s.ReleaseStateReference()
 
 	// Advance state with empty transitions up to the requested epoch start slot.
 	epochStartSlot, err := helpers.StartSlot(req.Epoch)

@@ -51,6 +51,8 @@ func (s *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *p
 	if err != nil {
 		return pubsub.ValidationIgnore
 	}
+	// Release state after its work is done.
+	defer headState.ReleaseStateReference()
 
 	if exit.Exit.ValidatorIndex >= uint64(headState.NumValidators()) {
 		return pubsub.ValidationReject
@@ -62,7 +64,6 @@ func (s *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *p
 	if err := blocks.VerifyExitAndSignature(val, headState.Slot(), headState.Fork(), exit, headState.GenesisValidatorRoot()); err != nil {
 		return pubsub.ValidationReject
 	}
-	headState.ReleaseStateReference()
 
 	msg.ValidatorData = exit // Used in downstream subscriber
 

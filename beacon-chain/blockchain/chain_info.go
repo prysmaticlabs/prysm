@@ -174,7 +174,11 @@ func (s *Service) HeadValidatorsIndices(ctx context.Context, epoch types.Epoch) 
 	if !s.hasHeadState() {
 		return []uint64{}, nil
 	}
-	return helpers.ActiveValidatorIndices(s.headState(ctx), epoch)
+	hState := s.headState(ctx)
+	// Release state after its work is done.
+	defer hState.ReleaseStateReference()
+
+	return helpers.ActiveValidatorIndices(hState, epoch)
 }
 
 // HeadSeed returns the seed from the head view of a given epoch.

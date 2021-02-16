@@ -163,6 +163,8 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk *ethpb.SignedBeac
 	if err != nil {
 		return err
 	}
+	// Release state after its work is done.
+	defer parentState.ReleaseStateReference()
 
 	if err := blocks.VerifyBlockSignature(parentState, blk); err != nil {
 		s.setBadBlock(ctx, blockRoot)
@@ -197,7 +199,6 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk *ethpb.SignedBeac
 		s.setBadBlock(ctx, blockRoot)
 		return errors.New("incorrect proposer index")
 	}
-	parentState.ReleaseStateReference()
 
 	return nil
 }

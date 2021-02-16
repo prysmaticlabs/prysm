@@ -51,12 +51,14 @@ func (s *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg
 	if err != nil {
 		return pubsub.ValidationIgnore
 	}
+	// Release state after its work is done.
+	defer headState.ReleaseStateReference()
+
 	if err := blocks.VerifyAttesterSlashing(ctx, headState, slashing); err != nil {
 		return pubsub.ValidationReject
 	}
 
 	msg.ValidatorData = slashing // Used in downstream subscriber
-	headState.ReleaseStateReference()
 	return pubsub.ValidationAccept
 }
 
