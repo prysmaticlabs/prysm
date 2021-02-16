@@ -30,6 +30,8 @@ import (
 
 var log = logrus.WithField("prefix", "flags")
 
+const enabledFeatureFlag = "Enabled feature flag"
+
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
 	// Testnet Flags.
@@ -135,28 +137,27 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	configureTestnet(ctx, cfg)
 
 	if ctx.Bool(writeSSZStateTransitionsFlag.Name) {
-		log.Warn("Writing SSZ states and blocks after state transitions")
+		log.WithField(writeSSZStateTransitionsFlag.Name, writeSSZStateTransitionsFlag.Usage).Warn(enabledFeatureFlag)
 		cfg.WriteSSZStateTransitions = true
 	}
 
 	cfg.EnableSSZCache = true
 
 	if ctx.String(kafkaBootstrapServersFlag.Name) != "" {
-		log.Warn("Enabling experimental kafka streaming.")
+		log.WithField(kafkaBootstrapServersFlag.Name, kafkaBootstrapServersFlag.Usage).Warn(enabledFeatureFlag)
 		cfg.KafkaBootstrapServers = ctx.String(kafkaBootstrapServersFlag.Name)
 	}
-
 	if ctx.IsSet(disableGRPCConnectionLogging.Name) {
+		log.WithField(disableGRPCConnectionLogging.Name, disableGRPCConnectionLogging.Usage).Warn(enabledFeatureFlag)
 		cfg.DisableGRPCConnectionLogs = true
 	}
 	cfg.AttestationAggregationStrategy = ctx.String(attestationAggregationStrategy.Name)
 	if ctx.Bool(forceOptMaxCoverAggregationStategy.Name) {
+		log.WithField(forceOptMaxCoverAggregationStategy.Name, forceOptMaxCoverAggregationStategy.Usage).Warn(enabledFeatureFlag)
 		cfg.AttestationAggregationStrategy = "opt_max_cover"
 	}
-	log.Infof("Using %q strategy on attestation aggregation", cfg.AttestationAggregationStrategy)
-
 	if ctx.Bool(enablePeerScorer.Name) {
-		log.Warn("Enabling peer scoring in P2P")
+		log.WithField(enablePeerScorer.Name, enablePeerScorer.Usage).Warn(enabledFeatureFlag)
 		cfg.EnablePeerScorer = true
 	}
 	if ctx.Bool(checkPtInfoCache.Name) {
@@ -164,23 +165,23 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	}
 	cfg.EnableBlst = true
 	if ctx.Bool(disableBlst.Name) {
-		log.Warn("Disabling new BLS library blst")
+		log.WithField(disableBlst.Name, disableBlst.Usage).Warn(enabledFeatureFlag)
 		cfg.EnableBlst = false
 	}
 	if ctx.Bool(enableLargerGossipHistory.Name) {
-		log.Warn("Using a larger gossip history for the node")
+		log.WithField(enableLargerGossipHistory.Name, enableLargerGossipHistory.Usage).Warn(enabledFeatureFlag)
 		cfg.EnableLargerGossipHistory = true
 	}
 	if ctx.Bool(disableBroadcastSlashingFlag.Name) {
-		log.Warn("Disabling slashing broadcasting to p2p network")
+		log.WithField(disableBroadcastSlashingFlag.Name, disableBroadcastSlashingFlag.Usage).Warn(enabledFeatureFlag)
 		cfg.DisableBroadcastSlashings = true
 	}
 	if ctx.Bool(enableNextSlotStateCache.Name) {
-		log.Warn("Enabling next slot state cache")
+		log.WithField(enableNextSlotStateCache.Name, enableNextSlotStateCache.Usage).Warn(enabledFeatureFlag)
 		cfg.EnableNextSlotStateCache = true
 	}
 	if ctx.Bool(updateHeadTimely.Name) {
-		log.Warn("Enabling update head timely feature")
+		log.WithField(updateHeadTimely.Name, updateHeadTimely.Usage).Warn(enabledFeatureFlag)
 		cfg.UpdateHeadTimely = true
 	}
 	Init(cfg)
@@ -194,7 +195,7 @@ func ConfigureSlasher(ctx *cli.Context) {
 	configureTestnet(ctx, cfg)
 
 	if ctx.Bool(disableLookbackFlag.Name) {
-		log.Warn("Disabling slasher lookback")
+		log.WithField(disableLookbackFlag.Name, disableLookbackFlag.Usage).Warn(enabledFeatureFlag)
 		cfg.DisableLookback = true
 	}
 	Init(cfg)
@@ -207,25 +208,24 @@ func ConfigureValidator(ctx *cli.Context) {
 	cfg := &Flags{}
 	configureTestnet(ctx, cfg)
 	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
-		log.Warn("Enabled validator attestation and block slashing protection using an external slasher.")
+		log.WithField(enableExternalSlasherProtectionFlag.Name, enableExternalSlasherProtectionFlag.Usage).Warn(enabledFeatureFlag)
 		cfg.SlasherProtection = true
 	}
 	if ctx.Bool(writeWalletPasswordOnWebOnboarding.Name) {
-		log.Warn("Enabled full web mode, wallet password will be written to disk at the wallet directory " +
-			"upon completing web onboarding.")
+		log.WithField(writeWalletPasswordOnWebOnboarding.Name, writeWalletPasswordOnWebOnboarding.Usage).Warn(enabledFeatureFlag)
 		cfg.WriteWalletPasswordOnWebOnboarding = true
 	}
 	if ctx.Bool(disableAttestingHistoryDBCache.Name) {
-		log.Warn("Disabled attesting history DB cache, likely increasing disk reads and writes significantly")
+		log.WithField(disableAttestingHistoryDBCache.Name, disableAttestingHistoryDBCache.Usage).Warn(enabledFeatureFlag)
 		cfg.DisableAttestingHistoryDBCache = true
 	}
 	cfg.EnableBlst = true
 	if ctx.Bool(disableBlst.Name) {
-		log.Warn("Disabling new BLS library blst")
+		log.WithField(disableBlst.Name, disableBlst.Usage).Warn(enabledFeatureFlag)
 		cfg.EnableBlst = false
 	}
 	if ctx.Bool(attestTimely.Name) {
-		log.Warn("Enabled attest timely fix for #8185")
+		log.WithField(attestTimely.Name, attestTimely.Usage).Warn(enabledFeatureFlag)
 		cfg.AttestTimely = true
 	}
 	cfg.KeystoreImportDebounceInterval = ctx.Duration(dynamicKeyReloadDebounceInterval.Name)
