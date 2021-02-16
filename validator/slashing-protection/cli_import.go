@@ -32,7 +32,7 @@ func ImportSlashingProtectionCLI(cliCtx *cli.Context) error {
 			return err
 		}
 	}
-	valDB, err := kv.NewKVStore(cliCtx.Context, dataDir, make([][48]byte, 0))
+	valDB, err := kv.NewKVStore(cliCtx.Context, dataDir, &kv.Config{})
 	if err != nil {
 		return errors.Wrapf(err, "could not access validator database at path: %s", dataDir)
 	}

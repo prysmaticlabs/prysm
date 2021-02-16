@@ -12,7 +12,7 @@ import (
 
 // SetupDB instantiates and returns database backed by key value store.
 func SetupDB(t testing.TB) db.Database {
-	s, err := kv.NewKVStore(context.Background(), t.TempDir())
+	s, err := kv.NewKVStore(context.Background(), t.TempDir(), &kv.Config{})
 	if err != nil {
 		t.Fatal(err)
 	}

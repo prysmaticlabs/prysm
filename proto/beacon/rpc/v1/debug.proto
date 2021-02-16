@@ -6,6 +6,7 @@ import "eth/v1alpha1/node.proto";
 import "proto/beacon/p2p/v1/messages.proto";
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
 // Debug service API
 //
@@ -99,9 +100,9 @@ message ProtoArrayForkChoiceResponse {
     // The prune threshold of how many nodes allowed in proto array store.
     uint64 prune_threshold = 1;
     // Latest justified epoch in proto array store.
-    uint64 justified_epoch = 2;
+    uint64 justified_epoch = 2 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Epoch"];
     // Latest finalized epoch in proto array store.
-    uint64 finalized_epoch = 3;
+    uint64 finalized_epoch = 3 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Epoch"];
     // The list of the proto array nodes in store.
     repeated ProtoArrayNode proto_array_nodes = 4;
     // Root to indices mapping of the proto array nodes in store.
@@ -116,9 +117,9 @@ message ProtoArrayNode {
     // Parent of the proto array node.
     uint64 parent = 3;
     // Justified epoch of the current proto array node.
-    uint64 justified_epoch = 4;
+    uint64 justified_epoch = 4 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Epoch"];
     // finalized epoch of the current proto array node.
-    uint64 finalized_epoch = 5;
+    uint64 finalized_epoch = 5 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Epoch"];
     // Current weight of the current proto array node.
     uint64 weight = 6;
     // Best child of the current proto array node.

@@ -389,7 +389,8 @@ func TestLastAncestorState_CanGetUsingDB(t *testing.T) {
 	r3, err := b3.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	b1State := testutil.NewBeaconState()
+	b1State, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, b1State.SetSlot(1))
 
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, b0))
@@ -428,7 +429,8 @@ func TestLastAncestorState_CanGetUsingCache(t *testing.T) {
 	r3, err := b3.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	b1State := testutil.NewBeaconState()
+	b1State, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, b1State.SetSlot(1))
 
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, b0))
@@ -446,7 +448,8 @@ func TestState_HasState(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	service := New(beaconDB)
-	s := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	rHit1 := [32]byte{1}
 	rHit2 := [32]byte{2}
 	rMiss := [32]byte{3}
@@ -477,7 +480,8 @@ func TestState_HasStateInCache(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	service := New(beaconDB)
-	s := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	rHit1 := [32]byte{1}
 	rHit2 := [32]byte{2}
 	rMiss := [32]byte{3}

@@ -297,7 +297,7 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 		return stateutil.Eth1Root(hasher, b.state.Eth1Data)
 	case eth1DataVotes:
 		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.state.Eth1DataVotes, params.BeaconConfig().EpochsPerEth1VotingPeriod*params.BeaconConfig().SlotsPerEpoch)
+			err := b.resetFieldTrie(field, b.state.Eth1DataVotes, uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod.Mul(params.BeaconConfig().SlotsPerEpoch)))
 			if err != nil {
 				return [32]byte{}, err
 			}
@@ -321,7 +321,7 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 		return stateutil.ValidatorBalancesRoot(b.state.Balances)
 	case randaoMixes:
 		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.state.RandaoMixes, params.BeaconConfig().EpochsPerHistoricalVector)
+			err := b.resetFieldTrie(field, b.state.RandaoMixes, uint64(params.BeaconConfig().EpochsPerHistoricalVector))
 			if err != nil {
 				return [32]byte{}, err
 			}

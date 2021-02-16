@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -85,7 +86,7 @@ func TestIndexedAttestationsWithPrefix(t *testing.T) {
 	type prefixTestStruct struct {
 		name           string
 		attsInDB       []*ethpb.IndexedAttestation
-		targetEpoch    uint64
+		targetEpoch    types.Epoch
 		searchPrefix   []byte
 		expectedResult []*ethpb.IndexedAttestation
 	}
@@ -326,7 +327,7 @@ func TestIndexedAttestationsForTarget(t *testing.T) {
 	type prefixTestStruct struct {
 		name           string
 		attsInDB       []*ethpb.IndexedAttestation
-		targetEpoch    uint64
+		targetEpoch    types.Epoch
 		expectedResult []*ethpb.IndexedAttestation
 	}
 	prefixTests := []prefixTestStruct{
@@ -695,8 +696,8 @@ func TestPruneHistoryIndexedAttestation(t *testing.T) {
 		require.NoError(t, err, "Failed to get indexed attestation")
 		require.Equal(t, true, found, "Expected to find attestation in DB")
 	}
-	currentEpoch := uint64(2)
-	historyToKeep := uint64(1)
+	currentEpoch := types.Epoch(2)
+	historyToKeep := types.Epoch(1)
 	require.NoError(t, db.PruneAttHistory(ctx, currentEpoch, historyToKeep), "Failed to prune")
 
 	for _, tt := range tests {

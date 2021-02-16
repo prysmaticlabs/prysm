@@ -30,10 +30,9 @@ func ProcessRandao(
 	beaconState *stateTrie.BeaconState,
 	b *ethpb.SignedBeaconBlock,
 ) (*stateTrie.BeaconState, error) {
-	if b.Block == nil || b.Block.Body == nil {
-		return nil, errors.New("block and block body can't be nil")
+	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+		return nil, err
 	}
-
 	body := b.Block.Body
 	buf, proposerPub, domain, err := randaoSigningData(beaconState)
 	if err != nil {
@@ -67,7 +66,7 @@ func ProcessRandaoNoVerify(
 	// If block randao passed verification, we XOR the state's latest randao mix with the block's
 	// randao and update the state's corresponding latest randao mix value.
 	latestMixesLength := params.BeaconConfig().EpochsPerHistoricalVector
-	latestMixSlice, err := beaconState.RandaoMixAtIndex(currentEpoch % latestMixesLength)
+	latestMixSlice, err := beaconState.RandaoMixAtIndex(uint64(currentEpoch % latestMixesLength))
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +77,7 @@ func ProcessRandaoNoVerify(
 	for i, x := range blockRandaoReveal {
 		latestMixSlice[i] ^= x
 	}
-	if err := beaconState.UpdateRandaoMixesAtIndex(currentEpoch%latestMixesLength, latestMixSlice); err != nil {
+	if err := beaconState.UpdateRandaoMixesAtIndex(uint64(currentEpoch%latestMixesLength), latestMixSlice); err != nil {
 		return nil, err
 	}
 	return beaconState, nil

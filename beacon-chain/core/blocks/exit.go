@@ -48,8 +48,8 @@ func ProcessVoluntaryExits(
 	beaconState *stateTrie.BeaconState,
 	b *ethpb.SignedBeaconBlock,
 ) (*stateTrie.BeaconState, error) {
-	if b.Block == nil || b.Block.Body == nil {
-		return nil, errors.New("block and block body can't be nil")
+	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+		return nil, err
 	}
 
 	body := b.Block.Body
@@ -68,39 +68,6 @@ func ProcessVoluntaryExits(
 		beaconState, err = v.InitiateValidatorExit(beaconState, exit.Exit.ValidatorIndex)
 		if err != nil {
 			return nil, err
-		}
-	}
-	return beaconState, nil
-}
-
-// ProcessVoluntaryExitsNoVerifySignature processes all the voluntary exits in
-// a block body, without verifying their BLS signatures.
-// This function is here to satisfy fuzz tests.
-func ProcessVoluntaryExitsNoVerifySignature(
-	beaconState *stateTrie.BeaconState,
-	body *ethpb.BeaconBlockBody,
-) (*stateTrie.BeaconState, error) {
-	exits := body.VoluntaryExits
-
-	for idx, exit := range exits {
-		if exit == nil || exit.Exit == nil {
-			return nil, errors.New("nil exit")
-		}
-		val, err := beaconState.ValidatorAtIndexReadOnly(exit.Exit.ValidatorIndex)
-		if err != nil {
-			return nil, err
-		}
-		if err := verifyExitConditions(val, beaconState.Slot(), exit.Exit); err != nil {
-			return nil, err
-		}
-		// Validate that fork and genesis root are valid.
-		_, err = helpers.Domain(beaconState.Fork(), exit.Exit.Epoch, params.BeaconConfig().DomainVoluntaryExit, beaconState.GenesisValidatorRoot())
-		if err != nil {
-			return nil, err
-		}
-		beaconState, err = v.InitiateValidatorExit(beaconState, exit.Exit.ValidatorIndex)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to process voluntary exit at index %d", idx)
 		}
 	}
 	return beaconState, nil

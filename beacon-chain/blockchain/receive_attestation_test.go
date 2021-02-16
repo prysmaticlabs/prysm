@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -27,7 +28,7 @@ func TestAttestationCheckPtState_FarFutureSlot(t *testing.T) {
 	chainService := setupBeaconChain(t, beaconDB)
 	chainService.genesisTime = time.Now()
 
-	e := helpers.MaxSlotBuffer/params.BeaconConfig().SlotsPerEpoch + 1
+	e := types.Epoch(helpers.MaxSlotBuffer/params.BeaconConfig().SlotsPerEpoch + 1)
 	_, err := chainService.AttestationPreState(context.Background(), &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: e}}})
 	require.ErrorContains(t, "exceeds max allowed value relative to the local clock", err)
 }
@@ -37,7 +38,7 @@ func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: beaconDB, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
-	service, err := New(ctx, cfg)
+	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
 	b32 := testutil.NewBeaconBlock()
@@ -65,7 +66,7 @@ func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: beaconDB, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
-	service, err := New(ctx, cfg)
+	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
 	b32 := testutil.NewBeaconBlock()
@@ -99,7 +100,7 @@ func TestProcessAttestations_Ok(t *testing.T) {
 		StateGen:        stategen.New(beaconDB),
 		AttPool:         attestations.NewPool(),
 	}
-	service, err := New(ctx, cfg)
+	service, err := NewService(ctx, cfg)
 	service.genesisTime = timeutils.Now().Add(-1 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
 	require.NoError(t, err)
 	genesisState, pks := testutil.DeterministicGenesisState(t, 64)
