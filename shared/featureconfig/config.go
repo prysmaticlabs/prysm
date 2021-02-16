@@ -56,7 +56,6 @@ type Flags struct {
 
 	// Cache toggles.
 	EnableSSZCache           bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
-	EnableEth1DataVoteCache  bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
 	EnableNextSlotStateCache bool // EnableNextSlotStateCache enables next slot state cache to improve validator performance.
 
 	// Bug fixes related flags.
