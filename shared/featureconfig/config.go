@@ -29,6 +29,7 @@ import (
 )
 
 var log = logrus.WithField("prefix", "flags")
+
 const enabledFeatureFlag = "Enabled feature flag"
 
 // Flags is a struct to represent which features the client will perform on runtime.
