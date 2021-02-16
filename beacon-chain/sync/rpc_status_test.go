@@ -11,7 +11,7 @@ import (
 	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -166,15 +166,15 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
 	require.NoError(t, err)
 	require.NoError(t, genesisState.SetSlot(111))
-	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%params.BeaconConfig().SlotsPerHistoricalRoot, headRoot))
+	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%uint64(params.BeaconConfig().SlotsPerHistoricalRoot), headRoot))
 	require.NoError(t, db.SaveBlock(context.Background(), finalized))
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), finalizedRoot))
 	finalizedCheckpt := &ethpb.Checkpoint{
 		Epoch: 3,
 		Root:  finalizedRoot[:],
 	}
-	totalSec := params.BeaconConfig().SlotsPerEpoch * 5 * params.BeaconConfig().SecondsPerSlot
-	genTime := time.Now().Unix() - int64(totalSec)
+	totalSec := int64(params.BeaconConfig().SlotsPerEpoch.Mul(5 * params.BeaconConfig().SecondsPerSlot))
+	genTime := time.Now().Unix() - totalSec
 
 	r := &Service{
 		p2p: p1,
@@ -383,7 +383,7 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
 	require.NoError(t, err)
 	require.NoError(t, genesisState.SetSlot(111))
-	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%params.BeaconConfig().SlotsPerHistoricalRoot, headRoot))
+	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%uint64(params.BeaconConfig().SlotsPerHistoricalRoot), headRoot))
 	finalizedCheckpt := &ethpb.Checkpoint{
 		Epoch: 5,
 		Root:  finalizedRoot[:],
@@ -458,7 +458,7 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{DepositRoot: make([]byte, 32), BlockHash: make([]byte, 32)})
 	require.NoError(t, err)
 	require.NoError(t, genesisState.SetSlot(111))
-	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%params.BeaconConfig().SlotsPerHistoricalRoot, headRoot))
+	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%uint64(params.BeaconConfig().SlotsPerHistoricalRoot), headRoot))
 	blk := testutil.NewBeaconBlock()
 	blk.Block.Slot = blkSlot
 	require.NoError(t, db.SaveBlock(context.Background(), blk))
@@ -467,8 +467,8 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 		Epoch: 3,
 		Root:  finalizedRoot[:],
 	}
-	totalSec := params.BeaconConfig().SlotsPerEpoch * 5 * params.BeaconConfig().SecondsPerSlot
-	genTime := time.Now().Unix() - int64(totalSec)
+	totalSec := int64(params.BeaconConfig().SlotsPerEpoch.Mul(5 * params.BeaconConfig().SecondsPerSlot))
+	genTime := time.Now().Unix() - totalSec
 	r := &Service{
 		p2p: p1,
 		chain: &mock.ChainService{
@@ -554,7 +554,7 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 	}
 	require.NoError(t, db.SaveStateSummaries(context.Background(), stateSummaries))
 
-	rootFetcher := func(slot uint64) [32]byte {
+	rootFetcher := func(slot types.Slot) [32]byte {
 		rt, err := blocksTillHead[slot-1].Block.HashTreeRoot()
 		require.NoError(t, err)
 		return rt
@@ -563,10 +563,10 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 		name                   string
 		expectedFinalizedEpoch types.Epoch
 		expectedFinalizedRoot  [32]byte
-		headSlot               uint64
+		headSlot               types.Slot
 		remoteFinalizedEpoch   types.Epoch
 		remoteFinalizedRoot    [32]byte
-		remoteHeadSlot         uint64
+		remoteHeadSlot         types.Slot
 		expectError            bool
 	}{
 		{
@@ -622,7 +622,7 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 		require.NoError(t, err)
 
 		require.NoError(t, nState.SetSlot(headSlot))
-		require.NoError(t, nState.UpdateBlockRootAtIndex(headSlot%params.BeaconConfig().SlotsPerHistoricalRoot, headRoot))
+		require.NoError(t, nState.UpdateBlockRootAtIndex(uint64(headSlot.ModSlot(params.BeaconConfig().SlotsPerHistoricalRoot)), headRoot))
 
 		finalizedCheckpt := &ethpb.Checkpoint{
 			Epoch: expectedFinalizedEpoch,
@@ -635,7 +635,8 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 		}
 		require.NoError(t, db.SaveFinalizedCheckpoint(context.Background(), finalizedCheckpt))
 
-		totalSec := params.BeaconConfig().SlotsPerEpoch * uint64(expectedFinalizedEpoch+2) * params.BeaconConfig().SecondsPerSlot
+		epoch := expectedFinalizedEpoch.Add(2)
+		totalSec := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch) * params.BeaconConfig().SecondsPerSlot))
 		genTime := time.Now().Unix() - int64(totalSec)
 		r := &Service{
 			p2p: p1,
@@ -713,7 +714,7 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
 	require.NoError(t, err)
 	require.NoError(t, genesisState.SetSlot(111))
-	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%params.BeaconConfig().SlotsPerHistoricalRoot, headRoot))
+	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%uint64(params.BeaconConfig().SlotsPerHistoricalRoot), headRoot))
 	finalizedCheckpt := &ethpb.Checkpoint{
 		Epoch: 5,
 		Root:  finalizedRoot[:],
@@ -791,7 +792,7 @@ func TestStatusRPC_ValidGenesisMessage(t *testing.T) {
 	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
 	require.NoError(t, err)
 	require.NoError(t, genesisState.SetSlot(111))
-	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%params.BeaconConfig().SlotsPerHistoricalRoot, headRoot))
+	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%uint64(params.BeaconConfig().SlotsPerHistoricalRoot), headRoot))
 	finalizedCheckpt := &ethpb.Checkpoint{
 		Epoch: 5,
 		Root:  finalizedRoot[:],
@@ -828,7 +829,7 @@ func TestShouldResync(t *testing.T) {
 	type args struct {
 		genesis  time.Time
 		syncing  bool
-		headSlot uint64
+		headSlot types.Slot
 	}
 	tests := []struct {
 		name string
@@ -838,7 +839,7 @@ func TestShouldResync(t *testing.T) {
 		{
 			name: "genesis epoch should not resync when syncing is true",
 			args: args{
-				headSlot: uint64(31),
+				headSlot: 31,
 				genesis:  timeutils.Now(),
 				syncing:  true,
 			},
@@ -847,7 +848,7 @@ func TestShouldResync(t *testing.T) {
 		{
 			name: "genesis epoch should not resync when syncing is false",
 			args: args{
-				headSlot: uint64(31),
+				headSlot: 31,
 				genesis:  timeutils.Now(),
 				syncing:  false,
 			},
@@ -856,7 +857,7 @@ func TestShouldResync(t *testing.T) {
 		{
 			name: "two epochs behind, resync ok",
 			args: args{
-				headSlot: uint64(31),
+				headSlot: 31,
 				genesis:  timeutils.Now().Add(-1 * 96 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
 				syncing:  false,
 			},
@@ -865,7 +866,7 @@ func TestShouldResync(t *testing.T) {
 		{
 			name: "two epochs behind, already syncing",
 			args: args{
-				headSlot: uint64(31),
+				headSlot: 31,
 				genesis:  timeutils.Now().Add(-1 * 96 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
 				syncing:  true,
 			},
@@ -898,7 +899,7 @@ func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []*ethpb.Signe
 		parentRoot := make([]byte, 32)
 		copy(parentRoot, previousRoot[:])
 		blocks[j-i] = testutil.NewBeaconBlock()
-		blocks[j-i].Block.Slot = j + 1
+		blocks[j-i].Block.Slot = types.Slot(j + 1)
 		blocks[j-i].Block.ParentRoot = parentRoot
 		var err error
 		previousRoot, err = blocks[j-i].Block.HashTreeRoot()

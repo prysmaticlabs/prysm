@@ -8,7 +8,7 @@ import (
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -217,7 +217,7 @@ func (bs *Server) ListValidators(
 	var reqState *statetrie.BeaconState
 	var err error
 	if requestedEpoch != currentEpoch {
-		var s uint64
+		var s types.Slot
 		s, err = helpers.StartSlot(requestedEpoch)
 		if err != nil {
 			return nil, err
@@ -509,11 +509,11 @@ func (bs *Server) GetValidatorParticipation(
 	}
 	// Keep looking back until there's a canonical slot.
 	for i := int(startSlot - 1); !canonical && i >= 0; i-- {
-		canonical, err = bs.isSlotCanonical(ctx, uint64(i))
+		canonical, err = bs.isSlotCanonical(ctx, types.Slot(i))
 		if err != nil {
 			return nil, err
 		}
-		startSlot = uint64(i)
+		startSlot = types.Slot(i)
 	}
 
 	beaconState, err := bs.StateGen.StateBySlot(ctx, startSlot)
@@ -716,8 +716,8 @@ func (bs *Server) GetValidatorPerformance(
 	beforeTransitionBalances := make([]uint64, 0, responseCap)
 	afterTransitionBalances := make([]uint64, 0, responseCap)
 	effectiveBalances := make([]uint64, 0, responseCap)
-	inclusionSlots := make([]uint64, 0, responseCap)
-	inclusionDistances := make([]uint64, 0, responseCap)
+	inclusionSlots := make([]types.Slot, 0, responseCap)
+	inclusionDistances := make([]types.Slot, 0, responseCap)
 	correctlyVotedSource := make([]bool, 0, responseCap)
 	correctlyVotedTarget := make([]bool, 0, responseCap)
 	correctlyVotedHead := make([]bool, 0, responseCap)
@@ -859,7 +859,7 @@ func (bs *Server) GetIndividualVotes(
 // isSlotCanonical returns true if the input slot has a canonical block in the chain,
 // if the input slot has a skip block, false is returned,
 // if the input slot has more than one block, an error is returned.
-func (bs *Server) isSlotCanonical(ctx context.Context, slot uint64) (bool, error) {
+func (bs *Server) isSlotCanonical(ctx context.Context, slot types.Slot) (bool, error) {
 	if slot == 0 {
 		return true, nil
 	}

@@ -11,7 +11,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
@@ -721,7 +721,7 @@ func TestPrunePeers(t *testing.T) {
 
 func TestStatus_BestPeer(t *testing.T) {
 	type peerConfig struct {
-		headSlot       uint64
+		headSlot       types.Slot
 		finalizedEpoch types.Epoch
 	}
 	tests := []struct {
@@ -907,7 +907,7 @@ func TestStatus_BestNonFinalized(t *testing.T) {
 		},
 	})
 
-	peerSlots := []uint64{32, 32, 32, 32, 235, 233, 258, 268, 270}
+	peerSlots := []types.Slot{32, 32, 32, 32, 235, 233, 258, 268, 270}
 	for i, headSlot := range peerSlots {
 		p.Add(new(enr.Record), peer.ID(rune(i)), nil, network.DirOutbound)
 		p.SetConnectionState(peer.ID(rune(i)), peers.PeerConnected)

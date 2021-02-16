@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -19,7 +19,7 @@ func TestBeaconState_SlotDataRace(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 	go func() {
-		require.NoError(t, headState.SetSlot(uint64(0)))
+		require.NoError(t, headState.SetSlot(0))
 		wg.Done()
 	}()
 	go func() {

@@ -7,6 +7,7 @@ import (
 
 	fastssz "github.com/ferranbt/fastssz"
 	"github.com/gogo/protobuf/proto"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -309,7 +310,7 @@ func TestProposer_PendingDeposits_Eth1DataVoteOK(t *testing.T) {
 		BlockHash:    blockHash,
 		DepositCount: 3,
 	}
-	period := uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod) * params.BeaconConfig().SlotsPerEpoch
+	period := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod)))
 	for i := 0; i <= int(period/2); i++ {
 		votes = append(votes, vote)
 	}
@@ -501,7 +502,7 @@ func TestProposer_PendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 		DepositRoot:  make([]byte, 32),
 		DepositCount: 7,
 	}
-	period := uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod) * params.BeaconConfig().SlotsPerEpoch
+	period := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod)))
 	for i := 0; i <= int(period/2); i++ {
 		votes = append(votes, vote)
 	}
@@ -1095,11 +1096,11 @@ func TestProposer_Eth1Data_NoBlockExists(t *testing.T) {
 }
 
 func TestProposer_Eth1Data(t *testing.T) {
-	slot := uint64(20000)
+	slot := types.Slot(20000)
 
 	p := &mockPOW.POWChain{
 		BlockNumberByTime: map[uint64]*big.Int{
-			slot * params.BeaconConfig().SecondsPerSlot: big.NewInt(8196),
+			uint64(slot.Mul(params.BeaconConfig().SecondsPerSlot)): big.NewInt(8196),
 		},
 		HashesByHeight: map[int][]byte{
 			8180: []byte("8180"),
@@ -1130,7 +1131,7 @@ func TestProposer_Eth1Data(t *testing.T) {
 }
 
 func TestProposer_Eth1Data_SmallerDepositCount(t *testing.T) {
-	slot := uint64(20000)
+	slot := types.Slot(20000)
 	deps := []*dbpb.DepositContainer{
 		{
 			Index:           0,
@@ -1165,7 +1166,7 @@ func TestProposer_Eth1Data_SmallerDepositCount(t *testing.T) {
 
 	p := &mockPOW.POWChain{
 		BlockNumberByTime: map[uint64]*big.Int{
-			slot * params.BeaconConfig().SecondsPerSlot: big.NewInt(4096),
+			uint64(slot.Mul(params.BeaconConfig().SecondsPerSlot)): big.NewInt(4096),
 		},
 		HashesByHeight: map[int][]byte{
 			4080: []byte("4080"),
@@ -1217,11 +1218,11 @@ func TestProposer_Eth1Data_MockEnabled(t *testing.T) {
 
 	eth1Data, err := ps.eth1Data(ctx, 100)
 	require.NoError(t, err)
-	period := uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod) * params.BeaconConfig().SlotsPerEpoch
-	wantedSlot := 100 % period
+	period := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod)))
+	wantedSlot := types.Slot(100).Mod(period)
 	currentEpoch := helpers.SlotToEpoch(100)
 	var enc []byte
-	enc = fastssz.MarshalUint64(enc, uint64(currentEpoch)+wantedSlot)
+	enc = fastssz.MarshalUint64(enc, uint64(currentEpoch)+uint64(wantedSlot))
 	depRoot := hashutil.Hash(enc)
 	blockHash := hashutil.Hash(depRoot[:])
 	want := &ethpb.Eth1Data{
@@ -1235,7 +1236,7 @@ func TestProposer_Eth1Data_MockEnabled(t *testing.T) {
 }
 
 func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
-	slot := uint64(64)
+	slot := types.Slot(64)
 	earliestValidTime, latestValidTime := majorityVoteBoundaryTime(slot)
 
 	dc := dbpb.DepositContainer{
@@ -2084,10 +2085,9 @@ func TestProposer_DeleteAttsInPool_Aggregated(t *testing.T) {
 	assert.Equal(t, 0, len(atts), "Did not delete unaggregated attestation")
 }
 
-func majorityVoteBoundaryTime(slot uint64) (uint64, uint64) {
-	slotStartTime := uint64(mockPOW.GenesisTime) +
-		(slot-(slot%(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod)*params.BeaconConfig().SlotsPerEpoch)))*
-			params.BeaconConfig().SecondsPerSlot
+func majorityVoteBoundaryTime(slot types.Slot) (uint64, uint64) {
+	slots := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod))
+	slotStartTime := uint64(mockPOW.GenesisTime) + uint64((slot - (slot % (slots))).Mul(params.BeaconConfig().SecondsPerSlot))
 	earliestValidTime := slotStartTime - 2*params.BeaconConfig().SecondsPerETH1Block*params.BeaconConfig().Eth1FollowDistance
 	latestValidTime := slotStartTime - params.BeaconConfig().SecondsPerETH1Block*params.BeaconConfig().Eth1FollowDistance
 
