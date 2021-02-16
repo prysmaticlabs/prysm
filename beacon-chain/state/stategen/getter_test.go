@@ -508,11 +508,10 @@ func TestState_HasStateInCache(t *testing.T) {
 
 func TestState_StateByStateRoot(t *testing.T) {
 	ctx := context.Background()
-	rootsLen := params.MainnetConfig().SlotsPerHistoricalRoot
 
-	// We fill state roots with hex representations of natural numbers starting with 1.
+	// We fill state and block roots with hex representations of natural numbers starting with 1.
 	// Example: 16 becomes 0x00...0f
-	fillStateRoots := func(state *pb.BeaconState) {
+	fillRoots := func(state *pb.BeaconState) {
 		rootsLen := params.MainnetConfig().SlotsPerHistoricalRoot
 		roots := make([][]byte, rootsLen)
 		for i := types.Slot(0); i < rootsLen; i++ {
@@ -526,54 +525,26 @@ func TestState_StateByStateRoot(t *testing.T) {
 			roots[j] = h
 		}
 		state.StateRoots = roots
+		state.BlockRoots = roots
 	}
-	headState, err := testutil.NewBeaconState(fillStateRoots)
+
+	headState, err := testutil.NewBeaconState(fillRoots)
 	require.NoError(t, err)
 
-	t.Run("Slot smaller than SLOTS_PER_HISTORICAL_ROOT", func(t *testing.T) {
+	t.Run("Ok", func(t *testing.T) {
 		beaconDB := testDB.SetupDB(t)
 		service := New(beaconDB)
 		slot := types.Slot(5)
 
-		err = headState.SetSlot(slot)
-		require.NoError(t, err)
-		genesisStateRoot, err := headState.HashTreeRoot(ctx)
-		require.NoError(t, err)
-		genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
-		assert.NoError(t, beaconDB.SaveBlock(ctx, genesis))
-		gRoot, err := genesis.Block.HashTreeRoot()
-		require.NoError(t, err)
-		assert.NoError(t, beaconDB.SaveState(ctx, headState, gRoot))
-		assert.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
-
 		s := fmt.Sprintf("%064s", hexutil.EncodeUint64(uint64(slot))[2:])
 		h, err := hexutil.Decode("0x" + s)
 		require.NoError(t, err, "Failed to decode root "+s)
-		rootState, err := service.StateByStateRoot(ctx, bytesutil.ToBytes32(h), headState)
+		state, err := testutil.NewBeaconState(func(state *pb.BeaconState) {
+			state.Slot = slot
+		})
 		require.NoError(t, err)
-		assert.Equal(t, slot, rootState.Slot())
-	})
+		service.hotStateCache.put(bytesutil.ToBytes32(h), state)
 
-	t.Run("Slot bigger than SLOTS_PER_HISTORICAL_ROOT", func(t *testing.T) {
-		beaconDB := testDB.SetupDB(t)
-		service := New(beaconDB)
-		slot := rootsLen + 1
-
-		err = headState.SetSlot(slot)
-		require.NoError(t, err)
-		genesisStateRoot, err := headState.HashTreeRoot(ctx)
-		require.NoError(t, err)
-		genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
-		assert.NoError(t, beaconDB.SaveBlock(ctx, genesis))
-		gRoot, err := genesis.Block.HashTreeRoot()
-		require.NoError(t, err)
-		assert.NoError(t, beaconDB.SaveState(ctx, headState, gRoot))
-		assert.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
-
-		// We expect the root to be 0x00..01
-		s := fmt.Sprintf("%064s", hexutil.EncodeUint64(1)[2:])
-		h, err := hexutil.Decode("0x" + s)
-		require.NoError(t, err, "Failed to decode root "+s)
 		rootState, err := service.StateByStateRoot(ctx, bytesutil.ToBytes32(h), headState)
 		require.NoError(t, err)
 		assert.Equal(t, slot, rootState.Slot())
@@ -583,19 +554,10 @@ func TestState_StateByStateRoot(t *testing.T) {
 		beaconDB := testDB.SetupDB(t)
 		service := New(beaconDB)
 
-		require.NoError(t, err)
-		genesisStateRoot, err := headState.HashTreeRoot(ctx)
-		require.NoError(t, err)
-		genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
-		assert.NoError(t, beaconDB.SaveBlock(ctx, genesis))
-		gRoot, err := genesis.Block.HashTreeRoot()
-		require.NoError(t, err)
-		assert.NoError(t, beaconDB.SaveState(ctx, headState, gRoot))
-		assert.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
-
 		s := fmt.Sprintf("%064s", hexutil.Encode([]byte("foo"))[2:])
 		h, err := hexutil.Decode("0x" + s)
 		require.NoError(t, err, "Failed to decode root "+s)
+
 		_, err = service.StateByStateRoot(ctx, bytesutil.ToBytes32(h), headState)
 		assert.ErrorContains(t, "could not find state in the last 8192 state roots in head state", err)
 	})

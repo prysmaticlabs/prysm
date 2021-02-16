@@ -125,8 +125,8 @@ func (s *State) StateByStateRoot(
 
 	for i, root := range headState.StateRoots() {
 		if bytes.Equal(root, stateRoot[:]) {
-			slot := ((headState.Slot() / params.BeaconConfig().SlotsPerHistoricalRoot) * params.BeaconConfig().SlotsPerHistoricalRoot).Add(uint64(i))
-			return s.StateBySlot(ctx, slot)
+			blockRoot := headState.BlockRoots()[i]
+			return s.StateByRoot(ctx, bytesutil.ToBytes32(blockRoot))
 		}
 	}
 	return nil, fmt.Errorf(errStateByStateRootNotFound, params.BeaconConfig().SlotsPerHistoricalRoot)
