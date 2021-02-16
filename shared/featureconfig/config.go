@@ -193,7 +193,7 @@ func ConfigureSlasher(ctx *cli.Context) {
 	configureTestnet(ctx, cfg)
 
 	if ctx.Bool(disableLookbackFlag.Name) {
-		log.Warn("Disabling slasher lookback")
+		log.WithField(disableLookbackFlag.Name, disableLookbackFlag.Usage).Warn("Enabled feature flag")
 		cfg.DisableLookback = true
 	}
 	Init(cfg)
@@ -206,25 +206,24 @@ func ConfigureValidator(ctx *cli.Context) {
 	cfg := &Flags{}
 	configureTestnet(ctx, cfg)
 	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
-		log.Warn("Enabled validator attestation and block slashing protection using an external slasher.")
+		log.WithField(enableExternalSlasherProtectionFlag.Name, enableExternalSlasherProtectionFlag.Usage).Warn("Enabled feature flag")
 		cfg.SlasherProtection = true
 	}
 	if ctx.Bool(writeWalletPasswordOnWebOnboarding.Name) {
-		log.Warn("Enabled full web mode, wallet password will be written to disk at the wallet directory " +
-			"upon completing web onboarding.")
+		log.WithField(writeWalletPasswordOnWebOnboarding.Name, writeWalletPasswordOnWebOnboarding.Usage).Warn("Enabled feature flag")
 		cfg.WriteWalletPasswordOnWebOnboarding = true
 	}
 	if ctx.Bool(disableAttestingHistoryDBCache.Name) {
-		log.Warn("Disabled attesting history DB cache, likely increasing disk reads and writes significantly")
+		log.WithField(disableAttestingHistoryDBCache.Name, disableAttestingHistoryDBCache.Usage).Warn("Enabled feature flag")
 		cfg.DisableAttestingHistoryDBCache = true
 	}
 	cfg.EnableBlst = true
 	if ctx.Bool(disableBlst.Name) {
-		log.Warn("Disabling new BLS library blst")
+		log.WithField(disableBlst.Name, disableBlst.Usage).Warn("Enabled feature flag")
 		cfg.EnableBlst = false
 	}
 	if ctx.Bool(attestTimely.Name) {
-		log.Warn("Enabled attest timely fix for #8185")
+		log.WithField(attestTimely.Name, attestTimely.Usage).Warn("Enabled feature flag")
 		cfg.AttestTimely = true
 	}
 	cfg.KeystoreImportDebounceInterval = ctx.Duration(dynamicKeyReloadDebounceInterval.Name)
