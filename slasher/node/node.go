@@ -68,7 +68,7 @@ func New(cliCtx *cli.Context) (*SlasherNode, error) {
 	if cliCtx.Bool(flags.EnableHistoricalDetectionFlag.Name) {
 		// Set the max RPC size to 4096 as configured by --historical-slasher-node for optimal historical detection.
 		cmdConfig := cmd.Get()
-		cmdConfig.MaxRPCPageSize = int(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().MaxAttestations)
+		cmdConfig.MaxRPCPageSize = int(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().MaxAttestations))
 		cmd.Init(cmdConfig)
 	}
 

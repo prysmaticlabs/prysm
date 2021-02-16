@@ -2,6 +2,8 @@ package sliceutil
 
 import (
 	"strings"
+
+	"github.com/prysmaticlabs/eth2-types"
 )
 
 // SubsetUint64 returns true if the first array is
@@ -301,4 +303,63 @@ func SplitCommaSeparated(arr []string) []string {
 //     return (list_size * index) // chunks
 func SplitOffset(listSize, chunks, index uint64) uint64 {
 	return (listSize * index) / chunks
+}
+
+// IntersectionSlot of any number of types.Slot slices with time
+// complexity of approximately O(n) leveraging a map to
+// check for element existence off by a constant factor
+// of underlying map efficiency.
+func IntersectionSlot(s ...[]types.Slot) []types.Slot {
+	if len(s) == 0 {
+		return []types.Slot{}
+	}
+	if len(s) == 1 {
+		return s[0]
+	}
+	intersect := make([]types.Slot, 0)
+	m := make(map[types.Slot]int)
+	for _, k := range s[0] {
+		m[k] = 1
+	}
+	for i, num := 1, len(s); i < num; i++ {
+		for _, k := range s[i] {
+			// Increment and check only if item is present in both, and no increment has happened yet.
+			if _, found := m[k]; found && i == m[k] {
+				m[k]++
+				if m[k] == num {
+					intersect = append(intersect, k)
+				}
+			}
+		}
+	}
+	return intersect
+}
+
+// NotSlot returns the types.Slot in slice b that are
+// not in slice a with time complexity of approximately
+// O(n) leveraging a map to check for element existence
+// off by a constant factor of underlying map efficiency.
+func NotSlot(a, b []types.Slot) []types.Slot {
+	set := make([]types.Slot, 0)
+	m := make(map[types.Slot]bool)
+
+	for i := 0; i < len(a); i++ {
+		m[a[i]] = true
+	}
+	for i := 0; i < len(b); i++ {
+		if _, found := m[b[i]]; !found {
+			set = append(set, b[i])
+		}
+	}
+	return set
+}
+
+// IsInSlots returns true if a is in b and False otherwise.
+func IsInSlots(a types.Slot, b []types.Slot) bool {
+	for _, v := range b {
+		if a == v {
+			return true
+		}
+	}
+	return false
 }

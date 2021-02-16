@@ -340,7 +340,7 @@ func validatorsVoteWithTheMajority(conns ...*grpc.ClientConn) error {
 
 	for _, blk := range blks.BlockContainers {
 		slot, vote := blk.Block.Block.Slot, blk.Block.Block.Body.Eth1Data.BlockHash
-		slotsPerVotingPeriod := uint64(params.E2ETestConfig().EpochsPerEth1VotingPeriod.Mul(params.E2ETestConfig().SlotsPerEpoch))
+		slotsPerVotingPeriod := params.E2ETestConfig().SlotsPerEpoch.Mul(uint64(params.E2ETestConfig().EpochsPerEth1VotingPeriod))
 
 		// We treat epoch 1 differently from other epoch for two reasons:
 		// - this evaluator is not executed for epoch 0 so we have to calculate the first slot differently

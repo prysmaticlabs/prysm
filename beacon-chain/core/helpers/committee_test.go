@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -151,11 +151,11 @@ func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 
 	tests := []struct {
 		index          uint64
-		slot           uint64
+		slot           types.Slot
 		committee      []uint64
 		committeeIndex uint64
 		isProposer     bool
-		proposerSlot   uint64
+		proposerSlot   types.Slot
 	}{
 		{
 			index:          0,
@@ -254,13 +254,13 @@ func TestCommitteeAssignments_EverySlotHasMin1Proposer(t *testing.T) {
 	_, proposerIndexToSlots, err := CommitteeAssignments(state, epoch)
 	require.NoError(t, err, "Failed to determine CommitteeAssignments")
 
-	slotsWithProposers := make(map[uint64]bool)
+	slotsWithProposers := make(map[types.Slot]bool)
 	for _, proposerSlots := range proposerIndexToSlots {
 		for _, slot := range proposerSlots {
 			slotsWithProposers[slot] = true
 		}
 	}
-	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch, uint64(len(slotsWithProposers)), "Unexpected slots")
+	assert.Equal(t, uint64(params.BeaconConfig().SlotsPerEpoch), uint64(len(slotsWithProposers)), "Unexpected slots")
 	startSlot, err := StartSlot(epoch)
 	require.NoError(t, err)
 	endSlot, err := StartSlot(epoch + 1)
@@ -288,7 +288,7 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 
 	tests := []struct {
 		attestation         *ethpb.Attestation
-		stateSlot           uint64
+		stateSlot           types.Slot
 		verificationFailure bool
 	}{
 		{
@@ -423,7 +423,7 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(t, err)
 
-	indices, err = committeeCache.Committee(uint64(epoch.Mul(params.BeaconConfig().SlotsPerEpoch)), seed, idx)
+	indices, err = committeeCache.Committee(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch)), seed, idx)
 	require.NoError(t, err)
 	assert.Equal(t, params.BeaconConfig().TargetCommitteeSize, uint64(len(indices)), "Did not save correct indices lengths")
 }
@@ -603,7 +603,7 @@ func BenchmarkComputeCommittee4000000_WithOutCache(b *testing.B) {
 
 func TestBeaconCommitteeFromState_UpdateCacheForPreviousEpoch(t *testing.T) {
 	committeeSize := uint64(16)
-	validators := make([]*ethpb.Validator, committeeSize*params.BeaconConfig().SlotsPerEpoch)
+	validators := make([]*ethpb.Validator, params.BeaconConfig().SlotsPerEpoch.Mul(committeeSize))
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -650,7 +650,7 @@ func TestPrecomputeProposerIndices_Ok(t *testing.T) {
 	var wantedProposerIndices []uint64
 	seed, err := Seed(state, 0, params.BeaconConfig().DomainBeaconProposer)
 	require.NoError(t, err)
-	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
+	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerEpoch); i++ {
 		seedWithSlot := append(seed[:], bytesutil.Bytes8(i)...)
 		seedWithSlotHash := hashutil.Hash(seedWithSlot)
 		index, err := ComputeProposerIndex(state, indices, seedWithSlotHash)

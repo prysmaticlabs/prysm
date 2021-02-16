@@ -41,9 +41,7 @@ type Flags struct {
 	SkipBLSVerify                      bool // Skips BLS verification across the runtime.
 	EnableBlst                         bool // Enables new BLS library from supranational.
 	SlasherProtection                  bool // SlasherProtection protects validator fron sending over a slashable offense over the network using external slasher.
-	EnableEth1DataMajorityVote         bool // EnableEth1DataMajorityVote uses the Voting With The Majority algorithm to vote for eth1data.
 	EnablePeerScorer                   bool // EnablePeerScorer enables experimental peer scoring in p2p.
-	EnablePruningDepositProofs         bool // EnablePruningDepositProofs enables pruning deposit proofs which significantly reduces the size of a deposit
 	EnableLargerGossipHistory          bool // EnableLargerGossipHistory increases the gossip history we store in our caches.
 	WriteWalletPasswordOnWebOnboarding bool // WriteWalletPasswordOnWebOnboarding writes the password to disk after Prysm web signup.
 	DisableAttestingHistoryDBCache     bool // DisableAttestingHistoryDBCache for the validator client increases disk reads/writes.
@@ -58,7 +56,6 @@ type Flags struct {
 
 	// Cache toggles.
 	EnableSSZCache           bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
-	EnableEth1DataVoteCache  bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
 	EnableNextSlotStateCache bool // EnableNextSlotStateCache enables next slot state cache to improve validator performance.
 
 	// Bug fixes related flags.
@@ -148,7 +145,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.WithField(kafkaBootstrapServersFlag.Name, kafkaBootstrapServersFlag.Usage).Warn("Enabled feature flag")
 		cfg.KafkaBootstrapServers = ctx.String(kafkaBootstrapServersFlag.Name)
 	}
-
 	if ctx.IsSet(disableGRPCConnectionLogging.Name) {
 		log.WithField(disableGRPCConnectionLogging.Name, disableGRPCConnectionLogging.Usage).Warn("Enabled feature flag")
 		cfg.DisableGRPCConnectionLogs = true
@@ -157,12 +153,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(forceOptMaxCoverAggregationStategy.Name) {
 		log.WithField(forceOptMaxCoverAggregationStategy.Name, forceOptMaxCoverAggregationStategy.Usage).Warn("Enabled feature flag")
 		cfg.AttestationAggregationStrategy = "opt_max_cover"
-	}
-
-	cfg.EnableEth1DataMajorityVote = true
-	if ctx.Bool(disableEth1DataMajorityVote.Name) {
-		log.WithField(disableEth1DataMajorityVote.Name, disableEth1DataMajorityVote.Usage).Warn("Enabled feature flag")
-		cfg.EnableEth1DataMajorityVote = false
 	}
 	if ctx.Bool(enablePeerScorer.Name) {
 		log.WithField(enablePeerScorer.Name, enablePeerScorer.Usage).Warn("Enabled feature flag")
@@ -175,11 +165,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(disableBlst.Name) {
 		log.WithField(disableBlst.Name, disableBlst.Usage).Warn("Enabled feature flag")
 		cfg.EnableBlst = false
-	}
-	cfg.EnablePruningDepositProofs = true
-	if ctx.Bool(disablePruningDepositProofs.Name) {
-		log.WithField(disablePruningDepositProofs.Name, disablePruningDepositProofs.Usage).Warn("Enabled feature flag")
-		cfg.EnablePruningDepositProofs = false
 	}
 	if ctx.Bool(enableLargerGossipHistory.Name) {
 		log.WithField(enableLargerGossipHistory.Name, enableLargerGossipHistory.Usage).Warn("Enabled feature flag")

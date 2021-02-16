@@ -34,13 +34,22 @@ func Uint64FromString(str string) (uint64, error) {
 	return strconv.ParseUint(str, 10, 64)
 }
 
-// Uint64FromString converts a string into a uint64 representation.
+// Uint64FromString converts a string into Epoch.
 func EpochFromString(str string) (types.Epoch, error) {
 	e, err := strconv.ParseUint(str, 10, 64)
 	if err != nil {
-		return 0, err
+		return types.Epoch(e), err
 	}
 	return types.Epoch(e), nil
+}
+
+// SlotFromString converts a string into Slot.
+func SlotFromString(str string) (types.Slot, error) {
+	s, err := strconv.ParseUint(str, 10, 64)
+	if err != nil {
+		return types.Slot(s), err
+	}
+	return types.Slot(s), nil
 }
 
 // PubKeyFromHex takes in a hex string, verifies its length as 48 bytes, and converts that representation.

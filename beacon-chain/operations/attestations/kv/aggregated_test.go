@@ -6,6 +6,7 @@ import (
 
 	fssz "github.com/ferranbt/fastssz"
 	c "github.com/patrickmn/go-cache"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -38,7 +39,7 @@ func TestKV_Aggregated_AggregateUnaggregatedAttestations(t *testing.T) {
 
 func TestKV_Aggregated_AggregateUnaggregatedAttestationsBySlotIndex(t *testing.T) {
 	cache := NewAttCaches()
-	genData := func(slot, committeeIndex uint64) *ethpb.AttestationData {
+	genData := func(slot types.Slot, committeeIndex uint64) *ethpb.AttestationData {
 		return testutil.HydrateAttestationData(&ethpb.AttestationData{
 			Slot:           slot,
 			CommitteeIndex: committeeIndex,

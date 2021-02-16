@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -37,17 +37,17 @@ import (
 
 type testCache struct {
 	sync.RWMutex
-	rootCache       map[uint64][32]byte
-	parentSlotCache map[uint64]uint64
+	rootCache       map[types.Slot][32]byte
+	parentSlotCache map[types.Slot]types.Slot
 }
 
 var cache = &testCache{}
 
 type peerData struct {
-	blocks         []uint64 // slots that peer has blocks
+	blocks         []types.Slot // slots that peer has blocks
 	finalizedEpoch types.Epoch
-	headSlot       uint64
-	failureSlots   []uint64 // slots at which the peer will return an error
+	headSlot       types.Slot
+	failureSlots   []types.Slot // slots at which the peer will return an error
 	forkedPeer     bool
 }
 
@@ -72,8 +72,8 @@ func TestMain(m *testing.M) {
 	m.Run()
 }
 
-func initializeTestServices(t *testing.T, blocks []uint64, peers []*peerData) (*mock.ChainService, *p2pt.TestP2P, db.Database) {
-	cache.initializeRootCache(blocks, t)
+func initializeTestServices(t *testing.T, slots []types.Slot, peers []*peerData) (*mock.ChainService, *p2pt.TestP2P, db.Database) {
+	cache.initializeRootCache(slots, t)
 	beaconDB := dbtest.SetupDB(t)
 
 	p := p2pt.NewTestP2P(t)
@@ -99,36 +99,36 @@ func initializeTestServices(t *testing.T, blocks []uint64, peers []*peerData) (*
 }
 
 // makeGenesisTime where now is the current slot.
-func makeGenesisTime(currentSlot uint64) time.Time {
+func makeGenesisTime(currentSlot types.Slot) time.Time {
 	return timeutils.Now().Add(-1 * time.Second * time.Duration(currentSlot) * time.Duration(params.BeaconConfig().SecondsPerSlot))
 }
 
 // sanity test on helper function
 func TestMakeGenesisTime(t *testing.T) {
-	currentSlot := uint64(64)
+	currentSlot := types.Slot(64)
 	gt := makeGenesisTime(currentSlot)
 	require.Equal(t, currentSlot, helpers.SlotsSince(gt))
 }
 
 // helper function for sequences of block slots
-func makeSequence(start, end uint64) []uint64 {
+func makeSequence(start, end types.Slot) []types.Slot {
 	if end < start {
 		panic("cannot make sequence where end is before start")
 	}
-	seq := make([]uint64, 0, end-start+1)
+	seq := make([]types.Slot, 0, end-start+1)
 	for i := start; i <= end; i++ {
 		seq = append(seq, i)
 	}
 	return seq
 }
 
-func (c *testCache) initializeRootCache(reqSlots []uint64, t *testing.T) {
+func (c *testCache) initializeRootCache(reqSlots []types.Slot, t *testing.T) {
 	c.Lock()
 	defer c.Unlock()
 
-	c.rootCache = make(map[uint64][32]byte)
-	c.parentSlotCache = make(map[uint64]uint64)
-	parentSlot := uint64(0)
+	c.rootCache = make(map[types.Slot][32]byte)
+	c.parentSlotCache = make(map[types.Slot]types.Slot)
+	parentSlot := types.Slot(0)
 
 	genesisBlock := testutil.NewBeaconBlock().Block
 	genesisRoot, err := genesisBlock.HashTreeRoot()
@@ -150,7 +150,7 @@ func (c *testCache) initializeRootCache(reqSlots []uint64, t *testing.T) {
 // sanity test on helper function
 func TestMakeSequence(t *testing.T) {
 	got := makeSequence(3, 5)
-	want := []uint64{3, 4, 5}
+	want := []types.Slot{3, 4, 5}
 	require.DeepEqual(t, want, got)
 }
 
@@ -174,10 +174,10 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 		req := &p2ppb.BeaconBlocksByRangeRequest{}
 		assert.NoError(t, p.Encoding().DecodeWithMaxLength(stream, req))
 
-		requestedBlocks := makeSequence(req.StartSlot, req.StartSlot+((req.Count-1)*req.Step))
+		requestedBlocks := makeSequence(req.StartSlot, req.StartSlot.Add((req.Count-1)*req.Step))
 
 		// Expected failure range
-		if len(sliceutil.IntersectionUint64(datum.failureSlots, requestedBlocks)) > 0 {
+		if len(sliceutil.IntersectionSlot(datum.failureSlots, requestedBlocks)) > 0 {
 			_, err := stream.Write([]byte{0x01})
 			assert.NoError(t, err)
 			msg := p2pTypes.ErrorMessage("bad")
@@ -187,11 +187,11 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 		}
 
 		// Determine the correct subset of blocks to return as dictated by the test scenario.
-		blocks := sliceutil.IntersectionUint64(datum.blocks, requestedBlocks)
+		slots := sliceutil.IntersectionSlot(datum.blocks, requestedBlocks)
 
 		ret := make([]*eth.SignedBeaconBlock, 0)
-		for _, slot := range blocks {
-			if (slot-req.StartSlot)%req.Step != 0 {
+		for _, slot := range slots {
+			if (slot - req.StartSlot).Mod(req.Step) != 0 {
 				continue
 			}
 			cache.RLock()
@@ -253,7 +253,7 @@ func extendBlockSequence(t *testing.T, inSeq []*eth.SignedBeaconBlock, size int)
 	// Extend block chain sequentially.
 	for slot := startSlot; slot < len(outSeq); slot++ {
 		outSeq[slot] = testutil.NewBeaconBlock()
-		outSeq[slot].Block.Slot = uint64(slot)
+		outSeq[slot].Block.Slot = types.Slot(slot)
 		parentRoot, err := outSeq[slot-1].Block.HashTreeRoot()
 		require.NoError(t, err)
 		outSeq[slot].Block.ParentRoot = parentRoot[:]
@@ -267,7 +267,7 @@ func extendBlockSequence(t *testing.T, inSeq []*eth.SignedBeaconBlock, size int)
 
 // connectPeerHavingBlocks connect host with a peer having provided blocks.
 func connectPeerHavingBlocks(
-	t *testing.T, host *p2pt.TestP2P, blocks []*eth.SignedBeaconBlock, finalizedSlot uint64,
+	t *testing.T, host *p2pt.TestP2P, blocks []*eth.SignedBeaconBlock, finalizedSlot types.Slot,
 	peerStatus *peers.Status,
 ) peer.ID {
 	p := p2pt.NewTestP2P(t)
@@ -281,8 +281,8 @@ func connectPeerHavingBlocks(
 		req := &p2ppb.BeaconBlocksByRangeRequest{}
 		assert.NoError(t, p.Encoding().DecodeWithMaxLength(stream, req))
 
-		for i := req.StartSlot; i < req.StartSlot+req.Count*req.Step; i += req.Step {
-			if i >= uint64(len(blocks)) {
+		for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += types.Slot(req.Step) {
+			if uint64(i) >= uint64(len(blocks)) {
 				break
 			}
 			require.NoError(t, beaconsync.WriteChunk(stream, p.Encoding(), blocks[i]))

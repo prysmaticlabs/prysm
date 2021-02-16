@@ -9,11 +9,15 @@ go_library(
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/sliceutil",
     visibility = ["//visibility:public"],
+    deps = ["@com_github_prysmaticlabs_eth2_types//:go_default_library"],
 )
 
 go_test(
     name = "go_default_test",
     size = "small",
     srcs = ["slice_test.go"],
-    deps = [":go_default_library"],
+    deps = [
+        ":go_default_library",
+        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
+    ],
 )

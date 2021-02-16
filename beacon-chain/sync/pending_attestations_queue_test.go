@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p-core/network"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -256,7 +257,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	root, err := sb.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	aggBits := bitfield.NewBitlist(validators / params.BeaconConfig().SlotsPerEpoch)
+	aggBits := bitfield.NewBitlist(validators / uint64(params.BeaconConfig().SlotsPerEpoch))
 	aggBits.SetBitAt(0, true)
 	aggBits.SetBitAt(1, true)
 	att := &ethpb.Attestation{
@@ -344,22 +345,22 @@ func TestValidatePendingAtts_CanPruneOldAtts(t *testing.T) {
 	r2 := [32]byte{'B'}
 	r3 := [32]byte{'C'}
 
-	for i := 0; i < 100; i++ {
+	for i := types.Slot(0); i < 100; i++ {
 		s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
 			Message: &ethpb.AggregateAttestationAndProof{
 				AggregatorIndex: uint64(i),
 				Aggregate: &ethpb.Attestation{
-					Data: &ethpb.AttestationData{Slot: uint64(i), BeaconBlockRoot: r1[:]}}}})
+					Data: &ethpb.AttestationData{Slot: i, BeaconBlockRoot: r1[:]}}}})
 		s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
 			Message: &ethpb.AggregateAttestationAndProof{
 				AggregatorIndex: uint64(i*2 + i),
 				Aggregate: &ethpb.Attestation{
-					Data: &ethpb.AttestationData{Slot: uint64(i), BeaconBlockRoot: r2[:]}}}})
+					Data: &ethpb.AttestationData{Slot: i, BeaconBlockRoot: r2[:]}}}})
 		s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
 			Message: &ethpb.AggregateAttestationAndProof{
 				AggregatorIndex: uint64(i*3 + i),
 				Aggregate: &ethpb.Attestation{
-					Data: &ethpb.AttestationData{Slot: uint64(i), BeaconBlockRoot: r3[:]}}}})
+					Data: &ethpb.AttestationData{Slot: i, BeaconBlockRoot: r3[:]}}}})
 	}
 
 	assert.Equal(t, 100, len(s.blkRootToPendingAtts[r1]), "Did not save pending atts")
@@ -393,17 +394,17 @@ func TestValidatePendingAtts_NoDuplicatingAggregatorIndex(t *testing.T) {
 		Message: &ethpb.AggregateAttestationAndProof{
 			AggregatorIndex: 1,
 			Aggregate: &ethpb.Attestation{
-				Data: &ethpb.AttestationData{Slot: uint64(1), BeaconBlockRoot: r1[:]}}}})
+				Data: &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: r1[:]}}}})
 	s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
 		Message: &ethpb.AggregateAttestationAndProof{
 			AggregatorIndex: 2,
 			Aggregate: &ethpb.Attestation{
-				Data: &ethpb.AttestationData{Slot: uint64(2), BeaconBlockRoot: r2[:]}}}})
+				Data: &ethpb.AttestationData{Slot: 2, BeaconBlockRoot: r2[:]}}}})
 	s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
 		Message: &ethpb.AggregateAttestationAndProof{
 			AggregatorIndex: 2,
 			Aggregate: &ethpb.Attestation{
-				Data: &ethpb.AttestationData{Slot: uint64(3), BeaconBlockRoot: r2[:]}}}})
+				Data: &ethpb.AttestationData{Slot: 3, BeaconBlockRoot: r2[:]}}}})
 
 	assert.Equal(t, 1, len(s.blkRootToPendingAtts[r1]), "Did not save pending atts")
 	assert.Equal(t, 1, len(s.blkRootToPendingAtts[r2]), "Did not save pending atts")

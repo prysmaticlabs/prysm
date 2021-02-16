@@ -10,19 +10,19 @@ import (
 
 // SlotStartTime returns the start time in terms of its unix epoch
 // value.
-func SlotStartTime(genesis, slot uint64) time.Time {
-	duration := time.Second * time.Duration(slot*params.BeaconConfig().SecondsPerSlot)
+func SlotStartTime(genesis uint64, slot types.Slot) time.Time {
+	duration := time.Second * time.Duration(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 	startTime := time.Unix(int64(genesis), 0).Add(duration)
 	return startTime
 }
 
 // SlotsSinceGenesis returns the number of slots since
 // the provided genesis time.
-func SlotsSinceGenesis(genesis time.Time) uint64 {
+func SlotsSinceGenesis(genesis time.Time) types.Slot {
 	if genesis.After(timeutils.Now()) { // Genesis has not occurred yet.
 		return 0
 	}
-	return uint64(timeutils.Since(genesis).Seconds()) / params.BeaconConfig().SecondsPerSlot
+	return types.Slot(uint64(timeutils.Since(genesis).Seconds()) / params.BeaconConfig().SecondsPerSlot)
 }
 
 // EpochsSinceGenesis returns the number of slots since

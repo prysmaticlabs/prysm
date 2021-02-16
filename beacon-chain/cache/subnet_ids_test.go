@@ -3,13 +3,14 @@ package cache
 import (
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestSubnetIDsCache_RoundTrip(t *testing.T) {
 	c := newSubnetIDs()
-	slot := uint64(100)
+	slot := types.Slot(100)
 	committeeIDs := c.GetAggregatorSubnetIDs(slot)
 	assert.Equal(t, 0, len(committeeIDs), "Empty cache returned an object")
 

@@ -166,7 +166,7 @@ func TestGetStateRoot(t *testing.T) {
 		// We fill state roots with hex representations of natural numbers starting with 1.
 		// Example: 16 becomes 0x00...0f
 		fillStateRoots := func(state *pb.BeaconState) {
-			rootsLen := params.MainnetConfig().SlotsPerHistoricalRoot
+			rootsLen := uint64(params.MainnetConfig().SlotsPerHistoricalRoot)
 			roots := make([][]byte, rootsLen)
 			for i := uint64(0); i < rootsLen; i++ {
 				roots[i] = make([]byte, 32)

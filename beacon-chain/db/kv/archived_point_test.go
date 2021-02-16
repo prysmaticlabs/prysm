@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -12,7 +13,7 @@ import (
 func TestArchivedPointIndexRoot_CanSaveRetrieve(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
-	i1 := uint64(100)
+	i1 := types.Slot(100)
 	r1 := [32]byte{'A'}
 
 	received := db.ArchivedPointRoot(ctx, i1)
@@ -30,7 +31,7 @@ func TestLastArchivedPoint_CanRetrieve(t *testing.T) {
 	ctx := context.Background()
 	i, err := db.LastArchivedSlot(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(0), i, "Did not get correct index")
+	assert.Equal(t, types.Slot(0), i, "Did not get correct index")
 
 	st, err := testutil.NewBeaconState()
 	require.NoError(t, err)
@@ -46,5 +47,5 @@ func TestLastArchivedPoint_CanRetrieve(t *testing.T) {
 
 	i, err = db.LastArchivedSlot(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(3), i, "Did not get correct index")
+	assert.Equal(t, types.Slot(3), i, "Did not get correct index")
 }
