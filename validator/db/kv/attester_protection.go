@@ -247,56 +247,7 @@ func (s *Store) CheckSlashableAttestation(
 				}
 			}
 		}
-
 		return nil
-		//return sourceEpochsBucket.ForEach(func(sourceEpochBytes []byte, targetEpochsBytes []byte) error {
-		//	if ctx.Err() != nil {
-		//		return ctx.Err()
-		//	}
-		//
-		//	existingSourceEpoch := bytesutil.BytesToEpochBigEndian(sourceEpochBytes)
-		//
-		//	// There can be multiple target epochs attested per source epoch.
-		//	attestedTargetEpochs := make([]types.Epoch, 0, len(targetEpochsBytes)/8)
-		//	for i := 0; i < len(targetEpochsBytes); i += 8 {
-		//		targetEpoch := bytesutil.BytesToEpochBigEndian(targetEpochsBytes[i : i+8])
-		//		attestedTargetEpochs = append(attestedTargetEpochs, targetEpoch)
-		//	}
-		//
-		//	for _, existingTargetEpoch := range attestedTargetEpochs {
-		//		existingAtt := &ethpb.IndexedAttestation{
-		//			Data: &ethpb.AttestationData{
-		//				Source: &ethpb.Checkpoint{Epoch: existingSourceEpoch},
-		//				Target: &ethpb.Checkpoint{Epoch: existingTargetEpoch},
-		//			},
-		//		}
-		//		// Checks if the incoming attestation is surrounding or
-		//		// is surrounded by an existing one.
-		//		surrounding := slashutil.IsSurround(att, existingAtt)
-		//		surrounded := slashutil.IsSurround(existingAtt, att)
-		//		if surrounding {
-		//			slashKind = SurroundingVote
-		//			return fmt.Errorf(
-		//				surroundingVoteMessage,
-		//				att.Data.Source.Epoch,
-		//				att.Data.Target.Epoch,
-		//				existingSourceEpoch,
-		//				existingTargetEpoch,
-		//			)
-		//		}
-		//		if surrounded {
-		//			slashKind = SurroundedVote
-		//			return fmt.Errorf(
-		//				surroundedVoteMessage,
-		//				att.Data.Source.Epoch,
-		//				att.Data.Target.Epoch,
-		//				existingSourceEpoch,
-		//				existingTargetEpoch,
-		//			)
-		//		}
-		//	}
-		//	return nil
-		//})
 	})
 
 	traceutil.AnnotateError(span, err)
