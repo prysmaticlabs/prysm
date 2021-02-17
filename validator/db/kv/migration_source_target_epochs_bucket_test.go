@@ -2,10 +2,10 @@ package kv
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	bolt "go.etcd.io/bbolt"
@@ -112,6 +112,13 @@ func TestStore_migrateSourceTargetEpochsBucketUp(t *testing.T) {
 }
 
 func TestStore_migrateSourceTargetEpochsBucketDown(t *testing.T) {
+	numKeys := 50
+	pubKeys := make([][48]byte, numKeys)
+	for i := 0; i < numKeys; i++ {
+		var pk [48]byte
+		copy(pk[:], fmt.Sprintf("%d", i))
+		pubKeys[i] = pk
+	}
 	tests := []struct {
 		name  string
 		setup func(t *testing.T, validatorDB *Store)
@@ -121,13 +128,13 @@ func TestStore_migrateSourceTargetEpochsBucketDown(t *testing.T) {
 			name: "unsets the migration completed key upon completion",
 			setup: func(t *testing.T, validatorDB *Store) {
 				err := validatorDB.update(func(tx *bolt.Tx) error {
-					return tx.Bucket(migrationsBucket).Put(migrationOptimalAttesterProtectionKey, migrationCompleted)
+					return tx.Bucket(migrationsBucket).Put(migrationSourceTargetEpochsBucketKey, migrationCompleted)
 				})
 				require.NoError(t, err)
 			},
 			eval: func(t *testing.T, validatorDB *Store) {
 				err := validatorDB.view(func(tx *bolt.Tx) error {
-					data := tx.Bucket(migrationsBucket).Get(migrationOptimalAttesterProtectionKey)
+					data := tx.Bucket(migrationsBucket).Get(migrationSourceTargetEpochsBucketKey)
 					require.DeepEqual(t, true, data == nil)
 					return nil
 				})
@@ -140,7 +147,7 @@ func TestStore_migrateSourceTargetEpochsBucketDown(t *testing.T) {
 			eval: func(t *testing.T, validatorDB *Store) {
 				// Ensure the migration is not marked as complete.
 				err := validatorDB.view(func(tx *bolt.Tx) error {
-					data := tx.Bucket(migrationsBucket).Get(migrationOptimalAttesterProtectionKey)
+					data := tx.Bucket(migrationsBucket).Get(migrationSourceTargetEpochsBucketKey)
 					require.DeepNotEqual(t, data, migrationCompleted)
 					return nil
 				})
@@ -148,62 +155,38 @@ func TestStore_migrateSourceTargetEpochsBucketDown(t *testing.T) {
 			},
 		},
 		{
-			name: "populates old format from data using the new schema",
+			name: "deletes the new bucket that was created in the up migration",
 			setup: func(t *testing.T, validatorDB *Store) {
-				pubKeys := [][48]byte{{1}, {2}}
-				// Create attesting history for two public keys
 				err := validatorDB.update(func(tx *bolt.Tx) error {
-					bkt := tx.Bucket(pubKeysBucket)
+					bucket := tx.Bucket(pubKeysBucket)
 					for _, pubKey := range pubKeys {
-						pkBucket, err := bkt.CreateBucketIfNotExists(pubKey[:])
+						pkBucket, err := bucket.CreateBucketIfNotExists(pubKey[:])
 						if err != nil {
 							return err
 						}
-						sourceEpochsBucket, err := pkBucket.CreateBucketIfNotExists(attestationSourceEpochsBucket)
-						if err != nil {
+						if _, err := pkBucket.CreateBucketIfNotExists(attestationSourceEpochsBucket); err != nil {
 							return err
 						}
-						signingRootsBucket, err := pkBucket.CreateBucketIfNotExists(attestationSigningRootsBucket)
-						if err != nil {
+						if _, err := pkBucket.CreateBucketIfNotExists(attestationTargetEpochsBucket); err != nil {
 							return err
-						}
-						// The highest epoch we write is 50.
-						highestEpoch := uint64(50)
-						for i := uint64(1); i <= highestEpoch; i++ {
-							source := bytesutil.Uint64ToBytesBigEndian(i - 1)
-							target := bytesutil.Uint64ToBytesBigEndian(i)
-							if err := sourceEpochsBucket.Put(source, target); err != nil {
-								return err
-							}
-							var signingRoot [32]byte
-							copy(signingRoot[:], fmt.Sprintf("%d", target))
-							if err := signingRootsBucket.Put(target, signingRoot[:]); err != nil {
-								return err
-							}
 						}
 					}
-					// Finally, we mark the migration as completed to show that we have the
-					// new, optimized format for attester protection in the database.
-					migrationBkt := tx.Bucket(migrationsBucket)
-					return migrationBkt.Put(migrationOptimalAttesterProtectionKey, migrationCompleted)
+					return nil
 				})
 				require.NoError(t, err)
 			},
 			eval: func(t *testing.T, validatorDB *Store) {
-				ctx := context.Background()
-				pubKeys := [][48]byte{{1}, {2}}
-				// Next up, we validate that we have indeed rolled back our data
-				// into the old format for attesting history.
 				err := validatorDB.view(func(tx *bolt.Tx) error {
-					bkt := tx.Bucket(deprecatedAttestationHistoryBucket)
+					bucket := tx.Bucket(pubKeysBucket)
 					for _, pubKey := range pubKeys {
-						encodedHistoryBytes := bkt.Get(pubKey[:])
-						require.NotNil(t, encodedHistoryBytes)
-						attestingHistory := deprecatedEncodedAttestingHistory(encodedHistoryBytes)
-						highestEpoch, err := attestingHistory.getLatestEpochWritten(ctx)
-						require.NoError(t, err)
-						// Verify the highest epoch written is 50 from the setup stage.
-						require.Equal(t, types.Epoch(50), highestEpoch)
+						pkBucket := bucket.Bucket(pubKey[:])
+						if pkBucket == nil {
+							return errors.New("expected pubkey bucket to exist")
+						}
+						targetEpochsBucket := pkBucket.Bucket(attestationTargetEpochsBucket)
+						if targetEpochsBucket != nil {
+							return errors.New("expected target epochs bucket to have been deleted")
+						}
 					}
 					return nil
 				})

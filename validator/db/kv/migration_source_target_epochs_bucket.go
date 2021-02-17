@@ -79,8 +79,22 @@ func (s *Store) migrateSourceTargetEpochsBucketUp(ctx context.Context) error {
 
 func (s *Store) migrateSourceTargetEpochsBucketDown(ctx context.Context) error {
 	return s.db.Update(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(pubKeysBucket)
+		err := bkt.ForEach(func(k, _ []byte) error {
+			if k == nil {
+				return nil
+			}
+			pkBucket := bkt.Bucket(k)
+			if pkBucket == nil {
+				return nil
+			}
+			return pkBucket.DeleteBucket(attestationTargetEpochsBucket)
+		})
+		if err != nil {
+			return err
+		}
 		migrationsBkt := tx.Bucket(migrationsBucket)
-		return migrationsBkt.Delete(migrationOptimalAttesterProtectionKey)
+		return migrationsBkt.Delete(migrationSourceTargetEpochsBucketKey)
 	})
 }
 
