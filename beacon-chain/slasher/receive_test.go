@@ -25,7 +25,7 @@ func Test_processQueuedAttestations_DetectsSurroundingVotes(t *testing.T) {
 		params:           DefaultParams(),
 		attestationQueue: make([]*slashertypes.CompactAttestation, 0),
 	}
-	currentEpochChan := make(chan uint64, 0)
+	currentEpochChan := make(chan types.Epoch, 0)
 	exitChan := make(chan struct{})
 	go func() {
 		s.processQueuedAttestations(ctx, currentEpochChan)
@@ -45,7 +45,7 @@ func Test_processQueuedAttestations_DetectsSurroundingVotes(t *testing.T) {
 			SigningRoot:      [32]byte{1},
 		},
 	}
-	currentEpoch := uint64(4)
+	currentEpoch := types.Epoch(4)
 	currentEpochChan <- currentEpoch
 	cancel()
 	<-exitChan
@@ -64,7 +64,7 @@ func Test_processQueuedAttestations_DetectsSurroundedVote(t *testing.T) {
 		params:           DefaultParams(),
 		attestationQueue: make([]*slashertypes.CompactAttestation, 0),
 	}
-	currentEpochChan := make(chan uint64, 0)
+	currentEpochChan := make(chan types.Epoch)
 	exitChan := make(chan struct{})
 	go func() {
 		s.processQueuedAttestations(ctx, currentEpochChan)
@@ -84,7 +84,7 @@ func Test_processQueuedAttestations_DetectsSurroundedVote(t *testing.T) {
 			SigningRoot:      [32]byte{1},
 		},
 	}
-	currentEpoch := uint64(4)
+	currentEpoch := types.Epoch(4)
 	currentEpochChan <- currentEpoch
 	cancel()
 	<-exitChan
@@ -103,7 +103,7 @@ func Test_processQueuedAttestations_NotSlashable(t *testing.T) {
 		params:           DefaultParams(),
 		attestationQueue: make([]*slashertypes.CompactAttestation, 0),
 	}
-	currentEpochChan := make(chan uint64, 0)
+	currentEpochChan := make(chan types.Epoch)
 	exitChan := make(chan struct{})
 	go func() {
 		s.processQueuedAttestations(ctx, currentEpochChan)
@@ -123,7 +123,7 @@ func Test_processQueuedAttestations_NotSlashable(t *testing.T) {
 			SigningRoot:      [32]byte{1},
 		},
 	}
-	currentEpoch := uint64(4)
+	currentEpoch := types.Epoch(4)
 	currentEpochChan <- currentEpoch
 	cancel()
 	<-exitChan
