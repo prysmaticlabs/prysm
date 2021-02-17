@@ -208,7 +208,7 @@ func (s *Store) CheckAndUpdateForSlashableProposals(
 	defer span.End()
 	existingProposals := make([]*slashertypes.CompactBeaconBlock, 0, len(proposals))
 	err := s.db.Update(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(slasherChunksBucket)
+		bkt := tx.Bucket(proposalRecordsBucket)
 		for _, proposal := range proposals {
 			key, err := keyForValidatorProposal(proposal)
 			if err != nil {

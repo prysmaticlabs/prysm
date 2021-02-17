@@ -22,7 +22,7 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 		params:            DefaultParams(),
 		beaconBlocksQueue: make([]*slashertypes.CompactBeaconBlock, 0),
 	}
-	currentEpochChan := make(chan types.Epoch, 0)
+	currentEpochChan := make(chan types.Epoch)
 	exitChan := make(chan struct{})
 	go func() {
 		s.processQueuedBlocks(ctx, currentEpochChan)
@@ -68,7 +68,7 @@ func Test_processQueuedBlocks_NotSlashable(t *testing.T) {
 		params:            DefaultParams(),
 		beaconBlocksQueue: make([]*slashertypes.CompactBeaconBlock, 0),
 	}
-	currentEpochChan := make(chan types.Epoch, 0)
+	currentEpochChan := make(chan types.Epoch)
 	exitChan := make(chan struct{})
 	go func() {
 		s.processQueuedBlocks(ctx, currentEpochChan)
