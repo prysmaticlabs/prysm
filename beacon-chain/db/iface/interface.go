@@ -108,6 +108,9 @@ type NoHeadAccessDatabase interface {
 	SaveSlasherChunks(
 		ctx context.Context, kind slashertypes.ChunkKind, chunkKeys []uint64, chunks [][]uint16,
 	) error
+	CheckAndUpdateForSlashableProposals(
+		ctx context.Context, proposals []*slashertypes.CompactBeaconBlock,
+	) ([]*slashertypes.CompactBeaconBlock, error)
 
 	// Run any required database migrations.
 	RunMigrations(ctx context.Context) error

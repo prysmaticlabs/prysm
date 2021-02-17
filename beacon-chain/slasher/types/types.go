@@ -37,8 +37,9 @@ type Slashing struct {
 	PrevTargetEpoch types.Epoch
 	SourceEpoch     types.Epoch
 	TargetEpoch     types.Epoch
-	SigningRoot     types.Epoch
-	Slot            uint64
+	SigningRoot     [32]byte
+	PrevSigningRoot [32]byte
+	Slot            types.Slot
 }
 
 // SlashingKind is an enum representing the type of slashable
@@ -50,6 +51,7 @@ const (
 	DoubleVote
 	SurroundingVote
 	SurroundedVote
+	DoubleProposal
 )
 
 func (k SlashingKind) String() string {

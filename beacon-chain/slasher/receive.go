@@ -120,6 +120,10 @@ func (s *Service) processQueuedBlocks(ctx context.Context, epochTicker <-chan ty
 				"currentEpoch": currentEpoch,
 				"numBlocks":    len(blocks),
 			}).Info("Epoch reached, processing queued blocks for slashing detection")
+			if err := s.detectSlashableBlocks(ctx, blocks); err != nil {
+				log.WithError(err).Error("Could not detect slashable blocks")
+				continue
+			}
 		case <-ctx.Done():
 			return
 		}

@@ -197,6 +197,54 @@ func (s *Store) SaveSlasherChunks(
 	})
 }
 
+// CheckAndUpdateForSlashableProposals takes in a list of proposals and for each,
+// checks if there already exists a proposal at the same slot+validatorIndex combination. If so,
+// we append that existing proposal to a list. Otherwise, we save the proposal to disk, then append nil
+// to a list. We then return the list to the caller.
+func (s *Store) CheckAndUpdateForSlashableProposals(
+	ctx context.Context, proposals []*slashertypes.CompactBeaconBlock,
+) ([]*slashertypes.CompactBeaconBlock, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.CheckAndUpdateForSlashableProposals")
+	defer span.End()
+	existingProposals := make([]*slashertypes.CompactBeaconBlock, len(proposals))
+	err := s.db.Update(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(slasherChunksBucket)
+		for _, proposal := range proposals {
+			key, err := keyForValidatorProposal(proposal)
+			if err != nil {
+				return err
+			}
+			existingSigningRoot := bkt.Get(key)
+			if existingSigningRoot != nil {
+				var sr [32]byte
+				copy(sr[:], existingSigningRoot)
+				existingProposals = append(existingProposals, &slashertypes.CompactBeaconBlock{
+					ProposerIndex: proposal.ProposerIndex,
+					Slot:          proposal.Slot,
+					SigningRoot:   sr,
+				})
+			} else {
+				if err := bkt.Put(key, proposal.SigningRoot[:]); err != nil {
+					return err
+				}
+				existingProposals = append(existingProposals, nil)
+			}
+		}
+		return nil
+	})
+	return existingProposals, err
+}
+
+// Disk key for a validator proposal, including a slot+validatorIndex as a byte slice.
+func keyForValidatorProposal(proposal *slashertypes.CompactBeaconBlock) ([]byte, error) {
+	encSlot, err := proposal.Slot.MarshalSSZ()
+	if err != nil {
+		return nil, err
+	}
+	encValidatorIdx := ssz.MarshalUint64(make([]byte, 8), proposal.ProposerIndex)
+	return append(encSlot, encValidatorIdx...), nil
+}
+
 // Encode an attestation record's required fields for slashing protection into bytes.
 func encodeAttestationRecord(att *slashertypes.CompactAttestation) ([]byte, error) {
 	if att == nil {
