@@ -119,3 +119,65 @@ func TestStore_SlasherChunk_SaveRetrieve(t *testing.T) {
 		require.DeepEqual(t, chunks[i], retrievedChunks[i])
 	}
 }
+
+func TestStore_CheckAndUpdateForSlashableProposals(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := setupDB(t)
+	proposals := []*slashertypes.CompactBeaconBlock{
+		{
+			ProposerIndex: 1,
+			Slot:          1,
+			SigningRoot:   [32]byte{1},
+		},
+		{
+			ProposerIndex: 1,
+			Slot:          2,
+			SigningRoot:   [32]byte{1},
+		},
+		{
+			ProposerIndex: 1,
+			Slot:          3,
+			SigningRoot:   [32]byte{1},
+		},
+	}
+	// First time writing should return empty existing proposals.
+	existingProposals, err := beaconDB.CheckAndUpdateForSlashableProposals(ctx, proposals)
+	require.NoError(t, err)
+	require.Equal(t, len(proposals), len(existingProposals))
+	for _, existing := range existingProposals {
+		require.Equal(t, true, existing == nil)
+	}
+
+	// Second time writing same proposals but all with different signing root should
+	// return the existing proposals.
+	proposals[0].SigningRoot = [32]byte{2}
+	proposals[1].SigningRoot = [32]byte{2}
+	proposals[2].SigningRoot = [32]byte{2}
+	existingProposals, err = beaconDB.CheckAndUpdateForSlashableProposals(ctx, proposals)
+	require.NoError(t, err)
+	require.Equal(t, len(proposals), len(existingProposals))
+	for i, existing := range existingProposals {
+		require.Equal(t, proposals[i].Slot, existing.Slot)
+		require.Equal(t, proposals[i].ProposerIndex, existing.ProposerIndex)
+		require.DeepNotEqual(t, proposals[i].SigningRoot, existing.SigningRoot)
+	}
+
+	// Second time writing same proposals but with only a single having a
+	// different signing root should return the existing proposals.
+	proposals[0].SigningRoot = [32]byte{1}
+	proposals[1].SigningRoot = [32]byte{2} // Different signing root.
+	proposals[2].SigningRoot = [32]byte{1}
+	existingProposals, err = beaconDB.CheckAndUpdateForSlashableProposals(ctx, proposals)
+	require.NoError(t, err)
+	require.Equal(t, len(proposals), len(existingProposals))
+
+	for i, existing := range existingProposals {
+		require.Equal(t, proposals[i].Slot, existing.Slot)
+		require.Equal(t, proposals[i].ProposerIndex, existing.ProposerIndex)
+		if i == 1 {
+			require.DeepNotEqual(t, proposals[i].SigningRoot, existing.SigningRoot)
+		} else {
+			require.DeepEqual(t, proposals[i].SigningRoot, existing.SigningRoot)
+		}
+	}
+}

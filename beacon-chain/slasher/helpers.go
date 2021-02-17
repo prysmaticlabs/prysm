@@ -71,6 +71,13 @@ func logSlashingEvent(slashing *slashertypes.Slashing) {
 			"sourceEpoch":     slashing.SourceEpoch,
 			"targetEpoch":     slashing.TargetEpoch,
 		}).Info("Attester surrounded vote slashing")
+	case slashertypes.DoubleProposal:
+		log.WithFields(logrus.Fields{
+			"validatorIndex":  slashing.ValidatorIndex,
+			"slot":            slashing.Slot,
+			"prevSigningRoot": fmt.Sprintf("%#x", slashing.PrevSigningRoot),
+			"signingRoot":     fmt.Sprintf("%#x", slashing.SigningRoot),
+		}).Info("Proposer double proposal slashing")
 	default:
 		return
 	}

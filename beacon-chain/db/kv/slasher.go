@@ -206,7 +206,7 @@ func (s *Store) CheckAndUpdateForSlashableProposals(
 ) ([]*slashertypes.CompactBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.CheckAndUpdateForSlashableProposals")
 	defer span.End()
-	existingProposals := make([]*slashertypes.CompactBeaconBlock, len(proposals))
+	existingProposals := make([]*slashertypes.CompactBeaconBlock, 0, len(proposals))
 	err := s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(slasherChunksBucket)
 		for _, proposal := range proposals {
