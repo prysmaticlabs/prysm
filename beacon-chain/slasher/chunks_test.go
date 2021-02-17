@@ -691,7 +691,7 @@ func Test_chunkDataAtEpoch_SetRetrieve(t *testing.T) {
 
 func createAttestation(source, target types.Epoch) *slashertypes.CompactAttestation {
 	return &slashertypes.CompactAttestation{
-		Source: uint64(source),
-		Target: uint64(target),
+		Source: source,
+		Target: target,
 	}
 }

@@ -14,9 +14,9 @@ func TestStore_AttestationRecordForValidator_SaveRetrieve(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := setupDB(t)
 	valIdx := types.ValidatorIndex(1)
-	target := uint64(5)
-	source := uint64(4)
-	attRecord, err := beaconDB.AttestationRecordForValidator(ctx, valIdx, types.Epoch(target))
+	target := types.Epoch(5)
+	source := types.Epoch(4)
+	attRecord, err := beaconDB.AttestationRecordForValidator(ctx, valIdx, target)
 	require.NoError(t, err)
 	require.Equal(t, true, attRecord == nil)
 
@@ -29,7 +29,7 @@ func TestStore_AttestationRecordForValidator_SaveRetrieve(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	attRecord, err = beaconDB.AttestationRecordForValidator(ctx, valIdx, types.Epoch(target))
+	attRecord, err = beaconDB.AttestationRecordForValidator(ctx, valIdx, target)
 	require.NoError(t, err)
 	assert.DeepEqual(t, target, attRecord.Target)
 	assert.DeepEqual(t, source, attRecord.Source)
