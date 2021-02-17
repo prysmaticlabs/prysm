@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -247,6 +248,9 @@ func TestBeaconState_AppendValidator_DoesntMutateCopy(t *testing.T) {
 }
 
 func TestBeaconState_ReleaseStateReference(t *testing.T) {
+	reset := featureconfig.InitWithReset(&featureconfig.Flags{ManualStateReference: true})
+	defer reset()
+
 	type test struct {
 		name        string
 		stateModify func(*state.BeaconState) (*state.BeaconState, error)
@@ -308,6 +312,8 @@ func TestBeaconState_ReleaseStateReference(t *testing.T) {
 }
 
 func TestBeaconState_ReleaseReference_NoPanic(t *testing.T) {
+	reset := featureconfig.InitWithReset(&featureconfig.Flags{ManualStateReference: true})
+	defer reset()
 	st0, err := testutil.NewBeaconState()
 	require.NoError(t, err)
 	st0.ReleaseStateReference()
