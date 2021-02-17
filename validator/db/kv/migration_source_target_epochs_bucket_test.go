@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -200,6 +201,47 @@ func TestStore_migrateSourceTargetEpochsBucketDown(t *testing.T) {
 			tt.setup(t, validatorDB)
 			require.NoError(t, validatorDB.migrateSourceTargetEpochsBucketDown(context.Background()))
 			tt.eval(t, validatorDB)
+		})
+	}
+}
+
+func Test_batchPublicKeys(t *testing.T) {
+	tests := []struct {
+		name       string
+		batchSize  int
+		publicKeys [][]byte
+		want       [][][]byte
+	}{
+		{
+			name:       "less than batch size returns all keys",
+			batchSize:  100,
+			publicKeys: [][]byte{{1}, {2}, {3}},
+			want:       [][][]byte{{{1}, {2}, {3}}},
+		},
+		{
+			name:       "equals batch size returns all keys",
+			batchSize:  3,
+			publicKeys: [][]byte{{1}, {2}, {3}},
+			want:       [][][]byte{{{1}, {2}, {3}}},
+		},
+		{
+			name:       "> batch size returns proper batches",
+			batchSize:  2,
+			publicKeys: [][]byte{{1}, {2}, {3}},
+			want:       [][][]byte{{{1}, {2}}, {{3}}},
+		},
+		{
+			name:       "equal size batches returns proper batches",
+			batchSize:  2,
+			publicKeys: [][]byte{{1}, {2}, {3}, {4}},
+			want:       [][][]byte{{{1}, {2}}, {{3}, {4}}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := batchPublicKeys(tt.publicKeys, tt.batchSize); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("batchPublicKeys() = %v, want %v", got, tt.want)
+			}
 		})
 	}
 }

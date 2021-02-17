@@ -8,7 +8,13 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-var migrationSourceTargetEpochsBucketKey = []byte("source_target_epochs_bucket_0")
+var (
+	migrationSourceTargetEpochsBucketKey = []byte("source_target_epochs_bucket_0")
+)
+
+const (
+	publicKeyMigrationBatchSize = 100 // Batch update 100 public keys at a time.
+)
 
 func (s *Store) migrateSourceTargetEpochsBucketUp(ctx context.Context) error {
 	// First, we extract the public keys we need to migrate data for.
@@ -33,34 +39,43 @@ func (s *Store) migrateSourceTargetEpochsBucketUp(ctx context.Context) error {
 		return err
 	}
 
-	// Next up, we initiate a bolt transaction for each public key.
+	// Next up, we initiate a bolt transaction for batches of public keys for efficiency.
+	// If we did a single transaction for all public keys, resource use might be too high,
+	// and if we do a single one per key, the migration will take too long.
+	batchedKeys := batchPublicKeys(publicKeyBytes, publicKeyMigrationBatchSize)
 	bar := progressutil.InitializeProgressBar(
-		len(publicKeyBytes), "Adding optimizations for validator slashing protection",
+		len(batchedKeys), "Adding optimizations for validator slashing protection",
 	)
-	for _, pubKey := range publicKeyBytes {
+	for _, batch := range batchedKeys {
 		err = s.db.Update(func(tx *bolt.Tx) error {
 			bkt := tx.Bucket(pubKeysBucket)
-			pkb := bkt.Bucket(pubKey)
-			sourceBucket := pkb.Bucket(attestationSourceEpochsBucket)
-			if sourceBucket == nil {
-				return nil
-			}
-			targetBucket, err := pkb.CreateBucketIfNotExists(attestationTargetEpochsBucket)
-			if err != nil {
-				return err
-			}
-			return sourceBucket.ForEach(func(sourceEpochBytes, targetEpochsBytes []byte) error {
-				for i := 0; i < len(targetEpochsBytes); i += 8 {
-					if err := insertTargetSource(
-						targetBucket,
-						targetEpochsBytes[i:i+8],
-						sourceEpochBytes,
-					); err != nil {
-						return err
-					}
+			for _, pubKey := range batch {
+				pkb := bkt.Bucket(pubKey)
+				sourceBucket := pkb.Bucket(attestationSourceEpochsBucket)
+				if sourceBucket == nil {
+					return nil
 				}
-				return nil
-			})
+				targetBucket, err := pkb.CreateBucketIfNotExists(attestationTargetEpochsBucket)
+				if err != nil {
+					return err
+				}
+				err = sourceBucket.ForEach(func(sourceEpochBytes, targetEpochsBytes []byte) error {
+					for i := 0; i < len(targetEpochsBytes); i += 8 {
+						if err := insertTargetSource(
+							targetBucket,
+							targetEpochsBytes[i:i+8],
+							sourceEpochBytes,
+						); err != nil {
+							return err
+						}
+					}
+					return nil
+				})
+				if err != nil {
+					return err
+				}
+			}
+			return nil
 		})
 		if err != nil {
 			return err
@@ -106,4 +121,19 @@ func insertTargetSource(bkt *bolt.Bucket, targetEpochBytes, sourceEpochBytes []b
 		existingAttestedSourceBytes = sourceEpochBytes
 	}
 	return bkt.Put(targetEpochBytes, existingAttestedSourceBytes)
+}
+
+func batchPublicKeys(publicKeys [][]byte, batchSize int) [][][]byte {
+	if len(publicKeys) < batchSize {
+		return [][][]byte{publicKeys}
+	}
+	batch := make([][][]byte, 0)
+	for i := 0; i < len(publicKeys); i += batchSize {
+		if i+batchSize == len(publicKeys)+1 {
+			batch = append(batch, publicKeys[i:])
+		} else {
+			batch = append(batch, publicKeys[i:i+batchSize])
+		}
+	}
+	return batch
 }
