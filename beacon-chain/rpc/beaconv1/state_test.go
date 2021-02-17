@@ -342,6 +342,7 @@ func TestGetStateFork(t *testing.T) {
 				Epoch:           123,
 			}
 		})
+		require.NoError(t, err)
 		require.NoError(t, db.SaveState(ctx, st, r))
 
 		s := Server{
