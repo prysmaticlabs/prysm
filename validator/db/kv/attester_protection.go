@@ -162,22 +162,26 @@ func (s *Store) CheckSlashableAttestation(
 			}
 		}
 
-		sourceEpochsBucket := pkBucket.Bucket(attestationSourceEpochsBucket)
+		sourceEpochsBucket, targetEpochsBucket := pkBucket.Bucket(attestationSourceEpochsBucket), pkBucket.Bucket(attestationTargetEpochsBucket)
 		if sourceEpochsBucket == nil {
 			return nil
 		}
 		// Check for surround votes.
-		return sourceEpochsBucket.ForEach(func(sourceEpochBytes []byte, targetEpochsBytes []byte) error {
-			if ctx.Err() != nil {
-				return ctx.Err()
+
+		// Is this attestation surrounding any other?
+		// TODO: refactor to another method.
+		c := sourceEpochsBucket.Cursor()
+		// Iterate from the back of the bucket since we are looking for source_epoch > att.source_epoch
+		for k, v := c.Last(); k != nil; k, v = c.Prev() {
+			existingSourceEpoch := bytesutil.BytesToEpochBigEndian(k)
+			if existingSourceEpoch <= att.Data.Source.Epoch {
+				break
 			}
 
-			existingSourceEpoch := bytesutil.BytesToEpochBigEndian(sourceEpochBytes)
-
 			// There can be multiple target epochs attested per source epoch.
-			attestedTargetEpochs := make([]types.Epoch, 0, len(targetEpochsBytes)/8)
-			for i := 0; i < len(targetEpochsBytes); i += 8 {
-				targetEpoch := bytesutil.BytesToEpochBigEndian(targetEpochsBytes[i : i+8])
+			attestedTargetEpochs := make([]types.Epoch, 0, len(v)/8)
+			for i := 0; i < len(v); i += 8 {
+				targetEpoch := bytesutil.BytesToEpochBigEndian(v[i : i+8])
 				attestedTargetEpochs = append(attestedTargetEpochs, targetEpoch)
 			}
 
@@ -188,10 +192,7 @@ func (s *Store) CheckSlashableAttestation(
 						Target: &ethpb.Checkpoint{Epoch: existingTargetEpoch},
 					},
 				}
-				// Checks if the incoming attestation is surrounding or
-				// is surrounded by an existing one.
 				surrounding := slashutil.IsSurround(att, existingAtt)
-				surrounded := slashutil.IsSurround(existingAtt, att)
 				if surrounding {
 					slashKind = SurroundingVote
 					return fmt.Errorf(
@@ -202,6 +203,38 @@ func (s *Store) CheckSlashableAttestation(
 						existingTargetEpoch,
 					)
 				}
+			}
+		}
+
+		if targetEpochsBucket == nil {
+			return nil
+		}
+
+		// Is this attestation surrounded by any other?
+		// TODO: refactor to another method.
+		// Iterate from the back of the bucket since we are looking for target_epoch > att.target_epoch
+		c = targetEpochsBucket.Cursor()
+		for k, v := c.Last(); k != nil; k, v = c.Prev() {
+			existingTargetEpoch := bytesutil.BytesToEpochBigEndian(k)
+			if existingTargetEpoch <= att.Data.Target.Epoch {
+				break
+			}
+
+			// There can be multiple sources epochs attested per target epoch.
+			attestedSourceEpochs := make([]types.Epoch, 0, len(v)/8)
+			for i := 0; i < len(v); i += 8 {
+				sourceEpoch := bytesutil.BytesToEpochBigEndian(v[i : i+8])
+				attestedSourceEpochs = append(attestedSourceEpochs, sourceEpoch)
+			}
+
+			for _, existingSourceEpoch := range attestedSourceEpochs {
+				existingAtt := &ethpb.IndexedAttestation{
+					Data: &ethpb.AttestationData{
+						Source: &ethpb.Checkpoint{Epoch: existingSourceEpoch},
+						Target: &ethpb.Checkpoint{Epoch: existingTargetEpoch},
+					},
+				}
+				surrounded := slashutil.IsSurround(existingAtt, att)
 				if surrounded {
 					slashKind = SurroundedVote
 					return fmt.Errorf(
@@ -213,8 +246,57 @@ func (s *Store) CheckSlashableAttestation(
 					)
 				}
 			}
-			return nil
-		})
+		}
+
+		return nil
+		//return sourceEpochsBucket.ForEach(func(sourceEpochBytes []byte, targetEpochsBytes []byte) error {
+		//	if ctx.Err() != nil {
+		//		return ctx.Err()
+		//	}
+		//
+		//	existingSourceEpoch := bytesutil.BytesToEpochBigEndian(sourceEpochBytes)
+		//
+		//	// There can be multiple target epochs attested per source epoch.
+		//	attestedTargetEpochs := make([]types.Epoch, 0, len(targetEpochsBytes)/8)
+		//	for i := 0; i < len(targetEpochsBytes); i += 8 {
+		//		targetEpoch := bytesutil.BytesToEpochBigEndian(targetEpochsBytes[i : i+8])
+		//		attestedTargetEpochs = append(attestedTargetEpochs, targetEpoch)
+		//	}
+		//
+		//	for _, existingTargetEpoch := range attestedTargetEpochs {
+		//		existingAtt := &ethpb.IndexedAttestation{
+		//			Data: &ethpb.AttestationData{
+		//				Source: &ethpb.Checkpoint{Epoch: existingSourceEpoch},
+		//				Target: &ethpb.Checkpoint{Epoch: existingTargetEpoch},
+		//			},
+		//		}
+		//		// Checks if the incoming attestation is surrounding or
+		//		// is surrounded by an existing one.
+		//		surrounding := slashutil.IsSurround(att, existingAtt)
+		//		surrounded := slashutil.IsSurround(existingAtt, att)
+		//		if surrounding {
+		//			slashKind = SurroundingVote
+		//			return fmt.Errorf(
+		//				surroundingVoteMessage,
+		//				att.Data.Source.Epoch,
+		//				att.Data.Target.Epoch,
+		//				existingSourceEpoch,
+		//				existingTargetEpoch,
+		//			)
+		//		}
+		//		if surrounded {
+		//			slashKind = SurroundedVote
+		//			return fmt.Errorf(
+		//				surroundedVoteMessage,
+		//				att.Data.Source.Epoch,
+		//				att.Data.Target.Epoch,
+		//				existingSourceEpoch,
+		//				existingTargetEpoch,
+		//			)
+		//		}
+		//	}
+		//	return nil
+		//})
 	})
 
 	traceutil.AnnotateError(span, err)
@@ -383,6 +465,22 @@ func (s *Store) saveAttestationRecords(ctx context.Context, atts []*AttestationR
 			if err := sourceEpochsBucket.Put(sourceEpochBytes, existingAttestedTargetsBytes); err != nil {
 				return errors.Wrapf(err, "could not save source epoch %d for epoch %d", att.Source, att.Target)
 			}
+
+			targetEpochsBucket, err := pkBucket.CreateBucketIfNotExists(attestationTargetEpochsBucket)
+			if err != nil {
+				return errors.Wrap(err, "could not create target epochs bucket")
+			}
+			var existingAttestedSourceBytes []byte
+			if existing := targetEpochsBucket.Get(targetEpochBytes); existing != nil {
+				existingAttestedSourceBytes = append(existing, sourceEpochBytes...)
+			} else {
+				existingAttestedSourceBytes = sourceEpochBytes
+			}
+
+			if err := targetEpochsBucket.Put(targetEpochBytes, existingAttestedSourceBytes); err != nil {
+				return errors.Wrapf(err, "could not save target epoch %d for epoch %d", att.Target, att.Source)
+			}
+
 			// Initialize buckets for the lowest target and source epochs.
 			lowestSourceBucket, err := tx.CreateBucketIfNotExists(lowestSignedSourceBucket)
 			if err != nil {
