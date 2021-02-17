@@ -5,14 +5,14 @@ import (
 	"reflect"
 	"testing"
 
-	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
-
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	ethpb_alpha "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -31,19 +31,19 @@ func fillDBTestBlocks(ctx context.Context, t *testing.T, beaconDB db.Database) (
 	require.NoError(t, beaconDB.SaveBlock(ctx, genBlk))
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
 
-	count := uint64(100)
+	count := types.Slot(100)
 	blks := make([]*ethpb_alpha.SignedBeaconBlock, count)
 	blkContainers := make([]*ethpb_alpha.BeaconBlockContainer, count)
-	for i := uint64(0); i < count; i++ {
+	for i := types.Slot(0); i < count; i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = i
 		b.Block.ParentRoot = bytesutil.PadTo([]byte{uint8(i)}, 32)
 		att1 := testutil.NewAttestation()
 		att1.Data.Slot = i
-		att1.Data.CommitteeIndex = i
+		att1.Data.CommitteeIndex = uint64(i)
 		att2 := testutil.NewAttestation()
 		att2.Data.Slot = i
-		att2.Data.CommitteeIndex = i + 1
+		att2.Data.CommitteeIndex = uint64(i + 1)
 		b.Block.Body.Attestations = []*ethpb_alpha.Attestation{att1, att2}
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
@@ -193,7 +193,7 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		slot       uint64
+		slot       types.Slot
 		parentRoot []byte
 		want       []*ethpb_alpha.SignedBeaconBlock
 		wantErr    bool

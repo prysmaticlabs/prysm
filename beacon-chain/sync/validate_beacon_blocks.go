@@ -8,6 +8,7 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -201,19 +202,19 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk *ethpb.SignedBeac
 }
 
 // Returns true if the block is not the first block proposed for the proposer for the slot.
-func (s *Service) hasSeenBlockIndexSlot(slot, proposerIdx uint64) bool {
+func (s *Service) hasSeenBlockIndexSlot(slot types.Slot, proposerIdx uint64) bool {
 	s.seenBlockLock.RLock()
 	defer s.seenBlockLock.RUnlock()
-	b := append(bytesutil.Bytes32(slot), bytesutil.Bytes32(proposerIdx)...)
+	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(proposerIdx)...)
 	_, seen := s.seenBlockCache.Get(string(b))
 	return seen
 }
 
 // Set block proposer index and slot as seen for incoming blocks.
-func (s *Service) setSeenBlockIndexSlot(slot, proposerIdx uint64) {
+func (s *Service) setSeenBlockIndexSlot(slot types.Slot, proposerIdx uint64) {
 	s.seenBlockLock.Lock()
 	defer s.seenBlockLock.Unlock()
-	b := append(bytesutil.Bytes32(slot), bytesutil.Bytes32(proposerIdx)...)
+	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(proposerIdx)...)
 	s.seenBlockCache.Add(string(b), true)
 }
 
@@ -236,7 +237,7 @@ func (s *Service) setBadBlock(ctx context.Context, root [32]byte) {
 }
 
 // This captures metrics for block arrival time by subtracts slot start time.
-func captureArrivalTimeMetric(genesisTime, currentSlot uint64) error {
+func captureArrivalTimeMetric(genesisTime uint64, currentSlot types.Slot) error {
 	startTime, err := helpers.SlotToTime(genesisTime, currentSlot)
 	if err != nil {
 		return err

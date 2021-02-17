@@ -244,7 +244,7 @@ func filterSlashablePubKeysFromBlocks(ctx context.Context, historyByPubKey map[[
 	//     then we consider that proposer public key as slashable.
 	slashablePubKeys := make([][48]byte, 0)
 	for pubKey, proposals := range historyByPubKey {
-		seenSigningRootsBySlot := make(map[uint64][]byte)
+		seenSigningRootsBySlot := make(map[types.Slot][]byte)
 		for _, blk := range proposals.Proposals {
 			if signingRoot, ok := seenSigningRootsBySlot[blk.Slot]; ok {
 				if signingRoot == nil || !bytes.Equal(signingRoot, blk.SigningRoot) {
@@ -314,7 +314,7 @@ func filterSlashablePubKeysFromAttestations(
 func transformSignedBlocks(ctx context.Context, signedBlocks []*format.SignedBlock) (*kv.ProposalHistoryForPubkey, error) {
 	proposals := make([]kv.Proposal, len(signedBlocks))
 	for i, proposal := range signedBlocks {
-		slot, err := Uint64FromString(proposal.Slot)
+		slot, err := SlotFromString(proposal.Slot)
 		if err != nil {
 			return nil, fmt.Errorf("%d is not a valid slot: %w", slot, err)
 		}

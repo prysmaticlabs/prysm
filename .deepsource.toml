@@ -1,11 +1,13 @@
 version = 1
 
+exclude_patterns = ["tools/analyzers/**"]
+
 [[analyzers]]
 name = "go"
 enabled = true
 
-  [analyzers.meta]
-  import_paths = ["github.com/prysmaticlabs/prysm"]
+[analyzers.meta]
+import_paths = ["github.com/prysmaticlabs/prysm"]
 
 [[analyzers]]
 name = "test-coverage"

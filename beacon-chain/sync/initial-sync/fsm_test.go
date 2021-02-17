@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -13,17 +13,17 @@ import (
 func TestStateMachineManager_String(t *testing.T) {
 	tests := []struct {
 		name     string
-		machines map[uint64]*stateMachine
+		machines map[types.Slot]*stateMachine
 		want     string
 	}{
 		{
 			"empty epoch state list",
-			map[uint64]*stateMachine{},
+			map[types.Slot]*stateMachine{},
 			"map[]",
 		},
 		{
 			"newly created state machine",
-			map[uint64]*stateMachine{
+			map[types.Slot]*stateMachine{
 				0:   {start: 64 * 0, state: stateNew},
 				64:  {start: 64 * 1, state: stateScheduled},
 				128: {start: 64 * 2, state: stateDataParsed},
@@ -175,9 +175,9 @@ func TestStateMachine_trigger(t *testing.T) {
 				}
 			}
 			for _, epoch := range tt.epochs {
-				smm.addStateMachine(uint64(epoch) * 32)
+				smm.addStateMachine(types.Slot(epoch * 32))
 			}
-			state := smm.machines[uint64(tt.args.epoch)*32]
+			state := smm.machines[types.Slot(tt.args.epoch*32)]
 			err := state.trigger(tt.args.name, tt.args.data)
 			if tt.err != nil && (err == nil || tt.err.Error() != err.Error()) {
 				t.Errorf("unexpected error = '%v', want '%v'", err, tt.err)
@@ -186,7 +186,7 @@ func TestStateMachine_trigger(t *testing.T) {
 				if err != nil && !expectHandlerError {
 					t.Error(err)
 				}
-				ind := uint64(tt.args.epoch) * 32
+				ind := types.Slot(tt.args.epoch * 32)
 				if smm.machines[ind].state != tt.args.returnState {
 					t.Errorf("unexpected final state: %v, want: %v (%v)",
 						smm.machines[ind].state, tt.args.returnState, smm.machines)
@@ -225,7 +225,7 @@ func TestStateMachineManager_QueueLoop(t *testing.T) {
 	smm.addStateMachine(64)
 	smm.addStateMachine(512)
 
-	assertState := func(startSlot uint64, state stateID) {
+	assertState := func(startSlot types.Slot, state stateID) {
 		fsm, ok := smm.findStateMachine(startSlot)
 		require.Equal(t, true, ok, "State machine not found")
 		assert.Equal(t, state, fsm.state, "Unexpected state machine state")
@@ -276,12 +276,12 @@ func TestStateMachineManager_removeAllStateMachines(t *testing.T) {
 	smm.addStateMachine(64)
 	smm.addStateMachine(128)
 	smm.addStateMachine(196)
-	keys := []uint64{64, 128, 196}
+	keys := []types.Slot{64, 128, 196}
 	assert.DeepEqual(t, smm.keys, keys, "Keys not sorted")
 	assert.Equal(t, 3, len(smm.machines), "Unexpected list size")
 	assert.NoError(t, smm.removeAllStateMachines())
 
-	keys = []uint64{}
+	keys = []types.Slot{}
 	assert.DeepEqual(t, smm.keys, keys, "Unexpected keys")
 	assert.Equal(t, 0, len(smm.machines), "Expected empty list")
 }
@@ -305,7 +305,7 @@ func TestStateMachineManager_findStateMachine(t *testing.T) {
 	if fsm, ok := smm.findStateMachine(512); !ok || fsm.start != 512 {
 		t.Errorf("unexpected start slot: %v, want: %v", fsm.start, 512)
 	}
-	keys := []uint64{64, 128, 196, 256, 512}
+	keys := []types.Slot{64, 128, 196, 256, 512}
 	assert.DeepEqual(t, smm.keys, keys, "Keys not sorted")
 }
 
@@ -318,11 +318,11 @@ func TestStateMachineManager_highestStartSlot(t *testing.T) {
 	smm.addStateMachine(196)
 	start, err := smm.highestStartSlot()
 	assert.NoError(t, err)
-	assert.Equal(t, uint64(196), start, "Incorrect highest start slot")
+	assert.Equal(t, types.Slot(196), start, "Incorrect highest start slot")
 	assert.NoError(t, smm.removeStateMachine(196))
 	start, err = smm.highestStartSlot()
 	assert.NoError(t, err)
-	assert.Equal(t, uint64(128), start, "Incorrect highest start slot")
+	assert.Equal(t, types.Slot(128), start, "Incorrect highest start slot")
 }
 
 func TestStateMachineManager_allMachinesInState(t *testing.T) {
@@ -458,6 +458,6 @@ func TestStateMachine_isFirstLast(t *testing.T) {
 	checkFirst(m5, true)
 	checkLast(m5, false)
 
-	keys := []uint64{32, 64, 128, 196, 512}
+	keys := []types.Slot{32, 64, 128, 196, 512}
 	assert.DeepEqual(t, smm.keys, keys, "Keys not sorted")
 }

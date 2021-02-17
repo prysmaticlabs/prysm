@@ -8,6 +8,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"k8s.io/client-go/tools/cache"
@@ -55,7 +56,7 @@ func NewCommitteesCache() *CommitteeCache {
 
 // Committee fetches the shuffled indices by slot and committee index. Every list of indices
 // represent one committee. Returns true if the list exists with slot and committee index. Otherwise returns false, nil.
-func (c *CommitteeCache) Committee(slot uint64, seed [32]byte, index uint64) ([]uint64, error) {
+func (c *CommitteeCache) Committee(slot types.Slot, seed [32]byte, index uint64) ([]uint64, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
@@ -77,11 +78,11 @@ func (c *CommitteeCache) Committee(slot uint64, seed [32]byte, index uint64) ([]
 	}
 
 	committeeCountPerSlot := uint64(1)
-	if item.CommitteeCount/params.BeaconConfig().SlotsPerEpoch > 1 {
-		committeeCountPerSlot = item.CommitteeCount / params.BeaconConfig().SlotsPerEpoch
+	if item.CommitteeCount/uint64(params.BeaconConfig().SlotsPerEpoch) > 1 {
+		committeeCountPerSlot = item.CommitteeCount / uint64(params.BeaconConfig().SlotsPerEpoch)
 	}
 
-	indexOffSet := index + (slot%params.BeaconConfig().SlotsPerEpoch)*committeeCountPerSlot
+	indexOffSet := index + uint64(slot.ModSlot(params.BeaconConfig().SlotsPerEpoch).Mul(committeeCountPerSlot))
 	start, end := startEndIndices(item, indexOffSet)
 
 	if end > uint64(len(item.ShuffledIndices)) || end < start {

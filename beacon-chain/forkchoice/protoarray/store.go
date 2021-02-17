@@ -7,7 +7,7 @@ import (
 	"math"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -95,7 +95,7 @@ func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []
 }
 
 // ProcessBlock processes a new block by inserting it to the fork choice store.
-func (f *ForkChoice) ProcessBlock(ctx context.Context, slot uint64, blockRoot, parentRoot, graffiti [32]byte, justifiedEpoch, finalizedEpoch types.Epoch) error {
+func (f *ForkChoice) ProcessBlock(ctx context.Context, slot types.Slot, blockRoot, parentRoot, graffiti [32]byte, justifiedEpoch, finalizedEpoch types.Epoch) error {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.ProcessBlock")
 	defer span.End()
 
@@ -171,7 +171,7 @@ func (f *ForkChoice) IsCanonical(root [32]byte) bool {
 }
 
 // AncestorRoot returns the ancestor root of input block root at a given slot.
-func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot uint64) ([]byte, error) {
+func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types.Slot) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "protoArray.AncestorRoot")
 	defer span.End()
 
@@ -314,7 +314,7 @@ func (s *Store) updateCanonicalNodes(ctx context.Context, root [32]byte) error {
 // insert registers a new block node to the fork choice store's node list.
 // It then updates the new node's parent with best child and descendant node.
 func (s *Store) insert(ctx context.Context,
-	slot uint64,
+	slot types.Slot,
 	root, parent, graffiti [32]byte,
 	justifiedEpoch, finalizedEpoch types.Epoch) error {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.insert")
