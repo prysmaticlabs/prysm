@@ -30,8 +30,8 @@ func NewBeaconState(options ...func(state *pb.BeaconState)) (*stateTrie.BeaconSt
 		JustificationBits:           bitfield.Bitvector4{0x0},
 		FinalizedCheckpoint:         &ethpb.Checkpoint{Root: make([]byte, 32)},
 		LatestBlockHeader:           HydrateBeaconHeader(&ethpb.BeaconBlockHeader{}),
-		PreviousEpochParticipation:  make([]*pb.ParticipationBits, 0),
-		CurrentEpochParticipation:   make([]*pb.ParticipationBits, 0),
+		PreviousEpochParticipation:  make([]byte, 0),
+		CurrentEpochParticipation:   make([]byte, 0),
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
 		CurrentSyncCommittee: &pb.SyncCommittee{
 			Pubkeys:          filledByteSlice2D(params.BeaconConfig().SyncCommitteeSize, uint64(params.BeaconConfig().BLSPubkeyLength)),

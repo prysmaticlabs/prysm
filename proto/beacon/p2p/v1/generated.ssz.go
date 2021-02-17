@@ -87,15 +87,6 @@ func (s *Status) SizeSSZ() (size int) {
 	return
 }
 
-<<<<<<< HEAD
-	// Offset (15) 'PreviousEpochParticipation'
-	dst = ssz.WriteOffset(dst, offset)
-	offset += len(b.PreviousEpochParticipation) * 1
-
-	// Offset (16) 'CurrentEpochParticipation'
-	dst = ssz.WriteOffset(dst, offset)
-	offset += len(b.CurrentEpochParticipation) * 1
-=======
 // HashTreeRoot ssz hashes the Status object
 func (s *Status) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(s)
@@ -104,7 +95,6 @@ func (s *Status) HashTreeRoot() ([32]byte, error) {
 // HashTreeRootWith ssz hashes the Status object with a hasher
 func (s *Status) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
->>>>>>> light-client
 
 	// Field (0) 'ForkDigest'
 	if len(s.ForkDigest) != 4 {
@@ -152,32 +142,8 @@ func (b *BeaconBlocksByRangeRequest) MarshalSSZTo(buf []byte) (dst []byte, err e
 	// Field (1) 'Count'
 	dst = ssz.MarshalUint64(dst, b.Count)
 
-<<<<<<< HEAD
-	// Field (15) 'PreviousEpochParticipation'
-	if len(b.PreviousEpochParticipation) > 1099511627776 {
-		err = ssz.ErrListTooBig
-		return
-	}
-	for ii := 0; ii < len(b.PreviousEpochParticipation); ii++ {
-		if dst, err = b.PreviousEpochParticipation[ii].MarshalSSZTo(dst); err != nil {
-			return
-		}
-	}
-
-	// Field (16) 'CurrentEpochParticipation'
-	if len(b.CurrentEpochParticipation) > 1099511627776 {
-		err = ssz.ErrListTooBig
-		return
-	}
-	for ii := 0; ii < len(b.CurrentEpochParticipation); ii++ {
-		if dst, err = b.CurrentEpochParticipation[ii].MarshalSSZTo(dst); err != nil {
-			return
-		}
-	}
-=======
 	// Field (2) 'Step'
 	dst = ssz.MarshalUint64(dst, b.Step)
->>>>>>> light-client
 
 	return
 }
@@ -256,16 +222,6 @@ func (e *ENRForkID) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	// Field (2) 'NextForkEpoch'
 	dst = ssz.MarshalUint64(dst, uint64(e.NextForkEpoch))
 
-<<<<<<< HEAD
-	// Offset (15) 'PreviousEpochParticipation'
-	if o15 = ssz.ReadOffset(buf[2687248:2687252]); o15 > size || o12 > o15 {
-		return ssz.ErrOffset
-	}
-
-	// Offset (16) 'CurrentEpochParticipation'
-	if o16 = ssz.ReadOffset(buf[2687252:2687256]); o16 > size || o15 > o16 {
-		return ssz.ErrOffset
-=======
 	return
 }
 
@@ -275,7 +231,6 @@ func (e *ENRForkID) UnmarshalSSZ(buf []byte) error {
 	size := uint64(len(buf))
 	if size != 16 {
 		return ssz.ErrSize
->>>>>>> light-client
 	}
 
 	// Field (0) 'CurrentForkDigest'
@@ -351,42 +306,6 @@ func (m *MetaData) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	}
 	dst = append(dst, m.Attnets...)
 
-<<<<<<< HEAD
-	// Field (15) 'PreviousEpochParticipation'
-	{
-		buf = tail[o15:o16]
-		num, err := ssz.DivideInt2(len(buf), 1, 1099511627776)
-		if err != nil {
-			return err
-		}
-		b.PreviousEpochParticipation = make([]*ParticipationBits, num)
-		for ii := 0; ii < num; ii++ {
-			if b.PreviousEpochParticipation[ii] == nil {
-				b.PreviousEpochParticipation[ii] = new(ParticipationBits)
-			}
-			if err = b.PreviousEpochParticipation[ii].UnmarshalSSZ(buf[ii*1 : (ii+1)*1]); err != nil {
-				return err
-			}
-		}
-	}
-
-	// Field (16) 'CurrentEpochParticipation'
-	{
-		buf = tail[o16:]
-		num, err := ssz.DivideInt2(len(buf), 1, 1099511627776)
-		if err != nil {
-			return err
-		}
-		b.CurrentEpochParticipation = make([]*ParticipationBits, num)
-		for ii := 0; ii < num; ii++ {
-			if b.CurrentEpochParticipation[ii] == nil {
-				b.CurrentEpochParticipation[ii] = new(ParticipationBits)
-			}
-			if err = b.CurrentEpochParticipation[ii].UnmarshalSSZ(buf[ii*1 : (ii+1)*1]); err != nil {
-				return err
-			}
-		}
-=======
 	return
 }
 
@@ -404,7 +323,6 @@ func (m *MetaData) UnmarshalSSZ(buf []byte) error {
 	// Field (1) 'Attnets'
 	if cap(m.Attnets) == 0 {
 		m.Attnets = make([]byte, 0, len(buf[8:16]))
->>>>>>> light-client
 	}
 	m.Attnets = append(m.Attnets, buf[8:16]...)
 
@@ -426,13 +344,6 @@ func (m *MetaData) HashTreeRoot() ([32]byte, error) {
 func (m *MetaData) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
-<<<<<<< HEAD
-	// Field (15) 'PreviousEpochParticipation'
-	size += len(b.PreviousEpochParticipation) * 1
-
-	// Field (16) 'CurrentEpochParticipation'
-	size += len(b.CurrentEpochParticipation) * 1
-=======
 	// Field (0) 'SeqNumber'
 	hh.PutUint64(m.SeqNumber)
 
@@ -442,7 +353,6 @@ func (m *MetaData) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 		return
 	}
 	hh.PutBytes(m.Attnets)
->>>>>>> light-client
 
 	hh.Merkleize(indx)
 	return
@@ -562,52 +472,13 @@ func (b *BeaconState) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 		dst = ssz.MarshalUint64(dst, b.Slashings[ii])
 	}
 
-<<<<<<< HEAD
-	// Field (15) 'PreviousEpochParticipation'
-	{
-		subIndx := hh.Index()
-		num := uint64(len(b.PreviousEpochParticipation))
-		if num > 1099511627776 {
-			err = ssz.ErrIncorrectListSize
-			return
-		}
-		for i := uint64(0); i < num; i++ {
-			if err = b.PreviousEpochParticipation[i].HashTreeRootWith(hh); err != nil {
-				return
-			}
-		}
-		hh.MerkleizeWithMixin(subIndx, num, 1099511627776)
-	}
-
-	// Field (16) 'CurrentEpochParticipation'
-	{
-		subIndx := hh.Index()
-		num := uint64(len(b.CurrentEpochParticipation))
-		if num > 1099511627776 {
-			err = ssz.ErrIncorrectListSize
-			return
-		}
-		for i := uint64(0); i < num; i++ {
-			if err = b.CurrentEpochParticipation[i].HashTreeRootWith(hh); err != nil {
-				return
-			}
-		}
-		hh.MerkleizeWithMixin(subIndx, num, 1099511627776)
-=======
-	// Offset (15) 'PreviousEpochAttestations'
+	// Offset (15) 'PreviousEpochParticipation'
 	dst = ssz.WriteOffset(dst, offset)
-	for ii := 0; ii < len(b.PreviousEpochAttestations); ii++ {
-		offset += 4
-		offset += b.PreviousEpochAttestations[ii].SizeSSZ()
-	}
+	offset += len(b.PreviousEpochParticipation)
 
-	// Offset (16) 'CurrentEpochAttestations'
+	// Offset (16) 'CurrentEpochParticipation'
 	dst = ssz.WriteOffset(dst, offset)
-	for ii := 0; ii < len(b.CurrentEpochAttestations); ii++ {
-		offset += 4
-		offset += b.CurrentEpochAttestations[ii].SizeSSZ()
->>>>>>> light-client
-	}
+	offset += len(b.CurrentEpochParticipation)
 
 	// Field (17) 'JustificationBits'
 	if len(b.JustificationBits) != 1 {
@@ -669,74 +540,6 @@ func (b *BeaconState) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 		dst = append(dst, b.HistoricalRoots[ii]...)
 	}
 
-<<<<<<< HEAD
-// MarshalSSZ ssz marshals the ParticipationBits object
-func (p *ParticipationBits) MarshalSSZ() ([]byte, error) {
-	return ssz.MarshalSSZ(p)
-}
-
-// MarshalSSZTo ssz marshals the ParticipationBits object to a target array
-func (p *ParticipationBits) MarshalSSZTo(buf []byte) (dst []byte, err error) {
-	dst = buf
-
-	// Field (0) 'Bits'
-	if len(p.Bits) != 1 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	dst = append(dst, p.Bits...)
-
-	return
-}
-
-// UnmarshalSSZ ssz unmarshals the ParticipationBits object
-func (p *ParticipationBits) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size != 1 {
-		return ssz.ErrSize
-	}
-
-	// Field (0) 'Bits'
-	if cap(p.Bits) == 0 {
-		p.Bits = make([]byte, 0, len(buf[0:1]))
-	}
-	p.Bits = append(p.Bits, buf[0:1]...)
-
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the ParticipationBits object
-func (p *ParticipationBits) SizeSSZ() (size int) {
-	size = 1
-	return
-}
-
-// HashTreeRoot ssz hashes the ParticipationBits object
-func (p *ParticipationBits) HashTreeRoot() ([32]byte, error) {
-	return ssz.HashWithDefaultHasher(p)
-}
-
-// HashTreeRootWith ssz hashes the ParticipationBits object with a hasher
-func (p *ParticipationBits) HashTreeRootWith(hh *ssz.Hasher) (err error) {
-	indx := hh.Index()
-
-	// Field (0) 'Bits'
-	if len(p.Bits) != 1 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	hh.PutBytes(p.Bits)
-
-	hh.Merkleize(indx)
-	return
-}
-
-// MarshalSSZ ssz marshals the Fork object
-func (f *Fork) MarshalSSZ() ([]byte, error) {
-	return ssz.MarshalSSZ(f)
-}
-=======
 	// Field (9) 'Eth1DataVotes'
 	if len(b.Eth1DataVotes) > 2048 {
 		err = ssz.ErrListTooBig
@@ -747,7 +550,6 @@ func (f *Fork) MarshalSSZ() ([]byte, error) {
 			return
 		}
 	}
->>>>>>> light-client
 
 	// Field (11) 'Validators'
 	if len(b.Validators) > 1099511627776 {
@@ -769,41 +571,19 @@ func (f *Fork) MarshalSSZ() ([]byte, error) {
 		dst = ssz.MarshalUint64(dst, b.Balances[ii])
 	}
 
-	// Field (15) 'PreviousEpochAttestations'
-	if len(b.PreviousEpochAttestations) > 4096 {
-		err = ssz.ErrListTooBig
+	// Field (15) 'PreviousEpochParticipation'
+	if len(b.PreviousEpochParticipation) > 1099511627776 {
+		err = ssz.ErrBytesLength
 		return
 	}
-	{
-		offset = 4 * len(b.PreviousEpochAttestations)
-		for ii := 0; ii < len(b.PreviousEpochAttestations); ii++ {
-			dst = ssz.WriteOffset(dst, offset)
-			offset += b.PreviousEpochAttestations[ii].SizeSSZ()
-		}
-	}
-	for ii := 0; ii < len(b.PreviousEpochAttestations); ii++ {
-		if dst, err = b.PreviousEpochAttestations[ii].MarshalSSZTo(dst); err != nil {
-			return
-		}
-	}
+	dst = append(dst, b.PreviousEpochParticipation...)
 
-	// Field (16) 'CurrentEpochAttestations'
-	if len(b.CurrentEpochAttestations) > 4096 {
-		err = ssz.ErrListTooBig
+	// Field (16) 'CurrentEpochParticipation'
+	if len(b.CurrentEpochParticipation) > 1099511627776 {
+		err = ssz.ErrBytesLength
 		return
 	}
-	{
-		offset = 4 * len(b.CurrentEpochAttestations)
-		for ii := 0; ii < len(b.CurrentEpochAttestations); ii++ {
-			dst = ssz.WriteOffset(dst, offset)
-			offset += b.CurrentEpochAttestations[ii].SizeSSZ()
-		}
-	}
-	for ii := 0; ii < len(b.CurrentEpochAttestations); ii++ {
-		if dst, err = b.CurrentEpochAttestations[ii].MarshalSSZTo(dst); err != nil {
-			return
-		}
-	}
+	dst = append(dst, b.CurrentEpochParticipation...)
 
 	return
 }
@@ -883,11 +663,6 @@ func (b *BeaconState) UnmarshalSSZ(buf []byte) error {
 		return ssz.ErrOffset
 	}
 
-<<<<<<< HEAD
-// MarshalSSZ ssz marshals the HistoricalBatch object
-func (h *HistoricalBatch) MarshalSSZ() ([]byte, error) {
-	return ssz.MarshalSSZ(h)
-=======
 	// Field (10) 'Eth1DepositIndex'
 	b.Eth1DepositIndex = ssz.UnmarshallUint64(buf[524544:524552])
 
@@ -916,12 +691,12 @@ func (h *HistoricalBatch) MarshalSSZ() ([]byte, error) {
 		b.Slashings[ii] = ssz.UnmarshallUint64(buf[2621712:2687248][ii*8 : (ii+1)*8])
 	}
 
-	// Offset (15) 'PreviousEpochAttestations'
+	// Offset (15) 'PreviousEpochParticipation'
 	if o15 = ssz.ReadOffset(buf[2687248:2687252]); o15 > size || o12 > o15 {
 		return ssz.ErrOffset
 	}
 
-	// Offset (16) 'CurrentEpochAttestations'
+	// Offset (16) 'CurrentEpochParticipation'
 	if o16 = ssz.ReadOffset(buf[2687252:2687256]); o16 > size || o15 > o16 {
 		return ssz.ErrOffset
 	}
@@ -1037,48 +812,28 @@ func (h *HistoricalBatch) MarshalSSZ() ([]byte, error) {
 		}
 	}
 
-	// Field (15) 'PreviousEpochAttestations'
+	// Field (15) 'PreviousEpochParticipation'
 	{
 		buf = tail[o15:o16]
-		num, err := ssz.DecodeDynamicLength(buf, 4096)
-		if err != nil {
-			return err
+		if len(buf) > 1099511627776 {
+			return ssz.ErrBytesLength
 		}
-		b.PreviousEpochAttestations = make([]*PendingAttestation, num)
-		err = ssz.UnmarshalDynamic(buf, num, func(indx int, buf []byte) (err error) {
-			if b.PreviousEpochAttestations[indx] == nil {
-				b.PreviousEpochAttestations[indx] = new(PendingAttestation)
-			}
-			if err = b.PreviousEpochAttestations[indx].UnmarshalSSZ(buf); err != nil {
-				return err
-			}
-			return nil
-		})
-		if err != nil {
-			return err
+		if cap(b.PreviousEpochParticipation) == 0 {
+			b.PreviousEpochParticipation = make([]byte, 0, len(buf))
 		}
+		b.PreviousEpochParticipation = append(b.PreviousEpochParticipation, buf...)
 	}
 
-	// Field (16) 'CurrentEpochAttestations'
+	// Field (16) 'CurrentEpochParticipation'
 	{
 		buf = tail[o16:]
-		num, err := ssz.DecodeDynamicLength(buf, 4096)
-		if err != nil {
-			return err
+		if len(buf) > 1099511627776 {
+			return ssz.ErrBytesLength
 		}
-		b.CurrentEpochAttestations = make([]*PendingAttestation, num)
-		err = ssz.UnmarshalDynamic(buf, num, func(indx int, buf []byte) (err error) {
-			if b.CurrentEpochAttestations[indx] == nil {
-				b.CurrentEpochAttestations[indx] = new(PendingAttestation)
-			}
-			if err = b.CurrentEpochAttestations[indx].UnmarshalSSZ(buf); err != nil {
-				return err
-			}
-			return nil
-		})
-		if err != nil {
-			return err
+		if cap(b.CurrentEpochParticipation) == 0 {
+			b.CurrentEpochParticipation = make([]byte, 0, len(buf))
 		}
+		b.CurrentEpochParticipation = append(b.CurrentEpochParticipation, buf...)
 	}
 	return err
 }
@@ -1099,17 +854,11 @@ func (b *BeaconState) SizeSSZ() (size int) {
 	// Field (12) 'Balances'
 	size += len(b.Balances) * 8
 
-	// Field (15) 'PreviousEpochAttestations'
-	for ii := 0; ii < len(b.PreviousEpochAttestations); ii++ {
-		size += 4
-		size += b.PreviousEpochAttestations[ii].SizeSSZ()
-	}
+	// Field (15) 'PreviousEpochParticipation'
+	size += len(b.PreviousEpochParticipation)
 
-	// Field (16) 'CurrentEpochAttestations'
-	for ii := 0; ii < len(b.CurrentEpochAttestations); ii++ {
-		size += 4
-		size += b.CurrentEpochAttestations[ii].SizeSSZ()
-	}
+	// Field (16) 'CurrentEpochParticipation'
+	size += len(b.CurrentEpochParticipation)
 
 	return
 }
@@ -1117,7 +866,6 @@ func (b *BeaconState) SizeSSZ() (size int) {
 // HashTreeRoot ssz hashes the BeaconState object
 func (b *BeaconState) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(b)
->>>>>>> light-client
 }
 
 // HashTreeRootWith ssz hashes the BeaconState object with a hasher
@@ -1284,37 +1032,19 @@ func (b *BeaconState) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 		hh.Merkleize(subIndx)
 	}
 
-	// Field (15) 'PreviousEpochAttestations'
-	{
-		subIndx := hh.Index()
-		num := uint64(len(b.PreviousEpochAttestations))
-		if num > 4096 {
-			err = ssz.ErrIncorrectListSize
-			return
-		}
-		for i := uint64(0); i < num; i++ {
-			if err = b.PreviousEpochAttestations[i].HashTreeRootWith(hh); err != nil {
-				return
-			}
-		}
-		hh.MerkleizeWithMixin(subIndx, num, 4096)
+	// Field (15) 'PreviousEpochParticipation'
+	if len(b.PreviousEpochParticipation) > 1099511627776 {
+		err = ssz.ErrBytesLength
+		return
 	}
+	hh.PutBytes(b.PreviousEpochParticipation)
 
-	// Field (16) 'CurrentEpochAttestations'
-	{
-		subIndx := hh.Index()
-		num := uint64(len(b.CurrentEpochAttestations))
-		if num > 4096 {
-			err = ssz.ErrIncorrectListSize
-			return
-		}
-		for i := uint64(0); i < num; i++ {
-			if err = b.CurrentEpochAttestations[i].HashTreeRootWith(hh); err != nil {
-				return
-			}
-		}
-		hh.MerkleizeWithMixin(subIndx, num, 4096)
+	// Field (16) 'CurrentEpochParticipation'
+	if len(b.CurrentEpochParticipation) > 1099511627776 {
+		err = ssz.ErrBytesLength
+		return
 	}
+	hh.PutBytes(b.CurrentEpochParticipation)
 
 	// Field (17) 'JustificationBits'
 	if len(b.JustificationBits) != 1 {
@@ -1438,129 +1168,6 @@ func (f *Fork) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 
 	// Field (2) 'Epoch'
 	hh.PutUint64(uint64(f.Epoch))
-
-	hh.Merkleize(indx)
-	return
-}
-
-// MarshalSSZ ssz marshals the PendingAttestation object
-func (p *PendingAttestation) MarshalSSZ() ([]byte, error) {
-	return ssz.MarshalSSZ(p)
-}
-
-// MarshalSSZTo ssz marshals the PendingAttestation object to a target array
-func (p *PendingAttestation) MarshalSSZTo(buf []byte) (dst []byte, err error) {
-	dst = buf
-	offset := int(148)
-
-	// Offset (0) 'AggregationBits'
-	dst = ssz.WriteOffset(dst, offset)
-	offset += len(p.AggregationBits)
-
-	// Field (1) 'Data'
-	if p.Data == nil {
-		p.Data = new(v1alpha1.AttestationData)
-	}
-	if dst, err = p.Data.MarshalSSZTo(dst); err != nil {
-		return
-	}
-
-	// Field (2) 'InclusionDelay'
-	dst = ssz.MarshalUint64(dst, uint64(p.InclusionDelay))
-
-	// Field (3) 'ProposerIndex'
-	dst = ssz.MarshalUint64(dst, p.ProposerIndex)
-
-	// Field (0) 'AggregationBits'
-	if len(p.AggregationBits) > 2048 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	dst = append(dst, p.AggregationBits...)
-
-	return
-}
-
-// UnmarshalSSZ ssz unmarshals the PendingAttestation object
-func (p *PendingAttestation) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size < 148 {
-		return ssz.ErrSize
-	}
-
-	tail := buf
-	var o0 uint64
-
-	// Offset (0) 'AggregationBits'
-	if o0 = ssz.ReadOffset(buf[0:4]); o0 > size {
-		return ssz.ErrOffset
-	}
-
-	// Field (1) 'Data'
-	if p.Data == nil {
-		p.Data = new(v1alpha1.AttestationData)
-	}
-	if err = p.Data.UnmarshalSSZ(buf[4:132]); err != nil {
-		return err
-	}
-
-	// Field (2) 'InclusionDelay'
-	p.InclusionDelay = github_com_prysmaticlabs_eth2_types.Slot(ssz.UnmarshallUint64(buf[132:140]))
-
-	// Field (3) 'ProposerIndex'
-	p.ProposerIndex = ssz.UnmarshallUint64(buf[140:148])
-
-	// Field (0) 'AggregationBits'
-	{
-		buf = tail[o0:]
-		if err = ssz.ValidateBitlist(buf, 2048); err != nil {
-			return err
-		}
-		if cap(p.AggregationBits) == 0 {
-			p.AggregationBits = make([]byte, 0, len(buf))
-		}
-		p.AggregationBits = append(p.AggregationBits, buf...)
-	}
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the PendingAttestation object
-func (p *PendingAttestation) SizeSSZ() (size int) {
-	size = 148
-
-	// Field (0) 'AggregationBits'
-	size += len(p.AggregationBits)
-
-	return
-}
-
-// HashTreeRoot ssz hashes the PendingAttestation object
-func (p *PendingAttestation) HashTreeRoot() ([32]byte, error) {
-	return ssz.HashWithDefaultHasher(p)
-}
-
-// HashTreeRootWith ssz hashes the PendingAttestation object with a hasher
-func (p *PendingAttestation) HashTreeRootWith(hh *ssz.Hasher) (err error) {
-	indx := hh.Index()
-
-	// Field (0) 'AggregationBits'
-	if len(p.AggregationBits) == 0 {
-		err = ssz.ErrEmptyBitlist
-		return
-	}
-	hh.PutBitlist(p.AggregationBits, 2048)
-
-	// Field (1) 'Data'
-	if err = p.Data.HashTreeRootWith(hh); err != nil {
-		return
-	}
-
-	// Field (2) 'InclusionDelay'
-	hh.PutUint64(uint64(p.InclusionDelay))
-
-	// Field (3) 'ProposerIndex'
-	hh.PutUint64(p.ProposerIndex)
 
 	hh.Merkleize(indx)
 	return

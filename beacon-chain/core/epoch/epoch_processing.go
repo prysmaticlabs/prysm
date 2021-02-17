@@ -6,8 +6,9 @@ package epoch
 
 import (
 	"fmt"
-	types "github.com/prysmaticlabs/eth2-types"
 	"sort"
+
+	types "github.com/prysmaticlabs/eth2-types"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"

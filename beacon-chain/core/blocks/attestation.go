@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+
 	types "github.com/prysmaticlabs/eth2-types"
 
 	"github.com/pkg/errors"
