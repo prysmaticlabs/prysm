@@ -47,7 +47,7 @@ func (s *Service) receiveBlocks(ctx context.Context) {
 	for {
 		select {
 		case blockHeader := <-s.beaconBlocksChan:
-			// TODO(#8331): Validate block and defer blocks from the future for later processing.
+			// TODO(#8331): Defer blocks from the future for later processing.
 			compactBlock := &slashertypes.CompactBeaconBlock{
 				ProposerIndex: blockHeader.ProposerIndex,
 				Slot:          blockHeader.Slot,
