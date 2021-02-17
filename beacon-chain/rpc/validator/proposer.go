@@ -82,12 +82,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 		}
 	}
 
-	var eth1Data *ethpb.Eth1Data
-	if featureconfig.Get().EnableEth1DataMajorityVote {
-		eth1Data, err = vs.eth1DataMajorityVote(ctx, head)
-	} else {
-		eth1Data, err = vs.eth1Data(ctx, req.Slot)
-	}
+	eth1Data, err := vs.eth1DataMajorityVote(ctx, head)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get ETH1 data: %v", err)
 	}
@@ -176,41 +171,6 @@ func (vs *Server) ProposeBlock(ctx context.Context, blk *ethpb.SignedBeaconBlock
 	return &ethpb.ProposeResponse{
 		BlockRoot: root[:],
 	}, nil
-}
-
-// eth1Data determines the appropriate eth1data for a block proposal. The algorithm for this method
-// is as follows:
-//  - Determine the timestamp for the start slot for the eth1 voting period.
-//  - Determine the most recent eth1 block before that timestamp.
-//  - Subtract that eth1block.number by ETH1_FOLLOW_DISTANCE.
-//  - This is the eth1block to use for the block proposal.
-func (vs *Server) eth1Data(ctx context.Context, slot types.Slot) (*ethpb.Eth1Data, error) {
-	ctx, cancel := context.WithTimeout(ctx, eth1dataTimeout)
-	defer cancel()
-
-	if vs.MockEth1Votes {
-		return vs.mockETH1DataVote(ctx, slot)
-	}
-	if !vs.Eth1InfoFetcher.IsConnectedToETH1() {
-		return vs.randomETH1DataVote(ctx)
-	}
-	eth1DataNotification = false
-
-	eth1VotingPeriodStartTime := vs.slotStartTime(slot)
-
-	// Look up most recent block up to timestamp
-	blockNumber, err := vs.Eth1BlockFetcher.BlockByTimestamp(ctx, eth1VotingPeriodStartTime)
-	if err != nil {
-		log.WithError(err).Error("Could not get block number from timestamp")
-		return vs.randomETH1DataVote(ctx)
-	}
-	eth1Data, err := vs.defaultEth1DataResponse(ctx, blockNumber.Number)
-	if err != nil {
-		log.WithError(err).Error("Could not get eth1 data from block number")
-		return vs.randomETH1DataVote(ctx)
-	}
-
-	return eth1Data, nil
 }
 
 // eth1DataMajorityVote determines the appropriate eth1data for a block proposal using

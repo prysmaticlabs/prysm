@@ -22,7 +22,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -953,11 +952,6 @@ func TestOnBlock_CanFinalize(t *testing.T) {
 }
 
 func TestInsertFinalizedDeposits(t *testing.T) {
-	flags := featureconfig.Get()
-	flags.EnablePruningDepositProofs = true
-	reset := featureconfig.InitWithReset(flags)
-	defer reset()
-
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
