@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
-	testing2 "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -104,7 +104,7 @@ func TestService_RejectInboundPeersBeyondLimit(t *testing.T) {
 			PeerLimit:    limit,
 			ScorerParams: &scorers.Config{},
 		}),
-		host: testing2.NewTestP2P(t).BHost,
+		host: mockp2p.NewTestP2P(t).BHost,
 		cfg:  &Config{MaxPeers: uint(limit)},
 	}
 	var err error
