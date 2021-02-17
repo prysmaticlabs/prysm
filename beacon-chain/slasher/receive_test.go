@@ -25,7 +25,7 @@ func Test_processQueuedAttestations_DetectsSurroundingVotes(t *testing.T) {
 		params:           DefaultParams(),
 		attestationQueue: make([]*slashertypes.CompactAttestation, 0),
 	}
-	currentEpochChan := make(chan types.Epoch, 0)
+	currentEpochChan := make(chan types.Epoch)
 	exitChan := make(chan struct{})
 	go func() {
 		s.processQueuedAttestations(ctx, currentEpochChan)
