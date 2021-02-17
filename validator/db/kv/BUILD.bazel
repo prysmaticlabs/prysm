@@ -13,6 +13,7 @@ go_library(
         "log.go",
         "migration.go",
         "migration_optimal_attester_protection.go",
+        "migration_source_target_epochs_bucket.go",
         "proposer_protection.go",
         "prune_attester_protection.go",
         "schema.go",

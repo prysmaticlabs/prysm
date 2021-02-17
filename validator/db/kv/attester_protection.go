@@ -162,96 +162,112 @@ func (s *Store) CheckSlashableAttestation(
 			}
 		}
 
-		sourceEpochsBucket, targetEpochsBucket := pkBucket.Bucket(attestationSourceEpochsBucket), pkBucket.Bucket(attestationTargetEpochsBucket)
+		sourceEpochsBucket := pkBucket.Bucket(attestationSourceEpochsBucket)
+		targetEpochsBucket := pkBucket.Bucket(attestationTargetEpochsBucket)
 		if sourceEpochsBucket == nil {
 			return nil
 		}
-		// Check for surround votes.
 
 		// Is this attestation surrounding any other?
-		// TODO: refactor to another method.
-		c := sourceEpochsBucket.Cursor()
-		// Iterate from the back of the bucket since we are looking for source_epoch > att.source_epoch
-		for k, v := c.Last(); k != nil; k, v = c.Prev() {
-			existingSourceEpoch := bytesutil.BytesToEpochBigEndian(k)
-			if existingSourceEpoch <= att.Data.Source.Epoch {
-				break
-			}
-
-			// There can be multiple target epochs attested per source epoch.
-			attestedTargetEpochs := make([]types.Epoch, 0, len(v)/8)
-			for i := 0; i < len(v); i += 8 {
-				targetEpoch := bytesutil.BytesToEpochBigEndian(v[i : i+8])
-				attestedTargetEpochs = append(attestedTargetEpochs, targetEpoch)
-			}
-
-			for _, existingTargetEpoch := range attestedTargetEpochs {
-				existingAtt := &ethpb.IndexedAttestation{
-					Data: &ethpb.AttestationData{
-						Source: &ethpb.Checkpoint{Epoch: existingSourceEpoch},
-						Target: &ethpb.Checkpoint{Epoch: existingTargetEpoch},
-					},
-				}
-				surrounding := slashutil.IsSurround(att, existingAtt)
-				if surrounding {
-					slashKind = SurroundingVote
-					return fmt.Errorf(
-						surroundingVoteMessage,
-						att.Data.Source.Epoch,
-						att.Data.Target.Epoch,
-						existingSourceEpoch,
-						existingTargetEpoch,
-					)
-				}
-			}
+		var err error
+		slashKind, err = s.checkSurroundingVote(sourceEpochsBucket, att)
+		if err != nil {
+			return err
 		}
-
 		if targetEpochsBucket == nil {
 			return nil
 		}
 
 		// Is this attestation surrounded by any other?
-		// TODO: refactor to another method.
-		// Iterate from the back of the bucket since we are looking for target_epoch > att.target_epoch
-		c = targetEpochsBucket.Cursor()
-		for k, v := c.Last(); k != nil; k, v = c.Prev() {
-			existingTargetEpoch := bytesutil.BytesToEpochBigEndian(k)
-			if existingTargetEpoch <= att.Data.Target.Epoch {
-				break
-			}
-
-			// There can be multiple sources epochs attested per target epoch.
-			attestedSourceEpochs := make([]types.Epoch, 0, len(v)/8)
-			for i := 0; i < len(v); i += 8 {
-				sourceEpoch := bytesutil.BytesToEpochBigEndian(v[i : i+8])
-				attestedSourceEpochs = append(attestedSourceEpochs, sourceEpoch)
-			}
-
-			for _, existingSourceEpoch := range attestedSourceEpochs {
-				existingAtt := &ethpb.IndexedAttestation{
-					Data: &ethpb.AttestationData{
-						Source: &ethpb.Checkpoint{Epoch: existingSourceEpoch},
-						Target: &ethpb.Checkpoint{Epoch: existingTargetEpoch},
-					},
-				}
-				surrounded := slashutil.IsSurround(existingAtt, att)
-				if surrounded {
-					slashKind = SurroundedVote
-					return fmt.Errorf(
-						surroundedVoteMessage,
-						att.Data.Source.Epoch,
-						att.Data.Target.Epoch,
-						existingSourceEpoch,
-						existingTargetEpoch,
-					)
-				}
-			}
+		slashKind, err = s.checkSurroundedVote(targetEpochsBucket, att)
+		if err != nil {
+			return err
 		}
 		return nil
 	})
 
 	traceutil.AnnotateError(span, err)
 	return slashKind, err
+}
+
+// Iterate from the back of the bucket since we are looking for target_epoch > att.target_epoch
+func (s *Store) checkSurroundedVote(
+	targetEpochsBucket *bolt.Bucket, att *ethpb.IndexedAttestation,
+) (SlashingKind, error) {
+	c := targetEpochsBucket.Cursor()
+	for k, v := c.Last(); k != nil; k, v = c.Prev() {
+		existingTargetEpoch := bytesutil.BytesToEpochBigEndian(k)
+		if existingTargetEpoch <= att.Data.Target.Epoch {
+			break
+		}
+
+		// There can be multiple sources epochs attested per target epoch.
+		attestedSourceEpochs := make([]types.Epoch, 0, len(v)/8)
+		for i := 0; i < len(v); i += 8 {
+			sourceEpoch := bytesutil.BytesToEpochBigEndian(v[i : i+8])
+			attestedSourceEpochs = append(attestedSourceEpochs, sourceEpoch)
+		}
+
+		for _, existingSourceEpoch := range attestedSourceEpochs {
+			existingAtt := &ethpb.IndexedAttestation{
+				Data: &ethpb.AttestationData{
+					Source: &ethpb.Checkpoint{Epoch: existingSourceEpoch},
+					Target: &ethpb.Checkpoint{Epoch: existingTargetEpoch},
+				},
+			}
+			surrounded := slashutil.IsSurround(existingAtt, att)
+			if surrounded {
+				return SurroundedVote, fmt.Errorf(
+					surroundedVoteMessage,
+					att.Data.Source.Epoch,
+					att.Data.Target.Epoch,
+					existingSourceEpoch,
+					existingTargetEpoch,
+				)
+			}
+		}
+	}
+	return NotSlashable, nil
+}
+
+// Iterate from the back of the bucket since we are looking for source_epoch > att.source_epoch
+func (s *Store) checkSurroundingVote(
+	sourceEpochsBucket *bolt.Bucket, att *ethpb.IndexedAttestation,
+) (SlashingKind, error) {
+	c := sourceEpochsBucket.Cursor()
+	for k, v := c.Last(); k != nil; k, v = c.Prev() {
+		existingSourceEpoch := bytesutil.BytesToEpochBigEndian(k)
+		if existingSourceEpoch <= att.Data.Source.Epoch {
+			break
+		}
+
+		// There can be multiple target epochs attested per source epoch.
+		attestedTargetEpochs := make([]types.Epoch, 0, len(v)/8)
+		for i := 0; i < len(v); i += 8 {
+			targetEpoch := bytesutil.BytesToEpochBigEndian(v[i : i+8])
+			attestedTargetEpochs = append(attestedTargetEpochs, targetEpoch)
+		}
+
+		for _, existingTargetEpoch := range attestedTargetEpochs {
+			existingAtt := &ethpb.IndexedAttestation{
+				Data: &ethpb.AttestationData{
+					Source: &ethpb.Checkpoint{Epoch: existingSourceEpoch},
+					Target: &ethpb.Checkpoint{Epoch: existingTargetEpoch},
+				},
+			}
+			surrounding := slashutil.IsSurround(att, existingAtt)
+			if surrounding {
+				return SurroundingVote, fmt.Errorf(
+					surroundingVoteMessage,
+					att.Data.Source.Epoch,
+					att.Data.Target.Epoch,
+					existingSourceEpoch,
+					existingTargetEpoch,
+				)
+			}
+		}
+	}
+	return NotSlashable, nil
 }
 
 // SaveAttestationsForPubKey stores a batch of attestations all at once.
