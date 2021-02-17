@@ -208,7 +208,7 @@ func (p *Status) IsAboveInboundLimit() bool {
 	return totalInbound > inboundLimit
 }
 
-// IsAboveInboundLimit checks if we are above our current inbound
+// InboundLimit returns the current inbound
 // peer limit.
 func (p *Status) InboundLimit() int {
 	p.store.RLock()
