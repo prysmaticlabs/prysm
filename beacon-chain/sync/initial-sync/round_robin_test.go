@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/paulbellamy/ratecounter"
+	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -21,9 +22,9 @@ import (
 func TestService_roundRobinSync(t *testing.T) {
 	tests := []struct {
 		name                string
-		currentSlot         uint64
-		availableBlockSlots []uint64
-		expectedBlockSlots  []uint64
+		currentSlot         types.Slot
+		availableBlockSlots []types.Slot
+		expectedBlockSlots  []types.Slot
 		peers               []*peerData
 	}{
 		{
@@ -283,7 +284,8 @@ func TestService_roundRobinSync(t *testing.T) {
 			err := beaconDB.SaveBlock(context.Background(), testutil.NewBeaconBlock())
 			require.NoError(t, err)
 
-			st := testutil.NewBeaconState()
+			st, err := testutil.NewBeaconState()
+			require.NoError(t, err)
 			mc := &mock.ChainService{
 				State: st,
 				Root:  genesisRoot[:],
@@ -305,11 +307,11 @@ func TestService_roundRobinSync(t *testing.T) {
 				t.Errorf("Head slot (%d) is less than expected currentSlot (%d)", s.chain.HeadSlot(), tt.currentSlot)
 			}
 			assert.Equal(t, true, len(tt.expectedBlockSlots) <= len(mc.BlocksReceived), "Processes wrong number of blocks")
-			var receivedBlockSlots []uint64
+			var receivedBlockSlots []types.Slot
 			for _, blk := range mc.BlocksReceived {
 				receivedBlockSlots = append(receivedBlockSlots, blk.Block.Slot)
 			}
-			missing := sliceutil.NotUint64(sliceutil.IntersectionUint64(tt.expectedBlockSlots, receivedBlockSlots), tt.expectedBlockSlots)
+			missing := sliceutil.NotSlot(sliceutil.IntersectionSlot(tt.expectedBlockSlots, receivedBlockSlots), tt.expectedBlockSlots)
 			if len(missing) > 0 {
 				t.Errorf("Missing blocks at slots %v", missing)
 			}
@@ -324,8 +326,9 @@ func TestService_processBlock(t *testing.T) {
 	require.NoError(t, err)
 	err = beaconDB.SaveBlock(context.Background(), genesisBlk)
 	require.NoError(t, err)
-	st := testutil.NewBeaconState()
-	s := New(context.Background(), &Config{
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	s := NewService(context.Background(), &Config{
 		P2P: p2pt.NewTestP2P(t),
 		DB:  beaconDB,
 		Chain: &mock.ChainService{
@@ -373,7 +376,7 @@ func TestService_processBlock(t *testing.T) {
 			return nil
 		})
 		assert.NoError(t, err)
-		assert.Equal(t, uint64(2), s.chain.HeadSlot(), "Unexpected head slot")
+		assert.Equal(t, types.Slot(2), s.chain.HeadSlot(), "Unexpected head slot")
 	})
 }
 
@@ -384,8 +387,9 @@ func TestService_processBlockBatch(t *testing.T) {
 	require.NoError(t, err)
 	err = beaconDB.SaveBlock(context.Background(), genesisBlk)
 	require.NoError(t, err)
-	st := testutil.NewBeaconState()
-	s := New(context.Background(), &Config{
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	s := NewService(context.Background(), &Config{
 		P2P: p2pt.NewTestP2P(t),
 		DB:  beaconDB,
 		Chain: &mock.ChainService{
@@ -404,10 +408,10 @@ func TestService_processBlockBatch(t *testing.T) {
 	t.Run("process non-linear batch", func(t *testing.T) {
 		var batch []*eth.SignedBeaconBlock
 		currBlockRoot := genesisBlkRoot
-		for i := 1; i < 10; i++ {
+		for i := types.Slot(1); i < 10; i++ {
 			parentRoot := currBlockRoot
 			blk1 := testutil.NewBeaconBlock()
-			blk1.Block.Slot = uint64(i)
+			blk1.Block.Slot = i
 			blk1.Block.ParentRoot = parentRoot[:]
 			blk1Root, err := blk1.Block.HashTreeRoot()
 			require.NoError(t, err)
@@ -418,10 +422,10 @@ func TestService_processBlockBatch(t *testing.T) {
 		}
 
 		var batch2 []*eth.SignedBeaconBlock
-		for i := 10; i < 20; i++ {
+		for i := types.Slot(10); i < 20; i++ {
 			parentRoot := currBlockRoot
 			blk1 := testutil.NewBeaconBlock()
-			blk1.Block.Slot = uint64(i)
+			blk1.Block.Slot = i
 			blk1.Block.ParentRoot = parentRoot[:]
 			blk1Root, err := blk1.Block.HashTreeRoot()
 			require.NoError(t, err)
@@ -470,7 +474,7 @@ func TestService_processBlockBatch(t *testing.T) {
 			return nil
 		})
 		assert.NoError(t, err)
-		assert.Equal(t, uint64(19), s.chain.HeadSlot(), "Unexpected head slot")
+		assert.Equal(t, types.Slot(19), s.chain.HeadSlot(), "Unexpected head slot")
 	})
 }
 
@@ -483,13 +487,13 @@ func TestService_blockProviderScoring(t *testing.T) {
 	peerData := []*peerData{
 		{
 			// The slowest peer, only a single block in couple of epochs.
-			blocks:         []uint64{1, 65, 129},
+			blocks:         []types.Slot{1, 65, 129},
 			finalizedEpoch: 5,
 			headSlot:       160,
 		},
 		{
 			// A relatively slow peer, still should perform better than the slowest peer.
-			blocks:         append([]uint64{1, 2, 3, 4, 65, 66, 67, 68, 129, 130}, makeSequence(131, 160)...),
+			blocks:         append([]types.Slot{1, 2, 3, 4, 65, 66, 67, 68, 129, 130}, makeSequence(131, 160)...),
 			finalizedEpoch: 5,
 			headSlot:       160,
 		},
@@ -512,7 +516,8 @@ func TestService_blockProviderScoring(t *testing.T) {
 	err := beaconDB.SaveBlock(context.Background(), testutil.NewBeaconBlock())
 	require.NoError(t, err)
 
-	st := testutil.NewBeaconState()
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, err)
 	mc := &mock.ChainService{
 		State: st,
@@ -533,7 +538,7 @@ func TestService_blockProviderScoring(t *testing.T) {
 	}
 	scorer := s.p2p.Peers().Scorers().BlockProviderScorer()
 	expectedBlockSlots := makeSequence(1, 160)
-	currentSlot := uint64(160)
+	currentSlot := types.Slot(160)
 
 	assert.Equal(t, scorer.MaxScore(), scorer.Score(peer1))
 	assert.Equal(t, scorer.MaxScore(), scorer.Score(peer2))
@@ -544,11 +549,11 @@ func TestService_blockProviderScoring(t *testing.T) {
 		t.Errorf("Head slot (%d) is less than expected currentSlot (%d)", s.chain.HeadSlot(), currentSlot)
 	}
 	assert.Equal(t, true, len(expectedBlockSlots) <= len(mc.BlocksReceived), "Processes wrong number of blocks")
-	var receivedBlockSlots []uint64
+	var receivedBlockSlots []types.Slot
 	for _, blk := range mc.BlocksReceived {
 		receivedBlockSlots = append(receivedBlockSlots, blk.Block.Slot)
 	}
-	missing := sliceutil.NotUint64(sliceutil.IntersectionUint64(expectedBlockSlots, receivedBlockSlots), expectedBlockSlots)
+	missing := sliceutil.NotSlot(sliceutil.IntersectionSlot(expectedBlockSlots, receivedBlockSlots), expectedBlockSlots)
 	if len(missing) > 0 {
 		t.Errorf("Missing blocks at slots %v", missing)
 	}
@@ -577,7 +582,7 @@ func TestService_syncToFinalizedEpoch(t *testing.T) {
 	err := beaconDB.SaveBlock(context.Background(), testutil.NewBeaconBlock())
 	require.NoError(t, err)
 
-	st := testutil.NewBeaconState()
+	st, err := testutil.NewBeaconState()
 	require.NoError(t, err)
 	mc := &mock.ChainService{
 		State: st,
@@ -598,7 +603,7 @@ func TestService_syncToFinalizedEpoch(t *testing.T) {
 		counter:      ratecounter.NewRateCounter(counterSeconds * time.Second),
 	}
 	expectedBlockSlots := makeSequence(1, 191)
-	currentSlot := uint64(191)
+	currentSlot := types.Slot(191)
 
 	// Sync to finalized epoch.
 	hook := logTest.NewGlobal()
@@ -613,11 +618,11 @@ func TestService_syncToFinalizedEpoch(t *testing.T) {
 		t.Errorf("Head slot (%d) is less than expected currentSlot (%d)", s.chain.HeadSlot(), currentSlot)
 	}
 	assert.Equal(t, true, len(expectedBlockSlots) <= len(mc.BlocksReceived), "Processes wrong number of blocks")
-	var receivedBlockSlots []uint64
+	var receivedBlockSlots []types.Slot
 	for _, blk := range mc.BlocksReceived {
 		receivedBlockSlots = append(receivedBlockSlots, blk.Block.Slot)
 	}
-	missing := sliceutil.NotUint64(sliceutil.IntersectionUint64(expectedBlockSlots, receivedBlockSlots), expectedBlockSlots)
+	missing := sliceutil.NotSlot(sliceutil.IntersectionSlot(expectedBlockSlots, receivedBlockSlots), expectedBlockSlots)
 	if len(missing) > 0 {
 		t.Errorf("Missing blocks at slots %v", missing)
 	}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -20,7 +21,7 @@ import (
 
 // This defines the current chain service's view of head.
 type head struct {
-	slot  uint64                   // current head slot.
+	slot  types.Slot               // current head slot.
 	root  [32]byte                 // current head root.
 	block *ethpb.SignedBeaconBlock // current head block.
 	state *stateTrie.BeaconState   // current head state.
@@ -148,16 +149,15 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 // root in DB. With the inception of initial-sync-cache-state flag, it uses finalized
 // check point as anchors to resume sync therefore head is no longer needed to be saved on per slot basis.
 func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, r [32]byte, hs *stateTrie.BeaconState) error {
+	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+		return err
+	}
 	cachedHeadRoot, err := s.HeadRoot(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get head root from cache")
 	}
 	if bytes.Equal(r[:], cachedHeadRoot) {
 		return nil
-	}
-
-	if b == nil || b.Block == nil {
-		return errors.New("cannot save nil head block")
 	}
 
 	s.setHeadInitialSync(r, stateTrie.CopySignedBeaconBlock(b), hs)
@@ -196,7 +196,7 @@ func (s *Service) setHeadInitialSync(root [32]byte, block *ethpb.SignedBeaconBlo
 
 // This returns the head slot.
 // This is a lock free version.
-func (s *Service) headSlot() uint64 {
+func (s *Service) headSlot() types.Slot {
 	return s.head.slot
 }
 

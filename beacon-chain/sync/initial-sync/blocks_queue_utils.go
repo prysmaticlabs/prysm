@@ -3,6 +3,8 @@ package initialsync
 import (
 	"context"
 	"errors"
+
+	types "github.com/prysmaticlabs/eth2-types"
 )
 
 // resetWithBlocks removes all state machines, then re-adds enough machines to contain all provided
@@ -30,8 +32,8 @@ func (q *blocksQueue) resetFromFork(ctx context.Context, fork *forkData) error {
 	fsm.state = stateDataParsed
 
 	// The rest of machines are in skipped state.
-	startSlot := firstBlock.Slot + uint64(len(fork.blocks))
-	for i := startSlot; i < startSlot+blocksPerRequest*(lookaheadSteps-1); i += blocksPerRequest {
+	startSlot := firstBlock.Slot.Add(uint64(len(fork.blocks)))
+	for i := startSlot; i < startSlot.Add(blocksPerRequest*(lookaheadSteps-1)); i += types.Slot(blocksPerRequest) {
 		fsm := q.smm.addStateMachine(i)
 		fsm.state = stateSkipped
 	}
@@ -41,18 +43,18 @@ func (q *blocksQueue) resetFromFork(ctx context.Context, fork *forkData) error {
 // resetFromSlot removes all state machines, and re-adds them starting with a given slot.
 // The last machine added relies on calculated non-skipped slot (to allow FSMs to jump over
 // long periods with skipped slots).
-func (q *blocksQueue) resetFromSlot(ctx context.Context, startSlot uint64) error {
+func (q *blocksQueue) resetFromSlot(ctx context.Context, startSlot types.Slot) error {
 	// Shift start position of all the machines except for the last one.
 	blocksPerRequest := q.blocksFetcher.blocksPerSecond
 	if err := q.smm.removeAllStateMachines(); err != nil {
 		return err
 	}
-	for i := startSlot; i < startSlot+blocksPerRequest*(lookaheadSteps-1); i += blocksPerRequest {
+	for i := startSlot; i < startSlot.Add(blocksPerRequest*(lookaheadSteps-1)); i += types.Slot(blocksPerRequest) {
 		q.smm.addStateMachine(i)
 	}
 
 	// Replace the last (currently activated) state machine to start with best known non-skipped slot.
-	nonSkippedSlot, err := q.blocksFetcher.nonSkippedSlotAfter(ctx, startSlot+blocksPerRequest*(lookaheadSteps-1)-1)
+	nonSkippedSlot, err := q.blocksFetcher.nonSkippedSlotAfter(ctx, startSlot.Add(blocksPerRequest*(lookaheadSteps-1)-1))
 	if err != nil {
 		return err
 	}
@@ -66,7 +68,7 @@ func (q *blocksQueue) resetFromSlot(ctx context.Context, startSlot uint64) error
 		}
 	}
 	if nonSkippedSlot > q.highestExpectedSlot {
-		nonSkippedSlot = startSlot + blocksPerRequest*(lookaheadSteps-1)
+		nonSkippedSlot = startSlot.Add(blocksPerRequest * (lookaheadSteps - 1))
 	}
 	q.smm.addStateMachine(nonSkippedSlot)
 	return nil

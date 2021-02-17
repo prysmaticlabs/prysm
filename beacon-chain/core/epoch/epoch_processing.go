@@ -6,6 +6,7 @@ package epoch
 
 import (
 	"fmt"
+	types "github.com/prysmaticlabs/eth2-types"
 	"sort"
 
 	"github.com/pkg/errors"
@@ -175,17 +176,17 @@ func ProcessSlashings(state *stateTrie.BeaconState) (*stateTrie.BeaconState, err
 	// below equally.
 	increment := params.BeaconConfig().EffectiveBalanceIncrement
 	minSlashing := mathutil.Min(totalSlashing*params.BeaconConfig().ProportionalSlashingMultiplier, totalBalance)
-	err = state.ApplyToEveryValidator(func(idx int, val *ethpb.Validator) (bool, error) {
+	err = state.ApplyToEveryValidator(func(idx int, val *ethpb.Validator) (bool, *ethpb.Validator, error) {
 		correctEpoch := (currentEpoch + exitLength/2) == val.WithdrawableEpoch
 		if val.Slashed && correctEpoch {
 			penaltyNumerator := val.EffectiveBalance / increment * minSlashing
 			penalty := penaltyNumerator / totalBalance * increment
 			if err := helpers.DecreaseBalance(state, uint64(idx), penalty); err != nil {
-				return false, err
+				return false, val, err
 			}
-			return true, nil
+			return true, val, nil
 		}
-		return false, nil
+		return false, val, nil
 	})
 	return state, err
 }
@@ -249,23 +250,24 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 
 	bals := state.Balances()
 	// Update effective balances with hysteresis.
-	validatorFunc := func(idx int, val *ethpb.Validator) (bool, error) {
+	validatorFunc := func(idx int, val *ethpb.Validator) (bool, *ethpb.Validator, error) {
 		if val == nil {
-			return false, fmt.Errorf("validator %d is nil in state", idx)
+			return false, nil, fmt.Errorf("validator %d is nil in state", idx)
 		}
 		if idx >= len(bals) {
-			return false, fmt.Errorf("validator index exceeds validator length in state %d >= %d", idx, len(state.Balances()))
+			return false, nil, fmt.Errorf("validator index exceeds validator length in state %d >= %d", idx, len(state.Balances()))
 		}
 		balance := bals[idx]
 
 		if balance+downwardThreshold < val.EffectiveBalance || val.EffectiveBalance+upwardThreshold < balance {
-			val.EffectiveBalance = maxEffBalance
-			if val.EffectiveBalance > balance-balance%effBalanceInc {
-				val.EffectiveBalance = balance - balance%effBalanceInc
+			newVal := stateTrie.CopyValidator(val)
+			newVal.EffectiveBalance = maxEffBalance
+			if newVal.EffectiveBalance > balance-balance%effBalanceInc {
+				newVal.EffectiveBalance = balance - balance%effBalanceInc
 			}
-			return true, nil
+			return true, newVal, nil
 		}
-		return false, nil
+		return false, val, nil
 	}
 
 	if err := state.ApplyToEveryValidator(validatorFunc); err != nil {
@@ -276,20 +278,20 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 	slashedExitLength := params.BeaconConfig().EpochsPerSlashingsVector
 	slashedEpoch := nextEpoch % slashedExitLength
 	slashings := state.Slashings()
-	if uint64(len(slashings)) != slashedExitLength {
+	if uint64(len(slashings)) != uint64(slashedExitLength) {
 		return nil, fmt.Errorf(
 			"state slashing length %d different than EpochsPerHistoricalVector %d",
 			len(slashings),
 			slashedExitLength,
 		)
 	}
-	if err := state.UpdateSlashingsAtIndex(slashedEpoch /* index */, 0 /* value */); err != nil {
+	if err := state.UpdateSlashingsAtIndex(uint64(slashedEpoch) /* index */, 0 /* value */); err != nil {
 		return nil, err
 	}
 
 	// Set RANDAO mix.
 	randaoMixLength := params.BeaconConfig().EpochsPerHistoricalVector
-	if uint64(state.RandaoMixesLength()) != randaoMixLength {
+	if uint64(state.RandaoMixesLength()) != uint64(randaoMixLength) {
 		return nil, fmt.Errorf(
 			"state randao length %d different than EpochsPerHistoricalVector %d",
 			state.RandaoMixesLength(),
@@ -300,13 +302,13 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 	if err != nil {
 		return nil, err
 	}
-	if err := state.UpdateRandaoMixesAtIndex(nextEpoch%randaoMixLength, mix); err != nil {
+	if err := state.UpdateRandaoMixesAtIndex(uint64(nextEpoch%randaoMixLength), mix); err != nil {
 		return nil, err
 	}
 
 	// Set historical root accumulator.
-	epochsPerHistoricalRoot := params.BeaconConfig().SlotsPerHistoricalRoot / params.BeaconConfig().SlotsPerEpoch
-	if nextEpoch%epochsPerHistoricalRoot == 0 {
+	epochsPerHistoricalRoot := params.BeaconConfig().SlotsPerHistoricalRoot.DivSlot(params.BeaconConfig().SlotsPerEpoch)
+	if nextEpoch.Mod(uint64(epochsPerHistoricalRoot)) == 0 {
 		historicalBatch := &pb.HistoricalBatch{
 			BlockRoots: state.BlockRoots(),
 			StateRoots: state.StateRoots(),
@@ -415,7 +417,8 @@ func BaseReward(state *stateTrie.BeaconState, index uint64) (uint64, error) {
 //        state.current_sync_committee = state.next_sync_committee
 //        state.next_sync_committee = get_sync_committee(state, next_epoch + EPOCHS_PER_SYNC_COMMITTEE_PERIOD)
 func ProcessLightClientCommitteeUpdates(beaconState *stateTrie.BeaconState) (*stateTrie.BeaconState, error) {
-	if helpers.CurrentEpoch(beaconState)+1%params.BeaconConfig().EpochsPerSyncCommitteePeriod == 0 {
+	nextEpoch := helpers.NextEpoch(beaconState)
+	if nextEpoch%params.BeaconConfig().EpochsPerSyncCommitteePeriod == 0 {
 		if err := beaconState.SetCurrentSyncCommittee(beaconState.NextSyncCommittee()); err != nil {
 			return nil, err
 		}
@@ -447,7 +450,7 @@ func ProcessLightClientCommitteeUpdates(beaconState *stateTrie.BeaconState) (*st
 //        if has_validator_flags(epoch_participation[index], flags)
 //    ]
 //    return set(filter(lambda index: not state.validators[index].slashed, participating_indices))
-func UnslashedParticipatingIndices(state *stateTrie.BeaconState, flag uint8, epoch uint64) ([]uint64, error) {
+func UnslashedParticipatingIndices(state *stateTrie.BeaconState, flag uint8, epoch types.Epoch) ([]uint64, error) {
 	if epoch != helpers.CurrentEpoch(state) && epoch != helpers.PrevEpoch(state) {
 		return nil, fmt.Errorf(
 			"epoch (%d) is not previous epoch (%d) or current epoch (%d)",
@@ -607,7 +610,7 @@ func InactivityPenaltyDeltas(state *stateTrie.BeaconState) ([]uint64, error) {
 			if err != nil {
 				return nil, err
 			}
-			penalties[index] += v.EffectiveBalance() * finalityDelay(helpers.PrevEpoch(state), state.FinalizedCheckpointEpoch()) / params.BeaconConfig().InactivityPenaltyQuotient
+			penalties[index] += v.EffectiveBalance() * uint64(finalityDelay(helpers.PrevEpoch(state), state.FinalizedCheckpointEpoch())) / params.BeaconConfig().InactivityPenaltyQuotient
 		}
 	}
 	return penalties, nil
@@ -618,7 +621,7 @@ func InactivityPenaltyDeltas(state *stateTrie.BeaconState) ([]uint64, error) {
 // Spec code:
 // def is_in_inactivity_leak(state: BeaconState) -> bool:
 //    return get_finality_delay(state) > MIN_EPOCHS_TO_INACTIVITY_PENALTY
-func isInInactivityLeak(prevEpoch, finalizedEpoch uint64) bool {
+func isInInactivityLeak(prevEpoch, finalizedEpoch types.Epoch) bool {
 	return finalityDelay(prevEpoch, finalizedEpoch) > params.BeaconConfig().MinEpochsToInactivityPenalty
 }
 
@@ -627,6 +630,6 @@ func isInInactivityLeak(prevEpoch, finalizedEpoch uint64) bool {
 // Spec code:
 // def get_finality_delay(state: BeaconState) -> uint64:
 //    return get_previous_epoch(state) - state.finalized_checkpoint.epoch
-func finalityDelay(prevEpoch, finalizedEpoch uint64) uint64 {
+func finalityDelay(prevEpoch, finalizedEpoch types.Epoch) types.Epoch {
 	return prevEpoch - finalizedEpoch
 }

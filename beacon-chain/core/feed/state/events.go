@@ -6,6 +6,7 @@ package state
 import (
 	"time"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
 
@@ -26,7 +27,7 @@ const (
 // BlockProcessedData is the data sent with BlockProcessed events.
 type BlockProcessedData struct {
 	// Slot is the slot of the processed block.
-	Slot uint64
+	Slot types.Slot
 	// BlockRoot of the processed block.
 	BlockRoot [32]byte
 	// SignedBlock is the physical processed block.
@@ -58,7 +59,7 @@ type InitializedData struct {
 // ReorgData is the data alongside a reorg event.
 type ReorgData struct {
 	// NewSlot is the slot of new state after the reorg.
-	NewSlot uint64
+	NewSlot types.Slot
 	// OldSlot is the slot of the head state before the reorg.
-	OldSlot uint64
+	OldSlot types.Slot
 }

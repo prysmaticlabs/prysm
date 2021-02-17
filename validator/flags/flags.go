@@ -214,6 +214,12 @@ var (
 			"a voluntary exit",
 		Value: "",
 	}
+	// ExitAllFlag allows stakers to select all validating keys for exit. This will still require the staker
+	// to confirm a prompt for this action given it is a dangerous one.
+	ExitAllFlag = &cli.BoolFlag{
+		Name:  "exit-all",
+		Usage: "Exit all validators. This will still require the staker to confirm a prompt for the action",
+	}
 	// BackupPasswordFile for encrypting accounts a user wishes to back up.
 	BackupPasswordFile = &cli.StringFlag{
 		Name:  "backup-password-file",

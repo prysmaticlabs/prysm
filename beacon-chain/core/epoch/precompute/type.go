@@ -1,5 +1,7 @@
 package precompute
 
+import types "github.com/prysmaticlabs/eth2-types"
+
 // Validator stores the pre computation of individual validator's attesting records these records
 // consist of attestation votes, block inclusion record. Pre computing and storing such record
 // is essential for process epoch optimizations.
@@ -26,9 +28,9 @@ type Validator struct {
 	// CurrentEpochEffectiveBalance is how much effective balance this validator validator has current epoch.
 	CurrentEpochEffectiveBalance uint64
 	// InclusionSlot is the slot of when the attestation gets included in the chain.
-	InclusionSlot uint64
+	InclusionSlot types.Slot
 	// InclusionDistance is the distance between the assigned slot and this validator's attestation was included in block.
-	InclusionDistance uint64
+	InclusionDistance types.Slot
 	// ProposerIndex is the index of proposer at slot where this validator's attestation was included.
 	ProposerIndex uint64
 	// BeforeEpochTransitionBalance is the validator balance prior to epoch transition.

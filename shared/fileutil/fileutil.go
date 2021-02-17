@@ -104,6 +104,16 @@ func HasDir(dirPath string) (bool, error) {
 	return info.IsDir(), err
 }
 
+// HasReadWritePermissions checks if file at a path has proper
+// 0600 permissions set.
+func HasReadWritePermissions(itemPath string) (bool, error) {
+	info, err := os.Stat(itemPath)
+	if err != nil {
+		return false, err
+	}
+	return info.Mode() == params.BeaconIoConfig().ReadWritePermissions, nil
+}
+
 // FileExists returns true if a file is not a directory and exists
 // at the specified path.
 func FileExists(filename string) bool {

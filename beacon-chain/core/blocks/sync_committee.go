@@ -93,7 +93,7 @@ func ProcessSyncCommittee(state *state.BeaconState, body *ethpb.BeaconBlockBody)
 		}
 		proposerReward := br / params.BeaconConfig().ProposerRewardQuotient
 		maxReward := br - proposerReward
-		r := maxReward * aCount / uint64(len(indices)) / params.BeaconConfig().SlotsPerEpoch
+		r := maxReward * aCount / uint64(len(indices)) / uint64(params.BeaconConfig().SlotsPerEpoch)
 		if err := helpers.IncreaseBalance(state, index, r); err != nil {
 			return nil, err
 		}

@@ -211,7 +211,7 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 
 	var proposerIndex uint64
 	for i, duty := range duties.CurrentEpochDuties {
-		if sliceutil.IsInUint64(chainHead.HeadSlot-1, duty.ProposerSlots) {
+		if sliceutil.IsInSlots(chainHead.HeadSlot-1, duty.ProposerSlots) {
 			proposerIndex = uint64(i)
 			break
 		}

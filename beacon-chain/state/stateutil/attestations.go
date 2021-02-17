@@ -28,7 +28,7 @@ func PendingAttestationRoot(hasher htrutils.HashFn, att *pb.PendingAttestation) 
 			return [32]byte{}, err
 		}
 		inclusionBuf := make([]byte, 8)
-		binary.LittleEndian.PutUint64(inclusionBuf, att.InclusionDelay)
+		binary.LittleEndian.PutUint64(inclusionBuf, uint64(att.InclusionDelay))
 		// Inclusion delay.
 		inclusionRoot := bytesutil.ToBytes32(inclusionBuf)
 
@@ -53,7 +53,7 @@ func marshalAttestationData(data *ethpb.AttestationData) []byte {
 	if data != nil {
 		// Slot.
 		slotBuf := make([]byte, 8)
-		binary.LittleEndian.PutUint64(slotBuf, data.Slot)
+		binary.LittleEndian.PutUint64(slotBuf, uint64(data.Slot))
 		copy(enc[0:8], slotBuf)
 
 		// Committee index.
@@ -66,7 +66,7 @@ func marshalAttestationData(data *ethpb.AttestationData) []byte {
 		// Source epoch and root.
 		if data.Source != nil {
 			sourceEpochBuf := make([]byte, 8)
-			binary.LittleEndian.PutUint64(sourceEpochBuf, data.Source.Epoch)
+			binary.LittleEndian.PutUint64(sourceEpochBuf, uint64(data.Source.Epoch))
 			copy(enc[48:56], sourceEpochBuf)
 			copy(enc[56:88], data.Source.Root)
 		}
@@ -74,7 +74,7 @@ func marshalAttestationData(data *ethpb.AttestationData) []byte {
 		// Target.
 		if data.Target != nil {
 			targetEpochBuf := make([]byte, 8)
-			binary.LittleEndian.PutUint64(targetEpochBuf, data.Target.Epoch)
+			binary.LittleEndian.PutUint64(targetEpochBuf, uint64(data.Target.Epoch))
 			copy(enc[88:96], targetEpochBuf)
 			copy(enc[96:128], data.Target.Root)
 		}
@@ -89,7 +89,7 @@ func attestationDataRoot(hasher htrutils.HashFn, data *ethpb.AttestationData) ([
 	if data != nil {
 		// Slot.
 		slotBuf := make([]byte, 8)
-		binary.LittleEndian.PutUint64(slotBuf, data.Slot)
+		binary.LittleEndian.PutUint64(slotBuf, uint64(data.Slot))
 		slotRoot := bytesutil.ToBytes32(slotBuf)
 		fieldRoots[0] = slotRoot[:]
 

@@ -38,7 +38,7 @@ func TestVerifyIndexInCommittee_CanVerify(t *testing.T) {
 	s, _ := testutil.DeterministicGenesisState(t, validators)
 	require.NoError(t, s.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
-	bf := bitfield.NewBitlist(validators / params.BeaconConfig().SlotsPerEpoch)
+	bf := bitfield.NewBitlist(validators / uint64(params.BeaconConfig().SlotsPerEpoch))
 	bf.SetBitAt(0, true)
 	att := &ethpb.Attestation{Data: &ethpb.AttestationData{
 		Target: &ethpb.Checkpoint{Epoch: 0}},
@@ -152,7 +152,8 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 	require.NoError(t, db.SaveBlock(context.Background(), b))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	s := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, db.SaveState(context.Background(), s, root))
 
 	aggBits := bitfield.NewBitlist(3)
@@ -301,10 +302,11 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	require.NoError(t, db.SaveBlock(context.Background(), b))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	s := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, db.SaveState(context.Background(), s, root))
 
-	aggBits := bitfield.NewBitlist(validators / params.BeaconConfig().SlotsPerEpoch)
+	aggBits := bitfield.NewBitlist(validators / uint64(params.BeaconConfig().SlotsPerEpoch))
 	aggBits.SetBitAt(0, true)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
@@ -390,10 +392,11 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	require.NoError(t, db.SaveBlock(context.Background(), b))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	s := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, db.SaveState(context.Background(), s, root))
 
-	aggBits := bitfield.NewBitlist(validators / params.BeaconConfig().SlotsPerEpoch)
+	aggBits := bitfield.NewBitlist(validators / uint64(params.BeaconConfig().SlotsPerEpoch))
 	aggBits.SetBitAt(0, true)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
@@ -496,10 +499,11 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 	b := testutil.NewBeaconBlock()
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	s := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, db.SaveState(context.Background(), s, root))
 
-	aggBits := bitfield.NewBitlist(validators / params.BeaconConfig().SlotsPerEpoch)
+	aggBits := bitfield.NewBitlist(validators / uint64(params.BeaconConfig().SlotsPerEpoch))
 	aggBits.SetBitAt(0, true)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
@@ -585,10 +589,11 @@ func TestValidateAggregateAndProof_RejectWhenAttEpochDoesntEqualTargetEpoch(t *t
 	require.NoError(t, db.SaveBlock(context.Background(), b))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	s := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, db.SaveState(context.Background(), s, root))
 
-	aggBits := bitfield.NewBitlist(validators / params.BeaconConfig().SlotsPerEpoch)
+	aggBits := bitfield.NewBitlist(validators / uint64(params.BeaconConfig().SlotsPerEpoch))
 	aggBits.SetBitAt(0, true)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{

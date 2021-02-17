@@ -6,11 +6,13 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -19,7 +21,7 @@ import (
 func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*stateTrie.BeaconState, error) {
 	// Use a multilock to allow scoped holding of a mutex by a checkpoint root + epoch
 	// allowing us to behave smarter in terms of how this function is used concurrently.
-	epochKey := strconv.FormatUint(c.Epoch, 10 /* base 10 */)
+	epochKey := strconv.FormatUint(uint64(c.Epoch), 10 /* base 10 */)
 	lock := mputil.NewMultilock(string(c.Root) + epochKey)
 	lock.Lock()
 	defer lock.Unlock()
@@ -41,9 +43,16 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 		return nil, err
 	}
 	if epochStartSlot > baseState.Slot() {
-		baseState, err = state.ProcessSlots(ctx, baseState, epochStartSlot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not process slots up to epoch %d", c.Epoch)
+		if featureconfig.Get().EnableNextSlotStateCache {
+			baseState, err = state.ProcessSlotsUsingNextSlotCache(ctx, baseState, c.Root, epochStartSlot)
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not process slots up to epoch %d", c.Epoch)
+			}
+		} else {
+			baseState, err = state.ProcessSlots(ctx, baseState, epochStartSlot)
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not process slots up to epoch %d", c.Epoch)
+			}
 		}
 		if err := s.checkpointStateCache.AddCheckpointState(c, baseState); err != nil {
 			return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
@@ -68,9 +77,9 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 
 // verifyAttTargetEpoch validates attestation is from the current or previous epoch.
 func (s *Service) verifyAttTargetEpoch(_ context.Context, genesisTime, nowTime uint64, c *ethpb.Checkpoint) error {
-	currentSlot := (nowTime - genesisTime) / params.BeaconConfig().SecondsPerSlot
+	currentSlot := types.Slot((nowTime - genesisTime) / params.BeaconConfig().SecondsPerSlot)
 	currentEpoch := helpers.SlotToEpoch(currentSlot)
-	var prevEpoch uint64
+	var prevEpoch types.Epoch
 	// Prevents previous epoch under flow
 	if currentEpoch > 1 {
 		prevEpoch = currentEpoch - 1
@@ -93,8 +102,8 @@ func (s *Service) verifyBeaconBlock(ctx context.Context, data *ethpb.Attestation
 	if b == nil && s.hasInitSyncBlock(r) {
 		b = s.getInitSyncBlock(r)
 	}
-	if b == nil || b.Block == nil {
-		return fmt.Errorf("beacon block %#x does not exist", bytesutil.Trunc(data.BeaconBlockRoot))
+	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+		return err
 	}
 	if b.Block.Slot > data.Slot {
 		return fmt.Errorf("could not process attestation for future block, block.Slot=%d > attestation.Data.Slot=%d", b.Block.Slot, data.Slot)

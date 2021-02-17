@@ -6,18 +6,20 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
 
 // CurrentSlot returns the current slot based on time.
-func (s *Service) CurrentSlot() uint64 {
+func (s *Service) CurrentSlot() types.Slot {
 	return helpers.CurrentSlot(uint64(s.genesisTime.Unix()))
 }
 
@@ -230,9 +232,10 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 	if err := s.beaconDB.SaveFinalizedCheckpoint(ctx, cp); err != nil {
 		return err
 	}
-
-	s.prevFinalizedCheckpt = s.finalizedCheckpt
-	s.finalizedCheckpt = cp
+	if !featureconfig.Get().UpdateHeadTimely {
+		s.prevFinalizedCheckpt = s.finalizedCheckpt
+		s.finalizedCheckpt = cp
+	}
 
 	fRoot := bytesutil.ToBytes32(cp.Root)
 	if err := s.stateGen.MigrateToCold(ctx, fRoot); err != nil {
@@ -254,7 +257,7 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 //    else:
 //        # root is older than queried slot, thus a skip slot. Return most recent root prior to slot
 //        return root
-func (s *Service) ancestor(ctx context.Context, root []byte, slot uint64) ([]byte, error) {
+func (s *Service) ancestor(ctx context.Context, root []byte, slot types.Slot) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.ancestor")
 	defer span.End()
 
@@ -275,7 +278,7 @@ func (s *Service) ancestor(ctx context.Context, root []byte, slot uint64) ([]byt
 }
 
 // This retrieves an ancestor root using fork choice store. The look up is looping through the a flat array structure.
-func (s *Service) ancestorByForkChoiceStore(ctx context.Context, r [32]byte, slot uint64) ([]byte, error) {
+func (s *Service) ancestorByForkChoiceStore(ctx context.Context, r [32]byte, slot types.Slot) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.ancestorByForkChoiceStore")
 	defer span.End()
 
@@ -286,7 +289,7 @@ func (s *Service) ancestorByForkChoiceStore(ctx context.Context, r [32]byte, slo
 }
 
 // This retrieves an ancestor root using DB. The look up is recursively looking up DB. Slower than `ancestorByForkChoiceStore`.
-func (s *Service) ancestorByDB(ctx context.Context, r [32]byte, slot uint64) ([]byte, error) {
+func (s *Service) ancestorByDB(ctx context.Context, r [32]byte, slot types.Slot) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.ancestorByDB")
 	defer span.End()
 
@@ -401,6 +404,28 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.
 		}
 	}
 
+	return nil
+}
+
+// inserts finalized deposits into our finalized deposit trie.
+func (s *Service) insertFinalizedDeposits(ctx context.Context, fRoot [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "blockChain.insertFinalizedDeposits")
+	defer span.End()
+
+	// Update deposit cache.
+	finalizedState, err := s.stateGen.StateByRoot(ctx, fRoot)
+	if err != nil {
+		return errors.Wrap(err, "could not fetch finalized state")
+	}
+	// We update the cache up to the last deposit index in the finalized block's state.
+	// We can be confident that these deposits will be included in some block
+	// because the Eth1 follow distance makes such long-range reorgs extremely unlikely.
+	eth1DepositIndex := int64(finalizedState.Eth1Data().DepositCount - 1)
+	s.depositCache.InsertFinalizedDeposits(ctx, eth1DepositIndex)
+	// Deposit proofs are only used during state transition and can be safely removed to save space.
+	if err = s.depositCache.PruneProofs(ctx, eth1DepositIndex); err != nil {
+		return errors.Wrap(err, "could not prune deposit proofs")
+	}
 	return nil
 }
 

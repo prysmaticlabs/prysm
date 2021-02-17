@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -42,7 +43,7 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 	if genesisTime.IsZero() {
 		return status.Error(codes.Unavailable, "genesis time is not set")
 	}
-	var currentEpoch uint64
+	var currentEpoch types.Epoch
 	if genesisTime.Before(timeutils.Now()) {
 		currentEpoch = slotutil.EpochsSinceGenesis(vs.TimeFetcher.GenesisTime())
 	}
@@ -60,13 +61,13 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 	stateSub := vs.StateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
 
-	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
+	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * uint64(params.BeaconConfig().SlotsPerEpoch)
 	epochTicker := slotutil.NewSlotTicker(vs.TimeFetcher.GenesisTime(), secondsPerEpoch)
 	for {
 		select {
 		// Ticks every epoch to submit assignments to connected validator clients.
-		case epoch := <-epochTicker.C():
-			req.Epoch = epoch
+		case slot := <-epochTicker.C():
+			req.Epoch = types.Epoch(slot)
 			res, err := vs.duties(stream.Context(), req)
 			if err != nil {
 				return status.Errorf(codes.Internal, "Could not compute validator duties: %v", err)
@@ -155,15 +156,15 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 		}
 		idx, ok := s.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
 		if ok {
-			status := assignmentStatus(s, idx)
+			s := assignmentStatus(s, idx)
 
 			assignment.ValidatorIndex = idx
-			assignment.Status = status
+			assignment.Status = s
 			assignment.ProposerSlots = proposerIndexToSlots[idx]
 
 			// The next epoch has no lookup for proposer indexes.
 			nextAssignment.ValidatorIndex = idx
-			nextAssignment.Status = status
+			nextAssignment.Status = s
 
 			ca, ok := committeeAssignments[idx]
 			if ok {
@@ -208,7 +209,7 @@ func assignValidatorToSubnet(pubkey []byte, status ethpb.ValidatorStatus) {
 	if ok && expTime.After(timeutils.Now()) {
 		return
 	}
-	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot)
+	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	var assignedIdxs []uint64
 	randGen := rand.NewGenerator()
 	for i := uint64(0); i < params.BeaconConfig().RandomSubnetsPerValidator; i++ {

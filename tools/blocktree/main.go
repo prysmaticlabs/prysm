@@ -16,8 +16,10 @@ import (
 	"strconv"
 
 	"github.com/emicklei/dot"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
@@ -37,7 +39,7 @@ type node struct {
 
 func main() {
 	flag.Parse()
-	db, err := db.NewDB(context.Background(), *datadir)
+	db, err := db.NewDB(context.Background(), *datadir, &kv.Config{})
 	if err != nil {
 		panic(err)
 	}
@@ -46,8 +48,8 @@ func main() {
 	graph.Attr("rankdir", "RL")
 	graph.Attr("labeljust", "l")
 
-	startSlot := uint64(*startSlot)
-	endSlot := uint64(*endSlot)
+	startSlot := types.Slot(*startSlot)
+	endSlot := types.Slot(*endSlot)
 	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
 	blks, roots, err := db.Blocks(context.Background(), filter)
 	if err != nil {

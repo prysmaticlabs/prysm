@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
@@ -17,8 +18,9 @@ func TestServer_GetBeaconState(t *testing.T) {
 
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
-	st := testutil.NewBeaconState()
-	slot := uint64(100)
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	slot := types.Slot(100)
 	require.NoError(t, st.SetSlot(slot))
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = slot

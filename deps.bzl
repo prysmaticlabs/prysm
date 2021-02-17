@@ -2569,30 +2569,23 @@ def prysm_deps():
         version = "v0.10.0",
     )
     go_repository(
-        name = "com_github_protolambda_zssz",
-        importpath = "github.com/protolambda/zssz",
-        sum = "h1:7fjJjissZIIaa2QcvmhS/pZISMX21zVITt49sW1ouek=",
-        version = "v0.1.5",
+        name = "com_github_prysmaticlabs_eth2_types",
+        importpath = "github.com/prysmaticlabs/eth2-types",
+        sum = "h1:6ooFkN9g9oAJq+VZWseIpj/tQqyVU0DuLFs66Ro43BQ=",
+        version = "v0.0.0-20210210115503-cf4ec6600a2d",
     )
-
     go_repository(
         name = "com_github_prysmaticlabs_ethereumapis",
         build_file_generation = "off",
         importpath = "github.com/prysmaticlabs/ethereumapis",
-        sum = "h1:ZR1ytQ2DGDxesgz/7tiiOV4sBc4JGLXDbdQkm4R49pE=",
-        version = "v0.0.0-20210204192632-2d34e7cce584",
+        sum = "h1:P/PEq40dCdTlMxmJWxO9732YUuGey2k8Do9fp6W1NQo=",
+        version = "v0.0.0-20210216232847-7cf4db55ab4b",
     )
     go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",
         importpath = "github.com/prysmaticlabs/go-bitfield",
         sum = "h1:18+Qqobq3HAUY0hgIhPGSqmLFnaLLocemmU7+Sj2aYQ=",
         version = "v0.0.0-20210202205921-7fcea7c45dc8",
-    )
-    go_repository(
-        name = "com_github_prysmaticlabs_go_ssz",
-        importpath = "github.com/prysmaticlabs/go-ssz",
-        sum = "h1:4bD+ujqGfY4zoDUF3q9MhdmpPXzdp03DYUIlXeQ72kk=",
-        version = "v0.0.0-20210121151755-f6208871c388",
     )
 
     go_repository(
@@ -3611,8 +3604,8 @@ def prysm_deps():
     go_repository(
         name = "org_golang_x_tools",
         importpath = "golang.org/x/tools",
-        sum = "h1:CB3a9Nez8M13wwlr/E2YtwoU+qYHKfC+JrDa45RXXoQ=",
-        version = "v0.0.0-20210106214847-113979e3529a",
+        sum = "h1:po9/4sTYwZU9lPhi1tOrb4hCv3qrhiQ77LZfGa2OjwY=",
+        version = "v0.1.0",
     )
 
     go_repository(

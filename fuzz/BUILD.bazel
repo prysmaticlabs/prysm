@@ -16,6 +16,7 @@ ssz_gen_marshal(
     srcs = ["inputs.go"],
     includes = [
         "//proto/beacon/p2p/v1:go_default_library",
+        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
     ],
     objs = [
@@ -69,6 +70,7 @@ go_fuzz_test(
         "//beacon-chain/p2p/testing:go_default_library",
         "//beacon-chain/sync:go_default_library",
         "//beacon-chain/db:go_default_library",
+        "//beacon-chain/db/kv:go_default_library",
         "//beacon-chain/operations/voluntaryexits:go_default_library",
         "//beacon-chain/blockchain:go_default_library",
         "//beacon-chain/operations/slashings:go_default_library",
@@ -168,6 +170,7 @@ go_library(
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/db:go_default_library",
+        "//beacon-chain/db/kv:go_default_library",
         "//beacon-chain/forkchoice/protoarray:go_default_library",
         "//beacon-chain/operations/attestations:go_default_library",
         "//beacon-chain/operations/slashings:go_default_library",

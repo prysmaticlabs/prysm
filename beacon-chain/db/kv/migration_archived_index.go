@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	bolt "go.etcd.io/bbolt"
@@ -26,7 +27,7 @@ func migrateArchivedIndex(tx *bolt.Tx) error {
 		return err
 	}
 
-	var highest uint64
+	var highest types.Slot
 	c := bkt.Cursor()
 	for k, v := c.First(); k != nil; k, v = c.Next() {
 		// Look up actual slot from block
@@ -39,7 +40,7 @@ func migrateArchivedIndex(tx *bolt.Tx) error {
 		if err := decode(context.TODO(), b, blk); err != nil {
 			return err
 		}
-		if err := tx.Bucket(stateSlotIndicesBucket).Put(bytesutil.Uint64ToBytesBigEndian(blk.Block.Slot), v); err != nil {
+		if err := tx.Bucket(stateSlotIndicesBucket).Put(bytesutil.SlotToBytesBigEndian(blk.Block.Slot), v); err != nil {
 			return err
 		}
 		if blk.Block.Slot > highest {

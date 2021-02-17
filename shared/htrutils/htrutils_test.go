@@ -23,7 +23,7 @@ func TestForkRoot(t *testing.T) {
 	testFork := pb.Fork{
 		PreviousVersion: []byte{123},
 		CurrentVersion:  []byte{124},
-		Epoch:           uint64(1234567890),
+		Epoch:           1234567890,
 	}
 	expected := [32]byte{19, 46, 77, 103, 92, 175, 247, 33, 100, 64, 17, 111, 199, 145, 69, 38, 217, 112, 6, 16, 149, 201, 225, 144, 192, 228, 197, 172, 157, 78, 114, 140}
 
@@ -35,7 +35,7 @@ func TestForkRoot(t *testing.T) {
 func TestCheckPointRoot(t *testing.T) {
 	testHasher := hashutil.CustomSHA256Hasher()
 	testCheckpoint := ethpb.Checkpoint{
-		Epoch: uint64(1234567890),
+		Epoch: 1234567890,
 		Root:  []byte{222},
 	}
 	expected := [32]byte{228, 65, 39, 109, 183, 249, 167, 232, 125, 239, 25, 155, 207, 4, 84, 174, 176, 229, 175, 224, 62, 33, 215, 254, 170, 220, 132, 65, 246, 128, 68, 194}

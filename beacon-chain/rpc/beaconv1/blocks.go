@@ -7,6 +7,7 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	ethpb_alpha "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -217,7 +218,7 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpb.BlockRequest) (*e
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "could not decode block id: %v", err)
 			}
-			hasRoots, roots, err := bs.BeaconDB.BlockRootsBySlot(ctx, slot)
+			hasRoots, roots, err := bs.BeaconDB.BlockRootsBySlot(ctx, types.Slot(slot))
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for slot %d: %v", slot, err)
 			}
@@ -300,11 +301,11 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (*ethpb_
 			if err != nil {
 				return nil, errors.Wrap(err, "could not decode block id")
 			}
-			_, blks, err := bs.BeaconDB.BlocksBySlot(ctx, slot)
+			_, blks, err := bs.BeaconDB.BlocksBySlot(ctx, types.Slot(slot))
 			if err != nil {
 				return nil, errors.Wrapf(err, "could not retrieve blocks for slot %d", slot)
 			}
-			_, roots, err := bs.BeaconDB.BlockRootsBySlot(ctx, slot)
+			_, roots, err := bs.BeaconDB.BlockRootsBySlot(ctx, types.Slot(slot))
 			if err != nil {
 				return nil, errors.Wrapf(err, "could not retrieve block roots for slot %d", slot)
 			}
