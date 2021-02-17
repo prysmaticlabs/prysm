@@ -62,7 +62,7 @@ const (
 	maxLimitBuffer = 150
 
 	// InboundRatio is the proportion of our connected peer limit at which we will allow inbound peers.
-	InboundRatio = float64(1)
+	InboundRatio = float64(0.8)
 )
 
 // Status is the structure holding the peer status information.
@@ -206,6 +206,14 @@ func (p *Status) IsAboveInboundLimit() bool {
 	}
 	inboundLimit := int(float64(p.ConnectedPeerLimit()) * InboundRatio)
 	return totalInbound > inboundLimit
+}
+
+// InboundLimit returns the current inbound
+// peer limit.
+func (p *Status) InboundLimit() int {
+	p.store.RLock()
+	defer p.store.RUnlock()
+	return int(float64(p.ConnectedPeerLimit()) * InboundRatio)
 }
 
 // SetMetadata sets the metadata of the given remote peer.
@@ -662,7 +670,7 @@ func (p *Status) PeersToPrune() []peer.ID {
 		badResp int
 	}
 	peersToPrune := make([]*peerResp, 0)
-	// Select disconnected peers with a smaller bad response count.
+	// Select connected and inbound peers to prune.
 	for pid, peerData := range p.store.Peers() {
 		if peerData.ConnState == PeerConnected && peerData.Direction == network.DirInbound {
 			peersToPrune = append(peersToPrune, &peerResp{
