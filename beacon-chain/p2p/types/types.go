@@ -11,8 +11,6 @@ import (
 
 const rootLength = 32
 
-const maxErrorLength = 256
-
 // BeaconBlockByRootsReq specifies the block by roots request type.
 type BeaconBlockByRootsReq [][rootLength]byte
 
@@ -61,46 +59,5 @@ func (r *BeaconBlockByRootsReq) UnmarshalSSZ(buf []byte) error {
 		roots = append(roots, rt)
 	}
 	*r = roots
-	return nil
-}
-
-// ErrorMessage describes the error message type.
-type ErrorMessage []byte
-
-// MarshalSSZTo marshals the error message with the provided byte slice.
-func (m *ErrorMessage) MarshalSSZTo(dst []byte) ([]byte, error) {
-	marshalledObj, err := m.MarshalSSZ()
-	if err != nil {
-		return nil, err
-	}
-	return append(dst, marshalledObj...), nil
-}
-
-// MarshalSSZ Marshals the error message into the serialized object.
-func (m *ErrorMessage) MarshalSSZ() ([]byte, error) {
-	if len(*m) > maxErrorLength {
-		return nil, errors.Errorf("error message exceeds max size: %d > %d", len(*m), maxErrorLength)
-	}
-	buf := make([]byte, m.SizeSSZ())
-	copy(buf, *m)
-	return buf, nil
-}
-
-// SizeSSZ returns the size of the serialized representation.
-func (m *ErrorMessage) SizeSSZ() int {
-	return len(*m)
-}
-
-// UnmarshalSSZ unmarshals the provided bytes buffer into the
-// error message object.
-func (m *ErrorMessage) UnmarshalSSZ(buf []byte) error {
-	bufLen := len(buf)
-	maxLength := maxErrorLength
-	if bufLen > maxLength {
-		return errors.Errorf("expected buffer with length of upto %d but received length %d", maxLength, bufLen)
-	}
-	errMsg := make([]byte, bufLen)
-	copy(errMsg, buf)
-	*m = errMsg
 	return nil
 }

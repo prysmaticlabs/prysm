@@ -113,6 +113,17 @@ func TestSSZBytes_HashTreeRoot(t *testing.T) {
 	}
 }
 
+func TestErrorResponse_Limit(t *testing.T) {
+	errorMessage := make([]byte, 0)
+	// Provide a message of size 6400 bytes.
+	for i := uint64(0); i < 200; i++ {
+		byteArr := [32]byte{byte(i)}
+		errorMessage = append(errorMessage, byteArr[:]...)
+	}
+	errMsg := sszutil.ErrorMessage{}
+	require.ErrorContains(t, "expected buffer with length of upto", errMsg.UnmarshalSSZ(errorMessage))
+}
+
 func hexDecodeOrDie(t *testing.T, str string) []byte {
 	decoded, err := hex.DecodeString(str)
 	require.NoError(t, err)

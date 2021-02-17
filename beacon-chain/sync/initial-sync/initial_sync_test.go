@@ -28,6 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -180,7 +181,7 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 		if len(sliceutil.IntersectionSlot(datum.failureSlots, requestedBlocks)) > 0 {
 			_, err := stream.Write([]byte{0x01})
 			assert.NoError(t, err)
-			msg := p2pTypes.ErrorMessage("bad")
+			msg := sszutil.ErrorMessage("bad")
 			_, err = p.Encoding().EncodeWithMaxLength(stream, &msg)
 			assert.NoError(t, err)
 			return

@@ -7,10 +7,12 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/mux"
 	"github.com/libp2p/go-libp2p-core/network"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/sszutil"
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -41,7 +43,7 @@ func ReadStatusCode(stream network.Stream, encoding encoder.NetworkEncoding) (ui
 
 	// Set response deadline, when reading error message.
 	SetStreamReadDeadline(stream, params.BeaconNetworkConfig().RespTimeout)
-	msg := &types.ErrorMessage{}
+	msg := &sszutil.ErrorMessage{}
 	if err := encoding.DecodeWithMaxLength(stream, msg); err != nil {
 		return 0, "", err
 	}
@@ -63,7 +65,7 @@ func writeErrorResponseToStream(responseCode byte, reason string, stream libp2pc
 
 func createErrorResponse(code byte, reason string, encoder p2p.EncodingProvider) ([]byte, error) {
 	buf := bytes.NewBuffer([]byte{code})
-	errMsg := types.ErrorMessage(reason)
+	errMsg := sszutil.ErrorMessage(reason)
 	if _, err := encoder.Encoding().EncodeWithMaxLength(buf, &errMsg); err != nil {
 		return nil, err
 	}
@@ -83,7 +85,7 @@ func readStatusCodeNoDeadline(stream network.Stream, encoding encoder.NetworkEnc
 		return 0, "", nil
 	}
 
-	msg := &types.ErrorMessage{}
+	msg := &sszutil.ErrorMessage{}
 	if err := encoding.DecodeWithMaxLength(stream, msg); err != nil {
 		return 0, "", err
 	}

@@ -16,6 +16,7 @@ import (
 	p2pTypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -69,7 +70,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 						}
 						_, err := stream.Write([]byte{0x01})
 						assert.NoError(t, err)
-						msg := p2pTypes.ErrorMessage(processorErr.Error())
+						msg := sszutil.ErrorMessage(processorErr.Error())
 						_, err = p2pProvider.Encoding().EncodeWithMaxLength(stream, &msg)
 						assert.NoError(t, err)
 						return
@@ -332,7 +333,7 @@ func TestSendRequest_SendBeaconBlocksByRootRequest(t *testing.T) {
 							}
 							_, err := stream.Write([]byte{0x01})
 							assert.NoError(t, err)
-							msg := p2pTypes.ErrorMessage(processorErr.Error())
+							msg := sszutil.ErrorMessage(processorErr.Error())
 							_, err = p2pProvider.Encoding().EncodeWithMaxLength(stream, &msg)
 							assert.NoError(t, err)
 							return
