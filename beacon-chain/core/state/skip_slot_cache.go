@@ -28,5 +28,5 @@ func cacheKey(ctx context.Context, state *beaconstate.BeaconState) ([32]byte, er
 	if err != nil {
 		return [32]byte{}, err
 	}
-	return hashutil.Hash(append(bytesutil.Bytes32(state.Slot()), r[:]...)), nil
+	return hashutil.Hash(append(bytesutil.Bytes32(uint64(state.Slot())), r[:]...)), nil
 }

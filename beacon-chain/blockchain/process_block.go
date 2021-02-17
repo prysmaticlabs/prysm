@@ -28,7 +28,7 @@ const slotDeadline = 5 * time.Second
 const depositDeadline = 20 * time.Second
 
 // This defines size of the upper bound for initial sync block cache.
-var initialSyncBlockCacheSize = 2 * params.BeaconConfig().SlotsPerEpoch
+var initialSyncBlockCacheSize = uint64(2 * params.BeaconConfig().SlotsPerEpoch)
 
 // onBlock is called when a gossip block is received. It runs regular state transition on the block.
 // The block's signing root should be computed before calling this method to avoid redundant
@@ -184,75 +184,6 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 	}
 
 	defer reportAttestationInclusion(b)
-
-	return s.handleEpochBoundary(ctx, postState)
-}
-
-// onBlockInitialSyncStateTransition is called when an initial sync block is received.
-// It runs state transition on the block and without fork choice and post operation pool processes.
-// The block's signing root should be computed before calling this method to avoid redundant
-// computation in this method and methods it calls into.
-func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed *ethpb.SignedBeaconBlock, blockRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "blockChain.onBlockInitialSyncStateTransition")
-	defer span.End()
-
-	if signed == nil || signed.Block == nil {
-		return errors.New("nil block")
-	}
-
-	b := signed.Block
-
-	// Retrieve incoming block's pre state.
-	if err := s.verifyBlkPreState(ctx, b); err != nil {
-		return err
-	}
-
-	preState, err := s.stateGen.StateByRootInitialSync(ctx, bytesutil.ToBytes32(signed.Block.ParentRoot))
-	if err != nil {
-		return err
-	}
-	if preState == nil {
-		return fmt.Errorf("nil pre state for slot %d", b.Slot)
-	}
-
-	// Exit early if the pre state slot is higher than incoming block's slot.
-	if preState.Slot() >= signed.Block.Slot {
-		return nil
-	}
-
-	postState, err := state.ExecuteStateTransition(ctx, preState, signed)
-	if err != nil {
-		return errors.Wrap(err, "could not execute state transition")
-	}
-
-	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, true /* init sync */); err != nil {
-		return err
-	}
-	// Save the latest block as head in cache.
-	if err := s.saveHeadNoDB(ctx, signed, blockRoot, postState); err != nil {
-		return err
-	}
-
-	// Rate limit how many blocks (2 epochs worth of blocks) a node keeps in the memory.
-	if uint64(len(s.getInitSyncBlocks())) > initialSyncBlockCacheSize {
-		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
-			return err
-		}
-		s.clearInitSyncBlocks()
-	}
-
-	if postState.CurrentJustifiedCheckpoint().Epoch > s.justifiedCheckpt.Epoch {
-		if err := s.updateJustifiedInitSync(ctx, postState.CurrentJustifiedCheckpoint()); err != nil {
-			return err
-		}
-	}
-
-	// Update finalized check point. Prune the block cache and helper caches on every new finalized epoch.
-	if postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch {
-		if err := s.updateFinalized(ctx, postState.FinalizedCheckpoint()); err != nil {
-			return err
-		}
-	}
 
 	return s.handleEpochBoundary(ctx, postState)
 }

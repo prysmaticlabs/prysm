@@ -16,9 +16,9 @@ func TestFieldTrie_NewTrie(t *testing.T) {
 	newState, _ := testutil.DeterministicGenesisState(t, 40)
 
 	// 5 represents the enum value of state roots
-	trie, err := state.NewFieldTrie(5, newState.StateRoots(), params.BeaconConfig().SlotsPerHistoricalRoot)
+	trie, err := state.NewFieldTrie(5, newState.StateRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
 	require.NoError(t, err)
-	root, err := stateutil.RootsArrayHashTreeRoot(newState.StateRoots(), params.BeaconConfig().SlotsPerHistoricalRoot, "StateRoots")
+	root, err := stateutil.RootsArrayHashTreeRoot(newState.StateRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "StateRoots")
 	require.NoError(t, err)
 	newRoot, err := trie.TrieRoot()
 	require.NoError(t, err)

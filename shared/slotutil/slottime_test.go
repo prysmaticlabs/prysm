@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
@@ -15,7 +16,7 @@ func TestSlotsSinceGenesis(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want uint64
+		want types.Slot
 	}{
 		{
 			name: "pre-genesis",

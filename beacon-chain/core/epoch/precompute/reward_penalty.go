@@ -2,7 +2,7 @@ package precompute
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
@@ -86,7 +86,7 @@ func attestationDelta(pBal *Balance, v *Validator, prevEpoch, finalizedEpoch typ
 	if v.IsPrevEpochAttester && !v.IsSlashed {
 		proposerReward := br / params.BeaconConfig().ProposerRewardQuotient
 		maxAttesterReward := br - proposerReward
-		r += maxAttesterReward / v.InclusionDistance
+		r += maxAttesterReward / uint64(v.InclusionDistance)
 
 		if isInInactivityLeak(prevEpoch, finalizedEpoch) {
 			// Since full base reward will be canceled out by inactivity penalty deltas,

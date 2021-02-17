@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -38,7 +39,7 @@ func TestMigrateToCold_HappyPath(t *testing.T) {
 	service := New(beaconDB)
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	stateSlot := uint64(1)
+	stateSlot := types.Slot(1)
 	require.NoError(t, beaconState.SetSlot(stateSlot))
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 2
@@ -55,7 +56,7 @@ func TestMigrateToCold_HappyPath(t *testing.T) {
 	assert.Equal(t, fRoot, gotRoot, "Did not save archived root")
 	lastIndex, err := service.beaconDB.LastArchivedSlot(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(1), lastIndex, "Did not save last archived index")
+	assert.Equal(t, types.Slot(1), lastIndex, "Did not save last archived index")
 
 	require.LogsContain(t, hook, "Saved state in DB")
 }
@@ -100,12 +101,12 @@ func TestMigrateToCold_RegeneratePath(t *testing.T) {
 
 	s1, err := service.beaconDB.State(ctx, r1)
 	require.NoError(t, err)
-	assert.Equal(t, s1.Slot(), uint64(1), "Did not save state")
+	assert.Equal(t, s1.Slot(), types.Slot(1), "Did not save state")
 	gotRoot := service.beaconDB.ArchivedPointRoot(ctx, 1/service.slotsPerArchivedPoint)
 	assert.Equal(t, r1, gotRoot, "Did not save archived root")
 	lastIndex, err := service.beaconDB.LastArchivedSlot(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(1), lastIndex, "Did not save last archived index")
+	assert.Equal(t, types.Slot(1), lastIndex, "Did not save last archived index")
 
 	require.LogsContain(t, hook, "Saved state in DB")
 }
@@ -118,7 +119,7 @@ func TestMigrateToCold_StateExistsInDB(t *testing.T) {
 	service := New(beaconDB)
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	stateSlot := uint64(1)
+	stateSlot := types.Slot(1)
 	require.NoError(t, beaconState.SetSlot(stateSlot))
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 2

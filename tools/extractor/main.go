@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 
+	"github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
@@ -28,7 +29,7 @@ func main() {
 		panic(err)
 	}
 	ctx := context.Background()
-	slot := uint64(*state)
+	slot := types.Slot(*state)
 	_, roots, err := d.BlockRootsBySlot(ctx, slot)
 	if err != nil {
 		panic(err)

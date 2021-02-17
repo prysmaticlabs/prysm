@@ -8,9 +8,10 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
@@ -193,7 +194,7 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 	// all the requested blocks, we randomly select another peer.
 	pid := bestPeers[randGen.Int()%len(bestPeers)]
 	for i := 0; i < numOfTries; i++ {
-		req := types.BeaconBlockByRootsReq(roots)
+		req := p2ptypes.BeaconBlockByRootsReq(roots)
 		if len(roots) > int(params.BeaconNetworkConfig().MaxRequestBlocks) {
 			req = roots[:params.BeaconNetworkConfig().MaxRequestBlocks]
 		}
@@ -220,13 +221,13 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 	return nil
 }
 
-func (s *Service) sortedPendingSlots() []uint64 {
+func (s *Service) sortedPendingSlots() []types.Slot {
 	s.pendingQueueLock.RLock()
 	defer s.pendingQueueLock.RUnlock()
 
 	items := s.slotToPendingBlocks.Items()
 
-	slots := make([]uint64, 0, len(items))
+	slots := make([]types.Slot, 0, len(items))
 	for k := range items {
 		slot := cacheKeyToSlot(k)
 		slots = append(slots, slot)
@@ -292,7 +293,7 @@ func (s *Service) clearPendingSlots() {
 
 // Delete block from the list from the pending queue using the slot as key.
 // Note: this helper is not thread safe.
-func (s *Service) deleteBlockFromPendingQueue(slot uint64, b *ethpb.SignedBeaconBlock, r [32]byte) error {
+func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b *ethpb.SignedBeaconBlock, r [32]byte) error {
 	mutexasserts.AssertRWMutexLocked(&s.pendingQueueLock)
 
 	blks := s.pendingBlocksInCache(slot)
@@ -323,7 +324,7 @@ func (s *Service) deleteBlockFromPendingQueue(slot uint64, b *ethpb.SignedBeacon
 
 // Insert block to the list in the pending queue using the slot as key.
 // Note: this helper is not thread safe.
-func (s *Service) insertBlockToPendingQueue(slot uint64, b *ethpb.SignedBeaconBlock, r [32]byte) error {
+func (s *Service) insertBlockToPendingQueue(slot types.Slot, b *ethpb.SignedBeaconBlock, r [32]byte) error {
 	mutexasserts.AssertRWMutexLocked(&s.pendingQueueLock)
 
 	if s.seenPendingBlocks[r] {
@@ -339,7 +340,7 @@ func (s *Service) insertBlockToPendingQueue(slot uint64, b *ethpb.SignedBeaconBl
 }
 
 // This returns signed beacon blocks given input key from slotToPendingBlocks.
-func (s *Service) pendingBlocksInCache(slot uint64) []*ethpb.SignedBeaconBlock {
+func (s *Service) pendingBlocksInCache(slot types.Slot) []*ethpb.SignedBeaconBlock {
 	k := slotToCacheKey(slot)
 	value, ok := s.slotToPendingBlocks.Get(k)
 	if !ok {
@@ -370,14 +371,14 @@ func (s *Service) addPendingBlockToCache(b *ethpb.SignedBeaconBlock) error {
 	return nil
 }
 
-// This converts input string to slot number in uint64.
-func cacheKeyToSlot(s string) uint64 {
+// This converts input string to slot.
+func cacheKeyToSlot(s string) types.Slot {
 	b := []byte(s)
-	return bytesutil.BytesToUint64BigEndian(b)
+	return bytesutil.BytesToSlotBigEndian(b)
 }
 
-// This converts input slot number to a key to be used for slotToPendingBlocks cache.
-func slotToCacheKey(s uint64) string {
-	b := bytesutil.Uint64ToBytesBigEndian(s)
+// This converts input slot to a key to be used for slotToPendingBlocks cache.
+func slotToCacheKey(s types.Slot) string {
+	b := bytesutil.SlotToBytesBigEndian(s)
 	return string(b)
 }

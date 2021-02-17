@@ -11,7 +11,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -112,9 +112,9 @@ func TestServer_ListAttestations_NoPagination(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
-	count := uint64(8)
+	count := types.Slot(8)
 	atts := make([]*ethpb.Attestation, 0, count)
-	for i := uint64(0); i < count; i++ {
+	for i := types.Slot(0); i < count; i++ {
 		blockExample := testutil.NewBeaconBlock()
 		blockExample.Block.Body.Attestations = []*ethpb.Attestation{
 			{
@@ -257,7 +257,7 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 
 	count := params.BeaconConfig().SlotsPerEpoch * 4
 	atts := make([]*ethpb.Attestation, 0, count)
-	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
+	for i := types.Slot(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
 		for s := uint64(0); s < 4; s++ {
 			blockExample := testutil.NewBeaconBlock()
 			blockExample.Block.Slot = i
@@ -360,9 +360,9 @@ func TestServer_ListAttestations_Pagination_OutOfRange(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 	testutil.NewBeaconBlock()
-	count := uint64(1)
+	count := types.Slot(1)
 	atts := make([]*ethpb.Attestation, 0, count)
-	for i := uint64(0); i < count; i++ {
+	for i := types.Slot(0); i < count; i++ {
 		blockExample := testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 			Block: &ethpb.BeaconBlock{
 				Body: &ethpb.BeaconBlockBody{
@@ -416,9 +416,9 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
-	count := uint64(params.BeaconConfig().DefaultPageSize)
+	count := types.Slot(params.BeaconConfig().DefaultPageSize)
 	atts := make([]*ethpb.Attestation, 0, count)
-	for i := uint64(0); i < count; i++ {
+	for i := types.Slot(0); i < count; i++ {
 		blockExample := testutil.NewBeaconBlock()
 		blockExample.Block.Body.Attestations = []*ethpb.Attestation{
 			{
@@ -454,12 +454,12 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 }
 
 func TestServer_mapAttestationToTargetRoot(t *testing.T) {
-	count := uint64(100)
+	count := types.Slot(100)
 	atts := make([]*ethpb.Attestation, count)
 	targetRoot1 := bytesutil.ToBytes32([]byte("root1"))
 	targetRoot2 := bytesutil.ToBytes32([]byte("root2"))
 
-	for i := uint64(0); i < count; i++ {
+	for i := types.Slot(0); i < count; i++ {
 		var targetRoot [32]byte
 		if i%2 == 0 {
 			targetRoot = targetRoot1
@@ -496,7 +496,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	atts := make([]*ethpb.Attestation, 0, count)
 	atts2 := make([]*ethpb.Attestation, 0, count)
 
-	for i := uint64(0); i < count; i++ {
+	for i := types.Slot(0); i < count; i++ {
 		var targetRoot [32]byte
 		if i%2 == 0 {
 			targetRoot = targetRoot1
@@ -518,7 +518,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 					Slot:           i,
 					CommitteeIndex: 0,
 				},
-				AggregationBits: bitfield.NewBitlist(128 / params.BeaconConfig().SlotsPerEpoch),
+				AggregationBits: bitfield.NewBitlist(128 / uint64(params.BeaconConfig().SlotsPerEpoch)),
 			},
 		}
 		require.NoError(t, db.SaveBlock(ctx, blockExample))
@@ -661,7 +661,7 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 	}
 	err = db.SaveStateSummary(ctx, &pbp2p.StateSummary{
 		Root: blockRoot[:],
-		Slot: uint64(epoch) * params.BeaconConfig().SlotsPerEpoch,
+		Slot: params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch)),
 	})
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, state, bytesutil.ToBytes32([]byte("root"))))
@@ -743,7 +743,7 @@ func TestServer_AttestationPool_Pagination_DefaultPageSize(t *testing.T) {
 	atts := make([]*ethpb.Attestation, params.BeaconConfig().DefaultPageSize+1)
 	for i := 0; i < len(atts); i++ {
 		att := testutil.NewAttestation()
-		att.Data.Slot = uint64(i)
+		att.Data.Slot = types.Slot(i)
 		atts[i] = att
 	}
 	require.NoError(t, bs.AttestationsPool.SaveAggregatedAttestations(atts))
@@ -765,7 +765,7 @@ func TestServer_AttestationPool_Pagination_CustomPageSize(t *testing.T) {
 	atts := make([]*ethpb.Attestation, numAtts)
 	for i := 0; i < len(atts); i++ {
 		att := testutil.NewAttestation()
-		att.Data.Slot = uint64(i)
+		att.Data.Slot = types.Slot(i)
 		atts[i] = att
 	}
 	require.NoError(t, bs.AttestationsPool.SaveAggregatedAttestations(atts))
@@ -861,13 +861,13 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 	epoch := types.Epoch(0)
 	attesterSeed, err := helpers.Seed(headState, epoch, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(t, err)
-	committees, err := computeCommittees(uint64(epoch)*params.BeaconConfig().SlotsPerEpoch, activeIndices, attesterSeed)
+	committees, err := computeCommittees(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch)), activeIndices, attesterSeed)
 	require.NoError(t, err)
 
 	count := params.BeaconConfig().SlotsPerEpoch
 	// We generate attestations for each validator per slot per epoch.
 	atts := make(map[[32]byte][]*ethpb.Attestation)
-	for i := uint64(0); i < count; i++ {
+	for i := types.Slot(0); i < count; i++ {
 		comms := committees[i].Committees
 		for j := 0; j < numValidators; j++ {
 			var indexInCommittee uint64

@@ -10,7 +10,7 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/paulbellamy/ratecounter"
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -126,7 +126,7 @@ func (s *Service) syncToNonFinalizedEpoch(ctx context.Context, genesis time.Time
 
 // processFetchedData processes data received from queue.
 func (s *Service) processFetchedData(
-	ctx context.Context, genesis time.Time, startSlot uint64, data *blocksQueueFetchedData) {
+	ctx context.Context, genesis time.Time, startSlot types.Slot, data *blocksQueueFetchedData) {
 	defer s.updatePeerScorerStats(data.pid, startSlot)
 
 	// Use Batch Block Verify to process and verify batches directly.
@@ -137,7 +137,7 @@ func (s *Service) processFetchedData(
 
 // processFetchedData processes data received from queue.
 func (s *Service) processFetchedDataRegSync(
-	ctx context.Context, genesis time.Time, startSlot uint64, data *blocksQueueFetchedData) {
+	ctx context.Context, genesis time.Time, startSlot types.Slot, data *blocksQueueFetchedData) {
 	defer s.updatePeerScorerStats(data.pid, startSlot)
 
 	blockReceiver := s.chain.ReceiveBlock
@@ -284,7 +284,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 }
 
 // updatePeerScorerStats adjusts monitored metrics for a peer.
-func (s *Service) updatePeerScorerStats(pid peer.ID, startSlot uint64) {
+func (s *Service) updatePeerScorerStats(pid peer.ID, startSlot types.Slot) {
 	if pid == "" {
 		return
 	}
@@ -294,7 +294,7 @@ func (s *Service) updatePeerScorerStats(pid peer.ID, startSlot uint64) {
 	}
 	if diff := s.chain.HeadSlot() - startSlot; diff > 0 {
 		scorer := s.p2p.Peers().Scorers().BlockProviderScorer()
-		scorer.IncrementProcessedBlocks(pid, diff)
+		scorer.IncrementProcessedBlocks(pid, uint64(diff))
 	}
 }
 

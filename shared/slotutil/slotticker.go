@@ -4,13 +4,14 @@ package slotutil
 import (
 	"time"
 
+	"github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
 // The Ticker interface defines a type which can expose a
 // receive-only channel firing slot events.
 type Ticker interface {
-	C() <-chan uint64
+	C() <-chan types.Slot
 	Done()
 }
 
@@ -21,13 +22,13 @@ type Ticker interface {
 // multiple of the slot duration.
 // In addition, the channel returns the new slot number.
 type SlotTicker struct {
-	c    chan uint64
+	c    chan types.Slot
 	done chan struct{}
 }
 
 // C returns the ticker channel. Call Cancel afterwards to ensure
 // that the goroutine exits cleanly.
-func (s *SlotTicker) C() <-chan uint64 {
+func (s *SlotTicker) C() <-chan types.Slot {
 	return s.c
 }
 
@@ -44,7 +45,7 @@ func NewSlotTicker(genesisTime time.Time, secondsPerSlot uint64) *SlotTicker {
 		panic("zero genesis time")
 	}
 	ticker := &SlotTicker{
-		c:    make(chan uint64),
+		c:    make(chan types.Slot),
 		done: make(chan struct{}),
 	}
 	ticker.start(genesisTime, secondsPerSlot, timeutils.Since, timeutils.Until, time.After)
@@ -61,7 +62,7 @@ func NewSlotTickerWithOffset(genesisTime time.Time, offset time.Duration, second
 		panic("invalid ticker offset")
 	}
 	ticker := &SlotTicker{
-		c:    make(chan uint64),
+		c:    make(chan types.Slot),
 		done: make(chan struct{}),
 	}
 	ticker.start(genesisTime.Add(offset), secondsPerSlot, timeutils.Since, timeutils.Until, time.After)
@@ -80,7 +81,7 @@ func (s *SlotTicker) start(
 		sinceGenesis := since(genesisTime)
 
 		var nextTickTime time.Time
-		var slot uint64
+		var slot types.Slot
 		if sinceGenesis < d {
 			// Handle when the current time is before the genesis time.
 			nextTickTime = genesisTime
@@ -88,7 +89,7 @@ func (s *SlotTicker) start(
 		} else {
 			nextTick := sinceGenesis.Truncate(d) + d
 			nextTickTime = genesisTime.Add(nextTick)
-			slot = uint64(nextTick / d)
+			slot = types.Slot(nextTick / d)
 		}
 
 		for {
