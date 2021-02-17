@@ -109,7 +109,7 @@ func runEndToEndTest(t *testing.T, config *e2etypes.E2EConfig) {
 			})
 		}
 
-		if t.Failed() || currentEpoch >= config.EpochsToRun-1 {
+		if t.Failed() || currentEpoch >= types.Epoch(config.EpochsToRun)-1 {
 			ticker.Done()
 			if t.Failed() {
 				return

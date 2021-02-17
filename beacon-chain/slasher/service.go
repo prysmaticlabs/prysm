@@ -58,7 +58,7 @@ func New(ctx context.Context, srvCfg *ServiceConfig) (*Service, error) {
 // Start listening for received indexed attestations and blocks
 // and perform slashing detection on them.
 func (s *Service) Start() {
-	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
+	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * uint64(params.BeaconConfig().SlotsPerEpoch)
 	ticker := slotutil.NewEpochTicker(s.genesisTime, secondsPerEpoch)
 	defer ticker.Done()
 	go s.processQueuedAttestations(s.ctx, ticker.C())

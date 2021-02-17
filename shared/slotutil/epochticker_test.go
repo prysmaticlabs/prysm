@@ -3,13 +3,13 @@ package slotutil
 import (
 	"testing"
 	"time"
-)
 
-var _ Ticker = (*EpochTicker)(nil)
+	types "github.com/prysmaticlabs/eth2-types"
+)
 
 func TestEpochTicker(t *testing.T) {
 	ticker := &EpochTicker{
-		c:    make(chan uint64),
+		c:    make(chan types.Epoch),
 		done: make(chan struct{}),
 	}
 	defer ticker.Done()
@@ -58,7 +58,7 @@ func TestEpochTicker(t *testing.T) {
 
 func TestEpochTickerGenesis(t *testing.T) {
 	ticker := &EpochTicker{
-		c:    make(chan uint64),
+		c:    make(chan types.Epoch),
 		done: make(chan struct{}),
 	}
 	defer ticker.Done()

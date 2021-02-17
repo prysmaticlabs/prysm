@@ -68,7 +68,7 @@ func (s *Service) receiveBlocks(ctx context.Context) {
 // these attestations from a queue, then group them all by validator chunk index.
 // This grouping will allow us to perform detection on batches of attestations
 // per validator chunk index which can be done concurrently.
-func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-chan uint64) {
+func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-chan types.Epoch) {
 	for {
 		select {
 		case currentEpoch := <-epochTicker:
@@ -94,7 +94,7 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 				}
 				if err := s.detectSlashableAttestations(ctx, &chunkUpdateOptions{
 					validatorChunkIndex: validatorChunkIdx,
-					currentEpoch:        types.Epoch(currentEpoch),
+					currentEpoch:        currentEpoch,
 				}, batch); err != nil {
 					log.WithError(err).Error("Could not detect slashable attestations")
 					continue

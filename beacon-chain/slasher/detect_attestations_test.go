@@ -184,7 +184,7 @@ func TestService_processQueuedAttestations(t *testing.T) {
 		},
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	tickerChan := make(chan uint64)
+	tickerChan := make(chan types.Epoch)
 	exitChan := make(chan struct{})
 	go func() {
 		s.processQueuedAttestations(ctx, tickerChan)
