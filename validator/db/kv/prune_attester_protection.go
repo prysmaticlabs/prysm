@@ -27,6 +27,9 @@ func (s *Store) PruneAttestationsOlderThanCurrentWeakSubjectivity(ctx context.Co
 			if err := pruneSourceEpochsBucket(pkBucket); err != nil {
 				return err
 			}
+			if err := pruneTargetEpochsBucket(pkBucket); err != nil {
+				return err
+			}
 			return pruneSigningRootsBucket(pkBucket)
 		})
 	})
@@ -62,6 +65,31 @@ func pruneSourceEpochsBucket(bucket *bolt.Bucket) error {
 		}
 		return nil
 	})
+}
+
+func pruneTargetEpochsBucket(bucket *bolt.Bucket) error {
+	wssPeriod := params.BeaconConfig().WeakSubjectivityPeriod
+	targetEpochsBucket := bucket.Bucket(attestationTargetEpochsBucket)
+	if targetEpochsBucket == nil {
+		return nil
+	}
+	// We obtain the highest target epoch from the bucket.
+	highestTargetEpochBytes, _ := targetEpochsBucket.Cursor().Last()
+	highestTargetEpoch := bytesutil.BytesToEpochBigEndian(highestTargetEpochBytes)
+
+	// No need to prune if the highest epoch we've written is still
+	// before the first weak subjectivity period.
+	if highestTargetEpoch < wssPeriod {
+		return nil
+	}
+	c := targetEpochsBucket.Cursor()
+	for k, _ := c.First(); k != nil; k, _ = c.Next() {
+		targetEpoch := bytesutil.BytesToEpochBigEndian(k)
+		if olderThanCurrentWeakSubjectivityPeriod(targetEpoch, highestTargetEpoch) {
+			return targetEpochsBucket.Delete(k)
+		}
+	}
+	return nil
 }
 
 func pruneSigningRootsBucket(bucket *bolt.Bucket) error {
