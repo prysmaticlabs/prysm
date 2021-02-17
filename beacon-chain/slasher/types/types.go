@@ -24,7 +24,7 @@ type CompactAttestation struct {
 // for proposer slashing detection.
 type CompactBeaconBlock struct {
 	ProposerIndex uint64
-	Slot          uint64
+	Slot          types.Slot
 	SigningRoot   [32]byte
 }
 

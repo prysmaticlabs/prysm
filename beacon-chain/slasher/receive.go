@@ -108,7 +108,7 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 
 // Process queued blocks every time an epoch ticker fires. We retrieve
 // these blocks from a queue, then perform double proposal detection.
-func (s *Service) processQueuedBlocks(ctx context.Context, epochTicker <-chan uint64) {
+func (s *Service) processQueuedBlocks(ctx context.Context, epochTicker <-chan types.Epoch) {
 	for {
 		select {
 		case currentEpoch := <-epochTicker:

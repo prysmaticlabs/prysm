@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
@@ -165,7 +166,7 @@ func TestService_processQueuedBlocks(t *testing.T) {
 		},
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	tickerChan := make(chan uint64)
+	tickerChan := make(chan types.Epoch)
 	exitChan := make(chan struct{})
 	go func() {
 		s.processQueuedBlocks(ctx, tickerChan)
