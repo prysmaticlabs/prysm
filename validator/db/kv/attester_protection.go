@@ -201,7 +201,7 @@ func (s *Store) checkSurroundedVote(
 			break
 		}
 
-		// There can be multiple sources epochs attested per target epoch.
+		// There can be multiple source epochs attested per target epoch.
 		attestedSourceEpochs := make([]types.Epoch, 0, len(v)/8)
 		for i := 0; i < len(v); i += 8 {
 			sourceEpoch := bytesutil.BytesToEpochBigEndian(v[i : i+8])
