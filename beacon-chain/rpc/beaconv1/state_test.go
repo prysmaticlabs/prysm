@@ -278,9 +278,9 @@ func TestGetStateRoot(t *testing.T) {
 func TestGetStateFork(t *testing.T) {
 	ctx := context.Background()
 
-	// We fill state roots with hex representations of natural numbers starting with 1.
+	// We fill state and block roots with hex representations of natural numbers starting with 0.
 	// Example: 16 becomes 0x00...0f
-	fillStateRoots := func(state *pb.BeaconState) {
+	fillRoots := func(state *pb.BeaconState) {
 		rootsLen := params.MainnetConfig().SlotsPerHistoricalRoot
 		roots := make([][]byte, rootsLen)
 		for i := types.Slot(0); i < rootsLen; i++ {
@@ -294,11 +294,12 @@ func TestGetStateFork(t *testing.T) {
 			roots[j] = h
 		}
 		state.StateRoots = roots
+		state.BlockRoots = roots
 	}
 	fillFork := func(state *pb.BeaconState) {
 		state.Fork = &pb.Fork{
-			PreviousVersion: []byte("previous"),
-			CurrentVersion:  []byte("current"),
+			PreviousVersion: []byte("prev"),
+			CurrentVersion:  []byte("curr"),
 			Epoch:           123,
 		}
 	}
@@ -306,7 +307,7 @@ func TestGetStateFork(t *testing.T) {
 	fillSlot := func(state *pb.BeaconState) {
 		state.Slot = headSlot
 	}
-	state, err := testutil.NewBeaconState(fillFork, fillStateRoots, fillSlot)
+	state, err := testutil.NewBeaconState(fillFork, fillRoots, fillSlot)
 	require.NoError(t, err)
 	stateRoot, err := state.HashTreeRoot(ctx)
 	require.NoError(t, err)
@@ -320,26 +321,39 @@ func TestGetStateFork(t *testing.T) {
 			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
-		assert.DeepEqual(t, []byte("previous"), resp.Data.PreviousVersion)
-		assert.DeepEqual(t, []byte("current"), resp.Data.CurrentVersion)
+		assert.DeepEqual(t, []byte("prev"), resp.Data.PreviousVersion)
+		assert.DeepEqual(t, []byte("curr"), resp.Data.CurrentVersion)
 		assert.Equal(t, types.Epoch(123), resp.Data.Epoch)
 	})
 
 	t.Run("Genesis", func(t *testing.T) {
-		stateGen := stategen.NewMockService()
-		stateGen.StatesBySlot[0] = state
+		db := testDB.SetupDB(t)
+		b := testutil.NewBeaconBlock()
+		b.Block.StateRoot = bytesutil.PadTo([]byte("genesis"), 32)
+		require.NoError(t, db.SaveBlock(ctx, b))
+		r, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, db.SaveStateSummary(ctx, &pb.StateSummary{Root: r[:]}))
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, r))
+		st, err := testutil.NewBeaconState(func(state *pb.BeaconState) {
+			state.Fork = &pb.Fork{
+				PreviousVersion: []byte("prev"),
+				CurrentVersion:  []byte("curr"),
+				Epoch:           123,
+			}
+		})
+		require.NoError(t, db.SaveState(ctx, st, r))
 
 		s := Server{
-			GenesisTimeFetcher: &chainMock.ChainService{Slot: &headSlot},
-			StateGenService:    stateGen,
+			BeaconDB: db,
 		}
 
 		resp, err := s.GetStateFork(ctx, &ethpb.StateRequest{
 			StateId: []byte("genesis"),
 		})
 		require.NoError(t, err)
-		assert.DeepEqual(t, []byte("previous"), resp.Data.PreviousVersion)
-		assert.DeepEqual(t, []byte("current"), resp.Data.CurrentVersion)
+		assert.DeepEqual(t, []byte("prev"), resp.Data.PreviousVersion)
+		assert.DeepEqual(t, []byte("curr"), resp.Data.CurrentVersion)
 		assert.Equal(t, types.Epoch(123), resp.Data.Epoch)
 	})
 
@@ -360,8 +374,8 @@ func TestGetStateFork(t *testing.T) {
 			StateId: []byte("finalized"),
 		})
 		require.NoError(t, err)
-		assert.DeepEqual(t, []byte("previous"), resp.Data.PreviousVersion)
-		assert.DeepEqual(t, []byte("current"), resp.Data.CurrentVersion)
+		assert.DeepEqual(t, []byte("prev"), resp.Data.PreviousVersion)
+		assert.DeepEqual(t, []byte("curr"), resp.Data.CurrentVersion)
 		assert.Equal(t, types.Epoch(123), resp.Data.Epoch)
 	})
 
@@ -382,8 +396,8 @@ func TestGetStateFork(t *testing.T) {
 			StateId: []byte("justified"),
 		})
 		require.NoError(t, err)
-		assert.DeepEqual(t, []byte("previous"), resp.Data.PreviousVersion)
-		assert.DeepEqual(t, []byte("current"), resp.Data.CurrentVersion)
+		assert.DeepEqual(t, []byte("prev"), resp.Data.PreviousVersion)
+		assert.DeepEqual(t, []byte("curr"), resp.Data.CurrentVersion)
 		assert.Equal(t, types.Epoch(123), resp.Data.Epoch)
 	})
 
@@ -391,10 +405,10 @@ func TestGetStateFork(t *testing.T) {
 		stateId, err := hexutil.Decode("0x" + strings.Repeat("0", 63) + "1")
 		require.NoError(t, err)
 		stateGen := stategen.NewMockService()
-		stateGen.StatesByStateRoot[bytesutil.ToBytes32(stateId)] = state
+		stateGen.StatesByRoot[bytesutil.ToBytes32(stateId)] = state
 
 		s := Server{
-			ChainInfoFetcher: &chainMock.ChainService{},
+			ChainInfoFetcher: &chainMock.ChainService{State: state},
 			StateGenService:  stateGen,
 		}
 
@@ -402,9 +416,21 @@ func TestGetStateFork(t *testing.T) {
 			StateId: stateId,
 		})
 		require.NoError(t, err)
-		assert.DeepEqual(t, []byte("previous"), resp.Data.PreviousVersion)
-		assert.DeepEqual(t, []byte("current"), resp.Data.CurrentVersion)
+		assert.DeepEqual(t, []byte("prev"), resp.Data.PreviousVersion)
+		assert.DeepEqual(t, []byte("curr"), resp.Data.CurrentVersion)
 		assert.Equal(t, types.Epoch(123), resp.Data.Epoch)
+	})
+
+	t.Run("Hex root not found", func(t *testing.T) {
+		s := Server{
+			ChainInfoFetcher: &chainMock.ChainService{State: state},
+		}
+		stateId, err := hexutil.Decode("0x" + strings.Repeat("f", 64))
+		require.NoError(t, err)
+		_, err = s.GetStateFork(ctx, &ethpb.StateRequest{
+			StateId: stateId,
+		})
+		require.ErrorContains(t, "State not found in the last 8192 state roots in head state", err)
 	})
 
 	t.Run("Slot", func(t *testing.T) {
@@ -420,8 +446,8 @@ func TestGetStateFork(t *testing.T) {
 			StateId: []byte(strconv.FormatUint(uint64(headSlot), 10)),
 		})
 		require.NoError(t, err)
-		assert.DeepEqual(t, []byte("previous"), resp.Data.PreviousVersion)
-		assert.DeepEqual(t, []byte("current"), resp.Data.CurrentVersion)
+		assert.DeepEqual(t, []byte("prev"), resp.Data.PreviousVersion)
+		assert.DeepEqual(t, []byte("curr"), resp.Data.CurrentVersion)
 		assert.Equal(t, types.Epoch(123), resp.Data.Epoch)
 	})
 

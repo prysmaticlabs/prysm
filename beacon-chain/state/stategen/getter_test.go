@@ -2,10 +2,8 @@ package stategen
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gogo/protobuf/proto"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -504,61 +502,4 @@ func TestState_HasStateInCache(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, tc.want, got)
 	}
-}
-
-func TestState_StateByStateRoot(t *testing.T) {
-	ctx := context.Background()
-
-	// We fill state and block roots with hex representations of natural numbers starting with 1.
-	// Example: 16 becomes 0x00...0f
-	fillRoots := func(state *pb.BeaconState) {
-		rootsLen := params.MainnetConfig().SlotsPerHistoricalRoot
-		roots := make([][]byte, rootsLen)
-		for i := types.Slot(0); i < rootsLen; i++ {
-			roots[i] = make([]byte, 32)
-		}
-		for j := 0; j < len(roots); j++ {
-			// Remove '0x' prefix and left-pad '0' to have 64 chars in total.
-			s := fmt.Sprintf("%064s", hexutil.EncodeUint64(uint64(j))[2:])
-			h, err := hexutil.Decode("0x" + s)
-			require.NoError(t, err, "Failed to decode root "+s)
-			roots[j] = h
-		}
-		state.StateRoots = roots
-		state.BlockRoots = roots
-	}
-
-	headState, err := testutil.NewBeaconState(fillRoots)
-	require.NoError(t, err)
-
-	t.Run("Ok", func(t *testing.T) {
-		beaconDB := testDB.SetupDB(t)
-		service := New(beaconDB)
-		slot := types.Slot(5)
-
-		s := fmt.Sprintf("%064s", hexutil.EncodeUint64(uint64(slot))[2:])
-		h, err := hexutil.Decode("0x" + s)
-		require.NoError(t, err, "Failed to decode root "+s)
-		state, err := testutil.NewBeaconState(func(state *pb.BeaconState) {
-			state.Slot = slot
-		})
-		require.NoError(t, err)
-		service.hotStateCache.put(bytesutil.ToBytes32(h), state)
-
-		rootState, err := service.StateByStateRoot(ctx, bytesutil.ToBytes32(h), headState)
-		require.NoError(t, err)
-		assert.Equal(t, slot, rootState.Slot())
-	})
-
-	t.Run("State root not found", func(t *testing.T) {
-		beaconDB := testDB.SetupDB(t)
-		service := New(beaconDB)
-
-		s := fmt.Sprintf("%064s", hexutil.Encode([]byte("foo"))[2:])
-		h, err := hexutil.Decode("0x" + s)
-		require.NoError(t, err, "Failed to decode root "+s)
-
-		_, err = service.StateByStateRoot(ctx, bytesutil.ToBytes32(h), headState)
-		assert.ErrorContains(t, "could not find state in the last 8192 state roots in head state", err)
-	})
 }

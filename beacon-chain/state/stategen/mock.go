@@ -11,17 +11,15 @@ import (
 
 // MockStateManager is a fake implementation of StateManager.
 type MockStateManager struct {
-	StatesByRoot      map[[32]byte]*state.BeaconState
-	StatesByStateRoot map[[32]byte]*state.BeaconState
-	StatesBySlot      map[types.Slot]*state.BeaconState
+	StatesByRoot map[[32]byte]*state.BeaconState
+	StatesBySlot map[types.Slot]*state.BeaconState
 }
 
 // NewMockService --
 func NewMockService() *MockStateManager {
 	return &MockStateManager{
-		StatesByRoot:      make(map[[32]byte]*state.BeaconState),
-		StatesByStateRoot: make(map[[32]byte]*state.BeaconState),
-		StatesBySlot:      make(map[types.Slot]*state.BeaconState),
+		StatesByRoot: make(map[[32]byte]*state.BeaconState),
+		StatesBySlot: make(map[types.Slot]*state.BeaconState),
 	}
 }
 
@@ -77,14 +75,6 @@ func (m *MockStateManager) StateByRoot(ctx context.Context, blockRoot [32]byte) 
 // StateByRootInitialSync --
 func (m *MockStateManager) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
 	panic("implement me")
-}
-
-func (m *MockStateManager) StateByStateRoot(
-	ctx context.Context,
-	stateRoot [32]byte,
-	headState *state.BeaconState,
-) (*state.BeaconState, error) {
-	return m.StatesByStateRoot[stateRoot], nil
 }
 
 // StateBySlot --

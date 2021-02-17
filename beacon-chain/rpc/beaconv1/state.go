@@ -149,7 +149,7 @@ func (bs *Server) state(ctx context.Context, stateId []byte) (*statetrie.BeaconS
 			return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 		}
 	case "genesis":
-		s, err = bs.StateGenService.StateBySlot(ctx, 0)
+		s, err = bs.BeaconDB.GenesisState(ctx)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get genesis state: %v", err)
 		}
@@ -280,13 +280,15 @@ func (bs *Server) stateByHex(ctx context.Context, stateId []byte) (*statetrie.Be
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
-	state, err := bs.StateGenService.StateByStateRoot(ctx, bytesutil.ToBytes32(stateId), headState)
-	if err != nil {
-		return nil, status.Errorf(
-			codes.NotFound,
-			"State not found in the last %d state roots in head state", len(headState.StateRoots()))
+	for i, root := range headState.StateRoots() {
+		if bytes.Equal(root, stateId) {
+			blockRoot := headState.BlockRoots()[i]
+			return bs.StateGenService.StateByRoot(ctx, bytesutil.ToBytes32(blockRoot))
+		}
 	}
-	return state, nil
+	return nil, status.Errorf(
+		codes.NotFound,
+		"State not found in the last %d state roots in head state", len(headState.StateRoots()))
 }
 
 func (bs *Server) stateBySlot(ctx context.Context, slot types.Slot) (*statetrie.BeaconState, error) {

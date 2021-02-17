@@ -1,9 +1,7 @@
 package stategen
 
 import (
-	"bytes"
 	"context"
-	"fmt"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -13,8 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
-
-const errStateByStateRootNotFound = "could not find state in the last %d state roots in head state"
 
 // HasState returns true if the state exists in cache or in DB.
 func (s *State) HasState(ctx context.Context, blockRoot [32]byte) (bool, error) {
@@ -111,25 +107,6 @@ func (s *State) StateBySlot(ctx context.Context, slot types.Slot) (*state.Beacon
 	defer span.End()
 
 	return s.loadStateBySlot(ctx, slot)
-}
-
-// StateByStateRoot retrieves the state with root equal to the input root.
-// It searches for the state only in the last SLOTS_PER_HISTORICAL_ROOT state roots.
-func (s *State) StateByStateRoot(
-	ctx context.Context,
-	stateRoot [32]byte,
-	headState *state.BeaconState,
-) (*state.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "stateGen.StateByStateRoot")
-	defer span.End()
-
-	for i, root := range headState.StateRoots() {
-		if bytes.Equal(root, stateRoot[:]) {
-			blockRoot := headState.BlockRoots()[i]
-			return s.StateByRoot(ctx, bytesutil.ToBytes32(blockRoot))
-		}
-	}
-	return nil, fmt.Errorf(errStateByStateRootNotFound, params.BeaconConfig().SlotsPerHistoricalRoot)
 }
 
 // This returns the state summary object of a given block root, it first checks the cache
