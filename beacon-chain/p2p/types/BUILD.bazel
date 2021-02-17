@@ -16,8 +16,8 @@ go_library(
         "//validator/client:__pkg__",
     ],
     deps = [
-        "//shared/htrutils:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/sszutil:go_default_library",
         "@com_github_ferranbt_fastssz//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
     ],
