@@ -19,7 +19,7 @@ func TestPruneExpired_Ticker(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	s, err := New(ctx, &Config{
+	s, err := NewService(ctx, &Config{
 		Pool:          NewPool(),
 		pruneInterval: 250 * time.Millisecond,
 	})
@@ -44,7 +44,7 @@ func TestPruneExpired_Ticker(t *testing.T) {
 	require.NoError(t, s.pool.SaveBlockAttestations(atts))
 
 	// Rewind back one epoch worth of time.
-	s.genesisTime = uint64(timeutils.Now().Unix()) - params.BeaconConfig().SlotsPerEpoch*params.BeaconConfig().SecondsPerSlot
+	s.genesisTime = uint64(timeutils.Now().Unix()) - uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 
 	go s.pruneAttsPool()
 
@@ -81,7 +81,7 @@ func TestPruneExpired_Ticker(t *testing.T) {
 }
 
 func TestPruneExpired_PruneExpiredAtts(t *testing.T) {
-	s, err := New(context.Background(), &Config{Pool: NewPool()})
+	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
 	require.NoError(t, err)
 
 	ad1 := testutil.HydrateAttestationData(&ethpb.AttestationData{})
@@ -97,7 +97,7 @@ func TestPruneExpired_PruneExpiredAtts(t *testing.T) {
 	require.NoError(t, s.pool.SaveBlockAttestations(atts))
 
 	// Rewind back one epoch worth of time.
-	s.genesisTime = uint64(timeutils.Now().Unix()) - params.BeaconConfig().SlotsPerEpoch*params.BeaconConfig().SecondsPerSlot
+	s.genesisTime = uint64(timeutils.Now().Unix()) - uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 
 	s.pruneExpiredAtts()
 	// All the attestations on slot 0 should be pruned.
@@ -114,11 +114,11 @@ func TestPruneExpired_PruneExpiredAtts(t *testing.T) {
 }
 
 func TestPruneExpired_Expired(t *testing.T) {
-	s, err := New(context.Background(), &Config{Pool: NewPool()})
+	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
 	require.NoError(t, err)
 
 	// Rewind back one epoch worth of time.
-	s.genesisTime = uint64(timeutils.Now().Unix()) - params.BeaconConfig().SlotsPerEpoch*params.BeaconConfig().SecondsPerSlot
+	s.genesisTime = uint64(timeutils.Now().Unix()) - uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	assert.Equal(t, true, s.expired(0), "Should be expired")
 	assert.Equal(t, false, s.expired(1), "Should not be expired")
 }

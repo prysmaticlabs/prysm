@@ -29,7 +29,7 @@ func TestNew(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	e := params.BeaconConfig().FarFutureEpoch
+	e := params.BeaconConfig().FarFutureSlot
 	v, b, err := precompute.New(context.Background(), s)
 	require.NoError(t, err)
 	assert.DeepEqual(t, &precompute.Validator{

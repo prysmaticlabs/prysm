@@ -5,6 +5,10 @@ import (
 	"encoding/binary"
 	"errors"
 	"math/bits"
+	"regexp"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	types "github.com/prysmaticlabs/eth2-types"
 )
 
 // ToBytes returns integer x to bytes in little-endian format at the specified length.
@@ -305,4 +309,42 @@ func BytesToUint64BigEndian(b []byte) uint64 {
 		return 0
 	}
 	return binary.BigEndian.Uint64(b)
+}
+
+// EpochToBytesLittleEndian conversion.
+func EpochToBytesLittleEndian(i types.Epoch) []byte {
+	return Uint64ToBytesLittleEndian(uint64(i))
+}
+
+// EpochToBytesBigEndian conversion.
+func EpochToBytesBigEndian(i types.Epoch) []byte {
+	return Uint64ToBytesBigEndian(uint64(i))
+}
+
+// BytesToEpochBigEndian conversion.
+func BytesToEpochBigEndian(b []byte) types.Epoch {
+	return types.Epoch(BytesToUint64BigEndian(b))
+}
+
+// SlotToBytesLittleEndian conversion.
+func SlotToBytesLittleEndian(i types.Slot) []byte {
+	return Uint64ToBytesLittleEndian(uint64(i))
+}
+
+// SlotToBytesBigEndian conversion.
+func SlotToBytesBigEndian(i types.Slot) []byte {
+	return Uint64ToBytesBigEndian(uint64(i))
+}
+
+// BytesToSlotBigEndian conversion.
+func BytesToSlotBigEndian(b []byte) types.Slot {
+	return types.Slot(BytesToUint64BigEndian(b))
+}
+
+// IsBytes32Hex checks whether the byte array is a 32-byte long hex number.
+func IsBytes32Hex(b []byte) (bool, error) {
+	if b == nil {
+		return false, nil
+	}
+	return regexp.Match("^0x[0-9a-fA-F]{64}$", []byte(hexutil.Encode(b)))
 }
