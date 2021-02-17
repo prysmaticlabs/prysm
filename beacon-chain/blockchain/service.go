@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
@@ -67,7 +67,7 @@ type Service struct {
 	bestJustifiedCheckpt  *ethpb.Checkpoint
 	finalizedCheckpt      *ethpb.Checkpoint
 	prevFinalizedCheckpt  *ethpb.Checkpoint
-	nextEpochBoundarySlot uint64
+	nextEpochBoundarySlot types.Slot
 	boundaryRoots         [][32]byte
 	checkpointStateCache  *cache.CheckpointStateCache
 	stateGen              *stategen.State

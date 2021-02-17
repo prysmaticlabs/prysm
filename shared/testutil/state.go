@@ -11,8 +11,8 @@ import (
 // NewBeaconState creates a beacon state with minimum marshalable fields.
 func NewBeaconState(options ...func(state *pb.BeaconState)) (*stateTrie.BeaconState, error) {
 	seed := &pb.BeaconState{
-		BlockRoots:                 filledByteSlice2D(params.MainnetConfig().SlotsPerHistoricalRoot, 32),
-		StateRoots:                 filledByteSlice2D(params.MainnetConfig().SlotsPerHistoricalRoot, 32),
+		BlockRoots:                 filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),
+		StateRoots:                 filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),
 		Slashings:                  make([]uint64, params.MainnetConfig().EpochsPerSlashingsVector),
 		RandaoMixes:                filledByteSlice2D(uint64(params.MainnetConfig().EpochsPerHistoricalVector), 32),
 		Validators:                 make([]*ethpb.Validator, 0),

@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -102,7 +102,7 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 		Slot: params.BeaconConfig().SlotsPerEpoch * 5,
 	})
 	require.NoError(t, err)
-	err = state.SetSlot(state.Slot() + uint64(params.BeaconConfig().ShardCommitteePeriod.Mul(params.BeaconConfig().SlotsPerEpoch)))
+	err = state.SetSlot(state.Slot() + params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().ShardCommitteePeriod)))
 	require.NoError(t, err)
 
 	priv, err := bls.RandKey()

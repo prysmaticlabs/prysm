@@ -16,6 +16,7 @@ import (
 	"strconv"
 
 	"github.com/emicklei/dot"
+	"github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
@@ -47,8 +48,8 @@ func main() {
 	graph.Attr("rankdir", "RL")
 	graph.Attr("labeljust", "l")
 
-	startSlot := uint64(*startSlot)
-	endSlot := uint64(*endSlot)
+	startSlot := types.Slot(*startSlot)
+	endSlot := types.Slot(*endSlot)
 	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
 	blks, roots, err := db.Blocks(context.Background(), filter)
 	if err != nil {

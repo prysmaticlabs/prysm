@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -353,7 +354,7 @@ func TestPool_PendingExits(t *testing.T) {
 		noLimit bool
 	}
 	type args struct {
-		slot uint64
+		slot types.Slot
 	}
 	tests := []struct {
 		name   string

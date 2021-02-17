@@ -11,6 +11,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	gcache "github.com/patrickmn/go-cache"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -318,13 +319,13 @@ func TestService_sortedPendingSlots(t *testing.T) {
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
 
-	var lastSlot uint64 = math.MaxUint64
+	var lastSlot types.Slot = math.MaxUint64
 	require.NoError(t, r.insertBlockToPendingQueue(lastSlot, testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: lastSlot}}), [32]byte{1}))
 	require.NoError(t, r.insertBlockToPendingQueue(lastSlot-3, testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: lastSlot - 3}}), [32]byte{2}))
 	require.NoError(t, r.insertBlockToPendingQueue(lastSlot-5, testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: lastSlot - 5}}), [32]byte{3}))
 	require.NoError(t, r.insertBlockToPendingQueue(lastSlot-2, testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: lastSlot - 2}}), [32]byte{4}))
 
-	want := []uint64{lastSlot - 5, lastSlot - 3, lastSlot - 2, lastSlot}
+	want := []types.Slot{lastSlot - 5, lastSlot - 3, lastSlot - 2, lastSlot}
 	assert.DeepEqual(t, want, r.sortedPendingSlots(), "Unexpected pending slots list")
 }
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -41,7 +42,7 @@ func (v *validator) LogAttestationsSubmitted() {
 	v.attLogs = make(map[[32]byte]*attSubmitted)
 }
 
-func (v *validator) LogNextDutyTimeLeft(slot uint64) error {
+func (v *validator) LogNextDutyTimeLeft(slot types.Slot) error {
 	if !v.logDutyCountDown {
 		return nil
 	}
@@ -49,9 +50,9 @@ func (v *validator) LogNextDutyTimeLeft(slot uint64) error {
 		return nil
 	}
 
-	var nextDutySlot uint64
-	attestingCounts := make(map[uint64]uint64)
-	proposingCounts := make(map[uint64]uint64)
+	var nextDutySlot types.Slot
+	attestingCounts := make(map[types.Slot]uint64)
+	proposingCounts := make(map[types.Slot]uint64)
 	for _, duty := range v.duties.CurrentEpochDuties {
 		attestingCounts[duty.AttesterSlot]++
 
