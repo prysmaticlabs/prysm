@@ -19,15 +19,15 @@ import (
 func TestUpdateValidator_Works(t *testing.T) {
 	e := params.BeaconConfig().FarFutureSlot
 	vp := []*precompute.Validator{{}, {InclusionSlot: e}, {}, {InclusionSlot: e}, {}, {InclusionSlot: e}}
-	record := &precompute.Validator{IsCurrentEpochAttester: true, IsCurrentEpochTargetAttester: true,
-		IsPrevEpochAttester: true, IsPrevEpochTargetAttester: true, IsPrevEpochHeadAttester: true}
+	record := &precompute.Validator{IsCurrentEpochSourceAttester: true, IsCurrentEpochTargetAttester: true,
+		IsPrevEpochSourceAttester: true, IsPrevEpochTargetAttester: true, IsPrevEpochHeadAttester: true}
 	a := &pb.PendingAttestation{InclusionDelay: 1, ProposerIndex: 2}
 
 	// Indices 1 3 and 5 attested
 	vp = precompute.UpdateValidator(vp, record, []uint64{1, 3, 5}, a, 100)
 
-	wanted := &precompute.Validator{IsCurrentEpochAttester: true, IsCurrentEpochTargetAttester: true,
-		IsPrevEpochAttester: true, IsPrevEpochTargetAttester: true, IsPrevEpochHeadAttester: true,
+	wanted := &precompute.Validator{IsCurrentEpochSourceAttester: true, IsCurrentEpochTargetAttester: true,
+		IsPrevEpochSourceAttester: true, IsPrevEpochTargetAttester: true, IsPrevEpochHeadAttester: true,
 		ProposerIndex: 2, InclusionDistance: 1, InclusionSlot: 101}
 	wantedVp := []*precompute.Validator{{}, wanted, {}, wanted, {}, wanted}
 	assert.DeepEqual(t, wantedVp, vp, "Incorrect attesting validator calculations")
@@ -36,33 +36,33 @@ func TestUpdateValidator_Works(t *testing.T) {
 func TestUpdateValidator_InclusionOnlyCountsPrevEpoch(t *testing.T) {
 	e := params.BeaconConfig().FarFutureSlot
 	vp := []*precompute.Validator{{InclusionSlot: e}}
-	record := &precompute.Validator{IsCurrentEpochAttester: true, IsCurrentEpochTargetAttester: true}
+	record := &precompute.Validator{IsCurrentEpochSourceAttester: true, IsCurrentEpochTargetAttester: true}
 	a := &pb.PendingAttestation{InclusionDelay: 1, ProposerIndex: 2}
 
 	// Verify inclusion info doesnt get updated.
 	vp = precompute.UpdateValidator(vp, record, []uint64{0}, a, 100)
-	wanted := &precompute.Validator{IsCurrentEpochAttester: true, IsCurrentEpochTargetAttester: true, InclusionSlot: e}
+	wanted := &precompute.Validator{IsCurrentEpochSourceAttester: true, IsCurrentEpochTargetAttester: true, InclusionSlot: e}
 	wantedVp := []*precompute.Validator{wanted}
 	assert.DeepEqual(t, wantedVp, vp, "Incorrect attesting validator calculations")
 }
 
 func TestUpdateBalance(t *testing.T) {
 	vp := []*precompute.Validator{
-		{IsCurrentEpochAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
-		{IsCurrentEpochTargetAttester: true, IsCurrentEpochAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+		{IsCurrentEpochSourceAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+		{IsCurrentEpochTargetAttester: true, IsCurrentEpochSourceAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
 		{IsCurrentEpochTargetAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
-		{IsPrevEpochAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
-		{IsPrevEpochAttester: true, IsPrevEpochTargetAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+		{IsPrevEpochSourceAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+		{IsPrevEpochSourceAttester: true, IsPrevEpochTargetAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
 		{IsPrevEpochHeadAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
-		{IsPrevEpochAttester: true, IsPrevEpochHeadAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
-		{IsSlashed: true, IsCurrentEpochAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+		{IsPrevEpochSourceAttester: true, IsPrevEpochHeadAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+		{IsSlashed: true, IsCurrentEpochSourceAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
 	}
 	wantedPBal := &precompute.Balance{
 		ActiveCurrentEpoch:         params.BeaconConfig().EffectiveBalanceIncrement,
 		ActivePrevEpoch:            params.BeaconConfig().EffectiveBalanceIncrement,
 		CurrentEpochAttested:       200 * params.BeaconConfig().EffectiveBalanceIncrement,
 		CurrentEpochTargetAttested: 200 * params.BeaconConfig().EffectiveBalanceIncrement,
-		PrevEpochAttested:          300 * params.BeaconConfig().EffectiveBalanceIncrement,
+		PrevEpochSourceAttested:    300 * params.BeaconConfig().EffectiveBalanceIncrement,
 		PrevEpochTargetAttested:    100 * params.BeaconConfig().EffectiveBalanceIncrement,
 		PrevEpochHeadAttested:      200 * params.BeaconConfig().EffectiveBalanceIncrement,
 	}
@@ -187,7 +187,7 @@ func TestProcessAttestations(t *testing.T) {
 	indices, err := attestationutil.AttestingIndices(att1.AggregationBits, committee)
 	require.NoError(t, err)
 	for _, i := range indices {
-		if !pVals[i].IsPrevEpochAttester {
+		if !pVals[i].IsPrevEpochSourceAttester {
 			t.Error("Not a prev epoch attester")
 		}
 	}
@@ -196,7 +196,7 @@ func TestProcessAttestations(t *testing.T) {
 	indices, err = attestationutil.AttestingIndices(att2.AggregationBits, committee)
 	require.NoError(t, err)
 	for _, i := range indices {
-		assert.Equal(t, true, pVals[i].IsPrevEpochAttester, "Not a prev epoch attester")
+		assert.Equal(t, true, pVals[i].IsPrevEpochSourceAttester, "Not a prev epoch attester")
 		assert.Equal(t, true, pVals[i].IsPrevEpochTargetAttester, "Not a prev epoch target attester")
 		assert.Equal(t, true, pVals[i].IsPrevEpochHeadAttester, "Not a prev epoch head attester")
 	}
@@ -210,7 +210,7 @@ func TestEnsureBalancesLowerBound(t *testing.T) {
 	assert.Equal(t, balanceIncrement, b.ActivePrevEpoch, "Did not get wanted active previous balance")
 	assert.Equal(t, balanceIncrement, b.CurrentEpochAttested, "Did not get wanted current attested balance")
 	assert.Equal(t, balanceIncrement, b.CurrentEpochTargetAttested, "Did not get wanted target attested balance")
-	assert.Equal(t, balanceIncrement, b.PrevEpochAttested, "Did not get wanted prev attested balance")
+	assert.Equal(t, balanceIncrement, b.PrevEpochSourceAttested, "Did not get wanted prev attested balance")
 	assert.Equal(t, balanceIncrement, b.PrevEpochTargetAttested, "Did not get wanted prev target attested balance")
 	assert.Equal(t, balanceIncrement, b.PrevEpochHeadAttested, "Did not get wanted prev head attested balance")
 }

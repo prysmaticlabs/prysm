@@ -31,17 +31,14 @@ func ProcessRewardsAndPenaltiesPrecompute(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get attestation delta")
 	}
-	proposerRewards, err := ProposersDelta(state, pBal, vp)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get attestation delta")
-	}
+
 	validatorBals := state.Balances()
 	for i := 0; i < numOfVals; i++ {
 		vp[i].BeforeEpochTransitionBalance = validatorBals[i]
 
 		// Compute the post balance of the validator after accounting for the
 		// attester and proposer rewards and penalties.
-		validatorBals[i] = helpers.IncreaseBalanceWithVal(validatorBals[i], attsRewards[i]+proposerRewards[i])
+		validatorBals[i] = helpers.IncreaseBalanceWithVal(validatorBals[i], attsRewards[i])
 		validatorBals[i] = helpers.DecreaseBalanceWithVal(validatorBals[i], attsPenalties[i])
 
 		vp[i].AfterEpochTransitionBalance = validatorBals[i]
@@ -78,27 +75,22 @@ func attestationDelta(pBal *Balance, v *Validator, prevEpoch, finalizedEpoch typ
 	baseRewardsPerEpoch := params.BeaconConfig().BaseRewardsPerEpoch
 	effectiveBalanceIncrement := params.BeaconConfig().EffectiveBalanceIncrement
 	vb := v.CurrentEpochEffectiveBalance
-	br := vb * params.BeaconConfig().BaseRewardFactor / mathutil.IntegerSquareRoot(pBal.ActiveCurrentEpoch) / baseRewardsPerEpoch
+	br := vb * params.BeaconConfig().BaseRewardFactor / mathutil.IntegerSquareRoot(pBal.ActiveCurrentEpoch)
 	r, p := uint64(0), uint64(0)
-	currentEpochBalance := pBal.ActiveCurrentEpoch / effectiveBalanceIncrement
+	activeCurrentEpochIncrements := pBal.ActiveCurrentEpoch / effectiveBalanceIncrement
 
 	// Process source reward / penalty
-	if v.IsPrevEpochAttester && !v.IsSlashed {
-		proposerReward := br / params.BeaconConfig().ProposerRewardQuotient
-		maxAttesterReward := br - proposerReward
-		r += maxAttesterReward / uint64(v.InclusionDistance)
-
+	if v.IsPrevEpochSourceAttester && !v.IsSlashed {
 		if isInInactivityLeak(prevEpoch, finalizedEpoch) {
 			// Since full base reward will be canceled out by inactivity penalty deltas,
 			// optimal participation receives full base reward compensation here.
-			r += br
+			r += br * params.BeaconConfig().TimelySourceNumerator / params.BeaconConfig().RewardDenominator
 		} else {
-			rewardNumerator := br * (pBal.PrevEpochAttested / effectiveBalanceIncrement)
-			r += rewardNumerator / currentEpochBalance
-
+			rewardNumerator := br * params.BeaconConfig().TimelySourceNumerator * (pBal.PrevEpochSourceAttested / effectiveBalanceIncrement)
+			r += rewardNumerator / (activeCurrentEpochIncrements * params.BeaconConfig().RewardDenominator)
 		}
 	} else {
-		p += br
+		p += br * params.BeaconConfig().TimelySourceNumerator / params.BeaconConfig().RewardDenominator
 	}
 
 	// Process target reward / penalty
@@ -106,13 +98,13 @@ func attestationDelta(pBal *Balance, v *Validator, prevEpoch, finalizedEpoch typ
 		if isInInactivityLeak(prevEpoch, finalizedEpoch) {
 			// Since full base reward will be canceled out by inactivity penalty deltas,
 			// optimal participation receives full base reward compensation here.
-			r += br
+			r += br * params.BeaconConfig().TimelyTargetNumerator / params.BeaconConfig().RewardDenominator
 		} else {
-			rewardNumerator := br * (pBal.PrevEpochTargetAttested / effectiveBalanceIncrement)
-			r += rewardNumerator / currentEpochBalance
+			rewardNumerator := br * params.BeaconConfig().TimelyTargetNumerator * (pBal.PrevEpochSourceAttested / effectiveBalanceIncrement)
+			r += rewardNumerator / (activeCurrentEpochIncrements * params.BeaconConfig().RewardDenominator)
 		}
 	} else {
-		p += br
+		p += br * params.BeaconConfig().TimelyTargetNumerator / params.BeaconConfig().RewardDenominator
 	}
 
 	// Process head reward / penalty
@@ -120,13 +112,13 @@ func attestationDelta(pBal *Balance, v *Validator, prevEpoch, finalizedEpoch typ
 		if isInInactivityLeak(prevEpoch, finalizedEpoch) {
 			// Since full base reward will be canceled out by inactivity penalty deltas,
 			// optimal participation receives full base reward compensation here.
-			r += br
+			r += br * params.BeaconConfig().TimelyHeadNumerator / params.BeaconConfig().RewardDenominator
 		} else {
-			rewardNumerator := br * (pBal.PrevEpochHeadAttested / effectiveBalanceIncrement)
-			r += rewardNumerator / currentEpochBalance
+			rewardNumerator := br * params.BeaconConfig().TimelyHeadNumerator * (pBal.PrevEpochSourceAttested / effectiveBalanceIncrement)
+			r += rewardNumerator / (activeCurrentEpochIncrements * params.BeaconConfig().RewardDenominator)
 		}
 	} else {
-		p += br
+		p += br * params.BeaconConfig().TimelyHeadNumerator / params.BeaconConfig().RewardDenominator
 	}
 
 	// Process finality delay penalty
@@ -144,38 +136,6 @@ func attestationDelta(pBal *Balance, v *Validator, prevEpoch, finalizedEpoch typ
 		}
 	}
 	return r, p
-}
-
-// ProposersDelta computes and returns the rewards and penalties differences for individual validators based on the
-// proposer inclusion records.
-func ProposersDelta(state *stateTrie.BeaconState, pBal *Balance, vp []*Validator) ([]uint64, error) {
-	numofVals := state.NumValidators()
-	rewards := make([]uint64, numofVals)
-
-	totalBalance := pBal.ActiveCurrentEpoch
-	balanceSqrt := mathutil.IntegerSquareRoot(totalBalance)
-	// Balance square root cannot be 0, this prevents division by 0.
-	if balanceSqrt == 0 {
-		balanceSqrt = 1
-	}
-
-	baseRewardFactor := params.BeaconConfig().BaseRewardFactor
-	baseRewardsPerEpoch := params.BeaconConfig().BaseRewardsPerEpoch
-	proposerRewardQuotient := params.BeaconConfig().ProposerRewardQuotient
-	for _, v := range vp {
-		if v.ProposerIndex >= uint64(len(rewards)) {
-			// This should never happen with a valid state / validator.
-			return nil, errors.New("proposer index out of range")
-		}
-		// Only apply inclusion rewards to proposer only if the attested hasn't been slashed.
-		if v.IsPrevEpochAttester && !v.IsSlashed {
-			vBalance := v.CurrentEpochEffectiveBalance
-			baseReward := vBalance * baseRewardFactor / balanceSqrt / baseRewardsPerEpoch
-			proposerReward := baseReward / proposerRewardQuotient
-			rewards[v.ProposerIndex] += proposerReward
-		}
-	}
-	return rewards, nil
 }
 
 // isInInactivityLeak returns true if the state is experiencing inactivity leak.

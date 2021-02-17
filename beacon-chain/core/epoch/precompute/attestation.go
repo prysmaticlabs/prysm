@@ -1,16 +1,13 @@
 package precompute
 
 import (
-	"bytes"
 	"context"
 
-	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
+	"go.opencensus.io/trace"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"go.opencensus.io/trace"
 )
 
 // ProcessAttestations process the attestations in state and update individual validator's pre computes,
@@ -23,158 +20,49 @@ func ProcessAttestations(
 ) ([]*Validator, *Balance, error) {
 	ctx, span := trace.StartSpan(ctx, "precomputeEpoch.ProcessAttestations")
 	defer span.End()
-	// TODO: Reform this based on the new scheme
-	//v := &Validator{}
-	//var err error
-	//
-	//for _, a := range append(state.PreviousEpochAttestations(), state.CurrentEpochAttestations()...) {
-	//	if a.InclusionDelay == 0 {
-	//		return nil, nil, errors.New("attestation with inclusion delay of 0")
-	//	}
-	//	v.IsCurrentEpochAttester, v.IsCurrentEpochTargetAttester, err = AttestedCurrentEpoch(state, a)
-	//	if err != nil {
-	//		traceutil.AnnotateError(span, err)
-	//		return nil, nil, errors.Wrap(err, "could not check validator attested current epoch")
-	//	}
-	//	v.IsPrevEpochAttester, v.IsPrevEpochTargetAttester, v.IsPrevEpochHeadAttester, err = AttestedPrevEpoch(state, a)
-	//	if err != nil {
-	//		traceutil.AnnotateError(span, err)
-	//		return nil, nil, errors.Wrap(err, "could not check validator attested previous epoch")
-	//	}
-	//
-	//	committee, err := helpers.BeaconCommitteeFromState(state, a.Data.Slot, a.Data.CommitteeIndex)
-	//	if err != nil {
-	//		return nil, nil, err
-	//	}
-	//	indices, err := attestationutil.AttestingIndices(a.AggregationBits, committee)
-	//	if err != nil {
-	//		return nil, nil, err
-	//	}
-	//	vp = UpdateValidator(vp, v, indices, a, a.Data.Slot)
-	//}
+
+	v := &Validator{}
+	cp := state.CurrentEpochParticipation()
+	for i, b := range cp {
+		if helpers.HasValidatorFlag(b, params.BeaconConfig().TimelyTargetFlag) {
+			v.IsCurrentEpochTargetAttester = true
+		}
+		vp[i] = v
+	}
+	pp := state.PreviousEpochParticipation()
+	for i, b := range pp {
+		v = vp[i]
+		if helpers.HasValidatorFlag(b, params.BeaconConfig().TimelySourceFlag) {
+			v.IsPrevEpochSourceAttester = true
+		}
+		if helpers.HasValidatorFlag(b, params.BeaconConfig().TimelyTargetFlag) {
+			v.IsPrevEpochTargetAttester = true
+		}
+		if helpers.HasValidatorFlag(b, params.BeaconConfig().TimelyHeadFlag) {
+			v.IsPrevEpochHeadAttester = true
+		}
+		vp[i] = v
+	}
 
 	pBal = UpdateBalance(vp, pBal)
 
 	return vp, pBal, nil
 }
 
-// AttestedCurrentEpoch returns true if attestation `a` attested once in current epoch and/or epoch boundary block.
-func AttestedCurrentEpoch(s *stateTrie.BeaconState, a *pb.PendingAttestation) (bool, bool, error) {
-	currentEpoch := helpers.CurrentEpoch(s)
-	var votedCurrentEpoch, votedTarget bool
-	// Did validator vote current epoch.
-	if a.Data.Target.Epoch == currentEpoch {
-		votedCurrentEpoch = true
-		same, err := SameTarget(s, a, currentEpoch)
-		if err != nil {
-			return false, false, err
-		}
-		if same {
-			votedTarget = true
-		}
-	}
-	return votedCurrentEpoch, votedTarget, nil
-}
-
-// AttestedPrevEpoch returns true if attestation `a` attested once in previous epoch and epoch boundary block and/or the same head.
-func AttestedPrevEpoch(s *stateTrie.BeaconState, a *pb.PendingAttestation) (bool, bool, bool, error) {
-	prevEpoch := helpers.PrevEpoch(s)
-	var votedPrevEpoch, votedTarget, votedHead bool
-	// Did validator vote previous epoch.
-	if a.Data.Target.Epoch == prevEpoch {
-		votedPrevEpoch = true
-		same, err := SameTarget(s, a, prevEpoch)
-		if err != nil {
-			return false, false, false, errors.Wrap(err, "could not check same target")
-		}
-		if same {
-			votedTarget = true
-		}
-
-		if votedTarget {
-			same, err = SameHead(s, a)
-			if err != nil {
-				return false, false, false, errors.Wrap(err, "could not check same head")
-			}
-			if same {
-				votedHead = true
-			}
-		}
-	}
-	return votedPrevEpoch, votedTarget, votedHead, nil
-}
-
-// SameTarget returns true if attestation `a` attested to the same target block in state.
-func SameTarget(state *stateTrie.BeaconState, a *pb.PendingAttestation, e types.Epoch) (bool, error) {
-	r, err := helpers.BlockRoot(state, e)
-	if err != nil {
-		return false, err
-	}
-	if bytes.Equal(a.Data.Target.Root, r) {
-		return true, nil
-	}
-	return false, nil
-}
-
-// SameHead returns true if attestation `a` attested to the same block by attestation slot in state.
-func SameHead(state *stateTrie.BeaconState, a *pb.PendingAttestation) (bool, error) {
-	r, err := helpers.BlockRootAtSlot(state, a.Data.Slot)
-	if err != nil {
-		return false, err
-	}
-	if bytes.Equal(a.Data.BeaconBlockRoot, r) {
-		return true, nil
-	}
-	return false, nil
-}
-
-// UpdateValidator updates pre computed validator store.
-func UpdateValidator(vp []*Validator, record *Validator, indices []uint64, a *pb.PendingAttestation, aSlot types.Slot) []*Validator {
-	inclusionSlot := aSlot + a.InclusionDelay
-
-	for _, i := range indices {
-		if record.IsCurrentEpochAttester {
-			vp[i].IsCurrentEpochAttester = true
-		}
-		if record.IsCurrentEpochTargetAttester {
-			vp[i].IsCurrentEpochTargetAttester = true
-		}
-		if record.IsPrevEpochAttester {
-			vp[i].IsPrevEpochAttester = true
-			// Update attestation inclusion info if inclusion slot is lower than before
-			if inclusionSlot < vp[i].InclusionSlot {
-				vp[i].InclusionSlot = aSlot + a.InclusionDelay
-				vp[i].InclusionDistance = a.InclusionDelay
-				vp[i].ProposerIndex = a.ProposerIndex
-			}
-		}
-		if record.IsPrevEpochTargetAttester {
-			vp[i].IsPrevEpochTargetAttester = true
-		}
-		if record.IsPrevEpochHeadAttester {
-			vp[i].IsPrevEpochHeadAttester = true
-		}
-	}
-	return vp
-}
-
 // UpdateBalance updates pre computed balance store.
 func UpdateBalance(vp []*Validator, bBal *Balance) *Balance {
 	for _, v := range vp {
 		if !v.IsSlashed {
-			if v.IsCurrentEpochAttester {
-				bBal.CurrentEpochAttested += v.CurrentEpochEffectiveBalance
-			}
-			if v.IsCurrentEpochTargetAttester {
+			if v.IsCurrentEpochTargetAttester && !v.IsSlashed {
 				bBal.CurrentEpochTargetAttested += v.CurrentEpochEffectiveBalance
 			}
-			if v.IsPrevEpochAttester {
-				bBal.PrevEpochAttested += v.CurrentEpochEffectiveBalance
+			if v.IsPrevEpochSourceAttester && !v.IsSlashed {
+				bBal.PrevEpochSourceAttested += v.CurrentEpochEffectiveBalance
 			}
-			if v.IsPrevEpochTargetAttester {
+			if v.IsPrevEpochTargetAttester && !v.IsSlashed {
 				bBal.PrevEpochTargetAttested += v.CurrentEpochEffectiveBalance
 			}
-			if v.IsPrevEpochHeadAttester {
+			if v.IsPrevEpochHeadAttester && !v.IsSlashed {
 				bBal.PrevEpochHeadAttested += v.CurrentEpochEffectiveBalance
 			}
 		}
@@ -193,14 +81,11 @@ func EnsureBalancesLowerBound(bBal *Balance) *Balance {
 	if ebi > bBal.ActivePrevEpoch {
 		bBal.ActivePrevEpoch = ebi
 	}
-	if ebi > bBal.CurrentEpochAttested {
-		bBal.CurrentEpochAttested = ebi
-	}
 	if ebi > bBal.CurrentEpochTargetAttested {
 		bBal.CurrentEpochTargetAttested = ebi
 	}
-	if ebi > bBal.PrevEpochAttested {
-		bBal.PrevEpochAttested = ebi
+	if ebi > bBal.PrevEpochSourceAttested {
+		bBal.PrevEpochSourceAttested = ebi
 	}
 	if ebi > bBal.PrevEpochTargetAttested {
 		bBal.PrevEpochTargetAttested = ebi

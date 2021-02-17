@@ -7,10 +7,10 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"go.opencensus.io/trace"
 )
 
 // New gets called at the beginning of process epoch cycle to return
@@ -22,7 +22,6 @@ func New(ctx context.Context, state *stateTrie.BeaconState) ([]*Validator, *Bala
 	pValidators := make([]*Validator, state.NumValidators())
 	pBal := &Balance{}
 
-	currentEpoch := helpers.CurrentEpoch(state)
 	prevEpoch := helpers.PrevEpoch(state)
 
 	if err := state.ReadFromEveryValidator(func(idx int, val stateTrie.ReadOnlyValidator) error {
@@ -33,20 +32,11 @@ func New(ctx context.Context, state *stateTrie.BeaconState) ([]*Validator, *Bala
 			IsWithdrawableCurrentEpoch:   withdrawable,
 			CurrentEpochEffectiveBalance: val.EffectiveBalance(),
 		}
-		// Was validator active current epoch
-		if helpers.IsActiveValidatorUsingTrie(val, currentEpoch) {
-			pVal.IsActiveCurrentEpoch = true
-			pBal.ActiveCurrentEpoch += val.EffectiveBalance()
-		}
 		// Was validator active previous epoch
 		if helpers.IsActiveValidatorUsingTrie(val, prevEpoch) {
 			pVal.IsActivePrevEpoch = true
 			pBal.ActivePrevEpoch += val.EffectiveBalance()
 		}
-		// Set inclusion slot and inclusion distance to be max, they will be compared and replaced
-		// with the lower values
-		pVal.InclusionSlot = params.BeaconConfig().FarFutureSlot
-		pVal.InclusionDistance = params.BeaconConfig().FarFutureSlot
 
 		pValidators[idx] = pVal
 		return nil

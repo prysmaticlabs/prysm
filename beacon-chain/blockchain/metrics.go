@@ -215,7 +215,7 @@ func reportEpochMetrics(ctx context.Context, postState, headState *stateTrie.Bea
 		return err
 	}
 	prevEpochActiveBalances.Set(float64(b.ActivePrevEpoch))
-	prevEpochSourceBalances.Set(float64(b.PrevEpochAttested))
+	prevEpochSourceBalances.Set(float64(b.PrevEpochSourceAttested))
 	prevEpochTargetBalances.Set(float64(b.PrevEpochTargetAttested))
 	prevEpochHeadBalances.Set(float64(b.PrevEpochHeadAttested))
 

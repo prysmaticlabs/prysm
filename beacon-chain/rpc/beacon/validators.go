@@ -539,10 +539,9 @@ func (bs *Server) GetValidatorParticipation(
 			VotedEther:                       b.PrevEpochTargetAttested,
 			EligibleEther:                    b.ActivePrevEpoch,
 			CurrentEpochActiveGwei:           b.ActiveCurrentEpoch,
-			CurrentEpochAttestingGwei:        b.CurrentEpochAttested,
 			CurrentEpochTargetAttestingGwei:  b.CurrentEpochTargetAttested,
 			PreviousEpochActiveGwei:          b.ActivePrevEpoch,
-			PreviousEpochAttestingGwei:       b.PrevEpochAttested,
+			PreviousEpochAttestingGwei:       b.PrevEpochSourceAttested,
 			PreviousEpochTargetAttestingGwei: b.PrevEpochTargetAttested,
 			PreviousEpochHeadAttestingGwei:   b.PrevEpochHeadAttested,
 		},
@@ -745,9 +744,7 @@ func (bs *Server) GetValidatorPerformance(
 		effectiveBalances = append(effectiveBalances, summary.CurrentEpochEffectiveBalance)
 		beforeTransitionBalances = append(beforeTransitionBalances, summary.BeforeEpochTransitionBalance)
 		afterTransitionBalances = append(afterTransitionBalances, summary.AfterEpochTransitionBalance)
-		inclusionSlots = append(inclusionSlots, summary.InclusionSlot)
-		inclusionDistances = append(inclusionDistances, summary.InclusionDistance)
-		correctlyVotedSource = append(correctlyVotedSource, summary.IsPrevEpochAttester)
+		correctlyVotedSource = append(correctlyVotedSource, summary.IsPrevEpochSourceAttester)
 		correctlyVotedTarget = append(correctlyVotedTarget, summary.IsPrevEpochTargetAttester)
 		correctlyVotedHead = append(correctlyVotedHead, summary.IsPrevEpochHeadAttester)
 	}
@@ -838,16 +835,12 @@ func (bs *Server) GetIndividualVotes(
 			ValidatorIndex:                   index,
 			IsSlashed:                        v[index].IsSlashed,
 			IsWithdrawableInCurrentEpoch:     v[index].IsWithdrawableCurrentEpoch,
-			IsActiveInCurrentEpoch:           v[index].IsActiveCurrentEpoch,
 			IsActiveInPreviousEpoch:          v[index].IsActivePrevEpoch,
-			IsCurrentEpochAttester:           v[index].IsCurrentEpochAttester,
 			IsCurrentEpochTargetAttester:     v[index].IsCurrentEpochTargetAttester,
-			IsPreviousEpochAttester:          v[index].IsPrevEpochAttester,
+			IsPreviousEpochAttester:          v[index].IsPrevEpochSourceAttester,
 			IsPreviousEpochTargetAttester:    v[index].IsPrevEpochTargetAttester,
 			IsPreviousEpochHeadAttester:      v[index].IsPrevEpochHeadAttester,
 			CurrentEpochEffectiveBalanceGwei: v[index].CurrentEpochEffectiveBalance,
-			InclusionSlot:                    v[index].InclusionSlot,
-			InclusionDistance:                v[index].InclusionDistance,
 		})
 	}
 
