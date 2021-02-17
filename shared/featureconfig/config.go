@@ -186,7 +186,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		cfg.UpdateHeadTimely = true
 	}
 	if ctx.Bool(manualStateReference.Name) {
-		log.Warn("Enabling manual state reference collection")
+		log.WithField(manualStateReference.Name, manualStateReference.Usage).Warn(enabledFeatureFlag)
 		cfg.ManualStateReference = true
 	}
 	Init(cfg)
