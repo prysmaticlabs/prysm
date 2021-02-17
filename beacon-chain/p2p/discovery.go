@@ -288,9 +288,14 @@ func (s *Service) isPeerAtLimit(inbound bool) bool {
 	// we apply the high watermark buffer.
 	if inbound {
 		maxPeers += highWatermarkBuffer
+		maxInbound := s.peers.InboundLimit() + highWatermarkBuffer
+		currInbound := len(s.peers.Inbound())
+		// Exit early if we are at the inbound limit.
+		if currInbound >= maxInbound {
+			return true
+		}
 	}
 	activePeers := len(s.Peers().Active())
-
 	return activePeers >= maxPeers || numOfConns >= maxPeers
 }
 
