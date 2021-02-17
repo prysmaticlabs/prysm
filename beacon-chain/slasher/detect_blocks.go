@@ -20,6 +20,8 @@ func (s *Service) detectSlashableBlocks(
 		if existing == nil {
 			continue
 		}
+		// If there is an existing record for a validator proposal, check if the existing
+		// record has a different signing root than the incoming one.
 		if existing.SigningRoot != proposedBlocks[i].SigningRoot {
 			// TODO(#8331): Send over an event feed.
 			logSlashingEvent(&slashertypes.Slashing{
