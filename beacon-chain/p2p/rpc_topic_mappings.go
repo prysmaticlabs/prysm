@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/sszutil"
+	ssztypes "github.com/prysmaticlabs/prysm/shared/sszutil/types"
 )
 
 // Current schema version for our rpc protocol ID.
@@ -30,10 +30,10 @@ const (
 // RPCTopicMappings map the base message type to the rpc request.
 var RPCTopicMappings = map[string]interface{}{
 	RPCStatusTopic:        new(pb.Status),
-	RPCGoodByeTopic:       new(sszutil.SSZUint64),
+	RPCGoodByeTopic:       new(ssztypes.SSZUint64),
 	RPCBlocksByRangeTopic: new(pb.BeaconBlocksByRangeRequest),
 	RPCBlocksByRootTopic:  new(types.BeaconBlockByRootsReq),
-	RPCPingTopic:          new(sszutil.SSZUint64),
+	RPCPingTopic:          new(ssztypes.SSZUint64),
 	RPCMetaDataTopic:      new(interface{}),
 }
 

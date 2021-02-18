@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/sszutil"
+	ssztypes "github.com/prysmaticlabs/prysm/shared/sszutil/types"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
@@ -263,7 +263,7 @@ func validateSelectionIndex(ctx context.Context, bs *stateTrie.BeaconState, data
 	if err != nil {
 		return nil, err
 	}
-	sszUint := sszutil.SSZUint64(data.Slot)
+	sszUint := ssztypes.SSZUint64(data.Slot)
 	root, err := helpers.ComputeSigningRoot(&sszUint, d)
 	if err != nil {
 		return nil, err

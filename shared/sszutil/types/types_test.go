@@ -1,27 +1,27 @@
-package sszutil_test
+package types_test
 
 import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/sszutil"
+	"github.com/prysmaticlabs/prysm/shared/sszutil/types"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestSSZUint64_Limit(t *testing.T) {
-	sszType := sszutil.SSZUint64(0)
+	sszType := types.SSZUint64(0)
 	serializedObj := [7]byte{}
 	require.ErrorContains(t, "expected buffer with length", sszType.UnmarshalSSZ(serializedObj[:]))
 }
 
 func TestRoundTripTestSSZUint64(t *testing.T) {
 	fixedVal := uint64(8)
-	sszVal := sszutil.SSZUint64(fixedVal)
+	sszVal := types.SSZUint64(fixedVal)
 
 	marshalledObj, err := sszVal.MarshalSSZ()
 	require.NoError(t, err)
-	newVal := sszutil.SSZUint64(0)
+	newVal := types.SSZUint64(0)
 
 	err = newVal.UnmarshalSSZ(marshalledObj)
 	require.NoError(t, err)
@@ -60,7 +60,7 @@ func TestSSZUint64(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var s sszutil.SSZUint64
+			var s types.SSZUint64
 			if err := s.UnmarshalSSZ(tt.serializedBytes); (err != nil) != tt.wantErr {
 				t.Errorf("UnmarshalSSZ() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -105,7 +105,7 @@ func TestSSZBytes_HashTreeRoot(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := sszutil.SSZBytes(tt.actualValue)
+			s := types.SSZBytes(tt.actualValue)
 			htr, err := s.HashTreeRoot()
 			require.NoError(t, err)
 			require.DeepEqual(t, tt.root, htr[:])

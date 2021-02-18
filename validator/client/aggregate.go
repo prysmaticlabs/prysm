@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
-	"github.com/prysmaticlabs/prysm/shared/sszutil"
+	ssztypes "github.com/prysmaticlabs/prysm/shared/sszutil/types"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -125,7 +125,7 @@ func (v *validator) signSlot(ctx context.Context, pubKey [48]byte, slot types.Sl
 	}
 
 	var sig bls.Signature
-	sszUint := sszutil.SSZUint64(slot)
+	sszUint := ssztypes.SSZUint64(slot)
 	root, err := helpers.ComputeSigningRoot(&sszUint, domain.SignatureDomain)
 	if err != nil {
 		return nil, err

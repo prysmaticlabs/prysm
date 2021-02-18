@@ -11,11 +11,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/shared/mputil"
-	"github.com/prysmaticlabs/prysm/shared/sszutil"
+	ssztypes "github.com/prysmaticlabs/prysm/shared/sszutil/types"
 	"github.com/sirupsen/logrus"
 )
 
-var backOffTime = map[sszutil.SSZUint64]time.Duration{
+var backOffTime = map[ssztypes.SSZUint64]time.Duration{
 	// Do not dial peers which are from a different/unverifiable
 	// network.
 	types.GoodbyeCodeWrongNetwork:          24 * time.Hour,
@@ -36,7 +36,7 @@ var backOffTime = map[sszutil.SSZUint64]time.Duration{
 func (s *Service) goodbyeRPCHandler(_ context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	SetRPCStreamDeadlines(stream)
 
-	m, ok := msg.(*sszutil.SSZUint64)
+	m, ok := msg.(*ssztypes.SSZUint64)
 	if !ok {
 		return fmt.Errorf("wrong message type for goodbye, got %T, wanted *uint64", msg)
 	}

@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/sszutil"
+	ssztypes "github.com/prysmaticlabs/prysm/shared/sszutil/types"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -237,7 +237,7 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 			sbbh.Header.BodyRoot = bytesutil.PadTo([]byte(fmt.Sprintf("%d", j)), 32)
 			bhr, err := sbbh.Header.HashTreeRoot()
 			assert.NoError(t, err)
-			sszBytes := sszutil.SSZBytes(bhr[:])
+			sszBytes := ssztypes.SSZBytes(bhr[:])
 			root, err := helpers.ComputeSigningRoot(&sszBytes, domain)
 			assert.NoError(t, err)
 			sbbh.Signature = keys[sbbh.Header.ProposerIndex].Sign(root[:]).Marshal()
@@ -306,7 +306,7 @@ func TestServer_IsSlashableBlockNoUpdate(t *testing.T) {
 	require.NoError(t, err)
 	bhr, err := savedBlock.Header.HashTreeRoot()
 	require.NoError(t, err)
-	sszBytes := sszutil.SSZBytes(bhr[:])
+	sszBytes := ssztypes.SSZBytes(bhr[:])
 	root, err := helpers.ComputeSigningRoot(&sszBytes, domain)
 	require.NoError(t, err)
 	blockSig := keys[savedBlock.Header.ProposerIndex].Sign(root[:])

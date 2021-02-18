@@ -10,7 +10,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/shared/sszutil"
+	ssztypes "github.com/prysmaticlabs/prysm/shared/sszutil/types"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
@@ -18,7 +18,7 @@ import (
 func (s *Service) pingHandler(_ context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	SetRPCStreamDeadlines(stream)
 
-	m, ok := msg.(*sszutil.SSZUint64)
+	m, ok := msg.(*ssztypes.SSZUint64)
 	if !ok {
 		return fmt.Errorf("wrong message type for ping, got %T, wanted *uint64", msg)
 	}
@@ -38,7 +38,7 @@ func (s *Service) pingHandler(_ context.Context, msg interface{}, stream libp2pc
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
 	}
-	sq := sszutil.SSZUint64(s.p2p.MetadataSeq())
+	sq := ssztypes.SSZUint64(s.p2p.MetadataSeq())
 	if _, err := s.p2p.Encoding().EncodeWithMaxLength(stream, &sq); err != nil {
 		return err
 	}
@@ -76,7 +76,7 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
-	metadataSeq := sszutil.SSZUint64(s.p2p.MetadataSeq())
+	metadataSeq := ssztypes.SSZUint64(s.p2p.MetadataSeq())
 	stream, err := s.p2p.Send(ctx, &metadataSeq, p2p.RPCPingTopic, id)
 	if err != nil {
 		return err
@@ -95,7 +95,7 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 		s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		return errors.New(errMsg)
 	}
-	msg := new(sszutil.SSZUint64)
+	msg := new(ssztypes.SSZUint64)
 	if err := s.p2p.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
 		return err
 	}
@@ -121,7 +121,7 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 }
 
 // validates the peer's sequence number.
-func (s *Service) validateSequenceNum(seq sszutil.SSZUint64, id peer.ID) (bool, error) {
+func (s *Service) validateSequenceNum(seq ssztypes.SSZUint64, id peer.ID) (bool, error) {
 	md, err := s.p2p.Peers().Metadata(id)
 	if err != nil {
 		return false, err
