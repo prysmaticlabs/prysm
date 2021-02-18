@@ -4,7 +4,8 @@ import (
 	"reflect"
 	"unsafe"
 
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
+	"google.golang.org/protobuf/proto"
 )
 
 // During deepValueEqual, must keep track of checks that are
@@ -35,7 +36,6 @@ func deepValueEqual(v1, v2 reflect.Value, visited map[visit]bool, depth int) boo
 	if v1.Type() != v2.Type() {
 		return false
 	}
-
 	// We want to avoid putting more in the visited map than we need to.
 	// For any possible reference cycle that might be encountered,
 	// hard(t) needs to return true for at least one of the types in the cycle.
@@ -68,8 +68,6 @@ func deepValueEqual(v1, v2 reflect.Value, visited map[visit]bool, depth int) boo
 	}
 
 	switch v1.Kind() {
-	case reflect.String:
-		return v1.String() == v2.String()
 	case reflect.Array:
 		for i := 0; i < v1.Len(); i++ {
 			if !deepValueEqual(v1.Index(i), v2.Index(i), visited, depth+1) {
@@ -116,6 +114,111 @@ func deepValueEqual(v1, v2 reflect.Value, visited map[visit]bool, depth int) boo
 			}
 		}
 		return true
+	default:
+		return deepValueBaseTypeEqual(v1, v2)
+	}
+}
+
+func deepValueEqualExportedOnly(v1, v2 reflect.Value, visited map[visit]bool, depth int) bool {
+	if !v1.IsValid() || !v2.IsValid() {
+		return v1.IsValid() == v2.IsValid()
+	}
+	if v1.Type() != v2.Type() {
+		return false
+	}
+	// We want to avoid putting more in the visited map than we need to.
+	// For any possible reference cycle that might be encountered,
+	// hard(t) needs to return true for at least one of the types in the cycle.
+	hard := func(k reflect.Kind) bool {
+		switch k {
+		case reflect.Slice, reflect.Ptr, reflect.Interface:
+			return true
+		}
+		return false
+	}
+
+	if v1.CanAddr() && v2.CanAddr() && hard(v1.Kind()) {
+		addr1 := unsafe.Pointer(v1.UnsafeAddr())
+		addr2 := unsafe.Pointer(v2.UnsafeAddr())
+		if uintptr(addr1) > uintptr(addr2) {
+			// Canonicalize order to reduce number of entries in visited.
+			// Assumes non-moving garbage collector.
+			addr1, addr2 = addr2, addr1
+		}
+
+		// Short circuit if references are already seen.
+		typ := v1.Type()
+		v := visit{addr1, addr2, typ}
+		if visited[v] {
+			return true
+		}
+
+		// Remember for later.
+		visited[v] = true
+	}
+
+	switch v1.Kind() {
+	case reflect.Array:
+		for i := 0; i < v1.Len(); i++ {
+			if !deepValueEqualExportedOnly(v1.Index(i), v2.Index(i), visited, depth+1) {
+				return false
+			}
+		}
+		return true
+	case reflect.Slice:
+		if v1.IsNil() && v2.Len() == 0 {
+			return true
+		}
+		if v1.Len() == 0 && v2.IsNil() {
+			return true
+		}
+		if v1.IsNil() && v2.IsNil() {
+			return true
+		}
+		if v1.Len() != v2.Len() {
+			return false
+		}
+		if v1.Pointer() == v2.Pointer() {
+			return true
+		}
+		for i := 0; i < v1.Len(); i++ {
+			if !deepValueEqualExportedOnly(v1.Index(i), v2.Index(i), visited, depth+1) {
+				return false
+			}
+		}
+		return true
+	case reflect.Interface:
+		if v1.IsNil() || v2.IsNil() {
+			return v1.IsNil() == v2.IsNil()
+		}
+		return deepValueEqualExportedOnly(v1.Elem(), v2.Elem(), visited, depth+1)
+	case reflect.Ptr:
+		if v1.Pointer() == v2.Pointer() {
+			return true
+		}
+		return deepValueEqualExportedOnly(v1.Elem(), v2.Elem(), visited, depth+1)
+	case reflect.Struct:
+		for i, n := 0, v1.NumField(); i < n; i++ {
+			v1Field := v1.Field(i)
+			v2Field := v2.Field(i)
+			if !v1Field.CanInterface() || !v2Field.CanInterface() {
+				// Continue for unexported fields, since they cannot be read anyways.
+				continue
+			}
+			if !deepValueEqualExportedOnly(v1Field, v2Field, visited, depth+1) {
+				return false
+			}
+		}
+		return true
+	default:
+		return deepValueBaseTypeEqual(v1, v2)
+	}
+}
+
+func deepValueBaseTypeEqual(v1, v2 reflect.Value) bool {
+	switch v1.Kind() {
+	case reflect.String:
+		return v1.String() == v2.String()
 	case reflect.Uint64:
 		switch v1.Type().Name() {
 		case "Epoch":
@@ -194,6 +297,13 @@ func DeepEqual(x, y interface{}) bool {
 	v2 := reflect.ValueOf(y)
 	if v1.Type() != v2.Type() {
 		return false
+	}
+	_, isProto := x.(proto.Message)
+	_, isProtoArray := x.([]proto.Message)
+	_, isProtoMap := x.(map[uint64]proto.Message)
+	if isProto || isProtoArray || isProtoMap {
+		// Exclude unexported fields for protos.
+		return deepValueEqualExportedOnly(v1, v2, make(map[visit]bool), 0)
 	}
 	return deepValueEqual(v1, v2, make(map[visit]bool), 0)
 }

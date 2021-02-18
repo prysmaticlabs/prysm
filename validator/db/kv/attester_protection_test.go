@@ -8,7 +8,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -16,6 +16,31 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	bolt "go.etcd.io/bbolt"
 )
+
+func TestPendingAttestationRecords_Flush(t *testing.T) {
+	queue := NewQueuedAttestationRecords()
+
+	// Add 5 atts
+	num := 5
+	for i := 0; i < num; i++ {
+		queue.Append(&AttestationRecord{
+			Target: types.Epoch(i),
+		})
+	}
+
+	res := queue.Flush()
+	assert.Equal(t, len(res), num, "Wrong number of flushed attestations")
+	assert.Equal(t, len(queue.records), 0, "Records were not cleared/flushed")
+}
+
+func TestPendingAttestationRecords_Len(t *testing.T) {
+	queue := NewQueuedAttestationRecords()
+	assert.Equal(t, queue.Len(), 0)
+	queue.Append(&AttestationRecord{})
+	assert.Equal(t, queue.Len(), 1)
+	queue.Flush()
+	assert.Equal(t, queue.Len(), 0)
+}
 
 func TestStore_CheckSlashableAttestation_DoubleVote(t *testing.T) {
 	ctx := context.Background()
@@ -188,7 +213,7 @@ func TestStore_CheckSlashableAttestation_SurroundVote_54kEpochs(t *testing.T) {
 
 func TestLowestSignedSourceEpoch_SaveRetrieve(t *testing.T) {
 	ctx := context.Background()
-	validatorDB, err := NewKVStore(ctx, t.TempDir(), nil)
+	validatorDB, err := NewKVStore(ctx, t.TempDir(), &Config{})
 	require.NoError(t, err, "Failed to instantiate DB")
 	t.Cleanup(func() {
 		require.NoError(t, validatorDB.Close(), "Failed to close database")
@@ -247,7 +272,7 @@ func TestLowestSignedSourceEpoch_SaveRetrieve(t *testing.T) {
 
 func TestLowestSignedTargetEpoch_SaveRetrieveReplace(t *testing.T) {
 	ctx := context.Background()
-	validatorDB, err := NewKVStore(ctx, t.TempDir(), nil)
+	validatorDB, err := NewKVStore(ctx, t.TempDir(), &Config{})
 	require.NoError(t, err, "Failed to instantiate DB")
 	t.Cleanup(func() {
 		require.NoError(t, validatorDB.Close(), "Failed to close database")
@@ -372,7 +397,7 @@ func TestSaveAttestationForPubKey_BatchWrites_FullCapacity(t *testing.T) {
 	require.LogsContain(t, hook, "Reached max capacity of batched attestation records")
 	require.LogsDoNotContain(t, hook, "Batched attestation records write interval reached")
 	require.LogsContain(t, hook, "Successfully flushed batched attestations to DB")
-	require.Equal(t, 0, len(validatorDB.batchedAttestations))
+	require.Equal(t, 0, validatorDB.batchedAttestations.Len())
 
 	// We then verify all the data we wanted to save is indeed saved to disk.
 	err := validatorDB.view(func(tx *bolt.Tx) error {
@@ -429,7 +454,7 @@ func TestSaveAttestationForPubKey_BatchWrites_LowCapacity_TimerReached(t *testin
 	require.LogsDoNotContain(t, hook, "Reached max capacity of batched attestation records")
 	require.LogsContain(t, hook, "Batched attestation records write interval reached")
 	require.LogsContain(t, hook, "Successfully flushed batched attestations to DB")
-	require.Equal(t, 0, len(validatorDB.batchedAttestations))
+	require.Equal(t, 0, validatorDB.batchedAttestations.Len())
 
 	// We then verify all the data we wanted to save is indeed saved to disk.
 	err := validatorDB.view(func(tx *bolt.Tx) error {
@@ -475,7 +500,9 @@ func benchCheckSurroundVote(
 	shouldSurround bool,
 ) {
 	ctx := context.Background()
-	validatorDB, err := NewKVStore(ctx, filepath.Join(os.TempDir(), "benchsurroundvote"), pubKeys)
+	validatorDB, err := NewKVStore(ctx, filepath.Join(os.TempDir(), "benchsurroundvote"), &Config{
+		PubKeys: pubKeys,
+	})
 	require.NoError(b, err, "Failed to instantiate DB")
 	defer func() {
 		require.NoError(b, validatorDB.Close(), "Failed to close database")
@@ -539,4 +566,13 @@ func createAttestation(source, target types.Epoch) *ethpb.IndexedAttestation {
 			},
 		},
 	}
+}
+
+func TestStore_flushAttestationRecords_InProgress(t *testing.T) {
+	s := &Store{}
+	s.batchedAttestationsFlushInProgress.Set()
+
+	hook := logTest.NewGlobal()
+	s.flushAttestationRecords(context.Background(), nil)
+	assert.LogsContain(t, hook, "Attempted to flush attestation records when already in progress")
 }

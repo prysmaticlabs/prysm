@@ -46,7 +46,7 @@ func setupValidExit(t *testing.T) (*ethpb.SignedVoluntaryExit, *stateTrie.Beacon
 		Slot: params.BeaconConfig().SlotsPerEpoch * 5,
 	})
 	require.NoError(t, err)
-	err = state.SetSlot(state.Slot() + uint64(params.BeaconConfig().ShardCommitteePeriod.Mul(params.BeaconConfig().SlotsPerEpoch)))
+	err = state.SetSlot(state.Slot() + params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().ShardCommitteePeriod)))
 	require.NoError(t, err)
 
 	priv, err := bls.RandKey()

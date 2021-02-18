@@ -16,6 +16,9 @@ import (
 
 const defaultBurstLimit = 5
 
+// Dummy topic to validate all incoming rpc requests.
+const rpcLimiterTopic = "rpc-limiter-topic"
+
 type limiter struct {
 	limiterMap map[string]*leakybucket.Collector
 	p2p        p2p.P2P
@@ -53,6 +56,9 @@ func newRateLimiter(p2pProvider p2p.P2P) *limiter {
 	// BlockByRange requests
 	topicMap[addEncoding(p2p.RPCBlocksByRangeTopic)] = blockCollector
 
+	// General topic for all rpc requests.
+	topicMap[rpcLimiterTopic] = leakybucket.NewCollector(5, defaultBurstLimit*2, false /* deleteEmptyBuckets */)
+
 	return &limiter{limiterMap: topicMap, p2p: p2pProvider}
 }
 
@@ -88,6 +94,29 @@ func (l *limiter) validateRequest(stream network.Stream, amt uint64) error {
 	return nil
 }
 
+// This is used to validate all incoming rpc streams from external peers.
+func (l *limiter) validateRawRpcRequest(stream network.Stream) error {
+	l.RLock()
+	defer l.RUnlock()
+
+	topic := rpcLimiterTopic
+
+	collector, err := l.retrieveCollector(topic)
+	if err != nil {
+		return err
+	}
+	key := stream.Conn().RemotePeer().String()
+	remaining := collector.Remaining(key)
+	// Treat each request as a minimum of 1.
+	amt := int64(1)
+	if amt > remaining {
+		l.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
+		writeErrorResponseToStream(responseCodeInvalidRequest, p2ptypes.ErrRateLimited.Error(), stream, l.p2p)
+		return p2ptypes.ErrRateLimited
+	}
+	return nil
+}
+
 // adds the cost to our leaky bucket for the topic.
 func (l *limiter) add(stream network.Stream, amt int64) {
 	l.Lock()
@@ -103,6 +132,23 @@ func (l *limiter) add(stream network.Stream, amt int64) {
 	}
 	key := stream.Conn().RemotePeer().String()
 	collector.Add(key, amt)
+}
+
+// adds the cost to our leaky bucket for the peer.
+func (l *limiter) addRawStream(stream network.Stream) {
+	l.Lock()
+	defer l.Unlock()
+
+	topic := rpcLimiterTopic
+	log := l.topicLogger(topic)
+
+	collector, err := l.retrieveCollector(topic)
+	if err != nil {
+		log.Errorf("collector with topic '%s' does not exist", topic)
+		return
+	}
+	key := stream.Conn().RemotePeer().String()
+	collector.Add(key, 1)
 }
 
 // frees all the collectors and removes them.

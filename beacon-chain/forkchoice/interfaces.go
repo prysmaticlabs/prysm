@@ -3,7 +3,7 @@ package forkchoice
 import (
 	"context"
 
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 )
 
@@ -23,7 +23,7 @@ type HeadRetriever interface {
 
 // BlockProcessor processes the block that's used for accounting fork choice.
 type BlockProcessor interface {
-	ProcessBlock(context.Context, uint64, [32]byte, [32]byte, [32]byte, types.Epoch, types.Epoch) error
+	ProcessBlock(context.Context, types.Slot, [32]byte, [32]byte, [32]byte, types.Epoch, types.Epoch) error
 }
 
 // AttestationProcessor processes the attestation that's used for accounting fork choice.
@@ -43,6 +43,6 @@ type Getter interface {
 	HasNode([32]byte) bool
 	Store() *protoarray.Store
 	HasParent(root [32]byte) bool
-	AncestorRoot(ctx context.Context, root [32]byte, slot uint64) ([]byte, error)
+	AncestorRoot(ctx context.Context, root [32]byte, slot types.Slot) ([]byte, error)
 	IsCanonical(root [32]byte) bool
 }

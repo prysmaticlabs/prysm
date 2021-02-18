@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -363,7 +363,7 @@ func TestStore_Prune_LessThanThreshold(t *testing.T) {
 	nodes := make([]*Node, 0)
 	for i := 0; i < numOfNodes; i++ {
 		indices[indexToHash(uint64(i))] = uint64(i)
-		nodes = append(nodes, &Node{slot: uint64(i)})
+		nodes = append(nodes, &Node{slot: types.Slot(i)})
 	}
 
 	s := &Store{nodes: nodes, nodesIndices: indices, pruneThreshold: 100}
@@ -382,7 +382,7 @@ func TestStore_Prune_MoreThanThreshold(t *testing.T) {
 	nodes := make([]*Node, 0)
 	for i := 0; i < numOfNodes; i++ {
 		indices[indexToHash(uint64(i))] = uint64(i)
-		nodes = append(nodes, &Node{slot: uint64(i), root: indexToHash(uint64(i)),
+		nodes = append(nodes, &Node{slot: types.Slot(i), root: indexToHash(uint64(i)),
 			bestDescendant: NonExistentNode, bestChild: NonExistentNode})
 	}
 
@@ -401,7 +401,7 @@ func TestStore_Prune_MoreThanOnce(t *testing.T) {
 	nodes := make([]*Node, 0)
 	for i := 0; i < numOfNodes; i++ {
 		indices[indexToHash(uint64(i))] = uint64(i)
-		nodes = append(nodes, &Node{slot: uint64(i), root: indexToHash(uint64(i)),
+		nodes = append(nodes, &Node{slot: types.Slot(i), root: indexToHash(uint64(i)),
 			bestDescendant: NonExistentNode, bestChild: NonExistentNode})
 	}
 

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -485,8 +486,8 @@ func TestSignAttestation(t *testing.T) {
 
 func TestServer_WaitToSlotOneThird_CanWait(t *testing.T) {
 	currentTime := uint64(time.Now().Unix())
-	currentSlot := uint64(4)
-	genesisTime := currentTime - (currentSlot * params.BeaconConfig().SecondsPerSlot)
+	currentSlot := types.Slot(4)
+	genesisTime := currentTime - uint64(currentSlot.Mul(params.BeaconConfig().SecondsPerSlot))
 
 	v := &validator{
 		genesisTime: genesisTime,
@@ -504,8 +505,8 @@ func TestServer_WaitToSlotOneThird_CanWait(t *testing.T) {
 
 func TestServer_WaitToSlotOneThird_SameReqSlot(t *testing.T) {
 	currentTime := uint64(time.Now().Unix())
-	currentSlot := uint64(4)
-	genesisTime := currentTime - (currentSlot * params.BeaconConfig().SecondsPerSlot)
+	currentSlot := types.Slot(4)
+	genesisTime := currentTime - uint64(currentSlot.Mul(params.BeaconConfig().SecondsPerSlot))
 
 	v := &validator{
 		genesisTime:      genesisTime,
@@ -525,8 +526,8 @@ func TestServer_WaitToSlotOneThird_ReceiveBlockSlot(t *testing.T) {
 	defer resetCfg()
 
 	currentTime := uint64(time.Now().Unix())
-	currentSlot := uint64(4)
-	genesisTime := currentTime - (currentSlot * params.BeaconConfig().SecondsPerSlot)
+	currentSlot := types.Slot(4)
+	genesisTime := currentTime - uint64(currentSlot.Mul(params.BeaconConfig().SecondsPerSlot))
 
 	v := &validator{
 		genesisTime: genesisTime,

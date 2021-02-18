@@ -33,7 +33,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr/net"
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
@@ -62,7 +62,7 @@ const (
 	maxLimitBuffer = 150
 
 	// InboundRatio is the proportion of our connected peer limit at which we will allow inbound peers.
-	InboundRatio = float64(1)
+	InboundRatio = float64(0.8)
 )
 
 // Status is the structure holding the peer status information.
@@ -89,7 +89,7 @@ func NewStatus(ctx context.Context, config *StatusConfig) *Status {
 	return &Status{
 		ctx:       ctx,
 		store:     store,
-		scorers:   scorers.New(ctx, store, config.ScorerParams),
+		scorers:   scorers.NewService(ctx, store, config.ScorerParams),
 		ipTracker: map[string]uint64{},
 	}
 }
@@ -206,6 +206,14 @@ func (p *Status) IsAboveInboundLimit() bool {
 	}
 	inboundLimit := int(float64(p.ConnectedPeerLimit()) * InboundRatio)
 	return totalInbound > inboundLimit
+}
+
+// InboundLimit returns the current inbound
+// peer limit.
+func (p *Status) InboundLimit() int {
+	p.store.RLock()
+	defer p.store.RUnlock()
+	return int(float64(p.ConnectedPeerLimit()) * InboundRatio)
 }
 
 // SetMetadata sets the metadata of the given remote peer.
@@ -550,7 +558,7 @@ func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch types.Epoch) (typ
 	connected := p.Connected()
 	finalizedEpochVotes := make(map[types.Epoch]uint64)
 	pidEpoch := make(map[peer.ID]types.Epoch, len(connected))
-	pidHead := make(map[peer.ID]uint64, len(connected))
+	pidHead := make(map[peer.ID]types.Slot, len(connected))
 	potentialPIDs := make([]peer.ID, 0, len(connected))
 	for _, pid := range connected {
 		peerChainState, err := p.ChainState(pid)
@@ -602,10 +610,10 @@ func (p *Status) BestNonFinalized(minPeers int, ourHeadEpoch types.Epoch) (types
 	connected := p.Connected()
 	epochVotes := make(map[types.Epoch]uint64)
 	pidEpoch := make(map[peer.ID]types.Epoch, len(connected))
-	pidHead := make(map[peer.ID]uint64, len(connected))
+	pidHead := make(map[peer.ID]types.Slot, len(connected))
 	potentialPIDs := make([]peer.ID, 0, len(connected))
 
-	ourHeadSlot := uint64(ourHeadEpoch.Mul(params.BeaconConfig().SlotsPerEpoch))
+	ourHeadSlot := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(ourHeadEpoch))
 	for _, pid := range connected {
 		peerChainState, err := p.ChainState(pid)
 		if err == nil && peerChainState != nil && peerChainState.HeadSlot > ourHeadSlot {
@@ -662,7 +670,7 @@ func (p *Status) PeersToPrune() []peer.ID {
 		badResp int
 	}
 	peersToPrune := make([]*peerResp, 0)
-	// Select disconnected peers with a smaller bad response count.
+	// Select connected and inbound peers to prune.
 	for pid, peerData := range p.store.Peers() {
 		if peerData.ConnState == PeerConnected && peerData.Direction == network.DirInbound {
 			peersToPrune = append(peersToPrune, &peerResp{
@@ -696,7 +704,7 @@ func (p *Status) PeersToPrune() []peer.ID {
 func (p *Status) HighestEpoch() types.Epoch {
 	p.store.RLock()
 	defer p.store.RUnlock()
-	var highestSlot uint64
+	var highestSlot types.Slot
 	for _, peerData := range p.store.Peers() {
 		if peerData != nil && peerData.ChainState != nil && peerData.ChainState.HeadSlot > highestSlot {
 			highestSlot = peerData.ChainState.HeadSlot

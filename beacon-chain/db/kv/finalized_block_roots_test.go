@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -15,7 +16,7 @@ import (
 var genesisBlockRoot = bytesutil.ToBytes32([]byte{'G', 'E', 'N', 'E', 'S', 'I', 'S'})
 
 func TestStore_IsFinalizedBlock(t *testing.T) {
-	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
+	slotsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch)
 	db := setupDB(t)
 	ctx := context.Background()
 
@@ -75,7 +76,7 @@ func TestStore_IsFinalizedBlockGenesis(t *testing.T) {
 // be c, e, and g. In this scenario, c was a finalized checkpoint root but no block built upon it so
 // it should not be considered "final and canonical" in the view at slot 6.
 func TestStore_IsFinalized_ForkEdgeCase(t *testing.T) {
-	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
+	slotsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch)
 	blocks0 := makeBlocks(t, slotsPerEpoch*0, slotsPerEpoch, genesisBlockRoot)
 	blocks1 := append(
 		makeBlocks(t, slotsPerEpoch*1, 1, bytesutil.ToBytes32(sszRootOrDie(t, blocks0[len(blocks0)-1]))), // No block builds off of the first block in epoch.
@@ -131,7 +132,7 @@ func TestStore_IsFinalized_ForkEdgeCase(t *testing.T) {
 }
 
 func TestStore_IsFinalizedChildBlock(t *testing.T) {
-	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
+	slotsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch)
 	db := setupDB(t)
 	ctx := context.Background()
 
@@ -179,7 +180,7 @@ func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []*ethpb.Signe
 		parentRoot := make([]byte, 32)
 		copy(parentRoot, previousRoot[:])
 		blocks[j-i] = testutil.NewBeaconBlock()
-		blocks[j-i].Block.Slot = j + 1
+		blocks[j-i].Block.Slot = types.Slot(j + 1)
 		blocks[j-i].Block.ParentRoot = parentRoot
 		var err error
 		previousRoot, err = blocks[j-i].Block.HashTreeRoot()
