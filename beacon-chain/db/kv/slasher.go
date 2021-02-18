@@ -8,6 +8,9 @@ import (
 	ssz "github.com/ferranbt/fastssz"
 	types "github.com/prysmaticlabs/eth2-types"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -197,17 +200,17 @@ func (s *Store) SaveSlasherChunks(
 	})
 }
 
-// CheckAndUpdateForSlashableProposals takes in a list of proposals and for each,
+// ExistingBlockProposals takes in a list of proposals and for each,
 // checks if there already exists a proposal at the same slot+validatorIndex combination. If so,
-// we append that existing proposal to a list. Otherwise, we save the proposal to disk, then append nil
-// to a list. We then return the list to the caller.
-func (s *Store) CheckAndUpdateForSlashableProposals(
+// we append that signing root and incoming proposal to a list. Otherwise, we append a zero hash and
+// the incoming proposal to a list.
+func (s *Store) ExistingBlockProposals(
 	ctx context.Context, proposals []*slashertypes.CompactBeaconBlock,
-) ([]*slashertypes.CompactBeaconBlock, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.CheckAndUpdateForSlashableProposals")
+) ([]*slashertypes.DoubleBlockProposal, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.ExistingBlockProposals")
 	defer span.End()
-	existingProposals := make([]*slashertypes.CompactBeaconBlock, 0, len(proposals))
-	err := s.db.Update(func(tx *bolt.Tx) error {
+	existingProposals := make([]*slashertypes.DoubleBlockProposal, 0, len(proposals))
+	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(proposalRecordsBucket)
 		for _, proposal := range proposals {
 			key, err := keyForValidatorProposal(proposal)
@@ -216,23 +219,42 @@ func (s *Store) CheckAndUpdateForSlashableProposals(
 			}
 			existingSigningRoot := bkt.Get(key)
 			if existingSigningRoot != nil {
-				var sr [32]byte
-				copy(sr[:], existingSigningRoot)
-				existingProposals = append(existingProposals, &slashertypes.CompactBeaconBlock{
-					ProposerIndex: proposal.ProposerIndex,
-					Slot:          proposal.Slot,
-					SigningRoot:   sr,
+				existingProposals = append(existingProposals, &slashertypes.DoubleBlockProposal{
+					IncomingSigningRoot: proposal.SigningRoot,
+					ExistingSigningRoot: bytesutil.ToBytes32(existingSigningRoot),
 				})
 			} else {
-				if err := bkt.Put(key, proposal.SigningRoot[:]); err != nil {
-					return err
-				}
-				existingProposals = append(existingProposals, nil)
+				existingProposals = append(existingProposals, &slashertypes.DoubleBlockProposal{
+					IncomingSigningRoot: proposal.SigningRoot,
+					ExistingSigningRoot: params.BeaconConfig().ZeroHash,
+				})
 			}
 		}
 		return nil
 	})
 	return existingProposals, err
+}
+
+// SaveBlockProposals takes in a list of block proposals and saves them to our
+// proposal records bucket in the database.
+func (s *Store) SaveBlockProposals(
+	ctx context.Context, proposals []*slashertypes.CompactBeaconBlock,
+) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlockProposals")
+	defer span.End()
+	return s.db.Update(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(proposalRecordsBucket)
+		for _, proposal := range proposals {
+			key, err := keyForValidatorProposal(proposal)
+			if err != nil {
+				return err
+			}
+			if err := bkt.Put(key, proposal.SigningRoot[:]); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 // Disk key for a validator proposal, including a slot+validatorIndex as a byte slice.

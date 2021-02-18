@@ -8,6 +8,7 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -302,6 +303,50 @@ func Test_validateAttestationIntegrity(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := validateAttestationIntegrity(tt.att); got != tt.want {
 				t.Errorf("validateAttestationIntegrity() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_isDoubleProposal(t *testing.T) {
+	type args struct {
+		incomingSigningRoot [32]byte
+		existingSigningRoot [32]byte
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "Existing signing root empty returns false",
+			args: args{
+				incomingSigningRoot: [32]byte{1},
+				existingSigningRoot: params.BeaconConfig().ZeroHash,
+			},
+			want: false,
+		},
+		{
+			name: "Existing signing root non-empty and equal to incoming returns false",
+			args: args{
+				incomingSigningRoot: [32]byte{1},
+				existingSigningRoot: [32]byte{1},
+			},
+			want: false,
+		},
+		{
+			name: "Existing signing root non-empty and not-equal to incoming returns true",
+			args: args{
+				incomingSigningRoot: [32]byte{1},
+				existingSigningRoot: [32]byte{2},
+			},
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isDoubleProposal(tt.args.incomingSigningRoot, tt.args.existingSigningRoot); got != tt.want {
+				t.Errorf("isDoubleProposal() = %v, want %v", got, tt.want)
 			}
 		})
 	}

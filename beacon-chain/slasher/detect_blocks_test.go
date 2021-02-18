@@ -50,7 +50,7 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 			SigningRoot:   [32]byte{2},
 		},
 	}
-	currentEpoch := types.Epoch(4)
+	currentEpoch := types.Epoch(0)
 	currentEpochChan <- currentEpoch
 	cancel()
 	<-exitChan

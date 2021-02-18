@@ -305,11 +305,18 @@ func (e Exporter) SaveAttestationRecordsForValidators(
 	return e.db.SaveAttestationRecordsForValidators(ctx, validatorIndices, attestations)
 }
 
-// CheckAndUpdateForSlashableProposals -- passthrough
-func (e Exporter) CheckAndUpdateForSlashableProposals(
+// ExistingBlockProposals -- passthrough
+func (e Exporter) ExistingBlockProposals(
 	ctx context.Context, proposals []*slashertypes.CompactBeaconBlock,
-) ([]*slashertypes.CompactBeaconBlock, error) {
-	return e.db.CheckAndUpdateForSlashableProposals(ctx, proposals)
+) ([]*slashertypes.ExistingBlockProposal, error) {
+	return e.db.ExistingBlockProposals(ctx, proposals)
+}
+
+// SaveBlockProposals -- passthrough
+func (e Exporter) SaveBlockProposals(
+	ctx context.Context, proposals []*slashertypes.CompactBeaconBlock,
+) error {
+	return e.db.SaveBlockProposals(ctx, proposals)
 }
 
 // SaveSlasherChunks -- passthrough

@@ -67,6 +67,9 @@ type ReadOnlyDatabase interface {
 	LoadSlasherChunks(
 		ctx context.Context, kind slashertypes.ChunkKind, diskKeys []uint64,
 	) ([][]uint16, []bool, error)
+	ExistingBlockProposals(
+		ctx context.Context, proposals []*slashertypes.CompactBeaconBlock,
+	) ([]*slashertypes.DoubleBlockProposal, error)
 }
 
 // NoHeadAccessDatabase defines a struct without access to chain head data.
@@ -108,10 +111,9 @@ type NoHeadAccessDatabase interface {
 	SaveSlasherChunks(
 		ctx context.Context, kind slashertypes.ChunkKind, chunkKeys []uint64, chunks [][]uint16,
 	) error
-	CheckAndUpdateForSlashableProposals(
-		ctx context.Context, proposals []*slashertypes.CompactBeaconBlock,
-	) ([]*slashertypes.CompactBeaconBlock, error)
-
+	SaveBlockProposals(
+		ctx context.Context, proposal []*slashertypes.CompactBeaconBlock,
+	) error
 	// Run any required database migrations.
 	RunMigrations(ctx context.Context) error
 
