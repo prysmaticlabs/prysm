@@ -3,13 +3,13 @@ package beaconv1
 import (
 	"bytes"
 	"context"
-	"errors"
 	"strconv"
 	"strings"
 
 	ptypes "github.com/gogo/protobuf/types"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
+	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	statetrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -96,7 +96,26 @@ func (bs *Server) GetStateFork(ctx context.Context, req *ethpb.StateRequest) (*e
 // GetFinalityCheckpoints returns finality checkpoints for state with given 'stateId'. In case finality is
 // not yet achieved, checkpoint should return epoch 0 and ZERO_HASH as root.
 func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRequest) (*ethpb.StateFinalityCheckpointResponse, error) {
-	return nil, errors.New("unimplemented")
+	ctx, span := trace.StartSpan(ctx, "beaconv1.GetFinalityCheckpoints")
+	defer span.End()
+
+	var (
+		state *statetrie.BeaconState
+		err   error
+	)
+
+	state, err = bs.state(ctx, req.StateId)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ethpb.StateFinalityCheckpointResponse{
+		Data: &ethpb.StateFinalityCheckpointResponse_StateFinalityCheckpoint{
+			PreviousJustified: checkpoint(state.PreviousJustifiedCheckpoint()),
+			CurrentJustified:  checkpoint(state.CurrentJustifiedCheckpoint()),
+			Finalized:         checkpoint(state.FinalizedCheckpoint()),
+		},
+	}, nil
 }
 
 func (bs *Server) stateRoot(ctx context.Context, stateId []byte) ([]byte, error) {
@@ -301,4 +320,17 @@ func (bs *Server) stateBySlot(ctx context.Context, slot types.Slot) (*statetrie.
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
 	return state, nil
+}
+
+func checkpoint(sourceCheckpoint *eth.Checkpoint) *ethpb.Checkpoint {
+	if sourceCheckpoint != nil {
+		return &ethpb.Checkpoint{
+			Epoch: sourceCheckpoint.Epoch,
+			Root:  sourceCheckpoint.Root,
+		}
+	}
+	return &ethpb.Checkpoint{
+		Epoch: 0,
+		Root:  params.BeaconConfig().ZeroHash[:],
+	}
 }
