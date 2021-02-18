@@ -59,7 +59,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 						Target:           1000,
 					},
 				},
-				currentEpoch: 4,
+				currentEpoch: 1000,
 			},
 			wantedLogs: []string{"Attester surrounding vote"},
 		},
@@ -249,6 +249,25 @@ func Test_processQueuedAttestations(t *testing.T) {
 						AttestingIndices: []uint64{0, 1},
 						Source:           0,
 						Target:           3,
+					},
+				},
+				currentEpoch: 4,
+			},
+			shouldNotBeSlashable: true,
+		},
+		{
+			name: "Not slashable, (source 0, target 3), (source 0, target 2)",
+			args: args{
+				attestationQueue: []*slashertypes.CompactAttestation{
+					{
+						AttestingIndices: []uint64{0, 1},
+						Source:           0,
+						Target:           3,
+					},
+					{
+						AttestingIndices: []uint64{0, 1},
+						Source:           0,
+						Target:           2,
 					},
 				},
 				currentEpoch: 4,

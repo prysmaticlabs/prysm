@@ -42,22 +42,23 @@ func TestStore_LatestEpochAttestedForValidators(t *testing.T) {
 	indices := []types.ValidatorIndex{1, 2, 3}
 	epoch := types.Epoch(5)
 
-	_, epochsExist, err := beaconDB.LatestEpochAttestedForValidators(ctx, indices)
+	attestedEpochs, err := beaconDB.LatestEpochAttestedForValidators(ctx, indices)
 	require.NoError(t, err)
-	for _, exists := range epochsExist {
-		require.Equal(t, false, exists)
-	}
+	require.Equal(t, true, len(attestedEpochs) == 0)
 
 	err = beaconDB.SaveLatestEpochAttestedForValidators(ctx, indices, epoch)
 	require.NoError(t, err)
 
-	retrievedEpochs, epochsExist, err := beaconDB.LatestEpochAttestedForValidators(ctx, indices)
+	retrievedEpochs, err := beaconDB.LatestEpochAttestedForValidators(ctx, indices)
 	require.NoError(t, err)
 	require.Equal(t, len(indices), len(retrievedEpochs))
 
 	for i, retrievedEpoch := range retrievedEpochs {
-		require.Equal(t, true, epochsExist[i])
-		require.Equal(t, epoch, retrievedEpoch)
+		want := &slashertypes.AttestedEpochForValidator{
+			Epoch:          epoch,
+			ValidatorIndex: indices[i],
+		}
+		require.DeepEqual(t, want, retrievedEpoch)
 	}
 }
 
