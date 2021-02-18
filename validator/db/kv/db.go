@@ -46,6 +46,7 @@ var blockedBuckets = [][]byte{
 	pubKeysBucket,
 	attestationSigningRootsBucket,
 	attestationSourceEpochsBucket,
+	attestationTargetEpochsBucket,
 }
 
 type Config struct {

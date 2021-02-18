@@ -19,10 +19,12 @@ func migrateUp(cliCtx *cli.Context) error {
 	}
 
 	ctx := context.Background()
+	log.Info("Opening DB")
 	validatorDB, err := kv.NewKVStore(ctx, dataDir, &kv.Config{})
 	if err != nil {
 		return err
 	}
+	log.Info("Running migrations")
 	return validatorDB.RunUpMigrations(ctx)
 }
 
@@ -34,9 +36,11 @@ func migrateDown(cliCtx *cli.Context) error {
 	}
 
 	ctx := context.Background()
+	log.Info("Opening DB")
 	validatorDB, err := kv.NewKVStore(ctx, dataDir, &kv.Config{})
 	if err != nil {
 		return err
 	}
+	log.Info("Running migrations")
 	return validatorDB.RunDownMigrations(ctx)
 }
