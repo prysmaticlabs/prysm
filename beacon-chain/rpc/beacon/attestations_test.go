@@ -258,7 +258,7 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 	count := params.BeaconConfig().SlotsPerEpoch * 4
 	atts := make([]*ethpb.Attestation, 0, count)
 	for i := types.Slot(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
-		for s := uint64(0); s < 4; s++ {
+		for s := types.CommitteeIndex(0); s < 4; s++ {
 			blockExample := testutil.NewBeaconBlock()
 			blockExample.Block.Slot = i
 			blockExample.Block.Body.Attestations = []*ethpb.Attestation{
@@ -871,14 +871,14 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 		comms := committees[i].Committees
 		for j := 0; j < numValidators; j++ {
 			var indexInCommittee uint64
-			var committeeIndex uint64
+			var committeeIndex types.CommitteeIndex
 			var committeeLength int
 			var found bool
 			for comIndex, item := range comms {
 				for n, idx := range item.ValidatorIndices {
 					if uint64(j) == idx {
 						indexInCommittee = uint64(n)
-						committeeIndex = uint64(comIndex)
+						committeeIndex = types.CommitteeIndex(comIndex)
 						committeeLength = len(item.ValidatorIndices)
 						found = true
 						break

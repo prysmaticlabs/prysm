@@ -153,7 +153,7 @@ func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 		index          uint64
 		slot           types.Slot
 		committee      []uint64
-		committeeIndex uint64
+		committeeIndex types.CommitteeIndex
 		isProposer     bool
 		proposerSlot   types.Slot
 	}{
@@ -419,7 +419,7 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 	require.NoError(t, UpdateCommitteeCache(state, CurrentEpoch(state)))
 
 	epoch := types.Epoch(1)
-	idx := uint64(1)
+	idx := types.CommitteeIndex(1)
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(t, err)
 
