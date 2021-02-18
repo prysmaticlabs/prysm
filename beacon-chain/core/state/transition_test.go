@@ -669,7 +669,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 
 	// Precache the shuffled indices
 	for i := uint64(0); i < committeeCount; i++ {
-		_, err := helpers.BeaconCommitteeFromState(s, 0, i)
+		_, err := helpers.BeaconCommitteeFromState(s, 0, types.CommitteeIndex(i))
 		require.NoError(b, err)
 	}
 

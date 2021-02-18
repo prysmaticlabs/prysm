@@ -40,10 +40,10 @@ func fillDBTestBlocks(ctx context.Context, t *testing.T, beaconDB db.Database) (
 		b.Block.ParentRoot = bytesutil.PadTo([]byte{uint8(i)}, 32)
 		att1 := testutil.NewAttestation()
 		att1.Data.Slot = i
-		att1.Data.CommitteeIndex = uint64(i)
+		att1.Data.CommitteeIndex = types.CommitteeIndex(i)
 		att2 := testutil.NewAttestation()
 		att2.Data.Slot = i
-		att2.Data.CommitteeIndex = uint64(i + 1)
+		att2.Data.CommitteeIndex = types.CommitteeIndex(i + 1)
 		b.Block.Body.Attestations = []*ethpb_alpha.Attestation{att1, att2}
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)

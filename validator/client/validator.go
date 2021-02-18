@@ -444,7 +444,7 @@ func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesRes
 			}
 
 			subscribeSlots = append(subscribeSlots, attesterSlot)
-			subscribeCommitteeIDs = append(subscribeCommitteeIDs, committeeIndex)
+			subscribeCommitteeIDs = append(subscribeCommitteeIDs, uint64(committeeIndex))
 			subscribeIsAggregator = append(subscribeIsAggregator, aggregator)
 		}
 	}
@@ -468,7 +468,7 @@ func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesRes
 			}
 
 			subscribeSlots = append(subscribeSlots, attesterSlot)
-			subscribeCommitteeIDs = append(subscribeCommitteeIDs, committeeIndex)
+			subscribeCommitteeIDs = append(subscribeCommitteeIDs, uint64(committeeIndex))
 			subscribeIsAggregator = append(subscribeIsAggregator, aggregator)
 		}
 	}
@@ -679,8 +679,8 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 
 // This constructs a validator subscribed key, it's used to track
 // which subnet has already been pending requested.
-func validatorSubscribeKey(slot types.Slot, committeeID uint64) [64]byte {
-	return bytesutil.ToBytes64(append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(committeeID)...))
+func validatorSubscribeKey(slot types.Slot, committeeID types.CommitteeIndex) [64]byte {
+	return bytesutil.ToBytes64(append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(uint64(committeeID))...))
 }
 
 // This tracks all validators' voting status.

@@ -39,7 +39,7 @@ func TestKV_Aggregated_AggregateUnaggregatedAttestations(t *testing.T) {
 
 func TestKV_Aggregated_AggregateUnaggregatedAttestationsBySlotIndex(t *testing.T) {
 	cache := NewAttCaches()
-	genData := func(slot types.Slot, committeeIndex uint64) *ethpb.AttestationData {
+	genData := func(slot types.Slot, committeeIndex types.CommitteeIndex) *ethpb.AttestationData {
 		return testutil.HydrateAttestationData(&ethpb.AttestationData{
 			Slot:           slot,
 			CommitteeIndex: committeeIndex,

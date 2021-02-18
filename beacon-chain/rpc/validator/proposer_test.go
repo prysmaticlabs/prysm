@@ -1654,7 +1654,7 @@ func TestProposer_FilterAttestation(t *testing.T) {
 				for i := 0; i < len(atts); i++ {
 					atts[i] = testutil.HydrateAttestation(&ethpb.Attestation{
 						Data: &ethpb.AttestationData{
-							CommitteeIndex: uint64(i),
+							CommitteeIndex: types.CommitteeIndex(i),
 						},
 					})
 				}
@@ -1671,7 +1671,7 @@ func TestProposer_FilterAttestation(t *testing.T) {
 				for i := 0; i < len(atts); i++ {
 					atts[i] = testutil.HydrateAttestation(&ethpb.Attestation{
 						Data: &ethpb.AttestationData{
-							CommitteeIndex: uint64(i),
+							CommitteeIndex: types.CommitteeIndex(i),
 							Source:         &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]},
 						},
 						AggregationBits: bitfield.Bitlist{0b00000110},
