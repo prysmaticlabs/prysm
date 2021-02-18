@@ -16,13 +16,23 @@ var log = logrus.WithField("prefix", "blockchain")
 
 // logs state transition related data every slot.
 func logStateTransitionData(b *ethpb.BeaconBlock) {
-	log.WithFields(logrus.Fields{
-		"attestations":      len(b.Body.Attestations),
-		"deposits":          len(b.Body.Deposits),
-		"attesterSlashings": len(b.Body.AttesterSlashings),
-		"proposerSlashings": len(b.Body.ProposerSlashings),
-		"voluntaryExits":    len(b.Body.VoluntaryExits),
-	}).Info("Finished applying state transition")
+	log := log.WithField("slot", b.Slot)
+	if len(b.Body.Attestations) > 0 {
+		log = log.WithField("attestations", len(b.Body.Attestations))
+	}
+	if len(b.Body.Deposits) > 0 {
+		log = log.WithField("deposits", len(b.Body.Deposits))
+	}
+	if len(b.Body.AttesterSlashings) > 0 {
+		log = log.WithField("attesterSlashings", len(b.Body.AttesterSlashings))
+	}
+	if len(b.Body.ProposerSlashings) > 0 {
+		log = log.WithField("proposerSlashings", len(b.Body.ProposerSlashings))
+	}
+	if len(b.Body.VoluntaryExits) > 0 {
+		log = log.WithField("voluntaryExits", len(b.Body.VoluntaryExits))
+	}
+	log.Info("Finished applying state transition")
 }
 
 func logBlockSyncStatus(block *ethpb.BeaconBlock, blockRoot [32]byte, finalized *ethpb.Checkpoint, receivedTime time.Time, genesisTime uint64) error {
