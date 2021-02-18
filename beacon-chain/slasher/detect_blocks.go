@@ -31,6 +31,8 @@ func (s *Service) detectSlashableBlocks(
 	return s.checkDoubleProposalsOnDisk(ctx, proposedBlocks)
 }
 
+// Check for double proposals in our database given a list of incoming block proposals.
+// For the proposals that were not slashable, we save them to the database.
 func (s *Service) checkDoubleProposalsOnDisk(
 	ctx context.Context, proposedBlocks []*slashertypes.CompactBeaconBlock,
 ) error {
