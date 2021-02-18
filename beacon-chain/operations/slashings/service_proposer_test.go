@@ -6,6 +6,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -313,7 +314,7 @@ func TestPool_MarkIncludedProposerSlashing(t *testing.T) {
 			p.MarkIncludedProposerSlashing(tt.args.slashing)
 			assert.Equal(t, len(tt.want.pending), len(p.pendingProposerSlashing))
 			for i := range p.pendingProposerSlashing {
-				assert.DeepSSZEqual(t, tt.want.pending[i], p.pendingProposerSlashing[i], "Unexpected pending proposer slashing at index %d", i)
+				sszutil.AssertDeepEqual(t, tt.want.pending[i], p.pendingProposerSlashing[i], "Unexpected pending proposer slashing at index %d", i)
 			}
 			assert.DeepEqual(t, tt.want.included, p.included)
 		})

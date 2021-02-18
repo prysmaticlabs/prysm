@@ -4,6 +4,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "assertions.go",
         "deep_equal.go",
         "types.go",
     ],
@@ -11,6 +12,8 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//shared/htrutils:go_default_library",
+        "//shared/testutil/assertions:go_default_library",
+        "@com_github_d4l3k_messagediff//:go_default_library",
         "@com_github_ferranbt_fastssz//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
@@ -22,6 +25,7 @@ go_test(
     name = "go_default_test",
     size = "small",
     srcs = [
+        "assertions_test.go",
         "deep_equal_test.go",
         "types_test.go",
     ],
@@ -29,6 +33,7 @@ go_test(
         ":go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/testutil/assert:go_default_library",
+        "//shared/testutil/assertions:go_default_library",
         "//shared/testutil/require:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
     ],
