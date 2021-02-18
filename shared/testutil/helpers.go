@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
-	"github.com/prysmaticlabs/prysm/shared/sszutil"
+	ssztypes "github.com/prysmaticlabs/prysm/shared/sszutil/types"
 )
 
 // RandaoReveal returns a signature of the requested epoch using the beacon proposer private key.
@@ -28,7 +28,7 @@ func RandaoReveal(beaconState *stateTrie.BeaconState, epoch types.Epoch, privKey
 	binary.LittleEndian.PutUint64(buf, uint64(epoch))
 
 	// We make the previous validator's index sign the message instead of the proposer.
-	sszEpoch := sszutil.SSZUint64(epoch)
+	sszEpoch := ssztypes.SSZUint64(epoch)
 	return helpers.ComputeDomainAndSign(beaconState, epoch, &sszEpoch, params.BeaconConfig().DomainRandao, privKeys[proposerIdx])
 }
 

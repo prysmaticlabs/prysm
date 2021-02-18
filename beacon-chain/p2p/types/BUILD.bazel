@@ -17,7 +17,7 @@ go_library(
     ],
     deps = [
         "//shared/params:go_default_library",
-        "//shared/sszutil:go_default_library",
+        "//shared/sszutil/types:go_default_library",
         "@com_github_ferranbt_fastssz//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
     ],

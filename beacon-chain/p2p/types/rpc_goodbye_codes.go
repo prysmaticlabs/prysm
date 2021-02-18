@@ -1,11 +1,11 @@
 package types
 
 import (
-	"github.com/prysmaticlabs/prysm/shared/sszutil"
+	ssztypes "github.com/prysmaticlabs/prysm/shared/sszutil/types"
 )
 
 // RPCGoodbyeCode represents goodbye code, used in sync package.
-type RPCGoodbyeCode = sszutil.SSZUint64
+type RPCGoodbyeCode = ssztypes.SSZUint64
 
 const (
 	// Spec defined codes.

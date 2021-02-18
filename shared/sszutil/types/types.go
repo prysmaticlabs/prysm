@@ -1,4 +1,4 @@
-package sszutil
+package types
 
 import (
 	fssz "github.com/ferranbt/fastssz"

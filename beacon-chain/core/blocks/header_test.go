@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/sszutil"
+	ssztypes "github.com/prysmaticlabs/prysm/shared/sszutil/types"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -121,7 +121,7 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
-	sszBytes := sszutil.SSZBytes("hello")
+	sszBytes := ssztypes.SSZBytes("hello")
 	blockSig, err := helpers.ComputeDomainAndSign(state, currentEpoch, &sszBytes, params.BeaconConfig().DomainBeaconProposer, priv)
 	require.NoError(t, err)
 	validators[5896].PublicKey = priv.PublicKey().Marshal()
@@ -162,7 +162,7 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 	currentEpoch := helpers.CurrentEpoch(state)
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
-	sszBytes := sszutil.SSZBytes("hello")
+	sszBytes := ssztypes.SSZBytes("hello")
 	blockSig, err := helpers.ComputeDomainAndSign(state, currentEpoch, &sszBytes, params.BeaconConfig().DomainBeaconProposer, priv)
 	require.NoError(t, err)
 	validators[5896].PublicKey = priv.PublicKey().Marshal()
@@ -203,7 +203,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 	currentEpoch := helpers.CurrentEpoch(state)
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
-	sszBytes := sszutil.SSZBytes("hello")
+	sszBytes := ssztypes.SSZBytes("hello")
 	blockSig, err := helpers.ComputeDomainAndSign(state, currentEpoch, &sszBytes, params.BeaconConfig().DomainBeaconProposer, priv)
 	require.NoError(t, err)
 

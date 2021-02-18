@@ -60,7 +60,7 @@ go_library(
         "//shared/params:go_default_library",
         "//shared/runutil:go_default_library",
         "//shared/slotutil:go_default_library",
-        "//shared/sszutil:go_default_library",
+        "//shared/sszutil/types:go_default_library",
         "//shared/timeutils:go_default_library",
         "//shared/traceutil:go_default_library",
         "//shared/version:go_default_library",
