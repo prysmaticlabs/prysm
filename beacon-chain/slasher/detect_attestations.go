@@ -174,7 +174,9 @@ func (s *Service) applyAttestationForValidator(
 	chunkIdx := s.params.chunkIndex(sourceEpoch)
 	chunk, ok := chunksByChunkIdx[chunkIdx]
 	if !ok {
-		return nil, fmt.Errorf("chunk at chunk index %d not found", chunkIdx)
+		// It is possible we receive an attestation corresponding to a chunk index
+		// we are not yet updating, so we ignore.
+		return nil, nil
 	}
 
 	// Check slashable, if so, return the slashing.

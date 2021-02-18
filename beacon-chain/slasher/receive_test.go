@@ -14,120 +14,202 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-func Test_processQueuedAttestations_DetectsSurroundingVotes(t *testing.T) {
-	hook := logTest.NewGlobal()
-	beaconDB := dbtest.SetupDB(t)
-	ctx, cancel := context.WithCancel(context.Background())
-	s := &Service{
-		serviceCfg: &ServiceConfig{
-			Database: beaconDB,
-		},
-		params:           DefaultParams(),
-		attestationQueue: make([]*slashertypes.CompactAttestation, 0),
+func Test_processQueuedAttestations(t *testing.T) {
+	type args struct {
+		attestationQueue []*slashertypes.CompactAttestation
+		currentEpoch     types.Epoch
 	}
-	currentEpochChan := make(chan types.Epoch)
-	exitChan := make(chan struct{})
-	go func() {
-		s.processQueuedAttestations(ctx, currentEpochChan)
-		exitChan <- struct{}{}
-	}()
-	s.attestationQueue = []*slashertypes.CompactAttestation{
+	tests := []struct {
+		name                 string
+		args                 args
+		shouldNotBeSlashable bool
+		wantedLogs           []string
+	}{
 		{
-			AttestingIndices: []uint64{0, 1},
-			Source:           1,
-			Target:           2,
-			SigningRoot:      [32]byte{1},
-		},
-		{
-			AttestingIndices: []uint64{0, 1},
-			Source:           0,
-			Target:           3,
-			SigningRoot:      [32]byte{1},
-		},
-	}
-	currentEpoch := types.Epoch(4)
-	currentEpochChan <- currentEpoch
-	cancel()
-	<-exitChan
-	require.LogsContain(t, hook, "Slashable offenses found")
-	require.LogsContain(t, hook, "Attester surrounding vote")
-}
-
-func Test_processQueuedAttestations_DetectsSurroundedVote(t *testing.T) {
-	hook := logTest.NewGlobal()
-	beaconDB := dbtest.SetupDB(t)
-	ctx, cancel := context.WithCancel(context.Background())
-	s := &Service{
-		serviceCfg: &ServiceConfig{
-			Database: beaconDB,
-		},
-		params:           DefaultParams(),
-		attestationQueue: make([]*slashertypes.CompactAttestation, 0),
-	}
-	currentEpochChan := make(chan types.Epoch)
-	exitChan := make(chan struct{})
-	go func() {
-		s.processQueuedAttestations(ctx, currentEpochChan)
-		exitChan <- struct{}{}
-	}()
-	s.attestationQueue = []*slashertypes.CompactAttestation{
-		{
-			AttestingIndices: []uint64{0, 1},
-			Source:           0,
-			Target:           3,
-			SigningRoot:      [32]byte{1},
+			name: "Detects surrounding vote (source 1, target 2), (source 0, target 3)",
+			args: args{
+				attestationQueue: []*slashertypes.CompactAttestation{
+					{
+						AttestingIndices: []uint64{0, 1},
+						Source:           1,
+						Target:           2,
+					},
+					{
+						AttestingIndices: []uint64{0, 1},
+						Source:           0,
+						Target:           3,
+					},
+				},
+				currentEpoch: 4,
+			},
+			wantedLogs: []string{"Attester surrounding vote"},
 		},
 		{
-			AttestingIndices: []uint64{0, 1},
-			Source:           1,
-			Target:           2,
-			SigningRoot:      [32]byte{1},
-		},
-	}
-	currentEpoch := types.Epoch(4)
-	currentEpochChan <- currentEpoch
-	cancel()
-	<-exitChan
-	require.LogsContain(t, hook, "Slashable offenses found")
-	require.LogsContain(t, hook, "Attester surrounded vote")
-}
-
-func Test_processQueuedAttestations_NotSlashable(t *testing.T) {
-	hook := logTest.NewGlobal()
-	beaconDB := dbtest.SetupDB(t)
-	ctx, cancel := context.WithCancel(context.Background())
-	s := &Service{
-		serviceCfg: &ServiceConfig{
-			Database: beaconDB,
-		},
-		params:           DefaultParams(),
-		attestationQueue: make([]*slashertypes.CompactAttestation, 0),
-	}
-	currentEpochChan := make(chan types.Epoch)
-	exitChan := make(chan struct{})
-	go func() {
-		s.processQueuedAttestations(ctx, currentEpochChan)
-		exitChan <- struct{}{}
-	}()
-	s.attestationQueue = []*slashertypes.CompactAttestation{
-		{
-			AttestingIndices: []uint64{0, 1},
-			Source:           0,
-			Target:           1,
-			SigningRoot:      [32]byte{1},
+			name: "Detects surrounding vote (source 50, target 51), (source 0, target 1000)",
+			args: args{
+				attestationQueue: []*slashertypes.CompactAttestation{
+					{
+						AttestingIndices: []uint64{0, 1},
+						Source:           50,
+						Target:           51,
+					},
+					{
+						AttestingIndices: []uint64{0, 1},
+						Source:           0,
+						Target:           1000,
+					},
+				},
+				currentEpoch: 4,
+			},
+			wantedLogs: []string{"Attester surrounding vote"},
 		},
 		{
-			AttestingIndices: []uint64{0, 1},
-			Source:           1,
-			Target:           2,
-			SigningRoot:      [32]byte{1},
+			name: "Detects surrounded vote (source 0, target 3), (source 1, target 2)",
+			args: args{
+				attestationQueue: []*slashertypes.CompactAttestation{
+					{
+						AttestingIndices: []uint64{0, 1},
+						Source:           0,
+						Target:           3,
+					},
+					{
+						AttestingIndices: []uint64{0, 1},
+						Source:           1,
+						Target:           2,
+					},
+				},
+				currentEpoch: 4,
+			},
+			wantedLogs: []string{"Attester surrounded vote"},
+		},
+		{
+			name: "Not slashable, surrounding but non-overlapping attesting indices",
+			args: args{
+				attestationQueue: []*slashertypes.CompactAttestation{
+					{
+						AttestingIndices: []uint64{0, 1},
+						Source:           1,
+						Target:           2,
+					},
+					{
+						AttestingIndices: []uint64{2, 3},
+						Source:           0,
+						Target:           3,
+					},
+				},
+				currentEpoch: 4,
+			},
+			shouldNotBeSlashable: true,
+		},
+		{
+			name: "Not slashable, (source 1, target 2), (source 2, target 3)",
+			args: args{
+				attestationQueue: []*slashertypes.CompactAttestation{
+					{
+						AttestingIndices: []uint64{0, 1},
+						Source:           1,
+						Target:           2,
+					},
+					{
+						AttestingIndices: []uint64{0, 1},
+						Source:           2,
+						Target:           3,
+					},
+				},
+				currentEpoch: 4,
+			},
+			shouldNotBeSlashable: true,
+		},
+		{
+			name: "Not slashable, (source 1, target 2), (source 1, target 2)",
+			args: args{
+				attestationQueue: []*slashertypes.CompactAttestation{
+					{
+						AttestingIndices: []uint64{0, 1},
+						Source:           1,
+						Target:           2,
+					},
+					{
+						AttestingIndices: []uint64{0, 1},
+						Source:           1,
+						Target:           2,
+					},
+				},
+				currentEpoch: 4,
+			},
+			shouldNotBeSlashable: true,
+		},
+		{
+			name: "Not slashable, (source 1, target 2), (source 0, target 2)",
+			args: args{
+				attestationQueue: []*slashertypes.CompactAttestation{
+					{
+						AttestingIndices: []uint64{0, 1},
+						Source:           1,
+						Target:           2,
+					},
+					{
+						AttestingIndices: []uint64{0, 1},
+						Source:           0,
+						Target:           2,
+					},
+				},
+				currentEpoch: 4,
+			},
+			shouldNotBeSlashable: true,
+		},
+		{
+			name: "Not slashable, (source 0, target 2), (source 0, target 3)",
+			args: args{
+				attestationQueue: []*slashertypes.CompactAttestation{
+					{
+						AttestingIndices: []uint64{0, 1},
+						Source:           0,
+						Target:           2,
+					},
+					{
+						AttestingIndices: []uint64{0, 1},
+						Source:           0,
+						Target:           3,
+					},
+				},
+				currentEpoch: 4,
+			},
+			shouldNotBeSlashable: true,
 		},
 	}
-	currentEpoch := types.Epoch(4)
-	currentEpochChan <- currentEpoch
-	cancel()
-	<-exitChan
-	require.LogsDoNotContain(t, hook, "Slashable offenses found")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			hook := logTest.NewGlobal()
+			defer hook.Reset()
+			beaconDB := dbtest.SetupDB(t)
+			ctx, cancel := context.WithCancel(context.Background())
+			s := &Service{
+				serviceCfg: &ServiceConfig{
+					Database: beaconDB,
+				},
+				params:           DefaultParams(),
+				attestationQueue: make([]*slashertypes.CompactAttestation, 0),
+			}
+			currentEpochChan := make(chan types.Epoch)
+			exitChan := make(chan struct{})
+			go func() {
+				s.processQueuedAttestations(ctx, currentEpochChan)
+				exitChan <- struct{}{}
+			}()
+			s.attestationQueue = tt.args.attestationQueue
+			currentEpochChan <- tt.args.currentEpoch
+			cancel()
+			<-exitChan
+			if tt.shouldNotBeSlashable {
+				require.LogsDoNotContain(t, hook, "Slashable offenses found")
+			} else {
+				for _, wanted := range tt.wantedLogs {
+					require.LogsContain(t, hook, wanted)
+				}
+			}
+		})
+	}
 }
 
 func TestSlasher_receiveAttestations_OK(t *testing.T) {
