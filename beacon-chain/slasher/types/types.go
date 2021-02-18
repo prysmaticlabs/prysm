@@ -20,6 +20,8 @@ type CompactAttestation struct {
 	SigningRoot      [32]byte
 }
 
+// AttestedEpochForValidator encapsulates a previously attested epoch
+// for a validator index.
 type AttestedEpochForValidator struct {
 	ValidatorIndex types.ValidatorIndex
 	Epoch          types.Epoch
