@@ -20,6 +20,7 @@ type CompactAttestation struct {
 	SigningRoot      [32]byte
 }
 
+// DoubleBlockProposal containing an incoming and an existing proposal's signing root.
 type DoubleBlockProposal struct {
 	IncomingSigningRoot [32]byte
 	ExistingSigningRoot [32]byte
