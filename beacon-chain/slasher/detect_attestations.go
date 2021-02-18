@@ -152,7 +152,7 @@ func (s *Service) determineChunksToUpdateForValidators(
 	chunkIndicesToUpdate := make(map[uint64]bool)
 
 	// Initialize the latest epoch attested for each validator to 0.
-	latestEpochAttestedByValidator := make(map[types.ValidatorIndex]types.Epoch)
+	latestEpochAttestedByValidator := make(map[types.ValidatorIndex]types.Epoch, len(validatorIndices))
 	for _, valIdx := range validatorIndices {
 		latestEpochAttestedByValidator[valIdx] = 0
 	}
