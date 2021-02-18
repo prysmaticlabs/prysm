@@ -289,7 +289,7 @@ func (s *Service) isPeerAtLimit(inbound bool) bool {
 	if inbound {
 		maxPeers += highWatermarkBuffer
 		maxInbound := s.peers.InboundLimit() + highWatermarkBuffer
-		currInbound := len(s.peers.Inbound())
+		currInbound := len(s.peers.InboundConnected())
 		// Exit early if we are at the inbound limit.
 		if currInbound >= maxInbound {
 			return true
