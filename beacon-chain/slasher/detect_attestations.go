@@ -104,6 +104,16 @@ func (s *Service) updateSpans(
 			for _, validatorIdx := range att.AttestingIndices {
 				args.validatorIndex = types.ValidatorIndex(validatorIdx)
 				computedValidatorChunkIdx := s.params.validatorChunkIndex(args.validatorIndex)
+
+				// Every validator chunk index represents a range of validators.
+				// If it possible that the validator index in this loop iteration is
+				// not part of the validator chunk index we are updating chunks for.
+				//
+				// For example, if there are 4 validators per validator chunk index,
+				// then validator chunk index 0 contains validator indices [0, 1, 2, 3]
+				// If we see an attestation with attesting indices [3, 4, 5] and we are updating
+				// chunks for validator chunk index 0, only validator index 3 should make
+				// it past this line.
 				if args.validatorChunkIndex != computedValidatorChunkIdx {
 					continue
 				}
