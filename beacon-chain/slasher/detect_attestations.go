@@ -102,7 +102,8 @@ func (s *Service) updateSpans(
 	for _, attestationBatch := range attestationsByChunkIdx {
 		for _, att := range attestationBatch {
 			for _, validatorIdx := range att.AttestingIndices {
-				computedValidatorChunkIdx := s.params.validatorChunkIndex(types.ValidatorIndex(validatorIdx))
+				args.validatorIndex = types.ValidatorIndex(validatorIdx)
+				computedValidatorChunkIdx := s.params.validatorChunkIndex(args.validatorIndex)
 				if args.validatorChunkIndex != computedValidatorChunkIdx {
 					continue
 				}
@@ -134,18 +135,14 @@ func (s *Service) determineChunksToUpdateForValidators(
 	args *chunkUpdateArgs,
 	validatorIndices []types.ValidatorIndex,
 ) (chunkIndices []uint64, err error) {
-	epochs, epochsExist, err := s.serviceCfg.Database.LatestEpochAttestedForValidators(ctx, validatorIndices)
+	attestedEpochs, err := s.serviceCfg.Database.LatestEpochAttestedForValidators(ctx, validatorIndices)
 	if err != nil {
 		return
 	}
 	chunkIndicesToUpdate := make(map[uint64]bool)
-	for i := 0; i < len(validatorIndices); i++ {
-		lastEpochWritten := epochs[i]
-		if !epochsExist[i] {
-			lastEpochWritten = types.Epoch(0)
-		}
-		args.validatorIndex = validatorIndices[i]
-		args.latestEpochWritten = lastEpochWritten
+	for _, attestedEpoch := range attestedEpochs {
+		args.validatorIndex = attestedEpoch.ValidatorIndex
+		args.latestEpochWritten = attestedEpoch.Epoch
 		for args.latestEpochWritten <= args.currentEpoch {
 			chunkIdx := s.params.chunkIndex(args.latestEpochWritten)
 			chunkIndicesToUpdate[chunkIdx] = true

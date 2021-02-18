@@ -20,6 +20,11 @@ type CompactAttestation struct {
 	SigningRoot      [32]byte
 }
 
+type AttestedEpochForValidator struct {
+	ValidatorIndex types.ValidatorIndex
+	Epoch          types.Epoch
+}
+
 // CompactBeaconBlock containing only the required information
 // for proposer slashing detection.
 type CompactBeaconBlock struct {

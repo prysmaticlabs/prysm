@@ -49,12 +49,12 @@ func Test_processQueuedAttestations(t *testing.T) {
 			args: args{
 				attestationQueue: []*slashertypes.CompactAttestation{
 					{
-						AttestingIndices: []uint64{0, 1},
+						AttestingIndices: []uint64{0},
 						Source:           50,
 						Target:           51,
 					},
 					{
-						AttestingIndices: []uint64{0, 1},
+						AttestingIndices: []uint64{0},
 						Source:           0,
 						Target:           1000,
 					},
@@ -83,18 +83,75 @@ func Test_processQueuedAttestations(t *testing.T) {
 			wantedLogs: []string{"Attester surrounded vote"},
 		},
 		{
-			name: "Not slashable, surrounding but non-overlapping attesting indices",
+			name: "Not slashable, surrounding but non-overlapping attesting indices within same validator chunk index",
 			args: args{
 				attestationQueue: []*slashertypes.CompactAttestation{
 					{
-						AttestingIndices: []uint64{0, 1},
+						AttestingIndices: []uint64{0},
 						Source:           1,
 						Target:           2,
 					},
 					{
-						AttestingIndices: []uint64{2, 3},
+						AttestingIndices: []uint64{1},
 						Source:           0,
 						Target:           3,
+					},
+				},
+				currentEpoch: 4,
+			},
+			shouldNotBeSlashable: true,
+		},
+		{
+			name: "Not slashable, surrounded but non-overlapping attesting indices within same validator chunk index",
+			args: args{
+				attestationQueue: []*slashertypes.CompactAttestation{
+					{
+						AttestingIndices: []uint64{0, 1},
+						Source:           0,
+						Target:           3,
+					},
+					{
+						AttestingIndices: []uint64{2, 3},
+						Source:           1,
+						Target:           2,
+					},
+				},
+				currentEpoch: 4,
+			},
+			shouldNotBeSlashable: true,
+		},
+		{
+			name: "Not slashable, surrounding but non-overlapping attesting indices in different validator chunk index",
+			args: args{
+				attestationQueue: []*slashertypes.CompactAttestation{
+					{
+						AttestingIndices: []uint64{0},
+						Source:           0,
+						Target:           3,
+					},
+					{
+						AttestingIndices: []uint64{1000000},
+						Source:           1,
+						Target:           2,
+					},
+				},
+				currentEpoch: 4,
+			},
+			shouldNotBeSlashable: true,
+		},
+		{
+			name: "Not slashable, surrounded but non-overlapping attesting indices in different validator chunk index",
+			args: args{
+				attestationQueue: []*slashertypes.CompactAttestation{
+					{
+						AttestingIndices: []uint64{0},
+						Source:           0,
+						Target:           3,
+					},
+					{
+						AttestingIndices: []uint64{1000000},
+						Source:           1,
+						Target:           2,
 					},
 				},
 				currentEpoch: 4,
@@ -121,18 +178,39 @@ func Test_processQueuedAttestations(t *testing.T) {
 			shouldNotBeSlashable: true,
 		},
 		{
-			name: "Not slashable, (source 1, target 2), (source 1, target 2)",
+			name: "Not slashable, same signing root, (source 1, target 2), (source 1, target 2)",
 			args: args{
 				attestationQueue: []*slashertypes.CompactAttestation{
 					{
 						AttestingIndices: []uint64{0, 1},
 						Source:           1,
 						Target:           2,
+						SigningRoot:      [32]byte{1},
 					},
 					{
 						AttestingIndices: []uint64{0, 1},
 						Source:           1,
 						Target:           2,
+						SigningRoot:      [32]byte{1},
+					},
+				},
+				currentEpoch: 4,
+			},
+			shouldNotBeSlashable: true,
+		},
+		{
+			name: "Not slashable, (source 0, target 3), (source 2, target 4)",
+			args: args{
+				attestationQueue: []*slashertypes.CompactAttestation{
+					{
+						AttestingIndices: []uint64{0, 1},
+						Source:           0,
+						Target:           3,
+					},
+					{
+						AttestingIndices: []uint64{0, 1},
+						Source:           2,
+						Target:           4,
 					},
 				},
 				currentEpoch: 4,

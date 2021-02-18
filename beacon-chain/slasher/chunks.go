@@ -178,8 +178,8 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 	validatorIdx types.ValidatorIndex,
 	attestation *slashertypes.CompactAttestation,
 ) (*slashertypes.Slashing, error) {
-	sourceEpoch := types.Epoch(attestation.Source)
-	targetEpoch := types.Epoch(attestation.Target)
+	sourceEpoch := attestation.Source
+	targetEpoch := attestation.Target
 	minTarget, err := chunkDataAtEpoch(m.params, m.data, validatorIdx, sourceEpoch)
 	if err != nil {
 		return &slashertypes.Slashing{Kind: slashertypes.NotSlashable}, errors.Wrapf(
@@ -194,12 +194,12 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 			)
 		}
 		if existingAttRecord != nil {
-			if sourceEpoch < types.Epoch(existingAttRecord.Source) {
+			if sourceEpoch < existingAttRecord.Source {
 				return &slashertypes.Slashing{
 					Kind:            slashertypes.SurroundingVote,
 					ValidatorIndex:  validatorIdx,
-					PrevSourceEpoch: types.Epoch(existingAttRecord.Source),
-					PrevTargetEpoch: types.Epoch(existingAttRecord.Target),
+					PrevSourceEpoch: existingAttRecord.Source,
+					PrevTargetEpoch: existingAttRecord.Target,
 					SourceEpoch:     sourceEpoch,
 					TargetEpoch:     targetEpoch,
 				}, nil
@@ -226,8 +226,8 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 	validatorIdx types.ValidatorIndex,
 	attestation *slashertypes.CompactAttestation,
 ) (*slashertypes.Slashing, error) {
-	sourceEpoch := types.Epoch(attestation.Source)
-	targetEpoch := types.Epoch(attestation.Target)
+	sourceEpoch := attestation.Source
+	targetEpoch := attestation.Target
 	maxTarget, err := chunkDataAtEpoch(m.params, m.data, validatorIdx, sourceEpoch)
 	if err != nil {
 		return &slashertypes.Slashing{Kind: slashertypes.NotSlashable}, errors.Wrapf(
@@ -242,12 +242,12 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 			)
 		}
 		if existingAttRecord != nil {
-			if types.Epoch(existingAttRecord.Source) < sourceEpoch {
+			if existingAttRecord.Source < sourceEpoch {
 				return &slashertypes.Slashing{
 					Kind:            slashertypes.SurroundedVote,
 					ValidatorIndex:  validatorIdx,
-					PrevSourceEpoch: types.Epoch(existingAttRecord.Source),
-					PrevTargetEpoch: types.Epoch(existingAttRecord.Target),
+					PrevSourceEpoch: existingAttRecord.Source,
+					PrevTargetEpoch: existingAttRecord.Target,
 					SourceEpoch:     sourceEpoch,
 					TargetEpoch:     targetEpoch,
 				}, nil
