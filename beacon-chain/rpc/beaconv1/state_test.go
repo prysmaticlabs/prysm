@@ -472,3 +472,259 @@ func TestGetStateFork(t *testing.T) {
 		require.ErrorContains(t, "Invalid state ID: foo", err)
 	})
 }
+
+func TestGetFinalityCheckpoints(t *testing.T) {
+	ctx := context.Background()
+
+	// We fill state and block roots with hex representations of natural numbers starting with 0.
+	// Example: 16 becomes 0x00...0f
+	fillRoots := func(state *pb.BeaconState) {
+		rootsLen := params.MainnetConfig().SlotsPerHistoricalRoot
+		roots := make([][]byte, rootsLen)
+		for i := types.Slot(0); i < rootsLen; i++ {
+			roots[i] = make([]byte, 32)
+		}
+		for j := 0; j < len(roots); j++ {
+			// Remove '0x' prefix and left-pad '0' to have 64 chars in total.
+			s := fmt.Sprintf("%064s", hexutil.EncodeUint64(uint64(j))[2:])
+			h, err := hexutil.Decode("0x" + s)
+			require.NoError(t, err, "Failed to decode root "+s)
+			roots[j] = h
+		}
+		state.StateRoots = roots
+		state.BlockRoots = roots
+	}
+	fillCheckpoints := func(state *pb.BeaconState) {
+		state.PreviousJustifiedCheckpoint = &eth.Checkpoint{
+			Root:  bytesutil.PadTo([]byte("previous"), 32),
+			Epoch: 113,
+		}
+		state.CurrentJustifiedCheckpoint = &eth.Checkpoint{
+			Root:  bytesutil.PadTo([]byte("current"), 32),
+			Epoch: 123,
+		}
+		state.FinalizedCheckpoint = &eth.Checkpoint{
+			Root:  bytesutil.PadTo([]byte("finalized"), 32),
+			Epoch: 103,
+		}
+	}
+	headSlot := types.Slot(123)
+	fillSlot := func(state *pb.BeaconState) {
+		state.Slot = headSlot
+	}
+	state, err := testutil.NewBeaconState(fillCheckpoints, fillRoots, fillSlot)
+	require.NoError(t, err)
+	stateRoot, err := state.HashTreeRoot(ctx)
+	require.NoError(t, err)
+
+	t.Run("Head", func(t *testing.T) {
+		s := Server{
+			ChainInfoFetcher: &chainMock.ChainService{State: state},
+		}
+
+		resp, err := s.GetFinalityCheckpoints(ctx, &ethpb.StateRequest{
+			StateId: []byte("head"),
+		})
+		require.NoError(t, err)
+		assert.DeepEqual(t, bytesutil.PadTo([]byte("previous"), 32), resp.Data.PreviousJustified.Root)
+		assert.Equal(t, types.Epoch(113), resp.Data.PreviousJustified.Epoch)
+		assert.DeepEqual(t, bytesutil.PadTo([]byte("current"), 32), resp.Data.CurrentJustified.Root)
+		assert.Equal(t, types.Epoch(123), resp.Data.CurrentJustified.Epoch)
+		assert.DeepEqual(t, bytesutil.PadTo([]byte("finalized"), 32), resp.Data.Finalized.Root)
+		assert.Equal(t, types.Epoch(103), resp.Data.Finalized.Epoch)
+	})
+
+	t.Run("Genesis", func(t *testing.T) {
+		db := testDB.SetupDB(t)
+		b := testutil.NewBeaconBlock()
+		b.Block.StateRoot = bytesutil.PadTo([]byte("genesis"), 32)
+		require.NoError(t, db.SaveBlock(ctx, b))
+		r, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, db.SaveStateSummary(ctx, &pb.StateSummary{Root: r[:]}))
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, r))
+		st, err := testutil.NewBeaconState(func(state *pb.BeaconState) {
+			state.PreviousJustifiedCheckpoint = &eth.Checkpoint{
+				Root:  bytesutil.PadTo([]byte("previous"), 32),
+				Epoch: 113,
+			}
+			state.CurrentJustifiedCheckpoint = &eth.Checkpoint{
+				Root:  bytesutil.PadTo([]byte("current"), 32),
+				Epoch: 123,
+			}
+			state.FinalizedCheckpoint = &eth.Checkpoint{
+				Root:  bytesutil.PadTo([]byte("finalized"), 32),
+				Epoch: 103,
+			}
+		})
+		require.NoError(t, err)
+		require.NoError(t, db.SaveState(ctx, st, r))
+
+		s := Server{
+			BeaconDB: db,
+		}
+
+		resp, err := s.GetFinalityCheckpoints(ctx, &ethpb.StateRequest{
+			StateId: []byte("genesis"),
+		})
+		require.NoError(t, err)
+		assert.DeepEqual(t, bytesutil.PadTo([]byte("previous"), 32), resp.Data.PreviousJustified.Root)
+		assert.Equal(t, types.Epoch(113), resp.Data.PreviousJustified.Epoch)
+		assert.DeepEqual(t, bytesutil.PadTo([]byte("current"), 32), resp.Data.CurrentJustified.Root)
+		assert.Equal(t, types.Epoch(123), resp.Data.CurrentJustified.Epoch)
+		assert.DeepEqual(t, bytesutil.PadTo([]byte("finalized"), 32), resp.Data.Finalized.Root)
+		assert.Equal(t, types.Epoch(103), resp.Data.Finalized.Epoch)
+	})
+
+	t.Run("Finalized", func(t *testing.T) {
+		stateGen := stategen.NewMockService()
+		stateGen.StatesByRoot[stateRoot] = state
+
+		s := Server{
+			ChainInfoFetcher: &chainMock.ChainService{
+				FinalizedCheckPoint: &eth.Checkpoint{
+					Root: stateRoot[:],
+				},
+			},
+			StateGenService: stateGen,
+		}
+
+		resp, err := s.GetFinalityCheckpoints(ctx, &ethpb.StateRequest{
+			StateId: []byte("finalized"),
+		})
+		require.NoError(t, err)
+		assert.DeepEqual(t, bytesutil.PadTo([]byte("previous"), 32), resp.Data.PreviousJustified.Root)
+		assert.Equal(t, types.Epoch(113), resp.Data.PreviousJustified.Epoch)
+		assert.DeepEqual(t, bytesutil.PadTo([]byte("current"), 32), resp.Data.CurrentJustified.Root)
+		assert.Equal(t, types.Epoch(123), resp.Data.CurrentJustified.Epoch)
+		assert.DeepEqual(t, bytesutil.PadTo([]byte("finalized"), 32), resp.Data.Finalized.Root)
+		assert.Equal(t, types.Epoch(103), resp.Data.Finalized.Epoch)
+	})
+
+	t.Run("Justified", func(t *testing.T) {
+		stateGen := stategen.NewMockService()
+		stateGen.StatesByRoot[stateRoot] = state
+
+		s := Server{
+			ChainInfoFetcher: &chainMock.ChainService{
+				CurrentJustifiedCheckPoint: &eth.Checkpoint{
+					Root: stateRoot[:],
+				},
+			},
+			StateGenService: stateGen,
+		}
+
+		resp, err := s.GetFinalityCheckpoints(ctx, &ethpb.StateRequest{
+			StateId: []byte("justified"),
+		})
+		require.NoError(t, err)
+		assert.DeepEqual(t, bytesutil.PadTo([]byte("previous"), 32), resp.Data.PreviousJustified.Root)
+		assert.Equal(t, types.Epoch(113), resp.Data.PreviousJustified.Epoch)
+		assert.DeepEqual(t, bytesutil.PadTo([]byte("current"), 32), resp.Data.CurrentJustified.Root)
+		assert.Equal(t, types.Epoch(123), resp.Data.CurrentJustified.Epoch)
+		assert.DeepEqual(t, bytesutil.PadTo([]byte("finalized"), 32), resp.Data.Finalized.Root)
+		assert.Equal(t, types.Epoch(103), resp.Data.Finalized.Epoch)
+	})
+
+	t.Run("Hex root", func(t *testing.T) {
+		stateId, err := hexutil.Decode("0x" + strings.Repeat("0", 63) + "1")
+		require.NoError(t, err)
+		stateGen := stategen.NewMockService()
+		stateGen.StatesByRoot[bytesutil.ToBytes32(stateId)] = state
+
+		s := Server{
+			ChainInfoFetcher: &chainMock.ChainService{State: state},
+			StateGenService:  stateGen,
+		}
+
+		resp, err := s.GetFinalityCheckpoints(ctx, &ethpb.StateRequest{
+			StateId: stateId,
+		})
+		require.NoError(t, err)
+		assert.DeepEqual(t, bytesutil.PadTo([]byte("previous"), 32), resp.Data.PreviousJustified.Root)
+		assert.Equal(t, types.Epoch(113), resp.Data.PreviousJustified.Epoch)
+		assert.DeepEqual(t, bytesutil.PadTo([]byte("current"), 32), resp.Data.CurrentJustified.Root)
+		assert.Equal(t, types.Epoch(123), resp.Data.CurrentJustified.Epoch)
+		assert.DeepEqual(t, bytesutil.PadTo([]byte("finalized"), 32), resp.Data.Finalized.Root)
+		assert.Equal(t, types.Epoch(103), resp.Data.Finalized.Epoch)
+	})
+
+	t.Run("Hex root not found", func(t *testing.T) {
+		s := Server{
+			ChainInfoFetcher: &chainMock.ChainService{State: state},
+		}
+		stateId, err := hexutil.Decode("0x" + strings.Repeat("f", 64))
+		require.NoError(t, err)
+		_, err = s.GetFinalityCheckpoints(ctx, &ethpb.StateRequest{
+			StateId: stateId,
+		})
+		require.ErrorContains(t, "State not found in the last 8192 state roots in head state", err)
+	})
+
+	t.Run("Slot", func(t *testing.T) {
+		stateGen := stategen.NewMockService()
+		stateGen.StatesBySlot[headSlot] = state
+
+		s := Server{
+			GenesisTimeFetcher: &chainMock.ChainService{Slot: &headSlot},
+			StateGenService:    stateGen,
+		}
+
+		resp, err := s.GetFinalityCheckpoints(ctx, &ethpb.StateRequest{
+			StateId: []byte(strconv.FormatUint(uint64(headSlot), 10)),
+		})
+		require.NoError(t, err)
+		assert.DeepEqual(t, bytesutil.PadTo([]byte("previous"), 32), resp.Data.PreviousJustified.Root)
+		assert.Equal(t, types.Epoch(113), resp.Data.PreviousJustified.Epoch)
+		assert.DeepEqual(t, bytesutil.PadTo([]byte("current"), 32), resp.Data.CurrentJustified.Root)
+		assert.Equal(t, types.Epoch(123), resp.Data.CurrentJustified.Epoch)
+		assert.DeepEqual(t, bytesutil.PadTo([]byte("finalized"), 32), resp.Data.Finalized.Root)
+		assert.Equal(t, types.Epoch(103), resp.Data.Finalized.Epoch)
+	})
+
+	t.Run("Slot too big", func(t *testing.T) {
+		s := Server{
+			GenesisTimeFetcher: &chainMock.ChainService{
+				Genesis: time.Now(),
+			},
+		}
+		_, err := s.GetFinalityCheckpoints(ctx, &ethpb.StateRequest{
+			StateId: []byte(strconv.FormatUint(1, 10)),
+		})
+		assert.ErrorContains(t, "Slot cannot be in the future", err)
+	})
+
+	t.Run("Checkpoints not available", func(t *testing.T) {
+		st, err := testutil.NewBeaconState()
+		require.NoError(t, err)
+		err = st.SetPreviousJustifiedCheckpoint(nil)
+		require.NoError(t, err)
+		err = st.SetCurrentJustifiedCheckpoint(nil)
+		require.NoError(t, err)
+		err = st.SetFinalizedCheckpoint(nil)
+		require.NoError(t, err)
+
+		s := Server{
+			ChainInfoFetcher: &chainMock.ChainService{State: st},
+		}
+
+		resp, err := s.GetFinalityCheckpoints(ctx, &ethpb.StateRequest{
+			StateId: []byte("head"),
+		})
+		require.NoError(t, err)
+		assert.DeepEqual(t, params.BeaconConfig().ZeroHash[:], resp.Data.PreviousJustified.Root)
+		assert.Equal(t, types.Epoch(0), resp.Data.PreviousJustified.Epoch)
+		assert.DeepEqual(t, params.BeaconConfig().ZeroHash[:], resp.Data.CurrentJustified.Root)
+		assert.Equal(t, types.Epoch(0), resp.Data.CurrentJustified.Epoch)
+		assert.DeepEqual(t, params.BeaconConfig().ZeroHash[:], resp.Data.Finalized.Root)
+		assert.Equal(t, types.Epoch(0), resp.Data.Finalized.Epoch)
+	})
+
+	t.Run("Invalid state", func(t *testing.T) {
+		s := Server{}
+		_, err := s.GetFinalityCheckpoints(ctx, &ethpb.StateRequest{
+			StateId: []byte("foo"),
+		})
+		require.ErrorContains(t, "Invalid state ID: foo", err)
+	})
+}
