@@ -292,7 +292,6 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	cp := beaconState.CurrentJustifiedCheckpoint()
 	cp.Root = []byte("hello-world")
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cp))
-	require.NoError(t, beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{}))
 	_, err = state.VerifyOperationLengths(context.Background(), beaconState, block)
 	wanted := "number of voluntary exits (17) in block body exceeds allowed threshold of 16"
 	assert.ErrorContains(t, wanted, err)
@@ -318,7 +317,6 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 	copy(mockRoot[:], "hello-world")
 	cp.Root = mockRoot[:]
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cp))
-	require.NoError(t, beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{}))
 
 	proposerSlashIdx := uint64(3)
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
@@ -504,14 +502,12 @@ func TestProcessBlockNoVerify_PassesProcessingConditions(t *testing.T) {
 func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
 	epoch := types.Epoch(1)
 
-	atts := []*pb.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: make([]byte, 32)}}, InclusionDelay: 1}}
 	slashing := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
 	base := &pb.BeaconState{
 		Slot:                       params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch)) + 1,
 		BlockRoots:                 make([][]byte, 128),
 		Slashings:                  slashing,
 		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		CurrentEpochAttestations:   atts,
 		FinalizedCheckpoint:        &ethpb.Checkpoint{Root: make([]byte, 32)},
 		JustificationBits:          bitfield.Bitvector4{0x00},
 		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},

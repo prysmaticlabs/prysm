@@ -295,7 +295,6 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 
 	// Verify historical root accumulator was appended.
 	assert.Equal(t, 1, len(newS.HistoricalRoots()), "Unexpected slashed balance")
-	assert.NotNil(t, newS.CurrentEpochAttestations(), "Nil value stored in current epoch attestations instead of empty slice")
 }
 
 func TestProcessRegistryUpdates_NoRotation(t *testing.T) {

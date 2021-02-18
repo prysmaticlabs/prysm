@@ -1496,18 +1496,11 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpoch(t *testing.T) {
 		balances[i] = params.BeaconConfig().MaxEffectiveBalance
 	}
 
-	atts := []*pb.PendingAttestation{{
-		Data:            testutil.HydrateAttestationData(&ethpb.AttestationData{}),
-		InclusionDelay:  1,
-		AggregationBits: bitfield.NewBitlist(validatorCount / uint64(params.BeaconConfig().SlotsPerEpoch)),
-	}}
 	headState, err := testutil.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(2*params.BeaconConfig().SlotsPerEpoch-1))
 	require.NoError(t, headState.SetValidators(validators))
 	require.NoError(t, headState.SetBalances(balances))
-	require.NoError(t, headState.SetCurrentEpochAttestations(atts))
-	require.NoError(t, headState.SetPreviousEpochAttestations(atts))
 
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 16
@@ -1572,19 +1565,11 @@ func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 		}
 		balances[i] = params.BeaconConfig().MaxEffectiveBalance
 	}
-
-	atts := []*pb.PendingAttestation{{
-		Data:            testutil.HydrateAttestationData(&ethpb.AttestationData{}),
-		InclusionDelay:  1,
-		AggregationBits: bitfield.NewBitlist(validatorCount / uint64(params.BeaconConfig().SlotsPerEpoch)),
-	}}
 	headState, err := testutil.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(2*params.BeaconConfig().SlotsPerEpoch-1))
 	require.NoError(t, headState.SetValidators(validators))
 	require.NoError(t, headState.SetBalances(balances))
-	require.NoError(t, headState.SetCurrentEpochAttestations(atts))
-	require.NoError(t, headState.SetPreviousEpochAttestations(atts))
 
 	b := testutil.NewBeaconBlock()
 	require.NoError(t, beaconDB.SaveBlock(ctx, b))
@@ -1660,7 +1645,6 @@ func TestGetValidatorPerformance_OK(t *testing.T) {
 			InclusionDelay:  1,
 		}
 	}
-	require.NoError(t, headState.SetPreviousEpochAttestations(atts))
 	defaultBal := params.BeaconConfig().MaxEffectiveBalance
 	extraBal := params.BeaconConfig().MaxEffectiveBalance + params.BeaconConfig().GweiPerEth
 	balances := []uint64{defaultBal, extraBal, extraBal + params.BeaconConfig().GweiPerEth}
@@ -2016,14 +2000,6 @@ func TestServer_GetIndividualVotes_Working(t *testing.T) {
 	require.NoError(t, beaconState.SetBlockRoots(br))
 	att2.Data.Target.Root = rt[:]
 	att2.Data.BeaconBlockRoot = newRt[:]
-	err = beaconState.SetPreviousEpochAttestations([]*pb.PendingAttestation{
-		{Data: att1.Data, AggregationBits: bf, InclusionDelay: 1},
-	})
-	require.NoError(t, err)
-	err = beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{
-		{Data: att2.Data, AggregationBits: bf, InclusionDelay: 1},
-	})
-	require.NoError(t, err)
 
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = params.BeaconConfig().SlotsPerEpoch

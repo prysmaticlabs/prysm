@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-bitfield"
+
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -152,125 +152,6 @@ func TestStateReferenceCopy_NoUnexpectedRandaoMutation(t *testing.T) {
 	// Copy on write happened, reference counters are reset.
 	assertRefCount(t, a, randaoMixes, 1)
 	assertRefCount(t, b, randaoMixes, 1)
-}
-
-func TestStateReferenceCopy_NoUnexpectedAttestationsMutation(t *testing.T) {
-	assertAttFound := func(vals []*p2ppb.PendingAttestation, val uint64) {
-		for i := range vals {
-			if reflect.DeepEqual(vals[i].AggregationBits, bitfield.NewBitlist(val)) {
-				return
-			}
-		}
-		t.Log(string(debug.Stack()))
-		t.Fatalf("Expected attestation not found (%v), want: %v", vals, val)
-	}
-	assertAttNotFound := func(vals []*p2ppb.PendingAttestation, val uint64) {
-		for i := range vals {
-			if reflect.DeepEqual(vals[i].AggregationBits, bitfield.NewBitlist(val)) {
-				t.Log(string(debug.Stack()))
-				t.Fatalf("Unexpected attestation found (%v): %v", vals, val)
-				return
-			}
-		}
-	}
-
-	a, err := InitializeFromProtoUnsafe(&p2ppb.BeaconState{})
-	require.NoError(t, err)
-	assertRefCount(t, a, previousEpochAttestations, 1)
-	assertRefCount(t, a, currentEpochAttestations, 1)
-
-	// Update initial state.
-	atts := []*p2ppb.PendingAttestation{
-		{AggregationBits: bitfield.NewBitlist(1)},
-		{AggregationBits: bitfield.NewBitlist(2)},
-	}
-	require.NoError(t, a.SetPreviousEpochAttestations(atts[:1]))
-	require.NoError(t, a.SetCurrentEpochAttestations(atts[:1]))
-	assert.Equal(t, 1, len(a.CurrentEpochAttestations()), "Unexpected number of attestations")
-	assert.Equal(t, 1, len(a.PreviousEpochAttestations()), "Unexpected number of attestations")
-
-	// Copy, increases reference count.
-	b := a.Copy()
-	assertRefCount(t, a, previousEpochAttestations, 2)
-	assertRefCount(t, a, currentEpochAttestations, 2)
-	assertRefCount(t, b, previousEpochAttestations, 2)
-	assertRefCount(t, b, currentEpochAttestations, 2)
-	assert.Equal(t, 1, len(b.state.GetPreviousEpochAttestations()), "Unexpected number of attestations")
-	assert.Equal(t, 1, len(b.state.GetCurrentEpochAttestations()), "Unexpected number of attestations")
-
-	// Assert shared state.
-	curAttsA := a.state.GetCurrentEpochAttestations()
-	prevAttsA := a.state.GetPreviousEpochAttestations()
-	curAttsB := b.state.GetCurrentEpochAttestations()
-	prevAttsB := b.state.GetPreviousEpochAttestations()
-	if len(curAttsA) != len(curAttsB) || len(curAttsA) < 1 {
-		t.Errorf("Unexpected number of attestations, want: %v", 1)
-	}
-	if len(prevAttsA) != len(prevAttsB) || len(prevAttsA) < 1 {
-		t.Errorf("Unexpected number of attestations, want: %v", 1)
-	}
-	assertAttFound(curAttsA, 1)
-	assertAttFound(prevAttsA, 1)
-	assertAttFound(curAttsB, 1)
-	assertAttFound(prevAttsB, 1)
-
-	// Extends state a attestations.
-	require.NoError(t, a.AppendCurrentEpochAttestations(atts[1]))
-	require.NoError(t, a.AppendPreviousEpochAttestations(atts[1]))
-	assert.Equal(t, 2, len(a.CurrentEpochAttestations()), "Unexpected number of attestations")
-	assert.Equal(t, 2, len(a.PreviousEpochAttestations()), "Unexpected number of attestations")
-	assertAttFound(a.state.GetCurrentEpochAttestations(), 1)
-	assertAttFound(a.state.GetPreviousEpochAttestations(), 1)
-	assertAttFound(a.state.GetCurrentEpochAttestations(), 2)
-	assertAttFound(a.state.GetPreviousEpochAttestations(), 2)
-	assertAttFound(b.state.GetCurrentEpochAttestations(), 1)
-	assertAttFound(b.state.GetPreviousEpochAttestations(), 1)
-	assertAttNotFound(b.state.GetCurrentEpochAttestations(), 2)
-	assertAttNotFound(b.state.GetPreviousEpochAttestations(), 2)
-
-	// Mutator should only affect calling state: a.
-	applyToEveryAttestation := func(state *p2ppb.BeaconState) {
-		// One MUST copy on write.
-		atts = make([]*p2ppb.PendingAttestation, len(state.CurrentEpochAttestations))
-		copy(atts, state.CurrentEpochAttestations)
-		state.CurrentEpochAttestations = atts
-		for i := range state.GetCurrentEpochAttestations() {
-			att := CopyPendingAttestation(state.CurrentEpochAttestations[i])
-			att.AggregationBits = bitfield.NewBitlist(3)
-			state.CurrentEpochAttestations[i] = att
-		}
-
-		atts = make([]*p2ppb.PendingAttestation, len(state.PreviousEpochAttestations))
-		copy(atts, state.PreviousEpochAttestations)
-		state.PreviousEpochAttestations = atts
-		for i := range state.GetPreviousEpochAttestations() {
-			att := CopyPendingAttestation(state.PreviousEpochAttestations[i])
-			att.AggregationBits = bitfield.NewBitlist(3)
-			state.PreviousEpochAttestations[i] = att
-		}
-	}
-	applyToEveryAttestation(a.state)
-
-	// Assert no shared state mutation occurred only on state a (copy on write).
-	assertAttFound(a.state.GetCurrentEpochAttestations(), 3)
-	assertAttFound(a.state.GetPreviousEpochAttestations(), 3)
-	assertAttNotFound(a.state.GetCurrentEpochAttestations(), 1)
-	assertAttNotFound(a.state.GetPreviousEpochAttestations(), 1)
-	assertAttNotFound(a.state.GetCurrentEpochAttestations(), 2)
-	assertAttNotFound(a.state.GetPreviousEpochAttestations(), 2)
-	// State b must be unaffected.
-	assertAttNotFound(b.state.GetCurrentEpochAttestations(), 3)
-	assertAttNotFound(b.state.GetPreviousEpochAttestations(), 3)
-	assertAttFound(b.state.GetCurrentEpochAttestations(), 1)
-	assertAttFound(b.state.GetPreviousEpochAttestations(), 1)
-	assertAttNotFound(b.state.GetCurrentEpochAttestations(), 2)
-	assertAttNotFound(b.state.GetPreviousEpochAttestations(), 2)
-
-	// Copy on write happened, reference counters are reset.
-	assertRefCount(t, a, currentEpochAttestations, 1)
-	assertRefCount(t, b, currentEpochAttestations, 1)
-	assertRefCount(t, a, previousEpochAttestations, 1)
-	assertRefCount(t, b, previousEpochAttestations, 1)
 }
 
 func TestValidatorReferences_RemainsConsistent(t *testing.T) {

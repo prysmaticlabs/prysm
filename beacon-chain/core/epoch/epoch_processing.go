@@ -8,10 +8,9 @@ import (
 	"fmt"
 	"sort"
 
-	types "github.com/prysmaticlabs/eth2-types"
-
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -425,22 +424,4 @@ func ProcessLightClientCommitteeUpdates(beaconState *stateTrie.BeaconState) (*st
 		}
 	}
 	return beaconState, nil
-}
-
-// isInInactivityLeak returns true if the state is experiencing inactivity leak.
-//
-// Spec code:
-// def is_in_inactivity_leak(state: BeaconState) -> bool:
-//    return get_finality_delay(state) > MIN_EPOCHS_TO_INACTIVITY_PENALTY
-func isInInactivityLeak(prevEpoch, finalizedEpoch types.Epoch) bool {
-	return finalityDelay(prevEpoch, finalizedEpoch) > params.BeaconConfig().MinEpochsToInactivityPenalty
-}
-
-// finalityDelay returns the finality delay using the beacon state.
-//
-// Spec code:
-// def get_finality_delay(state: BeaconState) -> uint64:
-//    return get_previous_epoch(state) - state.finalized_checkpoint.epoch
-func finalityDelay(prevEpoch, finalizedEpoch types.Epoch) types.Epoch {
-	return prevEpoch - finalizedEpoch
 }

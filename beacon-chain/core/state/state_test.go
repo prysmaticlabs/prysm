@@ -72,8 +72,8 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 
 	// Recent state checks.
 	assert.DeepEqual(t, make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector), newState.Slashings(), "Slashings was not correctly initialized")
-	assert.DeepSSZEqual(t, []*pb.PendingAttestation{}, newState.CurrentEpochAttestations(), "CurrentEpochAttestations was not correctly initialized")
-	assert.DeepSSZEqual(t, []*pb.PendingAttestation{}, newState.PreviousEpochAttestations(), "PreviousEpochAttestations was not correctly initialized")
+	assert.DeepSSZEqual(t, []byte{}, newState.CurrentEpochParticipation(), "CurrentEpochParticipation was not correctly initialized")
+	assert.DeepSSZEqual(t, []byte{}, newState.PreviousEpochParticipation(), "PreviousEpochParticipation was not correctly initialized")
 
 	zeroHash := params.BeaconConfig().ZeroHash[:]
 	// History root checks.
