@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
