@@ -305,7 +305,7 @@ func (e Exporter) SaveAttestationRecordsForValidators(
 	return e.db.SaveAttestationRecordsForValidators(ctx, validatorIndices, attestations)
 }
 
-// ExistingBlockProposals -- passthrough
+// CheckDoubleBlockProposals -- passthrough
 func (e Exporter) CheckDoubleBlockProposals(
 	ctx context.Context, proposals []*slashertypes.CompactBeaconBlock,
 ) ([]*slashertypes.DoubleBlockProposal, error) {
