@@ -64,7 +64,7 @@ type ReadOnlyDatabase interface {
 	AttestationRecordForValidator(
 		ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch,
 	) (*slashertypes.CompactAttestation, error)
-	CheckDoubleAttesterVotes(
+	CheckAttesterDoubleVotes(
 		ctx context.Context, attestations []*slashertypes.CompactAttestation,
 	) ([]*slashertypes.AttesterDoubleVote, error)
 	LoadSlasherChunks(

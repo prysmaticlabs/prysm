@@ -88,7 +88,10 @@ func (s *Service) detectSlashableAttestations(
 func (s *Service) checkDoubleVotes(
 	ctx context.Context, attestations []*slashertypes.CompactAttestation,
 ) ([]*slashertypes.Slashing, error) {
-	doubleVotes, err := s.serviceCfg.Database.CheckDoubleAttesterVotes(
+	// TODO(#8533): Check if there are any double votes with respect to each other.
+
+	// Check if there are any double votes with respect to the database.
+	doubleVotes, err := s.serviceCfg.Database.CheckAttesterDoubleVotes(
 		ctx, attestations,
 	)
 	if err != nil {

@@ -282,6 +282,13 @@ func (e Exporter) AttestationRecordForValidator(
 	return e.db.AttestationRecordForValidator(ctx, validatorIdx, targetEpoch)
 }
 
+// CheckAttesterDoubleVotes -- passthrough
+func (e Exporter) CheckAttesterDoubleVotes(
+	ctx context.Context, attestations []*slashertypes.CompactAttestation,
+) ([]*slashertypes.AttesterDoubleVote, error) {
+	return e.db.CheckAttesterDoubleVotes(ctx, attestations)
+}
+
 // LoadSlasherChunk -- passthrough
 func (e Exporter) LoadSlasherChunks(
 	ctx context.Context, kind slashertypes.ChunkKind, diskKeys []uint64,

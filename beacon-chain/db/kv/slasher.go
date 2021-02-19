@@ -7,9 +7,10 @@ import (
 
 	ssz "github.com/ferranbt/fastssz"
 	types "github.com/prysmaticlabs/eth2-types"
-	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
+
+	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 )
 
 // LatestEpochAttestedForValidator given a validator index returns the latest
@@ -114,6 +115,46 @@ func (s *Store) CheckAndUpdateAttestationRecordForValidators(
 		return nil
 	})
 	return exists, err
+}
+
+// CheckDoubleAttesterVotes retries any slashable double votes that exist
+// for a series of input attestations.
+func (s *Store) CheckAttesterDoubleVotes(
+	ctx context.Context, attestations []*slashertypes.CompactAttestation,
+) ([]*slashertypes.AttesterDoubleVote, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.CheckAndUpdateAttestationRecordForValidators")
+	defer span.End()
+	doubleVotes := make([]*slashertypes.AttesterDoubleVote, 0)
+	err := s.db.Update(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(attestationRecordsBucket)
+		for _, att := range attestations {
+			for _, valIdx := range att.AttestingIndices {
+				encIdx := ssz.MarshalUint64(make([]byte, 8), valIdx)
+				encEpoch, err := att.Target.MarshalSSZ()
+				if err != nil {
+					return err
+				}
+				key := append(encIdx, encEpoch...)
+				existingEncodedRecord := bkt.Get(key)
+				if existingEncodedRecord != nil {
+					existingAtt, err := decodeAttestationRecord(existingEncodedRecord)
+					if err != nil {
+						return err
+					}
+					if existingAtt.SigningRoot != att.SigningRoot {
+						doubleVotes = append(doubleVotes, &slashertypes.AttesterDoubleVote{
+							ValidatorIndex:  types.ValidatorIndex(valIdx),
+							Target:          att.Target,
+							SigningRoot:     att.SigningRoot,
+							PrevSigningRoot: existingAtt.SigningRoot,
+						})
+					}
+				}
+			}
+		}
+		return nil
+	})
+	return doubleVotes, err
 }
 
 // AttestationRecordForValidator given a validator index and a target epoch,
