@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
@@ -73,7 +73,7 @@ func (fv *FakeValidator) WaitForChainStart(_ context.Context) error {
 }
 
 // WaitForActivation for mocking.
-func (fv *FakeValidator) WaitForActivation(_ context.Context, _ chan struct{}) error {
+func (fv *FakeValidator) WaitForActivation(_ context.Context, _ <-chan struct{}) error {
 	fv.WaitForActivationCalled++
 	if fv.RetryTillSuccess >= fv.WaitForActivationCalled {
 		return errConnectionIssue
@@ -210,7 +210,7 @@ func (fv *FakeValidator) GetKeymanager() keymanager.IKeymanager {
 }
 
 // ReceiveBlocks for mocking
-func (fv *FakeValidator) ReceiveBlocks(ctx context.Context, connectionErrorChannel chan error) {
+func (fv *FakeValidator) ReceiveBlocks(ctx context.Context, connectionErrorChannel chan<- error) {
 	fv.ReceiveBlocksCalled++
 	if fv.RetryTillSuccess > fv.ReceiveBlocksCalled {
 		connectionErrorChannel <- errConnectionIssue
