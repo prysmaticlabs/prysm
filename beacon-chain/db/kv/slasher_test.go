@@ -21,11 +21,12 @@ func TestStore_AttestationRecordForValidator_SaveRetrieve(t *testing.T) {
 	require.Equal(t, true, attRecord == nil)
 
 	sr := [32]byte{1}
-	err = beaconDB.SaveAttestationRecordsForValidators(ctx, []types.ValidatorIndex{valIdx}, []*slashertypes.CompactAttestation{
+	err = beaconDB.SaveAttestationRecordsForValidators(ctx, []*slashertypes.CompactAttestation{
 		{
-			Target:      target,
-			Source:      source,
-			SigningRoot: sr,
+			AttestingIndices: []uint64{uint64(valIdx)},
+			Target:           target,
+			Source:           source,
+			SigningRoot:      sr,
 		},
 	})
 	require.NoError(t, err)
@@ -60,6 +61,71 @@ func TestStore_LatestEpochAttestedForValidators(t *testing.T) {
 		}
 		require.DeepEqual(t, want, retrievedEpoch)
 	}
+}
+
+func TestStore_CheckAttesterDoubleVotes(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := setupDB(t)
+	err := beaconDB.SaveAttestationRecordsForValidators(ctx, []*slashertypes.CompactAttestation{
+		{
+			AttestingIndices: []uint64{0, 1},
+			Source:           2,
+			Target:           3,
+			SigningRoot:      [32]byte{1},
+		},
+		{
+			AttestingIndices: []uint64{2, 3},
+			Source:           3,
+			Target:           4,
+			SigningRoot:      [32]byte{1},
+		},
+	})
+	require.NoError(t, err)
+
+	slashableAtts := []*slashertypes.CompactAttestation{
+		{
+			AttestingIndices: []uint64{0, 1},
+			Source:           2,
+			Target:           3,
+			SigningRoot:      [32]byte{2}, // Different signing root.
+		},
+		{
+			AttestingIndices: []uint64{2, 3},
+			Source:           3,
+			Target:           4,
+			SigningRoot:      [32]byte{2}, // Different signing root.
+		},
+	}
+
+	wanted := []*slashertypes.AttesterDoubleVote{
+		{
+			ValidatorIndex:  0,
+			SigningRoot:     [32]byte{2},
+			PrevSigningRoot: [32]byte{1},
+			Target:          3,
+		},
+		{
+			ValidatorIndex:  1,
+			SigningRoot:     [32]byte{2},
+			PrevSigningRoot: [32]byte{1},
+			Target:          3,
+		},
+		{
+			ValidatorIndex:  2,
+			SigningRoot:     [32]byte{2},
+			PrevSigningRoot: [32]byte{1},
+			Target:          4,
+		},
+		{
+			ValidatorIndex:  3,
+			SigningRoot:     [32]byte{2},
+			PrevSigningRoot: [32]byte{1},
+			Target:          4,
+		},
+	}
+	doubleVotes, err := beaconDB.CheckAttesterDoubleVotes(ctx, slashableAtts)
+	require.NoError(t, err)
+	require.DeepEqual(t, wanted, doubleVotes)
 }
 
 func TestStore_SlasherChunk_SaveRetrieve(t *testing.T) {

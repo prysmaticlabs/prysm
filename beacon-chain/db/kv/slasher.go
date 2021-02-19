@@ -7,10 +7,9 @@ import (
 
 	ssz "github.com/ferranbt/fastssz"
 	types "github.com/prysmaticlabs/eth2-types"
+	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
-
-	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 )
 
 // LatestEpochAttestedForValidator given a validator index returns the latest
@@ -71,52 +70,6 @@ func (s *Store) SaveLatestEpochAttestedForValidators(
 	})
 }
 
-// CheckAndUpdateAttestationRecordForValidators takes in a compact attestation. Using the attestation's
-// list of validator indices and a target epoch. Then, attempts to find attestation records
-// for each validator index at the specified target epoch.
-//
-// The return type is a list of booleans for each validator in the attestation's
-// attesting indices determining if such record exists already for each validator index. If the record
-// does not exist, we return false and update the database to mark the target epoch as attested for a
-// validator index.
-func (s *Store) CheckAndUpdateAttestationRecordForValidators(
-	ctx context.Context, attestation *slashertypes.CompactAttestation,
-) ([]bool, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.CheckAndUpdateAttestationRecordForValidators")
-	defer span.End()
-	var exists []bool
-	err := s.db.Update(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(attestationRecordsBucket)
-		encEpoch, err := attestation.Target.MarshalSSZ()
-		if err != nil {
-			return err
-		}
-		encAttestation, err := encodeAttestationRecord(attestation)
-		if err != nil {
-			return err
-		}
-		for _, validatorIdx := range attestation.AttestingIndices {
-			encIdx := ssz.MarshalUint64(make([]byte, 8), validatorIdx)
-			key := append(encIdx, encEpoch...)
-			existingRecord := bkt.Get(key)
-			// If an attesting record exists for the validator, we append
-			// `true` to our list of response booleans.
-			if existingRecord != nil {
-				exists = append(exists, true)
-				continue
-			}
-			// Otherwise, we mark the epoch as attested for the validator
-			// and append `false` to our list of response booleans.
-			exists = append(exists, false)
-			if err := bkt.Put(key, encAttestation); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	return exists, err
-}
-
 // CheckDoubleAttesterVotes retries any slashable double votes that exist
 // for a series of input attestations.
 func (s *Store) CheckAttesterDoubleVotes(
@@ -128,12 +81,12 @@ func (s *Store) CheckAttesterDoubleVotes(
 	err := s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationRecordsBucket)
 		for _, att := range attestations {
+			encEpoch, err := att.Target.MarshalSSZ()
+			if err != nil {
+				return err
+			}
 			for _, valIdx := range att.AttestingIndices {
 				encIdx := ssz.MarshalUint64(make([]byte, 8), valIdx)
-				encEpoch, err := att.Target.MarshalSSZ()
-				if err != nil {
-					return err
-				}
 				key := append(encIdx, encEpoch...)
 				existingEncodedRecord := bkt.Get(key)
 				if existingEncodedRecord != nil {
@@ -194,28 +147,24 @@ func (s *Store) AttestationRecordForValidator(
 // specified validator indices.
 func (s *Store) SaveAttestationRecordsForValidators(
 	ctx context.Context,
-	validatorIndices []types.ValidatorIndex,
 	attestations []*slashertypes.CompactAttestation,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveAttestationRecordsForValidators")
 	defer span.End()
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationRecordsBucket)
-		for _, valIdx := range validatorIndices {
-			encIdx, err := valIdx.MarshalSSZ()
+		for _, att := range attestations {
+			encEpoch, err := att.Target.MarshalSSZ()
 			if err != nil {
 				return err
 			}
-			for _, att := range attestations {
-				encEpoch, err := att.Target.MarshalSSZ()
-				if err != nil {
-					return err
-				}
+			value, err := encodeAttestationRecord(att)
+			if err != nil {
+				return err
+			}
+			for _, valIdx := range att.AttestingIndices {
+				encIdx := ssz.MarshalUint64(make([]byte, 8), valIdx)
 				key := append(encIdx, encEpoch...)
-				value, err := encodeAttestationRecord(att)
-				if err != nil {
-					return err
-				}
 				if err := bkt.Put(key, value); err != nil {
 					return err
 				}

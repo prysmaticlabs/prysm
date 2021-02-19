@@ -105,7 +105,6 @@ type NoHeadAccessDatabase interface {
 	) error
 	SaveAttestationRecordsForValidators(
 		ctx context.Context,
-		validatorIndices []types.ValidatorIndex,
 		attestations []*slashertypes.CompactAttestation,
 	) error
 	SaveSlasherChunks(

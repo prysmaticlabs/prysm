@@ -80,18 +80,17 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 				"currentEpoch": currentEpoch,
 				"numAtts":      len(attestations),
 			}).Info("Epoch reached, processing queued atts for slashing detection")
-			groupedAtts := s.groupByValidatorChunkIndex(attestations)
+			// Save the attestation records to our database.
+			if err := s.serviceCfg.Database.SaveAttestationRecordsForValidators(
+				ctx, attestations,
+			); err != nil {
+				log.WithError(err).Error("Could not save attestation records to DB")
+				continue
+			}
 
+			groupedAtts := s.groupByValidatorChunkIndex(attestations)
 			// TODO(#8331): Consider using goroutines and wait groups here.
 			for validatorChunkIdx, batch := range groupedAtts {
-				validatorIndices := s.params.validatorIndicesInChunk(validatorChunkIdx)
-				// Save the attestation records for the validator indices in our database.
-				if err := s.serviceCfg.Database.SaveAttestationRecordsForValidators(
-					ctx, validatorIndices, batch,
-				); err != nil {
-					log.WithError(err).Error("Could not save attestation records to DB")
-					continue
-				}
 				if err := s.detectSlashableAttestations(ctx, &chunkUpdateArgs{
 					validatorChunkIndex: validatorChunkIdx,
 					currentEpoch:        currentEpoch,

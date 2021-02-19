@@ -121,9 +121,9 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.Equal(t, true, slashing == nil)
+	att.AttestingIndices = []uint64{uint64(validatorIdx)}
 	err = beaconDB.SaveAttestationRecordsForValidators(
 		ctx,
-		[]types.ValidatorIndex{validatorIdx},
 		[]*slashertypes.CompactAttestation{att},
 	)
 	require.NoError(t, err)
@@ -180,9 +180,9 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.Equal(t, true, slashing == nil)
+	att.AttestingIndices = []uint64{uint64(validatorIdx)}
 	err = beaconDB.SaveAttestationRecordsForValidators(
 		ctx,
-		[]types.ValidatorIndex{validatorIdx},
 		[]*slashertypes.CompactAttestation{att},
 	)
 	require.NoError(t, err)
