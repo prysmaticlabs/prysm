@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
@@ -103,7 +104,10 @@ func (s *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.IndexedA
 	if err != nil {
 		return nil, err
 	}
-	indices := req.AttestingIndices
+	indices := make([]types.ValidatorIndex, len(req.AttestingIndices))
+	for i, index := range req.AttestingIndices {
+		indices[i] = types.ValidatorIndex(index)
+	}
 	pkMap, err := s.beaconClient.FindOrGetPublicKeys(ctx, indices)
 	if err != nil {
 		return nil, err
@@ -178,7 +182,7 @@ func (s *Server) IsSlashableBlock(ctx context.Context, req *ethpb.SignedBeaconBl
 	if err != nil {
 		return nil, err
 	}
-	pkMap, err := s.beaconClient.FindOrGetPublicKeys(ctx, []uint64{req.Header.ProposerIndex})
+	pkMap, err := s.beaconClient.FindOrGetPublicKeys(ctx, []types.ValidatorIndex{req.Header.ProposerIndex})
 	if err != nil {
 		return nil, err
 	}

@@ -83,7 +83,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot types.Slot, pubK
 	}
 
 	indexedAtt := &ethpb.IndexedAttestation{
-		AttestingIndices: []uint64{duty.ValidatorIndex},
+		AttestingIndices: []uint64{uint64(duty.ValidatorIndex)},
 		Data:             data,
 	}
 
@@ -226,7 +226,7 @@ func (v *validator) getDomainAndSigningRoot(ctx context.Context, data *ethpb.Att
 
 // For logging, this saves the last submitted attester index to its attestation data. The purpose of this
 // is to enhance attesting logs to be readable when multiple validator keys ran in a single client.
-func (v *validator) saveAttesterIndexToData(data *ethpb.AttestationData, index uint64) error {
+func (v *validator) saveAttesterIndexToData(data *ethpb.AttestationData, index types.ValidatorIndex) error {
 	v.attLogsLock.Lock()
 	defer v.attLogsLock.Unlock()
 
@@ -236,9 +236,9 @@ func (v *validator) saveAttesterIndexToData(data *ethpb.AttestationData, index u
 	}
 
 	if v.attLogs[h] == nil {
-		v.attLogs[h] = &attSubmitted{data, []uint64{}, []uint64{}}
+		v.attLogs[h] = &attSubmitted{data, []types.ValidatorIndex{}, []types.ValidatorIndex{}}
 	}
-	v.attLogs[h] = &attSubmitted{data, append(v.attLogs[h].attesterIndices, index), []uint64{}}
+	v.attLogs[h] = &attSubmitted{data, append(v.attLogs[h].attesterIndices, index), []types.ValidatorIndex{}}
 
 	return nil
 }

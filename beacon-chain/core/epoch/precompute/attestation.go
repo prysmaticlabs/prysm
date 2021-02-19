@@ -147,7 +147,7 @@ func UpdateValidator(vp []*Validator, record *Validator, indices []uint64, a *pb
 			if inclusionSlot < vp[i].InclusionSlot {
 				vp[i].InclusionSlot = aSlot + a.InclusionDelay
 				vp[i].InclusionDistance = a.InclusionDelay
-				vp[i].ProposerIndex = a.ProposerIndex
+				vp[i].ProposerIndex = uint64(a.ProposerIndex)
 			}
 		}
 		if record.IsPrevEpochTargetAttester {

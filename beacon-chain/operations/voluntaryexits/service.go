@@ -69,7 +69,7 @@ func (p *Pool) InsertVoluntaryExit(ctx context.Context, state *beaconstate.Beaco
 		return
 	}
 
-	existsInPending, index := existsInList(p.pending, exit.Exit.ValidatorIndex)
+	existsInPending, index := existsInList(p.pending, uint64(exit.Exit.ValidatorIndex))
 	// If the item exists in the pending list and includes a more favorable, earlier
 	// exit epoch, we replace it in the pending list. If it exists but the prior condition is false,
 	// we simply return.
@@ -99,7 +99,7 @@ func (p *Pool) InsertVoluntaryExit(ctx context.Context, state *beaconstate.Beaco
 func (p *Pool) MarkIncluded(exit *ethpb.SignedVoluntaryExit) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	exists, index := existsInList(p.pending, exit.Exit.ValidatorIndex)
+	exists, index := existsInList(p.pending, uint64(exit.Exit.ValidatorIndex))
 	if exists {
 		// Exit we want is present at p.pending[index], so we remove it.
 		p.pending = append(p.pending[:index], p.pending[index+1:]...)
@@ -109,9 +109,9 @@ func (p *Pool) MarkIncluded(exit *ethpb.SignedVoluntaryExit) {
 // Binary search to check if the index exists in the list of pending exits.
 func existsInList(pending []*ethpb.SignedVoluntaryExit, searchingFor uint64) (bool, int) {
 	i := sort.Search(len(pending), func(j int) bool {
-		return pending[j].Exit.ValidatorIndex >= searchingFor
+		return uint64(pending[j].Exit.ValidatorIndex) >= searchingFor
 	})
-	if i < len(pending) && pending[i].Exit.ValidatorIndex == searchingFor {
+	if i < len(pending) && uint64(pending[i].Exit.ValidatorIndex) == searchingFor {
 		return true, i
 	}
 	return false, -1

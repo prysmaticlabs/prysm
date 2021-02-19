@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -17,7 +18,7 @@ import (
 )
 
 var errPubkeyDoesNotExist = errors.New("pubkey does not exist")
-var nonExistentIndex = ^uint64(0)
+var nonExistentIndex = types.ValidatorIndex(^uint64(0))
 
 // ValidatorStatus returns the validator status of the current epoch.
 // The status response can be one of the following:
@@ -67,7 +68,7 @@ func (vs *Server) MultipleValidatorStatus(
 	}
 	// Convert indices to public keys.
 	for _, idx := range req.Indices {
-		pubkeyBytes := headState.PubkeyAtIndex(uint64(idx))
+		pubkeyBytes := headState.PubkeyAtIndex(types.ValidatorIndex(idx))
 		if !filtered[pubkeyBytes] {
 			pubKeys = append(pubKeys, pubkeyBytes[:])
 			filtered[pubkeyBytes] = true
@@ -75,7 +76,7 @@ func (vs *Server) MultipleValidatorStatus(
 	}
 	// Fetch statuses from beacon state.
 	statuses := make([]*ethpb.ValidatorStatusResponse, len(pubKeys))
-	indices := make([]uint64, len(pubKeys))
+	indices := make([]types.ValidatorIndex, len(pubKeys))
 	for i, pubKey := range pubKeys {
 		statuses[i], indices[i] = vs.validatorStatus(ctx, headState, pubKey)
 	}
@@ -126,7 +127,7 @@ func (vs *Server) validatorStatus(
 	ctx context.Context,
 	headState *stateTrie.BeaconState,
 	pubKey []byte,
-) (*ethpb.ValidatorStatusResponse, uint64) {
+) (*ethpb.ValidatorStatusResponse, types.ValidatorIndex) {
 	ctx, span := trace.StartSpan(ctx, "ValidatorServer.validatorStatus")
 	defer span.End()
 
@@ -196,20 +197,20 @@ func (vs *Server) validatorStatus(
 			}
 		}
 
-		var lastActivatedValidatorIdx uint64
+		var lastActivatedValidatorIdx types.ValidatorIndex
 		for j := headState.NumValidators() - 1; j >= 0; j-- {
-			val, err := headState.ValidatorAtIndexReadOnly(uint64(j))
+			val, err := headState.ValidatorAtIndexReadOnly(types.ValidatorIndex(j))
 			if err != nil {
 				return resp, idx
 			}
 			if helpers.IsActiveValidatorUsingTrie(val, helpers.CurrentEpoch(headState)) {
-				lastActivatedValidatorIdx = uint64(j)
+				lastActivatedValidatorIdx = types.ValidatorIndex(j)
 				break
 			}
 		}
 		// Our position in the activation queue is the above index - our validator index.
 		if lastActivatedValidatorIdx < idx {
-			resp.PositionInActivationQueue = idx - lastActivatedValidatorIdx
+			resp.PositionInActivationQueue = uint64(idx - lastActivatedValidatorIdx)
 		}
 		return resp, idx
 	default:
@@ -217,18 +218,18 @@ func (vs *Server) validatorStatus(
 	}
 }
 
-func statusForPubKey(headState *stateTrie.BeaconState, pubKey []byte) (ethpb.ValidatorStatus, uint64, error) {
+func statusForPubKey(headState *stateTrie.BeaconState, pubKey []byte) (ethpb.ValidatorStatus, types.ValidatorIndex, error) {
 	if headState == nil {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS, 0, errors.New("head state does not exist")
 	}
 	idx, ok := headState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
-	if !ok || idx >= uint64(headState.NumValidators()) {
+	if !ok || uint64(idx) >= uint64(headState.NumValidators()) {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS, 0, errPubkeyDoesNotExist
 	}
 	return assignmentStatus(headState, idx), idx, nil
 }
 
-func assignmentStatus(beaconState *stateTrie.BeaconState, validatorIdx uint64) ethpb.ValidatorStatus {
+func assignmentStatus(beaconState *stateTrie.BeaconState, validatorIdx types.ValidatorIndex) ethpb.ValidatorStatus {
 	validator, err := beaconState.ValidatorAtIndexReadOnly(validatorIdx)
 	if err != nil {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS

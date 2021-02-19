@@ -28,7 +28,7 @@ func unmarshalBlockHeader(ctx context.Context, enc []byte) (*ethpb.SignedBeaconB
 
 // BlockHeaders accepts an slot and validator id and returns the corresponding block header array.
 // Returns nil if the block header for those values does not exist.
-func (s *Store) BlockHeaders(ctx context.Context, slot types.Slot, validatorID uint64) ([]*ethpb.SignedBeaconBlockHeader, error) {
+func (s *Store) BlockHeaders(ctx context.Context, slot types.Slot, validatorID types.ValidatorIndex) ([]*ethpb.SignedBeaconBlockHeader, error) {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.BlockHeaders")
 	defer span.End()
 	var blockHeaders []*ethpb.SignedBeaconBlockHeader
@@ -48,7 +48,7 @@ func (s *Store) BlockHeaders(ctx context.Context, slot types.Slot, validatorID u
 }
 
 // HasBlockHeader accepts a slot and validator id and returns true if the block header exists.
-func (s *Store) HasBlockHeader(ctx context.Context, slot types.Slot, validatorID uint64) bool {
+func (s *Store) HasBlockHeader(ctx context.Context, slot types.Slot, validatorID types.ValidatorIndex) bool {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.HasBlockHeader")
 	defer span.End()
 	prefix := encodeSlotValidatorID(slot, validatorID)

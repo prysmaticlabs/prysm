@@ -202,19 +202,19 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk *ethpb.SignedBeac
 }
 
 // Returns true if the block is not the first block proposed for the proposer for the slot.
-func (s *Service) hasSeenBlockIndexSlot(slot types.Slot, proposerIdx uint64) bool {
+func (s *Service) hasSeenBlockIndexSlot(slot types.Slot, proposerIdx types.ValidatorIndex) bool {
 	s.seenBlockLock.RLock()
 	defer s.seenBlockLock.RUnlock()
-	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(proposerIdx)...)
+	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(uint64(proposerIdx))...)
 	_, seen := s.seenBlockCache.Get(string(b))
 	return seen
 }
 
 // Set block proposer index and slot as seen for incoming blocks.
-func (s *Service) setSeenBlockIndexSlot(slot types.Slot, proposerIdx uint64) {
+func (s *Service) setSeenBlockIndexSlot(slot types.Slot, proposerIdx types.ValidatorIndex) {
 	s.seenBlockLock.Lock()
 	defer s.seenBlockLock.Unlock()
-	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(proposerIdx)...)
+	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(uint64(proposerIdx))...)
 	s.seenBlockCache.Add(string(b), true)
 }
 

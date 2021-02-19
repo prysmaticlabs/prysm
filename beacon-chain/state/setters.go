@@ -341,11 +341,11 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator
 
 // UpdateValidatorAtIndex for the beacon state. Updates the validator
 // at a specific index to a new value.
-func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) error {
+func (b *BeaconState) UpdateValidatorAtIndex(idx types.ValidatorIndex, val *ethpb.Validator) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
-	if uint64(len(b.state.Validators)) <= idx {
+	if uint64(len(b.state.Validators)) <= uint64(idx) {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
 	b.lock.Lock()
@@ -361,14 +361,14 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 	v[idx] = val
 	b.state.Validators = v
 	b.markFieldAsDirty(validators)
-	b.addDirtyIndices(validators, []uint64{idx})
+	b.addDirtyIndices(validators, []uint64{uint64(idx)})
 
 	return nil
 }
 
 // SetValidatorIndexByPubkey updates the validator index mapping maintained internally to
 // a given input 48-byte, public key.
-func (b *BeaconState) SetValidatorIndexByPubkey(pubKey [48]byte, validatorIdx uint64) {
+func (b *BeaconState) SetValidatorIndexByPubkey(pubKey [48]byte, validatorIdx types.ValidatorIndex) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -399,11 +399,11 @@ func (b *BeaconState) SetBalances(val []uint64) error {
 
 // UpdateBalancesAtIndex for the beacon state. This method updates the balance
 // at a specific index to a new value.
-func (b *BeaconState) UpdateBalancesAtIndex(idx, val uint64) error {
+func (b *BeaconState) UpdateBalancesAtIndex(idx types.ValidatorIndex, val uint64) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
-	if uint64(len(b.state.Balances)) <= idx {
+	if uint64(len(b.state.Balances)) <= uint64(idx) {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
 	b.lock.Lock()
@@ -637,7 +637,7 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 
 	// append validator to slice
 	b.state.Validators = append(vals, val)
-	valIdx := uint64(len(b.state.Validators) - 1)
+	valIdx := types.ValidatorIndex(len(b.state.Validators) - 1)
 
 	// Copy if this is a shared validator map
 	if ref := b.valMapHandler.mapRef; ref.Refs() > 1 {
@@ -648,7 +648,7 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 	b.valMapHandler.valIdxMap[bytesutil.ToBytes48(val.PublicKey)] = valIdx
 
 	b.markFieldAsDirty(validators)
-	b.addDirtyIndices(validators, []uint64{valIdx})
+	b.addDirtyIndices(validators, []uint64{uint64(valIdx)})
 	return nil
 }
 

@@ -24,8 +24,8 @@ type ReadOnlyDatabase interface {
 	GetLatestEpochDetected(ctx context.Context) (types.Epoch, error)
 
 	// BlockHeader related methods.
-	BlockHeaders(ctx context.Context, slot types.Slot, validatorID uint64) ([]*ethpb.SignedBeaconBlockHeader, error)
-	HasBlockHeader(ctx context.Context, slot types.Slot, validatorID uint64) bool
+	BlockHeaders(ctx context.Context, slot types.Slot, validatorID types.ValidatorIndex) ([]*ethpb.SignedBeaconBlockHeader, error)
+	HasBlockHeader(ctx context.Context, slot types.Slot, validatorID types.ValidatorIndex) bool
 
 	// IndexedAttestations related methods.
 	HasIndexedAttestation(ctx context.Context, att *ethpb.IndexedAttestation) (bool, error)
@@ -44,7 +44,7 @@ type ReadOnlyDatabase interface {
 	HasProposerSlashing(ctx context.Context, slashing *ethpb.ProposerSlashing) (bool, dbtypes.SlashingStatus, error)
 
 	// Validator Index -> Pubkey related methods.
-	ValidatorPubKey(ctx context.Context, validatorID uint64) ([]byte, error)
+	ValidatorPubKey(ctx context.Context, validatorID types.ValidatorIndex) ([]byte, error)
 
 	// Chain data related methods.
 	ChainHead(ctx context.Context) (*ethpb.ChainHead, error)
@@ -83,8 +83,8 @@ type WriteAccessDatabase interface {
 	SaveProposerSlashings(ctx context.Context, status dbtypes.SlashingStatus, slashings []*ethpb.ProposerSlashing) error
 
 	// Validator Index -> Pubkey related methods.
-	SavePubKey(ctx context.Context, validatorID uint64, pubKey []byte) error
-	DeletePubKey(ctx context.Context, validatorID uint64) error
+	SavePubKey(ctx context.Context, validatorID types.ValidatorIndex, pubKey []byte) error
+	DeletePubKey(ctx context.Context, validatorID types.ValidatorIndex) error
 
 	// Chain data related methods.
 	SaveChainHead(ctx context.Context, head *ethpb.ChainHead) error
@@ -107,6 +107,6 @@ type Database interface {
 
 // EpochSpansStore represents a data access layer for marshaling and unmarshaling validator spans for each validator per epoch.
 type EpochSpansStore interface {
-	SetValidatorSpan(ctx context.Context, idx uint64, newSpan slashertypes.Span) error
-	GetValidatorSpan(ctx context.Context, idx uint64) (slashertypes.Span, error)
+	SetValidatorSpan(ctx context.Context, idx types.ValidatorIndex, newSpan slashertypes.Span) error
+	GetValidatorSpan(ctx context.Context, idx types.ValidatorIndex) (slashertypes.Span, error)
 }

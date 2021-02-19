@@ -3,13 +3,14 @@ package graffiti
 import (
 	"io/ioutil"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	"gopkg.in/yaml.v2"
 )
 
 type Graffiti struct {
-	Default  string            `yaml:"default,omitempty"`
-	Random   []string          `yaml:"random,omitempty"`
-	Specific map[uint64]string `yaml:"specific,omitempty"`
+	Default  string                          `yaml:"default,omitempty"`
+	Random   []string                        `yaml:"random,omitempty"`
+	Specific map[types.ValidatorIndex]string `yaml:"specific,omitempty"`
 }
 
 // ParseGraffitiFile parses the graffiti file and returns the graffiti struct.
