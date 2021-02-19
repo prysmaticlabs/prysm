@@ -91,6 +91,7 @@ func (s *Service) checkDoubleVotes(
 ) ([]*slashertypes.Slashing, error) {
 	// We check if there are any slashable double votes in the input list
 	// of attestations with respect to each other.
+	slashings := make([]*slashertypes.Slashing, 0)
 	existingAtts := make(map[string][32]byte)
 	for _, att := range attestations {
 		for _, valIdx := range att.AttestingIndices {
@@ -101,7 +102,7 @@ func (s *Service) checkDoubleVotes(
 				continue
 			}
 			if slashutil.SigningRootsDiffer(att.SigningRoot, existingSigningRoot) {
-				logSlashingEvent(&slashertypes.Slashing{
+				slashings = append(slashings, &slashertypes.Slashing{
 					Kind:            slashertypes.DoubleVote,
 					ValidatorIndex:  types.ValidatorIndex(valIdx),
 					TargetEpoch:     att.Target,
@@ -114,7 +115,11 @@ func (s *Service) checkDoubleVotes(
 
 	// We check if there are any slashable double votes in the input list
 	// of attestations with respect to our database.
-	return s.checkDoubleVotesOnDisk(ctx, attestations)
+	moreSlashings, err := s.checkDoubleVotesOnDisk(ctx, attestations)
+	if err != nil {
+		return nil, err
+	}
+	return append(slashings, moreSlashings...), nil
 }
 
 // Check for double votes in our database given a list of incoming attestations.
