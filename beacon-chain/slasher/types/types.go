@@ -20,6 +20,14 @@ type CompactAttestation struct {
 	SigningRoot      [32]byte
 }
 
+// AttesterDoubleVote --
+type AttesterDoubleVote struct {
+	ValidatorIndex  types.ValidatorIndex
+	Target          types.Epoch
+	SigningRoot     [32]byte
+	PrevSigningRoot [32]byte
+}
+
 // AttestedEpochForValidator encapsulates a previously attested epoch
 // for a validator index.
 type AttestedEpochForValidator struct {
@@ -45,6 +53,7 @@ type Slashing struct {
 	SourceEpoch     types.Epoch
 	TargetEpoch     types.Epoch
 	SigningRoot     [32]byte
+	PrevSigningRoot [32]byte
 	Slot            uint64
 }
 

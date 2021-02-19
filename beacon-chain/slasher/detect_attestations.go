@@ -88,30 +88,23 @@ func (s *Service) detectSlashableAttestations(
 func (s *Service) checkDoubleVotes(
 	ctx context.Context, attestations []*slashertypes.CompactAttestation,
 ) ([]*slashertypes.Slashing, error) {
-	slashings := make([]*slashertypes.Slashing, 0)
-	for _, att := range attestations {
-		// Check if there exist records for the validators at a specified target epoch.
-		// If there are not, update the target epoch as attested for the validators
-		// in the attesting indices.
-		recordsExist, err := s.serviceCfg.Database.CheckAndUpdateAttestationRecordForValidators(
-			ctx, att,
-		)
-		if err != nil {
-			return nil, err
-		}
-		for i := 0; i < len(recordsExist); i++ {
-			if recordsExist[i] {
-				validatorIdx := types.ValidatorIndex(att.AttestingIndices[i])
-				slashings = append(slashings, &slashertypes.Slashing{
-					Kind:           slashertypes.DoubleVote,
-					ValidatorIndex: validatorIdx,
-					TargetEpoch:    types.Epoch(att.Target),
-					SigningRoot:    att.SigningRoot,
-				})
-			}
-		}
+	doubleVotes, err := s.serviceCfg.Database.CheckDoubleAttesterVotes(
+		ctx, attestations,
+	)
+	if err != nil {
+		return nil, err
 	}
-	return slashings, nil
+	doubleVoteSlashings := make([]*slashertypes.Slashing, 0)
+	for _, doubleVote := range doubleVotes {
+		doubleVoteSlashings = append(doubleVoteSlashings, &slashertypes.Slashing{
+			Kind:            slashertypes.DoubleVote,
+			ValidatorIndex:  doubleVote.ValidatorIndex,
+			TargetEpoch:     doubleVote.Target,
+			SigningRoot:     doubleVote.SigningRoot,
+			PrevSigningRoot: doubleVote.PrevSigningRoot,
+		})
+	}
+	return doubleVoteSlashings, nil
 }
 
 // Updates spans and detects any slashable attester offenses along the way.
