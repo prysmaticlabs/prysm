@@ -10,7 +10,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/go-yaml/yaml"
 	types "github.com/prysmaticlabs/eth2-types"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"

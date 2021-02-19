@@ -3,6 +3,8 @@
 // This file is used in fuzzer builds to bypass proposer indices caches.
 package cache
 
+import types "github.com/prysmaticlabs/eth2-types"
+
 // FakeProposerIndicesCache is a struct with 1 queue for looking up proposer indices by root.
 type FakeProposerIndicesCache struct {
 }
