@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
+
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -69,7 +71,7 @@ specific:
 	require.NoError(t, err)
 
 	wanted := &Graffiti{
-		Specific: map[uint64]string{
+		Specific: map[types.ValidatorIndex]string{
 			1234:   "Yolo",
 			555:    "What's up",
 			703727: "Meow",
@@ -107,7 +109,7 @@ specific:
 			"Mr B was here",
 			"Mr C was here",
 		},
-		Specific: map[uint64]string{
+		Specific: map[types.ValidatorIndex]string{
 			1234:   "Yolo",
 			555:    "What's up",
 			703727: "Meow",

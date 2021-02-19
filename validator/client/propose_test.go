@@ -11,6 +11,7 @@ import (
 	"github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	lru "github.com/hashicorp/golang-lru"
+	ethTypes "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -680,7 +681,7 @@ func TestGetGraffiti_Ok(t *testing.T) {
 				graffitiStruct: &graffiti.Graffiti{
 					Default: "c",
 					Random:  []string{"d", "e"},
-					Specific: map[uint64]string{
+					Specific: map[ethTypes.ValidatorIndex]string{
 						1: "f",
 						2: "g",
 					},
@@ -713,7 +714,7 @@ func TestGetGraffiti_Ok(t *testing.T) {
 				graffitiStruct: &graffiti.Graffiti{
 					Random:  []string{"d"},
 					Default: "c",
-					Specific: map[uint64]string{
+					Specific: map[ethTypes.ValidatorIndex]string{
 						1: "f",
 						2: "g",
 					},

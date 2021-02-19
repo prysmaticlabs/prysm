@@ -3,6 +3,8 @@ package stateutil_test
 import (
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
+
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -92,8 +94,8 @@ func TestRecomputeFromLayer_VariableSizedArray(t *testing.T) {
 	val2.ExitEpoch = 40
 
 	changedVals := []*ethpb.Validator{val1, val2}
-	require.NoError(t, newState.UpdateValidatorAtIndex(changedIdx[0], changedVals[0]))
-	require.NoError(t, newState.UpdateValidatorAtIndex(changedIdx[1], changedVals[1]))
+	require.NoError(t, newState.UpdateValidatorAtIndex(types.ValidatorIndex(changedIdx[0]), changedVals[0]))
+	require.NoError(t, newState.UpdateValidatorAtIndex(types.ValidatorIndex(changedIdx[1]), changedVals[1]))
 
 	expectedRoot, err := stateutil.ValidatorRegistryRoot(newState.Validators())
 	require.NoError(t, err)

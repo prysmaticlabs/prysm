@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -54,7 +55,7 @@ func TestService_RequestValidator(t *testing.T) {
 	).Return(wanted2, nil)
 
 	// We request public key of validator id 0,1.
-	res, err := bs.FindOrGetPublicKeys(context.Background(), []uint64{0, 1})
+	res, err := bs.FindOrGetPublicKeys(context.Background(), []types.ValidatorIndex{0, 1})
 	require.NoError(t, err)
 	for i, v := range wanted.ValidatorList {
 		assert.DeepEqual(t, wanted.ValidatorList[i].Validator.PublicKey, res[v.Index])
@@ -63,7 +64,7 @@ func TestService_RequestValidator(t *testing.T) {
 	require.LogsContain(t, hook, "Retrieved validators id public key map:")
 	require.LogsDoNotContain(t, hook, "Retrieved validators public keys from cache:")
 	// We expect public key of validator id 0 to be in cache.
-	res, err = bs.FindOrGetPublicKeys(context.Background(), []uint64{0, 3})
+	res, err = bs.FindOrGetPublicKeys(context.Background(), []types.ValidatorIndex{0, 3})
 	require.NoError(t, err)
 
 	for i, v := range wanted2.ValidatorList {

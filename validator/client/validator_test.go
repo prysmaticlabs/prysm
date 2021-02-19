@@ -473,7 +473,7 @@ func TestUpdateDuties_DoesNothingWhenNotEpochStart_AlreadyExistingAssignments(t 
 		duties: &ethpb.DutiesResponse{
 			Duties: []*ethpb.DutiesResponse_Duty{
 				{
-					Committee:      []uint64{},
+					Committee:      []types.ValidatorIndex{},
 					AttesterSlot:   10,
 					CommitteeIndex: 20,
 				},
@@ -546,7 +546,7 @@ func TestUpdateDuties_OK(t *testing.T) {
 				AttesterSlot:   params.BeaconConfig().SlotsPerEpoch,
 				ValidatorIndex: 200,
 				CommitteeIndex: 100,
-				Committee:      []uint64{0, 1, 2, 3},
+				Committee:      []types.ValidatorIndex{0, 1, 2, 3},
 				PublicKey:      []byte("testPubKey_1"),
 				ProposerSlots:  []types.Slot{params.BeaconConfig().SlotsPerEpoch + 1},
 			},
@@ -688,7 +688,7 @@ func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
 }
 
 func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
-	nonexistentIndex := ^uint64(0)
+	nonexistentIndex := types.ValidatorIndex(^uint64(0))
 	type statusTest struct {
 		name   string
 		status *ethpb.ValidatorActivationResponse_Status
