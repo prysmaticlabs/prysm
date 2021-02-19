@@ -51,9 +51,7 @@ func (s *Service) checkDoubleProposalsOnDisk(
 		logDoubleProposal(proposedBlocks[i], doubleProposal.ExistingSigningRoot)
 		// If a proposer is found to have committed a slashable offense, we delete
 		// them from the safe proposers map.
-		if _, ok := safeProposers[doubleProposal.ProposerIndex]; ok {
-			delete(safeProposers, doubleProposal.ProposerIndex)
-		}
+		delete(safeProposers, doubleProposal.ProposerIndex)
 	}
 	// We save all the proposals that are determined "safe" and not-slashable to our database.
 	safeProposals := make([]*slashertypes.CompactBeaconBlock, 0, len(safeProposers))
