@@ -306,10 +306,9 @@ func (e Exporter) SaveLatestEpochAttestedForValidators(
 // SaveAttestationRecordForValidator -- passthrough
 func (e Exporter) SaveAttestationRecordsForValidators(
 	ctx context.Context,
-	validatorIndices []types.ValidatorIndex,
 	attestations []*slashertypes.CompactAttestation,
 ) error {
-	return e.db.SaveAttestationRecordsForValidators(ctx, validatorIndices, attestations)
+	return e.db.SaveAttestationRecordsForValidators(ctx, attestations)
 }
 
 // SaveSlasherChunks -- passthrough
