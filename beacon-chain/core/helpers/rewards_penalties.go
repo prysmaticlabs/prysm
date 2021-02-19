@@ -2,7 +2,6 @@ package helpers
 
 import (
 	types "github.com/prysmaticlabs/eth2-types"
-
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
