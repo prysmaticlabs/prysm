@@ -21,6 +21,7 @@ type ServiceConfig struct {
 	IndexedAttsFeed  *event.Feed
 	BeaconBlocksFeed *event.Feed
 	Database         db.Database
+	GenesisTime      time.Time
 }
 
 // Service defining a slasher implementation as part of
@@ -51,13 +52,14 @@ func New(ctx context.Context, srvCfg *ServiceConfig) (*Service, error) {
 		beaconBlocksQueue: make([]*slashertypes.CompactBeaconBlock, 0),
 		ctx:               ctx,
 		cancel:            cancel,
-		genesisTime:       time.Now(),
+		genesisTime:       srvCfg.GenesisTime,
 	}, nil
 }
 
 // Start listening for received indexed attestations and blocks
 // and perform slashing detection on them.
 func (s *Service) Start() {
+	log.Info("Starting slasher")
 	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * uint64(params.BeaconConfig().SlotsPerEpoch)
 	ticker := slotutil.NewEpochTicker(s.genesisTime, secondsPerEpoch)
 	defer ticker.Done()

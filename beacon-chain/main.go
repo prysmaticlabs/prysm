@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/node"
+	beaconslasher "github.com/prysmaticlabs/prysm/beacon-chain/slasher/simulator"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -123,6 +124,7 @@ func main() {
 	app.Version = version.Version()
 	app.Commands = []*cli.Command{
 		db.DatabaseCommands,
+		beaconslasher.SlasherCommands,
 	}
 
 	app.Flags = appFlags
