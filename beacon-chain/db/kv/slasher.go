@@ -8,11 +8,10 @@ import (
 
 	ssz "github.com/ferranbt/fastssz"
 	types "github.com/prysmaticlabs/eth2-types"
-	bolt "go.etcd.io/bbolt"
-	"go.opencensus.io/trace"
-
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	bolt "go.etcd.io/bbolt"
+	"go.opencensus.io/trace"
 )
 
 // LatestEpochAttestedForValidator given a validator index returns the latest
