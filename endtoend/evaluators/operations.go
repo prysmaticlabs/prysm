@@ -24,7 +24,7 @@ import (
 
 // exitedIndice holds the exited indice from ProposeVoluntaryExit in memory so other functions don't confuse it
 // for a normal validator.
-var exitedIndice uint64
+var exitedIndice types.ValidatorIndex
 
 // valExited is used to know if exitedIndice is set, since default value is 0.
 var valExited bool
@@ -274,7 +274,7 @@ func proposeVoluntaryExit(conns ...*grpc.ClientConn) error {
 		return err
 	}
 
-	exitedIndice = rand.Uint64() % params.BeaconConfig().MinGenesisActiveValidatorCount
+	exitedIndice = types.ValidatorIndex(rand.Uint64() % params.BeaconConfig().MinGenesisActiveValidatorCount)
 	valExited = true
 
 	voluntaryExit := &eth.VoluntaryExit{

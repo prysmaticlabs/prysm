@@ -72,7 +72,7 @@ func validatorsLoseBalance(conns ...*grpc.ClientConn) error {
 	for i, indice := range slashedIndices {
 		req := &eth.GetValidatorRequest{
 			QueryFilter: &eth.GetValidatorRequest_Index{
-				Index: indice,
+				Index: ethTypes.ValidatorIndex(indice),
 			},
 		}
 		valResp, err := client.GetValidator(ctx, req)
@@ -123,7 +123,7 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 	}
 
 	var committeeIndex ethTypes.CommitteeIndex
-	var committee []uint64
+	var committee []ethTypes.ValidatorIndex
 	for _, duty := range duties.Duties {
 		if duty.AttesterSlot == chainHead.HeadSlot-1 {
 			committeeIndex = duty.CommitteeIndex
@@ -159,7 +159,7 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 
 	valsToSlash := uint64(2)
 	for i := uint64(0); i < valsToSlash && i < uint64(len(committee)); i++ {
-		if len(sliceutil.IntersectionUint64(slashedIndices, []uint64{committee[i]})) > 0 {
+		if len(sliceutil.IntersectionUint64(slashedIndices, []uint64{uint64(committee[i])})) > 0 {
 			valsToSlash++
 			continue
 		}
@@ -178,7 +178,7 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 		if _, err = client.ProposeAttestation(ctx, att); err != nil {
 			return errors.Wrap(err, "could not propose attestation")
 		}
-		slashedIndices = append(slashedIndices, committee[i])
+		slashedIndices = append(slashedIndices, uint64(committee[i]))
 	}
 	return nil
 }
@@ -210,10 +210,10 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 		return errors.Wrap(err, "could not get duties")
 	}
 
-	var proposerIndex uint64
+	var proposerIndex ethTypes.ValidatorIndex
 	for i, duty := range duties.CurrentEpochDuties {
 		if sliceutil.IsInSlots(chainHead.HeadSlot-1, duty.ProposerSlots) {
-			proposerIndex = uint64(i)
+			proposerIndex = ethTypes.ValidatorIndex(i)
 			break
 		}
 	}
@@ -264,6 +264,6 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 	if _, err = client.ProposeBlock(ctx, signedBlk); err == nil {
 		return errors.New("expected block to fail processing")
 	}
-	slashedIndices = append(slashedIndices, proposerIndex)
+	slashedIndices = append(slashedIndices, uint64(proposerIndex))
 	return nil
 }

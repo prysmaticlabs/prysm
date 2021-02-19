@@ -19,7 +19,7 @@ func (c *FakeProposerIndicesCache) AddProposerIndices(p *ProposerIndices) error 
 }
 
 // ProposerIndices returns the proposer indices of a block root seed.
-func (c *FakeProposerIndicesCache) ProposerIndices(r [32]byte) ([]uint64, error) {
+func (c *FakeProposerIndicesCache) ProposerIndices(r [32]byte) ([]types.ValidatorIndex, error) {
 	return nil, nil
 }
 
