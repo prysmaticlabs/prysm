@@ -90,6 +90,12 @@ func (s *Service) checkDoubleVotes(
 ) ([]*slashertypes.Slashing, error) {
 	// TODO(#8533): Check if there are any double votes with respect to each other.
 
+	return s.checkDoubleVotesOnDisk(ctx, attestations)
+}
+
+func (s *Service) checkDoubleVotesOnDisk(
+	ctx context.Context, attestations []*slashertypes.CompactAttestation,
+) ([]*slashertypes.Slashing, error) {
 	// Check if there are any double votes with respect to the database.
 	doubleVotes, err := s.serviceCfg.Database.CheckAttesterDoubleVotes(
 		ctx, attestations,
