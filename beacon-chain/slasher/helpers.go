@@ -51,9 +51,10 @@ func logSlashingEvent(slashing *slashertypes.Slashing) {
 	switch slashing.Kind {
 	case slashertypes.DoubleVote:
 		log.WithFields(logrus.Fields{
-			"validatorIndex": slashing.ValidatorIndex,
-			"targetEpoch":    slashing.TargetEpoch,
-			"signingRoot":    fmt.Sprintf("%#x", slashing.SigningRoot),
+			"validatorIndex":  slashing.ValidatorIndex,
+			"targetEpoch":     slashing.TargetEpoch,
+			"signingRoot":     fmt.Sprintf("%#x", slashing.SigningRoot),
+			"prevSigningRoot": fmt.Sprintf("%#x", slashing.PrevSigningRoot),
 		}).Info("Attester double vote slashing")
 	case slashertypes.SurroundingVote:
 		log.WithFields(logrus.Fields{

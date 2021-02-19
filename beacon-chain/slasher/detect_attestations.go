@@ -6,7 +6,6 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
-	"github.com/prysmaticlabs/prysm/shared/slashutil"
 )
 
 // A struct encapsulating input arguments to
@@ -101,7 +100,7 @@ func (s *Service) checkDoubleVotes(
 				existingAtts[key] = att.SigningRoot
 				continue
 			}
-			if slashutil.SigningRootsDiffer(att.SigningRoot, existingSigningRoot) {
+			if att.SigningRoot != existingSigningRoot {
 				slashings = append(slashings, &slashertypes.Slashing{
 					Kind:            slashertypes.DoubleVote,
 					ValidatorIndex:  types.ValidatorIndex(valIdx),
