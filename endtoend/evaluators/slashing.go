@@ -69,10 +69,10 @@ func validatorsLoseBalance(conns ...*grpc.ClientConn) error {
 	ctx := context.Background()
 	client := eth.NewBeaconChainClient(conn)
 
-	for i, indice := range slashedIndices {
+	for i, slashedIndex := range slashedIndices {
 		req := &eth.GetValidatorRequest{
 			QueryFilter: &eth.GetValidatorRequest_Index{
-				Index: ethTypes.ValidatorIndex(indice),
+				Index: ethTypes.ValidatorIndex(slashedIndex),
 			},
 		}
 		valResp, err := client.GetValidator(ctx, req)
