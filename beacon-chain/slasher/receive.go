@@ -4,6 +4,7 @@ import (
 	"context"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/sirupsen/logrus"
 )
@@ -68,14 +69,15 @@ func (s *Service) receiveBlocks(ctx context.Context) {
 // these attestations from a queue, then group them all by validator chunk index.
 // This grouping will allow us to perform detection on batches of attestations
 // per validator chunk index which can be done concurrently.
-func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-chan types.Epoch) {
+func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-chan types.Slot) {
 	for {
 		select {
-		case currentEpoch := <-epochTicker:
+		case currentSlot := <-slotTicker:
 			s.attestationQueueLock.Lock()
 			attestations := s.attestationQueue
 			s.attestationQueue = make([]*slashertypes.CompactAttestation, 0)
 			s.attestationQueueLock.Unlock()
+			currentEpoch := helpers.SlotToEpoch(currentSlot)
 			log.WithFields(logrus.Fields{
 				"currentEpoch": currentEpoch,
 				"numAtts":      len(attestations),
@@ -107,14 +109,15 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 
 // Process queued blocks every time an epoch ticker fires. We retrieve
 // these blocks from a queue, then perform double proposal detection.
-func (s *Service) processQueuedBlocks(ctx context.Context, epochTicker <-chan types.Epoch) {
+func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan types.Slot) {
 	for {
 		select {
-		case currentEpoch := <-epochTicker:
+		case currentSlot := <-slotTicker:
 			s.blockQueueLock.Lock()
 			blocks := s.beaconBlocksQueue
 			s.beaconBlocksQueue = make([]*slashertypes.CompactBeaconBlock, 0)
 			s.blockQueueLock.Unlock()
+			currentEpoch := helpers.SlotToEpoch(currentSlot)
 			log.WithFields(logrus.Fields{
 				"currentEpoch": currentEpoch,
 				"numBlocks":    len(blocks),

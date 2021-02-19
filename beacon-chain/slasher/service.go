@@ -60,8 +60,7 @@ func New(ctx context.Context, srvCfg *ServiceConfig) (*Service, error) {
 // and perform slashing detection on them.
 func (s *Service) Start() {
 	log.Info("Starting slasher")
-	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * uint64(params.BeaconConfig().SlotsPerEpoch)
-	ticker := slotutil.NewEpochTicker(s.genesisTime, secondsPerEpoch)
+	ticker := slotutil.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
 	defer ticker.Done()
 	go s.processQueuedAttestations(s.ctx, ticker.C())
 	go s.processQueuedBlocks(s.ctx, ticker.C())

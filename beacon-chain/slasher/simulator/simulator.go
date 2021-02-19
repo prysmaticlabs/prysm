@@ -8,6 +8,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/slasher"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 )
 
 type Parameters struct {
@@ -23,6 +25,7 @@ type Simulator struct {
 	params           *Parameters
 	indexedAttsFeed  *event.Feed
 	beaconBlocksFeed *event.Feed
+	genesisTime      time.Time
 }
 
 func DefaultParams() *Parameters {
@@ -36,11 +39,12 @@ func DefaultParams() *Parameters {
 func New(ctx context.Context, beaconDB db.Database) (*Simulator, error) {
 	indexedAttsFeed := new(event.Feed)
 	beaconBlocksFeed := new(event.Feed)
+	genesisTime := time.Now()
 	slasherSrv, err := slasher.New(ctx, &slasher.ServiceConfig{
 		IndexedAttsFeed:  indexedAttsFeed,
 		BeaconBlocksFeed: beaconBlocksFeed,
 		Database:         beaconDB,
-		GenesisTime:      time.Now(),
+		GenesisTime:      genesisTime,
 	})
 	if err != nil {
 		return nil, err
@@ -51,6 +55,7 @@ func New(ctx context.Context, beaconDB db.Database) (*Simulator, error) {
 		params:           DefaultParams(),
 		indexedAttsFeed:  indexedAttsFeed,
 		beaconBlocksFeed: beaconBlocksFeed,
+		genesisTime:      genesisTime,
 	}, nil
 }
 
@@ -65,11 +70,11 @@ func (s *Simulator) Stop() error {
 }
 
 func (s *Simulator) simulateBlockProposals(ctx context.Context) {
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
+	ticker := slotutil.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
+	defer ticker.Done()
 	for {
 		select {
-		case <-ticker.C:
+		case <-ticker.C():
 			log.Info("Producing block")
 			s.beaconBlocksFeed.Send(&ethpb.BeaconBlockHeader{
 				Slot:          1,
@@ -82,11 +87,11 @@ func (s *Simulator) simulateBlockProposals(ctx context.Context) {
 }
 
 func (s *Simulator) simulateAttestations(ctx context.Context) {
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
+	ticker := slotutil.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
+	defer ticker.Done()
 	for {
 		select {
-		case <-ticker.C:
+		case <-ticker.C():
 			log.Info("Producing att")
 			s.indexedAttsFeed.Send(&ethpb.IndexedAttestation{
 				AttestingIndices: []uint64{1, 2, 3},
