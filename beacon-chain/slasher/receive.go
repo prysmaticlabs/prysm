@@ -49,7 +49,7 @@ func (s *Service) receiveBlocks(ctx context.Context) {
 		case blockHeader := <-s.beaconBlocksChan:
 			// TODO(#8331): Defer blocks from the future for later processing.
 			compactBlock := &slashertypes.CompactBeaconBlock{
-				ProposerIndex: blockHeader.ProposerIndex,
+				ProposerIndex: types.ValidatorIndex(blockHeader.ProposerIndex),
 				Slot:          blockHeader.Slot,
 			}
 			s.blockQueueLock.Lock()
