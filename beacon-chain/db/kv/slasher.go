@@ -86,7 +86,7 @@ func (s *Store) CheckAttesterDoubleVotes(
 				return err
 			}
 			for _, valIdx := range att.AttestingIndices {
-				encIdx := ssz.MarshalUint64(make([]byte, 8), valIdx)
+				encIdx := ssz.MarshalUint64(make([]byte, 0), valIdx)
 				key := append(encIdx, encEpoch...)
 				existingEncodedRecord := bkt.Get(key)
 				if existingEncodedRecord != nil {
@@ -163,7 +163,7 @@ func (s *Store) SaveAttestationRecordsForValidators(
 				return err
 			}
 			for _, valIdx := range att.AttestingIndices {
-				encIdx := ssz.MarshalUint64(make([]byte, 8), valIdx)
+				encIdx := ssz.MarshalUint64(make([]byte, 0), valIdx)
 				key := append(encIdx, encEpoch...)
 				if err := bkt.Put(key, value); err != nil {
 					return err
