@@ -6,6 +6,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
+	"github.com/prysmaticlabs/prysm/shared/slashutil"
 )
 
 // A struct encapsulating input arguments to
@@ -88,15 +89,38 @@ func (s *Service) detectSlashableAttestations(
 func (s *Service) checkDoubleVotes(
 	ctx context.Context, attestations []*slashertypes.CompactAttestation,
 ) ([]*slashertypes.Slashing, error) {
-	// TODO(#8533): Check if there are any double votes with respect to each other.
+	// We check if there are any slashable double votes in the input list
+	// of attestations with respect to each other.
+	existingAtts := make(map[string][32]byte)
+	for _, att := range attestations {
+		for _, valIdx := range att.AttestingIndices {
+			key := fmt.Sprintf("%d:%d", att.Target, valIdx)
+			existingSigningRoot, ok := existingAtts[key]
+			if !ok {
+				existingAtts[key] = att.SigningRoot
+				continue
+			}
+			if slashutil.SigningRootsDiffer(att.SigningRoot, existingSigningRoot) {
+				logSlashingEvent(&slashertypes.Slashing{
+					Kind:            slashertypes.DoubleVote,
+					ValidatorIndex:  types.ValidatorIndex(valIdx),
+					TargetEpoch:     att.Target,
+					SigningRoot:     att.SigningRoot,
+					PrevSigningRoot: existingSigningRoot,
+				})
+			}
+		}
+	}
 
+	// We check if there are any slashable double votes in the input list
+	// of attestations with respect to our database.
 	return s.checkDoubleVotesOnDisk(ctx, attestations)
 }
 
+// Check for double votes in our database given a list of incoming attestations.
 func (s *Service) checkDoubleVotesOnDisk(
 	ctx context.Context, attestations []*slashertypes.CompactAttestation,
 ) ([]*slashertypes.Slashing, error) {
-	// Check if there are any double votes with respect to the database.
 	doubleVotes, err := s.serviceCfg.Database.CheckAttesterDoubleVotes(
 		ctx, attestations,
 	)
