@@ -92,7 +92,7 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 					log.WithError(err).Error("Could not save attestation records to DB")
 					continue
 				}
-				if err := s.detectSlashableAttestations(ctx, &chunkUpdateOptions{
+				if err := s.detectSlashableAttestations(ctx, &chunkUpdateArgs{
 					validatorChunkIndex: validatorChunkIdx,
 					currentEpoch:        currentEpoch,
 				}, batch); err != nil {

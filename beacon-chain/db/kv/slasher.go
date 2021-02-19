@@ -19,11 +19,10 @@ import (
 // epoch we have recorded the validator attested for.
 func (s *Store) LatestEpochAttestedForValidators(
 	ctx context.Context, validatorIndices []types.ValidatorIndex,
-) ([]types.Epoch, []bool, error) {
+) ([]*slashertypes.AttestedEpochForValidator, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.LatestEpochAttestedForValidators")
 	defer span.End()
-	epochs := make([]types.Epoch, 0)
-	epochsExist := make([]bool, 0)
+	attestedEpochs := make([]*slashertypes.AttestedEpochForValidator, 0)
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestedEpochsByValidator)
 		for _, valIdx := range validatorIndices {
@@ -32,21 +31,20 @@ func (s *Store) LatestEpochAttestedForValidators(
 				return err
 			}
 			epochBytes := bkt.Get(enc)
-			if epochBytes == nil {
-				epochsExist = append(epochsExist, false)
-				epochs = append(epochs, 0)
-				continue
+			if epochBytes != nil {
+				var epoch types.Epoch
+				if err := epoch.UnmarshalSSZ(epochBytes); err != nil {
+					return err
+				}
+				attestedEpochs = append(attestedEpochs, &slashertypes.AttestedEpochForValidator{
+					ValidatorIndex: valIdx,
+					Epoch:          epoch,
+				})
 			}
-			var epoch types.Epoch
-			if err := epoch.UnmarshalSSZ(epochBytes); err != nil {
-				return err
-			}
-			epochsExist = append(epochsExist, true)
-			epochs = append(epochs, epoch)
 		}
 		return nil
 	})
-	return epochs, epochsExist, err
+	return attestedEpochs, err
 }
 
 // SaveLatestEpochAttestedForValidators updates the latest epoch a slice

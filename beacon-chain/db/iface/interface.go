@@ -60,7 +60,7 @@ type ReadOnlyDatabase interface {
 	// Slasher operations.
 	LatestEpochAttestedForValidators(
 		ctx context.Context, validatorIndices []types.ValidatorIndex,
-	) ([]types.Epoch, []bool, error)
+	) ([]*slashertypes.AttestedEpochForValidator, error)
 	AttestationRecordForValidator(
 		ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch,
 	) (*slashertypes.CompactAttestation, error)

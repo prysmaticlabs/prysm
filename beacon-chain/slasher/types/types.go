@@ -28,6 +28,13 @@ type DoubleBlockProposal struct {
 	ExistingSigningRoot [32]byte
 }
 
+// AttestedEpochForValidator encapsulates a previously attested epoch
+// for a validator index.
+type AttestedEpochForValidator struct {
+	ValidatorIndex types.ValidatorIndex
+	Epoch          types.Epoch
+}
+
 // CompactBeaconBlock containing only the required information
 // for proposer slashing detection.
 type CompactBeaconBlock struct {

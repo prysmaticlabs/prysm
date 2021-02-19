@@ -43,7 +43,7 @@ func Test_determineChunksToUpdateForValidators_FromLatestWrittenEpoch(t *testing
 	// safe contained in chunk index 1.
 	chunkIndices, err := s.determineChunksToUpdateForValidators(
 		ctx,
-		&chunkUpdateOptions{
+		&chunkUpdateArgs{
 			currentEpoch: currentEpoch,
 		},
 		validators,
@@ -76,13 +76,131 @@ func Test_determineChunksToUpdateForValidators_FromGenesis(t *testing.T) {
 	// will mean that we should be updating from epoch 0 to 3, meaning chunk indices 0 and 1.
 	chunkIndices, err := s.determineChunksToUpdateForValidators(
 		ctx,
-		&chunkUpdateOptions{
+		&chunkUpdateArgs{
 			currentEpoch: 3,
 		},
 		validators,
 	)
 	require.NoError(t, err)
 	require.DeepEqual(t, []uint64{0, 1}, chunkIndices)
+}
+
+func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := dbtest.SetupDB(t)
+	params := DefaultParams()
+	srv := &Service{
+		params: params,
+		serviceCfg: &ServiceConfig{
+			Database: beaconDB,
+		},
+	}
+	// We initialize an empty chunks slice.
+	chunk := EmptyMinSpanChunksSlice(params)
+	chunkIdx := uint64(0)
+	currentEpoch := types.Epoch(3)
+	validatorIdx := types.ValidatorIndex(0)
+	args := &chunkUpdateArgs{
+		chunkIndex:     chunkIdx,
+		currentEpoch:   currentEpoch,
+		validatorIndex: validatorIdx,
+	}
+	chunksByChunkIdx := map[uint64]Chunker{
+		chunkIdx: chunk,
+	}
+
+	// We apply attestation with (source 1, target 2) for our validator.
+	source := types.Epoch(1)
+	target := types.Epoch(2)
+	att := createAttestation(source, target)
+	slashing, err := srv.applyAttestationForValidator(
+		ctx,
+		args,
+		chunksByChunkIdx,
+		att,
+	)
+	require.NoError(t, err)
+	require.Equal(t, true, slashing == nil)
+	err = beaconDB.SaveAttestationRecordsForValidators(
+		ctx,
+		[]types.ValidatorIndex{validatorIdx},
+		[]*slashertypes.CompactAttestation{att},
+	)
+	require.NoError(t, err)
+
+	// Next, we apply an attestation with (source 0, target 3) and
+	// expect a slashable offense to be returned.
+	source = types.Epoch(0)
+	target = types.Epoch(3)
+	slashableAtt := createAttestation(source, target)
+	slashing, err = srv.applyAttestationForValidator(
+		ctx,
+		args,
+		chunksByChunkIdx,
+		slashableAtt,
+	)
+	require.NoError(t, err)
+	require.NotNil(t, slashing)
+	require.Equal(t, slashertypes.SurroundingVote, slashing.Kind)
+}
+
+func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := dbtest.SetupDB(t)
+	params := DefaultParams()
+	srv := &Service{
+		params: params,
+		serviceCfg: &ServiceConfig{
+			Database: beaconDB,
+		},
+	}
+	// We initialize an empty chunks slice.
+	chunk := EmptyMaxSpanChunksSlice(params)
+	chunkIdx := uint64(0)
+	currentEpoch := types.Epoch(3)
+	validatorIdx := types.ValidatorIndex(0)
+	args := &chunkUpdateArgs{
+		chunkIndex:     chunkIdx,
+		currentEpoch:   currentEpoch,
+		validatorIndex: validatorIdx,
+	}
+	chunksByChunkIdx := map[uint64]Chunker{
+		chunkIdx: chunk,
+	}
+
+	// We apply attestation with (source 0, target 3) for our validator.
+	source := types.Epoch(0)
+	target := types.Epoch(3)
+	att := createAttestation(source, target)
+	slashing, err := srv.applyAttestationForValidator(
+		ctx,
+		args,
+		chunksByChunkIdx,
+		att,
+	)
+	require.NoError(t, err)
+	require.Equal(t, true, slashing == nil)
+	err = beaconDB.SaveAttestationRecordsForValidators(
+		ctx,
+		[]types.ValidatorIndex{validatorIdx},
+		[]*slashertypes.CompactAttestation{att},
+	)
+	require.NoError(t, err)
+
+	// Next, we apply an attestation with (source 1, target 2) and
+	// expect a slashable offense to be returned.
+	source = types.Epoch(1)
+	target = types.Epoch(2)
+	slashableAtt := createAttestation(source, target)
+	slashing, err = srv.applyAttestationForValidator(
+		ctx,
+		args,
+		chunksByChunkIdx,
+		slashableAtt,
+	)
+	require.NoError(t, err)
+	require.NotNil(t, slashing)
+	require.Equal(t, slashertypes.SurroundedVote, slashing.Kind)
 }
 
 func Test_loadChunks_MinSpans(t *testing.T) {
@@ -114,7 +232,7 @@ func testLoadChunks(t *testing.T, kind slashertypes.ChunkKind) {
 		emptyChunk = EmptyMaxSpanChunksSlice(params)
 	}
 	chunkIdx := uint64(2)
-	received, err := s.loadChunks(ctx, &chunkUpdateOptions{
+	received, err := s.loadChunks(ctx, &chunkUpdateArgs{
 		validatorChunkIndex: 0,
 		kind:                kind,
 	}, []uint64{chunkIdx})
@@ -151,7 +269,7 @@ func testLoadChunks(t *testing.T, kind slashertypes.ChunkKind) {
 	}
 	err = s.saveUpdatedChunks(
 		ctx,
-		&chunkUpdateOptions{
+		&chunkUpdateArgs{
 			validatorChunkIndex: 0,
 			kind:                kind,
 		},
@@ -159,7 +277,7 @@ func testLoadChunks(t *testing.T, kind slashertypes.ChunkKind) {
 	)
 	require.NoError(t, err)
 	// Check if the retrieved chunks match what we just saved to disk.
-	received, err = s.loadChunks(ctx, &chunkUpdateOptions{
+	received, err = s.loadChunks(ctx, &chunkUpdateArgs{
 		validatorChunkIndex: 0,
 		kind:                kind,
 	}, []uint64{2, 4, 6})
