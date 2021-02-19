@@ -22,6 +22,8 @@ type CompactAttestation struct {
 
 // DoubleBlockProposal containing an incoming and an existing proposal's signing root.
 type DoubleBlockProposal struct {
+	Slot                types.Slot
+	ProposerIndex       types.ValidatorIndex
 	IncomingSigningRoot [32]byte
 	ExistingSigningRoot [32]byte
 }
@@ -29,7 +31,7 @@ type DoubleBlockProposal struct {
 // CompactBeaconBlock containing only the required information
 // for proposer slashing detection.
 type CompactBeaconBlock struct {
-	ProposerIndex uint64
+	ProposerIndex types.ValidatorIndex
 	Slot          types.Slot
 	SigningRoot   [32]byte
 }

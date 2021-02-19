@@ -67,7 +67,7 @@ type ReadOnlyDatabase interface {
 	LoadSlasherChunks(
 		ctx context.Context, kind slashertypes.ChunkKind, diskKeys []uint64,
 	) ([][]uint16, []bool, error)
-	ExistingBlockProposals(
+	CheckDoubleBlockProposals(
 		ctx context.Context, proposals []*slashertypes.CompactBeaconBlock,
 	) ([]*slashertypes.DoubleBlockProposal, error)
 }

@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -142,26 +142,23 @@ func TestStore_ExistingBlockProposals(t *testing.T) {
 		},
 	}
 	// First time checking should return empty existing proposals.
-	existingProposals, err := beaconDB.ExistingBlockProposals(ctx, proposals)
+	doubleProposals, err := beaconDB.CheckDoubleBlockProposals(ctx, proposals)
 	require.NoError(t, err)
-	require.Equal(t, len(proposals), len(existingProposals))
-	for _, existing := range existingProposals {
-		require.DeepEqual(t, params.BeaconConfig().ZeroHash, existing.ExistingSigningRoot)
-	}
+	require.Equal(t, 0, len(doubleProposals))
 
 	// We then save the block proposals to disk.
 	err = beaconDB.SaveBlockProposals(ctx, proposals)
 	require.NoError(t, err)
 
 	// Second time checking same proposals but all with different signing root should
-	// return the existing proposals with different signing roots.
+	// return all double proposals.
 	proposals[0].SigningRoot = [32]byte{2}
 	proposals[1].SigningRoot = [32]byte{2}
 	proposals[2].SigningRoot = [32]byte{2}
-	existingProposals, err = beaconDB.ExistingBlockProposals(ctx, proposals)
+	doubleProposals, err = beaconDB.CheckDoubleBlockProposals(ctx, proposals)
 	require.NoError(t, err)
-	require.Equal(t, len(proposals), len(existingProposals))
-	for i, existing := range existingProposals {
+	require.Equal(t, len(proposals), len(doubleProposals))
+	for i, existing := range doubleProposals {
 		require.DeepNotEqual(t, proposals[i].SigningRoot, existing.ExistingSigningRoot)
 	}
 }

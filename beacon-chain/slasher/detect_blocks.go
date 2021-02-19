@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	types "github.com/prysmaticlabs/eth2-types"
+
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 )
 
@@ -36,21 +38,27 @@ func (s *Service) detectSlashableBlocks(
 func (s *Service) checkDoubleProposalsOnDisk(
 	ctx context.Context, proposedBlocks []*slashertypes.CompactBeaconBlock,
 ) error {
-	existingProposals, err := s.serviceCfg.Database.ExistingBlockProposals(ctx, proposedBlocks)
+	doubleProposals, err := s.serviceCfg.Database.CheckDoubleBlockProposals(ctx, proposedBlocks)
 	if err != nil {
 		return err
 	}
-	newBlockProposals := make([]*slashertypes.CompactBeaconBlock, 0)
-	for i, existing := range existingProposals {
-		if existing == nil {
-			continue
-		}
-		if isDoubleProposal(proposedBlocks[i].SigningRoot, existing.ExistingSigningRoot) {
-			logDoubleProposal(proposedBlocks[i], existing.ExistingSigningRoot)
-		} else {
-			// If there is no existing block proposal, we append to a list of confirmed, new proposals.
-			newBlockProposals = append(newBlockProposals, proposedBlocks[i])
+	// We initialize a map of proposers that are safe from slashing.
+	safeProposers := make(map[types.ValidatorIndex]*slashertypes.CompactBeaconBlock, len(proposedBlocks))
+	for _, proposal := range proposedBlocks {
+		safeProposers[proposal.ProposerIndex] = proposal
+	}
+	for i, doubleProposal := range doubleProposals {
+		logDoubleProposal(proposedBlocks[i], doubleProposal.ExistingSigningRoot)
+		// If a proposer is found to have committed a slashable offense, we delete
+		// them from the safe proposers map.
+		if _, ok := safeProposers[doubleProposal.ProposerIndex]; ok {
+			delete(safeProposers, doubleProposal.ProposerIndex)
 		}
 	}
-	return s.serviceCfg.Database.SaveBlockProposals(ctx, newBlockProposals)
+	// We save all the proposals that are determined "safe" and not-slashable to our database.
+	safeProposals := make([]*slashertypes.CompactBeaconBlock, 0, len(safeProposers))
+	for _, proposal := range safeProposers {
+		safeProposals = append(safeProposals, proposal)
+	}
+	return s.serviceCfg.Database.SaveBlockProposals(ctx, safeProposals)
 }
