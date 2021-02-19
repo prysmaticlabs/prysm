@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	types "github.com/prysmaticlabs/eth2-types"
-
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
