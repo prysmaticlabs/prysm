@@ -271,7 +271,7 @@ func (e Exporter) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint 
 // LatestEpochAttestedForValidator -- passthrough
 func (e Exporter) LatestEpochAttestedForValidators(
 	ctx context.Context, validatorIndices []types.ValidatorIndex,
-) ([]types.Epoch, []bool, error) {
+) ([]*slashertypes.AttestedEpochForValidator, error) {
 	return e.db.LatestEpochAttestedForValidators(ctx, validatorIndices)
 }
 

@@ -27,7 +27,7 @@ type Chunker interface {
 		attestation *slashertypes.CompactAttestation,
 	) (*slashertypes.Slashing, error)
 	Update(
-		opts *chunkUpdateOptions,
+		args *chunkUpdateArgs,
 		startEpoch,
 		newTargetEpoch types.Epoch,
 	) (keepGoing bool, err error)
@@ -178,8 +178,8 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 	validatorIdx types.ValidatorIndex,
 	attestation *slashertypes.CompactAttestation,
 ) (*slashertypes.Slashing, error) {
-	sourceEpoch := types.Epoch(attestation.Source)
-	targetEpoch := types.Epoch(attestation.Target)
+	sourceEpoch := attestation.Source
+	targetEpoch := attestation.Target
 	minTarget, err := chunkDataAtEpoch(m.params, m.data, validatorIdx, sourceEpoch)
 	if err != nil {
 		return &slashertypes.Slashing{Kind: slashertypes.NotSlashable}, errors.Wrapf(
@@ -194,12 +194,12 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 			)
 		}
 		if existingAttRecord != nil {
-			if sourceEpoch < types.Epoch(existingAttRecord.Source) {
+			if sourceEpoch < existingAttRecord.Source {
 				return &slashertypes.Slashing{
 					Kind:            slashertypes.SurroundingVote,
 					ValidatorIndex:  validatorIdx,
-					PrevSourceEpoch: types.Epoch(existingAttRecord.Source),
-					PrevTargetEpoch: types.Epoch(existingAttRecord.Target),
+					PrevSourceEpoch: existingAttRecord.Source,
+					PrevTargetEpoch: existingAttRecord.Target,
 					SourceEpoch:     sourceEpoch,
 					TargetEpoch:     targetEpoch,
 				}, nil
@@ -226,8 +226,8 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 	validatorIdx types.ValidatorIndex,
 	attestation *slashertypes.CompactAttestation,
 ) (*slashertypes.Slashing, error) {
-	sourceEpoch := types.Epoch(attestation.Source)
-	targetEpoch := types.Epoch(attestation.Target)
+	sourceEpoch := attestation.Source
+	targetEpoch := attestation.Target
 	maxTarget, err := chunkDataAtEpoch(m.params, m.data, validatorIdx, sourceEpoch)
 	if err != nil {
 		return &slashertypes.Slashing{Kind: slashertypes.NotSlashable}, errors.Wrapf(
@@ -242,12 +242,12 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 			)
 		}
 		if existingAttRecord != nil {
-			if types.Epoch(existingAttRecord.Source) < sourceEpoch {
+			if existingAttRecord.Source < sourceEpoch {
 				return &slashertypes.Slashing{
 					Kind:            slashertypes.SurroundedVote,
 					ValidatorIndex:  validatorIdx,
-					PrevSourceEpoch: types.Epoch(existingAttRecord.Source),
-					PrevTargetEpoch: types.Epoch(existingAttRecord.Target),
+					PrevSourceEpoch: existingAttRecord.Source,
+					PrevTargetEpoch: existingAttRecord.Target,
 					SourceEpoch:     sourceEpoch,
 					TargetEpoch:     targetEpoch,
 				}, nil
@@ -313,30 +313,30 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 // to update, in our example, we stop at 2, which is still part of chunk 0, so no need
 // to jump to another min span chunks slice to perform updates.
 func (m *MinSpanChunksSlice) Update(
-	opts *chunkUpdateOptions,
+	args *chunkUpdateArgs,
 	startEpoch,
 	newTargetEpoch types.Epoch,
 ) (keepGoing bool, err error) {
 	// The lowest epoch we need to update. This is a sliding window from (current epoch - H) where
 	// H is the history length a min span for a validator stores.
 	var minEpoch types.Epoch
-	if uint64(opts.currentEpoch) > (m.params.historyLength - 1) {
-		minEpoch = opts.currentEpoch.Sub(m.params.historyLength - 1)
+	if uint64(args.currentEpoch) > (m.params.historyLength - 1) {
+		minEpoch = args.currentEpoch.Sub(m.params.historyLength - 1)
 	}
 	epochInChunk := startEpoch
 	// We go down the chunk for the validator, updating every value starting at start_epoch down to min_epoch.
 	// As long as the epoch, e, in the same chunk index and e >= min_epoch, we proceed with
 	// a for loop.
-	for m.params.chunkIndex(epochInChunk) == opts.chunkIndex && epochInChunk >= minEpoch {
+	for m.params.chunkIndex(epochInChunk) == args.chunkIndex && epochInChunk >= minEpoch {
 		var chunkTarget types.Epoch
-		chunkTarget, err = chunkDataAtEpoch(m.params, m.data, opts.validatorIndex, epochInChunk)
+		chunkTarget, err = chunkDataAtEpoch(m.params, m.data, args.validatorIndex, epochInChunk)
 		if err != nil {
 			return
 		}
 		// If the newly incoming value is < the existing value, we update
 		// the data in the min span to meet with its definition.
 		if newTargetEpoch < chunkTarget {
-			if err = setChunkDataAtEpoch(m.params, m.data, opts.validatorIndex, epochInChunk, newTargetEpoch); err != nil {
+			if err = setChunkDataAtEpoch(m.params, m.data, args.validatorIndex, epochInChunk, newTargetEpoch); err != nil {
 				return
 			}
 		} else {
@@ -359,7 +359,7 @@ func (m *MinSpanChunksSlice) Update(
 // up to the current epoch according to the definition of max spans. If we need to continue updating
 // a next chunk, this function returns a boolean letting the caller know it should keep going.
 func (m *MaxSpanChunksSlice) Update(
-	opts *chunkUpdateOptions,
+	args *chunkUpdateArgs,
 	startEpoch,
 	newTargetEpoch types.Epoch,
 ) (keepGoing bool, err error) {
@@ -367,16 +367,16 @@ func (m *MaxSpanChunksSlice) Update(
 	// We go down the chunk for the validator, updating every value starting at start_epoch up to.
 	// and including the current epoch as long as the epoch, e, in the same chunk index and e <= currentEpoch,
 	// we proceed with a for loop.
-	for m.params.chunkIndex(epochInChunk) == opts.chunkIndex && epochInChunk <= opts.currentEpoch {
+	for m.params.chunkIndex(epochInChunk) == args.chunkIndex && epochInChunk <= args.currentEpoch {
 		var chunkTarget types.Epoch
-		chunkTarget, err = chunkDataAtEpoch(m.params, m.data, opts.validatorIndex, epochInChunk)
+		chunkTarget, err = chunkDataAtEpoch(m.params, m.data, args.validatorIndex, epochInChunk)
 		if err != nil {
 			return
 		}
 		// If the newly incoming value is > the existing value, we update
 		// the data in the max span to meet with its definition.
 		if newTargetEpoch > chunkTarget {
-			if err = setChunkDataAtEpoch(m.params, m.data, opts.validatorIndex, epochInChunk, newTargetEpoch); err != nil {
+			if err = setChunkDataAtEpoch(m.params, m.data, args.validatorIndex, epochInChunk, newTargetEpoch); err != nil {
 				return
 			}
 		} else {
@@ -389,7 +389,7 @@ func (m *MaxSpanChunksSlice) Update(
 	}
 	// If the epoch to update now lies beyond the current chunk, then
 	// continue to the next chunk to update it.
-	keepGoing = epochInChunk <= opts.currentEpoch
+	keepGoing = epochInChunk <= args.currentEpoch
 	return
 }
 
