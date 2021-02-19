@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -49,8 +50,8 @@ func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_AfterFirstWeakSubject
 		pkBucket := bucket.Bucket(pubKey[:])
 		sourceEpochsBkt := pkBucket.Bucket(attestationSourceEpochsBucket)
 		signingRootsBkt := pkBucket.Bucket(attestationSigningRootsBucket)
-		targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(numEpochs + 1)
-		sourceEpochBytes := bytesutil.Uint64ToBytesBigEndian(numEpochs)
+		targetEpochBytes := bytesutil.EpochToBytesBigEndian(numEpochs + 1)
+		sourceEpochBytes := bytesutil.EpochToBytesBigEndian(numEpochs)
 		if err := sourceEpochsBkt.Put(sourceEpochBytes, targetEpochBytes); err != nil {
 			return err
 		}
@@ -76,11 +77,11 @@ func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_AfterFirstWeakSubject
 		sourceEpochsBkt := pkBucket.Bucket(attestationSourceEpochsBucket)
 		signingRootsBkt := pkBucket.Bucket(attestationSigningRootsBucket)
 
-		targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(numEpochs + 1)
-		sourceEpochBytes := bytesutil.Uint64ToBytesBigEndian(numEpochs)
+		targetEpochBytes := bytesutil.EpochToBytesBigEndian(numEpochs + 1)
+		sourceEpochBytes := bytesutil.EpochToBytesBigEndian(numEpochs)
 
 		storedTargetEpoch := sourceEpochsBkt.Get(sourceEpochBytes)
-		require.DeepEqual(t, numEpochs+1, bytesutil.BytesToUint64BigEndian(storedTargetEpoch))
+		require.DeepEqual(t, numEpochs+1, bytesutil.BytesToEpochBigEndian(storedTargetEpoch))
 
 		var expectedSigningRoot [32]byte
 		copy(expectedSigningRoot[:], fmt.Sprintf("%d", targetEpochBytes))
@@ -94,7 +95,7 @@ func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_AfterFirstWeakSubject
 }
 
 func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_AfterMultipleWeakSubjectivity(t *testing.T) {
-	numWeakSubjectivityPeriods := uint64(5)
+	numWeakSubjectivityPeriods := types.Epoch(5)
 	pubKeys := [][48]byte{{1}}
 	validatorDB := setupDB(t, pubKeys)
 
@@ -113,11 +114,11 @@ func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_AfterMultipleWeakSubj
 		if err != nil {
 			return err
 		}
-		for i := uint64(1); i <= numWeakSubjectivityPeriods; i++ {
+		for i := types.Epoch(1); i <= numWeakSubjectivityPeriods; i++ {
 			targetEpoch := (i * params.BeaconConfig().WeakSubjectivityPeriod) + 1
-			targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch)
+			targetEpochBytes := bytesutil.EpochToBytesBigEndian(targetEpoch)
 			sourceEpoch := targetEpoch - 1
-			sourceEpochBytes := bytesutil.Uint64ToBytesBigEndian(sourceEpoch)
+			sourceEpochBytes := bytesutil.EpochToBytesBigEndian(sourceEpoch)
 			if err := sourceEpochsBkt.Put(sourceEpochBytes, targetEpochBytes); err != nil {
 				return err
 			}
@@ -146,11 +147,11 @@ func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_AfterMultipleWeakSubj
 
 		// We check everything except for the highest weak subjectivity period
 		// has been pruned from the bucket.
-		for i := uint64(1); i <= numWeakSubjectivityPeriods-1; i++ {
+		for i := types.Epoch(1); i <= numWeakSubjectivityPeriods-1; i++ {
 			targetEpoch := (i * params.BeaconConfig().WeakSubjectivityPeriod) + 1
 			sourceEpoch := targetEpoch - 1
-			sourceEpochBytes := bytesutil.Uint64ToBytesBigEndian(sourceEpoch)
-			targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch)
+			sourceEpochBytes := bytesutil.EpochToBytesBigEndian(sourceEpoch)
+			targetEpochBytes := bytesutil.EpochToBytesBigEndian(targetEpoch)
 
 			storedTargetEpoch := sourceEpochsBkt.Get(sourceEpochBytes)
 			signingRoot := signingRootsBkt.Get(targetEpochBytes)
@@ -161,8 +162,8 @@ func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_AfterMultipleWeakSubj
 
 		targetEpoch := (numWeakSubjectivityPeriods * params.BeaconConfig().WeakSubjectivityPeriod) + 1
 		sourceEpoch := targetEpoch - 1
-		targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch)
-		sourceEpochBytes := bytesutil.Uint64ToBytesBigEndian(sourceEpoch)
+		targetEpochBytes := bytesutil.EpochToBytesBigEndian(targetEpoch)
+		sourceEpochBytes := bytesutil.EpochToBytesBigEndian(sourceEpoch)
 		var expectedSigningRoot [32]byte
 		copy(expectedSigningRoot[:], fmt.Sprintf("%d", targetEpochBytes))
 		signingRoot := signingRootsBkt.Get(targetEpochBytes)
@@ -178,7 +179,7 @@ func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_AfterMultipleWeakSubj
 
 // Saves attesting history for every (source, target = source + 1) pairs since genesis
 // up to a given number of epochs for a validator public key.
-func setupAttestationsForEveryEpoch(t testing.TB, validatorDB *Store, pubKey [48]byte, numEpochs uint64) error {
+func setupAttestationsForEveryEpoch(t testing.TB, validatorDB *Store, pubKey [48]byte, numEpochs types.Epoch) error {
 	return validatorDB.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(pubKeysBucket)
 		pkBucket, err := bucket.CreateBucketIfNotExists(pubKey[:])
@@ -193,9 +194,9 @@ func setupAttestationsForEveryEpoch(t testing.TB, validatorDB *Store, pubKey [48
 		if err != nil {
 			return err
 		}
-		for targetEpoch := uint64(1); targetEpoch < numEpochs; targetEpoch++ {
-			targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch)
-			sourceEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch - 1)
+		for targetEpoch := types.Epoch(1); targetEpoch < numEpochs; targetEpoch++ {
+			targetEpochBytes := bytesutil.EpochToBytesBigEndian(targetEpoch)
+			sourceEpochBytes := bytesutil.EpochToBytesBigEndian(targetEpoch - 1)
 			// Save (source epoch, target epoch) pairs.
 			if err := sourceEpochsBucket.Put(sourceEpochBytes, targetEpochBytes); err != nil {
 				return err
@@ -214,16 +215,16 @@ func setupAttestationsForEveryEpoch(t testing.TB, validatorDB *Store, pubKey [48
 // Verifies, based on a boolean input argument, whether or not we should have
 // pruned all attesting history since genesis up to a specified number of epochs.
 func checkAttestingHistoryAfterPruning(
-	t testing.TB, validatorDB *Store, pubKey [48]byte, numEpochs uint64, shouldBePruned bool,
+	t testing.TB, validatorDB *Store, pubKey [48]byte, numEpochs types.Epoch, shouldBePruned bool,
 ) error {
 	return validatorDB.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(pubKeysBucket)
 		pkBkt := bucket.Bucket(pubKey[:])
 		signingRootsBkt := pkBkt.Bucket(attestationSigningRootsBucket)
 		sourceEpochsBkt := pkBkt.Bucket(attestationSourceEpochsBucket)
-		for targetEpoch := uint64(1); targetEpoch < numEpochs; targetEpoch++ {
-			targetEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch)
-			sourceEpochBytes := bytesutil.Uint64ToBytesBigEndian(targetEpoch - 1)
+		for targetEpoch := types.Epoch(1); targetEpoch < numEpochs; targetEpoch++ {
+			targetEpochBytes := bytesutil.EpochToBytesBigEndian(targetEpoch)
+			sourceEpochBytes := bytesutil.EpochToBytesBigEndian(targetEpoch - 1)
 
 			storedTargetEpoch := sourceEpochsBkt.Get(sourceEpochBytes)
 			signingRoot := signingRootsBkt.Get(targetEpochBytes)
@@ -247,8 +248,8 @@ func checkAttestingHistoryAfterPruning(
 func Test_olderThanCurrentWeakSubjectivityPeriod(t *testing.T) {
 	wssPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 	type args struct {
-		epoch        uint64
-		highestEpoch uint64
+		epoch        types.Epoch
+		highestEpoch types.Epoch
 	}
 	tests := []struct {
 		name string

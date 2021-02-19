@@ -6,6 +6,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	bolt "go.etcd.io/bbolt"
@@ -26,11 +27,11 @@ func unmarshalIndexedAttestation(ctx context.Context, enc []byte) (*ethpb.Indexe
 // IndexedAttestationsForTarget accepts a target epoch and returns a list of
 // indexed attestations.
 // Returns nil if the indexed attestation does not exist with that target epoch.
-func (s *Store) IndexedAttestationsForTarget(ctx context.Context, targetEpoch uint64) ([]*ethpb.IndexedAttestation, error) {
+func (s *Store) IndexedAttestationsForTarget(ctx context.Context, targetEpoch types.Epoch) ([]*ethpb.IndexedAttestation, error) {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.IndexedAttestationsForTarget")
 	defer span.End()
 	var idxAtts []*ethpb.IndexedAttestation
-	key := bytesutil.Bytes8(targetEpoch)
+	key := bytesutil.Bytes8(uint64(targetEpoch))
 	err := s.view(func(tx *bolt.Tx) error {
 		c := tx.Bucket(historicIndexedAttestationsBucket).Cursor()
 		for k, enc := c.Seek(key); k != nil && bytes.Equal(k[:8], key); k, enc = c.Next() {
@@ -47,7 +48,7 @@ func (s *Store) IndexedAttestationsForTarget(ctx context.Context, targetEpoch ui
 
 // IndexedAttestationsWithPrefix accepts a target epoch and signature bytes to find all attestations with the requested prefix.
 // Returns nil if the indexed attestation does not exist with that target epoch.
-func (s *Store) IndexedAttestationsWithPrefix(ctx context.Context, targetEpoch uint64, sigBytes []byte) ([]*ethpb.IndexedAttestation, error) {
+func (s *Store) IndexedAttestationsWithPrefix(ctx context.Context, targetEpoch types.Epoch, sigBytes []byte) ([]*ethpb.IndexedAttestation, error) {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.IndexedAttestationsWithPrefix")
 	defer span.End()
 	var idxAtts []*ethpb.IndexedAttestation
@@ -162,7 +163,7 @@ func (s *Store) DeleteIndexedAttestation(ctx context.Context, idxAttestation *et
 }
 
 // PruneAttHistory removes all attestations from the DB older than the pruning epoch age.
-func (s *Store) PruneAttHistory(ctx context.Context, currentEpoch, pruningEpochAge uint64) error {
+func (s *Store) PruneAttHistory(ctx context.Context, currentEpoch, pruningEpochAge types.Epoch) error {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.pruneAttHistory")
 	defer span.End()
 	pruneFromEpoch := int64(currentEpoch) - int64(pruningEpochAge)

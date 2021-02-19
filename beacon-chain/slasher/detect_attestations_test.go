@@ -43,7 +43,7 @@ func Test_determineChunksToUpdateForValidators_FromLatestWrittenEpoch(t *testing
 	// safe contained in chunk index 1.
 	chunkIndices, err := s.determineChunksToUpdateForValidators(
 		ctx,
-		&chunkUpdateOptions{
+		&chunkUpdateArgs{
 			currentEpoch: currentEpoch,
 		},
 		validators,
@@ -76,7 +76,7 @@ func Test_determineChunksToUpdateForValidators_FromGenesis(t *testing.T) {
 	// will mean that we should be updating from epoch 0 to 3, meaning chunk indices 0 and 1.
 	chunkIndices, err := s.determineChunksToUpdateForValidators(
 		ctx,
-		&chunkUpdateOptions{
+		&chunkUpdateArgs{
 			currentEpoch: 3,
 		},
 		validators,
@@ -100,7 +100,7 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	chunkIdx := uint64(0)
 	currentEpoch := types.Epoch(3)
 	validatorIdx := types.ValidatorIndex(0)
-	opts := &chunkUpdateOptions{
+	args := &chunkUpdateArgs{
 		chunkIndex:     chunkIdx,
 		currentEpoch:   currentEpoch,
 		validatorIndex: validatorIdx,
@@ -109,27 +109,13 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 		chunkIdx: chunk,
 	}
 
-	// Attestation with a different chunk index that is
-	// not found in the input map should return nil.
-	// when applying the attestation for the validator.
-	unknownSource := types.Epoch(params.chunkSize + 1)
-	unknownAtt := createAttestation(unknownSource, unknownSource+1)
-	slashing, err := srv.applyAttestationForValidator(
-		ctx,
-		opts,
-		chunksByChunkIdx,
-		unknownAtt,
-	)
-	require.NoError(t, err)
-	require.Equal(t, true, slashing == nil)
-
 	// We apply attestation with (source 1, target 2) for our validator.
 	source := types.Epoch(1)
 	target := types.Epoch(2)
 	att := createAttestation(source, target)
-	slashing, err = srv.applyAttestationForValidator(
+	slashing, err := srv.applyAttestationForValidator(
 		ctx,
-		opts,
+		args,
 		chunksByChunkIdx,
 		att,
 	)
@@ -149,7 +135,7 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	slashableAtt := createAttestation(source, target)
 	slashing, err = srv.applyAttestationForValidator(
 		ctx,
-		opts,
+		args,
 		chunksByChunkIdx,
 		slashableAtt,
 	)
@@ -173,7 +159,7 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	chunkIdx := uint64(0)
 	currentEpoch := types.Epoch(3)
 	validatorIdx := types.ValidatorIndex(0)
-	opts := &chunkUpdateOptions{
+	args := &chunkUpdateArgs{
 		chunkIndex:     chunkIdx,
 		currentEpoch:   currentEpoch,
 		validatorIndex: validatorIdx,
@@ -182,27 +168,13 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 		chunkIdx: chunk,
 	}
 
-	// Attestation with a different chunk index that is
-	// not found in the input map should return nil.
-	// when applying the attestation for the validator.
-	unknownSource := types.Epoch(params.chunkSize + 1)
-	unknownAtt := createAttestation(unknownSource, unknownSource+1)
-	slashing, err := srv.applyAttestationForValidator(
-		ctx,
-		opts,
-		chunksByChunkIdx,
-		unknownAtt,
-	)
-	require.NoError(t, err)
-	require.Equal(t, true, slashing == nil)
-
 	// We apply attestation with (source 0, target 3) for our validator.
 	source := types.Epoch(0)
 	target := types.Epoch(3)
 	att := createAttestation(source, target)
-	slashing, err = srv.applyAttestationForValidator(
+	slashing, err := srv.applyAttestationForValidator(
 		ctx,
-		opts,
+		args,
 		chunksByChunkIdx,
 		att,
 	)
@@ -222,7 +194,7 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	slashableAtt := createAttestation(source, target)
 	slashing, err = srv.applyAttestationForValidator(
 		ctx,
-		opts,
+		args,
 		chunksByChunkIdx,
 		slashableAtt,
 	)
@@ -260,7 +232,7 @@ func testLoadChunks(t *testing.T, kind slashertypes.ChunkKind) {
 		emptyChunk = EmptyMaxSpanChunksSlice(params)
 	}
 	chunkIdx := uint64(2)
-	received, err := s.loadChunks(ctx, &chunkUpdateOptions{
+	received, err := s.loadChunks(ctx, &chunkUpdateArgs{
 		validatorChunkIndex: 0,
 		kind:                kind,
 	}, []uint64{chunkIdx})
@@ -297,7 +269,7 @@ func testLoadChunks(t *testing.T, kind slashertypes.ChunkKind) {
 	}
 	err = s.saveUpdatedChunks(
 		ctx,
-		&chunkUpdateOptions{
+		&chunkUpdateArgs{
 			validatorChunkIndex: 0,
 			kind:                kind,
 		},
@@ -305,7 +277,7 @@ func testLoadChunks(t *testing.T, kind slashertypes.ChunkKind) {
 	)
 	require.NoError(t, err)
 	// Check if the retrieved chunks match what we just saved to disk.
-	received, err = s.loadChunks(ctx, &chunkUpdateOptions{
+	received, err = s.loadChunks(ctx, &chunkUpdateArgs{
 		validatorChunkIndex: 0,
 		kind:                kind,
 	}, []uint64{2, 4, 6})
@@ -330,7 +302,7 @@ func TestService_processQueuedAttestations(t *testing.T) {
 		},
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	tickerChan := make(chan uint64)
+	tickerChan := make(chan types.Epoch)
 	exitChan := make(chan struct{})
 	go func() {
 		s.processQueuedAttestations(ctx, tickerChan)

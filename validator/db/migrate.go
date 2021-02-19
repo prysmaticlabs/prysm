@@ -19,7 +19,7 @@ func migrateUp(cliCtx *cli.Context) error {
 	}
 
 	ctx := context.Background()
-	validatorDB, err := kv.NewKVStore(ctx, dataDir, nil)
+	validatorDB, err := kv.NewKVStore(ctx, dataDir, &kv.Config{})
 	if err != nil {
 		return err
 	}
@@ -34,7 +34,7 @@ func migrateDown(cliCtx *cli.Context) error {
 	}
 
 	ctx := context.Background()
-	validatorDB, err := kv.NewKVStore(ctx, dataDir, nil)
+	validatorDB, err := kv.NewKVStore(ctx, dataDir, &kv.Config{})
 	if err != nil {
 		return err
 	}

@@ -43,7 +43,7 @@ func runSlotProcessingTests(t *testing.T, config string) {
 			require.NoError(t, err)
 			postBeaconState := &pb.BeaconState{}
 			require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateFile), "Failed to unmarshal")
-			postState, err := state.ProcessSlots(context.Background(), beaconState, beaconState.Slot()+uint64(slotsCount))
+			postState, err := state.ProcessSlots(context.Background(), beaconState, beaconState.Slot().Add(uint64(slotsCount)))
 			require.NoError(t, err)
 
 			if !proto.Equal(postState.CloneInnerState(), postBeaconState) {

@@ -10,6 +10,7 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -17,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	dbTest "github.com/prysmaticlabs/prysm/validator/db/testing"
@@ -324,7 +326,7 @@ func TestCanonicalHeadSlot_OK(t *testing.T) {
 	).Return(&ethpb.ChainHead{HeadSlot: 0}, nil)
 	headSlot, err := v.CanonicalHeadSlot(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, uint64(0), headSlot, "Mismatch slots")
+	assert.Equal(t, types.Slot(0), headSlot, "Mismatch slots")
 }
 
 func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
@@ -465,7 +467,7 @@ func TestUpdateDuties_DoesNothingWhenNotEpochStart_AlreadyExistingAssignments(t 
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
-	slot := uint64(1)
+	slot := types.Slot(1)
 	v := validator{
 		validatorClient: client,
 		duties: &ethpb.DutiesResponse{
@@ -546,7 +548,7 @@ func TestUpdateDuties_OK(t *testing.T) {
 				CommitteeIndex: 100,
 				Committee:      []uint64{0, 1, 2, 3},
 				PublicKey:      []byte("testPubKey_1"),
-				ProposerSlots:  []uint64{params.BeaconConfig().SlotsPerEpoch + 1},
+				ProposerSlots:  []types.Slot{params.BeaconConfig().SlotsPerEpoch + 1},
 			},
 		},
 	}
@@ -559,17 +561,21 @@ func TestUpdateDuties_OK(t *testing.T) {
 		gomock.Any(),
 	).Return(resp, nil)
 
-	client.EXPECT().GetDuties(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(resp, nil)
+	var wg sync.WaitGroup
+	wg.Add(1)
 
 	client.EXPECT().SubscribeCommitteeSubnets(
 		gomock.Any(),
 		gomock.Any(),
-	).Return(nil, nil)
+	).DoAndReturn(func(_ context.Context, _ *ethpb.CommitteeSubnetsSubscribeRequest) (*ptypes.Empty, error) {
+		wg.Done()
+		return nil, nil
+	})
 
 	require.NoError(t, v.UpdateDuties(context.Background(), slot), "Could not update assignments")
+
+	testutil.WaitTimeout(&wg, 3*time.Second)
+
 	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch+1, v.duties.Duties[0].ProposerSlots[0], "Unexpected validator assignments")
 	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch, v.duties.Duties[0].AttesterSlot, "Unexpected validator assignments")
 	assert.Equal(t, resp.Duties[0].CommitteeIndex, v.duties.Duties[0].CommitteeIndex, "Unexpected validator assignments")
@@ -611,17 +617,20 @@ func TestUpdateDuties_OK_FilterBlacklistedPublicKeys(t *testing.T) {
 		gomock.Any(),
 	).Return(resp, nil)
 
-	client.EXPECT().GetDuties(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(resp, nil)
-
+	var wg sync.WaitGroup
+	wg.Add(1)
 	client.EXPECT().SubscribeCommitteeSubnets(
 		gomock.Any(),
 		gomock.Any(),
-	).Return(nil, nil)
+	).DoAndReturn(func(_ context.Context, _ *ethpb.CommitteeSubnetsSubscribeRequest) (*ptypes.Empty, error) {
+		wg.Done()
+		return nil, nil
+	})
 
 	require.NoError(t, v.UpdateDuties(context.Background(), slot), "Could not update assignments")
+
+	testutil.WaitTimeout(&wg, 3*time.Second)
+
 	for range blacklistedPublicKeys {
 		assert.LogsContain(t, hook, "Not including slashable public key")
 	}
@@ -661,7 +670,7 @@ func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
 			{
 				CommitteeIndex: 1,
 				AttesterSlot:   0,
-				ProposerSlots:  []uint64{0},
+				ProposerSlots:  []types.Slot{0},
 				PublicKey:      validatorKey.PublicKey().Marshal(),
 			},
 		},
@@ -914,7 +923,7 @@ func TestService_ReceiveBlocks_NilBlock(t *testing.T) {
 	})
 	connectionErrorChannel := make(chan error)
 	v.ReceiveBlocks(ctx, connectionErrorChannel)
-	require.Equal(t, uint64(0), v.highestValidSlot)
+	require.Equal(t, types.Slot(0), v.highestValidSlot)
 }
 
 func TestService_ReceiveBlocks_SetHighest(t *testing.T) {
@@ -933,7 +942,7 @@ func TestService_ReceiveBlocks_SetHighest(t *testing.T) {
 		&ethpb.StreamBlocksRequest{VerifiedOnly: true},
 	).Return(stream, nil)
 	stream.EXPECT().Context().Return(ctx).AnyTimes()
-	slot := uint64(100)
+	slot := types.Slot(100)
 	stream.EXPECT().Recv().Return(
 		&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: slot}},
 		nil,

@@ -3,6 +3,7 @@ package ethereum_beacon_p2p_v1
 
 import (
 	ssz "github.com/ferranbt/fastssz"
+	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/eth2-types"
 	v1alpha1 "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
 
@@ -30,7 +31,7 @@ func (s *Status) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = append(dst, s.FinalizedRoot...)
 
 	// Field (2) 'FinalizedEpoch'
-	dst = ssz.MarshalUint64(dst, s.FinalizedEpoch)
+	dst = ssz.MarshalUint64(dst, uint64(s.FinalizedEpoch))
 
 	// Field (3) 'HeadRoot'
 	if len(s.HeadRoot) != 32 {
@@ -40,7 +41,7 @@ func (s *Status) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = append(dst, s.HeadRoot...)
 
 	// Field (4) 'HeadSlot'
-	dst = ssz.MarshalUint64(dst, s.HeadSlot)
+	dst = ssz.MarshalUint64(dst, uint64(s.HeadSlot))
 
 	return
 }
@@ -66,7 +67,7 @@ func (s *Status) UnmarshalSSZ(buf []byte) error {
 	s.FinalizedRoot = append(s.FinalizedRoot, buf[4:36]...)
 
 	// Field (2) 'FinalizedEpoch'
-	s.FinalizedEpoch = ssz.UnmarshallUint64(buf[36:44])
+	s.FinalizedEpoch = github_com_prysmaticlabs_eth2_types.Epoch(ssz.UnmarshallUint64(buf[36:44]))
 
 	// Field (3) 'HeadRoot'
 	if cap(s.HeadRoot) == 0 {
@@ -75,7 +76,7 @@ func (s *Status) UnmarshalSSZ(buf []byte) error {
 	s.HeadRoot = append(s.HeadRoot, buf[44:76]...)
 
 	// Field (4) 'HeadSlot'
-	s.HeadSlot = ssz.UnmarshallUint64(buf[76:84])
+	s.HeadSlot = github_com_prysmaticlabs_eth2_types.Slot(ssz.UnmarshallUint64(buf[76:84]))
 
 	return err
 }
@@ -110,7 +111,7 @@ func (s *Status) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	hh.PutBytes(s.FinalizedRoot)
 
 	// Field (2) 'FinalizedEpoch'
-	hh.PutUint64(s.FinalizedEpoch)
+	hh.PutUint64(uint64(s.FinalizedEpoch))
 
 	// Field (3) 'HeadRoot'
 	if len(s.HeadRoot) != 32 {
@@ -120,7 +121,7 @@ func (s *Status) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	hh.PutBytes(s.HeadRoot)
 
 	// Field (4) 'HeadSlot'
-	hh.PutUint64(s.HeadSlot)
+	hh.PutUint64(uint64(s.HeadSlot))
 
 	hh.Merkleize(indx)
 	return
@@ -136,7 +137,7 @@ func (b *BeaconBlocksByRangeRequest) MarshalSSZTo(buf []byte) (dst []byte, err e
 	dst = buf
 
 	// Field (0) 'StartSlot'
-	dst = ssz.MarshalUint64(dst, b.StartSlot)
+	dst = ssz.MarshalUint64(dst, uint64(b.StartSlot))
 
 	// Field (1) 'Count'
 	dst = ssz.MarshalUint64(dst, b.Count)
@@ -156,7 +157,7 @@ func (b *BeaconBlocksByRangeRequest) UnmarshalSSZ(buf []byte) error {
 	}
 
 	// Field (0) 'StartSlot'
-	b.StartSlot = ssz.UnmarshallUint64(buf[0:8])
+	b.StartSlot = github_com_prysmaticlabs_eth2_types.Slot(ssz.UnmarshallUint64(buf[0:8]))
 
 	// Field (1) 'Count'
 	b.Count = ssz.UnmarshallUint64(buf[8:16])
@@ -183,7 +184,7 @@ func (b *BeaconBlocksByRangeRequest) HashTreeRootWith(hh *ssz.Hasher) (err error
 	indx := hh.Index()
 
 	// Field (0) 'StartSlot'
-	hh.PutUint64(b.StartSlot)
+	hh.PutUint64(uint64(b.StartSlot))
 
 	// Field (1) 'Count'
 	hh.PutUint64(b.Count)
@@ -219,7 +220,7 @@ func (e *ENRForkID) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = append(dst, e.NextForkVersion...)
 
 	// Field (2) 'NextForkEpoch'
-	dst = ssz.MarshalUint64(dst, e.NextForkEpoch)
+	dst = ssz.MarshalUint64(dst, uint64(e.NextForkEpoch))
 
 	return
 }
@@ -245,7 +246,7 @@ func (e *ENRForkID) UnmarshalSSZ(buf []byte) error {
 	e.NextForkVersion = append(e.NextForkVersion, buf[4:8]...)
 
 	// Field (2) 'NextForkEpoch'
-	e.NextForkEpoch = ssz.UnmarshallUint64(buf[8:16])
+	e.NextForkEpoch = github_com_prysmaticlabs_eth2_types.Epoch(ssz.UnmarshallUint64(buf[8:16]))
 
 	return err
 }
@@ -280,7 +281,7 @@ func (e *ENRForkID) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	hh.PutBytes(e.NextForkVersion)
 
 	// Field (2) 'NextForkEpoch'
-	hh.PutUint64(e.NextForkEpoch)
+	hh.PutUint64(uint64(e.NextForkEpoch))
 
 	hh.Merkleize(indx)
 	return
@@ -378,7 +379,7 @@ func (b *BeaconState) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = append(dst, b.GenesisValidatorsRoot...)
 
 	// Field (2) 'Slot'
-	dst = ssz.MarshalUint64(dst, b.Slot)
+	dst = ssz.MarshalUint64(dst, uint64(b.Slot))
 
 	// Field (3) 'Fork'
 	if b.Fork == nil {
@@ -620,7 +621,7 @@ func (b *BeaconState) UnmarshalSSZ(buf []byte) error {
 	b.GenesisValidatorsRoot = append(b.GenesisValidatorsRoot, buf[8:40]...)
 
 	// Field (2) 'Slot'
-	b.Slot = ssz.UnmarshallUint64(buf[40:48])
+	b.Slot = github_com_prysmaticlabs_eth2_types.Slot(ssz.UnmarshallUint64(buf[40:48]))
 
 	// Field (3) 'Fork'
 	if b.Fork == nil {
@@ -904,7 +905,7 @@ func (b *BeaconState) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	hh.PutBytes(b.GenesisValidatorsRoot)
 
 	// Field (2) 'Slot'
-	hh.PutUint64(b.Slot)
+	hh.PutUint64(uint64(b.Slot))
 
 	// Field (3) 'Fork'
 	if err = b.Fork.HashTreeRootWith(hh); err != nil {
@@ -1135,7 +1136,7 @@ func (f *Fork) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = append(dst, f.CurrentVersion...)
 
 	// Field (2) 'Epoch'
-	dst = ssz.MarshalUint64(dst, f.Epoch)
+	dst = ssz.MarshalUint64(dst, uint64(f.Epoch))
 
 	return
 }
@@ -1161,7 +1162,7 @@ func (f *Fork) UnmarshalSSZ(buf []byte) error {
 	f.CurrentVersion = append(f.CurrentVersion, buf[4:8]...)
 
 	// Field (2) 'Epoch'
-	f.Epoch = ssz.UnmarshallUint64(buf[8:16])
+	f.Epoch = github_com_prysmaticlabs_eth2_types.Epoch(ssz.UnmarshallUint64(buf[8:16]))
 
 	return err
 }
@@ -1196,7 +1197,7 @@ func (f *Fork) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	hh.PutBytes(f.CurrentVersion)
 
 	// Field (2) 'Epoch'
-	hh.PutUint64(f.Epoch)
+	hh.PutUint64(uint64(f.Epoch))
 
 	hh.Merkleize(indx)
 	return
@@ -1225,7 +1226,7 @@ func (p *PendingAttestation) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	}
 
 	// Field (2) 'InclusionDelay'
-	dst = ssz.MarshalUint64(dst, p.InclusionDelay)
+	dst = ssz.MarshalUint64(dst, uint64(p.InclusionDelay))
 
 	// Field (3) 'ProposerIndex'
 	dst = ssz.MarshalUint64(dst, p.ProposerIndex)
@@ -1265,7 +1266,7 @@ func (p *PendingAttestation) UnmarshalSSZ(buf []byte) error {
 	}
 
 	// Field (2) 'InclusionDelay'
-	p.InclusionDelay = ssz.UnmarshallUint64(buf[132:140])
+	p.InclusionDelay = github_com_prysmaticlabs_eth2_types.Slot(ssz.UnmarshallUint64(buf[132:140]))
 
 	// Field (3) 'ProposerIndex'
 	p.ProposerIndex = ssz.UnmarshallUint64(buf[140:148])
@@ -1316,7 +1317,7 @@ func (p *PendingAttestation) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	}
 
 	// Field (2) 'InclusionDelay'
-	hh.PutUint64(p.InclusionDelay)
+	hh.PutUint64(uint64(p.InclusionDelay))
 
 	// Field (3) 'ProposerIndex'
 	hh.PutUint64(p.ProposerIndex)

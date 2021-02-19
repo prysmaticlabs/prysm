@@ -3,6 +3,7 @@ package params
 import (
 	"time"
 
+	"github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
@@ -54,6 +55,7 @@ var mainnetNetworkConfig = &NetworkConfig{
 var mainnetBeaconConfig = &BeaconChainConfig{
 	// Constants (Non-configurable)
 	FarFutureEpoch:           1<<64 - 1,
+	FarFutureSlot:            1<<64 - 1,
 	BaseRewardsPerEpoch:      4,
 	DepositContractTreeDepth: 32,
 	GenesisDelay:             604800, // 1 week.
@@ -171,7 +173,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	GenesisForkVersion:  []byte{0, 0, 0, 0},
 	NextForkVersion:     []byte{0, 0, 0, 0}, // Set to GenesisForkVersion unless there is a scheduled fork
 	NextForkEpoch:       1<<64 - 1,          // Set to FarFutureEpoch unless there is a scheduled fork.
-	ForkVersionSchedule: map[uint64][]byte{
+	ForkVersionSchedule: map[types.Epoch][]byte{
 		// Any further forks must be specified here by their epoch number.
 	},
 }

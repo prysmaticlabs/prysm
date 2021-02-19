@@ -6,6 +6,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -177,7 +178,7 @@ var (
 // responsibilities throughout the beacon chain's lifecycle. It logs absolute accrued rewards
 // and penalties over time, percentage gain/loss, and gives the end user a better idea
 // of how the validator performs with respect to the rest.
-func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error {
+func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot types.Slot) error {
 	if !helpers.IsEpochEnd(slot) || slot <= params.BeaconConfig().SlotsPerEpoch {
 		// Do nothing unless we are at the end of the epoch, and not in the first epoch.
 		return nil
@@ -209,10 +210,10 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		}
 	}
 
-	prevEpoch := uint64(0)
+	prevEpoch := types.Epoch(0)
 	if slot >= params.BeaconConfig().SlotsPerEpoch {
-		prevEpoch = (slot / params.BeaconConfig().SlotsPerEpoch) - 1
-		if v.voteStats.startEpoch == ^uint64(0) { // Handles unknown first epoch.
+		prevEpoch = types.Epoch(slot/params.BeaconConfig().SlotsPerEpoch) - 1
+		if uint64(v.voteStats.startEpoch) == ^uint64(0) { // Handles unknown first epoch.
 			v.voteStats.startEpoch = prevEpoch
 		}
 	}
@@ -279,14 +280,14 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 }
 
 // UpdateLogAggregateStats updates and logs the voteStats struct of a validator using the RPC response obtained from LogValidatorGainsAndLosses.
-func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResponse, slot uint64) {
+func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResponse, slot types.Slot) {
 	summary := &v.voteStats
-	currentEpoch := slot / params.BeaconConfig().SlotsPerEpoch
+	currentEpoch := types.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
 	var included uint64
 	var correctSource, correctTarget, correctHead int
 
 	for i := range resp.PublicKeys {
-		if resp.InclusionSlots[i] != ^uint64(0) {
+		if uint64(resp.InclusionSlots[i]) != ^uint64(0) {
 			included++
 			summary.includedAttestedCount++
 			summary.totalDistance += resp.InclusionDistances[i]

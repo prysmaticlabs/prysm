@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -24,8 +25,8 @@ const MaxSlotBuffer = uint64(1 << 7)
 //    Return the epoch number of ``slot``.
 //    """
 //    return Epoch(slot // SLOTS_PER_EPOCH)
-func SlotToEpoch(slot uint64) uint64 {
-	return slot / params.BeaconConfig().SlotsPerEpoch
+func SlotToEpoch(slot types.Slot) types.Epoch {
+	return types.Epoch(slot.DivSlot(params.BeaconConfig().SlotsPerEpoch))
 }
 
 // CurrentEpoch returns the current epoch number calculated from
@@ -37,7 +38,7 @@ func SlotToEpoch(slot uint64) uint64 {
 //    Return the current epoch.
 //    """
 //    return compute_epoch_of_slot(state.slot)
-func CurrentEpoch(state *stateTrie.BeaconState) uint64 {
+func CurrentEpoch(state *stateTrie.BeaconState) types.Epoch {
 	return SlotToEpoch(state.Slot())
 }
 
@@ -52,7 +53,7 @@ func CurrentEpoch(state *stateTrie.BeaconState) uint64 {
 //    """
 //    current_epoch = get_current_epoch(state)
 //    return GENESIS_EPOCH if current_epoch == GENESIS_EPOCH else Epoch(current_epoch - 1)
-func PrevEpoch(state *stateTrie.BeaconState) uint64 {
+func PrevEpoch(state *stateTrie.BeaconState) types.Epoch {
 	currentEpoch := CurrentEpoch(state)
 	if currentEpoch == 0 {
 		return 0
@@ -62,7 +63,7 @@ func PrevEpoch(state *stateTrie.BeaconState) uint64 {
 
 // NextEpoch returns the next epoch number calculated from
 // the slot number stored in beacon state.
-func NextEpoch(state *stateTrie.BeaconState) uint64 {
+func NextEpoch(state *stateTrie.BeaconState) types.Epoch {
 	return SlotToEpoch(state.Slot()) + 1
 }
 
@@ -75,8 +76,8 @@ func NextEpoch(state *stateTrie.BeaconState) uint64 {
 //    Return the start slot of ``epoch``.
 //    """
 //    return Slot(epoch * SLOTS_PER_EPOCH)
-func StartSlot(epoch uint64) (uint64, error) {
-	slot, err := mathutil.Mul64(epoch, params.BeaconConfig().SlotsPerEpoch)
+func StartSlot(epoch types.Epoch) (types.Slot, error) {
+	slot, err := params.BeaconConfig().SlotsPerEpoch.SafeMul(uint64(epoch))
 	if err != nil {
 		return slot, errors.Errorf("start slot calculation overflows: %v", err)
 	}
@@ -85,7 +86,7 @@ func StartSlot(epoch uint64) (uint64, error) {
 
 // EndSlot returns the last slot number of the
 // current epoch.
-func EndSlot(epoch uint64) (uint64, error) {
+func EndSlot(epoch types.Epoch) (types.Slot, error) {
 	if epoch == math.MaxUint64 {
 		return 0, errors.New("start slot calculation overflows")
 	}
@@ -98,23 +99,23 @@ func EndSlot(epoch uint64) (uint64, error) {
 
 // IsEpochStart returns true if the given slot number is an epoch starting slot
 // number.
-func IsEpochStart(slot uint64) bool {
+func IsEpochStart(slot types.Slot) bool {
 	return slot%params.BeaconConfig().SlotsPerEpoch == 0
 }
 
 // IsEpochEnd returns true if the given slot number is an epoch ending slot
 // number.
-func IsEpochEnd(slot uint64) bool {
+func IsEpochEnd(slot types.Slot) bool {
 	return IsEpochStart(slot + 1)
 }
 
 // SlotsSinceEpochStarts returns number of slots since the start of the epoch.
-func SlotsSinceEpochStarts(slot uint64) uint64 {
+func SlotsSinceEpochStarts(slot types.Slot) types.Slot {
 	return slot % params.BeaconConfig().SlotsPerEpoch
 }
 
 // VerifySlotTime validates the input slot is not from the future.
-func VerifySlotTime(genesisTime, slot uint64, timeTolerance time.Duration) error {
+func VerifySlotTime(genesisTime uint64, slot types.Slot, timeTolerance time.Duration) error {
 	slotTime, err := SlotToTime(genesisTime, slot)
 	if err != nil {
 		return err
@@ -136,12 +137,12 @@ func VerifySlotTime(genesisTime, slot uint64, timeTolerance time.Duration) error
 }
 
 // SlotToTime takes the given slot and genesis time to determine the start time of the slot.
-func SlotToTime(genesisTimeSec, slot uint64) (time.Time, error) {
-	timeSinceGenesis, err := mathutil.Mul64(slot, params.BeaconConfig().SecondsPerSlot)
+func SlotToTime(genesisTimeSec uint64, slot types.Slot) (time.Time, error) {
+	timeSinceGenesis, err := slot.SafeMul(params.BeaconConfig().SecondsPerSlot)
 	if err != nil {
 		return time.Unix(0, 0), fmt.Errorf("slot (%d) is in the far distant future: %w", slot, err)
 	}
-	sTime, err := mathutil.Add64(genesisTimeSec, timeSinceGenesis)
+	sTime, err := timeSinceGenesis.SafeAdd(genesisTimeSec)
 	if err != nil {
 		return time.Unix(0, 0), fmt.Errorf("slot (%d) is in the far distant future: %w", slot, err)
 	}
@@ -149,26 +150,26 @@ func SlotToTime(genesisTimeSec, slot uint64) (time.Time, error) {
 }
 
 // SlotsSince computes the number of time slots that have occurred since the given timestamp.
-func SlotsSince(time time.Time) uint64 {
+func SlotsSince(time time.Time) types.Slot {
 	return CurrentSlot(uint64(time.Unix()))
 }
 
 // CurrentSlot returns the current slot as determined by the local clock and
 // provided genesis time.
-func CurrentSlot(genesisTimeSec uint64) uint64 {
+func CurrentSlot(genesisTimeSec uint64) types.Slot {
 	now := timeutils.Now().Unix()
 	genesis := int64(genesisTimeSec)
 	if now < genesis {
 		return 0
 	}
-	return uint64(now-genesis) / params.BeaconConfig().SecondsPerSlot
+	return types.Slot(uint64(now-genesis) / params.BeaconConfig().SecondsPerSlot)
 }
 
 // ValidateSlotClock validates a provided slot against the local
 // clock to ensure slots that are unreasonable are returned with
 // an error.
-func ValidateSlotClock(slot, genesisTimeSec uint64) error {
-	maxPossibleSlot := CurrentSlot(genesisTimeSec) + MaxSlotBuffer
+func ValidateSlotClock(slot types.Slot, genesisTimeSec uint64) error {
+	maxPossibleSlot := CurrentSlot(genesisTimeSec).Add(MaxSlotBuffer)
 	// Defensive check to ensure that we only process slots up to a hard limit
 	// from our local clock.
 	if slot > maxPossibleSlot {
@@ -178,7 +179,7 @@ func ValidateSlotClock(slot, genesisTimeSec uint64) error {
 }
 
 // RoundUpToNearestEpoch rounds up the provided slot value to the nearest epoch.
-func RoundUpToNearestEpoch(slot uint64) uint64 {
+func RoundUpToNearestEpoch(slot types.Slot) types.Slot {
 	if slot%params.BeaconConfig().SlotsPerEpoch != 0 {
 		slot -= slot % params.BeaconConfig().SlotsPerEpoch
 		slot += params.BeaconConfig().SlotsPerEpoch
@@ -199,7 +200,7 @@ func RoundUpToNearestEpoch(slot uint64) uint64 {
 //    else:
 //        weak_subjectivity_period += SAFETY_DECAY*val_count/(2*100*MIN_PER_EPOCH_CHURN_LIMIT)
 //    return weak_subjectivity_period
-func WeakSubjectivityCheckptEpoch(valCount uint64) (uint64, error) {
+func WeakSubjectivityCheckptEpoch(valCount uint64) (types.Epoch, error) {
 	wsp := params.BeaconConfig().MinValidatorWithdrawabilityDelay
 
 	m := params.BeaconConfig().MinPerEpochChurnLimit
@@ -207,24 +208,22 @@ func WeakSubjectivityCheckptEpoch(valCount uint64) (uint64, error) {
 	d := params.BeaconConfig().SafetyDecay
 	if valCount >= m*q {
 		v := d * q / (2 * 100)
-		wsp += v
+		wsp += types.Epoch(v)
 	} else {
 		v, err := mathutil.Mul64(d, valCount)
 		if err != nil {
 			return 0, err
 		}
 		v /= 2 * 100 * m
-		wsp += v
+		wsp += types.Epoch(v)
 	}
 	return wsp, nil
 }
 
 // VotingPeriodStartTime returns the current voting period's start time
 // depending on the provided genesis and current slot.
-func VotingPeriodStartTime(genesis, slot uint64) uint64 {
-	startTime := genesis
-	startTime +=
-		(slot - (slot % (params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch))) *
-			params.BeaconConfig().SecondsPerSlot
-	return startTime
+func VotingPeriodStartTime(genesis uint64, slot types.Slot) uint64 {
+	slots := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod))
+	startTime := uint64((slot - slot.ModSlot(slots)).Mul(params.BeaconConfig().SecondsPerSlot))
+	return genesis + startTime
 }

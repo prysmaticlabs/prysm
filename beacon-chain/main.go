@@ -98,6 +98,8 @@ var appFlags = []cli.Flag{
 	debug.MemProfileRateFlag,
 	debug.CPUProfileFlag,
 	debug.TraceFlag,
+	debug.BlockProfileRateFlag,
+	debug.MutexProfileFractionFlag,
 	cmd.LogFileName,
 	cmd.EnableUPnPFlag,
 	cmd.ConfigFileFlag,
@@ -106,6 +108,7 @@ var appFlags = []cli.Flag{
 	cmd.AcceptTosFlag,
 	cmd.RestoreSourceFileFlag,
 	cmd.RestoreTargetDirFlag,
+	cmd.BoltMMapInitialSizeFlag,
 }
 
 func init() {

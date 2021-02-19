@@ -10,6 +10,7 @@ import (
 
 	fastssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -81,12 +82,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 		}
 	}
 
-	var eth1Data *ethpb.Eth1Data
-	if featureconfig.Get().EnableEth1DataMajorityVote {
-		eth1Data, err = vs.eth1DataMajorityVote(ctx, head)
-	} else {
-		eth1Data, err = vs.eth1Data(ctx, req.Slot)
-	}
+	eth1Data, err := vs.eth1DataMajorityVote(ctx, head)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get ETH1 data: %v", err)
 	}
@@ -177,41 +173,6 @@ func (vs *Server) ProposeBlock(ctx context.Context, blk *ethpb.SignedBeaconBlock
 	}, nil
 }
 
-// eth1Data determines the appropriate eth1data for a block proposal. The algorithm for this method
-// is as follows:
-//  - Determine the timestamp for the start slot for the eth1 voting period.
-//  - Determine the most recent eth1 block before that timestamp.
-//  - Subtract that eth1block.number by ETH1_FOLLOW_DISTANCE.
-//  - This is the eth1block to use for the block proposal.
-func (vs *Server) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, error) {
-	ctx, cancel := context.WithTimeout(ctx, eth1dataTimeout)
-	defer cancel()
-
-	if vs.MockEth1Votes {
-		return vs.mockETH1DataVote(ctx, slot)
-	}
-	if !vs.Eth1InfoFetcher.IsConnectedToETH1() {
-		return vs.randomETH1DataVote(ctx)
-	}
-	eth1DataNotification = false
-
-	eth1VotingPeriodStartTime := vs.slotStartTime(slot)
-
-	// Look up most recent block up to timestamp
-	blockNumber, err := vs.Eth1BlockFetcher.BlockByTimestamp(ctx, eth1VotingPeriodStartTime)
-	if err != nil {
-		log.WithError(err).Error("Could not get block number from timestamp")
-		return vs.randomETH1DataVote(ctx)
-	}
-	eth1Data, err := vs.defaultEth1DataResponse(ctx, blockNumber.Number)
-	if err != nil {
-		log.WithError(err).Error("Could not get eth1 data from block number")
-		return vs.randomETH1DataVote(ctx)
-	}
-
-	return eth1Data, nil
-}
-
 // eth1DataMajorityVote determines the appropriate eth1data for a block proposal using
 // an algorithm called Voting with the Majority. The algorithm works as follows:
 //  - Determine the timestamp for the start slot for the eth1 voting period.
@@ -292,7 +253,7 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState *stateTr
 	return &chosenVote.data.eth1Data, nil
 }
 
-func (vs *Server) slotStartTime(slot uint64) uint64 {
+func (vs *Server) slotStartTime(slot types.Slot) uint64 {
 	startTime, _ := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
 	return helpers.VotingPeriodStartTime(startTime, slot)
 }
@@ -357,7 +318,7 @@ func chosenEth1DataMajorityVote(votes []eth1DataSingleVote) eth1DataAggregatedVo
 	return currentVote
 }
 
-func (vs *Server) mockETH1DataVote(ctx context.Context, slot uint64) (*ethpb.Eth1Data, error) {
+func (vs *Server) mockETH1DataVote(ctx context.Context, slot types.Slot) (*ethpb.Eth1Data, error) {
 	if !eth1DataNotification {
 		log.Warn("Beacon Node is no longer connected to an ETH1 chain, so ETH1 data votes are now mocked.")
 		eth1DataNotification = true
@@ -371,13 +332,13 @@ func (vs *Server) mockETH1DataVote(ctx context.Context, slot uint64) (*ethpb.Eth
 	//   DepositCount = state.eth1_deposit_index,
 	//   BlockHash = hash(hash(current_epoch + slot_in_voting_period)),
 	// )
-	slotInVotingPeriod := slot % (params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch)
+	slotInVotingPeriod := slot.ModSlot(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod)))
 	headState, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, err
 	}
 	var enc []byte
-	enc = fastssz.MarshalUint64(enc, helpers.SlotToEpoch(slot)+slotInVotingPeriod)
+	enc = fastssz.MarshalUint64(enc, uint64(helpers.SlotToEpoch(slot))+uint64(slotInVotingPeriod))
 	depRoot := hashutil.Hash(enc)
 	blockHash := hashutil.Hash(depRoot[:])
 	return &ethpb.Eth1Data{

@@ -15,9 +15,24 @@ const (
 // for attester slashing detection.
 type CompactAttestation struct {
 	AttestingIndices []uint64
-	Source           uint64
-	Target           uint64
+	Source           types.Epoch
+	Target           types.Epoch
 	SigningRoot      [32]byte
+}
+
+// AttestedEpochForValidator encapsulates a previously attested epoch
+// for a validator index.
+type AttestedEpochForValidator struct {
+	ValidatorIndex types.ValidatorIndex
+	Epoch          types.Epoch
+}
+
+// CompactBeaconBlock containing only the required information
+// for proposer slashing detection.
+type CompactBeaconBlock struct {
+	ProposerIndex uint64
+	Slot          types.Slot
+	SigningRoot   [32]byte
 }
 
 // Slashing represents a compact format with all the information

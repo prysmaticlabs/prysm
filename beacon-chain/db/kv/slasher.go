@@ -16,11 +16,10 @@ import (
 // epoch we have recorded the validator attested for.
 func (s *Store) LatestEpochAttestedForValidators(
 	ctx context.Context, validatorIndices []types.ValidatorIndex,
-) ([]types.Epoch, []bool, error) {
+) ([]*slashertypes.AttestedEpochForValidator, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.LatestEpochAttestedForValidators")
 	defer span.End()
-	epochs := make([]types.Epoch, 0)
-	epochsExist := make([]bool, 0)
+	attestedEpochs := make([]*slashertypes.AttestedEpochForValidator, 0)
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestedEpochsByValidator)
 		for _, valIdx := range validatorIndices {
@@ -29,21 +28,20 @@ func (s *Store) LatestEpochAttestedForValidators(
 				return err
 			}
 			epochBytes := bkt.Get(enc)
-			if epochBytes == nil {
-				epochsExist = append(epochsExist, false)
-				epochs = append(epochs, 0)
-				continue
+			if epochBytes != nil {
+				var epoch types.Epoch
+				if err := epoch.UnmarshalSSZ(epochBytes); err != nil {
+					return err
+				}
+				attestedEpochs = append(attestedEpochs, &slashertypes.AttestedEpochForValidator{
+					ValidatorIndex: valIdx,
+					Epoch:          epoch,
+				})
 			}
-			var epoch types.Epoch
-			if err := epoch.UnmarshalSSZ(epochBytes); err != nil {
-				return err
-			}
-			epochsExist = append(epochsExist, true)
-			epochs = append(epochs, epoch)
 		}
 		return nil
 	})
-	return epochs, epochsExist, err
+	return attestedEpochs, err
 }
 
 // SaveLatestEpochAttestedForValidators updates the latest epoch a slice
@@ -88,7 +86,7 @@ func (s *Store) CheckAndUpdateAttestationRecordForValidators(
 	var exists []bool
 	err := s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationRecordsBucket)
-		encEpoch, err := types.Epoch(attestation.Target).MarshalSSZ()
+		encEpoch, err := attestation.Target.MarshalSSZ()
 		if err != nil {
 			return err
 		}
@@ -97,10 +95,7 @@ func (s *Store) CheckAndUpdateAttestationRecordForValidators(
 			return err
 		}
 		for _, validatorIdx := range attestation.AttestingIndices {
-			encIdx, err := types.ValidatorIndex(validatorIdx).MarshalSSZ()
-			if err != nil {
-				return err
-			}
+			encIdx := ssz.MarshalUint64(make([]byte, 8), validatorIdx)
 			key := append(encIdx, encEpoch...)
 			existingRecord := bkt.Get(key)
 			// If an attesting record exists for the validator, we append
@@ -171,7 +166,10 @@ func (s *Store) SaveAttestationRecordsForValidators(
 				return err
 			}
 			for _, att := range attestations {
-				encEpoch := ssz.MarshalUint64(make([]byte, 0), att.Target)
+				encEpoch, err := att.Target.MarshalSSZ()
+				if err != nil {
+					return err
+				}
 				key := append(encIdx, encEpoch...)
 				value, err := encodeAttestationRecord(att)
 				if err != nil {
@@ -249,8 +247,16 @@ func encodeAttestationRecord(att *slashertypes.CompactAttestation) ([]byte, erro
 		return nil, errors.New("encoding nil attestation")
 	}
 	value := make([]byte, 48)
-	copy(value[0:8], ssz.MarshalUint64(make([]byte, 0), att.Source))
-	copy(value[8:16], ssz.MarshalUint64(make([]byte, 0), att.Target))
+	encSource, err := att.Source.MarshalSSZ()
+	if err != nil {
+		return nil, err
+	}
+	encTarget, err := att.Target.MarshalSSZ()
+	if err != nil {
+		return nil, err
+	}
+	copy(value[0:8], encSource)
+	copy(value[8:16], encTarget)
 	copy(value[16:], att.SigningRoot[:])
 	return value, nil
 }
@@ -262,9 +268,16 @@ func decodeAttestationRecord(encoded []byte) (*slashertypes.CompactAttestation, 
 	}
 	var sr [32]byte
 	copy(sr[:], encoded[16:])
+	var source, target types.Epoch
+	if err := source.UnmarshalSSZ(encoded[0:8]); err != nil {
+		return nil, err
+	}
+	if err := target.UnmarshalSSZ(encoded[8:16]); err != nil {
+		return nil, err
+	}
 	return &slashertypes.CompactAttestation{
-		Source:      ssz.UnmarshallUint64(encoded[0:8]),
-		Target:      ssz.UnmarshallUint64(encoded[8:16]),
+		Source:      source,
+		Target:      target,
 		SigningRoot: sr,
 	}, nil
 }

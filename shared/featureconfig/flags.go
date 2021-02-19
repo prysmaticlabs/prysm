@@ -61,10 +61,6 @@ var (
 		Name:  "disable-blst",
 		Usage: "Disables the new BLS library, blst, from Supranational",
 	}
-	disableEth1DataMajorityVote = &cli.BoolFlag{
-		Name:  "disable-eth1-data-majority-vote",
-		Usage: "Disables the Voting With The Majority algorithm when voting for eth1data.",
-	}
 	disableAccountsV2 = &cli.BoolFlag{
 		Name:  "disable-accounts-v2",
 		Usage: "Disables usage of v2 for Prysm validator accounts",
@@ -76,11 +72,6 @@ var (
 	checkPtInfoCache = &cli.BoolFlag{
 		Name:  "use-check-point-cache",
 		Usage: "Enables check point info caching",
-	}
-	disablePruningDepositProofs = &cli.BoolFlag{
-		Name: "disable-pruning-deposit-proofs",
-		Usage: "Disables pruning deposit proofs when they are no longer needed." +
-			"This will probably significantly increase the amount of memory taken up by deposits.",
 	}
 	enableLargerGossipHistory = &cli.BoolFlag{
 		Name:  "enable-larger-gossip-history",
@@ -114,6 +105,10 @@ var (
 		Name:  "enable-next-slot-state-cache",
 		Usage: "Improves attesting and proposing efficiency by caching the next slot state at the end of the current slot",
 	}
+	updateHeadTimely = &cli.BoolFlag{
+		Name:  "update-head-timely",
+		Usage: "Improves update head time by updating head right after state transition",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -121,6 +116,7 @@ var devModeFlags = []cli.Flag{
 	enableLargerGossipHistory,
 	enableNextSlotStateCache,
 	forceOptMaxCoverAggregationStategy,
+	updateHeadTimely,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -159,14 +155,13 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	PyrmontTestnet,
 	Mainnet,
 	disableBlst,
-	disableEth1DataMajorityVote,
 	enablePeerScorer,
 	enableLargerGossipHistory,
 	checkPtInfoCache,
-	disablePruningDepositProofs,
 	disableBroadcastSlashingFlag,
 	enableNextSlotStateCache,
 	forceOptMaxCoverAggregationStategy,
+	updateHeadTimely,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

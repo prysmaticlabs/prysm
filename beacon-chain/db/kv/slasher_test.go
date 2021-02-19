@@ -14,9 +14,9 @@ func TestStore_AttestationRecordForValidator_SaveRetrieve(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := setupDB(t)
 	valIdx := types.ValidatorIndex(1)
-	target := uint64(5)
-	source := uint64(4)
-	attRecord, err := beaconDB.AttestationRecordForValidator(ctx, valIdx, types.Epoch(target))
+	target := types.Epoch(5)
+	source := types.Epoch(4)
+	attRecord, err := beaconDB.AttestationRecordForValidator(ctx, valIdx, target)
 	require.NoError(t, err)
 	require.Equal(t, true, attRecord == nil)
 
@@ -29,7 +29,7 @@ func TestStore_AttestationRecordForValidator_SaveRetrieve(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	attRecord, err = beaconDB.AttestationRecordForValidator(ctx, valIdx, types.Epoch(target))
+	attRecord, err = beaconDB.AttestationRecordForValidator(ctx, valIdx, target)
 	require.NoError(t, err)
 	assert.DeepEqual(t, target, attRecord.Target)
 	assert.DeepEqual(t, source, attRecord.Source)
@@ -42,22 +42,23 @@ func TestStore_LatestEpochAttestedForValidators(t *testing.T) {
 	indices := []types.ValidatorIndex{1, 2, 3}
 	epoch := types.Epoch(5)
 
-	_, epochsExist, err := beaconDB.LatestEpochAttestedForValidators(ctx, indices)
+	attestedEpochs, err := beaconDB.LatestEpochAttestedForValidators(ctx, indices)
 	require.NoError(t, err)
-	for _, exists := range epochsExist {
-		require.Equal(t, false, exists)
-	}
+	require.Equal(t, true, len(attestedEpochs) == 0)
 
 	err = beaconDB.SaveLatestEpochAttestedForValidators(ctx, indices, epoch)
 	require.NoError(t, err)
 
-	retrievedEpochs, epochsExist, err := beaconDB.LatestEpochAttestedForValidators(ctx, indices)
+	retrievedEpochs, err := beaconDB.LatestEpochAttestedForValidators(ctx, indices)
 	require.NoError(t, err)
 	require.Equal(t, len(indices), len(retrievedEpochs))
 
 	for i, retrievedEpoch := range retrievedEpochs {
-		require.Equal(t, true, epochsExist[i])
-		require.Equal(t, epoch, retrievedEpoch)
+		want := &slashertypes.AttestedEpochForValidator{
+			Epoch:          epoch,
+			ValidatorIndex: indices[i],
+		}
+		require.DeepEqual(t, want, retrievedEpoch)
 	}
 }
 

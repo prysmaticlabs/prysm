@@ -1,7 +1,11 @@
 package protoarray
 
+import (
+	types "github.com/prysmaticlabs/eth2-types"
+)
+
 // Slot of the fork choice node.
-func (n *Node) Slot() uint64 {
+func (n *Node) Slot() types.Slot {
 	return n.slot
 }
 
@@ -16,12 +20,12 @@ func (n *Node) Parent() uint64 {
 }
 
 // JustifiedEpoch of the fork choice node.
-func (n *Node) JustifiedEpoch() uint64 {
+func (n *Node) JustifiedEpoch() types.Epoch {
 	return n.justifiedEpoch
 }
 
 // FinalizedEpoch of the fork choice node.
-func (n *Node) FinalizedEpoch() uint64 {
+func (n *Node) FinalizedEpoch() types.Epoch {
 	return n.finalizedEpoch
 }
 

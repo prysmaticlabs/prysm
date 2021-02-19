@@ -8,6 +8,7 @@ import (
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -216,7 +217,7 @@ func (bs *Server) ListValidators(
 	var reqState *statetrie.BeaconState
 	var err error
 	if requestedEpoch != currentEpoch {
-		var s uint64
+		var s types.Slot
 		s, err = helpers.StartSlot(requestedEpoch)
 		if err != nil {
 			return nil, err
@@ -388,7 +389,7 @@ func (bs *Server) GetValidatorActiveSetChanges(
 ) (*ethpb.ActiveSetChanges, error) {
 	currentEpoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
 
-	var requestedEpoch uint64
+	var requestedEpoch types.Epoch
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.GetValidatorActiveSetChangesRequest_Genesis:
 		requestedEpoch = 0
@@ -474,7 +475,7 @@ func (bs *Server) GetValidatorParticipation(
 	currentSlot := bs.GenesisTimeFetcher.CurrentSlot()
 	currentEpoch := helpers.SlotToEpoch(currentSlot)
 
-	var requestedEpoch uint64
+	var requestedEpoch types.Epoch
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.GetValidatorParticipationRequest_Genesis:
 		requestedEpoch = 0
@@ -508,11 +509,11 @@ func (bs *Server) GetValidatorParticipation(
 	}
 	// Keep looking back until there's a canonical slot.
 	for i := int(startSlot - 1); !canonical && i >= 0; i-- {
-		canonical, err = bs.isSlotCanonical(ctx, uint64(i))
+		canonical, err = bs.isSlotCanonical(ctx, types.Slot(i))
 		if err != nil {
 			return nil, err
 		}
-		startSlot = uint64(i)
+		startSlot = types.Slot(i)
 	}
 
 	beaconState, err := bs.StateGen.StateBySlot(ctx, startSlot)
@@ -561,7 +562,7 @@ func (bs *Server) GetValidatorQueue(
 	// Queue the validators whose eligible to activate and sort them by activation eligibility epoch number.
 	// Additionally, determine those validators queued to exit
 	awaitingExit := make([]uint64, 0)
-	exitEpochs := make([]uint64, 0)
+	exitEpochs := make([]types.Epoch, 0)
 	activationQ := make([]uint64, 0)
 	vals := headState.Validators()
 	for idx, validator := range vals {
@@ -592,7 +593,7 @@ func (bs *Server) GetValidatorQueue(
 		return nil, status.Errorf(codes.Internal, "Could not compute churn limit: %v", err)
 	}
 
-	exitQueueEpoch := uint64(0)
+	exitQueueEpoch := types.Epoch(0)
 	for _, i := range exitEpochs {
 		if exitQueueEpoch < i {
 			exitQueueEpoch = i
@@ -715,8 +716,8 @@ func (bs *Server) GetValidatorPerformance(
 	beforeTransitionBalances := make([]uint64, 0, responseCap)
 	afterTransitionBalances := make([]uint64, 0, responseCap)
 	effectiveBalances := make([]uint64, 0, responseCap)
-	inclusionSlots := make([]uint64, 0, responseCap)
-	inclusionDistances := make([]uint64, 0, responseCap)
+	inclusionSlots := make([]types.Slot, 0, responseCap)
+	inclusionDistances := make([]types.Slot, 0, responseCap)
 	correctlyVotedSource := make([]bool, 0, responseCap)
 	correctlyVotedTarget := make([]bool, 0, responseCap)
 	correctlyVotedHead := make([]bool, 0, responseCap)
@@ -858,7 +859,7 @@ func (bs *Server) GetIndividualVotes(
 // isSlotCanonical returns true if the input slot has a canonical block in the chain,
 // if the input slot has a skip block, false is returned,
 // if the input slot has more than one block, an error is returned.
-func (bs *Server) isSlotCanonical(ctx context.Context, slot uint64) (bool, error) {
+func (bs *Server) isSlotCanonical(ctx context.Context, slot types.Slot) (bool, error) {
 	if slot == 0 {
 		return true, nil
 	}
@@ -877,7 +878,7 @@ func (bs *Server) isSlotCanonical(ctx context.Context, slot uint64) (bool, error
 }
 
 // Determines whether a validator has already exited.
-func validatorHasExited(validator *ethpb.Validator, currentEpoch uint64) bool {
+func validatorHasExited(validator *ethpb.Validator, currentEpoch types.Epoch) bool {
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
 	if currentEpoch < validator.ActivationEligibilityEpoch {
 		return false
@@ -897,7 +898,7 @@ func validatorHasExited(validator *ethpb.Validator, currentEpoch uint64) bool {
 	return true
 }
 
-func validatorStatus(validator *ethpb.Validator, epoch uint64) ethpb.ValidatorStatus {
+func validatorStatus(validator *ethpb.Validator, epoch types.Epoch) ethpb.ValidatorStatus {
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
 	if validator == nil {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS

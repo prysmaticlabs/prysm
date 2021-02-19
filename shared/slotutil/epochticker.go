@@ -3,6 +3,8 @@ package slotutil
 import (
 	"time"
 
+	types "github.com/prysmaticlabs/eth2-types"
+
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
@@ -13,13 +15,13 @@ import (
 // multiple of the epoch duration.
 // In addition, the channel returns the new epoch number.
 type EpochTicker struct {
-	c    chan uint64
+	c    chan types.Epoch
 	done chan struct{}
 }
 
 // C returns the ticker channel. Call Cancel afterwards to ensure
 // that the goroutine exits cleanly.
-func (s *EpochTicker) C() <-chan uint64 {
+func (s *EpochTicker) C() <-chan types.Epoch {
 	return s.c
 }
 
@@ -33,7 +35,7 @@ func (s *EpochTicker) Done() {
 // NewEpochTicker starts the EpochTicker.
 func NewEpochTicker(genesisTime time.Time, secondsPerEpoch uint64) *EpochTicker {
 	ticker := &EpochTicker{
-		c:    make(chan uint64),
+		c:    make(chan types.Epoch),
 		done: make(chan struct{}),
 	}
 	ticker.start(genesisTime, secondsPerEpoch, timeutils.Since, timeutils.Until, time.After)
@@ -67,7 +69,7 @@ func (s *EpochTicker) start(
 			waitTime := until(nextTickTime)
 			select {
 			case <-after(waitTime):
-				s.c <- epoch
+				s.c <- types.Epoch(epoch)
 				epoch++
 				nextTickTime = nextTickTime.Add(d)
 			case <-s.done:

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
+	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -26,7 +27,7 @@ const (
 	// skipped slot or backtracking takes place).
 	skippedMachineTimeout = 10 * staleEpochTimeout
 	// lookaheadSteps is a limit on how many forward steps are loaded into queue.
-	// Each step is managed by assigned finite state machine.
+	// Each step is managed by assigned finite state machine. Must be >= 2.
 	lookaheadSteps = 8
 	// noRequiredPeersErrMaxRetries defines number of retries when no required peers are found.
 	noRequiredPeersErrMaxRetries = 1000
@@ -61,7 +62,7 @@ type syncMode uint8
 type blocksQueueConfig struct {
 	blocksFetcher       *blocksFetcher
 	chain               blockchainService
-	highestExpectedSlot uint64
+	highestExpectedSlot types.Slot
 	p2p                 p2p.P2P
 	db                  db.ReadOnlyDatabase
 	mode                syncMode
@@ -75,13 +76,13 @@ type blocksQueue struct {
 	smm                 *stateMachineManager
 	blocksFetcher       *blocksFetcher
 	chain               blockchainService
-	highestExpectedSlot uint64
+	highestExpectedSlot types.Slot
 	mode                syncMode
 	exitConditions      struct {
 		noRequiredPeersErrRetries int
 	}
 	fetchedData chan *blocksQueueFetchedData // output channel for ready blocks
-	staleEpochs map[uint64]uint8             // counter to keep track of stale FSMs
+	staleEpochs map[types.Epoch]uint8        // counter to keep track of stale FSMs
 	quit        chan struct{}                // termination notifier
 }
 
@@ -124,7 +125,7 @@ func newBlocksQueue(ctx context.Context, cfg *blocksQueueConfig) *blocksQueue {
 		mode:                cfg.mode,
 		fetchedData:         make(chan *blocksQueueFetchedData, 1),
 		quit:                make(chan struct{}),
-		staleEpochs:         make(map[uint64]uint8),
+		staleEpochs:         make(map[types.Epoch]uint8),
 	}
 
 	// Configure state machines.
@@ -179,7 +180,7 @@ func (q *blocksQueue) loop() {
 		startSlot -= startBackSlots
 	}
 	blocksPerRequest := q.blocksFetcher.blocksPerSecond
-	for i := startSlot; i < startSlot+blocksPerRequest*lookaheadSteps; i += blocksPerRequest {
+	for i := startSlot; i < startSlot.Add(blocksPerRequest*lookaheadSteps); i += types.Slot(blocksPerRequest) {
 		q.smm.addStateMachine(i)
 	}
 
@@ -237,7 +238,7 @@ func (q *blocksQueue) loop() {
 					}
 				}
 				// Do garbage collection, and advance sliding window forward.
-				if q.chain.HeadSlot() >= fsm.start+blocksPerRequest-1 {
+				if q.chain.HeadSlot() >= fsm.start.Add(blocksPerRequest-1) {
 					highestStartSlot, err := q.smm.highestStartSlot()
 					if err != nil {
 						log.WithError(err).Debug("Cannot obtain highest epoch state number")
@@ -247,7 +248,7 @@ func (q *blocksQueue) loop() {
 						log.WithError(err).Debug("Can not remove state machine")
 					}
 					if len(q.smm.machines) < lookaheadSteps {
-						q.smm.addStateMachine(highestStartSlot + blocksPerRequest)
+						q.smm.addStateMachine(highestStartSlot.Add(blocksPerRequest))
 					}
 				}
 			}

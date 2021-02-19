@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -41,7 +42,7 @@ func CreateForkDigest(
 // Fork given a target epoch,
 // returns the active fork version during this epoch.
 func Fork(
-	targetEpoch uint64,
+	targetEpoch types.Epoch,
 ) (*pb.Fork, error) {
 	// We retrieve a list of scheduled forks by epoch.
 	// We loop through the keys in this map to determine the current
@@ -49,7 +50,7 @@ func Fork(
 	retrievedForkVersion := params.BeaconConfig().GenesisForkVersion
 	previousForkVersion := params.BeaconConfig().GenesisForkVersion
 	scheduledForks := params.BeaconConfig().ForkVersionSchedule
-	forkEpoch := uint64(0)
+	forkEpoch := types.Epoch(0)
 	for epoch, forkVersion := range scheduledForks {
 		if epoch <= targetEpoch {
 			previousForkVersion = retrievedForkVersion
