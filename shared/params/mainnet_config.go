@@ -182,6 +182,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	TimelyHeadNumerator:   12,
 	TimelySourceNumerator: 12,
 	TimelyTargetNumerator: 32,
+	RewardDenominator:     64,
 
 	// Fork related values.
 	GenesisForkVersion:  []byte{0, 0, 0, 0},

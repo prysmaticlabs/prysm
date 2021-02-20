@@ -139,7 +139,7 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	pfc.Root = []byte("hello-world")
 	require.NoError(t, beaconState.SetPreviousJustifiedCheckpoint(pfc))
 
-	want := "source check point not equal to previous justified checkpoint"
+	want := "could not verify attestation at index 0 in block: source epoch does not match"
 	_, err = blocks.ProcessAttestations(context.Background(), beaconState, b)
 	assert.ErrorContains(t, want, err)
 	b.Block.Body.Attestations[0].Data.Source.Epoch = helpers.PrevEpoch(beaconState)

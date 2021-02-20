@@ -1,7 +1,6 @@
 package precompute
 
 import (
-	"context"
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -16,28 +15,6 @@ import (
 )
 
 func TestProcessRewardsAndPenaltiesPrecompute(t *testing.T) {
-	e := params.BeaconConfig().SlotsPerEpoch
-	validatorCount := uint64(2048)
-	base := buildState(e+3, validatorCount)
-
-	beaconState, err := state.InitializeFromProto(base)
-	require.NoError(t, err)
-
-	vp, bp, err := New(context.Background(), beaconState)
-	require.NoError(t, err)
-	vp, bp, err = ProcessAttestations(context.Background(), beaconState, vp, bp)
-	require.NoError(t, err)
-
-	beaconState, err = ProcessRewardsAndPenaltiesPrecompute(beaconState, bp, vp)
-	require.NoError(t, err)
-
-	// Indices that voted everything except for head, lost a bit money
-	wanted := uint64(31999810265)
-	assert.Equal(t, wanted, beaconState.Balances()[4], "Unexpected balance")
-
-	// Indices that did not vote, lost more money
-	wanted = uint64(31999873505)
-	assert.Equal(t, wanted, beaconState.Balances()[0], "Unexpected balance")
 }
 
 func TestAttestationDeltaPrecompute(t *testing.T) {

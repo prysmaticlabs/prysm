@@ -54,13 +54,8 @@ func runPrecomputeRewardsAndPenaltiesTest(t *testing.T, testFolderPath string) {
 
 	rewards, penalties, err := precompute.AttestationsDelta(preBeaconState, bp, vp)
 	require.NoError(t, err)
-	pRewards, err := precompute.ProposersDelta(preBeaconState, bp, vp)
-	require.NoError(t, err)
-	if len(rewards) != len(penalties) && len(rewards) != len(pRewards) {
+	if len(rewards) != len(penalties) {
 		t.Fatal("Incorrect lengths")
-	}
-	for i, reward := range rewards {
-		rewards[i] = reward + pRewards[i]
 	}
 
 	totalSpecTestRewards := make([]uint64, len(rewards))

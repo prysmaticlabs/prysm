@@ -149,10 +149,10 @@ func TestBaseReward_AccurateRewards(t *testing.T) {
 		b uint64
 		c uint64
 	}{
-		{params.BeaconConfig().MinDepositAmount, params.BeaconConfig().MinDepositAmount, 505976},
-		{30 * 1e9, 30 * 1e9, 2771282},
-		{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance, 2862174},
-		{40 * 1e9, params.BeaconConfig().MaxEffectiveBalance, 2862174},
+		{params.BeaconConfig().MinDepositAmount, params.BeaconConfig().MinDepositAmount, 2023907},
+		{30 * 1e9, 30 * 1e9, 11085130},
+		{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance, 11448696},
+		{40 * 1e9, params.BeaconConfig().MaxEffectiveBalance, 11448696},
 	}
 	for _, tt := range tests {
 		base := &pb.BeaconState{
