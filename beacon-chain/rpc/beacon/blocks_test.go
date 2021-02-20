@@ -111,9 +111,7 @@ func TestServer_ListBlocks_Genesis(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	if !proto.Equal(wanted, res) {
-		t.Errorf("Wanted %v, received %v", wanted, res)
-	}
+	assert.DeepSSZEqual(t, wanted, res)
 }
 
 func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
@@ -230,30 +228,6 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 				NextPageToken:   "",
 				TotalSize:       int32(params.BeaconConfig().SlotsPerEpoch)}},
 		{req: &ethpb.ListBlocksRequest{
-			PageToken:   strconv.Itoa(1),
-			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 5},
-			PageSize:    3},
-			res: &ethpb.ListBlocksResponse{
-				BlockContainers: blkContainers[43:46],
-				NextPageToken:   "2",
-				TotalSize:       int32(params.BeaconConfig().SlotsPerEpoch)}},
-		{req: &ethpb.ListBlocksRequest{
-			PageToken:   strconv.Itoa(1),
-			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 11},
-			PageSize:    7},
-			res: &ethpb.ListBlocksResponse{
-				BlockContainers: blkContainers[95:96],
-				NextPageToken:   "",
-				TotalSize:       int32(params.BeaconConfig().SlotsPerEpoch)}},
-		{req: &ethpb.ListBlocksRequest{
-			PageToken:   strconv.Itoa(0),
-			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 12},
-			PageSize:    4},
-			res: &ethpb.ListBlocksResponse{
-				BlockContainers: blkContainers[96:100],
-				NextPageToken:   "",
-				TotalSize:       int32(params.BeaconConfig().SlotsPerEpoch / 2)}},
-		{req: &ethpb.ListBlocksRequest{
 			PageToken:   strconv.Itoa(0),
 			QueryFilter: &ethpb.ListBlocksRequest_Slot{Slot: 300},
 			PageSize:    3},
@@ -271,9 +245,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 		t.Run(fmt.Sprintf("test_%d", i), func(t *testing.T) {
 			res, err := bs.ListBlocks(ctx, test.req)
 			require.NoError(t, err)
-			if !proto.Equal(res, test.res) {
-				t.Errorf("Incorrect blocks response, wanted %v, received %v", test.res, res)
-			}
+			assert.DeepSSZEqual(t, res, test.res)
 		})
 	}
 }

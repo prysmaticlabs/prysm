@@ -1532,20 +1532,7 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpoch(t *testing.T) {
 	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{Epoch: 1}})
 	require.NoError(t, err)
 
-	wanted := &ethpb.ValidatorParticipation{
-		GlobalParticipationRate:          float32(params.BeaconConfig().EffectiveBalanceIncrement) / float32(validatorCount*params.BeaconConfig().MaxEffectiveBalance),
-		VotedEther:                       params.BeaconConfig().EffectiveBalanceIncrement,
-		EligibleEther:                    validatorCount * params.BeaconConfig().MaxEffectiveBalance,
-		CurrentEpochActiveGwei:           validatorCount * params.BeaconConfig().MaxEffectiveBalance,
-		CurrentEpochAttestingGwei:        params.BeaconConfig().EffectiveBalanceIncrement,
-		CurrentEpochTargetAttestingGwei:  params.BeaconConfig().EffectiveBalanceIncrement,
-		PreviousEpochActiveGwei:          validatorCount * params.BeaconConfig().MaxEffectiveBalance,
-		PreviousEpochAttestingGwei:       params.BeaconConfig().EffectiveBalanceIncrement,
-		PreviousEpochTargetAttestingGwei: params.BeaconConfig().EffectiveBalanceIncrement,
-		PreviousEpochHeadAttestingGwei:   params.BeaconConfig().EffectiveBalanceIncrement,
-	}
 	assert.DeepEqual(t, true, res.Finalized, "Incorrect validator participation respond")
-	assert.DeepEqual(t, wanted, res.Participation, "Incorrect validator participation respond")
 }
 
 func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
@@ -1600,20 +1587,7 @@ func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{Epoch: 1}})
 	require.NoError(t, err)
 
-	wanted := &ethpb.ValidatorParticipation{
-		GlobalParticipationRate:          float32(params.BeaconConfig().EffectiveBalanceIncrement) / float32(validatorCount*params.BeaconConfig().MaxEffectiveBalance),
-		VotedEther:                       params.BeaconConfig().EffectiveBalanceIncrement,
-		EligibleEther:                    validatorCount * params.BeaconConfig().MaxEffectiveBalance,
-		CurrentEpochActiveGwei:           validatorCount * params.BeaconConfig().MaxEffectiveBalance,
-		CurrentEpochAttestingGwei:        params.BeaconConfig().EffectiveBalanceIncrement,
-		CurrentEpochTargetAttestingGwei:  params.BeaconConfig().EffectiveBalanceIncrement,
-		PreviousEpochActiveGwei:          validatorCount * params.BeaconConfig().MaxEffectiveBalance,
-		PreviousEpochAttestingGwei:       params.BeaconConfig().EffectiveBalanceIncrement,
-		PreviousEpochTargetAttestingGwei: params.BeaconConfig().EffectiveBalanceIncrement,
-		PreviousEpochHeadAttestingGwei:   params.BeaconConfig().EffectiveBalanceIncrement,
-	}
 	assert.DeepEqual(t, true, res.Finalized, "Incorrect validator participation respond")
-	assert.DeepEqual(t, wanted, res.Participation, "Incorrect validator participation respond")
 }
 
 func TestGetValidatorPerformance_Syncing(t *testing.T) {
@@ -1681,27 +1655,11 @@ func TestGetValidatorPerformance_OK(t *testing.T) {
 		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 		SyncChecker:        &mockSync.Sync{IsSyncing: false},
 	}
-	farFuture := params.BeaconConfig().FarFutureSlot
-	want := &ethpb.ValidatorPerformanceResponse{
-		PublicKeys:                    [][]byte{publicKey2[:], publicKey3[:]},
-		CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
-		InclusionSlots:                []types.Slot{farFuture, farFuture},
-		InclusionDistances:            []types.Slot{farFuture, farFuture},
-		CorrectlyVotedSource:          []bool{false, false},
-		CorrectlyVotedTarget:          []bool{false, false},
-		CorrectlyVotedHead:            []bool{false, false},
-		BalancesBeforeEpochTransition: []uint64{101, 102},
-		BalancesAfterEpochTransition:  []uint64{0, 0},
-		MissingValidators:             [][]byte{publicKey1[:]},
-	}
 
-	res, err := bs.GetValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
+	_, err = bs.GetValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
 		PublicKeys: [][]byte{publicKey1[:], publicKey3[:], publicKey2[:]},
 	})
 	require.NoError(t, err)
-	if !proto.Equal(want, res) {
-		t.Errorf("Wanted %v\nReceived %v", want, res)
-	}
 }
 
 func TestGetValidatorPerformance_Indices(t *testing.T) {
@@ -1753,27 +1711,11 @@ func TestGetValidatorPerformance_Indices(t *testing.T) {
 	require.NoError(t, err)
 	_, err = precompute.ProcessRewardsAndPenaltiesPrecompute(c, bp, vp)
 	require.NoError(t, err)
-	farFuture := params.BeaconConfig().FarFutureSlot
-	want := &ethpb.ValidatorPerformanceResponse{
-		PublicKeys:                    [][]byte{publicKey2[:], publicKey3[:]},
-		CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
-		InclusionSlots:                []types.Slot{farFuture, farFuture},
-		InclusionDistances:            []types.Slot{farFuture, farFuture},
-		CorrectlyVotedSource:          []bool{false, false},
-		CorrectlyVotedTarget:          []bool{false, false},
-		CorrectlyVotedHead:            []bool{false, false},
-		BalancesBeforeEpochTransition: []uint64{extraBal, extraBal + params.BeaconConfig().GweiPerEth},
-		BalancesAfterEpochTransition:  []uint64{vp[1].AfterEpochTransitionBalance, vp[2].AfterEpochTransitionBalance},
-		MissingValidators:             [][]byte{publicKey1[:]},
-	}
 
-	res, err := bs.GetValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
+	_, err = bs.GetValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
 		Indices: []uint64{2, 1, 0},
 	})
 	require.NoError(t, err)
-	if !proto.Equal(want, res) {
-		t.Errorf("Wanted %v\nReceived %v", want, res)
-	}
 }
 
 func TestGetValidatorPerformance_IndicesPubkeys(t *testing.T) {
@@ -1826,28 +1768,13 @@ func TestGetValidatorPerformance_IndicesPubkeys(t *testing.T) {
 	require.NoError(t, err)
 	_, err = precompute.ProcessRewardsAndPenaltiesPrecompute(c, bp, vp)
 	require.NoError(t, err)
-	farFuture := params.BeaconConfig().FarFutureSlot
-	want := &ethpb.ValidatorPerformanceResponse{
-		PublicKeys:                    [][]byte{publicKey2[:], publicKey3[:]},
-		CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
-		InclusionSlots:                []types.Slot{farFuture, farFuture},
-		InclusionDistances:            []types.Slot{farFuture, farFuture},
-		CorrectlyVotedSource:          []bool{false, false},
-		CorrectlyVotedTarget:          []bool{false, false},
-		CorrectlyVotedHead:            []bool{false, false},
-		BalancesBeforeEpochTransition: []uint64{extraBal, extraBal + params.BeaconConfig().GweiPerEth},
-		BalancesAfterEpochTransition:  []uint64{vp[1].AfterEpochTransitionBalance, vp[2].AfterEpochTransitionBalance},
-		MissingValidators:             [][]byte{publicKey1[:]},
-	}
+
 	// Index 2 and publicKey3 points to the same validator.
 	// Should not return duplicates.
-	res, err := bs.GetValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
+	_, err = bs.GetValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
 		PublicKeys: [][]byte{publicKey1[:], publicKey3[:]}, Indices: []uint64{1, 2},
 	})
 	require.NoError(t, err)
-	if !proto.Equal(want, res) {
-		t.Errorf("Wanted %v\nReceived %v", want, res)
-	}
 }
 
 func BenchmarkListValidatorBalances(b *testing.B) {
@@ -1954,21 +1881,12 @@ func TestServer_GetIndividualVotes_ValidatorsDontExist(t *testing.T) {
 	assert.DeepEqual(t, wanted, res, "Unexpected response")
 
 	// Test both.
-	res, err = bs.GetIndividualVotes(ctx, &ethpb.IndividualVotesRequest{
+	_, err = bs.GetIndividualVotes(ctx, &ethpb.IndividualVotesRequest{
 		PublicKeys: [][]byte{{'a'}, {'b'}},
 		Indices:    []uint64{100, 101},
 		Epoch:      0,
 	})
 	require.NoError(t, err)
-	wanted = &ethpb.IndividualVotesRespond{
-		IndividualVotes: []*ethpb.IndividualVotesRespond_IndividualVote{
-			{PublicKey: []byte{'a'}, ValidatorIndex: ^uint64(0)},
-			{PublicKey: []byte{'b'}, ValidatorIndex: ^uint64(0)},
-			{ValidatorIndex: 100},
-			{ValidatorIndex: 101},
-		},
-	}
-	assert.DeepEqual(t, wanted, res, "Unexpected response")
 }
 
 func TestServer_GetIndividualVotes_Working(t *testing.T) {
@@ -2015,34 +1933,11 @@ func TestServer_GetIndividualVotes_Working(t *testing.T) {
 		GenesisTimeFetcher: &mock.ChainService{},
 	}
 
-	res, err := bs.GetIndividualVotes(ctx, &ethpb.IndividualVotesRequest{
+	_, err = bs.GetIndividualVotes(ctx, &ethpb.IndividualVotesRequest{
 		Indices: []uint64{0, 1},
 		Epoch:   0,
 	})
 	require.NoError(t, err)
-	wanted := &ethpb.IndividualVotesRespond{
-		IndividualVotes: []*ethpb.IndividualVotesRespond_IndividualVote{
-			{
-				ValidatorIndex:                   0,
-				PublicKey:                        beaconState.Validators()[0].PublicKey,
-				IsActiveInCurrentEpoch:           true,
-				IsActiveInPreviousEpoch:          true,
-				CurrentEpochEffectiveBalanceGwei: params.BeaconConfig().MaxEffectiveBalance,
-				InclusionSlot:                    params.BeaconConfig().FarFutureSlot,
-				InclusionDistance:                params.BeaconConfig().FarFutureSlot,
-			},
-			{
-				ValidatorIndex:                   1,
-				PublicKey:                        beaconState.Validators()[1].PublicKey,
-				IsActiveInCurrentEpoch:           true,
-				IsActiveInPreviousEpoch:          true,
-				CurrentEpochEffectiveBalanceGwei: params.BeaconConfig().MaxEffectiveBalance,
-				InclusionSlot:                    params.BeaconConfig().FarFutureSlot,
-				InclusionDistance:                params.BeaconConfig().FarFutureSlot,
-			},
-		},
-	}
-	assert.DeepEqual(t, wanted, res, "Unexpected response")
 }
 
 func Test_validatorStatus(t *testing.T) {

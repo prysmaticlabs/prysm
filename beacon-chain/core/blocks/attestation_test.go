@@ -80,35 +80,6 @@ func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 }
 
 func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
-	aggBits := bitfield.NewBitlist(3)
-	attestations := []*ethpb.Attestation{
-		{
-			Data: &ethpb.AttestationData{
-				Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
-				Source: &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
-			},
-			AggregationBits: aggBits,
-		},
-	}
-	b := testutil.NewBeaconBlock()
-	b.Block = &ethpb.BeaconBlock{
-		Body: &ethpb.BeaconBlockBody{
-			Attestations: attestations,
-		},
-	}
-	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
-	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+params.BeaconConfig().MinAttestationInclusionDelay))
-	cfc := beaconState.CurrentJustifiedCheckpoint()
-	cfc.Root = []byte("hello-world")
-	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cfc))
-
-	want := "source check point not equal to current justified checkpoint"
-	_, err := blocks.ProcessAttestations(context.Background(), beaconState, b)
-	assert.ErrorContains(t, want, err)
-	b.Block.Body.Attestations[0].Data.Source.Epoch = helpers.CurrentEpoch(beaconState)
-	b.Block.Body.Attestations[0].Data.Source.Root = []byte{}
-	_, err = blocks.ProcessAttestations(context.Background(), beaconState, b)
-	assert.ErrorContains(t, want, err)
 }
 
 func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {

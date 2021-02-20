@@ -106,7 +106,7 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	require.DeepEqual(t, wanted, res)
+	require.DeepSSZEqual(t, wanted, res)
 }
 
 func TestServer_ListAttestations_NoPagination(t *testing.T) {
