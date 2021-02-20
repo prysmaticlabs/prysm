@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -23,6 +24,7 @@ func TestParseGraffitiFile_Default(t *testing.T) {
 	require.NoError(t, err)
 
 	wanted := &Graffiti{
+		Hash:    hashutil.Hash(input),
 		Default: "Mr T was here",
 	}
 	require.DeepEqual(t, wanted, got)
@@ -44,6 +46,7 @@ func TestParseGraffitiFile_Random(t *testing.T) {
 	require.NoError(t, err)
 
 	wanted := &Graffiti{
+		Hash: hashutil.Hash(input),
 		Random: []string{
 			"Mr A was here",
 			"Mr B was here",
@@ -69,6 +72,7 @@ func TestParseGraffitiFile_Ordered(t *testing.T) {
 	require.NoError(t, err)
 
 	wanted := &Graffiti{
+		Hash: hashutil.Hash(input),
 		Ordered: []string{
 			"Mr D was here",
 			"Mr E was here",
@@ -95,6 +99,7 @@ specific:
 	require.NoError(t, err)
 
 	wanted := &Graffiti{
+		Hash: hashutil.Hash(input),
 		Specific: map[types.ValidatorIndex]string{
 			1234:   "Yolo",
 			555:    "What's up",
@@ -132,6 +137,7 @@ specific:
 	require.NoError(t, err)
 
 	wanted := &Graffiti{
+		Hash:    hashutil.Hash(input),
 		Default: "Mr T was here",
 		Random: []string{
 			"Mr A was here",
