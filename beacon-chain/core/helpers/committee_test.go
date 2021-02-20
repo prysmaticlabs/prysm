@@ -736,6 +736,7 @@ func TestSyncCommitteeIndices_CanGet(t *testing.T) {
 }
 
 func TestSyncCommitteeIndices_DifferentPeriods(t *testing.T) {
+	ClearCache()
 	getState := func(t *testing.T, count uint64) *beaconstate.BeaconState {
 		validators := make([]*ethpb.Validator, count)
 		for i := 0; i < len(validators); i++ {
