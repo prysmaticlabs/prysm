@@ -3,9 +3,9 @@ package debugv1
 import (
 	"context"
 
+	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // GetState returns the full beacon state for a given state id.
@@ -14,6 +14,6 @@ func (bs *Server) GetState(ctx context.Context, req *ethpb.StateRequest) (*ethpb
 }
 
 // GetForkChoiceHead retrieves the fork choice leaves for the current head.
-func (bs *Server) GetForkChoiceHeads(ctx context.Context, _ *emptypb.Empty) (*ethpb.ForkChoiceHeadsResponse, error) {
+func (bs *Server) GetForkChoiceHeads(ctx context.Context, _ *ptypes.Empty) (*ethpb.ForkChoiceHeadsResponse, error) {
 	return nil, errors.New("unimplemented")
 }
