@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/paulbellamy/ratecounter"
+	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -48,7 +49,8 @@ func TestService_InitStartStop(t *testing.T) {
 			name: "future genesis",
 			chainService: func() *mock.ChainService {
 				// Set to future time (genesis time hasn't arrived yet).
-				st := testutil.NewBeaconState()
+				st, err := testutil.NewBeaconState()
+				require.NoError(t, err)
 
 				return &mock.ChainService{
 					State: st,
@@ -76,7 +78,8 @@ func TestService_InitStartStop(t *testing.T) {
 			name: "zeroth epoch",
 			chainService: func() *mock.ChainService {
 				// Set to nearby slot.
-				st := testutil.NewBeaconState()
+				st, err := testutil.NewBeaconState()
+				require.NoError(t, err)
 				return &mock.ChainService{
 					State: st,
 					FinalizedCheckPoint: &eth.Checkpoint{
@@ -104,8 +107,9 @@ func TestService_InitStartStop(t *testing.T) {
 			name: "already synced",
 			chainService: func() *mock.ChainService {
 				// Set to some future slot, and then make sure that current head matches it.
-				st := testutil.NewBeaconState()
-				futureSlot := uint64(27354)
+				st, err := testutil.NewBeaconState()
+				require.NoError(t, err)
+				futureSlot := types.Slot(27354)
 				require.NoError(t, st.SetSlot(futureSlot))
 				return &mock.ChainService{
 					State: st,
@@ -115,7 +119,7 @@ func TestService_InitStartStop(t *testing.T) {
 				}
 			},
 			methodRuns: func(fd *event.Feed) {
-				futureSlot := uint64(27354)
+				futureSlot := types.Slot(27354)
 				// Send valid event.
 				fd.Send(&feed.Event{
 					Type: statefeed.Initialized,
@@ -388,8 +392,9 @@ func TestService_Resync(t *testing.T) {
 		{
 			name: "resync ok",
 			chainService: func() *mock.ChainService {
-				st := testutil.NewBeaconState()
-				futureSlot := uint64(160)
+				st, err := testutil.NewBeaconState()
+				require.NoError(t, err)
+				futureSlot := types.Slot(160)
 				require.NoError(t, st.SetGenesisTime(uint64(makeGenesisTime(futureSlot).Unix())))
 				return &mock.ChainService{
 					State: st,
@@ -402,7 +407,7 @@ func TestService_Resync(t *testing.T) {
 			},
 			assert: func(s *Service) {
 				assert.LogsContain(t, hook, "Resync attempt complete")
-				assert.Equal(t, uint64(160), s.chain.HeadSlot())
+				assert.Equal(t, types.Slot(160), s.chain.HeadSlot())
 			},
 		},
 	}
@@ -423,7 +428,7 @@ func TestService_Resync(t *testing.T) {
 				StateNotifier: mc.StateNotifier(),
 			})
 			assert.NotNil(t, s)
-			assert.Equal(t, uint64(0), s.chain.HeadSlot())
+			assert.Equal(t, types.Slot(0), s.chain.HeadSlot())
 			err := s.Resync()
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)

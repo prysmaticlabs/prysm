@@ -17,6 +17,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -60,6 +61,7 @@ const testSkipPowFlag = "test-skip-pow"
 type BeaconNode struct {
 	cliCtx          *cli.Context
 	ctx             context.Context
+	cancel          context.CancelFunc
 	services        *shared.ServiceRegistry
 	lock            sync.RWMutex
 	stop            chan struct{} // Channel to wait for termination notifications.
@@ -75,9 +77,9 @@ type BeaconNode struct {
 	stateGen        *stategen.State
 }
 
-// NewBeaconNode creates a new node instance, sets up configuration options, and registers
+// New creates a new node instance, sets up configuration options, and registers
 // every required service to the node.
-func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
+func New(cliCtx *cli.Context) (*BeaconNode, error) {
 	if err := tracing.Setup(
 		"beacon-chain", // service name
 		cliCtx.String(cmd.TracingProcessNameFlag.Name),
@@ -107,7 +109,7 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 		params.OverrideBeaconConfig(c)
 		cmdConfig := cmd.Get()
 		// Allow up to 4096 attestations at a time to be requested from the beacon nde.
-		cmdConfig.MaxRPCPageSize = int(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().MaxAttestations)
+		cmdConfig.MaxRPCPageSize = int(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().MaxAttestations))
 		cmd.Init(cmdConfig)
 		log.Warnf(
 			"Setting %d slots per archive point and %d max RPC page size for historical slasher usage. This requires additional storage",
@@ -118,7 +120,7 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 
 	if cliCtx.IsSet(flags.SlotsPerArchivedPoint.Name) {
 		c := params.BeaconConfig()
-		c.SlotsPerArchivedPoint = uint64(cliCtx.Int(flags.SlotsPerArchivedPoint.Name))
+		c.SlotsPerArchivedPoint = types.Slot(cliCtx.Int(flags.SlotsPerArchivedPoint.Name))
 		params.OverrideBeaconConfig(c)
 	}
 
@@ -153,9 +155,11 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 
 	registry := shared.NewServiceRegistry()
 
+	ctx, cancel := context.WithCancel(cliCtx.Context)
 	beacon := &BeaconNode{
 		cliCtx:          cliCtx,
-		ctx:             cliCtx.Context,
+		ctx:             ctx,
+		cancel:          cancel,
 		services:        registry,
 		stop:            make(chan struct{}),
 		stateFeed:       new(event.Feed),
@@ -239,7 +243,7 @@ func (b *BeaconNode) Start() {
 	b.lock.Lock()
 
 	log.WithFields(logrus.Fields{
-		"version": version.GetVersion(),
+		"version": version.Version(),
 	}).Info("Starting beacon node")
 
 	b.services.StartAll()
@@ -278,6 +282,7 @@ func (b *BeaconNode) Close() {
 	if err := b.db.Close(); err != nil {
 		log.Errorf("Failed to close database: %v", err)
 	}
+	b.cancel()
 	close(b.stop)
 }
 
@@ -294,7 +299,9 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
 
 	log.WithField("database-path", dbPath).Info("Checking DB")
 
-	d, err := db.NewDB(b.ctx, dbPath)
+	d, err := db.NewDB(b.ctx, dbPath, &kv.Config{
+		InitialMMapSize: cliCtx.Int(cmd.BoltMMapInitialSizeFlag.Name),
+	})
 	if err != nil {
 		return err
 	}
@@ -316,7 +323,9 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
 		if err := d.ClearDB(); err != nil {
 			return errors.Wrap(err, "could not clear database")
 		}
-		d, err = db.NewDB(b.ctx, dbPath)
+		d, err = db.NewDB(b.ctx, dbPath, &kv.Config{
+			InitialMMapSize: cliCtx.Int(cmd.BoltMMapInitialSizeFlag.Name),
+		})
 		if err != nil {
 			return errors.Wrap(err, "could not create new database")
 		}
@@ -696,10 +705,12 @@ func (b *BeaconNode) registerGRPCGateway() error {
 	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
 	allowedOrigins := strings.Split(b.cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
 	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
+	selfCert := b.cliCtx.String(flags.CertFlag.Name)
 	return b.services.RegisterService(
 		gateway.New(
 			b.ctx,
 			selfAddress,
+			selfCert,
 			gatewayAddress,
 			nil, /*optional mux*/
 			allowedOrigins,

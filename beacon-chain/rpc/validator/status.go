@@ -135,7 +135,7 @@ func (vs *Server) validatorStatus(
 		Status:          ethpb.ValidatorStatus_UNKNOWN_STATUS,
 		ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
 	}
-	vStatus, idx, err := retrieveStatusForPubKey(headState, pubKey)
+	vStatus, idx, err := statusForPubKey(headState, pubKey)
 	if err != nil && err != errPubkeyDoesNotExist {
 		traceutil.AnnotateError(span, err)
 		return resp, nonExistentIndex
@@ -217,7 +217,7 @@ func (vs *Server) validatorStatus(
 	}
 }
 
-func retrieveStatusForPubKey(headState *stateTrie.BeaconState, pubKey []byte) (ethpb.ValidatorStatus, uint64, error) {
+func statusForPubKey(headState *stateTrie.BeaconState, pubKey []byte) (ethpb.ValidatorStatus, uint64, error) {
 	if headState == nil {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS, 0, errors.New("head state does not exist")
 	}

@@ -30,8 +30,8 @@ func (s *EpochTicker) Done() {
 	}()
 }
 
-// GetEpochTicker is the constructor for EpochTicker.
-func GetEpochTicker(genesisTime time.Time, secondsPerEpoch uint64) *EpochTicker {
+// NewEpochTicker starts the EpochTicker.
+func NewEpochTicker(genesisTime time.Time, secondsPerEpoch uint64) *EpochTicker {
 	ticker := &EpochTicker{
 		c:    make(chan uint64),
 		done: make(chan struct{}),

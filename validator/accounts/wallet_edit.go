@@ -50,7 +50,7 @@ func EditWalletConfigurationCli(cliCtx *cli.Context) error {
 			return errors.Wrap(err, "could not write config to disk")
 		}
 	default:
-		return fmt.Errorf(msgKeymanagerNotSupported, w.KeymanagerKind())
+		return fmt.Errorf(errKeymanagerNotSupported, w.KeymanagerKind())
 	}
 	return nil
 }

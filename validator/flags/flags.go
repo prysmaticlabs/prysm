@@ -214,6 +214,12 @@ var (
 			"a voluntary exit",
 		Value: "",
 	}
+	// ExitAllFlag allows stakers to select all validating keys for exit. This will still require the staker
+	// to confirm a prompt for this action given it is a dangerous one.
+	ExitAllFlag = &cli.BoolFlag{
+		Name:  "exit-all",
+		Usage: "Exit all validators. This will still require the staker to confirm a prompt for the action",
+	}
 	// BackupPasswordFile for encrypting accounts a user wishes to back up.
 	BackupPasswordFile = &cli.StringFlag{
 		Name:  "backup-password-file",
@@ -225,6 +231,11 @@ var (
 		Name:  "backup-dir",
 		Usage: "Path to a directory where accounts will be backed up into a zip file",
 		Value: DefaultValidatorDir(),
+	}
+	// SlashingProtectionJSONFileFlag is used to enter the file path of the slashing protection JSON.
+	SlashingProtectionJSONFileFlag = &cli.StringFlag{
+		Name:  "slashing-protection-json-file",
+		Usage: "Path to an EIP-3076 compliant JSON file containing a user's slashing protection history",
 	}
 	// KeysDirFlag defines the path for a directory where keystores to be imported at stored.
 	KeysDirFlag = &cli.StringFlag{
@@ -281,6 +292,13 @@ var (
 		Name:  "web",
 		Usage: "Enables the web portal for the validator client (work in progress)",
 		Value: false,
+	}
+	// SlashingProtectionExportDirFlag allows specifying the outpt directory
+	// for a validator's slashing protection history.
+	SlashingProtectionExportDirFlag = &cli.StringFlag{
+		Name:  "slashing-protection-export-dir",
+		Usage: "Allows users to specify the output directory to export their slashing protection EIP-3076 standard JSON File",
+		Value: "",
 	}
 	// GraffitiFileFlag specifies the file path to load graffiti values.
 	GraffitiFileFlag = &cli.StringFlag{

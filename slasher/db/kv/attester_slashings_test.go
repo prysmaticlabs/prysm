@@ -5,11 +5,12 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/slasher/db/types"
+	dbtypes "github.com/prysmaticlabs/prysm/slasher/db/types"
 )
 
 func TestStore_AttesterSlashingNilBucket(t *testing.T) {
@@ -28,7 +29,7 @@ func TestStore_AttesterSlashingNilBucket(t *testing.T) {
 	require.NoError(t, err, "HasAttesterSlashing should not return error")
 	require.Equal(t, false, has)
 
-	p, err := db.AttesterSlashings(ctx, types.SlashingStatus(types.Active))
+	p, err := db.AttesterSlashings(ctx, dbtypes.SlashingStatus(dbtypes.Active))
 	require.NoError(t, err, "Failed to get attester slashing")
 	require.NotNil(t, p, "Get should return empty attester slashing array for a non existent key")
 	require.Equal(t, 0, len(p), "Get should return empty attester slashing array for a non existent key")
@@ -41,19 +42,19 @@ func TestStore_SaveAttesterSlashing(t *testing.T) {
 	data := testutil.HydrateAttestationData(&ethpb.AttestationData{})
 	att := &ethpb.IndexedAttestation{Data: data, Signature: make([]byte, 96)}
 	tests := []struct {
-		ss types.SlashingStatus
+		ss dbtypes.SlashingStatus
 		as *ethpb.AttesterSlashing
 	}{
 		{
-			ss: types.Active,
+			ss: dbtypes.Active,
 			as: &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Data: data, Signature: bytesutil.PadTo([]byte("hello"), 96)}, Attestation_2: att},
 		},
 		{
-			ss: types.Included,
+			ss: dbtypes.Included,
 			as: &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Data: data, Signature: bytesutil.PadTo([]byte("hello2"), 96)}, Attestation_2: att},
 		},
 		{
-			ss: types.Reverted,
+			ss: dbtypes.Reverted,
 			as: &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Data: data, Signature: bytesutil.PadTo([]byte("hello3"), 96)}, Attestation_2: att},
 		},
 	}
@@ -81,9 +82,9 @@ func TestStore_SaveAttesterSlashings(t *testing.T) {
 		{Attestation_1: &ethpb.IndexedAttestation{Signature: bytesutil.PadTo([]byte("2"), 96), Data: data}, Attestation_2: att},
 		{Attestation_1: &ethpb.IndexedAttestation{Signature: bytesutil.PadTo([]byte("3"), 96), Data: data}, Attestation_2: att},
 	}
-	err := db.SaveAttesterSlashings(ctx, types.Active, as)
+	err := db.SaveAttesterSlashings(ctx, dbtypes.Active, as)
 	require.NoError(t, err, "Save attester slashing failed")
-	attesterSlashings, err := db.AttesterSlashings(ctx, types.Active)
+	attesterSlashings, err := db.AttesterSlashings(ctx, dbtypes.Active)
 	require.NoError(t, err, "Failed to get attester slashings")
 	sort.SliceStable(attesterSlashings, func(i, j int) bool {
 		return attesterSlashings[i].Attestation_1.Signature[0] < attesterSlashings[j].Attestation_1.Signature[0]
@@ -99,25 +100,25 @@ func TestStore_UpdateAttesterSlashingStatus(t *testing.T) {
 	data := testutil.HydrateAttestationData(&ethpb.AttestationData{})
 
 	tests := []struct {
-		ss types.SlashingStatus
+		ss dbtypes.SlashingStatus
 		as *ethpb.AttesterSlashing
 	}{
 		{
-			ss: types.Active,
+			ss: dbtypes.Active,
 			as: &ethpb.AttesterSlashing{
 				Attestation_1: &ethpb.IndexedAttestation{Data: data, Signature: bytesutil.PadTo([]byte("hello"), 96)},
 				Attestation_2: &ethpb.IndexedAttestation{Data: data, Signature: bytesutil.PadTo([]byte("hello"), 96)},
 			},
 		},
 		{
-			ss: types.Active,
+			ss: dbtypes.Active,
 			as: &ethpb.AttesterSlashing{
 				Attestation_1: &ethpb.IndexedAttestation{Data: data, Signature: bytesutil.PadTo([]byte("hello2"), 96)},
 				Attestation_2: &ethpb.IndexedAttestation{Data: data, Signature: bytesutil.PadTo([]byte("hello2"), 96)},
 			},
 		},
 		{
-			ss: types.Active,
+			ss: dbtypes.Active,
 			as: &ethpb.AttesterSlashing{
 				Attestation_1: &ethpb.IndexedAttestation{Data: data, Signature: bytesutil.PadTo([]byte("hello3"), 96)},
 				Attestation_2: &ethpb.IndexedAttestation{Data: data, Signature: bytesutil.PadTo([]byte("hello2"), 96)},
@@ -136,12 +137,12 @@ func TestStore_UpdateAttesterSlashingStatus(t *testing.T) {
 		require.Equal(t, true, has, "Failed to find attester slashing: %v", tt.as)
 		require.Equal(t, tt.ss, st, "Failed to find attester slashing with the correct status: %v", tt.as)
 
-		err = db.SaveAttesterSlashing(ctx, types.SlashingStatus(types.Included), tt.as)
+		err = db.SaveAttesterSlashing(ctx, dbtypes.SlashingStatus(dbtypes.Included), tt.as)
 		require.NoError(t, err)
 		has, st, err = db.HasAttesterSlashing(ctx, tt.as)
 		require.NoError(t, err, "Failed to get attester slashing")
 		require.Equal(t, true, has, "Failed to find attester slashing: %v", tt.as)
-		require.Equal(t, types.SlashingStatus(types.Included), st, "Failed to find attester slashing with the correct status: %v", tt.as)
+		require.Equal(t, dbtypes.SlashingStatus(dbtypes.Included), st, "Failed to find attester slashing with the correct status: %v", tt.as)
 	}
 }
 
@@ -151,8 +152,8 @@ func TestStore_LatestEpochDetected(t *testing.T) {
 
 	e, err := db.GetLatestEpochDetected(ctx)
 	require.NoError(t, err, "Get latest epoch detected failed")
-	require.Equal(t, uint64(0), e, "Latest epoch detected should have been 0 before setting got: %d", e)
-	epoch := uint64(1)
+	require.Equal(t, types.Epoch(0), e, "Latest epoch detected should have been 0 before setting got: %d", e)
+	epoch := types.Epoch(1)
 	err = db.SetLatestEpochDetected(ctx, epoch)
 	require.NoError(t, err, "Set latest epoch detected failed")
 	e, err = db.GetLatestEpochDetected(ctx)

@@ -2,13 +2,11 @@ package sync
 
 import (
 	"context"
-	"sort"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -63,37 +61,29 @@ func (s *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg
 
 // Returns true if the node has already received a valid attester slashing with the attesting indices.
 func (s *Service) hasSeenAttesterSlashingIndices(indices1, indices2 []uint64) bool {
+	slashableIndices := sliceutil.IntersectionUint64(indices1, indices2)
+
 	s.seenAttesterSlashingLock.RLock()
 	defer s.seenAttesterSlashingLock.RUnlock()
 
-	slashableIndices := sliceutil.IntersectionUint64(indices1, indices2)
-	sort.SliceStable(slashableIndices, func(i, j int) bool {
-		return slashableIndices[i] < slashableIndices[j]
-	})
-	IndicesInBytes := make([]byte, 0, len(slashableIndices))
-	for _, i := range slashableIndices {
-		IndicesInBytes = append(IndicesInBytes, byte(i))
+	// Return false if any of the slashing index has not been seen before. (i.e. not in cache)
+	for _, index := range slashableIndices {
+		if !s.seenAttesterSlashingCache[index] {
+			return false
+		}
 	}
-	b := hashutil.FastSum256(IndicesInBytes)
 
-	_, seen := s.seenAttesterSlashingCache.Get(b)
-	return seen
+	return true
 }
 
 // Set attester slashing indices in attester slashing cache.
 func (s *Service) setAttesterSlashingIndicesSeen(indices1, indices2 []uint64) {
+	slashableIndices := sliceutil.IntersectionUint64(indices1, indices2)
+
 	s.seenAttesterSlashingLock.Lock()
 	defer s.seenAttesterSlashingLock.Unlock()
 
-	slashableIndices := sliceutil.IntersectionUint64(indices1, indices2)
-	sort.SliceStable(slashableIndices, func(i, j int) bool {
-		return slashableIndices[i] < slashableIndices[j]
-	})
-	IndicesInBytes := make([]byte, 0, len(slashableIndices))
-	for _, i := range slashableIndices {
-		IndicesInBytes = append(IndicesInBytes, byte(i))
+	for _, index := range slashableIndices {
+		s.seenAttesterSlashingCache[index] = true
 	}
-	b := hashutil.FastSum256(IndicesInBytes)
-
-	s.seenAttesterSlashingCache.Add(b, true)
 }

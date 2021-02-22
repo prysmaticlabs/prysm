@@ -10,14 +10,17 @@ type migration func(*bolt.Tx) error
 
 var (
 	migrationCompleted = []byte("done")
-	upMigrations       = []migration{}
-	downMigrations     = []migration{}
+	upMigrations       []migration
+	downMigrations     []migration
 )
 
 // RunUpMigrations defined in the upMigrations list.
 func (s *Store) RunUpMigrations(ctx context.Context) error {
 	// Run any special migrations that require special conditions.
 	if err := s.migrateOptimalAttesterProtectionUp(ctx); err != nil {
+		return err
+	}
+	if err := s.migrateSourceTargetEpochsBucketUp(ctx); err != nil {
 		return err
 	}
 
@@ -37,6 +40,9 @@ func (s *Store) RunUpMigrations(ctx context.Context) error {
 func (s *Store) RunDownMigrations(ctx context.Context) error {
 	// Run any special migrations that require special conditions.
 	if err := s.migrateOptimalAttesterProtectionDown(ctx); err != nil {
+		return err
+	}
+	if err := s.migrateSourceTargetEpochsBucketDown(ctx); err != nil {
 		return err
 	}
 

@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -14,9 +13,9 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	healthpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
+	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
 )
 
 // Initialize a client connect to a beacon node gRPC endpoint.
@@ -36,16 +35,9 @@ func (s *Server) registerBeaconClient() error {
 	if dialOpts == nil {
 		return errors.New("no dial options for beacon chain gRPC client")
 	}
-	for _, hdr := range s.clientGrpcHeaders {
-		if hdr != "" {
-			ss := strings.Split(hdr, "=")
-			if len(ss) < 2 {
-				log.Warnf("Incorrect gRPC header flag format. Skipping %v", ss[0])
-				continue
-			}
-			s.ctx = metadata.AppendToOutgoingContext(s.ctx, ss[0], strings.Join(ss[1:], "="))
-		}
-	}
+
+	s.ctx = grpcutils.AppendHeaders(s.ctx, s.clientGrpcHeaders)
+
 	conn, err := grpc.DialContext(s.ctx, s.beaconClientEndpoint, dialOpts...)
 	if err != nil {
 		return errors.Wrapf(err, "could not dial endpoint: %s", s.beaconClientEndpoint)

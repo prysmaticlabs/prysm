@@ -94,7 +94,7 @@ func PreGenFullBlock() (*ethpb.SignedBeaconBlock, error) {
 // attestations set to AttestationsPerEpoch.
 func SetBenchmarkConfig() {
 	maxAtts := AttestationsPerEpoch
-	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
+	slotsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch)
 	committeeSize := (ValidatorCount / slotsPerEpoch) / (maxAtts / slotsPerEpoch)
 	c := params.BeaconConfig()
 	c.ShardCommitteePeriod = 0

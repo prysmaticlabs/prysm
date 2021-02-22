@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/node"
+	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
@@ -88,12 +89,15 @@ var appFlags = []cli.Flag{
 	cmd.ConfigFileFlag,
 	cmd.ChainConfigFileFlag,
 	cmd.GrpcMaxCallRecvMsgSizeFlag,
+	cmd.BoltMMapInitialSizeFlag,
 	debug.PProfFlag,
 	debug.PProfAddrFlag,
 	debug.PProfPortFlag,
 	debug.MemProfileRateFlag,
 	debug.CPUProfileFlag,
 	debug.TraceFlag,
+	debug.BlockProfileRateFlag,
+	debug.MutexProfileFractionFlag,
 	cmd.AcceptTosFlag,
 }
 
@@ -104,13 +108,13 @@ func init() {
 func main() {
 	app := cli.App{}
 	app.Name = "validator"
-	app.Usage = `launches an Ethereum 2.0 validator client that interacts with a beacon chain,
-				 starts proposer and attester services, p2p connections, and more`
-	app.Version = version.GetVersion()
+	app.Usage = `launches an Ethereum 2.0 validator client that interacts with a beacon chain, starts proposer and attester services, p2p connections, and more`
+	app.Version = version.Version()
 	app.Action = startNode
 	app.Commands = []*cli.Command{
 		accounts.WalletCommands,
 		accounts.AccountCommands,
+		slashingprotection.Commands,
 		db.DatabaseCommands,
 	}
 

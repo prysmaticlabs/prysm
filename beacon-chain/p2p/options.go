@@ -32,7 +32,7 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 	options := []libp2p.Option{
 		privKeyOption(priKey),
 		libp2p.ListenAddrs(listen),
-		libp2p.UserAgent(version.GetBuildData()),
+		libp2p.UserAgent(version.BuildData()),
 		libp2p.ConnectionGater(s),
 	}
 

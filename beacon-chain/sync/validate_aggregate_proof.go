@@ -7,10 +7,12 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -188,19 +190,19 @@ func (s *Service) validateBlockInAttestation(ctx context.Context, satt *ethpb.Si
 }
 
 // Returns true if the node has received aggregate for the aggregator with index and target epoch.
-func (s *Service) hasSeenAggregatorIndexEpoch(epoch, aggregatorIndex uint64) bool {
+func (s *Service) hasSeenAggregatorIndexEpoch(epoch types.Epoch, aggregatorIndex uint64) bool {
 	s.seenAttestationLock.RLock()
 	defer s.seenAttestationLock.RUnlock()
-	b := append(bytesutil.Bytes32(epoch), bytesutil.Bytes32(aggregatorIndex)...)
+	b := append(bytesutil.Bytes32(uint64(epoch)), bytesutil.Bytes32(aggregatorIndex)...)
 	_, seen := s.seenAttestationCache.Get(string(b))
 	return seen
 }
 
 // Set aggregate's aggregator index target epoch as seen.
-func (s *Service) setAggregatorIndexEpochSeen(epoch, aggregatorIndex uint64) {
+func (s *Service) setAggregatorIndexEpochSeen(epoch types.Epoch, aggregatorIndex uint64) {
 	s.seenAttestationLock.Lock()
 	defer s.seenAttestationLock.Unlock()
-	b := append(bytesutil.Bytes32(epoch), bytesutil.Bytes32(aggregatorIndex)...)
+	b := append(bytesutil.Bytes32(uint64(epoch)), bytesutil.Bytes32(aggregatorIndex)...)
 	s.seenAttestationCache.Add(string(b), true)
 }
 
@@ -261,7 +263,8 @@ func validateSelectionIndex(ctx context.Context, bs *stateTrie.BeaconState, data
 	if err != nil {
 		return nil, err
 	}
-	root, err := helpers.ComputeSigningRoot(data.Slot, d)
+	sszUint := p2ptypes.SSZUint64(data.Slot)
+	root, err := helpers.ComputeSigningRoot(&sszUint, d)
 	if err != nil {
 		return nil, err
 	}

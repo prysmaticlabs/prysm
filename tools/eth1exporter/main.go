@@ -60,7 +60,7 @@ func main() {
 			t1 := time.Now()
 			fmt.Printf("Checking %v wallets...\n", len(allWatching))
 			for _, v := range allWatching {
-				v.Balance = GetEthBalance(v.Address).String()
+				v.Balance = EthBalance(v.Address).String()
 				totalLoaded++
 			}
 			t2 := time.Now()
@@ -93,8 +93,8 @@ func ConnectionToGeth(url string) error {
 	return err
 }
 
-// GetEthBalance from remote server.
-func GetEthBalance(address string) *big.Float {
+// EthBalance from remote server.
+func EthBalance(address string) *big.Float {
 	balance, err := eth.BalanceAt(context.TODO(), common.HexToAddress(address), nil)
 	if err != nil {
 		fmt.Printf("Error fetching ETH Balance for address: %v\n", address)

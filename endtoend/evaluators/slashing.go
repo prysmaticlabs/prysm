@@ -6,6 +6,7 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
+	ethTypes "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	corehelpers "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -121,7 +122,7 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 		return errors.Wrap(err, "could not get duties")
 	}
 
-	var committeeIndex uint64
+	var committeeIndex ethTypes.CommitteeIndex
 	var committee []uint64
 	for _, duty := range duties.Duties {
 		if duty.AttesterSlot == chainHead.HeadSlot-1 {
@@ -211,7 +212,7 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 
 	var proposerIndex uint64
 	for i, duty := range duties.CurrentEpochDuties {
-		if sliceutil.IsInUint64(chainHead.HeadSlot-1, duty.ProposerSlots) {
+		if sliceutil.IsInSlots(chainHead.HeadSlot-1, duty.ProposerSlots) {
 			proposerIndex = uint64(i)
 			break
 		}

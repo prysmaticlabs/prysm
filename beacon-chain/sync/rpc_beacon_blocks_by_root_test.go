@@ -1,9 +1,7 @@
 package sync
 
 import (
-	"bytes"
 	"context"
-	"reflect"
 	"sync"
 	"testing"
 	"time"
@@ -12,10 +10,8 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	gcache "github.com/patrickmn/go-cache"
-	"github.com/protolambda/zssz"
-	"github.com/protolambda/zssz/types"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -36,9 +32,9 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 
 	var blkRoots p2pTypes.BeaconBlockByRootsReq
 	// Populate the database with blocks that would match the request.
-	for i := 1; i < 11; i++ {
+	for i := types.Slot(1); i < 11; i++ {
 		blk := testutil.NewBeaconBlock()
-		blk.Block.Slot = uint64(i)
+		blk.Block.Slot = i
 		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
 		require.NoError(t, d.SaveBlock(context.Background(), blk))
@@ -58,7 +54,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 			expectSuccess(t, stream)
 			res := testutil.NewBeaconBlock()
 			assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, res))
-			if res.Block.Slot != uint64(i+1) {
+			if uint64(res.Block.Slot) != uint64(i+1) {
 				t.Errorf("Received unexpected block slot %d but wanted %d", res.Block.Slot, i+1)
 			}
 		}
@@ -91,7 +87,7 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
 	require.NoError(t, err)
 	require.NoError(t, genesisState.SetSlot(111))
-	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%params.BeaconConfig().SlotsPerHistoricalRoot, blockARoot))
+	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%uint64(params.BeaconConfig().SlotsPerHistoricalRoot), blockARoot))
 	finalizedCheckpt := &ethpb.Checkpoint{
 		Epoch: 5,
 		Root:  blockBRoot[:],
@@ -174,28 +170,4 @@ func TestRecentBeaconBlocksRPCHandler_HandleZeroBlocks(t *testing.T) {
 	lter, err := r.rateLimiter.retrieveCollector(topic)
 	require.NoError(t, err)
 	assert.Equal(t, 1, int(lter.Count(stream1.Conn().RemotePeer().String())))
-}
-
-type testList [][32]byte
-
-func (*testList) Limit() uint64 {
-	return 2 << 10
-}
-
-func TestSSZCompatibility(t *testing.T) {
-	rootA := [32]byte{'a'}
-	rootB := [32]byte{'B'}
-	rootC := [32]byte{'C'}
-	list := testList{rootA, rootB, rootC}
-	writer := bytes.NewBuffer([]byte{})
-	sszType, err := types.SSZFactory(reflect.TypeOf(list))
-	assert.NoError(t, err)
-	n, err := zssz.Encode(writer, list, sszType)
-	assert.NoError(t, err)
-	encodedPart := writer.Bytes()[:n]
-	fastSSZ, err := ssz.Marshal(list)
-	assert.NoError(t, err)
-	if !bytes.Equal(fastSSZ, encodedPart) {
-		t.Errorf("Wanted the same result as ZSSZ of %#x but got %#X", encodedPart, fastSSZ)
-	}
 }

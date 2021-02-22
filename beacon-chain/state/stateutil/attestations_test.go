@@ -1,7 +1,6 @@
 package stateutil
 
 import (
-	"bytes"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -28,9 +27,7 @@ func TestAttestationDataRoot_EqualGeneric(t *testing.T) {
 	dataHtr, err := AttestationDataRoot(attData)
 	require.NoError(t, err)
 
-	if !bytes.Equal(genericHtr[:], dataHtr[:]) {
-		t.Fatalf("Expected %#x, received %#x", genericHtr, dataHtr)
-	}
+	require.DeepEqual(t, genericHtr[:], dataHtr[:])
 }
 
 func BenchmarkAttestationDataRoot(b *testing.B) {

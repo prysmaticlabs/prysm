@@ -53,6 +53,7 @@ var WalletCommands = &cli.Command{
 			Usage: "edits a wallet configuration options, such as gRPC connection credentials and TLS certificates",
 			Flags: cmd.WrapFlags([]cli.Flag{
 				flags.WalletDirFlag,
+				flags.WalletPasswordFileFlag,
 				flags.GrpcRemoteAddressFlag,
 				flags.DisableRemoteSignerTlsFlag,
 				flags.RemoteSignerCertPathFlag,

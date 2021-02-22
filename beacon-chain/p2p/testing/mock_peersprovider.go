@@ -22,6 +22,20 @@ type MockPeersProvider struct {
 	peers *peers.Status
 }
 
+// ClearPeers removes all known peers.
+func (m *MockPeersProvider) ClearPeers() {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	m.peers = peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
+				Threshold: 5,
+			},
+		},
+	})
+}
+
 // Peers provides access the peer status.
 func (m *MockPeersProvider) Peers() *peers.Status {
 	m.lock.Lock()
@@ -46,7 +60,7 @@ func (m *MockPeersProvider) Peers() *peers.Status {
 		}
 		m.peers.Add(createENR(), id0, ma0, network.DirInbound)
 		m.peers.SetConnectionState(id0, peers.PeerConnected)
-		m.peers.SetChainState(id0, &pb.Status{FinalizedEpoch: uint64(10)})
+		m.peers.SetChainState(id0, &pb.Status{FinalizedEpoch: 10})
 		id1, err := peer.Decode("16Uiu2HAm4HgJ9N1o222xK61o7LSgToYWoAy1wNTJRkh9gLZapVAy")
 		if err != nil {
 			log.WithError(err).Debug("Cannot decode")
@@ -57,7 +71,7 @@ func (m *MockPeersProvider) Peers() *peers.Status {
 		}
 		m.peers.Add(createENR(), id1, ma1, network.DirOutbound)
 		m.peers.SetConnectionState(id1, peers.PeerConnected)
-		m.peers.SetChainState(id1, &pb.Status{FinalizedEpoch: uint64(11)})
+		m.peers.SetChainState(id1, &pb.Status{FinalizedEpoch: 11})
 	}
 	return m.peers
 }

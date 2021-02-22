@@ -8,7 +8,7 @@ import (
 
 // ExternalIPv4 returns the first IPv4 available.
 func ExternalIPv4() (string, error) {
-	ips, err := retrieveIPAddrs()
+	ips, err := ipAddrs()
 	if err != nil {
 		return "", err
 	}
@@ -25,31 +25,9 @@ func ExternalIPv4() (string, error) {
 	return "127.0.0.1", nil
 }
 
-// ExternalIPv6 retrieves any allocated IPv6 addresses
-// from the accessible network interfaces.
-func ExternalIPv6() (string, error) {
-	ips, err := retrieveIPAddrs()
-	if err != nil {
-		return "", err
-	}
-	if len(ips) == 0 {
-		return "127.0.0.1", nil
-	}
-	for _, ip := range ips {
-		if ip.To4() != nil {
-			continue // not an ipv6 address
-		}
-		if ip.To16() == nil {
-			continue
-		}
-		return ip.String(), nil
-	}
-	return "127.0.0.1", nil
-}
-
 // ExternalIP returns the first IPv4/IPv6 available.
 func ExternalIP() (string, error) {
-	ips, err := retrieveIPAddrs()
+	ips, err := ipAddrs()
 	if err != nil {
 		return "", err
 	}
@@ -59,8 +37,8 @@ func ExternalIP() (string, error) {
 	return ips[0].String(), nil
 }
 
-// retrieveIP returns all the valid IPs available.
-func retrieveIPAddrs() ([]net.IP, error) {
+// ipAddrs returns all the valid IPs available.
+func ipAddrs() ([]net.IP, error) {
 	ifaces, err := net.Interfaces()
 	if err != nil {
 		return nil, err

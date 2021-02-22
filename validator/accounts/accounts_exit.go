@@ -6,11 +6,14 @@ import (
 	"io"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
+	"github.com/prysmaticlabs/prysm/shared/grpcutils"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -33,17 +36,17 @@ const exitPassphrase = "Exit my validator"
 
 // ExitAccountsCli performs a voluntary exit on one or more accounts.
 func ExitAccountsCli(cliCtx *cli.Context, r io.Reader) error {
-	validatingPublicKeys, keymanager, err := prepareWallet(cliCtx)
+	validatingPublicKeys, kManager, err := prepareWallet(cliCtx)
 	if err != nil {
 		return err
 	}
 
-	rawPubKeys, formattedPubKeys, err := interact(cliCtx, r, validatingPublicKeys)
+	rawPubKeys, trimmedPubKeys, err := interact(cliCtx, r, validatingPublicKeys)
 	if err != nil {
 		return err
 	}
 	// User decided to cancel the voluntary exit.
-	if rawPubKeys == nil && formattedPubKeys == nil {
+	if rawPubKeys == nil && trimmedPubKeys == nil {
 		return nil
 	}
 
@@ -51,25 +54,19 @@ func ExitAccountsCli(cliCtx *cli.Context, r io.Reader) error {
 	if err != nil {
 		return err
 	}
+
 	cfg := performExitCfg{
 		*validatorClient,
 		*nodeClient,
-		keymanager,
+		kManager,
 		rawPubKeys,
-		formattedPubKeys,
+		trimmedPubKeys,
 	}
-
-	formattedExitedKeys, err := performExit(cliCtx, cfg)
+	rawExitedKeys, trimmedExitedKeys, err := performExit(cliCtx, cfg)
 	if err != nil {
 		return err
 	}
-
-	if len(formattedExitedKeys) > 0 {
-		log.WithField("publicKeys", strings.Join(formattedExitedKeys, ", ")).
-			Info("Voluntary exit was successful for the accounts listed")
-	} else {
-		log.Info("No successful voluntary exits")
-	}
+	displayExitInfo(rawExitedKeys, trimmedExitedKeys)
 
 	return nil
 }
@@ -102,54 +99,64 @@ func interact(
 	r io.Reader,
 	validatingPublicKeys [][48]byte,
 ) (rawPubKeys [][]byte, formattedPubKeys []string, err error) {
-	// Allow the user to interactively select the accounts to exit or optionally
-	// provide them via cli flags as a string of comma-separated, hex strings.
-	filteredPubKeys, err := filterPublicKeysFromUserInput(
-		cliCtx,
-		flags.VoluntaryExitPublicKeysFlag,
-		validatingPublicKeys,
-		prompt.SelectAccountsVoluntaryExitPromptText,
-	)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not filter public keys for voluntary exit")
-	}
-	rawPubKeys = make([][]byte, len(filteredPubKeys))
-	formattedPubKeys = make([]string, len(filteredPubKeys))
-	for i, pk := range filteredPubKeys {
-		pubKeyBytes := pk.Marshal()
-		rawPubKeys[i] = pubKeyBytes
-		formattedPubKeys[i] = fmt.Sprintf("%#x", bytesutil.Trunc(pubKeyBytes))
-	}
-	allAccountStr := strings.Join(formattedPubKeys, ", ")
-	if !cliCtx.IsSet(flags.VoluntaryExitPublicKeysFlag.Name) {
-		if len(filteredPubKeys) == 1 {
-			promptText := "Are you sure you want to perform a voluntary exit on 1 account? (%s) Y/N"
-			resp, err := promptutil.ValidatePrompt(
-				r, fmt.Sprintf(promptText, au.BrightGreen(formattedPubKeys[0])), promptutil.ValidateYesOrNo,
-			)
-			if err != nil {
-				return nil, nil, err
-			}
-			if strings.EqualFold(resp, "n") {
-				return nil, nil, nil
-			}
-		} else {
-			promptText := "Are you sure you want to perform a voluntary exit on %d accounts? (%s) Y/N"
-			if len(filteredPubKeys) == len(validatingPublicKeys) {
-				promptText = fmt.Sprintf(
-					"Are you sure you want to perform a voluntary exit on all accounts? Y/N (%s)",
-					au.BrightGreen(allAccountStr))
+	if !cliCtx.IsSet(flags.ExitAllFlag.Name) {
+		// Allow the user to interactively select the accounts to exit or optionally
+		// provide them via cli flags as a string of comma-separated, hex strings.
+		filteredPubKeys, err := filterPublicKeysFromUserInput(
+			cliCtx,
+			flags.VoluntaryExitPublicKeysFlag,
+			validatingPublicKeys,
+			prompt.SelectAccountsVoluntaryExitPromptText,
+		)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not filter public keys for voluntary exit")
+		}
+		rawPubKeys = make([][]byte, len(filteredPubKeys))
+		formattedPubKeys = make([]string, len(filteredPubKeys))
+		for i, pk := range filteredPubKeys {
+			pubKeyBytes := pk.Marshal()
+			rawPubKeys[i] = pubKeyBytes
+			formattedPubKeys[i] = fmt.Sprintf("%#x", bytesutil.Trunc(pubKeyBytes))
+		}
+		allAccountStr := strings.Join(formattedPubKeys, ", ")
+		if !cliCtx.IsSet(flags.VoluntaryExitPublicKeysFlag.Name) {
+			if len(filteredPubKeys) == 1 {
+				promptText := "Are you sure you want to perform a voluntary exit on 1 account? (%s) Y/N"
+				resp, err := promptutil.ValidatePrompt(
+					r, fmt.Sprintf(promptText, au.BrightGreen(formattedPubKeys[0])), promptutil.ValidateYesOrNo,
+				)
+				if err != nil {
+					return nil, nil, err
+				}
+				if strings.EqualFold(resp, "n") {
+					return nil, nil, nil
+				}
 			} else {
-				promptText = fmt.Sprintf(promptText, len(filteredPubKeys), au.BrightGreen(allAccountStr))
-			}
-			resp, err := promptutil.ValidatePrompt(r, promptText, promptutil.ValidateYesOrNo)
-			if err != nil {
-				return nil, nil, err
-			}
-			if strings.EqualFold(resp, "n") {
-				return nil, nil, nil
+				promptText := "Are you sure you want to perform a voluntary exit on %d accounts? (%s) Y/N"
+				if len(filteredPubKeys) == len(validatingPublicKeys) {
+					promptText = fmt.Sprintf(
+						"Are you sure you want to perform a voluntary exit on all accounts? Y/N (%s)",
+						au.BrightGreen(allAccountStr))
+				} else {
+					promptText = fmt.Sprintf(promptText, len(filteredPubKeys), au.BrightGreen(allAccountStr))
+				}
+				resp, err := promptutil.ValidatePrompt(r, promptText, promptutil.ValidateYesOrNo)
+				if err != nil {
+					return nil, nil, err
+				}
+				if strings.EqualFold(resp, "n") {
+					return nil, nil, nil
+				}
 			}
 		}
+	} else {
+		rawPubKeys = make([][]byte, len(validatingPublicKeys))
+		formattedPubKeys = make([]string, len(validatingPublicKeys))
+		for i, pk := range validatingPublicKeys {
+			rawPubKeys[i] = pk[:]
+			formattedPubKeys[i] = fmt.Sprintf("%#x", bytesutil.Trunc(pk[:]))
+		}
+		fmt.Printf("About to perform a voluntary exit of %d accounts\n", len(rawPubKeys))
 	}
 
 	promptHeader := au.Red("===============IMPORTANT===============")
@@ -183,17 +190,20 @@ func prepareClients(cliCtx *cli.Context) (*ethpb.BeaconNodeValidatorClient, *eth
 	if dialOpts == nil {
 		return nil, nil, errors.New("failed to construct dial options")
 	}
+
+	grpcHeaders := strings.Split(cliCtx.String(flags.GrpcHeadersFlag.Name), ",")
+	cliCtx.Context = grpcutils.AppendHeaders(cliCtx.Context, grpcHeaders)
+
 	conn, err := grpc.DialContext(cliCtx.Context, cliCtx.String(flags.BeaconRPCProviderFlag.Name), dialOpts...)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "could not dial endpoint %s", flags.BeaconRPCProviderFlag.Name)
 	}
 	validatorClient := ethpb.NewBeaconNodeValidatorClient(conn)
 	nodeClient := ethpb.NewNodeClient(conn)
-
 	return &validatorClient, &nodeClient, nil
 }
 
-func performExit(cliCtx *cli.Context, cfg performExitCfg) ([]string, error) {
+func performExit(cliCtx *cli.Context, cfg performExitCfg) (rawExitedKeys [][]byte, formattedExitedKeys []string, err error) {
 	var rawNotExitedKeys [][]byte
 	for i, key := range cfg.rawPubKeys {
 		if err := client.ProposeExit(cliCtx.Context, cfg.validatorClient, cfg.nodeClient, cfg.keymanager.Sign, key); err != nil {
@@ -208,7 +218,9 @@ func performExit(cliCtx *cli.Context, cfg performExitCfg) ([]string, error) {
 			}
 		}
 	}
-	var formattedExitedKeys []string
+
+	rawExitedKeys = make([][]byte, 0)
+	formattedExitedKeys = make([]string, 0)
 	for i, key := range cfg.rawPubKeys {
 		found := false
 		for _, notExited := range rawNotExitedKeys {
@@ -218,9 +230,38 @@ func performExit(cliCtx *cli.Context, cfg performExitCfg) ([]string, error) {
 			}
 		}
 		if !found {
+			rawExitedKeys = append(rawExitedKeys, key)
 			formattedExitedKeys = append(formattedExitedKeys, cfg.formattedPubKeys[i])
 		}
 	}
 
-	return formattedExitedKeys, nil
+	return rawExitedKeys, formattedExitedKeys, nil
+}
+
+func displayExitInfo(rawExitedKeys [][]byte, trimmedExitedKeys []string) {
+	if len(rawExitedKeys) > 0 {
+		urlFormattedPubKeys := make([]string, len(rawExitedKeys))
+		for i, key := range rawExitedKeys {
+			var baseUrl string
+			if params.BeaconConfig().ConfigName == params.ConfigNames[params.Pyrmont] {
+				baseUrl = "https://pyrmont.beaconcha.in/validator/"
+			} else {
+				baseUrl = "https://beaconcha.in/validator/"
+			}
+			// Remove '0x' prefix
+			urlFormattedPubKeys[i] = baseUrl + hexutil.Encode(key)[2:]
+		}
+
+		ifaceKeys := make([]interface{}, len(urlFormattedPubKeys))
+		for i, k := range urlFormattedPubKeys {
+			ifaceKeys[i] = k
+		}
+
+		info := fmt.Sprintf("Voluntary exit was successful for the accounts listed. "+
+			"URLs where you can track each validator's exit:\n"+strings.Repeat("%s\n", len(ifaceKeys)), ifaceKeys...)
+
+		log.WithField("publicKeys", strings.Join(trimmedExitedKeys, ", ")).Info(info)
+	} else {
+		log.Info("No successful voluntary exits")
+	}
 }

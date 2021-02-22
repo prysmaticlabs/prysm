@@ -26,13 +26,13 @@ func NewProposeDetector(db db.Database) *ProposeDetector {
 }
 
 // DetectDoublePropose detects double proposals given a block by looking in the db.
-func (dd *ProposeDetector) DetectDoublePropose(
+func (d *ProposeDetector) DetectDoublePropose(
 	ctx context.Context,
 	incomingBlk *ethpb.SignedBeaconBlockHeader,
 ) (*ethpb.ProposerSlashing, error) {
 	ctx, span := trace.StartSpan(ctx, "detector.DetectDoublePropose")
 	defer span.End()
-	headersFromIdx, err := dd.slasherDB.BlockHeaders(ctx, incomingBlk.Header.Slot, incomingBlk.Header.ProposerIndex)
+	headersFromIdx, err := d.slasherDB.BlockHeaders(ctx, incomingBlk.Header.Slot, incomingBlk.Header.ProposerIndex)
 	if err != nil {
 		return nil, err
 	}
@@ -41,12 +41,12 @@ func (dd *ProposeDetector) DetectDoublePropose(
 			continue
 		}
 		ps := &ethpb.ProposerSlashing{Header_1: incomingBlk, Header_2: blockHeader}
-		if err := dd.slasherDB.SaveProposerSlashing(ctx, status.Active, ps); err != nil {
+		if err := d.slasherDB.SaveProposerSlashing(ctx, status.Active, ps); err != nil {
 			return nil, err
 		}
 		return ps, nil
 	}
-	if err := dd.slasherDB.SaveBlockHeader(ctx, incomingBlk); err != nil {
+	if err := d.slasherDB.SaveBlockHeader(ctx, incomingBlk); err != nil {
 		return nil, err
 	}
 	return nil, nil
@@ -54,13 +54,13 @@ func (dd *ProposeDetector) DetectDoublePropose(
 
 // DetectDoubleProposeNoUpdate detects double proposals for a given block header by db search
 // without storing the incoming block to db.
-func (dd *ProposeDetector) DetectDoubleProposeNoUpdate(
+func (d *ProposeDetector) DetectDoubleProposeNoUpdate(
 	ctx context.Context,
 	incomingBlk *ethpb.BeaconBlockHeader,
 ) (bool, error) {
 	ctx, span := trace.StartSpan(ctx, "detector.DetectDoubleProposeNoUpdate")
 	defer span.End()
-	headersFromIdx, err := dd.slasherDB.BlockHeaders(ctx, incomingBlk.Slot, incomingBlk.ProposerIndex)
+	headersFromIdx, err := d.slasherDB.BlockHeaders(ctx, incomingBlk.Slot, incomingBlk.ProposerIndex)
 	if err != nil {
 		return false, err
 	}

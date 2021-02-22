@@ -149,7 +149,7 @@ func IsValidAttestationIndices(ctx context.Context, indexedAttestation *ethpb.In
 	ctx, span := trace.StartSpan(ctx, "attestationutil.IsValidAttestationIndices")
 	defer span.End()
 
-	if indexedAttestation == nil || indexedAttestation.Data == nil || indexedAttestation.Data.Target == nil {
+	if indexedAttestation == nil || indexedAttestation.Data == nil || indexedAttestation.Data.Target == nil || indexedAttestation.AttestingIndices == nil {
 		return errors.New("nil or missing indexed attestation data")
 	}
 	indices := indexedAttestation.AttestingIndices

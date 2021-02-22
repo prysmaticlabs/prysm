@@ -116,7 +116,7 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 			"Successfully created wallet with remote keymanager configuration",
 		)
 	default:
-		return nil, errors.Wrapf(err, msgKeymanagerNotSupported, w.KeymanagerKind())
+		return nil, errors.Wrapf(err, errKeymanagerNotSupported, w.KeymanagerKind())
 	}
 	return w, nil
 }
@@ -262,7 +262,7 @@ func inputKeymanagerKind(cliCtx *cli.Context) (keymanager.Kind, error) {
 	}
 	selection, _, err := promptSelect.Run()
 	if err != nil {
-		return keymanager.Imported, fmt.Errorf("could not select wallet type: %v", prompt.FormatPromptError(err))
+		return keymanager.Imported, fmt.Errorf("could not select wallet type: %w", prompt.FormatPromptError(err))
 	}
 	return keymanager.Kind(selection), nil
 }

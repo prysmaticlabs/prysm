@@ -68,6 +68,16 @@ func TestIsValidAttestationIndices(t *testing.T) {
 		wantedErr string
 	}{
 		{
+			name: "Indices should not be nil",
+			att: &eth.IndexedAttestation{
+				Data: &eth.AttestationData{
+					Target: &eth.Checkpoint{},
+				},
+				Signature: make([]byte, 96),
+			},
+			wantedErr: "nil or missing indexed attestation data",
+		},
+		{
 			name: "Indices should be non-empty",
 			att: &eth.IndexedAttestation{
 				AttestingIndices: []uint64{},

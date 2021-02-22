@@ -17,7 +17,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/metadata"
 )
 
 // Service represents a service to manage the validator
@@ -83,24 +82,13 @@ func (s *Service) startSlasherClient() ethsl.SlasherClient {
 		log.Warn("You are using an insecure slasher gRPC connection! Please provide a certificate and key to use a secure connection.")
 	}
 
-	md := make(metadata.MD)
-	for _, hdr := range s.grpcHeaders {
-		if hdr != "" {
-			ss := strings.Split(hdr, "=")
-			if len(ss) != 2 {
-				log.Warnf("Incorrect gRPC header flag format. Skipping %v", hdr)
-				continue
-			}
-			md.Set(ss[0], ss[1])
-		}
-	}
+	s.ctx = grpcutils.AppendHeaders(s.ctx, s.grpcHeaders)
 
 	opts := []grpc.DialOption{
 		dialOpt,
 		grpc.WithDefaultCallOptions(
 			grpc_retry.WithMax(s.grpcRetries),
 			grpc_retry.WithBackoff(grpc_retry.BackoffLinear(s.grpcRetryDelay)),
-			grpc.Header(&md),
 		),
 		grpc.WithStatsHandler(&ocgrpc.ClientHandler{}),
 		grpc.WithStreamInterceptor(middleware.ChainStreamClient(
@@ -112,7 +100,7 @@ func (s *Service) startSlasherClient() ethsl.SlasherClient {
 			grpc_opentracing.UnaryClientInterceptor(),
 			grpc_prometheus.UnaryClientInterceptor,
 			grpc_retry.UnaryClientInterceptor(),
-			grpcutils.LogGRPCRequests,
+			grpcutils.LogRequests,
 		)),
 	}
 	conn, err := grpc.DialContext(s.ctx, s.endpoint, opts...)

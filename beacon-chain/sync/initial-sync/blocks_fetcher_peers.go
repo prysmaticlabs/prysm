@@ -17,8 +17,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// getPeerLock returns peer lock for a given peer. If lock is not found, it is created.
-func (f *blocksFetcher) getPeerLock(pid peer.ID) *peerLock {
+// peerLock returns peer lock for a given peer. If lock is not found, it is created.
+func (f *blocksFetcher) peerLock(pid peer.ID) *peerLock {
 	f.Lock()
 	defer f.Unlock()
 	if lock, ok := f.peerLocks[pid]; ok && lock != nil {

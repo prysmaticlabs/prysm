@@ -141,6 +141,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		pubsub.WithMessageIdFn(msgIDFunction),
 		pubsub.WithSubscriptionFilter(s),
 		pubsub.WithPeerOutboundQueueSize(256),
+		pubsub.WithValidateQueueSize(256),
 	}
 	// Add gossip scoring options.
 	if featureconfig.Get().EnablePeerScorer {
@@ -234,8 +235,8 @@ func (s *Service) Start() {
 	})
 	runutil.RunEvery(s.ctx, 1*time.Minute, func() {
 		log.WithFields(logrus.Fields{
-			"inbound":     len(s.peers.Inbound()),
-			"outbound":    len(s.peers.Outbound()),
+			"inbound":     len(s.peers.InboundConnected()),
+			"outbound":    len(s.peers.OutboundConnected()),
 			"activePeers": len(s.peers.Active()),
 		}).Info("Peer summary")
 	})

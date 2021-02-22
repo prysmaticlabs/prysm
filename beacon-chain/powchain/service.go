@@ -34,6 +34,7 @@ import (
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -133,7 +134,6 @@ type Service struct {
 	processingLock          sync.RWMutex
 	ctx                     context.Context
 	cancel                  context.CancelFunc
-	headerChan              chan *gethTypes.Header
 	headTicker              *time.Ticker
 	currHttpEndpoint        string
 	httpEndpoints           []string
@@ -195,7 +195,6 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 	s := &Service{
 		ctx:              ctx,
 		cancel:           cancel,
-		headerChan:       make(chan *gethTypes.Header),
 		httpEndpoints:    endpoints,
 		currHttpEndpoint: currEndpoint,
 		latestEth1Data: &protodb.LatestETH1Data{
@@ -278,9 +277,6 @@ func (s *Service) Start() {
 func (s *Service) Stop() error {
 	if s.cancel != nil {
 		defer s.cancel()
-	}
-	if s.headerChan != nil {
-		defer close(s.headerChan)
 	}
 	s.closeClients()
 	return nil
@@ -471,7 +467,7 @@ func (s *Service) waitForConnection() {
 			s.connectedETH1 = true
 			s.runError = nil
 			log.WithFields(logrus.Fields{
-				"endpoint": s.currHttpEndpoint,
+				"endpoint": logutil.MaskCredentialsLogging(s.currHttpEndpoint),
 			}).Info("Connected to eth1 proof-of-work chain")
 			return
 		}
@@ -519,7 +515,7 @@ func (s *Service) waitForConnection() {
 				s.connectedETH1 = true
 				s.runError = nil
 				log.WithFields(logrus.Fields{
-					"endpoint": s.currHttpEndpoint,
+					"endpoint": logutil.MaskCredentialsLogging(s.currHttpEndpoint),
 				}).Info("Connected to eth1 proof-of-work chain")
 				return
 			}
@@ -562,7 +558,7 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.Deposit
 	if !s.chainStartData.Chainstarted {
 		// do not add to pending cache
 		// if no genesis state exists.
-		validDepositsCount.Add(float64(s.preGenesisState.Eth1DepositIndex() + 1))
+		validDepositsCount.Add(float64(s.preGenesisState.Eth1DepositIndex()))
 		return nil
 	}
 	genesisState, err := s.beaconDB.GenesisState(ctx)
@@ -588,7 +584,7 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.Deposit
 		// Set deposit index to the one in the current archived state.
 		currIndex = fState.Eth1DepositIndex()
 	}
-	validDepositsCount.Add(float64(currIndex + 1))
+	validDepositsCount.Add(float64(currIndex))
 	// Only add pending deposits if the container slice length
 	// is more than the current index in state.
 	if uint64(len(ctrs)) > currIndex {
@@ -616,6 +612,9 @@ func (s *Service) processBlockHeader(header *gethTypes.Header) {
 // batchRequestHeaders requests the block range specified in the arguments. Instead of requesting
 // each block in one call, it batches all requests into a single rpc call.
 func (s *Service) batchRequestHeaders(startBlock, endBlock uint64) ([]*gethTypes.Header, error) {
+	if startBlock > endBlock {
+		return nil, fmt.Errorf("start block height %d cannot be > end block height %d", startBlock, endBlock)
+	}
 	requestRange := (endBlock - startBlock) + 1
 	elems := make([]gethRPC.BatchElem, 0, requestRange)
 	headers := make([]*gethTypes.Header, 0, requestRange)

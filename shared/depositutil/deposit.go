@@ -3,12 +3,10 @@
 package depositutil
 
 import (
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	contract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -116,32 +114,4 @@ func VerifyDepositSignature(dd *ethpb.Deposit_Data, domain []byte) error {
 		return helpers.ErrSigFailedToVerify
 	}
 	return nil
-}
-
-// GenerateDepositTransaction uses the provided validating key and withdrawal key to
-// create a transaction object for the deposit contract.
-func GenerateDepositTransaction(validatingKey, withdrawalKey bls.SecretKey) (*types.Transaction, *ethpb.Deposit_Data, error) {
-	depositData, depositRoot, err := DepositInput(
-		validatingKey, withdrawalKey, params.BeaconConfig().MaxEffectiveBalance,
-	)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not generate deposit input")
-	}
-	testAcc, err := contract.Setup()
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not load deposit contract")
-	}
-	testAcc.TxOpts.GasLimit = 1000000
-
-	tx, err := testAcc.Contract.Deposit(
-		testAcc.TxOpts,
-		depositData.PublicKey,
-		depositData.WithdrawalCredentials,
-		depositData.Signature,
-		depositRoot,
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-	return tx, depositData, nil
 }

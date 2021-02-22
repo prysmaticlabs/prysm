@@ -114,7 +114,7 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 	case keymanager.Remote:
 		return errors.New("backing up keys is not supported for a remote keymanager")
 	default:
-		return fmt.Errorf(msgKeymanagerNotSupported, w.KeymanagerKind())
+		return fmt.Errorf(errKeymanagerNotSupported, w.KeymanagerKind())
 	}
 	return zipKeystoresToOutputDir(keystoresToBackup, backupDir)
 }
@@ -142,14 +142,14 @@ func selectAccounts(selectionPrompt string, pubKeys [][48]byte) (filteredPubKeys
 	results := make([]int, 0)
 	au := aurora.NewAurora(true)
 	for result != exit {
-		prompt := promptui.Select{
+		p := promptui.Select{
 			Label:        selectionPrompt,
 			HideSelected: true,
 			Items:        append([]string{exit, allAccountsText}, pubKeyStrings...),
 			Templates:    templates,
 		}
 
-		_, result, err = prompt.Run()
+		_, result, err = p.Run()
 		if err != nil {
 			return nil, err
 		}

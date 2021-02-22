@@ -18,7 +18,9 @@ func TestMain(m *testing.M) {
 
 // setupDB instantiates and returns a DB instance for the validator client.
 func setupDB(t testing.TB, pubkeys [][48]byte) *Store {
-	db, err := NewKVStore(context.Background(), t.TempDir(), pubkeys)
+	db, err := NewKVStore(context.Background(), t.TempDir(), &Config{
+		PubKeys: pubkeys,
+	})
 	require.NoError(t, err, "Failed to instantiate DB")
 	err = db.UpdatePublicKeysBuckets(pubkeys)
 	require.NoError(t, err, "Failed to create old buckets for public keys")

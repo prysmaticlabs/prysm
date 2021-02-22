@@ -9,9 +9,9 @@ import (
 	"regexp"
 	"strings"
 
+	fssz "github.com/ferranbt/fastssz"
 	"github.com/kr/pretty"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -37,7 +37,7 @@ func main() {
 	app := cli.App{}
 	app.Name = "pcli"
 	app.Usage = "A command line utility to run eth2 specific commands"
-	app.Version = version.GetVersion()
+	app.Version = version.Version()
 	app.Commands = []*cli.Command{
 		{
 			Name:    "pretty",
@@ -68,7 +68,7 @@ func main() {
 				},
 			},
 			Action: func(c *cli.Context) error {
-				var data interface{}
+				var data fssz.Unmarshaler
 				switch sszType {
 				case "block":
 					data = &ethpb.BeaconBlock{}
@@ -80,6 +80,8 @@ func main() {
 					data = &ethpb.BeaconBlockHeader{}
 				case "deposit":
 					data = &ethpb.Deposit{}
+				case "deposit_message":
+					data = &pb.DepositMessage{}
 				case "proposer_slashing":
 					data = &ethpb.ProposerSlashing{}
 				case "signed_block_header":
@@ -205,15 +207,15 @@ func main() {
 }
 
 // dataFetcher fetches and unmarshals data from file to provided data structure.
-func dataFetcher(fPath string, data interface{}) error {
+func dataFetcher(fPath string, data fssz.Unmarshaler) error {
 	rawFile, err := ioutil.ReadFile(fPath)
 	if err != nil {
 		return err
 	}
-	return ssz.Unmarshal(rawFile, data)
+	return data.UnmarshalSSZ(rawFile)
 }
 
-func prettyPrint(sszPath string, data interface{}) {
+func prettyPrint(sszPath string, data fssz.Unmarshaler) {
 	if err := dataFetcher(sszPath, data); err != nil {
 		log.Fatal(err)
 	}

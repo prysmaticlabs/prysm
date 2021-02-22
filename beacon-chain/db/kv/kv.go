@@ -37,6 +37,22 @@ const (
 // would be approximately 2MB
 var BlockCacheSize = int64(1 << 21)
 
+// blockedBuckets represents the buckets that we want to restrict
+// from our metrics fetching for performance reasons. For a detailed
+// summary, it can be read in https://github.com/prysmaticlabs/prysm/issues/8274.
+var blockedBuckets = [][]byte{
+	blocksBucket,
+	stateSummaryBucket,
+	blockParentRootIndicesBucket,
+	blockSlotIndicesBucket,
+	finalizedBlockRootsIndexBucket,
+}
+
+// Config for the bolt db kv store.
+type Config struct {
+	InitialMMapSize int
+}
+
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
 type Store struct {
@@ -51,7 +67,7 @@ type Store struct {
 // NewKVStore initializes a new boltDB key-value store at the directory
 // path specified, creates the kv-buckets based on the schema, and stores
 // an open connection db object as a property of the Store struct.
-func NewKVStore(ctx context.Context, dirPath string) (*Store, error) {
+func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, error) {
 	hasDir, err := fileutil.HasDir(dirPath)
 	if err != nil {
 		return nil, err
@@ -62,7 +78,14 @@ func NewKVStore(ctx context.Context, dirPath string) (*Store, error) {
 		}
 	}
 	datafile := path.Join(dirPath, DatabaseFileName)
-	boltDB, err := bolt.Open(datafile, params.BeaconIoConfig().ReadWritePermissions, &bolt.Options{Timeout: 1 * time.Second, InitialMmapSize: 10e6})
+	boltDB, err := bolt.Open(
+		datafile,
+		params.BeaconIoConfig().ReadWritePermissions,
+		&bolt.Options{
+			Timeout:         1 * time.Second,
+			InitialMmapSize: config.InitialMMapSize,
+		},
+	)
 	if err != nil {
 		if errors.Is(err, bolt.ErrTimeout) {
 			return nil, errors.New("cannot obtain database lock, database may be in use by another process")
@@ -174,5 +197,5 @@ func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 
 // createBoltCollector returns a prometheus collector specifically configured for boltdb.
 func createBoltCollector(db *bolt.DB) prometheus.Collector {
-	return prombolt.New("boltDB", db)
+	return prombolt.New("boltDB", db, blockedBuckets...)
 }

@@ -34,7 +34,7 @@ func execShellOutputFunc(ctx context.Context, command string, args ...string) (s
 	return string(result), nil
 }
 
-func getSupportedPlatforms() []platform {
+func supportedPlatforms() []platform {
 	return []platform{
 		{os: "linux", arch: "amd64"},
 		{os: "linux", arch: "arm64"},
@@ -66,7 +66,7 @@ func parseVersion(input string, num int, sep string) ([]int, error) {
 
 // meetsMinPlatformReqs returns true if the runtime matches any on the list of supported platforms
 func meetsMinPlatformReqs(ctx context.Context) (bool, error) {
-	okPlatforms := getSupportedPlatforms()
+	okPlatforms := supportedPlatforms()
 	for _, platform := range okPlatforms {
 		if runtimeOS == platform.os && runtimeArch == platform.arch {
 			// If MacOS we make sure it meets the minimum version cutoff

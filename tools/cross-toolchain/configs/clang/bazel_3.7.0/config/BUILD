@@ -41,7 +41,7 @@ platform(
         "@bazel_tools//tools/cpp:clang",
     ],
     exec_properties = {
-        "container-image": "docker://gcr.io/prysmaticlabs/rbe-worker@sha256:d5fa14154811dff0886e4c808dc15f18c4bb8545a1ef3c53805a0db13564bdad",
+        "container-image": "docker://gcr.io/prysmaticlabs/rbe-worker@sha256:bd40e9a43b983c8b06079d14a0530100d6e1d59796616ca1d8b3902a197c97b1",
         "OSFamily": "Linux",
     },
 )
