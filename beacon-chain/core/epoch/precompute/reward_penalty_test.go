@@ -301,7 +301,7 @@ func TestProposerDeltaPrecompute_HappyCase(t *testing.T) {
 	beaconState, err := state.InitializeFromProto(base)
 	require.NoError(t, err)
 
-	proposerIndex := uint64(1)
+	proposerIndex := types.ValidatorIndex(1)
 	b := &Balance{ActiveCurrentEpoch: 1000}
 	v := []*Validator{
 		{IsPrevEpochAttester: true, CurrentEpochEffectiveBalance: 32, ProposerIndex: proposerIndex},
@@ -323,7 +323,7 @@ func TestProposerDeltaPrecompute_ValidatorIndexOutOfRange(t *testing.T) {
 	beaconState, err := state.InitializeFromProto(base)
 	require.NoError(t, err)
 
-	proposerIndex := validatorCount
+	proposerIndex := types.ValidatorIndex(validatorCount)
 	b := &Balance{ActiveCurrentEpoch: 1000}
 	v := []*Validator{
 		{IsPrevEpochAttester: true, CurrentEpochEffectiveBalance: 32, ProposerIndex: proposerIndex},
@@ -339,7 +339,7 @@ func TestProposerDeltaPrecompute_SlashedCase(t *testing.T) {
 	beaconState, err := state.InitializeFromProto(base)
 	require.NoError(t, err)
 
-	proposerIndex := uint64(1)
+	proposerIndex := types.ValidatorIndex(1)
 	b := &Balance{ActiveCurrentEpoch: 1000}
 	v := []*Validator{
 		{IsPrevEpochAttester: true, CurrentEpochEffectiveBalance: 32, ProposerIndex: proposerIndex, IsSlashed: true},

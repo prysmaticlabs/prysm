@@ -131,7 +131,7 @@ func TestShuffledIndex(t *testing.T) {
 		list = append(list, i)
 	}
 	shuffledList := make([]types.ValidatorIndex, listSize)
-	unShuffledlist := make([]types.ValidatorIndex, listSize)
+	unshuffledlist := make([]types.ValidatorIndex, listSize)
 	seed := [32]byte{123, 42}
 	for i := types.ValidatorIndex(0); uint64(i) < listSize; i++ {
 		si, err := ShuffledIndex(i, listSize, seed)
@@ -141,9 +141,9 @@ func TestShuffledIndex(t *testing.T) {
 	for i := types.ValidatorIndex(0); uint64(i) < listSize; i++ {
 		ui, err := UnShuffledIndex(i, listSize, seed)
 		assert.NoError(t, err)
-		unShuffledlist[ui] = shuffledList[i]
+		unshuffledlist[ui] = shuffledList[i]
 	}
-	assert.DeepEqual(t, list, unShuffledlist)
+	assert.DeepEqual(t, list, unshuffledlist)
 }
 
 func TestSplitIndicesAndOffset_OK(t *testing.T) {

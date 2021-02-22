@@ -105,7 +105,7 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	require.DeepEqual(t, wanted, res)
+	require.DeepSSZEqual(t, wanted, res)
 }
 
 func TestServer_ListAttestations_NoPagination(t *testing.T) {
@@ -349,9 +349,7 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			res, err := bs.ListAttestations(ctx, test.req)
 			require.NoError(t, err)
-			if !proto.Equal(res, test.res) {
-				t.Errorf("Incorrect attestations response, wanted \n%v, received \n%v", test.res, res)
-			}
+			require.DeepSSZEqual(t, res, test.res)
 		})
 	}
 }

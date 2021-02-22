@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -27,7 +27,7 @@ type Validator interface {
 	Done()
 	WaitForChainStart(ctx context.Context) error
 	WaitForSync(ctx context.Context) error
-	WaitForActivation(ctx context.Context, accountsChangedChan chan struct{}) error
+	WaitForActivation(ctx context.Context, accountsChangedChan <-chan struct{}) error
 	SlasherReady(ctx context.Context) error
 	CanonicalHeadSlot(ctx context.Context) (types.Slot, error)
 	NextSlot() <-chan types.Slot
@@ -44,7 +44,7 @@ type Validator interface {
 	WaitForWalletInitialization(ctx context.Context) error
 	AllValidatorsAreExited(ctx context.Context) (bool, error)
 	GetKeymanager() keymanager.IKeymanager
-	ReceiveBlocks(ctx context.Context, connectionErrorChannel chan error)
+	ReceiveBlocks(ctx context.Context, connectionErrorChannel chan<- error)
 }
 
 // Run the main validator routine. This routine exits if the context is
@@ -234,7 +234,7 @@ func handleAssignmentError(err error, slot types.Slot) {
 	}
 }
 
-func handleAccountsChanged(ctx context.Context, v Validator, accountsChangedChan chan struct{}) {
+func handleAccountsChanged(ctx context.Context, v Validator, accountsChangedChan chan<- struct{}) {
 	validatingPubKeysChan := make(chan [][48]byte, 1)
 	var sub = v.GetKeymanager().SubscribeAccountChanges(validatingPubKeysChan)
 	defer func() {

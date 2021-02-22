@@ -227,6 +227,8 @@ func deepValueBaseTypeEqual(v1, v2 reflect.Value) bool {
 			return v1.Interface().(types.Slot) == v2.Interface().(types.Slot)
 		case "ValidatorIndex":
 			return v1.Interface().(types.ValidatorIndex) == v2.Interface().(types.ValidatorIndex)
+		case "CommitteeIndex":
+			return v1.Interface().(types.CommitteeIndex) == v2.Interface().(types.CommitteeIndex)
 		}
 		return v1.Interface().(uint64) == v2.Interface().(uint64)
 	case reflect.Uint32:
