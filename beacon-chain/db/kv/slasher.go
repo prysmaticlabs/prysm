@@ -72,6 +72,46 @@ func (s *Store) SaveLatestEpochAttestedForValidators(
 	})
 }
 
+// CheckDoubleAttesterVotes retries any slashable double votes that exist
+// for a series of input attestations.
+func (s *Store) CheckAttesterDoubleVotes(
+	ctx context.Context, attestations []*slashertypes.CompactAttestation,
+) ([]*slashertypes.AttesterDoubleVote, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.CheckAttesterDoubleVotes")
+	defer span.End()
+	doubleVotes := make([]*slashertypes.AttesterDoubleVote, 0)
+	err := s.db.Update(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(attestationRecordsBucket)
+		for _, att := range attestations {
+			encEpoch, err := att.Target.MarshalSSZ()
+			if err != nil {
+				return err
+			}
+			for _, valIdx := range att.AttestingIndices {
+				encIdx := ssz.MarshalUint64(make([]byte, 0), valIdx)
+				key := append(encIdx, encEpoch...)
+				existingEncodedRecord := bkt.Get(key)
+				if existingEncodedRecord != nil {
+					existingAtt, err := decodeAttestationRecord(existingEncodedRecord)
+					if err != nil {
+						return err
+					}
+					if existingAtt.SigningRoot != att.SigningRoot {
+						doubleVotes = append(doubleVotes, &slashertypes.AttesterDoubleVote{
+							ValidatorIndex:  types.ValidatorIndex(valIdx),
+							Target:          att.Target,
+							SigningRoot:     att.SigningRoot,
+							PrevSigningRoot: existingAtt.SigningRoot,
+						})
+					}
+				}
+			}
+		}
+		return nil
+	})
+	return doubleVotes, err
+}
+
 // AttestationRecordForValidator given a validator index and a target epoch,
 // retrieves an existing attestation record we have stored in the database.
 func (s *Store) AttestationRecordForValidator(
@@ -109,28 +149,24 @@ func (s *Store) AttestationRecordForValidator(
 // specified validator indices.
 func (s *Store) SaveAttestationRecordsForValidators(
 	ctx context.Context,
-	validatorIndices []types.ValidatorIndex,
 	attestations []*slashertypes.CompactAttestation,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveAttestationRecordsForValidators")
 	defer span.End()
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationRecordsBucket)
-		for _, valIdx := range validatorIndices {
-			encIdx, err := valIdx.MarshalSSZ()
+		for _, att := range attestations {
+			encEpoch, err := att.Target.MarshalSSZ()
 			if err != nil {
 				return err
 			}
-			for _, att := range attestations {
-				encEpoch, err := att.Target.MarshalSSZ()
-				if err != nil {
-					return err
-				}
+			value, err := encodeAttestationRecord(att)
+			if err != nil {
+				return err
+			}
+			for _, valIdx := range att.AttestingIndices {
+				encIdx := ssz.MarshalUint64(make([]byte, 0), valIdx)
 				key := append(encIdx, encEpoch...)
-				value, err := encodeAttestationRecord(att)
-				if err != nil {
-					return err
-				}
 				if err := bkt.Put(key, value); err != nil {
 					return err
 				}

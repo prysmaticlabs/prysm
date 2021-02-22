@@ -2,6 +2,7 @@ package slasher
 
 import (
 	"fmt"
+	"strconv"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -52,9 +53,10 @@ func logSlashingEvent(slashing *slashertypes.Slashing) {
 	switch slashing.Kind {
 	case slashertypes.DoubleVote:
 		log.WithFields(logrus.Fields{
-			"validatorIndex": slashing.ValidatorIndex,
-			"targetEpoch":    slashing.TargetEpoch,
-			"signingRoot":    fmt.Sprintf("%#x", slashing.SigningRoot),
+			"validatorIndex":  slashing.ValidatorIndex,
+			"targetEpoch":     slashing.TargetEpoch,
+			"signingRoot":     fmt.Sprintf("%#x", slashing.SigningRoot),
+			"prevSigningRoot": fmt.Sprintf("%#x", slashing.PrevSigningRoot),
 		}).Info("Attester double vote slashing")
 	case slashertypes.SurroundingVote:
 		log.WithFields(logrus.Fields{
@@ -93,6 +95,11 @@ func logDoubleProposal(incomingProposal *slashertypes.CompactBeaconBlock, existi
 		PrevSigningRoot: existingSigningRoot,
 		Slot:            incomingProposal.Slot,
 	})
+}
+
+// Turns a uint64 value to a string representation.
+func uintToString(val uint64) string {
+	return strconv.FormatUint(val, 10)
 }
 
 // If an existing signing root does not match an incoming proposal signing root,

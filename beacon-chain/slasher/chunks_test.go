@@ -153,9 +153,9 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 		Target:      att.Target,
 		SigningRoot: [32]byte{1},
 	}
+	attRecord.AttestingIndices = []uint64{uint64(validatorIdx)}
 	err = beaconDB.SaveAttestationRecordsForValidators(
 		ctx,
-		[]types.ValidatorIndex{validatorIdx},
 		[]*slashertypes.CompactAttestation{attRecord},
 	)
 	require.NoError(t, err)
@@ -239,9 +239,9 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 		Target:      att.Target,
 		SigningRoot: [32]byte{1},
 	}
+	attRecord.AttestingIndices = []uint64{uint64(validatorIdx)}
 	err = beaconDB.SaveAttestationRecordsForValidators(
 		ctx,
-		[]types.ValidatorIndex{validatorIdx},
 		[]*slashertypes.CompactAttestation{attRecord},
 	)
 	require.NoError(t, err)

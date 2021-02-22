@@ -20,6 +20,15 @@ type CompactAttestation struct {
 	SigningRoot      [32]byte
 }
 
+// AttesterDoubleVote represents a double vote instance
+// which is a slashable event for attesters.
+type AttesterDoubleVote struct {
+	ValidatorIndex  types.ValidatorIndex
+	Target          types.Epoch
+	SigningRoot     [32]byte
+	PrevSigningRoot [32]byte
+}
+
 // DoubleBlockProposal containing an incoming and an existing proposal's signing root.
 type DoubleBlockProposal struct {
 	Slot                types.Slot

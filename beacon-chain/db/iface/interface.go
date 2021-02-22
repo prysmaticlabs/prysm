@@ -8,7 +8,7 @@ import (
 	"io"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
@@ -64,6 +64,9 @@ type ReadOnlyDatabase interface {
 	AttestationRecordForValidator(
 		ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch,
 	) (*slashertypes.CompactAttestation, error)
+	CheckAttesterDoubleVotes(
+		ctx context.Context, attestations []*slashertypes.CompactAttestation,
+	) ([]*slashertypes.AttesterDoubleVote, error)
 	LoadSlasherChunks(
 		ctx context.Context, kind slashertypes.ChunkKind, diskKeys []uint64,
 	) ([][]uint16, []bool, error)
@@ -105,7 +108,6 @@ type NoHeadAccessDatabase interface {
 	) error
 	SaveAttestationRecordsForValidators(
 		ctx context.Context,
-		validatorIndices []types.ValidatorIndex,
 		attestations []*slashertypes.CompactAttestation,
 	) error
 	SaveSlasherChunks(

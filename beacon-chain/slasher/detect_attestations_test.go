@@ -121,9 +121,9 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.Equal(t, true, slashing == nil)
+	att.AttestingIndices = []uint64{uint64(validatorIdx)}
 	err = beaconDB.SaveAttestationRecordsForValidators(
 		ctx,
-		[]types.ValidatorIndex{validatorIdx},
 		[]*slashertypes.CompactAttestation{att},
 	)
 	require.NoError(t, err)
@@ -181,9 +181,9 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.Equal(t, true, slashing == nil)
+	att.AttestingIndices = []uint64{uint64(validatorIdx)}
 	err = beaconDB.SaveAttestationRecordsForValidators(
 		ctx,
-		[]types.ValidatorIndex{validatorIdx},
 		[]*slashertypes.CompactAttestation{att},
 	)
 	require.NoError(t, err)
@@ -203,6 +203,109 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, slashing)
 	require.Equal(t, slashertypes.SurroundedVote, slashing.Kind)
+}
+
+func Test_checkDoubleVotes_SlashableInputAttestations(t *testing.T) {
+	beaconDB := dbtest.SetupDB(t)
+	ctx := context.Background()
+	// For a list of input attestations, check that we can
+	// indeed check there could exist a double vote offense
+	// within the list with respect to other entries in the list.
+	atts := []*slashertypes.CompactAttestation{
+		{
+			AttestingIndices: []uint64{1, 2},
+			Target:           1,
+			SigningRoot:      [32]byte{1},
+		},
+		{
+			AttestingIndices: []uint64{1, 2},
+			Target:           2,
+			SigningRoot:      [32]byte{1},
+		},
+		{
+			AttestingIndices: []uint64{1, 2},
+			Target:           2,
+			SigningRoot:      [32]byte{2}, // Different signing root.
+		},
+	}
+	srv := &Service{
+		serviceCfg: &ServiceConfig{
+			Database: beaconDB,
+		},
+	}
+	wanted := []*slashertypes.Slashing{
+		{
+			Kind:            slashertypes.DoubleVote,
+			ValidatorIndex:  types.ValidatorIndex(1),
+			TargetEpoch:     2,
+			SigningRoot:     [32]byte{2},
+			PrevSigningRoot: [32]byte{1},
+		},
+		{
+			Kind:            slashertypes.DoubleVote,
+			ValidatorIndex:  types.ValidatorIndex(2),
+			TargetEpoch:     2,
+			SigningRoot:     [32]byte{2},
+			PrevSigningRoot: [32]byte{1},
+		},
+	}
+	slashings, err := srv.checkDoubleVotes(ctx, atts)
+	require.NoError(t, err)
+	require.DeepEqual(t, wanted, slashings)
+}
+
+func Test_checkDoubleVotes_SlashableAttestationsOnDisk(t *testing.T) {
+	beaconDB := dbtest.SetupDB(t)
+	ctx := context.Background()
+	// For a list of input attestations, check that we can
+	// indeed check there could exist a double vote offense
+	// within the list with respect to previous entries in the db.
+	prevAtts := []*slashertypes.CompactAttestation{
+		{
+			AttestingIndices: []uint64{1, 2},
+			Target:           1,
+			SigningRoot:      [32]byte{1},
+		},
+		{
+			AttestingIndices: []uint64{1, 2},
+			Target:           2,
+			SigningRoot:      [32]byte{1},
+		},
+	}
+	err := beaconDB.SaveAttestationRecordsForValidators(ctx, prevAtts)
+	require.NoError(t, err)
+
+	srv := &Service{
+		serviceCfg: &ServiceConfig{
+			Database: beaconDB,
+		},
+	}
+	wanted := []*slashertypes.Slashing{
+		{
+			Kind:            slashertypes.DoubleVote,
+			ValidatorIndex:  types.ValidatorIndex(1),
+			TargetEpoch:     2,
+			SigningRoot:     [32]byte{2},
+			PrevSigningRoot: [32]byte{1},
+		},
+		{
+			Kind:            slashertypes.DoubleVote,
+			ValidatorIndex:  types.ValidatorIndex(2),
+			TargetEpoch:     2,
+			SigningRoot:     [32]byte{2},
+			PrevSigningRoot: [32]byte{1},
+		},
+	}
+	newAtts := []*slashertypes.CompactAttestation{
+		{
+			AttestingIndices: []uint64{1, 2},
+			Target:           2,
+			SigningRoot:      [32]byte{2}, // Different signing root.
+		},
+	}
+	slashings, err := srv.checkDoubleVotes(ctx, newAtts)
+	require.NoError(t, err)
+	require.DeepEqual(t, wanted, slashings)
 }
 
 func Test_loadChunks_MinSpans(t *testing.T) {

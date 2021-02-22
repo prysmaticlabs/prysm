@@ -6,6 +6,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
+	"go.opencensus.io/trace"
 )
 
 // A struct encapsulating input arguments to
@@ -22,10 +23,11 @@ type chunkUpdateArgs struct {
 // as the current epoch in time, we perform slashing detection.
 // The process is as follows given a list of attestations:
 //
-// 1. Group the attestations by chunk index.
-// 2. Update the min and max spans for those grouped attestations, check if any slashings are
+// 1. Check for attester double votes using the list of attestations.
+// 2. Group the attestations by chunk index.
+// 3. Update the min and max spans for those grouped attestations, check if any slashings are
 //    found in the process
-// 3. Update the latest written epoch for all validators involved to the current epoch.
+// 4. Update the latest written epoch for all validators involved to the current epoch.
 //
 // This function performs a lot of critical actions and is split into smaller helpers for cleanliness.
 func (s *Service) detectSlashableAttestations(
@@ -33,12 +35,19 @@ func (s *Service) detectSlashableAttestations(
 	args *chunkUpdateArgs,
 	attestations []*slashertypes.CompactAttestation,
 ) error {
+	ctx, span := trace.StartSpan(ctx, "Slasher.detectSlashableAttestations")
+	defer span.End()
+	// Check for double votes.
+	doubleVoteSlashings, err := s.checkDoubleVotes(ctx, attestations)
+	if err != nil {
+		return err
+	}
 
 	// Group attestations by chunk index.
 	groupedAtts := s.groupByChunkIndex(attestations)
 
 	// Update min and max spans and retrieve any detected slashable offenses.
-	slashings, err := s.updateSpans(ctx, &chunkUpdateArgs{
+	surroundingSlashings, err := s.updateSpans(ctx, &chunkUpdateArgs{
 		kind:                slashertypes.MinSpan,
 		validatorChunkIndex: args.validatorChunkIndex,
 		currentEpoch:        args.currentEpoch,
@@ -46,7 +55,7 @@ func (s *Service) detectSlashableAttestations(
 	if err != nil {
 		return err
 	}
-	moreSlashings, err := s.updateSpans(ctx, &chunkUpdateArgs{
+	surroundedSlashings, err := s.updateSpans(ctx, &chunkUpdateArgs{
 		kind:                slashertypes.MaxSpan,
 		validatorChunkIndex: args.validatorChunkIndex,
 		currentEpoch:        args.currentEpoch,
@@ -55,11 +64,15 @@ func (s *Service) detectSlashableAttestations(
 		return err
 	}
 
-	totalSlashings := append(slashings, moreSlashings...)
-	if len(totalSlashings) > 0 {
-		log.WithField("numSlashings", len(totalSlashings)).Info("Slashable offenses found")
+	// Consolidate all slashings into a slice.
+	slashings := make([]*slashertypes.Slashing, 0)
+	slashings = append(slashings, doubleVoteSlashings...)
+	slashings = append(slashings, surroundingSlashings...)
+	slashings = append(slashings, surroundedSlashings...)
+	if len(slashings) > 0 {
+		log.WithField("numSlashings", len(slashings)).Info("Slashable offenses found")
 	}
-	for _, slashing := range totalSlashings {
+	for _, slashing := range slashings {
 		// TODO(#8331): Send over an event feed.
 		logSlashingEvent(slashing)
 	}
@@ -67,6 +80,73 @@ func (s *Service) detectSlashableAttestations(
 	// Update the latest written epoch for all involved validator indices.
 	validatorIndices := s.params.validatorIndicesInChunk(args.validatorChunkIndex)
 	return s.serviceCfg.Database.SaveLatestEpochAttestedForValidators(ctx, validatorIndices, args.currentEpoch)
+}
+
+// Check for attester slashing double votes by looking at every single validator index
+// in each attestation's attesting indices and checking if there already exist records for such
+// attestation's target epoch. If so, we append a double vote slashing object to a list of slashings
+// we return to the caller.
+func (s *Service) checkDoubleVotes(
+	ctx context.Context, attestations []*slashertypes.CompactAttestation,
+) ([]*slashertypes.Slashing, error) {
+	ctx, span := trace.StartSpan(ctx, "Slasher.checkDoubleVotes")
+	defer span.End()
+	// We check if there are any slashable double votes in the input list
+	// of attestations with respect to each other.
+	slashings := make([]*slashertypes.Slashing, 0)
+	existingAtts := make(map[string][32]byte)
+	for _, att := range attestations {
+		for _, valIdx := range att.AttestingIndices {
+			key := uintToString(uint64(att.Target)) + ":" + uintToString(valIdx)
+			existingSigningRoot, ok := existingAtts[key]
+			if !ok {
+				existingAtts[key] = att.SigningRoot
+				continue
+			}
+			if att.SigningRoot != existingSigningRoot {
+				slashings = append(slashings, &slashertypes.Slashing{
+					Kind:            slashertypes.DoubleVote,
+					ValidatorIndex:  types.ValidatorIndex(valIdx),
+					TargetEpoch:     att.Target,
+					SigningRoot:     att.SigningRoot,
+					PrevSigningRoot: existingSigningRoot,
+				})
+			}
+		}
+	}
+
+	// We check if there are any slashable double votes in the input list
+	// of attestations with respect to our database.
+	moreSlashings, err := s.checkDoubleVotesOnDisk(ctx, attestations)
+	if err != nil {
+		return nil, err
+	}
+	return append(slashings, moreSlashings...), nil
+}
+
+// Check for double votes in our database given a list of incoming attestations.
+func (s *Service) checkDoubleVotesOnDisk(
+	ctx context.Context, attestations []*slashertypes.CompactAttestation,
+) ([]*slashertypes.Slashing, error) {
+	ctx, span := trace.StartSpan(ctx, "Slasher.checkDoubleVotesOnDisk")
+	defer span.End()
+	doubleVotes, err := s.serviceCfg.Database.CheckAttesterDoubleVotes(
+		ctx, attestations,
+	)
+	if err != nil {
+		return nil, err
+	}
+	doubleVoteSlashings := make([]*slashertypes.Slashing, 0)
+	for _, doubleVote := range doubleVotes {
+		doubleVoteSlashings = append(doubleVoteSlashings, &slashertypes.Slashing{
+			Kind:            slashertypes.DoubleVote,
+			ValidatorIndex:  doubleVote.ValidatorIndex,
+			TargetEpoch:     doubleVote.Target,
+			SigningRoot:     doubleVote.SigningRoot,
+			PrevSigningRoot: doubleVote.PrevSigningRoot,
+		})
+	}
+	return doubleVoteSlashings, nil
 }
 
 // Updates spans and detects any slashable attester offenses along the way.
@@ -82,6 +162,8 @@ func (s *Service) updateSpans(
 	args *chunkUpdateArgs,
 	attestationsByChunkIdx map[uint64][]*slashertypes.CompactAttestation,
 ) ([]*slashertypes.Slashing, error) {
+	ctx, span := trace.StartSpan(ctx, "Slasher.updateSpans")
+	defer span.End()
 	// Determine the chunk indices we need to use for slashing detection.
 	validatorIndices := s.params.validatorIndicesInChunk(args.validatorChunkIndex)
 	chunkIndices, err := s.determineChunksToUpdateForValidators(ctx, args, validatorIndices)
@@ -144,6 +226,8 @@ func (s *Service) determineChunksToUpdateForValidators(
 	args *chunkUpdateArgs,
 	validatorIndices []types.ValidatorIndex,
 ) (chunkIndices []uint64, err error) {
+	ctx, span := trace.StartSpan(ctx, "Slasher.determineChunksToUpdateForValidators")
+	defer span.End()
 	attestedEpochs, err := s.serviceCfg.Database.LatestEpochAttestedForValidators(ctx, validatorIndices)
 	if err != nil {
 		return
@@ -190,6 +274,8 @@ func (s *Service) applyAttestationForValidator(
 	chunksByChunkIdx map[uint64]Chunker,
 	attestation *slashertypes.CompactAttestation,
 ) (*slashertypes.Slashing, error) {
+	ctx, span := trace.StartSpan(ctx, "Slasher.applyAttestationForValidator")
+	defer span.End()
 	sourceEpoch := attestation.Source
 	targetEpoch := attestation.Target
 	chunkIdx := s.params.chunkIndex(sourceEpoch)
@@ -264,6 +350,8 @@ func (s *Service) loadChunks(
 	args *chunkUpdateArgs,
 	chunkIndices []uint64,
 ) (map[uint64]Chunker, error) {
+	ctx, span := trace.StartSpan(ctx, "Slasher.loadChunks")
+	defer span.End()
 	chunkKeys := make([]uint64, 0, len(chunkIndices))
 	for _, chunkIdx := range chunkIndices {
 		chunkKeys = append(chunkKeys, s.params.flatSliceID(args.validatorChunkIndex, chunkIdx))
@@ -305,6 +393,8 @@ func (s *Service) saveUpdatedChunks(
 	args *chunkUpdateArgs,
 	updatedChunksByChunkIdx map[uint64]Chunker,
 ) error {
+	ctx, span := trace.StartSpan(ctx, "Slasher.saveUpdatedChunks")
+	defer span.End()
 	chunkKeys := make([]uint64, 0, len(updatedChunksByChunkIdx))
 	chunks := make([][]uint16, 0, len(updatedChunksByChunkIdx))
 	for chunkIdx, chunk := range updatedChunksByChunkIdx {
