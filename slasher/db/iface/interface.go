@@ -24,8 +24,8 @@ type ReadOnlyDatabase interface {
 	GetLatestEpochDetected(ctx context.Context) (types.Epoch, error)
 
 	// BlockHeader related methods.
-	BlockHeaders(ctx context.Context, slot types.Slot, validatorID types.ValidatorIndex) ([]*ethpb.SignedBeaconBlockHeader, error)
-	HasBlockHeader(ctx context.Context, slot types.Slot, validatorID types.ValidatorIndex) bool
+	BlockHeaders(ctx context.Context, slot types.Slot, validatorIndex types.ValidatorIndex) ([]*ethpb.SignedBeaconBlockHeader, error)
+	HasBlockHeader(ctx context.Context, slot types.Slot, validatorIndex types.ValidatorIndex) bool
 
 	// IndexedAttestations related methods.
 	HasIndexedAttestation(ctx context.Context, att *ethpb.IndexedAttestation) (bool, error)
@@ -44,7 +44,7 @@ type ReadOnlyDatabase interface {
 	HasProposerSlashing(ctx context.Context, slashing *ethpb.ProposerSlashing) (bool, dbtypes.SlashingStatus, error)
 
 	// Validator Index -> Pubkey related methods.
-	ValidatorPubKey(ctx context.Context, validatorID types.ValidatorIndex) ([]byte, error)
+	ValidatorPubKey(ctx context.Context, validatorIndex types.ValidatorIndex) ([]byte, error)
 
 	// Chain data related methods.
 	ChainHead(ctx context.Context) (*ethpb.ChainHead, error)
@@ -83,8 +83,8 @@ type WriteAccessDatabase interface {
 	SaveProposerSlashings(ctx context.Context, status dbtypes.SlashingStatus, slashings []*ethpb.ProposerSlashing) error
 
 	// Validator Index -> Pubkey related methods.
-	SavePubKey(ctx context.Context, validatorID types.ValidatorIndex, pubKey []byte) error
-	DeletePubKey(ctx context.Context, validatorID types.ValidatorIndex) error
+	SavePubKey(ctx context.Context, validatorIndex types.ValidatorIndex, pubKey []byte) error
+	DeletePubKey(ctx context.Context, validatorIndex types.ValidatorIndex) error
 
 	// Chain data related methods.
 	SaveChainHead(ctx context.Context, head *ethpb.ChainHead) error

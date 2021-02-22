@@ -20,14 +20,14 @@ func (s *Service) FindOrGetPublicKeys(
 
 	validators := make(map[types.ValidatorIndex][]byte, len(validatorIndices))
 	notFound := 0
-	for _, validatorIdx := range validatorIndices {
-		pub, exists := s.publicKeyCache.Get(validatorIdx)
+	for _, validatorIndex := range validatorIndices {
+		pub, exists := s.publicKeyCache.Get(validatorIndex)
 		if exists {
-			validators[validatorIdx] = pub
+			validators[validatorIndex] = pub
 			continue
 		}
 		// inline removal of cached elements from slice
-		validatorIndices[notFound] = validatorIdx
+		validatorIndices[notFound] = validatorIndex
 		notFound++
 	}
 	// trim the slice to its new size

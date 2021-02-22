@@ -368,7 +368,7 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx types.ValidatorIndex, val *ethp
 
 // SetValidatorIndexByPubkey updates the validator index mapping maintained internally to
 // a given input 48-byte, public key.
-func (b *BeaconState) SetValidatorIndexByPubkey(pubKey [48]byte, validatorIdx types.ValidatorIndex) {
+func (b *BeaconState) SetValidatorIndexByPubkey(pubKey [48]byte, validatorIndex types.ValidatorIndex) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -377,7 +377,7 @@ func (b *BeaconState) SetValidatorIndexByPubkey(pubKey [48]byte, validatorIdx ty
 		ref.MinusRef()
 		b.valMapHandler = valMap
 	}
-	b.valMapHandler.valIdxMap[pubKey] = validatorIdx
+	b.valMapHandler.valIdxMap[pubKey] = validatorIndex
 }
 
 // SetBalances for the beacon state. Updates the entire
