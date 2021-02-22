@@ -47,8 +47,11 @@ func logBlockSyncStatus(block *ethpb.BeaconBlock, blockRoot [32]byte, finalized 
 		"epoch":                     helpers.SlotToEpoch(block.Slot),
 		"finalizedEpoch":            finalized.Epoch,
 		"finalizedRoot":             fmt.Sprintf("0x%s...", hex.EncodeToString(finalized.Root)[:8]),
+	}).Info("Synced new block")
+	log.WithFields(logrus.Fields{
+		"slot":                      block.Slot,
 		"sinceSlotStartTime":        timeutils.Now().Sub(startTime),
 		"chainServiceProcessedTime": timeutils.Now().Sub(receivedTime),
-	}).Info("Synced new block")
+	}).Debug("Timings for synced block")
 	return nil
 }
