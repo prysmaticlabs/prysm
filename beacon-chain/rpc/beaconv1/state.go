@@ -174,12 +174,18 @@ func (bs *Server) state(ctx context.Context, stateId []byte) (*statetrie.BeaconS
 		}
 	case "finalized":
 		checkpoint := bs.ChainInfoFetcher.FinalizedCheckpt()
+		if checkpoint == nil {
+			return nil, status.Errorf(codes.NotFound, "Finality not yet achieved")
+		}
 		s, err = bs.StateGenService.StateByRoot(ctx, bytesutil.ToBytes32(checkpoint.Root))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get finalized state: %v", err)
 		}
 	case "justified":
 		checkpoint := bs.ChainInfoFetcher.CurrentJustifiedCheckpt()
+		if checkpoint == nil {
+			return nil, status.Errorf(codes.NotFound, "No justified checkpoint exists")
+		}
 		s, err = bs.StateGenService.StateByRoot(ctx, bytesutil.ToBytes32(checkpoint.Root))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get justified state: %v", err)
@@ -231,6 +237,9 @@ func (bs *Server) finalizedStateRoot(ctx context.Context) ([]byte, error) {
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get finalized checkpoint: %v", err)
 	}
+	if cp == nil {
+		return nil, status.Errorf(codes.NotFound, "Finality not yet achieved")
+	}
 	b, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(cp.Root))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get finalized block: %v", err)
@@ -245,6 +254,9 @@ func (bs *Server) justifiedStateRoot(ctx context.Context) ([]byte, error) {
 	cp, err := bs.BeaconDB.JustifiedCheckpoint(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get justified checkpoint: %v", err)
+	}
+	if cp == nil {
+		return nil, status.Errorf(codes.NotFound, "No justified checkpoint exists")
 	}
 	b, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(cp.Root))
 	if err != nil {
