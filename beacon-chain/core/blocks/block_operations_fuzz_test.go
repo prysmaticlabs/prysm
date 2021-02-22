@@ -122,7 +122,9 @@ func TestFuzzProcessBlockHeaderNoVerify_10000(t *testing.T) {
 		fuzzer.Fuzz(block)
 		s, err := stateTrie.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
-		_, err = ProcessBlockHeaderNoVerify(s, block)
+		_, err = ProcessBlockHeaderNoVerify(context.Background(), s, &eth.SignedBeaconBlock{
+			Block: block,
+		})
 		_ = err
 	}
 }
@@ -154,7 +156,11 @@ func TestFuzzProcessRandaoNoVerify_10000(t *testing.T) {
 		fuzzer.Fuzz(blockBody)
 		s, err := stateTrie.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
-		r, err := ProcessRandaoNoVerify(s, blockBody)
+		r, err := ProcessRandaoNoVerify(context.Background(), s, &eth.SignedBeaconBlock{
+			Block: &eth.BeaconBlock{
+				Body: blockBody,
+			},
+		})
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, blockBody)
 		}
