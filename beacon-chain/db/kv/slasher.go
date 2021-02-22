@@ -77,7 +77,7 @@ func (s *Store) SaveLatestEpochAttestedForValidators(
 func (s *Store) CheckAttesterDoubleVotes(
 	ctx context.Context, attestations []*slashertypes.CompactAttestation,
 ) ([]*slashertypes.AttesterDoubleVote, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.CheckAndUpdateAttestationRecordForValidators")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.CheckAttesterDoubleVotes")
 	defer span.End()
 	doubleVotes := make([]*slashertypes.AttesterDoubleVote, 0)
 	err := s.db.Update(func(tx *bolt.Tx) error {

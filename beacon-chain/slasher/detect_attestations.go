@@ -6,6 +6,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
+	"go.opencensus.io/trace"
 )
 
 // A struct encapsulating input arguments to
@@ -34,6 +35,8 @@ func (s *Service) detectSlashableAttestations(
 	args *chunkUpdateArgs,
 	attestations []*slashertypes.CompactAttestation,
 ) error {
+	ctx, span := trace.StartSpan(ctx, "Slasher.detectSlashableAttestations")
+	defer span.End()
 	slashings := make([]*slashertypes.Slashing, 0)
 	// Check for double votes.
 	doubleVoteSlashings, err := s.checkDoubleVotes(ctx, attestations)
@@ -86,6 +89,8 @@ func (s *Service) detectSlashableAttestations(
 func (s *Service) checkDoubleVotes(
 	ctx context.Context, attestations []*slashertypes.CompactAttestation,
 ) ([]*slashertypes.Slashing, error) {
+	ctx, span := trace.StartSpan(ctx, "Slasher.checkDoubleVotes")
+	defer span.End()
 	// We check if there are any slashable double votes in the input list
 	// of attestations with respect to each other.
 	slashings := make([]*slashertypes.Slashing, 0)
@@ -123,6 +128,8 @@ func (s *Service) checkDoubleVotes(
 func (s *Service) checkDoubleVotesOnDisk(
 	ctx context.Context, attestations []*slashertypes.CompactAttestation,
 ) ([]*slashertypes.Slashing, error) {
+	ctx, span := trace.StartSpan(ctx, "Slasher.checkDoubleVotesOnDisk")
+	defer span.End()
 	doubleVotes, err := s.serviceCfg.Database.CheckAttesterDoubleVotes(
 		ctx, attestations,
 	)
@@ -155,6 +162,8 @@ func (s *Service) updateSpans(
 	args *chunkUpdateArgs,
 	attestationsByChunkIdx map[uint64][]*slashertypes.CompactAttestation,
 ) ([]*slashertypes.Slashing, error) {
+	ctx, span := trace.StartSpan(ctx, "Slasher.updateSpans")
+	defer span.End()
 	// Determine the chunk indices we need to use for slashing detection.
 	validatorIndices := s.params.validatorIndicesInChunk(args.validatorChunkIndex)
 	chunkIndices, err := s.determineChunksToUpdateForValidators(ctx, args, validatorIndices)
@@ -217,6 +226,8 @@ func (s *Service) determineChunksToUpdateForValidators(
 	args *chunkUpdateArgs,
 	validatorIndices []types.ValidatorIndex,
 ) (chunkIndices []uint64, err error) {
+	ctx, span := trace.StartSpan(ctx, "Slasher.determineChunksToUpdateForValidators")
+	defer span.End()
 	attestedEpochs, err := s.serviceCfg.Database.LatestEpochAttestedForValidators(ctx, validatorIndices)
 	if err != nil {
 		return
@@ -263,6 +274,8 @@ func (s *Service) applyAttestationForValidator(
 	chunksByChunkIdx map[uint64]Chunker,
 	attestation *slashertypes.CompactAttestation,
 ) (*slashertypes.Slashing, error) {
+	ctx, span := trace.StartSpan(ctx, "Slasher.applyAttestationForValidator")
+	defer span.End()
 	sourceEpoch := attestation.Source
 	targetEpoch := attestation.Target
 	chunkIdx := s.params.chunkIndex(sourceEpoch)
@@ -337,6 +350,8 @@ func (s *Service) loadChunks(
 	args *chunkUpdateArgs,
 	chunkIndices []uint64,
 ) (map[uint64]Chunker, error) {
+	ctx, span := trace.StartSpan(ctx, "Slasher.loadChunks")
+	defer span.End()
 	chunkKeys := make([]uint64, 0, len(chunkIndices))
 	for _, chunkIdx := range chunkIndices {
 		chunkKeys = append(chunkKeys, s.params.flatSliceID(args.validatorChunkIndex, chunkIdx))
@@ -378,6 +393,8 @@ func (s *Service) saveUpdatedChunks(
 	args *chunkUpdateArgs,
 	updatedChunksByChunkIdx map[uint64]Chunker,
 ) error {
+	ctx, span := trace.StartSpan(ctx, "Slasher.saveUpdatedChunks")
+	defer span.End()
 	chunkKeys := make([]uint64, 0, len(updatedChunksByChunkIdx))
 	chunks := make([][]uint16, 0, len(updatedChunksByChunkIdx))
 	for chunkIdx, chunk := range updatedChunksByChunkIdx {

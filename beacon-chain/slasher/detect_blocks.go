@@ -6,6 +6,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
+	"go.opencensus.io/trace"
 )
 
 // Given a list of blocks, check if they are slashable for the validators involved.
@@ -13,6 +14,8 @@ func (s *Service) detectSlashableBlocks(
 	ctx context.Context,
 	proposedBlocks []*slashertypes.CompactBeaconBlock,
 ) error {
+	ctx, span := trace.StartSpan(ctx, "Slasher.detectSlashableBlocks")
+	defer span.End()
 	// We check if there are any slashable double proposals in the input list
 	// of proposals with respect to each other.
 	existingProposals := make(map[string][32]byte)
@@ -37,6 +40,8 @@ func (s *Service) detectSlashableBlocks(
 func (s *Service) checkDoubleProposalsOnDisk(
 	ctx context.Context, proposedBlocks []*slashertypes.CompactBeaconBlock,
 ) error {
+	ctx, span := trace.StartSpan(ctx, "Slasher.checkDoubleProposalsOnDisk")
+	defer span.End()
 	doubleProposals, err := s.serviceCfg.Database.CheckDoubleBlockProposals(ctx, proposedBlocks)
 	if err != nil {
 		return err
