@@ -3,7 +3,7 @@ package sliceutil
 import (
 	"strings"
 
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 )
 
 // SubsetUint64 returns true if the first array is

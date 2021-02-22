@@ -3,7 +3,7 @@
 package types
 
 import (
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	"google.golang.org/grpc"
 )
 
