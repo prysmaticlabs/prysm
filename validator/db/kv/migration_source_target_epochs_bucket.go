@@ -56,7 +56,7 @@ func (s *Store) migrateSourceTargetEpochsBucketUp(ctx context.Context) error {
 				}
 				sourceBucket := pkb.Bucket(attestationSourceEpochsBucket)
 				if sourceBucket == nil {
-					return nil
+					continue
 				}
 				targetBucket, err := pkb.CreateBucketIfNotExists(attestationTargetEpochsBucket)
 				if err != nil {
