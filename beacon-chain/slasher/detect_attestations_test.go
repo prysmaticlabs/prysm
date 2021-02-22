@@ -101,9 +101,8 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	currentEpoch := types.Epoch(3)
 	validatorIdx := types.ValidatorIndex(0)
 	args := &chunkUpdateArgs{
-		chunkIndex:     chunkIdx,
-		currentEpoch:   currentEpoch,
-		validatorIndex: validatorIdx,
+		chunkIndex:   chunkIdx,
+		currentEpoch: currentEpoch,
 	}
 	chunksByChunkIdx := map[uint64]Chunker{
 		chunkIdx: chunk,
@@ -116,6 +115,7 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	slashing, err := srv.applyAttestationForValidator(
 		ctx,
 		args,
+		validatorIdx,
 		chunksByChunkIdx,
 		att,
 	)
@@ -136,6 +136,7 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	slashing, err = srv.applyAttestationForValidator(
 		ctx,
 		args,
+		validatorIdx,
 		chunksByChunkIdx,
 		slashableAtt,
 	)
@@ -160,9 +161,8 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	currentEpoch := types.Epoch(3)
 	validatorIdx := types.ValidatorIndex(0)
 	args := &chunkUpdateArgs{
-		chunkIndex:     chunkIdx,
-		currentEpoch:   currentEpoch,
-		validatorIndex: validatorIdx,
+		chunkIndex:   chunkIdx,
+		currentEpoch: currentEpoch,
 	}
 	chunksByChunkIdx := map[uint64]Chunker{
 		chunkIdx: chunk,
@@ -175,6 +175,7 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	slashing, err := srv.applyAttestationForValidator(
 		ctx,
 		args,
+		validatorIdx,
 		chunksByChunkIdx,
 		att,
 	)
@@ -195,6 +196,7 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	slashing, err = srv.applyAttestationForValidator(
 		ctx,
 		args,
+		validatorIdx,
 		chunksByChunkIdx,
 		slashableAtt,
 	)

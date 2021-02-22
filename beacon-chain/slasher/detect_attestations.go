@@ -16,8 +16,6 @@ type chunkUpdateArgs struct {
 	chunkIndex          uint64
 	validatorChunkIndex uint64
 	currentEpoch        types.Epoch
-	latestEpochWritten  types.Epoch
-	validatorIndex      types.ValidatorIndex
 }
 
 // Given a list of attestations all corresponding to a validator chunk index as well
@@ -175,8 +173,8 @@ func (s *Service) updateSpans(
 	for _, attestationBatch := range attestationsByChunkIdx {
 		for _, att := range attestationBatch {
 			for _, validatorIdx := range att.AttestingIndices {
-				args.validatorIndex = types.ValidatorIndex(validatorIdx)
-				computedValidatorChunkIdx := s.params.validatorChunkIndex(args.validatorIndex)
+				validatorIndex := types.ValidatorIndex(validatorIdx)
+				computedValidatorChunkIdx := s.params.validatorChunkIndex(validatorIndex)
 
 				// Every validator chunk index represents a range of validators.
 				// If it possible that the validator index in this loop iteration is
@@ -193,6 +191,7 @@ func (s *Service) updateSpans(
 				slashing, err := s.applyAttestationForValidator(
 					ctx,
 					args,
+					validatorIndex,
 					chunksByChunkIdx,
 					att,
 				)
@@ -238,13 +237,12 @@ func (s *Service) determineChunksToUpdateForValidators(
 	// For every single validator and their latest epoch attested, we determine
 	// the chunk indices we need to update based on all the chunks between the latest
 	// epoch written and the current epoch, inclusive.
-	for valIdx, epoch := range latestEpochAttestedByValidator {
-		args.validatorIndex = valIdx
-		args.latestEpochWritten = epoch
-		for args.latestEpochWritten <= args.currentEpoch {
-			chunkIdx := s.params.chunkIndex(args.latestEpochWritten)
+	for _, epoch := range latestEpochAttestedByValidator {
+		latestEpochWritten := epoch
+		for latestEpochWritten <= args.currentEpoch {
+			chunkIdx := s.params.chunkIndex(latestEpochWritten)
 			chunkIndicesToUpdate[chunkIdx] = true
-			args.latestEpochWritten++
+			latestEpochWritten++
 		}
 	}
 	chunkIndices = make([]uint64, 0, len(chunkIndicesToUpdate))
@@ -261,6 +259,7 @@ func (s *Service) determineChunksToUpdateForValidators(
 func (s *Service) applyAttestationForValidator(
 	ctx context.Context,
 	args *chunkUpdateArgs,
+	validatorIndex types.ValidatorIndex,
 	chunksByChunkIdx map[uint64]Chunker,
 	attestation *slashertypes.CompactAttestation,
 ) (*slashertypes.Slashing, error) {
@@ -278,7 +277,7 @@ func (s *Service) applyAttestationForValidator(
 	slashing, err := chunk.CheckSlashable(
 		ctx,
 		s.serviceCfg.Database,
-		args.validatorIndex,
+		validatorIndex,
 		attestation,
 	)
 	if err != nil {
@@ -309,10 +308,10 @@ func (s *Service) applyAttestationForValidator(
 		}
 		keepGoing, err := chunk.Update(
 			&chunkUpdateArgs{
-				chunkIndex:     chunkIdx,
-				currentEpoch:   args.currentEpoch,
-				validatorIndex: args.validatorIndex,
+				chunkIndex:   chunkIdx,
+				currentEpoch: args.currentEpoch,
 			},
+			validatorIndex,
 			startEpoch,
 			targetEpoch,
 		)
