@@ -5,8 +5,11 @@ import (
 	"errors"
 
 	ptypes "github.com/gogo/protobuf/types"
-
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
+	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"go.opencensus.io/trace"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // ListPoolAttestations retrieves attestations known by the node but
@@ -24,7 +27,26 @@ func (bs *Server) SubmitAttestation(ctx context.Context, req *ethpb.Attestation)
 // ListPoolAttesterSlashings retrieves attester slashings known by the node but
 // not necessarily incorporated into any block.
 func (bs *Server) ListPoolAttesterSlashings(ctx context.Context, req *ptypes.Empty) (*ethpb.AttesterSlashingsPoolResponse, error) {
-	return nil, errors.New("unimplemented")
+	ctx, span := trace.StartSpan(ctx, "beaconv1.ListPoolAttesterSlashings")
+	defer span.End()
+
+	headState, err := bs.ChainInfoFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	}
+	sourceSlashings := bs.SlashingsPool.PendingAttesterSlashings(ctx, headState, true)
+
+	slashings := make([]*ethpb.AttesterSlashing, len(sourceSlashings))
+	for i, s := range sourceSlashings {
+		slashings[i] = &ethpb.AttesterSlashing{
+			Attestation_1: mapAttestation(s.Attestation_1),
+			Attestation_2: mapAttestation(s.Attestation_2),
+		}
+	}
+
+	return &ethpb.AttesterSlashingsPoolResponse{
+		Data: slashings,
+	}, nil
 }
 
 // SubmitAttesterSlashing submits AttesterSlashing object to node's pool and
@@ -55,4 +77,25 @@ func (bs *Server) ListPoolVoluntaryExits(ctx context.Context, req *ptypes.Empty)
 // and if passes validation node MUST broadcast it to network.
 func (bs *Server) SubmitVoluntaryExit(ctx context.Context, req *ethpb.SignedVoluntaryExit) (*ptypes.Empty, error) {
 	return nil, errors.New("unimplemented")
+}
+
+func mapAttestation(attestation *eth.IndexedAttestation) *ethpb.IndexedAttestation {
+	a := &ethpb.IndexedAttestation{
+		AttestingIndices: attestation.AttestingIndices,
+		Data: &ethpb.AttestationData{
+			Slot:            attestation.Data.Slot,
+			CommitteeIndex:  attestation.Data.CommitteeIndex,
+			BeaconBlockRoot: attestation.Data.BeaconBlockRoot,
+			Source: &ethpb.Checkpoint{
+				Epoch: attestation.Data.Source.Epoch,
+				Root:  attestation.Data.Source.Root,
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: attestation.Data.Target.Epoch,
+				Root:  attestation.Data.Target.Root,
+			},
+		},
+		Signature: attestation.Signature,
+	}
+	return a
 }
