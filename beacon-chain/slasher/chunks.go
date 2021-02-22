@@ -28,6 +28,7 @@ type Chunker interface {
 	) (*slashertypes.Slashing, error)
 	Update(
 		args *chunkUpdateArgs,
+		validatorIndex types.ValidatorIndex,
 		startEpoch,
 		newTargetEpoch types.Epoch,
 	) (keepGoing bool, err error)
@@ -314,6 +315,7 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 // to jump to another min span chunks slice to perform updates.
 func (m *MinSpanChunksSlice) Update(
 	args *chunkUpdateArgs,
+	validatorIndex types.ValidatorIndex,
 	startEpoch,
 	newTargetEpoch types.Epoch,
 ) (keepGoing bool, err error) {
@@ -329,14 +331,14 @@ func (m *MinSpanChunksSlice) Update(
 	// a for loop.
 	for m.params.chunkIndex(epochInChunk) == args.chunkIndex && epochInChunk >= minEpoch {
 		var chunkTarget types.Epoch
-		chunkTarget, err = chunkDataAtEpoch(m.params, m.data, args.validatorIndex, epochInChunk)
+		chunkTarget, err = chunkDataAtEpoch(m.params, m.data, validatorIndex, epochInChunk)
 		if err != nil {
 			return
 		}
 		// If the newly incoming value is < the existing value, we update
 		// the data in the min span to meet with its definition.
 		if newTargetEpoch < chunkTarget {
-			if err = setChunkDataAtEpoch(m.params, m.data, args.validatorIndex, epochInChunk, newTargetEpoch); err != nil {
+			if err = setChunkDataAtEpoch(m.params, m.data, validatorIndex, epochInChunk, newTargetEpoch); err != nil {
 				return
 			}
 		} else {
@@ -360,6 +362,7 @@ func (m *MinSpanChunksSlice) Update(
 // a next chunk, this function returns a boolean letting the caller know it should keep going.
 func (m *MaxSpanChunksSlice) Update(
 	args *chunkUpdateArgs,
+	validatorIndex types.ValidatorIndex,
 	startEpoch,
 	newTargetEpoch types.Epoch,
 ) (keepGoing bool, err error) {
@@ -369,14 +372,14 @@ func (m *MaxSpanChunksSlice) Update(
 	// we proceed with a for loop.
 	for m.params.chunkIndex(epochInChunk) == args.chunkIndex && epochInChunk <= args.currentEpoch {
 		var chunkTarget types.Epoch
-		chunkTarget, err = chunkDataAtEpoch(m.params, m.data, args.validatorIndex, epochInChunk)
+		chunkTarget, err = chunkDataAtEpoch(m.params, m.data, validatorIndex, epochInChunk)
 		if err != nil {
 			return
 		}
 		// If the newly incoming value is > the existing value, we update
 		// the data in the max span to meet with its definition.
 		if newTargetEpoch > chunkTarget {
-			if err = setChunkDataAtEpoch(m.params, m.data, args.validatorIndex, epochInChunk, newTargetEpoch); err != nil {
+			if err = setChunkDataAtEpoch(m.params, m.data, validatorIndex, epochInChunk, newTargetEpoch); err != nil {
 				return
 			}
 		} else {
