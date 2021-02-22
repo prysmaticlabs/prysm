@@ -739,27 +739,3 @@ func Test_state_NoCheckpoint(t *testing.T) {
 	_, err = s.state(context.Background(), []byte("justified"))
 	require.ErrorContains(t, "No justified checkpoint exists", err)
 }
-
-func Test_finalizedStateRoot_NoCheckpoint(t *testing.T) {
-	ctx := context.Background()
-	db := testDB.SetupDB(t)
-	b := testutil.NewBeaconBlock()
-	b.Block.StateRoot = bytesutil.PadTo([]byte("genesis"), 32)
-	require.NoError(t, db.SaveBlock(ctx, b))
-	r, err := b.Block.HashTreeRoot()
-	require.NoError(t, err)
-	require.NoError(t, db.SaveStateSummary(ctx, &pb.StateSummary{Root: r[:]}))
-	require.NoError(t, db.SaveGenesisBlockRoot(ctx, r))
-	st, err := testutil.NewBeaconState(func(state *pb.BeaconState) {
-		state.FinalizedCheckpoint = nil
-	})
-	require.NoError(t, err)
-	require.NoError(t, db.SaveState(ctx, st, r))
-
-	s := Server{
-		BeaconDB: db,
-	}
-
-	_, err = s.finalizedStateRoot(ctx)
-	require.ErrorContains(t, "Finality not yet achieved", err)
-}
