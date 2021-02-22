@@ -59,7 +59,7 @@ func marshalAttestationData(data *ethpb.AttestationData) []byte {
 
 		// Committee index.
 		indexBuf := make([]byte, 8)
-		binary.LittleEndian.PutUint64(indexBuf, data.CommitteeIndex)
+		binary.LittleEndian.PutUint64(indexBuf, uint64(data.CommitteeIndex))
 		copy(enc[8:16], indexBuf)
 
 		copy(enc[16:48], data.BeaconBlockRoot)
@@ -96,7 +96,7 @@ func attestationDataRoot(hasher htrutils.HashFn, data *ethpb.AttestationData) ([
 
 		// CommitteeIndex.
 		indexBuf := make([]byte, 8)
-		binary.LittleEndian.PutUint64(indexBuf, data.CommitteeIndex)
+		binary.LittleEndian.PutUint64(indexBuf, uint64(data.CommitteeIndex))
 		interRoot := bytesutil.ToBytes32(indexBuf)
 		fieldRoots[1] = interRoot[:]
 

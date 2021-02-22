@@ -117,11 +117,11 @@ func ComputeSubnetForAttestation(activeValCount uint64, att *ethpb.Attestation) 
 //    slots_since_epoch_start = attestation.data.slot % SLOTS_PER_EPOCH
 //    committees_since_epoch_start = get_committee_count_at_slot(state, attestation.data.slot) * slots_since_epoch_start
 //    return (committees_since_epoch_start + attestation.data.index) % ATTESTATION_SUBNET_COUNT
-func ComputeSubnetFromCommitteeAndSlot(activeValCount, comIdx uint64, attSlot types.Slot) uint64 {
+func ComputeSubnetFromCommitteeAndSlot(activeValCount uint64, comIdx types.CommitteeIndex, attSlot types.Slot) uint64 {
 	slotSinceStart := SlotsSinceEpochStarts(attSlot)
 	comCount := SlotCommitteeCount(activeValCount)
 	commsSinceStart := uint64(slotSinceStart.Mul(comCount))
-	computedSubnet := (commsSinceStart + comIdx) % params.BeaconNetworkConfig().AttestationSubnetCount
+	computedSubnet := (commsSinceStart + uint64(comIdx)) % params.BeaconNetworkConfig().AttestationSubnetCount
 	return computedSubnet
 }
 

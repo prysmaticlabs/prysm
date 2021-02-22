@@ -68,7 +68,7 @@ func SlotCommitteeCount(activeValidatorCount uint64) uint64 {
 //        index=(slot % SLOTS_PER_EPOCH) * committees_per_slot + index,
 //        count=committees_per_slot * SLOTS_PER_EPOCH,
 //    )
-func BeaconCommitteeFromState(state *stateTrie.BeaconState, slot types.Slot, committeeIndex uint64) ([]uint64, error) {
+func BeaconCommitteeFromState(state *stateTrie.BeaconState, slot types.Slot, committeeIndex types.CommitteeIndex) ([]uint64, error) {
 	epoch := SlotToEpoch(slot)
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
@@ -94,7 +94,7 @@ func BeaconCommitteeFromState(state *stateTrie.BeaconState, slot types.Slot, com
 // BeaconCommittee returns the crosslink committee of a given slot and committee index. The
 // validator indices and seed are provided as an argument rather than a imported implementation
 // from the spec definition. Having them as an argument allows for cheaper computation run time.
-func BeaconCommittee(validatorIndices []uint64, seed [32]byte, slot types.Slot, committeeIndex uint64) ([]uint64, error) {
+func BeaconCommittee(validatorIndices []uint64, seed [32]byte, slot types.Slot, committeeIndex types.CommitteeIndex) ([]uint64, error) {
 	indices, err := committeeCache.Committee(slot, seed, committeeIndex)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not interface with committee cache")
@@ -105,7 +105,7 @@ func BeaconCommittee(validatorIndices []uint64, seed [32]byte, slot types.Slot, 
 
 	committeesPerSlot := SlotCommitteeCount(uint64(len(validatorIndices)))
 
-	epochOffset := committeeIndex + uint64(slot.ModSlot(params.BeaconConfig().SlotsPerEpoch).Mul(committeesPerSlot))
+	epochOffset := uint64(committeeIndex) + uint64(slot.ModSlot(params.BeaconConfig().SlotsPerEpoch).Mul(committeesPerSlot))
 	count := committeesPerSlot * uint64(params.BeaconConfig().SlotsPerEpoch)
 
 	return ComputeCommittee(validatorIndices, seed, epochOffset, count)
@@ -156,7 +156,7 @@ func ComputeCommittee(
 type CommitteeAssignmentContainer struct {
 	Committee      []uint64
 	AttesterSlot   types.Slot
-	CommitteeIndex uint64
+	CommitteeIndex types.CommitteeIndex
 }
 
 // CommitteeAssignments is a map of validator indices pointing to the appropriate committee
@@ -218,14 +218,14 @@ func CommitteeAssignments(
 		// Compute committees.
 		for j := uint64(0); j < numCommitteesPerSlot; j++ {
 			slot := startSlot + i
-			committee, err := BeaconCommitteeFromState(state, slot, j /*committee index*/)
+			committee, err := BeaconCommitteeFromState(state, slot, types.CommitteeIndex(j) /*committee index*/)
 			if err != nil {
 				return nil, nil, err
 			}
 
 			cac := &CommitteeAssignmentContainer{
 				Committee:      committee,
-				CommitteeIndex: j,
+				CommitteeIndex: types.CommitteeIndex(j),
 				AttesterSlot:   slot,
 			}
 			for _, vID := range committee {

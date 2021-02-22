@@ -152,7 +152,7 @@ func computeCommittees(
 		}
 		committeeItems := make([]*ethpb.BeaconCommittees_CommitteeItem, countAtSlot)
 		for committeeIndex := uint64(0); committeeIndex < countAtSlot; committeeIndex++ {
-			committee, err := helpers.BeaconCommittee(activeIndices, attesterSeed, slot, committeeIndex)
+			committee, err := helpers.BeaconCommittee(activeIndices, attesterSeed, slot, types.CommitteeIndex(committeeIndex))
 			if err != nil {
 				return nil, status.Errorf(
 					codes.Internal,

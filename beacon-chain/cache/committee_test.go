@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -39,7 +40,7 @@ func TestCommitteeCache_CommitteesByEpoch(t *testing.T) {
 	}
 
 	slot := params.BeaconConfig().SlotsPerEpoch
-	committeeIndex := uint64(1)
+	committeeIndex := types.CommitteeIndex(1)
 	indices, err := cache.Committee(slot, item.Seed, committeeIndex)
 	require.NoError(t, err)
 	if indices != nil {
@@ -47,11 +48,11 @@ func TestCommitteeCache_CommitteesByEpoch(t *testing.T) {
 	}
 	require.NoError(t, cache.AddCommitteeShuffledList(item))
 
-	wantedIndex := uint64(0)
+	wantedIndex := types.CommitteeIndex(0)
 	indices, err = cache.Committee(slot, item.Seed, wantedIndex)
 	require.NoError(t, err)
 
-	start, end := startEndIndices(item, wantedIndex)
+	start, end := startEndIndices(item, uint64(wantedIndex))
 	assert.DeepEqual(t, item.ShuffledIndices[start:end], indices)
 }
 

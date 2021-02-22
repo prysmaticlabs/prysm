@@ -26,6 +26,7 @@ var (
 	pubKeysBucket                 = []byte("pubkeys-bucket")
 	attestationSigningRootsBucket = []byte("att-signing-roots-bucket")
 	attestationSourceEpochsBucket = []byte("att-source-epochs-bucket")
+	attestationTargetEpochsBucket = []byte("att-target-epochs-bucket")
 
 	// Migrations
 	migrationsBucket = []byte("migrations")

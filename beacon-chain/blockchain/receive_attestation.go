@@ -97,7 +97,7 @@ func (s *Service) VerifyFinalizedConsistency(ctx context.Context, root []byte) e
 }
 
 // This routine processes fork choice attestations from the pool to account for validator votes and fork choice.
-func (s *Service) processAttestationsRoutine(subscribedToStateEvents chan struct{}) {
+func (s *Service) processAttestationsRoutine(subscribedToStateEvents chan<- struct{}) {
 	// Wait for state to be initialized.
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
