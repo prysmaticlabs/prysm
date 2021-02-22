@@ -37,7 +37,6 @@ func (s *Service) detectSlashableAttestations(
 ) error {
 	ctx, span := trace.StartSpan(ctx, "Slasher.detectSlashableAttestations")
 	defer span.End()
-	slashings := make([]*slashertypes.Slashing, 0)
 	// Check for double votes.
 	doubleVoteSlashings, err := s.checkDoubleVotes(ctx, attestations)
 	if err != nil {
@@ -66,6 +65,7 @@ func (s *Service) detectSlashableAttestations(
 	}
 
 	// Consolidate all slashings into a slice.
+	slashings := make([]*slashertypes.Slashing, 0)
 	slashings = append(slashings, doubleVoteSlashings...)
 	slashings = append(slashings, surroundingSlashings...)
 	slashings = append(slashings, surroundedSlashings...)
@@ -97,7 +97,7 @@ func (s *Service) checkDoubleVotes(
 	existingAtts := make(map[string][32]byte)
 	for _, att := range attestations {
 		for _, valIdx := range att.AttestingIndices {
-			key := fmt.Sprintf("%d:%d", att.Target, valIdx)
+			key := uintToString(uint64(att.Target)) + ":" + uintToString(valIdx)
 			existingSigningRoot, ok := existingAtts[key]
 			if !ok {
 				existingAtts[key] = att.SigningRoot

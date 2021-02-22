@@ -2,6 +2,7 @@ package slasher
 
 import (
 	"fmt"
+	"strconv"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -94,6 +95,11 @@ func logDoubleProposal(incomingProposal *slashertypes.CompactBeaconBlock, existi
 		PrevSigningRoot: existingSigningRoot,
 		Slot:            incomingProposal.Slot,
 	})
+}
+
+// Turns a uint64 value to a string representation.
+func uintToString(val uint64) string {
+	return strconv.FormatUint(val, 10)
 }
 
 // If an existing signing root does not match an incoming proposal signing root,

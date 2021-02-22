@@ -2,7 +2,6 @@ package slasher
 
 import (
 	"context"
-	"fmt"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
@@ -20,7 +19,7 @@ func (s *Service) detectSlashableBlocks(
 	// of proposals with respect to each other.
 	existingProposals := make(map[string][32]byte)
 	for i, proposal := range proposedBlocks {
-		key := fmt.Sprintf("%d:%d", proposal.Slot, proposal.ProposerIndex)
+		key := uintToString(uint64(proposal.Slot)) + ":" + uintToString(uint64(proposal.ProposerIndex))
 		existingSigningRoot, ok := existingProposals[key]
 		if !ok {
 			existingProposals[key] = proposal.SigningRoot
