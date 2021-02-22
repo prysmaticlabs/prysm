@@ -52,6 +52,6 @@ func logBlockSyncStatus(block *ethpb.BeaconBlock, blockRoot [32]byte, finalized 
 		"slot":                      block.Slot,
 		"sinceSlotStartTime":        timeutils.Now().Sub(startTime),
 		"chainServiceProcessedTime": timeutils.Now().Sub(receivedTime),
-	}).Debug("Timings for synced block")
+	}).Debug("Sync new block times")
 	return nil
 }
