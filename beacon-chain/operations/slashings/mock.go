@@ -3,8 +3,8 @@ package slashings
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 )
 
 // PoolMock is a fake implementation of PoolManager.
