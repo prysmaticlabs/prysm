@@ -271,9 +271,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 		t.Run(fmt.Sprintf("test_%d", i), func(t *testing.T) {
 			res, err := bs.ListBlocks(ctx, test.req)
 			require.NoError(t, err)
-			if !proto.Equal(res, test.res) {
-				t.Errorf("Incorrect blocks response, wanted %v, received %v", test.res, res)
-			}
+			require.DeepSSZEqual(t, res, test.res)
 		})
 	}
 }
