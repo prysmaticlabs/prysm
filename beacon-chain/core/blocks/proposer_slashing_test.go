@@ -139,7 +139,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	// We test the case when data is correct and verify the validator
 	// registry has been updated.
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
-	proposerIdx := uint64(1)
+	proposerIdx := types.ValidatorIndex(1)
 
 	header1 := &ethpb.SignedBeaconBlockHeader{
 		Header: testutil.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{

@@ -6,12 +6,18 @@ go_library(
     srcs = ["parse_graffiti.go"],
     importpath = "github.com/prysmaticlabs/prysm/validator/graffiti",
     visibility = ["//validator:__subpackages__"],
-    deps = ["@in_gopkg_yaml_v2//:go_default_library"],
+    deps = [
+        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
+        "@in_gopkg_yaml_v2//:go_default_library",
+    ],
 )
 
 go_test(
     name = "go_default_test",
     srcs = ["parse_graffiti_test.go"],
     embed = [":go_default_library"],
-    deps = ["//shared/testutil/require:go_default_library"],
+    deps = [
+        "//shared/testutil/require:go_default_library",
+        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
+    ],
 )

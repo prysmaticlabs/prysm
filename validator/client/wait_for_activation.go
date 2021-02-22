@@ -20,7 +20,7 @@ import (
 // WaitForActivation checks whether the validator pubkey is in the active
 // validator set. If not, this operation will block until an activation message is
 // received.
-func (v *validator) WaitForActivation(ctx context.Context, accountsChangedChan chan struct{}) error {
+func (v *validator) WaitForActivation(ctx context.Context, accountsChangedChan <-chan struct{}) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
 	defer span.End()
 

@@ -320,7 +320,7 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cp))
 	require.NoError(t, beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{}))
 
-	proposerSlashIdx := uint64(3)
+	proposerSlashIdx := types.ValidatorIndex(3)
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	err = beaconState.SetSlot(slotsPerEpoch.Mul(uint64(params.BeaconConfig().ShardCommitteePeriod)) + params.BeaconConfig().MinAttestationInclusionDelay)
 	require.NoError(t, err)
@@ -669,7 +669,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 
 	// Precache the shuffled indices
 	for i := uint64(0); i < committeeCount; i++ {
-		_, err := helpers.BeaconCommitteeFromState(s, 0, i)
+		_, err := helpers.BeaconCommitteeFromState(s, 0, types.CommitteeIndex(i))
 		require.NoError(b, err)
 	}
 

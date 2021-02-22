@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -125,7 +125,7 @@ func GenerateAttestations(
 	if err != nil {
 		return nil, err
 	}
-	for c := uint64(0); c < committeesPerSlot && c < numToGen; c++ {
+	for c := types.CommitteeIndex(0); uint64(c) < committeesPerSlot && uint64(c) < numToGen; c++ {
 		committee, err := helpers.BeaconCommitteeFromState(bState, slot, c)
 		if err != nil {
 			return nil, err

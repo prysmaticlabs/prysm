@@ -77,7 +77,7 @@ func TestServer_GetAttestationInclusionSlot(t *testing.T) {
 	b.Block.Slot = 2
 	b.Block.Body.Attestations = []*ethpb.Attestation{a}
 	require.NoError(t, bs.BeaconDB.SaveBlock(ctx, b))
-	res, err := bs.GetInclusionSlot(ctx, &pbrpc.InclusionSlotRequest{Slot: 1, Id: c[0]})
+	res, err := bs.GetInclusionSlot(ctx, &pbrpc.InclusionSlotRequest{Slot: 1, Id: uint64(c[0])})
 	require.NoError(t, err)
 	require.Equal(t, b.Block.Slot, res.Slot)
 	res, err = bs.GetInclusionSlot(ctx, &pbrpc.InclusionSlotRequest{Slot: 1, Id: 9999999})
