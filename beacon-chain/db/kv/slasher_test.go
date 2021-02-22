@@ -120,3 +120,45 @@ func TestStore_SlasherChunk_SaveRetrieve(t *testing.T) {
 		require.DeepEqual(t, chunks[i], retrievedChunks[i])
 	}
 }
+
+func TestStore_ExistingBlockProposals(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := setupDB(t)
+	proposals := []*slashertypes.CompactBeaconBlock{
+		{
+			ProposerIndex: 1,
+			Slot:          1,
+			SigningRoot:   [32]byte{1},
+		},
+		{
+			ProposerIndex: 1,
+			Slot:          2,
+			SigningRoot:   [32]byte{1},
+		},
+		{
+			ProposerIndex: 1,
+			Slot:          3,
+			SigningRoot:   [32]byte{1},
+		},
+	}
+	// First time checking should return empty existing proposals.
+	doubleProposals, err := beaconDB.CheckDoubleBlockProposals(ctx, proposals)
+	require.NoError(t, err)
+	require.Equal(t, 0, len(doubleProposals))
+
+	// We then save the block proposals to disk.
+	err = beaconDB.SaveBlockProposals(ctx, proposals)
+	require.NoError(t, err)
+
+	// Second time checking same proposals but all with different signing root should
+	// return all double proposals.
+	proposals[0].SigningRoot = [32]byte{2}
+	proposals[1].SigningRoot = [32]byte{2}
+	proposals[2].SigningRoot = [32]byte{2}
+	doubleProposals, err = beaconDB.CheckDoubleBlockProposals(ctx, proposals)
+	require.NoError(t, err)
+	require.Equal(t, len(proposals), len(doubleProposals))
+	for i, existing := range doubleProposals {
+		require.DeepNotEqual(t, proposals[i].SigningRoot, existing.ExistingSigningRoot)
+	}
+}

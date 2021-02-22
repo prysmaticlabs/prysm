@@ -305,6 +305,20 @@ func (e Exporter) SaveAttestationRecordsForValidators(
 	return e.db.SaveAttestationRecordsForValidators(ctx, validatorIndices, attestations)
 }
 
+// CheckDoubleBlockProposals -- passthrough
+func (e Exporter) CheckDoubleBlockProposals(
+	ctx context.Context, proposals []*slashertypes.CompactBeaconBlock,
+) ([]*slashertypes.DoubleBlockProposal, error) {
+	return e.db.CheckDoubleBlockProposals(ctx, proposals)
+}
+
+// SaveBlockProposals -- passthrough
+func (e Exporter) SaveBlockProposals(
+	ctx context.Context, proposals []*slashertypes.CompactBeaconBlock,
+) error {
+	return e.db.SaveBlockProposals(ctx, proposals)
+}
+
 // SaveSlasherChunks -- passthrough
 func (e Exporter) SaveSlasherChunks(
 	ctx context.Context, kind slashertypes.ChunkKind, chunkKeys []uint64, chunks [][]uint16,
