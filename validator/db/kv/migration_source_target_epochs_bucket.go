@@ -51,9 +51,12 @@ func (s *Store) migrateSourceTargetEpochsBucketUp(ctx context.Context) error {
 			bkt := tx.Bucket(pubKeysBucket)
 			for _, pubKey := range batch {
 				pkb := bkt.Bucket(pubKey)
+				if pkb == nil {
+					continue
+				}
 				sourceBucket := pkb.Bucket(attestationSourceEpochsBucket)
 				if sourceBucket == nil {
-					return nil
+					continue
 				}
 				targetBucket, err := pkb.CreateBucketIfNotExists(attestationTargetEpochsBucket)
 				if err != nil {
