@@ -11,18 +11,22 @@ import (
 )
 
 func TestReportEpochMetrics_BadHeadState(t *testing.T) {
-	s := testutil.NewBeaconState()
-	h := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	h, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, h.SetValidators(nil))
-	err := reportEpochMetrics(context.Background(), s, h)
+	err = reportEpochMetrics(context.Background(), s, h)
 	require.ErrorContains(t, "failed to initialize precompute: nil validators in state", err)
 }
 
 func TestReportEpochMetrics_BadAttestation(t *testing.T) {
-	s := testutil.NewBeaconState()
-	h := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	h, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, h.SetCurrentEpochAttestations([]*pb.PendingAttestation{{InclusionDelay: 0}}))
-	err := reportEpochMetrics(context.Background(), s, h)
+	err = reportEpochMetrics(context.Background(), s, h)
 	require.ErrorContains(t, "attestation with inclusion delay of 0", err)
 }
 

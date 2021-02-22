@@ -5,8 +5,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -27,11 +29,26 @@ import (
 // It fetches the latest beacon block head along with the latest canonical beacon state
 // information in order to sign the block and include information about the validator's
 // participation in voting on the block.
-func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [48]byte) {
+func (v *validator) SubmitAttestation(ctx context.Context, slot types.Slot, pubKey [48]byte) {
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitAttestation")
 	defer span.End()
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
-	lock := mputil.NewMultilock(string(pubKey[:]))
+
+	v.waitOneThirdOrValidBlock(ctx, slot)
+
+	var b strings.Builder
+	if err := b.WriteByte(byte(roleAttester)); err != nil {
+		log.WithError(err).Error("Could not write role byte for lock key")
+		traceutil.AnnotateError(span, err)
+		return
+	}
+	_, err := b.Write(pubKey[:])
+	if err != nil {
+		log.WithError(err).Error("Could not write pubkey bytes for lock key")
+		traceutil.AnnotateError(span, err)
+		return
+	}
+	lock := mputil.NewMultilock(b.String())
 	lock.Lock()
 	defer lock.Unlock()
 
@@ -43,14 +60,13 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
+		traceutil.AnnotateError(span, err)
 		return
 	}
 	if len(duty.Committee) == 0 {
 		log.Debug("Empty committee for validator duty, not attesting")
 		return
 	}
-
-	v.waitOneThirdOrValidBlock(ctx, slot)
 
 	req := &ethpb.AttestationDataRequest{
 		Slot:           slot,
@@ -62,6 +78,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
+		traceutil.AnnotateError(span, err)
 		return
 	}
 
@@ -76,6 +93,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
+		traceutil.AnnotateError(span, err)
 		return
 	}
 
@@ -85,6 +103,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
+		traceutil.AnnotateError(span, err)
 		return
 	}
 
@@ -120,6 +139,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		log.WithFields(
 			attestationLogFields(pubKey, indexedAtt),
 		).Debug("Attempted slashable attestation details")
+		traceutil.AnnotateError(span, err)
 		return
 	}
 	attResp, err := v.validatorClient.ProposeAttestation(ctx, attestation)
@@ -128,6 +148,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
+		traceutil.AnnotateError(span, err)
 		return
 	}
 
@@ -136,6 +157,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
+		traceutil.AnnotateError(span, err)
 		return
 	}
 
@@ -224,7 +246,7 @@ func (v *validator) saveAttesterIndexToData(data *ethpb.AttestationData, index u
 // waitOneThirdOrValidBlock waits until (a) or (b) whichever comes first:
 //   (a) the validator has received a valid block that is the same slot as input slot
 //   (b) one-third of the slot has transpired (SECONDS_PER_SLOT / 3 seconds after the start of slot)
-func (v *validator) waitOneThirdOrValidBlock(ctx context.Context, slot uint64) {
+func (v *validator) waitOneThirdOrValidBlock(ctx context.Context, slot types.Slot) {
 	ctx, span := trace.StartSpan(ctx, "validator.waitOneThirdOrValidBlock")
 	defer span.End()
 

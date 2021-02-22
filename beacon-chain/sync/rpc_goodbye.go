@@ -6,9 +6,11 @@ import (
 	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
+	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -67,6 +69,14 @@ func (s *Service) sendGoodbye(ctx context.Context, id peer.ID) error {
 }
 
 func (s *Service) sendGoodByeAndDisconnect(ctx context.Context, code types.RPCGoodbyeCode, id peer.ID) error {
+	lock := mputil.NewMultilock(id.String())
+	lock.Lock()
+	defer lock.Unlock()
+	// In the event we are already disconnected, exit early from the
+	// goodbye method to prevent redundant streams from being created.
+	if s.p2p.Host().Network().Connectedness(id) == network.NotConnected {
+		return nil
+	}
 	if err := s.sendGoodByeMessage(ctx, code, id); err != nil {
 		log.WithFields(logrus.Fields{
 			"error": err,

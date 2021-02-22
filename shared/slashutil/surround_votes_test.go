@@ -3,6 +3,7 @@ package slashutil
 import (
 	"testing"
 
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
 
@@ -82,7 +83,7 @@ func TestIsSurround(t *testing.T) {
 	}
 }
 
-func createAttestation(source, target uint64) *ethpb.IndexedAttestation {
+func createAttestation(source, target types.Epoch) *ethpb.IndexedAttestation {
 	return &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: source},

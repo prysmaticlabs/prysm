@@ -34,9 +34,9 @@ type Handler struct {
 	Handler func(http.ResponseWriter, *http.Request)
 }
 
-// New sets up a new instance for a given address host:port.
+// NewService sets up a new instance for a given address host:port.
 // An empty host will match with any IP so an address like ":2121" is perfectly acceptable.
-func New(addr string, svcRegistry *shared.ServiceRegistry, additionalHandlers ...Handler) *Service {
+func NewService(addr string, svcRegistry *shared.ServiceRegistry, additionalHandlers ...Handler) *Service {
 	s := &Service{svcRegistry: svcRegistry}
 
 	mux := http.NewServeMux()
@@ -97,7 +97,7 @@ func (s *Service) healthzHandler(w http.ResponseWriter, r *http.Request) {
 			if s.Status {
 				status = "OK"
 			} else {
-				status = "ERROR " + s.Err
+				status = "ERROR, " + s.Err
 			}
 
 			if _, err := buf.WriteString(fmt.Sprintf("%s: %s\n", s.Name, status)); err != nil {

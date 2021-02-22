@@ -21,7 +21,7 @@ func init() {
 }
 
 func TestLifecycle(t *testing.T) {
-	prometheusService := New(":2112", nil)
+	prometheusService := NewService(":2112", nil)
 	prometheusService.Start()
 	// Give service time to start.
 	time.Sleep(time.Second)
@@ -60,7 +60,7 @@ func TestHealthz(t *testing.T) {
 	registry := shared.NewServiceRegistry()
 	m := &mockService{}
 	require.NoError(t, registry.RegisterService(m), "Failed to register service")
-	s := New("" /*addr*/, registry)
+	s := NewService("" /*addr*/, registry)
 
 	req, err := http.NewRequest("GET", "/healthz", nil /*reader*/)
 	require.NoError(t, err)
@@ -91,7 +91,7 @@ func TestHealthz(t *testing.T) {
 	body = rr.Body.String()
 	if !strings.Contains(
 		body,
-		"*prometheus.mockService: ERROR something really bad has happened",
+		"*prometheus.mockService: ERROR, something really bad has happened",
 	) {
 		t.Errorf("Expected body to contain mockService status, but got %v", body)
 	}
@@ -112,7 +112,7 @@ func TestContentNegotiation(t *testing.T) {
 		registry := shared.NewServiceRegistry()
 		m := &mockService{}
 		require.NoError(t, registry.RegisterService(m), "Failed to register service")
-		s := New("", registry)
+		s := NewService("", registry)
 
 		req, err := http.NewRequest("GET", "/healthz", nil /* body */)
 		require.NoError(t, err)
@@ -143,7 +143,7 @@ func TestContentNegotiation(t *testing.T) {
 		m := &mockService{}
 		m.status = errors.New("something is wrong")
 		require.NoError(t, registry.RegisterService(m), "Failed to register service")
-		s := New("", registry)
+		s := NewService("", registry)
 
 		req, err := http.NewRequest("GET", "/healthz", nil /* body */)
 		require.NoError(t, err)
@@ -153,7 +153,7 @@ func TestContentNegotiation(t *testing.T) {
 		handler.ServeHTTP(rr, req)
 
 		body := rr.Body.String()
-		if !strings.Contains(body, "*prometheus.mockService: ERROR something is wrong") {
+		if !strings.Contains(body, "*prometheus.mockService: ERROR, something is wrong") {
 			t.Errorf("Expected body to contain mockService status, but got %q", body)
 		}
 

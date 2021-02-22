@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	prombolt "github.com/prysmaticlabs/prombbolt"
+	"github.com/prysmaticlabs/prysm/shared/abool"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -33,14 +34,35 @@ var (
 	ProtectionDbFileName = "validator.db"
 )
 
+// blockedBuckets represents the buckets that we want to restrict
+// from our metrics fetching for performance reasons. For a detailed
+// summary, it can be read in https://github.com/prysmaticlabs/prysm/issues/8274.
+var blockedBuckets = [][]byte{
+	deprecatedAttestationHistoryBucket,
+	lowestSignedSourceBucket,
+	lowestSignedTargetBucket,
+	lowestSignedProposalsBucket,
+	highestSignedProposalsBucket,
+	pubKeysBucket,
+	attestationSigningRootsBucket,
+	attestationSourceEpochsBucket,
+	attestationTargetEpochsBucket,
+}
+
+type Config struct {
+	PubKeys         [][48]byte
+	InitialMMapSize int
+}
+
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
 type Store struct {
-	db                           *bolt.DB
-	databasePath                 string
-	batchedAttestations          []*AttestationRecord
-	batchedAttestationsChan      chan *AttestationRecord
-	batchAttestationsFlushedFeed *event.Feed
+	db                                 *bolt.DB
+	databasePath                       string
+	batchedAttestations                *QueuedAttestationRecords
+	batchedAttestationsChan            chan *AttestationRecord
+	batchAttestationsFlushedFeed       *event.Feed
+	batchedAttestationsFlushInProgress abool.AtomicBool
 }
 
 // Close closes the underlying boltdb database.
@@ -82,7 +104,7 @@ func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 // NewKVStore initializes a new boltDB key-value store at the directory
 // path specified, creates the kv-buckets based on the schema, and stores
 // an open connection db object as a property of the Store struct.
-func NewKVStore(ctx context.Context, dirPath string, pubKeys [][48]byte) (*Store, error) {
+func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, error) {
 	hasDir, err := fileutil.HasDir(dirPath)
 	if err != nil {
 		return nil, err
@@ -93,7 +115,10 @@ func NewKVStore(ctx context.Context, dirPath string, pubKeys [][48]byte) (*Store
 		}
 	}
 	datafile := filepath.Join(dirPath, ProtectionDbFileName)
-	boltDB, err := bolt.Open(datafile, params.BeaconIoConfig().ReadWritePermissions, &bolt.Options{Timeout: params.BeaconIoConfig().BoltTimeout})
+	boltDB, err := bolt.Open(datafile, params.BeaconIoConfig().ReadWritePermissions, &bolt.Options{
+		Timeout:         params.BeaconIoConfig().BoltTimeout,
+		InitialMmapSize: config.InitialMMapSize,
+	})
 	if err != nil {
 		if errors.Is(err, bolt.ErrTimeout) {
 			return nil, errors.New("cannot obtain database lock, database may be in use by another process")
@@ -104,7 +129,7 @@ func NewKVStore(ctx context.Context, dirPath string, pubKeys [][48]byte) (*Store
 	kv := &Store{
 		db:                           boltDB,
 		databasePath:                 dirPath,
-		batchedAttestations:          make([]*AttestationRecord, 0, attestationBatchCapacity),
+		batchedAttestations:          NewQueuedAttestationRecords(),
 		batchedAttestationsChan:      make(chan *AttestationRecord, attestationBatchCapacity),
 		batchAttestationsFlushedFeed: new(event.Feed),
 	}
@@ -128,8 +153,8 @@ func NewKVStore(ctx context.Context, dirPath string, pubKeys [][48]byte) (*Store
 	}
 
 	// Initialize the required public keys into the DB to ensure they're not empty.
-	if pubKeys != nil {
-		if err := kv.UpdatePublicKeysBuckets(pubKeys); err != nil {
+	if config != nil {
+		if err := kv.UpdatePublicKeysBuckets(config.PubKeys); err != nil {
 			return nil, err
 		}
 	}
@@ -171,5 +196,5 @@ func (s *Store) Size() (int64, error) {
 
 // createBoltCollector returns a prometheus collector specifically configured for boltdb.
 func createBoltCollector(db *bolt.DB) prometheus.Collector {
-	return prombolt.New("boltDB", db)
+	return prombolt.New("boltDB", db, blockedBuckets...)
 }

@@ -318,7 +318,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 				}
 
 				// multiplicative decrease
-				batchSize = batchSize / multiplicativeDecreaseDivisor
+				batchSize /= multiplicativeDecreaseDivisor
 				continue
 			}
 			return err
@@ -351,7 +351,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 
 		if batchSize < s.eth1HeaderReqLimit {
 			// update the batchSize with additive increase
-			batchSize = batchSize + additiveFactor
+			batchSize += additiveFactor
 			if batchSize > s.eth1HeaderReqLimit {
 				batchSize = s.eth1HeaderReqLimit
 			}

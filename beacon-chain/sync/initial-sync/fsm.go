@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
+	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
@@ -33,8 +34,8 @@ type eventID uint8
 
 // stateMachineManager is a collection of managed FSMs.
 type stateMachineManager struct {
-	keys     []uint64
-	machines map[uint64]*stateMachine
+	keys     []types.Slot
+	machines map[types.Slot]*stateMachine
 	handlers map[stateID]map[eventID]eventHandlerFn
 }
 
@@ -42,7 +43,7 @@ type stateMachineManager struct {
 // Each FSM allows deterministic state transitions: State(S) x Event(E) -> Actions (A), State(S').
 type stateMachine struct {
 	smm     *stateMachineManager
-	start   uint64
+	start   types.Slot
 	state   stateID
 	pid     peer.ID
 	blocks  []*eth.SignedBeaconBlock
@@ -55,8 +56,8 @@ type eventHandlerFn func(m *stateMachine, data interface{}) (newState stateID, e
 // newStateMachineManager returns fully initialized state machine manager.
 func newStateMachineManager() *stateMachineManager {
 	return &stateMachineManager{
-		keys:     make([]uint64, 0, lookaheadSteps),
-		machines: make(map[uint64]*stateMachine, lookaheadSteps),
+		keys:     make([]types.Slot, 0, lookaheadSteps),
+		machines: make(map[types.Slot]*stateMachine, lookaheadSteps),
 		handlers: make(map[stateID]map[eventID]eventHandlerFn),
 	}
 }
@@ -72,7 +73,7 @@ func (smm *stateMachineManager) addEventHandler(event eventID, state stateID, fn
 }
 
 // addStateMachine allocates memory for new FSM.
-func (smm *stateMachineManager) addStateMachine(startSlot uint64) *stateMachine {
+func (smm *stateMachineManager) addStateMachine(startSlot types.Slot) *stateMachine {
 	smm.machines[startSlot] = &stateMachine{
 		smm:     smm,
 		start:   startSlot,
@@ -85,7 +86,7 @@ func (smm *stateMachineManager) addStateMachine(startSlot uint64) *stateMachine 
 }
 
 // removeStateMachine frees memory of a processed/finished FSM.
-func (smm *stateMachineManager) removeStateMachine(startSlot uint64) error {
+func (smm *stateMachineManager) removeStateMachine(startSlot types.Slot) error {
 	if _, ok := smm.machines[startSlot]; !ok {
 		return fmt.Errorf("state for machine %v is not found", startSlot)
 	}
@@ -108,7 +109,7 @@ func (smm *stateMachineManager) removeAllStateMachines() error {
 
 // recalculateMachineAttribs updates cached attributes, which are used for efficiency.
 func (smm *stateMachineManager) recalculateMachineAttribs() {
-	keys := make([]uint64, 0, lookaheadSteps)
+	keys := make([]types.Slot, 0, lookaheadSteps)
 	for key := range smm.machines {
 		keys = append(keys, key)
 	}
@@ -119,13 +120,13 @@ func (smm *stateMachineManager) recalculateMachineAttribs() {
 }
 
 // findStateMachine returns a state machine for a given start slot (if exists).
-func (smm *stateMachineManager) findStateMachine(startSlot uint64) (*stateMachine, bool) {
+func (smm *stateMachineManager) findStateMachine(startSlot types.Slot) (*stateMachine, bool) {
 	fsm, ok := smm.machines[startSlot]
 	return fsm, ok
 }
 
 // highestStartSlot returns the start slot for the latest known state machine.
-func (smm *stateMachineManager) highestStartSlot() (uint64, error) {
+func (smm *stateMachineManager) highestStartSlot() (types.Slot, error) {
 	if len(smm.keys) == 0 {
 		return 0, errors.New("no state machine exist")
 	}

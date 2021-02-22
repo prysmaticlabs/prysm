@@ -41,8 +41,8 @@ message HighestAttestationResponse {
 
 message HighestAttestation {
     uint64 validator_id = 1;
-    uint64 highest_source_epoch = 2;
-    uint64 highest_target_epoch = 3;
+    uint64 highest_source_epoch = 2 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+    uint64 highest_target_epoch = 3 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Epoch"];
 }
 
 message ProposerSlashingResponse {
@@ -63,7 +63,7 @@ message AttesterSlashingResponse {
 // a block for while pruning the older data.
 message ProposalHistory {
     bytes epoch_bits = 1 [(gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
-    uint64 latest_epoch_written = 2;
+    uint64 latest_epoch_written = 2 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Epoch"];
 }
 
 // AttestationHistory defines the structure for recording a validator's historical attestation.
@@ -73,5 +73,5 @@ message ProposalHistory {
 // the history is updated.
 message AttestationHistory {
     map<uint64, uint64> target_to_source = 1;
-    uint64 latest_epoch_written = 2;
+    uint64 latest_epoch_written = 2 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Epoch"];
 }

@@ -117,6 +117,6 @@ func (km *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) e
 // SubscribeAccountChanges creates an event subscription for a channel
 // to listen for public key changes at runtime, such as when new validator accounts
 // are imported into the keymanager while the validator process is running.
-func (dr *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][48]byte) event.Subscription {
-	return dr.importedKM.SubscribeAccountChanges(pubKeysChan)
+func (km *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][48]byte) event.Subscription {
+	return km.importedKM.SubscribeAccountChanges(pubKeysChan)
 }

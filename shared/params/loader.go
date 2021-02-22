@@ -51,7 +51,7 @@ func replaceHexStringWithYAMLFormat(line string) []string {
 		if err != nil {
 			log.WithError(err).Error("Failed to marshal config file.")
 		}
-		parts[0] = parts[0] + string(fixedByte)
+		parts[0] += string(fixedByte)
 		parts = parts[:1]
 	case l > 1 && l <= 4:
 		var arr [4]byte

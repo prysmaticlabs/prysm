@@ -39,6 +39,7 @@ func main() {
 	gw := gateway.New(
 		context.Background(),
 		*beaconRPC,
+		"", // remoteCert
 		fmt.Sprintf("%s:%d", *host, *port),
 		mux,
 		strings.Split(*allowedOrigins, ","),

@@ -3,9 +3,9 @@
 // is critical to allow safe interoperability between eth2 clients.
 package format
 
-// INTERCHANGE_FORMAT_VERSION specified by https://eips.ethereum.org/EIPS/eip-3076.
+// InterchangeFormatVersion specified by https://eips.ethereum.org/EIPS/eip-3076.
 // The version Prysm supports is version 5.
-const INTERCHANGE_FORMAT_VERSION = "5"
+const InterchangeFormatVersion = "5"
 
 // EIPSlashingProtectionFormat string representation of a standard
 // format for representing validator slashing protection db data.

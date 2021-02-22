@@ -8,6 +8,7 @@ import (
 	"io"
 
 	"github.com/ethereum/go-ethereum/common"
+	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -22,20 +23,20 @@ type ReadOnlyDatabase interface {
 	Block(ctx context.Context, blockRoot [32]byte) (*eth.SignedBeaconBlock, error)
 	Blocks(ctx context.Context, f *filters.QueryFilter) ([]*eth.SignedBeaconBlock, [][32]byte, error)
 	BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32]byte, error)
-	BlocksBySlot(ctx context.Context, slot uint64) (bool, []*eth.SignedBeaconBlock, error)
-	BlockRootsBySlot(ctx context.Context, slot uint64) (bool, [][32]byte, error)
+	BlocksBySlot(ctx context.Context, slot types.Slot) (bool, []*eth.SignedBeaconBlock, error)
+	BlockRootsBySlot(ctx context.Context, slot types.Slot) (bool, [][32]byte, error)
 	HasBlock(ctx context.Context, blockRoot [32]byte) bool
 	GenesisBlock(ctx context.Context) (*eth.SignedBeaconBlock, error)
 	IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool
 	FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (*eth.SignedBeaconBlock, error)
-	HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*eth.SignedBeaconBlock, error)
+	HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) ([]*eth.SignedBeaconBlock, error)
 	// State related methods.
 	State(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error)
 	GenesisState(ctx context.Context) (*state.BeaconState, error)
 	HasState(ctx context.Context, blockRoot [32]byte) bool
 	StateSummary(ctx context.Context, blockRoot [32]byte) (*ethereum_beacon_p2p_v1.StateSummary, error)
 	HasStateSummary(ctx context.Context, blockRoot [32]byte) bool
-	HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*state.BeaconState, error)
+	HighestSlotStatesBelow(ctx context.Context, slot types.Slot) ([]*state.BeaconState, error)
 	// Slashing operations.
 	ProposerSlashing(ctx context.Context, slashingRoot [32]byte) (*eth.ProposerSlashing, error)
 	AttesterSlashing(ctx context.Context, slashingRoot [32]byte) (*eth.AttesterSlashing, error)
@@ -47,10 +48,10 @@ type ReadOnlyDatabase interface {
 	// Checkpoint operations.
 	JustifiedCheckpoint(ctx context.Context) (*eth.Checkpoint, error)
 	FinalizedCheckpoint(ctx context.Context) (*eth.Checkpoint, error)
-	ArchivedPointRoot(ctx context.Context, slot uint64) [32]byte
-	HasArchivedPoint(ctx context.Context, slot uint64) bool
+	ArchivedPointRoot(ctx context.Context, slot types.Slot) [32]byte
+	HasArchivedPoint(ctx context.Context, slot types.Slot) bool
 	LastArchivedRoot(ctx context.Context) [32]byte
-	LastArchivedSlot(ctx context.Context) (uint64, error)
+	LastArchivedSlot(ctx context.Context) (types.Slot, error)
 	// Deposit contract related handlers.
 	DepositContractAddress(ctx context.Context) ([]byte, error)
 	// Powchain operations.
@@ -88,7 +89,7 @@ type NoHeadAccessDatabase interface {
 	// Run any required database migrations.
 	RunMigrations(ctx context.Context) error
 
-	CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint uint64) error
+	CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint types.Slot) error
 }
 
 // HeadAccessDatabase defines a struct with access to reading chain head data.

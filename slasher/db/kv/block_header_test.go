@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -16,7 +17,7 @@ func TestNilDBHistoryBlkHdr(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	slot := uint64(1)
+	slot := types.Slot(1)
 	validatorID := uint64(1)
 
 	require.Equal(t, false, db.HasBlockHeader(ctx, slot, validatorID))
@@ -162,8 +163,8 @@ func TestPruneHistoryBlkHdr(t *testing.T) {
 		require.NotNil(t, bha)
 		require.DeepEqual(t, tt.bh, bha[0], "Should return bh")
 	}
-	currentEpoch := uint64(3)
-	historyToKeep := uint64(2)
+	currentEpoch := types.Epoch(3)
+	historyToKeep := types.Epoch(2)
 	err := db.PruneBlockHistory(ctx, currentEpoch, historyToKeep)
 	require.NoError(t, err, "Failed to prune")
 

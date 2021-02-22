@@ -5,6 +5,7 @@ import (
 	"math"
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -16,7 +17,7 @@ import (
 func TestBlockRootAtSlot_CorrectBlockRoot(t *testing.T) {
 	var blockRoots [][]byte
 
-	for i := uint64(0); i < params.BeaconConfig().SlotsPerHistoricalRoot; i++ {
+	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerHistoricalRoot); i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 	s := &pb.BeaconState{
@@ -24,8 +25,8 @@ func TestBlockRootAtSlot_CorrectBlockRoot(t *testing.T) {
 	}
 
 	tests := []struct {
-		slot         uint64
-		stateSlot    uint64
+		slot         types.Slot
+		stateSlot    types.Slot
 		expectedRoot [32]byte
 	}{
 		{
@@ -73,7 +74,7 @@ func TestBlockRootAtSlot_CorrectBlockRoot(t *testing.T) {
 func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 	var blockRoots [][]byte
 
-	for i := uint64(0); i < params.BeaconConfig().SlotsPerHistoricalRoot; i++ {
+	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerHistoricalRoot); i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 	state := &pb.BeaconState{
@@ -81,8 +82,8 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 	}
 
 	tests := []struct {
-		slot        uint64
-		stateSlot   uint64
+		slot        types.Slot
+		stateSlot   types.Slot
 		expectedErr string
 	}{
 		{
