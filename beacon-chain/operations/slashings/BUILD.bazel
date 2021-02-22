@@ -7,6 +7,7 @@ go_library(
         "doc.go",
         "log.go",
         "metrics.go",
+        "mock.go",
         "service.go",
         "types.go",
     ],
