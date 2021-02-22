@@ -53,6 +53,7 @@ var (
 	// Slasher buckets.
 	attestedEpochsByValidator = []byte("attested-epochs-by-validator")
 	attestationRecordsBucket  = []byte("attestation-records")
+	proposalRecordsBucket     = []byte("proposal-records")
 	slasherChunksBucket       = []byte("slasher-chunks")
 
 	// Migrations

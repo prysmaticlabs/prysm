@@ -437,10 +437,10 @@ func TestSlasher_receiveBlocks_OK(t *testing.T) {
 	<-exitChan
 	wanted := []*slashertypes.CompactBeaconBlock{
 		{
-			ProposerIndex: block1.ProposerIndex,
+			ProposerIndex: types.ValidatorIndex(block1.ProposerIndex),
 		},
 		{
-			ProposerIndex: block2.ProposerIndex,
+			ProposerIndex: types.ValidatorIndex(block2.ProposerIndex),
 		},
 	}
 	require.DeepEqual(t, wanted, s.beaconBlocksQueue)

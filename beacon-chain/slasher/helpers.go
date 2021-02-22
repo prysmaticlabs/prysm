@@ -6,6 +6,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -72,9 +73,38 @@ func logSlashingEvent(slashing *slashertypes.Slashing) {
 			"sourceEpoch":     slashing.SourceEpoch,
 			"targetEpoch":     slashing.TargetEpoch,
 		}).Info("Attester surrounded vote slashing")
+	case slashertypes.DoubleProposal:
+		log.WithFields(logrus.Fields{
+			"validatorIndex":  slashing.ValidatorIndex,
+			"slot":            slashing.Slot,
+			"prevSigningRoot": fmt.Sprintf("%#x", slashing.PrevSigningRoot),
+			"signingRoot":     fmt.Sprintf("%#x", slashing.SigningRoot),
+		}).Info("Proposer double proposal slashing")
 	default:
 		return
 	}
+}
+
+// Log a double block proposal slashing given an incoming proposal and existing proposal signing root.
+func logDoubleProposal(incomingProposal *slashertypes.CompactBeaconBlock, existingSigningRoot [32]byte) {
+	logSlashingEvent(&slashertypes.Slashing{
+		Kind:            slashertypes.DoubleProposal,
+		ValidatorIndex:  types.ValidatorIndex(incomingProposal.ProposerIndex),
+		SigningRoot:     incomingProposal.SigningRoot,
+		PrevSigningRoot: existingSigningRoot,
+		Slot:            incomingProposal.Slot,
+	})
+}
+
+// If an existing signing root does not match an incoming proposal signing root,
+// we then have a double block proposer slashing event.
+func isDoubleProposal(incomingSigningRoot, existingSigningRoot [32]byte) bool {
+	// If the existing signing root is the zero hash, we do not consider
+	// this a double proposal.
+	if existingSigningRoot == params.BeaconConfig().ZeroHash {
+		return false
+	}
+	return incomingSigningRoot != existingSigningRoot
 }
 
 // Validates the attestation data integrity, ensuring we have no nil values for

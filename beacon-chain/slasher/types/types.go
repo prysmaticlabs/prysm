@@ -29,6 +29,14 @@ type AttesterDoubleVote struct {
 	PrevSigningRoot [32]byte
 }
 
+// DoubleBlockProposal containing an incoming and an existing proposal's signing root.
+type DoubleBlockProposal struct {
+	Slot                types.Slot
+	ProposerIndex       types.ValidatorIndex
+	IncomingSigningRoot [32]byte
+	ExistingSigningRoot [32]byte
+}
+
 // AttestedEpochForValidator encapsulates a previously attested epoch
 // for a validator index.
 type AttestedEpochForValidator struct {
@@ -39,7 +47,7 @@ type AttestedEpochForValidator struct {
 // CompactBeaconBlock containing only the required information
 // for proposer slashing detection.
 type CompactBeaconBlock struct {
-	ProposerIndex uint64
+	ProposerIndex types.ValidatorIndex
 	Slot          types.Slot
 	SigningRoot   [32]byte
 }
@@ -55,7 +63,7 @@ type Slashing struct {
 	TargetEpoch     types.Epoch
 	SigningRoot     [32]byte
 	PrevSigningRoot [32]byte
-	Slot            uint64
+	Slot            types.Slot
 }
 
 // SlashingKind is an enum representing the type of slashable
@@ -67,6 +75,7 @@ const (
 	DoubleVote
 	SurroundingVote
 	SurroundedVote
+	DoubleProposal
 )
 
 func (k SlashingKind) String() string {
