@@ -8,6 +8,7 @@ import (
 	"path"
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -65,7 +66,7 @@ func TestRestore(t *testing.T) {
 	require.NoError(t, err)
 	headBlock, err := restoredDb.HeadBlock(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(5000), headBlock.Block.Slot, "Restored database has incorrect data")
+	assert.Equal(t, types.Slot(5000), headBlock.Block.Slot, "Restored database has incorrect data")
 	assert.LogsContain(t, logHook, "Restore completed successfully")
 
 }

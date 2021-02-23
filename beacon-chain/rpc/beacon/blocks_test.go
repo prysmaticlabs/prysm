@@ -152,6 +152,9 @@ func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
 }
 
 func TestServer_ListBlocks_Pagination(t *testing.T) {
+	params.UseMinimalConfig()
+	defer params.UseMainnetConfig()
+
 	db := dbTest.SetupDB(t)
 	chain := &chainMock.ChainService{
 		CanonicalRoots: map[[32]byte]bool{},
@@ -357,8 +360,10 @@ func TestServer_GetChainHead_NoHeadBlock(t *testing.T) {
 }
 
 func TestServer_GetChainHead(t *testing.T) {
-	db := dbTest.SetupDB(t)
+	params.UseMinimalConfig()
+	defer params.UseMainnetConfig()
 
+	db := dbTest.SetupDB(t)
 	genBlock := testutil.NewBeaconBlock()
 	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, 32)
 	require.NoError(t, db.SaveBlock(context.Background(), genBlock))
