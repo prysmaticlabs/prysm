@@ -197,20 +197,20 @@ func (vs *Server) validatorStatus(
 			}
 		}
 
-		var lastActivatedValidatorIdx types.ValidatorIndex
+		var lastActivatedvalidatorIndex types.ValidatorIndex
 		for j := headState.NumValidators() - 1; j >= 0; j-- {
 			val, err := headState.ValidatorAtIndexReadOnly(types.ValidatorIndex(j))
 			if err != nil {
 				return resp, idx
 			}
 			if helpers.IsActiveValidatorUsingTrie(val, helpers.CurrentEpoch(headState)) {
-				lastActivatedValidatorIdx = types.ValidatorIndex(j)
+				lastActivatedvalidatorIndex = types.ValidatorIndex(j)
 				break
 			}
 		}
 		// Our position in the activation queue is the above index - our validator index.
-		if lastActivatedValidatorIdx < idx {
-			resp.PositionInActivationQueue = uint64(idx - lastActivatedValidatorIdx)
+		if lastActivatedvalidatorIndex < idx {
+			resp.PositionInActivationQueue = uint64(idx - lastActivatedvalidatorIndex)
 		}
 		return resp, idx
 	default:
@@ -229,8 +229,8 @@ func statusForPubKey(headState *stateTrie.BeaconState, pubKey []byte) (ethpb.Val
 	return assignmentStatus(headState, idx), idx, nil
 }
 
-func assignmentStatus(beaconState *stateTrie.BeaconState, validatorIdx types.ValidatorIndex) ethpb.ValidatorStatus {
-	validator, err := beaconState.ValidatorAtIndexReadOnly(validatorIdx)
+func assignmentStatus(beaconState *stateTrie.BeaconState, validatorIndex types.ValidatorIndex) ethpb.ValidatorStatus {
+	validator, err := beaconState.ValidatorAtIndexReadOnly(validatorIndex)
 	if err != nil {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS
 	}

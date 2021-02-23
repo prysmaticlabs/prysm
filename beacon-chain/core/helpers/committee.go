@@ -228,8 +228,8 @@ func CommitteeAssignments(
 				CommitteeIndex: types.CommitteeIndex(j),
 				AttesterSlot:   slot,
 			}
-			for _, vID := range committee {
-				validatorIndexToCommittee[vID] = cac
+			for _, vIndex := range committee {
+				validatorIndexToCommittee[vIndex] = cac
 			}
 		}
 	}

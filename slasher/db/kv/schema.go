@@ -29,12 +29,12 @@ var (
 	validatorsMinMaxSpanBucketNew = []byte("validators-min-max-span-bucket-new")
 )
 
-func encodeSlotValidatorID(slot types.Slot, validatorID types.ValidatorIndex) []byte {
-	return append(bytesutil.Bytes8(uint64(slot)), bytesutil.Bytes8(uint64(validatorID))...)
+func encodeSlotValidatorIndex(slot types.Slot, validatorIndex types.ValidatorIndex) []byte {
+	return append(bytesutil.Bytes8(uint64(slot)), bytesutil.Bytes8(uint64(validatorIndex))...)
 }
 
-func encodeSlotValidatorIDSig(slot types.Slot, validatorID types.ValidatorIndex, sig []byte) []byte {
-	return append(append(bytesutil.Bytes8(uint64(slot)), bytesutil.Bytes8(uint64(validatorID))...), sig...)
+func encodeSlotValidatorIndexSig(slot types.Slot, validatorIndex types.ValidatorIndex, sig []byte) []byte {
+	return append(append(bytesutil.Bytes8(uint64(slot)), bytesutil.Bytes8(uint64(validatorIndex))...), sig...)
 }
 
 func encodeEpochSig(targetEpoch types.Epoch, sig []byte) []byte {
