@@ -6,12 +6,12 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
-	ethTypes "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	corehelpers "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/endtoend/policies"
-	"github.com/prysmaticlabs/prysm/endtoend/types"
+	e2eTypes "github.com/prysmaticlabs/prysm/endtoend/types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
@@ -20,28 +20,28 @@ import (
 )
 
 // InjectDoubleVote broadcasts a double vote into the beacon node pool for the slasher to detect.
-var InjectDoubleVote = types.Evaluator{
+var InjectDoubleVote = e2eTypes.Evaluator{
 	Name:       "inject_double_vote_%d",
 	Policy:     policies.OnEpoch(1),
 	Evaluation: insertDoubleAttestationIntoPool,
 }
 
 // ProposeDoubleBlock broadcasts a double block to the beacon node for the slasher to detect.
-var ProposeDoubleBlock = types.Evaluator{
+var ProposeDoubleBlock = e2eTypes.Evaluator{
 	Name:       "propose_double_block_%d",
 	Policy:     policies.OnEpoch(1),
 	Evaluation: proposeDoubleBlock,
 }
 
 // ValidatorsSlashed ensures the expected amount of validators are slashed.
-var ValidatorsSlashed = types.Evaluator{
+var ValidatorsSlashed = e2eTypes.Evaluator{
 	Name:       "validators_slashed_epoch_%d",
 	Policy:     policies.AfterNthEpoch(1),
 	Evaluation: validatorsSlashed,
 }
 
 // SlashedValidatorsLoseBalance checks if the validators slashed lose the right balance.
-var SlashedValidatorsLoseBalance = types.Evaluator{
+var SlashedValidatorsLoseBalance = e2eTypes.Evaluator{
 	Name:       "slashed_validators_lose_valance_epoch_%d",
 	Policy:     policies.AfterNthEpoch(1),
 	Evaluation: validatorsLoseBalance,
@@ -69,10 +69,10 @@ func validatorsLoseBalance(conns ...*grpc.ClientConn) error {
 	ctx := context.Background()
 	client := eth.NewBeaconChainClient(conn)
 
-	for i, indice := range slashedIndices {
+	for i, slashedIndex := range slashedIndices {
 		req := &eth.GetValidatorRequest{
 			QueryFilter: &eth.GetValidatorRequest_Index{
-				Index: indice,
+				Index: types.ValidatorIndex(slashedIndex),
 			},
 		}
 		valResp, err := client.GetValidator(ctx, req)
@@ -122,8 +122,8 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 		return errors.Wrap(err, "could not get duties")
 	}
 
-	var committeeIndex ethTypes.CommitteeIndex
-	var committee []uint64
+	var committeeIndex types.CommitteeIndex
+	var committee []types.ValidatorIndex
 	for _, duty := range duties.Duties {
 		if duty.AttesterSlot == chainHead.HeadSlot-1 {
 			committeeIndex = duty.CommitteeIndex
@@ -159,7 +159,7 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 
 	valsToSlash := uint64(2)
 	for i := uint64(0); i < valsToSlash && i < uint64(len(committee)); i++ {
-		if len(sliceutil.IntersectionUint64(slashedIndices, []uint64{committee[i]})) > 0 {
+		if len(sliceutil.IntersectionUint64(slashedIndices, []uint64{uint64(committee[i])})) > 0 {
 			valsToSlash++
 			continue
 		}
@@ -178,7 +178,7 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 		if _, err = client.ProposeAttestation(ctx, att); err != nil {
 			return errors.Wrap(err, "could not propose attestation")
 		}
-		slashedIndices = append(slashedIndices, committee[i])
+		slashedIndices = append(slashedIndices, uint64(committee[i]))
 	}
 	return nil
 }
@@ -210,10 +210,10 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 		return errors.Wrap(err, "could not get duties")
 	}
 
-	var proposerIndex uint64
+	var proposerIndex types.ValidatorIndex
 	for i, duty := range duties.CurrentEpochDuties {
 		if sliceutil.IsInSlots(chainHead.HeadSlot-1, duty.ProposerSlots) {
-			proposerIndex = uint64(i)
+			proposerIndex = types.ValidatorIndex(i)
 			break
 		}
 	}
@@ -264,6 +264,6 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 	if _, err = client.ProposeBlock(ctx, signedBlk); err == nil {
 		return errors.New("expected block to fail processing")
 	}
-	slashedIndices = append(slashedIndices, proposerIndex)
+	slashedIndices = append(slashedIndices, uint64(proposerIndex))
 	return nil
 }

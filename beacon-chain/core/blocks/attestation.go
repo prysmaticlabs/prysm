@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -248,7 +249,7 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.Beacon
 	indices := indexedAtt.AttestingIndices
 	var pubkeys []bls.PublicKey
 	for i := 0; i < len(indices); i++ {
-		pubkeyAtIdx := beaconState.PubkeyAtIndex(indices[i])
+		pubkeyAtIdx := beaconState.PubkeyAtIndex(types.ValidatorIndex(indices[i]))
 		pk, err := bls.PublicKeyFromBytes(pubkeyAtIdx[:])
 		if err != nil {
 			return errors.Wrap(err, "could not deserialize validator public key")

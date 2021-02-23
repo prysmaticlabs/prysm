@@ -320,7 +320,7 @@ func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cp))
 	require.NoError(t, beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{}))
 
-	proposerSlashIdx := uint64(3)
+	proposerSlashIdx := types.ValidatorIndex(3)
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	err = beaconState.SetSlot(slotsPerEpoch.Mul(uint64(params.BeaconConfig().ShardCommitteePeriod)) + params.BeaconConfig().MinAttestationInclusionDelay)
 	require.NoError(t, err)

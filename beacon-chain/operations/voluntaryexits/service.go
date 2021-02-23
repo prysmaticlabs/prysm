@@ -107,7 +107,7 @@ func (p *Pool) MarkIncluded(exit *ethpb.SignedVoluntaryExit) {
 }
 
 // Binary search to check if the index exists in the list of pending exits.
-func existsInList(pending []*ethpb.SignedVoluntaryExit, searchingFor uint64) (bool, int) {
+func existsInList(pending []*ethpb.SignedVoluntaryExit, searchingFor types.ValidatorIndex) (bool, int) {
 	i := sort.Search(len(pending), func(j int) bool {
 		return pending[j].Exit.ValidatorIndex >= searchingFor
 	})

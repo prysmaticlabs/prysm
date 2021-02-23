@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
@@ -15,7 +16,7 @@ import (
 func TestAttestingIndices(t *testing.T) {
 	type args struct {
 		bf        bitfield.Bitfield
-		committee []uint64
+		committee []types.ValidatorIndex
 	}
 	tests := []struct {
 		name string
@@ -27,7 +28,7 @@ func TestAttestingIndices(t *testing.T) {
 			name: "Full committee attested",
 			args: args{
 				bf:        bitfield.Bitlist{0b1111},
-				committee: []uint64{0, 1, 2},
+				committee: []types.ValidatorIndex{0, 1, 2},
 			},
 			want: []uint64{0, 1, 2},
 		},
@@ -35,7 +36,7 @@ func TestAttestingIndices(t *testing.T) {
 			name: "Partial committee attested",
 			args: args{
 				bf:        bitfield.Bitlist{0b1101},
-				committee: []uint64{0, 1, 2},
+				committee: []types.ValidatorIndex{0, 1, 2},
 			},
 			want: []uint64{0, 2},
 		},
@@ -43,7 +44,7 @@ func TestAttestingIndices(t *testing.T) {
 			name: "Invalid bit length",
 			args: args{
 				bf:        bitfield.Bitlist{0b11111},
-				committee: []uint64{0, 1, 2},
+				committee: []types.ValidatorIndex{0, 1, 2},
 			},
 			err: "bitfield length 4 is not equal to committee length 3",
 		},
@@ -155,7 +156,7 @@ func TestIsValidAttestationIndices(t *testing.T) {
 
 func BenchmarkAttestingIndices_PartialCommittee(b *testing.B) {
 	bf := bitfield.Bitlist{0b11111111, 0b11111111, 0b10000111, 0b11111111, 0b100}
-	committee := []uint64{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34}
+	committee := []types.ValidatorIndex{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

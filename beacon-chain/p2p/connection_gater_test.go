@@ -8,7 +8,6 @@ import (
 	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
@@ -24,7 +23,7 @@ func TestPeer_AtMaxLimit(t *testing.T) {
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	ipAddr2, pkey2 := createAddrAndPrivKey(t)
 
-	listen, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr, 2000))
+	listen, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr, 2000))
 	require.NoError(t, err, "Failed to p2p listen")
 	s := &Service{
 		ipLimiter: leakybucket.NewCollector(ipLimit, ipBurst, false),
@@ -53,7 +52,7 @@ func TestPeer_AtMaxLimit(t *testing.T) {
 	}
 
 	// create alternate host
-	listen, err = multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr2, 3000))
+	listen, err = ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr2, 3000))
 	require.NoError(t, err, "Failed to p2p listen")
 	h2, err := libp2p.New(context.Background(), []libp2p.Option{privKeyOption(pkey2), libp2p.ListenAddrs(listen)}...)
 	require.NoError(t, err)
@@ -61,7 +60,7 @@ func TestPeer_AtMaxLimit(t *testing.T) {
 		err := h2.Close()
 		require.NoError(t, err)
 	}()
-	multiAddress, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ipAddr, 2000, h1.ID()))
+	multiAddress, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ipAddr, 2000, h1.ID()))
 	require.NoError(t, err)
 	addrInfo, err := peer.AddrInfoFromP2pAddr(multiAddress)
 	require.NoError(t, err)
@@ -81,7 +80,7 @@ func TestService_InterceptBannedIP(t *testing.T) {
 	s.addrFilter, err = configureFilter(&Config{})
 	require.NoError(t, err)
 	ip := "212.67.10.122"
-	multiAddress, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ip, 3000))
+	multiAddress, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ip, 3000))
 	require.NoError(t, err)
 
 	for i := 0; i < ipBurst; i++ {
@@ -111,7 +110,7 @@ func TestService_RejectInboundPeersBeyondLimit(t *testing.T) {
 	s.addrFilter, err = configureFilter(&Config{})
 	require.NoError(t, err)
 	ip := "212.67.10.122"
-	multiAddress, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ip, 3000))
+	multiAddress, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ip, 3000))
 	require.NoError(t, err)
 
 	valid := s.InterceptAccept(&maEndpoints{raddr: multiAddress})
@@ -138,7 +137,7 @@ func TestPeer_BelowMaxLimit(t *testing.T) {
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	ipAddr2, pkey2 := createAddrAndPrivKey(t)
 
-	listen, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr, 2000))
+	listen, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr, 2000))
 	require.NoError(t, err, "Failed to p2p listen")
 	s := &Service{
 		ipLimiter: leakybucket.NewCollector(ipLimit, ipBurst, false),
@@ -163,7 +162,7 @@ func TestPeer_BelowMaxLimit(t *testing.T) {
 	}()
 
 	// create alternate host
-	listen, err = multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr2, 3000))
+	listen, err = ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr2, 3000))
 	require.NoError(t, err, "Failed to p2p listen")
 	h2, err := libp2p.New(context.Background(), []libp2p.Option{privKeyOption(pkey2), libp2p.ListenAddrs(listen)}...)
 	require.NoError(t, err)
@@ -171,7 +170,7 @@ func TestPeer_BelowMaxLimit(t *testing.T) {
 		err := h2.Close()
 		require.NoError(t, err)
 	}()
-	multiAddress, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ipAddr, 2000, h1.ID()))
+	multiAddress, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ipAddr, 2000, h1.ID()))
 	require.NoError(t, err)
 	addrInfo, err := peer.AddrInfoFromP2pAddr(multiAddress)
 	require.NoError(t, err)
@@ -189,7 +188,7 @@ func TestPeerAllowList(t *testing.T) {
 	// from that subnet.
 	cidr := "202.35.89.12/16"
 
-	listen, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr, 2000))
+	listen, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr, 2000))
 	require.NoError(t, err, "Failed to p2p listen")
 	s := &Service{
 		ipLimiter: leakybucket.NewCollector(ipLimit, ipBurst, false),
@@ -208,7 +207,7 @@ func TestPeerAllowList(t *testing.T) {
 	}()
 
 	// create alternate host
-	listen, err = multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr2, 3000))
+	listen, err = ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr2, 3000))
 	require.NoError(t, err, "Failed to p2p listen")
 	h2, err := libp2p.New(context.Background(), []libp2p.Option{privKeyOption(pkey2), libp2p.ListenAddrs(listen)}...)
 	require.NoError(t, err)
@@ -216,7 +215,7 @@ func TestPeerAllowList(t *testing.T) {
 		err := h2.Close()
 		require.NoError(t, err)
 	}()
-	multiAddress, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ipAddr2, 3000, h2.ID()))
+	multiAddress, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ipAddr2, 3000, h2.ID()))
 	require.NoError(t, err)
 	addrInfo, err := peer.AddrInfoFromP2pAddr(multiAddress)
 	require.NoError(t, err)
@@ -235,7 +234,7 @@ func TestPeerDenyList(t *testing.T) {
 	maskedIP := ipAddr2.Mask(mask)
 	cidr := maskedIP.String() + fmt.Sprintf("/%d", ones)
 
-	listen, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr, 2000))
+	listen, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr, 2000))
 	require.NoError(t, err, "Failed to p2p listen")
 	s := &Service{
 		ipLimiter: leakybucket.NewCollector(ipLimit, ipBurst, false),
@@ -254,7 +253,7 @@ func TestPeerDenyList(t *testing.T) {
 	}()
 
 	// create alternate host
-	listen, err = multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr2, 3000))
+	listen, err = ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr2, 3000))
 	require.NoError(t, err, "Failed to p2p listen")
 	h2, err := libp2p.New(context.Background(), []libp2p.Option{privKeyOption(pkey2), libp2p.ListenAddrs(listen)}...)
 	require.NoError(t, err)
@@ -262,7 +261,7 @@ func TestPeerDenyList(t *testing.T) {
 		err := h2.Close()
 		require.NoError(t, err)
 	}()
-	multiAddress, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ipAddr2, 3000, h2.ID()))
+	multiAddress, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ipAddr2, 3000, h2.ID()))
 	require.NoError(t, err)
 	addrInfo, err := peer.AddrInfoFromP2pAddr(multiAddress)
 	require.NoError(t, err)
@@ -283,7 +282,7 @@ func TestService_InterceptAddrDial_Allow(t *testing.T) {
 	s.addrFilter, err = configureFilter(&Config{AllowListCIDR: cidr})
 	require.NoError(t, err)
 	ip := "212.67.10.122"
-	multiAddress, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ip, 3000))
+	multiAddress, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ip, 3000))
 	require.NoError(t, err)
 	valid := s.InterceptAddrDial("", multiAddress)
 	if !valid {
