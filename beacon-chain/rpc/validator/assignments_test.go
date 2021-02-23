@@ -98,7 +98,7 @@ func TestGetDuties_OK(t *testing.T) {
 	res, err = vs.GetDuties(context.Background(), req)
 	require.NoError(t, err, "Could not call epoch committee assignment")
 	for i := 0; i < len(res.CurrentEpochDuties); i++ {
-		assert.Equal(t, uint64(i), res.CurrentEpochDuties[i].ValidatorIndex)
+		assert.Equal(t, types.ValidatorIndex(i), res.CurrentEpochDuties[i].ValidatorIndex)
 	}
 }
 

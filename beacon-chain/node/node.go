@@ -68,7 +68,7 @@ type BeaconNode struct {
 	db              db.Database
 	attestationPool attestations.Pool
 	exitPool        *voluntaryexits.Pool
-	slashingsPool   *slashings.Pool
+	slashingsPool   slashings.PoolManager
 	depositCache    *depositcache.DepositCache
 	stateFeed       *event.Feed
 	blockFeed       *event.Feed

@@ -42,7 +42,7 @@ type HeadFetcher interface {
 	HeadRoot(ctx context.Context) ([]byte, error)
 	HeadBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error)
 	HeadState(ctx context.Context) (*state.BeaconState, error)
-	HeadValidatorsIndices(ctx context.Context, epoch types.Epoch) ([]uint64, error)
+	HeadValidatorsIndices(ctx context.Context, epoch types.Epoch) ([]types.ValidatorIndex, error)
 	HeadSeed(ctx context.Context, epoch types.Epoch) ([32]byte, error)
 	HeadGenesisValidatorRoot() [32]byte
 	HeadETH1Data() *ethpb.Eth1Data
@@ -167,12 +167,12 @@ func (s *Service) HeadState(ctx context.Context) (*state.BeaconState, error) {
 }
 
 // HeadValidatorsIndices returns a list of active validator indices from the head view of a given epoch.
-func (s *Service) HeadValidatorsIndices(ctx context.Context, epoch types.Epoch) ([]uint64, error) {
+func (s *Service) HeadValidatorsIndices(ctx context.Context, epoch types.Epoch) ([]types.ValidatorIndex, error) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
 	if !s.hasHeadState() {
-		return []uint64{}, nil
+		return []types.ValidatorIndex{}, nil
 	}
 	return helpers.ActiveValidatorIndices(s.headState(ctx), epoch)
 }
