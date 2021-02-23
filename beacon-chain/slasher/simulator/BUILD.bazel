@@ -5,6 +5,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "attestation_generator.go",
+        "block_generator.go",
         "cmd.go",
         "cmd_simulate.go",
         "simulator.go",
@@ -34,4 +35,9 @@ go_test(
     name = "go_default_test",
     srcs = ["simulator_test.go"],
     embed = [":go_default_library"],
+    deps = [
+        "//shared/params:go_default_library",
+        "//shared/slashutil:go_default_library",
+        "//shared/testutil/require:go_default_library",
+    ],
 )

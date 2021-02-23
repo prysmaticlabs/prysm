@@ -2,7 +2,6 @@ package slasher
 
 import (
 	"context"
-	"fmt"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -88,7 +87,6 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 		case currentSlot := <-slotTicker:
 			s.attestationQueueLock.Lock()
 			attestations := s.attestationQueue
-			fmt.Printf("Queue loaded! %d atts loaded\n", len(attestations))
 			s.attestationQueue = make([]*slashertypes.CompactAttestation, 0)
 			s.attestationQueueLock.Unlock()
 			currentEpoch := helpers.SlotToEpoch(currentSlot)

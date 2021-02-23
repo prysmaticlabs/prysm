@@ -14,6 +14,8 @@ var SlasherCommands = &cli.Command{
 	Usage:    "defines commands for simulating a slasher acting at real-scale",
 	Flags: cmd.WrapFlags([]cli.Flag{
 		cmd.DataDirFlag,
+		cmd.ClearDB,
+		cmd.ForceClearDB,
 		debug.PProfFlag,
 		debug.MemProfileRateFlag,
 		debug.MutexProfileFractionFlag,
