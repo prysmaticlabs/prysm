@@ -5,8 +5,11 @@ import (
 	"errors"
 
 	ptypes "github.com/gogo/protobuf/types"
-
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
+	"github.com/prysmaticlabs/prysm/proto/migration"
+	"go.opencensus.io/trace"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // ListPoolAttestations retrieves attestations known by the node but
@@ -24,7 +27,23 @@ func (bs *Server) SubmitAttestation(ctx context.Context, req *ethpb.Attestation)
 // ListPoolAttesterSlashings retrieves attester slashings known by the node but
 // not necessarily incorporated into any block.
 func (bs *Server) ListPoolAttesterSlashings(ctx context.Context, req *ptypes.Empty) (*ethpb.AttesterSlashingsPoolResponse, error) {
-	return nil, errors.New("unimplemented")
+	ctx, span := trace.StartSpan(ctx, "beaconv1.ListPoolAttesterSlashings")
+	defer span.End()
+
+	headState, err := bs.ChainInfoFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	}
+	sourceSlashings := bs.SlashingsPool.PendingAttesterSlashings(ctx, headState, true)
+
+	slashings := make([]*ethpb.AttesterSlashing, len(sourceSlashings))
+	for i, s := range sourceSlashings {
+		slashings[i] = migration.V1Alpha1AttSlashingToV1(s)
+	}
+
+	return &ethpb.AttesterSlashingsPoolResponse{
+		Data: slashings,
+	}, nil
 }
 
 // SubmitAttesterSlashing submits AttesterSlashing object to node's pool and
