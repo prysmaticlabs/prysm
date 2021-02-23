@@ -1,6 +1,7 @@
 package precompute
 
 import (
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -47,7 +48,7 @@ func ProcessSlashingsPrecompute(state *stateTrie.BeaconState, pBal *Balance) err
 		if val.Slashed && correctEpoch {
 			penaltyNumerator := val.EffectiveBalance / increment * minSlashing
 			penalty := penaltyNumerator / pBal.ActiveCurrentEpoch * increment
-			if err := helpers.DecreaseBalance(state, uint64(idx), penalty); err != nil {
+			if err := helpers.DecreaseBalance(state, types.ValidatorIndex(idx), penalty); err != nil {
 				return false, val, err
 			}
 			return true, val, nil

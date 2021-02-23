@@ -5,6 +5,7 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -52,7 +53,7 @@ func (s *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *p
 		return pubsub.ValidationIgnore
 	}
 
-	if exit.Exit.ValidatorIndex >= uint64(headState.NumValidators()) {
+	if uint64(exit.Exit.ValidatorIndex) >= uint64(headState.NumValidators()) {
 		return pubsub.ValidationReject
 	}
 	val, err := headState.ValidatorAtIndexReadOnly(exit.Exit.ValidatorIndex)
@@ -69,7 +70,7 @@ func (s *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *p
 }
 
 // Returns true if the node has already received a valid exit request for the validator with index `i`.
-func (s *Service) hasSeenExitIndex(i uint64) bool {
+func (s *Service) hasSeenExitIndex(i types.ValidatorIndex) bool {
 	s.seenExitLock.RLock()
 	defer s.seenExitLock.RUnlock()
 	_, seen := s.seenExitCache.Get(i)
@@ -77,7 +78,7 @@ func (s *Service) hasSeenExitIndex(i uint64) bool {
 }
 
 // Set exit request index `i` in seen exit request cache.
-func (s *Service) setExitIndexSeen(i uint64) {
+func (s *Service) setExitIndexSeen(i types.ValidatorIndex) {
 	s.seenExitLock.Lock()
 	defer s.seenExitLock.Unlock()
 	s.seenExitCache.Add(i, true)

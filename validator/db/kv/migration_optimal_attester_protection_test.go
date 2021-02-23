@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/prysmaticlabs/eth2-types"
-	bolt "go.etcd.io/bbolt"
-
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	bolt "go.etcd.io/bbolt"
 )
 
 func Test_migrateOptimalAttesterProtectionUp(t *testing.T) {

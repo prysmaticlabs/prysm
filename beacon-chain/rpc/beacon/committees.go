@@ -67,7 +67,7 @@ func (bs *Server) ListBeaconCommittees(
 func (bs *Server) retrieveCommitteesForEpoch(
 	ctx context.Context,
 	epoch types.Epoch,
-) (SlotToCommiteesMap, []uint64, error) {
+) (SlotToCommiteesMap, []types.ValidatorIndex, error) {
 	startSlot, err := helpers.StartSlot(epoch)
 	if err != nil {
 		return nil, nil, err
@@ -103,7 +103,7 @@ func (bs *Server) retrieveCommitteesForEpoch(
 func (bs *Server) retrieveCommitteesForRoot(
 	ctx context.Context,
 	root []byte,
-) (SlotToCommiteesMap, []uint64, error) {
+) (SlotToCommiteesMap, []types.ValidatorIndex, error) {
 	requestedState, err := bs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(root))
 	if err != nil {
 		return nil, nil, status.Error(codes.Internal, fmt.Sprintf("Could not get state: %v", err))
@@ -138,7 +138,7 @@ func (bs *Server) retrieveCommitteesForRoot(
 // the attester seeds value.
 func computeCommittees(
 	startSlot types.Slot,
-	activeIndices []uint64,
+	activeIndices []types.ValidatorIndex,
 	attesterSeed [32]byte,
 ) (SlotToCommiteesMap, error) {
 	committeesListsBySlot := make(SlotToCommiteesMap, params.BeaconConfig().SlotsPerEpoch)

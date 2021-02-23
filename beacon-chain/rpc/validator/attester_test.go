@@ -559,12 +559,12 @@ func TestServer_SubscribeCommitteeSubnets_DifferentLengthSlots(t *testing.T) {
 	}
 
 	var slots []types.Slot
-	var comIdxs []uint64
+	var comIdxs []types.CommitteeIndex
 	var isAggregator []bool
 
 	for i := types.Slot(100); i < 200; i++ {
 		slots = append(slots, i)
-		comIdxs = append(comIdxs, uint64(randGen.Int63n(64)))
+		comIdxs = append(comIdxs, types.CommitteeIndex(randGen.Int63n(64)))
 		boolVal := randGen.Uint64()%2 == 0
 		isAggregator = append(isAggregator, boolVal)
 	}
@@ -607,12 +607,12 @@ func TestServer_SubscribeCommitteeSubnets_MultipleSlots(t *testing.T) {
 	}
 
 	var slots []types.Slot
-	var comIdxs []uint64
+	var comIdxs []types.CommitteeIndex
 	var isAggregator []bool
 
 	for i := types.Slot(100); i < 200; i++ {
 		slots = append(slots, i)
-		comIdxs = append(comIdxs, uint64(randGen.Int63n(64)))
+		comIdxs = append(comIdxs, types.CommitteeIndex(randGen.Int63n(64)))
 		boolVal := randGen.Uint64()%2 == 0
 		isAggregator = append(isAggregator, boolVal)
 	}
