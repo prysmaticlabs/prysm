@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
-
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
 

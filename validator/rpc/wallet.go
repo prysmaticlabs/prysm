@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
-
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
@@ -16,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"

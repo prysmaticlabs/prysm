@@ -13,8 +13,6 @@ import (
 	"sync"
 	"syscall"
 
-	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/backuputil"
@@ -28,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
+	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"

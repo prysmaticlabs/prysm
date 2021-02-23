@@ -9,11 +9,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"

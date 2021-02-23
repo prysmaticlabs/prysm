@@ -14,8 +14,6 @@ import (
 	"sync"
 	"time"
 
-	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
-
 	"github.com/dgraph-io/ristretto"
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
@@ -30,6 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	vdb "github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/graffiti"

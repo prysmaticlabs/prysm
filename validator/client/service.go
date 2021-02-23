@@ -6,8 +6,6 @@ import (
 	"strings"
 	"time"
 
-	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
-
 	"github.com/dgraph-io/ristretto"
 	ptypes "github.com/gogo/protobuf/types"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -22,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
