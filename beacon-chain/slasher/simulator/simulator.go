@@ -114,6 +114,8 @@ func generateBlockHeadersForSlot(simParams *Parameters, slot types.Slot) []*ethp
 	blocks[0] = &ethpb.BeaconBlockHeader{
 		Slot:          slot,
 		ProposerIndex: proposer,
+		ParentRoot:    bytesutil.PadTo([]byte{}, 32),
+		StateRoot:     bytesutil.PadTo([]byte{}, 32),
 		BodyRoot:      bytesutil.PadTo([]byte("good block"), 32),
 	}
 	if rand.NewGenerator().Float64() < simParams.ProposerSlashingProbab {
@@ -121,6 +123,8 @@ func generateBlockHeadersForSlot(simParams *Parameters, slot types.Slot) []*ethp
 		blocks = append(blocks, &ethpb.BeaconBlockHeader{
 			Slot:          slot,
 			ProposerIndex: proposer,
+			ParentRoot:    bytesutil.PadTo([]byte{}, 32),
+			StateRoot:     bytesutil.PadTo([]byte{}, 32),
 			BodyRoot:      bytesutil.PadTo([]byte("bad block"), 32),
 		})
 	}
