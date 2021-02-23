@@ -9,8 +9,8 @@ import (
 )
 
 type publicKeyTestStruct struct {
-	validatorID types.ValidatorIndex
-	pk          []byte
+	validatorIndex types.ValidatorIndex
+	pk             []byte
 }
 
 var pkTests []publicKeyTestStruct
@@ -18,16 +18,16 @@ var pkTests []publicKeyTestStruct
 func init() {
 	pkTests = []publicKeyTestStruct{
 		{
-			validatorID: 1,
-			pk:          []byte{1, 2, 3},
+			validatorIndex: 1,
+			pk:             []byte{1, 2, 3},
 		},
 		{
-			validatorID: 2,
-			pk:          []byte{4, 5, 6},
+			validatorIndex: 2,
+			pk:             []byte{4, 5, 6},
 		},
 		{
-			validatorID: 3,
-			pk:          []byte{7, 8, 9},
+			validatorIndex: 3,
+			pk:             []byte{7, 8, 9},
 		},
 	}
 }
@@ -37,9 +37,9 @@ func TestNilDBValidatorPublicKey(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	validatorID := types.ValidatorIndex(1)
+	validatorIndex := types.ValidatorIndex(1)
 
-	pk, err := db.ValidatorPubKey(ctx, validatorID)
+	pk, err := db.ValidatorPubKey(ctx, validatorIndex)
 	require.NoError(t, err, "Nil ValidatorPubKey should not return error")
 	require.DeepEqual(t, []uint8(nil), pk)
 }
@@ -50,10 +50,10 @@ func TestSavePubKey(t *testing.T) {
 	ctx := context.Background()
 
 	for _, tt := range pkTests {
-		err := db.SavePubKey(ctx, tt.validatorID, tt.pk)
+		err := db.SavePubKey(ctx, tt.validatorIndex, tt.pk)
 		require.NoError(t, err, "Save validator public key failed")
 
-		pk, err := db.ValidatorPubKey(ctx, tt.validatorID)
+		pk, err := db.ValidatorPubKey(ctx, tt.validatorIndex)
 		require.NoError(t, err, "Failed to get validator public key")
 		require.NotNil(t, pk)
 		require.DeepEqual(t, tt.pk, pk, "Should return validator public key")
@@ -66,18 +66,18 @@ func TestDeletePublicKey(t *testing.T) {
 	ctx := context.Background()
 
 	for _, tt := range pkTests {
-		require.NoError(t, db.SavePubKey(ctx, tt.validatorID, tt.pk), "Save validator public key failed")
+		require.NoError(t, db.SavePubKey(ctx, tt.validatorIndex, tt.pk), "Save validator public key failed")
 	}
 
 	for _, tt := range pkTests {
-		pk, err := db.ValidatorPubKey(ctx, tt.validatorID)
+		pk, err := db.ValidatorPubKey(ctx, tt.validatorIndex)
 		require.NoError(t, err, "Failed to get validator public key")
 		require.NotNil(t, pk)
 		require.DeepEqual(t, tt.pk, pk, "Should return validator public key")
 
-		err = db.DeletePubKey(ctx, tt.validatorID)
+		err = db.DeletePubKey(ctx, tt.validatorIndex)
 		require.NoError(t, err, "Delete validator public key")
-		pk, err = db.ValidatorPubKey(ctx, tt.validatorID)
+		pk, err = db.ValidatorPubKey(ctx, tt.validatorIndex)
 		require.NoError(t, err)
 		require.DeepEqual(t, []byte(nil), pk, "Expected validator public key to be deleted")
 	}

@@ -28,13 +28,13 @@ func unmarshalBlockHeader(ctx context.Context, enc []byte) (*ethpb.SignedBeaconB
 
 // BlockHeaders accepts an slot and validator id and returns the corresponding block header array.
 // Returns nil if the block header for those values does not exist.
-func (s *Store) BlockHeaders(ctx context.Context, slot types.Slot, validatorID types.ValidatorIndex) ([]*ethpb.SignedBeaconBlockHeader, error) {
+func (s *Store) BlockHeaders(ctx context.Context, slot types.Slot, validatorIndex types.ValidatorIndex) ([]*ethpb.SignedBeaconBlockHeader, error) {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.BlockHeaders")
 	defer span.End()
 	var blockHeaders []*ethpb.SignedBeaconBlockHeader
 	err := s.view(func(tx *bolt.Tx) error {
 		c := tx.Bucket(historicBlockHeadersBucket).Cursor()
-		prefix := encodeSlotValidatorID(slot, validatorID)
+		prefix := encodeSlotValidatorIndex(slot, validatorIndex)
 		for k, v := c.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, v = c.Next() {
 			bh, err := unmarshalBlockHeader(ctx, v)
 			if err != nil {
@@ -48,10 +48,10 @@ func (s *Store) BlockHeaders(ctx context.Context, slot types.Slot, validatorID t
 }
 
 // HasBlockHeader accepts a slot and validator id and returns true if the block header exists.
-func (s *Store) HasBlockHeader(ctx context.Context, slot types.Slot, validatorID types.ValidatorIndex) bool {
+func (s *Store) HasBlockHeader(ctx context.Context, slot types.Slot, validatorIndex types.ValidatorIndex) bool {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.HasBlockHeader")
 	defer span.End()
-	prefix := encodeSlotValidatorID(slot, validatorID)
+	prefix := encodeSlotValidatorIndex(slot, validatorIndex)
 	var hasBlockHeader bool
 	if err := s.view(func(tx *bolt.Tx) error {
 		c := tx.Bucket(historicBlockHeadersBucket).Cursor()
@@ -73,7 +73,7 @@ func (s *Store) SaveBlockHeader(ctx context.Context, blockHeader *ethpb.SignedBe
 	ctx, span := trace.StartSpan(ctx, "slasherDB.SaveBlockHeader")
 	defer span.End()
 	epoch := helpers.SlotToEpoch(blockHeader.Header.Slot)
-	key := encodeSlotValidatorIDSig(blockHeader.Header.Slot, blockHeader.Header.ProposerIndex, blockHeader.Signature)
+	key := encodeSlotValidatorIndexSig(blockHeader.Header.Slot, blockHeader.Header.ProposerIndex, blockHeader.Signature)
 	enc, err := proto.Marshal(blockHeader)
 	if err != nil {
 		return errors.Wrap(err, "failed to encode block")
@@ -102,7 +102,7 @@ func (s *Store) SaveBlockHeader(ctx context.Context, blockHeader *ethpb.SignedBe
 func (s *Store) DeleteBlockHeader(ctx context.Context, blockHeader *ethpb.SignedBeaconBlockHeader) error {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.DeleteBlockHeader")
 	defer span.End()
-	key := encodeSlotValidatorIDSig(blockHeader.Header.Slot, blockHeader.Header.ProposerIndex, blockHeader.Signature)
+	key := encodeSlotValidatorIndexSig(blockHeader.Header.Slot, blockHeader.Header.ProposerIndex, blockHeader.Signature)
 	return s.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicBlockHeadersBucket)
 		if err := bucket.Delete(key); err != nil {

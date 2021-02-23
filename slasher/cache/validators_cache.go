@@ -39,8 +39,8 @@ func NewPublicKeyCache(size int, onEvicted func(key interface{}, value interface
 }
 
 // Get returns an ok bool and the cached value for the requested validator id key, if any.
-func (c *PublicKeyCache) Get(validatorIdx types.ValidatorIndex) ([]byte, bool) {
-	item, exists := c.cache.Get(validatorIdx)
+func (c *PublicKeyCache) Get(validatorIndex types.ValidatorIndex) ([]byte, bool) {
+	item, exists := c.cache.Get(validatorIndex)
 	if exists && item != nil {
 		validatorsCacheHit.Inc()
 		return item.([]byte), true
@@ -51,19 +51,19 @@ func (c *PublicKeyCache) Get(validatorIdx types.ValidatorIndex) ([]byte, bool) {
 }
 
 // Set the response in the cache.
-func (c *PublicKeyCache) Set(validatorIdx types.ValidatorIndex, publicKey []byte) {
-	_ = c.cache.Add(validatorIdx, publicKey)
+func (c *PublicKeyCache) Set(validatorIndex types.ValidatorIndex, publicKey []byte) {
+	_ = c.cache.Add(validatorIndex, publicKey)
 }
 
 // Delete removes a validator id from the cache and returns if it existed or not.
 // Performs the onEviction function before removal.
-func (c *PublicKeyCache) Delete(validatorIdx types.ValidatorIndex) bool {
-	return c.cache.Remove(validatorIdx)
+func (c *PublicKeyCache) Delete(validatorIndex types.ValidatorIndex) bool {
+	return c.cache.Remove(validatorIndex)
 }
 
 // Has returns true if the key exists in the cache.
-func (c *PublicKeyCache) Has(validatorIdx types.ValidatorIndex) bool {
-	return c.cache.Contains(validatorIdx)
+func (c *PublicKeyCache) Has(validatorIndex types.ValidatorIndex) bool {
+	return c.cache.Contains(validatorIndex)
 }
 
 // Clear removes all keys from the ValidatorCache.
