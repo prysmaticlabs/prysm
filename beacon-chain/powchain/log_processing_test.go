@@ -3,7 +3,6 @@ package powchain
 import (
 	"context"
 	"encoding/binary"
-	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -25,7 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func TestProcessDepositLog_OK(t *testing.T) {
