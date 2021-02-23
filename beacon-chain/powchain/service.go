@@ -34,6 +34,7 @@ import (
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -133,7 +134,6 @@ type Service struct {
 	processingLock          sync.RWMutex
 	ctx                     context.Context
 	cancel                  context.CancelFunc
-	headerChan              chan *gethTypes.Header
 	headTicker              *time.Ticker
 	currHttpEndpoint        string
 	httpEndpoints           []string
@@ -166,9 +166,9 @@ type Web3ServiceConfig struct {
 	Eth1HeaderReqLimit uint64
 }
 
-// New sets up a new instance with an ethclient when
+// NewService sets up a new instance with an ethclient when
 // given a web3 endpoint as a string in the config.
-func New(ctx context.Context, config *Web3ServiceConfig) (*Service, error) {
+func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop()
 	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
@@ -195,7 +195,6 @@ func New(ctx context.Context, config *Web3ServiceConfig) (*Service, error) {
 	s := &Service{
 		ctx:              ctx,
 		cancel:           cancel,
-		headerChan:       make(chan *gethTypes.Header),
 		httpEndpoints:    endpoints,
 		currHttpEndpoint: currEndpoint,
 		latestEth1Data: &protodb.LatestETH1Data{
@@ -278,9 +277,6 @@ func (s *Service) Start() {
 func (s *Service) Stop() error {
 	if s.cancel != nil {
 		defer s.cancel()
-	}
-	if s.headerChan != nil {
-		defer close(s.headerChan)
 	}
 	s.closeClients()
 	return nil
@@ -471,7 +467,7 @@ func (s *Service) waitForConnection() {
 			s.connectedETH1 = true
 			s.runError = nil
 			log.WithFields(logrus.Fields{
-				"endpoint": s.currHttpEndpoint,
+				"endpoint": logutil.MaskCredentialsLogging(s.currHttpEndpoint),
 			}).Info("Connected to eth1 proof-of-work chain")
 			return
 		}
@@ -519,7 +515,7 @@ func (s *Service) waitForConnection() {
 				s.connectedETH1 = true
 				s.runError = nil
 				log.WithFields(logrus.Fields{
-					"endpoint": s.currHttpEndpoint,
+					"endpoint": logutil.MaskCredentialsLogging(s.currHttpEndpoint),
 				}).Info("Connected to eth1 proof-of-work chain")
 				return
 			}

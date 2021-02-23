@@ -36,7 +36,7 @@ func startSlasher(cliCtx *cli.Context) error {
 		return err
 	}
 	logrus.SetLevel(level)
-	slasher, err := node.NewSlasherNode(cliCtx)
+	slasher, err := node.New(cliCtx)
 	if err != nil {
 		return err
 	}

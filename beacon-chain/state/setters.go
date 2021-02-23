@@ -5,6 +5,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	coreutils "github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
@@ -54,7 +55,7 @@ func (b *BeaconState) SetGenesisValidatorRoot(val []byte) error {
 }
 
 // SetSlot for the beacon state.
-func (b *BeaconState) SetSlot(val uint64) error {
+func (b *BeaconState) SetSlot(val types.Slot) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
@@ -304,28 +305,27 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 
 // ApplyToEveryValidator applies the provided callback function to each validator in the
 // validator registry.
-func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator) (bool, error)) error {
+func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator) (bool, *ethpb.Validator, error)) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
 	v := b.state.Validators
 	if ref := b.sharedFieldReferences[validators]; ref.Refs() > 1 {
-		// Perform a copy since this is a shared reference and we don't want to mutate others.
-		v = b.validators()
-
+		v = b.validatorsReferences()
 		ref.MinusRef()
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
 	}
 	b.lock.Unlock()
 	var changedVals []uint64
 	for i, val := range v {
-		changed, err := f(i, val)
+		changed, newVal, err := f(i, val)
 		if err != nil {
 			return err
 		}
 		if changed {
 			changedVals = append(changedVals, uint64(i))
+			v[i] = newVal
 		}
 	}
 
@@ -341,11 +341,11 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator
 
 // UpdateValidatorAtIndex for the beacon state. Updates the validator
 // at a specific index to a new value.
-func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) error {
+func (b *BeaconState) UpdateValidatorAtIndex(idx types.ValidatorIndex, val *ethpb.Validator) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
-	if uint64(len(b.state.Validators)) <= idx {
+	if uint64(len(b.state.Validators)) <= uint64(idx) {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
 	b.lock.Lock()
@@ -353,9 +353,7 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 
 	v := b.state.Validators
 	if ref := b.sharedFieldReferences[validators]; ref.Refs() > 1 {
-		// Perform a copy since this is a shared reference and we don't want to mutate others.
-		v = b.validators()
-
+		v = b.validatorsReferences()
 		ref.MinusRef()
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
 	}
@@ -363,14 +361,14 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 	v[idx] = val
 	b.state.Validators = v
 	b.markFieldAsDirty(validators)
-	b.addDirtyIndices(validators, []uint64{idx})
+	b.addDirtyIndices(validators, []uint64{uint64(idx)})
 
 	return nil
 }
 
 // SetValidatorIndexByPubkey updates the validator index mapping maintained internally to
 // a given input 48-byte, public key.
-func (b *BeaconState) SetValidatorIndexByPubkey(pubKey [48]byte, validatorIdx uint64) {
+func (b *BeaconState) SetValidatorIndexByPubkey(pubKey [48]byte, validatorIndex types.ValidatorIndex) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -379,7 +377,7 @@ func (b *BeaconState) SetValidatorIndexByPubkey(pubKey [48]byte, validatorIdx ui
 		ref.MinusRef()
 		b.valMapHandler = valMap
 	}
-	b.valMapHandler.valIdxMap[pubKey] = validatorIdx
+	b.valMapHandler.valIdxMap[pubKey] = validatorIndex
 }
 
 // SetBalances for the beacon state. Updates the entire
@@ -401,11 +399,11 @@ func (b *BeaconState) SetBalances(val []uint64) error {
 
 // UpdateBalancesAtIndex for the beacon state. This method updates the balance
 // at a specific index to a new value.
-func (b *BeaconState) UpdateBalancesAtIndex(idx, val uint64) error {
+func (b *BeaconState) UpdateBalancesAtIndex(idx types.ValidatorIndex, val uint64) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
-	if uint64(len(b.state.Balances)) <= idx {
+	if uint64(len(b.state.Balances)) <= uint64(idx) {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
 	b.lock.Lock()
@@ -632,14 +630,14 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 
 	vals := b.state.Validators
 	if b.sharedFieldReferences[validators].Refs() > 1 {
-		vals = b.validators()
+		vals = b.validatorsReferences()
 		b.sharedFieldReferences[validators].MinusRef()
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
 	}
 
 	// append validator to slice
 	b.state.Validators = append(vals, val)
-	valIdx := uint64(len(b.state.Validators) - 1)
+	valIdx := types.ValidatorIndex(len(b.state.Validators) - 1)
 
 	// Copy if this is a shared validator map
 	if ref := b.valMapHandler.mapRef; ref.Refs() > 1 {
@@ -650,7 +648,7 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 	b.valMapHandler.valIdxMap[bytesutil.ToBytes48(val.PublicKey)] = valIdx
 
 	b.markFieldAsDirty(validators)
-	b.addDirtyIndices(validators, []uint64{valIdx})
+	b.addDirtyIndices(validators, []uint64{uint64(valIdx)})
 	return nil
 }
 

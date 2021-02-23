@@ -5,6 +5,7 @@ import (
 	"math"
 
 	"github.com/libp2p/go-libp2p-core/peer"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -18,8 +19,8 @@ var _ Scorer = (*PeerStatusScorer)(nil)
 type PeerStatusScorer struct {
 	config              *PeerStatusScorerConfig
 	store               *peerdata.Store
-	ourHeadSlot         uint64
-	highestPeerHeadSlot uint64
+	ourHeadSlot         types.Slot
+	highestPeerHeadSlot types.Slot
 }
 
 // PeerStatusScorerConfig holds configuration parameters for peer status scoring service.
@@ -138,6 +139,6 @@ func (s *PeerStatusScorer) peerStatus(pid peer.ID) (*pb.Status, error) {
 }
 
 // SetHeadSlot updates known head slot.
-func (s *PeerStatusScorer) SetHeadSlot(slot uint64) {
+func (s *PeerStatusScorer) SetHeadSlot(slot types.Slot) {
 	s.ourHeadSlot = slot
 }

@@ -3,6 +3,7 @@ package state_test
 import (
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
@@ -16,9 +17,9 @@ func TestFieldTrie_NewTrie(t *testing.T) {
 	newState, _ := testutil.DeterministicGenesisState(t, 40)
 
 	// 5 represents the enum value of state roots
-	trie, err := state.NewFieldTrie(5, newState.StateRoots(), params.BeaconConfig().SlotsPerHistoricalRoot)
+	trie, err := state.NewFieldTrie(5, newState.StateRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
 	require.NoError(t, err)
-	root, err := stateutil.RootsArrayHashTreeRoot(newState.StateRoots(), params.BeaconConfig().SlotsPerHistoricalRoot, "StateRoots")
+	root, err := stateutil.RootsArrayHashTreeRoot(newState.StateRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "StateRoots")
 	require.NoError(t, err)
 	newRoot, err := trie.TrieRoot()
 	require.NoError(t, err)
@@ -43,8 +44,8 @@ func TestFieldTrie_RecomputeTrie(t *testing.T) {
 	val2.ExitEpoch = 40
 
 	changedVals := []*ethpb.Validator{val1, val2}
-	require.NoError(t, newState.UpdateValidatorAtIndex(changedIdx[0], changedVals[0]))
-	require.NoError(t, newState.UpdateValidatorAtIndex(changedIdx[1], changedVals[1]))
+	require.NoError(t, newState.UpdateValidatorAtIndex(types.ValidatorIndex(changedIdx[0]), changedVals[0]))
+	require.NoError(t, newState.UpdateValidatorAtIndex(types.ValidatorIndex(changedIdx[1]), changedVals[1]))
 
 	expectedRoot, err := stateutil.ValidatorRegistryRoot(newState.Validators())
 	require.NoError(t, err)
@@ -56,7 +57,7 @@ func TestFieldTrie_RecomputeTrie(t *testing.T) {
 func TestFieldTrie_CopyTrieImmutable(t *testing.T) {
 	newState, _ := testutil.DeterministicGenesisState(t, 32)
 	// 12 represents the enum value of randao mixes.
-	trie, err := state.NewFieldTrie(13, newState.RandaoMixes(), params.BeaconConfig().EpochsPerHistoricalVector)
+	trie, err := state.NewFieldTrie(13, newState.RandaoMixes(), uint64(params.BeaconConfig().EpochsPerHistoricalVector))
 	require.NoError(t, err)
 
 	newTrie := trie.CopyTrie()

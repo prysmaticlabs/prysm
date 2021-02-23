@@ -10,6 +10,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -38,7 +39,7 @@ func TestVerifyIndexInCommittee_CanVerify(t *testing.T) {
 	s, _ := testutil.DeterministicGenesisState(t, validators)
 	require.NoError(t, s.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
-	bf := bitfield.NewBitlist(validators / params.BeaconConfig().SlotsPerEpoch)
+	bf := bitfield.NewBitlist(validators / uint64(params.BeaconConfig().SlotsPerEpoch))
 	bf.SetBitAt(0, true)
 	att := &ethpb.Attestation{Data: &ethpb.AttestationData{
 		Target: &ethpb.Checkpoint{Epoch: 0}},
@@ -48,7 +49,7 @@ func TestVerifyIndexInCommittee_CanVerify(t *testing.T) {
 	assert.NoError(t, err)
 	indices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
 	require.NoError(t, err)
-	require.NoError(t, validateIndexInCommittee(ctx, s, att, indices[0]))
+	require.NoError(t, validateIndexInCommittee(ctx, s, att, types.ValidatorIndex(indices[0])))
 
 	wanted := "validator index 1000 is not within the committee"
 	assert.ErrorContains(t, wanted, validateIndexInCommittee(ctx, s, att, 1000))
@@ -152,7 +153,8 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 	require.NoError(t, db.SaveBlock(context.Background(), b))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	s := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, db.SaveState(context.Background(), s, root))
 
 	aggBits := bitfield.NewBitlist(3)
@@ -301,10 +303,11 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	require.NoError(t, db.SaveBlock(context.Background(), b))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	s := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, db.SaveState(context.Background(), s, root))
 
-	aggBits := bitfield.NewBitlist(validators / params.BeaconConfig().SlotsPerEpoch)
+	aggBits := bitfield.NewBitlist(validators / uint64(params.BeaconConfig().SlotsPerEpoch))
 	aggBits.SetBitAt(0, true)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
@@ -390,10 +393,11 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	require.NoError(t, db.SaveBlock(context.Background(), b))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	s := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, db.SaveState(context.Background(), s, root))
 
-	aggBits := bitfield.NewBitlist(validators / params.BeaconConfig().SlotsPerEpoch)
+	aggBits := bitfield.NewBitlist(validators / uint64(params.BeaconConfig().SlotsPerEpoch))
 	aggBits.SetBitAt(0, true)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
@@ -496,10 +500,11 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 	b := testutil.NewBeaconBlock()
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	s := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, db.SaveState(context.Background(), s, root))
 
-	aggBits := bitfield.NewBitlist(validators / params.BeaconConfig().SlotsPerEpoch)
+	aggBits := bitfield.NewBitlist(validators / uint64(params.BeaconConfig().SlotsPerEpoch))
 	aggBits.SetBitAt(0, true)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
@@ -585,10 +590,11 @@ func TestValidateAggregateAndProof_RejectWhenAttEpochDoesntEqualTargetEpoch(t *t
 	require.NoError(t, db.SaveBlock(context.Background(), b))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	s := testutil.NewBeaconState()
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, db.SaveState(context.Background(), s, root))
 
-	aggBits := bitfield.NewBitlist(validators / params.BeaconConfig().SlotsPerEpoch)
+	aggBits := bitfield.NewBitlist(validators / uint64(params.BeaconConfig().SlotsPerEpoch))
 	aggBits.SetBitAt(0, true)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{

@@ -3,6 +3,7 @@ package validators
 import (
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -39,7 +40,7 @@ func TestHasVoted_OK(t *testing.T) {
 }
 
 func TestInitiateValidatorExit_AlreadyExited(t *testing.T) {
-	exitEpoch := uint64(199)
+	exitEpoch := types.Epoch(199)
 	base := &pb.BeaconState{Validators: []*ethpb.Validator{{
 		ExitEpoch: exitEpoch},
 	}}
@@ -53,8 +54,8 @@ func TestInitiateValidatorExit_AlreadyExited(t *testing.T) {
 }
 
 func TestInitiateValidatorExit_ProperExit(t *testing.T) {
-	exitedEpoch := uint64(100)
-	idx := uint64(3)
+	exitedEpoch := types.Epoch(100)
+	idx := types.ValidatorIndex(3)
 	base := &pb.BeaconState{Validators: []*ethpb.Validator{
 		{ExitEpoch: exitedEpoch},
 		{ExitEpoch: exitedEpoch + 1},
@@ -71,8 +72,8 @@ func TestInitiateValidatorExit_ProperExit(t *testing.T) {
 }
 
 func TestInitiateValidatorExit_ChurnOverflow(t *testing.T) {
-	exitedEpoch := uint64(100)
-	idx := uint64(4)
+	exitedEpoch := types.Epoch(100)
+	idx := types.ValidatorIndex(4)
 	base := &pb.BeaconState{Validators: []*ethpb.Validator{
 		{ExitEpoch: exitedEpoch + 2},
 		{ExitEpoch: exitedEpoch + 2},
@@ -118,7 +119,7 @@ func TestSlashValidator_OK(t *testing.T) {
 	state, err := beaconstate.InitializeFromProto(base)
 	require.NoError(t, err)
 
-	slashedIdx := uint64(2)
+	slashedIdx := types.ValidatorIndex(2)
 
 	proposer, err := helpers.BeaconProposerIndex(state)
 	require.NoError(t, err, "Could not get proposer")
@@ -133,7 +134,7 @@ func TestSlashValidator_OK(t *testing.T) {
 	assert.Equal(t, helpers.CurrentEpoch(state)+params.BeaconConfig().EpochsPerSlashingsVector, v.WithdrawableEpoch, "Withdrawable epoch not the expected value")
 
 	maxBalance := params.BeaconConfig().MaxEffectiveBalance
-	slashedBalance := state.Slashings()[state.Slot()%params.BeaconConfig().EpochsPerSlashingsVector]
+	slashedBalance := state.Slashings()[state.Slot().Mod(uint64(params.BeaconConfig().EpochsPerSlashingsVector))]
 	assert.Equal(t, maxBalance, slashedBalance, "Slashed balance isnt the expected amount")
 
 	whistleblowerReward := slashedBalance / params.BeaconConfig().WhistleBlowerRewardQuotient
@@ -151,7 +152,7 @@ func TestSlashValidator_OK(t *testing.T) {
 func TestActivatedValidatorIndices(t *testing.T) {
 	tests := []struct {
 		state  *pb.BeaconState
-		wanted []uint64
+		wanted []types.ValidatorIndex
 	}{
 		{
 			state: &pb.BeaconState{
@@ -173,7 +174,7 @@ func TestActivatedValidatorIndices(t *testing.T) {
 					},
 				},
 			},
-			wanted: []uint64{0, 1, 3},
+			wanted: []types.ValidatorIndex{0, 1, 3},
 		},
 		{
 			state: &pb.BeaconState{
@@ -183,7 +184,7 @@ func TestActivatedValidatorIndices(t *testing.T) {
 					},
 				},
 			},
-			wanted: []uint64{},
+			wanted: []types.ValidatorIndex{},
 		},
 		{
 			state: &pb.BeaconState{
@@ -194,7 +195,7 @@ func TestActivatedValidatorIndices(t *testing.T) {
 					},
 				},
 			},
-			wanted: []uint64{0},
+			wanted: []types.ValidatorIndex{0},
 		},
 	}
 	for _, tt := range tests {
@@ -208,7 +209,7 @@ func TestActivatedValidatorIndices(t *testing.T) {
 func TestSlashedValidatorIndices(t *testing.T) {
 	tests := []struct {
 		state  *pb.BeaconState
-		wanted []uint64
+		wanted []types.ValidatorIndex
 	}{
 		{
 			state: &pb.BeaconState{
@@ -227,7 +228,7 @@ func TestSlashedValidatorIndices(t *testing.T) {
 					},
 				},
 			},
-			wanted: []uint64{0, 2},
+			wanted: []types.ValidatorIndex{0, 2},
 		},
 		{
 			state: &pb.BeaconState{
@@ -237,7 +238,7 @@ func TestSlashedValidatorIndices(t *testing.T) {
 					},
 				},
 			},
-			wanted: []uint64{},
+			wanted: []types.ValidatorIndex{},
 		},
 		{
 			state: &pb.BeaconState{
@@ -248,7 +249,7 @@ func TestSlashedValidatorIndices(t *testing.T) {
 					},
 				},
 			},
-			wanted: []uint64{0},
+			wanted: []types.ValidatorIndex{0},
 		},
 	}
 	for _, tt := range tests {
@@ -262,7 +263,7 @@ func TestSlashedValidatorIndices(t *testing.T) {
 func TestExitedValidatorIndices(t *testing.T) {
 	tests := []struct {
 		state  *pb.BeaconState
-		wanted []uint64
+		wanted []types.ValidatorIndex
 	}{
 		{
 			state: &pb.BeaconState{
@@ -284,7 +285,7 @@ func TestExitedValidatorIndices(t *testing.T) {
 					},
 				},
 			},
-			wanted: []uint64{0, 2},
+			wanted: []types.ValidatorIndex{0, 2},
 		},
 		{
 			state: &pb.BeaconState{
@@ -296,7 +297,7 @@ func TestExitedValidatorIndices(t *testing.T) {
 					},
 				},
 			},
-			wanted: []uint64{},
+			wanted: []types.ValidatorIndex{},
 		},
 		{
 			state: &pb.BeaconState{
@@ -308,7 +309,7 @@ func TestExitedValidatorIndices(t *testing.T) {
 					},
 				},
 			},
-			wanted: []uint64{0},
+			wanted: []types.ValidatorIndex{0},
 		},
 	}
 	for _, tt := range tests {

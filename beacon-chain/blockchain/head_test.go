@@ -5,6 +5,7 @@ import (
 	"context"
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -22,7 +23,7 @@ func TestSaveHead_Same(t *testing.T) {
 	service.head = &head{slot: 0, root: r}
 
 	require.NoError(t, service.saveHead(context.Background(), r))
-	assert.Equal(t, uint64(0), service.headSlot(), "Head did not stay the same")
+	assert.Equal(t, types.Slot(0), service.headSlot(), "Head did not stay the same")
 	assert.Equal(t, r, service.headRoot(), "Head did not stay the same")
 }
 
@@ -41,13 +42,14 @@ func TestSaveHead_Different(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveBlock(context.Background(), newHeadSignedBlock))
 	newRoot, err := newHeadBlock.HashTreeRoot()
 	require.NoError(t, err)
-	headState := testutil.NewBeaconState()
+	headState, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(1))
 	require.NoError(t, service.beaconDB.SaveStateSummary(context.Background(), &pb.StateSummary{Slot: 1, Root: newRoot[:]}))
 	require.NoError(t, service.beaconDB.SaveState(context.Background(), headState, newRoot))
 	require.NoError(t, service.saveHead(context.Background(), newRoot))
 
-	assert.Equal(t, uint64(1), service.HeadSlot(), "Head did not change")
+	assert.Equal(t, types.Slot(1), service.HeadSlot(), "Head did not change")
 
 	cachedRoot, err := service.HeadRoot(context.Background())
 	require.NoError(t, err)
@@ -74,13 +76,14 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveBlock(context.Background(), newHeadSignedBlock))
 	newRoot, err := newHeadBlock.HashTreeRoot()
 	require.NoError(t, err)
-	headState := testutil.NewBeaconState()
+	headState, err := testutil.NewBeaconState()
+	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(1))
 	require.NoError(t, service.beaconDB.SaveStateSummary(context.Background(), &pb.StateSummary{Slot: 1, Root: newRoot[:]}))
 	require.NoError(t, service.beaconDB.SaveState(context.Background(), headState, newRoot))
 	require.NoError(t, service.saveHead(context.Background(), newRoot))
 
-	assert.Equal(t, uint64(1), service.HeadSlot(), "Head did not change")
+	assert.Equal(t, types.Slot(1), service.HeadSlot(), "Head did not change")
 
 	cachedRoot, err := service.HeadRoot(context.Background())
 	require.NoError(t, err)

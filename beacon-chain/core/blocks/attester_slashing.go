@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -38,8 +39,8 @@ func ProcessAttesterSlashings(
 	beaconState *stateTrie.BeaconState,
 	b *ethpb.SignedBeaconBlock,
 ) (*stateTrie.BeaconState, error) {
-	if b.Block == nil || b.Block.Body == nil {
-		return nil, errors.New("block and block body can't be nil")
+	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+		return nil, err
 	}
 
 	body := b.Block.Body
@@ -56,12 +57,12 @@ func ProcessAttesterSlashings(
 		var slashedAny bool
 		var val stateTrie.ReadOnlyValidator
 		for _, validatorIndex := range slashableIndices {
-			val, err = beaconState.ValidatorAtIndexReadOnly(validatorIndex)
+			val, err = beaconState.ValidatorAtIndexReadOnly(types.ValidatorIndex(validatorIndex))
 			if err != nil {
 				return nil, err
 			}
 			if helpers.IsSlashableValidator(val.ActivationEpoch(), val.WithdrawableEpoch(), val.Slashed(), currentEpoch) {
-				beaconState, err = v.SlashValidator(beaconState, validatorIndex)
+				beaconState, err = v.SlashValidator(beaconState, types.ValidatorIndex(validatorIndex))
 				if err != nil {
 					return nil, errors.Wrapf(err, "could not slash validator index %d",
 						validatorIndex)

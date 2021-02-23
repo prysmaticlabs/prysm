@@ -9,6 +9,6 @@ import (
 )
 
 // NewDB initializes a new DB.
-func NewDB(ctx context.Context, dirPath string) (Database, error) {
-	return kv.NewKVStore(ctx, dirPath)
+func NewDB(ctx context.Context, dirPath string, config *kv.Config) (Database, error) {
+	return kv.NewKVStore(ctx, dirPath, config)
 }

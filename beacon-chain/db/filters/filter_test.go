@@ -3,6 +3,7 @@ package filters
 import (
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
@@ -17,9 +18,9 @@ func TestQueryFilter_ChainsCorrectly(t *testing.T) {
 	for k, v := range filterSet {
 		switch k {
 		case StartSlot:
-			t.Log(v.(uint64))
+			t.Log(v.(types.Slot))
 		case EndSlot:
-			t.Log(v.(uint64))
+			t.Log(v.(types.Slot))
 		case ParentRoot:
 			t.Log(v.([]byte))
 		default:

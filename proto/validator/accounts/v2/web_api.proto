@@ -4,10 +4,8 @@ package ethereum.validator.accounts.v2;
 import "proto/beacon/rpc/v1/health.proto";
 import "eth/v1alpha1/beacon_chain.proto";
 import "eth/v1alpha1/node.proto";
-import "eth/v1alpha1/validator.proto";
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
-import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
 service Wallet {
     rpc CreateWallet(CreateWalletRequest) returns (CreateWalletResponse) {
@@ -38,6 +36,12 @@ service Accounts {
     rpc ListAccounts(ListAccountsRequest) returns (ListAccountsResponse) {
         option (google.api.http) = {
             get: "/v2/validator/accounts"
+        };
+    }
+    rpc BackupAccounts(BackupAccountsRequest) returns (BackupAccountsResponse) {
+        option (google.api.http) = {
+            post: "/v2/validator/accounts/backup",
+            body: "*"
         };
     }
     rpc ChangePassword(ChangePasswordRequest) returns (google.protobuf.Empty) {
@@ -324,4 +328,16 @@ message BeaconStatusResponse {
     bytes deposit_contract_address = 5;
     // The head of the chain from the beacon node.
     ethereum.eth.v1alpha1.ChainHead chain_head = 6;
+}
+
+message BackupAccountsRequest {
+    // List of public keys to backup.
+    repeated bytes public_keys = 1;
+
+    string backup_password = 2;
+}
+
+message BackupAccountsResponse {
+    // Zip file containing backed up keystores.
+    bytes zip_file = 1;
 }

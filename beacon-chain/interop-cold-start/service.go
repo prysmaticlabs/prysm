@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -48,10 +49,10 @@ type Config struct {
 	GenesisPath   string
 }
 
-// New is an interoperability testing service to inject a deterministically generated genesis state
+// NewService is an interoperability testing service to inject a deterministically generated genesis state
 // into the beacon chain database and running services at start up. This service should not be used in production
 // as it does not have any value other than ease of use for testing purposes.
-func New(ctx context.Context, cfg *Config) *Service {
+func NewService(ctx context.Context, cfg *Config) *Service {
 	log.Warn("Saving generated genesis state in database for interop testing")
 	ctx, cancel := context.WithCancel(ctx)
 
@@ -207,7 +208,7 @@ func (s *Service) saveGenesisState(ctx context.Context, genesisState *stateTrie.
 		return errors.Wrap(err, "could not save finalized checkpoint")
 	}
 
-	for i := uint64(0); i < uint64(genesisState.NumValidators()); i++ {
+	for i := types.ValidatorIndex(0); uint64(i) < uint64(genesisState.NumValidators()); i++ {
 		pk := genesisState.PubkeyAtIndex(i)
 		s.chainStartDeposits[i] = &ethpb.Deposit{
 			Data: &ethpb.Deposit_Data{

@@ -23,7 +23,7 @@ func TestMain(m *testing.M) {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
-		AttestationAggregationStrategy: string(MaxCoverAggregation),
+		AttestationAggregationStrategy: string(OptMaxCoverAggregation),
 	})
 	defer resetCfg()
 	m.Run()
@@ -236,6 +236,13 @@ func TestAggregateAttestations_Aggregate(t *testing.T) {
 		t.Run(fmt.Sprintf("%s/%s", tt.name, MaxCoverAggregation), func(t *testing.T) {
 			resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
 				AttestationAggregationStrategy: string(MaxCoverAggregation),
+			})
+			defer resetCfg()
+			runner()
+		})
+		t.Run(fmt.Sprintf("%s/%s", tt.name, OptMaxCoverAggregation), func(t *testing.T) {
+			resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+				AttestationAggregationStrategy: string(OptMaxCoverAggregation),
 			})
 			defer resetCfg()
 			runner()

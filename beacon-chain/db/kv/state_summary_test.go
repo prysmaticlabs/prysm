@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -44,7 +45,7 @@ func TestStateSummary_CacheToDB(t *testing.T) {
 
 	summaries := make([]*pb.StateSummary, stateSummaryCachePruneCount-1)
 	for i := range summaries {
-		summaries[i] = &pb.StateSummary{Slot: uint64(i), Root: bytesutil.PadTo(bytesutil.Uint64ToBytesLittleEndian(uint64(i)), 32)}
+		summaries[i] = &pb.StateSummary{Slot: types.Slot(i), Root: bytesutil.PadTo(bytesutil.Uint64ToBytesLittleEndian(uint64(i)), 32)}
 	}
 
 	require.NoError(t, db.SaveStateSummaries(context.Background(), summaries))
