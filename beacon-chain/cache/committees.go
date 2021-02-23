@@ -1,6 +1,10 @@
 package cache
 
-import "errors"
+import (
+	"errors"
+
+	types "github.com/prysmaticlabs/eth2-types"
+)
 
 // ErrNotCommittee will be returned when a cache object is not a pointer to
 // a Committee struct.
@@ -10,6 +14,6 @@ var ErrNotCommittee = errors.New("object is not a committee struct")
 type Committees struct {
 	CommitteeCount  uint64
 	Seed            [32]byte
-	ShuffledIndices []uint64
-	SortedIndices   []uint64
+	ShuffledIndices []types.ValidatorIndex
+	SortedIndices   []types.ValidatorIndex
 }

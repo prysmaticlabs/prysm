@@ -1229,7 +1229,7 @@ func (p *PendingAttestation) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = ssz.MarshalUint64(dst, uint64(p.InclusionDelay))
 
 	// Field (3) 'ProposerIndex'
-	dst = ssz.MarshalUint64(dst, p.ProposerIndex)
+	dst = ssz.MarshalUint64(dst, uint64(p.ProposerIndex))
 
 	// Field (0) 'AggregationBits'
 	if len(p.AggregationBits) > 2048 {
@@ -1269,7 +1269,7 @@ func (p *PendingAttestation) UnmarshalSSZ(buf []byte) error {
 	p.InclusionDelay = github_com_prysmaticlabs_eth2_types.Slot(ssz.UnmarshallUint64(buf[132:140]))
 
 	// Field (3) 'ProposerIndex'
-	p.ProposerIndex = ssz.UnmarshallUint64(buf[140:148])
+	p.ProposerIndex = github_com_prysmaticlabs_eth2_types.ValidatorIndex(ssz.UnmarshallUint64(buf[140:148]))
 
 	// Field (0) 'AggregationBits'
 	{
@@ -1320,7 +1320,7 @@ func (p *PendingAttestation) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	hh.PutUint64(uint64(p.InclusionDelay))
 
 	// Field (3) 'ProposerIndex'
-	hh.PutUint64(p.ProposerIndex)
+	hh.PutUint64(uint64(p.ProposerIndex))
 
 	hh.Merkleize(indx)
 	return
