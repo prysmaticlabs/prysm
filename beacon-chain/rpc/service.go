@@ -71,7 +71,7 @@ type Service struct {
 	enableDebugRPCEndpoints bool
 	attestationsPool        attestations.Pool
 	exitPool                *voluntaryexits.Pool
-	slashingsPool           *slashings.Pool
+	slashingsPool           slashings.PoolManager
 	syncService             chainSync.Checker
 	host                    string
 	port                    string
@@ -123,7 +123,7 @@ type Config struct {
 	MockEth1Votes           bool
 	AttestationsPool        attestations.Pool
 	ExitPool                *voluntaryexits.Pool
-	SlashingsPool           *slashings.Pool
+	SlashingsPool           slashings.PoolManager
 	SyncService             chainSync.Checker
 	Broadcaster             p2p.Broadcaster
 	PeersFetcher            p2p.PeersProvider

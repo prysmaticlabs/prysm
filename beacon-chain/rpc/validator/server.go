@@ -55,7 +55,7 @@ type Server struct {
 	BlockNotifier          blockfeed.Notifier
 	P2P                    p2p.Broadcaster
 	AttPool                attestations.Pool
-	SlashingsPool          *slashings.Pool
+	SlashingsPool          slashings.PoolManager
 	ExitPool               *voluntaryexits.Pool
 	BlockReceiver          blockchain.BlockReceiver
 	MockEth1Votes          bool
