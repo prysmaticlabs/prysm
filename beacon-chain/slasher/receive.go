@@ -24,10 +24,16 @@ func (s *Service) receiveAttestations(ctx context.Context) {
 			if !validateAttestationIntegrity(att) {
 				continue
 			}
+			signingRoot, err := att.Data.HashTreeRoot()
+			if err != nil {
+				log.WithError(err).Debug("Subscriber closed with error")
+				return
+			}
 			compactAtt := &slashertypes.CompactAttestation{
 				AttestingIndices: att.AttestingIndices,
 				Source:           att.Data.Source.Epoch,
 				Target:           att.Data.Target.Epoch,
+				SigningRoot:      signingRoot,
 			}
 			s.attestationQueueLock.Lock()
 			s.attestationQueue = append(s.attestationQueue, compactAtt)
@@ -50,9 +56,15 @@ func (s *Service) receiveBlocks(ctx context.Context) {
 		select {
 		case blockHeader := <-s.beaconBlocksChan:
 			// TODO(#8331): Defer blocks from the future for later processing.
+			signingRoot, err := blockHeader.HashTreeRoot()
+			if err != nil {
+				log.WithError(err).Debug("Subscriber closed with error")
+				return
+			}
 			compactBlock := &slashertypes.CompactBeaconBlock{
 				ProposerIndex: types.ValidatorIndex(blockHeader.ProposerIndex),
 				Slot:          blockHeader.Slot,
+				SigningRoot:   signingRoot,
 			}
 			s.blockQueueLock.Lock()
 			s.beaconBlocksQueue = append(s.beaconBlocksQueue, compactBlock)

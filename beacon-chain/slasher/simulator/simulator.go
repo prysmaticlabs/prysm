@@ -141,32 +141,31 @@ func generateAttestationsForSlot(simParams *Parameters, slot types.Slot) []*ethp
 	fmt.Printf("Attestations per Committee: %d\n", attsPerCommittee)
 	valsPerCommittee := simParams.NumValidators / (committeesPerSlot * uint64(params.BeaconConfig().SlotsPerEpoch))
 	fmt.Printf("Validators per Committee: %d\n", valsPerCommittee)
+	valsPerSlot := committeesPerSlot * valsPerCommittee
 
 	var sourceEpoch types.Epoch = 0
 	if currentEpoch != 0 {
 		sourceEpoch = currentEpoch - 1
 	}
+
+	startIdx := valsPerSlot * uint64(slot%params.BeaconConfig().SlotsPerEpoch)
+	endIdx := startIdx + valsPerCommittee
 	for c := types.CommitteeIndex(0); uint64(c) < committeesPerSlot; c++ {
 		attData := &ethpb.AttestationData{
-			Slot:           slot,
-			CommitteeIndex: c,
+			Slot:            slot,
+			CommitteeIndex:  c,
+			BeaconBlockRoot: bytesutil.PadTo([]byte("block"), 32),
 			Source: &ethpb.Checkpoint{
 				Epoch: sourceEpoch,
+				Root:  bytesutil.PadTo([]byte("source"), 32),
 			},
 			Target: &ethpb.Checkpoint{
 				Epoch: currentEpoch,
+				Root:  bytesutil.PadTo([]byte("target"), 32),
 			},
 		}
 
-		for i := uint64(0); i < attsPerCommittee; i++ {
-			startIdx := i * valsPerCommittee
-			if startIdx >= simParams.NumValidators {
-				startIdx = 0
-			}
-			endIdx := (i + 1) * valsPerCommittee
-			if endIdx > simParams.NumValidators {
-				endIdx = simParams.NumValidators
-			}
+		for i := startIdx; i < endIdx; i += valsPerCommittee {
 			indices := make([]uint64, 0, valsPerCommittee)
 			for v := startIdx; v < endIdx; v++ {
 				indices = append(indices, v)
@@ -177,26 +176,31 @@ func generateAttestationsForSlot(simParams *Parameters, slot types.Slot) []*ethp
 			}
 			attestations = append(attestations, att)
 			if rand.NewGenerator().Float64() < simParams.AttesterSlashingProbab {
+				fmt.Printf("Slashing made for index %d\n", indices[0])
 				attestations = append(attestations, makeSlashableFromAtt(att, []uint64{indices[0]}))
 			}
 		}
+		startIdx += valsPerCommittee
+		endIdx += valsPerCommittee
 	}
 	return attestations
 }
 
 func makeSlashableFromAtt(att *ethpb.IndexedAttestation, indices []uint64) *ethpb.IndexedAttestation {
-	fmt.Println("Making a slashable att!")
 	if att.Data.Source.Epoch <= 2 {
 		return makeDoubleVoteFromAtt(att, indices)
 	}
 	attData := &ethpb.AttestationData{
-		Slot:           att.Data.Slot,
-		CommitteeIndex: att.Data.CommitteeIndex,
+		Slot:            att.Data.Slot,
+		CommitteeIndex:  att.Data.CommitteeIndex,
+		BeaconBlockRoot: att.Data.BeaconBlockRoot,
 		Source: &ethpb.Checkpoint{
 			Epoch: att.Data.Source.Epoch - 3,
+			Root:  att.Data.Source.Root,
 		},
 		Target: &ethpb.Checkpoint{
 			Epoch: att.Data.Target.Epoch,
+			Root:  att.Data.Target.Root,
 		},
 	}
 	return &ethpb.IndexedAttestation{
@@ -212,9 +216,11 @@ func makeDoubleVoteFromAtt(att *ethpb.IndexedAttestation, indices []uint64) *eth
 		BeaconBlockRoot: bytesutil.PadTo([]byte("slash me"), 32),
 		Source: &ethpb.Checkpoint{
 			Epoch: att.Data.Source.Epoch,
+			Root:  att.Data.Source.Root,
 		},
 		Target: &ethpb.Checkpoint{
 			Epoch: att.Data.Target.Epoch,
+			Root:  att.Data.Target.Root,
 		},
 	}
 	return &ethpb.IndexedAttestation{
