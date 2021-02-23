@@ -9,6 +9,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 )
 
+// WrongKeystorePasswordErrMsg defines a common error string representing an EIP-2335
+// keystore password was incorrect.
+const IncorrectPasswordErrMsg = "invalid checksum"
+
 // IKeymanager defines a general keymanager interface for Prysm wallets.
 type IKeymanager interface {
 	// FetchValidatingPublicKeys fetches the list of active public keys that should be used to validate with.

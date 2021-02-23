@@ -238,7 +238,7 @@ func readAndDecryptKeystore(fullPath, password string) error {
 	// by utilizing the password.
 	privKeyBytes, err := decryptor.Decrypt(keystoreFile.Crypto, password)
 	if err != nil {
-		if strings.Contains(err.Error(), "invalid checksum") {
+		if strings.Contains(err.Error(), keymanager.IncorrectPasswordErrMsg) {
 			return fmt.Errorf("incorrect password for keystore at path: %s", fullPath)
 		}
 		return err

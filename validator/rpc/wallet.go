@@ -255,7 +255,7 @@ func (s *Server) ValidateKeystores(
 			return nil, status.Errorf(codes.InvalidArgument, "Not a valid EIP-2335 keystore JSON file: %v", err)
 		}
 		if _, err := decryptor.Decrypt(keystore.Crypto, req.KeystoresPassword); err != nil {
-			doesNotDecrypt := strings.Contains(err.Error(), "invalid checksum")
+			doesNotDecrypt := strings.Contains(err.Error(), keymanager.IncorrectPasswordErrMsg)
 			if doesNotDecrypt {
 				return nil, status.Errorf(
 					codes.InvalidArgument,
