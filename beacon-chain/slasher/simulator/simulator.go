@@ -10,8 +10,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/slasher"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 )
 
@@ -34,7 +36,7 @@ type Simulator struct {
 func DefaultParams() *Parameters {
 	return &Parameters{
 		ProposerSlashingProbab: 0.5,
-		AttesterSlashingProbab: 0.5,
+		AttesterSlashingProbab: 0.02,
 		NumValidators:          16384,
 	}
 }
@@ -73,16 +75,16 @@ func (s *Simulator) Stop() error {
 }
 
 func (s *Simulator) simulateBlockProposals(ctx context.Context) {
-	ticker := slotutil.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
+	ticker := slotutil.NewSlotTicker(s.genesisTime.Add(time.Millisecond*500), params.BeaconConfig().SecondsPerSlot)
 	defer ticker.Done()
 	for {
 		select {
-		case <-ticker.C():
+		case slot := <-ticker.C():
 			log.Info("Producing block")
-			s.beaconBlocksFeed.Send(&ethpb.BeaconBlockHeader{
-				Slot:          1,
-				ProposerIndex: 1,
-			})
+			blockHeaders := generateBlockHeadersForSlot(s.params, slot)
+			for _, bb := range blockHeaders {
+				s.beaconBlocksFeed.Send(bb)
+			}
 		case <-ctx.Done():
 			return
 		}
@@ -90,13 +92,13 @@ func (s *Simulator) simulateBlockProposals(ctx context.Context) {
 }
 
 func (s *Simulator) simulateAttestations(ctx context.Context) {
-	ticker := slotutil.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
+	ticker := slotutil.NewSlotTicker(s.genesisTime.Add(time.Millisecond*500), params.BeaconConfig().SecondsPerSlot)
 	defer ticker.Done()
 	for {
 		select {
 		case slot := <-ticker.C():
 			atts := generateAttestationsForSlot(s.params, slot)
-			log.Infof("Producing %d atts for slot %d", len(atts), slot)
+			log.Infof("Producing %d atts for slot %d\n", len(atts), slot)
 			for _, aa := range atts {
 				s.indexedAttsFeed.Send(aa)
 			}
@@ -104,6 +106,25 @@ func (s *Simulator) simulateAttestations(ctx context.Context) {
 			return
 		}
 	}
+}
+
+func generateBlockHeadersForSlot(simParams *Parameters, slot types.Slot) []*ethpb.BeaconBlockHeader {
+	blocks := make([]*ethpb.BeaconBlockHeader, 1)
+	proposer := rand.NewGenerator().Uint64() % simParams.NumValidators
+	blocks[0] = &ethpb.BeaconBlockHeader{
+		Slot:          slot,
+		ProposerIndex: proposer,
+		BodyRoot:      bytesutil.PadTo([]byte("good block"), 32),
+	}
+	if rand.NewGenerator().Float64() < simParams.ProposerSlashingProbab {
+		fmt.Println("Making a slashable block!")
+		blocks = append(blocks, &ethpb.BeaconBlockHeader{
+			Slot:          slot,
+			ProposerIndex: proposer,
+			BodyRoot:      bytesutil.PadTo([]byte("bad block"), 32),
+		})
+	}
+	return blocks
 }
 
 func generateAttestationsForSlot(simParams *Parameters, slot types.Slot) []*ethpb.IndexedAttestation {
@@ -134,7 +155,6 @@ func generateAttestationsForSlot(simParams *Parameters, slot types.Slot) []*ethp
 		}
 
 		for i := uint64(0); i < attsPerCommittee; i++ {
-			indices := make([]uint64, 0, valsPerCommittee)
 			startIdx := i * valsPerCommittee
 			if startIdx >= simParams.NumValidators {
 				startIdx = 0
@@ -143,6 +163,7 @@ func generateAttestationsForSlot(simParams *Parameters, slot types.Slot) []*ethp
 			if endIdx > simParams.NumValidators {
 				endIdx = simParams.NumValidators
 			}
+			indices := make([]uint64, 0, valsPerCommittee)
 			for v := startIdx; v < endIdx; v++ {
 				indices = append(indices, v)
 			}
@@ -151,7 +172,49 @@ func generateAttestationsForSlot(simParams *Parameters, slot types.Slot) []*ethp
 				Data:             attData,
 			}
 			attestations = append(attestations, att)
+			if rand.NewGenerator().Float64() < simParams.AttesterSlashingProbab {
+				attestations = append(attestations, makeSlashableFromAtt(att, []uint64{indices[0]}))
+			}
 		}
 	}
 	return attestations
+}
+
+func makeSlashableFromAtt(att *ethpb.IndexedAttestation, indices []uint64) *ethpb.IndexedAttestation {
+	fmt.Println("Making a slashable att!")
+	if att.Data.Source.Epoch <= 2 {
+		return makeDoubleVoteFromAtt(att, indices)
+	}
+	attData := &ethpb.AttestationData{
+		Slot:           att.Data.Slot,
+		CommitteeIndex: att.Data.CommitteeIndex,
+		Source: &ethpb.Checkpoint{
+			Epoch: att.Data.Source.Epoch - 3,
+		},
+		Target: &ethpb.Checkpoint{
+			Epoch: att.Data.Target.Epoch,
+		},
+	}
+	return &ethpb.IndexedAttestation{
+		AttestingIndices: indices,
+		Data:             attData,
+	}
+}
+
+func makeDoubleVoteFromAtt(att *ethpb.IndexedAttestation, indices []uint64) *ethpb.IndexedAttestation {
+	attData := &ethpb.AttestationData{
+		Slot:            att.Data.Slot,
+		CommitteeIndex:  att.Data.CommitteeIndex,
+		BeaconBlockRoot: bytesutil.PadTo([]byte("slash me"), 32),
+		Source: &ethpb.Checkpoint{
+			Epoch: att.Data.Source.Epoch,
+		},
+		Target: &ethpb.Checkpoint{
+			Epoch: att.Data.Target.Epoch,
+		},
+	}
+	return &ethpb.IndexedAttestation{
+		AttestingIndices: indices,
+		Data:             attData,
+	}
 }

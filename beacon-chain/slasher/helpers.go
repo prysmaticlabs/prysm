@@ -120,5 +120,8 @@ func validateAttestationIntegrity(att *ethpb.IndexedAttestation) bool {
 	if att == nil || att.Data == nil || att.Data.Source == nil || att.Data.Target == nil {
 		return false
 	}
+	if att.Data.Source.Epoch == 0 && att.Data.Target.Epoch == 0 {
+		return true
+	}
 	return att.Data.Source.Epoch < att.Data.Target.Epoch
 }

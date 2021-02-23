@@ -16,10 +16,12 @@ go_library(
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/db/kv:go_default_library",
         "//beacon-chain/slasher:go_default_library",
+        "//shared/bytesutil:go_default_library",
         "//shared/cmd:go_default_library",
         "//shared/debug:go_default_library",
         "//shared/event:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/rand:go_default_library",
         "//shared/slotutil:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
@@ -32,5 +34,4 @@ go_test(
     name = "go_default_test",
     srcs = ["simulator_test.go"],
     embed = [":go_default_library"],
-    deps = ["//shared/testutil/require:go_default_library"],
 )
