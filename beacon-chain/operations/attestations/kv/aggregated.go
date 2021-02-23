@@ -24,7 +24,7 @@ func (c *AttCaches) AggregateUnaggregatedAttestations() error {
 // AggregateUnaggregatedAttestationsBySlotIndex aggregates the unaggregated attestations and saves
 // newly aggregated attestations in the pool. Unaggregated attestations are filtered by slot and
 // committee index.
-func (c *AttCaches) AggregateUnaggregatedAttestationsBySlotIndex(slot types.Slot, committeeIndex uint64) error {
+func (c *AttCaches) AggregateUnaggregatedAttestationsBySlotIndex(slot types.Slot, committeeIndex types.CommitteeIndex) error {
 	unaggregatedAtts := c.UnaggregatedAttestationsBySlotIndex(slot, committeeIndex)
 	return c.aggregateUnaggregatedAttestations(unaggregatedAtts)
 }
@@ -154,7 +154,7 @@ func (c *AttCaches) AggregatedAttestations() []*ethpb.Attestation {
 
 // AggregatedAttestationsBySlotIndex returns the aggregated attestations in cache,
 // filtered by committee index and slot.
-func (c *AttCaches) AggregatedAttestationsBySlotIndex(slot types.Slot, committeeIndex uint64) []*ethpb.Attestation {
+func (c *AttCaches) AggregatedAttestationsBySlotIndex(slot types.Slot, committeeIndex types.CommitteeIndex) []*ethpb.Attestation {
 	atts := make([]*ethpb.Attestation, 0)
 
 	c.aggregatedAttLock.RLock()

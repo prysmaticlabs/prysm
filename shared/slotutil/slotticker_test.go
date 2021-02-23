@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 )
 
 var _ Ticker = (*SlotTicker)(nil)

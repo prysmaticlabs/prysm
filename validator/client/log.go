@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -17,8 +17,8 @@ var log = logrus.WithField("prefix", "validator")
 
 type attSubmitted struct {
 	data              *ethpb.AttestationData
-	attesterIndices   []uint64
-	aggregatorIndices []uint64
+	attesterIndices   []types.ValidatorIndex
+	aggregatorIndices []types.ValidatorIndex
 }
 
 func (v *validator) LogAttestationsSubmitted() {

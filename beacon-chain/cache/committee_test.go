@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -16,7 +17,7 @@ func TestCommitteeKeyFn_OK(t *testing.T) {
 	item := &Committees{
 		CommitteeCount:  1,
 		Seed:            [32]byte{'A'},
-		ShuffledIndices: []uint64{1, 2, 3, 4, 5},
+		ShuffledIndices: []types.ValidatorIndex{1, 2, 3, 4, 5},
 	}
 
 	k, err := committeeKeyFn(item)
@@ -33,13 +34,13 @@ func TestCommitteeCache_CommitteesByEpoch(t *testing.T) {
 	cache := NewCommitteesCache()
 
 	item := &Committees{
-		ShuffledIndices: []uint64{1, 2, 3, 4, 5, 6},
+		ShuffledIndices: []types.ValidatorIndex{1, 2, 3, 4, 5, 6},
 		Seed:            [32]byte{'A'},
 		CommitteeCount:  3,
 	}
 
 	slot := params.BeaconConfig().SlotsPerEpoch
-	committeeIndex := uint64(1)
+	committeeIndex := types.CommitteeIndex(1)
 	indices, err := cache.Committee(slot, item.Seed, committeeIndex)
 	require.NoError(t, err)
 	if indices != nil {
@@ -47,18 +48,18 @@ func TestCommitteeCache_CommitteesByEpoch(t *testing.T) {
 	}
 	require.NoError(t, cache.AddCommitteeShuffledList(item))
 
-	wantedIndex := uint64(0)
+	wantedIndex := types.CommitteeIndex(0)
 	indices, err = cache.Committee(slot, item.Seed, wantedIndex)
 	require.NoError(t, err)
 
-	start, end := startEndIndices(item, wantedIndex)
+	start, end := startEndIndices(item, uint64(wantedIndex))
 	assert.DeepEqual(t, item.ShuffledIndices[start:end], indices)
 }
 
 func TestCommitteeCache_ActiveIndices(t *testing.T) {
 	cache := NewCommitteesCache()
 
-	item := &Committees{Seed: [32]byte{'A'}, SortedIndices: []uint64{1, 2, 3, 4, 5, 6}}
+	item := &Committees{Seed: [32]byte{'A'}, SortedIndices: []types.ValidatorIndex{1, 2, 3, 4, 5, 6}}
 	indices, err := cache.ActiveIndices(item.Seed)
 	require.NoError(t, err)
 	if indices != nil {
@@ -75,7 +76,7 @@ func TestCommitteeCache_ActiveIndices(t *testing.T) {
 func TestCommitteeCache_ActiveCount(t *testing.T) {
 	cache := NewCommitteesCache()
 
-	item := &Committees{Seed: [32]byte{'A'}, SortedIndices: []uint64{1, 2, 3, 4, 5, 6}}
+	item := &Committees{Seed: [32]byte{'A'}, SortedIndices: []types.ValidatorIndex{1, 2, 3, 4, 5, 6}}
 	count, err := cache.ActiveIndicesCount(item.Seed)
 	require.NoError(t, err)
 	assert.Equal(t, 0, count, "Expected active count not to exist in empty cache")
@@ -119,8 +120,8 @@ func TestCommitteeCacheOutOfRange(t *testing.T) {
 	err := cache.CommitteeCache.Add(&Committees{
 		CommitteeCount:  1,
 		Seed:            seed,
-		ShuffledIndices: []uint64{0},
-		SortedIndices:   []uint64{},
+		ShuffledIndices: []types.ValidatorIndex{0},
+		SortedIndices:   []types.ValidatorIndex{},
 	})
 	require.NoError(t, err)
 

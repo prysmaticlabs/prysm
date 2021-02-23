@@ -19,7 +19,7 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -249,7 +249,7 @@ func (v *validator) SlasherReady(ctx context.Context) error {
 // ReceiveBlocks starts a gRPC client stream listener to obtain
 // blocks from the beacon node. Upon receiving a block, the service
 // broadcasts it to a feed for other usages to subscribe to.
-func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel chan error) {
+func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel chan<- error) {
 	stream, err := v.beaconClient.StreamBlocks(ctx, &ethpb.StreamBlocksRequest{VerifiedOnly: true})
 	if err != nil {
 		log.WithError(err).Error("Failed to retrieve blocks stream, " + errConnectionIssue.Error())
@@ -280,7 +280,7 @@ func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel ch
 }
 
 func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.ValidatorActivationResponse_Status) bool {
-	nonexistentIndex := ^uint64(0)
+	nonexistentIndex := types.ValidatorIndex(^uint64(0))
 	var validatorActivated bool
 	for _, status := range validatorStatuses {
 		fields := logrus.Fields{
@@ -420,7 +420,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot types.Slot) error {
 // to eagerly subscribe to subnets so that the aggregator has attestations to aggregate.
 func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesResponse) error {
 	subscribeSlots := make([]types.Slot, 0, len(res.CurrentEpochDuties)+len(res.NextEpochDuties))
-	subscribeCommitteeIDs := make([]uint64, 0, len(res.CurrentEpochDuties)+len(res.NextEpochDuties))
+	subscribeCommitteeIndices := make([]types.CommitteeIndex, 0, len(res.CurrentEpochDuties)+len(res.NextEpochDuties))
 	subscribeIsAggregator := make([]bool, 0, len(res.CurrentEpochDuties)+len(res.NextEpochDuties))
 	alreadySubscribed := make(map[[64]byte]bool)
 
@@ -444,7 +444,7 @@ func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesRes
 			}
 
 			subscribeSlots = append(subscribeSlots, attesterSlot)
-			subscribeCommitteeIDs = append(subscribeCommitteeIDs, committeeIndex)
+			subscribeCommitteeIndices = append(subscribeCommitteeIndices, committeeIndex)
 			subscribeIsAggregator = append(subscribeIsAggregator, aggregator)
 		}
 	}
@@ -468,14 +468,14 @@ func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesRes
 			}
 
 			subscribeSlots = append(subscribeSlots, attesterSlot)
-			subscribeCommitteeIDs = append(subscribeCommitteeIDs, committeeIndex)
+			subscribeCommitteeIndices = append(subscribeCommitteeIndices, committeeIndex)
 			subscribeIsAggregator = append(subscribeIsAggregator, aggregator)
 		}
 	}
 
 	_, err := v.validatorClient.SubscribeCommitteeSubnets(ctx, &ethpb.CommitteeSubnetsSubscribeRequest{
 		Slots:        subscribeSlots,
-		CommitteeIds: subscribeCommitteeIDs,
+		CommitteeIds: subscribeCommitteeIndices,
 		IsAggregator: subscribeIsAggregator,
 	})
 
@@ -531,7 +531,7 @@ func (v *validator) GetKeymanager() keymanager.IKeymanager {
 
 // isAggregator checks if a validator is an aggregator of a given slot, it uses the selection algorithm outlined in:
 // https://github.com/ethereum/eth2.0-specs/blob/v0.9.3/specs/validator/0_beacon-chain-validator.md#aggregation-selection
-func (v *validator) isAggregator(ctx context.Context, committee []uint64, slot types.Slot, pubKey [48]byte) (bool, error) {
+func (v *validator) isAggregator(ctx context.Context, committee []types.ValidatorIndex, slot types.Slot, pubKey [48]byte) (bool, error) {
 	modulo := uint64(1)
 	if len(committee)/int(params.BeaconConfig().TargetAggregatorsPerCommittee) > 1 {
 		modulo = uint64(len(committee)) / params.BeaconConfig().TargetAggregatorsPerCommittee
@@ -679,8 +679,8 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 
 // This constructs a validator subscribed key, it's used to track
 // which subnet has already been pending requested.
-func validatorSubscribeKey(slot types.Slot, committeeID uint64) [64]byte {
-	return bytesutil.ToBytes64(append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(committeeID)...))
+func validatorSubscribeKey(slot types.Slot, committeeID types.CommitteeIndex) [64]byte {
+	return bytesutil.ToBytes64(append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(uint64(committeeID))...))
 }
 
 // This tracks all validators' voting status.

@@ -52,7 +52,7 @@ type Service struct {
 	depositCache          *depositcache.DepositCache
 	chainStartFetcher     powchain.ChainStartFetcher
 	attPool               attestations.Pool
-	slashingPool          *slashings.Pool
+	slashingPool          slashings.PoolManager
 	exitPool              *voluntaryexits.Pool
 	genesisTime           time.Time
 	p2p                   p2p.Broadcaster
@@ -89,7 +89,7 @@ type Config struct {
 	DepositCache      *depositcache.DepositCache
 	AttPool           attestations.Pool
 	ExitPool          *voluntaryexits.Pool
-	SlashingPool      *slashings.Pool
+	SlashingPool      slashings.PoolManager
 	P2p               p2p.Broadcaster
 	MaxRoutines       int
 	StateNotifier     statefeed.Notifier

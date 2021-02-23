@@ -190,24 +190,24 @@ func (s *Service) validateBlockInAttestation(ctx context.Context, satt *ethpb.Si
 }
 
 // Returns true if the node has received aggregate for the aggregator with index and target epoch.
-func (s *Service) hasSeenAggregatorIndexEpoch(epoch types.Epoch, aggregatorIndex uint64) bool {
+func (s *Service) hasSeenAggregatorIndexEpoch(epoch types.Epoch, aggregatorIndex types.ValidatorIndex) bool {
 	s.seenAttestationLock.RLock()
 	defer s.seenAttestationLock.RUnlock()
-	b := append(bytesutil.Bytes32(uint64(epoch)), bytesutil.Bytes32(aggregatorIndex)...)
+	b := append(bytesutil.Bytes32(uint64(epoch)), bytesutil.Bytes32(uint64(aggregatorIndex))...)
 	_, seen := s.seenAttestationCache.Get(string(b))
 	return seen
 }
 
 // Set aggregate's aggregator index target epoch as seen.
-func (s *Service) setAggregatorIndexEpochSeen(epoch types.Epoch, aggregatorIndex uint64) {
+func (s *Service) setAggregatorIndexEpochSeen(epoch types.Epoch, aggregatorIndex types.ValidatorIndex) {
 	s.seenAttestationLock.Lock()
 	defer s.seenAttestationLock.Unlock()
-	b := append(bytesutil.Bytes32(uint64(epoch)), bytesutil.Bytes32(aggregatorIndex)...)
+	b := append(bytesutil.Bytes32(uint64(epoch)), bytesutil.Bytes32(uint64(aggregatorIndex))...)
 	s.seenAttestationCache.Add(string(b), true)
 }
 
 // This validates the aggregator's index in state is within the beacon committee.
-func validateIndexInCommittee(ctx context.Context, bs *stateTrie.BeaconState, a *ethpb.Attestation, validatorIndex uint64) error {
+func validateIndexInCommittee(ctx context.Context, bs *stateTrie.BeaconState, a *ethpb.Attestation, validatorIndex types.ValidatorIndex) error {
 	ctx, span := trace.StartSpan(ctx, "sync.validateIndexInCommittee")
 	defer span.End()
 
@@ -231,7 +231,7 @@ func validateIndexInCommittee(ctx context.Context, bs *stateTrie.BeaconState, a 
 
 // This validates selection proof by validating it's from the correct validator index of the slot.
 // It does not verify the selection proof, it returns the signature set of selection proof which can be used for batch verify.
-func validateSelectionIndex(ctx context.Context, bs *stateTrie.BeaconState, data *ethpb.AttestationData, validatorIndex uint64, proof []byte) (*bls.SignatureSet, error) {
+func validateSelectionIndex(ctx context.Context, bs *stateTrie.BeaconState, data *ethpb.AttestationData, validatorIndex types.ValidatorIndex, proof []byte) (*bls.SignatureSet, error) {
 	_, span := trace.StartSpan(ctx, "sync.validateSelectionIndex")
 	defer span.End()
 

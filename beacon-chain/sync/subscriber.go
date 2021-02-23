@@ -105,7 +105,7 @@ func (s *Service) subscribeWithBase(topic string, validator pubsub.ValidatorEx, 
 		// Any error subscribing to a PubSub topic would be the result of a misconfiguration of
 		// libp2p PubSub library or a subscription request to a topic that fails to match the topic
 		// subscription filter.
-		log.WithError(err).WithField("topic", topic).Error("Could not subscribe topic")
+		log.WithError(err).Error("Could not subscribe topic")
 		return nil
 	}
 

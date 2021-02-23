@@ -3,6 +3,7 @@ package helpers
 import (
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -18,7 +19,7 @@ func TestTotalBalance_OK(t *testing.T) {
 	}})
 	require.NoError(t, err)
 
-	balance := TotalBalance(state, []uint64{0, 1, 2, 3})
+	balance := TotalBalance(state, []types.ValidatorIndex{0, 1, 2, 3})
 	wanted := state.Validators()[0].EffectiveBalance + state.Validators()[1].EffectiveBalance +
 		state.Validators()[2].EffectiveBalance + state.Validators()[3].EffectiveBalance
 	assert.Equal(t, wanted, balance, "Incorrect TotalBalance")
@@ -28,7 +29,7 @@ func TestTotalBalance_ReturnsEffectiveBalanceIncrement(t *testing.T) {
 	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{Validators: []*ethpb.Validator{}})
 	require.NoError(t, err)
 
-	balance := TotalBalance(state, []uint64{})
+	balance := TotalBalance(state, []types.ValidatorIndex{})
 	wanted := params.BeaconConfig().EffectiveBalanceIncrement
 	assert.Equal(t, wanted, balance, "Incorrect TotalBalance")
 }
@@ -81,7 +82,7 @@ func TestGetBalance_OK(t *testing.T) {
 
 func TestIncreaseBalance_OK(t *testing.T) {
 	tests := []struct {
-		i  uint64
+		i  types.ValidatorIndex
 		b  []uint64
 		nb uint64
 		eb uint64
@@ -104,7 +105,7 @@ func TestIncreaseBalance_OK(t *testing.T) {
 
 func TestDecreaseBalance_OK(t *testing.T) {
 	tests := []struct {
-		i  uint64
+		i  types.ValidatorIndex
 		b  []uint64
 		nb uint64
 		eb uint64
