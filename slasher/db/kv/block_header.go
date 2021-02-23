@@ -34,7 +34,7 @@ func (s *Store) BlockHeaders(ctx context.Context, slot types.Slot, validatorInde
 	var blockHeaders []*ethpb.SignedBeaconBlockHeader
 	err := s.view(func(tx *bolt.Tx) error {
 		c := tx.Bucket(historicBlockHeadersBucket).Cursor()
-		prefix := encodeSlotvalidatorIndex(slot, validatorIndex)
+		prefix := encodeSlotValidatorIndex(slot, validatorIndex)
 		for k, v := c.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, v = c.Next() {
 			bh, err := unmarshalBlockHeader(ctx, v)
 			if err != nil {
