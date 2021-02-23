@@ -54,7 +54,7 @@ type Config struct {
 	DB                  db.NoHeadAccessDatabase
 	AttPool             attestations.Pool
 	ExitPool            *voluntaryexits.Pool
-	SlashingPool        *slashings.Pool
+	SlashingPool        slashings.PoolManager
 	Chain               blockchainService
 	InitialSync         Checker
 	StateNotifier       statefeed.Notifier
@@ -84,7 +84,7 @@ type Service struct {
 	db                        db.NoHeadAccessDatabase
 	attPool                   attestations.Pool
 	exitPool                  *voluntaryexits.Pool
-	slashingPool              *slashings.Pool
+	slashingPool              slashings.PoolManager
 	chain                     blockchainService
 	slotToPendingBlocks       *gcache.Cache
 	seenPendingBlocks         map[[32]byte]bool
