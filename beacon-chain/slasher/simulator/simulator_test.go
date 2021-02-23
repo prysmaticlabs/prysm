@@ -24,6 +24,30 @@ func TestGenerateAttestationsForSlot_Slashing(t *testing.T) {
 	}
 }
 
+func TestGenerateAttestationsForSlot_CorrectIndices(t *testing.T) {
+	simParams := &Parameters{
+		NumValidators:          16384,
+		AttesterSlashingProbab: 0,
+	}
+	slot0Atts := generateAttestationsForSlot(simParams, 0)
+	slot1Atts := generateAttestationsForSlot(simParams, 1)
+	slot2Atts := generateAttestationsForSlot(simParams, 2)
+	var indices []uint64
+	for _, att := range append(slot0Atts, slot1Atts...) {
+		indices = append(indices, att.AttestingIndices...)
+	}
+	for _, att := range slot2Atts {
+		indices = append(indices, att.AttestingIndices...)
+	}
+
+	// Making sure indices are one after the other for attestations.
+	var indice uint64
+	for _, ii := range indices {
+		require.Equal(t, indice, ii)
+		indice++
+	}
+}
+
 func TestGenerateBlockHeadersForSlot_Slashing(t *testing.T) {
 	simParams := &Parameters{
 		NumValidators:          64,
