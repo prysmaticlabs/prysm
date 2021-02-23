@@ -102,3 +102,63 @@ func TestListPoolAttesterSlashings(t *testing.T) {
 	assert.DeepEqual(t, migration.V1Alpha1AttSlashingToV1(slashing1), resp.Data[0])
 	assert.DeepEqual(t, migration.V1Alpha1AttSlashingToV1(slashing2), resp.Data[1])
 }
+
+func TestListPoolProposerSlashings(t *testing.T) {
+	state, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	slashing1 := &eth.ProposerSlashing{
+		Header_1: &eth.SignedBeaconBlockHeader{
+			Header: &eth.BeaconBlockHeader{
+				Slot:          1,
+				ProposerIndex: 1,
+				ParentRoot:    bytesutil.PadTo([]byte("parentroot1"), 32),
+				StateRoot:     bytesutil.PadTo([]byte("stateroot1"), 32),
+				BodyRoot:      bytesutil.PadTo([]byte("bodyroot1"), 32),
+			},
+			Signature: bytesutil.PadTo([]byte("signature1"), 96),
+		},
+		Header_2: &eth.SignedBeaconBlockHeader{
+			Header: &eth.BeaconBlockHeader{
+				Slot:          2,
+				ProposerIndex: 2,
+				ParentRoot:    bytesutil.PadTo([]byte("parentroot2"), 32),
+				StateRoot:     bytesutil.PadTo([]byte("stateroot2"), 32),
+				BodyRoot:      bytesutil.PadTo([]byte("bodyroot2"), 32),
+			},
+			Signature: bytesutil.PadTo([]byte("signature2"), 96),
+		},
+	}
+	slashing2 := &eth.ProposerSlashing{
+		Header_1: &eth.SignedBeaconBlockHeader{
+			Header: &eth.BeaconBlockHeader{
+				Slot:          3,
+				ProposerIndex: 3,
+				ParentRoot:    bytesutil.PadTo([]byte("parentroot3"), 32),
+				StateRoot:     bytesutil.PadTo([]byte("stateroot3"), 32),
+				BodyRoot:      bytesutil.PadTo([]byte("bodyroot3"), 32),
+			},
+			Signature: bytesutil.PadTo([]byte("signature3"), 96),
+		},
+		Header_2: &eth.SignedBeaconBlockHeader{
+			Header: &eth.BeaconBlockHeader{
+				Slot:          4,
+				ProposerIndex: 4,
+				ParentRoot:    bytesutil.PadTo([]byte("parentroot4"), 32),
+				StateRoot:     bytesutil.PadTo([]byte("stateroot4"), 32),
+				BodyRoot:      bytesutil.PadTo([]byte("bodyroot4"), 32),
+			},
+			Signature: bytesutil.PadTo([]byte("signature4"), 96),
+		},
+	}
+
+	s := &Server{
+		ChainInfoFetcher: &chainMock.ChainService{State: state},
+		SlashingsPool:    &slashings.PoolMock{PendingPropSlashings: []*eth.ProposerSlashing{slashing1, slashing2}},
+	}
+
+	resp, err := s.ListPoolProposerSlashings(context.Background(), &types.Empty{})
+	require.NoError(t, err)
+	require.Equal(t, 2, len(resp.Data))
+	assert.DeepEqual(t, migration.V1Alpha1ProposerSlashingToV1(slashing1), resp.Data[0])
+	assert.DeepEqual(t, migration.V1Alpha1ProposerSlashingToV1(slashing2), resp.Data[1])
+}

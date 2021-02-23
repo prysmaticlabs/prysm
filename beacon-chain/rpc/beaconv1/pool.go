@@ -55,7 +55,23 @@ func (bs *Server) SubmitAttesterSlashing(ctx context.Context, req *ethpb.Atteste
 // ListPoolProposerSlashings retrieves proposer slashings known by the node
 // but not necessarily incorporated into any block.
 func (bs *Server) ListPoolProposerSlashings(ctx context.Context, req *ptypes.Empty) (*ethpb.ProposerSlashingPoolResponse, error) {
-	return nil, errors.New("unimplemented")
+	ctx, span := trace.StartSpan(ctx, "beaconv1.ListPoolProposerSlashings")
+	defer span.End()
+
+	headState, err := bs.ChainInfoFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	}
+	sourceSlashings := bs.SlashingsPool.PendingProposerSlashings(ctx, headState, true)
+
+	slashings := make([]*ethpb.ProposerSlashing, len(sourceSlashings))
+	for i, s := range sourceSlashings {
+		slashings[i] = migration.V1Alpha1ProposerSlashingToV1(s)
+	}
+
+	return &ethpb.ProposerSlashingPoolResponse{
+		Data: slashings,
+	}, nil
 }
 
 // SubmitProposerSlashing submits AttesterSlashing object to node's pool and if
