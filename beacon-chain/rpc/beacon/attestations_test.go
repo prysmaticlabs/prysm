@@ -874,7 +874,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 			var found bool
 			for comIndex, item := range comms {
 				for n, idx := range item.ValidatorIndices {
-					if uint64(j) == idx {
+					if types.ValidatorIndex(j) == idx {
 						indexInCommittee = uint64(n)
 						committeeIndex = types.CommitteeIndex(comIndex)
 						committeeLength = len(item.ValidatorIndices)

@@ -4,13 +4,12 @@ package spectest
 
 import (
 	"encoding/hex"
-	"fmt"
 	"path"
-	"reflect"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/go-yaml/yaml"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -36,34 +35,32 @@ func runShuffleTests(t *testing.T, config string) {
 
 			testCase := &ShuffleTestCase{}
 			require.NoError(t, yaml.Unmarshal(testCaseFile, testCase), "Could not unmarshal YAML file into test struct")
-			require.NoError(t, runShuffleTest(testCase), "Shuffle test failed")
+			require.NoError(t, runShuffleTest(t, testCase), "Shuffle test failed")
 		})
 	}
 }
 
 // RunShuffleTest uses validator set specified from a YAML file, runs the validator shuffle
 // algorithm, then compare the output with the expected output from the YAML file.
-func runShuffleTest(testCase *ShuffleTestCase) error {
+func runShuffleTest(t *testing.T, testCase *ShuffleTestCase) error {
 	baseSeed, err := hex.DecodeString(testCase.Seed[2:])
 	if err != nil {
 		return err
 	}
 
 	seed := common.BytesToHash(baseSeed)
-	testIndices := make([]uint64, testCase.Count)
-	for i := uint64(0); i < testCase.Count; i++ {
+	testIndices := make([]types.ValidatorIndex, testCase.Count)
+	for i := types.ValidatorIndex(0); uint64(i) < testCase.Count; i++ {
 		testIndices[i] = i
 	}
-	shuffledList := make([]uint64, testCase.Count)
-	for i := uint64(0); i < testCase.Count; i++ {
+	shuffledList := make([]types.ValidatorIndex, testCase.Count)
+	for i := types.ValidatorIndex(0); uint64(i) < testCase.Count; i++ {
 		si, err := helpers.ShuffledIndex(i, testCase.Count, seed)
 		if err != nil {
 			return err
 		}
 		shuffledList[i] = si
 	}
-	if !reflect.DeepEqual(shuffledList, testCase.Mapping) {
-		return fmt.Errorf("shuffle result error: expected %v, actual %v", testCase.Mapping, shuffledList)
-	}
+	require.DeepSSZEqual(t, shuffledList, testCase.Mapping)
 	return nil
 }

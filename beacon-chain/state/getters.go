@@ -616,14 +616,14 @@ func (b *BeaconState) validatorsReferences() []*ethpb.Validator {
 }
 
 // ValidatorAtIndex is the validator at the provided index.
-func (b *BeaconState) ValidatorAtIndex(idx uint64) (*ethpb.Validator, error) {
+func (b *BeaconState) ValidatorAtIndex(idx types.ValidatorIndex) (*ethpb.Validator, error) {
 	if !b.HasInnerState() {
 		return nil, ErrNilInnerState
 	}
 	if b.state.Validators == nil {
 		return &ethpb.Validator{}, nil
 	}
-	if uint64(len(b.state.Validators)) <= idx {
+	if uint64(len(b.state.Validators)) <= uint64(idx) {
 		return nil, fmt.Errorf("index %d out of range", idx)
 	}
 
@@ -636,14 +636,14 @@ func (b *BeaconState) ValidatorAtIndex(idx uint64) (*ethpb.Validator, error) {
 
 // ValidatorAtIndexReadOnly is the validator at the provided index. This method
 // doesn't clone the validator.
-func (b *BeaconState) ValidatorAtIndexReadOnly(idx uint64) (ReadOnlyValidator, error) {
+func (b *BeaconState) ValidatorAtIndexReadOnly(idx types.ValidatorIndex) (ReadOnlyValidator, error) {
 	if !b.HasInnerState() {
 		return ReadOnlyValidator{}, ErrNilInnerState
 	}
 	if b.state.Validators == nil {
 		return ReadOnlyValidator{}, nil
 	}
-	if uint64(len(b.state.Validators)) <= idx {
+	if uint64(len(b.state.Validators)) <= uint64(idx) {
 		return ReadOnlyValidator{}, fmt.Errorf("index %d out of range", idx)
 	}
 
@@ -654,7 +654,7 @@ func (b *BeaconState) ValidatorAtIndexReadOnly(idx uint64) (ReadOnlyValidator, e
 }
 
 // ValidatorIndexByPubkey returns a given validator by its 48-byte public key.
-func (b *BeaconState) ValidatorIndexByPubkey(key [48]byte) (uint64, bool) {
+func (b *BeaconState) ValidatorIndexByPubkey(key [48]byte) (types.ValidatorIndex, bool) {
 	if b == nil || b.valMapHandler == nil || b.valMapHandler.valIdxMap == nil {
 		return 0, false
 	}
@@ -664,9 +664,9 @@ func (b *BeaconState) ValidatorIndexByPubkey(key [48]byte) (uint64, bool) {
 	return idx, ok
 }
 
-func (b *BeaconState) validatorIndexMap() map[[48]byte]uint64 {
+func (b *BeaconState) validatorIndexMap() map[[48]byte]types.ValidatorIndex {
 	if b == nil || b.valMapHandler == nil || b.valMapHandler.valIdxMap == nil {
-		return map[[48]byte]uint64{}
+		return map[[48]byte]types.ValidatorIndex{}
 	}
 	b.lock.RLock()
 	defer b.lock.RUnlock()
@@ -676,11 +676,11 @@ func (b *BeaconState) validatorIndexMap() map[[48]byte]uint64 {
 
 // PubkeyAtIndex returns the pubkey at the given
 // validator index.
-func (b *BeaconState) PubkeyAtIndex(idx uint64) [48]byte {
+func (b *BeaconState) PubkeyAtIndex(idx types.ValidatorIndex) [48]byte {
 	if !b.HasInnerState() {
 		return [48]byte{}
 	}
-	if idx >= uint64(len(b.state.Validators)) {
+	if uint64(idx) >= uint64(len(b.state.Validators)) {
 		return [48]byte{}
 	}
 	b.lock.RLock()
@@ -756,7 +756,7 @@ func (b *BeaconState) balances() []uint64 {
 }
 
 // BalanceAtIndex of validator with the provided index.
-func (b *BeaconState) BalanceAtIndex(idx uint64) (uint64, error) {
+func (b *BeaconState) BalanceAtIndex(idx types.ValidatorIndex) (uint64, error) {
 	if !b.HasInnerState() {
 		return 0, ErrNilInnerState
 	}
@@ -767,7 +767,7 @@ func (b *BeaconState) BalanceAtIndex(idx uint64) (uint64, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	if uint64(len(b.state.Balances)) <= idx {
+	if uint64(len(b.state.Balances)) <= uint64(idx) {
 		return 0, fmt.Errorf("index of %d does not exist", idx)
 	}
 	return b.state.Balances[idx], nil

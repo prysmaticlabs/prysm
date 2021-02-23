@@ -4,6 +4,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	types "github.com/prysmaticlabs/eth2-types"
 )
 
 var (
@@ -38,7 +39,7 @@ func NewPublicKeyCache(size int, onEvicted func(key interface{}, value interface
 }
 
 // Get returns an ok bool and the cached value for the requested validator id key, if any.
-func (c *PublicKeyCache) Get(validatorIdx uint64) ([]byte, bool) {
+func (c *PublicKeyCache) Get(validatorIdx types.ValidatorIndex) ([]byte, bool) {
 	item, exists := c.cache.Get(validatorIdx)
 	if exists && item != nil {
 		validatorsCacheHit.Inc()
@@ -50,18 +51,18 @@ func (c *PublicKeyCache) Get(validatorIdx uint64) ([]byte, bool) {
 }
 
 // Set the response in the cache.
-func (c *PublicKeyCache) Set(validatorIdx uint64, publicKey []byte) {
+func (c *PublicKeyCache) Set(validatorIdx types.ValidatorIndex, publicKey []byte) {
 	_ = c.cache.Add(validatorIdx, publicKey)
 }
 
 // Delete removes a validator id from the cache and returns if it existed or not.
 // Performs the onEviction function before removal.
-func (c *PublicKeyCache) Delete(validatorIdx uint64) bool {
+func (c *PublicKeyCache) Delete(validatorIdx types.ValidatorIndex) bool {
 	return c.cache.Remove(validatorIdx)
 }
 
 // Has returns true if the key exists in the cache.
-func (c *PublicKeyCache) Has(validatorIdx uint64) bool {
+func (c *PublicKeyCache) Has(validatorIdx types.ValidatorIndex) bool {
 	return c.cache.Contains(validatorIdx)
 }
 

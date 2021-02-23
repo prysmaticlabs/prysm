@@ -32,7 +32,7 @@ type Validator struct {
 	// InclusionDistance is the distance between the assigned slot and this validator's attestation was included in block.
 	InclusionDistance types.Slot
 	// ProposerIndex is the index of proposer at slot where this validator's attestation was included.
-	ProposerIndex uint64
+	ProposerIndex types.ValidatorIndex
 	// BeforeEpochTransitionBalance is the validator balance prior to epoch transition.
 	BeforeEpochTransitionBalance uint64
 	// AfterEpochTransitionBalance is the validator balance after epoch transition.

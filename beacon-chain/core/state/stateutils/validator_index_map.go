@@ -4,14 +4,15 @@
 package stateutils
 
 import (
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 // ValidatorIndexMap builds a lookup map for quickly determining the index of
 // a validator by their public key.
-func ValidatorIndexMap(validators []*ethpb.Validator) map[[48]byte]uint64 {
-	m := make(map[[48]byte]uint64, len(validators))
+func ValidatorIndexMap(validators []*ethpb.Validator) map[[48]byte]types.ValidatorIndex {
+	m := make(map[[48]byte]types.ValidatorIndex, len(validators))
 	if validators == nil {
 		return m
 	}
@@ -20,7 +21,7 @@ func ValidatorIndexMap(validators []*ethpb.Validator) map[[48]byte]uint64 {
 			continue
 		}
 		key := bytesutil.ToBytes48(record.PublicKey)
-		m[key] = uint64(idx)
+		m[key] = types.ValidatorIndex(idx)
 	}
 	return m
 }

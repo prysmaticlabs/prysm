@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -12,7 +13,7 @@ import (
 func TestProposerKeyFn_OK(t *testing.T) {
 	item := &ProposerIndices{
 		BlockRoot:       [32]byte{'A'},
-		ProposerIndices: []uint64{1, 2, 3, 4, 5},
+		ProposerIndices: []types.ValidatorIndex{1, 2, 3, 4, 5},
 	}
 
 	k, err := proposerIndicesKeyFn(item)
@@ -48,7 +49,7 @@ func TestProposerCache_AddProposerIndicesList(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, true, has)
 
-	item := &ProposerIndices{BlockRoot: [32]byte{'B'}, ProposerIndices: []uint64{1, 2, 3, 4, 5, 6}}
+	item := &ProposerIndices{BlockRoot: [32]byte{'B'}, ProposerIndices: []types.ValidatorIndex{1, 2, 3, 4, 5, 6}}
 	require.NoError(t, cache.AddProposerIndices(item))
 
 	received, err = cache.ProposerIndices(item.BlockRoot)

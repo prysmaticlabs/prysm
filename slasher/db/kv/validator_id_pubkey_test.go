@@ -4,11 +4,12 @@ import (
 	"context"
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 type publicKeyTestStruct struct {
-	validatorID uint64
+	validatorID types.ValidatorIndex
 	pk          []byte
 }
 
@@ -36,7 +37,7 @@ func TestNilDBValidatorPublicKey(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	validatorID := uint64(1)
+	validatorID := types.ValidatorIndex(1)
 
 	pk, err := db.ValidatorPubKey(ctx, validatorID)
 	require.NoError(t, err, "Nil ValidatorPubKey should not return error")
