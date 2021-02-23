@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/dgrijalva/jwt-go"
-	ptypes "github.com/gogo/protobuf/types"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
@@ -33,13 +32,16 @@ func TestServer_SignupAndLogin_RoundTrip(t *testing.T) {
 	defaultWalletPath = localWalletDir
 	strongPass := "29384283xasjasd32%%&*@*#*"
 
+	key, err := createRandomJWTKey()
+	require.NoError(t, err)
 	ss := &Server{
 		valDB:                 valDB,
 		walletInitializedFeed: new(event.Feed),
 		walletDir:             defaultWalletPath,
+		jwtKey:                key,
 	}
 	weakPass := "password"
-	_, err := ss.Signup(ctx, &pb.AuthRequest{
+	_, err = ss.Signup(ctx, &pb.AuthRequest{
 		Password:             weakPass,
 		PasswordConfirmation: weakPass,
 	})
@@ -68,32 +70,17 @@ func TestServer_SignupAndLogin_RoundTrip(t *testing.T) {
 	require.NoError(t, err)
 
 	// We assert we are able to login.
-	_, err = ss.Login(ctx, &pb.AuthRequest{
+	authResp, err := ss.Login(ctx, &pb.AuthRequest{
 		Password: strongPass,
 	})
 	require.NoError(t, err)
-}
 
-func TestServer_Logout(t *testing.T) {
-	key, err := createRandomJWTKey()
-	require.NoError(t, err)
-	ss := &Server{
-		jwtKey: key,
-	}
-	tokenString, _, err := ss.createTokenString()
-	require.NoError(t, err)
+	// Verify the auth token is correct.
 	checkParsedKey := func(*jwt.Token) (interface{}, error) {
 		return ss.jwtKey, nil
 	}
-	_, err = jwt.Parse(tokenString, checkParsedKey)
+	_, err = jwt.Parse(authResp.Token, checkParsedKey)
 	assert.NoError(t, err)
-
-	_, err = ss.Logout(context.Background(), &ptypes.Empty{})
-	require.NoError(t, err)
-
-	// Attempting to validate the same token string after logout should fail.
-	_, err = jwt.Parse(tokenString, checkParsedKey)
-	assert.ErrorContains(t, "signature is invalid", err)
 }
 
 func TestServer_ChangePassword_Preconditions(t *testing.T) {

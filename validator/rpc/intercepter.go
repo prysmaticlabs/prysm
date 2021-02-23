@@ -16,20 +16,10 @@ import (
 // noAuthPaths keeps track of the paths which do not require
 // authentication from our API.
 var (
-	noAuthPaths = map[string]bool{
-		"/ethereum.validator.accounts.v2.Auth/Signup":                      true,
-		"/ethereum.validator.accounts.v2.Auth/Login":                       true,
-		"/ethereum.validator.accounts.v2.Auth/Logout":                      true,
-		"/ethereum.validator.accounts.v2.Auth/HasUsedWeb":                  true,
-		"/ethereum.validator.accounts.v2.Wallet/HasWallet":                 true,
-		"/ethereum.validator.accounts.v2.Beacon/GetBeaconStatus":           true,
-		"/ethereum.validator.accounts.v2.Beacon/GetValidatorParticipation": true,
-		"/ethereum.validator.accounts.v2.Beacon/GetValidatorPerformance":   true,
-		"/ethereum.validator.accounts.v2.Beacon/GetValidatorBalances":      true,
-		"/ethereum.validator.accounts.v2.Beacon/GetValidators":             true,
-		"/ethereum.validator.accounts.v2.Beacon/GetValidatorQueue":         true,
-		"/ethereum.validator.accounts.v2.Beacon/GetPeers":                  true,
-		"/ethereum.validator.accounts.v2.Beacon/StreamValidatorLogs":       true,
+	authPaths = map[string]bool{
+		"/ethereum.validator.accounts.v2.Wallet/CreateWallet":    true,
+		"/ethereum.validator.accounts.v2.Auth/ChangePassword":    true,
+		"/ethereum.validator.accounts.v2.Wallet/ImportKeystores": true,
 	}
 	authLock sync.RWMutex
 )
@@ -45,7 +35,7 @@ func (s *Server) JWTInterceptor() grpc.UnaryServerInterceptor {
 	) (interface{}, error) {
 		// Skip authorize when the path doesn't require auth.
 		authLock.RLock()
-		shouldAuthenticate := !noAuthPaths[info.FullMethod]
+		shouldAuthenticate := authPaths[info.FullMethod]
 		authLock.RUnlock()
 		if shouldAuthenticate {
 			if err := s.authorize(ctx); err != nil {

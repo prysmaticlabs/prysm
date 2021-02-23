@@ -19,14 +19,13 @@ import (
 )
 
 var (
-	tokenExpiryLength = time.Hour
+	tokenExpiryLength = time.Minute
 	hashCost          = 8
 )
 
 const (
 	// HashedRPCPassword for the validator RPC access.
-	HashedRPCPassword       = "rpc-password-hash"
-	checkUserSignupInterval = time.Second * 30
+	HashedRPCPassword = "rpc-password-hash"
 )
 
 // Signup to authenticate access to the validator RPC API using bcrypt and
@@ -98,30 +97,6 @@ func (s *Server) HasUsedWeb(ctx context.Context, _ *ptypes.Empty) (*pb.HasUsedWe
 	}, nil
 }
 
-// Logout a user by invalidating their JWT key.
-func (s *Server) Logout(ctx context.Context, _ *ptypes.Empty) (*ptypes.Empty, error) {
-	// Invalidate the old JWT key, making all requests done with its token fail.
-	jwtKey, err := createRandomJWTKey()
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not invalidate JWT key")
-	}
-	s.jwtKey = jwtKey
-	return &ptypes.Empty{}, nil
-}
-
-// Sends an auth response via gRPC containing a new JWT token.
-func (s *Server) sendAuthResponse() (*pb.AuthResponse, error) {
-	// If everything is fine here, construct the auth token.
-	tokenString, expirationTime, err := s.createTokenString()
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not create jwt token string")
-	}
-	return &pb.AuthResponse{
-		Token:           tokenString,
-		TokenExpiration: expirationTime,
-	}, nil
-}
-
 // ChangePassword allows changing the RPC password via the API as an authenticated method.
 func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordRequest) (*ptypes.Empty, error) {
 	if req.CurrentPassword == "" {
@@ -161,30 +136,17 @@ func (s *Server) SaveHashedPassword(password string) error {
 	return fileutil.WriteFile(hashFilePath, hashedPassword)
 }
 
-// Interval in which we should check if a user has not yet used the RPC Signup endpoint
-// which means they are using the --web flag and someone could come in and signup for them
-// if they have their web host:port exposed to the Internet.
-func (s *Server) checkUserSignup(ctx context.Context) {
-	ticker := time.NewTicker(checkUserSignupInterval)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ticker.C:
-			hashedPasswordPath := filepath.Join(s.walletDir, HashedRPCPassword)
-			if fileutil.FileExists(hashedPasswordPath) {
-				return
-			}
-			log.Warnf(
-				"You are using the --web option but have not yet signed via a browser. "+
-					"If your web host and port are exposed to the Internet, someone else can attempt to sign up "+
-					"for you! You can visit http://%s:%d to view the Prysm web interface",
-				s.validatorGatewayHost,
-				s.validatorGatewayPort,
-			)
-		case <-s.ctx.Done():
-			return
-		}
+// Sends an auth response via gRPC containing a new JWT token.
+func (s *Server) sendAuthResponse() (*pb.AuthResponse, error) {
+	// If everything is fine here, construct the auth token.
+	tokenString, expirationTime, err := s.createTokenString()
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not create jwt token string")
 	}
+	return &pb.AuthResponse{
+		Token:           tokenString,
+		TokenExpiration: expirationTime,
+	}, nil
 }
 
 // Creates a JWT token string using the JWT key with an expiration timestamp.
