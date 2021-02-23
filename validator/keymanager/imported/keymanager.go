@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 	"go.opencensus.io/trace"
@@ -303,7 +304,7 @@ func (km *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 	password := km.wallet.Password()
 	decryptor := keystorev4.New()
 	enc, err := decryptor.Decrypt(keystoreFile.Crypto, password)
-	if err != nil && strings.Contains(err.Error(), "invalid checksum") {
+	if err != nil && strings.Contains(err.Error(), keymanager.IncorrectPasswordErrMsg) {
 		return errors.Wrap(err, "wrong password for wallet entered")
 	} else if err != nil {
 		return errors.Wrap(err, "could not decrypt keystore")

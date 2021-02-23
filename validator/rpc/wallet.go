@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
@@ -18,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/tyler-smith/go-bip39"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -229,6 +231,45 @@ func (s *Server) ImportKeystores(
 	return &pb.ImportKeystoresResponse{
 		ImportedPublicKeys: importedPubKeys,
 	}, nil
+}
+
+// ValidateKeystores checks whether a set of EIP-2335 keystores in the request
+// can indeed be decrypted using a password in the request. If there is no issue,
+// we return an empty response with no error. If the password is incorrect for a single keystore,
+// we return an appropriate error.
+func (s *Server) ValidateKeystores(
+	ctx context.Context, req *pb.ValidateKeystoresRequest,
+) (*ptypes.Empty, error) {
+	if req.KeystoresPassword == "" {
+		return nil, status.Error(codes.InvalidArgument, "Password required for keystores")
+	}
+	// Needs to unmarshal the keystores from the requests.
+	if req.Keystores == nil || len(req.Keystores) < 1 {
+		return nil, status.Error(codes.InvalidArgument, "No keystores included in request")
+	}
+	decryptor := keystorev4.New()
+	for i := 0; i < len(req.Keystores); i++ {
+		encoded := req.Keystores[i]
+		keystore := &keymanager.Keystore{}
+		if err := json.Unmarshal([]byte(encoded), &keystore); err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "Not a valid EIP-2335 keystore JSON file: %v", err)
+		}
+		if _, err := decryptor.Decrypt(keystore.Crypto, req.KeystoresPassword); err != nil {
+			doesNotDecrypt := strings.Contains(err.Error(), keymanager.IncorrectPasswordErrMsg)
+			if doesNotDecrypt {
+				return nil, status.Errorf(
+					codes.InvalidArgument,
+					"Password for keystore with public key %s is incorrect, make sure all keystores "+
+						"have the same password",
+					keystore.Pubkey,
+				)
+			} else {
+				return nil, status.Errorf(codes.Internal, "Unexpected error decrypting keystore: %v", err)
+			}
+		}
+	}
+
+	return &ptypes.Empty{}, nil
 }
 
 // Initialize a wallet and send it over a global feed.

@@ -30,6 +30,12 @@ service Wallet {
             body: "*"
         };
     }
+    rpc ValidateKeystores(ValidateKeystoresRequest) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            post: "/v2/validator/wallet/keystores/validate",
+            body: "*"
+        };
+    }
 }
 
 service Accounts {
@@ -297,6 +303,14 @@ message ImportKeystoresRequest {
 
 message ImportKeystoresResponse {
     repeated bytes imported_public_keys = 1;
+}
+
+message ValidateKeystoresRequest {
+    // JSON-encoded keystore files to validate.
+    repeated string keystores = 1;
+
+    // Password for the keystore files.
+    string keystores_password = 2;
 }
 
 message HasUsedWebResponse {
