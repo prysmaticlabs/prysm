@@ -83,7 +83,10 @@ func (s *Server) StreamBeaconLogs(req *ptypes.Empty, stream pb.Health_StreamBeac
 func (s *Server) StreamValidatorLogs(_ *ptypes.Empty, stream pb.Health_StreamValidatorLogsServer) error {
 	ch := make(chan []byte, s.streamLogsBufferSize)
 	sub := s.logsStreamer.LogsFeed().Subscribe(ch)
-	defer sub.Unsubscribe()
+	defer func() {
+		sub.Unsubscribe()
+		defer close(ch)
+	}()
 
 	recentLogs := s.logsStreamer.GetLastFewLogs()
 	logStrings := make([]string, len(recentLogs))

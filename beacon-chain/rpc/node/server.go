@@ -225,7 +225,10 @@ func (ns *Server) ListPeers(ctx context.Context, _ *ptypes.Empty) (*ethpb.Peers,
 func (ns *Server) StreamBeaconLogs(_ *ptypes.Empty, stream pb.Health_StreamBeaconLogsServer) error {
 	ch := make(chan []byte, ns.StreamLogsBufferSize)
 	sub := ns.LogsStreamer.LogsFeed().Subscribe(ch)
-	defer sub.Unsubscribe()
+	defer func() {
+		sub.Unsubscribe()
+		close(ch)
+	}()
 
 	recentLogs := ns.LogsStreamer.GetLastFewLogs()
 	logStrings := make([]string, len(recentLogs))
