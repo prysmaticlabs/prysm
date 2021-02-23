@@ -8,6 +8,7 @@ import (
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/proto/migration"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -98,8 +99,6 @@ func TestListPoolAttesterSlashings(t *testing.T) {
 	resp, err := s.ListPoolAttesterSlashings(context.Background(), &types.Empty{})
 	require.NoError(t, err)
 	require.Equal(t, 2, len(resp.Data))
-	assert.DeepEqual(t, mapAttestation(slashing1.Attestation_1), resp.Data[0].Attestation_1)
-	assert.DeepEqual(t, mapAttestation(slashing1.Attestation_2), resp.Data[0].Attestation_2)
-	assert.DeepEqual(t, mapAttestation(slashing2.Attestation_1), resp.Data[1].Attestation_1)
-	assert.DeepEqual(t, mapAttestation(slashing2.Attestation_2), resp.Data[1].Attestation_2)
+	assert.DeepEqual(t, migration.V1Alpha1AttSlashingToV1(slashing1), resp.Data[0])
+	assert.DeepEqual(t, migration.V1Alpha1AttSlashingToV1(slashing2), resp.Data[1])
 }

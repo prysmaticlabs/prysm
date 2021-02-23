@@ -6,7 +6,7 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
-	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/migration"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -38,10 +38,7 @@ func (bs *Server) ListPoolAttesterSlashings(ctx context.Context, req *ptypes.Emp
 
 	slashings := make([]*ethpb.AttesterSlashing, len(sourceSlashings))
 	for i, s := range sourceSlashings {
-		slashings[i] = &ethpb.AttesterSlashing{
-			Attestation_1: mapAttestation(s.Attestation_1),
-			Attestation_2: mapAttestation(s.Attestation_2),
-		}
+		slashings[i] = migration.V1Alpha1AttSlashingToV1(s)
 	}
 
 	return &ethpb.AttesterSlashingsPoolResponse{
@@ -77,25 +74,4 @@ func (bs *Server) ListPoolVoluntaryExits(ctx context.Context, req *ptypes.Empty)
 // and if passes validation node MUST broadcast it to network.
 func (bs *Server) SubmitVoluntaryExit(ctx context.Context, req *ethpb.SignedVoluntaryExit) (*ptypes.Empty, error) {
 	return nil, errors.New("unimplemented")
-}
-
-func mapAttestation(attestation *eth.IndexedAttestation) *ethpb.IndexedAttestation {
-	a := &ethpb.IndexedAttestation{
-		AttestingIndices: attestation.AttestingIndices,
-		Data: &ethpb.AttestationData{
-			Slot:            attestation.Data.Slot,
-			CommitteeIndex:  attestation.Data.CommitteeIndex,
-			BeaconBlockRoot: attestation.Data.BeaconBlockRoot,
-			Source: &ethpb.Checkpoint{
-				Epoch: attestation.Data.Source.Epoch,
-				Root:  attestation.Data.Source.Root,
-			},
-			Target: &ethpb.Checkpoint{
-				Epoch: attestation.Data.Target.Epoch,
-				Root:  attestation.Data.Target.Root,
-			},
-		},
-		Signature: attestation.Signature,
-	}
-	return a
 }
