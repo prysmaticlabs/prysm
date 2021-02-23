@@ -133,3 +133,21 @@ func (s *subnetIDs) AddPersistentCommittee(pubkey []byte, comIndex []uint64, dur
 
 	s.persistentSubnets.Set(string(pubkey), comIndex, duration)
 }
+
+// EmptyAllCaches empties out all the related caches and flushes any stored
+// entries on them. This should only ever be used for testing, in normal
+// production, handling of the relevant subnets for each role is done
+// separately.
+func (s *subnetIDs) EmptyAllCaches() {
+	s.attesterLock.Lock()
+	defer s.attesterLock.Unlock()
+	s.aggregatorLock.Lock()
+	defer s.aggregatorLock.Unlock()
+	s.subnetsLock.Lock()
+	defer s.subnetsLock.Unlock()
+
+	// Clear the caches.
+	s.attester.Purge()
+	s.aggregator.Purge()
+	s.persistentSubnets.Flush()
+}

@@ -13,8 +13,10 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
+	types "github.com/prysmaticlabs/eth2-types"
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -355,4 +357,78 @@ func Test_wrapAndReportValidation(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestFilterSubnetPeers(t *testing.T) {
+	p := p2ptest.NewTestP2P(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	currSlot := types.Slot(100)
+	r := Service{
+		ctx: ctx,
+		chain: &mockChain.ChainService{
+			Genesis:        time.Now(),
+			ValidatorsRoot: [32]byte{'A'},
+			Slot:           &currSlot,
+		},
+		p2p:          p,
+		chainStarted: abool.New(),
+	}
+	// Empty cache at the end of the test.
+	defer cache.SubnetIDs.EmptyAllCaches()
+
+	defaultTopic := "/eth2/%x/beacon_attestation_%d" + r.p2p.Encoding().ProtocolSuffix()
+	subnet10 := r.addDigestAndIndexToTopic(defaultTopic, 10)
+	cache.SubnetIDs.AddAggregatorSubnetID(currSlot, 10)
+
+	subnet20 := r.addDigestAndIndexToTopic(defaultTopic, 20)
+	cache.SubnetIDs.AddAttesterSubnetID(currSlot, 20)
+
+	p1 := createPeer(t, subnet10)
+	p2 := createPeer(t, subnet10, subnet20)
+	p3 := createPeer(t)
+
+	// Connect to all
+	// peers.
+	p.Connect(p1)
+	p.Connect(p2)
+	p.Connect(p3)
+
+	// Sleep a while to allow peers to connect.
+	time.Sleep(100 * time.Millisecond)
+
+	wantedPeers := []peer.ID{p1.PeerID(), p2.PeerID(), p3.PeerID()}
+	// Expect Peer 3 to be marked as suitable.
+	recPeers := r.filterNeededPeers(wantedPeers)
+	assert.DeepEqual(t, []peer.ID{p3.PeerID()}, recPeers)
+
+	// Try with only peers from subnet 20.
+	wantedPeers = []peer.ID{p2.BHost.ID()}
+	// Connect an excess amount of peers in the particular subnet.
+	for i := uint64(1); i <= params.BeaconNetworkConfig().MinimumPeersInSubnet; i++ {
+		nPeer := createPeer(t, subnet20)
+		p.Connect(nPeer)
+		wantedPeers = append(wantedPeers, nPeer.BHost.ID())
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	recPeers = r.filterNeededPeers(wantedPeers)
+	assert.DeepEqual(t, 1, len(recPeers), "expected at least 1 suitable peer to prune")
+
+	cancel()
+}
+
+// Create peer and register them to provided topics.
+func createPeer(t *testing.T, topics ...string) *p2ptest.TestP2P {
+	p := p2ptest.NewTestP2P(t)
+	for _, tp := range topics {
+		jTop, err := p.PubSub().Join(tp)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = jTop.Subscribe()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	return p
 }

@@ -362,6 +362,8 @@ func (s *Service) retrievePersistentSubs(currSlot types.Slot) []uint64 {
 	return sliceutil.SetUint64(append(persistentSubs, wantedSubs...))
 }
 
+// filters out required peers for the node to function, not
+// pruning peers who are in our attestation subnets.
 func (s *Service) filterNeededPeers(pids []peer.ID) []peer.ID {
 	// Exit early if nothing to filter.
 	if len(pids) == 0 {
