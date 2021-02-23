@@ -68,7 +68,6 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 				WalletPassword: req.WalletPassword,
 			},
 			SkipMnemonicConfirm: true,
-			ListenForChanges:    false,
 		})
 		if err != nil {
 			return nil, err
@@ -266,7 +265,7 @@ func (s *Server) initializeWallet(ctx context.Context, cfg *wallet.Config) error
 	}
 
 	s.walletInitialized = true
-	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: true})
+	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	if err != nil {
 		return errors.Wrap(err, accounts.ErrCouldNotInitializeKeymanager)
 	}
