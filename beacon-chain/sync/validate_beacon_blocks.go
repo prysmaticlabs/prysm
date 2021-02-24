@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -26,6 +27,7 @@ import (
 // Blocks that have already been seen are ignored. If the BLS signature is any valid signature,
 // this method rebroadcasts the message.
 func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
+	receivedTime := timeutils.Now()
 	// Validation runs on publish (not just subscriptions), so we should approve any message from
 	// ourselves.
 	if pid == s.p2p.PeerID() {
@@ -104,7 +106,8 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	}
 
 	// Add metrics for block arrival time subtracts slot start time.
-	if err := captureArrivalTimeMetric(uint64(s.chain.GenesisTime().Unix()), blk.Block.Slot); err != nil {
+	genesisTime := uint64(s.chain.GenesisTime().Unix())
+	if err := captureArrivalTimeMetric(genesisTime, blk.Block.Slot); err != nil {
 		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Debug("Ignored block")
 		return pubsub.ValidationIgnore
 	}
@@ -140,6 +143,17 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	// Record attribute of valid block.
 	span.AddAttributes(trace.Int64Attribute("slotInEpoch", int64(blk.Block.Slot%params.BeaconConfig().SlotsPerEpoch)))
 	msg.ValidatorData = blk // Used in downstream subscriber
+
+	// Log the arrival time of the accepted block
+	startTime, err := helpers.SlotToTime(genesisTime, blk.Block.Slot)
+	if err != nil {
+		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Debug("Couldn't get slot start time")
+		return pubsub.ValidationIgnore
+	}
+	log.WithFields(logrus.Fields{
+		"blockSlot":          blk.Block.Slot,
+		"sinceSlotStartTime": receivedTime.Sub(startTime),
+	}).Debug("Received block")
 	return pubsub.ValidationAccept
 }
 
