@@ -36,7 +36,7 @@ import (
 //    # Set validator exit epoch and withdrawable epoch
 //    validator.exit_epoch = exit_queue_epoch
 //    validator.withdrawable_epoch = Epoch(validator.exit_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
-func InitiateValidatorExit(state *stateTrie.BeaconState, idx uint64) (*stateTrie.BeaconState, error) {
+func InitiateValidatorExit(state *stateTrie.BeaconState, idx types.ValidatorIndex) (*stateTrie.BeaconState, error) {
 	validator, err := state.ValidatorAtIndex(idx)
 	if err != nil {
 		return nil, err
@@ -121,7 +121,7 @@ func InitiateValidatorExit(state *stateTrie.BeaconState, idx uint64) (*stateTrie
 //    proposer_reward = Gwei(whistleblower_reward // PROPOSER_REWARD_QUOTIENT)
 //    increase_balance(state, proposer_index, proposer_reward)
 //    increase_balance(state, whistleblower_index, Gwei(whistleblower_reward - proposer_reward))
-func SlashValidator(state *stateTrie.BeaconState, slashedIdx uint64) (*stateTrie.BeaconState, error) {
+func SlashValidator(state *stateTrie.BeaconState, slashedIdx types.ValidatorIndex) (*stateTrie.BeaconState, error) {
 	state, err := InitiateValidatorExit(state, slashedIdx)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not initiate validator %d exit", slashedIdx)
@@ -172,33 +172,33 @@ func SlashValidator(state *stateTrie.BeaconState, slashedIdx uint64) (*stateTrie
 }
 
 // ActivatedValidatorIndices determines the indices activated during the given epoch.
-func ActivatedValidatorIndices(epoch types.Epoch, validators []*ethpb.Validator) []uint64 {
-	activations := make([]uint64, 0)
+func ActivatedValidatorIndices(epoch types.Epoch, validators []*ethpb.Validator) []types.ValidatorIndex {
+	activations := make([]types.ValidatorIndex, 0)
 	for i := 0; i < len(validators); i++ {
 		val := validators[i]
 		if val.ActivationEpoch <= epoch && epoch < val.ExitEpoch {
-			activations = append(activations, uint64(i))
+			activations = append(activations, types.ValidatorIndex(i))
 		}
 	}
 	return activations
 }
 
 // SlashedValidatorIndices determines the indices slashed during the given epoch.
-func SlashedValidatorIndices(epoch types.Epoch, validators []*ethpb.Validator) []uint64 {
-	slashed := make([]uint64, 0)
+func SlashedValidatorIndices(epoch types.Epoch, validators []*ethpb.Validator) []types.ValidatorIndex {
+	slashed := make([]types.ValidatorIndex, 0)
 	for i := 0; i < len(validators); i++ {
 		val := validators[i]
 		maxWithdrawableEpoch := types.MaxEpoch(val.WithdrawableEpoch, epoch+params.BeaconConfig().EpochsPerSlashingsVector)
 		if val.WithdrawableEpoch == maxWithdrawableEpoch && val.Slashed {
-			slashed = append(slashed, uint64(i))
+			slashed = append(slashed, types.ValidatorIndex(i))
 		}
 	}
 	return slashed
 }
 
 // ExitedValidatorIndices determines the indices exited during the current epoch.
-func ExitedValidatorIndices(epoch types.Epoch, validators []*ethpb.Validator, activeValidatorCount uint64) ([]uint64, error) {
-	exited := make([]uint64, 0)
+func ExitedValidatorIndices(epoch types.Epoch, validators []*ethpb.Validator, activeValidatorCount uint64) ([]types.ValidatorIndex, error) {
+	exited := make([]types.ValidatorIndex, 0)
 	exitEpochs := make([]types.Epoch, 0)
 	for i := 0; i < len(validators); i++ {
 		val := validators[i]
@@ -231,15 +231,15 @@ func ExitedValidatorIndices(epoch types.Epoch, validators []*ethpb.Validator, ac
 	for i, val := range validators {
 		if val.ExitEpoch == epoch && val.WithdrawableEpoch == withdrawableEpoch &&
 			val.EffectiveBalance > params.BeaconConfig().EjectionBalance {
-			exited = append(exited, uint64(i))
+			exited = append(exited, types.ValidatorIndex(i))
 		}
 	}
 	return exited, nil
 }
 
 // EjectedValidatorIndices determines the indices ejected during the given epoch.
-func EjectedValidatorIndices(epoch types.Epoch, validators []*ethpb.Validator, activeValidatorCount uint64) ([]uint64, error) {
-	ejected := make([]uint64, 0)
+func EjectedValidatorIndices(epoch types.Epoch, validators []*ethpb.Validator, activeValidatorCount uint64) ([]types.ValidatorIndex, error) {
+	ejected := make([]types.ValidatorIndex, 0)
 	exitEpochs := make([]types.Epoch, 0)
 	for i := 0; i < len(validators); i++ {
 		val := validators[i]
@@ -272,7 +272,7 @@ func EjectedValidatorIndices(epoch types.Epoch, validators []*ethpb.Validator, a
 	for i, val := range validators {
 		if val.ExitEpoch == epoch && val.WithdrawableEpoch == withdrawableEpoch &&
 			val.EffectiveBalance <= params.BeaconConfig().EjectionBalance {
-			ejected = append(ejected, uint64(i))
+			ejected = append(ejected, types.ValidatorIndex(i))
 		}
 	}
 	return ejected, nil

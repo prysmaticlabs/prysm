@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -11,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func proposerSlashingForValIdx(valIdx uint64) *ethpb.ProposerSlashing {
+func proposerSlashingForValIdx(valIdx types.ValidatorIndex) *ethpb.ProposerSlashing {
 	return &ethpb.ProposerSlashing{
 		Header_1: &ethpb.SignedBeaconBlockHeader{
 			Header: &ethpb.BeaconBlockHeader{ProposerIndex: valIdx},
@@ -26,7 +27,7 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 	type fields struct {
 		wantedErr string
 		pending   []*ethpb.ProposerSlashing
-		included  map[uint64]bool
+		included  map[types.ValidatorIndex]bool
 	}
 	type args struct {
 		slashings []*ethpb.ProposerSlashing
@@ -35,7 +36,7 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
 	slashings := make([]*ethpb.ProposerSlashing, 20)
 	for i := 0; i < len(slashings); i++ {
-		sl, err := testutil.GenerateProposerSlashingForValidator(beaconState, privKeys[i], uint64(i))
+		sl, err := testutil.GenerateProposerSlashingForValidator(beaconState, privKeys[i], types.ValidatorIndex(i))
 		require.NoError(t, err)
 		slashings[i] = sl
 	}
@@ -43,18 +44,18 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
 	// We mark the following validators with some preconditions.
-	exitedVal, err := beaconState.ValidatorAtIndex(uint64(2))
+	exitedVal, err := beaconState.ValidatorAtIndex(types.ValidatorIndex(2))
 	require.NoError(t, err)
 	exitedVal.WithdrawableEpoch = 0
-	futureExitedVal, err := beaconState.ValidatorAtIndex(uint64(4))
+	futureExitedVal, err := beaconState.ValidatorAtIndex(types.ValidatorIndex(4))
 	require.NoError(t, err)
 	futureExitedVal.WithdrawableEpoch = 17
-	slashedVal, err := beaconState.ValidatorAtIndex(uint64(5))
+	slashedVal, err := beaconState.ValidatorAtIndex(types.ValidatorIndex(5))
 	require.NoError(t, err)
 	slashedVal.Slashed = true
-	require.NoError(t, beaconState.UpdateValidatorAtIndex(uint64(2), exitedVal))
-	require.NoError(t, beaconState.UpdateValidatorAtIndex(uint64(4), futureExitedVal))
-	require.NoError(t, beaconState.UpdateValidatorAtIndex(uint64(5), slashedVal))
+	require.NoError(t, beaconState.UpdateValidatorAtIndex(types.ValidatorIndex(2), exitedVal))
+	require.NoError(t, beaconState.UpdateValidatorAtIndex(types.ValidatorIndex(4), futureExitedVal))
+	require.NoError(t, beaconState.UpdateValidatorAtIndex(types.ValidatorIndex(5), slashedVal))
 
 	tests := []struct {
 		name   string
@@ -66,7 +67,7 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 			name: "Empty list",
 			fields: fields{
 				pending:  make([]*ethpb.ProposerSlashing, 0),
-				included: make(map[uint64]bool),
+				included: make(map[types.ValidatorIndex]bool),
 			},
 			args: args{
 				slashings: slashings[0:1],
@@ -77,7 +78,7 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 			name: "Duplicate identical slashing",
 			fields: fields{
 				pending:   slashings[0:1],
-				included:  make(map[uint64]bool),
+				included:  make(map[types.ValidatorIndex]bool),
 				wantedErr: "slashing object already exists in pending proposer slashings",
 			},
 			args: args{
@@ -89,7 +90,7 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 			name: "Slashing for exited validator",
 			fields: fields{
 				pending:   []*ethpb.ProposerSlashing{},
-				included:  make(map[uint64]bool),
+				included:  make(map[types.ValidatorIndex]bool),
 				wantedErr: "is not slashable",
 			},
 			args: args{
@@ -101,7 +102,7 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 			name: "Slashing for exiting validator",
 			fields: fields{
 				pending:  []*ethpb.ProposerSlashing{},
-				included: make(map[uint64]bool),
+				included: make(map[types.ValidatorIndex]bool),
 			},
 			args: args{
 				slashings: slashings[4:5],
@@ -112,7 +113,7 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 			name: "Slashing for slashed validator",
 			fields: fields{
 				pending:   []*ethpb.ProposerSlashing{},
-				included:  make(map[uint64]bool),
+				included:  make(map[types.ValidatorIndex]bool),
 				wantedErr: "not slashable",
 			},
 			args: args{
@@ -124,7 +125,7 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 			name: "Already included",
 			fields: fields{
 				pending: []*ethpb.ProposerSlashing{},
-				included: map[uint64]bool{
+				included: map[types.ValidatorIndex]bool{
 					1: true,
 				},
 				wantedErr: "cannot be slashed",
@@ -141,7 +142,7 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 					slashings[0],
 					slashings[2],
 				},
-				included: make(map[uint64]bool),
+				included: make(map[types.ValidatorIndex]bool),
 			},
 			args: args{
 				slashings: slashings[1:2],
@@ -185,7 +186,7 @@ func TestPool_InsertProposerSlashing_SigFailsVerify_ClearPool(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
 	slashings := make([]*ethpb.ProposerSlashing, 2)
 	for i := 0; i < 2; i++ {
-		sl, err := testutil.GenerateProposerSlashingForValidator(beaconState, privKeys[i], uint64(i))
+		sl, err := testutil.GenerateProposerSlashingForValidator(beaconState, privKeys[i], types.ValidatorIndex(i))
 		require.NoError(t, err)
 		slashings[i] = sl
 	}
@@ -206,7 +207,7 @@ func TestPool_InsertProposerSlashing_SigFailsVerify_ClearPool(t *testing.T) {
 func TestPool_MarkIncludedProposerSlashing(t *testing.T) {
 	type fields struct {
 		pending  []*ethpb.ProposerSlashing
-		included map[uint64]bool
+		included map[types.ValidatorIndex]bool
 	}
 	type args struct {
 		slashing *ethpb.ProposerSlashing
@@ -223,7 +224,7 @@ func TestPool_MarkIncludedProposerSlashing(t *testing.T) {
 				pending: []*ethpb.ProposerSlashing{
 					proposerSlashingForValIdx(1),
 				},
-				included: make(map[uint64]bool),
+				included: make(map[types.ValidatorIndex]bool),
 			},
 			args: args{
 				slashing: proposerSlashingForValIdx(3),
@@ -232,7 +233,7 @@ func TestPool_MarkIncludedProposerSlashing(t *testing.T) {
 				pending: []*ethpb.ProposerSlashing{
 					proposerSlashingForValIdx(1),
 				},
-				included: map[uint64]bool{
+				included: map[types.ValidatorIndex]bool{
 					3: true,
 				},
 			},
@@ -245,7 +246,7 @@ func TestPool_MarkIncludedProposerSlashing(t *testing.T) {
 					proposerSlashingForValIdx(2),
 					proposerSlashingForValIdx(3),
 				},
-				included: map[uint64]bool{
+				included: map[types.ValidatorIndex]bool{
 					0: true,
 				},
 			},
@@ -257,7 +258,7 @@ func TestPool_MarkIncludedProposerSlashing(t *testing.T) {
 					proposerSlashingForValIdx(1),
 					proposerSlashingForValIdx(3),
 				},
-				included: map[uint64]bool{
+				included: map[types.ValidatorIndex]bool{
 					0: true,
 					2: true,
 				},
@@ -278,7 +279,7 @@ func TestPool_MarkIncludedProposerSlashing(t *testing.T) {
 					proposerSlashingForValIdx(9),
 					proposerSlashingForValIdx(10),
 				},
-				included: map[uint64]bool{
+				included: map[types.ValidatorIndex]bool{
 					0: true,
 				},
 			},
@@ -297,7 +298,7 @@ func TestPool_MarkIncludedProposerSlashing(t *testing.T) {
 					proposerSlashingForValIdx(9),
 					proposerSlashingForValIdx(10),
 				},
-				included: map[uint64]bool{
+				included: map[types.ValidatorIndex]bool{
 					0: true,
 					7: true,
 				},
@@ -328,7 +329,7 @@ func TestPool_PendingProposerSlashings(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
 	slashings := make([]*ethpb.ProposerSlashing, 20)
 	for i := 0; i < len(slashings); i++ {
-		sl, err := testutil.GenerateProposerSlashingForValidator(beaconState, privKeys[i], uint64(i))
+		sl, err := testutil.GenerateProposerSlashingForValidator(beaconState, privKeys[i], types.ValidatorIndex(i))
 		require.NoError(t, err)
 		slashings[i] = sl
 	}
@@ -395,7 +396,7 @@ func TestPool_PendingProposerSlashings_Slashed(t *testing.T) {
 	slashings2 := make([]*ethpb.ProposerSlashing, 32)
 	result := make([]*ethpb.ProposerSlashing, 32)
 	for i := 0; i < len(slashings); i++ {
-		sl, err := testutil.GenerateProposerSlashingForValidator(beaconState, privKeys[i], uint64(i))
+		sl, err := testutil.GenerateProposerSlashingForValidator(beaconState, privKeys[i], types.ValidatorIndex(i))
 		require.NoError(t, err)
 		slashings[i] = sl
 		slashings2[i] = sl

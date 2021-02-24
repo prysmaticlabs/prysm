@@ -22,11 +22,11 @@ import (
 	"google.golang.org/grpc"
 )
 
-// exitedIndice holds the exited indice from ProposeVoluntaryExit in memory so other functions don't confuse it
+// exitedIndex holds the exited index from ProposeVoluntaryExit in memory so other functions don't confuse it
 // for a normal validator.
-var exitedIndice uint64
+var exitedIndex types.ValidatorIndex
 
-// valExited is used to know if exitedIndice is set, since default value is 0.
+// valExited is used to know if exitedIndex is set, since default value is 0.
 var valExited bool
 
 // churnLimit is normally 4 unless the validator set is extremely large.
@@ -274,12 +274,12 @@ func proposeVoluntaryExit(conns ...*grpc.ClientConn) error {
 		return err
 	}
 
-	exitedIndice = rand.Uint64() % params.BeaconConfig().MinGenesisActiveValidatorCount
+	exitedIndex = types.ValidatorIndex(rand.Uint64() % params.BeaconConfig().MinGenesisActiveValidatorCount)
 	valExited = true
 
 	voluntaryExit := &eth.VoluntaryExit{
 		Epoch:          chainHead.HeadEpoch,
-		ValidatorIndex: exitedIndice,
+		ValidatorIndex: exitedIndex,
 	}
 	req := &eth.DomainRequest{
 		Epoch:  chainHead.HeadEpoch,
@@ -293,7 +293,7 @@ func proposeVoluntaryExit(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return err
 	}
-	signature := privKeys[exitedIndice].Sign(signingData[:])
+	signature := privKeys[exitedIndex].Sign(signingData[:])
 	signedExit := &eth.SignedVoluntaryExit{
 		Exit:      voluntaryExit,
 		Signature: signature.Marshal(),
@@ -310,7 +310,7 @@ func validatorIsExited(conns ...*grpc.ClientConn) error {
 	client := eth.NewBeaconChainClient(conn)
 	validatorRequest := &eth.GetValidatorRequest{
 		QueryFilter: &eth.GetValidatorRequest_Index{
-			Index: exitedIndice,
+			Index: exitedIndex,
 		},
 	}
 	validator, err := client.GetValidator(context.Background(), validatorRequest)
@@ -318,7 +318,7 @@ func validatorIsExited(conns ...*grpc.ClientConn) error {
 		return errors.Wrap(err, "failed to get validators")
 	}
 	if validator.ExitEpoch == params.BeaconConfig().FarFutureEpoch {
-		return fmt.Errorf("expected validator %d to be submitted for exit", exitedIndice)
+		return fmt.Errorf("expected validator %d to be submitted for exit", exitedIndex)
 	}
 	return nil
 }

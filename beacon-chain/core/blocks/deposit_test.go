@@ -317,7 +317,7 @@ func TestPreGenesisDeposits_SkipInvalidDeposit(t *testing.T) {
 	require.Equal(t, false, ok, "bad pubkey should not exist in state")
 
 	for i := 1; i < newState.NumValidators(); i++ {
-		val, err := newState.ValidatorAtIndex(uint64(i))
+		val, err := newState.ValidatorAtIndex(types.ValidatorIndex(i))
 		require.NoError(t, err)
 		require.Equal(t, params.BeaconConfig().MaxEffectiveBalance, val.EffectiveBalance, "unequal effective balance")
 		require.Equal(t, types.Epoch(0), val.ActivationEpoch)

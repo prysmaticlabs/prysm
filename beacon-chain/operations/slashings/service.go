@@ -6,6 +6,7 @@ import (
 	"sort"
 
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -21,7 +22,7 @@ func NewPool() *Pool {
 	return &Pool{
 		pendingProposerSlashing: make([]*ethpb.ProposerSlashing, 0),
 		pendingAttesterSlashing: make([]*PendingAttesterSlashing, 0),
-		included:                make(map[uint64]bool),
+		included:                make(map[types.ValidatorIndex]bool),
 	}
 }
 
@@ -37,7 +38,7 @@ func (p *Pool) PendingAttesterSlashings(ctx context.Context, state *beaconstate.
 	// Update prom metric.
 	numPendingAttesterSlashings.Set(float64(len(p.pendingAttesterSlashing)))
 
-	included := make(map[uint64]bool)
+	included := make(map[types.ValidatorIndex]bool)
 
 	// Allocate pending slice with a capacity of maxAttesterSlashings or len(p.pendingAttesterSlashing)) depending on the request.
 	maxSlashings := params.BeaconConfig().MaxAttesterSlashings
@@ -63,7 +64,7 @@ func (p *Pool) PendingAttesterSlashings(ctx context.Context, state *beaconstate.
 		attSlashing := slashing.attesterSlashing
 		slashedVal := sliceutil.IntersectionUint64(attSlashing.Attestation_1.AttestingIndices, attSlashing.Attestation_2.AttestingIndices)
 		for _, idx := range slashedVal {
-			included[idx] = true
+			included[types.ValidatorIndex(idx)] = true
 		}
 
 		pending = append(pending, attSlashing)
@@ -131,7 +132,7 @@ func (p *Pool) InsertAttesterSlashing(
 	cantSlash := make([]uint64, 0, len(slashedVal))
 	for _, val := range slashedVal {
 		// Has this validator index been included recently?
-		ok, err := p.validatorSlashingPreconditionCheck(state, val)
+		ok, err := p.validatorSlashingPreconditionCheck(state, types.ValidatorIndex(val))
 		if err != nil {
 			return err
 		}
@@ -145,16 +146,16 @@ func (p *Pool) InsertAttesterSlashing(
 		// Check if the validator already exists in the list of slashings.
 		// Use binary search to find the answer.
 		found := sort.Search(len(p.pendingAttesterSlashing), func(i int) bool {
-			return p.pendingAttesterSlashing[i].validatorToSlash >= val
+			return uint64(p.pendingAttesterSlashing[i].validatorToSlash) >= val
 		})
-		if found != len(p.pendingAttesterSlashing) && p.pendingAttesterSlashing[found].validatorToSlash == val {
+		if found != len(p.pendingAttesterSlashing) && uint64(p.pendingAttesterSlashing[found].validatorToSlash) == val {
 			cantSlash = append(cantSlash, val)
 			continue
 		}
 
 		pendingSlashing := &PendingAttesterSlashing{
 			attesterSlashing: slashing,
-			validatorToSlash: val,
+			validatorToSlash: types.ValidatorIndex(val),
 		}
 		// Insert into pending list and sort again.
 		p.pendingAttesterSlashing = append(p.pendingAttesterSlashing, pendingSlashing)
@@ -226,12 +227,12 @@ func (p *Pool) MarkIncludedAttesterSlashing(as *ethpb.AttesterSlashing) {
 	slashedVal := sliceutil.IntersectionUint64(as.Attestation_1.AttestingIndices, as.Attestation_2.AttestingIndices)
 	for _, val := range slashedVal {
 		i := sort.Search(len(p.pendingAttesterSlashing), func(i int) bool {
-			return p.pendingAttesterSlashing[i].validatorToSlash >= val
+			return uint64(p.pendingAttesterSlashing[i].validatorToSlash) >= val
 		})
-		if i != len(p.pendingAttesterSlashing) && p.pendingAttesterSlashing[i].validatorToSlash == val {
+		if i != len(p.pendingAttesterSlashing) && uint64(p.pendingAttesterSlashing[i].validatorToSlash) == val {
 			p.pendingAttesterSlashing = append(p.pendingAttesterSlashing[:i], p.pendingAttesterSlashing[i+1:]...)
 		}
-		p.included[val] = true
+		p.included[types.ValidatorIndex(val)] = true
 		numAttesterSlashingsIncluded.Inc()
 	}
 }
@@ -258,7 +259,7 @@ func (p *Pool) MarkIncludedProposerSlashing(ps *ethpb.ProposerSlashing) {
 // Note: this method requires caller to hold the lock.
 func (p *Pool) validatorSlashingPreconditionCheck(
 	state *beaconstate.BeaconState,
-	valIdx uint64,
+	valIdx types.ValidatorIndex,
 ) (bool, error) {
 	if !mutexasserts.RWMutexLocked(&p.lock) && !mutexasserts.RWMutexRLocked(&p.lock) {
 		return false, errors.New("pool.validatorSlashingPreconditionCheck: caller must hold read/write lock")

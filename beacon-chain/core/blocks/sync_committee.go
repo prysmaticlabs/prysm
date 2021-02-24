@@ -3,10 +3,11 @@ package blocks
 import (
 	"errors"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -44,7 +45,7 @@ func ProcessSyncCommittee(state *state.BeaconState, body *ethpb.BeaconBlockBody)
 		return nil, err
 	}
 	pPubKeys := make([]bls.PublicKey, 0, len(indices))
-	pIndices := make([]uint64, 0, len(indices))
+	pIndices := make([]types.ValidatorIndex, 0, len(indices))
 	for i, index := range indices {
 		if body.SyncCommitteeBits.BitAt(uint64(i)) {
 			v, err := state.ValidatorAtIndex(index)
@@ -68,7 +69,7 @@ func ProcessSyncCommittee(state *state.BeaconState, body *ethpb.BeaconBlockBody)
 	if err != nil {
 		return nil, err
 	}
-	sszBytes := types.SSZBytes(pbr)
+	sszBytes := p2pType.SSZBytes(pbr)
 	r, err := helpers.ComputeSigningRoot(&sszBytes, d)
 	if err != nil {
 		return nil, err

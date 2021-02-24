@@ -5,9 +5,8 @@ import (
 	"context"
 	"fmt"
 
-	types "github.com/prysmaticlabs/eth2-types"
-
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -174,7 +173,7 @@ func ProcessAttestationNoVerifySignature(
 		return nil, err
 	}
 	c := helpers.SlotCommitteeCount(activeValidatorCount)
-	if att.Data.CommitteeIndex >= c {
+	if uint64(att.Data.CommitteeIndex) >= c {
 		return nil, fmt.Errorf("committee index %d >= committee count %d", att.Data.CommitteeIndex, c)
 	}
 	if err := helpers.VerifyAttestationBitfieldLengths(beaconState, att); err != nil {
@@ -244,7 +243,7 @@ func ProcessAttestationNoVerifySignature(
 	}
 	proposerRewardNumerator := uint64(0)
 	for _, index := range indices {
-		br, err := epoch.BaseReward(beaconState, index)
+		br, err := epoch.BaseReward(beaconState, types.ValidatorIndex(index))
 		if err != nil {
 			return nil, err
 		}
@@ -329,7 +328,7 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.Beacon
 	indices := indexedAtt.AttestingIndices
 	var pubkeys []bls.PublicKey
 	for i := 0; i < len(indices); i++ {
-		pubkeyAtIdx := beaconState.PubkeyAtIndex(indices[i])
+		pubkeyAtIdx := beaconState.PubkeyAtIndex(types.ValidatorIndex(indices[i]))
 		pk, err := bls.PublicKeyFromBytes(pubkeyAtIdx[:])
 		if err != nil {
 			return errors.Wrap(err, "could not deserialize validator public key")

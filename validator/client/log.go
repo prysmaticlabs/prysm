@@ -17,8 +17,8 @@ var log = logrus.WithField("prefix", "validator")
 
 type attSubmitted struct {
 	data              *ethpb.AttestationData
-	attesterIndices   []uint64
-	aggregatorIndices []uint64
+	attesterIndices   []types.ValidatorIndex
+	aggregatorIndices []types.ValidatorIndex
 }
 
 func (v *validator) LogAttestationsSubmitted() {

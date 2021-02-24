@@ -125,7 +125,7 @@ func GenerateAttestations(
 	if err != nil {
 		return nil, err
 	}
-	for c := uint64(0); c < committeesPerSlot && c < numToGen; c++ {
+	for c := types.CommitteeIndex(0); uint64(c) < committeesPerSlot && uint64(c) < numToGen; c++ {
 		committee, err := helpers.BeaconCommitteeFromState(bState, slot, c)
 		if err != nil {
 			return nil, err

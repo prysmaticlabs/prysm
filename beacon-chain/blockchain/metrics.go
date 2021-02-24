@@ -140,7 +140,7 @@ func reportEpochMetrics(ctx context.Context, postState, headState *stateTrie.Bea
 	slashingEffectiveBalance := uint64(0)
 
 	for i, validator := range postState.Validators() {
-		bal, err := postState.BalanceAtIndex(uint64(i))
+		bal, err := postState.BalanceAtIndex(types.ValidatorIndex(i))
 		if err != nil {
 			log.Errorf("Could not load validator balance: %v", err)
 			continue

@@ -81,7 +81,7 @@ func TestProposer_GetBlock_OK(t *testing.T) {
 	}
 
 	proposerSlashings := make([]*ethpb.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
-	for i := uint64(0); i < params.BeaconConfig().MaxProposerSlashings; i++ {
+	for i := types.ValidatorIndex(0); uint64(i) < params.BeaconConfig().MaxProposerSlashings; i++ {
 		proposerSlashing, err := testutil.GenerateProposerSlashingForValidator(
 			beaconState,
 			privKeys[i],
@@ -98,7 +98,7 @@ func TestProposer_GetBlock_OK(t *testing.T) {
 		attesterSlashing, err := testutil.GenerateAttesterSlashingForValidator(
 			beaconState,
 			privKeys[i+params.BeaconConfig().MaxProposerSlashings],
-			i+params.BeaconConfig().MaxProposerSlashings, /* validator index */
+			types.ValidatorIndex(i+params.BeaconConfig().MaxProposerSlashings), /* validator index */
 		)
 		require.NoError(t, err)
 		attSlashings[i] = attesterSlashing
@@ -1654,7 +1654,7 @@ func TestProposer_FilterAttestation(t *testing.T) {
 				for i := 0; i < len(atts); i++ {
 					atts[i] = testutil.HydrateAttestation(&ethpb.Attestation{
 						Data: &ethpb.AttestationData{
-							CommitteeIndex: uint64(i),
+							CommitteeIndex: types.CommitteeIndex(i),
 						},
 					})
 				}
@@ -1671,7 +1671,7 @@ func TestProposer_FilterAttestation(t *testing.T) {
 				for i := 0; i < len(atts); i++ {
 					atts[i] = testutil.HydrateAttestation(&ethpb.Attestation{
 						Data: &ethpb.AttestationData{
-							CommitteeIndex: uint64(i),
+							CommitteeIndex: types.CommitteeIndex(i),
 							Source:         &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]},
 						},
 						AggregationBits: bitfield.Bitlist{0b00000110},
