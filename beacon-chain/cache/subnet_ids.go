@@ -139,15 +139,16 @@ func (s *subnetIDs) AddPersistentCommittee(pubkey []byte, comIndex []uint64, dur
 // production, handling of the relevant subnets for each role is done
 // separately.
 func (s *subnetIDs) EmptyAllCaches() {
-	s.attesterLock.Lock()
-	defer s.attesterLock.Unlock()
-	s.aggregatorLock.Lock()
-	defer s.aggregatorLock.Unlock()
-	s.subnetsLock.Lock()
-	defer s.subnetsLock.Unlock()
-
 	// Clear the caches.
+	s.attesterLock.Lock()
 	s.attester.Purge()
+	s.attesterLock.Unlock()
+
+	s.aggregatorLock.Lock()
 	s.aggregator.Purge()
+	s.aggregatorLock.Unlock()
+
+	s.subnetsLock.Lock()
 	s.persistentSubnets.Flush()
+	s.subnetsLock.Unlock()
 }
