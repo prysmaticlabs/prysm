@@ -9,7 +9,8 @@ import (
 
 // PoolMock is a fake implementation of PoolManager.
 type PoolMock struct {
-	PendingAttSlashings []*ethpb.AttesterSlashing
+	PendingAttSlashings  []*ethpb.AttesterSlashing
+	PendingPropSlashings []*ethpb.ProposerSlashing
 }
 
 // PendingAttesterSlashings --
@@ -19,7 +20,7 @@ func (m *PoolMock) PendingAttesterSlashings(ctx context.Context, state *state.Be
 
 // PendingProposerSlashings --
 func (m *PoolMock) PendingProposerSlashings(ctx context.Context, state *state.BeaconState, noLimit bool) []*ethpb.ProposerSlashing {
-	panic("implement me")
+	return m.PendingPropSlashings
 }
 
 // InsertAttesterSlashing --
