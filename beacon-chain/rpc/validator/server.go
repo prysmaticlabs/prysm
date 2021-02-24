@@ -56,7 +56,7 @@ type Server struct {
 	P2P                    p2p.Broadcaster
 	AttPool                attestations.Pool
 	SlashingsPool          slashings.PoolManager
-	ExitPool               *voluntaryexits.Pool
+	ExitPool               voluntaryexits.PoolManager
 	BlockReceiver          blockchain.BlockReceiver
 	MockEth1Votes          bool
 	Eth1BlockFetcher       powchain.POWBlockFetcher
