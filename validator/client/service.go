@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
@@ -229,7 +230,7 @@ func (v *ValidatorService) recheckKeys(ctx context.Context) {
 		cleanup := sub.Unsubscribe
 		defer cleanup()
 		w := <-initializedChan
-		keyManager, err := w.InitializeKeymanager(ctx)
+		keyManager, err := w.InitializeKeymanager(ctx, accountsiface.InitKeymanagerConfig{ListenForChanges: true})
 		if err != nil {
 			// log.Fatalf will prevent defer from being called
 			cleanup()
