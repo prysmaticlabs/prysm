@@ -11,6 +11,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	types "github.com/prysmaticlabs/eth2-types"
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -264,14 +265,7 @@ func (s *Service) subscribeDynamicWithSubnets(
 				if s.chainStarted.IsSet() && s.initialSync.Syncing() {
 					continue
 				}
-
-				// Persistent subscriptions from validators
-				persistentSubs := s.persistentSubnetIndices()
-				// Update desired topic indices for aggregator
-				wantedSubs := s.aggregatorSubnetIndices(currentSlot)
-
-				// Combine subscriptions to get all requested subscriptions
-				wantedSubs = sliceutil.SetUint64(append(persistentSubs, wantedSubs...))
+				wantedSubs := s.retrievePersistentSubs(currentSlot)
 				// Resize as appropriate.
 				s.reValidateSubscriptions(subscriptions, wantedSubs, topicFormat, digest)
 
@@ -356,6 +350,65 @@ func (s *Service) lookupAttesterSubnets(digest [4]byte, idx uint64) {
 func (s *Service) validPeersExist(subnetTopic string) bool {
 	numOfPeers := s.p2p.PubSub().ListPeers(subnetTopic + s.p2p.Encoding().ProtocolSuffix())
 	return uint64(len(numOfPeers)) >= params.BeaconNetworkConfig().MinimumPeersInSubnet
+}
+
+func (s *Service) retrievePersistentSubs(currSlot types.Slot) []uint64 {
+	// Persistent subscriptions from validators
+	persistentSubs := s.persistentSubnetIndices()
+	// Update desired topic indices for aggregator
+	wantedSubs := s.aggregatorSubnetIndices(currSlot)
+
+	// Combine subscriptions to get all requested subscriptions
+	return sliceutil.SetUint64(append(persistentSubs, wantedSubs...))
+}
+
+// filters out required peers for the node to function, not
+// pruning peers who are in our attestation subnets.
+func (s *Service) filterNeededPeers(pids []peer.ID) []peer.ID {
+	// Exit early if nothing to filter.
+	if len(pids) == 0 {
+		return pids
+	}
+	digest, err := s.forkDigest()
+	if err != nil {
+		log.WithError(err).Error("Could not compute fork digest")
+		return pids
+	}
+	currSlot := s.chain.CurrentSlot()
+	wantedSubs := s.retrievePersistentSubs(currSlot)
+	wantedSubs = sliceutil.SetUint64(append(wantedSubs, s.attesterSubnetIndices(currSlot)...))
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.Attestation{})]
+
+	// Map of peers in subnets
+	peerMap := make(map[peer.ID]bool)
+
+	for _, sub := range wantedSubs {
+		subnetTopic := fmt.Sprintf(topic, digest, sub) + s.p2p.Encoding().ProtocolSuffix()
+		peers := s.p2p.PubSub().ListPeers(subnetTopic)
+		if len(peers) > int(params.BeaconNetworkConfig().MinimumPeersInSubnet) {
+			// In the event we have more than the minimum, we can
+			// mark the remaining as viable for pruning.
+			peers = peers[:params.BeaconNetworkConfig().MinimumPeersInSubnet]
+		}
+		// Add peer to peer map.
+		for _, p := range peers {
+			// Even if the peer id has
+			// already been seen we still set
+			// it, as the outcome is the same.
+			peerMap[p] = true
+		}
+	}
+
+	// Clear out necessary peers from the peers to prune.
+	newPeers := make([]peer.ID, 0, len(pids))
+
+	for _, pid := range pids {
+		if peerMap[pid] {
+			continue
+		}
+		newPeers = append(newPeers, pid)
+	}
+	return newPeers
 }
 
 // Add fork digest to topic.
