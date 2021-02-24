@@ -132,7 +132,7 @@ func batchPublicKeys(publicKeys [][]byte, batchSize int) [][][]byte {
 	}
 	batch := make([][][]byte, 0)
 	for i := 0; i < len(publicKeys); i += batchSize {
-		if i+batchSize == len(publicKeys)+1 {
+		if i+batchSize >= len(publicKeys)+1 {
 			batch = append(batch, publicKeys[i:])
 		} else {
 			batch = append(batch, publicKeys[i:i+batchSize])
