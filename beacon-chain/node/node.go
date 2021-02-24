@@ -67,7 +67,7 @@ type BeaconNode struct {
 	stop            chan struct{} // Channel to wait for termination notifications.
 	db              db.Database
 	attestationPool attestations.Pool
-	exitPool        *voluntaryexits.Pool
+	exitPool        voluntaryexits.PoolManager
 	slashingsPool   slashings.PoolManager
 	depositCache    *depositcache.DepositCache
 	stateFeed       *event.Feed

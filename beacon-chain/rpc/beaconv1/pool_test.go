@@ -8,6 +8,7 @@ import (
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -101,4 +102,94 @@ func TestListPoolAttesterSlashings(t *testing.T) {
 	require.Equal(t, 2, len(resp.Data))
 	assert.DeepEqual(t, migration.V1Alpha1AttSlashingToV1(slashing1), resp.Data[0])
 	assert.DeepEqual(t, migration.V1Alpha1AttSlashingToV1(slashing2), resp.Data[1])
+}
+
+func TestListPoolProposerSlashings(t *testing.T) {
+	state, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	slashing1 := &eth.ProposerSlashing{
+		Header_1: &eth.SignedBeaconBlockHeader{
+			Header: &eth.BeaconBlockHeader{
+				Slot:          1,
+				ProposerIndex: 1,
+				ParentRoot:    bytesutil.PadTo([]byte("parentroot1"), 32),
+				StateRoot:     bytesutil.PadTo([]byte("stateroot1"), 32),
+				BodyRoot:      bytesutil.PadTo([]byte("bodyroot1"), 32),
+			},
+			Signature: bytesutil.PadTo([]byte("signature1"), 96),
+		},
+		Header_2: &eth.SignedBeaconBlockHeader{
+			Header: &eth.BeaconBlockHeader{
+				Slot:          2,
+				ProposerIndex: 2,
+				ParentRoot:    bytesutil.PadTo([]byte("parentroot2"), 32),
+				StateRoot:     bytesutil.PadTo([]byte("stateroot2"), 32),
+				BodyRoot:      bytesutil.PadTo([]byte("bodyroot2"), 32),
+			},
+			Signature: bytesutil.PadTo([]byte("signature2"), 96),
+		},
+	}
+	slashing2 := &eth.ProposerSlashing{
+		Header_1: &eth.SignedBeaconBlockHeader{
+			Header: &eth.BeaconBlockHeader{
+				Slot:          3,
+				ProposerIndex: 3,
+				ParentRoot:    bytesutil.PadTo([]byte("parentroot3"), 32),
+				StateRoot:     bytesutil.PadTo([]byte("stateroot3"), 32),
+				BodyRoot:      bytesutil.PadTo([]byte("bodyroot3"), 32),
+			},
+			Signature: bytesutil.PadTo([]byte("signature3"), 96),
+		},
+		Header_2: &eth.SignedBeaconBlockHeader{
+			Header: &eth.BeaconBlockHeader{
+				Slot:          4,
+				ProposerIndex: 4,
+				ParentRoot:    bytesutil.PadTo([]byte("parentroot4"), 32),
+				StateRoot:     bytesutil.PadTo([]byte("stateroot4"), 32),
+				BodyRoot:      bytesutil.PadTo([]byte("bodyroot4"), 32),
+			},
+			Signature: bytesutil.PadTo([]byte("signature4"), 96),
+		},
+	}
+
+	s := &Server{
+		ChainInfoFetcher: &chainMock.ChainService{State: state},
+		SlashingsPool:    &slashings.PoolMock{PendingPropSlashings: []*eth.ProposerSlashing{slashing1, slashing2}},
+	}
+
+	resp, err := s.ListPoolProposerSlashings(context.Background(), &types.Empty{})
+	require.NoError(t, err)
+	require.Equal(t, 2, len(resp.Data))
+	assert.DeepEqual(t, migration.V1Alpha1ProposerSlashingToV1(slashing1), resp.Data[0])
+	assert.DeepEqual(t, migration.V1Alpha1ProposerSlashingToV1(slashing2), resp.Data[1])
+}
+
+func TestListPoolVoluntaryExits(t *testing.T) {
+	state, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	exit1 := &eth.SignedVoluntaryExit{
+		Exit: &eth.VoluntaryExit{
+			Epoch:          1,
+			ValidatorIndex: 1,
+		},
+		Signature: bytesutil.PadTo([]byte("signature1"), 96),
+	}
+	exit2 := &eth.SignedVoluntaryExit{
+		Exit: &eth.VoluntaryExit{
+			Epoch:          2,
+			ValidatorIndex: 2,
+		},
+		Signature: bytesutil.PadTo([]byte("signature2"), 96),
+	}
+
+	s := &Server{
+		ChainInfoFetcher:   &chainMock.ChainService{State: state},
+		VoluntaryExitsPool: &voluntaryexits.PoolMock{Exits: []*eth.SignedVoluntaryExit{exit1, exit2}},
+	}
+
+	resp, err := s.ListPoolVoluntaryExits(context.Background(), &types.Empty{})
+	require.NoError(t, err)
+	require.Equal(t, 2, len(resp.Data))
+	assert.DeepEqual(t, migration.V1Alpha1ExitToV1(exit1), resp.Data[0])
+	assert.DeepEqual(t, migration.V1Alpha1ExitToV1(exit2), resp.Data[1])
 }
