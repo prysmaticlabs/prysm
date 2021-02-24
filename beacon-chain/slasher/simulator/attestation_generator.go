@@ -1,6 +1,8 @@
 package simulator
 
 import (
+	"math"
+
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -39,10 +41,15 @@ func generateAttestationsForSlot(simParams *Parameters, slot types.Slot) []*ethp
 			},
 		}
 
-		for i := startIdx; i < endIdx; i += valsPerCommittee {
-			indices := make([]uint64, 0, valsPerCommittee)
-			for v := startIdx; v < endIdx; v++ {
-				indices = append(indices, v)
+		valsPerAttestation := uint64(math.Floor(simParams.AggregationPercent * float64(valsPerCommittee)))
+		for i := startIdx; i < endIdx; i += valsPerAttestation {
+			attEndIdx := i + valsPerAttestation
+			if attEndIdx >= endIdx {
+				attEndIdx = endIdx
+			}
+			indices := make([]uint64, 0, valsPerAttestation)
+			for idx := i; idx < attEndIdx; idx++ {
+				indices = append(indices, idx)
 			}
 			att := &ethpb.IndexedAttestation{
 				AttestingIndices: indices,

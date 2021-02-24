@@ -9,9 +9,11 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/sirupsen/logrus"
 )
 
 type Parameters struct {
+	AggregationPercent     float64
 	ProposerSlashingProbab float64
 	AttesterSlashingProbab float64
 	NumValidators          uint64
@@ -29,9 +31,10 @@ type Simulator struct {
 
 func DefaultParams() *Parameters {
 	return &Parameters{
+		AggregationPercent:     0.6,
 		ProposerSlashingProbab: 0.5,
 		AttesterSlashingProbab: 0.02,
-		NumValidators:          16384,
+		NumValidators:          200000,
 	}
 }
 
@@ -59,6 +62,11 @@ func New(ctx context.Context, beaconDB db.Database) (*Simulator, error) {
 }
 
 func (s *Simulator) Start() {
+	log.WithFields(logrus.Fields{
+		"numValidators":          s.params.NumValidators,
+		"proposerSlashingProbab": s.params.ProposerSlashingProbab,
+		"attesterSlashingProbab": s.params.AttesterSlashingProbab,
+	}).Info("Starting slasher simulator")
 	go s.simulateBlockProposals(s.ctx)
 	go s.simulateAttestations(s.ctx)
 	s.slasher.Start()
