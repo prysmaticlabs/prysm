@@ -1556,8 +1556,10 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpoch(t *testing.T) {
 }
 
 func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
-	beaconDB := dbTest.SetupDB(t)
+	helpers.ClearCache()
+	params.UseMainnetConfig()
 
+	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
 	validatorCount := uint64(100)
 
@@ -1644,6 +1646,10 @@ func TestGetValidatorPerformance_Syncing(t *testing.T) {
 }
 
 func TestGetValidatorPerformance_OK(t *testing.T) {
+	helpers.ClearCache()
+	params.UseMinimalConfig()
+	defer params.UseMainnetConfig()
+
 	ctx := context.Background()
 	epoch := types.Epoch(1)
 	headState, err := testutil.NewBeaconState()
@@ -1916,9 +1922,9 @@ func TestServer_GetIndividualVotes_RequestFutureSlot(t *testing.T) {
 }
 
 func TestServer_GetIndividualVotes_ValidatorsDontExist(t *testing.T) {
-
 	params.UseMinimalConfig()
 	defer params.UseMainnetConfig()
+
 	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
 
