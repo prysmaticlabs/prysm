@@ -350,7 +350,7 @@ func TestSubmitAggregateAndProof_PreferOwnAttestation(t *testing.T) {
 
 	res, err := aggregatorServer.SubmitAggregateSelectionProof(ctx, req)
 	require.NoError(t, err)
-	assert.DeepEqual(t, att1, res.AggregateAndProof.Aggregate, "Did not receive wanted attestation")
+	assert.DeepSSZEqual(t, att1, res.AggregateAndProof.Aggregate, "Did not receive wanted attestation")
 }
 
 func TestSubmitAggregateAndProof_SelectsMostBitsWhenOwnAttestationNotPresent(t *testing.T) {
@@ -401,7 +401,7 @@ func TestSubmitAggregateAndProof_SelectsMostBitsWhenOwnAttestationNotPresent(t *
 
 	res, err := aggregatorServer.SubmitAggregateSelectionProof(ctx, req)
 	require.NoError(t, err)
-	assert.DeepEqual(t, att1, res.AggregateAndProof.Aggregate, "Did not receive wanted attestation")
+	assert.DeepSSZEqual(t, att1, res.AggregateAndProof.Aggregate, "Did not receive wanted attestation")
 }
 
 func TestSubmitSignedAggregateSelectionProof_ZeroHashesSignatures(t *testing.T) {
