@@ -53,7 +53,7 @@ type Config struct {
 	P2P                 p2p.P2P
 	DB                  db.NoHeadAccessDatabase
 	AttPool             attestations.Pool
-	ExitPool            *voluntaryexits.Pool
+	ExitPool            voluntaryexits.PoolManager
 	SlashingPool        slashings.PoolManager
 	Chain               blockchainService
 	InitialSync         Checker
@@ -83,7 +83,7 @@ type Service struct {
 	p2p                       p2p.P2P
 	db                        db.NoHeadAccessDatabase
 	attPool                   attestations.Pool
-	exitPool                  *voluntaryexits.Pool
+	exitPool                  voluntaryexits.PoolManager
 	slashingPool              slashings.PoolManager
 	chain                     blockchainService
 	slotToPendingBlocks       *gcache.Cache
