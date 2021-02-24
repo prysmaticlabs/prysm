@@ -512,6 +512,6 @@ func TestKV_Aggregated_DuplicateAggregatedAttestations(t *testing.T) {
 	returned := cache.AggregatedAttestations()
 
 	// It should have only returned att2.
-	assert.DeepEqual(t, att2, returned[0], "Did not receive correct aggregated atts")
+	assert.DeepSSZEqual(t, att2, returned[0], "Did not receive correct aggregated atts")
 	assert.Equal(t, 1, len(returned), "Did not receive correct aggregated atts")
 }

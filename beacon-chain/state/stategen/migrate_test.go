@@ -51,7 +51,7 @@ func TestMigrateToCold_HappyPath(t *testing.T) {
 
 	gotState, err := service.beaconDB.State(ctx, fRoot)
 	require.NoError(t, err)
-	assert.DeepEqual(t, beaconState.InnerStateUnsafe(), gotState.InnerStateUnsafe(), "Did not save state")
+	assert.DeepSSZEqual(t, beaconState.InnerStateUnsafe(), gotState.InnerStateUnsafe(), "Did not save state")
 	gotRoot := service.beaconDB.ArchivedPointRoot(ctx, stateSlot/service.slotsPerArchivedPoint)
 	assert.Equal(t, fRoot, gotRoot, "Did not save archived root")
 	lastIndex, err := service.beaconDB.LastArchivedSlot(ctx)

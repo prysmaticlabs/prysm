@@ -82,9 +82,11 @@ func (s *Server) StreamBeaconLogs(req *ptypes.Empty, stream pb.Health_StreamBeac
 // StreamValidatorLogs from the validator client via a gRPC server-side stream.
 func (s *Server) StreamValidatorLogs(_ *ptypes.Empty, stream pb.Health_StreamValidatorLogsServer) error {
 	ch := make(chan []byte, s.streamLogsBufferSize)
-	defer close(ch)
 	sub := s.logsStreamer.LogsFeed().Subscribe(ch)
-	defer sub.Unsubscribe()
+	defer func() {
+		sub.Unsubscribe()
+		defer close(ch)
+	}()
 
 	recentLogs := s.logsStreamer.GetLastFewLogs()
 	logStrings := make([]string, len(recentLogs))
@@ -107,6 +109,8 @@ func (s *Server) StreamValidatorLogs(_ *ptypes.Empty, stream pb.Health_StreamVal
 			}
 		case <-s.ctx.Done():
 			return status.Error(codes.Canceled, "Context canceled")
+		case err := <-sub.Err():
+			return status.Errorf(codes.Canceled, "Subscriber error, closing: %v", err)
 		case <-stream.Context().Done():
 			return status.Error(codes.Canceled, "Context canceled")
 		}
