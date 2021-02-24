@@ -70,7 +70,7 @@ type Service struct {
 	mockEth1Votes           bool
 	enableDebugRPCEndpoints bool
 	attestationsPool        attestations.Pool
-	exitPool                *voluntaryexits.Pool
+	exitPool                voluntaryexits.PoolManager
 	slashingsPool           slashings.PoolManager
 	syncService             chainSync.Checker
 	host                    string
@@ -122,7 +122,7 @@ type Config struct {
 	EnableDebugRPCEndpoints bool
 	MockEth1Votes           bool
 	AttestationsPool        attestations.Pool
-	ExitPool                *voluntaryexits.Pool
+	ExitPool                voluntaryexits.PoolManager
 	SlashingsPool           slashings.PoolManager
 	SyncService             chainSync.Checker
 	Broadcaster             p2p.Broadcaster

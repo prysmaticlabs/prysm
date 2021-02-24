@@ -83,7 +83,24 @@ func (bs *Server) SubmitProposerSlashing(ctx context.Context, req *ethpb.Propose
 // ListPoolVoluntaryExits retrieves voluntary exits known by the node but
 // not necessarily incorporated into any block.
 func (bs *Server) ListPoolVoluntaryExits(ctx context.Context, req *ptypes.Empty) (*ethpb.VoluntaryExitsPoolResponse, error) {
-	return nil, errors.New("unimplemented")
+	ctx, span := trace.StartSpan(ctx, "beaconv1.ListPoolVoluntaryExits")
+	defer span.End()
+
+	headState, err := bs.ChainInfoFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	}
+
+	sourceExits := bs.VoluntaryExitsPool.PendingExits(headState, headState.Slot(), true)
+
+	exits := make([]*ethpb.SignedVoluntaryExit, len(sourceExits))
+	for i, s := range sourceExits {
+		exits[i] = migration.V1Alpha1ExitToV1(s)
+	}
+
+	return &ethpb.VoluntaryExitsPoolResponse{
+		Data: exits,
+	}, nil
 }
 
 // SubmitVoluntaryExit submits SignedVoluntaryExit object to node's pool
