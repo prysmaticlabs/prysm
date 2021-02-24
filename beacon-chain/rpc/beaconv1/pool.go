@@ -34,7 +34,7 @@ func (bs *Server) ListPoolAttesterSlashings(ctx context.Context, req *ptypes.Emp
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
-	sourceSlashings := bs.SlashingsPool.PendingAttesterSlashings(ctx, headState, true)
+	sourceSlashings := bs.SlashingsPool.PendingAttesterSlashings(ctx, headState, true /* return unlimited slashings */)
 
 	slashings := make([]*ethpb.AttesterSlashing, len(sourceSlashings))
 	for i, s := range sourceSlashings {
@@ -62,7 +62,7 @@ func (bs *Server) ListPoolProposerSlashings(ctx context.Context, req *ptypes.Emp
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
-	sourceSlashings := bs.SlashingsPool.PendingProposerSlashings(ctx, headState, true)
+	sourceSlashings := bs.SlashingsPool.PendingProposerSlashings(ctx, headState, true /* return unlimited slashings */)
 
 	slashings := make([]*ethpb.ProposerSlashing, len(sourceSlashings))
 	for i, s := range sourceSlashings {
@@ -91,7 +91,7 @@ func (bs *Server) ListPoolVoluntaryExits(ctx context.Context, req *ptypes.Empty)
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 
-	sourceExits := bs.VoluntaryExitsPool.PendingExits(headState, headState.Slot(), true)
+	sourceExits := bs.VoluntaryExitsPool.PendingExits(headState, headState.Slot(), true /* return unlimited exits */)
 
 	exits := make([]*ethpb.SignedVoluntaryExit, len(sourceExits))
 	for i, s := range sourceExits {
