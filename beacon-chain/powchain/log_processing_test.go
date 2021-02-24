@@ -3,7 +3,6 @@ package powchain
 import (
 	"context"
 	"encoding/binary"
-	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -25,7 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func TestProcessDepositLog_OK(t *testing.T) {
@@ -640,66 +638,6 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 	assert.Equal(t, int64(depositsWanted-1), web3Service.lastReceivedMerkleIndex, "missing logs were not re-requested")
 
 	hook.Reset()
-}
-
-func TestConsistentGenesisState(t *testing.T) {
-	t.Skip("Incorrect test setup")
-	testAcc, err := contracts.Setup()
-	require.NoError(t, err, "Unable to set up simulated backend")
-	beaconDB := testDB.SetupDB(t)
-	web3Service := newPowchainService(t, testAcc, beaconDB)
-
-	testAcc.Backend.Commit()
-	err = testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
-	require.NoError(t, err)
-
-	testutil.ResetCache()
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(uint64(depositsReqForChainStart))
-	require.NoError(t, err)
-
-	_, roots, err := testutil.DeterministicDepositTrie(len(deposits))
-	require.NoError(t, err)
-	ctx, cancel := context.WithCancel(context.Background())
-	go web3Service.run(ctx.Done())
-
-	// 64 Validators are used as size required for beacon-chain to start. This number
-	// is defined in the deposit contract as the number required for the testnet. The actual number
-	// is 2**14.
-	for i := 0; i < depositsReqForChainStart; i++ {
-		data := deposits[i].Data
-		testAcc.TxOpts.Value = contracts.Amount32Eth()
-		testAcc.TxOpts.GasLimit = 1000000
-		_, err = testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature, roots[i])
-		require.NoError(t, err, "Could not deposit to deposit contract")
-
-		testAcc.Backend.Commit()
-	}
-
-	for i := uint64(0); i < params.BeaconConfig().Eth1FollowDistance; i++ {
-		testAcc.Backend.Commit()
-	}
-
-	time.Sleep(2 * time.Second)
-	require.Equal(t, true, web3Service.chainStartData.Chainstarted, fmt.Sprintf("Service hasn't chainstarted yet with a block height of %d", web3Service.latestEth1Data.BlockHeight))
-
-	// Advance 10 blocks.
-	for i := 0; i < 10; i++ {
-		testAcc.Backend.Commit()
-	}
-
-	// New db to prevent registration error.
-	newBeaconDB := testDB.SetupDB(t)
-
-	newWeb3Service := newPowchainService(t, testAcc, newBeaconDB)
-	go newWeb3Service.run(ctx.Done())
-
-	time.Sleep(2 * time.Second)
-	require.Equal(t, true, newWeb3Service.chainStartData.Chainstarted, fmt.Sprintf("Service hasn't chainstarted yet with a block height of %d", newWeb3Service.latestEth1Data.BlockHeight))
-
-	diff, _ := messagediff.PrettyDiff(web3Service.chainStartData.Eth1Data, newWeb3Service.chainStartData.Eth1Data)
-	assert.Equal(t, "", diff, "Two services have different eth1data")
-
-	cancel()
 }
 
 func TestCheckForChainstart_NoValidator(t *testing.T) {
