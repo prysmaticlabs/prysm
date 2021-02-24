@@ -13,8 +13,15 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// Pool implements a struct to maintain pending and seen voluntary exits. This pool
-// is used by proposers to insert into new blocks.
+// PoolManager maintains pending and seen voluntary exits.
+// This pool is used by proposers to insert voluntary exits into new blocks.
+type PoolManager interface {
+	PendingExits(state *beaconstate.BeaconState, slot types.Slot, noLimit bool) []*ethpb.SignedVoluntaryExit
+	InsertVoluntaryExit(ctx context.Context, state *beaconstate.BeaconState, exit *ethpb.SignedVoluntaryExit)
+	MarkIncluded(exit *ethpb.SignedVoluntaryExit)
+}
+
+// Pool is a concrete implementation of PoolManager.
 type Pool struct {
 	lock    sync.RWMutex
 	pending []*ethpb.SignedVoluntaryExit
