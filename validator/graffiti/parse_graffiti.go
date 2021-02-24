@@ -4,11 +4,14 @@ import (
 	"io/ioutil"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"gopkg.in/yaml.v2"
 )
 
 type Graffiti struct {
+	Hash     [32]byte
 	Default  string                          `yaml:"default,omitempty"`
+	Ordered  []string                        `yaml:"ordered,omitempty"`
 	Random   []string                        `yaml:"random,omitempty"`
 	Specific map[types.ValidatorIndex]string `yaml:"specific,omitempty"`
 }
@@ -23,5 +26,6 @@ func ParseGraffitiFile(f string) (*Graffiti, error) {
 	if err := yaml.Unmarshal(yamlFile, g); err != nil {
 		return nil, err
 	}
+	g.Hash = hashutil.Hash(yamlFile)
 	return g, nil
 }

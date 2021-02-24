@@ -176,6 +176,12 @@ func (v *ValidatorService) Start() {
 		slashablePublicKeys[pubKey] = true
 	}
 
+	graffitiOrderedIndex, err := v.db.GraffitiOrderedIndex(v.ctx, v.graffitiStruct.Hash)
+	if err != nil {
+		log.Errorf("Could not read graffiti ordered index from disk: %v", err)
+		return
+	}
+
 	v.validator = &validator{
 		db:                             v.db,
 		validatorClient:                ethpb.NewBeaconNodeValidatorClient(v.conn),
@@ -196,6 +202,7 @@ func (v *ValidatorService) Start() {
 		walletInitializedFeed:          v.walletInitializedFeed,
 		blockFeed:                      new(event.Feed),
 		graffitiStruct:                 v.graffitiStruct,
+		graffitiOrderedIndex:           graffitiOrderedIndex,
 		eipImportBlacklistedPublicKeys: slashablePublicKeys,
 		logDutyCountDown:               v.logDutyCountDown,
 	}
