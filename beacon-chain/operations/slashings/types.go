@@ -1,14 +1,34 @@
 package slashings
 
 import (
+	"context"
 	"sync"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 )
 
-// Pool implements a struct to maintain pending and recently included attester and
-// proposer slashings. This pool is used by proposers to insert into new blocks.
+// PoolManager maintains a pool of pending and recently included attester and proposer slashings.
+// This pool is used by proposers to insert data into new blocks.
+type PoolManager interface {
+	PendingAttesterSlashings(ctx context.Context, state *state.BeaconState, noLimit bool) []*ethpb.AttesterSlashing
+	PendingProposerSlashings(ctx context.Context, state *state.BeaconState, noLimit bool) []*ethpb.ProposerSlashing
+	InsertAttesterSlashing(
+		ctx context.Context,
+		state *state.BeaconState,
+		slashing *ethpb.AttesterSlashing,
+	) error
+	InsertProposerSlashing(
+		ctx context.Context,
+		state *state.BeaconState,
+		slashing *ethpb.ProposerSlashing,
+	) error
+	MarkIncludedAttesterSlashing(as *ethpb.AttesterSlashing)
+	MarkIncludedProposerSlashing(ps *ethpb.ProposerSlashing)
+}
+
+// Pool is a concrete implementation of PoolManager.
 type Pool struct {
 	lock                    sync.RWMutex
 	pendingProposerSlashing []*ethpb.ProposerSlashing
