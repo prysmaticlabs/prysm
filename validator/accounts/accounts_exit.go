@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
@@ -79,7 +80,7 @@ func prepareWallet(cliCtx *cli.Context) (validatingPublicKeys [][48]byte, km key
 		return nil, nil, errors.Wrap(err, "could not open wallet")
 	}
 
-	km, err = w.InitializeKeymanager(cliCtx.Context)
+	km, err = w.InitializeKeymanager(cliCtx.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
 	if err != nil {
 		return nil, nil, errors.Wrap(err, ErrCouldNotInitializeKeymanager)
 	}
