@@ -56,7 +56,7 @@ func NewCommitteesCache() *CommitteeCache {
 
 // Committee fetches the shuffled indices by slot and committee index. Every list of indices
 // represent one committee. Returns true if the list exists with slot and committee index. Otherwise returns false, nil.
-func (c *CommitteeCache) Committee(slot types.Slot, seed [32]byte, index uint64) ([]uint64, error) {
+func (c *CommitteeCache) Committee(slot types.Slot, seed [32]byte, index types.CommitteeIndex) ([]types.ValidatorIndex, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
@@ -82,7 +82,7 @@ func (c *CommitteeCache) Committee(slot types.Slot, seed [32]byte, index uint64)
 		committeeCountPerSlot = item.CommitteeCount / uint64(params.BeaconConfig().SlotsPerEpoch)
 	}
 
-	indexOffSet := index + uint64(slot.ModSlot(params.BeaconConfig().SlotsPerEpoch).Mul(committeeCountPerSlot))
+	indexOffSet := uint64(index) + uint64(slot.ModSlot(params.BeaconConfig().SlotsPerEpoch).Mul(committeeCountPerSlot))
 	start, end := startEndIndices(item, indexOffSet)
 
 	if end > uint64(len(item.ShuffledIndices)) || end < start {
@@ -106,7 +106,7 @@ func (c *CommitteeCache) AddCommitteeShuffledList(committees *Committees) error 
 }
 
 // ActiveIndices returns the active indices of a given seed stored in cache.
-func (c *CommitteeCache) ActiveIndices(seed [32]byte) ([]uint64, error) {
+func (c *CommitteeCache) ActiveIndices(seed [32]byte) ([]types.ValidatorIndex, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	obj, exists, err := c.CommitteeCache.GetByKey(key(seed))

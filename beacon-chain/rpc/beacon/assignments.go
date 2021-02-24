@@ -29,8 +29,8 @@ func (bs *Server) ListValidatorAssignments(
 	}
 
 	var res []*ethpb.ValidatorAssignments_CommitteeAssignment
-	filtered := map[uint64]bool{} // track filtered validators to prevent duplication in the response.
-	filteredIndices := make([]uint64, 0)
+	filtered := map[types.ValidatorIndex]bool{} // track filtered validators to prevent duplication in the response.
+	filteredIndices := make([]types.ValidatorIndex, 0)
 	var requestedEpoch types.Epoch
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListValidatorAssignmentsRequest_Genesis:
@@ -105,7 +105,7 @@ func (bs *Server) ListValidatorAssignments(
 	}
 
 	for _, index := range filteredIndices[start:end] {
-		if index >= uint64(requestedState.NumValidators()) {
+		if uint64(index) >= uint64(requestedState.NumValidators()) {
 			return nil, status.Errorf(codes.OutOfRange, "Validator index %d >= validator count %d",
 				index, requestedState.NumValidators())
 		}

@@ -383,7 +383,7 @@ func (is *infostream) calculateActivationTimeForPendingValidators(res []*ethpb.V
 
 	// Fetch the list of pending validators; count the number of attesting validators.
 	numAttestingValidators := uint64(0)
-	pendingValidators := make([]uint64, 0, headState.NumValidators())
+	pendingValidators := make([]types.ValidatorIndex, 0, headState.NumValidators())
 
 	err := headState.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
 		if val.IsNil() {
@@ -462,7 +462,7 @@ func (is *infostream) handleBlockProcessed() {
 }
 
 type indicesSorter struct {
-	indices []uint64
+	indices []types.ValidatorIndex
 }
 
 func (s indicesSorter) Len() int      { return len(s.indices) }

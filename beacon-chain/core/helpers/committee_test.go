@@ -71,7 +71,7 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 }
 
 func TestComputeCommittee_RegressionTest(t *testing.T) {
-	indices := []uint64{1, 3, 8, 16, 18, 19, 20, 23, 30, 35, 43, 46, 47, 54, 56, 58, 69, 70, 71, 83, 84, 85, 91, 96, 100, 103, 105, 106, 112, 121, 127, 128, 129, 140, 142, 144, 146, 147, 149, 152, 153, 154, 157, 160, 173, 175, 180, 182, 188, 189, 191, 194, 201, 204, 217, 221, 226, 228, 230, 231, 239, 241, 249, 250, 255}
+	indices := []types.ValidatorIndex{1, 3, 8, 16, 18, 19, 20, 23, 30, 35, 43, 46, 47, 54, 56, 58, 69, 70, 71, 83, 84, 85, 91, 96, 100, 103, 105, 106, 112, 121, 127, 128, 129, 140, 142, 144, 146, 147, 149, 152, 153, 154, 157, 160, 173, 175, 180, 182, 188, 189, 191, 194, 201, 204, 217, 221, 226, 228, 230, 231, 239, 241, 249, 250, 255}
 	seed := [32]byte{68, 110, 161, 250, 98, 230, 161, 172, 227, 226, 99, 11, 138, 124, 201, 134, 38, 197, 0, 120, 6, 165, 122, 34, 19, 216, 43, 226, 210, 114, 165, 183}
 	index := uint64(215)
 	count := uint64(32)
@@ -151,24 +151,24 @@ func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 	require.NoError(t, err)
 
 	tests := []struct {
-		index          uint64
+		index          types.ValidatorIndex
 		slot           types.Slot
-		committee      []uint64
-		committeeIndex uint64
+		committee      []types.ValidatorIndex
+		committeeIndex types.CommitteeIndex
 		isProposer     bool
 		proposerSlot   types.Slot
 	}{
 		{
 			index:          0,
 			slot:           78,
-			committee:      []uint64{0, 38},
+			committee:      []types.ValidatorIndex{0, 38},
 			committeeIndex: 0,
 			isProposer:     false,
 		},
 		{
 			index:          1,
 			slot:           71,
-			committee:      []uint64{1, 4},
+			committee:      []types.ValidatorIndex{1, 4},
 			committeeIndex: 0,
 			isProposer:     true,
 			proposerSlot:   79,
@@ -176,13 +176,13 @@ func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 		{
 			index:          11,
 			slot:           90,
-			committee:      []uint64{31, 11},
+			committee:      []types.ValidatorIndex{31, 11},
 			committeeIndex: 0,
 			isProposer:     false,
 		}, {
 			index:          2,
 			slot:           127, // 3rd epoch has more active validators
-			committee:      []uint64{89, 2, 81, 5},
+			committee:      []types.ValidatorIndex{89, 2, 81, 5},
 			committeeIndex: 0,
 			isProposer:     false,
 		},
@@ -405,8 +405,8 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 	ClearCache()
 	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount
 	validators := make([]*ethpb.Validator, validatorCount)
-	indices := make([]uint64, validatorCount)
-	for i := uint64(0); i < validatorCount; i++ {
+	indices := make([]types.ValidatorIndex, validatorCount)
+	for i := types.ValidatorIndex(0); uint64(i) < validatorCount; i++ {
 		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
@@ -420,7 +420,7 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 	require.NoError(t, UpdateCommitteeCache(state, CurrentEpoch(state)))
 
 	epoch := types.Epoch(1)
-	idx := uint64(1)
+	idx := types.CommitteeIndex(1)
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(t, err)
 
@@ -648,7 +648,7 @@ func TestPrecomputeProposerIndices_Ok(t *testing.T) {
 	proposerIndices, err := precomputeProposerIndices(state, indices)
 	require.NoError(t, err)
 
-	var wantedProposerIndices []uint64
+	var wantedProposerIndices []types.ValidatorIndex
 	seed, err := Seed(state, 0, params.BeaconConfig().DomainBeaconProposer)
 	require.NoError(t, err)
 	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerEpoch); i++ {

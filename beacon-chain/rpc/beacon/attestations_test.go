@@ -3,7 +3,6 @@ package beacon
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"sort"
 	"strconv"
 	"testing"
@@ -106,7 +105,7 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	require.DeepEqual(t, wanted, res)
+	require.DeepSSZEqual(t, wanted, res)
 }
 
 func TestServer_ListAttestations_NoPagination(t *testing.T) {
@@ -258,7 +257,7 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 	count := params.BeaconConfig().SlotsPerEpoch * 4
 	atts := make([]*ethpb.Attestation, 0, count)
 	for i := types.Slot(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
-		for s := uint64(0); s < 4; s++ {
+		for s := types.CommitteeIndex(0); s < 4; s++ {
 			blockExample := testutil.NewBeaconBlock()
 			blockExample.Block.Slot = i
 			blockExample.Block.Body.Attestations = []*ethpb.Attestation{
@@ -349,9 +348,7 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			res, err := bs.ListAttestations(ctx, test.req)
 			require.NoError(t, err)
-			if !reflect.DeepEqual(res, test.res) {
-				t.Errorf("Incorrect attestations response, wanted \n%v, received \n%v", test.res, res)
-			}
+			require.DeepSSZEqual(t, res, test.res)
 		})
 	}
 }
@@ -871,14 +868,14 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 		comms := committees[i].Committees
 		for j := 0; j < numValidators; j++ {
 			var indexInCommittee uint64
-			var committeeIndex uint64
+			var committeeIndex types.CommitteeIndex
 			var committeeLength int
 			var found bool
 			for comIndex, item := range comms {
 				for n, idx := range item.ValidatorIndices {
-					if uint64(j) == idx {
+					if types.ValidatorIndex(j) == idx {
 						indexInCommittee = uint64(n)
-						committeeIndex = uint64(comIndex)
+						committeeIndex = types.CommitteeIndex(comIndex)
 						committeeLength = len(item.ValidatorIndices)
 						found = true
 						break

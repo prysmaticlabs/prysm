@@ -52,8 +52,8 @@ type Service struct {
 	depositCache          *depositcache.DepositCache
 	chainStartFetcher     powchain.ChainStartFetcher
 	attPool               attestations.Pool
-	slashingPool          *slashings.Pool
-	exitPool              *voluntaryexits.Pool
+	slashingPool          slashings.PoolManager
+	exitPool              voluntaryexits.PoolManager
 	genesisTime           time.Time
 	p2p                   p2p.Broadcaster
 	maxRoutines           int
@@ -88,8 +88,8 @@ type Config struct {
 	BeaconDB          db.HeadAccessDatabase
 	DepositCache      *depositcache.DepositCache
 	AttPool           attestations.Pool
-	ExitPool          *voluntaryexits.Pool
-	SlashingPool      *slashings.Pool
+	ExitPool          voluntaryexits.PoolManager
+	SlashingPool      slashings.PoolManager
 	P2p               p2p.Broadcaster
 	MaxRoutines       int
 	StateNotifier     statefeed.Notifier

@@ -193,7 +193,7 @@ func GenerateFullBlock(
 func GenerateProposerSlashingForValidator(
 	bState *stateTrie.BeaconState,
 	priv bls.SecretKey,
-	idx uint64,
+	idx types.ValidatorIndex,
 ) (*ethpb.ProposerSlashing, error) {
 	header1 := HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
@@ -253,7 +253,7 @@ func generateProposerSlashings(
 func GenerateAttesterSlashingForValidator(
 	bState *stateTrie.BeaconState,
 	priv bls.SecretKey,
-	idx uint64,
+	idx types.ValidatorIndex,
 ) (*ethpb.AttesterSlashing, error) {
 	currentEpoch := helpers.CurrentEpoch(bState)
 
@@ -271,7 +271,7 @@ func GenerateAttesterSlashingForValidator(
 				Root:  params.BeaconConfig().ZeroHash[:],
 			},
 		},
-		AttestingIndices: []uint64{idx},
+		AttestingIndices: []uint64{uint64(idx)},
 	}
 	var err error
 	att1.Signature, err = helpers.ComputeDomainAndSign(bState, currentEpoch, att1.Data, params.BeaconConfig().DomainBeaconAttester, priv)
@@ -293,7 +293,7 @@ func GenerateAttesterSlashingForValidator(
 				Root:  params.BeaconConfig().ZeroHash[:],
 			},
 		},
-		AttestingIndices: []uint64{idx},
+		AttestingIndices: []uint64{uint64(idx)},
 	}
 	att2.Signature, err = helpers.ComputeDomainAndSign(bState, currentEpoch, att2.Data, params.BeaconConfig().DomainBeaconAttester, priv)
 	if err != nil {
@@ -315,7 +315,7 @@ func generateAttesterSlashings(
 	randGen := rand.NewDeterministicGenerator()
 	for i := uint64(0); i < numSlashings; i++ {
 		committeeIndex := randGen.Uint64() % params.BeaconConfig().MaxCommitteesPerSlot
-		committee, err := helpers.BeaconCommitteeFromState(bState, bState.Slot(), committeeIndex)
+		committee, err := helpers.BeaconCommitteeFromState(bState, bState.Slot(), types.CommitteeIndex(committeeIndex))
 		if err != nil {
 			return nil, err
 		}
@@ -378,12 +378,12 @@ func generateVoluntaryExits(
 	return voluntaryExits, nil
 }
 
-func randValIndex(bState *stateTrie.BeaconState) (uint64, error) {
+func randValIndex(bState *stateTrie.BeaconState) (types.ValidatorIndex, error) {
 	activeCount, err := helpers.ActiveValidatorCount(bState, helpers.CurrentEpoch(bState))
 	if err != nil {
 		return 0, err
 	}
-	return rand.NewGenerator().Uint64() % activeCount, nil
+	return types.ValidatorIndex(rand.NewGenerator().Uint64() % activeCount), nil
 }
 
 // HydrateSignedBeaconHeader hydrates a signed beacon block header with correct field length sizes

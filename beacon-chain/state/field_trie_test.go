@@ -3,6 +3,7 @@ package state_test
 import (
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
@@ -43,8 +44,8 @@ func TestFieldTrie_RecomputeTrie(t *testing.T) {
 	val2.ExitEpoch = 40
 
 	changedVals := []*ethpb.Validator{val1, val2}
-	require.NoError(t, newState.UpdateValidatorAtIndex(changedIdx[0], changedVals[0]))
-	require.NoError(t, newState.UpdateValidatorAtIndex(changedIdx[1], changedVals[1]))
+	require.NoError(t, newState.UpdateValidatorAtIndex(types.ValidatorIndex(changedIdx[0]), changedVals[0]))
+	require.NoError(t, newState.UpdateValidatorAtIndex(types.ValidatorIndex(changedIdx[1]), changedVals[1]))
 
 	expectedRoot, err := stateutil.ValidatorRegistryRoot(newState.Validators())
 	require.NoError(t, err)

@@ -3,10 +3,11 @@ package blocks_test
 import (
 	"testing"
 
+	"github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -28,7 +29,7 @@ func TestProcessSyncCommittee_OK(t *testing.T) {
 	require.NoError(t, err)
 	sigs := make([]bls.Signature, len(indices))
 	for i, indice := range indices {
-		b := types.SSZBytes(pbr)
+		b := p2pType.SSZBytes(pbr)
 		sb, err := helpers.ComputeDomainAndSign(beaconState, helpers.CurrentEpoch(beaconState), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
 		require.NoError(t, err)
 		sig, err := bls.SignatureFromBytes(sb)
@@ -44,12 +45,12 @@ func TestProcessSyncCommittee_OK(t *testing.T) {
 	require.NoError(t, err)
 
 	// Find a non sync committee index to compare profitability.
-	syncCommittee := make(map[uint64]bool)
+	syncCommittee := make(map[types.ValidatorIndex]bool)
 	for _, index := range indices {
 		syncCommittee[index] = true
 	}
-	nonSyncIndex := params.BeaconConfig().MaxValidatorsPerCommittee + 1
-	for i := uint64(0); i < params.BeaconConfig().MaxValidatorsPerCommittee; i++ {
+	nonSyncIndex := types.ValidatorIndex(params.BeaconConfig().MaxValidatorsPerCommittee + 1)
+	for i := types.ValidatorIndex(0); uint64(i) < params.BeaconConfig().MaxValidatorsPerCommittee; i++ {
 		if !syncCommittee[i] {
 			nonSyncIndex = i
 			break
