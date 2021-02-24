@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
@@ -40,6 +41,7 @@ type Server struct {
 	Broadcaster         p2p.Broadcaster
 	AttestationsPool    attestations.Pool
 	SlashingsPool       slashings.PoolManager
+	VoluntaryExitsPool  voluntaryexits.PoolManager
 	CanonicalStateChan  chan *pbp2p.BeaconState
 	ChainStartChan      chan time.Time
 	StateGenService     stategen.StateManager
