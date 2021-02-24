@@ -26,7 +26,8 @@ const (
 // SetupConfig includes configuration values for initializing
 // a keymanager, such as passwords, the wallet, and more.
 type SetupConfig struct {
-	Wallet iface.Wallet
+	Wallet           iface.Wallet
+	ListenForChanges bool
 }
 
 // Keymanager implementation for derived, HD keymanager using EIP-2333 and EIP-2334.
@@ -40,7 +41,8 @@ func NewKeymanager(
 	cfg *SetupConfig,
 ) (*Keymanager, error) {
 	importedKM, err := imported.NewKeymanager(ctx, &imported.SetupConfig{
-		Wallet: cfg.Wallet,
+		Wallet:           cfg.Wallet,
+		ListenForChanges: cfg.ListenForChanges,
 	})
 	if err != nil {
 		return nil, err
