@@ -2571,8 +2571,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_prysmaticlabs_eth2_types",
         importpath = "github.com/prysmaticlabs/eth2-types",
-        sum = "h1:6ooFkN9g9oAJq+VZWseIpj/tQqyVU0DuLFs66Ro43BQ=",
-        version = "v0.0.0-20210210115503-cf4ec6600a2d",
+        sum = "h1:b4WxLSz1KzkEdF/DPcog9gIKN9d9YAFgbZO1hqjNrW0=",
+        version = "v0.0.0-20210219172114-1da477c09a06",
     )
     go_repository(
         name = "com_github_prysmaticlabs_ethereumapis",
