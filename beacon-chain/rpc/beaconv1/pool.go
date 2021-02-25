@@ -71,7 +71,7 @@ func (bs *Server) SubmitAttesterSlashing(ctx context.Context, req *ethpb.Atteste
 	}
 	if !featureconfig.Get().DisableBroadcastSlashings {
 		if err := bs.Broadcaster.Broadcast(ctx, req); err != nil {
-			return nil, err
+			return nil, status.Errorf(codes.Internal, "Could not broadcast slashing object: %v", err)
 		}
 	}
 
