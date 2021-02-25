@@ -12,4 +12,3 @@ go_library(
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
     ],
 )
-
