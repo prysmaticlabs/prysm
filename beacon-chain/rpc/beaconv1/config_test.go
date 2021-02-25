@@ -61,13 +61,16 @@ func TestGetSpec(t *testing.T) {
 	config.WhistleBlowerRewardQuotient = 40
 	config.ProposerRewardQuotient = 41
 	config.InactivityPenaltyQuotient = 42
-	config.MinSlashingPenaltyQuotient = 43
-	config.ProportionalSlashingMultiplier = 44
-	config.MaxProposerSlashings = 45
-	config.MaxAttesterSlashings = 46
-	config.MaxAttestations = 47
-	config.MaxDeposits = 48
-	config.MaxVoluntaryExits = 49
+	config.InactivityPenaltyQuotientHF1 = 43
+	config.MinSlashingPenaltyQuotient = 44
+	config.MinSlashingPenaltyQuotientHF1 = 45
+	config.ProportionalSlashingMultiplier = 46
+	config.ProportionalSlashingMultiplierHF1 = 47
+	config.MaxProposerSlashings = 48
+	config.MaxAttesterSlashings = 49
+	config.MaxAttestations = 50
+	config.MaxDeposits = 51
+	config.MaxVoluntaryExits = 52
 
 	var dbp [4]byte
 	copy(dbp[:], []byte{'0', '0', '0', '1'})
@@ -97,7 +100,7 @@ func TestGetSpec(t *testing.T) {
 	resp, err := server.GetSpec(context.Background(), &pbtypes.Empty{})
 	require.NoError(t, err)
 
-	assert.Equal(t, 60, len(resp.Data))
+	assert.Equal(t, 62, len(resp.Data))
 	for k, v := range resp.Data {
 		switch k {
 		case "config_name":
@@ -192,20 +195,26 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "41", v)
 		case "inactivity_penalty_quotient":
 			assert.Equal(t, "42", v)
-		case "min_slashing_penalty_quotient":
+		case "hf1_inactivity_penalty_quotient":
 			assert.Equal(t, "43", v)
-		case "proportional_slashing_multiplier":
+		case "min_slashing_penalty_quotient":
 			assert.Equal(t, "44", v)
-		case "max_proposer_slashings":
+		case "hf1_min_slashing_penalty_quotient":
 			assert.Equal(t, "45", v)
-		case "max_attester_slashings":
+		case "proportional_slashing_multiplier":
 			assert.Equal(t, "46", v)
-		case "max_attestations":
+		case "hf1_proportional_slashing_multiplier":
 			assert.Equal(t, "47", v)
-		case "max_deposits":
+		case "max_proposer_slashings":
 			assert.Equal(t, "48", v)
-		case "max_voluntary_exits":
+		case "max_attester_slashings":
 			assert.Equal(t, "49", v)
+		case "max_attestations":
+			assert.Equal(t, "50", v)
+		case "max_deposits":
+			assert.Equal(t, "51", v)
+		case "max_voluntary_exits":
+			assert.Equal(t, "52", v)
 		case "domain_beacon_proposer":
 			assert.Equal(t, "0x30303031", v)
 		case "domain_beacon_attester":
