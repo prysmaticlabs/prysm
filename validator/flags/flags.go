@@ -172,6 +172,12 @@ var (
 		Usage: "Display the private keys for validator accounts",
 		Value: false,
 	}
+	// ListValidatorIndices for accounts.
+	ListValidatorIndices = &cli.BoolFlag{
+		Name:  "list-validator-indices",
+		Usage: "List validator indices",
+		Value: false,
+	}
 	// NumAccountsFlag defines the amount of accounts to generate for derived wallets.
 	NumAccountsFlag = &cli.IntFlag{
 		Name:  "num-accounts",
