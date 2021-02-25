@@ -249,9 +249,9 @@ func listValidatorIndices(ctx context.Context, km keymanager.IKeymanager, client
 		return errors.Wrap(err, "could not request validator indices")
 	}
 	fmt.Println(au.BrightGreen("Validator indices:").Bold())
-	for _, idx := range resp.Indices {
+	for i, idx := range resp.Indices {
 		if idx != math.MaxUint64 {
-			fmt.Println(idx)
+			fmt.Printf("%#x %d\n", pubKeys[i][0:4], idx)
 		}
 	}
 	return nil
