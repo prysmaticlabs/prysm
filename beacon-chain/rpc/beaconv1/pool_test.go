@@ -5,12 +5,18 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/types"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
+	p2pMock "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -192,4 +198,119 @@ func TestListPoolVoluntaryExits(t *testing.T) {
 	require.Equal(t, 2, len(resp.Data))
 	assert.DeepEqual(t, migration.V1Alpha1ExitToV1(exit1), resp.Data[0])
 	assert.DeepEqual(t, migration.V1Alpha1ExitToV1(exit2), resp.Data[1])
+}
+
+func TestSubmitAttesterSlashing_Ok(t *testing.T) {
+	ctx := context.Background()
+
+	_, keys, err := testutil.DeterministicDepositsAndKeys(1)
+	require.NoError(t, err)
+	validator := &eth.Validator{
+		ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+		PublicKey:             keys[0].PublicKey().Marshal(),
+		WithdrawalCredentials: make([]byte, 32),
+	}
+	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) {
+		state.Validators = []*eth.Validator{validator}
+	})
+	require.NoError(t, err)
+
+	slashing := &ethpb.AttesterSlashing{
+		Attestation_1: &ethpb.IndexedAttestation{
+			AttestingIndices: []uint64{0},
+			Data: &ethpb.AttestationData{
+				Slot:            1,
+				CommitteeIndex:  1,
+				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot1"), 32),
+				Source: &ethpb.Checkpoint{
+					Epoch: 1,
+					Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
+				},
+				Target: &ethpb.Checkpoint{
+					Epoch: 10,
+					Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
+				},
+			},
+			Signature: make([]byte, 96),
+		},
+		Attestation_2: &ethpb.IndexedAttestation{
+			AttestingIndices: []uint64{0},
+			Data: &ethpb.AttestationData{
+				Slot:            1,
+				CommitteeIndex:  1,
+				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot2"), 32),
+				Source: &ethpb.Checkpoint{
+					Epoch: 1,
+					Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
+				},
+				Target: &ethpb.Checkpoint{
+					Epoch: 10,
+					Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
+				},
+			},
+			Signature: make([]byte, 96),
+		},
+	}
+
+	for _, att := range []*ethpb.IndexedAttestation{slashing.Attestation_1, slashing.Attestation_2} {
+		sb, err := helpers.ComputeDomainAndSign(state, att.Data.Target.Epoch, att.Data, params.BeaconConfig().DomainBeaconAttester, keys[0])
+		require.NoError(t, err)
+		sig, err := bls.SignatureFromBytes(sb)
+		require.NoError(t, err)
+		att.Signature = sig.Marshal()
+	}
+
+	broadcaster := &p2pMock.MockBroadcaster{}
+	s := &Server{
+		ChainInfoFetcher: &chainMock.ChainService{State: state},
+		SlashingsPool:    &slashings.PoolMock{},
+		Broadcaster:      broadcaster,
+	}
+
+	_, err = s.SubmitAttesterSlashing(ctx, slashing)
+	require.NoError(t, err)
+	pendingSlashings := s.SlashingsPool.PendingAttesterSlashings(ctx, state, true)
+	require.Equal(t, 1, len(pendingSlashings))
+	assert.DeepEqual(t, migration.V1AttSlashingToV1Alpha1(slashing), pendingSlashings[0])
+	assert.Equal(t, true, broadcaster.BroadcastCalled)
+}
+
+func TestSubmitAttesterSlashing_InvalidSlashing(t *testing.T) {
+	ctx := context.Background()
+	state, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+
+	attestation := &ethpb.IndexedAttestation{
+		AttestingIndices: []uint64{0},
+		Data: &ethpb.AttestationData{
+			Slot:            1,
+			CommitteeIndex:  1,
+			BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot1"), 32),
+			Source: &ethpb.Checkpoint{
+				Epoch: 1,
+				Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: 10,
+				Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
+			},
+		},
+		Signature: make([]byte, 96),
+	}
+
+	slashing := &ethpb.AttesterSlashing{
+		Attestation_1: attestation,
+		Attestation_2: attestation,
+	}
+
+	broadcaster := &p2pMock.MockBroadcaster{}
+	s := &Server{
+		ChainInfoFetcher: &chainMock.ChainService{State: state},
+		SlashingsPool:    &slashings.PoolMock{},
+		Broadcaster:      broadcaster,
+	}
+
+	_, err = s.SubmitAttesterSlashing(ctx, slashing)
+	require.ErrorContains(t, "Invalid attester slashing", err)
+	assert.Equal(t, false, broadcaster.BroadcastCalled)
 }
