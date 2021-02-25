@@ -30,7 +30,6 @@ func TestServer_ListAccounts(t *testing.T) {
 	ctx := context.Background()
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
-	strongPass := "29384283xasjasd32%%&*@*#*"
 	// We attempt to create the wallet.
 	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
@@ -96,7 +95,6 @@ func TestServer_BackupAccounts(t *testing.T) {
 	ctx := context.Background()
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
-	strongPass := "29384283xasjasd32%%&*@*#*"
 	// We attempt to create the wallet.
 	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
