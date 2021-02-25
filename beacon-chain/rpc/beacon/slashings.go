@@ -27,7 +27,7 @@ func (bs *Server) SubmitProposerSlashing(
 	}
 	if !featureconfig.Get().DisableBroadcastSlashings {
 		if err := bs.Broadcaster.Broadcast(ctx, req); err != nil {
-			return nil, err
+			return nil, status.Errorf(codes.Internal, "Could not broadcast slashing object: %v", err)
 		}
 	}
 
@@ -52,7 +52,7 @@ func (bs *Server) SubmitAttesterSlashing(
 	}
 	if !featureconfig.Get().DisableBroadcastSlashings {
 		if err := bs.Broadcaster.Broadcast(ctx, req); err != nil {
-			return nil, err
+			return nil, status.Errorf(codes.Internal, "Could not broadcast slashing object: %v", err)
 		}
 	}
 	indices := sliceutil.IntersectionUint64(req.Attestation_1.AttestingIndices, req.Attestation_2.AttestingIndices)
