@@ -9,12 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func TestSSZUint64_Limit(t *testing.T) {
-	sszType := SSZUint64(0)
-	serializedObj := [7]byte{}
-	require.ErrorContains(t, "expected buffer with length", sszType.UnmarshalSSZ(serializedObj[:]))
-}
-
 func TestBeaconBlockByRootsReq_Limit(t *testing.T) {
 	fixedRoots := make([][32]byte, 0)
 	for i := uint64(0); i < params.BeaconNetworkConfig().MaxRequestBlocks+100; i++ {
@@ -45,22 +39,8 @@ func TestErrorResponse_Limit(t *testing.T) {
 }
 
 func TestRoundTripSerialization(t *testing.T) {
-	roundTripTestSSZUint64(t)
 	roundTripTestBlocksByRootReq(t)
 	roundTripTestErrorMessage(t)
-}
-
-func roundTripTestSSZUint64(t *testing.T) {
-	fixedVal := uint64(8)
-	sszVal := SSZUint64(fixedVal)
-
-	marshalledObj, err := sszVal.MarshalSSZ()
-	require.NoError(t, err)
-	newVal := SSZUint64(0)
-
-	err = newVal.UnmarshalSSZ(marshalledObj)
-	require.NoError(t, err)
-	assert.DeepEqual(t, fixedVal, uint64(newVal))
 }
 
 func roundTripTestBlocksByRootReq(t *testing.T) {
@@ -89,55 +69,6 @@ func roundTripTestErrorMessage(t *testing.T) {
 
 	require.NoError(t, newVal.UnmarshalSSZ(marshalledObj))
 	assert.DeepEqual(t, []byte(newVal), errMsg)
-}
-
-func TestSSZUint64(t *testing.T) {
-	tests := []struct {
-		name            string
-		serializedBytes []byte
-		actualValue     uint64
-		root            []byte
-		wantErr         bool
-	}{
-		{
-			name:            "max",
-			serializedBytes: hexDecodeOrDie(t, "ffffffffffffffff"),
-			actualValue:     18446744073709551615,
-			root:            hexDecodeOrDie(t, "ffffffffffffffff000000000000000000000000000000000000000000000000"),
-			wantErr:         false,
-		},
-		{
-			name:            "random",
-			serializedBytes: hexDecodeOrDie(t, "357c8de9d7204577"),
-			actualValue:     8594311575614880821,
-			root:            hexDecodeOrDie(t, "357c8de9d7204577000000000000000000000000000000000000000000000000"),
-			wantErr:         false,
-		},
-		{
-			name:            "zero",
-			serializedBytes: hexDecodeOrDie(t, "0000000000000000"),
-			actualValue:     0,
-			root:            hexDecodeOrDie(t, "0000000000000000000000000000000000000000000000000000000000000000"),
-			wantErr:         false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var s SSZUint64
-			if err := s.UnmarshalSSZ(tt.serializedBytes); (err != nil) != tt.wantErr {
-				t.Errorf("UnmarshalSSZ() error = %v, wantErr %v", err, tt.wantErr)
-			}
-			require.Equal(t, uint64(s), tt.actualValue)
-
-			serializedBytes, err := s.MarshalSSZ()
-			require.NoError(t, err)
-			require.DeepEqual(t, tt.serializedBytes, serializedBytes)
-
-			htr, err := s.HashTreeRoot()
-			require.NoError(t, err)
-			require.DeepEqual(t, tt.root, htr[:])
-		})
-	}
 }
 
 func TestSSZBytes_HashTreeRoot(t *testing.T) {

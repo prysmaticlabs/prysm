@@ -4,7 +4,8 @@ import (
 	"reflect"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	types "github.com/prysmaticlabs/eth2-types"
+	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
@@ -31,7 +32,7 @@ var RPCTopicMappings = map[string]interface{}{
 	RPCStatusTopic:        new(pb.Status),
 	RPCGoodByeTopic:       new(types.SSZUint64),
 	RPCBlocksByRangeTopic: new(pb.BeaconBlocksByRangeRequest),
-	RPCBlocksByRootTopic:  new(types.BeaconBlockByRootsReq),
+	RPCBlocksByRootTopic:  new(p2ptypes.BeaconBlockByRootsReq),
 	RPCPingTopic:          new(types.SSZUint64),
 	RPCMetaDataTopic:      new(interface{}),
 }
