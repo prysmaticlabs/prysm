@@ -22,7 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 )
 
-var (
+const (
 	testMnemonic = "tumble turn jewel sudden social great water general cabin jacket bounce dry flip monster advance problem social half flee inform century chicken hard reason"
 )
 
