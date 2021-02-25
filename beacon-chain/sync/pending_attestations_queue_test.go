@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/abool"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
@@ -95,7 +94,7 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 
 	// Arbitrary aggregator index for testing purposes.
 	aggregatorIndex := committee[0]
-	sszUint := p2ptypes.SSZUint64(att.Data.Slot)
+	sszUint := types.SSZUint64(att.Data.Slot)
 	sig, err := helpers.ComputeDomainAndSign(beaconState, 0, &sszUint, params.BeaconConfig().DomainSelectionProof, privKeys[aggregatorIndex])
 	require.NoError(t, err)
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
@@ -210,7 +209,7 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 
 	// Arbitrary aggregator index for testing purposes.
 	aggregatorIndex := committee[0]
-	sszSlot := p2ptypes.SSZUint64(att.Data.Slot)
+	sszSlot := types.SSZUint64(att.Data.Slot)
 	sig, err := helpers.ComputeDomainAndSign(s, 0, &sszSlot, params.BeaconConfig().DomainSelectionProof, privKeys[aggregatorIndex])
 	require.NoError(t, err)
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
@@ -287,7 +286,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 
 	// Arbitrary aggregator index for testing purposes.
 	aggregatorIndex := committee[0]
-	sszUint := p2ptypes.SSZUint64(att.Data.Slot)
+	sszUint := types.SSZUint64(att.Data.Slot)
 	sig, err := helpers.ComputeDomainAndSign(beaconState, 0, &sszUint, params.BeaconConfig().DomainSelectionProof, privKeys[aggregatorIndex])
 	require.NoError(t, err)
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
