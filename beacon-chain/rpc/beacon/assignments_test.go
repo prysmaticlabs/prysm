@@ -30,7 +30,7 @@ func TestServer_ListAssignments_CannotRequestFutureEpoch(t *testing.T) {
 		GenesisTimeFetcher: &mock.ChainService{},
 	}
 
-	wanted := "Cannot retrieve information about an epoch in the future"
+	wanted := noEpochInfoError
 	_, err := bs.ListValidatorAssignments(
 		ctx,
 		&ethpb.ListValidatorAssignmentsRequest{
