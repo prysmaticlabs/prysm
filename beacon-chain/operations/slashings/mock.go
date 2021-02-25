@@ -14,31 +14,32 @@ type PoolMock struct {
 }
 
 // PendingAttesterSlashings --
-func (m *PoolMock) PendingAttesterSlashings(ctx context.Context, state *state.BeaconState, noLimit bool) []*ethpb.AttesterSlashing {
+func (m *PoolMock) PendingAttesterSlashings(_ context.Context, _ *state.BeaconState, _ bool) []*ethpb.AttesterSlashing {
 	return m.PendingAttSlashings
 }
 
 // PendingProposerSlashings --
-func (m *PoolMock) PendingProposerSlashings(ctx context.Context, state *state.BeaconState, noLimit bool) []*ethpb.ProposerSlashing {
+func (m *PoolMock) PendingProposerSlashings(_ context.Context, _ *state.BeaconState, _ bool) []*ethpb.ProposerSlashing {
 	return m.PendingPropSlashings
 }
 
 // InsertAttesterSlashing --
-func (m *PoolMock) InsertAttesterSlashing(ctx context.Context, state *state.BeaconState, slashing *ethpb.AttesterSlashing) error {
-	panic("implement me")
+func (m *PoolMock) InsertAttesterSlashing(_ context.Context, _ *state.BeaconState, slashing *ethpb.AttesterSlashing) error {
+	m.PendingAttSlashings = append(m.PendingAttSlashings, slashing)
+	return nil
 }
 
 // InsertProposerSlashing --
-func (m *PoolMock) InsertProposerSlashing(ctx context.Context, state *state.BeaconState, slashing *ethpb.ProposerSlashing) error {
+func (m *PoolMock) InsertProposerSlashing(_ context.Context, _ *state.BeaconState, _ *ethpb.ProposerSlashing) error {
 	panic("implement me")
 }
 
 // MarkIncludedAttesterSlashing --
-func (m *PoolMock) MarkIncludedAttesterSlashing(as *ethpb.AttesterSlashing) {
+func (m *PoolMock) MarkIncludedAttesterSlashing(_ *ethpb.AttesterSlashing) {
 	panic("implement me")
 }
 
 // MarkIncludedProposerSlashing --
-func (m *PoolMock) MarkIncludedProposerSlashing(ps *ethpb.ProposerSlashing) {
+func (m *PoolMock) MarkIncludedProposerSlashing(_ *ethpb.ProposerSlashing) {
 	panic("implement me")
 }
