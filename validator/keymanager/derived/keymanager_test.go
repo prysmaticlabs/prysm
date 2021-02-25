@@ -15,6 +15,8 @@ import (
 	util "github.com/wealdtech/go-eth2-util"
 )
 
+const password = "secretPassw0rd$1999"
+
 // We test that using a '25th word' mnemonic passphrase leads to different
 // public keys derived than not specifying the passphrase.
 func TestDerivedKeymanager_MnemnonicPassphrase_DifferentResults(t *testing.T) {
@@ -23,7 +25,7 @@ func TestDerivedKeymanager_MnemnonicPassphrase_DifferentResults(t *testing.T) {
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
 		AccountPasswords: make(map[string]string),
-		WalletPassword:   "secretPassw0rd$1999",
+		WalletPassword:   password,
 	}
 	km, err := NewKeymanager(ctx, &SetupConfig{
 		Wallet:           wallet,
@@ -38,7 +40,7 @@ func TestDerivedKeymanager_MnemnonicPassphrase_DifferentResults(t *testing.T) {
 	wallet = &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
 		AccountPasswords: make(map[string]string),
-		WalletPassword:   "secretPassw0rd$1999",
+		WalletPassword:   password,
 	}
 	km, err = NewKeymanager(ctx, &SetupConfig{
 		Wallet:           wallet,
@@ -78,7 +80,7 @@ func TestDerivedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
 		AccountPasswords: make(map[string]string),
-		WalletPassword:   "secretPassw0rd$1999",
+		WalletPassword:   password,
 	}
 	ctx := context.Background()
 	dr, err := NewKeymanager(ctx, &SetupConfig{
@@ -118,7 +120,7 @@ func TestDerivedKeymanager_FetchValidatingPrivateKeys(t *testing.T) {
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
 		AccountPasswords: make(map[string]string),
-		WalletPassword:   "secretPassw0rd$1999",
+		WalletPassword:   password,
 	}
 	ctx := context.Background()
 	dr, err := NewKeymanager(ctx, &SetupConfig{
@@ -156,7 +158,7 @@ func TestDerivedKeymanager_Sign(t *testing.T) {
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
 		AccountPasswords: make(map[string]string),
-		WalletPassword:   "secretPassw0rd$1999",
+		WalletPassword:   password,
 	}
 	ctx := context.Background()
 	dr, err := NewKeymanager(ctx, &SetupConfig{
