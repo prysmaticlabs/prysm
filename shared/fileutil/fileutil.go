@@ -3,7 +3,7 @@ package fileutil
 import (
 	"crypto/sha256"
 	"encoding/base64"
-	"error"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
