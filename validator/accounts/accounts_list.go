@@ -46,10 +46,7 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 		if err != nil {
 			return err
 		}
-		if err := listValidatorIndices(cliCtx.Context, km, *client); err != nil {
-			return err
-		}
-		return nil
+		return listValidatorIndices(cliCtx.Context, km, *client)
 	}
 
 	switch w.KeymanagerKind() {
@@ -243,7 +240,7 @@ func listValidatorIndices(ctx context.Context, km keymanager.IKeymanager, client
 		return errors.Wrap(err, "could not get validating public keys")
 	}
 	var pks [][]byte
-	for i, _ := range pubKeys {
+	for i := range pubKeys {
 		pks = append(pks, pubKeys[i][:])
 	}
 	req := &ethpb.MultipleValidatorStatusRequest{PublicKeys: pks}
