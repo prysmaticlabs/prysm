@@ -64,6 +64,7 @@ require (
 	github.com/libp2p/go-libp2p-yamux v0.4.1 // indirect
 	github.com/libp2p/go-netroute v0.1.4 // indirect
 	github.com/libp2p/go-sockaddr v0.1.0 // indirect
+	github.com/libp2p/go-tcp-transport v0.2.1
 	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/lunixbochs/vtclean v1.0.0 // indirect
 	github.com/manifoldco/promptui v0.7.0

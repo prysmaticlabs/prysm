@@ -3,6 +3,8 @@ package accounts
 import (
 	"context"
 	"fmt"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"math"
 	"path/filepath"
 	"strings"
 
@@ -37,6 +39,16 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 	}
 	showDepositData := cliCtx.Bool(flags.ShowDepositDataFlag.Name)
 	showPrivateKeys := cliCtx.Bool(flags.ShowPrivateKeysFlag.Name)
+	listIndices := cliCtx.Bool(flags.ListValidatorIndices.Name)
+
+	if listIndices {
+		client, _, err := prepareClients(cliCtx)
+		if err != nil {
+			return err
+		}
+		return listValidatorIndices(cliCtx.Context, km, *client)
+	}
+
 	switch w.KeymanagerKind() {
 	case keymanager.Imported:
 		km, ok := km.(*imported.Keymanager)
@@ -218,6 +230,29 @@ func listRemoteKeymanagerAccounts(
 		// Retrieve the validating key account metadata.
 		fmt.Printf("%s %#x\n", au.BrightCyan("[validating public key]").Bold(), validatingPubKeys[i])
 		fmt.Println(" ")
+	}
+	return nil
+}
+
+func listValidatorIndices(ctx context.Context, km keymanager.IKeymanager, client ethpb.BeaconNodeValidatorClient) error {
+	pubKeys, err := km.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not get validating public keys")
+	}
+	var pks [][]byte
+	for i := range pubKeys {
+		pks = append(pks, pubKeys[i][:])
+	}
+	req := &ethpb.MultipleValidatorStatusRequest{PublicKeys: pks}
+	resp, err := client.MultipleValidatorStatus(ctx, req)
+	if err != nil {
+		return errors.Wrap(err, "could not request validator indices")
+	}
+	fmt.Println(au.BrightGreen("Validator indices:").Bold())
+	for i, idx := range resp.Indices {
+		if idx != math.MaxUint64 {
+			fmt.Printf("%#x: %d\n", pubKeys[i][0:4], idx)
+		}
 	}
 	return nil
 }
