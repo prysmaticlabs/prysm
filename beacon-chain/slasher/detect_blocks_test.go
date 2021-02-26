@@ -22,10 +22,10 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 		params:            DefaultParams(),
 		beaconBlocksQueue: make([]*slashertypes.CompactBeaconBlock, 0),
 	}
-	currentEpochChan := make(chan types.Epoch)
+	currentSlotChan := make(chan types.Slot)
 	exitChan := make(chan struct{})
 	go func() {
-		s.processQueuedBlocks(ctx, currentEpochChan)
+		s.processQueuedBlocks(ctx, currentSlotChan)
 		exitChan <- struct{}{}
 	}()
 	s.beaconBlocksQueue = []*slashertypes.CompactBeaconBlock{
@@ -50,8 +50,8 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 			SigningRoot:   [32]byte{2},
 		},
 	}
-	currentEpoch := types.Epoch(0)
-	currentEpochChan <- currentEpoch
+	currentSlot := types.Slot(4)
+	currentSlotChan <- currentSlot
 	cancel()
 	<-exitChan
 	require.LogsContain(t, hook, "Proposer double proposal slashing")
@@ -68,10 +68,10 @@ func Test_processQueuedBlocks_NotSlashable(t *testing.T) {
 		params:            DefaultParams(),
 		beaconBlocksQueue: make([]*slashertypes.CompactBeaconBlock, 0),
 	}
-	currentEpochChan := make(chan types.Epoch)
+	currentSlotChan := make(chan types.Slot)
 	exitChan := make(chan struct{})
 	go func() {
-		s.processQueuedBlocks(ctx, currentEpochChan)
+		s.processQueuedBlocks(ctx, currentSlotChan)
 		exitChan <- struct{}{}
 	}()
 	s.beaconBlocksQueue = []*slashertypes.CompactBeaconBlock{
@@ -86,8 +86,8 @@ func Test_processQueuedBlocks_NotSlashable(t *testing.T) {
 			SigningRoot:   [32]byte{1},
 		},
 	}
-	currentEpoch := types.Epoch(4)
-	currentEpochChan <- currentEpoch
+	currentSlot := types.Slot(4)
+	currentSlotChan <- currentSlot
 	cancel()
 	<-exitChan
 	require.LogsDoNotContain(t, hook, "Proposer double proposal slashing")

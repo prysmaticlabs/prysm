@@ -297,6 +297,20 @@ func Test_validateAttestationIntegrity(t *testing.T) {
 			},
 			want: true,
 		},
+		{
+			name: "Source 0 target 0 returns true (genesis epoch attestations)",
+			att: &ethpb.IndexedAttestation{
+				Data: &ethpb.AttestationData{
+					Source: &ethpb.Checkpoint{
+						Epoch: 0,
+					},
+					Target: &ethpb.Checkpoint{
+						Epoch: 0,
+					},
+				},
+			},
+			want: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
