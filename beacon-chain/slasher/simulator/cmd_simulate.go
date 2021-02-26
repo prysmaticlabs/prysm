@@ -1,12 +1,11 @@
 package simulator
 
 import (
+	"context"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
-
-	"context"
-
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )

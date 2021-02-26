@@ -4,10 +4,9 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slashutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestGenerateAttestationsForSlot_Slashing(t *testing.T) {
