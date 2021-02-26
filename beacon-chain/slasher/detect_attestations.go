@@ -3,10 +3,12 @@ package slasher
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -48,6 +50,7 @@ func (s *Service) detectSlashableAttestations(
 	groupedAtts := s.groupByChunkIndex(attestations)
 
 	// Update min and max spans and retrieve any detected slashable offenses.
+	start := time.Now()
 	surroundingSlashings, err := s.updateSpans(ctx, &chunkUpdateArgs{
 		kind:                slashertypes.MinSpan,
 		validatorChunkIndex: args.validatorChunkIndex,
@@ -60,6 +63,14 @@ func (s *Service) detectSlashableAttestations(
 			args.validatorChunkIndex,
 		)
 	}
+	log.WithFields(logrus.Fields{
+		"timeElapsed":               time.Now().Sub(start),
+		"surroundingSlashingsFound": len(surroundingSlashings),
+		"currentEpoch":              args.currentEpoch,
+		"validatorChunkIndex":       args.validatorChunkIndex,
+	}).Debug("Done updating min spans")
+
+	start = time.Now()
 	surroundedSlashings, err := s.updateSpans(ctx, &chunkUpdateArgs{
 		kind:                slashertypes.MaxSpan,
 		validatorChunkIndex: args.validatorChunkIndex,
@@ -72,6 +83,12 @@ func (s *Service) detectSlashableAttestations(
 			args.validatorChunkIndex,
 		)
 	}
+	log.WithFields(logrus.Fields{
+		"timeElapsed":              time.Now().Sub(start),
+		"surroundedSlashingsFound": len(surroundingSlashings),
+		"currentEpoch":             args.currentEpoch,
+		"validatorChunkIndex":      args.validatorChunkIndex,
+	}).Debug("Done updating max spans")
 
 	// Consolidate all slashings into a slice.
 	slashings := make([]*slashertypes.Slashing, 0)
@@ -88,6 +105,14 @@ func (s *Service) detectSlashableAttestations(
 
 	// Update the latest written epoch for all involved validator indices.
 	validatorIndices := s.params.validatorIndicesInChunk(args.validatorChunkIndex)
+	if len(validatorIndices) > 0 {
+		firstIndex := validatorIndices[0]
+		lastIndex := validatorIndices[len(validatorIndices)-1]
+		log.WithFields(logrus.Fields{
+			"validatorIndices": fmt.Sprintf("[%d, ..., %d]", firstIndex, lastIndex),
+			"currentEpoch":     args.currentEpoch,
+		}).Debug("Saving latest epoch attested for validators")
+	}
 	return s.serviceCfg.Database.SaveLatestEpochAttestedForValidators(ctx, validatorIndices, args.currentEpoch)
 }
 
