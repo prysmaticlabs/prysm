@@ -17,6 +17,7 @@ var SlasherCommands = &cli.Command{
 		cmd.DataDirFlag,
 		cmd.ClearDB,
 		cmd.ForceClearDB,
+		cmd.ConfigFileFlag,
 		debug.PProfFlag,
 		debug.MemProfileRateFlag,
 		debug.MutexProfileFractionFlag,
