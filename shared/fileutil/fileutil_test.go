@@ -286,7 +286,6 @@ func TestRecursiveFileFind(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.DeepEqual(t, tt.found, found)
-			//assert.DeepEqual(t, tt.path, fpath)
 		})
 	}
 }
