@@ -1,7 +1,11 @@
 package types
 
+import (
+	types "github.com/prysmaticlabs/eth2-types"
+)
+
 // RPCGoodbyeCode represents goodbye code, used in sync package.
-type RPCGoodbyeCode = SSZUint64
+type RPCGoodbyeCode = types.SSZUint64
 
 const (
 	// Spec defined codes.

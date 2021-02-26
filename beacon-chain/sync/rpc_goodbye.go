@@ -8,8 +8,9 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/sirupsen/logrus"
 )
@@ -17,18 +18,18 @@ import (
 var backOffTime = map[types.SSZUint64]time.Duration{
 	// Do not dial peers which are from a different/unverifiable
 	// network.
-	types.GoodbyeCodeWrongNetwork:          24 * time.Hour,
-	types.GoodbyeCodeUnableToVerifyNetwork: 24 * time.Hour,
+	p2ptypes.GoodbyeCodeWrongNetwork:          24 * time.Hour,
+	p2ptypes.GoodbyeCodeUnableToVerifyNetwork: 24 * time.Hour,
 	// If local peer is banned, we back off for
 	// 2 hours to let the remote peer score us
 	// back up again.
-	types.GoodbyeCodeBadScore:       2 * time.Hour,
-	types.GoodbyeCodeBanned:         2 * time.Hour,
-	types.GoodbyeCodeClientShutdown: 1 * time.Hour,
+	p2ptypes.GoodbyeCodeBadScore:       2 * time.Hour,
+	p2ptypes.GoodbyeCodeBanned:         2 * time.Hour,
+	p2ptypes.GoodbyeCodeClientShutdown: 1 * time.Hour,
 	// Wait 5 minutes before dialing a peer who is
 	// 'full'
-	types.GoodbyeCodeTooManyPeers: 5 * time.Minute,
-	types.GoodbyeCodeGenericError: 2 * time.Minute,
+	p2ptypes.GoodbyeCodeTooManyPeers: 5 * time.Minute,
+	p2ptypes.GoodbyeCodeGenericError: 2 * time.Minute,
 }
 
 // goodbyeRPCHandler reads the incoming goodbye rpc message from the peer.
@@ -56,7 +57,7 @@ func (s *Service) disconnectBadPeer(ctx context.Context, id peer.ID) {
 	if !s.p2p.Peers().IsBad(id) {
 		return
 	}
-	goodbyeCode := types.ErrToGoodbyeCode(s.p2p.Peers().Scorers().ValidationError(id))
+	goodbyeCode := p2ptypes.ErrToGoodbyeCode(s.p2p.Peers().Scorers().ValidationError(id))
 	if err := s.sendGoodByeAndDisconnect(ctx, goodbyeCode, id); err != nil {
 		log.Debugf("Error when disconnecting with bad peer: %v", err)
 	}
@@ -65,10 +66,10 @@ func (s *Service) disconnectBadPeer(ctx context.Context, id peer.ID) {
 // A custom goodbye method that is used by our connection handler, in the
 // event we receive bad peers.
 func (s *Service) sendGoodbye(ctx context.Context, id peer.ID) error {
-	return s.sendGoodByeAndDisconnect(ctx, types.GoodbyeCodeGenericError, id)
+	return s.sendGoodByeAndDisconnect(ctx, p2ptypes.GoodbyeCodeGenericError, id)
 }
 
-func (s *Service) sendGoodByeAndDisconnect(ctx context.Context, code types.RPCGoodbyeCode, id peer.ID) error {
+func (s *Service) sendGoodByeAndDisconnect(ctx context.Context, code p2ptypes.RPCGoodbyeCode, id peer.ID) error {
 	lock := mputil.NewMultilock(id.String())
 	lock.Lock()
 	defer lock.Unlock()
@@ -86,7 +87,7 @@ func (s *Service) sendGoodByeAndDisconnect(ctx context.Context, code types.RPCGo
 	return s.p2p.Disconnect(id)
 }
 
-func (s *Service) sendGoodByeMessage(ctx context.Context, code types.RPCGoodbyeCode, id peer.ID) error {
+func (s *Service) sendGoodByeMessage(ctx context.Context, code p2ptypes.RPCGoodbyeCode, id peer.ID) error {
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
@@ -113,8 +114,8 @@ func (s *Service) sendGoodByeMessage(ctx context.Context, code types.RPCGoodbyeC
 	return nil
 }
 
-func goodbyeMessage(num types.RPCGoodbyeCode) string {
-	reason, ok := types.GoodbyeCodeMessages[num]
+func goodbyeMessage(num p2ptypes.RPCGoodbyeCode) string {
+	reason, ok := p2ptypes.GoodbyeCodeMessages[num]
 	if ok {
 		return reason
 	}
@@ -123,7 +124,7 @@ func goodbyeMessage(num types.RPCGoodbyeCode) string {
 
 // determines which backoff time to use depending on the
 // goodbye code provided.
-func goodByeBackoff(num types.RPCGoodbyeCode) time.Time {
+func goodByeBackoff(num p2ptypes.RPCGoodbyeCode) time.Time {
 	duration, ok := backOffTime[num]
 	if !ok {
 		return time.Time{}
