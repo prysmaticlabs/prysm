@@ -3,7 +3,12 @@ package accounts
 import (
 	"context"
 	"fmt"
+	"github.com/golang/mock/gomock"
+	types "github.com/prysmaticlabs/eth2-types"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/mock"
 	"io/ioutil"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -471,4 +476,56 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 		keyFound := strings.Contains(lines[lineNumber], keyString)
 		assert.Equal(t, true, keyFound, "Public Key %s not found on line number %d", keyString, lineNumber)
 	}
+}
+
+func TestListAccounts_ListValidatorIndices(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	numAccounts := 3
+	pubKeys := make([][48]byte, numAccounts)
+	pks := make([][]byte, numAccounts)
+
+	for i := 0; i < numAccounts; i++ {
+		key := make([]byte, 48)
+		copy(key, strconv.Itoa(i))
+		pubKeys[i] = bytesutil.ToBytes48(key)
+		pks[i] = key
+	}
+
+	km := &mockRemoteKeymanager{
+		publicKeys: pubKeys,
+	}
+
+	rescueStdout := os.Stdout
+	r, writer, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = writer
+
+	m := mock.NewMockBeaconNodeValidatorClient(ctrl)
+
+	req := &ethpb.MultipleValidatorStatusRequest{PublicKeys: pks}
+	resp := &ethpb.MultipleValidatorStatusResponse{Indices: []types.ValidatorIndex{1, math.MaxUint64, 2}}
+
+	m.
+		EXPECT().
+		MultipleValidatorStatus(gomock.Eq(context.Background()), gomock.Eq(req)).
+		Return(resp, nil)
+
+	require.NoError(
+		t,
+		listValidatorIndices(
+			context.Background(),
+			km,
+			m,
+		),
+	)
+
+	require.NoError(t, writer.Close())
+	out, err := ioutil.ReadAll(r)
+	require.NoError(t, err)
+	os.Stdout = rescueStdout
+
+	expectedStdout := au.BrightGreen("Validator indices:").Bold().String() + "\n0x30000000: 1\n0x32000000: 2\n"
+	require.Equal(t, expectedStdout, string(out))
 }
