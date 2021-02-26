@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
+	"github.com/sirupsen/logrus"
 )
 
 func generateAttestationsForSlot(simParams *Parameters, slot types.Slot) []*ethpb.IndexedAttestation {
@@ -57,8 +58,14 @@ func generateAttestationsForSlot(simParams *Parameters, slot types.Slot) []*ethp
 			}
 			attestations = append(attestations, att)
 			if rand.NewGenerator().Float64() < simParams.AttesterSlashingProbab {
-				log.WithField("attestingIndice", indices[0]).Infof("Slashable attestation made")
-				attestations = append(attestations, makeSlashableFromAtt(att, []uint64{indices[0]}))
+				slashableAtt := makeSlashableFromAtt(att, []uint64{indices[0]})
+				log.WithFields(logrus.Fields{
+					"validatorIndex":  indices[0],
+					"prevSourceEpoch": att.Data.Source.Epoch,
+					"prevTargetEpoch": att.Data.Target.Epoch,
+					"sourceEpoch":     slashableAtt.Data.Source.Epoch,
+					"targetEpoch":     slashableAtt.Data.Target.Epoch,
+				}).Infof("Slashable attestation made")
 			}
 		}
 		startIdx += valsPerCommittee

@@ -31,19 +31,19 @@ func TestGenerateAttestationsForSlot_CorrectIndices(t *testing.T) {
 	slot0Atts := generateAttestationsForSlot(simParams, 0)
 	slot1Atts := generateAttestationsForSlot(simParams, 1)
 	slot2Atts := generateAttestationsForSlot(simParams, 2)
-	var indices []uint64
+	var validatorIndices []uint64
 	for _, att := range append(slot0Atts, slot1Atts...) {
-		indices = append(indices, att.AttestingIndices...)
+		validatorIndices = append(validatorIndices, att.AttestingIndices...)
 	}
 	for _, att := range slot2Atts {
-		indices = append(indices, att.AttestingIndices...)
+		validatorIndices = append(validatorIndices, att.AttestingIndices...)
 	}
 
 	// Making sure indices are one after the other for attestations.
-	var indice uint64
-	for _, ii := range indices {
-		require.Equal(t, indice, ii)
-		indice++
+	var validatorIndex uint64
+	for _, ii := range validatorIndices {
+		require.Equal(t, validatorIndex, ii)
+		validatorIndex++
 	}
 }
 
