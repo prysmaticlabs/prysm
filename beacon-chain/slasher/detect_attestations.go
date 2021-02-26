@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"go.opencensus.io/trace"
@@ -40,7 +41,7 @@ func (s *Service) detectSlashableAttestations(
 	// Check for double votes.
 	doubleVoteSlashings, err := s.checkDoubleVotes(ctx, attestations)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not check for attestation double votes")
 	}
 
 	// Group attestations by chunk index.
@@ -53,7 +54,11 @@ func (s *Service) detectSlashableAttestations(
 		currentEpoch:        args.currentEpoch,
 	}, groupedAtts)
 	if err != nil {
-		return err
+		return errors.Wrapf(
+			err,
+			"could not update min attestation spans for validator chunk index %d",
+			args.validatorChunkIndex,
+		)
 	}
 	surroundedSlashings, err := s.updateSpans(ctx, &chunkUpdateArgs{
 		kind:                slashertypes.MaxSpan,
@@ -61,7 +66,11 @@ func (s *Service) detectSlashableAttestations(
 		currentEpoch:        args.currentEpoch,
 	}, groupedAtts)
 	if err != nil {
-		return err
+		return errors.Wrapf(
+			err,
+			"could not update max attestation spans for validator chunk index %d",
+			args.validatorChunkIndex,
+		)
 	}
 
 	// Consolidate all slashings into a slice.
@@ -168,12 +177,20 @@ func (s *Service) updateSpans(
 	validatorIndices := s.params.validatorIndicesInChunk(args.validatorChunkIndex)
 	chunkIndices, err := s.determineChunksToUpdateForValidators(ctx, args, validatorIndices)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(
+			err,
+			"could not determine chunks to update for validator indices %v",
+			validatorIndices,
+		)
 	}
 	// Load the required chunks from disk.
 	chunksByChunkIdx, err := s.loadChunks(ctx, args, chunkIndices)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(
+			err,
+			"could not load chunks for chunk indices %v",
+			chunkIndices,
+		)
 	}
 
 	// Apply the attestations to the related chunks and find any
@@ -205,7 +222,11 @@ func (s *Service) updateSpans(
 					att,
 				)
 				if err != nil {
-					return nil, err
+					return nil, errors.Wrapf(
+						err,
+						"could not apply attestation for validator index %d",
+						validatorIndex,
+					)
 				}
 				if slashing != nil {
 					slashings = append(slashings, slashing)
@@ -230,6 +251,7 @@ func (s *Service) determineChunksToUpdateForValidators(
 	defer span.End()
 	attestedEpochs, err := s.serviceCfg.Database.LatestEpochAttestedForValidators(ctx, validatorIndices)
 	if err != nil {
+		err = errors.Wrap(err, "could not get latest epoch attested for validators")
 		return
 	}
 	chunkIndicesToUpdate := make(map[uint64]bool)
@@ -294,7 +316,11 @@ func (s *Service) applyAttestationForValidator(
 		attestation,
 	)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(
+			err,
+			"could not check if attestation for validator index %d is slashable",
+			validatorIndex,
+		)
 	}
 	if slashing != nil && slashing.Kind != slashertypes.NotSlashable {
 		return slashing, nil
@@ -317,7 +343,7 @@ func (s *Service) applyAttestationForValidator(
 		chunkIdx = s.params.chunkIndex(startEpoch)
 		chunk, ok = chunksByChunkIdx[chunkIdx]
 		if !ok {
-			return nil, fmt.Errorf("chunk at chunk index %d not found", chunkIdx)
+			return nil, fmt.Errorf("chunk at chunk index %d for epoch %d not found", chunkIdx, startEpoch)
 		}
 		keepGoing, err := chunk.Update(
 			&chunkUpdateArgs{
@@ -329,7 +355,13 @@ func (s *Service) applyAttestationForValidator(
 			targetEpoch,
 		)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(
+				err,
+				"could not update chunk at chunk index %d for validator index %d and current epoch %d",
+				chunkIdx,
+				validatorIndex,
+				args.currentEpoch,
+			)
 		}
 		// We update the chunksByChunkIdx map with the chunk we just updated.
 		chunksByChunkIdx[chunkIdx] = chunk
@@ -358,7 +390,10 @@ func (s *Service) loadChunks(
 	}
 	rawChunks, chunksExist, err := s.serviceCfg.Database.LoadSlasherChunks(ctx, args.kind, chunkKeys)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(
+			err,
+			"could not load slasher chunk index",
+		)
 	}
 	chunksByChunkIdx := make(map[uint64]Chunker, len(rawChunks))
 	for i := 0; i < len(rawChunks); i++ {
@@ -380,7 +415,7 @@ func (s *Service) loadChunks(
 			}
 		}
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not initialize chunk")
 		}
 		chunksByChunkIdx[chunkIndices[i]] = chunk
 	}

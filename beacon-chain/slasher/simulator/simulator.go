@@ -31,10 +31,10 @@ type Simulator struct {
 
 func DefaultParams() *Parameters {
 	return &Parameters{
-		AggregationPercent:     0.6,
-		ProposerSlashingProbab: 0.5,
-		AttesterSlashingProbab: 0.02,
-		NumValidators:          200000,
+		AggregationPercent:     1.0,
+		ProposerSlashingProbab: 0.0,
+		AttesterSlashingProbab: 0.0,
+		NumValidators:          32,
 	}
 }
 
