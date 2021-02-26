@@ -230,9 +230,9 @@ func Test_batchPublicKeys(t *testing.T) {
 		},
 		{
 			name:       "> batch size returns proper batches",
-			batchSize:  2,
-			publicKeys: [][]byte{{1}, {2}, {3}},
-			want:       [][][]byte{{{1}, {2}}, {{3}}},
+			batchSize:  5,
+			publicKeys: [][]byte{{1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}},
+			want:       [][][]byte{{{1}, {2}, {3}, {4}, {5}}, {{6}, {7}, {8}}},
 		},
 		{
 			name:       "equal size batches returns proper batches",
