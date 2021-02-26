@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Parameters for a slasher simulator.
 type Parameters struct {
 	AggregationPercent     float64
 	ProposerSlashingProbab float64
@@ -19,6 +20,8 @@ type Parameters struct {
 	NumValidators          uint64
 }
 
+// Simulator defines a struct which can launch a slasher simulation
+// at scale using configuration parameters.
 type Simulator struct {
 	ctx              context.Context
 	cancel           context.CancelFunc
@@ -29,6 +32,7 @@ type Simulator struct {
 	genesisTime      time.Time
 }
 
+// DefaultParams for launching a slasher simulator.
 func DefaultParams() *Parameters {
 	return &Parameters{
 		AggregationPercent:     0.6,
@@ -38,6 +42,8 @@ func DefaultParams() *Parameters {
 	}
 }
 
+// New initializes a slasher simulator from a beacon database
+// and configuration parameters.
 func New(ctx context.Context, beaconDB db.Database) (*Simulator, error) {
 	indexedAttsFeed := new(event.Feed)
 	beaconBlocksFeed := new(event.Feed)
@@ -61,6 +67,7 @@ func New(ctx context.Context, beaconDB db.Database) (*Simulator, error) {
 	}, nil
 }
 
+// Start a simulator.
 func (s *Simulator) Start() {
 	log.WithFields(logrus.Fields{
 		"numValidators":          s.params.NumValidators,
@@ -72,6 +79,7 @@ func (s *Simulator) Start() {
 	s.slasher.Start()
 }
 
+// Stop the simulator.
 func (s *Simulator) Stop() error {
 	return s.slasher.Stop()
 }
