@@ -14,7 +14,6 @@ import (
 // for batch processing in a separate routine.
 func (s *Service) receiveAttestations(ctx context.Context) {
 	sub := s.serviceCfg.IndexedAttsFeed.Subscribe(s.indexedAttsChan)
-	defer close(s.indexedAttsChan)
 	defer sub.Unsubscribe()
 	for {
 		select {

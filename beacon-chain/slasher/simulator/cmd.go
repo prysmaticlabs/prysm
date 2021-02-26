@@ -8,6 +8,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+// SlasherCommands defines command-line tools for interacting with slasher.
 var SlasherCommands = &cli.Command{
 	Name:     "slasher-simulator",
 	Category: "slasher",
@@ -16,6 +17,8 @@ var SlasherCommands = &cli.Command{
 		cmd.DataDirFlag,
 		cmd.ClearDB,
 		cmd.ForceClearDB,
+		cmd.ConfigFileFlag,
+		cmd.LogFileName,
 		debug.PProfFlag,
 		debug.MemProfileRateFlag,
 		debug.MutexProfileFractionFlag,

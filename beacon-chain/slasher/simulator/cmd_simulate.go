@@ -1,18 +1,19 @@
 package simulator
 
 import (
+	"context"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
-
-	"context"
-
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
 var log = logrus.WithField("prefix", "slasher-simulator")
 
+// Simulate a slasher implementation at scale using different configuration
+// options for observability, benchmarking, and stress-testing.
 func Simulate(cliCtx *cli.Context) error {
 	logrus.SetLevel(logrus.DebugLevel)
 	dataDir := cliCtx.String(cmd.DataDirFlag.Name)

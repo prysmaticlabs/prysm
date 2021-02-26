@@ -6,9 +6,11 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -288,14 +290,16 @@ func Test_processQueuedAttestations(t *testing.T) {
 				params:           DefaultParams(),
 				attestationQueue: make([]*slashertypes.CompactAttestation, 0),
 			}
-			currentEpochChan := make(chan types.Epoch)
+			currentSlotChan := make(chan types.Slot)
 			exitChan := make(chan struct{})
 			go func() {
-				s.processQueuedAttestations(ctx, currentEpochChan)
+				s.processQueuedAttestations(ctx, currentSlotChan)
 				exitChan <- struct{}{}
 			}()
 			s.attestationQueue = tt.args.attestationQueue
-			currentEpochChan <- tt.args.currentEpoch
+			slot, err := helpers.StartSlot(tt.args.currentEpoch)
+			require.NoError(t, err)
+			currentSlotChan <- slot
 			cancel()
 			<-exitChan
 			if tt.shouldNotBeSlashable {
@@ -324,7 +328,7 @@ func TestSlasher_receiveAttestations_OK(t *testing.T) {
 	}()
 	firstIndices := []uint64{1, 2, 3}
 	secondIndices := []uint64{4, 5, 6}
-	att1 := &ethpb.IndexedAttestation{
+	att1 := testutil.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		AttestingIndices: firstIndices,
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{
@@ -334,8 +338,8 @@ func TestSlasher_receiveAttestations_OK(t *testing.T) {
 				Epoch: 2,
 			},
 		},
-	}
-	att2 := &ethpb.IndexedAttestation{
+	})
+	att2 := testutil.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		AttestingIndices: secondIndices,
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{
@@ -345,21 +349,27 @@ func TestSlasher_receiveAttestations_OK(t *testing.T) {
 				Epoch: 2,
 			},
 		},
-	}
+	})
 	s.indexedAttsChan <- att1
 	s.indexedAttsChan <- att2
 	cancel()
 	<-exitChan
+	sr1, err := att1.Data.HashTreeRoot()
+	require.NoError(t, err)
+	sr2, err := att2.Data.HashTreeRoot()
+	require.NoError(t, err)
 	wanted := []*slashertypes.CompactAttestation{
 		{
 			AttestingIndices: att1.AttestingIndices,
 			Source:           att1.Data.Source.Epoch,
 			Target:           att1.Data.Target.Epoch,
+			SigningRoot:      sr1,
 		},
 		{
 			AttestingIndices: att2.AttestingIndices,
 			Source:           att2.Data.Source.Epoch,
 			Target:           att2.Data.Target.Epoch,
+			SigningRoot:      sr2,
 		},
 	}
 	require.DeepEqual(t, wanted, s.attestationQueue)
@@ -381,7 +391,7 @@ func TestSlasher_receiveAttestations_OnlyValidAttestations(t *testing.T) {
 	firstIndices := []uint64{1, 2, 3}
 	secondIndices := []uint64{4, 5, 6}
 	// Add a valid attestation.
-	validAtt := &ethpb.IndexedAttestation{
+	validAtt := testutil.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		AttestingIndices: firstIndices,
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{
@@ -391,7 +401,9 @@ func TestSlasher_receiveAttestations_OnlyValidAttestations(t *testing.T) {
 				Epoch: 2,
 			},
 		},
-	}
+	})
+	sr, err := validAtt.Data.HashTreeRoot()
+	require.NoError(t, err)
 	s.indexedAttsChan <- validAtt
 	// Send an invalid, bad attestation which will not
 	// pass integrity checks at it has invalid attestation data.
@@ -407,6 +419,7 @@ func TestSlasher_receiveAttestations_OnlyValidAttestations(t *testing.T) {
 			AttestingIndices: validAtt.AttestingIndices,
 			Source:           validAtt.Data.Source.Epoch,
 			Target:           validAtt.Data.Target.Epoch,
+			SigningRoot:      sr,
 		},
 	}
 	require.DeepEqual(t, wanted, s.attestationQueue)
@@ -425,22 +438,28 @@ func TestSlasher_receiveBlocks_OK(t *testing.T) {
 		s.receiveBlocks(ctx)
 		exitChan <- struct{}{}
 	}()
-	block1 := &ethpb.BeaconBlockHeader{
+	block1 := testutil.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
 		ProposerIndex: 1,
-	}
-	block2 := &ethpb.BeaconBlockHeader{
+	})
+	block2 := testutil.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
 		ProposerIndex: 2,
-	}
+	})
 	s.beaconBlocksChan <- block1
 	s.beaconBlocksChan <- block2
 	cancel()
 	<-exitChan
+	sr1, err := block1.HashTreeRoot()
+	require.NoError(t, err)
+	sr2, err := block2.HashTreeRoot()
+	require.NoError(t, err)
 	wanted := []*slashertypes.CompactBeaconBlock{
 		{
 			ProposerIndex: types.ValidatorIndex(block1.ProposerIndex),
+			SigningRoot:   sr1,
 		},
 		{
 			ProposerIndex: types.ValidatorIndex(block2.ProposerIndex),
+			SigningRoot:   sr2,
 		},
 	}
 	require.DeepEqual(t, wanted, s.beaconBlocksQueue)
@@ -461,7 +480,7 @@ func TestService_processQueuedBlocks(t *testing.T) {
 		},
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	tickerChan := make(chan types.Epoch)
+	tickerChan := make(chan types.Slot)
 	exitChan := make(chan struct{})
 	go func() {
 		s.processQueuedBlocks(ctx, tickerChan)

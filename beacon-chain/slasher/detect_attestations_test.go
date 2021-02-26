@@ -407,7 +407,7 @@ func TestService_processQueuedAttestations(t *testing.T) {
 		},
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	tickerChan := make(chan types.Epoch)
+	tickerChan := make(chan types.Slot)
 	exitChan := make(chan struct{})
 	go func() {
 		s.processQueuedAttestations(ctx, tickerChan)
@@ -415,7 +415,7 @@ func TestService_processQueuedAttestations(t *testing.T) {
 	}()
 
 	// Send a value over the ticker.
-	tickerChan <- 0
+	tickerChan <- 1
 	cancel()
 	<-exitChan
 	assert.LogsContain(t, hook, "Epoch reached, processing queued")
