@@ -251,7 +251,7 @@ func listValidatorIndices(ctx context.Context, km keymanager.IKeymanager, client
 	fmt.Println(au.BrightGreen("Validator indices:").Bold())
 	for i, idx := range resp.Indices {
 		if idx != math.MaxUint64 {
-			fmt.Printf("%#x %d\n", pubKeys[i][0:4], idx)
+			fmt.Printf("%#x: %d\n", pubKeys[i][0:4], idx)
 		}
 	}
 	return nil

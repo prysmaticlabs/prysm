@@ -526,6 +526,6 @@ func TestListAccounts_ListValidatorIndices(t *testing.T) {
 	require.NoError(t, err)
 	os.Stdout = rescueStdout
 
-	expectedStdout := au.BrightGreen("Validator indices:").Bold().String() + "\n0x30000000 1\n0x32000000 2\n"
+	expectedStdout := au.BrightGreen("Validator indices:").Bold().String() + "\n0x30000000: 1\n0x32000000: 2\n"
 	require.Equal(t, expectedStdout, string(out))
 }
