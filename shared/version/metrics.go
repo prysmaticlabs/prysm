@@ -6,7 +6,7 @@ import (
 )
 
 var prysmInfo = promauto.NewGauge(prometheus.GaugeOpts{
-	Name:        "prysm_info",
+	Name:        "prysm_version",
 	ConstLabels: prometheus.Labels{"version": gitTag, "commit": gitCommit},
 })
 
