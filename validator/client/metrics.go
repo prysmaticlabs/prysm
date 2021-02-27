@@ -172,6 +172,28 @@ var (
 			"pubkey",
 		},
 	)
+	// ValidatorNextAttestationSlotGaugeVec used to track validator statuses by public key.
+	ValidatorNextAttestationSlotGaugeVec = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: "validator",
+			Name:      "next_attestation_slot",
+			Help:      "validator next scheduled attestation slot",
+		},
+		[]string{
+			"pubkey",
+		},
+	)
+	// ValidatorNextProposalSlotGaugeVec used to track validator statuses by public key.
+	ValidatorNextProposalSlotGaugeVec = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: "validator",
+			Name:      "next_proposal_slot",
+			Help:      "validator next scheduled proposal slot",
+		},
+		[]string{
+			"pubkey",
+		},
+	)
 )
 
 // LogValidatorGainsAndLosses logs important metrics related to this validator client's
