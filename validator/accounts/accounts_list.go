@@ -3,13 +3,13 @@ package accounts
 import (
 	"context"
 	"fmt"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"math"
 	"path/filepath"
 	"strings"
 
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
