@@ -59,13 +59,13 @@ func (bs *Server) SubmitAttesterSlashing(ctx context.Context, req *ethpb.Atteste
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 
-	v1Slashing := migration.V1AttSlashingToV1Alpha1(req)
-	err = blocks.VerifyAttesterSlashing(ctx, headState, v1Slashing)
+	alphaSlashing := migration.V1AttSlashingToV1Alpha1(req)
+	err = blocks.VerifyAttesterSlashing(ctx, headState, alphaSlashing)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Invalid attester slashing: %v", err)
 	}
 
-	err = bs.SlashingsPool.InsertAttesterSlashing(ctx, headState, v1Slashing)
+	err = bs.SlashingsPool.InsertAttesterSlashing(ctx, headState, alphaSlashing)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not insert attester slashing into pool: %v", err)
 	}
@@ -111,13 +111,13 @@ func (bs *Server) SubmitProposerSlashing(ctx context.Context, req *ethpb.Propose
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 
-	v1Slashing := migration.V1ProposerSlashingToV1Alpha1(req)
-	err = blocks.VerifyProposerSlashing(headState, v1Slashing)
+	alphaSlashing := migration.V1ProposerSlashingToV1Alpha1(req)
+	err = blocks.VerifyProposerSlashing(headState, alphaSlashing)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Invalid proposer slashing: %v", err)
 	}
 
-	err = bs.SlashingsPool.InsertProposerSlashing(ctx, headState, v1Slashing)
+	err = bs.SlashingsPool.InsertProposerSlashing(ctx, headState, alphaSlashing)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not insert proposer slashing into pool: %v", err)
 	}
@@ -168,13 +168,13 @@ func (bs *Server) SubmitVoluntaryExit(ctx context.Context, req *ethpb.SignedVolu
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get exiting validator: %v", err)
 	}
-	v1Slashing := migration.V1ExitToV1Alpha1(req)
-	err = blocks.VerifyExitAndSignature(validator, headState.Slot(), headState.Fork(), v1Slashing, headState.GenesisValidatorRoot())
+	alphaExit := migration.V1ExitToV1Alpha1(req)
+	err = blocks.VerifyExitAndSignature(validator, headState.Slot(), headState.Fork(), alphaExit, headState.GenesisValidatorRoot())
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Invalid voluntary exit: %v", err)
 	}
 
-	bs.VoluntaryExitsPool.InsertVoluntaryExit(ctx, headState, v1Slashing)
+	bs.VoluntaryExitsPool.InsertVoluntaryExit(ctx, headState, alphaExit)
 	if err := bs.Broadcaster.Broadcast(ctx, req); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not broadcast voluntary exit object: %v", err)
 	}
