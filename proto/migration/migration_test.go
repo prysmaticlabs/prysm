@@ -67,15 +67,11 @@ func Test_V1Alpha1ToV1Block(t *testing.T) {
 
 	v1Block, err := V1Alpha1ToV1Block(alphaBlock)
 	require.NoError(t, err)
-	assert.Equal(t, slot, v1Block.Block.Slot)
-	assert.Equal(t, validatorIndex, v1Block.Block.ProposerIndex)
-	assert.DeepEqual(t, parentRoot, v1Block.Block.ParentRoot)
-	assert.DeepEqual(t, stateRoot, v1Block.Block.StateRoot)
-	assert.DeepEqual(t, randaoReveal, v1Block.Block.Body.RandaoReveal)
-	assert.DeepEqual(t, depositRoot, v1Block.Block.Body.Eth1Data.DepositRoot)
-	assert.Equal(t, depositCount, v1Block.Block.Body.Eth1Data.DepositCount)
-	assert.DeepEqual(t, blockHash, v1Block.Block.Body.Eth1Data.BlockHash)
-	assert.DeepEqual(t, signature, v1Block.Signature)
+	alphaRoot, err := alphaBlock.HashTreeRoot()
+	require.NoError(t, err)
+	v1Root, err := v1Block.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, alphaRoot, v1Root)
 }
 
 func Test_V1ToV1Alpha1Block(t *testing.T) {
@@ -94,15 +90,11 @@ func Test_V1ToV1Alpha1Block(t *testing.T) {
 
 	alphaBlock, err := V1ToV1Alpha1Block(v1Block)
 	require.NoError(t, err)
-	assert.Equal(t, slot, alphaBlock.Block.Slot)
-	assert.Equal(t, validatorIndex, alphaBlock.Block.ProposerIndex)
-	assert.DeepEqual(t, parentRoot, alphaBlock.Block.ParentRoot)
-	assert.DeepEqual(t, stateRoot, alphaBlock.Block.StateRoot)
-	assert.DeepEqual(t, randaoReveal, alphaBlock.Block.Body.RandaoReveal)
-	assert.DeepEqual(t, depositRoot, alphaBlock.Block.Body.Eth1Data.DepositRoot)
-	assert.Equal(t, depositCount, alphaBlock.Block.Body.Eth1Data.DepositCount)
-	assert.DeepEqual(t, blockHash, alphaBlock.Block.Body.Eth1Data.BlockHash)
-	assert.DeepEqual(t, signature, alphaBlock.Signature)
+	alphaRoot, err := alphaBlock.HashTreeRoot()
+	require.NoError(t, err)
+	v1Root, err := v1Block.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, v1Root, alphaRoot)
 }
 
 func Test_V1Alpha1AttSlashingToV1(t *testing.T) {
@@ -129,23 +121,11 @@ func Test_V1Alpha1AttSlashingToV1(t *testing.T) {
 	}
 
 	v1Slashing := V1Alpha1AttSlashingToV1(alphaSlashing)
-	assert.DeepEqual(t, attestingIndices, v1Slashing.Attestation_1.AttestingIndices)
-	assert.Equal(t, slot, v1Slashing.Attestation_1.Data.Slot)
-	assert.Equal(t, committeeIndex, v1Slashing.Attestation_1.Data.CommitteeIndex)
-	assert.DeepEqual(t, beaconBlockRoot, v1Slashing.Attestation_1.Data.BeaconBlockRoot)
-	assert.Equal(t, epoch, v1Slashing.Attestation_1.Data.Source.Epoch)
-	assert.DeepEqual(t, sourceRoot, v1Slashing.Attestation_1.Data.Source.Root)
-	assert.Equal(t, epoch, v1Slashing.Attestation_1.Data.Target.Epoch)
-	assert.DeepEqual(t, targetRoot, v1Slashing.Attestation_1.Data.Target.Root)
-	assert.DeepEqual(t, signature, v1Slashing.Attestation_1.Signature)
-	assert.Equal(t, slot, v1Slashing.Attestation_2.Data.Slot)
-	assert.Equal(t, committeeIndex, v1Slashing.Attestation_2.Data.CommitteeIndex)
-	assert.DeepEqual(t, beaconBlockRoot, v1Slashing.Attestation_2.Data.BeaconBlockRoot)
-	assert.Equal(t, epoch, v1Slashing.Attestation_2.Data.Source.Epoch)
-	assert.DeepEqual(t, sourceRoot, v1Slashing.Attestation_2.Data.Source.Root)
-	assert.Equal(t, epoch, v1Slashing.Attestation_2.Data.Target.Epoch)
-	assert.DeepEqual(t, targetRoot, v1Slashing.Attestation_2.Data.Target.Root)
-	assert.DeepEqual(t, signature, v1Slashing.Attestation_2.Signature)
+	alphaRoot, err := alphaSlashing.HashTreeRoot()
+	require.NoError(t, err)
+	v1Root, err := v1Slashing.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, alphaRoot, v1Root)
 }
 
 func Test_V1Alpha1ProposerSlashingToV1(t *testing.T) {
@@ -162,18 +142,11 @@ func Test_V1Alpha1ProposerSlashingToV1(t *testing.T) {
 	}
 
 	v1Slashing := V1Alpha1ProposerSlashingToV1(alphaSlashing)
-	assert.Equal(t, slot, v1Slashing.Header_1.Header.Slot)
-	assert.Equal(t, validatorIndex, v1Slashing.Header_1.Header.ProposerIndex)
-	assert.DeepEqual(t, parentRoot, v1Slashing.Header_1.Header.ParentRoot)
-	assert.DeepEqual(t, stateRoot, v1Slashing.Header_1.Header.StateRoot)
-	assert.DeepEqual(t, bodyRoot, v1Slashing.Header_1.Header.BodyRoot)
-	assert.DeepEqual(t, signature, v1Slashing.Header_1.Signature)
-	assert.Equal(t, slot, v1Slashing.Header_2.Header.Slot)
-	assert.Equal(t, validatorIndex, v1Slashing.Header_2.Header.ProposerIndex)
-	assert.DeepEqual(t, parentRoot, v1Slashing.Header_2.Header.ParentRoot)
-	assert.DeepEqual(t, stateRoot, v1Slashing.Header_2.Header.StateRoot)
-	assert.DeepEqual(t, bodyRoot, v1Slashing.Header_2.Header.BodyRoot)
-	assert.DeepEqual(t, signature, v1Slashing.Header_2.Signature)
+	alphaRoot, err := alphaSlashing.HashTreeRoot()
+	require.NoError(t, err)
+	v1Root, err := v1Slashing.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, alphaRoot, v1Root)
 }
 
 func Test_V1Alpha1ExitToV1(t *testing.T) {
@@ -215,21 +188,9 @@ func Test_V1AttSlashingToV1Alpha1(t *testing.T) {
 	}
 
 	alphaSlashing := V1AttSlashingToV1Alpha1(v1Slashing)
-	assert.DeepEqual(t, attestingIndices, alphaSlashing.Attestation_1.AttestingIndices)
-	assert.Equal(t, slot, alphaSlashing.Attestation_1.Data.Slot)
-	assert.Equal(t, committeeIndex, alphaSlashing.Attestation_1.Data.CommitteeIndex)
-	assert.DeepEqual(t, beaconBlockRoot, alphaSlashing.Attestation_1.Data.BeaconBlockRoot)
-	assert.Equal(t, epoch, alphaSlashing.Attestation_1.Data.Source.Epoch)
-	assert.DeepEqual(t, sourceRoot, alphaSlashing.Attestation_1.Data.Source.Root)
-	assert.Equal(t, epoch, alphaSlashing.Attestation_1.Data.Target.Epoch)
-	assert.DeepEqual(t, targetRoot, alphaSlashing.Attestation_1.Data.Target.Root)
-	assert.DeepEqual(t, signature, alphaSlashing.Attestation_1.Signature)
-	assert.Equal(t, slot, alphaSlashing.Attestation_2.Data.Slot)
-	assert.Equal(t, committeeIndex, alphaSlashing.Attestation_2.Data.CommitteeIndex)
-	assert.DeepEqual(t, beaconBlockRoot, alphaSlashing.Attestation_2.Data.BeaconBlockRoot)
-	assert.Equal(t, epoch, alphaSlashing.Attestation_2.Data.Source.Epoch)
-	assert.DeepEqual(t, sourceRoot, alphaSlashing.Attestation_2.Data.Source.Root)
-	assert.Equal(t, epoch, alphaSlashing.Attestation_2.Data.Target.Epoch)
-	assert.DeepEqual(t, targetRoot, alphaSlashing.Attestation_2.Data.Target.Root)
-	assert.DeepEqual(t, signature, alphaSlashing.Attestation_2.Signature)
+	alphaRoot, err := alphaSlashing.HashTreeRoot()
+	require.NoError(t, err)
+	v1Root, err := v1Slashing.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, v1Root, alphaRoot)
 }
