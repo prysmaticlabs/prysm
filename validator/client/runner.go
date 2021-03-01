@@ -102,7 +102,10 @@ func run(ctx context.Context, v Validator) {
 		if err != nil {
 			log.Fatalf("Could not determine if beacon node synced: %v", err)
 		}
+
+		go handleAccountsChanged(ctx, v, accountsChangedChan)
 		err = v.WaitForActivation(ctx, accountsChangedChan)
+
 		if isConnectionError(err) {
 			log.Warnf("Could not wait for validator activation: %v", err)
 			continue
@@ -121,7 +124,6 @@ func run(ctx context.Context, v Validator) {
 		break
 	}
 
-	go handleAccountsChanged(ctx, v, accountsChangedChan)
 	connectionErrorChannel := make(chan error, 1)
 	go v.ReceiveBlocks(ctx, connectionErrorChannel)
 	if err := v.UpdateDuties(ctx, headSlot); err != nil {
