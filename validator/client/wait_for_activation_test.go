@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	constant "github.com/prysmaticlabs/prysm/validator/testing"
 	"testing"
 	"time"
 
@@ -19,8 +20,6 @@ import (
 	"github.com/tyler-smith/go-bip39"
 	util "github.com/wealdtech/go-eth2-util"
 )
-
-const testMnemonic = "tumble turn jewel sudden social great water general cabin jacket bounce dry flip monster advance problem social half flee inform century chicken hard reason"
 
 func TestWaitActivation_ContextCanceled(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -306,7 +305,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 	})
 
 	t.Run("Derived keymanager", func(t *testing.T) {
-		seed := bip39.NewSeed(testMnemonic, "")
+		seed := bip39.NewSeed(constant.TestMnemonic, "")
 		inactivePrivKey, err :=
 			util.PrivateKeyFromSeedAndPath(seed, fmt.Sprintf(derived.ValidatingKeyDerivationPathTemplate, 0))
 		require.NoError(t, err)
@@ -328,7 +327,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			ListenForChanges: true,
 		})
 		require.NoError(t, err)
-		err = km.RecoverAccountsFromMnemonic(ctx, testMnemonic, "", 1)
+		err = km.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "", 1)
 		require.NoError(t, err)
 		client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 		v := validator{
@@ -370,7 +369,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 		go func() {
 			// We add the active key into the keymanager and simulate a key refresh.
 			time.Sleep(time.Second * 1)
-			err = km.RecoverAccountsFromMnemonic(ctx, testMnemonic, "", 2)
+			err = km.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "", 2)
 			require.NoError(t, err)
 			channel <- struct{}{}
 		}()
