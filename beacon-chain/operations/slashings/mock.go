@@ -30,8 +30,9 @@ func (m *PoolMock) InsertAttesterSlashing(_ context.Context, _ *state.BeaconStat
 }
 
 // InsertProposerSlashing --
-func (m *PoolMock) InsertProposerSlashing(_ context.Context, _ *state.BeaconState, _ *ethpb.ProposerSlashing) error {
-	panic("implement me")
+func (m *PoolMock) InsertProposerSlashing(_ context.Context, _ *state.BeaconState, slashing *ethpb.ProposerSlashing) error {
+	m.PendingPropSlashings = append(m.PendingPropSlashings, slashing)
+	return nil
 }
 
 // MarkIncludedAttesterSlashing --

@@ -59,13 +59,13 @@ func (bs *Server) SubmitAttesterSlashing(ctx context.Context, req *ethpb.Atteste
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 
-	v1Slashing := migration.V1AttSlashingToV1Alpha1(req)
-	err = blocks.VerifyAttesterSlashing(ctx, headState, v1Slashing)
+	alphaSlashing := migration.V1AttSlashingToV1Alpha1(req)
+	err = blocks.VerifyAttesterSlashing(ctx, headState, alphaSlashing)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Invalid attester slashing: %v", err)
 	}
 
-	err = bs.SlashingsPool.InsertAttesterSlashing(ctx, headState, v1Slashing)
+	err = bs.SlashingsPool.InsertAttesterSlashing(ctx, headState, alphaSlashing)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not insert attester slashing into pool: %v", err)
 	}
@@ -103,7 +103,31 @@ func (bs *Server) ListPoolProposerSlashings(ctx context.Context, req *ptypes.Emp
 // SubmitProposerSlashing submits AttesterSlashing object to node's pool and if
 // passes validation node MUST broadcast it to network.
 func (bs *Server) SubmitProposerSlashing(ctx context.Context, req *ethpb.ProposerSlashing) (*ptypes.Empty, error) {
-	return nil, errors.New("unimplemented")
+	ctx, span := trace.StartSpan(ctx, "beaconv1.SubmitProposerSlashing")
+	defer span.End()
+
+	headState, err := bs.ChainInfoFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	}
+
+	alphaSlashing := migration.V1ProposerSlashingToV1Alpha1(req)
+	err = blocks.VerifyProposerSlashing(headState, alphaSlashing)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Invalid proposer slashing: %v", err)
+	}
+
+	err = bs.SlashingsPool.InsertProposerSlashing(ctx, headState, alphaSlashing)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not insert proposer slashing into pool: %v", err)
+	}
+	if !featureconfig.Get().DisableBroadcastSlashings {
+		if err := bs.Broadcaster.Broadcast(ctx, req); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not broadcast slashing object: %v", err)
+		}
+	}
+
+	return &ptypes.Empty{}, nil
 }
 
 // ListPoolVoluntaryExits retrieves voluntary exits known by the node but
@@ -132,5 +156,28 @@ func (bs *Server) ListPoolVoluntaryExits(ctx context.Context, req *ptypes.Empty)
 // SubmitVoluntaryExit submits SignedVoluntaryExit object to node's pool
 // and if passes validation node MUST broadcast it to network.
 func (bs *Server) SubmitVoluntaryExit(ctx context.Context, req *ethpb.SignedVoluntaryExit) (*ptypes.Empty, error) {
-	return nil, errors.New("unimplemented")
+	ctx, span := trace.StartSpan(ctx, "beaconv1.SubmitVoluntaryExit")
+	defer span.End()
+
+	headState, err := bs.ChainInfoFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	}
+
+	validator, err := headState.ValidatorAtIndexReadOnly(req.Exit.ValidatorIndex)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get exiting validator: %v", err)
+	}
+	alphaExit := migration.V1ExitToV1Alpha1(req)
+	err = blocks.VerifyExitAndSignature(validator, headState.Slot(), headState.Fork(), alphaExit, headState.GenesisValidatorRoot())
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Invalid voluntary exit: %v", err)
+	}
+
+	bs.VoluntaryExitsPool.InsertVoluntaryExit(ctx, headState, alphaExit)
+	if err := bs.Broadcaster.Broadcast(ctx, req); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not broadcast voluntary exit object: %v", err)
+	}
+
+	return &ptypes.Empty{}, nil
 }
