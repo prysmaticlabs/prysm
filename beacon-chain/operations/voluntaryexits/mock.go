@@ -19,8 +19,8 @@ func (m *PoolMock) PendingExits(_ *beaconstate.BeaconState, _ types.Slot, _ bool
 }
 
 // InsertVoluntaryExit --
-func (*PoolMock) InsertVoluntaryExit(_ context.Context, _ *beaconstate.BeaconState, _ *eth.SignedVoluntaryExit) {
-	panic("implement me")
+func (m *PoolMock) InsertVoluntaryExit(_ context.Context, _ *beaconstate.BeaconState, exit *eth.SignedVoluntaryExit) {
+	m.Exits = append(m.Exits, exit)
 }
 
 // MarkIncluded --
