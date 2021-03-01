@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
 	types "github.com/prysmaticlabs/eth2-types"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -36,9 +36,7 @@ func TestStateByRoot_ColdState(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, bRoot))
 	loadedState, err := service.StateByRoot(ctx, bRoot)
 	require.NoError(t, err)
-	if !proto.Equal(loadedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe()) {
-		t.Error("Did not correctly save state")
-	}
+	require.DeepSSZEqual(t, loadedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe())
 }
 
 func TestStateByRoot_HotStateUsingEpochBoundaryCacheNoReplay(t *testing.T) {
@@ -97,9 +95,7 @@ func TestStateByRoot_HotStateCached(t *testing.T) {
 
 	loadedState, err := service.StateByRoot(ctx, r)
 	require.NoError(t, err)
-	if !proto.Equal(loadedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe()) {
-		t.Error("Did not correctly cache state")
-	}
+	require.DeepSSZEqual(t, loadedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe())
 }
 
 func TestStateByRootInitialSync_UseEpochStateCache(t *testing.T) {
@@ -133,9 +129,7 @@ func TestStateByRootInitialSync_UseCache(t *testing.T) {
 
 	loadedState, err := service.StateByRootInitialSync(ctx, r)
 	require.NoError(t, err)
-	if !proto.Equal(loadedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe()) {
-		t.Error("Did not correctly cache state")
-	}
+	require.DeepSSZEqual(t, loadedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe())
 	if service.hotStateCache.has(r) {
 		t.Error("Hot state cache was not invalidated")
 	}
@@ -234,10 +228,7 @@ func TestLoadeStateByRoot_Cached(t *testing.T) {
 	// This tests where hot state was already cached.
 	loadedState, err := service.loadStateByRoot(ctx, r)
 	require.NoError(t, err)
-
-	if !proto.Equal(loadedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe()) {
-		t.Error("Did not correctly cache state")
-	}
+	require.DeepSSZEqual(t, loadedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe())
 }
 
 func TestLoadeStateByRoot_FinalizedState(t *testing.T) {
@@ -261,10 +252,7 @@ func TestLoadeStateByRoot_FinalizedState(t *testing.T) {
 	// This tests where hot state was already cached.
 	loadedState, err := service.loadStateByRoot(ctx, gRoot)
 	require.NoError(t, err)
-
-	if !proto.Equal(loadedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe()) {
-		t.Error("Did not correctly retrieve finalized state")
-	}
+	require.DeepSSZEqual(t, loadedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe())
 }
 
 func TestLoadeStateByRoot_EpochBoundaryStateCanProcess(t *testing.T) {

@@ -8,6 +8,7 @@ import (
 	"path"
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -26,7 +27,7 @@ func TestRestore(t *testing.T) {
 	}()
 	require.NoError(t, err)
 	pubKey := []byte("hello")
-	require.NoError(t, backupDb.SavePubKey(ctx, uint64(1), pubKey))
+	require.NoError(t, backupDb.SavePubKey(ctx, types.ValidatorIndex(1), pubKey))
 	require.NoError(t, backupDb.Close())
 	// We rename the backup file so that we can later verify
 	// whether the restored db has been renamed correctly.
@@ -54,7 +55,7 @@ func TestRestore(t *testing.T) {
 		require.NoError(t, restoredDb.Close())
 	}()
 	require.NoError(t, err)
-	received, err := restoredDb.ValidatorPubKey(ctx, uint64(1))
+	received, err := restoredDb.ValidatorPubKey(ctx, types.ValidatorIndex(1))
 	require.NoError(t, err)
 	require.DeepEqual(t, pubKey, received, "Restored database has incorrect data")
 	assert.LogsContain(t, logHook, "Restore completed successfully")

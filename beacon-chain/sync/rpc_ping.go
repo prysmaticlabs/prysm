@@ -8,8 +8,9 @@ import (
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/peer"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
@@ -28,9 +29,9 @@ func (s *Service) pingHandler(_ context.Context, msg interface{}, stream libp2pc
 	valid, err := s.validateSequenceNum(*m, stream.Conn().RemotePeer())
 	if err != nil {
 		// Descore peer for giving us a bad sequence number.
-		if errors.Is(err, types.ErrInvalidSequenceNum) {
+		if errors.Is(err, p2ptypes.ErrInvalidSequenceNum) {
 			s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
-			s.writeErrorResponseToStream(responseCodeInvalidRequest, types.ErrInvalidSequenceNum.Error(), stream)
+			s.writeErrorResponseToStream(responseCodeInvalidRequest, p2ptypes.ErrInvalidSequenceNum.Error(), stream)
 		}
 		return err
 	}
@@ -59,7 +60,7 @@ func (s *Service) pingHandler(_ context.Context, msg interface{}, stream libp2pc
 			// We cannot compare errors directly as the stream muxer error
 			// type isn't compatible with the error we have, so a direct
 			// equality checks fails.
-			if !strings.Contains(err.Error(), types.ErrIODeadline.Error()) {
+			if !strings.Contains(err.Error(), p2ptypes.ErrIODeadline.Error()) {
 				log.WithField("peer", stream.Conn().RemotePeer()).WithError(err).Debug("Could not send metadata request")
 			}
 			return
@@ -101,7 +102,7 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	valid, err := s.validateSequenceNum(*msg, stream.Conn().RemotePeer())
 	if err != nil {
 		// Descore peer for giving us a bad sequence number.
-		if errors.Is(err, types.ErrInvalidSequenceNum) {
+		if errors.Is(err, p2ptypes.ErrInvalidSequenceNum) {
 			s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		}
 		return err
@@ -130,7 +131,7 @@ func (s *Service) validateSequenceNum(seq types.SSZUint64, id peer.ID) (bool, er
 	}
 	// Return error on invalid sequence number.
 	if md.SeqNumber > uint64(seq) {
-		return false, types.ErrInvalidSequenceNum
+		return false, p2ptypes.ErrInvalidSequenceNum
 	}
 	return md.SeqNumber == uint64(seq), nil
 }

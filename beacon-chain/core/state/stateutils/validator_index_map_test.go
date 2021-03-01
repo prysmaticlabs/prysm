@@ -3,6 +3,7 @@ package stateutils_test
 import (
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -28,7 +29,7 @@ func TestValidatorIndexMap_OK(t *testing.T) {
 
 	tests := []struct {
 		key [48]byte
-		val uint64
+		val types.ValidatorIndex
 		ok  bool
 	}{
 		{

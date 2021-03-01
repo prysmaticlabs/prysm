@@ -240,6 +240,56 @@ func TestDirFiles(t *testing.T) {
 	}
 }
 
+func TestRecursiveFileFind(t *testing.T) {
+	tmpDir, _ := tmpDirWithContentsForRecursiveFind(t)
+	tests := []struct {
+		name  string
+		root  string
+		path  string
+		found bool
+	}{
+		{
+			name:  "file1",
+			root:  tmpDir,
+			path:  "subfolder1/subfolder11/file1",
+			found: true,
+		},
+		{
+			name:  "file2",
+			root:  tmpDir,
+			path:  "subfolder2/file2",
+			found: true,
+		},
+		{
+			name:  "file1",
+			root:  tmpDir + "/subfolder1",
+			path:  "subfolder11/file1",
+			found: true,
+		},
+		{
+			name:  "file3",
+			root:  tmpDir,
+			path:  "file3",
+			found: true,
+		},
+		{
+			name:  "file4",
+			root:  tmpDir,
+			path:  "",
+			found: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			found, _, err := fileutil.RecursiveFileFind(tt.name, tt.root)
+			require.NoError(t, err)
+
+			assert.DeepEqual(t, tt.found, found)
+		})
+	}
+}
+
 func deepCompare(t *testing.T, file1, file2 string) bool {
 	sf, err := os.Open(file1)
 	assert.NoError(t, err)
@@ -273,6 +323,24 @@ func tmpDirWithContents(t *testing.T) (string, []string) {
 	}
 	require.NoError(t, os.MkdirAll(filepath.Join(dir, "subfolder1", "subfolder11"), 0777))
 	require.NoError(t, os.MkdirAll(filepath.Join(dir, "subfolder1", "subfolder12"), 0777))
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "subfolder2"), 0777))
+	for _, fname := range fnames {
+		require.NoError(t, ioutil.WriteFile(filepath.Join(dir, fname), []byte(fname), 0777))
+	}
+	sort.Strings(fnames)
+	return dir, fnames
+}
+
+// tmpDirWithContentsForRecursiveFind returns path to temporary directory having some folders/files in it.
+// Directory is automatically removed by internal testing cleanup methods.
+func tmpDirWithContentsForRecursiveFind(t *testing.T) (string, []string) {
+	dir := t.TempDir()
+	fnames := []string{
+		"subfolder1/subfolder11/file1",
+		"subfolder2/file2",
+		"file3",
+	}
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "subfolder1", "subfolder11"), 0777))
 	require.NoError(t, os.MkdirAll(filepath.Join(dir, "subfolder2"), 0777))
 	for _, fname := range fnames {
 		require.NoError(t, ioutil.WriteFile(filepath.Join(dir, fname), []byte(fname), 0777))

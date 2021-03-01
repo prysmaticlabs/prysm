@@ -326,11 +326,6 @@ func BytesToEpochBigEndian(b []byte) types.Epoch {
 	return types.Epoch(BytesToUint64BigEndian(b))
 }
 
-// SlotToBytesLittleEndian conversion.
-func SlotToBytesLittleEndian(i types.Slot) []byte {
-	return Uint64ToBytesLittleEndian(uint64(i))
-}
-
 // SlotToBytesBigEndian conversion.
 func SlotToBytesBigEndian(i types.Slot) []byte {
 	return Uint64ToBytesBigEndian(uint64(i))

@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -18,11 +18,11 @@ func TestNilDBHistoryBlkHdr(t *testing.T) {
 	ctx := context.Background()
 
 	slot := types.Slot(1)
-	validatorID := uint64(1)
+	validatorIndex := types.ValidatorIndex(1)
 
-	require.Equal(t, false, db.HasBlockHeader(ctx, slot, validatorID))
+	require.Equal(t, false, db.HasBlockHeader(ctx, slot, validatorIndex))
 
-	bPrime, err := db.BlockHeaders(ctx, slot, validatorID)
+	bPrime, err := db.BlockHeaders(ctx, slot, validatorIndex)
 	require.NoError(t, err, "Failed to get block")
 	require.DeepEqual(t, []*ethpb.SignedBeaconBlockHeader(nil), bPrime, "Should return nil for a non existent key")
 }

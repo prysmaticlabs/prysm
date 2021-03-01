@@ -291,9 +291,9 @@ func (s *ChainService) AttestationPreState(_ context.Context, _ *ethpb.Attestati
 }
 
 // HeadValidatorsIndices mocks the same method in the chain service.
-func (s *ChainService) HeadValidatorsIndices(_ context.Context, epoch types.Epoch) ([]uint64, error) {
+func (s *ChainService) HeadValidatorsIndices(_ context.Context, epoch types.Epoch) ([]types.ValidatorIndex, error) {
 	if s.State == nil {
-		return []uint64{}, nil
+		return []types.ValidatorIndex{}, nil
 	}
 	return helpers.ActiveValidatorIndices(s.State, epoch)
 }
