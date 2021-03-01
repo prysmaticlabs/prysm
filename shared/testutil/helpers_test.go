@@ -5,8 +5,8 @@ import (
 	"encoding/binary"
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -46,7 +46,7 @@ func TestRandaoReveal(t *testing.T) {
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, uint64(epoch))
 	// We make the previous validator's index sign the message instead of the proposer.
-	sszUint := p2ptypes.SSZUint64(epoch)
+	sszUint := types.SSZUint64(epoch)
 	epochSignature, err := helpers.ComputeDomainAndSign(beaconState, epoch, &sszUint, params.BeaconConfig().DomainRandao, privKeys[proposerIdx])
 	require.NoError(t, err)
 

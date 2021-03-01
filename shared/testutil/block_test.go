@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
+	v1 "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -99,7 +101,7 @@ func TestGenerateFullBlock_ValidAttesterSlashings(t *testing.T) {
 	require.NoError(t, err)
 
 	slashableIndices := block.Block.Body.AttesterSlashings[0].Attestation_1.AttestingIndices
-	if val, err := beaconState.ValidatorAtIndexReadOnly(slashableIndices[0]); err != nil || !val.Slashed() {
+	if val, err := beaconState.ValidatorAtIndexReadOnly(types.ValidatorIndex(slashableIndices[0])); err != nil || !val.Slashed() {
 		require.NoError(t, err)
 		t.Fatal("expected validator to be slashed")
 	}
@@ -175,6 +177,17 @@ func TestGenerateFullBlock_ValidVoluntaryExits(t *testing.T) {
 func TestHydrateSignedBeaconBlock_NoError(t *testing.T) {
 	b := &eth.SignedBeaconBlock{}
 	b = HydrateSignedBeaconBlock(b)
+	_, err := b.HashTreeRoot()
+	require.NoError(t, err)
+	_, err = b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	_, err = b.Block.Body.HashTreeRoot()
+	require.NoError(t, err)
+}
+
+func TestHydrateV1SignedBeaconBlock_NoError(t *testing.T) {
+	b := &v1.SignedBeaconBlock{}
+	b = HydrateV1SignedBeaconBlock(b)
 	_, err := b.HashTreeRoot()
 	require.NoError(t, err)
 	_, err = b.Block.HashTreeRoot()

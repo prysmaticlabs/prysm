@@ -78,7 +78,7 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 	base.PreviousEpochAttestations = atts
 	beaconState, err := state.InitializeFromProto(base)
 	require.NoError(t, err)
-	slashedAttestedIndices := []uint64{1413}
+	slashedAttestedIndices := []types.ValidatorIndex{1413}
 	for _, i := range slashedAttestedIndices {
 		vs := beaconState.Validators()
 		vs[i].Slashed = true
@@ -101,7 +101,7 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 	totalBalance, err := helpers.TotalActiveBalance(beaconState)
 	require.NoError(t, err)
 
-	attestedIndices := []uint64{55, 1339, 1746, 1811, 1569}
+	attestedIndices := []types.ValidatorIndex{55, 1339, 1746, 1811, 1569}
 	for _, i := range attestedIndices {
 		base, err := epoch.BaseReward(beaconState, i)
 		require.NoError(t, err, "Could not get base reward")
@@ -126,7 +126,7 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 		assert.Equal(t, 3*base, penalties[i], "Unexpected slashed indices penalty balance")
 	}
 
-	nonAttestedIndices := []uint64{434, 677, 872, 791}
+	nonAttestedIndices := []types.ValidatorIndex{434, 677, 872, 791}
 	for _, i := range nonAttestedIndices {
 		base, err := epoch.BaseReward(beaconState, i)
 		assert.NoError(t, err, "Could not get base reward")
@@ -228,7 +228,7 @@ func TestProcessRewardsAndPenaltiesPrecompute_SlashedInactivePenalty(t *testing.
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch*10))
 
-	slashedAttestedIndices := []uint64{14, 37, 68, 77, 139}
+	slashedAttestedIndices := []types.ValidatorIndex{14, 37, 68, 77, 139}
 	for _, i := range slashedAttestedIndices {
 		vs := beaconState.Validators()
 		vs[i].Slashed = true
@@ -301,7 +301,7 @@ func TestProposerDeltaPrecompute_HappyCase(t *testing.T) {
 	beaconState, err := state.InitializeFromProto(base)
 	require.NoError(t, err)
 
-	proposerIndex := uint64(1)
+	proposerIndex := types.ValidatorIndex(1)
 	b := &Balance{ActiveCurrentEpoch: 1000}
 	v := []*Validator{
 		{IsPrevEpochAttester: true, CurrentEpochEffectiveBalance: 32, ProposerIndex: proposerIndex},
@@ -323,7 +323,7 @@ func TestProposerDeltaPrecompute_ValidatorIndexOutOfRange(t *testing.T) {
 	beaconState, err := state.InitializeFromProto(base)
 	require.NoError(t, err)
 
-	proposerIndex := validatorCount
+	proposerIndex := types.ValidatorIndex(validatorCount)
 	b := &Balance{ActiveCurrentEpoch: 1000}
 	v := []*Validator{
 		{IsPrevEpochAttester: true, CurrentEpochEffectiveBalance: 32, ProposerIndex: proposerIndex},
@@ -339,7 +339,7 @@ func TestProposerDeltaPrecompute_SlashedCase(t *testing.T) {
 	beaconState, err := state.InitializeFromProto(base)
 	require.NoError(t, err)
 
-	proposerIndex := uint64(1)
+	proposerIndex := types.ValidatorIndex(1)
 	b := &Balance{ActiveCurrentEpoch: 1000}
 	v := []*Validator{
 		{IsPrevEpochAttester: true, CurrentEpochEffectiveBalance: 32, ProposerIndex: proposerIndex, IsSlashed: true},

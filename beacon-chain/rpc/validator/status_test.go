@@ -595,7 +595,7 @@ func TestActivationStatus_OK(t *testing.T) {
 		t.Errorf("Validator with pubkey %#x is not unknown and instead has this status: %s",
 			response[2].PublicKey, response[2].Status.Status.String())
 	}
-	if response[2].Index != uint64(params.BeaconConfig().FarFutureEpoch) {
+	if uint64(response[2].Index) != uint64(params.BeaconConfig().FarFutureEpoch) {
 		t.Errorf("Validator with pubkey %#x is expected to have index %d, received %d", response[2].PublicKey, params.BeaconConfig().FarFutureEpoch, response[2].Index)
 	}
 

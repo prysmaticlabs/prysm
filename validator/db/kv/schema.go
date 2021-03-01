@@ -30,4 +30,11 @@ var (
 
 	// Migrations
 	migrationsBucket = []byte("migrations")
+
+	// Graffiti
+	graffitiBucket = []byte("graffiti")
+
+	// Graffiti ordered index and hash keys
+	graffitiOrderedIndexKey = []byte("graffiti-ordered-index")
+	graffitiFileHashKey     = []byte("graffiti-file-hash")
 )

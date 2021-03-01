@@ -323,7 +323,8 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 		}
 		ctx := context.Background()
 		km, err := derived.NewKeymanager(ctx, &derived.SetupConfig{
-			Wallet: wallet,
+			Wallet:           wallet,
+			ListenForChanges: true,
 		})
 		require.NoError(t, err)
 		err = km.RecoverAccountsFromMnemonic(ctx, mnemonic, "", 1)

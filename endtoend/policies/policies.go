@@ -1,6 +1,6 @@
 package policies
 
-import "github.com/prysmaticlabs/eth2-types"
+import types "github.com/prysmaticlabs/eth2-types"
 
 // AfterNthEpoch runs for every epoch after the provided epoch.
 func AfterNthEpoch(afterEpoch types.Epoch) func(epoch types.Epoch) bool {

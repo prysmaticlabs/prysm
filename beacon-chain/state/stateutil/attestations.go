@@ -34,7 +34,7 @@ func PendingAttestationRoot(hasher htrutils.HashFn, att *pb.PendingAttestation) 
 		inclusionRoot := bytesutil.ToBytes32(inclusionBuf)
 
 		proposerBuf := make([]byte, 8)
-		binary.LittleEndian.PutUint64(proposerBuf, att.ProposerIndex)
+		binary.LittleEndian.PutUint64(proposerBuf, uint64(att.ProposerIndex))
 		// Proposer index.
 		proposerRoot := bytesutil.ToBytes32(proposerBuf)
 
@@ -138,7 +138,7 @@ func (h *stateRootHasher) pendingAttestationRoot(hasher htrutils.HashFn, att *pb
 		copy(enc[2056:2184], attDataBuf)
 
 		proposerBuf := make([]byte, 8)
-		binary.LittleEndian.PutUint64(proposerBuf, att.ProposerIndex)
+		binary.LittleEndian.PutUint64(proposerBuf, uint64(att.ProposerIndex))
 		copy(enc[2184:2192], proposerBuf)
 
 		// Check if it exists in cache:

@@ -3,7 +3,7 @@ package cache
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethereum_slashing "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )

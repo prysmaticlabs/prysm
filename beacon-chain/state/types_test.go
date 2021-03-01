@@ -27,9 +27,7 @@ func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 	cloned, ok := proto.Clone(genesis).(*pb.BeaconState)
 	assert.Equal(t, true, ok, "Object is not of type *pb.BeaconState")
 	custom := customState.CloneInnerState()
-	if !proto.Equal(cloned, custom) {
-		t.Fatal("Cloned states did not match")
-	}
+	assert.DeepSSZEqual(t, cloned, custom)
 
 	r1, err := customState.HashTreeRoot(ctx)
 	require.NoError(t, err)

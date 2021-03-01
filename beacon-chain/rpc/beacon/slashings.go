@@ -3,9 +3,9 @@ package beacon
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -27,12 +27,12 @@ func (bs *Server) SubmitProposerSlashing(
 	}
 	if !featureconfig.Get().DisableBroadcastSlashings {
 		if err := bs.Broadcaster.Broadcast(ctx, req); err != nil {
-			return nil, err
+			return nil, status.Errorf(codes.Internal, "Could not broadcast slashing object: %v", err)
 		}
 	}
 
 	return &ethpb.SubmitSlashingResponse{
-		SlashedIndices: []uint64{req.Header_1.Header.ProposerIndex},
+		SlashedIndices: []types.ValidatorIndex{req.Header_1.Header.ProposerIndex},
 	}, nil
 }
 
@@ -52,10 +52,14 @@ func (bs *Server) SubmitAttesterSlashing(
 	}
 	if !featureconfig.Get().DisableBroadcastSlashings {
 		if err := bs.Broadcaster.Broadcast(ctx, req); err != nil {
-			return nil, err
+			return nil, status.Errorf(codes.Internal, "Could not broadcast slashing object: %v", err)
 		}
 	}
-	slashedIndices := sliceutil.IntersectionUint64(req.Attestation_1.AttestingIndices, req.Attestation_2.AttestingIndices)
+	indices := sliceutil.IntersectionUint64(req.Attestation_1.AttestingIndices, req.Attestation_2.AttestingIndices)
+	slashedIndices := make([]types.ValidatorIndex, len(indices))
+	for i, index := range indices {
+		slashedIndices[i] = types.ValidatorIndex(index)
+	}
 	return &ethpb.SubmitSlashingResponse{
 		SlashedIndices: slashedIndices,
 	}, nil
