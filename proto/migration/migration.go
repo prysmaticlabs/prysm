@@ -111,6 +111,23 @@ func V1Alpha1SignedHeaderToV1(v1alpha1Hdr *ethpb_alpha.SignedBeaconBlockHeader) 
 	}
 }
 
+// V1SignedHeaderToV1Alpha1 converts a v1 signed beacon block header to v1alpha1.
+func V1SignedHeaderToV1Alpha1(v1Header *ethpb.SignedBeaconBlockHeader) *ethpb_alpha.SignedBeaconBlockHeader {
+	if v1Header == nil || v1Header.Header == nil {
+		return &ethpb_alpha.SignedBeaconBlockHeader{}
+	}
+	return &ethpb_alpha.SignedBeaconBlockHeader{
+		Header: &ethpb_alpha.BeaconBlockHeader{
+			Slot:          v1Header.Header.Slot,
+			ProposerIndex: v1Header.Header.ProposerIndex,
+			ParentRoot:    v1Header.Header.ParentRoot,
+			StateRoot:     v1Header.Header.StateRoot,
+			BodyRoot:      v1Header.Header.BodyRoot,
+		},
+		Signature: v1Header.Signature,
+	}
+}
+
 // V1Alpha1ProposerSlashingToV1 converts a v1alpha1 proposer slashing to v1.
 func V1Alpha1ProposerSlashingToV1(v1alpha1Slashing *ethpb_alpha.ProposerSlashing) *ethpb.ProposerSlashing {
 	if v1alpha1Slashing == nil {
@@ -176,5 +193,16 @@ func V1AttSlashingToV1Alpha1(v1Slashing *ethpb.AttesterSlashing) *ethpb_alpha.At
 	return &ethpb_alpha.AttesterSlashing{
 		Attestation_1: V1IndexedAttToV1Alpha1(v1Slashing.Attestation_1),
 		Attestation_2: V1IndexedAttToV1Alpha1(v1Slashing.Attestation_2),
+	}
+}
+
+// V1ProposerSlashingToV1Alpha1 converts a v1 proposer slashing to v1alpha1.
+func V1ProposerSlashingToV1Alpha1(v1Slashing *ethpb.ProposerSlashing) *ethpb_alpha.ProposerSlashing {
+	if v1Slashing == nil {
+		return &ethpb_alpha.ProposerSlashing{}
+	}
+	return &ethpb_alpha.ProposerSlashing{
+		Header_1: V1SignedHeaderToV1Alpha1(v1Slashing.Header_1),
+		Header_2: V1SignedHeaderToV1Alpha1(v1Slashing.Header_2),
 	}
 }
