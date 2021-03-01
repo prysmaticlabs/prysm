@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	slashertypes "github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"

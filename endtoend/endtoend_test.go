@@ -13,7 +13,7 @@ import (
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/endtoend/components"

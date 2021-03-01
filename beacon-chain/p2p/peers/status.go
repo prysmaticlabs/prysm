@@ -656,7 +656,9 @@ func (p *Status) BestNonFinalized(minPeers int, ourHeadEpoch types.Epoch) (types
 // to determine the most suitable peers to take out.
 func (p *Status) PeersToPrune() []peer.ID {
 	connLimit := p.ConnectedPeerLimit()
+	inBoundLimit := p.InboundLimit()
 	activePeers := p.Active()
+	numInboundPeers := len(p.InboundConnected())
 	// Exit early if we are still below our max
 	// limit.
 	if len(activePeers) <= int(connLimit) {
@@ -672,7 +674,8 @@ func (p *Status) PeersToPrune() []peer.ID {
 	peersToPrune := make([]*peerResp, 0)
 	// Select connected and inbound peers to prune.
 	for pid, peerData := range p.store.Peers() {
-		if peerData.ConnState == PeerConnected && peerData.Direction == network.DirInbound {
+		if peerData.ConnState == PeerConnected &&
+			peerData.Direction == network.DirInbound {
 			peersToPrune = append(peersToPrune, &peerResp{
 				pid:     pid,
 				badResp: peerData.BadResponses,
@@ -690,6 +693,16 @@ func (p *Status) PeersToPrune() []peer.ID {
 	// max connection limit.
 	amountToPrune := len(activePeers) - int(connLimit)
 
+	// Also check for inbound peers above our limit.
+	excessInbound := 0
+	if numInboundPeers > inBoundLimit {
+		excessInbound = numInboundPeers - inBoundLimit
+	}
+	// Prune the largest amount between excess peers and
+	// excess inbound peers.
+	if excessInbound > amountToPrune {
+		amountToPrune = excessInbound
+	}
 	if amountToPrune < len(peersToPrune) {
 		peersToPrune = peersToPrune[:amountToPrune]
 	}

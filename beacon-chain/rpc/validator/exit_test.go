@@ -59,7 +59,7 @@ func TestProposeExit_Notification(t *testing.T) {
 	defer opSub.Unsubscribe()
 
 	// Send the request, expect a result on the state feed.
-	validatorIndex := uint64(0)
+	validatorIndex := types.ValidatorIndex(0)
 	req := &ethpb.SignedVoluntaryExit{
 		Exit: &ethpb.VoluntaryExit{
 			Epoch:          epoch,
@@ -134,7 +134,7 @@ func TestProposeExit_NoPanic(t *testing.T) {
 	require.ErrorContains(t, "voluntary exit does not exist", err, "Expected error for no exit existing")
 
 	// Send the request, expect a result on the state feed.
-	validatorIndex := uint64(0)
+	validatorIndex := types.ValidatorIndex(0)
 	req = &ethpb.SignedVoluntaryExit{
 		Exit: &ethpb.VoluntaryExit{
 			Epoch:          epoch,

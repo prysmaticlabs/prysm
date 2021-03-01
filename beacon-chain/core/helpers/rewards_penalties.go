@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	types "github.com/prysmaticlabs/eth2-types"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -15,7 +16,7 @@ import (
 //    ``EFFECTIVE_BALANCE_INCREMENT`` Gwei minimum to avoid divisions by zero.
 //    """
 //    return Gwei(max(EFFECTIVE_BALANCE_INCREMENT, sum([state.validators[index].effective_balance for index in indices])))
-func TotalBalance(state *stateTrie.BeaconState, indices []uint64) uint64 {
+func TotalBalance(state *stateTrie.BeaconState, indices []types.ValidatorIndex) uint64 {
 	total := uint64(0)
 
 	for _, idx := range indices {
@@ -64,7 +65,7 @@ func TotalActiveBalance(state *stateTrie.BeaconState) (uint64, error) {
 //    Increase the validator balance at index ``index`` by ``delta``.
 //    """
 //    state.balances[index] += delta
-func IncreaseBalance(state *stateTrie.BeaconState, idx, delta uint64) error {
+func IncreaseBalance(state *stateTrie.BeaconState, idx types.ValidatorIndex, delta uint64) error {
 	balAtIdx, err := state.BalanceAtIndex(idx)
 	if err != nil {
 		return err
@@ -94,7 +95,7 @@ func IncreaseBalanceWithVal(currBalance, delta uint64) uint64 {
 //    Decrease the validator balance at index ``index`` by ``delta``, with underflow protection.
 //    """
 //    state.balances[index] = 0 if delta > state.balances[index] else state.balances[index] - delta
-func DecreaseBalance(state *stateTrie.BeaconState, idx, delta uint64) error {
+func DecreaseBalance(state *stateTrie.BeaconState, idx types.ValidatorIndex, delta uint64) error {
 	balAtIdx, err := state.BalanceAtIndex(idx)
 	if err != nil {
 		return err

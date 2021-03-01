@@ -129,7 +129,8 @@ func RecoverWallet(ctx context.Context, cfg *RecoverWalletConfig) (*wallet.Walle
 		return nil, errors.Wrap(err, "could not save wallet to disk")
 	}
 	km, err := derived.NewKeymanager(ctx, &derived.SetupConfig{
-		Wallet: w,
+		Wallet:           w,
+		ListenForChanges: false,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "could not make keymanager for given phrase")

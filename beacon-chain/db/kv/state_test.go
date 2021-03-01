@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -57,7 +56,7 @@ func TestGenesisState_CanSaveRetrieve(t *testing.T) {
 
 	savedGenesisS, err := db.GenesisState(context.Background())
 	require.NoError(t, err)
-	assert.DeepEqual(t, st.InnerStateUnsafe(), savedGenesisS.InnerStateUnsafe(), "Did not retrieve saved state")
+	assert.DeepSSZEqual(t, st.InnerStateUnsafe(), savedGenesisS.InnerStateUnsafe(), "Did not retrieve saved state")
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), [32]byte{'C'}))
 }
 
@@ -197,15 +196,15 @@ func TestStore_SaveDeleteState_CanGetHighestBelow(t *testing.T) {
 
 	highest, err := db.HighestSlotStatesBelow(context.Background(), 2)
 	require.NoError(t, err)
-	assert.Equal(t, true, proto.Equal(highest[0].InnerStateUnsafe(), s0), "Did not retrieve saved state: %v != %v", highest, s0)
+	assert.DeepSSZEqual(t, highest[0].InnerStateUnsafe(), s0)
 
 	highest, err = db.HighestSlotStatesBelow(context.Background(), 101)
 	require.NoError(t, err)
-	assert.Equal(t, true, proto.Equal(highest[0].InnerStateUnsafe(), s1), "Did not retrieve saved state: %v != %v", highest, s1)
+	assert.DeepSSZEqual(t, highest[0].InnerStateUnsafe(), s1)
 
 	highest, err = db.HighestSlotStatesBelow(context.Background(), 1001)
 	require.NoError(t, err)
-	assert.Equal(t, true, proto.Equal(highest[0].InnerStateUnsafe(), s2), "Did not retrieve saved state: %v != %v", highest, s2)
+	assert.DeepSSZEqual(t, highest[0].InnerStateUnsafe(), s2)
 }
 
 func TestStore_GenesisState_CanGetHighestBelow(t *testing.T) {
@@ -230,14 +229,14 @@ func TestStore_GenesisState_CanGetHighestBelow(t *testing.T) {
 
 	highest, err := db.HighestSlotStatesBelow(context.Background(), 2)
 	require.NoError(t, err)
-	assert.Equal(t, true, proto.Equal(highest[0].InnerStateUnsafe(), st.InnerStateUnsafe()))
+	assert.DeepSSZEqual(t, highest[0].InnerStateUnsafe(), st.InnerStateUnsafe())
 
 	highest, err = db.HighestSlotStatesBelow(context.Background(), 1)
 	require.NoError(t, err)
-	assert.Equal(t, true, proto.Equal(highest[0].InnerStateUnsafe(), genesisState.InnerStateUnsafe()))
+	assert.DeepSSZEqual(t, highest[0].InnerStateUnsafe(), genesisState.InnerStateUnsafe())
 	highest, err = db.HighestSlotStatesBelow(context.Background(), 0)
 	require.NoError(t, err)
-	assert.Equal(t, true, proto.Equal(highest[0].InnerStateUnsafe(), genesisState.InnerStateUnsafe()))
+	assert.DeepSSZEqual(t, highest[0].InnerStateUnsafe(), genesisState.InnerStateUnsafe())
 }
 
 func TestStore_CleanUpDirtyStates_AboveThreshold(t *testing.T) {

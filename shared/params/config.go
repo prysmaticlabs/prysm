@@ -4,7 +4,7 @@ package params
 import (
 	"time"
 
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 )
 
 // BeaconChainConfig contains constant configs for node to participate in beacon chain.

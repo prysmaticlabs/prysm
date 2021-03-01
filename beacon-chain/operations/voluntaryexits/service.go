@@ -13,8 +13,15 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// Pool implements a struct to maintain pending and seen voluntary exits. This pool
-// is used by proposers to insert into new blocks.
+// PoolManager maintains pending and seen voluntary exits.
+// This pool is used by proposers to insert voluntary exits into new blocks.
+type PoolManager interface {
+	PendingExits(state *beaconstate.BeaconState, slot types.Slot, noLimit bool) []*ethpb.SignedVoluntaryExit
+	InsertVoluntaryExit(ctx context.Context, state *beaconstate.BeaconState, exit *ethpb.SignedVoluntaryExit)
+	MarkIncluded(exit *ethpb.SignedVoluntaryExit)
+}
+
+// Pool is a concrete implementation of PoolManager.
 type Pool struct {
 	lock    sync.RWMutex
 	pending []*ethpb.SignedVoluntaryExit
@@ -107,7 +114,7 @@ func (p *Pool) MarkIncluded(exit *ethpb.SignedVoluntaryExit) {
 }
 
 // Binary search to check if the index exists in the list of pending exits.
-func existsInList(pending []*ethpb.SignedVoluntaryExit, searchingFor uint64) (bool, int) {
+func existsInList(pending []*ethpb.SignedVoluntaryExit, searchingFor types.ValidatorIndex) (bool, int) {
 	i := sort.Search(len(pending), func(j int) bool {
 		return pending[j].Exit.ValidatorIndex >= searchingFor
 	})

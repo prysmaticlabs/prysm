@@ -10,6 +10,7 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/flags"
@@ -22,11 +23,11 @@ import (
 
 // CreateWalletConfig defines the parameters needed to call the create wallet functions.
 type CreateWalletConfig struct {
-	WalletCfg            *wallet.Config
-	RemoteKeymanagerOpts *remote.KeymanagerOpts
 	SkipMnemonicConfirm  bool
-	Mnemonic25thWord     string
 	NumAccounts          int
+	RemoteKeymanagerOpts *remote.KeymanagerOpts
+	WalletCfg            *wallet.Config
+	Mnemonic25thWord     string
 }
 
 // CreateAndSaveWalletCli from user input with a desired keymanager. If a
@@ -72,7 +73,7 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 		if err = createImportedKeymanagerWallet(ctx, w); err != nil {
 			return nil, errors.Wrap(err, "could not initialize wallet")
 		}
-		km, err := w.InitializeKeymanager(ctx)
+		km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 		if err != nil {
 			return nil, errors.Wrap(err, ErrCouldNotInitializeKeymanager)
 		}
@@ -219,7 +220,8 @@ func createDerivedKeymanagerWallet(
 		return errors.Wrap(err, "could not save wallet to disk")
 	}
 	km, err := derived.NewKeymanager(ctx, &derived.SetupConfig{
-		Wallet: wallet,
+		Wallet:           wallet,
+		ListenForChanges: true,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize HD keymanager")
