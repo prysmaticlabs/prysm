@@ -153,6 +153,20 @@ func V1Alpha1ExitToV1(v1alpha1Exit *ethpb_alpha.SignedVoluntaryExit) *ethpb.Sign
 	}
 }
 
+// V1ExitToV1Alpha1 converts a v1 SignedVoluntaryExit to v1alpha1.
+func V1ExitToV1Alpha1(v1Exit *ethpb.SignedVoluntaryExit) *ethpb_alpha.SignedVoluntaryExit {
+	if v1Exit == nil || v1Exit.Exit == nil {
+		return &ethpb_alpha.SignedVoluntaryExit{}
+	}
+	return &ethpb_alpha.SignedVoluntaryExit{
+		Exit: &ethpb_alpha.VoluntaryExit{
+			Epoch:          v1Exit.Exit.Epoch,
+			ValidatorIndex: v1Exit.Exit.ValidatorIndex,
+		},
+		Signature: v1Exit.Signature,
+	}
+}
+
 // V1IndexedAttToV1Alpha1 converts a v1 indexed attestation to v1alpha1.
 func V1IndexedAttToV1Alpha1(v1Att *ethpb.IndexedAttestation) *ethpb_alpha.IndexedAttestation {
 	if v1Att == nil {

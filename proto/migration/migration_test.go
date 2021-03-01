@@ -166,6 +166,23 @@ func Test_V1Alpha1ExitToV1(t *testing.T) {
 	assert.DeepEqual(t, alphaRoot, v1Root)
 }
 
+func Test_V1ExitToV1Alpha1(t *testing.T) {
+	v1Exit := &ethpb.SignedVoluntaryExit{
+		Exit: &ethpb.VoluntaryExit{
+			Epoch:          epoch,
+			ValidatorIndex: validatorIndex,
+		},
+		Signature: signature,
+	}
+
+	alphaExit := V1ExitToV1Alpha1(v1Exit)
+	alphaRoot, err := alphaExit.HashTreeRoot()
+	require.NoError(t, err)
+	v1Root, err := v1Exit.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, alphaRoot, v1Root)
+}
+
 func Test_V1AttSlashingToV1Alpha1(t *testing.T) {
 	v1Attestation := &ethpb.IndexedAttestation{
 		AttestingIndices: attestingIndices,

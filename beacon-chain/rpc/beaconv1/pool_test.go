@@ -416,3 +416,119 @@ func TestSubmitProposerSlashing_InvalidSlashing(t *testing.T) {
 	require.ErrorContains(t, "Invalid proposer slashing", err)
 	assert.Equal(t, false, broadcaster.BroadcastCalled)
 }
+
+func TestSubmitVoluntaryExit_Ok(t *testing.T) {
+	ctx := context.Background()
+
+	_, keys, err := testutil.DeterministicDepositsAndKeys(1)
+	require.NoError(t, err)
+	validator := &eth.Validator{
+		ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+		PublicKey:             keys[0].PublicKey().Marshal(),
+		WithdrawalCredentials: make([]byte, 32),
+	}
+	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) {
+		state.Validators = []*eth.Validator{validator}
+		// Satisfy activity time required before exiting.
+		state.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().ShardCommitteePeriod))
+	})
+	require.NoError(t, err)
+
+	exit := &ethpb.SignedVoluntaryExit{
+		Exit: &ethpb.VoluntaryExit{
+			Epoch:          0,
+			ValidatorIndex: 0,
+		},
+		Signature: make([]byte, 96),
+	}
+
+	sb, err := helpers.ComputeDomainAndSign(state, exit.Exit.Epoch, exit.Exit, params.BeaconConfig().DomainVoluntaryExit, keys[0])
+	require.NoError(t, err)
+	sig, err := bls.SignatureFromBytes(sb)
+	require.NoError(t, err)
+	exit.Signature = sig.Marshal()
+
+	broadcaster := &p2pMock.MockBroadcaster{}
+	s := &Server{
+		ChainInfoFetcher:   &chainMock.ChainService{State: state},
+		VoluntaryExitsPool: &voluntaryexits.PoolMock{},
+		Broadcaster:        broadcaster,
+	}
+
+	_, err = s.SubmitVoluntaryExit(ctx, exit)
+	require.NoError(t, err)
+	pendingExits := s.VoluntaryExitsPool.PendingExits(state, state.Slot(), true)
+	require.Equal(t, 1, len(pendingExits))
+	assert.DeepEqual(t, migration.V1ExitToV1Alpha1(exit), pendingExits[0])
+	assert.Equal(t, true, broadcaster.BroadcastCalled)
+}
+
+func TestSubmitVoluntaryExit_InvalidValidatorIndex(t *testing.T) {
+	ctx := context.Background()
+
+	_, keys, err := testutil.DeterministicDepositsAndKeys(1)
+	require.NoError(t, err)
+	validator := &eth.Validator{
+		ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+		PublicKey:             keys[0].PublicKey().Marshal(),
+		WithdrawalCredentials: make([]byte, 32),
+	}
+	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) {
+		state.Validators = []*eth.Validator{validator}
+	})
+	require.NoError(t, err)
+
+	exit := &ethpb.SignedVoluntaryExit{
+		Exit: &ethpb.VoluntaryExit{
+			Epoch:          0,
+			ValidatorIndex: 99,
+		},
+		Signature: make([]byte, 96),
+	}
+
+	broadcaster := &p2pMock.MockBroadcaster{}
+	s := &Server{
+		ChainInfoFetcher:   &chainMock.ChainService{State: state},
+		VoluntaryExitsPool: &voluntaryexits.PoolMock{},
+		Broadcaster:        broadcaster,
+	}
+
+	_, err = s.SubmitVoluntaryExit(ctx, exit)
+	require.ErrorContains(t, "Could not get exiting validator", err)
+	assert.Equal(t, false, broadcaster.BroadcastCalled)
+}
+
+func TestSubmitVoluntaryExit_InvalidExit(t *testing.T) {
+	ctx := context.Background()
+
+	_, keys, err := testutil.DeterministicDepositsAndKeys(1)
+	require.NoError(t, err)
+	validator := &eth.Validator{
+		ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+		PublicKey:             keys[0].PublicKey().Marshal(),
+		WithdrawalCredentials: make([]byte, 32),
+	}
+	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) {
+		state.Validators = []*eth.Validator{validator}
+	})
+	require.NoError(t, err)
+
+	exit := &ethpb.SignedVoluntaryExit{
+		Exit: &ethpb.VoluntaryExit{
+			Epoch:          0,
+			ValidatorIndex: 0,
+		},
+		Signature: make([]byte, 96),
+	}
+
+	broadcaster := &p2pMock.MockBroadcaster{}
+	s := &Server{
+		ChainInfoFetcher:   &chainMock.ChainService{State: state},
+		VoluntaryExitsPool: &voluntaryexits.PoolMock{},
+		Broadcaster:        broadcaster,
+	}
+
+	_, err = s.SubmitVoluntaryExit(ctx, exit)
+	require.ErrorContains(t, "Invalid voluntary exit", err)
+	assert.Equal(t, false, broadcaster.BroadcastCalled)
+}

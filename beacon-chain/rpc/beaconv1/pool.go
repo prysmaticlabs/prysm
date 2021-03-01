@@ -156,5 +156,28 @@ func (bs *Server) ListPoolVoluntaryExits(ctx context.Context, req *ptypes.Empty)
 // SubmitVoluntaryExit submits SignedVoluntaryExit object to node's pool
 // and if passes validation node MUST broadcast it to network.
 func (bs *Server) SubmitVoluntaryExit(ctx context.Context, req *ethpb.SignedVoluntaryExit) (*ptypes.Empty, error) {
-	return nil, errors.New("unimplemented")
+	ctx, span := trace.StartSpan(ctx, "beaconv1.SubmitVoluntaryExit")
+	defer span.End()
+
+	headState, err := bs.ChainInfoFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	}
+
+	validator, err := headState.ValidatorAtIndexReadOnly(req.Exit.ValidatorIndex)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get exiting validator: %v", err)
+	}
+	v1Slashing := migration.V1ExitToV1Alpha1(req)
+	err = blocks.VerifyExitAndSignature(validator, headState.Slot(), headState.Fork(), v1Slashing, headState.GenesisValidatorRoot())
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Invalid voluntary exit: %v", err)
+	}
+
+	bs.VoluntaryExitsPool.InsertVoluntaryExit(ctx, headState, v1Slashing)
+	if err := bs.Broadcaster.Broadcast(ctx, req); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not broadcast voluntary exit object: %v", err)
+	}
+
+	return &ptypes.Empty{}, nil
 }
