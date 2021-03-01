@@ -159,9 +159,11 @@ func Test_V1Alpha1ExitToV1(t *testing.T) {
 	}
 
 	v1Exit := V1Alpha1ExitToV1(alphaExit)
-	assert.Equal(t, epoch, v1Exit.Exit.Epoch)
-	assert.Equal(t, validatorIndex, v1Exit.Exit.ValidatorIndex)
-	assert.DeepEqual(t, signature, v1Exit.Signature)
+	alphaRoot, err := alphaExit.HashTreeRoot()
+	require.NoError(t, err)
+	v1Root, err := v1Exit.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, alphaRoot, v1Root)
 }
 
 func Test_V1AttSlashingToV1Alpha1(t *testing.T) {
