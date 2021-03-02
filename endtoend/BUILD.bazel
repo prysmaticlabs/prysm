@@ -13,7 +13,7 @@ go_test(
     ],
     args = ["-test.v"],
     data = [
-        "//beacon-chain",
+        "//cmd/beacon-chain",
         "//slasher",
         "//tools/bootnode",
         "//cmd/validator",

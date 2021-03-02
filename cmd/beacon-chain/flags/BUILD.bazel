@@ -8,8 +8,11 @@ go_library(
         "interop.go",
         "log.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/flags",
-    visibility = ["//beacon-chain:__subpackages__"],
+    importpath = "github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags",
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//cmd/beacon-chain:__subpackages__",
+    ],
     deps = [
         "//shared/cmd:go_default_library",
         "//shared/params:go_default_library",
