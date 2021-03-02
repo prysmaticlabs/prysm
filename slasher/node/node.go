@@ -13,9 +13,6 @@ import (
 	"syscall"
 
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
-
 	"github.com/prysmaticlabs/prysm/cmd/slasher/flags"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/backuputil"
@@ -33,6 +30,8 @@ import (
 	"github.com/prysmaticlabs/prysm/slasher/db/kv"
 	"github.com/prysmaticlabs/prysm/slasher/detection"
 	"github.com/prysmaticlabs/prysm/slasher/rpc"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
 )
 
 // SlasherNode defines a struct that handles the services running a slashing detector
