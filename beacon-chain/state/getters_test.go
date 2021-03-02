@@ -40,12 +40,10 @@ func TestNilState_NoPanic(t *testing.T) {
 	// retrieve elements from nil state
 	_ = st.GenesisTime()
 	_ = st.GenesisValidatorRoot()
-	_ = st.GenesisUnixTime()
 	_ = st.GenesisValidatorRoot()
 	_ = st.Slot()
 	_ = st.Fork()
 	_ = st.LatestBlockHeader()
-	_ = st.ParentRoot()
 	_ = st.BlockRoots()
 	_, err := st.BlockRootAtIndex(0)
 	_ = err
@@ -82,7 +80,6 @@ func TestNilState_NoPanic(t *testing.T) {
 func TestReadOnlyValidator_NoPanic(t *testing.T) {
 	v := &ReadOnlyValidator{}
 	assert.Equal(t, false, v.Slashed(), "Expected not slashed")
-	assert.Equal(t, (*eth.Validator)(nil), v.CopyValidator(), "Expected nil result")
 }
 
 func TestReadOnlyValidator_ActivationEligibilityEpochNoPanic(t *testing.T) {

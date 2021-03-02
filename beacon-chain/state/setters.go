@@ -56,7 +56,7 @@ func (b *BeaconState) SetGenesisValidatorRoot(val []byte) error {
 
 // SetSlot for the beacon state.
 func (b *BeaconState) SetSlot(val types.Slot) error {
-	if !b.HasInnerState() {
+	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
@@ -69,7 +69,7 @@ func (b *BeaconState) SetSlot(val types.Slot) error {
 
 // SetFork version for the beacon chain.
 func (b *BeaconState) SetFork(val *pbp2p.Fork) error {
-	if !b.HasInnerState() {
+	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
@@ -86,7 +86,7 @@ func (b *BeaconState) SetFork(val *pbp2p.Fork) error {
 
 // SetLatestBlockHeader in the beacon state.
 func (b *BeaconState) SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error {
-	if !b.HasInnerState() {
+	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
@@ -100,7 +100,7 @@ func (b *BeaconState) SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error {
 // SetBlockRoots for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetBlockRoots(val [][]byte) error {
-	if !b.HasInnerState() {
+	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
@@ -118,7 +118,7 @@ func (b *BeaconState) SetBlockRoots(val [][]byte) error {
 // UpdateBlockRootAtIndex for the beacon state. Updates the block root
 // at a specific index to a new value.
 func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) error {
-	if !b.HasInnerState() {
+	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
 	if uint64(len(b.state.BlockRoots)) <= idx {
@@ -147,7 +147,7 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 // SetStateRoots for the beacon state. Updates the state roots
 // to a new value by overwriting the previous value.
 func (b *BeaconState) SetStateRoots(val [][]byte) error {
-	if !b.HasInnerState() {
+	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
@@ -165,7 +165,7 @@ func (b *BeaconState) SetStateRoots(val [][]byte) error {
 // UpdateStateRootAtIndex for the beacon state. Updates the state root
 // at a specific index to a new value.
 func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) error {
-	if !b.HasInnerState() {
+	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
 
@@ -200,7 +200,7 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 // SetHistoricalRoots for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetHistoricalRoots(val [][]byte) error {
-	if !b.HasInnerState() {
+	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
@@ -216,7 +216,7 @@ func (b *BeaconState) SetHistoricalRoots(val [][]byte) error {
 
 // SetEth1Data for the beacon state.
 func (b *BeaconState) SetEth1Data(val *ethpb.Eth1Data) error {
-	if !b.HasInnerState() {
+	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
@@ -230,7 +230,7 @@ func (b *BeaconState) SetEth1Data(val *ethpb.Eth1Data) error {
 // SetEth1DataVotes for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetEth1DataVotes(val []*ethpb.Eth1Data) error {
-	if !b.HasInnerState() {
+	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
@@ -248,7 +248,7 @@ func (b *BeaconState) SetEth1DataVotes(val []*ethpb.Eth1Data) error {
 // AppendEth1DataVotes for the beacon state. Appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendEth1DataVotes(val *ethpb.Eth1Data) error {
-	if !b.HasInnerState() {
+	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
@@ -271,7 +271,7 @@ func (b *BeaconState) AppendEth1DataVotes(val *ethpb.Eth1Data) error {
 
 // SetEth1DepositIndex for the beacon state.
 func (b *BeaconState) SetEth1DepositIndex(val uint64) error {
-	if !b.HasInnerState() {
+	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
@@ -285,7 +285,7 @@ func (b *BeaconState) SetEth1DepositIndex(val uint64) error {
 // SetValidators for the beacon state. Updates the entire
 // to a new value by overwriting the previous one.
 func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
-	if !b.HasInnerState() {
+	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
@@ -306,7 +306,7 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 // ApplyToEveryValidator applies the provided callback function to each validator in the
 // validator registry.
 func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator) (bool, *ethpb.Validator, error)) error {
-	if !b.HasInnerState() {
+	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
@@ -342,7 +342,7 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator
 // UpdateValidatorAtIndex for the beacon state. Updates the validator
 // at a specific index to a new value.
 func (b *BeaconState) UpdateValidatorAtIndex(idx types.ValidatorIndex, val *ethpb.Validator) error {
-	if !b.HasInnerState() {
+	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
 	if uint64(len(b.state.Validators)) <= uint64(idx) {
@@ -366,24 +366,10 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx types.ValidatorIndex, val *ethp
 	return nil
 }
 
-// SetValidatorIndexByPubkey updates the validator index mapping maintained internally to
-// a given input 48-byte, public key.
-func (b *BeaconState) SetValidatorIndexByPubkey(pubKey [48]byte, validatorIndex types.ValidatorIndex) {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-
-	if ref := b.valMapHandler.mapRef; ref.Refs() > 1 {
-		valMap := b.valMapHandler.copy()
-		ref.MinusRef()
-		b.valMapHandler = valMap
-	}
-	b.valMapHandler.valIdxMap[pubKey] = validatorIndex
-}
-
 // SetBalances for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetBalances(val []uint64) error {
-	if !b.HasInnerState() {
+	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
@@ -400,7 +386,7 @@ func (b *BeaconState) SetBalances(val []uint64) error {
 // UpdateBalancesAtIndex for the beacon state. This method updates the balance
 // at a specific index to a new value.
 func (b *BeaconState) UpdateBalancesAtIndex(idx types.ValidatorIndex, val uint64) error {
-	if !b.HasInnerState() {
+	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
 	if uint64(len(b.state.Balances)) <= uint64(idx) {
@@ -425,7 +411,7 @@ func (b *BeaconState) UpdateBalancesAtIndex(idx types.ValidatorIndex, val uint64
 // SetRandaoMixes for the beacon state. Updates the entire
 // randao mixes to a new value by overwriting the previous one.
 func (b *BeaconState) SetRandaoMixes(val [][]byte) error {
-	if !b.HasInnerState() {
+	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
@@ -443,7 +429,7 @@ func (b *BeaconState) SetRandaoMixes(val [][]byte) error {
 // UpdateRandaoMixesAtIndex for the beacon state. Updates the randao mixes
 // at a specific index to a new value.
 func (b *BeaconState) UpdateRandaoMixesAtIndex(idx uint64, val []byte) error {
-	if !b.HasInnerState() {
+	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
 	if uint64(len(b.state.RandaoMixes)) <= idx {
@@ -472,7 +458,7 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(idx uint64, val []byte) error {
 // SetSlashings for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetSlashings(val []uint64) error {
-	if !b.HasInnerState() {
+	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
@@ -489,7 +475,7 @@ func (b *BeaconState) SetSlashings(val []uint64) error {
 // UpdateSlashingsAtIndex for the beacon state. Updates the slashings
 // at a specific index to a new value.
 func (b *BeaconState) UpdateSlashingsAtIndex(idx, val uint64) error {
-	if !b.HasInnerState() {
+	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
 	if uint64(len(b.state.Slashings)) <= idx {
@@ -516,7 +502,7 @@ func (b *BeaconState) UpdateSlashingsAtIndex(idx, val uint64) error {
 // SetPreviousEpochAttestations for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetPreviousEpochAttestations(val []*pbp2p.PendingAttestation) error {
-	if !b.HasInnerState() {
+	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
@@ -534,7 +520,7 @@ func (b *BeaconState) SetPreviousEpochAttestations(val []*pbp2p.PendingAttestati
 // SetCurrentEpochAttestations for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetCurrentEpochAttestations(val []*pbp2p.PendingAttestation) error {
-	if !b.HasInnerState() {
+	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
@@ -552,7 +538,7 @@ func (b *BeaconState) SetCurrentEpochAttestations(val []*pbp2p.PendingAttestatio
 // AppendHistoricalRoots for the beacon state. Appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
-	if !b.HasInnerState() {
+	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
@@ -574,7 +560,7 @@ func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 // AppendCurrentEpochAttestations for the beacon state. Appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendCurrentEpochAttestations(val *pbp2p.PendingAttestation) error {
-	if !b.HasInnerState() {
+	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
@@ -598,7 +584,7 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *pbp2p.PendingAttestati
 // AppendPreviousEpochAttestations for the beacon state. Appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestation) error {
-	if !b.HasInnerState() {
+	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
@@ -622,7 +608,7 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestat
 // AppendValidator for the beacon state. Appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
-	if !b.HasInnerState() {
+	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
@@ -655,7 +641,7 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 // AppendBalance for the beacon state. Appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendBalance(bal uint64) error {
-	if !b.HasInnerState() {
+	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
@@ -675,7 +661,7 @@ func (b *BeaconState) AppendBalance(bal uint64) error {
 
 // SetJustificationBits for the beacon state.
 func (b *BeaconState) SetJustificationBits(val bitfield.Bitvector4) error {
-	if !b.HasInnerState() {
+	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
@@ -688,7 +674,7 @@ func (b *BeaconState) SetJustificationBits(val bitfield.Bitvector4) error {
 
 // SetPreviousJustifiedCheckpoint for the beacon state.
 func (b *BeaconState) SetPreviousJustifiedCheckpoint(val *ethpb.Checkpoint) error {
-	if !b.HasInnerState() {
+	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
@@ -701,7 +687,7 @@ func (b *BeaconState) SetPreviousJustifiedCheckpoint(val *ethpb.Checkpoint) erro
 
 // SetCurrentJustifiedCheckpoint for the beacon state.
 func (b *BeaconState) SetCurrentJustifiedCheckpoint(val *ethpb.Checkpoint) error {
-	if !b.HasInnerState() {
+	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
@@ -714,7 +700,7 @@ func (b *BeaconState) SetCurrentJustifiedCheckpoint(val *ethpb.Checkpoint) error
 
 // SetFinalizedCheckpoint for the beacon state.
 func (b *BeaconState) SetFinalizedCheckpoint(val *ethpb.Checkpoint) error {
-	if !b.HasInnerState() {
+	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
 	b.lock.Lock()

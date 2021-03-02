@@ -12,5 +12,5 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = ["every_test.go"],
-    deps = [":go_default_library"],
+    embed = [":go_default_library"],
 )

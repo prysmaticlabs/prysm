@@ -168,6 +168,7 @@ def prysm_deps():
         sum = "h1:pv34s756C4pEXnjgPfGYgdhg/ZdajGhyOvzx8k+23nw=",
         version = "v0.0.0-20170710044230-e206f873d14a",
     )
+
     go_repository(
         name = "com_github_aws_aws_lambda_go",
         importpath = "github.com/aws/aws-lambda-go",
@@ -968,8 +969,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_golang_snappy",
         importpath = "github.com/golang/snappy",
-        sum = "h1:aeE13tS0IiQgFjYdoL8qN3K1N2bXXtI6Vi51/y7BpMw=",
-        version = "v0.0.2",
+        sum = "h1:fHPg5GQYlCeLIPB9BZqMVR5nR9A+IM5zcgeTdjMYmLA=",
+        version = "v0.0.3",
     )
     go_repository(
         name = "com_github_google_btree",
@@ -1030,12 +1031,6 @@ def prysm_deps():
     )
 
     go_repository(
-        name = "com_github_google_shlex",
-        importpath = "github.com/google/shlex",
-        sum = "h1:El6M4kTTCOh6aBiKaUGG7oYTSPP8MxqL4YI3kZKwcP4=",
-        version = "v0.0.0-20191202100458-e7afc7fbc510",
-    )
-    go_repository(
         name = "com_github_google_uuid",
         importpath = "github.com/google/uuid",
         sum = "h1:qJYtXnJRWmpe7m/3XlyhrsLrEURqHRM2kxzoxXqyUDs=",
@@ -1056,6 +1051,10 @@ def prysm_deps():
     )
     go_repository(
         name = "com_github_googleapis_gnostic",
+        build_directives = [
+            "gazelle:resolve go github.com/googleapis/gnostic/extensions //extensions:go_default_library",
+        ],
+        build_naming_convention = "go_default_library",
         importpath = "github.com/googleapis/gnostic",
         sum = "h1:rVsPeBmXbYv4If/cumu1AzZPwV58q433hvONV1UEZoI=",
         version = "v0.1.0",
@@ -2860,6 +2859,7 @@ def prysm_deps():
         sum = "h1:njlZPzLwU639dk2kqnCPPv+wNjq7Xb6EfUxe/oX0/NM=",
         version = "v0.0.0-20180906055917-c99c65617cd3",
     )
+
     go_repository(
         name = "com_github_streadway_amqp",
         importpath = "github.com/streadway/amqp",
@@ -3391,6 +3391,7 @@ def prysm_deps():
     go_repository(
         name = "io_k8s_client_go",
         build_extra_args = ["-exclude=vendor"],
+        build_naming_convention = "go_default_library",
         importpath = "k8s.io/client-go",
         sum = "h1:QaJzz92tsN67oorwzmoB0a9r9ZVHuD5ryjbCKP0U22k=",
         version = "v0.18.3",
