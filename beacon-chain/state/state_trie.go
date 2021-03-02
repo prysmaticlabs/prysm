@@ -69,7 +69,7 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 
 // Copy returns a deep copy of the beacon state.
 func (b *BeaconState) Copy() *BeaconState {
-	if !b.HasInnerState() {
+	if !b.hasInnerState() {
 		return nil
 	}
 

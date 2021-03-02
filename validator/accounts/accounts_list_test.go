@@ -3,6 +3,7 @@ package accounts
 import (
 	"context"
 	"fmt"
+	constant "github.com/prysmaticlabs/prysm/validator/testing"
 	"io/ioutil"
 	"math"
 	"os"
@@ -249,7 +250,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	require.NoError(t, err)
 
 	numAccounts := 5
-	err = keymanager.RecoverAccountsFromMnemonic(cliCtx.Context, testMnemonic, "", numAccounts)
+	err = keymanager.RecoverAccountsFromMnemonic(cliCtx.Context, constant.TestMnemonic, "", numAccounts)
 	require.NoError(t, err)
 
 	rescueStdout := os.Stdout
