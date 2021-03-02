@@ -22,11 +22,13 @@ go_library(
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/accounts",
     visibility = [
+        "//cmd/validator:__subpackages__",
         "//validator:__pkg__",
         "//validator:__subpackages__",
     ],
     deps = [
         "//beacon-chain/core/blocks:go_default_library",
+        "//cmd/validator/flags:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/cmd:go_default_library",
@@ -41,7 +43,6 @@ go_library(
         "//validator/accounts/prompt:go_default_library",
         "//validator/accounts/wallet:go_default_library",
         "//validator/client:go_default_library",
-        "//validator/flags:go_default_library",
         "//validator/keymanager:go_default_library",
         "//validator/keymanager/derived:go_default_library",
         "//validator/keymanager/imported:go_default_library",
@@ -76,6 +77,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//cmd/validator/flags:go_default_library",
         "//proto/validator/accounts/v2:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
@@ -89,7 +91,6 @@ go_test(
         "//shared/timeutils:go_default_library",
         "//validator/accounts/iface:go_default_library",
         "//validator/accounts/wallet:go_default_library",
-        "//validator/flags:go_default_library",
         "//validator/keymanager:go_default_library",
         "//validator/keymanager/derived:go_default_library",
         "//validator/keymanager/imported:go_default_library",
