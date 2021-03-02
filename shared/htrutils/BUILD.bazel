@@ -33,8 +33,8 @@ go_test(
         "htrutils_test.go",
         "merkleize_test.go",
     ],
-    embed = [":go_default_library"],
     deps = [
+        ":go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/testutil/assert:go_default_library",
