@@ -1,4 +1,6 @@
-# Prysm: An Ethereum 2.0 Implementation Written in Go
+# Vanguard
+
+Casper consensus engine based on [Prysm](https://github.com/prysmaticlabs/prysm), to work in concert with the [LUKSO orchestrator](https://github.com/lukso-network/lukso-orchestrator).
 
 [![Build status](https://badge.buildkite.com/b555891daf3614bae4284dcf365b2340cefc0089839526f096.svg?branch=master)](https://buildkite.com/prysmatic-labs/prysm)
 [![Go Report Card](https://goreportcard.com/badge/github.com/prysmaticlabs/prysm)](https://goreportcard.com/report/github.com/prysmaticlabs/prysm)
