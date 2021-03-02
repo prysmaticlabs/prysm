@@ -9,8 +9,6 @@ import (
 
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
-	"github.com/urfave/cli/v2"
-
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
@@ -20,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
+	"github.com/urfave/cli/v2"
 )
 
 // CreateWalletConfig defines the parameters needed to call the create wallet functions.

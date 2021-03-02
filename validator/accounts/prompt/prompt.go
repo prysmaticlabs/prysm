@@ -8,12 +8,11 @@ import (
 	"github.com/logrusorgru/aurora"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
-	"github.com/urfave/cli/v2"
-
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
+	"github.com/urfave/cli/v2"
 )
 
 const (

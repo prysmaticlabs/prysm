@@ -5,14 +5,13 @@ import (
 	"path/filepath"
 
 	"github.com/pkg/errors"
-	"github.com/urfave/cli/v2"
-
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	export "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format"
+	"github.com/urfave/cli/v2"
 )
 
 const (

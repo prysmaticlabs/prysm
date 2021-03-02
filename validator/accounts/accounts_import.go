@@ -14,9 +14,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
-	"github.com/urfave/cli/v2"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
-
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -27,6 +24,8 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
+	"github.com/urfave/cli/v2"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 var derivationPathRegex = regexp.MustCompile(`m_12381_3600_(\d+)_(\d+)_(\d+)`)

@@ -10,10 +10,6 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	logTest "github.com/sirupsen/logrus/hooks/test"
-	"github.com/urfave/cli/v2"
-
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -22,6 +18,9 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
+	"github.com/sirupsen/logrus"
+	logTest "github.com/sirupsen/logrus/hooks/test"
+	"github.com/urfave/cli/v2"
 )
 
 const (

@@ -9,9 +9,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/urfave/cli/v2"
-	"google.golang.org/grpc"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -24,6 +21,8 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/urfave/cli/v2"
+	"google.golang.org/grpc"
 )
 
 type performExitCfg struct {

@@ -7,8 +7,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/urfave/cli/v2"
-
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
@@ -18,6 +16,7 @@ import (
 	dbTest "github.com/prysmaticlabs/prysm/validator/db/testing"
 	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format/format"
 	mocks "github.com/prysmaticlabs/prysm/validator/testing"
+	"github.com/urfave/cli/v2"
 )
 
 func setupCliCtx(
