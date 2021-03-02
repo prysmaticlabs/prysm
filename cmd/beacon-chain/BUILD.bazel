@@ -45,13 +45,14 @@ go_image(
     }),
     binary = ":beacon-chain",
     tags = ["manual"],
-    visibility = ["//visibility:private"],
+    visibility = ["//beacon-chain:__pkg__"],
 )
 
 container_image(
     name = "image_with_creation_time",
     base = "image",
     stamp = True,
+    visibility = ["//beacon-chain:__pkg__"],
 )
 
 container_bundle(
@@ -63,12 +64,14 @@ container_bundle(
         "index.docker.io/prysmaticlabs/prysm-beacon-chain:{DOCKER_TAG}": ":image_with_creation_time",
     },
     tags = ["manual"],
+    visibility = ["//beacon-chain:__pkg__"],
 )
 
 go_image_debug(
     name = "image_debug",
     image = ":image",
     tags = ["manual"],
+    visibility = ["//beacon-chain:__pkg__"],
 )
 
 container_bundle(
@@ -80,12 +83,14 @@ container_bundle(
         "index.docker.io/prysmaticlabs/prysm-beacon-chain:{DOCKER_TAG}-debug": ":image_debug",
     },
     tags = ["manual"],
+    visibility = ["//beacon-chain:__pkg__"],
 )
 
 go_image_alpine(
     name = "image_alpine",
     image = ":image",
     tags = ["manual"],
+    visibility = ["//beacon-chain:__pkg__"],
 )
 
 container_bundle(
@@ -97,24 +102,28 @@ container_bundle(
         "index.docker.io/prysmaticlabs/prysm-beacon-chain:{DOCKER_TAG}-alpine": ":image_alpine",
     },
     tags = ["manual"],
+    visibility = ["//beacon-chain:__pkg__"],
 )
 
 docker_push(
     name = "push_images",
     bundle = ":image_bundle",
     tags = ["manual"],
+    visibility = ["//beacon-chain:__pkg__"],
 )
 
 docker_push(
     name = "push_images_debug",
     bundle = ":image_bundle_debug",
     tags = ["manual"],
+    visibility = ["//beacon-chain:__pkg__"],
 )
 
 docker_push(
     name = "push_images_alpine",
     bundle = ":image_bundle_alpine",
     tags = ["manual"],
+    visibility = ["//beacon-chain:__pkg__"],
 )
 
 go_binary(
@@ -131,6 +140,7 @@ go_test(
     size = "small",
     srcs = ["usage_test.go"],
     embed = [":go_default_library"],
+    visibility = ["//beacon-chain:__pkg__"],
     deps = [
         "//shared/featureconfig:go_default_library",
         "@com_github_urfave_cli_v2//:go_default_library",

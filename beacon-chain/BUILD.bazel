@@ -1,5 +1,19 @@
-alias(
-    name = "beacon-chain",
-    actual = "//cmd/beacon-chain:beacon-chain",
-    deprecation = "This target has moved to cmd/beacon-chain",
+load("//tools:target_migration.bzl", "moved_targets")
+
+moved_targets(
+    [
+        ":push_images_debug",
+        ":push_images_alpine",
+        ":push_images",
+        ":image_bundle_debug",
+        ":image_debug",
+        ":image_bundle_alpine",
+        ":image_bundle",
+        ":image_with_creation_time",
+        ":image_alpine",
+        ":image",
+        ":go_default_test",
+        ":beacon-chain",
+    ],
+    "//cmd/beacon-chain",
 )
