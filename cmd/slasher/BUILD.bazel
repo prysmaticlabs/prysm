@@ -36,6 +36,7 @@ go_test(
     size = "small",
     srcs = ["usage_test.go"],
     embed = [":go_default_library"],
+    visibility = ["//slasher:__pkg__"],
     deps = [
         "//shared/featureconfig:go_default_library",
         "//shared/testutil/assert:go_default_library",
@@ -48,13 +49,14 @@ go_image(
     base = "//tools:cc_image",
     binary = ":slasher",
     tags = ["manual"],
-    visibility = ["//visibility:private"],
+    visibility = ["//slasher:__pkg__"],
 )
 
 container_image(
     name = "image_with_creation_time",
     base = "image",
     stamp = True,
+    visibility = ["//slasher:__pkg__"],
 )
 
 container_bundle(
@@ -66,12 +68,14 @@ container_bundle(
         "index.docker.io/prysmaticlabs/prysm-slasher:{DOCKER_TAG}": ":image_with_creation_time",
     },
     tags = ["manual"],
+    visibility = ["//slasher:__pkg__"],
 )
 
 docker_push(
     name = "push_images",
     bundle = ":image_bundle",
     tags = ["manual"],
+    visibility = ["//slasher:__pkg__"],
 )
 
 go_binary(

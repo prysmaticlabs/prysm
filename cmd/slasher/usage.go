@@ -5,12 +5,11 @@ import (
 	"io"
 	"sort"
 
-	"github.com/urfave/cli/v2"
-
 	"github.com/prysmaticlabs/prysm/cmd/slasher/flags"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/urfave/cli/v2"
 )
 
 var appHelpTemplate = `NAME:
