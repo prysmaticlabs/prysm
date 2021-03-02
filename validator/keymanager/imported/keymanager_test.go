@@ -20,7 +20,6 @@ import (
 
 func TestImportedKeymanager_RemoveAccounts(t *testing.T) {
 	hook := logTest.NewGlobal()
-	password := "secretPassw0rd$1999"
 	wallet := &mock.Wallet{
 		Files:          make(map[string]map[string][]byte),
 		WalletPassword: password,
@@ -70,7 +69,6 @@ func TestImportedKeymanager_RemoveAccounts(t *testing.T) {
 }
 
 func TestImportedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
-	password := "secretPassw0rd$1999"
 	wallet := &mock.Wallet{
 		Files:          make(map[string]map[string][]byte),
 		WalletPassword: password,
@@ -109,7 +107,6 @@ func TestImportedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 }
 
 func TestImportedKeymanager_FetchAllValidatingPublicKeys(t *testing.T) {
-	password := "secretPassw0rd$1999"
 	wallet := &mock.Wallet{
 		Files:          make(map[string]map[string][]byte),
 		WalletPassword: password,
@@ -143,7 +140,6 @@ func TestImportedKeymanager_FetchAllValidatingPublicKeys(t *testing.T) {
 }
 
 func TestImportedKeymanager_FetchValidatingPrivateKeys(t *testing.T) {
-	password := "secretPassw0rd$1999"
 	wallet := &mock.Wallet{
 		Files:          make(map[string]map[string][]byte),
 		WalletPassword: password,
@@ -178,7 +174,6 @@ func TestImportedKeymanager_FetchValidatingPrivateKeys(t *testing.T) {
 }
 
 func TestImportedKeymanager_Sign(t *testing.T) {
-	password := "secretPassw0rd$1999"
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
 		AccountPasswords: make(map[string]string),
