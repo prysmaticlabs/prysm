@@ -4,3 +4,75 @@ alias(
     actual = "//cmd/validator:validator",
     deprecation = "This target has moved to cmd/validator",
 )
+
+alias(
+    name = "validator:push_images_debug",
+    actual = "//cmd/validator:push_images_debug",
+    deprecation = "This target has moved to cmd/validator:push_images_debug",
+)
+
+alias(
+    name = "validator:push_images_alpine",
+    actual = "//cmd/validator:push_images_alpine",
+    deprecation = "This target has moved to cmd/validator:push_images_alpine",
+)
+
+alias(
+    name = "validator:push_images",
+    actual = "//cmd/validator:push_images",
+    deprecation = "This target has moved to cmd/validator:push_images",
+)
+
+alias(
+    name = "validator:image_bundle_debug
+    actual = "//cmd/validator:image_bundle_debug",
+    deprecation = "This target has moved to cmd/validator:image_bundle_debug",
+)
+
+alias(
+    name = "validator:image_debug",
+    actual = "//cmd/validator:image_debug",
+    deprecation = "This target has moved to cmd/validator:image_debug",
+)
+
+alias(
+    name = "validator:image_bundle_alpine",
+    actual = "//cmd/validator:image_bundle_alpine",
+    deprecation = "This target has moved to cmd/validator:image_bundle_alpine",
+)
+
+alias(
+    name = "validator:image_bundle",
+    actual = "//cmd/validator:image_bundle",
+    deprecation = "This target has moved to cmd/validator:image_bundle",
+)
+
+alias(
+    name = "validator:image_with_creation_time",
+    actual = "//cmd/validator:image_with_creation_time",
+    deprecation = "This target has moved to cmd/validator:image_with_creation_time
+)
+
+alias(
+    name = "validator:image_alpine",
+    actual = "//cmd/validator:image_alpine",
+    deprecation = "This target has moved to cmd/validator:image_alpine",
+)
+
+alias(
+    name = "validator:image",
+    actual = "//cmd/validator:image",
+    deprecation = "This target has moved to cmd/validator:image",
+)
+
+alias(
+    name = "validator:go_default_test",
+    actual = "//cmd/validator:go_default_test",
+    deprecation = "This target has moved to cmd/validator:go_default_test",
+)
+
+alias(
+    name = "validator",
+    actual = "//cmd/validator:go_default_library",
+    deprecation = "This target has moved to cmd/validator:go_default_library",
+)
