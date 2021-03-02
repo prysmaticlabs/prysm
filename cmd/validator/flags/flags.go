@@ -7,8 +7,9 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/urfave/cli/v2"
+
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 )
 
 const (
