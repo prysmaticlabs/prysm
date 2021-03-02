@@ -5,6 +5,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -27,7 +28,7 @@ func ProcessSlashingsPrecompute(state *stateTrie.BeaconState, pBal *Balance) err
 
 	var hasSlashing bool
 	// Iterate through validator list in state, stop until a validator satisfies slashing condition of current epoch.
-	err := state.ReadFromEveryValidator(func(idx int, val stateTrie.ReadOnlyValidator) error {
+	err := state.ReadFromEveryValidator(func(idx int, val iface.ReadOnlyValidator) error {
 		correctEpoch := epochToWithdraw == val.WithdrawableEpoch()
 		if val.Slashed() && correctEpoch {
 			hasSlashing = true
