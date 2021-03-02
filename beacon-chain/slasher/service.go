@@ -29,11 +29,11 @@ type Service struct {
 	params               *Parameters
 	serviceCfg           *ServiceConfig
 	indexedAttsChan      chan *ethpb.IndexedAttestation
-	beaconBlocksChan     chan *ethpb.BeaconBlockHeader
+	beaconBlocksChan     chan *ethpb.SignedBeaconBlockHeader
 	attestationQueueLock sync.Mutex
 	blockQueueLock       sync.Mutex
-	attestationQueue     []*slashertypes.CompactAttestation
-	beaconBlocksQueue    []*slashertypes.CompactBeaconBlock
+	attestationQueue     []*slashertypes.IndexedAttestationWrapper
+	beaconBlocksQueue    []*slashertypes.SignedBlockHeaderWrapper
 	ctx                  context.Context
 	cancel               context.CancelFunc
 	genesisTime          time.Time
@@ -46,9 +46,9 @@ func New(ctx context.Context, srvCfg *ServiceConfig) (*Service, error) {
 		params:            DefaultParams(),
 		serviceCfg:        srvCfg,
 		indexedAttsChan:   make(chan *ethpb.IndexedAttestation, 1),
-		beaconBlocksChan:  make(chan *ethpb.BeaconBlockHeader, 1),
-		attestationQueue:  make([]*slashertypes.CompactAttestation, 0),
-		beaconBlocksQueue: make([]*slashertypes.CompactBeaconBlock, 0),
+		beaconBlocksChan:  make(chan *ethpb.SignedBeaconBlockHeader, 1),
+		attestationQueue:  make([]*slashertypes.IndexedAttestationWrapper, 0),
+		beaconBlocksQueue: make([]*slashertypes.SignedBlockHeaderWrapper, 0),
 		ctx:               ctx,
 		cancel:            cancel,
 		genesisTime:       time.Now(),

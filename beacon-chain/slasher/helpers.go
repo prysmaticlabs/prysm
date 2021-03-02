@@ -7,7 +7,6 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
@@ -17,12 +16,12 @@ import (
 // concurrently, and also allowing us to effectively use a single 2D chunk
 // for slashing detection through this logical grouping.
 func (s *Service) groupByValidatorChunkIndex(
-	attestations []*slashertypes.CompactAttestation,
-) map[uint64][]*slashertypes.CompactAttestation {
-	groupedAttestations := make(map[uint64][]*slashertypes.CompactAttestation)
+	attestations []*slashertypes.IndexedAttestationWrapper,
+) map[uint64][]*slashertypes.IndexedAttestationWrapper {
+	groupedAttestations := make(map[uint64][]*slashertypes.IndexedAttestationWrapper)
 	for _, att := range attestations {
 		validatorChunkIndices := make(map[uint64]bool)
-		for _, validatorIdx := range att.AttestingIndices {
+		for _, validatorIdx := range att.IndexedAttestation.AttestingIndices {
 			validatorChunkIndex := s.params.validatorChunkIndex(types.ValidatorIndex(validatorIdx))
 			validatorChunkIndices[validatorChunkIndex] = true
 		}
@@ -91,10 +90,10 @@ func logSlashingEvent(slashing *slashertypes.Slashing) {
 func logDoubleProposal(incomingProposal *slashertypes.SignedBlockHeaderWrapper, existingSigningRoot [32]byte) {
 	logSlashingEvent(&slashertypes.Slashing{
 		Kind:            slashertypes.DoubleProposal,
-		ValidatorIndex:  incomingProposal.SignedBlockHeader.Header.ProposerIndex,
-		SigningRoot:     bytesutil.ToBytes32(incomingProposal.SigningRoot),
+		ValidatorIndex:  incomingProposal.SignedBeaconBlockHeader.Header.ProposerIndex,
+		SigningRoot:     incomingProposal.SigningRoot,
 		PrevSigningRoot: existingSigningRoot,
-		Slot:            incomingProposal.SignedBlockHeader.Header.Slot,
+		Slot:            incomingProposal.SignedBeaconBlockHeader.Header.Slot,
 	})
 }
 

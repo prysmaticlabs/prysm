@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+
 	types "github.com/prysmaticlabs/eth2-types"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
@@ -111,7 +113,7 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	// We apply attestation with (source 1, target 2) for our validator.
 	source := types.Epoch(1)
 	target := types.Epoch(2)
-	att := createAttestation(source, target)
+	att := createAttestationWrapper(source, target, nil, nil)
 	slashing, err := srv.applyAttestationForValidator(
 		ctx,
 		args,
@@ -121,10 +123,10 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.Equal(t, true, slashing == nil)
-	att.AttestingIndices = []uint64{uint64(validatorIdx)}
+	att.IndexedAttestation.AttestingIndices = []uint64{uint64(validatorIdx)}
 	err = beaconDB.SaveAttestationRecordsForValidators(
 		ctx,
-		[]*slashertypes.CompactAttestation{att},
+		[]*slashertypes.IndexedAttestationWrapper{att},
 	)
 	require.NoError(t, err)
 
@@ -132,7 +134,7 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	// expect a slashable offense to be returned.
 	source = types.Epoch(0)
 	target = types.Epoch(3)
-	slashableAtt := createAttestation(source, target)
+	slashableAtt := createAttestationWrapper(source, target, nil, nil)
 	slashing, err = srv.applyAttestationForValidator(
 		ctx,
 		args,
@@ -171,7 +173,7 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	// We apply attestation with (source 0, target 3) for our validator.
 	source := types.Epoch(0)
 	target := types.Epoch(3)
-	att := createAttestation(source, target)
+	att := createAttestationWrapper(source, target, nil, nil)
 	slashing, err := srv.applyAttestationForValidator(
 		ctx,
 		args,
@@ -181,10 +183,10 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.Equal(t, true, slashing == nil)
-	att.AttestingIndices = []uint64{uint64(validatorIdx)}
+	att.IndexedAttestation.AttestingIndices = []uint64{uint64(validatorIdx)}
 	err = beaconDB.SaveAttestationRecordsForValidators(
 		ctx,
-		[]*slashertypes.CompactAttestation{att},
+		[]*slashertypes.IndexedAttestationWrapper{att},
 	)
 	require.NoError(t, err)
 
@@ -192,7 +194,7 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	// expect a slashable offense to be returned.
 	source = types.Epoch(1)
 	target = types.Epoch(2)
-	slashableAtt := createAttestation(source, target)
+	slashableAtt := createAttestationWrapper(source, target, nil, nil)
 	slashing, err = srv.applyAttestationForValidator(
 		ctx,
 		args,
@@ -211,21 +213,39 @@ func Test_checkDoubleVotes_SlashableInputAttestations(t *testing.T) {
 	// For a list of input attestations, check that we can
 	// indeed check there could exist a double vote offense
 	// within the list with respect to other entries in the list.
-	atts := []*slashertypes.CompactAttestation{
+	atts := []*slashertypes.IndexedAttestationWrapper{
 		{
-			AttestingIndices: []uint64{1, 2},
-			Target:           1,
-			SigningRoot:      [32]byte{1},
+			IndexedAttestation: &ethpb.IndexedAttestation{
+				AttestingIndices: []uint64{1, 2},
+				Data: &ethpb.AttestationData{
+					Target: &ethpb.Checkpoint{
+						Epoch: 1,
+					},
+				},
+			},
+			SigningRoot: [32]byte{1},
 		},
 		{
-			AttestingIndices: []uint64{1, 2},
-			Target:           2,
-			SigningRoot:      [32]byte{1},
+			IndexedAttestation: &ethpb.IndexedAttestation{
+				AttestingIndices: []uint64{1, 2},
+				Data: &ethpb.AttestationData{
+					Target: &ethpb.Checkpoint{
+						Epoch: 2,
+					},
+				},
+			},
+			SigningRoot: [32]byte{1},
 		},
 		{
-			AttestingIndices: []uint64{1, 2},
-			Target:           2,
-			SigningRoot:      [32]byte{2}, // Different signing root.
+			IndexedAttestation: &ethpb.IndexedAttestation{
+				AttestingIndices: []uint64{1, 2},
+				Data: &ethpb.AttestationData{
+					Target: &ethpb.Checkpoint{
+						Epoch: 1,
+					},
+				},
+			},
+			SigningRoot: [32]byte{2}, // Different signing root.
 		},
 	}
 	srv := &Service{
@@ -260,16 +280,28 @@ func Test_checkDoubleVotes_SlashableAttestationsOnDisk(t *testing.T) {
 	// For a list of input attestations, check that we can
 	// indeed check there could exist a double vote offense
 	// within the list with respect to previous entries in the db.
-	prevAtts := []*slashertypes.CompactAttestation{
+	prevAtts := []*slashertypes.IndexedAttestationWrapper{
 		{
-			AttestingIndices: []uint64{1, 2},
-			Target:           1,
-			SigningRoot:      [32]byte{1},
+			IndexedAttestation: &ethpb.IndexedAttestation{
+				AttestingIndices: []uint64{1, 2},
+				Data: &ethpb.AttestationData{
+					Target: &ethpb.Checkpoint{
+						Epoch: 1,
+					},
+				},
+			},
+			SigningRoot: [32]byte{1},
 		},
 		{
-			AttestingIndices: []uint64{1, 2},
-			Target:           2,
-			SigningRoot:      [32]byte{1},
+			IndexedAttestation: &ethpb.IndexedAttestation{
+				AttestingIndices: []uint64{1, 2},
+				Data: &ethpb.AttestationData{
+					Target: &ethpb.Checkpoint{
+						Epoch: 2,
+					},
+				},
+			},
+			SigningRoot: [32]byte{1},
 		},
 	}
 	err := beaconDB.SaveAttestationRecordsForValidators(ctx, prevAtts)
@@ -296,11 +328,17 @@ func Test_checkDoubleVotes_SlashableAttestationsOnDisk(t *testing.T) {
 			PrevSigningRoot: [32]byte{1},
 		},
 	}
-	newAtts := []*slashertypes.CompactAttestation{
+	newAtts := []*slashertypes.IndexedAttestationWrapper{
 		{
-			AttestingIndices: []uint64{1, 2},
-			Target:           2,
-			SigningRoot:      [32]byte{2}, // Different signing root.
+			IndexedAttestation: &ethpb.IndexedAttestation{
+				AttestingIndices: []uint64{1, 2},
+				Data: &ethpb.AttestationData{
+					Target: &ethpb.Checkpoint{
+						Epoch: 2,
+					},
+				},
+			},
+			SigningRoot: [32]byte{2}, // Different signing root.
 		},
 	}
 	slashings, err := srv.checkDoubleVotes(ctx, newAtts)
@@ -398,11 +436,19 @@ func TestService_processQueuedAttestations(t *testing.T) {
 		serviceCfg: &ServiceConfig{
 			Database: beaconDB,
 		},
-		attestationQueue: []*slashertypes.CompactAttestation{
+		attestationQueue: []*slashertypes.IndexedAttestationWrapper{
 			{
-				AttestingIndices: []uint64{0, 1},
-				Source:           0,
-				Target:           1,
+				IndexedAttestation: &ethpb.IndexedAttestation{
+					AttestingIndices: []uint64{0, 1},
+					Data: &ethpb.AttestationData{
+						Source: &ethpb.Checkpoint{
+							Epoch: 0,
+						},
+						Target: &ethpb.Checkpoint{
+							Epoch: 1,
+						},
+					},
+				},
 			},
 		},
 	}
