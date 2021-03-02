@@ -29,32 +29,8 @@ func Test_processQueuedAttestations(t *testing.T) {
 			name: "Detects surrounding vote (source 1, target 2), (source 0, target 3)",
 			args: args{
 				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-					{
-						IndexedAttestation: &ethpb.IndexedAttestation{
-							AttestingIndices: []uint64{0, 1},
-							Data: &ethpb.AttestationData{
-								Source: &ethpb.Checkpoint{
-									Epoch: 1,
-								},
-								Target: &ethpb.Checkpoint{
-									Epoch: 2,
-								},
-							},
-						},
-					},
-					{
-						IndexedAttestation: &ethpb.IndexedAttestation{
-							AttestingIndices: []uint64{0, 1},
-							Data: &ethpb.AttestationData{
-								Source: &ethpb.Checkpoint{
-									Epoch: 0,
-								},
-								Target: &ethpb.Checkpoint{
-									Epoch: 3,
-								},
-							},
-						},
-					},
+					createAttestationWrapper(1, 2, []uint64{0, 1}, nil),
+					createAttestationWrapper(0, 3, []uint64{0, 1}, nil),
 				},
 				currentEpoch: 4,
 			},
@@ -64,32 +40,8 @@ func Test_processQueuedAttestations(t *testing.T) {
 			name: "Detects surrounding vote (source 50, target 51), (source 0, target 1000)",
 			args: args{
 				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-					{
-						IndexedAttestation: &ethpb.IndexedAttestation{
-							AttestingIndices: []uint64{0, 1},
-							Data: &ethpb.AttestationData{
-								Source: &ethpb.Checkpoint{
-									Epoch: 50,
-								},
-								Target: &ethpb.Checkpoint{
-									Epoch: 51,
-								},
-							},
-						},
-					},
-					{
-						IndexedAttestation: &ethpb.IndexedAttestation{
-							AttestingIndices: []uint64{0},
-							Data: &ethpb.AttestationData{
-								Source: &ethpb.Checkpoint{
-									Epoch: 0,
-								},
-								Target: &ethpb.Checkpoint{
-									Epoch: 1000,
-								},
-							},
-						},
-					},
+					createAttestationWrapper(50, 51, []uint64{0, 1}, nil),
+					createAttestationWrapper(0, 1000, []uint64{0}, nil),
 				},
 				currentEpoch: 1000,
 			},
@@ -99,32 +51,8 @@ func Test_processQueuedAttestations(t *testing.T) {
 			name: "Detects surrounded vote (source 0, target 3), (source 1, target 2)",
 			args: args{
 				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-					{
-						IndexedAttestation: &ethpb.IndexedAttestation{
-							AttestingIndices: []uint64{0, 1},
-							Data: &ethpb.AttestationData{
-								Source: &ethpb.Checkpoint{
-									Epoch: 0,
-								},
-								Target: &ethpb.Checkpoint{
-									Epoch: 3,
-								},
-							},
-						},
-					},
-					{
-						IndexedAttestation: &ethpb.IndexedAttestation{
-							AttestingIndices: []uint64{0, 1},
-							Data: &ethpb.AttestationData{
-								Source: &ethpb.Checkpoint{
-									Epoch: 1,
-								},
-								Target: &ethpb.Checkpoint{
-									Epoch: 2,
-								},
-							},
-						},
-					},
+					createAttestationWrapper(0, 3, []uint64{0, 1}, nil),
+					createAttestationWrapper(1, 2, []uint64{0, 1}, nil),
 				},
 				currentEpoch: 4,
 			},
@@ -134,32 +62,8 @@ func Test_processQueuedAttestations(t *testing.T) {
 			name: "Not slashable, surrounding but non-overlapping attesting indices within same validator chunk index",
 			args: args{
 				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-					{
-						IndexedAttestation: &ethpb.IndexedAttestation{
-							AttestingIndices: []uint64{0},
-							Data: &ethpb.AttestationData{
-								Source: &ethpb.Checkpoint{
-									Epoch: 1,
-								},
-								Target: &ethpb.Checkpoint{
-									Epoch: 2,
-								},
-							},
-						},
-					},
-					{
-						IndexedAttestation: &ethpb.IndexedAttestation{
-							AttestingIndices: []uint64{1},
-							Data: &ethpb.AttestationData{
-								Source: &ethpb.Checkpoint{
-									Epoch: 0,
-								},
-								Target: &ethpb.Checkpoint{
-									Epoch: 3,
-								},
-							},
-						},
-					},
+					createAttestationWrapper(1, 2, []uint64{0}, nil),
+					createAttestationWrapper(0, 3, []uint64{1}, nil),
 				},
 				currentEpoch: 4,
 			},
