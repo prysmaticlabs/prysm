@@ -55,7 +55,7 @@ func (bs *Server) ListValidatorBalances(
 	if requestedEpoch > currentEpoch {
 		return nil, status.Errorf(
 			codes.InvalidArgument,
-			"Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
+			errEpoch,
 			currentEpoch,
 			requestedEpoch,
 		)
@@ -207,7 +207,7 @@ func (bs *Server) ListValidators(
 		if q.Epoch > currentEpoch {
 			return nil, status.Errorf(
 				codes.InvalidArgument,
-				"Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
+				errEpoch,
 				currentEpoch,
 				q.Epoch,
 			)
@@ -401,7 +401,7 @@ func (bs *Server) GetValidatorActiveSetChanges(
 	if requestedEpoch > currentEpoch {
 		return nil, status.Errorf(
 			codes.InvalidArgument,
-			"Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
+			errEpoch,
 			currentEpoch,
 			requestedEpoch,
 		)
@@ -775,7 +775,7 @@ func (bs *Server) GetIndividualVotes(
 	if req.Epoch > currentEpoch {
 		return nil, status.Errorf(
 			codes.InvalidArgument,
-			"Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
+			errEpoch,
 			currentEpoch,
 			req.Epoch,
 		)
