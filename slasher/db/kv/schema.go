@@ -1,7 +1,7 @@
 package kv
 
 import (
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	dbtypes "github.com/prysmaticlabs/prysm/slasher/db/types"
 )
@@ -29,12 +29,12 @@ var (
 	validatorsMinMaxSpanBucketNew = []byte("validators-min-max-span-bucket-new")
 )
 
-func encodeSlotValidatorID(slot types.Slot, validatorID uint64) []byte {
-	return append(bytesutil.Bytes8(uint64(slot)), bytesutil.Bytes8(validatorID)...)
+func encodeSlotValidatorIndex(slot types.Slot, validatorIndex types.ValidatorIndex) []byte {
+	return append(bytesutil.Bytes8(uint64(slot)), bytesutil.Bytes8(uint64(validatorIndex))...)
 }
 
-func encodeSlotValidatorIDSig(slot types.Slot, validatorID uint64, sig []byte) []byte {
-	return append(append(bytesutil.Bytes8(uint64(slot)), bytesutil.Bytes8(validatorID)...), sig...)
+func encodeSlotValidatorIndexSig(slot types.Slot, validatorIndex types.ValidatorIndex, sig []byte) []byte {
+	return append(append(bytesutil.Bytes8(uint64(slot)), bytesutil.Bytes8(uint64(validatorIndex))...), sig...)
 }
 
 func encodeEpochSig(targetEpoch types.Epoch, sig []byte) []byte {

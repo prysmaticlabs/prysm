@@ -8,9 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gogo/protobuf/types"
+	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	lru "github.com/hashicorp/golang-lru"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -501,7 +502,7 @@ func TestProposeExit_DomainDataFailed(t *testing.T) {
 		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
 
 	// Any time in the past will suffice
-	genesisTime := &types.Timestamp{
+	genesisTime := &ptypes.Timestamp{
 		Seconds: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
 	}
 
@@ -535,7 +536,7 @@ func TestProposeExit_DomainDataIsNil(t *testing.T) {
 		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
 
 	// Any time in the past will suffice
-	genesisTime := &types.Timestamp{
+	genesisTime := &ptypes.Timestamp{
 		Seconds: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
 	}
 
@@ -568,7 +569,7 @@ func TestProposeBlock_ProposeExitFailed(t *testing.T) {
 		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
 
 	// Any time in the past will suffice
-	genesisTime := &types.Timestamp{
+	genesisTime := &ptypes.Timestamp{
 		Seconds: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
 	}
 
@@ -605,7 +606,7 @@ func TestProposeExit_BroadcastsBlock(t *testing.T) {
 		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
 
 	// Any time in the past will suffice
-	genesisTime := &types.Timestamp{
+	genesisTime := &ptypes.Timestamp{
 		Seconds: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
 	}
 
@@ -680,7 +681,7 @@ func TestGetGraffiti_Ok(t *testing.T) {
 				graffitiStruct: &graffiti.Graffiti{
 					Default: "c",
 					Random:  []string{"d", "e"},
-					Specific: map[uint64]string{
+					Specific: map[types.ValidatorIndex]string{
 						1: "f",
 						2: "g",
 					},
@@ -713,7 +714,7 @@ func TestGetGraffiti_Ok(t *testing.T) {
 				graffitiStruct: &graffiti.Graffiti{
 					Random:  []string{"d"},
 					Default: "c",
-					Specific: map[uint64]string{
+					Specific: map[types.ValidatorIndex]string{
 						1: "f",
 						2: "g",
 					},
@@ -741,5 +742,32 @@ func TestGetGraffiti_Ok(t *testing.T) {
 			require.NoError(t, err)
 			require.DeepEqual(t, tt.want, got)
 		})
+	}
+}
+
+func TestGetGraffitiOrdered_Ok(t *testing.T) {
+	pubKey := [48]byte{'a'}
+	valDB := testing2.SetupDB(t, [][48]byte{pubKey})
+	ctrl := gomock.NewController(t)
+	m := &mocks{
+		validatorClient: mock.NewMockBeaconNodeValidatorClient(ctrl),
+	}
+	m.validatorClient.EXPECT().
+		ValidatorIndex(gomock.Any(), &ethpb.ValidatorIndexRequest{PublicKey: pubKey[:]}).
+		Times(5).
+		Return(&ethpb.ValidatorIndexResponse{Index: 2}, nil)
+
+	v := &validator{
+		db:              valDB,
+		validatorClient: m.validatorClient,
+		graffitiStruct: &graffiti.Graffiti{
+			Ordered: []string{"a", "b", "c"},
+			Default: "d",
+		},
+	}
+	for _, want := range [][]byte{{'a'}, {'b'}, {'c'}, {'d'}, {'d'}} {
+		got, err := v.getGraffiti(context.Background(), pubKey)
+		require.NoError(t, err)
+		require.DeepEqual(t, want, got)
 	}
 }

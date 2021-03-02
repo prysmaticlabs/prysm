@@ -2,7 +2,10 @@ load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["version.go"],
+    srcs = [
+        "metrics.go",
+        "version.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/shared/version",
     visibility = ["//visibility:public"],
     x_defs = {
@@ -10,4 +13,8 @@ go_library(
         "buildDate": "{DATE}",
         "gitTag": "{STABLE_GIT_TAG}",
     },
+    deps = [
+        "@com_github_prometheus_client_golang//prometheus:go_default_library",
+        "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
+    ],
 )

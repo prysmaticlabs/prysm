@@ -8,8 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-
-	"github.com/google/shlex"
 )
 
 // ForOS produces an exec.Cmd to open the web browser for different OS
@@ -31,17 +29,4 @@ func ForOS(goos, url string) *exec.Cmd {
 	cmd := exec.Command(exe, args...)
 	cmd.Stderr = os.Stderr
 	return cmd
-}
-
-// FromLauncher parses the launcher string based on shell splitting rules
-func FromLauncher(launcher, url string) (*exec.Cmd, error) {
-	args, err := shlex.Split(launcher)
-	if err != nil {
-		return nil, err
-	}
-
-	args = append(args, url)
-	cmd := exec.Command(args[0], args[1:]...)
-	cmd.Stderr = os.Stderr
-	return cmd, nil
 }

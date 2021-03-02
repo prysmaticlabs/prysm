@@ -10,6 +10,7 @@ go_library(
         "deprecated_attester_protection.go",
         "eip_blacklisted_keys.go",
         "genesis.go",
+        "graffiti.go",
         "log.go",
         "migration.go",
         "migration_optimal_attester_protection.go",
@@ -50,6 +51,7 @@ go_test(
         "deprecated_attester_protection_test.go",
         "eip_blacklisted_keys_test.go",
         "genesis_test.go",
+        "graffiti_test.go",
         "migration_optimal_attester_protection_test.go",
         "migration_source_target_epochs_bucket_test.go",
         "proposer_protection_test.go",
@@ -58,6 +60,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//shared/bytesutil:go_default_library",
+        "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",

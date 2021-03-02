@@ -14,12 +14,13 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
@@ -175,6 +176,12 @@ func (v *ValidatorService) Start() {
 		slashablePublicKeys[pubKey] = true
 	}
 
+	graffitiOrderedIndex, err := v.db.GraffitiOrderedIndex(v.ctx, v.graffitiStruct.Hash)
+	if err != nil {
+		log.Errorf("Could not read graffiti ordered index from disk: %v", err)
+		return
+	}
+
 	v.validator = &validator{
 		db:                             v.db,
 		validatorClient:                ethpb.NewBeaconNodeValidatorClient(v.conn),
@@ -195,6 +202,7 @@ func (v *ValidatorService) Start() {
 		walletInitializedFeed:          v.walletInitializedFeed,
 		blockFeed:                      new(event.Feed),
 		graffitiStruct:                 v.graffitiStruct,
+		graffitiOrderedIndex:           graffitiOrderedIndex,
 		eipImportBlacklistedPublicKeys: slashablePublicKeys,
 		logDutyCountDown:               v.logDutyCountDown,
 	}
@@ -229,7 +237,7 @@ func (v *ValidatorService) recheckKeys(ctx context.Context) {
 		cleanup := sub.Unsubscribe
 		defer cleanup()
 		w := <-initializedChan
-		keyManager, err := w.InitializeKeymanager(ctx)
+		keyManager, err := w.InitializeKeymanager(ctx, accountsiface.InitKeymanagerConfig{ListenForChanges: true})
 		if err != nil {
 			// log.Fatalf will prevent defer from being called
 			cleanup()

@@ -63,7 +63,8 @@ func TestDeleteAccounts_Noninteractive(t *testing.T) {
 	keymanager, err := imported.NewKeymanager(
 		cliCtx.Context,
 		&imported.SetupConfig{
-			Wallet: w,
+			Wallet:           w,
+			ListenForChanges: false,
 		},
 	)
 	require.NoError(t, err)

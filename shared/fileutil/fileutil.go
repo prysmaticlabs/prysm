@@ -131,6 +131,37 @@ func FileExists(filename string) bool {
 	return info != nil && !info.IsDir()
 }
 
+// RecursiveFileFind returns true, and the path,  if a file is not a directory and exists
+// at  dir or any of its subdirectories.  Finds the first instant based on the Walk order and returns.
+// Define non-fatal error to stop the recursive directory walk
+var stopWalk = errors.New("stop walking")
+
+func RecursiveFileFind(filename, dir string) (bool, string, error) {
+	var found bool
+	var fpath string
+	dir = filepath.Clean(dir)
+	found = false
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		// checks if its a file  and has the exact name as the filename
+		// need to break the walk function by using a non-fatal error
+		if !info.IsDir() && filename == info.Name() {
+			found = true
+			fpath = path
+			return stopWalk
+		}
+
+		// no errors or file found
+		return nil
+	})
+	if err != nil && err != stopWalk {
+		return false, "", err
+	}
+	return found, fpath, nil
+}
+
 // ReadFileAsBytes expands a file name's absolute path and reads it as bytes from disk.
 func ReadFileAsBytes(filename string) ([]byte, error) {
 	filePath, err := ExpandPath(filename)

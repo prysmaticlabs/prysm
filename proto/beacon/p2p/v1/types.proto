@@ -60,7 +60,7 @@ message PendingAttestation {
   // The difference of when attestation gets created and get included on chain.
   uint64 inclusion_delay = 3 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Slot"];
   // The proposer who included the attestation in the block.
-  uint64 proposer_index = 4;
+  uint64 proposer_index = 4 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
 }
 
 message HistoricalBatch {

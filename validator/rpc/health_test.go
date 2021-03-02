@@ -33,14 +33,6 @@ func (m *mockGenesisFetcher) GenesisInfo(_ context.Context) (*ethpb.Genesis, err
 	}, nil
 }
 
-type mockBeaconInfoFetcher struct {
-	endpoint string
-}
-
-func (m *mockBeaconInfoFetcher) BeaconLogsEndpoint(_ context.Context) (string, error) {
-	return m.endpoint, nil
-}
-
 func TestServer_GetBeaconNodeConnection(t *testing.T) {
 	ctx := context.Background()
 	endpoint := "localhost:90210"

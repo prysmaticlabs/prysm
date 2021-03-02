@@ -60,10 +60,10 @@ bazel_skylib_workspace()
 
 http_archive(
     name = "bazel_gazelle",
-    sha256 = "1f4fc1d91826ec436ae04833430626f4cc02c20bb0a813c0c2f3c4c421307b1d",
-    strip_prefix = "bazel-gazelle-e368a11b76e92932122d824970dc0ce5feb9c349",
+    sha256 = "222e49f034ca7a1d1231422cdb67066b885819885c356673cb1f72f748a3c9d4",
     urls = [
-        "https://github.com/bazelbuild/bazel-gazelle/archive/e368a11b76e92932122d824970dc0ce5feb9c349.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-gazelle/releases/download/v0.22.3/bazel-gazelle-v0.22.3.tar.gz",
+        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.22.3/bazel-gazelle-v0.22.3.tar.gz",
     ],
 )
 
@@ -156,7 +156,7 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_depe
 go_rules_dependencies()
 
 go_register_toolchains(
-    go_version = "1.15.7",
+    go_version = "1.16",
     nogo = "@//:nogo",
 )
 

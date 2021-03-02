@@ -10,6 +10,7 @@ import (
 	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
+	types "github.com/prysmaticlabs/eth2-types"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
@@ -54,13 +55,13 @@ func TestPingRPCHandler_ReceivesPing(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		expectSuccess(t, stream)
-		out := new(p2ptypes.SSZUint64)
+		out := new(types.SSZUint64)
 		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		assert.Equal(t, uint64(2), uint64(*out))
 	})
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
 	require.NoError(t, err)
-	seqNumber := p2ptypes.SSZUint64(2)
+	seqNumber := types.SSZUint64(2)
 
 	assert.NoError(t, r.pingHandler(context.Background(), &seqNumber, stream1))
 
@@ -117,7 +118,7 @@ func TestPingRPCHandler_SendsPing(t *testing.T) {
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		out := new(p2ptypes.SSZUint64)
+		out := new(types.SSZUint64)
 		assert.NoError(t, r2.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		assert.Equal(t, uint64(2), uint64(*out))
 		assert.NoError(t, r2.pingHandler(context.Background(), out, stream))
@@ -180,7 +181,7 @@ func TestPingRPCHandler_BadSequenceNumber(t *testing.T) {
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
 	require.NoError(t, err)
 
-	wantedSeq := p2ptypes.SSZUint64(p2.LocalMetadata.SeqNumber)
+	wantedSeq := types.SSZUint64(p2.LocalMetadata.SeqNumber)
 	err = r.pingHandler(context.Background(), &wantedSeq, stream1)
 	assert.ErrorContains(t, p2ptypes.ErrInvalidSequenceNum.Error(), err)
 
