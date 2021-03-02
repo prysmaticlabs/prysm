@@ -16,7 +16,7 @@ go_test(
         "//beacon-chain",
         "//slasher",
         "//tools/bootnode",
-        "//validator",
+        "//cmd/validator",
         "@com_github_ethereum_go_ethereum//cmd/geth",
     ],
     shard_count = 2,

@@ -45,7 +45,7 @@ func StartValidatorClients(t *testing.T, config *types.E2EConfig) {
 
 // StartNewValidatorClient starts a validator client with the passed in configuration.
 func StartNewValidatorClient(t *testing.T, config *types.E2EConfig, validatorNum, index, offset int) {
-	binaryPath, found := bazel.FindBinary("validator", "validator")
+	binaryPath, found := bazel.FindBinary("cmd/validator", "validator")
 	if !found {
 		t.Fatal("validator binary not found")
 	}
