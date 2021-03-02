@@ -314,45 +314,17 @@ func TestSlasher_receiveAttestations_OK(t *testing.T) {
 	}()
 	firstIndices := []uint64{1, 2, 3}
 	secondIndices := []uint64{4, 5, 6}
-	att1 := &ethpb.IndexedAttestation{
-		AttestingIndices: firstIndices,
-		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{
-				Epoch: 1,
-			},
-			Target: &ethpb.Checkpoint{
-				Epoch: 2,
-			},
-		},
-	}
-	att2 := &ethpb.IndexedAttestation{
-		AttestingIndices: secondIndices,
-		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{
-				Epoch: 1,
-			},
-			Target: &ethpb.Checkpoint{
-				Epoch: 2,
-			},
-		},
-	}
+	att1 := createAttestationWrapper(1, 2, firstIndices, nil).IndexedAttestation
+	att2 := createAttestationWrapper(1, 2, secondIndices, nil).IndexedAttestation
 	s.indexedAttsChan <- att1
 	s.indexedAttsChan <- att2
 	cancel()
 	<-exitChan
-	wanted := []*slashertypes.CompactAttestation{
-		{
-			AttestingIndices: att1.AttestingIndices,
-			Source:           att1.Data.Source.Epoch,
-			Target:           att1.Data.Target.Epoch,
-		},
-		{
-			AttestingIndices: att2.AttestingIndices,
-			Source:           att2.Data.Source.Epoch,
-			Target:           att2.Data.Target.Epoch,
-		},
+	wanted := []*slashertypes.IndexedAttestationWrapper{
+		createAttestationWrapper(att1.Data.Source.Epoch, att1.Data.Source.Epoch, att1.AttestingIndices, nil),
+		createAttestationWrapper(att2.Data.Source.Epoch, att2.Data.Source.Epoch, att2.AttestingIndices, nil),
 	}
-	require.DeepEqual(t, wanted, s.attestationQueue)
+	require.DeepSSZEqual(t, wanted, s.attestationQueue)
 }
 
 func TestSlasher_receiveAttestations_OnlyValidAttestations(t *testing.T) {
@@ -371,17 +343,7 @@ func TestSlasher_receiveAttestations_OnlyValidAttestations(t *testing.T) {
 	firstIndices := []uint64{1, 2, 3}
 	secondIndices := []uint64{4, 5, 6}
 	// Add a valid attestation.
-	validAtt := &ethpb.IndexedAttestation{
-		AttestingIndices: firstIndices,
-		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{
-				Epoch: 1,
-			},
-			Target: &ethpb.Checkpoint{
-				Epoch: 2,
-			},
-		},
-	}
+	validAtt := createAttestationWrapper(1, 2, firstIndices, nil).IndexedAttestation
 	s.indexedAttsChan <- validAtt
 	// Send an invalid, bad attestation which will not
 	// pass integrity checks at it has invalid attestation data.
@@ -392,14 +354,10 @@ func TestSlasher_receiveAttestations_OnlyValidAttestations(t *testing.T) {
 	<-exitChan
 	// Expect only a single, valid attestation was added to the queue.
 	require.Equal(t, 1, len(s.attestationQueue))
-	wanted := []*slashertypes.CompactAttestation{
-		{
-			AttestingIndices: validAtt.AttestingIndices,
-			Source:           validAtt.Data.Source.Epoch,
-			Target:           validAtt.Data.Target.Epoch,
-		},
+	wanted := []*slashertypes.IndexedAttestationWrapper{
+		createAttestationWrapper(validAtt.Data.Source.Epoch, validAtt.Data.Target.Epoch, validAtt.AttestingIndices, nil),
 	}
-	require.DeepEqual(t, wanted, s.attestationQueue)
+	require.DeepSSZEqual(t, wanted, s.attestationQueue)
 }
 
 func TestSlasher_receiveBlocks_OK(t *testing.T) {

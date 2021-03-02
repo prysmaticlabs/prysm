@@ -4,9 +4,8 @@ import (
 	"context"
 	"testing"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-
 	types "github.com/prysmaticlabs/eth2-types"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
