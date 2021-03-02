@@ -7,6 +7,8 @@ import (
 	"context"
 	"io"
 
+	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+
 	"github.com/ethereum/go-ethereum/common"
 	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -63,15 +65,15 @@ type ReadOnlyDatabase interface {
 	) ([]*slashertypes.AttestedEpochForValidator, error)
 	AttestationRecordForValidator(
 		ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch,
-	) (*slashertypes.CompactAttestation, error)
+	) (*slashpb.IndexedAttestationWrapper, error)
 	CheckAttesterDoubleVotes(
-		ctx context.Context, attestations []*slashertypes.CompactAttestation,
+		ctx context.Context, attestations []*slashpb.IndexedAttestationWrapper,
 	) ([]*slashertypes.AttesterDoubleVote, error)
 	LoadSlasherChunks(
 		ctx context.Context, kind slashertypes.ChunkKind, diskKeys []uint64,
 	) ([][]uint16, []bool, error)
 	CheckDoubleBlockProposals(
-		ctx context.Context, proposals []*slashertypes.CompactBeaconBlock,
+		ctx context.Context, proposals []*slashpb.SignedBlkHeaderWrapper,
 	) ([]*slashertypes.DoubleBlockProposal, error)
 }
 
@@ -108,13 +110,13 @@ type NoHeadAccessDatabase interface {
 	) error
 	SaveAttestationRecordsForValidators(
 		ctx context.Context,
-		attestations []*slashertypes.CompactAttestation,
+		attestations []*slashpb.IndexedAttestationWrapper,
 	) error
 	SaveSlasherChunks(
 		ctx context.Context, kind slashertypes.ChunkKind, chunkKeys []uint64, chunks [][]uint16,
 	) error
 	SaveBlockProposals(
-		ctx context.Context, proposal []*slashertypes.CompactBeaconBlock,
+		ctx context.Context, proposal []*slashpb.SignedBlkHeaderWrapper,
 	) error
 	// Run any required database migrations.
 	RunMigrations(ctx context.Context) error

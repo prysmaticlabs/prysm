@@ -3,15 +3,18 @@ package slasher
 import (
 	"context"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
+	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+
 	types "github.com/prysmaticlabs/eth2-types"
-	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"go.opencensus.io/trace"
 )
 
 // Given a list of blocks, check if they are slashable for the validators involved.
 func (s *Service) detectSlashableBlocks(
 	ctx context.Context,
-	proposedBlocks []*slashertypes.CompactBeaconBlock,
+	proposedBlocks []*slashpb.SignedBlkHeaderWrapper,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "Slasher.detectSlashableBlocks")
 	defer span.End()
@@ -19,13 +22,13 @@ func (s *Service) detectSlashableBlocks(
 	// of proposals with respect to each other.
 	existingProposals := make(map[string][32]byte)
 	for i, proposal := range proposedBlocks {
-		key := uintToString(uint64(proposal.Slot)) + ":" + uintToString(uint64(proposal.ProposerIndex))
+		key := uintToString(uint64(proposal.SignedBlockHeader.Header.Slot)) + ":" + uintToString(uint64(proposal.SignedBlockHeader.Header.ProposerIndex))
 		existingSigningRoot, ok := existingProposals[key]
 		if !ok {
-			existingProposals[key] = proposal.SigningRoot
+			existingProposals[key] = bytesutil.ToBytes32(proposal.SigningRoot)
 			continue
 		}
-		if isDoubleProposal(proposedBlocks[i].SigningRoot, existingSigningRoot) {
+		if isDoubleProposal(bytesutil.ToBytes32(proposedBlocks[i].SigningRoot), existingSigningRoot) {
 			logDoubleProposal(proposedBlocks[i], existingSigningRoot)
 		}
 	}
@@ -37,7 +40,7 @@ func (s *Service) detectSlashableBlocks(
 // Check for double proposals in our database given a list of incoming block proposals.
 // For the proposals that were not slashable, we save them to the database.
 func (s *Service) checkDoubleProposalsOnDisk(
-	ctx context.Context, proposedBlocks []*slashertypes.CompactBeaconBlock,
+	ctx context.Context, proposedBlocks []*slashpb.SignedBlkHeaderWrapper,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "Slasher.checkDoubleProposalsOnDisk")
 	defer span.End()
@@ -46,9 +49,9 @@ func (s *Service) checkDoubleProposalsOnDisk(
 		return err
 	}
 	// We initialize a map of proposers that are safe from slashing.
-	safeProposers := make(map[types.ValidatorIndex]*slashertypes.CompactBeaconBlock, len(proposedBlocks))
+	safeProposers := make(map[types.ValidatorIndex]*slashpb.SignedBlkHeaderWrapper, len(proposedBlocks))
 	for _, proposal := range proposedBlocks {
-		safeProposers[proposal.ProposerIndex] = proposal
+		safeProposers[proposal.SignedBlockHeader.Header.ProposerIndex] = proposal
 	}
 	for i, doubleProposal := range doubleProposals {
 		logDoubleProposal(proposedBlocks[i], doubleProposal.ExistingSigningRoot)
@@ -57,7 +60,7 @@ func (s *Service) checkDoubleProposalsOnDisk(
 		delete(safeProposers, doubleProposal.ProposerIndex)
 	}
 	// We save all the proposals that are determined "safe" and not-slashable to our database.
-	safeProposals := make([]*slashertypes.CompactBeaconBlock, 0, len(safeProposers))
+	safeProposals := make([]*slashpb.SignedBlkHeaderWrapper, 0, len(safeProposers))
 	for _, proposal := range safeProposers {
 		safeProposals = append(safeProposals, proposal)
 	}

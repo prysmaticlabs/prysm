@@ -3,12 +3,12 @@ package kv
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 
 	ssz "github.com/ferranbt/fastssz"
 	types "github.com/prysmaticlabs/eth2-types"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
+	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
@@ -75,7 +75,7 @@ func (s *Store) SaveLatestEpochAttestedForValidators(
 // CheckDoubleAttesterVotes retries any slashable double votes that exist
 // for a series of input attestations.
 func (s *Store) CheckAttesterDoubleVotes(
-	ctx context.Context, attestations []*slashertypes.CompactAttestation,
+	ctx context.Context, attestations []*slashpb.IndexedAttestationWrapper,
 ) ([]*slashertypes.AttesterDoubleVote, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.CheckAttesterDoubleVotes")
 	defer span.End()
@@ -83,11 +83,11 @@ func (s *Store) CheckAttesterDoubleVotes(
 	err := s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationRecordsBucket)
 		for _, att := range attestations {
-			encEpoch, err := att.Target.MarshalSSZ()
+			encEpoch, err := att.IndexedAttestation.Data.Target.Epoch.MarshalSSZ()
 			if err != nil {
 				return err
 			}
-			for _, valIdx := range att.AttestingIndices {
+			for _, valIdx := range att.IndexedAttestation.AttestingIndices {
 				encIdx := ssz.MarshalUint64(make([]byte, 0), valIdx)
 				key := append(encIdx, encEpoch...)
 				existingEncodedRecord := bkt.Get(key)
@@ -96,12 +96,12 @@ func (s *Store) CheckAttesterDoubleVotes(
 					if err != nil {
 						return err
 					}
-					if existingAtt.SigningRoot != att.SigningRoot {
+					if !bytes.Equal(existingAtt.SigningRoot, att.SigningRoot) {
 						doubleVotes = append(doubleVotes, &slashertypes.AttesterDoubleVote{
 							ValidatorIndex:  types.ValidatorIndex(valIdx),
-							Target:          att.Target,
-							SigningRoot:     att.SigningRoot,
-							PrevSigningRoot: existingAtt.SigningRoot,
+							Target:          att.IndexedAttestation.Data.Target.Epoch,
+							SigningRoot:     bytesutil.ToBytes32(att.SigningRoot),
+							PrevSigningRoot: bytesutil.ToBytes32(existingAtt.SigningRoot),
 						})
 					}
 				}
@@ -116,10 +116,10 @@ func (s *Store) CheckAttesterDoubleVotes(
 // retrieves an existing attestation record we have stored in the database.
 func (s *Store) AttestationRecordForValidator(
 	ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch,
-) (*slashertypes.CompactAttestation, error) {
+) (*slashpb.IndexedAttestationWrapper, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.AttestationRecordForValidator")
 	defer span.End()
-	var record *slashertypes.CompactAttestation
+	var record *slashpb.IndexedAttestationWrapper
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationRecordsBucket)
 		encIdx, err := validatorIdx.MarshalSSZ()
@@ -149,22 +149,22 @@ func (s *Store) AttestationRecordForValidator(
 // specified validator indices.
 func (s *Store) SaveAttestationRecordsForValidators(
 	ctx context.Context,
-	attestations []*slashertypes.CompactAttestation,
+	attestations []*slashpb.IndexedAttestationWrapper,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveAttestationRecordsForValidators")
 	defer span.End()
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationRecordsBucket)
 		for _, att := range attestations {
-			encEpoch, err := att.Target.MarshalSSZ()
+			encEpoch, err := att.IndexedAttestation.Data.Target.Epoch.MarshalSSZ()
 			if err != nil {
 				return err
 			}
-			value, err := encodeAttestationRecord(att)
+			value, err := att.Marshal()
 			if err != nil {
 				return err
 			}
-			for _, valIdx := range att.AttestingIndices {
+			for _, valIdx := range att.IndexedAttestation.AttestingIndices {
 				encIdx := ssz.MarshalUint64(make([]byte, 0), valIdx)
 				key := append(encIdx, encEpoch...)
 				if err := bkt.Put(key, value); err != nil {
@@ -238,7 +238,7 @@ func (s *Store) SaveSlasherChunks(
 // We check if the existing signing root is not-empty and is different than the incoming
 // proposal signing root. If so, we return a double block proposal object.
 func (s *Store) CheckDoubleBlockProposals(
-	ctx context.Context, proposals []*slashertypes.CompactBeaconBlock,
+	ctx context.Context, proposals []*slashpb.SignedBlkHeaderWrapper,
 ) ([]*slashertypes.DoubleBlockProposal, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.CheckDoubleBlockProposals")
 	defer span.End()
@@ -251,11 +251,11 @@ func (s *Store) CheckDoubleBlockProposals(
 				return err
 			}
 			existingSigningRoot := bkt.Get(key)
-			if existingSigningRoot != nil && !bytes.Equal(existingSigningRoot, proposal.SigningRoot[:]) {
+			if existingSigningRoot != nil && !bytes.Equal(existingSigningRoot, proposal.SigningRoot) {
 				doubleProposals = append(doubleProposals, &slashertypes.DoubleBlockProposal{
-					Slot:                proposal.Slot,
-					ProposerIndex:       proposal.ProposerIndex,
-					IncomingSigningRoot: proposal.SigningRoot,
+					Slot:                proposal.SignedBlockHeader.Header.Slot,
+					ProposerIndex:       proposal.SignedBlockHeader.Header.ProposerIndex,
+					IncomingSigningRoot: bytesutil.ToBytes32(proposal.SigningRoot),
 					ExistingSigningRoot: bytesutil.ToBytes32(existingSigningRoot),
 				})
 			}
@@ -268,7 +268,7 @@ func (s *Store) CheckDoubleBlockProposals(
 // SaveBlockProposals takes in a list of block proposals and saves them to our
 // proposal records bucket in the database.
 func (s *Store) SaveBlockProposals(
-	ctx context.Context, proposals []*slashertypes.CompactBeaconBlock,
+	ctx context.Context, proposals []*slashpb.SignedBlkHeaderWrapper,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlockProposals")
 	defer span.End()
@@ -279,7 +279,11 @@ func (s *Store) SaveBlockProposals(
 			if err != nil {
 				return err
 			}
-			if err := bkt.Put(key, proposal.SigningRoot[:]); err != nil {
+			proposalEnc, err := proposal.Marshal()
+			if err != nil {
+				return err
+			}
+			if err := bkt.Put(key, proposalEnc); err != nil {
 				return err
 			}
 		}
@@ -288,55 +292,26 @@ func (s *Store) SaveBlockProposals(
 }
 
 // Disk key for a validator proposal, including a slot+validatorIndex as a byte slice.
-func keyForValidatorProposal(proposal *slashertypes.CompactBeaconBlock) ([]byte, error) {
-	encSlot, err := proposal.Slot.MarshalSSZ()
+func keyForValidatorProposal(proposal *slashpb.SignedBlkHeaderWrapper) ([]byte, error) {
+	encSlot, err := proposal.SignedBlockHeader.Header.Slot.MarshalSSZ()
 	if err != nil {
 		return nil, err
 	}
-	encValidatorIdx, err := proposal.ProposerIndex.MarshalSSZ()
+	encValidatorIdx, err := proposal.SignedBlockHeader.Header.ProposerIndex.MarshalSSZ()
 	if err != nil {
 		return nil, err
 	}
 	return append(encSlot, encValidatorIdx...), nil
 }
 
-// Encode an attestation record's required fields for slashing protection into bytes.
-func encodeAttestationRecord(att *slashertypes.CompactAttestation) ([]byte, error) {
-	if att == nil {
-		return nil, errors.New("encoding nil attestation")
-	}
-	value := make([]byte, 48)
-	encSource, err := att.Source.MarshalSSZ()
-	if err != nil {
-		return nil, err
-	}
-	encTarget, err := att.Target.MarshalSSZ()
-	if err != nil {
-		return nil, err
-	}
-	copy(value[0:8], encSource)
-	copy(value[8:16], encTarget)
-	copy(value[16:], att.SigningRoot[:])
-	return value, nil
-}
-
 // Decode attestation record from bytes.
-func decodeAttestationRecord(encoded []byte) (*slashertypes.CompactAttestation, error) {
+func decodeAttestationRecord(encoded []byte) (*slashpb.IndexedAttestationWrapper, error) {
 	if len(encoded) != 48 {
 		return nil, fmt.Errorf("wrong length for encoded attestation record, want 48, got %d", len(encoded))
 	}
-	var sr [32]byte
-	copy(sr[:], encoded[16:])
-	var source, target types.Epoch
-	if err := source.UnmarshalSSZ(encoded[0:8]); err != nil {
+	indexedAttWrapper := &slashpb.IndexedAttestationWrapper{}
+	if err := indexedAttWrapper.Unmarshal(encoded); err != nil {
 		return nil, err
 	}
-	if err := target.UnmarshalSSZ(encoded[8:16]); err != nil {
-		return nil, err
-	}
-	return &slashertypes.CompactAttestation{
-		Source:      source,
-		Target:      target,
-		SigningRoot: sr,
-	}, nil
+	return indexedAttWrapper, nil
 }

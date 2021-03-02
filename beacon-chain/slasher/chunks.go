@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"math"
 
+	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -24,7 +26,7 @@ type Chunker interface {
 		ctx context.Context,
 		slasherDB db.Database,
 		validatorIdx types.ValidatorIndex,
-		attestation *slashertypes.CompactAttestation,
+		attestation *slashpb.IndexedAttestationWrapper,
 	) (*slashertypes.Slashing, error)
 	Update(
 		args *chunkUpdateArgs,
@@ -177,10 +179,10 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 	ctx context.Context,
 	slasherDB db.Database,
 	validatorIdx types.ValidatorIndex,
-	attestation *slashertypes.CompactAttestation,
+	attestation *slashpb.IndexedAttestationWrapper,
 ) (*slashertypes.Slashing, error) {
-	sourceEpoch := attestation.Source
-	targetEpoch := attestation.Target
+	sourceEpoch := attestation.IndexedAttestation.Data.Source.Epoch
+	targetEpoch := attestation.IndexedAttestation.Data.Target.Epoch
 	minTarget, err := chunkDataAtEpoch(m.params, m.data, validatorIdx, sourceEpoch)
 	if err != nil {
 		return &slashertypes.Slashing{Kind: slashertypes.NotSlashable}, errors.Wrapf(
@@ -195,12 +197,12 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 			)
 		}
 		if existingAttRecord != nil {
-			if sourceEpoch < existingAttRecord.Source {
+			if sourceEpoch < existingAttRecord.IndexedAttestation.Data.Source.Epoch {
 				return &slashertypes.Slashing{
 					Kind:            slashertypes.SurroundingVote,
 					ValidatorIndex:  validatorIdx,
-					PrevSourceEpoch: existingAttRecord.Source,
-					PrevTargetEpoch: existingAttRecord.Target,
+					PrevSourceEpoch: existingAttRecord.IndexedAttestation.Data.Source.Epoch,
+					PrevTargetEpoch: existingAttRecord.IndexedAttestation.Data.Target.Epoch,
 					SourceEpoch:     sourceEpoch,
 					TargetEpoch:     targetEpoch,
 				}, nil
@@ -225,10 +227,10 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 	ctx context.Context,
 	slasherDB db.Database,
 	validatorIdx types.ValidatorIndex,
-	attestation *slashertypes.CompactAttestation,
+	attestation *slashpb.IndexedAttestationWrapper,
 ) (*slashertypes.Slashing, error) {
-	sourceEpoch := attestation.Source
-	targetEpoch := attestation.Target
+	sourceEpoch := attestation.IndexedAttestation.Data.Source.Epoch
+	targetEpoch := attestation.IndexedAttestation.Data.Target.Epoch
 	maxTarget, err := chunkDataAtEpoch(m.params, m.data, validatorIdx, sourceEpoch)
 	if err != nil {
 		return &slashertypes.Slashing{Kind: slashertypes.NotSlashable}, errors.Wrapf(
@@ -243,12 +245,12 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 			)
 		}
 		if existingAttRecord != nil {
-			if existingAttRecord.Source < sourceEpoch {
+			if existingAttRecord.IndexedAttestation.Data.Source.Epoch < sourceEpoch {
 				return &slashertypes.Slashing{
 					Kind:            slashertypes.SurroundedVote,
 					ValidatorIndex:  validatorIdx,
-					PrevSourceEpoch: existingAttRecord.Source,
-					PrevTargetEpoch: existingAttRecord.Target,
+					PrevSourceEpoch: existingAttRecord.IndexedAttestation.Data.Source.Epoch,
+					PrevTargetEpoch: existingAttRecord.IndexedAttestation.Data.Target.Epoch,
 					SourceEpoch:     sourceEpoch,
 					TargetEpoch:     targetEpoch,
 				}, nil

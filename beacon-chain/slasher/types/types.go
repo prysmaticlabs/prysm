@@ -1,6 +1,8 @@
 package types
 
-import types "github.com/prysmaticlabs/eth2-types"
+import (
+	types "github.com/prysmaticlabs/eth2-types"
+)
 
 // ChunkKind to differentiate what kind of span we are working
 // with for slashing detection, either min or max span.

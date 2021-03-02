@@ -4,6 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
+	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+
 	types "github.com/prysmaticlabs/eth2-types"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"go.opencensus.io/trace"
@@ -33,7 +37,7 @@ type chunkUpdateArgs struct {
 func (s *Service) detectSlashableAttestations(
 	ctx context.Context,
 	args *chunkUpdateArgs,
-	attestations []*slashertypes.CompactAttestation,
+	attestations []*slashpb.IndexedAttestationWrapper,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "Slasher.detectSlashableAttestations")
 	defer span.End()
@@ -87,7 +91,7 @@ func (s *Service) detectSlashableAttestations(
 // attestation's target epoch. If so, we append a double vote slashing object to a list of slashings
 // we return to the caller.
 func (s *Service) checkDoubleVotes(
-	ctx context.Context, attestations []*slashertypes.CompactAttestation,
+	ctx context.Context, attestations []*slashpb.IndexedAttestationWrapper,
 ) ([]*slashertypes.Slashing, error) {
 	ctx, span := trace.StartSpan(ctx, "Slasher.checkDoubleVotes")
 	defer span.End()
@@ -96,19 +100,19 @@ func (s *Service) checkDoubleVotes(
 	slashings := make([]*slashertypes.Slashing, 0)
 	existingAtts := make(map[string][32]byte)
 	for _, att := range attestations {
-		for _, valIdx := range att.AttestingIndices {
-			key := uintToString(uint64(att.Target)) + ":" + uintToString(valIdx)
+		for _, valIdx := range att.IndexedAttestation.AttestingIndices {
+			key := uintToString(uint64(att.IndexedAttestation.Data.Target.Epoch)) + ":" + uintToString(valIdx)
 			existingSigningRoot, ok := existingAtts[key]
 			if !ok {
-				existingAtts[key] = att.SigningRoot
+				existingAtts[key] = bytesutil.ToBytes32(att.SigningRoot)
 				continue
 			}
-			if att.SigningRoot != existingSigningRoot {
+			if bytesutil.ToBytes32(att.SigningRoot) != existingSigningRoot {
 				slashings = append(slashings, &slashertypes.Slashing{
 					Kind:            slashertypes.DoubleVote,
 					ValidatorIndex:  types.ValidatorIndex(valIdx),
-					TargetEpoch:     att.Target,
-					SigningRoot:     att.SigningRoot,
+					TargetEpoch:     att.IndexedAttestation.Data.Target.Epoch,
+					SigningRoot:     bytesutil.ToBytes32(att.SigningRoot),
 					PrevSigningRoot: existingSigningRoot,
 				})
 			}
@@ -126,7 +130,7 @@ func (s *Service) checkDoubleVotes(
 
 // Check for double votes in our database given a list of incoming attestations.
 func (s *Service) checkDoubleVotesOnDisk(
-	ctx context.Context, attestations []*slashertypes.CompactAttestation,
+	ctx context.Context, attestations []*slashpb.IndexedAttestationWrapper,
 ) ([]*slashertypes.Slashing, error) {
 	ctx, span := trace.StartSpan(ctx, "Slasher.checkDoubleVotesOnDisk")
 	defer span.End()
@@ -160,7 +164,7 @@ func (s *Service) checkDoubleVotesOnDisk(
 func (s *Service) updateSpans(
 	ctx context.Context,
 	args *chunkUpdateArgs,
-	attestationsByChunkIdx map[uint64][]*slashertypes.CompactAttestation,
+	attestationsByChunkIdx map[uint64][]*slashpb.IndexedAttestationWrapper,
 ) ([]*slashertypes.Slashing, error) {
 	ctx, span := trace.StartSpan(ctx, "Slasher.updateSpans")
 	defer span.End()
@@ -181,7 +185,7 @@ func (s *Service) updateSpans(
 	slashings := make([]*slashertypes.Slashing, 0)
 	for _, attestationBatch := range attestationsByChunkIdx {
 		for _, att := range attestationBatch {
-			for _, validatorIdx := range att.AttestingIndices {
+			for _, validatorIdx := range att.IndexedAttestation.AttestingIndices {
 				validatorIndex := types.ValidatorIndex(validatorIdx)
 				computedValidatorChunkIdx := s.params.validatorChunkIndex(validatorIndex)
 
@@ -272,12 +276,12 @@ func (s *Service) applyAttestationForValidator(
 	args *chunkUpdateArgs,
 	validatorIndex types.ValidatorIndex,
 	chunksByChunkIdx map[uint64]Chunker,
-	attestation *slashertypes.CompactAttestation,
+	attestation *slashpb.IndexedAttestationWrapper,
 ) (*slashertypes.Slashing, error) {
 	ctx, span := trace.StartSpan(ctx, "Slasher.applyAttestationForValidator")
 	defer span.End()
-	sourceEpoch := attestation.Source
-	targetEpoch := attestation.Target
+	sourceEpoch := attestation.IndexedAttestation.Data.Source.Epoch
+	targetEpoch := attestation.IndexedAttestation.Data.Target.Epoch
 	chunkIdx := s.params.chunkIndex(sourceEpoch)
 	chunk, ok := chunksByChunkIdx[chunkIdx]
 	if !ok {

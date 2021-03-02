@@ -75,3 +75,15 @@ message AttestationHistory {
     map<uint64, uint64> target_to_source = 1;
     uint64 latest_epoch_written = 2 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Epoch"];
 }
+
+// SignedBlkHeaderWrapper --
+message SignedBlkHeaderWrapper {
+    ethereum.eth.v1alpha1.SignedBeaconBlockHeader signed_block_header = 1;
+    bytes signing_root = 2;
+}
+
+// IndexedAttestationWrapper --
+message IndexedAttestationWrapper {
+    ethereum.eth.v1alpha1.IndexedAttestation indexed_attestation = 1;
+    bytes signing_root = 2;
+}
