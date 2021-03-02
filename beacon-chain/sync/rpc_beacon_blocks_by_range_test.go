@@ -12,8 +12,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/protocol"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	logTest "github.com/sirupsen/logrus/hooks/test"
-
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	db2 "github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -28,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestRPCBeaconBlocksByRange_RPCHandlerReturnsBlocks(t *testing.T) {

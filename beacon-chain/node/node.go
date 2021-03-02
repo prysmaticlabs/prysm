@@ -18,10 +18,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
-	"gopkg.in/yaml.v2"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -52,6 +48,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
+	"gopkg.in/yaml.v2"
 )
 
 const testSkipPowFlag = "test-skip-pow"
