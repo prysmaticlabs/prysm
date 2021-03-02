@@ -40,7 +40,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 			name: "Detects surrounding vote (source 50, target 51), (source 0, target 1000)",
 			args: args{
 				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-					createAttestationWrapper(50, 51, []uint64{0, 1}, nil),
+					createAttestationWrapper(50, 51, []uint64{0}, nil),
 					createAttestationWrapper(0, 1000, []uint64{0}, nil),
 				},
 				currentEpoch: 1000,

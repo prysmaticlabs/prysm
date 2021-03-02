@@ -208,10 +208,10 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 	chunk = EmptyMaxSpanChunksSlice(params)
 	source = types.Epoch(0)
 	target = types.Epoch(3)
+	att = createAttestationWrapper(source, target, nil, nil)
 	chunkIdx := uint64(0)
 	startEpoch := source
 	currentEpoch := target
-	att = createAttestationWrapper(source, target, nil, nil)
 	args := &chunkUpdateArgs{
 		chunkIndex:   chunkIdx,
 		currentEpoch: currentEpoch,
