@@ -168,7 +168,6 @@ def prysm_deps():
         sum = "h1:pv34s756C4pEXnjgPfGYgdhg/ZdajGhyOvzx8k+23nw=",
         version = "v0.0.0-20170710044230-e206f873d14a",
     )
-
     go_repository(
         name = "com_github_aws_aws_lambda_go",
         importpath = "github.com/aws/aws-lambda-go",
@@ -1060,10 +1059,6 @@ def prysm_deps():
         importpath = "github.com/googleapis/gnostic",
         sum = "h1:rVsPeBmXbYv4If/cumu1AzZPwV58q433hvONV1UEZoI=",
         version = "v0.1.0",
-        build_naming_convention = "go_default_library",
-        build_directives = [
-            "gazelle:resolve go github.com/googleapis/gnostic/extensions //extensions:go_default_library",
-        ],
     )
     go_repository(
         name = "com_github_gophercloud_gophercloud",
@@ -2865,7 +2860,6 @@ def prysm_deps():
         sum = "h1:njlZPzLwU639dk2kqnCPPv+wNjq7Xb6EfUxe/oX0/NM=",
         version = "v0.0.0-20180906055917-c99c65617cd3",
     )
-
     go_repository(
         name = "com_github_streadway_amqp",
         importpath = "github.com/streadway/amqp",
@@ -3400,7 +3394,6 @@ def prysm_deps():
         importpath = "k8s.io/client-go",
         sum = "h1:QaJzz92tsN67oorwzmoB0a9r9ZVHuD5ryjbCKP0U22k=",
         version = "v0.18.3",
-        build_naming_convention = "go_default_library",
     )
     go_repository(
         name = "io_k8s_gengo",
