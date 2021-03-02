@@ -9,6 +9,11 @@ import (
 	"runtime"
 
 	joonix "github.com/joonix/log"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
+	prefixed "github.com/x-cray/logrus-prefixed-formatter"
+
+	"github.com/prysmaticlabs/prysm/cmd/slasher/flags"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -17,11 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/tos"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/slasher/db"
-	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/prysmaticlabs/prysm/slasher/node"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
-	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
 func startSlasher(cliCtx *cli.Context) error {
