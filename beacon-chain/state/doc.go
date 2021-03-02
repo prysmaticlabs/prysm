@@ -13,7 +13,7 @@
 //
 //  func (b *BeaconState) Foo() uint64 {
 //    // Short-circuit conditions.
-//    if !b.HasInnerState() {
+//    if !b.hasInnerState() {
 //      return 0
 //    }
 //
@@ -27,7 +27,7 @@
 //
 //  func (b *BeaconState) foo() uint64 {
 //    // Short-circuit conditions.
-//    if !b.HasInnerState() {
+//    if !b.hasInnerState() {
 //      return 0
 //    }
 //
