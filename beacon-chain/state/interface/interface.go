@@ -10,6 +10,54 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
+// BeaconState has read and write access to beacon state methods.
+type BeaconState interface {
+	ReadOnlyBeaconState
+	WriteOnlyBeaconState
+}
+
+// ReadOnlyBeaconState defines a struct which only has read access to beacon state methods.
+type ReadOnlyBeaconState interface {
+	ReadOnlyBlockRoots
+	ReadOnlyStateRoots
+	ReadOnlyRandaoMixes
+	ReadOnlyEth1Data
+	ReadOnlyValidators
+	ReadOnlyBalances
+	ReadOnlyCheckpoint
+	ReadOnlyAttestations
+	InnerStateUnsafe() *pbp2p.BeaconState
+	CloneInnerState() *pbp2p.BeaconState
+	GenesisTime() uint64
+	GenesisValidatorRoot() []byte
+	Slot() types.Slot
+	Fork() *pbp2p.Fork
+	LatestBlockHeader() *ethpb.BeaconBlockHeader
+	HistoricalRoots() [][]byte
+	Slashings() []uint64
+}
+
+// WriteOnlyBeaconState defines a struct which only has write access to beacon state methods.
+type WriteOnlyBeaconState interface {
+	WriteOnlyBlockRoots
+	WriteOnlyStateRoots
+	WriteOnlyRandaoMixes
+	WriteOnlyEth1Data
+	WriteOnlyValidators
+	WriteOnlyBalances
+	WriteOnlyCheckpoint
+	WriteOnlyAttestations
+	SetGenesisTime(val uint64) error
+	SetGenesisValidatorRoot(val []byte) error
+	SetSlot(val types.Slot) error
+	SetFork(val *pbp2p.Fork) error
+	SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error
+	SetHistoricalRoots(val [][]byte) error
+	SetSlashings(val []uint64) error
+	UpdateSlashingsAtIndex(idx, val uint64) error
+	AppendHistoricalRoots(root [32]byte) error
+}
+
 // ReadOnlyValidator defines a struct which only has read access to validator methods.
 type ReadOnlyValidator interface {
 	EffectiveBalance() uint64
@@ -84,27 +132,6 @@ type ReadOnlyAttestations interface {
 	CurrentEpochAttestations() []*pbp2p.PendingAttestation
 }
 
-// ReadOnlyBeaconState defines a struct which only has read access to beacon state methods.
-type ReadOnlyBeaconState interface {
-	ReadOnlyBlockRoots
-	ReadOnlyStateRoots
-	ReadOnlyRandaoMixes
-	ReadOnlyEth1Data
-	ReadOnlyValidators
-	ReadOnlyBalances
-	ReadOnlyCheckpoint
-	ReadOnlyAttestations
-	InnerStateUnsafe() *pbp2p.BeaconState
-	CloneInnerState() *pbp2p.BeaconState
-	GenesisTime() uint64
-	GenesisValidatorRoot() []byte
-	Slot() types.Slot
-	Fork() *pbp2p.Fork
-	LatestBlockHeader() *ethpb.BeaconBlockHeader
-	HistoricalRoots() [][]byte
-	Slashings() []uint64
-}
-
 // WriteOnlyBlockRoots defines a struct which only has write access to block roots methods.
 type WriteOnlyBlockRoots interface {
 	SetBlockRoots(val [][]byte) error
@@ -160,31 +187,4 @@ type WriteOnlyAttestations interface {
 	SetCurrentEpochAttestations(val []*pbp2p.PendingAttestation) error
 	AppendCurrentEpochAttestations(val *pbp2p.PendingAttestation) error
 	AppendPreviousEpochAttestations(val *pbp2p.PendingAttestation) error
-}
-
-// WriteOnlyBeaconState defines a struct which only has write access to beacon state methods.
-type WriteOnlyBeaconState interface {
-	WriteOnlyBlockRoots
-	WriteOnlyStateRoots
-	WriteOnlyRandaoMixes
-	WriteOnlyEth1Data
-	WriteOnlyValidators
-	WriteOnlyBalances
-	WriteOnlyCheckpoint
-	WriteOnlyAttestations
-	SetGenesisTime(val uint64) error
-	SetGenesisValidatorRoot(val []byte) error
-	SetSlot(val types.Slot) error
-	SetFork(val *pbp2p.Fork) error
-	SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error
-	SetHistoricalRoots(val [][]byte) error
-	SetSlashings(val []uint64) error
-	UpdateSlashingsAtIndex(idx, val uint64) error
-	AppendHistoricalRoots(root [32]byte) error
-}
-
-// BeaconState has read and write access to beacon state methods.
-type BeaconState interface {
-	ReadOnlyBeaconState
-	WriteOnlyBeaconState
 }
