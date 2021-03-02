@@ -1,6 +1,6 @@
 // Package iface defines the actual beacon state interface used
 // by a Prysm beacon node, also containing useful, scoped interfaces such as
-// a ReadOnlyState.
+// a ReadOnlyState and WriteOnlyBeaconState.
 package iface
 
 import (
