@@ -23,6 +23,8 @@ type CompactAttestation struct {
 	SigningRoot      [32]byte
 }
 
+// IndexedAttestationWrapper contains an indexed attestation with its
+// signing root to reduce duplicated computation.
 type IndexedAttestationWrapper struct {
 	IndexedAttestation *ethpb.IndexedAttestation
 	SigningRoot        [32]byte
@@ -60,6 +62,8 @@ type CompactBeaconBlock struct {
 	SigningRoot   [32]byte
 }
 
+// SignedBlockHeaderWrapper contains an signed beacon block header with its
+// signing root to reduce duplicated computation.
 type SignedBlockHeaderWrapper struct {
 	SignedBeaconBlockHeader *ethpb.SignedBeaconBlockHeader
 	SigningRoot             [32]byte
