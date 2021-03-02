@@ -4,8 +4,9 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/sirupsen/logrus"
+
+	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 )
 
 func TestMain(m *testing.M) {
