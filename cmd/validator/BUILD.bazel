@@ -45,17 +45,19 @@ go_image(
     }),
     binary = ":validator",
     tags = ["manual"],
-    visibility = ["//visibility:private"],
+    visibility = ["//validator:__pkg__"],
 )
 
 container_image(
     name = "image_with_creation_time",
+    visibility = ["//validator:__pkg__"],
     base = "image",
     stamp = True,
 )
 
 container_bundle(
     name = "image_bundle",
+    visibility = ["//validator:__pkg__"],
     images = {
         "gcr.io/prysmaticlabs/prysm/validator:latest": ":image_with_creation_time",
         "gcr.io/prysmaticlabs/prysm/validator:{DOCKER_TAG}": ":image_with_creation_time",
@@ -67,12 +69,14 @@ container_bundle(
 
 go_image_debug(
     name = "image_debug",
+    visibility = ["//validator:__pkg__"],
     image = ":image",
     tags = ["manual"],
 )
 
 container_bundle(
     name = "image_bundle_debug",
+    visibility = ["//validator:__pkg__"],
     images = {
         "gcr.io/prysmaticlabs/prysm/validator:latest-debug": ":image_debug",
         "gcr.io/prysmaticlabs/prysm/validator:{DOCKER_TAG}-debug": ":image_debug",
@@ -84,12 +88,14 @@ container_bundle(
 
 go_image_alpine(
     name = "image_alpine",
+    visibility = ["//validator:__pkg__"],
     image = ":image",
     tags = ["manual"],
 )
 
 container_bundle(
     name = "image_bundle_alpine",
+    visibility = ["//validator:__pkg__"],
     images = {
         "gcr.io/prysmaticlabs/prysm/validator:latest-alpine": ":image_alpine",
         "gcr.io/prysmaticlabs/prysm/validator:{DOCKER_TAG}-alpine": ":image_alpine",
@@ -101,18 +107,21 @@ container_bundle(
 
 docker_push(
     name = "push_images",
+    visibility = ["//validator:__pkg__"],
     bundle = ":image_bundle",
     tags = ["manual"],
 )
 
 docker_push(
     name = "push_images_debug",
+    visibility = ["//validator:__pkg__"],
     bundle = ":image_bundle_debug",
     tags = ["manual"],
 )
 
 docker_push(
     name = "push_images_alpine",
+    visibility = ["//validator:__pkg__"],
     bundle = ":image_bundle_alpine",
     tags = ["manual"],
 )
@@ -129,6 +138,7 @@ go_binary(
 
 go_test(
     name = "go_default_test",
+    visibility = ["//validator:__pkg__"],
     srcs = ["usage_test.go"],
     embed = [":go_default_library"],
     deps = [
