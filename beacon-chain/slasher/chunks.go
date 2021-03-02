@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"math"
 
-	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
-
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -26,7 +24,7 @@ type Chunker interface {
 		ctx context.Context,
 		slasherDB db.Database,
 		validatorIdx types.ValidatorIndex,
-		attestation *slashpb.IndexedAttestationWrapper,
+		attestation *slashertypes.IndexedAttestationWrapper,
 	) (*slashertypes.Slashing, error)
 	Update(
 		args *chunkUpdateArgs,
@@ -179,7 +177,7 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 	ctx context.Context,
 	slasherDB db.Database,
 	validatorIdx types.ValidatorIndex,
-	attestation *slashpb.IndexedAttestationWrapper,
+	attestation *slashertypes.IndexedAttestationWrapper,
 ) (*slashertypes.Slashing, error) {
 	sourceEpoch := attestation.IndexedAttestation.Data.Source.Epoch
 	targetEpoch := attestation.IndexedAttestation.Data.Target.Epoch
@@ -227,7 +225,7 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 	ctx context.Context,
 	slasherDB db.Database,
 	validatorIdx types.ValidatorIndex,
-	attestation *slashpb.IndexedAttestationWrapper,
+	attestation *slashertypes.IndexedAttestationWrapper,
 ) (*slashertypes.Slashing, error) {
 	sourceEpoch := attestation.IndexedAttestation.Data.Source.Epoch
 	targetEpoch := attestation.IndexedAttestation.Data.Target.Epoch

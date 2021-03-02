@@ -2,6 +2,7 @@ package types
 
 import (
 	types "github.com/prysmaticlabs/eth2-types"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
 
 // ChunkKind to differentiate what kind of span we are working
@@ -20,6 +21,11 @@ type CompactAttestation struct {
 	Source           types.Epoch
 	Target           types.Epoch
 	SigningRoot      [32]byte
+}
+
+type IndexedAttestationWrapper struct {
+	IndexedAttestation *ethpb.IndexedAttestation
+	SigningRoot        [32]byte
 }
 
 // AttesterDoubleVote represents a double vote instance
@@ -52,6 +58,11 @@ type CompactBeaconBlock struct {
 	ProposerIndex types.ValidatorIndex
 	Slot          types.Slot
 	SigningRoot   [32]byte
+}
+
+type SignedBlockHeaderWrapper struct {
+	SignedBeaconBlockHeader *ethpb.SignedBeaconBlockHeader
+	SigningRoot             [32]byte
 }
 
 // Slashing represents a compact format with all the information

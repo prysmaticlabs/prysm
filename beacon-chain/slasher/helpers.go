@@ -6,8 +6,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 
-	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
-
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
@@ -41,9 +39,9 @@ func (s *Service) groupByValidatorChunkIndex(
 
 // Group attestations by the chunk index their source epoch corresponds to.
 func (s *Service) groupByChunkIndex(
-	attestations []*slashpb.IndexedAttestationWrapper,
-) map[uint64][]*slashpb.IndexedAttestationWrapper {
-	attestationsByChunkIndex := make(map[uint64][]*slashpb.IndexedAttestationWrapper)
+	attestations []*slashertypes.IndexedAttestationWrapper,
+) map[uint64][]*slashertypes.IndexedAttestationWrapper {
+	attestationsByChunkIndex := make(map[uint64][]*slashertypes.IndexedAttestationWrapper)
 	for _, att := range attestations {
 		chunkIdx := s.params.chunkIndex(att.IndexedAttestation.Data.Source.Epoch)
 		attestationsByChunkIndex[chunkIdx] = append(attestationsByChunkIndex[chunkIdx], att)
@@ -91,7 +89,7 @@ func logSlashingEvent(slashing *slashertypes.Slashing) {
 }
 
 // Log a double block proposal slashing given an incoming proposal and existing proposal signing root.
-func logDoubleProposal(incomingProposal *slashpb.SignedBlkHeaderWrapper, existingSigningRoot [32]byte) {
+func logDoubleProposal(incomingProposal *slashertypes.SignedBlockHeaderWrapper, existingSigningRoot [32]byte) {
 	logSlashingEvent(&slashertypes.Slashing{
 		Kind:            slashertypes.DoubleProposal,
 		ValidatorIndex:  incomingProposal.SignedBlockHeader.Header.ProposerIndex,

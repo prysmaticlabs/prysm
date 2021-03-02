@@ -4,10 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
-	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
-
 	types "github.com/prysmaticlabs/eth2-types"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"go.opencensus.io/trace"
@@ -37,7 +33,7 @@ type chunkUpdateArgs struct {
 func (s *Service) detectSlashableAttestations(
 	ctx context.Context,
 	args *chunkUpdateArgs,
-	attestations []*slashpb.IndexedAttestationWrapper,
+	attestations []*slashertypes.IndexedAttestationWrapper,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "Slasher.detectSlashableAttestations")
 	defer span.End()
@@ -91,7 +87,7 @@ func (s *Service) detectSlashableAttestations(
 // attestation's target epoch. If so, we append a double vote slashing object to a list of slashings
 // we return to the caller.
 func (s *Service) checkDoubleVotes(
-	ctx context.Context, attestations []*slashpb.IndexedAttestationWrapper,
+	ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper,
 ) ([]*slashertypes.Slashing, error) {
 	ctx, span := trace.StartSpan(ctx, "Slasher.checkDoubleVotes")
 	defer span.End()
@@ -104,15 +100,15 @@ func (s *Service) checkDoubleVotes(
 			key := uintToString(uint64(att.IndexedAttestation.Data.Target.Epoch)) + ":" + uintToString(valIdx)
 			existingSigningRoot, ok := existingAtts[key]
 			if !ok {
-				existingAtts[key] = bytesutil.ToBytes32(att.SigningRoot)
+				existingAtts[key] = att.SigningRoot
 				continue
 			}
-			if bytesutil.ToBytes32(att.SigningRoot) != existingSigningRoot {
+			if att.SigningRoot != existingSigningRoot {
 				slashings = append(slashings, &slashertypes.Slashing{
 					Kind:            slashertypes.DoubleVote,
 					ValidatorIndex:  types.ValidatorIndex(valIdx),
 					TargetEpoch:     att.IndexedAttestation.Data.Target.Epoch,
-					SigningRoot:     bytesutil.ToBytes32(att.SigningRoot),
+					SigningRoot:     att.SigningRoot,
 					PrevSigningRoot: existingSigningRoot,
 				})
 			}
@@ -130,7 +126,7 @@ func (s *Service) checkDoubleVotes(
 
 // Check for double votes in our database given a list of incoming attestations.
 func (s *Service) checkDoubleVotesOnDisk(
-	ctx context.Context, attestations []*slashpb.IndexedAttestationWrapper,
+	ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper,
 ) ([]*slashertypes.Slashing, error) {
 	ctx, span := trace.StartSpan(ctx, "Slasher.checkDoubleVotesOnDisk")
 	defer span.End()
@@ -164,7 +160,7 @@ func (s *Service) checkDoubleVotesOnDisk(
 func (s *Service) updateSpans(
 	ctx context.Context,
 	args *chunkUpdateArgs,
-	attestationsByChunkIdx map[uint64][]*slashpb.IndexedAttestationWrapper,
+	attestationsByChunkIdx map[uint64][]*slashertypes.IndexedAttestationWrapper,
 ) ([]*slashertypes.Slashing, error) {
 	ctx, span := trace.StartSpan(ctx, "Slasher.updateSpans")
 	defer span.End()
@@ -276,7 +272,7 @@ func (s *Service) applyAttestationForValidator(
 	args *chunkUpdateArgs,
 	validatorIndex types.ValidatorIndex,
 	chunksByChunkIdx map[uint64]Chunker,
-	attestation *slashpb.IndexedAttestationWrapper,
+	attestation *slashertypes.IndexedAttestationWrapper,
 ) (*slashertypes.Slashing, error) {
 	ctx, span := trace.StartSpan(ctx, "Slasher.applyAttestationForValidator")
 	defer span.End()
