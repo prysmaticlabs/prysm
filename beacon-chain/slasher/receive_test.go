@@ -189,7 +189,9 @@ func Test_processQueuedAttestations(t *testing.T) {
 				s.processQueuedAttestations(ctx, currentEpochChan)
 				exitChan <- struct{}{}
 			}()
+			s.attestationQueueLock.Lock()
 			s.attestationQueue = tt.args.attestationQueue
+			s.attestationQueueLock.Unlock()
 			currentEpochChan <- tt.args.currentEpoch
 			cancel()
 			<-exitChan
@@ -240,11 +242,10 @@ func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
 			source = i - 1
 			target = i
 		}
-		t.Logf("Producing attestation with source %d, target %d", source, target)
-		s.attestationQueueLock.Lock()
 		var sr [32]byte
 		copy(sr[:], fmt.Sprintf("%d", i))
 		att := createAttestationWrapper(source, target, []uint64{0}, sr[:])
+		s.attestationQueueLock.Lock()
 		s.attestationQueue = []*slashertypes.IndexedAttestationWrapper{att}
 		s.attestationQueueLock.Unlock()
 		currentEpochChan <- i
@@ -278,19 +279,25 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 		exitChan <- struct{}{}
 	}()
 
-	// We create an attestation fully spanning chunk indices 0 and chunk 1
-	att := createAttestationWrapper(
-		types.Epoch(params.chunkSize-1),
+	// We create two attestations fully spanning chunk indices 0 and chunk 1
+	att1 := createAttestationWrapper(
+		types.Epoch(params.chunkSize-2),
 		types.Epoch(params.chunkSize),
+		[]uint64{0, 1},
+		nil, /* signing root */
+	)
+	att2 := createAttestationWrapper(
+		types.Epoch(params.chunkSize-1),
+		types.Epoch(params.chunkSize+1),
 		[]uint64{0, 1},
 		nil, /* signing root */
 	)
 
 	// We attempt to process the batch.
 	s.attestationQueueLock.Lock()
-	s.attestationQueue = []*slashertypes.IndexedAttestationWrapper{att}
+	s.attestationQueue = []*slashertypes.IndexedAttestationWrapper{att1, att2}
 	s.attestationQueueLock.Unlock()
-	currentEpochChan <- att.IndexedAttestation.Data.Target.Epoch
+	currentEpochChan <- att2.IndexedAttestation.Data.Target.Epoch
 
 	cancel()
 	<-exitChan
