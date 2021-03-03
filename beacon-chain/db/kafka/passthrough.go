@@ -278,13 +278,13 @@ func (e Exporter) LatestEpochAttestedForValidators(
 // AttestationRecordForValidator -- passthrough
 func (e Exporter) AttestationRecordForValidator(
 	ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch,
-) (*slashertypes.CompactAttestation, error) {
+) (*slashertypes.IndexedAttestationWrapper, error) {
 	return e.db.AttestationRecordForValidator(ctx, validatorIdx, targetEpoch)
 }
 
 // CheckAttesterDoubleVotes -- passthrough
 func (e Exporter) CheckAttesterDoubleVotes(
-	ctx context.Context, attestations []*slashertypes.CompactAttestation,
+	ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper,
 ) ([]*slashertypes.AttesterDoubleVote, error) {
 	return e.db.CheckAttesterDoubleVotes(ctx, attestations)
 }
@@ -306,21 +306,21 @@ func (e Exporter) SaveLatestEpochAttestedForValidators(
 // SaveAttestationRecordForValidator -- passthrough
 func (e Exporter) SaveAttestationRecordsForValidators(
 	ctx context.Context,
-	attestations []*slashertypes.CompactAttestation,
+	attestations []*slashertypes.IndexedAttestationWrapper,
 ) error {
 	return e.db.SaveAttestationRecordsForValidators(ctx, attestations)
 }
 
 // CheckDoubleBlockProposals -- passthrough
 func (e Exporter) CheckDoubleBlockProposals(
-	ctx context.Context, proposals []*slashertypes.CompactBeaconBlock,
+	ctx context.Context, proposals []*slashertypes.SignedBlockHeaderWrapper,
 ) ([]*slashertypes.DoubleBlockProposal, error) {
 	return e.db.CheckDoubleBlockProposals(ctx, proposals)
 }
 
 // SaveBlockProposals -- passthrough
 func (e Exporter) SaveBlockProposals(
-	ctx context.Context, proposals []*slashertypes.CompactBeaconBlock,
+	ctx context.Context, proposals []*slashertypes.SignedBlockHeaderWrapper,
 ) error {
 	return e.db.SaveBlockProposals(ctx, proposals)
 }
