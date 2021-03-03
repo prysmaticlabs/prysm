@@ -16,7 +16,7 @@ import (
 const dbExistsYesNoPrompt = "A database file already exists in the target directory. " +
 	"Are you sure that you want to overwrite it? [y/n]"
 
-func restore(cliCtx *cli.Context) error {
+func Restore(cliCtx *cli.Context) error {
 	sourceFile := cliCtx.String(cmd.RestoreSourceFileFlag.Name)
 	targetDir := cliCtx.String(cmd.RestoreTargetDirFlag.Name)
 

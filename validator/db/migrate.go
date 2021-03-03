@@ -11,7 +11,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func migrateUp(cliCtx *cli.Context) error {
+func MigrateUp(cliCtx *cli.Context) error {
 	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
 
 	if !fileutil.FileExists(path.Join(dataDir, kv.ProtectionDbFileName)) {
@@ -28,7 +28,7 @@ func migrateUp(cliCtx *cli.Context) error {
 	return validatorDB.RunUpMigrations(ctx)
 }
 
-func migrateDown(cliCtx *cli.Context) error {
+func MigrateDown(cliCtx *cli.Context) error {
 	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
 
 	if !fileutil.FileExists(path.Join(dataDir, kv.ProtectionDbFileName)) {
