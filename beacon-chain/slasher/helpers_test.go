@@ -30,13 +30,13 @@ func TestService_groupByValidatorChunkIndex(t *testing.T) {
 				validatorChunkSize: 2,
 			},
 			atts: []*slashertypes.IndexedAttestationWrapper{
-				createAttestationWrapper(0, 0, []uint64{0, 1}, nil),
-				createAttestationWrapper(0, 0, []uint64{0, 1}, nil),
+				createAttestationWrapper(0, 0, []uint64{0, 1} /* indices */, nil /* signingRoot */),
+				createAttestationWrapper(0, 0, []uint64{0, 1} /* indices */, nil /* signingRoot */),
 			},
 			want: map[uint64][]*slashertypes.IndexedAttestationWrapper{
 				0: {
-					createAttestationWrapper(0, 0, []uint64{0, 1}, nil),
-					createAttestationWrapper(0, 0, []uint64{0, 1}, nil),
+					createAttestationWrapper(0, 0, []uint64{0, 1} /* indices */, nil /* signingRoot */),
+					createAttestationWrapper(0, 0, []uint64{0, 1} /* indices */, nil /* signingRoot */),
 				},
 			},
 		},
@@ -46,17 +46,17 @@ func TestService_groupByValidatorChunkIndex(t *testing.T) {
 				validatorChunkSize: 2,
 			},
 			atts: []*slashertypes.IndexedAttestationWrapper{
-				createAttestationWrapper(0, 0, []uint64{0, 2, 4}, nil),
+				createAttestationWrapper(0, 0, []uint64{0, 2, 4} /* indices */, nil /* signingRoot */),
 			},
 			want: map[uint64][]*slashertypes.IndexedAttestationWrapper{
 				0: {
-					createAttestationWrapper(0, 0, []uint64{0, 2, 4}, nil),
+					createAttestationWrapper(0, 0, []uint64{0, 2, 4} /* indices */, nil /* signingRoot */),
 				},
 				1: {
-					createAttestationWrapper(0, 0, []uint64{0, 2, 4}, nil),
+					createAttestationWrapper(0, 0, []uint64{0, 2, 4} /* indices */, nil /* signingRoot */),
 				},
 				2: {
-					createAttestationWrapper(0, 0, []uint64{0, 2, 4}, nil),
+					createAttestationWrapper(0, 0, []uint64{0, 2, 4} /* indices */, nil /* signingRoot */),
 				},
 			},
 		},

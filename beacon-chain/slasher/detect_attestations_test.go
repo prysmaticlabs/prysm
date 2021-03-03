@@ -378,7 +378,7 @@ func TestService_processQueuedAttestations(t *testing.T) {
 			Database: beaconDB,
 		},
 		attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-			createAttestationWrapper(0, 1, []uint64{0, 1}, nil),
+			createAttestationWrapper(0, 1, []uint64{0, 1} /* indices */, nil /* signingRoot */),
 		},
 	}
 	ctx, cancel := context.WithCancel(context.Background())

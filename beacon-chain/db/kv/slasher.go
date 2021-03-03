@@ -337,3 +337,18 @@ func encodeProposalRecord(blkHdr *slashertypes.SignedBlockHeaderWrapper) ([]byte
 	}
 	return append(blkHdr.SigningRoot[:], encodedHdr...), nil
 }
+
+func decodeProposalRecord(encoded []byte) (*slashertypes.SignedBlockHeaderWrapper, error) {
+	if len(encoded) < 32 {
+		return nil, fmt.Errorf("wrong length for encoded proposal record, want 32, got %d", len(encoded))
+	}
+	signingRoot := encoded[:32]
+	decodedBlkHdr := &ethpb.SignedBeaconBlockHeader{}
+	if err := decodedBlkHdr.Unmarshal(encoded[32:]); err != nil {
+		return nil, err
+	}
+	return &slashertypes.SignedBlockHeaderWrapper{
+		SignedBeaconBlockHeader: decodedBlkHdr,
+		SigningRoot:             bytesutil.ToBytes32(signingRoot),
+	}, nil
+}
