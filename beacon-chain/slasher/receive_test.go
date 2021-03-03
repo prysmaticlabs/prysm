@@ -226,40 +226,27 @@ func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
 		exitChan <- struct{}{}
 	}()
 
-	// We process submit attestations from epoch 0 all the way to
-	// params.chunkSize + 1, which will guarantee we cross over into
-	// a new chunk index. What we want to test here is if we can proceed
+	// We process submit attestations from chunk index 0 to chunk index 1.
+	// What we want to test here is if we can proceed
 	// with processing queued attestations once the chunk index changes.
 	// For example, epochs 0 - 15 are chunk 0, epochs 16 - 31 are chunk 1, etc.
-	startEpoch := types.Epoch(0)
+	startEpoch := types.Epoch(params.chunkSize)
 	endEpoch := types.Epoch(params.chunkSize + 1)
 
-	for i := startEpoch; i < endEpoch; i++ {
+	for i := startEpoch; i <= endEpoch; i++ {
 		source := types.Epoch(0)
 		target := types.Epoch(0)
 		if i != 0 {
 			source = i - 1
 			target = i
 		}
+		t.Logf("Producing attestation with source %d, target %d", source, target)
 		s.attestationQueueLock.Lock()
 		var sr [32]byte
 		copy(sr[:], fmt.Sprintf("%d", i))
-		s.attestationQueue = []*slashertypes.IndexedAttestationWrapper{
-			{
-				IndexedAttestation: &ethpb.IndexedAttestation{
-					AttestingIndices: []uint64{0},
-					Data: &ethpb.AttestationData{
-						Source: &ethpb.Checkpoint{
-							Epoch: source,
-						},
-						Target: &ethpb.Checkpoint{
-							Epoch: target,
-						},
-					},
-				},
-				SigningRoot: sr,
-			},
-		}
+		att := createAttestationWrapper(source, target, []uint64{0}, sr[:])
+		t.Log(params.chunkIndex(source))
+		s.attestationQueue = []*slashertypes.IndexedAttestationWrapper{att}
 		s.attestationQueueLock.Unlock()
 		currentEpochChan <- i
 	}
@@ -267,7 +254,49 @@ func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
 	cancel()
 	<-exitChan
 	require.LogsDoNotContain(t, hook, "Slashable offenses found")
-	require.LogsDoNotContain(t, hook, "not found")
+	require.LogsDoNotContain(t, hook, "Could not detect")
+}
+
+func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
+	hook := logTest.NewGlobal()
+	defer hook.Reset()
+
+	beaconDB := dbtest.SetupDB(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	params := DefaultParams()
+
+	s := &Service{
+		serviceCfg: &ServiceConfig{
+			Database: beaconDB,
+		},
+		params:           params,
+		attestationQueue: make([]*slashertypes.IndexedAttestationWrapper, 0),
+	}
+	currentEpochChan := make(chan types.Epoch)
+	exitChan := make(chan struct{})
+	go func() {
+		s.processQueuedAttestations(ctx, currentEpochChan)
+		exitChan <- struct{}{}
+	}()
+
+	// We create an attestation fully spanning chunk indices 0 and chunk 1
+	att := createAttestationWrapper(
+		types.Epoch(params.chunkSize-1),
+		types.Epoch(params.chunkSize),
+		[]uint64{0, 1},
+		nil, /* signing root */
+	)
+
+	// We attempt to process the batch.
+	s.attestationQueueLock.Lock()
+	s.attestationQueue = []*slashertypes.IndexedAttestationWrapper{att}
+	s.attestationQueueLock.Unlock()
+	currentEpochChan <- att.IndexedAttestation.Data.Target.Epoch
+
+	cancel()
+	<-exitChan
+	require.LogsDoNotContain(t, hook, "Slashable offenses found")
+	require.LogsDoNotContain(t, hook, "Could not detect")
 }
 
 func TestSlasher_receiveAttestations_OK(t *testing.T) {
