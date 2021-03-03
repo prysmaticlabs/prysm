@@ -19,7 +19,7 @@ func (s *Service) detectSlashableBlocks(
 	// of proposals with respect to each other.
 	existingProposals := make(map[string][32]byte)
 	for i, proposal := range proposedBlocks {
-		key := uintToString(uint64(proposal.SignedBeaconBlockHeader.Header.Slot)) + ":" + uintToString(uint64(proposal.SignedBeaconBlockHeader.Header.ProposerIndex))
+		key := proposalKey(proposal)
 		existingSigningRoot, ok := existingProposals[key]
 		if !ok {
 			existingProposals[key] = proposal.SigningRoot
@@ -62,4 +62,9 @@ func (s *Service) checkDoubleProposalsOnDisk(
 		safeProposals = append(safeProposals, proposal)
 	}
 	return s.serviceCfg.Database.SaveBlockProposals(ctx, safeProposals)
+}
+
+func proposalKey(proposal *slashertypes.SignedBlockHeaderWrapper) string {
+	header := proposal.SignedBeaconBlockHeader.Header
+	return uintToString(uint64(header.Slot)) + ":" + uintToString(uint64(header.ProposerIndex))
 }
