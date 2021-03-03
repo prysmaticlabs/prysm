@@ -2,7 +2,6 @@ package slasher
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -262,8 +261,6 @@ func TestSlasher_receiveAttestations_OnlyValidAttestations(t *testing.T) {
 	wanted := []*slashertypes.IndexedAttestationWrapper{
 		validAtt,
 	}
-	fmt.Println(s.attestationQueue[0].SigningRoot)
-	fmt.Println(wanted[0].SigningRoot)
 	require.DeepEqual(t, wanted, s.attestationQueue)
 }
 
@@ -280,35 +277,16 @@ func TestSlasher_receiveBlocks_OK(t *testing.T) {
 		s.receiveBlocks(ctx)
 		exitChan <- struct{}{}
 	}()
-	block1 := &ethpb.SignedBeaconBlockHeader{
-		Header: &ethpb.BeaconBlockHeader{
-			ProposerIndex: 1,
-		},
-	}
-	block2 := &ethpb.SignedBeaconBlockHeader{
-		Header: &ethpb.BeaconBlockHeader{
-			ProposerIndex: 2,
-		},
-	}
+
+	block1 := createProposalWrapper(0, 1, nil).SignedBeaconBlockHeader
+	block2 := createProposalWrapper(0, 2, nil).SignedBeaconBlockHeader
 	s.beaconBlocksChan <- block1
 	s.beaconBlocksChan <- block2
 	cancel()
 	<-exitChan
 	wanted := []*slashertypes.SignedBlockHeaderWrapper{
-		{
-			SignedBeaconBlockHeader: &ethpb.SignedBeaconBlockHeader{
-				Header: &ethpb.BeaconBlockHeader{
-					ProposerIndex: block1.Header.ProposerIndex,
-				},
-			},
-		},
-		{
-			SignedBeaconBlockHeader: &ethpb.SignedBeaconBlockHeader{
-				Header: &ethpb.BeaconBlockHeader{
-					ProposerIndex: block2.Header.ProposerIndex,
-				},
-			},
-		},
+		createProposalWrapper(0, block1.Header.ProposerIndex, nil),
+		createProposalWrapper(0, block2.Header.ProposerIndex, nil),
 	}
 	require.DeepEqual(t, wanted, s.beaconBlocksQueue)
 }
@@ -322,13 +300,7 @@ func TestService_processQueuedBlocks(t *testing.T) {
 			Database: beaconDB,
 		},
 		beaconBlocksQueue: []*slashertypes.SignedBlockHeaderWrapper{
-			{
-				SignedBeaconBlockHeader: &ethpb.SignedBeaconBlockHeader{
-					Header: &ethpb.BeaconBlockHeader{
-						ProposerIndex: 1,
-					},
-				},
-			},
+			createProposalWrapper(0, 1, nil),
 		},
 	}
 	ctx, cancel := context.WithCancel(context.Background())

@@ -95,10 +95,6 @@ func (s *Store) CheckAttesterDoubleVotes(
 				}
 				existingSigningRoot := bytesutil.ToBytes32(existingAttRecord[:32])
 				if existingSigningRoot != att.SigningRoot {
-					//existingAtt, err := decodeAttestationRecord(existingEncodedRecord)
-					//if err != nil {
-					//	return err
-					//}
 					doubleVotes = append(doubleVotes, &slashertypes.AttesterDoubleVote{
 						ValidatorIndex:  types.ValidatorIndex(valIdx),
 						Target:          att.IndexedAttestation.Data.Target.Epoch,
@@ -344,7 +340,7 @@ func encodeProposalRecord(blkHdr *slashertypes.SignedBlockHeaderWrapper) ([]byte
 
 func decodeProposalRecord(encoded []byte) (*slashertypes.SignedBlockHeaderWrapper, error) {
 	if len(encoded) < 32 {
-		return nil, fmt.Errorf("wrong length for encoded attestation record, want 32, got %d", len(encoded))
+		return nil, fmt.Errorf("wrong length for encoded proposal record, want 32, got %d", len(encoded))
 	}
 	signingRoot := encoded[:32]
 	decodedBlkHdr := &ethpb.SignedBeaconBlockHeader{}
