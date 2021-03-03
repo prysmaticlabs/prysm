@@ -240,6 +240,7 @@ func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
 			source = i - 1
 			target = i
 		}
+		s.attestationQueueLock.Lock()
 		s.attestationQueue = []*slashertypes.CompactAttestation{
 			{
 				AttestingIndices: []uint64{0},
@@ -247,6 +248,7 @@ func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
 				Target:           target,
 			},
 		}
+		s.attestationQueueLock.Unlock()
 		currentEpochChan <- i
 	}
 
