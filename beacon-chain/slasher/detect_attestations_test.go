@@ -231,6 +231,8 @@ func Test_checkDoubleVotes_SlashableInputAttestations(t *testing.T) {
 			TargetEpoch:     2,
 			SigningRoot:     [32]byte{2},
 			PrevSigningRoot: [32]byte{1},
+			PrevAttestation: createAttestationWrapper(0, 2, []uint64{1, 2}, []byte{1}).IndexedAttestation,
+			Attestation:     createAttestationWrapper(0, 2, []uint64{1, 2}, []byte{2}).IndexedAttestation,
 		},
 		{
 			Kind:            slashertypes.DoubleVote,
@@ -238,6 +240,8 @@ func Test_checkDoubleVotes_SlashableInputAttestations(t *testing.T) {
 			TargetEpoch:     2,
 			SigningRoot:     [32]byte{2},
 			PrevSigningRoot: [32]byte{1},
+			PrevAttestation: createAttestationWrapper(0, 2, []uint64{1, 2}, []byte{1}).IndexedAttestation,
+			Attestation:     createAttestationWrapper(0, 2, []uint64{1, 2}, []byte{2}).IndexedAttestation,
 		},
 	}
 	slashings, err := srv.checkDoubleVotes(ctx, atts)
@@ -270,6 +274,8 @@ func Test_checkDoubleVotes_SlashableAttestationsOnDisk(t *testing.T) {
 			TargetEpoch:     2,
 			SigningRoot:     [32]byte{2},
 			PrevSigningRoot: [32]byte{1},
+			PrevAttestation: createAttestationWrapper(0, 2, []uint64{1, 2}, []byte{1}).IndexedAttestation,
+			Attestation:     createAttestationWrapper(0, 2, []uint64{1, 2}, []byte{2}).IndexedAttestation,
 		},
 		{
 			Kind:            slashertypes.DoubleVote,
@@ -277,6 +283,8 @@ func Test_checkDoubleVotes_SlashableAttestationsOnDisk(t *testing.T) {
 			TargetEpoch:     2,
 			SigningRoot:     [32]byte{2},
 			PrevSigningRoot: [32]byte{1},
+			PrevAttestation: createAttestationWrapper(0, 2, []uint64{1, 2}, []byte{1}).IndexedAttestation,
+			Attestation:     createAttestationWrapper(0, 2, []uint64{1, 2}, []byte{2}).IndexedAttestation,
 		},
 	}
 	newAtts := []*slashertypes.IndexedAttestationWrapper{

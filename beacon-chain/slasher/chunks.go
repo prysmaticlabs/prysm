@@ -199,10 +199,11 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 				return &slashertypes.Slashing{
 					Kind:            slashertypes.SurroundingVote,
 					ValidatorIndex:  validatorIdx,
-					PrevSourceEpoch: existingAttRecord.IndexedAttestation.Data.Source.Epoch,
-					PrevTargetEpoch: existingAttRecord.IndexedAttestation.Data.Target.Epoch,
-					SourceEpoch:     sourceEpoch,
 					TargetEpoch:     targetEpoch,
+					PrevSigningRoot: existingAttRecord.SigningRoot,
+					SigningRoot:     attestation.SigningRoot,
+					PrevAttestation: existingAttRecord.IndexedAttestation,
+					Attestation:     attestation.IndexedAttestation,
 				}, nil
 			}
 		}
@@ -247,10 +248,11 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 				return &slashertypes.Slashing{
 					Kind:            slashertypes.SurroundedVote,
 					ValidatorIndex:  validatorIdx,
-					PrevSourceEpoch: existingAttRecord.IndexedAttestation.Data.Source.Epoch,
-					PrevTargetEpoch: existingAttRecord.IndexedAttestation.Data.Target.Epoch,
-					SourceEpoch:     sourceEpoch,
 					TargetEpoch:     targetEpoch,
+					PrevSigningRoot: existingAttRecord.SigningRoot,
+					SigningRoot:     attestation.SigningRoot,
+					PrevAttestation: existingAttRecord.IndexedAttestation,
+					Attestation:     attestation.IndexedAttestation,
 				}, nil
 			}
 		}

@@ -77,28 +77,28 @@ func TestStore_CheckAttesterDoubleVotes(t *testing.T) {
 
 	wanted := []*slashertypes.AttesterDoubleVote{
 		{
-			ValidatorIndex:  0,
-			SigningRoot:     [32]byte{2},
-			PrevSigningRoot: [32]byte{1},
-			Target:          3,
+			ValidatorIndex:         0,
+			Target:                 3,
+			PrevAttestationWrapper: createAttestationWrapper(0, 3, []uint64{0}, []byte{1}),
+			AttestationWrapper:     createAttestationWrapper(0, 3, []uint64{0}, []byte{2}),
 		},
 		{
-			ValidatorIndex:  1,
-			SigningRoot:     [32]byte{2},
-			PrevSigningRoot: [32]byte{1},
-			Target:          3,
+			ValidatorIndex:         1,
+			Target:                 3,
+			PrevAttestationWrapper: createAttestationWrapper(0, 3, []uint64{1}, []byte{1}),
+			AttestationWrapper:     createAttestationWrapper(0, 3, []uint64{1}, []byte{2}),
 		},
 		{
-			ValidatorIndex:  2,
-			SigningRoot:     [32]byte{2},
-			PrevSigningRoot: [32]byte{1},
-			Target:          4,
+			ValidatorIndex:         2,
+			Target:                 4,
+			PrevAttestationWrapper: createAttestationWrapper(0, 4, []uint64{2}, []byte{1}),
+			AttestationWrapper:     createAttestationWrapper(0, 4, []uint64{2}, []byte{2}),
 		},
 		{
-			ValidatorIndex:  3,
-			SigningRoot:     [32]byte{2},
-			PrevSigningRoot: [32]byte{1},
-			Target:          4,
+			ValidatorIndex:         3,
+			Target:                 4,
+			PrevAttestationWrapper: createAttestationWrapper(0, 4, []uint64{3}, []byte{1}),
+			AttestationWrapper:     createAttestationWrapper(0, 4, []uint64{3}, []byte{2}),
 		},
 	}
 	doubleVotes, err := beaconDB.CheckAttesterDoubleVotes(ctx, slashableAtts)
@@ -215,7 +215,7 @@ func TestStore_ExistingBlockProposals(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, len(proposals), len(doubleProposals))
 	for i, existing := range doubleProposals {
-		require.DeepNotEqual(t, proposals[i].SigningRoot, existing.ExistingSigningRoot)
+		require.DeepNotEqual(t, proposals[i].SigningRoot, existing.BeaconBlockWrapper.SigningRoot)
 	}
 }
 

@@ -17,16 +17,16 @@ func (s *Service) detectSlashableBlocks(
 	defer span.End()
 	// We check if there are any slashable double proposals in the input list
 	// of proposals with respect to each other.
-	existingProposals := make(map[string][32]byte)
+	existingProposals := make(map[string]*slashertypes.SignedBlockHeaderWrapper)
 	for i, proposal := range proposedBlocks {
 		key := proposalKey(proposal)
-		existingSigningRoot, ok := existingProposals[key]
+		existingProposal, ok := existingProposals[key]
 		if !ok {
-			existingProposals[key] = proposal.SigningRoot
+			existingProposals[key] = proposal
 			continue
 		}
-		if isDoubleProposal(proposedBlocks[i].SigningRoot, existingSigningRoot) {
-			logDoubleProposal(proposedBlocks[i], existingSigningRoot)
+		if isDoubleProposal(proposedBlocks[i].SigningRoot, existingProposal.SigningRoot) {
+			logDoubleProposal(proposedBlocks[i], existingProposal)
 		}
 	}
 	// We check if there are any slashable double proposals in the input list
@@ -51,10 +51,10 @@ func (s *Service) checkDoubleProposalsOnDisk(
 		safeProposers[proposal.SignedBeaconBlockHeader.Header.ProposerIndex] = proposal
 	}
 	for i, doubleProposal := range doubleProposals {
-		logDoubleProposal(proposedBlocks[i], doubleProposal.ExistingSigningRoot)
+		logDoubleProposal(proposedBlocks[i], doubleProposal.PrevBeaconBlockWrapper)
 		// If a proposer is found to have committed a slashable offense, we delete
 		// them from the safe proposers map.
-		delete(safeProposers, doubleProposal.ProposerIndex)
+		delete(safeProposers, doubleProposal.ValidatorIndex)
 	}
 	// We save all the proposals that are determined "safe" and not-slashable to our database.
 	safeProposals := make([]*slashertypes.SignedBlockHeaderWrapper, 0, len(safeProposers))
