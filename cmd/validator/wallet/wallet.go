@@ -1,15 +1,19 @@
-package accounts
+package wallet
 
 import (
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/tos"
+	"github.com/prysmaticlabs/prysm/validator/accounts"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
-// WalletCommands for accounts for Prysm validators.
-var WalletCommands = &cli.Command{
+var log = logrus.WithField("prefix", "wallet")
+
+// Commands for wallets for Prysm validators.
+var Commands = &cli.Command{
 	Name:     "wallet",
 	Category: "wallet",
 	Usage:    "defines commands for interacting with eth2 validator wallets",
@@ -42,7 +46,7 @@ var WalletCommands = &cli.Command{
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
-				if _, err := CreateAndSaveWalletCli(cliCtx); err != nil {
+				if _, err := accounts.CreateAndSaveWalletCli(cliCtx); err != nil {
 					log.Fatalf("Could not create a wallet: %v", err)
 				}
 				return nil
@@ -72,7 +76,7 @@ var WalletCommands = &cli.Command{
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
-				if err := EditWalletConfigurationCli(cliCtx); err != nil {
+				if err := accounts.EditWalletConfigurationCli(cliCtx); err != nil {
 					log.Fatalf("Could not edit wallet configuration: %v", err)
 				}
 				return nil
@@ -101,7 +105,7 @@ var WalletCommands = &cli.Command{
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
-				if err := RecoverWalletCli(cliCtx); err != nil {
+				if err := accounts.RecoverWalletCli(cliCtx); err != nil {
 					log.Fatalf("Could not recover wallet: %v", err)
 				}
 				return nil
