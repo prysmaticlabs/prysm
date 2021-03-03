@@ -2,6 +2,7 @@ package slasher
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -216,7 +217,7 @@ func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
 			Database: beaconDB,
 		},
 		params:           params,
-		attestationQueue: make([]*slashertypes.CompactAttestation, 0),
+		attestationQueue: make([]*slashertypes.IndexedAttestationWrapper, 0),
 	}
 	currentEpochChan := make(chan types.Epoch)
 	exitChan := make(chan struct{})
@@ -241,11 +242,22 @@ func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
 			target = i
 		}
 		s.attestationQueueLock.Lock()
-		s.attestationQueue = []*slashertypes.CompactAttestation{
+		var sr [32]byte
+		copy(sr[:], fmt.Sprintf("%d", i))
+		s.attestationQueue = []*slashertypes.IndexedAttestationWrapper{
 			{
-				AttestingIndices: []uint64{0},
-				Source:           source,
-				Target:           target,
+				IndexedAttestation: &ethpb.IndexedAttestation{
+					AttestingIndices: []uint64{0},
+					Data: &ethpb.AttestationData{
+						Source: &ethpb.Checkpoint{
+							Epoch: source,
+						},
+						Target: &ethpb.Checkpoint{
+							Epoch: target,
+						},
+					},
+				},
+				SigningRoot: sr,
 			},
 		}
 		s.attestationQueueLock.Unlock()
