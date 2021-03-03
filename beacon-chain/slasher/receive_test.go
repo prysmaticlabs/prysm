@@ -245,7 +245,6 @@ func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
 		var sr [32]byte
 		copy(sr[:], fmt.Sprintf("%d", i))
 		att := createAttestationWrapper(source, target, []uint64{0}, sr[:])
-		t.Log(params.chunkIndex(source))
 		s.attestationQueue = []*slashertypes.IndexedAttestationWrapper{att}
 		s.attestationQueueLock.Unlock()
 		currentEpochChan <- i

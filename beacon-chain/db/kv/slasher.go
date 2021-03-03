@@ -15,10 +15,10 @@ import (
 
 // LatestEpochAttestedForValidator given a validator index returns the latest
 // epoch we have recorded the validator attested for.
-func (s *Store) LatestEpochAttestedForValidators(
+func (s *Store) LastCurrentEpochForValidators(
 	ctx context.Context, validatorIndices []types.ValidatorIndex,
 ) ([]*slashertypes.AttestedEpochForValidator, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.LatestEpochAttestedForValidators")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.LastCurrentEpochForValidators")
 	defer span.End()
 	attestedEpochs := make([]*slashertypes.AttestedEpochForValidator, 0)
 	err := s.db.View(func(tx *bolt.Tx) error {
@@ -47,19 +47,19 @@ func (s *Store) LatestEpochAttestedForValidators(
 
 // SaveLatestEpochAttestedForValidators updates the latest epoch a slice
 // of validator indices has attested to.
-func (s *Store) SaveLatestEpochAttestedForValidators(
+func (s *Store) SaveCurrentEpochForValidators(
 	ctx context.Context, validatorIndices []types.ValidatorIndex, epoch types.Epoch,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveLatestEpochAttestedForValidator")
 	defer span.End()
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestedEpochsByValidator)
+		val, err := epoch.MarshalSSZ()
+		if err != nil {
+			return err
+		}
 		for _, valIdx := range validatorIndices {
 			key, err := valIdx.MarshalSSZ()
-			if err != nil {
-				return err
-			}
-			val, err := epoch.MarshalSSZ()
 			if err != nil {
 				return err
 			}

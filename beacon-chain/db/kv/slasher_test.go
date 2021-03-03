@@ -41,14 +41,14 @@ func TestStore_LatestEpochAttestedForValidators(t *testing.T) {
 	indices := []types.ValidatorIndex{1, 2, 3}
 	epoch := types.Epoch(5)
 
-	attestedEpochs, err := beaconDB.LatestEpochAttestedForValidators(ctx, indices)
+	attestedEpochs, err := beaconDB.LastCurrentEpochForValidators(ctx, indices)
 	require.NoError(t, err)
 	require.Equal(t, true, len(attestedEpochs) == 0)
 
-	err = beaconDB.SaveLatestEpochAttestedForValidators(ctx, indices, epoch)
+	err = beaconDB.SaveCurrentEpochForValidators(ctx, indices, epoch)
 	require.NoError(t, err)
 
-	retrievedEpochs, err := beaconDB.LatestEpochAttestedForValidators(ctx, indices)
+	retrievedEpochs, err := beaconDB.LastCurrentEpochForValidators(ctx, indices)
 	require.NoError(t, err)
 	require.Equal(t, len(indices), len(retrievedEpochs))
 
