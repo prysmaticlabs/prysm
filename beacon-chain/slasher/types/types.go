@@ -1,6 +1,9 @@
 package types
 
-import types "github.com/prysmaticlabs/eth2-types"
+import (
+	types "github.com/prysmaticlabs/eth2-types"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+)
 
 // ChunkKind to differentiate what kind of span we are working
 // with for slashing detection, either min or max span.
@@ -11,13 +14,11 @@ const (
 	MaxSpan
 )
 
-// CompactAttestation containing only the required information
-// for attester slashing detection.
-type CompactAttestation struct {
-	AttestingIndices []uint64
-	Source           types.Epoch
-	Target           types.Epoch
-	SigningRoot      [32]byte
+// IndexedAttestationWrapper contains an indexed attestation with its
+// signing root to reduce duplicated computation.
+type IndexedAttestationWrapper struct {
+	IndexedAttestation *ethpb.IndexedAttestation
+	SigningRoot        [32]byte
 }
 
 // AttesterDoubleVote represents a double vote instance
@@ -44,12 +45,11 @@ type AttestedEpochForValidator struct {
 	Epoch          types.Epoch
 }
 
-// CompactBeaconBlock containing only the required information
-// for proposer slashing detection.
-type CompactBeaconBlock struct {
-	ProposerIndex types.ValidatorIndex
-	Slot          types.Slot
-	SigningRoot   [32]byte
+// SignedBlockHeaderWrapper contains an signed beacon block header with its
+// signing root to reduce duplicated computation.
+type SignedBlockHeaderWrapper struct {
+	SignedBeaconBlockHeader *ethpb.SignedBeaconBlockHeader
+	SigningRoot             [32]byte
 }
 
 // Slashing represents a compact format with all the information

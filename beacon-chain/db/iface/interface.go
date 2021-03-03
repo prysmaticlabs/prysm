@@ -63,15 +63,15 @@ type ReadOnlyDatabase interface {
 	) ([]*slashertypes.AttestedEpochForValidator, error)
 	AttestationRecordForValidator(
 		ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch,
-	) (*slashertypes.CompactAttestation, error)
+	) (*slashertypes.IndexedAttestationWrapper, error)
 	CheckAttesterDoubleVotes(
-		ctx context.Context, attestations []*slashertypes.CompactAttestation,
+		ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper,
 	) ([]*slashertypes.AttesterDoubleVote, error)
 	LoadSlasherChunks(
 		ctx context.Context, kind slashertypes.ChunkKind, diskKeys []uint64,
 	) ([][]uint16, []bool, error)
 	CheckDoubleBlockProposals(
-		ctx context.Context, proposals []*slashertypes.CompactBeaconBlock,
+		ctx context.Context, proposals []*slashertypes.SignedBlockHeaderWrapper,
 	) ([]*slashertypes.DoubleBlockProposal, error)
 }
 
@@ -108,13 +108,13 @@ type NoHeadAccessDatabase interface {
 	) error
 	SaveAttestationRecordsForValidators(
 		ctx context.Context,
-		attestations []*slashertypes.CompactAttestation,
+		attestations []*slashertypes.IndexedAttestationWrapper,
 	) error
 	SaveSlasherChunks(
 		ctx context.Context, kind slashertypes.ChunkKind, chunkKeys []uint64, chunks [][]uint16,
 	) error
 	SaveBlockProposals(
-		ctx context.Context, proposal []*slashertypes.CompactBeaconBlock,
+		ctx context.Context, proposal []*slashertypes.SignedBlockHeaderWrapper,
 	) error
 	// Run any required database migrations.
 	RunMigrations(ctx context.Context) error

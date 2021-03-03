@@ -15,36 +15,28 @@ func TestService_groupByValidatorChunkIndex(t *testing.T) {
 	tests := []struct {
 		name   string
 		params *Parameters
-		atts   []*slashertypes.CompactAttestation
-		want   map[uint64][]*slashertypes.CompactAttestation
+		atts   []*slashertypes.IndexedAttestationWrapper
+		want   map[uint64][]*slashertypes.IndexedAttestationWrapper
 	}{
 		{
 			name:   "No attestations returns empty map",
 			params: DefaultParams(),
-			atts:   make([]*slashertypes.CompactAttestation, 0),
-			want:   make(map[uint64][]*slashertypes.CompactAttestation),
+			atts:   make([]*slashertypes.IndexedAttestationWrapper, 0),
+			want:   make(map[uint64][]*slashertypes.IndexedAttestationWrapper),
 		},
 		{
 			name: "Groups multiple attestations belonging to single validator chunk",
 			params: &Parameters{
 				validatorChunkSize: 2,
 			},
-			atts: []*slashertypes.CompactAttestation{
-				{
-					AttestingIndices: []uint64{0, 1},
-				},
-				{
-					AttestingIndices: []uint64{0, 1},
-				},
+			atts: []*slashertypes.IndexedAttestationWrapper{
+				createAttestationWrapper(0, 0, []uint64{0, 1} /* indices */, nil /* signingRoot */),
+				createAttestationWrapper(0, 0, []uint64{0, 1} /* indices */, nil /* signingRoot */),
 			},
-			want: map[uint64][]*slashertypes.CompactAttestation{
+			want: map[uint64][]*slashertypes.IndexedAttestationWrapper{
 				0: {
-					{
-						AttestingIndices: []uint64{0, 1},
-					},
-					{
-						AttestingIndices: []uint64{0, 1},
-					},
+					createAttestationWrapper(0, 0, []uint64{0, 1} /* indices */, nil /* signingRoot */),
+					createAttestationWrapper(0, 0, []uint64{0, 1} /* indices */, nil /* signingRoot */),
 				},
 			},
 		},
@@ -53,26 +45,18 @@ func TestService_groupByValidatorChunkIndex(t *testing.T) {
 			params: &Parameters{
 				validatorChunkSize: 2,
 			},
-			atts: []*slashertypes.CompactAttestation{
-				{
-					AttestingIndices: []uint64{0, 2, 4},
-				},
+			atts: []*slashertypes.IndexedAttestationWrapper{
+				createAttestationWrapper(0, 0, []uint64{0, 2, 4} /* indices */, nil /* signingRoot */),
 			},
-			want: map[uint64][]*slashertypes.CompactAttestation{
+			want: map[uint64][]*slashertypes.IndexedAttestationWrapper{
 				0: {
-					{
-						AttestingIndices: []uint64{0, 2, 4},
-					},
+					createAttestationWrapper(0, 0, []uint64{0, 2, 4} /* indices */, nil /* signingRoot */),
 				},
 				1: {
-					{
-						AttestingIndices: []uint64{0, 2, 4},
-					},
+					createAttestationWrapper(0, 0, []uint64{0, 2, 4} /* indices */, nil /* signingRoot */),
 				},
 				2: {
-					{
-						AttestingIndices: []uint64{0, 2, 4},
-					},
+					createAttestationWrapper(0, 0, []uint64{0, 2, 4} /* indices */, nil /* signingRoot */),
 				},
 			},
 		},
@@ -93,14 +77,14 @@ func TestService_groupByChunkIndex(t *testing.T) {
 	tests := []struct {
 		name   string
 		params *Parameters
-		atts   []*slashertypes.CompactAttestation
-		want   map[uint64][]*slashertypes.CompactAttestation
+		atts   []*slashertypes.IndexedAttestationWrapper
+		want   map[uint64][]*slashertypes.IndexedAttestationWrapper
 	}{
 		{
 			name:   "No attestations returns empty map",
 			params: DefaultParams(),
-			atts:   make([]*slashertypes.CompactAttestation, 0),
-			want:   make(map[uint64][]*slashertypes.CompactAttestation),
+			atts:   make([]*slashertypes.IndexedAttestationWrapper, 0),
+			want:   make(map[uint64][]*slashertypes.IndexedAttestationWrapper),
 		},
 		{
 			name: "Groups multiple attestations belonging to single chunk",
@@ -108,22 +92,14 @@ func TestService_groupByChunkIndex(t *testing.T) {
 				chunkSize:     2,
 				historyLength: 3,
 			},
-			atts: []*slashertypes.CompactAttestation{
-				{
-					Source: 0,
-				},
-				{
-					Source: 1,
-				},
+			atts: []*slashertypes.IndexedAttestationWrapper{
+				createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */),
+				createAttestationWrapper(1, 0, nil /* indices */, nil /* signingRoot */),
 			},
-			want: map[uint64][]*slashertypes.CompactAttestation{
+			want: map[uint64][]*slashertypes.IndexedAttestationWrapper{
 				0: {
-					{
-						Source: 0,
-					},
-					{
-						Source: 1,
-					},
+					createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */),
+					createAttestationWrapper(1, 0, nil /* indices */, nil /* signingRoot */),
 				},
 			},
 		},
@@ -133,30 +109,18 @@ func TestService_groupByChunkIndex(t *testing.T) {
 				chunkSize:     2,
 				historyLength: 3,
 			},
-			atts: []*slashertypes.CompactAttestation{
-				{
-					Source: 0,
-				},
-				{
-					Source: 1,
-				},
-				{
-					Source: 2,
-				},
+			atts: []*slashertypes.IndexedAttestationWrapper{
+				createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */),
+				createAttestationWrapper(1, 0, nil /* indices */, nil /* signingRoot */),
+				createAttestationWrapper(2, 0, nil /* indices */, nil /* signingRoot */),
 			},
-			want: map[uint64][]*slashertypes.CompactAttestation{
+			want: map[uint64][]*slashertypes.IndexedAttestationWrapper{
 				0: {
-					{
-						Source: 0,
-					},
-					{
-						Source: 1,
-					},
+					createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */),
+					createAttestationWrapper(1, 0, nil /* indices */, nil /* signingRoot */),
 				},
 				1: {
-					{
-						Source: 2,
-					},
+					createAttestationWrapper(2, 0, nil /* indices */, nil /* signingRoot */),
 				},
 			},
 		},

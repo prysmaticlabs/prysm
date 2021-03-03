@@ -22,13 +22,11 @@ func (s *Service) receiveAttestations(ctx context.Context) {
 			if !validateAttestationIntegrity(att) {
 				continue
 			}
-			compactAtt := &slashertypes.CompactAttestation{
-				AttestingIndices: att.AttestingIndices,
-				Source:           att.Data.Source.Epoch,
-				Target:           att.Data.Target.Epoch,
+			attWrapper := &slashertypes.IndexedAttestationWrapper{
+				IndexedAttestation: att,
 			}
 			s.attestationQueueLock.Lock()
-			s.attestationQueue = append(s.attestationQueue, compactAtt)
+			s.attestationQueue = append(s.attestationQueue, attWrapper)
 			s.attestationQueueLock.Unlock()
 		case err := <-sub.Err():
 			log.WithError(err).Debug("Subscriber closed with error")
@@ -48,12 +46,11 @@ func (s *Service) receiveBlocks(ctx context.Context) {
 		select {
 		case blockHeader := <-s.beaconBlocksChan:
 			// TODO(#8331): Defer blocks from the future for later processing.
-			compactBlock := &slashertypes.CompactBeaconBlock{
-				ProposerIndex: types.ValidatorIndex(blockHeader.ProposerIndex),
-				Slot:          blockHeader.Slot,
+			wrappedProposal := &slashertypes.SignedBlockHeaderWrapper{
+				SignedBeaconBlockHeader: blockHeader,
 			}
 			s.blockQueueLock.Lock()
-			s.beaconBlocksQueue = append(s.beaconBlocksQueue, compactBlock)
+			s.beaconBlocksQueue = append(s.beaconBlocksQueue, wrappedProposal)
 			s.blockQueueLock.Unlock()
 		case err := <-sub.Err():
 			log.WithError(err).Debug("Subscriber closed with error")
@@ -74,7 +71,7 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 		case currentEpoch := <-epochTicker:
 			s.attestationQueueLock.Lock()
 			attestations := s.attestationQueue
-			s.attestationQueue = make([]*slashertypes.CompactAttestation, 0)
+			s.attestationQueue = make([]*slashertypes.IndexedAttestationWrapper, 0)
 			s.attestationQueueLock.Unlock()
 			log.WithFields(logrus.Fields{
 				"currentEpoch": currentEpoch,
@@ -113,7 +110,7 @@ func (s *Service) processQueuedBlocks(ctx context.Context, epochTicker <-chan ty
 		case currentEpoch := <-epochTicker:
 			s.blockQueueLock.Lock()
 			blocks := s.beaconBlocksQueue
-			s.beaconBlocksQueue = make([]*slashertypes.CompactBeaconBlock, 0)
+			s.beaconBlocksQueue = make([]*slashertypes.SignedBlockHeaderWrapper, 0)
 			s.blockQueueLock.Unlock()
 			log.WithFields(logrus.Fields{
 				"currentEpoch": currentEpoch,

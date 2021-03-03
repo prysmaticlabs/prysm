@@ -5,7 +5,10 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -21,19 +24,14 @@ func TestStore_AttestationRecordForValidator_SaveRetrieve(t *testing.T) {
 	require.Equal(t, true, attRecord == nil)
 
 	sr := [32]byte{1}
-	err = beaconDB.SaveAttestationRecordsForValidators(ctx, []*slashertypes.CompactAttestation{
-		{
-			AttestingIndices: []uint64{uint64(valIdx)},
-			Target:           target,
-			Source:           source,
-			SigningRoot:      sr,
-		},
+	err = beaconDB.SaveAttestationRecordsForValidators(ctx, []*slashertypes.IndexedAttestationWrapper{
+		createAttestationWrapper(source, target, []uint64{uint64(valIdx)}, sr[:]),
 	})
 	require.NoError(t, err)
 	attRecord, err = beaconDB.AttestationRecordForValidator(ctx, valIdx, target)
 	require.NoError(t, err)
-	assert.DeepEqual(t, target, attRecord.Target)
-	assert.DeepEqual(t, source, attRecord.Source)
+	assert.DeepEqual(t, target, attRecord.IndexedAttestation.Data.Target.Epoch)
+	assert.DeepEqual(t, source, attRecord.IndexedAttestation.Data.Source.Epoch)
 	assert.DeepEqual(t, sr, attRecord.SigningRoot)
 }
 
@@ -66,35 +64,15 @@ func TestStore_LatestEpochAttestedForValidators(t *testing.T) {
 func TestStore_CheckAttesterDoubleVotes(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := setupDB(t)
-	err := beaconDB.SaveAttestationRecordsForValidators(ctx, []*slashertypes.CompactAttestation{
-		{
-			AttestingIndices: []uint64{0, 1},
-			Source:           2,
-			Target:           3,
-			SigningRoot:      [32]byte{1},
-		},
-		{
-			AttestingIndices: []uint64{2, 3},
-			Source:           3,
-			Target:           4,
-			SigningRoot:      [32]byte{1},
-		},
+	err := beaconDB.SaveAttestationRecordsForValidators(ctx, []*slashertypes.IndexedAttestationWrapper{
+		createAttestationWrapper(2, 3, []uint64{0, 1}, []byte{1}),
+		createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{1}),
 	})
 	require.NoError(t, err)
 
-	slashableAtts := []*slashertypes.CompactAttestation{
-		{
-			AttestingIndices: []uint64{0, 1},
-			Source:           2,
-			Target:           3,
-			SigningRoot:      [32]byte{2}, // Different signing root.
-		},
-		{
-			AttestingIndices: []uint64{2, 3},
-			Source:           3,
-			Target:           4,
-			SigningRoot:      [32]byte{2}, // Different signing root.
-		},
+	slashableAtts := []*slashertypes.IndexedAttestationWrapper{
+		createAttestationWrapper(2, 3, []uint64{0, 1}, []byte{2}), // Different signing root.
+		createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{2}), // Different signing root.
 	}
 
 	wanted := []*slashertypes.AttesterDoubleVote{
@@ -190,21 +168,33 @@ func TestStore_SlasherChunk_SaveRetrieve(t *testing.T) {
 func TestStore_ExistingBlockProposals(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := setupDB(t)
-	proposals := []*slashertypes.CompactBeaconBlock{
+	proposals := []*slashertypes.SignedBlockHeaderWrapper{
 		{
-			ProposerIndex: 1,
-			Slot:          1,
-			SigningRoot:   [32]byte{1},
+			SignedBeaconBlockHeader: &ethpb.SignedBeaconBlockHeader{
+				Header: &ethpb.BeaconBlockHeader{
+					ProposerIndex: 1,
+					Slot:          1,
+				},
+			},
+			SigningRoot: [32]byte{1},
 		},
 		{
-			ProposerIndex: 1,
-			Slot:          2,
-			SigningRoot:   [32]byte{1},
+			SignedBeaconBlockHeader: &ethpb.SignedBeaconBlockHeader{
+				Header: &ethpb.BeaconBlockHeader{
+					ProposerIndex: 1,
+					Slot:          2,
+				},
+			},
+			SigningRoot: [32]byte{1},
 		},
 		{
-			ProposerIndex: 1,
-			Slot:          3,
-			SigningRoot:   [32]byte{1},
+			SignedBeaconBlockHeader: &ethpb.SignedBeaconBlockHeader{
+				Header: &ethpb.BeaconBlockHeader{
+					ProposerIndex: 1,
+					Slot:          3,
+				},
+			},
+			SigningRoot: [32]byte{1},
 		},
 	}
 	// First time checking should return empty existing proposals.
@@ -226,5 +216,27 @@ func TestStore_ExistingBlockProposals(t *testing.T) {
 	require.Equal(t, len(proposals), len(doubleProposals))
 	for i, existing := range doubleProposals {
 		require.DeepNotEqual(t, proposals[i].SigningRoot, existing.ExistingSigningRoot)
+	}
+}
+
+func createAttestationWrapper(source, target types.Epoch, indices []uint64, signingRoot []byte) *slashertypes.IndexedAttestationWrapper {
+	signRoot := bytesutil.ToBytes32(signingRoot)
+	if signingRoot == nil {
+		signRoot = params.BeaconConfig().ZeroHash
+	}
+	data := &ethpb.AttestationData{
+		Source: &ethpb.Checkpoint{
+			Epoch: source,
+		},
+		Target: &ethpb.Checkpoint{
+			Epoch: target,
+		},
+	}
+	return &slashertypes.IndexedAttestationWrapper{
+		IndexedAttestation: &ethpb.IndexedAttestation{
+			AttestingIndices: indices,
+			Data:             data,
+		},
+		SigningRoot: signRoot,
 	}
 }
