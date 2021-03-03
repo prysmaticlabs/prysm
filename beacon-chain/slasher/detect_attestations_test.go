@@ -112,7 +112,7 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	// We apply attestation with (source 1, target 2) for our validator.
 	source := types.Epoch(1)
 	target := types.Epoch(2)
-	att := createAttestationWrapper(t, source, target, nil, nil)
+	att := createAttestationWrapper(source, target, nil, nil)
 	slashing, err := srv.applyAttestationForValidator(
 		ctx,
 		args,
@@ -133,7 +133,7 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	// expect a slashable offense to be returned.
 	source = types.Epoch(0)
 	target = types.Epoch(3)
-	slashableAtt := createAttestationWrapper(t, source, target, nil, nil)
+	slashableAtt := createAttestationWrapper(source, target, nil, nil)
 	slashing, err = srv.applyAttestationForValidator(
 		ctx,
 		args,
@@ -172,7 +172,7 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	// We apply attestation with (source 0, target 3) for our validator.
 	source := types.Epoch(0)
 	target := types.Epoch(3)
-	att := createAttestationWrapper(t, source, target, nil, nil)
+	att := createAttestationWrapper(source, target, nil, nil)
 	slashing, err := srv.applyAttestationForValidator(
 		ctx,
 		args,
@@ -193,7 +193,7 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	// expect a slashable offense to be returned.
 	source = types.Epoch(1)
 	target = types.Epoch(2)
-	slashableAtt := createAttestationWrapper(t, source, target, nil, nil)
+	slashableAtt := createAttestationWrapper(source, target, nil, nil)
 	slashing, err = srv.applyAttestationForValidator(
 		ctx,
 		args,
@@ -213,9 +213,9 @@ func Test_checkDoubleVotes_SlashableInputAttestations(t *testing.T) {
 	// indeed check there could exist a double vote offense
 	// within the list with respect to other entries in the list.
 	atts := []*slashertypes.IndexedAttestationWrapper{
-		createAttestationWrapper(t, 0, 1, []uint64{1, 2}, []byte{1}),
-		createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{1}),
-		createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{2}), // Different signing root.
+		createAttestationWrapper(0, 1, []uint64{1, 2}, []byte{1}),
+		createAttestationWrapper(0, 2, []uint64{1, 2}, []byte{1}),
+		createAttestationWrapper(0, 2, []uint64{1, 2}, []byte{2}), // Different signing root.
 	}
 	srv := &Service{
 		serviceCfg: &ServiceConfig{
@@ -250,8 +250,8 @@ func Test_checkDoubleVotes_SlashableAttestationsOnDisk(t *testing.T) {
 	// indeed check there could exist a double vote offense
 	// within the list with respect to previous entries in the db.
 	prevAtts := []*slashertypes.IndexedAttestationWrapper{
-		createAttestationWrapper(t, 0, 1, []uint64{1, 2}, []byte{1}),
-		createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{1}),
+		createAttestationWrapper(0, 1, []uint64{1, 2}, []byte{1}),
+		createAttestationWrapper(0, 2, []uint64{1, 2}, []byte{1}),
 	}
 	err := beaconDB.SaveAttestationRecordsForValidators(ctx, prevAtts)
 	require.NoError(t, err)
@@ -278,7 +278,7 @@ func Test_checkDoubleVotes_SlashableAttestationsOnDisk(t *testing.T) {
 		},
 	}
 	newAtts := []*slashertypes.IndexedAttestationWrapper{
-		createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{2}), // Different signing root.
+		createAttestationWrapper(0, 2, []uint64{1, 2}, []byte{2}), // Different signing root.
 	}
 	slashings, err := srv.checkDoubleVotes(ctx, newAtts)
 	require.NoError(t, err)
