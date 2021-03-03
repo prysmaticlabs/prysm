@@ -75,6 +75,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//cmd/validator/flags:go_default_library",
         "//proto/validator/accounts/v2:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/event:go_default_library",
@@ -89,7 +90,6 @@ go_test(
         "//validator/accounts/wallet:go_default_library",
         "//validator/client:go_default_library",
         "//validator/db/testing:go_default_library",
-        "//validator/flags:go_default_library",
         "//validator/keymanager:go_default_library",
         "//validator/keymanager/derived:go_default_library",
         "//validator/keymanager/imported:go_default_library",

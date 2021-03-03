@@ -26,7 +26,7 @@ func StartBeaconNodes(t *testing.T, config *types.E2EConfig, enr string) {
 
 // StartNewBeaconNode starts a fresh beacon node, connecting to all passed in beacon nodes.
 func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, index int, enr string) {
-	binaryPath, found := bazel.FindBinary("beacon-chain", "beacon-chain")
+	binaryPath, found := bazel.FindBinary("cmd/beacon-chain", "beacon-chain")
 	if !found {
 		t.Log(binaryPath)
 		t.Fatal("beacon chain binary not found")
