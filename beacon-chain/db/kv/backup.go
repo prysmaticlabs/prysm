@@ -59,6 +59,8 @@ func (s *Store) Backup(ctx context.Context, outputDir string) error {
 			log.WithError(err).Error("Failed to close backup database")
 		}
 	}()
+	// Prefetch all keys of buckets, and inner keys in a
+	// bucket to use less memory usage when backing up.
 	bucketKeys := [][]byte{}
 	bucketMap := make(map[string][][]byte)
 	err = s.db.View(func(tx *bolt.Tx) error {
@@ -86,6 +88,10 @@ func (s *Store) Backup(ctx context.Context, outputDir string) error {
 	if err != nil {
 		return err
 	}
+	// Utilize much smaller writes, compared to
+	// writing for a whole bucket in a single transaction. Also
+	// prevent long-running read transactions, as Bolt doesn't
+	// handle those well.
 	for _, k := range bucketKeys {
 		log.Debugf("Copying bucket %s\n", k)
 		innerKeys := bucketMap[string(k)]
@@ -105,6 +111,8 @@ func (s *Store) Backup(ctx context.Context, outputDir string) error {
 			}
 		}
 	}
+	// Re-enable sync to allow bolt to fsync
+	// again.
 	copyDB.NoSync = false
 	copyDB.NoFreelistSync = false
 	return nil
