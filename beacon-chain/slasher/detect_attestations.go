@@ -79,7 +79,7 @@ func (s *Service) detectSlashableAttestations(
 
 	// Update the latest written epoch for all involved validator indices.
 	validatorIndices := s.params.validatorIndicesInChunk(args.validatorChunkIndex)
-	return s.serviceCfg.Database.SaveCurrentEpochForValidators(ctx, validatorIndices, args.currentEpoch)
+	return s.serviceCfg.Database.SaveLastEpochWrittenForValidators(ctx, validatorIndices, args.currentEpoch)
 }
 
 // Check for attester slashing double votes by looking at every single validator index
@@ -228,7 +228,7 @@ func (s *Service) determineChunksToUpdateForValidators(
 ) (chunkIndices []uint64, err error) {
 	ctx, span := trace.StartSpan(ctx, "Slasher.determineChunksToUpdateForValidators")
 	defer span.End()
-	lastCurrentEpochs, err := s.serviceCfg.Database.LastCurrentEpochForValidators(ctx, validatorIndices)
+	lastCurrentEpochs, err := s.serviceCfg.Database.LastEpochWrittenForValidators(ctx, validatorIndices)
 	if err != nil {
 		return
 	}

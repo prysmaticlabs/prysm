@@ -37,7 +37,7 @@ func Test_determineChunksToUpdateForValidators_FromLatestWrittenEpoch(t *testing
 
 	// Set the latest written epoch for validators to current epoch - 1.
 	latestWrittenEpoch := currentEpoch - 1
-	err := beaconDB.SaveCurrentEpochForValidators(ctx, validators, latestWrittenEpoch)
+	err := beaconDB.SaveLastEpochWrittenForValidators(ctx, validators, latestWrittenEpoch)
 	require.NoError(t, err)
 
 	// Because the validators have no recorded latest epoch written in the database,
