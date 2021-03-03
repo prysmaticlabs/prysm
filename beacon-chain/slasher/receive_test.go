@@ -203,6 +203,59 @@ func Test_processQueuedAttestations(t *testing.T) {
 	}
 }
 
+func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
+	hook := logTest.NewGlobal()
+	defer hook.Reset()
+
+	beaconDB := dbtest.SetupDB(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	params := DefaultParams()
+
+	s := &Service{
+		serviceCfg: &ServiceConfig{
+			Database: beaconDB,
+		},
+		params:           params,
+		attestationQueue: make([]*slashertypes.CompactAttestation, 0),
+	}
+	currentEpochChan := make(chan types.Epoch)
+	exitChan := make(chan struct{})
+	go func() {
+		s.processQueuedAttestations(ctx, currentEpochChan)
+		exitChan <- struct{}{}
+	}()
+
+	// We process submit attestations from epoch 0 all the way to
+	// params.chunkSize + 1, which will guarantee we cross over into
+	// a new chunk index. What we want to test here is if we can proceed
+	// with processing queued attestations once the chunk index changes.
+	// For example, epochs 0 - 15 are chunk 0, epochs 16 - 31 are chunk 1, etc.
+	startEpoch := types.Epoch(0)
+	endEpoch := types.Epoch(params.chunkSize + 1)
+
+	for i := startEpoch; i < endEpoch; i++ {
+		source := types.Epoch(0)
+		target := types.Epoch(0)
+		if i != 0 {
+			source = i - 1
+			target = i
+		}
+		s.attestationQueue = []*slashertypes.CompactAttestation{
+			{
+				AttestingIndices: []uint64{0},
+				Source:           source,
+				Target:           target,
+			},
+		}
+		currentEpochChan <- i
+	}
+
+	cancel()
+	<-exitChan
+	require.LogsDoNotContain(t, hook, "Slashable offenses found")
+	require.LogsDoNotContain(t, hook, "not found")
+}
+
 func TestSlasher_receiveAttestations_OK(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Service{
