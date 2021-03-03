@@ -8,6 +8,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -504,7 +505,7 @@ func (b *BeaconState) ValidatorAtIndex(idx types.ValidatorIndex) (*ethpb.Validat
 
 // ValidatorAtIndexReadOnly is the validator at the provided index. This method
 // doesn't clone the validator.
-func (b *BeaconState) ValidatorAtIndexReadOnly(idx types.ValidatorIndex) (ReadOnlyValidator, error) {
+func (b *BeaconState) ValidatorAtIndexReadOnly(idx types.ValidatorIndex) (iface.ReadOnlyValidator, error) {
 	if !b.hasInnerState() {
 		return ReadOnlyValidator{}, ErrNilInnerState
 	}
@@ -573,7 +574,7 @@ func (b *BeaconState) NumValidators() int {
 
 // ReadFromEveryValidator reads values from every validator and applies it to the provided function.
 // Warning: This method is potentially unsafe, as it exposes the actual validator registry.
-func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val ReadOnlyValidator) error) error {
+func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val iface.ReadOnlyValidator) error) error {
 	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}

@@ -10,6 +10,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -45,7 +46,7 @@ func InitiateValidatorExit(state *stateTrie.BeaconState, idx types.ValidatorInde
 		return state, nil
 	}
 	var exitEpochs []types.Epoch
-	err = state.ReadFromEveryValidator(func(idx int, val stateTrie.ReadOnlyValidator) error {
+	err = state.ReadFromEveryValidator(func(idx int, val iface.ReadOnlyValidator) error {
 		if val.ExitEpoch() != params.BeaconConfig().FarFutureEpoch {
 			exitEpochs = append(exitEpochs, val.ExitEpoch())
 		}
@@ -66,7 +67,7 @@ func InitiateValidatorExit(state *stateTrie.BeaconState, idx types.ValidatorInde
 
 	// We use the exit queue churn to determine if we have passed a churn limit.
 	exitQueueChurn := uint64(0)
-	err = state.ReadFromEveryValidator(func(idx int, val stateTrie.ReadOnlyValidator) error {
+	err = state.ReadFromEveryValidator(func(idx int, val iface.ReadOnlyValidator) error {
 		if val.ExitEpoch() == exitQueueEpoch {
 			exitQueueChurn++
 		}
