@@ -7,11 +7,15 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/tos"
+	"github.com/prysmaticlabs/prysm/validator/accounts"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
-// AccountCommands for Prysm validators.
-var AccountCommands = &cli.Command{
+var log = logrus.WithField("prefix", "accounts")
+
+// Commands for managing Prysm validator accounts.
+var Commands = &cli.Command{
 	Name:     "accounts",
 	Category: "accounts",
 	Usage:    "defines commands for interacting with eth2 validator accounts",
@@ -36,7 +40,7 @@ var AccountCommands = &cli.Command{
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
-				if err := DeleteAccountCli(cliCtx); err != nil {
+				if err := accounts.DeleteAccountCli(cliCtx); err != nil {
 					log.Fatalf("Could not delete account: %v", err)
 				}
 				return nil
@@ -70,7 +74,7 @@ var AccountCommands = &cli.Command{
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
-				if err := ListAccountsCli(cliCtx); err != nil {
+				if err := accounts.ListAccountsCli(cliCtx); err != nil {
 					log.Fatalf("Could not list accounts: %v", err)
 				}
 				return nil
@@ -101,7 +105,7 @@ var AccountCommands = &cli.Command{
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
-				if err := BackupAccountsCli(cliCtx); err != nil {
+				if err := accounts.BackupAccountsCli(cliCtx); err != nil {
 					log.Fatalf("Could not backup accounts: %v", err)
 				}
 				return nil
@@ -129,7 +133,7 @@ var AccountCommands = &cli.Command{
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
-				if err := ImportAccountsCli(cliCtx); err != nil {
+				if err := accounts.ImportAccountsCli(cliCtx); err != nil {
 					log.Fatalf("Could not import accounts: %v", err)
 				}
 				return nil
@@ -163,7 +167,7 @@ var AccountCommands = &cli.Command{
 			},
 			Action: func(cliCtx *cli.Context) error {
 				featureconfig.ConfigureValidator(cliCtx)
-				if err := ExitAccountsCli(cliCtx, os.Stdin); err != nil {
+				if err := accounts.ExitAccountsCli(cliCtx, os.Stdin); err != nil {
 					log.Fatalf("Could not perform voluntary exit: %v", err)
 				}
 				return nil
