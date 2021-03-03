@@ -27,7 +27,7 @@ func runRewardsAndPenaltiesTests(t *testing.T, config string) {
 	}
 }
 
-func processRewardsAndPenaltiesPrecomputeWrapper(t *testing.T, st *state.BeaconState) (*state.BeaconState, error) {
+func processRewardsAndPenaltiesPrecomputeWrapper(t *testing.T, st iface.ReadOnlyBeaconState) (iface.ReadOnlyBeaconState, error) {
 	ctx := context.Background()
 	vp, bp, err := precompute.New(ctx, st)
 	require.NoError(t, err)

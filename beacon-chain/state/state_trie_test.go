@@ -104,20 +104,20 @@ func TestBeaconState_HashTreeRoot(t *testing.T) {
 
 	type test struct {
 		name        string
-		stateModify func(*state.BeaconState) (*state.BeaconState, error)
+		stateModify func(iface.ReadOnlyBeaconState) (iface.ReadOnlyBeaconState, error)
 		error       string
 	}
 	initTests := []test{
 		{
 			name: "unchanged state",
-			stateModify: func(beaconState *state.BeaconState) (*state.BeaconState, error) {
+			stateModify: func(beaconState iface.ReadOnlyBeaconState) (iface.ReadOnlyBeaconState, error) {
 				return beaconState, nil
 			},
 			error: "",
 		},
 		{
 			name: "different slot",
-			stateModify: func(beaconState *state.BeaconState) (*state.BeaconState, error) {
+			stateModify: func(beaconState iface.ReadOnlyBeaconState) (iface.ReadOnlyBeaconState, error) {
 				if err := beaconState.SetSlot(5); err != nil {
 					return nil, err
 				}
@@ -127,7 +127,7 @@ func TestBeaconState_HashTreeRoot(t *testing.T) {
 		},
 		{
 			name: "different validator balance",
-			stateModify: func(beaconState *state.BeaconState) (*state.BeaconState, error) {
+			stateModify: func(beaconState iface.ReadOnlyBeaconState) (iface.ReadOnlyBeaconState, error) {
 				val, err := beaconState.ValidatorAtIndex(5)
 				if err != nil {
 					return nil, err
@@ -171,20 +171,20 @@ func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
 
 	type test struct {
 		name        string
-		stateModify func(*state.BeaconState) (*state.BeaconState, error)
+		stateModify func(iface.ReadOnlyBeaconState) (iface.ReadOnlyBeaconState, error)
 		error       string
 	}
 	initTests := []test{
 		{
 			name: "unchanged state",
-			stateModify: func(beaconState *state.BeaconState) (*state.BeaconState, error) {
+			stateModify: func(beaconState iface.ReadOnlyBeaconState) (iface.ReadOnlyBeaconState, error) {
 				return beaconState, nil
 			},
 			error: "",
 		},
 		{
 			name: "different slot",
-			stateModify: func(beaconState *state.BeaconState) (*state.BeaconState, error) {
+			stateModify: func(beaconState iface.ReadOnlyBeaconState) (iface.ReadOnlyBeaconState, error) {
 				if err := beaconState.SetSlot(5); err != nil {
 					return nil, err
 				}
@@ -194,7 +194,7 @@ func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
 		},
 		{
 			name: "different validator balance",
-			stateModify: func(beaconState *state.BeaconState) (*state.BeaconState, error) {
+			stateModify: func(beaconState iface.ReadOnlyBeaconState) (iface.ReadOnlyBeaconState, error) {
 				val, err := beaconState.ValidatorAtIndex(5)
 				if err != nil {
 					return nil, err

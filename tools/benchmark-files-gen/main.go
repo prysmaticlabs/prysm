@@ -204,7 +204,7 @@ func generate2FullEpochState() error {
 	return fileutil.WriteFile(path.Join(*outputDir, benchutil.BState2EpochFileName), beaconBytes)
 }
 
-func genesisBeaconState() (*stateTrie.BeaconState, error) {
+func genesisBeaconState() (iface.ReadOnlyBeaconState, error) {
 	beaconBytes, err := ioutil.ReadFile(path.Join(*outputDir, benchutil.GenesisFileName))
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot read genesis state file")

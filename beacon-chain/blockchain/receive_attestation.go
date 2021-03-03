@@ -21,7 +21,7 @@ import (
 // AttestationReceiver interface defines the methods of chain service receive and processing new attestations.
 type AttestationReceiver interface {
 	ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Attestation) error
-	AttestationPreState(ctx context.Context, att *ethpb.Attestation) (*state.BeaconState, error)
+	AttestationPreState(ctx context.Context, att *ethpb.Attestation) (iface.ReadOnlyBeaconState, error)
 	VerifyLmdFfgConsistency(ctx context.Context, att *ethpb.Attestation) error
 	VerifyFinalizedConsistency(ctx context.Context, root []byte) error
 }
@@ -43,7 +43,7 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 }
 
 // AttestationPreState returns the pre state of attestation.
-func (s *Service) AttestationPreState(ctx context.Context, att *ethpb.Attestation) (*state.BeaconState, error) {
+func (s *Service) AttestationPreState(ctx context.Context, att *ethpb.Attestation) (iface.ReadOnlyBeaconState, error) {
 	ss, err := helpers.StartSlot(att.Data.Target.Epoch)
 	if err != nil {
 		return nil, err

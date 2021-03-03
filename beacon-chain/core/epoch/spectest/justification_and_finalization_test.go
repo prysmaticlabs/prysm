@@ -25,7 +25,7 @@ func runJustificationAndFinalizationTests(t *testing.T, config string) {
 	}
 }
 
-func processJustificationAndFinalizationPrecomputeWrapper(t *testing.T, st *state.BeaconState) (*state.BeaconState, error) {
+func processJustificationAndFinalizationPrecomputeWrapper(t *testing.T, st iface.ReadOnlyBeaconState) (iface.ReadOnlyBeaconState, error) {
 	ctx := context.Background()
 	vp, bp, err := precompute.New(ctx, st)
 	require.NoError(t, err)

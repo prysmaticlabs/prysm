@@ -251,7 +251,7 @@ func (s *ChainService) HeadBlock(context.Context) (*ethpb.SignedBeaconBlock, err
 }
 
 // HeadState mocks HeadState method in chain service.
-func (s *ChainService) HeadState(context.Context) (*stateTrie.BeaconState, error) {
+func (s *ChainService) HeadState(context.Context) (iface.ReadOnlyBeaconState, error) {
 	return s.State, nil
 }
 
@@ -286,7 +286,7 @@ func (s *ChainService) ReceiveAttestationNoPubsub(context.Context, *ethpb.Attest
 }
 
 // AttestationPreState mocks AttestationPreState method in chain service.
-func (s *ChainService) AttestationPreState(_ context.Context, _ *ethpb.Attestation) (*stateTrie.BeaconState, error) {
+func (s *ChainService) AttestationPreState(_ context.Context, _ *ethpb.Attestation) (iface.ReadOnlyBeaconState, error) {
 	return s.State, nil
 }
 

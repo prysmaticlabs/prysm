@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
@@ -27,7 +27,7 @@ import (
 )
 
 // processFunc is a function that processes a block with a given state. State is mutated.
-type processFunc func(context.Context, *stateTrie.BeaconState, *ethpb.SignedBeaconBlock) (*stateTrie.BeaconState, error)
+type processFunc func(context.Context, iface.BeaconState, *ethpb.SignedBeaconBlock) (iface.BeaconState, error)
 
 // This defines the processing block routine as outlined in eth2 spec:
 // https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#block-processing
@@ -62,9 +62,9 @@ var processingPipeline = []processFunc{
 //    return state
 func ExecuteStateTransition(
 	ctx context.Context,
-	state *stateTrie.BeaconState,
+	state iface.BeaconState,
 	signed *ethpb.SignedBeaconBlock,
-) (*stateTrie.BeaconState, error) {
+) (iface.BeaconState, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -118,9 +118,9 @@ func ExecuteStateTransition(
 //    return state
 func ExecuteStateTransitionNoVerifyAnySig(
 	ctx context.Context,
-	state *stateTrie.BeaconState,
+	state iface.BeaconState,
 	signed *ethpb.SignedBeaconBlock,
-) (*bls.SignatureSet, *stateTrie.BeaconState, error) {
+) (*bls.SignatureSet, iface.BeaconState, error) {
 	if ctx.Err() != nil {
 		return nil, nil, ctx.Err()
 	}
@@ -171,7 +171,7 @@ func ExecuteStateTransitionNoVerifyAnySig(
 //    return state
 func CalculateStateRoot(
 	ctx context.Context,
-	state *stateTrie.BeaconState,
+	state iface.BeaconState,
 	signed *ethpb.SignedBeaconBlock,
 ) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.CalculateStateRoot")
@@ -229,7 +229,7 @@ func CalculateStateRoot(
 //    # Cache block root
 //    previous_block_root = hash_tree_root(state.latest_block_header)
 //    state.block_roots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = previous_block_root
-func ProcessSlot(ctx context.Context, state *stateTrie.BeaconState) (*stateTrie.BeaconState, error) {
+func ProcessSlot(ctx context.Context, state iface.BeaconState) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessSlot")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(state.Slot())))
@@ -272,9 +272,9 @@ func ProcessSlot(ctx context.Context, state *stateTrie.BeaconState) (*stateTrie.
 // ProcessSlotsUsingNextSlotCache processes slots by using next slot cache for higher efficiency.
 func ProcessSlotsUsingNextSlotCache(
 	ctx context.Context,
-	parentState *stateTrie.BeaconState,
+	parentState iface.BeaconState,
 	parentRoot []byte,
-	slot types.Slot) (*stateTrie.BeaconState, error) {
+	slot types.Slot) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessSlotsUsingNextSlotCache")
 	defer span.End()
 
@@ -312,7 +312,7 @@ func ProcessSlotsUsingNextSlotCache(
 //            process_epoch(state)
 //        state.slot += 1
 //    ]
-func ProcessSlots(ctx context.Context, state *stateTrie.BeaconState, slot types.Slot) (*stateTrie.BeaconState, error) {
+func ProcessSlots(ctx context.Context, state iface.BeaconState, slot types.Slot) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessSlots")
 	defer span.End()
 	if state == nil {
@@ -414,9 +414,9 @@ func ProcessSlots(ctx context.Context, state *stateTrie.BeaconState, slot types.
 //    process_operations(state, block.body)
 func ProcessBlock(
 	ctx context.Context,
-	state *stateTrie.BeaconState,
+	state iface.BeaconState,
 	signed *ethpb.SignedBeaconBlock,
-) (*stateTrie.BeaconState, error) {
+) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessBlock")
 	defer span.End()
 
@@ -445,9 +445,9 @@ func ProcessBlock(
 //    process_operations(state, block.body)
 func ProcessBlockNoVerifyAnySig(
 	ctx context.Context,
-	state *stateTrie.BeaconState,
+	state iface.BeaconState,
 	signed *ethpb.SignedBeaconBlock,
-) (*bls.SignatureSet, *stateTrie.BeaconState, error) {
+) (*bls.SignatureSet, iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessBlockNoVerifyAnySig")
 	defer span.End()
 
@@ -522,8 +522,8 @@ func ProcessBlockNoVerifyAnySig(
 //            function(state, operation)
 func ProcessOperationsNoVerifyAttsSigs(
 	ctx context.Context,
-	state *stateTrie.BeaconState,
-	signedBeaconBlock *ethpb.SignedBeaconBlock) (*stateTrie.BeaconState, error) {
+	state iface.BeaconState,
+	signedBeaconBlock *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessOperationsNoVerifyAttsSigs")
 	defer span.End()
 
@@ -556,7 +556,7 @@ func ProcessOperationsNoVerifyAttsSigs(
 }
 
 // VerifyOperationLengths verifies that block operation lengths are valid.
-func VerifyOperationLengths(_ context.Context, state *stateTrie.BeaconState, b *ethpb.SignedBeaconBlock) (*stateTrie.BeaconState, error) {
+func VerifyOperationLengths(_ context.Context, state iface.BeaconState, b *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err
 	}
@@ -615,13 +615,13 @@ func VerifyOperationLengths(_ context.Context, state *stateTrie.BeaconState, b *
 //
 // Spec pseudocode definition:
 //    If (state.slot + 1) % SLOTS_PER_EPOCH == 0:
-func CanProcessEpoch(state *stateTrie.BeaconState) bool {
+func CanProcessEpoch(state iface.ReadOnlyBeaconState) bool {
 	return (state.Slot()+1)%params.BeaconConfig().SlotsPerEpoch == 0
 }
 
 // ProcessEpochPrecompute describes the per epoch operations that are performed on the beacon state.
 // It's optimized by pre computing validator attested info and epoch total/attested balances upfront.
-func ProcessEpochPrecompute(ctx context.Context, state *stateTrie.BeaconState) (*stateTrie.BeaconState, error) {
+func ProcessEpochPrecompute(ctx context.Context, state iface.BeaconState) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessEpochPrecompute")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("epoch", int64(helpers.CurrentEpoch(state))))
@@ -669,9 +669,9 @@ func ProcessEpochPrecompute(ctx context.Context, state *stateTrie.BeaconState) (
 // and randao signature verifications.
 func ProcessBlockForStateRoot(
 	ctx context.Context,
-	state *stateTrie.BeaconState,
+	state iface.BeaconState,
 	signed *ethpb.SignedBeaconBlock,
-) (*stateTrie.BeaconState, error) {
+) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessBlockForStateRoot")
 	defer span.End()
 

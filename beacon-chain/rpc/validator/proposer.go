@@ -259,7 +259,7 @@ func (vs *Server) slotStartTime(slot types.Slot) uint64 {
 }
 
 func (vs *Server) inRangeVotes(ctx context.Context,
-	beaconState *stateTrie.BeaconState,
+	beaconState iface.ReadOnlyBeaconState
 	firstValidBlockNumber, lastValidBlockNumber *big.Int) ([]eth1DataSingleVote, error) {
 
 	currentETH1Data := vs.HeadFetcher.HeadETH1Data()
@@ -397,7 +397,7 @@ func (vs *Server) computeStateRoot(ctx context.Context, block *ethpb.SignedBeaco
 // eth1data.
 func (vs *Server) deposits(
 	ctx context.Context,
-	beaconState *stateTrie.BeaconState,
+	beaconState iface.ReadOnlyBeaconState
 	currentVote *ethpb.Eth1Data,
 ) ([]*ethpb.Deposit, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.deposits")
@@ -459,7 +459,7 @@ func (vs *Server) deposits(
 // canonicalEth1Data determines the canonical eth1data and eth1 block height to use for determining deposits.
 func (vs *Server) canonicalEth1Data(
 	ctx context.Context,
-	beaconState *stateTrie.BeaconState,
+	beaconState iface.ReadOnlyBeaconState
 	currentVote *ethpb.Eth1Data) (*ethpb.Eth1Data, *big.Int, error) {
 
 	var eth1BlockHash [32]byte
@@ -542,7 +542,7 @@ func (vs *Server) defaultEth1DataResponse(ctx context.Context, currentHeight *bi
 }
 
 // This filters the input attestations to return a list of valid attestations to be packaged inside a beacon block.
-func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, st *stateTrie.BeaconState, atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
+func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, st iface.ReadOnlyBeaconState,atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.filterAttestationsForBlockInclusion")
 	defer span.End()
 

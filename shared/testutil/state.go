@@ -9,7 +9,7 @@ import (
 )
 
 // NewBeaconState creates a beacon state with minimum marshalable fields.
-func NewBeaconState(options ...func(state *pb.BeaconState)) (*stateTrie.BeaconState, error) {
+func NewBeaconState(options ...func(state *pb.BeaconState)) (iface.ReadOnlyBeaconState, error) {
 	seed := &pb.BeaconState{
 		BlockRoots:                 filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),
 		StateRoots:                 filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),

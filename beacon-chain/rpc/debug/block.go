@@ -62,7 +62,7 @@ func (ds *Server) GetInclusionSlot(ctx context.Context, req *pbrpc.InclusionSlot
 	}
 
 	inclusionSlot := types.Slot(1<<64 - 1)
-	targetStates := make(map[[32]byte]*state.BeaconState)
+	targetStates := make(map[[32]byte]iface.ReadOnlyBeaconState)
 	for _, blk := range blks {
 		for _, a := range blk.Block.Body.Attestations {
 			tr := bytesutil.ToBytes32(a.Data.Target.Root)

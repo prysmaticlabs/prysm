@@ -65,7 +65,7 @@ func NewBeaconBlock() *ethpb.SignedBeaconBlock {
 // GenerateFullBlock generates a fully valid block with the requested parameters.
 // Use BlockGenConfig to declare the conditions you would like the block generated under.
 func GenerateFullBlock(
-	bState *stateTrie.BeaconState,
+	bState iface.ReadOnlyBeaconState
 	privs []bls.SecretKey,
 	conf *BlockGenConfig,
 	slot types.Slot,
@@ -187,7 +187,7 @@ func GenerateFullBlock(
 
 // GenerateProposerSlashingForValidator for a specific validator index.
 func GenerateProposerSlashingForValidator(
-	bState *stateTrie.BeaconState,
+	bState iface.ReadOnlyBeaconState
 	priv bls.SecretKey,
 	idx types.ValidatorIndex,
 ) (*ethpb.ProposerSlashing, error) {
@@ -226,7 +226,7 @@ func GenerateProposerSlashingForValidator(
 }
 
 func generateProposerSlashings(
-	bState *stateTrie.BeaconState,
+	bState iface.ReadOnlyBeaconState
 	privs []bls.SecretKey,
 	numSlashings uint64,
 ) ([]*ethpb.ProposerSlashing, error) {
@@ -247,7 +247,7 @@ func generateProposerSlashings(
 
 // GenerateAttesterSlashingForValidator for a specific validator index.
 func GenerateAttesterSlashingForValidator(
-	bState *stateTrie.BeaconState,
+	bState iface.ReadOnlyBeaconState
 	priv bls.SecretKey,
 	idx types.ValidatorIndex,
 ) (*ethpb.AttesterSlashing, error) {
@@ -303,7 +303,7 @@ func GenerateAttesterSlashingForValidator(
 }
 
 func generateAttesterSlashings(
-	bState *stateTrie.BeaconState,
+	bState iface.ReadOnlyBeaconState
 	privs []bls.SecretKey,
 	numSlashings uint64,
 ) ([]*ethpb.AttesterSlashing, error) {
@@ -327,7 +327,7 @@ func generateAttesterSlashings(
 }
 
 func generateDepositsAndEth1Data(
-	bState *stateTrie.BeaconState,
+	bState iface.ReadOnlyBeaconState
 	numDeposits uint64,
 ) (
 	[]*ethpb.Deposit,
@@ -347,7 +347,7 @@ func generateDepositsAndEth1Data(
 }
 
 func generateVoluntaryExits(
-	bState *stateTrie.BeaconState,
+	bState iface.ReadOnlyBeaconState
 	privs []bls.SecretKey,
 	numExits uint64,
 ) ([]*ethpb.SignedVoluntaryExit, error) {

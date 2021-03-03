@@ -381,7 +381,7 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk *ethpb.B
 
 // This saves post state info to DB or cache. This also saves post state info to fork choice store.
 // Post state info consists of processed block and state. Do not call this method unless the block and state are verified.
-func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b *ethpb.SignedBeaconBlock, st *stateTrie.BeaconState, initSync bool) error {
+func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b *ethpb.SignedBeaconBlock, st iface.ReadOnlyBeaconState, initSync bool) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.savePostStateInfo")
 	defer span.End()
 	if initSync {

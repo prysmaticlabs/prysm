@@ -154,7 +154,7 @@ func (bs *Server) stateRoot(ctx context.Context, stateId []byte) ([]byte, error)
 	return root, err
 }
 
-func (bs *Server) state(ctx context.Context, stateId []byte) (*statetrie.BeaconState, error) {
+func (bs *Server) state(ctx context.Context, stateId []byte) (iface.ReadOnlyBeaconState, error) {
 	var (
 		s   *statetrie.BeaconState
 		err error
@@ -294,7 +294,7 @@ func (bs *Server) stateRootBySlot(ctx context.Context, slot types.Slot) ([]byte,
 	return blks[0].Block.StateRoot, nil
 }
 
-func (bs *Server) stateByHex(ctx context.Context, stateId []byte) (*statetrie.BeaconState, error) {
+func (bs *Server) stateByHex(ctx context.Context, stateId []byte) (iface.ReadOnlyBeaconState, error) {
 	headState, err := bs.ChainInfoFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
@@ -310,7 +310,7 @@ func (bs *Server) stateByHex(ctx context.Context, stateId []byte) (*statetrie.Be
 		"State not found in the last %d state roots in head state", len(headState.StateRoots()))
 }
 
-func (bs *Server) stateBySlot(ctx context.Context, slot types.Slot) (*statetrie.BeaconState, error) {
+func (bs *Server) stateBySlot(ctx context.Context, slot types.Slot) (iface.ReadOnlyBeaconState, error) {
 	currentSlot := bs.GenesisTimeFetcher.CurrentSlot()
 	if slot > currentSlot {
 		return nil, status.Errorf(codes.Internal, "Slot cannot be in the future")

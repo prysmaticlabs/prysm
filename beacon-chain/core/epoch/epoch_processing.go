@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
@@ -45,7 +46,7 @@ func (s sortableIndices) Less(i, j int) bool {
 // Spec pseudocode definition:
 //  def get_attesting_balance(state: BeaconState, attestations: List[PendingAttestation]) -> Gwei:
 //    return get_total_balance(state, get_unslashed_attesting_indices(state, attestations))
-func AttestingBalance(state *stateTrie.BeaconState, atts []*pb.PendingAttestation) (uint64, error) {
+func AttestingBalance(state iface.ReadOnlyBeaconState, atts []*pb.PendingAttestation) (uint64, error) {
 	indices, err := UnslashedAttestingIndices(state, atts)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not get attesting indices")
@@ -76,7 +77,7 @@ func AttestingBalance(state *stateTrie.BeaconState, atts []*pb.PendingAttestatio
 //    for index in activation_queue[:get_validator_churn_limit(state)]:
 //        validator = state.validators[index]
 //        validator.activation_epoch = compute_activation_exit_epoch(get_current_epoch(state))
-func ProcessRegistryUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, error) {
+func ProcessRegistryUpdates(state iface.BeaconState) (iface.BeaconState, error) {
 	currentEpoch := helpers.CurrentEpoch(state)
 	vals := state.Validators()
 	var err error
@@ -155,7 +156,7 @@ func ProcessRegistryUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconStat
 //			  penalty_numerator = validator.effective_balance // increment * adjusted_total_slashing_balance
 //            penalty = penalty_numerator // total_balance * increment
 //            decrease_balance(state, ValidatorIndex(index), penalty)
-func ProcessSlashings(state *stateTrie.BeaconState) (*stateTrie.BeaconState, error) {
+func ProcessSlashings(state iface.BeaconState) (iface.BeaconState, error) {
 	currentEpoch := helpers.CurrentEpoch(state)
 	totalBalance, err := helpers.TotalActiveBalance(state)
 	if err != nil {
@@ -231,7 +232,7 @@ func ProcessSlashings(state *stateTrie.BeaconState) (*stateTrie.BeaconState, err
 //    # Rotate current/previous epoch attestations
 //    state.previous_epoch_attestations = state.current_epoch_attestations
 //    state.current_epoch_attestations = []
-func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, error) {
+func ProcessFinalUpdates(state iface.BeaconState) (iface.BeaconState, error) {
 	currentEpoch := helpers.CurrentEpoch(state)
 	nextEpoch := currentEpoch + 1
 
@@ -342,7 +343,7 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 //    for a in attestations:
 //        output = output.union(get_attesting_indices(state, a.data, a.aggregation_bits))
 //    return set(filter(lambda index: not state.validators[index].slashed, output))
-func UnslashedAttestingIndices(state *stateTrie.BeaconState, atts []*pb.PendingAttestation) ([]types.ValidatorIndex, error) {
+func UnslashedAttestingIndices(state iface.ReadOnlyBeaconState, atts []*pb.PendingAttestation) ([]types.ValidatorIndex, error) {
 	var setIndices []types.ValidatorIndex
 	seen := make(map[uint64]bool)
 
@@ -390,7 +391,7 @@ func UnslashedAttestingIndices(state *stateTrie.BeaconState, atts []*pb.PendingA
 //      total_balance = get_total_active_balance(state)
 //	    effective_balance = state.validator_registry[index].effective_balance
 //	    return effective_balance * BASE_REWARD_FACTOR // integer_squareroot(total_balance) // BASE_REWARDS_PER_EPOCH
-func BaseReward(state *stateTrie.BeaconState, index types.ValidatorIndex) (uint64, error) {
+func BaseReward(state iface.ReadOnlyBeaconState, index types.ValidatorIndex) (uint64, error) {
 	totalBalance, err := helpers.TotalActiveBalance(state)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not calculate active balance")
