@@ -39,6 +39,7 @@ type ReadOnlyBeaconState interface {
 	LatestBlockHeader() *ethpb.BeaconBlockHeader
 	HistoricalRoots() [][]byte
 	Slashings() []uint64
+	FieldReferencesCount() map[string]uint64
 }
 
 // WriteOnlyBeaconState defines a struct which only has write access to beacon state methods.

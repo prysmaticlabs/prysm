@@ -42,8 +42,10 @@ func TestProcessRewardsAndPenaltiesPrecompute(t *testing.T) {
 	vp, bp, err = ProcessAttestations(context.Background(), beaconState, vp, bp)
 	require.NoError(t, err)
 
-	beaconState, err = ProcessRewardsAndPenaltiesPrecompute(beaconState, bp, vp)
+	processedState, err := ProcessRewardsAndPenaltiesPrecompute(beaconState, bp, vp)
 	require.NoError(t, err)
+	beaconState, ok := processedState.(*state.BeaconState)
+	require.Equal(t, true, ok)
 
 	// Indices that voted everything except for head, lost a bit money
 	wanted := uint64(31999810265)

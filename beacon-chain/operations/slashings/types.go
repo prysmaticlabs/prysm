@@ -21,7 +21,7 @@ type PoolManager interface {
 	) error
 	InsertProposerSlashing(
 		ctx context.Context,
-		state iface.ReadOnlyBeaconState,
+		state iface.BeaconState,
 		slashing *ethpb.ProposerSlashing,
 	) error
 	MarkIncludedAttesterSlashing(as *ethpb.AttesterSlashing)

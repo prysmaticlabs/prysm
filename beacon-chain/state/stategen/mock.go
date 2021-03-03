@@ -11,25 +11,25 @@ import (
 
 // MockStateManager is a fake implementation of StateManager.
 type MockStateManager struct {
-	StatesByRoot map[[32]byte]iface.ReadOnlyBeaconState
-	StatesBySlot map[types.Slot]iface.ReadOnlyBeaconState
+	StatesByRoot map[[32]byte]iface.BeaconState
+	StatesBySlot map[types.Slot]iface.BeaconState
 }
 
 // NewMockService --
 func NewMockService() *MockStateManager {
 	return &MockStateManager{
-		StatesByRoot: make(map[[32]byte]iface.ReadOnlyBeaconState),
-		StatesBySlot: make(map[types.Slot]iface.ReadOnlyBeaconState),
+		StatesByRoot: make(map[[32]byte]iface.BeaconState),
+		StatesBySlot: make(map[types.Slot]iface.BeaconState),
 	}
 }
 
 // Resume --
-func (m *MockStateManager) Resume(ctx context.Context) (iface.ReadOnlyBeaconState, error) {
+func (m *MockStateManager) Resume(ctx context.Context) (iface.BeaconState, error) {
 	panic("implement me")
 }
 
 // SaveFinalizedState --
-func (m *MockStateManager) SaveFinalizedState(fSlot types.Slot, fRoot [32]byte, fState iface.ReadOnlyBeaconState) {
+func (m *MockStateManager) SaveFinalizedState(fSlot types.Slot, fRoot [32]byte, fState iface.BeaconState) {
 	panic("implement me")
 }
 
@@ -41,10 +41,10 @@ func (m *MockStateManager) MigrateToCold(ctx context.Context, fRoot [32]byte) er
 // ReplayBlocks --
 func (m *MockStateManager) ReplayBlocks(
 	ctx context.Context,
-	state iface.ReadOnlyBeaconState,
+	state iface.BeaconState,
 	signed []*eth.SignedBeaconBlock,
 	targetSlot types.Slot,
-) (iface.ReadOnlyBeaconState, error) {
+) (iface.BeaconState, error) {
 	panic("implement me")
 }
 
@@ -68,17 +68,17 @@ func (m *MockStateManager) HasStateInCache(ctx context.Context, blockRoot [32]by
 }
 
 // StateByRoot --
-func (m *MockStateManager) StateByRoot(ctx context.Context, blockRoot [32]byte) (iface.ReadOnlyBeaconState, error) {
+func (m *MockStateManager) StateByRoot(ctx context.Context, blockRoot [32]byte) (iface.BeaconState, error) {
 	return m.StatesByRoot[blockRoot], nil
 }
 
 // StateByRootInitialSync --
-func (m *MockStateManager) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (iface.ReadOnlyBeaconState, error) {
+func (m *MockStateManager) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (iface.BeaconState, error) {
 	panic("implement me")
 }
 
 // StateBySlot --
-func (m *MockStateManager) StateBySlot(ctx context.Context, slot types.Slot) (iface.ReadOnlyBeaconState, error) {
+func (m *MockStateManager) StateBySlot(ctx context.Context, slot types.Slot) (iface.BeaconState, error) {
 	return m.StatesBySlot[slot], nil
 }
 
@@ -91,7 +91,7 @@ func (m *MockStateManager) RecoverStateSummary(
 }
 
 // SaveState --
-func (m *MockStateManager) SaveState(ctx context.Context, root [32]byte, st iface.ReadOnlyBeaconState) error {
+func (m *MockStateManager) SaveState(ctx context.Context, root [32]byte, st iface.BeaconState) error {
 	panic("implement me")
 }
 
@@ -111,11 +111,11 @@ func (m *MockStateManager) DisableSaveHotStateToDB(ctx context.Context) error {
 }
 
 // AddStateForRoot --
-func (m *MockStateManager) AddStateForRoot(state iface.ReadOnlyBeaconState, blockRoot [32]byte) {
+func (m *MockStateManager) AddStateForRoot(state iface.BeaconState, blockRoot [32]byte) {
 	m.StatesByRoot[blockRoot] = state
 }
 
 // AddStateForSlot --
-func (m *MockStateManager) AddStateForSlot(state iface.ReadOnlyBeaconState, slot types.Slot) {
+func (m *MockStateManager) AddStateForSlot(state iface.BeaconState, slot types.Slot) {
 	m.StatesBySlot[slot] = state
 }

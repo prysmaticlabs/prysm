@@ -53,7 +53,7 @@ func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (iface.Beac
 // state is not copied.
 // It invalidates cache for parent root because pre state will get mutated.
 // Do not use this method for anything other than initial syncing purpose or block tree is applied.
-func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (iface.ReadOnlyBeaconState, error) {
+func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (iface.BeaconState, error) {
 	// Genesis case. If block root is zero hash, short circuit to use genesis state stored in DB.
 	if blockRoot == params.BeaconConfig().ZeroHash {
 		return s.beaconDB.State(ctx, blockRoot)
@@ -102,7 +102,7 @@ func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) 
 }
 
 // StateBySlot retrieves the state using input slot.
-func (s *State) StateBySlot(ctx context.Context, slot types.Slot) (iface.ReadOnlyBeaconState, error) {
+func (s *State) StateBySlot(ctx context.Context, slot types.Slot) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.StateBySlot")
 	defer span.End()
 
@@ -199,7 +199,7 @@ func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (iface.
 }
 
 // This loads a state by slot.
-func (s *State) loadStateBySlot(ctx context.Context, slot types.Slot) (iface.ReadOnlyBeaconState, error) {
+func (s *State) loadStateBySlot(ctx context.Context, slot types.Slot) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.loadStateBySlot")
 	defer span.End()
 

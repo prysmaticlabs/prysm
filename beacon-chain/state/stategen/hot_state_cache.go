@@ -6,7 +6,6 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 )
 
@@ -63,7 +62,7 @@ func (c *hotStateCache) getWithoutCopy(root [32]byte) iface.BeaconState {
 	item, exists := c.cache.Get(root)
 	if exists && item != nil {
 		hotStateCacheHit.Inc()
-		return item.(*stateTrie.BeaconState)
+		return item.(iface.BeaconState)
 	}
 	hotStateCacheMiss.Inc()
 	return nil

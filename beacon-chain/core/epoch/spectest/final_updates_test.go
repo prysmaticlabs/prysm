@@ -23,7 +23,7 @@ func runFinalUpdatesTests(t *testing.T, config string) {
 	}
 }
 
-func processFinalUpdatesWrapper(t *testing.T, state *beaconstate.BeaconState) (*beaconstate.BeaconState, error) {
+func processFinalUpdatesWrapper(t *testing.T, state iface.ReadOnlyBeaconState) (iface.ReadOnlyBeaconState, error) {
 	state, err := epoch.ProcessFinalUpdates(state)
 	require.NoError(t, err, "Could not process final updates")
 	return state, nil

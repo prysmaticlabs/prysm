@@ -9,7 +9,7 @@ import (
 )
 
 // NewBeaconState creates a beacon state with minimum marshalable fields.
-func NewBeaconState(options ...func(state *pb.BeaconState)) (iface.ReadOnlyBeaconState, error) {
+func NewBeaconState(options ...func(state *pb.BeaconState)) (*stateTrie.BeaconState, error) {
 	seed := &pb.BeaconState{
 		BlockRoots:                 filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),
 		StateRoots:                 filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),
@@ -44,7 +44,7 @@ func NewBeaconState(options ...func(state *pb.BeaconState)) (iface.ReadOnlyBeaco
 		return nil, err
 	}
 
-	return st.Copy(), nil
+	return st.Copy().(*stateTrie.BeaconState), nil
 }
 
 // SSZ will fill 2D byte slices with their respective values, so we must fill these in too for round

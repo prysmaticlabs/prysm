@@ -23,18 +23,18 @@ var defaultHotStateDBInterval types.Slot = 128
 // StateManager represents a management object that handles the internal
 // logic of maintaining both hot and cold states in DB.
 type StateManager interface {
-	Resume(ctx context.Context) (iface.ReadOnlyBeaconState, error)
-	SaveFinalizedState(fSlot types.Slot, fRoot [32]byte, fState iface.ReadOnlyBeaconState)
+	Resume(ctx context.Context) (iface.BeaconState, error)
+	SaveFinalizedState(fSlot types.Slot, fRoot [32]byte, fState iface.BeaconState)
 	MigrateToCold(ctx context.Context, fRoot [32]byte) error
-	ReplayBlocks(ctx context.Context, state iface.ReadOnlyBeaconState, signed []*eth.SignedBeaconBlock, targetSlot types.Slot) (iface.ReadOnlyBeaconState, error)
+	ReplayBlocks(ctx context.Context, state iface.BeaconState, signed []*eth.SignedBeaconBlock, targetSlot types.Slot) (iface.BeaconState, error)
 	LoadBlocks(ctx context.Context, startSlot, endSlot types.Slot, endBlockRoot [32]byte) ([]*eth.SignedBeaconBlock, error)
 	HasState(ctx context.Context, blockRoot [32]byte) (bool, error)
 	HasStateInCache(ctx context.Context, blockRoot [32]byte) (bool, error)
-	StateByRoot(ctx context.Context, blockRoot [32]byte) (iface.ReadOnlyBeaconState, error)
-	StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (iface.ReadOnlyBeaconState, error)
-	StateBySlot(ctx context.Context, slot types.Slot) (iface.ReadOnlyBeaconState, error)
+	StateByRoot(ctx context.Context, blockRoot [32]byte) (iface.BeaconState, error)
+	StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (iface.BeaconState, error)
+	StateBySlot(ctx context.Context, slot types.Slot) (iface.BeaconState, error)
 	RecoverStateSummary(ctx context.Context, blockRoot [32]byte) (*ethereum_beacon_p2p_v1.StateSummary, error)
-	SaveState(ctx context.Context, root [32]byte, st iface.ReadOnlyBeaconState) error
+	SaveState(ctx context.Context, root [32]byte, st iface.BeaconState) error
 	ForceCheckpoint(ctx context.Context, root []byte) error
 	EnableSaveHotStateToDB(_ context.Context)
 	DisableSaveHotStateToDB(ctx context.Context) error
@@ -84,7 +84,7 @@ func New(beaconDB db.NoHeadAccessDatabase) *State {
 }
 
 // Resume resumes a new state management object from previously saved finalized check point in DB.
-func (s *State) Resume(ctx context.Context) (iface.ReadOnlyBeaconState, error) {
+func (s *State) Resume(ctx context.Context) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.Resume")
 	defer span.End()
 

@@ -18,7 +18,7 @@ import (
 
 // State returns the saved state using block's signing root,
 // this particular block was used to generate the state.
-func (s *Store) State(ctx context.Context, blockRoot [32]byte) (iface.ReadOnlyBeaconState, error) {
+func (s *Store) State(ctx context.Context, blockRoot [32]byte) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.State")
 	defer span.End()
 	var st *pb.BeaconState
@@ -39,7 +39,7 @@ func (s *Store) State(ctx context.Context, blockRoot [32]byte) (iface.ReadOnlyBe
 }
 
 // GenesisState returns the genesis state in beacon chain.
-func (s *Store) GenesisState(ctx context.Context) (iface.ReadOnlyBeaconState, error) {
+func (s *Store) GenesisState(ctx context.Context) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.GenesisState")
 	defer span.End()
 	var st *pb.BeaconState

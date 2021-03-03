@@ -23,7 +23,7 @@ func runRegistryUpdatesTests(t *testing.T, config string) {
 	}
 }
 
-func processRegistryUpdatesWrapper(t *testing.T, state *beaconstate.BeaconState) (*beaconstate.BeaconState, error) {
+func processRegistryUpdatesWrapper(t *testing.T, state iface.ReadOnlyBeaconState) (iface.ReadOnlyBeaconState, error) {
 	state, err := epoch.ProcessRegistryUpdates(state)
 	require.NoError(t, err, "Could not process registry updates")
 	return state, nil

@@ -8,7 +8,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -16,8 +16,8 @@ import (
 // PoolManager maintains pending and seen voluntary exits.
 // This pool is used by proposers to insert voluntary exits into new blocks.
 type PoolManager interface {
-	PendingExits(state *beaconstate.BeaconState, slot types.Slot, noLimit bool) []*ethpb.SignedVoluntaryExit
-	InsertVoluntaryExit(ctx context.Context, state *beaconstate.BeaconState, exit *ethpb.SignedVoluntaryExit)
+	PendingExits(state iface.ReadOnlyBeaconState, slot types.Slot, noLimit bool) []*ethpb.SignedVoluntaryExit
+	InsertVoluntaryExit(ctx context.Context, state iface.ReadOnlyBeaconState, exit *ethpb.SignedVoluntaryExit)
 	MarkIncluded(exit *ethpb.SignedVoluntaryExit)
 }
 
@@ -37,7 +37,7 @@ func NewPool() *Pool {
 
 // PendingExits returns exits that are ready for inclusion at the given slot. This method will not
 // return more than the block enforced MaxVoluntaryExits.
-func (p *Pool) PendingExits(state *beaconstate.BeaconState, slot types.Slot, noLimit bool) []*ethpb.SignedVoluntaryExit {
+func (p *Pool) PendingExits(state iface.ReadOnlyBeaconState, slot types.Slot, noLimit bool) []*ethpb.SignedVoluntaryExit {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -65,7 +65,7 @@ func (p *Pool) PendingExits(state *beaconstate.BeaconState, slot types.Slot, noL
 
 // InsertVoluntaryExit into the pool. This method is a no-op if the pending exit already exists,
 // or the validator is already exited.
-func (p *Pool) InsertVoluntaryExit(ctx context.Context, state *beaconstate.BeaconState, exit *ethpb.SignedVoluntaryExit) {
+func (p *Pool) InsertVoluntaryExit(ctx context.Context, state iface.ReadOnlyBeaconState, exit *ethpb.SignedVoluntaryExit) {
 	ctx, span := trace.StartSpan(ctx, "exitPool.InsertVoluntaryExit")
 	defer span.End()
 	p.lock.Lock()

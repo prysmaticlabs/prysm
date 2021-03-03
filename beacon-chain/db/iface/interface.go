@@ -32,7 +32,7 @@ type ReadOnlyDatabase interface {
 	HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) ([]*eth.SignedBeaconBlock, error)
 	// State related methods.
 	State(ctx context.Context, blockRoot [32]byte) (iface.BeaconState, error)
-	GenesisState(ctx context.Context) (iface.ReadOnlyBeaconState, error)
+	GenesisState(ctx context.Context) (iface.BeaconState, error)
 	HasState(ctx context.Context, blockRoot [32]byte) bool
 	StateSummary(ctx context.Context, blockRoot [32]byte) (*ethereum_beacon_p2p_v1.StateSummary, error)
 	HasStateSummary(ctx context.Context, blockRoot [32]byte) bool
