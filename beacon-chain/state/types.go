@@ -7,9 +7,13 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	coreutils "github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+// Ensure type BeaconState below implements BeaconState interface.
+var _ iface.BeaconState = (*BeaconState)(nil)
 
 func init() {
 	fieldMap = make(map[fieldIndex]dataType, params.BeaconConfig().BeaconStateFieldCount)
