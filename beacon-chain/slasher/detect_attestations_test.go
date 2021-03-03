@@ -4,8 +4,11 @@ import (
 	"context"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
+
+	types "github.com/prysmaticlabs/eth2-types"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -376,19 +379,7 @@ func TestService_processQueuedAttestations(t *testing.T) {
 			Database: beaconDB,
 		},
 		attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-			{
-				IndexedAttestation: &ethpb.IndexedAttestation{
-					AttestingIndices: []uint64{0, 1},
-					Data: &ethpb.AttestationData{
-						Source: &ethpb.Checkpoint{
-							Epoch: 0,
-						},
-						Target: &ethpb.Checkpoint{
-							Epoch: 1,
-						},
-					},
-				},
-			},
+			createAttestationWrapper(0, 1, []uint64{0, 1}, nil),
 		},
 	}
 	ctx, cancel := context.WithCancel(context.Background())
@@ -404,4 +395,26 @@ func TestService_processQueuedAttestations(t *testing.T) {
 	cancel()
 	<-exitChan
 	assert.LogsContain(t, hook, "Epoch reached, processing queued")
+}
+
+func createAttestationWrapper(source, target types.Epoch, indices []uint64, signingRoot []byte) *slashertypes.IndexedAttestationWrapper {
+	signRoot := bytesutil.ToBytes32(signingRoot)
+	if signingRoot == nil {
+		signRoot = params.BeaconConfig().ZeroHash
+	}
+	data := &ethpb.AttestationData{
+		Source: &ethpb.Checkpoint{
+			Epoch: source,
+		},
+		Target: &ethpb.Checkpoint{
+			Epoch: target,
+		},
+	}
+	return &slashertypes.IndexedAttestationWrapper{
+		IndexedAttestation: &ethpb.IndexedAttestation{
+			AttestingIndices: indices,
+			Data:             data,
+		},
+		SigningRoot: signRoot,
+	}
 }

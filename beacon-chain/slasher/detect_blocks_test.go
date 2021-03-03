@@ -4,6 +4,9 @@ import (
 	"context"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -30,42 +33,10 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 		exitChan <- struct{}{}
 	}()
 	s.beaconBlocksQueue = []*slashertypes.SignedBlockHeaderWrapper{
-		{
-			SignedBeaconBlockHeader: &ethpb.SignedBeaconBlockHeader{
-				Header: &ethpb.BeaconBlockHeader{
-					Slot:          4,
-					ProposerIndex: 1,
-				},
-			},
-			SigningRoot: [32]byte{1},
-		},
-		{
-			SignedBeaconBlockHeader: &ethpb.SignedBeaconBlockHeader{
-				Header: &ethpb.BeaconBlockHeader{
-					Slot:          4,
-					ProposerIndex: 1,
-				},
-			},
-			SigningRoot: [32]byte{1},
-		},
-		{
-			SignedBeaconBlockHeader: &ethpb.SignedBeaconBlockHeader{
-				Header: &ethpb.BeaconBlockHeader{
-					Slot:          4,
-					ProposerIndex: 1,
-				},
-			},
-			SigningRoot: [32]byte{1},
-		},
-		{
-			SignedBeaconBlockHeader: &ethpb.SignedBeaconBlockHeader{
-				Header: &ethpb.BeaconBlockHeader{
-					Slot:          4,
-					ProposerIndex: 1,
-				},
-			},
-			SigningRoot: [32]byte{2},
-		},
+		createProposalWrapper(4, 1, []byte{1}),
+		createProposalWrapper(4, 1, []byte{1}),
+		createProposalWrapper(4, 1, []byte{1}),
+		createProposalWrapper(4, 1, []byte{2}),
 	}
 	currentEpoch := types.Epoch(0)
 	currentEpochChan <- currentEpoch
@@ -92,28 +63,28 @@ func Test_processQueuedBlocks_NotSlashable(t *testing.T) {
 		exitChan <- struct{}{}
 	}()
 	s.beaconBlocksQueue = []*slashertypes.SignedBlockHeaderWrapper{
-		{
-			SignedBeaconBlockHeader: &ethpb.SignedBeaconBlockHeader{
-				Header: &ethpb.BeaconBlockHeader{
-					Slot:          4,
-					ProposerIndex: 1,
-				},
-			},
-			SigningRoot: [32]byte{1},
-		},
-		{
-			SignedBeaconBlockHeader: &ethpb.SignedBeaconBlockHeader{
-				Header: &ethpb.BeaconBlockHeader{
-					Slot:          4,
-					ProposerIndex: 1,
-				},
-			},
-			SigningRoot: [32]byte{1},
-		},
+		createProposalWrapper(4, 1, []byte{1}),
+		createProposalWrapper(4, 1, []byte{1}),
 	}
 	currentEpoch := types.Epoch(4)
 	currentEpochChan <- currentEpoch
 	cancel()
 	<-exitChan
 	require.LogsDoNotContain(t, hook, "Proposer double proposal slashing")
+}
+
+func createProposalWrapper(slot types.Slot, proposerIndex types.ValidatorIndex, signingRoot []byte) *slashertypes.SignedBlockHeaderWrapper {
+	signRoot := bytesutil.ToBytes32(signingRoot)
+	if signingRoot == nil {
+		signRoot = params.BeaconConfig().ZeroHash
+	}
+	return &slashertypes.SignedBlockHeaderWrapper{
+		SignedBeaconBlockHeader: &ethpb.SignedBeaconBlockHeader{
+			Header: &ethpb.BeaconBlockHeader{
+				Slot:          slot,
+				ProposerIndex: proposerIndex,
+			},
+		},
+		SigningRoot: signRoot,
+	}
 }

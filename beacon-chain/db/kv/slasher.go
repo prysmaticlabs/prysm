@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/pkg/errors"
-
 	ssz "github.com/ferranbt/fastssz"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -165,7 +163,7 @@ func (s *Store) SaveAttestationRecordsForValidators(
 			}
 			value, err := encodeAttestationRecord(att)
 			if err != nil {
-				return errors.Wrap(err, "failed to encode attestation record")
+				return err
 			}
 			for _, valIdx := range att.IndexedAttestation.AttestingIndices {
 				encIdx := ssz.MarshalUint64(make([]byte, 0), valIdx)
@@ -259,10 +257,6 @@ func (s *Store) CheckDoubleBlockProposals(
 			}
 			existingSigningRoot := bytesutil.ToBytes32(existingProposalWrapper[:32])
 			if existingSigningRoot != proposal.SigningRoot {
-				//existingAtt, err := decodeAttestationRecord(existingEncodedRecord)
-				//if err != nil {
-				//	return err
-				//}
 				doubleProposals = append(doubleProposals, &slashertypes.DoubleBlockProposal{
 					Slot:                proposal.SignedBeaconBlockHeader.Header.Slot,
 					ProposerIndex:       proposal.SignedBeaconBlockHeader.Header.ProposerIndex,

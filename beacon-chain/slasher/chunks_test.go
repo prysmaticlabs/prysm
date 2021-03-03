@@ -5,12 +5,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
-	"github.com/prysmaticlabs/prysm/shared/params"
-
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -153,7 +148,8 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 
 	// Next up, we save the old attestation record, then check if the
 	// surrounding vote is indeed slashable.
-	attRecord := createAttestationWrapper(att.IndexedAttestation.Data.Source.Epoch, att.IndexedAttestation.Data.Target.Epoch, []uint64{uint64(validatorIdx)}, []byte{1})
+	attData := att.IndexedAttestation.Data
+	attRecord := createAttestationWrapper(attData.Source.Epoch, attData.Target.Epoch, []uint64{uint64(validatorIdx)}, []byte{1})
 	err = beaconDB.SaveAttestationRecordsForValidators(
 		ctx,
 		[]*slashertypes.IndexedAttestationWrapper{attRecord},
@@ -234,7 +230,8 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 
 	// Next up, we save the old attestation record, then check if the
 	// surroundedVote vote is indeed slashable.
-	attRecord := createAttestationWrapper(att.IndexedAttestation.Data.Source.Epoch, att.IndexedAttestation.Data.Target.Epoch, []uint64{uint64(validatorIdx)}, []byte{1})
+	attData := att.IndexedAttestation.Data
+	attRecord := createAttestationWrapper(attData.Source.Epoch, attData.Target.Epoch, []uint64{uint64(validatorIdx)}, []byte{1})
 	err = beaconDB.SaveAttestationRecordsForValidators(
 		ctx,
 		[]*slashertypes.IndexedAttestationWrapper{attRecord},
@@ -674,26 +671,4 @@ func Test_chunkDataAtEpoch_SetRetrieve(t *testing.T) {
 	received, err := chunkDataAtEpoch(params, chunk, validatorIdx, epochInChunk)
 	require.NoError(t, err)
 	assert.Equal(t, targetEpoch, received)
-}
-
-func createAttestationWrapper(source, target types.Epoch, indices []uint64, signingRoot []byte) *slashertypes.IndexedAttestationWrapper {
-	signRoot := bytesutil.ToBytes32(signingRoot)
-	if signingRoot == nil {
-		signRoot = params.BeaconConfig().ZeroHash
-	}
-	data := &ethpb.AttestationData{
-		Source: &ethpb.Checkpoint{
-			Epoch: source,
-		},
-		Target: &ethpb.Checkpoint{
-			Epoch: target,
-		},
-	}
-	return &slashertypes.IndexedAttestationWrapper{
-		IndexedAttestation: &ethpb.IndexedAttestation{
-			AttestingIndices: indices,
-			Data:             data,
-		},
-		SigningRoot: signRoot,
-	}
 }
