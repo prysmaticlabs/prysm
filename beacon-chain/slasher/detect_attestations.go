@@ -79,7 +79,7 @@ func (s *Service) detectSlashableAttestations(
 
 	// Update the latest written epoch for all involved validator indices.
 	validatorIndices := s.params.validatorIndicesInChunk(args.validatorChunkIndex)
-	return s.serviceCfg.Database.SaveLatestEpochAttestedForValidators(ctx, validatorIndices, args.currentEpoch)
+	return s.serviceCfg.Database.SaveLastEpochWrittenForValidators(ctx, validatorIndices, args.currentEpoch)
 }
 
 // Check for attester slashing double votes by looking at every single validator index
@@ -228,27 +228,26 @@ func (s *Service) determineChunksToUpdateForValidators(
 ) (chunkIndices []uint64, err error) {
 	ctx, span := trace.StartSpan(ctx, "Slasher.determineChunksToUpdateForValidators")
 	defer span.End()
-	attestedEpochs, err := s.serviceCfg.Database.LatestEpochAttestedForValidators(ctx, validatorIndices)
+	lastCurrentEpochs, err := s.serviceCfg.Database.LastEpochWrittenForValidators(ctx, validatorIndices)
 	if err != nil {
 		return
 	}
+
+	// Initialize the last epoch written for each validator to 0.
+	lastCurrentEpochByValidator := make(map[types.ValidatorIndex]types.Epoch, len(validatorIndices))
+	for _, valIdx := range validatorIndices {
+		lastCurrentEpochByValidator[valIdx] = 0
+	}
+	for _, lastEpoch := range lastCurrentEpochs {
+		lastCurrentEpochByValidator[lastEpoch.ValidatorIndex] = lastEpoch.Epoch
+	}
+
+	// For every single validator and their last written current epoch, we determine
+	// the chunk indices we need to update based on all the chunks between the last
+	// epoch written and the current epoch, inclusive.
 	chunkIndicesToUpdate := make(map[uint64]bool)
 
-	// Initialize the latest epoch attested for each validator to 0.
-	latestEpochAttestedByValidator := make(map[types.ValidatorIndex]types.Epoch, len(validatorIndices))
-	for _, valIdx := range validatorIndices {
-		latestEpochAttestedByValidator[valIdx] = 0
-	}
-	// If we have indeed attested an epoch, we update that value in
-	// the map from the previous step.
-	for _, attestedEpoch := range attestedEpochs {
-		latestEpochAttestedByValidator[attestedEpoch.ValidatorIndex] = attestedEpoch.Epoch
-	}
-
-	// For every single validator and their latest epoch attested, we determine
-	// the chunk indices we need to update based on all the chunks between the latest
-	// epoch written and the current epoch, inclusive.
-	for _, epoch := range latestEpochAttestedByValidator {
+	for _, epoch := range lastCurrentEpochByValidator {
 		latestEpochWritten := epoch
 		for latestEpochWritten <= args.currentEpoch {
 			chunkIdx := s.params.chunkIndex(latestEpochWritten)
@@ -279,11 +278,9 @@ func (s *Service) applyAttestationForValidator(
 	sourceEpoch := attestation.IndexedAttestation.Data.Source.Epoch
 	targetEpoch := attestation.IndexedAttestation.Data.Target.Epoch
 	chunkIdx := s.params.chunkIndex(sourceEpoch)
-	chunk, ok := chunksByChunkIdx[chunkIdx]
-	if !ok {
-		// It is possible we receive an attestation corresponding to a chunk index
-		// we are not yet updating, so we ignore.
-		return nil, nil
+	chunk, err := s.getChunk(ctx, args, chunksByChunkIdx, chunkIdx)
+	if err != nil {
+		return nil, err
 	}
 
 	// Check slashable, if so, return the slashing.
@@ -315,9 +312,9 @@ func (s *Service) applyAttestationForValidator(
 	// keep updating chunks.
 	for {
 		chunkIdx = s.params.chunkIndex(startEpoch)
-		chunk, ok = chunksByChunkIdx[chunkIdx]
-		if !ok {
-			return nil, fmt.Errorf("chunk at chunk index %d not found", chunkIdx)
+		chunk, err := s.getChunk(ctx, args, chunksByChunkIdx, chunkIdx)
+		if err != nil {
+			return nil, err
 		}
 		keepGoing, err := chunk.Update(
 			&chunkUpdateArgs{
@@ -340,6 +337,30 @@ func (s *Service) applyAttestationForValidator(
 		startEpoch = chunk.NextChunkStartEpoch(startEpoch)
 	}
 	return nil, nil
+}
+
+// Retrieves a chunk at a chunk index from a map. If such chunk does not exist, which
+// should be rare (occurring when we receive an attestation with source and target epochs
+// that span multiple chunk indices), then we fallback to fetching from disk.
+func (s *Service) getChunk(
+	ctx context.Context,
+	args *chunkUpdateArgs,
+	chunksByChunkIdx map[uint64]Chunker,
+	chunkIdx uint64,
+) (Chunker, error) {
+	chunk, ok := chunksByChunkIdx[chunkIdx]
+	if ok {
+		return chunk, nil
+	}
+	// We can ensure we load the appropriate chunk we need by fetching from the DB.
+	diskChunks, err := s.loadChunks(ctx, args, []uint64{chunkIdx})
+	if err != nil {
+		return nil, err
+	}
+	if chunk, ok := diskChunks[chunkIdx]; ok {
+		return chunk, nil
+	}
+	return nil, fmt.Errorf("could not retrieve chunk at chunk index %d from disk", chunkIdx)
 }
 
 // Load chunks for a specified list of chunk indices. We attempt to load it from the database.

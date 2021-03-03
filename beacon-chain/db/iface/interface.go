@@ -58,7 +58,7 @@ type ReadOnlyDatabase interface {
 	// Powchain operations.
 	PowchainData(ctx context.Context) (*db.ETH1ChainData, error)
 	// Slasher operations.
-	LatestEpochAttestedForValidators(
+	LastEpochWrittenForValidators(
 		ctx context.Context, validatorIndices []types.ValidatorIndex,
 	) ([]*slashertypes.AttestedEpochForValidator, error)
 	AttestationRecordForValidator(
@@ -103,7 +103,7 @@ type NoHeadAccessDatabase interface {
 	// Powchain operations.
 	SavePowchainData(ctx context.Context, data *db.ETH1ChainData) error
 	// Slasher operations.
-	SaveLatestEpochAttestedForValidators(
+	SaveLastEpochWrittenForValidators(
 		ctx context.Context, validatorIndices []types.ValidatorIndex, epoch types.Epoch,
 	) error
 	SaveAttestationRecordsForValidators(
