@@ -93,13 +93,13 @@ func TestService_groupByChunkIndex(t *testing.T) {
 				historyLength: 3,
 			},
 			atts: []*slashertypes.IndexedAttestationWrapper{
-				createAttestationWrapper(0, 0, nil, nil),
-				createAttestationWrapper(1, 0, nil, nil),
+				createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */),
+				createAttestationWrapper(1, 0, nil /* indices */, nil /* signingRoot */),
 			},
 			want: map[uint64][]*slashertypes.IndexedAttestationWrapper{
 				0: {
-					createAttestationWrapper(0, 0, nil, nil),
-					createAttestationWrapper(1, 0, nil, nil),
+					createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */),
+					createAttestationWrapper(1, 0, nil /* indices */, nil /* signingRoot */),
 				},
 			},
 		},
@@ -110,17 +110,17 @@ func TestService_groupByChunkIndex(t *testing.T) {
 				historyLength: 3,
 			},
 			atts: []*slashertypes.IndexedAttestationWrapper{
-				createAttestationWrapper(0, 0, nil, nil),
-				createAttestationWrapper(1, 0, nil, nil),
-				createAttestationWrapper(2, 0, nil, nil),
+				createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */),
+				createAttestationWrapper(1, 0, nil /* indices */, nil /* signingRoot */),
+				createAttestationWrapper(2, 0, nil /* indices */, nil /* signingRoot */),
 			},
 			want: map[uint64][]*slashertypes.IndexedAttestationWrapper{
 				0: {
-					createAttestationWrapper(0, 0, nil, nil),
-					createAttestationWrapper(1, 0, nil, nil),
+					createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */),
+					createAttestationWrapper(1, 0, nil /* indices */, nil /* signingRoot */),
 				},
 				1: {
-					createAttestationWrapper(2, 0, nil, nil),
+					createAttestationWrapper(2, 0, nil /* indices */, nil /* signingRoot */),
 				},
 			},
 		},

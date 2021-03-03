@@ -114,7 +114,7 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	// We apply attestation with (source 1, target 2) for our validator.
 	source := types.Epoch(1)
 	target := types.Epoch(2)
-	att := createAttestationWrapper(source, target, nil, nil)
+	att := createAttestationWrapper(source, target, nil /* indices */, nil /* signingRoot */)
 	slashing, err := srv.applyAttestationForValidator(
 		ctx,
 		args,
@@ -135,7 +135,7 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	// expect a slashable offense to be returned.
 	source = types.Epoch(0)
 	target = types.Epoch(3)
-	slashableAtt := createAttestationWrapper(source, target, nil, nil)
+	slashableAtt := createAttestationWrapper(source, target, nil /* indices */, nil /* signingRoot */)
 	slashing, err = srv.applyAttestationForValidator(
 		ctx,
 		args,
@@ -174,7 +174,7 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	// We apply attestation with (source 0, target 3) for our validator.
 	source := types.Epoch(0)
 	target := types.Epoch(3)
-	att := createAttestationWrapper(source, target, nil, nil)
+	att := createAttestationWrapper(source, target, nil /* indices */, nil /* signingRoot */)
 	slashing, err := srv.applyAttestationForValidator(
 		ctx,
 		args,
@@ -195,7 +195,7 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	// expect a slashable offense to be returned.
 	source = types.Epoch(1)
 	target = types.Epoch(2)
-	slashableAtt := createAttestationWrapper(source, target, nil, nil)
+	slashableAtt := createAttestationWrapper(source, target, nil /* indices */, nil /* signingRoot */)
 	slashing, err = srv.applyAttestationForValidator(
 		ctx,
 		args,
