@@ -14,15 +14,6 @@ const (
 	MaxSpan
 )
 
-// CompactAttestation containing only the required information
-// for attester slashing detection.
-type CompactAttestation struct {
-	AttestingIndices []uint64
-	Source           types.Epoch
-	Target           types.Epoch
-	SigningRoot      [32]byte
-}
-
 // IndexedAttestationWrapper contains an indexed attestation with its
 // signing root to reduce duplicated computation.
 type IndexedAttestationWrapper struct {
@@ -52,14 +43,6 @@ type DoubleBlockProposal struct {
 type AttestedEpochForValidator struct {
 	ValidatorIndex types.ValidatorIndex
 	Epoch          types.Epoch
-}
-
-// CompactBeaconBlock containing only the required information
-// for proposer slashing detection.
-type CompactBeaconBlock struct {
-	ProposerIndex types.ValidatorIndex
-	Slot          types.Slot
-	SigningRoot   [32]byte
 }
 
 // SignedBlockHeaderWrapper contains an signed beacon block header with its

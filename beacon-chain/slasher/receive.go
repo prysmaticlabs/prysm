@@ -46,11 +46,11 @@ func (s *Service) receiveBlocks(ctx context.Context) {
 		select {
 		case blockHeader := <-s.beaconBlocksChan:
 			// TODO(#8331): Defer blocks from the future for later processing.
-			compactBlock := &slashertypes.SignedBlockHeaderWrapper{
+			wrappedProposal := &slashertypes.SignedBlockHeaderWrapper{
 				SignedBeaconBlockHeader: blockHeader,
 			}
 			s.blockQueueLock.Lock()
-			s.beaconBlocksQueue = append(s.beaconBlocksQueue, compactBlock)
+			s.beaconBlocksQueue = append(s.beaconBlocksQueue, wrappedProposal)
 			s.blockQueueLock.Unlock()
 		case err := <-sub.Err():
 			log.WithError(err).Debug("Subscriber closed with error")
