@@ -5,7 +5,6 @@ moved_targets(
         ":push_images",
         ":image_bundle",
         ":image_with_creation_time",
-        ":image_alpine",
         ":image",
         ":go_default_test",
         ":slasher",
