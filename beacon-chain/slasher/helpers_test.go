@@ -30,13 +30,13 @@ func TestService_groupByValidatorChunkIndex(t *testing.T) {
 				validatorChunkSize: 2,
 			},
 			atts: []*slashertypes.IndexedAttestationWrapper{
-				createAttestationWrapper(0, 0, []uint64{0, 1}, nil),
-				createAttestationWrapper(0, 0, []uint64{0, 1}, nil),
+				createAttestationWrapper(t, 0, 0, []uint64{0, 1}, nil),
+				createAttestationWrapper(t, 0, 0, []uint64{0, 1}, nil),
 			},
 			want: map[uint64][]*slashertypes.IndexedAttestationWrapper{
 				0: {
-					createAttestationWrapper(0, 0, []uint64{0, 1}, nil),
-					createAttestationWrapper(0, 0, []uint64{0, 1}, nil),
+					createAttestationWrapper(t, 0, 0, []uint64{0, 1}, nil),
+					createAttestationWrapper(t, 0, 0, []uint64{0, 1}, nil),
 				},
 			},
 		},
@@ -46,17 +46,17 @@ func TestService_groupByValidatorChunkIndex(t *testing.T) {
 				validatorChunkSize: 2,
 			},
 			atts: []*slashertypes.IndexedAttestationWrapper{
-				createAttestationWrapper(0, 0, []uint64{0, 2, 4}, nil),
+				createAttestationWrapper(t, 0, 0, []uint64{0, 2, 4}, nil),
 			},
 			want: map[uint64][]*slashertypes.IndexedAttestationWrapper{
 				0: {
-					createAttestationWrapper(0, 0, []uint64{0, 2, 4}, nil),
+					createAttestationWrapper(t, 0, 0, []uint64{0, 2, 4}, nil),
 				},
 				1: {
-					createAttestationWrapper(0, 0, []uint64{0, 2, 4}, nil),
+					createAttestationWrapper(t, 0, 0, []uint64{0, 2, 4}, nil),
 				},
 				2: {
-					createAttestationWrapper(0, 0, []uint64{0, 2, 4}, nil),
+					createAttestationWrapper(t, 0, 0, []uint64{0, 2, 4}, nil),
 				},
 			},
 		},
@@ -93,13 +93,13 @@ func TestService_groupByChunkIndex(t *testing.T) {
 				historyLength: 3,
 			},
 			atts: []*slashertypes.IndexedAttestationWrapper{
-				createAttestationWrapper(0, 0, nil, nil),
-				createAttestationWrapper(1, 0, nil, nil),
+				createAttestationWrapper(t, 0, 0, nil, nil),
+				createAttestationWrapper(t, 1, 0, nil, nil),
 			},
 			want: map[uint64][]*slashertypes.IndexedAttestationWrapper{
 				0: {
-					createAttestationWrapper(0, 0, nil, nil),
-					createAttestationWrapper(1, 0, nil, nil),
+					createAttestationWrapper(t, 0, 0, nil, nil),
+					createAttestationWrapper(t, 1, 0, nil, nil),
 				},
 			},
 		},
@@ -110,17 +110,17 @@ func TestService_groupByChunkIndex(t *testing.T) {
 				historyLength: 3,
 			},
 			atts: []*slashertypes.IndexedAttestationWrapper{
-				createAttestationWrapper(0, 0, nil, nil),
-				createAttestationWrapper(1, 0, nil, nil),
-				createAttestationWrapper(2, 0, nil, nil),
+				createAttestationWrapper(t, 0, 0, nil, nil),
+				createAttestationWrapper(t, 1, 0, nil, nil),
+				createAttestationWrapper(t, 2, 0, nil, nil),
 			},
 			want: map[uint64][]*slashertypes.IndexedAttestationWrapper{
 				0: {
-					createAttestationWrapper(0, 0, nil, nil),
-					createAttestationWrapper(1, 0, nil, nil),
+					createAttestationWrapper(t, 0, 0, nil, nil),
+					createAttestationWrapper(t, 1, 0, nil, nil),
 				},
 				1: {
-					createAttestationWrapper(2, 0, nil, nil),
+					createAttestationWrapper(t, 2, 0, nil, nil),
 				},
 			},
 		},

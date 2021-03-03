@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
+
 	ssz "github.com/ferranbt/fastssz"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -89,11 +91,11 @@ func (s *Store) CheckAttesterDoubleVotes(
 			for _, valIdx := range att.IndexedAttestation.AttestingIndices {
 				encIdx := ssz.MarshalUint64(make([]byte, 0), valIdx)
 				key := append(encIdx, encEpoch...)
-				existingAttWrapper := bkt.Get(key)
-				if len(existingAttWrapper) < 32 {
+				existingAttRecord := bkt.Get(key)
+				if len(existingAttRecord) < 32 {
 					continue
 				}
-				existingSigningRoot := bytesutil.ToBytes32(existingAttWrapper[:32])
+				existingSigningRoot := bytesutil.ToBytes32(existingAttRecord[:32])
 				if existingSigningRoot != att.SigningRoot {
 					//existingAtt, err := decodeAttestationRecord(existingEncodedRecord)
 					//if err != nil {
@@ -163,7 +165,7 @@ func (s *Store) SaveAttestationRecordsForValidators(
 			}
 			value, err := encodeAttestationRecord(att)
 			if err != nil {
-				return err
+				return errors.Wrap(err, "failed to encode attestation record")
 			}
 			for _, valIdx := range att.IndexedAttestation.AttestingIndices {
 				encIdx := ssz.MarshalUint64(make([]byte, 0), valIdx)
@@ -319,7 +321,7 @@ func encodeAttestationRecord(att *slashertypes.IndexedAttestationWrapper) ([]byt
 	if err != nil {
 		return nil, err
 	}
-	return append(encodedAtt, att.SigningRoot[:]...), nil
+	return append(att.SigningRoot[:], encodedAtt...), nil
 }
 
 // Decode attestation record from bytes.
@@ -343,7 +345,7 @@ func encodeProposalRecord(blkHdr *slashertypes.SignedBlockHeaderWrapper) ([]byte
 	if err != nil {
 		return nil, err
 	}
-	return append(encodedHdr, blkHdr.SigningRoot[:]...), nil
+	return append(blkHdr.SigningRoot[:], encodedHdr...), nil
 }
 
 func decodeProposalRecord(encoded []byte) (*slashertypes.SignedBlockHeaderWrapper, error) {
