@@ -63,7 +63,7 @@ func (e Exporter) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 }
 
 // State -- passthrough.
-func (e Exporter) State(ctx context.Context, blockRoot [32]byte) (iface.ReadOnlyBeaconState, error) {
+func (e Exporter) State(ctx context.Context, blockRoot [32]byte) (iface.BeaconState, error) {
 	return e.db.State(ctx, blockRoot)
 }
 
@@ -73,7 +73,7 @@ func (e Exporter) StateSummary(ctx context.Context, blockRoot [32]byte) (*pb.Sta
 }
 
 // GenesisState -- passthrough.
-func (e Exporter) GenesisState(ctx context.Context) (iface.ReadOnlyBeaconState, error) {
+func (e Exporter) GenesisState(ctx context.Context) (iface.BeaconState, error) {
 	return e.db.GenesisState(ctx)
 }
 
