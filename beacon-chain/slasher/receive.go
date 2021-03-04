@@ -73,10 +73,12 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 			attestations := s.attestationQueue
 			s.attestationQueue = make([]*slashertypes.IndexedAttestationWrapper, 0)
 			s.attestationQueueLock.Unlock()
+
 			log.WithFields(logrus.Fields{
 				"currentEpoch": currentEpoch,
 				"numAtts":      len(attestations),
 			}).Info("Epoch reached, processing queued atts for slashing detection")
+
 			// Save the attestation records to our database.
 			if err := s.serviceCfg.Database.SaveAttestationRecordsForValidators(
 				ctx, attestations,
