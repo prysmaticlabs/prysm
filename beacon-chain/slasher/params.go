@@ -1,6 +1,9 @@
 package slasher
 
-import types "github.com/prysmaticlabs/eth2-types"
+import (
+	ssz "github.com/ferranbt/fastssz"
+	types "github.com/prysmaticlabs/eth2-types"
+)
 
 // Parameters for slashing detection.
 //
@@ -124,7 +127,7 @@ func (p *Parameters) validatorOffset(validatorIndex types.ValidatorIndex) uint64
 }
 
 // Construct a key for our database schema given a validator chunk index and chunk index.
-// This calculation gives us a uint that uniquely represents
+// This calculation gives us a uint encoded as bytes that uniquely represents
 // a 2D chunk given a validator index and epoch value.
 // First, we compute the validator chunk index for the validator index,
 // Then, we compute the chunk index for the epoch.
@@ -142,9 +145,9 @@ func (p *Parameters) validatorOffset(validatorIndex types.ValidatorIndex) uint64
 //
 //  validatorChunkIndex * width + chunkIndex = 2*4 + 2 = 10
 //
-func (p *Parameters) flatSliceID(validatorChunkIndex, chunkIndex uint64) uint64 {
+func (p *Parameters) flatSliceID(validatorChunkIndex, chunkIndex uint64) []byte {
 	width := p.historyLength / p.chunkSize
-	return validatorChunkIndex*width + chunkIndex
+	return ssz.MarshalUint64(make([]byte, 0), validatorChunkIndex*width+chunkIndex)
 }
 
 // Given a validator chunk index, we determine all of the validator

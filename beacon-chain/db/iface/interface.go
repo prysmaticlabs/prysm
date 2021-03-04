@@ -68,7 +68,7 @@ type ReadOnlyDatabase interface {
 		ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper,
 	) ([]*slashertypes.AttesterDoubleVote, error)
 	LoadSlasherChunks(
-		ctx context.Context, kind slashertypes.ChunkKind, diskKeys []uint64,
+		ctx context.Context, kind slashertypes.ChunkKind, diskKeys [][]byte,
 	) ([][]uint16, []bool, error)
 	CheckDoubleBlockProposals(
 		ctx context.Context, proposals []*slashertypes.SignedBlockHeaderWrapper,
@@ -111,7 +111,7 @@ type NoHeadAccessDatabase interface {
 		attestations []*slashertypes.IndexedAttestationWrapper,
 	) error
 	SaveSlasherChunks(
-		ctx context.Context, kind slashertypes.ChunkKind, chunkKeys []uint64, chunks [][]uint16,
+		ctx context.Context, kind slashertypes.ChunkKind, chunkKeys [][]byte, chunks [][]uint16,
 	) error
 	SaveBlockProposals(
 		ctx context.Context, proposal []*slashertypes.SignedBlockHeaderWrapper,

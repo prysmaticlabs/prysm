@@ -378,7 +378,7 @@ func (s *Service) loadChunks(
 ) (map[uint64]Chunker, error) {
 	ctx, span := trace.StartSpan(ctx, "Slasher.loadChunks")
 	defer span.End()
-	chunkKeys := make([]uint64, 0, len(chunkIndices))
+	chunkKeys := make([][]byte, 0, len(chunkIndices))
 	for _, chunkIdx := range chunkIndices {
 		chunkKeys = append(chunkKeys, s.params.flatSliceID(args.validatorChunkIndex, chunkIdx))
 	}
@@ -421,7 +421,7 @@ func (s *Service) saveUpdatedChunks(
 ) error {
 	ctx, span := trace.StartSpan(ctx, "Slasher.saveUpdatedChunks")
 	defer span.End()
-	chunkKeys := make([]uint64, 0, len(updatedChunksByChunkIdx))
+	chunkKeys := make([][]byte, 0, len(updatedChunksByChunkIdx))
 	chunks := make([][]uint16, 0, len(updatedChunksByChunkIdx))
 	for chunkIdx, chunk := range updatedChunksByChunkIdx {
 		chunkKeys = append(chunkKeys, s.params.flatSliceID(args.validatorChunkIndex, chunkIdx))
