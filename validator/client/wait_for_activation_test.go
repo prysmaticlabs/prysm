@@ -3,9 +3,11 @@ package client
 import (
 	"context"
 	"fmt"
-	constant "github.com/prysmaticlabs/prysm/validator/testing"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/event"
+	constant "github.com/prysmaticlabs/prysm/validator/testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
@@ -52,7 +54,7 @@ func TestWaitActivation_ContextCanceled(t *testing.T) {
 	)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	assert.ErrorContains(t, cancelledCtx, v.WaitForActivation(ctx, make(chan struct{})))
+	assert.ErrorContains(t, cancelledCtx, v.WaitForActivation(ctx))
 }
 
 func TestWaitActivation_StreamSetupFails_AttemptsToReconnect(t *testing.T) {
@@ -83,7 +85,7 @@ func TestWaitActivation_StreamSetupFails_AttemptsToReconnect(t *testing.T) {
 	resp := generateMockStatusResponse([][]byte{pubKey[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	clientStream.EXPECT().Recv().Return(resp, nil)
-	assert.NoError(t, v.WaitForActivation(context.Background(), make(chan struct{})))
+	assert.NoError(t, v.WaitForActivation(context.Background()))
 }
 
 func TestWaitForActivation_ReceiveErrorFromStream_AttemptsReconnection(t *testing.T) {
@@ -118,7 +120,7 @@ func TestWaitForActivation_ReceiveErrorFromStream_AttemptsReconnection(t *testin
 		nil,
 		errors.New("fails"),
 	).Return(resp, nil)
-	assert.NoError(t, v.WaitForActivation(context.Background(), make(chan struct{})))
+	assert.NoError(t, v.WaitForActivation(context.Background()))
 }
 
 func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
@@ -153,7 +155,7 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 		resp,
 		nil,
 	)
-	assert.NoError(t, v.WaitForActivation(context.Background(), make(chan struct{})), "Could not wait for activation")
+	assert.NoError(t, v.WaitForActivation(context.Background()), "Could not wait for activation")
 	assert.LogsContain(t, hook, "Validator activated")
 }
 
@@ -188,7 +190,7 @@ func TestWaitForActivation_Exiting(t *testing.T) {
 		resp,
 		nil,
 	)
-	assert.NoError(t, v.WaitForActivation(context.Background(), make(chan struct{})))
+	assert.NoError(t, v.WaitForActivation(context.Background()))
 }
 
 func TestWaitForActivation_RefetchKeys(t *testing.T) {
@@ -230,7 +232,7 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 		resp,
 		nil,
 	)
-	assert.NoError(t, v.WaitForActivation(context.Background(), make(chan struct{})), "Could not wait for activation")
+	assert.NoError(t, v.waitForActivation(context.Background(), make(chan struct{})), "Could not wait for activation")
 	assert.LogsContain(t, hook, msgNoKeysFetched)
 	assert.LogsContain(t, hook, "Validator activated")
 }
@@ -299,7 +301,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			channel <- struct{}{}
 		}()
 
-		assert.NoError(t, v.WaitForActivation(context.Background(), channel))
+		assert.NoError(t, v.waitForActivation(context.Background(), channel))
 		assert.LogsContain(t, hook, "Waiting for deposit to be observed by beacon node")
 		assert.LogsContain(t, hook, "Validator activated")
 	})
@@ -374,8 +376,60 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			channel <- struct{}{}
 		}()
 
-		assert.NoError(t, v.WaitForActivation(context.Background(), channel))
+		assert.NoError(t, v.waitForActivation(context.Background(), channel))
 		assert.LogsContain(t, hook, "Waiting for deposit to be observed by beacon node")
 		assert.LogsContain(t, hook, "Validator activated")
 	})
+}
+
+func TestHandleAccountsChanged_Ok(t *testing.T) {
+	ctx := context.Background()
+	defer ctx.Done()
+
+	km := &mockKeymanager{accountsChangedFeed: &event.Feed{}}
+	v := &FakeValidator{Keymanager: km}
+	channel := make(chan struct{})
+	go handleAccountsChanged(ctx, v, channel)
+	time.Sleep(time.Second) // Allow time for subscribing to changes.
+	km.SimulateAccountChanges()
+	time.Sleep(time.Second) // Allow time for handling subscribed changes.
+
+	select {
+	case _, ok := <-channel:
+		if !ok {
+			t.Error("Account changed channel is closed")
+		}
+	default:
+		t.Error("Accounts changed channel is empty")
+	}
+}
+
+func TestHandleAccountsChanged_CtxCancelled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	km := &mockKeymanager{accountsChangedFeed: &event.Feed{}}
+	v := &FakeValidator{Keymanager: km}
+	channel := make(chan struct{}, 2)
+	go handleAccountsChanged(ctx, v, channel)
+	time.Sleep(time.Second) // Allow time for subscribing to changes.
+	km.SimulateAccountChanges()
+	time.Sleep(time.Second) // Allow time for handling subscribed changes.
+
+	cancel()
+	time.Sleep(time.Second) // Allow time for handling cancellation.
+	km.SimulateAccountChanges()
+	time.Sleep(time.Second) // Allow time for handling subscribed changes.
+
+	var values int
+	for loop := true; loop == true; {
+		select {
+		case _, ok := <-channel:
+			if ok {
+				values++
+			}
+		default:
+			loop = false
+		}
+	}
+	assert.Equal(t, 1, values, "Incorrect number of values were passed to the channel")
 }

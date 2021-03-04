@@ -20,7 +20,17 @@ import (
 // WaitForActivation checks whether the validator pubkey is in the active
 // validator set. If not, this operation will block until an activation message is
 // received.
-func (v *validator) WaitForActivation(ctx context.Context, accountsChangedChan <-chan struct{}) error {
+func (v *validator) WaitForActivation(ctx context.Context) error {
+	accountsChangedChan := make(chan struct{}, 1)
+
+	accountsCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	go handleAccountsChanged(accountsCtx,v, accountsChangedChan)
+
+	return v.waitForActivation(ctx, accountsChangedChan)
+}
+
+func (v *validator) waitForActivation(ctx context.Context, accountsChangedChan <-chan struct{}) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
 	defer span.End()
 
@@ -63,13 +73,13 @@ func (v *validator) WaitForActivation(ctx context.Context, accountsChangedChan <
 			Error("Stream broken while waiting for activation. Reconnecting...")
 		// Reconnection attempt backoff, up to 60s.
 		time.Sleep(time.Second * time.Duration(mathutil.Min(uint64(attempts), 60)))
-		return v.WaitForActivation(incrementRetries(ctx), accountsChangedChan)
+		return v.waitForActivation(incrementRetries(ctx), accountsChangedChan)
 	}
 	for {
 		select {
 		case <-accountsChangedChan:
 			// Accounts (keys) changed, restart the process.
-			return v.WaitForActivation(ctx, accountsChangedChan)
+			return v.waitForActivation(ctx, accountsChangedChan)
 		default:
 			res, err := stream.Recv()
 			// If the stream is closed, we stop the loop.
@@ -87,7 +97,7 @@ func (v *validator) WaitForActivation(ctx context.Context, accountsChangedChan <
 					Error("Stream broken while waiting for activation. Reconnecting...")
 				// Reconnection attempt backoff, up to 60s.
 				time.Sleep(time.Second * time.Duration(mathutil.Min(uint64(attempts), 60)))
-				return v.WaitForActivation(incrementRetries(ctx), accountsChangedChan)
+				return v.waitForActivation(incrementRetries(ctx), accountsChangedChan)
 			}
 			valActivated := v.checkAndLogValidatorStatus(res.Statuses)
 
@@ -128,4 +138,25 @@ func streamAttempts(ctx context.Context) int {
 func incrementRetries(ctx context.Context) context.Context {
 	attempts := streamAttempts(ctx)
 	return context.WithValue(ctx, waitForActivationAttemptsContextKey, attempts+1)
+}
+
+func handleAccountsChanged(ctx context.Context, v Validator, accountsChangedChan chan<- struct{}) {
+	validatingPubKeysChan := make(chan [][48]byte, 1)
+	var sub = v.GetKeymanager().SubscribeAccountChanges(validatingPubKeysChan)
+	defer func() {
+		sub.Unsubscribe()
+		close(validatingPubKeysChan)
+	}()
+
+	for {
+		select {
+		case <-validatingPubKeysChan:
+			accountsChangedChan <- struct{}{}
+		case err := <-sub.Err():
+			log.WithError(err).Error("accounts changed subscription failed")
+			return
+		case <-ctx.Done():
+			return
+		}
+	}
 }
