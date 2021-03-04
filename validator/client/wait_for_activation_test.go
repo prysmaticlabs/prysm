@@ -293,15 +293,14 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			nil,
 		)
 
-		channel := make(chan struct{})
 		go func() {
 			// We add the active key into the keymanager and simulate a key refresh.
 			time.Sleep(time.Second * 1)
 			km.keysMap[activePubKey] = activePrivKey
-			channel <- struct{}{}
+			km.SimulateAccountChanges()
 		}()
 
-		assert.NoError(t, v.waitForActivation(context.Background(), channel))
+		assert.NoError(t, v.WaitForActivation(context.Background()))
 		assert.LogsContain(t, hook, "Waiting for deposit to be observed by beacon node")
 		assert.LogsContain(t, hook, "Validator activated")
 	})
