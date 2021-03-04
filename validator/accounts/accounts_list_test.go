@@ -10,8 +10,6 @@ import (
 	"strings"
 	"testing"
 
-	constant "github.com/prysmaticlabs/prysm/validator/testing"
-
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -29,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
+	constant "github.com/prysmaticlabs/prysm/validator/testing"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
