@@ -312,7 +312,7 @@ func decodeSlasherChunk(enc []byte) ([]uint16, error) {
 		return nil, err
 	}
 	chunk := make([]uint16, 0)
-	for i := 0; i < len(enc); i += 2 {
+	for i := 0; i < len(chunkBytes); i += 2 {
 		distance := ssz.UnmarshallUint16(chunkBytes[i : i+2])
 		chunk = append(chunk, distance)
 	}
