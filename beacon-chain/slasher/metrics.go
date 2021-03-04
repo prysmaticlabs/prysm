@@ -17,14 +17,6 @@ var (
 		Name: "slasher_chunks_saved_total",
 		Help: "Total number of slasher chunks saved to disk",
 	})
-	blockQueueSize = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "slasher_blocks_queue_size",
-		Help: "Size of block queue processed by slasher",
-	})
-	attestationQueueSize = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "slasher_attestations_queue_size",
-		Help: "Size of attestation queue processed by slasher",
-	})
 	receivedAttestationsTotal = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "slasher_attestations_received_total",
 		Help: "Total number of attestations received by slasher",

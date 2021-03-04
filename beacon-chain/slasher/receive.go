@@ -27,7 +27,6 @@ func (s *Service) receiveAttestations(ctx context.Context) {
 			}
 			s.attestationQueueLock.Lock()
 			s.attestationQueue = append(s.attestationQueue, attWrapper)
-			attestationQueueSize.Add(float64(len(s.attestationQueue)))
 			s.attestationQueueLock.Unlock()
 		case err := <-sub.Err():
 			log.WithError(err).Debug("Subscriber closed with error")
@@ -52,7 +51,6 @@ func (s *Service) receiveBlocks(ctx context.Context) {
 			}
 			s.blockQueueLock.Lock()
 			s.beaconBlocksQueue = append(s.beaconBlocksQueue, wrappedProposal)
-			blockQueueSize.Add(float64(len(s.beaconBlocksQueue)))
 			s.blockQueueLock.Unlock()
 		case err := <-sub.Err():
 			log.WithError(err).Debug("Subscriber closed with error")
