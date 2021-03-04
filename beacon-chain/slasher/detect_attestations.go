@@ -282,6 +282,8 @@ func (s *Service) applyAttestationForValidator(
 	defer span.End()
 	sourceEpoch := attestation.IndexedAttestation.Data.Source.Epoch
 	targetEpoch := attestation.IndexedAttestation.Data.Target.Epoch
+	attestationDistance.Observe(float64(targetEpoch) - float64(sourceEpoch))
+
 	chunkIdx := s.params.chunkIndex(sourceEpoch)
 	chunk, err := s.getChunk(ctx, args, chunksByChunkIdx, chunkIdx)
 	if err != nil {
@@ -426,6 +428,7 @@ func (s *Service) saveUpdatedChunks(
 	for chunkIdx, chunk := range updatedChunksByChunkIdx {
 		chunkKeys = append(chunkKeys, s.params.flatSliceID(args.validatorChunkIndex, chunkIdx))
 		chunks = append(chunks, chunk.Chunk())
+		chunksSavedTotal.Inc()
 	}
 	return s.serviceCfg.Database.SaveSlasherChunks(ctx, args.kind, chunkKeys, chunks)
 }

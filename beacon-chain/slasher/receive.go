@@ -112,13 +112,20 @@ func (s *Service) processQueuedBlocks(ctx context.Context, epochTicker <-chan ty
 			blocks := s.beaconBlocksQueue
 			s.beaconBlocksQueue = make([]*slashertypes.SignedBlockHeaderWrapper, 0)
 			s.blockQueueLock.Unlock()
+			blockQueueSize.Set(float64(len(blocks)))
 			log.WithFields(logrus.Fields{
 				"currentEpoch": currentEpoch,
 				"numBlocks":    len(blocks),
 			}).Info("Epoch reached, processing queued blocks for slashing detection")
+			for i := 0; i < len(blocks); i++ {
+				receivedBlocksTotal.Inc()
+			}
 			if err := s.detectSlashableBlocks(ctx, blocks); err != nil {
 				log.WithError(err).Error("Could not detect slashable blocks")
 				continue
+			}
+			for i := 0; i < len(blocks); i++ {
+				processedBlocksTotal.Inc()
 			}
 		case <-ctx.Done():
 			return
