@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	ssz "github.com/ferranbt/fastssz"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
@@ -111,7 +112,7 @@ func TestStore_SlasherChunk_SaveRetrieve(t *testing.T) {
 	beaconDB := setupDB(t)
 	elemsPerChunk := 16
 	totalChunks := 64
-	chunkKeys := make([]uint64, totalChunks)
+	chunkKeys := make([][]byte, totalChunks)
 	chunks := make([][]uint16, totalChunks)
 	for i := 0; i < totalChunks; i++ {
 		chunk := make([]uint16, elemsPerChunk)
@@ -119,7 +120,7 @@ func TestStore_SlasherChunk_SaveRetrieve(t *testing.T) {
 			chunk[j] = uint16(0)
 		}
 		chunks[i] = chunk
-		chunkKeys[i] = uint64(i)
+		chunkKeys[i] = ssz.MarshalUint64(make([]byte, 0), uint64(i))
 	}
 
 	// We save chunks for min spans.
