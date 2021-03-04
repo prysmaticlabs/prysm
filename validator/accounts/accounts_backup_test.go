@@ -4,7 +4,6 @@ import (
 	"archive/zip"
 	"encoding/hex"
 	"encoding/json"
-	constant "github.com/prysmaticlabs/prysm/validator/testing"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -12,6 +11,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	constant "github.com/prysmaticlabs/prysm/validator/testing"
 
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"

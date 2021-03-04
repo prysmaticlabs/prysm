@@ -3,13 +3,14 @@ package accounts
 import (
 	"context"
 	"fmt"
-	constant "github.com/prysmaticlabs/prysm/validator/testing"
 	"io/ioutil"
 	"math"
 	"os"
 	"strconv"
 	"strings"
 	"testing"
+
+	constant "github.com/prysmaticlabs/prysm/validator/testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"

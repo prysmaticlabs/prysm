@@ -3,8 +3,9 @@ package derived
 import (
 	"context"
 	"fmt"
-	constant "github.com/prysmaticlabs/prysm/validator/testing"
 	"testing"
+
+	constant "github.com/prysmaticlabs/prysm/validator/testing"
 
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"

@@ -26,7 +26,7 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 	accountsChangedChan := make(chan struct{}, 1)
 	accountsCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	go handleAccountsChanged(accountsCtx,v, accountsChangedChan)
+	go handleAccountsChanged(accountsCtx, v, accountsChangedChan)
 
 	return v.waitForActivation(ctx, accountsChangedChan)
 }
