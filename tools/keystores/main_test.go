@@ -20,6 +20,8 @@ import (
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
+const password = "secretPassw0rd$1999"
+
 type cliConfig struct {
 	keystoresPath string
 	password      string
@@ -70,7 +72,6 @@ func setupRandomDir(t testing.TB) string {
 
 func TestDecrypt(t *testing.T) {
 	keystoresDir := setupRandomDir(t)
-	password := "secretPassw0rd$1999"
 	keystore, privKey := createRandomKeystore(t, password)
 	// We write a random keystore to a keystores directory.
 	encodedKeystore, err := json.MarshalIndent(keystore, "", "\t")
@@ -109,7 +110,6 @@ func TestDecrypt(t *testing.T) {
 
 func TestEncrypt(t *testing.T) {
 	keystoresDir := setupRandomDir(t)
-	password := "secretPassw0rd$1999"
 	keystoreFilePath := filepath.Join(keystoresDir, "keystore.json")
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)

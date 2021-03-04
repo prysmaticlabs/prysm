@@ -11,7 +11,10 @@ go_library(
         "restore.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/db",
-    visibility = ["//validator:__subpackages__"],
+    visibility = [
+        "//cmd/validator:__subpackages__",
+        "//validator:__subpackages__",
+    ],
     deps = [
         "//shared/cmd:go_default_library",
         "//shared/fileutil:go_default_library",

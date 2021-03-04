@@ -17,6 +17,8 @@ import (
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
+const password = "secretPassw0rd$1999"
+
 func createRandomKeystore(t testing.TB, password string) *keymanager.Keystore {
 	encryptor := keystorev4.New()
 	id, err := uuid.NewRandom()
@@ -93,7 +95,6 @@ func TestImportedKeymanager_CreateAccountsKeystore_NoDuplicates(t *testing.T) {
 }
 
 func TestImportedKeymanager_ImportKeystores(t *testing.T) {
-	password := "secretPassw0rd$1999"
 	// Setup the keymanager.
 	wallet := &mock.Wallet{
 		Files:          make(map[string]map[string][]byte),

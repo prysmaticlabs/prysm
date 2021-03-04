@@ -3,6 +3,7 @@ package helpers
 import (
 	types "github.com/prysmaticlabs/eth2-types"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -46,7 +47,7 @@ func TotalBalance(state *stateTrie.BeaconState, indices []types.ValidatorIndex) 
 //    return get_total_balance(state, set(get_active_validator_indices(state, get_current_epoch(state))))
 func TotalActiveBalance(state *stateTrie.BeaconState) (uint64, error) {
 	total := uint64(0)
-	if err := state.ReadFromEveryValidator(func(idx int, val stateTrie.ReadOnlyValidator) error {
+	if err := state.ReadFromEveryValidator(func(idx int, val iface.ReadOnlyValidator) error {
 		if IsActiveValidatorUsingTrie(val, SlotToEpoch(state.Slot())) {
 			total += val.EffectiveBalance()
 		}
