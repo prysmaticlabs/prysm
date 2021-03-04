@@ -429,10 +429,12 @@ func TestInitDepositCache_OK(t *testing.T) {
 		{Index: 1, Eth1BlockHeight: 4, Deposit: &ethpb.Deposit{Proof: [][]byte{[]byte("B")}}},
 		{Index: 2, Eth1BlockHeight: 6, Deposit: &ethpb.Deposit{Proof: [][]byte{[]byte("c")}}},
 	}
+	gs, _ := testutil.DeterministicGenesisState(t, 1)
 	beaconDB := dbutil.SetupDB(t)
 	s := &Service{
-		chainStartData: &protodb.ChainStartData{Chainstarted: false},
-		beaconDB:       beaconDB,
+		chainStartData:  &protodb.ChainStartData{Chainstarted: false},
+		beaconDB:        beaconDB,
+		preGenesisState: gs,
 	}
 	var err error
 	s.depositCache, err = depositcache.New()

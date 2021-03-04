@@ -21,8 +21,8 @@ import (
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
-type blockOperation func(context.Context, iface.ReadOnlyBeaconState, *ethpb.SignedBeaconBlock) (iface.ReadOnlyBeaconState, error)
-type epochOperation func(*testing.T, iface.ReadOnlyBeaconState) (iface.ReadOnlyBeaconState, error)
+type blockOperation func(context.Context, iface.BeaconState, *ethpb.SignedBeaconBlock) (iface.BeaconState, error)
+type epochOperation func(*testing.T, iface.BeaconState) (iface.BeaconState, error)
 
 var json = jsoniter.Config{
 	EscapeHTML:             true,

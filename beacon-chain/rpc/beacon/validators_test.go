@@ -1470,7 +1470,7 @@ func TestServer_GetValidatorParticipation_UnknownState(t *testing.T) {
 		StateGen: stategen.New(beaconDB),
 	}
 
-	wanted := "failed to initialize precompute: nil inner state"
+	wanted := "Could not set up pre compute instance: nil inner state"
 	_, err = bs.GetValidatorParticipation(
 		ctx,
 		&ethpb.GetValidatorParticipationRequest{

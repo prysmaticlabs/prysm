@@ -137,7 +137,7 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 	atts, err := r.attPool.UnaggregatedAttestations()
 	require.NoError(t, err)
 	assert.Equal(t, 1, len(atts), "Did not save unaggregated att")
-	assert.DeepEqual(t, att, atts[0], "Incorrect saved att")
+	assert.DeepSSZEqual(t, att, atts[0], "Incorrect saved att")
 	assert.Equal(t, 0, len(r.attPool.AggregatedAttestations()), "Did save aggregated att")
 	require.LogsContain(t, hook, "Verified and saved pending attestations to pool")
 }
@@ -146,10 +146,11 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	p1 := p2ptest.NewTestP2P(t)
 
+	s, _ := testutil.DeterministicGenesisState(t, 256)
 	r := &Service{
 		p2p:                  p1,
 		db:                   db,
-		chain:                &mock.ChainService{Genesis: timeutils.Now(), FinalizedCheckPoint: &ethpb.Checkpoint{Root: make([]byte, 32)}},
+		chain:                &mock.ChainService{State: s, Genesis: timeutils.Now(), FinalizedCheckPoint: &ethpb.Checkpoint{Root: make([]byte, 32)}},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		attPool:              attestations.NewPool(),
 	}
@@ -167,8 +168,6 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 
 	b := testutil.NewBeaconBlock()
 	r32, err := b.Block.HashTreeRoot()
-	require.NoError(t, err)
-	s, err := testutil.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, r.db.SaveBlock(context.Background(), b))
 	require.NoError(t, r.db.SaveState(context.Background(), s, r32))
