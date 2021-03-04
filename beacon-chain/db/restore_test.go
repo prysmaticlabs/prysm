@@ -23,9 +23,6 @@ func TestRestore(t *testing.T) {
 	ctx := context.Background()
 
 	backupDb, err := kv.NewKVStore(context.Background(), t.TempDir(), &kv.Config{})
-	defer func() {
-		require.NoError(t, backupDb.Close())
-	}()
 	require.NoError(t, err)
 	head := testutil.NewBeaconBlock()
 	head.Block.Slot = 5000
