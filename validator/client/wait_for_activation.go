@@ -19,10 +19,11 @@ import (
 
 // WaitForActivation checks whether the validator pubkey is in the active
 // validator set. If not, this operation will block until an activation message is
-// received.
+// received. This method also monitors the keymanager for updates while waiting for an activation
+// from the gRPC server.
 func (v *validator) WaitForActivation(ctx context.Context) error {
+	// Monitor the key manager for updates.
 	accountsChangedChan := make(chan struct{}, 1)
-
 	accountsCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	go handleAccountsChanged(accountsCtx,v, accountsChangedChan)
@@ -30,6 +31,14 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 	return v.waitForActivation(ctx, accountsChangedChan)
 }
 
+// waitForActivation performs the following:
+// 1) While the key manager is empty, poll the key manager until some validator keys exist.
+// 2) Open a server side stream for activation events against the given keys.
+// 3) In another go routine, the key manager is monitored for updates and emits an update event on
+// the accountsChangedChan. When a event signal is received, restart the waitForActivation routine.
+// 4) If the stream is reset in error, restart the routine.
+// 5) If the stream returns a response indicating one or more validators are active, exit this
+// the routine.
 func (v *validator) waitForActivation(ctx context.Context, accountsChangedChan <-chan struct{}) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
 	defer span.End()
