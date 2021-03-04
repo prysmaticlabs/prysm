@@ -11,7 +11,11 @@ import (
 	runtimeDebug "runtime/debug"
 
 	joonix "github.com/joonix/log"
+	accountcommands "github.com/prysmaticlabs/prysm/cmd/validator/accounts"
+	dbcommands "github.com/prysmaticlabs/prysm/cmd/validator/db"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
+	slashingprotectioncommands "github.com/prysmaticlabs/prysm/cmd/validator/slashing-protection"
+	walletcommands "github.com/prysmaticlabs/prysm/cmd/validator/wallet"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -21,10 +25,7 @@ import (
 	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
 	"github.com/prysmaticlabs/prysm/shared/tos"
 	"github.com/prysmaticlabs/prysm/shared/version"
-	"github.com/prysmaticlabs/prysm/validator/accounts"
-	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/node"
-	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
@@ -112,10 +113,10 @@ func main() {
 	app.Version = version.Version()
 	app.Action = startNode
 	app.Commands = []*cli.Command{
-		accounts.WalletCommands,
-		accounts.AccountCommands,
-		slashingprotection.Commands,
-		db.DatabaseCommands,
+		walletcommands.Commands,
+		accountcommands.Commands,
+		slashingprotectioncommands.Commands,
+		dbcommands.Commands,
 	}
 
 	app.Flags = appFlags

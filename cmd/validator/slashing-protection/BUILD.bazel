@@ -1,0 +1,16 @@
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["slashing-protection.go"],
+    importpath = "github.com/prysmaticlabs/prysm/cmd/validator/slashing-protection",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//cmd/validator/flags:go_default_library",
+        "//shared/cmd:go_default_library",
+        "//shared/featureconfig:go_default_library",
+        "//shared/tos:go_default_library",
+        "//validator/slashing-protection:go_default_library",
+        "@com_github_urfave_cli_v2//:go_default_library",
+    ],
+)
