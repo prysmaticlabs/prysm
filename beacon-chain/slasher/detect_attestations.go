@@ -384,7 +384,7 @@ func (s *Service) loadChunks(
 	}
 	rawChunks, chunksExist, err := s.serviceCfg.Database.LoadSlasherChunks(ctx, args.kind, chunkKeys)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not load attestation chunks from disk")
 	}
 	chunksByChunkIdx := make(map[uint64]Chunker, len(rawChunks))
 	for i := 0; i < len(rawChunks); i++ {
