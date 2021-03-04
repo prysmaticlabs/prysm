@@ -27,6 +27,7 @@ func (s *Service) detectSlashableBlocks(
 			continue
 		}
 		if isDoubleProposal(proposedBlocks[i].SigningRoot, existingSigningRoot) {
+			doubleProposalsTotal.Inc()
 			logDoubleProposal(proposedBlocks[i], existingSigningRoot)
 		}
 	}
@@ -52,6 +53,7 @@ func (s *Service) checkDoubleProposalsOnDisk(
 		safeProposers[proposal.SignedBeaconBlockHeader.Header.ProposerIndex] = proposal
 	}
 	for i, doubleProposal := range doubleProposals {
+		doubleProposalsTotal.Inc()
 		logDoubleProposal(proposedBlocks[i], doubleProposal.ExistingSigningRoot)
 		// If a proposer is found to have committed a slashable offense, we delete
 		// them from the safe proposers map.

@@ -196,6 +196,7 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 		}
 		if existingAttRecord != nil {
 			if sourceEpoch < existingAttRecord.IndexedAttestation.Data.Source.Epoch {
+				surroundingVotesTotal.Inc()
 				return &slashertypes.Slashing{
 					Kind:            slashertypes.SurroundingVote,
 					ValidatorIndex:  validatorIdx,
@@ -244,6 +245,7 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 		}
 		if existingAttRecord != nil {
 			if existingAttRecord.IndexedAttestation.Data.Source.Epoch < sourceEpoch {
+				surroundedVotesTotal.Inc()
 				return &slashertypes.Slashing{
 					Kind:            slashertypes.SurroundedVote,
 					ValidatorIndex:  validatorIdx,

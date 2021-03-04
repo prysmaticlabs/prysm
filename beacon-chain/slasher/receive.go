@@ -27,6 +27,7 @@ func (s *Service) receiveAttestations(ctx context.Context) {
 			}
 			s.attestationQueueLock.Lock()
 			s.attestationQueue = append(s.attestationQueue, attWrapper)
+			attestationQueueSize.Add(float64(len(s.attestationQueue)))
 			s.attestationQueueLock.Unlock()
 		case err := <-sub.Err():
 			log.WithError(err).Debug("Subscriber closed with error")
@@ -51,6 +52,7 @@ func (s *Service) receiveBlocks(ctx context.Context) {
 			}
 			s.blockQueueLock.Lock()
 			s.beaconBlocksQueue = append(s.beaconBlocksQueue, wrappedProposal)
+			blockQueueSize.Add(float64(len(s.beaconBlocksQueue)))
 			s.blockQueueLock.Unlock()
 		case err := <-sub.Err():
 			log.WithError(err).Debug("Subscriber closed with error")
@@ -73,6 +75,8 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 			attestations := s.attestationQueue
 			s.attestationQueue = make([]*slashertypes.IndexedAttestationWrapper, 0)
 			s.attestationQueueLock.Unlock()
+
+			receivedAttestationsTotal.Add(float64(len(attestations)))
 
 			log.WithFields(logrus.Fields{
 				"currentEpoch": currentEpoch,
@@ -98,6 +102,8 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 					continue
 				}
 			}
+
+			processedAttestationsTotal.Add(float64(len(attestations)))
 		case <-ctx.Done():
 			return
 		}
@@ -114,14 +120,19 @@ func (s *Service) processQueuedBlocks(ctx context.Context, epochTicker <-chan ty
 			blocks := s.beaconBlocksQueue
 			s.beaconBlocksQueue = make([]*slashertypes.SignedBlockHeaderWrapper, 0)
 			s.blockQueueLock.Unlock()
+
+			receivedBlocksTotal.Add(float64(len(blocks)))
+
 			log.WithFields(logrus.Fields{
 				"currentEpoch": currentEpoch,
 				"numBlocks":    len(blocks),
 			}).Info("Epoch reached, processing queued blocks for slashing detection")
+
 			if err := s.detectSlashableBlocks(ctx, blocks); err != nil {
 				log.WithError(err).Error("Could not detect slashable blocks")
 				continue
 			}
+			processedBlocksTotal.Add(float64(len(blocks)))
 		case <-ctx.Done():
 			return
 		}
