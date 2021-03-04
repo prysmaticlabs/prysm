@@ -32,6 +32,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
+const (
+	errNoEpochInfoError = "Cannot retrieve information about an epoch in the future"
+)
+
 func TestServer_GetValidatorActiveSetChanges_CannotRequestFutureEpoch(t *testing.T) {
 	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
@@ -46,7 +50,7 @@ func TestServer_GetValidatorActiveSetChanges_CannotRequestFutureEpoch(t *testing
 		BeaconDB: beaconDB,
 	}
 
-	wanted := "Cannot retrieve information about an epoch in the future"
+	wanted := errNoEpochInfoError
 	_, err = bs.GetValidatorActiveSetChanges(
 		ctx,
 		&ethpb.GetValidatorActiveSetChangesRequest{
@@ -73,7 +77,7 @@ func TestServer_ListValidatorBalances_CannotRequestFutureEpoch(t *testing.T) {
 		GenesisTimeFetcher: &mock.ChainService{},
 	}
 
-	wanted := "Cannot retrieve information about an epoch in the future"
+	wanted := errNoEpochInfoError
 	_, err = bs.ListValidatorBalances(
 		ctx,
 		&ethpb.ListValidatorBalancesRequest{
@@ -415,7 +419,7 @@ func TestServer_ListValidators_CannotRequestFutureEpoch(t *testing.T) {
 		},
 	}
 
-	wanted := "Cannot retrieve information about an epoch in the future"
+	wanted := errNoEpochInfoError
 	_, err = bs.ListValidators(
 		ctx,
 		&ethpb.ListValidatorsRequest{
@@ -1916,7 +1920,7 @@ func TestServer_GetIndividualVotes_RequestFutureSlot(t *testing.T) {
 	req := &ethpb.IndividualVotesRequest{
 		Epoch: helpers.SlotToEpoch(ds.GenesisTimeFetcher.CurrentSlot()) + 1,
 	}
-	wanted := "Cannot retrieve information about an epoch in the future"
+	wanted := errNoEpochInfoError
 	_, err := ds.GetIndividualVotes(context.Background(), req)
 	assert.ErrorContains(t, wanted, err)
 }

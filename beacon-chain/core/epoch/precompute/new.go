@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -25,7 +26,7 @@ func New(ctx context.Context, state *stateTrie.BeaconState) ([]*Validator, *Bala
 	currentEpoch := helpers.CurrentEpoch(state)
 	prevEpoch := helpers.PrevEpoch(state)
 
-	if err := state.ReadFromEveryValidator(func(idx int, val stateTrie.ReadOnlyValidator) error {
+	if err := state.ReadFromEveryValidator(func(idx int, val iface.ReadOnlyValidator) error {
 		// Was validator withdrawable or slashed
 		withdrawable := prevEpoch+1 >= val.WithdrawableEpoch()
 		pVal := &Validator{
