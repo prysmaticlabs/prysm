@@ -312,15 +312,15 @@ func TestSyncCondCompatibility(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(2)
 	cond := sync.NewCond(NewMultilock("A", "C"))
-
-	sharedRsc := "foo"
+	var testValues = [3]string{"foo", "bar", "fizz!"}
+	sharedRsc := testValues[0]
 
 	go func() {
 		cond.L.Lock()
-		for sharedRsc == "foo" {
+		for sharedRsc == testValues[0] {
 			cond.Wait()
 		}
-		sharedRsc = "fizz!"
+		sharedRsc = testValues[2]
 		cond.Broadcast()
 		cond.L.Unlock()
 		wg.Done()
@@ -328,9 +328,9 @@ func TestSyncCondCompatibility(t *testing.T) {
 
 	go func() {
 		cond.L.Lock()
-		sharedRsc = "bar"
+		sharedRsc = testValues[1]
 		cond.Broadcast()
-		for sharedRsc == "bar" {
+		for sharedRsc == testValues[1] {
 			cond.Wait()
 		}
 		cond.L.Unlock()
@@ -338,5 +338,5 @@ func TestSyncCondCompatibility(t *testing.T) {
 	}()
 
 	wg.Wait()
-	assert.Equal(t, "fizz!", sharedRsc)
+	assert.Equal(t, testValues[2], sharedRsc)
 }

@@ -5,10 +5,10 @@ import (
 	"io"
 	"sort"
 
+	"github.com/prysmaticlabs/prysm/cmd/slasher/flags"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/urfave/cli/v2"
 )
 
@@ -46,26 +46,24 @@ var appHelpFlagGroups = []flagGroup{
 		Flags: []cli.Flag{
 			cmd.MinimalConfigFlag,
 			cmd.E2EConfigFlag,
+			cmd.RPCMaxPageSizeFlag,
 			cmd.VerbosityFlag,
 			cmd.DataDirFlag,
-			cmd.ClearDB,
-			cmd.ForceClearDB,
-			cmd.EnableBackupWebhookFlag,
-			cmd.BackupWebhookOutputDir,
 			cmd.EnableTracingFlag,
 			cmd.TracingProcessNameFlag,
 			cmd.TracingEndpointFlag,
 			cmd.TraceSampleFractionFlag,
 			cmd.MonitoringHostFlag,
+			cmd.EnableBackupWebhookFlag,
+			cmd.BackupWebhookOutputDir,
 			flags.MonitoringPortFlag,
 			cmd.DisableMonitoringFlag,
 			cmd.LogFormat,
 			cmd.LogFileName,
+			cmd.ForceClearDB,
+			cmd.ClearDB,
 			cmd.ConfigFileFlag,
-			cmd.ChainConfigFileFlag,
-			cmd.GrpcMaxCallRecvMsgSizeFlag,
 			cmd.AcceptTosFlag,
-			cmd.BoltMMapInitialSizeFlag,
 		},
 	},
 	{
@@ -77,47 +75,25 @@ var appHelpFlagGroups = []flagGroup{
 			debug.MemProfileRateFlag,
 			debug.CPUProfileFlag,
 			debug.TraceFlag,
-			debug.BlockProfileRateFlag,
-			debug.MutexProfileFractionFlag,
 		},
 	},
 	{
-		Name: "validator",
+		Name: "slasher",
 		Flags: []cli.Flag{
-			flags.BeaconRPCProviderFlag,
-			flags.BeaconRPCGatewayProviderFlag,
+			flags.BeaconCertFlag,
 			flags.CertFlag,
-			flags.EnableWebFlag,
-			flags.DisablePenaltyRewardLogFlag,
-			flags.GraffitiFlag,
-			flags.EnableRPCFlag,
-			flags.RPCHost,
+			flags.KeyFlag,
 			flags.RPCPort,
-			flags.GRPCGatewayPort,
-			flags.GRPCGatewayHost,
-			flags.GrpcRetriesFlag,
-			flags.GrpcRetryDelayFlag,
-			flags.GPRCGatewayCorsDomain,
-			flags.GrpcHeadersFlag,
-			flags.SlasherRPCProviderFlag,
-			flags.SlasherCertFlag,
-			flags.DisableAccountMetricsFlag,
-			flags.WalletDirFlag,
-			flags.WalletPasswordFileFlag,
-			flags.GraffitiFileFlag,
-			flags.EnableDutyCountDown,
+			flags.RPCHost,
+			flags.BeaconRPCProviderFlag,
+			flags.EnableHistoricalDetectionFlag,
+			flags.SpanCacheSize,
+			flags.HighestAttCacheSize,
 		},
 	},
 	{
 		Name:  "features",
-		Flags: featureconfig.ActiveFlags(featureconfig.ValidatorFlags),
-	},
-	{
-		Name: "interop",
-		Flags: []cli.Flag{
-			flags.InteropNumValidators,
-			flags.InteropStartIndex,
-		},
+		Flags: featureconfig.ActiveFlags(featureconfig.SlasherFlags),
 	},
 }
 
