@@ -13,7 +13,7 @@ var (
 			Buckets: []float64{1, 2, 3, 4, 5, 10, 20, 50, 100},
 		},
 	)
-	chunksSavedTotal = promauto.NewGauge(prometheus.GaugeOpts{
+	chunksSavedTotal = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "slasher_chunks_saved_total",
 		Help: "Total number of slasher chunks saved to disk",
 	})

@@ -27,6 +27,7 @@ func (s *Service) receiveAttestations(ctx context.Context) {
 			}
 			s.attestationQueueLock.Lock()
 			s.attestationQueue = append(s.attestationQueue, attWrapper)
+			attestationQueueSize.Set(float64(len(s.attestationQueue)))
 			s.attestationQueueLock.Unlock()
 		case err := <-sub.Err():
 			log.WithError(err).Debug("Subscriber closed with error")
@@ -51,6 +52,7 @@ func (s *Service) receiveBlocks(ctx context.Context) {
 			}
 			s.blockQueueLock.Lock()
 			s.beaconBlocksQueue = append(s.beaconBlocksQueue, wrappedProposal)
+			blockQueueSize.Set(float64(len(s.beaconBlocksQueue)))
 			s.blockQueueLock.Unlock()
 		case err := <-sub.Err():
 			log.WithError(err).Debug("Subscriber closed with error")
@@ -112,7 +114,6 @@ func (s *Service) processQueuedBlocks(ctx context.Context, epochTicker <-chan ty
 			blocks := s.beaconBlocksQueue
 			s.beaconBlocksQueue = make([]*slashertypes.SignedBlockHeaderWrapper, 0)
 			s.blockQueueLock.Unlock()
-			blockQueueSize.Set(float64(len(blocks)))
 			log.WithFields(logrus.Fields{
 				"currentEpoch": currentEpoch,
 				"numBlocks":    len(blocks),
