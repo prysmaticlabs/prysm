@@ -62,7 +62,7 @@ func runBlockProcessingTest(t *testing.T, config string) {
 					break
 				}
 				beaconState, ok = processedState.(*stateTrie.BeaconState)
-				require.DeepSSZEqual(t, true, ok)
+				require.Equal(t, true, ok)
 			}
 
 			// If the post.ssz is not present, it means the test should fail on our end.
