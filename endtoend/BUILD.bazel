@@ -14,7 +14,7 @@ go_test(
     args = ["-test.v"],
     data = [
         "//cmd/beacon-chain",
-        "//slasher",
+        "//cmd/slasher",
         "//tools/bootnode",
         "//cmd/validator",
         "@com_github_ethereum_go_ethereum//cmd/geth",

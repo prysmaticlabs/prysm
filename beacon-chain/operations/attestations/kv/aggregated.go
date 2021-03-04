@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
+	log "github.com/sirupsen/logrus"
 )
 
 // AggregateUnaggregatedAttestations aggregates the unaggregated attestations and saves the
@@ -132,7 +133,10 @@ func (c *AttCaches) SaveAggregatedAttestation(att *ethpb.Attestation) error {
 func (c *AttCaches) SaveAggregatedAttestations(atts []*ethpb.Attestation) error {
 	for _, att := range atts {
 		if err := c.SaveAggregatedAttestation(att); err != nil {
-			return err
+			log.WithError(err).Debug("Could not save aggregated attestation")
+			if err := c.DeleteAggregatedAttestation(att); err != nil {
+				log.WithError(err).Debug("Could not delete aggregated attestation")
+			}
 		}
 	}
 	return nil

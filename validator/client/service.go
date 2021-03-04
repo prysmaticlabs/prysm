@@ -123,17 +123,11 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 // Start the validator service. Launches the main go routine for the validator
 // client.
 func (v *ValidatorService) Start() {
-	streamInterceptor := grpc.WithStreamInterceptor(middleware.ChainStreamClient(
-		grpc_opentracing.StreamClientInterceptor(),
-		grpc_prometheus.StreamClientInterceptor,
-		grpc_retry.StreamClientInterceptor(),
-	))
 	dialOpts := ConstructDialOptions(
 		v.maxCallRecvMsgSize,
 		v.withCert,
 		v.grpcRetries,
 		v.grpcRetryDelay,
-		streamInterceptor,
 	)
 	if dialOpts == nil {
 		return
