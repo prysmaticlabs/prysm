@@ -23,9 +23,6 @@ func TestRestore(t *testing.T) {
 	ctx := context.Background()
 
 	backupDb, err := kv.NewKVStore(context.Background(), t.TempDir(), &kv.Config{})
-	defer func() {
-		require.NoError(t, backupDb.Close())
-	}()
 	require.NoError(t, err)
 	head := testutil.NewBeaconBlock()
 	head.Block.Slot = 5000
@@ -53,7 +50,7 @@ func TestRestore(t *testing.T) {
 	require.NoError(t, set.Set(cmd.RestoreTargetDirFlag.Name, restoreDir))
 	cliCtx := cli.NewContext(&app, set, nil)
 
-	assert.NoError(t, restore(cliCtx))
+	assert.NoError(t, Restore(cliCtx))
 
 	files, err := ioutil.ReadDir(path.Join(restoreDir, kv.BeaconNodeDbDirName))
 	require.NoError(t, err)
