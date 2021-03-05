@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	ssz "github.com/ferranbt/fastssz"
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
@@ -313,7 +314,10 @@ func keyForValidatorProposal(proposal *slashertypes.SignedBlockHeaderWrapper) ([
 
 // Decode attestation record from bytes.
 func encodeAttestationRecord(att *slashertypes.IndexedAttestationWrapper) ([]byte, error) {
-	encodedAtt, err := att.IndexedAttestation.Marshal()
+	if att == nil || att.IndexedAttestation == nil {
+		return []byte{}, errors.New("nil proposal record")
+	}
+	encodedAtt, err := att.IndexedAttestation.MarshalSSZ()
 	if err != nil {
 		return nil, err
 	}
@@ -327,7 +331,7 @@ func decodeAttestationRecord(encoded []byte) (*slashertypes.IndexedAttestationWr
 	}
 	signingRoot := encoded[:32]
 	decodedAtt := &ethpb.IndexedAttestation{}
-	if err := decodedAtt.Unmarshal(encoded[32:]); err != nil {
+	if err := decodedAtt.UnmarshalSSZ(encoded[32:]); err != nil {
 		return nil, err
 	}
 	return &slashertypes.IndexedAttestationWrapper{
@@ -337,7 +341,10 @@ func decodeAttestationRecord(encoded []byte) (*slashertypes.IndexedAttestationWr
 }
 
 func encodeProposalRecord(blkHdr *slashertypes.SignedBlockHeaderWrapper) ([]byte, error) {
-	encodedHdr, err := blkHdr.SignedBeaconBlockHeader.Marshal()
+	if blkHdr == nil || blkHdr.SignedBeaconBlockHeader == nil {
+		return []byte{}, errors.New("nil proposal record")
+	}
+	encodedHdr, err := blkHdr.SignedBeaconBlockHeader.MarshalSSZ()
 	if err != nil {
 		return nil, err
 	}
@@ -350,7 +357,7 @@ func decodeProposalRecord(encoded []byte) (*slashertypes.SignedBlockHeaderWrappe
 	}
 	signingRoot := encoded[:32]
 	decodedBlkHdr := &ethpb.SignedBeaconBlockHeader{}
-	if err := decodedBlkHdr.Unmarshal(encoded[32:]); err != nil {
+	if err := decodedBlkHdr.UnmarshalSSZ(encoded[32:]); err != nil {
 		return nil, err
 	}
 	return &slashertypes.SignedBlockHeaderWrapper{
