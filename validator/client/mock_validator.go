@@ -73,7 +73,7 @@ func (fv *FakeValidator) WaitForChainStart(_ context.Context) error {
 }
 
 // WaitForActivation for mocking.
-func (fv *FakeValidator) WaitForActivation(_ context.Context, _ <-chan struct{}) error {
+func (fv *FakeValidator) WaitForActivation(_ context.Context) error {
 	fv.WaitForActivationCalled++
 	if fv.RetryTillSuccess >= fv.WaitForActivationCalled {
 		return errConnectionIssue

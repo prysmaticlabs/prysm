@@ -3,7 +3,6 @@ package derived
 import (
 	"context"
 	"fmt"
-	constant "github.com/prysmaticlabs/prysm/validator/testing"
 	"testing"
 
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
@@ -12,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	mock "github.com/prysmaticlabs/prysm/validator/accounts/testing"
+	constant "github.com/prysmaticlabs/prysm/validator/testing"
 	"github.com/tyler-smith/go-bip39"
 	util "github.com/wealdtech/go-eth2-util"
 )
