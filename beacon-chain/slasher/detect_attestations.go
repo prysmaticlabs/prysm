@@ -95,23 +95,25 @@ func (s *Service) checkDoubleVotes(
 	// We check if there are any slashable double votes in the input list
 	// of attestations with respect to each other.
 	slashings := make([]*slashertypes.Slashing, 0)
-	existingAtts := make(map[string][32]byte)
+	existingAtts := make(map[string]*slashertypes.IndexedAttestationWrapper)
 	for _, att := range attestations {
 		for _, valIdx := range att.IndexedAttestation.AttestingIndices {
 			key := uintToString(uint64(att.IndexedAttestation.Data.Target.Epoch)) + ":" + uintToString(valIdx)
-			existingSigningRoot, ok := existingAtts[key]
+			existingAtt, ok := existingAtts[key]
 			if !ok {
-				existingAtts[key] = att.SigningRoot
+				existingAtts[key] = att
 				continue
 			}
-			if att.SigningRoot != existingSigningRoot {
+			if att.SigningRoot != existingAtt.SigningRoot {
 				doubleVotesTotal.Inc()
 				slashings = append(slashings, &slashertypes.Slashing{
 					Kind:            slashertypes.DoubleVote,
 					ValidatorIndex:  types.ValidatorIndex(valIdx),
 					TargetEpoch:     att.IndexedAttestation.Data.Target.Epoch,
+					PrevSigningRoot: existingAtt.SigningRoot,
 					SigningRoot:     att.SigningRoot,
-					PrevSigningRoot: existingSigningRoot,
+					PrevAttestation: existingAtt.IndexedAttestation,
+					Attestation:     att.IndexedAttestation,
 				})
 			}
 		}
@@ -145,8 +147,10 @@ func (s *Service) checkDoubleVotesOnDisk(
 			Kind:            slashertypes.DoubleVote,
 			ValidatorIndex:  doubleVote.ValidatorIndex,
 			TargetEpoch:     doubleVote.Target,
-			SigningRoot:     doubleVote.SigningRoot,
-			PrevSigningRoot: doubleVote.PrevSigningRoot,
+			PrevSigningRoot: doubleVote.PrevAttestationWrapper.SigningRoot,
+			SigningRoot:     doubleVote.AttestationWrapper.SigningRoot,
+			PrevAttestation: doubleVote.PrevAttestationWrapper.IndexedAttestation,
+			Attestation:     doubleVote.AttestationWrapper.IndexedAttestation,
 		})
 	}
 	return doubleVoteSlashings, nil
