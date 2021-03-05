@@ -24,7 +24,7 @@ import (
 func (v *validator) WaitForActivation(ctx context.Context) error {
 	// Monitor the key manager for updates.
 	accountsChangedChan := make(chan [][48]byte)
-	var sub = v.GetKeymanager().SubscribeAccountChanges(accountsChangedChan)
+	sub := v.GetKeymanager().SubscribeAccountChanges(accountsChangedChan)
 	defer func() {
 		sub.Unsubscribe()
 		close(accountsChangedChan)
