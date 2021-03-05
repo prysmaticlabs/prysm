@@ -2,6 +2,7 @@ package kv
 
 import (
 	"bytes"
+	"context"
 	"sort"
 	"testing"
 
@@ -242,11 +243,11 @@ func TestKV_Unaggregated_UnaggregatedAttestationsBySlotIndex(t *testing.T) {
 	for _, att := range atts {
 		require.NoError(t, cache.SaveUnaggregatedAttestation(att))
 	}
-
-	returned := cache.UnaggregatedAttestationsBySlotIndex(1, 1)
+	ctx := context.Background()
+	returned := cache.UnaggregatedAttestationsBySlotIndex(ctx, 1, 1)
 	assert.DeepEqual(t, []*ethpb.Attestation{att1}, returned)
-	returned = cache.UnaggregatedAttestationsBySlotIndex(1, 2)
+	returned = cache.UnaggregatedAttestationsBySlotIndex(ctx, 1, 2)
 	assert.DeepEqual(t, []*ethpb.Attestation{att2}, returned)
-	returned = cache.UnaggregatedAttestationsBySlotIndex(2, 1)
+	returned = cache.UnaggregatedAttestationsBySlotIndex(ctx, 2, 1)
 	assert.DeepEqual(t, []*ethpb.Attestation{att3}, returned)
 }
