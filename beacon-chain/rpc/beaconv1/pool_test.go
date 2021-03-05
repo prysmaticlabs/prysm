@@ -621,17 +621,113 @@ func TestServer_SubmitAttestations_Ok(t *testing.T) {
 	require.NoError(t, err)
 	savedAtts := s.AttestationsPool.AggregatedAttestations()
 	require.Equal(t, 2, len(savedAtts))
-	expectedRoot1, err := att1.Data.HashTreeRoot()
+	expectedAtt1, err := att1.HashTreeRoot()
 	require.NoError(t, err)
-	expectedRoot2, err := att2.Data.HashTreeRoot()
+	expectedAtt2, err := att2.HashTreeRoot()
 	require.NoError(t, err)
-	actualRoot1, err := savedAtts[0].Data.HashTreeRoot()
+	actualAtt1, err := savedAtts[0].HashTreeRoot()
 	require.NoError(t, err)
-	actualRoot2, err := savedAtts[1].Data.HashTreeRoot()
+	actualAtt2, err := savedAtts[1].HashTreeRoot()
 	require.NoError(t, err)
-	for _, r := range [][32]byte{actualRoot1, actualRoot2} {
-		assert.Equal(t, true, reflect.DeepEqual(expectedRoot1, r) || reflect.DeepEqual(expectedRoot2, r))
+	for _, r := range [][32]byte{actualAtt1, actualAtt2} {
+		assert.Equal(t, true, reflect.DeepEqual(expectedAtt1, r) || reflect.DeepEqual(expectedAtt2, r))
 	}
-	require.Equal(t, true, broadcaster.BroadcastCalled)
+	assert.Equal(t, true, broadcaster.BroadcastCalled)
 	assert.Equal(t, 2, len(broadcaster.BroadcastMessages))
+}
+
+func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
+	ctx := context.Background()
+	params.SetupTestConfigCleanup(t)
+	c := params.BeaconConfig()
+	// Required for correct committee size calculation.
+	c.SlotsPerEpoch = 1
+	params.OverrideBeaconConfig(c)
+
+	_, keys, err := testutil.DeterministicDepositsAndKeys(1)
+	require.NoError(t, err)
+	validators := []*eth.Validator{
+		{
+			PublicKey: keys[0].PublicKey().Marshal(),
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		},
+	}
+	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) {
+		state.Validators = validators
+	})
+	require.NoError(t, err)
+	b := bitfield.NewBitlist(1)
+	b.SetBitAt(0, true)
+
+	att1 := &ethpb.Attestation{
+		AggregationBits: b,
+		Data: &ethpb.AttestationData{
+			Slot:            0,
+			CommitteeIndex:  0,
+			BeaconBlockRoot: bytesutil.PadTo([]byte("beaconblockroot1"), 32),
+			Source: &ethpb.Checkpoint{
+				Epoch: 0,
+				Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: 0,
+				Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
+			},
+		},
+		Signature: make([]byte, 96),
+	}
+	att2 := &ethpb.Attestation{
+		AggregationBits: b,
+		Data: &ethpb.AttestationData{
+			Slot:            0,
+			CommitteeIndex:  0,
+			BeaconBlockRoot: bytesutil.PadTo([]byte("beaconblockroot2"), 32),
+			Source: &ethpb.Checkpoint{
+				Epoch: 0,
+				Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: 0,
+				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
+			},
+		},
+		Signature: make([]byte, 96),
+	}
+
+	// Sign only one attestation, meaning the other attestation is invalid.
+	sb, err := helpers.ComputeDomainAndSign(
+		state,
+		helpers.SlotToEpoch(att1.Data.Slot),
+		att1.Data,
+		params.BeaconConfig().DomainBeaconAttester,
+		keys[0],
+	)
+	require.NoError(t, err)
+	sig, err := bls.SignatureFromBytes(sb)
+	require.NoError(t, err)
+	att1.Signature = sig.Marshal()
+
+	broadcaster := &p2pMock.MockBroadcaster{}
+	s := &Server{
+		ChainInfoFetcher: &chainMock.ChainService{State: state},
+		AttestationsPool: &attestations.PoolMock{},
+		Broadcaster:      broadcaster,
+	}
+
+	_, err = s.SubmitAttestations(ctx, &ethpb.SubmitAttestationsRequest{
+		Data: []*ethpb.Attestation{att1, att2},
+	})
+	require.NoError(t, err)
+	savedAtts := s.AttestationsPool.AggregatedAttestations()
+	require.Equal(t, 1, len(savedAtts))
+	expectedAtt, err := att1.HashTreeRoot()
+	require.NoError(t, err)
+	actualAtt, err := savedAtts[0].HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, expectedAtt, actualAtt)
+	assert.Equal(t, true, broadcaster.BroadcastCalled)
+	require.Equal(t, 1, len(broadcaster.BroadcastMessages))
+	broadcastRoot, err := broadcaster.BroadcastMessages[0].(*eth.Attestation).HashTreeRoot()
+	require.NoError(t, err)
+	require.DeepEqual(t, expectedAtt, broadcastRoot)
 }
