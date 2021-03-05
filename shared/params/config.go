@@ -115,7 +115,6 @@ type BeaconChainConfig struct {
 	BeaconStateFieldCount     int           // BeaconStateFieldCount defines how many fields are in beacon state.
 
 	// Slasher constants.
-	WeakSubjectivityPeriod    types.Epoch // WeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events.
 	PruneSlasherStoragePeriod types.Epoch // PruneSlasherStoragePeriod defines the time period expressed in number of epochs were proof of stake network should prune attestation and block header store.
 
 	// Fork-related values.

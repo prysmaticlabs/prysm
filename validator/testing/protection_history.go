@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format/format"
@@ -51,13 +51,20 @@ func MockSlashingProtectionJSON(
 
 // MockAttestingAndProposalHistories given a number of validators, creates mock attesting
 // and proposing histories within WEAK_SUBJECTIVITY_PERIOD bounds.
-func MockAttestingAndProposalHistories(numValidators int) ([][]*kv.AttestationRecord, []kv.ProposalHistoryForPubkey) {
+func MockAttestingAndProposalHistories(
+	numValidators int,
+) ([][]*kv.AttestationRecord, []kv.ProposalHistoryForPubkey, error) {
 	// deduplicate and transform them into our internal format.
 	attData := make([][]*kv.AttestationRecord, numValidators)
 	proposalData := make([]kv.ProposalHistoryForPubkey, numValidators)
 	gen := rand.NewGenerator()
 	for v := 0; v < numValidators; v++ {
-		latestTarget := types.Epoch(gen.Intn(int(params.BeaconConfig().WeakSubjectivityPeriod) / 1000))
+		weakSubjectivityPeriod, err := helpers.ComputeWeakSubjectivityPeriod(uint64(numValidators))
+		if err != nil {
+			return nil, nil, err
+		}
+
+		latestTarget := types.Epoch(gen.Intn(int(weakSubjectivityPeriod)))
 		// If 0, we change the value to 1 as the we compute source by doing (target-1)
 		// to prevent any underflows in this setup helper.
 		if latestTarget == 0 {
@@ -87,7 +94,7 @@ func MockAttestingAndProposalHistories(numValidators int) ([][]*kv.AttestationRe
 		proposalData[v] = kv.ProposalHistoryForPubkey{Proposals: proposals}
 		attData[v] = historicalAtts
 	}
-	return attData, proposalData
+	return attData, proposalData, nil
 }
 
 // CreateRandomPubKeys --

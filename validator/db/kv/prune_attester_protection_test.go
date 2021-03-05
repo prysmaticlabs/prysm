@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -13,13 +14,15 @@ import (
 )
 
 func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_BeforeWeakSubjectivity_NoPruning(t *testing.T) {
-	numEpochs := params.BeaconConfig().WeakSubjectivityPeriod
+	numValidators := params.BeaconConfig().MinGenesisActiveValidatorCount
+	numEpochs, err := helpers.ComputeWeakSubjectivityPeriod(numValidators)
+	require.NoError(t, err)
 	pubKey := [48]byte{1}
 	validatorDB := setupDB(t, [][48]byte{pubKey})
 
 	// Write attesting history for every single epoch
 	// since genesis to WEAK_SUBJECTIVITY_PERIOD.
-	err := setupAttestationsForEveryEpoch(t, validatorDB, pubKey, numEpochs)
+	err = setupAttestationsForEveryEpoch(t, validatorDB, pubKey, numEpochs)
 	require.NoError(t, err)
 
 	// Next, attempt to prune and realize that we still have all epochs intact
@@ -35,13 +38,14 @@ func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_BeforeWeakSubjectivit
 }
 
 func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_AfterFirstWeakSubjectivity(t *testing.T) {
-	numEpochs := params.BeaconConfig().WeakSubjectivityPeriod
+	numValidators := params.BeaconConfig().MinGenesisActiveValidatorCount
+	numEpochs, err := helpers.ComputeWeakSubjectivityPeriod(numValidators)
 	pubKey := [48]byte{1}
 	validatorDB := setupDB(t, [][48]byte{pubKey})
 
 	// Write attesting history for every single epoch
 	// since genesis to WEAK_SUBJECTIVITY_PERIOD.
-	err := setupAttestationsForEveryEpoch(t, validatorDB, pubKey, numEpochs)
+	err = setupAttestationsForEveryEpoch(t, validatorDB, pubKey, numEpochs)
 	require.NoError(t, err)
 
 	// Save a single attestation for WEAK_SUBJECTIVITY_PERIOD+1
@@ -98,9 +102,12 @@ func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_AfterMultipleWeakSubj
 	numWeakSubjectivityPeriods := types.Epoch(5)
 	pubKeys := [][48]byte{{1}}
 	validatorDB := setupDB(t, pubKeys)
+	numValidators := params.BeaconConfig().MinGenesisActiveValidatorCount
+	numEpochs, err := helpers.ComputeWeakSubjectivityPeriod(numValidators)
+	require.NoError(t, err)
 
 	// Write signing roots for epochs within multiples of WEAK_SUBJECTIVITY_PERIOD.
-	err := validatorDB.update(func(tx *bolt.Tx) error {
+	err = validatorDB.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(pubKeysBucket)
 		pkBucket, err := bucket.CreateBucketIfNotExists(pubKeys[0][:])
 		if err != nil {
@@ -115,7 +122,7 @@ func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_AfterMultipleWeakSubj
 			return err
 		}
 		for i := types.Epoch(1); i <= numWeakSubjectivityPeriods; i++ {
-			targetEpoch := (i * params.BeaconConfig().WeakSubjectivityPeriod) + 1
+			targetEpoch := (i * numEpochs) + 1
 			targetEpochBytes := bytesutil.EpochToBytesBigEndian(targetEpoch)
 			sourceEpoch := targetEpoch - 1
 			sourceEpochBytes := bytesutil.EpochToBytesBigEndian(sourceEpoch)
@@ -148,7 +155,7 @@ func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_AfterMultipleWeakSubj
 		// We check everything except for the highest weak subjectivity period
 		// has been pruned from the bucket.
 		for i := types.Epoch(1); i <= numWeakSubjectivityPeriods-1; i++ {
-			targetEpoch := (i * params.BeaconConfig().WeakSubjectivityPeriod) + 1
+			targetEpoch := (i * numEpochs) + 1
 			sourceEpoch := targetEpoch - 1
 			sourceEpochBytes := bytesutil.EpochToBytesBigEndian(sourceEpoch)
 			targetEpochBytes := bytesutil.EpochToBytesBigEndian(targetEpoch)
@@ -160,7 +167,7 @@ func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_AfterMultipleWeakSubj
 			require.Equal(t, true, storedTargetEpoch == nil)
 		}
 
-		targetEpoch := (numWeakSubjectivityPeriods * params.BeaconConfig().WeakSubjectivityPeriod) + 1
+		targetEpoch := (numWeakSubjectivityPeriods * numEpochs) + 1
 		sourceEpoch := targetEpoch - 1
 		targetEpochBytes := bytesutil.EpochToBytesBigEndian(targetEpoch)
 		sourceEpochBytes := bytesutil.EpochToBytesBigEndian(sourceEpoch)
@@ -246,7 +253,9 @@ func checkAttestingHistoryAfterPruning(
 }
 
 func Test_olderThanCurrentWeakSubjectivityPeriod(t *testing.T) {
-	wssPeriod := params.BeaconConfig().WeakSubjectivityPeriod
+	numValidators := params.BeaconConfig().MinGenesisActiveValidatorCount
+	wssPeriod, err := helpers.ComputeWeakSubjectivityPeriod(numValidators)
+	require.NoError(t, err)
 	type args struct {
 		epoch        types.Epoch
 		highestEpoch types.Epoch
