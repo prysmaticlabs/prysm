@@ -14,12 +14,12 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// LatestEpochAttestedForValidator given a validator index returns the latest
+// LastEpochWrittenForValidator given a validator index returns the latest
 // epoch we have recorded the validator attested for.
-func (s *Store) LatestEpochAttestedForValidators(
+func (s *Store) LastEpochWrittenForValidators(
 	ctx context.Context, validatorIndices []types.ValidatorIndex,
 ) ([]*slashertypes.AttestedEpochForValidator, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.LatestEpochAttestedForValidators")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.LastEpochWrittenForValidators")
 	defer span.End()
 	attestedEpochs := make([]*slashertypes.AttestedEpochForValidator, 0)
 	err := s.db.View(func(tx *bolt.Tx) error {
@@ -46,21 +46,21 @@ func (s *Store) LatestEpochAttestedForValidators(
 	return attestedEpochs, err
 }
 
-// SaveLatestEpochAttestedForValidators updates the latest epoch a slice
+// SaveLastEpochWrittenForValidators updates the latest epoch a slice
 // of validator indices has attested to.
-func (s *Store) SaveLatestEpochAttestedForValidators(
+func (s *Store) SaveLastEpochWrittenForValidators(
 	ctx context.Context, validatorIndices []types.ValidatorIndex, epoch types.Epoch,
 ) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveLatestEpochAttestedForValidator")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveLastEpochWrittenForValidators")
 	defer span.End()
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestedEpochsByValidator)
+		val, err := epoch.MarshalSSZ()
+		if err != nil {
+			return err
+		}
 		for _, valIdx := range validatorIndices {
 			key, err := valIdx.MarshalSSZ()
-			if err != nil {
-				return err
-			}
-			val, err := epoch.MarshalSSZ()
 			if err != nil {
 				return err
 			}

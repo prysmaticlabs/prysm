@@ -36,20 +36,20 @@ func TestStore_AttestationRecordForValidator_SaveRetrieve(t *testing.T) {
 	assert.DeepEqual(t, sr, attRecord.SigningRoot)
 }
 
-func TestStore_LatestEpochAttestedForValidators(t *testing.T) {
+func TestStore_LastEpochWrittenForValidators(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := setupDB(t)
 	indices := []types.ValidatorIndex{1, 2, 3}
 	epoch := types.Epoch(5)
 
-	attestedEpochs, err := beaconDB.LatestEpochAttestedForValidators(ctx, indices)
+	attestedEpochs, err := beaconDB.LastEpochWrittenForValidators(ctx, indices)
 	require.NoError(t, err)
 	require.Equal(t, true, len(attestedEpochs) == 0)
 
-	err = beaconDB.SaveLatestEpochAttestedForValidators(ctx, indices, epoch)
+	err = beaconDB.SaveLastEpochWrittenForValidators(ctx, indices, epoch)
 	require.NoError(t, err)
 
-	retrievedEpochs, err := beaconDB.LatestEpochAttestedForValidators(ctx, indices)
+	retrievedEpochs, err := beaconDB.LastEpochWrittenForValidators(ctx, indices)
 	require.NoError(t, err)
 	require.Equal(t, len(indices), len(retrievedEpochs))
 

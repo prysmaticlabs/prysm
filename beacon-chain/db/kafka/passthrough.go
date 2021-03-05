@@ -268,11 +268,11 @@ func (e Exporter) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint 
 	return e.db.RunMigrations(ctx)
 }
 
-// LatestEpochAttestedForValidator -- passthrough
-func (e Exporter) LatestEpochAttestedForValidators(
+// LastEpochWrittenForValidator -- passthrough
+func (e Exporter) LastEpochWrittenForValidators(
 	ctx context.Context, validatorIndices []types.ValidatorIndex,
 ) ([]*slashertypes.AttestedEpochForValidator, error) {
-	return e.db.LatestEpochAttestedForValidators(ctx, validatorIndices)
+	return e.db.LastEpochWrittenForValidators(ctx, validatorIndices)
 }
 
 // AttestationRecordForValidator -- passthrough
@@ -296,11 +296,11 @@ func (e Exporter) LoadSlasherChunks(
 	return e.db.LoadSlasherChunks(ctx, kind, diskKeys)
 }
 
-// SaveLatestEpochAttestedForValidators -- passthrough
-func (e Exporter) SaveLatestEpochAttestedForValidators(
+// SaveLastEpochWrittenForValidators -- passthrough
+func (e Exporter) SaveLastEpochWrittenForValidators(
 	ctx context.Context, validatorIndices []types.ValidatorIndex, epoch types.Epoch,
 ) error {
-	return e.db.SaveLatestEpochAttestedForValidators(ctx, validatorIndices, epoch)
+	return e.db.SaveLastEpochWrittenForValidators(ctx, validatorIndices, epoch)
 }
 
 // SaveAttestationRecordForValidator -- passthrough

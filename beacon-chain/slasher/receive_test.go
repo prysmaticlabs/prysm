@@ -2,6 +2,7 @@ package slasher
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -188,7 +189,9 @@ func Test_processQueuedAttestations(t *testing.T) {
 				s.processQueuedAttestations(ctx, currentEpochChan)
 				exitChan <- struct{}{}
 			}()
+			s.attestationQueueLock.Lock()
 			s.attestationQueue = tt.args.attestationQueue
+			s.attestationQueueLock.Unlock()
 			currentEpochChan <- tt.args.currentEpoch
 			cancel()
 			<-exitChan
@@ -201,6 +204,105 @@ func Test_processQueuedAttestations(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
+	hook := logTest.NewGlobal()
+	defer hook.Reset()
+
+	beaconDB := dbtest.SetupDB(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	params := DefaultParams()
+
+	s := &Service{
+		serviceCfg: &ServiceConfig{
+			Database: beaconDB,
+		},
+		params:           params,
+		attestationQueue: make([]*slashertypes.IndexedAttestationWrapper, 0),
+	}
+	currentEpochChan := make(chan types.Epoch)
+	exitChan := make(chan struct{})
+	go func() {
+		s.processQueuedAttestations(ctx, currentEpochChan)
+		exitChan <- struct{}{}
+	}()
+
+	// We process submit attestations from chunk index 0 to chunk index 1.
+	// What we want to test here is if we can proceed
+	// with processing queued attestations once the chunk index changes.
+	// For example, epochs 0 - 15 are chunk 0, epochs 16 - 31 are chunk 1, etc.
+	startEpoch := types.Epoch(params.chunkSize)
+	endEpoch := types.Epoch(params.chunkSize + 1)
+
+	for i := startEpoch; i <= endEpoch; i++ {
+		source := types.Epoch(0)
+		target := types.Epoch(0)
+		if i != 0 {
+			source = i - 1
+			target = i
+		}
+		var sr [32]byte
+		copy(sr[:], fmt.Sprintf("%d", i))
+		att := createAttestationWrapper(source, target, []uint64{0}, sr[:])
+		s.attestationQueueLock.Lock()
+		s.attestationQueue = []*slashertypes.IndexedAttestationWrapper{att}
+		s.attestationQueueLock.Unlock()
+		currentEpochChan <- i
+	}
+
+	cancel()
+	<-exitChan
+	require.LogsDoNotContain(t, hook, "Slashable offenses found")
+	require.LogsDoNotContain(t, hook, "Could not detect")
+}
+
+func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
+	hook := logTest.NewGlobal()
+	defer hook.Reset()
+
+	beaconDB := dbtest.SetupDB(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	params := DefaultParams()
+
+	s := &Service{
+		serviceCfg: &ServiceConfig{
+			Database: beaconDB,
+		},
+		params:           params,
+		attestationQueue: make([]*slashertypes.IndexedAttestationWrapper, 0),
+	}
+	currentEpochChan := make(chan types.Epoch)
+	exitChan := make(chan struct{})
+	go func() {
+		s.processQueuedAttestations(ctx, currentEpochChan)
+		exitChan <- struct{}{}
+	}()
+
+	// We create two attestations fully spanning chunk indices 0 and chunk 1
+	att1 := createAttestationWrapper(
+		types.Epoch(params.chunkSize-2),
+		types.Epoch(params.chunkSize),
+		[]uint64{0, 1},
+		nil, /* signing root */
+	)
+	att2 := createAttestationWrapper(
+		types.Epoch(params.chunkSize-1),
+		types.Epoch(params.chunkSize+1),
+		[]uint64{0, 1},
+		nil, /* signing root */
+	)
+
+	// We attempt to process the batch.
+	s.attestationQueueLock.Lock()
+	s.attestationQueue = []*slashertypes.IndexedAttestationWrapper{att1, att2}
+	s.attestationQueueLock.Unlock()
+	currentEpochChan <- att2.IndexedAttestation.Data.Target.Epoch
+
+	cancel()
+	<-exitChan
+	require.LogsDoNotContain(t, hook, "Slashable offenses found")
+	require.LogsDoNotContain(t, hook, "Could not detect")
 }
 
 func TestSlasher_receiveAttestations_OK(t *testing.T) {

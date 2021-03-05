@@ -31,12 +31,14 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 		s.processQueuedBlocks(ctx, currentEpochChan)
 		exitChan <- struct{}{}
 	}()
+	s.blockQueueLock.Lock()
 	s.beaconBlocksQueue = []*slashertypes.SignedBlockHeaderWrapper{
 		createProposalWrapper(4, 1, []byte{1}),
 		createProposalWrapper(4, 1, []byte{1}),
 		createProposalWrapper(4, 1, []byte{1}),
 		createProposalWrapper(4, 1, []byte{2}),
 	}
+	s.blockQueueLock.Unlock()
 	currentEpoch := types.Epoch(0)
 	currentEpochChan <- currentEpoch
 	cancel()
@@ -61,10 +63,12 @@ func Test_processQueuedBlocks_NotSlashable(t *testing.T) {
 		s.processQueuedBlocks(ctx, currentEpochChan)
 		exitChan <- struct{}{}
 	}()
+	s.blockQueueLock.Lock()
 	s.beaconBlocksQueue = []*slashertypes.SignedBlockHeaderWrapper{
 		createProposalWrapper(4, 1, []byte{1}),
 		createProposalWrapper(4, 1, []byte{1}),
 	}
+	s.blockQueueLock.Unlock()
 	currentEpoch := types.Epoch(4)
 	currentEpochChan <- currentEpoch
 	cancel()
