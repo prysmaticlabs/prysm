@@ -18,13 +18,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -281,7 +281,7 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	assert.DeepEqual(t, headBlock, headBlk, "Head block incorrect")
 	s, err := c.HeadState(ctx)
 	require.NoError(t, err)
-	assert.DeepEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
+	assert.DeepSSZEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
 	assert.Equal(t, c.HeadSlot(), headBlock.Block.Slot, "Head slot incorrect")
 	r, err := c.HeadRoot(context.Background())
 	require.NoError(t, err)
@@ -318,7 +318,7 @@ func TestChainService_InitializeChainInfo_SetHeadAtGenesis(t *testing.T) {
 	require.NoError(t, c.initializeChainInfo(ctx))
 	s, err := c.HeadState(ctx)
 	require.NoError(t, err)
-	assert.DeepEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
+	assert.DeepSSZEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
 	assert.Equal(t, genesisRoot, c.genesisRoot, "Genesis block root incorrect")
 	assert.DeepEqual(t, genesis, c.head.block)
 }
@@ -376,7 +376,7 @@ func TestChainService_InitializeChainInfo_HeadSync(t *testing.T) {
 	require.NoError(t, c.initializeChainInfo(ctx))
 	s, err := c.HeadState(ctx)
 	require.NoError(t, err)
-	assert.DeepEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
+	assert.DeepSSZEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
 	assert.Equal(t, genesisRoot, c.genesisRoot, "Genesis block root incorrect")
 	// Since head sync is not triggered, chain is initialized to the last finalization checkpoint.
 	assert.DeepEqual(t, finalizedBlock, c.head.block)
@@ -397,7 +397,7 @@ func TestChainService_InitializeChainInfo_HeadSync(t *testing.T) {
 	require.NoError(t, c.initializeChainInfo(ctx))
 	s, err = c.HeadState(ctx)
 	require.NoError(t, err)
-	assert.DeepEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
+	assert.DeepSSZEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
 	assert.Equal(t, genesisRoot, c.genesisRoot, "Genesis block root incorrect")
 	// Head slot is far beyond the latest finalized checkpoint, head sync is triggered.
 	assert.DeepEqual(t, headBlock, c.head.block)
