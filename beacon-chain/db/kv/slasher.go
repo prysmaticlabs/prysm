@@ -191,7 +191,8 @@ func (s *Store) LoadSlasherChunks(
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(slasherChunksBucket)
 		for _, diskKey := range diskKeys {
-			chunkBytes := bkt.Get(diskKey)
+			key := append(ssz.MarshalUint8(make([]byte, 0), uint8(kind)), diskKey...)
+			chunkBytes := bkt.Get(key)
 			if chunkBytes == nil {
 				chunks = append(chunks, []uint16{})
 				exists = append(exists, false)
@@ -219,8 +220,9 @@ func (s *Store) SaveSlasherChunks(
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(slasherChunksBucket)
 		for i := 0; i < len(chunkKeys); i++ {
+			key := append(ssz.MarshalUint8(make([]byte, 0), uint8(kind)), chunkKeys[i]...)
 			enc := encodeSlasherChunk(chunks[i])
-			if err := bkt.Put(chunkKeys[i], enc); err != nil {
+			if err := bkt.Put(key, enc); err != nil {
 				return err
 			}
 		}
