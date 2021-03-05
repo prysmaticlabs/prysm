@@ -87,7 +87,7 @@ func logSlashingEvent(slashing *slashertypes.Slashing) {
 }
 
 // Log a double block proposal slashing given an incoming proposal and existing proposal signing root.
-func logDoubleProposal(incomingProposal *slashertypes.SignedBlockHeaderWrapper, existingProposal *slashertypes.SignedBlockHeaderWrapper) {
+func logDoubleProposal(incomingProposal, existingProposal *slashertypes.SignedBlockHeaderWrapper) {
 	logSlashingEvent(&slashertypes.Slashing{
 		Kind:            slashertypes.DoubleProposal,
 		ValidatorIndex:  incomingProposal.SignedBeaconBlockHeader.Header.ProposerIndex,

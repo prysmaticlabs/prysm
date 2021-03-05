@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	ssz "github.com/ferranbt/fastssz"
+	"github.com/golang/snappy"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -181,7 +182,7 @@ func (s *Store) SaveAttestationRecordsForValidators(
 // LoadSlasherChunks given a chunk kind and a disk keys, retrieves chunks for a validator
 // min or max span used by slasher from our database.
 func (s *Store) LoadSlasherChunks(
-	ctx context.Context, kind slashertypes.ChunkKind, diskKeys []uint64,
+	ctx context.Context, kind slashertypes.ChunkKind, diskKeys [][]byte,
 ) ([][]uint16, []bool, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.LoadSlasherChunk")
 	defer span.End()
@@ -190,18 +191,16 @@ func (s *Store) LoadSlasherChunks(
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(slasherChunksBucket)
 		for _, diskKey := range diskKeys {
-			keyBytes := ssz.MarshalUint64(make([]byte, 0), diskKey)
-			keyBytes = append(ssz.MarshalUint8(make([]byte, 0), uint8(kind)), keyBytes...)
-			chunkBytes := bkt.Get(keyBytes)
+			key := append(ssz.MarshalUint8(make([]byte, 0), uint8(kind)), diskKey...)
+			chunkBytes := bkt.Get(key)
 			if chunkBytes == nil {
 				chunks = append(chunks, []uint16{})
 				exists = append(exists, false)
 				continue
 			}
-			chunk := make([]uint16, 0)
-			for i := 0; i < len(chunkBytes); i += 2 {
-				distance := ssz.UnmarshallUint16(chunkBytes[i : i+2])
-				chunk = append(chunk, distance)
+			chunk, err := decodeSlasherChunk(chunkBytes)
+			if err != nil {
+				return err
 			}
 			chunks = append(chunks, chunk)
 			exists = append(exists, true)
@@ -214,20 +213,16 @@ func (s *Store) LoadSlasherChunks(
 // SaveSlasherChunk given a chunk kind, list of disk keys, and list of chunks,
 // saves the chunks to our database for use by slasher in slashing detection.
 func (s *Store) SaveSlasherChunks(
-	ctx context.Context, kind slashertypes.ChunkKind, chunkKeys []uint64, chunks [][]uint16,
+	ctx context.Context, kind slashertypes.ChunkKind, chunkKeys [][]byte, chunks [][]uint16,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveSlasherChunks")
 	defer span.End()
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(slasherChunksBucket)
 		for i := 0; i < len(chunkKeys); i++ {
-			keyBytes := ssz.MarshalUint64(make([]byte, 0), chunkKeys[i])
-			val := make([]byte, 0)
-			for j := 0; j < len(chunks[i]); j++ {
-				val = append(val, ssz.MarshalUint16(make([]byte, 0), chunks[i][j])...)
-			}
-			keyBytes = append(ssz.MarshalUint8(make([]byte, 0), uint8(kind)), keyBytes...)
-			if err := bkt.Put(keyBytes, val); err != nil {
+			key := append(ssz.MarshalUint8(make([]byte, 0), uint8(kind)), chunkKeys[i]...)
+			enc := encodeSlasherChunk(chunks[i])
+			if err := bkt.Put(key, enc); err != nil {
 				return err
 			}
 		}
@@ -310,6 +305,27 @@ func keyForValidatorProposal(proposal *slashertypes.SignedBlockHeaderWrapper) ([
 		return nil, err
 	}
 	return append(encSlot, encValidatorIdx...), nil
+}
+
+func encodeSlasherChunk(chunk []uint16) []byte {
+	val := make([]byte, 0)
+	for i := 0; i < len(chunk); i++ {
+		val = append(val, ssz.MarshalUint16(make([]byte, 0), chunk[i])...)
+	}
+	return snappy.Encode(nil, val)
+}
+
+func decodeSlasherChunk(enc []byte) ([]uint16, error) {
+	chunkBytes, err := snappy.Decode(nil, enc)
+	if err != nil {
+		return nil, err
+	}
+	chunk := make([]uint16, 0)
+	for i := 0; i < len(chunkBytes); i += 2 {
+		distance := ssz.UnmarshallUint16(chunkBytes[i : i+2])
+		chunk = append(chunk, distance)
+	}
+	return chunk, nil
 }
 
 // Decode attestation record from bytes.
