@@ -105,6 +105,7 @@ func (s *Service) checkDoubleVotes(
 				continue
 			}
 			if att.SigningRoot != existingAtt.SigningRoot {
+				doubleVotesTotal.Inc()
 				slashings = append(slashings, &slashertypes.Slashing{
 					Kind:            slashertypes.DoubleVote,
 					ValidatorIndex:  types.ValidatorIndex(valIdx),
@@ -141,6 +142,7 @@ func (s *Service) checkDoubleVotesOnDisk(
 	}
 	doubleVoteSlashings := make([]*slashertypes.Slashing, 0)
 	for _, doubleVote := range doubleVotes {
+		doubleVotesTotal.Inc()
 		doubleVoteSlashings = append(doubleVoteSlashings, &slashertypes.Slashing{
 			Kind:            slashertypes.DoubleVote,
 			ValidatorIndex:  doubleVote.ValidatorIndex,
@@ -286,6 +288,9 @@ func (s *Service) applyAttestationForValidator(
 	defer span.End()
 	sourceEpoch := attestation.IndexedAttestation.Data.Source.Epoch
 	targetEpoch := attestation.IndexedAttestation.Data.Target.Epoch
+
+	attestationDistance.Observe(float64(targetEpoch) - float64(sourceEpoch))
+
 	chunkIdx := s.params.chunkIndex(sourceEpoch)
 	chunk, err := s.getChunk(ctx, args, chunksByChunkIdx, chunkIdx)
 	if err != nil {
@@ -431,5 +436,6 @@ func (s *Service) saveUpdatedChunks(
 		chunkKeys = append(chunkKeys, s.params.flatSliceID(args.validatorChunkIndex, chunkIdx))
 		chunks = append(chunks, chunk.Chunk())
 	}
+	chunksSavedTotal.Add(float64(len(chunks)))
 	return s.serviceCfg.Database.SaveSlasherChunks(ctx, args.kind, chunkKeys, chunks)
 }
