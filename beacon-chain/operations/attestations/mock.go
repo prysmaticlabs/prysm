@@ -22,9 +22,7 @@ func (*PoolMock) SaveAggregatedAttestation(_ *ethpb.Attestation) error {
 }
 
 func (m *PoolMock) SaveAggregatedAttestations(atts []*ethpb.Attestation) error {
-	for _, a := range atts {
-		m.AggregatedAtts = append(m.AggregatedAtts, a)
-	}
+	m.AggregatedAtts = append(m.AggregatedAtts, atts...)
 	return nil
 }
 
