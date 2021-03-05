@@ -40,6 +40,7 @@ func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_BeforeWeakSubjectivit
 func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_AfterFirstWeakSubjectivity(t *testing.T) {
 	numValidators := params.BeaconConfig().MinGenesisActiveValidatorCount
 	numEpochs, err := helpers.ComputeWeakSubjectivityPeriod(numValidators)
+	require.NoError(t, err)
 	pubKey := [48]byte{1}
 	validatorDB := setupDB(t, [][48]byte{pubKey})
 
