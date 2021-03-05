@@ -73,10 +73,14 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 			attestations := s.attestationQueue
 			s.attestationQueue = make([]*slashertypes.IndexedAttestationWrapper, 0)
 			s.attestationQueueLock.Unlock()
+
+			receivedAttestationsTotal.Add(float64(len(attestations)))
+
 			log.WithFields(logrus.Fields{
 				"currentEpoch": currentEpoch,
 				"numAtts":      len(attestations),
 			}).Info("Epoch reached, processing queued atts for slashing detection")
+
 			// Save the attestation records to our database.
 			if err := s.serviceCfg.Database.SaveAttestationRecordsForValidators(
 				ctx, attestations,
@@ -96,6 +100,8 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 					continue
 				}
 			}
+
+			processedAttestationsTotal.Add(float64(len(attestations)))
 		case <-ctx.Done():
 			return
 		}
@@ -112,14 +118,19 @@ func (s *Service) processQueuedBlocks(ctx context.Context, epochTicker <-chan ty
 			blocks := s.beaconBlocksQueue
 			s.beaconBlocksQueue = make([]*slashertypes.SignedBlockHeaderWrapper, 0)
 			s.blockQueueLock.Unlock()
+
+			receivedBlocksTotal.Add(float64(len(blocks)))
+
 			log.WithFields(logrus.Fields{
 				"currentEpoch": currentEpoch,
 				"numBlocks":    len(blocks),
 			}).Info("Epoch reached, processing queued blocks for slashing detection")
+
 			if err := s.detectSlashableBlocks(ctx, blocks); err != nil {
 				log.WithError(err).Error("Could not detect slashable blocks")
 				continue
 			}
+			processedBlocksTotal.Add(float64(len(blocks)))
 		case <-ctx.Done():
 			return
 		}
