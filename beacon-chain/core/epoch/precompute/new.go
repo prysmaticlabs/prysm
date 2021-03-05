@@ -19,9 +19,6 @@ import (
 func New(ctx context.Context, state iface.BeaconState) ([]*Validator, *Balance, error) {
 	ctx, span := trace.StartSpan(ctx, "precomputeEpoch.New")
 	defer span.End()
-	if state == nil || state.InnerStateUnsafe() == nil {
-		return nil, nil, errors.New("nil inner state")
-	}
 
 	pValidators := make([]*Validator, state.NumValidators())
 	pBal := &Balance{}

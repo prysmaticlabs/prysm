@@ -896,10 +896,11 @@ func TestHandleEpochBoundary_BadMetrics(t *testing.T) {
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
-	s, err := testutil.NewBeaconState()
+	s, err := state.OptimizedGenesisBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, s.SetSlot(1))
 	service.head = &head{}
+
 	require.ErrorContains(t, "nil state", service.handleEpochBoundary(ctx, s))
 }
 

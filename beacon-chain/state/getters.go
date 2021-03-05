@@ -568,9 +568,6 @@ func (b *BeaconState) NumValidators() int {
 	}
 	b.lock.RLock()
 	defer b.lock.RUnlock()
-	if b.state.Validators == nil {
-		return 0
-	}
 
 	return len(b.state.Validators)
 }

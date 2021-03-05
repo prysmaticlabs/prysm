@@ -137,7 +137,7 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 	atts, err := r.attPool.UnaggregatedAttestations()
 	require.NoError(t, err)
 	assert.Equal(t, 1, len(atts), "Did not save unaggregated att")
-	assert.DeepSSZEqual(t, att, atts[0], "Incorrect saved att")
+	assert.DeepEqual(t, att, atts[0], "Incorrect saved att")
 	assert.Equal(t, 0, len(r.attPool.AggregatedAttestations()), "Did save aggregated att")
 	require.LogsContain(t, hook, "Verified and saved pending attestations to pool")
 }
