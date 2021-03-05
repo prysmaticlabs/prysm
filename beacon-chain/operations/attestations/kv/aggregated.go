@@ -17,12 +17,12 @@ import (
 // newly aggregated attestations in the pool.
 // It tracks the unaggregated attestations that weren't able to aggregate to prevent
 // the deletion of unaggregated attestations in the pool.
-func (c *AttCaches) AggregateUnaggregatedAttestations() error {
+func (c *AttCaches) AggregateUnaggregatedAttestations(ctx context.Context) error {
 	unaggregatedAtts, err := c.UnaggregatedAttestations()
 	if err != nil {
 		return err
 	}
-	return c.aggregateUnaggregatedAttestations(context.Background(), unaggregatedAtts)
+	return c.aggregateUnaggregatedAttestations(ctx, unaggregatedAtts)
 }
 
 // AggregateUnaggregatedAttestationsBySlotIndex aggregates the unaggregated attestations and saves

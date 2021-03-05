@@ -14,7 +14,7 @@ import (
 // aggregator actor.
 type Pool interface {
 	// For Aggregated attestations
-	AggregateUnaggregatedAttestations() error
+	AggregateUnaggregatedAttestations(ctx context.Context) error
 	AggregateUnaggregatedAttestationsBySlotIndex(ctx context.Context, slot types.Slot, committeeIndex types.CommitteeIndex) error
 	SaveAggregatedAttestation(att *ethpb.Attestation) error
 	SaveAggregatedAttestations(atts []*ethpb.Attestation) error
