@@ -99,8 +99,7 @@ func ProcessAttestationsNoVerifySignature(
 	return beaconState, nil
 }
 
-// ProcessAttestationNoVerifySignature processes the attestation without verifying the attestation signature. This
-// method is used to validate attestations whose signatures have already been verified.
+// ProcessAttestationNoVerifySignature processes the attestation without verifying the attestation signature.
 func ProcessAttestationNoVerifySignature(
 	ctx context.Context,
 	beaconState *stateTrie.BeaconState,
