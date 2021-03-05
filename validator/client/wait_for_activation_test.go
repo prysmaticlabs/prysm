@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"fmt"
-	constant "github.com/prysmaticlabs/prysm/validator/testing"
 	"testing"
 	"time"
 
@@ -16,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	walletMock "github.com/prysmaticlabs/prysm/validator/accounts/testing"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
+	constant "github.com/prysmaticlabs/prysm/validator/testing"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/tyler-smith/go-bip39"
 	util "github.com/wealdtech/go-eth2-util"
@@ -52,7 +52,7 @@ func TestWaitActivation_ContextCanceled(t *testing.T) {
 	)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	assert.ErrorContains(t, cancelledCtx, v.WaitForActivation(ctx, make(chan struct{})))
+	assert.ErrorContains(t, cancelledCtx, v.WaitForActivation(ctx))
 }
 
 func TestWaitActivation_StreamSetupFails_AttemptsToReconnect(t *testing.T) {
@@ -83,7 +83,7 @@ func TestWaitActivation_StreamSetupFails_AttemptsToReconnect(t *testing.T) {
 	resp := generateMockStatusResponse([][]byte{pubKey[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	clientStream.EXPECT().Recv().Return(resp, nil)
-	assert.NoError(t, v.WaitForActivation(context.Background(), make(chan struct{})))
+	assert.NoError(t, v.WaitForActivation(context.Background()))
 }
 
 func TestWaitForActivation_ReceiveErrorFromStream_AttemptsReconnection(t *testing.T) {
@@ -118,7 +118,7 @@ func TestWaitForActivation_ReceiveErrorFromStream_AttemptsReconnection(t *testin
 		nil,
 		errors.New("fails"),
 	).Return(resp, nil)
-	assert.NoError(t, v.WaitForActivation(context.Background(), make(chan struct{})))
+	assert.NoError(t, v.WaitForActivation(context.Background()))
 }
 
 func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
@@ -153,7 +153,7 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 		resp,
 		nil,
 	)
-	assert.NoError(t, v.WaitForActivation(context.Background(), make(chan struct{})), "Could not wait for activation")
+	assert.NoError(t, v.WaitForActivation(context.Background()), "Could not wait for activation")
 	assert.LogsContain(t, hook, "Validator activated")
 }
 
@@ -188,7 +188,7 @@ func TestWaitForActivation_Exiting(t *testing.T) {
 		resp,
 		nil,
 	)
-	assert.NoError(t, v.WaitForActivation(context.Background(), make(chan struct{})))
+	assert.NoError(t, v.WaitForActivation(context.Background()))
 }
 
 func TestWaitForActivation_RefetchKeys(t *testing.T) {
@@ -230,7 +230,7 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 		resp,
 		nil,
 	)
-	assert.NoError(t, v.WaitForActivation(context.Background(), make(chan struct{})), "Could not wait for activation")
+	assert.NoError(t, v.waitForActivation(context.Background(), make(chan [][48]byte)), "Could not wait for activation")
 	assert.LogsContain(t, hook, msgNoKeysFetched)
 	assert.LogsContain(t, hook, "Validator activated")
 }
@@ -291,15 +291,14 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			nil,
 		)
 
-		channel := make(chan struct{})
 		go func() {
 			// We add the active key into the keymanager and simulate a key refresh.
 			time.Sleep(time.Second * 1)
 			km.keysMap[activePubKey] = activePrivKey
-			channel <- struct{}{}
+			km.SimulateAccountChanges()
 		}()
 
-		assert.NoError(t, v.WaitForActivation(context.Background(), channel))
+		assert.NoError(t, v.WaitForActivation(context.Background()))
 		assert.LogsContain(t, hook, "Waiting for deposit to be observed by beacon node")
 		assert.LogsContain(t, hook, "Validator activated")
 	})
@@ -365,16 +364,16 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			nil,
 		)
 
-		channel := make(chan struct{})
+		channel := make(chan [][48]byte)
 		go func() {
 			// We add the active key into the keymanager and simulate a key refresh.
 			time.Sleep(time.Second * 1)
 			err = km.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "", 2)
 			require.NoError(t, err)
-			channel <- struct{}{}
+			channel <- [][48]byte{}
 		}()
 
-		assert.NoError(t, v.WaitForActivation(context.Background(), channel))
+		assert.NoError(t, v.waitForActivation(context.Background(), channel))
 		assert.LogsContain(t, hook, "Waiting for deposit to be observed by beacon node")
 		assert.LogsContain(t, hook, "Validator activated")
 	})

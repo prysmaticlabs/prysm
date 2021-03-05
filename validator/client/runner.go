@@ -27,7 +27,7 @@ type Validator interface {
 	Done()
 	WaitForChainStart(ctx context.Context) error
 	WaitForSync(ctx context.Context) error
-	WaitForActivation(ctx context.Context, accountsChangedChan <-chan struct{}) error
+	WaitForActivation(ctx context.Context) error
 	SlasherReady(ctx context.Context) error
 	CanonicalHeadSlot(ctx context.Context) (types.Slot, error)
 	NextSlot() <-chan types.Slot
@@ -75,7 +75,6 @@ func run(ctx context.Context, v Validator) {
 
 	var headSlot types.Slot
 	firstTime := true
-	accountsChangedChan := make(chan struct{}, 1)
 	for {
 		if !firstTime {
 			if ctx.Err() != nil {
@@ -102,7 +101,7 @@ func run(ctx context.Context, v Validator) {
 		if err != nil {
 			log.Fatalf("Could not determine if beacon node synced: %v", err)
 		}
-		err = v.WaitForActivation(ctx, accountsChangedChan)
+		err = v.WaitForActivation(ctx)
 		if isConnectionError(err) {
 			log.Warnf("Could not wait for validator activation: %v", err)
 			continue
@@ -121,7 +120,6 @@ func run(ctx context.Context, v Validator) {
 		break
 	}
 
-	go handleAccountsChanged(ctx, v, accountsChangedChan)
 	connectionErrorChannel := make(chan error, 1)
 	go v.ReceiveBlocks(ctx, connectionErrorChannel)
 	if err := v.UpdateDuties(ctx, headSlot); err != nil {
@@ -231,26 +229,5 @@ func handleAssignmentError(err error, slot types.Slot) {
 		).Warn("Validator not yet assigned to epoch")
 	} else {
 		log.WithField("error", err).Error("Failed to update assignments")
-	}
-}
-
-func handleAccountsChanged(ctx context.Context, v Validator, accountsChangedChan chan<- struct{}) {
-	validatingPubKeysChan := make(chan [][48]byte, 1)
-	var sub = v.GetKeymanager().SubscribeAccountChanges(validatingPubKeysChan)
-	defer func() {
-		sub.Unsubscribe()
-		close(validatingPubKeysChan)
-	}()
-
-	for {
-		select {
-		case <-validatingPubKeysChan:
-			accountsChangedChan <- struct{}{}
-		case err := <-sub.Err():
-			log.WithError(err).Error("accounts changed subscription failed")
-			return
-		case <-ctx.Done():
-			return
-		}
 	}
 }
