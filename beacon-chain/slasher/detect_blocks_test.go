@@ -86,7 +86,11 @@ func createProposalWrapper(slot types.Slot, proposerIndex types.ValidatorIndex, 
 			Header: &ethpb.BeaconBlockHeader{
 				Slot:          slot,
 				ProposerIndex: proposerIndex,
+				ParentRoot:    params.BeaconConfig().ZeroHash[:],
+				StateRoot:     params.BeaconConfig().ZeroHash[:],
+				BodyRoot:      params.BeaconConfig().ZeroHash[:],
 			},
+			Signature: params.BeaconConfig().EmptySignature[:],
 		},
 		SigningRoot: signRoot,
 	}
