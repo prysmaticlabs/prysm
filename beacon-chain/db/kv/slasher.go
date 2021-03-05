@@ -6,6 +6,7 @@ import (
 
 	ssz "github.com/ferranbt/fastssz"
 	"github.com/golang/snappy"
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
@@ -90,17 +91,21 @@ func (s *Store) CheckAttesterDoubleVotes(
 			for _, valIdx := range att.IndexedAttestation.AttestingIndices {
 				encIdx := ssz.MarshalUint64(make([]byte, 0), valIdx)
 				key := append(encIdx, encEpoch...)
-				existingAttRecord := bkt.Get(key)
-				if len(existingAttRecord) < 32 {
+				encExistingAttRecord := bkt.Get(key)
+				if len(encExistingAttRecord) < 32 {
 					continue
 				}
-				existingSigningRoot := bytesutil.ToBytes32(existingAttRecord[:32])
+				existingSigningRoot := bytesutil.ToBytes32(encExistingAttRecord[:32])
 				if existingSigningRoot != att.SigningRoot {
+					existingAttRecord, err := decodeAttestationRecord(encExistingAttRecord)
+					if err != nil {
+						return err
+					}
 					doubleVotes = append(doubleVotes, &slashertypes.AttesterDoubleVote{
-						ValidatorIndex:  types.ValidatorIndex(valIdx),
-						Target:          att.IndexedAttestation.Data.Target.Epoch,
-						SigningRoot:     att.SigningRoot,
-						PrevSigningRoot: existingSigningRoot,
+						ValidatorIndex:         types.ValidatorIndex(valIdx),
+						Target:                 att.IndexedAttestation.Data.Target.Epoch,
+						PrevAttestationWrapper: existingAttRecord,
+						AttestationWrapper:     att,
 					})
 				}
 			}
@@ -240,17 +245,19 @@ func (s *Store) CheckDoubleBlockProposals(
 			if err != nil {
 				return err
 			}
-			existingProposalWrapper := bkt.Get(key)
-			if len(existingProposalWrapper) < 32 {
+			encExistingProposalWrapper := bkt.Get(key)
+			if len(encExistingProposalWrapper) < 32 {
 				continue
 			}
-			existingSigningRoot := bytesutil.ToBytes32(existingProposalWrapper[:32])
+			existingSigningRoot := bytesutil.ToBytes32(encExistingProposalWrapper[:32])
 			if existingSigningRoot != proposal.SigningRoot {
+				existingProposalWrapper, err := decodeProposalRecord(encExistingProposalWrapper)
+				if err != nil {
+					return err
+				}
 				doubleProposals = append(doubleProposals, &slashertypes.DoubleBlockProposal{
-					Slot:                proposal.SignedBeaconBlockHeader.Header.Slot,
-					ProposerIndex:       proposal.SignedBeaconBlockHeader.Header.ProposerIndex,
-					IncomingSigningRoot: proposal.SigningRoot,
-					ExistingSigningRoot: existingSigningRoot,
+					PrevBeaconBlockWrapper: existingProposalWrapper,
+					BeaconBlockWrapper:     proposal,
 				})
 			}
 		}
@@ -321,7 +328,10 @@ func decodeSlasherChunk(enc []byte) ([]uint16, error) {
 
 // Decode attestation record from bytes.
 func encodeAttestationRecord(att *slashertypes.IndexedAttestationWrapper) ([]byte, error) {
-	encodedAtt, err := att.IndexedAttestation.Marshal()
+	if att == nil || att.IndexedAttestation == nil {
+		return []byte{}, errors.New("nil proposal record")
+	}
+	encodedAtt, err := att.IndexedAttestation.MarshalSSZ()
 	if err != nil {
 		return nil, err
 	}
@@ -335,7 +345,7 @@ func decodeAttestationRecord(encoded []byte) (*slashertypes.IndexedAttestationWr
 	}
 	signingRoot := encoded[:32]
 	decodedAtt := &ethpb.IndexedAttestation{}
-	if err := decodedAtt.Unmarshal(encoded[32:]); err != nil {
+	if err := decodedAtt.UnmarshalSSZ(encoded[32:]); err != nil {
 		return nil, err
 	}
 	return &slashertypes.IndexedAttestationWrapper{
@@ -345,9 +355,27 @@ func decodeAttestationRecord(encoded []byte) (*slashertypes.IndexedAttestationWr
 }
 
 func encodeProposalRecord(blkHdr *slashertypes.SignedBlockHeaderWrapper) ([]byte, error) {
-	encodedHdr, err := blkHdr.SignedBeaconBlockHeader.Marshal()
+	if blkHdr == nil || blkHdr.SignedBeaconBlockHeader == nil {
+		return []byte{}, errors.New("nil proposal record")
+	}
+	encodedHdr, err := blkHdr.SignedBeaconBlockHeader.MarshalSSZ()
 	if err != nil {
 		return nil, err
 	}
 	return append(blkHdr.SigningRoot[:], encodedHdr...), nil
+}
+
+func decodeProposalRecord(encoded []byte) (*slashertypes.SignedBlockHeaderWrapper, error) {
+	if len(encoded) < 32 {
+		return nil, fmt.Errorf("wrong length for encoded proposal record, want 32, got %d", len(encoded))
+	}
+	signingRoot := encoded[:32]
+	decodedBlkHdr := &ethpb.SignedBeaconBlockHeader{}
+	if err := decodedBlkHdr.UnmarshalSSZ(encoded[32:]); err != nil {
+		return nil, err
+	}
+	return &slashertypes.SignedBlockHeaderWrapper{
+		SignedBeaconBlockHeader: decodedBlkHdr,
+		SigningRoot:             bytesutil.ToBytes32(signingRoot),
+	}, nil
 }
