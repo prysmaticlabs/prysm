@@ -116,9 +116,16 @@ func isDoubleProposal(incomingSigningRoot, existingSigningRoot [32]byte) bool {
 // Validates the attestation data integrity, ensuring we have no nil values for
 // source, epoch, and that the source epoch of the attestation must be less than
 // the target epoch, which is a precondition for performing slashing detection.
-func validateAttestationIntegrity(att *ethpb.IndexedAttestation) bool {
+func validateAttestationIntegrity(
+	att *ethpb.IndexedAttestation, currentEpoch types.Epoch,
+) (valid, validInFuture bool) {
 	if att == nil || att.Data == nil || att.Data.Source == nil || att.Data.Target == nil {
-		return false
+		return
 	}
-	return att.Data.Source.Epoch < att.Data.Target.Epoch
+	if att.Data.Target.Epoch > currentEpoch {
+		validInFuture = true
+		return
+	}
+	valid = att.Data.Source.Epoch < att.Data.Target.Epoch
+	return
 }

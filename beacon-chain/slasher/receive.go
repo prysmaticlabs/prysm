@@ -18,10 +18,6 @@ func (s *Service) receiveAttestations(ctx context.Context) {
 	for {
 		select {
 		case att := <-s.indexedAttsChan:
-			// TODO(#8331): Defer attestations from the future for later processing.
-			if !validateAttestationIntegrity(att) {
-				continue
-			}
 			attWrapper := &slashertypes.IndexedAttestationWrapper{
 				IndexedAttestation: att,
 			}
@@ -69,10 +65,16 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 	for {
 		select {
 		case currentEpoch := <-epochTicker:
+			valid, validInFuture := validateAttestationIntegrity(att, currentEpoch)
+			if validInFuture {
+
+			}
+
 			s.attestationQueueLock.Lock()
 			attestations := s.attestationQueue
 			s.attestationQueue = make([]*slashertypes.IndexedAttestationWrapper, 0)
 			s.attestationQueueLock.Unlock()
+
 			log.WithFields(logrus.Fields{
 				"currentEpoch": currentEpoch,
 				"numAtts":      len(attestations),
