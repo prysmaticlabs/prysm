@@ -187,7 +187,7 @@ func RoundUpToNearestEpoch(slot types.Slot) types.Slot {
 	return slot
 }
 
-// WeakSubjectivityCheckptEpoch returns the epoch of the latest weak subjectivity checkpoint for the active validator count and
+// ComputeWeakSubjectivityPeriod returns the epoch of the latest weak subjectivity checkpoint for the active validator count and
 // finalized epoch.
 //
 // Reference spec implementation:
@@ -200,7 +200,7 @@ func RoundUpToNearestEpoch(slot types.Slot) types.Slot {
 //    else:
 //        weak_subjectivity_period += SAFETY_DECAY*val_count/(2*100*MIN_PER_EPOCH_CHURN_LIMIT)
 //    return weak_subjectivity_period
-func WeakSubjectivityCheckptEpoch(valCount uint64) (types.Epoch, error) {
+func ComputeWeakSubjectivityPeriod(valCount uint64) (types.Epoch, error) {
 	wsp := params.BeaconConfig().MinValidatorWithdrawabilityDelay
 
 	m := params.BeaconConfig().MinPerEpochChurnLimit
