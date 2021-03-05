@@ -18,9 +18,12 @@ import (
 // This struct allows us to specify required dependencies and
 // parameters for slasher to function as needed.
 type ServiceConfig struct {
-	IndexedAttsFeed  *event.Feed
-	BeaconBlocksFeed *event.Feed
-	Database         db.Database
+	IndexedAttsFeed    *event.Feed
+	BeaconBlocksFeed   *event.Feed
+	AttSlashingsFeed   *event.Feed
+	BlockSlashingsFeed *event.Feed
+	Database           db.Database
+	GenesisTime        time.Time
 }
 
 // Service defining a slasher implementation as part of
@@ -30,6 +33,8 @@ type Service struct {
 	serviceCfg           *ServiceConfig
 	indexedAttsChan      chan *ethpb.IndexedAttestation
 	beaconBlocksChan     chan *ethpb.SignedBeaconBlockHeader
+	attSlashingsChan     chan *ethpb.AttesterSlashing
+	blockSlashingsChan   chan *ethpb.ProposerSlashing
 	attestationQueueLock sync.Mutex
 	blockQueueLock       sync.Mutex
 	attestationQueue     []*slashertypes.IndexedAttestationWrapper
@@ -43,15 +48,17 @@ type Service struct {
 func New(ctx context.Context, srvCfg *ServiceConfig) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		params:            DefaultParams(),
-		serviceCfg:        srvCfg,
-		indexedAttsChan:   make(chan *ethpb.IndexedAttestation, 1),
-		beaconBlocksChan:  make(chan *ethpb.SignedBeaconBlockHeader, 1),
-		attestationQueue:  make([]*slashertypes.IndexedAttestationWrapper, 0),
-		beaconBlocksQueue: make([]*slashertypes.SignedBlockHeaderWrapper, 0),
-		ctx:               ctx,
-		cancel:            cancel,
-		genesisTime:       time.Now(),
+		params:             DefaultParams(),
+		serviceCfg:         srvCfg,
+		indexedAttsChan:    make(chan *ethpb.IndexedAttestation, 1),
+		beaconBlocksChan:   make(chan *ethpb.SignedBeaconBlockHeader, 1),
+		attSlashingsChan:   make(chan *ethpb.AttesterSlashing, 1),
+		blockSlashingsChan: make(chan *ethpb.ProposerSlashing, 1),
+		attestationQueue:   make([]*slashertypes.IndexedAttestationWrapper, 0),
+		beaconBlocksQueue:  make([]*slashertypes.SignedBlockHeaderWrapper, 0),
+		ctx:                ctx,
+		cancel:             cancel,
+		genesisTime:        time.Now(),
 	}, nil
 }
 
@@ -63,8 +70,10 @@ func (s *Service) Start() {
 	defer ticker.Done()
 	go s.processQueuedAttestations(s.ctx, ticker.C())
 	go s.processQueuedBlocks(s.ctx, ticker.C())
+	go s.receiveAttestations(s.ctx)
 	go s.receiveBlocks(s.ctx)
-	s.receiveAttestations(s.ctx)
+	go s.broadcastAttSlashings(s.ctx)
+	go s.broadcastBlockSlashings(s.ctx)
 }
 
 // Stop the slasher service.

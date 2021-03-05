@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
@@ -74,7 +76,10 @@ func (s *Service) detectSlashableAttestations(
 		log.WithField("numSlashings", len(slashings)).Info("Slashable offenses found")
 	}
 	for _, slashing := range slashings {
-		// TODO(#8331): Send over an event feed.
+		s.attSlashingsChan <- &ethpb.AttesterSlashing{
+			Attestation_1: slashing.PrevAttestation,
+			Attestation_2: slashing.Attestation,
+		}
 		logSlashingEvent(slashing)
 	}
 
