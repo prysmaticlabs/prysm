@@ -335,12 +335,14 @@ func (m *MinSpanChunksSlice) Update(
 		var chunkTarget types.Epoch
 		chunkTarget, err = chunkDataAtEpoch(m.params, m.data, validatorIndex, epochInChunk)
 		if err != nil {
+			err = errors.Wrapf(err, "could not get chunk data at epoch %d", epochInChunk)
 			return
 		}
 		// If the newly incoming value is < the existing value, we update
 		// the data in the min span to meet with its definition.
 		if newTargetEpoch < chunkTarget {
 			if err = setChunkDataAtEpoch(m.params, m.data, validatorIndex, epochInChunk, newTargetEpoch); err != nil {
+				err = errors.Wrapf(err, "could not set chunk data at epoch %d", epochInChunk)
 				return
 			}
 		} else {
@@ -376,12 +378,14 @@ func (m *MaxSpanChunksSlice) Update(
 		var chunkTarget types.Epoch
 		chunkTarget, err = chunkDataAtEpoch(m.params, m.data, validatorIndex, epochInChunk)
 		if err != nil {
+			err = errors.Wrapf(err, "could not get chunk data at epoch %d", epochInChunk)
 			return
 		}
 		// If the newly incoming value is > the existing value, we update
 		// the data in the max span to meet with its definition.
 		if newTargetEpoch > chunkTarget {
 			if err = setChunkDataAtEpoch(m.params, m.data, validatorIndex, epochInChunk, newTargetEpoch); err != nil {
+				err = errors.Wrapf(err, "could not set chunk data at epoch %d", epochInChunk)
 				return
 			}
 		} else {

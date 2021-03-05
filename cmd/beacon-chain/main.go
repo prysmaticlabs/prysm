@@ -11,9 +11,9 @@ import (
 	gethlog "github.com/ethereum/go-ethereum/log"
 	golog "github.com/ipfs/go-log/v2"
 	joonix "github.com/joonix/log"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/node"
+	dbcommands "github.com/prysmaticlabs/prysm/cmd/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -122,7 +122,7 @@ func main() {
 	app.Action = startNode
 	app.Version = version.Version()
 	app.Commands = []*cli.Command{
-		db.DatabaseCommands,
+		dbcommands.Commands,
 	}
 
 	app.Flags = appFlags

@@ -3,14 +3,18 @@ package db
 import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/tos"
+	validatordb "github.com/prysmaticlabs/prysm/validator/db"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
-// DatabaseCommands for Prysm validator.
-var DatabaseCommands = &cli.Command{
+var log = logrus.WithField("prefix", "db")
+
+// Commands for interacting with the Prysm validator database.
+var Commands = &cli.Command{
 	Name:     "db",
 	Category: "db",
-	Usage:    "defines commands for interacting with eth2 validator database",
+	Usage:    "defines commands for interacting with the Prysm validator database",
 	Subcommands: []*cli.Command{
 		{
 			Name:        "restore",
@@ -21,7 +25,7 @@ var DatabaseCommands = &cli.Command{
 			}),
 			Before: tos.VerifyTosAcceptedOrPrompt,
 			Action: func(cliCtx *cli.Context) error {
-				if err := restore(cliCtx); err != nil {
+				if err := validatordb.Restore(cliCtx); err != nil {
 					log.Fatalf("Could not restore database: %v", err)
 				}
 				return nil
@@ -40,7 +44,7 @@ var DatabaseCommands = &cli.Command{
 					}),
 					Before: tos.VerifyTosAcceptedOrPrompt,
 					Action: func(cliCtx *cli.Context) error {
-						if err := migrateUp(cliCtx); err != nil {
+						if err := validatordb.MigrateUp(cliCtx); err != nil {
 							log.Fatalf("Could not run database migrations: %v", err)
 						}
 						return nil
@@ -54,7 +58,7 @@ var DatabaseCommands = &cli.Command{
 					}),
 					Before: tos.VerifyTosAcceptedOrPrompt,
 					Action: func(cliCtx *cli.Context) error {
-						if err := migrateDown(cliCtx); err != nil {
+						if err := validatordb.MigrateDown(cliCtx); err != nil {
 							log.Fatalf("Could not run database migrations: %v", err)
 						}
 						return nil

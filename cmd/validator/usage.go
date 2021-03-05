@@ -5,10 +5,10 @@ import (
 	"io"
 	"sort"
 
+	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/urfave/cli/v2"
 )
 
@@ -46,24 +46,26 @@ var appHelpFlagGroups = []flagGroup{
 		Flags: []cli.Flag{
 			cmd.MinimalConfigFlag,
 			cmd.E2EConfigFlag,
-			cmd.RPCMaxPageSizeFlag,
 			cmd.VerbosityFlag,
 			cmd.DataDirFlag,
+			cmd.ClearDB,
+			cmd.ForceClearDB,
+			cmd.EnableBackupWebhookFlag,
+			cmd.BackupWebhookOutputDir,
 			cmd.EnableTracingFlag,
 			cmd.TracingProcessNameFlag,
 			cmd.TracingEndpointFlag,
 			cmd.TraceSampleFractionFlag,
 			cmd.MonitoringHostFlag,
-			cmd.EnableBackupWebhookFlag,
-			cmd.BackupWebhookOutputDir,
 			flags.MonitoringPortFlag,
 			cmd.DisableMonitoringFlag,
 			cmd.LogFormat,
 			cmd.LogFileName,
-			cmd.ForceClearDB,
-			cmd.ClearDB,
 			cmd.ConfigFileFlag,
+			cmd.ChainConfigFileFlag,
+			cmd.GrpcMaxCallRecvMsgSizeFlag,
 			cmd.AcceptTosFlag,
+			cmd.BoltMMapInitialSizeFlag,
 		},
 	},
 	{
@@ -75,25 +77,47 @@ var appHelpFlagGroups = []flagGroup{
 			debug.MemProfileRateFlag,
 			debug.CPUProfileFlag,
 			debug.TraceFlag,
+			debug.BlockProfileRateFlag,
+			debug.MutexProfileFractionFlag,
 		},
 	},
 	{
-		Name: "slasher",
+		Name: "validator",
 		Flags: []cli.Flag{
-			flags.BeaconCertFlag,
-			flags.CertFlag,
-			flags.KeyFlag,
-			flags.RPCPort,
-			flags.RPCHost,
 			flags.BeaconRPCProviderFlag,
-			flags.EnableHistoricalDetectionFlag,
-			flags.SpanCacheSize,
-			flags.HighestAttCacheSize,
+			flags.BeaconRPCGatewayProviderFlag,
+			flags.CertFlag,
+			flags.EnableWebFlag,
+			flags.DisablePenaltyRewardLogFlag,
+			flags.GraffitiFlag,
+			flags.EnableRPCFlag,
+			flags.RPCHost,
+			flags.RPCPort,
+			flags.GRPCGatewayPort,
+			flags.GRPCGatewayHost,
+			flags.GrpcRetriesFlag,
+			flags.GrpcRetryDelayFlag,
+			flags.GPRCGatewayCorsDomain,
+			flags.GrpcHeadersFlag,
+			flags.SlasherRPCProviderFlag,
+			flags.SlasherCertFlag,
+			flags.DisableAccountMetricsFlag,
+			flags.WalletDirFlag,
+			flags.WalletPasswordFileFlag,
+			flags.GraffitiFileFlag,
+			flags.EnableDutyCountDown,
 		},
 	},
 	{
 		Name:  "features",
-		Flags: featureconfig.ActiveFlags(featureconfig.SlasherFlags),
+		Flags: featureconfig.ActiveFlags(featureconfig.ValidatorFlags),
+	},
+	{
+		Name: "interop",
+		Flags: []cli.Flag{
+			flags.InteropNumValidators,
+			flags.InteropStartIndex,
+		},
 	},
 }
 

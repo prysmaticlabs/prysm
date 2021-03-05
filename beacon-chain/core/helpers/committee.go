@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -275,7 +276,7 @@ func ShuffledIndices(state *stateTrie.BeaconState, epoch types.Epoch) ([]types.V
 	}
 
 	indices := make([]types.ValidatorIndex, 0, state.NumValidators())
-	if err := state.ReadFromEveryValidator(func(idx int, val stateTrie.ReadOnlyValidator) error {
+	if err := state.ReadFromEveryValidator(func(idx int, val iface.ReadOnlyValidator) error {
 		if IsActiveValidatorUsingTrie(val, epoch) {
 			indices = append(indices, types.ValidatorIndex(idx))
 		}

@@ -3,6 +3,7 @@ package slasher
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"go.opencensus.io/trace"
@@ -43,7 +44,7 @@ func (s *Service) checkDoubleProposalsOnDisk(
 	defer span.End()
 	doubleProposals, err := s.serviceCfg.Database.CheckDoubleBlockProposals(ctx, proposedBlocks)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not check for double proposals on disk")
 	}
 	// We initialize a map of proposers that are safe from slashing.
 	safeProposers := make(map[types.ValidatorIndex]*slashertypes.SignedBlockHeaderWrapper, len(proposedBlocks))
