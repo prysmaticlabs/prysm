@@ -410,17 +410,21 @@ func createAttestationWrapper(source, target types.Epoch, indices []uint64, sign
 		signRoot = params.BeaconConfig().ZeroHash
 	}
 	data := &ethpb.AttestationData{
+		BeaconBlockRoot: params.BeaconConfig().ZeroHash[:],
 		Source: &ethpb.Checkpoint{
 			Epoch: source,
+			Root:  params.BeaconConfig().ZeroHash[:],
 		},
 		Target: &ethpb.Checkpoint{
 			Epoch: target,
+			Root:  params.BeaconConfig().ZeroHash[:],
 		},
 	}
 	return &slashertypes.IndexedAttestationWrapper{
 		IndexedAttestation: &ethpb.IndexedAttestation{
 			AttestingIndices: indices,
 			Data:             data,
+			Signature:        params.BeaconConfig().EmptySignature[:],
 		},
 		SigningRoot: signRoot,
 	}
