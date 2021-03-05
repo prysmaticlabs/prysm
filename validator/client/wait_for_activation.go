@@ -23,10 +23,12 @@ import (
 // from the gRPC server.
 func (v *validator) WaitForActivation(ctx context.Context) error {
 	// Monitor the key manager for updates.
-	accountsChangedChan := make(chan struct{}, 1)
-	accountsCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	go handleAccountsChanged(accountsCtx, v, accountsChangedChan)
+	accountsChangedChan := make(chan [][48]byte)
+	var sub = v.GetKeymanager().SubscribeAccountChanges(accountsChangedChan)
+	defer func() {
+		sub.Unsubscribe()
+		close(accountsChangedChan)
+	}()
 
 	return v.waitForActivation(ctx, accountsChangedChan)
 }
@@ -38,7 +40,7 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 // the accountsChangedChan. When an event signal is received, restart the waitForActivation routine.
 // 4) If the stream is reset in error, restart the routine.
 // 5) If the stream returns a response indicating one or more validators are active, exit the routine.
-func (v *validator) waitForActivation(ctx context.Context, accountsChangedChan <-chan struct{}) error {
+func (v *validator) waitForActivation(ctx context.Context, accountsChangedChan <-chan [][48]byte) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
 	defer span.End()
 
@@ -146,25 +148,4 @@ func streamAttempts(ctx context.Context) int {
 func incrementRetries(ctx context.Context) context.Context {
 	attempts := streamAttempts(ctx)
 	return context.WithValue(ctx, waitForActivationAttemptsContextKey, attempts+1)
-}
-
-func handleAccountsChanged(ctx context.Context, v Validator, accountsChangedChan chan<- struct{}) {
-	validatingPubKeysChan := make(chan [][48]byte, 1)
-	var sub = v.GetKeymanager().SubscribeAccountChanges(validatingPubKeysChan)
-	defer func() {
-		sub.Unsubscribe()
-		close(validatingPubKeysChan)
-	}()
-
-	for {
-		select {
-		case <-validatingPubKeysChan:
-			accountsChangedChan <- struct{}{}
-		case err := <-sub.Err():
-			log.WithError(err).Error("accounts changed subscription failed")
-			return
-		case <-ctx.Done():
-			return
-		}
-	}
 }
