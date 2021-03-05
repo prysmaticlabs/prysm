@@ -2,14 +2,17 @@ package beaconv1
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	"github.com/gogo/protobuf/types"
 	eth2types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-bitfield"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	p2pMock "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
@@ -531,4 +534,104 @@ func TestSubmitVoluntaryExit_InvalidExit(t *testing.T) {
 	_, err = s.SubmitVoluntaryExit(ctx, exit)
 	require.ErrorContains(t, "Invalid voluntary exit", err)
 	assert.Equal(t, false, broadcaster.BroadcastCalled)
+}
+
+func TestServer_SubmitAttestations_Ok(t *testing.T) {
+	ctx := context.Background()
+	params.SetupTestConfigCleanup(t)
+	c := params.BeaconConfig()
+	// Required for correct committee size calculation.
+	c.SlotsPerEpoch = 1
+	params.OverrideBeaconConfig(c)
+
+	_, keys, err := testutil.DeterministicDepositsAndKeys(1)
+	require.NoError(t, err)
+	validators := []*eth.Validator{
+		{
+			PublicKey: keys[0].PublicKey().Marshal(),
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		},
+	}
+	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) {
+		state.Validators = validators
+	})
+	require.NoError(t, err)
+	b := bitfield.NewBitlist(1)
+	b.SetBitAt(0, true)
+
+	att1 := &ethpb.Attestation{
+		AggregationBits: b,
+		Data: &ethpb.AttestationData{
+			Slot:            0,
+			CommitteeIndex:  0,
+			BeaconBlockRoot: bytesutil.PadTo([]byte("beaconblockroot1"), 32),
+			Source: &ethpb.Checkpoint{
+				Epoch: 0,
+				Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: 0,
+				Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
+			},
+		},
+		Signature: make([]byte, 96),
+	}
+	att2 := &ethpb.Attestation{
+		AggregationBits: b,
+		Data: &ethpb.AttestationData{
+			Slot:            0,
+			CommitteeIndex:  0,
+			BeaconBlockRoot: bytesutil.PadTo([]byte("beaconblockroot2"), 32),
+			Source: &ethpb.Checkpoint{
+				Epoch: 0,
+				Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: 0,
+				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
+			},
+		},
+		Signature: make([]byte, 96),
+	}
+
+	for _, att := range []*ethpb.Attestation{att1, att2} {
+		sb, err := helpers.ComputeDomainAndSign(
+			state,
+			helpers.SlotToEpoch(att.Data.Slot),
+			att.Data,
+			params.BeaconConfig().DomainBeaconAttester,
+			keys[0],
+		)
+		require.NoError(t, err)
+		sig, err := bls.SignatureFromBytes(sb)
+		require.NoError(t, err)
+		att.Signature = sig.Marshal()
+	}
+
+	broadcaster := &p2pMock.MockBroadcaster{}
+	s := &Server{
+		ChainInfoFetcher: &chainMock.ChainService{State: state},
+		AttestationsPool: &attestations.PoolMock{},
+		Broadcaster:      broadcaster,
+	}
+
+	_, err = s.SubmitAttestations(ctx, &ethpb.SubmitAttestationsRequest{
+		Data: []*ethpb.Attestation{att1, att2},
+	})
+	require.NoError(t, err)
+	savedAtts := s.AttestationsPool.AggregatedAttestations()
+	require.Equal(t, 2, len(savedAtts))
+	expectedRoot1, err := att1.Data.HashTreeRoot()
+	require.NoError(t, err)
+	actualRoot1, err := att2.Data.HashTreeRoot()
+	require.NoError(t, err)
+	actualRoot2, err := savedAtts[0].Data.HashTreeRoot()
+	require.NoError(t, err)
+	actualAtt2Root, err := savedAtts[1].Data.HashTreeRoot()
+	require.NoError(t, err)
+	for _, r := range [][32]byte{actualRoot2, actualAtt2Root} {
+		assert.Equal(t, true, reflect.DeepEqual(expectedRoot1, r) || reflect.DeepEqual(actualRoot1, r))
+	}
+	require.Equal(t, true, broadcaster.BroadcastCalled)
+	assert.Equal(t, 2, len(broadcaster.BroadcastMessages))
 }
