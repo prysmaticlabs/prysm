@@ -55,7 +55,7 @@ func TestSaveHead_Different(t *testing.T) {
 	require.NoError(t, err)
 	assert.DeepEqual(t, cachedRoot, newRoot[:], "Head did not change")
 	assert.DeepEqual(t, newHeadSignedBlock, service.headBlock(), "Head did not change")
-	assert.DeepEqual(t, headState.CloneInnerState(), service.headState(ctx).CloneInnerState(), "Head did not change")
+	assert.DeepSSZEqual(t, headState.CloneInnerState(), service.headState(ctx).CloneInnerState(), "Head did not change")
 }
 
 func TestSaveHead_Different_Reorg(t *testing.T) {
@@ -91,7 +91,7 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 		t.Error("Head did not change")
 	}
 	assert.DeepEqual(t, newHeadSignedBlock, service.headBlock(), "Head did not change")
-	assert.DeepEqual(t, headState.CloneInnerState(), service.headState(ctx).CloneInnerState(), "Head did not change")
+	assert.DeepSSZEqual(t, headState.CloneInnerState(), service.headState(ctx).CloneInnerState(), "Head did not change")
 	require.LogsContain(t, hook, "Chain reorg occurred")
 }
 
