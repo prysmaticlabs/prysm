@@ -207,9 +207,7 @@ func TestSubmitAttesterSlashing_Ok(t *testing.T) {
 	_, keys, err := testutil.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 	validator := &eth.Validator{
-		ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-		PublicKey:             keys[0].PublicKey().Marshal(),
-		WithdrawalCredentials: make([]byte, 32),
+		PublicKey: keys[0].PublicKey().Marshal(),
 	}
 	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) {
 		state.Validators = []*eth.Validator{validator}
@@ -322,10 +320,8 @@ func TestSubmitProposerSlashing_Ok(t *testing.T) {
 	_, keys, err := testutil.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 	validator := &eth.Validator{
-		ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-		PublicKey:             keys[0].PublicKey().Marshal(),
-		WithdrawalCredentials: make([]byte, 32),
-		WithdrawableEpoch:     eth2types.Epoch(1),
+		PublicKey:         keys[0].PublicKey().Marshal(),
+		WithdrawableEpoch: eth2types.Epoch(1),
 	}
 	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) {
 		state.Validators = []*eth.Validator{validator}
@@ -423,9 +419,8 @@ func TestSubmitVoluntaryExit_Ok(t *testing.T) {
 	_, keys, err := testutil.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 	validator := &eth.Validator{
-		ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-		PublicKey:             keys[0].PublicKey().Marshal(),
-		WithdrawalCredentials: make([]byte, 32),
+		ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		PublicKey: keys[0].PublicKey().Marshal(),
 	}
 	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) {
 		state.Validators = []*eth.Validator{validator}
@@ -469,9 +464,8 @@ func TestSubmitVoluntaryExit_InvalidValidatorIndex(t *testing.T) {
 	_, keys, err := testutil.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 	validator := &eth.Validator{
-		ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-		PublicKey:             keys[0].PublicKey().Marshal(),
-		WithdrawalCredentials: make([]byte, 32),
+		ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		PublicKey: keys[0].PublicKey().Marshal(),
 	}
 	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) {
 		state.Validators = []*eth.Validator{validator}
@@ -504,9 +498,8 @@ func TestSubmitVoluntaryExit_InvalidExit(t *testing.T) {
 	_, keys, err := testutil.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 	validator := &eth.Validator{
-		ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-		PublicKey:             keys[0].PublicKey().Marshal(),
-		WithdrawalCredentials: make([]byte, 32),
+		ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		PublicKey: keys[0].PublicKey().Marshal(),
 	}
 	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) {
 		state.Validators = []*eth.Validator{validator}
