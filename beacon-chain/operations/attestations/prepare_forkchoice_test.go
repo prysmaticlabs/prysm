@@ -100,7 +100,7 @@ func TestBatchAttestations_Multiple(t *testing.T) {
 	require.NoError(t, err)
 
 	wanted = append(wanted, aggregated...)
-	require.NoError(t, s.pool.AggregateUnaggregatedAttestations())
+	require.NoError(t, s.pool.AggregateUnaggregatedAttestations(context.Background()))
 	received := s.pool.ForkchoiceAttestations()
 
 	sort.Slice(received, func(i, j int) bool {

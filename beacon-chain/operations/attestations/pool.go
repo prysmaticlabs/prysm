@@ -1,6 +1,8 @@
 package attestations
 
 import (
+	"context"
+
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations/kv"
@@ -12,12 +14,12 @@ import (
 // aggregator actor.
 type Pool interface {
 	// For Aggregated attestations
-	AggregateUnaggregatedAttestations() error
-	AggregateUnaggregatedAttestationsBySlotIndex(slot types.Slot, committeeIndex types.CommitteeIndex) error
+	AggregateUnaggregatedAttestations(ctx context.Context) error
+	AggregateUnaggregatedAttestationsBySlotIndex(ctx context.Context, slot types.Slot, committeeIndex types.CommitteeIndex) error
 	SaveAggregatedAttestation(att *ethpb.Attestation) error
 	SaveAggregatedAttestations(atts []*ethpb.Attestation) error
 	AggregatedAttestations() []*ethpb.Attestation
-	AggregatedAttestationsBySlotIndex(slot types.Slot, committeeIndex types.CommitteeIndex) []*ethpb.Attestation
+	AggregatedAttestationsBySlotIndex(ctx context.Context, slot types.Slot, committeeIndex types.CommitteeIndex) []*ethpb.Attestation
 	DeleteAggregatedAttestation(att *ethpb.Attestation) error
 	HasAggregatedAttestation(att *ethpb.Attestation) (bool, error)
 	AggregatedAttestationCount() int
@@ -25,7 +27,7 @@ type Pool interface {
 	SaveUnaggregatedAttestation(att *ethpb.Attestation) error
 	SaveUnaggregatedAttestations(atts []*ethpb.Attestation) error
 	UnaggregatedAttestations() ([]*ethpb.Attestation, error)
-	UnaggregatedAttestationsBySlotIndex(slot types.Slot, committeeIndex types.CommitteeIndex) []*ethpb.Attestation
+	UnaggregatedAttestationsBySlotIndex(ctx context.Context, slot types.Slot, committeeIndex types.CommitteeIndex) []*ethpb.Attestation
 	DeleteUnaggregatedAttestation(att *ethpb.Attestation) error
 	DeleteSeenUnaggregatedAttestations() (int, error)
 	UnaggregatedAttestationCount() int
