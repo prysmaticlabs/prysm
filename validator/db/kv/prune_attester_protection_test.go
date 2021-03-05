@@ -254,9 +254,7 @@ func checkAttestingHistoryAfterPruning(
 }
 
 func Test_olderThanCurrentWeakSubjectivityPeriod(t *testing.T) {
-	numValidators := params.BeaconConfig().MinGenesisActiveValidatorCount
-	wsPeriod, err := helpers.ComputeWeakSubjectivityPeriod(numValidators)
-	require.NoError(t, err)
+	wsPeriod := params.BeaconConfig().SafeWeakSubjectivityPeriod
 	type args struct {
 		epoch        types.Epoch
 		highestEpoch types.Epoch

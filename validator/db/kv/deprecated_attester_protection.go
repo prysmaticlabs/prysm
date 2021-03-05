@@ -58,14 +58,14 @@ func emptyHistoryData() *deprecatedHistoryData {
 // newDeprecatedAttestingHistory creates a new encapsulated attestation history byte array
 // sized by the latest epoch written.
 func newDeprecatedAttestingHistory(target types.Epoch) deprecatedEncodedAttestingHistory {
-	relativeTarget := types.Epoch(target % params.BeaconConfig().MaxWeakSubjectivityPeriod)
+	relativeTarget := types.Epoch(target % params.BeaconConfig().SafeWeakSubjectivityPeriod)
 	historyDataSize := (relativeTarget + 1) * historySize
 	arraySize := latestEpochWrittenSize + historyDataSize
 	en := make(deprecatedEncodedAttestingHistory, arraySize)
 	enc := en
 	ctx := context.Background()
 	var err error
-	for i := types.Epoch(0); i <= target%params.BeaconConfig().MaxWeakSubjectivityPeriod; i++ {
+	for i := types.Epoch(0); i <= target%params.BeaconConfig().SafeWeakSubjectivityPeriod; i++ {
 		enc, err = enc.setTargetData(ctx, i, emptyHistoryData())
 		if err != nil {
 			log.WithError(err).Error("Failed to set empty target data")
@@ -95,7 +95,7 @@ func (dh deprecatedEncodedAttestingHistory) getTargetData(ctx context.Context, t
 	}
 	// Cursor for the location to read target epoch from.
 	// Modulus of target epoch X weak subjectivity period in order to have maximum size to the encapsulated data array.
-	cursor := (target%params.BeaconConfig().MaxWeakSubjectivityPeriod)*historySize + latestEpochWrittenSize
+	cursor := (target%params.BeaconConfig().SafeWeakSubjectivityPeriod)*historySize + latestEpochWrittenSize
 	if uint64(len(dh)) < uint64(cursor+historySize) {
 		return nil, nil
 	}
@@ -113,7 +113,7 @@ func (dh deprecatedEncodedAttestingHistory) setTargetData(ctx context.Context, t
 	}
 	// Cursor for the location to write target epoch to.
 	// Modulus of target epoch  X weak subjectivity period in order to have maximum size to the encapsulated data array.
-	cursor := latestEpochWrittenSize + (target%params.BeaconConfig().MaxWeakSubjectivityPeriod)*historySize
+	cursor := latestEpochWrittenSize + (target%params.BeaconConfig().SafeWeakSubjectivityPeriod)*historySize
 
 	if uint64(len(dh)) < uint64(cursor+historySize) {
 		ext := make([]byte, uint64(cursor+historySize)-uint64(len(dh)))

@@ -196,7 +196,7 @@ func pruneProposalHistoryBySlot(valBucket *bolt.Bucket, newestSlot types.Slot) e
 		epoch := helpers.SlotToEpoch(slot)
 		newestEpoch := helpers.SlotToEpoch(newestSlot)
 		// Only delete epochs that are older than the weak subjectivity period.
-		if epoch+params.BeaconConfig().MaxWeakSubjectivityPeriod <= newestEpoch {
+		if epoch+params.BeaconConfig().SafeWeakSubjectivityPeriod <= newestEpoch {
 			if err := c.Delete(); err != nil {
 				return errors.Wrapf(err, "could not prune epoch %d in proposal history", epoch)
 			}

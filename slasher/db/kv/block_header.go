@@ -93,7 +93,7 @@ func (s *Store) SaveBlockHeader(ctx context.Context, blockHeader *ethpb.SignedBe
 
 	// Prune block header history every 10th epoch.
 	if epoch%params.BeaconConfig().PruneSlasherStoragePeriod == 0 {
-		return s.PruneBlockHistory(ctx, epoch, params.BeaconConfig().MaxWeakSubjectivityPeriod)
+		return s.PruneBlockHistory(ctx, epoch, params.BeaconConfig().SafeWeakSubjectivityPeriod)
 	}
 	return nil
 }

@@ -115,8 +115,9 @@ type BeaconChainConfig struct {
 	BeaconStateFieldCount     int           // BeaconStateFieldCount defines how many fields are in beacon state.
 
 	// Slasher constants.
-	MaxWeakSubjectivityPeriod types.Epoch // MaxWeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events in a worst case scenario.
-	PruneSlasherStoragePeriod types.Epoch // PruneSlasherStoragePeriod defines the time period expressed in number of epochs were proof of stake network should prune attestation and block header store.
+	SafeWeakSubjectivityPeriod types.Epoch // SafeWeakSubjectivityPeriod defines a safe number of epochs for the weak subjectivity period on eth2 mainnet.
+	MaxWeakSubjectivityPeriod  types.Epoch // MaxWeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events in a worst case scenario.
+	PruneSlasherStoragePeriod  types.Epoch // PruneSlasherStoragePeriod defines the time period expressed in number of epochs were proof of stake network should prune attestation and block header store.
 
 	// Fork-related values.
 	GenesisForkVersion  []byte                 `yaml:"GENESIS_FORK_VERSION" spec:"true"` // GenesisForkVersion is used to track fork version between state transitions.
