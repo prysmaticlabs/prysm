@@ -1,11 +1,14 @@
 package kv
 
 import (
+	"context"
+
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"go.opencensus.io/trace"
 )
 
 // SaveUnaggregatedAttestation saves an unaggregated attestation in cache.
@@ -68,7 +71,10 @@ func (c *AttCaches) UnaggregatedAttestations() ([]*ethpb.Attestation, error) {
 
 // UnaggregatedAttestationsBySlotIndex returns the unaggregated attestations in cache,
 // filtered by committee index and slot.
-func (c *AttCaches) UnaggregatedAttestationsBySlotIndex(slot types.Slot, committeeIndex types.CommitteeIndex) []*ethpb.Attestation {
+func (c *AttCaches) UnaggregatedAttestationsBySlotIndex(ctx context.Context, slot types.Slot, committeeIndex types.CommitteeIndex) []*ethpb.Attestation {
+	ctx, span := trace.StartSpan(ctx, "operations.attestations.kv.UnaggregatedAttestationsBySlotIndex")
+	defer span.End()
+
 	atts := make([]*ethpb.Attestation, 0)
 
 	c.unAggregateAttLock.RLock()

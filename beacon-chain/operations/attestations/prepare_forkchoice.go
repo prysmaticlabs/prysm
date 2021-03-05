@@ -43,7 +43,7 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "Operations.attestations.batchForkChoiceAtts")
 	defer span.End()
 
-	if err := s.pool.AggregateUnaggregatedAttestations(); err != nil {
+	if err := s.pool.AggregateUnaggregatedAttestations(ctx); err != nil {
 		return err
 	}
 	atts := append(s.pool.AggregatedAttestations(), s.pool.BlockAttestations()...)
