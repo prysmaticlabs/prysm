@@ -623,14 +623,14 @@ func TestServer_SubmitAttestations_Ok(t *testing.T) {
 	require.Equal(t, 2, len(savedAtts))
 	expectedRoot1, err := att1.Data.HashTreeRoot()
 	require.NoError(t, err)
-	actualRoot1, err := att2.Data.HashTreeRoot()
+	expectedRoot2, err := att2.Data.HashTreeRoot()
 	require.NoError(t, err)
-	actualRoot2, err := savedAtts[0].Data.HashTreeRoot()
+	actualRoot1, err := savedAtts[0].Data.HashTreeRoot()
 	require.NoError(t, err)
-	actualAtt2Root, err := savedAtts[1].Data.HashTreeRoot()
+	actualRoot2, err := savedAtts[1].Data.HashTreeRoot()
 	require.NoError(t, err)
-	for _, r := range [][32]byte{actualRoot2, actualAtt2Root} {
-		assert.Equal(t, true, reflect.DeepEqual(expectedRoot1, r) || reflect.DeepEqual(actualRoot1, r))
+	for _, r := range [][32]byte{actualRoot1, actualRoot2} {
+		assert.Equal(t, true, reflect.DeepEqual(expectedRoot1, r) || reflect.DeepEqual(expectedRoot2, r))
 	}
 	require.Equal(t, true, broadcaster.BroadcastCalled)
 	assert.Equal(t, 2, len(broadcaster.BroadcastMessages))
