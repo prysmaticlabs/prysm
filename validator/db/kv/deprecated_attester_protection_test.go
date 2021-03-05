@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -13,9 +12,7 @@ import (
 )
 
 func TestNewAttestationHistoryArray(t *testing.T) {
-	numValidators := params.BeaconConfig().MinGenesisActiveValidatorCount
-	wsPeriod, err := helpers.ComputeWeakSubjectivityPeriod(numValidators)
-	require.NoError(t, err)
+	wsPeriod := params.BeaconConfig().SafeWeakSubjectivityPeriod
 	ba := newDeprecatedAttestingHistory(0)
 	assert.Equal(t, latestEpochWrittenSize+historySize, len(ba))
 	ba = newDeprecatedAttestingHistory(wsPeriod - 1)
@@ -28,9 +25,7 @@ func TestNewAttestationHistoryArray(t *testing.T) {
 }
 
 func TestSizeChecks(t *testing.T) {
-	numValidators := params.BeaconConfig().MinGenesisActiveValidatorCount
-	wsPeriod, err := helpers.ComputeWeakSubjectivityPeriod(numValidators)
-	require.NoError(t, err)
+	wsPeriod := params.BeaconConfig().SafeWeakSubjectivityPeriod
 	require.ErrorContains(t, "is smaller then minimal size", deprecatedEncodedAttestingHistory{}.assertSize())
 	require.NoError(t, deprecatedEncodedAttestingHistory{0, 1, 2, 3, 4, 5, 6, 7}.assertSize())
 	require.ErrorContains(t, "is not a multiple of entry size", deprecatedEncodedAttestingHistory{0, 1, 2, 3, 4, 5, 6, 7, 8}.assertSize())

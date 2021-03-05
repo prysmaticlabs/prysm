@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -14,15 +13,13 @@ import (
 )
 
 func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_BeforeWeakSubjectivity_NoPruning(t *testing.T) {
-	numValidators := params.BeaconConfig().MinGenesisActiveValidatorCount
-	numEpochs, err := helpers.ComputeWeakSubjectivityPeriod(numValidators)
-	require.NoError(t, err)
+	numEpochs := params.BeaconConfig().SafeWeakSubjectivityPeriod
 	pubKey := [48]byte{1}
 	validatorDB := setupDB(t, [][48]byte{pubKey})
 
 	// Write attesting history for every single epoch
 	// since genesis to WEAK_SUBJECTIVITY_PERIOD.
-	err = setupAttestationsForEveryEpoch(t, validatorDB, pubKey, numEpochs)
+	err := setupAttestationsForEveryEpoch(t, validatorDB, pubKey, numEpochs)
 	require.NoError(t, err)
 
 	// Next, attempt to prune and realize that we still have all epochs intact
@@ -38,15 +35,13 @@ func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_BeforeWeakSubjectivit
 }
 
 func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_AfterFirstWeakSubjectivity(t *testing.T) {
-	numValidators := params.BeaconConfig().MinGenesisActiveValidatorCount
-	numEpochs, err := helpers.ComputeWeakSubjectivityPeriod(numValidators)
-	require.NoError(t, err)
+	numEpochs := params.BeaconConfig().SafeWeakSubjectivityPeriod
 	pubKey := [48]byte{1}
 	validatorDB := setupDB(t, [][48]byte{pubKey})
 
 	// Write attesting history for every single epoch
 	// since genesis to WEAK_SUBJECTIVITY_PERIOD.
-	err = setupAttestationsForEveryEpoch(t, validatorDB, pubKey, numEpochs)
+	err := setupAttestationsForEveryEpoch(t, validatorDB, pubKey, numEpochs)
 	require.NoError(t, err)
 
 	// Save a single attestation for WEAK_SUBJECTIVITY_PERIOD+1
@@ -103,12 +98,10 @@ func TestPruneAttestationsOlderThanCurrentWeakSubjectivity_AfterMultipleWeakSubj
 	numWeakSubjectivityPeriods := types.Epoch(5)
 	pubKeys := [][48]byte{{1}}
 	validatorDB := setupDB(t, pubKeys)
-	numValidators := params.BeaconConfig().MinGenesisActiveValidatorCount
-	numEpochs, err := helpers.ComputeWeakSubjectivityPeriod(numValidators)
-	require.NoError(t, err)
+	numEpochs := params.BeaconConfig().SafeWeakSubjectivityPeriod
 
 	// Write signing roots for epochs within multiples of WEAK_SUBJECTIVITY_PERIOD.
-	err = validatorDB.update(func(tx *bolt.Tx) error {
+	err := validatorDB.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(pubKeysBucket)
 		pkBucket, err := bucket.CreateBucketIfNotExists(pubKeys[0][:])
 		if err != nil {

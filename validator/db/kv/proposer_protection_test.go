@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -110,9 +109,7 @@ func TestSaveProposalHistoryForSlot_Overwrites(t *testing.T) {
 
 func TestPruneProposalHistoryBySlot_OK(t *testing.T) {
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
-	numValidators := params.BeaconConfig().MinGenesisActiveValidatorCount
-	wsPeriod, err := helpers.ComputeWeakSubjectivityPeriod(numValidators)
-	require.NoError(t, err)
+	wsPeriod := params.BeaconConfig().SafeWeakSubjectivityPeriod
 	pubKey := [48]byte{0}
 	tests := []struct {
 		slots        []types.Slot
