@@ -35,9 +35,12 @@ func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpb.SubmitAttes
 	var validAttestations []*ethpb_alpha.Attestation
 	for _, sourceAtt := range req.Data {
 		att := migration.V1AttToV1Alpha1(sourceAtt)
-		err = blocks.VerifyAttestationSignature(ctx, headState, att)
+		headState, err = blocks.ProcessAttestationNoVerifySignature(ctx, headState, att)
 		if err == nil {
-			validAttestations = append(validAttestations, att)
+			err = blocks.VerifyAttestationSignature(ctx, headState, att)
+			if err == nil {
+				validAttestations = append(validAttestations, att)
+			}
 		}
 	}
 

@@ -554,21 +554,27 @@ func TestServer_SubmitAttestations_Ok(t *testing.T) {
 	}
 	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) {
 		state.Validators = validators
+		state.Slot = 1
+		state.PreviousJustifiedCheckpoint = &eth.Checkpoint{
+			Epoch: 0,
+			Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
+		}
 	})
 	require.NoError(t, err)
 	b := bitfield.NewBitlist(1)
 	b.SetBitAt(0, true)
 
+	sourceCheckpoint := &ethpb.Checkpoint{
+		Epoch: 0,
+		Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
+	}
 	att1 := &ethpb.Attestation{
 		AggregationBits: b,
 		Data: &ethpb.AttestationData{
 			Slot:            0,
 			CommitteeIndex:  0,
 			BeaconBlockRoot: bytesutil.PadTo([]byte("beaconblockroot1"), 32),
-			Source: &ethpb.Checkpoint{
-				Epoch: 0,
-				Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
-			},
+			Source:          sourceCheckpoint,
 			Target: &ethpb.Checkpoint{
 				Epoch: 0,
 				Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
@@ -582,10 +588,7 @@ func TestServer_SubmitAttestations_Ok(t *testing.T) {
 			Slot:            0,
 			CommitteeIndex:  0,
 			BeaconBlockRoot: bytesutil.PadTo([]byte("beaconblockroot2"), 32),
-			Source: &ethpb.Checkpoint{
-				Epoch: 0,
-				Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
-			},
+			Source:          sourceCheckpoint,
 			Target: &ethpb.Checkpoint{
 				Epoch: 0,
 				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
@@ -654,21 +657,27 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 	}
 	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) {
 		state.Validators = validators
+		state.Slot = 1
+		state.PreviousJustifiedCheckpoint = &eth.Checkpoint{
+			Epoch: 0,
+			Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
+		}
 	})
 	require.NoError(t, err)
+
+	sourceCheckpoint := &ethpb.Checkpoint{
+		Epoch: 0,
+		Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
+	}
 	b := bitfield.NewBitlist(1)
 	b.SetBitAt(0, true)
-
-	att1 := &ethpb.Attestation{
+	attValid := &ethpb.Attestation{
 		AggregationBits: b,
 		Data: &ethpb.AttestationData{
 			Slot:            0,
 			CommitteeIndex:  0,
 			BeaconBlockRoot: bytesutil.PadTo([]byte("beaconblockroot1"), 32),
-			Source: &ethpb.Checkpoint{
-				Epoch: 0,
-				Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
-			},
+			Source:          sourceCheckpoint,
 			Target: &ethpb.Checkpoint{
 				Epoch: 0,
 				Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
@@ -676,7 +685,7 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 		},
 		Signature: make([]byte, 96),
 	}
-	att2 := &ethpb.Attestation{
+	attInvalidSource := &ethpb.Attestation{
 		AggregationBits: b,
 		Data: &ethpb.AttestationData{
 			Slot:            0,
@@ -684,7 +693,7 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 			BeaconBlockRoot: bytesutil.PadTo([]byte("beaconblockroot2"), 32),
 			Source: &ethpb.Checkpoint{
 				Epoch: 0,
-				Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
+				Root:  bytesutil.PadTo([]byte("invalid"), 32),
 			},
 			Target: &ethpb.Checkpoint{
 				Epoch: 0,
@@ -693,19 +702,35 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 		},
 		Signature: make([]byte, 96),
 	}
+	attInvalidSignature := &ethpb.Attestation{
+		AggregationBits: b,
+		Data: &ethpb.AttestationData{
+			Slot:            0,
+			CommitteeIndex:  0,
+			BeaconBlockRoot: bytesutil.PadTo([]byte("beaconblockroot2"), 32),
+			Source:          sourceCheckpoint,
+			Target: &ethpb.Checkpoint{
+				Epoch: 0,
+				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
+			},
+		},
+		Signature: make([]byte, 96),
+	}
 
-	// Sign only one attestation, meaning the other attestation is invalid.
-	sb, err := helpers.ComputeDomainAndSign(
-		state,
-		helpers.SlotToEpoch(att1.Data.Slot),
-		att1.Data,
-		params.BeaconConfig().DomainBeaconAttester,
-		keys[0],
-	)
-	require.NoError(t, err)
-	sig, err := bls.SignatureFromBytes(sb)
-	require.NoError(t, err)
-	att1.Signature = sig.Marshal()
+	// Don't sign attInvalidSignature.
+	for _, att := range []*ethpb.Attestation{attValid, attInvalidSource} {
+		sb, err := helpers.ComputeDomainAndSign(
+			state,
+			helpers.SlotToEpoch(att.Data.Slot),
+			att.Data,
+			params.BeaconConfig().DomainBeaconAttester,
+			keys[0],
+		)
+		require.NoError(t, err)
+		sig, err := bls.SignatureFromBytes(sb)
+		require.NoError(t, err)
+		att.Signature = sig.Marshal()
+	}
 
 	broadcaster := &p2pMock.MockBroadcaster{}
 	s := &Server{
@@ -715,12 +740,12 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 	}
 
 	_, err = s.SubmitAttestations(ctx, &ethpb.SubmitAttestationsRequest{
-		Data: []*ethpb.Attestation{att1, att2},
+		Data: []*ethpb.Attestation{attValid, attInvalidSource, attInvalidSignature},
 	})
 	require.NoError(t, err)
 	savedAtts := s.AttestationsPool.AggregatedAttestations()
 	require.Equal(t, 1, len(savedAtts))
-	expectedAtt, err := att1.HashTreeRoot()
+	expectedAtt, err := attValid.HashTreeRoot()
 	require.NoError(t, err)
 	actualAtt, err := savedAtts[0].HashTreeRoot()
 	require.NoError(t, err)
