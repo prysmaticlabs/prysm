@@ -18,6 +18,8 @@ import (
 // It tracks the unaggregated attestations that weren't able to aggregate to prevent
 // the deletion of unaggregated attestations in the pool.
 func (c *AttCaches) AggregateUnaggregatedAttestations(ctx context.Context) error {
+	ctx, span := trace.StartSpan(ctx, "operations.attestations.kv.AggregateUnaggregatedAttestations")
+	defer span.End()
 	unaggregatedAtts, err := c.UnaggregatedAttestations()
 	if err != nil {
 		return err
