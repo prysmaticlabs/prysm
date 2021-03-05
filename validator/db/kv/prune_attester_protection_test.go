@@ -254,7 +254,7 @@ func checkAttestingHistoryAfterPruning(
 
 func Test_olderThanCurrentWeakSubjectivityPeriod(t *testing.T) {
 	numValidators := params.BeaconConfig().MinGenesisActiveValidatorCount
-	wssPeriod, err := helpers.ComputeWeakSubjectivityPeriod(numValidators)
+	wsPeriod, err := helpers.ComputeWeakSubjectivityPeriod(numValidators)
 	require.NoError(t, err)
 	type args struct {
 		epoch        types.Epoch
@@ -269,39 +269,39 @@ func Test_olderThanCurrentWeakSubjectivityPeriod(t *testing.T) {
 			name: "returns true if epoch < WSS",
 			args: args{
 				epoch:        1,
-				highestEpoch: wssPeriod,
+				highestEpoch: wsPeriod,
 			},
 			want: true,
 		},
 		{
 			name: "returns true if epoch == WSS and 2*WSS have passed",
 			args: args{
-				epoch:        wssPeriod,
-				highestEpoch: 2 * wssPeriod,
+				epoch:        wsPeriod,
+				highestEpoch: 2 * wsPeriod,
 			},
 			want: true,
 		},
 		{
 			name: "returns true if epoch == 2*WSS and 3*WSS have passed",
 			args: args{
-				epoch:        2 * wssPeriod,
-				highestEpoch: 3 * wssPeriod,
+				epoch:        2 * wsPeriod,
+				highestEpoch: 3 * wsPeriod,
 			},
 			want: true,
 		},
 		{
 			name: "returns false if epoch == 3*WSS and 3*WSS have passed",
 			args: args{
-				epoch:        3 * wssPeriod,
-				highestEpoch: 3 * wssPeriod,
+				epoch:        3 * wsPeriod,
+				highestEpoch: 3 * wsPeriod,
 			},
 			want: false,
 		},
 		{
 			name: "returns false if epoch == 4*WSS and 3*WSS have passed",
 			args: args{
-				epoch:        4 * wssPeriod,
-				highestEpoch: 3 * wssPeriod,
+				epoch:        4 * wsPeriod,
+				highestEpoch: 3 * wsPeriod,
 			},
 			want: false,
 		},

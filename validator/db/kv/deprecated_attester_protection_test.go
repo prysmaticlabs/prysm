@@ -14,30 +14,30 @@ import (
 
 func TestNewAttestationHistoryArray(t *testing.T) {
 	numValidators := params.BeaconConfig().MinGenesisActiveValidatorCount
-	wssPeriod, err := helpers.ComputeWeakSubjectivityPeriod(numValidators)
+	wsPeriod, err := helpers.ComputeWeakSubjectivityPeriod(numValidators)
 	require.NoError(t, err)
 	ba := newDeprecatedAttestingHistory(0)
 	assert.Equal(t, latestEpochWrittenSize+historySize, len(ba))
-	ba = newDeprecatedAttestingHistory(wssPeriod - 1)
-	assert.Equal(t, latestEpochWrittenSize+historySize*wssPeriod, types.Epoch(len(ba)))
-	ba = newDeprecatedAttestingHistory(wssPeriod)
+	ba = newDeprecatedAttestingHistory(wsPeriod - 1)
+	assert.Equal(t, latestEpochWrittenSize+historySize*wsPeriod, types.Epoch(len(ba)))
+	ba = newDeprecatedAttestingHistory(wsPeriod)
 	assert.Equal(t, latestEpochWrittenSize+historySize, len(ba))
-	ba = newDeprecatedAttestingHistory(wssPeriod + 1)
+	ba = newDeprecatedAttestingHistory(wsPeriod + 1)
 	assert.Equal(t, latestEpochWrittenSize+historySize+historySize, len(ba))
 
 }
 
 func TestSizeChecks(t *testing.T) {
 	numValidators := params.BeaconConfig().MinGenesisActiveValidatorCount
-	wssPeriod, err := helpers.ComputeWeakSubjectivityPeriod(numValidators)
+	wsPeriod, err := helpers.ComputeWeakSubjectivityPeriod(numValidators)
 	require.NoError(t, err)
 	require.ErrorContains(t, "is smaller then minimal size", deprecatedEncodedAttestingHistory{}.assertSize())
 	require.NoError(t, deprecatedEncodedAttestingHistory{0, 1, 2, 3, 4, 5, 6, 7}.assertSize())
 	require.ErrorContains(t, "is not a multiple of entry size", deprecatedEncodedAttestingHistory{0, 1, 2, 3, 4, 5, 6, 7, 8}.assertSize())
 	require.NoError(t, newDeprecatedAttestingHistory(0).assertSize())
 	require.NoError(t, newDeprecatedAttestingHistory(1).assertSize())
-	require.NoError(t, newDeprecatedAttestingHistory(wssPeriod).assertSize())
-	require.NoError(t, newDeprecatedAttestingHistory(wssPeriod-1).assertSize())
+	require.NoError(t, newDeprecatedAttestingHistory(wsPeriod).assertSize())
+	require.NoError(t, newDeprecatedAttestingHistory(wsPeriod-1).assertSize())
 }
 
 func TestGetLatestEpochWritten(t *testing.T) {

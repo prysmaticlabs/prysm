@@ -163,6 +163,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	BeaconStateFieldCount:     21,
 
 	// Slasher related values.
+	WeakSubjectivityPeriod:    54000,
 	PruneSlasherStoragePeriod: 10,
 
 	// Weak subjectivity values.

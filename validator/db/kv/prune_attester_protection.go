@@ -36,7 +36,7 @@ func (s *Store) PruneAttestationsOlderThanCurrentWeakSubjectivity(ctx context.Co
 }
 
 func pruneSourceEpochsBucket(bucket *bolt.Bucket) error {
-	wssPeriod := params.BeaconConfig().WeakSubjectivityPeriod
+	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 	sourceEpochsBucket := bucket.Bucket(attestationSourceEpochsBucket)
 	if sourceEpochsBucket == nil {
 		return nil
@@ -49,7 +49,7 @@ func pruneSourceEpochsBucket(bucket *bolt.Bucket) error {
 
 	// No need to prune if the highest epoch we've written is still
 	// before the first weak subjectivity period.
-	if highestTargetEpoch < wssPeriod {
+	if highestTargetEpoch < wsPeriod {
 		return nil
 	}
 
@@ -68,7 +68,7 @@ func pruneSourceEpochsBucket(bucket *bolt.Bucket) error {
 }
 
 func pruneTargetEpochsBucket(bucket *bolt.Bucket) error {
-	wssPeriod := params.BeaconConfig().WeakSubjectivityPeriod
+	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 	targetEpochsBucket := bucket.Bucket(attestationTargetEpochsBucket)
 	if targetEpochsBucket == nil {
 		return nil
@@ -79,7 +79,7 @@ func pruneTargetEpochsBucket(bucket *bolt.Bucket) error {
 
 	// No need to prune if the highest epoch we've written is still
 	// before the first weak subjectivity period.
-	if highestTargetEpoch < wssPeriod {
+	if highestTargetEpoch < wsPeriod {
 		return nil
 	}
 	c := targetEpochsBucket.Cursor()
@@ -93,7 +93,7 @@ func pruneTargetEpochsBucket(bucket *bolt.Bucket) error {
 }
 
 func pruneSigningRootsBucket(bucket *bolt.Bucket) error {
-	wssPeriod := params.BeaconConfig().WeakSubjectivityPeriod
+	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 	signingRootsBucket := bucket.Bucket(attestationSigningRootsBucket)
 	if signingRootsBucket == nil {
 		return nil
@@ -105,7 +105,7 @@ func pruneSigningRootsBucket(bucket *bolt.Bucket) error {
 
 	// No need to prune if the highest epoch we've written is still
 	// before the first weak subjectivity period.
-	if highestTargetEpoch < wssPeriod {
+	if highestTargetEpoch < wsPeriod {
 		return nil
 	}
 
@@ -122,12 +122,12 @@ func pruneSigningRootsBucket(bucket *bolt.Bucket) error {
 }
 
 func olderThanCurrentWeakSubjectivityPeriod(epoch, highestEpoch types.Epoch) bool {
-	wssPeriod := params.BeaconConfig().WeakSubjectivityPeriod
+	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 	// Number of weak subjectivity periods that have passed.
-	currentWeakSubjectivityPeriod := highestEpoch / wssPeriod
+	currentWeakSubjectivityPeriod := highestEpoch / wsPeriod
 	// We check if either the epoch is less than WEAK_SUBJECTIVITY_PERIOD
 	// or is it is from a weak subjectivity period older than the current one,
 	// for example, if 5 weak subjectivity periods have passed and epoch is
 	// from 2 weak subjectivity periods ago, then we return true.
-	return epoch < wssPeriod || (epoch/wssPeriod) < currentWeakSubjectivityPeriod
+	return epoch < wsPeriod || (epoch/wsPeriod) < currentWeakSubjectivityPeriod
 }

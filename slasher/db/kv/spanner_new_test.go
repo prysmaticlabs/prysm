@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	dbtypes "github.com/prysmaticlabs/prysm/slasher/db/types"
@@ -171,7 +172,12 @@ func TestStore_SlasherObservedEpoch(t *testing.T) {
 	}
 	// Don't prune when not multiple of PruneSlasherStoragePeriod.
 	params.BeaconConfig().PruneSlasherStoragePeriod = 2
-	highestObservedEpoch = params.BeaconConfig().WeakSubjectivityPeriod
+
+	numValidators := params.BeaconConfig().MinGenesisActiveValidatorCount
+	wsPeriod, err := helpers.ComputeWeakSubjectivityPeriod(numValidators)
+	require.NoError(t, err)
+
+	highestObservedEpoch = wsPeriod
 	require.NoError(t, db.setObservedEpochs(ctx, highestObservedEpoch+1))
 	for _, tt := range tests {
 		exists, err := db.HasIndexedAttestation(ctx, tt.idxAtt)
@@ -181,7 +187,6 @@ func TestStore_SlasherObservedEpoch(t *testing.T) {
 	}
 	// Prune on PruneSlasherStoragePeriod.
 	params.BeaconConfig().PruneSlasherStoragePeriod = 1
-	highestObservedEpoch = params.BeaconConfig().WeakSubjectivityPeriod
 	currentEpoch := highestObservedEpoch + 1
 	historyToKeep := highestObservedEpoch
 	require.NoError(t, db.setObservedEpochs(ctx, highestObservedEpoch+1))
