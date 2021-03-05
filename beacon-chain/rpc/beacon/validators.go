@@ -515,7 +515,6 @@ func (bs *Server) GetValidatorParticipation(
 		}
 		startSlot = types.Slot(i)
 	}
-
 	beaconState, err := bs.StateGen.StateBySlot(ctx, startSlot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)

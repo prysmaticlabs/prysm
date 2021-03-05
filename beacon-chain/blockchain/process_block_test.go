@@ -896,12 +896,12 @@ func TestHandleEpochBoundary_BadMetrics(t *testing.T) {
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
-	s, err := state.OptimizedGenesisBeaconState()
+	s, err := testutil.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, s.SetSlot(1))
-	service.head = &head{}
+	service.head = &head{state: (*stateTrie.BeaconState)(nil)}
 
-	require.ErrorContains(t, "nil state", service.handleEpochBoundary(ctx, s))
+	require.ErrorContains(t, "failed to initialize precompute: nil inner state", service.handleEpochBoundary(ctx, s))
 }
 
 func TestHandleEpochBoundary_UpdateFirstSlot(t *testing.T) {
