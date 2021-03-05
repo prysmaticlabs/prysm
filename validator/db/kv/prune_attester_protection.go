@@ -36,7 +36,7 @@ func (s *Store) PruneAttestationsOlderThanCurrentWeakSubjectivity(ctx context.Co
 }
 
 func pruneSourceEpochsBucket(bucket *bolt.Bucket) error {
-	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
+	wsPeriod := params.BeaconConfig().MaxWeakSubjectivityPeriod
 	sourceEpochsBucket := bucket.Bucket(attestationSourceEpochsBucket)
 	if sourceEpochsBucket == nil {
 		return nil
@@ -68,7 +68,7 @@ func pruneSourceEpochsBucket(bucket *bolt.Bucket) error {
 }
 
 func pruneTargetEpochsBucket(bucket *bolt.Bucket) error {
-	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
+	wsPeriod := params.BeaconConfig().MaxWeakSubjectivityPeriod
 	targetEpochsBucket := bucket.Bucket(attestationTargetEpochsBucket)
 	if targetEpochsBucket == nil {
 		return nil
@@ -93,7 +93,7 @@ func pruneTargetEpochsBucket(bucket *bolt.Bucket) error {
 }
 
 func pruneSigningRootsBucket(bucket *bolt.Bucket) error {
-	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
+	wsPeriod := params.BeaconConfig().MaxWeakSubjectivityPeriod
 	signingRootsBucket := bucket.Bucket(attestationSigningRootsBucket)
 	if signingRootsBucket == nil {
 		return nil
@@ -122,7 +122,7 @@ func pruneSigningRootsBucket(bucket *bolt.Bucket) error {
 }
 
 func olderThanCurrentWeakSubjectivityPeriod(epoch, highestEpoch types.Epoch) bool {
-	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
+	wsPeriod := params.BeaconConfig().MaxWeakSubjectivityPeriod
 	// Number of weak subjectivity periods that have passed.
 	currentWeakSubjectivityPeriod := highestEpoch / wsPeriod
 	// We check if either the epoch is less than WEAK_SUBJECTIVITY_PERIOD

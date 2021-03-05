@@ -143,7 +143,7 @@ func (s *Store) setObservedEpochs(ctx context.Context, epoch types.Epoch) error 
 		highestObservedEpoch = epoch
 		// Prune block header history every PruneSlasherStoragePeriod epoch.
 		if highestObservedEpoch%params.BeaconConfig().PruneSlasherStoragePeriod == 0 {
-			if err = s.PruneAttHistory(ctx, epoch, params.BeaconConfig().WeakSubjectivityPeriod); err != nil {
+			if err = s.PruneAttHistory(ctx, epoch, params.BeaconConfig().MaxWeakSubjectivityPeriod); err != nil {
 				return errors.Wrap(err, "failed to prune indexed attestations store")
 			}
 		}

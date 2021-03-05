@@ -77,10 +77,10 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 		sourceLargerThenTargetObserved.Inc()
 	}
 
-	if dis > params.BeaconConfig().WeakSubjectivityPeriod {
+	if dis > params.BeaconConfig().MaxWeakSubjectivityPeriod {
 		return nil, fmt.Errorf(
 			"attestation span was greater than weak subjectivity period %d, received: %d",
-			params.BeaconConfig().WeakSubjectivityPeriod,
+			params.BeaconConfig().MaxWeakSubjectivityPeriod,
 			dis,
 		)
 	}
