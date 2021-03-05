@@ -4,7 +4,6 @@ import (
 	"archive/zip"
 	"encoding/hex"
 	"encoding/json"
-	constant "github.com/prysmaticlabs/prysm/validator/testing"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -21,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
+	constant "github.com/prysmaticlabs/prysm/validator/testing"
 )
 
 func TestBackupAccounts_Noninteractive_Derived(t *testing.T) {
