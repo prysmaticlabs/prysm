@@ -76,10 +76,10 @@ func (s *Service) detectSlashableAttestations(
 		log.WithField("numSlashings", len(slashings)).Info("Slashable offenses found")
 	}
 	for _, slashing := range slashings {
-		s.attSlashingsChan <- &ethpb.AttesterSlashing{
+		s.attesterSlashingsFeed.Send(&ethpb.AttesterSlashing{
 			Attestation_1: slashing.PrevAttestation,
 			Attestation_2: slashing.Attestation,
-		}
+		})
 		logSlashingEvent(slashing)
 	}
 
