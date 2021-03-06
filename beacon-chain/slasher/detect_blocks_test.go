@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/event"
+
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -22,8 +24,9 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 		serviceCfg: &ServiceConfig{
 			Database: beaconDB,
 		},
-		params:            DefaultParams(),
-		beaconBlocksQueue: make([]*slashertypes.SignedBlockHeaderWrapper, 0),
+		params:                DefaultParams(),
+		beaconBlocksQueue:     make([]*slashertypes.SignedBlockHeaderWrapper, 0),
+		proposerSlashingsFeed: new(event.Feed),
 	}
 	currentEpochChan := make(chan types.Epoch)
 	exitChan := make(chan struct{})
