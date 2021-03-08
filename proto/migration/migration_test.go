@@ -6,6 +6,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	ethpb_alpha "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -29,6 +30,7 @@ var (
 	sourceRoot       = bytesutil.PadTo([]byte("sourceroot"), 32)
 	targetRoot       = bytesutil.PadTo([]byte("targetroot"), 32)
 	bodyRoot         = bytesutil.PadTo([]byte("bodyroot"), 32)
+	aggregationBits  = bitfield.Bitlist{0x01}
 )
 
 func Test_V1Alpha1BlockToV1BlockHeader(t *testing.T) {
@@ -236,4 +238,31 @@ func Test_V1ProposerSlashingToV1Alpha1(t *testing.T) {
 	v1Root, err := v1Slashing.HashTreeRoot()
 	require.NoError(t, err)
 	assert.DeepEqual(t, alphaRoot, v1Root)
+}
+
+func Test_V1AttToV1Alpha1(t *testing.T) {
+	v1Att := &ethpb.Attestation{
+		AggregationBits: aggregationBits,
+		Data: &ethpb.AttestationData{
+			Slot:            slot,
+			CommitteeIndex:  committeeIndex,
+			BeaconBlockRoot: beaconBlockRoot,
+			Source: &ethpb.Checkpoint{
+				Epoch: epoch,
+				Root:  sourceRoot,
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: epoch,
+				Root:  targetRoot,
+			},
+		},
+		Signature: signature,
+	}
+
+	alphaAtt := V1AttToV1Alpha1(v1Att)
+	alphaRoot, err := alphaAtt.HashTreeRoot()
+	require.NoError(t, err)
+	v1Root, err := v1Att.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, v1Root, alphaRoot)
 }
