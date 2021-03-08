@@ -63,10 +63,10 @@ func TestProposer_ProposerAtts_sortByProfitabilityUsingMaxCover(t *testing.T) {
 
 	t.Run("single att", func(t *testing.T) {
 		atts := getAtts([]testData{
-			{4, bitfield.Bitlist{0b11100000}},
+			{4, bitfield.Bitlist{0b11100000, 0b1}},
 		})
 		want := getAtts([]testData{
-			{4, bitfield.Bitlist{0b11100000}},
+			{4, bitfield.Bitlist{0b11100000, 0b1}},
 		})
 		atts = atts.sortByProfitability()
 		require.DeepEqual(t, want, atts)
@@ -74,27 +74,27 @@ func TestProposer_ProposerAtts_sortByProfitabilityUsingMaxCover(t *testing.T) {
 
 	t.Run("single att per slot", func(t *testing.T) {
 		atts := getAtts([]testData{
-			{1, bitfield.Bitlist{0b11000000}},
-			{4, bitfield.Bitlist{0b11100000}},
+			{1, bitfield.Bitlist{0b11000000, 0b1}},
+			{4, bitfield.Bitlist{0b11100000, 0b1}},
 		})
 		want := getAtts([]testData{
-			{4, bitfield.Bitlist{0b11100000}},
-			{1, bitfield.Bitlist{0b11000000}},
+			{4, bitfield.Bitlist{0b11100000, 0b1}},
+			{1, bitfield.Bitlist{0b11000000, 0b1}},
 		})
 		atts = atts.sortByProfitability()
 		require.DeepEqual(t, want, atts)
 	})
 
-	t.Run("two atts on on of the slots", func(t *testing.T) {
+	t.Run("two atts on one of the slots", func(t *testing.T) {
 		atts := getAtts([]testData{
-			{1, bitfield.Bitlist{0b11000000}},
-			{4, bitfield.Bitlist{0b11100000}},
-			{4, bitfield.Bitlist{0b11110000}},
+			{1, bitfield.Bitlist{0b11000000, 0b1}},
+			{4, bitfield.Bitlist{0b11100000, 0b1}},
+			{4, bitfield.Bitlist{0b11110000, 0b1}},
 		})
 		want := getAtts([]testData{
-			{4, bitfield.Bitlist{0b11110000}},
-			{4, bitfield.Bitlist{0b11100000}},
-			{1, bitfield.Bitlist{0b11000000}},
+			{4, bitfield.Bitlist{0b11110000, 0b1}},
+			{4, bitfield.Bitlist{0b11100000, 0b1}},
+			{1, bitfield.Bitlist{0b11000000, 0b1}},
 		})
 		atts = atts.sortByProfitability()
 		require.DeepEqual(t, want, atts)
@@ -143,20 +143,49 @@ func TestProposer_ProposerAtts_sortByProfitabilityUsingMaxCover(t *testing.T) {
 
 	t.Run("multiple slots", func(t *testing.T) {
 		atts := getAtts([]testData{
-			{4, bitfield.Bitlist{0b11100000}},
-			{1, bitfield.Bitlist{0b11000000}},
-			{2, bitfield.Bitlist{0b11100000}},
-			{4, bitfield.Bitlist{0b11110000}},
-			{1, bitfield.Bitlist{0b11100000}},
-			{3, bitfield.Bitlist{0b11000000}},
+			{2, bitfield.Bitlist{0b11100000, 0b1}},
+			{4, bitfield.Bitlist{0b11100000, 0b1}},
+			{1, bitfield.Bitlist{0b11000000, 0b1}},
+			{4, bitfield.Bitlist{0b11110000, 0b1}},
+			{1, bitfield.Bitlist{0b11100000, 0b1}},
+			{3, bitfield.Bitlist{0b11000000, 0b1}},
 		})
 		want := getAtts([]testData{
-			{4, bitfield.Bitlist{0b11110000}},
-			{4, bitfield.Bitlist{0b11100000}},
-			{3, bitfield.Bitlist{0b11000000}},
-			{2, bitfield.Bitlist{0b11100000}},
-			{1, bitfield.Bitlist{0b11100000}},
-			{1, bitfield.Bitlist{0b11000000}},
+			{4, bitfield.Bitlist{0b11110000, 0b1}},
+			{4, bitfield.Bitlist{0b11100000, 0b1}},
+			{3, bitfield.Bitlist{0b11000000, 0b1}},
+			{2, bitfield.Bitlist{0b11100000, 0b1}},
+			{1, bitfield.Bitlist{0b11100000, 0b1}},
+			{1, bitfield.Bitlist{0b11000000, 0b1}},
+		})
+		atts = atts.sortByProfitability()
+		require.DeepEqual(t, want, atts)
+	})
+
+	t.Run("selected and non selected atts sorted by bit count", func(t *testing.T) {
+		// Items at slot 4, must be first split into two lists by max-cover, with
+		// 0b10000011 scoring higher (as it provides more info in addition to already selected
+		// attestations) than 0b11100001 (despite naive bit count suggesting otherwise). Then,
+		// both selected and non-selected attestations must be sorted by bit count as well.
+		atts := getAtts([]testData{
+			{4, bitfield.Bitlist{0b00000001, 0b1}},
+			{4, bitfield.Bitlist{0b11100001, 0b1}},
+			{1, bitfield.Bitlist{0b11000000, 0b1}},
+			{2, bitfield.Bitlist{0b11100000, 0b1}},
+			{4, bitfield.Bitlist{0b10000011, 0b1}},
+			{4, bitfield.Bitlist{0b11111000, 0b1}},
+			{1, bitfield.Bitlist{0b11100000, 0b1}},
+			{3, bitfield.Bitlist{0b11000000, 0b1}},
+		})
+		want := getAtts([]testData{
+			{4, bitfield.Bitlist{0b11111000, 0b1}},
+			{4, bitfield.Bitlist{0b10000011, 0b1}},
+			{4, bitfield.Bitlist{0b11100001, 0b1}},
+			{4, bitfield.Bitlist{0b00000001, 0b1}},
+			{3, bitfield.Bitlist{0b11000000, 0b1}},
+			{2, bitfield.Bitlist{0b11100000, 0b1}},
+			{1, bitfield.Bitlist{0b11100000, 0b1}},
+			{1, bitfield.Bitlist{0b11000000, 0b1}},
 		})
 		atts = atts.sortByProfitability()
 		require.DeepEqual(t, want, atts)
