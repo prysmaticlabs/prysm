@@ -11,7 +11,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/proto/beacon/db"
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/backuputil"
@@ -31,12 +31,12 @@ type ReadOnlyDatabase interface {
 	FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (*eth.SignedBeaconBlock, error)
 	HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) ([]*eth.SignedBeaconBlock, error)
 	// State related methods.
-	State(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error)
-	GenesisState(ctx context.Context) (*state.BeaconState, error)
+	State(ctx context.Context, blockRoot [32]byte) (iface.BeaconState, error)
+	GenesisState(ctx context.Context) (iface.BeaconState, error)
 	HasState(ctx context.Context, blockRoot [32]byte) bool
 	StateSummary(ctx context.Context, blockRoot [32]byte) (*ethereum_beacon_p2p_v1.StateSummary, error)
 	HasStateSummary(ctx context.Context, blockRoot [32]byte) bool
-	HighestSlotStatesBelow(ctx context.Context, slot types.Slot) ([]*state.BeaconState, error)
+	HighestSlotStatesBelow(ctx context.Context, slot types.Slot) ([]iface.ReadOnlyBeaconState, error)
 	// Slashing operations.
 	ProposerSlashing(ctx context.Context, slashingRoot [32]byte) (*eth.ProposerSlashing, error)
 	AttesterSlashing(ctx context.Context, slashingRoot [32]byte) (*eth.AttesterSlashing, error)
@@ -67,8 +67,8 @@ type NoHeadAccessDatabase interface {
 	SaveBlocks(ctx context.Context, blocks []*eth.SignedBeaconBlock) error
 	SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	// State related methods.
-	SaveState(ctx context.Context, state *state.BeaconState, blockRoot [32]byte) error
-	SaveStates(ctx context.Context, states []*state.BeaconState, blockRoots [][32]byte) error
+	SaveState(ctx context.Context, state iface.ReadOnlyBeaconState, blockRoot [32]byte) error
+	SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconState, blockRoots [][32]byte) error
 	DeleteState(ctx context.Context, blockRoot [32]byte) error
 	DeleteStates(ctx context.Context, blockRoots [][32]byte) error
 	SaveStateSummary(ctx context.Context, summary *ethereum_beacon_p2p_v1.StateSummary) error

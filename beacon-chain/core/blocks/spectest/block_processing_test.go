@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -48,16 +49,20 @@ func runBlockProcessingTest(t *testing.T, config string) {
 			require.NoError(t, testutil.UnmarshalYaml(file, metaYaml), "Failed to Unmarshal")
 
 			var transitionError error
+			var processedState iface.BeaconState
+			var ok bool
 			for i := 0; i < metaYaml.BlocksCount; i++ {
 				filename := fmt.Sprintf("blocks_%d.ssz", i)
 				blockFile, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), filename)
 				require.NoError(t, err)
 				block := &ethpb.SignedBeaconBlock{}
 				require.NoError(t, block.UnmarshalSSZ(blockFile), "Failed to unmarshal")
-				beaconState, transitionError = state.ExecuteStateTransition(context.Background(), beaconState, block)
+				processedState, transitionError = state.ExecuteStateTransition(context.Background(), beaconState, block)
 				if transitionError != nil {
 					break
 				}
+				beaconState, ok = processedState.(*stateTrie.BeaconState)
+				require.Equal(t, true, ok)
 			}
 
 			// If the post.ssz is not present, it means the test should fail on our end.

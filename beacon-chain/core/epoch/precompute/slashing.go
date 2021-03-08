@@ -4,7 +4,6 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -12,7 +11,7 @@ import (
 
 // ProcessSlashingsPrecompute processes the slashed validators during epoch processing.
 // This is an optimized version by passing in precomputed total epoch balances.
-func ProcessSlashingsPrecompute(state *stateTrie.BeaconState, pBal *Balance) error {
+func ProcessSlashingsPrecompute(state iface.BeaconState, pBal *Balance) error {
 	currentEpoch := helpers.CurrentEpoch(state)
 	exitLength := params.BeaconConfig().EpochsPerSlashingsVector
 

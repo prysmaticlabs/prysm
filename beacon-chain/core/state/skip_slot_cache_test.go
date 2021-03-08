@@ -7,6 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -27,9 +28,10 @@ func TestSkipSlotCache_OK(t *testing.T) {
 	// with the state
 	blk, err := testutil.GenerateFullBlock(bState, privs, blkCfg, originalState.Slot()+10)
 	require.NoError(t, err)
-	originalState, err = state.ExecuteStateTransition(context.Background(), originalState, blk)
+	executedState, err := state.ExecuteStateTransition(context.Background(), originalState, blk)
 	require.NoError(t, err, "Could not run state transition")
-
+	originalState, ok := executedState.(*beaconstate.BeaconState)
+	require.Equal(t, true, ok)
 	bState, err = state.ExecuteStateTransition(context.Background(), bState, blk)
 	require.NoError(t, err, "Could not process state transition")
 
@@ -50,11 +52,13 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 	// with the state
 	blk, err := testutil.GenerateFullBlock(bState, privs, blkCfg, originalState.Slot()+10)
 	require.NoError(t, err)
-	originalState, err = state.ExecuteStateTransition(context.Background(), originalState, blk)
+	executedState, err := state.ExecuteStateTransition(context.Background(), originalState, blk)
 	require.NoError(t, err, "Could not run state transition")
+	originalState, ok := executedState.(*beaconstate.BeaconState)
+	require.Equal(t, true, ok)
 
 	// Create two shallow but different forks
-	var state1, state2 *beaconstate.BeaconState
+	var state1, state2 iface.BeaconState
 	{
 		blk, err := testutil.GenerateFullBlock(originalState.Copy(), privs, blkCfg, originalState.Slot()+10)
 		require.NoError(t, err)
@@ -90,9 +94,9 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 	}
 
 	// prepare copies for both states
-	var setups []*beaconstate.BeaconState
+	var setups []iface.BeaconState
 	for i := uint64(0); i < 300; i++ {
-		var st *beaconstate.BeaconState
+		var st iface.BeaconState
 		if i%2 == 0 {
 			st = state1
 		} else {
@@ -127,7 +131,7 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(len(setups))
 
-	step := func(i int, setup *beaconstate.BeaconState) {
+	step := func(i int, setup iface.BeaconState) {
 		// go at least 1 past problemSlot, to ensure problem slot state root is available
 		outState, err := state.ProcessSlots(context.Background(), setup, problemSlot.Add(1+uint64(i))) // keep increasing, to hit and extend the cache
 		require.NoError(t, err, "Could not process state transition")

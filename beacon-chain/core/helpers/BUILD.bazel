@@ -32,7 +32,6 @@ go_library(
     ],
     deps = [
         "//beacon-chain/cache:go_default_library",
-        "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/interface:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/bls:go_default_library",
