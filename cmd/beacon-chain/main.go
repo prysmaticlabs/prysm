@@ -12,9 +12,9 @@ import (
 	golog "github.com/ipfs/go-log/v2"
 	joonix "github.com/joonix/log"
 	"github.com/prysmaticlabs/prysm/beacon-chain/node"
-	slashercommands "github.com/prysmaticlabs/prysm/beacon-chain/slasher/simulator"
 	dbcommands "github.com/prysmaticlabs/prysm/cmd/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	slashercommands "github.com/prysmaticlabs/prysm/cmd/beacon-chain/slasher-simulator"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -123,7 +123,7 @@ func main() {
 	app.Action = startNode
 	app.Version = version.Version()
 	app.Commands = []*cli.Command{
-		slashercommands.SlasherCommands,
+		slashercommands.Commands,
 		dbcommands.Commands,
 	}
 
