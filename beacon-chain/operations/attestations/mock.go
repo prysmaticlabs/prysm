@@ -1,6 +1,8 @@
 package attestations
 
 import (
+	"context"
+
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
@@ -9,11 +11,11 @@ type PoolMock struct {
 	AggregatedAtts []*ethpb.Attestation
 }
 
-func (*PoolMock) AggregateUnaggregatedAttestations() error {
+func (*PoolMock) AggregateUnaggregatedAttestations(_ context.Context) error {
 	panic("implement me")
 }
 
-func (*PoolMock) AggregateUnaggregatedAttestationsBySlotIndex(_ types.Slot, _ types.CommitteeIndex) error {
+func (*PoolMock) AggregateUnaggregatedAttestationsBySlotIndex(_ context.Context, _ types.Slot, _ types.CommitteeIndex) error {
 	panic("implement me")
 }
 
@@ -30,7 +32,7 @@ func (m *PoolMock) AggregatedAttestations() []*ethpb.Attestation {
 	return m.AggregatedAtts
 }
 
-func (*PoolMock) AggregatedAttestationsBySlotIndex(_ types.Slot, _ types.CommitteeIndex) []*ethpb.Attestation {
+func (*PoolMock) AggregatedAttestationsBySlotIndex(_ context.Context, _ types.Slot, _ types.CommitteeIndex) []*ethpb.Attestation {
 	panic("implement me")
 }
 
@@ -58,7 +60,7 @@ func (*PoolMock) UnaggregatedAttestations() ([]*ethpb.Attestation, error) {
 	panic("implement me")
 }
 
-func (*PoolMock) UnaggregatedAttestationsBySlotIndex(_ types.Slot, _ types.CommitteeIndex) []*ethpb.Attestation {
+func (*PoolMock) UnaggregatedAttestationsBySlotIndex(_ context.Context, _ types.Slot, _ types.CommitteeIndex) []*ethpb.Attestation {
 	panic("implement me")
 }
 
