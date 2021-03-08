@@ -69,6 +69,8 @@ type Flags struct {
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
 	KeystoreImportDebounceInterval time.Duration
+
+	ProposerAttsSelectionUsingMaxCover bool // ProposerAttsSelectionUsingMaxCover enables max-cover algorithm when selecting attestations for proposing.
 }
 
 var featureConfig *Flags
@@ -183,6 +185,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(updateHeadTimely.Name) {
 		log.WithField(updateHeadTimely.Name, updateHeadTimely.Usage).Warn(enabledFeatureFlag)
 		cfg.UpdateHeadTimely = true
+	}
+	if ctx.Bool(proposerAttsSelectionUsingMaxCover.Name) {
+		log.WithField(proposerAttsSelectionUsingMaxCover.Name, proposerAttsSelectionUsingMaxCover.Usage).Warn(enabledFeatureFlag)
+		cfg.ProposerAttsSelectionUsingMaxCover = true
 	}
 	Init(cfg)
 }

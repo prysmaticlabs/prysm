@@ -5,8 +5,10 @@ import (
 	"sort"
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -31,6 +33,134 @@ func TestProposer_ProposerAtts_sortByProfitability(t *testing.T) {
 	})
 	atts = atts.sortByProfitability()
 	require.DeepEqual(t, want, atts)
+}
+
+func TestProposer_ProposerAtts_sortByProfitabilityUsingMaxCover(t *testing.T) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+		ProposerAttsSelectionUsingMaxCover: true,
+	})
+	defer resetCfg()
+
+	type testData struct {
+		slot types.Slot
+		bits bitfield.Bitlist
+	}
+	getAtts := func(data []testData) proposerAtts {
+		var atts proposerAtts
+		for _, att := range data {
+			atts = append(atts, testutil.HydrateAttestation(&ethpb.Attestation{
+				Data: &ethpb.AttestationData{Slot: att.slot}, AggregationBits: att.bits}))
+		}
+		return atts
+	}
+
+	t.Run("no atts", func(t *testing.T) {
+		atts := getAtts([]testData{})
+		want := getAtts([]testData{})
+		atts = atts.sortByProfitability()
+		require.DeepEqual(t, want, atts)
+	})
+
+	t.Run("single att", func(t *testing.T) {
+		atts := getAtts([]testData{
+			{4, bitfield.Bitlist{0b11100000}},
+		})
+		want := getAtts([]testData{
+			{4, bitfield.Bitlist{0b11100000}},
+		})
+		atts = atts.sortByProfitability()
+		require.DeepEqual(t, want, atts)
+	})
+
+	t.Run("single att per slot", func(t *testing.T) {
+		atts := getAtts([]testData{
+			{1, bitfield.Bitlist{0b11000000}},
+			{4, bitfield.Bitlist{0b11100000}},
+		})
+		want := getAtts([]testData{
+			{4, bitfield.Bitlist{0b11100000}},
+			{1, bitfield.Bitlist{0b11000000}},
+		})
+		atts = atts.sortByProfitability()
+		require.DeepEqual(t, want, atts)
+	})
+
+	t.Run("two atts on on of the slots", func(t *testing.T) {
+		atts := getAtts([]testData{
+			{1, bitfield.Bitlist{0b11000000}},
+			{4, bitfield.Bitlist{0b11100000}},
+			{4, bitfield.Bitlist{0b11110000}},
+		})
+		want := getAtts([]testData{
+			{4, bitfield.Bitlist{0b11110000}},
+			{4, bitfield.Bitlist{0b11100000}},
+			{1, bitfield.Bitlist{0b11000000}},
+		})
+		atts = atts.sortByProfitability()
+		require.DeepEqual(t, want, atts)
+	})
+
+	t.Run("compare to native sort", func(t *testing.T) {
+		t.Run("naive", func(t *testing.T) {
+			resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+				ProposerAttsSelectionUsingMaxCover: false,
+			})
+			defer resetCfg()
+
+			atts := getAtts([]testData{
+				{1, bitfield.Bitlist{0b11000011, 0b1}},
+				{1, bitfield.Bitlist{0b11001000, 0b1}},
+				{1, bitfield.Bitlist{0b00001100, 0b1}},
+			})
+			want := getAtts([]testData{
+				{1, bitfield.Bitlist{0b11000011, 0b1}},
+				{1, bitfield.Bitlist{0b11001000, 0b1}},
+				{1, bitfield.Bitlist{0b00001100, 0b1}},
+			})
+			atts = atts.sortByProfitability()
+			require.DeepEqual(t, want, atts)
+		})
+		t.Run("max-cover", func(t *testing.T) {
+			resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+				ProposerAttsSelectionUsingMaxCover: true,
+			})
+			defer resetCfg()
+
+			atts := getAtts([]testData{
+				{1, bitfield.Bitlist{0b11000011, 0b1}},
+				{1, bitfield.Bitlist{0b11001000, 0b1}},
+				{1, bitfield.Bitlist{0b00001100, 0b1}},
+			})
+			want := getAtts([]testData{
+				{1, bitfield.Bitlist{0b11000011, 0b1}},
+				{1, bitfield.Bitlist{0b00001100, 0b1}},
+				{1, bitfield.Bitlist{0b11001000, 0b1}},
+			})
+			atts = atts.sortByProfitability()
+			require.DeepEqual(t, want, atts)
+		})
+	})
+
+	t.Run("multiple slots", func(t *testing.T) {
+		atts := getAtts([]testData{
+			{4, bitfield.Bitlist{0b11100000}},
+			{1, bitfield.Bitlist{0b11000000}},
+			{2, bitfield.Bitlist{0b11100000}},
+			{4, bitfield.Bitlist{0b11110000}},
+			{1, bitfield.Bitlist{0b11100000}},
+			{3, bitfield.Bitlist{0b11000000}},
+		})
+		want := getAtts([]testData{
+			{4, bitfield.Bitlist{0b11110000}},
+			{4, bitfield.Bitlist{0b11100000}},
+			{3, bitfield.Bitlist{0b11000000}},
+			{2, bitfield.Bitlist{0b11100000}},
+			{1, bitfield.Bitlist{0b11100000}},
+			{1, bitfield.Bitlist{0b11000000}},
+		})
+		atts = atts.sortByProfitability()
+		require.DeepEqual(t, want, atts)
+	})
 }
 
 func TestProposer_ProposerAtts_dedup(t *testing.T) {

@@ -4,9 +4,13 @@ import (
 	"context"
 	"sort"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/shared/aggregation"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -33,6 +37,9 @@ func (a proposerAtts) sortByProfitability() proposerAtts {
 	if len(a) < 2 {
 		return a
 	}
+	if featureconfig.Get().ProposerAttsSelectionUsingMaxCover {
+		return a.sortByProfitabilityUsingMaxCover()
+	}
 	sort.Slice(a, func(i, j int) bool {
 		if a[i].Data.Slot == a[j].Data.Slot {
 			return a[i].AggregationBits.Count() > a[j].AggregationBits.Count()
@@ -40,6 +47,54 @@ func (a proposerAtts) sortByProfitability() proposerAtts {
 		return a[i].Data.Slot > a[j].Data.Slot
 	})
 	return a
+}
+
+// sortByProfitabilityUsingMaxCover orders attestations by highest slot and by highest aggregation bit count.
+// Duplicate bits are counted only once, using max-cover algorithm.
+func (a proposerAtts) sortByProfitabilityUsingMaxCover() proposerAtts {
+	// Separate attestations by slot, as slot number takes higher precedence when sorting.
+	var slots []types.Slot
+	attsBySlot := map[types.Slot]proposerAtts{}
+	for _, att := range a {
+		if _, ok := attsBySlot[att.Data.Slot]; !ok {
+			slots = append(slots, att.Data.Slot)
+		}
+		attsBySlot[att.Data.Slot] = append(attsBySlot[att.Data.Slot], att)
+	}
+	sort.Slice(slots, func(i, j int) bool {
+		return slots[i] > slots[j]
+	})
+
+	selectAtts := func(atts proposerAtts) proposerAtts {
+		if len(atts) < 2 {
+			return atts
+		}
+		candidates := make([]*bitfield.Bitlist64, len(atts))
+		for i := 0; i < len(atts); i++ {
+			candidates[i] = atts[i].AggregationBits.ToBitlist64()
+		}
+		// Add selected candidates on top, those that are not selected - append at bottom.
+		selectedKeys, _, err := aggregation.MaxCover(
+			candidates, len(candidates), true /* allowOverlaps */)
+		if err == nil {
+			var sortedAtts proposerAtts
+			for _, key := range selectedKeys.BitIndices() {
+				sortedAtts = append(sortedAtts, atts[key])
+			}
+			for _, key := range selectedKeys.Not().BitIndices() {
+				sortedAtts = append(sortedAtts, atts[key])
+			}
+			return sortedAtts
+		}
+		return atts
+	}
+
+	var sortedAtts proposerAtts
+	for _, slot := range slots {
+		sortedAtts = append(sortedAtts, selectAtts(attsBySlot[slot])...)
+	}
+
+	return sortedAtts
 }
 
 // limitToMaxAttestations limits attestations to maximum attestations per block.
