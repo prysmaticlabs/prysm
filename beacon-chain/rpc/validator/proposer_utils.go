@@ -61,9 +61,6 @@ func (a proposerAtts) sortByProfitabilityUsingMaxCover() proposerAtts {
 		}
 		attsBySlot[att.Data.Slot] = append(attsBySlot[att.Data.Slot], att)
 	}
-	sort.Slice(slots, func(i, j int) bool {
-		return slots[i] > slots[j]
-	})
 
 	selectAtts := func(atts proposerAtts) proposerAtts {
 		if len(atts) < 2 {
@@ -74,10 +71,9 @@ func (a proposerAtts) sortByProfitabilityUsingMaxCover() proposerAtts {
 			candidates[i] = atts[i].AggregationBits.ToBitlist64()
 		}
 		// Add selected candidates on top, those that are not selected - append at bottom.
-		selectedKeys, _, err := aggregation.MaxCover(
-			candidates, len(candidates), true /* allowOverlaps */)
+		selectedKeys, _, err := aggregation.MaxCover(candidates, len(candidates), true /* allowOverlaps */)
 		if err == nil {
-			// Pick selected attestations first, left over will be appended at the bottom.
+			// Pick selected attestations first, leftover attestations will be appended at the end.
 			// Both lists will be sorted by number of bits set.
 			selectedAtts := make(proposerAtts, selectedKeys.Count(), selectedKeys.Count())
 			leftoverAtts := make(proposerAtts, selectedKeys.Not().Count(), selectedKeys.Not().Count())
@@ -98,10 +94,13 @@ func (a proposerAtts) sortByProfitabilityUsingMaxCover() proposerAtts {
 		return atts
 	}
 
-	// Select attestations. Slots are sorted from higher to lower. Within slots attestations
+	// Select attestations. Slots are sorted from higher to lower at this point. Within slots attestations
 	// are sorted to maximize profitability (greedily selected, with previous attestations' bits
 	// evaluated before including any new attestation).
 	var sortedAtts proposerAtts
+	sort.Slice(slots, func(i, j int) bool {
+		return slots[i] > slots[j]
+	})
 	for _, slot := range slots {
 		sortedAtts = append(sortedAtts, selectAtts(attsBySlot[slot])...)
 	}

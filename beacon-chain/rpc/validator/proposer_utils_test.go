@@ -101,6 +101,10 @@ func TestProposer_ProposerAtts_sortByProfitabilityUsingMaxCover(t *testing.T) {
 	})
 
 	t.Run("compare to native sort", func(t *testing.T) {
+		// The naive sort will end up with 0b11001000 being selected second (which is not optimal
+		// as it only contains a single unknown bit).
+		// The max-cover based approach will select 0b00001100 instead, despite lower bit count
+		// (since it has two new/unknown bits).
 		t.Run("naive", func(t *testing.T) {
 			resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
 				ProposerAttsSelectionUsingMaxCover: false,
@@ -166,7 +170,7 @@ func TestProposer_ProposerAtts_sortByProfitabilityUsingMaxCover(t *testing.T) {
 		// Items at slot 4, must be first split into two lists by max-cover, with
 		// 0b10000011 scoring higher (as it provides more info in addition to already selected
 		// attestations) than 0b11100001 (despite naive bit count suggesting otherwise). Then,
-		// both selected and non-selected attestations must be sorted by bit count as well.
+		// both selected and non-selected attestations must be additionally sorted by bit count.
 		atts := getAtts([]testData{
 			{4, bitfield.Bitlist{0b00000001, 0b1}},
 			{4, bitfield.Bitlist{0b11100001, 0b1}},
