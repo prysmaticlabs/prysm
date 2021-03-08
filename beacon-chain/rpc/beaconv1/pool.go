@@ -6,6 +6,7 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
+	ethpb_alpha "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -22,8 +23,44 @@ func (bs *Server) ListPoolAttestations(ctx context.Context, req *ethpb.Attestati
 
 // SubmitAttestation submits Attestation object to node. If attestation passes all validation
 // constraints, node MUST publish attestation on appropriate subnet.
-func (bs *Server) SubmitAttestation(ctx context.Context, req *ethpb.Attestation) (*ptypes.Empty, error) {
-	return nil, errors.New("unimplemented")
+func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpb.SubmitAttestationsRequest) (*ptypes.Empty, error) {
+	ctx, span := trace.StartSpan(ctx, "beaconv1.SubmitAttestation")
+	defer span.End()
+
+	headState, err := bs.ChainInfoFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	}
+
+	var validAttestations []*ethpb_alpha.Attestation
+	for _, sourceAtt := range req.Data {
+		att := migration.V1AttToV1Alpha1(sourceAtt)
+		_, err = blocks.VerifyAttestationNoVerifySignature(ctx, headState, att)
+		if err != nil {
+			continue
+		}
+		err = blocks.VerifyAttestationSignature(ctx, headState, att)
+		if err == nil {
+			validAttestations = append(validAttestations, att)
+		}
+	}
+
+	err = bs.AttestationsPool.SaveAggregatedAttestations(validAttestations)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not save attestations: %v", err)
+	}
+	broadcastFailed := false
+	for _, att := range validAttestations {
+		if err := bs.Broadcaster.Broadcast(ctx, att); err != nil {
+			broadcastFailed = true
+		}
+	}
+	if broadcastFailed {
+		return nil, status.Errorf(
+			codes.Internal,
+			"Could not publish one or more attestations. Some attestations could be published successfully.")
+	}
+	return &ptypes.Empty{}, nil
 }
 
 // ListPoolAttesterSlashings retrieves attester slashings known by the node but
