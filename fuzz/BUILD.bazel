@@ -4,7 +4,7 @@ load("@com_github_prysmaticlabs_ethereumapis//tools:ssz.bzl", "SSZ_DEPS", "ssz_g
 load("@io_bazel_rules_docker//container:container.bzl", "container_image", "container_push")
 load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
-# gazelle:ignore generated.ssz.go
+# gazelle:ignore
 
 config_setting(
     name = "fuzzing_enabled",
