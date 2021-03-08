@@ -16,12 +16,12 @@ import (
 // concurrently, and also allowing us to effectively use a single 2D chunk
 // for slashing detection through this logical grouping.
 func (s *Service) groupByValidatorChunkIndex(
-	attestations []*slashertypes.CompactAttestation,
-) map[uint64][]*slashertypes.CompactAttestation {
-	groupedAttestations := make(map[uint64][]*slashertypes.CompactAttestation)
+	attestations []*slashertypes.IndexedAttestationWrapper,
+) map[uint64][]*slashertypes.IndexedAttestationWrapper {
+	groupedAttestations := make(map[uint64][]*slashertypes.IndexedAttestationWrapper)
 	for _, att := range attestations {
 		validatorChunkIndices := make(map[uint64]bool)
-		for _, validatorIdx := range att.AttestingIndices {
+		for _, validatorIdx := range att.IndexedAttestation.AttestingIndices {
 			validatorChunkIndex := s.params.validatorChunkIndex(types.ValidatorIndex(validatorIdx))
 			validatorChunkIndices[validatorChunkIndex] = true
 		}
@@ -37,11 +37,11 @@ func (s *Service) groupByValidatorChunkIndex(
 
 // Group attestations by the chunk index their source epoch corresponds to.
 func (s *Service) groupByChunkIndex(
-	attestations []*slashertypes.CompactAttestation,
-) map[uint64][]*slashertypes.CompactAttestation {
-	attestationsByChunkIndex := make(map[uint64][]*slashertypes.CompactAttestation)
+	attestations []*slashertypes.IndexedAttestationWrapper,
+) map[uint64][]*slashertypes.IndexedAttestationWrapper {
+	attestationsByChunkIndex := make(map[uint64][]*slashertypes.IndexedAttestationWrapper)
 	for _, att := range attestations {
-		chunkIdx := s.params.chunkIndex(types.Epoch(att.Source))
+		chunkIdx := s.params.chunkIndex(att.IndexedAttestation.Data.Source.Epoch)
 		attestationsByChunkIndex[chunkIdx] = append(attestationsByChunkIndex[chunkIdx], att)
 	}
 	return attestationsByChunkIndex
@@ -61,23 +61,23 @@ func logSlashingEvent(slashing *slashertypes.Slashing) {
 	case slashertypes.SurroundingVote:
 		log.WithFields(logrus.Fields{
 			"validatorIndex":  slashing.ValidatorIndex,
-			"prevSourceEpoch": slashing.PrevSourceEpoch,
-			"prevTargetEpoch": slashing.PrevTargetEpoch,
-			"sourceEpoch":     slashing.SourceEpoch,
-			"targetEpoch":     slashing.TargetEpoch,
+			"prevSourceEpoch": slashing.PrevAttestation.Data.Source.Epoch,
+			"prevTargetEpoch": slashing.PrevAttestation.Data.Target.Epoch,
+			"sourceEpoch":     slashing.Attestation.Data.Source.Epoch,
+			"targetEpoch":     slashing.Attestation.Data.Target.Epoch,
 		}).Info("Attester surrounding vote slashing")
 	case slashertypes.SurroundedVote:
 		log.WithFields(logrus.Fields{
 			"validatorIndex":  slashing.ValidatorIndex,
-			"prevSourceEpoch": slashing.PrevSourceEpoch,
-			"prevTargetEpoch": slashing.PrevTargetEpoch,
-			"sourceEpoch":     slashing.SourceEpoch,
-			"targetEpoch":     slashing.TargetEpoch,
+			"prevSourceEpoch": slashing.PrevAttestation.Data.Source.Epoch,
+			"prevTargetEpoch": slashing.PrevAttestation.Data.Target.Epoch,
+			"sourceEpoch":     slashing.Attestation.Data.Source.Epoch,
+			"targetEpoch":     slashing.Attestation.Data.Target.Epoch,
 		}).Info("Attester surrounded vote slashing")
 	case slashertypes.DoubleProposal:
 		log.WithFields(logrus.Fields{
 			"validatorIndex":  slashing.ValidatorIndex,
-			"slot":            slashing.Slot,
+			"slot":            slashing.BeaconBlock.Header.Slot,
 			"prevSigningRoot": fmt.Sprintf("%#x", slashing.PrevSigningRoot),
 			"signingRoot":     fmt.Sprintf("%#x", slashing.SigningRoot),
 		}).Info("Proposer double proposal slashing")
@@ -87,13 +87,14 @@ func logSlashingEvent(slashing *slashertypes.Slashing) {
 }
 
 // Log a double block proposal slashing given an incoming proposal and existing proposal signing root.
-func logDoubleProposal(incomingProposal *slashertypes.CompactBeaconBlock, existingSigningRoot [32]byte) {
+func logDoubleProposal(incomingProposal, existingProposal *slashertypes.SignedBlockHeaderWrapper) {
 	logSlashingEvent(&slashertypes.Slashing{
 		Kind:            slashertypes.DoubleProposal,
-		ValidatorIndex:  types.ValidatorIndex(incomingProposal.ProposerIndex),
+		ValidatorIndex:  incomingProposal.SignedBeaconBlockHeader.Header.ProposerIndex,
+		PrevSigningRoot: existingProposal.SigningRoot,
 		SigningRoot:     incomingProposal.SigningRoot,
-		PrevSigningRoot: existingSigningRoot,
-		Slot:            incomingProposal.Slot,
+		PrevBeaconBlock: existingProposal.SignedBeaconBlockHeader,
+		BeaconBlock:     incomingProposal.SignedBeaconBlockHeader,
 	})
 }
 

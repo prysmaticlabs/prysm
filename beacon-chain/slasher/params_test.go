@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	ssz "github.com/ferranbt/fastssz"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
@@ -297,7 +298,9 @@ func TestParams_flatSliceID(t *testing.T) {
 				validatorChunkSize: tt.fields.validatorChunkSize,
 				historyLength:      tt.fields.historyLength,
 			}
-			if got := c.flatSliceID(tt.validatorChunkIndex, tt.chunkIndex); got != tt.want {
+			got := c.flatSliceID(tt.validatorChunkIndex, tt.chunkIndex)
+			decoded := ssz.UnmarshallUint64(got)
+			if decoded != tt.want {
 				t.Errorf("diskKey() = %v, want %v", got, tt.want)
 			}
 		})

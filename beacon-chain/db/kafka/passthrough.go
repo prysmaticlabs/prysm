@@ -268,66 +268,66 @@ func (e Exporter) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint 
 	return e.db.RunMigrations(ctx)
 }
 
-// LatestEpochAttestedForValidator -- passthrough
-func (e Exporter) LatestEpochAttestedForValidators(
+// LastEpochWrittenForValidator -- passthrough
+func (e Exporter) LastEpochWrittenForValidators(
 	ctx context.Context, validatorIndices []types.ValidatorIndex,
 ) ([]*slashertypes.AttestedEpochForValidator, error) {
-	return e.db.LatestEpochAttestedForValidators(ctx, validatorIndices)
+	return e.db.LastEpochWrittenForValidators(ctx, validatorIndices)
 }
 
 // AttestationRecordForValidator -- passthrough
 func (e Exporter) AttestationRecordForValidator(
 	ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch,
-) (*slashertypes.CompactAttestation, error) {
+) (*slashertypes.IndexedAttestationWrapper, error) {
 	return e.db.AttestationRecordForValidator(ctx, validatorIdx, targetEpoch)
 }
 
 // CheckAttesterDoubleVotes -- passthrough
 func (e Exporter) CheckAttesterDoubleVotes(
-	ctx context.Context, attestations []*slashertypes.CompactAttestation,
+	ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper,
 ) ([]*slashertypes.AttesterDoubleVote, error) {
 	return e.db.CheckAttesterDoubleVotes(ctx, attestations)
 }
 
 // LoadSlasherChunk -- passthrough
 func (e Exporter) LoadSlasherChunks(
-	ctx context.Context, kind slashertypes.ChunkKind, diskKeys []uint64,
+	ctx context.Context, kind slashertypes.ChunkKind, diskKeys [][]byte,
 ) ([][]uint16, []bool, error) {
 	return e.db.LoadSlasherChunks(ctx, kind, diskKeys)
 }
 
-// SaveLatestEpochAttestedForValidators -- passthrough
-func (e Exporter) SaveLatestEpochAttestedForValidators(
+// SaveLastEpochWrittenForValidators -- passthrough
+func (e Exporter) SaveLastEpochWrittenForValidators(
 	ctx context.Context, validatorIndices []types.ValidatorIndex, epoch types.Epoch,
 ) error {
-	return e.db.SaveLatestEpochAttestedForValidators(ctx, validatorIndices, epoch)
+	return e.db.SaveLastEpochWrittenForValidators(ctx, validatorIndices, epoch)
 }
 
 // SaveAttestationRecordForValidator -- passthrough
 func (e Exporter) SaveAttestationRecordsForValidators(
 	ctx context.Context,
-	attestations []*slashertypes.CompactAttestation,
+	attestations []*slashertypes.IndexedAttestationWrapper,
 ) error {
 	return e.db.SaveAttestationRecordsForValidators(ctx, attestations)
 }
 
 // CheckDoubleBlockProposals -- passthrough
 func (e Exporter) CheckDoubleBlockProposals(
-	ctx context.Context, proposals []*slashertypes.CompactBeaconBlock,
+	ctx context.Context, proposals []*slashertypes.SignedBlockHeaderWrapper,
 ) ([]*slashertypes.DoubleBlockProposal, error) {
 	return e.db.CheckDoubleBlockProposals(ctx, proposals)
 }
 
 // SaveBlockProposals -- passthrough
 func (e Exporter) SaveBlockProposals(
-	ctx context.Context, proposals []*slashertypes.CompactBeaconBlock,
+	ctx context.Context, proposals []*slashertypes.SignedBlockHeaderWrapper,
 ) error {
 	return e.db.SaveBlockProposals(ctx, proposals)
 }
 
 // SaveSlasherChunks -- passthrough
 func (e Exporter) SaveSlasherChunks(
-	ctx context.Context, kind slashertypes.ChunkKind, chunkKeys []uint64, chunks [][]uint16,
+	ctx context.Context, kind slashertypes.ChunkKind, chunkKeys [][]byte, chunks [][]uint16,
 ) error {
 	return e.db.SaveSlasherChunks(ctx, kind, chunkKeys, chunks)
 }

@@ -2,10 +2,15 @@ package kv
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
+	ssz "github.com/ferranbt/fastssz"
 	types "github.com/prysmaticlabs/eth2-types"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -21,36 +26,31 @@ func TestStore_AttestationRecordForValidator_SaveRetrieve(t *testing.T) {
 	require.Equal(t, true, attRecord == nil)
 
 	sr := [32]byte{1}
-	err = beaconDB.SaveAttestationRecordsForValidators(ctx, []*slashertypes.CompactAttestation{
-		{
-			AttestingIndices: []uint64{uint64(valIdx)},
-			Target:           target,
-			Source:           source,
-			SigningRoot:      sr,
-		},
+	err = beaconDB.SaveAttestationRecordsForValidators(ctx, []*slashertypes.IndexedAttestationWrapper{
+		createAttestationWrapper(source, target, []uint64{uint64(valIdx)}, sr[:]),
 	})
 	require.NoError(t, err)
 	attRecord, err = beaconDB.AttestationRecordForValidator(ctx, valIdx, target)
 	require.NoError(t, err)
-	assert.DeepEqual(t, target, attRecord.Target)
-	assert.DeepEqual(t, source, attRecord.Source)
+	assert.DeepEqual(t, target, attRecord.IndexedAttestation.Data.Target.Epoch)
+	assert.DeepEqual(t, source, attRecord.IndexedAttestation.Data.Source.Epoch)
 	assert.DeepEqual(t, sr, attRecord.SigningRoot)
 }
 
-func TestStore_LatestEpochAttestedForValidators(t *testing.T) {
+func TestStore_LastEpochWrittenForValidators(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := setupDB(t)
 	indices := []types.ValidatorIndex{1, 2, 3}
 	epoch := types.Epoch(5)
 
-	attestedEpochs, err := beaconDB.LatestEpochAttestedForValidators(ctx, indices)
+	attestedEpochs, err := beaconDB.LastEpochWrittenForValidators(ctx, indices)
 	require.NoError(t, err)
 	require.Equal(t, true, len(attestedEpochs) == 0)
 
-	err = beaconDB.SaveLatestEpochAttestedForValidators(ctx, indices, epoch)
+	err = beaconDB.SaveLastEpochWrittenForValidators(ctx, indices, epoch)
 	require.NoError(t, err)
 
-	retrievedEpochs, err := beaconDB.LatestEpochAttestedForValidators(ctx, indices)
+	retrievedEpochs, err := beaconDB.LastEpochWrittenForValidators(ctx, indices)
 	require.NoError(t, err)
 	require.Equal(t, len(indices), len(retrievedEpochs))
 
@@ -66,61 +66,41 @@ func TestStore_LatestEpochAttestedForValidators(t *testing.T) {
 func TestStore_CheckAttesterDoubleVotes(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := setupDB(t)
-	err := beaconDB.SaveAttestationRecordsForValidators(ctx, []*slashertypes.CompactAttestation{
-		{
-			AttestingIndices: []uint64{0, 1},
-			Source:           2,
-			Target:           3,
-			SigningRoot:      [32]byte{1},
-		},
-		{
-			AttestingIndices: []uint64{2, 3},
-			Source:           3,
-			Target:           4,
-			SigningRoot:      [32]byte{1},
-		},
+	err := beaconDB.SaveAttestationRecordsForValidators(ctx, []*slashertypes.IndexedAttestationWrapper{
+		createAttestationWrapper(2, 3, []uint64{0, 1}, []byte{1}),
+		createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{1}),
 	})
 	require.NoError(t, err)
 
-	slashableAtts := []*slashertypes.CompactAttestation{
-		{
-			AttestingIndices: []uint64{0, 1},
-			Source:           2,
-			Target:           3,
-			SigningRoot:      [32]byte{2}, // Different signing root.
-		},
-		{
-			AttestingIndices: []uint64{2, 3},
-			Source:           3,
-			Target:           4,
-			SigningRoot:      [32]byte{2}, // Different signing root.
-		},
+	slashableAtts := []*slashertypes.IndexedAttestationWrapper{
+		createAttestationWrapper(2, 3, []uint64{0, 1}, []byte{2}), // Different signing root.
+		createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{2}), // Different signing root.
 	}
 
 	wanted := []*slashertypes.AttesterDoubleVote{
 		{
-			ValidatorIndex:  0,
-			SigningRoot:     [32]byte{2},
-			PrevSigningRoot: [32]byte{1},
-			Target:          3,
+			ValidatorIndex:         0,
+			Target:                 3,
+			PrevAttestationWrapper: createAttestationWrapper(2, 3, []uint64{0, 1}, []byte{1}),
+			AttestationWrapper:     createAttestationWrapper(2, 3, []uint64{0, 1}, []byte{2}),
 		},
 		{
-			ValidatorIndex:  1,
-			SigningRoot:     [32]byte{2},
-			PrevSigningRoot: [32]byte{1},
-			Target:          3,
+			ValidatorIndex:         1,
+			Target:                 3,
+			PrevAttestationWrapper: createAttestationWrapper(2, 3, []uint64{0, 1}, []byte{1}),
+			AttestationWrapper:     createAttestationWrapper(2, 3, []uint64{0, 1}, []byte{2}),
 		},
 		{
-			ValidatorIndex:  2,
-			SigningRoot:     [32]byte{2},
-			PrevSigningRoot: [32]byte{1},
-			Target:          4,
+			ValidatorIndex:         2,
+			Target:                 4,
+			PrevAttestationWrapper: createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{1}),
+			AttestationWrapper:     createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{2}),
 		},
 		{
-			ValidatorIndex:  3,
-			SigningRoot:     [32]byte{2},
-			PrevSigningRoot: [32]byte{1},
-			Target:          4,
+			ValidatorIndex:         3,
+			Target:                 4,
+			PrevAttestationWrapper: createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{1}),
+			AttestationWrapper:     createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{2}),
 		},
 	}
 	doubleVotes, err := beaconDB.CheckAttesterDoubleVotes(ctx, slashableAtts)
@@ -133,7 +113,7 @@ func TestStore_SlasherChunk_SaveRetrieve(t *testing.T) {
 	beaconDB := setupDB(t)
 	elemsPerChunk := 16
 	totalChunks := 64
-	chunkKeys := make([]uint64, totalChunks)
+	chunkKeys := make([][]byte, totalChunks)
 	chunks := make([][]uint16, totalChunks)
 	for i := 0; i < totalChunks; i++ {
 		chunk := make([]uint16, elemsPerChunk)
@@ -141,7 +121,7 @@ func TestStore_SlasherChunk_SaveRetrieve(t *testing.T) {
 			chunk[j] = uint16(0)
 		}
 		chunks[i] = chunk
-		chunkKeys[i] = uint64(i)
+		chunkKeys[i] = ssz.MarshalUint64(make([]byte, 0), uint64(i))
 	}
 
 	// We save chunks for min spans.
@@ -190,22 +170,10 @@ func TestStore_SlasherChunk_SaveRetrieve(t *testing.T) {
 func TestStore_ExistingBlockProposals(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := setupDB(t)
-	proposals := []*slashertypes.CompactBeaconBlock{
-		{
-			ProposerIndex: 1,
-			Slot:          1,
-			SigningRoot:   [32]byte{1},
-		},
-		{
-			ProposerIndex: 1,
-			Slot:          2,
-			SigningRoot:   [32]byte{1},
-		},
-		{
-			ProposerIndex: 1,
-			Slot:          3,
-			SigningRoot:   [32]byte{1},
-		},
+	proposals := []*slashertypes.SignedBlockHeaderWrapper{
+		createProposalWrapper(1, 1, []byte{1}),
+		createProposalWrapper(2, 1, []byte{1}),
+		createProposalWrapper(3, 1, []byte{1}),
 	}
 	// First time checking should return empty existing proposals.
 	doubleProposals, err := beaconDB.CheckDoubleBlockProposals(ctx, proposals)
@@ -218,13 +186,164 @@ func TestStore_ExistingBlockProposals(t *testing.T) {
 
 	// Second time checking same proposals but all with different signing root should
 	// return all double proposals.
-	proposals[0].SigningRoot = [32]byte{2}
-	proposals[1].SigningRoot = [32]byte{2}
-	proposals[2].SigningRoot = [32]byte{2}
+	proposals[0].SigningRoot = bytesutil.ToBytes32([]byte{2})
+	proposals[1].SigningRoot = bytesutil.ToBytes32([]byte{2})
+	proposals[2].SigningRoot = bytesutil.ToBytes32([]byte{2})
+
 	doubleProposals, err = beaconDB.CheckDoubleBlockProposals(ctx, proposals)
 	require.NoError(t, err)
 	require.Equal(t, len(proposals), len(doubleProposals))
 	for i, existing := range doubleProposals {
-		require.DeepNotEqual(t, proposals[i].SigningRoot, existing.ExistingSigningRoot)
+		require.DeepNotEqual(t, doubleProposals[i].PrevBeaconBlockWrapper.SigningRoot, existing.BeaconBlockWrapper.SigningRoot)
+	}
+}
+
+func Test_encodeDecodeProposalRecord(t *testing.T) {
+	tests := []struct {
+		name    string
+		blkHdr  *slashertypes.SignedBlockHeaderWrapper
+		wantErr bool
+	}{
+		{
+			name:   "empty standard encode/decode",
+			blkHdr: createProposalWrapper(0, 0, nil /* signingRoot */),
+		},
+		{
+			name:   "standard encode/decode",
+			blkHdr: createProposalWrapper(15, 6, []byte("1") /* signingRoot */),
+		},
+		{
+			name: "failing encode/decode",
+			blkHdr: &slashertypes.SignedBlockHeaderWrapper{
+				SignedBeaconBlockHeader: &ethpb.SignedBeaconBlockHeader{
+					Header: &ethpb.BeaconBlockHeader{},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name:    "failing empty encode/decode",
+			blkHdr:  &slashertypes.SignedBlockHeaderWrapper{},
+			wantErr: true,
+		},
+		{
+			name:    "failing nil",
+			blkHdr:  nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := encodeProposalRecord(tt.blkHdr)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("encodeProposalRecord() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			decoded, err := decodeProposalRecord(got)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("decodeProposalRecord() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if !tt.wantErr && !reflect.DeepEqual(tt.blkHdr, decoded) {
+				t.Errorf("Did not match got = %v, want %v", tt.blkHdr, decoded)
+			}
+		})
+	}
+}
+
+func Test_encodeDecodeAttestationRecord(t *testing.T) {
+	tests := []struct {
+		name       string
+		attWrapper *slashertypes.IndexedAttestationWrapper
+		wantErr    bool
+	}{
+		{
+			name:       "empty standard encode/decode",
+			attWrapper: createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */),
+		},
+		{
+			name:       "standard encode/decode",
+			attWrapper: createAttestationWrapper(15, 6, []uint64{2, 4}, []byte("1") /* signingRoot */),
+		},
+		{
+			name: "failing encode/decode",
+			attWrapper: &slashertypes.IndexedAttestationWrapper{
+				IndexedAttestation: &ethpb.IndexedAttestation{
+					Data: &ethpb.AttestationData{},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name:       "failing empty encode/decode",
+			attWrapper: &slashertypes.IndexedAttestationWrapper{},
+			wantErr:    true,
+		},
+		{
+			name:       "failing nil",
+			attWrapper: nil,
+			wantErr:    true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := encodeAttestationRecord(tt.attWrapper)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("encodeAttestationRecord() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			decoded, err := decodeAttestationRecord(got)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("decodeAttestationRecord() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if !tt.wantErr && !reflect.DeepEqual(tt.attWrapper, decoded) {
+				t.Errorf("Did not match got = %v, want %v", tt.attWrapper, decoded)
+			}
+		})
+	}
+}
+
+func createProposalWrapper(slot types.Slot, proposerIndex types.ValidatorIndex, signingRoot []byte) *slashertypes.SignedBlockHeaderWrapper {
+	signRoot := bytesutil.ToBytes32(signingRoot)
+	if signingRoot == nil {
+		signRoot = params.BeaconConfig().ZeroHash
+	}
+	return &slashertypes.SignedBlockHeaderWrapper{
+		SignedBeaconBlockHeader: &ethpb.SignedBeaconBlockHeader{
+			Header: &ethpb.BeaconBlockHeader{
+				Slot:          slot,
+				ProposerIndex: proposerIndex,
+				ParentRoot:    params.BeaconConfig().ZeroHash[:],
+				StateRoot:     params.BeaconConfig().ZeroHash[:],
+				BodyRoot:      params.BeaconConfig().ZeroHash[:],
+			},
+			Signature: params.BeaconConfig().EmptySignature[:],
+		},
+		SigningRoot: signRoot,
+	}
+}
+
+func createAttestationWrapper(source, target types.Epoch, indices []uint64, signingRoot []byte) *slashertypes.IndexedAttestationWrapper {
+	signRoot := bytesutil.ToBytes32(signingRoot)
+	if signingRoot == nil {
+		signRoot = params.BeaconConfig().ZeroHash
+	}
+	data := &ethpb.AttestationData{
+		BeaconBlockRoot: params.BeaconConfig().ZeroHash[:],
+		Source: &ethpb.Checkpoint{
+			Epoch: source,
+			Root:  params.BeaconConfig().ZeroHash[:],
+		},
+		Target: &ethpb.Checkpoint{
+			Epoch: target,
+			Root:  params.BeaconConfig().ZeroHash[:],
+		},
+	}
+	return &slashertypes.IndexedAttestationWrapper{
+		IndexedAttestation: &ethpb.IndexedAttestation{
+			AttestingIndices: indices,
+			Data:             data,
+			Signature:        params.BeaconConfig().EmptySignature[:],
+		},
+		SigningRoot: signRoot,
 	}
 }

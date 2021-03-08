@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	constant "github.com/prysmaticlabs/prysm/validator/testing"
 	"testing"
 	"time"
 
@@ -304,8 +305,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 	})
 
 	t.Run("Derived keymanager", func(t *testing.T) {
-		mnemonic := "tumble turn jewel sudden social great water general cabin jacket bounce dry flip monster advance problem social half flee inform century chicken hard reason"
-		seed := bip39.NewSeed(mnemonic, "")
+		seed := bip39.NewSeed(constant.TestMnemonic, "")
 		inactivePrivKey, err :=
 			util.PrivateKeyFromSeedAndPath(seed, fmt.Sprintf(derived.ValidatingKeyDerivationPathTemplate, 0))
 		require.NoError(t, err)
@@ -327,7 +327,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			ListenForChanges: true,
 		})
 		require.NoError(t, err)
-		err = km.RecoverAccountsFromMnemonic(ctx, mnemonic, "", 1)
+		err = km.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "", 1)
 		require.NoError(t, err)
 		client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 		v := validator{
@@ -369,7 +369,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 		go func() {
 			// We add the active key into the keymanager and simulate a key refresh.
 			time.Sleep(time.Second * 1)
-			err = km.RecoverAccountsFromMnemonic(ctx, mnemonic, "", 2)
+			err = km.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "", 2)
 			require.NoError(t, err)
 			channel <- struct{}{}
 		}()

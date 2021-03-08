@@ -203,6 +203,41 @@ func TestKV_Aggregated_SaveAggregatedAttestations(t *testing.T) {
 	}
 }
 
+func TestKV_Aggregated_SaveAggregatedAttestations_SomeGoodSomeBad(t *testing.T) {
+	tests := []struct {
+		name          string
+		atts          []*ethpb.Attestation
+		count         int
+		wantErrString string
+	}{
+		{
+			name: "the first attestation is bad",
+			atts: []*ethpb.Attestation{
+				testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1},
+					AggregationBits: bitfield.Bitlist{0b1100}}),
+				testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1},
+					AggregationBits: bitfield.Bitlist{0b1101}}),
+			},
+			count: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cache := NewAttCaches()
+			assert.Equal(t, 0, len(cache.aggregatedAtt), "Invalid start pool, atts: %d", len(cache.unAggregatedAtt))
+			err := cache.SaveAggregatedAttestations(tt.atts)
+			if tt.wantErrString != "" {
+				assert.ErrorContains(t, tt.wantErrString, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, tt.count, len(cache.aggregatedAtt), "Wrong attestation count")
+			assert.Equal(t, tt.count, cache.AggregatedAttestationCount(), "Wrong attestation count")
+		})
+	}
+}
+
 func TestKV_Aggregated_AggregatedAttestations(t *testing.T) {
 	cache := NewAttCaches()
 

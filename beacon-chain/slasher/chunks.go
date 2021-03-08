@@ -24,7 +24,7 @@ type Chunker interface {
 		ctx context.Context,
 		slasherDB db.Database,
 		validatorIdx types.ValidatorIndex,
-		attestation *slashertypes.CompactAttestation,
+		attestation *slashertypes.IndexedAttestationWrapper,
 	) (*slashertypes.Slashing, error)
 	Update(
 		args *chunkUpdateArgs,
@@ -177,10 +177,10 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 	ctx context.Context,
 	slasherDB db.Database,
 	validatorIdx types.ValidatorIndex,
-	attestation *slashertypes.CompactAttestation,
+	attestation *slashertypes.IndexedAttestationWrapper,
 ) (*slashertypes.Slashing, error) {
-	sourceEpoch := attestation.Source
-	targetEpoch := attestation.Target
+	sourceEpoch := attestation.IndexedAttestation.Data.Source.Epoch
+	targetEpoch := attestation.IndexedAttestation.Data.Target.Epoch
 	minTarget, err := chunkDataAtEpoch(m.params, m.data, validatorIdx, sourceEpoch)
 	if err != nil {
 		return &slashertypes.Slashing{Kind: slashertypes.NotSlashable}, errors.Wrapf(
@@ -195,14 +195,16 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 			)
 		}
 		if existingAttRecord != nil {
-			if sourceEpoch < existingAttRecord.Source {
+			if sourceEpoch < existingAttRecord.IndexedAttestation.Data.Source.Epoch {
+				surroundingVotesTotal.Inc()
 				return &slashertypes.Slashing{
 					Kind:            slashertypes.SurroundingVote,
 					ValidatorIndex:  validatorIdx,
-					PrevSourceEpoch: existingAttRecord.Source,
-					PrevTargetEpoch: existingAttRecord.Target,
-					SourceEpoch:     sourceEpoch,
 					TargetEpoch:     targetEpoch,
+					PrevSigningRoot: existingAttRecord.SigningRoot,
+					SigningRoot:     attestation.SigningRoot,
+					PrevAttestation: existingAttRecord.IndexedAttestation,
+					Attestation:     attestation.IndexedAttestation,
 				}, nil
 			}
 		}
@@ -225,10 +227,10 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 	ctx context.Context,
 	slasherDB db.Database,
 	validatorIdx types.ValidatorIndex,
-	attestation *slashertypes.CompactAttestation,
+	attestation *slashertypes.IndexedAttestationWrapper,
 ) (*slashertypes.Slashing, error) {
-	sourceEpoch := attestation.Source
-	targetEpoch := attestation.Target
+	sourceEpoch := attestation.IndexedAttestation.Data.Source.Epoch
+	targetEpoch := attestation.IndexedAttestation.Data.Target.Epoch
 	maxTarget, err := chunkDataAtEpoch(m.params, m.data, validatorIdx, sourceEpoch)
 	if err != nil {
 		return &slashertypes.Slashing{Kind: slashertypes.NotSlashable}, errors.Wrapf(
@@ -243,14 +245,16 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 			)
 		}
 		if existingAttRecord != nil {
-			if existingAttRecord.Source < sourceEpoch {
+			if existingAttRecord.IndexedAttestation.Data.Source.Epoch < sourceEpoch {
+				surroundedVotesTotal.Inc()
 				return &slashertypes.Slashing{
 					Kind:            slashertypes.SurroundedVote,
 					ValidatorIndex:  validatorIdx,
-					PrevSourceEpoch: existingAttRecord.Source,
-					PrevTargetEpoch: existingAttRecord.Target,
-					SourceEpoch:     sourceEpoch,
 					TargetEpoch:     targetEpoch,
+					PrevSigningRoot: existingAttRecord.SigningRoot,
+					SigningRoot:     attestation.SigningRoot,
+					PrevAttestation: existingAttRecord.IndexedAttestation,
+					Attestation:     attestation.IndexedAttestation,
 				}, nil
 			}
 		}
@@ -333,12 +337,14 @@ func (m *MinSpanChunksSlice) Update(
 		var chunkTarget types.Epoch
 		chunkTarget, err = chunkDataAtEpoch(m.params, m.data, validatorIndex, epochInChunk)
 		if err != nil {
+			err = errors.Wrapf(err, "could not get chunk data at epoch %d", epochInChunk)
 			return
 		}
 		// If the newly incoming value is < the existing value, we update
 		// the data in the min span to meet with its definition.
 		if newTargetEpoch < chunkTarget {
 			if err = setChunkDataAtEpoch(m.params, m.data, validatorIndex, epochInChunk, newTargetEpoch); err != nil {
+				err = errors.Wrapf(err, "could not set chunk data at epoch %d", epochInChunk)
 				return
 			}
 		} else {
@@ -374,12 +380,14 @@ func (m *MaxSpanChunksSlice) Update(
 		var chunkTarget types.Epoch
 		chunkTarget, err = chunkDataAtEpoch(m.params, m.data, validatorIndex, epochInChunk)
 		if err != nil {
+			err = errors.Wrapf(err, "could not get chunk data at epoch %d", epochInChunk)
 			return
 		}
 		// If the newly incoming value is > the existing value, we update
 		// the data in the max span to meet with its definition.
 		if newTargetEpoch > chunkTarget {
 			if err = setChunkDataAtEpoch(m.params, m.data, validatorIndex, epochInChunk, newTargetEpoch); err != nil {
+				err = errors.Wrapf(err, "could not set chunk data at epoch %d", epochInChunk)
 				return
 			}
 		} else {

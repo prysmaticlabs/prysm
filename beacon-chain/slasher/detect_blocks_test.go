@@ -5,8 +5,12 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -19,8 +23,9 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 		serviceCfg: &ServiceConfig{
 			Database: beaconDB,
 		},
-		params:            DefaultParams(),
-		beaconBlocksQueue: make([]*slashertypes.CompactBeaconBlock, 0),
+		params:                DefaultParams(),
+		beaconBlocksQueue:     make([]*slashertypes.SignedBlockHeaderWrapper, 0),
+		proposerSlashingsFeed: new(event.Feed),
 	}
 	currentSlotChan := make(chan types.Slot)
 	exitChan := make(chan struct{})
@@ -28,28 +33,14 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 		s.processQueuedBlocks(ctx, currentSlotChan)
 		exitChan <- struct{}{}
 	}()
-	s.beaconBlocksQueue = []*slashertypes.CompactBeaconBlock{
-		{
-			Slot:          4,
-			ProposerIndex: 1,
-			SigningRoot:   [32]byte{1},
-		},
-		{
-			Slot:          4,
-			ProposerIndex: 1,
-			SigningRoot:   [32]byte{1},
-		},
-		{
-			Slot:          4,
-			ProposerIndex: 1,
-			SigningRoot:   [32]byte{1},
-		},
-		{
-			Slot:          4,
-			ProposerIndex: 1,
-			SigningRoot:   [32]byte{2},
-		},
+	s.blockQueueLock.Lock()
+	s.beaconBlocksQueue = []*slashertypes.SignedBlockHeaderWrapper{
+		createProposalWrapper(4, 1, []byte{1}),
+		createProposalWrapper(4, 1, []byte{1}),
+		createProposalWrapper(4, 1, []byte{1}),
+		createProposalWrapper(4, 1, []byte{2}),
 	}
+	s.blockQueueLock.Unlock()
 	currentSlot := types.Slot(4)
 	currentSlotChan <- currentSlot
 	cancel()
@@ -66,7 +57,7 @@ func Test_processQueuedBlocks_NotSlashable(t *testing.T) {
 			Database: beaconDB,
 		},
 		params:            DefaultParams(),
-		beaconBlocksQueue: make([]*slashertypes.CompactBeaconBlock, 0),
+		beaconBlocksQueue: make([]*slashertypes.SignedBlockHeaderWrapper, 0),
 	}
 	currentSlotChan := make(chan types.Slot)
 	exitChan := make(chan struct{})
@@ -74,21 +65,35 @@ func Test_processQueuedBlocks_NotSlashable(t *testing.T) {
 		s.processQueuedBlocks(ctx, currentSlotChan)
 		exitChan <- struct{}{}
 	}()
-	s.beaconBlocksQueue = []*slashertypes.CompactBeaconBlock{
-		{
-			Slot:          4,
-			ProposerIndex: 1,
-			SigningRoot:   [32]byte{1},
-		},
-		{
-			Slot:          4,
-			ProposerIndex: 1,
-			SigningRoot:   [32]byte{1},
-		},
+	s.blockQueueLock.Lock()
+	s.beaconBlocksQueue = []*slashertypes.SignedBlockHeaderWrapper{
+		createProposalWrapper(4, 1, []byte{1}),
+		createProposalWrapper(4, 1, []byte{1}),
 	}
+	s.blockQueueLock.Unlock()
 	currentSlot := types.Slot(4)
 	currentSlotChan <- currentSlot
 	cancel()
 	<-exitChan
 	require.LogsDoNotContain(t, hook, "Proposer double proposal slashing")
+}
+
+func createProposalWrapper(slot types.Slot, proposerIndex types.ValidatorIndex, signingRoot []byte) *slashertypes.SignedBlockHeaderWrapper {
+	signRoot := bytesutil.ToBytes32(signingRoot)
+	if signingRoot == nil {
+		signRoot = params.BeaconConfig().ZeroHash
+	}
+	return &slashertypes.SignedBlockHeaderWrapper{
+		SignedBeaconBlockHeader: &ethpb.SignedBeaconBlockHeader{
+			Header: &ethpb.BeaconBlockHeader{
+				Slot:          slot,
+				ProposerIndex: proposerIndex,
+				ParentRoot:    params.BeaconConfig().ZeroHash[:],
+				StateRoot:     params.BeaconConfig().ZeroHash[:],
+				BodyRoot:      params.BeaconConfig().ZeroHash[:],
+			},
+			Signature: params.BeaconConfig().EmptySignature[:],
+		},
+		SigningRoot: signRoot,
+	}
 }

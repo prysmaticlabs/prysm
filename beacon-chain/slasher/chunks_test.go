@@ -90,7 +90,7 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 	validatorIdx := types.ValidatorIndex(1)
 	source := types.Epoch(1)
 	target := types.Epoch(2)
-	att := createAttestation(source, target)
+	att := createAttestationWrapper(source, target, nil /* indices */, nil /* signingRoot */)
 
 	// A faulty chunk should lead to error.
 	chunk := &MinSpanChunksSlice{
@@ -125,7 +125,7 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 	chunk = EmptyMinSpanChunksSlice(params)
 	source = types.Epoch(1)
 	target = types.Epoch(2)
-	att = createAttestation(source, target)
+	att = createAttestationWrapper(source, target, nil /* indices */, nil /* signingRoot */)
 	chunkIdx := uint64(0)
 	startEpoch := target
 	currentEpoch := target
@@ -140,7 +140,7 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 	// because we DO NOT have an existing attestation record in our database at the min target epoch.
 	source = types.Epoch(0)
 	target = types.Epoch(3)
-	surroundingVote := createAttestation(source, target)
+	surroundingVote := createAttestationWrapper(source, target, nil /* indices */, nil /* signingRoot */)
 
 	slashing, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx, surroundingVote)
 	require.NoError(t, err)
@@ -148,15 +148,11 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 
 	// Next up, we save the old attestation record, then check if the
 	// surrounding vote is indeed slashable.
-	attRecord := &slashertypes.CompactAttestation{
-		Source:      att.Source,
-		Target:      att.Target,
-		SigningRoot: [32]byte{1},
-	}
-	attRecord.AttestingIndices = []uint64{uint64(validatorIdx)}
+	attData := att.IndexedAttestation.Data
+	attRecord := createAttestationWrapper(attData.Source.Epoch, attData.Target.Epoch, []uint64{uint64(validatorIdx)}, []byte{1})
 	err = beaconDB.SaveAttestationRecordsForValidators(
 		ctx,
-		[]*slashertypes.CompactAttestation{attRecord},
+		[]*slashertypes.IndexedAttestationWrapper{attRecord},
 	)
 	require.NoError(t, err)
 
@@ -176,7 +172,7 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 	validatorIdx := types.ValidatorIndex(1)
 	source := types.Epoch(1)
 	target := types.Epoch(2)
-	att := createAttestation(source, target)
+	att := createAttestationWrapper(source, target, nil /* indices */, nil /* signingRoot */)
 
 	// A faulty chunk should lead to error.
 	chunk := &MaxSpanChunksSlice{
@@ -211,7 +207,7 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 	chunk = EmptyMaxSpanChunksSlice(params)
 	source = types.Epoch(0)
 	target = types.Epoch(3)
-	att = createAttestation(source, target)
+	att = createAttestationWrapper(source, target, nil /* indices */, nil /* signingRoot */)
 	chunkIdx := uint64(0)
 	startEpoch := source
 	currentEpoch := target
@@ -226,7 +222,7 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 	// because we DO NOT have an existing attestation record in our database at the max target epoch.
 	source = types.Epoch(1)
 	target = types.Epoch(2)
-	surroundedVote := createAttestation(source, target)
+	surroundedVote := createAttestationWrapper(source, target, nil /* indices */, nil /* signingRoot */)
 
 	slashing, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx, surroundedVote)
 	require.NoError(t, err)
@@ -234,15 +230,11 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 
 	// Next up, we save the old attestation record, then check if the
 	// surroundedVote vote is indeed slashable.
-	attRecord := &slashertypes.CompactAttestation{
-		Source:      att.Source,
-		Target:      att.Target,
-		SigningRoot: [32]byte{1},
-	}
-	attRecord.AttestingIndices = []uint64{uint64(validatorIdx)}
+	attData := att.IndexedAttestation.Data
+	attRecord := createAttestationWrapper(attData.Source.Epoch, attData.Target.Epoch, []uint64{uint64(validatorIdx)}, []byte{1})
 	err = beaconDB.SaveAttestationRecordsForValidators(
 		ctx,
-		[]*slashertypes.CompactAttestation{attRecord},
+		[]*slashertypes.IndexedAttestationWrapper{attRecord},
 	)
 	require.NoError(t, err)
 
@@ -679,11 +671,4 @@ func Test_chunkDataAtEpoch_SetRetrieve(t *testing.T) {
 	received, err := chunkDataAtEpoch(params, chunk, validatorIdx, epochInChunk)
 	require.NoError(t, err)
 	assert.Equal(t, targetEpoch, received)
-}
-
-func createAttestation(source, target types.Epoch) *slashertypes.CompactAttestation {
-	return &slashertypes.CompactAttestation{
-		Source: source,
-		Target: target,
-	}
 }

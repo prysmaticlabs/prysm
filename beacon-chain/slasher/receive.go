@@ -22,19 +22,11 @@ func (s *Service) receiveAttestations(ctx context.Context) {
 			if !validateAttestationIntegrity(att) {
 				continue
 			}
-			signingRoot, err := att.Data.HashTreeRoot()
-			if err != nil {
-				log.WithError(err).Debug("Subscriber closed with error")
-				return
-			}
-			compactAtt := &slashertypes.CompactAttestation{
-				AttestingIndices: att.AttestingIndices,
-				Source:           att.Data.Source.Epoch,
-				Target:           att.Data.Target.Epoch,
-				SigningRoot:      signingRoot,
+			attWrapper := &slashertypes.IndexedAttestationWrapper{
+				IndexedAttestation: att,
 			}
 			s.attestationQueueLock.Lock()
-			s.attestationQueue = append(s.attestationQueue, compactAtt)
+			s.attestationQueue = append(s.attestationQueue, attWrapper)
 			s.attestationQueueLock.Unlock()
 		case err := <-sub.Err():
 			log.WithError(err).Debug("Subscriber closed with error")
@@ -54,18 +46,11 @@ func (s *Service) receiveBlocks(ctx context.Context) {
 		select {
 		case blockHeader := <-s.beaconBlocksChan:
 			// TODO(#8331): Defer blocks from the future for later processing.
-			signingRoot, err := blockHeader.HashTreeRoot()
-			if err != nil {
-				log.WithError(err).Debug("Subscriber closed with error")
-				return
-			}
-			compactBlock := &slashertypes.CompactBeaconBlock{
-				ProposerIndex: types.ValidatorIndex(blockHeader.ProposerIndex),
-				Slot:          blockHeader.Slot,
-				SigningRoot:   signingRoot,
+			wrappedProposal := &slashertypes.SignedBlockHeaderWrapper{
+				SignedBeaconBlockHeader: blockHeader,
 			}
 			s.blockQueueLock.Lock()
-			s.beaconBlocksQueue = append(s.beaconBlocksQueue, compactBlock)
+			s.beaconBlocksQueue = append(s.beaconBlocksQueue, wrappedProposal)
 			s.blockQueueLock.Unlock()
 		case err := <-sub.Err():
 			log.WithError(err).Debug("Subscriber closed with error")
@@ -86,13 +71,17 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 		case currentSlot := <-slotTicker:
 			s.attestationQueueLock.Lock()
 			attestations := s.attestationQueue
-			s.attestationQueue = make([]*slashertypes.CompactAttestation, 0)
+			s.attestationQueue = make([]*slashertypes.IndexedAttestationWrapper, 0)
 			s.attestationQueueLock.Unlock()
 			currentEpoch := helpers.SlotToEpoch(currentSlot)
+
+			receivedAttestationsTotal.Add(float64(len(attestations)))
+
 			log.WithFields(logrus.Fields{
 				"currentEpoch": currentEpoch,
 				"numAtts":      len(attestations),
 			}).Info("Epoch reached, processing queued atts for slashing detection")
+
 			// Save the attestation records to our database.
 			if err := s.serviceCfg.Database.SaveAttestationRecordsForValidators(
 				ctx, attestations,
@@ -112,6 +101,8 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 					continue
 				}
 			}
+
+			processedAttestationsTotal.Add(float64(len(attestations)))
 		case <-ctx.Done():
 			return
 		}
@@ -126,17 +117,22 @@ func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan typ
 		case currentSlot := <-slotTicker:
 			s.blockQueueLock.Lock()
 			blocks := s.beaconBlocksQueue
-			s.beaconBlocksQueue = make([]*slashertypes.CompactBeaconBlock, 0)
+			s.beaconBlocksQueue = make([]*slashertypes.SignedBlockHeaderWrapper, 0)
 			s.blockQueueLock.Unlock()
 			currentEpoch := helpers.SlotToEpoch(currentSlot)
+
+			receivedBlocksTotal.Add(float64(len(blocks)))
+
 			log.WithFields(logrus.Fields{
 				"currentEpoch": currentEpoch,
 				"numBlocks":    len(blocks),
 			}).Info("Epoch reached, processing queued blocks for slashing detection")
+
 			if err := s.detectSlashableBlocks(ctx, blocks); err != nil {
 				log.WithError(err).Error("Could not detect slashable blocks")
 				continue
 			}
+			processedBlocksTotal.Add(float64(len(blocks)))
 		case <-ctx.Done():
 			return
 		}
