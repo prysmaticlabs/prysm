@@ -9,12 +9,14 @@ import (
 
 // MockBroadcaster implements p2p.Broadcaster for testing.
 type MockBroadcaster struct {
-	BroadcastCalled bool
+	BroadcastCalled   bool
+	BroadcastMessages []proto.Message
 }
 
 // Broadcast records a broadcast occurred.
-func (m *MockBroadcaster) Broadcast(context.Context, proto.Message) error {
+func (m *MockBroadcaster) Broadcast(_ context.Context, msg proto.Message) error {
 	m.BroadcastCalled = true
+	m.BroadcastMessages = append(m.BroadcastMessages, msg)
 	return nil
 }
 
