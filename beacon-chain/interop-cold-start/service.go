@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/interop"
@@ -141,7 +142,7 @@ func (s *Service) ChainStartEth1Data() *ethpb.Eth1Data {
 }
 
 // PreGenesisState returns an empty beacon state.
-func (s *Service) PreGenesisState() *stateTrie.BeaconState {
+func (s *Service) PreGenesisState() iface.BeaconState {
 	return &stateTrie.BeaconState{}
 }
 
@@ -170,7 +171,7 @@ func (s *Service) NonFinalizedDeposits(_ context.Context, _ *big.Int) []*ethpb.D
 	return []*ethpb.Deposit{}
 }
 
-func (s *Service) saveGenesisState(ctx context.Context, genesisState *stateTrie.BeaconState) error {
+func (s *Service) saveGenesisState(ctx context.Context, genesisState iface.BeaconState) error {
 	s.chainStartDeposits = make([]*ethpb.Deposit, genesisState.NumValidators())
 	stateRoot, err := genesisState.HashTreeRoot(ctx)
 	if err != nil {

@@ -99,6 +99,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 						log.WithError(err).Debug("Could not retrieve attestation prestate")
 						continue
 					}
+
 					valid := s.validateUnaggregatedAttWithState(ctx, att.Aggregate, preState)
 					if valid == pubsub.ValidationAccept {
 						if err := s.attPool.SaveUnaggregatedAttestation(att.Aggregate); err != nil {

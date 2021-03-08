@@ -11,6 +11,7 @@ go_library(
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/state:go_default_library",
+        "//beacon-chain/state/interface:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/benchutil:go_default_library",
         "//shared/fileutil:go_default_library",

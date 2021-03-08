@@ -146,10 +146,11 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	p1 := p2ptest.NewTestP2P(t)
 
+	s, _ := testutil.DeterministicGenesisState(t, 256)
 	r := &Service{
 		p2p:                  p1,
 		db:                   db,
-		chain:                &mock.ChainService{Genesis: timeutils.Now(), FinalizedCheckPoint: &ethpb.Checkpoint{Root: make([]byte, 32)}},
+		chain:                &mock.ChainService{State: s, Genesis: timeutils.Now(), FinalizedCheckPoint: &ethpb.Checkpoint{Root: make([]byte, 32)}},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		attPool:              attestations.NewPool(),
 	}
@@ -168,8 +169,6 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 	b := testutil.NewBeaconBlock()
 	r32, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	s, err := testutil.NewBeaconState()
-	require.NoError(t, err)
 	require.NoError(t, r.db.SaveBlock(context.Background(), b))
 	require.NoError(t, r.db.SaveState(context.Background(), s, r32))
 
@@ -183,7 +182,7 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 
 	validators := uint64(256)
 	testutil.ResetCache()
-	s, privKeys := testutil.DeterministicGenesisState(t, validators)
+	_, privKeys := testutil.DeterministicGenesisState(t, validators)
 	aggBits := bitfield.NewBitlist(8)
 	aggBits.SetBitAt(1, true)
 	att := &ethpb.Attestation{

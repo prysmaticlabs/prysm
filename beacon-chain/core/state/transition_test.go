@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -298,7 +299,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	assert.ErrorContains(t, wanted, err)
 }
 
-func createFullBlockWithOperations(t *testing.T) (*beaconstate.BeaconState,
+func createFullBlockWithOperations(t *testing.T) (iface.BeaconState,
 	*ethpb.SignedBeaconBlock, []*ethpb.Attestation, []*ethpb.ProposerSlashing, []*ethpb.SignedVoluntaryExit) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
 	genesisBlock := blocks.NewGenesisBlock([]byte{})

@@ -90,25 +90,26 @@ func TestReadOnlyValidator_ActivationEligibilityEpochNoPanic(t *testing.T) {
 func TestBeaconState_MatchCurrentJustifiedCheckpt(t *testing.T) {
 	c1 := &eth.Checkpoint{Epoch: 1}
 	c2 := &eth.Checkpoint{Epoch: 2}
-	state, err := InitializeFromProto(&pb.BeaconState{CurrentJustifiedCheckpoint: c1})
+	beaconState, err := InitializeFromProto(&pb.BeaconState{CurrentJustifiedCheckpoint: c1})
 	require.NoError(t, err)
-	require.Equal(t, true, state.MatchCurrentJustifiedCheckpoint(c1))
-	require.Equal(t, false, state.MatchCurrentJustifiedCheckpoint(c2))
-	require.Equal(t, false, state.MatchPreviousJustifiedCheckpoint(c1))
-	require.Equal(t, false, state.MatchPreviousJustifiedCheckpoint(c2))
-	state.state = nil
-	require.Equal(t, false, state.MatchCurrentJustifiedCheckpoint(c1))
+	require.Equal(t, true, beaconState.MatchCurrentJustifiedCheckpoint(c1))
+	require.Equal(t, false, beaconState.MatchCurrentJustifiedCheckpoint(c2))
+	require.Equal(t, false, beaconState.MatchPreviousJustifiedCheckpoint(c1))
+	require.Equal(t, false, beaconState.MatchPreviousJustifiedCheckpoint(c2))
+	beaconState.state = nil
+	require.Equal(t, false, beaconState.MatchCurrentJustifiedCheckpoint(c1))
 }
 
 func TestBeaconState_MatchPreviousJustifiedCheckpt(t *testing.T) {
 	c1 := &eth.Checkpoint{Epoch: 1}
 	c2 := &eth.Checkpoint{Epoch: 2}
-	state, err := InitializeFromProto(&pb.BeaconState{PreviousJustifiedCheckpoint: c1})
+	beaconState, err := InitializeFromProto(&pb.BeaconState{PreviousJustifiedCheckpoint: c1})
 	require.NoError(t, err)
-	require.Equal(t, false, state.MatchCurrentJustifiedCheckpoint(c1))
-	require.Equal(t, false, state.MatchCurrentJustifiedCheckpoint(c2))
-	require.Equal(t, true, state.MatchPreviousJustifiedCheckpoint(c1))
-	require.Equal(t, false, state.MatchPreviousJustifiedCheckpoint(c2))
-	state.state = nil
-	require.Equal(t, false, state.MatchPreviousJustifiedCheckpoint(c1))
+	require.NoError(t, err)
+	require.Equal(t, false, beaconState.MatchCurrentJustifiedCheckpoint(c1))
+	require.Equal(t, false, beaconState.MatchCurrentJustifiedCheckpoint(c2))
+	require.Equal(t, true, beaconState.MatchPreviousJustifiedCheckpoint(c1))
+	require.Equal(t, false, beaconState.MatchPreviousJustifiedCheckpoint(c2))
+	beaconState.state = nil
+	require.Equal(t, false, beaconState.MatchPreviousJustifiedCheckpoint(c1))
 }

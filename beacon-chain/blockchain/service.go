@@ -29,6 +29,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -299,8 +300,8 @@ func (s *Service) processChainStartTime(ctx context.Context, genesisTime time.Ti
 func (s *Service) initializeBeaconChain(
 	ctx context.Context,
 	genesisTime time.Time,
-	preGenesisState *stateTrie.BeaconState,
-	eth1data *ethpb.Eth1Data) (*stateTrie.BeaconState, error) {
+	preGenesisState iface.BeaconState,
+	eth1data *ethpb.Eth1Data) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.Service.initializeBeaconChain")
 	defer span.End()
 	s.genesisTime = genesisTime
@@ -360,7 +361,7 @@ func (s *Service) Status() error {
 }
 
 // This gets called when beacon chain is first initialized to save genesis data (state, block, and more) in db.
-func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.BeaconState) error {
+func (s *Service) saveGenesisData(ctx context.Context, genesisState iface.BeaconState) error {
 	stateRoot, err := genesisState.HashTreeRoot(ctx)
 	if err != nil {
 		return err
@@ -446,7 +447,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		return errors.New("no finalized epoch in the database")
 	}
 	finalizedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root))
-	var finalizedState *stateTrie.BeaconState
+	var finalizedState iface.BeaconState
 
 	finalizedState, err = s.stateGen.Resume(ctx)
 	if err != nil {
