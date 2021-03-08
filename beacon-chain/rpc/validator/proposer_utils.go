@@ -75,8 +75,8 @@ func (a proposerAtts) sortByProfitabilityUsingMaxCover() proposerAtts {
 		if err == nil {
 			// Pick selected attestations first, leftover attestations will be appended at the end.
 			// Both lists will be sorted by number of bits set.
-			selectedAtts := make(proposerAtts, selectedKeys.Count(), selectedKeys.Count())
-			leftoverAtts := make(proposerAtts, selectedKeys.Not().Count(), selectedKeys.Not().Count())
+			selectedAtts := make(proposerAtts, selectedKeys.Count())
+			leftoverAtts := make(proposerAtts, selectedKeys.Not().Count())
 			for i, key := range selectedKeys.BitIndices() {
 				selectedAtts[i] = atts[key]
 			}
