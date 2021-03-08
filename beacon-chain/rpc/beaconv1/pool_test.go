@@ -678,7 +678,7 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 		},
 		Signature: make([]byte, 96),
 	}
-	attInvalidSource := &ethpb.Attestation{
+	attInvalidTarget := &ethpb.Attestation{
 		AggregationBits: b,
 		Data: &ethpb.AttestationData{
 			Slot:            0,
@@ -686,10 +686,10 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 			BeaconBlockRoot: bytesutil.PadTo([]byte("beaconblockroot2"), 32),
 			Source: &ethpb.Checkpoint{
 				Epoch: 0,
-				Root:  bytesutil.PadTo([]byte("invalid"), 32),
+				Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
 			},
 			Target: &ethpb.Checkpoint{
-				Epoch: 0,
+				Epoch: 99,
 				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
 			},
 		},
@@ -711,7 +711,7 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 	}
 
 	// Don't sign attInvalidSignature.
-	for _, att := range []*ethpb.Attestation{attValid, attInvalidSource} {
+	for _, att := range []*ethpb.Attestation{attValid, attInvalidTarget} {
 		sb, err := helpers.ComputeDomainAndSign(
 			state,
 			helpers.SlotToEpoch(att.Data.Slot),
@@ -733,7 +733,7 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 	}
 
 	_, err = s.SubmitAttestations(ctx, &ethpb.SubmitAttestationsRequest{
-		Data: []*ethpb.Attestation{attValid, attInvalidSource, attInvalidSignature},
+		Data: []*ethpb.Attestation{attValid, attInvalidTarget, attInvalidSignature},
 	})
 	require.NoError(t, err)
 	savedAtts := s.AttestationsPool.AggregatedAttestations()
