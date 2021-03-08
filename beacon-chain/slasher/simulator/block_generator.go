@@ -12,7 +12,7 @@ func generateBlockHeadersForSlot(simParams *Parameters, slot types.Slot) []*ethp
 	proposer := rand.NewGenerator().Uint64() % simParams.NumValidators
 	blocks[0] = &ethpb.BeaconBlockHeader{
 		Slot:          slot,
-		ProposerIndex: proposer,
+		ProposerIndex: types.ValidatorIndex(proposer),
 		ParentRoot:    bytesutil.PadTo([]byte{}, 32),
 		StateRoot:     bytesutil.PadTo([]byte{}, 32),
 		BodyRoot:      bytesutil.PadTo([]byte("good block"), 32),
@@ -21,7 +21,7 @@ func generateBlockHeadersForSlot(simParams *Parameters, slot types.Slot) []*ethp
 		log.WithField("proposerIndex", proposer).Infof("Slashable block made")
 		blocks = append(blocks, &ethpb.BeaconBlockHeader{
 			Slot:          slot,
-			ProposerIndex: proposer,
+			ProposerIndex: types.ValidatorIndex(proposer),
 			ParentRoot:    bytesutil.PadTo([]byte{}, 32),
 			StateRoot:     bytesutil.PadTo([]byte{}, 32),
 			BodyRoot:      bytesutil.PadTo([]byte("bad block"), 32),
