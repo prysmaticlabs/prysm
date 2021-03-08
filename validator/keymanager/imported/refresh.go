@@ -2,12 +2,9 @@ package imported
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"path/filepath"
-	"strings"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/pkg/errors"
@@ -117,20 +114,6 @@ func (km *Keymanager) reloadAccountsFromKeystore(keystore *AccountsKeystoreRepre
 		pubKeyBytes := privKey.PublicKey().Marshal()
 		pubKeys[i] = bytesutil.ToBytes48(pubKeyBytes)
 	}
-	lock.Lock()
-	for _, pubKey := range keystore.DisabledPublicKeys {
-		pubKeyBytes, err := hex.DecodeString(strings.TrimPrefix(pubKey, "0x"))
-		if err != nil {
-			lock.Unlock()
-			return err
-		}
-		if len(pubKeyBytes) != 48 {
-			lock.Unlock()
-			return fmt.Errorf("public key %s has wrong length", pubKey)
-		}
-		km.disabledPublicKeys[bytesutil.ToBytes48(pubKeyBytes)] = true
-	}
-	lock.Unlock()
 	km.accountsStore = newAccountsStore
 	if err := km.initializeKeysCachesFromKeystore(); err != nil {
 		return err

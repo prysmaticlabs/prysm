@@ -105,11 +105,6 @@ func listImportedKeymanagerAccounts(
 	)
 
 	pubKeys, err := keymanager.FetchAllValidatingPublicKeys(ctx)
-	disabledPublicKeys := keymanager.DisabledPublicKeys()
-	existingDisabledPk := make(map[[48]byte]bool, len(disabledPublicKeys))
-	for _, dpk := range disabledPublicKeys {
-		existingDisabledPk[bytesutil.ToBytes48(dpk)] = true
-	}
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating public keys")
 	}
@@ -122,11 +117,7 @@ func listImportedKeymanagerAccounts(
 	}
 	for i := 0; i < len(accountNames); i++ {
 		fmt.Println("")
-		if existingDisabledPk[pubKeys[i]] {
-			fmt.Printf("%s | %s (%s)\n", au.BrightBlue(fmt.Sprintf("Account %d", i)).Bold(), au.BrightRed(accountNames[i]).Bold(), au.BrightRed("disabled").Bold())
-		} else {
-			fmt.Printf("%s | %s\n", au.BrightBlue(fmt.Sprintf("Account %d", i)).Bold(), au.BrightGreen(accountNames[i]).Bold())
-		}
+		fmt.Printf("%s | %s\n", au.BrightBlue(fmt.Sprintf("Account %d", i)).Bold(), au.BrightGreen(accountNames[i]).Bold())
 		fmt.Printf("%s %#x\n", au.BrightMagenta("[validating public key]").Bold(), pubKeys[i])
 		if showPrivateKeys {
 			if len(privateKeys) > i {
