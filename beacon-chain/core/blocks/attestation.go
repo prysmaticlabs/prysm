@@ -176,9 +176,9 @@ func VerifyAttestationNoVerifySignature(
 // method is used to validate attestations whose signatures have already been verified.
 func ProcessAttestationNoVerifySignature(
 	ctx context.Context,
-	beaconState *stateTrie.BeaconState,
+	beaconState iface.BeaconState,
 	att *ethpb.Attestation,
-) (*stateTrie.BeaconState, error) {
+) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.ProcessAttestationNoVerifySignature")
 	defer span.End()
 
