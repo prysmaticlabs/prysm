@@ -92,7 +92,7 @@ func TestImportedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	require.NoError(t, dr.initializeKeysCachesFromKeystore())
 	publicKeys, err := dr.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, numAccounts-1, len(publicKeys))
+	assert.Equal(t, numAccounts, len(publicKeys))
 	// FetchValidatingPublicKeys is also used in generating the output of account list
 	// therefore the results must be in the same order as the order in which the accounts were derived
 	for i, key := range wantedPubKeys {
