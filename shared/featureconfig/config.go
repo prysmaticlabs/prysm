@@ -48,6 +48,7 @@ type Flags struct {
 	WriteWalletPasswordOnWebOnboarding bool // WriteWalletPasswordOnWebOnboarding writes the password to disk after Prysm web signup.
 	DisableAttestingHistoryDBCache     bool // DisableAttestingHistoryDBCache for the validator client increases disk reads/writes.
 	UpdateHeadTimely                   bool // UpdateHeadTimely updates head right after state transition.
+	ProposerAttsSelectionUsingMaxCover bool // ProposerAttsSelectionUsingMaxCover enables max-cover algorithm when selecting attestations for proposing.
 
 	// Logging related toggles.
 	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
@@ -69,8 +70,6 @@ type Flags struct {
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
 	KeystoreImportDebounceInterval time.Duration
-
-	ProposerAttsSelectionUsingMaxCover bool // ProposerAttsSelectionUsingMaxCover enables max-cover algorithm when selecting attestations for proposing.
 }
 
 var featureConfig *Flags
