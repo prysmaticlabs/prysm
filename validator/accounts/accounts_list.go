@@ -11,7 +11,6 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -104,7 +103,7 @@ func listImportedKeymanagerAccounts(
 			"by running `validator accounts list --show-deposit-data`"),
 	)
 
-	pubKeys, err := keymanager.FetchAllValidatingPublicKeys(ctx)
+	pubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating public keys")
 	}
@@ -146,7 +145,7 @@ func listDerivedKeymanagerAccounts(
 	au := aurora.NewAurora(true)
 	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("derived, (HD) hierarchical-deterministic").Bold())
 	fmt.Printf("(derivation format) %s\n", au.BrightGreen(derived.DerivationPathFormat).Bold())
-	validatingPubKeys, err := keymanager.FetchAllValidatingPublicKeys(ctx)
+	validatingPubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating public keys")
 	}
@@ -201,7 +200,7 @@ func listRemoteKeymanagerAccounts(
 	fmt.Println(" ")
 	fmt.Printf("%s\n", au.BrightGreen("Configuration options").Bold())
 	fmt.Println(opts)
-	validatingPubKeys, err := keymanager.FetchAllValidatingPublicKeys(ctx)
+	validatingPubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating public keys")
 	}

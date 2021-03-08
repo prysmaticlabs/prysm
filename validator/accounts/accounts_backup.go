@@ -56,7 +56,7 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, ErrCouldNotInitializeKeymanager)
 	}
-	pubKeys, err := km.FetchAllValidatingPublicKeys(cliCtx.Context)
+	pubKeys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating public keys")
 	}
