@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -13,7 +14,7 @@ func TestHotStateCache_RoundTrip(t *testing.T) {
 	c := newHotStateCache()
 	root := [32]byte{'A'}
 	state := c.get(root)
-	assert.Equal(t, (*stateTrie.BeaconState)(nil), state)
+	assert.Equal(t, (iface.BeaconState)(nil), state)
 	assert.Equal(t, false, c.has(root), "Empty cache has an object")
 
 	state, err := stateTrie.InitializeFromProto(&pb.BeaconState{

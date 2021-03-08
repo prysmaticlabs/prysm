@@ -7,13 +7,13 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 )
 
 type nextSlotCache struct {
 	sync.RWMutex
 	root  []byte
-	state *state.BeaconState
+	state iface.BeaconState
 }
 
 var (
@@ -32,7 +32,7 @@ var (
 // NextSlotState returns the saved state if the input root matches the root in `nextSlotCache`. Returns nil otherwise.
 // This is useful to check before processing slots. With a cache hit, it will return last processed state with slot plus
 // one advancement.
-func NextSlotState(ctx context.Context, root []byte) (*state.BeaconState, error) {
+func NextSlotState(ctx context.Context, root []byte) (iface.BeaconState, error) {
 	nsc.RLock()
 	defer nsc.RUnlock()
 	if !bytes.Equal(root, nsc.root) {
@@ -47,7 +47,7 @@ func NextSlotState(ctx context.Context, root []byte) (*state.BeaconState, error)
 // UpdateNextSlotCache updates the `nextSlotCache`. It saves the input state after advancing the state slot by 1
 // by calling `ProcessSlots`, it also saves the input root for later look up.
 // This is useful to call after successfully processing a block.
-func UpdateNextSlotCache(ctx context.Context, root []byte, state *state.BeaconState) error {
+func UpdateNextSlotCache(ctx context.Context, root []byte, state iface.BeaconState) error {
 	// Advancing one slot by using a copied state.
 	copied := state.Copy()
 	copied, err := ProcessSlots(ctx, copied, copied.Slot()+1)

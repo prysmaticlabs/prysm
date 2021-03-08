@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -36,7 +36,7 @@ func VerifyNilBeaconBlock(b *ethpb.SignedBeaconBlock) error {
 //    """
 //    assert slot < state.slot <= slot + SLOTS_PER_HISTORICAL_ROOT
 //    return state.block_roots[slot % SLOTS_PER_HISTORICAL_ROOT]
-func BlockRootAtSlot(state *stateTrie.BeaconState, slot types.Slot) ([]byte, error) {
+func BlockRootAtSlot(state iface.ReadOnlyBeaconState, slot types.Slot) ([]byte, error) {
 	if math.MaxUint64-slot < params.BeaconConfig().SlotsPerHistoricalRoot {
 		return []byte{}, errors.New("slot overflows uint64")
 	}
@@ -48,7 +48,7 @@ func BlockRootAtSlot(state *stateTrie.BeaconState, slot types.Slot) ([]byte, err
 
 // StateRootAtSlot returns the cached state root at that particular slot. If no state
 // root has been cached it will return a zero-hash.
-func StateRootAtSlot(state *stateTrie.BeaconState, slot types.Slot) ([]byte, error) {
+func StateRootAtSlot(state iface.ReadOnlyBeaconState, slot types.Slot) ([]byte, error) {
 	if slot >= state.Slot() || state.Slot() > slot+params.BeaconConfig().SlotsPerHistoricalRoot {
 		return []byte{}, errors.Errorf("slot %d out of bounds", slot)
 	}
@@ -63,7 +63,7 @@ func StateRootAtSlot(state *stateTrie.BeaconState, slot types.Slot) ([]byte, err
 //    Return the block root at the start of a recent ``epoch``.
 //    """
 //    return get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch))
-func BlockRoot(state *stateTrie.BeaconState, epoch types.Epoch) ([]byte, error) {
+func BlockRoot(state iface.ReadOnlyBeaconState, epoch types.Epoch) ([]byte, error) {
 	s, err := StartSlot(epoch)
 	if err != nil {
 		return nil, err

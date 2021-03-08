@@ -5,13 +5,13 @@ import (
 	"os"
 	"path"
 
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 )
 
 // WriteStateToDisk as a state ssz. Writes to temp directory. Debug!
-func WriteStateToDisk(state *stateTrie.BeaconState) {
+func WriteStateToDisk(state iface.ReadOnlyBeaconState) {
 	if !featureconfig.Get().WriteSSZStateTransitions {
 		return
 	}

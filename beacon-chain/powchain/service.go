@@ -30,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
@@ -73,7 +74,7 @@ var errNotSynced = errors.New("eth1 node is still syncing")
 type ChainStartFetcher interface {
 	ChainStartDeposits() []*ethpb.Deposit
 	ChainStartEth1Data() *ethpb.Eth1Data
-	PreGenesisState() *stateTrie.BeaconState
+	PreGenesisState() iface.BeaconState
 	ClearPreGenesisData()
 }
 
@@ -150,7 +151,7 @@ type Service struct {
 	depositCache            *depositcache.DepositCache
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	runError                error
-	preGenesisState         *stateTrie.BeaconState
+	preGenesisState         iface.BeaconState
 	stateGen                *stategen.State
 	eth1HeaderReqLimit      uint64
 }
@@ -301,7 +302,7 @@ func (s *Service) ChainStartEth1Data() *ethpb.Eth1Data {
 
 // PreGenesisState returns a state that contains
 // pre-chainstart deposits.
-func (s *Service) PreGenesisState() *stateTrie.BeaconState {
+func (s *Service) PreGenesisState() iface.BeaconState {
 	return s.preGenesisState
 }
 

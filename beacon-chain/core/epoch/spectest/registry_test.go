@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
-	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -23,7 +23,7 @@ func runRegistryUpdatesTests(t *testing.T, config string) {
 	}
 }
 
-func processRegistryUpdatesWrapper(t *testing.T, state *beaconstate.BeaconState) (*beaconstate.BeaconState, error) {
+func processRegistryUpdatesWrapper(t *testing.T, state iface.BeaconState) (iface.BeaconState, error) {
 	state, err := epoch.ProcessRegistryUpdates(state)
 	require.NoError(t, err, "Could not process registry updates")
 	return state, nil

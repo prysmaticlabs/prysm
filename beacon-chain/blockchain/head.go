@@ -25,7 +25,7 @@ type head struct {
 	slot  types.Slot               // current head slot.
 	root  [32]byte                 // current head root.
 	block *ethpb.SignedBeaconBlock // current head block.
-	state *stateTrie.BeaconState   // current head state.
+	state iface.BeaconState        // current head state.
 }
 
 // Determined the head from the fork choice service and saves its new data
@@ -149,7 +149,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 // This gets called to update canonical root mapping. It does not save head block
 // root in DB. With the inception of initial-sync-cache-state flag, it uses finalized
 // check point as anchors to resume sync therefore head is no longer needed to be saved on per slot basis.
-func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, r [32]byte, hs *stateTrie.BeaconState) error {
+func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, r [32]byte, hs iface.BeaconState) error {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return err
 	}
@@ -166,7 +166,7 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 }
 
 // This sets head view object which is used to track the head slot, root, block and state.
-func (s *Service) setHead(root [32]byte, block *ethpb.SignedBeaconBlock, state *stateTrie.BeaconState) {
+func (s *Service) setHead(root [32]byte, block *ethpb.SignedBeaconBlock, state iface.BeaconState) {
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
 
@@ -182,7 +182,7 @@ func (s *Service) setHead(root [32]byte, block *ethpb.SignedBeaconBlock, state *
 // This sets head view object which is used to track the head slot, root, block and state. The method
 // assumes that state being passed into the method will not be modified by any other alternate
 // caller which holds the state's reference.
-func (s *Service) setHeadInitialSync(root [32]byte, block *ethpb.SignedBeaconBlock, state *stateTrie.BeaconState) {
+func (s *Service) setHeadInitialSync(root [32]byte, block *ethpb.SignedBeaconBlock, state iface.BeaconState) {
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
 
@@ -222,7 +222,7 @@ func (s *Service) headBlock() *ethpb.SignedBeaconBlock {
 // This returns the head state.
 // It does a full copy on head state for immutability.
 // This is a lock free version.
-func (s *Service) headState(ctx context.Context) *stateTrie.BeaconState {
+func (s *Service) headState(ctx context.Context) iface.BeaconState {
 	ctx, span := trace.StartSpan(ctx, "blockChain.headState")
 	defer span.End()
 
@@ -249,7 +249,7 @@ func (s *Service) cacheJustifiedStateBalances(ctx context.Context, justifiedRoot
 
 	s.clearInitSyncBlocks()
 
-	var justifiedState *stateTrie.BeaconState
+	var justifiedState iface.BeaconState
 	var err error
 	if justifiedRoot == s.genesisRoot {
 		justifiedState, err = s.beaconDB.GenesisState(ctx)
