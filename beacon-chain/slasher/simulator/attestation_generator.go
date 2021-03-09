@@ -102,6 +102,7 @@ func makeSlashableFromAtt(att *ethpb.IndexedAttestation, indices []uint64) *ethp
 	return &ethpb.IndexedAttestation{
 		AttestingIndices: indices,
 		Data:             attData,
+		Signature:        params.BeaconConfig().EmptySignature[:],
 	}
 }
 
@@ -122,5 +123,6 @@ func makeDoubleVoteFromAtt(att *ethpb.IndexedAttestation, indices []uint64) *eth
 	return &ethpb.IndexedAttestation{
 		AttestingIndices: indices,
 		Data:             attData,
+		Signature:        params.BeaconConfig().EmptySignature[:],
 	}
 }

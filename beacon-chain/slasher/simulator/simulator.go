@@ -20,6 +20,7 @@ import (
 
 // Parameters for a slasher simulator.
 type Parameters struct {
+	SecondsPerSlot         uint64
 	AggregationPercent     float64
 	ProposerSlashingProbab float64
 	AttesterSlashingProbab float64
@@ -49,6 +50,7 @@ type Simulator struct {
 // DefaultParams for launching a slasher simulator.
 func DefaultParams() *Parameters {
 	return &Parameters{
+		SecondsPerSlot:         1,
 		AggregationPercent:     1.0,
 		ProposerSlashingProbab: 0.2,
 		AttesterSlashingProbab: 0.2,
@@ -100,9 +102,17 @@ func New(ctx context.Context, beaconDB db.Database) (*Simulator, error) {
 func (s *Simulator) Start() {
 	log.WithFields(logrus.Fields{
 		"numValidators":          s.params.NumValidators,
+		"numEpochs":              s.params.NumEpochs,
+		"secondsPerSlot":         s.params.SecondsPerSlot,
 		"proposerSlashingProbab": s.params.ProposerSlashingProbab,
 		"attesterSlashingProbab": s.params.AttesterSlashingProbab,
 	}).Info("Starting slasher simulator")
+
+	// Override global configuration for simulation purposes.
+	config := params.BeaconConfig().Copy()
+	config.SecondsPerSlot = s.params.SecondsPerSlot
+	params.OverrideBeaconConfig(config)
+	defer params.OverrideBeaconConfig(params.BeaconConfig())
 
 	// Start slasher in the background (Start() is non-blocking).
 	s.slasher.Start()
@@ -135,7 +145,10 @@ func (s *Simulator) simulateBlocksAndAttestations(ctx context.Context) {
 			}
 
 			blockHeaders, propSlashings := generateBlockHeadersForSlot(s.params, slot)
-			log.Infof("Producing %d blocks, %d slashable, for slot %d", len(blockHeaders), len(propSlashings), slot)
+			log.WithFields(logrus.Fields{
+				"numBlocks":    len(blockHeaders),
+				"numSlashable": len(propSlashings),
+			}).Infof("Producing blocks for slot %d", slot)
 			// TODO: Some logic here is duplicated, we can use some abstraction here.
 			for _, sl := range propSlashings {
 				slashingRoot, err := sl.HashTreeRoot()
@@ -148,7 +161,10 @@ func (s *Simulator) simulateBlocksAndAttestations(ctx context.Context) {
 				s.beaconBlocksFeed.Send(bb)
 			}
 			atts, attSlashings := generateAttestationsForSlot(s.params, slot)
-			log.Infof("Producing %d attestations, %d slashable, for slot %d", len(atts), len(attSlashings), slot)
+			log.WithFields(logrus.Fields{
+				"numAtts":      len(atts),
+				"numSlashable": len(propSlashings),
+			}).Infof("Producing attestations for slot %d", slot)
 			for _, sl := range attSlashings {
 				slashingRoot, err := sl.HashTreeRoot()
 				if err != nil {
@@ -217,9 +233,9 @@ func (s *Simulator) verifySlashingsWereDetected(ctx context.Context) {
 	for slashingRoot := range s.sentSlashings {
 		_, ok := s.detectedSlashings[slashingRoot]
 		if ok {
-			log.Info("Correctly detected simulated slashing with root %#x", slashingRoot)
+			log.Infof("Correctly detected simulated slashing with root %#x", slashingRoot)
 		} else {
-			log.Error("Did not detect simulated slashing with root %#x", slashingRoot)
+			log.Errorf("Did not detect simulated slashing with root %#x", slashingRoot)
 		}
 	}
 }
