@@ -1700,3 +1700,123 @@ func (d *DepositMessage) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	hh.Merkleize(indx)
 	return
 }
+
+// MarshalSSZ ssz marshals the SyncCommittee object
+func (s *SyncCommittee) MarshalSSZ() ([]byte, error) {
+	return ssz.MarshalSSZ(s)
+}
+
+// MarshalSSZTo ssz marshals the SyncCommittee object to a target array
+func (s *SyncCommittee) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+	dst = buf
+
+	// Field (0) 'Pubkeys'
+	if len(s.Pubkeys) != 1024 {
+		err = ssz.ErrVectorLength
+		return
+	}
+	for ii := 0; ii < 1024; ii++ {
+		if len(s.Pubkeys[ii]) != 48 {
+			err = ssz.ErrBytesLength
+			return
+		}
+		dst = append(dst, s.Pubkeys[ii]...)
+	}
+
+	// Field (1) 'PubkeyAggregates'
+	if len(s.PubkeyAggregates) != 16 {
+		err = ssz.ErrVectorLength
+		return
+	}
+	for ii := 0; ii < 16; ii++ {
+		if len(s.PubkeyAggregates[ii]) != 48 {
+			err = ssz.ErrBytesLength
+			return
+		}
+		dst = append(dst, s.PubkeyAggregates[ii]...)
+	}
+
+	return
+}
+
+// UnmarshalSSZ ssz unmarshals the SyncCommittee object
+func (s *SyncCommittee) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size != 49920 {
+		return ssz.ErrSize
+	}
+
+	// Field (0) 'Pubkeys'
+	s.Pubkeys = make([][]byte, 1024)
+	for ii := 0; ii < 1024; ii++ {
+		if cap(s.Pubkeys[ii]) == 0 {
+			s.Pubkeys[ii] = make([]byte, 0, len(buf[0:49152][ii*48:(ii+1)*48]))
+		}
+		s.Pubkeys[ii] = append(s.Pubkeys[ii], buf[0:49152][ii*48:(ii+1)*48]...)
+	}
+
+	// Field (1) 'PubkeyAggregates'
+	s.PubkeyAggregates = make([][]byte, 16)
+	for ii := 0; ii < 16; ii++ {
+		if cap(s.PubkeyAggregates[ii]) == 0 {
+			s.PubkeyAggregates[ii] = make([]byte, 0, len(buf[49152:49920][ii*48:(ii+1)*48]))
+		}
+		s.PubkeyAggregates[ii] = append(s.PubkeyAggregates[ii], buf[49152:49920][ii*48:(ii+1)*48]...)
+	}
+
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the SyncCommittee object
+func (s *SyncCommittee) SizeSSZ() (size int) {
+	size = 49920
+	return
+}
+
+// HashTreeRoot ssz hashes the SyncCommittee object
+func (s *SyncCommittee) HashTreeRoot() ([32]byte, error) {
+	return ssz.HashWithDefaultHasher(s)
+}
+
+// HashTreeRootWith ssz hashes the SyncCommittee object with a hasher
+func (s *SyncCommittee) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+	indx := hh.Index()
+
+	// Field (0) 'Pubkeys'
+	{
+		if len(s.Pubkeys) != 1024 {
+			err = ssz.ErrVectorLength
+			return
+		}
+		subIndx := hh.Index()
+		for _, i := range s.Pubkeys {
+			if len(i) != 48 {
+				err = ssz.ErrBytesLength
+				return
+			}
+			hh.Append(i)
+		}
+		hh.Merkleize(subIndx)
+	}
+
+	// Field (1) 'PubkeyAggregates'
+	{
+		if len(s.PubkeyAggregates) != 16 {
+			err = ssz.ErrVectorLength
+			return
+		}
+		subIndx := hh.Index()
+		for _, i := range s.PubkeyAggregates {
+			if len(i) != 48 {
+				err = ssz.ErrBytesLength
+				return
+			}
+			hh.Append(i)
+		}
+		hh.Merkleize(subIndx)
+	}
+
+	hh.Merkleize(indx)
+	return
+}

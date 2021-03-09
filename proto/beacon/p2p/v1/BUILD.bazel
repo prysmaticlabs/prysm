@@ -37,6 +37,7 @@ ssz_gen_marshal(
         "Status",
         "BeaconState",
         "SigningData",
+        "SyncCommittee",
     ],
 )
 
