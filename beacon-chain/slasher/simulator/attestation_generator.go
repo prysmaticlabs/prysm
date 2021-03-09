@@ -55,6 +55,7 @@ func generateAttestationsForSlot(simParams *Parameters, slot types.Slot) []*ethp
 			att := &ethpb.IndexedAttestation{
 				AttestingIndices: indices,
 				Data:             attData,
+				Signature:        params.BeaconConfig().EmptySignature[:],
 			}
 			attestations = append(attestations, att)
 			if rand.NewGenerator().Float64() < simParams.AttesterSlashingProbab {

@@ -70,8 +70,8 @@ func (s *Service) Start() {
 	defer ticker.Done()
 	go s.processQueuedAttestations(s.ctx, ticker.C())
 	go s.processQueuedBlocks(s.ctx, ticker.C())
-	go s.receiveAttestations(s.ctx)
 	go s.receiveBlocks(s.ctx)
+	s.receiveAttestations(s.ctx)
 }
 
 // Stop the slasher service.
