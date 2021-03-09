@@ -31,20 +31,23 @@ type Parameters struct {
 // Simulator defines a struct which can launch a slasher simulation
 // at scale using configuration parameters.
 type Simulator struct {
-	ctx                   context.Context
-	cancel                context.CancelFunc
-	slasher               *slasher.Service
-	params                *Parameters
-	indexedAttsFeed       *event.Feed
-	beaconBlocksFeed      *event.Feed
-	blockSlashingFeed     *event.Feed
-	attSlasingFeed        *event.Feed
-	sentAttSlashingFeed   *event.Feed
-	sentBlockSlashingFeed *event.Feed
-	detectedSlashings     map[[32]byte]bool
-	sentSlashings         map[[32]byte]bool
-	genesisTime           time.Time
-	lock                  sync.RWMutex
+	ctx                       context.Context
+	cancel                    context.CancelFunc
+	slasher                   *slasher.Service
+	params                    *Parameters
+	indexedAttsFeed           *event.Feed
+	beaconBlocksFeed          *event.Feed
+	blockSlashingFeed         *event.Feed
+	attSlasingFeed            *event.Feed
+	sentAttSlashingFeed       *event.Feed
+	sentBlockSlashingFeed     *event.Feed
+	detectedProposerSlashings map[[32]byte]*ethpb.ProposerSlashing
+	detectedAttesterSlashings map[[32]byte]*ethpb.AttesterSlashing
+	sentProposerSlashings     map[[32]byte]*ethpb.ProposerSlashing
+	sentAttesterSlashings     map[[32]byte]*ethpb.AttesterSlashing
+	genesisTime               time.Time
+	proposerSlashingLock      sync.RWMutex
+	attesterSlashingLock      sync.RWMutex
 }
 
 // DefaultParams for launching a slasher simulator.

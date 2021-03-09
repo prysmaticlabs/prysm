@@ -24,7 +24,7 @@ func (s *Service) receiveAttestations(ctx context.Context) {
 			}
 			signingRoot, err := att.Data.HashTreeRoot()
 			if err != nil {
-				log.Error("could not get hash tree root of attestation")
+				log.WithError(err).Error("Could not get hash tree root of attestation")
 				continue
 			}
 			attWrapper := &slashertypes.IndexedAttestationWrapper{
@@ -54,7 +54,7 @@ func (s *Service) receiveBlocks(ctx context.Context) {
 			// TODO(#8331): Defer blocks from the future for later processing.
 			signingRoot, err := blockHeader.Header.HashTreeRoot()
 			if err != nil {
-				log.Error("could not get hash tree root of signed block header")
+				log.WithError(err).Error("Could not get hash tree root of signed block header")
 				continue
 			}
 			wrappedProposal := &slashertypes.SignedBlockHeaderWrapper{

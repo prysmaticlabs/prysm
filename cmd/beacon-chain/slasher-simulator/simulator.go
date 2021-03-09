@@ -6,7 +6,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/slasher/simulator"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/urfave/cli/v2"
 )
 
@@ -38,7 +37,6 @@ var Commands = &cli.Command{
 		return nil
 	},
 	Action: func(cliCtx *cli.Context) error {
-		params.UseE2EConfig()
 		return simulator.Simulate(cliCtx)
 	},
 }
