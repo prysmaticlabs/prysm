@@ -54,8 +54,8 @@ func DefaultParams() *Parameters {
 		AggregationPercent:     1.0,
 		ProposerSlashingProbab: 0.2,
 		AttesterSlashingProbab: 0.2,
-		NumValidators:          32,
-		NumEpochs:              2,
+		NumValidators:          128,
+		NumEpochs:              4,
 	}
 }
 
@@ -160,21 +160,22 @@ func (s *Simulator) simulateBlocksAndAttestations(ctx context.Context) {
 			for _, bb := range blockHeaders {
 				s.beaconBlocksFeed.Send(bb)
 			}
-			//atts, attSlashings := generateAttestationsForSlot(s.params, slot)
-			//log.WithFields(logrus.Fields{
-			//	"numAtts":      len(atts),
-			//	"numSlashable": len(propSlashings),
-			//}).Infof("Producing attestations for slot %d", slot)
-			//for _, sl := range attSlashings {
-			//	slashingRoot, err := sl.HashTreeRoot()
-			//	if err != nil {
-			//		log.WithError(err).Fatal("Could not hash tree root slashing")
-			//	}
-			//	s.sentSlashings[slashingRoot] = true
-			//}
-			//for _, aa := range atts {
-			//	s.indexedAttsFeed.Send(aa)
-			//}
+
+			atts, attSlashings := generateAttestationsForSlot(s.params, slot)
+			log.WithFields(logrus.Fields{
+				"numAtts":      len(atts),
+				"numSlashable": len(propSlashings),
+			}).Infof("Producing attestations for slot %d", slot)
+			for _, sl := range attSlashings {
+				slashingRoot, err := sl.HashTreeRoot()
+				if err != nil {
+					log.WithError(err).Fatal("Could not hash tree root slashing")
+				}
+				s.sentSlashings[slashingRoot] = true
+			}
+			for _, aa := range atts {
+				s.indexedAttsFeed.Send(aa)
+			}
 		case <-ctx.Done():
 			return
 		}
@@ -187,13 +188,13 @@ func (s *Simulator) receiveDetectedSlashings(ctx context.Context) {
 	blockSub := s.blockSlashingFeed.Subscribe(detectedSlashings)
 	defer func() {
 		attSub.Unsubscribe()
-		attSub.Unsubscribe()
+		blockSub.Unsubscribe()
 	}()
 	for {
 		select {
 		case detectedEvent := <-detectedSlashings:
-			var slashingRoot [32]byte
 			var err error
+			var slashingRoot [32]byte
 			switch detectedEvent.Type {
 			case slashertypes.AttesterSlashing:
 				attSlashing, ok := detectedEvent.Data.(*ethpb.AttesterSlashing)
