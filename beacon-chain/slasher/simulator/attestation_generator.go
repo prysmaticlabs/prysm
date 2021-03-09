@@ -67,6 +67,7 @@ func generateAttestationsForSlot(
 					Attestation_1: att,
 					Attestation_2: slashableAtt,
 				})
+				attestations = append(attestations, slashableAtt)
 				log.WithFields(logrus.Fields{
 					"validatorIndex":  indices[0],
 					"prevSourceEpoch": att.Data.Source.Epoch,
