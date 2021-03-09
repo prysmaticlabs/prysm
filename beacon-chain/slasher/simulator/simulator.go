@@ -195,7 +195,6 @@ func (s *Simulator) receiveDetectedProposerSlashings(ctx context.Context) {
 			if err != nil {
 				log.WithError(err).Fatal("Could not hash tree root proposer slashing")
 			}
-			log.Warn("Detected slashing received")
 			s.proposerSlashingLock.Lock()
 			s.detectedProposerSlashings[slashingRoot] = slashing
 			s.proposerSlashingLock.Unlock()
@@ -219,7 +218,6 @@ func (s *Simulator) receiveDetectedAttesterSlashings(ctx context.Context) {
 			if err != nil {
 				log.WithError(err).Fatal("Could not hash tree root attester slashing")
 			}
-			log.Warn("Detected slashing received")
 			s.attesterSlashingLock.Lock()
 			s.detectedAttesterSlashings[slashingRoot] = slashing
 			s.attesterSlashingLock.Unlock()
