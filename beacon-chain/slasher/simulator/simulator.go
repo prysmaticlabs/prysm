@@ -2,10 +2,13 @@ package simulator
 
 import (
 	"context"
+	"sync"
 	"time"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/slasher"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
@@ -21,6 +24,7 @@ type Parameters struct {
 	ProposerSlashingProbab float64
 	AttesterSlashingProbab float64
 	NumValidators          uint64
+	NumEpochs              uint64
 }
 
 // Simulator defines a struct which can launch a slasher simulation
@@ -36,9 +40,10 @@ type Simulator struct {
 	attSlasingFeed        *event.Feed
 	sentAttSlashingFeed   *event.Feed
 	sentBlockSlashingFeed *event.Feed
-	sentSlashings         [][32]byte
 	detectedSlashings     map[[32]byte]bool
+	sentSlashings         map[[32]byte]bool
 	genesisTime           time.Time
+	lock                  sync.RWMutex
 }
 
 // DefaultParams for launching a slasher simulator.
@@ -48,6 +53,7 @@ func DefaultParams() *Parameters {
 		ProposerSlashingProbab: 0.2,
 		AttesterSlashingProbab: 0.2,
 		NumValidators:          32,
+		NumEpochs:              5,
 	}
 }
 
@@ -60,7 +66,7 @@ func New(ctx context.Context, beaconDB db.Database) (*Simulator, error) {
 	sentBlockSlashingFeed := new(event.Feed)
 	sentAttSlashingFeed := new(event.Feed)
 	blockSlashingFeed := new(event.Feed)
-	sentSlashings := [][32]byte{}
+	sentSlashings := make(map[[32]byte]bool)
 	detectedSlashings := make(map[[32]byte]bool)
 	genesisTime := time.Now()
 	slasherSrv, err := slasher.New(ctx, &slasher.ServiceConfig{
@@ -97,10 +103,19 @@ func (s *Simulator) Start() {
 		"proposerSlashingProbab": s.params.ProposerSlashingProbab,
 		"attesterSlashingProbab": s.params.AttesterSlashingProbab,
 	}).Info("Starting slasher simulator")
-	go s.simulateBlockProposals(s.ctx)
-	go s.simulateAttestations(s.ctx)
-	go s.receiveSlashings(s.ctx)
+
+	// Start slasher in the background (Start() is non-blocking).
 	s.slasher.Start()
+
+	// We simulate blocks and attestations for N epochs, and in the background,
+	// start a routine which collects slashings detected by the running slasher.
+	go s.receiveDetectedSlashings(s.ctx)
+	s.simulateBlocksAndAttestations(s.ctx)
+
+	// Verify the slashings we detected are the same as those the
+	// simulator produced, effectively checking slasher caught all slashable offenses.
+	s.verifySlashingsWereDetected(s.ctx)
+	return
 }
 
 // Stop the simulator.
@@ -108,31 +123,39 @@ func (s *Simulator) Stop() error {
 	return s.slasher.Stop()
 }
 
-func (s *Simulator) simulateBlockProposals(ctx context.Context) {
+func (s *Simulator) simulateBlocksAndAttestations(ctx context.Context) {
 	ticker := slotutil.NewSlotTicker(s.genesisTime.Add(time.Millisecond*500), params.BeaconConfig().SecondsPerSlot)
 	defer ticker.Done()
 	for {
 		select {
 		case slot := <-ticker.C():
-			log.Info("Producing block")
-			blockHeaders := generateBlockHeadersForSlot(s.params, slot)
+			// We only run the simulator for a specified number of epochs.
+			if helpers.SlotToEpoch(slot) > types.Epoch(s.params.NumEpochs) {
+				return
+			}
+
+			blockHeaders, propSlashings := generateBlockHeadersForSlot(s.params, slot)
+			log.Infof("Producing %d blocks, %d slashable, for slot %d", len(blockHeaders), len(propSlashings), slot)
+			// TODO: Some logic here is duplicated, we can use some abstraction here.
+			for _, sl := range propSlashings {
+				slashingRoot, err := sl.HashTreeRoot()
+				if err != nil {
+					log.WithError(err).Fatal("Could not hash tree root slashing")
+				}
+				s.sentSlashings[slashingRoot] = true
+			}
 			for _, bb := range blockHeaders {
 				s.beaconBlocksFeed.Send(bb)
 			}
-		case <-ctx.Done():
-			return
-		}
-	}
-}
-
-func (s *Simulator) simulateAttestations(ctx context.Context) {
-	ticker := slotutil.NewSlotTicker(s.genesisTime.Add(time.Millisecond*500), params.BeaconConfig().SecondsPerSlot)
-	defer ticker.Done()
-	for {
-		select {
-		case slot := <-ticker.C():
-			atts := generateAttestationsForSlot(s.params, slot)
-			log.Infof("Producing %d atts for slot %d\n", len(atts), slot)
+			atts, attSlashings := generateAttestationsForSlot(s.params, slot)
+			log.Infof("Producing %d attestations, %d slashable, for slot %d", len(atts), len(attSlashings), slot)
+			for _, sl := range attSlashings {
+				slashingRoot, err := sl.HashTreeRoot()
+				if err != nil {
+					log.WithError(err).Fatal("Could not hash tree root slashing")
+				}
+				s.sentSlashings[slashingRoot] = true
+			}
 			for _, aa := range atts {
 				s.indexedAttsFeed.Send(aa)
 			}
@@ -142,85 +165,61 @@ func (s *Simulator) simulateAttestations(ctx context.Context) {
 	}
 }
 
-func (s *Simulator) receiveSlashings(ctx context.Context) {
-	sentSlashings := make(chan *feed.Event, 1)
-	s.sentAttSlashingFeed.Subscribe(sentSlashings)
-	s.sentBlockSlashingFeed.Subscribe(sentSlashings)
+func (s *Simulator) receiveDetectedSlashings(ctx context.Context) {
 	detectedSlashings := make(chan *feed.Event, 1)
-	s.attSlasingFeed.Subscribe(detectedSlashings)
-	s.blockSlashingFeed.Subscribe(detectedSlashings)
-
+	attSub := s.attSlasingFeed.Subscribe(detectedSlashings)
+	blockSub := s.blockSlashingFeed.Subscribe(detectedSlashings)
+	defer func() {
+		attSub.Unsubscribe()
+		attSub.Unsubscribe()
+	}()
 	for {
 		select {
-		case event := <-sentSlashings:
-			switch event.Type {
-			case slashertypes.AttesterSlashing:
-				attSlashing, ok := event.Data.(*ethpb.AttesterSlashing)
-				if !ok {
-					log.Error("not ok")
-					return
-				}
-				slashingRoot, err := attSlashing.HashTreeRoot()
-				if err != nil {
-					log.Error(err)
-					return
-				}
-				log.Printf("Sent att slashing %#x", slashingRoot)
-				s.sentSlashings = append(s.sentSlashings, slashingRoot)
-			case slashertypes.ProposerSlashing:
-				proposerSlashing, ok := event.Data.(*ethpb.ProposerSlashing)
-				if !ok {
-					log.Error("not ok")
-					return
-				}
-				slashingRoot, err := proposerSlashing.HashTreeRoot()
-				if err != nil {
-					log.Error(err)
-					return
-				}
-				log.Printf("Sent att slashing %#x", slashingRoot)
-				s.sentSlashings = append(s.sentSlashings, slashingRoot)
-			}
 		case detectedEvent := <-detectedSlashings:
+			var slashingRoot [32]byte
+			var err error
 			switch detectedEvent.Type {
 			case slashertypes.AttesterSlashing:
 				attSlashing, ok := detectedEvent.Data.(*ethpb.AttesterSlashing)
 				if !ok {
-					log.Error("not ok")
-					return
+					log.Fatal("Detected slashing is not of type AttesterSlashing")
 				}
-				slashingRoot, err := attSlashing.HashTreeRoot()
+				slashingRoot, err = attSlashing.HashTreeRoot()
 				if err != nil {
-					log.Error(err)
-					return
+					log.WithError(err).Fatal("Could not hash tree root attester slashing")
 				}
-				s.logIfDetected(slashingRoot)
-				s.detectedSlashings[slashingRoot] = true
 			case slashertypes.ProposerSlashing:
 				proposerSlashing, ok := detectedEvent.Data.(*ethpb.ProposerSlashing)
 				if !ok {
-					log.Error("not ok")
-					return
+					log.Fatal("Detected slashing is not of type ProposerSlashing")
 				}
-				slashingRoot, err := proposerSlashing.HashTreeRoot()
+				slashingRoot, err = proposerSlashing.HashTreeRoot()
 				if err != nil {
-					log.Error(err)
-					return
+					log.WithError(err).Fatal("Could not hash tree root attester slashing")
 				}
-				s.logIfDetected(slashingRoot)
-				s.detectedSlashings[slashingRoot] = true
 			}
+			s.lock.Lock()
+			s.detectedSlashings[slashingRoot] = true
+			s.lock.Unlock()
+		case <-ctx.Done():
+			return
+		case err := <-attSub.Err():
+			log.WithError(err).Fatal("Error from attester slashing feed subscription")
+			return
+		case err := <-blockSub.Err():
+			log.WithError(err).Fatal("Error from attester slashing feed subscription")
+			return
 		}
 	}
 }
 
-func (s *Simulator) logIfDetected(slashingRoot [32]byte) {
-	for _, ss := range s.sentSlashings {
-		if slashingRoot == ss {
-			log.Printf("Slashing detected! %#x", slashingRoot)
-			return
+func (s *Simulator) verifySlashingsWereDetected(ctx context.Context) {
+	for slashingRoot := range s.sentSlashings {
+		_, ok := s.detectedSlashings[slashingRoot]
+		if ok {
+			log.Info("Correctly detected simulated slashing with root %#x", slashingRoot)
+		} else {
+			log.Error("Did not detect simulated slashing with root %#x", slashingRoot)
 		}
 	}
-	log.Printf("No slashing detected for %#x", slashingRoot)
-	return
 }

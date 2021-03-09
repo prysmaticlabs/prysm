@@ -8,10 +8,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/rand"
 )
 
-func generateBlockHeadersForSlot(simParams *Parameters, slot types.Slot) []*ethpb.SignedBeaconBlockHeader {
-	blocks := make([]*ethpb.SignedBeaconBlockHeader, 1)
+func generateBlockHeadersForSlot(
+	simParams *Parameters, slot types.Slot,
+) ([]*ethpb.SignedBeaconBlockHeader, []*ethpb.ProposerSlashing) {
+	blocks := make([]*ethpb.SignedBeaconBlockHeader, 0)
+	slashings := make([]*ethpb.ProposerSlashing, 0)
 	proposer := rand.NewGenerator().Uint64() % simParams.NumValidators
-	blocks[0] = &ethpb.SignedBeaconBlockHeader{
+	block := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			Slot:          slot,
 			ProposerIndex: types.ValidatorIndex(proposer),
@@ -21,9 +24,10 @@ func generateBlockHeadersForSlot(simParams *Parameters, slot types.Slot) []*ethp
 		},
 		Signature: params.BeaconConfig().EmptySignature[:],
 	}
+	blocks = append(blocks, block)
 	if rand.NewGenerator().Float64() < simParams.ProposerSlashingProbab {
 		log.WithField("proposerIndex", proposer).Infof("Slashable block made")
-		blocks = append(blocks, &ethpb.SignedBeaconBlockHeader{
+		slashableBlock := &ethpb.SignedBeaconBlockHeader{
 			Header: &ethpb.BeaconBlockHeader{
 				Slot:          slot,
 				ProposerIndex: types.ValidatorIndex(proposer),
@@ -32,7 +36,12 @@ func generateBlockHeadersForSlot(simParams *Parameters, slot types.Slot) []*ethp
 				BodyRoot:      bytesutil.PadTo([]byte("bad block"), 32),
 			},
 			Signature: params.BeaconConfig().EmptySignature[:],
+		}
+		blocks = append(blocks, slashableBlock)
+		slashings = append(slashings, &ethpb.ProposerSlashing{
+			Header_1: block,
+			Header_2: slashableBlock,
 		})
 	}
-	return blocks
+	return blocks, slashings
 }

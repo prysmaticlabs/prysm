@@ -42,6 +42,7 @@ type Service struct {
 	ctx                   context.Context
 	cancel                context.CancelFunc
 	genesisTime           time.Time
+	slotTicker            slotutil.Ticker
 }
 
 // New instantiates a new slasher from configuration values.
@@ -66,17 +67,17 @@ func New(ctx context.Context, srvCfg *ServiceConfig) (*Service, error) {
 // and perform slashing detection on them.
 func (s *Service) Start() {
 	log.Info("Starting slasher")
-	ticker := slotutil.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
-	defer ticker.Done()
-	go s.processQueuedAttestations(s.ctx, ticker.C())
-	go s.processQueuedBlocks(s.ctx, ticker.C())
+	s.slotTicker = slotutil.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
+	go s.processQueuedAttestations(s.ctx, s.slotTicker.C())
+	go s.processQueuedBlocks(s.ctx, s.slotTicker.C())
 	go s.receiveBlocks(s.ctx)
-	s.receiveAttestations(s.ctx)
+	go s.receiveAttestations(s.ctx)
 }
 
 // Stop the slasher service.
 func (s *Service) Stop() error {
 	s.cancel()
+	s.slotTicker.Done()
 	return nil
 }
 

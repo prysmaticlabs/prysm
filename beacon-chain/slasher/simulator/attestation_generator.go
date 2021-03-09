@@ -12,8 +12,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func generateAttestationsForSlot(simParams *Parameters, slot types.Slot) []*ethpb.IndexedAttestation {
-	var attestations []*ethpb.IndexedAttestation
+func generateAttestationsForSlot(
+	simParams *Parameters, slot types.Slot,
+) ([]*ethpb.IndexedAttestation, []*ethpb.AttesterSlashing) {
+	attestations := make([]*ethpb.IndexedAttestation, 0)
+	slashings := make([]*ethpb.AttesterSlashing, 0)
 	currentEpoch := helpers.SlotToEpoch(slot)
 
 	committeesPerSlot := helpers.SlotCommitteeCount(simParams.NumValidators)
@@ -60,6 +63,10 @@ func generateAttestationsForSlot(simParams *Parameters, slot types.Slot) []*ethp
 			attestations = append(attestations, att)
 			if rand.NewGenerator().Float64() < simParams.AttesterSlashingProbab {
 				slashableAtt := makeSlashableFromAtt(att, []uint64{indices[0]})
+				slashings = append(slashings, &ethpb.AttesterSlashing{
+					Attestation_1: att,
+					Attestation_2: slashableAtt,
+				})
 				log.WithFields(logrus.Fields{
 					"validatorIndex":  indices[0],
 					"prevSourceEpoch": att.Data.Source.Epoch,
@@ -72,7 +79,7 @@ func generateAttestationsForSlot(simParams *Parameters, slot types.Slot) []*ethp
 		startIdx += valsPerCommittee
 		endIdx += valsPerCommittee
 	}
-	return attestations
+	return attestations, slashings
 }
 
 func makeSlashableFromAtt(att *ethpb.IndexedAttestation, indices []uint64) *ethpb.IndexedAttestation {
