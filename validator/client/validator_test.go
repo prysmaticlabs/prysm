@@ -60,6 +60,7 @@ func (m *mockKeymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]b
 	defer m.lock.RUnlock()
 	keys := make([][48]byte, 0)
 	if m.fetchNoKeys {
+		m.fetchNoKeys = false
 		return keys, nil
 	}
 	for pubKey := range m.keysMap {
