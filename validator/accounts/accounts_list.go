@@ -11,7 +11,6 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -104,12 +103,7 @@ func listImportedKeymanagerAccounts(
 			"by running `validator accounts list --show-deposit-data`"),
 	)
 
-	pubKeys, err := keymanager.FetchAllValidatingPublicKeys(ctx)
-	disabledPublicKeys := keymanager.DisabledPublicKeys()
-	existingDisabledPk := make(map[[48]byte]bool, len(disabledPublicKeys))
-	for _, dpk := range disabledPublicKeys {
-		existingDisabledPk[bytesutil.ToBytes48(dpk)] = true
-	}
+	pubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating public keys")
 	}
@@ -122,11 +116,7 @@ func listImportedKeymanagerAccounts(
 	}
 	for i := 0; i < len(accountNames); i++ {
 		fmt.Println("")
-		if existingDisabledPk[pubKeys[i]] {
-			fmt.Printf("%s | %s (%s)\n", au.BrightBlue(fmt.Sprintf("Account %d", i)).Bold(), au.BrightRed(accountNames[i]).Bold(), au.BrightRed("disabled").Bold())
-		} else {
-			fmt.Printf("%s | %s\n", au.BrightBlue(fmt.Sprintf("Account %d", i)).Bold(), au.BrightGreen(accountNames[i]).Bold())
-		}
+		fmt.Printf("%s | %s\n", au.BrightBlue(fmt.Sprintf("Account %d", i)).Bold(), au.BrightGreen(accountNames[i]).Bold())
 		fmt.Printf("%s %#x\n", au.BrightMagenta("[validating public key]").Bold(), pubKeys[i])
 		if showPrivateKeys {
 			if len(privateKeys) > i {
@@ -155,7 +145,7 @@ func listDerivedKeymanagerAccounts(
 	au := aurora.NewAurora(true)
 	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("derived, (HD) hierarchical-deterministic").Bold())
 	fmt.Printf("(derivation format) %s\n", au.BrightGreen(derived.DerivationPathFormat).Bold())
-	validatingPubKeys, err := keymanager.FetchAllValidatingPublicKeys(ctx)
+	validatingPubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating public keys")
 	}
@@ -210,7 +200,7 @@ func listRemoteKeymanagerAccounts(
 	fmt.Println(" ")
 	fmt.Printf("%s\n", au.BrightGreen("Configuration options").Bold())
 	fmt.Println(opts)
-	validatingPubKeys, err := keymanager.FetchAllValidatingPublicKeys(ctx)
+	validatingPubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating public keys")
 	}
