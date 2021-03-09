@@ -216,3 +216,8 @@ func (fv *FakeValidator) ReceiveBlocks(ctx context.Context, connectionErrorChann
 		connectionErrorChannel <- errConnectionIssue
 	}
 }
+
+// HandleKeyReload for mocking
+func (*FakeValidator) HandleKeyReload(_ context.Context, _ [][48]byte) error {
+	return nil
+}

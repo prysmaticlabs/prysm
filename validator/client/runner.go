@@ -45,6 +45,7 @@ type Validator interface {
 	AllValidatorsAreExited(ctx context.Context) (bool, error)
 	GetKeymanager() keymanager.IKeymanager
 	ReceiveBlocks(ctx context.Context, connectionErrorChannel chan<- error)
+	HandleKeyReload(ctx context.Context, newKeys [][48]byte) error
 }
 
 // Run the main validator routine. This routine exits if the context is
@@ -125,6 +126,9 @@ func run(ctx context.Context, v Validator) {
 	if err := v.UpdateDuties(ctx, headSlot); err != nil {
 		handleAssignmentError(err, headSlot)
 	}
+
+	accountsChangedChan := make(chan [][48]byte)
+	sub := v.GetKeymanager().SubscribeAccountChanges(accountsChangedChan)
 	for {
 		slotCtx, cancel := context.WithCancel(ctx)
 		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
@@ -134,12 +138,19 @@ func run(ctx context.Context, v Validator) {
 			log.Info("Context canceled, stopping validator")
 			span.End()
 			cancel()
+			sub.Unsubscribe()
+			close(accountsChangedChan)
 			return // Exit if context is canceled.
 		case blocksError := <-connectionErrorChannel:
 			if blocksError != nil {
 				log.WithError(blocksError).Warn("block stream interrupted")
 				go v.ReceiveBlocks(ctx, connectionErrorChannel)
 				continue
+			}
+		case newKeys := <-accountsChangedChan:
+			err := v.HandleKeyReload(ctx, newKeys)
+			if err != nil {
+				log.WithError(err).Error("Could not properly handle reloaded keys")
 			}
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
