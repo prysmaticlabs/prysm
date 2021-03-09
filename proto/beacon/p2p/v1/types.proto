@@ -48,7 +48,6 @@ message BeaconState {
 
 // Beacon state for hard fork 1.
 // https://github.com/ethereum/eth2.0-specs/blob/dev/specs/lightclient/beacon-chain.md#beaconstate
-
 message BeaconStateV1 {
   // Versioning [1001-2000]
   uint64 genesis_time = 1001;
