@@ -7,11 +7,9 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/slasher"
-	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -37,8 +35,8 @@ type Simulator struct {
 	params                    *Parameters
 	indexedAttsFeed           *event.Feed
 	beaconBlocksFeed          *event.Feed
-	blockSlashingFeed         *event.Feed
-	attSlasingFeed            *event.Feed
+	attesterSlashingsFeed     *event.Feed
+	proposerSlashingsFeed     *event.Feed
 	sentAttSlashingFeed       *event.Feed
 	sentBlockSlashingFeed     *event.Feed
 	detectedProposerSlashings map[[32]byte]*ethpb.ProposerSlashing
@@ -67,18 +65,18 @@ func DefaultParams() *Parameters {
 func New(ctx context.Context, beaconDB db.Database) (*Simulator, error) {
 	indexedAttsFeed := new(event.Feed)
 	beaconBlocksFeed := new(event.Feed)
-	attSlashingFeed := new(event.Feed)
 	sentBlockSlashingFeed := new(event.Feed)
 	sentAttSlashingFeed := new(event.Feed)
-	blockSlashingFeed := new(event.Feed)
+	attesterSlashingsFeed := new(event.Feed)
+	proposerSlashingsFeed := new(event.Feed)
 	genesisTime := time.Now()
 	slasherSrv, err := slasher.New(ctx, &slasher.ServiceConfig{
-		IndexedAttsFeed:    indexedAttsFeed,
-		BeaconBlocksFeed:   beaconBlocksFeed,
-		AttSlashingsFeed:   attSlashingFeed,
-		BlockSlashingsFeed: blockSlashingFeed,
-		Database:           beaconDB,
-		GenesisTime:        genesisTime,
+		IndexedAttsFeed:       indexedAttsFeed,
+		BeaconBlocksFeed:      beaconBlocksFeed,
+		AttesterSlashingsFeed: attesterSlashingsFeed,
+		ProposerSlashingsFeed: proposerSlashingsFeed,
+		Database:              beaconDB,
+		GenesisTime:           genesisTime,
 	})
 	if err != nil {
 		return nil, err
@@ -89,8 +87,8 @@ func New(ctx context.Context, beaconDB db.Database) (*Simulator, error) {
 		params:                    DefaultParams(),
 		indexedAttsFeed:           indexedAttsFeed,
 		beaconBlocksFeed:          beaconBlocksFeed,
-		attSlasingFeed:            attSlashingFeed,
-		blockSlashingFeed:         blockSlashingFeed,
+		attesterSlashingsFeed:     attesterSlashingsFeed,
+		proposerSlashingsFeed:     proposerSlashingsFeed,
 		sentAttSlashingFeed:       sentAttSlashingFeed,
 		sentBlockSlashingFeed:     sentBlockSlashingFeed,
 		sentProposerSlashings:     make(map[[32]byte]*ethpb.ProposerSlashing),
@@ -122,7 +120,8 @@ func (s *Simulator) Start() {
 
 	// We simulate blocks and attestations for N epochs, and in the background,
 	// start a routine which collects slashings detected by the running slasher.
-	go s.receiveDetectedSlashings(s.ctx)
+	go s.receiveDetectedAttesterSlashings(s.ctx)
+	go s.receiveDetectedProposerSlashings(s.ctx)
 	s.simulateBlocksAndAttestations(s.ctx)
 
 	// Verify the slashings we detected are the same as those the
@@ -185,52 +184,48 @@ func (s *Simulator) simulateBlocksAndAttestations(ctx context.Context) {
 	}
 }
 
-func (s *Simulator) receiveDetectedSlashings(ctx context.Context) {
-	detectedSlashings := make(chan *feed.Event, 1)
-	attSub := s.attSlasingFeed.Subscribe(detectedSlashings)
-	blockSub := s.blockSlashingFeed.Subscribe(detectedSlashings)
-	defer func() {
-		attSub.Unsubscribe()
-		blockSub.Unsubscribe()
-	}()
+func (s *Simulator) receiveDetectedProposerSlashings(ctx context.Context) {
+	proposerSlashingChan := make(chan *ethpb.ProposerSlashing, 1)
+	sub := s.proposerSlashingsFeed.Subscribe(proposerSlashingChan)
+	defer sub.Unsubscribe()
 	for {
 		select {
-		case detectedEvent := <-detectedSlashings:
-			var err error
-			var slashingRoot [32]byte
-			switch detectedEvent.Type {
-			case slashertypes.AttesterSlashing:
-				attSlashing, ok := detectedEvent.Data.(*ethpb.AttesterSlashing)
-				if !ok {
-					log.Fatal("Detected slashing is not of type AttesterSlashing")
-				}
-				slashingRoot, err = attSlashing.HashTreeRoot()
-				if err != nil {
-					log.WithError(err).Fatal("Could not hash tree root attester slashing")
-				}
-				s.attesterSlashingLock.Lock()
-				s.detectedAttesterSlashings[slashingRoot] = attSlashing
-				s.attesterSlashingLock.Unlock()
-			case slashertypes.ProposerSlashing:
-				proposerSlashing, ok := detectedEvent.Data.(*ethpb.ProposerSlashing)
-				if !ok {
-					log.Fatal("Detected slashing is not of type ProposerSlashing")
-				}
-				slashingRoot, err = proposerSlashing.HashTreeRoot()
-				if err != nil {
-					log.WithError(err).Fatal("Could not hash tree root attester slashing")
-				}
-				log.Warn("Detected slashing received")
-				s.proposerSlashingLock.Lock()
-				s.detectedProposerSlashings[slashingRoot] = proposerSlashing
-				s.proposerSlashingLock.Unlock()
+		case slashing := <-proposerSlashingChan:
+			slashingRoot, err := slashing.HashTreeRoot()
+			if err != nil {
+				log.WithError(err).Fatal("Could not hash tree root proposer slashing")
 			}
+			log.Warn("Detected slashing received")
+			s.proposerSlashingLock.Lock()
+			s.detectedProposerSlashings[slashingRoot] = slashing
+			s.proposerSlashingLock.Unlock()
 		case <-ctx.Done():
 			return
-		case err := <-attSub.Err():
+		case err := <-sub.Err():
 			log.WithError(err).Fatal("Error from attester slashing feed subscription")
 			return
-		case err := <-blockSub.Err():
+		}
+	}
+}
+
+func (s *Simulator) receiveDetectedAttesterSlashings(ctx context.Context) {
+	attesterSlashingChan := make(chan *ethpb.AttesterSlashing, 1)
+	sub := s.attesterSlashingsFeed.Subscribe(attesterSlashingChan)
+	defer sub.Unsubscribe()
+	for {
+		select {
+		case slashing := <-attesterSlashingChan:
+			slashingRoot, err := slashing.HashTreeRoot()
+			if err != nil {
+				log.WithError(err).Fatal("Could not hash tree root attester slashing")
+			}
+			log.Warn("Detected slashing received")
+			s.attesterSlashingLock.Lock()
+			s.detectedAttesterSlashings[slashingRoot] = slashing
+			s.attesterSlashingLock.Unlock()
+		case <-ctx.Done():
+			return
+		case err := <-sub.Err():
 			log.WithError(err).Fatal("Error from attester slashing feed subscription")
 			return
 		}
@@ -246,6 +241,10 @@ func (s *Simulator) verifySlashingsWereDetected(ctx context.Context) {
 			}).Errorf("Did not detect simulated proposer slashing")
 			continue
 		}
+		log.WithFields(logrus.Fields{
+			"slot":          slashing.Header_1.Header.Slot,
+			"proposerIndex": slashing.Header_1.Header.ProposerIndex,
+		}).Info("Correctly detected simulated proposer slashing")
 	}
 	for slashingRoot, slashing := range s.sentAttesterSlashings {
 		if _, ok := s.detectedAttesterSlashings[slashingRoot]; !ok {
@@ -257,5 +256,11 @@ func (s *Simulator) verifySlashingsWereDetected(ctx context.Context) {
 			}).Errorf("Did not detect simulated attester slashing")
 			continue
 		}
+		log.WithFields(logrus.Fields{
+			"targetEpoch":     slashing.Attestation_1.Data.Target.Epoch,
+			"prevTargetEpoch": slashing.Attestation_2.Data.Target.Epoch,
+			"sourceEpoch":     slashing.Attestation_1.Data.Source.Epoch,
+			"prevSourceEpoch": slashing.Attestation_2.Data.Source.Epoch,
+		}).Info("Correctly detected simulated attester slashing")
 	}
 }

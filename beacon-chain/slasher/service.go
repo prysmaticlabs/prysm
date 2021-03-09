@@ -18,48 +18,44 @@ import (
 // This struct allows us to specify required dependencies and
 // parameters for slasher to function as needed.
 type ServiceConfig struct {
-	IndexedAttsFeed    *event.Feed
-	BeaconBlocksFeed   *event.Feed
-	AttSlashingsFeed   *event.Feed
-	BlockSlashingsFeed *event.Feed
-	Database           db.Database
-	GenesisTime        time.Time
+	IndexedAttsFeed       *event.Feed
+	BeaconBlocksFeed      *event.Feed
+	AttesterSlashingsFeed *event.Feed
+	ProposerSlashingsFeed *event.Feed
+	Database              db.Database
+	GenesisTime           time.Time
 }
 
 // Service defining a slasher implementation as part of
 // the beacon node, able to detect eth2 slashable offenses.
 type Service struct {
-	params                *Parameters
-	serviceCfg            *ServiceConfig
-	indexedAttsChan       chan *ethpb.IndexedAttestation
-	beaconBlocksChan      chan *ethpb.SignedBeaconBlockHeader
-	proposerSlashingsFeed *event.Feed
-	attesterSlashingsFeed *event.Feed
-	attestationQueueLock  sync.Mutex
-	blockQueueLock        sync.Mutex
-	attestationQueue      []*slashertypes.IndexedAttestationWrapper
-	beaconBlocksQueue     []*slashertypes.SignedBlockHeaderWrapper
-	ctx                   context.Context
-	cancel                context.CancelFunc
-	genesisTime           time.Time
-	slotTicker            slotutil.Ticker
+	params               *Parameters
+	serviceCfg           *ServiceConfig
+	indexedAttsChan      chan *ethpb.IndexedAttestation
+	beaconBlocksChan     chan *ethpb.SignedBeaconBlockHeader
+	attestationQueueLock sync.Mutex
+	blockQueueLock       sync.Mutex
+	attestationQueue     []*slashertypes.IndexedAttestationWrapper
+	beaconBlocksQueue    []*slashertypes.SignedBlockHeaderWrapper
+	ctx                  context.Context
+	cancel               context.CancelFunc
+	genesisTime          time.Time
+	slotTicker           slotutil.Ticker
 }
 
 // New instantiates a new slasher from configuration values.
 func New(ctx context.Context, srvCfg *ServiceConfig) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		params:                DefaultParams(),
-		serviceCfg:            srvCfg,
-		indexedAttsChan:       make(chan *ethpb.IndexedAttestation, 1),
-		beaconBlocksChan:      make(chan *ethpb.SignedBeaconBlockHeader, 1),
-		proposerSlashingsFeed: new(event.Feed),
-		attesterSlashingsFeed: new(event.Feed),
-		attestationQueue:      make([]*slashertypes.IndexedAttestationWrapper, 0),
-		beaconBlocksQueue:     make([]*slashertypes.SignedBlockHeaderWrapper, 0),
-		ctx:                   ctx,
-		cancel:                cancel,
-		genesisTime:           time.Now(),
+		params:            DefaultParams(),
+		serviceCfg:        srvCfg,
+		indexedAttsChan:   make(chan *ethpb.IndexedAttestation, 1),
+		beaconBlocksChan:  make(chan *ethpb.SignedBeaconBlockHeader, 1),
+		attestationQueue:  make([]*slashertypes.IndexedAttestationWrapper, 0),
+		beaconBlocksQueue: make([]*slashertypes.SignedBlockHeaderWrapper, 0),
+		ctx:               ctx,
+		cancel:            cancel,
+		genesisTime:       time.Now(),
 	}, nil
 }
 

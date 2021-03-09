@@ -6,7 +6,6 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"go.opencensus.io/trace"
 )
@@ -30,12 +29,9 @@ func (s *Service) detectSlashableBlocks(
 		}
 		if isDoubleProposal(proposedBlocks[i].SigningRoot, existingProposal.SigningRoot) {
 			doubleProposalsTotal.Inc()
-			s.proposerSlashingsFeed.Send(&feed.Event{
-				Type: slashertypes.ProposerSlashing,
-				Data: &ethpb.ProposerSlashing{
-					Header_1: existingProposal.SignedBeaconBlockHeader,
-					Header_2: proposedBlocks[i].SignedBeaconBlockHeader,
-				},
+			s.serviceCfg.ProposerSlashingsFeed.Send(&ethpb.ProposerSlashing{
+				Header_1: existingProposal.SignedBeaconBlockHeader,
+				Header_2: proposedBlocks[i].SignedBeaconBlockHeader,
 			})
 			logDoubleProposal(proposedBlocks[i], existingProposal)
 		}
@@ -64,12 +60,9 @@ func (s *Service) checkDoubleProposalsOnDisk(
 	for i, doubleProposal := range doubleProposals {
 		doubleProposalsTotal.Inc()
 		logDoubleProposal(proposedBlocks[i], doubleProposal.PrevBeaconBlockWrapper)
-		s.proposerSlashingsFeed.Send(&feed.Event{
-			Type: slashertypes.ProposerSlashing,
-			Data: &ethpb.ProposerSlashing{
-				Header_1: doubleProposal.PrevBeaconBlockWrapper.SignedBeaconBlockHeader,
-				Header_2: proposedBlocks[i].SignedBeaconBlockHeader,
-			},
+		s.serviceCfg.ProposerSlashingsFeed.Send(&ethpb.ProposerSlashing{
+			Header_1: doubleProposal.PrevBeaconBlockWrapper.SignedBeaconBlockHeader,
+			Header_2: proposedBlocks[i].SignedBeaconBlockHeader,
 		})
 		// If a proposer is found to have committed a slashable offense, we delete
 		// them from the safe proposers map.
