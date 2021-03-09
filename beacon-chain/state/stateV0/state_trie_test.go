@@ -1,4 +1,4 @@
-package state_test
+package stateV0_test
 
 import (
 	"bytes"
@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v0"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -48,7 +48,7 @@ func TestInitializeFromProto(t *testing.T) {
 	}
 	for _, tt := range initTests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := state.InitializeFromProto(tt.state)
+			_, err := stateV0.InitializeFromProto(tt.state)
 			if tt.error != "" {
 				assert.ErrorContains(t, tt.error, err)
 			} else {
@@ -90,7 +90,7 @@ func TestInitializeFromProtoUnsafe(t *testing.T) {
 	}
 	for _, tt := range initTests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := state.InitializeFromProtoUnsafe(tt.state)
+			_, err := stateV0.InitializeFromProtoUnsafe(tt.state)
 			if tt.error != "" {
 				assert.ErrorContains(t, tt.error, err)
 			} else {

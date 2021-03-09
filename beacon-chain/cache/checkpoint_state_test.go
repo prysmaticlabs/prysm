@@ -6,8 +6,8 @@ import (
 	"github.com/gogo/protobuf/proto"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -19,7 +19,7 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 	cache := NewCheckpointStateCache()
 
 	cp1 := &ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'A'}, 32)}
-	st, err := stateTrie.InitializeFromProto(&pb.BeaconState{
+	st, err := stateV0.InitializeFromProto(&pb.BeaconState{
 		GenesisValidatorsRoot: params.BeaconConfig().ZeroHash[:],
 		Slot:                  64,
 	})
@@ -39,7 +39,7 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 	}
 
 	cp2 := &ethpb.Checkpoint{Epoch: 2, Root: bytesutil.PadTo([]byte{'B'}, 32)}
-	st2, err := stateTrie.InitializeFromProto(&pb.BeaconState{
+	st2, err := stateV0.InitializeFromProto(&pb.BeaconState{
 		Slot: 128,
 	})
 	require.NoError(t, err)
@@ -56,7 +56,7 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 
 func TestCheckpointStateCache_MaxSize(t *testing.T) {
 	c := NewCheckpointStateCache()
-	st, err := stateTrie.InitializeFromProto(&pb.BeaconState{
+	st, err := stateV0.InitializeFromProto(&pb.BeaconState{
 		Slot: 0,
 	})
 	require.NoError(t, err)

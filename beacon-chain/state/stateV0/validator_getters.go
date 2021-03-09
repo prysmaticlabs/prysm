@@ -1,4 +1,4 @@
-package state
+package stateV0
 
 import (
 	types "github.com/prysmaticlabs/eth2-types"

@@ -1,4 +1,4 @@
-package state
+package stateV0
 
 import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"

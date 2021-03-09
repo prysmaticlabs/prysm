@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v0"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -18,7 +18,7 @@ func TestSkipSlotCache_OK(t *testing.T) {
 	state.SkipSlotCache.Enable()
 	defer state.SkipSlotCache.Disable()
 	bState, privs := testutil.DeterministicGenesisState(t, params.MinimalSpecConfig().MinGenesisActiveValidatorCount)
-	originalState, err := beaconstate.InitializeFromProto(bState.CloneInnerState())
+	originalState, err := stateV0.InitializeFromProto(bState.CloneInnerState())
 	require.NoError(t, err)
 
 	blkCfg := testutil.DefaultBlockGenConfig()
@@ -30,7 +30,7 @@ func TestSkipSlotCache_OK(t *testing.T) {
 	require.NoError(t, err)
 	executedState, err := state.ExecuteStateTransition(context.Background(), originalState, blk)
 	require.NoError(t, err, "Could not run state transition")
-	originalState, ok := executedState.(*beaconstate.BeaconState)
+	originalState, ok := executedState.(*stateV0.BeaconState)
 	require.Equal(t, true, ok)
 	bState, err = state.ExecuteStateTransition(context.Background(), bState, blk)
 	require.NoError(t, err, "Could not process state transition")
@@ -40,7 +40,7 @@ func TestSkipSlotCache_OK(t *testing.T) {
 
 func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 	bState, privs := testutil.DeterministicGenesisState(t, params.MinimalSpecConfig().MinGenesisActiveValidatorCount)
-	originalState, err := beaconstate.InitializeFromProto(bState.CloneInnerState())
+	originalState, err := stateV0.InitializeFromProto(bState.CloneInnerState())
 	require.NoError(t, err)
 
 	blkCfg := testutil.DefaultBlockGenConfig()
@@ -54,7 +54,7 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 	require.NoError(t, err)
 	executedState, err := state.ExecuteStateTransition(context.Background(), originalState, blk)
 	require.NoError(t, err, "Could not run state transition")
-	originalState, ok := executedState.(*beaconstate.BeaconState)
+	originalState, ok := executedState.(*stateV0.BeaconState)
 	require.Equal(t, true, ok)
 
 	// Create two shallow but different forks
