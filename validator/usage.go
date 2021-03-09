@@ -106,6 +106,9 @@ var appHelpFlagGroups = []flagGroup{
 			flags.WalletPasswordFileFlag,
 			flags.GraffitiFileFlag,
 			flags.EnableDutyCountDown,
+			flags.PandoraCoinbaseAddrFlag,
+			flags.PandoraHTTPEndpointFlag,
+			flags.PandoraIPCEndpointFlag,
 		},
 	},
 	{

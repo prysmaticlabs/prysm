@@ -317,6 +317,19 @@ var (
 		Usage: "Enables more verbose logging for counting down to duty",
 		Value: false,
 	}
+	PandoraCoinbaseAddrFlag = &cli.StringFlag{
+		Name: "pandora-coinbase-address",
+		Usage: "Coinbase address of pandora client",
+		Value: "",
+	}
+	PandoraHTTPEndpointFlag = &cli.StringFlag{
+		Name:  "pandora-http-endpoint",
+		Usage: "A pandora string http endpoint. This is our pandora client endpoint",
+	}
+	PandoraIPCEndpointFlag = &cli.StringFlag{
+		Name:  "pandora-ipc-endpoint",
+		Usage: "A pandora string ipc endpoint. This is our pandora client endpoint",
+	}
 )
 
 // DefaultValidatorDir returns OS-specific default validator directory.
