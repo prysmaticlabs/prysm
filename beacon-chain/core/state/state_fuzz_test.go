@@ -5,7 +5,7 @@ import (
 
 	fuzz "github.com/google/gofuzz"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/v0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 )
 
 func TestGenesisBeaconState_1000(t *testing.T) {
