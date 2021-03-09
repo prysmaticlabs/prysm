@@ -50,7 +50,7 @@ type Simulator struct {
 // DefaultParams for launching a slasher simulator.
 func DefaultParams() *Parameters {
 	return &Parameters{
-		SecondsPerSlot:         1,
+		SecondsPerSlot:         4,
 		AggregationPercent:     1.0,
 		ProposerSlashingProbab: 0.2,
 		AttesterSlashingProbab: 0.2,
@@ -140,7 +140,7 @@ func (s *Simulator) simulateBlocksAndAttestations(ctx context.Context) {
 		select {
 		case slot := <-ticker.C():
 			// We only run the simulator for a specified number of epochs.
-			if helpers.SlotToEpoch(slot) >= types.Epoch(s.params.NumEpochs) {
+			if helpers.SlotToEpoch(slot)+1 >= types.Epoch(s.params.NumEpochs) {
 				return
 			}
 
@@ -160,21 +160,21 @@ func (s *Simulator) simulateBlocksAndAttestations(ctx context.Context) {
 			for _, bb := range blockHeaders {
 				s.beaconBlocksFeed.Send(bb)
 			}
-			atts, attSlashings := generateAttestationsForSlot(s.params, slot)
-			log.WithFields(logrus.Fields{
-				"numAtts":      len(atts),
-				"numSlashable": len(propSlashings),
-			}).Infof("Producing attestations for slot %d", slot)
-			for _, sl := range attSlashings {
-				slashingRoot, err := sl.HashTreeRoot()
-				if err != nil {
-					log.WithError(err).Fatal("Could not hash tree root slashing")
-				}
-				s.sentSlashings[slashingRoot] = true
-			}
-			for _, aa := range atts {
-				s.indexedAttsFeed.Send(aa)
-			}
+			//atts, attSlashings := generateAttestationsForSlot(s.params, slot)
+			//log.WithFields(logrus.Fields{
+			//	"numAtts":      len(atts),
+			//	"numSlashable": len(propSlashings),
+			//}).Infof("Producing attestations for slot %d", slot)
+			//for _, sl := range attSlashings {
+			//	slashingRoot, err := sl.HashTreeRoot()
+			//	if err != nil {
+			//		log.WithError(err).Fatal("Could not hash tree root slashing")
+			//	}
+			//	s.sentSlashings[slashingRoot] = true
+			//}
+			//for _, aa := range atts {
+			//	s.indexedAttsFeed.Send(aa)
+			//}
 		case <-ctx.Done():
 			return
 		}
@@ -230,6 +230,8 @@ func (s *Simulator) receiveDetectedSlashings(ctx context.Context) {
 }
 
 func (s *Simulator) verifySlashingsWereDetected(ctx context.Context) {
+	// TODO: This does not give us information about what exactly the slashing was. We likely need
+	// better differentiation for nicer logging and understanding what it was that we didn't catch.
 	for slashingRoot := range s.sentSlashings {
 		_, ok := s.detectedSlashings[slashingRoot]
 		if ok {
