@@ -398,6 +398,15 @@ func (s *Store) saveAttestationRecords(ctx context.Context, atts []*AttestationR
 	ctx, span := trace.StartSpan(ctx, "Validator.saveAttestationRecords")
 	defer span.End()
 	return s.update(func(tx *bolt.Tx) error {
+		// Initialize buckets for the lowest target and source epochs.
+		lowestSourceBucket, err := tx.CreateBucketIfNotExists(lowestSignedSourceBucket)
+		if err != nil {
+			return err
+		}
+		lowestTargetBucket, err := tx.CreateBucketIfNotExists(lowestSignedTargetBucket)
+		if err != nil {
+			return err
+		}
 		bucket := tx.Bucket(pubKeysBucket)
 		for _, att := range atts {
 			pkBucket, err := bucket.CreateBucketIfNotExists(att.PubKey[:])
@@ -446,16 +455,6 @@ func (s *Store) saveAttestationRecords(ctx context.Context, atts []*AttestationR
 
 			if err := targetEpochsBucket.Put(targetEpochBytes, existingAttestedSourceBytes); err != nil {
 				return errors.Wrapf(err, "could not save target epoch %d for epoch %d", att.Target, att.Source)
-			}
-
-			// Initialize buckets for the lowest target and source epochs.
-			lowestSourceBucket, err := tx.CreateBucketIfNotExists(lowestSignedSourceBucket)
-			if err != nil {
-				return err
-			}
-			lowestTargetBucket, err := tx.CreateBucketIfNotExists(lowestSignedTargetBucket)
-			if err != nil {
-				return err
 			}
 
 			// If the incoming source epoch is lower than the lowest signed source epoch, override.
