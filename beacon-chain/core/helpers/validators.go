@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -28,7 +28,7 @@ func IsActiveValidator(validator *ethpb.Validator, epoch types.Epoch) bool {
 }
 
 // IsActiveValidatorUsingTrie checks if a read only validator is active.
-func IsActiveValidatorUsingTrie(validator stateTrie.ReadOnlyValidator, epoch types.Epoch) bool {
+func IsActiveValidatorUsingTrie(validator iface.ReadOnlyValidator, epoch types.Epoch) bool {
 	return checkValidatorActiveStatus(validator.ActivationEpoch(), validator.ExitEpoch(), epoch)
 }
 
@@ -50,7 +50,7 @@ func IsSlashableValidator(activationEpoch, withdrawableEpoch types.Epoch, slashe
 }
 
 // IsSlashableValidatorUsingTrie checks if a read only validator is slashable.
-func IsSlashableValidatorUsingTrie(val stateTrie.ReadOnlyValidator, epoch types.Epoch) bool {
+func IsSlashableValidatorUsingTrie(val iface.ReadOnlyValidator, epoch types.Epoch) bool {
 	return checkValidatorSlashable(val.ActivationEpoch(), val.WithdrawableEpoch(), val.Slashed(), epoch)
 }
 
@@ -73,7 +73,7 @@ func checkValidatorSlashable(activationEpoch, withdrawableEpoch types.Epoch, sla
 //    Return the sequence of active validator indices at ``epoch``.
 //    """
 //    return [ValidatorIndex(i) for i, v in enumerate(state.validators) if is_active_validator(v, epoch)]
-func ActiveValidatorIndices(state *stateTrie.BeaconState, epoch types.Epoch) ([]types.ValidatorIndex, error) {
+func ActiveValidatorIndices(state iface.ReadOnlyBeaconState, epoch types.Epoch) ([]types.ValidatorIndex, error) {
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get seed")
@@ -86,7 +86,7 @@ func ActiveValidatorIndices(state *stateTrie.BeaconState, epoch types.Epoch) ([]
 		return activeIndices, nil
 	}
 	var indices []types.ValidatorIndex
-	if err := state.ReadFromEveryValidator(func(idx int, val stateTrie.ReadOnlyValidator) error {
+	if err := state.ReadFromEveryValidator(func(idx int, val iface.ReadOnlyValidator) error {
 		if IsActiveValidatorUsingTrie(val, epoch) {
 			indices = append(indices, types.ValidatorIndex(idx))
 		}
@@ -104,7 +104,7 @@ func ActiveValidatorIndices(state *stateTrie.BeaconState, epoch types.Epoch) ([]
 
 // ActiveValidatorCount returns the number of active validators in the state
 // at the given epoch.
-func ActiveValidatorCount(state *stateTrie.BeaconState, epoch types.Epoch) (uint64, error) {
+func ActiveValidatorCount(state iface.ReadOnlyBeaconState, epoch types.Epoch) (uint64, error) {
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not get seed")
@@ -118,7 +118,7 @@ func ActiveValidatorCount(state *stateTrie.BeaconState, epoch types.Epoch) (uint
 	}
 
 	count := uint64(0)
-	if err := state.ReadFromEveryValidator(func(idx int, val stateTrie.ReadOnlyValidator) error {
+	if err := state.ReadFromEveryValidator(func(idx int, val iface.ReadOnlyValidator) error {
 		if IsActiveValidatorUsingTrie(val, epoch) {
 			count++
 		}
@@ -176,7 +176,7 @@ func ValidatorChurnLimit(activeValidatorCount uint64) (uint64, error) {
 //    seed = hash(get_seed(state, epoch, DOMAIN_BEACON_PROPOSER) + int_to_bytes(state.slot, length=8))
 //    indices = get_active_validator_indices(state, epoch)
 //    return compute_proposer_index(state, indices, seed)
-func BeaconProposerIndex(state *stateTrie.BeaconState) (types.ValidatorIndex, error) {
+func BeaconProposerIndex(state iface.ReadOnlyBeaconState) (types.ValidatorIndex, error) {
 	e := CurrentEpoch(state)
 	// The cache uses the state root of the previous epoch - minimum_seed_lookahead last slot as key. (e.g. Starting epoch 1, slot 32, the key would be block root at slot 31)
 	// For simplicity, the node will skip caching of genesis epoch.
@@ -243,7 +243,7 @@ func BeaconProposerIndex(state *stateTrie.BeaconState) (types.ValidatorIndex, er
 //        if effective_balance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * random_byte:
 //            return ValidatorIndex(candidate_index)
 //        i += 1
-func ComputeProposerIndex(bState *stateTrie.BeaconState, activeIndices []types.ValidatorIndex, seed [32]byte) (types.ValidatorIndex, error) {
+func ComputeProposerIndex(bState iface.ReadOnlyValidators, activeIndices []types.ValidatorIndex, seed [32]byte) (types.ValidatorIndex, error) {
 	length := uint64(len(activeIndices))
 	if length == 0 {
 		return 0, errors.New("empty active indices list")
@@ -320,7 +320,7 @@ func IsEligibleForActivationQueue(validator *ethpb.Validator) bool {
 
 // IsEligibleForActivationQueueUsingTrie checks if the read-only validator is eligible to
 // be placed into the activation queue.
-func IsEligibleForActivationQueueUsingTrie(validator stateTrie.ReadOnlyValidator) bool {
+func IsEligibleForActivationQueueUsingTrie(validator iface.ReadOnlyValidator) bool {
 	return isEligibileForActivationQueue(validator.ActivationEligibilityEpoch(), validator.EffectiveBalance())
 }
 
@@ -343,13 +343,13 @@ func isEligibileForActivationQueue(activationEligibilityEpoch types.Epoch, effec
 //        # Has not yet been activated
 //        and validator.activation_epoch == FAR_FUTURE_EPOCH
 //    )
-func IsEligibleForActivation(state *stateTrie.BeaconState, validator *ethpb.Validator) bool {
+func IsEligibleForActivation(state iface.ReadOnlyCheckpoint, validator *ethpb.Validator) bool {
 	finalizedEpoch := state.FinalizedCheckpointEpoch()
 	return isEligibleForActivation(validator.ActivationEligibilityEpoch, validator.ActivationEpoch, finalizedEpoch)
 }
 
 // IsEligibleForActivationUsingTrie checks if the validator is eligible for activation.
-func IsEligibleForActivationUsingTrie(state *stateTrie.BeaconState, validator stateTrie.ReadOnlyValidator) bool {
+func IsEligibleForActivationUsingTrie(state iface.ReadOnlyCheckpoint, validator iface.ReadOnlyValidator) bool {
 	cpt := state.FinalizedCheckpoint()
 	if cpt == nil {
 		return false

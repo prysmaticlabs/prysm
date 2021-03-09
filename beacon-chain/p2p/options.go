@@ -8,6 +8,7 @@ import (
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/peer"
 	noise "github.com/libp2p/go-libp2p-noise"
+	"github.com/libp2p/go-tcp-transport"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/version"
@@ -34,6 +35,7 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 		libp2p.ListenAddrs(listen),
 		libp2p.UserAgent(version.BuildData()),
 		libp2p.ConnectionGater(s),
+		libp2p.Transport(tcp.NewTCPTransport),
 	}
 
 	options = append(options, libp2p.Security(noise.ID, noise.New))

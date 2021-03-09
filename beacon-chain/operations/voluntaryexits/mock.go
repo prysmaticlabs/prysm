@@ -5,7 +5,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 )
 
 // PoolMock is a fake implementation of PoolManager.
@@ -14,13 +14,13 @@ type PoolMock struct {
 }
 
 // PendingExits --
-func (m *PoolMock) PendingExits(_ *beaconstate.BeaconState, _ types.Slot, _ bool) []*eth.SignedVoluntaryExit {
+func (m *PoolMock) PendingExits(_ iface.ReadOnlyBeaconState, _ types.Slot, _ bool) []*eth.SignedVoluntaryExit {
 	return m.Exits
 }
 
 // InsertVoluntaryExit --
-func (*PoolMock) InsertVoluntaryExit(_ context.Context, _ *beaconstate.BeaconState, _ *eth.SignedVoluntaryExit) {
-	panic("implement me")
+func (m *PoolMock) InsertVoluntaryExit(_ context.Context, _ iface.ReadOnlyBeaconState, exit *eth.SignedVoluntaryExit) {
+	m.Exits = append(m.Exits, exit)
 }
 
 // MarkIncluded --

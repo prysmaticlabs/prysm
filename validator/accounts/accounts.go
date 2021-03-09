@@ -11,11 +11,9 @@ var (
 	ErrCouldNotInitializeKeymanager = "could not initialize keymanager"
 )
 
-// Config specifies parameters to run to delete, enable, disable accounts.
+// Config specifies parameters for accounts commands.
 type Config struct {
-	Wallet            *wallet.Wallet
-	Keymanager        keymanager.IKeymanager
-	DisablePublicKeys [][]byte
-	EnablePublicKeys  [][]byte
-	DeletePublicKeys  [][]byte
+	Wallet           *wallet.Wallet
+	Keymanager       keymanager.IKeymanager
+	DeletePublicKeys [][]byte
 }

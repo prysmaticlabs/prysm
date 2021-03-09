@@ -56,25 +56,13 @@ type mockKeymanager struct {
 }
 
 func (m *mockKeymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+	keys := make([][48]byte, 0)
 	if m.fetchNoKeys {
-		// We set the value to `false` to fetch keys the next time.
 		m.fetchNoKeys = false
-		return make([][48]byte, 0), nil
+		return keys, nil
 	}
-
-	m.lock.RLock()
-	defer m.lock.RUnlock()
-	keys := make([][48]byte, 0)
-	for pubKey := range m.keysMap {
-		keys = append(keys, pubKey)
-	}
-	return keys, nil
-}
-
-func (m *mockKeymanager) FetchAllValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
-	keys := make([][48]byte, 0)
 	for pubKey := range m.keysMap {
 		keys = append(keys, pubKey)
 	}
@@ -93,6 +81,9 @@ func (m *mockKeymanager) Sign(ctx context.Context, req *validatorpb.SignRequest)
 }
 
 func (m *mockKeymanager) SubscribeAccountChanges(pubKeysChan chan [][48]byte) event.Subscription {
+	if m.accountsChangedFeed == nil {
+		m.accountsChangedFeed = &event.Feed{}
+	}
 	return m.accountsChangedFeed.Subscribe(pubKeysChan)
 }
 
@@ -362,7 +353,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		resp,
 		nil,
 	)
-	require.NoError(t, v.WaitForActivation(context.Background(), make(chan struct{})), "Could not wait for activation")
+	require.NoError(t, v.WaitForActivation(context.Background()), "Could not wait for activation")
 	require.LogsContain(t, hook, "Validator activated")
 }
 
@@ -400,7 +391,7 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 		resp,
 		nil,
 	)
-	assert.NoError(t, v.WaitForActivation(context.Background(), make(chan struct{})), "Could not wait for activation")
+	assert.NoError(t, v.WaitForActivation(context.Background()), "Could not wait for activation")
 }
 
 func TestWaitSync_ContextCanceled(t *testing.T) {

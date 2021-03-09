@@ -47,27 +47,73 @@ func (s *Store) Backup(ctx context.Context, outputDir string) error {
 	copyDB, err := bolt.Open(
 		backupPath,
 		params.BeaconIoConfig().ReadWritePermissions,
-		&bolt.Options{Timeout: params.BeaconIoConfig().BoltTimeout},
+		&bolt.Options{NoFreelistSync: true, NoSync: true, Timeout: params.BeaconIoConfig().BoltTimeout, FreelistType: bolt.FreelistMapType},
 	)
 	if err != nil {
 		return err
 	}
+	copyDB.AllocSize = boltAllocSize
+
 	defer func() {
 		if err := copyDB.Close(); err != nil {
 			log.WithError(err).Error("Failed to close backup database")
 		}
 	}()
-
-	return s.db.View(func(tx *bolt.Tx) error {
+	// Prefetch all keys of buckets, and inner keys in a
+	// bucket to use less memory usage when backing up.
+	bucketKeys := [][]byte{}
+	bucketMap := make(map[string][][]byte)
+	err = s.db.View(func(tx *bolt.Tx) error {
 		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
-			log.Debugf("Copying bucket %s\n", name)
-			return copyDB.Update(func(tx2 *bolt.Tx) error {
-				b2, err := tx2.CreateBucketIfNotExists(name)
-				if err != nil {
-					return err
+			newName := make([]byte, len(name))
+			copy(newName, name)
+			bucketKeys = append(bucketKeys, newName)
+			innerKeys := [][]byte{}
+			err := b.ForEach(func(k, v []byte) error {
+				if k == nil {
+					return nil
 				}
-				return b.ForEach(b2.Put)
+				nKey := make([]byte, len(k))
+				copy(nKey, k)
+				innerKeys = append(innerKeys, nKey)
+				return nil
 			})
+			if err != nil {
+				return err
+			}
+			bucketMap[string(newName)] = innerKeys
+			return nil
 		})
 	})
+	if err != nil {
+		return err
+	}
+	// Utilize much smaller writes, compared to
+	// writing for a whole bucket in a single transaction. Also
+	// prevent long-running read transactions, as Bolt doesn't
+	// handle those well.
+	for _, k := range bucketKeys {
+		log.Debugf("Copying bucket %s\n", k)
+		innerKeys := bucketMap[string(k)]
+		for _, ik := range innerKeys {
+			err = s.db.View(func(tx *bolt.Tx) error {
+				bkt := tx.Bucket(k)
+				return copyDB.Update(func(tx2 *bolt.Tx) error {
+					b2, err := tx2.CreateBucketIfNotExists(k)
+					if err != nil {
+						return err
+					}
+					return b2.Put(ik, bkt.Get(ik))
+				})
+			})
+			if err != nil {
+				return err
+			}
+		}
+	}
+	// Re-enable sync to allow bolt to fsync
+	// again.
+	copyDB.NoSync = false
+	copyDB.NoFreelistSync = false
+	return nil
 }

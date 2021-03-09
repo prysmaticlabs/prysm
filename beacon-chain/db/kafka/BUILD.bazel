@@ -13,7 +13,7 @@ go_library(
     deps = [
         "//beacon-chain/db/filters:go_default_library",
         "//beacon-chain/db/iface:go_default_library",
-        "//beacon-chain/state:go_default_library",
+        "//beacon-chain/state/interface:go_default_library",
         "//proto/beacon/db:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/featureconfig:go_default_library",

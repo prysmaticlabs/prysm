@@ -7,7 +7,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -62,7 +62,7 @@ func (ds *Server) GetInclusionSlot(ctx context.Context, req *pbrpc.InclusionSlot
 	}
 
 	inclusionSlot := types.Slot(1<<64 - 1)
-	targetStates := make(map[[32]byte]*state.BeaconState)
+	targetStates := make(map[[32]byte]iface.ReadOnlyBeaconState)
 	for _, blk := range blks {
 		for _, a := range blk.Block.Body.Attestations {
 			tr := bytesutil.ToBytes32(a.Data.Target.Root)

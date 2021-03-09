@@ -81,8 +81,11 @@ func MakeAttestationsFromBitlists(bl []bitfield.Bitlist) []*ethpb.Attestation {
 	for i, b := range bl {
 		atts[i] = &ethpb.Attestation{
 			AggregationBits: b,
-			Data:            nil,
-			Signature:       bls.NewAggregateSignature().Marshal(),
+			Data: &ethpb.AttestationData{
+				Slot:           42,
+				CommitteeIndex: 1,
+			},
+			Signature: bls.NewAggregateSignature().Marshal(),
 		}
 	}
 	return atts

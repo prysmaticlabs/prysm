@@ -7,7 +7,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
@@ -47,7 +47,7 @@ func NewCheckpointStateCache() *CheckpointStateCache {
 
 // StateByCheckpoint fetches state by checkpoint. Returns true with a
 // reference to the CheckpointState info, if exists. Otherwise returns false, nil.
-func (c *CheckpointStateCache) StateByCheckpoint(cp *ethpb.Checkpoint) (*stateTrie.BeaconState, error) {
+func (c *CheckpointStateCache) StateByCheckpoint(cp *ethpb.Checkpoint) (iface.BeaconState, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	h, err := hashutil.HashProto(cp)
@@ -60,7 +60,7 @@ func (c *CheckpointStateCache) StateByCheckpoint(cp *ethpb.Checkpoint) (*stateTr
 	if exists && item != nil {
 		checkpointStateHit.Inc()
 		// Copy here is unnecessary since the return will only be used to verify attestation signature.
-		return item.(*stateTrie.BeaconState), nil
+		return item.(iface.BeaconState), nil
 	}
 
 	checkpointStateMiss.Inc()
@@ -69,7 +69,7 @@ func (c *CheckpointStateCache) StateByCheckpoint(cp *ethpb.Checkpoint) (*stateTr
 
 // AddCheckpointState adds CheckpointState object to the cache. This method also trims the least
 // recently added CheckpointState object if the cache size has ready the max cache size limit.
-func (c *CheckpointStateCache) AddCheckpointState(cp *ethpb.Checkpoint, s *stateTrie.BeaconState) error {
+func (c *CheckpointStateCache) AddCheckpointState(cp *ethpb.Checkpoint, s iface.ReadOnlyBeaconState) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	h, err := hashutil.HashProto(cp)

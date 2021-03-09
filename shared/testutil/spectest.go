@@ -15,13 +15,14 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
-type blockOperation func(context.Context, *beaconstate.BeaconState, *ethpb.SignedBeaconBlock) (*beaconstate.BeaconState, error)
-type epochOperation func(*testing.T, *beaconstate.BeaconState) (*beaconstate.BeaconState, error)
+type blockOperation func(context.Context, iface.BeaconState, *ethpb.SignedBeaconBlock) (iface.BeaconState, error)
+type epochOperation func(*testing.T, iface.BeaconState) (iface.BeaconState, error)
 
 var json = jsoniter.Config{
 	EscapeHTML:             true,

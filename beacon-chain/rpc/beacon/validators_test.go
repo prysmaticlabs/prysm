@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -30,6 +31,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
+)
+
+const (
+	errNoEpochInfoError = "Cannot retrieve information about an epoch in the future"
 )
 
 func TestServer_GetValidatorActiveSetChanges_CannotRequestFutureEpoch(t *testing.T) {
@@ -46,7 +51,7 @@ func TestServer_GetValidatorActiveSetChanges_CannotRequestFutureEpoch(t *testing
 		BeaconDB: beaconDB,
 	}
 
-	wanted := "Cannot retrieve information about an epoch in the future"
+	wanted := errNoEpochInfoError
 	_, err = bs.GetValidatorActiveSetChanges(
 		ctx,
 		&ethpb.GetValidatorActiveSetChangesRequest{
@@ -73,7 +78,7 @@ func TestServer_ListValidatorBalances_CannotRequestFutureEpoch(t *testing.T) {
 		GenesisTimeFetcher: &mock.ChainService{},
 	}
 
-	wanted := "Cannot retrieve information about an epoch in the future"
+	wanted := errNoEpochInfoError
 	_, err = bs.ListValidatorBalances(
 		ctx,
 		&ethpb.ListValidatorBalancesRequest{
@@ -415,7 +420,7 @@ func TestServer_ListValidators_CannotRequestFutureEpoch(t *testing.T) {
 		},
 	}
 
-	wanted := "Cannot retrieve information about an epoch in the future"
+	wanted := errNoEpochInfoError
 	_, err = bs.ListValidators(
 		ctx,
 		&ethpb.ListValidatorsRequest{
@@ -1454,6 +1459,11 @@ func TestServer_GetValidatorParticipation_UnknownState(t *testing.T) {
 	require.NoError(t, headState.SetSlot(0))
 	epoch := types.Epoch(50)
 	slots := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch))
+	mockStateGen := &stategen.MockStateManager{
+		StatesBySlot: map[types.Slot]iface.BeaconState{
+			0: (*stateTrie.BeaconState)(nil),
+		},
+	}
 	bs := &Server{
 		BeaconDB: beaconDB,
 		HeadFetcher: &mock.ChainService{
@@ -1462,10 +1472,10 @@ func TestServer_GetValidatorParticipation_UnknownState(t *testing.T) {
 		GenesisTimeFetcher: &mock.ChainService{
 			Genesis: time.Now().Add(time.Duration(-1*int64(slots)) * time.Second),
 		},
-		StateGen: stategen.New(beaconDB),
+		StateGen: mockStateGen,
 	}
 
-	wanted := "failed to initialize precompute: nil inner state"
+	wanted := "Could not set up pre compute instance: failed to initialize precompute: nil inner state"
 	_, err = bs.GetValidatorParticipation(
 		ctx,
 		&ethpb.GetValidatorParticipationRequest{
@@ -1893,7 +1903,7 @@ func BenchmarkListValidatorBalances(b *testing.B) {
 	}
 }
 
-func setupValidators(t testing.TB, _ db.Database, count int) ([]*ethpb.Validator, []uint64, *stateTrie.BeaconState) {
+func setupValidators(t testing.TB, _ db.Database, count int) ([]*ethpb.Validator, []uint64, iface.BeaconState) {
 	balances := make([]uint64, count)
 	validators := make([]*ethpb.Validator, 0, count)
 	for i := 0; i < count; i++ {
@@ -1916,7 +1926,7 @@ func TestServer_GetIndividualVotes_RequestFutureSlot(t *testing.T) {
 	req := &ethpb.IndividualVotesRequest{
 		Epoch: helpers.SlotToEpoch(ds.GenesisTimeFetcher.CurrentSlot()) + 1,
 	}
-	wanted := "Cannot retrieve information about an epoch in the future"
+	wanted := errNoEpochInfoError
 	_, err := ds.GetIndividualVotes(context.Background(), req)
 	assert.ErrorContains(t, wanted, err)
 }

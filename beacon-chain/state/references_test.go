@@ -8,6 +8,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -31,7 +32,9 @@ func TestStateReferenceSharing_Finalizer(t *testing.T) {
 	runtime.GC() // Should run finalizer on object b
 	assert.Equal(t, uint(1), a.sharedFieldReferences[randaoMixes].refs, "Expected 1 shared reference to RANDAO mixes!")
 
-	b := a.Copy()
+	copied := a.Copy()
+	b, ok := copied.(*BeaconState)
+	require.Equal(t, true, ok)
 	assert.Equal(t, uint(2), b.sharedFieldReferences[randaoMixes].refs, "Expected 2 shared references to RANDAO mixes")
 	require.NoError(t, b.UpdateRandaoMixesAtIndex(0, []byte("bar")))
 	if b.sharedFieldReferences[randaoMixes].refs != 1 || a.sharedFieldReferences[randaoMixes].refs != 1 {
@@ -54,7 +57,9 @@ func TestStateReferenceCopy_NoUnexpectedRootsMutation(t *testing.T) {
 	assertRefCount(t, a, stateRoots, 1)
 
 	// Copy, increases reference count.
-	b := a.Copy()
+	copied := a.Copy()
+	b, ok := copied.(*BeaconState)
+	require.Equal(t, true, ok)
 	assertRefCount(t, a, blockRoots, 2)
 	assertRefCount(t, a, stateRoots, 2)
 	assertRefCount(t, b, blockRoots, 2)
@@ -119,7 +124,9 @@ func TestStateReferenceCopy_NoUnexpectedRandaoMutation(t *testing.T) {
 	assertRefCount(t, a, randaoMixes, 1)
 
 	// Copy, increases reference count.
-	b := a.Copy()
+	copied := a.Copy()
+	b, ok := copied.(*BeaconState)
+	require.Equal(t, true, ok)
 	assertRefCount(t, a, randaoMixes, 2)
 	assertRefCount(t, b, randaoMixes, 2)
 	assert.Equal(t, 1, len(b.state.GetRandaoMixes()), "No randao mixes found")
@@ -190,7 +197,9 @@ func TestStateReferenceCopy_NoUnexpectedAttestationsMutation(t *testing.T) {
 	assert.Equal(t, 1, len(a.PreviousEpochAttestations()), "Unexpected number of attestations")
 
 	// Copy, increases reference count.
-	b := a.Copy()
+	copied := a.Copy()
+	b, ok := copied.(*BeaconState)
+	require.Equal(t, true, ok)
 	assertRefCount(t, a, previousEpochAttestations, 2)
 	assertRefCount(t, a, currentEpochAttestations, 2)
 	assertRefCount(t, b, previousEpochAttestations, 2)
@@ -286,7 +295,9 @@ func TestValidatorReferences_RemainsConsistent(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create a second state.
-	b := a.Copy()
+	copied := a.Copy()
+	b, ok := copied.(*BeaconState)
+	require.Equal(t, true, ok)
 
 	// Update First Validator.
 	assert.NoError(t, a.UpdateValidatorAtIndex(0, &ethpb.Validator{PublicKey: []byte{'Z'}}))
@@ -298,7 +309,7 @@ func TestValidatorReferences_RemainsConsistent(t *testing.T) {
 	}))
 
 	// Ensure reference is properly accounted for.
-	assert.NoError(t, a.ReadFromEveryValidator(func(idx int, val ReadOnlyValidator) error {
+	assert.NoError(t, a.ReadFromEveryValidator(func(idx int, val iface.ReadOnlyValidator) error {
 		assert.NotEqual(t, bytesutil.ToBytes48([]byte{'V'}), val.PublicKey())
 		return nil
 	}))
