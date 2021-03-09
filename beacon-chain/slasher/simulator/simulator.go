@@ -5,13 +5,10 @@ import (
 	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-
-	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/slasher"
+	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
