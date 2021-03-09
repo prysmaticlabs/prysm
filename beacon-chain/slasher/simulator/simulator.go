@@ -140,7 +140,7 @@ func (s *Simulator) simulateBlocksAndAttestations(ctx context.Context) {
 		select {
 		case slot := <-ticker.C():
 			// We only run the simulator for a specified number of epochs.
-			if helpers.SlotToEpoch(slot) > types.Epoch(s.params.NumEpochs) {
+			if helpers.SlotToEpoch(slot) >= types.Epoch(s.params.NumEpochs) {
 				return
 			}
 
