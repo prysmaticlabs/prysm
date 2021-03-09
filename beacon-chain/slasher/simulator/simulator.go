@@ -215,6 +215,7 @@ func (s *Simulator) receiveDetectedSlashings(ctx context.Context) {
 					log.WithError(err).Fatal("Could not hash tree root attester slashing")
 				}
 			}
+			log.Warn("Detected slashing received")
 			s.lock.Lock()
 			s.detectedSlashings[slashingRoot] = true
 			s.lock.Unlock()
