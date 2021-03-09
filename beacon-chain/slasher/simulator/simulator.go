@@ -151,7 +151,6 @@ func (s *Simulator) simulateBlocksAndAttestations(ctx context.Context) {
 				"numBlocks":    len(blockHeaders),
 				"numSlashable": len(propSlashings),
 			}).Infof("Producing blocks for slot %d", slot)
-			// TODO: Some logic here is duplicated, we can use some abstraction here.
 			for _, sl := range propSlashings {
 				slashingRoot, err := sl.HashTreeRoot()
 				if err != nil {
