@@ -3,11 +3,10 @@ package slasher
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"go.opencensus.io/trace"
 )

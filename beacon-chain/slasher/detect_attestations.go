@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"

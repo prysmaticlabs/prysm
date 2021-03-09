@@ -3,11 +3,10 @@ package slashersimulator
 import (
 	"runtime"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/slasher/simulator"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/urfave/cli/v2"
 )
 
