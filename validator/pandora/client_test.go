@@ -2,7 +2,6 @@ package pandora
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"reflect"
 	"testing"
@@ -18,15 +17,11 @@ func TestGetShardBlockHeader_Success(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		err := mockedPandoraClient.Close()
-		require.NoError(t, err)
-	}()
+	defer mockedPandoraClient.Close()
 
 	inputBlock := getDummyBlock()
 	var response *ShardBlockHeaderResponse
-	response, err = mockedPandoraClient.GetShardBlockHeader(
-		context.Background(), types.EmptyRootHash, 1000, 31, 0)
+	response, err = mockedPandoraClient.GetShardBlockHeader(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,10 +45,7 @@ func TestSubmitShardBlockHeader_Success(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		err := mockedPandoraClient.Close()
-		require.NoError(t, err)
-	}()
+	defer mockedPandoraClient.Close()
 
 	block := getDummyBlock()
 	dummySig := [96]byte{}

@@ -14,7 +14,7 @@ import (
 
 var (
 	logThreshold = 8
-	dialInterval = 2 * time.Second
+	dialInterval = 5 * time.Second
 
 	ConnectionError = errors.New("Client not connected")
 	errNotSynced    = errors.New("Pandora node is still syncing")
@@ -27,21 +27,11 @@ type ExtraData struct {
 	ProposerIndex uint64
 }
 
-const SignatureSize = 96
-
-type BlsSignatureBytes [SignatureSize]byte
-
-type PandoraExtraDataSig struct {
-	ExtraData
-	BlsSignatureBytes *BlsSignatureBytes
-}
-
 // Client defines a subset of methods conformed to by Pandora RPC clients for
 // producing catalyst block and insert pandora block.
 type PandoraService interface {
 	// GetShardBlockHeader gets the new block header and hash of pandora client
-	GetShardBlockHeader(ctx context.Context, parentHash common.Hash,
-		nextBlockNumber uint64, slot uint64, epoch uint64) (*eth1Types.Header, common.Hash, *ExtraData, error)
+	GetShardBlockHeader(ctx context.Context) (*eth1Types.Header, common.Hash, *ExtraData, error)
 	// SubmitShardBlockHeader submits the header hash and signature of pandora block header
 	SubmitShardBlockHeader(ctx context.Context, blockNonce uint64, headerHash common.Hash, sig [96]byte) (bool, error)
 }
@@ -180,19 +170,13 @@ func (s *Service) waitForConnection() {
 
 // GetShardBlockHeader method calls pandora client's `eth_getWork` api and decode header and extra data fields
 // This methods returns eth1Types.Header and ExtraData
-func (s *Service) GetShardBlockHeader(
-	ctx context.Context,
-	parentHash common.Hash,
-	nextBlockNumber uint64,
-	slot uint64,
-	epoch uint64,
-) (*eth1Types.Header, common.Hash, *ExtraData, error) {
+func (s *Service) GetShardBlockHeader(ctx context.Context) (*eth1Types.Header, common.Hash, *ExtraData, error) {
 	if !s.connected {
 		log.WithError(ConnectionError).Error("Pandora chain is not connected")
 		return nil, common.Hash{}, nil, ConnectionError
 	}
 
-	response, err := s.pandoraClient.GetShardBlockHeader(ctx, parentHash, nextBlockNumber, slot, epoch)
+	response, err := s.pandoraClient.GetShardBlockHeader(ctx)
 	if err != nil {
 		log.WithError(err).Error("Pandora block preparation failed")
 		return nil, common.Hash{}, nil, err
@@ -202,9 +186,6 @@ func (s *Service) GetShardBlockHeader(
 	if err := rlp.DecodeBytes(header.Extra, &extraData); err != nil {
 		return nil, common.Hash{}, nil, errors.Wrap(err, "Failed to decode extra data fields")
 	}
-	log.WithField("generatedHeaderHash", header.Hash().Hex()).WithField(
-		"headerHash", response.HeaderHash.Hex()).WithField(
-		"extraData", extraData).Debug("Got header info from pandora")
 	return header, response.HeaderHash, &extraData, nil
 }
 
@@ -229,9 +210,9 @@ func (s *Service) SubmitShardBlockHeader(ctx context.Context, blockNonce uint64,
 // isPandoraNodeSynced method checks if the pandora node is healthy and ready to serve before
 // fetching data from  it.
 func (s *Service) isPandoraNodeSynced() (bool, error) {
-	_, err := s.pandoraClient.GetShardSyncProgress(s.ctx)
+	syncProg, err := s.pandoraClient.GetShardSyncProgress(s.ctx)
 	if err != nil {
 		return false, err
 	}
-	return true, nil
+	return syncProg != nil, nil
 }

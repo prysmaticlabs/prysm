@@ -61,7 +61,6 @@ func NewBeaconBlock() *ethpb.SignedBeaconBlock {
 				Deposits:          []*ethpb.Deposit{},
 				ProposerSlashings: []*ethpb.ProposerSlashing{},
 				VoluntaryExits:    []*ethpb.SignedVoluntaryExit{},
-				PandoraShard:      []*ethpb.PandoraShard{},
 			},
 		},
 		Signature: make([]byte, 96),
@@ -177,7 +176,6 @@ func GenerateFullBlock(
 			VoluntaryExits:    exits,
 			Deposits:          newDeposits,
 			Graffiti:          make([]byte, 32),
-			PandoraShard:      []*ethpb.PandoraShard{},
 		},
 	}
 	if err := bState.SetSlot(currentSlot); err != nil {
@@ -512,18 +510,14 @@ func HydrateV1BeaconBlockBody(b *v1.BeaconBlockBody) *v1.BeaconBlockBody {
 }
 
 // getDummyBlock method creates a brand new block with extraData
-func NewPandoraBlock(slot types.Slot, proposerIndex uint64) (*gethTypes.Header, *pandora.ExtraData) {
+func NewPandoraBlock(slot types.Slot, proposerIndex uint64) (*gethTypes.Header, common.Hash, *pandora.ExtraData) {
 	epoch := types.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
 	extraData := pandora.ExtraData{
 		Slot:          uint64(slot),
 		Epoch:         uint64(epoch),
 		ProposerIndex: proposerIndex,
 	}
-	extraDataByte, err := rlp.EncodeToBytes(extraData)
-	if err != nil {
-		return nil, nil
-	}
-
+	extraDataByte, _ := rlp.EncodeToBytes(extraData)
 	block := gethTypes.NewBlock(&gethTypes.Header{
 		ParentHash:  gethTypes.EmptyRootHash,
 		UncleHash:   gethTypes.EmptyUncleHash,
@@ -541,26 +535,5 @@ func NewPandoraBlock(slot types.Slot, proposerIndex uint64) (*gethTypes.Header, 
 		Nonce:       gethTypes.BlockNonce{0x01, 0x02, 0x03},
 	}, nil, nil, nil, nil)
 
-	return block.Header(), &extraData
-}
-
-// NewBeaconBlockWithPandoraSharding
-func NewBeaconBlockWithPandoraSharding(panHeader *gethTypes.Header, slot types.Slot) *ethpb.SignedBeaconBlock {
-	beaconBlock := NewBeaconBlock()
-	beaconBlock.Block.Slot = slot
-
-	panState := new(ethpb.PandoraShard)
-	panState.BlockNumber = panHeader.Number.Uint64() - 1
-	panState.Hash = gethTypes.EmptyRootHash.Bytes()
-	panState.ParentHash = panHeader.ParentHash.Bytes()
-	panState.StateRoot = panHeader.Root.Bytes()
-	panState.TxHash = panHeader.TxHash.Bytes()
-	panState.ReceiptHash = panHeader.ReceiptHash.Bytes()
-	panState.Signature = make([]byte, params.BeaconConfig().BLSSignatureLength)
-
-	pandoraShards := make([]*ethpb.PandoraShard, 1)
-	pandoraShards[0] = panState
-
-	beaconBlock.Block.Body.PandoraShard = pandoraShards
-	return beaconBlock
+	return block.Header(), block.Hash(), &extraData
 }

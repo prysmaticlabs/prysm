@@ -15,7 +15,6 @@ import (
 
 	gethRpc "github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/backuputil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -32,6 +31,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
+	"github.com/prysmaticlabs/prysm/validator/flags"
 	g "github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
@@ -411,7 +411,7 @@ func (c *ValidatorClient) registerValidatorService(
 			log.WithError(err).Warn("Could not parse graffiti file")
 		}
 	}
-	// Vanguard: pandora chain service is needed for vanguard chain
+
 	var pandoraService *pandora.Service
 	if err := c.services.FetchService(&pandoraService); err != nil {
 		return err
@@ -434,9 +434,7 @@ func (c *ValidatorClient) registerValidatorService(
 		WalletInitializedFeed:      c.walletInitialized,
 		GraffitiStruct:             gStruct,
 		LogDutyCountDown:           c.cliCtx.Bool(flags.EnableDutyCountDown.Name),
-		// Vanguard: pandora service and vanguard node flag are needed for vanguard chain
-		PandoraService:     pandoraService,
-		EnableVanguardNode: c.cliCtx.Bool(cmd.VanguardNetwork.Name),
+		PandoraService:             pandoraService,
 	})
 
 	if err != nil {

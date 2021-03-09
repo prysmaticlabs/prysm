@@ -4,6 +4,11 @@ package client
 import (
 	"context"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/prysmaticlabs/prysm/validator/pandora"
+	"time"
+
+	eth1Types "github.com/ethereum/go-ethereum/core/types"
 	pbtypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -18,12 +23,24 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
-	"time"
+)
+
+var (
+	// errInvalidHeaderHash is returned if the header hash does not match with incoming header hash
+	errInvalidHeaderHash = errors.New("invalid header hash")
+	// errInvalidSlot is returned if the current slot does not match with incoming slot
+	errInvalidSlot = errors.New("invalid slot")
+	// errInvalidEpoch is returned if the epoch does not match with incoming epoch
+	errInvalidEpoch = errors.New("invalid epoch")
+	// errInvalidProposerIndex is returned if the proposer index does not match with incoming proposer index
+	errInvalidProposerIndex = errors.New("invalid proposer index")
+	// errInvalidTimestamp is returned if the timestamp of a block is higher than the current time
+	errInvalidTimestamp = errors.New("invalid timestamp")
 )
 
 type signingFunc func(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
 
-const domainDataErr = "could not get verify domain data"
+const domainDataErr = "could not get domain data"
 const signingRootErr = "could not get signing root"
 const signExitErr = "could not sign voluntary exit proposal"
 
@@ -80,13 +97,13 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [4
 		return
 	}
 
-	// Vanguard: If VanguardNetwork flag is enabled then this if state will be executed
-	if v.enableVanguardNode {
-		// Vanguard: processPandoraShardHeader method process the block header from pandora chain
-		if err := v.processPandoraShardHeader(ctx, b, slot, epoch, pubKey); err != nil {
-			log.WithField("blockSlot", slot).WithError(err).Error("Failed to process pandora sharding info")
-			return
+	// processPandoraShardHeader method process the block header from pandora chain
+	if status, err := v.processPandoraShardHeader(ctx, b, slot, epoch, pubKey); !status || err != nil {
+		log.WithError(err).Error("Failed to process pandora chain shard header")
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
+		return
 	}
 
 	// Sign returned block from beacon node
@@ -337,4 +354,83 @@ func (v *validator) getGraffiti(ctx context.Context, pubKey [48]byte) ([]byte, e
 	}
 
 	return []byte{}, nil
+}
+
+// processPandoraShardHeader method does the following tasks:
+// - Get pandora block header, header hash, extraData from remote pandora node
+// - Validate block header hash and extraData fields
+// - Signs header hash using a validator key
+// - Submit signature and header to pandora node
+func (v *validator) processPandoraShardHeader(ctx context.Context, beaconBlk *ethpb.BeaconBlock,
+	slot types.Slot, epoch types.Epoch, pubKey [48]byte) (bool, error) {
+
+	fmtKey := fmt.Sprintf("%#x", pubKey[:])
+	// Request for pandora chain header
+	header, headerHash, extraData, err := v.pandoraService.GetShardBlockHeader(ctx)
+	if err != nil {
+		log.WithField("blockSlot", slot).WithError(err).Error("Failed to request block from pandora node")
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return false, err
+	}
+	// Validate pandora chain header hash, extraData fields
+	if err := v.verifyPandoraShardHeader(beaconBlk, slot, epoch, header, headerHash, extraData); err != nil {
+		log.WithField("blockSlot", slot).WithError(err).Error("Failed to validate pandora block header")
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return false, err
+	}
+	headerHashSig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
+		PublicKey:       pubKey[:],
+		SigningRoot:     headerHash[:],
+		SignatureDomain: nil,
+		Object:          nil,
+	})
+	//compressedSig := headerHashSig.Marshal()
+	if err != nil {
+		log.WithField("blockSlot", slot).WithError(err).Error("Failed to sign pandora header hash")
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return false, err
+	}
+	header.MixDigest = common.BytesToHash(headerHashSig.Marshal())
+	var headerHashSig96Bytes [96]byte
+	copy(headerHashSig96Bytes[:], headerHashSig.Marshal())
+	return v.pandoraService.SubmitShardBlockHeader(ctx, header.Nonce.Uint64(), headerHash, headerHashSig96Bytes)
+}
+
+// verifyPandoraShardHeader verifies pandora sharding chain header hash and extraData field
+func (v *validator) verifyPandoraShardHeader(beaconBlk *ethpb.BeaconBlock, slot types.Slot, epoch types.Epoch,
+	header *eth1Types.Header, headerHash common.Hash, extraData *pandora.ExtraData) error {
+
+	// verify header hash
+	if header.Hash() != headerHash {
+		log.WithError(errInvalidHeaderHash).Error("invalid header hash from pandora chain")
+		return errInvalidHeaderHash
+	}
+	// verify timestamp. Timestamp should not be future time
+	if header.Time >= uint64(timeutils.Now().Unix()) {
+		log.WithError(errInvalidTimestamp).Error("invalid timestamp from pandora chain")
+		return errInvalidTimestamp
+	}
+	// verify slot number
+	if extraData.Slot != uint64(slot) {
+		log.WithError(errInvalidSlot).Error("invalid slot from pandora chain")
+		return errInvalidSlot
+	}
+	// verify epoch number
+	if extraData.Epoch != uint64(epoch) {
+		log.WithError(errInvalidEpoch).Error("invalid epoch from pandora chain")
+		return errInvalidEpoch
+	}
+	// verify proposer index
+	if extraData.ProposerIndex != uint64(beaconBlk.ProposerIndex) {
+		log.WithError(errInvalidProposerIndex).Error("invalid proposer index from pandora chain")
+		return errInvalidProposerIndex
+	}
+
+	return nil
 }

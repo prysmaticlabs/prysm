@@ -5,12 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/protobuf/ptypes/empty"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ptypes "github.com/gogo/protobuf/types"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/client"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type mockSyncChecker struct {
@@ -24,7 +23,11 @@ func (m *mockSyncChecker) Syncing(_ context.Context) (bool, error) {
 type mockGenesisFetcher struct{}
 
 func (m *mockGenesisFetcher) GenesisInfo(_ context.Context) (*ethpb.Genesis, error) {
-	genesis := timestamppb.New(time.Unix(0, 0))
+	genesis, err := ptypes.TimestampProto(time.Unix(0, 0))
+	if err != nil {
+		log.Info(err)
+		return nil, err
+	}
 	return &ethpb.Genesis{
 		GenesisTime: genesis,
 	}, nil
@@ -42,7 +45,7 @@ func TestServer_GetBeaconNodeConnection(t *testing.T) {
 		genesisFetcher:      &mockGenesisFetcher{},
 		nodeGatewayEndpoint: endpoint,
 	}
-	got, err := s.GetBeaconNodeConnection(ctx, &empty.Empty{})
+	got, err := s.GetBeaconNodeConnection(ctx, &ptypes.Empty{})
 	require.NoError(t, err)
 	want := &pb.NodeConnectionResponse{
 		BeaconNodeEndpoint: endpoint,
