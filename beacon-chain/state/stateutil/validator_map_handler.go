@@ -26,6 +26,21 @@ func (v *ValidatorMapHandler) AddRef() {
 	v.mapRef.AddRef()
 }
 
+// ValidatorIndexMap returns the validator index map.
+func (v *ValidatorMapHandler) ValidatorIndexMap() map[[48]byte]types.ValidatorIndex {
+	return v.valIdxMap
+}
+
+// MapRef returns the map reference.
+func (v *ValidatorMapHandler) MapRef() *Reference {
+	return v.mapRef
+}
+
+// IsNil returns true if the underlying validator index map is nil.
+func (v *ValidatorMapHandler) IsNil() bool {
+	return v.mapRef == nil
+}
+
 // Copy the whole map and returns a map handler with the copied map.
 func (v *ValidatorMapHandler) Copy() *ValidatorMapHandler {
 	if v == nil || v.valIdxMap == nil {
@@ -39,4 +54,18 @@ func (v *ValidatorMapHandler) Copy() *ValidatorMapHandler {
 		valIdxMap: m,
 		mapRef:    &Reference{refs: 1},
 	}
+}
+
+// Get the validator index using the corresponding public key.
+func (v *ValidatorMapHandler) Get(key [48]byte) (types.ValidatorIndex, bool) {
+	idx, ok := v.valIdxMap[key]
+	if !ok {
+		return 0, false
+	}
+	return idx, true
+}
+
+// Set the validator index using the corresponding public key.
+func (v *ValidatorMapHandler) Set(key [48]byte, index types.ValidatorIndex) {
+	v.valIdxMap[key] = index
 }

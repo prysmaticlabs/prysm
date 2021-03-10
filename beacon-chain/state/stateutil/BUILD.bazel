@@ -7,8 +7,10 @@ go_library(
         "arrays.go",
         "attestations.go",
         "blocks.go",
+        "reference.go",
         "state_root.go",
         "trie_helpers.go",
+        "validator_map_handler.go",
         "validators.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil",
@@ -25,6 +27,7 @@ go_library(
         "//validator/client:__pkg__",
     ],
     deps = [
+        "//beacon-chain/core/state/stateutils:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/featureconfig:go_default_library",
@@ -34,6 +37,7 @@ go_library(
         "//shared/trieutil:go_default_library",
         "@com_github_dgraph_io_ristretto//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
+        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
     ],
 )
@@ -43,6 +47,7 @@ go_test(
     srcs = [
         "attestations_test.go",
         "benchmark_test.go",
+        "reference_bench_test.go",
         "state_root_test.go",
         "stateutil_test.go",
         "trie_helpers_test.go",
