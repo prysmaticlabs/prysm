@@ -27,7 +27,7 @@ type Validator interface {
 	Done()
 	WaitForChainStart(ctx context.Context) error
 	WaitForSync(ctx context.Context) error
-	WaitForActivation(ctx context.Context) error
+	WaitForActivation(ctx context.Context, accountsChangedChan chan [][48]byte) error
 	SlasherReady(ctx context.Context) error
 	CanonicalHeadSlot(ctx context.Context) (types.Slot, error)
 	NextSlot() <-chan types.Slot
@@ -45,7 +45,7 @@ type Validator interface {
 	AllValidatorsAreExited(ctx context.Context) (bool, error)
 	GetKeymanager() keymanager.IKeymanager
 	ReceiveBlocks(ctx context.Context, connectionErrorChannel chan<- error)
-	HandleKeyReload(ctx context.Context, newKeys [][48]byte) error
+	HandleKeyReload(ctx context.Context, newKeys [][48]byte) (bool, error)
 }
 
 // Run the main validator routine. This routine exits if the context is
@@ -102,7 +102,7 @@ func run(ctx context.Context, v Validator) {
 		if err != nil {
 			log.Fatalf("Could not determine if beacon node synced: %v", err)
 		}
-		err = v.WaitForActivation(ctx)
+		err = v.WaitForActivation(ctx, nil)
 		if isConnectionError(err) {
 			log.Warnf("Could not wait for validator activation: %v", err)
 			continue
@@ -148,9 +148,16 @@ func run(ctx context.Context, v Validator) {
 				continue
 			}
 		case newKeys := <-accountsChangedChan:
-			err := v.HandleKeyReload(ctx, newKeys)
+			anyActive, err := v.HandleKeyReload(ctx, newKeys)
 			if err != nil {
 				log.WithError(err).Error("Could not properly handle reloaded keys")
+			}
+			if !anyActive {
+				log.Info("No active keys found. Waiting for activation...")
+				err := v.WaitForActivation(ctx, accountsChangedChan)
+				if err != nil {
+					log.Fatalf("Could not wait for validator activation: %v", err)
+				}
 			}
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))

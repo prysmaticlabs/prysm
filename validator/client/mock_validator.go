@@ -73,7 +73,7 @@ func (fv *FakeValidator) WaitForChainStart(_ context.Context) error {
 }
 
 // WaitForActivation for mocking.
-func (fv *FakeValidator) WaitForActivation(_ context.Context) error {
+func (fv *FakeValidator) WaitForActivation(_ context.Context, _ chan [][48]byte) error {
 	fv.WaitForActivationCalled++
 	if fv.RetryTillSuccess >= fv.WaitForActivationCalled {
 		return errConnectionIssue
@@ -218,6 +218,6 @@ func (fv *FakeValidator) ReceiveBlocks(ctx context.Context, connectionErrorChann
 }
 
 // HandleKeyReload for mocking
-func (*FakeValidator) HandleKeyReload(_ context.Context, _ [][48]byte) error {
-	return nil
+func (*FakeValidator) HandleKeyReload(_ context.Context, _ [][48]byte) (bool, error) {
+	return false, nil
 }

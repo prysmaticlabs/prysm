@@ -19,14 +19,18 @@ import (
 // validator set. If not, this operation will block until an activation message is
 // received. This method also monitors the keymanager for updates while waiting for an activation
 // from the gRPC server.
-func (v *validator) WaitForActivation(ctx context.Context) error {
+//
+// If the channel parameter is nil, WaitForActivation creates and manages its own channel.
+func (v *validator) WaitForActivation(ctx context.Context, accountsChangedChan chan [][48]byte) error {
 	// Monitor the key manager for updates.
-	accountsChangedChan := make(chan [][48]byte)
-	sub := v.GetKeymanager().SubscribeAccountChanges(accountsChangedChan)
-	defer func() {
-		sub.Unsubscribe()
-		close(accountsChangedChan)
-	}()
+	if accountsChangedChan == nil {
+		accountsChangedChan = make(chan [][48]byte)
+		sub := v.GetKeymanager().SubscribeAccountChanges(accountsChangedChan)
+		defer func() {
+			sub.Unsubscribe()
+			close(accountsChangedChan)
+		}()
+	}
 
 	return v.waitForActivation(ctx, accountsChangedChan)
 }

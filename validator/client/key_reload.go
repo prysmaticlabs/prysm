@@ -9,7 +9,7 @@ import (
 
 // HandleKeyReload makes sure the validator keeps operating correctly after a change to the underlying keys.
 // It is also responsible for logging out information about the new state of keys.
-func (v *validator) HandleKeyReload(ctx context.Context, newKeys [][48]byte) error {
+func (v *validator) HandleKeyReload(ctx context.Context, newKeys [][48]byte) (anyActive bool, err error) {
 	ctx, span := trace.StartSpan(ctx, "validator.HandleKeyReload")
 	defer span.End()
 
@@ -21,7 +21,7 @@ func (v *validator) HandleKeyReload(ctx context.Context, newKeys [][48]byte) err
 		PublicKeys: statusRequestKeys,
 	})
 	if err != nil {
-		return err
+		return false, err
 	}
 	statuses := make([]*validatorStatus, len(resp.Statuses))
 	for i, s := range resp.Statuses {
@@ -31,10 +31,10 @@ func (v *validator) HandleKeyReload(ctx context.Context, newKeys [][48]byte) err
 			index:     resp.Indices[i],
 		}
 	}
-	anyActive := v.checkAndLogValidatorStatus(statuses)
+	anyActive = v.checkAndLogValidatorStatus(statuses)
 	if anyActive {
 		logActiveValidatorStatus(statuses)
 	}
 
-	return nil
+	return anyActive, nil
 }
