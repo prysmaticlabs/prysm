@@ -65,7 +65,7 @@ func (s *Service) detectSlashableAttestations(
 		)
 	}
 	log.WithFields(logrus.Fields{
-		"timeElapsed":               time.Now().Sub(start),
+		"timeElapsed":               time.Since(start),
 		"surroundingSlashingsFound": len(surroundingSlashings),
 		"currentEpoch":              args.currentEpoch,
 		"validatorChunkIndex":       args.validatorChunkIndex,
@@ -85,7 +85,7 @@ func (s *Service) detectSlashableAttestations(
 		)
 	}
 	log.WithFields(logrus.Fields{
-		"timeElapsed":              time.Now().Sub(start),
+		"timeElapsed":              time.Since(start),
 		"surroundedSlashingsFound": len(surroundingSlashings),
 		"currentEpoch":             args.currentEpoch,
 		"validatorChunkIndex":      args.validatorChunkIndex,

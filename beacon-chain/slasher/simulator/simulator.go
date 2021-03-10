@@ -127,7 +127,6 @@ func (s *Simulator) Start() {
 	// Verify the slashings we detected are the same as those the
 	// simulator produced, effectively checking slasher caught all slashable offenses.
 	s.verifySlashingsWereDetected(s.ctx)
-	return
 }
 
 // Stop the simulator.
