@@ -49,7 +49,7 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 		b.stateFieldLeaves[fieldIndex(i)] = &FieldTrie{
 			field:     fieldIndex(i),
 			reference: &reference{refs: 1},
-			Mutex:     new(sync.Mutex),
+			RWMutex:   new(sync.RWMutex),
 		}
 	}
 
@@ -215,11 +215,11 @@ func (b *BeaconState) FieldReferencesCount() map[string]uint64 {
 	}
 	for i, f := range b.stateFieldLeaves {
 		numOfRefs := uint64(f.Refs())
-		f.lock.RLock()
+		f.RLock()
 		if len(f.fieldLayers) != 0 {
 			refMap[i.String()+"_trie"] = numOfRefs
 		}
-		f.lock.RUnlock()
+		f.RUnlock()
 	}
 	return refMap
 }
