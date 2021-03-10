@@ -14,7 +14,7 @@ func (v *validator) HandleKeyReload(ctx context.Context, newKeys [][48]byte) (an
 	defer span.End()
 
 	statusRequestKeys := make([][]byte, len(newKeys))
-	for i, _ := range newKeys {
+	for i := range newKeys {
 		statusRequestKeys[i] = newKeys[i][:]
 	}
 	resp, err := v.validatorClient.MultipleValidatorStatus(ctx, &eth.MultipleValidatorStatusRequest{
