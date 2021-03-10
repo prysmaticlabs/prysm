@@ -99,8 +99,8 @@ func (m *mockKeymanager) SubscribeAccountChanges(pubKeysChan chan [][48]byte) ev
 	return m.accountsChangedFeed.Subscribe(pubKeysChan)
 }
 
-func (m *mockKeymanager) SimulateAccountChanges() {
-	m.accountsChangedFeed.Send(make([][48]byte, 0))
+func (m *mockKeymanager) SimulateAccountChanges(newKeys [][48]byte) {
+	m.accountsChangedFeed.Send(newKeys)
 }
 
 func generateMockStatusResponse(pubkeys [][]byte) *ethpb.ValidatorActivationResponse {

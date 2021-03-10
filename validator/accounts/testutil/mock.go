@@ -1,4 +1,4 @@
-package mock
+package testutil
 
 import (
 	"context"

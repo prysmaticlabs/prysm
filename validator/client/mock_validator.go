@@ -1,12 +1,14 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/validator/accounts/testutil"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
 
@@ -27,6 +29,7 @@ type FakeValidator struct {
 	SaveProtectionsCalled             bool
 	DeleteProtectionCalled            bool
 	SlotDeadlineCalled                bool
+	HandleKeyReloadCalled             bool
 	WaitForChainStartCalled           int
 	WaitForSyncCalled                 int
 	WaitForActivationCalled           int
@@ -218,6 +221,12 @@ func (fv *FakeValidator) ReceiveBlocks(ctx context.Context, connectionErrorChann
 }
 
 // HandleKeyReload for mocking
-func (*FakeValidator) HandleKeyReload(_ context.Context, _ [][48]byte) (bool, error) {
+func (fv *FakeValidator) HandleKeyReload(_ context.Context, newKeys [][48]byte) (anyActive bool, err error) {
+	fv.HandleKeyReloadCalled = true
+	for _, key := range newKeys {
+		if bytes.Equal(key[:], testutil.ActiveKey[:]) {
+			return true, nil
+		}
+	}
 	return false, nil
 }

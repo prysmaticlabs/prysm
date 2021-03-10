@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	mock "github.com/prysmaticlabs/prysm/validator/accounts/testing"
+	mock "github.com/prysmaticlabs/prysm/validator/accounts/testutil"
 	constant "github.com/prysmaticlabs/prysm/validator/testing"
 	"github.com/tyler-smith/go-bip39"
 	util "github.com/wealdtech/go-eth2-util"

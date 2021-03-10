@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	walletMock "github.com/prysmaticlabs/prysm/validator/accounts/testing"
+	walletMock "github.com/prysmaticlabs/prysm/validator/accounts/testutil"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	constant "github.com/prysmaticlabs/prysm/validator/testing"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -295,7 +295,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			// We add the active key into the keymanager and simulate a key refresh.
 			time.Sleep(time.Second * 1)
 			km.keysMap[activePubKey] = activePrivKey
-			km.SimulateAccountChanges()
+			km.SimulateAccountChanges(make([][48]byte, 0))
 		}()
 
 		assert.NoError(t, v.WaitForActivation(context.Background(), nil))
