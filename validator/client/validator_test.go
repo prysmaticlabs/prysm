@@ -365,7 +365,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		resp,
 		nil,
 	)
-	require.NoError(t, v.WaitForActivation(context.Background()), "Could not wait for activation")
+	require.NoError(t, v.WaitForActivation(context.Background(), nil), "Could not wait for activation")
 	require.LogsContain(t, hook, "Validator activated")
 }
 
@@ -403,7 +403,7 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 		resp,
 		nil,
 	)
-	assert.NoError(t, v.WaitForActivation(context.Background()), "Could not wait for activation")
+	assert.NoError(t, v.WaitForActivation(context.Background(), nil), "Could not wait for activation")
 }
 
 func TestWaitSync_ContextCanceled(t *testing.T) {
