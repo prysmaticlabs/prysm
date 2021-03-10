@@ -402,7 +402,7 @@ func (b *BeaconState) eth1DataVotes() []*ethpb.Eth1Data {
 }
 
 // Eth1DepositIndex corresponds to the index of the deposit made to the
-// validator deposit contract at the time of this state's eth1 data.
+// Validator deposit contract at the time of this state's eth1 data.
 func (b *BeaconState) Eth1DepositIndex() uint64 {
 	if !b.hasInnerState() {
 		return 0
@@ -415,7 +415,7 @@ func (b *BeaconState) Eth1DepositIndex() uint64 {
 }
 
 // eth1DepositIndex corresponds to the index of the deposit made to the
-// validator deposit contract at the time of this state's eth1 data.
+// Validator deposit contract at the time of this state's eth1 data.
 // This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) eth1DepositIndex() uint64 {
 	if !b.hasInnerState() {
@@ -478,13 +478,13 @@ func (b *BeaconState) validatorsReferences() []*ethpb.Validator {
 		if validator == nil {
 			continue
 		}
-		// copy validator reference instead.
+		// copy Validator reference instead.
 		res[i] = validator
 	}
 	return res
 }
 
-// ValidatorAtIndex is the validator at the provided index.
+// ValidatorAtIndex is the Validator at the provided index.
 func (b *BeaconState) ValidatorAtIndex(idx types.ValidatorIndex) (*ethpb.Validator, error) {
 	if !b.hasInnerState() {
 		return nil, ErrNilInnerState
@@ -503,8 +503,8 @@ func (b *BeaconState) ValidatorAtIndex(idx types.ValidatorIndex) (*ethpb.Validat
 	return CopyValidator(val), nil
 }
 
-// ValidatorAtIndexReadOnly is the validator at the provided index. This method
-// doesn't clone the validator.
+// ValidatorAtIndexReadOnly is the Validator at the provided index. This method
+// doesn't clone the Validator.
 func (b *BeaconState) ValidatorAtIndexReadOnly(idx types.ValidatorIndex) (iface.ReadOnlyValidator, error) {
 	if !b.hasInnerState() {
 		return ReadOnlyValidator{}, ErrNilInnerState
@@ -522,7 +522,7 @@ func (b *BeaconState) ValidatorAtIndexReadOnly(idx types.ValidatorIndex) (iface.
 	return ReadOnlyValidator{b.state.Validators[idx]}, nil
 }
 
-// ValidatorIndexByPubkey returns a given validator by its 48-byte public key.
+// ValidatorIndexByPubkey returns a given Validator by its 48-byte public key.
 func (b *BeaconState) ValidatorIndexByPubkey(key [48]byte) (types.ValidatorIndex, bool) {
 	if b == nil || b.valMapHandler == nil || b.valMapHandler.valIdxMap == nil {
 		return 0, false
@@ -544,7 +544,7 @@ func (b *BeaconState) validatorIndexMap() map[[48]byte]types.ValidatorIndex {
 }
 
 // PubkeyAtIndex returns the pubkey at the given
-// validator index.
+// Validator index.
 func (b *BeaconState) PubkeyAtIndex(idx types.ValidatorIndex) [48]byte {
 	if !b.hasInnerState() {
 		return [48]byte{}
@@ -561,7 +561,7 @@ func (b *BeaconState) PubkeyAtIndex(idx types.ValidatorIndex) [48]byte {
 	return bytesutil.ToBytes48(b.state.Validators[idx].PublicKey)
 }
 
-// NumValidators returns the size of the validator registry.
+// NumValidators returns the size of the Validator registry.
 func (b *BeaconState) NumValidators() int {
 	if !b.hasInnerState() {
 		return 0
@@ -572,8 +572,8 @@ func (b *BeaconState) NumValidators() int {
 	return len(b.state.Validators)
 }
 
-// ReadFromEveryValidator reads values from every validator and applies it to the provided function.
-// Warning: This method is potentially unsafe, as it exposes the actual validator registry.
+// ReadFromEveryValidator reads values from every Validator and applies it to the provided function.
+// Warning: This method is potentially unsafe, as it exposes the actual Validator registry.
 func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val iface.ReadOnlyValidator) error) error {
 	if !b.hasInnerState() {
 		return ErrNilInnerState
@@ -586,7 +586,7 @@ func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val iface.ReadOnlyV
 	b.lock.RUnlock()
 
 	for i, v := range validators {
-		err := f(i, ReadOnlyValidator{validator: v})
+		err := f(i, ReadOnlyValidator{Validator: v})
 		if err != nil {
 			return err
 		}
@@ -624,7 +624,7 @@ func (b *BeaconState) balances() []uint64 {
 	return res
 }
 
-// BalanceAtIndex of validator with the provided index.
+// BalanceAtIndex of Validator with the provided index.
 func (b *BeaconState) BalanceAtIndex(idx types.ValidatorIndex) (uint64, error) {
 	if !b.hasInnerState() {
 		return 0, ErrNilInnerState

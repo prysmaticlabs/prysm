@@ -114,7 +114,7 @@ func (b *BeaconState) Copy() iface.BeaconState {
 		sharedFieldReferences: make(map[fieldIndex]*reference, 10),
 		stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, fieldCount),
 
-		// Copy on write validator index map.
+		// Copy on write Validator index map.
 		valMapHandler: b.valMapHandler,
 	}
 
@@ -123,7 +123,7 @@ func (b *BeaconState) Copy() iface.BeaconState {
 		dst.sharedFieldReferences[field] = ref
 	}
 
-	// Increment ref for validator map
+	// Increment ref for Validator map
 	b.valMapHandler.mapRef.AddRef()
 
 	for i := range b.dirtyFields {

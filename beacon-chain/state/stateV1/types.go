@@ -148,12 +148,6 @@ func (f fieldIndex) String() string {
 	}
 }
 
-// ReadOnlyValidator returns a wrapper that only allows fields from a validator
-// to be read, and prevents any modification of internal validator fields.
-type ReadOnlyValidator struct {
-	validator *ethpb.Validator
-}
-
 func (r *reference) Refs() uint {
 	r.lock.RLock()
 	defer r.lock.RUnlock()

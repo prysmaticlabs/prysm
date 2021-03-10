@@ -9,99 +9,15 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// EffectiveBalance returns the effective balance of the
-// read only validator.
-func (v ReadOnlyValidator) EffectiveBalance() uint64 {
-	if v.IsNil() {
-		return 0
-	}
-	return v.validator.EffectiveBalance
-}
-
-// ActivationEligibilityEpoch returns the activation eligibility epoch of the
-// read only validator.
-func (v ReadOnlyValidator) ActivationEligibilityEpoch() types.Epoch {
-	if v.IsNil() {
-		return 0
-	}
-	return v.validator.ActivationEligibilityEpoch
-}
-
-// ActivationEpoch returns the activation epoch of the
-// read only validator.
-func (v ReadOnlyValidator) ActivationEpoch() types.Epoch {
-	if v.IsNil() {
-		return 0
-	}
-	return v.validator.ActivationEpoch
-}
-
-// WithdrawableEpoch returns the withdrawable epoch of the
-// read only validator.
-func (v ReadOnlyValidator) WithdrawableEpoch() types.Epoch {
-	if v.IsNil() {
-		return 0
-	}
-	return v.validator.WithdrawableEpoch
-}
-
-// ExitEpoch returns the exit epoch of the
-// read only validator.
-func (v ReadOnlyValidator) ExitEpoch() types.Epoch {
-	if v.IsNil() {
-		return 0
-	}
-	return v.validator.ExitEpoch
-}
-
-// PublicKey returns the public key of the
-// read only validator.
-func (v ReadOnlyValidator) PublicKey() [48]byte {
-	if v.IsNil() {
-		return [48]byte{}
-	}
-	var pubkey [48]byte
-	copy(pubkey[:], v.validator.PublicKey)
-	return pubkey
-}
-
-// WithdrawalCredentials returns the withdrawal credentials of the
-// read only validator.
-func (v ReadOnlyValidator) WithdrawalCredentials() []byte {
-	creds := make([]byte, len(v.validator.WithdrawalCredentials))
-	copy(creds, v.validator.WithdrawalCredentials)
-	return creds
-}
-
-// Slashed returns the read only validator is slashed.
-func (v ReadOnlyValidator) Slashed() bool {
-	if v.IsNil() {
-		return false
-	}
-	return v.validator.Slashed
-}
-
-// CopyValidator returns the copy of the read only validator.
-func (v ReadOnlyValidator) CopyValidator() *ethpb.Validator {
-	if v.IsNil() {
-		return nil
-	}
-	return CopyValidator(v.validator)
-}
-
-// CopyValidator returns the copy of the read only validator.
-func (v ReadOnlyValidator) IsNil() bool {
-	return v.validator == nil
-}
-
 // InnerStateUnsafe returns the pointer value of the underlying
 // beacon state proto object, bypassing immutability. Use with care.
-func (b *BeaconState) InnerStateUnsafe() *pbp2p.BeaconState {
+func (b *BeaconState) InnerStateUnsafe() *pbp2p.BeaconStateV1 {
 	if b == nil {
 		return nil
 	}
@@ -638,21 +554,21 @@ func (b *BeaconState) ValidatorAtIndex(idx types.ValidatorIndex) (*ethpb.Validat
 
 // ValidatorAtIndexReadOnly is the validator at the provided index. This method
 // doesn't clone the validator.
-func (b *BeaconState) ValidatorAtIndexReadOnly(idx types.ValidatorIndex) (ReadOnlyValidator, error) {
+func (b *BeaconState) ValidatorAtIndexReadOnly(idx types.ValidatorIndex) (stateV0.ReadOnlyValidator, error) {
 	if !b.HasInnerState() {
-		return ReadOnlyValidator{}, ErrNilInnerState
+		return stateV0.ReadOnlyValidator{}, ErrNilInnerState
 	}
 	if b.state.Validators == nil {
-		return ReadOnlyValidator{}, nil
+		return stateV0.ReadOnlyValidator{}, nil
 	}
 	if uint64(len(b.state.Validators)) <= uint64(idx) {
-		return ReadOnlyValidator{}, fmt.Errorf("index %d out of range", idx)
+		return stateV0.ReadOnlyValidator{}, fmt.Errorf("index %d out of range", idx)
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return ReadOnlyValidator{b.state.Validators[idx]}, nil
+	return stateV0.ReadOnlyValidator{b.state.Validators[idx]}, nil
 }
 
 // ValidatorIndexByPubkey returns a given validator by its 48-byte public key.
@@ -707,7 +623,7 @@ func (b *BeaconState) NumValidators() int {
 
 // ReadFromEveryValidator reads values from every validator and applies it to the provided function.
 // Warning: This method is potentially unsafe, as it exposes the actual validator registry.
-func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val ReadOnlyValidator) error) error {
+func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val stateV0.ReadOnlyValidator) error) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
@@ -719,7 +635,7 @@ func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val ReadOnlyValidat
 	b.lock.RUnlock()
 
 	for i, v := range validators {
-		err := f(i, ReadOnlyValidator{validator: v})
+		err := f(i, stateV0.ReadOnlyValidator{Validator: v})
 		if err != nil {
 			return err
 		}

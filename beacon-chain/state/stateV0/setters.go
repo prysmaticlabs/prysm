@@ -303,8 +303,8 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 	return nil
 }
 
-// ApplyToEveryValidator applies the provided callback function to each validator in the
-// validator registry.
+// ApplyToEveryValidator applies the provided callback function to each Validator in the
+// Validator registry.
 func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator) (bool, *ethpb.Validator, error)) error {
 	if !b.hasInnerState() {
 		return ErrNilInnerState
@@ -339,7 +339,7 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator
 	return nil
 }
 
-// UpdateValidatorAtIndex for the beacon state. Updates the validator
+// UpdateValidatorAtIndex for the beacon state. Updates the Validator
 // at a specific index to a new value.
 func (b *BeaconState) UpdateValidatorAtIndex(idx types.ValidatorIndex, val *ethpb.Validator) error {
 	if !b.hasInnerState() {
@@ -621,11 +621,11 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
 	}
 
-	// append validator to slice
+	// append Validator to slice
 	b.state.Validators = append(vals, val)
 	valIdx := types.ValidatorIndex(len(b.state.Validators) - 1)
 
-	// Copy if this is a shared validator map
+	// Copy if this is a shared Validator map
 	if ref := b.valMapHandler.mapRef; ref.Refs() > 1 {
 		valMap := b.valMapHandler.copy()
 		ref.MinusRef()
