@@ -16,11 +16,12 @@ import (
 )
 
 func TestValidator_HandleKeyReload(t *testing.T) {
-	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	t.Run("active", func(t *testing.T) {
+		hook := logTest.NewGlobal()
+
 		inactivePrivKey, err := bls.RandKey()
 		require.NoError(t, err)
 		inactivePubKey := [48]byte{}
@@ -59,6 +60,8 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 	})
 
 	t.Run("no active", func(t *testing.T) {
+		hook := logTest.NewGlobal()
+
 		inactivePrivKey, err := bls.RandKey()
 		require.NoError(t, err)
 		inactivePubKey := [48]byte{}
