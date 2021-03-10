@@ -8,6 +8,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -68,7 +69,7 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 }
 
 // Copy returns a deep copy of the beacon state.
-func (b *BeaconState) Copy() *BeaconState {
+func (b *BeaconState) Copy() iface.BeaconState {
 	if !b.hasInnerState() {
 		return nil
 	}

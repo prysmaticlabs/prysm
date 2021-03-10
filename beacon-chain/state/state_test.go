@@ -61,6 +61,7 @@ func TestBeaconState_NoDeadlock(t *testing.T) {
 		Validators: vals,
 	})
 	assert.NoError(t, err)
+
 	wg := new(sync.WaitGroup)
 
 	wg.Add(1)

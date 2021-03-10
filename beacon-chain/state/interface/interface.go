@@ -4,6 +4,8 @@
 package iface
 
 import (
+	"context"
+
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -14,6 +16,8 @@ import (
 type BeaconState interface {
 	ReadOnlyBeaconState
 	WriteOnlyBeaconState
+	Copy() BeaconState
+	HashTreeRoot(ctx context.Context) ([32]byte, error)
 }
 
 // ReadOnlyBeaconState defines a struct which only has read access to beacon state methods.
@@ -35,6 +39,7 @@ type ReadOnlyBeaconState interface {
 	LatestBlockHeader() *ethpb.BeaconBlockHeader
 	HistoricalRoots() [][]byte
 	Slashings() []uint64
+	FieldReferencesCount() map[string]uint64
 }
 
 // WriteOnlyBeaconState defines a struct which only has write access to beacon state methods.

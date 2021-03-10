@@ -56,25 +56,13 @@ type mockKeymanager struct {
 }
 
 func (m *mockKeymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+	keys := make([][48]byte, 0)
 	if m.fetchNoKeys {
-		// We set the value to `false` to fetch keys the next time.
 		m.fetchNoKeys = false
-		return make([][48]byte, 0), nil
+		return keys, nil
 	}
-
-	m.lock.RLock()
-	defer m.lock.RUnlock()
-	keys := make([][48]byte, 0)
-	for pubKey := range m.keysMap {
-		keys = append(keys, pubKey)
-	}
-	return keys, nil
-}
-
-func (m *mockKeymanager) FetchAllValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
-	keys := make([][48]byte, 0)
 	for pubKey := range m.keysMap {
 		keys = append(keys, pubKey)
 	}

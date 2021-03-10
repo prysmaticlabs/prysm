@@ -125,8 +125,10 @@ func TestSlashValidator_OK(t *testing.T) {
 	require.NoError(t, err, "Could not get proposer")
 	proposerBal, err := state.BalanceAtIndex(proposer)
 	require.NoError(t, err)
-	state, err = SlashValidator(state, slashedIdx)
+	slashedState, err := SlashValidator(state, slashedIdx)
 	require.NoError(t, err, "Could not slash validator")
+	state, ok := slashedState.(*beaconstate.BeaconState)
+	require.Equal(t, true, ok)
 
 	v, err := state.ValidatorAtIndex(slashedIdx)
 	require.NoError(t, err)

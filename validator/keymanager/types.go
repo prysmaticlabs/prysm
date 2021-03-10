@@ -13,8 +13,6 @@ import (
 type IKeymanager interface {
 	// FetchValidatingPublicKeys fetches the list of active public keys that should be used to validate with.
 	FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error)
-	// FetchAllValidatingPublicKeys fetches the list of all public keys, including disabled ones.
-	FetchAllValidatingPublicKeys(ctx context.Context) ([][48]byte, error)
 	// Sign signs a message using a validator key.
 	Sign(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
 	// SubscribeAccountChanges subscribes to changes made to the underlying keys.

@@ -109,6 +109,10 @@ var (
 		Name:  "update-head-timely",
 		Usage: "Improves update head time by updating head right after state transition",
 	}
+	proposerAttsSelectionUsingMaxCover = &cli.BoolFlag{
+		Name:  "proposer-atts-selection-using-max-cover",
+		Usage: "Rely on max-cover algorithm when selecting attestations for proposer",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -117,6 +121,7 @@ var devModeFlags = []cli.Flag{
 	enableNextSlotStateCache,
 	forceOptMaxCoverAggregationStategy,
 	updateHeadTimely,
+	proposerAttsSelectionUsingMaxCover,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -162,6 +167,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableNextSlotStateCache,
 	forceOptMaxCoverAggregationStategy,
 	updateHeadTimely,
+	proposerAttsSelectionUsingMaxCover,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

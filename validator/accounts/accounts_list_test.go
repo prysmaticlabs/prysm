@@ -40,10 +40,6 @@ func (m *mockRemoteKeymanager) FetchValidatingPublicKeys(_ context.Context) ([][
 	return m.publicKeys, nil
 }
 
-func (m *mockRemoteKeymanager) FetchAllValidatingPublicKeys(_ context.Context) ([][48]byte, error) {
-	return m.publicKeys, nil
-}
-
 func (m *mockRemoteKeymanager) Sign(context.Context, *validatorpb.SignRequest) (bls.Signature, error) {
 	return nil, nil
 }

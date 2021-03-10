@@ -5,7 +5,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/tos"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection"
+	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/urfave/cli/v2"
 )
 

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"testing"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -14,7 +13,8 @@ import (
 )
 
 func Test_genesisStateFromJSONValidators(t *testing.T) {
-	jsonData, depositDataList := createGenesisDepositData(t)
+	numKeys := 5
+	jsonData := createGenesisDepositData(t, numKeys)
 	jsonInput, err := json.Marshal(jsonData)
 	require.NoError(t, err)
 	genesisState, err := genesisStateFromJSONValidators(
@@ -22,12 +22,11 @@ func Test_genesisStateFromJSONValidators(t *testing.T) {
 	)
 	require.NoError(t, err)
 	for i, val := range genesisState.Validators {
-		assert.DeepEqual(t, val.PublicKey, depositDataList[i].PublicKey)
+		assert.DeepEqual(t, fmt.Sprintf("%#x", val.PublicKey), jsonData[i].PubKey)
 	}
 }
 
-func createGenesisDepositData(t *testing.T) ([]*GenesisValidator, []*ethpb.Deposit_Data) {
-	numKeys := 5
+func createGenesisDepositData(t *testing.T, numKeys int) []*DepositDataJSON {
 	pubKeys := make([]bls.PublicKey, numKeys)
 	privKeys := make([]bls.SecretKey, numKeys)
 	for i := 0; i < numKeys; i++ {
@@ -38,14 +37,17 @@ func createGenesisDepositData(t *testing.T) ([]*GenesisValidator, []*ethpb.Depos
 	}
 	dataList, _, err := interop.DepositDataFromKeys(privKeys, pubKeys)
 	require.NoError(t, err)
-	jsonData := make([]*GenesisValidator, numKeys)
+	jsonData := make([]*DepositDataJSON, numKeys)
 	for i := 0; i < numKeys; i++ {
-		data := dataList[i]
-		enc, err := data.MarshalSSZ()
+		dataRoot, err := dataList[i].HashTreeRoot()
 		require.NoError(t, err)
-		jsonData[i] = &GenesisValidator{
-			DepositData: fmt.Sprintf("%#x", enc),
+		jsonData[i] = &DepositDataJSON{
+			PubKey:                fmt.Sprintf("%#x", dataList[i].PublicKey),
+			Amount:                dataList[i].Amount,
+			WithdrawalCredentials: fmt.Sprintf("%#x", dataList[i].WithdrawalCredentials),
+			DepositDataRoot:       fmt.Sprintf("%#x", dataRoot),
+			Signature:             fmt.Sprintf("%#x", dataList[i].Signature),
 		}
 	}
-	return jsonData, dataList
+	return jsonData
 }

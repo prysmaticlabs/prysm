@@ -11,7 +11,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	statetrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
@@ -74,7 +74,7 @@ func (bs *Server) GetStateFork(ctx context.Context, req *ethpb.StateRequest) (*e
 	defer span.End()
 
 	var (
-		state *statetrie.BeaconState
+		state iface.BeaconState
 		err   error
 	)
 
@@ -100,7 +100,7 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 	defer span.End()
 
 	var (
-		state *statetrie.BeaconState
+		state iface.BeaconState
 		err   error
 	)
 
@@ -154,9 +154,9 @@ func (bs *Server) stateRoot(ctx context.Context, stateId []byte) ([]byte, error)
 	return root, err
 }
 
-func (bs *Server) state(ctx context.Context, stateId []byte) (*statetrie.BeaconState, error) {
+func (bs *Server) state(ctx context.Context, stateId []byte) (iface.BeaconState, error) {
 	var (
-		s   *statetrie.BeaconState
+		s   iface.BeaconState
 		err error
 	)
 
@@ -294,7 +294,7 @@ func (bs *Server) stateRootBySlot(ctx context.Context, slot types.Slot) ([]byte,
 	return blks[0].Block.StateRoot, nil
 }
 
-func (bs *Server) stateByHex(ctx context.Context, stateId []byte) (*statetrie.BeaconState, error) {
+func (bs *Server) stateByHex(ctx context.Context, stateId []byte) (iface.BeaconState, error) {
 	headState, err := bs.ChainInfoFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
@@ -310,7 +310,7 @@ func (bs *Server) stateByHex(ctx context.Context, stateId []byte) (*statetrie.Be
 		"State not found in the last %d state roots in head state", len(headState.StateRoots()))
 }
 
-func (bs *Server) stateBySlot(ctx context.Context, slot types.Slot) (*statetrie.BeaconState, error) {
+func (bs *Server) stateBySlot(ctx context.Context, slot types.Slot) (iface.BeaconState, error) {
 	currentSlot := bs.GenesisTimeFetcher.CurrentSlot()
 	if slot > currentSlot {
 		return nil, status.Errorf(codes.Internal, "Slot cannot be in the future")

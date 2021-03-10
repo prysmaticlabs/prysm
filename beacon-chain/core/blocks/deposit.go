@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -20,9 +20,9 @@ import (
 // ProcessPreGenesisDeposits processes a deposit for the beacon state before chainstart.
 func ProcessPreGenesisDeposits(
 	ctx context.Context,
-	beaconState *stateTrie.BeaconState,
+	beaconState iface.BeaconState,
 	deposits []*ethpb.Deposit,
-) (*stateTrie.BeaconState, error) {
+) (iface.BeaconState, error) {
 	var err error
 	beaconState, err = ProcessDeposits(ctx, beaconState, &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{Deposits: deposits}}})
@@ -67,9 +67,9 @@ func ProcessPreGenesisDeposits(
 //     process_deposit(state, deposit)
 func ProcessDeposits(
 	ctx context.Context,
-	beaconState *stateTrie.BeaconState,
+	beaconState iface.BeaconState,
 	b *ethpb.SignedBeaconBlock,
-) (*stateTrie.BeaconState, error) {
+) (iface.BeaconState, error) {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err
 	}
@@ -140,7 +140,7 @@ func ProcessDeposits(
 //        # Increase balance by deposit amount
 //        index = ValidatorIndex(validator_pubkeys.index(pubkey))
 //        increase_balance(state, index, amount)
-func ProcessDeposit(beaconState *stateTrie.BeaconState, deposit *ethpb.Deposit, verifySignature bool) (*stateTrie.BeaconState, error) {
+func ProcessDeposit(beaconState iface.BeaconState, deposit *ethpb.Deposit, verifySignature bool) (iface.BeaconState, error) {
 	if err := verifyDeposit(beaconState, deposit); err != nil {
 		if deposit == nil || deposit.Data == nil {
 			return nil, err
@@ -191,7 +191,7 @@ func ProcessDeposit(beaconState *stateTrie.BeaconState, deposit *ethpb.Deposit, 
 	return beaconState, nil
 }
 
-func verifyDeposit(beaconState *stateTrie.BeaconState, deposit *ethpb.Deposit) error {
+func verifyDeposit(beaconState iface.ReadOnlyBeaconState, deposit *ethpb.Deposit) error {
 	// Verify Merkle proof of deposit and deposit trie root.
 	if deposit == nil || deposit.Data == nil {
 		return errors.New("received nil deposit or nil deposit data")
