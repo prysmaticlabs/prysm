@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/validator/pandora"
 	"io"
 	"strconv"
 	"strings"
@@ -93,6 +94,7 @@ type validator struct {
 	graffitiStruct                     *graffiti.Graffiti
 	graffitiOrderedIndex               uint64
 	eipImportBlacklistedPublicKeys     map[[48]byte]bool
+	pandoraService 		  				*pandora.Service
 }
 
 // Done cleans up the validator.

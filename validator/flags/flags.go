@@ -317,18 +317,16 @@ var (
 		Usage: "Enables more verbose logging for counting down to duty",
 		Value: false,
 	}
-	PandoraCoinbaseAddrFlag = &cli.StringFlag{
-		Name: "pandora-coinbase-address",
-		Usage: "Coinbase address of pandora client",
-		Value: "",
+	// PandoraRPCProviderFlag defines a pandora node RPC endpoint
+	PandoraRpcIpcProviderFlag = &cli.StringFlag{
+		Name:  "pandora-ipc-provider",
+		Usage: "Filename for IPC socket/pipe of pandora client.",
 	}
-	PandoraHTTPEndpointFlag = &cli.StringFlag{
-		Name:  "pandora-http-endpoint",
-		Usage: "A pandora string http endpoint. This is our pandora client endpoint",
-	}
-	PandoraIPCEndpointFlag = &cli.StringFlag{
-		Name:  "pandora-ipc-endpoint",
-		Usage: "A pandora string ipc endpoint. This is our pandora client endpoint",
+	// PandoraRPCProviderFlag defines a pandora node RPC endpoint
+	PandoraRpcHttpProviderFlag = &cli.StringFlag{
+		Name:  "pandora-http-provider",
+		Usage: "A pandora string rpc endpoint. This is our pandora client http endpoint.",
+		Value: "http://127.0.0.1:8454",
 	}
 )
 

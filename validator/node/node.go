@@ -6,6 +6,8 @@ package node
 import (
 	"context"
 	"fmt"
+	gethRpc "github.com/ethereum/go-ethereum/rpc"
+	"github.com/prysmaticlabs/prysm/validator/pandora"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -247,6 +249,9 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 			return err
 		}
 	}
+
+	if err := c.registerPandoraService(cliCtx); err != nil { return err }
+
 	if err := c.registerValidatorService(keyManager); err != nil {
 		return err
 	}
@@ -336,6 +341,7 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 			return err
 		}
 	}
+	if err := c.registerPandoraService(cliCtx); err != nil { return err}
 	if err := c.registerValidatorService(keyManager); err != nil {
 		return err
 	}
@@ -402,6 +408,11 @@ func (c *ValidatorClient) registerValidatorService(
 		}
 	}
 
+	var pandoraService *pandora.Service
+	if err := c.services.FetchService(&pandoraService); err != nil {
+		return err
+	}
+
 	v, err := client.NewValidatorService(c.cliCtx.Context, &client.Config{
 		Endpoint:                   endpoint,
 		DataDir:                    dataDir,
@@ -420,6 +431,7 @@ func (c *ValidatorClient) registerValidatorService(
 		WalletInitializedFeed:      c.walletInitialized,
 		GraffitiStruct:             gStruct,
 		LogDutyCountDown:           c.cliCtx.Bool(flags.EnableDutyCountDown.Name),
+		PandoraService:    			pandoraService,
 	})
 
 	if err != nil {
@@ -517,6 +529,35 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		allowedOrigins,
 	)
 	return c.services.RegisterService(gatewaySrv)
+}
+
+func (c *ValidatorClient) registerPandoraService(cliCtx *cli.Context) error {
+	var endpoint string
+	log.WithField("ipcPath", flags.PandoraRpcIpcProviderFlag.Value).Info("Ipc file path")
+	if flags.PandoraRpcIpcProviderFlag.Value != "" {
+		ipcFilePath := c.cliCtx.String(flags.PandoraRpcIpcProviderFlag.Name)
+		absFilePath, err := fileutil.ExpandPath(ipcFilePath)
+		if err != nil {
+			return errors.Wrap(err, "invalid ipc path")
+		}
+		if !fileutil.FileExists(absFilePath) {
+			return errors.New("File for IPC socket/pipe of pandora client does not exists")
+		}
+		endpoint = absFilePath
+	}
+	if endpoint == "" && flags.PandoraRpcHttpProviderFlag.Value != "" {
+		endpoint =  c.cliCtx.String(flags.PandoraRpcHttpProviderFlag.Name)
+	}
+	dialRPCFn := func(endpoint string) (*pandora.PandoraClient, *gethRpc.Client, error) {
+		rpcClient, err := gethRpc.Dial(endpoint)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not dial node")
+		}
+		pandoraClient := pandora.NewClient(rpcClient)
+		return pandoraClient, rpcClient, nil
+	}
+
+	return c.services.RegisterService(pandora.NewService(c.ctx, endpoint, dialRPCFn))
 }
 
 func setWalletPasswordFilePath(cliCtx *cli.Context) error {

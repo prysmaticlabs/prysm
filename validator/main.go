@@ -99,6 +99,8 @@ var appFlags = []cli.Flag{
 	debug.BlockProfileRateFlag,
 	debug.MutexProfileFractionFlag,
 	cmd.AcceptTosFlag,
+	flags.PandoraRpcIpcProviderFlag,
+	flags.PandoraRpcHttpProviderFlag,
 }
 
 func init() {
