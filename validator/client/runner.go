@@ -20,7 +20,9 @@ import (
 
 // time to wait before trying to reconnect with beacon node.
 var backOffPeriod = 10 * time.Second
-var errConnectionIssue = errors.New("could not connect")
+
+// ErrConnectionIssue represents a connection problem.
+var ErrConnectionIssue = errors.New("could not connect")
 
 // Validator interface defines the primary methods of a validator client.
 type Validator interface {
@@ -237,7 +239,7 @@ func run(ctx context.Context, v Validator) {
 }
 
 func isConnectionError(err error) bool {
-	return err != nil && errors.Is(err, errConnectionIssue)
+	return err != nil && errors.Is(err, ErrConnectionIssue)
 }
 
 func handleAssignmentError(err error, slot types.Slot) {

@@ -22,20 +22,20 @@ func cancelledContext() context.Context {
 }
 
 func TestCancelledContext_CleansUpValidator(t *testing.T) {
-	v := &FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
+	v := &testutil.FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	run(cancelledContext(), v)
 	assert.Equal(t, true, v.DoneCalled, "Expected Done() to be called")
 }
 
 func TestCancelledContext_WaitsForChainStart(t *testing.T) {
-	v := &FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
+	v := &testutil.FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	run(cancelledContext(), v)
 	assert.Equal(t, 1, v.WaitForChainStartCalled, "Expected WaitForChainStart() to be called")
 }
 
 func TestRetry_On_ConnectionError(t *testing.T) {
 	retry := 10
-	v := &FakeValidator{
+	v := &testutil.FakeValidator{
 		Keymanager:       &mockKeymanager{accountsChangedFeed: &event.Feed{}},
 		RetryTillSuccess: retry,
 	}
@@ -55,13 +55,13 @@ func TestRetry_On_ConnectionError(t *testing.T) {
 }
 
 func TestCancelledContext_WaitsForActivation(t *testing.T) {
-	v := &FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
+	v := &testutil.FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	run(cancelledContext(), v)
 	assert.Equal(t, 1, v.WaitForActivationCalled, "Expected WaitForActivation() to be called")
 }
 
 func TestCancelledContext_ChecksSlasherReady(t *testing.T) {
-	v := &FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
+	v := &testutil.FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	cfg := &featureconfig.Flags{
 		SlasherProtection: true,
 	}
@@ -72,7 +72,7 @@ func TestCancelledContext_ChecksSlasherReady(t *testing.T) {
 }
 
 func TestUpdateDuties_NextSlot(t *testing.T) {
-	v := &FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
+	v := &testutil.FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := types.Slot(55)
@@ -92,7 +92,7 @@ func TestUpdateDuties_NextSlot(t *testing.T) {
 
 func TestUpdateDuties_HandlesError(t *testing.T) {
 	hook := logTest.NewGlobal()
-	v := &FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
+	v := &testutil.FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := types.Slot(55)
@@ -111,7 +111,7 @@ func TestUpdateDuties_HandlesError(t *testing.T) {
 }
 
 func TestRoleAt_NextSlot(t *testing.T) {
-	v := &FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
+	v := &testutil.FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := types.Slot(55)
@@ -130,7 +130,7 @@ func TestRoleAt_NextSlot(t *testing.T) {
 }
 
 func TestAttests_NextSlot(t *testing.T) {
-	v := &FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
+	v := &testutil.FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := types.Slot(55)
@@ -150,7 +150,7 @@ func TestAttests_NextSlot(t *testing.T) {
 }
 
 func TestProposes_NextSlot(t *testing.T) {
-	v := &FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
+	v := &testutil.FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := types.Slot(55)
@@ -170,7 +170,7 @@ func TestProposes_NextSlot(t *testing.T) {
 }
 
 func TestBothProposesAndAttests_NextSlot(t *testing.T) {
-	v := &FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
+	v := &testutil.FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := types.Slot(55)
@@ -192,8 +192,8 @@ func TestBothProposesAndAttests_NextSlot(t *testing.T) {
 }
 
 func TestAllValidatorsAreExited_NextSlot(t *testing.T) {
-	v := &FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
-	ctx, cancel := context.WithCancel(context.WithValue(context.Background(), allValidatorsAreExitedCtxKey, true))
+	v := &testutil.FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
+	ctx, cancel := context.WithCancel(context.WithValue(context.Background(), testutil.allValidatorsAreExitedCtxKey, true))
 	hook := logTest.NewGlobal()
 
 	slot := types.Slot(55)
@@ -211,7 +211,7 @@ func TestAllValidatorsAreExited_NextSlot(t *testing.T) {
 func TestKeyReload_ActiveKey(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	km := &mockKeymanager{}
-	v := &FakeValidator{Keymanager: km}
+	v := &testutil.FakeValidator{Keymanager: km}
 	go func() {
 		km.SimulateAccountChanges([][48]byte{testutil.ActiveKey})
 
@@ -227,7 +227,7 @@ func TestKeyReload_ActiveKey(t *testing.T) {
 func TestKeyReload_NoActiveKey(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	km := &mockKeymanager{}
-	v := &FakeValidator{Keymanager: km}
+	v := &testutil.FakeValidator{Keymanager: km}
 	go func() {
 		km.SimulateAccountChanges(make([][48]byte, 0))
 

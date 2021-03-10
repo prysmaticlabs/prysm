@@ -6,6 +6,7 @@ go_library(
     srcs = [
         "helper.go",
         "mock.go",
+        "mock_validator.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/accounts/testutil",
     visibility = [
@@ -14,7 +15,11 @@ go_library(
     ],
     deps = [
         "//shared/bytesutil:go_default_library",
+        "//shared/timeutils:go_default_library",
         "//validator/accounts/iface:go_default_library",
+        "//validator/client:go_default_library",
         "//validator/keymanager:go_default_library",
+        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
     ],
 )

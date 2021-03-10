@@ -1,4 +1,4 @@
-package client
+package testutil
 
 import (
 	"bytes"
@@ -8,11 +8,11 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
-	"github.com/prysmaticlabs/prysm/validator/accounts/testutil"
+	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
 
-var _ Validator = (*FakeValidator)(nil)
+var _ client.Validator = (*FakeValidator)(nil)
 
 // FakeValidator for mocking.
 type FakeValidator struct {
@@ -43,7 +43,7 @@ type FakeValidator struct {
 	NextSlotRet                       <-chan types.Slot
 	PublicKey                         string
 	UpdateDutiesRet                   error
-	RolesAtRet                        []ValidatorRole
+	RolesAtRet                        []client.ValidatorRole
 	Balances                          map[[48]byte]uint64
 	IndexToPubkeyMap                  map[uint64][48]byte
 	PubkeyToIndexMap                  map[[48]byte]uint64
@@ -70,7 +70,7 @@ func (fv *FakeValidator) WaitForWalletInitialization(_ context.Context) error {
 func (fv *FakeValidator) WaitForChainStart(_ context.Context) error {
 	fv.WaitForChainStartCalled++
 	if fv.RetryTillSuccess >= fv.WaitForChainStartCalled {
-		return errConnectionIssue
+		return client.ErrConnectionIssue
 	}
 	return nil
 }
@@ -79,7 +79,7 @@ func (fv *FakeValidator) WaitForChainStart(_ context.Context) error {
 func (fv *FakeValidator) WaitForActivation(_ context.Context, _ chan [][48]byte) error {
 	fv.WaitForActivationCalled++
 	if fv.RetryTillSuccess >= fv.WaitForActivationCalled {
-		return errConnectionIssue
+		return client.ErrConnectionIssue
 	}
 	return nil
 }
@@ -88,7 +88,7 @@ func (fv *FakeValidator) WaitForActivation(_ context.Context, _ chan [][48]byte)
 func (fv *FakeValidator) WaitForSync(_ context.Context) error {
 	fv.WaitForSyncCalled++
 	if fv.RetryTillSuccess >= fv.WaitForSyncCalled {
-		return errConnectionIssue
+		return client.ErrConnectionIssue
 	}
 	return nil
 }
@@ -103,7 +103,7 @@ func (fv *FakeValidator) SlasherReady(_ context.Context) error {
 func (fv *FakeValidator) CanonicalHeadSlot(_ context.Context) (types.Slot, error) {
 	fv.CanonicalHeadSlotCalled++
 	if fv.RetryTillSuccess > fv.CanonicalHeadSlotCalled {
-		return 0, errConnectionIssue
+		return 0, client.ErrConnectionIssue
 	}
 	return 0, nil
 }
@@ -145,10 +145,10 @@ func (fv *FakeValidator) ResetAttesterProtectionData() {
 }
 
 // RolesAt for mocking.
-func (fv *FakeValidator) RolesAt(_ context.Context, slot types.Slot) (map[[48]byte][]ValidatorRole, error) {
+func (fv *FakeValidator) RolesAt(_ context.Context, slot types.Slot) (map[[48]byte][]client.ValidatorRole, error) {
 	fv.RoleAtCalled = true
 	fv.RoleAtArg1 = uint64(slot)
-	vr := make(map[[48]byte][]ValidatorRole)
+	vr := make(map[[48]byte][]client.ValidatorRole)
 	vr[[48]byte{1}] = fv.RolesAtRet
 	return vr, nil
 }
@@ -216,7 +216,7 @@ func (fv *FakeValidator) GetKeymanager() keymanager.IKeymanager {
 func (fv *FakeValidator) ReceiveBlocks(ctx context.Context, connectionErrorChannel chan<- error) {
 	fv.ReceiveBlocksCalled++
 	if fv.RetryTillSuccess > fv.ReceiveBlocksCalled {
-		connectionErrorChannel <- errConnectionIssue
+		connectionErrorChannel <- client.ErrConnectionIssue
 	}
 }
 
@@ -224,7 +224,7 @@ func (fv *FakeValidator) ReceiveBlocks(ctx context.Context, connectionErrorChann
 func (fv *FakeValidator) HandleKeyReload(_ context.Context, newKeys [][48]byte) (anyActive bool, err error) {
 	fv.HandleKeyReloadCalled = true
 	for _, key := range newKeys {
-		if bytes.Equal(key[:], testutil.ActiveKey[:]) {
+		if bytes.Equal(key[:], ActiveKey[:]) {
 			return true, nil
 		}
 	}
