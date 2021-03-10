@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
+
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/sirupsen/logrus"
@@ -23,6 +25,7 @@ func TestService_StartStop(t *testing.T) {
 	})
 	require.NoError(t, err)
 	go srv.Start()
+	srv.slotTicker = &slotutil.SlotTicker{}
 	require.NoError(t, srv.Stop())
 	require.NoError(t, srv.Status())
 }

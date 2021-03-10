@@ -54,6 +54,7 @@ go_test(
         "//shared/bytesutil:go_default_library",
         "//shared/event:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/slotutil:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
         "@com_github_ferranbt_fastssz//:go_default_library",

@@ -12,8 +12,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func generateAttestationsForSlot(simParams *Parameters, slot types.Slot) []*ethpb.IndexedAttestation {
-	var attestations []*ethpb.IndexedAttestation
+func generateAttestationsForSlot(
+	simParams *Parameters, slot types.Slot,
+) ([]*ethpb.IndexedAttestation, []*ethpb.AttesterSlashing) {
+	attestations := make([]*ethpb.IndexedAttestation, 0)
+	slashings := make([]*ethpb.AttesterSlashing, 0)
 	currentEpoch := helpers.SlotToEpoch(slot)
 
 	committeesPerSlot := helpers.SlotCommitteeCount(simParams.NumValidators)
@@ -25,6 +28,7 @@ func generateAttestationsForSlot(simParams *Parameters, slot types.Slot) []*ethp
 		sourceEpoch = currentEpoch - 1
 	}
 
+	var slashedIndices []uint64
 	startIdx := valsPerSlot * uint64(slot%params.BeaconConfig().SlotsPerEpoch)
 	endIdx := startIdx + valsPerCommittee
 	for c := types.CommitteeIndex(0); uint64(c) < committeesPerSlot; c++ {
@@ -55,23 +59,29 @@ func generateAttestationsForSlot(simParams *Parameters, slot types.Slot) []*ethp
 			att := &ethpb.IndexedAttestation{
 				AttestingIndices: indices,
 				Data:             attData,
+				Signature:        params.BeaconConfig().EmptySignature[:],
 			}
 			attestations = append(attestations, att)
 			if rand.NewGenerator().Float64() < simParams.AttesterSlashingProbab {
 				slashableAtt := makeSlashableFromAtt(att, []uint64{indices[0]})
-				log.WithFields(logrus.Fields{
-					"validatorIndex":  indices[0],
-					"prevSourceEpoch": att.Data.Source.Epoch,
-					"prevTargetEpoch": att.Data.Target.Epoch,
-					"sourceEpoch":     slashableAtt.Data.Source.Epoch,
-					"targetEpoch":     slashableAtt.Data.Target.Epoch,
-				}).Infof("Slashable attestation made")
+				slashedIndices = append(slashedIndices, slashableAtt.AttestingIndices...)
+				slashings = append(slashings, &ethpb.AttesterSlashing{
+					Attestation_1: att,
+					Attestation_2: slashableAtt,
+				})
+				attestations = append(attestations, slashableAtt)
 			}
 		}
 		startIdx += valsPerCommittee
 		endIdx += valsPerCommittee
 	}
-	return attestations
+	if len(slashedIndices) > 0 {
+		log.WithFields(logrus.Fields{
+			"amount":  len(slashedIndices),
+			"indices": slashedIndices,
+		}).Infof("Slashable attestation made")
+	}
+	return attestations, slashings
 }
 
 func makeSlashableFromAtt(att *ethpb.IndexedAttestation, indices []uint64) *ethpb.IndexedAttestation {
@@ -94,6 +104,7 @@ func makeSlashableFromAtt(att *ethpb.IndexedAttestation, indices []uint64) *ethp
 	return &ethpb.IndexedAttestation{
 		AttestingIndices: indices,
 		Data:             attData,
+		Signature:        params.BeaconConfig().EmptySignature[:],
 	}
 }
 
@@ -114,5 +125,6 @@ func makeDoubleVoteFromAtt(att *ethpb.IndexedAttestation, indices []uint64) *eth
 	return &ethpb.IndexedAttestation{
 		AttestingIndices: indices,
 		Data:             attData,
+		Signature:        params.BeaconConfig().EmptySignature[:],
 	}
 }

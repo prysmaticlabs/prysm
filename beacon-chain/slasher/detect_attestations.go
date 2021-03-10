@@ -65,7 +65,7 @@ func (s *Service) detectSlashableAttestations(
 		)
 	}
 	log.WithFields(logrus.Fields{
-		"timeElapsed":               time.Now().Sub(start),
+		"timeElapsed":               time.Since(start),
 		"surroundingSlashingsFound": len(surroundingSlashings),
 		"currentEpoch":              args.currentEpoch,
 		"validatorChunkIndex":       args.validatorChunkIndex,
@@ -85,7 +85,7 @@ func (s *Service) detectSlashableAttestations(
 		)
 	}
 	log.WithFields(logrus.Fields{
-		"timeElapsed":              time.Now().Sub(start),
+		"timeElapsed":              time.Since(start),
 		"surroundedSlashingsFound": len(surroundingSlashings),
 		"currentEpoch":             args.currentEpoch,
 		"validatorChunkIndex":      args.validatorChunkIndex,
@@ -100,7 +100,7 @@ func (s *Service) detectSlashableAttestations(
 		log.WithField("numSlashings", len(slashings)).Info("Slashable attestation offenses found")
 	}
 	for _, slashing := range slashings {
-		s.attesterSlashingsFeed.Send(&ethpb.AttesterSlashing{
+		s.serviceCfg.AttesterSlashingsFeed.Send(&ethpb.AttesterSlashing{
 			Attestation_1: slashing.PrevAttestation,
 			Attestation_2: slashing.Attestation,
 		})
