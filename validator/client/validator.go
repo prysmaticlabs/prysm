@@ -634,9 +634,9 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 	slotOffset := slot - (slot % params.BeaconConfig().SlotsPerEpoch)
 	var totalAttestingKeys uint64
 	for _, duty := range duties {
+		validatorNotTruncatedKey := fmt.Sprintf("%#x", duty.PublicKey)
 		if v.emitAccountMetrics {
-			fmtKey := fmt.Sprintf("%#x", duty.PublicKey)
-			ValidatorStatusesGaugeVec.WithLabelValues(fmtKey).Set(float64(duty.Status))
+			ValidatorStatusesGaugeVec.WithLabelValues(validatorNotTruncatedKey).Set(float64(duty.Status))
 		}
 
 		// Only interested in validators who are attesting/proposing.
@@ -652,6 +652,9 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 		} else {
 			attesterKeys[duty.AttesterSlot-slotOffset] = append(attesterKeys[duty.AttesterSlot-slotOffset], validatorKey)
 			totalAttestingKeys++
+			if v.emitAccountMetrics {
+				ValidatorNextAttestationSlotGaugeVec.WithLabelValues(validatorNotTruncatedKey).Set(float64(duty.AttesterSlot))
+			}
 		}
 
 		for _, proposerSlot := range duty.ProposerSlots {
@@ -660,6 +663,9 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 				log.WithField("duty", duty).Warn("Invalid proposer slot")
 			} else {
 				proposerKeys[proposerIndex] = validatorKey
+			}
+			if v.emitAccountMetrics {
+				ValidatorNextProposalSlotGaugeVec.WithLabelValues(validatorNotTruncatedKey).Set(float64(proposerSlot))
 			}
 		}
 	}
