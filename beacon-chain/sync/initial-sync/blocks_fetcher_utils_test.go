@@ -105,8 +105,9 @@ func TestBlocksFetcher_nonSkippedSlotAfter(t *testing.T) {
 		}()
 		if testutil.WaitTimeout(&wg, 5*time.Second) {
 			t.Errorf("Isolated non-skipped slot not found in %d iterations: %v", i, expectedSlot)
+		} else {
+			log.Debugf("Isolated non-skipped slot found in %d iterations", i)
 		}
-		log.Debugf("Isolated non-skipped slot found in %d iterations", i)
 	})
 
 	t.Run("no peers with higher target epoch available", func(t *testing.T) {
