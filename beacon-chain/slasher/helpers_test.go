@@ -30,13 +30,13 @@ func TestService_groupByValidatorChunkIndex(t *testing.T) {
 				validatorChunkSize: 2,
 			},
 			atts: []*slashertypes.IndexedAttestationWrapper{
-				createAttestationWrapper(0, 0, []uint64{0, 1} /* indices */, nil /* signingRoot */),
-				createAttestationWrapper(0, 0, []uint64{0, 1} /* indices */, nil /* signingRoot */),
+				createAttestationWrapper(t, 0, 0, []uint64{0, 1}, nil),
+				createAttestationWrapper(t, 0, 0, []uint64{0, 1}, nil),
 			},
 			want: map[uint64][]*slashertypes.IndexedAttestationWrapper{
 				0: {
-					createAttestationWrapper(0, 0, []uint64{0, 1} /* indices */, nil /* signingRoot */),
-					createAttestationWrapper(0, 0, []uint64{0, 1} /* indices */, nil /* signingRoot */),
+					createAttestationWrapper(t, 0, 0, []uint64{0, 1}, nil),
+					createAttestationWrapper(t, 0, 0, []uint64{0, 1}, nil),
 				},
 			},
 		},
@@ -46,17 +46,17 @@ func TestService_groupByValidatorChunkIndex(t *testing.T) {
 				validatorChunkSize: 2,
 			},
 			atts: []*slashertypes.IndexedAttestationWrapper{
-				createAttestationWrapper(0, 0, []uint64{0, 2, 4} /* indices */, nil /* signingRoot */),
+				createAttestationWrapper(t, 0, 0, []uint64{0, 2, 4}, nil),
 			},
 			want: map[uint64][]*slashertypes.IndexedAttestationWrapper{
 				0: {
-					createAttestationWrapper(0, 0, []uint64{0, 2, 4} /* indices */, nil /* signingRoot */),
+					createAttestationWrapper(t, 0, 0, []uint64{0, 2, 4}, nil),
 				},
 				1: {
-					createAttestationWrapper(0, 0, []uint64{0, 2, 4} /* indices */, nil /* signingRoot */),
+					createAttestationWrapper(t, 0, 0, []uint64{0, 2, 4}, nil),
 				},
 				2: {
-					createAttestationWrapper(0, 0, []uint64{0, 2, 4} /* indices */, nil /* signingRoot */),
+					createAttestationWrapper(t, 0, 0, []uint64{0, 2, 4}, nil),
 				},
 			},
 		},
@@ -93,13 +93,13 @@ func TestService_groupByChunkIndex(t *testing.T) {
 				historyLength: 3,
 			},
 			atts: []*slashertypes.IndexedAttestationWrapper{
-				createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */),
-				createAttestationWrapper(1, 0, nil /* indices */, nil /* signingRoot */),
+				createAttestationWrapper(t, 0, 0, nil, nil),
+				createAttestationWrapper(t, 1, 0, nil, nil),
 			},
 			want: map[uint64][]*slashertypes.IndexedAttestationWrapper{
 				0: {
-					createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */),
-					createAttestationWrapper(1, 0, nil /* indices */, nil /* signingRoot */),
+					createAttestationWrapper(t, 0, 0, nil, nil),
+					createAttestationWrapper(t, 1, 0, nil, nil),
 				},
 			},
 		},
@@ -110,17 +110,17 @@ func TestService_groupByChunkIndex(t *testing.T) {
 				historyLength: 3,
 			},
 			atts: []*slashertypes.IndexedAttestationWrapper{
-				createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */),
-				createAttestationWrapper(1, 0, nil /* indices */, nil /* signingRoot */),
-				createAttestationWrapper(2, 0, nil /* indices */, nil /* signingRoot */),
+				createAttestationWrapper(t, 0, 0, nil, nil),
+				createAttestationWrapper(t, 1, 0, nil, nil),
+				createAttestationWrapper(t, 2, 0, nil, nil),
 			},
 			want: map[uint64][]*slashertypes.IndexedAttestationWrapper{
 				0: {
-					createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */),
-					createAttestationWrapper(1, 0, nil /* indices */, nil /* signingRoot */),
+					createAttestationWrapper(t, 0, 0, nil, nil),
+					createAttestationWrapper(t, 1, 0, nil, nil),
 				},
 				1: {
-					createAttestationWrapper(2, 0, nil /* indices */, nil /* signingRoot */),
+					createAttestationWrapper(t, 2, 0, nil, nil),
 				},
 			},
 		},
@@ -148,8 +148,8 @@ func Test_logSlashingEvent(t *testing.T) {
 			name: "Surrounding vote",
 			slashing: &slashertypes.Slashing{
 				Kind:            slashertypes.SurroundingVote,
-				PrevAttestation: createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */).IndexedAttestation,
-				Attestation:     createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */).IndexedAttestation,
+				PrevAttestation: createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
+				Attestation:     createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
 			},
 			want: "Attester surrounding vote",
 		},
@@ -157,8 +157,8 @@ func Test_logSlashingEvent(t *testing.T) {
 			name: "Surrounded vote",
 			slashing: &slashertypes.Slashing{
 				Kind:            slashertypes.SurroundedVote,
-				PrevAttestation: createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */).IndexedAttestation,
-				Attestation:     createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */).IndexedAttestation,
+				PrevAttestation: createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
+				Attestation:     createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
 			},
 			want: "Attester surrounded vote",
 		},
@@ -166,8 +166,8 @@ func Test_logSlashingEvent(t *testing.T) {
 			name: "Double vote",
 			slashing: &slashertypes.Slashing{
 				Kind:            slashertypes.DoubleVote,
-				PrevAttestation: createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */).IndexedAttestation,
-				Attestation:     createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */).IndexedAttestation,
+				PrevAttestation: createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
+				Attestation:     createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
 			},
 			want: "Attester double vote",
 		},
@@ -175,8 +175,8 @@ func Test_logSlashingEvent(t *testing.T) {
 			name: "Not slashable",
 			slashing: &slashertypes.Slashing{
 				Kind:            slashertypes.NotSlashable,
-				PrevAttestation: createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */).IndexedAttestation,
-				Attestation:     createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */).IndexedAttestation,
+				PrevAttestation: createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
+				Attestation:     createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
 			},
 			noLog: true,
 		},

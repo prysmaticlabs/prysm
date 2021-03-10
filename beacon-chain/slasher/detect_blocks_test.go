@@ -21,11 +21,11 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Service{
 		serviceCfg: &ServiceConfig{
-			Database: beaconDB,
+			Database:              beaconDB,
+			ProposerSlashingsFeed: new(event.Feed),
 		},
-		params:                DefaultParams(),
-		beaconBlocksQueue:     make([]*slashertypes.SignedBlockHeaderWrapper, 0),
-		proposerSlashingsFeed: new(event.Feed),
+		params:            DefaultParams(),
+		beaconBlocksQueue: make([]*slashertypes.SignedBlockHeaderWrapper, 0),
 	}
 	currentSlotChan := make(chan types.Slot)
 	exitChan := make(chan struct{})
@@ -35,10 +35,10 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 	}()
 	s.blockQueueLock.Lock()
 	s.beaconBlocksQueue = []*slashertypes.SignedBlockHeaderWrapper{
-		createProposalWrapper(4, 1, []byte{1}),
-		createProposalWrapper(4, 1, []byte{1}),
-		createProposalWrapper(4, 1, []byte{1}),
-		createProposalWrapper(4, 1, []byte{2}),
+		createProposalWrapper(t, 4, 1, []byte{1}),
+		createProposalWrapper(t, 4, 1, []byte{1}),
+		createProposalWrapper(t, 4, 1, []byte{1}),
+		createProposalWrapper(t, 4, 1, []byte{2}),
 	}
 	s.blockQueueLock.Unlock()
 	currentSlot := types.Slot(4)
@@ -67,8 +67,8 @@ func Test_processQueuedBlocks_NotSlashable(t *testing.T) {
 	}()
 	s.blockQueueLock.Lock()
 	s.beaconBlocksQueue = []*slashertypes.SignedBlockHeaderWrapper{
-		createProposalWrapper(4, 1, []byte{1}),
-		createProposalWrapper(4, 1, []byte{1}),
+		createProposalWrapper(t, 4, 1, []byte{1}),
+		createProposalWrapper(t, 4, 1, []byte{1}),
 	}
 	s.blockQueueLock.Unlock()
 	currentSlot := types.Slot(4)
@@ -78,20 +78,21 @@ func Test_processQueuedBlocks_NotSlashable(t *testing.T) {
 	require.LogsDoNotContain(t, hook, "Proposer double proposal slashing")
 }
 
-func createProposalWrapper(slot types.Slot, proposerIndex types.ValidatorIndex, signingRoot []byte) *slashertypes.SignedBlockHeaderWrapper {
-	signRoot := bytesutil.ToBytes32(signingRoot)
-	if signingRoot == nil {
-		signRoot = params.BeaconConfig().ZeroHash
+func createProposalWrapper(t *testing.T, slot types.Slot, proposerIndex types.ValidatorIndex, signingRoot []byte) *slashertypes.SignedBlockHeaderWrapper {
+	header := &ethpb.BeaconBlockHeader{
+		Slot:          slot,
+		ProposerIndex: proposerIndex,
+		ParentRoot:    params.BeaconConfig().ZeroHash[:],
+		StateRoot:     bytesutil.PadTo(signingRoot, 32),
+		BodyRoot:      params.BeaconConfig().ZeroHash[:],
+	}
+	signRoot, err := header.HashTreeRoot()
+	if err != nil {
+		t.Fatal(err)
 	}
 	return &slashertypes.SignedBlockHeaderWrapper{
 		SignedBeaconBlockHeader: &ethpb.SignedBeaconBlockHeader{
-			Header: &ethpb.BeaconBlockHeader{
-				Slot:          slot,
-				ProposerIndex: proposerIndex,
-				ParentRoot:    params.BeaconConfig().ZeroHash[:],
-				StateRoot:     params.BeaconConfig().ZeroHash[:],
-				BodyRoot:      params.BeaconConfig().ZeroHash[:],
-			},
+			Header:    header,
 			Signature: params.BeaconConfig().EmptySignature[:],
 		},
 		SigningRoot: signRoot,
