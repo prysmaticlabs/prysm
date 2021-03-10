@@ -30,7 +30,6 @@ type Parameters struct {
 // at scale using configuration parameters.
 type Simulator struct {
 	ctx                       context.Context
-	cancel                    context.CancelFunc
 	slasher                   *slasher.Service
 	params                    *Parameters
 	indexedAttsFeed           *event.Feed

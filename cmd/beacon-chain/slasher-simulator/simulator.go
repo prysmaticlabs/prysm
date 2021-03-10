@@ -36,7 +36,5 @@ var Commands = &cli.Command{
 		debug.Exit(ctx)
 		return nil
 	},
-	Action: func(cliCtx *cli.Context) error {
-		return simulator.Simulate(cliCtx)
-	},
+	Action: simulator.Simulate,
 }
