@@ -1,4 +1,4 @@
-package state
+package stateutil
 
 import (
 	"math"
@@ -6,7 +6,7 @@ import (
 )
 
 func BenchmarkReference_MinusRef(b *testing.B) {
-	ref := &reference{
+	ref := &Reference{
 		refs: math.MaxUint64,
 	}
 	for i := 0; i < b.N; i++ {
