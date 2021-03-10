@@ -19,7 +19,7 @@ func TestSkipSlotCache_RoundTrip(t *testing.T) {
 	r := [32]byte{'a'}
 	state, err := c.Get(ctx, r)
 	require.NoError(t, err)
-	assert.Equal(t, (iface.BeaconState)(nil), state, "Empty cache returned an object")
+	assert.Equal(t, iface.BeaconState(nil), state, "Empty cache returned an object")
 
 	require.NoError(t, c.MarkInProgress(r))
 
