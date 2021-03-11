@@ -75,7 +75,7 @@ func run(ctx context.Context, v iface.Validator) {
 		if err != nil {
 			log.Fatalf("Could not determine if beacon node synced: %v", err)
 		}
-		err = v.WaitForActivation(ctx, nil)
+		err = v.WaitForActivation(ctx, nil /* accountsChangedChan */)
 		if isConnectionError(err) {
 			log.Warnf("Could not wait for validator activation: %v", err)
 			continue
