@@ -1,8 +1,11 @@
 package kv
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 
 	ssz "github.com/ferranbt/fastssz"
 	"github.com/golang/snappy"
@@ -90,7 +93,7 @@ func (s *Store) CheckAttesterDoubleVotes(
 			}
 			for _, valIdx := range att.IndexedAttestation.AttestingIndices {
 				encIdx := ssz.MarshalUint64(make([]byte, 0), valIdx)
-				key := append(encIdx, encEpoch...)
+				key := append(encEpoch, encIdx...)
 				encExistingAttRecord := bkt.Get(key)
 				if len(encExistingAttRecord) < 32 {
 					continue
@@ -133,7 +136,7 @@ func (s *Store) AttestationRecordForValidator(
 		if err != nil {
 			return err
 		}
-		key := append(encIdx, encEpoch...)
+		key := append(encEpoch, encIdx...)
 		value := bkt.Get(key)
 		if value == nil {
 			return nil
@@ -169,7 +172,7 @@ func (s *Store) SaveAttestationRecordsForValidators(
 			}
 			for _, valIdx := range att.IndexedAttestation.AttestingIndices {
 				encIdx := ssz.MarshalUint64(make([]byte, 0), valIdx)
-				key := append(encIdx, encEpoch...)
+				key := append(encEpoch, encIdx...)
 				if err := bkt.Put(key, value); err != nil {
 					return err
 				}
@@ -292,6 +295,52 @@ func (s *Store) SaveBlockProposals(
 		}
 		return nil
 	})
+}
+
+func (s *Store) PruneProposals(ctx context.Context, epoch types.Epoch, historySize uint64) error {
+	// + 1 here so we can prune everything less than this, but not equal.
+	endPruneSlot, err := helpers.StartSlot(epoch)
+	if err != nil {
+		return err
+	}
+	endEnc, err := endPruneSlot.MarshalSSZ()
+	if err != nil {
+		return err
+	}
+	return s.db.Update(func(tx *bolt.Tx) error {
+		proposalBkt := tx.Bucket(proposalRecordsBucket)
+		c := proposalBkt.Cursor()
+		for k, _ := c.Seek(endEnc); k != nil && prefixLessThan(k, endEnc); k, _ = c.Prev() {
+			if err := proposalBkt.Delete(k); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+func (s *Store) PruneAttestations(ctx context.Context, currentEpoch types.Epoch, historySize uint64) error {
+	// + 1 here so we can prune everything less than this, but not equal.
+	endPruneEpoch := currentEpoch
+	epochEnc, err := endPruneEpoch.MarshalSSZ()
+	if err != nil {
+		return err
+	}
+	return s.db.Update(func(tx *bolt.Tx) error {
+		attBkt := tx.Bucket(attestationRecordsBucket)
+		c := attBkt.Cursor()
+		for k, _ := c.Seek(epochEnc); k != nil && prefixLessThan(k, epochEnc); k, _ = c.Prev() {
+			if err := attBkt.Delete(k); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+func prefixLessThan(key []byte, lessThan []byte) bool {
+	encSlot := key[:8]
+	return bytes.Compare(encSlot, lessThan) < 0
 }
 
 // Disk key for a validator proposal, including a slot+validatorIndex as a byte slice.
