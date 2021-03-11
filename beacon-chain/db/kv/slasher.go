@@ -317,7 +317,7 @@ func (s *Store) PruneProposals(ctx context.Context, epoch types.Epoch, historySi
 		return nil
 	})
 }
-beacon-chain/db/kv/slasher.go
+
 func (s *Store) PruneAttestations(ctx context.Context, currentEpoch types.Epoch, historySize uint64) error {
 	// + 1 here so we can prune everything less than this, but not equal.
 	endPruneEpoch := currentEpoch
