@@ -102,10 +102,6 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 			}
 
 			processedAttestationsTotal.Add(float64(len(attestations)))
-
-			if err := s.serviceCfg.Database.PruneAttestations(ctx, currentEpoch); err != nil {
-				log.WithError(err).Error("Could not prune attestations")
-			}
 		case <-ctx.Done():
 			return
 		}
@@ -135,12 +131,25 @@ func (s *Service) processQueuedBlocks(ctx context.Context, epochTicker <-chan ty
 				continue
 			}
 			processedBlocksTotal.Add(float64(len(blocks)))
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+func (s *Service) pruneSlasherData(ctx context.Context, epochTicker <-chan types.Epoch) {
+	for {
+		select {
+		case currentEpoch := <-epochTicker:
+			if err := s.serviceCfg.Database.PruneAttestations(ctx, currentEpoch, s.params.historyLength); err != nil {
+				log.WithError(err).Error("Could not prune attestations")
+				continue
+			}
 
 			if err := s.serviceCfg.Database.PruneProposals(ctx, currentEpoch, s.params.historyLength); err != nil {
 				log.WithError(err).Error("Could not prune proposals")
+				continue
 			}
-		case <-ctx.Done():
-			return
 		}
 	}
 }
