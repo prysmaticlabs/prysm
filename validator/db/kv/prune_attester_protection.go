@@ -10,12 +10,12 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// PruneAttestationsOlderThanCurrentWeakSubjectivity loops through every
-// public key in the public keys bucket and prunes all attestation data
-// that has target epochs older than the highest weak subjectivity period
-// in our database. This routine is meant to run on startup.
-func (s *Store) PruneAttestationsOlderThanCurrentWeakSubjectivity(ctx context.Context) error {
-	ctx, span := trace.StartSpan(ctx, "Validator.PruneAttestationsOlderThanCurrentWeakSubjectivity")
+// PruneAttestations loops through every public key in the public keys bucket
+// and prunes all attestation data that has target epochs older the highest
+// target epoch minus some constant of how many epochs we keep track of for slashing
+// protection. This routine is meant to run on startup.
+func (s *Store) PruneAttestations(ctx context.Context) error {
+	ctx, span := trace.StartSpan(ctx, "Validator.PruneAttestations")
 	defer span.End()
 	return s.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(pubKeysBucket)
@@ -36,7 +36,6 @@ func (s *Store) PruneAttestationsOlderThanCurrentWeakSubjectivity(ctx context.Co
 }
 
 func pruneSourceEpochsBucket(bucket *bolt.Bucket) error {
-	wssPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 	sourceEpochsBucket := bucket.Bucket(attestationSourceEpochsBucket)
 	if sourceEpochsBucket == nil {
 		return nil
@@ -47,20 +46,9 @@ func pruneSourceEpochsBucket(bucket *bolt.Bucket) error {
 	highestTargetEpochBytes := sourceEpochsBucket.Get(highestSourceEpochBytes)
 	highestTargetEpoch := bytesutil.BytesToEpochBigEndian(highestTargetEpochBytes)
 
-	// No need to prune if the highest epoch we've written is still
-	// before the first weak subjectivity period.
-	if highestTargetEpoch < wssPeriod {
-		return nil
-	}
-
 	return sourceEpochsBucket.ForEach(func(k []byte, v []byte) error {
 		targetEpoch := bytesutil.BytesToEpochBigEndian(v)
-
-		// For each source epoch we find, we check
-		// if its associated target epoch is less than the weak
-		// subjectivity period of the highest written target epoch
-		// in the bucket and delete if so.
-		if olderThanCurrentWeakSubjectivityPeriod(targetEpoch, highestTargetEpoch) {
+		if targetEpoch < pruningEpochCutoff(highestTargetEpoch) {
 			return sourceEpochsBucket.Delete(k)
 		}
 		return nil
@@ -68,7 +56,6 @@ func pruneSourceEpochsBucket(bucket *bolt.Bucket) error {
 }
 
 func pruneTargetEpochsBucket(bucket *bolt.Bucket) error {
-	wssPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 	targetEpochsBucket := bucket.Bucket(attestationTargetEpochsBucket)
 	if targetEpochsBucket == nil {
 		return nil
@@ -77,23 +64,16 @@ func pruneTargetEpochsBucket(bucket *bolt.Bucket) error {
 	highestTargetEpochBytes, _ := targetEpochsBucket.Cursor().Last()
 	highestTargetEpoch := bytesutil.BytesToEpochBigEndian(highestTargetEpochBytes)
 
-	// No need to prune if the highest epoch we've written is still
-	// before the first weak subjectivity period.
-	if highestTargetEpoch < wssPeriod {
-		return nil
-	}
-	c := targetEpochsBucket.Cursor()
-	for k, _ := c.First(); k != nil; k, _ = c.Next() {
+	return targetEpochsBucket.ForEach(func(k []byte, v []byte) error {
 		targetEpoch := bytesutil.BytesToEpochBigEndian(k)
-		if olderThanCurrentWeakSubjectivityPeriod(targetEpoch, highestTargetEpoch) {
+		if targetEpoch < pruningEpochCutoff(highestTargetEpoch) {
 			return targetEpochsBucket.Delete(k)
 		}
-	}
-	return nil
+		return nil
+	})
 }
 
 func pruneSigningRootsBucket(bucket *bolt.Bucket) error {
-	wssPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 	signingRootsBucket := bucket.Bucket(attestationSigningRootsBucket)
 	if signingRootsBucket == nil {
 		return nil
@@ -103,31 +83,23 @@ func pruneSigningRootsBucket(bucket *bolt.Bucket) error {
 	highestTargetEpochBytes, _ := signingRootsBucket.Cursor().Last()
 	highestTargetEpoch := bytesutil.BytesToEpochBigEndian(highestTargetEpochBytes)
 
-	// No need to prune if the highest epoch we've written is still
-	// before the first weak subjectivity period.
-	if highestTargetEpoch < wssPeriod {
-		return nil
-	}
-
 	return signingRootsBucket.ForEach(func(k []byte, v []byte) error {
 		targetEpoch := bytesutil.BytesToEpochBigEndian(k)
-		// For each target epoch we find in the bucket, we check
-		// if it less than the weak subjectivity period of the
-		// highest written target epoch in the bucket and delete if so.
-		if olderThanCurrentWeakSubjectivityPeriod(targetEpoch, highestTargetEpoch) {
+		if targetEpoch < pruningEpochCutoff(highestTargetEpoch) {
 			return signingRootsBucket.Delete(k)
 		}
 		return nil
 	})
 }
 
-func olderThanCurrentWeakSubjectivityPeriod(epoch, highestEpoch types.Epoch) bool {
-	wssPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-	// Number of weak subjectivity periods that have passed.
-	currentWeakSubjectivityPeriod := highestEpoch / wssPeriod
-	// We check if either the epoch is less than WEAK_SUBJECTIVITY_PERIOD
-	// or is it is from a weak subjectivity period older than the current one,
-	// for example, if 5 weak subjectivity periods have passed and epoch is
-	// from 2 weak subjectivity periods ago, then we return true.
-	return epoch < wssPeriod || (epoch/wssPeriod) < currentWeakSubjectivityPeriod
+// This helper function determines the cutoff epoch where, for all epochs before it, we should prune
+// the slashing protection database. This is computed by taking in an epoch and subtracting
+// SLASHING_PROTECTION_PRUNING_EPOCHS from the value. For example, if we are keeping track of 512 epochs
+// in the database, if we pass in epoch 612, then we want to prune all epochs before epoch 100.
+func pruningEpochCutoff(epoch types.Epoch) types.Epoch {
+	minEpoch := types.Epoch(0)
+	if epoch > params.BeaconConfig().SlashingProtectionPruningEpochs {
+		minEpoch = epoch - params.BeaconConfig().SlashingProtectionPruningEpochs
+	}
+	return minEpoch
 }
