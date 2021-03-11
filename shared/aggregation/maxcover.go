@@ -1,7 +1,6 @@
 package aggregation
 
 import (
-	"fmt"
 	"sort"
 
 	"github.com/pkg/errors"
@@ -79,11 +78,6 @@ func (mc *MaxCoverProblem) Cover(k int, allowOverlaps bool) (*Aggregation, error
 				break
 			}
 			if !candidate.processed {
-				if !allowOverlaps && solution.Coverage.Overlaps(*candidate.bits) {
-					// Overlapping candidates violate non-intersection invariant.
-					candidate.processed = true
-					continue
-				}
 				solution.Coverage = solution.Coverage.Or(*candidate.bits)
 				solution.Keys = append(solution.Keys, candidate.key)
 				remainingBits = remainingBits.And(candidate.bits.Not())
@@ -239,9 +233,4 @@ func union(candidates []*bitfield.Bitlist64) *bitfield.Bitlist64 {
 		}
 	}
 	return ret
-}
-
-// String provides string representation of a candidate.
-func (c *MaxCoverCandidate) String() string {
-	return fmt.Sprintf("{%v, %#b, s%d, %t}", c.key, c.bits, c.score, c.processed)
 }
