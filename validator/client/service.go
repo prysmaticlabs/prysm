@@ -22,11 +22,12 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
+	slashingiface "github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -61,8 +62,8 @@ type ValidatorService struct {
 	dataDir               string
 	withCert              string
 	endpoint              string
-	validator             Validator
-	protector             iface.Protector
+	validator             iface.Validator
+	protector             slashingiface.Protector
 	ctx                   context.Context
 	keyManager            keymanager.IKeymanager
 	grpcHeaders           []string
@@ -80,9 +81,9 @@ type Config struct {
 	GrpcRetriesFlag            uint
 	GrpcRetryDelay             time.Duration
 	GrpcMaxCallRecvMsgSizeFlag int
-	Protector                  iface.Protector
+	Protector                  slashingiface.Protector
 	Endpoint                   string
-	Validator                  Validator
+	Validator                  iface.Validator
 	ValDB                      db.Database
 	KeyManager                 keymanager.IKeymanager
 	GraffitiFlag               string
