@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"go.opencensus.io/trace"
 )
@@ -74,7 +75,10 @@ func (s *Service) detectSlashableAttestations(
 		log.WithField("numSlashings", len(slashings)).Info("Slashable offenses found")
 	}
 	for _, slashing := range slashings {
-		// TODO(#8331): Send over an event feed.
+		s.attesterSlashingsFeed.Send(&ethpb.AttesterSlashing{
+			Attestation_1: slashing.PrevAttestation,
+			Attestation_2: slashing.Attestation,
+		})
 		logSlashingEvent(slashing)
 	}
 
@@ -95,22 +99,25 @@ func (s *Service) checkDoubleVotes(
 	// We check if there are any slashable double votes in the input list
 	// of attestations with respect to each other.
 	slashings := make([]*slashertypes.Slashing, 0)
-	existingAtts := make(map[string][32]byte)
+	existingAtts := make(map[string]*slashertypes.IndexedAttestationWrapper)
 	for _, att := range attestations {
 		for _, valIdx := range att.IndexedAttestation.AttestingIndices {
 			key := uintToString(uint64(att.IndexedAttestation.Data.Target.Epoch)) + ":" + uintToString(valIdx)
-			existingSigningRoot, ok := existingAtts[key]
+			existingAtt, ok := existingAtts[key]
 			if !ok {
-				existingAtts[key] = att.SigningRoot
+				existingAtts[key] = att
 				continue
 			}
-			if att.SigningRoot != existingSigningRoot {
+			if att.SigningRoot != existingAtt.SigningRoot {
+				doubleVotesTotal.Inc()
 				slashings = append(slashings, &slashertypes.Slashing{
 					Kind:            slashertypes.DoubleVote,
 					ValidatorIndex:  types.ValidatorIndex(valIdx),
 					TargetEpoch:     att.IndexedAttestation.Data.Target.Epoch,
+					PrevSigningRoot: existingAtt.SigningRoot,
 					SigningRoot:     att.SigningRoot,
-					PrevSigningRoot: existingSigningRoot,
+					PrevAttestation: existingAtt.IndexedAttestation,
+					Attestation:     att.IndexedAttestation,
 				})
 			}
 		}
@@ -139,12 +146,15 @@ func (s *Service) checkDoubleVotesOnDisk(
 	}
 	doubleVoteSlashings := make([]*slashertypes.Slashing, 0)
 	for _, doubleVote := range doubleVotes {
+		doubleVotesTotal.Inc()
 		doubleVoteSlashings = append(doubleVoteSlashings, &slashertypes.Slashing{
 			Kind:            slashertypes.DoubleVote,
 			ValidatorIndex:  doubleVote.ValidatorIndex,
 			TargetEpoch:     doubleVote.Target,
-			SigningRoot:     doubleVote.SigningRoot,
-			PrevSigningRoot: doubleVote.PrevSigningRoot,
+			PrevSigningRoot: doubleVote.PrevAttestationWrapper.SigningRoot,
+			SigningRoot:     doubleVote.AttestationWrapper.SigningRoot,
+			PrevAttestation: doubleVote.PrevAttestationWrapper.IndexedAttestation,
+			Attestation:     doubleVote.AttestationWrapper.IndexedAttestation,
 		})
 	}
 	return doubleVoteSlashings, nil
@@ -282,6 +292,9 @@ func (s *Service) applyAttestationForValidator(
 	defer span.End()
 	sourceEpoch := attestation.IndexedAttestation.Data.Source.Epoch
 	targetEpoch := attestation.IndexedAttestation.Data.Target.Epoch
+
+	attestationDistance.Observe(float64(targetEpoch) - float64(sourceEpoch))
+
 	chunkIdx := s.params.chunkIndex(sourceEpoch)
 	chunk, err := s.getChunk(ctx, args, chunksByChunkIdx, chunkIdx)
 	if err != nil {
@@ -378,7 +391,7 @@ func (s *Service) loadChunks(
 ) (map[uint64]Chunker, error) {
 	ctx, span := trace.StartSpan(ctx, "Slasher.loadChunks")
 	defer span.End()
-	chunkKeys := make([]uint64, 0, len(chunkIndices))
+	chunkKeys := make([][]byte, 0, len(chunkIndices))
 	for _, chunkIdx := range chunkIndices {
 		chunkKeys = append(chunkKeys, s.params.flatSliceID(args.validatorChunkIndex, chunkIdx))
 	}
@@ -421,11 +434,12 @@ func (s *Service) saveUpdatedChunks(
 ) error {
 	ctx, span := trace.StartSpan(ctx, "Slasher.saveUpdatedChunks")
 	defer span.End()
-	chunkKeys := make([]uint64, 0, len(updatedChunksByChunkIdx))
+	chunkKeys := make([][]byte, 0, len(updatedChunksByChunkIdx))
 	chunks := make([][]uint16, 0, len(updatedChunksByChunkIdx))
 	for chunkIdx, chunk := range updatedChunksByChunkIdx {
 		chunkKeys = append(chunkKeys, s.params.flatSliceID(args.validatorChunkIndex, chunkIdx))
 		chunks = append(chunks, chunk.Chunk())
 	}
+	chunksSavedTotal.Add(float64(len(chunks)))
 	return s.serviceCfg.Database.SaveSlasherChunks(ctx, args.kind, chunkKeys, chunks)
 }

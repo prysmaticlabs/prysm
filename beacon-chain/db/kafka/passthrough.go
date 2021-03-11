@@ -291,7 +291,7 @@ func (e Exporter) CheckAttesterDoubleVotes(
 
 // LoadSlasherChunk -- passthrough
 func (e Exporter) LoadSlasherChunks(
-	ctx context.Context, kind slashertypes.ChunkKind, diskKeys []uint64,
+	ctx context.Context, kind slashertypes.ChunkKind, diskKeys [][]byte,
 ) ([][]uint16, []bool, error) {
 	return e.db.LoadSlasherChunks(ctx, kind, diskKeys)
 }
@@ -327,7 +327,7 @@ func (e Exporter) SaveBlockProposals(
 
 // SaveSlasherChunks -- passthrough
 func (e Exporter) SaveSlasherChunks(
-	ctx context.Context, kind slashertypes.ChunkKind, chunkKeys []uint64, chunks [][]uint16,
+	ctx context.Context, kind slashertypes.ChunkKind, chunkKeys [][]byte, chunks [][]uint16,
 ) error {
 	return e.db.SaveSlasherChunks(ctx, kind, chunkKeys, chunks)
 }

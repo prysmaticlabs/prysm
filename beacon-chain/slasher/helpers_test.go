@@ -145,24 +145,40 @@ func Test_logSlashingEvent(t *testing.T) {
 		noLog    bool
 	}{
 		{
-			name:     "Surrounding vote",
-			slashing: &slashertypes.Slashing{Kind: slashertypes.SurroundingVote},
-			want:     "Attester surrounding vote",
+			name: "Surrounding vote",
+			slashing: &slashertypes.Slashing{
+				Kind:            slashertypes.SurroundingVote,
+				PrevAttestation: createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */).IndexedAttestation,
+				Attestation:     createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */).IndexedAttestation,
+			},
+			want: "Attester surrounding vote",
 		},
 		{
-			name:     "Surrounded vote",
-			slashing: &slashertypes.Slashing{Kind: slashertypes.SurroundedVote},
-			want:     "Attester surrounded vote",
+			name: "Surrounded vote",
+			slashing: &slashertypes.Slashing{
+				Kind:            slashertypes.SurroundedVote,
+				PrevAttestation: createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */).IndexedAttestation,
+				Attestation:     createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */).IndexedAttestation,
+			},
+			want: "Attester surrounded vote",
 		},
 		{
-			name:     "Double vote",
-			slashing: &slashertypes.Slashing{Kind: slashertypes.DoubleVote},
-			want:     "Attester double vote",
+			name: "Double vote",
+			slashing: &slashertypes.Slashing{
+				Kind:            slashertypes.DoubleVote,
+				PrevAttestation: createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */).IndexedAttestation,
+				Attestation:     createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */).IndexedAttestation,
+			},
+			want: "Attester double vote",
 		},
 		{
-			name:     "Not slashable",
-			slashing: &slashertypes.Slashing{Kind: slashertypes.NotSlashable},
-			noLog:    true,
+			name: "Not slashable",
+			slashing: &slashertypes.Slashing{
+				Kind:            slashertypes.NotSlashable,
+				PrevAttestation: createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */).IndexedAttestation,
+				Attestation:     createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */).IndexedAttestation,
+			},
+			noLog: true,
 		},
 	}
 	for _, tt := range tests {

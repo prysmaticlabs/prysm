@@ -9,6 +9,7 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -22,8 +23,9 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 		serviceCfg: &ServiceConfig{
 			Database: beaconDB,
 		},
-		params:            DefaultParams(),
-		beaconBlocksQueue: make([]*slashertypes.SignedBlockHeaderWrapper, 0),
+		params:                DefaultParams(),
+		beaconBlocksQueue:     make([]*slashertypes.SignedBlockHeaderWrapper, 0),
+		proposerSlashingsFeed: new(event.Feed),
 	}
 	currentEpochChan := make(chan types.Epoch)
 	exitChan := make(chan struct{})
@@ -86,7 +88,11 @@ func createProposalWrapper(slot types.Slot, proposerIndex types.ValidatorIndex, 
 			Header: &ethpb.BeaconBlockHeader{
 				Slot:          slot,
 				ProposerIndex: proposerIndex,
+				ParentRoot:    params.BeaconConfig().ZeroHash[:],
+				StateRoot:     params.BeaconConfig().ZeroHash[:],
+				BodyRoot:      params.BeaconConfig().ZeroHash[:],
 			},
+			Signature: params.BeaconConfig().EmptySignature[:],
 		},
 		SigningRoot: signRoot,
 	}

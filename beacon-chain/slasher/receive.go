@@ -21,9 +21,7 @@ func (s *Service) receiveAttestations(ctx context.Context) {
 			attWrapper := &slashertypes.IndexedAttestationWrapper{
 				IndexedAttestation: att,
 			}
-			s.attestationQueueLock.Lock()
-			s.attestationQueue = append(s.attestationQueue, attWrapper)
-			s.attestationQueueLock.Unlock()
+			s.attsQueue.push(attWrapper)
 		case err := <-sub.Err():
 			log.WithError(err).Debug("Subscriber closed with error")
 			return
@@ -45,9 +43,7 @@ func (s *Service) receiveBlocks(ctx context.Context) {
 			wrappedProposal := &slashertypes.SignedBlockHeaderWrapper{
 				SignedBeaconBlockHeader: blockHeader,
 			}
-			s.blockQueueLock.Lock()
-			s.beaconBlocksQueue = append(s.beaconBlocksQueue, wrappedProposal)
-			s.blockQueueLock.Unlock()
+			s.blksQueue.push(wrappedProposal)
 		case err := <-sub.Err():
 			log.WithError(err).Debug("Subscriber closed with error")
 			return
@@ -65,20 +61,19 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 	for {
 		select {
 		case currentEpoch := <-epochTicker:
+			attestations := s.attsQueue.dequeue()
 			valid, validInFuture := validateAttestationIntegrity(att, currentEpoch)
 			if validInFuture {
 
 			}
 
-			s.attestationQueueLock.Lock()
-			attestations := s.attestationQueue
-			s.attestationQueue = make([]*slashertypes.IndexedAttestationWrapper, 0)
-			s.attestationQueueLock.Unlock()
+			receivedAttestationsTotal.Add(float64(len(attestations)))
 
 			log.WithFields(logrus.Fields{
 				"currentEpoch": currentEpoch,
 				"numAtts":      len(attestations),
 			}).Info("Epoch reached, processing queued atts for slashing detection")
+
 			// Save the attestation records to our database.
 			if err := s.serviceCfg.Database.SaveAttestationRecordsForValidators(
 				ctx, attestations,
@@ -98,6 +93,8 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 					continue
 				}
 			}
+
+			processedAttestationsTotal.Add(float64(len(attestations)))
 		case <-ctx.Done():
 			return
 		}
@@ -110,18 +107,20 @@ func (s *Service) processQueuedBlocks(ctx context.Context, epochTicker <-chan ty
 	for {
 		select {
 		case currentEpoch := <-epochTicker:
-			s.blockQueueLock.Lock()
-			blocks := s.beaconBlocksQueue
-			s.beaconBlocksQueue = make([]*slashertypes.SignedBlockHeaderWrapper, 0)
-			s.blockQueueLock.Unlock()
+			blocks := s.blksQueue.dequeue()
+
+			receivedBlocksTotal.Add(float64(len(blocks)))
+
 			log.WithFields(logrus.Fields{
 				"currentEpoch": currentEpoch,
 				"numBlocks":    len(blocks),
 			}).Info("Epoch reached, processing queued blocks for slashing detection")
+
 			if err := s.detectSlashableBlocks(ctx, blocks); err != nil {
 				log.WithError(err).Error("Could not detect slashable blocks")
 				continue
 			}
+			processedBlocksTotal.Add(float64(len(blocks)))
 		case <-ctx.Done():
 			return
 		}

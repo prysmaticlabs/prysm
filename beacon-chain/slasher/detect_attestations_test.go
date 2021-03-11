@@ -231,6 +231,8 @@ func Test_checkDoubleVotes_SlashableInputAttestations(t *testing.T) {
 			TargetEpoch:     2,
 			SigningRoot:     [32]byte{2},
 			PrevSigningRoot: [32]byte{1},
+			PrevAttestation: createAttestationWrapper(0, 2, []uint64{1, 2}, []byte{1}).IndexedAttestation,
+			Attestation:     createAttestationWrapper(0, 2, []uint64{1, 2}, []byte{2}).IndexedAttestation,
 		},
 		{
 			Kind:            slashertypes.DoubleVote,
@@ -238,6 +240,8 @@ func Test_checkDoubleVotes_SlashableInputAttestations(t *testing.T) {
 			TargetEpoch:     2,
 			SigningRoot:     [32]byte{2},
 			PrevSigningRoot: [32]byte{1},
+			PrevAttestation: createAttestationWrapper(0, 2, []uint64{1, 2}, []byte{1}).IndexedAttestation,
+			Attestation:     createAttestationWrapper(0, 2, []uint64{1, 2}, []byte{2}).IndexedAttestation,
 		},
 	}
 	slashings, err := srv.checkDoubleVotes(ctx, atts)
@@ -270,6 +274,8 @@ func Test_checkDoubleVotes_SlashableAttestationsOnDisk(t *testing.T) {
 			TargetEpoch:     2,
 			SigningRoot:     [32]byte{2},
 			PrevSigningRoot: [32]byte{1},
+			PrevAttestation: createAttestationWrapper(0, 2, []uint64{1, 2}, []byte{1}).IndexedAttestation,
+			Attestation:     createAttestationWrapper(0, 2, []uint64{1, 2}, []byte{2}).IndexedAttestation,
 		},
 		{
 			Kind:            slashertypes.DoubleVote,
@@ -277,6 +283,8 @@ func Test_checkDoubleVotes_SlashableAttestationsOnDisk(t *testing.T) {
 			TargetEpoch:     2,
 			SigningRoot:     [32]byte{2},
 			PrevSigningRoot: [32]byte{1},
+			PrevAttestation: createAttestationWrapper(0, 2, []uint64{1, 2}, []byte{1}).IndexedAttestation,
+			Attestation:     createAttestationWrapper(0, 2, []uint64{1, 2}, []byte{2}).IndexedAttestation,
 		},
 	}
 	newAtts := []*slashertypes.IndexedAttestationWrapper{
@@ -402,17 +410,21 @@ func createAttestationWrapper(source, target types.Epoch, indices []uint64, sign
 		signRoot = params.BeaconConfig().ZeroHash
 	}
 	data := &ethpb.AttestationData{
+		BeaconBlockRoot: params.BeaconConfig().ZeroHash[:],
 		Source: &ethpb.Checkpoint{
 			Epoch: source,
+			Root:  params.BeaconConfig().ZeroHash[:],
 		},
 		Target: &ethpb.Checkpoint{
 			Epoch: target,
+			Root:  params.BeaconConfig().ZeroHash[:],
 		},
 	}
 	return &slashertypes.IndexedAttestationWrapper{
 		IndexedAttestation: &ethpb.IndexedAttestation{
 			AttestingIndices: indices,
 			Data:             data,
+			Signature:        params.BeaconConfig().EmptySignature[:],
 		},
 		SigningRoot: signRoot,
 	}

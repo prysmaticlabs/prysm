@@ -180,8 +180,9 @@ func Test_processQueuedAttestations(t *testing.T) {
 				serviceCfg: &ServiceConfig{
 					Database: beaconDB,
 				},
-				params:           DefaultParams(),
-				attestationQueue: make([]*slashertypes.IndexedAttestationWrapper, 0),
+				params:                DefaultParams(),
+				attestationQueue:      make([]*slashertypes.IndexedAttestationWrapper, 0),
+				attesterSlashingsFeed: new(event.Feed),
 			}
 			currentEpochChan := make(chan types.Epoch)
 			exitChan := make(chan struct{})
