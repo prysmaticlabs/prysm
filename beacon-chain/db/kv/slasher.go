@@ -5,13 +5,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-
 	ssz "github.com/ferranbt/fastssz"
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	bolt "go.etcd.io/bbolt"
@@ -318,7 +317,7 @@ func (s *Store) PruneProposals(ctx context.Context, epoch types.Epoch, historySi
 		return nil
 	})
 }
-
+beacon-chain/db/kv/slasher.go
 func (s *Store) PruneAttestations(ctx context.Context, currentEpoch types.Epoch, historySize uint64) error {
 	// + 1 here so we can prune everything less than this, but not equal.
 	endPruneEpoch := currentEpoch
