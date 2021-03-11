@@ -136,7 +136,7 @@ func (s *Service) processQueuedBlocks(ctx context.Context, epochTicker <-chan ty
 			}
 			processedBlocksTotal.Add(float64(len(blocks)))
 
-			if err := s.serviceCfg.Database.PruneProposals(ctx, currentEpoch); err != nil {
+			if err := s.serviceCfg.Database.PruneProposals(ctx, currentEpoch, s.params.historyLength); err != nil {
 				log.WithError(err).Error("Could not prune proposals")
 			}
 		case <-ctx.Done():

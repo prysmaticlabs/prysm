@@ -74,10 +74,10 @@ type ReadOnlyDatabase interface {
 		ctx context.Context, proposals []*slashertypes.SignedBlockHeaderWrapper,
 	) ([]*slashertypes.DoubleBlockProposal, error)
 	PruneAttestations(
-		ctx context.Context, currentEpoch types.Epoch,
+		ctx context.Context, currentEpoch types.Epoch, historySize uint64,
 	) error
 	PruneProposals(
-		ctx context.Context, currentEpoch types.Epoch,
+		ctx context.Context, currentEpoch types.Epoch, historySize uint64,
 	) error
 }
 
