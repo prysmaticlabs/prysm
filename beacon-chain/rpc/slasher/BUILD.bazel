@@ -8,7 +8,7 @@ go_library(
         "server.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/slasher",
-    visibility = ["//visibility:public"],
+    visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//proto/beacon/rpc/v1:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
