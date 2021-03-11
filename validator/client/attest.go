@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -37,7 +38,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot types.Slot, pubK
 	v.waitOneThirdOrValidBlock(ctx, slot)
 
 	var b strings.Builder
-	if err := b.WriteByte(byte(roleAttester)); err != nil {
+	if err := b.WriteByte(byte(iface.RoleAttester)); err != nil {
 		log.WithError(err).Error("Could not write role byte for lock key")
 		traceutil.AnnotateError(span, err)
 		return
