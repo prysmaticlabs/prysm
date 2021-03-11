@@ -33,7 +33,7 @@ type Service struct {
 	beaconBlocksChan      chan *ethpb.SignedBeaconBlockHeader
 	proposerSlashingsFeed *event.Feed
 	attesterSlashingsFeed *event.Feed
-	attsQueue             *attestaionsQueue
+	attsQueue             *attestationsQueue
 	blksQueue             *blocksQueue
 	ctx                   context.Context
 	cancel                context.CancelFunc

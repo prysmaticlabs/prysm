@@ -7,7 +7,7 @@ import (
 )
 
 // Struct for handling a thread-safe list of indexed attestation wrappers.
-type attestaionsQueue struct {
+type attestationsQueue struct {
 	lock  sync.RWMutex
 	items []*slashertypes.IndexedAttestationWrapper
 }
@@ -18,8 +18,8 @@ type blocksQueue struct {
 	items []*slashertypes.SignedBlockHeaderWrapper
 }
 
-func newAttestationsQueue() *attestaionsQueue {
-	return &attestaionsQueue{
+func newAttestationsQueue() *attestationsQueue {
+	return &attestationsQueue{
 		items: make([]*slashertypes.IndexedAttestationWrapper, 0),
 	}
 }
@@ -30,13 +30,13 @@ func newBlocksQueue() *blocksQueue {
 	}
 }
 
-func (q *attestaionsQueue) push(att *slashertypes.IndexedAttestationWrapper) {
+func (q *attestationsQueue) push(att *slashertypes.IndexedAttestationWrapper) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 	q.items = append(q.items, att)
 }
 
-func (q *attestaionsQueue) dequeue() []*slashertypes.IndexedAttestationWrapper {
+func (q *attestationsQueue) dequeue() []*slashertypes.IndexedAttestationWrapper {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 	items := q.items
@@ -44,13 +44,13 @@ func (q *attestaionsQueue) dequeue() []*slashertypes.IndexedAttestationWrapper {
 	return items
 }
 
-func (q *attestaionsQueue) size() int {
+func (q *attestationsQueue) size() int {
 	q.lock.RLock()
 	defer q.lock.RUnlock()
 	return len(q.items)
 }
 
-func (q *attestaionsQueue) extend(atts []*slashertypes.IndexedAttestationWrapper) {
+func (q *attestationsQueue) extend(atts []*slashertypes.IndexedAttestationWrapper) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 	q.items = append(q.items, atts...)
