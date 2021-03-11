@@ -13,7 +13,7 @@ import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 // Slasher service provides an interface for checking if attestations or blocks are slashable.
 service Slasher {
   // Returns any found attester slashings for an input indexed attestation.
-  rpc IsSlashableAttestation(ethereum.eth.v1alpha1.IndexedAttestation) returns (AttesterSlashingResponse) {
+  rpc IsSlashableAttestation(ethereum.eth.v1alpha1.IndexedAttestation) returns (ethereum.eth.v1alpha1.AttesterSlashing) {
     option (google.api.http) = {
       post: "/eth/v1alpha1/slasher/attestations/slashable",
       body: "*"
@@ -21,13 +21,13 @@ service Slasher {
   }
 
   // Returns any found proposer slashings for an input signed block header.
-  rpc IsSlashableBlock(ethereum.eth.v1alpha1.SignedBeaconBlockHeader) returns (ProposerSlashingResponse) {
+  rpc IsSlashableBlock(ethereum.eth.v1alpha1.SignedBeaconBlockHeader) returns (ethereum.eth.v1alpha1.ProposerSlashing) {
     option (google.api.http) = {
       get: "/eth/v1alpha1/slasher/blocks/slashable"
     };
   }
 
-  // Returns the highest source and target attestation for validator indexes that have been observed by slasher.
+  // Returns the highest source and target attestation for validator indices that have been observed by slasher.
   rpc HighestAttestations(HighestAttestationRequest) returns (HighestAttestationResponse) {
     option (google.api.http) = {
       get: "/eth/v1alpha1/slasher/attestations/highest"
@@ -35,16 +35,8 @@ service Slasher {
   }
 }
 
-message AttesterSlashingResponse {
-  repeated ethereum.eth.v1alpha1.AttesterSlashing attester_slashing = 1;
-}
-
-message ProposerSlashingResponse {
-  repeated ethereum.eth.v1alpha1.ProposerSlashing proposer_slashing = 1;
-}
-
 message HighestAttestationRequest {
-  repeated uint64 validator_ids = 1;
+  repeated uint64 validator_indices = 1;
 }
 
 message HighestAttestationResponse {
@@ -52,7 +44,7 @@ message HighestAttestationResponse {
 }
 
 message HighestAttestation {
-  uint64 validator_id = 1;
+  uint64 validator_index = 1;
   uint64 highest_source_epoch = 2 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Epoch"];
   uint64 highest_target_epoch = 3 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Epoch"];
 }

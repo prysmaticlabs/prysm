@@ -1,0 +1,18 @@
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "attestations.go",
+        "blocks.go",
+        "server.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/slasher",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//proto/beacon/rpc/v1:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "@org_golang_google_grpc//codes:go_default_library",
+        "@org_golang_google_grpc//status:go_default_library",
+    ],
+)
