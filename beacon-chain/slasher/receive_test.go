@@ -332,40 +332,6 @@ func TestSlasher_receiveAttestations_OK(t *testing.T) {
 	require.DeepEqual(t, wanted, s.attsQueue.dequeue())
 }
 
-func TestSlasher_receiveAttestations_OnlyValidAttestations(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	s := &Service{
-		serviceCfg: &ServiceConfig{
-			IndexedAttsFeed: new(event.Feed),
-		},
-		indexedAttsChan: make(chan *ethpb.IndexedAttestation),
-		attsQueue:       newAttestationsQueue(),
-	}
-	exitChan := make(chan struct{})
-	go func() {
-		s.receiveAttestations(ctx)
-		exitChan <- struct{}{}
-	}()
-	firstIndices := []uint64{1, 2, 3}
-	secondIndices := []uint64{4, 5, 6}
-	// Add a valid attestation.
-	validAtt := createAttestationWrapper(1, 2, firstIndices, nil)
-	s.indexedAttsChan <- validAtt.IndexedAttestation
-	// Send an invalid, bad attestation which will not
-	// pass integrity checks at it has invalid attestation data.
-	s.indexedAttsChan <- &ethpb.IndexedAttestation{
-		AttestingIndices: secondIndices,
-	}
-	cancel()
-	<-exitChan
-	// Expect only a single, valid attestation was added to the queue.
-	require.Equal(t, 1, s.attsQueue.size())
-	wanted := []*slashertypes.IndexedAttestationWrapper{
-		validAtt,
-	}
-	require.DeepEqual(t, wanted, s.attsQueue.dequeue())
-}
-
 func TestSlasher_receiveBlocks_OK(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Service{
