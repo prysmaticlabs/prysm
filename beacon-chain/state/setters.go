@@ -8,7 +8,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	coreutils "github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -107,7 +107,7 @@ func (b *BeaconState) SetBlockRoots(val [][]byte) error {
 	defer b.lock.Unlock()
 
 	b.sharedFieldReferences[blockRoots].MinusRef()
-	b.sharedFieldReferences[blockRoots] = &reference{refs: 1}
+	b.sharedFieldReferences[blockRoots] = stateutil.NewRef(1)
 
 	b.state.BlockRoots = val
 	b.markFieldAsDirty(blockRoots)
@@ -133,7 +133,7 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 		r = make([][]byte, len(b.state.BlockRoots))
 		copy(r, b.state.BlockRoots)
 		ref.MinusRef()
-		b.sharedFieldReferences[blockRoots] = &reference{refs: 1}
+		b.sharedFieldReferences[blockRoots] = stateutil.NewRef(1)
 	}
 
 	r[idx] = blockRoot[:]
@@ -154,7 +154,7 @@ func (b *BeaconState) SetStateRoots(val [][]byte) error {
 	defer b.lock.Unlock()
 
 	b.sharedFieldReferences[stateRoots].MinusRef()
-	b.sharedFieldReferences[stateRoots] = &reference{refs: 1}
+	b.sharedFieldReferences[stateRoots] = stateutil.NewRef(1)
 
 	b.state.StateRoots = val
 	b.markFieldAsDirty(stateRoots)
@@ -186,7 +186,7 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 		r = make([][]byte, len(b.state.StateRoots))
 		copy(r, b.state.StateRoots)
 		ref.MinusRef()
-		b.sharedFieldReferences[stateRoots] = &reference{refs: 1}
+		b.sharedFieldReferences[stateRoots] = stateutil.NewRef(1)
 	}
 
 	r[idx] = stateRoot[:]
@@ -207,7 +207,7 @@ func (b *BeaconState) SetHistoricalRoots(val [][]byte) error {
 	defer b.lock.Unlock()
 
 	b.sharedFieldReferences[historicalRoots].MinusRef()
-	b.sharedFieldReferences[historicalRoots] = &reference{refs: 1}
+	b.sharedFieldReferences[historicalRoots] = stateutil.NewRef(1)
 
 	b.state.HistoricalRoots = val
 	b.markFieldAsDirty(historicalRoots)
@@ -237,7 +237,7 @@ func (b *BeaconState) SetEth1DataVotes(val []*ethpb.Eth1Data) error {
 	defer b.lock.Unlock()
 
 	b.sharedFieldReferences[eth1DataVotes].MinusRef()
-	b.sharedFieldReferences[eth1DataVotes] = &reference{refs: 1}
+	b.sharedFieldReferences[eth1DataVotes] = stateutil.NewRef(1)
 
 	b.state.Eth1DataVotes = val
 	b.markFieldAsDirty(eth1DataVotes)
@@ -260,7 +260,7 @@ func (b *BeaconState) AppendEth1DataVotes(val *ethpb.Eth1Data) error {
 		votes = make([]*ethpb.Eth1Data, len(b.state.Eth1DataVotes))
 		copy(votes, b.state.Eth1DataVotes)
 		b.sharedFieldReferences[eth1DataVotes].MinusRef()
-		b.sharedFieldReferences[eth1DataVotes] = &reference{refs: 1}
+		b.sharedFieldReferences[eth1DataVotes] = stateutil.NewRef(1)
 	}
 
 	b.state.Eth1DataVotes = append(votes, val)
@@ -293,13 +293,10 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 
 	b.state.Validators = val
 	b.sharedFieldReferences[validators].MinusRef()
-	b.sharedFieldReferences[validators] = &reference{refs: 1}
+	b.sharedFieldReferences[validators] = stateutil.NewRef(1)
 	b.markFieldAsDirty(validators)
 	b.rebuildTrie[validators] = true
-	b.valMapHandler = &validatorMapHandler{
-		valIdxMap: coreutils.ValidatorIndexMap(b.state.Validators),
-		mapRef:    &reference{refs: 1},
-	}
+	b.valMapHandler = stateutil.NewValMapHandler(b.state.Validators)
 	return nil
 }
 
@@ -314,7 +311,7 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator
 	if ref := b.sharedFieldReferences[validators]; ref.Refs() > 1 {
 		v = b.validatorsReferences()
 		ref.MinusRef()
-		b.sharedFieldReferences[validators] = &reference{refs: 1}
+		b.sharedFieldReferences[validators] = stateutil.NewRef(1)
 	}
 	b.lock.Unlock()
 	var changedVals []uint64
@@ -355,7 +352,7 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx types.ValidatorIndex, val *ethp
 	if ref := b.sharedFieldReferences[validators]; ref.Refs() > 1 {
 		v = b.validatorsReferences()
 		ref.MinusRef()
-		b.sharedFieldReferences[validators] = &reference{refs: 1}
+		b.sharedFieldReferences[validators] = stateutil.NewRef(1)
 	}
 
 	v[idx] = val
@@ -376,7 +373,7 @@ func (b *BeaconState) SetBalances(val []uint64) error {
 	defer b.lock.Unlock()
 
 	b.sharedFieldReferences[balances].MinusRef()
-	b.sharedFieldReferences[balances] = &reference{refs: 1}
+	b.sharedFieldReferences[balances] = stateutil.NewRef(1)
 
 	b.state.Balances = val
 	b.markFieldAsDirty(balances)
@@ -399,7 +396,7 @@ func (b *BeaconState) UpdateBalancesAtIndex(idx types.ValidatorIndex, val uint64
 	if b.sharedFieldReferences[balances].Refs() > 1 {
 		bals = b.balances()
 		b.sharedFieldReferences[balances].MinusRef()
-		b.sharedFieldReferences[balances] = &reference{refs: 1}
+		b.sharedFieldReferences[balances] = stateutil.NewRef(1)
 	}
 
 	bals[idx] = val
@@ -418,7 +415,7 @@ func (b *BeaconState) SetRandaoMixes(val [][]byte) error {
 	defer b.lock.Unlock()
 
 	b.sharedFieldReferences[randaoMixes].MinusRef()
-	b.sharedFieldReferences[randaoMixes] = &reference{refs: 1}
+	b.sharedFieldReferences[randaoMixes] = stateutil.NewRef(1)
 
 	b.state.RandaoMixes = val
 	b.markFieldAsDirty(randaoMixes)
@@ -444,7 +441,7 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(idx uint64, val []byte) error {
 		mixes = make([][]byte, len(b.state.RandaoMixes))
 		copy(mixes, b.state.RandaoMixes)
 		b.sharedFieldReferences[randaoMixes].MinusRef()
-		b.sharedFieldReferences[randaoMixes] = &reference{refs: 1}
+		b.sharedFieldReferences[randaoMixes] = stateutil.NewRef(1)
 	}
 
 	mixes[idx] = val
@@ -465,7 +462,7 @@ func (b *BeaconState) SetSlashings(val []uint64) error {
 	defer b.lock.Unlock()
 
 	b.sharedFieldReferences[slashings].MinusRef()
-	b.sharedFieldReferences[slashings] = &reference{refs: 1}
+	b.sharedFieldReferences[slashings] = stateutil.NewRef(1)
 
 	b.state.Slashings = val
 	b.markFieldAsDirty(slashings)
@@ -488,7 +485,7 @@ func (b *BeaconState) UpdateSlashingsAtIndex(idx, val uint64) error {
 	if b.sharedFieldReferences[slashings].Refs() > 1 {
 		s = b.slashings()
 		b.sharedFieldReferences[slashings].MinusRef()
-		b.sharedFieldReferences[slashings] = &reference{refs: 1}
+		b.sharedFieldReferences[slashings] = stateutil.NewRef(1)
 	}
 
 	s[idx] = val
@@ -509,7 +506,7 @@ func (b *BeaconState) SetPreviousEpochAttestations(val []*pbp2p.PendingAttestati
 	defer b.lock.Unlock()
 
 	b.sharedFieldReferences[previousEpochAttestations].MinusRef()
-	b.sharedFieldReferences[previousEpochAttestations] = &reference{refs: 1}
+	b.sharedFieldReferences[previousEpochAttestations] = stateutil.NewRef(1)
 
 	b.state.PreviousEpochAttestations = val
 	b.markFieldAsDirty(previousEpochAttestations)
@@ -527,7 +524,7 @@ func (b *BeaconState) SetCurrentEpochAttestations(val []*pbp2p.PendingAttestatio
 	defer b.lock.Unlock()
 
 	b.sharedFieldReferences[currentEpochAttestations].MinusRef()
-	b.sharedFieldReferences[currentEpochAttestations] = &reference{refs: 1}
+	b.sharedFieldReferences[currentEpochAttestations] = stateutil.NewRef(1)
 
 	b.state.CurrentEpochAttestations = val
 	b.markFieldAsDirty(currentEpochAttestations)
@@ -549,7 +546,7 @@ func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 		roots = make([][]byte, len(b.state.HistoricalRoots))
 		copy(roots, b.state.HistoricalRoots)
 		b.sharedFieldReferences[historicalRoots].MinusRef()
-		b.sharedFieldReferences[historicalRoots] = &reference{refs: 1}
+		b.sharedFieldReferences[historicalRoots] = stateutil.NewRef(1)
 	}
 
 	b.state.HistoricalRoots = append(roots, root[:])
@@ -572,7 +569,7 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *pbp2p.PendingAttestati
 		atts = make([]*pbp2p.PendingAttestation, len(b.state.CurrentEpochAttestations))
 		copy(atts, b.state.CurrentEpochAttestations)
 		b.sharedFieldReferences[currentEpochAttestations].MinusRef()
-		b.sharedFieldReferences[currentEpochAttestations] = &reference{refs: 1}
+		b.sharedFieldReferences[currentEpochAttestations] = stateutil.NewRef(1)
 	}
 
 	b.state.CurrentEpochAttestations = append(atts, val)
@@ -595,7 +592,7 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestat
 		atts = make([]*pbp2p.PendingAttestation, len(b.state.PreviousEpochAttestations))
 		copy(atts, b.state.PreviousEpochAttestations)
 		b.sharedFieldReferences[previousEpochAttestations].MinusRef()
-		b.sharedFieldReferences[previousEpochAttestations] = &reference{refs: 1}
+		b.sharedFieldReferences[previousEpochAttestations] = stateutil.NewRef(1)
 	}
 
 	b.state.PreviousEpochAttestations = append(atts, val)
@@ -618,7 +615,7 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 	if b.sharedFieldReferences[validators].Refs() > 1 {
 		vals = b.validatorsReferences()
 		b.sharedFieldReferences[validators].MinusRef()
-		b.sharedFieldReferences[validators] = &reference{refs: 1}
+		b.sharedFieldReferences[validators] = stateutil.NewRef(1)
 	}
 
 	// append validator to slice
@@ -626,12 +623,12 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 	valIdx := types.ValidatorIndex(len(b.state.Validators) - 1)
 
 	// Copy if this is a shared validator map
-	if ref := b.valMapHandler.mapRef; ref.Refs() > 1 {
-		valMap := b.valMapHandler.copy()
+	if ref := b.valMapHandler.MapRef(); ref.Refs() > 1 {
+		valMap := b.valMapHandler.Copy()
 		ref.MinusRef()
 		b.valMapHandler = valMap
 	}
-	b.valMapHandler.valIdxMap[bytesutil.ToBytes48(val.PublicKey)] = valIdx
+	b.valMapHandler.Set(bytesutil.ToBytes48(val.PublicKey), valIdx)
 
 	b.markFieldAsDirty(validators)
 	b.addDirtyIndices(validators, []uint64{uint64(valIdx)})
@@ -651,7 +648,7 @@ func (b *BeaconState) AppendBalance(bal uint64) error {
 	if b.sharedFieldReferences[balances].Refs() > 1 {
 		bals = b.balances()
 		b.sharedFieldReferences[balances].MinusRef()
-		b.sharedFieldReferences[balances] = &reference{refs: 1}
+		b.sharedFieldReferences[balances] = stateutil.NewRef(1)
 	}
 
 	b.state.Balances = append(bals, bal)
