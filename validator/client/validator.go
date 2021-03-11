@@ -30,10 +30,11 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	vdb "github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
+	slashingiface "github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -49,16 +50,6 @@ var keyRefetchPeriod = 30 * time.Second
 var (
 	msgCouldNotFetchKeys = "could not fetch validating keys"
 	msgNoKeysFetched     = "No validating keys fetched. Trying again"
-)
-
-// ValidatorRole defines the validator role.
-type ValidatorRole int8
-
-const (
-	roleUnknown = iota
-	roleAttester
-	roleProposer
-	roleAggregator
 )
 
 type validator struct {
@@ -86,7 +77,7 @@ type validator struct {
 	keyManager                         keymanager.IKeymanager
 	beaconClient                       ethpb.BeaconChainClient
 	validatorClient                    ethpb.BeaconNodeValidatorClient
-	protector                          iface.Protector
+	protector                          slashingiface.Protector
 	db                                 vdb.Database
 	graffiti                           []byte
 	voteStats                          voteStats
@@ -147,7 +138,10 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 	// First, check if the beacon chain has started.
 	stream, err := v.validatorClient.WaitForChainStart(ctx, &ptypes.Empty{})
 	if err != nil {
-		return errors.Wrap(ErrConnectionIssue, errors.Wrap(err, "could not setup beacon chain ChainStart streaming client").Error())
+		return errors.Wrap(
+			iface.ErrConnectionIssue,
+			errors.Wrap(err, "could not setup beacon chain ChainStart streaming client").Error(),
+		)
 	}
 
 	log.Info("Waiting for beacon chain start log from the ETH 1.0 deposit contract")
@@ -157,7 +151,10 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 			return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
 		}
 		if err != nil {
-			return errors.Wrap(ErrConnectionIssue, errors.Wrap(err, "could not receive ChainStart from stream").Error())
+			return errors.Wrap(
+				iface.ErrConnectionIssue,
+				errors.Wrap(err, "could not receive ChainStart from stream").Error(),
+			)
 		}
 		v.genesisTime = chainStartRes.GenesisTime
 		curGenValRoot, err := v.db.GenesisValidatorsRoot(ctx)
@@ -182,7 +179,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 			}
 		}
 	} else {
-		return ErrConnectionIssue
+		return iface.ErrConnectionIssue
 	}
 
 	// Once the ChainStart log is received, we update the genesis time of the validator client
@@ -199,7 +196,7 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 
 	s, err := v.node.GetSyncStatus(ctx, &ptypes.Empty{})
 	if err != nil {
-		return errors.Wrap(ErrConnectionIssue, errors.Wrap(err, "could not get sync status").Error())
+		return errors.Wrap(iface.ErrConnectionIssue, errors.Wrap(err, "could not get sync status").Error())
 	}
 	if !s.Syncing {
 		return nil
@@ -211,7 +208,7 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 		case <-time.After(slotutil.DivideSlotBy(2 /* twice per slot */)):
 			s, err := v.node.GetSyncStatus(ctx, &ptypes.Empty{})
 			if err != nil {
-				return errors.Wrap(ErrConnectionIssue, errors.Wrap(err, "could not get sync status").Error())
+				return errors.Wrap(iface.ErrConnectionIssue, errors.Wrap(err, "could not get sync status").Error())
 			}
 			if !s.Syncing {
 				return nil
@@ -260,8 +257,8 @@ func (v *validator) SlasherReady(ctx context.Context) error {
 func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel chan<- error) {
 	stream, err := v.beaconClient.StreamBlocks(ctx, &ethpb.StreamBlocksRequest{VerifiedOnly: true})
 	if err != nil {
-		log.WithError(err).Error("Failed to retrieve blocks stream, " + ErrConnectionIssue.Error())
-		connectionErrorChannel <- errors.Wrap(ErrConnectionIssue, err.Error())
+		log.WithError(err).Error("Failed to retrieve blocks stream, " + iface.ErrConnectionIssue.Error())
+		connectionErrorChannel <- errors.Wrap(iface.ErrConnectionIssue, err.Error())
 		return
 	}
 
@@ -272,8 +269,8 @@ func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel ch
 		}
 		res, err := stream.Recv()
 		if err != nil {
-			log.WithError(err).Error("Could not receive blocks from beacon node, " + ErrConnectionIssue.Error())
-			connectionErrorChannel <- errors.Wrap(ErrConnectionIssue, err.Error())
+			log.WithError(err).Error("Could not receive blocks from beacon node, " + iface.ErrConnectionIssue.Error())
+			connectionErrorChannel <- errors.Wrap(iface.ErrConnectionIssue, err.Error())
 			return
 		}
 		if res == nil || res.Block == nil {
@@ -356,7 +353,7 @@ func (v *validator) CanonicalHeadSlot(ctx context.Context) (types.Slot, error) {
 	defer span.End()
 	head, err := v.beaconClient.GetChainHead(ctx, &ptypes.Empty{})
 	if err != nil {
-		return 0, errors.Wrap(ErrConnectionIssue, err.Error())
+		return 0, errors.Wrap(iface.ErrConnectionIssue, err.Error())
 	}
 	return head.HeadSlot, nil
 }
@@ -505,10 +502,10 @@ func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesRes
 // RolesAt slot returns the validator roles at the given slot. Returns nil if the
 // validator is known to not have a roles at the slot. Returns UNKNOWN if the
 // validator assignments are unknown. Otherwise returns a valid ValidatorRole map.
-func (v *validator) RolesAt(ctx context.Context, slot types.Slot) (map[[48]byte][]ValidatorRole, error) {
-	rolesAt := make(map[[48]byte][]ValidatorRole)
+func (v *validator) RolesAt(ctx context.Context, slot types.Slot) (map[[48]byte][]iface.ValidatorRole, error) {
+	rolesAt := make(map[[48]byte][]iface.ValidatorRole)
 	for _, duty := range v.duties.Duties {
-		var roles []ValidatorRole
+		var roles []iface.ValidatorRole
 
 		if duty == nil {
 			continue
@@ -516,25 +513,25 @@ func (v *validator) RolesAt(ctx context.Context, slot types.Slot) (map[[48]byte]
 		if len(duty.ProposerSlots) > 0 {
 			for _, proposerSlot := range duty.ProposerSlots {
 				if proposerSlot != 0 && proposerSlot == slot {
-					roles = append(roles, roleProposer)
+					roles = append(roles, iface.RoleProposer)
 					break
 				}
 			}
 		}
 		if duty.AttesterSlot == slot {
-			roles = append(roles, roleAttester)
+			roles = append(roles, iface.RoleAttester)
 
 			aggregator, err := v.isAggregator(ctx, duty.Committee, slot, bytesutil.ToBytes48(duty.PublicKey))
 			if err != nil {
 				return nil, errors.Wrap(err, "could not check if a validator is an aggregator")
 			}
 			if aggregator {
-				roles = append(roles, roleAggregator)
+				roles = append(roles, iface.RoleAggregator)
 			}
 
 		}
 		if len(roles) == 0 {
-			roles = append(roles, roleUnknown)
+			roles = append(roles, iface.RoleUnknown)
 		}
 
 		var pubKey [48]byte

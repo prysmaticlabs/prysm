@@ -40,7 +40,7 @@ func TestState_CanSaveRetrieve(t *testing.T) {
 
 	savedS, err = db.State(context.Background(), [32]byte{'B'})
 	require.NoError(t, err)
-	assert.Equal(t, (iface.ReadOnlyBeaconState)(nil), savedS, "Unsaved state should've been nil")
+	assert.Equal(t, iface.ReadOnlyBeaconState(nil), savedS, "Unsaved state should've been nil")
 }
 
 func TestGenesisState_CanSaveRetrieve(t *testing.T) {

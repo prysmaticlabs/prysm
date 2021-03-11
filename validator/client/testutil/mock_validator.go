@@ -8,11 +8,12 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
-	"github.com/prysmaticlabs/prysm/validator/client"
+
+	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
 
-var _ client.Validator = (*FakeValidator)(nil)
+var _ iface.Validator = (*FakeValidator)(nil)
 
 // FakeValidator for mocking.
 type FakeValidator struct {
@@ -43,7 +44,7 @@ type FakeValidator struct {
 	NextSlotRet                       <-chan types.Slot
 	PublicKey                         string
 	UpdateDutiesRet                   error
-	RolesAtRet                        []client.ValidatorRole
+	RolesAtRet                        []iface.ValidatorRole
 	Balances                          map[[48]byte]uint64
 	IndexToPubkeyMap                  map[uint64][48]byte
 	PubkeyToIndexMap                  map[[48]byte]uint64
@@ -53,7 +54,8 @@ type FakeValidator struct {
 
 type ctxKey string
 
-var allValidatorsAreExitedCtxKey = ctxKey("exited")
+// AllValidatorsAreExitedCtxKey represents the metadata context key used for exits.
+var AllValidatorsAreExitedCtxKey = ctxKey("exited")
 
 // Done for mocking.
 func (fv *FakeValidator) Done() {
@@ -70,7 +72,7 @@ func (fv *FakeValidator) WaitForWalletInitialization(_ context.Context) error {
 func (fv *FakeValidator) WaitForChainStart(_ context.Context) error {
 	fv.WaitForChainStartCalled++
 	if fv.RetryTillSuccess >= fv.WaitForChainStartCalled {
-		return client.ErrConnectionIssue
+		return iface.ErrConnectionIssue
 	}
 	return nil
 }
@@ -79,7 +81,7 @@ func (fv *FakeValidator) WaitForChainStart(_ context.Context) error {
 func (fv *FakeValidator) WaitForActivation(_ context.Context, _ chan [][48]byte) error {
 	fv.WaitForActivationCalled++
 	if fv.RetryTillSuccess >= fv.WaitForActivationCalled {
-		return client.ErrConnectionIssue
+		return iface.ErrConnectionIssue
 	}
 	return nil
 }
@@ -88,7 +90,7 @@ func (fv *FakeValidator) WaitForActivation(_ context.Context, _ chan [][48]byte)
 func (fv *FakeValidator) WaitForSync(_ context.Context) error {
 	fv.WaitForSyncCalled++
 	if fv.RetryTillSuccess >= fv.WaitForSyncCalled {
-		return client.ErrConnectionIssue
+		return iface.ErrConnectionIssue
 	}
 	return nil
 }
@@ -103,7 +105,7 @@ func (fv *FakeValidator) SlasherReady(_ context.Context) error {
 func (fv *FakeValidator) CanonicalHeadSlot(_ context.Context) (types.Slot, error) {
 	fv.CanonicalHeadSlotCalled++
 	if fv.RetryTillSuccess > fv.CanonicalHeadSlotCalled {
-		return 0, client.ErrConnectionIssue
+		return 0, iface.ErrConnectionIssue
 	}
 	return 0, nil
 }
@@ -145,10 +147,10 @@ func (fv *FakeValidator) ResetAttesterProtectionData() {
 }
 
 // RolesAt for mocking.
-func (fv *FakeValidator) RolesAt(_ context.Context, slot types.Slot) (map[[48]byte][]client.ValidatorRole, error) {
+func (fv *FakeValidator) RolesAt(_ context.Context, slot types.Slot) (map[[48]byte][]iface.ValidatorRole, error) {
 	fv.RoleAtCalled = true
 	fv.RoleAtArg1 = uint64(slot)
-	vr := make(map[[48]byte][]client.ValidatorRole)
+	vr := make(map[[48]byte][]iface.ValidatorRole)
 	vr[[48]byte{1}] = fv.RolesAtRet
 	return vr, nil
 }
@@ -201,10 +203,10 @@ func (fv *FakeValidator) PubkeysToStatuses(_ context.Context) map[[48]byte]ethpb
 
 // AllValidatorsAreExited for mocking
 func (fv *FakeValidator) AllValidatorsAreExited(ctx context.Context) (bool, error) {
-	if ctx.Value(allValidatorsAreExitedCtxKey) == nil {
+	if ctx.Value(AllValidatorsAreExitedCtxKey) == nil {
 		return false, nil
 	}
-	return ctx.Value(allValidatorsAreExitedCtxKey).(bool), nil
+	return ctx.Value(AllValidatorsAreExitedCtxKey).(bool), nil
 }
 
 // GetKeymanager for mocking
@@ -216,7 +218,7 @@ func (fv *FakeValidator) GetKeymanager() keymanager.IKeymanager {
 func (fv *FakeValidator) ReceiveBlocks(ctx context.Context, connectionErrorChannel chan<- error) {
 	fv.ReceiveBlocksCalled++
 	if fv.RetryTillSuccess > fv.ReceiveBlocksCalled {
-		connectionErrorChannel <- client.ErrConnectionIssue
+		connectionErrorChannel <- iface.ErrConnectionIssue
 	}
 }
 

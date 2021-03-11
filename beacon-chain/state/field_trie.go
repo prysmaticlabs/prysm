@@ -16,8 +16,8 @@ import (
 // FieldTrie is the representation of the representative
 // trie of the particular field.
 type FieldTrie struct {
-	*sync.Mutex
-	*reference
+	*sync.RWMutex
+	reference   *stateutil.Reference
 	fieldLayers [][]*[32]byte
 	field       fieldIndex
 }
@@ -29,8 +29,8 @@ func NewFieldTrie(field fieldIndex, elements interface{}, length uint64) (*Field
 	if elements == nil {
 		return &FieldTrie{
 			field:     field,
-			reference: &reference{refs: 1},
-			Mutex:     new(sync.Mutex),
+			reference: stateutil.NewRef(1),
+			RWMutex:   new(sync.RWMutex),
 		}, nil
 	}
 	datType, ok := fieldMap[field]
@@ -46,15 +46,15 @@ func NewFieldTrie(field fieldIndex, elements interface{}, length uint64) (*Field
 		return &FieldTrie{
 			fieldLayers: stateutil.ReturnTrieLayer(fieldRoots, length),
 			field:       field,
-			reference:   &reference{refs: 1},
-			Mutex:       new(sync.Mutex),
+			reference:   stateutil.NewRef(1),
+			RWMutex:     new(sync.RWMutex),
 		}, nil
 	case compositeArray:
 		return &FieldTrie{
 			fieldLayers: stateutil.ReturnTrieLayerVariable(fieldRoots, length),
 			field:       field,
-			reference:   &reference{refs: 1},
-			Mutex:       new(sync.Mutex),
+			reference:   stateutil.NewRef(1),
+			RWMutex:     new(sync.RWMutex),
 		}, nil
 	default:
 		return nil, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(datType).Name())
@@ -105,8 +105,8 @@ func (f *FieldTrie) CopyTrie() *FieldTrie {
 	if f.fieldLayers == nil {
 		return &FieldTrie{
 			field:     f.field,
-			reference: &reference{refs: 1},
-			Mutex:     new(sync.Mutex),
+			reference: stateutil.NewRef(1),
+			RWMutex:   new(sync.RWMutex),
 		}
 	}
 	dstFieldTrie := make([][]*[32]byte, len(f.fieldLayers))
@@ -117,8 +117,8 @@ func (f *FieldTrie) CopyTrie() *FieldTrie {
 	return &FieldTrie{
 		fieldLayers: dstFieldTrie,
 		field:       f.field,
-		reference:   &reference{refs: 1},
-		Mutex:       new(sync.Mutex),
+		reference:   stateutil.NewRef(1),
+		RWMutex:     new(sync.RWMutex),
 	}
 }
 

@@ -524,23 +524,23 @@ func (b *BeaconState) ValidatorAtIndexReadOnly(idx types.ValidatorIndex) (iface.
 
 // ValidatorIndexByPubkey returns a given validator by its 48-byte public key.
 func (b *BeaconState) ValidatorIndexByPubkey(key [48]byte) (types.ValidatorIndex, bool) {
-	if b == nil || b.valMapHandler == nil || b.valMapHandler.valIdxMap == nil {
+	if b == nil || b.valMapHandler == nil || b.valMapHandler.IsNil() {
 		return 0, false
 	}
 	b.lock.RLock()
 	defer b.lock.RUnlock()
-	idx, ok := b.valMapHandler.valIdxMap[key]
+	idx, ok := b.valMapHandler.Get(key)
 	return idx, ok
 }
 
 func (b *BeaconState) validatorIndexMap() map[[48]byte]types.ValidatorIndex {
-	if b == nil || b.valMapHandler == nil || b.valMapHandler.valIdxMap == nil {
+	if b == nil || b.valMapHandler == nil || b.valMapHandler.IsNil() {
 		return map[[48]byte]types.ValidatorIndex{}
 	}
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.valMapHandler.copy().valIdxMap
+	return b.valMapHandler.Copy().ValidatorIndexMap()
 }
 
 // PubkeyAtIndex returns the pubkey at the given

@@ -11,7 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/validator/accounts/testutil"
+	"github.com/prysmaticlabs/prysm/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/validator/client/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -136,7 +137,7 @@ func TestAttests_NextSlot(t *testing.T) {
 	slot := types.Slot(55)
 	ticker := make(chan types.Slot)
 	v.NextSlotRet = ticker
-	v.RolesAtRet = []ValidatorRole{roleAttester}
+	v.RolesAtRet = []iface.ValidatorRole{iface.RoleAttester}
 	go func() {
 		ticker <- slot
 
@@ -156,7 +157,7 @@ func TestProposes_NextSlot(t *testing.T) {
 	slot := types.Slot(55)
 	ticker := make(chan types.Slot)
 	v.NextSlotRet = ticker
-	v.RolesAtRet = []ValidatorRole{roleProposer}
+	v.RolesAtRet = []iface.ValidatorRole{iface.RoleProposer}
 	go func() {
 		ticker <- slot
 
@@ -176,7 +177,7 @@ func TestBothProposesAndAttests_NextSlot(t *testing.T) {
 	slot := types.Slot(55)
 	ticker := make(chan types.Slot)
 	v.NextSlotRet = ticker
-	v.RolesAtRet = []ValidatorRole{roleAttester, roleProposer}
+	v.RolesAtRet = []iface.ValidatorRole{iface.RoleAttester, iface.RoleProposer}
 	go func() {
 		ticker <- slot
 
@@ -193,7 +194,7 @@ func TestBothProposesAndAttests_NextSlot(t *testing.T) {
 
 func TestAllValidatorsAreExited_NextSlot(t *testing.T) {
 	v := &testutil.FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
-	ctx, cancel := context.WithCancel(context.WithValue(context.Background(), testutil.allValidatorsAreExitedCtxKey, true))
+	ctx, cancel := context.WithCancel(context.WithValue(context.Background(), testutil.AllValidatorsAreExitedCtxKey, true))
 	hook := logTest.NewGlobal()
 
 	slot := types.Slot(55)

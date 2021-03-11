@@ -20,24 +20,24 @@ func TestStateReferenceSharing_Finalizer(t *testing.T) {
 
 	a, err := InitializeFromProtoUnsafe(&p2ppb.BeaconState{RandaoMixes: [][]byte{[]byte("foo")}})
 	require.NoError(t, err)
-	assert.Equal(t, uint(1), a.sharedFieldReferences[randaoMixes].refs, "Expected a single reference for RANDAO mixes")
+	assert.Equal(t, uint(1), a.sharedFieldReferences[randaoMixes].Refs(), "Expected a single reference for RANDAO mixes")
 
 	func() {
 		// Create object in a different scope for GC
 		b := a.Copy()
-		assert.Equal(t, uint(2), a.sharedFieldReferences[randaoMixes].refs, "Expected 2 references to RANDAO mixes")
+		assert.Equal(t, uint(2), a.sharedFieldReferences[randaoMixes].Refs(), "Expected 2 references to RANDAO mixes")
 		_ = b
 	}()
 
 	runtime.GC() // Should run finalizer on object b
-	assert.Equal(t, uint(1), a.sharedFieldReferences[randaoMixes].refs, "Expected 1 shared reference to RANDAO mixes!")
+	assert.Equal(t, uint(1), a.sharedFieldReferences[randaoMixes].Refs(), "Expected 1 shared reference to RANDAO mixes!")
 
 	copied := a.Copy()
 	b, ok := copied.(*BeaconState)
 	require.Equal(t, true, ok)
-	assert.Equal(t, uint(2), b.sharedFieldReferences[randaoMixes].refs, "Expected 2 shared references to RANDAO mixes")
+	assert.Equal(t, uint(2), b.sharedFieldReferences[randaoMixes].Refs(), "Expected 2 shared references to RANDAO mixes")
 	require.NoError(t, b.UpdateRandaoMixesAtIndex(0, []byte("bar")))
-	if b.sharedFieldReferences[randaoMixes].refs != 1 || a.sharedFieldReferences[randaoMixes].refs != 1 {
+	if b.sharedFieldReferences[randaoMixes].Refs() != 1 || a.sharedFieldReferences[randaoMixes].Refs() != 1 {
 		t.Error("Expected 1 shared reference to RANDAO mix for both a and b")
 	}
 }
@@ -318,7 +318,7 @@ func TestValidatorReferences_RemainsConsistent(t *testing.T) {
 // assertRefCount checks whether reference count for a given state
 // at a given index is equal to expected amount.
 func assertRefCount(t *testing.T, b *BeaconState, idx fieldIndex, want uint) {
-	if cnt := b.sharedFieldReferences[idx].refs; cnt != want {
+	if cnt := b.sharedFieldReferences[idx].Refs(); cnt != want {
 		t.Errorf("Unexpected count of references for index %d, want: %v, got: %v", idx, want, cnt)
 	}
 }
