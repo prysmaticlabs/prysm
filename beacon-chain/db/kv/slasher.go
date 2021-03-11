@@ -296,9 +296,14 @@ func (s *Store) SaveBlockProposals(
 	})
 }
 
-func (s *Store) PruneProposals(ctx context.Context, epoch types.Epoch, historySize uint64) error {
+// PruneProposals prunes all proposal data older than historySize.
+func (s *Store) PruneProposals(ctx context.Context, currentEpoch types.Epoch, historySize uint64) error {
+	if uint64(currentEpoch) < historySize {
+		return nil
+	}
+
 	// + 1 here so we can prune everything less than this, but not equal.
-	endPruneSlot, err := helpers.StartSlot(epoch)
+	endPruneSlot, err := helpers.StartSlot(currentEpoch - types.Epoch(historySize))
 	if err != nil {
 		return err
 	}
@@ -318,9 +323,14 @@ func (s *Store) PruneProposals(ctx context.Context, epoch types.Epoch, historySi
 	})
 }
 
+// PruneAttestations prunes all proposal data older than historySize.
 func (s *Store) PruneAttestations(ctx context.Context, currentEpoch types.Epoch, historySize uint64) error {
+	if uint64(currentEpoch) < historySize {
+		return nil
+	}
+
 	// + 1 here so we can prune everything less than this, but not equal.
-	endPruneEpoch := currentEpoch
+	endPruneEpoch := currentEpoch - types.Epoch(historySize)
 	epochEnc, err := endPruneEpoch.MarshalSSZ()
 	if err != nil {
 		return err
@@ -337,7 +347,7 @@ func (s *Store) PruneAttestations(ctx context.Context, currentEpoch types.Epoch,
 	})
 }
 
-func prefixLessThan(key []byte, lessThan []byte) bool {
+func prefixLessThan(key, lessThan []byte) bool {
 	encSlot := key[:8]
 	return bytes.Compare(encSlot, lessThan) < 0
 }

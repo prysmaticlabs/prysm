@@ -150,6 +150,8 @@ func (s *Service) pruneSlasherData(ctx context.Context, epochTicker <-chan types
 				log.WithError(err).Error("Could not prune proposals")
 				continue
 			}
+		case <-ctx.Done():
+			return
 		}
 	}
 }
