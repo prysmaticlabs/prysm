@@ -60,16 +60,19 @@ func (s *Service) validateAttestationIntegrity(
 	validInFuture = make([]*slashertypes.IndexedAttestationWrapper, 0, len(atts))
 
 	for _, attWrapper := range atts {
-		att := attWrapper.IndexedAttestation
 		// If an attestation is malformed, we drop it.
-		if attWrapper == nil || att == nil || att.Data == nil || att.Data.Source == nil || att.Data.Target == nil {
+		if attWrapper == nil ||
+			attWrapper.IndexedAttestation == nil ||
+			attWrapper.IndexedAttestation.Data == nil ||
+			attWrapper.IndexedAttestation.Data.Source == nil ||
+			attWrapper.IndexedAttestation.Data.Target == nil {
 			numDropped++
 			continue
 		}
 
 		// All valid attestations cannot have source epoch > target epoch.
-		sourceEpoch := att.Data.Source.Epoch
-		targetEpoch := att.Data.Target.Epoch
+		sourceEpoch := attWrapper.IndexedAttestation.Data.Source.Epoch
+		targetEpoch := attWrapper.IndexedAttestation.Data.Target.Epoch
 		if sourceEpoch > targetEpoch {
 			numDropped++
 			continue

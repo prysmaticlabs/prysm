@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -137,6 +138,130 @@ func TestService_groupByChunkIndex(t *testing.T) {
 	}
 }
 
+func TestService_validateAttestationIntegrity(t *testing.T) {
+	tests := []struct {
+		name           string
+		input          []*slashertypes.IndexedAttestationWrapper
+		inputEpoch     types.Epoch
+		wantedValid    []*slashertypes.IndexedAttestationWrapper
+		wantedDeferred []*slashertypes.IndexedAttestationWrapper
+		wantedDropped  int
+	}{
+		{
+			name:          "Nil attestation input gets dropped",
+			input:         make([]*slashertypes.IndexedAttestationWrapper, 1),
+			inputEpoch:    0,
+			wantedDropped: 1,
+		},
+		{
+			name: "Nil attestation data gets dropped",
+			input: []*slashertypes.IndexedAttestationWrapper{
+				{
+					IndexedAttestation: &ethpb.IndexedAttestation{},
+				},
+			},
+			inputEpoch:    0,
+			wantedDropped: 1,
+		},
+		{
+			name: "Nil attestation source and target gets dropped",
+			input: []*slashertypes.IndexedAttestationWrapper{
+				{
+					IndexedAttestation: &ethpb.IndexedAttestation{
+						Data: &ethpb.AttestationData{},
+					},
+				},
+			},
+			inputEpoch:    0,
+			wantedDropped: 1,
+		},
+		{
+			name: "Nil attestation source and good target gets dropped",
+			input: []*slashertypes.IndexedAttestationWrapper{
+				{
+					IndexedAttestation: &ethpb.IndexedAttestation{
+						Data: &ethpb.AttestationData{
+							Target: &ethpb.Checkpoint{},
+						},
+					},
+				},
+			},
+			inputEpoch:    0,
+			wantedDropped: 1,
+		},
+		{
+			name: "Nil attestation target and good source gets dropped",
+			input: []*slashertypes.IndexedAttestationWrapper{
+				{
+					IndexedAttestation: &ethpb.IndexedAttestation{
+						Data: &ethpb.AttestationData{
+							Source: &ethpb.Checkpoint{},
+						},
+					},
+				},
+			},
+			inputEpoch:    0,
+			wantedDropped: 1,
+		},
+		{
+			name: "Source > target gets dropped",
+			input: []*slashertypes.IndexedAttestationWrapper{
+				createAttestationWrapper(1, 0, []uint64{1}, make([]byte, 32)),
+			},
+			inputEpoch:    0,
+			wantedDropped: 1,
+		},
+		{
+			name: "Source < target is valid",
+			input: []*slashertypes.IndexedAttestationWrapper{
+				createAttestationWrapper(0, 1, []uint64{1}, make([]byte, 32)),
+			},
+			inputEpoch: 1,
+			wantedValid: []*slashertypes.IndexedAttestationWrapper{
+				createAttestationWrapper(0, 1, []uint64{1}, make([]byte, 32)),
+			},
+			wantedDropped: 0,
+		},
+		{
+			name: "Source == target is valid",
+			input: []*slashertypes.IndexedAttestationWrapper{
+				createAttestationWrapper(0, 0, []uint64{1}, make([]byte, 32)),
+			},
+			inputEpoch: 1,
+			wantedValid: []*slashertypes.IndexedAttestationWrapper{
+				createAttestationWrapper(0, 0, []uint64{1}, make([]byte, 32)),
+			},
+			wantedDropped: 0,
+		},
+		{
+			name: "Attestation from the future is deferred",
+			input: []*slashertypes.IndexedAttestationWrapper{
+				createAttestationWrapper(0, 2, []uint64{1}, make([]byte, 32)),
+			},
+			inputEpoch: 1,
+			wantedDeferred: []*slashertypes.IndexedAttestationWrapper{
+				createAttestationWrapper(0, 2, []uint64{1}, make([]byte, 32)),
+			},
+			wantedDropped: 0,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			srv := &Service{
+				params: DefaultParams(),
+			}
+			valid, deferred, numDropped := srv.validateAttestationIntegrity(tt.input, tt.inputEpoch)
+			if len(tt.wantedValid) > 0 {
+				require.DeepEqual(t, tt.wantedValid, valid)
+			}
+			if len(tt.wantedDeferred) > 0 {
+				require.DeepEqual(t, tt.wantedDeferred, deferred)
+			}
+			require.DeepEqual(t, tt.wantedDropped, numDropped)
+		})
+	}
+}
+
 func Test_logSlashingEvent(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -189,99 +314,6 @@ func Test_logSlashingEvent(t *testing.T) {
 				require.LogsDoNotContain(t, hook, "slashing")
 			} else {
 				require.LogsContain(t, hook, tt.want)
-			}
-		})
-	}
-}
-
-func Test_validateAttestationIntegrity(t *testing.T) {
-	tests := []struct {
-		name string
-		att  *ethpb.IndexedAttestation
-		want bool
-	}{
-		{
-			name: "Nil attestation returns false",
-			att:  nil,
-			want: false,
-		},
-		{
-			name: "Nil attestation data returns false",
-			att:  &ethpb.IndexedAttestation{},
-			want: false,
-		},
-		{
-			name: "Nil attestation source and target returns false",
-			att: &ethpb.IndexedAttestation{
-				Data: &ethpb.AttestationData{},
-			},
-			want: false,
-		},
-		{
-			name: "Nil attestation source and good target returns false",
-			att: &ethpb.IndexedAttestation{
-				Data: &ethpb.AttestationData{
-					Target: &ethpb.Checkpoint{},
-				},
-			},
-			want: false,
-		},
-		{
-			name: "Nil attestation target and good source returns false",
-			att: &ethpb.IndexedAttestation{
-				Data: &ethpb.AttestationData{
-					Source: &ethpb.Checkpoint{},
-				},
-			},
-			want: false,
-		},
-		{
-			name: "Source > target returns false",
-			att: &ethpb.IndexedAttestation{
-				Data: &ethpb.AttestationData{
-					Source: &ethpb.Checkpoint{
-						Epoch: 1,
-					},
-					Target: &ethpb.Checkpoint{
-						Epoch: 0,
-					},
-				},
-			},
-			want: false,
-		},
-		{
-			name: "Source == target returns false",
-			att: &ethpb.IndexedAttestation{
-				Data: &ethpb.AttestationData{
-					Source: &ethpb.Checkpoint{
-						Epoch: 1,
-					},
-					Target: &ethpb.Checkpoint{
-						Epoch: 1,
-					},
-				},
-			},
-			want: false,
-		},
-		{
-			name: "Source < target returns true",
-			att: &ethpb.IndexedAttestation{
-				Data: &ethpb.AttestationData{
-					Source: &ethpb.Checkpoint{
-						Epoch: 1,
-					},
-					Target: &ethpb.Checkpoint{
-						Epoch: 2,
-					},
-				},
-			},
-			want: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := validateAttestationIntegrity(tt.att); got != tt.want {
-				t.Errorf("validateAttestationIntegrity() = %v, want %v", got, tt.want)
 			}
 		})
 	}

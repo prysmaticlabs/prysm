@@ -385,10 +385,11 @@ func TestService_processQueuedAttestations(t *testing.T) {
 		serviceCfg: &ServiceConfig{
 			Database: beaconDB,
 		},
-		attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-			createAttestationWrapper(0, 1, []uint64{0, 1} /* indices */, nil /* signingRoot */),
-		},
+		attsQueue: newAttestationsQueue(),
 	}
+	s.attsQueue.extend([]*slashertypes.IndexedAttestationWrapper{
+		createAttestationWrapper(0, 1, []uint64{0, 1} /* indices */, nil /* signingRoot */),
+	})
 	ctx, cancel := context.WithCancel(context.Background())
 	tickerChan := make(chan types.Epoch)
 	exitChan := make(chan struct{})
