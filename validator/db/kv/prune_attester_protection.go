@@ -5,6 +5,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -45,14 +46,9 @@ func pruneSourceEpochsBucket(bucket *bolt.Bucket) error {
 	highestTargetEpochBytes := sourceEpochsBucket.Get(highestSourceEpochBytes)
 	highestTargetEpoch := bytesutil.BytesToEpochBigEndian(highestTargetEpochBytes)
 
-	minEpoch := types.Epoch(0)
-	if highestTargetEpoch > 512 {
-		minEpoch = highestTargetEpoch - types.Epoch(512)
-	}
-
 	return sourceEpochsBucket.ForEach(func(k []byte, v []byte) error {
 		targetEpoch := bytesutil.BytesToEpochBigEndian(v)
-		if targetEpoch < minEpoch {
+		if targetEpoch < pruningEpochCutoff(highestTargetEpoch) {
 			return sourceEpochsBucket.Delete(k)
 		}
 		return nil
@@ -68,14 +64,9 @@ func pruneTargetEpochsBucket(bucket *bolt.Bucket) error {
 	highestTargetEpochBytes, _ := targetEpochsBucket.Cursor().Last()
 	highestTargetEpoch := bytesutil.BytesToEpochBigEndian(highestTargetEpochBytes)
 
-	minEpoch := types.Epoch(0)
-	if highestTargetEpoch > 512 {
-		minEpoch = highestTargetEpoch - types.Epoch(512)
-	}
-
 	return targetEpochsBucket.ForEach(func(k []byte, v []byte) error {
 		targetEpoch := bytesutil.BytesToEpochBigEndian(k)
-		if targetEpoch < minEpoch {
+		if targetEpoch < pruningEpochCutoff(highestTargetEpoch) {
 			return targetEpochsBucket.Delete(k)
 		}
 		return nil
@@ -92,16 +83,23 @@ func pruneSigningRootsBucket(bucket *bolt.Bucket) error {
 	highestTargetEpochBytes, _ := signingRootsBucket.Cursor().Last()
 	highestTargetEpoch := bytesutil.BytesToEpochBigEndian(highestTargetEpochBytes)
 
-	minEpoch := types.Epoch(0)
-	if highestTargetEpoch > 512 {
-		minEpoch = highestTargetEpoch - types.Epoch(512)
-	}
-
 	return signingRootsBucket.ForEach(func(k []byte, v []byte) error {
 		targetEpoch := bytesutil.BytesToEpochBigEndian(k)
-		if targetEpoch < minEpoch {
+		if targetEpoch < pruningEpochCutoff(highestTargetEpoch) {
 			return signingRootsBucket.Delete(k)
 		}
 		return nil
 	})
+}
+
+// This helper function determines the cutoff epoch where, for all epochs before it, we should prune
+// the slashing protection database. This is computed by taking in an epoch and subtracting
+// SLASHING_PROTECTION_PRUNING_EPOCHS from the value. For example, if we are keeping track of 512 epochs
+// in the database, if we pass in epoch 612, then we want to prune all epochs before epoch 100.
+func pruningEpochCutoff(epoch types.Epoch) types.Epoch {
+	minEpoch := types.Epoch(0)
+	if epoch > params.BeaconConfig().SlashingProtectionPruningEpochs {
+		minEpoch = epoch - params.BeaconConfig().SlashingProtectionPruningEpochs
+	}
+	return minEpoch
 }

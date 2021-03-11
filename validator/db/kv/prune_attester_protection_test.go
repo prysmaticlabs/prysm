@@ -13,84 +13,69 @@ import (
 )
 
 func TestPruneAttestations_NoPruning(t *testing.T) {
-	numEpochs := params.BeaconConfig().WeakSubjectivityPeriod
 	pubKey := [48]byte{1}
 	validatorDB := setupDB(t, [][48]byte{pubKey})
 
 	// Write attesting history for every single epoch
-	// since genesis to SlashingProtectionHistory epochs.
+	// since genesis to a specified number of epochs.
+	numEpochs := params.BeaconConfig().SlashingProtectionPruningEpochs
 	err := setupAttestationsForEveryEpoch(t, validatorDB, pubKey, numEpochs)
 	require.NoError(t, err)
 
 	// Next, attempt to prune and realize that we still have all epochs intact
-	// because the highest epoch we have written is still within the
-	// weak subjectivity period.
 	err = validatorDB.PruneAttestations(context.Background())
 	require.NoError(t, err)
 
+	startEpoch := types.Epoch(0)
 	err = checkAttestingHistoryAfterPruning(
-		t, validatorDB, pubKey, numEpochs, false, /* should be pruned */
+		t,
+		validatorDB,
+		pubKey,
+		startEpoch,
+		numEpochs,
+		false, /* should be pruned */
 	)
 	require.NoError(t, err)
 }
 
 func TestPruneAttestations_OK(t *testing.T) {
-	numEpochs := params.BeaconConfig().WeakSubjectivityPeriod
 	pubKey := [48]byte{1}
 	validatorDB := setupDB(t, [][48]byte{pubKey})
 
 	// Write attesting history for every single epoch
-	// since genesis to WEAK_SUBJECTIVITY_PERIOD.
+	// since genesis to SLASHING_PROTECTION_PRUNING_EPOCHS * 2.
+	numEpochs := params.BeaconConfig().SlashingProtectionPruningEpochs * 2
 	err := setupAttestationsForEveryEpoch(t, validatorDB, pubKey, numEpochs)
-	require.NoError(t, err)
-
-	// Save a single attestation for WEAK_SUBJECTIVITY_PERIOD+1
-	err = validatorDB.update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(pubKeysBucket)
-		pkBucket := bucket.Bucket(pubKey[:])
-		sourceEpochsBkt := pkBucket.Bucket(attestationSourceEpochsBucket)
-		signingRootsBkt := pkBucket.Bucket(attestationSigningRootsBucket)
-		targetEpochBytes := bytesutil.EpochToBytesBigEndian(numEpochs + 1)
-		sourceEpochBytes := bytesutil.EpochToBytesBigEndian(numEpochs)
-		if err := sourceEpochsBkt.Put(sourceEpochBytes, targetEpochBytes); err != nil {
-			return err
-		}
-
-		var signingRoot [32]byte
-		copy(signingRoot[:], fmt.Sprintf("%d", targetEpochBytes))
-		return signingRootsBkt.Put(targetEpochBytes, signingRoot[:])
-	})
 	require.NoError(t, err)
 
 	err = validatorDB.PruneAttestations(context.Background())
 	require.NoError(t, err)
 
-	// Next, attempt to prune and realize that we pruned everything except for
-	// a signing root at target = WEAK_SUBJECTIVITY_PERIOD + 1.
+	// Next, verify that we pruned every epoch
+	// from genesis to SLASHING_PROTECTION_PRUNING_EPOCHS - 1.
+	startEpoch := types.Epoch(0)
 	err = checkAttestingHistoryAfterPruning(
-		t, validatorDB, pubKey, numEpochs, true, /* should be pruned */
+		t,
+		validatorDB,
+		pubKey,
+		startEpoch,
+		params.BeaconConfig().SlashingProtectionPruningEpochs-1,
+		true, /* should be pruned */
 	)
 	require.NoError(t, err)
-	err = validatorDB.view(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(pubKeysBucket)
-		pkBucket := bucket.Bucket(pubKey[:])
-		sourceEpochsBkt := pkBucket.Bucket(attestationSourceEpochsBucket)
-		signingRootsBkt := pkBucket.Bucket(attestationSigningRootsBucket)
 
-		targetEpochBytes := bytesutil.EpochToBytesBigEndian(numEpochs + 1)
-		sourceEpochBytes := bytesutil.EpochToBytesBigEndian(numEpochs)
-
-		storedTargetEpoch := sourceEpochsBkt.Get(sourceEpochBytes)
-		require.DeepEqual(t, numEpochs+1, bytesutil.BytesToEpochBigEndian(storedTargetEpoch))
-
-		var expectedSigningRoot [32]byte
-		copy(expectedSigningRoot[:], fmt.Sprintf("%d", targetEpochBytes))
-		signingRoot := signingRootsBkt.Get(targetEpochBytes)
-
-		// Expect the correct signing root at WEAK_SUBJECTIVITY_PERIOD + 1.
-		require.DeepEqual(t, expectedSigningRoot[:], signingRoot)
-		return nil
-	})
+	// Next, verify that we pruned every epoch
+	// from N = SLASHING_PROTECTION_PRUNING_EPOCHS to N * 2.
+	startEpoch = params.BeaconConfig().SlashingProtectionPruningEpochs
+	endEpoch := startEpoch * 2
+	err = checkAttestingHistoryAfterPruning(
+		t,
+		validatorDB,
+		pubKey,
+		startEpoch,
+		endEpoch,
+		false, /* should not be pruned */
+	)
 	require.NoError(t, err)
 }
 
@@ -132,16 +117,25 @@ func setupAttestationsForEveryEpoch(t testing.TB, validatorDB *Store, pubKey [48
 // Verifies, based on a boolean input argument, whether or not we should have
 // pruned all attesting history since genesis up to a specified number of epochs.
 func checkAttestingHistoryAfterPruning(
-	t testing.TB, validatorDB *Store, pubKey [48]byte, numEpochs types.Epoch, shouldBePruned bool,
+	t testing.TB,
+	validatorDB *Store,
+	pubKey [48]byte,
+	startEpoch types.Epoch,
+	numEpochs types.Epoch,
+	shouldBePruned bool,
 ) error {
 	return validatorDB.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(pubKeysBucket)
 		pkBkt := bucket.Bucket(pubKey[:])
 		signingRootsBkt := pkBkt.Bucket(attestationSigningRootsBucket)
 		sourceEpochsBkt := pkBkt.Bucket(attestationSourceEpochsBucket)
-		for targetEpoch := types.Epoch(1); targetEpoch < numEpochs; targetEpoch++ {
+		for targetEpoch := startEpoch; targetEpoch < numEpochs; targetEpoch++ {
+			sourceEpoch := types.Epoch(0)
+			if targetEpoch != 0 {
+				sourceEpoch = targetEpoch - 1
+			}
 			targetEpochBytes := bytesutil.EpochToBytesBigEndian(targetEpoch)
-			sourceEpochBytes := bytesutil.EpochToBytesBigEndian(targetEpoch - 1)
+			sourceEpochBytes := bytesutil.EpochToBytesBigEndian(sourceEpoch)
 
 			storedTargetEpoch := sourceEpochsBkt.Get(sourceEpochBytes)
 			signingRoot := signingRootsBkt.Get(targetEpochBytes)
