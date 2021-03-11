@@ -161,7 +161,7 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 	}
 
 	// Prune attesting records older than the current weak subjectivity period.
-	if err := kv.PruneAttestationsOlderThanCurrentWeakSubjectivity(ctx); err != nil {
+	if err := kv.PruneAttestations(ctx); err != nil {
 		return nil, errors.Wrap(err, "could not prune old attestations from DB")
 	}
 
