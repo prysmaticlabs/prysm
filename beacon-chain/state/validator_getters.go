@@ -2,7 +2,14 @@ package state
 
 import (
 	types "github.com/prysmaticlabs/eth2-types"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
+
+// ReadOnlyValidator returns a wrapper that only allows fields from a validator
+// to be read, and prevents any modification of internal validator fields.
+type ReadOnlyValidator struct {
+	validator *ethpb.Validator
+}
 
 // EffectiveBalance returns the effective balance of the
 // read only validator.

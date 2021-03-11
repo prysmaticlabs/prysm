@@ -4,10 +4,8 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	coreutils "github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -74,16 +72,6 @@ const (
 // to its corresponding data type.
 var fieldMap map[fieldIndex]dataType
 
-// Reference structs are shared across BeaconState copies to understand when the state must use
-// copy-on-write for shared fields or may modify a field in place when it holds the only reference
-// to the field value. References are tracked in a map of fieldIndex -> *reference. Whenever a state
-// releases their reference to the field value, they must decrement the refs. Likewise whenever a
-// copy is performed then the state must increment the refs counter.
-type reference struct {
-	refs uint
-	lock sync.RWMutex
-}
-
 // ErrNilInnerState returns when the inner state is nil and no copy set or get
 // operations can be performed on state.
 var ErrNilInnerState = errors.New("nil inner state")
@@ -97,9 +85,9 @@ type BeaconState struct {
 	dirtyIndices          map[fieldIndex][]uint64
 	stateFieldLeaves      map[fieldIndex]*FieldTrie
 	rebuildTrie           map[fieldIndex]bool
-	valMapHandler         *validatorMapHandler
+	valMapHandler         *stateutil.ValidatorMapHandler
 	merkleLayers          [][][]byte
-	sharedFieldReferences map[fieldIndex]*reference
+	sharedFieldReferences map[fieldIndex]*stateutil.Reference
 }
 
 // String returns the name of the field index.
@@ -149,63 +137,5 @@ func (f fieldIndex) String() string {
 		return "finalizedCheckpoint"
 	default:
 		return ""
-	}
-}
-
-// ReadOnlyValidator returns a wrapper that only allows fields from a validator
-// to be read, and prevents any modification of internal validator fields.
-type ReadOnlyValidator struct {
-	validator *ethpb.Validator
-}
-
-func (r *reference) Refs() uint {
-	r.lock.RLock()
-	defer r.lock.RUnlock()
-	return r.refs
-}
-
-func (r *reference) AddRef() {
-	r.lock.Lock()
-	r.refs++
-	r.lock.Unlock()
-}
-
-func (r *reference) MinusRef() {
-	r.lock.Lock()
-	// Do not reduce further if object
-	// already has 0 reference to prevent underflow.
-	if r.refs > 0 {
-		r.refs--
-	}
-	r.lock.Unlock()
-}
-
-// a container to hold the map and a reference tracker for how many
-// states shared this.
-type validatorMapHandler struct {
-	valIdxMap map[[48]byte]types.ValidatorIndex
-	mapRef    *reference
-}
-
-// A constructor for the map handler.
-func newValHandler(vals []*ethpb.Validator) *validatorMapHandler {
-	return &validatorMapHandler{
-		valIdxMap: coreutils.ValidatorIndexMap(vals),
-		mapRef:    &reference{refs: 1},
-	}
-}
-
-// copies the whole map and returns a map handler with the copied map.
-func (v *validatorMapHandler) copy() *validatorMapHandler {
-	if v == nil || v.valIdxMap == nil {
-		return &validatorMapHandler{valIdxMap: map[[48]byte]types.ValidatorIndex{}, mapRef: new(reference)}
-	}
-	m := make(map[[48]byte]types.ValidatorIndex, len(v.valIdxMap))
-	for k, v := range v.valIdxMap {
-		m[k] = v
-	}
-	return &validatorMapHandler{
-		valIdxMap: m,
-		mapRef:    &reference{refs: 1},
 	}
 }
