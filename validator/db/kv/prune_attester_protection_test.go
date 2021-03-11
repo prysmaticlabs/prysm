@@ -18,7 +18,7 @@ func TestPruneAttestations_NoPruning(t *testing.T) {
 	validatorDB := setupDB(t, [][48]byte{pubKey})
 
 	// Write attesting history for every single epoch
-	// since genesis to SlashingProtectionPruningCheckpoint epochs.
+	// since genesis to SlashingProtectionHistory epochs.
 	err := setupAttestationsForEveryEpoch(t, validatorDB, pubKey, numEpochs)
 	require.NoError(t, err)
 
