@@ -17,10 +17,6 @@ var (
 		Name: "slasher_chunks_saved_total",
 		Help: "Total number of slasher chunks saved to disk",
 	})
-	receivedAttestationsTotal = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "slasher_attestations_received_total",
-		Help: "Total number of attestations received by slasher",
-	})
 	deferredAttestationsTotal = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "slasher_attestations_deferred_total",
 		Help: "Total number of attestations deferred by slasher for future processing",
