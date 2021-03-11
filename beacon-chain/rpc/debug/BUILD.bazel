@@ -25,7 +25,6 @@ go_library(
         "//shared/bytesutil:go_default_library",
         "//shared/params:go_default_library",
         "@com_github_ethereum_go_ethereum//log:go_default_library",
-        "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_ipfs_go_log_v2//:go_default_library",
         "@com_github_libp2p_go_libp2p_core//network:go_default_library",
         "@com_github_libp2p_go_libp2p_core//peer:go_default_library",
