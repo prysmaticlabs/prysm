@@ -18,7 +18,7 @@ func TestPruneAttestations_NoPruning(t *testing.T) {
 
 	// Write attesting history for every single epoch
 	// since genesis to a specified number of epochs.
-	numEpochs := params.BeaconConfig().SlashingProtectionPruningEpochs
+	numEpochs := params.BeaconConfig().SlashingProtectionPruningEpochs - 1
 	err := setupAttestationsForEveryEpoch(t, validatorDB, pubKey, numEpochs)
 	require.NoError(t, err)
 
@@ -96,9 +96,10 @@ func setupAttestationsForEveryEpoch(t testing.TB, validatorDB *Store, pubKey [48
 		if err != nil {
 			return err
 		}
-		for targetEpoch := types.Epoch(1); targetEpoch < numEpochs; targetEpoch++ {
+		for sourceEpoch := types.Epoch(0); sourceEpoch < numEpochs; sourceEpoch++ {
+			targetEpoch := sourceEpoch + 1
 			targetEpochBytes := bytesutil.EpochToBytesBigEndian(targetEpoch)
-			sourceEpochBytes := bytesutil.EpochToBytesBigEndian(targetEpoch - 1)
+			sourceEpochBytes := bytesutil.EpochToBytesBigEndian(sourceEpoch)
 			// Save (source epoch, target epoch) pairs.
 			if err := sourceEpochsBucket.Put(sourceEpochBytes, targetEpochBytes); err != nil {
 				return err
@@ -129,11 +130,8 @@ func checkAttestingHistoryAfterPruning(
 		pkBkt := bucket.Bucket(pubKey[:])
 		signingRootsBkt := pkBkt.Bucket(attestationSigningRootsBucket)
 		sourceEpochsBkt := pkBkt.Bucket(attestationSourceEpochsBucket)
-		for targetEpoch := startEpoch; targetEpoch < numEpochs; targetEpoch++ {
-			sourceEpoch := types.Epoch(0)
-			if targetEpoch != 0 {
-				sourceEpoch = targetEpoch - 1
-			}
+		for sourceEpoch := startEpoch; sourceEpoch < numEpochs; sourceEpoch++ {
+			targetEpoch := sourceEpoch + 1
 			targetEpochBytes := bytesutil.EpochToBytesBigEndian(targetEpoch)
 			sourceEpochBytes := bytesutil.EpochToBytesBigEndian(sourceEpoch)
 
