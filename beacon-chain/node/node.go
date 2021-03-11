@@ -32,6 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
+	"github.com/prysmaticlabs/prysm/beacon-chain/slasher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	regularsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
@@ -59,22 +60,26 @@ const testSkipPowFlag = "test-skip-pow"
 // full PoS node. It handles the lifecycle of the entire system and registers
 // services to a service registry.
 type BeaconNode struct {
-	cliCtx          *cli.Context
-	ctx             context.Context
-	cancel          context.CancelFunc
-	services        *shared.ServiceRegistry
-	lock            sync.RWMutex
-	stop            chan struct{} // Channel to wait for termination notifications.
-	db              db.Database
-	attestationPool attestations.Pool
-	exitPool        voluntaryexits.PoolManager
-	slashingsPool   slashings.PoolManager
-	depositCache    *depositcache.DepositCache
-	stateFeed       *event.Feed
-	blockFeed       *event.Feed
-	opFeed          *event.Feed
-	forkChoiceStore forkchoice.ForkChoicer
-	stateGen        *stategen.State
+	cliCtx                  *cli.Context
+	ctx                     context.Context
+	cancel                  context.CancelFunc
+	services                *shared.ServiceRegistry
+	lock                    sync.RWMutex
+	stop                    chan struct{} // Channel to wait for termination notifications.
+	db                      db.Database
+	attestationPool         attestations.Pool
+	exitPool                voluntaryexits.PoolManager
+	slashingsPool           slashings.PoolManager
+	depositCache            *depositcache.DepositCache
+	stateFeed               *event.Feed
+	blockFeed               *event.Feed
+	opFeed                  *event.Feed
+	verifiedBlockHeaderFeed *event.Feed
+	verifiedAttestationFeed *event.Feed
+	proposerSlashingsFeed   *event.Feed
+	attesterSlashingsFeed   *event.Feed
+	forkChoiceStore         forkchoice.ForkChoicer
+	stateGen                *stategen.State
 }
 
 // New creates a new node instance, sets up configuration options, and registers
@@ -157,17 +162,19 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 
 	ctx, cancel := context.WithCancel(cliCtx.Context)
 	beacon := &BeaconNode{
-		cliCtx:          cliCtx,
-		ctx:             ctx,
-		cancel:          cancel,
-		services:        registry,
-		stop:            make(chan struct{}),
-		stateFeed:       new(event.Feed),
-		blockFeed:       new(event.Feed),
-		opFeed:          new(event.Feed),
-		attestationPool: attestations.NewPool(),
-		exitPool:        voluntaryexits.NewPool(),
-		slashingsPool:   slashings.NewPool(),
+		cliCtx:                  cliCtx,
+		ctx:                     ctx,
+		cancel:                  cancel,
+		services:                registry,
+		stop:                    make(chan struct{}),
+		stateFeed:               new(event.Feed),
+		blockFeed:               new(event.Feed),
+		opFeed:                  new(event.Feed),
+		verifiedBlockHeaderFeed: new(event.Feed),
+		verifiedAttestationFeed: new(event.Feed),
+		attestationPool:         attestations.NewPool(),
+		exitPool:                voluntaryexits.NewPool(),
+		slashingsPool:           slashings.NewPool(),
 	}
 
 	if err := beacon.startDB(cliCtx); err != nil {
@@ -204,6 +211,12 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 
 	if err := beacon.registerSyncService(); err != nil {
 		return nil, err
+	}
+
+	if cliCtx.Bool(flags.EnableSlasherFlag.Name) {
+		if err := beacon.registerSlasherService(cliCtx); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := beacon.registerRPCService(); err != nil {
@@ -574,6 +587,21 @@ func (b *BeaconNode) registerInitialSyncService() error {
 		BlockNotifier: b,
 	})
 	return b.services.RegisterService(is)
+}
+
+func (b *BeaconNode) registerSlasherService() error {
+	slasherSrv, err := slasher.New(b.ctx, &slasher.ServiceConfig{
+		IndexedAttsFeed:    b.verifiedAttestationFeed,
+		BeaconBlocksFeed:   b.verifiedBlockHeaderFeed,
+		AttSlashingsFeed:   b.attesterSlashingsFeed,
+		BlockSlashingsFeed: b.proposerSlashingsFeed,
+		Database:           b.db,
+		//GenesisTime:        time.Time{},
+	})
+	if err != nil {
+		return err
+	}
+	return b.services.RegisterService(slasherSrv)
 }
 
 func (b *BeaconNode) registerRPCService() error {

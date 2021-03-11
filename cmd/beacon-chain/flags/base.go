@@ -166,4 +166,9 @@ var (
 		Usage: "Sets the maximum number of headers that a deposit log query can fetch.",
 		Value: uint64(1000),
 	}
+	// EnableSlasherFlag for enabling a slasher service in the beacon node.
+	EnableSlasherFlag = &cli.BoolFlag{
+		Name:  "slasher",
+		Usage: "Enables a slasher in the beacon node for detecting slashable offenses on eth2",
+	}
 )
