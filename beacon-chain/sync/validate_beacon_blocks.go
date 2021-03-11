@@ -15,6 +15,7 @@ import (
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
@@ -140,6 +141,15 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Rejected block")
 		return pubsub.ValidationReject
 	}
+
+	// Send the verified block header over a feed.
+	header, err := blockutil.SignedBeaconBlockHeaderFromBlock(blk)
+	if err != nil {
+		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Debug("Couldn't get header from verified block")
+		return pubsub.ValidationIgnore
+	}
+	s.verifiedBlockFeed.Send(header)
+
 	// Record attribute of valid block.
 	span.AddAttributes(trace.Int64Attribute("slotInEpoch", int64(blk.Block.Slot%params.BeaconConfig().SlotsPerEpoch)))
 	msg.ValidatorData = blk // Used in downstream subscriber

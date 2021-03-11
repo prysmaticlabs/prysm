@@ -37,6 +37,7 @@ import (
 	chainSync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -93,6 +94,7 @@ type Service struct {
 	stateNotifier           statefeed.Notifier
 	blockNotifier           blockfeed.Notifier
 	operationNotifier       opfeed.Notifier
+	verifiedBlockHeaderFeed *event.Feed
 	stateGen                *stategen.State
 	connectedRPCClients     map[net.Addr]bool
 	clientConnectionLock    sync.Mutex
@@ -134,6 +136,7 @@ type Config struct {
 	StateNotifier           statefeed.Notifier
 	BlockNotifier           blockfeed.Notifier
 	OperationNotifier       opfeed.Notifier
+	VerifiedBlockHeaderFeed *event.Feed
 	StateGen                *stategen.State
 	MaxMsgSize              int
 }
@@ -179,6 +182,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		stateNotifier:           cfg.StateNotifier,
 		blockNotifier:           cfg.BlockNotifier,
 		operationNotifier:       cfg.OperationNotifier,
+		verifiedBlockHeaderFeed: cfg.VerifiedBlockHeaderFeed,
 		stateGen:                cfg.StateGen,
 		enableDebugRPCEndpoints: cfg.EnableDebugRPCEndpoints,
 		connectedRPCClients:     make(map[net.Addr]bool),
@@ -231,31 +235,32 @@ func (s *Service) Start() {
 	s.grpcServer = grpc.NewServer(opts...)
 
 	validatorServer := &validator.Server{
-		Ctx:                    s.ctx,
-		BeaconDB:               s.beaconDB,
-		AttestationCache:       cache.NewAttestationCache(),
-		AttPool:                s.attestationsPool,
-		ExitPool:               s.exitPool,
-		HeadFetcher:            s.headFetcher,
-		ForkFetcher:            s.forkFetcher,
-		FinalizationFetcher:    s.finalizationFetcher,
-		TimeFetcher:            s.timeFetcher,
-		CanonicalStateChan:     s.canonicalStateChan,
-		BlockFetcher:           s.powChainService,
-		DepositFetcher:         s.depositFetcher,
-		ChainStartFetcher:      s.chainStartFetcher,
-		Eth1InfoFetcher:        s.powChainService,
-		SyncChecker:            s.syncService,
-		StateNotifier:          s.stateNotifier,
-		BlockNotifier:          s.blockNotifier,
-		OperationNotifier:      s.operationNotifier,
-		P2P:                    s.p2p,
-		BlockReceiver:          s.blockReceiver,
-		MockEth1Votes:          s.mockEth1Votes,
-		Eth1BlockFetcher:       s.powChainService,
-		PendingDepositsFetcher: s.pendingDepositFetcher,
-		SlashingsPool:          s.slashingsPool,
-		StateGen:               s.stateGen,
+		Ctx:                     s.ctx,
+		BeaconDB:                s.beaconDB,
+		AttestationCache:        cache.NewAttestationCache(),
+		AttPool:                 s.attestationsPool,
+		ExitPool:                s.exitPool,
+		HeadFetcher:             s.headFetcher,
+		ForkFetcher:             s.forkFetcher,
+		FinalizationFetcher:     s.finalizationFetcher,
+		TimeFetcher:             s.timeFetcher,
+		CanonicalStateChan:      s.canonicalStateChan,
+		BlockFetcher:            s.powChainService,
+		DepositFetcher:          s.depositFetcher,
+		ChainStartFetcher:       s.chainStartFetcher,
+		Eth1InfoFetcher:         s.powChainService,
+		SyncChecker:             s.syncService,
+		StateNotifier:           s.stateNotifier,
+		BlockNotifier:           s.blockNotifier,
+		OperationNotifier:       s.operationNotifier,
+		P2P:                     s.p2p,
+		BlockReceiver:           s.blockReceiver,
+		VerifiedBlockHeaderFeed: s.verifiedBlockHeaderFeed,
+		MockEth1Votes:           s.mockEth1Votes,
+		Eth1BlockFetcher:        s.powChainService,
+		PendingDepositsFetcher:  s.pendingDepositFetcher,
+		SlashingsPool:           s.slashingsPool,
+		StateGen:                s.stateGen,
 	}
 	nodeServer := &node.Server{
 		LogsStreamer:         logutil.NewStreamServer(),
