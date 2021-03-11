@@ -61,28 +61,33 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 	for {
 		select {
 		case currentEpoch := <-epochTicker:
+			// We take all the attestations in the queue and filter out
+			// those which are valid now and valid in the future.
 			attestations := s.attsQueue.dequeue()
-			valid, validInFuture := validateAttestationIntegrity(att, currentEpoch)
-			if validInFuture {
+			validAtts, validInFuture, numDropped := s.validateAttestationIntegrity(attestations, currentEpoch)
 
-			}
+			deferredAttestationsTotal.Add(float64(len(validInFuture)))
+			droppedAttestationsTotal.Add(float64(numDropped))
 
-			receivedAttestationsTotal.Add(float64(len(attestations)))
+			// We add back those attestations that are valid in the future to the queue.
+			s.attsQueue.extend(validInFuture)
 
 			log.WithFields(logrus.Fields{
-				"currentEpoch": currentEpoch,
-				"numAtts":      len(attestations),
+				"currentEpoch":    currentEpoch,
+				"numValidAtts":    len(validAtts),
+				"numDeferredAtts": len(validInFuture),
+				"numDroppedAtts":  numDropped,
 			}).Info("Epoch reached, processing queued atts for slashing detection")
 
 			// Save the attestation records to our database.
 			if err := s.serviceCfg.Database.SaveAttestationRecordsForValidators(
-				ctx, attestations,
+				ctx, validAtts,
 			); err != nil {
 				log.WithError(err).Error("Could not save attestation records to DB")
 				continue
 			}
 
-			groupedAtts := s.groupByValidatorChunkIndex(attestations)
+			groupedAtts := s.groupByValidatorChunkIndex(validAtts)
 			// TODO(#8331): Consider using goroutines and wait groups here.
 			for validatorChunkIdx, batch := range groupedAtts {
 				if err := s.detectSlashableAttestations(ctx, &chunkUpdateArgs{
@@ -94,7 +99,7 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 				}
 			}
 
-			processedAttestationsTotal.Add(float64(len(attestations)))
+			processedAttestationsTotal.Add(float64(len(validAtts)))
 		case <-ctx.Done():
 			return
 		}
