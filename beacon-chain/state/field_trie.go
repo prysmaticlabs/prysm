@@ -17,7 +17,7 @@ import (
 // trie of the particular field.
 type FieldTrie struct {
 	*sync.RWMutex
-	*reference
+	reference   *stateutil.Reference
 	fieldLayers [][]*[32]byte
 	field       fieldIndex
 }
@@ -29,7 +29,7 @@ func NewFieldTrie(field fieldIndex, elements interface{}, length uint64) (*Field
 	if elements == nil {
 		return &FieldTrie{
 			field:     field,
-			reference: &reference{refs: 1},
+			reference: stateutil.NewRef(1),
 			RWMutex:   new(sync.RWMutex),
 		}, nil
 	}
@@ -46,14 +46,14 @@ func NewFieldTrie(field fieldIndex, elements interface{}, length uint64) (*Field
 		return &FieldTrie{
 			fieldLayers: stateutil.ReturnTrieLayer(fieldRoots, length),
 			field:       field,
-			reference:   &reference{refs: 1},
+			reference:   stateutil.NewRef(1),
 			RWMutex:     new(sync.RWMutex),
 		}, nil
 	case compositeArray:
 		return &FieldTrie{
 			fieldLayers: stateutil.ReturnTrieLayerVariable(fieldRoots, length),
 			field:       field,
-			reference:   &reference{refs: 1},
+			reference:   stateutil.NewRef(1),
 			RWMutex:     new(sync.RWMutex),
 		}, nil
 	default:
@@ -105,7 +105,7 @@ func (f *FieldTrie) CopyTrie() *FieldTrie {
 	if f.fieldLayers == nil {
 		return &FieldTrie{
 			field:     f.field,
-			reference: &reference{refs: 1},
+			reference: stateutil.NewRef(1),
 			RWMutex:   new(sync.RWMutex),
 		}
 	}
@@ -117,7 +117,7 @@ func (f *FieldTrie) CopyTrie() *FieldTrie {
 	return &FieldTrie{
 		fieldLayers: dstFieldTrie,
 		field:       f.field,
-		reference:   &reference{refs: 1},
+		reference:   stateutil.NewRef(1),
 		RWMutex:     new(sync.RWMutex),
 	}
 }
