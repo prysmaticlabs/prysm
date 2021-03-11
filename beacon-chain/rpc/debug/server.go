@@ -8,7 +8,7 @@ import (
 	"os"
 
 	gethlog "github.com/ethereum/go-ethereum/log"
-	ptypes "github.com/gogo/protobuf/types"
+	"github.com/golang/protobuf/ptypes/empty"
 	golog "github.com/ipfs/go-log/v2"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -34,7 +34,7 @@ type Server struct {
 
 // SetLoggingLevel of a beacon node according to a request type,
 // either INFO, DEBUG, or TRACE.
-func (ds *Server) SetLoggingLevel(_ context.Context, req *pbrpc.LoggingLevelRequest) (*ptypes.Empty, error) {
+func (ds *Server) SetLoggingLevel(_ context.Context, req *pbrpc.LoggingLevelRequest) (*empty.Empty, error) {
 	var verbosity string
 	switch req.Level {
 	case pbrpc.LoggingLevelRequest_INFO:
@@ -59,5 +59,5 @@ func (ds *Server) SetLoggingLevel(_ context.Context, req *pbrpc.LoggingLevelRequ
 		glogger.Verbosity(gethlog.LvlTrace)
 		gethlog.Root().SetHandler(glogger)
 	}
-	return &ptypes.Empty{}, nil
+	return &empty.Empty{}, nil
 }

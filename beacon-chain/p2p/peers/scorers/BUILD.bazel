@@ -36,8 +36,8 @@ go_test(
         "scorers_test.go",
         "service_test.go",
     ],
-    embed = [":go_default_library"],
     deps = [
+        ":go_default_library",
         "//beacon-chain/p2p/peers:go_default_library",
         "//beacon-chain/p2p/peers/peerdata:go_default_library",
         "//beacon-chain/p2p/types:go_default_library",
