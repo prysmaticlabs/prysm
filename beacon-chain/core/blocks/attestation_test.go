@@ -366,7 +366,7 @@ func TestVerifyAttestationNoVerifySignature_IncorrectSlotTargetEpoch(t *testing.
 		},
 	})
 	wanted := "slot 32 does not match target epoch 0"
-	_, err := blocks.VerifyAttestationNoVerifySignature(context.TODO(), beaconState, att)
+	err := blocks.VerifyAttestationNoVerifySignature(context.TODO(), beaconState, att)
 	assert.ErrorContains(t, wanted, err)
 }
 
@@ -428,7 +428,7 @@ func TestVerifyAttestationNoVerifySignature_OK(t *testing.T) {
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(ckp))
 	require.NoError(t, beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{}))
 
-	_, err = blocks.VerifyAttestationNoVerifySignature(context.TODO(), beaconState, att)
+	err = blocks.VerifyAttestationNoVerifySignature(context.TODO(), beaconState, att)
 	assert.NoError(t, err)
 }
 
@@ -453,7 +453,7 @@ func TestVerifyAttestationNoVerifySignature_BadAttIdx(t *testing.T) {
 	copy(ckp.Root, "hello-world")
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(ckp))
 	require.NoError(t, beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{}))
-	_, err := blocks.VerifyAttestationNoVerifySignature(context.TODO(), beaconState, att)
+	err := blocks.VerifyAttestationNoVerifySignature(context.TODO(), beaconState, att)
 	require.ErrorContains(t, "committee index 100 >= committee count 1", err)
 }
 
