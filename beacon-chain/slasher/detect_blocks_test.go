@@ -3,9 +3,11 @@ package slasher
 import (
 	"context"
 	"testing"
+	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -22,6 +24,9 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 	s := &Service{
 		serviceCfg: &ServiceConfig{
 			Database: beaconDB,
+			GenesisTimeFetcher: &mock.ChainService{
+				Genesis: time.Now(),
+			},
 		},
 		params:                DefaultParams(),
 		beaconBlocksQueue:     make([]*slashertypes.SignedBlockHeaderWrapper, 0),
@@ -55,6 +60,9 @@ func Test_processQueuedBlocks_NotSlashable(t *testing.T) {
 	s := &Service{
 		serviceCfg: &ServiceConfig{
 			Database: beaconDB,
+			GenesisTimeFetcher: &mock.ChainService{
+				Genesis: time.Now(),
+			},
 		},
 		params:            DefaultParams(),
 		beaconBlocksQueue: make([]*slashertypes.SignedBlockHeaderWrapper, 0),

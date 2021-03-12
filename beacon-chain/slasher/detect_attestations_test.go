@@ -3,9 +3,11 @@ package slasher
 import (
 	"context"
 	"testing"
+	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -28,6 +30,9 @@ func Test_determineChunksToUpdateForValidators_FromLatestWrittenEpoch(t *testing
 		},
 		serviceCfg: &ServiceConfig{
 			Database: beaconDB,
+			GenesisTimeFetcher: &mock.ChainService{
+				Genesis: time.Now(),
+			},
 		},
 	}
 	validators := []types.ValidatorIndex{
@@ -68,6 +73,9 @@ func Test_determineChunksToUpdateForValidators_FromGenesis(t *testing.T) {
 		},
 		serviceCfg: &ServiceConfig{
 			Database: beaconDB,
+			GenesisTimeFetcher: &mock.ChainService{
+				Genesis: time.Now(),
+			},
 		},
 	}
 	validators := []types.ValidatorIndex{
@@ -96,6 +104,9 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 		params: params,
 		serviceCfg: &ServiceConfig{
 			Database: beaconDB,
+			GenesisTimeFetcher: &mock.ChainService{
+				Genesis: time.Now(),
+			},
 		},
 	}
 	// We initialize an empty chunks slice.
@@ -156,6 +167,9 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 		params: params,
 		serviceCfg: &ServiceConfig{
 			Database: beaconDB,
+			GenesisTimeFetcher: &mock.ChainService{
+				Genesis: time.Now(),
+			},
 		},
 	}
 	// We initialize an empty chunks slice.
@@ -222,6 +236,9 @@ func Test_checkDoubleVotes_SlashableInputAttestations(t *testing.T) {
 	srv := &Service{
 		serviceCfg: &ServiceConfig{
 			Database: beaconDB,
+			GenesisTimeFetcher: &mock.ChainService{
+				Genesis: time.Now(),
+			},
 		},
 	}
 	wanted := []*slashertypes.Slashing{
@@ -265,6 +282,9 @@ func Test_checkDoubleVotes_SlashableAttestationsOnDisk(t *testing.T) {
 	srv := &Service{
 		serviceCfg: &ServiceConfig{
 			Database: beaconDB,
+			GenesisTimeFetcher: &mock.ChainService{
+				Genesis: time.Now(),
+			},
 		},
 	}
 	wanted := []*slashertypes.Slashing{
@@ -313,6 +333,9 @@ func testLoadChunks(t *testing.T, kind slashertypes.ChunkKind) {
 		params: DefaultParams(),
 		serviceCfg: &ServiceConfig{
 			Database: beaconDB,
+			GenesisTimeFetcher: &mock.ChainService{
+				Genesis: time.Now(),
+			},
 		},
 	}
 	// If a chunk at a chunk index does not exist, ensure it
@@ -384,6 +407,9 @@ func TestService_processQueuedAttestations(t *testing.T) {
 		params: DefaultParams(),
 		serviceCfg: &ServiceConfig{
 			Database: beaconDB,
+			GenesisTimeFetcher: &mock.ChainService{
+				Genesis: time.Now(),
+			},
 		},
 		attestationQueue: []*slashertypes.IndexedAttestationWrapper{
 			createAttestationWrapper(0, 1, []uint64{0, 1} /* indices */, nil /* signingRoot */),
