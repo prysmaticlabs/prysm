@@ -331,3 +331,17 @@ func (e Exporter) SaveSlasherChunks(
 ) error {
 	return e.db.SaveSlasherChunks(ctx, kind, chunkKeys, chunks)
 }
+
+// PruneAttestations -- passthrough
+func (e Exporter) PruneAttestations(
+	ctx context.Context, currentEpoch types.Epoch, historySize uint64,
+) error {
+	return e.db.PruneAttestations(ctx, currentEpoch, historySize)
+}
+
+// PruneProposals -- passthrough
+func (e Exporter) PruneProposals(
+	ctx context.Context, currentEpoch types.Epoch, historySize uint64,
+) error {
+	return e.db.PruneProposals(ctx, currentEpoch, historySize)
+}

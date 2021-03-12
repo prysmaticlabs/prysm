@@ -150,3 +150,26 @@ func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan typ
 		}
 	}
 }
+
+func (s *Service) pruneSlasherData(ctx context.Context, slotTicker <-chan types.Slot) {
+	for {
+		select {
+		case currentSlot := <-slotTicker:
+			if !helpers.IsEpochStart(currentSlot) {
+				continue
+			}
+			currentEpoch := helpers.SlotToEpoch(currentSlot)
+			if err := s.serviceCfg.Database.PruneAttestations(ctx, currentEpoch, s.params.historyLength); err != nil {
+				log.WithError(err).Error("Could not prune attestations")
+				continue
+			}
+
+			if err := s.serviceCfg.Database.PruneProposals(ctx, currentEpoch, s.params.historyLength); err != nil {
+				log.WithError(err).Error("Could not prune proposals")
+				continue
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
+}

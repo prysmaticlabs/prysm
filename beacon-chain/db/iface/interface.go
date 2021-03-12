@@ -73,6 +73,12 @@ type ReadOnlyDatabase interface {
 	CheckDoubleBlockProposals(
 		ctx context.Context, proposals []*slashertypes.SignedBlockHeaderWrapper,
 	) ([]*slashertypes.DoubleBlockProposal, error)
+	PruneAttestations(
+		ctx context.Context, currentEpoch types.Epoch, historySize uint64,
+	) error
+	PruneProposals(
+		ctx context.Context, currentEpoch types.Epoch, historySize uint64,
+	) error
 }
 
 // NoHeadAccessDatabase defines a struct without access to chain head data.
