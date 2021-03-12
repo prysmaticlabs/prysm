@@ -412,7 +412,6 @@ func (c *ValidatorClient) registerValidatorService(
 	if err := c.services.FetchService(&pandoraService); err != nil {
 		return err
 	}
-
 	v, err := client.NewValidatorService(c.cliCtx.Context, &client.Config{
 		Endpoint:                   endpoint,
 		DataDir:                    dataDir,
@@ -533,9 +532,9 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 
 func (c *ValidatorClient) registerPandoraService(cliCtx *cli.Context) error {
 	var endpoint string
-	log.WithField("ipcPath", flags.PandoraRpcIpcProviderFlag.Value).Info("Ipc file path")
-	if flags.PandoraRpcIpcProviderFlag.Value != "" {
-		ipcFilePath := c.cliCtx.String(flags.PandoraRpcIpcProviderFlag.Name)
+	if cliCtx.String(flags.PandoraRpcIpcProviderFlag.Name) != "" {
+		log.WithField("ipcPath", cliCtx.String(flags.PandoraRpcIpcProviderFlag.Name)).Info("Pandora ipc file path")
+		ipcFilePath := cliCtx.String(flags.PandoraRpcIpcProviderFlag.Name)
 		absFilePath, err := fileutil.ExpandPath(ipcFilePath)
 		if err != nil {
 			return errors.Wrap(err, "invalid ipc path")
@@ -545,19 +544,25 @@ func (c *ValidatorClient) registerPandoraService(cliCtx *cli.Context) error {
 		}
 		endpoint = absFilePath
 	}
-	if endpoint == "" && flags.PandoraRpcHttpProviderFlag.Value != "" {
-		endpoint =  c.cliCtx.String(flags.PandoraRpcHttpProviderFlag.Name)
-	}
-	dialRPCFn := func(endpoint string) (*pandora.PandoraClient, *gethRpc.Client, error) {
-		rpcClient, err := gethRpc.Dial(endpoint)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "could not dial node")
-		}
-		pandoraClient := pandora.NewClient(rpcClient)
-		return pandoraClient, rpcClient, nil
+	if endpoint == "" && cliCtx.String(flags.PandoraRpcHttpProviderFlag.Name) != "" {
+		log.WithField("httpEndpoint", cliCtx.String(flags.PandoraRpcHttpProviderFlag.Name)).Info("Pandora http endpoint")
+		endpoint = cliCtx.String(flags.PandoraRpcHttpProviderFlag.Name)
 	}
 
-	return c.services.RegisterService(pandora.NewService(c.ctx, endpoint, dialRPCFn))
+	dialRPCFn := func(endpoint string) (*pandora.PandoraClient, error) {
+		rpcClient, err := gethRpc.Dial(endpoint)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not dial node")
+		}
+		pandoraClient := pandora.NewClient(rpcClient)
+		return pandoraClient, nil
+	}
+
+	pandoraService, err := pandora.NewService(c.ctx, endpoint, dialRPCFn)
+	if err != nil {
+		return err
+	}
+	return c.services.RegisterService(pandoraService)
 }
 
 func setWalletPasswordFilePath(cliCtx *cli.Context) error {

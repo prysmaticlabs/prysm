@@ -2,7 +2,6 @@ package node
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"io/ioutil"
 	"os"
@@ -37,6 +36,7 @@ func TestNode_Builds(t *testing.T) {
 	set.String("wallet-password-file", passwordFile, "path to wallet password")
 	set.String("keymanager-kind", "imported", "keymanager kind")
 	set.String("verbosity", "debug", "log verbosity")
+	set.String("pandora-http-provider", "http://127.0.0.1:8545", "pandora ipc endpoint")
 	require.NoError(t, set.Set(flags.WalletPasswordFileFlag.Name, passwordFile))
 	context := cli.NewContext(&app, set, nil)
 	_, err := accounts.CreateWalletWithKeymanager(context.Context, &accounts.CreateWalletConfig{
@@ -99,5 +99,6 @@ func TestRegisterPandoraService(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = NewValidatorClient(context)
-	require.ErrorContains(t, errors.New("File for IPC socket/pipe of pandora client does not exists").Error(), err)
+	want := "File for IPC socket/pipe of pandora client does not exists"
+	require.ErrorContains(t, want, err, "Should not initialize pandora service")
 }
