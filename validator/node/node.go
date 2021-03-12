@@ -7,7 +7,10 @@ import (
 	"context"
 	"fmt"
 	gethRpc "github.com/ethereum/go-ethereum/rpc"
-	"github.com/prysmaticlabs/prysm/validator/pandora"
+	"github.com/lukso-network/vanguard-consensus-engine/validator/client"
+	"github.com/lukso-network/vanguard-consensus-engine/validator/pandora"
+	"github.com/lukso-network/vanguard-consensus-engine/validator/rpc"
+
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -30,13 +33,11 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/version"
 	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	g "github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
-	"github.com/prysmaticlabs/prysm/validator/rpc"
 	"github.com/prysmaticlabs/prysm/validator/rpc/gateway"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
@@ -532,9 +533,9 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 
 func (c *ValidatorClient) registerPandoraService(cliCtx *cli.Context) error {
 	var endpoint string
-	if cliCtx.String(flags.PandoraRpcIpcProviderFlag.Name) != "" {
-		log.WithField("ipcPath", cliCtx.String(flags.PandoraRpcIpcProviderFlag.Name)).Info("Pandora ipc file path")
-		ipcFilePath := cliCtx.String(flags.PandoraRpcIpcProviderFlag.Name)
+	if cliCtx.String(pandora.PandoraRpcIpcProviderFlag.Name) != "" {
+		log.WithField("ipcPath", cliCtx.String(pandora.PandoraRpcIpcProviderFlag.Name)).Info("Pandora ipc file path")
+		ipcFilePath := cliCtx.String(pandora.PandoraRpcIpcProviderFlag.Name)
 		absFilePath, err := fileutil.ExpandPath(ipcFilePath)
 		if err != nil {
 			return errors.Wrap(err, "invalid ipc path")
@@ -544,9 +545,9 @@ func (c *ValidatorClient) registerPandoraService(cliCtx *cli.Context) error {
 		}
 		endpoint = absFilePath
 	}
-	if endpoint == "" && cliCtx.String(flags.PandoraRpcHttpProviderFlag.Name) != "" {
-		log.WithField("httpEndpoint", cliCtx.String(flags.PandoraRpcHttpProviderFlag.Name)).Info("Pandora http endpoint")
-		endpoint = cliCtx.String(flags.PandoraRpcHttpProviderFlag.Name)
+	if endpoint == "" && cliCtx.String(pandora.PandoraRpcHttpProviderFlag.Name) != "" {
+		log.WithField("httpEndpoint", cliCtx.String(pandora.PandoraRpcHttpProviderFlag.Name)).Info("Pandora http endpoint")
+		endpoint = cliCtx.String(pandora.PandoraRpcHttpProviderFlag.Name)
 	}
 
 	dialRPCFn := func(endpoint string) (*pandora.PandoraClient, error) {

@@ -3,7 +3,8 @@ package client
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/validator/pandora"
+	"github.com/lukso-network/vanguard-consensus-engine/validator/pandora"
+
 	"strings"
 	"time"
 

@@ -4,6 +4,9 @@
 package main
 
 import (
+	"github.com/lukso-network/vanguard-consensus-engine/validator/node"
+	"github.com/lukso-network/vanguard-consensus-engine/validator/pandora"
+
 	"fmt"
 	"os"
 	"path/filepath"
@@ -23,7 +26,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	"github.com/prysmaticlabs/prysm/validator/node"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -99,8 +101,8 @@ var appFlags = []cli.Flag{
 	debug.BlockProfileRateFlag,
 	debug.MutexProfileFractionFlag,
 	cmd.AcceptTosFlag,
-	flags.PandoraRpcIpcProviderFlag,
-	flags.PandoraRpcHttpProviderFlag,
+	pandora.PandoraRpcIpcProviderFlag,
+	pandora.PandoraRpcHttpProviderFlag,
 }
 
 func init() {

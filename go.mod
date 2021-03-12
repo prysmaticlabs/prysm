@@ -1,4 +1,4 @@
-module github.com/prysmaticlabs/prysm
+module github.com/lukso-network/vanguard-consensus-engine
 
 go 1.16
 
@@ -87,6 +87,7 @@ require (
 	github.com/prysmaticlabs/ethereumapis v0.0.0-20210218195742-a393edb60549
 	github.com/prysmaticlabs/go-bitfield v0.0.0-20210202205921-7fcea7c45dc8
 	github.com/prysmaticlabs/prombbolt v0.0.0-20210126082820-9b7adba6db7c
+	github.com/prysmaticlabs/prysm v1.3.3-0.20210301183527-8a274495957d
 	github.com/rs/cors v1.7.0
 	github.com/schollz/progressbar/v3 v3.3.4
 	github.com/sirupsen/logrus v1.6.0

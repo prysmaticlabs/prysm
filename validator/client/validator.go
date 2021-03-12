@@ -8,7 +8,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/validator/pandora"
+	"github.com/lukso-network/vanguard-consensus-engine/validator/pandora"
 	"io"
 	"strconv"
 	"strings"

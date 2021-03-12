@@ -2,6 +2,7 @@
 package main
 
 import (
+	"github.com/lukso-network/vanguard-consensus-engine/validator/pandora"
 	"io"
 	"sort"
 
@@ -106,8 +107,8 @@ var appHelpFlagGroups = []flagGroup{
 			flags.WalletPasswordFileFlag,
 			flags.GraffitiFileFlag,
 			flags.EnableDutyCountDown,
-			flags.PandoraRpcIpcProviderFlag,
-			flags.PandoraRpcHttpProviderFlag,
+			pandora.PandoraRpcIpcProviderFlag,
+			pandora.PandoraRpcHttpProviderFlag,
 		},
 	},
 	{
