@@ -4,9 +4,9 @@ package slasher
 import (
 	"context"
 	"sync"
-	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -23,7 +23,7 @@ type ServiceConfig struct {
 	AttSlashingsFeed   *event.Feed
 	BlockSlashingsFeed *event.Feed
 	Database           db.Database
-	GenesisTime        time.Time
+	GenesisTimeFetcher blockchain.TimeFetcher
 }
 
 // Service defining a slasher implementation as part of
@@ -41,7 +41,6 @@ type Service struct {
 	beaconBlocksQueue     []*slashertypes.SignedBlockHeaderWrapper
 	ctx                   context.Context
 	cancel                context.CancelFunc
-	genesisTime           time.Time
 }
 
 // New instantiates a new slasher from configuration values.
@@ -58,15 +57,15 @@ func New(ctx context.Context, srvCfg *ServiceConfig) (*Service, error) {
 		beaconBlocksQueue:     make([]*slashertypes.SignedBlockHeaderWrapper, 0),
 		ctx:                   ctx,
 		cancel:                cancel,
-		genesisTime:           time.Now(),
 	}, nil
 }
 
 // Start listening for received indexed attestations and blocks
 // and perform slashing detection on them.
 func (s *Service) Start() {
+	genesisTime := s.serviceCfg.GenesisTimeFetcher.GenesisTime()
 	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * uint64(params.BeaconConfig().SlotsPerEpoch)
-	ticker := slotutil.NewEpochTicker(s.genesisTime, secondsPerEpoch)
+	ticker := slotutil.NewEpochTicker(genesisTime, secondsPerEpoch)
 	defer ticker.Done()
 	go s.processQueuedAttestations(s.ctx, ticker.C())
 	go s.processQueuedBlocks(s.ctx, ticker.C())

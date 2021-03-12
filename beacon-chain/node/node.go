@@ -557,19 +557,17 @@ func (b *BeaconNode) registerSyncService() error {
 	}
 
 	rs := regularsync.NewService(b.ctx, &regularsync.Config{
-		DB:                      b.db,
-		P2P:                     b.fetchP2P(),
-		Chain:                   chainService,
-		InitialSync:             initSync,
-		StateNotifier:           b,
-		BlockNotifier:           b,
-		AttestationNotifier:     b,
-		AttPool:                 b.attestationPool,
-		ExitPool:                b.exitPool,
-		SlashingPool:            b.slashingsPool,
-		StateGen:                b.stateGen,
-		VerifiedBlockHeaderFeed: b.verifiedBlockHeaderFeed,
-		VerifiedAttestationFeed: b.verifiedAttestationFeed,
+		DB:                  b.db,
+		P2P:                 b.fetchP2P(),
+		Chain:               chainService,
+		InitialSync:         initSync,
+		StateNotifier:       b,
+		BlockNotifier:       b,
+		AttestationNotifier: b,
+		AttPool:             b.attestationPool,
+		ExitPool:            b.exitPool,
+		SlashingPool:        b.slashingsPool,
+		StateGen:            b.stateGen,
 	})
 
 	return b.services.RegisterService(rs)
@@ -592,13 +590,18 @@ func (b *BeaconNode) registerInitialSyncService() error {
 }
 
 func (b *BeaconNode) registerSlasherService() error {
+	var chainService *blockchain.Service
+	if err := b.services.FetchService(&chainService); err != nil {
+		return err
+	}
+
 	slasherSrv, err := slasher.New(b.ctx, &slasher.ServiceConfig{
 		IndexedAttsFeed:    b.verifiedAttestationFeed,
 		BeaconBlocksFeed:   b.verifiedBlockHeaderFeed,
 		AttSlashingsFeed:   b.attesterSlashingsFeed,
 		BlockSlashingsFeed: b.proposerSlashingsFeed,
 		Database:           b.db,
-		//GenesisTime:        time.Time{},
+		GenesisTimeFetcher: chainService,
 	})
 	if err != nil {
 		return err
