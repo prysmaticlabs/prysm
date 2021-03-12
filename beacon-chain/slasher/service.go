@@ -68,6 +68,7 @@ func (s *Service) Start() {
 	go s.processQueuedBlocks(s.ctx, ticker.C())
 	go s.receiveAttestations(s.ctx)
 	go s.receiveBlocks(s.ctx)
+	go s.pruneSlasherData(s.ctx, ticker.C())
 }
 
 // Stop the slasher service.
