@@ -213,8 +213,8 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	if cliCtx.Bool(flags.EnableSlasherFlag.Name) {
-		if err := beacon.registerSlasherService(cliCtx); err != nil {
+	if featureconfig.Get().EnableSlasher {
+		if err := beacon.registerSlasherService(); err != nil {
 			return nil, err
 		}
 	}
@@ -557,17 +557,19 @@ func (b *BeaconNode) registerSyncService() error {
 	}
 
 	rs := regularsync.NewService(b.ctx, &regularsync.Config{
-		DB:                  b.db,
-		P2P:                 b.fetchP2P(),
-		Chain:               chainService,
-		InitialSync:         initSync,
-		StateNotifier:       b,
-		BlockNotifier:       b,
-		AttestationNotifier: b,
-		AttPool:             b.attestationPool,
-		ExitPool:            b.exitPool,
-		SlashingPool:        b.slashingsPool,
-		StateGen:            b.stateGen,
+		DB:                      b.db,
+		P2P:                     b.fetchP2P(),
+		Chain:                   chainService,
+		InitialSync:             initSync,
+		StateNotifier:           b,
+		BlockNotifier:           b,
+		AttestationNotifier:     b,
+		AttPool:                 b.attestationPool,
+		ExitPool:                b.exitPool,
+		SlashingPool:            b.slashingsPool,
+		StateGen:                b.stateGen,
+		VerifiedAttestationFeed: b.verifiedAttestationFeed,
+		VerifiedBlockHeaderFeed: b.verifiedBlockHeaderFeed,
 	})
 
 	return b.services.RegisterService(rs)
