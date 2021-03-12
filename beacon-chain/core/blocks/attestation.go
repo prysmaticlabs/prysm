@@ -103,7 +103,7 @@ func ProcessAttestationsNoVerifySignature(
 // used before processing attestation with the beacon state.
 func VerifyAttestationNoVerifySignature(
 	ctx context.Context,
-	beaconState iface.BeaconState,
+	beaconState iface.ReadOnlyBeaconState,
 	att *ethpb.Attestation,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "core.VerifyAttestationNoVerifySignature")
