@@ -15,12 +15,12 @@ go_proto_library(
     visibility = ["//visibility:public"],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
+        "@com_github_gogo_protobuf//gogoproto:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
-        "@com_github_golang_protobuf//descriptor:go_default_library",
-        "@com_github_golang_protobuf//ptypes/empty:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@go_googleapis//google/api:annotations_go_proto",
-        "@com_github_gogo_protobuf//gogoproto:go_default_library",
+        "@io_bazel_rules_go//proto/wkt:descriptor_go_proto",
+        "@io_bazel_rules_go//proto/wkt:empty_go_proto",
     ],
 )
 
@@ -33,9 +33,9 @@ go_proto_library(
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
-        "@com_github_golang_protobuf//ptypes/empty:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@go_googleapis//google/api:annotations_go_proto",
+        "@io_bazel_rules_go//proto/wkt:empty_go_proto",
     ],
 )
 
@@ -48,7 +48,10 @@ go_library(
 
 proto_library(
     name = "v1_proto",
-    srcs = ["debug.proto", "health.proto"],
+    srcs = [
+        "debug.proto",
+        "health.proto",
+    ],
     visibility = ["//visibility:public"],
     deps = [
         "//proto/beacon/p2p/v1:v1_proto",

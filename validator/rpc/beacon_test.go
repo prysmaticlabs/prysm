@@ -7,6 +7,7 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
@@ -27,7 +28,7 @@ func TestGetBeaconStatus_NotConnected(t *testing.T) {
 		beaconNodeClient: nodeClient,
 	}
 	ctx := context.Background()
-	resp, err := srv.GetBeaconStatus(ctx, &ptypes.Empty{})
+	resp, err := srv.GetBeaconStatus(ctx, &empty.Empty{})
 	require.NoError(t, err)
 	want := &pb.BeaconStatusResponse{
 		BeaconNodeEndpoint: "",
@@ -65,7 +66,7 @@ func TestGetBeaconStatus_OK(t *testing.T) {
 		beaconChainClient: beaconChainClient,
 	}
 	ctx := context.Background()
-	resp, err := srv.GetBeaconStatus(ctx, &ptypes.Empty{})
+	resp, err := srv.GetBeaconStatus(ctx, &empty.Empty{})
 	require.NoError(t, err)
 	want := &pb.BeaconStatusResponse{
 		BeaconNodeEndpoint:     "",

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/golang/protobuf/ptypes/empty"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -54,7 +55,7 @@ func (s *Server) registerBeaconClient() error {
 // GetBeaconStatus retrieves information about the beacon node gRPC connection
 // and certain chain metadata, such as the genesis time, the chain head, and the
 // deposit contract address.
-func (s *Server) GetBeaconStatus(ctx context.Context, _ *ptypes.Empty) (*pb.BeaconStatusResponse, error) {
+func (s *Server) GetBeaconStatus(ctx context.Context, _ *empty.Empty) (*pb.BeaconStatusResponse, error) {
 	syncStatus, err := s.beaconNodeClient.GetSyncStatus(ctx, &ptypes.Empty{})
 	if err != nil {
 		return &pb.BeaconStatusResponse{
@@ -113,14 +114,14 @@ func (s *Server) GetValidators(
 
 // GetValidatorQueue is a wrapper around the /eth/v1alpha1 endpoint of the same name.
 func (s *Server) GetValidatorQueue(
-	ctx context.Context, req *ptypes.Empty,
+	ctx context.Context, _ *empty.Empty,
 ) (*ethpb.ValidatorQueue, error) {
-	return s.beaconChainClient.GetValidatorQueue(ctx, req)
+	return s.beaconChainClient.GetValidatorQueue(ctx, &ptypes.Empty{})
 }
 
 // GetPeers is a wrapper around the /eth/v1alpha1 endpoint of the same name.
 func (s *Server) GetPeers(
-	ctx context.Context, req *ptypes.Empty,
+	ctx context.Context, _ *empty.Empty,
 ) (*ethpb.Peers, error) {
-	return s.beaconNodeClient.ListPeers(ctx, req)
+	return s.beaconNodeClient.ListPeers(ctx, &ptypes.Empty{})
 }
