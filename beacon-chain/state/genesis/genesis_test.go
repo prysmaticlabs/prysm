@@ -12,12 +12,6 @@ func TestGenesisState(t *testing.T) {
 		name params.ConfigName
 	}{
 		{
-			name: params.Prater,
-		},
-		{
-			name: params.Pyrmont,
-		},
-		{
 			name: params.Mainnet,
 		},
 	}
