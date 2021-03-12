@@ -1,6 +1,7 @@
 package kv
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	bolt "go.etcd.io/bbolt"
@@ -90,7 +92,7 @@ func (s *Store) CheckAttesterDoubleVotes(
 			}
 			for _, valIdx := range att.IndexedAttestation.AttestingIndices {
 				encIdx := ssz.MarshalUint64(make([]byte, 0), valIdx)
-				key := append(encIdx, encEpoch...)
+				key := append(encEpoch, encIdx...)
 				encExistingAttRecord := bkt.Get(key)
 				if len(encExistingAttRecord) < 32 {
 					continue
@@ -133,7 +135,7 @@ func (s *Store) AttestationRecordForValidator(
 		if err != nil {
 			return err
 		}
-		key := append(encIdx, encEpoch...)
+		key := append(encEpoch, encIdx...)
 		value := bkt.Get(key)
 		if value == nil {
 			return nil
@@ -169,7 +171,7 @@ func (s *Store) SaveAttestationRecordsForValidators(
 			}
 			for _, valIdx := range att.IndexedAttestation.AttestingIndices {
 				encIdx := ssz.MarshalUint64(make([]byte, 0), valIdx)
-				key := append(encIdx, encEpoch...)
+				key := append(encEpoch, encIdx...)
 				if err := bkt.Put(key, value); err != nil {
 					return err
 				}
@@ -292,6 +294,68 @@ func (s *Store) SaveBlockProposals(
 		}
 		return nil
 	})
+}
+
+// PruneProposals prunes all proposal data older than historySize.
+func (s *Store) PruneProposals(ctx context.Context, currentEpoch types.Epoch, historySize uint64) error {
+	if uint64(currentEpoch) < historySize {
+		return nil
+	}
+
+	// + 1 here so we can prune everything less than this, but not equal.
+	endPruneSlot, err := helpers.StartSlot(currentEpoch - types.Epoch(historySize))
+	if err != nil {
+		return err
+	}
+	endEnc, err := endPruneSlot.MarshalSSZ()
+	if err != nil {
+		return err
+	}
+	return s.db.Update(func(tx *bolt.Tx) error {
+		proposalBkt := tx.Bucket(proposalRecordsBucket)
+		c := proposalBkt.Cursor()
+		for k, _ := c.Seek(endEnc); k != nil; k, _ = c.Prev() {
+			if !prefixLessThan(k, endEnc) {
+				continue
+			}
+			if err := proposalBkt.Delete(k); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+// PruneAttestations prunes all proposal data older than historySize.
+func (s *Store) PruneAttestations(ctx context.Context, currentEpoch types.Epoch, historySize uint64) error {
+	if uint64(currentEpoch) < historySize {
+		return nil
+	}
+
+	// + 1 here so we can prune everything less than this, but not equal.
+	endPruneEpoch := currentEpoch - types.Epoch(historySize)
+	epochEnc, err := endPruneEpoch.MarshalSSZ()
+	if err != nil {
+		return err
+	}
+	return s.db.Update(func(tx *bolt.Tx) error {
+		attBkt := tx.Bucket(attestationRecordsBucket)
+		c := attBkt.Cursor()
+		for k, _ := c.Seek(epochEnc); k != nil; k, _ = c.Prev() {
+			if !prefixLessThan(k, epochEnc) {
+				continue
+			}
+			if err := attBkt.Delete(k); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+func prefixLessThan(key, lessThan []byte) bool {
+	encSlot := key[:8]
+	return bytes.Compare(encSlot, lessThan) < 0
 }
 
 // Disk key for a validator proposal, including a slot+validatorIndex as a byte slice.
