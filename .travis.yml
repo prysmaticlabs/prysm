@@ -1,5 +1,5 @@
 language: go
-go_import_path: github.com/prysmaticlabs/prysm
+go_import_path: github.com/lukso-network/vanguard-consensus-engine
 sudo: false
 matrix:
   include:
