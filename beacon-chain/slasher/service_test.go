@@ -5,9 +5,8 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
-
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/sirupsen/logrus"
 )

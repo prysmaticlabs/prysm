@@ -171,9 +171,9 @@ func TestStore_ExistingBlockProposals(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := setupDB(t)
 	proposals := []*slashertypes.SignedBlockHeaderWrapper{
-		createProposalWrapper(1, 1, []byte{1}, t),
-		createProposalWrapper(2, 1, []byte{1}, t),
-		createProposalWrapper(3, 1, []byte{1}, t),
+		createProposalWrapper(t, 1, 1, []byte{1}),
+		createProposalWrapper(t, 2, 1, []byte{1}),
+		createProposalWrapper(t, 3, 1, []byte{1}),
 	}
 	// First time checking should return empty existing proposals.
 	doubleProposals, err := beaconDB.CheckDoubleBlockProposals(ctx, proposals)
@@ -206,11 +206,11 @@ func Test_encodeDecodeProposalRecord(t *testing.T) {
 	}{
 		{
 			name:   "empty standard encode/decode",
-			blkHdr: createProposalWrapper(0, 0, nil, t),
+			blkHdr: createProposalWrapper(t, 0, 0, nil),
 		},
 		{
 			name:   "standard encode/decode",
-			blkHdr: createProposalWrapper(15, 6, []byte("1"), t),
+			blkHdr: createProposalWrapper(t, 15, 6, []byte("1")),
 		},
 		{
 			name: "failing encode/decode",
@@ -315,28 +315,28 @@ func TestStore_PruneProposals(t *testing.T) {
 		{
 			name: "should delete all proposals under epoch 2",
 			proposalsInDB: []*slashertypes.SignedBlockHeaderWrapper{
-				createProposalWrapper(types.Slot(2), 0, []byte{1}, t),
-				createProposalWrapper(types.Slot(8), 0, []byte{1}, t),
-				createProposalWrapper(params.BeaconConfig().SlotsPerEpoch*3, 0, []byte{1}, t),
+				createProposalWrapper(t, types.Slot(2), 0, []byte{1}),
+				createProposalWrapper(t, types.Slot(8), 0, []byte{1}),
+				createProposalWrapper(t, params.BeaconConfig().SlotsPerEpoch*3, 0, []byte{1}),
 			},
 			afterPruning: []*slashertypes.SignedBlockHeaderWrapper{
-				createProposalWrapper(params.BeaconConfig().SlotsPerEpoch*3, 0, []byte{1}, t),
+				createProposalWrapper(t, params.BeaconConfig().SlotsPerEpoch*3, 0, []byte{1}),
 			},
 			epoch: 2,
 		},
 		{
 			name: "should delete all proposals under epoch 5 - historySize 3",
 			proposalsInDB: []*slashertypes.SignedBlockHeaderWrapper{
-				createProposalWrapper(types.Slot(2), 0, []byte{1}, t),
-				createProposalWrapper(types.Slot(8), 0, []byte{1}, t),
-				createProposalWrapper(params.BeaconConfig().SlotsPerEpoch*3, 0, []byte{1}, t),
-				createProposalWrapper(params.BeaconConfig().SlotsPerEpoch*4, 0, []byte{1}, t),
-				createProposalWrapper(params.BeaconConfig().SlotsPerEpoch*5, 0, []byte{1}, t),
+				createProposalWrapper(t, types.Slot(2), 0, []byte{1}),
+				createProposalWrapper(t, types.Slot(8), 0, []byte{1}),
+				createProposalWrapper(t, params.BeaconConfig().SlotsPerEpoch*3, 0, []byte{1}),
+				createProposalWrapper(t, params.BeaconConfig().SlotsPerEpoch*4, 0, []byte{1}),
+				createProposalWrapper(t, params.BeaconConfig().SlotsPerEpoch*5, 0, []byte{1}),
 			},
 			afterPruning: []*slashertypes.SignedBlockHeaderWrapper{
-				createProposalWrapper(params.BeaconConfig().SlotsPerEpoch*3, 0, []byte{1}, t),
-				createProposalWrapper(params.BeaconConfig().SlotsPerEpoch*4, 0, []byte{1}, t),
-				createProposalWrapper(params.BeaconConfig().SlotsPerEpoch*5, 0, []byte{1}, t),
+				createProposalWrapper(t, params.BeaconConfig().SlotsPerEpoch*3, 0, []byte{1}),
+				createProposalWrapper(t, params.BeaconConfig().SlotsPerEpoch*4, 0, []byte{1}),
+				createProposalWrapper(t, params.BeaconConfig().SlotsPerEpoch*5, 0, []byte{1}),
 			},
 			historySize: 3,
 			epoch:       5,
@@ -344,10 +344,10 @@ func TestStore_PruneProposals(t *testing.T) {
 		{
 			name: "should delete all proposals under epoch 4",
 			proposalsInDB: []*slashertypes.SignedBlockHeaderWrapper{
-				createProposalWrapper(params.BeaconConfig().SlotsPerEpoch*0, 0, []byte{1}, t),
-				createProposalWrapper(params.BeaconConfig().SlotsPerEpoch*1, 0, []byte{1}, t),
-				createProposalWrapper(params.BeaconConfig().SlotsPerEpoch*2, 0, []byte{1}, t),
-				createProposalWrapper(params.BeaconConfig().SlotsPerEpoch*3, 0, []byte{1}, t),
+				createProposalWrapper(t, params.BeaconConfig().SlotsPerEpoch*0, 0, []byte{1}),
+				createProposalWrapper(t, params.BeaconConfig().SlotsPerEpoch*1, 0, []byte{1}),
+				createProposalWrapper(t, params.BeaconConfig().SlotsPerEpoch*2, 0, []byte{1}),
+				createProposalWrapper(t, params.BeaconConfig().SlotsPerEpoch*3, 0, []byte{1}),
 			},
 			afterPruning: []*slashertypes.SignedBlockHeaderWrapper{},
 			epoch:        4,
@@ -355,12 +355,12 @@ func TestStore_PruneProposals(t *testing.T) {
 		{
 			name: "no proposal to delete under epoch 1",
 			proposalsInDB: []*slashertypes.SignedBlockHeaderWrapper{
-				createProposalWrapper(params.BeaconConfig().SlotsPerEpoch*2, 0, []byte{1}, t),
-				createProposalWrapper(params.BeaconConfig().SlotsPerEpoch*3, 0, []byte{1}, t),
+				createProposalWrapper(t, params.BeaconConfig().SlotsPerEpoch*2, 0, []byte{1}),
+				createProposalWrapper(t, params.BeaconConfig().SlotsPerEpoch*3, 0, []byte{1}),
 			},
 			afterPruning: []*slashertypes.SignedBlockHeaderWrapper{
-				createProposalWrapper(params.BeaconConfig().SlotsPerEpoch*2, 0, []byte{1}, t),
-				createProposalWrapper(params.BeaconConfig().SlotsPerEpoch*3, 0, []byte{1}, t),
+				createProposalWrapper(t, params.BeaconConfig().SlotsPerEpoch*2, 0, []byte{1}),
+				createProposalWrapper(t, params.BeaconConfig().SlotsPerEpoch*3, 0, []byte{1}),
 			},
 			epoch: 5,
 		},
@@ -377,7 +377,7 @@ func TestStore_PruneProposals(t *testing.T) {
 			// return all double proposals.
 			slashable := make([]*slashertypes.SignedBlockHeaderWrapper, len(tt.afterPruning))
 			for i := 0; i < len(tt.afterPruning); i++ {
-				slashable[i] = createProposalWrapper(tt.afterPruning[i].SignedBeaconBlockHeader.Header.Slot, tt.afterPruning[i].SignedBeaconBlockHeader.Header.ProposerIndex, []byte{2}, t)
+				slashable[i] = createProposalWrapper(t, tt.afterPruning[i].SignedBeaconBlockHeader.Header.Slot, tt.afterPruning[i].SignedBeaconBlockHeader.Header.ProposerIndex, []byte{2})
 			}
 
 			doubleProposals, err := beaconDB.CheckDoubleBlockProposals(ctx, slashable)
@@ -482,7 +482,7 @@ func TestStore_PruneAttestations(t *testing.T) {
 	}
 }
 
-func createProposalWrapper(slot types.Slot, proposerIndex types.ValidatorIndex, signingRoot []byte, t *testing.T) *slashertypes.SignedBlockHeaderWrapper {
+func createProposalWrapper(t *testing.T, slot types.Slot, proposerIndex types.ValidatorIndex, signingRoot []byte) *slashertypes.SignedBlockHeaderWrapper {
 	header := &ethpb.BeaconBlockHeader{
 		Slot:          slot,
 		ProposerIndex: proposerIndex,
