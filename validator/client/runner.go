@@ -75,7 +75,7 @@ func run(ctx context.Context, v iface.Validator) {
 		if err != nil {
 			log.Fatalf("Could not determine if beacon node synced: %v", err)
 		}
-		err = v.WaitForActivation(ctx)
+		err = v.WaitForActivation(ctx, nil /* accountsChangedChan */)
 		if isConnectionError(err) {
 			log.Warnf("Could not wait for validator activation: %v", err)
 			continue
@@ -99,6 +99,9 @@ func run(ctx context.Context, v iface.Validator) {
 	if err := v.UpdateDuties(ctx, headSlot); err != nil {
 		handleAssignmentError(err, headSlot)
 	}
+
+	accountsChangedChan := make(chan [][48]byte)
+	sub := v.GetKeymanager().SubscribeAccountChanges(accountsChangedChan)
 	for {
 		slotCtx, cancel := context.WithCancel(ctx)
 		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
@@ -108,12 +111,26 @@ func run(ctx context.Context, v iface.Validator) {
 			log.Info("Context canceled, stopping validator")
 			span.End()
 			cancel()
+			sub.Unsubscribe()
+			close(accountsChangedChan)
 			return // Exit if context is canceled.
 		case blocksError := <-connectionErrorChannel:
 			if blocksError != nil {
 				log.WithError(blocksError).Warn("block stream interrupted")
 				go v.ReceiveBlocks(ctx, connectionErrorChannel)
 				continue
+			}
+		case newKeys := <-accountsChangedChan:
+			anyActive, err := v.HandleKeyReload(ctx, newKeys)
+			if err != nil {
+				log.WithError(err).Error("Could not properly handle reloaded keys")
+			}
+			if !anyActive {
+				log.Info("No active keys found. Waiting for activation...")
+				err := v.WaitForActivation(ctx, accountsChangedChan)
+				if err != nil {
+					log.Fatalf("Could not wait for validator activation: %v", err)
+				}
 			}
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))

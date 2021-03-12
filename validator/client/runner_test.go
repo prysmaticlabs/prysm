@@ -208,3 +208,33 @@ func TestAllValidatorsAreExited_NextSlot(t *testing.T) {
 	run(ctx, v)
 	assert.LogsContain(t, hook, "All validators are exited")
 }
+
+func TestKeyReload_ActiveKey(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	km := &mockKeymanager{}
+	v := &testutil.FakeValidator{Keymanager: km}
+	go func() {
+		km.SimulateAccountChanges([][48]byte{testutil.ActiveKey})
+
+		cancel()
+	}()
+	run(ctx, v)
+	assert.Equal(t, true, v.HandleKeyReloadCalled)
+	// We expect that WaitForActivation will only be called once,
+	// at the very beginning, and not after account changes.
+	assert.Equal(t, 1, v.WaitForActivationCalled)
+}
+
+func TestKeyReload_NoActiveKey(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	km := &mockKeymanager{}
+	v := &testutil.FakeValidator{Keymanager: km}
+	go func() {
+		km.SimulateAccountChanges(make([][48]byte, 0))
+
+		cancel()
+	}()
+	run(ctx, v)
+	assert.Equal(t, true, v.HandleKeyReloadCalled)
+	assert.Equal(t, 2, v.WaitForActivationCalled)
+}

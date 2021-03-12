@@ -6,6 +6,7 @@ import (
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/golang/protobuf/ptypes/empty"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -45,7 +46,7 @@ func TestServer_GetBeaconNodeConnection(t *testing.T) {
 		genesisFetcher:      &mockGenesisFetcher{},
 		nodeGatewayEndpoint: endpoint,
 	}
-	got, err := s.GetBeaconNodeConnection(ctx, &ptypes.Empty{})
+	got, err := s.GetBeaconNodeConnection(ctx, &empty.Empty{})
 	require.NoError(t, err)
 	want := &pb.NodeConnectionResponse{
 		BeaconNodeEndpoint: endpoint,
