@@ -21,7 +21,6 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -155,14 +154,6 @@ func (vs *Server) ProposeBlock(ctx context.Context, blk *ethpb.SignedBeaconBlock
 			Type: blockfeed.ReceivedBlock,
 			Data: &blockfeed.ReceivedBlockData{SignedBlock: blk},
 		})
-
-		// Send the verified block header over a feed.
-		header, err := blockutil.SignedBeaconBlockHeaderFromBlock(blk)
-		if err != nil {
-			log.WithError(err).Debug("Couldn't get header from verified block")
-			return
-		}
-		vs.VerifiedBlockHeaderFeed.Send(header)
 	}()
 
 	// Broadcast the new block to the network.

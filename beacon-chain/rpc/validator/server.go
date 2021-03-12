@@ -28,7 +28,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -39,32 +38,31 @@ import (
 // and committees in which particular validators need to perform their responsibilities,
 // and more.
 type Server struct {
-	Ctx                     context.Context
-	BeaconDB                db.NoHeadAccessDatabase
-	AttestationCache        *cache.AttestationCache
-	HeadFetcher             blockchain.HeadFetcher
-	ForkFetcher             blockchain.ForkFetcher
-	FinalizationFetcher     blockchain.FinalizationFetcher
-	TimeFetcher             blockchain.TimeFetcher
-	CanonicalStateChan      chan *pbp2p.BeaconState
-	BlockFetcher            powchain.POWBlockFetcher
-	DepositFetcher          depositcache.DepositFetcher
-	ChainStartFetcher       powchain.ChainStartFetcher
-	Eth1InfoFetcher         powchain.ChainInfoFetcher
-	SyncChecker             sync.Checker
-	StateNotifier           statefeed.Notifier
-	BlockNotifier           blockfeed.Notifier
-	P2P                     p2p.Broadcaster
-	AttPool                 attestations.Pool
-	SlashingsPool           slashings.PoolManager
-	ExitPool                voluntaryexits.PoolManager
-	BlockReceiver           blockchain.BlockReceiver
-	MockEth1Votes           bool
-	Eth1BlockFetcher        powchain.POWBlockFetcher
-	PendingDepositsFetcher  depositcache.PendingDepositsFetcher
-	OperationNotifier       opfeed.Notifier
-	VerifiedBlockHeaderFeed *event.Feed
-	StateGen                *stategen.State
+	Ctx                    context.Context
+	BeaconDB               db.NoHeadAccessDatabase
+	AttestationCache       *cache.AttestationCache
+	HeadFetcher            blockchain.HeadFetcher
+	ForkFetcher            blockchain.ForkFetcher
+	FinalizationFetcher    blockchain.FinalizationFetcher
+	TimeFetcher            blockchain.TimeFetcher
+	CanonicalStateChan     chan *pbp2p.BeaconState
+	BlockFetcher           powchain.POWBlockFetcher
+	DepositFetcher         depositcache.DepositFetcher
+	ChainStartFetcher      powchain.ChainStartFetcher
+	Eth1InfoFetcher        powchain.ChainInfoFetcher
+	SyncChecker            sync.Checker
+	StateNotifier          statefeed.Notifier
+	BlockNotifier          blockfeed.Notifier
+	P2P                    p2p.Broadcaster
+	AttPool                attestations.Pool
+	SlashingsPool          slashings.PoolManager
+	ExitPool               voluntaryexits.PoolManager
+	BlockReceiver          blockchain.BlockReceiver
+	MockEth1Votes          bool
+	Eth1BlockFetcher       powchain.POWBlockFetcher
+	PendingDepositsFetcher depositcache.PendingDepositsFetcher
+	OperationNotifier      opfeed.Notifier
+	StateGen               *stategen.State
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current
