@@ -17,10 +17,23 @@ import (
 func (s *Store) PruneAttestations(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.PruneAttestations")
 	defer span.End()
-	return s.update(func(tx *bolt.Tx) error {
+	pubkeys := [][]byte{}
+	err := s.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(pubKeysBucket)
 		return bucket.ForEach(func(pubKey []byte, _ []byte) error {
-			pkBucket := bucket.Bucket(pubKey)
+			key := make([]byte, len(pubKey))
+			copy(key, pubKey)
+			pubkeys = append(pubkeys, pubKey)
+			return nil
+		})
+	})
+	if err != nil {
+		return err
+	}
+	for _, k := range pubkeys {
+		err = s.update(func(tx *bolt.Tx) error {
+			bucket := tx.Bucket(pubKeysBucket)
+			pkBucket := bucket.Bucket(k)
 			if pkBucket == nil {
 				return nil
 			}
@@ -32,7 +45,11 @@ func (s *Store) PruneAttestations(ctx context.Context) error {
 			}
 			return pruneSigningRootsBucket(pkBucket)
 		})
-	})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func pruneSourceEpochsBucket(bucket *bolt.Bucket) error {
