@@ -314,7 +314,10 @@ func (s *Store) PruneProposals(ctx context.Context, currentEpoch types.Epoch, hi
 	return s.db.Update(func(tx *bolt.Tx) error {
 		proposalBkt := tx.Bucket(proposalRecordsBucket)
 		c := proposalBkt.Cursor()
-		for k, _ := c.Seek(endEnc); k != nil && prefixLessThan(k, endEnc); k, _ = c.Prev() {
+		for k, _ := c.Seek(endEnc); k != nil; k, _ = c.Prev() {
+			if !prefixLessThan(k, endEnc) {
+				continue
+			}
 			if err := proposalBkt.Delete(k); err != nil {
 				return err
 			}
@@ -338,7 +341,10 @@ func (s *Store) PruneAttestations(ctx context.Context, currentEpoch types.Epoch,
 	return s.db.Update(func(tx *bolt.Tx) error {
 		attBkt := tx.Bucket(attestationRecordsBucket)
 		c := attBkt.Cursor()
-		for k, _ := c.Seek(epochEnc); k != nil && prefixLessThan(k, epochEnc); k, _ = c.Prev() {
+		for k, _ := c.Seek(epochEnc); k != nil; k, _ = c.Prev() {
+			if !prefixLessThan(k, epochEnc) {
+				continue
+			}
 			if err := attBkt.Delete(k); err != nil {
 				return err
 			}
