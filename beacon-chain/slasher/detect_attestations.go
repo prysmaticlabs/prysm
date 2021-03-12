@@ -3,11 +3,13 @@ package slasher
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -49,22 +51,45 @@ func (s *Service) detectSlashableAttestations(
 	groupedAtts := s.groupByChunkIndex(attestations)
 
 	// Update min and max spans and retrieve any detected slashable offenses.
+	start := time.Now()
 	surroundingSlashings, err := s.updateSpans(ctx, &chunkUpdateArgs{
 		kind:                slashertypes.MinSpan,
 		validatorChunkIndex: args.validatorChunkIndex,
 		currentEpoch:        args.currentEpoch,
 	}, groupedAtts)
 	if err != nil {
-		return errors.Wrap(err, "could not update attestation min spans")
+		return errors.Wrapf(
+			err,
+			"could not update min attestation spans for validator chunk index %d",
+			args.validatorChunkIndex,
+		)
 	}
+	log.WithFields(logrus.Fields{
+		"timeElapsed":               time.Since(start),
+		"surroundingSlashingsFound": len(surroundingSlashings),
+		"currentEpoch":              args.currentEpoch,
+		"validatorChunkIndex":       args.validatorChunkIndex,
+	}).Debug("Done updating min spans")
+
+	start = time.Now()
 	surroundedSlashings, err := s.updateSpans(ctx, &chunkUpdateArgs{
 		kind:                slashertypes.MaxSpan,
 		validatorChunkIndex: args.validatorChunkIndex,
 		currentEpoch:        args.currentEpoch,
 	}, groupedAtts)
 	if err != nil {
-		return errors.Wrap(err, "could not update attestation max spans")
+		return errors.Wrapf(
+			err,
+			"could not update max attestation spans for validator chunk index %d",
+			args.validatorChunkIndex,
+		)
 	}
+	log.WithFields(logrus.Fields{
+		"timeElapsed":              time.Since(start),
+		"surroundedSlashingsFound": len(surroundingSlashings),
+		"currentEpoch":             args.currentEpoch,
+		"validatorChunkIndex":      args.validatorChunkIndex,
+	}).Debug("Done updating max spans")
 
 	// Consolidate all slashings into a slice.
 	slashings := make([]*slashertypes.Slashing, 0)
@@ -72,10 +97,10 @@ func (s *Service) detectSlashableAttestations(
 	slashings = append(slashings, surroundingSlashings...)
 	slashings = append(slashings, surroundedSlashings...)
 	if len(slashings) > 0 {
-		log.WithField("numSlashings", len(slashings)).Info("Slashable offenses found")
+		log.WithField("numSlashings", len(slashings)).Info("Slashable attestation offenses found")
 	}
 	for _, slashing := range slashings {
-		s.attesterSlashingsFeed.Send(&ethpb.AttesterSlashing{
+		s.serviceCfg.AttesterSlashingsFeed.Send(&ethpb.AttesterSlashing{
 			Attestation_1: slashing.PrevAttestation,
 			Attestation_2: slashing.Attestation,
 		})
@@ -84,6 +109,14 @@ func (s *Service) detectSlashableAttestations(
 
 	// Update the latest written epoch for all involved validator indices.
 	validatorIndices := s.params.validatorIndicesInChunk(args.validatorChunkIndex)
+	if len(validatorIndices) > 0 {
+		firstIndex := validatorIndices[0]
+		lastIndex := validatorIndices[len(validatorIndices)-1]
+		log.WithFields(logrus.Fields{
+			"validatorIndices": fmt.Sprintf("[%d, ..., %d]", firstIndex, lastIndex),
+			"currentEpoch":     args.currentEpoch,
+		}).Debug("Saving latest epoch attested for validators")
+	}
 	return s.serviceCfg.Database.SaveLastEpochWrittenForValidators(ctx, validatorIndices, args.currentEpoch)
 }
 
@@ -179,12 +212,20 @@ func (s *Service) updateSpans(
 	validatorIndices := s.params.validatorIndicesInChunk(args.validatorChunkIndex)
 	chunkIndices, err := s.determineChunksToUpdateForValidators(ctx, args, validatorIndices)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not determine chunks to update for validators")
+		return nil, errors.Wrapf(
+			err,
+			"could not determine chunks to update for validator indices %v",
+			validatorIndices,
+		)
 	}
 	// Load the required chunks from disk.
 	chunksByChunkIdx, err := s.loadChunks(ctx, args, chunkIndices)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not load chunks for attestations from disk")
+		return nil, errors.Wrapf(
+			err,
+			"could not load chunks for chunk indices %v",
+			chunkIndices,
+		)
 	}
 
 	// Apply the attestations to the related chunks and find any
@@ -245,7 +286,8 @@ func (s *Service) determineChunksToUpdateForValidators(
 	defer span.End()
 	lastCurrentEpochs, err := s.serviceCfg.Database.LastEpochWrittenForValidators(ctx, validatorIndices)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get last epoch written for validators")
+		err = errors.Wrap(err, "could not get latest epoch attested for validators")
+		return
 	}
 
 	// Initialize the last epoch written for each validator to 0.
@@ -309,7 +351,11 @@ func (s *Service) applyAttestationForValidator(
 		attestation,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not check if attestation is slashable")
+		return nil, errors.Wrapf(
+			err,
+			"could not check if attestation for validator index %d is slashable",
+			validatorIndex,
+		)
 	}
 	if slashing != nil && slashing.Kind != slashertypes.NotSlashable {
 		return slashing, nil
@@ -344,7 +390,13 @@ func (s *Service) applyAttestationForValidator(
 			targetEpoch,
 		)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not update chunk at index %d", chunkIdx)
+			return nil, errors.Wrapf(
+				err,
+				"could not update chunk at chunk index %d for validator index %d and current epoch %d",
+				chunkIdx,
+				validatorIndex,
+				args.currentEpoch,
+			)
 		}
 		// We update the chunksByChunkIdx map with the chunk we just updated.
 		chunksByChunkIdx[chunkIdx] = chunk
@@ -397,7 +449,10 @@ func (s *Service) loadChunks(
 	}
 	rawChunks, chunksExist, err := s.serviceCfg.Database.LoadSlasherChunks(ctx, args.kind, chunkKeys)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not load attestation chunks from disk")
+		return nil, errors.Wrapf(
+			err,
+			"could not load slasher chunk index",
+		)
 	}
 	chunksByChunkIdx := make(map[uint64]Chunker, len(rawChunks))
 	for i := 0; i < len(rawChunks); i++ {
