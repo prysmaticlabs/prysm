@@ -13,7 +13,7 @@ import (
 
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
-	types "github.com/gogo/protobuf/types"
+	empty "github.com/golang/protobuf/ptypes/empty"
 	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/eth2-types"
 	v1alpha1 "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -1125,9 +1125,9 @@ const _ = grpc.SupportPackageIsVersion4
 type DebugClient interface {
 	GetBeaconState(ctx context.Context, in *BeaconStateRequest, opts ...grpc.CallOption) (*SSZResponse, error)
 	GetBlock(ctx context.Context, in *BlockRequest, opts ...grpc.CallOption) (*SSZResponse, error)
-	SetLoggingLevel(ctx context.Context, in *LoggingLevelRequest, opts ...grpc.CallOption) (*types.Empty, error)
-	GetProtoArrayForkChoice(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*ProtoArrayForkChoiceResponse, error)
-	ListPeers(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*DebugPeerResponses, error)
+	SetLoggingLevel(ctx context.Context, in *LoggingLevelRequest, opts ...grpc.CallOption) (*empty.Empty, error)
+	GetProtoArrayForkChoice(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*ProtoArrayForkChoiceResponse, error)
+	ListPeers(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*DebugPeerResponses, error)
 	GetPeer(ctx context.Context, in *v1alpha1.PeerRequest, opts ...grpc.CallOption) (*DebugPeerResponse, error)
 	GetInclusionSlot(ctx context.Context, in *InclusionSlotRequest, opts ...grpc.CallOption) (*InclusionSlotResponse, error)
 }
@@ -1158,8 +1158,8 @@ func (c *debugClient) GetBlock(ctx context.Context, in *BlockRequest, opts ...gr
 	return out, nil
 }
 
-func (c *debugClient) SetLoggingLevel(ctx context.Context, in *LoggingLevelRequest, opts ...grpc.CallOption) (*types.Empty, error) {
-	out := new(types.Empty)
+func (c *debugClient) SetLoggingLevel(ctx context.Context, in *LoggingLevelRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
+	out := new(empty.Empty)
 	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.Debug/SetLoggingLevel", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -1167,7 +1167,7 @@ func (c *debugClient) SetLoggingLevel(ctx context.Context, in *LoggingLevelReque
 	return out, nil
 }
 
-func (c *debugClient) GetProtoArrayForkChoice(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*ProtoArrayForkChoiceResponse, error) {
+func (c *debugClient) GetProtoArrayForkChoice(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*ProtoArrayForkChoiceResponse, error) {
 	out := new(ProtoArrayForkChoiceResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.Debug/GetProtoArrayForkChoice", in, out, opts...)
 	if err != nil {
@@ -1176,7 +1176,7 @@ func (c *debugClient) GetProtoArrayForkChoice(ctx context.Context, in *types.Emp
 	return out, nil
 }
 
-func (c *debugClient) ListPeers(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*DebugPeerResponses, error) {
+func (c *debugClient) ListPeers(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*DebugPeerResponses, error) {
 	out := new(DebugPeerResponses)
 	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.Debug/ListPeers", in, out, opts...)
 	if err != nil {
@@ -1207,9 +1207,9 @@ func (c *debugClient) GetInclusionSlot(ctx context.Context, in *InclusionSlotReq
 type DebugServer interface {
 	GetBeaconState(context.Context, *BeaconStateRequest) (*SSZResponse, error)
 	GetBlock(context.Context, *BlockRequest) (*SSZResponse, error)
-	SetLoggingLevel(context.Context, *LoggingLevelRequest) (*types.Empty, error)
-	GetProtoArrayForkChoice(context.Context, *types.Empty) (*ProtoArrayForkChoiceResponse, error)
-	ListPeers(context.Context, *types.Empty) (*DebugPeerResponses, error)
+	SetLoggingLevel(context.Context, *LoggingLevelRequest) (*empty.Empty, error)
+	GetProtoArrayForkChoice(context.Context, *empty.Empty) (*ProtoArrayForkChoiceResponse, error)
+	ListPeers(context.Context, *empty.Empty) (*DebugPeerResponses, error)
 	GetPeer(context.Context, *v1alpha1.PeerRequest) (*DebugPeerResponse, error)
 	GetInclusionSlot(context.Context, *InclusionSlotRequest) (*InclusionSlotResponse, error)
 }
@@ -1224,13 +1224,13 @@ func (*UnimplementedDebugServer) GetBeaconState(ctx context.Context, req *Beacon
 func (*UnimplementedDebugServer) GetBlock(ctx context.Context, req *BlockRequest) (*SSZResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBlock not implemented")
 }
-func (*UnimplementedDebugServer) SetLoggingLevel(ctx context.Context, req *LoggingLevelRequest) (*types.Empty, error) {
+func (*UnimplementedDebugServer) SetLoggingLevel(ctx context.Context, req *LoggingLevelRequest) (*empty.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetLoggingLevel not implemented")
 }
-func (*UnimplementedDebugServer) GetProtoArrayForkChoice(ctx context.Context, req *types.Empty) (*ProtoArrayForkChoiceResponse, error) {
+func (*UnimplementedDebugServer) GetProtoArrayForkChoice(ctx context.Context, req *empty.Empty) (*ProtoArrayForkChoiceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetProtoArrayForkChoice not implemented")
 }
-func (*UnimplementedDebugServer) ListPeers(ctx context.Context, req *types.Empty) (*DebugPeerResponses, error) {
+func (*UnimplementedDebugServer) ListPeers(ctx context.Context, req *empty.Empty) (*DebugPeerResponses, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListPeers not implemented")
 }
 func (*UnimplementedDebugServer) GetPeer(ctx context.Context, req *v1alpha1.PeerRequest) (*DebugPeerResponse, error) {
@@ -1299,7 +1299,7 @@ func _Debug_SetLoggingLevel_Handler(srv interface{}, ctx context.Context, dec fu
 }
 
 func _Debug_GetProtoArrayForkChoice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(types.Empty)
+	in := new(empty.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -1311,13 +1311,13 @@ func _Debug_GetProtoArrayForkChoice_Handler(srv interface{}, ctx context.Context
 		FullMethod: "/ethereum.beacon.rpc.v1.Debug/GetProtoArrayForkChoice",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DebugServer).GetProtoArrayForkChoice(ctx, req.(*types.Empty))
+		return srv.(DebugServer).GetProtoArrayForkChoice(ctx, req.(*empty.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Debug_ListPeers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(types.Empty)
+	in := new(empty.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -1329,7 +1329,7 @@ func _Debug_ListPeers_Handler(srv interface{}, ctx context.Context, dec func(int
 		FullMethod: "/ethereum.beacon.rpc.v1.Debug/ListPeers",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DebugServer).ListPeers(ctx, req.(*types.Empty))
+		return srv.(DebugServer).ListPeers(ctx, req.(*empty.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }

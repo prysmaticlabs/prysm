@@ -443,7 +443,9 @@ func TestService_Resync(t *testing.T) {
 }
 
 func TestService_Initialized(t *testing.T) {
-	s := NewService(context.Background(), &Config{})
+	s := NewService(context.Background(), &Config{
+		StateNotifier: &mock.MockStateNotifier{},
+	})
 	s.chainStarted.Set()
 	assert.Equal(t, true, s.Initialized())
 	s.chainStarted.UnSet()

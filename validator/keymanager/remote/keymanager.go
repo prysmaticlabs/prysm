@@ -10,7 +10,7 @@ import (
 	"io/ioutil"
 	"strings"
 
-	ptypes "github.com/gogo/protobuf/types"
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
@@ -198,7 +198,7 @@ func (km *Keymanager) KeymanagerOpts() *KeymanagerOpts {
 
 // FetchValidatingPublicKeys fetches the list of public keys that should be used to validate with.
 func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
-	resp, err := km.client.ListValidatingPublicKeys(ctx, &ptypes.Empty{})
+	resp, err := km.client.ListValidatingPublicKeys(ctx, &empty.Empty{})
 	if err != nil {
 		return nil, errors.Wrap(err, "could not list accounts from remote server")
 	}
