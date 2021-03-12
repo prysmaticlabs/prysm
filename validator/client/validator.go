@@ -86,6 +86,12 @@ type validator struct {
 	eipImportBlacklistedPublicKeys     map[[48]byte]bool
 }
 
+type validatorStatus struct {
+	publicKey []byte
+	status    *ethpb.ValidatorStatusResponse
+	index     types.ValidatorIndex
+}
+
 // Done cleans up the validator.
 func (v *validator) Done() {
 	v.ticker.Done()
@@ -278,39 +284,39 @@ func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel ch
 	}
 }
 
-func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.ValidatorActivationResponse_Status) bool {
+func (v *validator) checkAndLogValidatorStatus(statuses []*validatorStatus) bool {
 	nonexistentIndex := types.ValidatorIndex(^uint64(0))
 	var validatorActivated bool
-	for _, status := range validatorStatuses {
+	for _, status := range statuses {
 		fields := logrus.Fields{
-			"pubKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey)),
-			"status": status.Status.Status.String(),
+			"pubKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.publicKey)),
+			"status": status.status.Status.String(),
 		}
-		if status.Index != nonexistentIndex {
-			fields["index"] = status.Index
+		if status.index != nonexistentIndex {
+			fields["index"] = status.index
 		}
 		log := log.WithFields(fields)
 		if v.emitAccountMetrics {
-			fmtKey := fmt.Sprintf("%#x", status.PublicKey)
-			ValidatorStatusesGaugeVec.WithLabelValues(fmtKey).Set(float64(status.Status.Status))
+			fmtKey := fmt.Sprintf("%#x", status.publicKey)
+			ValidatorStatusesGaugeVec.WithLabelValues(fmtKey).Set(float64(status.status.Status))
 		}
-		switch status.Status.Status {
+		switch status.status.Status {
 		case ethpb.ValidatorStatus_UNKNOWN_STATUS:
 			log.Info("Waiting for deposit to be observed by beacon node")
 		case ethpb.ValidatorStatus_DEPOSITED:
-			if status.Status.PositionInActivationQueue != 0 {
+			if status.status.PositionInActivationQueue != 0 {
 				log.WithField(
-					"positionInActivationQueue", status.Status.PositionInActivationQueue,
+					"positionInActivationQueue", status.status.PositionInActivationQueue,
 				).Info("Deposit processed, entering activation queue after finalization")
 			}
 		case ethpb.ValidatorStatus_PENDING:
-			if status.Status.ActivationEpoch == params.BeaconConfig().FarFutureEpoch {
+			if status.status.ActivationEpoch == params.BeaconConfig().FarFutureEpoch {
 				log.WithFields(logrus.Fields{
-					"positionInActivationQueue": status.Status.PositionInActivationQueue,
+					"positionInActivationQueue": status.status.PositionInActivationQueue,
 				}).Info("Waiting to be assigned activation epoch")
 			} else {
 				log.WithFields(logrus.Fields{
-					"activationEpoch": status.Status.ActivationEpoch,
+					"activationEpoch": status.status.ActivationEpoch,
 				}).Info("Waiting for activation")
 			}
 		case ethpb.ValidatorStatus_ACTIVE, ethpb.ValidatorStatus_EXITING:
@@ -321,11 +327,23 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 			log.Warn("Invalid Eth1 deposit")
 		default:
 			log.WithFields(logrus.Fields{
-				"activationEpoch": status.Status.ActivationEpoch,
+				"activationEpoch": status.status.ActivationEpoch,
 			}).Info("Validator status")
 		}
 	}
 	return validatorActivated
+}
+
+func logActiveValidatorStatus(statuses []*validatorStatus) {
+	for _, s := range statuses {
+		if s.status.Status != ethpb.ValidatorStatus_ACTIVE {
+			continue
+		}
+		log.WithFields(logrus.Fields{
+			"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(s.publicKey)),
+			"index":     s.index,
+		}).Info("Validator activated")
+	}
 }
 
 // CanonicalHeadSlot returns the slot of canonical block currently found in the

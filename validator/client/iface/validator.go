@@ -31,7 +31,7 @@ type Validator interface {
 	Done()
 	WaitForChainStart(ctx context.Context) error
 	WaitForSync(ctx context.Context) error
-	WaitForActivation(ctx context.Context) error
+	WaitForActivation(ctx context.Context, accountsChangedChan chan [][48]byte) error
 	SlasherReady(ctx context.Context) error
 	CanonicalHeadSlot(ctx context.Context) (types.Slot, error)
 	NextSlot() <-chan types.Slot
@@ -49,4 +49,5 @@ type Validator interface {
 	AllValidatorsAreExited(ctx context.Context) (bool, error)
 	GetKeymanager() keymanager.IKeymanager
 	ReceiveBlocks(ctx context.Context, connectionErrorChannel chan<- error)
+	HandleKeyReload(ctx context.Context, newKeys [][48]byte) (bool, error)
 }
