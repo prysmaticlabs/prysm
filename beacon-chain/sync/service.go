@@ -30,7 +30,6 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/abool"
-	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
@@ -51,19 +50,17 @@ var pendingBlockExpTime = time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(
 
 // Config to set up the regular sync service.
 type Config struct {
-	P2P                     p2p.P2P
-	DB                      db.NoHeadAccessDatabase
-	AttPool                 attestations.Pool
-	ExitPool                voluntaryexits.PoolManager
-	SlashingPool            slashings.PoolManager
-	Chain                   blockchainService
-	InitialSync             Checker
-	StateNotifier           statefeed.Notifier
-	BlockNotifier           blockfeed.Notifier
-	AttestationNotifier     operation.Notifier
-	VerifiedAttestationFeed *event.Feed
-	VerifiedBlockHeaderFeed *event.Feed
-	StateGen                *stategen.State
+	P2P                 p2p.P2P
+	DB                  db.NoHeadAccessDatabase
+	AttPool             attestations.Pool
+	ExitPool            voluntaryexits.PoolManager
+	SlashingPool        slashings.PoolManager
+	Chain               blockchainService
+	InitialSync         Checker
+	StateNotifier       statefeed.Notifier
+	BlockNotifier       blockfeed.Notifier
+	AttestationNotifier operation.Notifier
+	StateGen            *stategen.State
 }
 
 // This defines the interface for interacting with block chain service
@@ -114,8 +111,6 @@ type Service struct {
 	badBlockCache             *lru.Cache
 	badBlockLock              sync.RWMutex
 	stateGen                  *stategen.State
-	verifiedBlockFeed         *event.Feed
-	verifiedAttestationFeed   *event.Feed
 }
 
 // NewService initializes new regular sync service.
@@ -125,26 +120,24 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 	rLimiter := newRateLimiter(cfg.P2P)
 	ctx, cancel := context.WithCancel(ctx)
 	r := &Service{
-		ctx:                     ctx,
-		cancel:                  cancel,
-		db:                      cfg.DB,
-		p2p:                     cfg.P2P,
-		attPool:                 cfg.AttPool,
-		exitPool:                cfg.ExitPool,
-		slashingPool:            cfg.SlashingPool,
-		chainStarted:            abool.New(),
-		chain:                   cfg.Chain,
-		initialSync:             cfg.InitialSync,
-		attestationNotifier:     cfg.AttestationNotifier,
-		slotToPendingBlocks:     c,
-		seenPendingBlocks:       make(map[[32]byte]bool),
-		blkRootToPendingAtts:    make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
-		stateNotifier:           cfg.StateNotifier,
-		blockNotifier:           cfg.BlockNotifier,
-		stateGen:                cfg.StateGen,
-		rateLimiter:             rLimiter,
-		verifiedAttestationFeed: cfg.VerifiedAttestationFeed,
-		verifiedBlockFeed:       cfg.VerifiedBlockHeaderFeed,
+		ctx:                  ctx,
+		cancel:               cancel,
+		db:                   cfg.DB,
+		p2p:                  cfg.P2P,
+		attPool:              cfg.AttPool,
+		exitPool:             cfg.ExitPool,
+		slashingPool:         cfg.SlashingPool,
+		chainStarted:         abool.New(),
+		chain:                cfg.Chain,
+		initialSync:          cfg.InitialSync,
+		attestationNotifier:  cfg.AttestationNotifier,
+		slotToPendingBlocks:  c,
+		seenPendingBlocks:    make(map[[32]byte]bool),
+		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
+		stateNotifier:        cfg.StateNotifier,
+		blockNotifier:        cfg.BlockNotifier,
+		stateGen:             cfg.StateGen,
+		rateLimiter:          rLimiter,
 	}
 
 	go r.registerHandlers()
