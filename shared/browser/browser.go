@@ -1,4 +1,5 @@
-/**
+/*
+// skipcq: SCT-1000
 Package from the official Github CLI https://github.com/cli/cli/blob/f30bc5bc64f9c3a839e39713adab48790264119c/pkg/browser/browser.go
 All rights reserved to the package authors, respectively. MIT License. See https://github.com/cli/cli/blob/trunk/LICENSE
 */

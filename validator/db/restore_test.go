@@ -45,7 +45,7 @@ func TestRestore(t *testing.T) {
 	require.NoError(t, set.Set(cmd.RestoreTargetDirFlag.Name, restoreDir))
 	cliCtx := cli.NewContext(&app, set, nil)
 
-	assert.NoError(t, restore(cliCtx))
+	assert.NoError(t, Restore(cliCtx))
 
 	files, err := ioutil.ReadDir(restoreDir)
 	require.NoError(t, err)

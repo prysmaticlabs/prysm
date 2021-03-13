@@ -969,8 +969,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_golang_snappy",
         importpath = "github.com/golang/snappy",
-        sum = "h1:aeE13tS0IiQgFjYdoL8qN3K1N2bXXtI6Vi51/y7BpMw=",
-        version = "v0.0.2",
+        sum = "h1:fHPg5GQYlCeLIPB9BZqMVR5nR9A+IM5zcgeTdjMYmLA=",
+        version = "v0.0.3",
     )
     go_repository(
         name = "com_github_google_btree",
@@ -1031,12 +1031,6 @@ def prysm_deps():
     )
 
     go_repository(
-        name = "com_github_google_shlex",
-        importpath = "github.com/google/shlex",
-        sum = "h1:El6M4kTTCOh6aBiKaUGG7oYTSPP8MxqL4YI3kZKwcP4=",
-        version = "v0.0.0-20191202100458-e7afc7fbc510",
-    )
-    go_repository(
         name = "com_github_google_uuid",
         importpath = "github.com/google/uuid",
         sum = "h1:qJYtXnJRWmpe7m/3XlyhrsLrEURqHRM2kxzoxXqyUDs=",
@@ -1057,13 +1051,13 @@ def prysm_deps():
     )
     go_repository(
         name = "com_github_googleapis_gnostic",
-        importpath = "github.com/googleapis/gnostic",
-        sum = "h1:rVsPeBmXbYv4If/cumu1AzZPwV58q433hvONV1UEZoI=",
-        version = "v0.1.0",
-        build_naming_convention = "go_default_library",
         build_directives = [
             "gazelle:resolve go github.com/googleapis/gnostic/extensions //extensions:go_default_library",
         ],
+        build_naming_convention = "go_default_library",
+        importpath = "github.com/googleapis/gnostic",
+        sum = "h1:rVsPeBmXbYv4If/cumu1AzZPwV58q433hvONV1UEZoI=",
+        version = "v0.1.0",
     )
     go_repository(
         name = "com_github_gophercloud_gophercloud",
@@ -2583,8 +2577,8 @@ def prysm_deps():
         name = "com_github_prysmaticlabs_ethereumapis",
         build_file_generation = "off",
         importpath = "github.com/prysmaticlabs/ethereumapis",
-        sum = "h1:GhzZ3sO2ZiuJxxm3dyBps+tDaVu3q7xMdJD2yJXyuDs=",
-        version = "v0.0.0-20210218195742-a393edb60549",
+        sum = "h1:WbNiB9+NFslsXtM8mjOEjcsSbedl+06eGBkW7zvSynE=",
+        version = "v0.0.0-20210303155523-663cc605c7d9",
     )
     go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",
@@ -2894,11 +2888,11 @@ def prysm_deps():
     http_archive(
         name = "com_github_supranational_blst",
         urls = [
-            "https://github.com/supranational/blst/archive/97e8ce0396161f306cdc9038af983ae78409213c.tar.gz",
+            "https://github.com/supranational/blst/archive/575c3dd0219299ecf08d47d016ea392be9e47fe8.tar.gz",
         ],
-        strip_prefix = "blst-97e8ce0396161f306cdc9038af983ae78409213c",
+        strip_prefix = "blst-575c3dd0219299ecf08d47d016ea392be9e47fe8",
         build_file = "//third_party:blst/blst.BUILD",
-        sha256 = "f86cce48d1c0c393399121034b2190b807e08ba7ad09a4b856e708df01e05c19",
+        sha256 = "6be8a61424fed7d31cdc0277c7c08cffbe5b0d13d6afc4456dd84d42f9423c59",
     )
     go_repository(
         name = "com_github_syndtr_goleveldb",
@@ -3397,10 +3391,10 @@ def prysm_deps():
     go_repository(
         name = "io_k8s_client_go",
         build_extra_args = ["-exclude=vendor"],
+        build_naming_convention = "go_default_library",
         importpath = "k8s.io/client-go",
         sum = "h1:QaJzz92tsN67oorwzmoB0a9r9ZVHuD5ryjbCKP0U22k=",
         version = "v0.18.3",
-        build_naming_convention = "go_default_library",
     )
     go_repository(
         name = "io_k8s_gengo",

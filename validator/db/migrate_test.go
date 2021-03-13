@@ -11,17 +11,17 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func Test_migrateUp_NoDBFound(t *testing.T) {
+func TestMigrateUp_NoDBFound(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	set.String(cmd.DataDirFlag.Name, "", "")
 	require.NoError(t, set.Set(cmd.DataDirFlag.Name, ""))
 	cliCtx := cli.NewContext(&app, set, nil)
-	err := migrateUp(cliCtx)
+	err := MigrateUp(cliCtx)
 	assert.ErrorContains(t, "No validator db found at path", err)
 }
 
-func Test_migrateUp_OK(t *testing.T) {
+func TestMigrateUp_OK(t *testing.T) {
 	validatorDB := dbtest.SetupDB(t, nil)
 	dbPath := validatorDB.DatabasePath()
 	require.NoError(t, validatorDB.Close())
@@ -30,20 +30,20 @@ func Test_migrateUp_OK(t *testing.T) {
 	set.String(cmd.DataDirFlag.Name, dbPath, "")
 	require.NoError(t, set.Set(cmd.DataDirFlag.Name, dbPath))
 	cliCtx := cli.NewContext(&app, set, nil)
-	assert.NoError(t, migrateUp(cliCtx))
+	assert.NoError(t, MigrateUp(cliCtx))
 }
 
-func Test_migrateDown_NoDBFound(t *testing.T) {
+func TestMigrateDown_NoDBFound(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	set.String(cmd.DataDirFlag.Name, "", "")
 	require.NoError(t, set.Set(cmd.DataDirFlag.Name, ""))
 	cliCtx := cli.NewContext(&app, set, nil)
-	err := migrateDown(cliCtx)
+	err := MigrateDown(cliCtx)
 	assert.ErrorContains(t, "No validator db found at path", err)
 }
 
-func Test_migrateDown_OK(t *testing.T) {
+func TestMigrateDown_OK(t *testing.T) {
 	validatorDB := dbtest.SetupDB(t, nil)
 	dbPath := validatorDB.DatabasePath()
 	require.NoError(t, validatorDB.Close())
@@ -52,5 +52,5 @@ func Test_migrateDown_OK(t *testing.T) {
 	set.String(cmd.DataDirFlag.Name, dbPath, "")
 	require.NoError(t, set.Set(cmd.DataDirFlag.Name, dbPath))
 	cliCtx := cli.NewContext(&app, set, nil)
-	assert.NoError(t, migrateDown(cliCtx))
+	assert.NoError(t, MigrateDown(cliCtx))
 }
