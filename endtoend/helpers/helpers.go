@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	maxPollingWaitTime  = 60 * time.Second // A minute so timing out doesn't take very long.
+	maxPollingWaitTime  = 90 * time.Second // A minute so timing out doesn't take very long.
 	filePollingInterval = 500 * time.Millisecond
 	memoryHeapFileName  = "node_heap_%d.pb.gz"
 	cpuProfileFileName  = "node_cpu_profile_%d.pb.gz"
@@ -70,6 +70,7 @@ func WaitForTextInFile(file *os.File, text string) error {
 			fileScanner.Buffer(buf, maxFileBufferSize)
 			for fileScanner.Scan() {
 				scanned := fileScanner.Text()
+				fmt.Println(scanned)
 				if strings.Contains(scanned, text) {
 					return nil
 				}
