@@ -87,6 +87,7 @@ require (
 	github.com/prysmaticlabs/ethereumapis v0.0.0-20210303155523-663cc605c7d9
 	github.com/prysmaticlabs/go-bitfield v0.0.0-20210202205921-7fcea7c45dc8
 	github.com/prysmaticlabs/prombbolt v0.0.0-20210126082820-9b7adba6db7c
+	github.com/prysmaticlabs/prysm v1.3.3
 	github.com/rs/cors v1.7.0
 	github.com/schollz/progressbar/v3 v3.3.4
 	github.com/sirupsen/logrus v1.6.0
@@ -129,3 +130,5 @@ require (
 replace github.com/ethereum/go-ethereum => github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20210222122116-71d15f72c132
 
 replace github.com/json-iterator/go => github.com/prestonvanloon/go v1.1.7-0.20190722034630-4f2e55fcf87b
+
+replace github.com/prysmaticlabs/prysm => github.com/lukso-network/vanguard-consensus-engine v0.0.1
