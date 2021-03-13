@@ -81,14 +81,13 @@ func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 }
 
 func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
-	aggBits := bitfield.NewBitlist(3)
 	attestations := []*ethpb.Attestation{
 		{
 			Data: &ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
 				Source: &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
 			},
-			AggregationBits: aggBits,
+			AggregationBits: bitfield.Bitlist{0x09},
 		},
 	}
 	b := testutil.NewBeaconBlock()
@@ -357,7 +356,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestProcessAttestationsNoVerify_IncorrectSlotTargetEpoch(t *testing.T) {
+func TestVerifyAttestationNoVerifySignature_IncorrectSlotTargetEpoch(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, 1)
 
 	att := testutil.HydrateAttestation(&ethpb.Attestation{
@@ -367,7 +366,7 @@ func TestProcessAttestationsNoVerify_IncorrectSlotTargetEpoch(t *testing.T) {
 		},
 	})
 	wanted := "slot 32 does not match target epoch 0"
-	_, err := blocks.ProcessAttestationNoVerifySignature(context.TODO(), beaconState, att)
+	_, err := blocks.VerifyAttestationNoVerifySignature(context.TODO(), beaconState, att)
 	assert.ErrorContains(t, wanted, err)
 }
 
@@ -402,7 +401,38 @@ func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestProcessAttestationsNoVerify_BadAttIdx(t *testing.T) {
+func TestVerifyAttestationNoVerifySignature_OK(t *testing.T) {
+	// Attestation with an empty signature
+
+	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
+
+	aggBits := bitfield.NewBitlist(3)
+	aggBits.SetBitAt(1, true)
+	var mockRoot [32]byte
+	copy(mockRoot[:], "hello-world")
+	att := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			Source: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
+			Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+		},
+		AggregationBits: aggBits,
+	}
+
+	zeroSig := [96]byte{}
+	att.Signature = zeroSig[:]
+
+	err := beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
+	require.NoError(t, err)
+	ckp := beaconState.CurrentJustifiedCheckpoint()
+	copy(ckp.Root, "hello-world")
+	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(ckp))
+	require.NoError(t, beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{}))
+
+	_, err = blocks.VerifyAttestationNoVerifySignature(context.TODO(), beaconState, att)
+	assert.NoError(t, err)
+}
+
+func TestVerifyAttestationNoVerifySignature_BadAttIdx(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(1, true)
@@ -423,7 +453,7 @@ func TestProcessAttestationsNoVerify_BadAttIdx(t *testing.T) {
 	copy(ckp.Root, "hello-world")
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(ckp))
 	require.NoError(t, beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{}))
-	_, err := blocks.ProcessAttestationNoVerifySignature(context.TODO(), beaconState, att)
+	_, err := blocks.VerifyAttestationNoVerifySignature(context.TODO(), beaconState, att)
 	require.ErrorContains(t, "committee index 100 >= committee count 1", err)
 }
 

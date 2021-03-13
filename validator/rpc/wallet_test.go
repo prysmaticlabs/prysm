@@ -25,11 +25,12 @@ import (
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
+const strongPass = "29384283xasjasd32%%&*@*#*"
+
 func TestServer_CreateWallet_Imported(t *testing.T) {
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
 	ctx := context.Background()
-	strongPass := "29384283xasjasd32%%&*@*#*"
 	s := &Server{
 		walletInitializedFeed: new(event.Feed),
 		walletDir:             defaultWalletPath,
@@ -86,7 +87,6 @@ func TestServer_CreateWallet_Derived(t *testing.T) {
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
 	ctx := context.Background()
-	strongPass := "29384283xasjasd32%%&*@*#*"
 	s := &Server{
 		walletInitializedFeed: new(event.Feed),
 		walletDir:             localWalletDir,
@@ -125,7 +125,6 @@ func TestServer_WalletConfig(t *testing.T) {
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
 	ctx := context.Background()
-	strongPass := "29384283xasjasd32%%&*@*#*"
 	s := &Server{
 		walletInitializedFeed: new(event.Feed),
 		walletDir:             defaultWalletPath,
@@ -157,7 +156,6 @@ func TestServer_ImportKeystores_FailedPreconditions_WrongKeymanagerKind(t *testi
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
 	ctx := context.Background()
-	strongPass := "29384283xasjasd32%%&*@*#*"
 	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
@@ -181,7 +179,6 @@ func TestServer_ImportKeystores_FailedPreconditions(t *testing.T) {
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
 	ctx := context.Background()
-	strongPass := "29384283xasjasd32%%&*@*#*"
 	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
@@ -217,7 +214,6 @@ func TestServer_ImportKeystores_OK(t *testing.T) {
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
 	ctx := context.Background()
-	strongPass := "29384283xasjasd32%%&*@*#*"
 	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
