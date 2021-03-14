@@ -12,21 +12,20 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-
 var (
 	logThreshold = 8
 	dialInterval = 5 * time.Second
 
 	ConnectionError = errors.New("Client not connected")
-	errNotSynced = errors.New("Pandora node is still syncing")
-	errNoEndpoint = errors.New("No endpoint defined")
+	errNotSynced    = errors.New("Pandora node is still syncing")
+	errNoEndpoint   = errors.New("No endpoint defined")
 )
 
 type ExtraData struct {
-	Slot 					uint64
-	Epoch   				uint64
-	ProposerIndex 			uint64
-	CoinbaseAddress         common.Address
+	Slot            uint64
+	Epoch           uint64
+	ProposerIndex   uint64
+	CoinbaseAddress common.Address
 }
 
 // Client defines a subset of methods conformed to by Pandora RPC clients for
@@ -45,14 +44,14 @@ type RPCClient interface {
 type DialRPCFn func(endpoint string) (*PandoraClient, error)
 
 type Service struct {
-	connected 			  bool
-	isRunning             bool
-	ctx                   context.Context
-	cancel                context.CancelFunc
-	endpoint              string
-	pandoraClient    	  *PandoraClient
-	runError              error
-	dialPandoraFn 		  DialRPCFn
+	connected     bool
+	isRunning     bool
+	ctx           context.Context
+	cancel        context.CancelFunc
+	endpoint      string
+	pandoraClient *PandoraClient
+	runError      error
+	dialPandoraFn DialRPCFn
 }
 
 func NewService(ctx context.Context, endpoint string, dialPandoraFn DialRPCFn) (*Service, error) {
@@ -66,11 +65,11 @@ func NewService(ctx context.Context, endpoint string, dialPandoraFn DialRPCFn) (
 	}
 
 	return &Service{
-		ctx:              	ctx,
-		cancel:           	cancel,
-		endpoint:      	  	endpoint,
-		dialPandoraFn: 		dialPandoraFn,
-		pandoraClient:      pandoraClient,
+		ctx:           ctx,
+		cancel:        cancel,
+		endpoint:      endpoint,
+		dialPandoraFn: dialPandoraFn,
+		pandoraClient: pandoraClient,
 	}, nil
 }
 
@@ -116,8 +115,7 @@ func (s *Service) waitForConnection() {
 	if synced {
 		s.connected = true
 		s.runError = nil
-		log.WithFields(logrus.Fields{"endpoint": logutil.MaskCredentialsLogging(s.endpoint),
-		}).Info("Connected to pandora chain")
+		log.WithFields(logrus.Fields{"endpoint": logutil.MaskCredentialsLogging(s.endpoint)}).Info("Connected to pandora chain")
 		return
 	}
 	if errSynced != nil {

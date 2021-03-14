@@ -6,11 +6,6 @@ package node
 import (
 	"context"
 	"fmt"
-	gethRpc "github.com/ethereum/go-ethereum/rpc"
-	"github.com/lukso-network/vanguard-consensus-engine/validator/client"
-	"github.com/lukso-network/vanguard-consensus-engine/validator/pandora"
-	"github.com/lukso-network/vanguard-consensus-engine/validator/rpc"
-
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -18,6 +13,7 @@ import (
 	"sync"
 	"syscall"
 
+	gethRpc "github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/shared"
@@ -34,10 +30,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/version"
 	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	g "github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
+	"github.com/prysmaticlabs/prysm/validator/pandora"
+	"github.com/prysmaticlabs/prysm/validator/rpc"
 	"github.com/prysmaticlabs/prysm/validator/rpc/gateway"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
@@ -251,7 +250,9 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 		}
 	}
 
-	if err := c.registerPandoraService(cliCtx); err != nil { return err }
+	if err := c.registerPandoraService(cliCtx); err != nil {
+		return err
+	}
 
 	if err := c.registerValidatorService(keyManager); err != nil {
 		return err
@@ -342,7 +343,9 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 			return err
 		}
 	}
-	if err := c.registerPandoraService(cliCtx); err != nil { return err}
+	if err := c.registerPandoraService(cliCtx); err != nil {
+		return err
+	}
 	if err := c.registerValidatorService(keyManager); err != nil {
 		return err
 	}
@@ -431,7 +434,7 @@ func (c *ValidatorClient) registerValidatorService(
 		WalletInitializedFeed:      c.walletInitialized,
 		GraffitiStruct:             gStruct,
 		LogDutyCountDown:           c.cliCtx.Bool(flags.EnableDutyCountDown.Name),
-		PandoraService:    			pandoraService,
+		PandoraService:             pandoraService,
 	})
 
 	if err != nil {

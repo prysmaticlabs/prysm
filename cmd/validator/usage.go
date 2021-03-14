@@ -2,7 +2,6 @@
 package main
 
 import (
-	"github.com/lukso-network/vanguard-consensus-engine/validator/pandora"
 	"io"
 	"sort"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/validator/pandora"
 	"github.com/urfave/cli/v2"
 )
 

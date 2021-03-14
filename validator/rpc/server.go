@@ -1,8 +1,6 @@
 package rpc
 
 import (
-	"github.com/lukso-network/vanguard-consensus-engine/validator/client"
-
 	"context"
 	"errors"
 	"fmt"
@@ -21,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"

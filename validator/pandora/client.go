@@ -18,10 +18,10 @@ type PandoraClient struct {
 
 // GetWorkResponseParams contains response params of `eth_gethWork` api
 type GetWorkResponseParams struct {
-	HeaderHash 		common.Hash
-	TxReceipt       common.Hash
-	Header 			*types.Header
-	BlockNumber     uint64
+	HeaderHash  common.Hash
+	TxReceipt   common.Hash
+	Header      *types.Header
+	BlockNumber uint64
 }
 
 // RpcProgressParams contains response params of `eth_syncing` api
@@ -76,7 +76,7 @@ func (oc *PandoraClient) GetWork(ctx context.Context) (*GetWorkResponseParams, e
 	receiptHash := common.HexToHash(response[1])
 	rlpHeader, err := hexutil.Decode(response[2])
 	if nil != err {
-		return nil, errors.Wrap(err,"Failed to encode hex header")
+		return nil, errors.Wrap(err, "Failed to encode hex header")
 	}
 	header := types.Header{}
 	if err := rlp.DecodeBytes(rlpHeader, &header); err != nil {
@@ -91,9 +91,9 @@ func (oc *PandoraClient) GetWork(ctx context.Context) (*GetWorkResponseParams, e
 	//blockNumber := binary.BigEndian.Uint64(append(blockNumberBytes[:8], empty4bytes...))
 
 	return &GetWorkResponseParams{
-		HeaderHash: headerHash,
-		TxReceipt: receiptHash,
-		Header: &header,
+		HeaderHash:  headerHash,
+		TxReceipt:   receiptHash,
+		Header:      &header,
 		BlockNumber: header.Number.Uint64(),
 	}, nil
 }

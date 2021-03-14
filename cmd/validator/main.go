@@ -4,9 +4,6 @@
 package main
 
 import (
-	"github.com/lukso-network/vanguard-consensus-engine/validator/node"
-	"github.com/lukso-network/vanguard-consensus-engine/validator/pandora"
-
 	"fmt"
 	"os"
 	"path/filepath"
@@ -28,6 +25,8 @@ import (
 	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
 	"github.com/prysmaticlabs/prysm/shared/tos"
 	"github.com/prysmaticlabs/prysm/shared/version"
+	"github.com/prysmaticlabs/prysm/validator/node"
+	"github.com/prysmaticlabs/prysm/validator/pandora"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"

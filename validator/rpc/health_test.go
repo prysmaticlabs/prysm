@@ -1,8 +1,6 @@
 package rpc
 
 import (
-	"github.com/lukso-network/vanguard-consensus-engine/validator/client"
-
 	"context"
 	"testing"
 	"time"
@@ -11,6 +9,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/validator/client"
 )
 
 type mockSyncChecker struct {

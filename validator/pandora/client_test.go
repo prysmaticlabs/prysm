@@ -104,7 +104,6 @@ func TestGetWork_OK(t *testing.T) {
 	}
 	defer mockedPandoraClient.Close()
 
-
 	inputBlock := getDummyBlock()
 	var response *GetWorkResponseParams
 	response, err = mockedPandoraClient.GetWork(context.Background())

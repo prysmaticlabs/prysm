@@ -1,8 +1,6 @@
 package accounts
 
 import (
-	"github.com/lukso-network/vanguard-consensus-engine/validator/client"
-
 	"bytes"
 	"fmt"
 	"io"
@@ -21,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/urfave/cli/v2"
 	"google.golang.org/grpc"
