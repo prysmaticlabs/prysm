@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -530,10 +531,15 @@ func (s *Service) checkForChainstart(blockHash [32]byte, blockNumber *big.Int, b
 
 // save all powchain related metadata to disk.
 func (s *Service) savePowchainData(ctx context.Context) error {
+	obj := s.preGenesisState.InnerStateUnsafe()
+	state, ok := obj.(*pb.BeaconState)
+	if !ok {
+		return errors.New("could not covert obj to beacon state pb")
+	}
 	eth1Data := &protodb.ETH1ChainData{
 		CurrentEth1Data:   s.latestEth1Data,
 		ChainstartData:    s.chainStartData,
-		BeaconState:       s.preGenesisState.InnerStateUnsafe(), // I promise not to mutate it!
+		BeaconState:       state, // I promise not to mutate it!
 		Trie:              s.depositTrie.ToProto(),
 		DepositContainers: s.depositCache.AllDepositContainers(ctx),
 	}

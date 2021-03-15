@@ -17,7 +17,7 @@ import (
 
 // InnerStateUnsafe returns the pointer value of the underlying
 // beacon state proto object, bypassing immutability. Use with care.
-func (b *BeaconState) InnerStateUnsafe() *pbp2p.BeaconStateV1 {
+func (b *BeaconState) InnerStateUnsafe() interface{} {
 	if b == nil {
 		return nil
 	}
@@ -25,7 +25,7 @@ func (b *BeaconState) InnerStateUnsafe() *pbp2p.BeaconStateV1 {
 }
 
 // CloneInnerState the beacon state into a protobuf for usage.
-func (b *BeaconState) CloneInnerState() *pbp2p.BeaconStateV1 {
+func (b *BeaconState) CloneInnerState() interface{} {
 	if b == nil || b.state == nil {
 		return nil
 	}

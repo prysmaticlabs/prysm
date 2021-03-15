@@ -86,7 +86,12 @@ func (s *Store) SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconSta
 	var err error
 	multipleEncs := make([][]byte, len(states))
 	for i, st := range states {
-		multipleEncs[i], err = encode(ctx, st.InnerStateUnsafe())
+		obj := st.InnerStateUnsafe()
+		s, ok := obj.(*pb.BeaconState)
+		if !ok {
+			return errors.New("could not covert obj to beacon state pb")
+		}
+		multipleEncs[i], err = encode(ctx, s)
 		if err != nil {
 			return err
 		}

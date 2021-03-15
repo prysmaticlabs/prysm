@@ -6,6 +6,7 @@ import (
 	"path"
 
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 )
@@ -17,7 +18,13 @@ func WriteStateToDisk(state iface.ReadOnlyBeaconState) {
 	}
 	fp := path.Join(os.TempDir(), fmt.Sprintf("beacon_state_%d.ssz", state.Slot()))
 	log.Warnf("Writing state to disk at %s", fp)
-	enc, err := state.InnerStateUnsafe().MarshalSSZ()
+	obj := state.InnerStateUnsafe()
+	s, ok := obj.(*pbp2p.BeaconState)
+	if !ok {
+		log.Error("Beacon state ")
+		return
+	}
+	enc, err := s.MarshalSSZ()
 	if err != nil {
 		log.WithError(err).Error("Failed to ssz encode state")
 		return

@@ -30,8 +30,8 @@ type ReadOnlyBeaconState interface {
 	ReadOnlyBalances
 	ReadOnlyCheckpoint
 	ReadOnlyAttestations
-	InnerStateUnsafe() *pbp2p.BeaconState
-	CloneInnerState() *pbp2p.BeaconState
+	InnerStateUnsafe() interface{}
+	CloneInnerState() interface{}
 	GenesisTime() uint64
 	GenesisValidatorRoot() []byte
 	Slot() types.Slot

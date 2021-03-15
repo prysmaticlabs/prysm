@@ -63,7 +63,13 @@ func GenerateGenesisStateFromDepositData(
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not generate genesis state")
 	}
-	return beaconState.CloneInnerState(), deposits, nil
+
+	obj := beaconState.CloneInnerState()
+	s, ok := obj.(*pb.BeaconState)
+	if !ok {
+		return nil, nil, errors.New("could not covert obj to beacon state pb")
+	}
+	return s, deposits, nil
 }
 
 // GenerateDepositsFromData a list of deposit items by creating proofs for each of them from a sparse Merkle trie.
