@@ -36,7 +36,7 @@ func StartSlasherSimulator(t *testing.T) {
 		t.Fatalf("Failed to start slasher simulator client: %v", err)
 	}
 
-	if err = helpers.WaitForTextInFile(stdOutFile, "Starting slasher simulator"); err != nil {
+	if err = helpers.WaitForTextInFile(stdOutFile, "Producing blocks for slot 0"); err != nil {
 		t.Fatalf("could not find starting logs for slasher simulator, this means it had issues starting: %v", err)
 	}
 }

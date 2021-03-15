@@ -119,7 +119,7 @@ func runEndToEndTest(t *testing.T, config *e2etypes.E2EConfig) {
 		}
 	}
 
-	simulatorOutFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, e2e.SlasherSimulatorLogFileName)
+	simulatorOutFile, err := os.Open(path.Join(e2e.TestParams.LogPath, e2e.SlasherSimulatorLogFileName))
 	if err != nil {
 		t.Fatal(err)
 	}
