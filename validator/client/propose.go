@@ -4,8 +4,11 @@ package client
 import (
 	"context"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/prysmaticlabs/prysm/validator/pandora"
 	"time"
 
+	eth1Types "github.com/ethereum/go-ethereum/core/types"
 	pbtypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -22,6 +25,18 @@ import (
 	"go.opencensus.io/trace"
 )
 
+var (
+	// errInvalidHeaderHash is returned if the header hash does not match with incoming header hash
+	errInvalidHeaderHash = errors.New("invalid header hash")
+	// errInvalidSlot is returned if the current slot does not match with incoming slot
+	errInvalidSlot = errors.New("invalid slot")
+	// errInvalidEpoch is returned if the epoch does not match with incoming epoch
+	errInvalidEpoch = errors.New("invalid epoch")
+	// errInvalidProposerIndex is returned if the proposer index does not match with incoming proposer index
+	errInvalidProposerIndex = errors.New("invalid proposer index")
+	// errInvalidTimestamp is returned if the timestamp of a block is higher than the current time
+	errInvalidTimestamp = errors.New("invalid timestamp")
+)
 type signingFunc func(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
 
 const domainDataErr = "could not get domain data"
@@ -75,6 +90,23 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [4
 	})
 	if err != nil {
 		log.WithField("blockSlot", slot).WithError(err).Error("Failed to request block from beacon node")
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return
+	}
+	// Request pandora header
+	header, headerHash, extraData, err := v.pandoraService.GetWork(ctx)
+	if err != nil {
+		log.WithField("blockSlot", slot).WithError(err).Error("Failed to request block from pandora node")
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return
+	}
+	// Validate pandora header hash, extraData fields
+	if err := v.verifyPandoraHeader(b, epoch, header, headerHash, extraData); err != nil {
+		log.WithField("blockSlot", slot).WithError(err).Error("Failed to validate pandora block header")
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
@@ -329,4 +361,37 @@ func (v *validator) getGraffiti(ctx context.Context, pubKey [48]byte) ([]byte, e
 	}
 
 	return []byte{}, nil
+}
+
+// verifyPandoraHeader verifies header hash and extraData field
+func(v *validator) verifyPandoraHeader(beaconBlk *ethpb.BeaconBlock, epoch types.Epoch,
+	header *eth1Types.Header, headerHash common.Hash, extraData *pandora.ExtraData) (error) {
+
+	// verify header hash
+    if header.Hash() != headerHash {
+    	log.WithError(errInvalidHeaderHash).Error("invalid header hash from pandora chain")
+    	return errInvalidHeaderHash
+	}
+	// verify timestamp. Timestamp should not be future time
+	if header.Time >= uint64(timeutils.Now().Unix()) {
+		log.WithError(errInvalidTimestamp).Error("invalid timestamp from pandora chain")
+		return errInvalidTimestamp
+	}
+	// verify slot number
+	if extraData.Slot != uint64(beaconBlk.Slot) {
+		log.WithError(errInvalidSlot).Error("invalid slot from pandora chain")
+		return errInvalidSlot
+	}
+	// verify epoch number
+	if extraData.Epoch != uint64(epoch) {
+		log.WithError(errInvalidEpoch).Error("invalid epoch from pandora chain")
+		return errInvalidEpoch
+	}
+	// verify proposr index
+	if extraData.ProposerIndex != uint64(beaconBlk.ProposerIndex) {
+		log.WithError(errInvalidProposerIndex).Error("invalid proposer index from pandora chain")
+		return errInvalidProposerIndex
+	}
+
+	return nil
 }

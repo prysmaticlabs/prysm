@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"github.com/prysmaticlabs/prysm/validator/pandora"
 	"strings"
 	"testing"
 	"time"
@@ -770,4 +771,44 @@ func TestGetGraffitiOrdered_Ok(t *testing.T) {
 		require.NoError(t, err)
 		require.DeepEqual(t, want, got)
 	}
+}
+
+// TestVerifyPandoraHeader_Ok method checks pandora header validation method
+func TestVerifyPandoraHeader_Ok(t *testing.T) {
+	validator, _, _, finish := setup(t)
+	pandoraService, err := pandora.MockPandoraService(pandora.HttpEndpoint, pandora.DialInProcRPCClient)
+	require.NoError(t, err)
+	pandora.ConnectPandoraService(pandoraService)
+	validator.pandoraService = pandoraService
+	defer finish()
+
+	blk := testutil.NewBeaconBlock()
+	blk.Block.Slot = 98
+	blk.Block.ProposerIndex = 23
+	epoch := types.Epoch(uint64(blk.Block.Slot) / 32)
+
+	header, headerHash, extraData, err := validator.pandoraService.GetWork(context.Background())
+	require.NoError(t, err)
+
+	// Checks all the validations
+	err = validator.verifyPandoraHeader(blk.Block, epoch, header, headerHash, extraData)
+	require.NoError(t, err, "Should pass without any error")
+	// Should get an `errInvalidHeaderHash` error
+	header.Time = uint64(14265167)
+	want := "invalid header hash"
+	err = validator.verifyPandoraHeader(blk.Block, epoch, header, headerHash, extraData)
+	require.ErrorContains(t, want, err, "Should get an errInvalidHeaderHash error")
+	// Should get an `errInvalidSlot` error
+	header.Time = uint64(1426516743)
+	blk.Block.Slot = 90
+	want = "invalid slot"
+	err = validator.verifyPandoraHeader(blk.Block, epoch, header, headerHash, extraData)
+	require.ErrorContains(t, want, err, "Should get an errInvalidSlot error")
+	// Should get an `errInvalidEpoch` error
+	blk.Block.Slot = 98
+	epoch = 2
+	want = "invalid epoch"
+	err = validator.verifyPandoraHeader(blk.Block, epoch, header, headerHash, extraData)
+	require.ErrorContains(t, want, err, "Should get an errInvalidEpoch error")
+	// Should get an `
 }
