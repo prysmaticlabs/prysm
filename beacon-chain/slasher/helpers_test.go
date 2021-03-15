@@ -138,7 +138,7 @@ func TestService_groupByChunkIndex(t *testing.T) {
 	}
 }
 
-func TestService_validateAttestationIntegrity(t *testing.T) {
+func TestService_filterAttestations(t *testing.T) {
 	tests := []struct {
 		name           string
 		input          []*slashertypes.IndexedAttestationWrapper
@@ -250,7 +250,7 @@ func TestService_validateAttestationIntegrity(t *testing.T) {
 			srv := &Service{
 				params: DefaultParams(),
 			}
-			valid, deferred, numDropped := srv.validateAttestationIntegrity(tt.input, tt.inputEpoch)
+			valid, deferred, numDropped := srv.filterAttestations(tt.input, tt.inputEpoch)
 			if len(tt.wantedValid) > 0 {
 				require.DeepEqual(t, tt.wantedValid, valid)
 			}

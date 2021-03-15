@@ -64,7 +64,7 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 			// We take all the attestations in the queue and filter out
 			// those which are valid now and valid in the future.
 			attestations := s.attsQueue.dequeue()
-			validAtts, validInFuture, numDropped := s.validateAttestationIntegrity(attestations, currentEpoch)
+			validAtts, validInFuture, numDropped := s.filterAttestations(attestations, currentEpoch)
 
 			deferredAttestationsTotal.Add(float64(len(validInFuture)))
 			droppedAttestationsTotal.Add(float64(numDropped))

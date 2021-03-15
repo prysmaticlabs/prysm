@@ -8,7 +8,7 @@ import (
 
 // Struct for handling a thread-safe list of indexed attestation wrappers.
 type attestationsQueue struct {
-	lock  sync.RWMutex
+	sync.RWMutex
 	items []*slashertypes.IndexedAttestationWrapper
 }
 
@@ -31,28 +31,28 @@ func newBlocksQueue() *blocksQueue {
 }
 
 func (q *attestationsQueue) push(att *slashertypes.IndexedAttestationWrapper) {
-	q.lock.Lock()
-	defer q.lock.Unlock()
+	q.Lock()
+	defer q.Unlock()
 	q.items = append(q.items, att)
 }
 
 func (q *attestationsQueue) dequeue() []*slashertypes.IndexedAttestationWrapper {
-	q.lock.Lock()
-	defer q.lock.Unlock()
+	q.Lock()
+	defer q.Unlock()
 	items := q.items
 	q.items = make([]*slashertypes.IndexedAttestationWrapper, 0)
 	return items
 }
 
 func (q *attestationsQueue) size() int {
-	q.lock.RLock()
-	defer q.lock.RUnlock()
+	q.RLock()
+	defer q.RUnlock()
 	return len(q.items)
 }
 
 func (q *attestationsQueue) extend(atts []*slashertypes.IndexedAttestationWrapper) {
-	q.lock.Lock()
-	defer q.lock.Unlock()
+	q.Lock()
+	defer q.Unlock()
 	q.items = append(q.items, atts...)
 }
 

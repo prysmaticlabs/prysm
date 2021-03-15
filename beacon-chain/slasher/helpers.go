@@ -46,53 +46,59 @@ func (s *Service) groupByChunkIndex(
 	return attestationsByChunkIndex
 }
 
-// Validates the attestation data integrity, ensuring we have no nil values for
-// source, epoch, and that the source epoch of the attestation must be less than
-// the target epoch, which is a precondition for performing slashing detection.
-// This function also checks the attestation source epoch is within the history size
-// we keep track of for slashing detection.
 // This function returns a list of valid attestations, a list of attestations that are
 // valid in the future, and the number of attestations dropped.
-func (s *Service) validateAttestationIntegrity(
+func (s *Service) filterAttestations(
 	atts []*slashertypes.IndexedAttestationWrapper, currentEpoch types.Epoch,
 ) (valid, validInFuture []*slashertypes.IndexedAttestationWrapper, numDropped int) {
 	valid = make([]*slashertypes.IndexedAttestationWrapper, 0, len(atts))
 	validInFuture = make([]*slashertypes.IndexedAttestationWrapper, 0, len(atts))
 
 	for _, attWrapper := range atts {
-		// If an attestation is malformed, we drop it.
-		if attWrapper == nil ||
-			attWrapper.IndexedAttestation == nil ||
-			attWrapper.IndexedAttestation.Data == nil ||
-			attWrapper.IndexedAttestation.Data.Source == nil ||
-			attWrapper.IndexedAttestation.Data.Target == nil {
-			numDropped++
-			continue
-		}
-
-		// All valid attestations cannot have source epoch > target epoch.
-		sourceEpoch := attWrapper.IndexedAttestation.Data.Source.Epoch
-		targetEpoch := attWrapper.IndexedAttestation.Data.Target.Epoch
-		if sourceEpoch > targetEpoch {
-			numDropped++
-			continue
-		}
-
-		// If an attestation's source is epoch is older than the max history length
-		// we keep track of for slashing detection, we drop it.
-		if sourceEpoch+types.Epoch(s.params.historyLength) <= currentEpoch {
+		if !s.validateAttestationIntegrity(attWrapper, currentEpoch) {
 			numDropped++
 			continue
 		}
 
 		// If an attestations's target epoch is in the future, we defer processing for later.
-		if targetEpoch > currentEpoch {
+		if attWrapper.IndexedAttestation.Data.Target.Epoch > currentEpoch {
 			validInFuture = append(validInFuture, attWrapper)
 		} else {
 			valid = append(valid, attWrapper)
 		}
 	}
 	return
+}
+
+// Validates the attestation data integrity, ensuring we have no nil values for
+// source, epoch, and that the source epoch of the attestation must be less than
+// the target epoch, which is a precondition for performing slashing detection.
+// This function also checks the attestation source epoch is within the history size
+// we keep track of for slashing detection.
+func (s *Service) validateAttestationIntegrity(attWrapper *slashertypes.IndexedAttestationWrapper, currentEpoch types.Epoch) bool {
+	// If an attestation is malformed, we drop it.
+	if attWrapper == nil ||
+		attWrapper.IndexedAttestation == nil ||
+		attWrapper.IndexedAttestation.Data == nil ||
+		attWrapper.IndexedAttestation.Data.Source == nil ||
+		attWrapper.IndexedAttestation.Data.Target == nil {
+		return false
+	}
+
+	// All valid attestations cannot have source epoch > target epoch.
+	sourceEpoch := attWrapper.IndexedAttestation.Data.Source.Epoch
+	targetEpoch := attWrapper.IndexedAttestation.Data.Target.Epoch
+	if sourceEpoch > targetEpoch {
+		return false
+	}
+
+	// If an attestation's source is epoch is older than the max history length
+	// we keep track of for slashing detection, we drop it.
+	if sourceEpoch+types.Epoch(s.params.historyLength) <= currentEpoch {
+		return false
+	}
+
+	return true
 }
 
 // Logs a slahing event with its particular details of the slashing
