@@ -75,12 +75,15 @@ type BeaconChainConfig struct {
 	ValidatorRegistryLimit    uint64      `yaml:"VALIDATOR_REGISTRY_LIMIT" spec:"true"`     // ValidatorRegistryLimit defines the upper bound of validators can participate in eth2.
 
 	// Reward and penalty quotients constants.
-	BaseRewardFactor               uint64 `yaml:"BASE_REWARD_FACTOR" spec:"true"`               // BaseRewardFactor is used to calculate validator per-slot interest rate.
-	WhistleBlowerRewardQuotient    uint64 `yaml:"WHISTLEBLOWER_REWARD_QUOTIENT" spec:"true"`    // WhistleBlowerRewardQuotient is used to calculate whistle blower reward.
-	ProposerRewardQuotient         uint64 `yaml:"PROPOSER_REWARD_QUOTIENT" spec:"true"`         // ProposerRewardQuotient is used to calculate the reward for proposers.
-	InactivityPenaltyQuotient      uint64 `yaml:"INACTIVITY_PENALTY_QUOTIENT" spec:"true"`      // InactivityPenaltyQuotient is used to calculate the penalty for a validator that is offline.
-	MinSlashingPenaltyQuotient     uint64 `yaml:"MIN_SLASHING_PENALTY_QUOTIENT" spec:"true"`    // MinSlashingPenaltyQuotient is used to calculate the minimum penalty to prevent DoS attacks.
-	ProportionalSlashingMultiplier uint64 `yaml:"PROPORTIONAL_SLASHING_MULTIPLIER" spec:"true"` // ProportionalSlashingMultiplier is used as a multiplier on slashed penalties.
+	BaseRewardFactor                  uint64 `yaml:"BASE_REWARD_FACTOR" spec:"true"`                   // BaseRewardFactor is used to calculate validator per-slot interest rate.
+	WhistleBlowerRewardQuotient       uint64 `yaml:"WHISTLEBLOWER_REWARD_QUOTIENT" spec:"true"`        // WhistleBlowerRewardQuotient is used to calculate whistle blower reward.
+	ProposerRewardQuotient            uint64 `yaml:"PROPOSER_REWARD_QUOTIENT" spec:"true"`             // ProposerRewardQuotient is used to calculate the reward for proposers.
+	InactivityPenaltyQuotient         uint64 `yaml:"INACTIVITY_PENALTY_QUOTIENT" spec:"true"`          // InactivityPenaltyQuotient is used to calculate the penalty for a validator that is offline.
+	InactivityPenaltyQuotientHF1      uint64 `yaml:"HF1_INACTIVITY_PENALTY_QUOTIENT spec:true"`        // InactivityPenaltyQuotientHF1 is used after hard fork 1 to calculate the penalty for a validator that is offline.
+	MinSlashingPenaltyQuotient        uint64 `yaml:"MIN_SLASHING_PENALTY_QUOTIENT" spec:"true"`        // MinSlashingPenaltyQuotient is used to calculate the minimum penalty to prevent DoS attacks.
+	MinSlashingPenaltyQuotientHF1     uint64 `yaml:"HF1_MIN_SLASHING_PENALTY_QUOTIENT" spec:"true"`    // MinSlashingPenaltyQuotientHF1 is used after hard fork 1 to calculate the minimum penalty to prevent DoS attacks.
+	ProportionalSlashingMultiplier    uint64 `yaml:"PROPORTIONAL_SLASHING_MULTIPLIER" spec:"true"`     // ProportionalSlashingMultiplier is used as a multiplier on slashed penalties.
+	ProportionalSlashingMultiplierHF1 uint64 `yaml:"HF1_PROPORTIONAL_SLASHING_MULTIPLIER" spec:"true"` // ProportionalSlashingMultiplierHF1 is used after hard fork 1 as a multiplier on slashed penalties.
 
 	// Max operations per block constants.
 	MaxProposerSlashings uint64 `yaml:"MAX_PROPOSER_SLASHINGS" spec:"true"` // MaxProposerSlashings defines the maximum number of slashings of proposers possible in a block.
@@ -117,6 +120,9 @@ type BeaconChainConfig struct {
 	// Slasher constants.
 	WeakSubjectivityPeriod    types.Epoch // WeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events.
 	PruneSlasherStoragePeriod types.Epoch // PruneSlasherStoragePeriod defines the time period expressed in number of epochs were proof of stake network should prune attestation and block header store.
+
+	// Slashing protection constants.
+	SlashingProtectionPruningEpochs types.Epoch // SlashingProtectionPruningEpochs defines a period after which all prior epochs are pruned in the validator database.
 
 	// Fork-related values.
 	GenesisForkVersion  []byte                 `yaml:"GENESIS_FORK_VERSION" spec:"true"` // GenesisForkVersion is used to track fork version between state transitions.

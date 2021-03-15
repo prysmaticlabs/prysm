@@ -118,6 +118,7 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 	boltDB, err := bolt.Open(datafile, params.BeaconIoConfig().ReadWritePermissions, &bolt.Options{
 		Timeout:         params.BeaconIoConfig().BoltTimeout,
 		InitialMmapSize: config.InitialMMapSize,
+		NoFreelistSync:  true,
 	})
 	if err != nil {
 		if errors.Is(err, bolt.ErrTimeout) {
@@ -161,7 +162,7 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 	}
 
 	// Prune attesting records older than the current weak subjectivity period.
-	if err := kv.PruneAttestationsOlderThanCurrentWeakSubjectivity(ctx); err != nil {
+	if err := kv.PruneAttestations(ctx); err != nil {
 		return nil, errors.Wrap(err, "could not prune old attestations from DB")
 	}
 

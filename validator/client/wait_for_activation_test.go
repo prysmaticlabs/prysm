@@ -52,7 +52,7 @@ func TestWaitActivation_ContextCanceled(t *testing.T) {
 	)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	assert.ErrorContains(t, cancelledCtx, v.WaitForActivation(ctx))
+	assert.ErrorContains(t, cancelledCtx, v.WaitForActivation(ctx, nil))
 }
 
 func TestWaitActivation_StreamSetupFails_AttemptsToReconnect(t *testing.T) {
@@ -83,7 +83,7 @@ func TestWaitActivation_StreamSetupFails_AttemptsToReconnect(t *testing.T) {
 	resp := generateMockStatusResponse([][]byte{pubKey[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	clientStream.EXPECT().Recv().Return(resp, nil)
-	assert.NoError(t, v.WaitForActivation(context.Background()))
+	assert.NoError(t, v.WaitForActivation(context.Background(), nil))
 }
 
 func TestWaitForActivation_ReceiveErrorFromStream_AttemptsReconnection(t *testing.T) {
@@ -118,7 +118,7 @@ func TestWaitForActivation_ReceiveErrorFromStream_AttemptsReconnection(t *testin
 		nil,
 		errors.New("fails"),
 	).Return(resp, nil)
-	assert.NoError(t, v.WaitForActivation(context.Background()))
+	assert.NoError(t, v.WaitForActivation(context.Background(), nil))
 }
 
 func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
@@ -153,7 +153,7 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 		resp,
 		nil,
 	)
-	assert.NoError(t, v.WaitForActivation(context.Background()), "Could not wait for activation")
+	assert.NoError(t, v.WaitForActivation(context.Background(), nil), "Could not wait for activation")
 	assert.LogsContain(t, hook, "Validator activated")
 }
 
@@ -188,7 +188,7 @@ func TestWaitForActivation_Exiting(t *testing.T) {
 		resp,
 		nil,
 	)
-	assert.NoError(t, v.WaitForActivation(context.Background()))
+	assert.NoError(t, v.WaitForActivation(context.Background(), nil))
 }
 
 func TestWaitForActivation_RefetchKeys(t *testing.T) {
@@ -295,10 +295,10 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			// We add the active key into the keymanager and simulate a key refresh.
 			time.Sleep(time.Second * 1)
 			km.keysMap[activePubKey] = activePrivKey
-			km.SimulateAccountChanges()
+			km.SimulateAccountChanges(make([][48]byte, 0))
 		}()
 
-		assert.NoError(t, v.WaitForActivation(context.Background()))
+		assert.NoError(t, v.WaitForActivation(context.Background(), nil))
 		assert.LogsContain(t, hook, "Waiting for deposit to be observed by beacon node")
 		assert.LogsContain(t, hook, "Validator activated")
 	})

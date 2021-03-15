@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -31,11 +32,13 @@ func TestValidatorMap_DistinctCopy(t *testing.T) {
 			WithdrawableEpoch:          1,
 		})
 	}
-	handler := newValHandler(vals)
-	newHandler := handler.copy()
+	handler := stateutil.NewValMapHandler(vals)
+	newHandler := handler.Copy()
 	wantedPubkey := strconv.Itoa(22)
-	handler.valIdxMap[bytesutil.ToBytes48([]byte(wantedPubkey))] = 27
-	assert.NotEqual(t, handler.valIdxMap[bytesutil.ToBytes48([]byte(wantedPubkey))], newHandler.valIdxMap[bytesutil.ToBytes48([]byte(wantedPubkey))], "Values are supposed to be unequal due to copy")
+	handler.Set(bytesutil.ToBytes48([]byte(wantedPubkey)), 27)
+	val1, _ := handler.Get(bytesutil.ToBytes48([]byte(wantedPubkey)))
+	val2, _ := newHandler.Get(bytesutil.ToBytes48([]byte(wantedPubkey)))
+	assert.NotEqual(t, val1, val2, "Values are supposed to be unequal due to copy")
 }
 
 func TestBeaconState_NoDeadlock(t *testing.T) {
@@ -75,7 +78,7 @@ func TestBeaconState_NoDeadlock(t *testing.T) {
 					f.fieldLayers = make([][]*[32]byte, 10)
 				}
 				f.Unlock()
-				f.AddRef()
+				f.reference.AddRef()
 			}
 		}
 		wg.Done()

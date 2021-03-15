@@ -27,7 +27,7 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 
 	state, err := cache.StateByCheckpoint(cp1)
 	require.NoError(t, err)
-	assert.Equal(t, (iface.BeaconState)(nil), state, "Expected state not to exist in empty cache")
+	assert.Equal(t, iface.BeaconState(nil), state, "Expected state not to exist in empty cache")
 
 	require.NoError(t, cache.AddCheckpointState(cp1, st))
 
