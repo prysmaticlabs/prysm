@@ -10,16 +10,6 @@ import (
 	"time"
 )
 
-// MockPandoraService method returns a mocked pandora service using
-// mocked rpc client and mocked rpc server.
-func MockPandoraService(endpoint string, dialPandoraFn DialRPCFn) (*Service, error) {
-	mockedPandoraService, err := NewService(context.Background(), endpoint, dialPandoraFn)
-	if err != nil {
-		return nil, err
-	}
-	return mockedPandoraService, nil
-}
-
 // TestStart_OK method checks that service starts successfully or not
 func TestStart_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
