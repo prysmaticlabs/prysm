@@ -11,6 +11,7 @@ import (
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 )
 
+// StartSlasherSimulator runs a beacon chain client with the slasher simulator enabled to simulate slashing detection.
 func StartSlasherSimulator(t *testing.T) {
 	binaryPath, found := bazel.FindBinary("cmd/beacon-chain", "beacon-chain")
 	if !found {
