@@ -25,7 +25,6 @@ type ExtraData struct {
 	Slot            uint64
 	Epoch           uint64
 	ProposerIndex   uint64
-	CoinbaseAddress common.Address
 }
 
 // Client defines a subset of methods conformed to by Pandora RPC clients for
