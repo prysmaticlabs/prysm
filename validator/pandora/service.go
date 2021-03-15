@@ -22,9 +22,9 @@ var (
 )
 
 type ExtraData struct {
-	Slot            uint64
-	Epoch           uint64
-	ProposerIndex   uint64
+	Slot          uint64
+	Epoch         uint64
+	ProposerIndex uint64
 }
 
 // Client defines a subset of methods conformed to by Pandora RPC clients for
