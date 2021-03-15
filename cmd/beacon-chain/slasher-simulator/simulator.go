@@ -6,8 +6,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/slasher/simulator"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
-	"github.com/prysmaticlabs/prysm/shared/logutil"
-	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
@@ -32,13 +30,6 @@ var Commands = &cli.Command{
 	}),
 	Before: func(cliCtx *cli.Context) error {
 		runtime.GOMAXPROCS(runtime.NumCPU())
-
-		logFileName := cliCtx.String(cmd.LogFileName.Name)
-		if logFileName != "" {
-			if err := logutil.ConfigurePersistentLogging(logFileName); err != nil {
-				log.WithError(err).Error("Failed to configuring logging to disk.")
-			}
-		}
 		return debug.Setup(cliCtx)
 	},
 	After: func(ctx *cli.Context) error {

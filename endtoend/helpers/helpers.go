@@ -85,6 +85,26 @@ func WaitForTextInFile(file *os.File, text string) error {
 	}
 }
 
+func CheckTextNotInFile(file *os.File, text string) error {
+	fileScanner := bufio.NewScanner(file)
+	buf := make([]byte, 0, fileBufferSize)
+	fileScanner.Buffer(buf, maxFileBufferSize)
+	for fileScanner.Scan() {
+		scanned := fileScanner.Text()
+		if strings.Contains(scanned, text) {
+			return fmt.Errorf("found text \"%s\" in file", text)
+		}
+	}
+	if err := fileScanner.Err(); err != nil {
+		return err
+	}
+	_, err := file.Seek(0, io.SeekStart)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func GraffitiYamlFile(testDir string) (string, error) {
 	b := []byte(`default: "Rice"
 random: 

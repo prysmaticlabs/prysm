@@ -124,11 +124,14 @@ func runEndToEndTest(t *testing.T, config *e2etypes.E2EConfig) {
 		t.Fatal(err)
 	}
 	t.Run("slasher simulator completed", func(t *testing.T) {
-		if err = helpers.WaitForTextInFile(simulatorcmd/beacon-chain/slasher-simulator/simulator.goOutFile, "Correctly detected simulated attester slashing"); err != nil {
-			t.Fatalf("could not find starting logs for slasher, this means it had issues starting: %v", err)
+		if err = helpers.WaitForTextInFile(simulatorOutFile, "Correctly detected simulated attester slashing"); err != nil {
+			t.Fatalf("could not find detection logs for slasher, this means it had issues with detection: %v", err)
 		}
 		if err = helpers.WaitForTextInFile(simulatorOutFile, "Correctly detected simulated proposer slashing"); err != nil {
-			t.Fatalf("could not find starting logs for slasher, this means it had issues starting: %v", err)
+			t.Fatalf("could not find detection logs for slasher, this means it had issues with detection: %v", err)
+		}
+		if err = helpers.CheckTextNotInFile(simulatorOutFile, "Did not detect"); err != nil {
+			t.Fatalf("found error logs for slasher, this means it failed to detect slashings: %v", err)
 		}
 	})
 
