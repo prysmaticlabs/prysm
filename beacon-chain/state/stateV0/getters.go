@@ -586,7 +586,7 @@ func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val iface.ReadOnlyV
 	b.lock.RUnlock()
 
 	for i, v := range validators {
-		err := f(i, ReadOnlyValidator{Validator: v})
+		err := f(i, ReadOnlyValidator{validator: v})
 		if err != nil {
 			return err
 		}

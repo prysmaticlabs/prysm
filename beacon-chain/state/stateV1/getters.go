@@ -9,7 +9,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -554,21 +554,21 @@ func (b *BeaconState) ValidatorAtIndex(idx types.ValidatorIndex) (*ethpb.Validat
 
 // ValidatorAtIndexReadOnly is the validator at the provided index. This method
 // doesn't clone the validator.
-func (b *BeaconState) ValidatorAtIndexReadOnly(idx types.ValidatorIndex) (stateV0.ReadOnlyValidator, error) {
+func (b *BeaconState) ValidatorAtIndexReadOnly(idx types.ValidatorIndex) (iface.ReadOnlyValidator, error) {
 	if !b.HasInnerState() {
-		return stateV0.ReadOnlyValidator{}, ErrNilInnerState
+		return ReadOnlyValidator{}, ErrNilInnerState
 	}
 	if b.state.Validators == nil {
-		return stateV0.ReadOnlyValidator{}, nil
+		return ReadOnlyValidator{}, nil
 	}
 	if uint64(len(b.state.Validators)) <= uint64(idx) {
-		return stateV0.ReadOnlyValidator{}, fmt.Errorf("index %d out of range", idx)
+		return ReadOnlyValidator{}, fmt.Errorf("index %d out of range", idx)
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return stateV0.ReadOnlyValidator{b.state.Validators[idx]}, nil
+	return ReadOnlyValidator{b.state.Validators[idx]}, nil
 }
 
 // ValidatorIndexByPubkey returns a given validator by its 48-byte public key.
@@ -623,7 +623,7 @@ func (b *BeaconState) NumValidators() int {
 
 // ReadFromEveryValidator reads values from every validator and applies it to the provided function.
 // Warning: This method is potentially unsafe, as it exposes the actual validator registry.
-func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val stateV0.ReadOnlyValidator) error) error {
+func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val iface.ReadOnlyValidator) error) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
@@ -635,7 +635,7 @@ func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val stateV0.ReadOnl
 	b.lock.RUnlock()
 
 	for i, v := range validators {
-		err := f(i, stateV0.ReadOnlyValidator{Validator: v})
+		err := f(i, ReadOnlyValidator{validator: v})
 		if err != nil {
 			return err
 		}
