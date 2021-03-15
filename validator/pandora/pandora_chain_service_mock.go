@@ -7,7 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
-"github.com/pkg/errors"
+	"github.com/pkg/errors"
 	"math/big"
 )
 
@@ -23,6 +23,12 @@ func MockPandoraService(endpoint string, dialPandoraFn DialRPCFn) (*Service, err
 		return nil, err
 	}
 	return mockedPandoraService, nil
+}
+
+// ConnectPandoraService method creates dummy connection with pandora chain
+func ConnectPandoraService(pandoraService *Service) {
+	pandoraService.connected = true
+	pandoraService.isRunning = true
 }
 
 // NewMockPandoraServer method mock pandora chain apis
