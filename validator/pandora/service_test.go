@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -46,12 +47,14 @@ func TestStart_OK(t *testing.T) {
 	pandoraService.cancel()
 }
 
+// Test_NoEndpointDefinedFails method checks invalid pandora chain endpoint
 func Test_NoEndpointDefinedFails(t *testing.T) {
 	_, err := MockPandoraService("", DialRPCClient)
 	want := "Pandora service initialization failed!"
 	require.ErrorContains(t, want, err, "Should not initialize pandora service with empty endpoint")
 }
 
+// TestStop_OK method checks connection with pandora chain
 func Test_WaitForConnection_ConnErr(t *testing.T) {
 	pandoraService, err := MockPandoraService(HttpEndpoint, DialInProcRPCClient)
 	require.NoError(t, err, "Error in preparing pandora mock service")
@@ -60,9 +63,34 @@ func Test_WaitForConnection_ConnErr(t *testing.T) {
 	require.Equal(t, true, status, "Should connect to pandora chain")
 }
 
+// TestStop_OK method checks service stop functionality
 func TestStop_OK(t *testing.T) {
 	pandoraService, err := MockPandoraService(HttpEndpoint, DialInProcRPCClient)
 	require.NoError(t, err, "Error in preparing pandora mock service")
 	err = pandoraService.Stop()
 	require.NoError(t, err, "Unable to stop pandora chain service")
+}
+
+// TestService_GetWork method checks GetWork method and test extraData decoding
+func TestService_GetWork(t *testing.T) {
+	pandoraService, err := MockPandoraService(HttpEndpoint, DialInProcRPCClient)
+	require.NoError(t, err, "Should not get error when preparing pandora mock service")
+	pandoraService.connected = true
+	pandoraService.isRunning = true
+
+	actualHeader, actualHash, actualExtraData, err := pandoraService.GetWork(context.Background())
+	require.NoError(t, err, "Should not get error when calling GetWork method")
+
+	expectedExtraData, _, err := getDummyEncodedExtraData()
+	require.NoError(t, err, "Should not get error when preparing encoded extraData")
+	expectedBlock := getDummyBlock()
+	if !reflect.DeepEqual(actualHeader, expectedBlock.Header()) {
+		t.Errorf("incorrect block header %#v", actualHeader)
+	}
+	if !reflect.DeepEqual(actualHash, expectedBlock.Hash()) {
+		t.Errorf("incorrect block hash %#v", actualHash)
+	}
+	if !reflect.DeepEqual(actualExtraData, expectedExtraData) {
+		t.Errorf("incorrect extra data %#v", actualExtraData)
+	}
 }

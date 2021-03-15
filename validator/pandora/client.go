@@ -83,13 +83,6 @@ func (oc *PandoraClient) GetWork(ctx context.Context) (*GetWorkResponseParams, e
 		return nil, errors.Wrap(err, "Failed to decode header")
 	}
 
-	//blockNumberBytes, err := hexutil.Decode(response[3])
-	//if err != nil {
-	//	return nil, errors.Wrap(err, "Failed to decode block number")
-	//}
-	//empty4bytes := make([]byte, 8)
-	//blockNumber := binary.BigEndian.Uint64(append(blockNumberBytes[:8], empty4bytes...))
-
 	return &GetWorkResponseParams{
 		HeaderHash:  headerHash,
 		TxReceipt:   receiptHash,

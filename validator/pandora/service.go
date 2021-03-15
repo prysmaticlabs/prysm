@@ -31,7 +31,7 @@ type ExtraData struct {
 // producing catalyst block and insert pandora block.
 type PandoraService interface {
 	// GetWork gets the new block header and hash of pandora client
-	GetWork(ctx context.Context) (*eth1Types.Header, *ExtraData, error)
+	GetWork(ctx context.Context) (*eth1Types.Header, common.Hash, *ExtraData, error)
 	// SubmitWork submits the header hash and signature of pandora block header
 	SubmitWork(ctx context.Context, blockNonce uint64, headerHash common.Hash, sig [32]byte) (bool, error)
 }
@@ -163,23 +163,23 @@ func (s *Service) waitForConnection() {
 
 // GetPandoraBlock method calls pandora client's `eth_getWork` api and decode header and extra data fields
 // This methods returns eth1Types.Header and ExtraData
-func (s *Service) GetWork(ctx context.Context) (*eth1Types.Header, *ExtraData, error) {
+func (s *Service) GetWork(ctx context.Context) (*eth1Types.Header, common.Hash, *ExtraData, error) {
 	if !s.connected {
 		log.WithError(ConnectionError).Error("Pandora chain is not connected")
-		return nil, nil, ConnectionError
+		return nil, common.Hash{}, nil, ConnectionError
 	}
 
 	response, err := s.pandoraClient.GetWork(ctx)
 	if err != nil {
 		log.WithError(err).Error("Pandora block preparation failed")
-		return nil, nil, err
+		return nil, common.Hash{}, nil, err
 	}
 	header := response.Header
 	var extraData ExtraData
 	if err := rlp.DecodeBytes(header.Extra, &extraData); err != nil {
-		return nil, nil, errors.Wrap(err, "Failed to decode extra data fields")
+		return nil, common.Hash{}, nil, errors.Wrap(err, "Failed to decode extra data fields")
 	}
-	return header, &extraData, nil
+	return header, response.HeaderHash, &extraData, nil
 }
 
 // SubmitWork method calls pandora client's `eth_submitWork` api
