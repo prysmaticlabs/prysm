@@ -14,6 +14,7 @@ import (
 	"github.com/golang/mock/gomock"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -267,7 +268,8 @@ func TestRemoteKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	m := mock.NewMockRemoteSignerClient(ctrl)
 	k := &Keymanager{
-		client: m,
+		client:              m,
+		accountsChangedFeed: new(event.Feed),
 	}
 
 	// Expect error handling to work.
