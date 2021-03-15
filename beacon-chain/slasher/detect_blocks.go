@@ -10,13 +10,27 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// Given a list of blocks, check if they are slashable for the validators involved.
-func (s *Service) detectSlashableBlocks(
+// DetectSlashableBlocks, given a list of blocks, check if they are
+// slashable for the validators involved.
+func (s *Service) detectBlocks(
 	ctx context.Context,
 	proposedBlocks []*slashertypes.SignedBlockHeaderWrapper,
 ) error {
-	ctx, span := trace.StartSpan(ctx, "Slasher.detectSlashableBlocks")
+	ctx, span := trace.StartSpan(ctx, "Slasher.detectBlocks")
 	defer span.End()
+	proposerSlashings, err := s.DetectProposerSlashings(ctx, proposedBlocks)
+	if err != nil {
+		return err
+	}
+	//for _, slashing := range proposerSlashings {
+	//	//logDoubleProposal()
+	//}
+}
+
+func (s *Service) DetectProposerSlashings(
+	ctx context.Context, proposedBlocks []*slashertypes.SignedBlockHeaderWrapper,
+) ([]*ethpb.ProposerSlashing, error) {
+	proposerSlashings := make([]*ethpb.ProposerSlashing, 0, len(proposedBlocks))
 	// We check if there are any slashable double proposals in the input list
 	// of proposals with respect to each other.
 	existingProposals := make(map[string]*slashertypes.SignedBlockHeaderWrapper)
@@ -29,11 +43,12 @@ func (s *Service) detectSlashableBlocks(
 		}
 		if isDoubleProposal(proposedBlocks[i].SigningRoot, existingProposal.SigningRoot) {
 			doubleProposalsTotal.Inc()
-			s.serviceCfg.ProposerSlashingsFeed.Send(&ethpb.ProposerSlashing{
+			slashing := &ethpb.ProposerSlashing{
 				Header_1: existingProposal.SignedBeaconBlockHeader,
 				Header_2: proposedBlocks[i].SignedBeaconBlockHeader,
 			})
-			logDoubleProposal(proposedBlocks[i], existingProposal)
+			s.serviceCfg.ProposerSlashingsFeed.Send(slashing)
+			proposerSlashings = append(proposerSlashings, slashing)
 		}
 	}
 	// We check if there are any slashable double proposals in the input list
