@@ -7,6 +7,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/slasher"
@@ -68,14 +69,18 @@ func New(ctx context.Context, beaconDB db.Database) (*Simulator, error) {
 	sentAttSlashingFeed := new(event.Feed)
 	attesterSlashingsFeed := new(event.Feed)
 	proposerSlashingsFeed := new(event.Feed)
-	genesisTime := time.Now()
+
+	mockChainService := &mock.ChainService{
+		Genesis: time.Now(),
+	}
+
 	slasherSrv, err := slasher.New(ctx, &slasher.ServiceConfig{
 		IndexedAttsFeed:       indexedAttsFeed,
 		BeaconBlocksFeed:      beaconBlocksFeed,
 		AttesterSlashingsFeed: attesterSlashingsFeed,
 		ProposerSlashingsFeed: proposerSlashingsFeed,
 		Database:              beaconDB,
-		GenesisTime:           genesisTime,
+		GenesisTimeFetcher:    mockChainService,
 	})
 	if err != nil {
 		return nil, err
@@ -94,7 +99,6 @@ func New(ctx context.Context, beaconDB db.Database) (*Simulator, error) {
 		detectedProposerSlashings: make(map[[32]byte]*ethpb.ProposerSlashing),
 		sentAttesterSlashings:     make(map[[32]byte]*ethpb.AttesterSlashing),
 		detectedAttesterSlashings: make(map[[32]byte]*ethpb.AttesterSlashing),
-		genesisTime:               genesisTime,
 	}, nil
 }
 
