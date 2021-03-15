@@ -14,11 +14,14 @@ import (
 	"github.com/golang/mock/gomock"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 var validClientCert = `-----BEGIN CERTIFICATE-----
@@ -331,4 +334,76 @@ func TestUnmarshalOptionsFile_DefaultRequireTls(t *testing.T) {
 	opts, err := UnmarshalOptionsFile(r)
 	assert.NoError(t, err)
 	assert.Equal(t, true, opts.RemoteCertificate.RequireTls)
+}
+
+func TestFetchValidatingPublicKeys_Reload(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctx := context.Background()
+	ctrl := gomock.NewController(t)
+	m := mock.NewMockRemoteSignerClient(ctrl)
+
+	k := &Keymanager{
+		client:              m,
+		accountsChangedFeed: new(event.Feed),
+		orderedPubKeys:      [][48]byte{bytesutil.ToBytes48([]byte("100"))},
+	}
+
+	// Add key
+	m.EXPECT().ListValidatingPublicKeys(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(&validatorpb.ListPublicKeysResponse{
+		// Return keys in reverse order to verify ordering
+		ValidatingPublicKeys: [][]byte{[]byte("200"), []byte("100")},
+	}, nil /* err */)
+
+	_, err := k.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
+	assert.DeepEqual(t, [][48]byte{bytesutil.ToBytes48([]byte("100")), bytesutil.ToBytes48([]byte("200"))}, k.orderedPubKeys)
+	assert.LogsContain(t, hook, keymanager.KeysReloaded)
+
+	hook.Reset()
+
+	// Remove key
+	m.EXPECT().ListValidatingPublicKeys(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(&validatorpb.ListPublicKeysResponse{
+		ValidatingPublicKeys: [][]byte{[]byte("200")},
+	}, nil /* err */)
+
+	_, err = k.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
+	assert.DeepEqual(t, [][48]byte{bytesutil.ToBytes48([]byte("200"))}, k.orderedPubKeys)
+	assert.LogsContain(t, hook, keymanager.KeysReloaded)
+
+	hook.Reset()
+
+	// Change key
+	m.EXPECT().ListValidatingPublicKeys(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(&validatorpb.ListPublicKeysResponse{
+		ValidatingPublicKeys: [][]byte{[]byte("300")},
+	}, nil /* err */)
+
+	_, err = k.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
+	assert.DeepEqual(t, [][48]byte{bytesutil.ToBytes48([]byte("300"))}, k.orderedPubKeys)
+	assert.LogsContain(t, hook, keymanager.KeysReloaded)
+
+	hook.Reset()
+
+	// No change
+	m.EXPECT().ListValidatingPublicKeys(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(&validatorpb.ListPublicKeysResponse{
+		ValidatingPublicKeys: [][]byte{[]byte("300")},
+	}, nil /* err */)
+
+	_, err = k.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
+	assert.DeepEqual(t, [][48]byte{bytesutil.ToBytes48([]byte("300"))}, k.orderedPubKeys)
+	assert.LogsDoNotContain(t, hook, keymanager.KeysReloaded)
 }
