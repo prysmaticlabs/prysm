@@ -18,12 +18,12 @@ import (
 // This struct allows us to specify required dependencies and
 // parameters for slasher to function as needed.
 type ServiceConfig struct {
-	IndexedAttsFeed    *event.Feed
-	BeaconBlocksFeed   *event.Feed
-	AttSlashingsFeed   *event.Feed
-	BlockSlashingsFeed *event.Feed
-	Database           db.Database
-	GenesisTimeFetcher blockchain.TimeFetcher
+	IndexedAttsFeed       *event.Feed
+	BeaconBlocksFeed      *event.Feed
+	AttesterSlashingsFeed *event.Feed
+	ProposerSlashingsFeed *event.Feed
+	Database              db.Database
+	GenesisTimeFetcher    blockchain.TimeFetcher
 }
 
 // Service defining a slasher implementation as part of
@@ -41,6 +41,7 @@ type Service struct {
 	beaconBlocksQueue     []*slashertypes.SignedBlockHeaderWrapper
 	ctx                   context.Context
 	cancel                context.CancelFunc
+	slotTicker            slotutil.Ticker
 }
 
 // New instantiates a new slasher from configuration values.
@@ -64,19 +65,19 @@ func New(ctx context.Context, srvCfg *ServiceConfig) (*Service, error) {
 // and perform slashing detection on them.
 func (s *Service) Start() {
 	genesisTime := s.serviceCfg.GenesisTimeFetcher.GenesisTime()
-	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * uint64(params.BeaconConfig().SlotsPerEpoch)
-	ticker := slotutil.NewEpochTicker(genesisTime, secondsPerEpoch)
-	defer ticker.Done()
-	go s.processQueuedAttestations(s.ctx, ticker.C())
-	go s.processQueuedBlocks(s.ctx, ticker.C())
+	secondsPerSlot := params.BeaconConfig().SecondsPerSlot
+	s.slotTicker = slotutil.NewSlotTicker(genesisTime, secondsPerSlot)
+	go s.processQueuedAttestations(s.ctx, s.slotTicker.C())
+	go s.processQueuedBlocks(s.ctx, s.slotTicker.C())
 	go s.receiveAttestations(s.ctx)
 	go s.receiveBlocks(s.ctx)
-	go s.pruneSlasherData(s.ctx, ticker.C())
+	go s.pruneSlasherData(s.ctx, s.slotTicker.C())
 }
 
 // Stop the slasher service.
 func (s *Service) Stop() error {
 	s.cancel()
+	s.slotTicker.Done()
 	return nil
 }
 

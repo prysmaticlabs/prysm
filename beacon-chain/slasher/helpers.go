@@ -121,5 +121,10 @@ func validateAttestationIntegrity(att *ethpb.IndexedAttestation) bool {
 	if att == nil || att.Data == nil || att.Data.Source == nil || att.Data.Target == nil {
 		return false
 	}
+	// The genesis epoch is a special case, since all attestations formed in it
+	// will have source and target 0, and they should be considered valid.
+	if att.Data.Source.Epoch == 0 && att.Data.Target.Epoch == 0 {
+		return true
+	}
 	return att.Data.Source.Epoch < att.Data.Target.Epoch
 }

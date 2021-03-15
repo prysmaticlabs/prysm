@@ -9,6 +9,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -32,8 +33,8 @@ func Test_processQueuedAttestations(t *testing.T) {
 			name: "Detects surrounding vote (source 1, target 2), (source 0, target 3)",
 			args: args{
 				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-					createAttestationWrapper(1, 2, []uint64{0, 1} /* indices */, nil /* signingRoot */),
-					createAttestationWrapper(0, 3, []uint64{0, 1} /* indices */, nil /* signingRoot */),
+					createAttestationWrapper(t, 1, 2, []uint64{0, 1}, nil),
+					createAttestationWrapper(t, 0, 3, []uint64{0, 1}, nil),
 				},
 				currentEpoch: 4,
 			},
@@ -43,8 +44,8 @@ func Test_processQueuedAttestations(t *testing.T) {
 			name: "Detects surrounding vote (source 50, target 51), (source 0, target 1000)",
 			args: args{
 				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-					createAttestationWrapper(50, 51, []uint64{0} /* indices */, nil /* signingRoot */),
-					createAttestationWrapper(0, 1000, []uint64{0} /* indices */, nil /* signingRoot */),
+					createAttestationWrapper(t, 50, 51, []uint64{0}, nil),
+					createAttestationWrapper(t, 0, 1000, []uint64{0}, nil),
 				},
 				currentEpoch: 1000,
 			},
@@ -54,8 +55,8 @@ func Test_processQueuedAttestations(t *testing.T) {
 			name: "Detects surrounded vote (source 0, target 3), (source 1, target 2)",
 			args: args{
 				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-					createAttestationWrapper(0, 3, []uint64{0, 1} /* indices */, nil /* signingRoot */),
-					createAttestationWrapper(1, 2, []uint64{0, 1} /* indices */, nil /* signingRoot */),
+					createAttestationWrapper(t, 0, 3, []uint64{0, 1}, nil),
+					createAttestationWrapper(t, 1, 2, []uint64{0, 1}, nil),
 				},
 				currentEpoch: 4,
 			},
@@ -65,8 +66,8 @@ func Test_processQueuedAttestations(t *testing.T) {
 			name: "Not slashable, surrounding but non-overlapping attesting indices within same validator chunk index",
 			args: args{
 				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-					createAttestationWrapper(1, 2, []uint64{0} /* indices */, nil /* signingRoot */),
-					createAttestationWrapper(0, 3, []uint64{1} /* indices */, nil /* signingRoot */),
+					createAttestationWrapper(t, 1, 2, []uint64{0}, nil),
+					createAttestationWrapper(t, 0, 3, []uint64{1}, nil),
 				},
 				currentEpoch: 4,
 			},
@@ -76,8 +77,8 @@ func Test_processQueuedAttestations(t *testing.T) {
 			name: "Not slashable, surrounded but non-overlapping attesting indices within same validator chunk index",
 			args: args{
 				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-					createAttestationWrapper(0, 3, []uint64{0, 1} /* indices */, nil /* signingRoot */),
-					createAttestationWrapper(1, 2, []uint64{2, 3} /* indices */, nil /* signingRoot */),
+					createAttestationWrapper(t, 0, 3, []uint64{0, 1}, nil),
+					createAttestationWrapper(t, 1, 2, []uint64{2, 3}, nil),
 				},
 				currentEpoch: 4,
 			},
@@ -87,8 +88,8 @@ func Test_processQueuedAttestations(t *testing.T) {
 			name: "Not slashable, surrounding but non-overlapping attesting indices in different validator chunk index",
 			args: args{
 				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-					createAttestationWrapper(0, 3, []uint64{0} /* indices */, nil /* signingRoot */),
-					createAttestationWrapper(1, 2, []uint64{1000000} /* indices */, nil /* signingRoot */),
+					createAttestationWrapper(t, 0, 3, []uint64{0}, nil),
+					createAttestationWrapper(t, 1, 2, []uint64{1000000}, nil),
 				},
 				currentEpoch: 4,
 			},
@@ -98,8 +99,8 @@ func Test_processQueuedAttestations(t *testing.T) {
 			name: "Not slashable, surrounded but non-overlapping attesting indices in different validator chunk index",
 			args: args{
 				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-					createAttestationWrapper(0, 3, []uint64{0} /* indices */, nil /* signingRoot */),
-					createAttestationWrapper(1, 2, []uint64{1000000} /* indices */, nil /* signingRoot */),
+					createAttestationWrapper(t, 0, 3, []uint64{0}, nil),
+					createAttestationWrapper(t, 1, 2, []uint64{1000000}, nil),
 				},
 				currentEpoch: 4,
 			},
@@ -109,8 +110,8 @@ func Test_processQueuedAttestations(t *testing.T) {
 			name: "Not slashable, (source 1, target 2), (source 2, target 3)",
 			args: args{
 				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-					createAttestationWrapper(1, 2, []uint64{0, 1} /* indices */, nil /* signingRoot */),
-					createAttestationWrapper(2, 3, []uint64{0, 1} /* indices */, nil /* signingRoot */),
+					createAttestationWrapper(t, 1, 2, []uint64{0, 1}, nil),
+					createAttestationWrapper(t, 2, 3, []uint64{0, 1}, nil),
 				},
 				currentEpoch: 4,
 			},
@@ -120,8 +121,8 @@ func Test_processQueuedAttestations(t *testing.T) {
 			name: "Not slashable, same signing root, (source 1, target 2), (source 1, target 2)",
 			args: args{
 				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-					createAttestationWrapper(1, 2, []uint64{0, 1}, []byte{1}),
-					createAttestationWrapper(1, 2, []uint64{0, 1}, []byte{1}),
+					createAttestationWrapper(t, 1, 2, []uint64{0, 1}, []byte{1}),
+					createAttestationWrapper(t, 1, 2, []uint64{0, 1}, []byte{1}),
 				},
 				currentEpoch: 4,
 			},
@@ -131,8 +132,8 @@ func Test_processQueuedAttestations(t *testing.T) {
 			name: "Not slashable, (source 0, target 3), (source 2, target 4)",
 			args: args{
 				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-					createAttestationWrapper(0, 3, []uint64{0, 1} /* indices */, nil /* signingRoot */),
-					createAttestationWrapper(2, 4, []uint64{0, 1} /* indices */, nil /* signingRoot */),
+					createAttestationWrapper(t, 0, 3, []uint64{0, 1}, nil),
+					createAttestationWrapper(t, 2, 4, []uint64{0, 1}, nil),
 				},
 				currentEpoch: 4,
 			},
@@ -142,8 +143,8 @@ func Test_processQueuedAttestations(t *testing.T) {
 			name: "Not slashable, (source 1, target 2), (source 0, target 2)",
 			args: args{
 				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-					createAttestationWrapper(1, 2, []uint64{0, 1} /* indices */, nil /* signingRoot */),
-					createAttestationWrapper(0, 2, []uint64{0, 1} /* indices */, nil /* signingRoot */),
+					createAttestationWrapper(t, 1, 2, []uint64{0, 1}, nil),
+					createAttestationWrapper(t, 0, 2, []uint64{0, 1}, nil),
 				},
 				currentEpoch: 4,
 			},
@@ -153,8 +154,8 @@ func Test_processQueuedAttestations(t *testing.T) {
 			name: "Not slashable, (source 0, target 2), (source 0, target 3)",
 			args: args{
 				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-					createAttestationWrapper(0, 2, []uint64{0, 1} /* indices */, nil /* signingRoot */),
-					createAttestationWrapper(0, 3, []uint64{0, 1} /* indices */, nil /* signingRoot */),
+					createAttestationWrapper(t, 0, 2, []uint64{0, 1}, nil),
+					createAttestationWrapper(t, 0, 3, []uint64{0, 1}, nil),
 				},
 				currentEpoch: 4,
 			},
@@ -164,8 +165,8 @@ func Test_processQueuedAttestations(t *testing.T) {
 			name: "Not slashable, (source 0, target 3), (source 0, target 2)",
 			args: args{
 				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-					createAttestationWrapper(0, 3, []uint64{0, 1} /* indices */, nil /* signingRoot */),
-					createAttestationWrapper(0, 2, []uint64{0, 1} /* indices */, nil /* signingRoot */),
+					createAttestationWrapper(t, 0, 3, []uint64{0, 1}, nil),
+					createAttestationWrapper(t, 0, 2, []uint64{0, 1}, nil),
 				},
 				currentEpoch: 4,
 			},
@@ -184,21 +185,23 @@ func Test_processQueuedAttestations(t *testing.T) {
 					GenesisTimeFetcher: &mock.ChainService{
 						Genesis: time.Now(),
 					},
+					AttesterSlashingsFeed: new(event.Feed),
 				},
-				params:                DefaultParams(),
-				attestationQueue:      make([]*slashertypes.IndexedAttestationWrapper, 0),
-				attesterSlashingsFeed: new(event.Feed),
+				params:           DefaultParams(),
+				attestationQueue: make([]*slashertypes.IndexedAttestationWrapper, 0),
 			}
-			currentEpochChan := make(chan types.Epoch)
+			currentSlotChan := make(chan types.Slot)
 			exitChan := make(chan struct{})
 			go func() {
-				s.processQueuedAttestations(ctx, currentEpochChan)
+				s.processQueuedAttestations(ctx, currentSlotChan)
 				exitChan <- struct{}{}
 			}()
 			s.attestationQueueLock.Lock()
 			s.attestationQueue = tt.args.attestationQueue
 			s.attestationQueueLock.Unlock()
-			currentEpochChan <- tt.args.currentEpoch
+			slot, err := helpers.StartSlot(tt.args.currentEpoch)
+			require.NoError(t, err)
+			currentSlotChan <- slot
 			cancel()
 			<-exitChan
 			if tt.shouldNotBeSlashable {
@@ -230,10 +233,10 @@ func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
 		params:           params,
 		attestationQueue: make([]*slashertypes.IndexedAttestationWrapper, 0),
 	}
-	currentEpochChan := make(chan types.Epoch)
+	currentSlotChan := make(chan types.Slot)
 	exitChan := make(chan struct{})
 	go func() {
-		s.processQueuedAttestations(ctx, currentEpochChan)
+		s.processQueuedAttestations(ctx, currentSlotChan)
 		exitChan <- struct{}{}
 	}()
 
@@ -253,11 +256,13 @@ func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
 		}
 		var sr [32]byte
 		copy(sr[:], fmt.Sprintf("%d", i))
-		att := createAttestationWrapper(source, target, []uint64{0}, sr[:])
+		att := createAttestationWrapper(t, source, target, []uint64{0}, sr[:])
 		s.attestationQueueLock.Lock()
 		s.attestationQueue = []*slashertypes.IndexedAttestationWrapper{att}
 		s.attestationQueueLock.Unlock()
-		currentEpochChan <- i
+		slot, err := helpers.StartSlot(i)
+		require.NoError(t, err)
+		currentSlotChan <- slot
 	}
 
 	cancel()
@@ -284,32 +289,24 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 		params:           params,
 		attestationQueue: make([]*slashertypes.IndexedAttestationWrapper, 0),
 	}
-	currentEpochChan := make(chan types.Epoch)
+	currentSlotChan := make(chan types.Slot)
 	exitChan := make(chan struct{})
 	go func() {
-		s.processQueuedAttestations(ctx, currentEpochChan)
+		s.processQueuedAttestations(ctx, currentSlotChan)
 		exitChan <- struct{}{}
 	}()
 
 	// We create two attestations fully spanning chunk indices 0 and chunk 1
-	att1 := createAttestationWrapper(
-		types.Epoch(params.chunkSize-2),
-		types.Epoch(params.chunkSize),
-		[]uint64{0, 1},
-		nil, /* signing root */
-	)
-	att2 := createAttestationWrapper(
-		types.Epoch(params.chunkSize-1),
-		types.Epoch(params.chunkSize+1),
-		[]uint64{0, 1},
-		nil, /* signing root */
-	)
+	att1 := createAttestationWrapper(t, types.Epoch(params.chunkSize-2), types.Epoch(params.chunkSize), []uint64{0, 1}, nil)
+	att2 := createAttestationWrapper(t, types.Epoch(params.chunkSize-1), types.Epoch(params.chunkSize+1), []uint64{0, 1}, nil)
 
 	// We attempt to process the batch.
 	s.attestationQueueLock.Lock()
 	s.attestationQueue = []*slashertypes.IndexedAttestationWrapper{att1, att2}
 	s.attestationQueueLock.Unlock()
-	currentEpochChan <- att2.IndexedAttestation.Data.Target.Epoch
+	slot, err := helpers.StartSlot(att2.IndexedAttestation.Data.Target.Epoch)
+	require.NoError(t, err)
+	currentSlotChan <- slot
 
 	cancel()
 	<-exitChan
@@ -335,8 +332,8 @@ func TestSlasher_receiveAttestations_OK(t *testing.T) {
 	}()
 	firstIndices := []uint64{1, 2, 3}
 	secondIndices := []uint64{4, 5, 6}
-	att1 := createAttestationWrapper(1, 2, firstIndices, nil)
-	att2 := createAttestationWrapper(1, 2, secondIndices, nil)
+	att1 := createAttestationWrapper(t, 1, 2, firstIndices, nil)
+	att2 := createAttestationWrapper(t, 1, 2, secondIndices, nil)
 	s.indexedAttsChan <- att1.IndexedAttestation
 	s.indexedAttsChan <- att2.IndexedAttestation
 	cancel()
@@ -367,7 +364,7 @@ func TestSlasher_receiveAttestations_OnlyValidAttestations(t *testing.T) {
 	firstIndices := []uint64{1, 2, 3}
 	secondIndices := []uint64{4, 5, 6}
 	// Add a valid attestation.
-	validAtt := createAttestationWrapper(1, 2, firstIndices, nil)
+	validAtt := createAttestationWrapper(t, 1, 2, firstIndices, nil)
 	s.indexedAttsChan <- validAtt.IndexedAttestation
 	// Send an invalid, bad attestation which will not
 	// pass integrity checks at it has invalid attestation data.
@@ -401,15 +398,15 @@ func TestSlasher_receiveBlocks_OK(t *testing.T) {
 		exitChan <- struct{}{}
 	}()
 
-	block1 := createProposalWrapper(0, 1, nil).SignedBeaconBlockHeader
-	block2 := createProposalWrapper(0, 2, nil).SignedBeaconBlockHeader
+	block1 := createProposalWrapper(t, 0, 1, nil).SignedBeaconBlockHeader
+	block2 := createProposalWrapper(t, 0, 2, nil).SignedBeaconBlockHeader
 	s.beaconBlocksChan <- block1
 	s.beaconBlocksChan <- block2
 	cancel()
 	<-exitChan
 	wanted := []*slashertypes.SignedBlockHeaderWrapper{
-		createProposalWrapper(0, block1.Header.ProposerIndex, nil),
-		createProposalWrapper(0, block2.Header.ProposerIndex, nil),
+		createProposalWrapper(t, 0, block1.Header.ProposerIndex, nil),
+		createProposalWrapper(t, 0, block2.Header.ProposerIndex, nil),
 	}
 	require.DeepEqual(t, wanted, s.beaconBlocksQueue)
 }
@@ -426,11 +423,11 @@ func TestService_processQueuedBlocks(t *testing.T) {
 			},
 		},
 		beaconBlocksQueue: []*slashertypes.SignedBlockHeaderWrapper{
-			createProposalWrapper(0, 1, nil),
+			createProposalWrapper(t, 0, 1, nil),
 		},
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	tickerChan := make(chan types.Epoch)
+	tickerChan := make(chan types.Slot)
 	exitChan := make(chan struct{})
 	go func() {
 		s.processQueuedBlocks(ctx, tickerChan)

@@ -125,7 +125,7 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	// We apply attestation with (source 1, target 2) for our validator.
 	source := types.Epoch(1)
 	target := types.Epoch(2)
-	att := createAttestationWrapper(source, target, nil /* indices */, nil /* signingRoot */)
+	att := createAttestationWrapper(t, source, target, nil, nil)
 	slashing, err := srv.applyAttestationForValidator(
 		ctx,
 		args,
@@ -146,7 +146,7 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	// expect a slashable offense to be returned.
 	source = types.Epoch(0)
 	target = types.Epoch(3)
-	slashableAtt := createAttestationWrapper(source, target, nil /* indices */, nil /* signingRoot */)
+	slashableAtt := createAttestationWrapper(t, source, target, nil, nil)
 	slashing, err = srv.applyAttestationForValidator(
 		ctx,
 		args,
@@ -188,7 +188,7 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	// We apply attestation with (source 0, target 3) for our validator.
 	source := types.Epoch(0)
 	target := types.Epoch(3)
-	att := createAttestationWrapper(source, target, nil /* indices */, nil /* signingRoot */)
+	att := createAttestationWrapper(t, source, target, nil, nil)
 	slashing, err := srv.applyAttestationForValidator(
 		ctx,
 		args,
@@ -209,7 +209,7 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	// expect a slashable offense to be returned.
 	source = types.Epoch(1)
 	target = types.Epoch(2)
-	slashableAtt := createAttestationWrapper(source, target, nil /* indices */, nil /* signingRoot */)
+	slashableAtt := createAttestationWrapper(t, source, target, nil, nil)
 	slashing, err = srv.applyAttestationForValidator(
 		ctx,
 		args,
@@ -229,9 +229,9 @@ func Test_checkDoubleVotes_SlashableInputAttestations(t *testing.T) {
 	// indeed check there could exist a double vote offense
 	// within the list with respect to other entries in the list.
 	atts := []*slashertypes.IndexedAttestationWrapper{
-		createAttestationWrapper(0, 1, []uint64{1, 2}, []byte{1}),
-		createAttestationWrapper(0, 2, []uint64{1, 2}, []byte{1}),
-		createAttestationWrapper(0, 2, []uint64{1, 2}, []byte{2}), // Different signing root.
+		createAttestationWrapper(t, 0, 1, []uint64{1, 2}, []byte{1}),
+		createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{1}),
+		createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{2}), // Different signing root.
 	}
 	srv := &Service{
 		serviceCfg: &ServiceConfig{
@@ -241,24 +241,28 @@ func Test_checkDoubleVotes_SlashableInputAttestations(t *testing.T) {
 			},
 		},
 	}
+	prev1 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{1})
+	cur1 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{2})
+	prev2 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{1})
+	cur2 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{2})
 	wanted := []*slashertypes.Slashing{
 		{
 			Kind:            slashertypes.DoubleVote,
 			ValidatorIndex:  types.ValidatorIndex(1),
 			TargetEpoch:     2,
-			SigningRoot:     [32]byte{2},
-			PrevSigningRoot: [32]byte{1},
-			PrevAttestation: createAttestationWrapper(0, 2, []uint64{1, 2}, []byte{1}).IndexedAttestation,
-			Attestation:     createAttestationWrapper(0, 2, []uint64{1, 2}, []byte{2}).IndexedAttestation,
+			PrevSigningRoot: prev1.SigningRoot,
+			SigningRoot:     cur1.SigningRoot,
+			PrevAttestation: prev1.IndexedAttestation,
+			Attestation:     cur1.IndexedAttestation,
 		},
 		{
 			Kind:            slashertypes.DoubleVote,
 			ValidatorIndex:  types.ValidatorIndex(2),
 			TargetEpoch:     2,
-			SigningRoot:     [32]byte{2},
-			PrevSigningRoot: [32]byte{1},
-			PrevAttestation: createAttestationWrapper(0, 2, []uint64{1, 2}, []byte{1}).IndexedAttestation,
-			Attestation:     createAttestationWrapper(0, 2, []uint64{1, 2}, []byte{2}).IndexedAttestation,
+			PrevSigningRoot: prev2.SigningRoot,
+			SigningRoot:     cur2.SigningRoot,
+			PrevAttestation: prev2.IndexedAttestation,
+			Attestation:     cur2.IndexedAttestation,
 		},
 	}
 	slashings, err := srv.checkDoubleVotes(ctx, atts)
@@ -273,8 +277,8 @@ func Test_checkDoubleVotes_SlashableAttestationsOnDisk(t *testing.T) {
 	// indeed check there could exist a double vote offense
 	// within the list with respect to previous entries in the db.
 	prevAtts := []*slashertypes.IndexedAttestationWrapper{
-		createAttestationWrapper(0, 1, []uint64{1, 2}, []byte{1}),
-		createAttestationWrapper(0, 2, []uint64{1, 2}, []byte{1}),
+		createAttestationWrapper(t, 0, 1, []uint64{1, 2}, []byte{1}),
+		createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{1}),
 	}
 	err := beaconDB.SaveAttestationRecordsForValidators(ctx, prevAtts)
 	require.NoError(t, err)
@@ -287,28 +291,32 @@ func Test_checkDoubleVotes_SlashableAttestationsOnDisk(t *testing.T) {
 			},
 		},
 	}
+	prev1 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{1})
+	cur1 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{2})
+	prev2 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{1})
+	cur2 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{2})
 	wanted := []*slashertypes.Slashing{
 		{
 			Kind:            slashertypes.DoubleVote,
 			ValidatorIndex:  types.ValidatorIndex(1),
 			TargetEpoch:     2,
-			SigningRoot:     [32]byte{2},
-			PrevSigningRoot: [32]byte{1},
-			PrevAttestation: createAttestationWrapper(0, 2, []uint64{1, 2}, []byte{1}).IndexedAttestation,
-			Attestation:     createAttestationWrapper(0, 2, []uint64{1, 2}, []byte{2}).IndexedAttestation,
+			PrevSigningRoot: prev1.SigningRoot,
+			SigningRoot:     cur1.SigningRoot,
+			PrevAttestation: prev1.IndexedAttestation,
+			Attestation:     cur1.IndexedAttestation,
 		},
 		{
 			Kind:            slashertypes.DoubleVote,
 			ValidatorIndex:  types.ValidatorIndex(2),
 			TargetEpoch:     2,
-			SigningRoot:     [32]byte{2},
-			PrevSigningRoot: [32]byte{1},
-			PrevAttestation: createAttestationWrapper(0, 2, []uint64{1, 2}, []byte{1}).IndexedAttestation,
-			Attestation:     createAttestationWrapper(0, 2, []uint64{1, 2}, []byte{2}).IndexedAttestation,
+			PrevSigningRoot: prev2.SigningRoot,
+			SigningRoot:     cur2.SigningRoot,
+			PrevAttestation: prev2.IndexedAttestation,
+			Attestation:     cur2.IndexedAttestation,
 		},
 	}
 	newAtts := []*slashertypes.IndexedAttestationWrapper{
-		createAttestationWrapper(0, 2, []uint64{1, 2}, []byte{2}), // Different signing root.
+		createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{2}), // Different signing root.
 	}
 	slashings, err := srv.checkDoubleVotes(ctx, newAtts)
 	require.NoError(t, err)
@@ -412,11 +420,11 @@ func TestService_processQueuedAttestations(t *testing.T) {
 			},
 		},
 		attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-			createAttestationWrapper(0, 1, []uint64{0, 1} /* indices */, nil /* signingRoot */),
+			createAttestationWrapper(t, 0, 1, []uint64{0, 1}, nil),
 		},
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	tickerChan := make(chan types.Epoch)
+	tickerChan := make(chan types.Slot)
 	exitChan := make(chan struct{})
 	go func() {
 		s.processQueuedAttestations(ctx, tickerChan)
@@ -424,19 +432,15 @@ func TestService_processQueuedAttestations(t *testing.T) {
 	}()
 
 	// Send a value over the ticker.
-	tickerChan <- 0
+	tickerChan <- 1
 	cancel()
 	<-exitChan
 	assert.LogsContain(t, hook, "Epoch reached, processing queued")
 }
 
-func createAttestationWrapper(source, target types.Epoch, indices []uint64, signingRoot []byte) *slashertypes.IndexedAttestationWrapper {
-	signRoot := bytesutil.ToBytes32(signingRoot)
-	if signingRoot == nil {
-		signRoot = params.BeaconConfig().ZeroHash
-	}
+func createAttestationWrapper(t *testing.T, source, target types.Epoch, indices []uint64, signingRoot []byte) *slashertypes.IndexedAttestationWrapper {
 	data := &ethpb.AttestationData{
-		BeaconBlockRoot: params.BeaconConfig().ZeroHash[:],
+		BeaconBlockRoot: bytesutil.PadTo(signingRoot, 32),
 		Source: &ethpb.Checkpoint{
 			Epoch: source,
 			Root:  params.BeaconConfig().ZeroHash[:],
@@ -445,6 +449,10 @@ func createAttestationWrapper(source, target types.Epoch, indices []uint64, sign
 			Epoch: target,
 			Root:  params.BeaconConfig().ZeroHash[:],
 		},
+	}
+	signRoot, err := data.HashTreeRoot()
+	if err != nil {
+		t.Fatal(err)
 	}
 	return &slashertypes.IndexedAttestationWrapper{
 		IndexedAttestation: &ethpb.IndexedAttestation{
