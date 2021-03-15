@@ -43,6 +43,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 		chain:                chain,
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		seenAttestationCache: c,
+		attestationNotifier:  (&mockChain.ChainService{}).OperationNotifier(),
 	}
 	err = s.initCaches()
 	require.NoError(t, err)
