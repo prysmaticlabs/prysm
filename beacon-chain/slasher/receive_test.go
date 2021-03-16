@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -181,10 +180,8 @@ func Test_processQueuedAttestations(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			s := &Service{
 				serviceCfg: &ServiceConfig{
-					Database: beaconDB,
-					GenesisTimeFetcher: &mock.ChainService{
-						Genesis: time.Now(),
-					},
+					Database:              beaconDB,
+					StateNotifier:         &mock.MockStateNotifier{},
 					AttesterSlashingsFeed: new(event.Feed),
 				},
 				params:    DefaultParams(),
@@ -223,10 +220,8 @@ func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
 
 	s := &Service{
 		serviceCfg: &ServiceConfig{
-			Database: beaconDB,
-			GenesisTimeFetcher: &mock.ChainService{
-				Genesis: time.Now(),
-			},
+			Database:      beaconDB,
+			StateNotifier: &mock.MockStateNotifier{},
 		},
 		params:    params,
 		attsQueue: newAttestationsQueue(),
@@ -278,10 +273,8 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 
 	s := &Service{
 		serviceCfg: &ServiceConfig{
-			Database: beaconDB,
-			GenesisTimeFetcher: &mock.ChainService{
-				Genesis: time.Now(),
-			},
+			Database:      beaconDB,
+			StateNotifier: &mock.MockStateNotifier{},
 		},
 		params:    params,
 		attsQueue: newAttestationsQueue(),
@@ -316,9 +309,7 @@ func TestSlasher_receiveAttestations_OK(t *testing.T) {
 	s := &Service{
 		serviceCfg: &ServiceConfig{
 			IndexedAttestationsFeed: new(event.Feed),
-			GenesisTimeFetcher: &mock.ChainService{
-				Genesis: time.Now(),
-			},
+			StateNotifier:           &mock.MockStateNotifier{},
 		},
 		indexedAttsChan: make(chan *ethpb.IndexedAttestation),
 		attsQueue:       newAttestationsQueue(),
@@ -348,9 +339,7 @@ func TestSlasher_receiveAttestations_OnlyValidAttestations(t *testing.T) {
 	s := &Service{
 		serviceCfg: &ServiceConfig{
 			IndexedAttestationsFeed: new(event.Feed),
-			GenesisTimeFetcher: &mock.ChainService{
-				Genesis: time.Now(),
-			},
+			StateNotifier:           &mock.MockStateNotifier{},
 		},
 		attsQueue:       newAttestationsQueue(),
 		indexedAttsChan: make(chan *ethpb.IndexedAttestation),
@@ -385,9 +374,7 @@ func TestSlasher_receiveBlocks_OK(t *testing.T) {
 	s := &Service{
 		serviceCfg: &ServiceConfig{
 			BeaconBlockHeadersFeed: new(event.Feed),
-			GenesisTimeFetcher: &mock.ChainService{
-				Genesis: time.Now(),
-			},
+			StateNotifier:          &mock.MockStateNotifier{},
 		},
 		beaconBlockHeadersChan: make(chan *ethpb.SignedBeaconBlockHeader),
 		blksQueue:              newBlocksQueue(),
@@ -417,10 +404,8 @@ func TestService_processQueuedBlocks(t *testing.T) {
 	s := &Service{
 		params: DefaultParams(),
 		serviceCfg: &ServiceConfig{
-			Database: beaconDB,
-			GenesisTimeFetcher: &mock.ChainService{
-				Genesis: time.Now(),
-			},
+			Database:      beaconDB,
+			StateNotifier: &mock.MockStateNotifier{},
 		},
 		blksQueue: newBlocksQueue(),
 	}

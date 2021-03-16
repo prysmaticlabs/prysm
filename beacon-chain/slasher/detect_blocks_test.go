@@ -3,7 +3,6 @@ package slasher
 import (
 	"context"
 	"testing"
-	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -23,10 +22,8 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Service{
 		serviceCfg: &ServiceConfig{
-			Database: beaconDB,
-			GenesisTimeFetcher: &mock.ChainService{
-				Genesis: time.Now(),
-			},
+			Database:              beaconDB,
+			StateNotifier:         &mock.MockStateNotifier{},
 			ProposerSlashingsFeed: new(event.Feed),
 		},
 		params:    DefaultParams(),
@@ -57,10 +54,8 @@ func Test_processQueuedBlocks_NotSlashable(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Service{
 		serviceCfg: &ServiceConfig{
-			Database: beaconDB,
-			GenesisTimeFetcher: &mock.ChainService{
-				Genesis: time.Now(),
-			},
+			Database:      beaconDB,
+			StateNotifier: &mock.MockStateNotifier{},
 		},
 		params:    DefaultParams(),
 		blksQueue: newBlocksQueue(),

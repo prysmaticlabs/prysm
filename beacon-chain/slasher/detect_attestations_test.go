@@ -3,7 +3,6 @@ package slasher
 import (
 	"context"
 	"testing"
-	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -29,10 +28,8 @@ func Test_determineChunksToUpdateForValidators_FromLatestWrittenEpoch(t *testing
 			historyLength:      4,
 		},
 		serviceCfg: &ServiceConfig{
-			Database: beaconDB,
-			GenesisTimeFetcher: &mock.ChainService{
-				Genesis: time.Now(),
-			},
+			Database:      beaconDB,
+			StateNotifier: &mock.MockStateNotifier{},
 		},
 	}
 	validators := []types.ValidatorIndex{
@@ -72,10 +69,8 @@ func Test_determineChunksToUpdateForValidators_FromGenesis(t *testing.T) {
 			historyLength:      4,
 		},
 		serviceCfg: &ServiceConfig{
-			Database: beaconDB,
-			GenesisTimeFetcher: &mock.ChainService{
-				Genesis: time.Now(),
-			},
+			Database:      beaconDB,
+			StateNotifier: &mock.MockStateNotifier{},
 		},
 	}
 	validators := []types.ValidatorIndex{
@@ -103,10 +98,8 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	srv := &Service{
 		params: params,
 		serviceCfg: &ServiceConfig{
-			Database: beaconDB,
-			GenesisTimeFetcher: &mock.ChainService{
-				Genesis: time.Now(),
-			},
+			Database:      beaconDB,
+			StateNotifier: &mock.MockStateNotifier{},
 		},
 	}
 	// We initialize an empty chunks slice.
@@ -166,10 +159,8 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	srv := &Service{
 		params: params,
 		serviceCfg: &ServiceConfig{
-			Database: beaconDB,
-			GenesisTimeFetcher: &mock.ChainService{
-				Genesis: time.Now(),
-			},
+			Database:      beaconDB,
+			StateNotifier: &mock.MockStateNotifier{},
 		},
 	}
 	// We initialize an empty chunks slice.
@@ -235,10 +226,8 @@ func Test_checkDoubleVotes_SlashableInputAttestations(t *testing.T) {
 	}
 	srv := &Service{
 		serviceCfg: &ServiceConfig{
-			Database: beaconDB,
-			GenesisTimeFetcher: &mock.ChainService{
-				Genesis: time.Now(),
-			},
+			Database:      beaconDB,
+			StateNotifier: &mock.MockStateNotifier{},
 		},
 	}
 	prev1 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{1})
@@ -285,10 +274,8 @@ func Test_checkDoubleVotes_SlashableAttestationsOnDisk(t *testing.T) {
 
 	srv := &Service{
 		serviceCfg: &ServiceConfig{
-			Database: beaconDB,
-			GenesisTimeFetcher: &mock.ChainService{
-				Genesis: time.Now(),
-			},
+			Database:      beaconDB,
+			StateNotifier: &mock.MockStateNotifier{},
 		},
 	}
 	prev1 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{1})
@@ -340,10 +327,8 @@ func testLoadChunks(t *testing.T, kind slashertypes.ChunkKind) {
 	s := &Service{
 		params: DefaultParams(),
 		serviceCfg: &ServiceConfig{
-			Database: beaconDB,
-			GenesisTimeFetcher: &mock.ChainService{
-				Genesis: time.Now(),
-			},
+			Database:      beaconDB,
+			StateNotifier: &mock.MockStateNotifier{},
 		},
 	}
 	// If a chunk at a chunk index does not exist, ensure it
@@ -414,10 +399,8 @@ func TestService_processQueuedAttestations(t *testing.T) {
 	s := &Service{
 		params: DefaultParams(),
 		serviceCfg: &ServiceConfig{
-			Database: beaconDB,
-			GenesisTimeFetcher: &mock.ChainService{
-				Genesis: time.Now(),
-			},
+			Database:      beaconDB,
+			StateNotifier: &mock.MockStateNotifier{},
 		},
 		attsQueue: newAttestationsQueue(),
 	}

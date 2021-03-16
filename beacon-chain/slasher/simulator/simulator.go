@@ -70,17 +70,13 @@ func New(ctx context.Context, beaconDB db.Database) (*Simulator, error) {
 	attesterSlashingsFeed := new(event.Feed)
 	proposerSlashingsFeed := new(event.Feed)
 
-	mockChainService := &mock.ChainService{
-		Genesis: time.Now(),
-	}
-
 	slasherSrv, err := slasher.New(ctx, &slasher.ServiceConfig{
 		IndexedAttestationsFeed: indexedAttsFeed,
 		BeaconBlockHeadersFeed:  beaconBlocksFeed,
 		AttesterSlashingsFeed:   attesterSlashingsFeed,
 		ProposerSlashingsFeed:   proposerSlashingsFeed,
 		Database:                beaconDB,
-		GenesisTimeFetcher:      mockChainService,
+		StateNotifier:           &mock.MockStateNotifier{},
 	})
 	if err != nil {
 		return nil, err

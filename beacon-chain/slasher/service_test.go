@@ -4,7 +4,6 @@ import (
 	"context"
 	"io/ioutil"
 	"testing"
-	"time"
 
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -23,9 +22,7 @@ func TestMain(m *testing.M) {
 func TestService_StartStop(t *testing.T) {
 	srv, err := New(context.Background(), &ServiceConfig{
 		IndexedAttestationsFeed: new(event.Feed),
-		GenesisTimeFetcher: &mock.ChainService{
-			Genesis: time.Now(),
-		},
+		StateNotifier:           &mock.MockStateNotifier{},
 	})
 	require.NoError(t, err)
 	go srv.Start()
