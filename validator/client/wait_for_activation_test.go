@@ -8,13 +8,18 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mock"
+	slotutilmock "github.com/prysmaticlabs/prysm/shared/slotutil/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	walletMock "github.com/prysmaticlabs/prysm/validator/accounts/testing"
+	"github.com/prysmaticlabs/prysm/validator/client/testutil"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	constant "github.com/prysmaticlabs/prysm/validator/testing"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/tyler-smith/go-bip39"
@@ -376,5 +381,81 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 		assert.NoError(t, v.waitForActivation(context.Background(), channel))
 		assert.LogsContain(t, hook, "Waiting for deposit to be observed by beacon node")
 		assert.LogsContain(t, hook, "Validator activated")
+	})
+}
+
+func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	stream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
+	client.EXPECT().WaitForActivation(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(stream, nil /* err */).AnyTimes()
+
+	inactiveKey := bytesutil.ToBytes48([]byte("inactive"))
+	activeKey := bytesutil.ToBytes48([]byte("active"))
+	km := &remote.MockKeymanager{
+		PublicKeys: [][48]byte{inactiveKey, activeKey},
+	}
+	slot := types.Slot(0)
+
+	t.Run("activated", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		hook := logTest.NewGlobal()
+
+		tickerChan := make(chan types.Slot)
+		ticker := &slotutilmock.MockTicker{
+			Channel: tickerChan,
+		}
+		v := validator{
+			validatorClient: client,
+			keyManager:      km,
+			ticker:          ticker,
+		}
+		go func() {
+			tickerChan <- slot
+			// Cancel after timeout to avoid waiting on channel forever in case test goes wrong.
+			time.Sleep(time.Second)
+			cancel()
+		}()
+
+		resp := testutil.GenerateMultipleValidatorStatusResponse([][]byte{inactiveKey[:], activeKey[:]})
+		resp.Statuses[0].Status = ethpb.ValidatorStatus_UNKNOWN_STATUS
+		resp.Statuses[1].Status = ethpb.ValidatorStatus_ACTIVE
+		client.EXPECT().MultipleValidatorStatus(
+			gomock.Any(),
+			&ethpb.MultipleValidatorStatusRequest{
+				PublicKeys: [][]byte{inactiveKey[:], activeKey[:]},
+			},
+		).Return(resp, nil /* err */)
+
+		err := v.waitForActivation(ctx, nil /* accountsChangedChan */)
+		require.NoError(t, err)
+		assert.LogsContain(t, hook, "Waiting for deposit to be observed by beacon node")
+		assert.LogsContain(t, hook, "Validator activated")
+	})
+
+	t.Run("cancelled", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+
+		tickerChan := make(chan types.Slot)
+		ticker := &slotutilmock.MockTicker{
+			Channel: tickerChan,
+		}
+		v := validator{
+			validatorClient: client,
+			keyManager:      km,
+			ticker:          ticker,
+		}
+		go func() {
+			cancel()
+			tickerChan <- slot
+		}()
+
+		err := v.waitForActivation(ctx, nil /* accountsChangedChan */)
+		assert.ErrorContains(t, "context canceled, not waiting for activation anymore", err)
 	})
 }

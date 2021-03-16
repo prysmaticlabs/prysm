@@ -1027,3 +1027,11 @@ func (b *BeaconState) safeCopyCheckpoint(input *ethpb.Checkpoint) *ethpb.Checkpo
 
 	return CopyCheckpoint(input)
 }
+
+// MarshalSSZ marshals the underlying beacon state to bytes.
+func (b *BeaconState) MarshalSSZ() ([]byte, error) {
+	if !b.hasInnerState() {
+		return nil, errors.New("nil beacon state")
+	}
+	return b.state.MarshalSSZ()
+}

@@ -148,7 +148,7 @@ func generateMarshalledFullStateAndBlock() error {
 		return err
 	}
 
-	beaconBytes, err := beaconState.InnerStateUnsafe().MarshalSSZ()
+	beaconBytes, err := beaconState.MarshalSSZ()
 	if err != nil {
 		return err
 	}
@@ -197,7 +197,7 @@ func generate2FullEpochState() error {
 		}
 	}
 
-	beaconBytes, err := beaconState.InnerStateUnsafe().MarshalSSZ()
+	beaconBytes, err := beaconState.MarshalSSZ()
 	if err != nil {
 		return err
 	}
