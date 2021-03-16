@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
@@ -118,7 +119,7 @@ func (km *Keymanager) reloadAccountsFromKeystore(keystore *AccountsKeystoreRepre
 	if err := km.initializeKeysCachesFromKeystore(); err != nil {
 		return err
 	}
-	log.Info("Reloaded validator keys into keymanager")
+	log.Info(keymanager.KeysReloaded)
 	km.accountsChangedFeed.Send(pubKeys)
 	return nil
 }

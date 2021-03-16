@@ -100,7 +100,7 @@ func run(ctx context.Context, v iface.Validator) {
 		handleAssignmentError(err, headSlot)
 	}
 
-	accountsChangedChan := make(chan [][48]byte)
+	accountsChangedChan := make(chan [][48]byte, 1)
 	sub := v.GetKeymanager().SubscribeAccountChanges(accountsChangedChan)
 	for {
 		slotCtx, cancel := context.WithCancel(ctx)
