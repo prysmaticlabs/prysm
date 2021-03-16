@@ -17,6 +17,11 @@ var (
 		Name:  "pyrmont",
 		Usage: "This defines the flag through which we can run on the Pyrmont Multiclient Testnet",
 	}
+	// PraterTestnet flag for the multiclient eth2 testnet.
+	PraterTestnet = &cli.BoolFlag{
+		Name: "prater",
+		Usage: "Run Prysm configured for the Prater test network",
+	}
 	// Mainnet flag for easier tooling, no-op
 	Mainnet = &cli.BoolFlag{
 		Value: true,
