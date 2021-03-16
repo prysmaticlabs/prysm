@@ -14,10 +14,12 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
 
@@ -109,6 +111,47 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
 		return err
 	}
+
+	// If slasher is configured, forward the attestations in the block via
+	// an event feed for processing.
+	if featureconfig.Get().EnableSlasher {
+		// Feed the indexed attestation to slasher if enabled. This action
+		// is done in the background to avoid adding more load to this critical code path.
+		go func() {
+			signedHeader, err := blockutil.SignedBeaconBlockHeaderFromBlock(signed)
+			if err != nil {
+				log.WithError(err).Error("Could not get signed block header")
+				traceutil.AnnotateError(span, err)
+				return
+			}
+
+			s.slasherBlockHeadersFeed.Send(signedHeader)
+
+			for _, att := range signed.Block.Body.Attestations {
+				committee, err := helpers.BeaconCommitteeFromState(preState, att.Data.Slot, att.Data.CommitteeIndex)
+				if err != nil {
+					log.WithError(err).Error("Could not get attestation committee")
+					traceutil.AnnotateError(span, err)
+					return
+				}
+				indexedAtt, err := attestationutil.ConvertToIndexed(ctx, att, committee)
+				if err != nil {
+					log.WithError(err).Error("Could not convert to indexed attestation")
+					traceutil.AnnotateError(span, err)
+					return
+				}
+				s.slasherAttestationsFeed.Send(indexedAtt)
+			}
+		}()
+	}
+	//for attestation in &signed_block.message.body.attestations {
+	//	let committee =
+	//		state.get_beacon_committee(attestation.data.slot, attestation.data.index)?;
+	//	let indexed_attestation =
+	//		get_indexed_attestation(&committee.committee, attestation)
+	//	.map_err(|e| BlockError::BeaconChainError(e.into()))?;
+	//	slasher.accept_attestation(indexed_attestation);
+	//}
 
 	// Updating next slot state cache can happen in the background. It shouldn't block rest of the process.
 	if featureconfig.Get().EnableNextSlotStateCache {

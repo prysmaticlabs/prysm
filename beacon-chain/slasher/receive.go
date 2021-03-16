@@ -13,7 +13,7 @@ import (
 // validating their integrity before appending them to an attestation queue
 // for batch processing in a separate routine.
 func (s *Service) receiveAttestations(ctx context.Context) {
-	sub := s.serviceCfg.IndexedAttsFeed.Subscribe(s.indexedAttsChan)
+	sub := s.serviceCfg.IndexedAttestationsFeed.Subscribe(s.indexedAttsChan)
 	defer sub.Unsubscribe()
 	for {
 		select {
@@ -43,12 +43,12 @@ func (s *Service) receiveAttestations(ctx context.Context) {
 
 // Receive beacon blocks from some source event feed,
 func (s *Service) receiveBlocks(ctx context.Context) {
-	sub := s.serviceCfg.BeaconBlocksFeed.Subscribe(s.beaconBlocksChan)
-	defer close(s.beaconBlocksChan)
+	sub := s.serviceCfg.BeaconBlockHeadersFeed.Subscribe(s.beaconBlockHeadersChan)
+	defer close(s.beaconBlockHeadersChan)
 	defer sub.Unsubscribe()
 	for {
 		select {
-		case blockHeader := <-s.beaconBlocksChan:
+		case blockHeader := <-s.beaconBlockHeadersChan:
 			// TODO(#8331): Defer blocks from the future for later processing.
 			signingRoot, err := blockHeader.Header.HashTreeRoot()
 			if err != nil {

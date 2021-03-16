@@ -315,7 +315,7 @@ func TestSlasher_receiveAttestations_OK(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Service{
 		serviceCfg: &ServiceConfig{
-			IndexedAttsFeed: new(event.Feed),
+			IndexedAttestationsFeed: new(event.Feed),
 			GenesisTimeFetcher: &mock.ChainService{
 				Genesis: time.Now(),
 			},
@@ -347,7 +347,7 @@ func TestSlasher_receiveAttestations_OnlyValidAttestations(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Service{
 		serviceCfg: &ServiceConfig{
-			IndexedAttsFeed: new(event.Feed),
+			IndexedAttestationsFeed: new(event.Feed),
 			GenesisTimeFetcher: &mock.ChainService{
 				Genesis: time.Now(),
 			},
@@ -384,13 +384,13 @@ func TestSlasher_receiveBlocks_OK(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Service{
 		serviceCfg: &ServiceConfig{
-			BeaconBlocksFeed: new(event.Feed),
+			BeaconBlockHeadersFeed: new(event.Feed),
 			GenesisTimeFetcher: &mock.ChainService{
 				Genesis: time.Now(),
 			},
 		},
-		beaconBlocksChan: make(chan *ethpb.SignedBeaconBlockHeader),
-		blksQueue:        newBlocksQueue(),
+		beaconBlockHeadersChan: make(chan *ethpb.SignedBeaconBlockHeader),
+		blksQueue:              newBlocksQueue(),
 	}
 	exitChan := make(chan struct{})
 	go func() {
@@ -400,8 +400,8 @@ func TestSlasher_receiveBlocks_OK(t *testing.T) {
 
 	block1 := createProposalWrapper(t, 0, 1, nil).SignedBeaconBlockHeader
 	block2 := createProposalWrapper(t, 0, 2, nil).SignedBeaconBlockHeader
-	s.beaconBlocksChan <- block1
-	s.beaconBlocksChan <- block2
+	s.beaconBlockHeadersChan <- block1
+	s.beaconBlockHeadersChan <- block2
 	cancel()
 	<-exitChan
 	wanted := []*slashertypes.SignedBlockHeaderWrapper{

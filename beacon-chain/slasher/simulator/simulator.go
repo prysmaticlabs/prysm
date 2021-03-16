@@ -75,12 +75,12 @@ func New(ctx context.Context, beaconDB db.Database) (*Simulator, error) {
 	}
 
 	slasherSrv, err := slasher.New(ctx, &slasher.ServiceConfig{
-		IndexedAttsFeed:       indexedAttsFeed,
-		BeaconBlocksFeed:      beaconBlocksFeed,
-		AttesterSlashingsFeed: attesterSlashingsFeed,
-		ProposerSlashingsFeed: proposerSlashingsFeed,
-		Database:              beaconDB,
-		GenesisTimeFetcher:    mockChainService,
+		IndexedAttestationsFeed: indexedAttsFeed,
+		BeaconBlockHeadersFeed:  beaconBlocksFeed,
+		AttesterSlashingsFeed:   attesterSlashingsFeed,
+		ProposerSlashingsFeed:   proposerSlashingsFeed,
+		Database:                beaconDB,
+		GenesisTimeFetcher:      mockChainService,
 	})
 	if err != nil {
 		return nil, err

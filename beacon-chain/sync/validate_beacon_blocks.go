@@ -74,6 +74,18 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		},
 	})
 
+	if featureconfig.Get().EnableSlasher {
+		// Feed the block header to slasher if enabled. This action
+		// is done in the background to avoid adding more load to this critical code path.
+		go func() {
+			blockHeader, err := blockutil.SignedBeaconBlockHeaderFromBlock(blk)
+			if err != nil {
+				log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Could not extract block header")
+			}
+			s.slasherBlockHeadersFeed.Send(blockHeader)
+		}()
+	}
+
 	// Verify the block is the first block received for the proposer for the slot.
 	if s.hasSeenBlockIndexSlot(blk.Block.Slot, blk.Block.ProposerIndex) {
 		return pubsub.ValidationIgnore
@@ -141,18 +153,6 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	if err := s.validateBeaconBlock(ctx, blk, blockRoot); err != nil {
 		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Rejected block")
 		return pubsub.ValidationReject
-	}
-
-	if featureconfig.Get().EnableSlasher {
-		// Feed the signature-verified block header to slasher if enabled. This action
-		// is done in the background to avoid adding more load to this critical code path.
-		go func() {
-			blockHeader, err := blockutil.SignedBeaconBlockHeaderFromBlock(blk)
-			if err != nil {
-				log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Could not extract block header")
-			}
-			s.verifiedBlockHeaderFeed.Send(blockHeader)
-		}()
 	}
 
 	// Record attribute of valid block.

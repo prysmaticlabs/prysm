@@ -74,8 +74,8 @@ type BeaconNode struct {
 	stateFeed               *event.Feed
 	blockFeed               *event.Feed
 	opFeed                  *event.Feed
-	verifiedBlockHeaderFeed *event.Feed
-	verifiedAttestationFeed *event.Feed
+	slasherBlockHeadersFeed *event.Feed
+	slasherAttestationsFeed *event.Feed
 	proposerSlashingsFeed   *event.Feed
 	attesterSlashingsFeed   *event.Feed
 	forkChoiceStore         forkchoice.ForkChoicer
@@ -170,8 +170,8 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 		stateFeed:               new(event.Feed),
 		blockFeed:               new(event.Feed),
 		opFeed:                  new(event.Feed),
-		verifiedBlockHeaderFeed: new(event.Feed),
-		verifiedAttestationFeed: new(event.Feed),
+		slasherBlockHeadersFeed: new(event.Feed),
+		slasherAttestationsFeed: new(event.Feed),
 		attestationPool:         attestations.NewPool(),
 		exitPool:                voluntaryexits.NewPool(),
 		slashingsPool:           slashings.NewPool(),
@@ -568,8 +568,8 @@ func (b *BeaconNode) registerSyncService() error {
 		ExitPool:                b.exitPool,
 		SlashingPool:            b.slashingsPool,
 		StateGen:                b.stateGen,
-		VerifiedAttestationFeed: b.verifiedAttestationFeed,
-		VerifiedBlockHeaderFeed: b.verifiedBlockHeaderFeed,
+		SlasherAttestationsFeed: b.slasherAttestationsFeed,
+		SlasherBlockHeadersFeed: b.slasherBlockHeadersFeed,
 	})
 
 	return b.services.RegisterService(rs)
@@ -598,12 +598,12 @@ func (b *BeaconNode) registerSlasherService() error {
 	}
 
 	slasherSrv, err := slasher.New(b.ctx, &slasher.ServiceConfig{
-		IndexedAttsFeed:       b.verifiedAttestationFeed,
-		BeaconBlocksFeed:      b.verifiedBlockHeaderFeed,
-		AttesterSlashingsFeed: b.attesterSlashingsFeed,
-		ProposerSlashingsFeed: b.proposerSlashingsFeed,
-		Database:              b.db,
-		StateNotifier:         b,
+		IndexedAttestationsFeed: b.slasherAttestationsFeed,
+		BeaconBlockHeadersFeed:  b.slasherBlockHeadersFeed,
+		AttesterSlashingsFeed:   b.attesterSlashingsFeed,
+		ProposerSlashingsFeed:   b.proposerSlashingsFeed,
+		Database:                b.db,
+		StateNotifier:           b,
 	})
 	if err != nil {
 		return err

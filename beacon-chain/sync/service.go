@@ -61,8 +61,8 @@ type Config struct {
 	StateNotifier           statefeed.Notifier
 	BlockNotifier           blockfeed.Notifier
 	AttestationNotifier     operation.Notifier
-	VerifiedAttestationFeed *event.Feed
-	VerifiedBlockHeaderFeed *event.Feed
+	SlasherAttestationsFeed *event.Feed
+	SlasherBlockHeadersFeed *event.Feed
 	StateGen                *stategen.State
 }
 
@@ -114,8 +114,8 @@ type Service struct {
 	badBlockCache             *lru.Cache
 	badBlockLock              sync.RWMutex
 	stateGen                  *stategen.State
-	verifiedAttestationFeed   *event.Feed
-	verifiedBlockHeaderFeed   *event.Feed
+	slasherAttestationsFeed   *event.Feed
+	slasherBlockHeadersFeed   *event.Feed
 }
 
 // NewService initializes new regular sync service.
@@ -142,8 +142,8 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		stateNotifier:           cfg.StateNotifier,
 		blockNotifier:           cfg.BlockNotifier,
 		stateGen:                cfg.StateGen,
-		verifiedAttestationFeed: cfg.VerifiedAttestationFeed,
-		verifiedBlockHeaderFeed: cfg.VerifiedBlockHeaderFeed,
+		slasherAttestationsFeed: cfg.SlasherAttestationsFeed,
+		slasherBlockHeadersFeed: cfg.SlasherBlockHeadersFeed,
 		rateLimiter:             rLimiter,
 	}
 

@@ -22,7 +22,7 @@ func TestMain(m *testing.M) {
 
 func TestService_StartStop(t *testing.T) {
 	srv, err := New(context.Background(), &ServiceConfig{
-		IndexedAttsFeed: new(event.Feed),
+		IndexedAttestationsFeed: new(event.Feed),
 		GenesisTimeFetcher: &mock.ChainService{
 			Genesis: time.Now(),
 		},

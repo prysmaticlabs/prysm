@@ -18,40 +18,40 @@ import (
 // This struct allows us to specify required dependencies and
 // parameters for slasher to function as needed.
 type ServiceConfig struct {
-	IndexedAttsFeed       *event.Feed
-	BeaconBlocksFeed      *event.Feed
-	AttesterSlashingsFeed *event.Feed
-	ProposerSlashingsFeed *event.Feed
-	Database              db.Database
-	StateNotifier         statefeed.Notifier
+	IndexedAttestationsFeed *event.Feed
+	BeaconBlockHeadersFeed  *event.Feed
+	AttesterSlashingsFeed   *event.Feed
+	ProposerSlashingsFeed   *event.Feed
+	Database                db.Database
+	StateNotifier           statefeed.Notifier
 }
 
 // Service defining a slasher implementation as part of
 // the beacon node, able to detect eth2 slashable offenses.
 type Service struct {
-	params           *Parameters
-	serviceCfg       *ServiceConfig
-	indexedAttsChan  chan *ethpb.IndexedAttestation
-	beaconBlocksChan chan *ethpb.SignedBeaconBlockHeader
-	attsQueue        *attestationsQueue
-	blksQueue        *blocksQueue
-	ctx              context.Context
-	cancel           context.CancelFunc
-	slotTicker       *slotutil.SlotTicker
+	params                 *Parameters
+	serviceCfg             *ServiceConfig
+	indexedAttsChan        chan *ethpb.IndexedAttestation
+	beaconBlockHeadersChan chan *ethpb.SignedBeaconBlockHeader
+	attsQueue              *attestationsQueue
+	blksQueue              *blocksQueue
+	ctx                    context.Context
+	cancel                 context.CancelFunc
+	slotTicker             *slotutil.SlotTicker
 }
 
 // New instantiates a new slasher from configuration values.
 func New(ctx context.Context, srvCfg *ServiceConfig) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		params:           DefaultParams(),
-		serviceCfg:       srvCfg,
-		indexedAttsChan:  make(chan *ethpb.IndexedAttestation, 1),
-		beaconBlocksChan: make(chan *ethpb.SignedBeaconBlockHeader, 1),
-		attsQueue:        newAttestationsQueue(),
-		blksQueue:        newBlocksQueue(),
-		ctx:              ctx,
-		cancel:           cancel,
+		params:                 DefaultParams(),
+		serviceCfg:             srvCfg,
+		indexedAttsChan:        make(chan *ethpb.IndexedAttestation, 1),
+		beaconBlockHeadersChan: make(chan *ethpb.SignedBeaconBlockHeader, 1),
+		attsQueue:              newAttestationsQueue(),
+		blksQueue:              newBlocksQueue(),
+		ctx:                    ctx,
+		cancel:                 cancel,
 	}, nil
 }
 
