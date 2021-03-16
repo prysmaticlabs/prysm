@@ -8,6 +8,8 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/slasher"
@@ -39,6 +41,7 @@ type Simulator struct {
 	proposerSlashingsFeed     *event.Feed
 	sentAttSlashingFeed       *event.Feed
 	sentBlockSlashingFeed     *event.Feed
+	stateNotifier             statefeed.Notifier
 	detectedProposerSlashings map[[32]byte]*ethpb.ProposerSlashing
 	detectedAttesterSlashings map[[32]byte]*ethpb.AttesterSlashing
 	sentProposerSlashings     map[[32]byte]*ethpb.ProposerSlashing
@@ -69,6 +72,7 @@ func New(ctx context.Context, beaconDB db.Database) (*Simulator, error) {
 	sentAttSlashingFeed := new(event.Feed)
 	attesterSlashingsFeed := new(event.Feed)
 	proposerSlashingsFeed := new(event.Feed)
+	stateNotifier := &mock.MockStateNotifier{}
 
 	slasherSrv, err := slasher.New(ctx, &slasher.ServiceConfig{
 		IndexedAttestationsFeed: indexedAttsFeed,
@@ -76,7 +80,7 @@ func New(ctx context.Context, beaconDB db.Database) (*Simulator, error) {
 		AttesterSlashingsFeed:   attesterSlashingsFeed,
 		ProposerSlashingsFeed:   proposerSlashingsFeed,
 		Database:                beaconDB,
-		StateNotifier:           &mock.MockStateNotifier{},
+		StateNotifier:           stateNotifier,
 	})
 	if err != nil {
 		return nil, err
@@ -91,6 +95,7 @@ func New(ctx context.Context, beaconDB db.Database) (*Simulator, error) {
 		proposerSlashingsFeed:     proposerSlashingsFeed,
 		sentAttSlashingFeed:       sentAttSlashingFeed,
 		sentBlockSlashingFeed:     sentBlockSlashingFeed,
+		stateNotifier:             stateNotifier,
 		sentProposerSlashings:     make(map[[32]byte]*ethpb.ProposerSlashing),
 		detectedProposerSlashings: make(map[[32]byte]*ethpb.ProposerSlashing),
 		sentAttesterSlashings:     make(map[[32]byte]*ethpb.AttesterSlashing),
@@ -116,6 +121,14 @@ func (s *Simulator) Start() {
 
 	// Start slasher in the background (Start() is non-blocking).
 	s.slasher.Start()
+
+	// Wait some time and then send a "chain started" event over a notifier
+	// for slasher to pick up a genesis time.
+	time.Sleep(time.Second)
+	s.stateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.ChainStarted,
+		Data: &statefeed.ChainStartedData{StartTime: time.Now()},
+	})
 
 	// We simulate blocks and attestations for N epochs, and in the background,
 	// start a routine which collects slashings detected by the running slasher.
