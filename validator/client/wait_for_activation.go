@@ -89,10 +89,14 @@ func (v *validator) waitForActivation(ctx context.Context, accountsChangedChan <
 		return v.waitForActivation(incrementRetries(ctx), accountsChangedChan)
 	}
 
-	remoteKm, ok := v.keyManager.(*remote.Keymanager)
+	remoteKm, ok := v.keyManager.(remote.RemoteKeymanager)
 	if ok {
 		for range v.NextSlot() {
-			validatingKeys, err = remoteKm.FetchValidatingPublicKeys(ctx)
+			if ctx.Err() == context.Canceled {
+				return errors.Wrap(ctx.Err(), "context canceled, not waiting for activation anymore")
+			}
+
+			validatingKeys, err = remoteKm.ReloadPublicKeys(ctx)
 			if err != nil {
 				return errors.Wrap(err, msgCouldNotFetchKeys)
 			}
