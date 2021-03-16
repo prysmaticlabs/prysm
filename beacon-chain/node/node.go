@@ -603,7 +603,6 @@ func (b *BeaconNode) registerSlasherService() error {
 		AttesterSlashingsFeed: b.attesterSlashingsFeed,
 		ProposerSlashingsFeed: b.proposerSlashingsFeed,
 		Database:              b.db,
-		GenesisTimeFetcher:    chainService,
 		StateNotifier:         b,
 	})
 	if err != nil {
