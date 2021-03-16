@@ -119,8 +119,8 @@ func (s *Simulator) Start() {
 	params.OverrideBeaconConfig(config)
 	defer params.OverrideBeaconConfig(params.BeaconConfig())
 
-	// Start slasher in the background (Start() is non-blocking).
-	s.slasher.Start()
+	// Start slasher in the background.
+	go s.slasher.Start()
 
 	// Wait some time and then send a "chain started" event over a notifier
 	// for slasher to pick up a genesis time.
