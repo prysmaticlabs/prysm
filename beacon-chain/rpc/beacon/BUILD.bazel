@@ -70,6 +70,7 @@ go_test(
         "blocks_test.go",
         "committees_test.go",
         "config_test.go",
+        "init_test.go",
         "slashings_test.go",
         "validators_stream_test.go",
         "validators_test.go",

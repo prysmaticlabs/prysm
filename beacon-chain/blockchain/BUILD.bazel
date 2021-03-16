@@ -5,6 +5,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "chain_info.go",
+        "genesis.go",
         "head.go",
         "info.go",
         "init_sync_process_block.go",
@@ -84,6 +85,7 @@ go_test(
         "checktags_test.go",
         "head_test.go",
         "info_test.go",
+        "init_test.go",
         "metrics_test.go",
         "process_attestation_test.go",
         "process_block_test.go",
@@ -130,6 +132,7 @@ go_test(
     srcs = [
         "chain_info_norace_test.go",
         "checktags_test.go",
+        "init_test.go",
         "receive_block_test.go",
         "service_norace_test.go",
     ],

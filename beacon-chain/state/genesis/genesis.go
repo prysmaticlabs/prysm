@@ -11,7 +11,7 @@ import (
 
 var (
 	//go:embed mainnet.ssz.snappy
-	mainnetRawSSZCompressed []byte
+	mainnetRawSSZCompressed []byte // 1.8Mb
 )
 
 // GenesisState returns a copy of the genesis state from a hardcoded value.

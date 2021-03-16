@@ -71,6 +71,7 @@ go_test(
         "deposit_contract_test.go",
         "encoding_test.go",
         "finalized_block_roots_test.go",
+        "init_test.go",
         "kv_test.go",
         "migration_archived_index_test.go",
         "migration_block_slot_index_test.go",
