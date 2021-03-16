@@ -1,7 +1,9 @@
 package kv
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"io/ioutil"
 
 	"github.com/pkg/errors"
@@ -11,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // SaveGenesisData bootstraps the beaconDB with a given genesis state.
@@ -88,6 +91,11 @@ func (s *Store) LoadGenesisFromFile(ctx context.Context, filePath string) error 
 			return nil
 		}
 		return dbIface.ErrExistingGenesisState
+	}
+
+	if !bytes.Equal(gs.Fork().CurrentVersion, params.BeaconConfig().GenesisForkVersion) {
+		return fmt.Errorf("loaded genesis fork version (%#x) does not match config genesis " +
+			"fork version (%#x)", gs.Fork().CurrentVersion, params.BeaconConfig().GenesisForkVersion)
 	}
 
 	return s.SaveGenesisData(ctx, gs)

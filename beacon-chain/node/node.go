@@ -351,7 +351,7 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
 					"exists already. Run again with --clear-db and/or ensure you are using the " +
 					"appropriate testnet flag to load the given genesis state.")
 			}
-			return err
+			return errors.Wrap(err, "could not load genesis from file")
 		}
 	}
 
