@@ -3,9 +3,12 @@ package slasher
 
 import (
 	"context"
+	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -22,6 +25,7 @@ type ServiceConfig struct {
 	ProposerSlashingsFeed *event.Feed
 	Database              db.Database
 	GenesisTimeFetcher    blockchain.TimeFetcher
+	StateNotifier         statefeed.Notifier
 }
 
 // Service defining a slasher implementation as part of
@@ -35,7 +39,7 @@ type Service struct {
 	blksQueue        *blocksQueue
 	ctx              context.Context
 	cancel           context.CancelFunc
-	slotTicker       slotutil.Ticker
+	slotTicker       *slotutil.SlotTicker
 }
 
 // New instantiates a new slasher from configuration values.
@@ -56,9 +60,25 @@ func New(ctx context.Context, srvCfg *ServiceConfig) (*Service, error) {
 // Start listening for received indexed attestations and blocks
 // and perform slashing detection on them.
 func (s *Service) Start() {
-	genesisTime := s.serviceCfg.GenesisTimeFetcher.GenesisTime()
+	var genesisTime time.Time
+	stateChannel := make(chan *feed.Event, 1)
+	stateSub := s.serviceCfg.StateNotifier.StateFeed().Subscribe(stateChannel)
+	event := <-stateChannel
+	if event.Type == statefeed.ChainStarted {
+		data, ok := event.Data.(*statefeed.ChainStartedData)
+		if !ok {
+			log.Error("Could not receive chain start notification, want *statefeed.ChainStartedData")
+			return
+		}
+		genesisTime = data.StartTime
+	} else {
+		log.Error("Could start slasher, could not receive chain start event")
+		return
+	}
+	stateSub.Unsubscribe()
 	secondsPerSlot := params.BeaconConfig().SecondsPerSlot
 	s.slotTicker = slotutil.NewSlotTicker(genesisTime, secondsPerSlot)
+
 	go s.processQueuedAttestations(s.ctx, s.slotTicker.C())
 	go s.processQueuedBlocks(s.ctx, s.slotTicker.C())
 	go s.receiveAttestations(s.ctx)
@@ -69,7 +89,9 @@ func (s *Service) Start() {
 // Stop the slasher service.
 func (s *Service) Stop() error {
 	s.cancel()
-	s.slotTicker.Done()
+	if s.slotTicker != nil {
+		s.slotTicker.Done()
+	}
 	return nil
 }
 
