@@ -1,9 +1,8 @@
-// Package stateutil defines utility functions to compute state roots
-// using advanced merkle branch caching techniques.
-package stateutil
+package state
 
 import (
 	"encoding/binary"
+	"sync"
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/pkg/errors"
@@ -13,6 +12,12 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
+)
+
+var (
+	leavesCache = make(map[string][][32]byte, params.BeaconConfig().BeaconStateFieldCount)
+	layersCache = make(map[string][][][32]byte, params.BeaconConfig().BeaconStateFieldCount)
+	lock        sync.RWMutex
 )
 
 const cacheSize = 100000
@@ -39,16 +44,16 @@ type stateRootHasher struct {
 	rootsCache *ristretto.Cache
 }
 
-// ComputeFieldRoots returns the hash tree root computations of every field in
+// computeFieldRoots returns the hash tree root computations of every field in
 // the beacon state as a list of 32 byte roots.
-func ComputeFieldRoots(state *pb.BeaconState) ([][]byte, error) {
+func computeFieldRoots(state *pb.BeaconState) ([][]byte, error) {
 	if featureconfig.Get().EnableSSZCache {
-		return cachedHasher.computeFieldRoots(state)
+		return cachedHasher.computeFieldRootsWithHasher(state)
 	}
-	return nocachedHasher.computeFieldRoots(state)
+	return nocachedHasher.computeFieldRootsWithHasher(state)
 }
 
-func (h *stateRootHasher) computeFieldRoots(state *pb.BeaconState) ([][]byte, error) {
+func (h *stateRootHasher) computeFieldRootsWithHasher(state *pb.BeaconState) ([][]byte, error) {
 	if state == nil {
 		return nil, errors.New("nil state")
 	}
@@ -76,7 +81,7 @@ func (h *stateRootHasher) computeFieldRoots(state *pb.BeaconState) ([][]byte, er
 	fieldRoots[3] = forkHashTreeRoot[:]
 
 	// BeaconBlockHeader data structure root.
-	headerHashTreeRoot, err := BlockHeaderRoot(state.LatestBlockHeader)
+	headerHashTreeRoot, err := blockHeaderRoot(state.LatestBlockHeader)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute block header merkleization")
 	}
@@ -104,14 +109,14 @@ func (h *stateRootHasher) computeFieldRoots(state *pb.BeaconState) ([][]byte, er
 	fieldRoots[7] = historicalRootsRt[:]
 
 	// Eth1Data data structure root.
-	eth1HashTreeRoot, err := Eth1Root(hasher, state.Eth1Data)
+	eth1HashTreeRoot, err := eth1Root(hasher, state.Eth1Data)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute eth1data merkleization")
 	}
 	fieldRoots[8] = eth1HashTreeRoot[:]
 
 	// Eth1DataVotes slice root.
-	eth1VotesRoot, err := Eth1DataVotesRoot(state.Eth1DataVotes)
+	eth1VotesRoot, err := eth1DataVotesRoot(state.Eth1DataVotes)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute eth1data votes merkleization")
 	}
@@ -131,7 +136,7 @@ func (h *stateRootHasher) computeFieldRoots(state *pb.BeaconState) ([][]byte, er
 	fieldRoots[11] = validatorsRoot[:]
 
 	// Balances slice root.
-	balancesRoot, err := ValidatorBalancesRoot(state.Balances)
+	balancesRoot, err := validatorBalancesRoot(state.Balances)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute validator balances merkleization")
 	}

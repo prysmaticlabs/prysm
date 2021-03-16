@@ -1,22 +1,12 @@
-// Package stateutil defines utility functions to compute state roots
-// using advanced merkle branch caching techniques.package stateutil
-package stateutil
+package state
 
 import (
 	"bytes"
-	"errors"
-	"sync"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
-	"github.com/prysmaticlabs/prysm/shared/params"
-)
-
-var (
-	leavesCache = make(map[string][][32]byte, params.BeaconConfig().BeaconStateFieldCount)
-	layersCache = make(map[string][][][32]byte, params.BeaconConfig().BeaconStateFieldCount)
-	lock        sync.RWMutex
 )
 
 // RootsArrayHashTreeRoot computes the Merkle root of arrays of 32-byte hashes, such as [64][32]byte
@@ -87,53 +77,6 @@ func (h *stateRootHasher) arraysRoot(input [][]byte, length uint64, fieldName st
 	return res, nil
 }
 
-func (h *stateRootHasher) merkleizeWithCache(leaves [][32]byte, length uint64,
-	fieldName string, hasher func([]byte) [32]byte) [32]byte {
-	if len(leaves) == 1 {
-		return leaves[0]
-	}
-	hashLayer := leaves
-	layers := make([][][32]byte, htrutils.Depth(length)+1)
-	if items, ok := layersCache[fieldName]; ok && h.rootsCache != nil {
-		if len(items[0]) == len(leaves) {
-			layers = items
-		}
-	}
-	layers[0] = hashLayer
-	layers, hashLayer = merkleizeTrieLeaves(layers, hashLayer, hasher)
-	root := hashLayer[0]
-	if h.rootsCache != nil {
-		layersCache[fieldName] = layers
-	}
-	return root
-}
-
-func merkleizeTrieLeaves(layers [][][32]byte, hashLayer [][32]byte,
-	hasher func([]byte) [32]byte) ([][][32]byte, [][32]byte) {
-	// We keep track of the hash layers of a Merkle trie until we reach
-	// the top layer of length 1, which contains the single root element.
-	//        [Root]      -> Top layer has length 1.
-	//    [E]       [F]   -> This layer has length 2.
-	// [A]  [B]  [C]  [D] -> The bottom layer has length 4 (needs to be a power of two).
-	i := 1
-	chunkBuffer := bytes.NewBuffer([]byte{})
-	chunkBuffer.Grow(64)
-	for len(hashLayer) > 1 && i < len(layers) {
-		layer := make([][32]byte, len(hashLayer)/2)
-		for j := 0; j < len(hashLayer); j += 2 {
-			chunkBuffer.Write(hashLayer[j][:])
-			chunkBuffer.Write(hashLayer[j+1][:])
-			hashedChunk := hasher(chunkBuffer.Bytes())
-			layer[j/2] = hashedChunk
-			chunkBuffer.Reset()
-		}
-		hashLayer = layer
-		layers[i] = hashLayer
-		i++
-	}
-	return layers, hashLayer
-}
-
 func recomputeRoot(idx int, chunks [][32]byte, fieldName string, hasher func([]byte) [32]byte) ([32]byte, error) {
 	items, ok := layersCache[fieldName]
 	if !ok {
@@ -180,4 +123,51 @@ func recomputeRoot(idx int, chunks [][32]byte, fieldName string, hasher func([]b
 		return layers[0][0], nil
 	}
 	return root, nil
+}
+
+func (h *stateRootHasher) merkleizeWithCache(leaves [][32]byte, length uint64,
+	fieldName string, hasher func([]byte) [32]byte) [32]byte {
+	if len(leaves) == 1 {
+		return leaves[0]
+	}
+	hashLayer := leaves
+	layers := make([][][32]byte, htrutils.Depth(length)+1)
+	if items, ok := layersCache[fieldName]; ok && h.rootsCache != nil {
+		if len(items[0]) == len(leaves) {
+			layers = items
+		}
+	}
+	layers[0] = hashLayer
+	layers, hashLayer = merkleizeTrieLeaves(layers, hashLayer, hasher)
+	root := hashLayer[0]
+	if h.rootsCache != nil {
+		layersCache[fieldName] = layers
+	}
+	return root
+}
+
+func merkleizeTrieLeaves(layers [][][32]byte, hashLayer [][32]byte,
+	hasher func([]byte) [32]byte) ([][][32]byte, [][32]byte) {
+	// We keep track of the hash layers of a Merkle trie until we reach
+	// the top layer of length 1, which contains the single root element.
+	//        [Root]      -> Top layer has length 1.
+	//    [E]       [F]   -> This layer has length 2.
+	// [A]  [B]  [C]  [D] -> The bottom layer has length 4 (needs to be a power of two).
+	i := 1
+	chunkBuffer := bytes.NewBuffer([]byte{})
+	chunkBuffer.Grow(64)
+	for len(hashLayer) > 1 && i < len(layers) {
+		layer := make([][32]byte, len(hashLayer)/2)
+		for j := 0; j < len(hashLayer); j += 2 {
+			chunkBuffer.Write(hashLayer[j][:])
+			chunkBuffer.Write(hashLayer[j+1][:])
+			hashedChunk := hasher(chunkBuffer.Bytes())
+			layer[j/2] = hashedChunk
+			chunkBuffer.Reset()
+		}
+		hashLayer = layer
+		layers[i] = hashLayer
+		i++
+	}
+	return layers, hashLayer
 }
