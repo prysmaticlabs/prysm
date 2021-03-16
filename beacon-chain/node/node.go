@@ -598,12 +598,12 @@ func (b *BeaconNode) registerSlasherService() error {
 	}
 
 	slasherSrv, err := slasher.New(b.ctx, &slasher.ServiceConfig{
-		IndexedAttsFeed:    b.verifiedAttestationFeed,
-		BeaconBlocksFeed:   b.verifiedBlockHeaderFeed,
-		AttSlashingsFeed:   b.attesterSlashingsFeed,
-		BlockSlashingsFeed: b.proposerSlashingsFeed,
-		Database:           b.db,
-		GenesisTimeFetcher: chainService,
+		IndexedAttsFeed:       b.verifiedAttestationFeed,
+		BeaconBlocksFeed:      b.verifiedBlockHeaderFeed,
+		AttesterSlashingsFeed: b.attesterSlashingsFeed,
+		ProposerSlashingsFeed: b.proposerSlashingsFeed,
+		Database:              b.db,
+		GenesisTimeFetcher:    chainService,
 	})
 	if err != nil {
 		return err
