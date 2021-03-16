@@ -604,6 +604,7 @@ func (b *BeaconNode) registerSlasherService() error {
 		ProposerSlashingsFeed: b.proposerSlashingsFeed,
 		Database:              b.db,
 		GenesisTimeFetcher:    chainService,
+		StateNotifier:         b,
 	})
 	if err != nil {
 		return err

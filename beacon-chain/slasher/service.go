@@ -64,6 +64,8 @@ func (s *Service) Start() {
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.serviceCfg.StateNotifier.StateFeed().Subscribe(stateChannel)
 	event := <-stateChannel
+
+	// Wait for us to receive the genesis time via a chain started notification.
 	if event.Type == statefeed.ChainStarted {
 		data, ok := event.Data.(*statefeed.ChainStartedData)
 		if !ok {
@@ -71,11 +73,22 @@ func (s *Service) Start() {
 			return
 		}
 		genesisTime = data.StartTime
+	} else if event.Type == statefeed.Initialized {
+		// Alternatively, if the chain has already started, we then read the genesis
+		// time value from this data.
+		data, ok := event.Data.(*statefeed.InitializedData)
+		if !ok {
+			log.Error("Could not receive chain start notification, want *statefeed.ChainStartedData")
+			return
+		}
+		genesisTime = data.StartTime
 	} else {
+		// This should not happen.
 		log.Error("Could start slasher, could not receive chain start event")
 		return
 	}
 	stateSub.Unsubscribe()
+	log.WithField("genesisTime", genesisTime).Info("Starting slasher")
 	secondsPerSlot := params.BeaconConfig().SecondsPerSlot
 	s.slotTicker = slotutil.NewSlotTicker(genesisTime, secondsPerSlot)
 
