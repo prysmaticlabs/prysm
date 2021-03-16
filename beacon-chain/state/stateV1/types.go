@@ -13,7 +13,7 @@ import (
 )
 
 // Ensure type BeaconState below implements BeaconState interface.
-var _ iface.BeaconState = (*BeaconState)(nil)
+var _ iface.BeaconStateV1 = (*BeaconState)(nil)
 
 func init() {
 	fieldMap = make(map[fieldIndex]dataType, params.BeaconConfig().BeaconStateFieldCount)

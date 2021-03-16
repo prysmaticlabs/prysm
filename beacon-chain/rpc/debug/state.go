@@ -3,7 +3,6 @@ package debug
 import (
 	"context"
 
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"google.golang.org/grpc/codes"
@@ -33,12 +32,7 @@ func (ds *Server) GetBeaconState(
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not compute state by slot: %v", err)
 		}
-		obj := st.InnerStateUnsafe()
-		s, ok := obj.(*pb.BeaconState)
-		if !ok {
-			return nil, status.Error(codes.Internal, "could not covert obj to beacon state pb")
-		}
-		encoded, err := s.MarshalSSZ()
+		encoded, err := st.CloneInnerState().MarshalSSZ()
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not ssz encode beacon state: %v", err)
 		}
@@ -50,12 +44,7 @@ func (ds *Server) GetBeaconState(
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not compute state by block root: %v", err)
 		}
-		obj := st.InnerStateUnsafe()
-		s, ok := obj.(*pb.BeaconState)
-		if !ok {
-			return nil, status.Error(codes.Internal, "could not covert obj to beacon state pb")
-		}
-		encoded, err := s.MarshalSSZ()
+		encoded, err := st.CloneInnerState().MarshalSSZ()
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not ssz encode beacon state: %v", err)
 		}
