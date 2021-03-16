@@ -144,14 +144,6 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 			}
 		}()
 	}
-	//for attestation in &signed_block.message.body.attestations {
-	//	let committee =
-	//		state.get_beacon_committee(attestation.data.slot, attestation.data.index)?;
-	//	let indexed_attestation =
-	//		get_indexed_attestation(&committee.committee, attestation)
-	//	.map_err(|e| BlockError::BeaconChainError(e.into()))?;
-	//	slasher.accept_attestation(indexed_attestation);
-	//}
 
 	// Updating next slot state cache can happen in the background. It shouldn't block rest of the process.
 	if featureconfig.Get().EnableNextSlotStateCache {
