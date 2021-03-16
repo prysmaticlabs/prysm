@@ -355,6 +355,10 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
 		}
 	}
 
+	if err := b.db.EnsureEmbeddedGenesis(b.ctx); err != nil {
+		return err
+	}
+
 	return nil
 }
 

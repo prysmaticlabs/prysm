@@ -30,7 +30,7 @@ func (s *Store) SaveGenesisData(ctx context.Context, genesisState iface.BeaconSt
 	if err := s.SaveState(ctx, genesisState, genesisBlkRoot); err != nil {
 		return errors.Wrap(err, "could not save genesis state")
 	}
-	if err := s.SaveStateSummary(ctx, &ethereum_beacon_p2p_v1.StateSummary{
+	if err := s.SaveStateSummary(ctx, &pbp2p.StateSummary{
 		Slot: 0,
 		Root: genesisBlkRoot[:],
 	}); err != nil {
@@ -91,4 +91,25 @@ func (s *Store) LoadGenesisFromFile(ctx context.Context, filePath string) error 
 	}
 
 	return s.SaveGenesisData(ctx, gs)
+}
+
+// EnsureEmbeddedGenesis checks that a genesis block has been generated when an embedded genesis
+// state is used. If a genesis block does not exist, but a genesis does, then we should call
+// SaveGenesisData on the existing genesis state.
+func (s *Store) EnsureEmbeddedGenesis(ctx context.Context) error {
+	gb, err := s.GenesisBlock(ctx)
+	if err != nil {
+		return err
+	}
+	if gb != nil {
+		return nil
+	}
+	gs, err := s.GenesisState(ctx)
+	if err != nil {
+		return err
+	}
+	if gs != nil {
+		return s.SaveGenesisData(ctx, gs)
+	}
+	return nil
 }

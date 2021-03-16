@@ -146,24 +146,6 @@ func (s *Service) Start() {
 		if err != nil {
 			log.Fatalf("Could not fetch finalized cp: %v", err)
 		}
-		// If a genesis block doesn't exist, but we have a known genesis state, then we should
-		// save this genesis data. This can happen when a genesis state is provided via flag or
-		// hard coded into the application.
-		if genesisBlock == nil && false { // DEBUG: disabled to test via interop flag.
-			genesisState, err := s.beaconDB.GenesisState(s.ctx)
-			if err != nil {
-				log.Fatal(err)
-			}
-			if genesisState != nil {
-				if err := s.saveGenesisData(s.ctx, genesisState); err != nil {
-					log.Fatal(err)
-				}
-			}
-			genesisBlock, err = s.beaconDB.GenesisBlock(s.ctx)
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
 		if genesisBlock != nil {
 			r, err = genesisBlock.Block.HashTreeRoot()
 			if err != nil {

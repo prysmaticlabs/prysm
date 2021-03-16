@@ -276,3 +276,8 @@ func (e Exporter) LoadGenesisFromFile(ctx context.Context, filePath string) erro
 func (e Exporter) SaveGenesisData(ctx context.Context, state iface.BeaconState) error {
 	return e.db.SaveGenesisData(ctx, state)
 }
+
+// EnsureEmbeddedGenesis -- passthrough.
+func (e Exporter) EnsureEmbeddedGenesis(ctx context.Context) error {
+	return e.db.EnsureEmbeddedGenesis(ctx)
+}

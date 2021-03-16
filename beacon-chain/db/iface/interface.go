@@ -103,6 +103,7 @@ type HeadAccessDatabase interface {
 	// Genesis operations.
 	LoadGenesisFromFile(ctx context.Context, filePath string) error
 	SaveGenesisData(ctx context.Context, state iface.BeaconState) error
+	EnsureEmbeddedGenesis(ctx context.Context) error
 }
 
 // Database interface with full access.
