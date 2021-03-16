@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strconv"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+
 	types "github.com/prysmaticlabs/eth2-types"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -55,7 +57,14 @@ func (s *Service) filterAttestations(
 	validInFuture = make([]*slashertypes.IndexedAttestationWrapper, 0, len(atts))
 
 	for _, attWrapper := range atts {
-		if !s.validateAttestationIntegrity(attWrapper, currentEpoch) {
+		if attWrapper == nil || !validateAttestationIntegrity(attWrapper.IndexedAttestation) {
+			numDropped++
+			continue
+		}
+
+		// If an attestation's source is epoch is older than the max history length
+		// we keep track of for slashing detection, we drop it.
+		if attWrapper.IndexedAttestation.Data.Source.Epoch+types.Epoch(s.params.historyLength) <= currentEpoch {
 			numDropped++
 			continue
 		}
@@ -75,30 +84,23 @@ func (s *Service) filterAttestations(
 // the target epoch, which is a precondition for performing slashing detection.
 // This function also checks the attestation source epoch is within the history size
 // we keep track of for slashing detection.
-func (s *Service) validateAttestationIntegrity(attWrapper *slashertypes.IndexedAttestationWrapper, currentEpoch types.Epoch) bool {
+func validateAttestationIntegrity(att *ethpb.IndexedAttestation) bool {
 	// If an attestation is malformed, we drop it.
-	if attWrapper == nil ||
-		attWrapper.IndexedAttestation == nil ||
-		attWrapper.IndexedAttestation.Data == nil ||
-		attWrapper.IndexedAttestation.Data.Source == nil ||
-		attWrapper.IndexedAttestation.Data.Target == nil {
+	if att == nil ||
+		att.Data == nil ||
+		att.Data.Source == nil ||
+		att.Data.Target == nil {
 		return false
 	}
 
-	// All valid attestations cannot have source epoch > target epoch.
-	sourceEpoch := attWrapper.IndexedAttestation.Data.Source.Epoch
-	targetEpoch := attWrapper.IndexedAttestation.Data.Target.Epoch
-	if sourceEpoch > targetEpoch {
-		return false
+	sourceEpoch := att.Data.Source.Epoch
+	targetEpoch := att.Data.Target.Epoch
+	if sourceEpoch == 0 && targetEpoch == 0 {
+		return true
 	}
 
-	// If an attestation's source is epoch is older than the max history length
-	// we keep track of for slashing detection, we drop it.
-	if sourceEpoch+types.Epoch(s.params.historyLength) <= currentEpoch {
-		return false
-	}
-
-	return true
+	// All valid attestations must have source epoch < target epoch.
+	return sourceEpoch < targetEpoch
 }
 
 // Logs a slahing event with its particular details of the slashing

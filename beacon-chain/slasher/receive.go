@@ -4,6 +4,7 @@ import (
 	"context"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/sirupsen/logrus"
 )
@@ -13,13 +14,22 @@ import (
 // for batch processing in a separate routine.
 func (s *Service) receiveAttestations(ctx context.Context) {
 	sub := s.serviceCfg.IndexedAttsFeed.Subscribe(s.indexedAttsChan)
-	defer close(s.indexedAttsChan)
 	defer sub.Unsubscribe()
 	for {
 		select {
 		case att := <-s.indexedAttsChan:
+			// TODO(#8331): Defer attestations from the future for later processing.
+			if !validateAttestationIntegrity(att) {
+				continue
+			}
+			signingRoot, err := att.Data.HashTreeRoot()
+			if err != nil {
+				log.WithError(err).Error("Could not get hash tree root of attestation")
+				continue
+			}
 			attWrapper := &slashertypes.IndexedAttestationWrapper{
 				IndexedAttestation: att,
+				SigningRoot:        signingRoot,
 			}
 			s.attsQueue.push(attWrapper)
 		case err := <-sub.Err():
@@ -40,8 +50,14 @@ func (s *Service) receiveBlocks(ctx context.Context) {
 		select {
 		case blockHeader := <-s.beaconBlocksChan:
 			// TODO(#8331): Defer blocks from the future for later processing.
+			signingRoot, err := blockHeader.Header.HashTreeRoot()
+			if err != nil {
+				log.WithError(err).Error("Could not get hash tree root of signed block header")
+				continue
+			}
 			wrappedProposal := &slashertypes.SignedBlockHeaderWrapper{
 				SignedBeaconBlockHeader: blockHeader,
+				SigningRoot:             signingRoot,
 			}
 			s.blksQueue.push(wrappedProposal)
 		case err := <-sub.Err():
@@ -57,13 +73,14 @@ func (s *Service) receiveBlocks(ctx context.Context) {
 // these attestations from a queue, then group them all by validator chunk index.
 // This grouping will allow us to perform detection on batches of attestations
 // per validator chunk index which can be done concurrently.
-func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-chan types.Epoch) {
+func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-chan types.Slot) {
 	for {
 		select {
-		case currentEpoch := <-epochTicker:
+		case currentSlot := <-slotTicker:
+			attestations := s.attsQueue.dequeue()
+			currentEpoch := helpers.SlotToEpoch(currentSlot)
 			// We take all the attestations in the queue and filter out
 			// those which are valid now and valid in the future.
-			attestations := s.attsQueue.dequeue()
 			validAtts, validInFuture, numDropped := s.filterAttestations(attestations, currentEpoch)
 
 			deferredAttestationsTotal.Add(float64(len(validInFuture)))
@@ -108,11 +125,12 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 
 // Process queued blocks every time an epoch ticker fires. We retrieve
 // these blocks from a queue, then perform double proposal detection.
-func (s *Service) processQueuedBlocks(ctx context.Context, epochTicker <-chan types.Epoch) {
+func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan types.Slot) {
 	for {
 		select {
-		case currentEpoch := <-epochTicker:
+		case currentSlot := <-slotTicker:
 			blocks := s.blksQueue.dequeue()
+			currentEpoch := helpers.SlotToEpoch(currentSlot)
 
 			receivedBlocksTotal.Add(float64(len(blocks)))
 
@@ -132,10 +150,14 @@ func (s *Service) processQueuedBlocks(ctx context.Context, epochTicker <-chan ty
 	}
 }
 
-func (s *Service) pruneSlasherData(ctx context.Context, epochTicker <-chan types.Epoch) {
+func (s *Service) pruneSlasherData(ctx context.Context, slotTicker <-chan types.Slot) {
 	for {
 		select {
-		case currentEpoch := <-epochTicker:
+		case currentSlot := <-slotTicker:
+			if !helpers.IsEpochStart(currentSlot) {
+				continue
+			}
+			currentEpoch := helpers.SlotToEpoch(currentSlot)
 			if err := s.serviceCfg.Database.PruneAttestations(ctx, currentEpoch, s.params.historyLength); err != nil {
 				log.WithError(err).Error("Could not prune attestations")
 				continue

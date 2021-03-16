@@ -29,7 +29,7 @@ func (s *Service) detectSlashableBlocks(
 		}
 		if isDoubleProposal(proposedBlocks[i].SigningRoot, existingProposal.SigningRoot) {
 			doubleProposalsTotal.Inc()
-			s.proposerSlashingsFeed.Send(&ethpb.ProposerSlashing{
+			s.serviceCfg.ProposerSlashingsFeed.Send(&ethpb.ProposerSlashing{
 				Header_1: existingProposal.SignedBeaconBlockHeader,
 				Header_2: proposedBlocks[i].SignedBeaconBlockHeader,
 			})
@@ -60,7 +60,7 @@ func (s *Service) checkDoubleProposalsOnDisk(
 	for i, doubleProposal := range doubleProposals {
 		doubleProposalsTotal.Inc()
 		logDoubleProposal(proposedBlocks[i], doubleProposal.PrevBeaconBlockWrapper)
-		s.proposerSlashingsFeed.Send(&ethpb.ProposerSlashing{
+		s.serviceCfg.ProposerSlashingsFeed.Send(&ethpb.ProposerSlashing{
 			Header_1: doubleProposal.PrevBeaconBlockWrapper.SignedBeaconBlockHeader,
 			Header_2: proposedBlocks[i].SignedBeaconBlockHeader,
 		})
