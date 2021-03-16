@@ -24,8 +24,8 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 			Database:              beaconDB,
 			ProposerSlashingsFeed: new(event.Feed),
 		},
-		params:            DefaultParams(),
-		beaconBlocksQueue: make([]*slashertypes.SignedBlockHeaderWrapper, 0),
+		params:    DefaultParams(),
+		blksQueue: newBlocksQueue(),
 	}
 	currentSlotChan := make(chan types.Slot)
 	exitChan := make(chan struct{})
@@ -33,14 +33,12 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 		s.processQueuedBlocks(ctx, currentSlotChan)
 		exitChan <- struct{}{}
 	}()
-	s.blockQueueLock.Lock()
-	s.beaconBlocksQueue = []*slashertypes.SignedBlockHeaderWrapper{
+	s.blksQueue.extend([]*slashertypes.SignedBlockHeaderWrapper{
 		createProposalWrapper(t, 4, 1, []byte{1}),
 		createProposalWrapper(t, 4, 1, []byte{1}),
 		createProposalWrapper(t, 4, 1, []byte{1}),
 		createProposalWrapper(t, 4, 1, []byte{2}),
-	}
-	s.blockQueueLock.Unlock()
+	})
 	currentSlot := types.Slot(4)
 	currentSlotChan <- currentSlot
 	cancel()
@@ -56,8 +54,8 @@ func Test_processQueuedBlocks_NotSlashable(t *testing.T) {
 		serviceCfg: &ServiceConfig{
 			Database: beaconDB,
 		},
-		params:            DefaultParams(),
-		beaconBlocksQueue: make([]*slashertypes.SignedBlockHeaderWrapper, 0),
+		params:    DefaultParams(),
+		blksQueue: newBlocksQueue(),
 	}
 	currentSlotChan := make(chan types.Slot)
 	exitChan := make(chan struct{})
@@ -65,12 +63,10 @@ func Test_processQueuedBlocks_NotSlashable(t *testing.T) {
 		s.processQueuedBlocks(ctx, currentSlotChan)
 		exitChan <- struct{}{}
 	}()
-	s.blockQueueLock.Lock()
-	s.beaconBlocksQueue = []*slashertypes.SignedBlockHeaderWrapper{
+	s.blksQueue.extend([]*slashertypes.SignedBlockHeaderWrapper{
 		createProposalWrapper(t, 4, 1, []byte{1}),
 		createProposalWrapper(t, 4, 1, []byte{1}),
-	}
-	s.blockQueueLock.Unlock()
+	})
 	currentSlot := types.Slot(4)
 	currentSlotChan <- currentSlot
 	cancel()

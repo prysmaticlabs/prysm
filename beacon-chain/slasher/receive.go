@@ -31,9 +31,7 @@ func (s *Service) receiveAttestations(ctx context.Context) {
 				IndexedAttestation: att,
 				SigningRoot:        signingRoot,
 			}
-			s.attestationQueueLock.Lock()
-			s.attestationQueue = append(s.attestationQueue, attWrapper)
-			s.attestationQueueLock.Unlock()
+			s.attsQueue.push(attWrapper)
 		case err := <-sub.Err():
 			log.WithError(err).Debug("Subscriber closed with error")
 			return
@@ -61,9 +59,7 @@ func (s *Service) receiveBlocks(ctx context.Context) {
 				SignedBeaconBlockHeader: blockHeader,
 				SigningRoot:             signingRoot,
 			}
-			s.blockQueueLock.Lock()
-			s.beaconBlocksQueue = append(s.beaconBlocksQueue, wrappedProposal)
-			s.blockQueueLock.Unlock()
+			s.blksQueue.push(wrappedProposal)
 		case err := <-sub.Err():
 			log.WithError(err).Debug("Subscriber closed with error")
 			return
@@ -81,28 +77,34 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 	for {
 		select {
 		case currentSlot := <-slotTicker:
-			s.attestationQueueLock.Lock()
-			attestations := s.attestationQueue
-			s.attestationQueue = make([]*slashertypes.IndexedAttestationWrapper, 0)
-			s.attestationQueueLock.Unlock()
+			attestations := s.attsQueue.dequeue()
 			currentEpoch := helpers.SlotToEpoch(currentSlot)
+			// We take all the attestations in the queue and filter out
+			// those which are valid now and valid in the future.
+			validAtts, validInFuture, numDropped := s.filterAttestations(attestations, currentEpoch)
 
-			receivedAttestationsTotal.Add(float64(len(attestations)))
+			deferredAttestationsTotal.Add(float64(len(validInFuture)))
+			droppedAttestationsTotal.Add(float64(numDropped))
+
+			// We add back those attestations that are valid in the future to the queue.
+			s.attsQueue.extend(validInFuture)
 
 			log.WithFields(logrus.Fields{
-				"currentEpoch": currentEpoch,
-				"numAtts":      len(attestations),
+				"currentEpoch":    currentEpoch,
+				"numValidAtts":    len(validAtts),
+				"numDeferredAtts": len(validInFuture),
+				"numDroppedAtts":  numDropped,
 			}).Info("Epoch reached, processing queued atts for slashing detection")
 
 			// Save the attestation records to our database.
 			if err := s.serviceCfg.Database.SaveAttestationRecordsForValidators(
-				ctx, attestations,
+				ctx, validAtts,
 			); err != nil {
 				log.WithError(err).Error("Could not save attestation records to DB")
 				continue
 			}
 
-			groupedAtts := s.groupByValidatorChunkIndex(attestations)
+			groupedAtts := s.groupByValidatorChunkIndex(validAtts)
 			// TODO(#8331): Consider using goroutines and wait groups here.
 			for validatorChunkIdx, batch := range groupedAtts {
 				if err := s.detectSlashableAttestations(ctx, &chunkUpdateArgs{
@@ -114,7 +116,7 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 				}
 			}
 
-			processedAttestationsTotal.Add(float64(len(attestations)))
+			processedAttestationsTotal.Add(float64(len(validAtts)))
 		case <-ctx.Done():
 			return
 		}
@@ -127,10 +129,7 @@ func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan typ
 	for {
 		select {
 		case currentSlot := <-slotTicker:
-			s.blockQueueLock.Lock()
-			blocks := s.beaconBlocksQueue
-			s.beaconBlocksQueue = make([]*slashertypes.SignedBlockHeaderWrapper, 0)
-			s.blockQueueLock.Unlock()
+			blocks := s.blksQueue.dequeue()
 			currentEpoch := helpers.SlotToEpoch(currentSlot)
 
 			receivedBlocksTotal.Add(float64(len(blocks)))
