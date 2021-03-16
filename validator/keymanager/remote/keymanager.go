@@ -33,6 +33,12 @@ var (
 	ErrSigningDenied = errors.New("signing request was denied by remote server")
 )
 
+// RemoteKeymanager defines the interface for remote Prysm wallets.
+type RemoteKeymanager interface {
+	keymanager.IKeymanager
+	ReloadPublicKeys(ctx context.Context) ([][48]byte, error)
+}
+
 // KeymanagerOpts for a remote keymanager.
 type KeymanagerOpts struct {
 	RemoteCertificate *CertificateConfig `json:"remote_cert"`
@@ -201,15 +207,10 @@ func (km *Keymanager) KeymanagerOpts() *KeymanagerOpts {
 	return km.opts
 }
 
-// FetchValidatingPublicKeys fetches the list of public keys that should be used to validate with.
-func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
-	resp, err := km.client.ListValidatingPublicKeys(ctx, &empty.Empty{})
+func (km *Keymanager) ReloadPublicKeys(ctx context.Context) ([][48]byte, error) {
+	pubKeys, err := km.FetchValidatingPublicKeys(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not list accounts from remote server")
-	}
-	pubKeys := make([][48]byte, len(resp.ValidatingPublicKeys))
-	for i := range resp.ValidatingPublicKeys {
-		pubKeys[i] = bytesutil.ToBytes48(resp.ValidatingPublicKeys[i])
+		return nil, errors.Wrap(err, "could not reload public keys")
 	}
 
 	sort.Slice(pubKeys, func(i, j int) bool { return bytes.Compare(pubKeys[i][:], pubKeys[j][:]) == -1 })
@@ -227,6 +228,19 @@ func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 	}
 
 	km.orderedPubKeys = pubKeys
+	return km.orderedPubKeys, nil
+}
+
+// FetchValidatingPublicKeys fetches the list of public keys that should be used to validate with.
+func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+	resp, err := km.client.ListValidatingPublicKeys(ctx, &empty.Empty{})
+	if err != nil {
+		return nil, errors.Wrap(err, "could not list accounts from remote server")
+	}
+	pubKeys := make([][48]byte, len(resp.ValidatingPublicKeys))
+	for i := range resp.ValidatingPublicKeys {
+		pubKeys[i] = bytesutil.ToBytes48(resp.ValidatingPublicKeys[i])
+	}
 	return pubKeys, nil
 }
 

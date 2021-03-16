@@ -336,7 +336,7 @@ func TestUnmarshalOptionsFile_DefaultRequireTls(t *testing.T) {
 	assert.Equal(t, true, opts.RemoteCertificate.RequireTls)
 }
 
-func TestFetchValidatingPublicKeys_Reload(t *testing.T) {
+func TestReloadPublicKeys(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	ctrl := gomock.NewController(t)
@@ -357,9 +357,10 @@ func TestFetchValidatingPublicKeys_Reload(t *testing.T) {
 		ValidatingPublicKeys: [][]byte{[]byte("200"), []byte("100")},
 	}, nil /* err */)
 
-	_, err := k.FetchValidatingPublicKeys(ctx)
+	keys, err := k.ReloadPublicKeys(ctx)
 	require.NoError(t, err)
 	assert.DeepEqual(t, [][48]byte{bytesutil.ToBytes48([]byte("100")), bytesutil.ToBytes48([]byte("200"))}, k.orderedPubKeys)
+	assert.DeepEqual(t, keys, k.orderedPubKeys)
 	assert.LogsContain(t, hook, keymanager.KeysReloaded)
 
 	hook.Reset()
@@ -372,9 +373,10 @@ func TestFetchValidatingPublicKeys_Reload(t *testing.T) {
 		ValidatingPublicKeys: [][]byte{[]byte("200")},
 	}, nil /* err */)
 
-	_, err = k.FetchValidatingPublicKeys(ctx)
+	keys, err = k.ReloadPublicKeys(ctx)
 	require.NoError(t, err)
 	assert.DeepEqual(t, [][48]byte{bytesutil.ToBytes48([]byte("200"))}, k.orderedPubKeys)
+	assert.DeepEqual(t, keys, k.orderedPubKeys)
 	assert.LogsContain(t, hook, keymanager.KeysReloaded)
 
 	hook.Reset()
@@ -387,9 +389,10 @@ func TestFetchValidatingPublicKeys_Reload(t *testing.T) {
 		ValidatingPublicKeys: [][]byte{[]byte("300")},
 	}, nil /* err */)
 
-	_, err = k.FetchValidatingPublicKeys(ctx)
+	keys, err = k.ReloadPublicKeys(ctx)
 	require.NoError(t, err)
 	assert.DeepEqual(t, [][48]byte{bytesutil.ToBytes48([]byte("300"))}, k.orderedPubKeys)
+	assert.DeepEqual(t, keys, k.orderedPubKeys)
 	assert.LogsContain(t, hook, keymanager.KeysReloaded)
 
 	hook.Reset()
@@ -402,8 +405,9 @@ func TestFetchValidatingPublicKeys_Reload(t *testing.T) {
 		ValidatingPublicKeys: [][]byte{[]byte("300")},
 	}, nil /* err */)
 
-	_, err = k.FetchValidatingPublicKeys(ctx)
+	keys, err = k.ReloadPublicKeys(ctx)
 	require.NoError(t, err)
 	assert.DeepEqual(t, [][48]byte{bytesutil.ToBytes48([]byte("300"))}, k.orderedPubKeys)
+	assert.DeepEqual(t, keys, k.orderedPubKeys)
 	assert.LogsDoNotContain(t, hook, keymanager.KeysReloaded)
 }
