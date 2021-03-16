@@ -92,6 +92,7 @@ func (h *stateRootHasher) pendingAttestationRoot(hasher htrutils.HashFn, att *pb
 		proposerRoot := bytesutil.ToBytes32(proposerBuf)
 		fieldRoots[3] = proposerRoot[:]
 	}
+
 	res, err := htrutils.BitwiseMerkleize(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 	if err != nil {
 		return [32]byte{}, err
