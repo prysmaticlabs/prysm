@@ -5,7 +5,6 @@ go_library(
     name = "go_default_library",
     srcs = [
         "chain_info.go",
-        "genesis.go",
         "head.go",
         "info.go",
         "init_sync_process_block.go",
@@ -28,7 +27,6 @@ go_library(
     deps = [
         "//beacon-chain/cache:go_default_library",
         "//beacon-chain/cache/depositcache:go_default_library",
-        "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/epoch/precompute:go_default_library",
         "//beacon-chain/core/feed:go_default_library",
         "//beacon-chain/core/feed/state:go_default_library",

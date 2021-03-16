@@ -343,6 +343,18 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
 	}
 
 	b.depositCache = depositCache
+
+	if cliCtx.IsSet(flags.GenesisStatePath.Name) {
+		if err := b.db.LoadGenesisFromFile(b.ctx, cliCtx.String(flags.GenesisStatePath.Name)); err != nil {
+			if err == db.ErrExistingGenesisState {
+				log.WithError(err).Error("Genesis state flag specified but a genesis state " +
+					"exists already. Run again with --clear-db and/or ensure you are using the " +
+					"appropriate testnet flag to load the given genesis state.")
+			}
+			return err
+		}
+	}
+
 	return nil
 }
 

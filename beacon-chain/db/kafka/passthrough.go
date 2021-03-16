@@ -266,3 +266,13 @@ func (e Exporter) RunMigrations(ctx context.Context) error {
 func (e Exporter) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint types.Slot) error {
 	return e.db.RunMigrations(ctx)
 }
+
+// LoadGenesisFromFile -- passthrough
+func (e Exporter) LoadGenesisFromFile(ctx context.Context, filePath string) error {
+	return e.db.LoadGenesisFromFile(ctx, filePath)
+}
+
+// SaveGenesisData -- passthrough
+func (e Exporter) SaveGenesisData(ctx context.Context, state iface.BeaconState) error {
+	return e.db.SaveGenesisData(ctx, state)
+}

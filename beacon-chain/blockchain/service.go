@@ -15,7 +15,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -32,7 +31,6 @@ import (
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -147,6 +145,24 @@ func (s *Service) Start() {
 		genesisBlock, err := s.beaconDB.GenesisBlock(s.ctx)
 		if err != nil {
 			log.Fatalf("Could not fetch finalized cp: %v", err)
+		}
+		// If a genesis block doesn't exist, but we have a known genesis state, then we should
+		// save this genesis data. This can happen when a genesis state is provided via flag or
+		// hard coded into the application.
+		if genesisBlock == nil && false { // DEBUG: disabled to test via interop flag.
+			genesisState, err := s.beaconDB.GenesisState(s.ctx)
+			if err != nil {
+				log.Fatal(err)
+			}
+			if genesisState != nil {
+				if err := s.saveGenesisData(s.ctx, genesisState); err != nil {
+					log.Fatal(err)
+				}
+			}
+			genesisBlock, err = s.beaconDB.GenesisBlock(s.ctx)
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 		if genesisBlock != nil {
 			r, err = genesisBlock.Block.HashTreeRoot()
@@ -362,38 +378,20 @@ func (s *Service) Status() error {
 
 // This gets called when beacon chain is first initialized to save genesis data (state, block, and more) in db.
 func (s *Service) saveGenesisData(ctx context.Context, genesisState iface.BeaconState) error {
-	stateRoot, err := genesisState.HashTreeRoot(ctx)
-	if err != nil {
-		return err
+	if err := s.beaconDB.SaveGenesisData(ctx, genesisState); err != nil {
+		return errors.Wrap(err, "could not save genesis data")
 	}
-	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
+	genesisBlk, err := s.beaconDB.GenesisBlock(ctx)
+	if err != nil || genesisBlk == nil {
+		return errors.Wrap(err, "could not load genesis block")
+	}
 	genesisBlkRoot, err := genesisBlk.Block.HashTreeRoot()
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block root")
 	}
+
 	s.genesisRoot = genesisBlkRoot
-
-	if err := s.beaconDB.SaveBlock(ctx, genesisBlk); err != nil {
-		return errors.Wrap(err, "could not save genesis block")
-	}
-	if err := s.beaconDB.SaveState(ctx, genesisState, genesisBlkRoot); err != nil {
-		return errors.Wrap(err, "could not save genesis state")
-	}
-	if err := s.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
-		Slot: 0,
-		Root: genesisBlkRoot[:],
-	}); err != nil {
-		return err
-	}
-
-	s.stateGen.SaveFinalizedState(0, genesisBlkRoot, genesisState)
-
-	if err := s.beaconDB.SaveHeadBlockRoot(ctx, genesisBlkRoot); err != nil {
-		return errors.Wrap(err, "could not save head block root")
-	}
-	if err := s.beaconDB.SaveGenesisBlockRoot(ctx, genesisBlkRoot); err != nil {
-		return errors.Wrap(err, "could not save genesis block root")
-	}
+	s.stateGen.SaveFinalizedState(0 /*slot*/, genesisBlkRoot, genesisState)
 
 	// Finalized checkpoint at genesis is a zero hash.
 	genesisCheckpoint := genesisState.FinalizedCheckpoint()
@@ -418,7 +416,6 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState iface.Beacon
 	}
 
 	s.setHead(genesisBlkRoot, genesisBlk, genesisState)
-
 	return nil
 }
 

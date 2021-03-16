@@ -14,8 +14,8 @@ var (
 	mainnetRawSSZCompressed []byte // 1.8Mb
 )
 
-// GenesisState returns a copy of the genesis state from a hardcoded value.
-func GenesisState(name string) (*state.BeaconState, error) {
+// State returns a copy of the genesis state from a hardcoded value.
+func State(name string) (*state.BeaconState, error) {
 	switch name {
 	case params.ConfigNames[params.Mainnet]:
 		return load(mainnetRawSSZCompressed)

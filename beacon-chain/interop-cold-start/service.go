@@ -11,7 +11,6 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -171,8 +170,7 @@ func (s *Service) NonFinalizedDeposits(_ context.Context, _ *big.Int) []*ethpb.D
 }
 
 func (s *Service) saveGenesisState(ctx context.Context, genesisState iface.BeaconState) error {
-	_, err := blockchain.SaveGenesisData(ctx, genesisState, s.beaconDB)
-	if err != nil {
+	if err := s.beaconDB.SaveGenesisData(ctx, genesisState); err != nil {
 		return err
 	}
 

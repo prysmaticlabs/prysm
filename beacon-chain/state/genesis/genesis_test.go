@@ -17,7 +17,7 @@ func TestGenesisState(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(params.ConfigNames[tt.name], func(t *testing.T) {
-			st, err := genesis.GenesisState(params.ConfigNames[tt.name])
+			st, err := genesis.State(params.ConfigNames[tt.name])
 			if err != nil {
 				t.Fatal(err)
 			}

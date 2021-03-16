@@ -43,10 +43,10 @@ func (s *Store) State(ctx context.Context, blockRoot [32]byte) (iface.BeaconStat
 
 // GenesisState returns the genesis state in beacon chain.
 func (s *Store) GenesisState(ctx context.Context) (iface.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.GenesisState")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.State")
 	defer span.End()
 
-	cached, err := genesis.GenesisState(params.BeaconConfig().ConfigName)
+	cached, err := genesis.State(params.BeaconConfig().ConfigName)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, err

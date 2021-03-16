@@ -11,6 +11,7 @@ go_library(
         "deposit_contract.go",
         "encoding.go",
         "finalized_block_roots.go",
+        "genesis.go",
         "kv.go",
         "log.go",
         "migration.go",
@@ -32,6 +33,7 @@ go_library(
         "//tools:__subpackages__",
     ],
     deps = [
+        "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/db/filters:go_default_library",
         "//beacon-chain/db/iface:go_default_library",
