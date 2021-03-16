@@ -6,6 +6,11 @@ go_library(
     srcs = [
         "cloners.go",
         "doc.go",
+        "field_root_attestation.go",
+        "field_root_block_header.go",
+        "field_root_eth1.go",
+        "field_root_validator.go",
+        "field_root_vector.go",
         "field_roots.go",
         "field_trie.go",
         "getters.go",
