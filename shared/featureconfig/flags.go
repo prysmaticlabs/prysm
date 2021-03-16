@@ -19,7 +19,7 @@ var (
 	}
 	// PraterTestnet flag for the multiclient eth2 testnet.
 	PraterTestnet = &cli.BoolFlag{
-		Name: "prater",
+		Name:  "prater",
 		Usage: "Run Prysm configured for the Prater test network",
 	}
 	// Mainnet flag for easier tooling, no-op
@@ -136,6 +136,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	disableAttestingHistoryDBCache,
 	ToledoTestnet,
 	PyrmontTestnet,
+	PraterTestnet,
 	Mainnet,
 	disableAccountsV2,
 	disableBlst,
@@ -148,6 +149,7 @@ var SlasherFlags = append(deprecatedFlags, []cli.Flag{
 	disableLookbackFlag,
 	ToledoTestnet,
 	PyrmontTestnet,
+	PraterTestnet,
 	Mainnet,
 }...)
 
@@ -163,6 +165,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	attestationAggregationStrategy,
 	ToledoTestnet,
 	PyrmontTestnet,
+	PraterTestnet,
 	Mainnet,
 	disableBlst,
 	enablePeerScorer,
