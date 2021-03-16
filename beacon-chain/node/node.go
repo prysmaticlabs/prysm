@@ -172,6 +172,8 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 		opFeed:                  new(event.Feed),
 		slasherBlockHeadersFeed: new(event.Feed),
 		slasherAttestationsFeed: new(event.Feed),
+		proposerSlashingsFeed:   new(event.Feed),
+		attesterSlashingsFeed:   new(event.Feed),
 		attestationPool:         attestations.NewPool(),
 		exitPool:                voluntaryexits.NewPool(),
 		slashingsPool:           slashings.NewPool(),
