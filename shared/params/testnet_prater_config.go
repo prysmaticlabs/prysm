@@ -4,7 +4,7 @@ import (
 	eth1Params "github.com/ethereum/go-ethereum/params"
 )
 
-// UsePraterNetworkConfig uses the Pyrmont specific
+// UsePraterNetworkConfig uses the Prater specific
 // network config.
 func UsePraterNetworkConfig() {
 	cfg := BeaconNetworkConfig().Copy()
@@ -16,7 +16,7 @@ func UsePraterNetworkConfig() {
 }
 
 // UsePraterConfig sets the main beacon chain
-// config for Pyrmont.
+// config for Prater.
 func UsePraterConfig() {
 	beaconConfig = PraterConfig()
 }
