@@ -94,7 +94,7 @@ type validator struct {
 	graffitiStruct                     *graffiti.Graffiti
 	graffitiOrderedIndex               uint64
 	eipImportBlacklistedPublicKeys     map[[48]byte]bool
-	pandoraService                     *pandora.Service
+	pandoraService                     pandora.PandoraService
 }
 
 // Done cleans up the validator.

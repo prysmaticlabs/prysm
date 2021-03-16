@@ -92,6 +92,18 @@ func (m *mockKeymanager) Sign(ctx context.Context, req *validatorpb.SignRequest)
 	return sig, nil
 }
 
+func (m *mockKeymanager) SignHeaderHash(ctx context.Context, req *validatorpb.SignRequest) ([]byte, error) {
+	pubKey := [48]byte{}
+	copy(pubKey[:], req.PublicKey)
+	privKey, ok := m.keysMap[pubKey]
+	if !ok {
+		return nil, errors.New("not found")
+	}
+	sig := privKey.Sign(req.SigningRoot)
+	sigByte := sig.Marshal()
+	return sigByte[:32], nil
+}
+
 func (m *mockKeymanager) SubscribeAccountChanges(pubKeysChan chan [][48]byte) event.Subscription {
 	if m.accountsChangedFeed == nil {
 		m.accountsChangedFeed = &event.Feed{}

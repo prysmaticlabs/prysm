@@ -288,6 +288,26 @@ func (km *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 	return secretKey.Sign(req.SigningRoot), nil
 }
 
+// SignHeaderHash signs pandora chain header hash using a validator key
+func (km *Keymanager) SignHeaderHash(ctx context.Context, req *validatorpb.SignRequest) ([]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "keymanager.SignHeaderHash")
+	defer span.End()
+
+	publicKey := req.PublicKey
+	if publicKey == nil {
+		return nil, errors.New("nil public key in request")
+	}
+	lock.RLock()
+	secretKey, ok := secretKeysCache[bytesutil.ToBytes48(publicKey)]
+	lock.RUnlock()
+	if !ok {
+		return nil, errors.New("no signing key found in keys cache")
+	}
+	sig := secretKey.Sign(req.SigningRoot)
+	sigByte := sig.Marshal()
+	return sigByte[:32], nil
+}
+
 func (km *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 	encoded, err := km.wallet.ReadFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName)
 	if err != nil && strings.Contains(err.Error(), "no files found") {

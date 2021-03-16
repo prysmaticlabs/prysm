@@ -229,6 +229,11 @@ func (km *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 	return bls.SignatureFromBytes(resp.Signature)
 }
 
+// SignHeaderHash signs pandora header hash
+func (km *Keymanager) SignHeaderHash(ctx context.Context, req *validatorpb.SignRequest) ([]byte, error) {
+	return nil, nil
+}
+
 // SubscribeAccountChanges is currently NOT IMPLEMENTED for the remote keymanager.
 // INVOKING THIS FUNCTION HAS NO EFFECT!
 func (km *Keymanager) SubscribeAccountChanges(_ chan [][48]byte) event.Subscription {

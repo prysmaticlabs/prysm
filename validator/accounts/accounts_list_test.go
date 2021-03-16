@@ -48,6 +48,10 @@ func (m *mockRemoteKeymanager) Sign(context.Context, *validatorpb.SignRequest) (
 	return nil, nil
 }
 
+func (m *mockRemoteKeymanager) SignHeaderHash(ctx context.Context, req *validatorpb.SignRequest) ([]byte, error) {
+	return nil, nil
+}
+
 func (m *mockRemoteKeymanager) SubscribeAccountChanges(_ chan [][48]byte) event.Subscription {
 	return nil
 }
