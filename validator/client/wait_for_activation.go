@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"time"
 
@@ -13,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -21,14 +19,18 @@ import (
 // validator set. If not, this operation will block until an activation message is
 // received. This method also monitors the keymanager for updates while waiting for an activation
 // from the gRPC server.
-func (v *validator) WaitForActivation(ctx context.Context) error {
+//
+// If the channel parameter is nil, WaitForActivation creates and manages its own channel.
+func (v *validator) WaitForActivation(ctx context.Context, accountsChangedChan chan [][48]byte) error {
 	// Monitor the key manager for updates.
-	accountsChangedChan := make(chan [][48]byte)
-	sub := v.GetKeymanager().SubscribeAccountChanges(accountsChangedChan)
-	defer func() {
-		sub.Unsubscribe()
-		close(accountsChangedChan)
-	}()
+	if accountsChangedChan == nil {
+		accountsChangedChan = make(chan [][48]byte)
+		sub := v.GetKeymanager().SubscribeAccountChanges(accountsChangedChan)
+		defer func() {
+			sub.Unsubscribe()
+			close(accountsChangedChan)
+		}()
+	}
 
 	return v.waitForActivation(ctx, accountsChangedChan)
 }
@@ -109,18 +111,18 @@ func (v *validator) waitForActivation(ctx context.Context, accountsChangedChan <
 				time.Sleep(time.Second * time.Duration(mathutil.Min(uint64(attempts), 60)))
 				return v.waitForActivation(incrementRetries(ctx), accountsChangedChan)
 			}
-			valActivated := v.checkAndLogValidatorStatus(res.Statuses)
 
-			if valActivated {
-				for _, statusResp := range res.Statuses {
-					if statusResp.Status.Status != ethpb.ValidatorStatus_ACTIVE {
-						continue
-					}
-					log.WithFields(logrus.Fields{
-						"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(statusResp.PublicKey)),
-						"index":     statusResp.Index,
-					}).Info("Validator activated")
+			statuses := make([]*validatorStatus, len(res.Statuses))
+			for i, s := range res.Statuses {
+				statuses[i] = &validatorStatus{
+					publicKey: s.PublicKey,
+					status:    s.Status,
+					index:     s.Index,
 				}
+			}
+			valActivated := v.checkAndLogValidatorStatus(statuses)
+			if valActivated {
+				logActiveValidatorStatus(statuses)
 			} else {
 				continue
 			}

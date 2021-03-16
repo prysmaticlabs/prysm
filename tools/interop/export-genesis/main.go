@@ -37,7 +37,7 @@ func main() {
 	if gs == nil {
 		panic("nil genesis state")
 	}
-	b, err := gs.InnerStateUnsafe().MarshalSSZ()
+	b, err := gs.MarshalSSZ()
 	if err != nil {
 		panic(err)
 	}
