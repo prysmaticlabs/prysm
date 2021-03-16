@@ -187,8 +187,8 @@ func Test_processQueuedAttestations(t *testing.T) {
 					},
 					AttesterSlashingsFeed: new(event.Feed),
 				},
-				params:           DefaultParams(),
-				attestationQueue: make([]*slashertypes.IndexedAttestationWrapper, 0),
+				params:    DefaultParams(),
+				attsQueue: newAttestationsQueue(),
 			}
 			currentSlotChan := make(chan types.Slot)
 			exitChan := make(chan struct{})
@@ -196,9 +196,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 				s.processQueuedAttestations(ctx, currentSlotChan)
 				exitChan <- struct{}{}
 			}()
-			s.attestationQueueLock.Lock()
-			s.attestationQueue = tt.args.attestationQueue
-			s.attestationQueueLock.Unlock()
+			s.attsQueue.extend(tt.args.attestationQueue)
 			slot, err := helpers.StartSlot(tt.args.currentEpoch)
 			require.NoError(t, err)
 			currentSlotChan <- slot
@@ -230,8 +228,8 @@ func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
 				Genesis: time.Now(),
 			},
 		},
-		params:           params,
-		attestationQueue: make([]*slashertypes.IndexedAttestationWrapper, 0),
+		params:    params,
+		attsQueue: newAttestationsQueue(),
 	}
 	currentSlotChan := make(chan types.Slot)
 	exitChan := make(chan struct{})
@@ -257,9 +255,8 @@ func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
 		var sr [32]byte
 		copy(sr[:], fmt.Sprintf("%d", i))
 		att := createAttestationWrapper(t, source, target, []uint64{0}, sr[:])
-		s.attestationQueueLock.Lock()
-		s.attestationQueue = []*slashertypes.IndexedAttestationWrapper{att}
-		s.attestationQueueLock.Unlock()
+		s.attsQueue = newAttestationsQueue()
+		s.attsQueue.push(att)
 		slot, err := helpers.StartSlot(i)
 		require.NoError(t, err)
 		currentSlotChan <- slot
@@ -286,8 +283,8 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 				Genesis: time.Now(),
 			},
 		},
-		params:           params,
-		attestationQueue: make([]*slashertypes.IndexedAttestationWrapper, 0),
+		params:    params,
+		attsQueue: newAttestationsQueue(),
 	}
 	currentSlotChan := make(chan types.Slot)
 	exitChan := make(chan struct{})
@@ -301,9 +298,9 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 	att2 := createAttestationWrapper(t, types.Epoch(params.chunkSize-1), types.Epoch(params.chunkSize+1), []uint64{0, 1}, nil)
 
 	// We attempt to process the batch.
-	s.attestationQueueLock.Lock()
-	s.attestationQueue = []*slashertypes.IndexedAttestationWrapper{att1, att2}
-	s.attestationQueueLock.Unlock()
+	s.attsQueue = newAttestationsQueue()
+	s.attsQueue.push(att1)
+	s.attsQueue.push(att2)
 	slot, err := helpers.StartSlot(att2.IndexedAttestation.Data.Target.Epoch)
 	require.NoError(t, err)
 	currentSlotChan <- slot
@@ -324,6 +321,7 @@ func TestSlasher_receiveAttestations_OK(t *testing.T) {
 			},
 		},
 		indexedAttsChan: make(chan *ethpb.IndexedAttestation),
+		attsQueue:       newAttestationsQueue(),
 	}
 	exitChan := make(chan struct{})
 	go func() {
@@ -342,7 +340,7 @@ func TestSlasher_receiveAttestations_OK(t *testing.T) {
 		att1,
 		att2,
 	}
-	require.DeepEqual(t, wanted, s.attestationQueue)
+	require.DeepEqual(t, wanted, s.attsQueue.dequeue())
 }
 
 func TestSlasher_receiveAttestations_OnlyValidAttestations(t *testing.T) {
@@ -354,6 +352,7 @@ func TestSlasher_receiveAttestations_OnlyValidAttestations(t *testing.T) {
 				Genesis: time.Now(),
 			},
 		},
+		attsQueue:       newAttestationsQueue(),
 		indexedAttsChan: make(chan *ethpb.IndexedAttestation),
 	}
 	exitChan := make(chan struct{})
@@ -374,11 +373,11 @@ func TestSlasher_receiveAttestations_OnlyValidAttestations(t *testing.T) {
 	cancel()
 	<-exitChan
 	// Expect only a single, valid attestation was added to the queue.
-	require.Equal(t, 1, len(s.attestationQueue))
+	require.Equal(t, 1, s.attsQueue.size())
 	wanted := []*slashertypes.IndexedAttestationWrapper{
 		validAtt,
 	}
-	require.DeepEqual(t, wanted, s.attestationQueue)
+	require.DeepEqual(t, wanted, s.attsQueue.dequeue())
 }
 
 func TestSlasher_receiveBlocks_OK(t *testing.T) {
@@ -391,6 +390,7 @@ func TestSlasher_receiveBlocks_OK(t *testing.T) {
 			},
 		},
 		beaconBlocksChan: make(chan *ethpb.SignedBeaconBlockHeader),
+		blksQueue:        newBlocksQueue(),
 	}
 	exitChan := make(chan struct{})
 	go func() {
@@ -408,7 +408,7 @@ func TestSlasher_receiveBlocks_OK(t *testing.T) {
 		createProposalWrapper(t, 0, block1.Header.ProposerIndex, nil),
 		createProposalWrapper(t, 0, block2.Header.ProposerIndex, nil),
 	}
-	require.DeepEqual(t, wanted, s.beaconBlocksQueue)
+	require.DeepEqual(t, wanted, s.blksQueue.dequeue())
 }
 
 func TestService_processQueuedBlocks(t *testing.T) {
@@ -422,10 +422,11 @@ func TestService_processQueuedBlocks(t *testing.T) {
 				Genesis: time.Now(),
 			},
 		},
-		beaconBlocksQueue: []*slashertypes.SignedBlockHeaderWrapper{
-			createProposalWrapper(t, 0, 1, nil),
-		},
+		blksQueue: newBlocksQueue(),
 	}
+	s.blksQueue.extend([]*slashertypes.SignedBlockHeaderWrapper{
+		createProposalWrapper(t, 0, 1, nil),
+	})
 	ctx, cancel := context.WithCancel(context.Background())
 	tickerChan := make(chan types.Slot)
 	exitChan := make(chan struct{})

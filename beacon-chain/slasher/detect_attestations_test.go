@@ -419,10 +419,11 @@ func TestService_processQueuedAttestations(t *testing.T) {
 				Genesis: time.Now(),
 			},
 		},
-		attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-			createAttestationWrapper(t, 0, 1, []uint64{0, 1}, nil),
-		},
+		attsQueue: newAttestationsQueue(),
 	}
+	s.attsQueue.extend([]*slashertypes.IndexedAttestationWrapper{
+		createAttestationWrapper(t, 0, 1, []uint64{0, 1} /* indices */, nil /* signingRoot */),
+	})
 	ctx, cancel := context.WithCancel(context.Background())
 	tickerChan := make(chan types.Slot)
 	exitChan := make(chan struct{})
