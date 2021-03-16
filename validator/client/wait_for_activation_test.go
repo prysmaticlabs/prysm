@@ -432,7 +432,8 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 			},
 		).Return(resp, nil /* err */)
 
-		_ = v.waitForActivation(ctx, nil /* accountsChangedChan */)
+		err := v.waitForActivation(ctx, nil /* accountsChangedChan */)
+		require.NoError(t, err)
 		assert.LogsContain(t, hook, "Waiting for deposit to be observed by beacon node")
 		assert.LogsContain(t, hook, "Validator activated")
 	})
