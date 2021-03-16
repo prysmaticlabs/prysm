@@ -17,7 +17,7 @@ func WriteStateToDisk(state iface.ReadOnlyBeaconState) {
 	}
 	fp := path.Join(os.TempDir(), fmt.Sprintf("beacon_state_%d.ssz", state.Slot()))
 	log.Warnf("Writing state to disk at %s", fp)
-	enc, err := state.InnerStateUnsafe().MarshalSSZ()
+	enc, err := state.MarshalSSZ()
 	if err != nil {
 		log.WithError(err).Error("Failed to ssz encode state")
 		return
