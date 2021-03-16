@@ -25,7 +25,7 @@ func UsePraterConfig() {
 // Prater testnet.
 func PraterConfig() *BeaconChainConfig {
 	cfg := MainnetConfig().Copy()
-	cfg.MinGenesisTime = 1616508000
+	cfg.MinGenesisTime = 1614588812
 	cfg.GenesisDelay = 1919188
 	cfg.ConfigName = ConfigNames[Prater]
 	cfg.GenesisForkVersion = []byte{0x00, 0x00, 0x10, 0x20}
