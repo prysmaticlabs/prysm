@@ -125,9 +125,10 @@ func (s *Simulator) Start() {
 	// Wait some time and then send a "chain started" event over a notifier
 	// for slasher to pick up a genesis time.
 	time.Sleep(time.Second)
+	s.genesisTime = time.Now()
 	s.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.ChainStarted,
-		Data: &statefeed.ChainStartedData{StartTime: time.Now()},
+		Data: &statefeed.ChainStartedData{StartTime: s.genesisTime},
 	})
 
 	// We simulate blocks and attestations for N epochs, and in the background,
