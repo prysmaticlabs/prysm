@@ -4,9 +4,8 @@ import (
 	"fmt"
 	"strconv"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-
 	types "github.com/prysmaticlabs/eth2-types"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -95,6 +94,9 @@ func validateAttestationIntegrity(att *ethpb.IndexedAttestation) bool {
 
 	sourceEpoch := att.Data.Source.Epoch
 	targetEpoch := att.Data.Target.Epoch
+
+	// The genesis epoch is a special case, since all attestations formed in it
+	// will have source and target 0, and they should be considered valid.
 	if sourceEpoch == 0 && targetEpoch == 0 {
 		return true
 	}
