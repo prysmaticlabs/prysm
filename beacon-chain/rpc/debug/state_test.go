@@ -15,7 +15,6 @@ import (
 )
 
 func TestServer_GetBeaconState(t *testing.T) {
-
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 	st, err := testutil.NewBeaconState()
@@ -43,7 +42,7 @@ func TestServer_GetBeaconState(t *testing.T) {
 	}
 	res, err := bs.GetBeaconState(ctx, req)
 	require.NoError(t, err)
-	wanted, err := st.CloneInnerState().MarshalSSZ()
+	wanted, err := st.MarshalSSZ()
 	require.NoError(t, err)
 	assert.DeepEqual(t, wanted, res.Encoded)
 	req = &pbrpc.BeaconStateRequest{
@@ -57,7 +56,6 @@ func TestServer_GetBeaconState(t *testing.T) {
 }
 
 func TestServer_GetBeaconState_RequestFutureSlot(t *testing.T) {
-
 	ds := &Server{GenesisTimeFetcher: &mock.ChainService{}}
 	req := &pbrpc.BeaconStateRequest{
 		QueryFilter: &pbrpc.BeaconStateRequest_Slot{
