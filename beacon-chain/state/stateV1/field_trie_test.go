@@ -5,7 +5,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -19,7 +19,7 @@ func TestFieldTrie_NewTrie(t *testing.T) {
 	// 5 represents the enum value of state roots
 	trie, err := stateV1.NewFieldTrie(5, newState.StateRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
 	require.NoError(t, err)
-	root, err := state.RootsArrayHashTreeRoot(newState.StateRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "StateRoots")
+	root, err := stateV0.RootsArrayHashTreeRoot(newState.StateRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "StateRoots")
 	require.NoError(t, err)
 	newRoot, err := trie.TrieRoot()
 	require.NoError(t, err)
@@ -47,7 +47,7 @@ func TestFieldTrie_RecomputeTrie(t *testing.T) {
 	require.NoError(t, newState.UpdateValidatorAtIndex(types.ValidatorIndex(changedIdx[0]), changedVals[0]))
 	require.NoError(t, newState.UpdateValidatorAtIndex(types.ValidatorIndex(changedIdx[1]), changedVals[1]))
 
-	expectedRoot, err := state.ValidatorRegistryRoot(newState.Validators())
+	expectedRoot, err := stateV0.ValidatorRegistryRoot(newState.Validators())
 	require.NoError(t, err)
 	root, err := trie.RecomputeTrie(changedIdx, newState.Validators())
 	require.NoError(t, err)
