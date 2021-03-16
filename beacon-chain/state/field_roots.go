@@ -692,6 +692,15 @@ func attestationDataRoot(hasher htrutils.HashFn, data *ethpb.AttestationData) ([
 	return htrutils.BitwiseMerkleize(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
+// RootsArrayHashTreeRoot computes the Merkle root of arrays of 32-byte hashes, such as [64][32]byte
+// according to the Simple Serialize specification of eth2.
+func RootsArrayHashTreeRoot(vals [][]byte, length uint64, fieldName string) ([32]byte, error) {
+	if featureconfig.Get().EnableSSZCache {
+		return cachedHasher.arraysRoot(vals, length, fieldName)
+	}
+	return nocachedHasher.arraysRoot(vals, length, fieldName)
+}
+
 func (h *stateRootHasher) arraysRoot(input [][]byte, length uint64, fieldName string) ([32]byte, error) {
 	lock.Lock()
 	defer lock.Unlock()
@@ -846,9 +855,9 @@ func merkleizeTrieLeaves(layers [][][32]byte, hashLayer [][32]byte,
 	return layers, hashLayer
 }
 
-// PendingAttestationRoot describes a method from which the hash tree root
+// pendingAttestationRoot describes a method from which the hash tree root
 // of a pending attestation is returned.
-func PendingAttestationRoot(hasher htrutils.HashFn, att *pb.PendingAttestation) ([32]byte, error) {
+func pendingAttestationRoot(hasher htrutils.HashFn, att *pb.PendingAttestation) ([32]byte, error) {
 	var fieldRoots [][32]byte
 	if att != nil {
 		// Bitfield.
