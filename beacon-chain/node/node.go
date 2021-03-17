@@ -15,6 +15,8 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/slasher"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -540,6 +542,11 @@ func (b *BeaconNode) registerSyncService() error {
 
 	var initSync *initialsync.Service
 	if err := b.services.FetchService(&initSync); err != nil {
+		return err
+	}
+
+	var slasherService *slasher.Service
+	if err := b.services.FetchService(&slasherService); err != nil {
 		return err
 	}
 

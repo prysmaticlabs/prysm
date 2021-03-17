@@ -26,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	slasherinterface "github.com/prysmaticlabs/prysm/beacon-chain/slasher/iface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared"
@@ -60,6 +61,7 @@ type Config struct {
 	StateNotifier       statefeed.Notifier
 	BlockNotifier       blockfeed.Notifier
 	AttestationNotifier operation.Notifier
+	SlashingChecker     slasherinterface.SlashingChecker
 	StateGen            *stategen.State
 }
 
@@ -111,6 +113,7 @@ type Service struct {
 	badBlockCache             *lru.Cache
 	badBlockLock              sync.RWMutex
 	stateGen                  *stategen.State
+	slashingChecker           slasherinterface.SlashingChecker
 }
 
 // NewService initializes new regular sync service.
@@ -137,6 +140,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		stateNotifier:        cfg.StateNotifier,
 		blockNotifier:        cfg.BlockNotifier,
 		stateGen:             cfg.StateGen,
+		slashingChecker:      cfg.SlashingChecker,
 		rateLimiter:          rLimiter,
 	}
 

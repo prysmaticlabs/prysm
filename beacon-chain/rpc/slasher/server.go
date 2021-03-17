@@ -8,5 +8,5 @@ import (
 
 // Server defines a server implementation of the gRPC slasher service.
 type Server struct {
-	slasher iface.SlashableChecker
+	slasher iface.SlashingChecker
 }

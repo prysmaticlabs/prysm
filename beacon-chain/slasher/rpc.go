@@ -24,7 +24,7 @@ func (s *Service) IsSlashableBlock(
 	if err != nil {
 		return nil, err
 	}
-	if len(doubleProposals) > 0 {
+	if len(doubleProposals) == 0 {
 		return nil, nil
 	}
 	proposerSlashing := &ethpb.ProposerSlashing{
@@ -32,27 +32,4 @@ func (s *Service) IsSlashableBlock(
 		Header_2: doubleProposals[0].BeaconBlockWrapper.SignedBeaconBlockHeader,
 	}
 	return proposerSlashing, nil
-}
-
-// IsSlashableAttestation --
-func (s *Service) IsSlashableAttestation(
-	ctx context.Context, attestation *ethpb.IndexedAttestation,
-) ([]*ethpb.AttesterSlashing, error) {
-	dataRoot, err := attestation.Data.HashTreeRoot()
-	if err != nil {
-		return nil, err
-	}
-	attWrapper := &slashertypes.IndexedAttestationWrapper{
-		IndexedAttestation: attestation,
-		SigningRoot:        dataRoot,
-	}
-	slashings, err := s.detectAllAttesterSlashings(ctx, args, attestations)
-	if err != nil {
-		return err
-	}
-	attesterSlashings, err := s.saveSafeProposals(ctx, []*slashertypes.IndexedAttestationWrapper{attWrapper})
-	if err != nil {
-		return nil, err
-	}
-	return attesterSlashings, nil
 }
