@@ -27,6 +27,7 @@ go_library(
         "//shared/aggregation:__subpackages__",
         "//shared/benchutil:__pkg__",
         "//shared/depositutil:__subpackages__",
+        "//shared/interop:__subpackages__",
         "//shared/testutil:__pkg__",
         "//slasher/rpc:__subpackages__",
         "//tools/benchmark-files-gen:__pkg__",
