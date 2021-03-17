@@ -71,6 +71,7 @@ func (s *Service) Start() {
 			return
 		}
 		genesisTime = data.StartTime
+		log.WithField("genesisTime", genesisTime).Info("Starting slasher, received chain start event")
 	} else if event.Type == statefeed.Initialized {
 		// Alternatively, if the chain has already started, we then read the genesis
 		// time value from this data.
@@ -80,13 +81,13 @@ func (s *Service) Start() {
 			return
 		}
 		genesisTime = data.StartTime
+		log.WithField("genesisTime", genesisTime).Info("Starting slasher, chain already initialized")
 	} else {
 		// This should not happen.
 		log.Error("Could start slasher, could not receive chain start event")
 		return
 	}
 	stateSub.Unsubscribe()
-	log.WithField("genesisTime", genesisTime).Info("Starting slasher")
 	secondsPerSlot := params.BeaconConfig().SecondsPerSlot
 	s.slotTicker = slotutil.NewSlotTicker(genesisTime, secondsPerSlot)
 
