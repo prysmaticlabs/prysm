@@ -70,8 +70,10 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	var web3Service *powchain.Service
 	var err error
 	bState, _ := testutil.DeterministicGenesisState(t, 10)
+	pbState, err := beaconstate.ProtobufBeaconState(bState.InnerStateUnsafe())
+	require.NoError(t, err)
 	err = beaconDB.SavePowchainData(ctx, &protodb.ETH1ChainData{
-		BeaconState: bState.InnerStateUnsafe(),
+		BeaconState: pbState,
 		Trie:        &protodb.SparseMerkleTrie{},
 		CurrentEth1Data: &protodb.LatestETH1Data{
 			BlockHash: make([]byte, 32),
