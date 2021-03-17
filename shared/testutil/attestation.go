@@ -60,7 +60,11 @@ func GenerateAttestations(
 	var err error
 	// Only calculate head state if its an attestation for the current slot or future slot.
 	if generateHeadState || slot == bState.Slot() {
-		genState, err := stateTrie.InitializeFromProtoUnsafe(bState.CloneInnerState())
+		pbState, err := stateTrie.ProtobufBeaconState(bState.CloneInnerState())
+		if err != nil {
+			return nil, err
+		}
+		genState, err := stateTrie.InitializeFromProtoUnsafe(pbState)
 		if err != nil {
 			return nil, err
 		}

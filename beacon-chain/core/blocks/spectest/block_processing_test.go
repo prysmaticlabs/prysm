@@ -84,8 +84,9 @@ func runBlockProcessingTest(t *testing.T, config string) {
 
 				postBeaconState := &pb.BeaconState{}
 				require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateFile), "Failed to unmarshal")
-
-				if !proto.Equal(beaconState.InnerStateUnsafe(), postBeaconState) {
+				pbState, err := stateTrie.ProtobufBeaconState(beaconState.InnerStateUnsafe())
+				require.NoError(t, err)
+				if !proto.Equal(pbState, postBeaconState) {
 					diff, _ := messagediff.PrettyDiff(beaconState.InnerStateUnsafe(), postBeaconState)
 					t.Log(diff)
 					t.Fatal("Post state does not match expected")
