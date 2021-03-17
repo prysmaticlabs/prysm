@@ -41,63 +41,10 @@ func (s *Service) detectSlashableAttestations(
 ) error {
 	ctx, span := trace.StartSpan(ctx, "Slasher.detectSlashableAttestations")
 	defer span.End()
-	// Check for double votes.
-	doubleVoteSlashings, err := s.checkDoubleVotes(ctx, attestations)
+
+	slashings, err := s.detectAllAttesterSlashings(ctx, args, attestations)
 	if err != nil {
-		return errors.Wrap(err, "could not check slashable double votes")
-	}
-
-	// Group attestations by chunk index.
-	groupedAtts := s.groupByChunkIndex(attestations)
-
-	// Update min and max spans and retrieve any detected slashable offenses.
-	start := time.Now()
-	surroundingSlashings, err := s.updateSpans(ctx, &chunkUpdateArgs{
-		kind:                slashertypes.MinSpan,
-		validatorChunkIndex: args.validatorChunkIndex,
-		currentEpoch:        args.currentEpoch,
-	}, groupedAtts)
-	if err != nil {
-		return errors.Wrapf(
-			err,
-			"could not update min attestation spans for validator chunk index %d",
-			args.validatorChunkIndex,
-		)
-	}
-	log.WithFields(logrus.Fields{
-		"timeElapsed":               time.Since(start),
-		"surroundingSlashingsFound": len(surroundingSlashings),
-		"currentEpoch":              args.currentEpoch,
-		"validatorChunkIndex":       args.validatorChunkIndex,
-	}).Debug("Done updating min spans")
-
-	start = time.Now()
-	surroundedSlashings, err := s.updateSpans(ctx, &chunkUpdateArgs{
-		kind:                slashertypes.MaxSpan,
-		validatorChunkIndex: args.validatorChunkIndex,
-		currentEpoch:        args.currentEpoch,
-	}, groupedAtts)
-	if err != nil {
-		return errors.Wrapf(
-			err,
-			"could not update max attestation spans for validator chunk index %d",
-			args.validatorChunkIndex,
-		)
-	}
-	log.WithFields(logrus.Fields{
-		"timeElapsed":              time.Since(start),
-		"surroundedSlashingsFound": len(surroundingSlashings),
-		"currentEpoch":             args.currentEpoch,
-		"validatorChunkIndex":      args.validatorChunkIndex,
-	}).Debug("Done updating max spans")
-
-	// Consolidate all slashings into a slice.
-	slashings := make([]*slashertypes.Slashing, 0)
-	slashings = append(slashings, doubleVoteSlashings...)
-	slashings = append(slashings, surroundingSlashings...)
-	slashings = append(slashings, surroundedSlashings...)
-	if len(slashings) > 0 {
-		log.WithField("numSlashings", len(slashings)).Info("Slashable attestation offenses found")
+		return err
 	}
 	for _, slashing := range slashings {
 		s.serviceCfg.AttesterSlashingsFeed.Send(&ethpb.AttesterSlashing{
@@ -118,6 +65,72 @@ func (s *Service) detectSlashableAttestations(
 		}).Debug("Saving latest epoch attested for validators")
 	}
 	return s.serviceCfg.Database.SaveLastEpochWrittenForValidators(ctx, validatorIndices, args.currentEpoch)
+}
+
+func (s *Service) detectAllAttesterSlashings(
+	ctx context.Context,
+	args *chunkUpdateArgs,
+	attestations []*slashertypes.IndexedAttestationWrapper,
+) ([]*slashertypes.Slashing, error) {
+	// Check for double votes.
+	doubleVoteSlashings, err := s.checkDoubleVotes(ctx, attestations)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not check slashable double votes")
+	}
+
+	// Group attestations by chunk index.
+	groupedAtts := s.groupByChunkIndex(attestations)
+
+	// Update min and max spans and retrieve any detected slashable offenses.
+	start := time.Now()
+	surroundingSlashings, err := s.updateSpans(ctx, &chunkUpdateArgs{
+		kind:                slashertypes.MinSpan,
+		validatorChunkIndex: args.validatorChunkIndex,
+		currentEpoch:        args.currentEpoch,
+	}, groupedAtts)
+	if err != nil {
+		return nil, errors.Wrapf(
+			err,
+			"could not update min attestation spans for validator chunk index %d",
+			args.validatorChunkIndex,
+		)
+	}
+	log.WithFields(logrus.Fields{
+		"timeElapsed":               time.Since(start),
+		"surroundingSlashingsFound": len(surroundingSlashings),
+		"currentEpoch":              args.currentEpoch,
+		"validatorChunkIndex":       args.validatorChunkIndex,
+	}).Debug("Done updating min spans")
+
+	start = time.Now()
+	surroundedSlashings, err := s.updateSpans(ctx, &chunkUpdateArgs{
+		kind:                slashertypes.MaxSpan,
+		validatorChunkIndex: args.validatorChunkIndex,
+		currentEpoch:        args.currentEpoch,
+	}, groupedAtts)
+	if err != nil {
+		return nil, errors.Wrapf(
+			err,
+			"could not update max attestation spans for validator chunk index %d",
+			args.validatorChunkIndex,
+		)
+	}
+	log.WithFields(logrus.Fields{
+		"timeElapsed":              time.Since(start),
+		"surroundedSlashingsFound": len(surroundingSlashings),
+		"currentEpoch":             args.currentEpoch,
+		"validatorChunkIndex":      args.validatorChunkIndex,
+	}).Debug("Done updating max spans")
+
+	// Consolidate all slashings into a slice.
+	slashings := make([]*slashertypes.Slashing, 0)
+	slashings = append(slashings, doubleVoteSlashings...)
+	slashings = append(slashings, surroundingSlashings...)
+	slashings = append(slashings, surroundedSlashings...)
+	if len(slashings) > 0 {
+		log.WithField("numSlashings", len(slashings)).Info("Slashable attestation offenses found")
+	}
+	return slashings, nil
 }
 
 // Check for attester slashing double votes by looking at every single validator index

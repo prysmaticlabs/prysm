@@ -10,18 +10,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// IsSlashableBlock comapres the given block to the slasher database and returns any double block
-// proposals that are considered slashable.
-func (s *Service) IsSlashableBlock(
-	ctx context.Context, block *slashertypes.SignedBlockHeaderWrapper,
-) ([]*slashertypes.DoubleBlockProposal, error) {
-	doubleProposals, err := s.saveSafeProposals(ctx, []*slashertypes.SignedBlockHeaderWrapper{block})
-	if err != nil {
-		return nil, err
-	}
-	return doubleProposals, nil
-}
-
 // detectProposerSlashings takes in signed block header wrappers and returns a list of proposer slashings detected.
 func (s *Service) detectProposerSlashings(
 	ctx context.Context, proposedBlocks []*slashertypes.SignedBlockHeaderWrapper,
