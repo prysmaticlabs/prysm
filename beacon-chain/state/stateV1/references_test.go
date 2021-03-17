@@ -17,7 +17,7 @@ import (
 func TestStateReferenceSharing_Finalizer(t *testing.T) {
 	// This test showcases the logic on a the RandaoMixes field with the GC finalizer.
 
-	a, err := InitializeFromProtoUnsafe(&p2ppb.BeaconState{RandaoMixes: [][]byte{[]byte("foo")}})
+	a, err := InitializeFromProtoUnsafe(&p2ppb.BeaconStateV1{RandaoMixes: [][]byte{[]byte("foo")}})
 	require.NoError(t, err)
 	assert.Equal(t, uint(1), a.sharedFieldReferences[randaoMixes].refs, "Expected a single reference for RANDAO mixes")
 
