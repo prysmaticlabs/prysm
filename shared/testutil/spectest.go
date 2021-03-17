@@ -119,7 +119,7 @@ func RunBlockOperationTest(
 		if err := postBeaconState.UnmarshalSSZ(postBeaconStateFile); err != nil {
 			t.Fatalf("Failed to unmarshal: %v", err)
 		}
-		pbState, err := beaconstate.ProtobufBeaconState(beaconState.InnerStateUnsafe())
+		pbState, err := stateV0.ProtobufBeaconState(beaconState.InnerStateUnsafe())
 		require.NoError(t, err)
 		if !proto.Equal(pbState, postBeaconState) {
 			diff, _ := messagediff.PrettyDiff(beaconState.InnerStateUnsafe(), postBeaconState)
@@ -173,7 +173,7 @@ func RunEpochOperationTest(
 			t.Fatalf("Failed to unmarshal: %v", err)
 		}
 
-		pbState, err := beaconstate.ProtobufBeaconState(beaconState.InnerStateUnsafe())
+		pbState, err := stateV0.ProtobufBeaconState(beaconState.InnerStateUnsafe())
 		require.NoError(t, err)
 		if !proto.Equal(pbState, postBeaconState) {
 			diff, _ := messagediff.PrettyDiff(beaconState.InnerStateUnsafe(), postBeaconState)

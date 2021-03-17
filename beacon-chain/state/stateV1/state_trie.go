@@ -9,7 +9,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -185,7 +185,8 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 	defer b.lock.Unlock()
 
 	if b.merkleLayers == nil || len(b.merkleLayers) == 0 {
-		fieldRoots, err := stateutil.ComputeFieldRoots(b.state)
+		// TODO: Needs its own compute field roots
+		fieldRoots, err := computeFieldRoots(b.state)
 		if err != nil {
 			return [32]byte{}, err
 		}
@@ -271,7 +272,7 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 	case fork:
 		return htrutils.ForkRoot(b.state.Fork)
 	case latestBlockHeader:
-		return stateutil.BlockHeaderRoot(b.state.LatestBlockHeader)
+		return stateV0.BlockHeaderRoot(b.state.LatestBlockHeader)
 	case blockRoots:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(field, b.state.BlockRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
@@ -297,7 +298,7 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 	case historicalRoots:
 		return htrutils.HistoricalRootsRoot(b.state.HistoricalRoots)
 	case eth1Data:
-		return stateutil.Eth1Root(hasher, b.state.Eth1Data)
+		return stateV0.Eth1Root(hasher, b.state.Eth1Data)
 	case eth1DataVotes:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(field, b.state.Eth1DataVotes, uint64(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod))))
@@ -321,7 +322,7 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 		}
 		return b.recomputeFieldTrie(validators, b.state.Validators)
 	case balances:
-		return stateutil.ValidatorBalancesRoot(b.state.Balances)
+		return stateV0.ValidatorBalancesRoot(b.state.Balances)
 	case randaoMixes:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(field, b.state.RandaoMixes, uint64(params.BeaconConfig().EpochsPerHistoricalVector))
@@ -336,9 +337,9 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 	case slashings:
 		return htrutils.SlashingsRoot(b.state.Slashings)
 	case previousEpochParticipationBits:
-		return stateutil.ParticipationBitsRoot(b.state.PreviousEpochParticipation)
+		return participationBitsRoot(b.state.PreviousEpochParticipation)
 	case currentEpochParticipationBits:
-		return stateutil.ParticipationBitsRoot(b.state.CurrentEpochParticipation)
+		return participationBitsRoot(b.state.CurrentEpochParticipation)
 	case justificationBits:
 		return bytesutil.ToBytes32(b.state.JustificationBits), nil
 	case previousJustifiedCheckpoint:
@@ -348,9 +349,9 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 	case finalizedCheckpoint:
 		return htrutils.CheckpointRoot(hasher, b.state.FinalizedCheckpoint)
 	case currentSyncCommittee:
-		return stateutil.SyncCommitteeRoot(b.state.CurrentSyncCommittee)
+		return syncCommitteeRoot(b.state.CurrentSyncCommittee)
 	case nextSyncCommittee:
-		return stateutil.SyncCommitteeRoot(b.state.NextSyncCommittee)
+		return syncCommitteeRoot(b.state.NextSyncCommittee)
 	}
 	return [32]byte{}, errors.New("invalid field index provided")
 }

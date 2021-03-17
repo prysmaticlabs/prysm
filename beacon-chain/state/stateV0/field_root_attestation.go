@@ -177,9 +177,9 @@ func attestationDataRoot(hasher htrutils.HashFn, data *ethpb.AttestationData) ([
 	return htrutils.BitwiseMerkleize(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
-// pendingAttestationRoot describes a method from which the hash tree root
+// PendingAttestationRoot describes a method from which the hash tree root
 // of a pending attestation is returned.
-func pendingAttestationRoot(hasher htrutils.HashFn, att *pb.PendingAttestation) ([32]byte, error) {
+func PendingAttestationRoot(hasher htrutils.HashFn, att *pb.PendingAttestation) ([32]byte, error) {
 	var fieldRoots [][32]byte
 	if att != nil {
 		// Bitfield.

@@ -13,10 +13,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// eth1Root computes the HashTreeRoot Merkleization of
+// Eth1Root computes the HashTreeRoot Merkleization of
 // a BeaconBlockHeader struct according to the eth2
 // Simple Serialize specification.
-func eth1Root(hasher htrutils.HashFn, eth1Data *ethpb.Eth1Data) ([32]byte, error) {
+func Eth1Root(hasher htrutils.HashFn, eth1Data *ethpb.Eth1Data) ([32]byte, error) {
 	enc := make([]byte, 0, 96)
 	fieldRoots := make([][]byte, 3)
 	for i := 0; i < len(fieldRoots); i++ {
@@ -54,15 +54,15 @@ func eth1Root(hasher htrutils.HashFn, eth1Data *ethpb.Eth1Data) ([32]byte, error
 	return root, nil
 }
 
-// eth1DataVotesRoot computes the HashTreeRoot Merkleization of
+// Eth1DataVotesRoot computes the HashTreeRoot Merkleization of
 // a list of Eth1Data structs according to the eth2
 // Simple Serialize specification.
-func eth1DataVotesRoot(eth1DataVotes []*ethpb.Eth1Data) ([32]byte, error) {
+func Eth1DataVotesRoot(eth1DataVotes []*ethpb.Eth1Data) ([32]byte, error) {
 	eth1VotesRoots := make([][]byte, 0)
 	enc := make([]byte, len(eth1DataVotes)*32)
 	hasher := hashutil.CustomSHA256Hasher()
 	for i := 0; i < len(eth1DataVotes); i++ {
-		eth1, err := eth1Root(hasher, eth1DataVotes[i])
+		eth1, err := Eth1Root(hasher, eth1DataVotes[i])
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not compute eth1data merkleization")
 		}

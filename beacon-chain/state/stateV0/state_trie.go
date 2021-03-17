@@ -269,7 +269,7 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 	case fork:
 		return htrutils.ForkRoot(b.state.Fork)
 	case latestBlockHeader:
-		return blockHeaderRoot(b.state.LatestBlockHeader)
+		return BlockHeaderRoot(b.state.LatestBlockHeader)
 	case blockRoots:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(field, b.state.BlockRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
@@ -295,7 +295,7 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 	case historicalRoots:
 		return htrutils.HistoricalRootsRoot(b.state.HistoricalRoots)
 	case eth1Data:
-		return eth1Root(hasher, b.state.Eth1Data)
+		return Eth1Root(hasher, b.state.Eth1Data)
 	case eth1DataVotes:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(field, b.state.Eth1DataVotes, uint64(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod))))
@@ -319,7 +319,7 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 		}
 		return b.recomputeFieldTrie(validators, b.state.Validators)
 	case balances:
-		return validatorBalancesRoot(b.state.Balances)
+		return ValidatorBalancesRoot(b.state.Balances)
 	case randaoMixes:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(field, b.state.RandaoMixes, uint64(params.BeaconConfig().EpochsPerHistoricalVector))

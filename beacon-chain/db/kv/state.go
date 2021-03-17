@@ -85,7 +85,7 @@ func (s *Store) SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconSta
 	}
 	multipleEncs := make([][]byte, len(states))
 	for i, st := range states {
-		pbState, err := state.ProtobufBeaconState(st.InnerStateUnsafe())
+		pbState, err := stateV0.ProtobufBeaconState(st.InnerStateUnsafe())
 		if err != nil {
 			return err
 		}

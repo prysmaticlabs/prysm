@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -203,7 +204,7 @@ func handleEth1DataSlice(val []*ethpb.Eth1Data, indices []uint64, convertAll boo
 	roots := make([][32]byte, 0, length)
 	hasher := hashutil.CustomSHA256Hasher()
 	rootCreator := func(input *ethpb.Eth1Data) error {
-		newRoot, err := stateutil.Eth1Root(hasher, input)
+		newRoot, err := stateV0.Eth1Root(hasher, input)
 		if err != nil {
 			return err
 		}
@@ -241,7 +242,7 @@ func handleValidatorSlice(val []*ethpb.Validator, indices []uint64, convertAll b
 	roots := make([][32]byte, 0, length)
 	hasher := hashutil.CustomSHA256Hasher()
 	rootCreator := func(input *ethpb.Validator) error {
-		newRoot, err := stateutil.ValidatorRoot(hasher, input)
+		newRoot, err := stateV0.ValidatorRoot(hasher, input)
 		if err != nil {
 			return err
 		}
@@ -279,7 +280,7 @@ func handlePendingAttestation(val []*pb.PendingAttestation, indices []uint64, co
 	roots := make([][32]byte, 0, length)
 	hasher := hashutil.CustomSHA256Hasher()
 	rootCreator := func(input *pb.PendingAttestation) error {
-		newRoot, err := stateutil.PendingAttestationRoot(hasher, input)
+		newRoot, err := stateV0.PendingAttestationRoot(hasher, input)
 		if err != nil {
 			return err
 		}

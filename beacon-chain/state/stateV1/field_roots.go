@@ -1,4 +1,4 @@
-package stateV0
+package stateV1
 
 import (
 	"encoding/binary"
@@ -6,6 +6,7 @@ import (
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -46,14 +47,14 @@ type stateRootHasher struct {
 
 // computeFieldRoots returns the hash tree root computations of every field in
 // the beacon state as a list of 32 byte roots.
-func computeFieldRoots(state *pb.BeaconState) ([][]byte, error) {
+func computeFieldRoots(state *pb.BeaconStateV1) ([][]byte, error) {
 	if featureconfig.Get().EnableSSZCache {
 		return cachedHasher.computeFieldRootsWithHasher(state)
 	}
 	return nocachedHasher.computeFieldRootsWithHasher(state)
 }
 
-func (h *stateRootHasher) computeFieldRootsWithHasher(state *pb.BeaconState) ([][]byte, error) {
+func (h *stateRootHasher) computeFieldRootsWithHasher(state *pb.BeaconStateV1) ([][]byte, error) {
 	if state == nil {
 		return nil, errors.New("nil state")
 	}
@@ -81,7 +82,7 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(state *pb.BeaconState) ([]
 	fieldRoots[3] = forkHashTreeRoot[:]
 
 	// BeaconBlockHeader data structure root.
-	headerHashTreeRoot, err := BlockHeaderRoot(state.LatestBlockHeader)
+	headerHashTreeRoot, err := stateV0.BlockHeaderRoot(state.LatestBlockHeader)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute block header merkleization")
 	}
@@ -109,14 +110,14 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(state *pb.BeaconState) ([]
 	fieldRoots[7] = historicalRootsRt[:]
 
 	// Eth1Data data structure root.
-	eth1HashTreeRoot, err := Eth1Root(hasher, state.Eth1Data)
+	eth1HashTreeRoot, err := stateV0.Eth1Root(hasher, state.Eth1Data)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute eth1data merkleization")
 	}
 	fieldRoots[8] = eth1HashTreeRoot[:]
 
 	// Eth1DataVotes slice root.
-	eth1VotesRoot, err := Eth1DataVotesRoot(state.Eth1DataVotes)
+	eth1VotesRoot, err := stateV0.Eth1DataVotesRoot(state.Eth1DataVotes)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute eth1data votes merkleization")
 	}
@@ -136,7 +137,7 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(state *pb.BeaconState) ([]
 	fieldRoots[11] = validatorsRoot[:]
 
 	// Balances slice root.
-	balancesRoot, err := ValidatorBalancesRoot(state.Balances)
+	balancesRoot, err := stateV0.ValidatorBalancesRoot(state.Balances)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute validator balances merkleization")
 	}
@@ -156,19 +157,19 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(state *pb.BeaconState) ([]
 	}
 	fieldRoots[14] = slashingsRootsRoot[:]
 
-	// PreviousEpochAttestations slice root.
-	prevAttsRoot, err := h.epochAttestationsRoot(state.PreviousEpochAttestations)
+	// PreviousEpochParticipation slice root.
+	prevParticipationRoot, err := participationBitsRoot(state.PreviousEpochParticipation)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not compute previous epoch attestations merkleization")
+		return nil, errors.Wrap(err, "could not compute previous epoch participation merkleization")
 	}
-	fieldRoots[15] = prevAttsRoot[:]
+	fieldRoots[15] = prevParticipationRoot[:]
 
-	// CurrentEpochAttestations slice root.
-	currAttsRoot, err := h.epochAttestationsRoot(state.CurrentEpochAttestations)
+	// CurrentEpochParticipation slice root.
+	currParticipationRoot, err := participationBitsRoot(state.CurrentEpochParticipation)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not compute current epoch attestations merkleization")
+		return nil, errors.Wrap(err, "could not compute current epoch participation merkleization")
 	}
-	fieldRoots[16] = currAttsRoot[:]
+	fieldRoots[16] = currParticipationRoot[:]
 
 	// JustificationBits root.
 	justifiedBitsRoot := bytesutil.ToBytes32(state.JustificationBits)
@@ -194,5 +195,18 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(state *pb.BeaconState) ([]
 		return nil, errors.Wrap(err, "could not compute finalized checkpoint merkleization")
 	}
 	fieldRoots[20] = finalRoot[:]
+
+	currentLightRoot, err := syncCommitteeRoot(state.CurrentSyncCommittee)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not compute sync committee merkleization")
+	}
+	fieldRoots[21] = currentLightRoot[:]
+
+	nextLightRoot, err := syncCommitteeRoot(state.NextSyncCommittee)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not compute sync committee merkleization")
+	}
+	fieldRoots[22] = nextLightRoot[:]
+
 	return fieldRoots, nil
 }
