@@ -33,6 +33,7 @@ func (s *Service) detectProposerSlashings(
 			s.serviceCfg.ProposerSlashingsFeed.Send(slashing)
 		}
 	}
+
 	// We check if there are any slashable double proposals in the input list
 	// of proposals with respect to our database.
 	doubleProposals, err := s.saveSafeProposals(ctx, proposedBlocks)

@@ -38,6 +38,7 @@ type Service struct {
 	ctx                    context.Context
 	cancel                 context.CancelFunc
 	slotTicker             *slotutil.SlotTicker
+	genesisTime            time.Time
 }
 
 // New instantiates a new slasher from configuration values.
@@ -70,8 +71,8 @@ func (s *Service) Start() {
 			log.Error("Could not receive chain start notification, want *statefeed.ChainStartedData")
 			return
 		}
-		genesisTime = data.StartTime
-		log.WithField("genesisTime", genesisTime).Info("Starting slasher, received chain start event")
+		s.genesisTime = data.StartTime
+		log.WithField("genesisTime", s.genesisTime).Info("Starting slasher, received chain start event")
 	} else if event.Type == statefeed.Initialized {
 		// Alternatively, if the chain has already started, we then read the genesis
 		// time value from this data.
@@ -80,8 +81,8 @@ func (s *Service) Start() {
 			log.Error("Could not receive chain start notification, want *statefeed.ChainStartedData")
 			return
 		}
-		genesisTime = data.StartTime
-		log.WithField("genesisTime", genesisTime).Info("Starting slasher, chain already initialized")
+		s.genesisTime = data.StartTime
+		log.WithField("genesisTime", s.genesisTime).Info("Starting slasher, chain already initialized")
 	} else {
 		// This should not happen.
 		log.Error("Could start slasher, could not receive chain start event")
@@ -89,7 +90,7 @@ func (s *Service) Start() {
 	}
 	stateSub.Unsubscribe()
 	secondsPerSlot := params.BeaconConfig().SecondsPerSlot
-	s.slotTicker = slotutil.NewSlotTicker(genesisTime, secondsPerSlot)
+	s.slotTicker = slotutil.NewSlotTicker(s.genesisTime, secondsPerSlot)
 
 	go s.processQueuedAttestations(s.ctx, s.slotTicker.C())
 	go s.processQueuedBlocks(s.ctx, s.slotTicker.C())

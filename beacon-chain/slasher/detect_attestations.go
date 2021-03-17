@@ -9,6 +9,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -23,6 +24,31 @@ type chunkUpdateArgs struct {
 	currentEpoch        types.Epoch
 }
 
+func (s *Service) CheckSlashableAttestations(
+	ctx context.Context, atts []*slashertypes.IndexedAttestationWrapper,
+) ([]*ethpb.AttesterSlashing, error) {
+	currentEpoch := slotutil.EpochsSinceGenesis(s.genesisTime)
+	slashings := make([]*ethpb.AttesterSlashing, 0)
+	groupedAtts := s.groupByValidatorChunkIndex(atts)
+	// TODO(#8331): Consider using goroutines and wait groups here.
+	for validatorChunkIdx, batch := range groupedAtts {
+		attSlashings, err := s.detectAllAttesterSlashings(ctx, &chunkUpdateArgs{
+			validatorChunkIndex: validatorChunkIdx,
+			currentEpoch:        currentEpoch,
+		}, batch)
+
+		slashings = append(slashings, attSlashings...)
+		if err != nil {
+			return nil, errors.Wrap(err, "Could not detect slashable attestations")
+		}
+		validatorIndices := s.params.validatorIndicesInChunk(validatorChunkIdx)
+		if err := s.serviceCfg.Database.SaveLastEpochWrittenForValidators(ctx, validatorIndices, currentEpoch); err != nil {
+			return nil, err
+		}
+	}
+	return slashings, nil
+}
+
 // Given a list of attestations all corresponding to a validator chunk index as well
 // as the current epoch in time, we perform slashing detection.
 // The process is as follows given a list of attestations:
@@ -34,39 +60,6 @@ type chunkUpdateArgs struct {
 // 4. Update the latest written epoch for all validators involved to the current epoch.
 //
 // This function performs a lot of critical actions and is split into smaller helpers for cleanliness.
-func (s *Service) detectSlashableAttestations(
-	ctx context.Context,
-	args *chunkUpdateArgs,
-	attestations []*slashertypes.IndexedAttestationWrapper,
-) error {
-	ctx, span := trace.StartSpan(ctx, "Slasher.detectSlashableAttestations")
-	defer span.End()
-
-	slashings, err := s.detectAllAttesterSlashings(ctx, args, attestations)
-	if err != nil {
-		return err
-	}
-	for _, slashing := range slashings {
-		s.serviceCfg.AttesterSlashingsFeed.Send(&ethpb.AttesterSlashing{
-			Attestation_1: slashing.PrevAttestation,
-			Attestation_2: slashing.Attestation,
-		})
-		logSlashingEvent(slashing)
-	}
-
-	// Update the latest written epoch for all involved validator indices.
-	validatorIndices := s.params.validatorIndicesInChunk(args.validatorChunkIndex)
-	if len(validatorIndices) > 0 {
-		firstIndex := validatorIndices[0]
-		lastIndex := validatorIndices[len(validatorIndices)-1]
-		log.WithFields(logrus.Fields{
-			"validatorIndices": fmt.Sprintf("[%d, ..., %d]", firstIndex, lastIndex),
-			"currentEpoch":     args.currentEpoch,
-		}).Debug("Saving latest epoch attested for validators")
-	}
-	return s.serviceCfg.Database.SaveLastEpochWrittenForValidators(ctx, validatorIndices, args.currentEpoch)
-}
-
 func (s *Service) detectAllAttesterSlashings(
 	ctx context.Context,
 	args *chunkUpdateArgs,
