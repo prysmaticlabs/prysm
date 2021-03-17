@@ -298,23 +298,23 @@ func (ns *Server) handleEmptyFilters(req *ethpb.PeersRequest, peerStatus *peers.
 func peerInfo(peerStatus *peers.Status, id peer.ID) (*ethpb.Peer, error) {
 	enr, err := peerStatus.ENR(id)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not obtain ENR: %v", err)
+		return nil, errors.Wrap(err, "Could not obtain ENR")
 	}
 	serializedEnr, err := p2p.SerializeENR(enr)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not serialize ENR: %v", err)
+		return nil, errors.Wrap(err, "Could not serialize ENR")
 	}
 	address, err := peerStatus.Address(id)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not obtain address: %v", err)
+		return nil, errors.Wrap(err, "Could not obtain address")
 	}
 	connectionState, err := peerStatus.ConnectionState(id)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not obtain connection state: %v", err)
+		return nil, errors.Wrap(err, "Could not obtain connection state")
 	}
 	direction, err := peerStatus.Direction(id)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not obtain direction: %v", err)
+		return nil, errors.Wrap(err, "Could not obtain direction")
 	}
 	p := ethpb.Peer{
 		PeerId:    id.Pretty(),
