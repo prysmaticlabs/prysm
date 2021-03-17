@@ -121,6 +121,12 @@ func configureTestnet(ctx *cli.Context, cfg *Flags) {
 		params.UsePyrmontConfig()
 		params.UsePyrmontNetworkConfig()
 		cfg.PyrmontTestnet = true
+	} else if ctx.Bool(PraterTestnet.Name) {
+		log.Warn("Running on the Prater Testnet")
+		params.UsePraterConfig()
+		params.UsePraterNetworkConfig()
+		// TODO(8612): Define bootstrap nodes.
+		log.Error("No bootnodes are defined by default for Prater")
 	} else {
 		log.Warn("Running on ETH2 Mainnet")
 		params.UseMainnetConfig()
