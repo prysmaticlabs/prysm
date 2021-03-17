@@ -16,7 +16,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	coreState "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -521,7 +522,7 @@ func (s *Service) checkForChainstart(blockHash [32]byte, blockNumber *big.Int, b
 	if valCount == 0 {
 		return
 	}
-	triggered := state.IsValidGenesisState(valCount, genesisTime)
+	triggered := coreState.IsValidGenesisState(valCount, genesisTime)
 	if triggered {
 		s.chainStartData.GenesisTime = genesisTime
 		s.ProcessChainStart(s.chainStartData.GenesisTime, blockHash, blockNumber)
@@ -530,10 +531,14 @@ func (s *Service) checkForChainstart(blockHash [32]byte, blockNumber *big.Int, b
 
 // save all powchain related metadata to disk.
 func (s *Service) savePowchainData(ctx context.Context) error {
+	pbState, err := state.ProtobufBeaconState(s.preGenesisState.InnerStateUnsafe())
+	if err != nil {
+		return err
+	}
 	eth1Data := &protodb.ETH1ChainData{
 		CurrentEth1Data:   s.latestEth1Data,
 		ChainstartData:    s.chainStartData,
-		BeaconState:       s.preGenesisState.InnerStateUnsafe(), // I promise not to mutate it!
+		BeaconState:       pbState, // I promise not to mutate it!
 		Trie:              s.depositTrie.ToProto(),
 		DepositContainers: s.depositCache.AllDepositContainers(ctx),
 	}

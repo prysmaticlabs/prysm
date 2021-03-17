@@ -119,8 +119,9 @@ func RunBlockOperationTest(
 		if err := postBeaconState.UnmarshalSSZ(postBeaconStateFile); err != nil {
 			t.Fatalf("Failed to unmarshal: %v", err)
 		}
-
-		if !proto.Equal(beaconState.InnerStateUnsafe(), postBeaconState) {
+		pbState, err := beaconstate.ProtobufBeaconState(beaconState.InnerStateUnsafe())
+		require.NoError(t, err)
+		if !proto.Equal(pbState, postBeaconState) {
 			diff, _ := messagediff.PrettyDiff(beaconState.InnerStateUnsafe(), postBeaconState)
 			t.Log(diff)
 			t.Fatal("Post state does not match expected")
@@ -172,7 +173,9 @@ func RunEpochOperationTest(
 			t.Fatalf("Failed to unmarshal: %v", err)
 		}
 
-		if !proto.Equal(beaconState.InnerStateUnsafe(), postBeaconState) {
+		pbState, err := beaconstate.ProtobufBeaconState(beaconState.InnerStateUnsafe())
+		require.NoError(t, err)
+		if !proto.Equal(pbState, postBeaconState) {
 			diff, _ := messagediff.PrettyDiff(beaconState.InnerStateUnsafe(), postBeaconState)
 			t.Log(diff)
 			t.Fatal("Post state does not match expected")

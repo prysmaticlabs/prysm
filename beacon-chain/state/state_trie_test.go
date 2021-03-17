@@ -18,7 +18,8 @@ import (
 
 func TestInitializeFromProto(t *testing.T) {
 	testState, _ := testutil.DeterministicGenesisState(t, 64)
-
+	pbState, err := state.ProtobufBeaconState(testState.InnerStateUnsafe())
+	require.NoError(t, err)
 	type test struct {
 		name  string
 		state *pbp2p.BeaconState
@@ -43,7 +44,7 @@ func TestInitializeFromProto(t *testing.T) {
 		},
 		{
 			name:  "full state",
-			state: testState.InnerStateUnsafe(),
+			state: pbState,
 		},
 	}
 	for _, tt := range initTests {
@@ -60,7 +61,8 @@ func TestInitializeFromProto(t *testing.T) {
 
 func TestInitializeFromProtoUnsafe(t *testing.T) {
 	testState, _ := testutil.DeterministicGenesisState(t, 64)
-
+	pbState, err := state.ProtobufBeaconState(testState.InnerStateUnsafe())
+	require.NoError(t, err)
 	type test struct {
 		name  string
 		state *pbp2p.BeaconState
@@ -85,7 +87,7 @@ func TestInitializeFromProtoUnsafe(t *testing.T) {
 		},
 		{
 			name:  "full state",
-			state: testState.InnerStateUnsafe(),
+			state: pbState,
 		},
 	}
 	for _, tt := range initTests {
@@ -153,7 +155,9 @@ func TestBeaconState_HashTreeRoot(t *testing.T) {
 			if err == nil && tt.error != "" {
 				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
 			}
-			genericHTR, err := testState.InnerStateUnsafe().HashTreeRoot()
+			pbState, err := state.ProtobufBeaconState(testState.InnerStateUnsafe())
+			require.NoError(t, err)
+			genericHTR, err := pbState.HashTreeRoot()
 			if err == nil && tt.error != "" {
 				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
 			}
@@ -220,7 +224,9 @@ func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
 			if err == nil && tt.error != "" {
 				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
 			}
-			genericHTR, err := testState.InnerStateUnsafe().HashTreeRoot()
+			pbState, err := state.ProtobufBeaconState(testState.InnerStateUnsafe())
+			require.NoError(t, err)
+			genericHTR, err := pbState.HashTreeRoot()
 			if err == nil && tt.error != "" {
 				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
 			}
