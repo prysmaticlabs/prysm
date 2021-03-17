@@ -4,14 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // ProcessProposerSlashings is one of the operations performed
@@ -38,9 +37,9 @@ import (
 //    slash_validator(state, proposer_slashing.proposer_index)
 func ProcessProposerSlashings(
 	_ context.Context,
-	beaconState *stateTrie.BeaconState,
+	beaconState iface.BeaconState,
 	b *ethpb.SignedBeaconBlock,
-) (*stateTrie.BeaconState, error) {
+) (iface.BeaconState, error) {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err
 	}
@@ -66,7 +65,7 @@ func ProcessProposerSlashings(
 
 // VerifyProposerSlashing verifies that the data provided from slashing is valid.
 func VerifyProposerSlashing(
-	beaconState *stateTrie.BeaconState,
+	beaconState iface.BeaconState,
 	slashing *ethpb.ProposerSlashing,
 ) error {
 	if slashing.Header_1 == nil || slashing.Header_1.Header == nil || slashing.Header_2 == nil || slashing.Header_2.Header == nil {

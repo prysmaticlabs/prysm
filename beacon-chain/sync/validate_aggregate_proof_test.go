@@ -189,6 +189,7 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 		},
 		attPool:              attestations.NewPool(),
 		seenAttestationCache: c,
+		attestationNotifier:  (&mock.ChainService{}).OperationNotifier(),
 	}
 	err = r.initCaches()
 	require.NoError(t, err)
@@ -269,6 +270,7 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 			State: beaconState},
 		seenAttestationCache: c,
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
+		attestationNotifier:  (&mock.ChainService{}).OperationNotifier(),
 	}
 	err = r.initCaches()
 	require.NoError(t, err)
@@ -361,6 +363,7 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 			}},
 		attPool:              attestations.NewPool(),
 		seenAttestationCache: c,
+		attestationNotifier:  (&mock.ChainService{}).OperationNotifier(),
 	}
 	err = r.initCaches()
 	require.NoError(t, err)
@@ -452,6 +455,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 
 		attPool:              attestations.NewPool(),
 		seenAttestationCache: c,
+		attestationNotifier:  (&mock.ChainService{}).OperationNotifier(),
 	}
 	err = r.initCaches()
 	require.NoError(t, err)
@@ -558,6 +562,7 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 			}},
 		attPool:              attestations.NewPool(),
 		seenAttestationCache: c,
+		attestationNotifier:  (&mock.ChainService{}).OperationNotifier(),
 	}
 	err = r.initCaches()
 	require.NoError(t, err)
@@ -648,6 +653,7 @@ func TestValidateAggregateAndProof_RejectWhenAttEpochDoesntEqualTargetEpoch(t *t
 			}},
 		attPool:              attestations.NewPool(),
 		seenAttestationCache: c,
+		attestationNotifier:  (&mock.ChainService{}).OperationNotifier(),
 	}
 	err = r.initCaches()
 	require.NoError(t, err)

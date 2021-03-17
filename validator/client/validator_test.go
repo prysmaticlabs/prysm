@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	dbTest "github.com/prysmaticlabs/prysm/validator/db/testing"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -31,7 +32,7 @@ func init() {
 	logrus.SetOutput(ioutil.Discard)
 }
 
-var _ Validator = (*validator)(nil)
+var _ iface.Validator = (*validator)(nil)
 
 const cancelledCtx = "context has been canceled"
 
@@ -56,25 +57,13 @@ type mockKeymanager struct {
 }
 
 func (m *mockKeymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+	keys := make([][48]byte, 0)
 	if m.fetchNoKeys {
-		// We set the value to `false` to fetch keys the next time.
 		m.fetchNoKeys = false
-		return make([][48]byte, 0), nil
+		return keys, nil
 	}
-
-	m.lock.RLock()
-	defer m.lock.RUnlock()
-	keys := make([][48]byte, 0)
-	for pubKey := range m.keysMap {
-		keys = append(keys, pubKey)
-	}
-	return keys, nil
-}
-
-func (m *mockKeymanager) FetchAllValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
-	keys := make([][48]byte, 0)
 	for pubKey := range m.keysMap {
 		keys = append(keys, pubKey)
 	}
@@ -99,8 +88,8 @@ func (m *mockKeymanager) SubscribeAccountChanges(pubKeysChan chan [][48]byte) ev
 	return m.accountsChangedFeed.Subscribe(pubKeysChan)
 }
 
-func (m *mockKeymanager) SimulateAccountChanges() {
-	m.accountsChangedFeed.Send(make([][48]byte, 0))
+func (m *mockKeymanager) SimulateAccountChanges(newKeys [][48]byte) {
+	m.accountsChangedFeed.Send(newKeys)
 }
 
 func generateMockStatusResponse(pubkeys [][]byte) *ethpb.ValidatorActivationResponse {
@@ -365,7 +354,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		resp,
 		nil,
 	)
-	require.NoError(t, v.WaitForActivation(context.Background()), "Could not wait for activation")
+	require.NoError(t, v.WaitForActivation(context.Background(), nil), "Could not wait for activation")
 	require.LogsContain(t, hook, "Validator activated")
 }
 
@@ -403,7 +392,7 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 		resp,
 		nil,
 	)
-	assert.NoError(t, v.WaitForActivation(context.Background()), "Could not wait for activation")
+	assert.NoError(t, v.WaitForActivation(context.Background(), nil), "Could not wait for activation")
 }
 
 func TestWaitSync_ContextCanceled(t *testing.T) {
@@ -661,7 +650,7 @@ func TestRolesAt_OK(t *testing.T) {
 	roleMap, err := v.RolesAt(context.Background(), 1)
 	require.NoError(t, err)
 
-	assert.Equal(t, ValidatorRole(roleAttester), roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][0])
+	assert.Equal(t, iface.ValidatorRole(iface.RoleAttester), roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][0])
 }
 
 func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
@@ -687,82 +676,104 @@ func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
 	roleMap, err := v.RolesAt(context.Background(), 0)
 	require.NoError(t, err)
 
-	assert.Equal(t, ValidatorRole(roleAttester), roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][0])
+	assert.Equal(t, iface.ValidatorRole(iface.RoleAttester), roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][0])
 }
 
 func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 	nonexistentIndex := types.ValidatorIndex(^uint64(0))
 	type statusTest struct {
 		name   string
-		status *ethpb.ValidatorActivationResponse_Status
+		status *validatorStatus
 		log    string
 		active bool
 	}
-	pubKeys := [][]byte{
-		bytesutil.Uint64ToBytesLittleEndian(0),
-		bytesutil.Uint64ToBytesLittleEndian(1),
-		bytesutil.Uint64ToBytesLittleEndian(2),
-		bytesutil.Uint64ToBytesLittleEndian(3),
-	}
+	pubKeys := [][]byte{bytesutil.Uint64ToBytesLittleEndian(0)}
 	tests := []statusTest{
 		{
 			name: "UNKNOWN_STATUS, no deposit found yet",
-			status: &ethpb.ValidatorActivationResponse_Status{
-				PublicKey: pubKeys[0],
-				Index:     nonexistentIndex,
-				Status: &ethpb.ValidatorStatusResponse{
+			status: &validatorStatus{
+				publicKey: pubKeys[0],
+				index:     nonexistentIndex,
+				status: &ethpb.ValidatorStatusResponse{
 					Status: ethpb.ValidatorStatus_UNKNOWN_STATUS,
 				},
 			},
-			log: "Waiting for deposit to be observed by beacon node",
+			log:    "Waiting for deposit to be observed by beacon node",
+			active: false,
 		},
 		{
 			name: "DEPOSITED into state",
-			status: &ethpb.ValidatorActivationResponse_Status{
-				PublicKey: pubKeys[0],
-				Index:     30,
-				Status: &ethpb.ValidatorStatusResponse{
+			status: &validatorStatus{
+				publicKey: pubKeys[0],
+				index:     30,
+				status: &ethpb.ValidatorStatusResponse{
 					Status:                    ethpb.ValidatorStatus_DEPOSITED,
 					PositionInActivationQueue: 30,
 				},
 			},
-			log: "Deposit processed, entering activation queue after finalization\" index=30 positionInActivationQueue=30",
+			log:    "Deposit processed, entering activation queue after finalization\" index=30 positionInActivationQueue=30",
+			active: false,
 		},
 		{
 			name: "PENDING",
-			status: &ethpb.ValidatorActivationResponse_Status{
-				PublicKey: pubKeys[0],
-				Index:     50,
-				Status: &ethpb.ValidatorStatusResponse{
+			status: &validatorStatus{
+				publicKey: pubKeys[0],
+				index:     50,
+				status: &ethpb.ValidatorStatusResponse{
 					Status:                    ethpb.ValidatorStatus_PENDING,
 					ActivationEpoch:           params.BeaconConfig().FarFutureEpoch,
 					PositionInActivationQueue: 6,
 				},
 			},
-			log: "Waiting to be assigned activation epoch\" index=50 positionInActivationQueue=6",
+			log:    "Waiting to be assigned activation epoch\" index=50 positionInActivationQueue=6",
+			active: false,
 		},
 		{
 			name: "PENDING",
-			status: &ethpb.ValidatorActivationResponse_Status{
-				PublicKey: pubKeys[0],
-				Index:     89,
-				Status: &ethpb.ValidatorStatusResponse{
+			status: &validatorStatus{
+				publicKey: pubKeys[0],
+				index:     89,
+				status: &ethpb.ValidatorStatusResponse{
 					Status:                    ethpb.ValidatorStatus_PENDING,
 					ActivationEpoch:           60,
 					PositionInActivationQueue: 5,
 				},
 			},
-			log: "Waiting for activation\" activationEpoch=60 index=89",
+			log:    "Waiting for activation\" activationEpoch=60 index=89",
+			active: false,
+		},
+		{
+			name: "ACTIVE",
+			status: &validatorStatus{
+				publicKey: pubKeys[0],
+				index:     89,
+				status: &ethpb.ValidatorStatusResponse{
+					Status: ethpb.ValidatorStatus_ACTIVE,
+				},
+			},
+			active: true,
+		},
+		{
+			name: "EXITING",
+			status: &validatorStatus{
+				publicKey: pubKeys[0],
+				index:     89,
+				status: &ethpb.ValidatorStatusResponse{
+					Status: ethpb.ValidatorStatus_EXITING,
+				},
+			},
+			active: true,
 		},
 		{
 			name: "EXITED",
-			status: &ethpb.ValidatorActivationResponse_Status{
-				PublicKey: pubKeys[0],
-				Status: &ethpb.ValidatorStatusResponse{
+			status: &validatorStatus{
+				publicKey: pubKeys[0],
+				status: &ethpb.ValidatorStatusResponse{
 					Status: ethpb.ValidatorStatus_EXITED,
 				},
 			},
-			log: "Validator exited",
+			log:    "Validator exited",
+			active: false,
 		},
 	}
 	for _, test := range tests {
@@ -782,9 +793,11 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 				},
 			}
 
-			active := v.checkAndLogValidatorStatus([]*ethpb.ValidatorActivationResponse_Status{test.status})
-			require.Equal(t, test.active, active, "Expected key to be active")
-			require.LogsContain(t, hook, test.log)
+			active := v.checkAndLogValidatorStatus([]*validatorStatus{test.status})
+			require.Equal(t, test.active, active)
+			if test.log != "" {
+				require.LogsContain(t, hook, test.log)
+			}
 		})
 	}
 }

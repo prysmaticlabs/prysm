@@ -11,7 +11,7 @@ import (
 	math_bits "math/bits"
 
 	proto "github.com/gogo/protobuf/proto"
-	types "github.com/gogo/protobuf/types"
+	empty "github.com/golang/protobuf/ptypes/empty"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
@@ -114,7 +114,7 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type HealthClient interface {
-	StreamBeaconLogs(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (Health_StreamBeaconLogsClient, error)
+	StreamBeaconLogs(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (Health_StreamBeaconLogsClient, error)
 }
 
 type healthClient struct {
@@ -125,7 +125,7 @@ func NewHealthClient(cc *grpc.ClientConn) HealthClient {
 	return &healthClient{cc}
 }
 
-func (c *healthClient) StreamBeaconLogs(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (Health_StreamBeaconLogsClient, error) {
+func (c *healthClient) StreamBeaconLogs(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (Health_StreamBeaconLogsClient, error) {
 	stream, err := c.cc.NewStream(ctx, &_Health_serviceDesc.Streams[0], "/ethereum.beacon.rpc.v1.Health/StreamBeaconLogs", opts...)
 	if err != nil {
 		return nil, err
@@ -159,14 +159,14 @@ func (x *healthStreamBeaconLogsClient) Recv() (*LogsResponse, error) {
 
 // HealthServer is the server API for Health service.
 type HealthServer interface {
-	StreamBeaconLogs(*types.Empty, Health_StreamBeaconLogsServer) error
+	StreamBeaconLogs(*empty.Empty, Health_StreamBeaconLogsServer) error
 }
 
 // UnimplementedHealthServer can be embedded to have forward compatible implementations.
 type UnimplementedHealthServer struct {
 }
 
-func (*UnimplementedHealthServer) StreamBeaconLogs(req *types.Empty, srv Health_StreamBeaconLogsServer) error {
+func (*UnimplementedHealthServer) StreamBeaconLogs(req *empty.Empty, srv Health_StreamBeaconLogsServer) error {
 	return status.Errorf(codes.Unimplemented, "method StreamBeaconLogs not implemented")
 }
 
@@ -175,7 +175,7 @@ func RegisterHealthServer(s *grpc.Server, srv HealthServer) {
 }
 
 func _Health_StreamBeaconLogs_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(types.Empty)
+	m := new(empty.Empty)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}

@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -27,9 +27,9 @@ import (
 //    state.randao_mixes[epoch % EPOCHS_PER_HISTORICAL_VECTOR] = mix
 func ProcessRandao(
 	_ context.Context,
-	beaconState *stateTrie.BeaconState,
+	beaconState iface.BeaconState,
 	b *ethpb.SignedBeaconBlock,
-) (*stateTrie.BeaconState, error) {
+) (iface.BeaconState, error) {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err
 	}
@@ -59,9 +59,9 @@ func ProcessRandao(
 //             hash(body.randao_reveal))
 //     )
 func ProcessRandaoNoVerify(
-	beaconState *stateTrie.BeaconState,
+	beaconState iface.BeaconState,
 	body *ethpb.BeaconBlockBody,
-) (*stateTrie.BeaconState, error) {
+) (iface.BeaconState, error) {
 	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
 	// If block randao passed verification, we XOR the state's latest randao mix with the block's
 	// randao and update the state's corresponding latest randao mix value.

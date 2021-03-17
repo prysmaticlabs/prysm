@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -28,7 +29,7 @@ import (
 
 // ChainService defines the mock interface for testing
 type ChainService struct {
-	State                       *stateTrie.BeaconState
+	State                       iface.BeaconState
 	Root                        []byte
 	Block                       *ethpb.SignedBeaconBlock
 	FinalizedCheckPoint         *ethpb.Checkpoint
@@ -251,7 +252,7 @@ func (s *ChainService) HeadBlock(context.Context) (*ethpb.SignedBeaconBlock, err
 }
 
 // HeadState mocks HeadState method in chain service.
-func (s *ChainService) HeadState(context.Context) (*stateTrie.BeaconState, error) {
+func (s *ChainService) HeadState(context.Context) (iface.BeaconState, error) {
 	return s.State, nil
 }
 
@@ -286,7 +287,7 @@ func (s *ChainService) ReceiveAttestationNoPubsub(context.Context, *ethpb.Attest
 }
 
 // AttestationPreState mocks AttestationPreState method in chain service.
-func (s *ChainService) AttestationPreState(_ context.Context, _ *ethpb.Attestation) (*stateTrie.BeaconState, error) {
+func (s *ChainService) AttestationPreState(_ context.Context, _ *ethpb.Attestation) (iface.BeaconState, error) {
 	return s.State, nil
 }
 

@@ -18,6 +18,7 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
@@ -65,7 +66,7 @@ func TestStore_OnBlock(t *testing.T) {
 	tests := []struct {
 		name          string
 		blk           *ethpb.SignedBeaconBlock
-		s             *stateTrie.BeaconState
+		s             iface.BeaconState
 		time          uint64
 		wantErrString string
 	}{
@@ -153,7 +154,7 @@ func TestStore_OnBlockBatch(t *testing.T) {
 
 	var blks []*ethpb.SignedBeaconBlock
 	var blkRoots [][32]byte
-	var firstState *stateTrie.BeaconState
+	var firstState iface.BeaconState
 	for i := 1; i < 10; i++ {
 		b, err := testutil.GenerateFullBlock(bState, keys, testutil.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
@@ -898,7 +899,8 @@ func TestHandleEpochBoundary_BadMetrics(t *testing.T) {
 	s, err := testutil.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, s.SetSlot(1))
-	service.head = &head{}
+	service.head = &head{state: (*stateTrie.BeaconState)(nil)}
+
 	require.ErrorContains(t, "failed to initialize precompute: nil inner state", service.handleEpochBoundary(ctx, s))
 }
 

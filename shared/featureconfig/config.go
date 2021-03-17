@@ -48,6 +48,7 @@ type Flags struct {
 	WriteWalletPasswordOnWebOnboarding bool // WriteWalletPasswordOnWebOnboarding writes the password to disk after Prysm web signup.
 	DisableAttestingHistoryDBCache     bool // DisableAttestingHistoryDBCache for the validator client increases disk reads/writes.
 	UpdateHeadTimely                   bool // UpdateHeadTimely updates head right after state transition.
+	ProposerAttsSelectionUsingMaxCover bool // ProposerAttsSelectionUsingMaxCover enables max-cover algorithm when selecting attestations for proposing.
 
 	// Logging related toggles.
 	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
@@ -120,6 +121,12 @@ func configureTestnet(ctx *cli.Context, cfg *Flags) {
 		params.UsePyrmontConfig()
 		params.UsePyrmontNetworkConfig()
 		cfg.PyrmontTestnet = true
+	} else if ctx.Bool(PraterTestnet.Name) {
+		log.Warn("Running on the Prater Testnet")
+		params.UsePraterConfig()
+		params.UsePraterNetworkConfig()
+		// TODO(8612): Define bootstrap nodes.
+		log.Error("No bootnodes are defined by default for Prater")
 	} else {
 		log.Warn("Running on ETH2 Mainnet")
 		params.UseMainnetConfig()
@@ -183,6 +190,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(updateHeadTimely.Name) {
 		log.WithField(updateHeadTimely.Name, updateHeadTimely.Usage).Warn(enabledFeatureFlag)
 		cfg.UpdateHeadTimely = true
+	}
+	if ctx.Bool(proposerAttsSelectionUsingMaxCover.Name) {
+		log.WithField(proposerAttsSelectionUsingMaxCover.Name, proposerAttsSelectionUsingMaxCover.Usage).Warn(enabledFeatureFlag)
+		cfg.ProposerAttsSelectionUsingMaxCover = true
 	}
 	Init(cfg)
 }

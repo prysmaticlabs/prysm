@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"time"
 
@@ -13,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
-	"github.com/sirupsen/logrus"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"go.opencensus.io/trace"
 )
 
@@ -21,14 +20,18 @@ import (
 // validator set. If not, this operation will block until an activation message is
 // received. This method also monitors the keymanager for updates while waiting for an activation
 // from the gRPC server.
-func (v *validator) WaitForActivation(ctx context.Context) error {
+//
+// If the channel parameter is nil, WaitForActivation creates and manages its own channel.
+func (v *validator) WaitForActivation(ctx context.Context, accountsChangedChan chan [][48]byte) error {
 	// Monitor the key manager for updates.
-	accountsChangedChan := make(chan [][48]byte)
-	sub := v.GetKeymanager().SubscribeAccountChanges(accountsChangedChan)
-	defer func() {
-		sub.Unsubscribe()
-		close(accountsChangedChan)
-	}()
+	if accountsChangedChan == nil {
+		accountsChangedChan = make(chan [][48]byte, 1)
+		sub := v.GetKeymanager().SubscribeAccountChanges(accountsChangedChan)
+		defer func() {
+			sub.Unsubscribe()
+			close(accountsChangedChan)
+		}()
+	}
 
 	return v.waitForActivation(ctx, accountsChangedChan)
 }
@@ -85,47 +88,87 @@ func (v *validator) waitForActivation(ctx context.Context, accountsChangedChan <
 		time.Sleep(time.Second * time.Duration(mathutil.Min(uint64(attempts), 60)))
 		return v.waitForActivation(incrementRetries(ctx), accountsChangedChan)
 	}
-	for {
-		select {
-		case <-accountsChangedChan:
-			// Accounts (keys) changed, restart the process.
-			return v.waitForActivation(ctx, accountsChangedChan)
-		default:
-			res, err := stream.Recv()
-			// If the stream is closed, we stop the loop.
-			if errors.Is(err, io.EOF) {
+
+	remoteKm, ok := v.keyManager.(remote.RemoteKeymanager)
+	if ok {
+		for range v.NextSlot() {
+			if ctx.Err() == context.Canceled {
+				return errors.Wrap(ctx.Err(), "context canceled, not waiting for activation anymore")
+			}
+
+			validatingKeys, err = remoteKm.ReloadPublicKeys(ctx)
+			if err != nil {
+				return errors.Wrap(err, msgCouldNotFetchKeys)
+			}
+			statusRequestKeys := make([][]byte, len(validatingKeys))
+			for i := range validatingKeys {
+				statusRequestKeys[i] = validatingKeys[i][:]
+			}
+			resp, err := v.validatorClient.MultipleValidatorStatus(ctx, &ethpb.MultipleValidatorStatusRequest{
+				PublicKeys: statusRequestKeys,
+			})
+			if err != nil {
+				return err
+			}
+			statuses := make([]*validatorStatus, len(resp.Statuses))
+			for i, s := range resp.Statuses {
+				statuses[i] = &validatorStatus{
+					publicKey: resp.PublicKeys[i],
+					status:    s,
+					index:     resp.Indices[i],
+				}
+			}
+
+			valActivated := v.checkAndLogValidatorStatus(statuses)
+			if valActivated {
+				logActiveValidatorStatus(statuses)
 				break
 			}
-			// If context is canceled we return from the function.
-			if ctx.Err() == context.Canceled {
-				return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
-			}
-			if err != nil {
-				traceutil.AnnotateError(span, err)
-				attempts := streamAttempts(ctx)
-				log.WithError(err).WithField("attempts", attempts).
-					Error("Stream broken while waiting for activation. Reconnecting...")
-				// Reconnection attempt backoff, up to 60s.
-				time.Sleep(time.Second * time.Duration(mathutil.Min(uint64(attempts), 60)))
-				return v.waitForActivation(incrementRetries(ctx), accountsChangedChan)
-			}
-			valActivated := v.checkAndLogValidatorStatus(res.Statuses)
-
-			if valActivated {
-				for _, statusResp := range res.Statuses {
-					if statusResp.Status.Status != ethpb.ValidatorStatus_ACTIVE {
-						continue
-					}
-					log.WithFields(logrus.Fields{
-						"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(statusResp.PublicKey)),
-						"index":     statusResp.Index,
-					}).Info("Validator activated")
-				}
-			} else {
-				continue
-			}
 		}
-		break
+	} else {
+		for {
+			select {
+			case <-accountsChangedChan:
+				// Accounts (keys) changed, restart the process.
+				return v.waitForActivation(ctx, accountsChangedChan)
+			default:
+				res, err := stream.Recv()
+				// If the stream is closed, we stop the loop.
+				if errors.Is(err, io.EOF) {
+					break
+				}
+				// If context is canceled we return from the function.
+				if ctx.Err() == context.Canceled {
+					return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
+				}
+				if err != nil {
+					traceutil.AnnotateError(span, err)
+					attempts := streamAttempts(ctx)
+					log.WithError(err).WithField("attempts", attempts).
+						Error("Stream broken while waiting for activation. Reconnecting...")
+					// Reconnection attempt backoff, up to 60s.
+					time.Sleep(time.Second * time.Duration(mathutil.Min(uint64(attempts), 60)))
+					return v.waitForActivation(incrementRetries(ctx), accountsChangedChan)
+				}
+
+				statuses := make([]*validatorStatus, len(res.Statuses))
+				for i, s := range res.Statuses {
+					statuses[i] = &validatorStatus{
+						publicKey: s.PublicKey,
+						status:    s.Status,
+						index:     s.Index,
+					}
+				}
+
+				valActivated := v.checkAndLogValidatorStatus(statuses)
+				if valActivated {
+					logActiveValidatorStatus(statuses)
+				} else {
+					continue
+				}
+			}
+			break
+		}
 	}
 
 	v.ticker = slotutil.NewSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)

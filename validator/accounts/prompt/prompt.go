@@ -30,10 +30,6 @@ const (
 	SelectAccountsBackupPromptText = "Select the account(s) you wish to backup"
 	// SelectAccountsVoluntaryExitPromptText --
 	SelectAccountsVoluntaryExitPromptText = "Select the account(s) on which you wish to perform a voluntary exit"
-	// SelectAccountsDisablePromptText --
-	SelectAccountsDisablePromptText = "Select the account(s) you would like to disable"
-	// SelectAccountsEnablePromptText --
-	SelectAccountsEnablePromptText = "Select the account(s) you would like to enable"
 )
 
 var au = aurora.NewAurora(true)

@@ -46,7 +46,9 @@ func runSlotProcessingTests(t *testing.T, config string) {
 			postState, err := state.ProcessSlots(context.Background(), beaconState, beaconState.Slot().Add(uint64(slotsCount)))
 			require.NoError(t, err)
 
-			if !proto.Equal(postState.CloneInnerState(), postBeaconState) {
+			pbState, err := beaconstate.ProtobufBeaconState(postState.CloneInnerState())
+			require.NoError(t, err)
+			if !proto.Equal(pbState, postBeaconState) {
 				diff, _ := messagediff.PrettyDiff(beaconState, postBeaconState)
 				t.Fatalf("Post state does not match expected. Diff between states %s", diff)
 			}

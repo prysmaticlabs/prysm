@@ -1,6 +1,6 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
-# gazelle:ignore geth_deps.go
+# gazelle:exclude geth_deps.go
 
 go_test(
     name = "go_default_test",
@@ -15,8 +15,8 @@ go_test(
     data = [
         "//cmd/beacon-chain",
         "//cmd/slasher",
-        "//tools/bootnode",
         "//cmd/validator",
+        "//tools/bootnode",
         "@com_github_ethereum_go_ethereum//cmd/geth",
     ],
     shard_count = 2,
@@ -36,11 +36,11 @@ go_test(
         "//shared/params:go_default_library",
         "//shared/slotutil:go_default_library",
         "//shared/testutil:go_default_library",
+        "//shared/testutil/assert:go_default_library",
+        "//shared/testutil/require:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
-        "//shared/testutil/assert:go_default_library",
-        "//shared/testutil/require:go_default_library",
     ],
 )
