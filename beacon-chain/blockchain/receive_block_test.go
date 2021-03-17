@@ -73,7 +73,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 				),
 			},
 			check: func(t *testing.T, s *Service) {
-				if baCount := len(s.attPool.BlockAttestations()); baCount != 2 {
+				if baCount := len(s.cfg.AttPool.BlockAttestations()); baCount != 2 {
 					t.Errorf("Did not get the correct number of block attestations saved to the pool. "+
 						"Got %d but wanted %d", baCount, 2)
 				}
@@ -93,7 +93,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 				),
 			},
 			check: func(t *testing.T, s *Service) {
-				pending := s.exitPool.PendingExits(genesis, 1, true /* no limit */)
+				pending := s.cfg.ExitPool.PendingExits(genesis, 1, true /* no limit */)
 				if len(pending) != 0 {
 					t.Errorf(
 						"Did not mark the correct number of exits. Got %d pending but wanted %d",
@@ -109,7 +109,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 				block: genFullBlock(t, testutil.DefaultBlockGenConfig(), 1 /*slot*/),
 			},
 			check: func(t *testing.T, s *Service) {
-				if recvd := len(s.stateNotifier.(*blockchainTesting.MockStateNotifier).ReceivedEvents()); recvd < 1 {
+				if recvd := len(s.cfg.StateNotifier.(*blockchainTesting.MockStateNotifier).ReceivedEvents()); recvd < 1 {
 					t.Errorf("Received %d state notifications, expected at least 1", recvd)
 				}
 			},
@@ -137,7 +137,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 			s, err := NewService(ctx, cfg)
 			require.NoError(t, err)
 			require.NoError(t, s.saveGenesisData(ctx, genesis))
-			gBlk, err := s.beaconDB.GenesisBlock(ctx)
+			gBlk, err := s.cfg.BeaconDB.GenesisBlock(ctx)
 			require.NoError(t, err)
 			gRoot, err := gBlk.Block.HashTreeRoot()
 			require.NoError(t, err)
@@ -178,7 +178,7 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 	s, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 	require.NoError(t, s.saveGenesisData(ctx, genesis))
-	gBlk, err := s.beaconDB.GenesisBlock(ctx)
+	gBlk, err := s.cfg.BeaconDB.GenesisBlock(ctx)
 	require.NoError(t, err)
 	gRoot, err := gBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -192,11 +192,11 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 		wg.Done()
 	}()
 	wg.Wait()
-	if recvd := len(s.stateNotifier.(*blockchainTesting.MockStateNotifier).ReceivedEvents()); recvd < 1 {
+	if recvd := len(s.cfg.StateNotifier.(*blockchainTesting.MockStateNotifier).ReceivedEvents()); recvd < 1 {
 		t.Errorf("Received %d state notifications, expected at least 1", recvd)
 	}
 	// Verify fork choice has processed the block. (Genesis block and the new block)
-	assert.Equal(t, 2, len(s.forkChoiceStore.Nodes()))
+	assert.Equal(t, 2, len(s.cfg.ForkChoiceStore.Nodes()))
 }
 
 func TestService_ReceiveBlockBatch(t *testing.T) {
@@ -234,7 +234,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 				block: genFullBlock(t, testutil.DefaultBlockGenConfig(), 1 /*slot*/),
 			},
 			check: func(t *testing.T, s *Service) {
-				if recvd := len(s.stateNotifier.(*blockchainTesting.MockStateNotifier).ReceivedEvents()); recvd < 1 {
+				if recvd := len(s.cfg.StateNotifier.(*blockchainTesting.MockStateNotifier).ReceivedEvents()); recvd < 1 {
 					t.Errorf("Received %d state notifications, expected at least 1", recvd)
 				}
 			},
@@ -260,7 +260,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 			require.NoError(t, err)
 			err = s.saveGenesisData(ctx, genesis)
 			require.NoError(t, err)
-			gBlk, err := s.beaconDB.GenesisBlock(ctx)
+			gBlk, err := s.cfg.BeaconDB.GenesisBlock(ctx)
 			require.NoError(t, err)
 
 			gRoot, err := gBlk.Block.HashTreeRoot()

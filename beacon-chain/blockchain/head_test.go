@@ -39,14 +39,14 @@ func TestSaveHead_Different(t *testing.T) {
 	newHeadSignedBlock.Block.Slot = 1
 	newHeadBlock := newHeadSignedBlock.Block
 
-	require.NoError(t, service.beaconDB.SaveBlock(context.Background(), newHeadSignedBlock))
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), newHeadSignedBlock))
 	newRoot, err := newHeadBlock.HashTreeRoot()
 	require.NoError(t, err)
 	headState, err := testutil.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(1))
-	require.NoError(t, service.beaconDB.SaveStateSummary(context.Background(), &pb.StateSummary{Slot: 1, Root: newRoot[:]}))
-	require.NoError(t, service.beaconDB.SaveState(context.Background(), headState, newRoot))
+	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(context.Background(), &pb.StateSummary{Slot: 1, Root: newRoot[:]}))
+	require.NoError(t, service.cfg.BeaconDB.SaveState(context.Background(), headState, newRoot))
 	require.NoError(t, service.saveHead(context.Background(), newRoot))
 
 	assert.Equal(t, types.Slot(1), service.HeadSlot(), "Head did not change")
@@ -73,14 +73,14 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	newHeadSignedBlock.Block.ParentRoot = reorgChainParent[:]
 	newHeadBlock := newHeadSignedBlock.Block
 
-	require.NoError(t, service.beaconDB.SaveBlock(context.Background(), newHeadSignedBlock))
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), newHeadSignedBlock))
 	newRoot, err := newHeadBlock.HashTreeRoot()
 	require.NoError(t, err)
 	headState, err := testutil.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(1))
-	require.NoError(t, service.beaconDB.SaveStateSummary(context.Background(), &pb.StateSummary{Slot: 1, Root: newRoot[:]}))
-	require.NoError(t, service.beaconDB.SaveState(context.Background(), headState, newRoot))
+	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(context.Background(), &pb.StateSummary{Slot: 1, Root: newRoot[:]}))
+	require.NoError(t, service.cfg.BeaconDB.SaveState(context.Background(), headState, newRoot))
 	require.NoError(t, service.saveHead(context.Background(), newRoot))
 
 	assert.Equal(t, types.Slot(1), service.HeadSlot(), "Head did not change")
@@ -101,8 +101,8 @@ func TestCacheJustifiedStateBalances_CanCache(t *testing.T) {
 
 	state, _ := testutil.DeterministicGenesisState(t, 100)
 	r := [32]byte{'a'}
-	require.NoError(t, service.beaconDB.SaveStateSummary(context.Background(), &pb.StateSummary{Root: r[:]}))
-	require.NoError(t, service.beaconDB.SaveState(context.Background(), state, r))
+	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(context.Background(), &pb.StateSummary{Root: r[:]}))
+	require.NoError(t, service.cfg.BeaconDB.SaveState(context.Background(), state, r))
 	require.NoError(t, service.cacheJustifiedStateBalances(context.Background(), r))
 	require.DeepEqual(t, service.getJustifiedBalances(), state.Balances(), "Incorrect justified balances")
 }
@@ -112,7 +112,7 @@ func TestUpdateHead_MissingJustifiedRoot(t *testing.T) {
 	service := setupBeaconChain(t, beaconDB)
 
 	b := testutil.NewBeaconBlock()
-	require.NoError(t, service.beaconDB.SaveBlock(context.Background(), b))
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), b))
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 
