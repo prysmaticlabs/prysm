@@ -483,7 +483,6 @@ func (b *BeaconNode) registerBlockchainService() error {
 		WspBlockRoot:            bRoot,
 		WspEpoch:                epoch,
 		SlasherAttestationsFeed: b.slasherAttestationsFeed,
-		SlasherBlockHeadersFeed: b.slasherBlockHeadersFeed,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")

@@ -80,7 +80,6 @@ type Service struct {
 	wsEpoch                 types.Epoch
 	wsRoot                  []byte
 	wsVerified              bool
-	slasherBlockHeadersFeed *event.Feed
 	slasherAttestationsFeed *event.Feed
 }
 
@@ -101,7 +100,6 @@ type Config struct {
 	StateGen                *stategen.State
 	WspBlockRoot            []byte
 	WspEpoch                types.Epoch
-	SlasherBlockHeadersFeed *event.Feed
 	SlasherAttestationsFeed *event.Feed
 }
 
@@ -130,7 +128,6 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		justifiedBalances:       make([]uint64, 0),
 		wsEpoch:                 cfg.WspEpoch,
 		wsRoot:                  cfg.WspBlockRoot,
-		slasherBlockHeadersFeed: cfg.SlasherBlockHeadersFeed,
 		slasherAttestationsFeed: cfg.SlasherAttestationsFeed,
 	}, nil
 }

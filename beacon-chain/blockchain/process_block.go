@@ -14,7 +14,6 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -118,15 +117,6 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 		// Feed the indexed attestation to slasher if enabled. This action
 		// is done in the background to avoid adding more load to this critical code path.
 		go func() {
-			signedHeader, err := blockutil.SignedBeaconBlockHeaderFromBlock(signed)
-			if err != nil {
-				log.WithError(err).Error("Could not get signed block header")
-				traceutil.AnnotateError(span, err)
-				return
-			}
-
-			s.slasherBlockHeadersFeed.Send(signedHeader)
-
 			for _, att := range signed.Block.Body.Attestations {
 				committee, err := helpers.BeaconCommitteeFromState(preState, att.Data.Slot, att.Data.CommitteeIndex)
 				if err != nil {
