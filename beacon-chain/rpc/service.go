@@ -32,6 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/debug"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/node"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/nodev1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	chainSync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
@@ -321,6 +322,12 @@ func (s *Service) Start() {
 		Broadcaster:         s.p2p,
 		StateGenService:     s.stateGen,
 		SyncChecker:         s.syncService,
+		StateFetcher: statefetcher.StateFetcher{
+			BeaconDB:           s.beaconDB,
+			ChainInfoFetcher:   s.chainInfoFetcher,
+			GenesisTimeFetcher: s.timeFetcher,
+			StateGenService:    s.stateGen,
+		},
 	}
 	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpbv1.RegisterBeaconNodeServer(s.grpcServer, nodeServerV1)

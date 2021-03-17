@@ -10,6 +10,7 @@ import (
 
 // GetState returns the full beacon state for a given state id.
 func (bs *Server) GetState(ctx context.Context, req *ethpb.StateRequest) (*ethpb.BeaconStateResponse, error) {
+
 	return nil, errors.New("unimplemented")
 }
 
