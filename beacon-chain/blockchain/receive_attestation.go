@@ -76,7 +76,7 @@ func (s *Service) VerifyLmdFfgConsistency(ctx context.Context, a *ethpb.Attestat
 func (s *Service) VerifyFinalizedConsistency(ctx context.Context, root []byte) error {
 	// A canonical root implies the root to has an ancestor that aligns with finalized check point.
 	// In this case, we could exit early to save on additional computation.
-	if s.forkChoiceStore.IsCanonical(bytesutil.ToBytes32(root)) {
+	if s.cfg.ForkChoiceStore.IsCanonical(bytesutil.ToBytes32(root)) {
 		return nil
 	}
 
@@ -100,7 +100,7 @@ func (s *Service) VerifyFinalizedConsistency(ctx context.Context, root []byte) e
 func (s *Service) processAttestationsRoutine(subscribedToStateEvents chan<- struct{}) {
 	// Wait for state to be initialized.
 	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
+	stateSub := s.cfg.StateNotifier.StateFeed().Subscribe(stateChannel)
 	subscribedToStateEvents <- struct{}{}
 	<-stateChannel
 	stateSub.Unsubscribe()
@@ -121,7 +121,7 @@ func (s *Service) processAttestationsRoutine(subscribedToStateEvents chan<- stru
 		case <-st.C():
 			// Continue when there's no fork choice attestation, there's nothing to process and update head.
 			// This covers the condition when the node is still initial syncing to the head of the chain.
-			if s.attPool.ForkchoiceAttestationCount() == 0 {
+			if s.cfg.AttPool.ForkchoiceAttestationCount() == 0 {
 				continue
 			}
 			s.processAttestations(s.ctx)
@@ -134,7 +134,7 @@ func (s *Service) processAttestationsRoutine(subscribedToStateEvents chan<- stru
 
 // This processes fork choice attestations from the pool to account for validator votes and fork choice.
 func (s *Service) processAttestations(ctx context.Context) {
-	atts := s.attPool.ForkchoiceAttestations()
+	atts := s.cfg.AttPool.ForkchoiceAttestations()
 	for _, a := range atts {
 		// Based on the spec, don't process the attestation until the subsequent slot.
 		// This delays consideration in the fork choice until their slot is in the past.
@@ -144,13 +144,13 @@ func (s *Service) processAttestations(ctx context.Context) {
 			continue
 		}
 
-		hasState := s.beaconDB.HasStateSummary(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
+		hasState := s.cfg.BeaconDB.HasStateSummary(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
 		hasBlock := s.hasBlock(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
 		if !(hasState && hasBlock) {
 			continue
 		}
 
-		if err := s.attPool.DeleteForkchoiceAttestation(a); err != nil {
+		if err := s.cfg.AttPool.DeleteForkchoiceAttestation(a); err != nil {
 			log.WithError(err).Error("Could not delete fork choice attestation in pool")
 		}
 
