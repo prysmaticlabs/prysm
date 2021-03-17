@@ -6,7 +6,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	aggtesting "github.com/prysmaticlabs/prysm/shared/aggregation/testing"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bls/common"
@@ -56,7 +56,7 @@ func BenchmarkAggregateAttestations_Aggregate(b *testing.B) {
 	runner := func(atts []*ethpb.Attestation) {
 		attsCopy := make([]*ethpb.Attestation, len(atts))
 		for i, att := range atts {
-			attsCopy[i] = stateTrie.CopyAttestation(att)
+			attsCopy[i] = stateV0.CopyAttestation(att)
 		}
 		_, err := Aggregate(attsCopy)
 		require.NoError(b, err)

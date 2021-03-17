@@ -12,8 +12,8 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -161,7 +161,7 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 		return nil
 	}
 
-	s.setHeadInitialSync(r, stateTrie.CopySignedBeaconBlock(b), hs)
+	s.setHeadInitialSync(r, stateV0.CopySignedBeaconBlock(b), hs)
 	return nil
 }
 
@@ -174,7 +174,7 @@ func (s *Service) setHead(root [32]byte, block *ethpb.SignedBeaconBlock, state i
 	s.head = &head{
 		slot:  block.Block.Slot,
 		root:  root,
-		block: stateTrie.CopySignedBeaconBlock(block),
+		block: stateV0.CopySignedBeaconBlock(block),
 		state: state.Copy(),
 	}
 }
@@ -190,7 +190,7 @@ func (s *Service) setHeadInitialSync(root [32]byte, block *ethpb.SignedBeaconBlo
 	s.head = &head{
 		slot:  block.Block.Slot,
 		root:  root,
-		block: stateTrie.CopySignedBeaconBlock(block),
+		block: stateV0.CopySignedBeaconBlock(block),
 		state: state,
 	}
 }
@@ -216,7 +216,7 @@ func (s *Service) headRoot() [32]byte {
 // It does a full copy on head block for immutability.
 // This is a lock free version.
 func (s *Service) headBlock() *ethpb.SignedBeaconBlock {
-	return stateTrie.CopySignedBeaconBlock(s.head.block)
+	return stateV0.CopySignedBeaconBlock(s.head.block)
 }
 
 // This returns the head state.

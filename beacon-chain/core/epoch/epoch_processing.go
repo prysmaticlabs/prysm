@@ -13,8 +13,8 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
@@ -261,7 +261,7 @@ func ProcessFinalUpdates(state iface.BeaconState) (iface.BeaconState, error) {
 		balance := bals[idx]
 
 		if balance+downwardThreshold < val.EffectiveBalance || val.EffectiveBalance+upwardThreshold < balance {
-			newVal := stateTrie.CopyValidator(val)
+			newVal := stateV0.CopyValidator(val)
 			newVal.EffectiveBalance = maxEffBalance
 			if newVal.EffectiveBalance > balance-balance%effBalanceInc {
 				newVal.EffectiveBalance = balance - balance%effBalanceInc
