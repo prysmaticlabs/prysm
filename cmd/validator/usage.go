@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/validator/pandora"
 	"github.com/urfave/cli/v2"
 )
 
@@ -106,6 +107,8 @@ var appHelpFlagGroups = []flagGroup{
 			flags.WalletPasswordFileFlag,
 			flags.GraffitiFileFlag,
 			flags.EnableDutyCountDown,
+			pandora.PandoraRpcIpcProviderFlag,
+			pandora.PandoraRpcHttpProviderFlag,
 		},
 	},
 	{

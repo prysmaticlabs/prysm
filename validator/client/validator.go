@@ -33,6 +33,7 @@ import (
 	vdb "github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/pandora"
 	"github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -93,6 +94,7 @@ type validator struct {
 	graffitiStruct                     *graffiti.Graffiti
 	graffitiOrderedIndex               uint64
 	eipImportBlacklistedPublicKeys     map[[48]byte]bool
+	pandoraService                     *pandora.Service
 }
 
 // Done cleans up the validator.

@@ -26,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/tos"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/validator/node"
+	"github.com/prysmaticlabs/prysm/validator/pandora"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
@@ -100,6 +101,8 @@ var appFlags = []cli.Flag{
 	debug.BlockProfileRateFlag,
 	debug.MutexProfileFractionFlag,
 	cmd.AcceptTosFlag,
+	pandora.PandoraRpcIpcProviderFlag,
+	pandora.PandoraRpcHttpProviderFlag,
 }
 
 func init() {

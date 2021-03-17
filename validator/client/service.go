@@ -26,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
+	"github.com/prysmaticlabs/prysm/validator/pandora"
 	"github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -68,6 +69,7 @@ type ValidatorService struct {
 	grpcHeaders           []string
 	graffiti              []byte
 	graffitiStruct        *graffiti.Graffiti
+	pandoraService        *pandora.Service
 }
 
 // Config for the validator service.
@@ -90,6 +92,7 @@ type Config struct {
 	DataDir                    string
 	GrpcHeadersFlag            string
 	GraffitiStruct             *graffiti.Graffiti
+	PandoraService             *pandora.Service
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -117,6 +120,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		useWeb:                cfg.UseWeb,
 		graffitiStruct:        cfg.GraffitiStruct,
 		logDutyCountDown:      cfg.LogDutyCountDown,
+		pandoraService:        cfg.PandoraService,
 	}, nil
 }
 
@@ -199,6 +203,7 @@ func (v *ValidatorService) Start() {
 		graffitiOrderedIndex:           graffitiOrderedIndex,
 		eipImportBlacklistedPublicKeys: slashablePublicKeys,
 		logDutyCountDown:               v.logDutyCountDown,
+		pandoraService:                 v.pandoraService,
 	}
 	go run(v.ctx, v.validator)
 	go v.recheckKeys(v.ctx)
