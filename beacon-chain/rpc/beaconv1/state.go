@@ -58,7 +58,7 @@ func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*e
 
 	root, err = bs.stateRoot(ctx, req.StateId)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "Could not get state root: %v", err)
 	}
 
 	return &ethpb.StateRootResponse{
@@ -80,7 +80,7 @@ func (bs *Server) GetStateFork(ctx context.Context, req *ethpb.StateRequest) (*e
 
 	state, err = bs.state(ctx, req.StateId)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
 
 	fork := state.Fork()
@@ -106,7 +106,7 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 
 	state, err = bs.state(ctx, req.StateId)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
 
 	return &ethpb.StateFinalityCheckpointResponse{

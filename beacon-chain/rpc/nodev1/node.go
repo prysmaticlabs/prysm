@@ -131,7 +131,7 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 		for _, id := range allIds {
 			p, err := peerInfo(peerStatus, id)
 			if err != nil {
-				return nil, err
+				return nil, status.Errorf(codes.Internal, "Could not get peer info: %v", err)
 			}
 			allPeers = append(allPeers, p)
 		}
@@ -199,7 +199,7 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 	for _, id := range filteredIds {
 		p, err := peerInfo(peerStatus, id)
 		if err != nil {
-			return nil, err
+			return nil, status.Errorf(codes.Internal, "Could not get peer info: %v", err)
 		}
 		filteredPeers = append(filteredPeers, p)
 	}
