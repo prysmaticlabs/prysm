@@ -55,7 +55,9 @@ func runBlockHeaderTest(t *testing.T, config string) {
 
 				postBeaconState := &pb.BeaconState{}
 				require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateFile), "Failed to unmarshal")
-				if !proto.Equal(beaconState.CloneInnerState(), postBeaconState) {
+				pbState, err := stateTrie.ProtobufBeaconState(beaconState.CloneInnerState())
+				require.NoError(t, err)
+				if !proto.Equal(pbState, postBeaconState) {
 					diff, _ := messagediff.PrettyDiff(beaconState.CloneInnerState(), postBeaconState)
 					t.Log(diff)
 					t.Fatal("Post state does not match expected")

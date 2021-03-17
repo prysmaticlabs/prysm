@@ -18,7 +18,9 @@ func TestSkipSlotCache_OK(t *testing.T) {
 	state.SkipSlotCache.Enable()
 	defer state.SkipSlotCache.Disable()
 	bState, privs := testutil.DeterministicGenesisState(t, params.MinimalSpecConfig().MinGenesisActiveValidatorCount)
-	originalState, err := stateV0.InitializeFromProto(bState.CloneInnerState())
+	pbState, err := stateV0.ProtobufBeaconState(bState.CloneInnerState())
+	require.NoError(t, err)
+	originalState, err := stateV0.InitializeFromProto(pbState)
 	require.NoError(t, err)
 
 	blkCfg := testutil.DefaultBlockGenConfig()
@@ -40,7 +42,9 @@ func TestSkipSlotCache_OK(t *testing.T) {
 
 func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 	bState, privs := testutil.DeterministicGenesisState(t, params.MinimalSpecConfig().MinGenesisActiveValidatorCount)
-	originalState, err := stateV0.InitializeFromProto(bState.CloneInnerState())
+	pbState, err := stateV0.ProtobufBeaconState(bState.CloneInnerState())
+	require.NoError(t, err)
+	originalState, err := stateV0.InitializeFromProto(pbState)
 	require.NoError(t, err)
 
 	blkCfg := testutil.DefaultBlockGenConfig()

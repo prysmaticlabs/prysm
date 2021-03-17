@@ -221,6 +221,7 @@ func TestForkManualCopy_OK(t *testing.T) {
 	}
 	require.NoError(t, a.SetFork(wantedFork))
 
-	newState := a.CloneInnerState()
-	require.DeepEqual(t, newState.Fork, wantedFork)
+	pbState, err := stateTrie.ProtobufBeaconState(a.InnerStateUnsafe())
+	require.NoError(t, err)
+	require.DeepEqual(t, pbState.Fork, wantedFork)
 }
