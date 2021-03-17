@@ -47,6 +47,64 @@ func (s *Service) groupByChunkIndex(
 	return attestationsByChunkIndex
 }
 
+// This function returns a list of valid attestations, a list of attestations that are
+// valid in the future, and the number of attestations dropped.
+func (s *Service) filterAttestations(
+	atts []*slashertypes.IndexedAttestationWrapper, currentEpoch types.Epoch,
+) (valid, validInFuture []*slashertypes.IndexedAttestationWrapper, numDropped int) {
+	valid = make([]*slashertypes.IndexedAttestationWrapper, 0, len(atts))
+	validInFuture = make([]*slashertypes.IndexedAttestationWrapper, 0, len(atts))
+
+	for _, attWrapper := range atts {
+		if attWrapper == nil || !validateAttestationIntegrity(attWrapper.IndexedAttestation) {
+			numDropped++
+			continue
+		}
+
+		// If an attestation's source is epoch is older than the max history length
+		// we keep track of for slashing detection, we drop it.
+		if attWrapper.IndexedAttestation.Data.Source.Epoch+types.Epoch(s.params.historyLength) <= currentEpoch {
+			numDropped++
+			continue
+		}
+
+		// If an attestations's target epoch is in the future, we defer processing for later.
+		if attWrapper.IndexedAttestation.Data.Target.Epoch > currentEpoch {
+			validInFuture = append(validInFuture, attWrapper)
+		} else {
+			valid = append(valid, attWrapper)
+		}
+	}
+	return
+}
+
+// Validates the attestation data integrity, ensuring we have no nil values for
+// source, epoch, and that the source epoch of the attestation must be less than
+// the target epoch, which is a precondition for performing slashing detection.
+// This function also checks the attestation source epoch is within the history size
+// we keep track of for slashing detection.
+func validateAttestationIntegrity(att *ethpb.IndexedAttestation) bool {
+	// If an attestation is malformed, we drop it.
+	if att == nil ||
+		att.Data == nil ||
+		att.Data.Source == nil ||
+		att.Data.Target == nil {
+		return false
+	}
+
+	sourceEpoch := att.Data.Source.Epoch
+	targetEpoch := att.Data.Target.Epoch
+
+	// The genesis epoch is a special case, since all attestations formed in it
+	// will have source and target 0, and they should be considered valid.
+	if sourceEpoch == 0 && targetEpoch == 0 {
+		return true
+	}
+
+	// All valid attestations must have source epoch < target epoch.
+	return sourceEpoch < targetEpoch
+}
+
 // Logs a slahing event with its particular details of the slashing
 // itself as fields to our logger.
 func logSlashingEvent(slashing *slashertypes.Slashing) {
@@ -112,14 +170,4 @@ func isDoubleProposal(incomingSigningRoot, existingSigningRoot [32]byte) bool {
 		return false
 	}
 	return incomingSigningRoot != existingSigningRoot
-}
-
-// Validates the attestation data integrity, ensuring we have no nil values for
-// source, epoch, and that the source epoch of the attestation must be less than
-// the target epoch, which is a precondition for performing slashing detection.
-func validateAttestationIntegrity(att *ethpb.IndexedAttestation) bool {
-	if att == nil || att.Data == nil || att.Data.Source == nil || att.Data.Target == nil {
-		return false
-	}
-	return att.Data.Source.Epoch < att.Data.Target.Epoch
 }

@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -30,13 +31,13 @@ func TestService_groupByValidatorChunkIndex(t *testing.T) {
 				validatorChunkSize: 2,
 			},
 			atts: []*slashertypes.IndexedAttestationWrapper{
-				createAttestationWrapper(0, 0, []uint64{0, 1} /* indices */, nil /* signingRoot */),
-				createAttestationWrapper(0, 0, []uint64{0, 1} /* indices */, nil /* signingRoot */),
+				createAttestationWrapper(t, 0, 0, []uint64{0, 1}, nil),
+				createAttestationWrapper(t, 0, 0, []uint64{0, 1}, nil),
 			},
 			want: map[uint64][]*slashertypes.IndexedAttestationWrapper{
 				0: {
-					createAttestationWrapper(0, 0, []uint64{0, 1} /* indices */, nil /* signingRoot */),
-					createAttestationWrapper(0, 0, []uint64{0, 1} /* indices */, nil /* signingRoot */),
+					createAttestationWrapper(t, 0, 0, []uint64{0, 1}, nil),
+					createAttestationWrapper(t, 0, 0, []uint64{0, 1}, nil),
 				},
 			},
 		},
@@ -46,17 +47,17 @@ func TestService_groupByValidatorChunkIndex(t *testing.T) {
 				validatorChunkSize: 2,
 			},
 			atts: []*slashertypes.IndexedAttestationWrapper{
-				createAttestationWrapper(0, 0, []uint64{0, 2, 4} /* indices */, nil /* signingRoot */),
+				createAttestationWrapper(t, 0, 0, []uint64{0, 2, 4}, nil),
 			},
 			want: map[uint64][]*slashertypes.IndexedAttestationWrapper{
 				0: {
-					createAttestationWrapper(0, 0, []uint64{0, 2, 4} /* indices */, nil /* signingRoot */),
+					createAttestationWrapper(t, 0, 0, []uint64{0, 2, 4}, nil),
 				},
 				1: {
-					createAttestationWrapper(0, 0, []uint64{0, 2, 4} /* indices */, nil /* signingRoot */),
+					createAttestationWrapper(t, 0, 0, []uint64{0, 2, 4}, nil),
 				},
 				2: {
-					createAttestationWrapper(0, 0, []uint64{0, 2, 4} /* indices */, nil /* signingRoot */),
+					createAttestationWrapper(t, 0, 0, []uint64{0, 2, 4}, nil),
 				},
 			},
 		},
@@ -93,13 +94,13 @@ func TestService_groupByChunkIndex(t *testing.T) {
 				historyLength: 3,
 			},
 			atts: []*slashertypes.IndexedAttestationWrapper{
-				createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */),
-				createAttestationWrapper(1, 0, nil /* indices */, nil /* signingRoot */),
+				createAttestationWrapper(t, 0, 0, nil, nil),
+				createAttestationWrapper(t, 1, 0, nil, nil),
 			},
 			want: map[uint64][]*slashertypes.IndexedAttestationWrapper{
 				0: {
-					createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */),
-					createAttestationWrapper(1, 0, nil /* indices */, nil /* signingRoot */),
+					createAttestationWrapper(t, 0, 0, nil, nil),
+					createAttestationWrapper(t, 1, 0, nil, nil),
 				},
 			},
 		},
@@ -110,17 +111,17 @@ func TestService_groupByChunkIndex(t *testing.T) {
 				historyLength: 3,
 			},
 			atts: []*slashertypes.IndexedAttestationWrapper{
-				createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */),
-				createAttestationWrapper(1, 0, nil /* indices */, nil /* signingRoot */),
-				createAttestationWrapper(2, 0, nil /* indices */, nil /* signingRoot */),
+				createAttestationWrapper(t, 0, 0, nil, nil),
+				createAttestationWrapper(t, 1, 0, nil, nil),
+				createAttestationWrapper(t, 2, 0, nil, nil),
 			},
 			want: map[uint64][]*slashertypes.IndexedAttestationWrapper{
 				0: {
-					createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */),
-					createAttestationWrapper(1, 0, nil /* indices */, nil /* signingRoot */),
+					createAttestationWrapper(t, 0, 0, nil, nil),
+					createAttestationWrapper(t, 1, 0, nil, nil),
 				},
 				1: {
-					createAttestationWrapper(2, 0, nil /* indices */, nil /* signingRoot */),
+					createAttestationWrapper(t, 2, 0, nil, nil),
 				},
 			},
 		},
@@ -137,6 +138,130 @@ func TestService_groupByChunkIndex(t *testing.T) {
 	}
 }
 
+func TestService_filterAttestations(t *testing.T) {
+	tests := []struct {
+		name           string
+		input          []*slashertypes.IndexedAttestationWrapper
+		inputEpoch     types.Epoch
+		wantedValid    []*slashertypes.IndexedAttestationWrapper
+		wantedDeferred []*slashertypes.IndexedAttestationWrapper
+		wantedDropped  int
+	}{
+		{
+			name:          "Nil attestation input gets dropped",
+			input:         make([]*slashertypes.IndexedAttestationWrapper, 1),
+			inputEpoch:    0,
+			wantedDropped: 1,
+		},
+		{
+			name: "Nil attestation data gets dropped",
+			input: []*slashertypes.IndexedAttestationWrapper{
+				{
+					IndexedAttestation: &ethpb.IndexedAttestation{},
+				},
+			},
+			inputEpoch:    0,
+			wantedDropped: 1,
+		},
+		{
+			name: "Nil attestation source and target gets dropped",
+			input: []*slashertypes.IndexedAttestationWrapper{
+				{
+					IndexedAttestation: &ethpb.IndexedAttestation{
+						Data: &ethpb.AttestationData{},
+					},
+				},
+			},
+			inputEpoch:    0,
+			wantedDropped: 1,
+		},
+		{
+			name: "Nil attestation source and good target gets dropped",
+			input: []*slashertypes.IndexedAttestationWrapper{
+				{
+					IndexedAttestation: &ethpb.IndexedAttestation{
+						Data: &ethpb.AttestationData{
+							Target: &ethpb.Checkpoint{},
+						},
+					},
+				},
+			},
+			inputEpoch:    0,
+			wantedDropped: 1,
+		},
+		{
+			name: "Nil attestation target and good source gets dropped",
+			input: []*slashertypes.IndexedAttestationWrapper{
+				{
+					IndexedAttestation: &ethpb.IndexedAttestation{
+						Data: &ethpb.AttestationData{
+							Source: &ethpb.Checkpoint{},
+						},
+					},
+				},
+			},
+			inputEpoch:    0,
+			wantedDropped: 1,
+		},
+		{
+			name: "Source > target gets dropped",
+			input: []*slashertypes.IndexedAttestationWrapper{
+				createAttestationWrapper(t, 1, 0, []uint64{1}, make([]byte, 32)),
+			},
+			inputEpoch:    0,
+			wantedDropped: 1,
+		},
+		{
+			name: "Source < target is valid",
+			input: []*slashertypes.IndexedAttestationWrapper{
+				createAttestationWrapper(t, 0, 1, []uint64{1}, make([]byte, 32)),
+			},
+			inputEpoch: 1,
+			wantedValid: []*slashertypes.IndexedAttestationWrapper{
+				createAttestationWrapper(t, 0, 1, []uint64{1}, make([]byte, 32)),
+			},
+			wantedDropped: 0,
+		},
+		{
+			name: "Source == target is valid",
+			input: []*slashertypes.IndexedAttestationWrapper{
+				createAttestationWrapper(t, 0, 0, []uint64{1}, make([]byte, 32)),
+			},
+			inputEpoch: 1,
+			wantedValid: []*slashertypes.IndexedAttestationWrapper{
+				createAttestationWrapper(t, 0, 0, []uint64{1}, make([]byte, 32)),
+			},
+			wantedDropped: 0,
+		},
+		{
+			name: "Attestation from the future is deferred",
+			input: []*slashertypes.IndexedAttestationWrapper{
+				createAttestationWrapper(t, 0, 2, []uint64{1}, make([]byte, 32)),
+			},
+			inputEpoch: 1,
+			wantedDeferred: []*slashertypes.IndexedAttestationWrapper{
+				createAttestationWrapper(t, 0, 2, []uint64{1}, make([]byte, 32)),
+			},
+			wantedDropped: 0,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			srv := &Service{
+				params: DefaultParams(),
+			}
+			valid, deferred, numDropped := srv.filterAttestations(tt.input, tt.inputEpoch)
+			if len(tt.wantedValid) > 0 {
+				require.DeepEqual(t, tt.wantedValid, valid)
+			}
+			if len(tt.wantedDeferred) > 0 {
+				require.DeepEqual(t, tt.wantedDeferred, deferred)
+			}
+			require.DeepEqual(t, tt.wantedDropped, numDropped)
+		})
+	}
+}
+
 func Test_logSlashingEvent(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -148,8 +273,8 @@ func Test_logSlashingEvent(t *testing.T) {
 			name: "Surrounding vote",
 			slashing: &slashertypes.Slashing{
 				Kind:            slashertypes.SurroundingVote,
-				PrevAttestation: createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */).IndexedAttestation,
-				Attestation:     createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */).IndexedAttestation,
+				PrevAttestation: createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
+				Attestation:     createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
 			},
 			want: "Attester surrounding vote",
 		},
@@ -157,8 +282,8 @@ func Test_logSlashingEvent(t *testing.T) {
 			name: "Surrounded vote",
 			slashing: &slashertypes.Slashing{
 				Kind:            slashertypes.SurroundedVote,
-				PrevAttestation: createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */).IndexedAttestation,
-				Attestation:     createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */).IndexedAttestation,
+				PrevAttestation: createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
+				Attestation:     createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
 			},
 			want: "Attester surrounded vote",
 		},
@@ -166,8 +291,8 @@ func Test_logSlashingEvent(t *testing.T) {
 			name: "Double vote",
 			slashing: &slashertypes.Slashing{
 				Kind:            slashertypes.DoubleVote,
-				PrevAttestation: createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */).IndexedAttestation,
-				Attestation:     createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */).IndexedAttestation,
+				PrevAttestation: createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
+				Attestation:     createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
 			},
 			want: "Attester double vote",
 		},
@@ -175,8 +300,8 @@ func Test_logSlashingEvent(t *testing.T) {
 			name: "Not slashable",
 			slashing: &slashertypes.Slashing{
 				Kind:            slashertypes.NotSlashable,
-				PrevAttestation: createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */).IndexedAttestation,
-				Attestation:     createAttestationWrapper(0, 0, nil /* indices */, nil /* signingRoot */).IndexedAttestation,
+				PrevAttestation: createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
+				Attestation:     createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
 			},
 			noLog: true,
 		},
@@ -272,6 +397,20 @@ func Test_validateAttestationIntegrity(t *testing.T) {
 					},
 					Target: &ethpb.Checkpoint{
 						Epoch: 2,
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "Source 0 target 0 returns true (genesis epoch attestations)",
+			att: &ethpb.IndexedAttestation{
+				Data: &ethpb.AttestationData{
+					Source: &ethpb.Checkpoint{
+						Epoch: 0,
+					},
+					Target: &ethpb.Checkpoint{
+						Epoch: 0,
 					},
 				},
 			},

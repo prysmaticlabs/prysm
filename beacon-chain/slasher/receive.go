@@ -4,6 +4,7 @@ import (
 	"context"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/sirupsen/logrus"
 )
@@ -13,7 +14,6 @@ import (
 // for batch processing in a separate routine.
 func (s *Service) receiveAttestations(ctx context.Context) {
 	sub := s.serviceCfg.IndexedAttsFeed.Subscribe(s.indexedAttsChan)
-	defer close(s.indexedAttsChan)
 	defer sub.Unsubscribe()
 	for {
 		select {
@@ -22,12 +22,16 @@ func (s *Service) receiveAttestations(ctx context.Context) {
 			if !validateAttestationIntegrity(att) {
 				continue
 			}
+			signingRoot, err := att.Data.HashTreeRoot()
+			if err != nil {
+				log.WithError(err).Error("Could not get hash tree root of attestation")
+				continue
+			}
 			attWrapper := &slashertypes.IndexedAttestationWrapper{
 				IndexedAttestation: att,
+				SigningRoot:        signingRoot,
 			}
-			s.attestationQueueLock.Lock()
-			s.attestationQueue = append(s.attestationQueue, attWrapper)
-			s.attestationQueueLock.Unlock()
+			s.attsQueue.push(attWrapper)
 		case err := <-sub.Err():
 			log.WithError(err).Debug("Subscriber closed with error")
 			return
@@ -46,12 +50,16 @@ func (s *Service) receiveBlocks(ctx context.Context) {
 		select {
 		case blockHeader := <-s.beaconBlocksChan:
 			// TODO(#8331): Defer blocks from the future for later processing.
+			signingRoot, err := blockHeader.Header.HashTreeRoot()
+			if err != nil {
+				log.WithError(err).Error("Could not get hash tree root of signed block header")
+				continue
+			}
 			wrappedProposal := &slashertypes.SignedBlockHeaderWrapper{
 				SignedBeaconBlockHeader: blockHeader,
+				SigningRoot:             signingRoot,
 			}
-			s.blockQueueLock.Lock()
-			s.beaconBlocksQueue = append(s.beaconBlocksQueue, wrappedProposal)
-			s.blockQueueLock.Unlock()
+			s.blksQueue.push(wrappedProposal)
 		case err := <-sub.Err():
 			log.WithError(err).Debug("Subscriber closed with error")
 			return
@@ -65,31 +73,38 @@ func (s *Service) receiveBlocks(ctx context.Context) {
 // these attestations from a queue, then group them all by validator chunk index.
 // This grouping will allow us to perform detection on batches of attestations
 // per validator chunk index which can be done concurrently.
-func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-chan types.Epoch) {
+func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-chan types.Slot) {
 	for {
 		select {
-		case currentEpoch := <-epochTicker:
-			s.attestationQueueLock.Lock()
-			attestations := s.attestationQueue
-			s.attestationQueue = make([]*slashertypes.IndexedAttestationWrapper, 0)
-			s.attestationQueueLock.Unlock()
+		case currentSlot := <-slotTicker:
+			attestations := s.attsQueue.dequeue()
+			currentEpoch := helpers.SlotToEpoch(currentSlot)
+			// We take all the attestations in the queue and filter out
+			// those which are valid now and valid in the future.
+			validAtts, validInFuture, numDropped := s.filterAttestations(attestations, currentEpoch)
 
-			receivedAttestationsTotal.Add(float64(len(attestations)))
+			deferredAttestationsTotal.Add(float64(len(validInFuture)))
+			droppedAttestationsTotal.Add(float64(numDropped))
+
+			// We add back those attestations that are valid in the future to the queue.
+			s.attsQueue.extend(validInFuture)
 
 			log.WithFields(logrus.Fields{
-				"currentEpoch": currentEpoch,
-				"numAtts":      len(attestations),
+				"currentEpoch":    currentEpoch,
+				"numValidAtts":    len(validAtts),
+				"numDeferredAtts": len(validInFuture),
+				"numDroppedAtts":  numDropped,
 			}).Info("Epoch reached, processing queued atts for slashing detection")
 
 			// Save the attestation records to our database.
 			if err := s.serviceCfg.Database.SaveAttestationRecordsForValidators(
-				ctx, attestations,
+				ctx, validAtts,
 			); err != nil {
 				log.WithError(err).Error("Could not save attestation records to DB")
 				continue
 			}
 
-			groupedAtts := s.groupByValidatorChunkIndex(attestations)
+			groupedAtts := s.groupByValidatorChunkIndex(validAtts)
 			// TODO(#8331): Consider using goroutines and wait groups here.
 			for validatorChunkIdx, batch := range groupedAtts {
 				if err := s.detectSlashableAttestations(ctx, &chunkUpdateArgs{
@@ -101,7 +116,7 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 				}
 			}
 
-			processedAttestationsTotal.Add(float64(len(attestations)))
+			processedAttestationsTotal.Add(float64(len(validAtts)))
 		case <-ctx.Done():
 			return
 		}
@@ -110,14 +125,12 @@ func (s *Service) processQueuedAttestations(ctx context.Context, epochTicker <-c
 
 // Process queued blocks every time an epoch ticker fires. We retrieve
 // these blocks from a queue, then perform double proposal detection.
-func (s *Service) processQueuedBlocks(ctx context.Context, epochTicker <-chan types.Epoch) {
+func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan types.Slot) {
 	for {
 		select {
-		case currentEpoch := <-epochTicker:
-			s.blockQueueLock.Lock()
-			blocks := s.beaconBlocksQueue
-			s.beaconBlocksQueue = make([]*slashertypes.SignedBlockHeaderWrapper, 0)
-			s.blockQueueLock.Unlock()
+		case currentSlot := <-slotTicker:
+			blocks := s.blksQueue.dequeue()
+			currentEpoch := helpers.SlotToEpoch(currentSlot)
 
 			receivedBlocksTotal.Add(float64(len(blocks)))
 
@@ -126,11 +139,34 @@ func (s *Service) processQueuedBlocks(ctx context.Context, epochTicker <-chan ty
 				"numBlocks":    len(blocks),
 			}).Info("Epoch reached, processing queued blocks for slashing detection")
 
-			if err := s.detectSlashableBlocks(ctx, blocks); err != nil {
+			if err := s.detectProposerSlashings(ctx, blocks); err != nil {
 				log.WithError(err).Error("Could not detect slashable blocks")
 				continue
 			}
 			processedBlocksTotal.Add(float64(len(blocks)))
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+func (s *Service) pruneSlasherData(ctx context.Context, slotTicker <-chan types.Slot) {
+	for {
+		select {
+		case currentSlot := <-slotTicker:
+			if !helpers.IsEpochStart(currentSlot) {
+				continue
+			}
+			currentEpoch := helpers.SlotToEpoch(currentSlot)
+			if err := s.serviceCfg.Database.PruneAttestations(ctx, currentEpoch, s.params.historyLength); err != nil {
+				log.WithError(err).Error("Could not prune attestations")
+				continue
+			}
+
+			if err := s.serviceCfg.Database.PruneProposals(ctx, currentEpoch, s.params.historyLength); err != nil {
+				log.WithError(err).Error("Could not prune proposals")
+				continue
+			}
 		case <-ctx.Done():
 			return
 		}
