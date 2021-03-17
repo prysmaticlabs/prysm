@@ -118,7 +118,7 @@ func (s *Service) HeadRoot(ctx context.Context) ([]byte, error) {
 		return r[:], nil
 	}
 
-	b, err := s.beaconDB.HeadBlock(ctx)
+	b, err := s.cfg.BeaconDB.HeadBlock(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +145,7 @@ func (s *Service) HeadBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, erro
 		return s.headBlock(), nil
 	}
 
-	return s.beaconDB.HeadBlock(ctx)
+	return s.cfg.BeaconDB.HeadBlock(ctx)
 }
 
 // HeadState returns the head state of the chain.
@@ -164,7 +164,7 @@ func (s *Service) HeadState(ctx context.Context) (iface.BeaconState, error) {
 		return s.headState(ctx), nil
 	}
 
-	return s.stateGen.StateByRoot(ctx, s.headRoot())
+	return s.cfg.StateGen.StateByRoot(ctx, s.headRoot())
 }
 
 // HeadValidatorsIndices returns a list of active validator indices from the head view of a given epoch.
@@ -215,7 +215,7 @@ func (s *Service) HeadETH1Data() *ethpb.Eth1Data {
 
 // ProtoArrayStore returns the proto array store object.
 func (s *Service) ProtoArrayStore() *protoarray.Store {
-	return s.forkChoiceStore.Store()
+	return s.cfg.ForkChoiceStore.Store()
 }
 
 // GenesisTime returns the genesis time of beacon chain.
@@ -252,10 +252,10 @@ func (s *Service) CurrentFork() *pb.Fork {
 // IsCanonical returns true if the input block root is part of the canonical chain.
 func (s *Service) IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, error) {
 	// If the block has been finalized, the block will always be part of the canonical chain.
-	if s.beaconDB.IsFinalizedBlock(ctx, blockRoot) {
+	if s.cfg.BeaconDB.IsFinalizedBlock(ctx, blockRoot) {
 		return true, nil
 	}
 
 	// If the block has not been finalized, check fork choice store to see if the block is canonical
-	return s.forkChoiceStore.IsCanonical(blockRoot), nil
+	return s.cfg.ForkChoiceStore.IsCanonical(blockRoot), nil
 }

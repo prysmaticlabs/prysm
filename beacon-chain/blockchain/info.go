@@ -45,7 +45,7 @@ func (s *Service) TreeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	nodes := s.forkChoiceStore.Nodes()
+	nodes := s.cfg.ForkChoiceStore.Nodes()
 
 	graph := dot.NewGraph(dot.Directed)
 	graph.Attr("rankdir", "RL")
