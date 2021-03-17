@@ -36,10 +36,10 @@ func (m *MockPandoraService) EXPECT() *MockPandoraServiceMockRecorder {
 	return m.recorder
 }
 
-// GetWork mocks base method
-func (m *MockPandoraService) GetWork(ctx context.Context) (*types.Header, common.Hash, *pandora.ExtraData, error) {
+// GetShardBlockHeader mocks base method
+func (m *MockPandoraService) GetShardBlockHeader(ctx context.Context) (*types.Header, common.Hash, *pandora.ExtraData, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetWork", ctx)
+	ret := m.ctrl.Call(m, "GetShardBlockHeader", ctx)
 	ret0, _ := ret[0].(*types.Header)
 	ret1, _ := ret[1].(common.Hash)
 	ret2, _ := ret[2].(*pandora.ExtraData)
@@ -47,25 +47,25 @@ func (m *MockPandoraService) GetWork(ctx context.Context) (*types.Header, common
 	return ret0, ret1, ret2, ret3
 }
 
-// GetWork indicates an expected call of GetWork
-func (mr *MockPandoraServiceMockRecorder) GetWork(ctx interface{}) *gomock.Call {
+// GetShardBlockHeader indicates an expected call of GetShardBlockHeader
+func (mr *MockPandoraServiceMockRecorder) GetShardBlockHeader(ctx interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWork", reflect.TypeOf((*MockPandoraService)(nil).GetWork), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShardBlockHeader", reflect.TypeOf((*MockPandoraService)(nil).GetShardBlockHeader), ctx)
 }
 
-// SubmitWork mocks base method
-func (m *MockPandoraService) SubmitWork(ctx context.Context, blockNonce uint64, headerHash common.Hash, sig [32]byte) (bool, error) {
+// SubmitShardBlockHeader mocks base method
+func (m *MockPandoraService) SubmitShardBlockHeader(ctx context.Context, blockNonce uint64, headerHash common.Hash, sig [32]byte) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SubmitWork", ctx, blockNonce, headerHash, sig)
+	ret := m.ctrl.Call(m, "SubmitShardBlockHeader", ctx, blockNonce, headerHash, sig)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// SubmitWork indicates an expected call of SubmitWork
-func (mr *MockPandoraServiceMockRecorder) SubmitWork(ctx, blockNonce, headerHash, sig interface{}) *gomock.Call {
+// SubmitShardBlockHeader indicates an expected call of SubmitShardBlockHeader
+func (mr *MockPandoraServiceMockRecorder) SubmitShardBlockHeader(ctx, blockNonce, headerHash, sig interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitWork", reflect.TypeOf((*MockPandoraService)(nil).SubmitWork), ctx, blockNonce, headerHash, sig)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitShardBlockHeader", reflect.TypeOf((*MockPandoraService)(nil).SubmitShardBlockHeader), ctx, blockNonce, headerHash, sig)
 }
 
 // MockRPCClient is a mock of RPCClient interface

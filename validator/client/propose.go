@@ -366,7 +366,7 @@ func (v *validator) processPandoraShardHeader(ctx context.Context, beaconBlk *et
 
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 	// Request for pandora chain header
-	header, headerHash, extraData, err := v.pandoraService.GetWork(ctx)
+	header, headerHash, extraData, err := v.pandoraService.GetShardBlockHeader(ctx)
 	if err != nil {
 		log.WithField("blockSlot", slot).WithError(err).Error("Failed to request block from pandora node")
 		if v.emitAccountMetrics {
@@ -398,7 +398,7 @@ func (v *validator) processPandoraShardHeader(ctx context.Context, beaconBlk *et
 	header.MixDigest = common.BytesToHash(headerHashSig)
 	var headerHashSig32Bytes [32]byte
 	copy(headerHashSig32Bytes[:], headerHashSig)
-	return v.pandoraService.SubmitWork(ctx, header.Nonce.Uint64(), headerHash, headerHashSig32Bytes)
+	return v.pandoraService.SubmitShardBlockHeader(ctx, header.Nonce.Uint64(), headerHash, headerHashSig32Bytes)
 }
 
 // verifyPandoraHeader verifies header hash and extraData field

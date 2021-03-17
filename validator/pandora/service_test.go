@@ -10,10 +10,10 @@ import (
 	"time"
 )
 
-// TestStart_OK method checks that service starts successfully or not
-func TestStart_OK(t *testing.T) {
+// TestStart_Success method checks that service starts successfully or not
+func TestStart_Success(t *testing.T) {
 	hook := logTest.NewGlobal()
-	pandoraService, err := MockPandoraService(HttpEndpoint, DialInProcRPCClient)
+	pandoraService, err := NewService(context.Background(), HttpEndpoint, DialInProcRPCClient)
 	require.NoError(t, err, "Error in preparing pandora mock service")
 
 	pandoraService.Start()
@@ -39,36 +39,36 @@ func TestStart_OK(t *testing.T) {
 
 // Test_NoEndpointDefinedFails method checks invalid pandora chain endpoint
 func Test_NoEndpointDefinedFails(t *testing.T) {
-	_, err := MockPandoraService("", DialRPCClient)
+	_, err := NewService(context.Background(), "", DialRPCClient)
 	want := "Pandora service initialization failed!"
 	require.ErrorContains(t, want, err, "Should not initialize pandora service with empty endpoint")
 }
 
 // TestStop_OK method checks connection with pandora chain
 func Test_WaitForConnection_ConnErr(t *testing.T) {
-	pandoraService, err := MockPandoraService(HttpEndpoint, DialInProcRPCClient)
+	pandoraService, err := NewService(context.Background(), HttpEndpoint, DialInProcRPCClient)
 	require.NoError(t, err, "Error in preparing pandora mock service")
 
 	status, _ := pandoraService.isPandoraNodeSynced()
 	require.Equal(t, true, status, "Should connect to pandora chain")
 }
 
-// TestStop_OK method checks service stop functionality
-func TestStop_OK(t *testing.T) {
-	pandoraService, err := MockPandoraService(HttpEndpoint, DialInProcRPCClient)
+// TestStop_Success method checks service stop functionality
+func TestStop_Success(t *testing.T) {
+	pandoraService, err := NewService(context.Background(), HttpEndpoint, DialInProcRPCClient)
 	require.NoError(t, err, "Error in preparing pandora mock service")
 	err = pandoraService.Stop()
 	require.NoError(t, err, "Unable to stop pandora chain service")
 }
 
-// TestService_GetWork method checks GetWork method and test extraData decoding
-func TestService_GetWork(t *testing.T) {
-	pandoraService, err := MockPandoraService(HttpEndpoint, DialInProcRPCClient)
+// TestService_GetShardBlockHeader_Success method checks GetWork method and test extraData decoding
+func TestService_GetShardBlockHeader_Success(t *testing.T) {
+	pandoraService, err := NewService(context.Background(), HttpEndpoint, DialInProcRPCClient)
 	require.NoError(t, err, "Should not get error when preparing pandora mock service")
 	pandoraService.connected = true
 	pandoraService.isRunning = true
 
-	actualHeader, actualHash, actualExtraData, err := pandoraService.GetWork(context.Background())
+	actualHeader, actualHash, actualExtraData, err := pandoraService.GetShardBlockHeader(context.Background())
 	require.NoError(t, err, "Should not get error when calling GetWork method")
 
 	expectedExtraData, _, err := getDummyEncodedExtraData()

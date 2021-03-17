@@ -15,16 +15,6 @@ var HttpEndpoint = "http://127.0.0.1:4045"
 
 type mockPandoraService struct{}
 
-// MockPandoraService method returns a mocked pandora service using
-// mocked rpc client and mocked rpc server.
-func MockPandoraService(endpoint string, dialPandoraFn DialRPCFn) (*Service, error) {
-	mockedPandoraService, err := NewService(context.Background(), endpoint, dialPandoraFn)
-	if err != nil {
-		return nil, err
-	}
-	return mockedPandoraService, nil
-}
-
 // ConnectPandoraService method creates dummy connection with pandora chain
 func ConnectPandoraService(pandoraService *Service) {
 	pandoraService.connected = true
@@ -128,8 +118,8 @@ func (api *mockPandoraService) SubmitWork(nonce types.BlockNonce, hash, digest c
 }
 
 // Syncing is a mock api which returns a dummy chain info
-func (api *mockPandoraService) Syncing(ctx context.Context) (*RpcProgressParams, error) {
-	return &RpcProgressParams{
+func (api *mockPandoraService) Syncing(ctx context.Context) (*ShardChainSyncResponse, error) {
+	return &ShardChainSyncResponse{
 		StartingBlock: 12,
 		CurrentBlock:  192,
 		HighestBlock:  200,
