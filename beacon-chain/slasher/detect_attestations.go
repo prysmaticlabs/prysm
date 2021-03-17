@@ -34,7 +34,7 @@ type chunkUpdateArgs struct {
 // 4. Update the latest written epoch for all validators involved to the current epoch.
 //
 // This function performs a lot of critical actions and is split into smaller helpers for cleanliness.
-func (s *Service) detectSlashableAttestations(
+func (s *Service) t stdetectSlashableAttestations(
 	ctx context.Context,
 	args *chunkUpdateArgs,
 	attestations []*slashertypes.IndexedAttestationWrapper,
