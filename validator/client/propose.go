@@ -97,7 +97,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [4
 		return
 	}
 
-	// processPandoraShardHeader method process process the block header from pandora chain
+	// processPandoraShardHeader method process the block header from pandora chain
 	if status, err := v.processPandoraShardHeader(ctx, b, slot, epoch, pubKey); !status || err != nil {
 		log.WithError(err).Error("Failed to process pandora chain shard header")
 		if v.emitAccountMetrics {
