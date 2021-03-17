@@ -15,6 +15,9 @@ go_library(
         "//cmd/beacon-chain:__subpackages__",
     ],
     deps = [
+        "//beacon-chain/blockchain/testing:go_default_library",
+        "//beacon-chain/core/feed:go_default_library",
+        "//beacon-chain/core/feed/state:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/db/kv:go_default_library",

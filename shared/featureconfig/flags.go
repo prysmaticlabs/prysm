@@ -109,6 +109,10 @@ var (
 		Name:  "update-head-timely",
 		Usage: "Improves update head time by updating head right after state transition",
 	}
+	enableSlasherFlag = &cli.BoolFlag{
+		Name:  "slasher",
+		Usage: "Enables a slasher in the beacon node for detecting slashable offenses on eth2",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -162,6 +166,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableNextSlotStateCache,
 	forceOptMaxCoverAggregationStategy,
 	updateHeadTimely,
+	enableSlasherFlag,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

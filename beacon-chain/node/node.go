@@ -34,6 +34,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
+	"github.com/prysmaticlabs/prysm/beacon-chain/slasher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	regularsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
@@ -61,22 +62,26 @@ const testSkipPowFlag = "test-skip-pow"
 // full PoS node. It handles the lifecycle of the entire system and registers
 // services to a service registry.
 type BeaconNode struct {
-	cliCtx          *cli.Context
-	ctx             context.Context
-	cancel          context.CancelFunc
-	services        *shared.ServiceRegistry
-	lock            sync.RWMutex
-	stop            chan struct{} // Channel to wait for termination notifications.
-	db              db.Database
-	attestationPool attestations.Pool
-	exitPool        voluntaryexits.PoolManager
-	slashingsPool   slashings.PoolManager
-	depositCache    *depositcache.DepositCache
-	stateFeed       *event.Feed
-	blockFeed       *event.Feed
-	opFeed          *event.Feed
-	forkChoiceStore forkchoice.ForkChoicer
-	stateGen        *stategen.State
+	cliCtx                  *cli.Context
+	ctx                     context.Context
+	cancel                  context.CancelFunc
+	services                *shared.ServiceRegistry
+	lock                    sync.RWMutex
+	stop                    chan struct{} // Channel to wait for termination notifications.
+	db                      db.Database
+	attestationPool         attestations.Pool
+	exitPool                voluntaryexits.PoolManager
+	slashingsPool           slashings.PoolManager
+	depositCache            *depositcache.DepositCache
+	stateFeed               *event.Feed
+	blockFeed               *event.Feed
+	opFeed                  *event.Feed
+	slasherBlockHeadersFeed *event.Feed
+	slasherAttestationsFeed *event.Feed
+	proposerSlashingsFeed   *event.Feed
+	attesterSlashingsFeed   *event.Feed
+	forkChoiceStore         forkchoice.ForkChoicer
+	stateGen                *stategen.State
 }
 
 // New creates a new node instance, sets up configuration options, and registers
@@ -159,17 +164,21 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 
 	ctx, cancel := context.WithCancel(cliCtx.Context)
 	beacon := &BeaconNode{
-		cliCtx:          cliCtx,
-		ctx:             ctx,
-		cancel:          cancel,
-		services:        registry,
-		stop:            make(chan struct{}),
-		stateFeed:       new(event.Feed),
-		blockFeed:       new(event.Feed),
-		opFeed:          new(event.Feed),
-		attestationPool: attestations.NewPool(),
-		exitPool:        voluntaryexits.NewPool(),
-		slashingsPool:   slashings.NewPool(),
+		cliCtx:                  cliCtx,
+		ctx:                     ctx,
+		cancel:                  cancel,
+		services:                registry,
+		stop:                    make(chan struct{}),
+		stateFeed:               new(event.Feed),
+		blockFeed:               new(event.Feed),
+		opFeed:                  new(event.Feed),
+		slasherBlockHeadersFeed: new(event.Feed),
+		slasherAttestationsFeed: new(event.Feed),
+		proposerSlashingsFeed:   new(event.Feed),
+		attesterSlashingsFeed:   new(event.Feed),
+		attestationPool:         attestations.NewPool(),
+		exitPool:                voluntaryexits.NewPool(),
+		slashingsPool:           slashings.NewPool(),
 	}
 
 	if err := beacon.startDB(cliCtx); err != nil {
@@ -206,6 +215,12 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 
 	if err := beacon.registerSyncService(); err != nil {
 		return nil, err
+	}
+
+	if featureconfig.Get().EnableSlasher {
+		if err := beacon.registerSlasherService(); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := beacon.registerRPCService(); err != nil {
@@ -455,20 +470,21 @@ func (b *BeaconNode) registerBlockchainService() error {
 
 	maxRoutines := b.cliCtx.Int(cmd.MaxGoroutines.Name)
 	blockchainService, err := blockchain.NewService(b.ctx, &blockchain.Config{
-		BeaconDB:          b.db,
-		DepositCache:      b.depositCache,
-		ChainStartFetcher: web3Service,
-		AttPool:           b.attestationPool,
-		ExitPool:          b.exitPool,
-		SlashingPool:      b.slashingsPool,
-		P2p:               b.fetchP2P(),
-		MaxRoutines:       maxRoutines,
-		StateNotifier:     b,
-		ForkChoiceStore:   b.forkChoiceStore,
-		OpsService:        opsService,
-		StateGen:          b.stateGen,
-		WspBlockRoot:      bRoot,
-		WspEpoch:          epoch,
+		BeaconDB:                b.db,
+		DepositCache:            b.depositCache,
+		ChainStartFetcher:       web3Service,
+		AttPool:                 b.attestationPool,
+		ExitPool:                b.exitPool,
+		SlashingPool:            b.slashingsPool,
+		P2p:                     b.fetchP2P(),
+		MaxRoutines:             maxRoutines,
+		StateNotifier:           b,
+		ForkChoiceStore:         b.forkChoiceStore,
+		OpsService:              opsService,
+		StateGen:                b.stateGen,
+		WspBlockRoot:            bRoot,
+		WspEpoch:                epoch,
+		SlasherAttestationsFeed: b.slasherAttestationsFeed,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")
@@ -551,17 +567,19 @@ func (b *BeaconNode) registerSyncService() error {
 	}
 
 	rs := regularsync.NewService(b.ctx, &regularsync.Config{
-		DB:                  b.db,
-		P2P:                 b.fetchP2P(),
-		Chain:               chainService,
-		InitialSync:         initSync,
-		StateNotifier:       b,
-		BlockNotifier:       b,
-		AttestationNotifier: b,
-		AttPool:             b.attestationPool,
-		ExitPool:            b.exitPool,
-		SlashingPool:        b.slashingsPool,
-		StateGen:            b.stateGen,
+		DB:                      b.db,
+		P2P:                     b.fetchP2P(),
+		Chain:                   chainService,
+		InitialSync:             initSync,
+		StateNotifier:           b,
+		BlockNotifier:           b,
+		AttestationNotifier:     b,
+		AttPool:                 b.attestationPool,
+		ExitPool:                b.exitPool,
+		SlashingPool:            b.slashingsPool,
+		StateGen:                b.stateGen,
+		SlasherAttestationsFeed: b.slasherAttestationsFeed,
+		SlasherBlockHeadersFeed: b.slasherBlockHeadersFeed,
 	})
 
 	return b.services.RegisterService(rs)
@@ -581,6 +599,26 @@ func (b *BeaconNode) registerInitialSyncService() error {
 		BlockNotifier: b,
 	})
 	return b.services.RegisterService(is)
+}
+
+func (b *BeaconNode) registerSlasherService() error {
+	var chainService *blockchain.Service
+	if err := b.services.FetchService(&chainService); err != nil {
+		return err
+	}
+
+	slasherSrv, err := slasher.New(b.ctx, &slasher.ServiceConfig{
+		IndexedAttestationsFeed: b.slasherAttestationsFeed,
+		BeaconBlockHeadersFeed:  b.slasherBlockHeadersFeed,
+		AttesterSlashingsFeed:   b.attesterSlashingsFeed,
+		ProposerSlashingsFeed:   b.proposerSlashingsFeed,
+		Database:                b.db,
+		StateNotifier:           b,
+	})
+	if err != nil {
+		return err
+	}
+	return b.services.RegisterService(slasherSrv)
 }
 
 func (b *BeaconNode) registerRPCService() error {
