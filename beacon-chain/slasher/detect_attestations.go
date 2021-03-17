@@ -104,6 +104,7 @@ func (s *Service) detectSlashableAttestations(
 			Attestation_1: slashing.PrevAttestation,
 			Attestation_2: slashing.Attestation,
 		})
+
 		logSlashingEvent(slashing)
 	}
 
