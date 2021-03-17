@@ -1,24 +1,25 @@
-package stateV0_test
+package stateV0
 
 import (
+	"strconv"
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestFieldTrie_NewTrie(t *testing.T) {
-	newState, _ := testutil.DeterministicGenesisState(t, 40)
+	newState, err := state(40)
+	require.NoError(t, err)
 
 	// 5 represents the enum value of state roots
-	trie, err := stateV0.NewFieldTrie(5, newState.StateRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
+	trie, err := NewFieldTrie(5, newState.StateRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
 	require.NoError(t, err)
-	root, err := stateV0.RootsArrayHashTreeRoot(newState.StateRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "StateRoots")
+	root, err := nocachedHasher.arraysRoot(newState.StateRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "StateRoots")
 	require.NoError(t, err)
 	newRoot, err := trie.TrieRoot()
 	require.NoError(t, err)
@@ -26,9 +27,11 @@ func TestFieldTrie_NewTrie(t *testing.T) {
 }
 
 func TestFieldTrie_RecomputeTrie(t *testing.T) {
-	newState, _ := testutil.DeterministicGenesisState(t, 32)
+	newState, err := state(32)
+	require.NoError(t, err)
+
 	// 10 represents the enum value of validators
-	trie, err := stateV0.NewFieldTrie(11, newState.Validators(), params.BeaconConfig().ValidatorRegistryLimit)
+	trie, err := NewFieldTrie(11, newState.Validators(), params.BeaconConfig().ValidatorRegistryLimit)
 	require.NoError(t, err)
 
 	changedIdx := []uint64{2, 29}
@@ -46,7 +49,7 @@ func TestFieldTrie_RecomputeTrie(t *testing.T) {
 	require.NoError(t, newState.UpdateValidatorAtIndex(types.ValidatorIndex(changedIdx[0]), changedVals[0]))
 	require.NoError(t, newState.UpdateValidatorAtIndex(types.ValidatorIndex(changedIdx[1]), changedVals[1]))
 
-	expectedRoot, err := stateV0.ValidatorRegistryRoot(newState.Validators())
+	expectedRoot, err := ValidatorRegistryRoot(newState.Validators())
 	require.NoError(t, err)
 	root, err := trie.RecomputeTrie(changedIdx, newState.Validators())
 	require.NoError(t, err)
@@ -54,9 +57,11 @@ func TestFieldTrie_RecomputeTrie(t *testing.T) {
 }
 
 func TestFieldTrie_CopyTrieImmutable(t *testing.T) {
-	newState, _ := testutil.DeterministicGenesisState(t, 32)
+	newState, err := state(32)
+	require.NoError(t, err)
+
 	// 12 represents the enum value of randao mixes.
-	trie, err := stateV0.NewFieldTrie(13, newState.RandaoMixes(), uint64(params.BeaconConfig().EpochsPerHistoricalVector))
+	trie, err := NewFieldTrie(13, newState.RandaoMixes(), uint64(params.BeaconConfig().EpochsPerHistoricalVector))
 	require.NoError(t, err)
 
 	newTrie := trie.CopyTrie()
@@ -74,4 +79,24 @@ func TestFieldTrie_CopyTrieImmutable(t *testing.T) {
 	if root == newRoot {
 		t.Errorf("Wanted roots to be different, but they are the same: %#x", root)
 	}
+}
+
+func state(vCount uint64) (*BeaconState, error) {
+	validators := make([]*ethpb.Validator, vCount)
+	for i := 0; i < len(validators); i++ {
+		k := make([]byte, 48)
+		copy(k, strconv.Itoa(i))
+		validators[i] = &ethpb.Validator{
+			PublicKey:             k,
+			WithdrawalCredentials: make([]byte, 32),
+			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+	return InitializeFromProto(&pb.BeaconState{
+		Validators:  validators,
+		BlockRoots:  make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+		StateRoots:  make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	})
+
 }
