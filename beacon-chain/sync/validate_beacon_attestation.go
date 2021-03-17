@@ -81,7 +81,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		go func() {
 			preState, err := s.chain.AttestationPreState(ctx, att)
 			if err != nil {
-				log.WithError(err).Error("Could not to retrieve pre state")
+				log.WithError(err).Error("Could not retrieve pre state")
 				traceutil.AnnotateError(span, err)
 				return
 			}
