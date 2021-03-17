@@ -17,8 +17,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
@@ -251,7 +251,7 @@ func TestCachedPreState_CanGetFromStateSummary(t *testing.T) {
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
-	s, err := stateTrie.InitializeFromProto(&pb.BeaconState{Slot: 1, GenesisValidatorsRoot: params.BeaconConfig().ZeroHash[:]})
+	s, err := stateV0.InitializeFromProto(&pb.BeaconState{Slot: 1, GenesisValidatorsRoot: params.BeaconConfig().ZeroHash[:]})
 	require.NoError(t, err)
 
 	genesisStateRoot := [32]byte{}
@@ -303,7 +303,7 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 	assert.ErrorContains(t, wanted, err)
 
 	b.Block.ParentRoot = gRoot[:]
-	s, err := stateTrie.InitializeFromProto(&pb.BeaconState{Slot: 1})
+	s, err := stateV0.InitializeFromProto(&pb.BeaconState{Slot: 1})
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: 1, Root: gRoot[:]}))
 	require.NoError(t, service.cfg.StateGen.SaveState(ctx, gRoot, s))
@@ -899,7 +899,7 @@ func TestHandleEpochBoundary_BadMetrics(t *testing.T) {
 	s, err := testutil.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, s.SetSlot(1))
-	service.head = &head{state: (*stateTrie.BeaconState)(nil)}
+	service.head = &head{state: (*stateV0.BeaconState)(nil)}
 
 	require.ErrorContains(t, "failed to initialize precompute: nil inner state", service.handleEpochBoundary(ctx, s))
 }

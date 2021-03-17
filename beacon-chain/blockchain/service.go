@@ -28,8 +28,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -167,14 +167,14 @@ func (s *Service) Start() {
 		}
 
 		// Resume fork choice.
-		s.justifiedCheckpt = stateTrie.CopyCheckpoint(justifiedCheckpoint)
+		s.justifiedCheckpt = stateV0.CopyCheckpoint(justifiedCheckpoint)
 		if err := s.cacheJustifiedStateBalances(s.ctx, s.ensureRootNotZeros(bytesutil.ToBytes32(s.justifiedCheckpt.Root))); err != nil {
 			log.Fatalf("Could not cache justified state balances: %v", err)
 		}
-		s.prevJustifiedCheckpt = stateTrie.CopyCheckpoint(justifiedCheckpoint)
-		s.bestJustifiedCheckpt = stateTrie.CopyCheckpoint(justifiedCheckpoint)
-		s.finalizedCheckpt = stateTrie.CopyCheckpoint(finalizedCheckpoint)
-		s.prevFinalizedCheckpt = stateTrie.CopyCheckpoint(finalizedCheckpoint)
+		s.prevJustifiedCheckpt = stateV0.CopyCheckpoint(justifiedCheckpoint)
+		s.bestJustifiedCheckpt = stateV0.CopyCheckpoint(justifiedCheckpoint)
+		s.finalizedCheckpt = stateV0.CopyCheckpoint(finalizedCheckpoint)
+		s.prevFinalizedCheckpt = stateV0.CopyCheckpoint(finalizedCheckpoint)
 		s.resumeForkChoice(justifiedCheckpoint, finalizedCheckpoint)
 
 		ss, err := helpers.StartSlot(s.finalizedCheckpt.Epoch)
@@ -372,14 +372,14 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState iface.Beacon
 	// Finalized checkpoint at genesis is a zero hash.
 	genesisCheckpoint := genesisState.FinalizedCheckpoint()
 
-	s.justifiedCheckpt = stateTrie.CopyCheckpoint(genesisCheckpoint)
+	s.justifiedCheckpt = stateV0.CopyCheckpoint(genesisCheckpoint)
 	if err := s.cacheJustifiedStateBalances(ctx, genesisBlkRoot); err != nil {
 		return err
 	}
-	s.prevJustifiedCheckpt = stateTrie.CopyCheckpoint(genesisCheckpoint)
-	s.bestJustifiedCheckpt = stateTrie.CopyCheckpoint(genesisCheckpoint)
-	s.finalizedCheckpt = stateTrie.CopyCheckpoint(genesisCheckpoint)
-	s.prevFinalizedCheckpt = stateTrie.CopyCheckpoint(genesisCheckpoint)
+	s.prevJustifiedCheckpt = stateV0.CopyCheckpoint(genesisCheckpoint)
+	s.bestJustifiedCheckpt = stateV0.CopyCheckpoint(genesisCheckpoint)
+	s.finalizedCheckpt = stateV0.CopyCheckpoint(genesisCheckpoint)
+	s.prevFinalizedCheckpt = stateV0.CopyCheckpoint(genesisCheckpoint)
 
 	if err := s.cfg.ForkChoiceStore.ProcessBlock(ctx,
 		genesisBlk.Block.Slot,

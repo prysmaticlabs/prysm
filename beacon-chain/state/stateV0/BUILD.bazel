@@ -19,7 +19,7 @@ go_library(
         "types.go",
         "validator_getters.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state",
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0",
     visibility = [
         "//beacon-chain:__subpackages__",
         "//fuzz:__pkg__",

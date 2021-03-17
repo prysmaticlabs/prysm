@@ -22,7 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
@@ -70,7 +70,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	var web3Service *powchain.Service
 	var err error
 	bState, _ := testutil.DeterministicGenesisState(t, 10)
-	pbState, err := beaconstate.ProtobufBeaconState(bState.InnerStateUnsafe())
+	pbState, err := stateV0.ProtobufBeaconState(bState.InnerStateUnsafe())
 	require.NoError(t, err)
 	err = beaconDB.SavePowchainData(ctx, &protodb.ETH1ChainData{
 		BeaconState: pbState,
@@ -506,7 +506,7 @@ func BenchmarkHasBlockForkChoiceStore(b *testing.B) {
 	r, err := block.Block.HashTreeRoot()
 	require.NoError(b, err)
 	bs := &pb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}, CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}}
-	beaconState, err := beaconstate.InitializeFromProto(bs)
+	beaconState, err := stateV0.InitializeFromProto(bs)
 	require.NoError(b, err)
 	require.NoError(b, s.insertBlockAndAttestationsToForkChoiceStore(ctx, block.Block, r, beaconState))
 
