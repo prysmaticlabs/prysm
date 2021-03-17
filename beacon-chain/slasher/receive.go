@@ -13,7 +13,7 @@ import (
 // validating their integrity before appending them to an attestation queue
 // for batch processing in a separate routine.
 func (s *Service) receiveAttestations(ctx context.Context) {
-	sub := s.serviceCfg.IndexedAttsFeed.Subscribe(s.indexedAttsChan)
+	sub := s.serviceCfg.IndexedAttestationsFeed.Subscribe(s.indexedAttsChan)
 	defer sub.Unsubscribe()
 	for {
 		select {
@@ -43,12 +43,12 @@ func (s *Service) receiveAttestations(ctx context.Context) {
 
 // Receive beacon blocks from some source event feed,
 func (s *Service) receiveBlocks(ctx context.Context) {
-	sub := s.serviceCfg.BeaconBlocksFeed.Subscribe(s.beaconBlocksChan)
-	defer close(s.beaconBlocksChan)
+	sub := s.serviceCfg.BeaconBlockHeadersFeed.Subscribe(s.beaconBlockHeadersChan)
+	defer close(s.beaconBlockHeadersChan)
 	defer sub.Unsubscribe()
 	for {
 		select {
-		case blockHeader := <-s.beaconBlocksChan:
+		case blockHeader := <-s.beaconBlockHeadersChan:
 			// TODO(#8331): Defer blocks from the future for later processing.
 			signingRoot, err := blockHeader.Header.HashTreeRoot()
 			if err != nil {
@@ -90,11 +90,12 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 			s.attsQueue.extend(validInFuture)
 
 			log.WithFields(logrus.Fields{
+				"currentSlot":     currentSlot,
 				"currentEpoch":    currentEpoch,
 				"numValidAtts":    len(validAtts),
 				"numDeferredAtts": len(validInFuture),
 				"numDroppedAtts":  numDropped,
-			}).Info("Epoch reached, processing queued atts for slashing detection")
+			}).Info("New slot, processing queued atts for slashing detection")
 
 			// Save the attestation records to our database.
 			if err := s.serviceCfg.Database.SaveAttestationRecordsForValidators(
@@ -135,9 +136,10 @@ func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan typ
 			receivedBlocksTotal.Add(float64(len(blocks)))
 
 			log.WithFields(logrus.Fields{
+				"currentSlot":  currentSlot,
 				"currentEpoch": currentEpoch,
 				"numBlocks":    len(blocks),
-			}).Info("Epoch reached, processing queued blocks for slashing detection")
+			}).Info("New slot, processing queued blocks for slashing detection")
 
 			if err := s.detectSlashableBlocks(ctx, blocks); err != nil {
 				log.WithError(err).Error("Could not detect slashable blocks")

@@ -6,6 +6,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -22,6 +23,7 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 	s := &Service{
 		serviceCfg: &ServiceConfig{
 			Database:              beaconDB,
+			StateNotifier:         &mock.MockStateNotifier{},
 			ProposerSlashingsFeed: new(event.Feed),
 		},
 		params:    DefaultParams(),
@@ -52,7 +54,8 @@ func Test_processQueuedBlocks_NotSlashable(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Service{
 		serviceCfg: &ServiceConfig{
-			Database: beaconDB,
+			Database:      beaconDB,
+			StateNotifier: &mock.MockStateNotifier{},
 		},
 		params:    DefaultParams(),
 		blksQueue: newBlocksQueue(),

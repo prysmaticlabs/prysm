@@ -6,6 +6,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -27,7 +28,8 @@ func Test_determineChunksToUpdateForValidators_FromLatestWrittenEpoch(t *testing
 			historyLength:      4,
 		},
 		serviceCfg: &ServiceConfig{
-			Database: beaconDB,
+			Database:      beaconDB,
+			StateNotifier: &mock.MockStateNotifier{},
 		},
 	}
 	validators := []types.ValidatorIndex{
@@ -67,7 +69,8 @@ func Test_determineChunksToUpdateForValidators_FromGenesis(t *testing.T) {
 			historyLength:      4,
 		},
 		serviceCfg: &ServiceConfig{
-			Database: beaconDB,
+			Database:      beaconDB,
+			StateNotifier: &mock.MockStateNotifier{},
 		},
 	}
 	validators := []types.ValidatorIndex{
@@ -95,7 +98,8 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	srv := &Service{
 		params: params,
 		serviceCfg: &ServiceConfig{
-			Database: beaconDB,
+			Database:      beaconDB,
+			StateNotifier: &mock.MockStateNotifier{},
 		},
 	}
 	// We initialize an empty chunks slice.
@@ -155,7 +159,8 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	srv := &Service{
 		params: params,
 		serviceCfg: &ServiceConfig{
-			Database: beaconDB,
+			Database:      beaconDB,
+			StateNotifier: &mock.MockStateNotifier{},
 		},
 	}
 	// We initialize an empty chunks slice.
@@ -221,7 +226,8 @@ func Test_checkDoubleVotes_SlashableInputAttestations(t *testing.T) {
 	}
 	srv := &Service{
 		serviceCfg: &ServiceConfig{
-			Database: beaconDB,
+			Database:      beaconDB,
+			StateNotifier: &mock.MockStateNotifier{},
 		},
 	}
 	prev1 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{1})
@@ -268,7 +274,8 @@ func Test_checkDoubleVotes_SlashableAttestationsOnDisk(t *testing.T) {
 
 	srv := &Service{
 		serviceCfg: &ServiceConfig{
-			Database: beaconDB,
+			Database:      beaconDB,
+			StateNotifier: &mock.MockStateNotifier{},
 		},
 	}
 	prev1 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{1})
@@ -320,7 +327,8 @@ func testLoadChunks(t *testing.T, kind slashertypes.ChunkKind) {
 	s := &Service{
 		params: DefaultParams(),
 		serviceCfg: &ServiceConfig{
-			Database: beaconDB,
+			Database:      beaconDB,
+			StateNotifier: &mock.MockStateNotifier{},
 		},
 	}
 	// If a chunk at a chunk index does not exist, ensure it
@@ -391,7 +399,8 @@ func TestService_processQueuedAttestations(t *testing.T) {
 	s := &Service{
 		params: DefaultParams(),
 		serviceCfg: &ServiceConfig{
-			Database: beaconDB,
+			Database:      beaconDB,
+			StateNotifier: &mock.MockStateNotifier{},
 		},
 		attsQueue: newAttestationsQueue(),
 	}
@@ -410,7 +419,7 @@ func TestService_processQueuedAttestations(t *testing.T) {
 	tickerChan <- 1
 	cancel()
 	<-exitChan
-	assert.LogsContain(t, hook, "Epoch reached, processing queued")
+	assert.LogsContain(t, hook, "New slot, processing queued")
 }
 
 func createAttestationWrapper(t *testing.T, source, target types.Epoch, indices []uint64, signingRoot []byte) *slashertypes.IndexedAttestationWrapper {
