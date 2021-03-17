@@ -30,10 +30,10 @@ type ExtraData struct {
 // Client defines a subset of methods conformed to by Pandora RPC clients for
 // producing catalyst block and insert pandora block.
 type PandoraService interface {
-	// GetWork gets the new block header and hash of pandora client
-	GetWork(ctx context.Context) (*eth1Types.Header, common.Hash, *ExtraData, error)
-	// SubmitWork submits the header hash and signature of pandora block header
-	SubmitWork(ctx context.Context, blockNonce uint64, headerHash common.Hash, sig [32]byte) (bool, error)
+	// GetShardBlockHeader gets the new block header and hash of pandora client
+	GetShardBlockHeader(ctx context.Context) (*eth1Types.Header, common.Hash, *ExtraData, error)
+	// SubmitShardBlockHeader submits the header hash and signature of pandora block header
+	SubmitShardBlockHeader(ctx context.Context, blockNonce uint64, headerHash common.Hash, sig [32]byte) (bool, error)
 }
 
 type RPCClient interface {
@@ -53,6 +53,7 @@ type Service struct {
 	dialPandoraFn DialRPCFn
 }
 
+// NewService initialize new pandora client service for communicating with pandora node.
 func NewService(ctx context.Context, endpoint string, dialPandoraFn DialRPCFn) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop()
@@ -72,6 +73,7 @@ func NewService(ctx context.Context, endpoint string, dialPandoraFn DialRPCFn) (
 	}, nil
 }
 
+// Start method starts the service
 func (s *Service) Start() {
 	go func() {
 		s.isRunning = true
@@ -83,12 +85,14 @@ func (s *Service) Start() {
 	}()
 }
 
+// Stop method stops the service
 func (s *Service) Stop() error {
 	s.cancel()
 	s.closeClient()
 	return nil
 }
 
+// Status method gives us the service's status
 func (s *Service) Status() error {
 	// Service don't start
 	if !s.isRunning {
@@ -108,6 +112,7 @@ func (s *Service) closeClient() error {
 	return nil
 }
 
+// waitForConnection method tries to initiate the connection with pandora node.
 func (s *Service) waitForConnection() {
 	synced, errSynced := s.isPandoraNodeSynced()
 	// Resume if eth1 node is synced.
@@ -161,15 +166,15 @@ func (s *Service) waitForConnection() {
 	}
 }
 
-// GetPandoraBlock method calls pandora client's `eth_getWork` api and decode header and extra data fields
+// GetShardBlockHeader method calls pandora client's `eth_getWork` api and decode header and extra data fields
 // This methods returns eth1Types.Header and ExtraData
-func (s *Service) GetWork(ctx context.Context) (*eth1Types.Header, common.Hash, *ExtraData, error) {
+func (s *Service) GetShardBlockHeader(ctx context.Context) (*eth1Types.Header, common.Hash, *ExtraData, error) {
 	if !s.connected {
 		log.WithError(ConnectionError).Error("Pandora chain is not connected")
 		return nil, common.Hash{}, nil, ConnectionError
 	}
 
-	response, err := s.pandoraClient.GetWork(ctx)
+	response, err := s.pandoraClient.GetShardBlockHeader(ctx)
 	if err != nil {
 		log.WithError(err).Error("Pandora block preparation failed")
 		return nil, common.Hash{}, nil, err
@@ -182,9 +187,9 @@ func (s *Service) GetWork(ctx context.Context) (*eth1Types.Header, common.Hash, 
 	return header, response.HeaderHash, &extraData, nil
 }
 
-// SubmitWork method calls pandora client's `eth_submitWork` api
+// SubmitShardBlockHeader method calls pandora client's `eth_submitWork` api
 // This method returns a boolean status
-func (s *Service) SubmitWork(ctx context.Context, blockNonce uint64,
+func (s *Service) SubmitShardBlockHeader(ctx context.Context, blockNonce uint64,
 	headerHash common.Hash, sig [32]byte) (bool, error) {
 
 	if !s.connected {
@@ -192,7 +197,7 @@ func (s *Service) SubmitWork(ctx context.Context, blockNonce uint64,
 		return false, ConnectionError
 	}
 
-	status, err := s.pandoraClient.SubmitWork(ctx, blockNonce, headerHash, sig)
+	status, err := s.pandoraClient.SubmitShardBlockHeader(ctx, blockNonce, headerHash, sig)
 	if err != nil || !status {
 		log.WithError(err).Error("Work submission failed")
 		return false, err
@@ -200,10 +205,10 @@ func (s *Service) SubmitWork(ctx context.Context, blockNonce uint64,
 	return status, nil
 }
 
-// checks if the pandora node is healthy and ready to serve before
+// isPandoraNodeSynced method checks if the pandora node is healthy and ready to serve before
 // fetching data from  it.
 func (s *Service) isPandoraNodeSynced() (bool, error) {
-	syncProg, err := s.pandoraClient.SyncProgress(s.ctx)
+	syncProg, err := s.pandoraClient.GetShardSyncProgress(s.ctx)
 	if err != nil {
 		return false, err
 	}

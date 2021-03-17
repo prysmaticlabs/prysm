@@ -7,8 +7,8 @@ import (
 	"testing"
 )
 
-// TestGetWork_OK method checks GetWork method.
-func TestGetWork_OK(t *testing.T) {
+// TestGetShardBlockHeader_Success method checks GetWork method.
+func TestGetShardBlockHeader_Success(t *testing.T) {
 	// Create a mock server
 	server := NewMockPandoraServer()
 	defer server.Stop()
@@ -20,13 +20,13 @@ func TestGetWork_OK(t *testing.T) {
 	defer mockedPandoraClient.Close()
 
 	inputBlock := getDummyBlock()
-	var response *GetWorkResponseParams
-	response, err = mockedPandoraClient.GetWork(context.Background())
+	var response *ShardBlockHeaderResponse
+	response, err = mockedPandoraClient.GetShardBlockHeader(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Checks decoding mechanism of incoming response
-	if !reflect.DeepEqual(response, &GetWorkResponseParams{
+	if !reflect.DeepEqual(response, &ShardBlockHeaderResponse{
 		inputBlock.Hash(),
 		inputBlock.Header().ReceiptHash,
 		inputBlock.Header(),
@@ -35,8 +35,8 @@ func TestGetWork_OK(t *testing.T) {
 	}
 }
 
-// TestSubmitWork_OK method checks `eth_submitWork` api
-func TestSubmitWork_OK(t *testing.T) {
+// TestSubmitShardBlockHeader_Success method checks `eth_submitWork` api
+func TestSubmitShardBlockHeader_Success(t *testing.T) {
 	// Create a mock server
 	server := NewMockPandoraServer()
 	defer server.Stop()
@@ -49,7 +49,7 @@ func TestSubmitWork_OK(t *testing.T) {
 
 	block := getDummyBlock()
 	dummySig := [32]byte{}
-	response, err := mockedPandoraClient.SubmitWork(context.Background(), block.Nonce(), block.Header().Hash(), dummySig)
+	response, err := mockedPandoraClient.SubmitShardBlockHeader(context.Background(), block.Nonce(), block.Header().Hash(), dummySig)
 	if err != nil {
 		t.Fatal(err)
 	}

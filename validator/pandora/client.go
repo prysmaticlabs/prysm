@@ -16,16 +16,16 @@ type PandoraClient struct {
 	c *rpc.Client
 }
 
-// GetWorkResponseParams contains response params of `eth_gethWork` api
-type GetWorkResponseParams struct {
+// ShardBlockHeaderResponse contains response params of `eth_getWork` api
+type ShardBlockHeaderResponse struct {
 	HeaderHash  common.Hash
 	TxReceipt   common.Hash
 	Header      *types.Header
 	BlockNumber uint64
 }
 
-// RpcProgressParams contains response params of `eth_syncing` api
-type RpcProgressParams struct {
+// ShardChainSyncResponse contains response params of `eth_syncing` api
+type ShardChainSyncResponse struct {
 	StartingBlock hexutil.Uint64
 	CurrentBlock  hexutil.Uint64
 	HighestBlock  hexutil.Uint64
@@ -60,13 +60,13 @@ func (oc *PandoraClient) Close() error {
 	return nil
 }
 
-// GetWork method calls to pandora client's `eth_getWork` api for getting executable block
+// GetShardBlockHeader method calls to pandora client's `eth_getWork` api for getting executable block header
 // Response structure -
 //  - result[0], 32 bytes hex encoded current block header pos-hash
 //  - result[1], 32 bytes hex encoded receipt hash for transaction proof
 //  - result[2], hex encoded rlp block header
 //  - result[3], hex encoded block number
-func (oc *PandoraClient) GetWork(ctx context.Context) (*GetWorkResponseParams, error) {
+func (oc *PandoraClient) GetShardBlockHeader(ctx context.Context) (*ShardBlockHeaderResponse, error) {
 	var response []string
 	if err := oc.c.CallContext(ctx, &response, "eth_getWork"); err != nil {
 		return nil, errors.Wrap(err, "Got error when calls to eth_getWork api")
@@ -83,7 +83,7 @@ func (oc *PandoraClient) GetWork(ctx context.Context) (*GetWorkResponseParams, e
 		return nil, errors.Wrap(err, "Failed to decode header")
 	}
 
-	return &GetWorkResponseParams{
+	return &ShardBlockHeaderResponse{
 		HeaderHash:  headerHash,
 		TxReceipt:   receiptHash,
 		Header:      &header,
@@ -91,8 +91,8 @@ func (oc *PandoraClient) GetWork(ctx context.Context) (*GetWorkResponseParams, e
 	}, nil
 }
 
-// SubmitWork methods call to pandora client's `eth_submitWork` api
-func (oc *PandoraClient) SubmitWork(ctx context.Context, blockNonce uint64, headerHash common.Hash,
+// SubmitShardBlockHeader methods call to pandora client's `eth_submitWork` api
+func (oc *PandoraClient) SubmitShardBlockHeader(ctx context.Context, blockNonce uint64, headerHash common.Hash,
 	sig [32]byte) (bool, error) {
 
 	nonecHex := types.EncodeNonce(blockNonce)
@@ -106,9 +106,9 @@ func (oc *PandoraClient) SubmitWork(ctx context.Context, blockNonce uint64, head
 	return status, nil
 }
 
-// SyncProgress retrieves the current progress of the sync algorithm. If there's
+// GetShardSyncProgress retrieves the current progress status. If there's
 // no sync currently running, it returns nil.
-func (ec *PandoraClient) SyncProgress(ctx context.Context) (*RpcProgressParams, error) {
+func (ec *PandoraClient) GetShardSyncProgress(ctx context.Context) (*ShardChainSyncResponse, error) {
 	var raw json.RawMessage
 	if err := ec.c.CallContext(ctx, &raw, "eth_syncing"); err != nil {
 		return nil, err
@@ -118,11 +118,11 @@ func (ec *PandoraClient) SyncProgress(ctx context.Context) (*RpcProgressParams, 
 	if err := json.Unmarshal(raw, &syncing); err == nil {
 		return nil, nil // Not syncing (always false)
 	}
-	var progress *RpcProgressParams
+	var progress *ShardChainSyncResponse
 	if err := json.Unmarshal(raw, &progress); err != nil {
 		return nil, err
 	}
-	return &RpcProgressParams{
+	return &ShardChainSyncResponse{
 		StartingBlock: progress.StartingBlock,
 		CurrentBlock:  progress.CurrentBlock,
 		HighestBlock:  progress.HighestBlock,
