@@ -68,7 +68,7 @@ type validator struct {
 	highestValidSlot                   types.Slot
 	domainDataCache                    *ristretto.Cache
 	aggregatedSlotCommitteeIDCache     *lru.Cache
-	ticker                             *slotutil.SlotTicker
+	ticker                             slotutil.Ticker
 	prevBalance                        map[[48]byte]uint64
 	duties                             *ethpb.DutiesResponse
 	startBalances                      map[[48]byte]uint64
