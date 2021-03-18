@@ -4,9 +4,13 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "block_header_root.go",
+        "eth1_root.go",
+        "pending_attestation_root.go",
         "reference.go",
         "trie_helpers.go",
         "validator_map_handler.go",
+        "validator_root.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil",
     visibility = [
@@ -23,8 +27,11 @@ go_library(
     ],
     deps = [
         "//beacon-chain/core/state/stateutils:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/bytesutil:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/htrutils:go_default_library",
+        "//shared/params:go_default_library",
         "//shared/trieutil:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",

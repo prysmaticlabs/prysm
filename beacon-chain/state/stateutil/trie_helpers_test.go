@@ -37,7 +37,7 @@ func TestReturnTrieLayerVariable_OK(t *testing.T) {
 	validators := newState.Validators()
 	roots := make([][32]byte, 0, len(validators))
 	for _, val := range validators {
-		rt, err := stateV0.ValidatorRoot(hasher, val)
+		rt, err := stateutil.ValidatorRootWithHasher(hasher, val)
 		require.NoError(t, err)
 		roots = append(roots, rt)
 	}
@@ -75,7 +75,7 @@ func TestRecomputeFromLayer_VariableSizedArray(t *testing.T) {
 	hasher := hashutil.CustomSHA256Hasher()
 	roots := make([][32]byte, 0, len(validators))
 	for _, val := range validators {
-		rt, err := stateV0.ValidatorRoot(hasher, val)
+		rt, err := stateutil.ValidatorRootWithHasher(hasher, val)
 		require.NoError(t, err)
 		roots = append(roots, rt)
 	}
@@ -100,7 +100,7 @@ func TestRecomputeFromLayer_VariableSizedArray(t *testing.T) {
 	require.NoError(t, err)
 	roots = make([][32]byte, 0, len(changedVals))
 	for _, val := range changedVals {
-		rt, err := stateV0.ValidatorRoot(hasher, val)
+		rt, err := stateutil.ValidatorRootWithHasher(hasher, val)
 		require.NoError(t, err)
 		roots = append(roots, rt)
 	}
