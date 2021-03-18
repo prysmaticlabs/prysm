@@ -286,7 +286,7 @@ func handlePendingAttestation(val []*pb.PendingAttestation, indices []uint64, co
 	roots := make([][32]byte, 0, length)
 	hasher := hashutil.CustomSHA256Hasher()
 	rootCreator := func(input *pb.PendingAttestation) error {
-		newRoot, err := pendingAttestationRoot(hasher, input)
+		newRoot, err := stateutil.PendingAttRootWithHasher(hasher, input)
 		if err != nil {
 			return err
 		}
