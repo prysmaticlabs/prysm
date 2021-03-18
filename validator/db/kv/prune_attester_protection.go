@@ -57,19 +57,8 @@ func pruneSourceEpochsBucket(bucket *bolt.Bucket) error {
 	if sourceEpochsBucket == nil {
 		return nil
 	}
-	// We obtain the highest source epoch from the source epochs bucket.
-	// Then, we obtain the corresponding target epoch for that source epoch.
-	highestSourceEpochBytes, _ := sourceEpochsBucket.Cursor().Last()
-	highestTargetEpochBytes := sourceEpochsBucket.Get(highestSourceEpochBytes)
-	highestTargetEpoch := bytesutil.BytesToEpochBigEndian(highestTargetEpochBytes)
 
-	return sourceEpochsBucket.ForEach(func(k []byte, v []byte) error {
-		targetEpoch := bytesutil.BytesToEpochBigEndian(v)
-		if targetEpoch < pruningEpochCutoff(highestTargetEpoch) {
-			return sourceEpochsBucket.Delete(k)
-		}
-		return nil
-	})
+	return pruneBucket(sourceEpochsBucket)
 }
 
 func pruneTargetEpochsBucket(bucket *bolt.Bucket) error {
@@ -77,17 +66,8 @@ func pruneTargetEpochsBucket(bucket *bolt.Bucket) error {
 	if targetEpochsBucket == nil {
 		return nil
 	}
-	// We obtain the highest target epoch from the bucket.
-	highestTargetEpochBytes, _ := targetEpochsBucket.Cursor().Last()
-	highestTargetEpoch := bytesutil.BytesToEpochBigEndian(highestTargetEpochBytes)
 
-	return targetEpochsBucket.ForEach(func(k []byte, v []byte) error {
-		targetEpoch := bytesutil.BytesToEpochBigEndian(k)
-		if targetEpoch < pruningEpochCutoff(highestTargetEpoch) {
-			return targetEpochsBucket.Delete(k)
-		}
-		return nil
-	})
+	return pruneBucket(targetEpochsBucket)
 }
 
 func pruneSigningRootsBucket(bucket *bolt.Bucket) error {
@@ -96,18 +76,28 @@ func pruneSigningRootsBucket(bucket *bolt.Bucket) error {
 		return nil
 	}
 
-	// We obtain the highest target epoch from the signing roots bucket.
-	highestTargetEpochBytes, _ := signingRootsBucket.Cursor().Last()
-	highestTargetEpoch := bytesutil.BytesToEpochBigEndian(highestTargetEpochBytes)
-	upperBounds := pruningEpochCutoff(highestTargetEpoch)
+	return pruneBucket(signingRootsBucket)
+}
 
-	c := signingRootsBucket.Cursor()
+// pruneBucket iterates through epoch keys and deletes any key/value lower than
+// the pruning cut off epoch as determined by the highest key in the bucket.
+func pruneBucket(bkt *bolt.Bucket) error {
+	if bkt == nil {
+		return nil
+	}
+
+	// We obtain the highest target epoch from the signing roots bucket.
+	highestEpochBytes, _ := bkt.Cursor().Last()
+	highestEpoch := bytesutil.BytesToEpochBigEndian(highestEpochBytes)
+	upperBounds := pruningEpochCutoff(highestEpoch)
+
+	c := bkt.Cursor()
 	for k, _ := c.First(); k != nil; k, _ = c.Next() {
 		targetEpoch := bytesutil.BytesToEpochBigEndian(k)
 		if targetEpoch >= upperBounds {
 			return nil
 		}
-		if err := signingRootsBucket.Delete(k); err != nil {
+		if err := bkt.Delete(k); err != nil {
 			return err
 		}
 	}
