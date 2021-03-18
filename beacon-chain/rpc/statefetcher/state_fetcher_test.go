@@ -2,7 +2,6 @@ package statefetcher
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -16,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -25,29 +23,12 @@ import (
 func TestGetStateRoot(t *testing.T) {
 	ctx := context.Background()
 
-	// We fill state and block roots with hex representations of natural numbers starting with 0.
-	// Example: 16 becomes 0x00...0f
-	fillRoots := func(state *pb.BeaconState) {
-		rootsLen := params.MainnetConfig().SlotsPerHistoricalRoot
-		roots := make([][]byte, rootsLen)
-		for i := types.Slot(0); i < rootsLen; i++ {
-			roots[i] = make([]byte, 32)
-		}
-		for j := 0; j < len(roots); j++ {
-			// Remove '0x' prefix and left-pad '0' to have 64 chars in total.
-			s := fmt.Sprintf("%064s", hexutil.EncodeUint64(uint64(j))[2:])
-			h, err := hexutil.Decode("0x" + s)
-			require.NoError(t, err, "Failed to decode root "+s)
-			roots[j] = h
-		}
-		state.StateRoots = roots
-		state.BlockRoots = roots
-	}
 	headSlot := types.Slot(123)
-	fillSlot := func(state *pb.BeaconState) {
+	fillSlot := func(state *pb.BeaconState) error {
 		state.Slot = headSlot
+		return nil
 	}
-	state, err := testutil.NewBeaconState(fillRoots, fillSlot)
+	state, err := testutil.NewBeaconState(testutil.FillRootsNaturalOpt, fillSlot)
 	require.NoError(t, err)
 	stateRoot, err := state.HashTreeRoot(ctx)
 	require.NoError(t, err)
