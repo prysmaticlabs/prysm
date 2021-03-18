@@ -41,6 +41,8 @@ func PendingAttRootWithHasher(hasher htrutils.HashFn, att *pb.PendingAttestation
 	return htrutils.BitwiseMerkleizeArrays(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
+// PendingAttEncKey returns the encoded key in bytes of input `pendingAttestation`,
+// the returned key bytes can be used for caching purposes.
 func PendingAttEncKey(att *pb.PendingAttestation) []byte {
 	enc := make([]byte, 2192)
 

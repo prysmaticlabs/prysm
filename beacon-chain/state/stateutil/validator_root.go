@@ -93,6 +93,8 @@ func ValidatorBalancesRoot(balances []uint64) ([32]byte, error) {
 	return htrutils.MixInLength(balancesRootsRoot, balancesRootsBufRoot), nil
 }
 
+// ValidatorEncKey returns the encoded key in bytes of input `validator`,
+// the returned key bytes can be used for caching purposes.
 func ValidatorEncKey(validator *ethpb.Validator) []byte {
 	if validator == nil {
 		return nil

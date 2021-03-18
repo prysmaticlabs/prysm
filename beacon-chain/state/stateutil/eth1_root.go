@@ -12,6 +12,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+// Eth1DataEncKey returns the encoded key in bytes of input `eth1Data`,
+// the returned key bytes can be used for caching purposes.
 func Eth1DataEncKey(eth1Data *ethpb.Eth1Data) []byte {
 	enc := make([]byte, 0, 96)
 	if eth1Data != nil {
@@ -31,6 +33,7 @@ func Eth1DataEncKey(eth1Data *ethpb.Eth1Data) []byte {
 	return enc
 }
 
+// Eth1DataRootWithHasher returns the hash tree root of input `eth1Data`.
 func Eth1DataRootWithHasher(hasher htrutils.HashFn, eth1Data *ethpb.Eth1Data) ([32]byte, error) {
 	if eth1Data == nil {
 		return [32]byte{}, errors.New("nil eth1 data")
@@ -59,6 +62,8 @@ func Eth1DataRootWithHasher(hasher htrutils.HashFn, eth1Data *ethpb.Eth1Data) ([
 	return root, nil
 }
 
+// Eth1DataEncKey returns the encoded key in bytes of input `eth1Data`s,
+// the returned key bytes can be used for caching purposes.
 func Eth1DatasEncKey(eth1Datas []*ethpb.Eth1Data) ([32]byte, error) {
 	hasher := hashutil.CustomSHA256Hasher()
 	enc := make([]byte, len(eth1Datas)*32)
@@ -73,6 +78,7 @@ func Eth1DatasEncKey(eth1Datas []*ethpb.Eth1Data) ([32]byte, error) {
 	return hashKey, nil
 }
 
+// Eth1DatasRoot returns the hash tree root of input `eth1Datas`.
 func Eth1DatasRoot(eth1Datas []*ethpb.Eth1Data) ([32]byte, error) {
 	hasher := hashutil.CustomSHA256Hasher()
 	eth1VotesRoots := make([][]byte, 0)
