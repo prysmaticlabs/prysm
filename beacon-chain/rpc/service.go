@@ -30,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/beacon"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/beaconv1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/debug"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/debugv1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/node"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/nodev1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
@@ -344,7 +345,18 @@ func (s *Service) Start() {
 			PeerManager:        s.peerManager,
 			PeersFetcher:       s.peersFetcher,
 		}
+		debugServerV1 := &debugv1.Server{
+			Ctx:      s.ctx,
+			BeaconDB: s.beaconDB,
+			StateFetcher: statefetcher.StateFetcher{
+				BeaconDB:           s.beaconDB,
+				ChainInfoFetcher:   s.chainInfoFetcher,
+				GenesisTimeFetcher: s.timeFetcher,
+				StateGenService:    s.stateGen,
+			},
+		}
 		pbrpc.RegisterDebugServer(s.grpcServer, debugServer)
+		ethpbv1.RegisterBeaconDebugServer(s.grpcServer, debugServerV1)
 	}
 	ethpb.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServer)
 
