@@ -89,6 +89,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/db/filters:go_default_library",
+        "//beacon-chain/db/iface:go_default_library",
         "//beacon-chain/state/interface:go_default_library",
         "//proto/beacon/db:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
@@ -103,6 +104,7 @@ go_test(
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@in_gopkg_d4l3k_messagediff_v1//:go_default_library",
+        "@io_bazel_rules_go//go/tools/bazel:go_default_library",
         "@io_etcd_go_bbolt//:go_default_library",
     ],
 )

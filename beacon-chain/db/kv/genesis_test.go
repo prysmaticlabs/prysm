@@ -4,7 +4,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/bazelbuild/rules_go/go/tools/bazel"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
@@ -17,6 +20,12 @@ func TestStore_SaveGenesisData(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.NoError(t, db.SaveGenesisData(ctx, gs))
+
+	testGenesisDataSaved(t, db)
+}
+
+func testGenesisDataSaved(t *testing.T, db iface.Database) {
+	ctx := context.Background()
 
 	gb, err := db.GenesisBlock(ctx)
 	assert.NoError(t, err)
@@ -44,4 +53,45 @@ func TestStore_SaveGenesisData(t *testing.T) {
 	fcp, err := db.FinalizedCheckpoint(ctx)
 	assert.NoError(t, err)
 	assert.Equal(t, bytesutil.ToBytes32(fcp.Root), gbHTR, "finalized checkpoint not set to genesis block root")
+}
+
+func TestLoadGenesisFromFile(t *testing.T) {
+	fp := "testdata/genesis.ssz"
+	rfp, err := bazel.Runfile(fp)
+	if err == nil {
+		fp = rfp
+	}
+
+	db := setupDB(t)
+	assert.NoError(t, db.LoadGenesisFromFile(context.Background(), fp))
+	testGenesisDataSaved(t, db)
+}
+
+func TestEnsureEmbeddedGenesis(t *testing.T) {
+	// Embedded Genesis works with Mainnet config
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig()
+	cfg.ConfigName = params.ConfigNames[params.Mainnet]
+	params.OverrideBeaconConfig(cfg)
+
+	ctx := context.Background()
+	db := setupDB(t)
+
+	gb, err := db.GenesisBlock(ctx)
+	assert.NoError(t, err)
+	if gb != nil {
+		t.Fatal("Genesis block exists already")
+	}
+
+	gs, err := db.GenesisState(ctx)
+	assert.NoError(t, err)
+	assert.NotNil(t, gs, "an embedded genesis state does not exist")
+
+	assert.NoError(t, db.EnsureEmbeddedGenesis(ctx))
+
+	gb, err = db.GenesisBlock(ctx)
+	assert.NoError(t, err)
+	assert.NotNil(t, gb)
+
+	testGenesisDataSaved(t, db)
 }
