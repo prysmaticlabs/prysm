@@ -1,4 +1,4 @@
-package stateV0
+package stateutil
 
 import (
 	"encoding/binary"
