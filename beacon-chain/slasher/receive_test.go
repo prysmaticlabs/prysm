@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -184,8 +185,9 @@ func Test_processQueuedAttestations(t *testing.T) {
 					StateNotifier:         &mock.MockStateNotifier{},
 					AttesterSlashingsFeed: new(event.Feed),
 				},
-				params:    DefaultParams(),
-				attsQueue: newAttestationsQueue(),
+				params:      DefaultParams(),
+				attsQueue:   newAttestationsQueue(),
+				genesisTime: time.Unix(0, 0),
 			}
 			currentSlotChan := make(chan types.Slot)
 			exitChan := make(chan struct{})

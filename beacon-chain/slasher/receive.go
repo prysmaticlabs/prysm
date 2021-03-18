@@ -106,10 +106,14 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 			}
 
 			// Check for slashings.
-			_, err := s.CheckSlashableAttestations(ctx, validAtts)
+			slashings, err := s.CheckSlashableAttestations(ctx, validAtts, currentEpoch)
 			if err != nil {
 				log.WithError(err).Error("Could not check slashable attestations")
 				continue
+			}
+			for _, slashing := range slashings {
+				s.serviceCfg.AttesterSlashingsFeed.Send(slashing)
+				logAttesterSlashing(slashing)
 			}
 
 			processedAttestationsTotal.Add(float64(len(validAtts)))

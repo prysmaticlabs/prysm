@@ -25,12 +25,15 @@ type chunkUpdateArgs struct {
 }
 
 func (s *Service) CheckSlashableAttestations(
-	ctx context.Context, atts []*slashertypes.IndexedAttestationWrapper,
+	ctx context.Context, atts []*slashertypes.IndexedAttestationWrapper, currentEpoch types.Epoch,
 ) ([]*ethpb.AttesterSlashing, error) {
-	currentEpoch := slotutil.EpochsSinceGenesis(s.genesisTime)
+	currentEpoch2 := slotutil.EpochsSinceGenesis(s.genesisTime)
+	fmt.Printf("ticker: %d, current: %d\n", currentEpoch2, currentEpoch)
 	slashings := make([]*ethpb.AttesterSlashing, 0)
-	groupedAtts := s.groupByValidatorChunkIndex(atts)
+	indices := make([]types.ValidatorIndex, 0)
+
 	// TODO(#8331): Consider using goroutines and wait groups here.
+	groupedAtts := s.groupByValidatorChunkIndex(atts)
 	for validatorChunkIdx, batch := range groupedAtts {
 		attSlashings, err := s.detectAllAttesterSlashings(ctx, &chunkUpdateArgs{
 			validatorChunkIndex: validatorChunkIdx,
@@ -41,11 +44,12 @@ func (s *Service) CheckSlashableAttestations(
 		if err != nil {
 			return nil, errors.Wrap(err, "Could not detect slashable attestations")
 		}
-		validatorIndices := s.params.validatorIndicesInChunk(validatorChunkIdx)
-		if err := s.serviceCfg.Database.SaveLastEpochWrittenForValidators(ctx, validatorIndices, currentEpoch); err != nil {
-			return nil, err
-		}
+		indices = append(indices, s.params.validatorIndicesInChunk(validatorChunkIdx)...)
 	}
+	if err := s.serviceCfg.Database.SaveLastEpochWrittenForValidators(ctx, indices, currentEpoch); err != nil {
+		return nil, err
+	}
+
 	return slashings, nil
 }
 
