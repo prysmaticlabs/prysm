@@ -149,7 +149,6 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.NotNil(t, slashing)
-	require.Equal(t, slashertypes.SurroundingVote, slashing.Kind)
 }
 
 func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
@@ -210,7 +209,6 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.NotNil(t, slashing)
-	require.Equal(t, slashertypes.SurroundedVote, slashing.Kind)
 }
 
 func Test_checkDoubleVotes_SlashableInputAttestations(t *testing.T) {
