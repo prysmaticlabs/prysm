@@ -7,8 +7,10 @@ import (
 var (
 	// InteropGenesisStateFlag defines a flag for the beacon node to load genesis state via file.
 	InteropGenesisStateFlag = &cli.StringFlag{
-		Name:  "interop-genesis-state",
-		Usage: "The genesis state file (.SSZ) to load from",
+		Name: "interop-genesis-state",
+		Usage: "The genesis state file (.SSZ) to load from. Note: loading from an interop genesis " +
+			"state does not use a web3 connection to read any deposits. This interop " +
+			"functionality should not be used with public testnets.",
 	}
 	// InteropMockEth1DataVotesFlag enables mocking the eth1 proof-of-work chain data put into blocks by proposers.
 	InteropMockEth1DataVotesFlag = &cli.BoolFlag{

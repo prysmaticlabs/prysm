@@ -8,10 +8,13 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/genesis"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -42,8 +45,19 @@ func (s *Store) State(ctx context.Context, blockRoot [32]byte) (iface.BeaconStat
 func (s *Store) GenesisState(ctx context.Context) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.GenesisState")
 	defer span.End()
+
+	cached, err := genesis.State(params.BeaconConfig().ConfigName)
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+		return nil, err
+	}
+	span.AddAttributes(trace.BoolAttribute("cache_hit", cached != nil))
+	if cached != nil {
+		return cached, nil
+	}
+
 	var st *pb.BeaconState
-	err := s.db.View(func(tx *bolt.Tx) error {
+	err = s.db.View(func(tx *bolt.Tx) error {
 		// Retrieve genesis block's signing root from blocks bucket,
 		// to look up what the genesis state is.
 		bucket := tx.Bucket(blocksBucket)

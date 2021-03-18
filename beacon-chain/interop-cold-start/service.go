@@ -9,11 +9,9 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
@@ -172,42 +170,11 @@ func (s *Service) NonFinalizedDeposits(_ context.Context, _ *big.Int) []*ethpb.D
 }
 
 func (s *Service) saveGenesisState(ctx context.Context, genesisState iface.BeaconState) error {
-	s.chainStartDeposits = make([]*ethpb.Deposit, genesisState.NumValidators())
-	stateRoot, err := genesisState.HashTreeRoot(ctx)
-	if err != nil {
+	if err := s.beaconDB.SaveGenesisData(ctx, genesisState); err != nil {
 		return err
-	}
-	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
-	genesisBlkRoot, err := genesisBlk.Block.HashTreeRoot()
-	if err != nil {
-		return errors.Wrap(err, "could not get genesis block root")
 	}
 
-	if err := s.beaconDB.SaveBlock(ctx, genesisBlk); err != nil {
-		return errors.Wrap(err, "could not save genesis block")
-	}
-	if err := s.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
-		Slot: 0,
-		Root: genesisBlkRoot[:],
-	}); err != nil {
-		return err
-	}
-	if err := s.beaconDB.SaveState(ctx, genesisState, genesisBlkRoot); err != nil {
-		return errors.Wrap(err, "could not save genesis state")
-	}
-	if err := s.beaconDB.SaveGenesisBlockRoot(ctx, genesisBlkRoot); err != nil {
-		return errors.Wrap(err, "could not save genesis block root")
-	}
-	if err := s.beaconDB.SaveHeadBlockRoot(ctx, genesisBlkRoot); err != nil {
-		return errors.Wrap(err, "could not save head block root")
-	}
-	genesisCheckpoint := &ethpb.Checkpoint{Root: genesisBlkRoot[:]}
-	if err := s.beaconDB.SaveJustifiedCheckpoint(ctx, genesisCheckpoint); err != nil {
-		return errors.Wrap(err, "could not save justified checkpoint")
-	}
-	if err := s.beaconDB.SaveFinalizedCheckpoint(ctx, genesisCheckpoint); err != nil {
-		return errors.Wrap(err, "could not save finalized checkpoint")
-	}
+	s.chainStartDeposits = make([]*ethpb.Deposit, genesisState.NumValidators())
 
 	for i := types.ValidatorIndex(0); uint64(i) < uint64(genesisState.NumValidators()); i++ {
 		pk := genesisState.PubkeyAtIndex(i)

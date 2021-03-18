@@ -61,6 +61,7 @@ go_test(
         "block_cache_test.go",
         "block_reader_test.go",
         "deposit_test.go",
+        "init_test.go",
         "log_processing_test.go",
         "powchain_test.go",
         "service_test.go",
