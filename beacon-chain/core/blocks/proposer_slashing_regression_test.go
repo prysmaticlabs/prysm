@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -24,7 +24,7 @@ func TestVerifyProposerSlashing_BeaconFuzzIssue91(t *testing.T) {
 	err = rawState.UnmarshalSSZ(file)
 	require.NoError(t, err)
 
-	st, err := stateTrie.InitializeFromProtoUnsafe(rawState)
+	st, err := stateV0.InitializeFromProtoUnsafe(rawState)
 	require.NoError(t, err)
 
 	file, err = ioutil.ReadFile("testdata/beaconfuzz_91_proposer_slashing.ssz")

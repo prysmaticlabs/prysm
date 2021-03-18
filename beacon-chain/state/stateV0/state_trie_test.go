@@ -1,4 +1,4 @@
-package state_test
+package stateV0_test
 
 import (
 	"bytes"
@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -18,7 +18,7 @@ import (
 
 func TestInitializeFromProto(t *testing.T) {
 	testState, _ := testutil.DeterministicGenesisState(t, 64)
-	pbState, err := state.ProtobufBeaconState(testState.InnerStateUnsafe())
+	pbState, err := stateV0.ProtobufBeaconState(testState.InnerStateUnsafe())
 	require.NoError(t, err)
 	type test struct {
 		name  string
@@ -49,7 +49,7 @@ func TestInitializeFromProto(t *testing.T) {
 	}
 	for _, tt := range initTests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := state.InitializeFromProto(tt.state)
+			_, err := stateV0.InitializeFromProto(tt.state)
 			if tt.error != "" {
 				assert.ErrorContains(t, tt.error, err)
 			} else {
@@ -61,7 +61,7 @@ func TestInitializeFromProto(t *testing.T) {
 
 func TestInitializeFromProtoUnsafe(t *testing.T) {
 	testState, _ := testutil.DeterministicGenesisState(t, 64)
-	pbState, err := state.ProtobufBeaconState(testState.InnerStateUnsafe())
+	pbState, err := stateV0.ProtobufBeaconState(testState.InnerStateUnsafe())
 	require.NoError(t, err)
 	type test struct {
 		name  string
@@ -92,7 +92,7 @@ func TestInitializeFromProtoUnsafe(t *testing.T) {
 	}
 	for _, tt := range initTests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := state.InitializeFromProtoUnsafe(tt.state)
+			_, err := stateV0.InitializeFromProtoUnsafe(tt.state)
 			if tt.error != "" {
 				assert.ErrorContains(t, tt.error, err)
 			} else {
@@ -155,7 +155,7 @@ func TestBeaconState_HashTreeRoot(t *testing.T) {
 			if err == nil && tt.error != "" {
 				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
 			}
-			pbState, err := state.ProtobufBeaconState(testState.InnerStateUnsafe())
+			pbState, err := stateV0.ProtobufBeaconState(testState.InnerStateUnsafe())
 			require.NoError(t, err)
 			genericHTR, err := pbState.HashTreeRoot()
 			if err == nil && tt.error != "" {
@@ -224,7 +224,7 @@ func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
 			if err == nil && tt.error != "" {
 				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
 			}
-			pbState, err := state.ProtobufBeaconState(testState.InnerStateUnsafe())
+			pbState, err := stateV0.ProtobufBeaconState(testState.InnerStateUnsafe())
 			require.NoError(t, err)
 			genericHTR, err := pbState.HashTreeRoot()
 			if err == nil && tt.error != "" {

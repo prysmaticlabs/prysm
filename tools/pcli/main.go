@@ -13,7 +13,7 @@ import (
 	"github.com/kr/pretty"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
@@ -159,7 +159,7 @@ func main() {
 				if err := dataFetcher(preStatePath, preState); err != nil {
 					log.Fatal(err)
 				}
-				stateObj, err := stateTrie.InitializeFromProto(preState)
+				stateObj, err := stateV0.InitializeFromProto(preState)
 				if err != nil {
 					log.Fatal(err)
 				}
