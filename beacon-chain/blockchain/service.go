@@ -334,10 +334,10 @@ func (s *Service) Status() error {
 
 // This gets called when beacon chain is first initialized to save genesis data (state, block, and more) in db.
 func (s *Service) saveGenesisData(ctx context.Context, genesisState iface.BeaconState) error {
-	if err := s.beaconDB.SaveGenesisData(ctx, genesisState); err != nil {
+	if err := s.cfg.BeaconDB.SaveGenesisData(ctx, genesisState); err != nil {
 		return errors.Wrap(err, "could not save genesis data")
 	}
-	genesisBlk, err := s.beaconDB.GenesisBlock(ctx)
+	genesisBlk, err := s.cfg.BeaconDB.GenesisBlock(ctx)
 	if err != nil || genesisBlk == nil {
 		return errors.Wrap(err, "could not load genesis block")
 	}

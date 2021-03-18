@@ -10,7 +10,7 @@ import (
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	dbIface "github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	state "github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
