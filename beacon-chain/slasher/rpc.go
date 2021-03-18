@@ -20,16 +20,12 @@ func (s *Service) IsSlashableBlock(
 		SignedBeaconBlockHeader: block,
 		SigningRoot:             dataRoot,
 	}
-	doubleProposals, err := s.saveSafeProposals(ctx, []*slashertypes.SignedBlockHeaderWrapper{signedBlockWrapper})
+	proposerSlashings, err := s.detectProposerSlashings(ctx, []*slashertypes.SignedBlockHeaderWrapper{signedBlockWrapper})
 	if err != nil {
 		return nil, err
 	}
-	if len(doubleProposals) == 0 {
+	if len(proposerSlashings) == 0 {
 		return nil, nil
 	}
-	proposerSlashing := &ethpb.ProposerSlashing{
-		Header_1: doubleProposals[0].PrevBeaconBlockWrapper.SignedBeaconBlockHeader,
-		Header_2: doubleProposals[0].BeaconBlockWrapper.SignedBeaconBlockHeader,
-	}
-	return proposerSlashing, nil
+	return proposerSlashings[0], nil
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1lpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -72,7 +73,7 @@ type ReadOnlyDatabase interface {
 	) ([][]uint16, []bool, error)
 	CheckDoubleBlockProposals(
 		ctx context.Context, proposals []*slashertypes.SignedBlockHeaderWrapper,
-	) ([]*slashertypes.DoubleBlockProposal, error)
+	) ([]*ethpb.ProposerSlashing, error)
 	PruneAttestations(
 		ctx context.Context, currentEpoch types.Epoch, historySize uint64,
 	) error

@@ -561,11 +561,6 @@ func (b *BeaconNode) registerSyncService() error {
 		return err
 	}
 
-	var slasherService *slasher.Service
-	if err := b.services.FetchService(&slasherService); err != nil {
-		return err
-	}
-
 	rs := regularsync.NewService(b.ctx, &regularsync.Config{
 		DB:                      b.db,
 		P2P:                     b.fetchP2P(),

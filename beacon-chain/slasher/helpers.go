@@ -1,8 +1,9 @@
 package slasher
 
 import (
-	"fmt"
 	"strconv"
+
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -105,55 +106,22 @@ func validateAttestationIntegrity(att *ethpb.IndexedAttestation) bool {
 	return sourceEpoch < targetEpoch
 }
 
-// Logs a slahing event with its particular details of the slashing
-// itself as fields to our logger.
-func logSlashingEvent(slashing *slashertypes.Slashing) {
-	switch slashing.Kind {
-	case slashertypes.DoubleVote:
-		log.WithFields(logrus.Fields{
-			"validatorIndex":  slashing.ValidatorIndex,
-			"targetEpoch":     slashing.TargetEpoch,
-			"signingRoot":     fmt.Sprintf("%#x", slashing.SigningRoot),
-			"prevSigningRoot": fmt.Sprintf("%#x", slashing.PrevSigningRoot),
-		}).Info("Attester double vote slashing")
-	case slashertypes.SurroundingVote:
-		log.WithFields(logrus.Fields{
-			"validatorIndex":  slashing.ValidatorIndex,
-			"prevSourceEpoch": slashing.PrevAttestation.Data.Source.Epoch,
-			"prevTargetEpoch": slashing.PrevAttestation.Data.Target.Epoch,
-			"sourceEpoch":     slashing.Attestation.Data.Source.Epoch,
-			"targetEpoch":     slashing.Attestation.Data.Target.Epoch,
-		}).Info("Attester surrounding vote slashing")
-	case slashertypes.SurroundedVote:
-		log.WithFields(logrus.Fields{
-			"validatorIndex":  slashing.ValidatorIndex,
-			"prevSourceEpoch": slashing.PrevAttestation.Data.Source.Epoch,
-			"prevTargetEpoch": slashing.PrevAttestation.Data.Target.Epoch,
-			"sourceEpoch":     slashing.Attestation.Data.Source.Epoch,
-			"targetEpoch":     slashing.Attestation.Data.Target.Epoch,
-		}).Info("Attester surrounded vote slashing")
-	case slashertypes.DoubleProposal:
-		log.WithFields(logrus.Fields{
-			"validatorIndex":  slashing.ValidatorIndex,
-			"slot":            slashing.BeaconBlock.Header.Slot,
-			"prevSigningRoot": fmt.Sprintf("%#x", slashing.PrevSigningRoot),
-			"signingRoot":     fmt.Sprintf("%#x", slashing.SigningRoot),
-		}).Info("Proposer double proposal slashing")
-	default:
-		return
-	}
+func logAttesterSlashing(slashing *ethpb.AttesterSlashing) {
+	indices := sliceutil.IntersectionUint64(slashing.Attestation_1.AttestingIndices, slashing.Attestation_2.AttestingIndices)
+	log.WithFields(logrus.Fields{
+		"validatorIndex":  indices,
+		"prevSourceEpoch": slashing.Attestation_1.Data.Source.Epoch,
+		"prevTargetEpoch": slashing.Attestation_1.Data.Target.Epoch,
+		"sourceEpoch":     slashing.Attestation_2.Data.Source.Epoch,
+		"targetEpoch":     slashing.Attestation_2.Data.Target.Epoch,
+	}).Info("Attester slashing detected")
 }
 
-// Log a double block proposal slashing given an incoming proposal and existing proposal signing root.
-func logDoubleProposal(incomingProposal, existingProposal *slashertypes.SignedBlockHeaderWrapper) {
-	logSlashingEvent(&slashertypes.Slashing{
-		Kind:            slashertypes.DoubleProposal,
-		ValidatorIndex:  incomingProposal.SignedBeaconBlockHeader.Header.ProposerIndex,
-		PrevSigningRoot: existingProposal.SigningRoot,
-		SigningRoot:     incomingProposal.SigningRoot,
-		PrevBeaconBlock: existingProposal.SignedBeaconBlockHeader,
-		BeaconBlock:     incomingProposal.SignedBeaconBlockHeader,
-	})
+func logProposerSlashing(slashing *ethpb.ProposerSlashing) {
+	log.WithFields(logrus.Fields{
+		"validatorIndex": slashing.Header_1.Header.ProposerIndex,
+		"slot":           slashing.Header_1.Header.Slot,
+	}).Info("Proposer slashing detected")
 }
 
 // Turns a uint64 value to a string representation.

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"math"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -25,7 +27,7 @@ type Chunker interface {
 		slasherDB db.Database,
 		validatorIdx types.ValidatorIndex,
 		attestation *slashertypes.IndexedAttestationWrapper,
-	) (*slashertypes.Slashing, error)
+	) (*ethpb.AttesterSlashing, error)
 	Update(
 		args *chunkUpdateArgs,
 		validatorIndex types.ValidatorIndex,
@@ -178,38 +180,33 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 	slasherDB db.Database,
 	validatorIdx types.ValidatorIndex,
 	attestation *slashertypes.IndexedAttestationWrapper,
-) (*slashertypes.Slashing, error) {
+) (*ethpb.AttesterSlashing, error) {
 	sourceEpoch := attestation.IndexedAttestation.Data.Source.Epoch
 	targetEpoch := attestation.IndexedAttestation.Data.Target.Epoch
 	minTarget, err := chunkDataAtEpoch(m.params, m.data, validatorIdx, sourceEpoch)
 	if err != nil {
-		return &slashertypes.Slashing{Kind: slashertypes.NotSlashable}, errors.Wrapf(
+		return nil, errors.Wrapf(
 			err, "could not get min target for validator %d at epoch %d", validatorIdx, sourceEpoch,
 		)
 	}
 	if targetEpoch > minTarget {
 		existingAttRecord, err := slasherDB.AttestationRecordForValidator(ctx, validatorIdx, minTarget)
 		if err != nil {
-			return &slashertypes.Slashing{Kind: slashertypes.NotSlashable}, errors.Wrapf(
+			return nil, errors.Wrapf(
 				err, "could not get existing attestation record at target %d", minTarget,
 			)
 		}
 		if existingAttRecord != nil {
 			if sourceEpoch < existingAttRecord.IndexedAttestation.Data.Source.Epoch {
 				surroundingVotesTotal.Inc()
-				return &slashertypes.Slashing{
-					Kind:            slashertypes.SurroundingVote,
-					ValidatorIndex:  validatorIdx,
-					TargetEpoch:     targetEpoch,
-					PrevSigningRoot: existingAttRecord.SigningRoot,
-					SigningRoot:     attestation.SigningRoot,
-					PrevAttestation: existingAttRecord.IndexedAttestation,
-					Attestation:     attestation.IndexedAttestation,
+				return &ethpb.AttesterSlashing{
+					Attestation_1: attestation.IndexedAttestation,
+					Attestation_2: existingAttRecord.IndexedAttestation,
 				}, nil
 			}
 		}
 	}
-	return &slashertypes.Slashing{Kind: slashertypes.NotSlashable}, nil
+	return nil, nil
 }
 
 // CheckSlashable takes in a validator index and an incoming attestation
@@ -228,38 +225,33 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 	slasherDB db.Database,
 	validatorIdx types.ValidatorIndex,
 	attestation *slashertypes.IndexedAttestationWrapper,
-) (*slashertypes.Slashing, error) {
+) (*ethpb.AttesterSlashing, error) {
 	sourceEpoch := attestation.IndexedAttestation.Data.Source.Epoch
 	targetEpoch := attestation.IndexedAttestation.Data.Target.Epoch
 	maxTarget, err := chunkDataAtEpoch(m.params, m.data, validatorIdx, sourceEpoch)
 	if err != nil {
-		return &slashertypes.Slashing{Kind: slashertypes.NotSlashable}, errors.Wrapf(
+		return nil, errors.Wrapf(
 			err, "could not get max target for validator %d at epoch %d", validatorIdx, sourceEpoch,
 		)
 	}
 	if targetEpoch < maxTarget {
 		existingAttRecord, err := slasherDB.AttestationRecordForValidator(ctx, validatorIdx, maxTarget)
 		if err != nil {
-			return &slashertypes.Slashing{Kind: slashertypes.NotSlashable}, errors.Wrapf(
+			return nil, errors.Wrapf(
 				err, "could not get existing attestation record at target %d", maxTarget,
 			)
 		}
 		if existingAttRecord != nil {
 			if existingAttRecord.IndexedAttestation.Data.Source.Epoch < sourceEpoch {
 				surroundedVotesTotal.Inc()
-				return &slashertypes.Slashing{
-					Kind:            slashertypes.SurroundedVote,
-					ValidatorIndex:  validatorIdx,
-					TargetEpoch:     targetEpoch,
-					PrevSigningRoot: existingAttRecord.SigningRoot,
-					SigningRoot:     attestation.SigningRoot,
-					PrevAttestation: existingAttRecord.IndexedAttestation,
-					Attestation:     attestation.IndexedAttestation,
+				return &ethpb.AttesterSlashing{
+					Attestation_1: existingAttRecord.IndexedAttestation,
+					Attestation_2: attestation.IndexedAttestation,
 				}, nil
 			}
 		}
 	}
-	return &slashertypes.Slashing{Kind: slashertypes.NotSlashable}, nil
+	return nil, nil
 }
 
 // Update a min span chunk for a validator index starting at the current epoch, e_c, then updating

@@ -14,14 +14,7 @@ import (
 func (s *Server) IsSlashableAttestation(
 	ctx context.Context, req *ethpb.IndexedAttestation,
 ) (*ethpb.AttesterSlashing, error) {
-	attesterSlashings, err := s.slasher.IsSlashableAttestation(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-	if len(attesterSlashings) > 0 {
-		return attesterSlashings[0], nil
-	}
-	return nil, nil
+	return nil, status.Error(codes.Unimplemented, "Unimplemented")
 }
 
 // HighestAttestations returns the highest source and target epochs attested for
