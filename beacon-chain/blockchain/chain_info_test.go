@@ -120,7 +120,7 @@ func TestHeadRoot_CanRetrieve(t *testing.T) {
 
 func TestHeadRoot_UseDB(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
-	c := &Service{beaconDB: beaconDB}
+	c := &Service{cfg: &Config{BeaconDB: beaconDB}}
 	c.head = &head{root: params.BeaconConfig().ZeroHash}
 	b := testutil.NewBeaconBlock()
 	br, err := b.Block.HashTreeRoot()
@@ -278,7 +278,7 @@ func TestService_HeadGenesisValidatorRoot(t *testing.T) {
 }
 
 func TestService_ProtoArrayStore(t *testing.T) {
-	c := &Service{forkChoiceStore: protoarray.New(0, 0, [32]byte{})}
+	c := &Service{cfg: &Config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}}
 	p := c.ProtoArrayStore()
 	require.Equal(t, 0, int(p.FinalizedEpoch()))
 }

@@ -7,7 +7,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -94,9 +94,9 @@ func TestGenesisState_HashEquality(t *testing.T) {
 	state2, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	require.NoError(t, err)
 
-	pbState1, err := beaconstate.ProtobufBeaconState(state1.CloneInnerState())
+	pbState1, err := stateV0.ProtobufBeaconState(state1.CloneInnerState())
 	require.NoError(t, err)
-	pbState2, err := beaconstate.ProtobufBeaconState(state2.CloneInnerState())
+	pbState2, err := stateV0.ProtobufBeaconState(state2.CloneInnerState())
 	require.NoError(t, err)
 
 	root1, err1 := hashutil.HashProto(pbState1)

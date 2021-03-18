@@ -33,7 +33,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (ifac
 		return cachedState, nil
 	}
 
-	baseState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(c.Root))
+	baseState, err := s.cfg.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(c.Root))
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get pre state for epoch %d", c.Epoch)
 	}
@@ -62,7 +62,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (ifac
 
 	// To avoid sharing the same state across checkpoint state cache and hot state cache,
 	// we don't add the state to check point cache.
-	has, err := s.stateGen.HasStateInCache(ctx, bytesutil.ToBytes32(c.Root))
+	has, err := s.cfg.StateGen.HasStateInCache(ctx, bytesutil.ToBytes32(c.Root))
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func (s *Service) verifyAttTargetEpoch(_ context.Context, genesisTime, nowTime u
 // verifyBeaconBlock verifies beacon head block is known and not from the future.
 func (s *Service) verifyBeaconBlock(ctx context.Context, data *ethpb.AttestationData) error {
 	r := bytesutil.ToBytes32(data.BeaconBlockRoot)
-	b, err := s.beaconDB.Block(ctx, r)
+	b, err := s.cfg.BeaconDB.Block(ctx, r)
 	if err != nil {
 		return err
 	}

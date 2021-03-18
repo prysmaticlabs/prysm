@@ -4,6 +4,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "cloners.go",
         "deprecated_getters.go",
         "deprecated_setters.go",
         "doc.go",

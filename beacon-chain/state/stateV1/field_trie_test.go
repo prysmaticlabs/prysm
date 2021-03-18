@@ -57,7 +57,7 @@ func TestFieldTrie_RecomputeTrie(t *testing.T) {
 func TestFieldTrie_CopyTrieImmutable(t *testing.T) {
 	newState, _ := testutil.DeterministicGenesisState(t, 32)
 	// 12 represents the enum value of randao mixes.
-	trie, err := stateV1.NewFieldTrie(13, newState.RandaoMixes(), uint64(params.BeaconConfig().EpochsPerHistoricalVector))
+	trie, err := stateV0.NewFieldTrie(13, newState.RandaoMixes(), uint64(params.BeaconConfig().EpochsPerHistoricalVector))
 	require.NoError(t, err)
 
 	newTrie := trie.CopyTrie()

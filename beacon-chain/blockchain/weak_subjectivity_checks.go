@@ -14,7 +14,7 @@ import (
 // Reference design: https://github.com/ethereum/eth2.0-specs/blob/master/specs/phase0/weak-subjectivity.md#weak-subjectivity-sync-procedure
 func (s *Service) VerifyWeakSubjectivityRoot(ctx context.Context) error {
 	// TODO(7342): Remove the following to fully use weak subjectivity in production.
-	if len(s.wsRoot) == 0 || s.wsEpoch == 0 {
+	if len(s.cfg.WspBlockRoot) == 0 || s.cfg.WspEpoch == 0 {
 		return nil
 	}
 
@@ -23,28 +23,28 @@ func (s *Service) VerifyWeakSubjectivityRoot(ctx context.Context) error {
 	if s.wsVerified {
 		return nil
 	}
-	if s.wsEpoch > s.finalizedCheckpt.Epoch {
+	if s.cfg.WspEpoch > s.finalizedCheckpt.Epoch {
 		return nil
 	}
 
-	r := bytesutil.ToBytes32(s.wsRoot)
-	log.Infof("Performing weak subjectivity check for root %#x in epoch %d", r, s.wsEpoch)
+	r := bytesutil.ToBytes32(s.cfg.WspBlockRoot)
+	log.Infof("Performing weak subjectivity check for root %#x in epoch %d", r, s.cfg.WspEpoch)
 	// Save initial sync cached blocks to DB.
-	if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+	if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
 		return err
 	}
 	// A node should have the weak subjectivity block in the DB.
-	if !s.beaconDB.HasBlock(ctx, r) {
+	if !s.cfg.BeaconDB.HasBlock(ctx, r) {
 		return fmt.Errorf("node does not have root in DB: %#x", r)
 	}
 
-	startSlot, err := helpers.StartSlot(s.wsEpoch)
+	startSlot, err := helpers.StartSlot(s.cfg.WspEpoch)
 	if err != nil {
 		return err
 	}
 	// A node should have the weak subjectivity block corresponds to the correct epoch in the DB.
 	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(startSlot + params.BeaconConfig().SlotsPerEpoch)
-	roots, err := s.beaconDB.BlockRoots(ctx, filter)
+	roots, err := s.cfg.BeaconDB.BlockRoots(ctx, filter)
 	if err != nil {
 		return err
 	}
@@ -56,5 +56,5 @@ func (s *Service) VerifyWeakSubjectivityRoot(ctx context.Context) error {
 		}
 	}
 
-	return fmt.Errorf("node does not have root in db corresponding to epoch: %#x %d", r, s.wsEpoch)
+	return fmt.Errorf("node does not have root in db corresponding to epoch: %#x %d", r, s.cfg.WspEpoch)
 }

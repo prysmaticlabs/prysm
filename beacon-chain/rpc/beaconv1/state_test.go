@@ -214,7 +214,7 @@ func TestGetStateRoot(t *testing.T) {
 		_, err = s.GetStateRoot(ctx, &ethpb.StateRequest{
 			StateId: stateId,
 		})
-		assert.ErrorContains(t, fmt.Sprintf("State not found in the last %d state roots in head state", len(state.StateRoots())), err)
+		assert.ErrorContains(t, fmt.Sprintf("state not found in the last %d state roots in head state", len(state.StateRoots())), err)
 	})
 
 	t.Run("Slot", func(t *testing.T) {
@@ -251,7 +251,7 @@ func TestGetStateRoot(t *testing.T) {
 		_, err := s.GetStateRoot(ctx, &ethpb.StateRequest{
 			StateId: []byte("100"),
 		})
-		assert.ErrorContains(t, "Multiple blocks exist in same slot", err)
+		assert.ErrorContains(t, "multiple blocks exist in same slot", err)
 	})
 
 	t.Run("Slot too big", func(t *testing.T) {
@@ -263,7 +263,7 @@ func TestGetStateRoot(t *testing.T) {
 		_, err := s.GetStateRoot(ctx, &ethpb.StateRequest{
 			StateId: []byte(strconv.FormatUint(1, 10)),
 		})
-		assert.ErrorContains(t, "Slot cannot be in the future", err)
+		assert.ErrorContains(t, "slot cannot be in the future", err)
 	})
 
 	t.Run("Invalid state", func(t *testing.T) {
@@ -271,7 +271,7 @@ func TestGetStateRoot(t *testing.T) {
 		_, err := s.GetStateRoot(ctx, &ethpb.StateRequest{
 			StateId: []byte("foo"),
 		})
-		require.ErrorContains(t, "Invalid state ID: foo", err)
+		require.ErrorContains(t, "invalid state ID: foo", err)
 	})
 }
 
@@ -431,7 +431,7 @@ func TestGetStateFork(t *testing.T) {
 		_, err = s.GetStateFork(ctx, &ethpb.StateRequest{
 			StateId: stateId,
 		})
-		require.ErrorContains(t, "State not found in the last 8192 state roots in head state", err)
+		require.ErrorContains(t, "state not found in the last 8192 state roots in head state", err)
 	})
 
 	t.Run("Slot", func(t *testing.T) {
@@ -461,7 +461,7 @@ func TestGetStateFork(t *testing.T) {
 		_, err := s.GetStateFork(ctx, &ethpb.StateRequest{
 			StateId: []byte(strconv.FormatUint(1, 10)),
 		})
-		assert.ErrorContains(t, "Slot cannot be in the future", err)
+		assert.ErrorContains(t, "slot cannot be in the future", err)
 	})
 
 	t.Run("Invalid state", func(t *testing.T) {
@@ -469,7 +469,7 @@ func TestGetStateFork(t *testing.T) {
 		_, err := s.GetStateFork(ctx, &ethpb.StateRequest{
 			StateId: []byte("foo"),
 		})
-		require.ErrorContains(t, "Invalid state ID: foo", err)
+		require.ErrorContains(t, "invalid state ID: foo", err)
 	})
 }
 
@@ -658,7 +658,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 		_, err = s.GetFinalityCheckpoints(ctx, &ethpb.StateRequest{
 			StateId: stateId,
 		})
-		require.ErrorContains(t, "State not found in the last 8192 state roots in head state", err)
+		require.ErrorContains(t, "state not found in the last 8192 state roots in head state", err)
 	})
 
 	t.Run("Slot", func(t *testing.T) {
@@ -691,7 +691,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 		_, err := s.GetFinalityCheckpoints(ctx, &ethpb.StateRequest{
 			StateId: []byte(strconv.FormatUint(1, 10)),
 		})
-		assert.ErrorContains(t, "Slot cannot be in the future", err)
+		assert.ErrorContains(t, "slot cannot be in the future", err)
 	})
 
 	t.Run("Checkpoints not available", func(t *testing.T) {
@@ -725,6 +725,6 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 		_, err := s.GetFinalityCheckpoints(ctx, &ethpb.StateRequest{
 			StateId: []byte("foo"),
 		})
-		require.ErrorContains(t, "Invalid state ID: foo", err)
+		require.ErrorContains(t, "invalid state ID: foo", err)
 	})
 }
