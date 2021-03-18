@@ -13,6 +13,7 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -179,6 +180,12 @@ func Test_processQueuedAttestations(t *testing.T) {
 			defer hook.Reset()
 			beaconDB := dbtest.SetupDB(t)
 			ctx, cancel := context.WithCancel(context.Background())
+
+			currentTime := time.Now()
+			totalSlots := uint64(tt.args.currentEpoch) * uint64(params.BeaconConfig().SlotsPerEpoch)
+			secondsSinceGenesis := time.Duration(totalSlots * params.BeaconConfig().SecondsPerSlot)
+			genesisTime := currentTime.Add(-secondsSinceGenesis * time.Second)
+
 			s := &Service{
 				serviceCfg: &ServiceConfig{
 					Database:              beaconDB,
@@ -187,7 +194,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 				},
 				params:      DefaultParams(),
 				attsQueue:   newAttestationsQueue(),
-				genesisTime: time.Unix(0, 0),
+				genesisTime: genesisTime,
 			}
 			currentSlotChan := make(chan types.Slot)
 			exitChan := make(chan struct{})
