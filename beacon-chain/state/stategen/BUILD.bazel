@@ -48,6 +48,7 @@ go_test(
         "epoch_boundary_state_cache_test.go",
         "getter_test.go",
         "hot_state_cache_test.go",
+        "init_test.go",
         "migrate_test.go",
         "replay_test.go",
         "service_test.go",

@@ -166,4 +166,10 @@ var (
 		Usage: "Sets the maximum number of headers that a deposit log query can fetch.",
 		Value: uint64(1000),
 	}
+	// GenesisStatePath defines a flag to start the beacon chain from a give genesis state file.
+	GenesisStatePath = &cli.StringFlag{
+		Name: "genesis-state",
+		Usage: "Load a genesis state from ssz file. Testnet genesis files can be found in the " +
+			"eth2-clients/eth2-testnets repository on github.",
+	}
 )
