@@ -8,9 +8,9 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/genesis"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -38,7 +38,7 @@ func (s *Store) State(ctx context.Context, blockRoot [32]byte) (iface.BeaconStat
 	if err != nil {
 		return nil, err
 	}
-	return state.InitializeFromProtoUnsafe(st)
+	return stateV0.InitializeFromProtoUnsafe(st)
 }
 
 // GenesisState returns the genesis state in beacon chain.
@@ -79,7 +79,7 @@ func (s *Store) GenesisState(ctx context.Context) (iface.BeaconState, error) {
 	if st == nil {
 		return nil, nil
 	}
-	return state.InitializeFromProtoUnsafe(st)
+	return stateV0.InitializeFromProtoUnsafe(st)
 }
 
 // SaveState stores a state to the db using block's signing root which was used to generate the state.
@@ -97,10 +97,13 @@ func (s *Store) SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconSta
 	if states == nil {
 		return errors.New("nil state")
 	}
-	var err error
 	multipleEncs := make([][]byte, len(states))
 	for i, st := range states {
-		multipleEncs[i], err = encode(ctx, st.InnerStateUnsafe())
+		pbState, err := stateV0.ProtobufBeaconState(st.InnerStateUnsafe())
+		if err != nil {
+			return err
+		}
+		multipleEncs[i], err = encode(ctx, pbState)
 		if err != nil {
 			return err
 		}

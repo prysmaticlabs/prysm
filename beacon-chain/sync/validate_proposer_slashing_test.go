@@ -18,8 +18,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -45,7 +45,7 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, iface.Be
 	}
 
 	currentSlot := types.Slot(0)
-	state, err := stateTrie.InitializeFromProto(&pb.BeaconState{
+	state, err := stateV0.InitializeFromProto(&pb.BeaconState{
 		Validators: validators,
 		Slot:       currentSlot,
 		Balances:   validatorBalances,

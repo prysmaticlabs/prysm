@@ -7,7 +7,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -45,7 +45,7 @@ func TestIsActiveValidatorUsingTrie_OK(t *testing.T) {
 		{a: 64, b: true},
 	}
 	val := &ethpb.Validator{ActivationEpoch: 10, ExitEpoch: 100}
-	beaconState, err := beaconstate.InitializeFromProto(&pb.BeaconState{Validators: []*ethpb.Validator{val}})
+	beaconState, err := stateV0.InitializeFromProto(&pb.BeaconState{Validators: []*ethpb.Validator{val}})
 	require.NoError(t, err)
 	for _, test := range tests {
 		readOnlyVal, err := beaconState.ValidatorAtIndexReadOnly(0)
@@ -210,7 +210,7 @@ func TestIsSlashableValidatorUsingTrie_OK(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		beaconState, err := beaconstate.InitializeFromProto(&pb.BeaconState{Validators: []*ethpb.Validator{test.validator}})
+		beaconState, err := stateV0.InitializeFromProto(&pb.BeaconState{Validators: []*ethpb.Validator{test.validator}})
 		require.NoError(t, err)
 		readOnlyVal, err := beaconState.ValidatorAtIndexReadOnly(0)
 		require.NoError(t, err)
@@ -234,7 +234,7 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 		}
 	}
 
-	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+	state, err := stateV0.InitializeFromProto(&pb.BeaconState{
 		Validators:  validators,
 		Slot:        0,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
@@ -293,7 +293,7 @@ func TestBeaconProposerIndex_BadState(t *testing.T) {
 		roots[i] = make([]byte, 32)
 	}
 
-	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+	state, err := stateV0.InitializeFromProto(&pb.BeaconState{
 		Validators:  validators,
 		Slot:        0,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
@@ -317,7 +317,7 @@ func TestComputeProposerIndex_Compatibility(t *testing.T) {
 		}
 	}
 
-	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+	state, err := stateV0.InitializeFromProto(&pb.BeaconState{
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
@@ -364,7 +364,7 @@ func TestActiveValidatorCount_Genesis(t *testing.T) {
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
-	beaconState, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+	beaconState, err := stateV0.InitializeFromProto(&pb.BeaconState{
 		Slot:        0,
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
@@ -400,7 +400,7 @@ func TestChurnLimit_OK(t *testing.T) {
 			}
 		}
 
-		beaconState, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+		beaconState, err := stateV0.InitializeFromProto(&pb.BeaconState{
 			Slot:        1,
 			Validators:  validators,
 			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
@@ -589,7 +589,7 @@ func TestActiveValidatorIndices(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, err := beaconstate.InitializeFromProto(tt.args.state)
+			s, err := stateV0.InitializeFromProto(tt.args.state)
 			require.NoError(t, err)
 			got, err := ActiveValidatorIndices(s, tt.args.epoch)
 			if tt.wantedErr != "" {
@@ -714,7 +714,7 @@ func TestComputeProposerIndex(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			bState := &pb.BeaconState{Validators: tt.args.validators}
-			stTrie, err := beaconstate.InitializeFromProtoUnsafe(bState)
+			stTrie, err := stateV0.InitializeFromProtoUnsafe(bState)
 			require.NoError(t, err)
 			got, err := ComputeProposerIndex(stTrie, tt.args.indices, tt.args.seed)
 			if tt.wantedErr != "" {
@@ -771,7 +771,7 @@ func TestIsIsEligibleForActivation(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, err := beaconstate.InitializeFromProto(tt.state)
+			s, err := stateV0.InitializeFromProto(tt.state)
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, IsEligibleForActivation(s, tt.validator), "IsEligibleForActivation()")
 		})
