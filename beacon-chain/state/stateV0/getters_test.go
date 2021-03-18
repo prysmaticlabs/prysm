@@ -1,4 +1,4 @@
-package state
+package stateV0
 
 import (
 	"runtime/debug"
@@ -112,4 +112,12 @@ func TestBeaconState_MatchPreviousJustifiedCheckpt(t *testing.T) {
 	require.Equal(t, false, beaconState.MatchPreviousJustifiedCheckpoint(c2))
 	beaconState.state = nil
 	require.Equal(t, false, beaconState.MatchPreviousJustifiedCheckpoint(c1))
+}
+
+func TestBeaconState_MarshalSSZ_NilState(t *testing.T) {
+	s, err := InitializeFromProto(&pb.BeaconState{})
+	require.NoError(t, err)
+	s.state = nil
+	_, err = s.MarshalSSZ()
+	require.ErrorContains(t, "nil beacon state", err)
 }

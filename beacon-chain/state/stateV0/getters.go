@@ -1,4 +1,4 @@
-package state
+package stateV0
 
 import (
 	"bytes"
@@ -16,7 +16,7 @@ import (
 
 // InnerStateUnsafe returns the pointer value of the underlying
 // beacon state proto object, bypassing immutability. Use with care.
-func (b *BeaconState) InnerStateUnsafe() *pbp2p.BeaconState {
+func (b *BeaconState) InnerStateUnsafe() interface{} {
 	if b == nil {
 		return nil
 	}
@@ -24,7 +24,7 @@ func (b *BeaconState) InnerStateUnsafe() *pbp2p.BeaconState {
 }
 
 // CloneInnerState the beacon state into a protobuf for usage.
-func (b *BeaconState) CloneInnerState() *pbp2p.BeaconState {
+func (b *BeaconState) CloneInnerState() interface{} {
 	if b == nil || b.state == nil {
 		return nil
 	}
@@ -1026,4 +1026,22 @@ func (b *BeaconState) safeCopyCheckpoint(input *ethpb.Checkpoint) *ethpb.Checkpo
 	}
 
 	return CopyCheckpoint(input)
+}
+
+// MarshalSSZ marshals the underlying beacon state to bytes.
+func (b *BeaconState) MarshalSSZ() ([]byte, error) {
+	if !b.hasInnerState() {
+		return nil, errors.New("nil beacon state")
+	}
+	return b.state.MarshalSSZ()
+}
+
+// ProtobufBeaconState transforms an input into beacon state in the form of protobuf.
+// Error is returned if the input is not type protobuf beacon state.
+func ProtobufBeaconState(s interface{}) (*pbp2p.BeaconState, error) {
+	pbState, ok := s.(*pbp2p.BeaconState)
+	if !ok {
+		return nil, errors.New("input is not type pb.BeaconState")
+	}
+	return pbState, nil
 }

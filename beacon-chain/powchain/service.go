@@ -29,8 +29,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
@@ -229,7 +229,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		s.depositTrie = trieutil.CreateTrieFromProto(eth1Data.Trie)
 		s.chainStartData = eth1Data.ChainstartData
 		if !reflect.ValueOf(eth1Data.BeaconState).IsZero() {
-			s.preGenesisState, err = stateTrie.InitializeFromProto(eth1Data.BeaconState)
+			s.preGenesisState, err = stateV0.InitializeFromProto(eth1Data.BeaconState)
 			if err != nil {
 				return nil, errors.Wrap(err, "Could not initialize state trie")
 			}
@@ -292,7 +292,7 @@ func (s *Service) ChainStartDeposits() []*ethpb.Deposit {
 // ClearPreGenesisData clears out the stored chainstart deposits and beacon state.
 func (s *Service) ClearPreGenesisData() {
 	s.chainStartData.ChainstartDeposits = []*ethpb.Deposit{}
-	s.preGenesisState = &stateTrie.BeaconState{}
+	s.preGenesisState = &stateV0.BeaconState{}
 }
 
 // ChainStartEth1Data returns the eth1 data at chainstart.

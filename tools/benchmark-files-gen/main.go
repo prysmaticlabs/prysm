@@ -13,8 +13,8 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/benchutil"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
@@ -148,7 +148,7 @@ func generateMarshalledFullStateAndBlock() error {
 		return err
 	}
 
-	beaconBytes, err := beaconState.InnerStateUnsafe().MarshalSSZ()
+	beaconBytes, err := beaconState.MarshalSSZ()
 	if err != nil {
 		return err
 	}
@@ -197,7 +197,7 @@ func generate2FullEpochState() error {
 		}
 	}
 
-	beaconBytes, err := beaconState.InnerStateUnsafe().MarshalSSZ()
+	beaconBytes, err := beaconState.MarshalSSZ()
 	if err != nil {
 		return err
 	}
@@ -214,5 +214,5 @@ func genesisBeaconState() (iface.BeaconState, error) {
 	if err := genesisState.UnmarshalSSZ(beaconBytes); err != nil {
 		return nil, errors.Wrap(err, "cannot unmarshal genesis state file")
 	}
-	return stateTrie.InitializeFromProtoUnsafe(genesisState)
+	return stateV0.InitializeFromProtoUnsafe(genesisState)
 }
