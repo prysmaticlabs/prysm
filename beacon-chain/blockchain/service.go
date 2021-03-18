@@ -339,7 +339,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState iface.Beacon
 	}
 	genesisBlk, err := s.cfg.BeaconDB.GenesisBlock(ctx)
 	if err != nil || genesisBlk == nil {
-		return errors.Wrap(err, "could not load genesis block")
+		return fmt.Errorf("could not load genesis block: %v", err)
 	}
 	genesisBlkRoot, err := genesisBlk.Block.HashTreeRoot()
 	if err != nil {
