@@ -86,7 +86,7 @@ func (s *Service) listenForNewNodes() {
 			continue
 		}
 		// Make sure that peer is not dialed too often, for each connection attempt there's a backoff period.
-		s.Peers().RandomizeBackOff(peerInfo.ID, nil)
+		s.Peers().RandomizeBackOff(peerInfo.ID)
 		go func(info *peer.AddrInfo) {
 			if err := s.connectWithPeer(s.ctx, *info); err != nil {
 				log.WithError(err).Tracef("Could not connect with peer %s", info.String())
