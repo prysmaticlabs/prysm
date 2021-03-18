@@ -56,7 +56,7 @@ func testGenesisDataSaved(t *testing.T, db iface.Database) {
 }
 
 func TestLoadGenesisFromFile(t *testing.T) {
-	fp := "testdata/genesis.ssz"
+	fp := "testdata/mainnet.genesis.ssz"
 	rfp, err := bazel.Runfile(fp)
 	if err == nil {
 		fp = rfp
@@ -65,6 +65,21 @@ func TestLoadGenesisFromFile(t *testing.T) {
 	db := setupDB(t)
 	assert.NoError(t, db.LoadGenesisFromFile(context.Background(), fp))
 	testGenesisDataSaved(t, db)
+
+	// Loading the same genesis again should not throw an error
+	assert.NoError(t, db.LoadGenesisFromFile(context.Background(), fp))
+}
+
+func TestLoadGenesisFromFile_mismatchedForkVersion(t *testing.T) {
+	fp := "testdata/altona.genesis.ssz"
+	rfp, err := bazel.Runfile(fp)
+	if err == nil {
+		fp = rfp
+	}
+
+	// Loading a genesis with the wrong fork version as beacon config should throw an error.
+	db := setupDB(t)
+	assert.ErrorContains(t, "does not match config genesis fork version", db.LoadGenesisFromFile(context.Background(), fp))
 }
 
 func TestEnsureEmbeddedGenesis(t *testing.T) {
