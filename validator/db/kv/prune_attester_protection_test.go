@@ -111,7 +111,6 @@ func BenchmarkPruneAttestations(b *testing.B) {
 	}
 }
 
-
 // Saves attesting history for every (source, target = source + 1) pairs since genesis
 // up to a given number of epochs for a validator public key.
 func setupAttestationsForEveryEpoch(t testing.TB, validatorDB *Store, pubKey [48]byte, numEpochs types.Epoch) error {
