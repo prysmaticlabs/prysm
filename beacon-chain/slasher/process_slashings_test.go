@@ -53,7 +53,6 @@ func TestService_processAttesterSlashings(t *testing.T) {
 		AttestingIndices: []uint64{0},
 	})
 
-	// Sign both attestations.
 	domain, err := helpers.Domain(
 		beaconState.Fork(),
 		0,
@@ -166,7 +165,6 @@ func TestService_processProposerSlashings(t *testing.T) {
 		},
 	})
 
-	// Sign both block headers.
 	domain, err := helpers.Domain(
 		beaconState.Fork(),
 		0,
@@ -174,7 +172,6 @@ func TestService_processProposerSlashings(t *testing.T) {
 		beaconState.GenesisValidatorRoot(),
 	)
 	require.NoError(t, err)
-
 	htr, err := firstBlockHeader.Header.HashTreeRoot()
 	require.NoError(t, err)
 	container := &pb.SigningData{
@@ -184,4 +181,58 @@ func TestService_processProposerSlashings(t *testing.T) {
 	require.NoError(t, err)
 	signingRoot, err := container.HashTreeRoot()
 	require.NoError(t, err)
+
+	t.Run("first_header_valid_sig_second_invalid", func(tt *testing.T) {
+		hook := logTest.NewGlobal()
+		// Use valid signature for the first header, but bad one for the second.
+		signature := privKey.Sign(signingRoot[:])
+		firstBlockHeader.Signature = signature.Marshal()
+		secondBlockHeader.Signature = make([]byte, 96)
+
+		slashings := []*ethpb.ProposerSlashing{
+			{
+				Header_1: firstBlockHeader,
+				Header_2: secondBlockHeader,
+			},
+		}
+
+		s.processProposerSlashings(ctx, slashings)
+		require.LogsContain(tt, hook, "Invalid signature")
+	})
+
+	t.Run("first_header_invalid_sig_second_valid", func(tt *testing.T) {
+		hook := logTest.NewGlobal()
+		// Use invalid signature for the first header, but valid for the second.
+		signature := privKey.Sign(signingRoot[:])
+		firstBlockHeader.Signature = make([]byte, 96)
+		secondBlockHeader.Signature = signature.Marshal()
+
+		slashings := []*ethpb.ProposerSlashing{
+			{
+				Header_1: firstBlockHeader,
+				Header_2: secondBlockHeader,
+			},
+		}
+
+		s.processProposerSlashings(ctx, slashings)
+		require.LogsContain(tt, hook, "Invalid signature")
+	})
+
+	t.Run("both_valid_header_signatures", func(tt *testing.T) {
+		hook := logTest.NewGlobal()
+		// Use valid signatures.
+		signature := privKey.Sign(signingRoot[:])
+		firstBlockHeader.Signature = signature.Marshal()
+		secondBlockHeader.Signature = signature.Marshal()
+
+		slashings := []*ethpb.ProposerSlashing{
+			{
+				Header_1: firstBlockHeader,
+				Header_2: secondBlockHeader,
+			},
+		}
+
+		s.processProposerSlashings(ctx, slashings)
+		require.LogsDoNotContain(tt, hook, "Invalid signature")
+	})
 }
