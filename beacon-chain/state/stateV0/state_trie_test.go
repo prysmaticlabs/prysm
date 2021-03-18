@@ -129,7 +129,7 @@ func TestBeaconState_HashTreeRoot(t *testing.T) {
 			error: "",
 		},
 		{
-			name: "different Validator balance",
+			name: "different validator balance",
 			stateModify: func(beaconState iface.BeaconState) (iface.BeaconState, error) {
 				val, err := beaconState.ValidatorAtIndex(5)
 				if err != nil {
@@ -198,7 +198,7 @@ func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
 			error: "",
 		},
 		{
-			name: "different Validator balance",
+			name: "different validator balance",
 			stateModify: func(beaconState iface.BeaconState) (iface.BeaconState, error) {
 				val, err := beaconState.ValidatorAtIndex(5)
 				if err != nil {
@@ -250,5 +250,5 @@ func TestBeaconState_AppendValidator_DoesntMutateCopy(t *testing.T) {
 	assert.NoError(t, st0.AppendValidator(val))
 	assert.Equal(t, originalCount, st1.NumValidators(), "st1 NumValidators mutated")
 	_, ok := st1.ValidatorIndexByPubkey(bytesutil.ToBytes48(val.PublicKey))
-	assert.Equal(t, false, ok, "Expected no Validator index to be present in st1 for the newly inserted pubkey")
+	assert.Equal(t, false, ok, "Expected no validator index to be present in st1 for the newly inserted pubkey")
 }

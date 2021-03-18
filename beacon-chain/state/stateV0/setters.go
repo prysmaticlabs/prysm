@@ -300,8 +300,8 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 	return nil
 }
 
-// ApplyToEveryValidator applies the provided callback function to each Validator in the
-// Validator registry.
+// ApplyToEveryValidator applies the provided callback function to each validator in the
+// validator registry.
 func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator) (bool, *ethpb.Validator, error)) error {
 	if !b.hasInnerState() {
 		return ErrNilInnerState
@@ -618,7 +618,7 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 		b.sharedFieldReferences[validators] = stateutil.NewRef(1)
 	}
 
-	// append Validator to slice
+	// append validator to slice
 	b.state.Validators = append(vals, val)
 	valIdx := types.ValidatorIndex(len(b.state.Validators) - 1)
 

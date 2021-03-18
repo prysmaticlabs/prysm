@@ -114,7 +114,7 @@ func (b *BeaconState) Copy() iface.BeaconState {
 		sharedFieldReferences: make(map[fieldIndex]*stateutil.Reference, 10),
 		stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, fieldCount),
 
-		// Copy on write Validator index map.
+		// Copy on write validator index map.
 		valMapHandler: b.valMapHandler,
 	}
 

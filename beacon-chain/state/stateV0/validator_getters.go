@@ -12,7 +12,7 @@ type ReadOnlyValidator struct {
 }
 
 // EffectiveBalance returns the effective balance of the
-// read only Validator.
+// read only validator.
 func (v ReadOnlyValidator) EffectiveBalance() uint64 {
 	if v.IsNil() {
 		return 0
@@ -21,7 +21,7 @@ func (v ReadOnlyValidator) EffectiveBalance() uint64 {
 }
 
 // ActivationEligibilityEpoch returns the activation eligibility epoch of the
-// read only Validator.
+// read only validator.
 func (v ReadOnlyValidator) ActivationEligibilityEpoch() types.Epoch {
 	if v.IsNil() {
 		return 0
@@ -30,7 +30,7 @@ func (v ReadOnlyValidator) ActivationEligibilityEpoch() types.Epoch {
 }
 
 // ActivationEpoch returns the activation epoch of the
-// read only Validator.
+// read only validator.
 func (v ReadOnlyValidator) ActivationEpoch() types.Epoch {
 	if v.IsNil() {
 		return 0
@@ -39,7 +39,7 @@ func (v ReadOnlyValidator) ActivationEpoch() types.Epoch {
 }
 
 // WithdrawableEpoch returns the withdrawable epoch of the
-// read only Validator.
+// read only validator.
 func (v ReadOnlyValidator) WithdrawableEpoch() types.Epoch {
 	if v.IsNil() {
 		return 0
@@ -48,7 +48,7 @@ func (v ReadOnlyValidator) WithdrawableEpoch() types.Epoch {
 }
 
 // ExitEpoch returns the exit epoch of the
-// read only Validator.
+// read only validator.
 func (v ReadOnlyValidator) ExitEpoch() types.Epoch {
 	if v.IsNil() {
 		return 0
@@ -57,7 +57,7 @@ func (v ReadOnlyValidator) ExitEpoch() types.Epoch {
 }
 
 // PublicKey returns the public key of the
-// read only Validator.
+// read only validator.
 func (v ReadOnlyValidator) PublicKey() [48]byte {
 	if v.IsNil() {
 		return [48]byte{}
@@ -68,14 +68,14 @@ func (v ReadOnlyValidator) PublicKey() [48]byte {
 }
 
 // WithdrawalCredentials returns the withdrawal credentials of the
-// read only Validator.
+// read only validator.
 func (v ReadOnlyValidator) WithdrawalCredentials() []byte {
 	creds := make([]byte, len(v.validator.WithdrawalCredentials))
 	copy(creds, v.validator.WithdrawalCredentials)
 	return creds
 }
 
-// Slashed returns the read only Validator is slashed.
+// Slashed returns the read only validator is slashed.
 func (v ReadOnlyValidator) Slashed() bool {
 	if v.IsNil() {
 		return false
@@ -83,7 +83,7 @@ func (v ReadOnlyValidator) Slashed() bool {
 	return v.validator.Slashed
 }
 
-// CopyValidator returns the copy of the read only Validator.
+// CopyValidator returns the copy of the read only validator.
 func (v ReadOnlyValidator) IsNil() bool {
 	return v.validator == nil
 }
