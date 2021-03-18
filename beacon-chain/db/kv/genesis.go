@@ -94,7 +94,7 @@ func (s *Store) LoadGenesis(ctx context.Context, r io.Reader) error {
 }
 
 // EnsureEmbeddedGenesis checks that a genesis block has been generated when an embedded genesis
-// state is used. If a genesis block does not exist, but a genesis does, then we should call
+// state is used. If a genesis block does not exist, but a genesis state does, then we should call
 // SaveGenesisData on the existing genesis state.
 func (s *Store) EnsureEmbeddedGenesis(ctx context.Context) error {
 	gb, err := s.GenesisBlock(ctx)
