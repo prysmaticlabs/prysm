@@ -8,6 +8,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
+// Verifies attester slashings, logs them, and submits them to the slashing operations pool
+// in the beacon node if they pass validation.
 func (s *Service) processAttesterSlashings(ctx context.Context, slashings []*ethpb.AttesterSlashing) {
 	for _, sl := range slashings {
 		if err := s.verifyAttSignature(ctx, sl.Attestation_1); err != nil {
@@ -22,14 +24,14 @@ func (s *Service) processAttesterSlashings(ctx context.Context, slashings []*eth
 			)
 			continue
 		}
-		// Log the slashing event.
-		//logSlashingEvent(sl)
+		// TODO(#8331): Log the slashing event.
 
-		// Submit to the slashing operations pool.
-		// TODO: Implement.
+		// TODO(#8331) Submit to the slashing operations pool.
 	}
 }
 
+// Verifies proposer slashings, logs them, and submits them to the slashing operations pool
+// in the beacon node if they pass validation.
 func (s *Service) processProposerSlashings(ctx context.Context, slashings []*ethpb.ProposerSlashing) {
 	for _, sl := range slashings {
 		if err := s.verifyBlockSignature(ctx, sl.Header_1); err != nil {
@@ -44,11 +46,9 @@ func (s *Service) processProposerSlashings(ctx context.Context, slashings []*eth
 			)
 			continue
 		}
-		// Log the slashing event.
-		//logSlashingEvent(sl)
+		// TODO(#8331): Log the slashing event.
 
-		// Submit to the slashing operations pool.
-		// TODO: Implement.
+		// TODO(#8331) Submit to the slashing operations pool.
 	}
 }
 
