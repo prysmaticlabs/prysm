@@ -10,8 +10,8 @@ import (
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	dbIface "github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
-	state "github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	state "github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -94,7 +94,7 @@ func (s *Store) LoadGenesisFromFile(ctx context.Context, filePath string) error 
 	}
 
 	if !bytes.Equal(gs.Fork().CurrentVersion, params.BeaconConfig().GenesisForkVersion) {
-		return fmt.Errorf("loaded genesis fork version (%#x) does not match config genesis " +
+		return fmt.Errorf("loaded genesis fork version (%#x) does not match config genesis "+
 			"fork version (%#x)", gs.Fork().CurrentVersion, params.BeaconConfig().GenesisForkVersion)
 	}
 
