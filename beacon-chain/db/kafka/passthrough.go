@@ -2,6 +2,7 @@ package kafka
 
 import (
 	"context"
+	"io"
 
 	"github.com/ethereum/go-ethereum/common"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -268,8 +269,8 @@ func (e Exporter) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint 
 }
 
 // LoadGenesisFromFile -- passthrough
-func (e Exporter) LoadGenesisFromFile(ctx context.Context, filePath string) error {
-	return e.db.LoadGenesisFromFile(ctx, filePath)
+func (e Exporter) LoadGenesis(ctx context.Context, r io.Reader) error {
+	return e.db.LoadGenesis(ctx, r)
 }
 
 // SaveGenesisData -- passthrough

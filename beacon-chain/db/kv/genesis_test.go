@@ -2,11 +2,11 @@ package kv
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -45,14 +45,6 @@ func testGenesisDataSaved(t *testing.T, db iface.Database) {
 	headHTR, err := head.Block.HashTreeRoot()
 	assert.NoError(t, err)
 	assert.Equal(t, gbHTR, headHTR, "head block does not match genesis block")
-
-	jcp, err := db.JustifiedCheckpoint(ctx)
-	assert.NoError(t, err)
-	assert.Equal(t, bytesutil.ToBytes32(jcp.Root), gbHTR, "justified checkpoint not set to genesis block root")
-
-	fcp, err := db.FinalizedCheckpoint(ctx)
-	assert.NoError(t, err)
-	assert.Equal(t, bytesutil.ToBytes32(fcp.Root), gbHTR, "finalized checkpoint not set to genesis block root")
 }
 
 func TestLoadGenesisFromFile(t *testing.T) {
@@ -62,12 +54,20 @@ func TestLoadGenesisFromFile(t *testing.T) {
 		fp = rfp
 	}
 
+	r, err := os.Open(fp)
+	assert.NoError(t, err)
+	defer func() {
+		assert.NoError(t, r.Close())
+	}()
+
 	db := setupDB(t)
-	assert.NoError(t, db.LoadGenesisFromFile(context.Background(), fp))
+	assert.NoError(t, db.LoadGenesis(context.Background(), r))
 	testGenesisDataSaved(t, db)
 
 	// Loading the same genesis again should not throw an error
-	assert.NoError(t, db.LoadGenesisFromFile(context.Background(), fp))
+	_, err = r.Seek(0, 0)
+	assert.NoError(t, err)
+	assert.NoError(t, db.LoadGenesis(context.Background(), r))
 }
 
 func TestLoadGenesisFromFile_mismatchedForkVersion(t *testing.T) {
@@ -76,10 +76,15 @@ func TestLoadGenesisFromFile_mismatchedForkVersion(t *testing.T) {
 	if err == nil {
 		fp = rfp
 	}
+	r, err := os.Open(fp)
+	assert.NoError(t, err)
+	defer func() {
+		assert.NoError(t, r.Close())
+	}()
 
 	// Loading a genesis with the wrong fork version as beacon config should throw an error.
 	db := setupDB(t)
-	assert.ErrorContains(t, "does not match config genesis fork version", db.LoadGenesisFromFile(context.Background(), fp))
+	assert.ErrorContains(t, "does not match config genesis fork version", db.LoadGenesis(context.Background(), r))
 }
 
 func TestEnsureEmbeddedGenesis(t *testing.T) {

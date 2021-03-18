@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 
 	"github.com/pkg/errors"
-	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	dbIface "github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
@@ -47,20 +47,12 @@ func (s *Store) SaveGenesisData(ctx context.Context, genesisState iface.BeaconSt
 		return errors.Wrap(err, "could not save genesis block root")
 	}
 
-	genesisCheckpoint := &eth.Checkpoint{Root: genesisBlkRoot[:]}
-	if err := s.SaveJustifiedCheckpoint(ctx, genesisCheckpoint); err != nil {
-		return errors.Wrap(err, "could not save justified checkpoint")
-	}
-	if err := s.SaveFinalizedCheckpoint(ctx, genesisCheckpoint); err != nil {
-		return errors.Wrap(err, "could not save finalized checkpoint")
-	}
-
 	return nil
 }
 
 // LoadGenesisFromFile loads a genesis state from a given file path, if no genesis exists already.
-func (s *Store) LoadGenesisFromFile(ctx context.Context, filePath string) error {
-	b, err := ioutil.ReadFile(filePath)
+func (s *Store) LoadGenesis(ctx context.Context, r io.Reader) error {
+	b, err := ioutil.ReadAll(r)
 	if err != nil {
 		return err
 	}

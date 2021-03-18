@@ -101,7 +101,7 @@ type HeadAccessDatabase interface {
 	SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
 
 	// Genesis operations.
-	LoadGenesisFromFile(ctx context.Context, filePath string) error
+	LoadGenesis(ctx context.Context, r io.Reader) error
 	SaveGenesisData(ctx context.Context, state iface.BeaconState) error
 	EnsureEmbeddedGenesis(ctx context.Context) error
 }
