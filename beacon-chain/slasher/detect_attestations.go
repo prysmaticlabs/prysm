@@ -37,7 +37,7 @@ func (s *Service) CheckSlashableAttestations(
 			currentEpoch:        currentEpoch,
 		}, batch)
 
-		slashings = append(slashings, attSlbeacon-chain/node/node.goashings...)
+		slashings = append(slashings, attSlashings...)
 		if err != nil {
 			return nil, errors.Wrap(err, "Could not detect slashable attestations")
 		}

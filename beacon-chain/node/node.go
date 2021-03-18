@@ -15,8 +15,6 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/slasher"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"

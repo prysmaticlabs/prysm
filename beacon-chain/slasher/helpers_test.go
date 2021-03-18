@@ -265,56 +265,35 @@ func TestService_filterAttestations(t *testing.T) {
 func Test_logSlashingEvent(t *testing.T) {
 	tests := []struct {
 		name     string
-		slashing *slashertypes.Slashing
-		want     string
-		noLog    bool
+		slashing *ethpb.AttesterSlashing
 	}{
 		{
 			name: "Surrounding vote",
-			slashing: &slashertypes.Slashing{
-				Kind:            slashertypes.SurroundingVote,
-				PrevAttestation: createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
-				Attestation:     createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
+			slashing: &ethpb.AttesterSlashing{
+				Attestation_1: createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
+				Attestation_2: createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
 			},
-			want: "Attester surrounding vote",
 		},
 		{
 			name: "Surrounded vote",
-			slashing: &slashertypes.Slashing{
-				Kind:            slashertypes.SurroundedVote,
-				PrevAttestation: createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
-				Attestation:     createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
+			slashing: &ethpb.AttesterSlashing{
+				Attestation_1: createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
+				Attestation_2: createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
 			},
-			want: "Attester surrounded vote",
 		},
 		{
 			name: "Double vote",
-			slashing: &slashertypes.Slashing{
-				Kind:            slashertypes.DoubleVote,
-				PrevAttestation: createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
-				Attestation:     createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
+			slashing: &ethpb.AttesterSlashing{
+				Attestation_1: createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
+				Attestation_2: createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
 			},
-			want: "Attester double vote",
-		},
-		{
-			name: "Not slashable",
-			slashing: &slashertypes.Slashing{
-				Kind:            slashertypes.NotSlashable,
-				PrevAttestation: createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
-				Attestation:     createAttestationWrapper(t, 0, 0, nil, nil).IndexedAttestation,
-			},
-			noLog: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			hook := logTest.NewGlobal()
-			logSlashingEvent(tt.slashing)
-			if tt.noLog {
-				require.LogsDoNotContain(t, hook, "slashing")
-			} else {
-				require.LogsContain(t, hook, tt.want)
-			}
+			logAttesterSlashing(tt.slashing)
+			require.LogsContain(t, hook, "")
 		})
 	}
 }

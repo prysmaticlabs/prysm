@@ -3,10 +3,9 @@ package slasher
 import (
 	"context"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
 
 // IsSlashableBlock returns a proposer slashing if an input
