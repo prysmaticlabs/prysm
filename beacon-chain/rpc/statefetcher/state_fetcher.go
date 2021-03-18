@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
+// StateFetcher is responsible for retrieving the BeaconState.
 type StateFetcher struct {
 	BeaconDB           db.ReadOnlyDatabase
 	ChainInfoFetcher   blockchain.ChainInfoFetcher
