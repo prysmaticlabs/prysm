@@ -99,14 +99,20 @@ func pruneSigningRootsBucket(bucket *bolt.Bucket) error {
 	// We obtain the highest target epoch from the signing roots bucket.
 	highestTargetEpochBytes, _ := signingRootsBucket.Cursor().Last()
 	highestTargetEpoch := bytesutil.BytesToEpochBigEndian(highestTargetEpochBytes)
+	upperBounds := pruningEpochCutoff(highestTargetEpoch)
 
-	return signingRootsBucket.ForEach(func(k []byte, v []byte) error {
+	c := signingRootsBucket.Cursor()
+	for k, _ := c.First(); k != nil; k, _ = c.Next() {
 		targetEpoch := bytesutil.BytesToEpochBigEndian(k)
-		if targetEpoch < pruningEpochCutoff(highestTargetEpoch) {
-			return signingRootsBucket.Delete(k)
+		if targetEpoch >= upperBounds {
+			return nil
 		}
-		return nil
-	})
+		if err := signingRootsBucket.Delete(k); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // This helper function determines the cutoff epoch where, for all epochs before it, we should prune
