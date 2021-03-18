@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -26,6 +27,7 @@ type ServiceConfig struct {
 	Database                db.Database
 	StateNotifier           statefeed.Notifier
 	StateFetcher            blockchain.AttestationStateFetcher
+	StateGen                stategen.StateManager
 }
 
 // Service defining a slasher implementation as part of
