@@ -28,7 +28,6 @@ func Test_processQueuedAttestations(t *testing.T) {
 		name                 string
 		args                 args
 		shouldNotBeSlashable bool
-		wantedLogs           []string
 	}{
 		{
 			name: "Detects surrounding vote (source 1, target 2), (source 0, target 3)",
@@ -39,7 +38,6 @@ func Test_processQueuedAttestations(t *testing.T) {
 				},
 				currentEpoch: 4,
 			},
-			wantedLogs: []string{"Attester surrounding vote"},
 		},
 		{
 			name: "Detects surrounding vote (source 50, target 51), (source 0, target 1000)",
@@ -50,7 +48,6 @@ func Test_processQueuedAttestations(t *testing.T) {
 				},
 				currentEpoch: 1000,
 			},
-			wantedLogs: []string{"Attester surrounding vote"},
 		},
 		{
 			name: "Detects surrounded vote (source 0, target 3), (source 1, target 2)",
@@ -61,7 +58,6 @@ func Test_processQueuedAttestations(t *testing.T) {
 				},
 				currentEpoch: 4,
 			},
-			wantedLogs: []string{"Attester surrounded vote"},
 		},
 		{
 			name: "Not slashable, surrounding but non-overlapping attesting indices within same validator chunk index",
@@ -209,11 +205,9 @@ func Test_processQueuedAttestations(t *testing.T) {
 			cancel()
 			<-exitChan
 			if tt.shouldNotBeSlashable {
-				require.LogsDoNotContain(t, hook, "Slashable offenses found")
+				require.LogsDoNotContain(t, hook, "Attester slashing detected")
 			} else {
-				for _, wanted := range tt.wantedLogs {
-					require.LogsContain(t, hook, wanted)
-				}
+				require.LogsContain(t, hook, "Attester slashing detected")
 			}
 		})
 	}

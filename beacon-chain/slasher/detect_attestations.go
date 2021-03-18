@@ -25,10 +25,9 @@ type chunkUpdateArgs struct {
 }
 
 func (s *Service) CheckSlashableAttestations(
-	ctx context.Context, atts []*slashertypes.IndexedAttestationWrapper, currentEpoch types.Epoch,
+	ctx context.Context, atts []*slashertypes.IndexedAttestationWrapper,
 ) ([]*ethpb.AttesterSlashing, error) {
-	currentEpoch2 := slotutil.EpochsSinceGenesis(s.genesisTime)
-	fmt.Printf("ticker: %d, current: %d\n", currentEpoch2, currentEpoch)
+	currentEpoch := slotutil.EpochsSinceGenesis(s.genesisTime)
 	slashings := make([]*ethpb.AttesterSlashing, 0)
 	indices := make([]types.ValidatorIndex, 0)
 
