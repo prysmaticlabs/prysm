@@ -497,7 +497,7 @@ func (s *Service) waitForConnection() {
 	for {
 		select {
 		case <-ticker.C:
-			log.Debugf("Trying to dial endpoint: %s", s.currHttpEndpoint)
+			log.Debugf("Trying to dial endpoint: %s", logutil.MaskCredentialsLogging(s.currHttpEndpoint))
 			errConnect := s.connectToPowChain()
 			if errConnect != nil {
 				errorLogger(errConnect, "Could not connect to powchain endpoint")
@@ -905,7 +905,7 @@ func (s *Service) fallbackToNextEndpoint() {
 		return
 	}
 	s.currHttpEndpoint = s.httpEndpoints[nextIndex]
-	log.Infof("Falling back to alternative endpoint: %s", s.currHttpEndpoint)
+	log.Infof("Falling back to alternative endpoint: %s", logutil.MaskCredentialsLogging(s.currHttpEndpoint))
 }
 
 func dedupEndpoints(endpoints []string) []string {
