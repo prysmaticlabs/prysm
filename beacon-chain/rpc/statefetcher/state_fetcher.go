@@ -16,7 +16,12 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
-// StateFetcher is responsible for retrieving the BeaconState.
+// IStateFetcher is responsible for retrieving the BeaconState.
+type IStateFetcher interface {
+	State(ctx context.Context, stateId []byte) (iface.BeaconState, error)
+}
+
+// StateFetcher is a real implementation of IStateFetcher.
 type StateFetcher struct {
 	BeaconDB           db.ReadOnlyDatabase
 	ChainInfoFetcher   blockchain.ChainInfoFetcher

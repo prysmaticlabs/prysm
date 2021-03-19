@@ -348,7 +348,7 @@ func (s *Service) Start() {
 		debugServerV1 := &debugv1.Server{
 			Ctx:      s.ctx,
 			BeaconDB: s.beaconDB,
-			StateFetcher: statefetcher.StateFetcher{
+			StateFetcher: &statefetcher.StateFetcher{
 				BeaconDB:           s.beaconDB,
 				ChainInfoFetcher:   s.chainInfoFetcher,
 				GenesisTimeFetcher: s.timeFetcher,

@@ -24,4 +24,11 @@ go_test(
     name = "go_default_test",
     srcs = ["debug_test.go"],
     embed = [":go_default_library"],
+    deps = [
+        "//beacon-chain/rpc/testutil:go_default_library",
+        "//shared/testutil:go_default_library",
+        "//shared/testutil/assert:go_default_library",
+        "//shared/testutil/require:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1:go_default_library",
+    ],
 )
