@@ -29,3 +29,26 @@ func (s *Service) IsSlashableBlock(
 	}
 	return proposerSlashings[0], nil
 }
+
+// IsSlashableAttestation comapres the given indexed attestation to the slasher database and returns any
+// slashing proofs if they exist.
+func (s *Service) IsSlashableAttestation(
+	ctx context.Context, attestation *ethpb.IndexedAttestation,
+) ([]*ethpb.AttesterSlashing, error) {
+	dataRoot, err := attestation.Data.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	indexedAttWrapper := &slashertypes.IndexedAttestationWrapper{
+		IndexedAttestation: attestation,
+		SigningRoot:        dataRoot,
+	}
+	attesterSlashings, err := s.CheckSlashableAttestations(ctx, []*slashertypes.IndexedAttestationWrapper{indexedAttWrapper})
+	if err != nil {
+		return nil, err
+	}
+	if len(attesterSlashings) == 0 {
+		return nil, nil
+	}
+	return attesterSlashings, nil
+}
