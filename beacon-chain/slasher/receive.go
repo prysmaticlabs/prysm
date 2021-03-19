@@ -18,7 +18,6 @@ func (s *Service) receiveAttestations(ctx context.Context) {
 	for {
 		select {
 		case att := <-s.indexedAttsChan:
-			// TODO(#8331): Defer attestations from the future for later processing.
 			if !validateAttestationIntegrity(att) {
 				continue
 			}
@@ -49,7 +48,6 @@ func (s *Service) receiveBlocks(ctx context.Context) {
 	for {
 		select {
 		case blockHeader := <-s.beaconBlockHeadersChan:
-			// TODO(#8331): Defer blocks from the future for later processing.
 			signingRoot, err := blockHeader.Header.HashTreeRoot()
 			if err != nil {
 				log.WithError(err).Error("Could not get hash tree root of signed block header")
@@ -111,10 +109,10 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 				log.WithError(err).Error("Could not check slashable attestations")
 				continue
 			}
-			for _, slashing := range slashings {
-				s.serviceCfg.AttesterSlashingsFeed.Send(slashing)
-				logAttesterSlashing(slashing)
-			}
+
+			// Process attester slashings by verifying their signatures, submitting
+			// to the beacon node's operations pool, and logging them.
+			s.processAttesterSlashings(ctx, slashings)
 
 			processedAttestationsTotal.Add(float64(len(validAtts)))
 		case <-ctx.Done():
@@ -140,13 +138,15 @@ func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan typ
 				"numBlocks":    len(blocks),
 			}).Info("New slot, processing queued blocks for slashing detection")
 
-			proposerSlashings, err := s.detectProposerSlashings(ctx, blocks)
+			slashings, err := s.detectProposerSlashings(ctx, blocks)
 			if err != nil {
 				log.WithError(err).Error("Could not detect slashable blocks")
 				continue
 			}
 
-			s.recordDoubleProposals(proposerSlashings)
+			// Process proposer slashings by verifying their signatures, submitting
+			// to the beacon node's operations pool, and logging them.
+			s.processProposerSlashings(ctx, slashings)
 
 			processedBlocksTotal.Add(float64(len(blocks)))
 		case <-ctx.Done():

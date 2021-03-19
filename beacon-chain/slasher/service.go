@@ -23,8 +23,6 @@ import (
 type ServiceConfig struct {
 	IndexedAttestationsFeed *event.Feed
 	BeaconBlockHeadersFeed  *event.Feed
-	AttesterSlashingsFeed   *event.Feed
-	ProposerSlashingsFeed   *event.Feed
 	Database                db.Database
 	StateNotifier           statefeed.Notifier
 	StateFetcher            blockchain.AttestationStateFetcher

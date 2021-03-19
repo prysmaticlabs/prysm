@@ -35,7 +35,6 @@ func (s *Service) detectProposerSlashings(
 				Header_2: proposedBlocks[i].SignedBeaconBlockHeader,
 			}
 			slashings = append(slashings, slashing)
-			s.serviceCfg.ProposerSlashingsFeed.Send(slashing)
 		}
 	}
 
@@ -59,19 +58,13 @@ func (s *Service) saveSafeProposals(
 ) error {
 	ctx, span := trace.StartSpan(ctx, "Slasher.saveSafeProposals")
 	defer span.End()
-	safeProposals := safeProposals(proposedBlocks, proposerSlashings)
-	return s.serviceCfg.Database.SaveBlockProposals(ctx, safeProposals)
+	return s.serviceCfg.Database.SaveBlockProposals(
+		ctx,
+		filterSafeProposals(proposedBlocks, proposerSlashings),
+	)
 }
 
-func (s *Service) recordDoubleProposals(doubleProposals []*ethpb.ProposerSlashing) {
-	for _, doubleProposal := range doubleProposals {
-		doubleProposalsTotal.Inc()
-		logProposerSlashing(doubleProposal)
-		s.serviceCfg.ProposerSlashingsFeed.Send(doubleProposal)
-	}
-}
-
-func safeProposals(
+func filterSafeProposals(
 	proposedBlocks []*slashertypes.SignedBlockHeaderWrapper,
 	proposerSlashings []*ethpb.ProposerSlashing,
 ) []*slashertypes.SignedBlockHeaderWrapper {
