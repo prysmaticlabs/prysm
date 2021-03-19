@@ -232,24 +232,14 @@ func Test_checkDoubleVotes_SlashableInputAttestations(t *testing.T) {
 	cur1 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{2})
 	prev2 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{1})
 	cur2 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{2})
-	wanted := []*slashertypes.Slashing{
+	wanted := []*ethpb.AttesterSlashing{
 		{
-			Kind:            slashertypes.DoubleVote,
-			ValidatorIndex:  types.ValidatorIndex(1),
-			TargetEpoch:     2,
-			PrevSigningRoot: prev1.SigningRoot,
-			SigningRoot:     cur1.SigningRoot,
-			PrevAttestation: prev1.IndexedAttestation,
-			Attestation:     cur1.IndexedAttestation,
+			Attestation_1: prev1.IndexedAttestation,
+			Attestation_2: cur1.IndexedAttestation,
 		},
 		{
-			Kind:            slashertypes.DoubleVote,
-			ValidatorIndex:  types.ValidatorIndex(2),
-			TargetEpoch:     2,
-			PrevSigningRoot: prev2.SigningRoot,
-			SigningRoot:     cur2.SigningRoot,
-			PrevAttestation: prev2.IndexedAttestation,
-			Attestation:     cur2.IndexedAttestation,
+			Attestation_1: prev2.IndexedAttestation,
+			Attestation_2: cur2.IndexedAttestation,
 		},
 	}
 	slashings, err := srv.checkDoubleVotes(ctx, atts)
@@ -280,24 +270,14 @@ func Test_checkDoubleVotes_SlashableAttestationsOnDisk(t *testing.T) {
 	cur1 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{2})
 	prev2 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{1})
 	cur2 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{2})
-	wanted := []*slashertypes.Slashing{
+	wanted := []*ethpb.AttesterSlashing{
 		{
-			Kind:            slashertypes.DoubleVote,
-			ValidatorIndex:  types.ValidatorIndex(1),
-			TargetEpoch:     2,
-			PrevSigningRoot: prev1.SigningRoot,
-			SigningRoot:     cur1.SigningRoot,
-			PrevAttestation: prev1.IndexedAttestation,
-			Attestation:     cur1.IndexedAttestation,
+			Attestation_1: prev1.IndexedAttestation,
+			Attestation_2: cur1.IndexedAttestation,
 		},
 		{
-			Kind:            slashertypes.DoubleVote,
-			ValidatorIndex:  types.ValidatorIndex(2),
-			TargetEpoch:     2,
-			PrevSigningRoot: prev2.SigningRoot,
-			SigningRoot:     cur2.SigningRoot,
-			PrevAttestation: prev2.IndexedAttestation,
-			Attestation:     cur2.IndexedAttestation,
+			Attestation_1: prev2.IndexedAttestation,
+			Attestation_2: cur2.IndexedAttestation,
 		},
 	}
 	newAtts := []*slashertypes.IndexedAttestationWrapper{

@@ -60,6 +60,16 @@ func Test_processQueuedAttestations(t *testing.T) {
 			},
 		},
 		{
+			name: "Detects double vote, (source 1, target 2), (source 0, target 2)",
+			args: args{
+				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
+					createAttestationWrapper(t, 1, 2, []uint64{0, 1}, nil),
+					createAttestationWrapper(t, 0, 2, []uint64{0, 1}, nil),
+				},
+				currentEpoch: 4,
+			},
+		},
+		{
 			name: "Not slashable, surrounding but non-overlapping attesting indices within same validator chunk index",
 			args: args{
 				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
@@ -115,33 +125,11 @@ func Test_processQueuedAttestations(t *testing.T) {
 			shouldNotBeSlashable: true,
 		},
 		{
-			name: "Not slashable, same signing root, (source 1, target 2), (source 1, target 2)",
-			args: args{
-				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-					createAttestationWrapper(t, 1, 2, []uint64{0, 1}, []byte{1}),
-					createAttestationWrapper(t, 1, 2, []uint64{0, 1}, []byte{1}),
-				},
-				currentEpoch: 4,
-			},
-			shouldNotBeSlashable: true,
-		},
-		{
 			name: "Not slashable, (source 0, target 3), (source 2, target 4)",
 			args: args{
 				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
 					createAttestationWrapper(t, 0, 3, []uint64{0, 1}, nil),
 					createAttestationWrapper(t, 2, 4, []uint64{0, 1}, nil),
-				},
-				currentEpoch: 4,
-			},
-			shouldNotBeSlashable: true,
-		},
-		{
-			name: "Not slashable, (source 1, target 2), (source 0, target 2)",
-			args: args{
-				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-					createAttestationWrapper(t, 1, 2, []uint64{0, 1}, nil),
-					createAttestationWrapper(t, 0, 2, []uint64{0, 1}, nil),
 				},
 				currentEpoch: 4,
 			},
@@ -219,15 +207,28 @@ func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
 
 	beaconDB := dbtest.SetupDB(t)
 	ctx, cancel := context.WithCancel(context.Background())
-	params := DefaultParams()
+	slasherParams := DefaultParams()
+
+	// We process submit attestations from chunk index 0 to chunk index 1.
+	// What we want to test here is if we can proceed
+	// with processing queued attestations once the chunk index changes.
+	// For example, epochs 0 - 15 are chunk 0, epochs 16 - 31 are chunk 1, etc.
+	startEpoch := types.Epoch(slasherParams.chunkSize)
+	endEpoch := types.Epoch(slasherParams.chunkSize + 1)
+
+	currentTime := time.Now()
+	totalSlots := uint64(startEpoch) * uint64(params.BeaconConfig().SlotsPerEpoch)
+	secondsSinceGenesis := time.Duration(totalSlots * params.BeaconConfig().SecondsPerSlot)
+	genesisTime := currentTime.Add(-secondsSinceGenesis * time.Second)
 
 	s := &Service{
 		serviceCfg: &ServiceConfig{
 			Database:      beaconDB,
 			StateNotifier: &mock.MockStateNotifier{},
 		},
-		params:    params,
-		attsQueue: newAttestationsQueue(),
+		params:      slasherParams,
+		attsQueue:   newAttestationsQueue(),
+		genesisTime: genesisTime,
 	}
 	currentSlotChan := make(chan types.Slot)
 	exitChan := make(chan struct{})
@@ -235,13 +236,6 @@ func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
 		s.processQueuedAttestations(ctx, currentSlotChan)
 		exitChan <- struct{}{}
 	}()
-
-	// We process submit attestations from chunk index 0 to chunk index 1.
-	// What we want to test here is if we can proceed
-	// with processing queued attestations once the chunk index changes.
-	// For example, epochs 0 - 15 are chunk 0, epochs 16 - 31 are chunk 1, etc.
-	startEpoch := types.Epoch(params.chunkSize)
-	endEpoch := types.Epoch(params.chunkSize + 1)
 
 	for i := startEpoch; i <= endEpoch; i++ {
 		source := types.Epoch(0)
@@ -272,15 +266,23 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 
 	beaconDB := dbtest.SetupDB(t)
 	ctx, cancel := context.WithCancel(context.Background())
-	params := DefaultParams()
+	slasherParams := DefaultParams()
+
+	startEpoch := types.Epoch(slasherParams.chunkSize)
+
+	currentTime := time.Now()
+	totalSlots := uint64(startEpoch) * uint64(params.BeaconConfig().SlotsPerEpoch)
+	secondsSinceGenesis := time.Duration(totalSlots * params.BeaconConfig().SecondsPerSlot)
+	genesisTime := currentTime.Add(-secondsSinceGenesis * time.Second)
 
 	s := &Service{
 		serviceCfg: &ServiceConfig{
 			Database:      beaconDB,
 			StateNotifier: &mock.MockStateNotifier{},
 		},
-		params:    params,
-		attsQueue: newAttestationsQueue(),
+		params:      slasherParams,
+		attsQueue:   newAttestationsQueue(),
+		genesisTime: genesisTime,
 	}
 	currentSlotChan := make(chan types.Slot)
 	exitChan := make(chan struct{})
@@ -290,8 +292,8 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 	}()
 
 	// We create two attestations fully spanning chunk indices 0 and chunk 1
-	att1 := createAttestationWrapper(t, types.Epoch(params.chunkSize-2), types.Epoch(params.chunkSize), []uint64{0, 1}, nil)
-	att2 := createAttestationWrapper(t, types.Epoch(params.chunkSize-1), types.Epoch(params.chunkSize+1), []uint64{0, 1}, nil)
+	att1 := createAttestationWrapper(t, types.Epoch(slasherParams.chunkSize-2), types.Epoch(slasherParams.chunkSize), []uint64{0, 1}, nil)
+	att2 := createAttestationWrapper(t, types.Epoch(slasherParams.chunkSize-1), types.Epoch(slasherParams.chunkSize+1), []uint64{0, 1}, nil)
 
 	// We attempt to process the batch.
 	s.attsQueue = newAttestationsQueue()
