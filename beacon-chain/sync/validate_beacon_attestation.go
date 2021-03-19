@@ -79,7 +79,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		// Feed the indexed attestation to slasher if enabled. This action
 		// is done in the background to avoid adding more load to this critical code path.
 		go func() {
-			preState, err := s.chain.AttestationPreState(ctx, att)
+			preState, err := s.chain.AttestationTargetState(ctx, att.Data.Target)
 			if err != nil {
 				log.WithError(err).Error("Could not retrieve pre state")
 				traceutil.AnnotateError(span, err)
@@ -130,7 +130,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationReject
 	}
 
-	preState, err := s.chain.AttestationPreState(ctx, att)
+	preState, err := s.chain.AttestationTargetState(ctx, att.Data.Target)
 	if err != nil {
 		log.WithError(err).Error("Could not to retrieve pre state")
 		traceutil.AnnotateError(span, err)
