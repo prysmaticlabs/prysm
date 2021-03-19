@@ -74,6 +74,21 @@ func VerifyBlockSignature(beaconState *stateTrie.BeaconState, block *ethpb.Signe
 	return helpers.VerifyBlockSigningRoot(block.Block, proposerPubKey, block.Signature, domain)
 }
 
+// VerifyBlockHeaderSignature verifies the proposer signature of a beacon block header.
+func VerifyBlockHeaderSignature(beaconState *stateTrie.BeaconState, header *ethpb.SignedBeaconBlockHeader) error {
+	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
+	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
+	if err != nil {
+		return err
+	}
+	proposer, err := beaconState.ValidatorAtIndex(header.Header.ProposerIndex)
+	if err != nil {
+		return err
+	}
+	proposerPubKey := proposer.PublicKey
+	return helpers.VerifyBlockHeaderSigningRoot(header.Header, proposerPubKey, header.Signature, domain)
+}
+
 // BlockSignatureSet retrieves the block signature set from the provided block and its corresponding state.
 func BlockSignatureSet(beaconState *stateTrie.BeaconState, block *ethpb.SignedBeaconBlock) (*bls.SignatureSet, error) {
 	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())

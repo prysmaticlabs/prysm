@@ -26,7 +26,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	slasherinterface "github.com/prysmaticlabs/prysm/beacon-chain/slasher/iface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared"
@@ -52,20 +51,6 @@ var pendingBlockExpTime = time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(
 
 // Config to set up the regular sync service.
 type Config struct {
-<<<<<<< HEAD
-	P2P                 p2p.P2P
-	DB                  db.NoHeadAccessDatabase
-	AttPool             attestations.Pool
-	ExitPool            voluntaryexits.PoolManager
-	SlashingPool        slashings.PoolManager
-	Chain               blockchainService
-	InitialSync         Checker
-	StateNotifier       statefeed.Notifier
-	BlockNotifier       blockfeed.Notifier
-	AttestationNotifier operation.Notifier
-	SlashingChecker     slasherinterface.SlashingChecker
-	StateGen            *stategen.State
-=======
 	P2P                     p2p.P2P
 	DB                      db.NoHeadAccessDatabase
 	AttPool                 attestations.Pool
@@ -78,8 +63,8 @@ type Config struct {
 	AttestationNotifier     operation.Notifier
 	SlasherAttestationsFeed *event.Feed
 	SlasherBlockHeadersFeed *event.Feed
+	SlashingChecker         SlashingChecker
 	StateGen                *stategen.State
->>>>>>> 8fff0b6ca7f658456b90a08111973a9481cd3271
 }
 
 // This defines the interface for interacting with block chain service
@@ -92,6 +77,12 @@ type blockchainService interface {
 	blockchain.TimeFetcher
 	blockchain.GenesisFetcher
 	blockchain.CanonicalFetcher
+}
+
+// SlashingChecker is an interface for defining services that the beacon node may interact with to provide slashing data.
+type SlashingChecker interface {
+	IsSlashableProposal(ctx context.Context, proposal *ethpb.SignedBeaconBlockHeader) (*ethpb.ProposerSlashing, error)
+	IsSlashableAttestation(ctx context.Context, attestation *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error)
 }
 
 // Service is responsible for handling all run time p2p related operations as the
@@ -132,7 +123,7 @@ type Service struct {
 	stateGen                  *stategen.State
 	slasherAttestationsFeed   *event.Feed
 	slasherBlockHeadersFeed   *event.Feed
-	slashingChecker           slasherinterface.SlashingChecker
+	slashingChecker           SlashingChecker
 }
 
 // NewService initializes new regular sync service.
@@ -142,27 +133,6 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 	rLimiter := newRateLimiter(cfg.P2P)
 	ctx, cancel := context.WithCancel(ctx)
 	r := &Service{
-<<<<<<< HEAD
-		ctx:                  ctx,
-		cancel:               cancel,
-		db:                   cfg.DB,
-		p2p:                  cfg.P2P,
-		attPool:              cfg.AttPool,
-		exitPool:             cfg.ExitPool,
-		slashingPool:         cfg.SlashingPool,
-		chainStarted:         abool.New(),
-		chain:                cfg.Chain,
-		initialSync:          cfg.InitialSync,
-		attestationNotifier:  cfg.AttestationNotifier,
-		slotToPendingBlocks:  c,
-		seenPendingBlocks:    make(map[[32]byte]bool),
-		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
-		stateNotifier:        cfg.StateNotifier,
-		blockNotifier:        cfg.BlockNotifier,
-		stateGen:             cfg.StateGen,
-		slashingChecker:      cfg.SlashingChecker,
-		rateLimiter:          rLimiter,
-=======
 		ctx:                     ctx,
 		cancel:                  cancel,
 		db:                      cfg.DB,
@@ -182,8 +152,8 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		stateGen:                cfg.StateGen,
 		slasherAttestationsFeed: cfg.SlasherAttestationsFeed,
 		slasherBlockHeadersFeed: cfg.SlasherBlockHeadersFeed,
+		slashingChecker:         cfg.SlashingChecker,
 		rateLimiter:             rLimiter,
->>>>>>> 8fff0b6ca7f658456b90a08111973a9481cd3271
 	}
 
 	go r.registerHandlers()

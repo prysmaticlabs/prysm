@@ -111,13 +111,9 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 				log.WithError(err).Error("Could not check slashable attestations")
 				continue
 			}
-
 			for _, slashing := range slashings {
-				s.serviceCfg.AttesterSlashingsFeed.Send(&ethpb.AttesterSlashing{
-					Attestation_1: slashing.PrevAttestation,
-					Attestation_2: slashing.Attestation,
-				})
-				logSlashingEvent(slashing)
+				s.serviceCfg.AttesterSlashingsFeed.Send(slashing)
+				logAttesterSlashing(slashing)
 			}
 
 			processedAttestationsTotal.Add(float64(len(validAtts)))

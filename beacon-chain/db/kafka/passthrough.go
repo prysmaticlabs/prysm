@@ -3,8 +3,6 @@ package kafka
 import (
 	"context"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
-
 	"github.com/ethereum/go-ethereum/common"
 	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -316,7 +314,7 @@ func (e Exporter) SaveAttestationRecordsForValidators(
 // CheckDoubleBlockProposals -- passthrough
 func (e Exporter) CheckDoubleBlockProposals(
 	ctx context.Context, proposals []*slashertypes.SignedBlockHeaderWrapper,
-) ([]*ethpb.ProposerSlashing, error) {
+) ([]*eth.ProposerSlashing, error) {
 	return e.db.CheckDoubleBlockProposals(ctx, proposals)
 }
 

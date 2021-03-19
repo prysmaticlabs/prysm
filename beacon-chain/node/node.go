@@ -609,6 +609,8 @@ func (b *BeaconNode) registerSlasherService() error {
 		ProposerSlashingsFeed:   b.proposerSlashingsFeed,
 		Database:                b.db,
 		StateNotifier:           b,
+		StateFetcher:            chainService,
+		StateGen:                b.stateGen,
 	})
 	if err != nil {
 		return err

@@ -19,6 +19,7 @@ func (s *Service) detectProposerSlashings(
 	defer span.End()
 	// We check if there are any slashable double proposals in the input list
 	// of proposals with respect to each other.
+	slashings := make([]*ethpb.ProposerSlashing, 0)
 	existingProposals := make(map[string]*slashertypes.SignedBlockHeaderWrapper)
 	for i, proposal := range proposedBlocks {
 		key := proposalKey(proposal)
@@ -33,6 +34,7 @@ func (s *Service) detectProposerSlashings(
 				Header_1: existingProposal.SignedBeaconBlockHeader,
 				Header_2: proposedBlocks[i].SignedBeaconBlockHeader,
 			}
+			slashings = append(slashings, slashing)
 			s.serviceCfg.ProposerSlashingsFeed.Send(slashing)
 		}
 	}
@@ -44,7 +46,8 @@ func (s *Service) detectProposerSlashings(
 	if err := s.saveSafeProposals(ctx, proposedBlocks, proposerSlashings); err != nil {
 		return nil, errors.Wrap(err, "could not save safe proposals")
 	}
-	return proposerSlashings, nil
+	slashings = append(slashings, proposerSlashings...)
+	return slashings, nil
 }
 
 // Check for double proposals in our database given a list of incoming block proposals.
