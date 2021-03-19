@@ -26,6 +26,7 @@ go_library(
         "//shared/abool:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/event:go_default_library",
+        "//shared/featureconfig:go_default_library",
         "//shared/fileutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/progressutil:go_default_library",

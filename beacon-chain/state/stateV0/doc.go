@@ -1,4 +1,4 @@
-// Package state defines how the beacon chain state for eth2
+// Package stateV0 defines how the beacon chain state for eth2
 // functions in the running beacon node, using an advanced,
 // immutable implementation of the state data structure.
 //
