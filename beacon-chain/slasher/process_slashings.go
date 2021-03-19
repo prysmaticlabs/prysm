@@ -26,7 +26,9 @@ func (s *Service) processAttesterSlashings(ctx context.Context, slashings []*eth
 		}
 		// TODO(#8331): Log the slashing event.
 
-		// TODO(#8331) Submit to the slashing operations pool.
+		if err := s.serviceCfg.SlashingPoolInserter.InsertAttesterSlashing(ctx, nil, sl); err != nil {
+			log.WithError(err).Error("Could not insert attester slashing into operations pool")
+		}
 	}
 }
 
@@ -48,7 +50,9 @@ func (s *Service) processProposerSlashings(ctx context.Context, slashings []*eth
 		}
 		// TODO(#8331): Log the slashing event.
 
-		// TODO(#8331) Submit to the slashing operations pool.
+		if err := s.serviceCfg.SlashingPoolInserter.InsertProposerSlashing(ctx, nil, sl); err != nil {
+			log.WithError(err).Error("Could not insert attester slashing into operations pool")
+		}
 	}
 }
 
