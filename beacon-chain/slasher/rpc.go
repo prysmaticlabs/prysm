@@ -7,8 +7,8 @@ import (
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 )
 
-// IsSlashableBlock comapres the given block to the slasher database and returns any double block
-// proposals that are considered slashable.
+// IsSlashableBlock checks if an input block header is slashable
+// with respect to historical block proposal data.
 func (s *Service) IsSlashableBlock(
 	ctx context.Context, block *ethpb.SignedBeaconBlockHeader,
 ) (*ethpb.ProposerSlashing, error) {
@@ -30,8 +30,8 @@ func (s *Service) IsSlashableBlock(
 	return proposerSlashings[0], nil
 }
 
-// IsSlashableAttestation comapres the given indexed attestation to the slasher database and returns any
-// slashing proofs if they exist.
+// IsSlashableAttestation checks if an input indexed attestation is slashable
+// with respect to historical attestation data.
 func (s *Service) IsSlashableAttestation(
 	ctx context.Context, attestation *ethpb.IndexedAttestation,
 ) ([]*ethpb.AttesterSlashing, error) {
@@ -43,7 +43,7 @@ func (s *Service) IsSlashableAttestation(
 		IndexedAttestation: attestation,
 		SigningRoot:        dataRoot,
 	}
-	attesterSlashings, err := s.CheckSlashableAttestations(ctx, []*slashertypes.IndexedAttestationWrapper{indexedAttWrapper})
+	attesterSlashings, err := s.checkSlashableAttestations(ctx, []*slashertypes.IndexedAttestationWrapper{indexedAttWrapper})
 	if err != nil {
 		return nil, err
 	}

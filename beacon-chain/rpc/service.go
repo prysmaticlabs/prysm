@@ -34,7 +34,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/nodev1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/slasher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/validator"
-	slasher2 "github.com/prysmaticlabs/prysm/beacon-chain/slasher"
+	slasherservice "github.com/prysmaticlabs/prysm/beacon-chain/slasher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	chainSync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -74,7 +74,7 @@ type Service struct {
 	attestationsPool        attestations.Pool
 	exitPool                voluntaryexits.PoolManager
 	slashingsPool           slashings.PoolManager
-	slashingChecker         slasher2.SlashingChecker
+	slashingChecker         slasherservice.SlashingChecker
 	syncService             chainSync.Checker
 	host                    string
 	port                    string
@@ -127,7 +127,7 @@ type Config struct {
 	AttestationsPool        attestations.Pool
 	ExitPool                voluntaryexits.PoolManager
 	SlashingsPool           slashings.PoolManager
-	SlashingChecker         slasher2.SlashingChecker
+	SlashingChecker         slasherservice.SlashingChecker
 	SyncService             chainSync.Checker
 	Broadcaster             p2p.Broadcaster
 	PeersFetcher            p2p.PeersProvider
