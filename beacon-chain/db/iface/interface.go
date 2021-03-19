@@ -99,6 +99,11 @@ type HeadAccessDatabase interface {
 	// Block related methods.
 	HeadBlock(ctx context.Context) (*eth.SignedBeaconBlock, error)
 	SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
+
+	// Genesis operations.
+	LoadGenesis(ctx context.Context, r io.Reader) error
+	SaveGenesisData(ctx context.Context, state iface.BeaconState) error
+	EnsureEmbeddedGenesis(ctx context.Context) error
 }
 
 // Database interface with full access.
