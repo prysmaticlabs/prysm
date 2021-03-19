@@ -6,7 +6,8 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -54,86 +55,35 @@ func (h *stateRootHasher) validatorRegistryRoot(validators []*ethpb.Validator) (
 }
 
 func (h *stateRootHasher) validatorRoot(hasher htrutils.HashFn, validator *ethpb.Validator) ([32]byte, error) {
-	// Validator marshaling for caching.
-	enc := make([]byte, 122)
-	fieldRoots := make([][32]byte, 2, 8)
-
-	if validator != nil {
-		pubkey := bytesutil.ToBytes48(validator.PublicKey)
-		copy(enc[0:48], pubkey[:])
-		withdrawCreds := bytesutil.ToBytes32(validator.WithdrawalCredentials)
-		copy(enc[48:80], withdrawCreds[:])
-		effectiveBalanceBuf := [32]byte{}
-		binary.LittleEndian.PutUint64(effectiveBalanceBuf[:8], validator.EffectiveBalance)
-		copy(enc[80:88], effectiveBalanceBuf[:8])
-		if validator.Slashed {
-			enc[88] = uint8(1)
-		} else {
-			enc[88] = uint8(0)
-		}
-		activationEligibilityBuf := [32]byte{}
-		binary.LittleEndian.PutUint64(activationEligibilityBuf[:8], uint64(validator.ActivationEligibilityEpoch))
-		copy(enc[89:97], activationEligibilityBuf[:8])
-
-		activationBuf := [32]byte{}
-		binary.LittleEndian.PutUint64(activationBuf[:8], uint64(validator.ActivationEpoch))
-		copy(enc[97:105], activationBuf[:8])
-
-		exitBuf := [32]byte{}
-		binary.LittleEndian.PutUint64(exitBuf[:8], uint64(validator.ExitEpoch))
-		copy(enc[105:113], exitBuf[:8])
-
-		withdrawalBuf := [32]byte{}
-		binary.LittleEndian.PutUint64(withdrawalBuf[:8], uint64(validator.WithdrawableEpoch))
-		copy(enc[113:121], withdrawalBuf[:8])
-
-		// Check if it exists in cache:
-		if h.rootsCache != nil {
-			if found, ok := h.rootsCache.Get(string(enc)); found != nil && ok {
-				return found.([32]byte), nil
-			}
-		}
-
-		// Public key.
-		pubKeyChunks, err := htrutils.Pack([][]byte{pubkey[:]})
-		if err != nil {
-			return [32]byte{}, err
-		}
-		pubKeyRoot, err := htrutils.BitwiseMerkleize(hasher, pubKeyChunks, uint64(len(pubKeyChunks)), uint64(len(pubKeyChunks)))
-		if err != nil {
-			return [32]byte{}, err
-		}
-		fieldRoots[0] = pubKeyRoot
-
-		// Withdrawal credentials.
-		copy(fieldRoots[1][:], withdrawCreds[:])
-
-		// Effective balance.
-		fieldRoots = append(fieldRoots, effectiveBalanceBuf)
-
-		// Slashed.
-		slashBuf := [32]byte{}
-		if validator.Slashed {
-			slashBuf[0] = uint8(1)
-		} else {
-			slashBuf[0] = uint8(0)
-		}
-		fieldRoots = append(
-			fieldRoots,
-			slashBuf,
-			activationEligibilityBuf,
-			activationBuf,
-			exitBuf,
-			withdrawalBuf,
-		)
+	if validator == nil {
+		return [32]byte{}, errors.New("nil validator")
 	}
 
-	valRoot, err := htrutils.BitwiseMerkleizeArrays(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+	enc := stateutil.ValidatorEncKey(validator)
+	// Check if it exists in cache:
+	if h.rootsCache != nil {
+		if found, ok := h.rootsCache.Get(string(enc)); found != nil && ok {
+			return found.([32]byte), nil
+		}
+	}
+
+	valRoot, err := stateutil.ValidatorRootWithHasher(hasher, validator)
 	if err != nil {
 		return [32]byte{}, err
 	}
+
 	if h.rootsCache != nil {
 		h.rootsCache.Set(string(enc), valRoot, 32)
 	}
 	return valRoot, nil
+}
+
+// ValidatorRegistryRoot computes the HashTreeRoot Merkleization of
+// a list of validator structs according to the eth2
+// Simple Serialize specification.
+func ValidatorRegistryRoot(vals []*ethpb.Validator) ([32]byte, error) {
+	if featureconfig.Get().EnableSSZCache {
+		return cachedHasher.validatorRegistryRoot(vals)
+	}
+	return nocachedHasher.validatorRegistryRoot(vals)
 }

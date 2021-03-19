@@ -110,14 +110,14 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(state *pb.BeaconState) ([]
 	fieldRoots[7] = historicalRootsRt[:]
 
 	// Eth1Data data structure root.
-	eth1HashTreeRoot, err := Eth1Root(hasher, state.Eth1Data)
+	eth1HashTreeRoot, err := eth1Root(hasher, state.Eth1Data)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute eth1data merkleization")
 	}
 	fieldRoots[8] = eth1HashTreeRoot[:]
 
 	// Eth1DataVotes slice root.
-	eth1VotesRoot, err := Eth1DataVotesRoot(state.Eth1DataVotes)
+	eth1VotesRoot, err := eth1DataVotesRoot(state.Eth1DataVotes)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute eth1data votes merkleization")
 	}

@@ -9,7 +9,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -272,7 +272,7 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 	case fork:
 		return htrutils.ForkRoot(b.state.Fork)
 	case latestBlockHeader:
-		return stateV0.BlockHeaderRoot(b.state.LatestBlockHeader)
+		return stateutil.BlockHeaderRoot(b.state.LatestBlockHeader)
 	case blockRoots:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(field, b.state.BlockRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
@@ -298,7 +298,7 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 	case historicalRoots:
 		return htrutils.HistoricalRootsRoot(b.state.HistoricalRoots)
 	case eth1Data:
-		return stateV0.Eth1Root(hasher, b.state.Eth1Data)
+		return eth1Root(hasher, b.state.Eth1Data)
 	case eth1DataVotes:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(field, b.state.Eth1DataVotes, uint64(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod))))
@@ -322,7 +322,7 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 		}
 		return b.recomputeFieldTrie(validators, b.state.Validators)
 	case balances:
-		return stateV0.ValidatorBalancesRoot(b.state.Balances)
+		return stateutil.ValidatorBalancesRoot(b.state.Balances)
 	case randaoMixes:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(field, b.state.RandaoMixes, uint64(params.BeaconConfig().EpochsPerHistoricalVector))

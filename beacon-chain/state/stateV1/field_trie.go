@@ -7,9 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
@@ -204,7 +202,7 @@ func handleEth1DataSlice(val []*ethpb.Eth1Data, indices []uint64, convertAll boo
 	roots := make([][32]byte, 0, length)
 	hasher := hashutil.CustomSHA256Hasher()
 	rootCreator := func(input *ethpb.Eth1Data) error {
-		newRoot, err := stateV0.Eth1Root(hasher, input)
+		newRoot, err := eth1Root(hasher, input)
 		if err != nil {
 			return err
 		}
@@ -242,7 +240,7 @@ func handleValidatorSlice(val []*ethpb.Validator, indices []uint64, convertAll b
 	roots := make([][32]byte, 0, length)
 	hasher := hashutil.CustomSHA256Hasher()
 	rootCreator := func(input *ethpb.Validator) error {
-		newRoot, err := stateV0.ValidatorRoot(hasher, input)
+		newRoot, err := stateutil.ValidatorRootWithHasher(hasher, input)
 		if err != nil {
 			return err
 		}
@@ -262,44 +260,6 @@ func handleValidatorSlice(val []*ethpb.Validator, indices []uint64, convertAll b
 		for _, idx := range indices {
 			if idx > uint64(len(val))-1 {
 				return nil, fmt.Errorf("index %d greater than number of validators %d", idx, len(val))
-			}
-			err := rootCreator(val[idx])
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-	return roots, nil
-}
-
-func handlePendingAttestation(val []*pb.PendingAttestation, indices []uint64, convertAll bool) ([][32]byte, error) {
-	length := len(indices)
-	if convertAll {
-		length = len(val)
-	}
-	roots := make([][32]byte, 0, length)
-	hasher := hashutil.CustomSHA256Hasher()
-	rootCreator := func(input *pb.PendingAttestation) error {
-		newRoot, err := stateV0.PendingAttestationRoot(hasher, input)
-		if err != nil {
-			return err
-		}
-		roots = append(roots, newRoot)
-		return nil
-	}
-	if convertAll {
-		for i := range val {
-			err := rootCreator(val[i])
-			if err != nil {
-				return nil, err
-			}
-		}
-		return roots, nil
-	}
-	if len(val) > 0 {
-		for _, idx := range indices {
-			if idx > uint64(len(val))-1 {
-				return nil, fmt.Errorf("index %d greater than number of pending attestations %d", idx, len(val))
 			}
 			err := rootCreator(val[idx])
 			if err != nil {

@@ -210,7 +210,7 @@ func handleEth1DataSlice(val []*ethpb.Eth1Data, indices []uint64, convertAll boo
 	roots := make([][32]byte, 0, length)
 	hasher := hashutil.CustomSHA256Hasher()
 	rootCreator := func(input *ethpb.Eth1Data) error {
-		newRoot, err := stateutil.Eth1DataRootWithHasher(hasher, input)
+		newRoot, err := eth1Root(hasher, input)
 		if err != nil {
 			return err
 		}

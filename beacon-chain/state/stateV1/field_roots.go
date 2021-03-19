@@ -6,7 +6,7 @@ import (
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -82,7 +82,7 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(state *pb.BeaconStateV1) (
 	fieldRoots[3] = forkHashTreeRoot[:]
 
 	// BeaconBlockHeader data structure root.
-	headerHashTreeRoot, err := stateV0.BlockHeaderRoot(state.LatestBlockHeader)
+	headerHashTreeRoot, err := stateutil.BlockHeaderRoot(state.LatestBlockHeader)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute block header merkleization")
 	}
@@ -110,14 +110,14 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(state *pb.BeaconStateV1) (
 	fieldRoots[7] = historicalRootsRt[:]
 
 	// Eth1Data data structure root.
-	eth1HashTreeRoot, err := stateV0.Eth1Root(hasher, state.Eth1Data)
+	eth1HashTreeRoot, err := eth1Root(hasher, state.Eth1Data)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute eth1data merkleization")
 	}
 	fieldRoots[8] = eth1HashTreeRoot[:]
 
 	// Eth1DataVotes slice root.
-	eth1VotesRoot, err := stateV0.Eth1DataVotesRoot(state.Eth1DataVotes)
+	eth1VotesRoot, err := eth1DataVotesRoot(state.Eth1DataVotes)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute eth1data votes merkleization")
 	}
@@ -137,7 +137,7 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(state *pb.BeaconStateV1) (
 	fieldRoots[11] = validatorsRoot[:]
 
 	// Balances slice root.
-	balancesRoot, err := stateV0.ValidatorBalancesRoot(state.Balances)
+	balancesRoot, err := stateutil.ValidatorBalancesRoot(state.Balances)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute validator balances merkleization")
 	}

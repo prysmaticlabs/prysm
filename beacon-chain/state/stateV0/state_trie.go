@@ -264,7 +264,7 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 	case historicalRoots:
 		return htrutils.HistoricalRootsRoot(b.state.HistoricalRoots)
 	case eth1Data:
-		return stateutil.Eth1DataRootWithHasher(hasher, b.state.Eth1Data)
+		return eth1Root(hasher, b.state.Eth1Data)
 	case eth1DataVotes:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(field, b.state.Eth1DataVotes, uint64(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod))))
