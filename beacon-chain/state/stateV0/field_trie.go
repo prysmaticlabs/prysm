@@ -210,7 +210,7 @@ func handleEth1DataSlice(val []*ethpb.Eth1Data, indices []uint64, convertAll boo
 	roots := make([][32]byte, 0, length)
 	hasher := hashutil.CustomSHA256Hasher()
 	rootCreator := func(input *ethpb.Eth1Data) error {
-		newRoot, err := Eth1Root(hasher, input)
+		newRoot, err := stateutil.Eth1DataRootWithHasher(hasher, input)
 		if err != nil {
 			return err
 		}
@@ -248,7 +248,7 @@ func handleValidatorSlice(val []*ethpb.Validator, indices []uint64, convertAll b
 	roots := make([][32]byte, 0, length)
 	hasher := hashutil.CustomSHA256Hasher()
 	rootCreator := func(input *ethpb.Validator) error {
-		newRoot, err := ValidatorRoot(hasher, input)
+		newRoot, err := stateutil.ValidatorRootWithHasher(hasher, input)
 		if err != nil {
 			return err
 		}
@@ -286,7 +286,7 @@ func handlePendingAttestation(val []*pb.PendingAttestation, indices []uint64, co
 	roots := make([][32]byte, 0, length)
 	hasher := hashutil.CustomSHA256Hasher()
 	rootCreator := func(input *pb.PendingAttestation) error {
-		newRoot, err := PendingAttestationRoot(hasher, input)
+		newRoot, err := stateutil.PendingAttRootWithHasher(hasher, input)
 		if err != nil {
 			return err
 		}

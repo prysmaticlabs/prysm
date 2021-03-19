@@ -56,6 +56,7 @@ go_test(
     srcs = [
         "blocks_test.go",
         "config_test.go",
+        "init_test.go",
         "pool_test.go",
         "server_test.go",
         "state_test.go",

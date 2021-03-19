@@ -343,6 +343,31 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
 	}
 
 	b.depositCache = depositCache
+
+	if cliCtx.IsSet(flags.GenesisStatePath.Name) {
+		r, err := os.Open(cliCtx.String(flags.GenesisStatePath.Name))
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if err := r.Close(); err != nil {
+				log.WithError(err).Error("Failed to close genesis file")
+			}
+		}()
+		if err := b.db.LoadGenesis(b.ctx, r); err != nil {
+			if err == db.ErrExistingGenesisState {
+				return errors.New("Genesis state flag specified but a genesis state " +
+					"exists already. Run again with --clear-db and/or ensure you are using the " +
+					"appropriate testnet flag to load the given genesis state.")
+			}
+			return errors.Wrap(err, "could not load genesis from file")
+		}
+	}
+
+	if err := b.db.EnsureEmbeddedGenesis(b.ctx); err != nil {
+		return err
+	}
+
 	return nil
 }
 

@@ -15,7 +15,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -32,7 +31,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -336,38 +334,20 @@ func (s *Service) Status() error {
 
 // This gets called when beacon chain is first initialized to save genesis data (state, block, and more) in db.
 func (s *Service) saveGenesisData(ctx context.Context, genesisState iface.BeaconState) error {
-	stateRoot, err := genesisState.HashTreeRoot(ctx)
-	if err != nil {
-		return err
+	if err := s.cfg.BeaconDB.SaveGenesisData(ctx, genesisState); err != nil {
+		return errors.Wrap(err, "could not save genesis data")
 	}
-	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
+	genesisBlk, err := s.cfg.BeaconDB.GenesisBlock(ctx)
+	if err != nil || genesisBlk == nil {
+		return fmt.Errorf("could not load genesis block: %v", err)
+	}
 	genesisBlkRoot, err := genesisBlk.Block.HashTreeRoot()
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block root")
 	}
+
 	s.genesisRoot = genesisBlkRoot
-
-	if err := s.cfg.BeaconDB.SaveBlock(ctx, genesisBlk); err != nil {
-		return errors.Wrap(err, "could not save genesis block")
-	}
-	if err := s.cfg.BeaconDB.SaveState(ctx, genesisState, genesisBlkRoot); err != nil {
-		return errors.Wrap(err, "could not save genesis state")
-	}
-	if err := s.cfg.BeaconDB.SaveStateSummary(ctx, &pb.StateSummary{
-		Slot: 0,
-		Root: genesisBlkRoot[:],
-	}); err != nil {
-		return err
-	}
-
-	s.cfg.StateGen.SaveFinalizedState(0, genesisBlkRoot, genesisState)
-
-	if err := s.cfg.BeaconDB.SaveHeadBlockRoot(ctx, genesisBlkRoot); err != nil {
-		return errors.Wrap(err, "could not save head block root")
-	}
-	if err := s.cfg.BeaconDB.SaveGenesisBlockRoot(ctx, genesisBlkRoot); err != nil {
-		return errors.Wrap(err, "could not save genesis block root")
-	}
+	s.cfg.StateGen.SaveFinalizedState(0 /*slot*/, genesisBlkRoot, genesisState)
 
 	// Finalized checkpoint at genesis is a zero hash.
 	genesisCheckpoint := genesisState.FinalizedCheckpoint()
@@ -392,7 +372,6 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState iface.Beacon
 	}
 
 	s.setHead(genesisBlkRoot, genesisBlk, genesisState)
-
 	return nil
 }
 
