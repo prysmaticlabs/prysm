@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -46,12 +47,26 @@ func TestGetStateRoot(t *testing.T) {
 	})
 
 	t.Run("Genesis", func(t *testing.T) {
+		params.SetupTestConfigCleanup(t)
+		cfg := params.BeaconConfig()
+		cfg.ConfigName = "test"
+		params.OverrideBeaconConfig(cfg)
+
 		db := testDB.SetupDB(t)
 		b := testutil.NewBeaconBlock()
-		b.Block.StateRoot = bytesutil.PadTo([]byte("genesis"), 32)
+		b.Block.StateRoot = bytesutil.PadTo([]byte("foo"), 32)
 		require.NoError(t, db.SaveBlock(ctx, b))
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
+
+		state, err := testutil.NewBeaconState(func(state *pb.BeaconState) error {
+			state.BlockRoots[0] = r[:]
+			return nil
+		})
+		require.NoError(t, err)
+		stateRoot, err := state.HashTreeRoot(ctx)
+		require.NoError(t, err)
+
 		require.NoError(t, db.SaveStateSummary(ctx, &pb.StateSummary{Root: r[:]}))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, r))
 		require.NoError(t, db.SaveState(ctx, state, r))
