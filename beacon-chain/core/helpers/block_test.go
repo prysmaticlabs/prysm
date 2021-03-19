@@ -7,7 +7,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -61,7 +61,7 @@ func TestBlockRootAtSlot_CorrectBlockRoot(t *testing.T) {
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			s.Slot = tt.stateSlot
-			state, err := beaconstate.InitializeFromProto(s)
+			state, err := stateV0.InitializeFromProto(s)
 			require.NoError(t, err)
 			wantedSlot := tt.slot
 			result, err := helpers.BlockRootAtSlot(state, wantedSlot)
@@ -111,7 +111,7 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 	}
 	for _, tt := range tests {
 		state.Slot = tt.stateSlot
-		s, err := beaconstate.InitializeFromProto(state)
+		s, err := stateV0.InitializeFromProto(state)
 		require.NoError(t, err)
 		_, err = helpers.BlockRootAtSlot(s, tt.slot)
 		assert.ErrorContains(t, tt.expectedErr, err)

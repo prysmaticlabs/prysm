@@ -1,7 +1,7 @@
 package params
 
 const (
-	Mainnet configName = iota
+	Mainnet ConfigName = iota
 	EndToEnd
 	Pyrmont
 	Toledo
@@ -9,7 +9,7 @@ const (
 )
 
 // ConfigNames provides network configuration names.
-var ConfigNames = map[configName]string{
+var ConfigNames = map[ConfigName]string{
 	Mainnet:  "mainnet",
 	EndToEnd: "end-to-end",
 	Pyrmont:  "pyrmont",
@@ -17,4 +17,5 @@ var ConfigNames = map[configName]string{
 	Prater:   "prater",
 }
 
-type configName = int
+// ConfigName enum describes the type of known network in use.
+type ConfigName = int

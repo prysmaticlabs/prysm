@@ -20,7 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
@@ -38,7 +38,7 @@ func TestServer_ListAttestations_NoResults(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
-	st, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
+	st, err := stateV0.InitializeFromProto(&pbp2p.BeaconState{
 		Slot: 0,
 	})
 	require.NoError(t, err)
@@ -66,7 +66,7 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
-	st, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
+	st, err := stateV0.InitializeFromProto(&pbp2p.BeaconState{
 		Slot: 0,
 	})
 	require.NoError(t, err)

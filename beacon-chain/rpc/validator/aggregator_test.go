@@ -13,8 +13,8 @@ import (
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
@@ -31,7 +31,7 @@ func TestSubmitAggregateAndProof_Syncing(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
-	s := &beaconstate.BeaconState{}
+	s := &stateV0.BeaconState{}
 
 	aggregatorServer := &Server{
 		HeadFetcher: &mock.ChainService{State: s},
@@ -49,7 +49,7 @@ func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
-	s, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
+	s, err := stateV0.InitializeFromProto(&pbp2p.BeaconState{
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
 	require.NoError(t, err)
@@ -73,7 +73,7 @@ func TestSubmitAggregateAndProof_IsAggregatorAndNoAtts(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
-	s, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
+	s, err := stateV0.InitializeFromProto(&pbp2p.BeaconState{
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		Validators: []*ethpb.Validator{
 			{PublicKey: pubKey(0)},

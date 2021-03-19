@@ -14,8 +14,8 @@ import (
 	jsoniter "github.com/json-iterator/go"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"gopkg.in/d4l3k/messagediff.v1"
@@ -93,7 +93,7 @@ func RunBlockOperationTest(
 	if err := preStateBase.UnmarshalSSZ(preBeaconStateFile); err != nil {
 		t.Fatalf("Failed to unmarshal: %v", err)
 	}
-	preState, err := beaconstate.InitializeFromProto(preStateBase)
+	preState, err := stateV0.InitializeFromProto(preStateBase)
 	require.NoError(t, err)
 
 	// If the post.ssz is not present, it means the test should fail on our end.
@@ -119,7 +119,7 @@ func RunBlockOperationTest(
 		if err := postBeaconState.UnmarshalSSZ(postBeaconStateFile); err != nil {
 			t.Fatalf("Failed to unmarshal: %v", err)
 		}
-		pbState, err := beaconstate.ProtobufBeaconState(beaconState.InnerStateUnsafe())
+		pbState, err := stateV0.ProtobufBeaconState(beaconState.InnerStateUnsafe())
 		require.NoError(t, err)
 		if !proto.Equal(pbState, postBeaconState) {
 			diff, _ := messagediff.PrettyDiff(beaconState.InnerStateUnsafe(), postBeaconState)
@@ -150,7 +150,7 @@ func RunEpochOperationTest(
 	if err := preBeaconStateBase.UnmarshalSSZ(preBeaconStateFile); err != nil {
 		t.Fatalf("Failed to unmarshal: %v", err)
 	}
-	preBeaconState, err := beaconstate.InitializeFromProto(preBeaconStateBase)
+	preBeaconState, err := stateV0.InitializeFromProto(preBeaconStateBase)
 	require.NoError(t, err)
 
 	// If the post.ssz is not present, it means the test should fail on our end.
@@ -173,7 +173,7 @@ func RunEpochOperationTest(
 			t.Fatalf("Failed to unmarshal: %v", err)
 		}
 
-		pbState, err := beaconstate.ProtobufBeaconState(beaconState.InnerStateUnsafe())
+		pbState, err := stateV0.ProtobufBeaconState(beaconState.InnerStateUnsafe())
 		require.NoError(t, err)
 		if !proto.Equal(pbState, postBeaconState) {
 			diff, _ := messagediff.PrettyDiff(beaconState.InnerStateUnsafe(), postBeaconState)
