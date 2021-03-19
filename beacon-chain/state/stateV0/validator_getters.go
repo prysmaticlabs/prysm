@@ -83,7 +83,7 @@ func (v ReadOnlyValidator) Slashed() bool {
 	return v.validator.Slashed
 }
 
-// CopyValidator returns the copy of the read only validator.
+// IsNil returns true if the validator is nil.
 func (v ReadOnlyValidator) IsNil() bool {
 	return v.validator == nil
 }
