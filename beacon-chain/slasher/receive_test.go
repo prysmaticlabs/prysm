@@ -172,9 +172,8 @@ func Test_processQueuedAttestations(t *testing.T) {
 
 			s := &Service{
 				serviceCfg: &ServiceConfig{
-					Database:              beaconDB,
-					StateNotifier:         &mock.MockStateNotifier{},
-					AttesterSlashingsFeed: new(event.Feed),
+					Database:      beaconDB,
+					StateNotifier: &mock.MockStateNotifier{},
 				},
 				params:      DefaultParams(),
 				attsQueue:   newAttestationsQueue(),

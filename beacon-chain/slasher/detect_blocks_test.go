@@ -10,7 +10,6 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -22,9 +21,8 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Service{
 		serviceCfg: &ServiceConfig{
-			Database:              beaconDB,
-			StateNotifier:         &mock.MockStateNotifier{},
-			ProposerSlashingsFeed: new(event.Feed),
+			Database:      beaconDB,
+			StateNotifier: &mock.MockStateNotifier{},
 		},
 		params:    DefaultParams(),
 		blksQueue: newBlocksQueue(),
