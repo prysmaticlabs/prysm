@@ -147,6 +147,7 @@ func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan typ
 			}
 
 			s.recordDoubleProposals(proposerSlashings)
+
 			processedBlocksTotal.Add(float64(len(blocks)))
 		case <-ctx.Done():
 			return
