@@ -349,7 +349,7 @@ func (is *infostream) generatePendingValidatorInfo(info *ethpb.ValidatorInfo) (*
 			deposit = &eth1Deposit{}
 			is.eth1Deposits.Set(key, deposit, cache.DefaultExpiration)
 		} else {
-			beacon-chain/db/iface/interface.godeposit = &eth1Deposit{
+			deposit = &eth1Deposit{
 				block: eth1BlockNumber,
 				data:  fetchedDeposit.Data,
 			}

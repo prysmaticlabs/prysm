@@ -15,8 +15,6 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/slasher"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -80,6 +78,7 @@ type BeaconNode struct {
 	slasherAttestationsFeed *event.Feed
 	proposerSlashingsFeed   *event.Feed
 	attesterSlashingsFeed   *event.Feed
+	slashingChecker         slasher.SlashingChecker
 	forkChoiceStore         forkchoice.ForkChoicer
 	stateGen                *stategen.State
 }
@@ -558,6 +557,11 @@ func (b *BeaconNode) registerSyncService() error {
 
 	var initSync *initialsync.Service
 	if err := b.services.FetchService(&initSync); err != nil {
+		return err
+	}
+
+	var slasherService *slasher.Service
+	if err := b.services.FetchService(&slasherService); err != nil {
 		return err
 	}
 

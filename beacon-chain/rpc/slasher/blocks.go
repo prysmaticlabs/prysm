@@ -3,9 +3,6 @@ package slasher
 import (
 	"context"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
 
@@ -14,5 +11,9 @@ import (
 func (s *Server) IsSlashableBlock(
 	ctx context.Context, req *ethpb.SignedBeaconBlockHeader,
 ) (*ethpb.ProposerSlashing, error) {
-	return nil, status.Error(codes.Unimplemented, "Unimplemented")
+	proposerSlashing, err := s.slasher.IsSlashableProposal(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return proposerSlashing, nil
 }

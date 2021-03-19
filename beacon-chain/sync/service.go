@@ -63,7 +63,6 @@ type Config struct {
 	AttestationNotifier     operation.Notifier
 	SlasherAttestationsFeed *event.Feed
 	SlasherBlockHeadersFeed *event.Feed
-	SlashingChecker         SlashingChecker
 	StateGen                *stategen.State
 }
 
@@ -77,12 +76,6 @@ type blockchainService interface {
 	blockchain.TimeFetcher
 	blockchain.GenesisFetcher
 	blockchain.CanonicalFetcher
-}
-
-// SlashingChecker is an interface for defining services that the beacon node may interact with to provide slashing data.
-type SlashingChecker interface {
-	IsSlashableProposal(ctx context.Context, proposal *ethpb.SignedBeaconBlockHeader) (*ethpb.ProposerSlashing, error)
-	IsSlashableAttestation(ctx context.Context, attestation *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error)
 }
 
 // Service is responsible for handling all run time p2p related operations as the
@@ -123,7 +116,6 @@ type Service struct {
 	stateGen                  *stategen.State
 	slasherAttestationsFeed   *event.Feed
 	slasherBlockHeadersFeed   *event.Feed
-	slashingChecker           SlashingChecker
 }
 
 // NewService initializes new regular sync service.
@@ -152,7 +144,6 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		stateGen:                cfg.StateGen,
 		slasherAttestationsFeed: cfg.SlasherAttestationsFeed,
 		slasherBlockHeadersFeed: cfg.SlasherBlockHeadersFeed,
-		slashingChecker:         cfg.SlashingChecker,
 		rateLimiter:             rLimiter,
 	}
 

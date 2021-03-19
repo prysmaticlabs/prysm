@@ -140,14 +140,10 @@ func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan typ
 				"numBlocks":    len(blocks),
 			}).Info("New slot, processing queued blocks for slashing detection")
 
-			proposerSlashings, err := s.detectProposerSlashings(ctx, blocks)
-			if err != nil {
+			if err := s.detectProposerSlashings(ctx, blocks); err != nil {
 				log.WithError(err).Error("Could not detect slashable blocks")
 				continue
 			}
-
-			s.recordDoubleProposals(proposerSlashings)
-
 			processedBlocksTotal.Add(float64(len(blocks)))
 		case <-ctx.Done():
 			return
