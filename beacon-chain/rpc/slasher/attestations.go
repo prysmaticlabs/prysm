@@ -14,7 +14,7 @@ import (
 func (s *Server) IsSlashableAttestation(
 	ctx context.Context, req *ethpb.IndexedAttestation,
 ) (*ethpb.AttesterSlashing, error) {
-	attesterSlashings, err := s.slasher.IsSlashableAttestation(ctx, req)
+	attesterSlashings, err := s.SlashingChecker.IsSlashableAttestation(ctx, req)
 	if err != nil {
 		return nil, err
 	}

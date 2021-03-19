@@ -34,6 +34,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/nodev1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/slasher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/validator"
+	slasher2 "github.com/prysmaticlabs/prysm/beacon-chain/slasher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	chainSync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -73,6 +74,7 @@ type Service struct {
 	attestationsPool        attestations.Pool
 	exitPool                voluntaryexits.PoolManager
 	slashingsPool           slashings.PoolManager
+	slashingChecker         slasher2.SlashingChecker
 	syncService             chainSync.Checker
 	host                    string
 	port                    string
@@ -125,6 +127,7 @@ type Config struct {
 	AttestationsPool        attestations.Pool
 	ExitPool                voluntaryexits.PoolManager
 	SlashingsPool           slashings.PoolManager
+	SlashingChecker         slasher2.SlashingChecker
 	SyncService             chainSync.Checker
 	Broadcaster             p2p.Broadcaster
 	PeersFetcher            p2p.PeersProvider
@@ -166,6 +169,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		attestationsPool:        cfg.AttestationsPool,
 		exitPool:                cfg.ExitPool,
 		slashingsPool:           cfg.SlashingsPool,
+		slashingChecker:         cfg.SlashingChecker,
 		syncService:             cfg.SyncService,
 		host:                    cfg.Host,
 		port:                    cfg.Port,
@@ -283,6 +287,10 @@ func (s *Service) Start() {
 		HeadFetcher:        s.headFetcher,
 	}
 
+	slasherServer := &slasher.Server{
+		SlashingChecker: s.slashingChecker,
+	}
+
 	beaconChainServer := &beacon.Server{
 		Ctx:                         s.ctx,
 		BeaconDB:                    s.beaconDB,
@@ -323,10 +331,11 @@ func (s *Service) Start() {
 		StateGenService:     s.stateGen,
 		SyncChecker:         s.syncService,
 	}
+
 	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpbv1.RegisterBeaconNodeServer(s.grpcServer, nodeServerV1)
 	pbrpc.RegisterHealthServer(s.grpcServer, nodeServer)
-	pbrpc.RegisterSlasherServer(s.grpcServer, &slasher.Server{})
+	pbrpc.RegisterSlasherServer(s.grpcServer, slasherServer)
 	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
 	ethpbv1.RegisterBeaconChainServer(s.grpcServer, beaconChainServerV1)
 	if s.enableDebugRPCEndpoints {

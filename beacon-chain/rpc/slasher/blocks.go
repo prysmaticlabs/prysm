@@ -11,7 +11,7 @@ import (
 func (s *Server) IsSlashableBlock(
 	ctx context.Context, req *ethpb.SignedBeaconBlockHeader,
 ) (*ethpb.ProposerSlashing, error) {
-	proposerSlashing, err := s.slasher.IsSlashableProposal(ctx, req)
+	proposerSlashing, err := s.SlashingChecker.IsSlashableProposal(ctx, req)
 	if err != nil {
 		return nil, err
 	}
