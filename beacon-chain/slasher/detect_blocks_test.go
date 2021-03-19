@@ -45,7 +45,7 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 	currentSlotChan <- currentSlot
 	cancel()
 	<-exitChan
-	require.LogsContain(t, hook, "Proposer double proposal slashing")
+	require.LogsContain(t, hook, "Proposer slashing detected")
 }
 
 func Test_processQueuedBlocks_NotSlashable(t *testing.T) {
@@ -74,7 +74,7 @@ func Test_processQueuedBlocks_NotSlashable(t *testing.T) {
 	currentSlotChan <- currentSlot
 	cancel()
 	<-exitChan
-	require.LogsDoNotContain(t, hook, "Proposer double proposal slashing")
+	require.LogsDoNotContain(t, hook, "Proposer slashing detected")
 }
 
 func createProposalWrapper(t *testing.T, slot types.Slot, proposerIndex types.ValidatorIndex, signingRoot []byte) *slashertypes.SignedBlockHeaderWrapper {

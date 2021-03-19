@@ -194,7 +194,7 @@ func TestStore_ExistingBlockProposals(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, len(proposals), len(doubleProposals))
 	for i, existing := range doubleProposals {
-		require.DeepNotEqual(t, doubleProposals[i].PrevBeaconBlockWrapper.SigningRoot, existing.BeaconBlockWrapper.SigningRoot)
+		require.DeepEqual(t, doubleProposals[i].Header_1, existing.Header_1)
 	}
 }
 
@@ -384,7 +384,7 @@ func TestStore_PruneProposals(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, len(tt.afterPruning), len(doubleProposals))
 			for i, existing := range doubleProposals {
-				require.DeepEqual(t, existing.PrevBeaconBlockWrapper.SigningRoot, tt.afterPruning[i].SigningRoot)
+				require.DeepSSZEqual(t, existing.Header_1, tt.afterPruning[i].SignedBeaconBlockHeader)
 			}
 		})
 	}

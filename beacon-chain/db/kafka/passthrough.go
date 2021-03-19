@@ -314,7 +314,7 @@ func (e Exporter) SaveAttestationRecordsForValidators(
 // CheckDoubleBlockProposals -- passthrough
 func (e Exporter) CheckDoubleBlockProposals(
 	ctx context.Context, proposals []*slashertypes.SignedBlockHeaderWrapper,
-) ([]*slashertypes.DoubleBlockProposal, error) {
+) ([]*eth.ProposerSlashing, error) {
 	return e.db.CheckDoubleBlockProposals(ctx, proposals)
 }
 

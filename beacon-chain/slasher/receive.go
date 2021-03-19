@@ -105,16 +105,15 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 				continue
 			}
 
-			groupedAtts := s.groupByValidatorChunkIndex(validAtts)
-			// TODO(#8331): Consider using goroutines and wait groups here.
-			for validatorChunkIdx, batch := range groupedAtts {
-				if err := s.detectSlashableAttestations(ctx, &chunkUpdateArgs{
-					validatorChunkIndex: validatorChunkIdx,
-					currentEpoch:        currentEpoch,
-				}, batch); err != nil {
-					log.WithError(err).Error("Could not detect slashable attestations")
-					continue
-				}
+			// Check for slashings.
+			slashings, err := s.CheckSlashableAttestations(ctx, validAtts)
+			if err != nil {
+				log.WithError(err).Error("Could not check slashable attestations")
+				continue
+			}
+			for _, slashing := range slashings {
+				s.serviceCfg.AttesterSlashingsFeed.Send(slashing)
+				logAttesterSlashing(slashing)
 			}
 
 			processedAttestationsTotal.Add(float64(len(validAtts)))
@@ -141,10 +140,14 @@ func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan typ
 				"numBlocks":    len(blocks),
 			}).Info("New slot, processing queued blocks for slashing detection")
 
-			if err := s.detectSlashableBlocks(ctx, blocks); err != nil {
+			proposerSlashings, err := s.detectProposerSlashings(ctx, blocks)
+			if err != nil {
 				log.WithError(err).Error("Could not detect slashable blocks")
 				continue
 			}
+
+			s.recordDoubleProposals(proposerSlashings)
+
 			processedBlocksTotal.Add(float64(len(blocks)))
 		case <-ctx.Done():
 			return
