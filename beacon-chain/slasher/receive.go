@@ -112,6 +112,14 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 				continue
 			}
 
+			for _, slashing := range slashings {
+				s.serviceCfg.AttesterSlashingsFeed.Send(&ethpb.AttesterSlashing{
+					Attestation_1: slashing.PrevAttestation,
+					Attestation_2: slashing.Attestation,
+				})
+				logSlashingEvent(slashing)
+			}
+
 			processedAttestationsTotal.Add(float64(len(validAtts)))
 		case <-ctx.Done():
 			return
