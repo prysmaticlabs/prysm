@@ -41,6 +41,7 @@ func TestGetStateRoot(t *testing.T) {
 		s, err := f.State(ctx, []byte("head"))
 		require.NoError(t, err)
 		sRoot, err := s.HashTreeRoot(ctx)
+		require.NoError(t, err)
 		assert.DeepEqual(t, stateRoot, sRoot)
 	})
 
