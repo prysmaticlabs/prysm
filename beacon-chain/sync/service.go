@@ -26,7 +26,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	slasherinterface "github.com/prysmaticlabs/prysm/beacon-chain/slasher/iface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared"
@@ -117,7 +116,6 @@ type Service struct {
 	stateGen                  *stategen.State
 	slasherAttestationsFeed   *event.Feed
 	slasherBlockHeadersFeed   *event.Feed
-	slashingChecker           slasherinterface.SlashingChecker
 }
 
 // NewService initializes new regular sync service.
