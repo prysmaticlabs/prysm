@@ -25,9 +25,10 @@ type ServiceConfig struct {
 	BeaconBlockHeadersFeed  *event.Feed
 	Database                db.Database
 	StateNotifier           statefeed.Notifier
-	StateFetcher            blockchain.AttestationStateFetcher
+	AttestationStateFetcher blockchain.AttestationStateFetcher
 	StateGen                stategen.StateManager
 	SlashingPoolInserter    slashings.PoolInserter
+	HeadStateFetcher        blockchain.HeadFetcher
 }
 
 // Service defining a slasher implementation as part of

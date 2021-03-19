@@ -8,6 +8,7 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -39,10 +40,11 @@ func TestService_processAttesterSlashings(t *testing.T) {
 	s := &Service{
 		serviceCfg: &ServiceConfig{
 			Database: beaconDB,
-			StateFetcher: &mock.ChainService{
+			AttestationStateFetcher: &mock.ChainService{
 				State: beaconState,
 			},
-			StateGen: stategen.New(beaconDB),
+			StateGen:             stategen.New(beaconDB),
+			SlashingPoolInserter: &slashings.PoolMock{},
 		},
 	}
 
@@ -139,10 +141,11 @@ func TestService_processProposerSlashings(t *testing.T) {
 	s := &Service{
 		serviceCfg: &ServiceConfig{
 			Database: beaconDB,
-			StateFetcher: &mock.ChainService{
+			AttestationStateFetcher: &mock.ChainService{
 				State: beaconState,
 			},
-			StateGen: stategen.New(beaconDB),
+			StateGen:             stategen.New(beaconDB),
+			SlashingPoolInserter: &slashings.PoolMock{},
 		},
 	}
 

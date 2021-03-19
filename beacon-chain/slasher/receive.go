@@ -112,7 +112,10 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 
 			// Process attester slashings by verifying their signatures, submitting
 			// to the beacon node's operations pool, and logging them.
-			s.processAttesterSlashings(ctx, slashings)
+			if err := s.processAttesterSlashings(ctx, slashings); err != nil {
+				log.WithError(err).Error("Could not process attester slashings")
+				continue
+			}
 
 			processedAttestationsTotal.Add(float64(len(validAtts)))
 		case <-ctx.Done():
@@ -146,7 +149,10 @@ func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan typ
 
 			// Process proposer slashings by verifying their signatures, submitting
 			// to the beacon node's operations pool, and logging them.
-			s.processProposerSlashings(ctx, slashings)
+			if err := s.processProposerSlashings(ctx, slashings); err != nil {
+				log.WithError(err).Error("Could not process proposer slashings")
+				continue
+			}
 
 			processedBlocksTotal.Add(float64(len(blocks)))
 		case <-ctx.Done():

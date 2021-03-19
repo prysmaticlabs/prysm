@@ -76,8 +76,6 @@ type BeaconNode struct {
 	opFeed                  *event.Feed
 	slasherBlockHeadersFeed *event.Feed
 	slasherAttestationsFeed *event.Feed
-	proposerSlashingsFeed   *event.Feed
-	attesterSlashingsFeed   *event.Feed
 	forkChoiceStore         forkchoice.ForkChoicer
 	stateGen                *stategen.State
 }
@@ -172,8 +170,6 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 		opFeed:                  new(event.Feed),
 		slasherBlockHeadersFeed: new(event.Feed),
 		slasherAttestationsFeed: new(event.Feed),
-		proposerSlashingsFeed:   new(event.Feed),
-		attesterSlashingsFeed:   new(event.Feed),
 		attestationPool:         attestations.NewPool(),
 		exitPool:                voluntaryexits.NewPool(),
 		slashingsPool:           slashings.NewPool(),
@@ -603,12 +599,11 @@ func (b *BeaconNode) registerSlasherService() error {
 	slasherSrv, err := slasher.New(b.ctx, &slasher.ServiceConfig{
 		IndexedAttestationsFeed: b.slasherAttestationsFeed,
 		BeaconBlockHeadersFeed:  b.slasherBlockHeadersFeed,
-		AttesterSlashingsFeed:   b.attesterSlashingsFeed,
-		ProposerSlashingsFeed:   b.proposerSlashingsFeed,
 		Database:                b.db,
 		StateNotifier:           b,
-		StateFetcher:            chainService,
+		AttestationStateFetcher: chainService,
 		StateGen:                b.stateGen,
+		SlashingPoolInserter:    b.slashingsPool,
 	})
 	if err != nil {
 		return err

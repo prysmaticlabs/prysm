@@ -5,12 +5,21 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 // Verifies attester slashings, logs them, and submits them to the slashing operations pool
 // in the beacon node if they pass validation.
-func (s *Service) processAttesterSlashings(ctx context.Context, slashings []*ethpb.AttesterSlashing) {
+func (s *Service) processAttesterSlashings(ctx context.Context, slashings []*ethpb.AttesterSlashing) error {
+	var beaconState *state.BeaconState
+	var err error
+	if len(slashings) > 0 {
+		beaconState, err = s.serviceCfg.HeadStateFetcher.HeadState(ctx)
+		if err != nil {
+			return err
+		}
+	}
 	for _, sl := range slashings {
 		if err := s.verifyAttSignature(ctx, sl.Attestation_1); err != nil {
 			log.WithField("a", sl.Attestation_1).Debug(
@@ -27,15 +36,26 @@ func (s *Service) processAttesterSlashings(ctx context.Context, slashings []*eth
 
 		// Log the slashing event and insert into the beacon node's operations pool.
 		logAttesterSlashing(sl)
-		if err := s.serviceCfg.SlashingPoolInserter.InsertAttesterSlashing(ctx, nil, sl); err != nil {
+		if err := s.serviceCfg.SlashingPoolInserter.InsertAttesterSlashing(
+			ctx, beaconState, sl,
+		); err != nil {
 			log.WithError(err).Error("Could not insert attester slashing into operations pool")
 		}
 	}
+	return nil
 }
 
 // Verifies proposer slashings, logs them, and submits them to the slashing operations pool
 // in the beacon node if they pass validation.
-func (s *Service) processProposerSlashings(ctx context.Context, slashings []*ethpb.ProposerSlashing) {
+func (s *Service) processProposerSlashings(ctx context.Context, slashings []*ethpb.ProposerSlashing) error {
+	var beaconState *state.BeaconState
+	var err error
+	if len(slashings) > 0 {
+		beaconState, err = s.serviceCfg.HeadStateFetcher.HeadState(ctx)
+		if err != nil {
+			return err
+		}
+	}
 	for _, sl := range slashings {
 		if err := s.verifyBlockSignature(ctx, sl.Header_1); err != nil {
 			log.WithField("a", sl.Header_1).Debug(
@@ -50,11 +70,11 @@ func (s *Service) processProposerSlashings(ctx context.Context, slashings []*eth
 			continue
 		}
 		// Log the slashing event and insert into the beacon node's operations pool.
-		logProposerSlashing(sl)
-		if err := s.serviceCfg.SlashingPoolInserter.InsertProposerSlashing(ctx, nil, sl); err != nil {
+		if err := s.serviceCfg.SlashingPoolInserter.InsertProposerSlashing(ctx, beaconState, sl); err != nil {
 			log.WithError(err).Error("Could not insert attester slashing into operations pool")
 		}
 	}
+	return nil
 }
 
 func (s *Service) verifyBlockSignature(ctx context.Context, header *ethpb.SignedBeaconBlockHeader) error {
@@ -66,7 +86,7 @@ func (s *Service) verifyBlockSignature(ctx context.Context, header *ethpb.Signed
 }
 
 func (s *Service) verifyAttSignature(ctx context.Context, att *ethpb.IndexedAttestation) error {
-	preState, err := s.serviceCfg.StateFetcher.AttestationTargetState(ctx, att.Data.Target)
+	preState, err := s.serviceCfg.AttestationStateFetcher.AttestationTargetState(ctx, att.Data.Target)
 	if err != nil {
 		return err
 	}
