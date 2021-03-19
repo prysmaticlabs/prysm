@@ -238,10 +238,10 @@ func (s *Store) SaveSlasherChunks(
 // proposal signing root. If so, we return a double block proposal object.
 func (s *Store) CheckDoubleBlockProposals(
 	ctx context.Context, proposals []*slashertypes.SignedBlockHeaderWrapper,
-) ([]*slashertypes.DoubleBlockProposal, error) {
+) ([]*ethpb.ProposerSlashing, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.CheckDoubleBlockProposals")
 	defer span.End()
-	doubleProposals := make([]*slashertypes.DoubleBlockProposal, 0, len(proposals))
+	proposerSlashings := make([]*ethpb.ProposerSlashing, 0, len(proposals))
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(proposalRecordsBucket)
 		for _, proposal := range proposals {
@@ -259,15 +259,15 @@ func (s *Store) CheckDoubleBlockProposals(
 				if err != nil {
 					return err
 				}
-				doubleProposals = append(doubleProposals, &slashertypes.DoubleBlockProposal{
-					PrevBeaconBlockWrapper: existingProposalWrapper,
-					BeaconBlockWrapper:     proposal,
+				proposerSlashings = append(proposerSlashings, &ethpb.ProposerSlashing{
+					Header_1: existingProposalWrapper.SignedBeaconBlockHeader,
+					Header_2: proposal.SignedBeaconBlockHeader,
 				})
 			}
 		}
 		return nil
 	})
-	return doubleProposals, err
+	return proposerSlashings, err
 }
 
 // SaveBlockProposals takes in a list of block proposals and saves them to our
