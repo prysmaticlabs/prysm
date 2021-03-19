@@ -16,7 +16,7 @@ func (s *Server) IsSlashableAttestation(
 ) (*ethpb.AttesterSlashing, error) {
 	attesterSlashings, err := s.SlashingChecker.IsSlashableAttestation(ctx, req)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "Could not determine if attestation is slashable: %v", err)
 	}
 	if len(attesterSlashings) > 0 {
 		return attesterSlashings[0], nil
