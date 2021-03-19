@@ -13,7 +13,7 @@ import (
 )
 
 func TestBeaconState_SlotDataRace(t *testing.T) {
-	headState, err := InitializeFromProto(&pb.BeaconState{Slot: 1})
+	headState, err := InitializeFromProto(&pb.BeaconStateV1{Slot: 1})
 	require.NoError(t, err)
 
 	wg := sync.WaitGroup{}
@@ -82,7 +82,6 @@ func TestNilState_NoPanic(t *testing.T) {
 func TestReadOnlyValidator_NoPanic(t *testing.T) {
 	v := &ReadOnlyValidator{}
 	assert.Equal(t, false, v.Slashed(), "Expected not slashed")
-	assert.Equal(t, (*eth.Validator)(nil), v.CopyValidator(), "Expected nil result")
 }
 
 func TestReadOnlyValidator_ActivationEligibilityEpochNoPanic(t *testing.T) {
@@ -93,7 +92,7 @@ func TestReadOnlyValidator_ActivationEligibilityEpochNoPanic(t *testing.T) {
 func TestBeaconState_MatchCurrentJustifiedCheckpt(t *testing.T) {
 	c1 := &eth.Checkpoint{Epoch: 1}
 	c2 := &eth.Checkpoint{Epoch: 2}
-	state, err := InitializeFromProto(&pb.BeaconState{CurrentJustifiedCheckpoint: c1})
+	state, err := InitializeFromProto(&pb.BeaconStateV1{CurrentJustifiedCheckpoint: c1})
 	require.NoError(t, err)
 	require.Equal(t, true, state.MatchCurrentJustifiedCheckpoint(c1))
 	require.Equal(t, false, state.MatchCurrentJustifiedCheckpoint(c2))
@@ -106,7 +105,7 @@ func TestBeaconState_MatchCurrentJustifiedCheckpt(t *testing.T) {
 func TestBeaconState_MatchPreviousJustifiedCheckpt(t *testing.T) {
 	c1 := &eth.Checkpoint{Epoch: 1}
 	c2 := &eth.Checkpoint{Epoch: 2}
-	state, err := InitializeFromProto(&pb.BeaconState{PreviousJustifiedCheckpoint: c1})
+	state, err := InitializeFromProto(&pb.BeaconStateV1{PreviousJustifiedCheckpoint: c1})
 	require.NoError(t, err)
 	require.Equal(t, false, state.MatchCurrentJustifiedCheckpoint(c1))
 	require.Equal(t, false, state.MatchCurrentJustifiedCheckpoint(c2))

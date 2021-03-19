@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 )
 
-// Eth1Root computes the HashTreeRoot Merkleization of
+// eth1Root computes the HashTreeRoot Merkleization of
 // a BeaconBlockHeader struct according to the eth2
 // Simple Serialize specification.
 func eth1Root(hasher htrutils.HashFn, eth1Data *ethpb.Eth1Data) ([32]byte, error) {
@@ -34,7 +34,7 @@ func eth1Root(hasher htrutils.HashFn, eth1Data *ethpb.Eth1Data) ([32]byte, error
 	return root, nil
 }
 
-// Eth1DataVotesRoot computes the HashTreeRoot Merkleization of
+// eth1DataVotesRoot computes the HashTreeRoot Merkleization of
 // a list of Eth1Data structs according to the eth2
 // Simple Serialize specification.
 func eth1DataVotesRoot(eth1DataVotes []*ethpb.Eth1Data) ([32]byte, error) {

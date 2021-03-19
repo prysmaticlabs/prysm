@@ -1112,18 +1112,6 @@ func (b *BeaconState) safeCopyBytesAtIndex(input [][]byte, idx uint64) ([]byte, 
 	return root, nil
 }
 
-func (b *BeaconState) safeCopyPendingAttestationSlice(input []*pbp2p.PendingAttestation) []*pbp2p.PendingAttestation {
-	if input == nil {
-		return nil
-	}
-
-	res := make([]*pbp2p.PendingAttestation, len(input))
-	for i := 0; i < len(res); i++ {
-		res[i] = stateV0.CopyPendingAttestation(input[i])
-	}
-	return res
-}
-
 func (b *BeaconState) safeCopyCheckpoint(input *ethpb.Checkpoint) *ethpb.Checkpoint {
 	if input == nil {
 		return nil
@@ -1138,4 +1126,14 @@ func (b *BeaconState) MarshalSSZ() ([]byte, error) {
 		return nil, errors.New("nil beacon state")
 	}
 	return b.state.MarshalSSZ()
+}
+
+// ProtobufBeaconState transforms an input into beacon state hard fork 1 in the form of protobuf.
+// Error is returned if the input is not type protobuf beacon state.
+func ProtobufBeaconState(s interface{}) (*pbp2p.BeaconStateV1, error) {
+	pbState, ok := s.(*pbp2p.BeaconStateV1)
+	if !ok {
+		return nil, errors.New("input is not type pb.BeaconStateV1")
+	}
+	return pbState, nil
 }

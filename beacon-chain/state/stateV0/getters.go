@@ -504,7 +504,7 @@ func (b *BeaconState) ValidatorAtIndex(idx types.ValidatorIndex) (*ethpb.Validat
 }
 
 // ValidatorAtIndexReadOnly is the validator at the provided index. This method
-// doesn't clone the Validator.
+// doesn't clone the validator.
 func (b *BeaconState) ValidatorAtIndexReadOnly(idx types.ValidatorIndex) (iface.ReadOnlyValidator, error) {
 	if !b.hasInnerState() {
 		return ReadOnlyValidator{}, ErrNilInnerState

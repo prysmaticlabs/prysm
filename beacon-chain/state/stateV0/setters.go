@@ -336,7 +336,7 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator
 	return nil
 }
 
-// UpdateValidatorAtIndex for the beacon state. Updates the Validator
+// UpdateValidatorAtIndex for the beacon state. Updates the validator
 // at a specific index to a new value.
 func (b *BeaconState) UpdateValidatorAtIndex(idx types.ValidatorIndex, val *ethpb.Validator) error {
 	if !b.hasInnerState() {
