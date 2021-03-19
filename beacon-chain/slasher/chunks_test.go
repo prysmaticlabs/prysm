@@ -242,7 +242,6 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 	slashing, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx, surroundedVote)
 	require.NoError(t, err)
 	require.NotEqual(t, (*ethpb.AttesterSlashing)(nil), slashing)
-
 }
 
 func TestMinSpanChunksSlice_Update_MultipleChunks(t *testing.T) {
