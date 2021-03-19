@@ -21,7 +21,7 @@ import (
 // AttestationStateFetcher is able to retrieve a beacon state for an attestation
 // target checkpoint, useful for verifying attestation signatures.
 type AttestationStateFetcher interface {
-	AttestationPreState(ctx context.Context, attTarget *ethpb.Checkpoint) (*state.BeaconState, error)
+	AttestationTargetState(ctx context.Context, attTarget *ethpb.Checkpoint) (*state.BeaconState, error)
 }
 
 // AttestationReceiver interface defines the methods of chain service receive and processing new attestations.
@@ -49,7 +49,7 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 }
 
 // AttestationPreState returns the pre state of attestation.
-func (s *Service) AttestationPreState(ctx context.Context, attTarget *ethpb.Checkpoint) (*state.BeaconState, error) {
+func (s *Service) AttestationTargetState(ctx context.Context, attTarget *ethpb.Checkpoint) (*state.BeaconState, error) {
 	ss, err := helpers.StartSlot(attTarget.Epoch)
 	if err != nil {
 		return nil, err

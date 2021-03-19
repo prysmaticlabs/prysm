@@ -116,7 +116,7 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 		return pubsub.ValidationReject
 	}
 
-	bs, err := s.chain.AttestationPreState(ctx, signed.Message.Aggregate.Data.Target)
+	bs, err := s.chain.AttestationTargetState(ctx, signed.Message.Aggregate.Data.Target)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore

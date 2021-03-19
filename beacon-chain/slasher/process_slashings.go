@@ -61,7 +61,7 @@ func (s *Service) verifyBlockSignature(ctx context.Context, header *ethpb.Signed
 }
 
 func (s *Service) verifyAttSignature(ctx context.Context, att *ethpb.IndexedAttestation) error {
-	preState, err := s.serviceCfg.StateFetcher.AttestationPreState(ctx, att.Data.Target)
+	preState, err := s.serviceCfg.StateFetcher.AttestationTargetState(ctx, att.Data.Target)
 	if err != nil {
 		return err
 	}
