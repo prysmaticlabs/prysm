@@ -118,6 +118,10 @@ var (
 		Name:  "proposer-atts-selection-using-max-cover",
 		Usage: "Rely on max-cover algorithm when selecting attestations for proposer",
 	}
+	enableSlashingProtectionPruning = &cli.BoolFlag{
+		Name:  "enable-slashing-protection-pruning",
+		Usage: "Enables the pruning of the validator client's slashing protectin database",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -142,6 +146,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	disableBlst,
 	dynamicKeyReloadDebounceInterval,
 	attestTimely,
+	enableSlashingProtectionPruning,
 }...)
 
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
