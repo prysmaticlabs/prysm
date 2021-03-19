@@ -604,6 +604,7 @@ func (b *BeaconNode) registerSlasherService() error {
 		AttestationStateFetcher: chainService,
 		StateGen:                b.stateGen,
 		SlashingPoolInserter:    b.slashingsPool,
+		HeadStateFetcher:        chainService,
 	})
 	if err != nil {
 		return err
