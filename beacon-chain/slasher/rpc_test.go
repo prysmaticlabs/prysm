@@ -89,11 +89,16 @@ func TestIsSlashableAttestation(t *testing.T) {
 		blksQueue:   newBlocksQueue(),
 		genesisTime: genesisTime,
 	}
-	err := beaconDB.SaveAttestationRecordsForValidators(ctx, []*slashertypes.IndexedAttestationWrapper{
+	prevAtts := []*slashertypes.IndexedAttestationWrapper{
 		createAttestationWrapper(t, 2, 3, []uint64{0}, []byte{1}),
 		createAttestationWrapper(t, 2, 3, []uint64{1}, []byte{1}),
-	})
+	}
+	err := beaconDB.SaveAttestationRecordsForValidators(ctx, prevAtts)
 	require.NoError(t, err)
+	attesterSlashings, err := s.checkSlashableAttestations(ctx, prevAtts)
+	require.NoError(t, err)
+	require.Equal(t, 0, len(attesterSlashings))
+
 	tests := []struct {
 		name         string
 		attToCheck   *slashertypes.IndexedAttestationWrapper
@@ -105,12 +110,12 @@ func TestIsSlashableAttestation(t *testing.T) {
 			amtSlashable: 0,
 		},
 		{
-			name:         "should not detect if different indice",
+			name:         "should not detect if different index",
 			attToCheck:   createAttestationWrapper(t, 0, 3, []uint64{2}, []byte{2}),
 			amtSlashable: 0,
 		},
 		{
-			name:         "should detect double if same indice",
+			name:         "should detect double if same index",
 			attToCheck:   createAttestationWrapper(t, 0, 3, []uint64{0}, []byte{2}),
 			amtSlashable: 1,
 		},
@@ -127,7 +132,7 @@ func TestIsSlashableAttestation(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			attesterSlashings, err := s.IsSlashableAttestation(ctx, tt.attToCheck.IndexedAttestation)
+			attesterSlashings, err = s.IsSlashableAttestation(ctx, tt.attToCheck.IndexedAttestation)
 			require.NoError(t, err)
 			assert.Equal(t, tt.amtSlashable, uint64(len(attesterSlashings)))
 		})
