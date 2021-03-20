@@ -3,6 +3,9 @@ package slasher
 import (
 	"context"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 )
@@ -14,7 +17,7 @@ func (s *Service) IsSlashableBlock(
 ) (*ethpb.ProposerSlashing, error) {
 	dataRoot, err := block.Header.HashTreeRoot()
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "Could not get block header hash tree root: %v", err)
 	}
 	signedBlockWrapper := &slashertypes.SignedBlockHeaderWrapper{
 		SignedBeaconBlockHeader: block,
@@ -22,7 +25,7 @@ func (s *Service) IsSlashableBlock(
 	}
 	proposerSlashings, err := s.detectProposerSlashings(ctx, []*slashertypes.SignedBlockHeaderWrapper{signedBlockWrapper})
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "Could not check if proposal is slashable: %v", err)
 	}
 	if len(proposerSlashings) == 0 {
 		return nil, nil
@@ -37,7 +40,7 @@ func (s *Service) IsSlashableAttestation(
 ) ([]*ethpb.AttesterSlashing, error) {
 	dataRoot, err := attestation.Data.HashTreeRoot()
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "Could not get attestation data hash tree root: %v", err)
 	}
 	indexedAttWrapper := &slashertypes.IndexedAttestationWrapper{
 		IndexedAttestation: attestation,
@@ -45,7 +48,7 @@ func (s *Service) IsSlashableAttestation(
 	}
 	attesterSlashings, err := s.checkSlashableAttestations(ctx, []*slashertypes.IndexedAttestationWrapper{indexedAttWrapper})
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "Could not check if attestation is slashable: %v", err)
 	}
 	if len(attesterSlashings) == 0 {
 		return nil, nil
