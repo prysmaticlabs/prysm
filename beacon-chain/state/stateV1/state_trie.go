@@ -31,7 +31,7 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconStateV1) (*BeaconState, error) {
 		return nil, errors.New("received nil state")
 	}
 
-	fieldCount := params.BeaconConfig().BeaconStateFieldCount
+	fieldCount := params.BeaconConfig().BeaconStateV1FieldCount
 	b := &BeaconState{
 		state:                 st,
 		dirtyFields:           make(map[fieldIndex]interface{}, fieldCount),
@@ -76,7 +76,7 @@ func (b *BeaconState) Copy() iface.BeaconState {
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
-	fieldCount := params.BeaconConfig().BeaconStateFieldCount
+	fieldCount := params.BeaconConfig().BeaconStateV1FieldCount
 	dst := &BeaconState{
 		state: &pbp2p.BeaconStateV1{
 			// Primitive types, safe to copy.
@@ -178,21 +178,20 @@ func (b *BeaconState) Copy() iface.BeaconState {
 // HashTreeRoot of the beacon state retrieves the Merkle root of the trie
 // representation of the beacon state based on the eth2 Simple Serialize specification.
 func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
-	_, span := trace.StartSpan(ctx, "beaconState.HashTreeRoot")
+	_, span := trace.StartSpan(ctx, "beaconStateV1.HashTreeRoot")
 	defer span.End()
 
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	if b.merkleLayers == nil || len(b.merkleLayers) == 0 {
-		// TODO: Needs its own compute field roots
 		fieldRoots, err := computeFieldRoots(b.state)
 		if err != nil {
 			return [32]byte{}, err
 		}
 		layers := merkleize(fieldRoots)
 		b.merkleLayers = layers
-		b.dirtyFields = make(map[fieldIndex]interface{}, params.BeaconConfig().BeaconStateFieldCount)
+		b.dirtyFields = make(map[fieldIndex]interface{}, params.BeaconConfig().BeaconStateV1FieldCount)
 	}
 
 	for field := range b.dirtyFields {

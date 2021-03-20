@@ -16,8 +16,8 @@ import (
 )
 
 var (
-	leavesCache = make(map[string][][32]byte, params.BeaconConfig().BeaconStateFieldCount)
-	layersCache = make(map[string][][][32]byte, params.BeaconConfig().BeaconStateFieldCount)
+	leavesCache = make(map[string][][32]byte, params.BeaconConfig().BeaconStateV1FieldCount)
+	layersCache = make(map[string][][][32]byte, params.BeaconConfig().BeaconStateV1FieldCount)
 	lock        sync.RWMutex
 )
 
@@ -59,7 +59,7 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(state *pb.BeaconStateV1) (
 		return nil, errors.New("nil state")
 	}
 	hasher := hashutil.CustomSHA256Hasher()
-	fieldRoots := make([][]byte, params.BeaconConfig().BeaconStateFieldCount)
+	fieldRoots := make([][]byte, params.BeaconConfig().BeaconStateV1FieldCount)
 
 	// Genesis time root.
 	genesisRoot := htrutils.Uint64Root(state.GenesisTime)

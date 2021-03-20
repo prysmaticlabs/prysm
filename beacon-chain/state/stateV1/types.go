@@ -16,7 +16,7 @@ import (
 var _ iface.BeaconStateV1 = (*BeaconState)(nil)
 
 func init() {
-	fieldMap = make(map[fieldIndex]dataType, params.BeaconConfig().BeaconStateFieldCount)
+	fieldMap = make(map[fieldIndex]dataType, params.BeaconConfig().BeaconStateV1FieldCount)
 
 	// Initialize the fixed sized arrays.
 	fieldMap[blockRoots] = basicArray

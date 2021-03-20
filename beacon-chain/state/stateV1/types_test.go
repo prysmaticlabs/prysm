@@ -11,20 +11,21 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	log "github.com/sirupsen/logrus"
 )
 
-func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
+func TestBeaconStateV1_ProtoBeaconStateCompatibility(t *testing.T) {
 	params.UseMinimalConfig()
 	ctx := context.Background()
 	genesis := setupGenesisState(t, 64)
 	customState, err := stateV1.InitializeFromProto(genesis)
 	require.NoError(t, err)
-	cloned, ok := proto.Clone(genesis).(*pb.BeaconState)
-	assert.Equal(t, true, ok, "Object is not of type *pb.BeaconState")
+	cloned, ok := proto.Clone(genesis).(*pb.BeaconStateV1)
+	assert.Equal(t, true, ok, "Object is not of type *pb.BeaconStateV1")
 	custom := customState.CloneInnerState()
 	assert.DeepSSZEqual(t, cloned, custom)
 
@@ -51,7 +52,8 @@ func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 }
 
 func setupGenesisState(tb testing.TB, count uint64) *pb.BeaconStateV1 {
-	genesisState := &pb.BeaconStateV1{}
+	genesisState, _, err := interop.GenerateGenesisStateV1(0, count)
+	require.NoError(tb, err)
 	for i := uint64(1); i < count; i++ {
 		someRoot := [32]byte{}
 		someKey := [48]byte{}

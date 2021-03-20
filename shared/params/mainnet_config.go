@@ -164,6 +164,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	GenesisCountdownInterval:  time.Minute,
 	ConfigName:                ConfigNames[Mainnet],
 	BeaconStateFieldCount:     21,
+	BeaconStateV1FieldCount:   23,
 
 	// Slasher related values.
 	WeakSubjectivityPeriod:          54000,
@@ -172,6 +173,10 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 
 	// Weak subjectivity values.
 	SafetyDecay: 10,
+
+	// Light client values.
+	SyncCommitteeSize:          1024,
+	SyncCommitteeAggregateSize: 16,
 
 	// Fork related values.
 	GenesisForkVersion:  []byte{0, 0, 0, 0},

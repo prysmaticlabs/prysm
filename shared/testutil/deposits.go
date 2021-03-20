@@ -262,6 +262,24 @@ func DeterministicGenesisState(t testing.TB, numValidators uint64) (iface.Beacon
 	return beaconState, privKeys
 }
 
+// DeterministicGenesisStateV1 returns a genesis state in hard fork 1 format made using the deterministic deposits.
+func DeterministicGenesisStateV1(t testing.TB, numValidators uint64) (iface.BeaconState, []bls.SecretKey) {
+	deposits, privKeys, err := DeterministicDepositsAndKeys(numValidators)
+	if err != nil {
+		t.Fatal(errors.Wrapf(err, "failed to get %d deposits", numValidators))
+	}
+	eth1Data, err := DeterministicEth1Data(len(deposits))
+	if err != nil {
+		t.Fatal(errors.Wrapf(err, "failed to get eth1data for %d deposits", numValidators))
+	}
+	beaconState, err := state.GenesisBeaconStateV1(deposits, uint64(0), eth1Data)
+	if err != nil {
+		t.Fatal(errors.Wrapf(err, "failed to get genesis beacon state of %d validators", numValidators))
+	}
+	ResetCache()
+	return beaconState, privKeys
+}
+
 // DepositTrieFromDeposits takes an array of deposits and returns the deposit trie.
 func DepositTrieFromDeposits(deposits []*ethpb.Deposit) (*trieutil.SparseMerkleTrie, [][32]byte, error) {
 	encodedDeposits := make([][]byte, len(deposits))

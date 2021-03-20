@@ -17,7 +17,7 @@ import (
 )
 
 func TestInitializeFromProto(t *testing.T) {
-	testState, _ := testutil.DeterministicGenesisState(t, 64)
+	testState, _ := testutil.DeterministicGenesisStateV1(t, 64)
 	pbState, err := stateV1.ProtobufBeaconState(testState.InnerStateUnsafe())
 	require.NoError(t, err)
 	type test struct {
@@ -60,7 +60,7 @@ func TestInitializeFromProto(t *testing.T) {
 }
 
 func TestInitializeFromProtoUnsafe(t *testing.T) {
-	testState, _ := testutil.DeterministicGenesisState(t, 64)
+	testState, _ := testutil.DeterministicGenesisStateV1(t, 64)
 	pbState, err := stateV1.ProtobufBeaconState(testState.InnerStateUnsafe())
 	require.NoError(t, err)
 	type test struct {
@@ -103,8 +103,7 @@ func TestInitializeFromProtoUnsafe(t *testing.T) {
 }
 
 func TestBeaconState_HashTreeRoot(t *testing.T) {
-	testState, _ := testutil.DeterministicGenesisState(t, 64)
-
+	testState, _ := testutil.DeterministicGenesisStateV1(t, 64)
 	type test struct {
 		name        string
 		stateModify func(beaconState iface.BeaconState) (iface.BeaconState, error)
@@ -172,7 +171,7 @@ func TestBeaconState_HashTreeRoot(t *testing.T) {
 }
 
 func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
-	testState, _ := testutil.DeterministicGenesisState(t, 64)
+	testState, _ := testutil.DeterministicGenesisStateV1(t, 64)
 
 	type test struct {
 		name        string
