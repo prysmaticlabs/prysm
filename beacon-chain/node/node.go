@@ -700,6 +700,7 @@ func (b *BeaconNode) registerRPCService() error {
 		StateGen:                b.stateGen,
 		EnableDebugRPCEndpoints: enableDebugRPCEndpoints,
 		MaxMsgSize:              maxMsgSize,
+		SlashingChecker:         slasherService,
 	})
 
 	return b.services.RegisterService(rpcService)

@@ -24,7 +24,9 @@ type chunkUpdateArgs struct {
 	currentEpoch        types.Epoch
 }
 
-func (s *Service) CheckSlashableAttestations(
+// Takes in a list of indexed attestation wrappers and returns any
+// found attester slashings to the caller.
+func (s *Service) checkSlashableAttestations(
 	ctx context.Context, atts []*slashertypes.IndexedAttestationWrapper,
 ) ([]*ethpb.AttesterSlashing, error) {
 	currentEpoch := slotutil.EpochsSinceGenesis(s.genesisTime)
