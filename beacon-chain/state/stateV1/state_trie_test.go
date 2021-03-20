@@ -3,7 +3,6 @@ package stateV1_test
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"testing"
 
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -16,11 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
-
-func TestBeaconState_HashTreeRoot1(t *testing.T) {
-	testState, _ := testutil.DeterministicGenesisStateV1(t, 64)
-	fmt.Println(testState.CurrentEpochParticipation())
-}
 
 func TestInitializeFromProto(t *testing.T) {
 	testState, _ := testutil.DeterministicGenesisStateV1(t, 64)

@@ -5,4 +5,6 @@ type BeaconStateV1 interface {
 	BeaconState
 	CurrentEpochParticipation() []byte
 	PreviousEpochParticipation() []byte
+	AppendCurrentParticipationBits(val byte) error
+	AppendPreviousParticipationBits(val byte) error
 }

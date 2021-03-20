@@ -312,6 +312,12 @@ func ProcessDepositV1(beaconState iface.BeaconStateV1, deposit *ethpb.Deposit, v
 		if err := beaconState.AppendBalance(amount); err != nil {
 			return nil, err
 		}
+		if err := beaconState.AppendPreviousParticipationBits(0); err != nil {
+			return nil, err
+		}
+		if err := beaconState.AppendCurrentParticipationBits(0); err != nil {
+			return nil, err
+		}
 	} else if err := helpers.IncreaseBalance(beaconState, index, amount); err != nil {
 		return nil, err
 	}
