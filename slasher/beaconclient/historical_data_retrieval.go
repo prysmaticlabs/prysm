@@ -27,7 +27,7 @@ func (s *Service) RequestHistoricalAttestations(
 		if res == nil {
 			res = &ethpb.ListIndexedAttestationsResponse{}
 		}
-		res, err = s.beaconClient.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
+		res, err = s.cfg.BeaconClient.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
 			QueryFilter: &ethpb.ListIndexedAttestationsRequest_Epoch{
 				Epoch: epoch,
 			},
