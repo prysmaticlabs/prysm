@@ -105,7 +105,7 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 	return OptimizedGenesisBeaconState(genesisTime, state, state.Eth1Data())
 }
 
-func GenesisBeaconStateV1(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (iface.BeaconState, error) {
+func GenesisBeaconStateV1(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (iface.BeaconStateV1, error) {
 	if eth1Data == nil {
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
@@ -261,7 +261,7 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState iface.BeaconState,
 
 // OptimizedGenesisBeaconStateV1 is used to create a state that has already processed deposits. This is to efficiently
 // create a mainnet state at chainstart.
-func OptimizedGenesisBeaconStateV1(genesisTime uint64, preState iface.BeaconStateV1, eth1Data *ethpb.Eth1Data) (iface.BeaconState, error) {
+func OptimizedGenesisBeaconStateV1(genesisTime uint64, preState iface.BeaconStateV1, eth1Data *ethpb.Eth1Data) (iface.BeaconStateV1, error) {
 	if eth1Data == nil {
 		return nil, errors.New("no eth1data provided for genesis state")
 	}

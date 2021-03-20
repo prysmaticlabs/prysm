@@ -263,7 +263,7 @@ func DeterministicGenesisState(t testing.TB, numValidators uint64) (iface.Beacon
 }
 
 // DeterministicGenesisStateV1 returns a genesis state in hard fork 1 format made using the deterministic deposits.
-func DeterministicGenesisStateV1(t testing.TB, numValidators uint64) (iface.BeaconState, []bls.SecretKey) {
+func DeterministicGenesisStateV1(t testing.TB, numValidators uint64) (iface.BeaconStateV1, []bls.SecretKey) {
 	deposits, privKeys, err := DeterministicDepositsAndKeys(numValidators)
 	if err != nil {
 		t.Fatal(errors.Wrapf(err, "failed to get %d deposits", numValidators))
