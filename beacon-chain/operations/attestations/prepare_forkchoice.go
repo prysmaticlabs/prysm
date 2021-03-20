@@ -43,11 +43,11 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "Operations.attestations.batchForkChoiceAtts")
 	defer span.End()
 
-	if err := s.pool.AggregateUnaggregatedAttestations(ctx); err != nil {
+	if err := s.cfg.Pool.AggregateUnaggregatedAttestations(ctx); err != nil {
 		return err
 	}
-	atts := append(s.pool.AggregatedAttestations(), s.pool.BlockAttestations()...)
-	atts = append(atts, s.pool.ForkchoiceAttestations()...)
+	atts := append(s.cfg.Pool.AggregatedAttestations(), s.cfg.Pool.BlockAttestations()...)
+	atts = append(atts, s.cfg.Pool.ForkchoiceAttestations()...)
 
 	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(atts))
 
@@ -74,8 +74,8 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 		}
 	}
 
-	for _, a := range s.pool.BlockAttestations() {
-		if err := s.pool.DeleteBlockAttestation(a); err != nil {
+	for _, a := range s.cfg.Pool.BlockAttestations() {
+		if err := s.cfg.Pool.DeleteBlockAttestation(a); err != nil {
 			return err
 		}
 	}
@@ -95,7 +95,7 @@ func (s *Service) aggregateAndSaveForkChoiceAtts(atts []*ethpb.Attestation) erro
 		return err
 	}
 
-	return s.pool.SaveForkchoiceAttestations(aggregatedAtts)
+	return s.cfg.Pool.SaveForkchoiceAttestations(aggregatedAtts)
 }
 
 // This checks if the attestation has previously been aggregated for fork choice
