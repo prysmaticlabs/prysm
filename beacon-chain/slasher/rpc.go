@@ -7,7 +7,7 @@ import (
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 )
 
-// IsSlashableBlock comapres the given block to the slasher database and returns any double block
+// IsSlashableBlock comapres the given signed proposal to the slasher database and returns any double block
 // proposals that are considered slashable.
 func (s *Service) IsSlashableBlock(
 	ctx context.Context, block *ethpb.SignedBeaconBlockHeader,

@@ -11,6 +11,7 @@ go_library(
         "helpers.go",
         "log.go",
         "metrics.go",
+        "mock_slashing_checker.go",
         "params.go",
         "process_slashings.go",
         "queue.go",

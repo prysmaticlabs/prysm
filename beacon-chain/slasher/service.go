@@ -32,7 +32,7 @@ type ServiceConfig struct {
 
 // SlashingChecker is an interface for defining services that the beacon node may interact with to provide slashing data.
 type SlashingChecker interface {
-	IsSlashableProposal(ctx context.Context, proposal *ethpb.SignedBeaconBlockHeader) (*ethpb.ProposerSlashing, error)
+	IsSlashableBlock(ctx context.Context, proposal *ethpb.SignedBeaconBlockHeader) (*ethpb.ProposerSlashing, error)
 	IsSlashableAttestation(ctx context.Context, attestation *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error)
 }
 

@@ -17,6 +17,9 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
+var _ = SlashingChecker(&Service{})
+var _ = SlashingChecker(&MockSlashingChecker{})
+
 func TestMain(m *testing.M) {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)

@@ -78,7 +78,6 @@ type BeaconNode struct {
 	slasherAttestationsFeed *event.Feed
 	proposerSlashingsFeed   *event.Feed
 	attesterSlashingsFeed   *event.Feed
-	slashingChecker         slasher.SlashingChecker
 	forkChoiceStore         forkchoice.ForkChoicer
 	stateGen                *stategen.State
 }
@@ -560,11 +559,6 @@ func (b *BeaconNode) registerSyncService() error {
 		return err
 	}
 
-	var slasherService *slasher.Service
-	if err := b.services.FetchService(&slasherService); err != nil {
-		return err
-	}
-
 	rs := regularsync.NewService(b.ctx, &regularsync.Config{
 		DB:                      b.db,
 		P2P:                     b.fetchP2P(),
@@ -638,6 +632,11 @@ func (b *BeaconNode) registerRPCService() error {
 		return err
 	}
 
+	var slasherService *slasher.Service
+	if err := b.services.FetchService(&slasherService); err != nil {
+		return err
+	}
+
 	genesisValidators := b.cliCtx.Uint64(flags.InteropNumValidatorsFlag.Name)
 	genesisStatePath := b.cliCtx.String(flags.InteropGenesisStateFlag.Name)
 	var depositFetcher depositcache.DepositFetcher
@@ -688,6 +687,7 @@ func (b *BeaconNode) registerRPCService() error {
 		AttestationsPool:        b.attestationPool,
 		ExitPool:                b.exitPool,
 		SlashingsPool:           b.slashingsPool,
+		SlashingChecker:         slasherService,
 		POWChainService:         web3Service,
 		ChainStartFetcher:       chainStartFetcher,
 		MockEth1Votes:           mockEth1DataVotes,
