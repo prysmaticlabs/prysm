@@ -26,18 +26,12 @@ import (
 // Service defines a server implementation of the gRPC Slasher service,
 // providing RPC endpoints for retrieving slashing proofs for malicious validators.
 type Service struct {
+	cfg             *Config
 	ctx             context.Context
 	cancel          context.CancelFunc
-	host            string
-	port            string
-	detector        *detection.Service
 	listener        net.Listener
 	grpcServer      *grpc.Server
-	slasherDB       db.Database
-	withCert        string
-	withKey         string
 	credentialError error
-	beaconclient    *beaconclient.Service
 }
 
 // Config options for the slasher node RPC server.
@@ -56,21 +50,15 @@ type Config struct {
 func NewService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:          ctx,
-		cancel:       cancel,
-		host:         cfg.Host,
-		port:         cfg.Port,
-		detector:     cfg.Detector,
-		slasherDB:    cfg.SlasherDB,
-		withCert:     cfg.CertFlag,
-		withKey:      cfg.KeyFlag,
-		beaconclient: cfg.BeaconClient,
+		cfg:    cfg,
+		ctx:    ctx,
+		cancel: cancel,
 	}
 }
 
 // Start the gRPC service.
 func (s *Service) Start() {
-	address := fmt.Sprintf("%s:%s", s.host, s.port)
+	address := fmt.Sprintf("%s:%s", s.cfg.Host, s.cfg.Port)
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Errorf("Could not listen to port in Start() %s: %v", address, err)
@@ -98,8 +86,8 @@ func (s *Service) Start() {
 	grpc_prometheus.EnableHandlingTimeHistogram()
 	// TODO(#791): Utilize a certificate for secure connections
 	// between beacon nodes and validator clients.
-	if s.withCert != "" && s.withKey != "" {
-		creds, err := credentials.NewServerTLSFromFile(s.withCert, s.withKey)
+	if s.cfg.CertFlag != "" && s.cfg.KeyFlag != "" {
+		creds, err := credentials.NewServerTLSFromFile(s.cfg.CertFlag, s.cfg.KeyFlag)
 		if err != nil {
 			log.Errorf("Could not load TLS keys: %s", err)
 			s.credentialError = err
@@ -114,9 +102,9 @@ func (s *Service) Start() {
 
 	slasherServer := &Server{
 		ctx:          s.ctx,
-		detector:     s.detector,
-		slasherDB:    s.slasherDB,
-		beaconClient: s.beaconclient,
+		detector:     s.cfg.Detector,
+		slasherDB:    s.cfg.SlasherDB,
+		beaconClient: s.cfg.BeaconClient,
 	}
 	slashpb.RegisterSlasherServer(s.grpcServer, slasherServer)
 
@@ -149,8 +137,8 @@ func (s *Service) Status() error {
 	if s.credentialError != nil {
 		return s.credentialError
 	}
-	if bs := s.beaconclient.Status(); bs != nil {
+	if bs := s.cfg.BeaconClient.Status(); bs != nil {
 		return bs
 	}
-	return s.detector.Status()
+	return s.cfg.Detector.Status()
 }
