@@ -30,7 +30,7 @@ func (s *Service) pingHandler(_ context.Context, msg interface{}, stream libp2pc
 	if err != nil {
 		// Descore peer for giving us a bad sequence number.
 		if errors.Is(err, p2ptypes.ErrInvalidSequenceNum) {
-			s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
+			s.cfg.P2P.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 			s.writeErrorResponseToStream(responseCodeInvalidRequest, p2ptypes.ErrInvalidSequenceNum.Error(), stream)
 		}
 		return err
@@ -38,8 +38,8 @@ func (s *Service) pingHandler(_ context.Context, msg interface{}, stream libp2pc
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
 	}
-	sq := types.SSZUint64(s.p2p.MetadataSeq())
-	if _, err := s.p2p.Encoding().EncodeWithMaxLength(stream, &sq); err != nil {
+	sq := types.SSZUint64(s.cfg.P2P.MetadataSeq())
+	if _, err := s.cfg.P2P.Encoding().EncodeWithMaxLength(stream, &sq); err != nil {
 		return err
 	}
 
@@ -66,7 +66,7 @@ func (s *Service) pingHandler(_ context.Context, msg interface{}, stream libp2pc
 			return
 		}
 		// update metadata if there is no error
-		s.p2p.Peers().SetMetadata(stream.Conn().RemotePeer(), md)
+		s.cfg.P2P.Peers().SetMetadata(stream.Conn().RemotePeer(), md)
 	}()
 
 	return nil
@@ -76,34 +76,34 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
-	metadataSeq := types.SSZUint64(s.p2p.MetadataSeq())
-	stream, err := s.p2p.Send(ctx, &metadataSeq, p2p.RPCPingTopic, id)
+	metadataSeq := types.SSZUint64(s.cfg.P2P.MetadataSeq())
+	stream, err := s.cfg.P2P.Send(ctx, &metadataSeq, p2p.RPCPingTopic, id)
 	if err != nil {
 		return err
 	}
 	currentTime := timeutils.Now()
 	defer closeStream(stream, log)
 
-	code, errMsg, err := ReadStatusCode(stream, s.p2p.Encoding())
+	code, errMsg, err := ReadStatusCode(stream, s.cfg.P2P.Encoding())
 	if err != nil {
 		return err
 	}
 	// Records the latency of the ping request for that peer.
-	s.p2p.Host().Peerstore().RecordLatency(id, timeutils.Now().Sub(currentTime))
+	s.cfg.P2P.Host().Peerstore().RecordLatency(id, timeutils.Now().Sub(currentTime))
 
 	if code != 0 {
-		s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
+		s.cfg.P2P.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		return errors.New(errMsg)
 	}
 	msg := new(types.SSZUint64)
-	if err := s.p2p.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
+	if err := s.cfg.P2P.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
 		return err
 	}
 	valid, err := s.validateSequenceNum(*msg, stream.Conn().RemotePeer())
 	if err != nil {
 		// Descore peer for giving us a bad sequence number.
 		if errors.Is(err, p2ptypes.ErrInvalidSequenceNum) {
-			s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
+			s.cfg.P2P.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		}
 		return err
 	}
@@ -116,13 +116,13 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 		// already done in the request method.
 		return err
 	}
-	s.p2p.Peers().SetMetadata(stream.Conn().RemotePeer(), md)
+	s.cfg.P2P.Peers().SetMetadata(stream.Conn().RemotePeer(), md)
 	return nil
 }
 
 // validates the peer's sequence number.
 func (s *Service) validateSequenceNum(seq types.SSZUint64, id peer.ID) (bool, error) {
-	md, err := s.p2p.Peers().Metadata(id)
+	md, err := s.cfg.P2P.Peers().Metadata(id)
 	if err != nil {
 		return false, err
 	}
