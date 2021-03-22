@@ -14,11 +14,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/slasher"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -72,10 +72,11 @@ func New(ctx context.Context, beaconDB db.Database) (*Simulator, error) {
 	stateNotifier := &mock.MockStateNotifier{}
 	params := DefaultParams()
 
-	beaconState, err := testutil.NewBeaconState()
-	if err != nil {
-		return nil, err
-	}
+	//beaconState, err := testutil.NewBeaconState()
+	//if err != nil {
+	//	return nil, err
+	//}
+	var beaconState *state.BeaconState
 	mockChain := &mock.ChainService{
 		State: beaconState,
 	}
