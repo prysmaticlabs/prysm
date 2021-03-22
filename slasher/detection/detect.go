@@ -73,7 +73,7 @@ func (s *Service) DetectAttesterSlashings(
 		}
 	}
 	if len(slashings) > 0 {
-		if err := s.slasherDB.SaveAttesterSlashings(ctx, status.Active, slashings); err != nil {
+		if err := s.cfg.SlasherDB.SaveAttesterSlashings(ctx, status.Active, slashings); err != nil {
 			return nil, err
 		}
 	}
@@ -187,7 +187,7 @@ func (s *Service) mapResultsToAtts(ctx context.Context, results []*types.Detecti
 		if _, ok := resultsToAtts[resultKey]; ok {
 			continue
 		}
-		matchingAtts, err := s.slasherDB.IndexedAttestationsWithPrefix(ctx, result.SlashableEpoch, result.SigBytes[:])
+		matchingAtts, err := s.cfg.SlasherDB.IndexedAttestationsWithPrefix(ctx, result.SlashableEpoch, result.SigBytes[:])
 		if err != nil {
 			return nil, err
 		}
@@ -214,7 +214,7 @@ func isDoubleVote(incomingAtt, prevAtt *ethpb.IndexedAttestation) bool {
 // UpdateHighestAttestation updates to the db the highest source and target attestations for a each validator.
 func (s *Service) UpdateHighestAttestation(ctx context.Context, att *ethpb.IndexedAttestation) error {
 	for _, idx := range att.AttestingIndices {
-		h, err := s.slasherDB.HighestAttestation(ctx, idx)
+		h, err := s.cfg.SlasherDB.HighestAttestation(ctx, idx)
 		if err != nil {
 			return err
 		}
@@ -238,7 +238,7 @@ func (s *Service) UpdateHighestAttestation(ctx context.Context, att *ethpb.Index
 
 		// If it's not a new instance of HighestAttestation, changing it will also change the cached instance.
 		if update {
-			if err := s.slasherDB.SaveHighestAttestation(ctx, h); err != nil {
+			if err := s.cfg.SlasherDB.SaveHighestAttestation(ctx, h); err != nil {
 				return err
 			}
 		}

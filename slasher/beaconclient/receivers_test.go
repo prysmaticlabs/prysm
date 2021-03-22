@@ -21,8 +21,8 @@ func TestService_ReceiveBlocks(t *testing.T) {
 	client := mock.NewMockBeaconChainClient(ctrl)
 
 	bs := Service{
-		beaconClient: client,
-		blockFeed:    new(event.Feed),
+		cfg:       &Config{BeaconClient: client},
+		blockFeed: new(event.Feed),
 	}
 	stream := mock.NewMockBeaconChain_StreamBlocksClient(ctrl)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -46,7 +46,7 @@ func TestService_ReceiveAttestations(t *testing.T) {
 	client := mock.NewMockBeaconChainClient(ctrl)
 
 	bs := Service{
-		beaconClient:                client,
+		cfg:                         &Config{BeaconClient: client},
 		blockFeed:                   new(event.Feed),
 		receivedAttestationsBuffer:  make(chan *ethpb.IndexedAttestation, 1),
 		collectedAttestationsBuffer: make(chan []*ethpb.IndexedAttestation, 1),
@@ -78,9 +78,11 @@ func TestService_ReceiveAttestations_Batched(t *testing.T) {
 	client := mock.NewMockBeaconChainClient(ctrl)
 
 	bs := Service{
-		beaconClient:                client,
+		cfg: &Config{
+			BeaconClient: client,
+			SlasherDB:    testDB.SetupSlasherDB(t, false),
+		},
 		blockFeed:                   new(event.Feed),
-		slasherDB:                   testDB.SetupSlasherDB(t, false),
 		attestationFeed:             new(event.Feed),
 		receivedAttestationsBuffer:  make(chan *ethpb.IndexedAttestation, 1),
 		collectedAttestationsBuffer: make(chan []*ethpb.IndexedAttestation, 1),

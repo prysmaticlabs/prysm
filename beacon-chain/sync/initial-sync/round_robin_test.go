@@ -296,15 +296,13 @@ func TestService_roundRobinSync(t *testing.T) {
 			} // no-op mock
 			s := &Service{
 				ctx:          context.Background(),
-				chain:        mc,
-				p2p:          p,
-				db:           beaconDB,
+				cfg:          &Config{Chain: mc, P2P: p, DB: beaconDB},
 				synced:       abool.New(),
 				chainStarted: abool.NewBool(true),
 			}
 			assert.NoError(t, s.roundRobinSync(makeGenesisTime(tt.currentSlot)))
-			if s.chain.HeadSlot() < tt.currentSlot {
-				t.Errorf("Head slot (%d) is less than expected currentSlot (%d)", s.chain.HeadSlot(), tt.currentSlot)
+			if s.cfg.Chain.HeadSlot() < tt.currentSlot {
+				t.Errorf("Head slot (%d) is less than expected currentSlot (%d)", s.cfg.Chain.HeadSlot(), tt.currentSlot)
 			}
 			assert.Equal(t, true, len(tt.expectedBlockSlots) <= len(mc.BlocksReceived), "Processes wrong number of blocks")
 			var receivedBlockSlots []types.Slot
@@ -357,7 +355,7 @@ func TestService_processBlock(t *testing.T) {
 		// Process block normally.
 		err = s.processBlock(ctx, genesis, blk1, func(
 			ctx context.Context, block *eth.SignedBeaconBlock, blockRoot [32]byte) error {
-			assert.NoError(t, s.chain.ReceiveBlock(ctx, block, blockRoot))
+			assert.NoError(t, s.cfg.Chain.ReceiveBlock(ctx, block, blockRoot))
 			return nil
 		})
 		assert.NoError(t, err)
@@ -372,11 +370,11 @@ func TestService_processBlock(t *testing.T) {
 		// Continue normal processing, should proceed w/o errors.
 		err = s.processBlock(ctx, genesis, blk2, func(
 			ctx context.Context, block *eth.SignedBeaconBlock, blockRoot [32]byte) error {
-			assert.NoError(t, s.chain.ReceiveBlock(ctx, block, blockRoot))
+			assert.NoError(t, s.cfg.Chain.ReceiveBlock(ctx, block, blockRoot))
 			return nil
 		})
 		assert.NoError(t, err)
-		assert.Equal(t, types.Slot(2), s.chain.HeadSlot(), "Unexpected head slot")
+		assert.Equal(t, types.Slot(2), s.cfg.Chain.HeadSlot(), "Unexpected head slot")
 	})
 }
 
@@ -438,7 +436,7 @@ func TestService_processBlockBatch(t *testing.T) {
 		// Process block normally.
 		err = s.processBatchedBlocks(ctx, genesis, batch, func(
 			ctx context.Context, blks []*eth.SignedBeaconBlock, blockRoots [][32]byte) error {
-			assert.NoError(t, s.chain.ReceiveBlockBatch(ctx, blks, blockRoots))
+			assert.NoError(t, s.cfg.Chain.ReceiveBlockBatch(ctx, blks, blockRoots))
 			return nil
 		})
 		assert.NoError(t, err)
@@ -470,11 +468,11 @@ func TestService_processBlockBatch(t *testing.T) {
 		// Continue normal processing, should proceed w/o errors.
 		err = s.processBatchedBlocks(ctx, genesis, batch2, func(
 			ctx context.Context, blks []*eth.SignedBeaconBlock, blockRoots [][32]byte) error {
-			assert.NoError(t, s.chain.ReceiveBlockBatch(ctx, blks, blockRoots))
+			assert.NoError(t, s.cfg.Chain.ReceiveBlockBatch(ctx, blks, blockRoots))
 			return nil
 		})
 		assert.NoError(t, err)
-		assert.Equal(t, types.Slot(19), s.chain.HeadSlot(), "Unexpected head slot")
+		assert.Equal(t, types.Slot(19), s.cfg.Chain.HeadSlot(), "Unexpected head slot")
 	})
 }
 
@@ -530,13 +528,11 @@ func TestService_blockProviderScoring(t *testing.T) {
 	} // no-op mock
 	s := &Service{
 		ctx:          context.Background(),
-		chain:        mc,
-		p2p:          p,
-		db:           beaconDB,
+		cfg:          &Config{Chain: mc, P2P: p, DB: beaconDB},
 		synced:       abool.New(),
 		chainStarted: abool.NewBool(true),
 	}
-	scorer := s.p2p.Peers().Scorers().BlockProviderScorer()
+	scorer := s.cfg.P2P.Peers().Scorers().BlockProviderScorer()
 	expectedBlockSlots := makeSequence(1, 160)
 	currentSlot := types.Slot(160)
 
@@ -545,8 +541,8 @@ func TestService_blockProviderScoring(t *testing.T) {
 	assert.Equal(t, scorer.MaxScore(), scorer.Score(peer3))
 
 	assert.NoError(t, s.roundRobinSync(makeGenesisTime(currentSlot)))
-	if s.chain.HeadSlot() < currentSlot {
-		t.Errorf("Head slot (%d) is less than expected currentSlot (%d)", s.chain.HeadSlot(), currentSlot)
+	if s.cfg.Chain.HeadSlot() < currentSlot {
+		t.Errorf("Head slot (%d) is less than expected currentSlot (%d)", s.cfg.Chain.HeadSlot(), currentSlot)
 	}
 	assert.Equal(t, true, len(expectedBlockSlots) <= len(mc.BlocksReceived), "Processes wrong number of blocks")
 	var receivedBlockSlots []types.Slot
@@ -595,9 +591,7 @@ func TestService_syncToFinalizedEpoch(t *testing.T) {
 	}
 	s := &Service{
 		ctx:          context.Background(),
-		chain:        mc,
-		p2p:          p,
-		db:           beaconDB,
+		cfg:          &Config{Chain: mc, P2P: p, DB: beaconDB},
 		synced:       abool.New(),
 		chainStarted: abool.NewBool(true),
 		counter:      ratecounter.NewRateCounter(counterSeconds * time.Second),
@@ -614,8 +608,8 @@ func TestService_syncToFinalizedEpoch(t *testing.T) {
 	}, p.Peers())
 	genesis := makeGenesisTime(currentSlot)
 	assert.NoError(t, s.syncToFinalizedEpoch(context.Background(), genesis))
-	if s.chain.HeadSlot() < currentSlot {
-		t.Errorf("Head slot (%d) is less than expected currentSlot (%d)", s.chain.HeadSlot(), currentSlot)
+	if s.cfg.Chain.HeadSlot() < currentSlot {
+		t.Errorf("Head slot (%d) is less than expected currentSlot (%d)", s.cfg.Chain.HeadSlot(), currentSlot)
 	}
 	assert.Equal(t, true, len(expectedBlockSlots) <= len(mc.BlocksReceived), "Processes wrong number of blocks")
 	var receivedBlockSlots []types.Slot
