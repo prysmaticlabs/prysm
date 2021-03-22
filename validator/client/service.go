@@ -69,7 +69,7 @@ type ValidatorService struct {
 	grpcHeaders           []string
 	graffiti              []byte
 	graffitiStruct        *graffiti.Graffiti
-	pandoraService        *pandora.Service
+	pandoraService        pandora.PandoraService
 }
 
 // Config for the validator service.
@@ -92,7 +92,7 @@ type Config struct {
 	DataDir                    string
 	GrpcHeadersFlag            string
 	GraffitiStruct             *graffiti.Graffiti
-	PandoraService             *pandora.Service
+	PandoraService             pandora.PandoraService
 }
 
 // NewValidatorService creates a new validator service for the service
