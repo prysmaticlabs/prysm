@@ -17,7 +17,7 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (proto.Message, error
 		return nil, errNilPubsubMessage
 	}
 	topic := *msg.Topic
-	topic = strings.TrimSuffix(topic, s.p2p.Encoding().ProtocolSuffix())
+	topic = strings.TrimSuffix(topic, s.cfg.P2P.Encoding().ProtocolSuffix())
 	topic, err := s.replaceForkDigest(topic)
 	if err != nil {
 		return nil, err
@@ -27,7 +27,7 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (proto.Message, error
 		return nil, p2p.ErrMessageNotMapped
 	}
 	m := proto.Clone(base)
-	if err := s.p2p.Encoding().DecodeGossip(msg.Data, m); err != nil {
+	if err := s.cfg.P2P.Encoding().DecodeGossip(msg.Data, m); err != nil {
 		return nil, err
 	}
 	return m, nil

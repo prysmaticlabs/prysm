@@ -43,13 +43,13 @@ func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
 
 	b32 := testutil.NewBeaconBlock()
 	b32.Block.Slot = 32
-	require.NoError(t, service.beaconDB.SaveBlock(ctx, b32))
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, b32))
 	r32, err := b32.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b33 := testutil.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]
-	require.NoError(t, service.beaconDB.SaveBlock(ctx, b33))
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, b33))
 	r33, err := b33.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -71,13 +71,13 @@ func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 
 	b32 := testutil.NewBeaconBlock()
 	b32.Block.Slot = 32
-	require.NoError(t, service.beaconDB.SaveBlock(ctx, b32))
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, b32))
 	r32, err := b32.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b33 := testutil.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]
-	require.NoError(t, service.beaconDB.SaveBlock(ctx, b33))
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, b33))
 	r33, err := b33.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -112,10 +112,10 @@ func TestProcessAttestations_Ok(t *testing.T) {
 	copied := genesisState.Copy()
 	copied, err = state.ProcessSlots(ctx, copied, 1)
 	require.NoError(t, err)
-	require.NoError(t, service.beaconDB.SaveState(ctx, copied, tRoot))
-	require.NoError(t, service.forkChoiceStore.ProcessBlock(ctx, 0, tRoot, tRoot, tRoot, 1, 1))
-	require.NoError(t, service.attPool.SaveForkchoiceAttestations(atts))
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, copied, tRoot))
+	require.NoError(t, service.cfg.ForkChoiceStore.ProcessBlock(ctx, 0, tRoot, tRoot, tRoot, 1, 1))
+	require.NoError(t, service.cfg.AttPool.SaveForkchoiceAttestations(atts))
 	service.processAttestations(ctx)
-	require.Equal(t, 0, len(service.attPool.ForkchoiceAttestations()))
+	require.Equal(t, 0, len(service.cfg.AttPool.ForkchoiceAttestations()))
 	require.LogsDoNotContain(t, hook, "Could not process attestation for fork choice")
 }

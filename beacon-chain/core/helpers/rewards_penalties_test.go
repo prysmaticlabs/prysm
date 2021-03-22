@@ -5,7 +5,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -13,7 +13,7 @@ import (
 )
 
 func TestTotalBalance_OK(t *testing.T) {
-	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{Validators: []*ethpb.Validator{
+	state, err := stateV0.InitializeFromProto(&pb.BeaconState{Validators: []*ethpb.Validator{
 		{EffectiveBalance: 27 * 1e9}, {EffectiveBalance: 28 * 1e9},
 		{EffectiveBalance: 32 * 1e9}, {EffectiveBalance: 40 * 1e9},
 	}})
@@ -26,7 +26,7 @@ func TestTotalBalance_OK(t *testing.T) {
 }
 
 func TestTotalBalance_ReturnsEffectiveBalanceIncrement(t *testing.T) {
-	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{Validators: []*ethpb.Validator{}})
+	state, err := stateV0.InitializeFromProto(&pb.BeaconState{Validators: []*ethpb.Validator{}})
 	require.NoError(t, err)
 
 	balance := TotalBalance(state, []types.ValidatorIndex{})
@@ -35,7 +35,7 @@ func TestTotalBalance_ReturnsEffectiveBalanceIncrement(t *testing.T) {
 }
 
 func TestTotalActiveBalance_OK(t *testing.T) {
-	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{Validators: []*ethpb.Validator{
+	state, err := stateV0.InitializeFromProto(&pb.BeaconState{Validators: []*ethpb.Validator{
 		{
 			EffectiveBalance: 32 * 1e9,
 			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
@@ -74,7 +74,7 @@ func TestGetBalance_OK(t *testing.T) {
 		{i: 2, b: []uint64{0, 0, 0}},
 	}
 	for _, test := range tests {
-		state, err := beaconstate.InitializeFromProto(&pb.BeaconState{Balances: test.b})
+		state, err := stateV0.InitializeFromProto(&pb.BeaconState{Balances: test.b})
 		require.NoError(t, err)
 		assert.Equal(t, test.b[test.i], state.Balances()[test.i], "Incorrect Validator balance")
 	}
@@ -92,7 +92,7 @@ func TestIncreaseBalance_OK(t *testing.T) {
 		{i: 2, b: []uint64{27 * 1e9, 28 * 1e9, 32 * 1e9}, nb: 33 * 1e9, eb: 65 * 1e9},
 	}
 	for _, test := range tests {
-		state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+		state, err := stateV0.InitializeFromProto(&pb.BeaconState{
 			Validators: []*ethpb.Validator{
 				{EffectiveBalance: 4}, {EffectiveBalance: 4}, {EffectiveBalance: 4}},
 			Balances: test.b,
@@ -116,7 +116,7 @@ func TestDecreaseBalance_OK(t *testing.T) {
 		{i: 3, b: []uint64{27 * 1e9, 28 * 1e9, 1, 28 * 1e9}, nb: 28 * 1e9, eb: 0},
 	}
 	for _, test := range tests {
-		state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+		state, err := stateV0.InitializeFromProto(&pb.BeaconState{
 			Validators: []*ethpb.Validator{
 				{EffectiveBalance: 4}, {EffectiveBalance: 4}, {EffectiveBalance: 4}, {EffectiveBalance: 3}},
 			Balances: test.b,

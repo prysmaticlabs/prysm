@@ -39,44 +39,76 @@ func TestPruneAttestations_NoPruning(t *testing.T) {
 }
 
 func TestPruneAttestations_OK(t *testing.T) {
-	pubKey := [48]byte{1}
-	validatorDB := setupDB(t, [][48]byte{pubKey})
+	numKeys := uint64(2048)
+	pks := make([][48]byte, 0, numKeys)
+	for i := uint64(0); i < numKeys; i++ {
+		pks = append(pks, bytesutil.ToBytes48(bytesutil.ToBytes(i, 48)))
+	}
+	validatorDB := setupDB(t, pks)
 
 	// Write attesting history for every single epoch
 	// since genesis to SLASHING_PROTECTION_PRUNING_EPOCHS * 2.
 	numEpochs := params.BeaconConfig().SlashingProtectionPruningEpochs * 2
-	err := setupAttestationsForEveryEpoch(t, validatorDB, pubKey, numEpochs)
-	require.NoError(t, err)
+	for _, pk := range pks {
+		require.NoError(t, setupAttestationsForEveryEpoch(t, validatorDB, pk, numEpochs))
+	}
 
-	err = validatorDB.PruneAttestations(context.Background())
-	require.NoError(t, err)
+	require.NoError(t, validatorDB.PruneAttestations(context.Background()))
 
 	// Next, verify that we pruned every epoch
 	// from genesis to SLASHING_PROTECTION_PRUNING_EPOCHS - 1.
 	startEpoch := types.Epoch(0)
-	err = checkAttestingHistoryAfterPruning(
-		t,
-		validatorDB,
-		pubKey,
-		startEpoch,
-		params.BeaconConfig().SlashingProtectionPruningEpochs-1,
-		true, /* should be pruned */
-	)
-	require.NoError(t, err)
+	for _, pk := range pks {
+		err := checkAttestingHistoryAfterPruning(
+			t,
+			validatorDB,
+			pk,
+			startEpoch,
+			params.BeaconConfig().SlashingProtectionPruningEpochs-1,
+			true, /* should be pruned */
+		)
+		require.NoError(t, err)
+	}
 
 	// Next, verify that we pruned every epoch
 	// from N = SLASHING_PROTECTION_PRUNING_EPOCHS to N * 2.
 	startEpoch = params.BeaconConfig().SlashingProtectionPruningEpochs
 	endEpoch := startEpoch * 2
-	err = checkAttestingHistoryAfterPruning(
-		t,
-		validatorDB,
-		pubKey,
-		startEpoch,
-		endEpoch,
-		false, /* should not be pruned */
-	)
-	require.NoError(t, err)
+	for _, pk := range pks {
+		err := checkAttestingHistoryAfterPruning(
+			t,
+			validatorDB,
+			pk,
+			startEpoch,
+			endEpoch,
+			false, /* should not be pruned */
+		)
+		require.NoError(t, err)
+	}
+}
+
+func BenchmarkPruneAttestations(b *testing.B) {
+	numKeys := uint64(8)
+	pks := make([][48]byte, 0, numKeys)
+	for i := uint64(0); i < numKeys; i++ {
+		pks = append(pks, bytesutil.ToBytes48(bytesutil.ToBytes(i, 48)))
+	}
+	validatorDB := setupDB(b, pks)
+
+	// Write attesting history for every single epoch
+	// since genesis to SLASHING_PROTECTION_PRUNING_EPOCHS * 20.
+	numEpochs := params.BeaconConfig().SlashingProtectionPruningEpochs * 20
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		b.StopTimer()
+		for _, pk := range pks {
+			require.NoError(b, setupAttestationsForEveryEpoch(b, validatorDB, pk, numEpochs))
+		}
+		b.StartTimer()
+
+		require.NoError(b, validatorDB.PruneAttestations(context.Background()))
+	}
 }
 
 // Saves attesting history for every (source, target = source + 1) pairs since genesis

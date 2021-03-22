@@ -10,8 +10,8 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -136,7 +136,7 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState iface.BeaconState,
 
 	slashings := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
 
-	genesisValidatorsRoot, err := stateTrie.ValidatorRegistryRoot(preState.Validators())
+	genesisValidatorsRoot, err := stateV0.ValidatorRegistryRoot(preState.Validators())
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not hash tree root genesis validators %v", err)
 	}
@@ -206,7 +206,7 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState iface.BeaconState,
 		BodyRoot:   bodyRoot[:],
 	}
 
-	return stateTrie.InitializeFromProto(state)
+	return stateV0.InitializeFromProto(state)
 }
 
 // EmptyGenesisState returns an empty beacon state object.
@@ -233,7 +233,7 @@ func EmptyGenesisState() (iface.BeaconState, error) {
 		Eth1DataVotes:    []*ethpb.Eth1Data{},
 		Eth1DepositIndex: 0,
 	}
-	return stateTrie.InitializeFromProto(state)
+	return stateV0.InitializeFromProto(state)
 }
 
 // IsValidGenesisState gets called whenever there's a deposit event,
