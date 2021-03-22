@@ -1112,15 +1112,15 @@ func (b *BeaconState) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	return
 }
 
-// MarshalSSZ ssz marshals the BeaconStateV1 object
-func (b *BeaconStateV1) MarshalSSZ() ([]byte, error) {
+// MarshalSSZ ssz marshals the BeaconStateAltair object
+func (b *BeaconStateAltair) MarshalSSZ() ([]byte, error) {
 	return ssz.MarshalSSZ(b)
 }
 
-// MarshalSSZTo ssz marshals the BeaconStateV1 object to a target array
-func (b *BeaconStateV1) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+// MarshalSSZTo ssz marshals the BeaconStateAltair object to a target array
+func (b *BeaconStateAltair) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := int(2787217)
+	offset := int(2787221)
 
 	// Field (0) 'GenesisTime'
 	dst = ssz.MarshalUint64(dst, b.GenesisTime)
@@ -1265,7 +1265,11 @@ func (b *BeaconStateV1) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 		return
 	}
 
-	// Field (21) 'CurrentSyncCommittee'
+	// Offset (21) 'InactivityScores'
+	dst = ssz.WriteOffset(dst, offset)
+	offset += len(b.InactivityScores) * 8
+
+	// Field (22) 'CurrentSyncCommittee'
 	if b.CurrentSyncCommittee == nil {
 		b.CurrentSyncCommittee = new(SyncCommittee)
 	}
@@ -1273,7 +1277,7 @@ func (b *BeaconStateV1) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 		return
 	}
 
-	// Field (22) 'NextSyncCommittee'
+	// Field (23) 'NextSyncCommittee'
 	if b.NextSyncCommittee == nil {
 		b.NextSyncCommittee = new(SyncCommittee)
 	}
@@ -1339,19 +1343,28 @@ func (b *BeaconStateV1) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	}
 	dst = append(dst, b.CurrentEpochParticipation...)
 
+	// Field (21) 'InactivityScores'
+	if len(b.InactivityScores) > 1099511627776 {
+		err = ssz.ErrListTooBig
+		return
+	}
+	for ii := 0; ii < len(b.InactivityScores); ii++ {
+		dst = ssz.MarshalUint64(dst, b.InactivityScores[ii])
+	}
+
 	return
 }
 
-// UnmarshalSSZ ssz unmarshals the BeaconStateV1 object
-func (b *BeaconStateV1) UnmarshalSSZ(buf []byte) error {
+// UnmarshalSSZ ssz unmarshals the BeaconStateAltair object
+func (b *BeaconStateAltair) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
-	if size < 2787217 {
+	if size < 2787221 {
 		return ssz.ErrSize
 	}
 
 	tail := buf
-	var o7, o9, o11, o12, o15, o16 uint64
+	var o7, o9, o11, o12, o15, o16, o21 uint64
 
 	// Field (0) 'GenesisTime'
 	b.GenesisTime = ssz.UnmarshallUint64(buf[0:8])
@@ -1485,19 +1498,24 @@ func (b *BeaconStateV1) UnmarshalSSZ(buf []byte) error {
 		return err
 	}
 
-	// Field (21) 'CurrentSyncCommittee'
+	// Offset (21) 'InactivityScores'
+	if o21 = ssz.ReadOffset(buf[2687377:2687381]); o21 > size || o16 > o21 {
+		return ssz.ErrOffset
+	}
+
+	// Field (22) 'CurrentSyncCommittee'
 	if b.CurrentSyncCommittee == nil {
 		b.CurrentSyncCommittee = new(SyncCommittee)
 	}
-	if err = b.CurrentSyncCommittee.UnmarshalSSZ(buf[2687377:2737297]); err != nil {
+	if err = b.CurrentSyncCommittee.UnmarshalSSZ(buf[2687381:2737301]); err != nil {
 		return err
 	}
 
-	// Field (22) 'NextSyncCommittee'
+	// Field (23) 'NextSyncCommittee'
 	if b.NextSyncCommittee == nil {
 		b.NextSyncCommittee = new(SyncCommittee)
 	}
-	if err = b.NextSyncCommittee.UnmarshalSSZ(buf[2737297:2787217]); err != nil {
+	if err = b.NextSyncCommittee.UnmarshalSSZ(buf[2737301:2787221]); err != nil {
 		return err
 	}
 
@@ -1580,7 +1598,7 @@ func (b *BeaconStateV1) UnmarshalSSZ(buf []byte) error {
 
 	// Field (16) 'CurrentEpochParticipation'
 	{
-		buf = tail[o16:]
+		buf = tail[o16:o21]
 		if len(buf) > 1099511627776 {
 			return ssz.ErrBytesLength
 		}
@@ -1589,12 +1607,25 @@ func (b *BeaconStateV1) UnmarshalSSZ(buf []byte) error {
 		}
 		b.CurrentEpochParticipation = append(b.CurrentEpochParticipation, buf...)
 	}
+
+	// Field (21) 'InactivityScores'
+	{
+		buf = tail[o21:]
+		num, err := ssz.DivideInt2(len(buf), 8, 1099511627776)
+		if err != nil {
+			return err
+		}
+		b.InactivityScores = ssz.ExtendUint64(b.InactivityScores, num)
+		for ii := 0; ii < num; ii++ {
+			b.InactivityScores[ii] = ssz.UnmarshallUint64(buf[ii*8 : (ii+1)*8])
+		}
+	}
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the BeaconStateV1 object
-func (b *BeaconStateV1) SizeSSZ() (size int) {
-	size = 2787217
+// SizeSSZ returns the ssz encoded size in bytes for the BeaconStateAltair object
+func (b *BeaconStateAltair) SizeSSZ() (size int) {
+	size = 2787221
 
 	// Field (7) 'HistoricalRoots'
 	size += len(b.HistoricalRoots) * 32
@@ -1614,16 +1645,19 @@ func (b *BeaconStateV1) SizeSSZ() (size int) {
 	// Field (16) 'CurrentEpochParticipation'
 	size += len(b.CurrentEpochParticipation)
 
+	// Field (21) 'InactivityScores'
+	size += len(b.InactivityScores) * 8
+
 	return
 }
 
-// HashTreeRoot ssz hashes the BeaconStateV1 object
-func (b *BeaconStateV1) HashTreeRoot() ([32]byte, error) {
+// HashTreeRoot ssz hashes the BeaconStateAltair object
+func (b *BeaconStateAltair) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(b)
 }
 
-// HashTreeRootWith ssz hashes the BeaconStateV1 object with a hasher
-func (b *BeaconStateV1) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+// HashTreeRootWith ssz hashes the BeaconStateAltair object with a hasher
+func (b *BeaconStateAltair) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
 	// Field (0) 'GenesisTime'
@@ -1822,12 +1856,27 @@ func (b *BeaconStateV1) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 		return
 	}
 
-	// Field (21) 'CurrentSyncCommittee'
+	// Field (21) 'InactivityScores'
+	{
+		if len(b.InactivityScores) > 1099511627776 {
+			err = ssz.ErrListTooBig
+			return
+		}
+		subIndx := hh.Index()
+		for _, i := range b.InactivityScores {
+			hh.AppendUint64(i)
+		}
+		hh.FillUpTo32()
+		numItems := uint64(len(b.InactivityScores))
+		hh.MerkleizeWithMixin(subIndx, numItems, ssz.CalculateLimit(1099511627776, numItems, 8))
+	}
+
+	// Field (22) 'CurrentSyncCommittee'
 	if err = b.CurrentSyncCommittee.HashTreeRootWith(hh); err != nil {
 		return
 	}
 
-	// Field (22) 'NextSyncCommittee'
+	// Field (23) 'NextSyncCommittee'
 	if err = b.NextSyncCommittee.HashTreeRootWith(hh); err != nil {
 		return
 	}
