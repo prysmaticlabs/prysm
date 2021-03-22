@@ -11,7 +11,6 @@ import (
 	"os/exec"
 	"path"
 	"strings"
-	"testing"
 	"time"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
@@ -40,7 +39,7 @@ type Eth1Node struct {
 }
 
 // NewEth1Node creates and returns ETH1 node.
-func NewEth1Node(t *testing.T, config *e2etypes.E2EConfig) *Eth1Node {
+func NewEth1Node(config *e2etypes.E2EConfig) *Eth1Node {
 	return &Eth1Node{
 		started: make(chan struct{}, 1),
 	}
