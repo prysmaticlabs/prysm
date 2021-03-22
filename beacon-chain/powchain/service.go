@@ -180,11 +180,11 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		config.Eth1HeaderReqLimit = defaultEth1HeaderReqLimit
 	}
 
-	endpoints := dedupEndpoints(config.HTTPEndpoints)
+	config.HTTPEndpoints = dedupEndpoints(config.HTTPEndpoints)
 	// Select first http endpoint in the provided list.
 	currEndpoint := ""
-	if len(endpoints) > 0 {
-		currEndpoint = endpoints[0]
+	if len(config.HTTPEndpoints) > 0 {
+		currEndpoint = config.HTTPEndpoints[0]
 	}
 	s := &Service{
 		cfg:              config,
