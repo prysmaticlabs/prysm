@@ -255,10 +255,10 @@ func (s *Service) Start() {
 		StateGenService:     s.cfg.StateGen,
 		SyncChecker:         s.cfg.SyncService,
 		StateFetcher: statefetcher.StateFetcher{
-			BeaconDB:           s.beaconDB,
-			ChainInfoFetcher:   s.chainInfoFetcher,
-			GenesisTimeFetcher: s.timeFetcher,
-			StateGenService:    s.stateGen,
+			BeaconDB:           s.cfg.BeaconDB,
+			ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
+			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
+			StateGenService:    s.cfg.StateGen,
 		},
 	}
 	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
