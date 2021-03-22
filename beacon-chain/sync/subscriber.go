@@ -93,15 +93,15 @@ func (s *Service) subscribe(topic string, validator pubsub.ValidatorEx, handle s
 }
 
 func (s *Service) subscribeWithBase(topic string, validator pubsub.ValidatorEx, handle subHandler) *pubsub.Subscription {
-	topic += s.p2p.Encoding().ProtocolSuffix()
+	topic += s.cfg.P2P.Encoding().ProtocolSuffix()
 	log := log.WithField("topic", topic)
 
-	if err := s.p2p.PubSub().RegisterTopicValidator(s.wrapAndReportValidation(topic, validator)); err != nil {
+	if err := s.cfg.P2P.PubSub().RegisterTopicValidator(s.wrapAndReportValidation(topic, validator)); err != nil {
 		log.WithError(err).Error("Could not register validator for topic")
 		return nil
 	}
 
-	sub, err := s.p2p.SubscribeToTopic(topic)
+	sub, err := s.cfg.P2P.SubscribeToTopic(topic)
 	if err != nil {
 		// Any error subscribing to a PubSub topic would be the result of a misconfiguration of
 		// libp2p PubSub library or a subscription request to a topic that fails to match the topic
@@ -157,7 +157,7 @@ func (s *Service) subscribeWithBase(topic string, validator pubsub.ValidatorEx, 
 				return
 			}
 
-			if msg.ReceivedFrom == s.p2p.PeerID() {
+			if msg.ReceivedFrom == s.cfg.P2P.PeerID() {
 				continue
 			}
 
@@ -205,7 +205,7 @@ func (s *Service) subscribeStaticWithSubnets(topic string, validator pubsub.Vali
 	for i := uint64(0); i < params.BeaconNetworkConfig().AttestationSubnetCount; i++ {
 		s.subscribeWithBase(s.addDigestAndIndexToTopic(topic, i), validator, handle)
 	}
-	genesis := s.chain.GenesisTime()
+	genesis := s.cfg.Chain.GenesisTime()
 	ticker := slotutil.NewSlotTicker(genesis, params.BeaconConfig().SecondsPerSlot)
 
 	go func() {
@@ -215,7 +215,7 @@ func (s *Service) subscribeStaticWithSubnets(topic string, validator pubsub.Vali
 				ticker.Done()
 				return
 			case <-ticker.C():
-				if s.chainStarted.IsSet() && s.initialSync.Syncing() {
+				if s.chainStarted.IsSet() && s.cfg.InitialSync.Syncing() {
 					continue
 				}
 				// Check every slot that there are enough peers
@@ -223,7 +223,7 @@ func (s *Service) subscribeStaticWithSubnets(topic string, validator pubsub.Vali
 					if !s.validPeersExist(s.addDigestAndIndexToTopic(topic, i)) {
 						log.Debugf("No peers found subscribed to attestation gossip subnet with "+
 							"committee index %d. Searching network for peers subscribed to the subnet.", i)
-						_, err := s.p2p.FindPeersWithSubnet(s.ctx, s.addDigestAndIndexToTopic(topic, i), i, params.BeaconNetworkConfig().MinimumPeersInSubnet)
+						_, err := s.cfg.P2P.FindPeersWithSubnet(s.ctx, s.addDigestAndIndexToTopic(topic, i), i, params.BeaconNetworkConfig().MinimumPeersInSubnet)
 						if err != nil {
 							log.WithError(err).Debug("Could not search for peers")
 							return
@@ -252,7 +252,7 @@ func (s *Service) subscribeDynamicWithSubnets(
 		log.WithError(err).Fatal("Could not compute fork digest")
 	}
 	subscriptions := make(map[uint64]*pubsub.Subscription, params.BeaconConfig().MaxCommitteesPerSlot)
-	genesis := s.chain.GenesisTime()
+	genesis := s.cfg.Chain.GenesisTime()
 	ticker := slotutil.NewSlotTicker(genesis, params.BeaconConfig().SecondsPerSlot)
 
 	go func() {
@@ -262,7 +262,7 @@ func (s *Service) subscribeDynamicWithSubnets(
 				ticker.Done()
 				return
 			case currentSlot := <-ticker.C():
-				if s.chainStarted.IsSet() && s.initialSync.Syncing() {
+				if s.chainStarted.IsSet() && s.cfg.InitialSync.Syncing() {
 					continue
 				}
 				wantedSubs := s.retrievePersistentSubs(currentSlot)
@@ -296,8 +296,8 @@ func (s *Service) reValidateSubscriptions(subscriptions map[uint64]*pubsub.Subsc
 		}
 		if !wanted && v != nil {
 			v.Cancel()
-			fullTopic := fmt.Sprintf(topicFormat, digest, k) + s.p2p.Encoding().ProtocolSuffix()
-			if err := s.p2p.PubSub().UnregisterTopicValidator(fullTopic); err != nil {
+			fullTopic := fmt.Sprintf(topicFormat, digest, k) + s.cfg.P2P.Encoding().ProtocolSuffix()
+			if err := s.cfg.P2P.PubSub().UnregisterTopicValidator(fullTopic); err != nil {
 				log.WithError(err).Error("Could not unregister topic validator")
 			}
 			delete(subscriptions, k)
@@ -324,7 +324,7 @@ func (s *Service) subscribeAggregatorSubnet(
 	if !s.validPeersExist(subnetTopic) {
 		log.Debugf("No peers found subscribed to attestation gossip subnet with "+
 			"committee index %d. Searching network for peers subscribed to the subnet.", idx)
-		_, err := s.p2p.FindPeersWithSubnet(s.ctx, subnetTopic, idx, params.BeaconNetworkConfig().MinimumPeersInSubnet)
+		_, err := s.cfg.P2P.FindPeersWithSubnet(s.ctx, subnetTopic, idx, params.BeaconNetworkConfig().MinimumPeersInSubnet)
 		if err != nil {
 			log.WithError(err).Debug("Could not search for peers")
 		}
@@ -339,7 +339,7 @@ func (s *Service) lookupAttesterSubnets(digest [4]byte, idx uint64) {
 		log.Debugf("No peers found subscribed to attestation gossip subnet with "+
 			"committee index %d. Searching network for peers subscribed to the subnet.", idx)
 		// perform a search for peers with the desired committee index.
-		_, err := s.p2p.FindPeersWithSubnet(s.ctx, subnetTopic, idx, params.BeaconNetworkConfig().MinimumPeersInSubnet)
+		_, err := s.cfg.P2P.FindPeersWithSubnet(s.ctx, subnetTopic, idx, params.BeaconNetworkConfig().MinimumPeersInSubnet)
 		if err != nil {
 			log.WithError(err).Debug("Could not search for peers")
 		}
@@ -348,7 +348,7 @@ func (s *Service) lookupAttesterSubnets(digest [4]byte, idx uint64) {
 
 // find if we have peers who are subscribed to the same subnet
 func (s *Service) validPeersExist(subnetTopic string) bool {
-	numOfPeers := s.p2p.PubSub().ListPeers(subnetTopic + s.p2p.Encoding().ProtocolSuffix())
+	numOfPeers := s.cfg.P2P.PubSub().ListPeers(subnetTopic + s.cfg.P2P.Encoding().ProtocolSuffix())
 	return uint64(len(numOfPeers)) >= params.BeaconNetworkConfig().MinimumPeersInSubnet
 }
 
@@ -374,7 +374,7 @@ func (s *Service) filterNeededPeers(pids []peer.ID) []peer.ID {
 		log.WithError(err).Error("Could not compute fork digest")
 		return pids
 	}
-	currSlot := s.chain.CurrentSlot()
+	currSlot := s.cfg.Chain.CurrentSlot()
 	wantedSubs := s.retrievePersistentSubs(currSlot)
 	wantedSubs = sliceutil.SetUint64(append(wantedSubs, s.attesterSubnetIndices(currSlot)...))
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.Attestation{})]
@@ -383,8 +383,8 @@ func (s *Service) filterNeededPeers(pids []peer.ID) []peer.ID {
 	peerMap := make(map[peer.ID]bool)
 
 	for _, sub := range wantedSubs {
-		subnetTopic := fmt.Sprintf(topic, digest, sub) + s.p2p.Encoding().ProtocolSuffix()
-		peers := s.p2p.PubSub().ListPeers(subnetTopic)
+		subnetTopic := fmt.Sprintf(topic, digest, sub) + s.cfg.P2P.Encoding().ProtocolSuffix()
+		peers := s.cfg.P2P.PubSub().ListPeers(subnetTopic)
 		if len(peers) > int(params.BeaconNetworkConfig().MinimumPeersInSubnet) {
 			// In the event we have more than the minimum, we can
 			// mark the remaining as viable for pruning.
@@ -436,6 +436,6 @@ func (s *Service) addDigestAndIndexToTopic(topic string, idx uint64) string {
 }
 
 func (s *Service) forkDigest() ([4]byte, error) {
-	genRoot := s.chain.GenesisValidatorRoot()
-	return p2putils.CreateForkDigest(s.chain.GenesisTime(), genRoot[:])
+	genRoot := s.cfg.Chain.GenesisValidatorRoot()
+	return p2putils.CreateForkDigest(s.cfg.Chain.GenesisTime(), genRoot[:])
 }

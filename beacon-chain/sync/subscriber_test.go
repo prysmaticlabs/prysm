@@ -34,12 +34,14 @@ import (
 func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 	p2pService := p2ptest.NewTestP2P(t)
 	r := Service{
-		ctx:         context.Background(),
-		p2p:         p2pService,
-		initialSync: &mockSync.Sync{IsSyncing: false},
-		chain: &mockChain.ChainService{
-			ValidatorsRoot: [32]byte{'A'},
-			Genesis:        time.Now(),
+		ctx: context.Background(),
+		cfg: &Config{
+			P2P:         p2pService,
+			InitialSync: &mockSync.Sync{IsSyncing: false},
+			Chain: &mockChain.ChainService{
+				ValidatorsRoot: [32]byte{'A'},
+				Genesis:        time.Now(),
+			},
 		},
 		chainStarted: abool.New(),
 	}
@@ -77,12 +79,14 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 		ValidatorsRoot: [32]byte{'A'},
 	}
 	r := Service{
-		ctx:                       ctx,
-		p2p:                       p2pService,
-		initialSync:               &mockSync.Sync{IsSyncing: false},
-		slashingPool:              slashings.NewPool(),
-		chain:                     chainService,
-		db:                        d,
+		ctx: ctx,
+		cfg: &Config{
+			P2P:          p2pService,
+			InitialSync:  &mockSync.Sync{IsSyncing: false},
+			SlashingPool: slashings.NewPool(),
+			Chain:        chainService,
+			DB:           d,
+		},
 		seenAttesterSlashingCache: make(map[uint64]bool),
 		chainStarted:              abool.New(),
 	}
@@ -105,7 +109,7 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 		1, /* validator index */
 	)
 	require.NoError(t, err, "Error generating attester slashing")
-	err = r.db.SaveState(ctx, beaconState, bytesutil.ToBytes32(attesterSlashing.Attestation_1.Data.BeaconBlockRoot))
+	err = r.cfg.DB.SaveState(ctx, beaconState, bytesutil.ToBytes32(attesterSlashing.Attestation_1.Data.BeaconBlockRoot))
 	require.NoError(t, err)
 	p2pService.Digest, err = r.forkDigest()
 	require.NoError(t, err)
@@ -114,7 +118,7 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	if testutil.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
 	}
-	as := r.slashingPool.PendingAttesterSlashings(ctx, beaconState, false /*noLimit*/)
+	as := r.cfg.SlashingPool.PendingAttesterSlashings(ctx, beaconState, false /*noLimit*/)
 	assert.Equal(t, 1, len(as), "Expected attester slashing")
 }
 
@@ -129,12 +133,14 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	c, err := lru.New(10)
 	require.NoError(t, err)
 	r := Service{
-		ctx:                       ctx,
-		p2p:                       p2pService,
-		initialSync:               &mockSync.Sync{IsSyncing: false},
-		slashingPool:              slashings.NewPool(),
-		chain:                     chainService,
-		db:                        d,
+		ctx: ctx,
+		cfg: &Config{
+			P2P:          p2pService,
+			InitialSync:  &mockSync.Sync{IsSyncing: false},
+			SlashingPool: slashings.NewPool(),
+			Chain:        chainService,
+			DB:           d,
+		},
 		seenProposerSlashingCache: c,
 		chainStarted:              abool.New(),
 	}
@@ -164,7 +170,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	if testutil.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
 	}
-	ps := r.slashingPool.PendingProposerSlashings(ctx, beaconState, false /*noLimit*/)
+	ps := r.cfg.SlashingPool.PendingProposerSlashings(ctx, beaconState, false /*noLimit*/)
 	assert.Equal(t, 1, len(ps), "Expected proposer slashing")
 }
 
@@ -172,11 +178,13 @@ func TestSubscribe_HandlesPanic(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	r := Service{
 		ctx: context.Background(),
-		chain: &mockChain.ChainService{
-			Genesis:        time.Now(),
-			ValidatorsRoot: [32]byte{'A'},
+		cfg: &Config{
+			Chain: &mockChain.ChainService{
+				Genesis:        time.Now(),
+				ValidatorsRoot: [32]byte{'A'},
+			},
+			P2P: p,
 		},
-		p2p:          p,
 		chainStarted: abool.New(),
 	}
 	var err error
@@ -204,11 +212,13 @@ func TestRevalidateSubscription_CorrectlyFormatsTopic(t *testing.T) {
 	hook := logTest.NewGlobal()
 	r := Service{
 		ctx: context.Background(),
-		chain: &mockChain.ChainService{
-			Genesis:        time.Now(),
-			ValidatorsRoot: [32]byte{'A'},
+		cfg: &Config{
+			Chain: &mockChain.ChainService{
+				Genesis:        time.Now(),
+				ValidatorsRoot: [32]byte{'A'},
+			},
+			P2P: p,
 		},
-		p2p:          p,
 		chainStarted: abool.New(),
 	}
 	digest, err := r.forkDigest()
@@ -217,16 +227,16 @@ func TestRevalidateSubscription_CorrectlyFormatsTopic(t *testing.T) {
 
 	defaultTopic := "/eth2/testing/%#x/committee%d"
 	// committee index 1
-	fullTopic := fmt.Sprintf(defaultTopic, digest, 1) + r.p2p.Encoding().ProtocolSuffix()
-	require.NoError(t, r.p2p.PubSub().RegisterTopicValidator(fullTopic, r.noopValidator))
-	subscriptions[1], err = r.p2p.SubscribeToTopic(fullTopic)
+	fullTopic := fmt.Sprintf(defaultTopic, digest, 1) + r.cfg.P2P.Encoding().ProtocolSuffix()
+	require.NoError(t, r.cfg.P2P.PubSub().RegisterTopicValidator(fullTopic, r.noopValidator))
+	subscriptions[1], err = r.cfg.P2P.SubscribeToTopic(fullTopic)
 	require.NoError(t, err)
 
 	// committee index 2
-	fullTopic = fmt.Sprintf(defaultTopic, digest, 2) + r.p2p.Encoding().ProtocolSuffix()
-	err = r.p2p.PubSub().RegisterTopicValidator(fullTopic, r.noopValidator)
+	fullTopic = fmt.Sprintf(defaultTopic, digest, 2) + r.cfg.P2P.Encoding().ProtocolSuffix()
+	err = r.cfg.P2P.PubSub().RegisterTopicValidator(fullTopic, r.noopValidator)
 	require.NoError(t, err)
-	subscriptions[2], err = r.p2p.SubscribeToTopic(fullTopic)
+	subscriptions[2], err = r.cfg.P2P.SubscribeToTopic(fullTopic)
 	require.NoError(t, err)
 
 	r.reValidateSubscriptions(subscriptions, []uint64{2}, defaultTopic, digest)
@@ -238,11 +248,13 @@ func TestStaticSubnets(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	r := Service{
 		ctx: ctx,
-		chain: &mockChain.ChainService{
-			Genesis:        time.Now(),
-			ValidatorsRoot: [32]byte{'A'},
+		cfg: &Config{
+			Chain: &mockChain.ChainService{
+				Genesis:        time.Now(),
+				ValidatorsRoot: [32]byte{'A'},
+			},
+			P2P: p,
 		},
-		p2p:          p,
 		chainStarted: abool.New(),
 	}
 	defaultTopic := "/eth2/%x/beacon_attestation_%d"
@@ -250,7 +262,7 @@ func TestStaticSubnets(t *testing.T) {
 		// no-op
 		return nil
 	})
-	topics := r.p2p.PubSub().GetTopics()
+	topics := r.cfg.P2P.PubSub().GetTopics()
 	if uint64(len(topics)) != params.BeaconNetworkConfig().AttestationSubnetCount {
 		t.Errorf("Wanted the number of subnet topics registered to be %d but got %d", params.BeaconNetworkConfig().AttestationSubnetCount, len(topics))
 	}
@@ -365,18 +377,20 @@ func TestFilterSubnetPeers(t *testing.T) {
 	currSlot := types.Slot(100)
 	r := Service{
 		ctx: ctx,
-		chain: &mockChain.ChainService{
-			Genesis:        time.Now(),
-			ValidatorsRoot: [32]byte{'A'},
-			Slot:           &currSlot,
+		cfg: &Config{
+			Chain: &mockChain.ChainService{
+				Genesis:        time.Now(),
+				ValidatorsRoot: [32]byte{'A'},
+				Slot:           &currSlot,
+			},
+			P2P: p,
 		},
-		p2p:          p,
 		chainStarted: abool.New(),
 	}
 	// Empty cache at the end of the test.
 	defer cache.SubnetIDs.EmptyAllCaches()
 
-	defaultTopic := "/eth2/%x/beacon_attestation_%d" + r.p2p.Encoding().ProtocolSuffix()
+	defaultTopic := "/eth2/%x/beacon_attestation_%d" + r.cfg.P2P.Encoding().ProtocolSuffix()
 	subnet10 := r.addDigestAndIndexToTopic(defaultTopic, 10)
 	cache.SubnetIDs.AddAggregatorSubnetID(currSlot, 10)
 

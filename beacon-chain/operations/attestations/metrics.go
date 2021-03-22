@@ -33,6 +33,6 @@ var (
 )
 
 func (s *Service) updateMetrics() {
-	aggregatedAttsCount.Set(float64(s.pool.AggregatedAttestationCount()))
-	unaggregatedAttsCount.Set(float64(s.pool.UnaggregatedAttestationCount()))
+	aggregatedAttsCount.Set(float64(s.cfg.Pool.AggregatedAttestationCount()))
+	unaggregatedAttsCount.Set(float64(s.cfg.Pool.UnaggregatedAttestationCount()))
 }

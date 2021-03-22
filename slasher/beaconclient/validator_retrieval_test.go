@@ -24,7 +24,7 @@ func TestService_RequestValidator(t *testing.T) {
 	validatorCache, err := cache.NewPublicKeyCache(0, nil)
 	require.NoError(t, err, "Could not create new cache")
 	bs := Service{
-		beaconClient:   client,
+		cfg:            &Config{BeaconClient: client},
 		publicKeyCache: validatorCache,
 	}
 	wanted := &ethpb.Validators{

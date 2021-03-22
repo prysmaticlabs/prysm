@@ -80,7 +80,7 @@ func (bs *Server) GetStateFork(ctx context.Context, req *ethpb.StateRequest) (*e
 		err   error
 	)
 
-	state, err = bs.state(ctx, req.StateId)
+	state, err = bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
@@ -106,7 +106,7 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 		err   error
 	)
 
-	state, err = bs.state(ctx, req.StateId)
+	state, err = bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
@@ -154,56 +154,6 @@ func (bs *Server) stateRoot(ctx context.Context, stateId []byte) ([]byte, error)
 	}
 
 	return root, err
-}
-
-func (bs *Server) state(ctx context.Context, stateId []byte) (iface.BeaconState, error) {
-	var (
-		s   iface.BeaconState
-		err error
-	)
-
-	stateIdString := strings.ToLower(string(stateId))
-	switch stateIdString {
-	case "head":
-		s, err = bs.ChainInfoFetcher.HeadState(ctx)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get head state")
-		}
-	case "genesis":
-		s, err = bs.BeaconDB.GenesisState(ctx)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get genesis state")
-		}
-	case "finalized":
-		checkpoint := bs.ChainInfoFetcher.FinalizedCheckpt()
-		s, err = bs.StateGenService.StateByRoot(ctx, bytesutil.ToBytes32(checkpoint.Root))
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get finalized state")
-		}
-	case "justified":
-		checkpoint := bs.ChainInfoFetcher.CurrentJustifiedCheckpt()
-		s, err = bs.StateGenService.StateByRoot(ctx, bytesutil.ToBytes32(checkpoint.Root))
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get justified state")
-		}
-	default:
-		ok, matchErr := bytesutil.IsBytes32Hex(stateId)
-		if matchErr != nil {
-			return nil, errors.Wrap(err, "could not parse ID")
-		}
-		if ok {
-			s, err = bs.stateByHex(ctx, stateId)
-		} else {
-			slotNumber, parseErr := strconv.ParseUint(stateIdString, 10, 64)
-			if parseErr != nil {
-				// ID format does not match any valid options.
-				return nil, errors.New("invalid state ID: " + stateIdString)
-			}
-			s, err = bs.stateBySlot(ctx, types.Slot(slotNumber))
-		}
-	}
-
-	return s, err
 }
 
 func (bs *Server) headStateRoot(ctx context.Context) ([]byte, error) {
@@ -292,32 +242,6 @@ func (bs *Server) stateRootBySlot(ctx context.Context, slot types.Slot) ([]byte,
 		return nil, errors.New("nil block")
 	}
 	return blks[0].Block.StateRoot, nil
-}
-
-func (bs *Server) stateByHex(ctx context.Context, stateId []byte) (iface.BeaconState, error) {
-	headState, err := bs.ChainInfoFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get head state")
-	}
-	for i, root := range headState.StateRoots() {
-		if bytes.Equal(root, stateId) {
-			blockRoot := headState.BlockRoots()[i]
-			return bs.StateGenService.StateByRoot(ctx, bytesutil.ToBytes32(blockRoot))
-		}
-	}
-	return nil, fmt.Errorf("state not found in the last %d state roots in head state", len(headState.StateRoots()))
-}
-
-func (bs *Server) stateBySlot(ctx context.Context, slot types.Slot) (iface.BeaconState, error) {
-	currentSlot := bs.GenesisTimeFetcher.CurrentSlot()
-	if slot > currentSlot {
-		return nil, errors.New("slot cannot be in the future")
-	}
-	state, err := bs.StateGenService.StateBySlot(ctx, slot)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get state")
-	}
-	return state, nil
 }
 
 func checkpoint(sourceCheckpoint *eth.Checkpoint) *ethpb.Checkpoint {

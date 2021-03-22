@@ -43,7 +43,7 @@ func (s *Service) FindOrGetPublicKeys(
 	if notFound == 0 {
 		return validators, nil
 	}
-	vc, err := s.beaconClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
+	vc, err := s.cfg.BeaconClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
 		Indices: validatorIndices,
 	})
 	if err != nil {
