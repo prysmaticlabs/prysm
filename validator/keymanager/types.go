@@ -19,8 +19,6 @@ type IKeymanager interface {
 	Sign(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
 	// SubscribeAccountChanges subscribes to changes made to the underlying keys.
 	SubscribeAccountChanges(pubKeysChan chan [][48]byte) event.Subscription
-	// SignHeaderHash signs pandora chain header hash using a validator key
-	SignHeaderHash(ctx context.Context, req *validatorpb.SignRequest) ([]byte, error)
 }
 
 // Keystore json file representation as a Go struct.

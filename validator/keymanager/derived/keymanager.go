@@ -96,11 +96,6 @@ func (km *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 	return km.importedKM.Sign(ctx, req)
 }
 
-// SignHeaderHash signs pandora chain header hash using a validator key
-func (km *Keymanager) SignHeaderHash(ctx context.Context, req *validatorpb.SignRequest) ([]byte, error) {
-	return km.importedKM.SignHeaderHash(ctx, req)
-}
-
 // FetchValidatingPublicKeys fetches the list of validating public keys from the keymanager.
 func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
 	return km.importedKM.FetchValidatingPublicKeys(ctx)
