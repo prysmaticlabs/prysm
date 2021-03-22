@@ -48,7 +48,7 @@ func TestServer_IsSlashableBlock_SlashingNotFound(t *testing.T) {
 	}
 	s := Server{SlashingChecker: mockSlasher}
 	ctx := context.Background()
-	slashing, err := s.IsSlashablbeacon - chain/slasher/rpc.goeBlock(ctx, &ethpb.SignedBeaconBlockHeader{})
+	slashing, err := s.IsSlashableBlock(ctx, &ethpb.SignedBeaconBlockHeader{})
 	require.NoError(t, err)
 	require.Equal(t, (*ethpb.ProposerSlashing)(nil), slashing)
 }
