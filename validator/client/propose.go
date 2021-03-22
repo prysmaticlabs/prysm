@@ -375,7 +375,7 @@ func (v *validator) processPandoraShardHeader(ctx context.Context, beaconBlk *et
 		return false, err
 	}
 	// Validate pandora chain header hash, extraData fields
-	if err := v.verifyPandoraHeader(beaconBlk, slot, epoch, header, headerHash, extraData); err != nil {
+	if err := v.verifyPandoraShardHeader(beaconBlk, slot, epoch, header, headerHash, extraData); err != nil {
 		log.WithField("blockSlot", slot).WithError(err).Error("Failed to validate pandora block header")
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
@@ -402,8 +402,8 @@ func (v *validator) processPandoraShardHeader(ctx context.Context, beaconBlk *et
 	return v.pandoraService.SubmitShardBlockHeader(ctx, header.Nonce.Uint64(), headerHash, headerHashSig32Bytes)
 }
 
-// verifyPandoraHeader verifies header hash and extraData field
-func (v *validator) verifyPandoraHeader(beaconBlk *ethpb.BeaconBlock, slot types.Slot, epoch types.Epoch,
+// verifyPandoraShardHeader verifies pandora sharding chain header hash and extraData field
+func (v *validator) verifyPandoraShardHeader(beaconBlk *ethpb.BeaconBlock, slot types.Slot, epoch types.Epoch,
 	header *eth1Types.Header, headerHash common.Hash, extraData *pandora.ExtraData) error {
 
 	// verify header hash
@@ -426,7 +426,7 @@ func (v *validator) verifyPandoraHeader(beaconBlk *ethpb.BeaconBlock, slot types
 		log.WithError(errInvalidEpoch).Error("invalid epoch from pandora chain")
 		return errInvalidEpoch
 	}
-	// verify proposr index
+	// verify proposer index
 	if extraData.ProposerIndex != uint64(beaconBlk.ProposerIndex) {
 		log.WithError(errInvalidProposerIndex).Error("invalid proposer index from pandora chain")
 		return errInvalidProposerIndex

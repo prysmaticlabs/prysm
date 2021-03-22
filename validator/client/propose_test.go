@@ -896,7 +896,7 @@ func TestGetGraffitiOrdered_Ok(t *testing.T) {
 }
 
 // TestVerifyPandoraHeader_Ok method checks pandora header validation method
-func TestVerifyPandoraHeader(t *testing.T) {
+func TestVerifyPandoraShardHeader(t *testing.T) {
 	validator, _, _, finish := setup(t)
 	defer finish()
 
@@ -908,34 +908,34 @@ func TestVerifyPandoraHeader(t *testing.T) {
 	header, headerHash, extraData := testutil.NewPandoraBlock(blk.Block.Slot, uint64(blk.Block.ProposerIndex))
 
 	// Checks all the validations
-	err := validator.verifyPandoraHeader(blk.Block, blk.Block.Slot, epoch, header, headerHash, extraData)
+	err := validator.verifyPandoraShardHeader(blk.Block, blk.Block.Slot, epoch, header, headerHash, extraData)
 	require.NoError(t, err, "Should pass without any error")
 
 	// Should get an `errInvalidHeaderHash` error
 	header.Time = uint64(14265167)
 	want := "invalid header hash"
-	err = validator.verifyPandoraHeader(blk.Block, blk.Block.Slot, epoch, header, headerHash, extraData)
+	err = validator.verifyPandoraShardHeader(blk.Block, blk.Block.Slot, epoch, header, headerHash, extraData)
 	require.ErrorContains(t, want, err, "Should get an errInvalidHeaderHash error")
 
 	// Should get an `errInvalidSlot` error
 	header.Time = uint64(1426516743)
 	blk.Block.Slot = 90
 	want = "invalid slot"
-	err = validator.verifyPandoraHeader(blk.Block, blk.Block.Slot, epoch, header, headerHash, extraData)
+	err = validator.verifyPandoraShardHeader(blk.Block, blk.Block.Slot, epoch, header, headerHash, extraData)
 	require.ErrorContains(t, want, err, "Should get an errInvalidSlot error")
 
 	// Should get an `errInvalidEpoch` error
 	blk.Block.Slot = 98
 	epoch = 2
 	want = "invalid epoch"
-	err = validator.verifyPandoraHeader(blk.Block, blk.Block.Slot, epoch, header, headerHash, extraData)
+	err = validator.verifyPandoraShardHeader(blk.Block, blk.Block.Slot, epoch, header, headerHash, extraData)
 	require.ErrorContains(t, want, err, "Should get an errInvalidEpoch error")
 
 	// Shoud get an `errInvalidProposerIndex` error
 	epoch = 3
 	blk.Block.ProposerIndex = 190
 	want = "invalid proposer index"
-	err = validator.verifyPandoraHeader(blk.Block, blk.Block.Slot, epoch, header, headerHash, extraData)
+	err = validator.verifyPandoraShardHeader(blk.Block, blk.Block.Slot, epoch, header, headerHash, extraData)
 	require.ErrorContains(t, want, err, "Should get an errInvalidProposerIndex error")
 }
 
