@@ -1,4 +1,4 @@
-package stateV0
+package stateutil
 
 import (
 	"encoding/binary"
@@ -9,10 +9,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 )
 
-// blockHeaderRoot computes the HashTreeRoot Merkleization of
+// BlockHeaderRoot computes the HashTreeRoot Merkleization of
 // a BeaconBlockHeader struct according to the eth2
 // Simple Serialize specification.
-func blockHeaderRoot(header *ethpb.BeaconBlockHeader) ([32]byte, error) {
+func BlockHeaderRoot(header *ethpb.BeaconBlockHeader) ([32]byte, error) {
 	fieldRoots := make([][]byte, 5)
 	if header != nil {
 		headerSlotBuf := make([]byte, 8)

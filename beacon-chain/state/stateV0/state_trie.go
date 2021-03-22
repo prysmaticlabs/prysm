@@ -187,7 +187,7 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 		if err != nil {
 			return [32]byte{}, err
 		}
-		layers := merkleize(fieldRoots)
+		layers := stateutil.Merkleize(fieldRoots)
 		b.merkleLayers = layers
 		b.dirtyFields = make(map[fieldIndex]interface{}, params.BeaconConfig().BeaconStateFieldCount)
 	}
@@ -224,37 +224,6 @@ func (b *BeaconState) FieldReferencesCount() map[string]uint64 {
 	return refMap
 }
 
-// Merkleize 32-byte leaves into a Merkle trie for its adequate depth, returning
-// the resulting layers of the trie based on the appropriate depth. This function
-// pads the leaves to a length of 32.
-func merkleize(leaves [][]byte) [][][]byte {
-	hashFunc := hashutil.CustomSHA256Hasher()
-	layers := make([][][]byte, htrutils.Depth(uint64(len(leaves)))+1)
-	for len(leaves) != 32 {
-		leaves = append(leaves, make([]byte, 32))
-	}
-	currentLayer := leaves
-	layers[0] = currentLayer
-
-	// We keep track of the hash layers of a Merkle trie until we reach
-	// the top layer of length 1, which contains the single root element.
-	//        [Root]      -> Top layer has length 1.
-	//    [E]       [F]   -> This layer has length 2.
-	// [A]  [B]  [C]  [D] -> The bottom layer has length 4 (needs to be a power of two).
-	i := 1
-	for len(currentLayer) > 1 && i < len(layers) {
-		layer := make([][]byte, 0)
-		for i := 0; i < len(currentLayer); i += 2 {
-			hashedChunk := hashFunc(append(currentLayer[i], currentLayer[i+1]...))
-			layer = append(layer, hashedChunk[:])
-		}
-		currentLayer = layer
-		layers[i] = currentLayer
-		i++
-	}
-	return layers
-}
-
 func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 	hasher := hashutil.CustomSHA256Hasher()
 	switch field {
@@ -269,7 +238,7 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 	case fork:
 		return htrutils.ForkRoot(b.state.Fork)
 	case latestBlockHeader:
-		return blockHeaderRoot(b.state.LatestBlockHeader)
+		return stateutil.BlockHeaderRoot(b.state.LatestBlockHeader)
 	case blockRoots:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(field, b.state.BlockRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
@@ -319,7 +288,7 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 		}
 		return b.recomputeFieldTrie(validators, b.state.Validators)
 	case balances:
-		return validatorBalancesRoot(b.state.Balances)
+		return stateutil.ValidatorBalancesRoot(b.state.Balances)
 	case randaoMixes:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(field, b.state.RandaoMixes, uint64(params.BeaconConfig().EpochsPerHistoricalVector))

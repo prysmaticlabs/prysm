@@ -27,6 +27,7 @@ go_library(
         "//beacon-chain/rpc/debug:go_default_library",
         "//beacon-chain/rpc/node:go_default_library",
         "//beacon-chain/rpc/nodev1:go_default_library",
+        "//beacon-chain/rpc/statefetcher:go_default_library",
         "//beacon-chain/rpc/validator:go_default_library",
         "//beacon-chain/state/stategen:go_default_library",
         "//beacon-chain/sync:go_default_library",

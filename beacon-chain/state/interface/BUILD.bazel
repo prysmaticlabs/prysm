@@ -2,7 +2,7 @@ load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["interface.go"],
+    srcs = ["beacon_state_v0.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/interface",
     visibility = [
         "//beacon-chain:__subpackages__",
