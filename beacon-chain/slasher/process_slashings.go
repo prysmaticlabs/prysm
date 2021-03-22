@@ -70,6 +70,7 @@ func (s *Service) processProposerSlashings(ctx context.Context, slashings []*eth
 			continue
 		}
 		// Log the slashing event and insert into the beacon node's operations pool.
+		logProposerSlashing(sl)
 		if err := s.serviceCfg.SlashingPoolInserter.InsertProposerSlashing(ctx, beaconState, sl); err != nil {
 			log.WithError(err).Error("Could not insert attester slashing into operations pool")
 		}
