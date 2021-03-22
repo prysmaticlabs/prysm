@@ -633,8 +633,10 @@ func (b *BeaconNode) registerRPCService() error {
 	}
 
 	var slasherService *slasher.Service
-	if err := b.services.FetchService(&slasherService); err != nil {
-		return err
+	if featureconfig.Get().EnableSlasher {
+		if err := b.services.FetchService(&slasherService); err != nil {
+			return err
+		}
 	}
 
 	genesisValidators := b.cliCtx.Uint64(flags.InteropNumValidatorsFlag.Name)
