@@ -169,7 +169,7 @@ func TestDerivedKeymanager_Sign(t *testing.T) {
 	err = dr.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "", numAccounts)
 	require.NoError(t, err)
 
-	pubKeys, err := dr.FetchAllValidatingPublicKeys(ctx)
+	pubKeys, err := dr.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
 	// We prepare naive data to sign.
 	data := []byte("eth2data")

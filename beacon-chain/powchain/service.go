@@ -29,7 +29,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
@@ -73,7 +74,7 @@ var errNotSynced = errors.New("eth1 node is still syncing")
 type ChainStartFetcher interface {
 	ChainStartDeposits() []*ethpb.Deposit
 	ChainStartEth1Data() *ethpb.Eth1Data
-	PreGenesisState() *stateTrie.BeaconState
+	PreGenesisState() iface.BeaconState
 	ClearPreGenesisData()
 }
 
@@ -150,7 +151,7 @@ type Service struct {
 	depositCache            *depositcache.DepositCache
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	runError                error
-	preGenesisState         *stateTrie.BeaconState
+	preGenesisState         iface.BeaconState
 	stateGen                *stategen.State
 	eth1HeaderReqLimit      uint64
 }
@@ -228,7 +229,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		s.depositTrie = trieutil.CreateTrieFromProto(eth1Data.Trie)
 		s.chainStartData = eth1Data.ChainstartData
 		if !reflect.ValueOf(eth1Data.BeaconState).IsZero() {
-			s.preGenesisState, err = stateTrie.InitializeFromProto(eth1Data.BeaconState)
+			s.preGenesisState, err = stateV0.InitializeFromProto(eth1Data.BeaconState)
 			if err != nil {
 				return nil, errors.Wrap(err, "Could not initialize state trie")
 			}
@@ -291,7 +292,7 @@ func (s *Service) ChainStartDeposits() []*ethpb.Deposit {
 // ClearPreGenesisData clears out the stored chainstart deposits and beacon state.
 func (s *Service) ClearPreGenesisData() {
 	s.chainStartData.ChainstartDeposits = []*ethpb.Deposit{}
-	s.preGenesisState = &stateTrie.BeaconState{}
+	s.preGenesisState = &stateV0.BeaconState{}
 }
 
 // ChainStartEth1Data returns the eth1 data at chainstart.
@@ -301,7 +302,7 @@ func (s *Service) ChainStartEth1Data() *ethpb.Eth1Data {
 
 // PreGenesisState returns a state that contains
 // pre-chainstart deposits.
-func (s *Service) PreGenesisState() *stateTrie.BeaconState {
+func (s *Service) PreGenesisState() iface.BeaconState {
 	return s.preGenesisState
 }
 
@@ -496,7 +497,7 @@ func (s *Service) waitForConnection() {
 	for {
 		select {
 		case <-ticker.C:
-			log.Debugf("Trying to dial endpoint: %s", s.currHttpEndpoint)
+			log.Debugf("Trying to dial endpoint: %s", logutil.MaskCredentialsLogging(s.currHttpEndpoint))
 			errConnect := s.connectToPowChain()
 			if errConnect != nil {
 				errorLogger(errConnect, "Could not connect to powchain endpoint")
@@ -904,7 +905,7 @@ func (s *Service) fallbackToNextEndpoint() {
 		return
 	}
 	s.currHttpEndpoint = s.httpEndpoints[nextIndex]
-	log.Infof("Falling back to alternative endpoint: %s", s.currHttpEndpoint)
+	log.Infof("Falling back to alternative endpoint: %s", logutil.MaskCredentialsLogging(s.currHttpEndpoint))
 }
 
 func dedupEndpoints(endpoints []string) []string {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	ptypes "github.com/gogo/protobuf/types"
+	"github.com/golang/protobuf/ptypes/empty"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mockP2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -36,7 +36,7 @@ func TestDebugServer_ListPeers(t *testing.T) {
 		PeerManager:  &mockP2p.MockPeerManager{BHost: mP2P.BHost},
 	}
 
-	res, err := ds.ListPeers(context.Background(), &ptypes.Empty{})
+	res, err := ds.ListPeers(context.Background(), &empty.Empty{})
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(res.Responses))
 

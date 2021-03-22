@@ -7,7 +7,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -30,7 +30,7 @@ func runSlotProcessingTests(t *testing.T, config string) {
 			require.NoError(t, err)
 			base := &pb.BeaconState{}
 			require.NoError(t, base.UnmarshalSSZ(preBeaconStateFile), "Failed to unmarshal")
-			beaconState, err := beaconstate.InitializeFromProto(base)
+			beaconState, err := stateV0.InitializeFromProto(base)
 			require.NoError(t, err)
 
 			file, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "slots.yaml")
@@ -46,7 +46,9 @@ func runSlotProcessingTests(t *testing.T, config string) {
 			postState, err := state.ProcessSlots(context.Background(), beaconState, beaconState.Slot().Add(uint64(slotsCount)))
 			require.NoError(t, err)
 
-			if !proto.Equal(postState.CloneInnerState(), postBeaconState) {
+			pbState, err := stateV0.ProtobufBeaconState(postState.CloneInnerState())
+			require.NoError(t, err)
+			if !proto.Equal(pbState, postBeaconState) {
 				diff, _ := messagediff.PrettyDiff(beaconState, postBeaconState)
 				t.Fatalf("Post state does not match expected. Diff between states %s", diff)
 			}

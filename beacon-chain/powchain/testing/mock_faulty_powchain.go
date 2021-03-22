@@ -8,7 +8,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
-	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
@@ -74,8 +75,8 @@ func (f *FaultyMockPOWChain) ChainStartEth1Data() *ethpb.Eth1Data {
 }
 
 // PreGenesisState --
-func (f *FaultyMockPOWChain) PreGenesisState() *beaconstate.BeaconState {
-	return &beaconstate.BeaconState{}
+func (f *FaultyMockPOWChain) PreGenesisState() iface.BeaconState {
+	return &stateV0.BeaconState{}
 }
 
 // ClearPreGenesisData --

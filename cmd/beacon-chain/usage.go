@@ -119,6 +119,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.NetworkID,
 			flags.WeakSubjectivityCheckpt,
 			flags.Eth1HeaderReqLimit,
+			flags.GenesisStatePath,
 		},
 	},
 	{

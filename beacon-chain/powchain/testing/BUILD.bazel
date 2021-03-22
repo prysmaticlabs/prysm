@@ -11,7 +11,8 @@ go_library(
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/powchain/types:go_default_library",
-        "//beacon-chain/state:go_default_library",
+        "//beacon-chain/state/interface:go_default_library",
+        "//beacon-chain/state/stateV0:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/event:go_default_library",
         "//shared/trieutil:go_default_library",

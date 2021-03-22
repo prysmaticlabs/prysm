@@ -12,6 +12,7 @@ import (
 	prombolt "github.com/prysmaticlabs/prombbolt"
 	"github.com/prysmaticlabs/prysm/shared/abool"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	bolt "go.etcd.io/bbolt"
@@ -160,9 +161,11 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 		}
 	}
 
-	// Prune attesting records older than the current weak subjectivity period.
-	if err := kv.PruneAttestationsOlderThanCurrentWeakSubjectivity(ctx); err != nil {
-		return nil, errors.Wrap(err, "could not prune old attestations from DB")
+	if featureconfig.Get().EnableSlashingProtectionPruning {
+		// Prune attesting records older than the current weak subjectivity period.
+		if err := kv.PruneAttestations(ctx); err != nil {
+			return nil, errors.Wrap(err, "could not prune old attestations from DB")
+		}
 	}
 
 	// Batch save attestation records for slashing protection at timed

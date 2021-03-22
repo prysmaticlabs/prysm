@@ -3,7 +3,7 @@ package attestations
 import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	"github.com/prysmaticlabs/prysm/shared/aggregation"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -73,8 +73,8 @@ func AggregatePair(a1, a2 *ethpb.Attestation) (*ethpb.Attestation, error) {
 		return nil, aggregation.ErrBitsOverlap
 	}
 
-	baseAtt := stateTrie.CopyAttestation(a1)
-	newAtt := stateTrie.CopyAttestation(a2)
+	baseAtt := stateV0.CopyAttestation(a1)
+	newAtt := stateV0.CopyAttestation(a2)
 	if newAtt.AggregationBits.Count() > baseAtt.AggregationBits.Count() {
 		baseAtt, newAtt = newAtt, baseAtt
 	}

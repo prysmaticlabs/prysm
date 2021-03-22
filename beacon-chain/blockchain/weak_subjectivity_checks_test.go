@@ -72,9 +72,7 @@ func TestService_VerifyWeakSubjectivityRoot(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Service{
-				beaconDB:         beaconDB,
-				wsRoot:           tt.wsRoot[:],
-				wsEpoch:          tt.wsEpoch,
+				cfg:              &Config{BeaconDB: beaconDB, WspBlockRoot: tt.wsRoot[:], WspEpoch: tt.wsEpoch},
 				wsVerified:       tt.wsVerified,
 				finalizedCheckpt: &ethpb.Checkpoint{Epoch: tt.finalizedEpoch},
 			}

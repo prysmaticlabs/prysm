@@ -3,7 +3,7 @@ package kv
 import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 )
 
 // SaveForkchoiceAttestation saves an forkchoice attestation in cache.
@@ -16,7 +16,7 @@ func (c *AttCaches) SaveForkchoiceAttestation(att *ethpb.Attestation) error {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
 
-	att = stateTrie.CopyAttestation(att)
+	att = stateV0.CopyAttestation(att)
 	c.forkchoiceAttLock.Lock()
 	defer c.forkchoiceAttLock.Unlock()
 	c.forkchoiceAtt[r] = att
@@ -42,7 +42,7 @@ func (c *AttCaches) ForkchoiceAttestations() []*ethpb.Attestation {
 
 	atts := make([]*ethpb.Attestation, 0, len(c.forkchoiceAtt))
 	for _, att := range c.forkchoiceAtt {
-		atts = append(atts, stateTrie.CopyAttestation(att) /* Copied */)
+		atts = append(atts, stateV0.CopyAttestation(att) /* Copied */)
 	}
 
 	return atts

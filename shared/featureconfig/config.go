@@ -48,6 +48,7 @@ type Flags struct {
 	WriteWalletPasswordOnWebOnboarding bool // WriteWalletPasswordOnWebOnboarding writes the password to disk after Prysm web signup.
 	DisableAttestingHistoryDBCache     bool // DisableAttestingHistoryDBCache for the validator client increases disk reads/writes.
 	UpdateHeadTimely                   bool // UpdateHeadTimely updates head right after state transition.
+	ProposerAttsSelectionUsingMaxCover bool // ProposerAttsSelectionUsingMaxCover enables max-cover algorithm when selecting attestations for proposing.
 
 	// Logging related toggles.
 	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
@@ -69,6 +70,9 @@ type Flags struct {
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
 	KeystoreImportDebounceInterval time.Duration
+
+	// EnableSlashingProtectionPruning for the validator client.
+	EnableSlashingProtectionPruning bool
 }
 
 var featureConfig *Flags
@@ -120,6 +124,10 @@ func configureTestnet(ctx *cli.Context, cfg *Flags) {
 		params.UsePyrmontConfig()
 		params.UsePyrmontNetworkConfig()
 		cfg.PyrmontTestnet = true
+	} else if ctx.Bool(PraterTestnet.Name) {
+		log.Warn("Running on the Prater Testnet")
+		params.UsePraterConfig()
+		params.UsePraterNetworkConfig()
 	} else {
 		log.Warn("Running on ETH2 Mainnet")
 		params.UseMainnetConfig()
@@ -184,6 +192,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.WithField(updateHeadTimely.Name, updateHeadTimely.Usage).Warn(enabledFeatureFlag)
 		cfg.UpdateHeadTimely = true
 	}
+	if ctx.Bool(proposerAttsSelectionUsingMaxCover.Name) {
+		log.WithField(proposerAttsSelectionUsingMaxCover.Name, proposerAttsSelectionUsingMaxCover.Usage).Warn(enabledFeatureFlag)
+		cfg.ProposerAttsSelectionUsingMaxCover = true
+	}
 	Init(cfg)
 }
 
@@ -227,6 +239,10 @@ func ConfigureValidator(ctx *cli.Context) {
 	if ctx.Bool(attestTimely.Name) {
 		log.WithField(attestTimely.Name, attestTimely.Usage).Warn(enabledFeatureFlag)
 		cfg.AttestTimely = true
+	}
+	if ctx.Bool(enableSlashingProtectionPruning.Name) {
+		log.WithField(enableSlashingProtectionPruning.Name, enableSlashingProtectionPruning.Usage).Warn(enabledFeatureFlag)
+		cfg.EnableSlashingProtectionPruning = true
 	}
 	cfg.KeystoreImportDebounceInterval = ctx.Duration(dynamicKeyReloadDebounceInterval.Name)
 	Init(cfg)
