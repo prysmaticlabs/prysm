@@ -70,6 +70,7 @@ func New(ctx context.Context, beaconDB db.Database) (*Simulator, error) {
 	sentBlockSlashingFeed := new(event.Feed)
 	sentAttSlashingFeed := new(event.Feed)
 	stateNotifier := &mock.MockStateNotifier{}
+	params := DefaultParams()
 
 	beaconState, err := testutil.NewBeaconState()
 	if err != nil {
@@ -96,7 +97,7 @@ func New(ctx context.Context, beaconDB db.Database) (*Simulator, error) {
 		ctx:                   ctx,
 		slasher:               slasherSrv,
 		srvConfig:             srvConfig,
-		params:                DefaultParams(),
+		params:                params,
 		sentAttSlashingFeed:   sentAttSlashingFeed,
 		sentBlockSlashingFeed: sentBlockSlashingFeed,
 		sentProposerSlashings: make(map[[32]byte]*ethpb.ProposerSlashing),
