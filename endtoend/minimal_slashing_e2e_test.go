@@ -14,7 +14,7 @@ import (
 func TestEndToEnd_Slashing_MinimalConfig(t *testing.T) {
 	testutil.ResetCache()
 	params.UseE2EConfig()
-	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
+	require.NoError(t, e2eParams.Init(1, e2eParams.StandardBeaconCount))
 
 	minimalConfig := &types.E2EConfig{
 		BeaconFlags:    []string{},
