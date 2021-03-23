@@ -55,10 +55,9 @@ func ValidatorRootWithHasher(hasher htrutils.HashFn, validator *ethpb.Validator)
 	return htrutils.BitwiseMerkleizeArrays(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
-// ValidatorBalancesRoot computes the HashTreeRoot Merkleization of
-// a list of validator uint64 balances according to the eth2
-// Simple Serialize specification.
-func ValidatorBalancesRoot(balances []uint64) ([32]byte, error) {
+// Uint64ListRootWithRegistryLimit computes the HashTreeRoot Merkleization of
+// a list of uint64 and mixed with registry limit.
+func Uint64ListRootWithRegistryLimit(balances []uint64) ([32]byte, error) {
 	hasher := hashutil.CustomSHA256Hasher()
 	balancesMarshaling := make([][]byte, 0)
 	for i := 0; i < len(balances); i++ {
