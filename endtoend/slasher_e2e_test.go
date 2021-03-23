@@ -10,6 +10,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	slashersimulator "github.com/prysmaticlabs/prysm/beacon-chain/slasher/simulator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -63,9 +64,11 @@ func TestEndToEnd_Slasher(t *testing.T) {
 		Params:                      simulatorParams,
 		Database:                    beaconDB,
 		StateNotifier:               &mock.MockStateNotifier{},
-		StateFetcher:                mockChain,
+		HeadStateFetcher:            mockChain,
+		AttestationStateFetcher:     mockChain,
 		StateGen:                    gen,
 		PrivateKeysByValidatorIndex: privKeys,
+		SlashingsPool:               &slashings.PoolMock{},
 	})
 	require.NoError(t, err)
 	sim.Start()

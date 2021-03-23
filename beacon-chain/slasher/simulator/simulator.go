@@ -28,7 +28,8 @@ type ServiceConfig struct {
 	Params                      *Parameters
 	Database                    db.Database
 	StateNotifier               statefeed.Notifier
-	StateFetcher                blockchain.AttestationStateFetcher
+	AttestationStateFetcher     blockchain.AttestationStateFetcher
+	HeadStateFetcher            blockchain.HeadFetcher
 	StateGen                    stategen.StateManager
 	SlashingsPool               slashings.PoolManager
 	PrivateKeysByValidatorIndex map[types.ValidatorIndex]bls.SecretKey
@@ -88,7 +89,8 @@ func New(ctx context.Context, srvConfig *ServiceConfig) (*Simulator, error) {
 		BeaconBlockHeadersFeed:  beaconBlocksFeed,
 		Database:                srvConfig.Database,
 		StateNotifier:           srvConfig.StateNotifier,
-		AttestationStateFetcher: srvConfig.StateFetcher,
+		HeadStateFetcher:        srvConfig.HeadStateFetcher,
+		AttestationStateFetcher: srvConfig.AttestationStateFetcher,
 		StateGen:                srvConfig.StateGen,
 	})
 	if err != nil {
