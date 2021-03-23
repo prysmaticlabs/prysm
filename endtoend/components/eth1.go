@@ -26,10 +26,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-var _ e2etypes.ComponentRunner = (*Eth1Node)(nil)
-
 const timeGapPerTX = 100 * time.Millisecond
 const timeGapPerMiningTX = 250 * time.Millisecond
+
+var _ e2etypes.ComponentRunner = (*Eth1Node)(nil)
 
 // Eth1Node represents ETH1 node.
 type Eth1Node struct {
