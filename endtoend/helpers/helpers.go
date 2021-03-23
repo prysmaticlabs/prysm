@@ -18,6 +18,8 @@ import (
 
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 	"github.com/prysmaticlabs/prysm/endtoend/types"
+	log "github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
 )
 
 const (
@@ -182,4 +184,36 @@ func writeURLRespAtPath(url, filePath string) error {
 		return err
 	}
 	return nil
+}
+
+// NewLocalConnection creates and returns GRPC connection on a given localhost port.
+func NewLocalConnection(ctx context.Context, port int) (*grpc.ClientConn, error) {
+	endpoint := fmt.Sprintf("127.0.0.1:%d", port)
+	dialOpts := []grpc.DialOption{
+		grpc.WithInsecure(),
+	}
+	conn, err := grpc.DialContext(ctx, endpoint, dialOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return conn, nil
+}
+
+// NewLocalConnections returns number of GRPC connections, along with function to close all of them.
+func NewLocalConnections(ctx context.Context, numConns int) ([]*grpc.ClientConn, func(), error) {
+	conns := make([]*grpc.ClientConn, numConns)
+	for i := 0; i < len(conns); i++ {
+		conn, err := NewLocalConnection(ctx, e2e.TestParams.BeaconNodeRPCPort+i)
+		if err != nil {
+			return nil, nil, err
+		}
+		conns[i] = conn
+	}
+	return conns, func() {
+		for _, conn := range conns {
+			if err := conn.Close(); err != nil {
+				log.Error(err)
+			}
+		}
+	}, nil
 }
