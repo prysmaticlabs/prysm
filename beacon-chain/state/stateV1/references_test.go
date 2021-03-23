@@ -17,7 +17,7 @@ import (
 func TestStateReferenceSharing_Finalizer(t *testing.T) {
 	// This test showcases the logic on a the RandaoMixes field with the GC finalizer.
 
-	a, err := InitializeFromProtoUnsafe(&p2ppb.BeaconStateV1{RandaoMixes: [][]byte{[]byte("foo")}})
+	a, err := InitializeFromProtoUnsafe(&p2ppb.BeaconStateAltair{RandaoMixes: [][]byte{[]byte("foo")}})
 	require.NoError(t, err)
 	assert.Equal(t, uint(1), a.sharedFieldReferences[randaoMixes].Refs(), "Expected a single reference for RANDAO mixes")
 
@@ -43,7 +43,7 @@ func TestStateReferenceSharing_Finalizer(t *testing.T) {
 
 func TestStateReferenceCopy_NoUnexpectedRootsMutation(t *testing.T) {
 	root1, root2 := bytesutil.ToBytes32([]byte("foo")), bytesutil.ToBytes32([]byte("bar"))
-	a, err := InitializeFromProtoUnsafe(&p2ppb.BeaconStateV1{
+	a, err := InitializeFromProtoUnsafe(&p2ppb.BeaconStateAltair{
 		BlockRoots: [][]byte{
 			root1[:],
 		},
@@ -114,7 +114,7 @@ func TestStateReferenceCopy_NoUnexpectedRootsMutation(t *testing.T) {
 func TestStateReferenceCopy_NoUnexpectedRandaoMutation(t *testing.T) {
 
 	val1, val2 := []byte("foo"), []byte("bar")
-	a, err := InitializeFromProtoUnsafe(&p2ppb.BeaconStateV1{
+	a, err := InitializeFromProtoUnsafe(&p2ppb.BeaconStateAltair{
 		RandaoMixes: [][]byte{
 			val1,
 		},
@@ -161,7 +161,7 @@ func TestStateReferenceCopy_NoUnexpectedRandaoMutation(t *testing.T) {
 }
 
 func TestValidatorReferences_RemainsConsistent(t *testing.T) {
-	a, err := InitializeFromProtoUnsafe(&p2ppb.BeaconStateV1{
+	a, err := InitializeFromProtoUnsafe(&p2ppb.BeaconStateAltair{
 		Validators: []*ethpb.Validator{
 			{PublicKey: []byte{'A'}},
 			{PublicKey: []byte{'B'}},

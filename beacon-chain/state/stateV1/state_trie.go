@@ -20,26 +20,26 @@ import (
 )
 
 // InitializeFromProto the beacon state from a protobuf representation.
-func InitializeFromProto(st *pbp2p.BeaconStateV1) (*BeaconState, error) {
-	return InitializeFromProtoUnsafe(proto.Clone(st).(*pbp2p.BeaconStateV1))
+func InitializeFromProto(st *pbp2p.BeaconStateAltair) (*BeaconState, error) {
+	return InitializeFromProtoUnsafe(proto.Clone(st).(*pbp2p.BeaconStateAltair))
 }
 
 // InitializeFromProtoUnsafe directly uses the beacon state protobuf pointer
 // and sets it as the inner state of the BeaconState type.
-func InitializeFromProtoUnsafe(st *pbp2p.BeaconStateV1) (*BeaconState, error) {
+func InitializeFromProtoUnsafe(st *pbp2p.BeaconStateAltair) (*BeaconState, error) {
 	if st == nil {
 		return nil, errors.New("received nil state")
 	}
 
-	fieldCount := params.BeaconConfig().BeaconStateV1FieldCount
+	fieldCount := params.BeaconConfig().BeaconStateAltairFieldCount
 	b := &BeaconState{
 		state:                 st,
 		dirtyFields:           make(map[fieldIndex]interface{}, fieldCount),
 		dirtyIndices:          make(map[fieldIndex][]uint64, fieldCount),
 		stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, fieldCount),
-		sharedFieldReferences: make(map[fieldIndex]*reference, 10),
+		sharedFieldReferences: make(map[fieldIndex]*stateutil.Reference, 11),
 		rebuildTrie:           make(map[fieldIndex]bool, fieldCount),
-		valMapHandler:         newValHandler(st.Validators),
+		valMapHandler:         stateutil.NewValMapHandler(st.Validators),
 	}
 
 	for i := 0; i < fieldCount; i++ {
@@ -48,37 +48,38 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconStateV1) (*BeaconState, error) {
 		b.dirtyIndices[fieldIndex(i)] = []uint64{}
 		b.stateFieldLeaves[fieldIndex(i)] = &FieldTrie{
 			field:     fieldIndex(i),
-			reference: &reference{refs: 1},
-			Mutex:     new(sync.Mutex),
+			reference: stateutil.NewRef(1),
+			RWMutex:   new(sync.RWMutex),
 		}
 	}
 
 	// Initialize field reference tracking for shared data.
-	b.sharedFieldReferences[randaoMixes] = &reference{refs: 1}
-	b.sharedFieldReferences[stateRoots] = &reference{refs: 1}
-	b.sharedFieldReferences[blockRoots] = &reference{refs: 1}
-	b.sharedFieldReferences[previousEpochParticipationBits] = &reference{refs: 1}
-	b.sharedFieldReferences[currentEpochParticipationBits] = &reference{refs: 1}
-	b.sharedFieldReferences[slashings] = &reference{refs: 1}
-	b.sharedFieldReferences[eth1DataVotes] = &reference{refs: 1}
-	b.sharedFieldReferences[validators] = &reference{refs: 1}
-	b.sharedFieldReferences[balances] = &reference{refs: 1}
-	b.sharedFieldReferences[historicalRoots] = &reference{refs: 1}
+	b.sharedFieldReferences[randaoMixes] = stateutil.NewRef(1)
+	b.sharedFieldReferences[stateRoots] = stateutil.NewRef(1)
+	b.sharedFieldReferences[blockRoots] = stateutil.NewRef(1)
+	b.sharedFieldReferences[previousEpochParticipationBits] = stateutil.NewRef(1)
+	b.sharedFieldReferences[currentEpochParticipationBits] = stateutil.NewRef(1)
+	b.sharedFieldReferences[slashings] = stateutil.NewRef(1)
+	b.sharedFieldReferences[eth1DataVotes] = stateutil.NewRef(1)
+	b.sharedFieldReferences[validators] = stateutil.NewRef(1)
+	b.sharedFieldReferences[balances] = stateutil.NewRef(1)
+	b.sharedFieldReferences[inactivityScores] = stateutil.NewRef(1)
+	b.sharedFieldReferences[historicalRoots] = stateutil.NewRef(1)
 
 	return b, nil
 }
 
 // Copy returns a deep copy of the beacon state.
 func (b *BeaconState) Copy() iface.BeaconState {
-	if !b.HasInnerState() {
+	if !b.hasInnerState() {
 		return nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
-	fieldCount := params.BeaconConfig().BeaconStateV1FieldCount
+	fieldCount := params.BeaconConfig().BeaconStateAltairFieldCount
 	dst := &BeaconState{
-		state: &pbp2p.BeaconStateV1{
+		state: &pbp2p.BeaconStateAltair{
 			// Primitive types, safe to copy.
 			GenesisTime:      b.state.GenesisTime,
 			Slot:             b.state.Slot,
@@ -97,6 +98,7 @@ func (b *BeaconState) Copy() iface.BeaconState {
 			HistoricalRoots:            b.state.HistoricalRoots,
 			PreviousEpochParticipation: b.state.PreviousEpochParticipation,
 			CurrentEpochParticipation:  b.state.CurrentEpochParticipation,
+			InactivityScores:           b.state.InactivityScores,
 
 			// Everything else, too small to be concerned about, constant size.
 			Fork:                        b.fork(),
@@ -113,7 +115,7 @@ func (b *BeaconState) Copy() iface.BeaconState {
 		dirtyFields:           make(map[fieldIndex]interface{}, fieldCount),
 		dirtyIndices:          make(map[fieldIndex][]uint64, fieldCount),
 		rebuildTrie:           make(map[fieldIndex]bool, fieldCount),
-		sharedFieldReferences: make(map[fieldIndex]*reference, 10),
+		sharedFieldReferences: make(map[fieldIndex]*stateutil.Reference, 11),
 		stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, fieldCount),
 
 		// Copy on write validator index map.
@@ -126,7 +128,7 @@ func (b *BeaconState) Copy() iface.BeaconState {
 	}
 
 	// Increment ref for validator map
-	b.valMapHandler.mapRef.AddRef()
+	b.valMapHandler.AddRef()
 
 	for i := range b.dirtyFields {
 		dst.dirtyFields[i] = true
@@ -146,7 +148,7 @@ func (b *BeaconState) Copy() iface.BeaconState {
 		dst.stateFieldLeaves[fldIdx] = fieldTrie
 		if fieldTrie.reference != nil {
 			fieldTrie.Lock()
-			fieldTrie.AddRef()
+			fieldTrie.reference.AddRef()
 			fieldTrie.Unlock()
 		}
 	}
@@ -167,7 +169,7 @@ func (b *BeaconState) Copy() iface.BeaconState {
 		for field, v := range b.sharedFieldReferences {
 			v.MinusRef()
 			if b.stateFieldLeaves[field].reference != nil {
-				b.stateFieldLeaves[field].MinusRef()
+				b.stateFieldLeaves[field].reference.MinusRef()
 			}
 		}
 	})
@@ -191,7 +193,7 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 		}
 		layers := merkleize(fieldRoots)
 		b.merkleLayers = layers
-		b.dirtyFields = make(map[fieldIndex]interface{}, params.BeaconConfig().BeaconStateV1FieldCount)
+		b.dirtyFields = make(map[fieldIndex]interface{}, params.BeaconConfig().BeaconStateAltairFieldCount)
 	}
 
 	for field := range b.dirtyFields {
@@ -216,12 +218,12 @@ func (b *BeaconState) FieldReferencesCount() map[string]uint64 {
 		refMap[i.String()] = uint64(f.Refs())
 	}
 	for i, f := range b.stateFieldLeaves {
-		numOfRefs := uint64(f.Refs())
-		f.lock.RLock()
+		numOfRefs := uint64(f.reference.Refs())
+		f.RLock()
 		if len(f.fieldLayers) != 0 {
 			refMap[i.String()+"_trie"] = numOfRefs
 		}
-		f.lock.RUnlock()
+		f.RUnlock()
 	}
 	return refMap
 }
@@ -347,6 +349,8 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 		return htrutils.CheckpointRoot(hasher, b.state.CurrentJustifiedCheckpoint)
 	case finalizedCheckpoint:
 		return htrutils.CheckpointRoot(hasher, b.state.FinalizedCheckpoint)
+	case inactivityScores:
+		return stateutil.ValidatorBalancesRoot(b.state.InactivityScores)
 	case currentSyncCommittee:
 		return syncCommitteeRoot(b.state.CurrentSyncCommittee)
 	case nextSyncCommittee:
@@ -357,10 +361,10 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 
 func (b *BeaconState) recomputeFieldTrie(index fieldIndex, elements interface{}) ([32]byte, error) {
 	fTrie := b.stateFieldLeaves[index]
-	if fTrie.Refs() > 1 {
+	if fTrie.reference.Refs() > 1 {
 		fTrie.Lock()
 		defer fTrie.Unlock()
-		fTrie.MinusRef()
+		fTrie.reference.MinusRef()
 		newTrie := fTrie.CopyTrie()
 		b.stateFieldLeaves[index] = newTrie
 		fTrie = newTrie

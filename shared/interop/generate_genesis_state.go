@@ -42,7 +42,7 @@ func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, [
 
 // GenerateGenesisStateV1 deterministically given a genesis time and number of validators.
 // If a genesis time of 0 is supplied it is set to the current time.
-func GenerateGenesisStateV1(genesisTime, numValidators uint64) (*pb.BeaconStateV1, []*ethpb.Deposit, error) {
+func GenerateGenesisStateV1(genesisTime, numValidators uint64) (*pb.BeaconStateAltair, []*ethpb.Deposit, error) {
 	privKeys, pubKeys, err := DeterministicallyGenerateKeys(0 /*startIndex*/, numValidators)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "could not deterministically generate keys for %d validators", numValidators)
@@ -89,7 +89,7 @@ func GenerateGenesisStateFromDepositData(
 
 func GenerateGenesisStateFromDepositDataV1(
 	genesisTime uint64, depositData []*ethpb.Deposit_Data, depositDataRoots [][]byte,
-) (*pb.BeaconStateV1, []*ethpb.Deposit, error) {
+) (*pb.BeaconStateAltair, []*ethpb.Deposit, error) {
 	trie, err := trieutil.GenerateTrieFromItems(depositDataRoots, params.BeaconConfig().DepositContractTreeDepth)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not generate Merkle trie for deposit proofs")

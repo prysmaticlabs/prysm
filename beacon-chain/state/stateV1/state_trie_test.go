@@ -22,7 +22,7 @@ func TestInitializeFromProto(t *testing.T) {
 	require.NoError(t, err)
 	type test struct {
 		name  string
-		state *pbp2p.BeaconStateV1
+		state *pbp2p.BeaconStateAltair
 		error string
 	}
 	initTests := []test{
@@ -33,14 +33,14 @@ func TestInitializeFromProto(t *testing.T) {
 		},
 		{
 			name: "nil validators",
-			state: &pbp2p.BeaconStateV1{
+			state: &pbp2p.BeaconStateAltair{
 				Slot:       4,
 				Validators: nil,
 			},
 		},
 		{
 			name:  "empty state",
-			state: &pbp2p.BeaconStateV1{},
+			state: &pbp2p.BeaconStateAltair{},
 		},
 		{
 			name:  "full state",
@@ -65,7 +65,7 @@ func TestInitializeFromProtoUnsafe(t *testing.T) {
 	require.NoError(t, err)
 	type test struct {
 		name  string
-		state *pbp2p.BeaconStateV1
+		state *pbp2p.BeaconStateAltair
 		error string
 	}
 	initTests := []test{
@@ -76,14 +76,14 @@ func TestInitializeFromProtoUnsafe(t *testing.T) {
 		},
 		{
 			name: "nil validators",
-			state: &pbp2p.BeaconStateV1{
+			state: &pbp2p.BeaconStateAltair{
 				Slot:       4,
 				Validators: nil,
 			},
 		},
 		{
 			name:  "empty state",
-			state: &pbp2p.BeaconStateV1{},
+			state: &pbp2p.BeaconStateAltair{},
 		},
 		{
 			name:  "full state",

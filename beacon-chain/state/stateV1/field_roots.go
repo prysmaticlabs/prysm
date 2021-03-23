@@ -16,8 +16,8 @@ import (
 )
 
 var (
-	leavesCache = make(map[string][][32]byte, params.BeaconConfig().BeaconStateV1FieldCount)
-	layersCache = make(map[string][][][32]byte, params.BeaconConfig().BeaconStateV1FieldCount)
+	leavesCache = make(map[string][][32]byte, params.BeaconConfig().BeaconStateAltairFieldCount)
+	layersCache = make(map[string][][][32]byte, params.BeaconConfig().BeaconStateAltairFieldCount)
 	lock        sync.RWMutex
 )
 
@@ -47,19 +47,19 @@ type stateRootHasher struct {
 
 // computeFieldRoots returns the hash tree root computations of every field in
 // the beacon state as a list of 32 byte roots.
-func computeFieldRoots(state *pb.BeaconStateV1) ([][]byte, error) {
+func computeFieldRoots(state *pb.BeaconStateAltair) ([][]byte, error) {
 	if featureconfig.Get().EnableSSZCache {
 		return cachedHasher.computeFieldRootsWithHasher(state)
 	}
 	return nocachedHasher.computeFieldRootsWithHasher(state)
 }
 
-func (h *stateRootHasher) computeFieldRootsWithHasher(state *pb.BeaconStateV1) ([][]byte, error) {
+func (h *stateRootHasher) computeFieldRootsWithHasher(state *pb.BeaconStateAltair) ([][]byte, error) {
 	if state == nil {
 		return nil, errors.New("nil state")
 	}
 	hasher := hashutil.CustomSHA256Hasher()
-	fieldRoots := make([][]byte, params.BeaconConfig().BeaconStateV1FieldCount)
+	fieldRoots := make([][]byte, params.BeaconConfig().BeaconStateAltairFieldCount)
 
 	// Genesis time root.
 	genesisRoot := htrutils.Uint64Root(state.GenesisTime)
@@ -196,17 +196,24 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(state *pb.BeaconStateV1) (
 	}
 	fieldRoots[20] = finalRoot[:]
 
+	// Inactivity scores root.
+	inactivityScoresRoot, err := stateutil.ValidatorBalancesRoot(state.InactivityScores)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not compute inactivityScoreRoot")
+	}
+	fieldRoots[21] = inactivityScoresRoot[:]
+
 	currentLightRoot, err := syncCommitteeRoot(state.CurrentSyncCommittee)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute sync committee merkleization")
 	}
-	fieldRoots[21] = currentLightRoot[:]
+	fieldRoots[22] = currentLightRoot[:]
 
 	nextLightRoot, err := syncCommitteeRoot(state.NextSyncCommittee)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute sync committee merkleization")
 	}
-	fieldRoots[22] = nextLightRoot[:]
+	fieldRoots[23] = nextLightRoot[:]
 
 	return fieldRoots, nil
 }

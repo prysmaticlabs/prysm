@@ -297,7 +297,7 @@ func OptimizedGenesisBeaconStateV1(genesisTime uint64, preState iface.BeaconStat
 		return nil, errors.Wrapf(err, "could not hash tree root genesis validators %v", err)
 	}
 
-	state := &pb.BeaconStateV1{
+	state := &pb.BeaconStateAltair{
 		// Misc fields.
 		Slot:                  0,
 		GenesisTime:           genesisTime,
@@ -314,6 +314,7 @@ func OptimizedGenesisBeaconStateV1(genesisTime uint64, preState iface.BeaconStat
 		Balances:                   preState.Balances(),
 		PreviousEpochParticipation: preState.PreviousEpochParticipation(),
 		CurrentEpochParticipation:  preState.CurrentEpochParticipation(),
+		InactivityScores:           preState.InactivityScores(),
 
 		// Randomness and committees.
 		RandaoMixes: randaoMixes,
@@ -369,7 +370,7 @@ func OptimizedGenesisBeaconStateV1(genesisTime uint64, preState iface.BeaconStat
 		pubKeys = append(pubKeys, bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength))
 	}
 	var aggregatedKeys [][]byte
-	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeAggregateSize; i++ {
+	for i := uint64(0); i < (params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncPubkeysPerAggregate); i++ {
 		aggregatedKeys = append(aggregatedKeys, bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength))
 	}
 	state.CurrentSyncCommittee = &pb.SyncCommittee{
@@ -413,7 +414,7 @@ func EmptyGenesisState() (iface.BeaconState, error) {
 
 // EmptyGenesisStateV1 returns an empty beacon state hard fork 1 object.
 func EmptyGenesisStateV1() (iface.BeaconStateV1, error) {
-	state := &pb.BeaconStateV1{
+	state := &pb.BeaconStateAltair{
 		// Misc fields.
 		Slot: 0,
 		Fork: &pb.Fork{
@@ -422,8 +423,9 @@ func EmptyGenesisStateV1() (iface.BeaconStateV1, error) {
 			Epoch:           0,
 		},
 		// Validator registry fields.
-		Validators: []*ethpb.Validator{},
-		Balances:   []uint64{},
+		Validators:       []*ethpb.Validator{},
+		Balances:         []uint64{},
+		InactivityScores: []uint64{},
 
 		JustificationBits:          []byte{0},
 		HistoricalRoots:            [][]byte{},

@@ -19,16 +19,14 @@ import (
 )
 
 func TestBeaconStateV1_ProtoBeaconStateCompatibility(t *testing.T) {
-	params.UseMinimalConfig()
 	ctx := context.Background()
 	genesis := setupGenesisState(t, 64)
 	customState, err := stateV1.InitializeFromProto(genesis)
 	require.NoError(t, err)
-	cloned, ok := proto.Clone(genesis).(*pb.BeaconStateV1)
-	assert.Equal(t, true, ok, "Object is not of type *pb.BeaconStateV1")
+	cloned, ok := proto.Clone(genesis).(*pb.BeaconStateAltair)
+	assert.Equal(t, true, ok, "Object is not of type *pb.BeaconStateAltair")
 	custom := customState.CloneInnerState()
 	assert.DeepSSZEqual(t, cloned, custom)
-
 	r1, err := customState.HashTreeRoot(ctx)
 	require.NoError(t, err)
 	beaconState, err := stateV1.InitializeFromProto(genesis)
@@ -51,7 +49,7 @@ func TestBeaconStateV1_ProtoBeaconStateCompatibility(t *testing.T) {
 	assert.Equal(t, r1, r2, "Mismatched roots")
 }
 
-func setupGenesisState(tb testing.TB, count uint64) *pb.BeaconStateV1 {
+func setupGenesisState(tb testing.TB, count uint64) *pb.BeaconStateAltair {
 	genesisState, _, err := interop.GenerateGenesisStateV1(0, count)
 	require.NoError(tb, err)
 	for i := uint64(1); i < count; i++ {
