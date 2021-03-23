@@ -193,10 +193,13 @@ func TestStart_NoHTTPEndpointDefinedSucceeds_WithGenesisState(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveState(context.Background(), st, genRoot))
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(context.Background(), genRoot))
+	depositCache, err := depositcache.New()
+	require.NoError(t, err)
 	s, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndpoints:   []string{""}, // No endpoint defined!
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
+		DepositCache:    depositCache,
 	})
 	require.NoError(t, err)
 
