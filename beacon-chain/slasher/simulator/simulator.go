@@ -68,7 +68,7 @@ func DefaultParams() *Parameters {
 		AggregationPercent:     1.0,
 		ProposerSlashingProbab: 0.2,
 		AttesterSlashingProbab: 0.2,
-		NumValidators:          params.BeaconConfig().MinGenesisActiveValidatorCount,
+		NumValidators:          1024,
 		NumEpochs:              10,
 	}
 }
