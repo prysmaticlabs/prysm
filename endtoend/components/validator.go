@@ -131,13 +131,14 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		return errors.New("validator binary not found")
 	}
 
-	beaconRPCPort := e2e.TestParams.BeaconNodeRPCPort + v.index
+	config, validatorNum, index, offset := v.config, v.validatorNum, v.index, v.offset
+	beaconRPCPort := e2e.TestParams.BeaconNodeRPCPort + index
 	if beaconRPCPort >= e2e.TestParams.BeaconNodeRPCPort+e2e.TestParams.BeaconNodeCount {
 		// Point any extra validator clients to a node we know is running.
 		beaconRPCPort = e2e.TestParams.BeaconNodeRPCPort
 	}
 
-	file, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, fmt.Sprintf(e2e.ValidatorLogFileName, v.index))
+	file, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, fmt.Sprintf(e2e.ValidatorLogFileName, index))
 	if err != nil {
 		return err
 	}
@@ -146,13 +147,13 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		return err
 	}
 	args := []string{
-		fmt.Sprintf("--datadir=%s/eth2-val-%d", e2e.TestParams.TestPath, v.index),
+		fmt.Sprintf("--datadir=%s/eth2-val-%d", e2e.TestParams.TestPath, index),
 		fmt.Sprintf("--log-file=%s", file.Name()),
 		fmt.Sprintf("--graffiti-file=%s", gFile),
-		fmt.Sprintf("--interop-num-validators=%d", v.validatorNum),
-		fmt.Sprintf("--interop-start-index=%d", v.offset),
-		fmt.Sprintf("--monitoring-port=%d", e2e.TestParams.ValidatorMetricsPort+v.index),
-		fmt.Sprintf("--grpc-gateway-port=%d", e2e.TestParams.ValidatorGatewayPort+v.index),
+		fmt.Sprintf("--interop-num-validators=%d", validatorNum),
+		fmt.Sprintf("--interop-start-index=%d", offset),
+		fmt.Sprintf("--monitoring-port=%d", e2e.TestParams.ValidatorMetricsPort+index),
+		fmt.Sprintf("--grpc-gateway-port=%d", e2e.TestParams.ValidatorGatewayPort+index),
 		fmt.Sprintf("--beacon-rpc-provider=localhost:%d", beaconRPCPort),
 		"--grpc-headers=dummy=value,foo=bar", // Sending random headers shouldn't break anything.
 		"--force-clear-db",
@@ -161,10 +162,10 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		"--verbosity=debug",
 	}
 	args = append(args, featureconfig.E2EValidatorFlags...)
-	args = append(args, v.config.ValidatorFlags...)
+	args = append(args, config.ValidatorFlags...)
 
 	cmd := exec.CommandContext(ctx, binaryPath, args...)
-	log.Infof("Starting validator client %d with flags: %s", v.index, strings.Join(args[2:], " "))
+	log.Infof("Starting validator client %d with flags: %s", index, strings.Join(args[2:], " "))
 	if err = cmd.Start(); err != nil {
 		return err
 	}
