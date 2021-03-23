@@ -587,3 +587,27 @@ func Test_batchRequestHeaders_UnderflowChecks(t *testing.T) {
 	_, err = srv.batchRequestHeaders(start, end)
 	require.ErrorContains(t, "cannot be >", err)
 }
+
+func TestService_EnsureConsistentPowchainData(t *testing.T) {
+	beaconDB := dbutil.SetupDB(t)
+	cache, err := depositcache.New()
+	require.NoError(t, err)
+
+	s1, err := NewService(context.Background(), &Web3ServiceConfig{
+		BeaconDB:     beaconDB,
+		DepositCache: cache,
+	})
+	require.NoError(t, err)
+	genState, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	assert.NoError(t, genState.SetSlot(1000))
+
+	require.NoError(t, s1.cfg.BeaconDB.SaveGenesisData(context.Background(), genState))
+	require.NoError(t, s1.ensureValidPowchainData(context.Background()))
+
+	eth1Data, err := s1.cfg.BeaconDB.PowchainData(context.Background())
+	assert.NoError(t, err)
+
+	assert.NotNil(t, eth1Data)
+	assert.Equal(t, true, eth1Data.ChainstartData.Chainstarted)
+}
