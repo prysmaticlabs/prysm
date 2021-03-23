@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/slasher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -24,12 +25,13 @@ import (
 
 // ServiceConfig for the simulator.
 type ServiceConfig struct {
-	Params        *Parameters
-	Database      db.Database
-	StateNotifier statefeed.Notifier
-	StateFetcher  blockchain.AttestationStateFetcher
-	StateGen      stategen.StateManager
-	SlashingsPool slashings.PoolManager
+	Params                      *Parameters
+	Database                    db.Database
+	StateNotifier               statefeed.Notifier
+	StateFetcher                blockchain.AttestationStateFetcher
+	StateGen                    stategen.StateManager
+	SlashingsPool               slashings.PoolManager
+	PrivateKeysByValidatorIndex map[types.ValidatorIndex]bls.SecretKey
 }
 
 // Parameters for a slasher simulator.
@@ -67,7 +69,7 @@ func DefaultParams() *Parameters {
 		SecondsPerSlot:         2,
 		AggregationPercent:     1.0,
 		ProposerSlashingProbab: 0.2,
-		AttesterSlashingProbab: 0.2,
+		AttesterSlashingProbab: 0,
 		NumValidators:          1024,
 		NumEpochs:              10,
 	}
@@ -158,7 +160,10 @@ func (s *Simulator) simulateBlocksAndAttestations(ctx context.Context) {
 				return
 			}
 
-			blockHeaders, propSlashings := generateBlockHeadersForSlot(s.srvConfig.Params, slot)
+			blockHeaders, propSlashings, err := s.generateBlockHeadersForSlot(ctx, slot)
+			if err != nil {
+				log.WithError(err).Fatal("Could not generate block headers for slot")
+			}
 			log.WithFields(logrus.Fields{
 				"numBlocks":    len(blockHeaders),
 				"numSlashable": len(propSlashings),
