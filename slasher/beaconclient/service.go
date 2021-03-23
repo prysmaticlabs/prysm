@@ -39,21 +39,15 @@ type ChainFetcher interface {
 
 // Service struct for the beaconclient service of the slasher.
 type Service struct {
+	cfg                         *Config
 	ctx                         context.Context
 	cancel                      context.CancelFunc
-	cert                        string
 	conn                        *grpc.ClientConn
-	provider                    string
-	beaconClient                ethpb.BeaconChainClient
-	slasherDB                   db.Database
-	nodeClient                  ethpb.NodeClient
 	clientFeed                  *event.Feed
 	blockFeed                   *event.Feed
 	attestationFeed             *event.Feed
 	proposerSlashingsChan       chan *ethpb.ProposerSlashing
 	attesterSlashingsChan       chan *ethpb.AttesterSlashing
-	attesterSlashingsFeed       *event.Feed
-	proposerSlashingsFeed       *event.Feed
 	receivedAttestationsBuffer  chan *ethpb.IndexedAttestation
 	collectedAttestationsBuffer chan []*ethpb.IndexedAttestation
 	publicKeyCache              *cache.PublicKeyCache
@@ -82,23 +76,17 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	}
 
 	return &Service{
-		cert:                        cfg.BeaconCert,
+		cfg:                         cfg,
 		ctx:                         ctx,
 		cancel:                      cancel,
-		provider:                    cfg.BeaconProvider,
 		blockFeed:                   new(event.Feed),
 		clientFeed:                  new(event.Feed),
 		attestationFeed:             new(event.Feed),
-		slasherDB:                   cfg.SlasherDB,
 		proposerSlashingsChan:       make(chan *ethpb.ProposerSlashing, 1),
 		attesterSlashingsChan:       make(chan *ethpb.AttesterSlashing, 1),
-		attesterSlashingsFeed:       cfg.AttesterSlashingsFeed,
-		proposerSlashingsFeed:       cfg.ProposerSlashingsFeed,
 		receivedAttestationsBuffer:  make(chan *ethpb.IndexedAttestation, 1),
 		collectedAttestationsBuffer: make(chan []*ethpb.IndexedAttestation, 1),
 		publicKeyCache:              publicKeyCache,
-		beaconClient:                cfg.BeaconClient,
-		nodeClient:                  cfg.NodeClient,
 	}, nil
 }
 
@@ -145,8 +133,8 @@ func (s *Service) Status() error {
 // after they are detected by other services in the slasher.
 func (s *Service) Start() {
 	var dialOpt grpc.DialOption
-	if s.cert != "" {
-		creds, err := credentials.NewClientTLSFromFile(s.cert, "")
+	if s.cfg.BeaconCert != "" {
+		creds, err := credentials.NewClientTLSFromFile(s.cfg.BeaconCert, "")
 		if err != nil {
 			log.Errorf("Could not get valid credentials: %v", err)
 		}
@@ -173,15 +161,15 @@ func (s *Service) Start() {
 			grpcutils.LogRequests,
 		)),
 	}
-	conn, err := grpc.DialContext(s.ctx, s.provider, beaconOpts...)
+	conn, err := grpc.DialContext(s.ctx, s.cfg.BeaconProvider, beaconOpts...)
 	if err != nil {
-		log.Fatalf("Could not dial endpoint: %s, %v", s.provider, err)
+		log.Fatalf("Could not dial endpoint: %s, %v", s.cfg.BeaconProvider, err)
 	}
 	s.beaconDialOptions = beaconOpts
 	log.Info("Successfully started gRPC connection")
 	s.conn = conn
-	s.beaconClient = ethpb.NewBeaconChainClient(s.conn)
-	s.nodeClient = ethpb.NewNodeClient(s.conn)
+	s.cfg.BeaconClient = ethpb.NewBeaconChainClient(s.conn)
+	s.cfg.NodeClient = ethpb.NewNodeClient(s.conn)
 
 	// We poll for the sync status of the beacon node until it is fully synced.
 	s.querySyncStatus(s.ctx)

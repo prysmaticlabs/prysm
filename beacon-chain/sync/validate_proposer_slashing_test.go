@@ -116,9 +116,11 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 	c, err := lru.New(10)
 	require.NoError(t, err)
 	r := &Service{
-		p2p:                       p,
-		chain:                     &mock.ChainService{State: s},
-		initialSync:               &mockSync.Sync{IsSyncing: false},
+		cfg: &Config{
+			P2P:         p,
+			Chain:       &mock.ChainService{State: s},
+			InitialSync: &mockSync.Sync{IsSyncing: false},
+		},
 		seenProposerSlashingCache: c,
 	}
 
@@ -153,9 +155,11 @@ func TestValidateProposerSlashing_ContextTimeout(t *testing.T) {
 	c, err := lru.New(10)
 	require.NoError(t, err)
 	r := &Service{
-		p2p:                       p,
-		chain:                     &mock.ChainService{State: state},
-		initialSync:               &mockSync.Sync{IsSyncing: false},
+		cfg: &Config{
+			P2P:         p,
+			Chain:       &mock.ChainService{State: state},
+			InitialSync: &mockSync.Sync{IsSyncing: false},
+		},
 		seenProposerSlashingCache: c,
 	}
 
@@ -180,9 +184,11 @@ func TestValidateProposerSlashing_Syncing(t *testing.T) {
 	slashing, s := setupValidProposerSlashing(t)
 
 	r := &Service{
-		p2p:         p,
-		chain:       &mock.ChainService{State: s},
-		initialSync: &mockSync.Sync{IsSyncing: true},
+		cfg: &Config{
+			P2P:         p,
+			Chain:       &mock.ChainService{State: s},
+			InitialSync: &mockSync.Sync{IsSyncing: true},
+		},
 	}
 
 	buf := new(bytes.Buffer)

@@ -57,11 +57,8 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.WhistleBlowerRewardQuotient = 512
 	minimalConfig.ProposerRewardQuotient = 8
 	minimalConfig.InactivityPenaltyQuotient = 33554432
-	minimalConfig.InactivityPenaltyQuotientHF1 = 50331648
 	minimalConfig.MinSlashingPenaltyQuotient = 64
-	minimalConfig.MinSlashingPenaltyQuotientHF1 = 64
 	minimalConfig.ProportionalSlashingMultiplier = 2
-	minimalConfig.ProportionalSlashingMultiplierHF1 = 2
 
 	// Max operations per block
 	minimalConfig.MaxProposerSlashings = 16
@@ -81,6 +78,12 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.DepositContractTreeDepth = 32
 	minimalConfig.FarFutureEpoch = 1<<64 - 1
 	minimalConfig.FarFutureSlot = 1<<64 - 1
+
+	// New Altair params
+	minimalConfig.SyncCommitteeSize = 32
+	minimalConfig.SyncPubkeysPerAggregate = 16
+	minimalConfig.InactivityScoreBias = 4
+	minimalConfig.EpochsPerSyncCommitteePeriod = 8
 
 	return minimalConfig
 }
