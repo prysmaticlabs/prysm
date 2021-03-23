@@ -7,17 +7,28 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/slasher"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
+
+// ServiceConfig for the simulator.
+type ServiceConfig struct {
+	Params        *Parameters
+	Database      db.Database
+	StateNotifier statefeed.Notifier
+	StateFetcher  blockchain.AttestationStateFetcher
+	StateGen      stategen.StateManager
+}
 
 // Parameters for a slasher simulator.
 type Parameters struct {
@@ -34,14 +45,13 @@ type Parameters struct {
 type Simulator struct {
 	ctx                       context.Context
 	slasher                   *slasher.Service
-	params                    *Parameters
+	srvConfig                 *ServiceConfig
 	indexedAttsFeed           *event.Feed
 	beaconBlocksFeed          *event.Feed
 	attesterSlashingsFeed     *event.Feed
 	proposerSlashingsFeed     *event.Feed
 	sentAttSlashingFeed       *event.Feed
 	sentBlockSlashingFeed     *event.Feed
-	stateNotifier             statefeed.Notifier
 	detectedProposerSlashings map[[32]byte]*ethpb.ProposerSlashing
 	detectedAttesterSlashings map[[32]byte]*ethpb.AttesterSlashing
 	sentProposerSlashings     map[[32]byte]*ethpb.ProposerSlashing
@@ -65,22 +75,23 @@ func DefaultParams() *Parameters {
 
 // New initializes a slasher simulator from a beacon database
 // and configuration parameters.
-func New(ctx context.Context, beaconDB db.Database) (*Simulator, error) {
+func New(ctx context.Context, srvConfig *ServiceConfig) (*Simulator, error) {
 	indexedAttsFeed := new(event.Feed)
 	beaconBlocksFeed := new(event.Feed)
 	sentBlockSlashingFeed := new(event.Feed)
 	sentAttSlashingFeed := new(event.Feed)
 	attesterSlashingsFeed := new(event.Feed)
 	proposerSlashingsFeed := new(event.Feed)
-	stateNotifier := &mock.MockStateNotifier{}
 
 	slasherSrv, err := slasher.New(ctx, &slasher.ServiceConfig{
 		IndexedAttestationsFeed: indexedAttsFeed,
 		BeaconBlockHeadersFeed:  beaconBlocksFeed,
 		AttesterSlashingsFeed:   attesterSlashingsFeed,
 		ProposerSlashingsFeed:   proposerSlashingsFeed,
-		Database:                beaconDB,
-		StateNotifier:           stateNotifier,
+		Database:                srvConfig.Database,
+		StateNotifier:           srvConfig.StateNotifier,
+		StateFetcher:            srvConfig.StateFetcher,
+		StateGen:                srvConfig.StateGen,
 	})
 	if err != nil {
 		return nil, err
@@ -88,14 +99,13 @@ func New(ctx context.Context, beaconDB db.Database) (*Simulator, error) {
 	return &Simulator{
 		ctx:                       ctx,
 		slasher:                   slasherSrv,
-		params:                    DefaultParams(),
+		srvConfig:                 srvConfig,
 		indexedAttsFeed:           indexedAttsFeed,
 		beaconBlocksFeed:          beaconBlocksFeed,
 		attesterSlashingsFeed:     attesterSlashingsFeed,
 		proposerSlashingsFeed:     proposerSlashingsFeed,
 		sentAttSlashingFeed:       sentAttSlashingFeed,
 		sentBlockSlashingFeed:     sentBlockSlashingFeed,
-		stateNotifier:             stateNotifier,
 		sentProposerSlashings:     make(map[[32]byte]*ethpb.ProposerSlashing),
 		detectedProposerSlashings: make(map[[32]byte]*ethpb.ProposerSlashing),
 		sentAttesterSlashings:     make(map[[32]byte]*ethpb.AttesterSlashing),
@@ -106,16 +116,16 @@ func New(ctx context.Context, beaconDB db.Database) (*Simulator, error) {
 // Start a simulator.
 func (s *Simulator) Start() {
 	log.WithFields(logrus.Fields{
-		"numValidators":          s.params.NumValidators,
-		"numEpochs":              s.params.NumEpochs,
-		"secondsPerSlot":         s.params.SecondsPerSlot,
-		"proposerSlashingProbab": s.params.ProposerSlashingProbab,
-		"attesterSlashingProbab": s.params.AttesterSlashingProbab,
+		"numValidators":          s.srvConfig.Params.NumValidators,
+		"numEpochs":              s.srvConfig.Params.NumEpochs,
+		"secondsPerSlot":         s.srvConfig.Params.SecondsPerSlot,
+		"proposerSlashingProbab": s.srvConfig.Params.ProposerSlashingProbab,
+		"attesterSlashingProbab": s.srvConfig.Params.AttesterSlashingProbab,
 	}).Info("Starting slasher simulator")
 
 	// Override global configuration for simulation purposes.
 	config := params.BeaconConfig().Copy()
-	config.SecondsPerSlot = s.params.SecondsPerSlot
+	config.SecondsPerSlot = s.srvConfig.Params.SecondsPerSlot
 	params.OverrideBeaconConfig(config)
 	defer params.OverrideBeaconConfig(params.BeaconConfig())
 
@@ -126,7 +136,7 @@ func (s *Simulator) Start() {
 	// for slasher to pick up a genesis time.
 	time.Sleep(time.Second)
 	s.genesisTime = time.Now()
-	s.stateNotifier.StateFeed().Send(&feed.Event{
+	s.srvConfig.StateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.ChainStarted,
 		Data: &statefeed.ChainStartedData{StartTime: s.genesisTime},
 	})
@@ -154,11 +164,11 @@ func (s *Simulator) simulateBlocksAndAttestations(ctx context.Context) {
 		select {
 		case slot := <-ticker.C():
 			// We only run the simulator for a specified number of epochs.
-			if helpers.SlotToEpoch(slot)+1 >= types.Epoch(s.params.NumEpochs) {
+			if helpers.SlotToEpoch(slot)+1 >= types.Epoch(s.srvConfig.Params.NumEpochs) {
 				return
 			}
 
-			blockHeaders, propSlashings := generateBlockHeadersForSlot(s.params, slot)
+			blockHeaders, propSlashings := generateBlockHeadersForSlot(s.srvConfig.Params, slot)
 			log.WithFields(logrus.Fields{
 				"numBlocks":    len(blockHeaders),
 				"numSlashable": len(propSlashings),
@@ -174,7 +184,7 @@ func (s *Simulator) simulateBlocksAndAttestations(ctx context.Context) {
 				s.beaconBlocksFeed.Send(bb)
 			}
 
-			atts, attSlashings := generateAttestationsForSlot(s.params, slot)
+			atts, attSlashings := generateAttestationsForSlot(s.srvConfig.Params, slot)
 			log.WithFields(logrus.Fields{
 				"numAtts":      len(atts),
 				"numSlashable": len(propSlashings),
