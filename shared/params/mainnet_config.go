@@ -122,15 +122,12 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	ValidatorRegistryLimit:    1099511627776,
 
 	// Reward and penalty quotients constants.
-	BaseRewardFactor:                  64,
-	WhistleBlowerRewardQuotient:       512,
-	ProposerRewardQuotient:            8,
-	InactivityPenaltyQuotient:         67108864,
-	InactivityPenaltyQuotientHF1:      50331648,
-	MinSlashingPenaltyQuotient:        128,
-	MinSlashingPenaltyQuotientHF1:     64,
-	ProportionalSlashingMultiplier:    1,
-	ProportionalSlashingMultiplierHF1: 2,
+	BaseRewardFactor:               64,
+	WhistleBlowerRewardQuotient:    512,
+	ProposerRewardQuotient:         8,
+	InactivityPenaltyQuotient:      67108864,
+	MinSlashingPenaltyQuotient:     128,
+	ProportionalSlashingMultiplier: 1,
 
 	// Max operations per block constants.
 	MaxProposerSlashings: 16,
@@ -140,13 +137,16 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MaxVoluntaryExits:    16,
 
 	// BLS domain values.
-	DomainBeaconProposer:    bytesutil.ToBytes4(bytesutil.Bytes4(0)),
-	DomainBeaconAttester:    bytesutil.ToBytes4(bytesutil.Bytes4(1)),
-	DomainRandao:            bytesutil.ToBytes4(bytesutil.Bytes4(2)),
-	DomainDeposit:           bytesutil.ToBytes4(bytesutil.Bytes4(3)),
-	DomainVoluntaryExit:     bytesutil.ToBytes4(bytesutil.Bytes4(4)),
-	DomainSelectionProof:    bytesutil.ToBytes4(bytesutil.Bytes4(5)),
-	DomainAggregateAndProof: bytesutil.ToBytes4(bytesutil.Bytes4(6)),
+	DomainBeaconProposer:              bytesutil.ToBytes4(bytesutil.Bytes4(0)),
+	DomainBeaconAttester:              bytesutil.ToBytes4(bytesutil.Bytes4(1)),
+	DomainRandao:                      bytesutil.ToBytes4(bytesutil.Bytes4(2)),
+	DomainDeposit:                     bytesutil.ToBytes4(bytesutil.Bytes4(3)),
+	DomainVoluntaryExit:               bytesutil.ToBytes4(bytesutil.Bytes4(4)),
+	DomainSelectionProof:              bytesutil.ToBytes4(bytesutil.Bytes4(5)),
+	DomainAggregateAndProof:           bytesutil.ToBytes4(bytesutil.Bytes4(6)),
+	DomainSyncCommittee:               bytesutil.ToBytes4(bytesutil.Bytes4(7)),
+	DomainSyncCommitteeSelectionProof: bytesutil.ToBytes4(bytesutil.Bytes4(8)),
+	DomainContributionAndProof:        bytesutil.ToBytes4(bytesutil.Bytes4(9)),
 
 	// Prysm constants.
 	GweiPerEth:                1000000000,
