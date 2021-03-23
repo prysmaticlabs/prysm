@@ -5,7 +5,6 @@ go_library(
     testonly = True,
     srcs = [
         "beacon_node.go",
-        "boot_node.go",
         "eth1.go",
         "log.go",
         "slasher.go",
