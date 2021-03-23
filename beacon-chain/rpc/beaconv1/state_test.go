@@ -166,26 +166,7 @@ func TestGetStateRoot(t *testing.T) {
 	})
 
 	t.Run("Hex root", func(t *testing.T) {
-		// We fill state and block roots with hex representations of natural numbers starting with 0.
-		// Example: 16 becomes 0x00...0f
-		fillRoots := func(state *pb.BeaconState) {
-			rootsLen := params.MainnetConfig().SlotsPerHistoricalRoot
-			roots := make([][]byte, rootsLen)
-			for i := types.Slot(0); i < rootsLen; i++ {
-				roots[i] = make([]byte, 32)
-			}
-			for j := 0; j < len(roots); j++ {
-				// Remove '0x' prefix and left-pad '0' to have 64 chars in total.
-				s := fmt.Sprintf("%064s", hexutil.EncodeUint64(uint64(j))[2:])
-				h, err := hexutil.Decode("0x" + s)
-				require.NoError(t, err, "Failed to decode root "+s)
-				roots[j] = h
-			}
-			state.StateRoots = roots
-			state.BlockRoots = roots
-		}
-
-		state, err := testutil.NewBeaconState(fillRoots)
+		state, err := testutil.NewBeaconState(testutil.FillRootsNaturalOpt)
 		require.NoError(t, err)
 		chainService := &chainMock.ChainService{
 			State: state,
@@ -280,37 +261,20 @@ func TestGetStateRoot(t *testing.T) {
 func TestGetStateFork(t *testing.T) {
 	ctx := context.Background()
 
-	// We fill state and block roots with hex representations of natural numbers starting with 0.
-	// Example: 16 becomes 0x00...0f
-	fillRoots := func(state *pb.BeaconState) {
-		rootsLen := params.MainnetConfig().SlotsPerHistoricalRoot
-		roots := make([][]byte, rootsLen)
-		for i := types.Slot(0); i < rootsLen; i++ {
-			roots[i] = make([]byte, 32)
-		}
-		for j := 0; j < len(roots); j++ {
-			// Remove '0x' prefix and left-pad '0' to have 64 chars in total.
-			s := fmt.Sprintf("%064s", hexutil.EncodeUint64(uint64(j))[2:])
-			h, err := hexutil.Decode("0x" + s)
-			require.NoError(t, err, "Failed to decode root "+s)
-			roots[j] = h
-		}
-		state.StateRoots = roots
-		state.BlockRoots = roots
-	}
-
-	fillFork := func(state *pb.BeaconState) {
+	fillFork := func(state *pb.BeaconState) error {
 		state.Fork = &pb.Fork{
 			PreviousVersion: []byte("prev"),
 			CurrentVersion:  []byte("curr"),
 			Epoch:           123,
 		}
+		return nil
 	}
 	headSlot := types.Slot(123)
-	fillSlot := func(state *pb.BeaconState) {
+	fillSlot := func(state *pb.BeaconState) error {
 		state.Slot = headSlot
+		return nil
 	}
-	state, err := testutil.NewBeaconState(fillRoots, fillFork, fillSlot)
+	state, err := testutil.NewBeaconState(testutil.FillRootsNaturalOpt, fillFork, fillSlot)
 	require.NoError(t, err)
 	stateRoot, err := state.HashTreeRoot(ctx)
 	require.NoError(t, err)
@@ -340,12 +304,13 @@ func TestGetStateFork(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, db.SaveStateSummary(ctx, &pb.StateSummary{Root: r[:]}))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, r))
-		st, err := testutil.NewBeaconState(func(state *pb.BeaconState) {
+		st, err := testutil.NewBeaconState(func(state *pb.BeaconState) error {
 			state.Fork = &pb.Fork{
 				PreviousVersion: []byte("prev"),
 				CurrentVersion:  []byte("curr"),
 				Epoch:           123,
 			}
+			return nil
 		})
 		require.NoError(t, err)
 		require.NoError(t, db.SaveState(ctx, st, r))
@@ -495,25 +460,7 @@ func TestGetStateFork(t *testing.T) {
 func TestGetFinalityCheckpoints(t *testing.T) {
 	ctx := context.Background()
 
-	// We fill state and block roots with hex representations of natural numbers starting with 0.
-	// Example: 16 becomes 0x00...0f
-	fillRoots := func(state *pb.BeaconState) {
-		rootsLen := params.MainnetConfig().SlotsPerHistoricalRoot
-		roots := make([][]byte, rootsLen)
-		for i := types.Slot(0); i < rootsLen; i++ {
-			roots[i] = make([]byte, 32)
-		}
-		for j := 0; j < len(roots); j++ {
-			// Remove '0x' prefix and left-pad '0' to have 64 chars in total.
-			s := fmt.Sprintf("%064s", hexutil.EncodeUint64(uint64(j))[2:])
-			h, err := hexutil.Decode("0x" + s)
-			require.NoError(t, err, "Failed to decode root "+s)
-			roots[j] = h
-		}
-		state.StateRoots = roots
-		state.BlockRoots = roots
-	}
-	fillCheckpoints := func(state *pb.BeaconState) {
+	fillCheckpoints := func(state *pb.BeaconState) error {
 		state.PreviousJustifiedCheckpoint = &eth.Checkpoint{
 			Root:  bytesutil.PadTo([]byte("previous"), 32),
 			Epoch: 113,
@@ -526,12 +473,14 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 			Root:  bytesutil.PadTo([]byte("finalized"), 32),
 			Epoch: 103,
 		}
+		return nil
 	}
 	headSlot := types.Slot(123)
-	fillSlot := func(state *pb.BeaconState) {
+	fillSlot := func(state *pb.BeaconState) error {
 		state.Slot = headSlot
+		return nil
 	}
-	state, err := testutil.NewBeaconState(fillRoots, fillCheckpoints, fillSlot)
+	state, err := testutil.NewBeaconState(testutil.FillRootsNaturalOpt, fillCheckpoints, fillSlot)
 	require.NoError(t, err)
 	stateRoot, err := state.HashTreeRoot(ctx)
 	require.NoError(t, err)
@@ -564,7 +513,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, db.SaveStateSummary(ctx, &pb.StateSummary{Root: r[:]}))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, r))
-		st, err := testutil.NewBeaconState(func(state *pb.BeaconState) {
+		st, err := testutil.NewBeaconState(func(state *pb.BeaconState) error {
 			state.PreviousJustifiedCheckpoint = &eth.Checkpoint{
 				Root:  bytesutil.PadTo([]byte("previous"), 32),
 				Epoch: 113,
@@ -577,6 +526,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 				Root:  bytesutil.PadTo([]byte("finalized"), 32),
 				Epoch: 103,
 			}
+			return nil
 		})
 		require.NoError(t, err)
 		require.NoError(t, db.SaveState(ctx, st, r))
