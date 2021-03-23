@@ -1,4 +1,4 @@
-package stateV1
+package stateAltair
 
 import (
 	"runtime/debug"
@@ -77,6 +77,11 @@ func TestNilState_NoPanic(t *testing.T) {
 	_ = st.PreviousJustifiedCheckpoint()
 	_ = st.CurrentJustifiedCheckpoint()
 	_ = st.FinalizedCheckpoint()
+	_ = st.CurrentEpochParticipation()
+	_ = st.PreviousEpochParticipation()
+	_ = st.InactivityScores()
+	_ = st.CurrentSyncCommittee()
+	_ = st.NextSyncCommittee()
 }
 
 func TestReadOnlyValidator_NoPanic(t *testing.T) {

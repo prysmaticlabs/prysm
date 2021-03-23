@@ -1,4 +1,4 @@
-package stateV1
+package stateAltair
 
 import (
 	"sync"
@@ -11,7 +11,7 @@ import (
 )
 
 // Ensure type BeaconState below implements BeaconState interface.
-var _ iface.BeaconStateV1 = (*BeaconState)(nil)
+var _ iface.BeaconStateAltair = (*BeaconState)(nil)
 
 func init() {
 	fieldMap = make(map[fieldIndex]dataType, params.BeaconConfig().BeaconStateFieldCount)

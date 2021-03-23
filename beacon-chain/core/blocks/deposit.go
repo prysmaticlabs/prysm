@@ -61,9 +61,9 @@ func ProcessPreGenesisDeposits(
 // ProcessPreGenesisDepositsV1 processes a deposit for the beacon state hard fork 1 before chainstart.
 func ProcessPreGenesisDepositsV1(
 	ctx context.Context,
-	beaconState iface.BeaconStateV1,
+	beaconState iface.BeaconStateAltair,
 	deposits []*ethpb.Deposit,
-) (iface.BeaconStateV1, error) {
+) (iface.BeaconStateAltair, error) {
 	var err error
 	beaconState, err = ProcessDepositsV1(ctx, beaconState, &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{Deposits: deposits}}})
@@ -144,9 +144,9 @@ func ProcessDeposits(
 
 func ProcessDepositsV1(
 	ctx context.Context,
-	beaconState iface.BeaconStateV1,
+	beaconState iface.BeaconStateAltair,
 	b *ethpb.SignedBeaconBlock,
-) (iface.BeaconStateV1, error) {
+) (iface.BeaconStateAltair, error) {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err
 	}
@@ -268,7 +268,7 @@ func ProcessDeposit(beaconState iface.BeaconState, deposit *ethpb.Deposit, verif
 	return beaconState, nil
 }
 
-func ProcessDepositV1(beaconState iface.BeaconStateV1, deposit *ethpb.Deposit, verifySignature bool) (iface.BeaconStateV1, error) {
+func ProcessDepositV1(beaconState iface.BeaconStateAltair, deposit *ethpb.Deposit, verifySignature bool) (iface.BeaconStateAltair, error) {
 	if err := verifyDeposit(beaconState, deposit); err != nil {
 		if deposit == nil || deposit.Data == nil {
 			return nil, err

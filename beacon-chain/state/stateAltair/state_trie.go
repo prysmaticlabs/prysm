@@ -1,4 +1,4 @@
-package stateV1
+package stateAltair
 
 import (
 	"context"
@@ -180,7 +180,7 @@ func (b *BeaconState) Copy() iface.BeaconState {
 // HashTreeRoot of the beacon state retrieves the Merkle root of the trie
 // representation of the beacon state based on the eth2 Simple Serialize specification.
 func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
-	_, span := trace.StartSpan(ctx, "beaconStateV1.HashTreeRoot")
+	_, span := trace.StartSpan(ctx, "beaconStateAltair.HashTreeRoot")
 	defer span.End()
 
 	b.lock.Lock()

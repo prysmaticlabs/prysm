@@ -1,4 +1,4 @@
-package stateV1_test
+package stateAltair_test
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateAltair"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/interop"
@@ -18,10 +18,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func TestBeaconStateV1_ProtoBeaconStateCompatibility(t *testing.T) {
+func TestBeaconStateAltair_ProtoBeaconStateCompatibility(t *testing.T) {
 	ctx := context.Background()
 	genesis := setupGenesisState(t, 64)
-	customState, err := stateV1.InitializeFromProto(genesis)
+	customState, err := stateAltair.InitializeFromProto(genesis)
 	require.NoError(t, err)
 	cloned, ok := proto.Clone(genesis).(*pb.BeaconStateAltair)
 	assert.Equal(t, true, ok, "Object is not of type *pb.BeaconStateAltair")
@@ -29,7 +29,7 @@ func TestBeaconStateV1_ProtoBeaconStateCompatibility(t *testing.T) {
 	assert.DeepSSZEqual(t, cloned, custom)
 	r1, err := customState.HashTreeRoot(ctx)
 	require.NoError(t, err)
-	beaconState, err := stateV1.InitializeFromProto(genesis)
+	beaconState, err := stateAltair.InitializeFromProto(genesis)
 	require.NoError(t, err)
 	r2, err := beaconState.HashTreeRoot(context.Background())
 	require.NoError(t, err)
@@ -42,7 +42,7 @@ func TestBeaconStateV1_ProtoBeaconStateCompatibility(t *testing.T) {
 	r1, err = customState.HashTreeRoot(ctx)
 	require.NoError(t, err)
 	genesis.Balances = balances
-	beaconState, err = stateV1.InitializeFromProto(genesis)
+	beaconState, err = stateAltair.InitializeFromProto(genesis)
 	require.NoError(t, err)
 	r2, err = beaconState.HashTreeRoot(context.Background())
 	require.NoError(t, err)
@@ -50,7 +50,7 @@ func TestBeaconStateV1_ProtoBeaconStateCompatibility(t *testing.T) {
 }
 
 func setupGenesisState(tb testing.TB, count uint64) *pb.BeaconStateAltair {
-	genesisState, _, err := interop.GenerateGenesisStateV1(0, count)
+	genesisState, _, err := interop.GenerateGenesisStateAltair(0, count)
 	require.NoError(tb, err)
 	for i := uint64(1); i < count; i++ {
 		someRoot := [32]byte{}
@@ -133,7 +133,7 @@ func BenchmarkStateClone_Manual(b *testing.B) {
 	b.StopTimer()
 	params.UseMinimalConfig()
 	genesis := setupGenesisState(b, 64)
-	st, err := stateV1.InitializeFromProto(genesis)
+	st, err := stateAltair.InitializeFromProto(genesis)
 	require.NoError(b, err)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
@@ -174,7 +174,7 @@ func cloneValidatorsManually(vals []*ethpb.Validator) []*ethpb.Validator {
 func TestBeaconState_ImmutabilityWithSharedResources(t *testing.T) {
 	params.UseMinimalConfig()
 	genesis := setupGenesisState(t, 64)
-	a, err := stateV1.InitializeFromProto(genesis)
+	a, err := stateAltair.InitializeFromProto(genesis)
 	require.NoError(t, err)
 	b := a.Copy()
 
@@ -210,7 +210,7 @@ func TestBeaconState_ImmutabilityWithSharedResources(t *testing.T) {
 func TestForkManualCopy_OK(t *testing.T) {
 	params.UseMinimalConfig()
 	genesis := setupGenesisState(t, 64)
-	a, err := stateV1.InitializeFromProto(genesis)
+	a, err := stateAltair.InitializeFromProto(genesis)
 	require.NoError(t, err)
 	wantedFork := &pb.Fork{
 		PreviousVersion: []byte{'a', 'b', 'c'},
@@ -219,7 +219,7 @@ func TestForkManualCopy_OK(t *testing.T) {
 	}
 	require.NoError(t, a.SetFork(wantedFork))
 
-	pbState, err := stateV1.ProtobufBeaconState(a.InnerStateUnsafe())
+	pbState, err := stateAltair.ProtobufBeaconState(a.InnerStateUnsafe())
 	require.NoError(t, err)
 	require.DeepEqual(t, pbState.Fork, wantedFork)
 }

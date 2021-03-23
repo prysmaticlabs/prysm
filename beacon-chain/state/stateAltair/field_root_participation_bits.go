@@ -1,4 +1,4 @@
-package stateV1
+package stateAltair
 
 import "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 

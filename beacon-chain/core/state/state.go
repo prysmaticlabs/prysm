@@ -11,8 +11,8 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateAltair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -105,11 +105,11 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 	return OptimizedGenesisBeaconState(genesisTime, state, state.Eth1Data())
 }
 
-func GenesisBeaconStateV1(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (iface.BeaconStateV1, error) {
+func GenesisBeaconStateAltair(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (iface.BeaconStateAltair, error) {
 	if eth1Data == nil {
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
-	state, err := EmptyGenesisStateV1()
+	state, err := EmptyGenesisStateAltair()
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +150,7 @@ func GenesisBeaconStateV1(deposits []*ethpb.Deposit, genesisTime uint64, eth1Dat
 		return nil, errors.Wrap(err, "could not process validator deposits")
 	}
 
-	return OptimizedGenesisBeaconStateV1(genesisTime, state, state.Eth1Data())
+	return OptimizedGenesisBeaconStateAltair(genesisTime, state, state.Eth1Data())
 }
 
 // OptimizedGenesisBeaconState is used to create a state that has already processed deposits. This is to efficiently
@@ -259,9 +259,9 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState iface.BeaconState,
 	return stateV0.InitializeFromProto(state)
 }
 
-// OptimizedGenesisBeaconStateV1 is used to create a state that has already processed deposits. This is to efficiently
+// OptimizedGenesisBeaconStateAltair is used to create a state that has already processed deposits. This is to efficiently
 // create a mainnet state at chainstart.
-func OptimizedGenesisBeaconStateV1(genesisTime uint64, preState iface.BeaconStateV1, eth1Data *ethpb.Eth1Data) (iface.BeaconStateV1, error) {
+func OptimizedGenesisBeaconStateAltair(genesisTime uint64, preState iface.BeaconStateAltair, eth1Data *ethpb.Eth1Data) (iface.BeaconStateAltair, error) {
 	if eth1Data == nil {
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
@@ -382,7 +382,7 @@ func OptimizedGenesisBeaconStateV1(genesisTime uint64, preState iface.BeaconStat
 		PubkeyAggregates: bytesutil.Copy2dBytes(aggregatedKeys),
 	}
 
-	return stateV1.InitializeFromProto(state)
+	return stateAltair.InitializeFromProto(state)
 }
 
 // EmptyGenesisState returns an empty beacon state object.
@@ -412,8 +412,8 @@ func EmptyGenesisState() (iface.BeaconState, error) {
 	return stateV0.InitializeFromProto(state)
 }
 
-// EmptyGenesisStateV1 returns an empty beacon state hard fork 1 object.
-func EmptyGenesisStateV1() (iface.BeaconStateV1, error) {
+// EmptyGenesisStateAltair returns an empty beacon state hard fork 1 object.
+func EmptyGenesisStateAltair() (iface.BeaconStateAltair, error) {
 	state := &pb.BeaconStateAltair{
 		// Misc fields.
 		Slot: 0,
@@ -437,7 +437,7 @@ func EmptyGenesisStateV1() (iface.BeaconStateV1, error) {
 		Eth1DataVotes:    []*ethpb.Eth1Data{},
 		Eth1DepositIndex: 0,
 	}
-	return stateV1.InitializeFromProto(state)
+	return stateAltair.InitializeFromProto(state)
 }
 
 // IsValidGenesisState gets called whenever there's a deposit event,

@@ -1,4 +1,4 @@
-package stateV1_test
+package stateAltair_test
 
 import (
 	"bytes"
@@ -7,7 +7,7 @@ import (
 
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateAltair"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -17,8 +17,8 @@ import (
 )
 
 func TestInitializeFromProto(t *testing.T) {
-	testState, _ := testutil.DeterministicGenesisStateV1(t, 64)
-	pbState, err := stateV1.ProtobufBeaconState(testState.InnerStateUnsafe())
+	testState, _ := testutil.DeterministicGenesisStateAltair(t, 64)
+	pbState, err := stateAltair.ProtobufBeaconState(testState.InnerStateUnsafe())
 	require.NoError(t, err)
 	type test struct {
 		name  string
@@ -49,7 +49,7 @@ func TestInitializeFromProto(t *testing.T) {
 	}
 	for _, tt := range initTests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := stateV1.InitializeFromProto(tt.state)
+			_, err := stateAltair.InitializeFromProto(tt.state)
 			if tt.error != "" {
 				assert.ErrorContains(t, tt.error, err)
 			} else {
@@ -60,8 +60,8 @@ func TestInitializeFromProto(t *testing.T) {
 }
 
 func TestInitializeFromProtoUnsafe(t *testing.T) {
-	testState, _ := testutil.DeterministicGenesisStateV1(t, 64)
-	pbState, err := stateV1.ProtobufBeaconState(testState.InnerStateUnsafe())
+	testState, _ := testutil.DeterministicGenesisStateAltair(t, 64)
+	pbState, err := stateAltair.ProtobufBeaconState(testState.InnerStateUnsafe())
 	require.NoError(t, err)
 	type test struct {
 		name  string
@@ -92,7 +92,7 @@ func TestInitializeFromProtoUnsafe(t *testing.T) {
 	}
 	for _, tt := range initTests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := stateV1.InitializeFromProtoUnsafe(tt.state)
+			_, err := stateAltair.InitializeFromProtoUnsafe(tt.state)
 			if tt.error != "" {
 				assert.ErrorContains(t, tt.error, err)
 			} else {
@@ -103,23 +103,23 @@ func TestInitializeFromProtoUnsafe(t *testing.T) {
 }
 
 func TestBeaconState_HashTreeRoot(t *testing.T) {
-	testState, _ := testutil.DeterministicGenesisStateV1(t, 64)
+	testState, _ := testutil.DeterministicGenesisStateAltair(t, 64)
 	type test struct {
 		name        string
-		stateModify func(beaconState iface.BeaconStateV1) (iface.BeaconStateV1, error)
+		stateModify func(beaconState iface.BeaconStateAltair) (iface.BeaconStateAltair, error)
 		error       string
 	}
 	initTests := []test{
 		{
 			name: "unchanged state",
-			stateModify: func(beaconState iface.BeaconStateV1) (iface.BeaconStateV1, error) {
+			stateModify: func(beaconState iface.BeaconStateAltair) (iface.BeaconStateAltair, error) {
 				return beaconState, nil
 			},
 			error: "",
 		},
 		{
 			name: "different slot",
-			stateModify: func(beaconState iface.BeaconStateV1) (iface.BeaconStateV1, error) {
+			stateModify: func(beaconState iface.BeaconStateAltair) (iface.BeaconStateAltair, error) {
 				if err := beaconState.SetSlot(5); err != nil {
 					return nil, err
 				}
@@ -129,7 +129,7 @@ func TestBeaconState_HashTreeRoot(t *testing.T) {
 		},
 		{
 			name: "different validator balance",
-			stateModify: func(beaconState iface.BeaconStateV1) (iface.BeaconStateV1, error) {
+			stateModify: func(beaconState iface.BeaconStateAltair) (iface.BeaconStateAltair, error) {
 				val, err := beaconState.ValidatorAtIndex(5)
 				if err != nil {
 					return nil, err
@@ -154,7 +154,7 @@ func TestBeaconState_HashTreeRoot(t *testing.T) {
 			if err == nil && tt.error != "" {
 				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
 			}
-			pbState, err := stateV1.ProtobufBeaconState(testState.InnerStateUnsafe())
+			pbState, err := stateAltair.ProtobufBeaconState(testState.InnerStateUnsafe())
 			require.NoError(t, err)
 			genericHTR, err := pbState.HashTreeRoot()
 			if err == nil && tt.error != "" {
@@ -171,24 +171,24 @@ func TestBeaconState_HashTreeRoot(t *testing.T) {
 }
 
 func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
-	testState, _ := testutil.DeterministicGenesisStateV1(t, 64)
+	testState, _ := testutil.DeterministicGenesisStateAltair(t, 64)
 
 	type test struct {
 		name        string
-		stateModify func(iface.BeaconStateV1) (iface.BeaconStateV1, error)
+		stateModify func(iface.BeaconStateAltair) (iface.BeaconStateAltair, error)
 		error       string
 	}
 	initTests := []test{
 		{
 			name: "unchanged state",
-			stateModify: func(beaconState iface.BeaconStateV1) (iface.BeaconStateV1, error) {
+			stateModify: func(beaconState iface.BeaconStateAltair) (iface.BeaconStateAltair, error) {
 				return beaconState, nil
 			},
 			error: "",
 		},
 		{
 			name: "different slot",
-			stateModify: func(beaconState iface.BeaconStateV1) (iface.BeaconStateV1, error) {
+			stateModify: func(beaconState iface.BeaconStateAltair) (iface.BeaconStateAltair, error) {
 				if err := beaconState.SetSlot(5); err != nil {
 					return nil, err
 				}
@@ -198,7 +198,7 @@ func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
 		},
 		{
 			name: "different validator balance",
-			stateModify: func(beaconState iface.BeaconStateV1) (iface.BeaconStateV1, error) {
+			stateModify: func(beaconState iface.BeaconStateAltair) (iface.BeaconStateAltair, error) {
 				val, err := beaconState.ValidatorAtIndex(5)
 				if err != nil {
 					return nil, err
@@ -223,7 +223,7 @@ func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
 			if err == nil && tt.error != "" {
 				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
 			}
-			pbState, err := stateV1.ProtobufBeaconState(testState.InnerStateUnsafe())
+			pbState, err := stateAltair.ProtobufBeaconState(testState.InnerStateUnsafe())
 			require.NoError(t, err)
 			genericHTR, err := pbState.HashTreeRoot()
 			if err == nil && tt.error != "" {

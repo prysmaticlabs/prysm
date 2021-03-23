@@ -1,4 +1,4 @@
-// Package stateV1 defines how the beacon chain state for eth2
+// Package StateAltair defines how the beacon chain state for eth2
 // functions in the running beacon node, using an advanced,
 // immutable implementation of the state data structure.
 //
@@ -37,4 +37,4 @@
 // Although it is technically possible to remove the short-circuit conditions
 // from the external function, that would require every read to obtain a lock
 // even if the data was not present, leading to potential slowdowns.
-package stateV1
+package stateAltair

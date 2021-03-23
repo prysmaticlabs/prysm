@@ -1,7 +1,7 @@
 package iface
 
-// BeaconStateV1 has read and write access to beacon state Altair hard fork1 methods.
-type BeaconStateV1 interface {
+// BeaconStateAltair has read and write access to beacon state Altair hard fork1 methods.
+type BeaconStateAltair interface {
 	BeaconState
 	CurrentEpochParticipation() []byte
 	PreviousEpochParticipation() []byte

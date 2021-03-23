@@ -9,8 +9,8 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	coreState "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateAltair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -40,9 +40,9 @@ func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, [
 	return GenerateGenesisStateFromDepositData(genesisTime, depositDataItems, depositDataRoots)
 }
 
-// GenerateGenesisStateV1 deterministically given a genesis time and number of validators.
+// GenerateGenesisStateAltair deterministically given a genesis time and number of validators.
 // If a genesis time of 0 is supplied it is set to the current time.
-func GenerateGenesisStateV1(genesisTime, numValidators uint64) (*pb.BeaconStateAltair, []*ethpb.Deposit, error) {
+func GenerateGenesisStateAltair(genesisTime, numValidators uint64) (*pb.BeaconStateAltair, []*ethpb.Deposit, error) {
 	privKeys, pubKeys, err := DeterministicallyGenerateKeys(0 /*startIndex*/, numValidators)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "could not deterministically generate keys for %d validators", numValidators)
@@ -102,7 +102,7 @@ func GenerateGenesisStateFromDepositDataV1(
 	if genesisTime == 0 {
 		genesisTime = uint64(timeutils.Now().Unix())
 	}
-	beaconState, err := coreState.GenesisBeaconStateV1(deposits, genesisTime, &ethpb.Eth1Data{
+	beaconState, err := coreState.GenesisBeaconStateAltair(deposits, genesisTime, &ethpb.Eth1Data{
 		DepositRoot:  root[:],
 		DepositCount: uint64(len(deposits)),
 		BlockHash:    mockEth1BlockHash,
@@ -111,7 +111,7 @@ func GenerateGenesisStateFromDepositDataV1(
 		return nil, nil, errors.Wrap(err, "could not generate genesis state")
 	}
 
-	pbState, err := stateV1.ProtobufBeaconState(beaconState.CloneInnerState())
+	pbState, err := stateAltair.ProtobufBeaconState(beaconState.CloneInnerState())
 	if err != nil {
 		return nil, nil, err
 	}
