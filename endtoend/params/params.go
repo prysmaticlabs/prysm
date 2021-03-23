@@ -52,7 +52,6 @@ var StandardBeaconCount = 2
 var DepositCount = uint64(64)
 
 // Init initializes the E2E config, properly handling test sharding.
-// In order to isolate ports and directories on per test bases, specify unique testID.
 func Init(beaconNodeCount int) error {
 	testPath := bazel.TestTmpDir()
 	logPath, ok := os.LookupEnv("TEST_UNDECLARED_OUTPUTS_DIR")
