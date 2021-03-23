@@ -42,9 +42,6 @@ var BeaconNodeLogFileName = "beacon-%d.log"
 // SlasherLogFileName is the file name used for the slasher client logs.
 var SlasherLogFileName = "slasher-%d.log"
 
-// SlasherSimulatorLogFileName is the file name used for the slasher simulator logs.
-var SlasherSimulatorLogFileName = "slasher-simulator.log"
-
 // ValidatorLogFileName is the file name used for the validator client logs.
 var ValidatorLogFileName = "vals-%d.log"
 

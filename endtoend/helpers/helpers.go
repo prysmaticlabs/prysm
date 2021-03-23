@@ -144,12 +144,6 @@ func LogOutput(t *testing.T, config *types.E2EConfig) {
 		}
 	}
 
-	slasherSimulatorFile, err := os.Open(path.Join(e2e.TestParams.LogPath, e2e.SlasherSimulatorLogFileName))
-	if err != nil {
-		t.Fatal(err)
-	}
-	LogErrorOutput(t, slasherSimulatorFile, "slasher simulator", 0)
-
 	t.Logf("Ending time: %s\n", time.Now().String())
 }
 

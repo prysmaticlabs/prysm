@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 func generateAttestationsForSlot(
@@ -76,7 +76,7 @@ func generateAttestationsForSlot(
 		endIdx += valsPerCommittee
 	}
 	if len(slashedIndices) > 0 {
-		log.WithFields(logrus.Fields{
+		log.WithFields(log.Fields{
 			"amount":  len(slashedIndices),
 			"indices": slashedIndices,
 		}).Infof("Slashable attestation made")
