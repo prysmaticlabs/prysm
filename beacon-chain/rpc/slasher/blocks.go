@@ -13,5 +13,9 @@ import (
 func (s *Server) IsSlashableBlock(
 	ctx context.Context, req *ethpb.SignedBeaconBlockHeader,
 ) (*ethpb.ProposerSlashing, error) {
-	return nil, status.Error(codes.Unimplemented, "Unimplemented")
+	proposerSlashing, err := s.SlashingChecker.IsSlashableBlock(ctx, req)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not determine if block is slashable: %v", err)
+	}
+	return proposerSlashing, nil
 }

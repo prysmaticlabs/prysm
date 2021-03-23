@@ -632,6 +632,13 @@ func (b *BeaconNode) registerRPCService() error {
 		return err
 	}
 
+	var slasherService *slasher.Service
+	if featureconfig.Get().EnableSlasher {
+		if err := b.services.FetchService(&slasherService); err != nil {
+			return err
+		}
+	}
+
 	genesisValidators := b.cliCtx.Uint64(flags.InteropNumValidatorsFlag.Name)
 	genesisStatePath := b.cliCtx.String(flags.InteropGenesisStateFlag.Name)
 	var depositFetcher depositcache.DepositFetcher
@@ -682,6 +689,7 @@ func (b *BeaconNode) registerRPCService() error {
 		AttestationsPool:        b.attestationPool,
 		ExitPool:                b.exitPool,
 		SlashingsPool:           b.slashingsPool,
+		SlashingChecker:         slasherService,
 		POWChainService:         web3Service,
 		ChainStartFetcher:       chainStartFetcher,
 		MockEth1Votes:           mockEth1DataVotes,
