@@ -14,7 +14,6 @@ import (
 	slashersimulator "github.com/prysmaticlabs/prysm/beacon-chain/slasher/simulator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -24,7 +23,6 @@ func TestEndToEnd_Slasher(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	testutil.ResetCache()
-	params.UseE2EConfig()
 
 	// Run for 10 epochs if not in long-running to confirm long-running has no issues.
 	simulatorParams := slashersimulator.DefaultParams()

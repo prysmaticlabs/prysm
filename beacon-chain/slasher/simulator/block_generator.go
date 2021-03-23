@@ -2,7 +2,6 @@ package simulator
 
 import (
 	"context"
-	"fmt"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -28,7 +27,6 @@ func (s *Simulator) generateBlockHeadersForSlot(
 	if err != nil {
 		return nil, nil, err
 	}
-	fmt.Println(beaconState)
 	block := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			Slot:          slot,
@@ -57,6 +55,12 @@ func (s *Simulator) generateBlockHeadersForSlot(
 			},
 			Signature: sig.Marshal(),
 		}
+		sig, err = s.signBlockHeader(beaconState, slashableBlock)
+		if err != nil {
+			return nil, nil, err
+		}
+		slashableBlock.Signature = sig.Marshal()
+
 		blocks = append(blocks, slashableBlock)
 		slashings = append(slashings, &ethpb.ProposerSlashing{
 			Header_1: block,
@@ -70,8 +74,6 @@ func (s *Simulator) signBlockHeader(
 	beaconState *state.BeaconState,
 	header *ethpb.SignedBeaconBlockHeader,
 ) (bls.Signature, error) {
-	log.Warn(beaconState.Fork())
-	log.Warn(beaconState.GenesisValidatorRoot())
 	domain, err := helpers.Domain(
 		beaconState.Fork(),
 		0,

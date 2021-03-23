@@ -38,6 +38,7 @@ type ServiceConfig struct {
 // Parameters for a slasher simulator.
 type Parameters struct {
 	SecondsPerSlot         uint64
+	SlotsPerEpoch          types.Slot
 	AggregationPercent     float64
 	ProposerSlashingProbab float64
 	AttesterSlashingProbab float64
@@ -67,12 +68,13 @@ type Simulator struct {
 // DefaultParams for launching a slasher simulator.
 func DefaultParams() *Parameters {
 	return &Parameters{
-		SecondsPerSlot:         2,
+		SecondsPerSlot:         1,
+		SlotsPerEpoch:          8,
 		AggregationPercent:     1.0,
 		ProposerSlashingProbab: 0.2,
-		AttesterSlashingProbab: 0,
+		AttesterSlashingProbab: 0.2,
 		NumValidators:          1024,
-		NumEpochs:              10,
+		NumEpochs:              20,
 	}
 }
 
@@ -92,6 +94,7 @@ func New(ctx context.Context, srvConfig *ServiceConfig) (*Simulator, error) {
 		HeadStateFetcher:        srvConfig.HeadStateFetcher,
 		AttestationStateFetcher: srvConfig.AttestationStateFetcher,
 		StateGen:                srvConfig.StateGen,
+		SlashingPoolInserter:    srvConfig.SlashingsPool,
 	})
 	if err != nil {
 		return nil, err
@@ -122,6 +125,7 @@ func (s *Simulator) Start() {
 	// Override global configuration for simulation purposes.
 	config := params.BeaconConfig().Copy()
 	config.SecondsPerSlot = s.srvConfig.Params.SecondsPerSlot
+	config.SlotsPerEpoch = s.srvConfig.Params.SlotsPerEpoch
 	params.OverrideBeaconConfig(config)
 	defer params.OverrideBeaconConfig(params.BeaconConfig())
 
