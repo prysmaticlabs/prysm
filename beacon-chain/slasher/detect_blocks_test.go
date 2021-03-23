@@ -78,8 +78,8 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 	}()
 
 	signedBlkHeaders := []*slashertypes.SignedBlockHeaderWrapper{
-		//createProposalWrapper(t, 4, 1, []byte{1}),
-		//createProposalWrapper(t, 4, 1, []byte{1}),
+		createProposalWrapper(t, 4, 1, []byte{1}),
+		createProposalWrapper(t, 4, 1, []byte{1}),
 		createProposalWrapper(t, 4, 1, []byte{1}),
 		createProposalWrapper(t, 4, 1, []byte{2}),
 	}
