@@ -10,8 +10,7 @@ go_library(
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/slasher/simulator",
     visibility = [
-        "//beacon-chain:__subpackages__",
-        "//cmd/beacon-chain:__subpackages__",
+        "//endtoend:__subpackages__",
     ],
     deps = [
         "//beacon-chain/blockchain:go_default_library",
