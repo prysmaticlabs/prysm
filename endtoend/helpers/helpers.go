@@ -17,7 +17,7 @@ import (
 	"time"
 
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
-	"github.com/prysmaticlabs/prysm/endtoend/types"
+	e2etypes "github.com/prysmaticlabs/prysm/endtoend/types"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
@@ -102,7 +102,7 @@ random:
 }
 
 // LogOutput logs the output of all log files made.
-func LogOutput(t *testing.T, config *types.E2EConfig) {
+func LogOutput(t *testing.T, config *e2etypes.E2EConfig) {
 	// Log out errors from beacon chain nodes.
 	for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
 		beaconLogFile, err := os.Open(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.BeaconNodeLogFileName, i)))
@@ -216,4 +216,17 @@ func NewLocalConnections(ctx context.Context, numConns int) ([]*grpc.ClientConn,
 			}
 		}
 	}, nil
+}
+
+// ComponentsStarted checks, sequentially, each provided component, blocks until all of the components are ready.
+func ComponentsStarted(ctx context.Context, comps []e2etypes.ComponentRunner) error {
+	for _, comp := range comps {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-comp.Started():
+			continue
+		}
+	}
+	return nil
 }
