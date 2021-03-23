@@ -17,7 +17,7 @@ import (
 func TestEndToEnd_MinimalConfig(t *testing.T) {
 	testutil.ResetCache()
 	params.UseE2EConfig()
-	require.NoError(t, e2eParams.Init(0, e2eParams.StandardBeaconCount))
+	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
 
 	// Run for 10 epochs if not in long-running to confirm long-running has no issues.
 	epochsToRun := 10

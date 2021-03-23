@@ -18,7 +18,6 @@ type params struct {
 	TestPath              string
 	LogPath               string
 	TestShardIndex        int
-	TestID                int
 	BeaconNodeCount       int
 	Eth1RPCPort           int
 	ContractAddress       common.Address
@@ -54,7 +53,7 @@ var DepositCount = uint64(64)
 
 // Init initializes the E2E config, properly handling test sharding.
 // In order to isolate ports and directories on per test bases, specify unique testID.
-func Init(testID, beaconNodeCount int) error {
+func Init(beaconNodeCount int) error {
 	testPath := bazel.TestTmpDir()
 	logPath, ok := os.LookupEnv("TEST_UNDECLARED_OUTPUTS_DIR")
 	if !ok {
@@ -68,23 +67,21 @@ func Init(testID, beaconNodeCount int) error {
 	if err != nil {
 		return err
 	}
-	testPath = filepath.Join(testPath, fmt.Sprintf("shard-%d-test-%d", testIndex, testID))
+	testPath = filepath.Join(testPath, fmt.Sprintf("shard-%d", testIndex))
 
 	TestParams = &params{
-		TestPath:        testPath,
-		LogPath:         logPath,
-		TestShardIndex:  testIndex,
-		TestID:          testID,
-		BeaconNodeCount: beaconNodeCount,
-		// Adjusting port numbers, so that test index doesn't conflict with the other node ports.
-		Eth1RPCPort:           3100 + testIndex*100 + testID,
-		BootNodePort:          4100 + testIndex*100 + testID,
-		BeaconNodeRPCPort:     4150 + testIndex*100 + testID,
-		BeaconNodeMetricsPort: 5100 + testIndex*100 + testID,
-		ValidatorMetricsPort:  6100 + testIndex*100 + testID,
-		ValidatorGatewayPort:  7150 + testIndex*100 + testID,
-		SlasherRPCPort:        7100 + testIndex*100 + testID,
-		SlasherMetricsPort:    8100 + testIndex*100 + testID,
+		TestPath:              testPath,
+		LogPath:               logPath,
+		TestShardIndex:        testIndex,
+		BeaconNodeCount:       beaconNodeCount,
+		Eth1RPCPort:           3100 + testIndex*100, // Multiplying 100 here so the test index doesn't conflict with the other node ports.
+		BootNodePort:          4100 + testIndex*100,
+		BeaconNodeRPCPort:     4150 + testIndex*100,
+		BeaconNodeMetricsPort: 5100 + testIndex*100,
+		ValidatorMetricsPort:  6100 + testIndex*100,
+		ValidatorGatewayPort:  7150 + testIndex*100,
+		SlasherRPCPort:        7100 + testIndex*100,
+		SlasherMetricsPort:    8100 + testIndex*100,
 	}
 	return nil
 }
