@@ -180,4 +180,32 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	ForkVersionSchedule: map[types.Epoch][]byte{
 		// Any further forks must be specified here by their epoch number.
 	},
+
+	// New values introduced in Altair hard fork 1.
+	// Participation flag indices.
+	TimelyHeadFlagIndex:   0,
+	TimelySourceFlagIndex: 1,
+	TimelyTargetFlagIndex: 2,
+
+	// Incentivization weight values.
+	TimelyHeadWeight:   12,
+	TimelySourceWeight: 12,
+	TimelyTargetWeight: 24,
+	SyncRewardWeight:   8,
+	WeightDenominator:  64,
+
+	// Validator related values.
+	TargetAggregatorsPerSyncSubcommittee: 4,
+	SyncCommitteeSubnetCount:             8,
+
+	// Misc values.
+	SyncCommitteeSize:            1024,
+	SyncPubkeysPerAggregate:      64,
+	InactivityScoreBias:          4,
+	EpochsPerSyncCommitteePeriod: 256,
+
+	// Updated penalty values.
+	InactivityPenaltyQuotientAltair:      3 * 1 << 24, //50331648
+	MinSlashingPenaltyQuotientAltair:     64,
+	ProportionalSlashingMultiplierAltair: 2,
 }
