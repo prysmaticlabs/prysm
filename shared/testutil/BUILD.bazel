@@ -29,6 +29,7 @@ go_library(
         "//shared/rand:go_default_library",
         "//shared/testutil/require:go_default_library",
         "//shared/trieutil:go_default_library",
+        "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
         "@com_github_ghodss_yaml//:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_json_iterator_go//:go_default_library",
