@@ -80,7 +80,7 @@ type SlasherNode struct {
 }
 
 // NewSlasherNode creates and returns slasher node.
-func NewSlasherNode(config *e2etypes.E2EConfig, index int) *SlasherNode {
+func NewSlasherNode(_ *e2etypes.E2EConfig, index int) *SlasherNode {
 	return &SlasherNode{
 		index:   index,
 		started: make(chan struct{}, 1),

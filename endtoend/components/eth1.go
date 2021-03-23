@@ -39,7 +39,7 @@ type Eth1Node struct {
 }
 
 // NewEth1Node creates and returns ETH1 node.
-func NewEth1Node(config *e2etypes.E2EConfig) *Eth1Node {
+func NewEth1Node(_ *e2etypes.E2EConfig) *Eth1Node {
 	return &Eth1Node{
 		started: make(chan struct{}, 1),
 	}

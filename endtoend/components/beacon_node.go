@@ -175,7 +175,7 @@ type BootNode struct {
 }
 
 // NewBootNode creates and returns boot node.
-func NewBootNode(config *e2etypes.E2EConfig) *BootNode {
+func NewBootNode(_ *e2etypes.E2EConfig) *BootNode {
 	return &BootNode{
 		started: make(chan struct{}, 1),
 	}
