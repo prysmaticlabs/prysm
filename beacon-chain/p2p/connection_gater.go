@@ -84,19 +84,50 @@ func (s *Service) validateDial(addr multiaddr.Multiaddr) bool {
 // configureFilter looks at the provided allow lists and
 // deny lists to appropriately create a filter.
 func configureFilter(cfg *Config) (*multiaddr.Filters, error) {
+	//set list of private addresses
+	privateCIDRList := []string{
+		"10.0.0.0/8",
+		"172.16.0.0/12",
+		"192.168.0.0/16",
+		"100.64.0.0/10",
+		"169.254.0.0/16",
+	}
+
 	addrFilter := multiaddr.NewFilters()
-	// Configure from provided allow list in the config.
-	if cfg.AllowListCIDR != "" {
+	//if allowlist = public, add private addr to denylist
+	//don't add anything to allowlist since we want to allow any public address
+	//if allowlist is non empty, try to add the addresses to the allow list
+	switch {
+	case cfg.AllowListCIDR == "public":
+		cfg.DenyListCIDR = append(cfg.DenyListCIDR, privateCIDRList...)
+	case cfg.AllowListCIDR != "":
 		_, ipnet, err := net.ParseCIDR(cfg.AllowListCIDR)
+		//CONFIRM: a "private" entry in the allow list should return an error
 		if err != nil {
 			return nil, err
 		}
 		addrFilter.AddFilter(*ipnet, multiaddr.ActionAccept)
 	}
+
+	//If the deny list contains private, we need to append the private addresses to the deny list
 	// Configure from provided deny list in the config.
 	if len(cfg.DenyListCIDR) > 0 {
 		for _, cidr := range cfg.DenyListCIDR {
+			//if an entry in the deny list is "private", we iterate through the private addresses
+			//and add them to the filter
+			if cidr == "private" {
+				for _, privCidr := range privateCIDRList {
+					_, ipnet, err := net.ParseCIDR(privCidr)
+					if err != nil {
+						return nil, err
+					}
+					addrFilter.AddFilter(*ipnet, multiaddr.ActionDeny)
+				}
+				//move on to next entry in the deny list
+				continue
+			}
 			_, ipnet, err := net.ParseCIDR(cidr)
+			//CONFIRM: a "public" entry in the deny list won't be parsed, and should be an error,
 			if err != nil {
 				return nil, err
 			}
