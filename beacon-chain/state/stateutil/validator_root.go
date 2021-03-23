@@ -3,6 +3,7 @@ package stateutil
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -129,4 +130,43 @@ func ValidatorEncKey(validator *ethpb.Validator) []byte {
 	copy(enc[113:121], withdrawalBuf[:8])
 
 	return enc
+}
+
+// HandleValidatorSlice returns the validator indices in a slice of root format.
+func HandleValidatorSlice(val []*ethpb.Validator, indices []uint64, convertAll bool) ([][32]byte, error) {
+	length := len(indices)
+	if convertAll {
+		length = len(val)
+	}
+	roots := make([][32]byte, 0, length)
+	hasher := hashutil.CustomSHA256Hasher()
+	rootCreator := func(input *ethpb.Validator) error {
+		newRoot, err := ValidatorRootWithHasher(hasher, input)
+		if err != nil {
+			return err
+		}
+		roots = append(roots, newRoot)
+		return nil
+	}
+	if convertAll {
+		for i := range val {
+			err := rootCreator(val[i])
+			if err != nil {
+				return nil, err
+			}
+		}
+		return roots, nil
+	}
+	if len(val) > 0 {
+		for _, idx := range indices {
+			if idx > uint64(len(val))-1 {
+				return nil, fmt.Errorf("index %d greater than number of validators %d", idx, len(val))
+			}
+			err := rootCreator(val[idx])
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	return roots, nil
 }
