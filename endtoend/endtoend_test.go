@@ -44,7 +44,6 @@ func runEndToEndTest(t *testing.T, config *e2etypes.E2EConfig) {
 	bootnodeENR := components.StartBootnode(t)
 	components.StartBeaconNodes(t, config, bootnodeENR)
 	components.StartValidatorClients(t, config)
-	components.StartSlasherSimulator(t)
 	defer helpers.LogOutput(t, config)
 	if config.UsePprof {
 		defer func() {
@@ -118,22 +117,6 @@ func runEndToEndTest(t *testing.T, config *e2etypes.E2EConfig) {
 			break
 		}
 	}
-
-	simulatorOutFile, err := os.Open(path.Join(e2e.TestParams.LogPath, e2e.SlasherSimulatorLogFileName))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Run("slasher simulator completed", func(t *testing.T) {
-		if err = helpers.WaitForTextInFile(simulatorOutFile, "Correctly detected simulated attester slashing"); err != nil {
-			t.Fatalf("could not find detection logs for slasher, this means it had issues with detection: %v", err)
-		}
-		if err = helpers.WaitForTextInFile(simulatorOutFile, "Correctly detected simulated proposer slashing"); err != nil {
-			t.Fatalf("could not find detection logs for slasher, this means it had issues with detection: %v", err)
-		}
-		if err = helpers.CheckTextNotInFile(simulatorOutFile, "Did not detect"); err != nil {
-			t.Fatalf("found error logs for slasher, this means it failed to detect slashings: %v", err)
-		}
-	})
 
 	if !config.TestSync {
 		return

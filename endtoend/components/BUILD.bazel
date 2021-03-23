@@ -7,7 +7,6 @@ go_library(
         "beacon_node.go",
         "eth1.go",
         "slasher.go",
-        "slasher_simulator.go",
         "validator.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/endtoend/components",

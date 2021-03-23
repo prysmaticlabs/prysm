@@ -31,6 +31,12 @@ type ServiceConfig struct {
 	HeadStateFetcher        blockchain.HeadFetcher
 }
 
+// SlashingChecker is an interface for defining services that the beacon node may interact with to provide slashing data.
+type SlashingChecker interface {
+	IsSlashableBlock(ctx context.Context, proposal *ethpb.SignedBeaconBlockHeader) (*ethpb.ProposerSlashing, error)
+	IsSlashableAttestation(ctx context.Context, attestation *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error)
+}
+
 // Service defining a slasher implementation as part of
 // the beacon node, able to detect eth2 slashable offenses.
 type Service struct {

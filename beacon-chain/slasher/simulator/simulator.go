@@ -7,20 +7,30 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/slasher"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
+
+// ServiceConfig for the simulator.
+type ServiceConfig struct {
+	Params        *Parameters
+	Database      db.Database
+	StateNotifier statefeed.Notifier
+	StateFetcher  blockchain.AttestationStateFetcher
+	StateGen      stategen.StateManager
+	SlashingsPool slashings.PoolManager
+}
 
 // Parameters for a slasher simulator.
 type Parameters struct {
@@ -35,19 +45,20 @@ type Parameters struct {
 // Simulator defines a struct which can launch a slasher simulation
 // at scale using configuration parameters.
 type Simulator struct {
-	ctx                   context.Context
-	slasher               *slasher.Service
-	srvConfig             *slasher.ServiceConfig
-	slashingsPool         slashings.PoolManager
-	params                *Parameters
-	proposerSlashingsFeed *event.Feed
-	sentAttSlashingFeed   *event.Feed
-	sentBlockSlashingFeed *event.Feed
-	sentProposerSlashings map[[32]byte]*ethpb.ProposerSlashing
-	sentAttesterSlashings map[[32]byte]*ethpb.AttesterSlashing
-	genesisTime           time.Time
-	proposerSlashingLock  sync.RWMutex
-	attesterSlashingLock  sync.RWMutex
+	ctx                       context.Context
+	slasher                   *slasher.Service
+	srvConfig                 *ServiceConfig
+	indexedAttsFeed           *event.Feed
+	beaconBlocksFeed          *event.Feed
+	sentAttSlashingFeed       *event.Feed
+	sentBlockSlashingFeed     *event.Feed
+	detectedProposerSlashings map[[32]byte]*ethpb.ProposerSlashing
+	detectedAttesterSlashings map[[32]byte]*ethpb.AttesterSlashing
+	sentProposerSlashings     map[[32]byte]*ethpb.ProposerSlashing
+	sentAttesterSlashings     map[[32]byte]*ethpb.AttesterSlashing
+	genesisTime               time.Time
+	proposerSlashingLock      sync.RWMutex
+	attesterSlashingLock      sync.RWMutex
 }
 
 // DefaultParams for launching a slasher simulator.
@@ -57,40 +68,27 @@ func DefaultParams() *Parameters {
 		AggregationPercent:     1.0,
 		ProposerSlashingProbab: 0.2,
 		AttesterSlashingProbab: 0.2,
-		NumValidators:          128,
-		NumEpochs:              2,
+		NumValidators:          1024,
+		NumEpochs:              10,
 	}
 }
 
 // New initializes a slasher simulator from a beacon database
 // and configuration parameters.
-func New(ctx context.Context, beaconDB db.Database) (*Simulator, error) {
+func New(ctx context.Context, srvConfig *ServiceConfig) (*Simulator, error) {
 	indexedAttsFeed := new(event.Feed)
 	beaconBlocksFeed := new(event.Feed)
 	sentBlockSlashingFeed := new(event.Feed)
 	sentAttSlashingFeed := new(event.Feed)
-	stateNotifier := &mock.MockStateNotifier{}
-	params := DefaultParams()
 
-	//beaconState, err := testutil.NewBeaconState()
-	//if err != nil {
-	//	return nil, err
-	//}
-	var beaconState *state.BeaconState
-	mockChain := &mock.ChainService{
-		State: beaconState,
-	}
-	srvConfig := &slasher.ServiceConfig{
+	slasherSrv, err := slasher.New(ctx, &slasher.ServiceConfig{
 		IndexedAttestationsFeed: indexedAttsFeed,
 		BeaconBlockHeadersFeed:  beaconBlocksFeed,
-		Database:                beaconDB,
-		StateNotifier:           stateNotifier,
-		AttestationStateFetcher: mockChain,
-		StateGen:                stategen.New(beaconDB),
-		SlashingPoolInserter:    &slashings.PoolMock{},
-		HeadStateFetcher:        mockChain,
-	}
-	slasherSrv, err := slasher.New(ctx, srvConfig)
+		Database:                srvConfig.Database,
+		StateNotifier:           srvConfig.StateNotifier,
+		AttestationStateFetcher: srvConfig.StateFetcher,
+		StateGen:                srvConfig.StateGen,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +96,8 @@ func New(ctx context.Context, beaconDB db.Database) (*Simulator, error) {
 		ctx:                   ctx,
 		slasher:               slasherSrv,
 		srvConfig:             srvConfig,
-		params:                params,
+		indexedAttsFeed:       indexedAttsFeed,
+		beaconBlocksFeed:      beaconBlocksFeed,
 		sentAttSlashingFeed:   sentAttSlashingFeed,
 		sentBlockSlashingFeed: sentBlockSlashingFeed,
 		sentProposerSlashings: make(map[[32]byte]*ethpb.ProposerSlashing),
@@ -109,16 +108,16 @@ func New(ctx context.Context, beaconDB db.Database) (*Simulator, error) {
 // Start a simulator.
 func (s *Simulator) Start() {
 	log.WithFields(logrus.Fields{
-		"numValidators":          s.params.NumValidators,
-		"numEpochs":              s.params.NumEpochs,
-		"secondsPerSlot":         s.params.SecondsPerSlot,
-		"proposerSlashingProbab": s.params.ProposerSlashingProbab,
-		"attesterSlashingProbab": s.params.AttesterSlashingProbab,
+		"numValidators":          s.srvConfig.Params.NumValidators,
+		"numEpochs":              s.srvConfig.Params.NumEpochs,
+		"secondsPerSlot":         s.srvConfig.Params.SecondsPerSlot,
+		"proposerSlashingProbab": s.srvConfig.Params.ProposerSlashingProbab,
+		"attesterSlashingProbab": s.srvConfig.Params.AttesterSlashingProbab,
 	}).Info("Starting slasher simulator")
 
 	// Override global configuration for simulation purposes.
 	config := params.BeaconConfig().Copy()
-	config.SecondsPerSlot = s.params.SecondsPerSlot
+	config.SecondsPerSlot = s.srvConfig.Params.SecondsPerSlot
 	params.OverrideBeaconConfig(config)
 	defer params.OverrideBeaconConfig(params.BeaconConfig())
 
@@ -155,11 +154,11 @@ func (s *Simulator) simulateBlocksAndAttestations(ctx context.Context) {
 		select {
 		case slot := <-ticker.C():
 			// We only run the simulator for a specified number of epochs.
-			if helpers.SlotToEpoch(slot)+1 >= types.Epoch(s.params.NumEpochs) {
+			if helpers.SlotToEpoch(slot)+1 >= types.Epoch(s.srvConfig.Params.NumEpochs) {
 				return
 			}
 
-			blockHeaders, propSlashings := generateBlockHeadersForSlot(s.params, slot)
+			blockHeaders, propSlashings := generateBlockHeadersForSlot(s.srvConfig.Params, slot)
 			log.WithFields(logrus.Fields{
 				"numBlocks":    len(blockHeaders),
 				"numSlashable": len(propSlashings),
@@ -172,10 +171,10 @@ func (s *Simulator) simulateBlocksAndAttestations(ctx context.Context) {
 				s.sentProposerSlashings[slashingRoot] = sl
 			}
 			for _, bb := range blockHeaders {
-				s.srvConfig.BeaconBlockHeadersFeed.Send(bb)
+				s.beaconBlocksFeed.Send(bb)
 			}
 
-			atts, attSlashings := generateAttestationsForSlot(s.params, slot)
+			atts, attSlashings := generateAttestationsForSlot(s.srvConfig.Params, slot)
 			log.WithFields(logrus.Fields{
 				"numAtts":      len(atts),
 				"numSlashable": len(propSlashings),
@@ -188,7 +187,7 @@ func (s *Simulator) simulateBlocksAndAttestations(ctx context.Context) {
 				s.sentAttesterSlashings[slashingRoot] = sl
 			}
 			for _, aa := range atts {
-				s.srvConfig.IndexedAttestationsFeed.Send(aa)
+				s.indexedAttsFeed.Send(aa)
 			}
 		case <-ctx.Done():
 			return
@@ -197,8 +196,12 @@ func (s *Simulator) simulateBlocksAndAttestations(ctx context.Context) {
 }
 
 func (s *Simulator) verifySlashingsWereDetected(ctx context.Context) {
-	poolProposerSlashings := s.slashingsPool.PendingProposerSlashings(ctx, nil, true /* no limit */)
-	poolAttesterSlashings := s.slashingsPool.PendingAttesterSlashings(ctx, nil, true /* no limit */)
+	poolProposerSlashings := s.srvConfig.SlashingsPool.PendingProposerSlashings(
+		ctx, nil, true, /* no limit */
+	)
+	poolAttesterSlashings := s.srvConfig.SlashingsPool.PendingAttesterSlashings(
+		ctx, nil, true, /* no limit */
+	)
 	detectedProposerSlashings := make(map[[32]byte]*ethpb.ProposerSlashing)
 	detectedAttesterSlashings := make(map[[32]byte]*ethpb.AttesterSlashing)
 	for _, slashing := range poolProposerSlashings {
