@@ -609,7 +609,6 @@ func BenchmarkHighestAttestations(b *testing.B) {
 		}
 		allIndices = append(allIndices, indicesForAtt...)
 	}
-	b.N = 10
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		_, err := beaconDB.HighestAttestations(ctx, allIndices)
