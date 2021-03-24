@@ -34,11 +34,8 @@ var _ e2etypes.ComponentRunner = (*ValidatorNodes)(nil)
 // ValidatorNodes represents set of validator nodes.
 type ValidatorNodes struct {
 	e2etypes.ComponentRunner
-	config       *e2etypes.E2EConfig
-	validatorNum int
-	index        int
-	offset       int
-	started      chan struct{}
+	config  *e2etypes.E2EConfig
+	started chan struct{}
 }
 
 // SetENR assigns ENR to the set of beacon nodes.
