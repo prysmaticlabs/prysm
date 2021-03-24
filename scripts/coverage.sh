@@ -7,7 +7,7 @@ set -e
 echo "" > coverage.txt
 
 for d in $(go list ./... | grep -v vendor); do
-    if [[ ${skip_coverage[*]} =~ "$d" ]]; then
+    if [[ ${skip_coverage[*]} =~ $d ]]; then
         continue
     fi
     go test -coverprofile=profile.out -covermode=atomic $d

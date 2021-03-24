@@ -22,6 +22,7 @@
 
 # Check dependencies.
 set -e
+# skipcq: SH-2034
 xargs=$(which gxargs || which xargs)
 
 # Validate settings.
@@ -38,7 +39,9 @@ GH_API="https://api.github.com"
 GH_REPO="$GH_API/repos/$owner/$repo"
 GH_TAGS="$GH_REPO/releases/tags/$tag"
 AUTH="Authorization: token $github_api_token"
+# skipcq: SH-2034
 WGET_ARGS="--content-disposition --auth-no-challenge --no-cookie"
+# skipcq: SH-2034
 CURL_ARGS="-LJO#"
 
 if [[ "$tag" == 'LATEST' ]]; then
@@ -52,7 +55,7 @@ curl -o /dev/null -sH "$AUTH" $GH_REPO || { echo "Error: Invalid repo, token or 
 response=$(curl -sH "$AUTH" $GH_TAGS)
 
 # Get ID of the asset based on given filename.
-eval $(echo "$response" | grep -m 1 "id.:" | grep -w id | tr : = | tr -cd '[[:alnum:]]=')
+eval "$(echo "$response" | grep -m 1 "id.:" | grep -w id | tr : = | tr -cd '[[:alnum:]]=')"
 [ "$id" ] || { echo "Error: Failed to get release id for tag: $tag"; echo "$response" | awk 'length($0)<100' >&2; exit 1; }
 
 # Upload asset
