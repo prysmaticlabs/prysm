@@ -23,7 +23,7 @@
 # Check dependencies.
 set -e
 # skipcq: SH-2034
-xargs=$(which gxargs || which xargs)
+export xargs=$(which gxargs || which xargs)
 
 # Validate settings.
 [ "$TRACE" ] && set -x
@@ -40,9 +40,9 @@ GH_REPO="$GH_API/repos/$owner/$repo"
 GH_TAGS="$GH_REPO/releases/tags/$tag"
 AUTH="Authorization: token $github_api_token"
 # skipcq: SH-2034
-WGET_ARGS="--content-disposition --auth-no-challenge --no-cookie"
+export WGET_ARGS="--content-disposition --auth-no-challenge --no-cookie"
 # skipcq: SH-2034
-CURL_ARGS="-LJO#"
+export CURL_ARGS="-LJO#"
 
 if [[ "$tag" == 'LATEST' ]]; then
   GH_TAGS="$GH_REPO/releases/latest"

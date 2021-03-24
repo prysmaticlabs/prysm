@@ -134,13 +134,13 @@ function verify() {
 
     color "37" "Verifying binary integrity."
 
-    gpg --list-keys $PRYLABS_SIGNING_KEY >/dev/null 2>&1 || curl --silent https://prysmaticlabs.com/releases/pgp_keys.asc | gpg --import
+    gpg --list-keys "$PRYLABS_SIGNING_KEY" >/dev/null 2>&1 || curl --silent https://prysmaticlabs.com/releases/pgp_keys.asc | gpg --import
     (
         cd "$wrapper_dir"
 	$checkSum -c "${file}.sha256" || failed_verification
     )
     (
-        cd $wrapper_dir
+        cd "$wrapper_dir"
         gpg -u "$PRYLABS_SIGNING_KEY" --verify "${file}.sig" $file || failed_verification
     )
 
