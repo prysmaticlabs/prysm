@@ -141,7 +141,7 @@ function verify() {
     )
     (
         cd "$wrapper_dir"
-        gpg -u "$PRYLABS_SIGNING_KEY" --verify "${file}.sig" $file || failed_verification
+        gpg -u "$PRYLABS_SIGNING_KEY" --verify "${file}.sig" "$file" || failed_verification
     )
 
     color "32;1" "Verified ${file} has been signed by Prysmatic Labs."
