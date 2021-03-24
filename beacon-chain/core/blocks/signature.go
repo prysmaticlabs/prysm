@@ -75,7 +75,7 @@ func VerifyBlockSignature(beaconState iface.ReadOnlyBeaconState, block *ethpb.Si
 }
 
 // VerifyBlockHeaderSignature verifies the proposer signature of a beacon block header.
-func VerifyBlockHeaderSignature(beaconState *stateTrie.BeaconState, header *ethpb.SignedBeaconBlockHeader) error {
+func VerifyBlockHeaderSignature(beaconState iface.BeaconState, header *ethpb.SignedBeaconBlockHeader) error {
 	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
 	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {

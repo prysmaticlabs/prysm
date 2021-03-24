@@ -130,7 +130,7 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 					traceutil.AnnotateError(span, err)
 					return
 				}
-				s.slasherAttestationsFeed.Send(indexedAtt)
+				s.cfg.SlasherAttestationsFeed.Send(indexedAtt)
 			}
 		}()
 	}
