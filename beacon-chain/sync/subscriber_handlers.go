@@ -20,11 +20,11 @@ func (s *Service) voluntaryExitSubscriber(ctx context.Context, msg proto.Message
 	}
 	s.setExitIndexSeen(ve.Exit.ValidatorIndex)
 
-	headState, err := s.chain.HeadState(ctx)
+	headState, err := s.cfg.Chain.HeadState(ctx)
 	if err != nil {
 		return err
 	}
-	s.exitPool.InsertVoluntaryExit(ctx, headState, ve)
+	s.cfg.ExitPool.InsertVoluntaryExit(ctx, headState, ve)
 	return nil
 }
 
@@ -37,11 +37,11 @@ func (s *Service) attesterSlashingSubscriber(ctx context.Context, msg proto.Mess
 	aSlashing1IsNil := aSlashing == nil || aSlashing.Attestation_1 == nil || aSlashing.Attestation_1.AttestingIndices == nil
 	aSlashing2IsNil := aSlashing == nil || aSlashing.Attestation_2 == nil || aSlashing.Attestation_2.AttestingIndices == nil
 	if !aSlashing1IsNil && !aSlashing2IsNil {
-		headState, err := s.chain.HeadState(ctx)
+		headState, err := s.cfg.Chain.HeadState(ctx)
 		if err != nil {
 			return err
 		}
-		if err := s.slashingPool.InsertAttesterSlashing(ctx, headState, aSlashing); err != nil {
+		if err := s.cfg.SlashingPool.InsertAttesterSlashing(ctx, headState, aSlashing); err != nil {
 			return errors.Wrap(err, "could not insert attester slashing into pool")
 		}
 		s.setAttesterSlashingIndicesSeen(aSlashing.Attestation_1.AttestingIndices, aSlashing.Attestation_2.AttestingIndices)
@@ -58,11 +58,11 @@ func (s *Service) proposerSlashingSubscriber(ctx context.Context, msg proto.Mess
 	header1IsNil := pSlashing == nil || pSlashing.Header_1 == nil || pSlashing.Header_1.Header == nil
 	header2IsNil := pSlashing == nil || pSlashing.Header_2 == nil || pSlashing.Header_2.Header == nil
 	if !header1IsNil && !header2IsNil {
-		headState, err := s.chain.HeadState(ctx)
+		headState, err := s.cfg.Chain.HeadState(ctx)
 		if err != nil {
 			return err
 		}
-		if err := s.slashingPool.InsertProposerSlashing(ctx, headState, pSlashing); err != nil {
+		if err := s.cfg.SlashingPool.InsertProposerSlashing(ctx, headState, pSlashing); err != nil {
 			return errors.Wrap(err, "could not insert proposer slashing into pool")
 		}
 		s.setProposerSlashingIndexSeen(pSlashing.Header_1.Header.ProposerIndex)

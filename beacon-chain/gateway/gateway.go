@@ -10,6 +10,7 @@ import (
 	"time"
 
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1_gateway"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1_gateway"
 	"github.com/prysmaticlabs/prysm/shared"
@@ -108,8 +109,14 @@ func (g *Gateway) Status() error {
 // Stop the gateway with a graceful shutdown.
 func (g *Gateway) Stop() error {
 	if g.server != nil {
-		if err := g.server.Shutdown(g.ctx); err != nil {
-			log.WithError(err).Error("Failed to shut down server")
+		shutdownCtx, shutdownCancel := context.WithTimeout(g.ctx, 2*time.Second)
+		defer shutdownCancel()
+		if err := g.server.Shutdown(shutdownCtx); err != nil {
+			if errors.Is(err, context.DeadlineExceeded) {
+				log.Warn("Existing connections terminated")
+			} else {
+				log.WithError(err).Error("Failed to gracefully shut down server")
+			}
 		}
 	}
 

@@ -30,12 +30,12 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	receivedTime := timeutils.Now()
 	// Validation runs on publish (not just subscriptions), so we should approve any message from
 	// ourselves.
-	if pid == s.p2p.PeerID() {
+	if pid == s.cfg.P2P.PeerID() {
 		return pubsub.ValidationAccept
 	}
 
 	// We should not attempt to process blocks until fully synced, but propagation is OK.
-	if s.initialSync.Syncing() {
+	if s.cfg.InitialSync.Syncing() {
 		return pubsub.ValidationIgnore
 	}
 
@@ -65,7 +65,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 
 	// Broadcast the block on a feed to notify other services in the beacon node
 	// of a received block (even if it does not process correctly through a state transition).
-	s.blockNotifier.BlockFeed().Send(&feed.Event{
+	s.cfg.BlockNotifier.BlockFeed().Send(&feed.Event{
 		Type: blockfeed.ReceivedBlock,
 		Data: &blockfeed.ReceivedBlockData{
 			SignedBlock: blk,
@@ -82,7 +82,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Debug("Ignored block")
 		return pubsub.ValidationIgnore
 	}
-	if s.db.HasBlock(ctx, blockRoot) {
+	if s.cfg.DB.HasBlock(ctx, blockRoot) {
 		return pubsub.ValidationIgnore
 	}
 	// Check if parent is a bad block and then reject the block.
@@ -100,19 +100,19 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	}
 	s.pendingQueueLock.RUnlock()
 
-	if err := helpers.VerifySlotTime(uint64(s.chain.GenesisTime().Unix()), blk.Block.Slot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+	if err := helpers.VerifySlotTime(uint64(s.cfg.Chain.GenesisTime().Unix()), blk.Block.Slot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Debug("Ignored block")
 		return pubsub.ValidationIgnore
 	}
 
 	// Add metrics for block arrival time subtracts slot start time.
-	genesisTime := uint64(s.chain.GenesisTime().Unix())
+	genesisTime := uint64(s.cfg.Chain.GenesisTime().Unix())
 	if err := captureArrivalTimeMetric(genesisTime, blk.Block.Slot); err != nil {
 		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Debug("Ignored block")
 		return pubsub.ValidationIgnore
 	}
 
-	startSlot, err := helpers.StartSlot(s.chain.FinalizedCheckpt().Epoch)
+	startSlot, err := helpers.StartSlot(s.cfg.Chain.FinalizedCheckpt().Epoch)
 	if err != nil {
 		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Debug("Ignored block")
 		return pubsub.ValidationIgnore
@@ -124,7 +124,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	}
 
 	// Handle block when the parent is unknown.
-	if !s.db.HasBlock(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot)) {
+	if !s.cfg.DB.HasBlock(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot)) {
 		s.pendingQueueLock.Lock()
 		if err := s.insertBlockToPendingQueue(blk.Block.Slot, blk, blockRoot); err != nil {
 			s.pendingQueueLock.Unlock()
@@ -161,19 +161,19 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk *ethpb.SignedBeac
 	ctx, span := trace.StartSpan(ctx, "sync.validateBeaconBlock")
 	defer span.End()
 
-	if err := s.chain.VerifyBlkDescendant(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot)); err != nil {
+	if err := s.cfg.Chain.VerifyBlkDescendant(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot)); err != nil {
 		s.setBadBlock(ctx, blockRoot)
 		return err
 	}
 
-	hasStateSummaryDB := s.db.HasStateSummary(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot))
+	hasStateSummaryDB := s.cfg.DB.HasStateSummary(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot))
 	if !hasStateSummaryDB {
-		_, err := s.stateGen.RecoverStateSummary(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot))
+		_, err := s.cfg.StateGen.RecoverStateSummary(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot))
 		if err != nil {
 			return err
 		}
 	}
-	parentState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot))
+	parentState, err := s.cfg.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot))
 	if err != nil {
 		return err
 	}

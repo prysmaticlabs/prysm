@@ -25,8 +25,10 @@ func TestService_RequestHistoricalAttestations(t *testing.T) {
 	client := mock.NewMockBeaconChainClient(ctrl)
 
 	bs := Service{
-		beaconClient: client,
-		slasherDB:    db,
+		cfg: &Config{
+			BeaconClient: client,
+			SlasherDB:    db,
+		},
 	}
 
 	numAtts := 1000

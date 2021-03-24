@@ -663,6 +663,7 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 		}
 		return nil
 	})
+
 	require.NoError(t, err)
 
 	sourceCheckpoint := &ethpb.Checkpoint{
