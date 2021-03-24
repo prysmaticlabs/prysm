@@ -71,10 +71,10 @@ func DefaultParams() *Parameters {
 		SecondsPerSlot:         1,
 		SlotsPerEpoch:          8,
 		AggregationPercent:     1.0,
-		ProposerSlashingProbab: 0.2,
-		AttesterSlashingProbab: 0.2,
+		ProposerSlashingProbab: 0,
+		AttesterSlashingProbab: 1,
 		NumValidators:          1024,
-		NumEpochs:              5,
+		NumEpochs:              4,
 	}
 }
 

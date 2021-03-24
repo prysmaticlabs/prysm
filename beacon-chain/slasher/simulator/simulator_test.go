@@ -7,6 +7,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -32,12 +33,16 @@ func setupService(t *testing.T, params *Parameters) *Simulator {
 	}
 	err = beaconState.SetValidators(validators)
 	require.NoError(t, err)
+
+	gen := stategen.NewMockService()
+	gen.AddStateForRoot(beaconState, [32]byte{})
 	return &Simulator{
 		srvConfig: &ServiceConfig{
 			Params:                      params,
 			Database:                    beaconDB,
 			AttestationStateFetcher:     &mock.ChainService{State: beaconState},
 			PrivateKeysByValidatorIndex: privKeys,
+			StateGen:                    gen,
 		},
 	}
 }
