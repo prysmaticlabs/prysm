@@ -36,7 +36,7 @@ func (node *BootNode) ENR() string {
 	return node.enr
 }
 
-// StartBootnode starts a bootnode and returns its ENR.
+// StartBootnode starts a bootnode blocks up until ctx is cancelled.
 func (node *BootNode) Start(ctx context.Context) error {
 	binaryPath, found := bazel.FindBinary("tools/bootnode", "bootnode")
 	if !found {
@@ -79,12 +79,13 @@ func (node *BootNode) Start(ctx context.Context) error {
 	return cmd.Wait()
 }
 
-// Started checks whether boot node is started and ready to be queried.
+// Started checks whether a boot node is started and ready to be queried.
 func (node *BootNode) Started() <-chan struct{} {
 	return node.started
 }
 
 // StartBootnode starts a bootnode and returns its ENR.
+// Deprecated: this method will be removed once BootNode component is used.
 func StartBootnode(t *testing.T) string {
 	binaryPath, found := bazel.FindBinary("tools/bootnode", "bootnode")
 	if !found {
