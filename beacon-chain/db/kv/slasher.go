@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"sort"
 
-	slashpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-
 	ssz "github.com/ferranbt/fastssz"
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
@@ -15,6 +13,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
+	slashpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
@@ -356,16 +355,6 @@ func (s *Store) PruneAttestations(ctx context.Context, currentEpoch types.Epoch,
 	})
 }
 
-func prefixLessThan(key, lessThan []byte) bool {
-	encSlot := key[:8]
-	return bytes.Compare(encSlot, lessThan) < 0
-}
-
-func suffixForIndex(key, index []byte) bool {
-	encIdx := key[8:]
-	return bytes.Compare(encIdx, index) == 0
-}
-
 // HighestAttestations retrieves the last attestation data from the database for all indices.
 func (s *Store) HighestAttestations(
 	ctx context.Context,
@@ -410,6 +399,16 @@ func (s *Store) HighestAttestations(
 		return nil
 	})
 	return history, err
+}
+
+func prefixLessThan(key, lessThan []byte) bool {
+	encSlot := key[:8]
+	return bytes.Compare(encSlot, lessThan) < 0
+}
+
+func suffixForIndex(key, index []byte) bool {
+	encIdx := key[8:]
+	return bytes.Compare(encIdx, index) == 0
 }
 
 // Disk key for a validator proposal, including a slot+validatorIndex as a byte slice.
