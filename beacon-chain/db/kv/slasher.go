@@ -371,7 +371,7 @@ func (s *Store) HighestAttestations(
 
 	history := make([]*slashpb.HighestAttestation, 0, len(indices))
 
-	err := s.db.Update(func(tx *bolt.Tx) error {
+	err := s.db.View(func(tx *bolt.Tx) error {
 		attBkt := tx.Bucket(attestationRecordsBucket)
 		for i := 0; i < len(indices); i++ {
 			encIdx, err := indices[i].MarshalSSZ()

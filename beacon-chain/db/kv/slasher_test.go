@@ -582,6 +582,42 @@ func TestStore_HighestAttestations(t *testing.T) {
 	}
 }
 
+func BenchmarkHighestAttestations(b *testing.B) {
+	count := 10000
+	valsPerAtt := 100
+	indicesPerAtt := make([][]uint64, count)
+	for i := 0; i < count; i++ {
+		indicesForAtt := make([]uint64, valsPerAtt)
+		for r := i * count; r < valsPerAtt*(i+1); r++ {
+			indicesForAtt[i] = uint64(r)
+		}
+		indicesPerAtt[i] = indicesForAtt
+	}
+	atts := make([]*slashertypes.IndexedAttestationWrapper, count)
+	for i := 0; i < count; i++ {
+		atts[i] = createAttestationWrapper(types.Epoch(i), types.Epoch(i+2), indicesPerAtt[i], []byte{})
+	}
+
+	ctx := context.Background()
+	beaconDB := setupDB(b)
+	require.NoError(b, beaconDB.SaveAttestationRecordsForValidators(ctx, atts))
+
+	allIndices := make([]types.ValidatorIndex, valsPerAtt*count)
+	for i := 0; i < count; i++ {
+		indicesForAtt := make([]types.ValidatorIndex, valsPerAtt)
+		for r := 0; r < valsPerAtt; r++ {
+			indicesForAtt[r] = types.ValidatorIndex(atts[i].IndexedAttestation.AttestingIndices[r])
+		}
+		allIndices = append(allIndices, indicesForAtt...)
+	}
+	b.N = 100
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_, err := beaconDB.HighestAttestations(ctx, allIndices)
+		require.NoError(b, err)
+	}
+}
+
 func createProposalWrapper(t *testing.T, slot types.Slot, proposerIndex types.ValidatorIndex, signingRoot []byte) *slashertypes.SignedBlockHeaderWrapper {
 	header := &ethpb.BeaconBlockHeader{
 		Slot:          slot,
