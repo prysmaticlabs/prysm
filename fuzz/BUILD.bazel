@@ -4,7 +4,7 @@ load("@com_github_prysmaticlabs_ethereumapis//tools:ssz.bzl", "SSZ_DEPS", "ssz_g
 load("@io_bazel_rules_docker//container:container.bzl", "container_image", "container_push")
 load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
-# gazelle:ignore generated.ssz.go
+# gazelle:ignore
 
 config_setting(
     name = "fuzzing_enabled",
@@ -27,7 +27,7 @@ ssz_gen_marshal(
 IMPORT_PATH = "github.com/prysmaticlabs/prysm/fuzz"
 
 COMMON_DEPS = [
-    "//beacon-chain/state:go_default_library",
+    "//beacon-chain/state/stateV0:go_default_library",
     "//shared/featureconfig:go_default_library",
     "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
 ] + SSZ_DEPS
@@ -178,7 +178,7 @@ go_library(
         "//beacon-chain/p2p:go_default_library",
         "//beacon-chain/p2p/encoder:go_default_library",
         "//beacon-chain/p2p/testing:go_default_library",
-        "//beacon-chain/state:go_default_library",
+        "//beacon-chain/state/stateV0:go_default_library",
         "//beacon-chain/state/stategen:go_default_library",
         "//beacon-chain/sync:go_default_library",
         "//beacon-chain/sync/initial-sync/testing:go_default_library",

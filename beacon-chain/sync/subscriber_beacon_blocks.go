@@ -29,7 +29,7 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 		return err
 	}
 
-	if err := s.chain.ReceiveBlock(ctx, signed, root); err != nil {
+	if err := s.cfg.Chain.ReceiveBlock(ctx, signed, root); err != nil {
 		interop.WriteBlockToDisk(signed, true /*failed*/)
 		s.setBadBlock(ctx, root)
 		return err
@@ -49,12 +49,12 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 func (s *Service) deleteAttsInPool(atts []*ethpb.Attestation) error {
 	for _, att := range atts {
 		if helpers.IsAggregated(att) {
-			if err := s.attPool.DeleteAggregatedAttestation(att); err != nil {
+			if err := s.cfg.AttPool.DeleteAggregatedAttestation(att); err != nil {
 				return err
 			}
 		} else {
 			// Ideally there's shouldn't be any unaggregated attestation in the block.
-			if err := s.attPool.DeleteUnaggregatedAttestation(att); err != nil {
+			if err := s.cfg.AttPool.DeleteUnaggregatedAttestation(att); err != nil {
 				return err
 			}
 		}

@@ -12,7 +12,7 @@ import (
 
 func TestRegularSync_generateErrorResponse(t *testing.T) {
 	r := &Service{
-		p2p: p2ptest.NewTestP2P(t),
+		cfg: &Config{P2P: p2ptest.NewTestP2P(t)},
 	}
 	data, err := r.generateErrorResponse(responseCodeServerError, "something bad happened")
 	require.NoError(t, err)
@@ -23,6 +23,6 @@ func TestRegularSync_generateErrorResponse(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, responseCodeServerError, b[0], "The first byte was not the status code")
 	msg := &types.ErrorMessage{}
-	require.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(buf, msg))
+	require.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(buf, msg))
 	assert.Equal(t, "something bad happened", string(*msg), "Received the wrong message")
 }

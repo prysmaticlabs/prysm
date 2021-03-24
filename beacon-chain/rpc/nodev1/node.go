@@ -131,7 +131,7 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 		for _, id := range allIds {
 			p, err := peerInfo(peerStatus, id)
 			if err != nil {
-				return nil, err
+				return nil, status.Errorf(codes.Internal, "Could not get peer info: %v", err)
 			}
 			allPeers = append(allPeers, p)
 		}
@@ -199,7 +199,7 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 	for _, id := range filteredIds {
 		p, err := peerInfo(peerStatus, id)
 		if err != nil {
-			return nil, err
+			return nil, status.Errorf(codes.Internal, "Could not get peer info: %v", err)
 		}
 		filteredPeers = append(filteredPeers, p)
 	}
@@ -298,23 +298,23 @@ func (ns *Server) handleEmptyFilters(req *ethpb.PeersRequest, peerStatus *peers.
 func peerInfo(peerStatus *peers.Status, id peer.ID) (*ethpb.Peer, error) {
 	enr, err := peerStatus.ENR(id)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not obtain ENR: %v", err)
+		return nil, errors.Wrap(err, "could not obtain ENR")
 	}
 	serializedEnr, err := p2p.SerializeENR(enr)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not serialize ENR: %v", err)
+		return nil, errors.Wrap(err, "could not serialize ENR")
 	}
 	address, err := peerStatus.Address(id)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not obtain address: %v", err)
+		return nil, errors.Wrap(err, "could not obtain address")
 	}
 	connectionState, err := peerStatus.ConnectionState(id)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not obtain connection state: %v", err)
+		return nil, errors.Wrap(err, "could not obtain connection state")
 	}
 	direction, err := peerStatus.Direction(id)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not obtain direction: %v", err)
+		return nil, errors.Wrap(err, "could not obtain direction")
 	}
 	p := ethpb.Peer{
 		PeerId:    id.Pretty(),

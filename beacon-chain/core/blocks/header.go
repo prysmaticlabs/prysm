@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -38,9 +38,9 @@ import (
 //    assert bls_verify(proposer.pubkey, signing_root(block), block.signature, get_domain(state, DOMAIN_BEACON_PROPOSER))
 func ProcessBlockHeader(
 	_ context.Context,
-	beaconState *stateTrie.BeaconState,
+	beaconState iface.BeaconState,
 	block *ethpb.SignedBeaconBlock,
-) (*stateTrie.BeaconState, error) {
+) (iface.BeaconState, error) {
 	beaconState, err := ProcessBlockHeaderNoVerify(beaconState, block.Block)
 	if err != nil {
 		return nil, err
@@ -80,9 +80,9 @@ func ProcessBlockHeader(
 //    proposer = state.validators[get_beacon_proposer_index(state)]
 //    assert not proposer.slashed
 func ProcessBlockHeaderNoVerify(
-	beaconState *stateTrie.BeaconState,
+	beaconState iface.BeaconState,
 	block *ethpb.BeaconBlock,
-) (*stateTrie.BeaconState, error) {
+) (iface.BeaconState, error) {
 	if block == nil {
 		return nil, errors.New("nil block")
 	}

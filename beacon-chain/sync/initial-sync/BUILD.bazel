@@ -69,7 +69,7 @@ go_test(
         "//beacon-chain/p2p/peers:go_default_library",
         "//beacon-chain/p2p/testing:go_default_library",
         "//beacon-chain/p2p/types:go_default_library",
-        "//beacon-chain/state:go_default_library",
+        "//beacon-chain/state/stateV0:go_default_library",
         "//beacon-chain/state/stateutil:go_default_library",
         "//beacon-chain/sync:go_default_library",
         "//cmd/beacon-chain/flags:go_default_library",

@@ -246,6 +246,8 @@ func displayExitInfo(rawExitedKeys [][]byte, trimmedExitedKeys []string) {
 			var baseUrl string
 			if params.BeaconConfig().ConfigName == params.ConfigNames[params.Pyrmont] {
 				baseUrl = "https://pyrmont.beaconcha.in/validator/"
+			} else if params.BeaconConfig().ConfigName == params.ConfigNames[params.Prater] {
+				baseUrl = "https://prater.beaconcha.in/validator/"
 			} else {
 				baseUrl = "https://beaconcha.in/validator/"
 			}

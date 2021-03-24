@@ -15,7 +15,7 @@ go_library(
     ],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
-        "//beacon-chain/state:go_default_library",
+        "//beacon-chain/state/interface:go_default_library",
         "//shared/params:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
@@ -29,7 +29,7 @@ go_test(
     srcs = ["service_test.go"],
     embed = [":go_default_library"],
     deps = [
-        "//beacon-chain/state:go_default_library",
+        "//beacon-chain/state/stateV0:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil/require:go_default_library",

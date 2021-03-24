@@ -5,7 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -37,7 +37,7 @@ func (s *State) HasStateInCache(ctx context.Context, blockRoot [32]byte) (bool, 
 }
 
 // StateByRoot retrieves the state using input block root.
-func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
+func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.StateByRoot")
 	defer span.End()
 
@@ -53,7 +53,7 @@ func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (*state.Bea
 // state is not copied.
 // It invalidates cache for parent root because pre state will get mutated.
 // Do not use this method for anything other than initial syncing purpose or block tree is applied.
-func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
+func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (iface.BeaconState, error) {
 	// Genesis case. If block root is zero hash, short circuit to use genesis state stored in DB.
 	if blockRoot == params.BeaconConfig().ZeroHash {
 		return s.beaconDB.State(ctx, blockRoot)
@@ -102,7 +102,7 @@ func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) 
 }
 
 // StateBySlot retrieves the state using input slot.
-func (s *State) StateBySlot(ctx context.Context, slot types.Slot) (*state.BeaconState, error) {
+func (s *State) StateBySlot(ctx context.Context, slot types.Slot) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.StateBySlot")
 	defer span.End()
 
@@ -143,7 +143,7 @@ func (s *State) RecoverStateSummary(ctx context.Context, blockRoot [32]byte) (*p
 }
 
 // This loads a beacon state from either the cache or DB then replay blocks up the requested block root.
-func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
+func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.loadStateByRoot")
 	defer span.End()
 
@@ -199,7 +199,7 @@ func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (*state
 }
 
 // This loads a state by slot.
-func (s *State) loadStateBySlot(ctx context.Context, slot types.Slot) (*state.BeaconState, error) {
+func (s *State) loadStateBySlot(ctx context.Context, slot types.Slot) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.loadStateBySlot")
 	defer span.End()
 
@@ -236,7 +236,7 @@ func (s *State) loadStateBySlot(ctx context.Context, slot types.Slot) (*state.Be
 // 1.) block parent state is the last finalized state
 // 2.) block parent state is the epoch boundary state and exists in epoch boundary cache.
 // 3.) block parent state is in DB.
-func (s *State) lastAncestorState(ctx context.Context, root [32]byte) (*state.BeaconState, error) {
+func (s *State) lastAncestorState(ctx context.Context, root [32]byte) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.lastAncestorState")
 	defer span.End()
 

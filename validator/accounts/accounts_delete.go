@@ -32,7 +32,7 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, ErrCouldNotInitializeKeymanager)
 	}
-	validatingPublicKeys, err := kManager.FetchAllValidatingPublicKeys(cliCtx.Context)
+	validatingPublicKeys, err := kManager.FetchValidatingPublicKeys(cliCtx.Context)
 	if err != nil {
 		return err
 	}

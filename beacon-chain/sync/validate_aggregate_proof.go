@@ -10,9 +10,11 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -23,7 +25,7 @@ import (
 // validateAggregateAndProof verifies the aggregated signature and the selection proof is valid before forwarding to the
 // network and downstream services.
 func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
-	if pid == s.p2p.PeerID() {
+	if pid == s.cfg.P2P.PeerID() {
 		return pubsub.ValidationAccept
 	}
 
@@ -32,7 +34,7 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 
 	// To process the following it requires the recent blocks to be present in the database, so we'll skip
 	// validating or processing aggregated attestations until fully synced.
-	if s.initialSync.Syncing() {
+	if s.cfg.InitialSync.Syncing() {
 		return pubsub.ValidationIgnore
 	}
 
@@ -53,10 +55,19 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationReject
 	}
 
+	// Broadcast the aggregated attestation on a feed to notify other services in the beacon node
+	// of a received aggregated attestation.
+	s.cfg.AttestationNotifier.OperationFeed().Send(&feed.Event{
+		Type: operation.AggregatedAttReceived,
+		Data: &operation.AggregatedAttReceivedData{
+			Attestation: m.Message,
+		},
+	})
+
 	if err := helpers.ValidateSlotTargetEpoch(m.Message.Aggregate.Data); err != nil {
 		return pubsub.ValidationReject
 	}
-	if err := helpers.ValidateAttestationTime(m.Message.Aggregate.Data.Slot, s.chain.GenesisTime()); err != nil {
+	if err := helpers.ValidateAttestationTime(m.Message.Aggregate.Data.Slot, s.cfg.Chain.GenesisTime()); err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
@@ -73,7 +84,7 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	}
 
 	// Verify aggregate attestation has not already been seen via aggregate gossip, within a block, or through the creation locally.
-	seen, err := s.attPool.HasAggregatedAttestation(m.Message.Aggregate)
+	seen, err := s.cfg.AttPool.HasAggregatedAttestation(m.Message.Aggregate)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
@@ -105,18 +116,18 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	// This verification is not in the spec, however we guard against it as it opens us up
 	// to weird edge cases during verification. The attestation technically could be used to add value to a block,
 	// but it's invalid in the spirit of the protocol. Here we choose safety over profit.
-	if err := s.chain.VerifyLmdFfgConsistency(ctx, signed.Message.Aggregate); err != nil {
+	if err := s.cfg.Chain.VerifyLmdFfgConsistency(ctx, signed.Message.Aggregate); err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
 
 	// Verify current finalized checkpoint is an ancestor of the block defined by the attestation's beacon block root.
-	if err := s.chain.VerifyFinalizedConsistency(ctx, signed.Message.Aggregate.Data.BeaconBlockRoot); err != nil {
+	if err := s.cfg.Chain.VerifyFinalizedConsistency(ctx, signed.Message.Aggregate.Data.BeaconBlockRoot); err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
 
-	bs, err := s.chain.AttestationTargetState(ctx, signed.Message.Aggregate.Data.Target)
+	bs, err := s.cfg.Chain.AttestationTargetState(ctx, signed.Message.Aggregate.Data.Target)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
@@ -206,7 +217,7 @@ func (s *Service) setAggregatorIndexEpochSeen(epoch types.Epoch, aggregatorIndex
 }
 
 // This validates the aggregator's index in state is within the beacon committee.
-func validateIndexInCommittee(ctx context.Context, bs *stateTrie.BeaconState, a *ethpb.Attestation, validatorIndex types.ValidatorIndex) error {
+func validateIndexInCommittee(ctx context.Context, bs iface.ReadOnlyBeaconState, a *ethpb.Attestation, validatorIndex types.ValidatorIndex) error {
 	ctx, span := trace.StartSpan(ctx, "sync.validateIndexInCommittee")
 	defer span.End()
 
@@ -230,7 +241,7 @@ func validateIndexInCommittee(ctx context.Context, bs *stateTrie.BeaconState, a 
 
 // This validates selection proof by validating it's from the correct validator index of the slot.
 // It does not verify the selection proof, it returns the signature set of selection proof which can be used for batch verify.
-func validateSelectionIndex(ctx context.Context, bs *stateTrie.BeaconState, data *ethpb.AttestationData, validatorIndex types.ValidatorIndex, proof []byte) (*bls.SignatureSet, error) {
+func validateSelectionIndex(ctx context.Context, bs iface.ReadOnlyBeaconState, data *ethpb.AttestationData, validatorIndex types.ValidatorIndex, proof []byte) (*bls.SignatureSet, error) {
 	_, span := trace.StartSpan(ctx, "sync.validateSelectionIndex")
 	defer span.End()
 
@@ -275,7 +286,7 @@ func validateSelectionIndex(ctx context.Context, bs *stateTrie.BeaconState, data
 }
 
 // This returns aggregator signature set which can be used to batch verify.
-func aggSigSet(s *stateTrie.BeaconState, a *ethpb.SignedAggregateAttestationAndProof) (*bls.SignatureSet, error) {
+func aggSigSet(s iface.ReadOnlyBeaconState, a *ethpb.SignedAggregateAttestationAndProof) (*bls.SignatureSet, error) {
 	v, err := s.ValidatorAtIndex(a.Message.AggregatorIndex)
 	if err != nil {
 		return nil, err

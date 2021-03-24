@@ -1,15 +1,42 @@
 package testutil
 
 import (
+	"fmt"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+// FillRootsNaturalOpt is meant to be used as an option when calling NewBeaconState.
+// It fills state and block roots with hex representations of natural numbers starting with 0.
+// Example: 16 becomes 0x00...0f.
+func FillRootsNaturalOpt(state *pb.BeaconState) error {
+	rootsLen := params.MainnetConfig().SlotsPerHistoricalRoot
+	roots := make([][]byte, rootsLen)
+	for i := types.Slot(0); i < rootsLen; i++ {
+		roots[i] = make([]byte, 32)
+	}
+	for j := 0; j < len(roots); j++ {
+		// Remove '0x' prefix and left-pad '0' to have 64 chars in total.
+		s := fmt.Sprintf("%064s", hexutil.EncodeUint64(uint64(j))[2:])
+		h, err := hexutil.Decode("0x" + s)
+		if err != nil {
+			return err
+		}
+		roots[j] = h
+	}
+	state.StateRoots = roots
+	state.BlockRoots = roots
+	return nil
+}
+
 // NewBeaconState creates a beacon state with minimum marshalable fields.
-func NewBeaconState(options ...func(state *pb.BeaconState)) (*stateTrie.BeaconState, error) {
+func NewBeaconState(options ...func(state *pb.BeaconState) error) (*stateV0.BeaconState, error) {
 	seed := &pb.BeaconState{
 		BlockRoots:                 filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),
 		StateRoots:                 filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),
@@ -36,15 +63,18 @@ func NewBeaconState(options ...func(state *pb.BeaconState)) (*stateTrie.BeaconSt
 	}
 
 	for _, opt := range options {
-		opt(seed)
+		err := opt(seed)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	var st, err = stateTrie.InitializeFromProtoUnsafe(seed)
+	var st, err = stateV0.InitializeFromProtoUnsafe(seed)
 	if err != nil {
 		return nil, err
 	}
 
-	return st.Copy(), nil
+	return st.Copy().(*stateV0.BeaconState), nil
 }
 
 // SSZ will fill 2D byte slices with their respective values, so we must fill these in too for round

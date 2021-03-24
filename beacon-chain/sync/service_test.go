@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/abool"
@@ -23,14 +23,16 @@ import (
 )
 
 func TestService_StatusZeroEpoch(t *testing.T) {
-	bState, err := stateTrie.InitializeFromProto(&pb.BeaconState{Slot: 0})
+	bState, err := stateV0.InitializeFromProto(&pb.BeaconState{Slot: 0})
 	require.NoError(t, err)
 	r := &Service{
-		p2p:         p2ptest.NewTestP2P(t),
-		initialSync: new(mockSync.Sync),
-		chain: &mockChain.ChainService{
-			Genesis: time.Now(),
-			State:   bState,
+		cfg: &Config{
+			P2P:         p2ptest.NewTestP2P(t),
+			InitialSync: new(mockSync.Sync),
+			Chain: &mockChain.ChainService{
+				Genesis: time.Now(),
+				State:   bState,
+			},
 		},
 		chainStarted: abool.New(),
 	}
@@ -46,18 +48,20 @@ func TestSyncHandlers_WaitToSync(t *testing.T) {
 		ValidatorsRoot: [32]byte{'A'},
 	}
 	r := Service{
-		ctx:           context.Background(),
-		p2p:           p2p,
-		chain:         chainService,
-		stateNotifier: chainService.StateNotifier(),
-		chainStarted:  abool.New(),
-		initialSync:   &mockSync.Sync{IsSyncing: false},
+		ctx: context.Background(),
+		cfg: &Config{
+			P2P:           p2p,
+			Chain:         chainService,
+			StateNotifier: chainService.StateNotifier(),
+			InitialSync:   &mockSync.Sync{IsSyncing: false},
+		},
+		chainStarted: abool.New(),
 	}
 
 	topic := "/eth2/%x/beacon_block"
 	go r.registerHandlers()
 	time.Sleep(100 * time.Millisecond)
-	i := r.stateNotifier.StateFeed().Send(&feed.Event{
+	i := r.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.Initialized,
 		Data: &statefeed.InitializedData{
 			StartTime: time.Now(),
@@ -87,18 +91,20 @@ func TestSyncHandlers_WaitForChainStart(t *testing.T) {
 		ValidatorsRoot: [32]byte{'A'},
 	}
 	r := Service{
-		ctx:                 context.Background(),
-		p2p:                 p2p,
-		chain:               chainService,
-		stateNotifier:       chainService.StateNotifier(),
-		initialSync:         &mockSync.Sync{IsSyncing: false},
+		ctx: context.Background(),
+		cfg: &Config{
+			P2P:           p2p,
+			Chain:         chainService,
+			StateNotifier: chainService.StateNotifier(),
+			InitialSync:   &mockSync.Sync{IsSyncing: false},
+		},
 		chainStarted:        abool.New(),
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 	}
 
 	go r.registerHandlers()
 	time.Sleep(100 * time.Millisecond)
-	i := r.stateNotifier.StateFeed().Send(&feed.Event{
+	i := r.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.Initialized,
 		Data: &statefeed.InitializedData{
 			StartTime: time.Now().Add(2 * time.Second),
@@ -121,18 +127,20 @@ func TestSyncHandlers_WaitTillSynced(t *testing.T) {
 		ValidatorsRoot: [32]byte{'A'},
 	}
 	r := Service{
-		ctx:           context.Background(),
-		p2p:           p2p,
-		chain:         chainService,
-		stateNotifier: chainService.StateNotifier(),
-		initialSync:   &mockSync.Sync{IsSyncing: false},
-		chainStarted:  abool.New(),
+		ctx: context.Background(),
+		cfg: &Config{
+			P2P:           p2p,
+			Chain:         chainService,
+			StateNotifier: chainService.StateNotifier(),
+			InitialSync:   &mockSync.Sync{IsSyncing: false},
+		},
+		chainStarted: abool.New(),
 	}
 
 	topic := "/eth2/%x/beacon_block"
 	go r.registerHandlers()
 	time.Sleep(100 * time.Millisecond)
-	i := r.stateNotifier.StateFeed().Send(&feed.Event{
+	i := r.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.Initialized,
 		Data: &statefeed.InitializedData{
 			StartTime: time.Now(),
@@ -150,9 +158,9 @@ func TestSyncHandlers_WaitTillSynced(t *testing.T) {
 	msg.Block.ParentRoot = testutil.Random32Bytes(t)
 	msg.Signature = sk.Sign([]byte("data")).Marshal()
 	p2p.Digest, err = r.forkDigest()
-	r.blockNotifier = chainService.BlockNotifier()
+	r.cfg.BlockNotifier = chainService.BlockNotifier()
 	blockChan := make(chan feed.Event, 1)
-	sub := r.blockNotifier.BlockFeed().Subscribe(blockChan)
+	sub := r.cfg.BlockNotifier.BlockFeed().Subscribe(blockChan)
 
 	require.NoError(t, err)
 	p2p.ReceivePubSub(topic, msg)
@@ -163,7 +171,7 @@ func TestSyncHandlers_WaitTillSynced(t *testing.T) {
 
 	assert.Equal(t, 0, len(blockChan), "block was received by sync service despite not being fully synced")
 
-	i = r.stateNotifier.StateFeed().Send(&feed.Event{
+	i = r.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.Synced,
 		Data: &statefeed.SyncedData{
 			StartTime: time.Now(),
@@ -196,18 +204,20 @@ func TestSyncService_StopCleanly(t *testing.T) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	r := Service{
-		ctx:           ctx,
-		cancel:        cancel,
-		p2p:           p2p,
-		chain:         chainService,
-		stateNotifier: chainService.StateNotifier(),
-		initialSync:   &mockSync.Sync{IsSyncing: false},
-		chainStarted:  abool.New(),
+		ctx:    ctx,
+		cancel: cancel,
+		cfg: &Config{
+			P2P:           p2p,
+			Chain:         chainService,
+			StateNotifier: chainService.StateNotifier(),
+			InitialSync:   &mockSync.Sync{IsSyncing: false},
+		},
+		chainStarted: abool.New(),
 	}
 
 	go r.registerHandlers()
 	time.Sleep(100 * time.Millisecond)
-	i := r.stateNotifier.StateFeed().Send(&feed.Event{
+	i := r.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.Initialized,
 		Data: &statefeed.InitializedData{
 			StartTime: time.Now(),
@@ -225,7 +235,7 @@ func TestSyncService_StopCleanly(t *testing.T) {
 	time.Sleep(2 * time.Second)
 	require.Equal(t, true, r.chainStarted.IsSet(), "Did not receive chain start event.")
 
-	i = r.stateNotifier.StateFeed().Send(&feed.Event{
+	i = r.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.Synced,
 		Data: &statefeed.SyncedData{
 			StartTime: time.Now(),
@@ -237,14 +247,14 @@ func TestSyncService_StopCleanly(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	require.NotEqual(t, 0, len(r.p2p.PubSub().GetTopics()))
-	require.NotEqual(t, 0, len(r.p2p.Host().Mux().Protocols()))
+	require.NotEqual(t, 0, len(r.cfg.P2P.PubSub().GetTopics()))
+	require.NotEqual(t, 0, len(r.cfg.P2P.Host().Mux().Protocols()))
 
 	// Both pubsub and rpc topcis should be unsubscribed.
 	require.NoError(t, r.Stop())
 
 	// Sleep to allow pubsub topics to be deregistered.
 	time.Sleep(1 * time.Second)
-	require.Equal(t, 0, len(r.p2p.PubSub().GetTopics()))
-	require.Equal(t, 0, len(r.p2p.Host().Mux().Protocols()))
+	require.Equal(t, 0, len(r.cfg.P2P.PubSub().GetTopics()))
+	require.Equal(t, 0, len(r.cfg.P2P.Host().Mux().Protocols()))
 }

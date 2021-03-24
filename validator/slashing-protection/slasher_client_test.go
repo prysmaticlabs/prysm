@@ -11,6 +11,7 @@ import (
 
 func TestGrpcHeaders(t *testing.T) {
 	s := &Service{
+		cfg:         &Config{},
 		ctx:         context.Background(),
 		grpcHeaders: []string{"first=value1", "second=value2"},
 	}

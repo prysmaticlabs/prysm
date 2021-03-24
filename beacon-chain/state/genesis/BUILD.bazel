@@ -1,0 +1,25 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_test")
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["genesis.go"],
+    embedsrcs = ["mainnet.ssz.snappy"],
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/genesis",
+    visibility = ["//beacon-chain/db:__subpackages__"],
+    deps = [
+        "//beacon-chain/state/stateV0:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/params:go_default_library",
+        "@com_github_golang_snappy//:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["genesis_test.go"],
+    deps = [
+        ":go_default_library",
+        "//shared/params:go_default_library",
+    ],
+)

@@ -22,7 +22,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -299,7 +298,7 @@ func (is *infostream) generateValidatorsInfo(pubKeys [][]byte) ([]*ethpb.Validat
 }
 
 // generateValidatorInfo generates the validator info for a public key.
-func (is *infostream) generateValidatorInfo(pubKey []byte, validator iface.ReadOnlyValidator, headState *state.BeaconState, epoch types.Epoch) (*ethpb.ValidatorInfo, error) {
+func (is *infostream) generateValidatorInfo(pubKey []byte, validator iface.ReadOnlyValidator, headState iface.ReadOnlyBeaconState, epoch types.Epoch) (*ethpb.ValidatorInfo, error) {
 	info := &ethpb.ValidatorInfo{
 		PublicKey: pubKey,
 		Epoch:     epoch,
@@ -369,7 +368,7 @@ func (is *infostream) generatePendingValidatorInfo(info *ethpb.ValidatorInfo) (*
 	return info, nil
 }
 
-func (is *infostream) calculateActivationTimeForPendingValidators(res []*ethpb.ValidatorInfo, headState *state.BeaconState, epoch types.Epoch) error {
+func (is *infostream) calculateActivationTimeForPendingValidators(res []*ethpb.ValidatorInfo, headState iface.ReadOnlyBeaconState, epoch types.Epoch) error {
 	// pendingValidatorsMap is map from the validator pubkey to the index in our return array
 	pendingValidatorsMap := make(map[[48]byte]int)
 	for i, info := range res {

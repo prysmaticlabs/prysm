@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -25,7 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *stateTrie.BeaconState) {
+func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, iface.BeaconState) {
 	state, privKeys := testutil.DeterministicGenesisState(t, 5)
 	vals := state.Validators()
 	for _, vv := range vals {
@@ -80,9 +80,11 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 	slashing, s := setupValidAttesterSlashing(t)
 
 	r := &Service{
-		p2p:                       p,
-		chain:                     &mock.ChainService{State: s},
-		initialSync:               &mockSync.Sync{IsSyncing: false},
+		cfg: &Config{
+			P2P:         p,
+			Chain:       &mock.ChainService{State: s},
+			InitialSync: &mockSync.Sync{IsSyncing: false},
+		},
 		seenAttesterSlashingCache: make(map[uint64]bool),
 	}
 
@@ -108,8 +110,10 @@ func TestValidateAttesterSlashing_CanFilter(t *testing.T) {
 	ctx := context.Background()
 
 	r := &Service{
-		p2p:                       p,
-		initialSync:               &mockSync.Sync{IsSyncing: false},
+		cfg: &Config{
+			P2P:         p,
+			InitialSync: &mockSync.Sync{IsSyncing: false},
+		},
 		seenAttesterSlashingCache: make(map[uint64]bool),
 	}
 
@@ -166,9 +170,11 @@ func TestValidateAttesterSlashing_ContextTimeout(t *testing.T) {
 	defer cancel()
 
 	r := &Service{
-		p2p:                       p,
-		chain:                     &mock.ChainService{State: state},
-		initialSync:               &mockSync.Sync{IsSyncing: false},
+		cfg: &Config{
+			P2P:         p,
+			Chain:       &mock.ChainService{State: state},
+			InitialSync: &mockSync.Sync{IsSyncing: false},
+		},
 		seenAttesterSlashingCache: make(map[uint64]bool),
 	}
 
@@ -194,9 +200,11 @@ func TestValidateAttesterSlashing_Syncing(t *testing.T) {
 	slashing, s := setupValidAttesterSlashing(t)
 
 	r := &Service{
-		p2p:         p,
-		chain:       &mock.ChainService{State: s},
-		initialSync: &mockSync.Sync{IsSyncing: true},
+		cfg: &Config{
+			P2P:         p,
+			Chain:       &mock.ChainService{State: s},
+			InitialSync: &mockSync.Sync{IsSyncing: true},
+		},
 	}
 
 	buf := new(bytes.Buffer)
