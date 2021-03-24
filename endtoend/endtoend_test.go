@@ -42,7 +42,23 @@ func init() {
 	state.SkipSlotCache.Disable()
 }
 
-func runEndToEndTest(t *testing.T, config *e2etypes.E2EConfig) {
+// testRunner abstracts E2E test configuration and running.
+type testRunner struct {
+	t      *testing.T
+	config *e2etypes.E2EConfig
+}
+
+// newTestRunner creates E2E test runner.
+func newTestRunner(t *testing.T, config *e2etypes.E2EConfig) *testRunner {
+	return &testRunner{
+		t:      t,
+		config: config,
+	}
+}
+
+// run executes configured E2E test.
+func (r *testRunner) run() {
+	t, config := r.t, r.config
 	t.Logf("Shard index: %d\n", e2e.TestParams.TestShardIndex)
 	t.Logf("Starting time: %s\n", time.Now().String())
 	t.Logf("Log Path: %s\n", e2e.TestParams.LogPath)
@@ -100,13 +116,11 @@ func runEndToEndTest(t *testing.T, config *e2etypes.E2EConfig) {
 		})
 	}
 
-	//var depositCheckValidator *components.ValidatorNode
-
-	// Run E2E tests.
+	// Run E2E evaluators and tests.
 	g.Go(func() error {
 		// When everything is done, cancel parent context (will stop all spawned nodes).
 		defer func() {
-			log.Info("All tests finished, cleaning up")
+			log.Info("All E2E evaluations are finished, cleaning up")
 			done()
 		}()
 
@@ -114,9 +128,6 @@ func runEndToEndTest(t *testing.T, config *e2etypes.E2EConfig) {
 		requiredComponents := []e2etypes.ComponentRunner{
 			eth1Node, bootNode, beaconNodes, validatorNodes,
 		}
-		//if config.TestDeposits && depositCheckValidator != nil {
-		//	requiredComponents = append(requiredComponents, depositCheckValidator)
-		//}
 		ctxAllNodesReady, cancel := context.WithTimeout(ctx, allNodesStartTimeout)
 		defer cancel()
 		if err := helpers.ComponentsStarted(ctxAllNodesReady, requiredComponents); err != nil {
@@ -131,17 +142,11 @@ func runEndToEndTest(t *testing.T, config *e2etypes.E2EConfig) {
 				for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
 					assert.NoError(t, helpers.WritePprofFiles(e2e.TestParams.LogPath, i))
 				}
-				log.Info("Writing output pprof files..DONE!")
 			}()
 		}
 
-		// Sleep depending on the count of validators, as generating the genesis state could take some time.
-		time.Sleep(time.Duration(params.BeaconConfig().GenesisDelay) * time.Second)
-		beaconLogFile, err := os.Open(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.BeaconNodeLogFileName, 0)))
-		require.NoError(t, err)
-		t.Run("chain started", func(t *testing.T) {
-			require.NoError(t, helpers.WaitForTextInFile(beaconLogFile, "Chain started in sync service"), "Chain did not start")
-		})
+		// Blocking, wait period varies depending on number of validators.
+		r.waitForChainStart()
 
 		// Failing early in case chain doesn't start.
 		if t.Failed() {
@@ -149,19 +154,8 @@ func runEndToEndTest(t *testing.T, config *e2etypes.E2EConfig) {
 		}
 
 		if config.TestDeposits {
-			depositCheckValidator := components.NewValidatorNode(config, int(e2e.DepositCount), e2e.TestParams.BeaconNodeCount, minGenesisActiveCount)
-			g.Go(func() error {
-				if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{beaconNodes}); err != nil {
-					return fmt.Errorf("deposit check validator node requires beacon nodes to run: %w", err)
-				}
-				go func() {
-					err := components.SendAndMineDeposits(eth1Node.KeystorePath(), int(e2e.DepositCount), minGenesisActiveCount, false /* partial */)
-					if err != nil {
-						t.Fatal(err)
-					}
-				}()
-				return depositCheckValidator.Start(ctx)
-			})
+			log.Info("Running deposit tests")
+			r.testDeposits(ctx, g, eth1Node, []e2etypes.ComponentRunner{beaconNodes})
 		}
 
 		// Create GRPC connection to beacon nodes.
@@ -169,10 +163,12 @@ func runEndToEndTest(t *testing.T, config *e2etypes.E2EConfig) {
 		require.NoError(t, err, "Cannot create local connections")
 		defer closeConns()
 
+		// Calculate genesis time.
 		nodeClient := eth.NewNodeClient(conns[0])
 		genesis, err := nodeClient.GetGenesis(context.Background(), &ptypes.Empty{})
 		require.NoError(t, err)
 
+		// Epoch time calculations.
 		epochSeconds := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 		epochSecondsHalf := time.Duration(int64(epochSeconds*1000)/2) * time.Millisecond
 		// Adding a half slot here to ensure the requests are in the middle of an epoch.
@@ -181,25 +177,9 @@ func runEndToEndTest(t *testing.T, config *e2etypes.E2EConfig) {
 		// Offsetting the ticker from genesis so it ticks in the middle of an epoch, in order to keep results consistent.
 		tickingStartTime := genesisTime.Add(middleOfEpoch)
 
-		ticker := helpers.NewEpochTicker(tickingStartTime, epochSeconds)
-		for currentEpoch := range ticker.C() {
-			for _, evaluator := range config.Evaluators {
-				// Only run if the policy says so.
-				if !evaluator.Policy(types.Epoch(currentEpoch)) {
-					continue
-				}
-				t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
-					assert.NoError(t, evaluator.Evaluation(conns...), "Evaluation failed for epoch %d: %v", currentEpoch, err)
-				})
-			}
-
-			if t.Failed() || currentEpoch >= config.EpochsToRun-1 {
-				ticker.Done()
-				if t.Failed() {
-					return errors.New("test failed")
-				}
-				break
-			}
+		// Run assigned evaluators.
+		if err := r.runEvaluators(conns, tickingStartTime, epochSeconds); err != nil {
+			return err
 		}
 
 		if !config.TestSync {
@@ -245,11 +225,6 @@ func runEndToEndTest(t *testing.T, config *e2etypes.E2EConfig) {
 		return nil
 	})
 
-	//g.Go(func() error {
-	//	time.Sleep(10*time.Second)
-	//	return errors.New("some error returned from node")
-	//})
-
 	if err := g.Wait(); err != nil && !errors.Is(err, context.Canceled) {
 		// At the end of the main evaluator goroutine all nodes are killed, no need to fail the test.
 		if strings.Contains(err.Error(), "signal: killed") {
@@ -257,4 +232,63 @@ func runEndToEndTest(t *testing.T, config *e2etypes.E2EConfig) {
 		}
 		t.Fatalf("E2E test ended in error: %v", err)
 	}
+}
+
+// waitForChainStart allows to wait up until beacon nodes are started.
+func (r *testRunner) waitForChainStart() {
+	// Sleep depending on the count of validators, as generating the genesis state could take some time.
+	time.Sleep(time.Duration(params.BeaconConfig().GenesisDelay) * time.Second)
+	beaconLogFile, err := os.Open(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.BeaconNodeLogFileName, 0)))
+	require.NoError(r.t, err)
+
+	r.t.Run("chain started", func(t *testing.T) {
+		require.NoError(t, helpers.WaitForTextInFile(beaconLogFile, "Chain started in sync service"), "Chain did not start")
+	})
+}
+
+// testDeposits runs tests when config.TestDeposits is enabled.
+func (r *testRunner) testDeposits(ctx context.Context, g *errgroup.Group,
+	eth1Node *components.Eth1Node, requiredNodes []e2etypes.ComponentRunner) {
+	minGenesisActiveCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
+
+	depositCheckValidator := components.NewValidatorNode(r.config, int(e2e.DepositCount), e2e.TestParams.BeaconNodeCount, minGenesisActiveCount)
+	g.Go(func() error {
+		if err := helpers.ComponentsStarted(ctx, requiredNodes); err != nil {
+			return fmt.Errorf("deposit check validator node requires beacon nodes to run: %w", err)
+		}
+		go func() {
+			err := components.SendAndMineDeposits(eth1Node.KeystorePath(), int(e2e.DepositCount), minGenesisActiveCount, false /* partial */)
+			if err != nil {
+				r.t.Fatal(err)
+			}
+		}()
+		return depositCheckValidator.Start(ctx)
+	})
+}
+
+// runEvaluators executes assigned evaluators.
+func (r *testRunner) runEvaluators(conns []*grpc.ClientConn, genesisTime time.Time, secondsPerEpoch uint64) error {
+	t, config := r.t, r.config
+	ticker := helpers.NewEpochTicker(genesisTime, secondsPerEpoch)
+	for currentEpoch := range ticker.C() {
+		for _, evaluator := range config.Evaluators {
+			// Only run if the policy says so.
+			if !evaluator.Policy(types.Epoch(currentEpoch)) {
+				continue
+			}
+			t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
+				err := evaluator.Evaluation(conns...)
+				assert.NoError(t, err, "Evaluation failed for epoch %d: %v", currentEpoch, err)
+			})
+		}
+
+		if t.Failed() || currentEpoch >= config.EpochsToRun-1 {
+			ticker.Done()
+			if t.Failed() {
+				return errors.New("test failed")
+			}
+			break
+		}
+	}
+	return nil
 }
