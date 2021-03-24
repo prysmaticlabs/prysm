@@ -323,7 +323,7 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 		}
 		return b.recomputeFieldTrie(validators, b.state.Validators)
 	case balances:
-		return stateutil.ValidatorBalancesRoot(b.state.Balances)
+		return stateutil.Uint64ListRootWithRegistryLimit(b.state.Balances)
 	case randaoMixes:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(field, b.state.RandaoMixes, uint64(params.BeaconConfig().EpochsPerHistoricalVector))
@@ -350,7 +350,7 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 	case finalizedCheckpoint:
 		return htrutils.CheckpointRoot(hasher, b.state.FinalizedCheckpoint)
 	case inactivityScores:
-		return stateutil.ValidatorBalancesRoot(b.state.InactivityScores)
+		return stateutil.Uint64ListRootWithRegistryLimit(b.state.InactivityScores)
 	case currentSyncCommittee:
 		return syncCommitteeRoot(b.state.CurrentSyncCommittee)
 	case nextSyncCommittee:

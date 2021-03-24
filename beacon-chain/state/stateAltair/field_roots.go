@@ -137,7 +137,7 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(state *pb.BeaconStateAltai
 	fieldRoots[11] = validatorsRoot[:]
 
 	// Balances slice root.
-	balancesRoot, err := stateutil.ValidatorBalancesRoot(state.Balances)
+	balancesRoot, err := stateutil.Uint64ListRootWithRegistryLimit(state.Balances)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute validator balances merkleization")
 	}
@@ -197,23 +197,25 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(state *pb.BeaconStateAltai
 	fieldRoots[20] = finalRoot[:]
 
 	// Inactivity scores root.
-	inactivityScoresRoot, err := stateutil.ValidatorBalancesRoot(state.InactivityScores)
+	inactivityScoresRoot, err := stateutil.Uint64ListRootWithRegistryLimit(state.InactivityScores)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute inactivityScoreRoot")
 	}
 	fieldRoots[21] = inactivityScoresRoot[:]
 
-	currentLightRoot, err := syncCommitteeRoot(state.CurrentSyncCommittee)
+	// Current sync committee root.
+	currentSyncCommitteeRoot, err := syncCommitteeRoot(state.CurrentSyncCommittee)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute sync committee merkleization")
 	}
-	fieldRoots[22] = currentLightRoot[:]
+	fieldRoots[22] = currentSyncCommitteeRoot[:]
 
-	nextLightRoot, err := syncCommitteeRoot(state.NextSyncCommittee)
+	// Next sync committee root.
+	nextSyncCommitteeRoot, err := syncCommitteeRoot(state.NextSyncCommittee)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute sync committee merkleization")
 	}
-	fieldRoots[23] = nextLightRoot[:]
+	fieldRoots[23] = nextSyncCommitteeRoot[:]
 
 	return fieldRoots, nil
 }

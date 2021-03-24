@@ -137,7 +137,7 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(state *pb.BeaconState) ([]
 	fieldRoots[11] = validatorsRoot[:]
 
 	// Balances slice root.
-	balancesRoot, err := stateutil.ValidatorBalancesRoot(state.Balances)
+	balancesRoot, err := stateutil.Uint64ListRootWithRegistryLimit(state.Balances)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute validator balances merkleization")
 	}
