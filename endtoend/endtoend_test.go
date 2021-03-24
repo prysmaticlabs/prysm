@@ -80,7 +80,7 @@ func (r *testRunner) run() {
 	})
 
 	// Boot node.
-	bootNode := components.NewBootNode(config)
+	bootNode := components.NewBootNode()
 	g.Go(func() error {
 		return bootNode.Start(ctx)
 	})
