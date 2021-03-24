@@ -582,6 +582,7 @@ func TestStore_HighestAttestations(t *testing.T) {
 }
 
 func BenchmarkHighestAttestations(b *testing.B) {
+	b.StopTimer()
 	count := 10000
 	valsPerAtt := 100
 	indicesPerAtt := make([][]uint64, count)
@@ -610,6 +611,7 @@ func BenchmarkHighestAttestations(b *testing.B) {
 		allIndices = append(allIndices, indicesForAtt...)
 	}
 	b.ReportAllocs()
+	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := beaconDB.HighestAttestations(ctx, allIndices)
 		require.NoError(b, err)
