@@ -2,7 +2,6 @@ package simulator
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -49,20 +48,16 @@ type Parameters struct {
 // Simulator defines a struct which can launch a slasher simulation
 // at scale using configuration parameters.
 type Simulator struct {
-	ctx                       context.Context
-	slasher                   *slasher.Service
-	srvConfig                 *ServiceConfig
-	indexedAttsFeed           *event.Feed
-	beaconBlocksFeed          *event.Feed
-	sentAttSlashingFeed       *event.Feed
-	sentBlockSlashingFeed     *event.Feed
-	detectedProposerSlashings map[[32]byte]*ethpb.ProposerSlashing
-	detectedAttesterSlashings map[[32]byte]*ethpb.AttesterSlashing
-	sentProposerSlashings     map[[32]byte]*ethpb.ProposerSlashing
-	sentAttesterSlashings     map[[32]byte]*ethpb.AttesterSlashing
-	genesisTime               time.Time
-	proposerSlashingLock      sync.RWMutex
-	attesterSlashingLock      sync.RWMutex
+	ctx                   context.Context
+	slasher               *slasher.Service
+	srvConfig             *ServiceConfig
+	indexedAttsFeed       *event.Feed
+	beaconBlocksFeed      *event.Feed
+	sentAttSlashingFeed   *event.Feed
+	sentBlockSlashingFeed *event.Feed
+	sentProposerSlashings map[[32]byte]*ethpb.ProposerSlashing
+	sentAttesterSlashings map[[32]byte]*ethpb.AttesterSlashing
+	genesisTime           time.Time
 }
 
 // DefaultParams for launching a slasher simulator.
