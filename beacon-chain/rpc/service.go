@@ -279,12 +279,12 @@ func (s *Service) Start() {
 		}
 		debugServerV1 := &debugv1.Server{
 			Ctx:      s.ctx,
-			BeaconDB: s.beaconDB,
+			BeaconDB: s.cfg.BeaconDB,
 			StateFetcher: &statefetcher.StateFetcher{
-				BeaconDB:           s.beaconDB,
-				ChainInfoFetcher:   s.chainInfoFetcher,
-				GenesisTimeFetcher: s.timeFetcher,
-				StateGenService:    s.stateGen,
+				BeaconDB:           s.cfg.BeaconDB,
+				ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
+				GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
+				StateGenService:    s.cfg.StateGen,
 			},
 		}
 		pbrpc.RegisterDebugServer(s.grpcServer, debugServer)
