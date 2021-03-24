@@ -10,8 +10,8 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -55,7 +55,7 @@ import (
 //	    state.compact_committees_roots[index] = committee_root
 //	  return state
 // This method differs from the spec so as to process deposits beforehand instead of the end of the function.
-func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (*stateTrie.BeaconState, error) {
+func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (iface.BeaconState, error) {
 	if eth1Data == nil {
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
@@ -105,7 +105,7 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 
 // OptimizedGenesisBeaconState is used to create a state that has already processed deposits. This is to efficiently
 // create a mainnet state at chainstart.
-func OptimizedGenesisBeaconState(genesisTime uint64, preState *stateTrie.BeaconState, eth1Data *ethpb.Eth1Data) (*stateTrie.BeaconState, error) {
+func OptimizedGenesisBeaconState(genesisTime uint64, preState iface.BeaconState, eth1Data *ethpb.Eth1Data) (iface.BeaconState, error) {
 	if eth1Data == nil {
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
@@ -136,7 +136,7 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState *stateTrie.BeaconS
 
 	slashings := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
 
-	genesisValidatorsRoot, err := stateutil.ValidatorRegistryRoot(preState.Validators())
+	genesisValidatorsRoot, err := stateV0.ValidatorRegistryRoot(preState.Validators())
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not hash tree root genesis validators %v", err)
 	}
@@ -206,11 +206,11 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState *stateTrie.BeaconS
 		BodyRoot:   bodyRoot[:],
 	}
 
-	return stateTrie.InitializeFromProto(state)
+	return stateV0.InitializeFromProto(state)
 }
 
 // EmptyGenesisState returns an empty beacon state object.
-func EmptyGenesisState() (*stateTrie.BeaconState, error) {
+func EmptyGenesisState() (iface.BeaconState, error) {
 	state := &pb.BeaconState{
 		// Misc fields.
 		Slot: 0,
@@ -233,7 +233,7 @@ func EmptyGenesisState() (*stateTrie.BeaconState, error) {
 		Eth1DataVotes:    []*ethpb.Eth1Data{},
 		Eth1DepositIndex: 0,
 	}
-	return stateTrie.InitializeFromProto(state)
+	return stateV0.InitializeFromProto(state)
 }
 
 // IsValidGenesisState gets called whenever there's a deposit event,

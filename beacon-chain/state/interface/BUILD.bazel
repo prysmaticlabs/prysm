@@ -2,9 +2,20 @@ load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["interface.go"],
+    srcs = ["phase0.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/interface",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//fuzz:__pkg__",
+        "//proto/testing:__subpackages__",
+        "//shared/aggregation:__subpackages__",
+        "//shared/benchutil:__pkg__",
+        "//shared/depositutil:__subpackages__",
+        "//shared/testutil:__pkg__",
+        "//slasher/rpc:__subpackages__",
+        "//tools/benchmark-files-gen:__pkg__",
+        "//tools/pcli:__pkg__",
+    ],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",

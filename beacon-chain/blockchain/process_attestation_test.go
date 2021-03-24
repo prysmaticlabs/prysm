@@ -50,7 +50,7 @@ func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 	s, err := testutil.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, s.SetSlot(100*params.BeaconConfig().SlotsPerEpoch))
-	require.NoError(t, service.beaconDB.SaveState(ctx, s, BlkWithStateBadAttRoot))
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, BlkWithStateBadAttRoot))
 
 	BlkWithValidState := testutil.NewBeaconBlock()
 	BlkWithValidState.Block.Slot = 2
@@ -66,7 +66,7 @@ func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 		PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 	})
 	require.NoError(t, err)
-	require.NoError(t, service.beaconDB.SaveState(ctx, s, BlkWithValidStateRoot))
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, BlkWithValidStateRoot))
 
 	tests := []struct {
 		name      string
@@ -146,8 +146,8 @@ func TestStore_OnAttestation_Ok(t *testing.T) {
 	copied := genesisState.Copy()
 	copied, err = state.ProcessSlots(ctx, copied, 1)
 	require.NoError(t, err)
-	require.NoError(t, service.beaconDB.SaveState(ctx, copied, tRoot))
-	require.NoError(t, service.forkChoiceStore.ProcessBlock(ctx, 0, tRoot, tRoot, tRoot, 1, 1))
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, copied, tRoot))
+	require.NoError(t, service.cfg.ForkChoiceStore.ProcessBlock(ctx, 0, tRoot, tRoot, tRoot, 1, 1))
 	require.NoError(t, service.onAttestation(ctx, att[0]))
 }
 
@@ -175,7 +175,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	err = s.SetBalances([]uint64{0})
 	require.NoError(t, err)
 	r := [32]byte{'g'}
-	require.NoError(t, service.beaconDB.SaveState(ctx, s, r))
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, r))
 
 	service.justifiedCheckpt = &ethpb.Checkpoint{Root: r[:]}
 	service.bestJustifiedCheckpt = &ethpb.Checkpoint{Root: r[:]}
@@ -184,16 +184,16 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 
 	r = bytesutil.ToBytes32([]byte{'A'})
 	cp1 := &ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'A'}, 32)}
-	require.NoError(t, service.beaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'A'})))
-	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: bytesutil.PadTo([]byte{'A'}, 32)}))
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'A'})))
+	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: bytesutil.PadTo([]byte{'A'}, 32)}))
 
 	s1, err := service.getAttPreState(ctx, cp1)
 	require.NoError(t, err)
 	assert.Equal(t, 1*params.BeaconConfig().SlotsPerEpoch, s1.Slot(), "Unexpected state slot")
 
 	cp2 := &ethpb.Checkpoint{Epoch: 2, Root: bytesutil.PadTo([]byte{'B'}, 32)}
-	require.NoError(t, service.beaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'B'})))
-	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: bytesutil.PadTo([]byte{'B'}, 32)}))
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'B'})))
+	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: bytesutil.PadTo([]byte{'B'}, 32)}))
 	s2, err := service.getAttPreState(ctx, cp2)
 	require.NoError(t, err)
 	assert.Equal(t, 2*params.BeaconConfig().SlotsPerEpoch, s2.Slot(), "Unexpected state slot")
@@ -216,8 +216,8 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	service.finalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
 	service.prevFinalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
 	cp3 := &ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'C'}, 32)}
-	require.NoError(t, service.beaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'C'})))
-	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: bytesutil.PadTo([]byte{'C'}, 32)}))
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'C'})))
+	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: bytesutil.PadTo([]byte{'C'}, 32)}))
 	s3, err := service.getAttPreState(ctx, cp3)
 	require.NoError(t, err)
 	assert.Equal(t, s.Slot(), s3.Slot(), "Unexpected state slot")
@@ -237,7 +237,7 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 	epoch := types.Epoch(1)
 	baseState, _ := testutil.DeterministicGenesisState(t, 1)
 	checkpoint := &ethpb.Checkpoint{Epoch: epoch, Root: bytesutil.PadTo([]byte("hi"), 32)}
-	require.NoError(t, service.beaconDB.SaveState(ctx, baseState, bytesutil.ToBytes32(checkpoint.Root)))
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, baseState, bytesutil.ToBytes32(checkpoint.Root)))
 	returned, err := service.getAttPreState(ctx, checkpoint)
 	require.NoError(t, err)
 	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch.Mul(uint64(checkpoint.Epoch)), returned.Slot(), "Incorrectly returned base state")
@@ -248,7 +248,7 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 
 	epoch = 2
 	newCheckpoint := &ethpb.Checkpoint{Epoch: epoch, Root: bytesutil.PadTo([]byte("bye"), 32)}
-	require.NoError(t, service.beaconDB.SaveState(ctx, baseState, bytesutil.ToBytes32(newCheckpoint.Root)))
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, baseState, bytesutil.ToBytes32(newCheckpoint.Root)))
 	returned, err = service.getAttPreState(ctx, newCheckpoint)
 	require.NoError(t, err)
 	s, err := helpers.StartSlot(newCheckpoint.Epoch)
@@ -321,7 +321,7 @@ func TestVerifyBeaconBlock_futureBlock(t *testing.T) {
 
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 2
-	require.NoError(t, service.beaconDB.SaveBlock(ctx, b))
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, b))
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	d := &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: r[:]}
@@ -339,7 +339,7 @@ func TestVerifyBeaconBlock_OK(t *testing.T) {
 
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 2
-	require.NoError(t, service.beaconDB.SaveBlock(ctx, b))
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, b))
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	d := &ethpb.AttestationData{Slot: 2, BeaconBlockRoot: r[:]}
@@ -357,7 +357,7 @@ func TestVerifyFinalizedConsistency_InconsistentRoot(t *testing.T) {
 
 	b32 := testutil.NewBeaconBlock()
 	b32.Block.Slot = 32
-	require.NoError(t, service.beaconDB.SaveBlock(ctx, b32))
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, b32))
 	r32, err := b32.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -366,7 +366,7 @@ func TestVerifyFinalizedConsistency_InconsistentRoot(t *testing.T) {
 	b33 := testutil.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]
-	require.NoError(t, service.beaconDB.SaveBlock(ctx, b33))
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, b33))
 	r33, err := b33.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -384,7 +384,7 @@ func TestVerifyFinalizedConsistency_OK(t *testing.T) {
 
 	b32 := testutil.NewBeaconBlock()
 	b32.Block.Slot = 32
-	require.NoError(t, service.beaconDB.SaveBlock(ctx, b32))
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, b32))
 	r32, err := b32.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -393,7 +393,7 @@ func TestVerifyFinalizedConsistency_OK(t *testing.T) {
 	b33 := testutil.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]
-	require.NoError(t, service.beaconDB.SaveBlock(ctx, b33))
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, b33))
 	r33, err := b33.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -422,10 +422,10 @@ func TestVerifyFinalizedConsistency_IsCanonical(t *testing.T) {
 	r33, err := b33.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	require.NoError(t, service.forkChoiceStore.ProcessBlock(ctx, b32.Block.Slot, r32, [32]byte{}, [32]byte{}, 0, 0))
-	require.NoError(t, service.forkChoiceStore.ProcessBlock(ctx, b33.Block.Slot, r33, r32, [32]byte{}, 0, 0))
+	require.NoError(t, service.cfg.ForkChoiceStore.ProcessBlock(ctx, b32.Block.Slot, r32, [32]byte{}, [32]byte{}, 0, 0))
+	require.NoError(t, service.cfg.ForkChoiceStore.ProcessBlock(ctx, b33.Block.Slot, r33, r32, [32]byte{}, 0, 0))
 
-	_, err = service.forkChoiceStore.Head(ctx, 0, r32, []uint64{}, 0)
+	_, err = service.cfg.ForkChoiceStore.Head(ctx, 0, r32, []uint64{}, 0)
 	require.NoError(t, err)
 	err = service.VerifyFinalizedConsistency(context.Background(), r33[:])
 	require.NoError(t, err)

@@ -22,8 +22,8 @@ go_test(
         "epoch_store_test.go",
         "types_test.go",
     ],
-    embed = [":go_default_library"],
     deps = [
+        ":go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
         "//slasher/db/testing:go_default_library",

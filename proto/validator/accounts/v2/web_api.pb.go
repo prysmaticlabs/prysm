@@ -11,7 +11,7 @@ import (
 	math_bits "math/bits"
 
 	proto "github.com/gogo/protobuf/proto"
-	types "github.com/gogo/protobuf/types"
+	empty "github.com/golang/protobuf/ptypes/empty"
 	v1alpha1 "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	v1 "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
@@ -1625,8 +1625,8 @@ const _ = grpc.SupportPackageIsVersion4
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type WalletClient interface {
 	CreateWallet(ctx context.Context, in *CreateWalletRequest, opts ...grpc.CallOption) (*CreateWalletResponse, error)
-	WalletConfig(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*WalletResponse, error)
-	GenerateMnemonic(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*GenerateMnemonicResponse, error)
+	WalletConfig(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*WalletResponse, error)
+	GenerateMnemonic(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*GenerateMnemonicResponse, error)
 	ImportKeystores(ctx context.Context, in *ImportKeystoresRequest, opts ...grpc.CallOption) (*ImportKeystoresResponse, error)
 }
 
@@ -1647,7 +1647,7 @@ func (c *walletClient) CreateWallet(ctx context.Context, in *CreateWalletRequest
 	return out, nil
 }
 
-func (c *walletClient) WalletConfig(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*WalletResponse, error) {
+func (c *walletClient) WalletConfig(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*WalletResponse, error) {
 	out := new(WalletResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Wallet/WalletConfig", in, out, opts...)
 	if err != nil {
@@ -1656,7 +1656,7 @@ func (c *walletClient) WalletConfig(ctx context.Context, in *types.Empty, opts .
 	return out, nil
 }
 
-func (c *walletClient) GenerateMnemonic(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*GenerateMnemonicResponse, error) {
+func (c *walletClient) GenerateMnemonic(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*GenerateMnemonicResponse, error) {
 	out := new(GenerateMnemonicResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Wallet/GenerateMnemonic", in, out, opts...)
 	if err != nil {
@@ -1677,8 +1677,8 @@ func (c *walletClient) ImportKeystores(ctx context.Context, in *ImportKeystoresR
 // WalletServer is the server API for Wallet service.
 type WalletServer interface {
 	CreateWallet(context.Context, *CreateWalletRequest) (*CreateWalletResponse, error)
-	WalletConfig(context.Context, *types.Empty) (*WalletResponse, error)
-	GenerateMnemonic(context.Context, *types.Empty) (*GenerateMnemonicResponse, error)
+	WalletConfig(context.Context, *empty.Empty) (*WalletResponse, error)
+	GenerateMnemonic(context.Context, *empty.Empty) (*GenerateMnemonicResponse, error)
 	ImportKeystores(context.Context, *ImportKeystoresRequest) (*ImportKeystoresResponse, error)
 }
 
@@ -1689,10 +1689,10 @@ type UnimplementedWalletServer struct {
 func (*UnimplementedWalletServer) CreateWallet(ctx context.Context, req *CreateWalletRequest) (*CreateWalletResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateWallet not implemented")
 }
-func (*UnimplementedWalletServer) WalletConfig(ctx context.Context, req *types.Empty) (*WalletResponse, error) {
+func (*UnimplementedWalletServer) WalletConfig(ctx context.Context, req *empty.Empty) (*WalletResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method WalletConfig not implemented")
 }
-func (*UnimplementedWalletServer) GenerateMnemonic(ctx context.Context, req *types.Empty) (*GenerateMnemonicResponse, error) {
+func (*UnimplementedWalletServer) GenerateMnemonic(ctx context.Context, req *empty.Empty) (*GenerateMnemonicResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GenerateMnemonic not implemented")
 }
 func (*UnimplementedWalletServer) ImportKeystores(ctx context.Context, req *ImportKeystoresRequest) (*ImportKeystoresResponse, error) {
@@ -1722,7 +1722,7 @@ func _Wallet_CreateWallet_Handler(srv interface{}, ctx context.Context, dec func
 }
 
 func _Wallet_WalletConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(types.Empty)
+	in := new(empty.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -1734,13 +1734,13 @@ func _Wallet_WalletConfig_Handler(srv interface{}, ctx context.Context, dec func
 		FullMethod: "/ethereum.validator.accounts.v2.Wallet/WalletConfig",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WalletServer).WalletConfig(ctx, req.(*types.Empty))
+		return srv.(WalletServer).WalletConfig(ctx, req.(*empty.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Wallet_GenerateMnemonic_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(types.Empty)
+	in := new(empty.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -1752,7 +1752,7 @@ func _Wallet_GenerateMnemonic_Handler(srv interface{}, ctx context.Context, dec 
 		FullMethod: "/ethereum.validator.accounts.v2.Wallet/GenerateMnemonic",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WalletServer).GenerateMnemonic(ctx, req.(*types.Empty))
+		return srv.(WalletServer).GenerateMnemonic(ctx, req.(*empty.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1806,7 +1806,7 @@ var _Wallet_serviceDesc = grpc.ServiceDesc{
 type AccountsClient interface {
 	ListAccounts(ctx context.Context, in *ListAccountsRequest, opts ...grpc.CallOption) (*ListAccountsResponse, error)
 	BackupAccounts(ctx context.Context, in *BackupAccountsRequest, opts ...grpc.CallOption) (*BackupAccountsResponse, error)
-	ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*types.Empty, error)
+	ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 }
 
 type accountsClient struct {
@@ -1835,8 +1835,8 @@ func (c *accountsClient) BackupAccounts(ctx context.Context, in *BackupAccountsR
 	return out, nil
 }
 
-func (c *accountsClient) ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*types.Empty, error) {
-	out := new(types.Empty)
+func (c *accountsClient) ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
+	out := new(empty.Empty)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Accounts/ChangePassword", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -1848,7 +1848,7 @@ func (c *accountsClient) ChangePassword(ctx context.Context, in *ChangePasswordR
 type AccountsServer interface {
 	ListAccounts(context.Context, *ListAccountsRequest) (*ListAccountsResponse, error)
 	BackupAccounts(context.Context, *BackupAccountsRequest) (*BackupAccountsResponse, error)
-	ChangePassword(context.Context, *ChangePasswordRequest) (*types.Empty, error)
+	ChangePassword(context.Context, *ChangePasswordRequest) (*empty.Empty, error)
 }
 
 // UnimplementedAccountsServer can be embedded to have forward compatible implementations.
@@ -1861,7 +1861,7 @@ func (*UnimplementedAccountsServer) ListAccounts(ctx context.Context, req *ListA
 func (*UnimplementedAccountsServer) BackupAccounts(ctx context.Context, req *BackupAccountsRequest) (*BackupAccountsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method BackupAccounts not implemented")
 }
-func (*UnimplementedAccountsServer) ChangePassword(ctx context.Context, req *ChangePasswordRequest) (*types.Empty, error) {
+func (*UnimplementedAccountsServer) ChangePassword(ctx context.Context, req *ChangePasswordRequest) (*empty.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ChangePassword not implemented")
 }
 
@@ -1948,13 +1948,13 @@ var _Accounts_serviceDesc = grpc.ServiceDesc{
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type BeaconClient interface {
-	GetBeaconStatus(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*BeaconStatusResponse, error)
+	GetBeaconStatus(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*BeaconStatusResponse, error)
 	GetValidatorParticipation(ctx context.Context, in *v1alpha1.GetValidatorParticipationRequest, opts ...grpc.CallOption) (*v1alpha1.ValidatorParticipationResponse, error)
 	GetValidatorPerformance(ctx context.Context, in *v1alpha1.ValidatorPerformanceRequest, opts ...grpc.CallOption) (*v1alpha1.ValidatorPerformanceResponse, error)
 	GetValidators(ctx context.Context, in *v1alpha1.ListValidatorsRequest, opts ...grpc.CallOption) (*v1alpha1.Validators, error)
 	GetValidatorBalances(ctx context.Context, in *v1alpha1.ListValidatorBalancesRequest, opts ...grpc.CallOption) (*v1alpha1.ValidatorBalances, error)
-	GetValidatorQueue(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*v1alpha1.ValidatorQueue, error)
-	GetPeers(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*v1alpha1.Peers, error)
+	GetValidatorQueue(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*v1alpha1.ValidatorQueue, error)
+	GetPeers(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*v1alpha1.Peers, error)
 }
 
 type beaconClient struct {
@@ -1965,7 +1965,7 @@ func NewBeaconClient(cc *grpc.ClientConn) BeaconClient {
 	return &beaconClient{cc}
 }
 
-func (c *beaconClient) GetBeaconStatus(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*BeaconStatusResponse, error) {
+func (c *beaconClient) GetBeaconStatus(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*BeaconStatusResponse, error) {
 	out := new(BeaconStatusResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Beacon/GetBeaconStatus", in, out, opts...)
 	if err != nil {
@@ -2010,7 +2010,7 @@ func (c *beaconClient) GetValidatorBalances(ctx context.Context, in *v1alpha1.Li
 	return out, nil
 }
 
-func (c *beaconClient) GetValidatorQueue(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*v1alpha1.ValidatorQueue, error) {
+func (c *beaconClient) GetValidatorQueue(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*v1alpha1.ValidatorQueue, error) {
 	out := new(v1alpha1.ValidatorQueue)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Beacon/GetValidatorQueue", in, out, opts...)
 	if err != nil {
@@ -2019,7 +2019,7 @@ func (c *beaconClient) GetValidatorQueue(ctx context.Context, in *types.Empty, o
 	return out, nil
 }
 
-func (c *beaconClient) GetPeers(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*v1alpha1.Peers, error) {
+func (c *beaconClient) GetPeers(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*v1alpha1.Peers, error) {
 	out := new(v1alpha1.Peers)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Beacon/GetPeers", in, out, opts...)
 	if err != nil {
@@ -2030,20 +2030,20 @@ func (c *beaconClient) GetPeers(ctx context.Context, in *types.Empty, opts ...gr
 
 // BeaconServer is the server API for Beacon service.
 type BeaconServer interface {
-	GetBeaconStatus(context.Context, *types.Empty) (*BeaconStatusResponse, error)
+	GetBeaconStatus(context.Context, *empty.Empty) (*BeaconStatusResponse, error)
 	GetValidatorParticipation(context.Context, *v1alpha1.GetValidatorParticipationRequest) (*v1alpha1.ValidatorParticipationResponse, error)
 	GetValidatorPerformance(context.Context, *v1alpha1.ValidatorPerformanceRequest) (*v1alpha1.ValidatorPerformanceResponse, error)
 	GetValidators(context.Context, *v1alpha1.ListValidatorsRequest) (*v1alpha1.Validators, error)
 	GetValidatorBalances(context.Context, *v1alpha1.ListValidatorBalancesRequest) (*v1alpha1.ValidatorBalances, error)
-	GetValidatorQueue(context.Context, *types.Empty) (*v1alpha1.ValidatorQueue, error)
-	GetPeers(context.Context, *types.Empty) (*v1alpha1.Peers, error)
+	GetValidatorQueue(context.Context, *empty.Empty) (*v1alpha1.ValidatorQueue, error)
+	GetPeers(context.Context, *empty.Empty) (*v1alpha1.Peers, error)
 }
 
 // UnimplementedBeaconServer can be embedded to have forward compatible implementations.
 type UnimplementedBeaconServer struct {
 }
 
-func (*UnimplementedBeaconServer) GetBeaconStatus(ctx context.Context, req *types.Empty) (*BeaconStatusResponse, error) {
+func (*UnimplementedBeaconServer) GetBeaconStatus(ctx context.Context, req *empty.Empty) (*BeaconStatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBeaconStatus not implemented")
 }
 func (*UnimplementedBeaconServer) GetValidatorParticipation(ctx context.Context, req *v1alpha1.GetValidatorParticipationRequest) (*v1alpha1.ValidatorParticipationResponse, error) {
@@ -2058,10 +2058,10 @@ func (*UnimplementedBeaconServer) GetValidators(ctx context.Context, req *v1alph
 func (*UnimplementedBeaconServer) GetValidatorBalances(ctx context.Context, req *v1alpha1.ListValidatorBalancesRequest) (*v1alpha1.ValidatorBalances, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetValidatorBalances not implemented")
 }
-func (*UnimplementedBeaconServer) GetValidatorQueue(ctx context.Context, req *types.Empty) (*v1alpha1.ValidatorQueue, error) {
+func (*UnimplementedBeaconServer) GetValidatorQueue(ctx context.Context, req *empty.Empty) (*v1alpha1.ValidatorQueue, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetValidatorQueue not implemented")
 }
-func (*UnimplementedBeaconServer) GetPeers(ctx context.Context, req *types.Empty) (*v1alpha1.Peers, error) {
+func (*UnimplementedBeaconServer) GetPeers(ctx context.Context, req *empty.Empty) (*v1alpha1.Peers, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPeers not implemented")
 }
 
@@ -2070,7 +2070,7 @@ func RegisterBeaconServer(s *grpc.Server, srv BeaconServer) {
 }
 
 func _Beacon_GetBeaconStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(types.Empty)
+	in := new(empty.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -2082,7 +2082,7 @@ func _Beacon_GetBeaconStatus_Handler(srv interface{}, ctx context.Context, dec f
 		FullMethod: "/ethereum.validator.accounts.v2.Beacon/GetBeaconStatus",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconServer).GetBeaconStatus(ctx, req.(*types.Empty))
+		return srv.(BeaconServer).GetBeaconStatus(ctx, req.(*empty.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2160,7 +2160,7 @@ func _Beacon_GetValidatorBalances_Handler(srv interface{}, ctx context.Context, 
 }
 
 func _Beacon_GetValidatorQueue_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(types.Empty)
+	in := new(empty.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -2172,13 +2172,13 @@ func _Beacon_GetValidatorQueue_Handler(srv interface{}, ctx context.Context, dec
 		FullMethod: "/ethereum.validator.accounts.v2.Beacon/GetValidatorQueue",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconServer).GetValidatorQueue(ctx, req.(*types.Empty))
+		return srv.(BeaconServer).GetValidatorQueue(ctx, req.(*empty.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Beacon_GetPeers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(types.Empty)
+	in := new(empty.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -2190,7 +2190,7 @@ func _Beacon_GetPeers_Handler(srv interface{}, ctx context.Context, dec func(int
 		FullMethod: "/ethereum.validator.accounts.v2.Beacon/GetPeers",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconServer).GetPeers(ctx, req.(*types.Empty))
+		return srv.(BeaconServer).GetPeers(ctx, req.(*empty.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2236,11 +2236,11 @@ var _Beacon_serviceDesc = grpc.ServiceDesc{
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type HealthClient interface {
-	GetBeaconNodeConnection(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*NodeConnectionResponse, error)
-	GetLogsEndpoints(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*LogsEndpointResponse, error)
-	GetVersion(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*VersionResponse, error)
-	StreamBeaconLogs(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (Health_StreamBeaconLogsClient, error)
-	StreamValidatorLogs(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (Health_StreamValidatorLogsClient, error)
+	GetBeaconNodeConnection(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*NodeConnectionResponse, error)
+	GetLogsEndpoints(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*LogsEndpointResponse, error)
+	GetVersion(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*VersionResponse, error)
+	StreamBeaconLogs(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (Health_StreamBeaconLogsClient, error)
+	StreamValidatorLogs(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (Health_StreamValidatorLogsClient, error)
 }
 
 type healthClient struct {
@@ -2251,7 +2251,7 @@ func NewHealthClient(cc *grpc.ClientConn) HealthClient {
 	return &healthClient{cc}
 }
 
-func (c *healthClient) GetBeaconNodeConnection(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*NodeConnectionResponse, error) {
+func (c *healthClient) GetBeaconNodeConnection(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*NodeConnectionResponse, error) {
 	out := new(NodeConnectionResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Health/GetBeaconNodeConnection", in, out, opts...)
 	if err != nil {
@@ -2260,7 +2260,7 @@ func (c *healthClient) GetBeaconNodeConnection(ctx context.Context, in *types.Em
 	return out, nil
 }
 
-func (c *healthClient) GetLogsEndpoints(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*LogsEndpointResponse, error) {
+func (c *healthClient) GetLogsEndpoints(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*LogsEndpointResponse, error) {
 	out := new(LogsEndpointResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Health/GetLogsEndpoints", in, out, opts...)
 	if err != nil {
@@ -2269,7 +2269,7 @@ func (c *healthClient) GetLogsEndpoints(ctx context.Context, in *types.Empty, op
 	return out, nil
 }
 
-func (c *healthClient) GetVersion(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*VersionResponse, error) {
+func (c *healthClient) GetVersion(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*VersionResponse, error) {
 	out := new(VersionResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Health/GetVersion", in, out, opts...)
 	if err != nil {
@@ -2278,7 +2278,7 @@ func (c *healthClient) GetVersion(ctx context.Context, in *types.Empty, opts ...
 	return out, nil
 }
 
-func (c *healthClient) StreamBeaconLogs(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (Health_StreamBeaconLogsClient, error) {
+func (c *healthClient) StreamBeaconLogs(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (Health_StreamBeaconLogsClient, error) {
 	stream, err := c.cc.NewStream(ctx, &_Health_serviceDesc.Streams[0], "/ethereum.validator.accounts.v2.Health/StreamBeaconLogs", opts...)
 	if err != nil {
 		return nil, err
@@ -2310,7 +2310,7 @@ func (x *healthStreamBeaconLogsClient) Recv() (*v1.LogsResponse, error) {
 	return m, nil
 }
 
-func (c *healthClient) StreamValidatorLogs(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (Health_StreamValidatorLogsClient, error) {
+func (c *healthClient) StreamValidatorLogs(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (Health_StreamValidatorLogsClient, error) {
 	stream, err := c.cc.NewStream(ctx, &_Health_serviceDesc.Streams[1], "/ethereum.validator.accounts.v2.Health/StreamValidatorLogs", opts...)
 	if err != nil {
 		return nil, err
@@ -2344,30 +2344,30 @@ func (x *healthStreamValidatorLogsClient) Recv() (*LogsResponse, error) {
 
 // HealthServer is the server API for Health service.
 type HealthServer interface {
-	GetBeaconNodeConnection(context.Context, *types.Empty) (*NodeConnectionResponse, error)
-	GetLogsEndpoints(context.Context, *types.Empty) (*LogsEndpointResponse, error)
-	GetVersion(context.Context, *types.Empty) (*VersionResponse, error)
-	StreamBeaconLogs(*types.Empty, Health_StreamBeaconLogsServer) error
-	StreamValidatorLogs(*types.Empty, Health_StreamValidatorLogsServer) error
+	GetBeaconNodeConnection(context.Context, *empty.Empty) (*NodeConnectionResponse, error)
+	GetLogsEndpoints(context.Context, *empty.Empty) (*LogsEndpointResponse, error)
+	GetVersion(context.Context, *empty.Empty) (*VersionResponse, error)
+	StreamBeaconLogs(*empty.Empty, Health_StreamBeaconLogsServer) error
+	StreamValidatorLogs(*empty.Empty, Health_StreamValidatorLogsServer) error
 }
 
 // UnimplementedHealthServer can be embedded to have forward compatible implementations.
 type UnimplementedHealthServer struct {
 }
 
-func (*UnimplementedHealthServer) GetBeaconNodeConnection(ctx context.Context, req *types.Empty) (*NodeConnectionResponse, error) {
+func (*UnimplementedHealthServer) GetBeaconNodeConnection(ctx context.Context, req *empty.Empty) (*NodeConnectionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBeaconNodeConnection not implemented")
 }
-func (*UnimplementedHealthServer) GetLogsEndpoints(ctx context.Context, req *types.Empty) (*LogsEndpointResponse, error) {
+func (*UnimplementedHealthServer) GetLogsEndpoints(ctx context.Context, req *empty.Empty) (*LogsEndpointResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetLogsEndpoints not implemented")
 }
-func (*UnimplementedHealthServer) GetVersion(ctx context.Context, req *types.Empty) (*VersionResponse, error) {
+func (*UnimplementedHealthServer) GetVersion(ctx context.Context, req *empty.Empty) (*VersionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetVersion not implemented")
 }
-func (*UnimplementedHealthServer) StreamBeaconLogs(req *types.Empty, srv Health_StreamBeaconLogsServer) error {
+func (*UnimplementedHealthServer) StreamBeaconLogs(req *empty.Empty, srv Health_StreamBeaconLogsServer) error {
 	return status.Errorf(codes.Unimplemented, "method StreamBeaconLogs not implemented")
 }
-func (*UnimplementedHealthServer) StreamValidatorLogs(req *types.Empty, srv Health_StreamValidatorLogsServer) error {
+func (*UnimplementedHealthServer) StreamValidatorLogs(req *empty.Empty, srv Health_StreamValidatorLogsServer) error {
 	return status.Errorf(codes.Unimplemented, "method StreamValidatorLogs not implemented")
 }
 
@@ -2376,7 +2376,7 @@ func RegisterHealthServer(s *grpc.Server, srv HealthServer) {
 }
 
 func _Health_GetBeaconNodeConnection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(types.Empty)
+	in := new(empty.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -2388,13 +2388,13 @@ func _Health_GetBeaconNodeConnection_Handler(srv interface{}, ctx context.Contex
 		FullMethod: "/ethereum.validator.accounts.v2.Health/GetBeaconNodeConnection",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HealthServer).GetBeaconNodeConnection(ctx, req.(*types.Empty))
+		return srv.(HealthServer).GetBeaconNodeConnection(ctx, req.(*empty.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Health_GetLogsEndpoints_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(types.Empty)
+	in := new(empty.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -2406,13 +2406,13 @@ func _Health_GetLogsEndpoints_Handler(srv interface{}, ctx context.Context, dec 
 		FullMethod: "/ethereum.validator.accounts.v2.Health/GetLogsEndpoints",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HealthServer).GetLogsEndpoints(ctx, req.(*types.Empty))
+		return srv.(HealthServer).GetLogsEndpoints(ctx, req.(*empty.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Health_GetVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(types.Empty)
+	in := new(empty.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -2424,13 +2424,13 @@ func _Health_GetVersion_Handler(srv interface{}, ctx context.Context, dec func(i
 		FullMethod: "/ethereum.validator.accounts.v2.Health/GetVersion",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HealthServer).GetVersion(ctx, req.(*types.Empty))
+		return srv.(HealthServer).GetVersion(ctx, req.(*empty.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Health_StreamBeaconLogs_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(types.Empty)
+	m := new(empty.Empty)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
@@ -2451,7 +2451,7 @@ func (x *healthStreamBeaconLogsServer) Send(m *v1.LogsResponse) error {
 }
 
 func _Health_StreamValidatorLogs_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(types.Empty)
+	m := new(empty.Empty)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
@@ -2507,10 +2507,10 @@ var _Health_serviceDesc = grpc.ServiceDesc{
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type AuthClient interface {
-	HasUsedWeb(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*HasUsedWebResponse, error)
+	HasUsedWeb(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*HasUsedWebResponse, error)
 	Login(ctx context.Context, in *AuthRequest, opts ...grpc.CallOption) (*AuthResponse, error)
 	Signup(ctx context.Context, in *AuthRequest, opts ...grpc.CallOption) (*AuthResponse, error)
-	Logout(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*types.Empty, error)
+	Logout(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*empty.Empty, error)
 }
 
 type authClient struct {
@@ -2521,7 +2521,7 @@ func NewAuthClient(cc *grpc.ClientConn) AuthClient {
 	return &authClient{cc}
 }
 
-func (c *authClient) HasUsedWeb(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*HasUsedWebResponse, error) {
+func (c *authClient) HasUsedWeb(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*HasUsedWebResponse, error) {
 	out := new(HasUsedWebResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Auth/HasUsedWeb", in, out, opts...)
 	if err != nil {
@@ -2548,8 +2548,8 @@ func (c *authClient) Signup(ctx context.Context, in *AuthRequest, opts ...grpc.C
 	return out, nil
 }
 
-func (c *authClient) Logout(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*types.Empty, error) {
-	out := new(types.Empty)
+func (c *authClient) Logout(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*empty.Empty, error) {
+	out := new(empty.Empty)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Auth/Logout", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -2559,17 +2559,17 @@ func (c *authClient) Logout(ctx context.Context, in *types.Empty, opts ...grpc.C
 
 // AuthServer is the server API for Auth service.
 type AuthServer interface {
-	HasUsedWeb(context.Context, *types.Empty) (*HasUsedWebResponse, error)
+	HasUsedWeb(context.Context, *empty.Empty) (*HasUsedWebResponse, error)
 	Login(context.Context, *AuthRequest) (*AuthResponse, error)
 	Signup(context.Context, *AuthRequest) (*AuthResponse, error)
-	Logout(context.Context, *types.Empty) (*types.Empty, error)
+	Logout(context.Context, *empty.Empty) (*empty.Empty, error)
 }
 
 // UnimplementedAuthServer can be embedded to have forward compatible implementations.
 type UnimplementedAuthServer struct {
 }
 
-func (*UnimplementedAuthServer) HasUsedWeb(ctx context.Context, req *types.Empty) (*HasUsedWebResponse, error) {
+func (*UnimplementedAuthServer) HasUsedWeb(ctx context.Context, req *empty.Empty) (*HasUsedWebResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method HasUsedWeb not implemented")
 }
 func (*UnimplementedAuthServer) Login(ctx context.Context, req *AuthRequest) (*AuthResponse, error) {
@@ -2578,7 +2578,7 @@ func (*UnimplementedAuthServer) Login(ctx context.Context, req *AuthRequest) (*A
 func (*UnimplementedAuthServer) Signup(ctx context.Context, req *AuthRequest) (*AuthResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Signup not implemented")
 }
-func (*UnimplementedAuthServer) Logout(ctx context.Context, req *types.Empty) (*types.Empty, error) {
+func (*UnimplementedAuthServer) Logout(ctx context.Context, req *empty.Empty) (*empty.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Logout not implemented")
 }
 
@@ -2587,7 +2587,7 @@ func RegisterAuthServer(s *grpc.Server, srv AuthServer) {
 }
 
 func _Auth_HasUsedWeb_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(types.Empty)
+	in := new(empty.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -2599,7 +2599,7 @@ func _Auth_HasUsedWeb_Handler(srv interface{}, ctx context.Context, dec func(int
 		FullMethod: "/ethereum.validator.accounts.v2.Auth/HasUsedWeb",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServer).HasUsedWeb(ctx, req.(*types.Empty))
+		return srv.(AuthServer).HasUsedWeb(ctx, req.(*empty.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2641,7 +2641,7 @@ func _Auth_Signup_Handler(srv interface{}, ctx context.Context, dec func(interfa
 }
 
 func _Auth_Logout_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(types.Empty)
+	in := new(empty.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -2653,7 +2653,7 @@ func _Auth_Logout_Handler(srv interface{}, ctx context.Context, dec func(interfa
 		FullMethod: "/ethereum.validator.accounts.v2.Auth/Logout",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServer).Logout(ctx, req.(*types.Empty))
+		return srv.(AuthServer).Logout(ctx, req.(*empty.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }

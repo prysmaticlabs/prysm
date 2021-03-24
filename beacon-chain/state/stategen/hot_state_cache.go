@@ -6,7 +6,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 )
 
 var (
@@ -42,34 +42,34 @@ func newHotStateCache() *hotStateCache {
 
 // Get returns a cached response via input block root, if any.
 // The response is copied by default.
-func (c *hotStateCache) get(root [32]byte) *stateTrie.BeaconState {
+func (c *hotStateCache) get(root [32]byte) iface.BeaconState {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	item, exists := c.cache.Get(root)
 
 	if exists && item != nil {
 		hotStateCacheHit.Inc()
-		return item.(*stateTrie.BeaconState).Copy()
+		return item.(iface.BeaconState).Copy()
 	}
 	hotStateCacheMiss.Inc()
 	return nil
 }
 
 // GetWithoutCopy returns a non-copied cached response via input block root.
-func (c *hotStateCache) getWithoutCopy(root [32]byte) *stateTrie.BeaconState {
+func (c *hotStateCache) getWithoutCopy(root [32]byte) iface.BeaconState {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	item, exists := c.cache.Get(root)
 	if exists && item != nil {
 		hotStateCacheHit.Inc()
-		return item.(*stateTrie.BeaconState)
+		return item.(iface.BeaconState)
 	}
 	hotStateCacheMiss.Inc()
 	return nil
 }
 
 // put the response in the cache.
-func (c *hotStateCache) put(root [32]byte, state *stateTrie.BeaconState) {
+func (c *hotStateCache) put(root [32]byte, state iface.BeaconState) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	c.cache.Add(root, state)

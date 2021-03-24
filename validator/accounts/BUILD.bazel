@@ -7,7 +7,6 @@ go_library(
         "accounts.go",
         "accounts_backup.go",
         "accounts_delete.go",
-        "accounts_enable_disable.go",
         "accounts_exit.go",
         "accounts_helper.go",
         "accounts_import.go",
@@ -63,7 +62,6 @@ go_test(
     srcs = [
         "accounts_backup_test.go",
         "accounts_delete_test.go",
-        "accounts_enable_disable_test.go",
         "accounts_exit_test.go",
         "accounts_import_test.go",
         "accounts_list_test.go",

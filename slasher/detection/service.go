@@ -48,20 +48,14 @@ func (s Status) String() string {
 
 // Service struct for the detection service of the slasher.
 type Service struct {
-	ctx                   context.Context
-	cancel                context.CancelFunc
-	slasherDB             db.Database
-	blocksChan            chan *ethpb.SignedBeaconBlock
-	attsChan              chan *ethpb.IndexedAttestation
-	notifier              beaconclient.Notifier
-	chainFetcher          beaconclient.ChainFetcher
-	beaconClient          *beaconclient.Service
-	attesterSlashingsFeed *event.Feed
-	proposerSlashingsFeed *event.Feed
-	minMaxSpanDetector    iface.SpanDetector
-	proposalsDetector     proposerIface.ProposalsDetector
-	historicalDetection   bool
-	status                Status
+	cfg                *Config
+	ctx                context.Context
+	cancel             context.CancelFunc
+	blocksChan         chan *ethpb.SignedBeaconBlock
+	attsChan           chan *ethpb.IndexedAttestation
+	minMaxSpanDetector iface.SpanDetector
+	proposalsDetector  proposerIface.ProposalsDetector
+	status             Status
 }
 
 // Config options for the detection service.
@@ -79,20 +73,14 @@ type Config struct {
 func NewService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:                   ctx,
-		cancel:                cancel,
-		notifier:              cfg.Notifier,
-		chainFetcher:          cfg.ChainFetcher,
-		slasherDB:             cfg.SlasherDB,
-		beaconClient:          cfg.BeaconClient,
-		blocksChan:            make(chan *ethpb.SignedBeaconBlock, 1),
-		attsChan:              make(chan *ethpb.IndexedAttestation, 1),
-		attesterSlashingsFeed: cfg.AttesterSlashingsFeed,
-		proposerSlashingsFeed: cfg.ProposerSlashingsFeed,
-		minMaxSpanDetector:    attestations.NewSpanDetector(cfg.SlasherDB),
-		proposalsDetector:     proposals.NewProposeDetector(cfg.SlasherDB),
-		historicalDetection:   cfg.HistoricalDetection,
-		status:                None,
+		cfg:                cfg,
+		ctx:                ctx,
+		cancel:             cancel,
+		blocksChan:         make(chan *ethpb.SignedBeaconBlock, 1),
+		attsChan:           make(chan *ethpb.IndexedAttestation, 1),
+		minMaxSpanDetector: attestations.NewSpanDetector(cfg.SlasherDB),
+		proposalsDetector:  proposals.NewProposeDetector(cfg.SlasherDB),
+		status:             None,
 	}
 }
 
@@ -117,12 +105,12 @@ func (s *Service) Start() {
 	// to be fully synced before proceeding.
 	s.status = Started
 	ch := make(chan bool)
-	sub := s.notifier.ClientReadyFeed().Subscribe(ch)
+	sub := s.cfg.Notifier.ClientReadyFeed().Subscribe(ch)
 	s.status = Syncing
 	<-ch
 	sub.Unsubscribe()
 
-	if s.historicalDetection {
+	if s.cfg.HistoricalDetection {
 		// The detection service runs detection on all historical
 		// chain data since genesis.
 		s.status = HistoricalDetection
@@ -130,8 +118,8 @@ func (s *Service) Start() {
 	}
 	s.status = Ready
 	// We listen to a stream of blocks and attestations from the beacon node.
-	go s.beaconClient.ReceiveBlocks(s.ctx)
-	go s.beaconClient.ReceiveAttestations(s.ctx)
+	go s.cfg.BeaconClient.ReceiveBlocks(s.ctx)
+	go s.cfg.BeaconClient.ReceiveAttestations(s.ctx)
 	// We subscribe to incoming blocks from the beacon node via
 	// our gRPC client to keep detecting slashable offenses.
 	go s.detectIncomingBlocks(s.ctx, s.blocksChan)
@@ -143,12 +131,12 @@ func (s *Service) detectHistoricalChainData(ctx context.Context) {
 	defer span.End()
 	// We fetch both the latest persisted chain head in our DB as well
 	// as the current chain head from the beacon node via gRPC.
-	latestStoredHead, err := s.slasherDB.ChainHead(ctx)
+	latestStoredHead, err := s.cfg.SlasherDB.ChainHead(ctx)
 	if err != nil {
 		log.WithError(err).Error("Could not retrieve chain head from DB")
 		return
 	}
-	currentChainHead, err := s.chainFetcher.ChainHead(ctx)
+	currentChainHead, err := s.cfg.ChainFetcher.ChainHead(ctx)
 	if err != nil {
 		log.WithError(err).Error("Cannot retrieve chain head from beacon node")
 		return
@@ -169,12 +157,12 @@ func (s *Service) detectHistoricalChainData(ctx context.Context) {
 			log.WithError(err).Errorf("Could not fetch attestations for epoch: %d", epoch)
 			return
 		}
-		indexedAtts, err := s.beaconClient.RequestHistoricalAttestations(ctx, epoch)
+		indexedAtts, err := s.cfg.BeaconClient.RequestHistoricalAttestations(ctx, epoch)
 		if err != nil {
 			log.WithError(err).Errorf("Could not fetch attestations for epoch: %d", epoch)
 			return
 		}
-		if err := s.slasherDB.SaveIndexedAttestations(ctx, indexedAtts); err != nil {
+		if err := s.cfg.SlasherDB.SaveIndexedAttestations(ctx, indexedAtts); err != nil {
 			log.WithError(err).Error("could not save indexed attestations")
 			return
 		}
@@ -201,13 +189,13 @@ func (s *Service) detectHistoricalChainData(ctx context.Context) {
 			}
 		}
 		latestStoredHead = &ethpb.ChainHead{HeadEpoch: epoch}
-		if err := s.slasherDB.SaveChainHead(ctx, latestStoredHead); err != nil {
+		if err := s.cfg.SlasherDB.SaveChainHead(ctx, latestStoredHead); err != nil {
 			log.WithError(err).Error("Could not persist chain head to disk")
 		}
 		storedEpoch = epoch
-		s.slasherDB.RemoveOldestFromCache(ctx)
+		s.cfg.SlasherDB.RemoveOldestFromCache(ctx)
 		if epoch == currentChainHead.HeadEpoch-1 {
-			currentChainHead, err = s.chainFetcher.ChainHead(ctx)
+			currentChainHead, err = s.cfg.ChainFetcher.ChainHead(ctx)
 			if err != nil {
 				log.WithError(err).Error("Cannot retrieve chain head from beacon node")
 				return
@@ -224,7 +212,7 @@ func (s *Service) submitAttesterSlashings(ctx context.Context, slashings []*ethp
 	ctx, span := trace.StartSpan(ctx, "detection.submitAttesterSlashings")
 	defer span.End()
 	for i := 0; i < len(slashings); i++ {
-		s.attesterSlashingsFeed.Send(slashings[i])
+		s.cfg.AttesterSlashingsFeed.Send(slashings[i])
 	}
 }
 
@@ -238,6 +226,6 @@ func (s *Service) submitProposerSlashing(ctx context.Context, slashing *ethpb.Pr
 			"proposerIdxHeader1": slashing.Header_1.Header.ProposerIndex,
 			"proposerIdxHeader2": slashing.Header_2.Header.ProposerIndex,
 		}).Info("Found a proposer slashing! Submitting to beacon node")
-		s.proposerSlashingsFeed.Send(slashing)
+		s.cfg.ProposerSlashingsFeed.Send(slashing)
 	}
 }

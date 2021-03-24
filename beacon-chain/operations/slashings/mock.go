@@ -4,7 +4,7 @@ import (
 	"context"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 )
 
 // PoolMock is a fake implementation of PoolManager.
@@ -14,23 +14,23 @@ type PoolMock struct {
 }
 
 // PendingAttesterSlashings --
-func (m *PoolMock) PendingAttesterSlashings(_ context.Context, _ *state.BeaconState, _ bool) []*ethpb.AttesterSlashing {
+func (m *PoolMock) PendingAttesterSlashings(_ context.Context, _ iface.ReadOnlyBeaconState, _ bool) []*ethpb.AttesterSlashing {
 	return m.PendingAttSlashings
 }
 
 // PendingProposerSlashings --
-func (m *PoolMock) PendingProposerSlashings(_ context.Context, _ *state.BeaconState, _ bool) []*ethpb.ProposerSlashing {
+func (m *PoolMock) PendingProposerSlashings(_ context.Context, _ iface.ReadOnlyBeaconState, _ bool) []*ethpb.ProposerSlashing {
 	return m.PendingPropSlashings
 }
 
 // InsertAttesterSlashing --
-func (m *PoolMock) InsertAttesterSlashing(_ context.Context, _ *state.BeaconState, slashing *ethpb.AttesterSlashing) error {
+func (m *PoolMock) InsertAttesterSlashing(_ context.Context, _ iface.ReadOnlyBeaconState, slashing *ethpb.AttesterSlashing) error {
 	m.PendingAttSlashings = append(m.PendingAttSlashings, slashing)
 	return nil
 }
 
 // InsertProposerSlashing --
-func (m *PoolMock) InsertProposerSlashing(_ context.Context, _ *state.BeaconState, slashing *ethpb.ProposerSlashing) error {
+func (m *PoolMock) InsertProposerSlashing(_ context.Context, _ iface.BeaconState, slashing *ethpb.ProposerSlashing) error {
 	m.PendingPropSlashings = append(m.PendingPropSlashings, slashing)
 	return nil
 }

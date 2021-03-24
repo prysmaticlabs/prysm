@@ -167,6 +167,18 @@ func V1ExitToV1Alpha1(v1Exit *ethpb.SignedVoluntaryExit) *ethpb_alpha.SignedVolu
 	}
 }
 
+// V1AttToV1Alpha1 converts a v1 attestation to v1alpha1.
+func V1AttToV1Alpha1(v1Att *ethpb.Attestation) *ethpb_alpha.Attestation {
+	if v1Att == nil {
+		return &ethpb_alpha.Attestation{}
+	}
+	return &ethpb_alpha.Attestation{
+		AggregationBits: v1Att.AggregationBits,
+		Data:            V1AttDataToV1Alpha1(v1Att.Data),
+		Signature:       v1Att.Signature,
+	}
+}
+
 // V1IndexedAttToV1Alpha1 converts a v1 indexed attestation to v1alpha1.
 func V1IndexedAttToV1Alpha1(v1Att *ethpb.IndexedAttestation) *ethpb_alpha.IndexedAttestation {
 	if v1Att == nil {

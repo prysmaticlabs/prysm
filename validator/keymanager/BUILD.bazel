@@ -3,7 +3,10 @@ load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["types.go"],
+    srcs = [
+        "constants.go",
+        "types.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/validator/keymanager",
     visibility = [
         "//tools/keystores:__pkg__",
@@ -20,8 +23,8 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = ["types_test.go"],
-    embed = [":go_default_library"],
     deps = [
+        ":go_default_library",
         "//validator/keymanager/derived:go_default_library",
         "//validator/keymanager/imported:go_default_library",
         "//validator/keymanager/remote:go_default_library",
