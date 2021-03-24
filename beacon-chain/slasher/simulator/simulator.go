@@ -185,7 +185,10 @@ func (s *Simulator) simulateBlocksAndAttestations(ctx context.Context) {
 				s.beaconBlocksFeed.Send(bb)
 			}
 
-			atts, attSlashings := generateAttestationsForSlot(s.srvConfig.Params, slot)
+			atts, attSlashings, err := s.generateAttestationsForSlot(ctx, slot)
+			if err != nil {
+				log.WithError(err).Fatal("Could not generate block headers for slot")
+			}
 			log.WithFields(logrus.Fields{
 				"numAtts":      len(atts),
 				"numSlashable": len(propSlashings),
