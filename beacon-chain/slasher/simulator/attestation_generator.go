@@ -7,6 +7,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -70,29 +71,20 @@ func (s *Simulator) generateAttestationsForSlot(
 			}
 
 			// Sign the attestation with a valid signature.
-			domain, err := helpers.Domain(
-				beaconState.Fork(),
-				0,
-				params.BeaconConfig().DomainBeaconAttester,
-				beaconState.GenesisValidatorRoot(),
-			)
+			aggSig, err := s.aggregateSigForAttestation(beaconState, att)
 			if err != nil {
 				return nil, nil, err
 			}
-			signingRoot, err := helpers.ComputeSigningRoot(att.Data, domain)
-			if err != nil {
-				return nil, nil, err
-			}
-			sigs := make([]bls.Signature, len(att.AttestingIndices))
-			for i, validatorIndex := range att.AttestingIndices {
-				privKey := s.srvConfig.PrivateKeysByValidatorIndex[types.ValidatorIndex(validatorIndex)]
-				sigs[i] = privKey.Sign(signingRoot[:])
-			}
-			att.Signature = bls.AggregateSignatures(sigs).Marshal()
+			att.Signature = aggSig.Marshal()
 
 			attestations = append(attestations, att)
 			if rand.NewGenerator().Float64() < s.srvConfig.Params.AttesterSlashingProbab {
 				slashableAtt := makeSlashableFromAtt(att, []uint64{indices[0]})
+				aggSig, err := s.aggregateSigForAttestation(beaconState, slashableAtt)
+				if err != nil {
+					return nil, nil, err
+				}
+				slashableAtt.Signature = aggSig.Marshal()
 				slashedIndices = append(slashedIndices, slashableAtt.AttestingIndices...)
 				slashings = append(slashings, &ethpb.AttesterSlashing{
 					Attestation_1: att,
@@ -113,28 +105,52 @@ func (s *Simulator) generateAttestationsForSlot(
 	return attestations, slashings, nil
 }
 
+func (s *Simulator) aggregateSigForAttestation(
+	beaconState *state.BeaconState, att *ethpb.IndexedAttestation,
+) (bls.Signature, error) {
+	domain, err := helpers.Domain(
+		beaconState.Fork(),
+		att.Data.Target.Epoch,
+		params.BeaconConfig().DomainBeaconAttester,
+		beaconState.GenesisValidatorRoot(),
+	)
+	if err != nil {
+		return nil, err
+	}
+	signingRoot, err := helpers.ComputeSigningRoot(att.Data, domain)
+	if err != nil {
+		return nil, err
+	}
+	sigs := make([]bls.Signature, len(att.AttestingIndices))
+	for i, validatorIndex := range att.AttestingIndices {
+		privKey := s.srvConfig.PrivateKeysByValidatorIndex[types.ValidatorIndex(validatorIndex)]
+		sigs[i] = privKey.Sign(signingRoot[:])
+	}
+	return bls.AggregateSignatures(sigs), nil
+}
+
 func makeSlashableFromAtt(att *ethpb.IndexedAttestation, indices []uint64) *ethpb.IndexedAttestation {
-	if att.Data.Source.Epoch <= 2 {
-		return makeDoubleVoteFromAtt(att, indices)
-	}
-	attData := &ethpb.AttestationData{
-		Slot:            att.Data.Slot,
-		CommitteeIndex:  att.Data.CommitteeIndex,
-		BeaconBlockRoot: att.Data.BeaconBlockRoot,
-		Source: &ethpb.Checkpoint{
-			Epoch: att.Data.Source.Epoch - 3,
-			Root:  att.Data.Source.Root,
-		},
-		Target: &ethpb.Checkpoint{
-			Epoch: att.Data.Target.Epoch,
-			Root:  att.Data.Target.Root,
-		},
-	}
-	return &ethpb.IndexedAttestation{
-		AttestingIndices: indices,
-		Data:             attData,
-		Signature:        params.BeaconConfig().EmptySignature[:],
-	}
+	//if att.Data.Source.Epoch <= 2 {
+	return makeDoubleVoteFromAtt(att, indices)
+	//}
+	//attData := &ethpb.AttestationData{
+	//	Slot:            att.Data.Slot,
+	//	CommitteeIndex:  att.Data.CommitteeIndex,
+	//	BeaconBlockRoot: att.Data.BeaconBlockRoot,
+	//	Source: &ethpb.Checkpoint{
+	//		Epoch: att.Data.Source.Epoch - 3,
+	//		Root:  att.Data.Source.Root,
+	//	},
+	//	Target: &ethpb.Checkpoint{
+	//		Epoch: att.Data.Target.Epoch,
+	//		Root:  att.Data.Target.Root,
+	//	},
+	//}
+	//return &ethpb.IndexedAttestation{
+	//	AttestingIndices: indices,
+	//	Data:             attData,
+	//	Signature:        params.BeaconConfig().EmptySignature[:],
+	//}
 }
 
 func makeDoubleVoteFromAtt(att *ethpb.IndexedAttestation, indices []uint64) *ethpb.IndexedAttestation {

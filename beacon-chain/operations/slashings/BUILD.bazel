@@ -14,8 +14,8 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings",
     visibility = [
         "//beacon-chain:__subpackages__",
-        "//fuzz:__pkg__",
         "//endtoend:__subpackages__",
+        "//fuzz:__pkg__",
     ],
     deps = [
         "//beacon-chain/core/blocks:go_default_library",

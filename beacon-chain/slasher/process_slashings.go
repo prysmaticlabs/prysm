@@ -22,13 +22,13 @@ func (s *Service) processAttesterSlashings(ctx context.Context, slashings []*eth
 	}
 	for _, sl := range slashings {
 		if err := s.verifyAttSignature(ctx, sl.Attestation_1); err != nil {
-			log.WithField("a", sl.Attestation_1).Debug(
+			log.WithError(err).WithField("a", sl.Attestation_1).Warn(
 				"Invalid signature for attestation in detected slashing offense",
 			)
 			continue
 		}
 		if err := s.verifyAttSignature(ctx, sl.Attestation_2); err != nil {
-			log.WithField("a", sl.Attestation_2).Debug(
+			log.WithError(err).WithField("b", sl.Attestation_2).Warn(
 				"Invalid signature for attestation in detected slashing offense",
 			)
 			continue
@@ -58,13 +58,13 @@ func (s *Service) processProposerSlashings(ctx context.Context, slashings []*eth
 	}
 	for _, sl := range slashings {
 		if err := s.verifyBlockSignature(ctx, sl.Header_1); err != nil {
-			log.WithField("a", sl.Header_1).Debug(
+			log.WithError(err).WithField("a", sl.Header_1).Warn(
 				"Invalid signature for block header in detected slashing offense",
 			)
 			continue
 		}
 		if err := s.verifyBlockSignature(ctx, sl.Header_2); err != nil {
-			log.WithField("a", sl.Header_2).Debug(
+			log.WithError(err).WithField("b", sl.Header_2).Warn(
 				"Invalid signature for block header in detected slashing offense",
 			)
 			continue
