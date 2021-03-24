@@ -175,6 +175,7 @@ func (v *ValidatorNode) Started() <-chan struct{} {
 
 // StartValidatorClients starts the configured amount of validators, also sending and mining their validator deposits.
 // Should only be used on initialization.
+// Deprecated: this method will be removed once ValidatorNodes component is used.
 func StartValidatorClients(t *testing.T, config *e2etypes.E2EConfig) {
 	// Always using genesis count since using anything else would be difficult to test for.
 	validatorNum := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
@@ -189,6 +190,7 @@ func StartValidatorClients(t *testing.T, config *e2etypes.E2EConfig) {
 }
 
 // StartNewValidatorClient starts a validator client with the passed in configuration.
+// Deprecated: this method will be removed once ValidatorNode component is used.
 func StartNewValidatorClient(t *testing.T, config *e2etypes.E2EConfig, validatorNum, index, offset int) {
 	binaryPath, found := bazel.FindBinary("cmd/validator", "validator")
 	if !found {
