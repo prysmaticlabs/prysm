@@ -208,6 +208,10 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		headTicker:              time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerETH1Block) * time.Second),
 	}
 
+	if err := s.ensureValidPowchainData(ctx); err != nil {
+		return nil, errors.Wrap(err, "unable to validate powchain data")
+	}
+
 	eth1Data, err := config.BeaconDB.PowchainData(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to retrieve eth1 data")
@@ -722,6 +726,20 @@ func (s *Service) initPOWService() {
 				s.retryETH1Node(err)
 				continue
 			}
+			// Handle edge case with embedded genesis state by fetching genesis header to determine
+			// its height.
+			if s.chainStartData.Chainstarted && s.chainStartData.GenesisBlock == 0 {
+				genHeader, err := s.eth1DataFetcher.HeaderByHash(ctx, common.BytesToHash(s.chainStartData.Eth1Data.BlockHash))
+				if err != nil {
+					log.Errorf("Unable to retrieve genesis ETH1.0 chain header: %v", err)
+					s.retryETH1Node(err)
+					continue
+				}
+				s.chainStartData.GenesisBlock = genHeader.Number.Uint64()
+				if err := s.savePowchainData(ctx); err != nil {
+					log.Errorf("Unable to save powchain data: %v", err)
+				}
+			}
 			return
 		}
 	}
@@ -893,6 +911,45 @@ func (s *Service) fallbackToNextEndpoint() {
 	}
 	s.currHttpEndpoint = s.cfg.HTTPEndpoints[nextIndex]
 	log.Infof("Falling back to alternative endpoint: %s", logutil.MaskCredentialsLogging(s.currHttpEndpoint))
+}
+
+// validates the current powchain data saved and makes sure that any
+// embedded genesis state is correctly accounted for.
+func (s *Service) ensureValidPowchainData(ctx context.Context) error {
+	genState, err := s.cfg.BeaconDB.GenesisState(ctx)
+	if err != nil {
+		return err
+	}
+	// Exit early if no genesis state is saved.
+	if genState == nil {
+		return nil
+	}
+	eth1Data, err := s.cfg.BeaconDB.PowchainData(ctx)
+	if err != nil {
+		return errors.Wrap(err, "unable to retrieve eth1 data")
+	}
+	if eth1Data == nil || !eth1Data.ChainstartData.Chainstarted {
+		pbState, err := stateV0.ProtobufBeaconState(s.preGenesisState.InnerStateUnsafe())
+		if err != nil {
+			return err
+		}
+		s.chainStartData = &protodb.ChainStartData{
+			Chainstarted:       true,
+			GenesisTime:        genState.GenesisTime(),
+			GenesisBlock:       0,
+			Eth1Data:           genState.Eth1Data(),
+			ChainstartDeposits: make([]*ethpb.Deposit, 0),
+		}
+		eth1Data = &protodb.ETH1ChainData{
+			CurrentEth1Data:   s.latestEth1Data,
+			ChainstartData:    s.chainStartData,
+			BeaconState:       pbState,
+			Trie:              s.depositTrie.ToProto(),
+			DepositContainers: s.cfg.DepositCache.AllDepositContainers(ctx),
+		}
+		return s.cfg.BeaconDB.SavePowchainData(ctx, eth1Data)
+	}
+	return nil
 }
 
 func dedupEndpoints(endpoints []string) []string {
