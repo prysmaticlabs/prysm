@@ -6,7 +6,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -71,7 +71,7 @@ func (s *Simulator) generateBlockHeadersForSlot(
 }
 
 func (s *Simulator) signBlockHeader(
-	beaconState *state.BeaconState,
+	beaconState iface.BeaconState,
 	header *ethpb.SignedBeaconBlockHeader,
 ) (bls.Signature, error) {
 	domain, err := helpers.Domain(

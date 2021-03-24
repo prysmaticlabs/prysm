@@ -5,14 +5,14 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 // Verifies attester slashings, logs them, and submits them to the slashing operations pool
 // in the beacon node if they pass validation.
 func (s *Service) processAttesterSlashings(ctx context.Context, slashings []*ethpb.AttesterSlashing) error {
-	var beaconState *state.BeaconState
+	var beaconState iface.BeaconState
 	var err error
 	if len(slashings) > 0 {
 		beaconState, err = s.serviceCfg.HeadStateFetcher.HeadState(ctx)
@@ -48,7 +48,7 @@ func (s *Service) processAttesterSlashings(ctx context.Context, slashings []*eth
 // Verifies proposer slashings, logs them, and submits them to the slashing operations pool
 // in the beacon node if they pass validation.
 func (s *Service) processProposerSlashings(ctx context.Context, slashings []*ethpb.ProposerSlashing) error {
-	var beaconState *state.BeaconState
+	var beaconState iface.BeaconState
 	var err error
 	if len(slashings) > 0 {
 		beaconState, err = s.serviceCfg.HeadStateFetcher.HeadState(ctx)

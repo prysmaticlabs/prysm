@@ -30,7 +30,7 @@ go_library(
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/operations/slashings:go_default_library",
         "//beacon-chain/slasher/types:go_default_library",
-        "//beacon-chain/state:go_default_library",
+        "//beacon-chain/state/interface:go_default_library",
         "//beacon-chain/state/stategen:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/event:go_default_library",
