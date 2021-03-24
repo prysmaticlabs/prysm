@@ -49,10 +49,10 @@ if [[ "$tag" == 'LATEST' ]]; then
 fi
 
 # Validate token.
-curl -o /dev/null -sH "$AUTH" $GH_REPO || { echo "Error: Invalid repo, token or network issue!";  exit 1; }
+curl -o /dev/null -sH "$AUTH" "$GH_REPO" || { echo "Error: Invalid repo, token or network issue!";  exit 1; }
 
 # Read asset tags.
-response=$(curl -sH "$AUTH" $GH_TAGS)
+response=$(curl -sH "$AUTH" "$GH_TAGS")
 
 # Get ID of the asset based on given filename.
 eval "$(echo "$response" | grep -m 1 "id.:" | grep -w id | tr : = | tr -cd '[[:alnum:]]=')"
@@ -62,8 +62,8 @@ eval "$(echo "$response" | grep -m 1 "id.:" | grep -w id | tr : = | tr -cd '[[:a
 echo "Uploading asset... "
 
 # Construct url
-GH_ASSET="https://uploads.github.com/repos/$owner/$repo/releases/$id/assets?name=$(basename $filename)"
+GH_ASSET="https://uploads.github.com/repos/$owner/$repo/releases/$id/assets?name=$(basename "$filename")"
 
-echo $GH_ASSET
+echo "$GH_ASSET"
 
-curl "$GITHUB_OAUTH_BASIC" --data-binary @"$filename" -H "Authorization: token $github_api_token" -H "Content-Type: application/octet-stream" $GH_ASSET
+curl "$GITHUB_OAUTH_BASIC" --data-binary @"$filename" -H "Authorization: token $github_api_token" -H "Content-Type: application/octet-stream" "$GH_ASSET"
