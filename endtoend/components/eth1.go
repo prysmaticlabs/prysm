@@ -165,7 +165,6 @@ func (node *Eth1Node) Started() <-chan struct{} {
 	return node.started
 }
 
-
 // StartEth1Node starts an eth1 local dev chain and deploys a deposit contract.
 // Deprecated: this method will be removed once Eth1Node component is used.
 func StartEth1Node(t *testing.T) string {
