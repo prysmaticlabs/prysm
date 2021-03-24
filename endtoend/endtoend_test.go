@@ -24,7 +24,6 @@ import (
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/endtoend/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	log "github.com/sirupsen/logrus"
@@ -167,59 +166,19 @@ func (r *testRunner) run() {
 		nodeClient := eth.NewNodeClient(conns[0])
 		genesis, err := nodeClient.GetGenesis(context.Background(), &ptypes.Empty{})
 		require.NoError(t, err)
-
-		// Epoch time calculations.
-		epochSeconds := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
-		epochSecondsHalf := time.Duration(int64(epochSeconds*1000)/2) * time.Millisecond
-		// Adding a half slot here to ensure the requests are in the middle of an epoch.
-		middleOfEpoch := epochSecondsHalf + slotutil.DivideSlotBy(2 /* half a slot */)
-		genesisTime := time.Unix(genesis.GenesisTime.Seconds, 0)
-		// Offsetting the ticker from genesis so it ticks in the middle of an epoch, in order to keep results consistent.
-		tickingStartTime := genesisTime.Add(middleOfEpoch)
+		tickingStartTime := helpers.EpochTickerStartTime(genesis)
 
 		// Run assigned evaluators.
-		if err := r.runEvaluators(conns, tickingStartTime, epochSeconds); err != nil {
+		if err := r.runEvaluators(conns, tickingStartTime); err != nil {
 			return err
 		}
 
+		// If requested, run sync test.
 		if !config.TestSync {
 			return nil
 		}
-
-		index := e2e.TestParams.BeaconNodeCount
-		syncBeaconNode := components.NewBeaconNode(config, index, bootNode.ENR())
-		g.Go(func() error {
-			return syncBeaconNode.Start(ctx)
-		})
-		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{syncBeaconNode}); err != nil {
-			return fmt.Errorf("sync beacon node not ready: %w", err)
-		}
-		syncConn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", e2e.TestParams.BeaconNodeRPCPort+index), grpc.WithInsecure())
-		require.NoError(t, err, "Failed to dial")
-		conns = append(conns, syncConn)
-
-		// Sleep a second for every 4 blocks that need to be synced for the newly started node.
-		extraSecondsToSync := (config.EpochsToRun)*epochSeconds + uint64(params.BeaconConfig().SlotsPerEpoch.Div(4).Mul(config.EpochsToRun))
-		waitForSync := tickingStartTime.Add(time.Duration(extraSecondsToSync) * time.Second)
-		time.Sleep(time.Until(waitForSync))
-
-		syncLogFile, err := os.Open(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.BeaconNodeLogFileName, index)))
-		require.NoError(t, err)
-		defer helpers.LogErrorOutput(t, syncLogFile, "beacon chain node", index)
-		t.Run("sync completed", func(t *testing.T) {
-			assert.NoError(t, helpers.WaitForTextInFile(syncLogFile, "Synced up to"), "Failed to sync")
-		})
-		if t.Failed() {
-			return nil
-		}
-
-		// Sleep a slot to make sure the synced state is made.
-		time.Sleep(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
-		syncEvaluators := []e2etypes.Evaluator{ev.FinishedSyncing, ev.AllNodesHaveSameHead}
-		for _, evaluator := range syncEvaluators {
-			t.Run(evaluator.Name, func(t *testing.T) {
-				assert.NoError(t, evaluator.Evaluation(conns...), "Evaluation failed for sync node")
-			})
+		if err := r.testBeaconChainSync(ctx, g, conns, tickingStartTime, bootNode.ENR()); err != nil {
+			return err
 		}
 
 		return nil
@@ -246,30 +205,11 @@ func (r *testRunner) waitForChainStart() {
 	})
 }
 
-// testDeposits runs tests when config.TestDeposits is enabled.
-func (r *testRunner) testDeposits(ctx context.Context, g *errgroup.Group,
-	eth1Node *components.Eth1Node, requiredNodes []e2etypes.ComponentRunner) {
-	minGenesisActiveCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
-
-	depositCheckValidator := components.NewValidatorNode(r.config, int(e2e.DepositCount), e2e.TestParams.BeaconNodeCount, minGenesisActiveCount)
-	g.Go(func() error {
-		if err := helpers.ComponentsStarted(ctx, requiredNodes); err != nil {
-			return fmt.Errorf("deposit check validator node requires beacon nodes to run: %w", err)
-		}
-		go func() {
-			err := components.SendAndMineDeposits(eth1Node.KeystorePath(), int(e2e.DepositCount), minGenesisActiveCount, false /* partial */)
-			if err != nil {
-				r.t.Fatal(err)
-			}
-		}()
-		return depositCheckValidator.Start(ctx)
-	})
-}
-
 // runEvaluators executes assigned evaluators.
-func (r *testRunner) runEvaluators(conns []*grpc.ClientConn, genesisTime time.Time, secondsPerEpoch uint64) error {
+func (r *testRunner) runEvaluators(conns []*grpc.ClientConn, tickingStartTime time.Time) error {
 	t, config := r.t, r.config
-	ticker := helpers.NewEpochTicker(genesisTime, secondsPerEpoch)
+	secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
+	ticker := helpers.NewEpochTicker(tickingStartTime, secondsPerEpoch)
 	for currentEpoch := range ticker.C() {
 		for _, evaluator := range config.Evaluators {
 			// Only run if the policy says so.
@@ -290,5 +230,69 @@ func (r *testRunner) runEvaluators(conns []*grpc.ClientConn, genesisTime time.Ti
 			break
 		}
 	}
+	return nil
+}
+
+// testDeposits runs tests when config.TestDeposits is enabled.
+func (r *testRunner) testDeposits(ctx context.Context, g *errgroup.Group,
+	eth1Node *components.Eth1Node, requiredNodes []e2etypes.ComponentRunner) {
+	minGenesisActiveCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
+
+	depositCheckValidator := components.NewValidatorNode(r.config, int(e2e.DepositCount), e2e.TestParams.BeaconNodeCount, minGenesisActiveCount)
+	g.Go(func() error {
+		if err := helpers.ComponentsStarted(ctx, requiredNodes); err != nil {
+			return fmt.Errorf("deposit check validator node requires beacon nodes to run: %w", err)
+		}
+		go func() {
+			err := components.SendAndMineDeposits(eth1Node.KeystorePath(), int(e2e.DepositCount), minGenesisActiveCount, false /* partial */)
+			if err != nil {
+				r.t.Fatal(err)
+			}
+		}()
+		return depositCheckValidator.Start(ctx)
+	})
+}
+
+// testBeaconChainSync creates another beacon node, and tests whether it can sync to head using previous nodes.
+func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group,
+	conns []*grpc.ClientConn, tickingStartTime time.Time, enr string) error {
+	t, config := r.t, r.config
+	index := e2e.TestParams.BeaconNodeCount
+	syncBeaconNode := components.NewBeaconNode(config, index, enr)
+	g.Go(func() error {
+		return syncBeaconNode.Start(ctx)
+	})
+	if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{syncBeaconNode}); err != nil {
+		return fmt.Errorf("sync beacon node not ready: %w", err)
+	}
+	syncConn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", e2e.TestParams.BeaconNodeRPCPort+index), grpc.WithInsecure())
+	require.NoError(t, err, "Failed to dial")
+	conns = append(conns, syncConn)
+
+	// Sleep a second for every 4 blocks that need to be synced for the newly started node.
+	secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
+	extraSecondsToSync := (config.EpochsToRun)*secondsPerEpoch + uint64(params.BeaconConfig().SlotsPerEpoch.Div(4).Mul(config.EpochsToRun))
+	waitForSync := tickingStartTime.Add(time.Duration(extraSecondsToSync) * time.Second)
+	time.Sleep(time.Until(waitForSync))
+
+	syncLogFile, err := os.Open(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.BeaconNodeLogFileName, index)))
+	require.NoError(t, err)
+	defer helpers.LogErrorOutput(t, syncLogFile, "beacon chain node", index)
+	t.Run("sync completed", func(t *testing.T) {
+		assert.NoError(t, helpers.WaitForTextInFile(syncLogFile, "Synced up to"), "Failed to sync")
+	})
+	if t.Failed() {
+		return errors.New("cannot sync beacon node")
+	}
+
+	// Sleep a slot to make sure the synced state is made.
+	time.Sleep(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
+	syncEvaluators := []e2etypes.Evaluator{ev.FinishedSyncing, ev.AllNodesHaveSameHead}
+	for _, evaluator := range syncEvaluators {
+		t.Run(evaluator.Name, func(t *testing.T) {
+			assert.NoError(t, evaluator.Evaluation(conns...), "Evaluation failed for sync node")
+		})
+	}
+
 	return nil
 }
