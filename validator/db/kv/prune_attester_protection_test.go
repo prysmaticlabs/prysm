@@ -153,7 +153,7 @@ func checkAttestingHistoryAfterPruning(
 	t testing.TB,
 	validatorDB *Store,
 	pubKey [48]byte,
-	startEpoch types.Epoch,
+	startEpoch,
 	numEpochs types.Epoch,
 	shouldBePruned bool,
 ) error {
