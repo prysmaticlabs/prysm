@@ -29,7 +29,7 @@ type Evaluator struct {
 	Evaluation func(conn ...*grpc.ClientConn) error // A variable amount of conns is allowed to be passed in for evaluations to check all nodes if needed.
 }
 
-// ComponentRunner defines the API via which E2E components' configuration, execution and termination is managed.
+// ComponentRunner defines an interface via which E2E component's configuration, execution and termination is managed.
 type ComponentRunner interface {
 	// Start starts a component.
 	Start(ctx context.Context) error
