@@ -6,7 +6,6 @@ go_library(
     srcs = [
         "backup.go",
         "doc.go",
-        "enable_disable.go",
         "import.go",
         "keymanager.go",
         "log.go",
@@ -45,7 +44,6 @@ go_test(
     name = "go_default_test",
     srcs = [
         "backup_test.go",
-        "enable_disable_test.go",
         "import_test.go",
         "keymanager_test.go",
         "refresh_test.go",

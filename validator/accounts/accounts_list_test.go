@@ -3,7 +3,6 @@ package accounts
 import (
 	"context"
 	"fmt"
-	constant "github.com/prysmaticlabs/prysm/validator/testing"
 	"io/ioutil"
 	"math"
 	"os"
@@ -28,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
+	constant "github.com/prysmaticlabs/prysm/validator/testing"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
@@ -37,10 +37,6 @@ type mockRemoteKeymanager struct {
 }
 
 func (m *mockRemoteKeymanager) FetchValidatingPublicKeys(_ context.Context) ([][48]byte, error) {
-	return m.publicKeys, nil
-}
-
-func (m *mockRemoteKeymanager) FetchAllValidatingPublicKeys(_ context.Context) ([][48]byte, error) {
 	return m.publicKeys, nil
 }
 

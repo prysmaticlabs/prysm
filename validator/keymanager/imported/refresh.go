@@ -2,12 +2,9 @@ package imported
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"path/filepath"
-	"strings"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/pkg/errors"
@@ -16,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
@@ -108,34 +106,20 @@ func (km *Keymanager) reloadAccountsFromKeystore(keystore *AccountsKeystoreRepre
 	if len(newAccountsStore.PublicKeys) != len(newAccountsStore.PrivateKeys) {
 		return errors.New("number of public and private keys in keystore do not match")
 	}
-	pubKeys := make([][48]byte, len(km.accountsStore.PublicKeys))
-	for i := 0; i < len(km.accountsStore.PrivateKeys); i++ {
-		privKey, err := bls.SecretKeyFromBytes(km.accountsStore.PrivateKeys[i])
+	pubKeys := make([][48]byte, len(newAccountsStore.PublicKeys))
+	for i := 0; i < len(newAccountsStore.PrivateKeys); i++ {
+		privKey, err := bls.SecretKeyFromBytes(newAccountsStore.PrivateKeys[i])
 		if err != nil {
 			return errors.Wrap(err, "could not initialize private key")
 		}
 		pubKeyBytes := privKey.PublicKey().Marshal()
 		pubKeys[i] = bytesutil.ToBytes48(pubKeyBytes)
 	}
-	lock.Lock()
-	for _, pubKey := range keystore.DisabledPublicKeys {
-		pubKeyBytes, err := hex.DecodeString(strings.TrimPrefix(pubKey, "0x"))
-		if err != nil {
-			lock.Unlock()
-			return err
-		}
-		if len(pubKeyBytes) != 48 {
-			lock.Unlock()
-			return fmt.Errorf("public key %s has wrong length", pubKey)
-		}
-		km.disabledPublicKeys[bytesutil.ToBytes48(pubKeyBytes)] = true
-	}
-	lock.Unlock()
 	km.accountsStore = newAccountsStore
 	if err := km.initializeKeysCachesFromKeystore(); err != nil {
 		return err
 	}
-	log.Info("Reloaded validator keys into keymanager")
+	log.Info(keymanager.KeysReloaded)
 	km.accountsChangedFeed.Send(pubKeys)
 	return nil
 }

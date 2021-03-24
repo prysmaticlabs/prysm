@@ -38,8 +38,10 @@ func TestPingRPCHandler_ReceivesPing(t *testing.T) {
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
 	r := &Service{
-		db:          d,
-		p2p:         p1,
+		cfg: &Config{
+			DB:  d,
+			P2P: p1,
+		},
 		rateLimiter: newRateLimiter(p1),
 	}
 
@@ -56,7 +58,7 @@ func TestPingRPCHandler_ReceivesPing(t *testing.T) {
 		defer wg.Done()
 		expectSuccess(t, stream)
 		out := new(types.SSZUint64)
-		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
+		assert.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(stream, out))
 		assert.Equal(t, uint64(2), uint64(*out))
 	})
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
@@ -93,8 +95,10 @@ func TestPingRPCHandler_SendsPing(t *testing.T) {
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
 	r := &Service{
-		db:          d,
-		p2p:         p1,
+		cfg: &Config{
+			DB:  d,
+			P2P: p1,
+		},
 		rateLimiter: newRateLimiter(p1),
 	}
 
@@ -105,8 +109,10 @@ func TestPingRPCHandler_SendsPing(t *testing.T) {
 	p2.Peers().SetMetadata(p1.BHost.ID(), p1.LocalMetadata)
 
 	r2 := &Service{
-		db:          d,
-		p2p:         p2,
+		cfg: &Config{
+			DB:  d,
+			P2P: p2,
+		},
 		rateLimiter: newRateLimiter(p2),
 	}
 	// Setup streams
@@ -119,7 +125,7 @@ func TestPingRPCHandler_SendsPing(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := new(types.SSZUint64)
-		assert.NoError(t, r2.p2p.Encoding().DecodeWithMaxLength(stream, out))
+		assert.NoError(t, r2.cfg.P2P.Encoding().DecodeWithMaxLength(stream, out))
 		assert.Equal(t, uint64(2), uint64(*out))
 		assert.NoError(t, r2.pingHandler(context.Background(), out, stream))
 	})
@@ -154,8 +160,10 @@ func TestPingRPCHandler_BadSequenceNumber(t *testing.T) {
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
 	r := &Service{
-		db:          d,
-		p2p:         p1,
+		cfg: &Config{
+			DB:  d,
+			P2P: p1,
+		},
 		rateLimiter: newRateLimiter(p1),
 	}
 

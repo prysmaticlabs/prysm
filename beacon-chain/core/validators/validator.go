@@ -9,7 +9,6 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -37,7 +36,7 @@ import (
 //    # Set validator exit epoch and withdrawable epoch
 //    validator.exit_epoch = exit_queue_epoch
 //    validator.withdrawable_epoch = Epoch(validator.exit_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
-func InitiateValidatorExit(state *stateTrie.BeaconState, idx types.ValidatorIndex) (*stateTrie.BeaconState, error) {
+func InitiateValidatorExit(state iface.BeaconState, idx types.ValidatorIndex) (iface.BeaconState, error) {
 	validator, err := state.ValidatorAtIndex(idx)
 	if err != nil {
 		return nil, err
@@ -122,7 +121,7 @@ func InitiateValidatorExit(state *stateTrie.BeaconState, idx types.ValidatorInde
 //    proposer_reward = Gwei(whistleblower_reward // PROPOSER_REWARD_QUOTIENT)
 //    increase_balance(state, proposer_index, proposer_reward)
 //    increase_balance(state, whistleblower_index, Gwei(whistleblower_reward - proposer_reward))
-func SlashValidator(state *stateTrie.BeaconState, slashedIdx types.ValidatorIndex) (*stateTrie.BeaconState, error) {
+func SlashValidator(state iface.BeaconState, slashedIdx types.ValidatorIndex) (iface.BeaconState, error) {
 	state, err := InitiateValidatorExit(state, slashedIdx)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not initiate validator %d exit", slashedIdx)

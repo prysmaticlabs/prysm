@@ -30,6 +30,7 @@ var Commands = &cli.Command{
 				featureconfig.Mainnet,
 				featureconfig.PyrmontTestnet,
 				featureconfig.ToledoTestnet,
+				featureconfig.PraterTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -64,6 +65,7 @@ var Commands = &cli.Command{
 				featureconfig.Mainnet,
 				featureconfig.PyrmontTestnet,
 				featureconfig.ToledoTestnet,
+				featureconfig.PraterTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -95,6 +97,7 @@ var Commands = &cli.Command{
 				featureconfig.Mainnet,
 				featureconfig.PyrmontTestnet,
 				featureconfig.ToledoTestnet,
+				featureconfig.PraterTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -123,6 +126,7 @@ var Commands = &cli.Command{
 				featureconfig.Mainnet,
 				featureconfig.PyrmontTestnet,
 				featureconfig.ToledoTestnet,
+				featureconfig.PraterTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -157,6 +161,7 @@ var Commands = &cli.Command{
 				featureconfig.Mainnet,
 				featureconfig.PyrmontTestnet,
 				featureconfig.ToledoTestnet,
+				featureconfig.PraterTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {

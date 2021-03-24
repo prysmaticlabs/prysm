@@ -113,13 +113,15 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 	c, err := lru.New(10)
 	require.NoError(t, err)
 	r := &Service{
-		p2p:                  p,
-		db:                   db,
-		initialSync:          &mockSync.Sync{IsSyncing: false},
-		attPool:              attestations.NewPool(),
+		cfg: &Config{
+			P2P:         p,
+			DB:          db,
+			InitialSync: &mockSync.Sync{IsSyncing: false},
+			AttPool:     attestations.NewPool(),
+			Chain:       &mock.ChainService{},
+		},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		seenAttestationCache: c,
-		chain:                &mock.ChainService{},
 	}
 	err = r.initCaches()
 	require.NoError(t, err)
@@ -180,14 +182,17 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 	c, err := lru.New(10)
 	require.NoError(t, err)
 	r := &Service{
-		p2p:         p,
-		db:          db,
-		initialSync: &mockSync.Sync{IsSyncing: false},
-		chain: &mock.ChainService{
-			Genesis: time.Now(),
-			State:   beaconState,
+		cfg: &Config{
+			P2P:         p,
+			DB:          db,
+			InitialSync: &mockSync.Sync{IsSyncing: false},
+			Chain: &mock.ChainService{
+				Genesis: time.Now(),
+				State:   beaconState,
+			},
+			AttPool:             attestations.NewPool(),
+			AttestationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
-		attPool:              attestations.NewPool(),
 		seenAttestationCache: c,
 	}
 	err = r.initCaches()
@@ -261,12 +266,15 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 	c, err := lru.New(10)
 	require.NoError(t, err)
 	r := &Service{
-		attPool:     attestations.NewPool(),
-		p2p:         p,
-		db:          db,
-		initialSync: &mockSync.Sync{IsSyncing: false},
-		chain: &mock.ChainService{Genesis: time.Now(),
-			State: beaconState},
+		cfg: &Config{
+			AttPool:     attestations.NewPool(),
+			P2P:         p,
+			DB:          db,
+			InitialSync: &mockSync.Sync{IsSyncing: false},
+			Chain: &mock.ChainService{Genesis: time.Now(),
+				State: beaconState},
+			AttestationNotifier: (&mock.ChainService{}).OperationNotifier(),
+		},
 		seenAttestationCache: c,
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 	}
@@ -285,7 +293,7 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 		},
 	}
 
-	require.NoError(t, r.attPool.SaveBlockAttestation(att))
+	require.NoError(t, r.cfg.AttPool.SaveBlockAttestation(att))
 	if r.validateAggregateAndProof(context.Background(), "", msg) == pubsub.ValidationAccept {
 		t.Error("Expected validate to fail")
 	}
@@ -349,17 +357,20 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	c, err := lru.New(10)
 	require.NoError(t, err)
 	r := &Service{
-		p2p:         p,
-		db:          db,
-		initialSync: &mockSync.Sync{IsSyncing: false},
-		chain: &mock.ChainService{Genesis: time.Now(),
-			State:            beaconState,
-			ValidAttestation: true,
-			FinalizedCheckPoint: &ethpb.Checkpoint{
-				Epoch: 0,
-				Root:  att.Data.BeaconBlockRoot,
-			}},
-		attPool:              attestations.NewPool(),
+		cfg: &Config{
+			P2P:         p,
+			DB:          db,
+			InitialSync: &mockSync.Sync{IsSyncing: false},
+			Chain: &mock.ChainService{Genesis: time.Now(),
+				State:            beaconState,
+				ValidAttestation: true,
+				FinalizedCheckPoint: &ethpb.Checkpoint{
+					Epoch: 0,
+					Root:  att.Data.BeaconBlockRoot,
+				}},
+			AttPool:             attestations.NewPool(),
+			AttestationNotifier: (&mock.ChainService{}).OperationNotifier(),
+		},
 		seenAttestationCache: c,
 	}
 	err = r.initCaches()
@@ -438,19 +449,22 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	c, err := lru.New(10)
 	require.NoError(t, err)
 	r := &Service{
-		p2p:         p,
-		db:          db,
-		initialSync: &mockSync.Sync{IsSyncing: false},
-		chain: &mock.ChainService{Genesis: time.Now(),
-			ValidatorsRoot:   [32]byte{'A'},
-			State:            beaconState,
-			ValidAttestation: true,
-			FinalizedCheckPoint: &ethpb.Checkpoint{
-				Epoch: 0,
-				Root:  signedAggregateAndProof.Message.Aggregate.Data.BeaconBlockRoot,
-			}},
+		cfg: &Config{
+			P2P:         p,
+			DB:          db,
+			InitialSync: &mockSync.Sync{IsSyncing: false},
+			Chain: &mock.ChainService{Genesis: time.Now(),
+				ValidatorsRoot:   [32]byte{'A'},
+				State:            beaconState,
+				ValidAttestation: true,
+				FinalizedCheckPoint: &ethpb.Checkpoint{
+					Epoch: 0,
+					Root:  signedAggregateAndProof.Message.Aggregate.Data.BeaconBlockRoot,
+				}},
 
-		attPool:              attestations.NewPool(),
+			AttPool:             attestations.NewPool(),
+			AttestationNotifier: (&mock.ChainService{}).OperationNotifier(),
+		},
 		seenAttestationCache: c,
 	}
 	err = r.initCaches()
@@ -547,16 +561,19 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 	c, err := lru.New(10)
 	require.NoError(t, err)
 	r := &Service{
-		p2p:         p,
-		db:          db,
-		initialSync: &mockSync.Sync{IsSyncing: false},
-		chain: &mock.ChainService{Genesis: time.Now(),
-			State:            beaconState,
-			ValidAttestation: true,
-			FinalizedCheckPoint: &ethpb.Checkpoint{
-				Epoch: 0,
-			}},
-		attPool:              attestations.NewPool(),
+		cfg: &Config{
+			P2P:         p,
+			DB:          db,
+			InitialSync: &mockSync.Sync{IsSyncing: false},
+			Chain: &mock.ChainService{Genesis: time.Now(),
+				State:            beaconState,
+				ValidAttestation: true,
+				FinalizedCheckPoint: &ethpb.Checkpoint{
+					Epoch: 0,
+				}},
+			AttPool:             attestations.NewPool(),
+			AttestationNotifier: (&mock.ChainService{}).OperationNotifier(),
+		},
 		seenAttestationCache: c,
 	}
 	err = r.initCaches()
@@ -636,17 +653,20 @@ func TestValidateAggregateAndProof_RejectWhenAttEpochDoesntEqualTargetEpoch(t *t
 	c, err := lru.New(10)
 	require.NoError(t, err)
 	r := &Service{
-		p2p:         p,
-		db:          db,
-		initialSync: &mockSync.Sync{IsSyncing: false},
-		chain: &mock.ChainService{Genesis: time.Now(),
-			State:            beaconState,
-			ValidAttestation: true,
-			FinalizedCheckPoint: &ethpb.Checkpoint{
-				Epoch: 0,
-				Root:  att.Data.BeaconBlockRoot,
-			}},
-		attPool:              attestations.NewPool(),
+		cfg: &Config{
+			P2P:         p,
+			DB:          db,
+			InitialSync: &mockSync.Sync{IsSyncing: false},
+			Chain: &mock.ChainService{Genesis: time.Now(),
+				State:            beaconState,
+				ValidAttestation: true,
+				FinalizedCheckPoint: &ethpb.Checkpoint{
+					Epoch: 0,
+					Root:  att.Data.BeaconBlockRoot,
+				}},
+			AttPool:             attestations.NewPool(),
+			AttestationNotifier: (&mock.ChainService{}).OperationNotifier(),
+		},
 		seenAttestationCache: c,
 	}
 	err = r.initCaches()

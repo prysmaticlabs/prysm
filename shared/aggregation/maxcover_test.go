@@ -475,6 +475,32 @@ func TestMaxCover_MaxCoverProblem_Cover(t *testing.T) {
 				Keys:     []int{0, 3, 1, 2, 6},
 			},
 		},
+		{
+			name: "empty bitlists",
+			args: args{k: 5, allowOverlaps: true, candidates: MaxCoverCandidates{
+				{1, &bitfield.Bitlist{0b0}, 0, false},
+				{0, &bitfield.Bitlist{0b00000000, 0b00000000, 0b00000000, 0b1}, 0, false},
+				{2, &bitfield.Bitlist{0b00000000, 0b00000000, 0b00000000, 0b1}, 0, false},
+			}},
+			wantedErr: "empty bitlists: invalid max_cover problem",
+		},
+		{
+			name: "overlapping solution dropped",
+			args: args{k: 5, allowOverlaps: false, candidates: MaxCoverCandidates{
+				{0, &bitfield.Bitlist{0b11111111, 0b11000111, 0b11111111, 0b1}, 0, false},
+				// All remaining bitlists will overlap, so will be dropped.
+				{1, &bitfield.Bitlist{0b11111111, 0b00001100, 0b11111111, 0b1}, 0, false},
+				{2, &bitfield.Bitlist{0b00000000, 0b01110000, 0b01110000, 0b1}, 0, false},
+				{3, &bitfield.Bitlist{0b00000111, 0b10000001, 0b10000000, 0b1}, 0, false},
+				{4, &bitfield.Bitlist{0b00000000, 0b00000110, 0b00000110, 0b1}, 0, false},
+				{5, &bitfield.Bitlist{0b00000000, 0b00000001, 0b01100010, 0b1}, 0, false},
+				{6, &bitfield.Bitlist{0b00001000, 0b00001000, 0b10000010, 0b1}, 0, false},
+			}},
+			want: &Aggregation{
+				Coverage: bitfield.Bitlist{0xff, 0b11000111, 0xff, 0b1},
+				Keys:     []int{0},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -624,6 +650,15 @@ func TestMaxCover_MaxCover(t *testing.T) {
 				Coverage: bitfield.NewBitlist64From([]uint64{0b00001111, 0xff, 0b11111110}),
 				Keys:     []int{0, 1, 2, 3, 6},
 			},
+		},
+		{
+			name: "empty bitlists",
+			args: args{k: 5, allowOverlaps: true, candidates: []*bitfield.Bitlist64{
+				bitfield.NewBitlist64From([]uint64{}),
+				bitfield.NewBitlist64From([]uint64{0b00000000, 0b00001110, 0b00001110}),
+				bitfield.NewBitlist64From([]uint64{0b00000000, 0b01110000, 0b01110000}),
+			}},
+			wantedErr: "empty bitlists: invalid max_cover problem",
 		},
 	}
 	for _, tt := range tests {

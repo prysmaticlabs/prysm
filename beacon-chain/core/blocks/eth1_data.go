@@ -6,7 +6,8 @@ import (
 	"errors"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -19,7 +20,7 @@ import (
 //    state.eth1_data_votes.append(body.eth1_data)
 //    if state.eth1_data_votes.count(body.eth1_data) * 2 > EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH:
 //        state.latest_eth1_data = body.eth1_data
-func ProcessEth1DataInBlock(_ context.Context, beaconState *stateTrie.BeaconState, b *ethpb.SignedBeaconBlock) (*stateTrie.BeaconState, error) {
+func ProcessEth1DataInBlock(_ context.Context, beaconState iface.BeaconState, b *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
 	block := b.Block
 	if beaconState == nil {
 		return nil, errors.New("nil state")
@@ -59,9 +60,9 @@ func AreEth1DataEqual(a, b *ethpb.Eth1Data) bool {
 // eth1 voting period. A vote is cast by including eth1data in a block and part of state processing
 // appends eth1data to the state in the Eth1DataVotes list. Iterating through this list checks the
 // votes to see if they match the eth1data.
-func Eth1DataHasEnoughSupport(beaconState *stateTrie.BeaconState, data *ethpb.Eth1Data) (bool, error) {
+func Eth1DataHasEnoughSupport(beaconState iface.ReadOnlyBeaconState, data *ethpb.Eth1Data) (bool, error) {
 	voteCount := uint64(0)
-	data = stateTrie.CopyETH1Data(data)
+	data = stateV0.CopyETH1Data(data)
 
 	for _, vote := range beaconState.Eth1DataVotes() {
 		if AreEth1DataEqual(vote, data) {

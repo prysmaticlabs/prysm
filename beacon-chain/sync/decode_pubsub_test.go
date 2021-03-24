@@ -68,7 +68,7 @@ func TestService_decodePubsubMessage(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Service{
-				p2p: p2ptesting.NewTestP2P(t),
+				cfg: &Config{P2P: p2ptesting.NewTestP2P(t)},
 			}
 			if tt.topic != "" {
 				if tt.input == nil {
