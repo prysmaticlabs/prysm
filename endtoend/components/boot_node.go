@@ -1,5 +1,3 @@
-// Package components defines utilities to spin up actual
-// beacon node and validator processes as needed by end to end tests.
 package components
 
 import (
