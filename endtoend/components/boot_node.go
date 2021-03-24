@@ -86,7 +86,6 @@ func (node *BootNode) Started() <-chan struct{} {
 	return node.started
 }
 
-
 // StartBootnode starts a bootnode and returns its ENR.
 func StartBootnode(t *testing.T) string {
 	binaryPath, found := bazel.FindBinary("tools/bootnode", "bootnode")
