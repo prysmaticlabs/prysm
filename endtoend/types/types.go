@@ -3,6 +3,8 @@
 package types
 
 import (
+	"context"
+
 	types "github.com/prysmaticlabs/eth2-types"
 	"google.golang.org/grpc"
 )
@@ -25,4 +27,12 @@ type Evaluator struct {
 	Name       string
 	Policy     func(currentEpoch types.Epoch) bool
 	Evaluation func(conn ...*grpc.ClientConn) error // A variable amount of conns is allowed to be passed in for evaluations to check all nodes if needed.
+}
+
+// ComponentRunner defines an interface via which E2E component's configuration, execution and termination is managed.
+type ComponentRunner interface {
+	// Start starts a component.
+	Start(ctx context.Context) error
+	// Started checks whether an underlying component is started and ready to be queried.
+	Started() <-chan struct{}
 }
