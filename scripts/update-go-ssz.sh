@@ -18,7 +18,7 @@ searchstring="/bin/"
 # Copy ssz.go files from bazel-bin to original folder where the target is located.
 for ((i = 0; i < arraylength; i++)); do
     destination=${file_list[i]#*$searchstring}
-    color "34" $destination
+    color "34" "$destination"
     chmod 755 "$destination"
     cp -R -L "${file_list[i]}" "$destination"
 done
