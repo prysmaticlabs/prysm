@@ -146,9 +146,10 @@ func verifyExitConditions(validator iface.ReadOnlyValidator, currentSlot types.S
 	// Verify the validator has been active long enough.
 	if currentEpoch < validator.ActivationEpoch()+params.BeaconConfig().ShardCommitteePeriod {
 		return fmt.Errorf(
-			"%s: %d epochs vs required %d epochs",
+			"%s: %d of %d epochs. Validator will be eligible for exit at epoch %d.",
 			ValidatorCannotExitYetMsg,
-			currentEpoch,
+			currentEpoch-validator.ActivationEpoch(),
+			params.BeaconConfig().ShardCommitteePeriod,
 			validator.ActivationEpoch()+params.BeaconConfig().ShardCommitteePeriod,
 		)
 	}
