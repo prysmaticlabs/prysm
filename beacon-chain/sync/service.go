@@ -104,7 +104,6 @@ type Service struct {
 	seenAttesterSlashingCache map[uint64]bool
 	badBlockCache             *lru.Cache
 	badBlockLock              sync.RWMutex
-	stateGen                  *stategen.State
 	slasherAttestationsFeed   *event.Feed
 	slasherBlockHeadersFeed   *event.Feed
 }
