@@ -24,7 +24,7 @@ func (s *Simulator) generateAttestationsForSlot(
 
 	committeesPerSlot := helpers.SlotCommitteeCount(s.srvConfig.Params.NumValidators)
 	valsPerCommittee := s.srvConfig.Params.NumValidators /
-		(committeesPerSlot * uint64(params.BeaconConfig().SlotsPerEpoch))
+		(committeesPerSlot * uint64(s.srvConfig.Params.SlotsPerEpoch))
 	valsPerSlot := committeesPerSlot * valsPerCommittee
 
 	var sourceEpoch types.Epoch = 0
@@ -33,7 +33,7 @@ func (s *Simulator) generateAttestationsForSlot(
 	}
 
 	var slashedIndices []uint64
-	startIdx := valsPerSlot * uint64(slot%params.BeaconConfig().SlotsPerEpoch)
+	startIdx := valsPerSlot * uint64(slot%s.srvConfig.Params.SlotsPerEpoch)
 	endIdx := startIdx + valsPerCommittee
 	for c := types.CommitteeIndex(0); uint64(c) < committeesPerSlot; c++ {
 		attData := &ethpb.AttestationData{
@@ -130,27 +130,27 @@ func (s *Simulator) aggregateSigForAttestation(
 }
 
 func makeSlashableFromAtt(att *ethpb.IndexedAttestation, indices []uint64) *ethpb.IndexedAttestation {
-	//if att.Data.Source.Epoch <= 2 {
-	return makeDoubleVoteFromAtt(att, indices)
-	//}
-	//attData := &ethpb.AttestationData{
-	//	Slot:            att.Data.Slot,
-	//	CommitteeIndex:  att.Data.CommitteeIndex,
-	//	BeaconBlockRoot: att.Data.BeaconBlockRoot,
-	//	Source: &ethpb.Checkpoint{
-	//		Epoch: att.Data.Source.Epoch - 3,
-	//		Root:  att.Data.Source.Root,
-	//	},
-	//	Target: &ethpb.Checkpoint{
-	//		Epoch: att.Data.Target.Epoch,
-	//		Root:  att.Data.Target.Root,
-	//	},
-	//}
-	//return &ethpb.IndexedAttestation{
-	//	AttestingIndices: indices,
-	//	Data:             attData,
-	//	Signature:        params.BeaconConfig().EmptySignature[:],
-	//}
+	if att.Data.Source.Epoch <= 2 {
+		return makeDoubleVoteFromAtt(att, indices)
+	}
+	attData := &ethpb.AttestationData{
+		Slot:            att.Data.Slot,
+		CommitteeIndex:  att.Data.CommitteeIndex,
+		BeaconBlockRoot: att.Data.BeaconBlockRoot,
+		Source: &ethpb.Checkpoint{
+			Epoch: att.Data.Source.Epoch - 3,
+			Root:  att.Data.Source.Root,
+		},
+		Target: &ethpb.Checkpoint{
+			Epoch: att.Data.Target.Epoch,
+			Root:  att.Data.Target.Root,
+		},
+	}
+	return &ethpb.IndexedAttestation{
+		AttestingIndices: indices,
+		Data:             attData,
+		Signature:        params.BeaconConfig().EmptySignature[:],
+	}
 }
 
 func makeDoubleVoteFromAtt(att *ethpb.IndexedAttestation, indices []uint64) *ethpb.IndexedAttestation {

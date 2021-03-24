@@ -212,6 +212,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 				params.BeaconConfig().DomainBeaconAttester,
 				beaconState.GenesisValidatorRoot(),
 			)
+			require.NoError(t, err)
 
 			// Create valid signatures for all input attestations in the test.
 			for _, attestationWrapper := range tt.args.attestationQueue {

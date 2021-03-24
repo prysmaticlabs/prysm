@@ -50,6 +50,7 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 		params.BeaconConfig().DomainBeaconProposer,
 		beaconState.GenesisValidatorRoot(),
 	)
+	require.NoError(t, err)
 
 	mockChain := &mock.ChainService{
 		State: beaconState,
