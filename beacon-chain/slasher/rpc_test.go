@@ -8,7 +8,6 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
-	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -19,8 +18,7 @@ func TestIsSlashableBlock(t *testing.T) {
 	beaconDB := dbtest.SetupDB(t)
 	s := &Service{
 		serviceCfg: &ServiceConfig{
-			Database:              beaconDB,
-			ProposerSlashingsFeed: new(event.Feed),
+			Database: beaconDB,
 		},
 		params:    DefaultParams(),
 		blksQueue: newBlocksQueue(),
@@ -82,8 +80,7 @@ func TestIsSlashableAttestation(t *testing.T) {
 
 	s := &Service{
 		serviceCfg: &ServiceConfig{
-			Database:              beaconDB,
-			ProposerSlashingsFeed: new(event.Feed),
+			Database: beaconDB,
 		},
 		params:      DefaultParams(),
 		blksQueue:   newBlocksQueue(),

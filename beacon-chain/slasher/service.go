@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -22,12 +23,12 @@ import (
 type ServiceConfig struct {
 	IndexedAttestationsFeed *event.Feed
 	BeaconBlockHeadersFeed  *event.Feed
-	AttesterSlashingsFeed   *event.Feed
-	ProposerSlashingsFeed   *event.Feed
 	Database                db.Database
 	StateNotifier           statefeed.Notifier
-	StateFetcher            blockchain.AttestationStateFetcher
+	AttestationStateFetcher blockchain.AttestationStateFetcher
 	StateGen                stategen.StateManager
+	SlashingPoolInserter    slashings.PoolInserter
+	HeadStateFetcher        blockchain.HeadFetcher
 }
 
 // SlashingChecker is an interface for defining services that the beacon node may interact with to provide slashing data.

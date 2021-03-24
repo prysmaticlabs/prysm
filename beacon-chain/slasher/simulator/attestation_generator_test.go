@@ -1,6 +1,7 @@
 package simulator
 
 import (
+	"context"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -9,13 +10,20 @@ import (
 )
 
 func TestGenerateAttestationsForSlot_Slashing(t *testing.T) {
+	ctx := context.Background()
 	simParams := &Parameters{
+		SecondsPerSlot:         params.BeaconConfig().SecondsPerSlot,
+		SlotsPerEpoch:          params.BeaconConfig().SlotsPerEpoch,
 		AggregationPercent:     1,
 		NumValidators:          64,
 		AttesterSlashingProbab: 1,
 	}
-	epoch3Atts, _ := generateAttestationsForSlot(simParams, params.BeaconConfig().SlotsPerEpoch*3)
-	epoch4Atts, _ := generateAttestationsForSlot(simParams, params.BeaconConfig().SlotsPerEpoch*4)
+	srv := setupService(t, simParams)
+
+	epoch3Atts, _, err := srv.generateAttestationsForSlot(ctx, params.BeaconConfig().SlotsPerEpoch*3)
+	require.NoError(t, err)
+	epoch4Atts, _, err := srv.generateAttestationsForSlot(ctx, params.BeaconConfig().SlotsPerEpoch*4)
+	require.NoError(t, err)
 	for i := 0; i < len(epoch3Atts); i += 2 {
 		goodAtt := epoch3Atts[i]
 		surroundAtt := epoch4Atts[i+1]
@@ -24,14 +32,21 @@ func TestGenerateAttestationsForSlot_Slashing(t *testing.T) {
 }
 
 func TestGenerateAttestationsForSlot_CorrectIndices(t *testing.T) {
+	ctx := context.Background()
 	simParams := &Parameters{
+		SecondsPerSlot:         params.BeaconConfig().SecondsPerSlot,
+		SlotsPerEpoch:          params.BeaconConfig().SlotsPerEpoch,
 		AggregationPercent:     1,
 		NumValidators:          16384,
 		AttesterSlashingProbab: 0,
 	}
-	slot0Atts, _ := generateAttestationsForSlot(simParams, 0)
-	slot1Atts, _ := generateAttestationsForSlot(simParams, 1)
-	slot2Atts, _ := generateAttestationsForSlot(simParams, 2)
+	srv := setupService(t, simParams)
+	slot0Atts, _, err := srv.generateAttestationsForSlot(ctx, 0)
+	require.NoError(t, err)
+	slot1Atts, _, err := srv.generateAttestationsForSlot(ctx, 1)
+	require.NoError(t, err)
+	slot2Atts, _, err := srv.generateAttestationsForSlot(ctx, 2)
+	require.NoError(t, err)
 	var validatorIndices []uint64
 	for _, att := range append(slot0Atts, slot1Atts...) {
 		validatorIndices = append(validatorIndices, att.AttestingIndices...)
