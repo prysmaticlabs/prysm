@@ -30,7 +30,7 @@ func (m *PoolMock) InsertAttesterSlashing(_ context.Context, _ iface.ReadOnlyBea
 }
 
 // InsertProposerSlashing --
-func (m *PoolMock) InsertProposerSlashing(_ context.Context, _ iface.BeaconState, slashing *ethpb.ProposerSlashing) error {
+func (m *PoolMock) InsertProposerSlashing(_ context.Context, _ iface.ReadOnlyBeaconState, slashing *ethpb.ProposerSlashing) error {
 	m.PendingPropSlashings = append(m.PendingPropSlashings, slashing)
 	return nil
 }
