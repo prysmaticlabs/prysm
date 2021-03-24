@@ -408,7 +408,7 @@ func prefixLessThan(key, lessThan []byte) bool {
 
 func suffixForIndex(key, index []byte) bool {
 	encIdx := key[8:]
-	return bytes.Compare(encIdx, index) == 0
+	return bytes.Equal(encIdx, index)
 }
 
 // Disk key for a validator proposal, including a slot+validatorIndex as a byte slice.
