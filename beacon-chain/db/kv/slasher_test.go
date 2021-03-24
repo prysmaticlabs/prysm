@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"testing"
 
+	slashpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+
 	ssz "github.com/ferranbt/fastssz"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -477,6 +479,104 @@ func TestStore_PruneAttestations(t *testing.T) {
 			require.Equal(t, len(tt.afterPruning), len(doubleProposals))
 			for i, existing := range doubleProposals {
 				require.DeepEqual(t, existing.PrevAttestationWrapper.SigningRoot, tt.afterPruning[i].SigningRoot)
+			}
+		})
+	}
+}
+
+func TestStore_HighestAttestations(t *testing.T) {
+	ctx := context.Background()
+	tests := []struct {
+		name             string
+		attestationsInDB []*slashertypes.IndexedAttestationWrapper
+		expected         []*slashpb.HighestAttestation
+		indices          []types.ValidatorIndex
+		wantErr          bool
+	}{
+		{
+			name: "should get highest att if single att in db",
+			attestationsInDB: []*slashertypes.IndexedAttestationWrapper{
+				createAttestationWrapper(0, 3, []uint64{1}, []byte{1}),
+			},
+			indices: []types.ValidatorIndex{1},
+			expected: []*slashpb.HighestAttestation{
+				{
+					ValidatorIndex:     1,
+					HighestSourceEpoch: 0,
+					HighestTargetEpoch: 3,
+				},
+			},
+		},
+		{
+			name: "should get highest att for multiple with diff histories",
+			attestationsInDB: []*slashertypes.IndexedAttestationWrapper{
+				createAttestationWrapper(0, 3, []uint64{2}, []byte{1}),
+				createAttestationWrapper(1, 4, []uint64{3}, []byte{1}),
+				createAttestationWrapper(2, 3, []uint64{4}, []byte{1}),
+				createAttestationWrapper(5, 6, []uint64{5}, []byte{1}),
+			},
+			indices: []types.ValidatorIndex{2, 3, 4, 5},
+			expected: []*slashpb.HighestAttestation{
+				{
+					ValidatorIndex:     2,
+					HighestSourceEpoch: 0,
+					HighestTargetEpoch: 3,
+				},
+				{
+					ValidatorIndex:     3,
+					HighestSourceEpoch: 1,
+					HighestTargetEpoch: 4,
+				},
+				{
+					ValidatorIndex:     4,
+					HighestSourceEpoch: 2,
+					HighestTargetEpoch: 3,
+				},
+				{
+					ValidatorIndex:     5,
+					HighestSourceEpoch: 5,
+					HighestTargetEpoch: 6,
+				},
+			},
+		},
+		{
+			name: "should get correct highest att for multiple shared atts with diff histories",
+			attestationsInDB: []*slashertypes.IndexedAttestationWrapper{
+				createAttestationWrapper(1, 4, []uint64{2, 3}, []byte{1}),
+				createAttestationWrapper(2, 5, []uint64{3, 5}, []byte{1}),
+				createAttestationWrapper(4, 5, []uint64{1, 2}, []byte{1}),
+				createAttestationWrapper(6, 7, []uint64{5}, []byte{1}),
+			},
+			indices: []types.ValidatorIndex{2, 3, 4, 5},
+			expected: []*slashpb.HighestAttestation{
+				{
+					ValidatorIndex:     2,
+					HighestSourceEpoch: 4,
+					HighestTargetEpoch: 5,
+				},
+				{
+					ValidatorIndex:     3,
+					HighestSourceEpoch: 2,
+					HighestTargetEpoch: 5,
+				},
+				{
+					ValidatorIndex:     5,
+					HighestSourceEpoch: 6,
+					HighestTargetEpoch: 7,
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			beaconDB := setupDB(t)
+			require.NoError(t, beaconDB.SaveAttestationRecordsForValidators(ctx, tt.attestationsInDB))
+
+			highestAttestations, err := beaconDB.HighestAttestations(ctx, tt.indices)
+			require.NoError(t, err)
+			require.Equal(t, len(tt.expected), len(highestAttestations))
+			for i, existing := range highestAttestations {
+				require.DeepEqual(t, existing, tt.expected[i])
 			}
 		})
 	}

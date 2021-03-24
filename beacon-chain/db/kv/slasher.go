@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"sort"
+
+	slashpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 
 	ssz "github.com/ferranbt/fastssz"
 	"github.com/golang/snappy"
@@ -356,6 +359,57 @@ func (s *Store) PruneAttestations(ctx context.Context, currentEpoch types.Epoch,
 func prefixLessThan(key, lessThan []byte) bool {
 	encSlot := key[:8]
 	return bytes.Compare(encSlot, lessThan) < 0
+}
+
+func suffixForIndex(key, index []byte) bool {
+	encIdx := key[8:]
+	return bytes.Compare(encIdx, index) == 0
+}
+
+// HighestAttestations retrieves the last attestation data from the database for all indices.
+func (s *Store) HighestAttestations(
+	ctx context.Context,
+	indices []types.ValidatorIndex,
+) ([]*slashpb.HighestAttestation, error) {
+	if len(indices) == 0 {
+		return nil, nil
+	}
+
+	// Sort indices to keep DB interactions short.
+	sort.SliceStable(indices, func(i, j int) bool {
+		return uint64(indices[i]) < uint64(indices[j])
+	})
+
+	history := make([]*slashpb.HighestAttestation, 0, len(indices))
+
+	err := s.db.Update(func(tx *bolt.Tx) error {
+		attBkt := tx.Bucket(attestationRecordsBucket)
+		for i := 0; i < len(indices); i++ {
+			encIdx, err := indices[i].MarshalSSZ()
+			if err != nil {
+				return err
+			}
+
+			c := attBkt.Cursor()
+			for k, v := c.Last(); k != nil; k, v = c.Prev() {
+				if suffixForIndex(k, encIdx) {
+					attWrapper, err := decodeAttestationRecord(v)
+					if err != nil {
+						return err
+					}
+					highestAtt := &slashpb.HighestAttestation{
+						ValidatorIndex:     uint64(indices[i]),
+						HighestSourceEpoch: attWrapper.IndexedAttestation.Data.Source.Epoch,
+						HighestTargetEpoch: attWrapper.IndexedAttestation.Data.Target.Epoch,
+					}
+					history = append(history, highestAtt)
+					break
+				}
+			}
+		}
+		return nil
+	})
+	return history, err
 }
 
 // Disk key for a validator proposal, including a slot+validatorIndex as a byte slice.
