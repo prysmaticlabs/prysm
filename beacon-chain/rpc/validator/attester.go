@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -182,7 +182,7 @@ func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation
 
 	go func() {
 		ctx = trace.NewContext(context.Background(), trace.FromContext(ctx))
-		attCopy := stateTrie.CopyAttestation(att)
+		attCopy := stateV0.CopyAttestation(att)
 		if err := vs.AttPool.SaveUnaggregatedAttestation(attCopy); err != nil {
 			log.WithError(err).Error("Could not handle attestation in operations service")
 			return

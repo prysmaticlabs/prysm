@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	ptypes "github.com/gogo/protobuf/types"
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -126,7 +126,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 }
 
 // WalletConfig returns the wallet's configuration. If no wallet exists, we return an empty response.
-func (s *Server) WalletConfig(ctx context.Context, _ *ptypes.Empty) (*pb.WalletResponse, error) {
+func (s *Server) WalletConfig(ctx context.Context, _ *empty.Empty) (*pb.WalletResponse, error) {
 	exists, err := wallet.Exists(s.walletDir)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, checkExistsErrMsg)
@@ -166,7 +166,7 @@ func (s *Server) WalletConfig(ctx context.Context, _ *ptypes.Empty) (*pb.WalletR
 }
 
 // GenerateMnemonic creates a new, random bip39 mnemonic phrase.
-func (s *Server) GenerateMnemonic(_ context.Context, _ *ptypes.Empty) (*pb.GenerateMnemonicResponse, error) {
+func (s *Server) GenerateMnemonic(_ context.Context, _ *empty.Empty) (*pb.GenerateMnemonicResponse, error) {
 	mnemonicRandomness := make([]byte, 32)
 	if _, err := rand.NewGenerator().Read(mnemonicRandomness); err != nil {
 		return nil, status.Errorf(

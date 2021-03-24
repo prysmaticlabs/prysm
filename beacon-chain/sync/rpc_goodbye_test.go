@@ -27,8 +27,10 @@ func TestGoodByeRPCHandler_Disconnects_With_Peer(t *testing.T) {
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
 	r := &Service{
-		db:          d,
-		p2p:         p1,
+		cfg: &Config{
+			DB:  d,
+			P2P: p1,
+		},
 		rateLimiter: newRateLimiter(p1),
 	}
 
@@ -70,8 +72,10 @@ func TestGoodByeRPCHandler_BackOffPeer(t *testing.T) {
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
 	r := &Service{
-		db:          d,
-		p2p:         p1,
+		cfg: &Config{
+			DB:  d,
+			P2P: p1,
+		},
 		rateLimiter: newRateLimiter(p1),
 	}
 
@@ -143,8 +147,10 @@ func TestSendGoodbye_SendsMessage(t *testing.T) {
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
 	r := &Service{
-		db:          d,
-		p2p:         p1,
+		cfg: &Config{
+			DB:  d,
+			P2P: p1,
+		},
 		rateLimiter: newRateLimiter(p1),
 	}
 	failureCode := p2ptypes.GoodbyeCodeClientShutdown
@@ -158,7 +164,7 @@ func TestSendGoodbye_SendsMessage(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := new(types.SSZUint64)
-		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
+		assert.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(stream, out))
 		assert.Equal(t, failureCode, *out)
 		assert.NoError(t, stream.Close())
 	})
@@ -185,8 +191,10 @@ func TestSendGoodbye_DisconnectWithPeer(t *testing.T) {
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
 	r := &Service{
-		db:          d,
-		p2p:         p1,
+		cfg: &Config{
+			DB:  d,
+			P2P: p1,
+		},
 		rateLimiter: newRateLimiter(p1),
 	}
 	failureCode := p2ptypes.GoodbyeCodeClientShutdown
@@ -200,7 +208,7 @@ func TestSendGoodbye_DisconnectWithPeer(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := new(types.SSZUint64)
-		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
+		assert.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(stream, out))
 		assert.Equal(t, failureCode, *out)
 		assert.NoError(t, stream.Close())
 	})

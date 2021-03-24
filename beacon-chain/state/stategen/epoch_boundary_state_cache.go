@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -37,7 +37,7 @@ func slotKeyFn(obj interface{}) (string, error) {
 // rootStateInfo specifies the root state info in the epoch boundary state cache.
 type rootStateInfo struct {
 	root  [32]byte
-	state *stateTrie.BeaconState
+	state iface.BeaconState
 }
 
 // rootKeyFn takes the string representation of the block root to be used as key
@@ -112,7 +112,7 @@ func (e *epochBoundaryState) getBySlot(s types.Slot) (*rootStateInfo, bool, erro
 // put adds a state to the epoch boundary state cache. This method also trims the
 // least recently added state info if the cache size has reached the max cache
 // size limit.
-func (e *epochBoundaryState) put(r [32]byte, s *stateTrie.BeaconState) error {
+func (e *epochBoundaryState) put(r [32]byte, s iface.BeaconState) error {
 	e.lock.Lock()
 	defer e.lock.Unlock()
 

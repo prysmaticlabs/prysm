@@ -15,13 +15,12 @@ var forkChoiceProcessedRootsSize = 1 << 16
 
 // Service of attestation pool operations.
 type Service struct {
+	cfg                      *Config
 	ctx                      context.Context
 	cancel                   context.CancelFunc
-	pool                     Pool
 	err                      error
 	forkChoiceProcessedRoots *lru.Cache
 	genesisTime              uint64
-	pruneInterval            time.Duration
 }
 
 // Config options for the service.
@@ -38,19 +37,17 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		return nil, err
 	}
 
-	pruneInterval := cfg.pruneInterval
-	if pruneInterval == 0 {
+	if cfg.pruneInterval == 0 {
 		// Prune expired attestations from the pool every slot interval.
-		pruneInterval = time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
+		cfg.pruneInterval = time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
+		cfg:                      cfg,
 		ctx:                      ctx,
 		cancel:                   cancel,
-		pool:                     cfg.Pool,
 		forkChoiceProcessedRoots: cache,
-		pruneInterval:            pruneInterval,
 	}, nil
 }
 

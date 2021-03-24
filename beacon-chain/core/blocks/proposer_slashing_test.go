@@ -9,7 +9,8 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -116,7 +117,7 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 		},
 	}
 
-	beaconState, err := stateTrie.InitializeFromProto(&pb.BeaconState{
+	beaconState, err := stateV0.InitializeFromProto(&pb.BeaconState{
 		Validators: registry,
 		Slot:       currentSlot,
 	})
@@ -182,7 +183,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 
 func TestVerifyProposerSlashing(t *testing.T) {
 	type args struct {
-		beaconState *stateTrie.BeaconState
+		beaconState iface.BeaconState
 		slashing    *ethpb.ProposerSlashing
 	}
 

@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
-	statetrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
@@ -214,7 +214,7 @@ func (bs *Server) ListValidators(
 		}
 		requestedEpoch = q.Epoch
 	}
-	var reqState *statetrie.BeaconState
+	var reqState iface.BeaconState
 	var err error
 	if requestedEpoch != currentEpoch {
 		var s types.Slot
@@ -515,7 +515,6 @@ func (bs *Server) GetValidatorParticipation(
 		}
 		startSlot = types.Slot(i)
 	}
-
 	beaconState, err := bs.StateGen.StateBySlot(ctx, startSlot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)

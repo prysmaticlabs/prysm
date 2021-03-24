@@ -9,8 +9,6 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
@@ -27,7 +25,7 @@ func (s *Service) committeeIndexBeaconAttestationSubscriber(_ context.Context, m
 	}
 	s.setSeenCommitteeIndicesSlot(a.Data.Slot, a.Data.CommitteeIndex, a.AggregationBits)
 
-	exists, err := s.attPool.HasAggregatedAttestation(a)
+	exists, err := s.cfg.AttPool.HasAggregatedAttestation(a)
 	if err != nil {
 		return errors.Wrap(err, "Could not determine if attestation pool has this atttestation")
 	}
@@ -35,16 +33,7 @@ func (s *Service) committeeIndexBeaconAttestationSubscriber(_ context.Context, m
 		return nil
 	}
 
-	// Broadcast the unaggregated attestation on a feed to notify other services in the beacon node
-	// of a received unaggregated attestation.
-	s.attestationNotifier.OperationFeed().Send(&feed.Event{
-		Type: operation.UnaggregatedAttReceived,
-		Data: &operation.UnAggregatedAttReceivedData{
-			Attestation: a,
-		},
-	})
-
-	return s.attPool.SaveUnaggregatedAttestation(a)
+	return s.cfg.AttPool.SaveUnaggregatedAttestation(a)
 }
 
 func (s *Service) persistentSubnetIndices() []uint64 {

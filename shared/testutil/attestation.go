@@ -10,7 +10,8 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
@@ -42,7 +43,7 @@ func NewAttestation() *ethpb.Attestation {
 //
 // If you request 4 attestations, but there are 8 committees, you will get 4 fully aggregated attestations.
 func GenerateAttestations(
-	bState *stateTrie.BeaconState, privs []bls.SecretKey, numToGen uint64, slot types.Slot, randomRoot bool,
+	bState iface.BeaconState, privs []bls.SecretKey, numToGen uint64, slot types.Slot, randomRoot bool,
 ) ([]*ethpb.Attestation, error) {
 	var attestations []*ethpb.Attestation
 	generateHeadState := false
@@ -59,10 +60,15 @@ func GenerateAttestations(
 	var err error
 	// Only calculate head state if its an attestation for the current slot or future slot.
 	if generateHeadState || slot == bState.Slot() {
-		headState, err := stateTrie.InitializeFromProtoUnsafe(bState.CloneInnerState())
+		pbState, err := stateV0.ProtobufBeaconState(bState.CloneInnerState())
 		if err != nil {
 			return nil, err
 		}
+		genState, err := stateV0.InitializeFromProtoUnsafe(pbState)
+		if err != nil {
+			return nil, err
+		}
+		headState := iface.BeaconState(genState)
 		headState, err = state.ProcessSlots(context.Background(), headState, slot+1)
 		if err != nil {
 			return nil, err

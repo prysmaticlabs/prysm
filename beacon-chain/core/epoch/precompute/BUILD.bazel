@@ -15,7 +15,6 @@ go_library(
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
-        "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/interface:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/attestationutil:go_default_library",
@@ -42,7 +41,7 @@ go_test(
     deps = [
         "//beacon-chain/core/epoch:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
-        "//beacon-chain/state:go_default_library",
+        "//beacon-chain/state/stateV0:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/attestationutil:go_default_library",
         "//shared/mathutil:go_default_library",

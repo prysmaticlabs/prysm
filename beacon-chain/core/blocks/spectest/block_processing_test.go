@@ -15,7 +15,8 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -38,7 +39,7 @@ func runBlockProcessingTest(t *testing.T, config string) {
 			require.NoError(t, err)
 			beaconStateBase := &pb.BeaconState{}
 			require.NoError(t, beaconStateBase.UnmarshalSSZ(preBeaconStateFile), "Failed to unmarshal")
-			beaconState, err := stateTrie.InitializeFromProto(beaconStateBase)
+			beaconState, err := stateV0.InitializeFromProto(beaconStateBase)
 			require.NoError(t, err)
 
 			file, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "meta.yaml")
@@ -48,16 +49,20 @@ func runBlockProcessingTest(t *testing.T, config string) {
 			require.NoError(t, testutil.UnmarshalYaml(file, metaYaml), "Failed to Unmarshal")
 
 			var transitionError error
+			var processedState iface.BeaconState
+			var ok bool
 			for i := 0; i < metaYaml.BlocksCount; i++ {
 				filename := fmt.Sprintf("blocks_%d.ssz", i)
 				blockFile, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), filename)
 				require.NoError(t, err)
 				block := &ethpb.SignedBeaconBlock{}
 				require.NoError(t, block.UnmarshalSSZ(blockFile), "Failed to unmarshal")
-				beaconState, transitionError = state.ExecuteStateTransition(context.Background(), beaconState, block)
+				processedState, transitionError = state.ExecuteStateTransition(context.Background(), beaconState, block)
 				if transitionError != nil {
 					break
 				}
+				beaconState, ok = processedState.(*stateV0.BeaconState)
+				require.Equal(t, true, ok)
 			}
 
 			// If the post.ssz is not present, it means the test should fail on our end.
@@ -79,8 +84,9 @@ func runBlockProcessingTest(t *testing.T, config string) {
 
 				postBeaconState := &pb.BeaconState{}
 				require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateFile), "Failed to unmarshal")
-
-				if !proto.Equal(beaconState.InnerStateUnsafe(), postBeaconState) {
+				pbState, err := stateV0.ProtobufBeaconState(beaconState.InnerStateUnsafe())
+				require.NoError(t, err)
+				if !proto.Equal(pbState, postBeaconState) {
 					diff, _ := messagediff.PrettyDiff(beaconState.InnerStateUnsafe(), postBeaconState)
 					t.Log(diff)
 					t.Fatal("Post state does not match expected")

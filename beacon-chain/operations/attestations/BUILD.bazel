@@ -6,6 +6,7 @@ go_library(
     srcs = [
         "log.go",
         "metrics.go",
+        "mock.go",
         "pool.go",
         "prepare_forkchoice.go",
         "prune_expired.go",
@@ -18,7 +19,7 @@ go_library(
     ],
     deps = [
         "//beacon-chain/operations/attestations/kv:go_default_library",
-        "//beacon-chain/state:go_default_library",
+        "//beacon-chain/state/stateV0:go_default_library",
         "//shared/aggregation/attestations:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",

@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -19,7 +19,7 @@ import (
 // it also tracks and updates epoch attesting balances.
 func ProcessAttestations(
 	ctx context.Context,
-	state *stateTrie.BeaconState,
+	state iface.ReadOnlyBeaconState,
 	vp []*Validator,
 	pBal *Balance,
 ) ([]*Validator, *Balance, error) {
@@ -61,7 +61,7 @@ func ProcessAttestations(
 }
 
 // AttestedCurrentEpoch returns true if attestation `a` attested once in current epoch and/or epoch boundary block.
-func AttestedCurrentEpoch(s *stateTrie.BeaconState, a *pb.PendingAttestation) (bool, bool, error) {
+func AttestedCurrentEpoch(s iface.ReadOnlyBeaconState, a *pb.PendingAttestation) (bool, bool, error) {
 	currentEpoch := helpers.CurrentEpoch(s)
 	var votedCurrentEpoch, votedTarget bool
 	// Did validator vote current epoch.
@@ -79,7 +79,7 @@ func AttestedCurrentEpoch(s *stateTrie.BeaconState, a *pb.PendingAttestation) (b
 }
 
 // AttestedPrevEpoch returns true if attestation `a` attested once in previous epoch and epoch boundary block and/or the same head.
-func AttestedPrevEpoch(s *stateTrie.BeaconState, a *pb.PendingAttestation) (bool, bool, bool, error) {
+func AttestedPrevEpoch(s iface.ReadOnlyBeaconState, a *pb.PendingAttestation) (bool, bool, bool, error) {
 	prevEpoch := helpers.PrevEpoch(s)
 	var votedPrevEpoch, votedTarget, votedHead bool
 	// Did validator vote previous epoch.
@@ -107,7 +107,7 @@ func AttestedPrevEpoch(s *stateTrie.BeaconState, a *pb.PendingAttestation) (bool
 }
 
 // SameTarget returns true if attestation `a` attested to the same target block in state.
-func SameTarget(state *stateTrie.BeaconState, a *pb.PendingAttestation, e types.Epoch) (bool, error) {
+func SameTarget(state iface.ReadOnlyBeaconState, a *pb.PendingAttestation, e types.Epoch) (bool, error) {
 	r, err := helpers.BlockRoot(state, e)
 	if err != nil {
 		return false, err
@@ -119,7 +119,7 @@ func SameTarget(state *stateTrie.BeaconState, a *pb.PendingAttestation, e types.
 }
 
 // SameHead returns true if attestation `a` attested to the same block by attestation slot in state.
-func SameHead(state *stateTrie.BeaconState, a *pb.PendingAttestation) (bool, error) {
+func SameHead(state iface.ReadOnlyBeaconState, a *pb.PendingAttestation) (bool, error) {
 	r, err := helpers.BlockRootAtSlot(state, a.Data.Slot)
 	if err != nil {
 		return false, err

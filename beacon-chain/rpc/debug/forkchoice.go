@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/hex"
 
-	ptypes "github.com/gogo/protobuf/types"
+	"github.com/golang/protobuf/ptypes/empty"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 )
 
 // GetProtoArrayForkChoice returns proto array fork choice store.
-func (ds *Server) GetProtoArrayForkChoice(_ context.Context, _ *ptypes.Empty) (*pbrpc.ProtoArrayForkChoiceResponse, error) {
+func (ds *Server) GetProtoArrayForkChoice(_ context.Context, _ *empty.Empty) (*pbrpc.ProtoArrayForkChoiceResponse, error) {
 	store := ds.HeadFetcher.ProtoArrayStore()
 
 	nodes := store.Nodes()

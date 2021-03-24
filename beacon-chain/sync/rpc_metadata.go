@@ -22,7 +22,7 @@ func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
 	}
-	_, err := s.p2p.Encoding().EncodeWithMaxLength(stream, s.p2p.Metadata())
+	_, err := s.cfg.P2P.Encoding().EncodeWithMaxLength(stream, s.cfg.P2P.Metadata())
 	if err != nil {
 		return err
 	}
@@ -34,21 +34,21 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (*pb.Meta
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
-	stream, err := s.p2p.Send(ctx, new(interface{}), p2p.RPCMetaDataTopic, id)
+	stream, err := s.cfg.P2P.Send(ctx, new(interface{}), p2p.RPCMetaDataTopic, id)
 	if err != nil {
 		return nil, err
 	}
 	defer closeStream(stream, log)
-	code, errMsg, err := ReadStatusCode(stream, s.p2p.Encoding())
+	code, errMsg, err := ReadStatusCode(stream, s.cfg.P2P.Encoding())
 	if err != nil {
 		return nil, err
 	}
 	if code != 0 {
-		s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
+		s.cfg.P2P.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		return nil, errors.New(errMsg)
 	}
 	msg := new(pb.MetaData)
-	if err := s.p2p.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
+	if err := s.cfg.P2P.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
 		return nil, err
 	}
 	return msg, nil

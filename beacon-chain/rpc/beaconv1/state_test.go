@@ -15,6 +15,7 @@ import (
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -165,25 +166,7 @@ func TestGetStateRoot(t *testing.T) {
 	})
 
 	t.Run("Hex root", func(t *testing.T) {
-		// We fill state roots with hex representations of natural numbers starting with 1.
-		// Example: 16 becomes 0x00...0f
-		fillStateRoots := func(state *pb.BeaconState) {
-			rootsLen := uint64(params.MainnetConfig().SlotsPerHistoricalRoot)
-			roots := make([][]byte, rootsLen)
-			for i := uint64(0); i < rootsLen; i++ {
-				roots[i] = make([]byte, 32)
-			}
-			for j := 0; j < len(roots); j++ {
-				// Remove '0x' prefix and left-pad '0' to have 64 chars in total.
-				s := fmt.Sprintf("%064s", hexutil.EncodeUint64(uint64(j))[2:])
-				h, err := hexutil.Decode("0x" + s)
-				require.NoError(t, err, "Failed to decode root "+s)
-				roots[j] = h
-			}
-			state.StateRoots = roots
-		}
-
-		state, err := testutil.NewBeaconState(fillStateRoots)
+		state, err := testutil.NewBeaconState(testutil.FillRootsNaturalOpt)
 		require.NoError(t, err)
 		chainService := &chainMock.ChainService{
 			State: state,
@@ -214,7 +197,7 @@ func TestGetStateRoot(t *testing.T) {
 		_, err = s.GetStateRoot(ctx, &ethpb.StateRequest{
 			StateId: stateId,
 		})
-		assert.ErrorContains(t, fmt.Sprintf("State not found in the last %d state roots in head state", len(state.StateRoots())), err)
+		assert.ErrorContains(t, fmt.Sprintf("state not found in the last %d state roots in head state", len(state.StateRoots())), err)
 	})
 
 	t.Run("Slot", func(t *testing.T) {
@@ -251,7 +234,7 @@ func TestGetStateRoot(t *testing.T) {
 		_, err := s.GetStateRoot(ctx, &ethpb.StateRequest{
 			StateId: []byte("100"),
 		})
-		assert.ErrorContains(t, "Multiple blocks exist in same slot", err)
+		assert.ErrorContains(t, "multiple blocks exist in same slot", err)
 	})
 
 	t.Run("Slot too big", func(t *testing.T) {
@@ -263,7 +246,7 @@ func TestGetStateRoot(t *testing.T) {
 		_, err := s.GetStateRoot(ctx, &ethpb.StateRequest{
 			StateId: []byte(strconv.FormatUint(1, 10)),
 		})
-		assert.ErrorContains(t, "Slot cannot be in the future", err)
+		assert.ErrorContains(t, "slot cannot be in the future", err)
 	})
 
 	t.Run("Invalid state", func(t *testing.T) {
@@ -271,50 +254,36 @@ func TestGetStateRoot(t *testing.T) {
 		_, err := s.GetStateRoot(ctx, &ethpb.StateRequest{
 			StateId: []byte("foo"),
 		})
-		require.ErrorContains(t, "Invalid state ID: foo", err)
+		require.ErrorContains(t, "invalid state ID: foo", err)
 	})
 }
 
 func TestGetStateFork(t *testing.T) {
 	ctx := context.Background()
 
-	// We fill state and block roots with hex representations of natural numbers starting with 0.
-	// Example: 16 becomes 0x00...0f
-	fillRoots := func(state *pb.BeaconState) {
-		rootsLen := params.MainnetConfig().SlotsPerHistoricalRoot
-		roots := make([][]byte, rootsLen)
-		for i := types.Slot(0); i < rootsLen; i++ {
-			roots[i] = make([]byte, 32)
-		}
-		for j := 0; j < len(roots); j++ {
-			// Remove '0x' prefix and left-pad '0' to have 64 chars in total.
-			s := fmt.Sprintf("%064s", hexutil.EncodeUint64(uint64(j))[2:])
-			h, err := hexutil.Decode("0x" + s)
-			require.NoError(t, err, "Failed to decode root "+s)
-			roots[j] = h
-		}
-		state.StateRoots = roots
-		state.BlockRoots = roots
-	}
-	fillFork := func(state *pb.BeaconState) {
+	fillFork := func(state *pb.BeaconState) error {
 		state.Fork = &pb.Fork{
 			PreviousVersion: []byte("prev"),
 			CurrentVersion:  []byte("curr"),
 			Epoch:           123,
 		}
+		return nil
 	}
 	headSlot := types.Slot(123)
-	fillSlot := func(state *pb.BeaconState) {
+	fillSlot := func(state *pb.BeaconState) error {
 		state.Slot = headSlot
+		return nil
 	}
-	state, err := testutil.NewBeaconState(fillFork, fillRoots, fillSlot)
+	state, err := testutil.NewBeaconState(testutil.FillRootsNaturalOpt, fillFork, fillSlot)
 	require.NoError(t, err)
 	stateRoot, err := state.HashTreeRoot(ctx)
 	require.NoError(t, err)
 
 	t.Run("Head", func(t *testing.T) {
 		s := Server{
-			ChainInfoFetcher: &chainMock.ChainService{State: state},
+			StateFetcher: statefetcher.StateFetcher{
+				ChainInfoFetcher: &chainMock.ChainService{State: state},
+			},
 		}
 
 		resp, err := s.GetStateFork(ctx, &ethpb.StateRequest{
@@ -335,18 +304,21 @@ func TestGetStateFork(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, db.SaveStateSummary(ctx, &pb.StateSummary{Root: r[:]}))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, r))
-		st, err := testutil.NewBeaconState(func(state *pb.BeaconState) {
+		st, err := testutil.NewBeaconState(func(state *pb.BeaconState) error {
 			state.Fork = &pb.Fork{
 				PreviousVersion: []byte("prev"),
 				CurrentVersion:  []byte("curr"),
 				Epoch:           123,
 			}
+			return nil
 		})
 		require.NoError(t, err)
 		require.NoError(t, db.SaveState(ctx, st, r))
 
 		s := Server{
-			BeaconDB: db,
+			StateFetcher: statefetcher.StateFetcher{
+				BeaconDB: db,
+			},
 		}
 
 		resp, err := s.GetStateFork(ctx, &ethpb.StateRequest{
@@ -363,12 +335,14 @@ func TestGetStateFork(t *testing.T) {
 		stateGen.StatesByRoot[stateRoot] = state
 
 		s := Server{
-			ChainInfoFetcher: &chainMock.ChainService{
-				FinalizedCheckPoint: &eth.Checkpoint{
-					Root: stateRoot[:],
+			StateFetcher: statefetcher.StateFetcher{
+				ChainInfoFetcher: &chainMock.ChainService{
+					FinalizedCheckPoint: &eth.Checkpoint{
+						Root: stateRoot[:],
+					},
 				},
+				StateGenService: stateGen,
 			},
-			StateGenService: stateGen,
 		}
 
 		resp, err := s.GetStateFork(ctx, &ethpb.StateRequest{
@@ -385,12 +359,14 @@ func TestGetStateFork(t *testing.T) {
 		stateGen.StatesByRoot[stateRoot] = state
 
 		s := Server{
-			ChainInfoFetcher: &chainMock.ChainService{
-				CurrentJustifiedCheckPoint: &eth.Checkpoint{
-					Root: stateRoot[:],
+			StateFetcher: statefetcher.StateFetcher{
+				ChainInfoFetcher: &chainMock.ChainService{
+					CurrentJustifiedCheckPoint: &eth.Checkpoint{
+						Root: stateRoot[:],
+					},
 				},
+				StateGenService: stateGen,
 			},
-			StateGenService: stateGen,
 		}
 
 		resp, err := s.GetStateFork(ctx, &ethpb.StateRequest{
@@ -409,8 +385,10 @@ func TestGetStateFork(t *testing.T) {
 		stateGen.StatesByRoot[bytesutil.ToBytes32(stateId)] = state
 
 		s := Server{
-			ChainInfoFetcher: &chainMock.ChainService{State: state},
-			StateGenService:  stateGen,
+			StateFetcher: statefetcher.StateFetcher{
+				ChainInfoFetcher: &chainMock.ChainService{State: state},
+				StateGenService:  stateGen,
+			},
 		}
 
 		resp, err := s.GetStateFork(ctx, &ethpb.StateRequest{
@@ -424,14 +402,16 @@ func TestGetStateFork(t *testing.T) {
 
 	t.Run("Hex root not found", func(t *testing.T) {
 		s := Server{
-			ChainInfoFetcher: &chainMock.ChainService{State: state},
+			StateFetcher: statefetcher.StateFetcher{
+				ChainInfoFetcher: &chainMock.ChainService{State: state},
+			},
 		}
 		stateId, err := hexutil.Decode("0x" + strings.Repeat("f", 64))
 		require.NoError(t, err)
 		_, err = s.GetStateFork(ctx, &ethpb.StateRequest{
 			StateId: stateId,
 		})
-		require.ErrorContains(t, "State not found in the last 8192 state roots in head state", err)
+		require.ErrorContains(t, "state not found in the last 8192 state roots in head state", err)
 	})
 
 	t.Run("Slot", func(t *testing.T) {
@@ -439,8 +419,10 @@ func TestGetStateFork(t *testing.T) {
 		stateGen.StatesBySlot[headSlot] = state
 
 		s := Server{
-			GenesisTimeFetcher: &chainMock.ChainService{Slot: &headSlot},
-			StateGenService:    stateGen,
+			StateFetcher: statefetcher.StateFetcher{
+				GenesisTimeFetcher: &chainMock.ChainService{Slot: &headSlot},
+				StateGenService:    stateGen,
+			},
 		}
 
 		resp, err := s.GetStateFork(ctx, &ethpb.StateRequest{
@@ -454,14 +436,16 @@ func TestGetStateFork(t *testing.T) {
 
 	t.Run("Slot too big", func(t *testing.T) {
 		s := Server{
-			GenesisTimeFetcher: &chainMock.ChainService{
-				Genesis: time.Now(),
+			StateFetcher: statefetcher.StateFetcher{
+				GenesisTimeFetcher: &chainMock.ChainService{
+					Genesis: time.Now(),
+				},
 			},
 		}
 		_, err := s.GetStateFork(ctx, &ethpb.StateRequest{
 			StateId: []byte(strconv.FormatUint(1, 10)),
 		})
-		assert.ErrorContains(t, "Slot cannot be in the future", err)
+		assert.ErrorContains(t, "slot cannot be in the future", err)
 	})
 
 	t.Run("Invalid state", func(t *testing.T) {
@@ -469,32 +453,14 @@ func TestGetStateFork(t *testing.T) {
 		_, err := s.GetStateFork(ctx, &ethpb.StateRequest{
 			StateId: []byte("foo"),
 		})
-		require.ErrorContains(t, "Invalid state ID: foo", err)
+		require.ErrorContains(t, "invalid state ID: foo", err)
 	})
 }
 
 func TestGetFinalityCheckpoints(t *testing.T) {
 	ctx := context.Background()
 
-	// We fill state and block roots with hex representations of natural numbers starting with 0.
-	// Example: 16 becomes 0x00...0f
-	fillRoots := func(state *pb.BeaconState) {
-		rootsLen := params.MainnetConfig().SlotsPerHistoricalRoot
-		roots := make([][]byte, rootsLen)
-		for i := types.Slot(0); i < rootsLen; i++ {
-			roots[i] = make([]byte, 32)
-		}
-		for j := 0; j < len(roots); j++ {
-			// Remove '0x' prefix and left-pad '0' to have 64 chars in total.
-			s := fmt.Sprintf("%064s", hexutil.EncodeUint64(uint64(j))[2:])
-			h, err := hexutil.Decode("0x" + s)
-			require.NoError(t, err, "Failed to decode root "+s)
-			roots[j] = h
-		}
-		state.StateRoots = roots
-		state.BlockRoots = roots
-	}
-	fillCheckpoints := func(state *pb.BeaconState) {
+	fillCheckpoints := func(state *pb.BeaconState) error {
 		state.PreviousJustifiedCheckpoint = &eth.Checkpoint{
 			Root:  bytesutil.PadTo([]byte("previous"), 32),
 			Epoch: 113,
@@ -507,19 +473,23 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 			Root:  bytesutil.PadTo([]byte("finalized"), 32),
 			Epoch: 103,
 		}
+		return nil
 	}
 	headSlot := types.Slot(123)
-	fillSlot := func(state *pb.BeaconState) {
+	fillSlot := func(state *pb.BeaconState) error {
 		state.Slot = headSlot
+		return nil
 	}
-	state, err := testutil.NewBeaconState(fillCheckpoints, fillRoots, fillSlot)
+	state, err := testutil.NewBeaconState(testutil.FillRootsNaturalOpt, fillCheckpoints, fillSlot)
 	require.NoError(t, err)
 	stateRoot, err := state.HashTreeRoot(ctx)
 	require.NoError(t, err)
 
 	t.Run("Head", func(t *testing.T) {
 		s := Server{
-			ChainInfoFetcher: &chainMock.ChainService{State: state},
+			StateFetcher: statefetcher.StateFetcher{
+				ChainInfoFetcher: &chainMock.ChainService{State: state},
+			},
 		}
 
 		resp, err := s.GetFinalityCheckpoints(ctx, &ethpb.StateRequest{
@@ -543,7 +513,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, db.SaveStateSummary(ctx, &pb.StateSummary{Root: r[:]}))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, r))
-		st, err := testutil.NewBeaconState(func(state *pb.BeaconState) {
+		st, err := testutil.NewBeaconState(func(state *pb.BeaconState) error {
 			state.PreviousJustifiedCheckpoint = &eth.Checkpoint{
 				Root:  bytesutil.PadTo([]byte("previous"), 32),
 				Epoch: 113,
@@ -556,12 +526,15 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 				Root:  bytesutil.PadTo([]byte("finalized"), 32),
 				Epoch: 103,
 			}
+			return nil
 		})
 		require.NoError(t, err)
 		require.NoError(t, db.SaveState(ctx, st, r))
 
 		s := Server{
-			BeaconDB: db,
+			StateFetcher: statefetcher.StateFetcher{
+				BeaconDB: db,
+			},
 		}
 
 		resp, err := s.GetFinalityCheckpoints(ctx, &ethpb.StateRequest{
@@ -581,12 +554,14 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 		stateGen.StatesByRoot[stateRoot] = state
 
 		s := Server{
-			ChainInfoFetcher: &chainMock.ChainService{
-				FinalizedCheckPoint: &eth.Checkpoint{
-					Root: stateRoot[:],
+			StateFetcher: statefetcher.StateFetcher{
+				ChainInfoFetcher: &chainMock.ChainService{
+					FinalizedCheckPoint: &eth.Checkpoint{
+						Root: stateRoot[:],
+					},
 				},
+				StateGenService: stateGen,
 			},
-			StateGenService: stateGen,
 		}
 
 		resp, err := s.GetFinalityCheckpoints(ctx, &ethpb.StateRequest{
@@ -606,12 +581,14 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 		stateGen.StatesByRoot[stateRoot] = state
 
 		s := Server{
-			ChainInfoFetcher: &chainMock.ChainService{
-				CurrentJustifiedCheckPoint: &eth.Checkpoint{
-					Root: stateRoot[:],
+			StateFetcher: statefetcher.StateFetcher{
+				ChainInfoFetcher: &chainMock.ChainService{
+					CurrentJustifiedCheckPoint: &eth.Checkpoint{
+						Root: stateRoot[:],
+					},
 				},
+				StateGenService: stateGen,
 			},
-			StateGenService: stateGen,
 		}
 
 		resp, err := s.GetFinalityCheckpoints(ctx, &ethpb.StateRequest{
@@ -633,8 +610,10 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 		stateGen.StatesByRoot[bytesutil.ToBytes32(stateId)] = state
 
 		s := Server{
-			ChainInfoFetcher: &chainMock.ChainService{State: state},
-			StateGenService:  stateGen,
+			StateFetcher: statefetcher.StateFetcher{
+				ChainInfoFetcher: &chainMock.ChainService{State: state},
+				StateGenService:  stateGen,
+			},
 		}
 
 		resp, err := s.GetFinalityCheckpoints(ctx, &ethpb.StateRequest{
@@ -651,14 +630,16 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 
 	t.Run("Hex root not found", func(t *testing.T) {
 		s := Server{
-			ChainInfoFetcher: &chainMock.ChainService{State: state},
+			StateFetcher: statefetcher.StateFetcher{
+				ChainInfoFetcher: &chainMock.ChainService{State: state},
+			},
 		}
 		stateId, err := hexutil.Decode("0x" + strings.Repeat("f", 64))
 		require.NoError(t, err)
 		_, err = s.GetFinalityCheckpoints(ctx, &ethpb.StateRequest{
 			StateId: stateId,
 		})
-		require.ErrorContains(t, "State not found in the last 8192 state roots in head state", err)
+		require.ErrorContains(t, "state not found in the last 8192 state roots in head state", err)
 	})
 
 	t.Run("Slot", func(t *testing.T) {
@@ -666,8 +647,10 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 		stateGen.StatesBySlot[headSlot] = state
 
 		s := Server{
-			GenesisTimeFetcher: &chainMock.ChainService{Slot: &headSlot},
-			StateGenService:    stateGen,
+			StateFetcher: statefetcher.StateFetcher{
+				GenesisTimeFetcher: &chainMock.ChainService{Slot: &headSlot},
+				StateGenService:    stateGen,
+			},
 		}
 
 		resp, err := s.GetFinalityCheckpoints(ctx, &ethpb.StateRequest{
@@ -684,14 +667,16 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 
 	t.Run("Slot too big", func(t *testing.T) {
 		s := Server{
-			GenesisTimeFetcher: &chainMock.ChainService{
-				Genesis: time.Now(),
+			StateFetcher: statefetcher.StateFetcher{
+				GenesisTimeFetcher: &chainMock.ChainService{
+					Genesis: time.Now(),
+				},
 			},
 		}
 		_, err := s.GetFinalityCheckpoints(ctx, &ethpb.StateRequest{
 			StateId: []byte(strconv.FormatUint(1, 10)),
 		})
-		assert.ErrorContains(t, "Slot cannot be in the future", err)
+		assert.ErrorContains(t, "slot cannot be in the future", err)
 	})
 
 	t.Run("Checkpoints not available", func(t *testing.T) {
@@ -705,7 +690,9 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 		require.NoError(t, err)
 
 		s := Server{
-			ChainInfoFetcher: &chainMock.ChainService{State: st},
+			StateFetcher: statefetcher.StateFetcher{
+				ChainInfoFetcher: &chainMock.ChainService{State: st},
+			},
 		}
 
 		resp, err := s.GetFinalityCheckpoints(ctx, &ethpb.StateRequest{
@@ -725,6 +712,6 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 		_, err := s.GetFinalityCheckpoints(ctx, &ethpb.StateRequest{
 			StateId: []byte("foo"),
 		})
-		require.ErrorContains(t, "Invalid state ID: foo", err)
+		require.ErrorContains(t, "invalid state ID: foo", err)
 	})
 }

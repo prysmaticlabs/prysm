@@ -12,7 +12,7 @@ import (
 func TestNewBeaconState(t *testing.T) {
 	st, err := NewBeaconState()
 	require.NoError(t, err)
-	b, err := st.InnerStateUnsafe().MarshalSSZ()
+	b, err := st.MarshalSSZ()
 	require.NoError(t, err)
 	got := &pb.BeaconState{}
 	require.NoError(t, got.UnmarshalSSZ(b))

@@ -193,10 +193,13 @@ func TestStart_NoHTTPEndpointDefinedSucceeds_WithGenesisState(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveState(context.Background(), st, genRoot))
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(context.Background(), genRoot))
+	depositCache, err := depositcache.New()
+	require.NoError(t, err)
 	s, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndpoints:   []string{""}, // No endpoint defined!
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
+		DepositCache:    depositCache,
 	})
 	require.NoError(t, err)
 
@@ -429,27 +432,29 @@ func TestInitDepositCache_OK(t *testing.T) {
 		{Index: 1, Eth1BlockHeight: 4, Deposit: &ethpb.Deposit{Proof: [][]byte{[]byte("B")}}},
 		{Index: 2, Eth1BlockHeight: 6, Deposit: &ethpb.Deposit{Proof: [][]byte{[]byte("c")}}},
 	}
+	gs, _ := testutil.DeterministicGenesisState(t, 1)
 	beaconDB := dbutil.SetupDB(t)
 	s := &Service{
-		chainStartData: &protodb.ChainStartData{Chainstarted: false},
-		beaconDB:       beaconDB,
+		chainStartData:  &protodb.ChainStartData{Chainstarted: false},
+		preGenesisState: gs,
+		cfg:             &Web3ServiceConfig{BeaconDB: beaconDB},
 	}
 	var err error
-	s.depositCache, err = depositcache.New()
+	s.cfg.DepositCache, err = depositcache.New()
 	require.NoError(t, err)
 	require.NoError(t, s.initDepositCaches(context.Background(), ctrs))
 
-	require.Equal(t, 0, len(s.depositCache.PendingContainers(context.Background(), nil)))
+	require.Equal(t, 0, len(s.cfg.DepositCache.PendingContainers(context.Background(), nil)))
 
 	blockRootA := [32]byte{'a'}
 
 	emptyState, err := testutil.NewBeaconState()
 	require.NoError(t, err)
-	require.NoError(t, s.beaconDB.SaveGenesisBlockRoot(context.Background(), blockRootA))
-	require.NoError(t, s.beaconDB.SaveState(context.Background(), emptyState, blockRootA))
+	require.NoError(t, s.cfg.BeaconDB.SaveGenesisBlockRoot(context.Background(), blockRootA))
+	require.NoError(t, s.cfg.BeaconDB.SaveState(context.Background(), emptyState, blockRootA))
 	s.chainStartData.Chainstarted = true
 	require.NoError(t, s.initDepositCaches(context.Background(), ctrs))
-	require.Equal(t, 3, len(s.depositCache.PendingContainers(context.Background(), nil)))
+	require.Equal(t, 3, len(s.cfg.DepositCache.PendingContainers(context.Background(), nil)))
 }
 
 func TestNewService_EarliestVotingBlock(t *testing.T) {
@@ -513,7 +518,7 @@ func TestNewService_Eth1HeaderRequLimit(t *testing.T) {
 		BeaconDB:        beaconDB,
 	})
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
-	assert.Equal(t, defaultEth1HeaderReqLimit, s1.eth1HeaderReqLimit, "default eth1 header request limit not set")
+	assert.Equal(t, defaultEth1HeaderReqLimit, s1.cfg.Eth1HeaderReqLimit, "default eth1 header request limit not set")
 
 	s2, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndpoints:      []string{endpoint},
@@ -522,7 +527,7 @@ func TestNewService_Eth1HeaderRequLimit(t *testing.T) {
 		Eth1HeaderReqLimit: uint64(150),
 	})
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
-	assert.Equal(t, uint64(150), s2.eth1HeaderReqLimit, "unable to set eth1HeaderRequestLimit")
+	assert.Equal(t, uint64(150), s2.cfg.Eth1HeaderReqLimit, "unable to set eth1HeaderRequestLimit")
 }
 
 func TestServiceFallbackCorrectly(t *testing.T) {
@@ -545,7 +550,7 @@ func TestServiceFallbackCorrectly(t *testing.T) {
 	s1.fallbackToNextEndpoint()
 	assert.Equal(t, firstEndpoint, s1.currHttpEndpoint, "Unexpected http endpoint")
 
-	s1.httpEndpoints = append(s1.httpEndpoints, secondEndpoint)
+	s1.cfg.HTTPEndpoints = append(s1.cfg.HTTPEndpoints, secondEndpoint)
 
 	s1.fallbackToNextEndpoint()
 	assert.Equal(t, secondEndpoint, s1.currHttpEndpoint, "Unexpected http endpoint")
@@ -553,7 +558,7 @@ func TestServiceFallbackCorrectly(t *testing.T) {
 	thirdEndpoint := "C"
 	fourthEndpoint := "D"
 
-	s1.httpEndpoints = append(s1.httpEndpoints, thirdEndpoint, fourthEndpoint)
+	s1.cfg.HTTPEndpoints = append(s1.cfg.HTTPEndpoints, thirdEndpoint, fourthEndpoint)
 
 	s1.fallbackToNextEndpoint()
 	assert.Equal(t, thirdEndpoint, s1.currHttpEndpoint, "Unexpected http endpoint")
@@ -584,4 +589,28 @@ func Test_batchRequestHeaders_UnderflowChecks(t *testing.T) {
 	end = uint64(100)
 	_, err = srv.batchRequestHeaders(start, end)
 	require.ErrorContains(t, "cannot be >", err)
+}
+
+func TestService_EnsureConsistentPowchainData(t *testing.T) {
+	beaconDB := dbutil.SetupDB(t)
+	cache, err := depositcache.New()
+	require.NoError(t, err)
+
+	s1, err := NewService(context.Background(), &Web3ServiceConfig{
+		BeaconDB:     beaconDB,
+		DepositCache: cache,
+	})
+	require.NoError(t, err)
+	genState, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	assert.NoError(t, genState.SetSlot(1000))
+
+	require.NoError(t, s1.cfg.BeaconDB.SaveGenesisData(context.Background(), genState))
+	require.NoError(t, s1.ensureValidPowchainData(context.Background()))
+
+	eth1Data, err := s1.cfg.BeaconDB.PowchainData(context.Background())
+	assert.NoError(t, err)
+
+	assert.NotNil(t, eth1Data)
+	assert.Equal(t, true, eth1Data.ChainstartData.Chainstarted)
 }

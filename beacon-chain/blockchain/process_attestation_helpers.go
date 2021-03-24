@@ -10,7 +10,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mputil"
@@ -18,7 +18,7 @@ import (
 )
 
 // getAttPreState retrieves the att pre state by either from the cache or the DB.
-func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*stateTrie.BeaconState, error) {
+func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (iface.BeaconState, error) {
 	// Use a multilock to allow scoped holding of a mutex by a checkpoint root + epoch
 	// allowing us to behave smarter in terms of how this function is used concurrently.
 	epochKey := strconv.FormatUint(uint64(c.Epoch), 10 /* base 10 */)
@@ -33,7 +33,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 		return cachedState, nil
 	}
 
-	baseState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(c.Root))
+	baseState, err := s.cfg.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(c.Root))
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get pre state for epoch %d", c.Epoch)
 	}
@@ -62,7 +62,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 
 	// To avoid sharing the same state across checkpoint state cache and hot state cache,
 	// we don't add the state to check point cache.
-	has, err := s.stateGen.HasStateInCache(ctx, bytesutil.ToBytes32(c.Root))
+	has, err := s.cfg.StateGen.HasStateInCache(ctx, bytesutil.ToBytes32(c.Root))
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func (s *Service) verifyAttTargetEpoch(_ context.Context, genesisTime, nowTime u
 // verifyBeaconBlock verifies beacon head block is known and not from the future.
 func (s *Service) verifyBeaconBlock(ctx context.Context, data *ethpb.AttestationData) error {
 	r := bytesutil.ToBytes32(data.BeaconBlockRoot)
-	b, err := s.beaconDB.Block(ctx, r)
+	b, err := s.cfg.BeaconDB.Block(ctx, r)
 	if err != nil {
 		return err
 	}

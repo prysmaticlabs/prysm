@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	ptypes "github.com/gogo/protobuf/types"
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/google/uuid"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -106,7 +106,7 @@ func TestServer_CreateWallet_Derived(t *testing.T) {
 	_, err = s.CreateWallet(ctx, req)
 	require.ErrorContains(t, "Must include mnemonic", err)
 
-	mnemonicResp, err := s.GenerateMnemonic(ctx, &ptypes.Empty{})
+	mnemonicResp, err := s.GenerateMnemonic(ctx, &empty.Empty{})
 	require.NoError(t, err)
 	req.Mnemonic = mnemonicResp.Mnemonic
 
@@ -116,7 +116,7 @@ func TestServer_CreateWallet_Derived(t *testing.T) {
 
 func TestServer_WalletConfig_NoWalletFound(t *testing.T) {
 	s := &Server{}
-	resp, err := s.WalletConfig(context.Background(), &ptypes.Empty{})
+	resp, err := s.WalletConfig(context.Background(), &empty.Empty{})
 	require.NoError(t, err)
 	assert.DeepEqual(t, resp, &pb.WalletResponse{})
 }
@@ -143,7 +143,7 @@ func TestServer_WalletConfig(t *testing.T) {
 	require.NoError(t, err)
 	s.wallet = w
 	s.keymanager = km
-	resp, err := s.WalletConfig(ctx, &ptypes.Empty{})
+	resp, err := s.WalletConfig(ctx, &empty.Empty{})
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, resp, &pb.WalletResponse{

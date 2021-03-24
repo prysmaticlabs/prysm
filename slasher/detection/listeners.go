@@ -21,7 +21,7 @@ import (
 func (s *Service) detectIncomingBlocks(ctx context.Context, ch chan *ethpb.SignedBeaconBlock) {
 	ctx, span := trace.StartSpan(ctx, "detection.detectIncomingBlocks")
 	defer span.End()
-	sub := s.notifier.BlockFeed().Subscribe(ch)
+	sub := s.cfg.Notifier.BlockFeed().Subscribe(ch)
 	defer sub.Unsubscribe()
 	for {
 		select {
@@ -54,7 +54,7 @@ func (s *Service) detectIncomingBlocks(ctx context.Context, ch chan *ethpb.Signe
 func (s *Service) detectIncomingAttestations(ctx context.Context, ch chan *ethpb.IndexedAttestation) {
 	ctx, span := trace.StartSpan(ctx, "detection.detectIncomingAttestations")
 	defer span.End()
-	sub := s.notifier.AttestationFeed().Subscribe(ch)
+	sub := s.cfg.Notifier.AttestationFeed().Subscribe(ch)
 	defer sub.Unsubscribe()
 	for {
 		select {

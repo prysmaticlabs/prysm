@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -58,7 +58,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
-	beaconState, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
+	beaconState, err := stateV0.InitializeFromProto(&pbp2p.BeaconState{
 		Slot:       0,
 		Validators: []*ethpb.Validator{},
 	})
@@ -151,7 +151,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	require.NoError(t, err)
 
 	depositCache.InsertDeposit(ctx, deposit, 10 /*blockNum*/, 0, depositTrie.Root())
-	trie, err := stateTrie.InitializeFromProtoUnsafe(beaconState)
+	trie, err := stateV0.InitializeFromProtoUnsafe(beaconState)
 	require.NoError(t, err)
 	vs := &Server{
 		BeaconDB:           db,
@@ -234,7 +234,7 @@ func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 	block := testutil.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
-	trie, err := stateTrie.InitializeFromProtoUnsafe(beaconState)
+	trie, err := stateV0.InitializeFromProtoUnsafe(beaconState)
 	require.NoError(t, err)
 	vs := &Server{
 		BeaconDB:           db,
