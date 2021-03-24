@@ -36,7 +36,7 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 	}
 	if err := s.validateRangeRequest(m); err != nil {
 		s.writeErrorResponseToStream(responseCodeInvalidRequest, err.Error(), stream)
-		s.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
+		s.cfg.P2P.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		traceutil.AnnotateError(span, err)
 		return err
 	}
@@ -123,7 +123,7 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 	defer span.End()
 
 	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot).SetSlotStep(step)
-	blks, roots, err := s.db.Blocks(ctx, filter)
+	blks, roots, err := s.cfg.DB.Blocks(ctx, filter)
 	if err != nil {
 		log.WithError(err).Debug("Could not retrieve blocks")
 		s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
@@ -183,7 +183,7 @@ func (s *Service) validateRangeRequest(r *pb.BeaconBlocksByRangeRequest) error {
 	// Add a buffer for possible large range requests from nodes syncing close to the
 	// head of the chain.
 	buffer := rangeLimit * 2
-	highestExpectedSlot := s.chain.CurrentSlot().Add(uint64(buffer))
+	highestExpectedSlot := s.cfg.Chain.CurrentSlot().Add(uint64(buffer))
 
 	// Ensure all request params are within appropriate bounds
 	if count == 0 || count > maxRequestBlocks {
@@ -215,7 +215,7 @@ func (s *Service) filterBlocks(ctx context.Context, blks []*ethpb.SignedBeaconBl
 
 	newBlks := make([]*ethpb.SignedBeaconBlock, 0, len(blks))
 	for i, b := range blks {
-		isCanonical, err := s.chain.IsCanonical(ctx, roots[i])
+		isCanonical, err := s.cfg.Chain.IsCanonical(ctx, roots[i])
 		if err != nil {
 			return nil, err
 		}
@@ -247,11 +247,11 @@ func (s *Service) filterBlocks(ctx context.Context, blks []*ethpb.SignedBeaconBl
 }
 
 func (s *Service) writeErrorResponseToStream(responseCode byte, reason string, stream libp2pcore.Stream) {
-	writeErrorResponseToStream(responseCode, reason, stream, s.p2p)
+	writeErrorResponseToStream(responseCode, reason, stream, s.cfg.P2P)
 }
 
 func (s *Service) retrieveGenesisBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, [32]byte, error) {
-	genBlock, err := s.db.GenesisBlock(ctx)
+	genBlock, err := s.cfg.DB.GenesisBlock(ctx)
 	if err != nil {
 		return nil, [32]byte{}, err
 	}

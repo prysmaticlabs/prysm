@@ -17,7 +17,7 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
-	_, err := SendBeaconBlocksByRootRequest(ctx, s.p2p, id, blockRoots, func(blk *ethpb.SignedBeaconBlock) error {
+	_, err := SendBeaconBlocksByRootRequest(ctx, s.cfg.P2P, id, blockRoots, func(blk *ethpb.SignedBeaconBlock) error {
 		blkRoot, err := blk.Block.HashTreeRoot()
 		if err != nil {
 			return err
@@ -62,7 +62,7 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 	s.rateLimiter.add(stream, int64(len(blockRoots)))
 
 	for _, root := range blockRoots {
-		blk, err := s.db.Block(ctx, root)
+		blk, err := s.cfg.DB.Block(ctx, root)
 		if err != nil {
 			log.WithError(err).Debug("Could not fetch block")
 			s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)

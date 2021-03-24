@@ -76,11 +76,13 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 	c, err := lru.New(10)
 	require.NoError(t, err)
 	r := &Service{
-		p2p: p,
-		chain: &mock.ChainService{
-			State: s,
+		cfg: &Config{
+			P2P: p,
+			Chain: &mock.ChainService{
+				State: s,
+			},
+			InitialSync: &mockSync.Sync{IsSyncing: false},
 		},
-		initialSync:   &mockSync.Sync{IsSyncing: false},
 		seenExitCache: c,
 	}
 
@@ -109,11 +111,13 @@ func TestValidateVoluntaryExit_InvalidExitSlot(t *testing.T) {
 	c, err := lru.New(10)
 	require.NoError(t, err)
 	r := &Service{
-		p2p: p,
-		chain: &mock.ChainService{
-			State: s,
+		cfg: &Config{
+			P2P: p,
+			Chain: &mock.ChainService{
+				State: s,
+			},
+			InitialSync: &mockSync.Sync{IsSyncing: false},
 		},
-		initialSync:   &mockSync.Sync{IsSyncing: false},
 		seenExitCache: c,
 	}
 
@@ -138,11 +142,13 @@ func TestValidateVoluntaryExit_ValidExit_Syncing(t *testing.T) {
 	exit, s := setupValidExit(t)
 
 	r := &Service{
-		p2p: p,
-		chain: &mock.ChainService{
-			State: s,
+		cfg: &Config{
+			P2P: p,
+			Chain: &mock.ChainService{
+				State: s,
+			},
+			InitialSync: &mockSync.Sync{IsSyncing: true},
 		},
-		initialSync: &mockSync.Sync{IsSyncing: true},
 	}
 	buf := new(bytes.Buffer)
 	_, err := p.Encoding().EncodeGossip(buf, exit)

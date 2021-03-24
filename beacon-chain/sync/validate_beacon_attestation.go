@@ -28,12 +28,12 @@ import (
 // - attestation.data.slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots (attestation.data.slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= current_slot >= attestation.data.slot).
 // - The signature of attestation is valid.
 func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, pid peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
-	if pid == s.p2p.PeerID() {
+	if pid == s.cfg.P2P.PeerID() {
 		return pubsub.ValidationAccept
 	}
 	// Attestation processing requires the target block to be present in the database, so we'll skip
 	// validating or processing attestations until fully synced.
-	if s.initialSync.Syncing() {
+	if s.cfg.InitialSync.Syncing() {
 		return pubsub.ValidationIgnore
 	}
 	ctx, span := trace.StartSpan(ctx, "sync.validateCommitteeIndexBeaconAttestation")
@@ -68,7 +68,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 
 	// Broadcast the unaggregated attestation on a feed to notify other services in the beacon node
 	// of a received unaggregated attestation.
-	s.attestationNotifier.OperationFeed().Send(&feed.Event{
+	s.cfg.AttestationNotifier.OperationFeed().Send(&feed.Event{
 		Type: operation.UnaggregatedAttReceived,
 		Data: &operation.UnAggregatedAttReceivedData{
 			Attestation: att,
@@ -76,7 +76,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	})
 
 	// Attestation's slot is within ATTESTATION_PROPAGATION_SLOT_RANGE.
-	if err := helpers.ValidateAttestationTime(att.Data.Slot, s.chain.GenesisTime()); err != nil {
+	if err := helpers.ValidateAttestationTime(att.Data.Slot, s.cfg.Chain.GenesisTime()); err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
@@ -104,16 +104,16 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationIgnore
 	}
 
-	if err := s.chain.VerifyFinalizedConsistency(ctx, att.Data.BeaconBlockRoot); err != nil {
+	if err := s.cfg.Chain.VerifyFinalizedConsistency(ctx, att.Data.BeaconBlockRoot); err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
-	if err := s.chain.VerifyLmdFfgConsistency(ctx, att); err != nil {
+	if err := s.cfg.Chain.VerifyLmdFfgConsistency(ctx, att); err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
 
-	preState, err := s.chain.AttestationPreState(ctx, att)
+	preState, err := s.cfg.Chain.AttestationPreState(ctx, att)
 	if err != nil {
 		log.WithError(err).Error("Could not to retrieve pre state")
 		traceutil.AnnotateError(span, err)
@@ -222,8 +222,8 @@ func (s *Service) setSeenCommitteeIndicesSlot(slot types.Slot, committeeID types
 // hasBlockAndState returns true if the beacon node knows about a block and associated state in the
 // database or cache.
 func (s *Service) hasBlockAndState(ctx context.Context, blockRoot [32]byte) bool {
-	hasStateSummary := s.db.HasStateSummary(ctx, blockRoot)
-	hasState := hasStateSummary || s.db.HasState(ctx, blockRoot)
-	hasBlock := s.chain.HasInitSyncBlock(blockRoot) || s.db.HasBlock(ctx, blockRoot)
+	hasStateSummary := s.cfg.DB.HasStateSummary(ctx, blockRoot)
+	hasState := hasStateSummary || s.cfg.DB.HasState(ctx, blockRoot)
+	hasBlock := s.cfg.Chain.HasInitSyncBlock(blockRoot) || s.cfg.DB.HasBlock(ctx, blockRoot)
 	return hasState && hasBlock
 }

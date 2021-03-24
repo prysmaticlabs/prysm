@@ -285,3 +285,30 @@ func Merkleize(leaves [][]byte) [][][]byte {
 	}
 	return layers
 }
+
+// MerkleizeTrieLeaves merkleize the trie leaves.
+func MerkleizeTrieLeaves(layers [][][32]byte, hashLayer [][32]byte,
+	hasher func([]byte) [32]byte) ([][][32]byte, [][32]byte) {
+	// We keep track of the hash layers of a Merkle trie until we reach
+	// the top layer of length 1, which contains the single root element.
+	//        [Root]      -> Top layer has length 1.
+	//    [E]       [F]   -> This layer has length 2.
+	// [A]  [B]  [C]  [D] -> The bottom layer has length 4 (needs to be a power of two).
+	i := 1
+	chunkBuffer := bytes.NewBuffer([]byte{})
+	chunkBuffer.Grow(64)
+	for len(hashLayer) > 1 && i < len(layers) {
+		layer := make([][32]byte, len(hashLayer)/2)
+		for j := 0; j < len(hashLayer); j += 2 {
+			chunkBuffer.Write(hashLayer[j][:])
+			chunkBuffer.Write(hashLayer[j+1][:])
+			hashedChunk := hasher(chunkBuffer.Bytes())
+			layer[j/2] = hashedChunk
+			chunkBuffer.Reset()
+		}
+		hashLayer = layer
+		layers[i] = hashLayer
+		i++
+	}
+	return layers, hashLayer
+}
