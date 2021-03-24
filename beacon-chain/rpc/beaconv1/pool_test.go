@@ -212,8 +212,9 @@ func TestSubmitAttesterSlashing_Ok(t *testing.T) {
 	validator := &eth.Validator{
 		PublicKey: keys[0].PublicKey().Marshal(),
 	}
-	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) {
+	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) error {
 		state.Validators = []*eth.Validator{validator}
+		return nil
 	})
 	require.NoError(t, err)
 
@@ -326,8 +327,9 @@ func TestSubmitProposerSlashing_Ok(t *testing.T) {
 		PublicKey:         keys[0].PublicKey().Marshal(),
 		WithdrawableEpoch: eth2types.Epoch(1),
 	}
-	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) {
+	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) error {
 		state.Validators = []*eth.Validator{validator}
+		return nil
 	})
 	require.NoError(t, err)
 
@@ -425,10 +427,11 @@ func TestSubmitVoluntaryExit_Ok(t *testing.T) {
 		ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		PublicKey: keys[0].PublicKey().Marshal(),
 	}
-	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) {
+	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) error {
 		state.Validators = []*eth.Validator{validator}
 		// Satisfy activity time required before exiting.
 		state.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().ShardCommitteePeriod))
+		return nil
 	})
 	require.NoError(t, err)
 
@@ -470,8 +473,9 @@ func TestSubmitVoluntaryExit_InvalidValidatorIndex(t *testing.T) {
 		ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		PublicKey: keys[0].PublicKey().Marshal(),
 	}
-	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) {
+	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) error {
 		state.Validators = []*eth.Validator{validator}
+		return nil
 	})
 	require.NoError(t, err)
 
@@ -504,8 +508,9 @@ func TestSubmitVoluntaryExit_InvalidExit(t *testing.T) {
 		ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		PublicKey: keys[0].PublicKey().Marshal(),
 	}
-	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) {
+	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) error {
 		state.Validators = []*eth.Validator{validator}
+		return nil
 	})
 	require.NoError(t, err)
 
@@ -545,13 +550,14 @@ func TestServer_SubmitAttestations_Ok(t *testing.T) {
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		},
 	}
-	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) {
+	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) error {
 		state.Validators = validators
 		state.Slot = 1
 		state.PreviousJustifiedCheckpoint = &eth.Checkpoint{
 			Epoch: 0,
 			Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
 		}
+		return nil
 	})
 	require.NoError(t, err)
 	b := bitfield.NewBitlist(1)
@@ -648,14 +654,16 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		},
 	}
-	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) {
+	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) error {
 		state.Validators = validators
 		state.Slot = 1
 		state.PreviousJustifiedCheckpoint = &eth.Checkpoint{
 			Epoch: 0,
 			Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
 		}
+		return nil
 	})
+
 	require.NoError(t, err)
 
 	sourceCheckpoint := &ethpb.Checkpoint{
