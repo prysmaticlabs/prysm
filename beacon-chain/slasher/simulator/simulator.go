@@ -74,7 +74,7 @@ func DefaultParams() *Parameters {
 		ProposerSlashingProbab: 0.2,
 		AttesterSlashingProbab: 0.2,
 		NumValidators:          1024,
-		NumEpochs:              20,
+		NumEpochs:              5,
 	}
 }
 
