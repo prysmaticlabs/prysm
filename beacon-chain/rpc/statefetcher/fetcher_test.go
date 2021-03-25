@@ -35,7 +35,7 @@ func TestGetStateRoot(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("Head", func(t *testing.T) {
-		f := StateFetcher{
+		f := Provider{
 			ChainInfoFetcher: &chainMock.ChainService{State: state},
 		}
 
@@ -71,7 +71,7 @@ func TestGetStateRoot(t *testing.T) {
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, r))
 		require.NoError(t, db.SaveState(ctx, state, r))
 
-		f := StateFetcher{
+		f := Provider{
 			BeaconDB: db,
 		}
 
@@ -86,7 +86,7 @@ func TestGetStateRoot(t *testing.T) {
 		stateGen := stategen.NewMockService()
 		stateGen.StatesByRoot[stateRoot] = state
 
-		f := StateFetcher{
+		f := Provider{
 			ChainInfoFetcher: &chainMock.ChainService{
 				FinalizedCheckPoint: &eth.Checkpoint{
 					Root: stateRoot[:],
@@ -106,7 +106,7 @@ func TestGetStateRoot(t *testing.T) {
 		stateGen := stategen.NewMockService()
 		stateGen.StatesByRoot[stateRoot] = state
 
-		f := StateFetcher{
+		f := Provider{
 			ChainInfoFetcher: &chainMock.ChainService{
 				CurrentJustifiedCheckPoint: &eth.Checkpoint{
 					Root: stateRoot[:],
@@ -128,7 +128,7 @@ func TestGetStateRoot(t *testing.T) {
 		stateGen := stategen.NewMockService()
 		stateGen.StatesByRoot[bytesutil.ToBytes32(stateId)] = state
 
-		f := StateFetcher{
+		f := Provider{
 			ChainInfoFetcher: &chainMock.ChainService{State: state},
 			StateGenService:  stateGen,
 		}
@@ -141,7 +141,7 @@ func TestGetStateRoot(t *testing.T) {
 	})
 
 	t.Run("Hex root not found", func(t *testing.T) {
-		f := StateFetcher{
+		f := Provider{
 			ChainInfoFetcher: &chainMock.ChainService{State: state},
 		}
 		stateId, err := hexutil.Decode("0x" + strings.Repeat("f", 64))
@@ -154,7 +154,7 @@ func TestGetStateRoot(t *testing.T) {
 		stateGen := stategen.NewMockService()
 		stateGen.StatesBySlot[headSlot] = state
 
-		f := StateFetcher{
+		f := Provider{
 			GenesisTimeFetcher: &chainMock.ChainService{Slot: &headSlot},
 			StateGenService:    stateGen,
 		}
@@ -167,7 +167,7 @@ func TestGetStateRoot(t *testing.T) {
 	})
 
 	t.Run("Slot too big", func(t *testing.T) {
-		f := StateFetcher{
+		f := Provider{
 			GenesisTimeFetcher: &chainMock.ChainService{
 				Genesis: time.Now(),
 			},
@@ -177,7 +177,7 @@ func TestGetStateRoot(t *testing.T) {
 	})
 
 	t.Run("Invalid state", func(t *testing.T) {
-		f := StateFetcher{}
+		f := Provider{}
 		_, err := f.State(ctx, []byte("foo"))
 		require.ErrorContains(t, "invalid state ID: foo", err)
 	})

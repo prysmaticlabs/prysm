@@ -21,8 +21,8 @@ type IStateFetcher interface {
 	State(ctx context.Context, stateId []byte) (iface.BeaconState, error)
 }
 
-// StateFetcher is a real implementation of IStateFetcher.
-type StateFetcher struct {
+// Provider is a real implementation of IStateFetcher.
+type Provider struct {
 	BeaconDB           db.ReadOnlyDatabase
 	ChainInfoFetcher   blockchain.ChainInfoFetcher
 	GenesisTimeFetcher blockchain.TimeFetcher
@@ -36,7 +36,7 @@ type StateFetcher struct {
 //  - "justified"
 //  - <slot>
 //  - <hex encoded stateRoot with 0x prefix>
-func (f *StateFetcher) State(ctx context.Context, stateId []byte) (iface.BeaconState, error) {
+func (f *Provider) State(ctx context.Context, stateId []byte) (iface.BeaconState, error) {
 	var (
 		s   iface.BeaconState
 		err error
@@ -86,7 +86,7 @@ func (f *StateFetcher) State(ctx context.Context, stateId []byte) (iface.BeaconS
 	return s, err
 }
 
-func (f *StateFetcher) stateByHex(ctx context.Context, stateId []byte) (iface.BeaconState, error) {
+func (f *Provider) stateByHex(ctx context.Context, stateId []byte) (iface.BeaconState, error) {
 	headState, err := f.ChainInfoFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get head state")
@@ -100,7 +100,7 @@ func (f *StateFetcher) stateByHex(ctx context.Context, stateId []byte) (iface.Be
 	return nil, fmt.Errorf("state not found in the last %d state roots in head state", len(headState.StateRoots()))
 }
 
-func (f *StateFetcher) stateBySlot(ctx context.Context, slot types.Slot) (iface.BeaconState, error) {
+func (f *Provider) stateBySlot(ctx context.Context, slot types.Slot) (iface.BeaconState, error) {
 	currentSlot := f.GenesisTimeFetcher.CurrentSlot()
 	if slot > currentSlot {
 		return nil, errors.New("slot cannot be in the future")
