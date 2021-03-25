@@ -2,7 +2,6 @@ package simulator
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -12,8 +11,10 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/slasher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -23,16 +24,20 @@ import (
 
 // ServiceConfig for the simulator.
 type ServiceConfig struct {
-	Params        *Parameters
-	Database      db.Database
-	StateNotifier statefeed.Notifier
-	StateFetcher  blockchain.AttestationStateFetcher
-	StateGen      stategen.StateManager
+	Params                      *Parameters
+	Database                    db.Database
+	StateNotifier               statefeed.Notifier
+	AttestationStateFetcher     blockchain.AttestationStateFetcher
+	HeadStateFetcher            blockchain.HeadFetcher
+	StateGen                    stategen.StateManager
+	SlashingsPool               slashings.PoolManager
+	PrivateKeysByValidatorIndex map[types.ValidatorIndex]bls.SecretKey
 }
 
 // Parameters for a slasher simulator.
 type Parameters struct {
 	SecondsPerSlot         uint64
+	SlotsPerEpoch          types.Slot
 	AggregationPercent     float64
 	ProposerSlashingProbab float64
 	AttesterSlashingProbab float64
@@ -43,31 +48,26 @@ type Parameters struct {
 // Simulator defines a struct which can launch a slasher simulation
 // at scale using configuration parameters.
 type Simulator struct {
-	ctx                       context.Context
-	slasher                   *slasher.Service
-	srvConfig                 *ServiceConfig
-	indexedAttsFeed           *event.Feed
-	beaconBlocksFeed          *event.Feed
-	attesterSlashingsFeed     *event.Feed
-	proposerSlashingsFeed     *event.Feed
-	sentAttSlashingFeed       *event.Feed
-	sentBlockSlashingFeed     *event.Feed
-	detectedProposerSlashings map[[32]byte]*ethpb.ProposerSlashing
-	detectedAttesterSlashings map[[32]byte]*ethpb.AttesterSlashing
-	sentProposerSlashings     map[[32]byte]*ethpb.ProposerSlashing
-	sentAttesterSlashings     map[[32]byte]*ethpb.AttesterSlashing
-	genesisTime               time.Time
-	proposerSlashingLock      sync.RWMutex
-	attesterSlashingLock      sync.RWMutex
+	ctx                   context.Context
+	slasher               *slasher.Service
+	srvConfig             *ServiceConfig
+	indexedAttsFeed       *event.Feed
+	beaconBlocksFeed      *event.Feed
+	sentAttSlashingFeed   *event.Feed
+	sentBlockSlashingFeed *event.Feed
+	sentProposerSlashings map[[32]byte]*ethpb.ProposerSlashing
+	sentAttesterSlashings map[[32]byte]*ethpb.AttesterSlashing
+	genesisTime           time.Time
 }
 
 // DefaultParams for launching a slasher simulator.
 func DefaultParams() *Parameters {
 	return &Parameters{
-		SecondsPerSlot:         2,
+		SecondsPerSlot:         4,
+		SlotsPerEpoch:          8,
 		AggregationPercent:     1.0,
-		ProposerSlashingProbab: 0.2,
-		AttesterSlashingProbab: 0.2,
+		ProposerSlashingProbab: 0.4,
+		AttesterSlashingProbab: 0.4,
 		NumValidators:          1024,
 		NumEpochs:              10,
 	}
@@ -80,36 +80,30 @@ func New(ctx context.Context, srvConfig *ServiceConfig) (*Simulator, error) {
 	beaconBlocksFeed := new(event.Feed)
 	sentBlockSlashingFeed := new(event.Feed)
 	sentAttSlashingFeed := new(event.Feed)
-	attesterSlashingsFeed := new(event.Feed)
-	proposerSlashingsFeed := new(event.Feed)
 
 	slasherSrv, err := slasher.New(ctx, &slasher.ServiceConfig{
 		IndexedAttestationsFeed: indexedAttsFeed,
 		BeaconBlockHeadersFeed:  beaconBlocksFeed,
-		AttesterSlashingsFeed:   attesterSlashingsFeed,
-		ProposerSlashingsFeed:   proposerSlashingsFeed,
 		Database:                srvConfig.Database,
 		StateNotifier:           srvConfig.StateNotifier,
-		StateFetcher:            srvConfig.StateFetcher,
+		HeadStateFetcher:        srvConfig.HeadStateFetcher,
+		AttestationStateFetcher: srvConfig.AttestationStateFetcher,
 		StateGen:                srvConfig.StateGen,
+		SlashingPoolInserter:    srvConfig.SlashingsPool,
 	})
 	if err != nil {
 		return nil, err
 	}
 	return &Simulator{
-		ctx:                       ctx,
-		slasher:                   slasherSrv,
-		srvConfig:                 srvConfig,
-		indexedAttsFeed:           indexedAttsFeed,
-		beaconBlocksFeed:          beaconBlocksFeed,
-		attesterSlashingsFeed:     attesterSlashingsFeed,
-		proposerSlashingsFeed:     proposerSlashingsFeed,
-		sentAttSlashingFeed:       sentAttSlashingFeed,
-		sentBlockSlashingFeed:     sentBlockSlashingFeed,
-		sentProposerSlashings:     make(map[[32]byte]*ethpb.ProposerSlashing),
-		detectedProposerSlashings: make(map[[32]byte]*ethpb.ProposerSlashing),
-		sentAttesterSlashings:     make(map[[32]byte]*ethpb.AttesterSlashing),
-		detectedAttesterSlashings: make(map[[32]byte]*ethpb.AttesterSlashing),
+		ctx:                   ctx,
+		slasher:               slasherSrv,
+		srvConfig:             srvConfig,
+		indexedAttsFeed:       indexedAttsFeed,
+		beaconBlocksFeed:      beaconBlocksFeed,
+		sentAttSlashingFeed:   sentAttSlashingFeed,
+		sentBlockSlashingFeed: sentBlockSlashingFeed,
+		sentProposerSlashings: make(map[[32]byte]*ethpb.ProposerSlashing),
+		sentAttesterSlashings: make(map[[32]byte]*ethpb.AttesterSlashing),
 	}, nil
 }
 
@@ -126,6 +120,7 @@ func (s *Simulator) Start() {
 	// Override global configuration for simulation purposes.
 	config := params.BeaconConfig().Copy()
 	config.SecondsPerSlot = s.srvConfig.Params.SecondsPerSlot
+	config.SlotsPerEpoch = s.srvConfig.Params.SlotsPerEpoch
 	params.OverrideBeaconConfig(config)
 	defer params.OverrideBeaconConfig(params.BeaconConfig())
 
@@ -141,10 +136,7 @@ func (s *Simulator) Start() {
 		Data: &statefeed.ChainStartedData{StartTime: s.genesisTime},
 	})
 
-	// We simulate blocks and attestations for N epochs, and in the background,
-	// start a routine which collects slashings detected by the running slasher.
-	go s.receiveDetectedAttesterSlashings(s.ctx)
-	go s.receiveDetectedProposerSlashings(s.ctx)
+	// We simulate blocks and attestations for N epochs.
 	s.simulateBlocksAndAttestations(s.ctx)
 
 	// Verify the slashings we detected are the same as those the
@@ -158,17 +150,21 @@ func (s *Simulator) Stop() error {
 }
 
 func (s *Simulator) simulateBlocksAndAttestations(ctx context.Context) {
+	// Add a small offset to producing blocks and attestations a little bit after a slot starts.
 	ticker := slotutil.NewSlotTicker(s.genesisTime.Add(time.Millisecond*500), params.BeaconConfig().SecondsPerSlot)
 	defer ticker.Done()
 	for {
 		select {
 		case slot := <-ticker.C():
 			// We only run the simulator for a specified number of epochs.
-			if helpers.SlotToEpoch(slot)+1 >= types.Epoch(s.srvConfig.Params.NumEpochs) {
+			if helpers.SlotToEpoch(slot) >= types.Epoch(s.srvConfig.Params.NumEpochs) {
 				return
 			}
 
-			blockHeaders, propSlashings := generateBlockHeadersForSlot(s.srvConfig.Params, slot)
+			blockHeaders, propSlashings, err := s.generateBlockHeadersForSlot(ctx, slot)
+			if err != nil {
+				log.WithError(err).Fatal("Could not generate block headers for slot")
+			}
 			log.WithFields(logrus.Fields{
 				"numBlocks":    len(blockHeaders),
 				"numSlashable": len(propSlashings),
@@ -184,7 +180,10 @@ func (s *Simulator) simulateBlocksAndAttestations(ctx context.Context) {
 				s.beaconBlocksFeed.Send(bb)
 			}
 
-			atts, attSlashings := generateAttestationsForSlot(s.srvConfig.Params, slot)
+			atts, attSlashings, err := s.generateAttestationsForSlot(ctx, slot)
+			if err != nil {
+				log.WithError(err).Fatal("Could not generate block headers for slot")
+			}
 			log.WithFields(logrus.Fields{
 				"numAtts":      len(atts),
 				"numSlashable": len(propSlashings),
@@ -205,55 +204,33 @@ func (s *Simulator) simulateBlocksAndAttestations(ctx context.Context) {
 	}
 }
 
-func (s *Simulator) receiveDetectedProposerSlashings(ctx context.Context) {
-	proposerSlashingChan := make(chan *ethpb.ProposerSlashing, 1)
-	sub := s.proposerSlashingsFeed.Subscribe(proposerSlashingChan)
-	defer sub.Unsubscribe()
-	for {
-		select {
-		case slashing := <-proposerSlashingChan:
-			slashingRoot, err := slashing.HashTreeRoot()
-			if err != nil {
-				log.WithError(err).Fatal("Could not hash tree root proposer slashing")
-			}
-			s.proposerSlashingLock.Lock()
-			s.detectedProposerSlashings[slashingRoot] = slashing
-			s.proposerSlashingLock.Unlock()
-		case <-ctx.Done():
-			return
-		case err := <-sub.Err():
-			log.WithError(err).Fatal("Error from attester slashing feed subscription")
-			return
-		}
-	}
-}
-
-func (s *Simulator) receiveDetectedAttesterSlashings(ctx context.Context) {
-	attesterSlashingChan := make(chan *ethpb.AttesterSlashing, 1)
-	sub := s.attesterSlashingsFeed.Subscribe(attesterSlashingChan)
-	defer sub.Unsubscribe()
-	for {
-		select {
-		case slashing := <-attesterSlashingChan:
-			slashingRoot, err := slashing.HashTreeRoot()
-			if err != nil {
-				log.WithError(err).Fatal("Could not hash tree root attester slashing")
-			}
-			s.attesterSlashingLock.Lock()
-			s.detectedAttesterSlashings[slashingRoot] = slashing
-			s.attesterSlashingLock.Unlock()
-		case <-ctx.Done():
-			return
-		case err := <-sub.Err():
-			log.WithError(err).Fatal("Error from attester slashing feed subscription")
-			return
-		}
-	}
-}
-
 func (s *Simulator) verifySlashingsWereDetected(ctx context.Context) {
+	poolProposerSlashings := s.srvConfig.SlashingsPool.PendingProposerSlashings(
+		ctx, nil, true, /* no limit */
+	)
+	poolAttesterSlashings := s.srvConfig.SlashingsPool.PendingAttesterSlashings(
+		ctx, nil, true, /* no limit */
+	)
+	detectedProposerSlashings := make(map[[32]byte]*ethpb.ProposerSlashing)
+	detectedAttesterSlashings := make(map[[32]byte]*ethpb.AttesterSlashing)
+	for _, slashing := range poolProposerSlashings {
+		slashingRoot, err := slashing.HashTreeRoot()
+		if err != nil {
+			log.WithError(err).Error("Could not determine slashing root")
+		}
+		detectedProposerSlashings[slashingRoot] = slashing
+	}
+	for _, slashing := range poolAttesterSlashings {
+		slashingRoot, err := slashing.HashTreeRoot()
+		if err != nil {
+			log.WithError(err).Error("Could not determine slashing root")
+		}
+		detectedAttesterSlashings[slashingRoot] = slashing
+	}
+
+	// Check if the sent slashings made it into the slashings pool.
 	for slashingRoot, slashing := range s.sentProposerSlashings {
-		if _, ok := s.detectedProposerSlashings[slashingRoot]; !ok {
+		if _, ok := detectedProposerSlashings[slashingRoot]; !ok {
 			log.WithFields(logrus.Fields{
 				"slot":          slashing.Header_1.Header.Slot,
 				"proposerIndex": slashing.Header_1.Header.ProposerIndex,
@@ -266,7 +243,7 @@ func (s *Simulator) verifySlashingsWereDetected(ctx context.Context) {
 		}).Info("Correctly detected simulated proposer slashing")
 	}
 	for slashingRoot, slashing := range s.sentAttesterSlashings {
-		if _, ok := s.detectedAttesterSlashings[slashingRoot]; !ok {
+		if _, ok := detectedAttesterSlashings[slashingRoot]; !ok {
 			log.WithFields(logrus.Fields{
 				"targetEpoch":     slashing.Attestation_1.Data.Target.Epoch,
 				"prevTargetEpoch": slashing.Attestation_2.Data.Target.Epoch,

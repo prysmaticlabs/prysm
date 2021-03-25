@@ -2,6 +2,7 @@ package slasher
 
 import (
 	"context"
+	"sort"
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -88,6 +89,9 @@ func Test_determineChunksToUpdateForValidators_FromGenesis(t *testing.T) {
 		validators,
 	)
 	require.NoError(t, err)
+	sort.Slice(chunkIndices, func(i, j int) bool {
+		return chunkIndices[i] < chunkIndices[j]
+	})
 	require.DeepEqual(t, []uint64{0, 1}, chunkIndices)
 }
 

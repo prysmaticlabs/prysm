@@ -4,7 +4,6 @@ package components
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os/exec"
 	"strings"
 	"testing"
@@ -71,64 +70,4 @@ func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, index int, enr st
 	if err = helpers.WaitForTextInFile(stdOutFile, "gRPC server listening on port"); err != nil {
 		t.Fatalf("could not find multiaddr for node %d, this means the node had issues starting: %v", index, err)
 	}
-}
-
-// StartBootnode starts a bootnode and returns its ENR.
-func StartBootnode(t *testing.T) string {
-	binaryPath, found := bazel.FindBinary("tools/bootnode", "bootnode")
-	if !found {
-		t.Log(binaryPath)
-		t.Fatal("boot node binary not found")
-	}
-
-	stdOutFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, e2e.BootNodeLogFileName)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	args := []string{
-		fmt.Sprintf("--log-file=%s", stdOutFile.Name()),
-		fmt.Sprintf("--discv5-port=%d", e2e.TestParams.BootNodePort),
-		fmt.Sprintf("--metrics-port=%d", e2e.TestParams.BootNodePort+20),
-		"--debug",
-	}
-
-	cmd := exec.Command(binaryPath, args...)
-	cmd.Stdout = stdOutFile
-	cmd.Stderr = stdOutFile
-	t.Logf("Starting boot node with flags: %s", strings.Join(args[1:], " "))
-	if err = cmd.Start(); err != nil {
-		t.Fatalf("Failed to start beacon node: %v", err)
-	}
-
-	if err = helpers.WaitForTextInFile(stdOutFile, "Running bootnode"); err != nil {
-		t.Fatalf("could not find enr for bootnode, this means the bootnode had issues starting: %v", err)
-	}
-
-	enr, err := enrFromLogFile(stdOutFile.Name())
-	if err != nil {
-		t.Fatalf("could not get enr for bootnode: %v", err)
-	}
-
-	return enr
-}
-
-func enrFromLogFile(name string) (string, error) {
-	byteContent, err := ioutil.ReadFile(name)
-	if err != nil {
-		return "", err
-	}
-	contents := string(byteContent)
-
-	searchText := "Running bootnode: "
-	startIdx := strings.Index(contents, searchText)
-	if startIdx == -1 {
-		return "", fmt.Errorf("did not find ENR text in %s", contents)
-	}
-	startIdx += len(searchText)
-	endIdx := strings.Index(contents[startIdx:], " prefix=bootnode")
-	if endIdx == -1 {
-		return "", fmt.Errorf("did not find ENR text in %s", contents)
-	}
-	return contents[startIdx : startIdx+endIdx-1], nil
 }

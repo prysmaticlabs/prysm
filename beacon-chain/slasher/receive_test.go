@@ -11,9 +11,12 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -96,7 +99,13 @@ func Test_processQueuedAttestations(t *testing.T) {
 			args: args{
 				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
 					createAttestationWrapper(t, 0, 3, []uint64{0}, nil),
-					createAttestationWrapper(t, 1, 2, []uint64{1000000}, nil),
+					createAttestationWrapper(
+						t,
+						1,
+						2,
+						[]uint64{params.BeaconConfig().MinGenesisActiveValidatorCount - 1},
+						nil,
+					),
 				},
 				currentEpoch: 4,
 			},
@@ -107,7 +116,13 @@ func Test_processQueuedAttestations(t *testing.T) {
 			args: args{
 				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
 					createAttestationWrapper(t, 0, 3, []uint64{0}, nil),
-					createAttestationWrapper(t, 1, 2, []uint64{1000000}, nil),
+					createAttestationWrapper(
+						t,
+						1,
+						2,
+						[]uint64{params.BeaconConfig().MinGenesisActiveValidatorCount - 1},
+						nil,
+					),
 				},
 				currentEpoch: 4,
 			},
@@ -170,11 +185,55 @@ func Test_processQueuedAttestations(t *testing.T) {
 			secondsSinceGenesis := time.Duration(totalSlots * params.BeaconConfig().SecondsPerSlot)
 			genesisTime := currentTime.Add(-secondsSinceGenesis * time.Second)
 
+			beaconState, err := testutil.NewBeaconState()
+			require.NoError(t, err)
+			mockChain := &mock.ChainService{
+				State: beaconState,
+			}
+
+			// Initialize validators in the state.
+			numVals := params.BeaconConfig().MinGenesisActiveValidatorCount
+			validators := make([]*ethpb.Validator, numVals)
+			privKeys := make([]bls.SecretKey, numVals)
+			for i := range validators {
+				privKey, err := bls.RandKey()
+				require.NoError(t, err)
+				privKeys[i] = privKey
+				validators[i] = &ethpb.Validator{
+					PublicKey:             privKey.PublicKey().Marshal(),
+					WithdrawalCredentials: make([]byte, 32),
+				}
+			}
+			err = beaconState.SetValidators(validators)
+			require.NoError(t, err)
+			domain, err := helpers.Domain(
+				beaconState.Fork(),
+				0,
+				params.BeaconConfig().DomainBeaconAttester,
+				beaconState.GenesisValidatorRoot(),
+			)
+			require.NoError(t, err)
+
+			// Create valid signatures for all input attestations in the test.
+			for _, attestationWrapper := range tt.args.attestationQueue {
+				signingRoot, err := helpers.ComputeSigningRoot(attestationWrapper.IndexedAttestation.Data, domain)
+				require.NoError(t, err)
+				attestingIndices := attestationWrapper.IndexedAttestation.AttestingIndices
+				sigs := make([]bls.Signature, len(attestingIndices))
+				for i, validatorIndex := range attestingIndices {
+					privKey := privKeys[validatorIndex]
+					sigs[i] = privKey.Sign(signingRoot[:])
+				}
+				attestationWrapper.IndexedAttestation.Signature = bls.AggregateSignatures(sigs).Marshal()
+			}
+
 			s := &Service{
 				serviceCfg: &ServiceConfig{
-					Database:              beaconDB,
-					StateNotifier:         &mock.MockStateNotifier{},
-					AttesterSlashingsFeed: new(event.Feed),
+					Database:                beaconDB,
+					StateNotifier:           &mock.MockStateNotifier{},
+					HeadStateFetcher:        mockChain,
+					AttestationStateFetcher: mockChain,
+					SlashingPoolInserter:    &slashings.PoolMock{},
 				},
 				params:      DefaultParams(),
 				attsQueue:   newAttestationsQueue(),
@@ -221,10 +280,19 @@ func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
 	secondsSinceGenesis := time.Duration(totalSlots * params.BeaconConfig().SecondsPerSlot)
 	genesisTime := currentTime.Add(-secondsSinceGenesis * time.Second)
 
+	beaconState, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	mockChain := &mock.ChainService{
+		State: beaconState,
+	}
+
 	s := &Service{
 		serviceCfg: &ServiceConfig{
-			Database:      beaconDB,
-			StateNotifier: &mock.MockStateNotifier{},
+			Database:                beaconDB,
+			StateNotifier:           &mock.MockStateNotifier{},
+			HeadStateFetcher:        mockChain,
+			AttestationStateFetcher: mockChain,
+			SlashingPoolInserter:    &slashings.PoolMock{},
 		},
 		params:      slasherParams,
 		attsQueue:   newAttestationsQueue(),
@@ -275,10 +343,19 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 	secondsSinceGenesis := time.Duration(totalSlots * params.BeaconConfig().SecondsPerSlot)
 	genesisTime := currentTime.Add(-secondsSinceGenesis * time.Second)
 
+	beaconState, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	mockChain := &mock.ChainService{
+		State: beaconState,
+	}
+
 	s := &Service{
 		serviceCfg: &ServiceConfig{
-			Database:      beaconDB,
-			StateNotifier: &mock.MockStateNotifier{},
+			Database:                beaconDB,
+			StateNotifier:           &mock.MockStateNotifier{},
+			HeadStateFetcher:        mockChain,
+			AttestationStateFetcher: mockChain,
+			SlashingPoolInserter:    &slashings.PoolMock{},
 		},
 		params:      slasherParams,
 		attsQueue:   newAttestationsQueue(),

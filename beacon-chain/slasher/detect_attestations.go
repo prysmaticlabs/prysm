@@ -50,7 +50,6 @@ func (s *Service) checkSlashableAttestations(
 	if err := s.serviceCfg.Database.SaveLastEpochWrittenForValidators(ctx, indices, currentEpoch); err != nil {
 		return nil, err
 	}
-
 	return slashings, nil
 }
 

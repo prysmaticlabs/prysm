@@ -1,26 +1,30 @@
 package simulator
 
 import (
+	"context"
 	"math"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	log "github.com/sirupsen/logrus"
 )
 
-func generateAttestationsForSlot(
-	simParams *Parameters, slot types.Slot,
-) ([]*ethpb.IndexedAttestation, []*ethpb.AttesterSlashing) {
+func (s *Simulator) generateAttestationsForSlot(
+	ctx context.Context, slot types.Slot,
+) ([]*ethpb.IndexedAttestation, []*ethpb.AttesterSlashing, error) {
 	attestations := make([]*ethpb.IndexedAttestation, 0)
 	slashings := make([]*ethpb.AttesterSlashing, 0)
 	currentEpoch := helpers.SlotToEpoch(slot)
 
-	committeesPerSlot := helpers.SlotCommitteeCount(simParams.NumValidators)
-	valsPerCommittee := simParams.NumValidators / (committeesPerSlot * uint64(params.BeaconConfig().SlotsPerEpoch))
+	committeesPerSlot := helpers.SlotCommitteeCount(s.srvConfig.Params.NumValidators)
+	valsPerCommittee := s.srvConfig.Params.NumValidators /
+		(committeesPerSlot * uint64(s.srvConfig.Params.SlotsPerEpoch))
 	valsPerSlot := committeesPerSlot * valsPerCommittee
 
 	var sourceEpoch types.Epoch = 0
@@ -29,7 +33,7 @@ func generateAttestationsForSlot(
 	}
 
 	var slashedIndices []uint64
-	startIdx := valsPerSlot * uint64(slot%params.BeaconConfig().SlotsPerEpoch)
+	startIdx := valsPerSlot * uint64(slot%s.srvConfig.Params.SlotsPerEpoch)
 	endIdx := startIdx + valsPerCommittee
 	for c := types.CommitteeIndex(0); uint64(c) < committeesPerSlot; c++ {
 		attData := &ethpb.AttestationData{
@@ -46,7 +50,7 @@ func generateAttestationsForSlot(
 			},
 		}
 
-		valsPerAttestation := uint64(math.Floor(simParams.AggregationPercent * float64(valsPerCommittee)))
+		valsPerAttestation := uint64(math.Floor(s.srvConfig.Params.AggregationPercent * float64(valsPerCommittee)))
 		for i := startIdx; i < endIdx; i += valsPerAttestation {
 			attEndIdx := i + valsPerAttestation
 			if attEndIdx >= endIdx {
@@ -61,9 +65,26 @@ func generateAttestationsForSlot(
 				Data:             attData,
 				Signature:        params.BeaconConfig().EmptySignature[:],
 			}
+			beaconState, err := s.srvConfig.AttestationStateFetcher.AttestationTargetState(ctx, att.Data.Target)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			// Sign the attestation with a valid signature.
+			aggSig, err := s.aggregateSigForAttestation(beaconState, att)
+			if err != nil {
+				return nil, nil, err
+			}
+			att.Signature = aggSig.Marshal()
+
 			attestations = append(attestations, att)
-			if rand.NewGenerator().Float64() < simParams.AttesterSlashingProbab {
+			if rand.NewGenerator().Float64() < s.srvConfig.Params.AttesterSlashingProbab {
 				slashableAtt := makeSlashableFromAtt(att, []uint64{indices[0]})
+				aggSig, err := s.aggregateSigForAttestation(beaconState, slashableAtt)
+				if err != nil {
+					return nil, nil, err
+				}
+				slashableAtt.Signature = aggSig.Marshal()
 				slashedIndices = append(slashedIndices, slashableAtt.AttestingIndices...)
 				slashings = append(slashings, &ethpb.AttesterSlashing{
 					Attestation_1: att,
@@ -81,7 +102,31 @@ func generateAttestationsForSlot(
 			"indices": slashedIndices,
 		}).Infof("Slashable attestation made")
 	}
-	return attestations, slashings
+	return attestations, slashings, nil
+}
+
+func (s *Simulator) aggregateSigForAttestation(
+	beaconState iface.BeaconState, att *ethpb.IndexedAttestation,
+) (bls.Signature, error) {
+	domain, err := helpers.Domain(
+		beaconState.Fork(),
+		att.Data.Target.Epoch,
+		params.BeaconConfig().DomainBeaconAttester,
+		beaconState.GenesisValidatorRoot(),
+	)
+	if err != nil {
+		return nil, err
+	}
+	signingRoot, err := helpers.ComputeSigningRoot(att.Data, domain)
+	if err != nil {
+		return nil, err
+	}
+	sigs := make([]bls.Signature, len(att.AttestingIndices))
+	for i, validatorIndex := range att.AttestingIndices {
+		privKey := s.srvConfig.PrivateKeysByValidatorIndex[types.ValidatorIndex(validatorIndex)]
+		sigs[i] = privKey.Sign(signingRoot[:])
+	}
+	return bls.AggregateSignatures(sigs), nil
 }
 
 func makeSlashableFromAtt(att *ethpb.IndexedAttestation, indices []uint64) *ethpb.IndexedAttestation {

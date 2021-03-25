@@ -52,6 +52,7 @@ type SlasherNode struct {
 // New creates a new node instance, sets up configuration options,
 // and registers every required service.
 func New(cliCtx *cli.Context) (*SlasherNode, error) {
+	log.Warn("The Prysm slasher client is now deprecated. Please use the new slasher client embedded into the beacon node with --slasher")
 	if err := tracing.Setup(
 		"slasher", // Service name.
 		cliCtx.String(cmd.TracingProcessNameFlag.Name),

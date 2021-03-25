@@ -8,6 +8,7 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -36,13 +37,16 @@ func TestService_processAttesterSlashings(t *testing.T) {
 	err = beaconState.SetValidators(validators)
 	require.NoError(t, err)
 
+	mockChain := &mock.ChainService{
+		State: beaconState,
+	}
 	s := &Service{
 		serviceCfg: &ServiceConfig{
-			Database: beaconDB,
-			StateFetcher: &mock.ChainService{
-				State: beaconState,
-			},
-			StateGen: stategen.New(beaconDB),
+			Database:                beaconDB,
+			AttestationStateFetcher: mockChain,
+			StateGen:                stategen.New(beaconDB),
+			SlashingPoolInserter:    &slashings.PoolMock{},
+			HeadStateFetcher:        mockChain,
 		},
 	}
 
@@ -77,7 +81,8 @@ func TestService_processAttesterSlashings(t *testing.T) {
 			},
 		}
 
-		s.processAttesterSlashings(ctx, slashings)
+		err = s.processAttesterSlashings(ctx, slashings)
+		require.NoError(tt, err)
 		require.LogsContain(tt, hook, "Invalid signature")
 	})
 
@@ -95,7 +100,8 @@ func TestService_processAttesterSlashings(t *testing.T) {
 			},
 		}
 
-		s.processAttesterSlashings(ctx, slashings)
+		err = s.processAttesterSlashings(ctx, slashings)
+		require.NoError(tt, err)
 		require.LogsContain(tt, hook, "Invalid signature")
 	})
 
@@ -113,7 +119,8 @@ func TestService_processAttesterSlashings(t *testing.T) {
 			},
 		}
 
-		s.processAttesterSlashings(ctx, slashings)
+		err = s.processAttesterSlashings(ctx, slashings)
+		require.NoError(tt, err)
 		require.LogsDoNotContain(tt, hook, "Invalid signature")
 	})
 }
@@ -136,13 +143,16 @@ func TestService_processProposerSlashings(t *testing.T) {
 	err = beaconState.SetValidators(validators)
 	require.NoError(t, err)
 
+	mockChain := &mock.ChainService{
+		State: beaconState,
+	}
 	s := &Service{
 		serviceCfg: &ServiceConfig{
-			Database: beaconDB,
-			StateFetcher: &mock.ChainService{
-				State: beaconState,
-			},
-			StateGen: stategen.New(beaconDB),
+			Database:                beaconDB,
+			AttestationStateFetcher: mockChain,
+			StateGen:                stategen.New(beaconDB),
+			SlashingPoolInserter:    &slashings.PoolMock{},
+			HeadStateFetcher:        mockChain,
 		},
 	}
 
@@ -196,7 +206,8 @@ func TestService_processProposerSlashings(t *testing.T) {
 			},
 		}
 
-		s.processProposerSlashings(ctx, slashings)
+		err = s.processProposerSlashings(ctx, slashings)
+		require.NoError(tt, err)
 		require.LogsContain(tt, hook, "Invalid signature")
 	})
 
@@ -214,7 +225,8 @@ func TestService_processProposerSlashings(t *testing.T) {
 			},
 		}
 
-		s.processProposerSlashings(ctx, slashings)
+		err = s.processProposerSlashings(ctx, slashings)
+		require.NoError(tt, err)
 		require.LogsContain(tt, hook, "Invalid signature")
 	})
 
@@ -232,7 +244,8 @@ func TestService_processProposerSlashings(t *testing.T) {
 			},
 		}
 
-		s.processProposerSlashings(ctx, slashings)
+		err = s.processProposerSlashings(ctx, slashings)
+		require.NoError(tt, err)
 		require.LogsDoNotContain(tt, hook, "Invalid signature")
 	})
 }
