@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"sort"
 
 	ssz "github.com/ferranbt/fastssz"
 	"github.com/golang/snappy"
@@ -12,6 +13,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
+	slashpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
@@ -353,9 +355,64 @@ func (s *Store) PruneAttestations(ctx context.Context, currentEpoch types.Epoch,
 	})
 }
 
+// HighestAttestations retrieves the last attestation data from the database for all indices.
+func (s *Store) HighestAttestations(
+	ctx context.Context,
+	indices []types.ValidatorIndex,
+) ([]*slashpb.HighestAttestation, error) {
+	if len(indices) == 0 {
+		return nil, nil
+	}
+
+	// Sort indices to keep DB interactions short.
+	sort.SliceStable(indices, func(i, j int) bool {
+		return uint64(indices[i]) < uint64(indices[j])
+	})
+
+	var err error
+	encodedIndices := make([][]byte, len(indices))
+	for i, idx := range indices {
+		encodedIndices[i], err = idx.MarshalSSZ()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	history := make([]*slashpb.HighestAttestation, 0, len(encodedIndices))
+
+	err = s.db.View(func(tx *bolt.Tx) error {
+		attBkt := tx.Bucket(attestationRecordsBucket)
+		for i := 0; i < len(encodedIndices); i++ {
+			c := attBkt.Cursor()
+			for k, v := c.Last(); k != nil; k, v = c.Prev() {
+				if suffixForIndex(k, encodedIndices[i]) {
+					attWrapper, err := decodeAttestationRecord(v)
+					if err != nil {
+						return err
+					}
+					highestAtt := &slashpb.HighestAttestation{
+						ValidatorIndex:     uint64(indices[i]),
+						HighestSourceEpoch: attWrapper.IndexedAttestation.Data.Source.Epoch,
+						HighestTargetEpoch: attWrapper.IndexedAttestation.Data.Target.Epoch,
+					}
+					history = append(history, highestAtt)
+					break
+				}
+			}
+		}
+		return nil
+	})
+	return history, err
+}
+
 func prefixLessThan(key, lessThan []byte) bool {
 	encSlot := key[:8]
 	return bytes.Compare(encSlot, lessThan) < 0
+}
+
+func suffixForIndex(key, index []byte) bool {
+	encIdx := key[8:]
+	return bytes.Equal(encIdx, index)
 }
 
 // Disk key for a validator proposal, including a slot+validatorIndex as a byte slice.
