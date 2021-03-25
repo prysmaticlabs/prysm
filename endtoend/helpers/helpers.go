@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 )
 
@@ -243,4 +244,33 @@ func EpochTickerStartTime(genesis *eth.Genesis) time.Time {
 	genesisTime := time.Unix(genesis.GenesisTime.Seconds, 0)
 	// Offsetting the ticker from genesis so it ticks in the middle of an epoch, in order to keep results consistent.
 	return genesisTime.Add(middleOfEpoch)
+}
+
+// WaitOnNodes waits on nodes to complete execution, accepts function that will be called when all nodes are ready.
+func WaitOnNodes(ctx context.Context, nodes []e2etypes.ComponentRunner, nodesStarted func()) error {
+	// Start nodes.
+	g, ctx := errgroup.WithContext(ctx)
+	for _, node := range nodes {
+		node := node
+		g.Go(func() error {
+			return node.Start(ctx)
+		})
+	}
+
+	// Mark set as ready (happens when all contained nodes report as started).
+	go func() {
+		for _, node := range nodes {
+			select {
+			case <-ctx.Done():
+				return
+			case <-node.Started():
+				continue
+			}
+		}
+		// When all nodes are done, signal the client. Client handles unresponsive components by setting up
+		// a deadline for passed in context, and this ensures that nothing breaks if function below is never called.
+		nodesStarted()
+	}()
+
+	return g.Wait()
 }
