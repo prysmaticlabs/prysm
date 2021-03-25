@@ -191,8 +191,8 @@ func TestStateReferenceCopy_NoUnexpectedAttestationsMutation(t *testing.T) {
 		{AggregationBits: bitfield.NewBitlist(1)},
 		{AggregationBits: bitfield.NewBitlist(2)},
 	}
-	require.NoError(t, a.SetPreviousEpochAttestations(atts[:1]))
-	require.NoError(t, a.SetCurrentEpochAttestations(atts[:1]))
+	a.setPreviousEpochAttestations(atts[:1])
+	a.setCurrentEpochAttestations(atts[:1])
 	curAtt, err := a.CurrentEpochAttestations()
 	require.NoError(t, err)
 	assert.Equal(t, 1, len(curAtt), "Unexpected number of attestations")

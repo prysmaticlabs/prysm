@@ -189,8 +189,6 @@ type WriteOnlyCheckpoint interface {
 
 // WriteOnlyAttestations defines a struct which only has write access to attestations methods.
 type WriteOnlyAttestations interface {
-	SetPreviousEpochAttestations(val []*pbp2p.PendingAttestation) error
-	SetCurrentEpochAttestations(val []*pbp2p.PendingAttestation) error
 	AppendCurrentEpochAttestations(val *pbp2p.PendingAttestation) error
 	AppendPreviousEpochAttestations(val *pbp2p.PendingAttestation) error
 	RotateAttestations() error

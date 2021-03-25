@@ -18,6 +18,6 @@ func TestBeaconState_RotateAttestations(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NoError(t, st.RotateAttestations())
-	require.Equal(t, 0, len(st.CurrentEpochAttestations()))
-	require.Equal(t, types.Slot(456), st.PreviousEpochAttestations()[0].Data.Slot)
+	require.Equal(t, 0, len(st.currentEpochAttestations()))
+	require.Equal(t, types.Slot(456), st.previousEpochAttestations()[0].Data.Slot)
 }
