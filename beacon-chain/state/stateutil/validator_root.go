@@ -132,6 +132,7 @@ func ValidatorEncKey(validator *ethpb.Validator) []byte {
 	return enc
 }
 
+// HandleValidatorSlice returns the validator indices in a slice of root format.
 func HandleValidatorSlice(val []*ethpb.Validator, indices []uint64, convertAll bool) ([][32]byte, error) {
 	length := len(indices)
 	if convertAll {
