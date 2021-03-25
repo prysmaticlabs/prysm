@@ -13,5 +13,6 @@ go_library(
         "//endtoend/params:go_default_library",
         "//endtoend/types:go_default_library",
         "//shared/timeutils:go_default_library",
+        "@org_golang_x_sync//errgroup:go_default_library",
     ],
 )
