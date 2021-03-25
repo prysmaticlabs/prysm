@@ -63,7 +63,7 @@ type Simulator struct {
 // DefaultParams for launching a slasher simulator.
 func DefaultParams() *Parameters {
 	return &Parameters{
-		SecondsPerSlot:         2,
+		SecondsPerSlot:         4,
 		SlotsPerEpoch:          8,
 		AggregationPercent:     1.0,
 		ProposerSlashingProbab: 0.4,
@@ -157,7 +157,7 @@ func (s *Simulator) simulateBlocksAndAttestations(ctx context.Context) {
 		select {
 		case slot := <-ticker.C():
 			// We only run the simulator for a specified number of epochs.
-			if helpers.SlotToEpoch(slot)+1 >= types.Epoch(s.srvConfig.Params.NumEpochs) {
+			if helpers.SlotToEpoch(slot) >= types.Epoch(s.srvConfig.Params.NumEpochs) {
 				return
 			}
 
