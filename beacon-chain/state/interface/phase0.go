@@ -193,4 +193,5 @@ type WriteOnlyAttestations interface {
 	SetCurrentEpochAttestations(val []*pbp2p.PendingAttestation) error
 	AppendCurrentEpochAttestations(val *pbp2p.PendingAttestation) error
 	AppendPreviousEpochAttestations(val *pbp2p.PendingAttestation) error
+	RotateAttestations() error
 }
