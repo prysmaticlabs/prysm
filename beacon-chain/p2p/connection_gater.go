@@ -85,17 +85,17 @@ func (s *Service) validateDial(addr multiaddr.Multiaddr) bool {
 // deny lists to appropriately create a filter.
 func configureFilter(cfg *Config) (*multiaddr.Filters, error) {
 	//Set list of private addresses
-	//The first three are the range of private ip addreses specified by rfc-1918
-	//  See: https://tools.ietf.org/html/rfc1918
-	//Next one is the reserved address space for CGN devices, specified by rfc-6598
-	//  See: https://tools.ietf.org/html/rfc6598
-	//Last one is the range for IPv4 Link-Local addresses, specified by rfc-3927
-	//  See: https://tools.ietf.org/html/rfc3927
 	privateCIDRList := []string{
+		// Private ip addresses specified by rfc-1918.
+		// See: https://tools.ietf.org/html/rfc1918
 		"10.0.0.0/8",
 		"172.16.0.0/12",
 		"192.168.0.0/16",
+		// Reserved address space for CGN devices, specified by rfc-6598
+		// See: https://tools.ietf.org/html/rfc6598
 		"100.64.0.0/10",
+		// IPv4 Link-Local addresses, specified by rfc-3926
+		// See: https://tools.ietf.org/html/rfc3927
 		"169.254.0.0/16",
 	}
 
