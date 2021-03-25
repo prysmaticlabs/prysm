@@ -19,10 +19,10 @@ import (
 )
 
 var _ e2etypes.ComponentRunner = (*BeaconNode)(nil)
-var _ e2etypes.ComponentRunner = (*BeaconNodes)(nil)
+var _ e2etypes.ComponentRunner = (*BeaconNodeSet)(nil)
 
-// BeaconNodes represents set of beacon nodes.
-type BeaconNodes struct {
+// BeaconNodeSet represents set of beacon nodes.
+type BeaconNodeSet struct {
 	e2etypes.ComponentRunner
 	config  *e2etypes.E2EConfig
 	enr     string
@@ -30,20 +30,20 @@ type BeaconNodes struct {
 }
 
 // SetENR assigns ENR to the set of beacon nodes.
-func (s *BeaconNodes) SetENR(enr string) {
+func (s *BeaconNodeSet) SetENR(enr string) {
 	s.enr = enr
 }
 
 // NewBeaconNodes creates and returns a set of beacon nodes.
-func NewBeaconNodes(config *e2etypes.E2EConfig) *BeaconNodes {
-	return &BeaconNodes{
+func NewBeaconNodes(config *e2etypes.E2EConfig) *BeaconNodeSet {
+	return &BeaconNodeSet{
 		config:  config,
 		started: make(chan struct{}, 1),
 	}
 }
 
 // Start starts all the beacon nodes in set.
-func (s *BeaconNodes) Start(ctx context.Context) error {
+func (s *BeaconNodeSet) Start(ctx context.Context) error {
 	if s.enr == "" {
 		return errors.New("empty ENR")
 	}
@@ -82,7 +82,7 @@ func (s *BeaconNodes) Start(ctx context.Context) error {
 }
 
 // Started checks whether beacon node set is started and all nodes are ready to be queried.
-func (s *BeaconNodes) Started() <-chan struct{} {
+func (s *BeaconNodeSet) Started() <-chan struct{} {
 	return s.started
 }
 

@@ -38,11 +38,6 @@ type ValidatorNodes struct {
 	started chan struct{}
 }
 
-// SetENR assigns ENR to the set of beacon nodes.
-func (s *BeaconNodes) SetParams(enr string) {
-	s.enr = enr
-}
-
 // NewValidatorNodes creates and returns a set of validator nodes.
 func NewValidatorNodes(config *e2etypes.E2EConfig) *ValidatorNodes {
 	return &ValidatorNodes{
