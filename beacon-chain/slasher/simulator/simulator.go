@@ -63,7 +63,7 @@ type Simulator struct {
 // DefaultParams for launching a slasher simulator.
 func DefaultParams() *Parameters {
 	return &Parameters{
-		SecondsPerSlot:         3,
+		SecondsPerSlot:         4,
 		SlotsPerEpoch:          8,
 		AggregationPercent:     1.0,
 		ProposerSlashingProbab: 0.4,
