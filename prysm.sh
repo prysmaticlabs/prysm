@@ -98,7 +98,7 @@ if [[ "$arch" == "armv7l" ]]; then
     exit 1
 fi
 
-mkdir -p $wrapper_dir
+mkdir -p "$wrapper_dir"
 
 function get_prysm_version() {
     if [[ -n ${USE_PRYSM_VERSION:-} ]]; then
@@ -134,14 +134,14 @@ function verify() {
 
     color "37" "Verifying binary integrity."
 
-    gpg --list-keys $PRYLABS_SIGNING_KEY >/dev/null 2>&1 || curl --silent https://prysmaticlabs.com/releases/pgp_keys.asc | gpg --import
+    gpg --list-keys "$PRYLABS_SIGNING_KEY" >/dev/null 2>&1 || curl --silent https://prysmaticlabs.com/releases/pgp_keys.asc | gpg --import
     (
-        cd $wrapper_dir
+        cd "$wrapper_dir"
 	$checkSum -c "${file}.sha256" || failed_verification
     )
     (
-        cd $wrapper_dir
-        gpg -u $PRYLABS_SIGNING_KEY --verify "${file}.sig" $file || failed_verification
+        cd "$wrapper_dir"
+        gpg -u "$PRYLABS_SIGNING_KEY" --verify "${file}.sig" "$file" || failed_verification
     )
 
     color "32;1" "Verified ${file} has been signed by Prysmatic Labs."
@@ -174,10 +174,10 @@ if [[ $1 == beacon-chain ]]; then
     if [[ ! -x $BEACON_CHAIN_REAL ]]; then
         color "34" "Downloading beacon chain@${prysm_version} to ${BEACON_CHAIN_REAL} (${reason})"
         file=beacon-chain-${prysm_version}-${system}-${arch}
-        curl -L "https://prysmaticlabs.com/releases/${file}" -o $BEACON_CHAIN_REAL
+        curl -L "https://prysmaticlabs.com/releases/${file}" -o "$BEACON_CHAIN_REAL"
         curl --silent -L "https://prysmaticlabs.com/releases/${file}.sha256" -o "${wrapper_dir}/${file}.sha256"
         curl --silent -L "https://prysmaticlabs.com/releases/${file}.sig" -o "${wrapper_dir}/${file}.sig"
-        chmod +x $BEACON_CHAIN_REAL
+        chmod +x "$BEACON_CHAIN_REAL"
     else
         color "37" "Beacon chain is up to date."
     fi
@@ -188,10 +188,10 @@ if [[ $1 == validator ]]; then
         color "34" "Downloading validator@${prysm_version} to ${VALIDATOR_REAL} (${reason})"
 
         file=validator-${prysm_version}-${system}-${arch}
-        curl -L "https://prysmaticlabs.com/releases/${file}" -o $VALIDATOR_REAL
+        curl -L "https://prysmaticlabs.com/releases/${file}" -o "$VALIDATOR_REAL"
         curl --silent -L "https://prysmaticlabs.com/releases/${file}.sha256" -o "${wrapper_dir}/${file}.sha256"
         curl --silent -L "https://prysmaticlabs.com/releases/${file}.sig" -o "${wrapper_dir}/${file}.sig"
-        chmod +x $VALIDATOR_REAL
+        chmod +x "$VALIDATOR_REAL"
     else
         color "37" "Validator is up to date."
     fi
@@ -202,10 +202,10 @@ if [[ $1 == slasher ]]; then
         color "34" "Downloading slasher@${prysm_version} to ${SLASHER_REAL} (${reason})"
 
         file=slasher-${prysm_version}-${system}-${arch}
-        curl -L "https://prysmaticlabs.com/releases/${file}" -o $SLASHER_REAL
+        curl -L "https://prysmaticlabs.com/releases/${file}" -o "$SLASHER_REAL"
         curl --silent -L "https://prysmaticlabs.com/releases/${file}.sha256" -o "${wrapper_dir}/${file}.sha256"
         curl --silent -L "https://prysmaticlabs.com/releases/${file}.sig" -o "${wrapper_dir}/${file}.sig"
-        chmod +x $SLASHER_REAL
+        chmod +x "$SLASHER_REAL"
     else
         color "37" "Slasher is up to date."
     fi
@@ -233,7 +233,7 @@ slasher)
     ;;
 esac
 
-verify $process
+verify "$process"
 
 if [[ "$#" -gt 1 ]] && [[ $2 == --download-only ]]; then
     color "37" "Only download operation is requested, done."
