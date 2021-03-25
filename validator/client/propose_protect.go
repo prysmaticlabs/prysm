@@ -58,12 +58,20 @@ func (v *validator) preBlockSignValidations(
 		)
 	}
 
-	if featureconfig.Get().SlasherProtection && v.protector != nil {
+	if featureconfig.Get().SlasherProtection {
 		blockHdr, err := blockutil.BeaconBlockHeaderFromBlock(block)
 		if err != nil {
 			return errors.Wrap(err, "failed to get block header from block")
 		}
-		if !v.protector.CheckBlockSafety(ctx, blockHdr) {
+		signedHeader := &ethpb.SignedBeaconBlockHeader{
+			Header:    blockHdr,
+			Signature: params.BeaconConfig().EmptySignature[:],
+		}
+		slashing, err := v.slashingProtectionClient.IsSlashableBlock(ctx, signedHeader)
+		if err != nil {
+			return errors.Wrap(err, "could not check if block is slashable")
+		}
+		if slashing != nil {
 			if v.emitAccountMetrics {
 				ValidatorProposeFailVecSlasher.WithLabelValues(fmtKey).Inc()
 			}
@@ -81,22 +89,6 @@ func (v *validator) postBlockSignUpdate(
 	signingRoot [32]byte,
 ) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
-	if featureconfig.Get().SlasherProtection && v.protector != nil {
-		sbh, err := blockutil.SignedBeaconBlockHeaderFromBlock(block)
-		if err != nil {
-			return errors.Wrap(err, "failed to get block header from block")
-		}
-		valid, err := v.protector.CommitBlock(ctx, sbh)
-		if err != nil {
-			return err
-		}
-		if !valid {
-			if v.emitAccountMetrics {
-				ValidatorProposeFailVecSlasher.WithLabelValues(fmtKey).Inc()
-			}
-			return fmt.Errorf(failedPostBlockSignErr)
-		}
-	}
 	if err := v.db.SaveProposalHistoryForSlot(ctx, pubKey, block.Block.Slot, signingRoot[:]); err != nil {
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
