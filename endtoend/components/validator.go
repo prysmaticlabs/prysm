@@ -19,18 +19,164 @@ import (
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
-	"github.com/prysmaticlabs/prysm/endtoend/types"
+	e2etypes "github.com/prysmaticlabs/prysm/endtoend/types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"golang.org/x/sync/errgroup"
 )
 
 const depositGasLimit = 4000000
 
+var _ e2etypes.ComponentRunner = (*ValidatorNode)(nil)
+var _ e2etypes.ComponentRunner = (*ValidatorNodeSet)(nil)
+
+// ValidatorNodeSet represents set of validator nodes.
+type ValidatorNodeSet struct {
+	e2etypes.ComponentRunner
+	config  *e2etypes.E2EConfig
+	started chan struct{}
+}
+
+// NewValidatorNodeSet creates and returns a set of validator nodes.
+func NewValidatorNodeSet(config *e2etypes.E2EConfig) *ValidatorNodeSet {
+	return &ValidatorNodeSet{
+		config:  config,
+		started: make(chan struct{}, 1),
+	}
+}
+
+// Start starts the configured amount of validators, also sending and mining their deposits.
+func (s *ValidatorNodeSet) Start(ctx context.Context) error {
+	// Always using genesis count since using anything else would be difficult to test for.
+	validatorNum := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	beaconNodeNum := e2e.TestParams.BeaconNodeCount
+	if validatorNum%beaconNodeNum != 0 {
+		return errors.New("validator count is not easily divisible by beacon node count")
+	}
+	validatorsPerNode := validatorNum / beaconNodeNum
+
+	// Create validator nodes.
+	nodes := make([]*ValidatorNode, beaconNodeNum)
+	for i := 0; i < beaconNodeNum; i++ {
+		nodes[i] = NewValidatorNode(s.config, validatorsPerNode, i, validatorsPerNode*i)
+	}
+
+	// Start all created validator nodes.
+	g, ctx := errgroup.WithContext(ctx)
+	for _, node := range nodes {
+		node := node
+		g.Go(func() error {
+			return node.Start(ctx)
+		})
+	}
+
+	// Mark set as ready (happens when all contained nodes report as started).
+	go func() {
+		for _, node := range nodes {
+			select {
+			case <-ctx.Done():
+				return
+			case <-node.Started():
+				continue
+			}
+		}
+		// Only close if all nodes are started. When context is cancelled, node is not considered as started.
+		// Stalled nodes do not pose problem -- after certain period of time main routine times out.
+		close(s.started)
+	}()
+
+	return g.Wait()
+}
+
+// Started checks whether validator node set is started and all nodes are ready to be queried.
+func (s *ValidatorNodeSet) Started() <-chan struct{} {
+	return s.started
+}
+
+// ValidatorNode represents a validator node.
+type ValidatorNode struct {
+	e2etypes.ComponentRunner
+	config       *e2etypes.E2EConfig
+	started      chan struct{}
+	validatorNum int
+	index        int
+	offset       int
+}
+
+// NewValidatorNode creates and returns a validator node.
+func NewValidatorNode(config *e2etypes.E2EConfig, validatorNum, index, offset int) *ValidatorNode {
+	return &ValidatorNode{
+		config:       config,
+		validatorNum: validatorNum,
+		index:        index,
+		offset:       offset,
+		started:      make(chan struct{}, 1),
+	}
+}
+
+// StartNewValidatorNode starts a validator client.
+func (v *ValidatorNode) Start(ctx context.Context) error {
+	binaryPath, found := bazel.FindBinary("cmd/validator", "validator")
+	if !found {
+		return errors.New("validator binary not found")
+	}
+
+	config, validatorNum, index, offset := v.config, v.validatorNum, v.index, v.offset
+	beaconRPCPort := e2e.TestParams.BeaconNodeRPCPort + index
+	if beaconRPCPort >= e2e.TestParams.BeaconNodeRPCPort+e2e.TestParams.BeaconNodeCount {
+		// Point any extra validator clients to a node we know is running.
+		beaconRPCPort = e2e.TestParams.BeaconNodeRPCPort
+	}
+
+	file, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, fmt.Sprintf(e2e.ValidatorLogFileName, index))
+	if err != nil {
+		return err
+	}
+	gFile, err := helpers.GraffitiYamlFile(e2e.TestParams.TestPath)
+	if err != nil {
+		return err
+	}
+	args := []string{
+		fmt.Sprintf("--datadir=%s/eth2-val-%d", e2e.TestParams.TestPath, index),
+		fmt.Sprintf("--log-file=%s", file.Name()),
+		fmt.Sprintf("--graffiti-file=%s", gFile),
+		fmt.Sprintf("--interop-num-validators=%d", validatorNum),
+		fmt.Sprintf("--interop-start-index=%d", offset),
+		fmt.Sprintf("--monitoring-port=%d", e2e.TestParams.ValidatorMetricsPort+index),
+		fmt.Sprintf("--grpc-gateway-port=%d", e2e.TestParams.ValidatorGatewayPort+index),
+		fmt.Sprintf("--beacon-rpc-provider=localhost:%d", beaconRPCPort),
+		"--grpc-headers=dummy=value,foo=bar", // Sending random headers shouldn't break anything.
+		"--force-clear-db",
+		"--e2e-config",
+		"--accept-terms-of-use",
+		"--verbosity=debug",
+	}
+	args = append(args, featureconfig.E2EValidatorFlags...)
+	args = append(args, config.ValidatorFlags...)
+
+	cmd := exec.CommandContext(ctx, binaryPath, args...)
+	log.Infof("Starting validator client %d with flags: %s", index, strings.Join(args[2:], " "))
+	if err = cmd.Start(); err != nil {
+		return err
+	}
+
+	// Mark node as ready.
+	close(v.started)
+
+	return cmd.Wait()
+}
+
+// Started checks whether validator node is started and ready to be queried.
+func (v *ValidatorNode) Started() <-chan struct{} {
+	return v.started
+}
+
 // StartValidatorClients starts the configured amount of validators, also sending and mining their validator deposits.
 // Should only be used on initialization.
-func StartValidatorClients(t *testing.T, config *types.E2EConfig) {
+// Deprecated: this method will be removed once ValidatorNodeSet component is used.
+func StartValidatorClients(t *testing.T, config *e2etypes.E2EConfig) {
 	// Always using genesis count since using anything else would be difficult to test for.
 	validatorNum := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 	beaconNodeNum := e2e.TestParams.BeaconNodeCount
@@ -44,7 +190,8 @@ func StartValidatorClients(t *testing.T, config *types.E2EConfig) {
 }
 
 // StartNewValidatorClient starts a validator client with the passed in configuration.
-func StartNewValidatorClient(t *testing.T, config *types.E2EConfig, validatorNum, index, offset int) {
+// Deprecated: this method will be removed once ValidatorNode component is used.
+func StartNewValidatorClient(t *testing.T, config *e2etypes.E2EConfig, validatorNum, index, offset int) {
 	binaryPath, found := bazel.FindBinary("cmd/validator", "validator")
 	if !found {
 		t.Fatal("validator binary not found")
