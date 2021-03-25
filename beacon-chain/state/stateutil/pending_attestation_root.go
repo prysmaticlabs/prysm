@@ -2,11 +2,13 @@ package stateutil
 
 import (
 	"encoding/binary"
+	"fmt"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -62,6 +64,45 @@ func PendingAttEncKey(att *pb.PendingAttestation) []byte {
 	}
 
 	return enc
+}
+
+// HandlePendingAttestation handles a list of pending attestations and returns the state root for each in a list back.
+func HandlePendingAttestation(val []*pb.PendingAttestation, indices []uint64, convertAll bool) ([][32]byte, error) {
+	length := len(indices)
+	if convertAll {
+		length = len(val)
+	}
+	roots := make([][32]byte, 0, length)
+	hasher := hashutil.CustomSHA256Hasher()
+	rootCreator := func(input *pb.PendingAttestation) error {
+		newRoot, err := PendingAttRootWithHasher(hasher, input)
+		if err != nil {
+			return err
+		}
+		roots = append(roots, newRoot)
+		return nil
+	}
+	if convertAll {
+		for i := range val {
+			err := rootCreator(val[i])
+			if err != nil {
+				return nil, err
+			}
+		}
+		return roots, nil
+	}
+	if len(val) > 0 {
+		for _, idx := range indices {
+			if idx > uint64(len(val))-1 {
+				return nil, fmt.Errorf("index %d greater than number of pending attestations %d", idx, len(val))
+			}
+			err := rootCreator(val[idx])
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	return roots, nil
 }
 
 func attDataRootWithHasher(hasher htrutils.HashFn, data *ethpb.AttestationData) ([32]byte, error) {

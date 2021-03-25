@@ -7,6 +7,9 @@ go_library(
         "array_root.go",
         "block_header_root.go",
         "eth1_root.go",
+        "field_index.go",
+        "field_map.go",
+        "field_trie.go",
         "pending_attestation_root.go",
         "reference.go",
         "trie_helpers.go",
@@ -44,6 +47,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "benchmark_test.go",
+        "field_trie_test.go",
         "reference_bench_test.go",
         "state_root_test.go",
         "stateutil_test.go",

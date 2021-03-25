@@ -1,4 +1,4 @@
-package stateV0
+package stateutil
 
 import (
 	"fmt"
@@ -7,7 +7,6 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
@@ -16,19 +15,19 @@ import (
 // trie of the particular field.
 type FieldTrie struct {
 	*sync.RWMutex
-	reference   *stateutil.Reference
+	reference   *Reference
 	fieldLayers [][]*[32]byte
-	field       fieldIndex
+	field       FieldIndex
 }
 
 // NewFieldTrie is the constructor for the field trie data structure. It creates the corresponding
 // trie according to the given parameters. Depending on whether the field is a basic/composite array
 // which is either fixed/variable length, it will appropriately determine the trie.
-func NewFieldTrie(field fieldIndex, elements interface{}, length uint64) (*FieldTrie, error) {
+func NewFieldTrie(field FieldIndex, elements interface{}, length uint64) (*FieldTrie, error) {
 	if elements == nil {
 		return &FieldTrie{
 			field:     field,
-			reference: stateutil.NewRef(1),
+			reference: NewRef(1),
 			RWMutex:   new(sync.RWMutex),
 		}, nil
 	}
@@ -43,22 +42,37 @@ func NewFieldTrie(field fieldIndex, elements interface{}, length uint64) (*Field
 	switch datType {
 	case basicArray:
 		return &FieldTrie{
-			fieldLayers: stateutil.ReturnTrieLayer(fieldRoots, length),
+			fieldLayers: ReturnTrieLayer(fieldRoots, length),
 			field:       field,
-			reference:   stateutil.NewRef(1),
+			reference:   NewRef(1),
 			RWMutex:     new(sync.RWMutex),
 		}, nil
 	case compositeArray:
 		return &FieldTrie{
-			fieldLayers: stateutil.ReturnTrieLayerVariable(fieldRoots, length),
+			fieldLayers: ReturnTrieLayerVariable(fieldRoots, length),
 			field:       field,
-			reference:   stateutil.NewRef(1),
+			reference:   NewRef(1),
 			RWMutex:     new(sync.RWMutex),
 		}, nil
 	default:
 		return nil, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(datType).Name())
 	}
 
+}
+
+// Reference returns the reference of the FieldTrie.
+func (f *FieldTrie) Reference() *Reference {
+	return f.reference
+}
+
+// FieldLayers returns the field layers of the FieldTrie.
+func (f *FieldTrie) FieldLayers() [][]*[32]byte {
+	return f.fieldLayers
+}
+
+// SetFieldLayers sets the field layers of the FieldTrie.
+func (f *FieldTrie) SetFieldLayers(layers [][]*[32]byte) {
+	f.fieldLayers = layers
 }
 
 // RecomputeTrie rebuilds the affected branches in the trie according to the provided
@@ -81,17 +95,17 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 	}
 	switch datType {
 	case basicArray:
-		fieldRoot, f.fieldLayers, err = stateutil.RecomputeFromLayer(fieldRoots, indices, f.fieldLayers)
+		fieldRoot, f.fieldLayers, err = RecomputeFromLayer(fieldRoots, indices, f.fieldLayers)
 		if err != nil {
 			return [32]byte{}, err
 		}
 		return fieldRoot, nil
 	case compositeArray:
-		fieldRoot, f.fieldLayers, err = stateutil.RecomputeFromLayerVariable(fieldRoots, indices, f.fieldLayers)
+		fieldRoot, f.fieldLayers, err = RecomputeFromLayerVariable(fieldRoots, indices, f.fieldLayers)
 		if err != nil {
 			return [32]byte{}, err
 		}
-		return stateutil.AddInMixin(fieldRoot, uint64(len(f.fieldLayers[0])))
+		return AddInMixin(fieldRoot, uint64(len(f.fieldLayers[0])))
 	default:
 		return [32]byte{}, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(datType).Name())
 	}
@@ -104,7 +118,7 @@ func (f *FieldTrie) CopyTrie() *FieldTrie {
 	if f.fieldLayers == nil {
 		return &FieldTrie{
 			field:     f.field,
-			reference: stateutil.NewRef(1),
+			reference: NewRef(1),
 			RWMutex:   new(sync.RWMutex),
 		}
 	}
@@ -116,7 +130,7 @@ func (f *FieldTrie) CopyTrie() *FieldTrie {
 	return &FieldTrie{
 		fieldLayers: dstFieldTrie,
 		field:       f.field,
-		reference:   stateutil.NewRef(1),
+		reference:   NewRef(1),
 		RWMutex:     new(sync.RWMutex),
 	}
 }
@@ -132,49 +146,49 @@ func (f *FieldTrie) TrieRoot() ([32]byte, error) {
 		return *f.fieldLayers[len(f.fieldLayers)-1][0], nil
 	case compositeArray:
 		trieRoot := *f.fieldLayers[len(f.fieldLayers)-1][0]
-		return stateutil.AddInMixin(trieRoot, uint64(len(f.fieldLayers[0])))
+		return AddInMixin(trieRoot, uint64(len(f.fieldLayers[0])))
 	default:
 		return [32]byte{}, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(datType).Name())
 	}
 }
 
 // this converts the corresponding field and the provided elements to the appropriate roots.
-func fieldConverters(field fieldIndex, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
+func fieldConverters(field FieldIndex, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	switch field {
-	case blockRoots, stateRoots, randaoMixes:
+	case BlockRoots, StateRoots, RandaoMixes:
 		val, ok := elements.([][]byte)
 		if !ok {
 			return nil, errors.Errorf("Wanted type of %v but got %v",
 				reflect.TypeOf([][]byte{}).Name(), reflect.TypeOf(elements).Name())
 		}
-		return stateutil.HandleByteArrays(val, indices, convertAll)
-	case eth1DataVotes:
+		return HandleByteArrays(val, indices, convertAll)
+	case Eth1DataVotes:
 		val, ok := elements.([]*ethpb.Eth1Data)
 		if !ok {
 			return nil, errors.Errorf("Wanted type of %v but got %v",
 				reflect.TypeOf([]*ethpb.Eth1Data{}).Name(), reflect.TypeOf(elements).Name())
 		}
-		return handleEth1DataSlice(val, indices, convertAll)
-	case validators:
+		return HandleEth1DataSlice(val, indices, convertAll)
+	case Validators:
 		val, ok := elements.([]*ethpb.Validator)
 		if !ok {
 			return nil, errors.Errorf("Wanted type of %v but got %v",
 				reflect.TypeOf([]*ethpb.Validator{}).Name(), reflect.TypeOf(elements).Name())
 		}
-		return stateutil.HandleValidatorSlice(val, indices, convertAll)
-	case previousEpochAttestations, currentEpochAttestations:
+		return HandleValidatorSlice(val, indices, convertAll)
+	case PreviousEpochAttestations, CurrentEpochAttestations:
 		val, ok := elements.([]*pb.PendingAttestation)
 		if !ok {
 			return nil, errors.Errorf("Wanted type of %v but got %v",
 				reflect.TypeOf([]*pb.PendingAttestation{}).Name(), reflect.TypeOf(elements).Name())
 		}
-		return handlePendingAttestation(val, indices, convertAll)
+		return HandlePendingAttestation(val, indices, convertAll)
 	default:
 		return [][32]byte{}, errors.Errorf("got unsupported type of %v", reflect.TypeOf(elements).Name())
 	}
 }
 
-func handleEth1DataSlice(val []*ethpb.Eth1Data, indices []uint64, convertAll bool) ([][32]byte, error) {
+func HandleEth1DataSlice(val []*ethpb.Eth1Data, indices []uint64, convertAll bool) ([][32]byte, error) {
 	length := len(indices)
 	if convertAll {
 		length = len(val)
@@ -182,7 +196,7 @@ func handleEth1DataSlice(val []*ethpb.Eth1Data, indices []uint64, convertAll boo
 	roots := make([][32]byte, 0, length)
 	hasher := hashutil.CustomSHA256Hasher()
 	rootCreator := func(input *ethpb.Eth1Data) error {
-		newRoot, err := eth1Root(hasher, input)
+		newRoot, err := Eth1DataRootWithHasher(hasher, input)
 		if err != nil {
 			return err
 		}
@@ -202,44 +216,6 @@ func handleEth1DataSlice(val []*ethpb.Eth1Data, indices []uint64, convertAll boo
 		for _, idx := range indices {
 			if idx > uint64(len(val))-1 {
 				return nil, fmt.Errorf("index %d greater than number of items in eth1 data slice %d", idx, len(val))
-			}
-			err := rootCreator(val[idx])
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-	return roots, nil
-}
-
-func handlePendingAttestation(val []*pb.PendingAttestation, indices []uint64, convertAll bool) ([][32]byte, error) {
-	length := len(indices)
-	if convertAll {
-		length = len(val)
-	}
-	roots := make([][32]byte, 0, length)
-	hasher := hashutil.CustomSHA256Hasher()
-	rootCreator := func(input *pb.PendingAttestation) error {
-		newRoot, err := stateutil.PendingAttRootWithHasher(hasher, input)
-		if err != nil {
-			return err
-		}
-		roots = append(roots, newRoot)
-		return nil
-	}
-	if convertAll {
-		for i := range val {
-			err := rootCreator(val[i])
-			if err != nil {
-				return nil, err
-			}
-		}
-		return roots, nil
-	}
-	if len(val) > 0 {
-		for _, idx := range indices {
-			if idx > uint64(len(val))-1 {
-				return nil, fmt.Errorf("index %d greater than number of pending attestations %d", idx, len(val))
 			}
 			err := rootCreator(val[idx])
 			if err != nil {
