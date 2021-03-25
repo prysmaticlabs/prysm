@@ -30,25 +30,25 @@ import (
 const depositGasLimit = 4000000
 
 var _ e2etypes.ComponentRunner = (*ValidatorNode)(nil)
-var _ e2etypes.ComponentRunner = (*ValidatorNodes)(nil)
+var _ e2etypes.ComponentRunner = (*ValidatorNodeSet)(nil)
 
-// ValidatorNodes represents set of validator nodes.
-type ValidatorNodes struct {
+// ValidatorNodeSet represents set of validator nodes.
+type ValidatorNodeSet struct {
 	e2etypes.ComponentRunner
 	config  *e2etypes.E2EConfig
 	started chan struct{}
 }
 
-// NewValidatorNodes creates and returns a set of validator nodes.
-func NewValidatorNodes(config *e2etypes.E2EConfig) *ValidatorNodes {
-	return &ValidatorNodes{
+// NewValidatorNodeSet creates and returns a set of validator nodes.
+func NewValidatorNodeSet(config *e2etypes.E2EConfig) *ValidatorNodeSet {
+	return &ValidatorNodeSet{
 		config:  config,
 		started: make(chan struct{}, 1),
 	}
 }
 
 // Start starts the configured amount of validators, also sending and mining their deposits.
-func (s *ValidatorNodes) Start(ctx context.Context) error {
+func (s *ValidatorNodeSet) Start(ctx context.Context) error {
 	// Always using genesis count since using anything else would be difficult to test for.
 	validatorNum := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 	beaconNodeNum := e2e.TestParams.BeaconNodeCount
@@ -91,7 +91,7 @@ func (s *ValidatorNodes) Start(ctx context.Context) error {
 }
 
 // Started checks whether validator node set is started and all nodes are ready to be queried.
-func (s *ValidatorNodes) Started() <-chan struct{} {
+func (s *ValidatorNodeSet) Started() <-chan struct{} {
 	return s.started
 }
 
@@ -175,7 +175,7 @@ func (v *ValidatorNode) Started() <-chan struct{} {
 
 // StartValidatorClients starts the configured amount of validators, also sending and mining their validator deposits.
 // Should only be used on initialization.
-// Deprecated: this method will be removed once ValidatorNodes component is used.
+// Deprecated: this method will be removed once ValidatorNodeSet component is used.
 func StartValidatorClients(t *testing.T, config *e2etypes.E2EConfig) {
 	// Always using genesis count since using anything else would be difficult to test for.
 	validatorNum := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
