@@ -369,19 +369,23 @@ func (s *Store) HighestAttestations(
 		return uint64(indices[i]) < uint64(indices[j])
 	})
 
-	history := make([]*slashpb.HighestAttestation, 0, len(indices))
+	var err error
+	encodedIndices := make([][]byte, len(indices))
+	for i, idx := range indices {
+		encodedIndices[i], err = idx.MarshalSSZ()
+		if err != nil {
+			return nil, err
+		}
+	}
 
-	err := s.db.View(func(tx *bolt.Tx) error {
+	history := make([]*slashpb.HighestAttestation, 0, len(encodedIndices))
+
+	err = s.db.View(func(tx *bolt.Tx) error {
 		attBkt := tx.Bucket(attestationRecordsBucket)
-		for i := 0; i < len(indices); i++ {
-			encIdx, err := indices[i].MarshalSSZ()
-			if err != nil {
-				return err
-			}
-
+		for i := 0; i < len(encodedIndices); i++ {
 			c := attBkt.Cursor()
 			for k, v := c.Last(); k != nil; k, v = c.Prev() {
-				if suffixForIndex(k, encIdx) {
+				if suffixForIndex(k, encodedIndices[i]) {
 					attWrapper, err := decodeAttestationRecord(v)
 					if err != nil {
 						return err
