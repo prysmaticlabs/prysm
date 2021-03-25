@@ -48,18 +48,14 @@ func (s *BeaconNodeSet) Start(ctx context.Context) error {
 	}
 
 	// Create beacon nodes.
-	nodes := make([]*BeaconNode, e2e.TestParams.BeaconNodeCount)
+	nodes := make([]e2etypes.ComponentRunner, e2e.TestParams.BeaconNodeCount)
 	for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
 		nodes[i] = NewBeaconNode(s.config, i, s.enr)
 	}
 
-	// Convert nodes to component runners on which to wait.
-	runners := make([]e2etypes.ComponentRunner, len(nodes))
-	for i := range nodes {
-		runners[i] = nodes[i]
-	}
-
-	return helpers.WaitOnNodes(ctx, runners, func() {
+	// Wait for all nodes to finish their job (blocking).
+	// Once nodes are ready passed in handler function will be called.
+	return helpers.WaitOnNodes(ctx, nodes, func() {
 		// All nodes stated, close channel, so that all services waiting on a set, can proceed.
 		close(s.started)
 	})
