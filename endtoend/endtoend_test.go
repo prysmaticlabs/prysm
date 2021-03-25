@@ -68,7 +68,7 @@ func (r *testRunner) run() {
 	g, ctx := errgroup.WithContext(ctx)
 
 	// ETH1 node.
-	eth1Node := components.NewEth1Node(config)
+	eth1Node := components.NewEth1Node()
 	g.Go(func() error {
 		return eth1Node.Start(ctx)
 	})
