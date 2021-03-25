@@ -1,6 +1,9 @@
 version = 1
 
-exclude_patterns = ["tools/analyzers/**"]
+exclude_patterns = [
+  "tools/analyzers/**",
+  "validator/keymanager/remote/keymanager_test.go"
+]
 
 [[analyzers]]
 name = "go"

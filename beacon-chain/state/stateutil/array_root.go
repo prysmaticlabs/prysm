@@ -6,6 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
+// HandleByteArrays computes and returns byte arrays in a slice of root format.
 func HandleByteArrays(val [][]byte, indices []uint64, convertAll bool) ([][32]byte, error) {
 	length := len(indices)
 	if convertAll {
