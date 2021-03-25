@@ -11,64 +11,44 @@ import (
 	"github.com/prysmaticlabs/prysm/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/endtoend/types"
-	"golang.org/x/sync/errgroup"
 )
 
 var _ e2etypes.ComponentRunner = (*SlasherNode)(nil)
-var _ e2etypes.ComponentRunner = (*SlasherNodes)(nil)
+var _ e2etypes.ComponentRunner = (*SlasherNodeSet)(nil)
 
-// SlasherNodes represents set of slasher nodes.
-type SlasherNodes struct {
+// SlasherNodeSet represents set of slasher nodes.
+type SlasherNodeSet struct {
 	e2etypes.ComponentRunner
 	config  *e2etypes.E2EConfig
 	started chan struct{}
 }
 
 // NewSlasherNodes creates and returns a set of slasher nodes.
-func NewSlasherNodes(config *e2etypes.E2EConfig) *SlasherNodes {
-	return &SlasherNodes{
+func NewSlasherNodes(config *e2etypes.E2EConfig) *SlasherNodeSet {
+	return &SlasherNodeSet{
 		config:  config,
 		started: make(chan struct{}, 1),
 	}
 }
 
 // Start starts all the slasher nodes in set.
-func (s *SlasherNodes) Start(ctx context.Context) error {
+func (s *SlasherNodeSet) Start(ctx context.Context) error {
 	// Create slasher nodes.
-	nodes := make([]*SlasherNode, e2e.TestParams.BeaconNodeCount)
+	nodes := make([]e2etypes.ComponentRunner, e2e.TestParams.BeaconNodeCount)
 	for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
 		nodes[i] = NewSlasherNode(s.config, i)
 	}
 
-	// Start all created slasher nodes.
-	g, ctx := errgroup.WithContext(ctx)
-	for _, node := range nodes {
-		node := node
-		g.Go(func() error {
-			return node.Start(ctx)
-		})
-	}
-
-	// Mark set as ready (happens when all contained nodes report as started).
-	go func() {
-		for _, node := range nodes {
-			select {
-			case <-ctx.Done():
-				return
-			case <-node.Started():
-				continue
-			}
-		}
-		// Only close if all nodes are started. When context is cancelled, node is not considered as started.
-		// Stalled nodes do not pose problem -- after certain period of time main routine times out.
+	// Wait for all nodes to finish their job (blocking).
+	// Once nodes are ready passed in handler function will be called.
+	return helpers.WaitOnNodes(ctx, nodes, func() {
+		// All nodes stated, close channel, so that all services waiting on a set, can proceed.
 		close(s.started)
-	}()
-
-	return g.Wait()
+	})
 }
 
 // Started checks whether beacon node set is started and all nodes are ready to be queried.
-func (s *SlasherNodes) Started() <-chan struct{} {
+func (s *SlasherNodeSet) Started() <-chan struct{} {
 	return s.started
 }
 
