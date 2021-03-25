@@ -1,4 +1,4 @@
-package stateAltair
+package state_altair
 
 import pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 

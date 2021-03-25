@@ -43,7 +43,6 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
-        "array_root_test.go",
         "benchmark_test.go",
         "reference_bench_test.go",
         "state_root_test.go",
