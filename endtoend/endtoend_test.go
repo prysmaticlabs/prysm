@@ -105,6 +105,7 @@ func (r *testRunner) run() {
 	})
 
 	// Slasher nodes.
+	var slasherNodes e2etypes.ComponentRunner
 	if config.TestSlasher {
 		slasherNodes := components.NewSlasherNodes(config)
 		g.Go(func() error {
@@ -126,6 +127,9 @@ func (r *testRunner) run() {
 		// Wait for all required nodes to start.
 		requiredComponents := []e2etypes.ComponentRunner{
 			eth1Node, bootNode, beaconNodes, validatorNodes,
+		}
+		if config.TestSlasher && slasherNodes != nil {
+			requiredComponents = append(requiredComponents, slasherNodes)
 		}
 		ctxAllNodesReady, cancel := context.WithTimeout(ctx, allNodesStartTimeout)
 		defer cancel()
