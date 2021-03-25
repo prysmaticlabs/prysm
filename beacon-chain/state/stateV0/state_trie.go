@@ -205,7 +205,7 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 	return bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0]), nil
 }
 
-// ToProto returns a *v1.BeaconState representation of the state.
+// ToProto returns a protobuf *v1.BeaconState representation of the state.
 func (b *BeaconState) ToProto() *v1.BeaconState {
 	sourceFork := b.Fork()
 	sourceLatestBlockHeader := b.LatestBlockHeader()
