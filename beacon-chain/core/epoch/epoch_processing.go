@@ -324,7 +324,11 @@ func ProcessFinalUpdates(state iface.BeaconState) (iface.BeaconState, error) {
 	}
 
 	// Rotate current and previous epoch attestations.
-	if err := state.SetPreviousEpochAttestations(state.CurrentEpochAttestations()); err != nil {
+	currAtt, err := state.CurrentEpochAttestations()
+	if err != nil {
+		return nil, err
+	}
+	if err := state.SetPreviousEpochAttestations(currAtt); err != nil {
 		return nil, err
 	}
 	if err := state.SetCurrentEpochAttestations([]*pb.PendingAttestation{}); err != nil {
