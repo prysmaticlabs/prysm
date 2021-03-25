@@ -29,26 +29,25 @@ import (
 const depositGasLimit = 4000000
 
 var _ e2etypes.ComponentRunner = (*ValidatorNode)(nil)
-var _ e2etypes.ComponentRunner = (*ValidatorNodes)(nil)
+var _ e2etypes.ComponentRunner = (*ValidatorNodeSet)(nil)
 
-// ValidatorNodes represents set of validator nodes.
-type ValidatorNodes struct {
+// ValidatorNodeSet represents set of validator nodes.
+type ValidatorNodeSet struct {
 	e2etypes.ComponentRunner
 	config  *e2etypes.E2EConfig
 	started chan struct{}
 }
 
-// NewValidatorNodes creates and returns a set of validator nodes.
-func NewValidatorNodes(config *e2etypes.E2EConfig) *ValidatorNodes {
-	return &ValidatorNodes{
+// NewValidatorNodeSet creates and returns a set of validator nodes.
+func NewValidatorNodeSet(config *e2etypes.E2EConfig) *ValidatorNodeSet {
+	return &ValidatorNodeSet{
 		config:  config,
 		started: make(chan struct{}, 1),
 	}
 }
 
-// Start starts the configured amount of validators, also sending and mining their validator deposits.
-// Should only be used on initialization.
-func (s *ValidatorNodes) Start(ctx context.Context) error {
+// Start starts the configured amount of validators, also sending and mining their deposits.
+func (s *ValidatorNodeSet) Start(ctx context.Context) error {
 	// Always using genesis count since using anything else would be difficult to test for.
 	validatorNum := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 	beaconNodeNum := e2e.TestParams.BeaconNodeCount
@@ -91,7 +90,7 @@ func (s *ValidatorNodes) Start(ctx context.Context) error {
 }
 
 // Started checks whether validator node set is started and all nodes are ready to be queried.
-func (s *ValidatorNodes) Started() <-chan struct{} {
+func (s *ValidatorNodeSet) Started() <-chan struct{} {
 	return s.started
 }
 
@@ -116,7 +115,7 @@ func NewValidatorNode(config *e2etypes.E2EConfig, validatorNum, index, offset in
 	}
 }
 
-// StartNewValidatorNode starts a validator client with the passed in configuration.
+// StartNewValidatorNode starts a validator client.
 func (v *ValidatorNode) Start(ctx context.Context) error {
 	binaryPath, found := bazel.FindBinary("cmd/validator", "validator")
 	if !found {

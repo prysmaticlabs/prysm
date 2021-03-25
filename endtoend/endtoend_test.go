@@ -96,7 +96,7 @@ func (r *testRunner) run() {
 	})
 
 	// Validator nodes.
-	validatorNodes := components.NewValidatorNodes(config)
+	validatorNodes := components.NewValidatorNodeSet(config)
 	g.Go(func() error {
 		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{beaconNodes}); err != nil {
 			return fmt.Errorf("validator nodes require beacon nodes to run: %w", err)
