@@ -15,7 +15,7 @@ require (
 	github.com/d4l3k/messagediff v1.2.1
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
 	github.com/deckarep/golang-set v1.7.1 // indirect
-	github.com/dgraph-io/ristretto v0.0.3
+	github.com/dgraph-io/ristretto v0.0.4-0.20210318174700-74754f61e018
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/emicklei/dot v0.11.0
 	github.com/ethereum/go-ethereum v0.0.0-00010101000000-000000000000
@@ -108,6 +108,7 @@ require (
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
 	golang.org/x/exp v0.0.0-20200513190911-00229845015e
 	golang.org/x/net v0.0.0-20201209123823-ac852fbbde11 // indirect
+	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
 	golang.org/x/tools v0.0.0-20210106214847-113979e3529a
 	google.golang.org/api v0.34.0 // indirect

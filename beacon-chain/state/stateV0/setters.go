@@ -505,13 +505,17 @@ func (b *BeaconState) SetPreviousEpochAttestations(val []*pbp2p.PendingAttestati
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
+	b.setPreviousEpochAttestations(val)
+	return nil
+}
+
+func (b *BeaconState) setPreviousEpochAttestations(val []*pbp2p.PendingAttestation) {
 	b.sharedFieldReferences[previousEpochAttestations].MinusRef()
 	b.sharedFieldReferences[previousEpochAttestations] = stateutil.NewRef(1)
 
 	b.state.PreviousEpochAttestations = val
 	b.markFieldAsDirty(previousEpochAttestations)
 	b.rebuildTrie[previousEpochAttestations] = true
-	return nil
 }
 
 // SetCurrentEpochAttestations for the beacon state. Updates the entire
@@ -523,12 +527,30 @@ func (b *BeaconState) SetCurrentEpochAttestations(val []*pbp2p.PendingAttestatio
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
+	b.setCurrentEpochAttestations(val)
+	return nil
+}
+
+func (b *BeaconState) setCurrentEpochAttestations(val []*pbp2p.PendingAttestation) {
 	b.sharedFieldReferences[currentEpochAttestations].MinusRef()
 	b.sharedFieldReferences[currentEpochAttestations] = stateutil.NewRef(1)
 
 	b.state.CurrentEpochAttestations = val
 	b.markFieldAsDirty(currentEpochAttestations)
 	b.rebuildTrie[currentEpochAttestations] = true
+}
+
+// RotateAttestations sets the previous epoch attestations to the current epoch attestations and
+// then clears the current epoch attestations.
+func (b *BeaconState) RotateAttestations() error {
+	if !b.hasInnerState() {
+		return ErrNilInnerState
+	}
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.setPreviousEpochAttestations(b.currentEpochAttestations())
+	b.setCurrentEpochAttestations([]*pbp2p.PendingAttestation{})
 	return nil
 }
 
