@@ -1,4 +1,4 @@
-package stateAltair
+package state_altair
 
 import (
 	"fmt"

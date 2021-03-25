@@ -1,4 +1,4 @@
-package stateAltair
+package state_altair
 
 import (
 	types "github.com/prysmaticlabs/eth2-types"
