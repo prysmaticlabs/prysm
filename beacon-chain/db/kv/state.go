@@ -304,7 +304,7 @@ func (s *Store) HighestSlotStatesBelow(ctx context.Context, slot types.Slot) ([]
 	return []iface.ReadOnlyBeaconState{st}, nil
 }
 
-// createBlockIndicesFromBlock takes in a beacon block and returns
+// createStateIndicesFromStateSlot takes in a state slot and returns
 // a map of bolt DB index buckets corresponding to each particular key for indices for
 // data, such as (shard indices bucket -> shard 5).
 func createStateIndicesFromStateSlot(ctx context.Context, slot types.Slot) map[string][]byte {
