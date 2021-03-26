@@ -27,21 +27,25 @@ func (s *Store) LastEpochWrittenForValidators(
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.LastEpochWrittenForValidators")
 	defer span.End()
 	attestedEpochs := make([]*slashertypes.AttestedEpochForValidator, 0)
+	encodedIndices := make([][]byte, len(validatorIndices))
+	for i, valIdx := range validatorIndices {
+		enc, err := valIdx.MarshalSSZ()
+		if err != nil {
+			return nil, err
+		}
+		encodedIndices[i] = enc
+	}
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestedEpochsByValidator)
-		for _, valIdx := range validatorIndices {
-			enc, err := valIdx.MarshalSSZ()
-			if err != nil {
-				return err
-			}
-			epochBytes := bkt.Get(enc)
+		for i, encodedIndex := range encodedIndices {
+			epochBytes := bkt.Get(encodedIndex)
 			if epochBytes != nil {
 				var epoch types.Epoch
 				if err := epoch.UnmarshalSSZ(epochBytes); err != nil {
 					return err
 				}
 				attestedEpochs = append(attestedEpochs, &slashertypes.AttestedEpochForValidator{
-					ValidatorIndex: valIdx,
+					ValidatorIndex: validatorIndices[i],
 					Epoch:          epoch,
 				})
 			}
@@ -58,18 +62,22 @@ func (s *Store) SaveLastEpochWrittenForValidators(
 ) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveLastEpochWrittenForValidators")
 	defer span.End()
-	return s.db.Update(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(attestedEpochsByValidator)
-		val, err := epoch.MarshalSSZ()
+	encodedIndices := make([][]byte, len(validatorIndices))
+	for i, valIdx := range validatorIndices {
+		enc, err := valIdx.MarshalSSZ()
 		if err != nil {
 			return err
 		}
-		for _, valIdx := range validatorIndices {
-			key, err := valIdx.MarshalSSZ()
-			if err != nil {
-				return err
-			}
-			if err := bkt.Put(key, val); err != nil {
+		encodedIndices[i] = enc
+	}
+	encodedEpoch, err := epoch.MarshalSSZ()
+	if err != nil {
+		return err
+	}
+	return s.db.Update(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(attestedEpochsByValidator)
+		for _, encodedIndex := range encodedIndices {
+			if err = bkt.Put(encodedIndex, encodedEpoch); err != nil {
 				return err
 			}
 		}
@@ -127,17 +135,17 @@ func (s *Store) AttestationRecordForValidator(
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.AttestationRecordForValidator")
 	defer span.End()
 	var record *slashertypes.IndexedAttestationWrapper
-	err := s.db.View(func(tx *bolt.Tx) error {
+	encIdx, err := validatorIdx.MarshalSSZ()
+	if err != nil {
+		return nil, err
+	}
+	encEpoch, err := targetEpoch.MarshalSSZ()
+	if err != nil {
+		return nil, err
+	}
+	key := append(encEpoch, encIdx...)
+	err = s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationRecordsBucket)
-		encIdx, err := validatorIdx.MarshalSSZ()
-		if err != nil {
-			return err
-		}
-		encEpoch, err := targetEpoch.MarshalSSZ()
-		if err != nil {
-			return err
-		}
-		key := append(encEpoch, encIdx...)
 		value := bkt.Get(key)
 		if value == nil {
 			return nil
@@ -160,21 +168,27 @@ func (s *Store) SaveAttestationRecordsForValidators(
 ) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveAttestationRecordsForValidators")
 	defer span.End()
+	encodedTargetEpoch := make([][]byte, len(attestations))
+	encodedRecords := make([][]byte, len(attestations))
+	for i, att := range attestations {
+		encEpoch, err := att.IndexedAttestation.Data.Target.Epoch.MarshalSSZ()
+		if err != nil {
+			return err
+		}
+		value, err := encodeAttestationRecord(att)
+		if err != nil {
+			return err
+		}
+		encodedTargetEpoch[i] = encEpoch
+		encodedRecords[i] = value
+	}
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationRecordsBucket)
-		for _, att := range attestations {
-			encEpoch, err := att.IndexedAttestation.Data.Target.Epoch.MarshalSSZ()
-			if err != nil {
-				return err
-			}
-			value, err := encodeAttestationRecord(att)
-			if err != nil {
-				return err
-			}
+		for i, att := range attestations {
 			for _, valIdx := range att.IndexedAttestation.AttestingIndices {
 				encIdx := ssz.MarshalUint64(make([]byte, 0), valIdx)
-				key := append(encEpoch, encIdx...)
-				if err := bkt.Put(key, value); err != nil {
+				key := append(encodedTargetEpoch[i], encIdx...)
+				if err := bkt.Put(key, encodedRecords[i]); err != nil {
 					return err
 				}
 			}
@@ -221,12 +235,16 @@ func (s *Store) SaveSlasherChunks(
 ) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveSlasherChunks")
 	defer span.End()
+	encodedKeys := make([][]byte, len(chunkKeys))
+	encodedChunks := make([][]byte, len(chunkKeys))
+	for i := 0; i < len(chunkKeys); i++ {
+		encodedKeys[i] = append(ssz.MarshalUint8(make([]byte, 0), uint8(kind)), chunkKeys[i]...)
+		encodedChunks[i] = encodeSlasherChunk(chunks[i])
+	}
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(slasherChunksBucket)
 		for i := 0; i < len(chunkKeys); i++ {
-			key := append(ssz.MarshalUint8(make([]byte, 0), uint8(kind)), chunkKeys[i]...)
-			enc := encodeSlasherChunk(chunks[i])
-			if err := bkt.Put(key, enc); err != nil {
+			if err := bkt.Put(encodedKeys[i], encodedChunks[i]); err != nil {
 				return err
 			}
 		}
@@ -279,18 +297,24 @@ func (s *Store) SaveBlockProposals(
 ) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlockProposals")
 	defer span.End()
+	encodedKeys := make([][]byte, len(proposals))
+	encodedProposals := make([][]byte, len(proposals))
+	for i, proposal := range proposals {
+		key, err := keyForValidatorProposal(proposal)
+		if err != nil {
+			return err
+		}
+		enc, err := encodeProposalRecord(proposal)
+		if err != nil {
+			return err
+		}
+		encodedKeys[i] = key
+		encodedProposals[i] = enc
+	}
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(proposalRecordsBucket)
-		for _, proposal := range proposals {
-			key, err := keyForValidatorProposal(proposal)
-			if err != nil {
-				return err
-			}
-			proposalEnc, err := encodeProposalRecord(proposal)
-			if err != nil {
-				return err
-			}
-			if err := bkt.Put(key, proposalEnc); err != nil {
+		for i := range proposals {
+			if err := bkt.Put(encodedKeys[i], encodedProposals[i]); err != nil {
 				return err
 			}
 		}
@@ -303,7 +327,6 @@ func (s *Store) PruneProposals(ctx context.Context, currentEpoch types.Epoch, hi
 	if uint64(currentEpoch) < historySize {
 		return nil
 	}
-
 	// + 1 here so we can prune everything less than this, but not equal.
 	endPruneSlot, err := helpers.StartSlot(currentEpoch - types.Epoch(historySize))
 	if err != nil {
@@ -333,7 +356,6 @@ func (s *Store) PruneAttestations(ctx context.Context, currentEpoch types.Epoch,
 	if uint64(currentEpoch) < historySize {
 		return nil
 	}
-
 	// + 1 here so we can prune everything less than this, but not equal.
 	endPruneEpoch := currentEpoch - types.Epoch(historySize)
 	epochEnc, err := endPruneEpoch.MarshalSSZ()
