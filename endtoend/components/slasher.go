@@ -23,8 +23,8 @@ type SlasherNodeSet struct {
 	started chan struct{}
 }
 
-// NewSlasherNodes creates and returns a set of slasher nodes.
-func NewSlasherNodes(config *e2etypes.E2EConfig) *SlasherNodeSet {
+// NewSlasherNodeSet creates and returns a set of slasher nodes.
+func NewSlasherNodeSet(config *e2etypes.E2EConfig) *SlasherNodeSet {
 	return &SlasherNodeSet{
 		config:  config,
 		started: make(chan struct{}, 1),

@@ -60,6 +60,7 @@ go_test(
         "getters_test.go",
         "helpers_test.go",
         "references_test.go",
+        "setters_test.go",
         "state_test.go",
         "state_trie_test.go",
         "types_test.go",

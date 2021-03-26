@@ -107,7 +107,7 @@ func (r *testRunner) run() {
 	// Slasher nodes.
 	var slasherNodes e2etypes.ComponentRunner
 	if config.TestSlasher {
-		slasherNodes := components.NewSlasherNodes(config)
+		slasherNodes := components.NewSlasherNodeSet(config)
 		g.Go(func() error {
 			if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{beaconNodes}); err != nil {
 				return fmt.Errorf("slasher nodes require beacon nodes to run: %w", err)
