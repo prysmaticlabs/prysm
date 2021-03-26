@@ -22,11 +22,10 @@ func TestEndToEnd_Connectivity(t *testing.T) {
 		BeaconFlags:    []string{},
 		ValidatorFlags: []string{},
 		EpochsToRun:    2,
-		TestDeposits:   true,
 		Evaluators: []types.Evaluator{
 			ev.PeersConnect,
 		},
 	}
 
-	runEndToEndTest(t, testConfig)
+	newTestRunner(t, testConfig).run()
 }
