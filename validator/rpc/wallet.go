@@ -140,13 +140,13 @@ func (s *Server) WalletConfig(ctx context.Context, _ *empty.Empty) (*pb.WalletRe
 // Create the wallet
 // Return &CreateWalletResponse, nil if nothing went wrong
 func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest) (*pb.CreateWalletResponse, error)  {
-	numAccounts  := int(req.numAccounts)
+	numAccounts  := int(req.NumAccounts)
 	if numAccounts < 1 {
 		return nil,status.Error(codes.InvalidArgument, "Must create at least 1 validator account")
 	}
 	
 	//check validate mnemonic with chosen language
-	language := req.language
+	language := req.Language
 	allowedLanguages := map[string][]string{
 		"english":             wordlists.English,
 		"chinese_simplified":  wordlists.ChineseSimplified,
@@ -161,7 +161,7 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 		return nil,status.Error(codes.InvalidArgument, "input not in the list of allowed languages")
 	}
 	bip39.SetWordList(language)
-	mnemonic := req.mnemonic
+	mnemonic := req.Mnemonic
 	if err := accounts.validateMnemonic(mnemonic); err != nil {
 		return nil,status.Error(codes.InvalidArgument, "invalid mnemonic in request")
 	}
