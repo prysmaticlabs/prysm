@@ -38,10 +38,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// reconnectPeriod is the frequency that we try to restart our
-// slasher connection when the slasher client connection is not ready.
-var reconnectPeriod = 5 * time.Second
-
 // keyFetchPeriod is the frequency that we try to refetch validating keys
 // in case no keys were fetched previously.
 var keyRefetchPeriod = 30 * time.Second

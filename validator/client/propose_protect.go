@@ -12,9 +12,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var failedPreBlockSignLocalErr = "attempted to sign a double proposal, block rejected by local protection"
-var failedPreBlockSignExternalErr = "attempted a double proposal, block rejected by remote slashing protection"
-var failedPostBlockSignErr = "made a double proposal, considered slashable by remote slashing protection"
+var failedBlockSignLocalErr = "attempted to sign a double proposal, block rejected by local protection"
+var failedBlockSignExternalErr = "attempted a double proposal, block rejected by remote slashing protection"
 
 func (v *validator) slashableProposalCheck(
 	ctx context.Context, pubKey [48]byte, signedBlock *ethpb.SignedBeaconBlock, signingRoot [32]byte,
@@ -44,7 +43,7 @@ func (v *validator) slashableProposalCheck(
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
-		return errors.New(failedPreBlockSignLocalErr)
+		return errors.New(failedBlockSignLocalErr)
 	}
 
 	// Based on EIP3076, validator should refuse to sign any proposal with slot less
@@ -72,7 +71,7 @@ func (v *validator) slashableProposalCheck(
 			if v.emitAccountMetrics {
 				ValidatorProposeFailVecSlasher.WithLabelValues(fmtKey).Inc()
 			}
-			return errors.New(failedPreBlockSignExternalErr)
+			return errors.New(failedBlockSignExternalErr)
 		}
 	}
 
