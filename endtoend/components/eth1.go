@@ -11,7 +11,6 @@ import (
 	"os/exec"
 	"path"
 	"strings"
-	"testing"
 	"time"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
@@ -163,110 +162,6 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 // Started checks whether ETH1 node is started and ready to be queried.
 func (node *Eth1Node) Started() <-chan struct{} {
 	return node.started
-}
-
-// StartEth1Node starts an eth1 local dev chain and deploys a deposit contract.
-// Deprecated: this method will be removed once Eth1Node component is used.
-func StartEth1Node(t *testing.T) string {
-	binaryPath, found := bazel.FindBinary("cmd/geth", "geth")
-	if !found {
-		t.Fatal("go-ethereum binary not found")
-	}
-
-	eth1Path := path.Join(e2e.TestParams.TestPath, "eth1data/")
-	// Clear out ETH1 to prevent issues.
-	if _, err := os.Stat(eth1Path); !os.IsNotExist(err) {
-		if err = os.RemoveAll(eth1Path); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	args := []string{
-		fmt.Sprintf("--datadir=%s", eth1Path),
-		fmt.Sprintf("--rpcport=%d", e2e.TestParams.Eth1RPCPort),
-		fmt.Sprintf("--wsport=%d", e2e.TestParams.Eth1RPCPort+1),
-		"--rpc",
-		"--rpcaddr=127.0.0.1",
-		"--rpccorsdomain=\"*\"",
-		"--rpcvhosts=\"*\"",
-		"--ws",
-		"--wsaddr=127.0.0.1",
-		"--wsorigins=\"*\"",
-		"--dev",
-		"--dev.period=2",
-		"--ipcdisable",
-	}
-	cmd := exec.Command(binaryPath, args...)
-	file, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, "eth1.log")
-	if err != nil {
-		t.Fatal(err)
-	}
-	cmd.Stdout = file
-	cmd.Stderr = file
-	if err = cmd.Start(); err != nil {
-		t.Fatalf("Failed to start eth1 chain: %v", err)
-	}
-
-	if err = helpers.WaitForTextInFile(file, "Commit new mining work"); err != nil {
-		t.Fatalf("mining log not found, this means the eth1 chain had issues starting: %v", err)
-	}
-
-	// Connect to the started geth dev chain.
-	client, err := rpc.DialHTTP(fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.Eth1RPCPort))
-	if err != nil {
-		t.Fatalf("Failed to connect to ipc: %v", err)
-	}
-	web3 := ethclient.NewClient(client)
-
-	// Access the dev account keystore to deploy the contract.
-	fileName, err := exec.Command("ls", path.Join(eth1Path, "keystore")).Output()
-	if err != nil {
-		t.Fatal(err)
-	}
-	keystorePath := path.Join(eth1Path, fmt.Sprintf("keystore/%s", strings.TrimSpace(string(fileName))))
-	jsonBytes, err := ioutil.ReadFile(keystorePath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	store, err := keystore.DecryptKey(jsonBytes, "" /*password*/)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Advancing the blocks eth1follow distance to prevent issues reading the chain.
-	if err = mineBlocks(web3, store, params.BeaconConfig().Eth1FollowDistance); err != nil {
-		t.Fatalf("Unable to advance chain: %v", err)
-	}
-
-	txOpts, err := bind.NewTransactor(bytes.NewReader(jsonBytes), "" /*password*/)
-	if err != nil {
-		t.Fatal(err)
-	}
-	nonce, err := web3.PendingNonceAt(context.Background(), store.Address)
-	if err != nil {
-		t.Fatal(err)
-	}
-	txOpts.Nonce = big.NewInt(int64(nonce))
-	contractAddr, tx, _, err := contracts.DeployDepositContract(txOpts, web3, txOpts.From)
-	if err != nil {
-		t.Fatalf("Failed to deploy deposit contract: %v", err)
-	}
-	e2e.TestParams.ContractAddress = contractAddr
-
-	// Wait for contract to mine.
-	for pending := true; pending; _, pending, err = web3.TransactionByHash(context.Background(), tx.Hash()) {
-		if err != nil {
-			t.Fatal(err)
-		}
-		time.Sleep(timeGapPerTX)
-	}
-
-	// Advancing the blocks another eth1follow distance to prevent issues reading the chain.
-	if err = mineBlocks(web3, store, params.BeaconConfig().Eth1FollowDistance); err != nil {
-		t.Fatalf("Unable to advance chain: %v", err)
-	}
-
-	return keystorePath
 }
 
 func mineBlocks(web3 *ethclient.Client, keystore *keystore.Key, blocksToMake uint64) error {

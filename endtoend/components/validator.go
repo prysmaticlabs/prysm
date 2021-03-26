@@ -8,7 +8,6 @@ import (
 	"math/big"
 	"os/exec"
 	"strings"
-	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -153,92 +152,30 @@ func (v *ValidatorNode) Started() <-chan struct{} {
 	return v.started
 }
 
-// StartValidatorClients starts the configured amount of validators, also sending and mining their validator deposits.
-// Should only be used on initialization.
-// Deprecated: this method will be removed once ValidatorNodeSet component is used.
-func StartValidatorClients(t *testing.T, config *e2etypes.E2EConfig) {
-	// Always using genesis count since using anything else would be difficult to test for.
-	validatorNum := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
-	beaconNodeNum := e2e.TestParams.BeaconNodeCount
-	if validatorNum%beaconNodeNum != 0 {
-		t.Fatal("Validator count is not easily divisible by beacon node count.")
-	}
-	validatorsPerNode := validatorNum / beaconNodeNum
-	for i := 0; i < beaconNodeNum; i++ {
-		go StartNewValidatorClient(t, config, validatorsPerNode, i, validatorsPerNode*i)
-	}
-}
-
-// StartNewValidatorClient starts a validator client with the passed in configuration.
-// Deprecated: this method will be removed once ValidatorNode component is used.
-func StartNewValidatorClient(t *testing.T, config *e2etypes.E2EConfig, validatorNum, index, offset int) {
-	binaryPath, found := bazel.FindBinary("cmd/validator", "validator")
-	if !found {
-		t.Fatal("validator binary not found")
-	}
-
-	beaconRPCPort := e2e.TestParams.BeaconNodeRPCPort + index
-	if beaconRPCPort >= e2e.TestParams.BeaconNodeRPCPort+e2e.TestParams.BeaconNodeCount {
-		// Point any extra validator clients to a node we know is running.
-		beaconRPCPort = e2e.TestParams.BeaconNodeRPCPort
-	}
-
-	file, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, fmt.Sprintf(e2e.ValidatorLogFileName, index))
-	if err != nil {
-		t.Fatal(err)
-	}
-	gFile, err := helpers.GraffitiYamlFile(e2e.TestParams.TestPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	args := []string{
-		fmt.Sprintf("--datadir=%s/eth2-val-%d", e2e.TestParams.TestPath, index),
-		fmt.Sprintf("--log-file=%s", file.Name()),
-		fmt.Sprintf("--graffiti-file=%s", gFile),
-		fmt.Sprintf("--interop-num-validators=%d", validatorNum),
-		fmt.Sprintf("--interop-start-index=%d", offset),
-		fmt.Sprintf("--monitoring-port=%d", e2e.TestParams.ValidatorMetricsPort+index),
-		fmt.Sprintf("--grpc-gateway-port=%d", e2e.TestParams.ValidatorGatewayPort+index),
-		fmt.Sprintf("--beacon-rpc-provider=localhost:%d", beaconRPCPort),
-		"--grpc-headers=dummy=value,foo=bar", // Sending random headers shouldn't break anything.
-		"--force-clear-db",
-		"--e2e-config",
-		"--accept-terms-of-use",
-		"--verbosity=debug",
-	}
-	args = append(args, featureconfig.E2EValidatorFlags...)
-	args = append(args, config.ValidatorFlags...)
-
-	cmd := exec.Command(binaryPath, args...)
-	t.Logf("Starting validator client %d with flags: %s", index, strings.Join(args[2:], " "))
-	if err = cmd.Start(); err != nil {
-		t.Fatal(err)
-	}
-}
-
 // SendAndMineDeposits sends the requested amount of deposits and mines the chain after to ensure the deposits are seen.
-func SendAndMineDeposits(t *testing.T, keystorePath string, validatorNum, offset int, partial bool) {
+func SendAndMineDeposits(keystorePath string, validatorNum, offset int, partial bool) error {
 	client, err := rpc.DialHTTP(fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.Eth1RPCPort))
 	if err != nil {
-		t.Fatal(err)
+		return err
 	}
 	defer client.Close()
 	web3 := ethclient.NewClient(client)
 
 	keystoreBytes, err := ioutil.ReadFile(keystorePath)
 	if err != nil {
-		t.Fatal(err)
+		return err
 	}
 	if err = sendDeposits(web3, keystoreBytes, validatorNum, offset, partial); err != nil {
-		t.Fatal(err)
+		return err
 	}
 	mineKey, err := keystore.DecryptKey(keystoreBytes, "" /*password*/)
 	if err != nil {
-		t.Fatal(err)
+		return err
 	}
 	if err = mineBlocks(web3, mineKey, params.BeaconConfig().Eth1FollowDistance); err != nil {
-		t.Fatalf("failed to mine blocks %v", err)
+		return fmt.Errorf("failed to mine blocks %w", err)
 	}
+	return nil
 }
 
 // sendDeposits uses the passed in web3 and keystore bytes to send the requested deposits.

@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"os/exec"
 	"strings"
-	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/prysmaticlabs/prysm/endtoend/helpers"
@@ -82,47 +81,6 @@ func (node *BootNode) Start(ctx context.Context) error {
 // Started checks whether a boot node is started and ready to be queried.
 func (node *BootNode) Started() <-chan struct{} {
 	return node.started
-}
-
-// StartBootnode starts a bootnode and returns its ENR.
-// Deprecated: this method will be removed once BootNode component is used.
-func StartBootnode(t *testing.T) string {
-	binaryPath, found := bazel.FindBinary("tools/bootnode", "bootnode")
-	if !found {
-		t.Log(binaryPath)
-		t.Fatal("boot node binary not found")
-	}
-
-	stdOutFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, e2e.BootNodeLogFileName)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	args := []string{
-		fmt.Sprintf("--log-file=%s", stdOutFile.Name()),
-		fmt.Sprintf("--discv5-port=%d", e2e.TestParams.BootNodePort),
-		fmt.Sprintf("--metrics-port=%d", e2e.TestParams.BootNodePort+20),
-		"--debug",
-	}
-
-	cmd := exec.Command(binaryPath, args...)
-	cmd.Stdout = stdOutFile
-	cmd.Stderr = stdOutFile
-	t.Logf("Starting boot node with flags: %s", strings.Join(args[1:], " "))
-	if err = cmd.Start(); err != nil {
-		t.Fatalf("Failed to start beacon node: %v", err)
-	}
-
-	if err = helpers.WaitForTextInFile(stdOutFile, "Running bootnode"); err != nil {
-		t.Fatalf("could not find enr for bootnode, this means the bootnode had issues starting: %v", err)
-	}
-
-	enr, err := enrFromLogFile(stdOutFile.Name())
-	if err != nil {
-		t.Fatalf("could not get enr for bootnode: %v", err)
-	}
-
-	return enr
 }
 
 func enrFromLogFile(name string) (string, error) {
