@@ -3,38 +3,100 @@
 package components
 
 import (
+	"context"
+	"errors"
 	"fmt"
-	"io/ioutil"
 	"os/exec"
 	"strings"
-	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/prysmaticlabs/prysm/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
-	"github.com/prysmaticlabs/prysm/endtoend/types"
+	e2etypes "github.com/prysmaticlabs/prysm/endtoend/types"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// StartBeaconNodes starts the requested amount of beacon nodes.
-func StartBeaconNodes(t *testing.T, config *types.E2EConfig, enr string) {
-	for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
-		StartNewBeaconNode(t, config, i, enr)
+var _ e2etypes.ComponentRunner = (*BeaconNode)(nil)
+var _ e2etypes.ComponentRunner = (*BeaconNodeSet)(nil)
+
+// BeaconNodeSet represents set of beacon nodes.
+type BeaconNodeSet struct {
+	e2etypes.ComponentRunner
+	config  *e2etypes.E2EConfig
+	enr     string
+	started chan struct{}
+}
+
+// SetENR assigns ENR to the set of beacon nodes.
+func (s *BeaconNodeSet) SetENR(enr string) {
+	s.enr = enr
+}
+
+// NewBeaconNodes creates and returns a set of beacon nodes.
+func NewBeaconNodes(config *e2etypes.E2EConfig) *BeaconNodeSet {
+	return &BeaconNodeSet{
+		config:  config,
+		started: make(chan struct{}, 1),
 	}
 }
 
-// StartNewBeaconNode starts a fresh beacon node, connecting to all passed in beacon nodes.
-func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, index int, enr string) {
-	binaryPath, found := bazel.FindBinary("cmd/beacon-chain", "beacon-chain")
-	if !found {
-		t.Log(binaryPath)
-		t.Fatal("beacon chain binary not found")
+// Start starts all the beacon nodes in set.
+func (s *BeaconNodeSet) Start(ctx context.Context) error {
+	if s.enr == "" {
+		return errors.New("empty ENR")
 	}
 
+	// Create beacon nodes.
+	nodes := make([]e2etypes.ComponentRunner, e2e.TestParams.BeaconNodeCount)
+	for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
+		nodes[i] = NewBeaconNode(s.config, i, s.enr)
+	}
+
+	// Wait for all nodes to finish their job (blocking).
+	// Once nodes are ready passed in handler function will be called.
+	return helpers.WaitOnNodes(ctx, nodes, func() {
+		// All nodes stated, close channel, so that all services waiting on a set, can proceed.
+		close(s.started)
+	})
+}
+
+// Started checks whether beacon node set is started and all nodes are ready to be queried.
+func (s *BeaconNodeSet) Started() <-chan struct{} {
+	return s.started
+}
+
+// BeaconNode represents beacon node.
+type BeaconNode struct {
+	e2etypes.ComponentRunner
+	config  *e2etypes.E2EConfig
+	started chan struct{}
+	index   int
+	enr     string
+}
+
+// NewBeaconNode creates and returns a beacon node.
+func NewBeaconNode(config *e2etypes.E2EConfig, index int, enr string) *BeaconNode {
+	return &BeaconNode{
+		config:  config,
+		index:   index,
+		enr:     enr,
+		started: make(chan struct{}, 1),
+	}
+}
+
+// Start starts a fresh beacon node, connecting to all passed in beacon nodes.
+func (node *BeaconNode) Start(ctx context.Context) error {
+	binaryPath, found := bazel.FindBinary("cmd/beacon-chain", "beacon-chain")
+	if !found {
+		log.Info(binaryPath)
+		return errors.New("beacon chain binary not found")
+	}
+
+	config, index, enr := node.config, node.index, node.enr
 	stdOutFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, fmt.Sprintf(e2e.BeaconNodeLogFileName, index))
 	if err != nil {
-		t.Fatal(err)
+		return err
 	}
 
 	args := []string{
@@ -62,73 +124,23 @@ func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, index int, enr st
 	args = append(args, featureconfig.E2EBeaconChainFlags...)
 	args = append(args, config.BeaconFlags...)
 
-	cmd := exec.Command(binaryPath, args...)
-	t.Logf("Starting beacon chain %d with flags: %s", index, strings.Join(args[2:], " "))
+	cmd := exec.CommandContext(ctx, binaryPath, args...)
+	log.Infof("Starting beacon chain %d with flags: %s", index, strings.Join(args[2:], " "))
 	if err = cmd.Start(); err != nil {
-		t.Fatalf("Failed to start beacon node: %v", err)
+		return fmt.Errorf("failed to start beacon node: %w", err)
 	}
 
 	if err = helpers.WaitForTextInFile(stdOutFile, "gRPC server listening on port"); err != nil {
-		t.Fatalf("could not find multiaddr for node %d, this means the node had issues starting: %v", index, err)
+		return fmt.Errorf("could not find multiaddr for node %d, this means the node had issues starting: %w", index, err)
 	}
+
+	// Mark node as ready.
+	close(node.started)
+
+	return cmd.Wait()
 }
 
-// StartBootnode starts a bootnode and returns its ENR.
-func StartBootnode(t *testing.T) string {
-	binaryPath, found := bazel.FindBinary("tools/bootnode", "bootnode")
-	if !found {
-		t.Log(binaryPath)
-		t.Fatal("boot node binary not found")
-	}
-
-	stdOutFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, e2e.BootNodeLogFileName)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	args := []string{
-		fmt.Sprintf("--log-file=%s", stdOutFile.Name()),
-		fmt.Sprintf("--discv5-port=%d", e2e.TestParams.BootNodePort),
-		fmt.Sprintf("--metrics-port=%d", e2e.TestParams.BootNodePort+20),
-		"--debug",
-	}
-
-	cmd := exec.Command(binaryPath, args...)
-	cmd.Stdout = stdOutFile
-	cmd.Stderr = stdOutFile
-	t.Logf("Starting boot node with flags: %s", strings.Join(args[1:], " "))
-	if err = cmd.Start(); err != nil {
-		t.Fatalf("Failed to start beacon node: %v", err)
-	}
-
-	if err = helpers.WaitForTextInFile(stdOutFile, "Running bootnode"); err != nil {
-		t.Fatalf("could not find enr for bootnode, this means the bootnode had issues starting: %v", err)
-	}
-
-	enr, err := enrFromLogFile(stdOutFile.Name())
-	if err != nil {
-		t.Fatalf("could not get enr for bootnode: %v", err)
-	}
-
-	return enr
-}
-
-func enrFromLogFile(name string) (string, error) {
-	byteContent, err := ioutil.ReadFile(name)
-	if err != nil {
-		return "", err
-	}
-	contents := string(byteContent)
-
-	searchText := "Running bootnode: "
-	startIdx := strings.Index(contents, searchText)
-	if startIdx == -1 {
-		return "", fmt.Errorf("did not find ENR text in %s", contents)
-	}
-	startIdx += len(searchText)
-	endIdx := strings.Index(contents[startIdx:], " prefix=bootnode")
-	if endIdx == -1 {
-		return "", fmt.Errorf("did not find ENR text in %s", contents)
-	}
-	return contents[startIdx : startIdx+endIdx-1], nil
+// Started checks whether beacon node is started and ready to be queried.
+func (node *BeaconNode) Started() <-chan struct{} {
+	return node.started
 }

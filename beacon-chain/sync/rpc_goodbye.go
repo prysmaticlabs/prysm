@@ -46,18 +46,18 @@ func (s *Service) goodbyeRPCHandler(_ context.Context, msg interface{}, stream l
 	s.rateLimiter.add(stream, 1)
 	log := log.WithField("Reason", goodbyeMessage(*m))
 	log.WithField("peer", stream.Conn().RemotePeer()).Debug("Peer has sent a goodbye message")
-	s.p2p.Peers().SetNextValidTime(stream.Conn().RemotePeer(), goodByeBackoff(*m))
+	s.cfg.P2P.Peers().SetNextValidTime(stream.Conn().RemotePeer(), goodByeBackoff(*m))
 	// closes all streams with the peer
-	return s.p2p.Disconnect(stream.Conn().RemotePeer())
+	return s.cfg.P2P.Disconnect(stream.Conn().RemotePeer())
 }
 
 // disconnectBadPeer checks whether peer is considered bad by some scorer, and tries to disconnect
 // the peer, if that is the case. Additionally, disconnection reason is obtained from scorer.
 func (s *Service) disconnectBadPeer(ctx context.Context, id peer.ID) {
-	if !s.p2p.Peers().IsBad(id) {
+	if !s.cfg.P2P.Peers().IsBad(id) {
 		return
 	}
-	goodbyeCode := p2ptypes.ErrToGoodbyeCode(s.p2p.Peers().Scorers().ValidationError(id))
+	goodbyeCode := p2ptypes.ErrToGoodbyeCode(s.cfg.P2P.Peers().Scorers().ValidationError(id))
 	if err := s.sendGoodByeAndDisconnect(ctx, goodbyeCode, id); err != nil {
 		log.Debugf("Error when disconnecting with bad peer: %v", err)
 	}
@@ -75,7 +75,7 @@ func (s *Service) sendGoodByeAndDisconnect(ctx context.Context, code p2ptypes.RP
 	defer lock.Unlock()
 	// In the event we are already disconnected, exit early from the
 	// goodbye method to prevent redundant streams from being created.
-	if s.p2p.Host().Network().Connectedness(id) == network.NotConnected {
+	if s.cfg.P2P.Host().Network().Connectedness(id) == network.NotConnected {
 		return nil
 	}
 	if err := s.sendGoodByeMessage(ctx, code, id); err != nil {
@@ -84,14 +84,14 @@ func (s *Service) sendGoodByeAndDisconnect(ctx context.Context, code p2ptypes.RP
 			"peer":  id,
 		}).Debug("Could not send goodbye message to peer")
 	}
-	return s.p2p.Disconnect(id)
+	return s.cfg.P2P.Disconnect(id)
 }
 
 func (s *Service) sendGoodByeMessage(ctx context.Context, code p2ptypes.RPCGoodbyeCode, id peer.ID) error {
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
-	stream, err := s.p2p.Send(ctx, &code, p2p.RPCGoodByeTopic, id)
+	stream, err := s.cfg.P2P.Send(ctx, &code, p2p.RPCGoodByeTopic, id)
 	if err != nil {
 		return err
 	}

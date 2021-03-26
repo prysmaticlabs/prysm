@@ -29,13 +29,9 @@ var _ powchain.ChainStartFetcher = (*Service)(nil)
 // Service spins up an client interoperability service that handles responsibilities such
 // as kickstarting a genesis state for the beacon node from cli flags or a genesis.ssz file.
 type Service struct {
+	cfg                *Config
 	ctx                context.Context
 	cancel             context.CancelFunc
-	genesisTime        uint64
-	numValidators      uint64
-	beaconDB           db.HeadAccessDatabase
-	depositCache       *depositcache.DepositCache
-	genesisPath        string
 	chainStartDeposits []*ethpb.Deposit
 }
 
@@ -56,17 +52,13 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 
 	s := &Service{
-		ctx:           ctx,
-		cancel:        cancel,
-		genesisTime:   cfg.GenesisTime,
-		numValidators: cfg.NumValidators,
-		beaconDB:      cfg.BeaconDB,
-		depositCache:  cfg.DepositCache,
-		genesisPath:   cfg.GenesisPath,
+		cfg:    cfg,
+		ctx:    ctx,
+		cancel: cancel,
 	}
 
-	if s.genesisPath != "" {
-		data, err := ioutil.ReadFile(s.genesisPath)
+	if s.cfg.GenesisPath != "" {
+		data, err := ioutil.ReadFile(s.cfg.GenesisPath)
 		if err != nil {
 			log.Fatalf("Could not read pre-loaded state: %v", err)
 		}
@@ -85,7 +77,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 	}
 
 	// Save genesis state in db
-	genesisState, _, err := interop.GenerateGenesisState(s.genesisTime, s.numValidators)
+	genesisState, _, err := interop.GenerateGenesisState(s.cfg.GenesisTime, s.cfg.NumValidators)
 	if err != nil {
 		log.Fatalf("Could not generate interop genesis state: %v", err)
 	}
@@ -93,15 +85,15 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 	if err != nil {
 		log.Fatalf("Could not get state trie: %v", err)
 	}
-	if s.genesisTime == 0 {
+	if s.cfg.GenesisTime == 0 {
 		// Generated genesis time; fetch it
-		s.genesisTime = genesisTrie.GenesisTime()
+		s.cfg.GenesisTime = genesisTrie.GenesisTime()
 	}
 	gRoot, err := genesisTrie.HashTreeRoot(s.ctx)
 	if err != nil {
 		log.Fatalf("Could not hash tree root genesis state: %v", err)
 	}
-	go slotutil.CountdownToGenesis(ctx, time.Unix(int64(s.genesisTime), 0), s.numValidators, gRoot)
+	go slotutil.CountdownToGenesis(ctx, time.Unix(int64(s.cfg.GenesisTime), 0), s.cfg.NumValidators, gRoot)
 
 	if err := s.saveGenesisState(ctx, genesisTrie); err != nil {
 		log.Fatalf("Could not save interop genesis state %v", err)
@@ -170,7 +162,7 @@ func (s *Service) NonFinalizedDeposits(_ context.Context, _ *big.Int) []*ethpb.D
 }
 
 func (s *Service) saveGenesisState(ctx context.Context, genesisState iface.BeaconState) error {
-	if err := s.beaconDB.SaveGenesisData(ctx, genesisState); err != nil {
+	if err := s.cfg.BeaconDB.SaveGenesisData(ctx, genesisState); err != nil {
 		return err
 	}
 

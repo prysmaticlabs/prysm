@@ -9,7 +9,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
@@ -148,7 +147,7 @@ func fieldConverters(field fieldIndex, indices []uint64, elements interface{}, c
 			return nil, errors.Errorf("Wanted type of %v but got %v",
 				reflect.TypeOf([][]byte{}).Name(), reflect.TypeOf(elements).Name())
 		}
-		return handleByteArrays(val, indices, convertAll)
+		return stateutil.HandleByteArrays(val, indices, convertAll)
 	case eth1DataVotes:
 		val, ok := elements.([]*ethpb.Eth1Data)
 		if !ok {
@@ -162,7 +161,7 @@ func fieldConverters(field fieldIndex, indices []uint64, elements interface{}, c
 			return nil, errors.Errorf("Wanted type of %v but got %v",
 				reflect.TypeOf([]*ethpb.Validator{}).Name(), reflect.TypeOf(elements).Name())
 		}
-		return handleValidatorSlice(val, indices, convertAll)
+		return stateutil.HandleValidatorSlice(val, indices, convertAll)
 	case previousEpochAttestations, currentEpochAttestations:
 		val, ok := elements.([]*pb.PendingAttestation)
 		if !ok {
@@ -173,33 +172,6 @@ func fieldConverters(field fieldIndex, indices []uint64, elements interface{}, c
 	default:
 		return [][32]byte{}, errors.Errorf("got unsupported type of %v", reflect.TypeOf(elements).Name())
 	}
-}
-
-func handleByteArrays(val [][]byte, indices []uint64, convertAll bool) ([][32]byte, error) {
-	length := len(indices)
-	if convertAll {
-		length = len(val)
-	}
-	roots := make([][32]byte, 0, length)
-	rootCreator := func(input []byte) {
-		newRoot := bytesutil.ToBytes32(input)
-		roots = append(roots, newRoot)
-	}
-	if convertAll {
-		for i := range val {
-			rootCreator(val[i])
-		}
-		return roots, nil
-	}
-	if len(val) > 0 {
-		for _, idx := range indices {
-			if idx > uint64(len(val))-1 {
-				return nil, fmt.Errorf("index %d greater than number of byte arrays %d", idx, len(val))
-			}
-			rootCreator(val[idx])
-		}
-	}
-	return roots, nil
 }
 
 func handleEth1DataSlice(val []*ethpb.Eth1Data, indices []uint64, convertAll bool) ([][32]byte, error) {
@@ -230,44 +202,6 @@ func handleEth1DataSlice(val []*ethpb.Eth1Data, indices []uint64, convertAll boo
 		for _, idx := range indices {
 			if idx > uint64(len(val))-1 {
 				return nil, fmt.Errorf("index %d greater than number of items in eth1 data slice %d", idx, len(val))
-			}
-			err := rootCreator(val[idx])
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-	return roots, nil
-}
-
-func handleValidatorSlice(val []*ethpb.Validator, indices []uint64, convertAll bool) ([][32]byte, error) {
-	length := len(indices)
-	if convertAll {
-		length = len(val)
-	}
-	roots := make([][32]byte, 0, length)
-	hasher := hashutil.CustomSHA256Hasher()
-	rootCreator := func(input *ethpb.Validator) error {
-		newRoot, err := stateutil.ValidatorRootWithHasher(hasher, input)
-		if err != nil {
-			return err
-		}
-		roots = append(roots, newRoot)
-		return nil
-	}
-	if convertAll {
-		for i := range val {
-			err := rootCreator(val[i])
-			if err != nil {
-				return nil, err
-			}
-		}
-		return roots, nil
-	}
-	if len(val) > 0 {
-		for _, idx := range indices {
-			if idx > uint64(len(val))-1 {
-				return nil, fmt.Errorf("index %d greater than number of validators %d", idx, len(val))
 			}
 			err := rootCreator(val[idx])
 			if err != nil {

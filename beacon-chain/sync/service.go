@@ -78,26 +78,17 @@ type blockchainService interface {
 // Service is responsible for handling all run time p2p related operations as the
 // main entry point for network messages.
 type Service struct {
+	cfg                       *Config
 	ctx                       context.Context
 	cancel                    context.CancelFunc
-	p2p                       p2p.P2P
-	db                        db.NoHeadAccessDatabase
-	attPool                   attestations.Pool
-	exitPool                  voluntaryexits.PoolManager
-	slashingPool              slashings.PoolManager
-	chain                     blockchainService
 	slotToPendingBlocks       *gcache.Cache
 	seenPendingBlocks         map[[32]byte]bool
 	blkRootToPendingAtts      map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof
 	pendingAttsLock           sync.RWMutex
 	pendingQueueLock          sync.RWMutex
 	chainStarted              *abool.AtomicBool
-	initialSync               Checker
 	validateBlockLock         sync.RWMutex
-	stateNotifier             statefeed.Notifier
-	blockNotifier             blockfeed.Notifier
 	rateLimiter               *limiter
-	attestationNotifier       operation.Notifier
 	seenBlockLock             sync.RWMutex
 	seenBlockCache            *lru.Cache
 	seenAttestationLock       sync.RWMutex
@@ -110,7 +101,6 @@ type Service struct {
 	seenAttesterSlashingCache map[uint64]bool
 	badBlockCache             *lru.Cache
 	badBlockLock              sync.RWMutex
-	stateGen                  *stategen.State
 }
 
 // NewService initializes new regular sync service.
@@ -120,23 +110,13 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 	rLimiter := newRateLimiter(cfg.P2P)
 	ctx, cancel := context.WithCancel(ctx)
 	r := &Service{
+		cfg:                  cfg,
 		ctx:                  ctx,
 		cancel:               cancel,
-		db:                   cfg.DB,
-		p2p:                  cfg.P2P,
-		attPool:              cfg.AttPool,
-		exitPool:             cfg.ExitPool,
-		slashingPool:         cfg.SlashingPool,
 		chainStarted:         abool.New(),
-		chain:                cfg.Chain,
-		initialSync:          cfg.InitialSync,
-		attestationNotifier:  cfg.AttestationNotifier,
 		slotToPendingBlocks:  c,
 		seenPendingBlocks:    make(map[[32]byte]bool),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
-		stateNotifier:        cfg.StateNotifier,
-		blockNotifier:        cfg.BlockNotifier,
-		stateGen:             cfg.StateGen,
 		rateLimiter:          rLimiter,
 	}
 
@@ -151,12 +131,12 @@ func (s *Service) Start() {
 		panic(err)
 	}
 
-	s.p2p.AddConnectionHandler(s.reValidatePeer, s.sendGoodbye)
-	s.p2p.AddDisconnectionHandler(func(_ context.Context, _ peer.ID) error {
+	s.cfg.P2P.AddConnectionHandler(s.reValidatePeer, s.sendGoodbye)
+	s.cfg.P2P.AddDisconnectionHandler(func(_ context.Context, _ peer.ID) error {
 		// no-op
 		return nil
 	})
-	s.p2p.AddPingMethod(s.sendPingRequest)
+	s.cfg.P2P.AddPingMethod(s.sendPingRequest)
 	s.processPendingBlocksQueue()
 	s.processPendingAttsQueue()
 	s.maintainPeerStatuses()
@@ -176,12 +156,12 @@ func (s *Service) Stop() error {
 		}
 	}()
 	// Removing RPC Stream handlers.
-	for _, p := range s.p2p.Host().Mux().Protocols() {
-		s.p2p.Host().RemoveStreamHandler(protocol.ID(p))
+	for _, p := range s.cfg.P2P.Host().Mux().Protocols() {
+		s.cfg.P2P.Host().RemoveStreamHandler(protocol.ID(p))
 	}
 	// Deregister Topic Subscribers.
-	for _, t := range s.p2p.PubSub().GetTopics() {
-		if err := s.p2p.PubSub().UnregisterTopicValidator(t); err != nil {
+	for _, t := range s.cfg.P2P.PubSub().GetTopics() {
+		if err := s.cfg.P2P.PubSub().UnregisterTopicValidator(t); err != nil {
 			log.Errorf("Could not successfully unregister for topic %s: %v", t, err)
 		}
 	}
@@ -193,8 +173,8 @@ func (s *Service) Stop() error {
 func (s *Service) Status() error {
 	// If our head slot is on a previous epoch and our peers are reporting their head block are
 	// in the most recent epoch, then we might be out of sync.
-	if headEpoch := helpers.SlotToEpoch(s.chain.HeadSlot()); headEpoch+1 < helpers.SlotToEpoch(s.chain.CurrentSlot()) &&
-		headEpoch+1 < s.p2p.Peers().HighestEpoch() {
+	if headEpoch := helpers.SlotToEpoch(s.cfg.Chain.HeadSlot()); headEpoch+1 < helpers.SlotToEpoch(s.cfg.Chain.CurrentSlot()) &&
+		headEpoch+1 < s.cfg.P2P.Peers().HighestEpoch() {
 		return errors.New("out of sync")
 	}
 	return nil
@@ -236,7 +216,7 @@ func (s *Service) initCaches() error {
 func (s *Service) registerHandlers() {
 	// Wait until chain start.
 	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
+	stateSub := s.cfg.StateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
 	for {
 		select {

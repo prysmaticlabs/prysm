@@ -364,11 +364,7 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
 		}
 	}
 
-	if err := b.db.EnsureEmbeddedGenesis(b.ctx); err != nil {
-		return err
-	}
-
-	return nil
+	return b.db.EnsureEmbeddedGenesis(b.ctx)
 }
 
 func (b *BeaconNode) startStateGen() {
@@ -434,6 +430,7 @@ func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 		EnableUPnP:        cliCtx.Bool(cmd.EnableUPnPFlag.Name),
 		DisableDiscv5:     cliCtx.Bool(flags.DisableDiscv5.Name),
 		StateNotifier:     b,
+		DB:                b.db,
 	})
 	if err != nil {
 		return err
