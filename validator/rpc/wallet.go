@@ -13,12 +13,14 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/rand"
+	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/tyler-smith/go-bip39"
+	"github.com/tyler-smith/go-bip39/wordlists"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -163,6 +165,71 @@ func (s *Server) WalletConfig(ctx context.Context, _ *empty.Empty) (*pb.WalletRe
 		WalletPath:     s.walletDir,
 		KeymanagerKind: keymanagerKind,
 	}, nil
+}
+
+
+// RecoverWallet via an API request, allowing a user to recover a derived.
+// Generate the seed from the mnemonic + language
+// Create N validator keystores from the seed specified by req.NumAccounts
+// Set the wallet password to req.WalletPassword (needs password validation)
+// Create the wallet
+// Return &ptypes.Empty{}, nil if nothing went wrong
+func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest) error {
+
+	//retreive all params(numAccounts,lang,password etc) and set the RecoverWalletConfig from the inputs
+	
+	//check validate mnemonic with chosen language
+	// this language list should be dynamic in the future
+	language := req.language
+	allowedLanguages := map[string][]string{
+		"english":             wordlists.English,
+		"chinese_simplified":  wordlists.ChineseSimplified,
+		"chinese_traditional": wordlists.ChineseTraditional,
+		"french":              wordlists.French,
+		"italian":             wordlists.Italian,
+		"japanese":            wordlists.Japanese,
+		"korean":              wordlists.Korean,
+		"spanish":             wordlists.Spanish,
+	}
+	if _, ok := allowedLanguages[language]; !ok {
+		return errors.New("input not in the list of allowed languages")
+	}
+	bip39.SetWordList(language)
+	mnemonic := req.mnemonic
+	if err := validateMnemonic(mnemonic); err != nil {
+		return err
+	}
+	
+	//skipMnemonic25 is not supported through web-ui for now
+
+	//default wallet-dir not supported through  web-ui  for now
+	walletDir := s.walletDir
+	exists, err := wallet.Exists(walletDir)
+	if err != nil {
+		return status.Errorf(codes.Internal, "Could not check for existing wallet: %v", err)
+	}
+	//web-ui should check the new and confirmed password are equal
+	walletPassword  := req.walletPassword
+	if err := promptutil.ValidatePasswordInput(walletPassword); err != nil {
+		return errors.Wrap(err, "password did not pass validation")
+	}
+
+	numAccounts  := int(req.numAccounts)
+	if numAccounts < 1 {
+			return status.Error(codes.InvalidArgument, "Must create at least 1 validator account")
+	}
+
+	//try to recover 
+	if _, err := accounts.RecoverWallet(ctx, &accounts.RecoverWalletConfig{
+			WalletDir:      walletDir,
+			WalletPassword: walletPassword,
+			Mnemonic:       mnemonic,
+			NumAccounts:    numAccounts,
+	}); err != nil {
+			return err
+	}
+	return nil
+		
 }
 
 // GenerateMnemonic creates a new, random bip39 mnemonic phrase.
