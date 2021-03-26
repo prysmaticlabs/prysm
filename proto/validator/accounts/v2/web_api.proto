@@ -208,7 +208,7 @@ message WalletResponse {
 
 message RecoverWalletRequest {
     string mnemonic = 1;
-    string num_accounts = 2;
+    uint64 num_accounts = 2;
     string wallet_password = 3;
     string language = 4;
     //string mnemonic25thWord =5 ;

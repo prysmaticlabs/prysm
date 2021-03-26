@@ -6,14 +6,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -132,19 +133,18 @@ func (s *Server) WalletConfig(ctx context.Context, _ *empty.Empty) (*pb.WalletRe
 	}, nil
 }
 
-
 // RecoverWallet via an API request, allowing a user to recover a derived.
 // Generate the seed from the mnemonic + language
 // Create N validator keystores from the seed specified by req.NumAccounts
 // Set the wallet password to req.WalletPassword (needs password validation)
 // Create the wallet
 // Return &CreateWalletResponse, nil if nothing went wrong
-func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest) (*pb.CreateWalletResponse, error)  {
-	numAccounts  := int(req.NumAccounts)
+func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest) (*pb.CreateWalletResponse, error) {
+	numAccounts := int(req.NumAccounts)
 	if numAccounts < 1 {
-		return nil,status.Error(codes.InvalidArgument, "Must create at least 1 validator account")
+		return nil, status.Error(codes.InvalidArgument, "Must create at least 1 validator account")
 	}
-	
+
 	//check validate mnemonic with chosen language
 	language := req.Language
 	allowedLanguages := map[string][]string{
@@ -158,22 +158,22 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 		"spanish":             wordlists.Spanish,
 	}
 	if _, ok := allowedLanguages[language]; !ok {
-		return nil,status.Error(codes.InvalidArgument, "input not in the list of allowed languages")
+		return nil, status.Error(codes.InvalidArgument, "input not in the list of allowed languages")
 	}
-	bip39.SetWordList(language)
+	bip39.SetWordList(allowedLanguages[language])
 	mnemonic := req.Mnemonic
-	if err := accounts.validateMnemonic(mnemonic); err != nil {
-		return nil,status.Error(codes.InvalidArgument, "invalid mnemonic in request")
+	if err := validateMnemonic(mnemonic); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid mnemonic in request")
 	}
 
 	//web UI is structured to only write to the default wallet directory
-	//accounts.Recoverwallet checks if wallet already exists 
+	//accounts.Recoverwallet checks if wallet already exists
 	walletDir := s.walletDir
-	
+
 	//web-ui should check the new and confirmed password are equal
-	walletPassword  := req.walletPassword
+	walletPassword := req.WalletPassword
 	if err := promptutil.ValidatePasswordInput(walletPassword); err != nil {
-		return nil,status.Error(codes.InvalidArgument, "password did not pass validation")
+		return nil, status.Error(codes.InvalidArgument, "password did not pass validation")
 	}
 
 	//recover
@@ -188,7 +188,7 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 	}
 	if err := s.initializeWallet(ctx, &wallet.Config{
 		WalletDir:      walletDir,
-		KeymanagerKind: pb.KeymanagerKind_DERIVED,
+		KeymanagerKind: keymanager.Derived,
 		WalletPassword: walletPassword,
 	}); err != nil {
 		return nil, err
@@ -331,4 +331,23 @@ func writeWalletPasswordToDisk(walletDir, password string) error {
 		return fmt.Errorf("cannot write wallet password file as it already exists %s", passwordFilePath)
 	}
 	return fileutil.WriteFile(passwordFilePath, []byte(password))
+}
+
+//the is the same fuction in validator\accounts\wallet_recover.go
+//should we expose it there?
+func validateMnemonic(mnemonic string) error {
+	phraseWordCount := 24
+	if strings.Trim(mnemonic, " ") == "" {
+		return errors.New("phrase cannot be empty")
+	}
+	words := strings.Split(mnemonic, " ")
+	for i, word := range words {
+		if strings.Trim(word, " ") == "" {
+			words = append(words[:i], words[i+1:]...)
+		}
+	}
+	if len(words) != phraseWordCount {
+		return fmt.Errorf("phrase must be %d words, entered %d", phraseWordCount, len(words))
+	}
+	return nil
 }

@@ -92,7 +92,6 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 		walletDir:             localWalletDir,
 	}
 	req := &pb.RecoverWalletRequest{
-		Keymanager:     pb.KeymanagerKind_DERIVED,
 		WalletPassword: strongPass,
 		NumAccounts:    0,
 	}
@@ -106,29 +105,28 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 	_, err = s.RecoverWallet(ctx, req)
 	require.ErrorContains(t, "input not in the list of allowed languages", err)
 
-	req.language = "english"
+	req.Language = "english"
 	_, err = s.RecoverWallet(ctx, req)
-	require.ErrorContains(t, "invalid mnemonic in request ", err)
+	require.ErrorContains(t, "invalid mnemonic in request", err)
 
 	mnemonicResp, err := s.GenerateMnemonic(ctx, &empty.Empty{})
 	require.NoError(t, err)
 	req.Mnemonic = mnemonicResp.Mnemonic
 
 	//create then delete to test recover
-	reqC := &pb.CreaterWalletRequest{
+	reqC := &pb.CreateWalletRequest{
 		Keymanager:     pb.KeymanagerKind_DERIVED,
 		WalletPassword: strongPass,
 		NumAccounts:    2,
-		Mnemonic:		mnemonicResp.Mnemonic,
+		Mnemonic:       mnemonicResp.Mnemonic,
 	}
 	_, err = s.CreateWallet(ctx, reqC)
-	require.NoError(t, err)
+	require.ErrorContains(t,"not supported through web", err)
 
 	//remove the defaultwallet then recover
 	require.NoError(t, os.RemoveAll(defaultWalletPath))
 	_, err = s.RecoverWallet(ctx, req)
 	require.NoError(t, err)
-
 }
 
 func TestServer_WalletConfig_NoWalletFound(t *testing.T) {
