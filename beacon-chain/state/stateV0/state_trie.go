@@ -107,6 +107,8 @@ func (b *BeaconState) Copy() iface.BeaconState {
 			CurrentJustifiedCheckpoint:  b.currentJustifiedCheckpoint(),
 			FinalizedCheckpoint:         b.finalizedCheckpoint(),
 			GenesisValidatorsRoot:       b.genesisValidatorRoot(),
+			ApplicationStateHash:        b.applicationStateHash(),
+			ApplicationBlockHash:        b.applicationBlockHash(),
 		},
 		dirtyFields:           make(map[fieldIndex]interface{}, fieldCount),
 		dirtyIndices:          make(map[fieldIndex][]uint64, fieldCount),
@@ -332,6 +334,10 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 		return htrutils.CheckpointRoot(hasher, b.state.CurrentJustifiedCheckpoint)
 	case finalizedCheckpoint:
 		return htrutils.CheckpointRoot(hasher, b.state.FinalizedCheckpoint)
+	case applicationStateHash:
+		return bytesutil.ToBytes32(b.state.ApplicationStateHash), nil
+	case applicationBlockHash:
+		return bytesutil.ToBytes32(b.state.ApplicationBlockHash), nil
 	}
 	return [32]byte{}, errors.New("invalid field index provided")
 }

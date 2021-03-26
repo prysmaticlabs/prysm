@@ -114,6 +114,36 @@ func (b *BeaconState) genesisValidatorRoot() []byte {
 	return root
 }
 
+// applicationStateHash of the beacon state.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) applicationStateHash() []byte {
+	if !b.hasInnerState() {
+		return nil
+	}
+	if b.state.ApplicationStateHash == nil {
+		return params.BeaconConfig().ZeroHash[:]
+	}
+
+	root := make([]byte, 32)
+	copy(root, b.state.ApplicationStateHash)
+	return root
+}
+
+// applicationBlockHash of the beacon state.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) applicationBlockHash() []byte {
+	if !b.hasInnerState() {
+		return nil
+	}
+	if b.state.ApplicationBlockHash == nil {
+		return params.BeaconConfig().ZeroHash[:]
+	}
+
+	root := make([]byte, 32)
+	copy(root, b.state.ApplicationBlockHash)
+	return root
+}
+
 // Slot of the current beacon chain state.
 func (b *BeaconState) Slot() types.Slot {
 	if !b.hasInnerState() {

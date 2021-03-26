@@ -708,6 +708,26 @@ func (b *BeaconState) SetFinalizedCheckpoint(val *ethpb.Checkpoint) error {
 	return nil
 }
 
+// SetApplicationStateHash the beacon state.
+func (b *BeaconState) SetApplicationStateHash(val []byte) error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.ApplicationStateHash = val
+	b.markFieldAsDirty(applicationStateHash)
+	return nil
+}
+
+// SetApplicationBlockHash for the beacon state.
+func (b *BeaconState) SetApplicationBlockHash(val []byte) error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.ApplicationBlockHash = val
+	b.markFieldAsDirty(applicationBlockHash)
+	return nil
+}
+
 // Recomputes the branch up the index in the Merkle trie representation
 // of the beacon state. This method performs map reads and the caller MUST
 // hold the lock before calling this method.

@@ -194,7 +194,8 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState iface.BeaconState,
 			DepositRoot: make([]byte, 32),
 			BlockHash:   make([]byte, 32),
 		},
-		Graffiti: make([]byte, 32),
+		Graffiti:           make([]byte, 32),
+		ApplicationPayload: &ethpb.ApplicationPayload{},
 	}).HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not hash tree root empty block body")

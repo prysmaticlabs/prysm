@@ -195,5 +195,15 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(state *pb.BeaconState) ([]
 		return nil, errors.Wrap(err, "could not compute finalized checkpoint merkleization")
 	}
 	fieldRoots[20] = finalRoot[:]
+
+	// Applicaiton roots.
+	r = [32]byte{}
+	copy(r[:], state.ApplicationStateHash)
+	fieldRoots[21] = r[:]
+
+	r = [32]byte{}
+	copy(r[:], state.ApplicationBlockHash)
+	fieldRoots[22] = r[:]
+
 	return fieldRoots, nil
 }
