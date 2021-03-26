@@ -16,7 +16,6 @@ import (
 	e2etypes "github.com/prysmaticlabs/prysm/endtoend/types"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"golang.org/x/sync/errgroup"
 )
 
 var _ e2etypes.ComponentRunner = (*BeaconNode)(nil)
@@ -50,36 +49,17 @@ func (s *BeaconNodeSet) Start(ctx context.Context) error {
 	}
 
 	// Create beacon nodes.
-	nodes := make([]*BeaconNode, e2e.TestParams.BeaconNodeCount)
+	nodes := make([]e2etypes.ComponentRunner, e2e.TestParams.BeaconNodeCount)
 	for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
 		nodes[i] = NewBeaconNode(s.config, i, s.enr)
 	}
 
-	// Start all created beacon nodes.
-	g, ctx := errgroup.WithContext(ctx)
-	for _, node := range nodes {
-		node := node
-		g.Go(func() error {
-			return node.Start(ctx)
-		})
-	}
-
-	// Mark set as ready (happens when all contained nodes report as started).
-	go func() {
-		for _, node := range nodes {
-			select {
-			case <-ctx.Done():
-				return
-			case <-node.Started():
-				continue
-			}
-		}
-		// Only close if all nodes are started. When context is cancelled, node is not considered as started.
-		// Stalled nodes do not pose problem -- after certain period of time main routine times out.
+	// Wait for all nodes to finish their job (blocking).
+	// Once nodes are ready passed in handler function will be called.
+	return helpers.WaitOnNodes(ctx, nodes, func() {
+		// All nodes stated, close channel, so that all services waiting on a set, can proceed.
 		close(s.started)
-	}()
-
-	return g.Wait()
+	})
 }
 
 // Started checks whether beacon node set is started and all nodes are ready to be queried.

@@ -24,7 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"golang.org/x/sync/errgroup"
 )
 
 const depositGasLimit = 4000000
@@ -58,36 +57,17 @@ func (s *ValidatorNodeSet) Start(ctx context.Context) error {
 	validatorsPerNode := validatorNum / beaconNodeNum
 
 	// Create validator nodes.
-	nodes := make([]*ValidatorNode, beaconNodeNum)
+	nodes := make([]e2etypes.ComponentRunner, beaconNodeNum)
 	for i := 0; i < beaconNodeNum; i++ {
 		nodes[i] = NewValidatorNode(s.config, validatorsPerNode, i, validatorsPerNode*i)
 	}
 
-	// Start all created validator nodes.
-	g, ctx := errgroup.WithContext(ctx)
-	for _, node := range nodes {
-		node := node
-		g.Go(func() error {
-			return node.Start(ctx)
-		})
-	}
-
-	// Mark set as ready (happens when all contained nodes report as started).
-	go func() {
-		for _, node := range nodes {
-			select {
-			case <-ctx.Done():
-				return
-			case <-node.Started():
-				continue
-			}
-		}
-		// Only close if all nodes are started. When context is cancelled, node is not considered as started.
-		// Stalled nodes do not pose problem -- after certain period of time main routine times out.
+	// Wait for all nodes to finish their job (blocking).
+	// Once nodes are ready passed in handler function will be called.
+	return helpers.WaitOnNodes(ctx, nodes, func() {
+		// All nodes stated, close channel, so that all services waiting on a set, can proceed.
 		close(s.started)
-	}()
-
-	return g.Wait()
+	})
 }
 
 // Started checks whether validator node set is started and all nodes are ready to be queried.
