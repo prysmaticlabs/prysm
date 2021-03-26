@@ -120,6 +120,3 @@ message DepositMessage {
   // Deposit amount in gwei.
   uint64 amount = 3;
 }
-
-// Define ApplicationPayload in ethereumapi
-// Define Transaction in ethereumapi
