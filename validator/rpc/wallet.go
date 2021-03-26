@@ -176,7 +176,7 @@ func (s *Server) WalletConfig(ctx context.Context, _ *empty.Empty) (*pb.WalletRe
 // Return &ptypes.Empty{}, nil if nothing went wrong
 func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest) error {
 
-	//retreive all params(numAccounts,lang,password etc) and set the RecoverWalletConfig from the inputs
+	//retreive all params(numAccounts,lang,password etc) and call accounts.RecoverWallet 
 	
 	//check validate mnemonic with chosen language
 	// this language list should be dynamic in the future
@@ -203,11 +203,9 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 	//skipMnemonic25 is not supported through web-ui for now
 
 	//default wallet-dir not supported through  web-ui  for now
+	//accounts.Recoverwallet checks if wallet already exists 
 	walletDir := s.walletDir
-	exists, err := wallet.Exists(walletDir)
-	if err != nil {
-		return status.Errorf(codes.Internal, "Could not check for existing wallet: %v", err)
-	}
+	
 	//web-ui should check the new and confirmed password are equal
 	walletPassword  := req.walletPassword
 	if err := promptutil.ValidatePasswordInput(walletPassword); err != nil {
@@ -216,7 +214,7 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 
 	numAccounts  := int(req.numAccounts)
 	if numAccounts < 1 {
-			return status.Error(codes.InvalidArgument, "Must create at least 1 validator account")
+		return status.Error(codes.InvalidArgument, "Must create at least 1 validator account")
 	}
 
 	//try to recover 
