@@ -125,6 +125,9 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 			params.BeaconConfig().ZeroHash,
 		},
 	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not produce application data %v", err)
+	}
 	log.WithFields(logrus.Fields{
 		"coinbase":        fmt.Sprintf("%#x", payload.Coinbase),
 		"blockHash":       fmt.Sprintf("%#x", payload.BlockHash),
