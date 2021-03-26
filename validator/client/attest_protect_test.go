@@ -14,7 +14,7 @@ import (
 
 func Test_slashableAttestationCheck(t *testing.T) {
 	config := &featureconfig.Flags{
-		SlasherProtection: true,
+		RemoteSlasherProtection: true,
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
@@ -58,7 +58,7 @@ func Test_slashableAttestationCheck(t *testing.T) {
 
 func Test_slashableAttestationCheck_UpdatesLowestSignedEpochs(t *testing.T) {
 	config := &featureconfig.Flags{
-		SlasherProtection: true,
+		RemoteSlasherProtection: true,
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
@@ -119,7 +119,7 @@ func Test_slashableAttestationCheck_UpdatesLowestSignedEpochs(t *testing.T) {
 
 func Test_slashableAttestationCheck_OK(t *testing.T) {
 	config := &featureconfig.Flags{
-		SlasherProtection: false,
+		RemoteSlasherProtection: false,
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
@@ -150,7 +150,7 @@ func Test_slashableAttestationCheck_OK(t *testing.T) {
 
 func Test_slashableAttestationCheck_GenesisEpoch(t *testing.T) {
 	config := &featureconfig.Flags{
-		SlasherProtection: false,
+		RemoteSlasherProtection: false,
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()

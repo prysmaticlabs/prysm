@@ -10,7 +10,6 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -75,12 +74,6 @@ func setupEIP3076SpecTests(t *testing.T) []*eip3076TestCase {
 }
 
 func TestEIP3076SpecTests(t *testing.T) {
-	config := &featureconfig.Flags{
-		SlasherProtection: true,
-	}
-	reset := featureconfig.InitWithReset(config)
-	defer reset()
-
 	testCases := setupEIP3076SpecTests(t)
 	for _, tt := range testCases {
 		t.Run(tt.Name, func(t *testing.T) {

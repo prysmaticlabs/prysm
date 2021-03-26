@@ -58,7 +58,7 @@ func (v *validator) preBlockSignValidations(
 		)
 	}
 
-	if featureconfig.Get().SlasherProtection {
+	if featureconfig.Get().RemoteSlasherProtection {
 		blockHdr, err := blockutil.BeaconBlockHeaderFromBlock(block)
 		if err != nil {
 			return errors.Wrap(err, "failed to get block header from block")
