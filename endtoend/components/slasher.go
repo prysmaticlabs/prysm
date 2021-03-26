@@ -4,11 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"os/exec"
-	"path"
 	"strings"
-	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/prysmaticlabs/prysm/endtoend/helpers"
@@ -113,46 +110,4 @@ func (node *SlasherNode) Start(ctx context.Context) error {
 // Started checks whether slasher node is started and ready to be queried.
 func (node *SlasherNode) Started() <-chan struct{} {
 	return node.started
-}
-
-// StartSlashers starts slasher clients for use within E2E, connected to all beacon nodes.
-// Deprecated: this method will be removed once SlasherNodeSet component is used.
-func StartSlashers(t *testing.T) {
-	binaryPath, found := bazel.FindBinary("cmd/slasher", "slasher")
-	if !found {
-		t.Log(binaryPath)
-		t.Fatal("Slasher binary not found")
-	}
-
-	for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
-		stdOutFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, fmt.Sprintf(e2e.SlasherLogFileName, i))
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		args := []string{
-			fmt.Sprintf("--datadir=%s/slasher-data-%d/", e2e.TestParams.TestPath, i),
-			fmt.Sprintf("--log-file=%s", stdOutFile.Name()),
-			fmt.Sprintf("--rpc-port=%d", e2e.TestParams.SlasherRPCPort+i),
-			fmt.Sprintf("--monitoring-port=%d", e2e.TestParams.SlasherMetricsPort+i),
-			fmt.Sprintf("--beacon-rpc-provider=localhost:%d", e2e.TestParams.BeaconNodeRPCPort+i),
-			"--force-clear-db",
-			"--e2e-config",
-			"--accept-terms-of-use",
-		}
-
-		t.Logf("Starting slasher %d with flags: %s", i, strings.Join(args[2:], " "))
-		cmd := exec.Command(binaryPath, args...)
-		if err = cmd.Start(); err != nil {
-			t.Fatalf("Failed to start slasher client: %v", err)
-		}
-	}
-
-	stdOutFile, err := os.Open(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.SlasherLogFileName, 0)))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err = helpers.WaitForTextInFile(stdOutFile, "Starting slasher client"); err != nil {
-		t.Fatalf("could not find starting logs for slasher, this means it had issues starting: %v", err)
-	}
 }
