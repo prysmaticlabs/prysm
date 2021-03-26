@@ -87,7 +87,7 @@ func Test_slashableAttestationCheck_UpdatesLowestSignedEpochs(t *testing.T) {
 	m.slasherClient.EXPECT().IsSlashableAttestation(
 		gomock.Any(), // ctx
 		gomock.Any(),
-	).Return(&ethpb.AttesterSlashing{}, nil /*err*/)
+	).Return(nil, nil /*err*/)
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -96,14 +96,10 @@ func Test_slashableAttestationCheck_UpdatesLowestSignedEpochs(t *testing.T) {
 	_, sr, err := validator.getDomainAndSigningRoot(ctx, att.Data)
 	require.NoError(t, err)
 
-	m.slasherClient.EXPECT().IsSlashableAttestation(
-		gomock.Any(), // ctx
-		gomock.Any(),
-	).Return(nil, nil /*err*/)
-
 	err = validator.slashableAttestationCheck(context.Background(), att, pubKey, sr)
 	require.NoError(t, err)
 	differentSigningRoot := [32]byte{2}
+
 	err = validator.slashableAttestationCheck(context.Background(), att, pubKey, differentSigningRoot)
 	require.ErrorContains(t, "could not sign attestation", err)
 

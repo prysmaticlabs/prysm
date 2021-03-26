@@ -16,11 +16,12 @@ var failedPreBlockSignLocalErr = "attempted to sign a double proposal, block rej
 var failedPreBlockSignExternalErr = "attempted a double proposal, block rejected by remote slashing protection"
 var failedPostBlockSignErr = "made a double proposal, considered slashable by remote slashing protection"
 
-func (v *validator) preBlockSignValidations(
-	ctx context.Context, pubKey [48]byte, block *ethpb.BeaconBlock, signingRoot [32]byte,
+func (v *validator) slashableProposalCheck(
+	ctx context.Context, pubKey [48]byte, signedBlock *ethpb.SignedBeaconBlock, signingRoot [32]byte,
 ) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 
+	block := signedBlock.Block
 	prevSigningRoot, proposalAtSlotExists, err := v.db.ProposalHistoryForSlot(ctx, pubKey, block.Slot)
 	if err != nil {
 		if v.emitAccountMetrics {
@@ -59,15 +60,11 @@ func (v *validator) preBlockSignValidations(
 	}
 
 	if featureconfig.Get().RemoteSlasherProtection {
-		blockHdr, err := blockutil.BeaconBlockHeaderFromBlock(block)
+		blockHdr, err := blockutil.SignedBeaconBlockHeaderFromBlock(signedBlock)
 		if err != nil {
 			return errors.Wrap(err, "failed to get block header from block")
 		}
-		signedHeader := &ethpb.SignedBeaconBlockHeader{
-			Header:    blockHdr,
-			Signature: params.BeaconConfig().EmptySignature[:],
-		}
-		slashing, err := v.slashingProtectionClient.IsSlashableBlock(ctx, signedHeader)
+		slashing, err := v.slashingProtectionClient.IsSlashableBlock(ctx, blockHdr)
 		if err != nil {
 			return errors.Wrap(err, "could not check if block is slashable")
 		}
@@ -79,17 +76,7 @@ func (v *validator) preBlockSignValidations(
 		}
 	}
 
-	return nil
-}
-
-func (v *validator) postBlockSignUpdate(
-	ctx context.Context,
-	pubKey [48]byte,
-	block *ethpb.SignedBeaconBlock,
-	signingRoot [32]byte,
-) error {
-	fmtKey := fmt.Sprintf("%#x", pubKey[:])
-	if err := v.db.SaveProposalHistoryForSlot(ctx, pubKey, block.Block.Slot, signingRoot[:]); err != nil {
+	if err := v.db.SaveProposalHistoryForSlot(ctx, pubKey, block.Slot, signingRoot[:]); err != nil {
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
