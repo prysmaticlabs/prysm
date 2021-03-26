@@ -80,6 +80,7 @@ type Status struct {
 	scorers   *scorers.Service
 	store     *peerdata.Store
 	ipTracker map[string]uint64
+	rand      *rand.Rand
 }
 
 // StatusConfig represents peer status service params.
@@ -100,6 +101,9 @@ func NewStatus(ctx context.Context, config *StatusConfig) *Status {
 		store:     store,
 		scorers:   scorers.NewService(ctx, store, config.ScorerParams),
 		ipTracker: map[string]uint64{},
+		// Random generator used to calculate dial backoff period.
+		// It is ok to use deterministic generator, no need for true entropy.
+		rand: rand.NewDeterministicGenerator(),
 	}
 }
 
@@ -357,8 +361,7 @@ func (p *Status) RandomizeBackOff(pid peer.ID) {
 		return
 	}
 
-	randGen := rand.NewDeterministicGenerator()
-	duration := time.Duration(math.Max(MinBackOffDuration, float64(randGen.Intn(MaxBackOffDuration)))) * time.Millisecond
+	duration := time.Duration(math.Max(MinBackOffDuration, float64(p.rand.Intn(MaxBackOffDuration)))) * time.Millisecond
 	peerData.NextValidTime = time.Now().Add(duration)
 }
 
