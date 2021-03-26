@@ -2,6 +2,7 @@ package p2p
 
 import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 )
 
 // Config for the p2p service. These parameters are set from application level flags
@@ -26,4 +27,5 @@ type Config struct {
 	AllowListCIDR       string
 	DenyListCIDR        []string
 	StateNotifier       statefeed.Notifier
+	DB                  db.ReadOnlyDatabase
 }
