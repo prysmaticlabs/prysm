@@ -138,13 +138,14 @@ func (s *Server) WalletConfig(ctx context.Context, _ *empty.Empty) (*pb.WalletRe
 // Create N validator keystores from the seed specified by req.NumAccounts
 // Set the wallet password to req.WalletPassword (needs password validation)
 // Create the wallet
-// Return &ptypes.Empty{}, nil if nothing went wrong
+// Return &CreateWalletResponse, nil if nothing went wrong
 func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest) (*pb.CreateWalletResponse, error)  {
-
-	//retreive all params(numAccounts,lang,password etc) and call the RecoverWalletConfig from the inputs
+	numAccounts  := int(req.numAccounts)
+	if numAccounts < 1 {
+		return nil,status.Error(codes.InvalidArgument, "Must create at least 1 validator account")
+	}
 	
 	//check validate mnemonic with chosen language
-	// this language list should be dynamic in the future
 	language := req.language
 	allowedLanguages := map[string][]string{
 		"english":             wordlists.English,
@@ -157,29 +158,22 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 		"spanish":             wordlists.Spanish,
 	}
 	if _, ok := allowedLanguages[language]; !ok {
-		return nil,errors.New("input not in the list of allowed languages")
+		return nil,status.Error(codes.InvalidArgument, "input not in the list of allowed languages")
 	}
 	bip39.SetWordList(language)
 	mnemonic := req.mnemonic
 	if err := accounts.validateMnemonic(mnemonic); err != nil {
-		return nil,err
+		return nil,status.Error(codes.InvalidArgument, "invalid mnemonic in request")
 	}
-	
-	//skipMnemonic25 is not supported through web-ui for now
 
-	//default wallet-dir not supported through  web-ui  for now
+	//web UI is structured to only write to the default wallet directory
 	//accounts.Recoverwallet checks if wallet already exists 
 	walletDir := s.walletDir
 	
 	//web-ui should check the new and confirmed password are equal
 	walletPassword  := req.walletPassword
 	if err := promptutil.ValidatePasswordInput(walletPassword); err != nil {
-		return nil,errors.Wrap(err, "password did not pass validation")
-	}
-
-	numAccounts  := int(req.numAccounts)
-	if numAccounts < 1 {
-		return nil,status.Error(codes.InvalidArgument, "Must create at least 1 validator account")
+		return nil,status.Error(codes.InvalidArgument, "password did not pass validation")
 	}
 
 	//recover
@@ -188,7 +182,7 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 		WalletPassword: walletPassword,
 		Mnemonic:       mnemonic,
 		NumAccounts:    numAccounts,
-		//Mnemonic25thWord: req.Mnemonic25thWord, support Mnemonic
+		//Mnemonic25thWord: req.Mnemonic25thWord, //support Mnemonic25thWord
 	}); err != nil {
 		return nil, err
 	}
