@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	mockSlasher "github.com/prysmaticlabs/prysm/validator/testing"
 )
 
 func Test_slashableAttestationCheck(t *testing.T) {
@@ -84,15 +83,24 @@ func Test_slashableAttestationCheck_UpdatesLowestSignedEpochs(t *testing.T) {
 			},
 		},
 	}
-	mockProtector := &mockSlasher.MockProtector{AllowAttestation: false}
-	validator.protector = mockProtector
+
+	m.slasherClient.EXPECT().IsSlashableAttestation(
+		gomock.Any(), // ctx
+		gomock.Any(),
+	).Return(&ethpb.AttesterSlashing{}, nil /*err*/)
+
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		&ethpb.DomainRequest{Epoch: 10, Domain: []byte{1, 0, 0, 0}},
 	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 	_, sr, err := validator.getDomainAndSigningRoot(ctx, att.Data)
 	require.NoError(t, err)
-	mockProtector.AllowAttestation = true
+
+	m.slasherClient.EXPECT().IsSlashableAttestation(
+		gomock.Any(), // ctx
+		gomock.Any(),
+	).Return(nil, nil /*err*/)
+
 	err = validator.slashableAttestationCheck(context.Background(), att, pubKey, sr)
 	require.NoError(t, err)
 	differentSigningRoot := [32]byte{2}

@@ -4,12 +4,12 @@ import (
 	"context"
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	mockSlasher "github.com/prysmaticlabs/prysm/validator/testing"
 )
 
 func TestPreBlockSignLocalValidation_PreventsLowerThanMinProposal(t *testing.T) {
@@ -121,18 +121,27 @@ func TestPreBlockSignValidation(t *testing.T) {
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
-	validator, _, validatorKey, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t)
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
 	block := testutil.NewBeaconBlock()
 	block.Block.Slot = 10
-	mockProtector := &mockSlasher.MockProtector{AllowBlock: false}
-	validator.protector = mockProtector
+
+	m.slasherClient.EXPECT().IsSlashableBlock(
+		gomock.Any(), // ctx
+		gomock.Any(),
+	).Return(&ethpb.ProposerSlashing{}, nil /*err*/)
+
 	err := validator.preBlockSignValidations(context.Background(), pubKey, block.Block, [32]byte{2})
 	require.ErrorContains(t, failedPreBlockSignExternalErr, err)
-	mockProtector.AllowBlock = true
+
+	m.slasherClient.EXPECT().IsSlashableBlock(
+		gomock.Any(), // ctx
+		gomock.Any(),
+	).Return(nil, nil /*err*/)
+
 	err = validator.preBlockSignValidations(context.Background(), pubKey, block.Block, [32]byte{2})
 	require.NoError(t, err, "Expected allowed block not to throw error")
 }
@@ -143,18 +152,27 @@ func TestPostBlockSignUpdate(t *testing.T) {
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
-	validator, _, validatorKey, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t)
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	emptyBlock := testutil.NewBeaconBlock()
 	emptyBlock.Block.Slot = 10
 	emptyBlock.Block.ProposerIndex = 0
-	mockProtector := &mockSlasher.MockProtector{AllowBlock: false}
-	validator.protector = mockProtector
+
+	m.slasherClient.EXPECT().IsSlashableBlock(
+		gomock.Any(), // ctx
+		gomock.Any(),
+	).Return(&ethpb.ProposerSlashing{}, nil /*err*/)
+
 	err := validator.postBlockSignUpdate(context.Background(), pubKey, emptyBlock, [32]byte{})
 	require.ErrorContains(t, failedPostBlockSignErr, err, "Expected error when post signature update is detected as slashable")
-	mockProtector.AllowBlock = true
+
+	m.slasherClient.EXPECT().IsSlashableBlock(
+		gomock.Any(), // ctx
+		gomock.Any(),
+	).Return(nil, nil /*err*/)
+
 	err = validator.postBlockSignUpdate(context.Background(), pubKey, emptyBlock, [32]byte{})
 	require.NoError(t, err, "Expected allowed block not to throw error")
 }

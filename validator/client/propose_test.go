@@ -79,6 +79,7 @@ func setup(t *testing.T) (*validator, *mocks, bls.SecretKey, func()) {
 		db:                             valDB,
 		keyManager:                     km,
 		validatorClient:                m.validatorClient,
+		slashingProtectionClient:       m.slasherClient,
 		graffiti:                       []byte{},
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
