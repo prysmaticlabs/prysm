@@ -104,8 +104,6 @@ type Service struct {
 	seenAttesterSlashingCache map[uint64]bool
 	badBlockCache             *lru.Cache
 	badBlockLock              sync.RWMutex
-	slasherAttestationsFeed   *event.Feed
-	slasherBlockHeadersFeed   *event.Feed
 }
 
 // NewService initializes new regular sync service.

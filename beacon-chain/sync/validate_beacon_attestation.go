@@ -108,7 +108,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 				traceutil.AnnotateError(span, err)
 				return
 			}
-			s.slasherAttestationsFeed.Send(indexedAtt)
+			s.cfg.SlasherAttestationsFeed.Send(indexedAtt)
 		}()
 	}
 
