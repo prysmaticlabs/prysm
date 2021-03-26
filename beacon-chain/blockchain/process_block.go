@@ -98,6 +98,17 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 	if err != nil {
 		return errors.Wrap(err, "could not execute state transition")
 	}
+
+	// Verify application payload, which the eth1 component of the block.
+	// First get beacon_chain_data using block's randao_reveal. Use beacon_chain_data
+	// along with state's application block hash and block body's application payload.
+	// Call function process_application_payload.
+	// Note, we can't call RPC call here. One way is to send block.application_payload to RPC service via channel and
+	// block until we get a respond.
+	// If pass, set beacon state's application fields
+	//    state.application_state_root = body.application_payload.state_root;
+	//    state.application_block_hash = body.application_payload.block_hash;
+
 	valid, err := set.Verify()
 	if err != nil {
 		return errors.Wrap(err, "could not batch verify signature")

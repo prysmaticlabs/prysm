@@ -110,6 +110,10 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 		return nil, status.Errorf(codes.Internal, "Could not calculate proposer index %v", err)
 	}
 
+	// Get application payload using beacon state's application_block_hash and beacon_chain_data.
+	// beacon_chain_data consists of slot,timestamp and randao mix.
+	// Call function get_application_payload.
+
 	blk := &ethpb.BeaconBlock{
 		Slot:          req.Slot,
 		ParentRoot:    parentRoot,
@@ -124,6 +128,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 			AttesterSlashings: vs.SlashingsPool.PendingAttesterSlashings(ctx, head, false /*noLimit*/),
 			VoluntaryExits:    vs.ExitPool.PendingExits(head, req.Slot, false /*noLimit*/),
 			Graffiti:          graffiti[:],
+			// Insert application payload here
 		},
 	}
 
