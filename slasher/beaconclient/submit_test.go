@@ -19,8 +19,10 @@ func TestService_SubscribeDetectedProposerSlashings(t *testing.T) {
 	client := mock.NewMockBeaconChainClient(ctrl)
 
 	bs := Service{
-		beaconClient:          client,
-		proposerSlashingsFeed: new(event.Feed),
+		cfg: &Config{
+			BeaconClient:          client,
+			ProposerSlashingsFeed: new(event.Feed),
+		},
 	}
 
 	slashing := &ethpb.ProposerSlashing{
@@ -61,8 +63,10 @@ func TestService_SubscribeDetectedAttesterSlashings(t *testing.T) {
 	client := mock.NewMockBeaconChainClient(ctrl)
 
 	bs := Service{
-		beaconClient:          client,
-		attesterSlashingsFeed: new(event.Feed),
+		cfg: &Config{
+			BeaconClient:          client,
+			AttesterSlashingsFeed: new(event.Feed),
+		},
 	}
 
 	slashing := &ethpb.AttesterSlashing{

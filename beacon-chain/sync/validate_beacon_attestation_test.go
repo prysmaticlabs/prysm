@@ -37,13 +37,15 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 	c, err := lru.New(10)
 	require.NoError(t, err)
 	s := &Service{
-		initialSync:          &mockSync.Sync{IsSyncing: false},
-		p2p:                  p,
-		db:                   db,
-		chain:                chain,
+		cfg: &Config{
+			InitialSync:         &mockSync.Sync{IsSyncing: false},
+			P2P:                 p,
+			DB:                  db,
+			Chain:               chain,
+			AttestationNotifier: (&mockChain.ChainService{}).OperationNotifier(),
+		},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		seenAttestationCache: c,
-		attestationNotifier:  (&mockChain.ChainService{}).OperationNotifier(),
 	}
 	err = s.initCaches()
 	require.NoError(t, err)

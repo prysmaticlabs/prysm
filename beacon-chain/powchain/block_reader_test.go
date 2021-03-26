@@ -22,7 +22,7 @@ var endpoint = "http://127.0.0.1"
 func setDefaultMocks(service *Service) *Service {
 	service.eth1DataFetcher = &goodFetcher{}
 	service.httpLogger = &goodLogger{}
-	service.stateNotifier = &goodNotifier{}
+	service.cfg.StateNotifier = &goodNotifier{}
 	return service
 }
 

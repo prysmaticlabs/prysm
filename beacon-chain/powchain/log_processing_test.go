@@ -65,7 +65,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
-			web3Service.depositContractAddress,
+			web3Service.cfg.DepositContract,
 		},
 	}
 
@@ -133,7 +133,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
-			web3Service.depositContractAddress,
+			web3Service.cfg.DepositContract,
 		},
 	}
 
@@ -147,7 +147,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	err = web3Service.ProcessDepositLog(context.Background(), logs[1])
 	require.NoError(t, err)
 
-	pendingDeposits := web3Service.depositCache.PendingDeposits(context.Background(), nil /*blockNum*/)
+	pendingDeposits := web3Service.cfg.DepositCache.PendingDeposits(context.Background(), nil /*blockNum*/)
 	require.Equal(t, 2, len(pendingDeposits), "Unexpected number of deposits")
 
 	hook.Reset()
@@ -184,7 +184,7 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
-			web3Service.depositContractAddress,
+			web3Service.cfg.DepositContract,
 		},
 	}
 
@@ -250,7 +250,7 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
-			web3Service.depositContractAddress,
+			web3Service.cfg.DepositContract,
 		},
 	}
 
@@ -318,7 +318,7 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
-			web3Service.depositContractAddress,
+			web3Service.cfg.DepositContract,
 		},
 	}
 
@@ -328,7 +328,7 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 
 	// Set up our subscriber now to listen for the chain started event.
 	stateChannel := make(chan *feed.Event, 1)
-	stateSub := web3Service.stateNotifier.StateFeed().Subscribe(stateChannel)
+	stateSub := web3Service.cfg.StateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
 
 	for _, log := range logs {
@@ -425,7 +425,7 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 
 	// Set up our subscriber now to listen for the chain started event.
 	stateChannel := make(chan *feed.Event, 1)
-	stateSub := web3Service.stateNotifier.StateFeed().Subscribe(stateChannel)
+	stateSub := web3Service.cfg.StateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
 
 	err = web3Service.processPastLogs(context.Background())
@@ -529,7 +529,7 @@ func TestProcessETH2GenesisLog_LargePeriodOfNoLogs(t *testing.T) {
 
 	// Set up our subscriber now to listen for the chain started event.
 	stateChannel := make(chan *feed.Event, 1)
-	stateSub := web3Service.stateNotifier.StateFeed().Subscribe(stateChannel)
+	stateSub := web3Service.cfg.StateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
 
 	err = web3Service.processPastLogs(context.Background())
@@ -599,7 +599,7 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
-			web3Service.depositContractAddress,
+			web3Service.cfg.DepositContract,
 		},
 	}
 

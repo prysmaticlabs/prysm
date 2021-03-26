@@ -19,7 +19,7 @@ var responseCodeInvalidRequest = byte(0x01)
 var responseCodeServerError = byte(0x02)
 
 func (s *Service) generateErrorResponse(code byte, reason string) ([]byte, error) {
-	return createErrorResponse(code, reason, s.p2p)
+	return createErrorResponse(code, reason, s.cfg.P2P)
 }
 
 // ReadStatusCode response from a RPC stream.

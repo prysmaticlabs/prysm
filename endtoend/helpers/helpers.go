@@ -16,8 +16,14 @@ import (
 	"testing"
 	"time"
 
+	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
-	"github.com/prysmaticlabs/prysm/endtoend/types"
+	e2etypes "github.com/prysmaticlabs/prysm/endtoend/types"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	log "github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
 )
 
 const (
@@ -100,7 +106,7 @@ random:
 }
 
 // LogOutput logs the output of all log files made.
-func LogOutput(t *testing.T, config *types.E2EConfig) {
+func LogOutput(t *testing.T, config *e2etypes.E2EConfig) {
 	// Log out errors from beacon chain nodes.
 	for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
 		beaconLogFile, err := os.Open(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.BeaconNodeLogFileName, i)))
@@ -182,4 +188,89 @@ func writeURLRespAtPath(url, filePath string) error {
 		return err
 	}
 	return nil
+}
+
+// NewLocalConnection creates and returns GRPC connection on a given localhost port.
+func NewLocalConnection(ctx context.Context, port int) (*grpc.ClientConn, error) {
+	endpoint := fmt.Sprintf("127.0.0.1:%d", port)
+	dialOpts := []grpc.DialOption{
+		grpc.WithInsecure(),
+	}
+	conn, err := grpc.DialContext(ctx, endpoint, dialOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return conn, nil
+}
+
+// NewLocalConnections returns number of GRPC connections, along with function to close all of them.
+func NewLocalConnections(ctx context.Context, numConns int) ([]*grpc.ClientConn, func(), error) {
+	conns := make([]*grpc.ClientConn, numConns)
+	for i := 0; i < len(conns); i++ {
+		conn, err := NewLocalConnection(ctx, e2e.TestParams.BeaconNodeRPCPort+i)
+		if err != nil {
+			return nil, nil, err
+		}
+		conns[i] = conn
+	}
+	return conns, func() {
+		for _, conn := range conns {
+			if err := conn.Close(); err != nil {
+				log.Error(err)
+			}
+		}
+	}, nil
+}
+
+// ComponentsStarted checks, sequentially, each provided component, blocks until all of the components are ready.
+func ComponentsStarted(ctx context.Context, comps []e2etypes.ComponentRunner) error {
+	for _, comp := range comps {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-comp.Started():
+			continue
+		}
+	}
+	return nil
+}
+
+// EpochTickerStartTime calculates the best time to start epoch ticker for a given genesis.
+func EpochTickerStartTime(genesis *eth.Genesis) time.Time {
+	epochSeconds := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
+	epochSecondsHalf := time.Duration(int64(epochSeconds*1000)/2) * time.Millisecond
+	// Adding a half slot here to ensure the requests are in the middle of an epoch.
+	middleOfEpoch := epochSecondsHalf + slotutil.DivideSlotBy(2 /* half a slot */)
+	genesisTime := time.Unix(genesis.GenesisTime.Seconds, 0)
+	// Offsetting the ticker from genesis so it ticks in the middle of an epoch, in order to keep results consistent.
+	return genesisTime.Add(middleOfEpoch)
+}
+
+// WaitOnNodes waits on nodes to complete execution, accepts function that will be called when all nodes are ready.
+func WaitOnNodes(ctx context.Context, nodes []e2etypes.ComponentRunner, nodesStarted func()) error {
+	// Start nodes.
+	g, ctx := errgroup.WithContext(ctx)
+	for _, node := range nodes {
+		node := node
+		g.Go(func() error {
+			return node.Start(ctx)
+		})
+	}
+
+	// Mark set as ready (happens when all contained nodes report as started).
+	go func() {
+		for _, node := range nodes {
+			select {
+			case <-ctx.Done():
+				return
+			case <-node.Started():
+				continue
+			}
+		}
+		// When all nodes are done, signal the client. Client handles unresponsive components by setting up
+		// a deadline for passed in context, and this ensures that nothing breaks if function below is never called.
+		nodesStarted()
+	}()
+
+	return g.Wait()
 }

@@ -14,7 +14,7 @@ import (
 // response_chunk ::= | <result> | <encoding-dependent-header> | <encoded-payload>
 func (s *Service) chunkWriter(stream libp2pcore.Stream, msg interface{}) error {
 	SetStreamWriteDeadline(stream, defaultWriteDuration)
-	return WriteChunk(stream, s.p2p.Encoding(), msg)
+	return WriteChunk(stream, s.cfg.P2P.Encoding(), msg)
 }
 
 // WriteChunk object to stream.
