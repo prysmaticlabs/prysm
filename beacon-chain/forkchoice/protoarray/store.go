@@ -230,6 +230,21 @@ func (s *Store) NodesIndices() map[[32]byte]uint64 {
 	return s.nodesIndices
 }
 
+// ViableHeads returns all possible chain heads.
+func (s *Store) ViableHeads() []*Node {
+	s.nodesLock.RLock()
+	defer s.nodesLock.RUnlock()
+
+	heads := make([]*Node, 0)
+	for _, node := range s.nodes {
+		if s.viableForHead(node) {
+			heads = append(heads, node)
+		}
+	}
+
+	return heads
+}
+
 // head starts from justified root and then follows the best descendant links
 // to find the best block for head.
 func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, error) {

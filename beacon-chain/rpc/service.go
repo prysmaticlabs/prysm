@@ -22,6 +22,7 @@ import (
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
@@ -30,6 +31,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/beacon"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/beaconv1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/debug"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/debugv1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/node"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/nodev1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
@@ -102,6 +104,7 @@ type Config struct {
 	BlockNotifier           blockfeed.Notifier
 	OperationNotifier       opfeed.Notifier
 	StateGen                *stategen.State
+	ForkChoiceStore         protoarray.Store
 	MaxMsgSize              int
 }
 
@@ -276,7 +279,13 @@ func (s *Service) Start() {
 			PeerManager:        s.cfg.PeerManager,
 			PeersFetcher:       s.cfg.PeersFetcher,
 		}
+		debugServerV1 := &debugv1.Server{
+			Ctx:             s.ctx,
+			BeaconDB:        s.cfg.BeaconDB,
+			ForkChoiceStore: &s.cfg.ForkChoiceStore,
+		}
 		pbrpc.RegisterDebugServer(s.grpcServer, debugServer)
+		ethpbv1.RegisterBeaconDebugServer(s.grpcServer, debugServerV1)
 	}
 	ethpb.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServer)
 
