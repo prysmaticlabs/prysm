@@ -17,7 +17,8 @@ import (
 	"time"
 
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
-	"github.com/prysmaticlabs/prysm/endtoend/types"
+	e2etypes "github.com/prysmaticlabs/prysm/endtoend/types"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -100,7 +101,7 @@ random:
 }
 
 // LogOutput logs the output of all log files made.
-func LogOutput(t *testing.T, config *types.E2EConfig) {
+func LogOutput(t *testing.T, config *e2etypes.E2EConfig) {
 	// Log out errors from beacon chain nodes.
 	for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
 		beaconLogFile, err := os.Open(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.BeaconNodeLogFileName, i)))
@@ -182,4 +183,33 @@ func writeURLRespAtPath(url, filePath string) error {
 		return err
 	}
 	return nil
+}
+
+// WaitOnNodes waits on nodes to complete execution, accepts function that will be called when all nodes are ready.
+func WaitOnNodes(ctx context.Context, nodes []e2etypes.ComponentRunner, nodesStarted func()) error {
+	// Start nodes.
+	g, ctx := errgroup.WithContext(ctx)
+	for _, node := range nodes {
+		node := node
+		g.Go(func() error {
+			return node.Start(ctx)
+		})
+	}
+
+	// Mark set as ready (happens when all contained nodes report as started).
+	go func() {
+		for _, node := range nodes {
+			select {
+			case <-ctx.Done():
+				return
+			case <-node.Started():
+				continue
+			}
+		}
+		// When all nodes are done, signal the client. Client handles unresponsive components by setting up
+		// a deadline for passed in context, and this ensures that nothing breaks if function below is never called.
+		nodesStarted()
+	}()
+
+	return g.Wait()
 }
