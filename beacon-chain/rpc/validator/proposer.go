@@ -8,6 +8,8 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/eth"
 	fastssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -112,7 +114,29 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 
 	// Get application payload using beacon state's application_block_hash and beacon_chain_data.
 	// beacon_chain_data consists of slot,timestamp and randao mix.
-	// Call function get_application_payload.
+	// TODO: This is hard coded to my catalyst instance genesis hash.
+	eth1ParentHash := "0x3a3fdfc9ab6e17ff530b57bc21494da3848ebbeaf9343545fded7a18d221ffec"
+	payload, err := vs.ApplicationExecutor.ProduceBlock(ctx, eth.ProduceBlockParams{
+		ParentHash: common.HexToHash(eth1ParentHash),
+		RandaoMix:  common.BytesToHash(req.RandaoReveal),
+		Slot:       uint64(req.Slot),
+		Timestamp:  uint64(time.Now().Unix()),
+		RecentBeaconBlockRoots: []common.Hash{
+			params.BeaconConfig().ZeroHash,
+		},
+	})
+	log.WithFields(logrus.Fields{
+		"coinbase":        fmt.Sprintf("%#x", payload.Coinbase),
+		"blockHash":       fmt.Sprintf("%#x", payload.BlockHash),
+		"difficulty":      payload.Difficulty,
+		"gasLimit":        payload.GasLimit,
+		"gasUsed":         payload.GasUsed,
+		"logsBloom":       fmt.Sprintf("%#x", payload.BlockHash),
+		"parentHash":      fmt.Sprintf("%#x", payload.ParentHash),
+		"receiptRoot":     fmt.Sprintf("%#x", payload.ReceiptRoot),
+		"stateRoot":       fmt.Sprintf("%#x", payload.StateRoot),
+		"numTransactions": len(payload.Transactions),
+	}).Info("Received response, executable data is ready to be put into a beacon block")
 
 	blk := &ethpb.BeaconBlock{
 		Slot:          req.Slot,

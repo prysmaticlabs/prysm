@@ -1260,6 +1260,8 @@ github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20210311182818-b9c0d847ae7b h1
 github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20210311182818-b9c0d847ae7b/go.mod h1:JIfVb6esrqALTExdz9hRYvrP0xBDf6wCncIu1hNwHpM=
 github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20210326202722-3ab481cbf467 h1:HCtICW7Q+T5chfhgQvVG5Qsk3HNpW8poUAo9BO7M5D4=
 github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20210326202722-3ab481cbf467/go.mod h1:JIfVb6esrqALTExdz9hRYvrP0xBDf6wCncIu1hNwHpM=
+github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20210326214302-a7522982fb2a h1:9Dpc+B8ZEOzmXQl9ludy0zYBODMleW22fym+0qlpXf8=
+github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20210326214302-a7522982fb2a/go.mod h1:JIfVb6esrqALTExdz9hRYvrP0xBDf6wCncIu1hNwHpM=
 github.com/prysmaticlabs/eth2-types v0.0.0-20210127031309-22cbe426eba6/go.mod h1:kOmQ/zdobQf7HUohDTifDNFEZfNaSCIY5fkONPL+dWU=
 github.com/prysmaticlabs/eth2-types v0.0.0-20210219172114-1da477c09a06 h1:b4WxLSz1KzkEdF/DPcog9gIKN9d9YAFgbZO1hqjNrW0=
 github.com/prysmaticlabs/eth2-types v0.0.0-20210219172114-1da477c09a06/go.mod h1:kOmQ/zdobQf7HUohDTifDNFEZfNaSCIY5fkONPL+dWU=

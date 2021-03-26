@@ -127,6 +127,6 @@ require (
 	k8s.io/utils v0.0.0-20200520001619-278ece378a50 // indirect
 )
 
-replace github.com/ethereum/go-ethereum => github.com/prysmaticlabs/bazel-go-ethereum a7522982fb2a9f60ddb08f28d42029c3d23267a2
+replace github.com/ethereum/go-ethereum => github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20210326214302-a7522982fb2a
 
 replace github.com/json-iterator/go => github.com/prestonvanloon/go v1.1.7-0.20190722034630-4f2e55fcf87b

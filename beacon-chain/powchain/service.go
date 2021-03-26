@@ -17,6 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
@@ -108,6 +109,12 @@ type Client interface {
 	bind.ContractCaller
 }
 
+// ApplicationExecutor --
+type ApplicationExecutor interface {
+	InsertBlock(ctx context.Context, params eth.InsertBlockParams) (bool, error)
+	ProduceBlock(ctx context.Context, params eth.ProduceBlockParams) (*eth.ApplicationPayload, error)
+}
+
 // RPCDataFetcher defines a subset of methods conformed to by ETH1.0 RPC clients for
 // fetching eth1 data from the clients.
 type RPCDataFetcher interface {
@@ -139,6 +146,7 @@ type Service struct {
 	currHttpEndpoint        string
 	httpLogger              bind.ContractFilterer
 	eth1DataFetcher         RPCDataFetcher
+	applicationExecutor     ApplicationExecutor
 	rpcClient               RPCClient
 	headerCache             *headerCache // cache to store block hash/block height.
 	latestEth1Data          *protodb.LatestETH1Data
@@ -434,6 +442,7 @@ func (s *Service) initializeConnection(
 ) {
 	s.httpLogger = httpClient
 	s.eth1DataFetcher = httpClient
+	s.applicationExecutor = httpClient
 	s.depositContractCaller = contractCaller
 	s.rpcClient = rpcClient
 }
