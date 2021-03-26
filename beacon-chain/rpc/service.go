@@ -84,6 +84,7 @@ type Config struct {
 	BlockReceiver           blockchain.BlockReceiver
 	POWChainService         powchain.Chain
 	ChainStartFetcher       powchain.ChainStartFetcher
+	ApplicationExecutor     powchain.ApplicationExecutor
 	GenesisTimeFetcher      blockchain.TimeFetcher
 	GenesisFetcher          blockchain.GenesisFetcher
 	EnableDebugRPCEndpoints bool
@@ -189,6 +190,7 @@ func (s *Service) Start() {
 		PendingDepositsFetcher: s.cfg.PendingDepositFetcher,
 		SlashingsPool:          s.cfg.SlashingsPool,
 		StateGen:               s.cfg.StateGen,
+		ApplicationExecutor:    s.cfg.ApplicationExecutor,
 	}
 	nodeServer := &node.Server{
 		LogsStreamer:         logutil.NewStreamServer(),

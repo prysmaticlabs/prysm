@@ -119,7 +119,9 @@ func TestGenerateFullBlock_ValidAttestations(t *testing.T) {
 	require.NoError(t, err)
 	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
 	require.NoError(t, err)
-	if len(beaconState.CurrentEpochAttestations()) != 4 {
+	atts, err := beaconState.CurrentEpochAttestations()
+	require.NoError(t, err)
+	if len(atts) != 4 {
 		t.Fatal("expected 4 attestations to be saved to the beacon state")
 	}
 }
