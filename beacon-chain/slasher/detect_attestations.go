@@ -79,7 +79,6 @@ func (s *Service) detectAllAttesterSlashings(
 	groupedAtts := s.groupByChunkIndex(attestations)
 
 	// Update min and max spans and retrieve any detected slashable offenses.
-	start := time.Now()
 	surroundingSlashings, err := s.updateSpans(ctx, &chunkUpdateArgs{
 		kind:                slashertypes.MinSpan,
 		validatorChunkIndex: args.validatorChunkIndex,
@@ -92,14 +91,7 @@ func (s *Service) detectAllAttesterSlashings(
 			args.validatorChunkIndex,
 		)
 	}
-	log.WithFields(logrus.Fields{
-		"timeElapsed":               time.Since(start),
-		"surroundingSlashingsFound": len(surroundingSlashings),
-		"currentEpoch":              args.currentEpoch,
-		"validatorChunkIndex":       args.validatorChunkIndex,
-	}).Debug("Done updating min spans")
 
-	start = time.Now()
 	surroundedSlashings, err := s.updateSpans(ctx, &chunkUpdateArgs{
 		kind:                slashertypes.MaxSpan,
 		validatorChunkIndex: args.validatorChunkIndex,
@@ -112,12 +104,6 @@ func (s *Service) detectAllAttesterSlashings(
 			args.validatorChunkIndex,
 		)
 	}
-	log.WithFields(logrus.Fields{
-		"timeElapsed":              time.Since(start),
-		"surroundedSlashingsFound": len(surroundingSlashings),
-		"currentEpoch":             args.currentEpoch,
-		"validatorChunkIndex":      args.validatorChunkIndex,
-	}).Debug("Done updating max spans")
 
 	// Consolidate all slashings into a slice.
 	slashings := make([]*ethpb.AttesterSlashing, 0)
