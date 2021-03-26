@@ -170,9 +170,9 @@ func TestProcessAttestations(t *testing.T) {
 	require.NoError(t, beaconState.SetBlockRoots(br))
 	att2.Data.Target.Root = newRt[:]
 	att2.Data.BeaconBlockRoot = newRt[:]
-	err := beaconState.SetPreviousEpochAttestations([]*pb.PendingAttestation{{Data: att1.Data, AggregationBits: bf, InclusionDelay: 1}})
+	err := beaconState.AppendPreviousEpochAttestations(&pb.PendingAttestation{Data: att1.Data, AggregationBits: bf, InclusionDelay: 1})
 	require.NoError(t, err)
-	err = beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{{Data: att2.Data, AggregationBits: bf, InclusionDelay: 1}})
+	err = beaconState.AppendCurrentEpochAttestations(&pb.PendingAttestation{Data: att2.Data, AggregationBits: bf, InclusionDelay: 1})
 	require.NoError(t, err)
 
 	pVals := make([]*precompute.Validator, validators)
