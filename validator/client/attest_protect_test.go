@@ -19,7 +19,7 @@ func Test_slashableAttestationCheck(t *testing.T) {
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
-	validator, _, validatorKey, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t)
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
@@ -39,11 +39,20 @@ func Test_slashableAttestationCheck(t *testing.T) {
 			},
 		},
 	}
-	mockProtector := &mockSlasher.MockProtector{AllowAttestation: false}
-	validator.protector = mockProtector
+
+	m.slasherClient.EXPECT().IsSlashableAttestation(
+		gomock.Any(), // ctx
+		gomock.Any(),
+	).Return(&ethpb.AttesterSlashing{}, nil /*err*/)
+
 	err := validator.slashableAttestationCheck(context.Background(), att, pubKey, [32]byte{1})
 	require.ErrorContains(t, failedPostAttSignExternalErr, err)
-	mockProtector.AllowAttestation = true
+
+	m.slasherClient.EXPECT().IsSlashableAttestation(
+		gomock.Any(), // ctx
+		gomock.Any(),
+	).Return(nil, nil /*err*/)
+
 	err = validator.slashableAttestationCheck(context.Background(), att, pubKey, [32]byte{1})
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
 }
