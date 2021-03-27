@@ -187,13 +187,13 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState iface.BeaconState,
 		Eth1DataVotes:    []*ethpb.Eth1Data{},
 		Eth1DepositIndex: preState.Eth1DepositIndex(),
 
-		// Merge.
 		ApplicationStateHash: make([]byte, 32),
 		ApplicationBlockHash: make([]byte, 32),
 	}
-	lb := make([][]byte, 8)
-	for i := range lb {
-		lb[i] = make([]byte, 32)
+
+	logsBloom := make([][]byte, 8)
+	for i := 0; i < len(logsBloom); i++ {
+		logsBloom[i] = params.BeaconConfig().ZeroHash[:]
 	}
 	bodyRoot, err := (&ethpb.BeaconBlockBody{
 		RandaoReveal: make([]byte, 96),
@@ -209,7 +209,7 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState iface.BeaconState,
 			GasLimit:     0,
 			GasUsed:      0,
 			ReceiptRoot:  make([]byte, 32),
-			LogsBloom:    lb,
+			LogsBloom:    logsBloom,
 			Transactions: make([]*ethpb.Transaction, 0),
 		},
 	}).HashTreeRoot()
@@ -249,6 +249,9 @@ func EmptyGenesisState() (iface.BeaconState, error) {
 		Eth1Data:         &ethpb.Eth1Data{},
 		Eth1DataVotes:    []*ethpb.Eth1Data{},
 		Eth1DepositIndex: 0,
+
+		ApplicationBlockHash: make([]byte, 32),
+		ApplicationStateHash: make([]byte, 32),
 	}
 	return stateV0.InitializeFromProto(state)
 }
