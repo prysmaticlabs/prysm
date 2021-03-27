@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
-	"strings"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
@@ -162,7 +161,7 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 	}
 	bip39.SetWordList(allowedLanguages[language])
 	mnemonic := req.Mnemonic
-	if err := validateMnemonic(mnemonic); err != nil {
+	if err := accounts.ValidateMnemonic(mnemonic); err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid mnemonic in request")
 	}
 
@@ -331,23 +330,4 @@ func writeWalletPasswordToDisk(walletDir, password string) error {
 		return fmt.Errorf("cannot write wallet password file as it already exists %s", passwordFilePath)
 	}
 	return fileutil.WriteFile(passwordFilePath, []byte(password))
-}
-
-//the is the same fuction in validator\accounts\wallet_recover.go
-//should we expose it there?
-func validateMnemonic(mnemonic string) error {
-	phraseWordCount := 24
-	if strings.Trim(mnemonic, " ") == "" {
-		return errors.New("phrase cannot be empty")
-	}
-	words := strings.Split(mnemonic, " ")
-	for i, word := range words {
-		if strings.Trim(word, " ") == "" {
-			words = append(words[:i], words[i+1:]...)
-		}
-	}
-	if len(words) != phraseWordCount {
-		return fmt.Errorf("phrase must be %d words, entered %d", phraseWordCount, len(words))
-	}
-	return nil
 }
