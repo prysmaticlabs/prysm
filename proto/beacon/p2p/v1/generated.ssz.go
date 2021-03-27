@@ -366,7 +366,7 @@ func (b *BeaconState) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the BeaconState object to a target array
 func (b *BeaconState) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := int(2687377)
+	offset := int(2687441)
 
 	// Field (0) 'GenesisTime'
 	dst = ssz.MarshalUint64(dst, b.GenesisTime)
@@ -517,6 +517,20 @@ func (b *BeaconState) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 		return
 	}
 
+	// Field (21) 'ApplicationStateHash'
+	if len(b.ApplicationStateHash) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	dst = append(dst, b.ApplicationStateHash...)
+
+	// Field (22) 'ApplicationBlockHash'
+	if len(b.ApplicationBlockHash) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	dst = append(dst, b.ApplicationBlockHash...)
+
 	// Field (7) 'HistoricalRoots'
 	if len(b.HistoricalRoots) > 16777216 {
 		err = ssz.ErrListTooBig
@@ -604,7 +618,7 @@ func (b *BeaconState) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 func (b *BeaconState) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
-	if size < 2687377 {
+	if size < 2687441 {
 		return ssz.ErrSize
 	}
 
@@ -743,6 +757,18 @@ func (b *BeaconState) UnmarshalSSZ(buf []byte) error {
 		return err
 	}
 
+	// Field (21) 'ApplicationStateHash'
+	if cap(b.ApplicationStateHash) == 0 {
+		b.ApplicationStateHash = make([]byte, 0, len(buf[2687377:2687409]))
+	}
+	b.ApplicationStateHash = append(b.ApplicationStateHash, buf[2687377:2687409]...)
+
+	// Field (22) 'ApplicationBlockHash'
+	if cap(b.ApplicationBlockHash) == 0 {
+		b.ApplicationBlockHash = make([]byte, 0, len(buf[2687409:2687441]))
+	}
+	b.ApplicationBlockHash = append(b.ApplicationBlockHash, buf[2687409:2687441]...)
+
 	// Field (7) 'HistoricalRoots'
 	{
 		buf = tail[o7:o9]
@@ -856,7 +882,7 @@ func (b *BeaconState) UnmarshalSSZ(buf []byte) error {
 
 // SizeSSZ returns the ssz encoded size in bytes for the BeaconState object
 func (b *BeaconState) SizeSSZ() (size int) {
-	size = 2687377
+	size = 2687441
 
 	// Field (7) 'HistoricalRoots'
 	size += len(b.HistoricalRoots) * 32
@@ -1107,6 +1133,20 @@ func (b *BeaconState) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	if err = b.FinalizedCheckpoint.HashTreeRootWith(hh); err != nil {
 		return
 	}
+
+	// Field (21) 'ApplicationStateHash'
+	if len(b.ApplicationStateHash) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	hh.PutBytes(b.ApplicationStateHash)
+
+	// Field (22) 'ApplicationBlockHash'
+	if len(b.ApplicationBlockHash) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	hh.PutBytes(b.ApplicationBlockHash)
 
 	hh.Merkleize(indx)
 	return
