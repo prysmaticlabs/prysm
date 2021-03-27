@@ -24,6 +24,7 @@ package peers
 
 import (
 	"context"
+	"math"
 	"sort"
 	"time"
 
@@ -40,6 +41,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
@@ -63,6 +65,13 @@ const (
 
 	// InboundRatio is the proportion of our connected peer limit at which we will allow inbound peers.
 	InboundRatio = float64(0.8)
+
+	// MinBackOffDuration minimum amount (in milliseconds) to wait before peer is re-dialed.
+	// When node and peer are dialing each other simultaneously connection may fail. In order, to break
+	// of constant dialing, peer is assigned some backoff period, and only dialed again once that backoff is up.
+	MinBackOffDuration = 100
+	// MaxBackOffDuration maximum amount (in milliseconds) to wait before peer is re-dialed.
+	MaxBackOffDuration = 5000
 )
 
 // Status is the structure holding the peer status information.
@@ -71,6 +80,7 @@ type Status struct {
 	scorers   *scorers.Service
 	store     *peerdata.Store
 	ipTracker map[string]uint64
+	rand      *rand.Rand
 }
 
 // StatusConfig represents peer status service params.
@@ -91,6 +101,9 @@ func NewStatus(ctx context.Context, config *StatusConfig) *Status {
 		store:     store,
 		scorers:   scorers.NewService(ctx, store, config.ScorerParams),
 		ipTracker: map[string]uint64{},
+		// Random generator used to calculate dial backoff period.
+		// It is ok to use deterministic generator, no need for true entropy.
+		rand: rand.NewDeterministicGenerator(),
 	}
 }
 
@@ -334,6 +347,22 @@ func (p *Status) SetNextValidTime(pid peer.ID, nextTime time.Time) {
 
 	peerData := p.store.PeerDataGetOrCreate(pid)
 	peerData.NextValidTime = nextTime
+}
+
+// RandomizeBackOff adds extra backoff period during which peer will not be dialed.
+func (p *Status) RandomizeBackOff(pid peer.ID) {
+	p.store.Lock()
+	defer p.store.Unlock()
+
+	peerData := p.store.PeerDataGetOrCreate(pid)
+
+	// No need to add backoff period, if the previous one hasn't expired yet.
+	if !time.Now().After(peerData.NextValidTime) {
+		return
+	}
+
+	duration := time.Duration(math.Max(MinBackOffDuration, float64(p.rand.Intn(MaxBackOffDuration)))) * time.Millisecond
+	peerData.NextValidTime = time.Now().Add(duration)
 }
 
 // IsReadyToDial checks where the given peer is ready to be

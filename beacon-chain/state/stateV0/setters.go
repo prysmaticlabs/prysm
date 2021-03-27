@@ -496,19 +496,6 @@ func (b *BeaconState) UpdateSlashingsAtIndex(idx, val uint64) error {
 	return nil
 }
 
-// SetPreviousEpochAttestations for the beacon state. Updates the entire
-// list to a new value by overwriting the previous one.
-func (b *BeaconState) SetPreviousEpochAttestations(val []*pbp2p.PendingAttestation) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
-	b.lock.Lock()
-	defer b.lock.Unlock()
-
-	b.setPreviousEpochAttestations(val)
-	return nil
-}
-
 func (b *BeaconState) setPreviousEpochAttestations(val []*pbp2p.PendingAttestation) {
 	b.sharedFieldReferences[previousEpochAttestations].MinusRef()
 	b.sharedFieldReferences[previousEpochAttestations] = stateutil.NewRef(1)
@@ -516,19 +503,6 @@ func (b *BeaconState) setPreviousEpochAttestations(val []*pbp2p.PendingAttestati
 	b.state.PreviousEpochAttestations = val
 	b.markFieldAsDirty(previousEpochAttestations)
 	b.rebuildTrie[previousEpochAttestations] = true
-}
-
-// SetCurrentEpochAttestations for the beacon state. Updates the entire
-// list to a new value by overwriting the previous one.
-func (b *BeaconState) SetCurrentEpochAttestations(val []*pbp2p.PendingAttestation) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
-	b.lock.Lock()
-	defer b.lock.Unlock()
-
-	b.setCurrentEpochAttestations(val)
-	return nil
 }
 
 func (b *BeaconState) setCurrentEpochAttestations(val []*pbp2p.PendingAttestation) {
