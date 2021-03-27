@@ -23,13 +23,13 @@ const (
 	// our attestation subnet topic.
 	attestationTotalWeight = 1
 	// attesterSlashingWeight specifies the scoring weight that we apply to
-	//our attester slashing topic.
+	// our attester slashing topic.
 	attesterSlashingWeight = 0.05
 	// proposerSlashingWeight specifies the scoring weight that we apply to
-	//our proposer slashing topic.
+	// our proposer slashing topic.
 	proposerSlashingWeight = 0.05
 	// voluntaryExitWeight specifies the scoring weight that we apply to
-	//our voluntary exit topic.
+	// our voluntary exit topic.
 	voluntaryExitWeight = 0.05
 
 	// decayToZero specifies the terminal value that we will use when decaying
