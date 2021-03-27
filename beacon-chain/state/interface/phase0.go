@@ -41,6 +41,8 @@ type ReadOnlyBeaconState interface {
 	Slashings() []uint64
 	FieldReferencesCount() map[string]uint64
 	MarshalSSZ() ([]byte, error)
+	ApplicationStateHash() []byte
+	ApplicationBlockHash() []byte
 }
 
 // WriteOnlyBeaconState defines a struct which only has write access to beacon state methods.

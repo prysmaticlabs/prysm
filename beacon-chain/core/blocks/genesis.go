@@ -11,6 +11,10 @@ import (
 // NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
 func NewGenesisBlock(stateRoot []byte) *ethpb.SignedBeaconBlock {
 	zeroHash := params.BeaconConfig().ZeroHash[:]
+	lb := make([][]byte, 8)
+	for i := range lb {
+		lb[i] = make([]byte, 32)
+	}
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			ParentRoot: zeroHash,
@@ -29,7 +33,7 @@ func NewGenesisBlock(stateRoot []byte) *ethpb.SignedBeaconBlock {
 					GasLimit:     0,
 					GasUsed:      0,
 					ReceiptRoot:  make([]byte, 32),
-					LogsBloom:    make([]byte, 256),
+					LogsBloom:    lb,
 					Transactions: make([]*ethpb.Transaction, 0),
 				},
 			},

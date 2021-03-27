@@ -53,6 +53,8 @@ func (b *BeaconState) CloneInnerState() interface{} {
 		PreviousJustifiedCheckpoint: b.previousJustifiedCheckpoint(),
 		CurrentJustifiedCheckpoint:  b.currentJustifiedCheckpoint(),
 		FinalizedCheckpoint:         b.finalizedCheckpoint(),
+		ApplicationStateHash:        b.applicationStateHash(),
+		ApplicationBlockHash:        b.applicationBlockHash(),
 	}
 }
 
@@ -114,6 +116,21 @@ func (b *BeaconState) genesisValidatorRoot() []byte {
 	return root
 }
 
+// ApplicationStateHash of the beacon state.
+func (b *BeaconState) ApplicationStateHash() []byte {
+	if !b.hasInnerState() {
+		return nil
+	}
+	if b.state.ApplicationStateHash == nil {
+		return params.BeaconConfig().ZeroHash[:]
+	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.applicationStateHash()
+}
+
 // applicationStateHash of the beacon state.
 // This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) applicationStateHash() []byte {
@@ -127,6 +144,21 @@ func (b *BeaconState) applicationStateHash() []byte {
 	root := make([]byte, 32)
 	copy(root, b.state.ApplicationStateHash)
 	return root
+}
+
+// ApplicationBlockHash of the beacon state.
+func (b *BeaconState) ApplicationBlockHash() []byte {
+	if !b.hasInnerState() {
+		return nil
+	}
+	if b.state.ApplicationBlockHash == nil {
+		return params.BeaconConfig().ZeroHash[:]
+	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.applicationBlockHash()
 }
 
 // applicationBlockHash of the beacon state.

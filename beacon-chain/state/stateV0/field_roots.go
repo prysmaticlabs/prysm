@@ -196,14 +196,14 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(state *pb.BeaconState) ([]
 	}
 	fieldRoots[20] = finalRoot[:]
 
-	// Applicaiton roots.
-	r = [32]byte{}
-	copy(r[:], state.ApplicationStateHash)
-	fieldRoots[21] = r[:]
+	// Application roots.
+	stateHash := [32]byte{}
+	copy(stateHash[:], state.ApplicationStateHash)
+	fieldRoots[21] = stateHash[:]
 
-	r = [32]byte{}
-	copy(r[:], state.ApplicationBlockHash)
-	fieldRoots[22] = r[:]
+	blockHash := [32]byte{}
+	copy(blockHash[:], state.ApplicationBlockHash)
+	fieldRoots[22] = blockHash[:]
 
 	return fieldRoots, nil
 }
