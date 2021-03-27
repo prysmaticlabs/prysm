@@ -109,6 +109,10 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 	_, err = s.RecoverWallet(ctx, req)
 	require.ErrorContains(t, "invalid mnemonic in request", err)
 
+	req.Mnemonic25thWord = " "
+	_, err = s.RecoverWallet(ctx, req)
+	require.ErrorContains(t, "mnemonic25Passphrase cannot be empty", err)
+
 	mnemonicResp, err := s.GenerateMnemonic(ctx, &empty.Empty{})
 	require.NoError(t, err)
 	req.Mnemonic = mnemonicResp.Mnemonic

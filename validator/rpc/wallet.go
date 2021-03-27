@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
@@ -164,6 +165,9 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 	if err := accounts.ValidateMnemonic(mnemonic); err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid mnemonic in request")
 	}
+	if req.Mnemonic25thWord && strings.TrimSpace(req.Mnemonic25thWord) == "" {
+		return nil, status.Error(codes.InvalidArgument, "mnemonic25Passphrase cannot be empty")
+	}
 
 	//web UI is structured to only write to the default wallet directory
 	//accounts.Recoverwallet checks if wallet already exists
@@ -181,7 +185,7 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 		WalletPassword: walletPassword,
 		Mnemonic:       mnemonic,
 		NumAccounts:    numAccounts,
-		//Mnemonic25thWord: req.Mnemonic25thWord, //support Mnemonic25thWord
+		Mnemonic25thWord: req.Mnemonic25thWord, //support Mnemonic25thWord
 	}); err != nil {
 		return nil, err
 	}
