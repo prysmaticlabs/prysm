@@ -165,7 +165,7 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 	if err := accounts.ValidateMnemonic(mnemonic); err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid mnemonic in request")
 	}
-	if req.Mnemonic25thWord && strings.TrimSpace(req.Mnemonic25thWord) == "" {
+	if !req.SkipMnemonic25ThWord && strings.TrimSpace(req.Mnemonic25ThWord) == "" {
 		return nil, status.Error(codes.InvalidArgument, "mnemonic25Passphrase cannot be empty")
 	}
 
@@ -181,11 +181,11 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 
 	//recover
 	if _, err := accounts.RecoverWallet(ctx, &accounts.RecoverWalletConfig{
-		WalletDir:      walletDir,
-		WalletPassword: walletPassword,
-		Mnemonic:       mnemonic,
-		NumAccounts:    numAccounts,
-		Mnemonic25thWord: req.Mnemonic25thWord, //support Mnemonic25thWord
+		WalletDir:        walletDir,
+		WalletPassword:   walletPassword,
+		Mnemonic:         mnemonic,
+		NumAccounts:      numAccounts,
+		Mnemonic25thWord: req.Mnemonic25ThWord, //support Mnemonic25ThWord
 	}); err != nil {
 		return nil, err
 	}

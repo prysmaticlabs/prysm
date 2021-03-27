@@ -109,13 +109,15 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 	_, err = s.RecoverWallet(ctx, req)
 	require.ErrorContains(t, "invalid mnemonic in request", err)
 
-	req.Mnemonic25thWord = " "
-	_, err = s.RecoverWallet(ctx, req)
-	require.ErrorContains(t, "mnemonic25Passphrase cannot be empty", err)
-
 	mnemonicResp, err := s.GenerateMnemonic(ctx, &empty.Empty{})
 	require.NoError(t, err)
 	req.Mnemonic = mnemonicResp.Mnemonic
+
+	req.Mnemonic25ThWord = " "
+	req.SkipMnemonic25ThWord = false
+	_, err = s.RecoverWallet(ctx, req)
+	require.ErrorContains(t, "mnemonic25Passphrase cannot be empty", err)
+	req.Mnemonic25ThWord = "outer"
 
 	//create then delete to test recover
 	reqC := &pb.CreateWalletRequest{
@@ -125,7 +127,7 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 		Mnemonic:       mnemonicResp.Mnemonic,
 	}
 	_, err = s.CreateWallet(ctx, reqC)
-	require.ErrorContains(t,"not supported through web", err)
+	require.ErrorContains(t, "not supported through web", err)
 
 	//remove the defaultwallet then recover
 	require.NoError(t, os.RemoveAll(defaultWalletPath))

@@ -212,6 +212,7 @@ message RecoverWalletRequest {
     string wallet_password = 3;
     string language = 4;
     string mnemonic25thWord =5 ;
+    bool   skipMnemonic25thWord = 6; 
 }
 
 message ListAccountsRequest {
