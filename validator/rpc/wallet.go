@@ -144,7 +144,7 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 		return nil, status.Error(codes.InvalidArgument, "Must create at least 1 validator account")
 	}
 
-	//check validate mnemonic with chosen language
+	// Check validate mnemonic with chosen language
 	language := req.Language
 	allowedLanguages := map[string][]string{
 		"english":             wordlists.English,
