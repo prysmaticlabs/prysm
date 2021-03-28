@@ -160,3 +160,61 @@ func TestServer_BackupAccounts(t *testing.T) {
 		require.NoError(t, keystoreFile.Close())
 	}
 }
+
+func TestServer_DeleteAccounts_FailedPreconditions_WrongKeymanagerKind(t *testing.T) {
+	localWalletDir := setupWalletDir(t)
+	defaultWalletPath = localWalletDir
+	ctx := context.Background()
+	strongPass := "29384283xasjasd32%%&*@*#*"
+	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
+		WalletCfg: &wallet.Config{
+			WalletDir:      defaultWalletPath,
+			KeymanagerKind: keymanager.Derived,
+			WalletPassword: strongPass,
+		},
+		SkipMnemonicConfirm: true,
+	})
+	require.NoError(t, err)
+	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
+	require.NoError(t, err)
+	ss := &Server{
+		wallet:     w,
+		keymanager: km,
+	}
+	_, err = ss.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
+		DeletePublicKeys: make([][]byte, 1),
+	})
+	assert.ErrorContains(t, "Only imported wallets can delete accounts", err)
+}
+
+func TestServer_DeleteAccounts_FailedPreconditions(t *testing.T) {
+	ss := &Server{}
+	ctx := context.Background()
+	_, err := ss.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{})
+	assert.ErrorContains(t, "No public keys specified", err)
+	_, err = ss.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
+		DeletePublicKeys: make([][]byte, 1),
+	})
+	assert.ErrorContains(t, "No wallet found", err)
+}
+
+func TestServer_DeleteAccounts_OK(t *testing.T) {
+	ss, pubKeys := createImportedWalletWithAccounts(t, 3)
+	ctx := context.Background()
+	keys, err := ss.keymanager.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
+	require.Equal(t, len(pubKeys), len(keys))
+
+	// Next, we attempt to delete one of the keystores.
+	_, err = ss.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
+		DeletePublicKeys: pubKeys[:1], // Delete the 0th public key
+	})
+	require.NoError(t, err)
+	ss.keymanager, err = ss.wallet.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
+	require.NoError(t, err)
+
+	// We expect one of the keys to have been deleted.
+	keys, err = ss.keymanager.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, len(pubKeys)-1, len(keys))
+}
