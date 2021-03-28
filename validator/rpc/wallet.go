@@ -172,7 +172,7 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 	//accounts.Recoverwallet checks if wallet already exists
 	walletDir := s.walletDir
 
-	//web-ui should check the new and confirmed password are equal
+	// Web-ui should check the new and confirmed password are equal
 	walletPassword := req.WalletPassword
 	if err := promptutil.ValidatePasswordInput(walletPassword); err != nil {
 		return nil, status.Error(codes.InvalidArgument, "password did not pass validation")
