@@ -178,7 +178,6 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 		return nil, status.Error(codes.InvalidArgument, "password did not pass validation")
 	}
 
-	//recover
 	if _, err := accounts.RecoverWallet(ctx, &accounts.RecoverWalletConfig{
 		WalletDir:        walletDir,
 		WalletPassword:   walletPassword,
