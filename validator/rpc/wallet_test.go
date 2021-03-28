@@ -114,20 +114,20 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 	req.Mnemonic = mnemonicResp.Mnemonic
 
 	req.Mnemonic25ThWord = " "
-	req.SkipMnemonic25ThWord = false
+	req.SkipMnemonic_25ThWord = false
 	_, err = s.RecoverWallet(ctx, req)
-	require.ErrorContains(t, "mnemonic25Passphrase cannot be empty", err)
+	require.ErrorContains(t, "mnemonic 25th word passphrase cannot be empty", err)
 	req.Mnemonic25ThWord = "outer"
 
-	//create then delete to test recover
-	reqC := &pb.CreateWalletRequest{
+	//create(drived should fail) then test recover
+	reqCreate := &pb.CreateWalletRequest{
 		Keymanager:     pb.KeymanagerKind_DERIVED,
 		WalletPassword: strongPass,
 		NumAccounts:    2,
 		Mnemonic:       mnemonicResp.Mnemonic,
 	}
-	_, err = s.CreateWallet(ctx, reqC)
-	require.ErrorContains(t, "not supported through web", err)
+	_, err = s.CreateWallet(ctx, reqCreate)
+	require.ErrorContains(t, "create wallet not supported through web", err, "Create wallet for DERIVED or REMOTE types not supported through web, either import keystore or recover")
 
 	//remove the defaultwallet then recover
 	require.NoError(t, os.RemoveAll(defaultWalletPath))

@@ -33,7 +33,7 @@ const (
 )
 
 // CreateWallet via an API request, allowing a user to save a new
-// derived, imported, or remote wallet.
+// imported (derived is RecoverWallet and remote is not supported through web)
 func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) (*pb.CreateWalletResponse, error) {
 	walletDir := s.walletDir
 	exists, err := wallet.Exists(walletDir)
@@ -90,7 +90,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 			},
 		}, nil
 	}
-	return nil, status.Errorf(codes.InvalidArgument, "Keymanager type %T not supported through web", req.Keymanager)
+	return nil, status.Errorf(codes.InvalidArgument, "Keymanager type %T create wallet not supported through web", req.Keymanager)
 }
 
 // WalletConfig returns the wallet's configuration. If no wallet exists, we return an empty response.
@@ -134,11 +134,10 @@ func (s *Server) WalletConfig(ctx context.Context, _ *empty.Empty) (*pb.WalletRe
 }
 
 // RecoverWallet via an API request, allowing a user to recover a derived.
-// Generate the seed from the mnemonic + language
-// Create N validator keystores from the seed specified by req.NumAccounts
-// Set the wallet password to req.WalletPassword (needs password validation)
-// Create the wallet
-// Return &CreateWalletResponse, nil if nothing went wrong
+// Generate the seed from the mnemonic + language + 25th passphrase(optional).
+// Create N validator keystores from the seed specified by req.NumAccounts.
+// Set the wallet password to req.WalletPassword, then create the wallet from
+// the provided Mnemonic and return CreateWalletResponse,nil if nothing went wrong
 func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest) (*pb.CreateWalletResponse, error) {
 	numAccounts := int(req.NumAccounts)
 	if numAccounts < 1 {
@@ -165,8 +164,8 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 	if err := accounts.ValidateMnemonic(mnemonic); err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid mnemonic in request")
 	}
-	if !req.SkipMnemonic25ThWord && strings.TrimSpace(req.Mnemonic25ThWord) == "" {
-		return nil, status.Error(codes.InvalidArgument, "mnemonic25Passphrase cannot be empty")
+	if !req.SkipMnemonic_25ThWord && strings.TrimSpace(req.Mnemonic25ThWord) == "" {
+		return nil, status.Error(codes.InvalidArgument, "mnemonic 25th word passphrase cannot be empty")
 	}
 
 	//web UI is structured to only write to the default wallet directory
@@ -185,7 +184,7 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 		WalletPassword:   walletPassword,
 		Mnemonic:         mnemonic,
 		NumAccounts:      numAccounts,
-		Mnemonic25thWord: req.Mnemonic25ThWord, //support Mnemonic25ThWord
+		Mnemonic25thWord: req.Mnemonic25ThWord,
 	}); err != nil {
 		return nil, err
 	}
