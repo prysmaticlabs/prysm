@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
@@ -105,9 +106,9 @@ func (km *Keymanager) reloadAccountsFromKeystore(keystore *AccountsKeystoreRepre
 	if len(newAccountsStore.PublicKeys) != len(newAccountsStore.PrivateKeys) {
 		return errors.New("number of public and private keys in keystore do not match")
 	}
-	pubKeys := make([][48]byte, len(km.accountsStore.PublicKeys))
-	for i := 0; i < len(km.accountsStore.PrivateKeys); i++ {
-		privKey, err := bls.SecretKeyFromBytes(km.accountsStore.PrivateKeys[i])
+	pubKeys := make([][48]byte, len(newAccountsStore.PublicKeys))
+	for i := 0; i < len(newAccountsStore.PrivateKeys); i++ {
+		privKey, err := bls.SecretKeyFromBytes(newAccountsStore.PrivateKeys[i])
 		if err != nil {
 			return errors.Wrap(err, "could not initialize private key")
 		}
@@ -118,7 +119,7 @@ func (km *Keymanager) reloadAccountsFromKeystore(keystore *AccountsKeystoreRepre
 	if err := km.initializeKeysCachesFromKeystore(); err != nil {
 		return err
 	}
-	log.Info("Reloaded validator keys into keymanager")
+	log.Info(keymanager.KeysReloaded)
 	km.accountsChangedFeed.Send(pubKeys)
 	return nil
 }

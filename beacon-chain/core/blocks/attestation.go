@@ -103,35 +103,46 @@ func ProcessAttestationsNoVerifySignature(
 // used before processing attestation with the beacon state.
 func VerifyAttestationNoVerifySignature(
 	ctx context.Context,
-	beaconState iface.BeaconState,
+	beaconState iface.ReadOnlyBeaconState,
 	att *ethpb.Attestation,
-) (iface.BeaconState, error) {
+) error {
 	ctx, span := trace.StartSpan(ctx, "core.VerifyAttestationNoVerifySignature")
 	defer span.End()
 
 	if err := helpers.ValidateNilAttestation(att); err != nil {
-		return nil, err
+		return err
 	}
 	currEpoch := helpers.CurrentEpoch(beaconState)
 	prevEpoch := helpers.PrevEpoch(beaconState)
 	data := att.Data
 	if data.Target.Epoch != prevEpoch && data.Target.Epoch != currEpoch {
-		return nil, fmt.Errorf(
+		return fmt.Errorf(
 			"expected target epoch (%d) to be the previous epoch (%d) or the current epoch (%d)",
 			data.Target.Epoch,
 			prevEpoch,
 			currEpoch,
 		)
 	}
+
+	if data.Target.Epoch == currEpoch {
+		if !beaconState.MatchCurrentJustifiedCheckpoint(data.Source) {
+			return errors.New("source check point not equal to current justified checkpoint")
+		}
+	} else {
+		if !beaconState.MatchPreviousJustifiedCheckpoint(data.Source) {
+			return errors.New("source check point not equal to previous justified checkpoint")
+		}
+	}
+
 	if err := helpers.ValidateSlotTargetEpoch(att.Data); err != nil {
-		return nil, err
+		return err
 	}
 
 	s := att.Data.Slot
 	minInclusionCheck := s+params.BeaconConfig().MinAttestationInclusionDelay <= beaconState.Slot()
 	epochInclusionCheck := beaconState.Slot() <= s+params.BeaconConfig().SlotsPerEpoch
 	if !minInclusionCheck {
-		return nil, fmt.Errorf(
+		return fmt.Errorf(
 			"attestation slot %d + inclusion delay %d > state slot %d",
 			s,
 			params.BeaconConfig().MinAttestationInclusionDelay,
@@ -139,7 +150,7 @@ func VerifyAttestationNoVerifySignature(
 		)
 	}
 	if !epochInclusionCheck {
-		return nil, fmt.Errorf(
+		return fmt.Errorf(
 			"state slot %d > attestation slot %d + SLOTS_PER_EPOCH %d",
 			beaconState.Slot(),
 			s,
@@ -148,28 +159,28 @@ func VerifyAttestationNoVerifySignature(
 	}
 	activeValidatorCount, err := helpers.ActiveValidatorCount(beaconState, att.Data.Target.Epoch)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	c := helpers.SlotCommitteeCount(activeValidatorCount)
 	if uint64(att.Data.CommitteeIndex) >= c {
-		return nil, fmt.Errorf("committee index %d >= committee count %d", att.Data.CommitteeIndex, c)
+		return fmt.Errorf("committee index %d >= committee count %d", att.Data.CommitteeIndex, c)
 	}
 
 	if err := helpers.VerifyAttestationBitfieldLengths(beaconState, att); err != nil {
-		return nil, errors.Wrap(err, "could not verify attestation bitfields")
+		return errors.Wrap(err, "could not verify attestation bitfields")
 	}
 
 	// Verify attesting indices are correct.
 	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	indexedAtt, err := attestationutil.ConvertToIndexed(ctx, att, committee)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return nil, attestationutil.IsValidAttestationIndices(ctx, indexedAtt)
+	return attestationutil.IsValidAttestationIndices(ctx, indexedAtt)
 }
 
 // ProcessAttestationNoVerifySignature processes the attestation without verifying the attestation signature. This
@@ -182,7 +193,7 @@ func ProcessAttestationNoVerifySignature(
 	ctx, span := trace.StartSpan(ctx, "core.ProcessAttestationNoVerifySignature")
 	defer span.End()
 
-	if _, err := VerifyAttestationNoVerifySignature(ctx, beaconState, att); err != nil {
+	if err := VerifyAttestationNoVerifySignature(ctx, beaconState, att); err != nil {
 		return nil, err
 	}
 
@@ -201,16 +212,10 @@ func ProcessAttestationNoVerifySignature(
 	}
 
 	if data.Target.Epoch == currEpoch {
-		if !beaconState.MatchCurrentJustifiedCheckpoint(data.Source) {
-			return nil, errors.New("source check point not equal to current justified checkpoint")
-		}
 		if err := beaconState.AppendCurrentEpochAttestations(pendingAtt); err != nil {
 			return nil, err
 		}
 	} else {
-		if !beaconState.MatchPreviousJustifiedCheckpoint(data.Source) {
-			return nil, errors.New("source check point not equal to previous justified checkpoint")
-		}
 		if err := beaconState.AppendPreviousEpochAttestations(pendingAtt); err != nil {
 			return nil, err
 		}

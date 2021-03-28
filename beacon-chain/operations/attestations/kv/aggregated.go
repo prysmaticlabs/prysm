@@ -7,7 +7,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -120,7 +120,7 @@ func (c *AttCaches) SaveAggregatedAttestation(att *ethpb.Attestation) error {
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
-	copiedAtt := stateTrie.CopyAttestation(att)
+	copiedAtt := stateV0.CopyAttestation(att)
 	c.aggregatedAttLock.Lock()
 	defer c.aggregatedAttLock.Unlock()
 	atts, ok := c.aggregatedAtt[r]

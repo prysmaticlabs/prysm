@@ -27,7 +27,7 @@ var reconnectPeriod = 5 * time.Second
 func (s *Service) ReceiveBlocks(ctx context.Context) {
 	ctx, span := trace.StartSpan(ctx, "beaconclient.ReceiveBlocks")
 	defer span.End()
-	stream, err := s.beaconClient.StreamBlocks(ctx, &ethpb.StreamBlocksRequest{} /* Prefers unverified block to catch slashing */)
+	stream, err := s.cfg.BeaconClient.StreamBlocks(ctx, &ethpb.StreamBlocksRequest{} /* Prefers unverified block to catch slashing */)
 	if err != nil {
 		log.WithError(err).Error("Failed to retrieve blocks stream")
 		return
@@ -53,7 +53,7 @@ func (s *Service) ReceiveBlocks(ctx context.Context) {
 						log.WithError(err).Error("Could not restart beacon connection")
 						return
 					}
-					stream, err = s.beaconClient.StreamBlocks(ctx, &ethpb.StreamBlocksRequest{} /* Prefers unverified block to catch slashing */)
+					stream, err = s.cfg.BeaconClient.StreamBlocks(ctx, &ethpb.StreamBlocksRequest{} /* Prefers unverified block to catch slashing */)
 					if err != nil {
 						log.WithError(err).Error("Could not restart block stream")
 						return
@@ -93,7 +93,7 @@ func (s *Service) ReceiveBlocks(ctx context.Context) {
 func (s *Service) ReceiveAttestations(ctx context.Context) {
 	ctx, span := trace.StartSpan(ctx, "beaconclient.ReceiveAttestations")
 	defer span.End()
-	stream, err := s.beaconClient.StreamIndexedAttestations(ctx, &ptypes.Empty{})
+	stream, err := s.cfg.BeaconClient.StreamIndexedAttestations(ctx, &ptypes.Empty{})
 	if err != nil {
 		log.WithError(err).Error("Failed to retrieve attestations stream")
 		return
@@ -122,7 +122,7 @@ func (s *Service) ReceiveAttestations(ctx context.Context) {
 						log.WithError(err).Error("Could not restart beacon connection")
 						return
 					}
-					stream, err = s.beaconClient.StreamIndexedAttestations(ctx, &ptypes.Empty{})
+					stream, err = s.cfg.BeaconClient.StreamIndexedAttestations(ctx, &ptypes.Empty{})
 					if err != nil {
 						log.WithError(err).Error("Could not restart attestation stream")
 						return
@@ -162,7 +162,7 @@ func (s *Service) collectReceivedAttestations(ctx context.Context) {
 		case att := <-s.receivedAttestationsBuffer:
 			atts = append(atts, att)
 		case collectedAtts := <-s.collectedAttestationsBuffer:
-			if err := s.slasherDB.SaveIndexedAttestations(ctx, collectedAtts); err != nil {
+			if err := s.cfg.SlasherDB.SaveIndexedAttestations(ctx, collectedAtts); err != nil {
 				log.WithError(err).Error("Could not save indexed attestation")
 				continue
 			}
@@ -197,7 +197,7 @@ func (s *Service) restartBeaconConnection(ctx context.Context) error {
 				log.Info("Beacon node is still down")
 				continue
 			}
-			s, err := s.nodeClient.GetSyncStatus(ctx, &ptypes.Empty{})
+			s, err := s.cfg.NodeClient.GetSyncStatus(ctx, &ptypes.Empty{})
 			if err != nil {
 				log.WithError(err).Error("Could not fetch sync status")
 				continue

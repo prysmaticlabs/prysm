@@ -19,8 +19,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -150,7 +150,7 @@ func (mon *MockOperationNotifier) OperationFeed() *event.Feed {
 // ReceiveBlockInitialSync mocks ReceiveBlockInitialSync method in chain service.
 func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block *ethpb.SignedBeaconBlock, _ [32]byte) error {
 	if s.State == nil {
-		s.State = &stateTrie.BeaconState{}
+		s.State = &stateV0.BeaconState{}
 	}
 	if !bytes.Equal(s.Root, block.Block.ParentRoot) {
 		return errors.Errorf("wanted %#x but got %#x", s.Root, block.Block.ParentRoot)
@@ -177,7 +177,7 @@ func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block *ethpb
 // ReceiveBlockBatch processes blocks in batches from initial-sync.
 func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBlock, _ [][32]byte) error {
 	if s.State == nil {
-		s.State = &stateTrie.BeaconState{}
+		s.State = &stateV0.BeaconState{}
 	}
 	for _, block := range blks {
 		if !bytes.Equal(s.Root, block.Block.ParentRoot) {
@@ -206,7 +206,7 @@ func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []*ethpb.Sign
 // ReceiveBlock mocks ReceiveBlock method in chain service.
 func (s *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlock, _ [32]byte) error {
 	if s.State == nil {
-		s.State = &stateTrie.BeaconState{}
+		s.State = &stateV0.BeaconState{}
 	}
 	if !bytes.Equal(s.Root, block.Block.ParentRoot) {
 		return errors.Errorf("wanted %#x but got %#x", s.Root, block.Block.ParentRoot)

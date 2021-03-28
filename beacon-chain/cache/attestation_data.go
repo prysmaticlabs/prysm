@@ -11,7 +11,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -98,7 +98,7 @@ func (c *AttestationCache) Get(ctx context.Context, req *ethpb.AttestationDataRe
 
 	if exists && item != nil && item.(*attestationReqResWrapper).res != nil {
 		attestationCacheHit.Inc()
-		return state.CopyAttestationData(item.(*attestationReqResWrapper).res), nil
+		return stateV0.CopyAttestationData(item.(*attestationReqResWrapper).res), nil
 	}
 	attestationCacheMiss.Inc()
 	return nil, nil

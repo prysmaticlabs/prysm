@@ -24,7 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -106,7 +106,7 @@ func BeaconFuzzBlock(b []byte) {
 	if err := input.UnmarshalSSZ(b); err != nil {
 		return
 	}
-	st, err := stateTrie.InitializeFromProtoUnsafe(input.State)
+	st, err := stateV0.InitializeFromProtoUnsafe(input.State)
 	if err != nil {
 		return
 	}

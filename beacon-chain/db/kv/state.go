@@ -8,10 +8,13 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/genesis"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -35,15 +38,26 @@ func (s *Store) State(ctx context.Context, blockRoot [32]byte) (iface.BeaconStat
 	if err != nil {
 		return nil, err
 	}
-	return state.InitializeFromProtoUnsafe(st)
+	return stateV0.InitializeFromProtoUnsafe(st)
 }
 
 // GenesisState returns the genesis state in beacon chain.
 func (s *Store) GenesisState(ctx context.Context) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.GenesisState")
 	defer span.End()
+
+	cached, err := genesis.State(params.BeaconConfig().ConfigName)
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+		return nil, err
+	}
+	span.AddAttributes(trace.BoolAttribute("cache_hit", cached != nil))
+	if cached != nil {
+		return cached, nil
+	}
+
 	var st *pb.BeaconState
-	err := s.db.View(func(tx *bolt.Tx) error {
+	err = s.db.View(func(tx *bolt.Tx) error {
 		// Retrieve genesis block's signing root from blocks bucket,
 		// to look up what the genesis state is.
 		bucket := tx.Bucket(blocksBucket)
@@ -65,7 +79,7 @@ func (s *Store) GenesisState(ctx context.Context) (iface.BeaconState, error) {
 	if st == nil {
 		return nil, nil
 	}
-	return state.InitializeFromProtoUnsafe(st)
+	return stateV0.InitializeFromProtoUnsafe(st)
 }
 
 // SaveState stores a state to the db using block's signing root which was used to generate the state.
@@ -83,10 +97,13 @@ func (s *Store) SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconSta
 	if states == nil {
 		return errors.New("nil state")
 	}
-	var err error
 	multipleEncs := make([][]byte, len(states))
 	for i, st := range states {
-		multipleEncs[i], err = encode(ctx, st.InnerStateUnsafe())
+		pbState, err := stateV0.ProtobufBeaconState(st.InnerStateUnsafe())
+		if err != nil {
+			return err
+		}
+		multipleEncs[i], err = encode(ctx, pbState)
 		if err != nil {
 			return err
 		}
@@ -287,7 +304,7 @@ func (s *Store) HighestSlotStatesBelow(ctx context.Context, slot types.Slot) ([]
 	return []iface.ReadOnlyBeaconState{st}, nil
 }
 
-// createBlockIndicesFromBlock takes in a beacon block and returns
+// createStateIndicesFromStateSlot takes in a state slot and returns
 // a map of bolt DB index buckets corresponding to each particular key for indices for
 // data, such as (shard indices bucket -> shard 5).
 func createStateIndicesFromStateSlot(ctx context.Context, slot types.Slot) map[string][]byte {

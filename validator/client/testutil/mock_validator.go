@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"bytes"
 	"context"
 	"time"
 
@@ -28,6 +29,7 @@ type FakeValidator struct {
 	SaveProtectionsCalled             bool
 	DeleteProtectionCalled            bool
 	SlotDeadlineCalled                bool
+	HandleKeyReloadCalled             bool
 	WaitForChainStartCalled           int
 	WaitForSyncCalled                 int
 	WaitForActivationCalled           int
@@ -75,7 +77,7 @@ func (fv *FakeValidator) WaitForChainStart(_ context.Context) error {
 }
 
 // WaitForActivation for mocking.
-func (fv *FakeValidator) WaitForActivation(_ context.Context) error {
+func (fv *FakeValidator) WaitForActivation(_ context.Context, _ chan [][48]byte) error {
 	fv.WaitForActivationCalled++
 	if fv.RetryTillSuccess >= fv.WaitForActivationCalled {
 		return iface.ErrConnectionIssue
@@ -217,4 +219,15 @@ func (fv *FakeValidator) ReceiveBlocks(ctx context.Context, connectionErrorChann
 	if fv.RetryTillSuccess > fv.ReceiveBlocksCalled {
 		connectionErrorChannel <- iface.ErrConnectionIssue
 	}
+}
+
+// HandleKeyReload for mocking
+func (fv *FakeValidator) HandleKeyReload(_ context.Context, newKeys [][48]byte) (anyActive bool, err error) {
+	fv.HandleKeyReloadCalled = true
+	for _, key := range newKeys {
+		if bytes.Equal(key[:], ActiveKey[:]) {
+			return true, nil
+		}
+	}
+	return false, nil
 }

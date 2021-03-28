@@ -7,6 +7,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -72,8 +73,12 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 
 	// Recent state checks.
 	assert.DeepEqual(t, make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector), newState.Slashings(), "Slashings was not correctly initialized")
-	assert.DeepSSZEqual(t, []*pb.PendingAttestation{}, newState.CurrentEpochAttestations(), "CurrentEpochAttestations was not correctly initialized")
-	assert.DeepSSZEqual(t, []*pb.PendingAttestation{}, newState.PreviousEpochAttestations(), "PreviousEpochAttestations was not correctly initialized")
+	currAtt, err := newState.CurrentEpochAttestations()
+	require.NoError(t, err)
+	assert.DeepSSZEqual(t, []*pb.PendingAttestation{}, currAtt, "CurrentEpochAttestations was not correctly initialized")
+	prevAtt, err := newState.CurrentEpochAttestations()
+	require.NoError(t, err)
+	assert.DeepSSZEqual(t, []*pb.PendingAttestation{}, prevAtt, "PreviousEpochAttestations was not correctly initialized")
 
 	zeroHash := params.BeaconConfig().ZeroHash[:]
 	// History root checks.
@@ -93,8 +98,13 @@ func TestGenesisState_HashEquality(t *testing.T) {
 	state2, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	require.NoError(t, err)
 
-	root1, err1 := hashutil.HashProto(state1.CloneInnerState())
-	root2, err2 := hashutil.HashProto(state2.CloneInnerState())
+	pbState1, err := stateV0.ProtobufBeaconState(state1.CloneInnerState())
+	require.NoError(t, err)
+	pbState2, err := stateV0.ProtobufBeaconState(state2.CloneInnerState())
+	require.NoError(t, err)
+
+	root1, err1 := hashutil.HashProto(pbState1)
+	root2, err2 := hashutil.HashProto(pbState2)
 
 	if err1 != nil || err2 != nil {
 		t.Fatalf("Failed to marshal state to bytes: %v %v", err1, err2)

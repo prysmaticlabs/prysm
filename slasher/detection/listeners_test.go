@@ -38,7 +38,7 @@ func TestService_DetectIncomingBlocks(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := testDB.SetupSlasherDB(t, false)
 	ds := Service{
-		notifier:          &mockNotifier{},
+		cfg:               &Config{Notifier: &mockNotifier{}},
 		proposalsDetector: proposals.NewProposeDetector(db),
 	}
 	blk := &ethpb.SignedBeaconBlock{
@@ -61,9 +61,11 @@ func TestService_DetectIncomingBlocks(t *testing.T) {
 func TestService_DetectIncomingAttestations(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ds := Service{
-		notifier:              &mockNotifier{},
-		minMaxSpanDetector:    &attestations.MockSpanDetector{},
-		attesterSlashingsFeed: new(event.Feed),
+		cfg: &Config{
+			Notifier:              &mockNotifier{},
+			AttesterSlashingsFeed: new(event.Feed),
+		},
+		minMaxSpanDetector: &attestations.MockSpanDetector{},
 	}
 	att := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
