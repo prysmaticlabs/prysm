@@ -169,7 +169,7 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 	}
 
 	// Web UI is structured to only write to the default wallet directory
-	//accounts.Recoverwallet checks if wallet already exists
+	// accounts.Recoverwallet checks if wallet already exists
 	walletDir := s.walletDir
 
 	// Web-ui should check the new and confirmed password are equal
