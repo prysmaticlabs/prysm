@@ -157,7 +157,7 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 		"spanish":             wordlists.Spanish,
 	}
 	if _, ok := allowedLanguages[language]; !ok {
-		return nil, status.Error(codes.InvalidArgument, "input not in the list of allowed languages")
+		return nil, status.Error(codes.InvalidArgument, "input not in the list of supported languages")
 	}
 	bip39.SetWordList(allowedLanguages[language])
 	mnemonic := req.Mnemonic
