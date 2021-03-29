@@ -629,6 +629,8 @@ func (b *BeaconNode) registerRPCService() error {
 		depositFetcher = b.depositCache
 		chainStartFetcher = web3Service
 	}
+	var applicationExecutor powchain.ApplicationDataExecutor
+	applicationExecutor = web3Service
 
 	host := b.cliCtx.String(flags.RPCHost.Name)
 	port := b.cliCtx.String(flags.RPCPort.Name)
@@ -676,6 +678,7 @@ func (b *BeaconNode) registerRPCService() error {
 		StateGen:                b.stateGen,
 		EnableDebugRPCEndpoints: enableDebugRPCEndpoints,
 		MaxMsgSize:              maxMsgSize,
+		ApplicationExecutor:     applicationExecutor,
 	})
 
 	return b.services.RegisterService(rpcService)

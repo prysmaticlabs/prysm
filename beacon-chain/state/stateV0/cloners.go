@@ -4,6 +4,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // CopyETH1Data copies the provided eth1data object.
@@ -100,14 +101,15 @@ func CopyBeaconBlockBody(body *ethpb.BeaconBlockBody) *ethpb.BeaconBlockBody {
 		return nil
 	}
 	return &ethpb.BeaconBlockBody{
-		RandaoReveal:      bytesutil.SafeCopyBytes(body.RandaoReveal),
-		Eth1Data:          CopyETH1Data(body.Eth1Data),
-		Graffiti:          bytesutil.SafeCopyBytes(body.Graffiti),
-		ProposerSlashings: CopyProposerSlashings(body.ProposerSlashings),
-		AttesterSlashings: CopyAttesterSlashings(body.AttesterSlashings),
-		Attestations:      CopyAttestations(body.Attestations),
-		Deposits:          CopyDeposits(body.Deposits),
-		VoluntaryExits:    CopySignedVoluntaryExits(body.VoluntaryExits),
+		RandaoReveal:       bytesutil.SafeCopyBytes(body.RandaoReveal),
+		Eth1Data:           CopyETH1Data(body.Eth1Data),
+		Graffiti:           bytesutil.SafeCopyBytes(body.Graffiti),
+		ProposerSlashings:  CopyProposerSlashings(body.ProposerSlashings),
+		AttesterSlashings:  CopyAttesterSlashings(body.AttesterSlashings),
+		Attestations:       CopyAttestations(body.Attestations),
+		Deposits:           CopyDeposits(body.Deposits),
+		VoluntaryExits:     CopySignedVoluntaryExits(body.VoluntaryExits),
+		ApplicationPayload: CopyApplicationPayload(body.ApplicationPayload),
 	}
 }
 
@@ -264,6 +266,28 @@ func CopySignedVoluntaryExit(exit *ethpb.SignedVoluntaryExit) *ethpb.SignedVolun
 			ValidatorIndex: exit.Exit.ValidatorIndex,
 		},
 		Signature: bytesutil.SafeCopyBytes(exit.Signature),
+	}
+}
+
+// CopyApplicationPayload copies the provided ApplicationPayload.
+func CopyApplicationPayload(payload *ethpb.ApplicationPayload) *ethpb.ApplicationPayload {
+	if payload == nil {
+		return nil
+	}
+	// TODO: Implement this!
+	logsBloom := make([][]byte, 8)
+	for i := 0; i < len(logsBloom); i++ {
+		logsBloom[i] = params.BeaconConfig().ZeroHash[:]
+	}
+	return &ethpb.ApplicationPayload{
+		BlockHash:    make([]byte, 32),
+		Coinbase:     make([]byte, 20),
+		StateRoot:    make([]byte, 32),
+		GasLimit:     0,
+		GasUsed:      0,
+		ReceiptRoot:  make([]byte, 32),
+		LogsBloom:    logsBloom,
+		Transactions: make([]*ethpb.Transaction, 0),
 	}
 }
 

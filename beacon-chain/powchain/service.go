@@ -109,10 +109,20 @@ type Client interface {
 	bind.ContractCaller
 }
 
-// ApplicationExecutor --
-type ApplicationExecutor interface {
+// Eth1BlockExecutor --
+type Eth1BlockExecutor interface {
 	InsertBlock(ctx context.Context, params eth.InsertBlockParams) (bool, error)
 	ProduceBlock(ctx context.Context, params eth.ProduceBlockParams) (*eth.ApplicationPayload, error)
+}
+
+// ApplicationDataExecutor --
+type ApplicationDataExecutor interface {
+	ProduceApplicationData(
+		ctx context.Context, params eth.ProduceBlockParams,
+	) (*eth.ApplicationPayload, error)
+	InsertApplicationData(
+		ctx context.Context, params eth.InsertBlockParams,
+	) (bool, error)
 }
 
 // RPCDataFetcher defines a subset of methods conformed to by ETH1.0 RPC clients for
@@ -146,7 +156,7 @@ type Service struct {
 	currHttpEndpoint        string
 	httpLogger              bind.ContractFilterer
 	eth1DataFetcher         RPCDataFetcher
-	applicationExecutor     ApplicationExecutor
+	applicationExecutor     Eth1BlockExecutor
 	rpcClient               RPCClient
 	headerCache             *headerCache // cache to store block hash/block height.
 	latestEth1Data          *protodb.LatestETH1Data
@@ -412,25 +422,28 @@ func (s *Service) dialETH1Nodes(endpoint string) (*ethclient.Client, *gethRPC.Cl
 		closeClients()
 		return nil, nil, errors.New("eth1 node has not finished syncing yet")
 	}
+
+	// Disable this to connect with Catalyst.
+
 	// Make a simple call to ensure we are actually connected to a working node.
-	cID, err := httpClient.ChainID(s.ctx)
-	if err != nil {
-		closeClients()
-		return nil, nil, err
-	}
-	nID, err := httpClient.NetworkID(s.ctx)
-	if err != nil {
-		closeClients()
-		return nil, nil, err
-	}
-	if cID.Uint64() != params.BeaconConfig().DepositChainID {
-		closeClients()
-		return nil, nil, fmt.Errorf("eth1 node using incorrect chain id, %d != %d", cID.Uint64(), params.BeaconConfig().DepositChainID)
-	}
-	if nID.Uint64() != params.BeaconConfig().DepositNetworkID {
-		closeClients()
-		return nil, nil, fmt.Errorf("eth1 node using incorrect network id, %d != %d", nID.Uint64(), params.BeaconConfig().DepositNetworkID)
-	}
+	//cID, err := httpClient.ChainID(s.ctx)
+	//if err != nil {
+	//	closeClients()
+	//	return nil, nil, err
+	//}
+	//nID, err := httpClient.NetworkID(s.ctx)
+	//if err != nil {
+	//	closeClients()
+	//	return nil, nil, err
+	//}
+	//if cID.Uint64() != params.BeaconConfig().DepositChainID {
+	//	closeClients()
+	//	return nil, nil, fmt.Errorf("eth1 node using incorrect chain id, %d != %d", cID.Uint64(), params.BeaconConfig().DepositChainID)
+	//}
+	//if nID.Uint64() != params.BeaconConfig().DepositNetworkID {
+	//	closeClients()
+	//	return nil, nil, fmt.Errorf("eth1 node using incorrect network id, %d != %d", nID.Uint64(), params.BeaconConfig().DepositNetworkID)
+	//}
 
 	return httpClient, httpRPCClient, nil
 }

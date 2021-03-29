@@ -116,7 +116,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	// beacon_chain_data consists of slot,timestamp and randao mix.
 	// TODO: This is hard coded to my catalyst instance genesis hash.
 	eth1ParentHash := "0x3a3fdfc9ab6e17ff530b57bc21494da3848ebbeaf9343545fded7a18d221ffec"
-	payload, err := vs.ApplicationExecutor.ProduceBlock(ctx, eth.ProduceBlockParams{
+	payload, err := vs.ApplicationExecutor.ProduceApplicationData(ctx, eth.ProduceBlockParams{
 		ParentHash: common.HexToHash(eth1ParentHash),
 		RandaoMix:  common.BytesToHash(req.RandaoReveal),
 		Slot:       uint64(req.Slot),
