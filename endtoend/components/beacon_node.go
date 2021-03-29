@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
-	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/prysmaticlabs/prysm/endtoend/helpers"
@@ -16,7 +15,6 @@ import (
 	e2etypes "github.com/prysmaticlabs/prysm/endtoend/types"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"golang.org/x/sync/errgroup"
 )
 
 var _ e2etypes.ComponentRunner = (*BeaconNode)(nil)
@@ -50,36 +48,17 @@ func (s *BeaconNodeSet) Start(ctx context.Context) error {
 	}
 
 	// Create beacon nodes.
-	nodes := make([]*BeaconNode, e2e.TestParams.BeaconNodeCount)
+	nodes := make([]e2etypes.ComponentRunner, e2e.TestParams.BeaconNodeCount)
 	for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
 		nodes[i] = NewBeaconNode(s.config, i, s.enr)
 	}
 
-	// Start all created beacon nodes.
-	g, ctx := errgroup.WithContext(ctx)
-	for _, node := range nodes {
-		node := node
-		g.Go(func() error {
-			return node.Start(ctx)
-		})
-	}
-
-	// Mark set as ready (happens when all contained nodes report as started).
-	go func() {
-		for _, node := range nodes {
-			select {
-			case <-ctx.Done():
-				return
-			case <-node.Started():
-				continue
-			}
-		}
-		// Only close if all nodes are started. When context is cancelled, node is not considered as started.
-		// Stalled nodes do not pose problem -- after certain period of time main routine times out.
+	// Wait for all nodes to finish their job (blocking).
+	// Once nodes are ready passed in handler function will be called.
+	return helpers.WaitOnNodes(ctx, nodes, func() {
+		// All nodes stated, close channel, so that all services waiting on a set, can proceed.
 		close(s.started)
-	}()
-
-	return g.Wait()
+	})
 }
 
 // Started checks whether beacon node set is started and all nodes are ready to be queried.
@@ -164,62 +143,4 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 // Started checks whether beacon node is started and ready to be queried.
 func (node *BeaconNode) Started() <-chan struct{} {
 	return node.started
-}
-
-// StartBeaconNodes starts the requested amount of beacon nodes.
-// Deprecated: this method will be removed once BeaconNodeSet component is used.
-func StartBeaconNodes(t *testing.T, config *e2etypes.E2EConfig, enr string) {
-	for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
-		StartNewBeaconNode(t, config, i, enr)
-	}
-}
-
-// StartNewBeaconNode starts a fresh beacon node, connecting to all passed in beacon nodes.
-// Deprecated: this method will be removed once BeaconNode component is used.
-func StartNewBeaconNode(t *testing.T, config *e2etypes.E2EConfig, index int, enr string) {
-	binaryPath, found := bazel.FindBinary("cmd/beacon-chain", "beacon-chain")
-	if !found {
-		t.Log(binaryPath)
-		t.Fatal("beacon chain binary not found")
-	}
-
-	stdOutFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, fmt.Sprintf(e2e.BeaconNodeLogFileName, index))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	args := []string{
-		fmt.Sprintf("--datadir=%s/eth2-beacon-node-%d", e2e.TestParams.TestPath, index),
-		fmt.Sprintf("--log-file=%s", stdOutFile.Name()),
-		fmt.Sprintf("--deposit-contract=%s", e2e.TestParams.ContractAddress.Hex()),
-		fmt.Sprintf("--rpc-port=%d", e2e.TestParams.BeaconNodeRPCPort+index),
-		fmt.Sprintf("--http-web3provider=http://127.0.0.1:%d", e2e.TestParams.Eth1RPCPort),
-		fmt.Sprintf("--min-sync-peers=%d", e2e.TestParams.BeaconNodeCount-1),
-		fmt.Sprintf("--p2p-udp-port=%d", e2e.TestParams.BeaconNodeRPCPort+index+10),
-		fmt.Sprintf("--p2p-tcp-port=%d", e2e.TestParams.BeaconNodeRPCPort+index+20),
-		fmt.Sprintf("--monitoring-port=%d", e2e.TestParams.BeaconNodeMetricsPort+index),
-		fmt.Sprintf("--grpc-gateway-port=%d", e2e.TestParams.BeaconNodeRPCPort+index+40),
-		fmt.Sprintf("--contract-deployment-block=%d", 0),
-		fmt.Sprintf("--rpc-max-page-size=%d", params.BeaconConfig().MinGenesisActiveValidatorCount),
-		fmt.Sprintf("--bootstrap-node=%s", enr),
-		"--verbosity=debug",
-		"--force-clear-db",
-		"--e2e-config",
-		"--accept-terms-of-use",
-	}
-	if config.UsePprof {
-		args = append(args, "--pprof", fmt.Sprintf("--pprofport=%d", e2e.TestParams.BeaconNodeRPCPort+index+50))
-	}
-	args = append(args, featureconfig.E2EBeaconChainFlags...)
-	args = append(args, config.BeaconFlags...)
-
-	cmd := exec.Command(binaryPath, args...)
-	t.Logf("Starting beacon chain %d with flags: %s", index, strings.Join(args[2:], " "))
-	if err = cmd.Start(); err != nil {
-		t.Fatalf("Failed to start beacon node: %v", err)
-	}
-
-	if err = helpers.WaitForTextInFile(stdOutFile, "gRPC server listening on port"); err != nil {
-		t.Fatalf("could not find multiaddr for node %d, this means the node had issues starting: %v", index, err)
-	}
 }
