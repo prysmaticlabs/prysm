@@ -184,7 +184,7 @@ func TestServer_DeleteAccounts_FailedPreconditions_WrongKeymanagerKind(t *testin
 		DeletePublicKeys: nil,
 	})
 	assert.ErrorContains(t, "No public keys specified to delete", err)
-	
+
 	_, err = s.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
 		DeletePublicKeys: make([][]byte, 1),
 	})
