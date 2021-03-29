@@ -144,7 +144,7 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 		return nil, status.Error(codes.InvalidArgument, "Must create at least 1 validator account")
 	}
 
-	//check validate mnemonic with chosen language
+	// Check validate mnemonic with chosen language
 	language := req.Language
 	allowedLanguages := map[string][]string{
 		"english":             wordlists.English,
@@ -157,7 +157,7 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 		"spanish":             wordlists.Spanish,
 	}
 	if _, ok := allowedLanguages[language]; !ok {
-		return nil, status.Error(codes.InvalidArgument, "input not in the list of allowed languages")
+		return nil, status.Error(codes.InvalidArgument, "input not in the list of supported languages")
 	}
 	bip39.SetWordList(allowedLanguages[language])
 	mnemonic := req.Mnemonic
@@ -165,20 +165,19 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 		return nil, status.Error(codes.InvalidArgument, "invalid mnemonic in request")
 	}
 	if !req.SkipMnemonic_25ThWord && strings.TrimSpace(req.Mnemonic25ThWord) == "" {
-		return nil, status.Error(codes.InvalidArgument, "mnemonic 25th word passphrase cannot be empty")
+		return nil, status.Error(codes.InvalidArgument, "mnemonic 25th word cannot be empty")
 	}
 
-	//web UI is structured to only write to the default wallet directory
-	//accounts.Recoverwallet checks if wallet already exists
+	// Web UI is structured to only write to the default wallet directory
+	// accounts.Recoverwallet checks if wallet already exists
 	walletDir := s.walletDir
 
-	//web-ui should check the new and confirmed password are equal
+	// Web-ui should check the new and confirmed password are equal
 	walletPassword := req.WalletPassword
 	if err := promptutil.ValidatePasswordInput(walletPassword); err != nil {
 		return nil, status.Error(codes.InvalidArgument, "password did not pass validation")
 	}
 
-	//recover
 	if _, err := accounts.RecoverWallet(ctx, &accounts.RecoverWalletConfig{
 		WalletDir:        walletDir,
 		WalletPassword:   walletPassword,
