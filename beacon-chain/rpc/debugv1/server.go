@@ -16,5 +16,5 @@ import (
 type Server struct {
 	Ctx          context.Context
 	BeaconDB     db.ReadOnlyDatabase
-	StateFetcher statefetcher.IStateFetcher
+	StateFetcher statefetcher.Fetcher
 }

@@ -15,7 +15,7 @@ func TestGetBeaconState(t *testing.T) {
 	fakeState, err := sharedtestutil.NewBeaconState()
 	require.NoError(t, err)
 	server := &Server{
-		StateFetcher: &testutil.MockStateFetcher{
+		StateFetcher: &testutil.MockFetcher{
 			BeaconState: fakeState,
 		},
 	}

@@ -255,7 +255,7 @@ func (s *Service) Start() {
 		Broadcaster:         s.cfg.Broadcaster,
 		StateGenService:     s.cfg.StateGen,
 		SyncChecker:         s.cfg.SyncService,
-		StateFetcher: statefetcher.Provider{
+		StateFetcher: statefetcher.StateProvider{
 			BeaconDB:           s.cfg.BeaconDB,
 			ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
 			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
@@ -280,7 +280,7 @@ func (s *Service) Start() {
 		debugServerV1 := &debugv1.Server{
 			Ctx:      s.ctx,
 			BeaconDB: s.cfg.BeaconDB,
-			StateFetcher: &statefetcher.Provider{
+			StateFetcher: &statefetcher.StateProvider{
 				BeaconDB:           s.cfg.BeaconDB,
 				ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
 				GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
