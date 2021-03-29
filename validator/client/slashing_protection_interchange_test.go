@@ -10,7 +10,6 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -75,12 +74,6 @@ func setupEIP3076SpecTests(t *testing.T) []*eip3076TestCase {
 }
 
 func TestEIP3076SpecTests(t *testing.T) {
-	config := &featureconfig.Flags{
-		SlasherProtection: true,
-	}
-	reset := featureconfig.InitWithReset(config)
-	defer reset()
-
 	testCases := setupEIP3076SpecTests(t)
 	for _, tt := range testCases {
 		t.Run(tt.Name, func(t *testing.T) {
@@ -129,21 +122,11 @@ func TestEIP3076SpecTests(t *testing.T) {
 						copy(signingRoot[:], signingRootBytes)
 					}
 
-					err = validator.preBlockSignValidations(context.Background(), pk, b.Block, signingRoot)
+					err = validator.slashableProposalCheck(context.Background(), pk, b, signingRoot)
 					if sb.ShouldSucceed {
 						require.NoError(t, err)
 					} else {
-						require.NotEqual(t, nil, err, "pre validation should have failed for block")
-					}
-
-					// Only proceed post update if pre validation did not error.
-					if err == nil {
-						err = validator.postBlockSignUpdate(context.Background(), pk, b, signingRoot)
-						if sb.ShouldSucceed {
-							require.NoError(t, err)
-						} else {
-							require.NotEqual(t, nil, err, "post validation should have failed for block")
-						}
+						require.NotEqual(t, nil, err, "validation should have failed for block")
 					}
 				}
 

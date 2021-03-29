@@ -105,16 +105,9 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [4
 		return
 	}
 
-	if err := v.preBlockSignValidations(ctx, pubKey, b, signingRoot); err != nil {
+	if err := v.slashableProposalCheck(ctx, pubKey, blk, signingRoot); err != nil {
 		log.WithFields(
 			blockLogFields(pubKey, b, nil),
-		).WithError(err).Error("Failed block slashing protection check")
-		return
-	}
-
-	if err := v.postBlockSignUpdate(ctx, pubKey, blk, signingRoot); err != nil {
-		log.WithFields(
-			blockLogFields(pubKey, b, sig),
 		).WithError(err).Error("Failed block slashing protection check")
 		return
 	}
