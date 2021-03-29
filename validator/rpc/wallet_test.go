@@ -103,7 +103,7 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 
 	req.NumAccounts = 2
 	_, err = s.RecoverWallet(ctx, req)
-	require.ErrorContains(t, "input not in the list of allowed languages", err)
+	require.ErrorContains(t, "input not in the list of supported languages", err)
 
 	req.Language = "english"
 	_, err = s.RecoverWallet(ctx, req)
@@ -114,9 +114,9 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 	req.Mnemonic = mnemonicResp.Mnemonic
 
 	req.Mnemonic25ThWord = " "
-	req.SkipMnemonic_25ThWord = false
+	req.SkipMnemonic25ThWord = false
 	_, err = s.RecoverWallet(ctx, req)
-	require.ErrorContains(t, "mnemonic 25th word passphrase cannot be empty", err)
+	require.ErrorContains(t, "mnemonic 25th word cannot be empty", err)
 	req.Mnemonic25ThWord = "outer"
 
 	//create(drived should fail) then test recover
