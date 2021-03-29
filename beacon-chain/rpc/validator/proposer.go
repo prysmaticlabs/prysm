@@ -141,21 +141,51 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 		"numTransactions": len(payload.Transactions),
 	}).Info("Received response, executable data is ready to be put into a beacon block")
 
+	// TODO: Need a general helper here
+	eth2Txs := make([]*ethpb.Transaction, len(payload.Transactions))
+	for i := range eth2Txs {
+		eth2Txs[i] = &ethpb.Transaction{
+			Nounce:    payload.Transactions[i].Nonce(),
+			GasPrice:  payload.Transactions[i].GasPrice().Bytes(),
+			GasLimit:  0,        // Not exported in geth?
+			Recipient: []byte{}, // Not exported  in geth?
+			Value:     payload.Transactions[i].Value().Bytes(),
+			Data:      [][]byte{payload.Transactions[i].Data()}, // TODO: Fix this in ethereumapi
+			V:         []byte{},                                 // Not exported  in geth?
+			R:         []byte{},                                 // Not exported  in geth?
+			S:         []byte{},                                 // Not exported  in geth?
+		}
+	}
+	logsBloom := make([][]byte, 8)
+	for i := 0; i < len(logsBloom); i++ {
+		logsBloom[i] = params.BeaconConfig().ZeroHash[:]
+	}
+	eth2Payload := &ethpb.ApplicationPayload{
+		BlockHash:   bytesutil.PadTo(payload.BlockHash.Bytes(), 32),
+		Coinbase:    bytesutil.PadTo(payload.Coinbase.Bytes(), 20),
+		StateRoot:   bytesutil.PadTo(payload.StateRoot.Bytes(), 32),
+		GasLimit:    payload.GasLimit,
+		GasUsed:     payload.GasUsed,
+		ReceiptRoot: bytesutil.PadTo(payload.ReceiptRoot.Bytes(), 32),
+		LogsBloom:   logsBloom, // TODO: Fix this in ethereumapi
+		// Transactions: eth2Txs,
+	}
+
 	blk := &ethpb.BeaconBlock{
 		Slot:          req.Slot,
 		ParentRoot:    parentRoot,
 		StateRoot:     stateRoot,
 		ProposerIndex: idx,
 		Body: &ethpb.BeaconBlockBody{
-			Eth1Data:          eth1Data,
-			Deposits:          deposits,
-			Attestations:      atts,
-			RandaoReveal:      req.RandaoReveal,
-			ProposerSlashings: vs.SlashingsPool.PendingProposerSlashings(ctx, head, false /*noLimit*/),
-			AttesterSlashings: vs.SlashingsPool.PendingAttesterSlashings(ctx, head, false /*noLimit*/),
-			VoluntaryExits:    vs.ExitPool.PendingExits(head, req.Slot, false /*noLimit*/),
-			Graffiti:          graffiti[:],
-			// Insert application payload here
+			Eth1Data:           eth1Data,
+			Deposits:           deposits,
+			Attestations:       atts,
+			RandaoReveal:       req.RandaoReveal,
+			ProposerSlashings:  vs.SlashingsPool.PendingProposerSlashings(ctx, head, false /*noLimit*/),
+			AttesterSlashings:  vs.SlashingsPool.PendingAttesterSlashings(ctx, head, false /*noLimit*/),
+			VoluntaryExits:     vs.ExitPool.PendingExits(head, req.Slot, false /*noLimit*/),
+			Graffiti:           graffiti[:],
+			ApplicationPayload: eth2Payload,
 		},
 	}
 
