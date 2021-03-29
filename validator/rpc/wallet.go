@@ -145,7 +145,7 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 	}
 
 	// Check validate mnemonic with chosen language
-	language := req.Language
+	language := strings.ToLower(req.Language)
 	allowedLanguages := map[string][]string{
 		"english":             wordlists.English,
 		"chinese_simplified":  wordlists.ChineseSimplified,

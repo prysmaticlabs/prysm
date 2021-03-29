@@ -102,10 +102,11 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 	require.ErrorContains(t, "Must create at least 1 validator account", err)
 
 	req.NumAccounts = 2
+	req.Language = "Swahili"
 	_, err = s.RecoverWallet(ctx, req)
 	require.ErrorContains(t, "input not in the list of supported languages", err)
 
-	req.Language = "english"
+	req.Language = "ENglish"
 	_, err = s.RecoverWallet(ctx, req)
 	require.ErrorContains(t, "invalid mnemonic in request", err)
 
