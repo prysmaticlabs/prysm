@@ -181,6 +181,11 @@ func TestServer_DeleteAccounts_FailedPreconditions_WrongKeymanagerKind(t *testin
 		keymanager: km,
 	}
 	_, err = ss.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
+		DeletePublicKeys: nil,
+	})
+	assert.ErrorContains(t, "No public keys specified to delete", err)
+	
+	_, err = ss.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
 		DeletePublicKeys: make([][]byte, 1),
 	})
 	assert.ErrorContains(t, "Only imported wallets can delete accounts", err)
