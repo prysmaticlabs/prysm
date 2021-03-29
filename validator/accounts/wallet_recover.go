@@ -219,6 +219,8 @@ func inputNumAccounts(cliCtx *cli.Context) (int64, error) {
 	return int64(numAccountsInt), nil
 }
 
+// ValidateMnemonic ensures that it is not empty and that the count of the words are
+// as specified(currently 24).
 func ValidateMnemonic(mnemonic string) error {
 	if strings.Trim(mnemonic, " ") == "" {
 		return errors.New("phrase cannot be empty")
