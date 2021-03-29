@@ -19,7 +19,7 @@ type BeaconState interface {
 	WriteOnlyBeaconState
 	Copy() BeaconState
 	HashTreeRoot(ctx context.Context) ([32]byte, error)
-	ToProto() *v1.BeaconState
+	ToProto() (*v1.BeaconState, error)
 }
 
 // ReadOnlyBeaconState defines a struct which only has read access to beacon state methods.

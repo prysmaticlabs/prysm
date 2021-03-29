@@ -17,8 +17,13 @@ func (ds *Server) GetBeaconState(ctx context.Context, req *ethpb.StateRequest) (
 		return nil, status.Errorf(codes.Internal, "could not get state: %v", err)
 	}
 
+	protoState, err := state.ToProto()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not convert state to proto: %v", err)
+	}
+
 	return &ethpb.BeaconStateResponse{
-		Data: state.ToProto(),
+		Data: protoState,
 	}, nil
 }
 

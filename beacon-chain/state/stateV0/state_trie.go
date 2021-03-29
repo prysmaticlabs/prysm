@@ -206,14 +206,20 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 }
 
 // ToProto returns a protobuf *v1.BeaconState representation of the state.
-func (b *BeaconState) ToProto() *v1.BeaconState {
+func (b *BeaconState) ToProto() (*v1.BeaconState, error) {
 	sourceFork := b.Fork()
 	sourceLatestBlockHeader := b.LatestBlockHeader()
 	sourceEth1Data := b.Eth1Data()
 	sourceEth1DataVotes := b.Eth1DataVotes()
 	sourceValidators := b.Validators()
-	sourcePrevEpochAtts := b.PreviousEpochAttestations()
-	sourceCurrEpochAtts := b.CurrentEpochAttestations()
+	sourcePrevEpochAtts, err := b.PreviousEpochAttestations()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get previous epoch attestations")
+	}
+	sourceCurrEpochAtts, err := b.CurrentEpochAttestations()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get current epoch attestations")
+	}
 	sourcePrevJustifiedCheckpoint := b.PreviousJustifiedCheckpoint()
 	sourceCurrJustifiedCheckpoint := b.CurrentJustifiedCheckpoint()
 	sourceFinalizedCheckpoint := b.FinalizedCheckpoint()
@@ -330,7 +336,7 @@ func (b *BeaconState) ToProto() *v1.BeaconState {
 		},
 	}
 
-	return result
+	return result, nil
 }
 
 // FieldReferencesCount returns the reference count held by each field. This

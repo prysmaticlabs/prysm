@@ -352,7 +352,8 @@ func TestBeaconState_ToProto(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	result := source.ToProto()
+	result, err := source.ToProto()
+	require.NoError(t, err)
 	require.NotNil(t, result)
 	assert.Equal(t, uint64(1), result.GenesisTime)
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("genesisvalidatorroot"), 32), result.GenesisValidatorsRoot)
