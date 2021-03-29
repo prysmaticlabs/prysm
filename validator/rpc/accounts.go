@@ -154,7 +154,7 @@ func (s *Server) BackupAccounts(
 func (s *Server) DeleteAccounts(
 	ctx context.Context, req *pb.DeleteAccountsRequest,
 ) (*pb.DeleteAccountsResponse, error) {
-	if req.DeletePublicKeys == nil || len(req.DeletePublicKeys) < 1 {
+	if req.PublicKeysToDelete == nil || len(req.PublicKeysToDelete) < 1 {
 		return nil, status.Error(codes.InvalidArgument, "No public keys specified to delete")
 	}
 	if s.wallet == nil || s.keymanager == nil {
@@ -166,11 +166,11 @@ func (s *Server) DeleteAccounts(
 	if err := accounts.DeleteAccount(ctx, &accounts.Config{
 		Wallet:           s.wallet,
 		Keymanager:       s.keymanager,
-		DeletePublicKeys: req.DeletePublicKeys,
+		DeletePublicKeys: req.PublicKeysToDelete,
 	}); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not delete public keys: %v", err)
 	}
 	return &pb.DeleteAccountsResponse{
-		DeletedKeys: req.DeletePublicKeys,
+		DeletedKeys: req.PublicKeysToDelete,
 	}, nil
 }

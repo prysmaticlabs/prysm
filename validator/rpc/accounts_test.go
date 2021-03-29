@@ -181,12 +181,12 @@ func TestServer_DeleteAccounts_FailedPreconditions_WrongKeymanagerKind(t *testin
 		keymanager: km,
 	}
 	_, err = s.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
-		DeletePublicKeys: nil,
+		PublicKeysToDelete: nil,
 	})
 	assert.ErrorContains(t, "No public keys specified to delete", err)
 
 	_, err = s.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
-		DeletePublicKeys: make([][]byte, 1),
+		PublicKeysToDelete: make([][]byte, 1),
 	})
 	assert.ErrorContains(t, "Only imported wallets can delete accounts", err)
 }
@@ -197,7 +197,7 @@ func TestServer_DeleteAccounts_FailedPreconditions_NoWallet(t *testing.T) {
 	_, err := s.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{})
 	assert.ErrorContains(t, "No public keys specified", err)
 	_, err = s.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
-		DeletePublicKeys: make([][]byte, 1),
+		PublicKeysToDelete: make([][]byte, 1),
 	})
 	assert.ErrorContains(t, "No wallet found", err)
 }
@@ -211,7 +211,7 @@ func TestServer_DeleteAccounts_OK(t *testing.T) {
 
 	// Next, we attempt to delete one of the keystores.
 	_, err = s.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
-		DeletePublicKeys: pubKeys[:1], // Delete the 0th public key
+		PublicKeysToDelete: pubKeys[:1], // Delete the 0th public key
 	})
 	require.NoError(t, err)
 	s.keymanager, err = s.wallet.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})

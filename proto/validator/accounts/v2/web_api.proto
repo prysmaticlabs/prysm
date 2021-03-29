@@ -350,7 +350,7 @@ message BackupAccountsResponse {
 
 message DeleteAccountsRequest {
     // List of public keys to delete.
-    repeated bytes delete_public_keys = 1;
+    repeated bytes public_keys_to_delete = 1;
 }
 
 message DeleteAccountsResponse {
