@@ -211,7 +211,7 @@ message RecoverWalletRequest {
     uint64 num_accounts = 2;
     string wallet_password = 3;
     string language = 4;
-    string mnemonic25th_word =5 ;
+    string mnemonic25th_word = 5 ;
     bool   skip_mnemonic25th_word = 6; 
 }
 
