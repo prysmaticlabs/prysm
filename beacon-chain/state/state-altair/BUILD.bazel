@@ -44,7 +44,11 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["getters_test.go"],
+    srcs = [
+        "deprecated_getters_test.go",
+        "deprecated_setters_test.go",
+        "getters_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
