@@ -136,8 +136,8 @@ type ReadOnlyEth1Data interface {
 
 // ReadOnlyAttestations defines a struct which only has read access to attestations methods.
 type ReadOnlyAttestations interface {
-	PreviousEpochAttestations() []*pbp2p.PendingAttestation
-	CurrentEpochAttestations() []*pbp2p.PendingAttestation
+	PreviousEpochAttestations() ([]*pbp2p.PendingAttestation, error)
+	CurrentEpochAttestations() ([]*pbp2p.PendingAttestation, error)
 }
 
 // WriteOnlyBlockRoots defines a struct which only has write access to block roots methods.
@@ -191,8 +191,6 @@ type WriteOnlyCheckpoint interface {
 
 // WriteOnlyAttestations defines a struct which only has write access to attestations methods.
 type WriteOnlyAttestations interface {
-	SetPreviousEpochAttestations(val []*pbp2p.PendingAttestation) error
-	SetCurrentEpochAttestations(val []*pbp2p.PendingAttestation) error
 	AppendCurrentEpochAttestations(val *pbp2p.PendingAttestation) error
 	AppendPreviousEpochAttestations(val *pbp2p.PendingAttestation) error
 	RotateAttestations() error
