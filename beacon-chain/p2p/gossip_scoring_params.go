@@ -22,6 +22,16 @@ const (
 	// attestationTotalWeight specifies the scoring weight that we apply to
 	// our attestation subnet topic.
 	attestationTotalWeight = 1
+	// attesterSlashingWeight specifies the scoring weight that we apply to
+	// our attester slashing topic.
+	attesterSlashingWeight = 0.05
+	// proposerSlashingWeight specifies the scoring weight that we apply to
+	// our proposer slashing topic.
+	proposerSlashingWeight = 0.05
+	// voluntaryExitWeight specifies the scoring weight that we apply to
+	// our voluntary exit topic.
+	voluntaryExitWeight = 0.05
+
 	// decayToZero specifies the terminal value that we will use when decaying
 	// a value.
 	decayToZero = 0.01
@@ -67,8 +77,14 @@ func (s *Service) topicScoreParams(topic string) (*pubsub.TopicScoreParams, erro
 		return defaultAggregateTopicParams(activeValidators), nil
 	case strings.Contains(topic, "beacon_attestation"):
 		return defaultAggregateSubnetTopicParams(activeValidators), nil
+	case strings.Contains(topic, "voluntary_exit"):
+		return defaultVoluntaryExitTopicParams(), nil
+	case strings.Contains(topic, "proposer_slashing"):
+		return defaultProposerSlashingTopicParams(), nil
+	case strings.Contains(topic, "attester_slashing"):
+		return defaultAttesterSlashingTopicParams(), nil
 	default:
-		return nil, nil
+		return nil, errors.Errorf("unrecognized topic provided for parameter registration: %s", topic)
 	}
 }
 
@@ -174,6 +190,72 @@ func defaultAggregateSubnetTopicParams(activeValidators uint64) *pubsub.TopicSco
 		MeshFailurePenaltyWeight:        -37.55,
 		MeshFailurePenaltyDecay:         scoreDecay(meshDecay * oneEpochDuration()),
 		InvalidMessageDeliveriesWeight:  -4544,
+		InvalidMessageDeliveriesDecay:   scoreDecay(50 * oneEpochDuration()),
+	}
+}
+
+func defaultAttesterSlashingTopicParams() *pubsub.TopicScoreParams {
+	return &pubsub.TopicScoreParams{
+		TopicWeight:                     attesterSlashingWeight,
+		TimeInMeshWeight:                0.0324,
+		TimeInMeshQuantum:               1 * oneSlotDuration(),
+		TimeInMeshCap:                   300,
+		FirstMessageDeliveriesWeight:    36,
+		FirstMessageDeliveriesDecay:     scoreDecay(100 * oneEpochDuration()),
+		FirstMessageDeliveriesCap:       1,
+		MeshMessageDeliveriesWeight:     0,
+		MeshMessageDeliveriesDecay:      0,
+		MeshMessageDeliveriesCap:        0,
+		MeshMessageDeliveriesThreshold:  0,
+		MeshMessageDeliveriesWindow:     0,
+		MeshMessageDeliveriesActivation: 0,
+		MeshFailurePenaltyWeight:        0,
+		MeshFailurePenaltyDecay:         0,
+		InvalidMessageDeliveriesWeight:  -2000,
+		InvalidMessageDeliveriesDecay:   scoreDecay(50 * oneEpochDuration()),
+	}
+}
+
+func defaultProposerSlashingTopicParams() *pubsub.TopicScoreParams {
+	return &pubsub.TopicScoreParams{
+		TopicWeight:                     proposerSlashingWeight,
+		TimeInMeshWeight:                0.0324,
+		TimeInMeshQuantum:               1 * oneSlotDuration(),
+		TimeInMeshCap:                   300,
+		FirstMessageDeliveriesWeight:    36,
+		FirstMessageDeliveriesDecay:     scoreDecay(100 * oneEpochDuration()),
+		FirstMessageDeliveriesCap:       1,
+		MeshMessageDeliveriesWeight:     0,
+		MeshMessageDeliveriesDecay:      0,
+		MeshMessageDeliveriesCap:        0,
+		MeshMessageDeliveriesThreshold:  0,
+		MeshMessageDeliveriesWindow:     0,
+		MeshMessageDeliveriesActivation: 0,
+		MeshFailurePenaltyWeight:        0,
+		MeshFailurePenaltyDecay:         0,
+		InvalidMessageDeliveriesWeight:  -2000,
+		InvalidMessageDeliveriesDecay:   scoreDecay(50 * oneEpochDuration()),
+	}
+}
+
+func defaultVoluntaryExitTopicParams() *pubsub.TopicScoreParams {
+	return &pubsub.TopicScoreParams{
+		TopicWeight:                     voluntaryExitWeight,
+		TimeInMeshWeight:                0.0324,
+		TimeInMeshQuantum:               1 * oneSlotDuration(),
+		TimeInMeshCap:                   300,
+		FirstMessageDeliveriesWeight:    2,
+		FirstMessageDeliveriesDecay:     scoreDecay(100 * oneEpochDuration()),
+		FirstMessageDeliveriesCap:       5,
+		MeshMessageDeliveriesWeight:     0,
+		MeshMessageDeliveriesDecay:      0,
+		MeshMessageDeliveriesCap:        0,
+		MeshMessageDeliveriesThreshold:  0,
+		MeshMessageDeliveriesWindow:     0,
+		MeshMessageDeliveriesActivation: 0,
+		MeshFailurePenaltyWeight:        0,
+		MeshFailurePenaltyDecay:         0,
+		InvalidMessageDeliveriesWeight:  -2000,
 		InvalidMessageDeliveriesDecay:   scoreDecay(50 * oneEpochDuration()),
 	}
 }
