@@ -119,7 +119,7 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 				continue
 			}
 
-			log.WithField("elapsed", time.Now().Sub(start)).Debug("Done checking slashable attestations")
+			log.WithField("elapsed", time.Since(start)).Debug("Done checking slashable attestations")
 
 			processedAttestationsTotal.Add(float64(len(validAtts)))
 		case <-ctx.Done():
@@ -159,7 +159,7 @@ func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan typ
 				continue
 			}
 
-			log.WithField("elapsed", time.Now().Sub(start)).Debug("Done checking slashable blocks")
+			log.WithField("elapsed", time.Since(start)).Debug("Done checking slashable blocks")
 
 			processedBlocksTotal.Add(float64(len(blocks)))
 		case <-ctx.Done():
