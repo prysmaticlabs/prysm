@@ -186,7 +186,7 @@ func TestServer_DeleteAccounts_FailedPreconditions_WrongKeymanagerKind(t *testin
 	assert.ErrorContains(t, "Only imported wallets can delete accounts", err)
 }
 
-func TestServer_DeleteAccounts_FailedPreconditions(t *testing.T) {
+func TestServer_DeleteAccounts_FailedPreconditions_NoWallet(t *testing.T) {
 	ss := &Server{}
 	ctx := context.Background()
 	_, err := ss.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{})
