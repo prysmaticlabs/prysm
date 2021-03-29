@@ -100,14 +100,6 @@ type Chain interface {
 	POWBlockFetcher
 }
 
-// Client defines a struct that combines all relevant ETH1.0 mainchain interactions required
-// by the beacon chain node.
-type Client interface {
-	RPCDataFetcher
-	bind.ContractFilterer
-	bind.ContractCaller
-}
-
 // RPCDataFetcher defines a subset of methods conformed to by ETH1.0 RPC clients for
 // fetching eth1 data from the clients.
 type RPCDataFetcher interface {
