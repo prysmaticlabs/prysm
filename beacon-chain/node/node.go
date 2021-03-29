@@ -511,17 +511,15 @@ func (b *BeaconNode) registerPOWChainService() error {
 
 	if b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name) == "" {
 		log.Error("No ETH1 node specified to run with the beacon node. Please consider running your own ETH1 node for better uptime, security, and decentralization of ETH2. Visit https://docs.prylabs.network/docs/prysm-usage/setup-eth1 for more information.")
-		log.Error("You will need to specify --http-web3provider to attach an eth1 node to the prysm node. Without an eth1 node block proposals for your validator will be affected and the beacon node will not be able to initialize the genesis state.")
+		log.Error("You will need to specify --http-web3provider to attach an ETH1 node to the Prysm node. Without an ETH1 node block proposals for your validator will be affected and the beacon node will not be able to initialize the genesis state.")
 	}
+
 	httpProvider, auth := extractAuthStringFromFlag(b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name))
+	endpoints := append([]string{httpProvider}, b.cliCtx.StringSlice(flags.FallbackWeb3ProviderFlag.Name)...)
 
 	cfg := &powchain.Web3ServiceConfig{
 		HTTPEndPoint:       httpProvider,
 		Auth:               auth,
-	endpoints := []string{b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name)}
-	endpoints = append(endpoints, b.cliCtx.StringSlice(flags.FallbackWeb3ProviderFlag.Name)...)
-
-	cfg := &powchain.Web3ServiceConfig{
 		HTTPEndpoints:      endpoints,
 		DepositContract:    common.HexToAddress(depAddress),
 		BeaconDB:           b.db,
@@ -557,13 +555,15 @@ func (b *BeaconNode) registerPOWChainService() error {
 func extractAuthStringFromFlag(flag string) (string, string) {
 	var httpProvider, auth string
 	authProvider := strings.Split(flag, ",")
-	if len(authProvider) == 2 {
+	if len(authProvider) > 2 {
+		log.Errorf("Web 3 provider string can contain one comma for specifying the authorization header to access the provider. String contains too many commas: %d", len(authProvider))
+		httpProvider = authProvider[0]
+		auth = ""
+	} else if len(authProvider) == 2 {
 		httpProvider = authProvider[0]
 		auth = authProvider[1]
 	} else if len(authProvider) == 1 {
 		httpProvider = flag
-	} else {
-		log.Errorf("Web 3 provider string can contain one comma for specifying the authorization header to access the provider. String contains too many commas: %d", len(authProvider))
 	}
 	return httpProvider, auth
 }

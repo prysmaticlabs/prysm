@@ -184,11 +184,10 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		currEndpoint = config.HTTPEndpoints[0]
 	}
 	s := &Service{
-		ctx:          ctx,
-		cancel:       cancel,
-		headerChan:   make(chan *gethTypes.Header),
-		httpEndpoint: config.HTTPEndPoint,
-		auth:         config.Auth,
+		ctx:              ctx,
+		cancel:           cancel,
+		httpEndpoint:     config.HTTPEndPoint,
+		auth:             config.Auth,
 		cfg:              config,
 		currHttpEndpoint: currEndpoint,
 		latestEth1Data: &protodb.LatestETH1Data{
