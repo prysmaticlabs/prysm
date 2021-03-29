@@ -7,6 +7,7 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -21,6 +22,16 @@ const (
 	// attestationTotalWeight specifies the scoring weight that we apply to
 	// our attestation subnet topic.
 	attestationTotalWeight = 1
+	// attesterSlashingWeight specifies the scoring weight that we apply to
+	// our attester slashing topic.
+	attesterSlashingWeight = 0.05
+	// proposerSlashingWeight specifies the scoring weight that we apply to
+	// our proposer slashing topic.
+	proposerSlashingWeight = 0.05
+	// voluntaryExitWeight specifies the scoring weight that we apply to
+	// our voluntary exit topic.
+	voluntaryExitWeight = 0.05
+
 	// decayToZero specifies the terminal value that we will use when decaying
 	// a value.
 	decayToZero = 0.01
@@ -54,17 +65,49 @@ func peerScoringParams() (*pubsub.PeerScoreParams, *pubsub.PeerScoreThresholds) 
 	return scoreParams, thresholds
 }
 
-func topicScoreParams(topic string) *pubsub.TopicScoreParams {
+func (s *Service) topicScoreParams(topic string) (*pubsub.TopicScoreParams, error) {
+	activeValidators, err := s.retrieveActiveValidators()
+	if err != nil {
+		return nil, err
+	}
 	switch {
 	case strings.Contains(topic, "beacon_block"):
-		return defaultBlockTopicParams()
+		return defaultBlockTopicParams(), nil
 	case strings.Contains(topic, "beacon_aggregate_and_proof"):
-		return defaultAggregateTopicParams()
+		return defaultAggregateTopicParams(activeValidators), nil
 	case strings.Contains(topic, "beacon_attestation"):
-		return defaultAggregateSubnetTopicParams()
+		return defaultAggregateSubnetTopicParams(activeValidators), nil
+	case strings.Contains(topic, "voluntary_exit"):
+		return defaultVoluntaryExitTopicParams(), nil
+	case strings.Contains(topic, "proposer_slashing"):
+		return defaultProposerSlashingTopicParams(), nil
+	case strings.Contains(topic, "attester_slashing"):
+		return defaultAttesterSlashingTopicParams(), nil
 	default:
-		return nil
+		return nil, errors.Errorf("unrecognized topic provided for parameter registration: %s", topic)
 	}
+}
+
+func (s *Service) retrieveActiveValidators() (uint64, error) {
+	rt := s.cfg.DB.LastArchivedRoot(s.ctx)
+	if rt == params.BeaconConfig().ZeroHash {
+		genState, err := s.cfg.DB.GenesisState(s.ctx)
+		if err != nil {
+			return 0, err
+		}
+		if genState == nil {
+			return 0, errors.New("no genesis state exists")
+		}
+		return helpers.ActiveValidatorCount(genState, helpers.CurrentEpoch(genState))
+	}
+	bState, err := s.cfg.DB.State(s.ctx, rt)
+	if err != nil {
+		return 0, err
+	}
+	if bState == nil {
+		return 0, errors.Errorf("no state with root %#x exists", rt)
+	}
+	return helpers.ActiveValidatorCount(bState, helpers.CurrentEpoch(bState))
 }
 
 // Based on Ben's tested parameters for lighthouse.
@@ -94,8 +137,8 @@ func defaultBlockTopicParams() *pubsub.TopicScoreParams {
 	}
 }
 
-func defaultAggregateTopicParams() *pubsub.TopicScoreParams {
-	aggPerEpoch := aggregatorsPerSlot() * uint64(params.BeaconConfig().SlotsPerEpoch)
+func defaultAggregateTopicParams(activeValidators uint64) *pubsub.TopicScoreParams {
+	aggPerEpoch := aggregatorsPerSlot(activeValidators) * uint64(params.BeaconConfig().SlotsPerEpoch)
 	return &pubsub.TopicScoreParams{
 		TopicWeight:                     aggregateWeight,
 		TimeInMeshWeight:                0.0324,
@@ -117,12 +160,12 @@ func defaultAggregateTopicParams() *pubsub.TopicScoreParams {
 	}
 }
 
-func defaultAggregateSubnetTopicParams() *pubsub.TopicScoreParams {
+func defaultAggregateSubnetTopicParams(activeValidators uint64) *pubsub.TopicScoreParams {
 	topicWeight := attestationTotalWeight / float64(params.BeaconNetworkConfig().AttestationSubnetCount)
-	subnetWeight := activeValidators() / params.BeaconNetworkConfig().AttestationSubnetCount
+	subnetWeight := activeValidators / params.BeaconNetworkConfig().AttestationSubnetCount
 	minimumWeight := subnetWeight / 50
 	numPerSlot := time.Duration(subnetWeight / uint64(params.BeaconConfig().SlotsPerEpoch))
-	comsPerSlot := committeeCountPerSlot()
+	comsPerSlot := committeeCountPerSlot(activeValidators)
 	exceedsThreshold := comsPerSlot >= 2*params.BeaconNetworkConfig().AttestationSubnetCount/uint64(params.BeaconConfig().SlotsPerEpoch)
 	firstDecay := time.Duration(1)
 	meshDecay := time.Duration(4)
@@ -151,6 +194,72 @@ func defaultAggregateSubnetTopicParams() *pubsub.TopicScoreParams {
 	}
 }
 
+func defaultAttesterSlashingTopicParams() *pubsub.TopicScoreParams {
+	return &pubsub.TopicScoreParams{
+		TopicWeight:                     attesterSlashingWeight,
+		TimeInMeshWeight:                0.0324,
+		TimeInMeshQuantum:               1 * oneSlotDuration(),
+		TimeInMeshCap:                   300,
+		FirstMessageDeliveriesWeight:    36,
+		FirstMessageDeliveriesDecay:     scoreDecay(100 * oneEpochDuration()),
+		FirstMessageDeliveriesCap:       1,
+		MeshMessageDeliveriesWeight:     0,
+		MeshMessageDeliveriesDecay:      0,
+		MeshMessageDeliveriesCap:        0,
+		MeshMessageDeliveriesThreshold:  0,
+		MeshMessageDeliveriesWindow:     0,
+		MeshMessageDeliveriesActivation: 0,
+		MeshFailurePenaltyWeight:        0,
+		MeshFailurePenaltyDecay:         0,
+		InvalidMessageDeliveriesWeight:  -2000,
+		InvalidMessageDeliveriesDecay:   scoreDecay(50 * oneEpochDuration()),
+	}
+}
+
+func defaultProposerSlashingTopicParams() *pubsub.TopicScoreParams {
+	return &pubsub.TopicScoreParams{
+		TopicWeight:                     proposerSlashingWeight,
+		TimeInMeshWeight:                0.0324,
+		TimeInMeshQuantum:               1 * oneSlotDuration(),
+		TimeInMeshCap:                   300,
+		FirstMessageDeliveriesWeight:    36,
+		FirstMessageDeliveriesDecay:     scoreDecay(100 * oneEpochDuration()),
+		FirstMessageDeliveriesCap:       1,
+		MeshMessageDeliveriesWeight:     0,
+		MeshMessageDeliveriesDecay:      0,
+		MeshMessageDeliveriesCap:        0,
+		MeshMessageDeliveriesThreshold:  0,
+		MeshMessageDeliveriesWindow:     0,
+		MeshMessageDeliveriesActivation: 0,
+		MeshFailurePenaltyWeight:        0,
+		MeshFailurePenaltyDecay:         0,
+		InvalidMessageDeliveriesWeight:  -2000,
+		InvalidMessageDeliveriesDecay:   scoreDecay(50 * oneEpochDuration()),
+	}
+}
+
+func defaultVoluntaryExitTopicParams() *pubsub.TopicScoreParams {
+	return &pubsub.TopicScoreParams{
+		TopicWeight:                     voluntaryExitWeight,
+		TimeInMeshWeight:                0.0324,
+		TimeInMeshQuantum:               1 * oneSlotDuration(),
+		TimeInMeshCap:                   300,
+		FirstMessageDeliveriesWeight:    2,
+		FirstMessageDeliveriesDecay:     scoreDecay(100 * oneEpochDuration()),
+		FirstMessageDeliveriesCap:       5,
+		MeshMessageDeliveriesWeight:     0,
+		MeshMessageDeliveriesDecay:      0,
+		MeshMessageDeliveriesCap:        0,
+		MeshMessageDeliveriesThreshold:  0,
+		MeshMessageDeliveriesWindow:     0,
+		MeshMessageDeliveriesActivation: 0,
+		MeshFailurePenaltyWeight:        0,
+		MeshFailurePenaltyDecay:         0,
+		InvalidMessageDeliveriesWeight:  -2000,
+		InvalidMessageDeliveriesDecay:   scoreDecay(50 * oneEpochDuration()),
+	}
+}
+
 func oneSlotDuration() time.Duration {
 	return time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
 }
@@ -164,22 +273,16 @@ func scoreDecay(totalDurationDecay time.Duration) float64 {
 	return math.Pow(decayToZero, 1/float64(numOfTimes))
 }
 
-// Default to the min-genesis for the current moment, as p2p service
-// has no access to the chain service.
-func activeValidators() uint64 {
-	return params.BeaconConfig().MinGenesisActiveValidatorCount
-}
-
-func committeeCountPerSlot() uint64 {
+func committeeCountPerSlot(activeValidators uint64) uint64 {
 	// Use a static parameter for now rather than a dynamic one, we can use
 	// the actual parameter later when we have figured out how to fix a circular
 	// dependency in service startup order.
-	return helpers.SlotCommitteeCount(activeValidators())
+	return helpers.SlotCommitteeCount(activeValidators)
 }
 
 // Uses a very rough gauge for total aggregator size per slot.
-func aggregatorsPerSlot() uint64 {
-	comms := committeeCountPerSlot()
+func aggregatorsPerSlot(activeValidators uint64) uint64 {
+	comms := committeeCountPerSlot(activeValidators)
 	totalAggs := comms * params.BeaconConfig().TargetAggregatorsPerCommittee
 	return totalAggs
 }

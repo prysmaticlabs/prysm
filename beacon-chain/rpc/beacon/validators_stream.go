@@ -330,7 +330,7 @@ func (is *infostream) generateValidatorInfo(pubKey []byte, validator iface.ReadO
 
 // generatePendingValidatorInfo generates the validator info for a pending (or unknown) key.
 func (is *infostream) generatePendingValidatorInfo(info *ethpb.ValidatorInfo) (*ethpb.ValidatorInfo, error) {
-	key := fmt.Sprintf("%s", info.PublicKey)
+	key := string(info.PublicKey)
 	var deposit *eth1Deposit
 	is.eth1DepositsMutex.Lock()
 	if fetchedDeposit, exists := is.eth1Deposits.Get(key); exists {
