@@ -138,7 +138,10 @@ func defaultBlockTopicParams() *pubsub.TopicScoreParams {
 }
 
 func defaultAggregateTopicParams(activeValidators uint64) *pubsub.TopicScoreParams {
-	aggPerEpoch := aggregatorsPerSlot(activeValidators) * uint64(params.BeaconConfig().SlotsPerEpoch)
+	aggPerSlot := aggregatorsPerSlot(activeValidators)
+	meshThreshold := decayThreshold(scoreDecay(1*oneEpochDuration()), float64(aggPerSlot)/50)
+	meshWeight := -122.5 / (aggregateWeight * meshThreshold * meshThreshold)
+	meshCap := 4 * meshThreshold
 	return &pubsub.TopicScoreParams{
 		TopicWeight:                     aggregateWeight,
 		TimeInMeshWeight:                0.0324,
@@ -147,10 +150,10 @@ func defaultAggregateTopicParams(activeValidators uint64) *pubsub.TopicScorePara
 		FirstMessageDeliveriesWeight:    0.128,
 		FirstMessageDeliveriesDecay:     scoreDecay(1 * oneEpochDuration()),
 		FirstMessageDeliveriesCap:       179,
-		MeshMessageDeliveriesWeight:     -0.064,
+		MeshMessageDeliveriesWeight:     meshWeight,
 		MeshMessageDeliveriesDecay:      scoreDecay(1 * oneEpochDuration()),
-		MeshMessageDeliveriesCap:        float64(aggPerEpoch),
-		MeshMessageDeliveriesThreshold:  float64(aggPerEpoch / 50),
+		MeshMessageDeliveriesCap:        meshCap,
+		MeshMessageDeliveriesThreshold:  meshThreshold,
 		MeshMessageDeliveriesWindow:     2 * time.Second,
 		MeshMessageDeliveriesActivation: 32 * oneSlotDuration(),
 		MeshFailurePenaltyWeight:        -0.064,
@@ -271,6 +274,10 @@ func oneEpochDuration() time.Duration {
 func scoreDecay(totalDurationDecay time.Duration) float64 {
 	numOfTimes := totalDurationDecay / oneSlotDuration()
 	return math.Pow(decayToZero, 1/float64(numOfTimes))
+}
+
+func decayThreshold(decay, rate float64) float64 {
+	return (rate/1 - decay) * decay
 }
 
 func committeeCountPerSlot(activeValidators uint64) uint64 {
