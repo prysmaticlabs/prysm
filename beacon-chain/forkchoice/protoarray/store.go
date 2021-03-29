@@ -235,7 +235,7 @@ func (s *Store) NodesIndices() map[[32]byte]uint64 {
 func (s *Store) ChainHeads() ([][32]byte, []types.Slot) {
 	s.nodesLock.RLock()
 	nodes := s.Nodes()
-	defer s.nodesLock.RUnlock()
+	s.nodesLock.RUnlock()
 
 	// Deliberate choice to not preallocate space for below.
 	// Heads cant be more than 2-3 in the worst case where pre-allocation will be 64 to begin with.
