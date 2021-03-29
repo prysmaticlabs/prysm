@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -16,7 +17,7 @@ import (
 )
 
 func TestUpdateValidator_Works(t *testing.T) {
-	e := params.BeaconConfig().FarFutureEpoch
+	e := params.BeaconConfig().FarFutureSlot
 	vp := []*precompute.Validator{{}, {InclusionSlot: e}, {}, {InclusionSlot: e}, {}, {InclusionSlot: e}}
 	record := &precompute.Validator{IsCurrentEpochAttester: true, IsCurrentEpochTargetAttester: true,
 		IsPrevEpochAttester: true, IsPrevEpochTargetAttester: true, IsPrevEpochHeadAttester: true}
@@ -33,7 +34,7 @@ func TestUpdateValidator_Works(t *testing.T) {
 }
 
 func TestUpdateValidator_InclusionOnlyCountsPrevEpoch(t *testing.T) {
-	e := params.BeaconConfig().FarFutureEpoch
+	e := params.BeaconConfig().FarFutureSlot
 	vp := []*precompute.Validator{{InclusionSlot: e}}
 	record := &precompute.Validator{IsCurrentEpochAttester: true, IsCurrentEpochTargetAttester: true}
 	a := &pb.PendingAttestation{InclusionDelay: 1, ProposerIndex: 2}
@@ -149,11 +150,11 @@ func TestProcessAttestations(t *testing.T) {
 	params.UseMinimalConfig()
 	defer params.UseMainnetConfig()
 
-	validators := uint64(64)
+	validators := uint64(128)
 	beaconState, _ := testutil.DeterministicGenesisState(t, validators)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
-
-	bf := []byte{0xff}
+	c := helpers.SlotCommitteeCount(validators)
+	bf := bitfield.NewBitlist(c)
 	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{
 		Target: &ethpb.Checkpoint{Epoch: 0}},
 		AggregationBits: bf}
@@ -169,9 +170,9 @@ func TestProcessAttestations(t *testing.T) {
 	require.NoError(t, beaconState.SetBlockRoots(br))
 	att2.Data.Target.Root = newRt[:]
 	att2.Data.BeaconBlockRoot = newRt[:]
-	err := beaconState.SetPreviousEpochAttestations([]*pb.PendingAttestation{{Data: att1.Data, AggregationBits: bf, InclusionDelay: 1}})
+	err := beaconState.AppendPreviousEpochAttestations(&pb.PendingAttestation{Data: att1.Data, AggregationBits: bf, InclusionDelay: 1})
 	require.NoError(t, err)
-	err = beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{{Data: att2.Data, AggregationBits: bf, InclusionDelay: 1}})
+	err = beaconState.AppendCurrentEpochAttestations(&pb.PendingAttestation{Data: att2.Data, AggregationBits: bf, InclusionDelay: 1})
 	require.NoError(t, err)
 
 	pVals := make([]*precompute.Validator, validators)
@@ -183,7 +184,8 @@ func TestProcessAttestations(t *testing.T) {
 
 	committee, err := helpers.BeaconCommitteeFromState(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
 	require.NoError(t, err)
-	indices := attestationutil.AttestingIndices(att1.AggregationBits, committee)
+	indices, err := attestationutil.AttestingIndices(att1.AggregationBits, committee)
+	require.NoError(t, err)
 	for _, i := range indices {
 		if !pVals[i].IsPrevEpochAttester {
 			t.Error("Not a prev epoch attester")
@@ -191,7 +193,8 @@ func TestProcessAttestations(t *testing.T) {
 	}
 	committee, err = helpers.BeaconCommitteeFromState(beaconState, att2.Data.Slot, att2.Data.CommitteeIndex)
 	require.NoError(t, err)
-	indices = attestationutil.AttestingIndices(att2.AggregationBits, committee)
+	indices, err = attestationutil.AttestingIndices(att2.AggregationBits, committee)
+	require.NoError(t, err)
 	for _, i := range indices {
 		assert.Equal(t, true, pVals[i].IsPrevEpochAttester, "Not a prev epoch attester")
 		assert.Equal(t, true, pVals[i].IsPrevEpochTargetAttester, "Not a prev epoch target attester")

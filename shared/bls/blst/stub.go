@@ -51,7 +51,7 @@ func (p PublicKey) Aggregate(_ common.PublicKey) common.PublicKey {
 }
 
 // IsInfinite -- stub
-func (s PublicKey) IsInfinite() bool {
+func (p PublicKey) IsInfinite() bool {
 	panic(err)
 }
 

@@ -12,14 +12,15 @@ import (
 	"github.com/logrusorgru/aurora"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
@@ -51,11 +52,11 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 			"remote wallets cannot backup accounts",
 		)
 	}
-	km, err := w.InitializeKeymanager(cliCtx.Context)
+	km, err := w.InitializeKeymanager(cliCtx.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
 	if err != nil {
-		return errors.Wrap(err, "could not initialize keymanager")
+		return errors.Wrap(err, ErrCouldNotInitializeKeymanager)
 	}
-	pubKeys, err := km.FetchAllValidatingPublicKeys(cliCtx.Context)
+	pubKeys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating public keys")
 	}
@@ -114,13 +115,13 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 	case keymanager.Remote:
 		return errors.New("backing up keys is not supported for a remote keymanager")
 	default:
-		return errors.New("keymanager kind not supported")
+		return fmt.Errorf(errKeymanagerNotSupported, w.KeymanagerKind())
 	}
 	return zipKeystoresToOutputDir(keystoresToBackup, backupDir)
 }
 
 // Ask user to select accounts via an interactive prompt.
-func selectAccounts(selectionPrompt string, pubKeys [][48]byte) ([]bls.PublicKey, error) {
+func selectAccounts(selectionPrompt string, pubKeys [][48]byte) (filteredPubKeys []bls.PublicKey, err error) {
 	pubKeyStrings := make([]string, len(pubKeys))
 	for i, pk := range pubKeys {
 		name := petnames.DeterministicName(pk[:], "-")
@@ -138,19 +139,18 @@ func selectAccounts(selectionPrompt string, pubKeys [][48]byte) ([]bls.PublicKey
 {{ "Name:" | faint }}	{{ .Name }}`,
 	}
 	var result string
-	var err error
 	exit := "Done selecting"
 	results := make([]int, 0)
 	au := aurora.NewAurora(true)
 	for result != exit {
-		prompt := promptui.Select{
+		p := promptui.Select{
 			Label:        selectionPrompt,
 			HideSelected: true,
 			Items:        append([]string{exit, allAccountsText}, pubKeyStrings...),
 			Templates:    templates,
 		}
 
-		_, result, err = prompt.Run()
+		_, result, err = p.Run()
 		if err != nil {
 			return nil, err
 		}
@@ -184,7 +184,7 @@ func selectAccounts(selectionPrompt string, pubKeys [][48]byte) ([]bls.PublicKey
 	}
 
 	// Filter the public keys based on user input.
-	filteredPubKeys := make([]bls.PublicKey, 0)
+	filteredPubKeys = make([]bls.PublicKey, 0)
 	for selectedIndex := range seen {
 		pk, err := bls.PublicKeyFromBytes(pubKeys[selectedIndex][:])
 		if err != nil {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -21,10 +22,10 @@ import (
 const pubKeyErr = "could not convert bytes to public key"
 
 func TestProcessDeposit_OK(t *testing.T) {
-	beaconDB, _ := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndPoint: endpoint,
-		BeaconDB:     beaconDB,
+		HTTPEndpoints: []string{endpoint},
+		BeaconDB:      beaconDB,
 	})
 	require.NoError(t, err, "Unable to setup web3 ETH1.0 chain service")
 
@@ -45,10 +46,10 @@ func TestProcessDeposit_OK(t *testing.T) {
 }
 
 func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
-	beaconDB, _ := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndPoint: endpoint,
-		BeaconDB:     beaconDB,
+		HTTPEndpoints: []string{endpoint},
+		BeaconDB:      beaconDB,
 	})
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
@@ -71,10 +72,10 @@ func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
 
 func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 	hook := logTest.NewGlobal()
-	beaconDB, _ := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndPoint: endpoint,
-		BeaconDB:     beaconDB,
+		HTTPEndpoints: []string{endpoint},
+		BeaconDB:      beaconDB,
 	})
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
@@ -107,10 +108,10 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 
 func TestProcessDeposit_InvalidSignature(t *testing.T) {
 	hook := logTest.NewGlobal()
-	beaconDB, _ := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndPoint: endpoint,
-		BeaconDB:     beaconDB,
+		HTTPEndpoints: []string{endpoint},
+		BeaconDB:      beaconDB,
 	})
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
@@ -142,10 +143,10 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 
 func TestProcessDeposit_UnableToVerify(t *testing.T) {
 	hook := logTest.NewGlobal()
-	beaconDB, _ := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndPoint: endpoint,
-		BeaconDB:     beaconDB,
+		HTTPEndpoints: []string{endpoint},
+		BeaconDB:      beaconDB,
 	})
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
@@ -175,10 +176,10 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 }
 
 func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
-	beaconDB, _ := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndPoint: endpoint,
-		BeaconDB:     beaconDB,
+		HTTPEndpoints: []string{endpoint},
+		BeaconDB:      beaconDB,
 	})
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
@@ -236,10 +237,10 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 }
 
 func TestProcessDeposit_AllDepositedSuccessfully(t *testing.T) {
-	beaconDB, _ := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndPoint: endpoint,
-		BeaconDB:     beaconDB,
+		HTTPEndpoints: []string{endpoint},
+		BeaconDB:      beaconDB,
 	})
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
@@ -259,7 +260,7 @@ func TestProcessDeposit_AllDepositedSuccessfully(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, uint64(i+1), valCount, "Did not get correct active validator count")
 
-		val, err := web3Service.preGenesisState.ValidatorAtIndex(uint64(i))
+		val, err := web3Service.preGenesisState.ValidatorAtIndex(types.ValidatorIndex(i))
 		require.NoError(t, err)
 		assert.Equal(t, params.BeaconConfig().MaxEffectiveBalance, val.EffectiveBalance)
 	}

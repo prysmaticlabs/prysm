@@ -6,6 +6,7 @@ import (
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/patrickmn/go-cache"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
@@ -25,7 +26,7 @@ var SubnetIDs = newSubnetIDs()
 func newSubnetIDs() *subnetIDs {
 	// Given a node can calculate committee assignments of current epoch and next epoch.
 	// Max size is set to 2 epoch length.
-	cacheSize := int(params.BeaconConfig().MaxCommitteesPerSlot * params.BeaconConfig().SlotsPerEpoch * 2)
+	cacheSize := int(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().MaxCommitteesPerSlot * 2))
 	attesterCache, err := lru.New(cacheSize)
 	if err != nil {
 		panic(err)
@@ -34,31 +35,31 @@ func newSubnetIDs() *subnetIDs {
 	if err != nil {
 		panic(err)
 	}
-	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot)
-	subLength := epochDuration * time.Duration(params.BeaconNetworkConfig().EpochsPerRandomSubnetSubscription)
+	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
+	subLength := epochDuration * time.Duration(params.BeaconConfig().EpochsPerRandomSubnetSubscription)
 	persistentCache := cache.New(subLength*time.Second, epochDuration*time.Second)
 	return &subnetIDs{attester: attesterCache, aggregator: aggregatorCache, persistentSubnets: persistentCache}
 }
 
 // AddAttesterSubnetID adds the subnet index for subscribing subnet for the attester of a given slot.
-func (c *subnetIDs) AddAttesterSubnetID(slot, subnetID uint64) {
-	c.attesterLock.Lock()
-	defer c.attesterLock.Unlock()
+func (s *subnetIDs) AddAttesterSubnetID(slot types.Slot, subnetID uint64) {
+	s.attesterLock.Lock()
+	defer s.attesterLock.Unlock()
 
 	ids := []uint64{subnetID}
-	val, exists := c.attester.Get(slot)
+	val, exists := s.attester.Get(slot)
 	if exists {
 		ids = sliceutil.UnionUint64(append(val.([]uint64), ids...))
 	}
-	c.attester.Add(slot, ids)
+	s.attester.Add(slot, ids)
 }
 
 // GetAttesterSubnetIDs gets the subnet IDs for subscribed subnets for attesters of the slot.
-func (c *subnetIDs) GetAttesterSubnetIDs(slot uint64) []uint64 {
-	c.attesterLock.RLock()
-	defer c.attesterLock.RUnlock()
+func (s *subnetIDs) GetAttesterSubnetIDs(slot types.Slot) []uint64 {
+	s.attesterLock.RLock()
+	defer s.attesterLock.RUnlock()
 
-	val, exists := c.attester.Get(slot)
+	val, exists := s.attester.Get(slot)
 	if !exists {
 		return nil
 	}
@@ -69,24 +70,24 @@ func (c *subnetIDs) GetAttesterSubnetIDs(slot uint64) []uint64 {
 }
 
 // AddAggregatorSubnetID adds the subnet ID for subscribing subnet for the aggregator of a given slot.
-func (c *subnetIDs) AddAggregatorSubnetID(slot, subnetID uint64) {
-	c.aggregatorLock.Lock()
-	defer c.aggregatorLock.Unlock()
+func (s *subnetIDs) AddAggregatorSubnetID(slot types.Slot, subnetID uint64) {
+	s.aggregatorLock.Lock()
+	defer s.aggregatorLock.Unlock()
 
 	ids := []uint64{subnetID}
-	val, exists := c.aggregator.Get(slot)
+	val, exists := s.aggregator.Get(slot)
 	if exists {
 		ids = sliceutil.UnionUint64(append(val.([]uint64), ids...))
 	}
-	c.aggregator.Add(slot, ids)
+	s.aggregator.Add(slot, ids)
 }
 
 // GetAggregatorSubnetIDs gets the subnet IDs for subscribing subnet for aggregator of the slot.
-func (c *subnetIDs) GetAggregatorSubnetIDs(slot uint64) []uint64 {
-	c.aggregatorLock.RLock()
-	defer c.aggregatorLock.RUnlock()
+func (s *subnetIDs) GetAggregatorSubnetIDs(slot types.Slot) []uint64 {
+	s.aggregatorLock.RLock()
+	defer s.aggregatorLock.RUnlock()
 
-	val, exists := c.aggregator.Get(slot)
+	val, exists := s.aggregator.Get(slot)
 	if !exists {
 		return []uint64{}
 	}
@@ -95,11 +96,11 @@ func (c *subnetIDs) GetAggregatorSubnetIDs(slot uint64) []uint64 {
 
 // GetPersistentSubnets retrieves the persistent subnet and expiration time of that validator's
 // subscription.
-func (c *subnetIDs) GetPersistentSubnets(pubkey []byte) ([]uint64, bool, time.Time) {
-	c.subnetsLock.RLock()
-	defer c.subnetsLock.RUnlock()
+func (s *subnetIDs) GetPersistentSubnets(pubkey []byte) ([]uint64, bool, time.Time) {
+	s.subnetsLock.RLock()
+	defer s.subnetsLock.RUnlock()
 
-	id, duration, ok := c.persistentSubnets.GetWithExpiration(string(pubkey))
+	id, duration, ok := s.persistentSubnets.GetWithExpiration(string(pubkey))
 	if !ok {
 		return []uint64{}, ok, time.Time{}
 	}
@@ -108,11 +109,11 @@ func (c *subnetIDs) GetPersistentSubnets(pubkey []byte) ([]uint64, bool, time.Ti
 
 // GetAllSubnets retrieves all the non-expired subscribed subnets of all the validators
 // in the cache.
-func (c *subnetIDs) GetAllSubnets() []uint64 {
-	c.subnetsLock.RLock()
-	defer c.subnetsLock.RUnlock()
+func (s *subnetIDs) GetAllSubnets() []uint64 {
+	s.subnetsLock.RLock()
+	defer s.subnetsLock.RUnlock()
 
-	itemsMap := c.persistentSubnets.Items()
+	itemsMap := s.persistentSubnets.Items()
 	var committees []uint64
 
 	for _, v := range itemsMap {
@@ -126,9 +127,28 @@ func (c *subnetIDs) GetAllSubnets() []uint64 {
 
 // AddPersistentCommittee adds the relevant committee for that particular validator along with its
 // expiration period.
-func (c *subnetIDs) AddPersistentCommittee(pubkey []byte, comIndex []uint64, duration time.Duration) {
-	c.subnetsLock.Lock()
-	defer c.subnetsLock.Unlock()
+func (s *subnetIDs) AddPersistentCommittee(pubkey []byte, comIndex []uint64, duration time.Duration) {
+	s.subnetsLock.Lock()
+	defer s.subnetsLock.Unlock()
 
-	c.persistentSubnets.Set(string(pubkey), comIndex, duration)
+	s.persistentSubnets.Set(string(pubkey), comIndex, duration)
+}
+
+// EmptyAllCaches empties out all the related caches and flushes any stored
+// entries on them. This should only ever be used for testing, in normal
+// production, handling of the relevant subnets for each role is done
+// separately.
+func (s *subnetIDs) EmptyAllCaches() {
+	// Clear the caches.
+	s.attesterLock.Lock()
+	s.attester.Purge()
+	s.attesterLock.Unlock()
+
+	s.aggregatorLock.Lock()
+	s.aggregator.Purge()
+	s.aggregatorLock.Unlock()
+
+	s.subnetsLock.Lock()
+	s.persistentSubnets.Flush()
+	s.subnetsLock.Unlock()
 }

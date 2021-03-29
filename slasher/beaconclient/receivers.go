@@ -24,10 +24,10 @@ var reconnectPeriod = 5 * time.Second
 // ReceiveBlocks starts a gRPC client stream listener to obtain
 // blocks from the beacon node. Upon receiving a block, the service
 // broadcasts it to a feed for other services in slasher to subscribe to.
-func (bs *Service) ReceiveBlocks(ctx context.Context) {
+func (s *Service) ReceiveBlocks(ctx context.Context) {
 	ctx, span := trace.StartSpan(ctx, "beaconclient.ReceiveBlocks")
 	defer span.End()
-	stream, err := bs.beaconClient.StreamBlocks(ctx, &ptypes.Empty{})
+	stream, err := s.cfg.BeaconClient.StreamBlocks(ctx, &ethpb.StreamBlocksRequest{} /* Prefers unverified block to catch slashing */)
 	if err != nil {
 		log.WithError(err).Error("Failed to retrieve blocks stream")
 		return
@@ -48,12 +48,12 @@ func (bs *Service) ReceiveBlocks(ctx context.Context) {
 				switch e.Code() {
 				case codes.Canceled, codes.Internal, codes.Unavailable:
 					log.WithError(err).Infof("Trying to restart connection. rpc status: %v", e.Code())
-					err = bs.restartBeaconConnection(ctx)
+					err = s.restartBeaconConnection(ctx)
 					if err != nil {
 						log.WithError(err).Error("Could not restart beacon connection")
 						return
 					}
-					stream, err = bs.beaconClient.StreamBlocks(ctx, &ptypes.Empty{})
+					stream, err = s.cfg.BeaconClient.StreamBlocks(ctx, &ethpb.StreamBlocksRequest{} /* Prefers unverified block to catch slashing */)
 					if err != nil {
 						log.WithError(err).Error("Could not restart block stream")
 						return
@@ -83,23 +83,23 @@ func (bs *Service) ReceiveBlocks(ctx context.Context) {
 			"root":           fmt.Sprintf("%#x...", root[:8]),
 		}).Info("Received block from beacon node")
 		// We send the received block over the block feed.
-		bs.blockFeed.Send(res)
+		s.blockFeed.Send(res)
 	}
 }
 
 // ReceiveAttestations starts a gRPC client stream listener to obtain
 // attestations from the beacon node. Upon receiving an attestation, the service
 // broadcasts it to a feed for other services in slasher to subscribe to.
-func (bs *Service) ReceiveAttestations(ctx context.Context) {
+func (s *Service) ReceiveAttestations(ctx context.Context) {
 	ctx, span := trace.StartSpan(ctx, "beaconclient.ReceiveAttestations")
 	defer span.End()
-	stream, err := bs.beaconClient.StreamIndexedAttestations(ctx, &ptypes.Empty{})
+	stream, err := s.cfg.BeaconClient.StreamIndexedAttestations(ctx, &ptypes.Empty{})
 	if err != nil {
 		log.WithError(err).Error("Failed to retrieve attestations stream")
 		return
 	}
 
-	go bs.collectReceivedAttestations(ctx)
+	go s.collectReceivedAttestations(ctx)
 	for {
 		res, err := stream.Recv()
 		// If the stream is closed, we stop the loop.
@@ -117,12 +117,12 @@ func (bs *Service) ReceiveAttestations(ctx context.Context) {
 				switch e.Code() {
 				case codes.Canceled, codes.Internal, codes.Unavailable:
 					log.WithError(err).Infof("Trying to restart connection. rpc status: %v", e.Code())
-					err = bs.restartBeaconConnection(ctx)
+					err = s.restartBeaconConnection(ctx)
 					if err != nil {
 						log.WithError(err).Error("Could not restart beacon connection")
 						return
 					}
-					stream, err = bs.beaconClient.StreamIndexedAttestations(ctx, &ptypes.Empty{})
+					stream, err = s.cfg.BeaconClient.StreamIndexedAttestations(ctx, &ptypes.Empty{})
 					if err != nil {
 						log.WithError(err).Error("Could not restart attestation stream")
 						return
@@ -140,11 +140,11 @@ func (bs *Service) ReceiveAttestations(ctx context.Context) {
 		if res == nil {
 			continue
 		}
-		bs.receivedAttestationsBuffer <- res
+		s.receivedAttestationsBuffer <- res
 	}
 }
 
-func (bs *Service) collectReceivedAttestations(ctx context.Context) {
+func (s *Service) collectReceivedAttestations(ctx context.Context) {
 	ctx, span := trace.StartSpan(ctx, "beaconclient.collectReceivedAttestations")
 	defer span.End()
 
@@ -156,13 +156,13 @@ func (bs *Service) collectReceivedAttestations(ctx context.Context) {
 		select {
 		case <-ticker.C:
 			if len(atts) > 0 {
-				bs.collectedAttestationsBuffer <- atts
+				s.collectedAttestationsBuffer <- atts
 				atts = []*ethpb.IndexedAttestation{}
 			}
-		case att := <-bs.receivedAttestationsBuffer:
+		case att := <-s.receivedAttestationsBuffer:
 			atts = append(atts, att)
-		case collectedAtts := <-bs.collectedAttestationsBuffer:
-			if err := bs.slasherDB.SaveIndexedAttestations(ctx, collectedAtts); err != nil {
+		case collectedAtts := <-s.collectedAttestationsBuffer:
+			if err := s.cfg.SlasherDB.SaveIndexedAttestations(ctx, collectedAtts); err != nil {
 				log.WithError(err).Error("Could not save indexed attestation")
 				continue
 			}
@@ -178,7 +178,7 @@ func (bs *Service) collectReceivedAttestations(ctx context.Context) {
 					"slot":    att.Data.Slot,
 					"indices": att.AttestingIndices,
 				}).Debug("Sending attestation to detection service")
-				bs.attestationFeed.Send(att)
+				s.attestationFeed.Send(att)
 			}
 		case <-ctx.Done():
 			return
@@ -186,23 +186,23 @@ func (bs *Service) collectReceivedAttestations(ctx context.Context) {
 	}
 }
 
-func (bs *Service) restartBeaconConnection(ctx context.Context) error {
+func (s *Service) restartBeaconConnection(ctx context.Context) error {
 	ticker := time.NewTicker(reconnectPeriod)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
-			if bs.conn.GetState() == connectivity.TransientFailure || bs.conn.GetState() == connectivity.Idle {
-				log.Debugf("Connection status %v", bs.conn.GetState())
+			if s.conn.GetState() == connectivity.TransientFailure || s.conn.GetState() == connectivity.Idle {
+				log.Debugf("Connection status %v", s.conn.GetState())
 				log.Info("Beacon node is still down")
 				continue
 			}
-			status, err := bs.nodeClient.GetSyncStatus(ctx, &ptypes.Empty{})
+			s, err := s.cfg.NodeClient.GetSyncStatus(ctx, &ptypes.Empty{})
 			if err != nil {
 				log.WithError(err).Error("Could not fetch sync status")
 				continue
 			}
-			if status == nil || status.Syncing {
+			if s == nil || s.Syncing {
 				log.Info("Waiting for beacon node to be fully synced...")
 				continue
 			}

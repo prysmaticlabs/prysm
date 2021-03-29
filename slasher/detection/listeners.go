@@ -18,10 +18,10 @@ import (
 // block objects from a notifier interface. Upon receiving
 // a signed beacon block from the feed, we run proposer slashing
 // detection on the block.
-func (ds *Service) detectIncomingBlocks(ctx context.Context, ch chan *ethpb.SignedBeaconBlock) {
+func (s *Service) detectIncomingBlocks(ctx context.Context, ch chan *ethpb.SignedBeaconBlock) {
 	ctx, span := trace.StartSpan(ctx, "detection.detectIncomingBlocks")
 	defer span.End()
-	sub := ds.notifier.BlockFeed().Subscribe(ch)
+	sub := s.cfg.Notifier.BlockFeed().Subscribe(ch)
 	defer sub.Unsubscribe()
 	for {
 		select {
@@ -31,12 +31,12 @@ func (ds *Service) detectIncomingBlocks(ctx context.Context, ch chan *ethpb.Sign
 				log.WithError(err).Error("Could not get block header from block")
 				continue
 			}
-			slashing, err := ds.proposalsDetector.DetectDoublePropose(ctx, signedBlkHdr)
+			slashing, err := s.proposalsDetector.DetectDoublePropose(ctx, signedBlkHdr)
 			if err != nil {
 				log.WithError(err).Error("Could not perform detection on block header")
 				continue
 			}
-			ds.submitProposerSlashing(ctx, slashing)
+			s.submitProposerSlashing(ctx, slashing)
 		case <-sub.Err():
 			log.Error("Subscriber closed, exiting goroutine")
 			return
@@ -51,27 +51,27 @@ func (ds *Service) detectIncomingBlocks(ctx context.Context, ch chan *ethpb.Sign
 // attestation objects from a notifier interface. Upon receiving
 // an attestation from the feed, we run surround vote and double vote
 // detection on the attestation.
-func (ds *Service) detectIncomingAttestations(ctx context.Context, ch chan *ethpb.IndexedAttestation) {
+func (s *Service) detectIncomingAttestations(ctx context.Context, ch chan *ethpb.IndexedAttestation) {
 	ctx, span := trace.StartSpan(ctx, "detection.detectIncomingAttestations")
 	defer span.End()
-	sub := ds.notifier.AttestationFeed().Subscribe(ch)
+	sub := s.cfg.Notifier.AttestationFeed().Subscribe(ch)
 	defer sub.Unsubscribe()
 	for {
 		select {
 		case indexedAtt := <-ch:
-			slashings, err := ds.DetectAttesterSlashings(ctx, indexedAtt)
+			slashings, err := s.DetectAttesterSlashings(ctx, indexedAtt)
 			if err != nil {
 				log.WithError(err).Error("Could not detect attester slashings")
 				continue
 			}
 			if len(slashings) < 1 {
-				if err := ds.minMaxSpanDetector.UpdateSpans(ctx, indexedAtt); err != nil {
+				if err := s.minMaxSpanDetector.UpdateSpans(ctx, indexedAtt); err != nil {
 					log.WithError(err).Error("Could not update spans")
 				}
 			}
-			ds.submitAttesterSlashings(ctx, slashings)
+			s.submitAttesterSlashings(ctx, slashings)
 
-			if err := ds.UpdateHighestAttestation(ctx, indexedAtt); err != nil {
+			if err := s.UpdateHighestAttestation(ctx, indexedAtt); err != nil {
 				log.WithError(err).Error("Could not update highest attestation")
 			}
 		case <-sub.Err():

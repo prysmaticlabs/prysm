@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -33,7 +32,7 @@ func TestBeaconBlockHeaderFromBlock(t *testing.T) {
 			VoluntaryExits:    []*eth.SignedVoluntaryExit{},
 		},
 	}
-	bodyRoot, err := stateutil.BlockBodyRoot(blk.Body)
+	bodyRoot, err := blk.Body.HashTreeRoot()
 	require.NoError(t, err)
 	want := &eth.BeaconBlockHeader{
 		Slot:          blk.Slot,
@@ -46,6 +45,18 @@ func TestBeaconBlockHeaderFromBlock(t *testing.T) {
 	bh, err := BeaconBlockHeaderFromBlock(blk)
 	require.NoError(t, err)
 	assert.DeepEqual(t, want, bh)
+}
+
+func TestBeaconBlockHeaderFromBlock_NilBlockBody(t *testing.T) {
+	hashLen := 32
+	blk := &eth.BeaconBlock{
+		Slot:          200,
+		ProposerIndex: 2,
+		ParentRoot:    bytesutil.PadTo([]byte("parent root"), hashLen),
+		StateRoot:     bytesutil.PadTo([]byte("state root"), hashLen),
+	}
+	_, err := BeaconBlockHeaderFromBlock(blk)
+	require.ErrorContains(t, "nil block body", err)
 }
 
 func TestSignedBeaconBlockHeaderFromBlock(t *testing.T) {
@@ -72,7 +83,7 @@ func TestSignedBeaconBlockHeaderFromBlock(t *testing.T) {
 	},
 		Signature: bytesutil.PadTo([]byte("signature"), params.BeaconConfig().BLSSignatureLength),
 	}
-	bodyRoot, err := stateutil.BlockBodyRoot(blk.Block.Body)
+	bodyRoot, err := blk.Block.Body.HashTreeRoot()
 	require.NoError(t, err)
 	want := &eth.SignedBeaconBlockHeader{Header: &eth.BeaconBlockHeader{
 		Slot:          blk.Block.Slot,
@@ -87,4 +98,18 @@ func TestSignedBeaconBlockHeaderFromBlock(t *testing.T) {
 	bh, err := SignedBeaconBlockHeaderFromBlock(blk)
 	require.NoError(t, err)
 	assert.DeepEqual(t, want, bh)
+}
+
+func TestSignedBeaconBlockHeaderFromBlock_NilBlockBody(t *testing.T) {
+	hashLen := 32
+	blk := &eth.SignedBeaconBlock{Block: &eth.BeaconBlock{
+		Slot:          200,
+		ProposerIndex: 2,
+		ParentRoot:    bytesutil.PadTo([]byte("parent root"), hashLen),
+		StateRoot:     bytesutil.PadTo([]byte("state root"), hashLen),
+	},
+		Signature: bytesutil.PadTo([]byte("signature"), params.BeaconConfig().BLSSignatureLength),
+	}
+	_, err := SignedBeaconBlockHeaderFromBlock(blk)
+	require.ErrorContains(t, "nil block", err)
 }

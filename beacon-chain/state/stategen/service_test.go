@@ -4,9 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -16,9 +14,9 @@ import (
 
 func TestResume(t *testing.T) {
 	ctx := context.Background()
-	db, _ := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(beaconDB)
 	b := testutil.NewBeaconBlock()
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, b))
 	root, err := b.Block.HashTreeRoot()
@@ -31,10 +29,7 @@ func TestResume(t *testing.T) {
 
 	resumeState, err := service.Resume(ctx)
 	require.NoError(t, err)
-
-	if !proto.Equal(beaconState.InnerStateUnsafe(), resumeState.InnerStateUnsafe()) {
-		t.Error("Diff saved state")
-	}
+	require.DeepSSZEqual(t, beaconState.InnerStateUnsafe(), resumeState.InnerStateUnsafe())
 	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch, service.finalizedInfo.slot, "Did not get watned slot")
 	assert.Equal(t, service.finalizedInfo.root, root, "Did not get wanted root")
 	assert.NotNil(t, service.finalizedState(), "Wanted a non nil finalized state")

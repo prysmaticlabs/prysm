@@ -4,6 +4,7 @@
 package node
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -13,6 +14,7 @@ import (
 	"syscall"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/backuputil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -25,26 +27,27 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
+	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
-	"github.com/prysmaticlabs/prysm/validator/flags"
 	g "github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/rpc"
 	"github.com/prysmaticlabs/prysm/validator/rpc/gateway"
-	slashing_protection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
+	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
-
-var log = logrus.WithField("prefix", "node")
 
 // ValidatorClient defines an instance of an eth2 validator that manages
 // the entire lifecycle of services attached to it participating in eth2.
 type ValidatorClient struct {
 	cliCtx            *cli.Context
+	ctx               context.Context
+	cancel            context.CancelFunc
 	db                *kv.Store
 	services          *shared.ServiceRegistry // Lifecycle and service store.
 	lock              sync.RWMutex
@@ -53,7 +56,7 @@ type ValidatorClient struct {
 	stop              chan struct{} // Channel to wait for termination notifications.
 }
 
-// NewValidatorClient creates a new, Prysm validator client.
+// NewValidatorClient creates a new instance of the Prysm validator client.
 func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	if err := tracing.Setup(
 		"validator", // service name
@@ -76,8 +79,11 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	prereq.WarnIfNotSupported(cliCtx.Context)
 
 	registry := shared.NewServiceRegistry()
-	ValidatorClient := &ValidatorClient{
+	ctx, cancel := context.WithCancel(cliCtx.Context)
+	validatorClient := &ValidatorClient{
 		cliCtx:            cliCtx,
+		ctx:               ctx,
+		cancel:            cancel,
 		services:          registry,
 		walletInitialized: new(event.Feed),
 		stop:              make(chan struct{}),
@@ -95,10 +101,10 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	// client via a web portal, we start the validator client in a different way.
 	if cliCtx.IsSet(flags.EnableWebFlag.Name) {
 		log.Info("Enabling web portal to manage the validator client")
-		if err := ValidatorClient.initializeForWeb(cliCtx); err != nil {
+		if err := validatorClient.initializeForWeb(cliCtx); err != nil {
 			return nil, err
 		}
-		return ValidatorClient, nil
+		return validatorClient, nil
 	}
 
 	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
@@ -106,25 +112,25 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		params.LoadChainConfigFile(chainConfigFileName)
 	}
 
-	if err := ValidatorClient.initializeFromCLI(cliCtx); err != nil {
+	if err := validatorClient.initializeFromCLI(cliCtx); err != nil {
 		return nil, err
 	}
 
-	return ValidatorClient, nil
+	return validatorClient, nil
 }
 
 // Start every service in the validator client.
-func (s *ValidatorClient) Start() {
-	s.lock.Lock()
+func (c *ValidatorClient) Start() {
+	c.lock.Lock()
 
 	log.WithFields(logrus.Fields{
-		"version": version.GetVersion(),
+		"version": version.Version(),
 	}).Info("Starting validator node")
 
-	s.services.StartAll()
+	c.services.StartAll()
 
-	stop := s.stop
-	s.lock.Unlock()
+	stop := c.stop
+	c.lock.Unlock()
 
 	go func() {
 		sigc := make(chan os.Signal, 1)
@@ -132,8 +138,8 @@ func (s *ValidatorClient) Start() {
 		defer signal.Stop(sigc)
 		<-sigc
 		log.Info("Got interrupt, shutting down...")
-		debug.Exit(s.cliCtx) // Ensure trace and CPU profile data are flushed.
-		go s.Close()
+		debug.Exit(c.cliCtx) // Ensure trace and CPU profile data are flushed.
+		go c.Close()
 		for i := 10; i > 0; i-- {
 			<-sigc
 			if i > 1 {
@@ -148,16 +154,17 @@ func (s *ValidatorClient) Start() {
 }
 
 // Close handles graceful shutdown of the system.
-func (s *ValidatorClient) Close() {
-	s.lock.Lock()
-	defer s.lock.Unlock()
+func (c *ValidatorClient) Close() {
+	c.lock.Lock()
+	defer c.lock.Unlock()
 
-	s.services.StopAll()
+	c.services.StopAll()
 	log.Info("Stopping Prysm validator")
-	close(s.stop)
+	c.cancel()
+	close(c.stop)
 }
 
-func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
+func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	var keyManager keymanager.IKeymanager
 	var err error
 	if cliCtx.IsSet(flags.InteropNumValidators.Name) {
@@ -175,19 +182,19 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "could not open wallet")
 		}
-		s.wallet = w
+		c.wallet = w
 		log.WithFields(logrus.Fields{
 			"wallet":          w.AccountsDir(),
 			"keymanager-kind": w.KeymanagerKind().String(),
 		}).Info("Opened validator wallet")
-		keyManager, err = w.InitializeKeymanager(cliCtx.Context)
+		keyManager, err = w.InitializeKeymanager(cliCtx.Context, accountsiface.InitKeymanagerConfig{ListenForChanges: true})
 		if err != nil {
 			return errors.Wrap(err, "could not read keymanager for wallet")
 		}
 	}
 	dataDir := cliCtx.String(flags.WalletDirFlag.Name)
-	if s.wallet != nil {
-		dataDir = s.wallet.AccountsDir()
+	if c.wallet != nil {
+		dataDir = c.wallet.AccountsDir()
 	}
 	if cliCtx.String(cmd.DataDirFlag.Name) != cmd.DefaultDataDir() {
 		dataDir = cliCtx.String(cmd.DataDirFlag.Name)
@@ -195,17 +202,17 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 	if clearFlag || forceClearFlag {
-		if dataDir == "" && s.wallet != nil {
-			dataDir = s.wallet.AccountsDir()
+		if dataDir == "" && c.wallet != nil {
+			dataDir = c.wallet.AccountsDir()
 			if dataDir == "" {
 				log.Fatal(
-					"Could not determine your system's HOME path, please specify a --datadir you wish " +
+					"Could not determine your system'c HOME path, please specify a --datadir you wish " +
 						"to use for your validator data",
 				)
 			}
 
 		}
-		if err := clearDB(dataDir, forceClearFlag); err != nil {
+		if err := clearDB(cliCtx.Context, dataDir, forceClearFlag); err != nil {
 			return err
 		}
 	} else {
@@ -218,45 +225,51 @@ func (s *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	}
 	log.WithField("databasePath", dataDir).Info("Checking DB")
 
-	valDB, err := kv.NewKVStore(dataDir, nil)
+	valDB, err := kv.NewKVStore(cliCtx.Context, dataDir, &kv.Config{
+		PubKeys:         nil,
+		InitialMMapSize: cliCtx.Int(cmd.BoltMMapInitialSizeFlag.Name),
+	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize db")
 	}
-	s.db = valDB
+	c.db = valDB
+	if err := valDB.RunUpMigrations(cliCtx.Context); err != nil {
+		return errors.Wrap(err, "could not run database migration")
+	}
+
 	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
-		if err := s.registerPrometheusService(cliCtx); err != nil {
+		if err := c.registerPrometheusService(cliCtx); err != nil {
 			return err
 		}
 	}
 	if featureconfig.Get().SlasherProtection {
-		if err := s.registerSlasherClientService(); err != nil {
+		if err := c.registerSlasherService(); err != nil {
 			return err
 		}
 	}
-	if err := s.registerClientService(keyManager); err != nil {
+	if err := c.registerValidatorService(keyManager); err != nil {
 		return err
 	}
 	if cliCtx.Bool(flags.EnableRPCFlag.Name) {
-		if err := s.registerRPCService(cliCtx, keyManager); err != nil {
+		if err := c.registerRPCService(cliCtx, keyManager); err != nil {
 			return err
 		}
-		if err := s.registerRPCGatewayService(cliCtx); err != nil {
+		if err := c.registerRPCGatewayService(cliCtx); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
+func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	var keyManager keymanager.IKeymanager
 	var err error
-	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
-	defaultWalletPasswordFilePath := filepath.Join(walletDir, wallet.DefaultWalletPasswordFile)
-	if fileutil.FileExists(defaultWalletPasswordFilePath) {
-		if err := cliCtx.Set(flags.WalletPasswordFileFlag.Name, defaultWalletPasswordFilePath); err != nil {
-			return errors.Wrap(err, "could not set default wallet password file path")
-		}
+
+	// Read the wallet password file from the cli context.
+	if err = setWalletPasswordFilePath(cliCtx); err != nil {
+		return errors.Wrap(err, "could not read wallet password file")
 	}
+
 	// Read the wallet from the specified path.
 	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
 		return nil, nil
@@ -265,19 +278,19 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not open wallet")
 	}
 	if w != nil {
-		s.wallet = w
+		c.wallet = w
 		log.WithFields(logrus.Fields{
 			"wallet":          w.AccountsDir(),
 			"keymanager-kind": w.KeymanagerKind().String(),
 		}).Info("Opened validator wallet")
-		keyManager, err = w.InitializeKeymanager(cliCtx.Context)
+		keyManager, err = w.InitializeKeymanager(cliCtx.Context, accountsiface.InitKeymanagerConfig{ListenForChanges: true})
 		if err != nil {
 			return errors.Wrap(err, "could not read keymanager for wallet")
 		}
 	}
 	dataDir := cliCtx.String(flags.WalletDirFlag.Name)
-	if s.wallet != nil {
-		dataDir = s.wallet.AccountsDir()
+	if c.wallet != nil {
+		dataDir = c.wallet.AccountsDir()
 	}
 	if cliCtx.String(cmd.DataDirFlag.Name) != cmd.DefaultDataDir() {
 		dataDir = cliCtx.String(cmd.DataDirFlag.Name)
@@ -290,39 +303,46 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 			dataDir = cmd.DefaultDataDir()
 			if dataDir == "" {
 				log.Fatal(
-					"Could not determine your system's HOME path, please specify a --datadir you wish " +
+					"Could not determine your system'c HOME path, please specify a --datadir you wish " +
 						"to use for your validator data",
 				)
 			}
 
 		}
-		if err := clearDB(dataDir, forceClearFlag); err != nil {
+		if err := clearDB(cliCtx.Context, dataDir, forceClearFlag); err != nil {
 			return err
 		}
 	}
 	log.WithField("databasePath", dataDir).Info("Checking DB")
-	valDB, err := kv.NewKVStore(dataDir, make([][48]byte, 0))
+	valDB, err := kv.NewKVStore(cliCtx.Context, dataDir, &kv.Config{
+		PubKeys:         nil,
+		InitialMMapSize: cliCtx.Int(cmd.BoltMMapInitialSizeFlag.Name),
+	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize db")
 	}
-	s.db = valDB
+	c.db = valDB
+	if err := valDB.RunUpMigrations(cliCtx.Context); err != nil {
+		return errors.Wrap(err, "could not run database migration")
+	}
+
 	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
-		if err := s.registerPrometheusService(cliCtx); err != nil {
+		if err := c.registerPrometheusService(cliCtx); err != nil {
 			return err
 		}
 	}
 	if featureconfig.Get().SlasherProtection {
-		if err := s.registerSlasherClientService(); err != nil {
+		if err := c.registerSlasherService(); err != nil {
 			return err
 		}
 	}
-	if err := s.registerClientService(keyManager); err != nil {
+	if err := c.registerValidatorService(keyManager); err != nil {
 		return err
 	}
-	if err := s.registerRPCService(cliCtx, keyManager); err != nil {
+	if err := c.registerRPCService(cliCtx, keyManager); err != nil {
 		return err
 	}
-	if err := s.registerRPCGatewayService(cliCtx); err != nil {
+	if err := c.registerRPCGatewayService(cliCtx); err != nil {
 		return err
 	}
 	gatewayHost := cliCtx.String(flags.GRPCGatewayHost.Name)
@@ -334,55 +354,55 @@ func (s *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	return nil
 }
 
-func (s *ValidatorClient) registerPrometheusService(cliCtx *cli.Context) error {
+func (c *ValidatorClient) registerPrometheusService(cliCtx *cli.Context) error {
 	var additionalHandlers []prometheus.Handler
 	if cliCtx.IsSet(cmd.EnableBackupWebhookFlag.Name) {
 		additionalHandlers = append(
 			additionalHandlers,
 			prometheus.Handler{
 				Path:    "/db/backup",
-				Handler: backuputil.BackupHandler(s.db, cliCtx.String(cmd.BackupWebhookOutputDir.Name)),
+				Handler: backuputil.BackupHandler(c.db, cliCtx.String(cmd.BackupWebhookOutputDir.Name)),
 			},
 		)
 	}
 	service := prometheus.NewService(
-		fmt.Sprintf("%s:%d", s.cliCtx.String(cmd.MonitoringHostFlag.Name), s.cliCtx.Int(flags.MonitoringPortFlag.Name)),
-		s.services,
+		fmt.Sprintf("%s:%d", c.cliCtx.String(cmd.MonitoringHostFlag.Name), c.cliCtx.Int(flags.MonitoringPortFlag.Name)),
+		c.services,
 		additionalHandlers...,
 	)
 	logrus.AddHook(prometheus.NewLogrusCollector())
-	return s.services.RegisterService(service)
+	return c.services.RegisterService(service)
 }
 
-func (s *ValidatorClient) registerClientService(
+func (c *ValidatorClient) registerValidatorService(
 	keyManager keymanager.IKeymanager,
 ) error {
-	endpoint := s.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
-	dataDir := s.cliCtx.String(cmd.DataDirFlag.Name)
-	logValidatorBalances := !s.cliCtx.Bool(flags.DisablePenaltyRewardLogFlag.Name)
-	emitAccountMetrics := !s.cliCtx.Bool(flags.DisableAccountMetricsFlag.Name)
-	cert := s.cliCtx.String(flags.CertFlag.Name)
-	graffiti := s.cliCtx.String(flags.GraffitiFlag.Name)
-	maxCallRecvMsgSize := s.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
-	grpcRetries := s.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
-	grpcRetryDelay := s.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
-	var sp *slashing_protection.Service
-	var protector slashing_protection.Protector
-	if err := s.services.FetchService(&sp); err == nil {
+	endpoint := c.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
+	dataDir := c.cliCtx.String(cmd.DataDirFlag.Name)
+	logValidatorBalances := !c.cliCtx.Bool(flags.DisablePenaltyRewardLogFlag.Name)
+	emitAccountMetrics := !c.cliCtx.Bool(flags.DisableAccountMetricsFlag.Name)
+	cert := c.cliCtx.String(flags.CertFlag.Name)
+	graffiti := c.cliCtx.String(flags.GraffitiFlag.Name)
+	maxCallRecvMsgSize := c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
+	grpcRetries := c.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
+	grpcRetryDelay := c.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
+	var sp *slashingprotection.Service
+	var protector iface.Protector
+	if err := c.services.FetchService(&sp); err == nil {
 		protector = sp
 	}
 
 	gStruct := &g.Graffiti{}
 	var err error
-	if s.cliCtx.IsSet(flags.GraffitiFileFlag.Name) {
-		n := s.cliCtx.String(flags.GraffitiFileFlag.Name)
+	if c.cliCtx.IsSet(flags.GraffitiFileFlag.Name) {
+		n := c.cliCtx.String(flags.GraffitiFileFlag.Name)
 		gStruct, err = g.ParseGraffitiFile(n)
 		if err != nil {
 			log.WithError(err).Warn("Could not parse graffiti file")
 		}
 	}
 
-	v, err := client.NewValidatorService(s.cliCtx.Context, &client.Config{
+	v, err := client.NewValidatorService(c.cliCtx.Context, &client.Config{
 		Endpoint:                   endpoint,
 		DataDir:                    dataDir,
 		KeyManager:                 keyManager,
@@ -393,46 +413,47 @@ func (s *ValidatorClient) registerClientService(
 		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
 		GrpcRetriesFlag:            grpcRetries,
 		GrpcRetryDelay:             grpcRetryDelay,
-		GrpcHeadersFlag:            s.cliCtx.String(flags.GrpcHeadersFlag.Name),
+		GrpcHeadersFlag:            c.cliCtx.String(flags.GrpcHeadersFlag.Name),
 		Protector:                  protector,
-		ValDB:                      s.db,
-		UseWeb:                     s.cliCtx.Bool(flags.EnableWebFlag.Name),
-		WalletInitializedFeed:      s.walletInitialized,
+		ValDB:                      c.db,
+		UseWeb:                     c.cliCtx.Bool(flags.EnableWebFlag.Name),
+		WalletInitializedFeed:      c.walletInitialized,
 		GraffitiStruct:             gStruct,
+		LogDutyCountDown:           c.cliCtx.Bool(flags.EnableDutyCountDown.Name),
 	})
 
 	if err != nil {
-		return errors.Wrap(err, "could not initialize client service")
+		return errors.Wrap(err, "could not initialize validator service")
 	}
-	return s.services.RegisterService(v)
+	return c.services.RegisterService(v)
 }
-func (s *ValidatorClient) registerSlasherClientService() error {
-	endpoint := s.cliCtx.String(flags.SlasherRPCProviderFlag.Name)
+func (c *ValidatorClient) registerSlasherService() error {
+	endpoint := c.cliCtx.String(flags.SlasherRPCProviderFlag.Name)
 	if endpoint == "" {
 		return errors.New("external slasher feature flag is set but no slasher endpoint is configured")
 
 	}
-	cert := s.cliCtx.String(flags.SlasherCertFlag.Name)
-	maxCallRecvMsgSize := s.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
-	grpcRetries := s.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
-	grpcRetryDelay := s.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
-	sp, err := slashing_protection.NewService(s.cliCtx.Context, &slashing_protection.Config{
+	cert := c.cliCtx.String(flags.SlasherCertFlag.Name)
+	maxCallRecvMsgSize := c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
+	grpcRetries := c.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
+	grpcRetryDelay := c.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
+	sp, err := slashingprotection.NewService(c.cliCtx.Context, &slashingprotection.Config{
 		Endpoint:                   endpoint,
 		CertFlag:                   cert,
 		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
 		GrpcRetriesFlag:            grpcRetries,
 		GrpcRetryDelay:             grpcRetryDelay,
-		GrpcHeadersFlag:            s.cliCtx.String(flags.GrpcHeadersFlag.Name),
+		GrpcHeadersFlag:            c.cliCtx.String(flags.GrpcHeadersFlag.Name),
 	})
 	if err != nil {
-		return errors.Wrap(err, "could not initialize client service")
+		return errors.Wrap(err, "could not initialize slasher service")
 	}
-	return s.services.RegisterService(sp)
+	return c.services.RegisterService(sp)
 }
 
-func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context, km keymanager.IKeymanager) error {
+func (c *ValidatorClient) registerRPCService(cliCtx *cli.Context, km keymanager.IKeymanager) error {
 	var vs *client.ValidatorService
-	if err := s.services.FetchService(&vs); err != nil {
+	if err := c.services.FetchService(&vs); err != nil {
 		return err
 	}
 	validatorGatewayHost := cliCtx.String(flags.GRPCGatewayHost.Name)
@@ -442,29 +463,40 @@ func (s *ValidatorClient) registerRPCService(cliCtx *cli.Context, km keymanager.
 	rpcHost := cliCtx.String(flags.RPCHost.Name)
 	rpcPort := cliCtx.Int(flags.RPCPort.Name)
 	nodeGatewayEndpoint := cliCtx.String(flags.BeaconRPCGatewayProviderFlag.Name)
+	beaconClientEndpoint := cliCtx.String(flags.BeaconRPCProviderFlag.Name)
+	maxCallRecvMsgSize := c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
+	grpcRetries := c.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
+	grpcRetryDelay := c.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
 	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
+	grpcHeaders := c.cliCtx.String(flags.GrpcHeadersFlag.Name)
+	clientCert := c.cliCtx.String(flags.CertFlag.Name)
 	server := rpc.NewServer(cliCtx.Context, &rpc.Config{
-		ValDB:                   s.db,
-		Host:                    rpcHost,
-		Port:                    fmt.Sprintf("%d", rpcPort),
-		WalletInitializedFeed:   s.walletInitialized,
-		ValidatorService:        vs,
-		SyncChecker:             vs,
-		GenesisFetcher:          vs,
-		BeaconNodeInfoFetcher:   vs,
-		NodeGatewayEndpoint:     nodeGatewayEndpoint,
-		WalletDir:               walletDir,
-		Wallet:                  s.wallet,
-		Keymanager:              km,
-		ValidatorGatewayHost:    validatorGatewayHost,
-		ValidatorGatewayPort:    validatorGatewayPort,
-		ValidatorMonitoringHost: validatorMonitoringHost,
-		ValidatorMonitoringPort: validatorMonitoringPort,
+		ValDB:                    c.db,
+		Host:                     rpcHost,
+		Port:                     fmt.Sprintf("%d", rpcPort),
+		WalletInitializedFeed:    c.walletInitialized,
+		ValidatorService:         vs,
+		SyncChecker:              vs,
+		GenesisFetcher:           vs,
+		NodeGatewayEndpoint:      nodeGatewayEndpoint,
+		WalletDir:                walletDir,
+		Wallet:                   c.wallet,
+		Keymanager:               km,
+		ValidatorGatewayHost:     validatorGatewayHost,
+		ValidatorGatewayPort:     validatorGatewayPort,
+		ValidatorMonitoringHost:  validatorMonitoringHost,
+		ValidatorMonitoringPort:  validatorMonitoringPort,
+		BeaconClientEndpoint:     beaconClientEndpoint,
+		ClientMaxCallRecvMsgSize: maxCallRecvMsgSize,
+		ClientGrpcRetries:        grpcRetries,
+		ClientGrpcRetryDelay:     grpcRetryDelay,
+		ClientGrpcHeaders:        strings.Split(grpcHeaders, ","),
+		ClientWithCert:           clientCert,
 	})
-	return s.services.RegisterService(server)
+	return c.services.RegisterService(server)
 }
 
-func (s *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
+func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 	gatewayHost := cliCtx.String(flags.GRPCGatewayHost.Name)
 	if gatewayHost != flags.DefaultGatewayHost {
 		log.WithField("web-host", gatewayHost).Warn(
@@ -484,10 +516,34 @@ func (s *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		gatewayAddress,
 		allowedOrigins,
 	)
-	return s.services.RegisterService(gatewaySrv)
+	return c.services.RegisterService(gatewaySrv)
 }
 
-func clearDB(dataDir string, force bool) error {
+func setWalletPasswordFilePath(cliCtx *cli.Context) error {
+	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
+	defaultWalletPasswordFilePath := filepath.Join(walletDir, wallet.DefaultWalletPasswordFile)
+	if fileutil.FileExists(defaultWalletPasswordFilePath) {
+		// Ensure file has proper permissions.
+		hasPerms, err := fileutil.HasReadWritePermissions(defaultWalletPasswordFilePath)
+		if err != nil {
+			return err
+		}
+		if !hasPerms {
+			return fmt.Errorf(
+				"wallet password file %s does not have proper 0600 permissions",
+				defaultWalletPasswordFilePath,
+			)
+		}
+
+		// Set the filepath into the cli context.
+		if err := cliCtx.Set(flags.WalletPasswordFileFlag.Name, defaultWalletPasswordFilePath); err != nil {
+			return errors.Wrap(err, "could not set default wallet password file path")
+		}
+	}
+	return nil
+}
+
+func clearDB(ctx context.Context, dataDir string, force bool) error {
 	var err error
 	clearDBConfirmed := force
 
@@ -502,7 +558,7 @@ func clearDB(dataDir string, force bool) error {
 	}
 
 	if clearDBConfirmed {
-		valDB, err := kv.NewKVStore(dataDir, nil)
+		valDB, err := kv.NewKVStore(ctx, dataDir, &kv.Config{})
 		if err != nil {
 			return errors.Wrapf(err, "Could not create DB in dir %s", dataDir)
 		}

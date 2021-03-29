@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
-	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -23,7 +23,7 @@ func runFinalUpdatesTests(t *testing.T, config string) {
 	}
 }
 
-func processFinalUpdatesWrapper(t *testing.T, state *beaconstate.BeaconState) (*beaconstate.BeaconState, error) {
+func processFinalUpdatesWrapper(t *testing.T, state iface.BeaconState) (iface.BeaconState, error) {
 	state, err := epoch.ProcessFinalUpdates(state)
 	require.NoError(t, err, "Could not process final updates")
 	return state, nil

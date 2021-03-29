@@ -6,6 +6,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -14,18 +15,6 @@ import (
 )
 
 var (
-	// AttestationMapMiss used to track the success rate of historical
-	// attestation map for slashing detection flow.
-	AttestationMapHit = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "attestation_history_map_hit",
-		Help: "The number of attestation history calls that are present in the map.",
-	})
-	// AttestationMapMiss used to track the use of the fallback db read when
-	// attestation map is being mutated while being used in the slashing detection flow.
-	AttestationMapMiss = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "attestation_history_map_miss",
-		Help: "The number of attestation history calls that are'nt present in the map.",
-	})
 	// ValidatorStatusesGaugeVec used to track validator statuses by public key.
 	ValidatorStatusesGaugeVec = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
@@ -183,13 +172,35 @@ var (
 			"pubkey",
 		},
 	)
+	// ValidatorNextAttestationSlotGaugeVec used to track validator statuses by public key.
+	ValidatorNextAttestationSlotGaugeVec = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: "validator",
+			Name:      "next_attestation_slot",
+			Help:      "validator next scheduled attestation slot",
+		},
+		[]string{
+			"pubkey",
+		},
+	)
+	// ValidatorNextProposalSlotGaugeVec used to track validator statuses by public key.
+	ValidatorNextProposalSlotGaugeVec = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: "validator",
+			Name:      "next_proposal_slot",
+			Help:      "validator next scheduled proposal slot",
+		},
+		[]string{
+			"pubkey",
+		},
+	)
 )
 
 // LogValidatorGainsAndLosses logs important metrics related to this validator client's
 // responsibilities throughout the beacon chain's lifecycle. It logs absolute accrued rewards
 // and penalties over time, percentage gain/loss, and gives the end user a better idea
 // of how the validator performs with respect to the rest.
-func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error {
+func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot types.Slot) error {
 	if !helpers.IsEpochEnd(slot) || slot <= params.BeaconConfig().SlotsPerEpoch {
 		// Do nothing unless we are at the end of the epoch, and not in the first epoch.
 		return nil
@@ -221,10 +232,10 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		}
 	}
 
-	prevEpoch := uint64(0)
+	prevEpoch := types.Epoch(0)
 	if slot >= params.BeaconConfig().SlotsPerEpoch {
-		prevEpoch = (slot / params.BeaconConfig().SlotsPerEpoch) - 1
-		if v.voteStats.startEpoch == ^uint64(0) { // Handles unknown first epoch.
+		prevEpoch = types.Epoch(slot/params.BeaconConfig().SlotsPerEpoch) - 1
+		if uint64(v.voteStats.startEpoch) == ^uint64(0) { // Handles unknown first epoch.
 			v.voteStats.startEpoch = prevEpoch
 		}
 	}
@@ -291,14 +302,14 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 }
 
 // UpdateLogAggregateStats updates and logs the voteStats struct of a validator using the RPC response obtained from LogValidatorGainsAndLosses.
-func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResponse, slot uint64) {
+func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResponse, slot types.Slot) {
 	summary := &v.voteStats
-	currentEpoch := slot / params.BeaconConfig().SlotsPerEpoch
+	currentEpoch := types.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
 	var included uint64
 	var correctSource, correctTarget, correctHead int
 
 	for i := range resp.PublicKeys {
-		if resp.InclusionSlots[i] != ^uint64(0) {
+		if uint64(resp.InclusionSlots[i]) != ^uint64(0) {
 			included++
 			summary.includedAttestedCount++
 			summary.totalDistance += resp.InclusionDistances[i]

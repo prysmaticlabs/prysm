@@ -15,15 +15,15 @@ import (
 // slashing objects from the slasher runtime. Upon receiving
 // a proposer slashing from the feed, we submit the object to the
 // connected beacon node via a client RPC.
-func (bs *Service) subscribeDetectedProposerSlashings(ctx context.Context, ch chan *ethpb.ProposerSlashing) {
+func (s *Service) subscribeDetectedProposerSlashings(ctx context.Context, ch chan *ethpb.ProposerSlashing) {
 	ctx, span := trace.StartSpan(ctx, "beaconclient.submitProposerSlashing")
 	defer span.End()
-	sub := bs.proposerSlashingsFeed.Subscribe(ch)
+	sub := s.cfg.ProposerSlashingsFeed.Subscribe(ch)
 	defer sub.Unsubscribe()
 	for {
 		select {
 		case slashing := <-ch:
-			if _, err := bs.beaconClient.SubmitProposerSlashing(ctx, slashing); err != nil {
+			if _, err := s.cfg.BeaconClient.SubmitProposerSlashing(ctx, slashing); err != nil {
 				log.Error(err)
 			}
 		case <-sub.Err():
@@ -40,17 +40,17 @@ func (bs *Service) subscribeDetectedProposerSlashings(ctx context.Context, ch ch
 // slashing objects from the slasher runtime. Upon receiving an
 // attester slashing from the feed, we submit the object to the
 // connected beacon node via a client RPC.
-func (bs *Service) subscribeDetectedAttesterSlashings(ctx context.Context, ch chan *ethpb.AttesterSlashing) {
+func (s *Service) subscribeDetectedAttesterSlashings(ctx context.Context, ch chan *ethpb.AttesterSlashing) {
 	ctx, span := trace.StartSpan(ctx, "beaconclient.submitAttesterSlashing")
 	defer span.End()
-	sub := bs.attesterSlashingsFeed.Subscribe(ch)
+	sub := s.cfg.AttesterSlashingsFeed.Subscribe(ch)
 	defer sub.Unsubscribe()
 	for {
 		select {
 		case slashing := <-ch:
 			if slashing != nil && slashing.Attestation_1 != nil && slashing.Attestation_2 != nil {
 				slashableIndices := sliceutil.IntersectionUint64(slashing.Attestation_1.AttestingIndices, slashing.Attestation_2.AttestingIndices)
-				_, err := bs.beaconClient.SubmitAttesterSlashing(ctx, slashing)
+				_, err := s.cfg.BeaconClient.SubmitAttesterSlashing(ctx, slashing)
 				if err == nil {
 					log.WithFields(logrus.Fields{
 						"sourceEpoch": slashing.Attestation_1.Data.Source.Epoch,

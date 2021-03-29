@@ -6,6 +6,7 @@ import (
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/golang/protobuf/ptypes/empty"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -33,14 +34,6 @@ func (m *mockGenesisFetcher) GenesisInfo(_ context.Context) (*ethpb.Genesis, err
 	}, nil
 }
 
-type mockBeaconInfoFetcher struct {
-	endpoint string
-}
-
-func (m *mockBeaconInfoFetcher) BeaconLogsEndpoint(_ context.Context) (string, error) {
-	return m.endpoint, nil
-}
-
 func TestServer_GetBeaconNodeConnection(t *testing.T) {
 	ctx := context.Background()
 	endpoint := "localhost:90210"
@@ -53,29 +46,13 @@ func TestServer_GetBeaconNodeConnection(t *testing.T) {
 		genesisFetcher:      &mockGenesisFetcher{},
 		nodeGatewayEndpoint: endpoint,
 	}
-	got, err := s.GetBeaconNodeConnection(ctx, &ptypes.Empty{})
+	got, err := s.GetBeaconNodeConnection(ctx, &empty.Empty{})
 	require.NoError(t, err)
 	want := &pb.NodeConnectionResponse{
 		BeaconNodeEndpoint: endpoint,
 		Connected:          false,
 		Syncing:            false,
 		GenesisTime:        uint64(time.Unix(0, 0).Unix()),
-	}
-	require.DeepEqual(t, want, got)
-}
-
-func TestServer_GetLogsEndpoints(t *testing.T) {
-	ctx := context.Background()
-	s := &Server{
-		validatorMonitoringHost: "localhost",
-		validatorMonitoringPort: 8081,
-		beaconNodeInfoFetcher:   &mockBeaconInfoFetcher{endpoint: "localhost:8080"},
-	}
-	got, err := s.GetLogsEndpoints(ctx, &ptypes.Empty{})
-	require.NoError(t, err)
-	want := &pb.LogsEndpointResponse{
-		BeaconLogsEndpoint:    "localhost:8080/logs",
-		ValidatorLogsEndpoint: "localhost:8081/logs",
 	}
 	require.DeepEqual(t, want, got)
 }

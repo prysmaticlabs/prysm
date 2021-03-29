@@ -2,8 +2,9 @@ package precompute
 
 import (
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -11,10 +12,10 @@ import (
 // ProcessRewardsAndPenaltiesPrecompute processes the rewards and penalties of individual validator.
 // This is an optimized version by passing in precomputed validator attesting records and and total epoch balances.
 func ProcessRewardsAndPenaltiesPrecompute(
-	state *stateTrie.BeaconState,
+	state iface.BeaconState,
 	pBal *Balance,
 	vp []*Validator,
-) (*stateTrie.BeaconState, error) {
+) (iface.BeaconState, error) {
 	// Can't process rewards and penalties in genesis epoch.
 	if helpers.CurrentEpoch(state) == 0 {
 		return state, nil
@@ -55,7 +56,7 @@ func ProcessRewardsAndPenaltiesPrecompute(
 
 // AttestationsDelta computes and returns the rewards and penalties differences for individual validators based on the
 // voting records.
-func AttestationsDelta(state *stateTrie.BeaconState, pBal *Balance, vp []*Validator) ([]uint64, []uint64, error) {
+func AttestationsDelta(state iface.ReadOnlyBeaconState, pBal *Balance, vp []*Validator) ([]uint64, []uint64, error) {
 	numOfVals := state.NumValidators()
 	rewards := make([]uint64, numOfVals)
 	penalties := make([]uint64, numOfVals)
@@ -68,7 +69,7 @@ func AttestationsDelta(state *stateTrie.BeaconState, pBal *Balance, vp []*Valida
 	return rewards, penalties, nil
 }
 
-func attestationDelta(pBal *Balance, v *Validator, prevEpoch, finalizedEpoch uint64) (uint64, uint64) {
+func attestationDelta(pBal *Balance, v *Validator, prevEpoch, finalizedEpoch types.Epoch) (uint64, uint64) {
 	eligible := v.IsActivePrevEpoch || (v.IsSlashed && !v.IsWithdrawableCurrentEpoch)
 	if !eligible || pBal.ActiveCurrentEpoch == 0 {
 		return 0, 0
@@ -85,7 +86,7 @@ func attestationDelta(pBal *Balance, v *Validator, prevEpoch, finalizedEpoch uin
 	if v.IsPrevEpochAttester && !v.IsSlashed {
 		proposerReward := br / params.BeaconConfig().ProposerRewardQuotient
 		maxAttesterReward := br - proposerReward
-		r += maxAttesterReward / v.InclusionDistance
+		r += maxAttesterReward / uint64(v.InclusionDistance)
 
 		if isInInactivityLeak(prevEpoch, finalizedEpoch) {
 			// Since full base reward will be canceled out by inactivity penalty deltas,
@@ -139,7 +140,7 @@ func attestationDelta(pBal *Balance, v *Validator, prevEpoch, finalizedEpoch uin
 		// Equivalent to the following condition from the spec:
 		// `index not in get_unslashed_attesting_indices(state, matching_target_attestations)`
 		if !v.IsPrevEpochTargetAttester || v.IsSlashed {
-			p += vb * finalityDelay / params.BeaconConfig().InactivityPenaltyQuotient
+			p += vb * uint64(finalityDelay) / params.BeaconConfig().InactivityPenaltyQuotient
 		}
 	}
 	return r, p
@@ -147,7 +148,7 @@ func attestationDelta(pBal *Balance, v *Validator, prevEpoch, finalizedEpoch uin
 
 // ProposersDelta computes and returns the rewards and penalties differences for individual validators based on the
 // proposer inclusion records.
-func ProposersDelta(state *stateTrie.BeaconState, pBal *Balance, vp []*Validator) ([]uint64, error) {
+func ProposersDelta(state iface.ReadOnlyBeaconState, pBal *Balance, vp []*Validator) ([]uint64, error) {
 	numofVals := state.NumValidators()
 	rewards := make([]uint64, numofVals)
 
@@ -162,7 +163,7 @@ func ProposersDelta(state *stateTrie.BeaconState, pBal *Balance, vp []*Validator
 	baseRewardsPerEpoch := params.BeaconConfig().BaseRewardsPerEpoch
 	proposerRewardQuotient := params.BeaconConfig().ProposerRewardQuotient
 	for _, v := range vp {
-		if v.ProposerIndex >= uint64(len(rewards)) {
+		if uint64(v.ProposerIndex) >= uint64(len(rewards)) {
 			// This should never happen with a valid state / validator.
 			return nil, errors.New("proposer index out of range")
 		}
@@ -182,7 +183,7 @@ func ProposersDelta(state *stateTrie.BeaconState, pBal *Balance, vp []*Validator
 // Spec code:
 // def is_in_inactivity_leak(state: BeaconState) -> bool:
 //    return get_finality_delay(state) > MIN_EPOCHS_TO_INACTIVITY_PENALTY
-func isInInactivityLeak(prevEpoch, finalizedEpoch uint64) bool {
+func isInInactivityLeak(prevEpoch, finalizedEpoch types.Epoch) bool {
 	return finalityDelay(prevEpoch, finalizedEpoch) > params.BeaconConfig().MinEpochsToInactivityPenalty
 }
 
@@ -191,6 +192,6 @@ func isInInactivityLeak(prevEpoch, finalizedEpoch uint64) bool {
 // Spec code:
 // def get_finality_delay(state: BeaconState) -> uint64:
 //    return get_previous_epoch(state) - state.finalized_checkpoint.epoch
-func finalityDelay(prevEpoch, finalizedEpoch uint64) uint64 {
+func finalityDelay(prevEpoch, finalizedEpoch types.Epoch) types.Epoch {
 	return prevEpoch - finalizedEpoch
 }

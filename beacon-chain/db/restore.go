@@ -10,14 +10,14 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
-	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
 const dbExistsYesNoPrompt = "A database file already exists in the target directory. " +
 	"Are you sure that you want to overwrite it? [y/n]"
 
-func restore(cliCtx *cli.Context) error {
+// Restore a beacon chain database.
+func Restore(cliCtx *cli.Context) error {
 	sourceFile := cliCtx.String(cmd.RestoreSourceFileFlag.Name)
 	targetDir := cliCtx.String(cmd.RestoreTargetDirFlag.Name)
 
@@ -29,8 +29,8 @@ func restore(cliCtx *cli.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "could not validate choice")
 		}
-		if strings.ToLower(resp) == "n" {
-			logrus.Info("Restore aborted")
+		if strings.EqualFold(resp, "n") {
+			log.Info("Restore aborted")
 			return nil
 		}
 	}
@@ -41,6 +41,6 @@ func restore(cliCtx *cli.Context) error {
 		return err
 	}
 
-	logrus.Info("Restore completed successfully")
+	log.Info("Restore completed successfully")
 	return nil
 }

@@ -5,4 +5,5 @@ go_library(
     srcs = ["policies.go"],
     importpath = "github.com/prysmaticlabs/prysm/endtoend/policies",
     visibility = ["//visibility:public"],
+    deps = ["@com_github_prysmaticlabs_eth2_types//:go_default_library"],
 )

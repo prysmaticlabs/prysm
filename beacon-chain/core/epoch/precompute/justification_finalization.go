@@ -4,7 +4,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 )
 
 // ProcessJustificationAndFinalizationPreCompute processes justification and finalization during
@@ -48,7 +48,7 @@ import (
 //    # The 1st/2nd most recent epochs are justified, the 1st using the 2nd as source
 //    if all(bits[0:2]) and old_current_justified_checkpoint.epoch + 1 == current_epoch:
 //        state.finalized_checkpoint = old_current_justified_checkpoint
-func ProcessJustificationAndFinalizationPreCompute(state *stateTrie.BeaconState, pBal *Balance) (*stateTrie.BeaconState, error) {
+func ProcessJustificationAndFinalizationPreCompute(state iface.BeaconState, pBal *Balance) (iface.BeaconState, error) {
 	canProcessSlot, err := helpers.StartSlot(2 /*epoch*/)
 	if err != nil {
 		return nil, err

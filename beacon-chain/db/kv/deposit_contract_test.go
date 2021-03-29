@@ -15,7 +15,7 @@ func TestStore_DepositContract(t *testing.T) {
 	contractAddress := common.Address{1, 2, 3}
 	retrieved, err := db.DepositContractAddress(ctx)
 	require.NoError(t, err)
-	assert.DeepEqual(t, ([]uint8)(nil), retrieved, "Expected nil contract address")
+	assert.DeepEqual(t, []uint8(nil), retrieved, "Expected nil contract address")
 	require.NoError(t, db.SaveDepositContractAddress(ctx, contractAddress))
 	retrieved, err = db.DepositContractAddress(ctx)
 	require.NoError(t, err)

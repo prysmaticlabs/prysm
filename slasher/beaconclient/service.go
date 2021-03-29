@@ -18,13 +18,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/slasher/cache"
 	"github.com/prysmaticlabs/prysm/slasher/db"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
-
-var log = logrus.WithField("prefix", "beaconclient")
 
 // Notifier defines a struct which exposes event feeds regarding beacon blocks,
 // attestations, and more information received from a beacon node.
@@ -42,21 +39,15 @@ type ChainFetcher interface {
 
 // Service struct for the beaconclient service of the slasher.
 type Service struct {
+	cfg                         *Config
 	ctx                         context.Context
 	cancel                      context.CancelFunc
-	cert                        string
 	conn                        *grpc.ClientConn
-	provider                    string
-	beaconClient                ethpb.BeaconChainClient
-	slasherDB                   db.Database
-	nodeClient                  ethpb.NodeClient
 	clientFeed                  *event.Feed
 	blockFeed                   *event.Feed
 	attestationFeed             *event.Feed
 	proposerSlashingsChan       chan *ethpb.ProposerSlashing
 	attesterSlashingsChan       chan *ethpb.AttesterSlashing
-	attesterSlashingsFeed       *event.Feed
-	proposerSlashingsFeed       *event.Feed
 	receivedAttestationsBuffer  chan *ethpb.IndexedAttestation
 	collectedAttestationsBuffer chan []*ethpb.IndexedAttestation
 	publicKeyCache              *cache.PublicKeyCache
@@ -85,58 +76,52 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	}
 
 	return &Service{
-		cert:                        cfg.BeaconCert,
+		cfg:                         cfg,
 		ctx:                         ctx,
 		cancel:                      cancel,
-		provider:                    cfg.BeaconProvider,
 		blockFeed:                   new(event.Feed),
 		clientFeed:                  new(event.Feed),
 		attestationFeed:             new(event.Feed),
-		slasherDB:                   cfg.SlasherDB,
 		proposerSlashingsChan:       make(chan *ethpb.ProposerSlashing, 1),
 		attesterSlashingsChan:       make(chan *ethpb.AttesterSlashing, 1),
-		attesterSlashingsFeed:       cfg.AttesterSlashingsFeed,
-		proposerSlashingsFeed:       cfg.ProposerSlashingsFeed,
 		receivedAttestationsBuffer:  make(chan *ethpb.IndexedAttestation, 1),
 		collectedAttestationsBuffer: make(chan []*ethpb.IndexedAttestation, 1),
 		publicKeyCache:              publicKeyCache,
-		beaconClient:                cfg.BeaconClient,
-		nodeClient:                  cfg.NodeClient,
 	}, nil
 }
 
 // BlockFeed returns a feed other services in slasher can subscribe to
 // blocks received via the beacon node through gRPC.
-func (bs *Service) BlockFeed() *event.Feed {
-	return bs.blockFeed
+func (s *Service) BlockFeed() *event.Feed {
+	return s.blockFeed
 }
 
 // AttestationFeed returns a feed other services in slasher can subscribe to
 // attestations received via the beacon node through gRPC.
-func (bs *Service) AttestationFeed() *event.Feed {
-	return bs.attestationFeed
+func (s *Service) AttestationFeed() *event.Feed {
+	return s.attestationFeed
 }
 
 // ClientReadyFeed returns a feed other services in slasher can subscribe to
 // to indicate when the gRPC connection is ready.
-func (bs *Service) ClientReadyFeed() *event.Feed {
-	return bs.clientFeed
+func (s *Service) ClientReadyFeed() *event.Feed {
+	return s.clientFeed
 }
 
 // Stop the beacon client service by closing the gRPC connection.
-func (bs *Service) Stop() error {
-	bs.cancel()
+func (s *Service) Stop() error {
+	s.cancel()
 	log.Info("Stopping service")
-	if bs.conn != nil {
-		return bs.conn.Close()
+	if s.conn != nil {
+		return s.conn.Close()
 	}
 	return nil
 }
 
 // Status returns an error if there exists a gRPC connection error
 // in the service.
-func (bs *Service) Status() error {
-	if bs.conn == nil {
+func (s *Service) Status() error {
+	if s.conn == nil {
 		return errors.New("no connection to beacon RPC")
 	}
 	return nil
@@ -146,10 +131,10 @@ func (bs *Service) Status() error {
 // a gRPC client connection with a beacon node, listening for
 // streamed blocks/attestations, and submitting slashing operations
 // after they are detected by other services in the slasher.
-func (bs *Service) Start() {
+func (s *Service) Start() {
 	var dialOpt grpc.DialOption
-	if bs.cert != "" {
-		creds, err := credentials.NewClientTLSFromFile(bs.cert, "")
+	if s.cfg.BeaconCert != "" {
+		creds, err := credentials.NewClientTLSFromFile(s.cfg.BeaconCert, "")
 		if err != nil {
 			log.Errorf("Could not get valid credentials: %v", err)
 		}
@@ -167,36 +152,36 @@ func (bs *Service) Start() {
 			grpc_opentracing.StreamClientInterceptor(),
 			grpc_prometheus.StreamClientInterceptor,
 			grpc_retry.StreamClientInterceptor(),
-			grpcutils.LogGRPCStream,
+			grpcutils.LogStream,
 		)),
 		grpc.WithUnaryInterceptor(middleware.ChainUnaryClient(
 			grpc_opentracing.UnaryClientInterceptor(),
 			grpc_prometheus.UnaryClientInterceptor,
 			grpc_retry.UnaryClientInterceptor(),
-			grpcutils.LogGRPCRequests,
+			grpcutils.LogRequests,
 		)),
 	}
-	conn, err := grpc.DialContext(bs.ctx, bs.provider, beaconOpts...)
+	conn, err := grpc.DialContext(s.ctx, s.cfg.BeaconProvider, beaconOpts...)
 	if err != nil {
-		log.Fatalf("Could not dial endpoint: %s, %v", bs.provider, err)
+		log.Fatalf("Could not dial endpoint: %s, %v", s.cfg.BeaconProvider, err)
 	}
-	bs.beaconDialOptions = beaconOpts
+	s.beaconDialOptions = beaconOpts
 	log.Info("Successfully started gRPC connection")
-	bs.conn = conn
-	bs.beaconClient = ethpb.NewBeaconChainClient(bs.conn)
-	bs.nodeClient = ethpb.NewNodeClient(bs.conn)
+	s.conn = conn
+	s.cfg.BeaconClient = ethpb.NewBeaconChainClient(s.conn)
+	s.cfg.NodeClient = ethpb.NewNodeClient(s.conn)
 
 	// We poll for the sync status of the beacon node until it is fully synced.
-	bs.querySyncStatus(bs.ctx)
+	s.querySyncStatus(s.ctx)
 
 	// We notify other services in slasher that the beacon client is ready
 	// and the connection is active.
-	bs.clientFeed.Send(true)
+	s.clientFeed.Send(true)
 
 	// We register subscribers for any detected proposer/attester slashings
 	// in the slasher services that we can submit to the beacon node
 	// as they are found.
-	go bs.subscribeDetectedProposerSlashings(bs.ctx, bs.proposerSlashingsChan)
-	go bs.subscribeDetectedAttesterSlashings(bs.ctx, bs.attesterSlashingsChan)
+	go s.subscribeDetectedProposerSlashings(s.ctx, s.proposerSlashingsChan)
+	go s.subscribeDetectedAttesterSlashings(s.ctx, s.attesterSlashingsChan)
 
 }

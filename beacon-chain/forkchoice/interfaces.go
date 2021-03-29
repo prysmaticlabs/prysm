@@ -3,6 +3,7 @@ package forkchoice
 import (
 	"context"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 )
 
@@ -17,17 +18,17 @@ type ForkChoicer interface {
 
 // HeadRetriever retrieves head root of the current chain.
 type HeadRetriever interface {
-	Head(context.Context, uint64, [32]byte, []uint64, uint64) ([32]byte, error)
+	Head(context.Context, types.Epoch, [32]byte, []uint64, types.Epoch) ([32]byte, error)
 }
 
 // BlockProcessor processes the block that's used for accounting fork choice.
 type BlockProcessor interface {
-	ProcessBlock(context.Context, uint64, [32]byte, [32]byte, [32]byte, uint64, uint64) error
+	ProcessBlock(context.Context, types.Slot, [32]byte, [32]byte, [32]byte, types.Epoch, types.Epoch) error
 }
 
 // AttestationProcessor processes the attestation that's used for accounting fork choice.
 type AttestationProcessor interface {
-	ProcessAttestation(context.Context, []uint64, [32]byte, uint64)
+	ProcessAttestation(context.Context, []uint64, [32]byte, types.Epoch)
 }
 
 // Pruner prunes the fork choice upon new finalization. This is used to keep fork choice sane.
@@ -42,6 +43,6 @@ type Getter interface {
 	HasNode([32]byte) bool
 	Store() *protoarray.Store
 	HasParent(root [32]byte) bool
-	AncestorRoot(ctx context.Context, root [32]byte, slot uint64) ([]byte, error)
+	AncestorRoot(ctx context.Context, root [32]byte, slot types.Slot) ([]byte, error)
 	IsCanonical(root [32]byte) bool
 }

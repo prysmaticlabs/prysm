@@ -19,7 +19,7 @@ func TestService_ChainHead(t *testing.T) {
 	client := mock.NewMockBeaconChainClient(ctrl)
 
 	bs := Service{
-		beaconClient: client,
+		cfg: &Config{BeaconClient: client},
 	}
 	wanted := &ethpb.ChainHead{
 		HeadSlot:      4,
@@ -38,7 +38,7 @@ func TestService_GenesisValidatorsRoot(t *testing.T) {
 
 	client := mock.NewMockNodeClient(ctrl)
 	bs := Service{
-		nodeClient: client,
+		cfg: &Config{NodeClient: client},
 	}
 	wanted := &ethpb.Genesis{
 		GenesisValidatorsRoot: []byte("I am genesis"),
@@ -60,7 +60,7 @@ func TestService_QuerySyncStatus(t *testing.T) {
 	client := mock.NewMockNodeClient(ctrl)
 
 	bs := Service{
-		nodeClient: client,
+		cfg: &Config{NodeClient: client},
 	}
 	syncStatusPollingInterval = time.Millisecond
 	client.EXPECT().GetSyncStatus(gomock.Any(), gomock.Any()).Return(&ethpb.SyncStatus{

@@ -8,15 +8,16 @@ import (
 	"os"
 	"path"
 
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
-
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/benchutil"
+	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -96,7 +97,7 @@ func generateMarshalledFullStateAndBlock() error {
 	conf := &testutil.BlockGenConfig{}
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	// Small offset for the beacon state so we dont process a block on an epoch.
-	slotOffset := uint64(2)
+	slotOffset := types.Slot(2)
 	block, err := testutil.GenerateFullBlock(beaconState, privs, conf, slotsPerEpoch+slotOffset)
 	if err != nil {
 		return err
@@ -107,7 +108,7 @@ func generateMarshalledFullStateAndBlock() error {
 	}
 
 	attConfig := &testutil.BlockGenConfig{
-		NumAttestations: benchutil.AttestationsPerEpoch / slotsPerEpoch,
+		NumAttestations: benchutil.AttestationsPerEpoch / uint64(slotsPerEpoch),
 	}
 
 	var atts []*ethpb.Attestation
@@ -147,7 +148,7 @@ func generateMarshalledFullStateAndBlock() error {
 		return err
 	}
 
-	beaconBytes, err := beaconState.InnerStateUnsafe().MarshalSSZ()
+	beaconBytes, err := beaconState.MarshalSSZ()
 	if err != nil {
 		return err
 	}
@@ -182,10 +183,10 @@ func generate2FullEpochState() error {
 	}
 
 	attConfig := &testutil.BlockGenConfig{
-		NumAttestations: benchutil.AttestationsPerEpoch / params.BeaconConfig().SlotsPerEpoch,
+		NumAttestations: benchutil.AttestationsPerEpoch / uint64(params.BeaconConfig().SlotsPerEpoch),
 	}
 
-	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch*2-1; i++ {
+	for i := types.Slot(0); i < params.BeaconConfig().SlotsPerEpoch*2-1; i++ {
 		block, err := testutil.GenerateFullBlock(beaconState, privs, attConfig, beaconState.Slot())
 		if err != nil {
 			return err
@@ -196,7 +197,7 @@ func generate2FullEpochState() error {
 		}
 	}
 
-	beaconBytes, err := beaconState.InnerStateUnsafe().MarshalSSZ()
+	beaconBytes, err := beaconState.MarshalSSZ()
 	if err != nil {
 		return err
 	}
@@ -204,7 +205,7 @@ func generate2FullEpochState() error {
 	return fileutil.WriteFile(path.Join(*outputDir, benchutil.BState2EpochFileName), beaconBytes)
 }
 
-func genesisBeaconState() (*stateTrie.BeaconState, error) {
+func genesisBeaconState() (iface.BeaconState, error) {
 	beaconBytes, err := ioutil.ReadFile(path.Join(*outputDir, benchutil.GenesisFileName))
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot read genesis state file")
@@ -213,5 +214,5 @@ func genesisBeaconState() (*stateTrie.BeaconState, error) {
 	if err := genesisState.UnmarshalSSZ(beaconBytes); err != nil {
 		return nil, errors.Wrap(err, "cannot unmarshal genesis state file")
 	}
-	return stateTrie.InitializeFromProtoUnsafe(genesisState)
+	return stateV0.InitializeFromProtoUnsafe(genesisState)
 }

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -31,7 +32,7 @@ func pubKey(i uint64) []byte {
 }
 
 func TestGetDuties_OK(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
@@ -60,10 +61,10 @@ func TestGetDuties_OK(t *testing.T) {
 		State: bs, Root: genesisRoot[:], Genesis: time.Now(),
 	}
 	vs := &Server{
-		BeaconDB:           db,
-		HeadFetcher:        chain,
-		GenesisTimeFetcher: chain,
-		SyncChecker:        &mockSync.Sync{IsSyncing: false},
+		BeaconDB:    db,
+		HeadFetcher: chain,
+		TimeFetcher: chain,
+		SyncChecker: &mockSync.Sync{IsSyncing: false},
 	}
 
 	// Test the first validator in registry.
@@ -97,12 +98,26 @@ func TestGetDuties_OK(t *testing.T) {
 	res, err = vs.GetDuties(context.Background(), req)
 	require.NoError(t, err, "Could not call epoch committee assignment")
 	for i := 0; i < len(res.CurrentEpochDuties); i++ {
-		assert.Equal(t, uint64(i), res.CurrentEpochDuties[i].ValidatorIndex)
+		assert.Equal(t, types.ValidatorIndex(i), res.CurrentEpochDuties[i].ValidatorIndex)
 	}
 }
 
+func TestGetDuties_SlotOutOfUpperBound(t *testing.T) {
+	chain := &mockChain.ChainService{
+		Genesis: time.Now(),
+	}
+	vs := &Server{
+		TimeFetcher: chain,
+	}
+	req := &ethpb.DutiesRequest{
+		Epoch: types.Epoch(chain.CurrentSlot()/params.BeaconConfig().SlotsPerEpoch + 2),
+	}
+	_, err := vs.duties(context.Background(), req)
+	require.ErrorContains(t, "can not be greater than next epoch", err)
+}
+
 func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
@@ -129,10 +144,10 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 		State: bState, Root: genesisRoot[:], Genesis: time.Now(),
 	}
 	vs := &Server{
-		BeaconDB:           db,
-		HeadFetcher:        chain,
-		GenesisTimeFetcher: chain,
-		SyncChecker:        &mockSync.Sync{IsSyncing: false},
+		BeaconDB:    db,
+		HeadFetcher: chain,
+		TimeFetcher: chain,
+		SyncChecker: &mockSync.Sync{IsSyncing: false},
 	}
 
 	// Test the first validator in registry.
@@ -145,7 +160,7 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 }
 
 func TestGetDuties_MultipleKeys_OK(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := uint64(64)
@@ -170,10 +185,10 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 		State: bs, Root: genesisRoot[:], Genesis: time.Now(),
 	}
 	vs := &Server{
-		BeaconDB:           db,
-		HeadFetcher:        chain,
-		GenesisTimeFetcher: chain,
-		SyncChecker:        &mockSync.Sync{IsSyncing: false},
+		BeaconDB:    db,
+		HeadFetcher: chain,
+		TimeFetcher: chain,
+		SyncChecker: &mockSync.Sync{IsSyncing: false},
 	}
 
 	pubkey0 := deposits[0].Data.PublicKey
@@ -186,8 +201,8 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	res, err := vs.GetDuties(context.Background(), req)
 	require.NoError(t, err, "Could not call epoch committee assignment")
 	assert.Equal(t, 2, len(res.CurrentEpochDuties))
-	assert.Equal(t, uint64(4), res.CurrentEpochDuties[0].AttesterSlot)
-	assert.Equal(t, uint64(4), res.CurrentEpochDuties[1].AttesterSlot)
+	assert.Equal(t, types.Slot(4), res.CurrentEpochDuties[0].AttesterSlot)
+	assert.Equal(t, types.Slot(4), res.CurrentEpochDuties[1].AttesterSlot)
 }
 
 func TestGetDuties_SyncNotReady(t *testing.T) {
@@ -209,7 +224,7 @@ func TestStreamDuties_SyncNotReady(t *testing.T) {
 }
 
 func TestStreamDuties_OK(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
@@ -235,14 +250,15 @@ func TestStreamDuties_OK(t *testing.T) {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
+	c := &mockChain.ChainService{
+		Genesis: time.Now(),
+	}
 	vs := &Server{
-		Ctx:         ctx,
-		BeaconDB:    db,
-		HeadFetcher: &mockChain.ChainService{State: bs, Root: genesisRoot[:]},
-		SyncChecker: &mockSync.Sync{IsSyncing: false},
-		GenesisTimeFetcher: &mockChain.ChainService{
-			Genesis: time.Now(),
-		},
+		Ctx:           ctx,
+		BeaconDB:      db,
+		HeadFetcher:   &mockChain.ChainService{State: bs, Root: genesisRoot[:]},
+		SyncChecker:   &mockSync.Sync{IsSyncing: false},
+		TimeFetcher:   c,
 		StateNotifier: &mockChain.MockStateNotifier{},
 	}
 
@@ -268,7 +284,7 @@ func TestStreamDuties_OK(t *testing.T) {
 }
 
 func TestStreamDuties_OK_ChainReorg(t *testing.T) {
-	db, _ := dbutil.SetupDB(t)
+	db := dbutil.SetupDB(t)
 
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
@@ -294,14 +310,15 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
+	c := &mockChain.ChainService{
+		Genesis: time.Now(),
+	}
 	vs := &Server{
-		Ctx:         ctx,
-		BeaconDB:    db,
-		HeadFetcher: &mockChain.ChainService{State: bs, Root: genesisRoot[:]},
-		SyncChecker: &mockSync.Sync{IsSyncing: false},
-		GenesisTimeFetcher: &mockChain.ChainService{
-			Genesis: time.Now(),
-		},
+		Ctx:           ctx,
+		BeaconDB:      db,
+		HeadFetcher:   &mockChain.ChainService{State: bs, Root: genesisRoot[:]},
+		SyncChecker:   &mockSync.Sync{IsSyncing: false},
+		TimeFetcher:   c,
 		StateNotifier: &mockChain.MockStateNotifier{},
 	}
 
@@ -349,9 +366,9 @@ func TestAssignValidatorToSubnet(t *testing.T) {
 	assignValidatorToSubnet(k, ethpb.ValidatorStatus_ACTIVE)
 	coms, ok, exp := cache.SubnetIDs.GetPersistentSubnets(k)
 	require.Equal(t, true, ok, "No cache entry found for validator")
-	assert.Equal(t, params.BeaconNetworkConfig().RandomSubnetsPerValidator, uint64(len(coms)))
-	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot)
-	totalTime := time.Duration(params.BeaconNetworkConfig().EpochsPerRandomSubnetSubscription) * epochDuration * time.Second
+	assert.Equal(t, params.BeaconConfig().RandomSubnetsPerValidator, uint64(len(coms)))
+	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
+	totalTime := time.Duration(params.BeaconConfig().EpochsPerRandomSubnetSubscription) * epochDuration * time.Second
 	receivedTime := time.Until(exp.Round(time.Second))
 	if receivedTime < totalTime {
 		t.Fatalf("Expiration time of %f was less than expected duration of %f ", receivedTime.Seconds(), totalTime.Seconds())
@@ -359,7 +376,7 @@ func TestAssignValidatorToSubnet(t *testing.T) {
 }
 
 func BenchmarkCommitteeAssignment(b *testing.B) {
-	db, _ := dbutil.SetupDB(b)
+	db := dbutil.SetupDB(b)
 
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := uint64(8192 * 2)

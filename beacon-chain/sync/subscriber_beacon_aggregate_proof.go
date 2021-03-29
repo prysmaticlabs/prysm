@@ -7,8 +7,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 )
 
@@ -24,19 +22,10 @@ func (s *Service) beaconAggregateProofSubscriber(_ context.Context, msg proto.Me
 		return errors.New("nil aggregate")
 	}
 
-	// Broadcast the aggregated attestation on a feed to notify other services in the beacon node
-	// of a received aggregated attestation.
-	s.attestationNotifier.OperationFeed().Send(&feed.Event{
-		Type: operation.AggregatedAttReceived,
-		Data: &operation.AggregatedAttReceivedData{
-			Attestation: a.Message,
-		},
-	})
-
 	// An unaggregated attestation can make it here. It’s valid, the aggregator it just itself, although it means poor performance for the subnet.
 	if !helpers.IsAggregated(a.Message.Aggregate) {
-		return s.attPool.SaveUnaggregatedAttestation(a.Message.Aggregate)
+		return s.cfg.AttPool.SaveUnaggregatedAttestation(a.Message.Aggregate)
 	}
 
-	return s.attPool.SaveAggregatedAttestation(a.Message.Aggregate)
+	return s.cfg.AttPool.SaveAggregatedAttestation(a.Message.Aggregate)
 }

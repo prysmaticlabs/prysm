@@ -13,27 +13,21 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	ethsl "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
-	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/metadata"
 )
 
 // Service represents a service to manage the validator
 // ￿slashing protection.
 type Service struct {
-	ctx                context.Context
-	cancel             context.CancelFunc
-	conn               *grpc.ClientConn
-	endpoint           string
-	withCert           string
-	maxCallRecvMsgSize int
-	grpcRetries        uint
-	grpcHeaders        []string
-	slasherClient      ethsl.SlasherClient
-	grpcRetryDelay     time.Duration
+	cfg           *Config
+	ctx           context.Context
+	cancel        context.CancelFunc
+	conn          *grpc.ClientConn
+	grpcHeaders   []string
+	slasherClient ethsl.SlasherClient
 }
 
 // Config for the validator service.
@@ -51,20 +45,16 @@ type Config struct {
 func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:                ctx,
-		cancel:             cancel,
-		endpoint:           cfg.Endpoint,
-		withCert:           cfg.CertFlag,
-		maxCallRecvMsgSize: cfg.GrpcMaxCallRecvMsgSizeFlag,
-		grpcRetries:        cfg.GrpcRetriesFlag,
-		grpcRetryDelay:     cfg.GrpcRetryDelay,
-		grpcHeaders:        strings.Split(cfg.GrpcHeadersFlag, ","),
+		cfg:         cfg,
+		ctx:         ctx,
+		cancel:      cancel,
+		grpcHeaders: strings.Split(cfg.GrpcHeadersFlag, ","),
 	}, nil
 }
 
 // Start the slasher protection service and grpc client.
 func (s *Service) Start() {
-	if s.endpoint != "" {
+	if s.cfg.Endpoint != "" {
 		s.slasherClient = s.startSlasherClient()
 	}
 }
@@ -72,8 +62,8 @@ func (s *Service) Start() {
 func (s *Service) startSlasherClient() ethsl.SlasherClient {
 	var dialOpt grpc.DialOption
 
-	if s.withCert != "" {
-		creds, err := credentials.NewClientTLSFromFile(s.withCert, "")
+	if s.cfg.CertFlag != "" {
+		creds, err := credentials.NewClientTLSFromFile(s.cfg.CertFlag, "")
 		if err != nil {
 			log.Errorf("Could not get valid slasher credentials: %v", err)
 			return nil
@@ -84,24 +74,13 @@ func (s *Service) startSlasherClient() ethsl.SlasherClient {
 		log.Warn("You are using an insecure slasher gRPC connection! Please provide a certificate and key to use a secure connection.")
 	}
 
-	md := make(metadata.MD)
-	for _, hdr := range s.grpcHeaders {
-		if hdr != "" {
-			ss := strings.Split(hdr, "=")
-			if len(ss) != 2 {
-				log.Warnf("Incorrect gRPC header flag format. Skipping %v", hdr)
-				continue
-			}
-			md.Set(ss[0], ss[1])
-		}
-	}
+	s.ctx = grpcutils.AppendHeaders(s.ctx, s.grpcHeaders)
 
 	opts := []grpc.DialOption{
 		dialOpt,
 		grpc.WithDefaultCallOptions(
-			grpc_retry.WithMax(s.grpcRetries),
-			grpc_retry.WithBackoff(grpc_retry.BackoffLinear(s.grpcRetryDelay)),
-			grpc.Header(&md),
+			grpc_retry.WithMax(s.cfg.GrpcRetriesFlag),
+			grpc_retry.WithBackoff(grpc_retry.BackoffLinear(s.cfg.GrpcRetryDelay)),
 		),
 		grpc.WithStatsHandler(&ocgrpc.ClientHandler{}),
 		grpc.WithStreamInterceptor(middleware.ChainStreamClient(
@@ -113,12 +92,12 @@ func (s *Service) startSlasherClient() ethsl.SlasherClient {
 			grpc_opentracing.UnaryClientInterceptor(),
 			grpc_prometheus.UnaryClientInterceptor,
 			grpc_retry.UnaryClientInterceptor(),
-			grpcutils.LogGRPCRequests,
+			grpcutils.LogRequests,
 		)),
 	}
-	conn, err := grpc.DialContext(s.ctx, s.endpoint, opts...)
+	conn, err := grpc.DialContext(s.ctx, s.cfg.Endpoint, opts...)
 	if err != nil {
-		log.Errorf("Could not dial slasher endpoint: %s, %v", s.endpoint, err)
+		log.Errorf("Could not dial slasher endpoint: %s, %v", s.cfg.Endpoint, err)
 		return nil
 	}
 	log.Debug("Successfully started slasher gRPC connection")
@@ -144,7 +123,7 @@ func (s *Service) Status() error {
 		return errors.New("no connection to slasher RPC")
 	}
 	if s.conn.GetState() != connectivity.Ready {
-		return fmt.Errorf("can`t connect to slasher server at: %v connection status: %v ", s.endpoint, s.conn.GetState())
+		return fmt.Errorf("can`t connect to slasher server at: %v connection status: %v ", s.cfg.Endpoint, s.conn.GetState())
 	}
 	return nil
 }

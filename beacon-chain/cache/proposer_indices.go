@@ -7,6 +7,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	types "github.com/prysmaticlabs/eth2-types"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -63,8 +64,19 @@ func (c *ProposerIndicesCache) AddProposerIndices(p *ProposerIndices) error {
 	return nil
 }
 
+// HasProposerIndices returns the proposer indices of a block root seed.
+func (c *ProposerIndicesCache) HasProposerIndices(r [32]byte) (bool, error) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	_, exists, err := c.ProposerIndicesCache.GetByKey(key(r))
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
+}
+
 // ProposerIndices returns the proposer indices of a block root seed.
-func (c *ProposerIndicesCache) ProposerIndices(r [32]byte) ([]uint64, error) {
+func (c *ProposerIndicesCache) ProposerIndices(r [32]byte) ([]types.ValidatorIndex, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	obj, exists, err := c.ProposerIndicesCache.GetByKey(key(r))

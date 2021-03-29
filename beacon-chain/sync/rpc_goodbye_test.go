@@ -9,6 +9,7 @@ import (
 	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
+	types "github.com/prysmaticlabs/eth2-types"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
@@ -24,10 +25,12 @@ func TestGoodByeRPCHandler_Disconnects_With_Peer(t *testing.T) {
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 
 	// Set up a head state in the database with data we expect.
-	d, _ := db.SetupDB(t)
+	d := db.SetupDB(t)
 	r := &Service{
-		db:          d,
-		p2p:         p1,
+		cfg: &Config{
+			DB:  d,
+			P2P: p1,
+		},
 		rateLimiter: newRateLimiter(p1),
 	}
 
@@ -67,10 +70,12 @@ func TestGoodByeRPCHandler_BackOffPeer(t *testing.T) {
 	assert.Equal(t, 2, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 
 	// Set up a head state in the database with data we expect.
-	d, _ := db.SetupDB(t)
+	d := db.SetupDB(t)
 	r := &Service{
-		db:          d,
-		p2p:         p1,
+		cfg: &Config{
+			DB:  d,
+			P2P: p1,
+		},
 		rateLimiter: newRateLimiter(p1),
 	}
 
@@ -140,10 +145,12 @@ func TestSendGoodbye_SendsMessage(t *testing.T) {
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 
 	// Set up a head state in the database with data we expect.
-	d, _ := db.SetupDB(t)
+	d := db.SetupDB(t)
 	r := &Service{
-		db:          d,
-		p2p:         p1,
+		cfg: &Config{
+			DB:  d,
+			P2P: p1,
+		},
 		rateLimiter: newRateLimiter(p1),
 	}
 	failureCode := p2ptypes.GoodbyeCodeClientShutdown
@@ -156,8 +163,8 @@ func TestSendGoodbye_SendsMessage(t *testing.T) {
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		out := new(p2ptypes.SSZUint64)
-		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
+		out := new(types.SSZUint64)
+		assert.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(stream, out))
 		assert.Equal(t, failureCode, *out)
 		assert.NoError(t, stream.Close())
 	})
@@ -182,10 +189,12 @@ func TestSendGoodbye_DisconnectWithPeer(t *testing.T) {
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 
 	// Set up a head state in the database with data we expect.
-	d, _ := db.SetupDB(t)
+	d := db.SetupDB(t)
 	r := &Service{
-		db:          d,
-		p2p:         p1,
+		cfg: &Config{
+			DB:  d,
+			P2P: p1,
+		},
 		rateLimiter: newRateLimiter(p1),
 	}
 	failureCode := p2ptypes.GoodbyeCodeClientShutdown
@@ -198,8 +207,8 @@ func TestSendGoodbye_DisconnectWithPeer(t *testing.T) {
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		out := new(p2ptypes.SSZUint64)
-		assert.NoError(t, r.p2p.Encoding().DecodeWithMaxLength(stream, out))
+		out := new(types.SSZUint64)
+		assert.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(stream, out))
 		assert.Equal(t, failureCode, *out)
 		assert.NoError(t, stream.Close())
 	})

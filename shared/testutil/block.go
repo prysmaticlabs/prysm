@@ -3,15 +3,13 @@ package testutil
 import (
 	"context"
 	"fmt"
-	"log"
-	"math"
 
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
+	v1 "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -64,30 +62,13 @@ func NewBeaconBlock() *ethpb.SignedBeaconBlock {
 	}
 }
 
-// NewAttestation creates an attestation block with minimum marshalable fields.
-func NewAttestation() *ethpb.Attestation {
-	return &ethpb.Attestation{
-		AggregationBits: bitfield.Bitlist{0b1101},
-		Data: &ethpb.AttestationData{
-			BeaconBlockRoot: make([]byte, 32),
-			Source: &ethpb.Checkpoint{
-				Root: make([]byte, 32),
-			},
-			Target: &ethpb.Checkpoint{
-				Root: make([]byte, 32),
-			},
-		},
-		Signature: make([]byte, 96),
-	}
-}
-
 // GenerateFullBlock generates a fully valid block with the requested parameters.
 // Use BlockGenConfig to declare the conditions you would like the block generated under.
 func GenerateFullBlock(
-	bState *stateTrie.BeaconState,
+	bState iface.BeaconState,
 	privs []bls.SecretKey,
 	conf *BlockGenConfig,
-	slot uint64,
+	slot types.Slot,
 ) (*ethpb.SignedBeaconBlock, error) {
 	ctx := context.Background()
 	currentSlot := bState.Slot()
@@ -206,19 +187,17 @@ func GenerateFullBlock(
 
 // GenerateProposerSlashingForValidator for a specific validator index.
 func GenerateProposerSlashingForValidator(
-	bState *stateTrie.BeaconState,
+	bState iface.BeaconState,
 	priv bls.SecretKey,
-	idx uint64,
+	idx types.ValidatorIndex,
 ) (*ethpb.ProposerSlashing, error) {
-	header1 := &ethpb.SignedBeaconBlockHeader{
+	header1 := HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: idx,
 			Slot:          bState.Slot(),
 			BodyRoot:      bytesutil.PadTo([]byte{0, 1, 0}, 32),
-			StateRoot:     make([]byte, 32),
-			ParentRoot:    make([]byte, 32),
 		},
-	}
+	})
 	currentEpoch := helpers.CurrentEpoch(bState)
 	var err error
 	header1.Signature, err = helpers.ComputeDomainAndSign(bState, currentEpoch, header1.Header, params.BeaconConfig().DomainBeaconProposer, priv)
@@ -247,7 +226,7 @@ func GenerateProposerSlashingForValidator(
 }
 
 func generateProposerSlashings(
-	bState *stateTrie.BeaconState,
+	bState iface.BeaconState,
 	privs []bls.SecretKey,
 	numSlashings uint64,
 ) ([]*ethpb.ProposerSlashing, error) {
@@ -268,9 +247,9 @@ func generateProposerSlashings(
 
 // GenerateAttesterSlashingForValidator for a specific validator index.
 func GenerateAttesterSlashingForValidator(
-	bState *stateTrie.BeaconState,
+	bState iface.BeaconState,
 	priv bls.SecretKey,
-	idx uint64,
+	idx types.ValidatorIndex,
 ) (*ethpb.AttesterSlashing, error) {
 	currentEpoch := helpers.CurrentEpoch(bState)
 
@@ -288,7 +267,7 @@ func GenerateAttesterSlashingForValidator(
 				Root:  params.BeaconConfig().ZeroHash[:],
 			},
 		},
-		AttestingIndices: []uint64{idx},
+		AttestingIndices: []uint64{uint64(idx)},
 	}
 	var err error
 	att1.Signature, err = helpers.ComputeDomainAndSign(bState, currentEpoch, att1.Data, params.BeaconConfig().DomainBeaconAttester, priv)
@@ -310,7 +289,7 @@ func GenerateAttesterSlashingForValidator(
 				Root:  params.BeaconConfig().ZeroHash[:],
 			},
 		},
-		AttestingIndices: []uint64{idx},
+		AttestingIndices: []uint64{uint64(idx)},
 	}
 	att2.Signature, err = helpers.ComputeDomainAndSign(bState, currentEpoch, att2.Data, params.BeaconConfig().DomainBeaconAttester, priv)
 	if err != nil {
@@ -324,7 +303,7 @@ func GenerateAttesterSlashingForValidator(
 }
 
 func generateAttesterSlashings(
-	bState *stateTrie.BeaconState,
+	bState iface.BeaconState,
 	privs []bls.SecretKey,
 	numSlashings uint64,
 ) ([]*ethpb.AttesterSlashing, error) {
@@ -332,7 +311,7 @@ func generateAttesterSlashings(
 	randGen := rand.NewDeterministicGenerator()
 	for i := uint64(0); i < numSlashings; i++ {
 		committeeIndex := randGen.Uint64() % params.BeaconConfig().MaxCommitteesPerSlot
-		committee, err := helpers.BeaconCommitteeFromState(bState, bState.Slot(), committeeIndex)
+		committee, err := helpers.BeaconCommitteeFromState(bState, bState.Slot(), types.CommitteeIndex(committeeIndex))
 		if err != nil {
 			return nil, err
 		}
@@ -347,145 +326,8 @@ func generateAttesterSlashings(
 	return attesterSlashings, nil
 }
 
-// GenerateAttestations creates attestations that are entirely valid, for all
-// the committees of the current state slot. This function expects attestations
-// requested to be cleanly divisible by committees per slot. If there is 1 committee
-// in the slot, and numToGen is set to 4, then it will return 4 attestations
-// for the same data with their aggregation bits split uniformly.
-//
-// If you request 4 attestations, but there are 8 committees, you will get 4 fully aggregated attestations.
-func GenerateAttestations(bState *stateTrie.BeaconState, privs []bls.SecretKey, numToGen, slot uint64, randomRoot bool) ([]*ethpb.Attestation, error) {
-	currentEpoch := helpers.SlotToEpoch(slot)
-	var attestations []*ethpb.Attestation
-	generateHeadState := false
-	bState = bState.Copy()
-	if slot > bState.Slot() {
-		// Going back a slot here so there's no inclusion delay issues.
-		slot--
-		generateHeadState = true
-	}
-
-	targetRoot := make([]byte, 32)
-	var headRoot []byte
-	var err error
-	// Only calculate head state if its an attestation for the current slot or future slot.
-	if generateHeadState || slot == bState.Slot() {
-		headState, err := stateTrie.InitializeFromProtoUnsafe(bState.CloneInnerState())
-		if err != nil {
-			return nil, err
-		}
-		headState, err = state.ProcessSlots(context.Background(), headState, slot+1)
-		if err != nil {
-			return nil, err
-		}
-		headRoot, err = helpers.BlockRootAtSlot(headState, slot)
-		if err != nil {
-			return nil, err
-		}
-		targetRoot, err = helpers.BlockRoot(headState, currentEpoch)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		headRoot, err = helpers.BlockRootAtSlot(bState, slot)
-		if err != nil {
-			return nil, err
-		}
-	}
-	if randomRoot {
-		randGen := rand.NewDeterministicGenerator()
-		b := make([]byte, 32)
-		_, err := randGen.Read(b)
-		if err != nil {
-			return nil, err
-		}
-		headRoot = b
-	}
-
-	activeValidatorCount, err := helpers.ActiveValidatorCount(bState, currentEpoch)
-	if err != nil {
-		return nil, err
-	}
-	committeesPerSlot := helpers.SlotCommitteeCount(activeValidatorCount)
-
-	if numToGen < committeesPerSlot {
-		log.Printf(
-			"Warning: %d attestations requested is less than %d committees in current slot, not all validators will be attesting.",
-			numToGen,
-			committeesPerSlot,
-		)
-	} else if numToGen > committeesPerSlot {
-		log.Printf(
-			"Warning: %d attestations requested are more than %d committees in current slot, attestations will not be perfectly efficient.",
-			numToGen,
-			committeesPerSlot,
-		)
-	}
-
-	attsPerCommittee := math.Max(float64(numToGen/committeesPerSlot), 1)
-	if math.Trunc(attsPerCommittee) != attsPerCommittee {
-		return nil, fmt.Errorf(
-			"requested attestations %d must be easily divisible by committees in slot %d, calculated %f",
-			numToGen,
-			committeesPerSlot,
-			attsPerCommittee,
-		)
-	}
-
-	domain, err := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester, bState.GenesisValidatorRoot())
-	if err != nil {
-		return nil, err
-	}
-	for c := uint64(0); c < committeesPerSlot && c < numToGen; c++ {
-		committee, err := helpers.BeaconCommitteeFromState(bState, slot, c)
-		if err != nil {
-			return nil, err
-		}
-
-		attData := &ethpb.AttestationData{
-			Slot:            slot,
-			CommitteeIndex:  c,
-			BeaconBlockRoot: headRoot,
-			Source:          bState.CurrentJustifiedCheckpoint(),
-			Target: &ethpb.Checkpoint{
-				Epoch: currentEpoch,
-				Root:  targetRoot,
-			},
-		}
-
-		dataRoot, err := helpers.ComputeSigningRoot(attData, domain)
-		if err != nil {
-			return nil, err
-		}
-
-		committeeSize := uint64(len(committee))
-		bitsPerAtt := committeeSize / uint64(attsPerCommittee)
-		for i := uint64(0); i < committeeSize; i += bitsPerAtt {
-			aggregationBits := bitfield.NewBitlist(committeeSize)
-			var sigs []bls.Signature
-			for b := i; b < i+bitsPerAtt; b++ {
-				aggregationBits.SetBitAt(b, true)
-				sigs = append(sigs, privs[committee[b]].Sign(dataRoot[:]))
-			}
-
-			// bls.AggregateSignatures will return nil if sigs is 0.
-			if len(sigs) == 0 {
-				continue
-			}
-
-			att := &ethpb.Attestation{
-				Data:            attData,
-				AggregationBits: aggregationBits,
-				Signature:       bls.AggregateSignatures(sigs).Marshal(),
-			}
-			attestations = append(attestations, att)
-		}
-	}
-	return attestations, nil
-}
-
 func generateDepositsAndEth1Data(
-	bState *stateTrie.BeaconState,
+	bState iface.BeaconState,
 	numDeposits uint64,
 ) (
 	[]*ethpb.Deposit,
@@ -505,7 +347,7 @@ func generateDepositsAndEth1Data(
 }
 
 func generateVoluntaryExits(
-	bState *stateTrie.BeaconState,
+	bState iface.BeaconState,
 	privs []bls.SecretKey,
 	numExits uint64,
 ) ([]*ethpb.SignedVoluntaryExit, error) {
@@ -532,10 +374,132 @@ func generateVoluntaryExits(
 	return voluntaryExits, nil
 }
 
-func randValIndex(bState *stateTrie.BeaconState) (uint64, error) {
+func randValIndex(bState iface.BeaconState) (types.ValidatorIndex, error) {
 	activeCount, err := helpers.ActiveValidatorCount(bState, helpers.CurrentEpoch(bState))
 	if err != nil {
 		return 0, err
 	}
-	return rand.NewGenerator().Uint64() % activeCount, nil
+	return types.ValidatorIndex(rand.NewGenerator().Uint64() % activeCount), nil
+}
+
+// HydrateSignedBeaconHeader hydrates a signed beacon block header with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateSignedBeaconHeader(h *ethpb.SignedBeaconBlockHeader) *ethpb.SignedBeaconBlockHeader {
+	if h.Signature == nil {
+		h.Signature = make([]byte, params.BeaconConfig().BLSSignatureLength)
+	}
+	h.Header = HydrateBeaconHeader(h.Header)
+	return h
+}
+
+// HydrateBeaconHeader hydrates a beacon block header with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateBeaconHeader(h *ethpb.BeaconBlockHeader) *ethpb.BeaconBlockHeader {
+	if h == nil {
+		h = &ethpb.BeaconBlockHeader{}
+	}
+	if h.BodyRoot == nil {
+		h.BodyRoot = make([]byte, 32)
+	}
+	if h.StateRoot == nil {
+		h.StateRoot = make([]byte, 32)
+	}
+	if h.ParentRoot == nil {
+		h.ParentRoot = make([]byte, 32)
+	}
+	return h
+}
+
+// HydrateSignedBeaconBlock hydrates a signed beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateSignedBeaconBlock(b *ethpb.SignedBeaconBlock) *ethpb.SignedBeaconBlock {
+	if b.Signature == nil {
+		b.Signature = make([]byte, params.BeaconConfig().BLSSignatureLength)
+	}
+	b.Block = HydrateBeaconBlock(b.Block)
+	return b
+}
+
+// HydrateBeaconBlock hydrates a beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateBeaconBlock(b *ethpb.BeaconBlock) *ethpb.BeaconBlock {
+	if b == nil {
+		b = &ethpb.BeaconBlock{}
+	}
+	if b.ParentRoot == nil {
+		b.ParentRoot = make([]byte, 32)
+	}
+	if b.StateRoot == nil {
+		b.StateRoot = make([]byte, 32)
+	}
+	b.Body = HydrateBeaconBlockBody(b.Body)
+	return b
+}
+
+// HydrateBeaconBlockBody hydrates a beacon block body with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateBeaconBlockBody(b *ethpb.BeaconBlockBody) *ethpb.BeaconBlockBody {
+	if b == nil {
+		b = &ethpb.BeaconBlockBody{}
+	}
+	if b.RandaoReveal == nil {
+		b.RandaoReveal = make([]byte, params.BeaconConfig().BLSSignatureLength)
+	}
+	if b.Graffiti == nil {
+		b.Graffiti = make([]byte, 32)
+	}
+	if b.Eth1Data == nil {
+		b.Eth1Data = &ethpb.Eth1Data{
+			DepositRoot: make([]byte, 32),
+			BlockHash:   make([]byte, 32),
+		}
+	}
+	return b
+}
+
+// HydrateV1SignedBeaconBlock hydrates a signed beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateV1SignedBeaconBlock(b *v1.SignedBeaconBlock) *v1.SignedBeaconBlock {
+	if b.Signature == nil {
+		b.Signature = make([]byte, params.BeaconConfig().BLSSignatureLength)
+	}
+	b.Block = HydrateV1BeaconBlock(b.Block)
+	return b
+}
+
+// HydrateV1BeaconBlock hydrates a beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateV1BeaconBlock(b *v1.BeaconBlock) *v1.BeaconBlock {
+	if b == nil {
+		b = &v1.BeaconBlock{}
+	}
+	if b.ParentRoot == nil {
+		b.ParentRoot = make([]byte, 32)
+	}
+	if b.StateRoot == nil {
+		b.StateRoot = make([]byte, 32)
+	}
+	b.Body = HydrateV1BeaconBlockBody(b.Body)
+	return b
+}
+
+// HydrateV1BeaconBlockBody hydrates a beacon block body with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateV1BeaconBlockBody(b *v1.BeaconBlockBody) *v1.BeaconBlockBody {
+	if b == nil {
+		b = &v1.BeaconBlockBody{}
+	}
+	if b.RandaoReveal == nil {
+		b.RandaoReveal = make([]byte, params.BeaconConfig().BLSSignatureLength)
+	}
+	if b.Graffiti == nil {
+		b.Graffiti = make([]byte, 32)
+	}
+	if b.Eth1Data == nil {
+		b.Eth1Data = &v1.Eth1Data{
+			DepositRoot: make([]byte, 32),
+			BlockHash:   make([]byte, 32),
+		}
+	}
+	return b
 }

@@ -1,7 +1,6 @@
 package sync
 
 import (
-	"bytes"
 	"context"
 	"sync"
 	"testing"
@@ -15,6 +14,7 @@ import (
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -49,8 +49,9 @@ func expectResetStream(t *testing.T, stream network.Stream) {
 func TestRegisterRPC_ReceivesValidMessage(t *testing.T) {
 	p2p := p2ptest.NewTestP2P(t)
 	r := &Service{
-		ctx: context.Background(),
-		p2p: p2p,
+		ctx:         context.Background(),
+		cfg:         &Config{P2P: p2p},
+		rateLimiter: newRateLimiter(p2p),
 	}
 
 	var wg sync.WaitGroup
@@ -61,9 +62,7 @@ func TestRegisterRPC_ReceivesValidMessage(t *testing.T) {
 		if !ok {
 			t.Error("Object is not of type *pb.TestSimpleMessage")
 		}
-		if !bytes.Equal(m.CurrentVersion, []byte("fooo")) {
-			t.Errorf("Unexpected incoming message: %+v", m)
-		}
+		assert.DeepEqual(t, []byte("fooo"), m.CurrentVersion, "Unexpected incoming message")
 		wg.Done()
 
 		return nil

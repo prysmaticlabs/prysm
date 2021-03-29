@@ -8,7 +8,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/sirupsen/logrus"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -36,7 +35,7 @@ func (s *Store) Backup(ctx context.Context, outputDir string) error {
 		return err
 	}
 	backupPath := path.Join(backupsDir, fmt.Sprintf("prysm_validatordb_%d.backup", time.Now().Unix()))
-	logrus.WithField("prefix", "db").WithField("backup", backupPath).Info("Writing backup database")
+	log.WithField("backup", backupPath).Info("Writing backup database")
 
 	copyDB, err := bolt.Open(
 		backupPath,
@@ -48,13 +47,13 @@ func (s *Store) Backup(ctx context.Context, outputDir string) error {
 	}
 	defer func() {
 		if err := copyDB.Close(); err != nil {
-			logrus.WithError(err).Error("Failed to close backup database")
+			log.WithError(err).Error("Failed to close backup database")
 		}
 	}()
 
 	return s.db.View(func(tx *bolt.Tx) error {
 		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
-			logrus.Debugf("Copying bucket %s\n", name)
+			log.Debugf("Copying bucket %s\n", name)
 			return copyDB.Update(func(tx2 *bolt.Tx) error {
 				b2, err := tx2.CreateBucketIfNotExists(name)
 				if err != nil {

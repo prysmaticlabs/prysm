@@ -24,6 +24,7 @@ package peers
 
 import (
 	"context"
+	"math"
 	"sort"
 	"time"
 
@@ -33,12 +34,14 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr/net"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
@@ -59,6 +62,16 @@ const (
 
 	// Additional buffer beyond current peer limit, from which we can store the relevant peer statuses.
 	maxLimitBuffer = 150
+
+	// InboundRatio is the proportion of our connected peer limit at which we will allow inbound peers.
+	InboundRatio = float64(0.8)
+
+	// MinBackOffDuration minimum amount (in milliseconds) to wait before peer is re-dialed.
+	// When node and peer are dialing each other simultaneously connection may fail. In order, to break
+	// of constant dialing, peer is assigned some backoff period, and only dialed again once that backoff is up.
+	MinBackOffDuration = 100
+	// MaxBackOffDuration maximum amount (in milliseconds) to wait before peer is re-dialed.
+	MaxBackOffDuration = 5000
 )
 
 // Status is the structure holding the peer status information.
@@ -67,6 +80,7 @@ type Status struct {
 	scorers   *scorers.Service
 	store     *peerdata.Store
 	ipTracker map[string]uint64
+	rand      *rand.Rand
 }
 
 // StatusConfig represents peer status service params.
@@ -87,6 +101,9 @@ func NewStatus(ctx context.Context, config *StatusConfig) *Status {
 		store:     store,
 		scorers:   scorers.NewService(ctx, store, config.ScorerParams),
 		ipTracker: map[string]uint64{},
+		// Random generator used to calculate dial backoff period.
+		// It is ok to use deterministic generator, no need for true entropy.
+		rand: rand.NewDeterministicGenerator(),
 	}
 }
 
@@ -188,6 +205,30 @@ func (p *Status) IsActive(pid peer.ID) bool {
 	return ok && (peerData.ConnState == PeerConnected || peerData.ConnState == PeerConnecting)
 }
 
+// IsAboveInboundLimit checks if we are above our current inbound
+// peer limit.
+func (p *Status) IsAboveInboundLimit() bool {
+	p.store.RLock()
+	defer p.store.RUnlock()
+	totalInbound := 0
+	for _, peerData := range p.store.Peers() {
+		if peerData.ConnState == PeerConnected &&
+			peerData.Direction == network.DirInbound {
+			totalInbound += 1
+		}
+	}
+	inboundLimit := int(float64(p.ConnectedPeerLimit()) * InboundRatio)
+	return totalInbound > inboundLimit
+}
+
+// InboundLimit returns the current inbound
+// peer limit.
+func (p *Status) InboundLimit() int {
+	p.store.RLock()
+	defer p.store.RUnlock()
+	return int(float64(p.ConnectedPeerLimit()) * InboundRatio)
+}
+
 // SetMetadata sets the metadata of the given remote peer.
 func (p *Status) SetMetadata(pid peer.ID, metaData *pb.MetaData) {
 	p.store.Lock()
@@ -218,7 +259,7 @@ func (p *Status) CommitteeIndices(pid peer.ID) ([]uint64, error) {
 		if peerData.Enr == nil || peerData.MetaData == nil {
 			return []uint64{}, nil
 		}
-		return retrieveIndicesFromBitfield(peerData.MetaData.Attnets), nil
+		return indicesFromBitfield(peerData.MetaData.Attnets), nil
 	}
 	return nil, peerdata.ErrPeerUnknown
 }
@@ -234,7 +275,7 @@ func (p *Status) SubscribedToSubnet(index uint64) []peer.ID {
 		// look at active peers
 		connectedStatus := peerData.ConnState == PeerConnecting || peerData.ConnState == PeerConnected
 		if connectedStatus && peerData.MetaData != nil && peerData.MetaData.Attnets != nil {
-			indices := retrieveIndicesFromBitfield(peerData.MetaData.Attnets)
+			indices := indicesFromBitfield(peerData.MetaData.Attnets)
 			for _, idx := range indices {
 				if idx == index {
 					peers = append(peers, pid)
@@ -308,6 +349,22 @@ func (p *Status) SetNextValidTime(pid peer.ID, nextTime time.Time) {
 	peerData.NextValidTime = nextTime
 }
 
+// RandomizeBackOff adds extra backoff period during which peer will not be dialed.
+func (p *Status) RandomizeBackOff(pid peer.ID) {
+	p.store.Lock()
+	defer p.store.Unlock()
+
+	peerData := p.store.PeerDataGetOrCreate(pid)
+
+	// No need to add backoff period, if the previous one hasn't expired yet.
+	if !time.Now().After(peerData.NextValidTime) {
+		return
+	}
+
+	duration := time.Duration(math.Max(MinBackOffDuration, float64(p.rand.Intn(MaxBackOffDuration)))) * time.Millisecond
+	peerData.NextValidTime = time.Now().Add(duration)
+}
+
 // IsReadyToDial checks where the given peer is ready to be
 // dialed again.
 func (p *Status) IsReadyToDial(pid peer.ID) bool {
@@ -344,6 +401,58 @@ func (p *Status) Connected() []peer.ID {
 	peers := make([]peer.ID, 0)
 	for pid, peerData := range p.store.Peers() {
 		if peerData.ConnState == PeerConnected {
+			peers = append(peers, pid)
+		}
+	}
+	return peers
+}
+
+// Inbound returns the current batch of inbound peers.
+func (p *Status) Inbound() []peer.ID {
+	p.store.RLock()
+	defer p.store.RUnlock()
+	peers := make([]peer.ID, 0)
+	for pid, peerData := range p.store.Peers() {
+		if peerData.Direction == network.DirInbound {
+			peers = append(peers, pid)
+		}
+	}
+	return peers
+}
+
+// InboundConnected returns the current batch of inbound peers that are connected.
+func (p *Status) InboundConnected() []peer.ID {
+	p.store.RLock()
+	defer p.store.RUnlock()
+	peers := make([]peer.ID, 0)
+	for pid, peerData := range p.store.Peers() {
+		if peerData.ConnState == PeerConnected && peerData.Direction == network.DirInbound {
+			peers = append(peers, pid)
+		}
+	}
+	return peers
+}
+
+// Outbound returns the current batch of outbound peers.
+func (p *Status) Outbound() []peer.ID {
+	p.store.RLock()
+	defer p.store.RUnlock()
+	peers := make([]peer.ID, 0)
+	for pid, peerData := range p.store.Peers() {
+		if peerData.Direction == network.DirOutbound {
+			peers = append(peers, pid)
+		}
+	}
+	return peers
+}
+
+// OutboundConnected returns the current batch of outbound peers that are connected.
+func (p *Status) OutboundConnected() []peer.ID {
+	p.store.RLock()
+	defer p.store.RUnlock()
+	peers := make([]peer.ID, 0)
+	for pid, peerData := range p.store.Peers() {
+		if peerData.ConnState == PeerConnected && peerData.Direction == network.DirOutbound {
 			peers = append(peers, pid)
 		}
 	}
@@ -474,11 +583,11 @@ func (p *Status) Prune() {
 // Ideally, all peers would be reporting the same finalized epoch but some may be behind due to their
 // own latency, or because of their finalized epoch at the time we queried them.
 // Returns epoch number and list of peers that are at or beyond that epoch.
-func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) (uint64, []peer.ID) {
+func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch types.Epoch) (types.Epoch, []peer.ID) {
 	connected := p.Connected()
-	finalizedEpochVotes := make(map[uint64]uint64)
-	pidEpoch := make(map[peer.ID]uint64, len(connected))
-	pidHead := make(map[peer.ID]uint64, len(connected))
+	finalizedEpochVotes := make(map[types.Epoch]uint64)
+	pidEpoch := make(map[peer.ID]types.Epoch, len(connected))
+	pidHead := make(map[peer.ID]types.Slot, len(connected))
 	potentialPIDs := make([]peer.ID, 0, len(connected))
 	for _, pid := range connected {
 		peerChainState, err := p.ChainState(pid)
@@ -491,7 +600,7 @@ func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) (uint64, 
 	}
 
 	// Select the target epoch, which is the epoch most peers agree upon.
-	var targetEpoch uint64
+	var targetEpoch types.Epoch
 	var mostVotes uint64
 	for epoch, count := range finalizedEpochVotes {
 		if count > mostVotes || (count == mostVotes && epoch > targetEpoch) {
@@ -526,14 +635,14 @@ func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) (uint64, 
 
 // BestNonFinalized returns the highest known epoch, higher than ours,
 // and is shared by at least minPeers.
-func (p *Status) BestNonFinalized(minPeers int, ourHeadEpoch uint64) (uint64, []peer.ID) {
+func (p *Status) BestNonFinalized(minPeers int, ourHeadEpoch types.Epoch) (types.Epoch, []peer.ID) {
 	connected := p.Connected()
-	epochVotes := make(map[uint64]uint64)
-	pidEpoch := make(map[peer.ID]uint64, len(connected))
-	pidHead := make(map[peer.ID]uint64, len(connected))
+	epochVotes := make(map[types.Epoch]uint64)
+	pidEpoch := make(map[peer.ID]types.Epoch, len(connected))
+	pidHead := make(map[peer.ID]types.Slot, len(connected))
 	potentialPIDs := make([]peer.ID, 0, len(connected))
 
-	ourHeadSlot := ourHeadEpoch * params.BeaconConfig().SlotsPerEpoch
+	ourHeadSlot := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(ourHeadEpoch))
 	for _, pid := range connected {
 		peerChainState, err := p.ChainState(pid)
 		if err == nil && peerChainState != nil && peerChainState.HeadSlot > ourHeadSlot {
@@ -546,7 +655,7 @@ func (p *Status) BestNonFinalized(minPeers int, ourHeadEpoch uint64) (uint64, []
 	}
 
 	// Select the target epoch, which has enough peers' votes (>= minPeers).
-	var targetEpoch uint64
+	var targetEpoch types.Epoch
 	for epoch, votes := range epochVotes {
 		if votes >= uint64(minPeers) && targetEpoch < epoch {
 			targetEpoch = epoch
@@ -569,17 +678,91 @@ func (p *Status) BestNonFinalized(minPeers int, ourHeadEpoch uint64) (uint64, []
 	return targetEpoch, potentialPIDs
 }
 
+// PeersToPrune selects the most sutiable inbound peers
+// to disconnect the host peer from. As of this moment
+// the pruning relies on simple heuristics such as
+// bad response count. In the future scoring will be used
+// to determine the most suitable peers to take out.
+func (p *Status) PeersToPrune() []peer.ID {
+	connLimit := p.ConnectedPeerLimit()
+	inBoundLimit := p.InboundLimit()
+	activePeers := p.Active()
+	numInboundPeers := len(p.InboundConnected())
+	// Exit early if we are still below our max
+	// limit.
+	if len(activePeers) <= int(connLimit) {
+		return []peer.ID{}
+	}
+	p.store.Lock()
+	defer p.store.Unlock()
+
+	type peerResp struct {
+		pid     peer.ID
+		badResp int
+	}
+	peersToPrune := make([]*peerResp, 0)
+	// Select connected and inbound peers to prune.
+	for pid, peerData := range p.store.Peers() {
+		if peerData.ConnState == PeerConnected &&
+			peerData.Direction == network.DirInbound {
+			peersToPrune = append(peersToPrune, &peerResp{
+				pid:     pid,
+				badResp: peerData.BadResponses,
+			})
+		}
+	}
+
+	// Sort in descending order to favour pruning peers with a
+	// higher bad response count.
+	sort.Slice(peersToPrune, func(i, j int) bool {
+		return peersToPrune[i].badResp > peersToPrune[j].badResp
+	})
+
+	// Determine amount of peers to prune using our
+	// max connection limit.
+	amountToPrune := len(activePeers) - int(connLimit)
+
+	// Also check for inbound peers above our limit.
+	excessInbound := 0
+	if numInboundPeers > inBoundLimit {
+		excessInbound = numInboundPeers - inBoundLimit
+	}
+	// Prune the largest amount between excess peers and
+	// excess inbound peers.
+	if excessInbound > amountToPrune {
+		amountToPrune = excessInbound
+	}
+	if amountToPrune < len(peersToPrune) {
+		peersToPrune = peersToPrune[:amountToPrune]
+	}
+	ids := make([]peer.ID, 0, len(peersToPrune))
+	for _, pr := range peersToPrune {
+		ids = append(ids, pr.pid)
+	}
+	return ids
+}
+
 // HighestEpoch returns the highest epoch reported epoch amongst peers.
-func (p *Status) HighestEpoch() uint64 {
+func (p *Status) HighestEpoch() types.Epoch {
 	p.store.RLock()
 	defer p.store.RUnlock()
-	var highestSlot uint64
+	var highestSlot types.Slot
 	for _, peerData := range p.store.Peers() {
 		if peerData != nil && peerData.ChainState != nil && peerData.ChainState.HeadSlot > highestSlot {
 			highestSlot = peerData.ChainState.HeadSlot
 		}
 	}
 	return helpers.SlotToEpoch(highestSlot)
+}
+
+// ConnectedPeerLimit returns the peer limit of
+// concurrent peers connected to the beacon-node.
+func (p *Status) ConnectedPeerLimit() uint64 {
+	maxLim := p.MaxPeerLimit()
+	if maxLim <= maxLimitBuffer {
+		return 0
+	}
+	return uint64(maxLim) - maxLimitBuffer
 }
 
 func (p *Status) isfromBadIP(pid peer.ID) bool {
@@ -664,7 +847,7 @@ func sameIP(firstAddr, secondAddr ma.Multiaddr) bool {
 	return firstIP.Equal(secondIP)
 }
 
-func retrieveIndicesFromBitfield(bitV bitfield.Bitvector64) []uint64 {
+func indicesFromBitfield(bitV bitfield.Bitvector64) []uint64 {
 	committeeIdxs := make([]uint64, 0, bitV.Count())
 	for i := uint64(0); i < 64; i++ {
 		if bitV.BitAt(i) {

@@ -19,7 +19,7 @@ import (
 )
 
 func TestServer_GetBlock(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	b := testutil.NewBeaconBlock()
@@ -48,13 +48,13 @@ func TestServer_GetBlock(t *testing.T) {
 }
 
 func TestServer_GetAttestationInclusionSlot(t *testing.T) {
-	db, sc := dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
 	ctx := context.Background()
+	offset := int64(2 * params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	bs := &Server{
-		BeaconDB: db,
-		StateGen: stategen.New(db, sc),
-		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*int64(
-			2*params.BeaconConfig().SlotsPerEpoch*params.BeaconConfig().SecondsPerSlot)) * time.Second)},
+		BeaconDB:           db,
+		StateGen:           stategen.New(db),
+		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 	}
 
 	s, _ := testutil.DeterministicGenesisState(t, 2048)
@@ -70,17 +70,17 @@ func TestServer_GetAttestationInclusionSlot(t *testing.T) {
 			BeaconBlockRoot: make([]byte, 32),
 			Slot:            1,
 		},
-		AggregationBits: bitfield.Bitlist{0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
+		AggregationBits: bitfield.Bitlist{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01},
 		Signature:       make([]byte, 96),
 	}
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 2
 	b.Block.Body.Attestations = []*ethpb.Attestation{a}
 	require.NoError(t, bs.BeaconDB.SaveBlock(ctx, b))
-	res, err := bs.GetInclusionSlot(ctx, &pbrpc.InclusionSlotRequest{Slot: 1, Id: c[0]})
+	res, err := bs.GetInclusionSlot(ctx, &pbrpc.InclusionSlotRequest{Slot: 1, Id: uint64(c[0])})
 	require.NoError(t, err)
 	require.Equal(t, b.Block.Slot, res.Slot)
 	res, err = bs.GetInclusionSlot(ctx, &pbrpc.InclusionSlotRequest{Slot: 1, Id: 9999999})
 	require.NoError(t, err)
-	require.Equal(t, params.BeaconConfig().FarFutureEpoch, res.Slot)
+	require.Equal(t, params.BeaconConfig().FarFutureSlot, res.Slot)
 }

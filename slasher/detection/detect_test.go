@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/slashutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
@@ -172,7 +173,7 @@ func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {
 			ctx := context.Background()
 			ds := Service{
 				ctx:                ctx,
-				slasherDB:          db,
+				cfg:                &Config{SlasherDB: db},
 				minMaxSpanDetector: attestations.NewSpanDetector(db),
 			}
 			require.NoError(t, db.SaveIndexedAttestations(ctx, tt.savedAtts))
@@ -189,7 +190,7 @@ func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {
 			for _, ss := range slashings {
 				slashingAtt1 := ss.Attestation_1
 				slashingAtt2 := ss.Attestation_2
-				if !isSurrounding(slashingAtt1, slashingAtt2) {
+				if !slashutil.IsSurround(slashingAtt1, slashingAtt2) {
 					t.Fatalf(
 						"Expected slashing to be valid, received atts %d->%d and %d->%d",
 						slashingAtt2.Data.Source.Epoch,
@@ -323,7 +324,7 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 			ctx := context.Background()
 			ds := Service{
 				ctx:                ctx,
-				slasherDB:          db,
+				cfg:                &Config{SlasherDB: db},
 				minMaxSpanDetector: attestations.NewSpanDetector(db),
 			}
 			require.NoError(t, db.SaveIndexedAttestations(ctx, tt.savedAtts))
@@ -478,7 +479,7 @@ func TestDetect_updateHighestAttestation(t *testing.T) {
 			ctx := context.Background()
 			ds := Service{
 				ctx:               ctx,
-				slasherDB:         db,
+				cfg:               &Config{SlasherDB: db},
 				proposalsDetector: proposals.NewProposeDetector(db),
 			}
 			require.NoError(t, db.SaveHighestAttestation(ctx, tt.savedHighest))
@@ -536,7 +537,7 @@ func TestDetect_detectProposerSlashing(t *testing.T) {
 			ctx := context.Background()
 			ds := Service{
 				ctx:               ctx,
-				slasherDB:         db,
+				cfg:               &Config{SlasherDB: db},
 				proposalsDetector: proposals.NewProposeDetector(db),
 			}
 			require.NoError(t, db.SaveBlockHeader(ctx, tt.blk))
@@ -615,7 +616,7 @@ func TestDetect_detectProposerSlashingNoUpdate(t *testing.T) {
 			ctx := context.Background()
 			ds := Service{
 				ctx:               ctx,
-				slasherDB:         db,
+				cfg:               &Config{SlasherDB: db},
 				proposalsDetector: proposals.NewProposeDetector(db),
 			}
 			require.NoError(t, db.SaveBlockHeader(ctx, tt.blk))
@@ -631,8 +632,8 @@ func TestServer_MapResultsToAtts(t *testing.T) {
 	db := testDB.SetupSlasherDB(t, false)
 	ctx := context.Background()
 	ds := Service{
-		ctx:       ctx,
-		slasherDB: db,
+		ctx: ctx,
+		cfg: &Config{SlasherDB: db},
 	}
 	// 3 unique results, but 7 validators in total.
 	results := []*types.DetectionResult{
@@ -701,7 +702,7 @@ func TestServer_MapResultsToAtts(t *testing.T) {
 		},
 	}
 	for _, atts := range expectedResultsToAtts {
-		require.NoError(t, ds.slasherDB.SaveIndexedAttestations(ctx, atts))
+		require.NoError(t, ds.cfg.SlasherDB.SaveIndexedAttestations(ctx, atts))
 	}
 
 	resultsToAtts, err := ds.mapResultsToAtts(ctx, results)

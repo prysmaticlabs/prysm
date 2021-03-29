@@ -32,6 +32,7 @@ type Service struct {
 		badResponsesScorer  *BadResponsesScorer
 		blockProviderScorer *BlockProviderScorer
 		peerStatusScorer    *PeerStatusScorer
+		gossipScorer        *GossipScorer
 	}
 	weights     map[Scorer]float64
 	totalWeight float64
@@ -42,6 +43,7 @@ type Config struct {
 	BadResponsesScorerConfig  *BadResponsesScorerConfig
 	BlockProviderScorerConfig *BlockProviderScorerConfig
 	PeerStatusScorerConfig    *PeerStatusScorerConfig
+	GossipScorerConfig        *GossipScorerConfig
 }
 
 // NewService provides fully initialized peer scoring service.
@@ -58,6 +60,8 @@ func NewService(ctx context.Context, store *peerdata.Store, config *Config) *Ser
 	s.setScorerWeight(s.scorers.blockProviderScorer, 1.0)
 	s.scorers.peerStatusScorer = newPeerStatusScorer(store, config.PeerStatusScorerConfig)
 	s.setScorerWeight(s.scorers.peerStatusScorer, 0.0)
+	s.scorers.gossipScorer = newGossipScorer(store, config.GossipScorerConfig)
+	s.setScorerWeight(s.scorers.gossipScorer, 0.0)
 
 	// Start background tasks.
 	go s.loop(ctx)
@@ -78,6 +82,11 @@ func (s *Service) BlockProviderScorer() *BlockProviderScorer {
 // PeerStatusScorer exposes peer chain status scoring service.
 func (s *Service) PeerStatusScorer() *PeerStatusScorer {
 	return s.scorers.peerStatusScorer
+}
+
+// GossipScorer exposes the peer's gossip scoring service.
+func (s *Service) GossipScorer() *GossipScorer {
+	return s.scorers.gossipScorer
 }
 
 // ActiveScorersCount returns number of scorers that can affect score (have non-zero weight).
@@ -103,6 +112,7 @@ func (s *Service) Score(pid peer.ID) float64 {
 	score += s.scorers.badResponsesScorer.score(pid) * s.scorerWeight(s.scorers.badResponsesScorer)
 	score += s.scorers.blockProviderScorer.score(pid) * s.scorerWeight(s.scorers.blockProviderScorer)
 	score += s.scorers.peerStatusScorer.score(pid) * s.scorerWeight(s.scorers.peerStatusScorer)
+	score += s.scorers.gossipScorer.score(pid) * s.scorerWeight(s.scorers.gossipScorer)
 	return math.Round(score*ScoreRoundingFactor) / ScoreRoundingFactor
 }
 
@@ -121,6 +131,8 @@ func (s *Service) isBadPeer(pid peer.ID) bool {
 	if s.scorers.peerStatusScorer.isBadPeer(pid) {
 		return true
 	}
+	// TODO(#6043): Hook in gossip scorer's relevant
+	// method to check if peer has a bad gossip score.
 	return false
 }
 

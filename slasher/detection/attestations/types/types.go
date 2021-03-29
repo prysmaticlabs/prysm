@@ -5,6 +5,7 @@ package types
 import (
 	"errors"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
@@ -31,17 +32,17 @@ const (
 // finding the attestation for the slashing proof.
 type DetectionResult struct {
 	ValidatorIndex uint64
-	SlashableEpoch uint64
+	SlashableEpoch types.Epoch
 	Kind           DetectionKind
 	SigBytes       [2]byte
 }
 
 // Marshal the result into bytes, used for removing duplicates.
-func (result *DetectionResult) Marshal() []byte {
-	numBytes := bytesutil.ToBytes(result.SlashableEpoch, 8)
+func (r *DetectionResult) Marshal() []byte {
+	numBytes := bytesutil.ToBytes(uint64(r.SlashableEpoch), 8)
 	var resultBytes []byte
-	resultBytes = append(resultBytes, uint8(result.Kind))
-	resultBytes = append(resultBytes, result.SigBytes[:]...)
+	resultBytes = append(resultBytes, uint8(r.Kind))
+	resultBytes = append(resultBytes, r.SigBytes[:]...)
 	resultBytes = append(resultBytes, numBytes...)
 	return resultBytes
 }
@@ -75,18 +76,18 @@ func UnmarshalSpan(enc []byte) (Span, error) {
 
 // Marshal converts the span struct into a flattened byte array.
 // Note: This is a very often used function, so it is as optimized as possible.
-func (span Span) Marshal() []byte {
+func (s Span) Marshal() []byte {
 	var attested byte = 0
-	if span.HasAttested {
+	if s.HasAttested {
 		attested = 1
 	}
 	return []byte{
-		byte(span.MinSpan),
-		byte(span.MinSpan >> 8),
-		byte(span.MaxSpan),
-		byte(span.MaxSpan >> 8),
-		span.SigBytes[0],
-		span.SigBytes[1],
+		byte(s.MinSpan),
+		byte(s.MinSpan >> 8),
+		byte(s.MaxSpan),
+		byte(s.MaxSpan >> 8),
+		s.SigBytes[0],
+		s.SigBytes[1],
 		attested,
 	}
 }

@@ -1,16 +1,17 @@
 package node
 
 import (
+	"context"
 	"flag"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/urfave/cli/v2"
@@ -56,6 +57,6 @@ func TestNode_Builds(t *testing.T) {
 func TestClearDB(t *testing.T) {
 	hook := logTest.NewGlobal()
 	tmp := filepath.Join(t.TempDir(), "datadirtest")
-	require.NoError(t, clearDB(tmp, true))
+	require.NoError(t, clearDB(context.Background(), tmp, true))
 	require.LogsContain(t, hook, "Removing database")
 }

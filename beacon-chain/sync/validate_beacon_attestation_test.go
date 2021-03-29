@@ -13,7 +13,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
@@ -27,7 +26,7 @@ import (
 func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 	ctx := context.Background()
 	p := p2ptest.NewTestP2P(t)
-	db, _ := dbtest.SetupDB(t)
+	db := dbtest.SetupDB(t)
 	chain := &mockChain.ChainService{
 		// 1 slot ago.
 		Genesis:          time.Now().Add(time.Duration(-1*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second),
@@ -38,13 +37,15 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 	c, err := lru.New(10)
 	require.NoError(t, err)
 	s := &Service{
-		initialSync:          &mockSync.Sync{IsSyncing: false},
-		p2p:                  p,
-		db:                   db,
-		chain:                chain,
+		cfg: &Config{
+			InitialSync:         &mockSync.Sync{IsSyncing: false},
+			P2P:                 p,
+			DB:                  db,
+			Chain:               chain,
+			AttestationNotifier: (&mockChain.ChainService{}).OperationNotifier(),
+		},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		seenAttestationCache: c,
-		stateSummaryCache:    cache.NewStateSummaryCache(),
 	}
 	err = s.initCaches()
 	require.NoError(t, err)

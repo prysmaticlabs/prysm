@@ -74,7 +74,7 @@ func main() {
 		}
 	}
 
-	fmt.Printf("Starting bootnode. Version: %s\n", version.GetVersion())
+	fmt.Printf("Starting bootnode. Version: %s\n", version.Version())
 
 	if *debug {
 		logrus.SetLevel(logrus.DebugLevel)

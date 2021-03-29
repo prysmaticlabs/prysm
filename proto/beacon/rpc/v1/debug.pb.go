@@ -5,13 +5,16 @@ package ethereum_beacon_rpc_v1
 
 import (
 	context "context"
+	encoding_binary "encoding/binary"
 	fmt "fmt"
 	io "io"
 	math "math"
 	math_bits "math/bits"
 
+	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
-	types "github.com/gogo/protobuf/types"
+	empty "github.com/golang/protobuf/ptypes/empty"
+	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/eth2-types"
 	v1alpha1 "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
@@ -60,11 +63,11 @@ func (LoggingLevelRequest_Level) EnumDescriptor() ([]byte, []int) {
 }
 
 type InclusionSlotRequest struct {
-	Id                   uint64   `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	Slot                 uint64   `protobuf:"varint,2,opt,name=slot,proto3" json:"slot,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Id                   uint64                                   `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Slot                 github_com_prysmaticlabs_eth2_types.Slot `protobuf:"varint,2,opt,name=slot,proto3,casttype=github.com/prysmaticlabs/eth2-types.Slot" json:"slot,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                                 `json:"-"`
+	XXX_unrecognized     []byte                                   `json:"-"`
+	XXX_sizecache        int32                                    `json:"-"`
 }
 
 func (m *InclusionSlotRequest) Reset()         { *m = InclusionSlotRequest{} }
@@ -107,7 +110,7 @@ func (m *InclusionSlotRequest) GetId() uint64 {
 	return 0
 }
 
-func (m *InclusionSlotRequest) GetSlot() uint64 {
+func (m *InclusionSlotRequest) GetSlot() github_com_prysmaticlabs_eth2_types.Slot {
 	if m != nil {
 		return m.Slot
 	}
@@ -115,10 +118,10 @@ func (m *InclusionSlotRequest) GetSlot() uint64 {
 }
 
 type InclusionSlotResponse struct {
-	Slot                 uint64   `protobuf:"varint,2,opt,name=slot,proto3" json:"slot,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Slot                 github_com_prysmaticlabs_eth2_types.Slot `protobuf:"varint,2,opt,name=slot,proto3,casttype=github.com/prysmaticlabs/eth2-types.Slot" json:"slot,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                                 `json:"-"`
+	XXX_unrecognized     []byte                                   `json:"-"`
+	XXX_sizecache        int32                                    `json:"-"`
 }
 
 func (m *InclusionSlotResponse) Reset()         { *m = InclusionSlotResponse{} }
@@ -154,7 +157,7 @@ func (m *InclusionSlotResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_InclusionSlotResponse proto.InternalMessageInfo
 
-func (m *InclusionSlotResponse) GetSlot() uint64 {
+func (m *InclusionSlotResponse) GetSlot() github_com_prysmaticlabs_eth2_types.Slot {
 	if m != nil {
 		return m.Slot
 	}
@@ -211,7 +214,7 @@ type isBeaconStateRequest_QueryFilter interface {
 }
 
 type BeaconStateRequest_Slot struct {
-	Slot uint64 `protobuf:"varint,1,opt,name=slot,proto3,oneof" json:"slot,omitempty"`
+	Slot github_com_prysmaticlabs_eth2_types.Slot `protobuf:"varint,1,opt,name=slot,proto3,oneof,casttype=github.com/prysmaticlabs/eth2-types.Slot" json:"slot,omitempty"`
 }
 type BeaconStateRequest_BlockRoot struct {
 	BlockRoot []byte `protobuf:"bytes,2,opt,name=block_root,json=blockRoot,proto3,oneof" json:"block_root,omitempty"`
@@ -227,7 +230,7 @@ func (m *BeaconStateRequest) GetQueryFilter() isBeaconStateRequest_QueryFilter {
 	return nil
 }
 
-func (m *BeaconStateRequest) GetSlot() uint64 {
+func (m *BeaconStateRequest) GetSlot() github_com_prysmaticlabs_eth2_types.Slot {
 	if x, ok := m.GetQueryFilter().(*BeaconStateRequest_Slot); ok {
 		return x.Slot
 	}
@@ -391,14 +394,14 @@ func (m *LoggingLevelRequest) GetLevel() LoggingLevelRequest_Level {
 }
 
 type ProtoArrayForkChoiceResponse struct {
-	PruneThreshold       uint64            `protobuf:"varint,1,opt,name=prune_threshold,json=pruneThreshold,proto3" json:"prune_threshold,omitempty"`
-	JustifiedEpoch       uint64            `protobuf:"varint,2,opt,name=justified_epoch,json=justifiedEpoch,proto3" json:"justified_epoch,omitempty"`
-	FinalizedEpoch       uint64            `protobuf:"varint,3,opt,name=finalized_epoch,json=finalizedEpoch,proto3" json:"finalized_epoch,omitempty"`
-	ProtoArrayNodes      []*ProtoArrayNode `protobuf:"bytes,4,rep,name=proto_array_nodes,json=protoArrayNodes,proto3" json:"proto_array_nodes,omitempty"`
-	Indices              map[string]uint64 `protobuf:"bytes,5,rep,name=indices,proto3" json:"indices,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
-	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
-	XXX_unrecognized     []byte            `json:"-"`
-	XXX_sizecache        int32             `json:"-"`
+	PruneThreshold       uint64                                    `protobuf:"varint,1,opt,name=prune_threshold,json=pruneThreshold,proto3" json:"prune_threshold,omitempty"`
+	JustifiedEpoch       github_com_prysmaticlabs_eth2_types.Epoch `protobuf:"varint,2,opt,name=justified_epoch,json=justifiedEpoch,proto3,casttype=github.com/prysmaticlabs/eth2-types.Epoch" json:"justified_epoch,omitempty"`
+	FinalizedEpoch       github_com_prysmaticlabs_eth2_types.Epoch `protobuf:"varint,3,opt,name=finalized_epoch,json=finalizedEpoch,proto3,casttype=github.com/prysmaticlabs/eth2-types.Epoch" json:"finalized_epoch,omitempty"`
+	ProtoArrayNodes      []*ProtoArrayNode                         `protobuf:"bytes,4,rep,name=proto_array_nodes,json=protoArrayNodes,proto3" json:"proto_array_nodes,omitempty"`
+	Indices              map[string]uint64                         `protobuf:"bytes,5,rep,name=indices,proto3" json:"indices,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
+	XXX_NoUnkeyedLiteral struct{}                                  `json:"-"`
+	XXX_unrecognized     []byte                                    `json:"-"`
+	XXX_sizecache        int32                                     `json:"-"`
 }
 
 func (m *ProtoArrayForkChoiceResponse) Reset()         { *m = ProtoArrayForkChoiceResponse{} }
@@ -441,14 +444,14 @@ func (m *ProtoArrayForkChoiceResponse) GetPruneThreshold() uint64 {
 	return 0
 }
 
-func (m *ProtoArrayForkChoiceResponse) GetJustifiedEpoch() uint64 {
+func (m *ProtoArrayForkChoiceResponse) GetJustifiedEpoch() github_com_prysmaticlabs_eth2_types.Epoch {
 	if m != nil {
 		return m.JustifiedEpoch
 	}
 	return 0
 }
 
-func (m *ProtoArrayForkChoiceResponse) GetFinalizedEpoch() uint64 {
+func (m *ProtoArrayForkChoiceResponse) GetFinalizedEpoch() github_com_prysmaticlabs_eth2_types.Epoch {
 	if m != nil {
 		return m.FinalizedEpoch
 	}
@@ -470,17 +473,17 @@ func (m *ProtoArrayForkChoiceResponse) GetIndices() map[string]uint64 {
 }
 
 type ProtoArrayNode struct {
-	Slot                 uint64   `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty"`
-	Root                 []byte   `protobuf:"bytes,2,opt,name=root,proto3" json:"root,omitempty"`
-	Parent               uint64   `protobuf:"varint,3,opt,name=parent,proto3" json:"parent,omitempty"`
-	JustifiedEpoch       uint64   `protobuf:"varint,4,opt,name=justified_epoch,json=justifiedEpoch,proto3" json:"justified_epoch,omitempty"`
-	FinalizedEpoch       uint64   `protobuf:"varint,5,opt,name=finalized_epoch,json=finalizedEpoch,proto3" json:"finalized_epoch,omitempty"`
-	Weight               uint64   `protobuf:"varint,6,opt,name=weight,proto3" json:"weight,omitempty"`
-	BestChild            uint64   `protobuf:"varint,7,opt,name=best_child,json=bestChild,proto3" json:"best_child,omitempty"`
-	BestDescendant       uint64   `protobuf:"varint,8,opt,name=best_descendant,json=bestDescendant,proto3" json:"best_descendant,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Slot                 github_com_prysmaticlabs_eth2_types.Slot  `protobuf:"varint,1,opt,name=slot,proto3,casttype=github.com/prysmaticlabs/eth2-types.Slot" json:"slot,omitempty"`
+	Root                 []byte                                    `protobuf:"bytes,2,opt,name=root,proto3" json:"root,omitempty"`
+	Parent               uint64                                    `protobuf:"varint,3,opt,name=parent,proto3" json:"parent,omitempty"`
+	JustifiedEpoch       github_com_prysmaticlabs_eth2_types.Epoch `protobuf:"varint,4,opt,name=justified_epoch,json=justifiedEpoch,proto3,casttype=github.com/prysmaticlabs/eth2-types.Epoch" json:"justified_epoch,omitempty"`
+	FinalizedEpoch       github_com_prysmaticlabs_eth2_types.Epoch `protobuf:"varint,5,opt,name=finalized_epoch,json=finalizedEpoch,proto3,casttype=github.com/prysmaticlabs/eth2-types.Epoch" json:"finalized_epoch,omitempty"`
+	Weight               uint64                                    `protobuf:"varint,6,opt,name=weight,proto3" json:"weight,omitempty"`
+	BestChild            uint64                                    `protobuf:"varint,7,opt,name=best_child,json=bestChild,proto3" json:"best_child,omitempty"`
+	BestDescendant       uint64                                    `protobuf:"varint,8,opt,name=best_descendant,json=bestDescendant,proto3" json:"best_descendant,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                                  `json:"-"`
+	XXX_unrecognized     []byte                                    `json:"-"`
+	XXX_sizecache        int32                                     `json:"-"`
 }
 
 func (m *ProtoArrayNode) Reset()         { *m = ProtoArrayNode{} }
@@ -516,7 +519,7 @@ func (m *ProtoArrayNode) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ProtoArrayNode proto.InternalMessageInfo
 
-func (m *ProtoArrayNode) GetSlot() uint64 {
+func (m *ProtoArrayNode) GetSlot() github_com_prysmaticlabs_eth2_types.Slot {
 	if m != nil {
 		return m.Slot
 	}
@@ -537,14 +540,14 @@ func (m *ProtoArrayNode) GetParent() uint64 {
 	return 0
 }
 
-func (m *ProtoArrayNode) GetJustifiedEpoch() uint64 {
+func (m *ProtoArrayNode) GetJustifiedEpoch() github_com_prysmaticlabs_eth2_types.Epoch {
 	if m != nil {
 		return m.JustifiedEpoch
 	}
 	return 0
 }
 
-func (m *ProtoArrayNode) GetFinalizedEpoch() uint64 {
+func (m *ProtoArrayNode) GetFinalizedEpoch() github_com_prysmaticlabs_eth2_types.Epoch {
 	if m != nil {
 		return m.FinalizedEpoch
 	}
@@ -628,6 +631,7 @@ type DebugPeerResponse struct {
 	PeerInfo             *DebugPeerResponse_PeerInfo `protobuf:"bytes,6,opt,name=peer_info,json=peerInfo,proto3" json:"peer_info,omitempty"`
 	PeerStatus           *v1.Status                  `protobuf:"bytes,7,opt,name=peer_status,json=peerStatus,proto3" json:"peer_status,omitempty"`
 	LastUpdated          uint64                      `protobuf:"varint,8,opt,name=last_updated,json=lastUpdated,proto3" json:"last_updated,omitempty"`
+	ScoreInfo            *ScoreInfo                  `protobuf:"bytes,9,opt,name=score_info,json=scoreInfo,proto3" json:"score_info,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}                    `json:"-"`
 	XXX_unrecognized     []byte                      `json:"-"`
 	XXX_sizecache        int32                       `json:"-"`
@@ -722,6 +726,13 @@ func (m *DebugPeerResponse) GetLastUpdated() uint64 {
 	return 0
 }
 
+func (m *DebugPeerResponse) GetScoreInfo() *ScoreInfo {
+	if m != nil {
+		return m.ScoreInfo
+	}
+	return nil
+}
+
 type DebugPeerResponse_PeerInfo struct {
 	Metadata             *v1.MetaData `protobuf:"bytes,1,opt,name=metadata,proto3" json:"metadata,omitempty"`
 	Protocols            []string     `protobuf:"bytes,2,rep,name=protocols,proto3" json:"protocols,omitempty"`
@@ -809,6 +820,172 @@ func (m *DebugPeerResponse_PeerInfo) GetPeerLatency() uint64 {
 	return 0
 }
 
+type ScoreInfo struct {
+	OverallScore         float32                        `protobuf:"fixed32,1,opt,name=overall_score,json=overallScore,proto3" json:"overall_score,omitempty"`
+	ProcessedBlocks      uint64                         `protobuf:"varint,2,opt,name=processed_blocks,json=processedBlocks,proto3" json:"processed_blocks,omitempty"`
+	BlockProviderScore   float32                        `protobuf:"fixed32,3,opt,name=block_provider_score,json=blockProviderScore,proto3" json:"block_provider_score,omitempty"`
+	TopicScores          map[string]*TopicScoreSnapshot `protobuf:"bytes,4,rep,name=topic_scores,json=topicScores,proto3" json:"topic_scores,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	GossipScore          float32                        `protobuf:"fixed32,5,opt,name=gossip_score,json=gossipScore,proto3" json:"gossip_score,omitempty"`
+	BehaviourPenalty     float32                        `protobuf:"fixed32,6,opt,name=behaviour_penalty,json=behaviourPenalty,proto3" json:"behaviour_penalty,omitempty"`
+	ValidationError      string                         `protobuf:"bytes,7,opt,name=validation_error,json=validationError,proto3" json:"validation_error,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                       `json:"-"`
+	XXX_unrecognized     []byte                         `json:"-"`
+	XXX_sizecache        int32                          `json:"-"`
+}
+
+func (m *ScoreInfo) Reset()         { *m = ScoreInfo{} }
+func (m *ScoreInfo) String() string { return proto.CompactTextString(m) }
+func (*ScoreInfo) ProtoMessage()    {}
+func (*ScoreInfo) Descriptor() ([]byte, []int) {
+	return fileDescriptor_851e5cb2de3d61dd, []int{10}
+}
+func (m *ScoreInfo) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ScoreInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ScoreInfo.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *ScoreInfo) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ScoreInfo.Merge(m, src)
+}
+func (m *ScoreInfo) XXX_Size() int {
+	return m.Size()
+}
+func (m *ScoreInfo) XXX_DiscardUnknown() {
+	xxx_messageInfo_ScoreInfo.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ScoreInfo proto.InternalMessageInfo
+
+func (m *ScoreInfo) GetOverallScore() float32 {
+	if m != nil {
+		return m.OverallScore
+	}
+	return 0
+}
+
+func (m *ScoreInfo) GetProcessedBlocks() uint64 {
+	if m != nil {
+		return m.ProcessedBlocks
+	}
+	return 0
+}
+
+func (m *ScoreInfo) GetBlockProviderScore() float32 {
+	if m != nil {
+		return m.BlockProviderScore
+	}
+	return 0
+}
+
+func (m *ScoreInfo) GetTopicScores() map[string]*TopicScoreSnapshot {
+	if m != nil {
+		return m.TopicScores
+	}
+	return nil
+}
+
+func (m *ScoreInfo) GetGossipScore() float32 {
+	if m != nil {
+		return m.GossipScore
+	}
+	return 0
+}
+
+func (m *ScoreInfo) GetBehaviourPenalty() float32 {
+	if m != nil {
+		return m.BehaviourPenalty
+	}
+	return 0
+}
+
+func (m *ScoreInfo) GetValidationError() string {
+	if m != nil {
+		return m.ValidationError
+	}
+	return ""
+}
+
+type TopicScoreSnapshot struct {
+	TimeInMesh               uint64   `protobuf:"varint,1,opt,name=time_in_mesh,json=timeInMesh,proto3" json:"time_in_mesh,omitempty"`
+	FirstMessageDeliveries   float32  `protobuf:"fixed32,2,opt,name=first_message_deliveries,json=firstMessageDeliveries,proto3" json:"first_message_deliveries,omitempty"`
+	MeshMessageDeliveries    float32  `protobuf:"fixed32,3,opt,name=mesh_message_deliveries,json=meshMessageDeliveries,proto3" json:"mesh_message_deliveries,omitempty"`
+	InvalidMessageDeliveries float32  `protobuf:"fixed32,4,opt,name=invalid_message_deliveries,json=invalidMessageDeliveries,proto3" json:"invalid_message_deliveries,omitempty"`
+	XXX_NoUnkeyedLiteral     struct{} `json:"-"`
+	XXX_unrecognized         []byte   `json:"-"`
+	XXX_sizecache            int32    `json:"-"`
+}
+
+func (m *TopicScoreSnapshot) Reset()         { *m = TopicScoreSnapshot{} }
+func (m *TopicScoreSnapshot) String() string { return proto.CompactTextString(m) }
+func (*TopicScoreSnapshot) ProtoMessage()    {}
+func (*TopicScoreSnapshot) Descriptor() ([]byte, []int) {
+	return fileDescriptor_851e5cb2de3d61dd, []int{11}
+}
+func (m *TopicScoreSnapshot) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *TopicScoreSnapshot) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_TopicScoreSnapshot.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *TopicScoreSnapshot) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TopicScoreSnapshot.Merge(m, src)
+}
+func (m *TopicScoreSnapshot) XXX_Size() int {
+	return m.Size()
+}
+func (m *TopicScoreSnapshot) XXX_DiscardUnknown() {
+	xxx_messageInfo_TopicScoreSnapshot.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_TopicScoreSnapshot proto.InternalMessageInfo
+
+func (m *TopicScoreSnapshot) GetTimeInMesh() uint64 {
+	if m != nil {
+		return m.TimeInMesh
+	}
+	return 0
+}
+
+func (m *TopicScoreSnapshot) GetFirstMessageDeliveries() float32 {
+	if m != nil {
+		return m.FirstMessageDeliveries
+	}
+	return 0
+}
+
+func (m *TopicScoreSnapshot) GetMeshMessageDeliveries() float32 {
+	if m != nil {
+		return m.MeshMessageDeliveries
+	}
+	return 0
+}
+
+func (m *TopicScoreSnapshot) GetInvalidMessageDeliveries() float32 {
+	if m != nil {
+		return m.InvalidMessageDeliveries
+	}
+	return 0
+}
+
 func init() {
 	proto.RegisterEnum("ethereum.beacon.rpc.v1.LoggingLevelRequest_Level", LoggingLevelRequest_Level_name, LoggingLevelRequest_Level_value)
 	proto.RegisterType((*InclusionSlotRequest)(nil), "ethereum.beacon.rpc.v1.InclusionSlotRequest")
@@ -823,89 +1000,115 @@ func init() {
 	proto.RegisterType((*DebugPeerResponses)(nil), "ethereum.beacon.rpc.v1.DebugPeerResponses")
 	proto.RegisterType((*DebugPeerResponse)(nil), "ethereum.beacon.rpc.v1.DebugPeerResponse")
 	proto.RegisterType((*DebugPeerResponse_PeerInfo)(nil), "ethereum.beacon.rpc.v1.DebugPeerResponse.PeerInfo")
+	proto.RegisterType((*ScoreInfo)(nil), "ethereum.beacon.rpc.v1.ScoreInfo")
+	proto.RegisterMapType((map[string]*TopicScoreSnapshot)(nil), "ethereum.beacon.rpc.v1.ScoreInfo.TopicScoresEntry")
+	proto.RegisterType((*TopicScoreSnapshot)(nil), "ethereum.beacon.rpc.v1.TopicScoreSnapshot")
 }
 
 func init() { proto.RegisterFile("proto/beacon/rpc/v1/debug.proto", fileDescriptor_851e5cb2de3d61dd) }
 
 var fileDescriptor_851e5cb2de3d61dd = []byte{
-	// 1218 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x56, 0xdd, 0x6e, 0x1b, 0xc5,
-	0x17, 0xef, 0x3a, 0x71, 0x12, 0x1f, 0xfb, 0xef, 0xb8, 0xd3, 0xfe, 0x53, 0xe3, 0xb6, 0x49, 0xba,
-	0x2d, 0xfd, 0xa4, 0x6b, 0xc5, 0x70, 0x81, 0x2a, 0x24, 0x94, 0xaf, 0xa6, 0x91, 0x42, 0x5b, 0x36,
-	0x2d, 0x17, 0x54, 0x68, 0x35, 0xd9, 0x3d, 0xb6, 0x97, 0x6c, 0x66, 0xb6, 0x3b, 0xb3, 0x01, 0x97,
-	0xbb, 0x0a, 0xc1, 0x25, 0x17, 0x48, 0x5c, 0xf3, 0x18, 0x3c, 0x02, 0x97, 0x48, 0xbc, 0x00, 0x8a,
-	0x78, 0x0a, 0xae, 0xd0, 0xcc, 0xec, 0xae, 0x6d, 0x62, 0x97, 0x80, 0xb8, 0x9b, 0xf3, 0x9b, 0xdf,
-	0xf9, 0x98, 0x73, 0xce, 0xcc, 0x19, 0x58, 0x89, 0x13, 0x2e, 0x79, 0xfb, 0x00, 0xa9, 0xcf, 0x59,
-	0x3b, 0x89, 0xfd, 0xf6, 0xf1, 0x5a, 0x3b, 0xc0, 0x83, 0xb4, 0xe7, 0xe8, 0x1d, 0xb2, 0x84, 0xb2,
-	0x8f, 0x09, 0xa6, 0x47, 0x8e, 0xe1, 0x38, 0x49, 0xec, 0x3b, 0xc7, 0x6b, 0xad, 0x4b, 0x28, 0xfb,
-	0xed, 0xe3, 0x35, 0x1a, 0xc5, 0x7d, 0xba, 0xd6, 0x66, 0x3c, 0x40, 0xa3, 0xd0, 0xb2, 0xc7, 0x2c,
-	0xc6, 0x9d, 0x58, 0x59, 0x3c, 0x42, 0x21, 0x68, 0x0f, 0x45, 0xc6, 0xb9, 0xd2, 0xe3, 0xbc, 0x17,
-	0x61, 0x9b, 0xc6, 0x61, 0x9b, 0x32, 0xc6, 0x25, 0x95, 0x21, 0x67, 0xf9, 0xee, 0xe5, 0x6c, 0x57,
-	0x4b, 0x07, 0x69, 0xb7, 0x8d, 0x47, 0xb1, 0x1c, 0x98, 0x4d, 0xfb, 0x01, 0x5c, 0xdc, 0x65, 0x7e,
-	0x94, 0x8a, 0x90, 0xb3, 0xfd, 0x88, 0x4b, 0x17, 0x5f, 0xa6, 0x28, 0x24, 0xa9, 0x43, 0x29, 0x0c,
-	0x9a, 0xd6, 0xaa, 0x75, 0x7b, 0xd6, 0x2d, 0x85, 0x01, 0x21, 0x30, 0x2b, 0x22, 0x2e, 0x9b, 0x25,
-	0x8d, 0xe8, 0xb5, 0x7d, 0x0f, 0xfe, 0xff, 0x17, 0x5d, 0x11, 0x73, 0x26, 0x70, 0x22, 0xf9, 0x05,
-	0x90, 0x0d, 0x7d, 0x86, 0x7d, 0x49, 0x25, 0xe6, 0x6e, 0x2e, 0x66, 0x4c, 0xed, 0xe8, 0xd1, 0x39,
-	0xc3, 0x25, 0x2b, 0x00, 0x07, 0x11, 0xf7, 0x0f, 0xbd, 0x84, 0x67, 0x56, 0x6a, 0x8f, 0xce, 0xb9,
-	0x15, 0x8d, 0xb9, 0x9c, 0xcb, 0x8d, 0x3a, 0xd4, 0x5e, 0xa6, 0x98, 0x0c, 0xbc, 0x6e, 0x18, 0x49,
-	0x4c, 0xec, 0xfb, 0x50, 0xdb, 0xd0, 0x9b, 0x99, 0xd9, 0xab, 0x63, 0x06, 0x94, 0xf1, 0xda, 0x88,
-	0xba, 0x7d, 0x0b, 0xaa, 0xfb, 0xfb, 0x9f, 0x16, 0xe1, 0x36, 0x61, 0x1e, 0x99, 0xcf, 0x03, 0x0c,
-	0x32, 0x6a, 0x2e, 0xda, 0xdf, 0x5a, 0x70, 0x61, 0x8f, 0xf7, 0x7a, 0x21, 0xeb, 0xed, 0xe1, 0x31,
-	0x46, 0xb9, 0xfd, 0x1d, 0x28, 0x47, 0x4a, 0xd6, 0xfc, 0x7a, 0x67, 0xcd, 0x99, 0x5c, 0x55, 0x67,
-	0x82, 0xae, 0x63, 0x04, 0xa3, 0x6f, 0xdf, 0x82, 0xb2, 0x96, 0xc9, 0x02, 0xcc, 0xee, 0x3e, 0x7e,
-	0xf8, 0xa4, 0x71, 0x8e, 0x54, 0xa0, 0xbc, 0xb5, 0xbd, 0xf1, 0x7c, 0xa7, 0x61, 0xa9, 0xe5, 0x33,
-	0x77, 0x7d, 0x73, 0xbb, 0x51, 0xb2, 0xbf, 0x99, 0x81, 0x2b, 0x4f, 0x55, 0xc5, 0xd6, 0x93, 0x84,
-	0x0e, 0x1e, 0xf2, 0xe4, 0x70, 0xb3, 0xcf, 0x43, 0x1f, 0x8b, 0x43, 0xdc, 0x82, 0xc5, 0x38, 0x49,
-	0x19, 0x7a, 0xb2, 0x9f, 0xa0, 0xe8, 0xf3, 0x28, 0xaf, 0x5e, 0x5d, 0xc3, 0xcf, 0x72, 0x54, 0x11,
-	0x3f, 0x4f, 0x85, 0x0c, 0xbb, 0x21, 0x06, 0x1e, 0xc6, 0xdc, 0xef, 0x67, 0x75, 0xaa, 0x17, 0xf0,
-	0xb6, 0x42, 0x15, 0xb1, 0x1b, 0x32, 0x1a, 0x85, 0xaf, 0x0a, 0xe2, 0x8c, 0x21, 0x16, 0xb0, 0x21,
-	0xba, 0x70, 0x5e, 0x37, 0x93, 0x47, 0x55, 0x6c, 0x9e, 0x6a, 0x5e, 0xd1, 0x9c, 0x5d, 0x9d, 0xb9,
-	0x5d, 0xed, 0xdc, 0x9c, 0x96, 0x99, 0xe1, 0x59, 0x1e, 0xf3, 0x00, 0xdd, 0xc5, 0x78, 0x4c, 0x16,
-	0xe4, 0x05, 0xcc, 0x87, 0x2c, 0x08, 0x7d, 0x14, 0xcd, 0xb2, 0xb6, 0xb4, 0xfe, 0xf7, 0x96, 0x4e,
-	0x67, 0xc5, 0xd9, 0x35, 0x36, 0xb6, 0x99, 0x4c, 0x06, 0x6e, 0x6e, 0xb1, 0xf5, 0x00, 0x6a, 0xa3,
-	0x1b, 0xa4, 0x01, 0x33, 0x87, 0x38, 0xd0, 0xf9, 0xaa, 0xb8, 0x6a, 0x49, 0x2e, 0x42, 0xf9, 0x98,
-	0x46, 0x29, 0x66, 0xa9, 0x31, 0xc2, 0x83, 0xd2, 0xfb, 0x96, 0xfd, 0xba, 0x04, 0xf5, 0xf1, 0xe0,
-	0x8b, 0x76, 0xb7, 0x86, 0xed, 0xae, 0xb0, 0x61, 0xf3, 0xba, 0x7a, 0x4d, 0x96, 0x60, 0x2e, 0xa6,
-	0x09, 0x32, 0x99, 0xe5, 0x31, 0x93, 0x26, 0x55, 0x64, 0xf6, 0xac, 0x15, 0x29, 0x4f, 0xac, 0xc8,
-	0x12, 0xcc, 0x7d, 0x81, 0x61, 0xaf, 0x2f, 0x9b, 0x73, 0xc6, 0x93, 0x91, 0xf4, 0xbd, 0x40, 0x21,
-	0x3d, 0xbf, 0x1f, 0x46, 0x41, 0x73, 0x5e, 0xef, 0x55, 0x14, 0xb2, 0xa9, 0x00, 0x65, 0x5f, 0x6f,
-	0x07, 0x28, 0x7c, 0x64, 0x01, 0x65, 0xb2, 0xb9, 0x60, 0xec, 0x2b, 0x78, 0xab, 0x40, 0xed, 0xcf,
-	0x80, 0x6c, 0xa9, 0x47, 0xed, 0x29, 0x62, 0x92, 0xe7, 0x5a, 0x90, 0x1d, 0xa8, 0x24, 0xb9, 0xd0,
-	0xb4, 0x74, 0xd5, 0xee, 0x4c, 0xab, 0xda, 0x29, 0x75, 0x77, 0xa8, 0x6b, 0xff, 0x54, 0x86, 0xf3,
-	0xa7, 0x08, 0xa4, 0x0d, 0x17, 0xa2, 0x50, 0x48, 0x64, 0x21, 0xeb, 0x79, 0x34, 0x08, 0x12, 0x14,
-	0xb9, 0xa3, 0x8a, 0x4b, 0x8a, 0xad, 0xf5, 0x7c, 0x87, 0x6c, 0x40, 0x25, 0x08, 0x13, 0xf4, 0xd5,
-	0x63, 0xa8, 0x0b, 0x51, 0xef, 0xdc, 0x18, 0xc6, 0x83, 0xb2, 0xef, 0xe4, 0x0f, 0xae, 0xa3, 0x1c,
-	0x6d, 0xe5, 0x5c, 0x77, 0xa8, 0x46, 0x3e, 0x86, 0x86, 0xcf, 0x19, 0x33, 0x92, 0x27, 0xd4, 0xdb,
-	0xa5, 0xab, 0x57, 0x1f, 0x6d, 0xed, 0x31, 0x53, 0x9b, 0x05, 0xdd, 0xbc, 0x74, 0x8b, 0xfe, 0x38,
-	0x40, 0x2e, 0xc1, 0x7c, 0x8c, 0x98, 0x78, 0x61, 0xa0, 0xcb, 0x5c, 0x71, 0xe7, 0x94, 0xb8, 0x1b,
-	0xa8, 0x36, 0x44, 0x96, 0xe8, 0x92, 0x56, 0x5c, 0xb5, 0x24, 0x4f, 0xa0, 0x62, 0xa8, 0xac, 0xcb,
-	0x75, 0x29, 0xab, 0x9d, 0xce, 0x99, 0x33, 0xaa, 0x0f, 0xb5, 0xcb, 0xba, 0xdc, 0x5d, 0x88, 0xb3,
-	0x15, 0xf9, 0x10, 0xaa, 0xda, 0xa0, 0x3a, 0x48, 0x2a, 0x74, 0x07, 0x54, 0x3b, 0xcb, 0xa7, 0x4c,
-	0xc6, 0x9d, 0x58, 0x99, 0xdc, 0xd7, 0x2c, 0x17, 0x94, 0x8a, 0x59, 0x93, 0x6b, 0x50, 0x8b, 0xa8,
-	0x90, 0x5e, 0x1a, 0x07, 0x54, 0x62, 0x90, 0xf5, 0x47, 0x55, 0x61, 0xcf, 0x0d, 0xd4, 0xfa, 0xc3,
-	0x82, 0x85, 0xdc, 0x35, 0xf9, 0x00, 0x16, 0x8e, 0x50, 0xd2, 0x80, 0x4a, 0xaa, 0xef, 0x47, 0xb5,
-	0xb3, 0x3a, 0xcd, 0xdb, 0x47, 0x28, 0xe9, 0x16, 0x95, 0xd4, 0x2d, 0x34, 0xc8, 0x15, 0xa8, 0xe8,
-	0x87, 0xc1, 0xe7, 0x91, 0x68, 0x96, 0x74, 0xa1, 0x87, 0x00, 0x59, 0x81, 0x6a, 0x97, 0xa6, 0x91,
-	0xf4, 0x7c, 0x9e, 0x16, 0x97, 0x0a, 0x34, 0xb4, 0xa9, 0x10, 0x72, 0x07, 0x1a, 0x39, 0xdb, 0x3b,
-	0xc6, 0x44, 0xcd, 0xa9, 0x2c, 0xe5, 0x8b, 0x39, 0xfe, 0x89, 0x81, 0xc9, 0x75, 0xf8, 0x1f, 0xed,
-	0x21, 0x93, 0x05, 0xcf, 0x54, 0xa1, 0xa6, 0xc1, 0x9c, 0x74, 0x0d, 0x6a, 0x3a, 0x7b, 0x11, 0x95,
-	0xc8, 0xfc, 0x41, 0x76, 0xb9, 0x74, 0x46, 0xf7, 0x0c, 0xd4, 0xf9, 0x71, 0x1e, 0xca, 0xba, 0x12,
-	0xe4, 0x6b, 0x0b, 0xea, 0x3b, 0x28, 0x47, 0x86, 0x1e, 0xb9, 0x3b, 0xad, 0x76, 0xa7, 0x27, 0x63,
-	0xeb, 0xfa, 0x34, 0xee, 0xc8, 0xe4, 0xb2, 0xaf, 0xbd, 0xfe, 0xf5, 0xf7, 0xef, 0x4b, 0x97, 0xc9,
-	0x5b, 0xed, 0xb1, 0xef, 0x83, 0xfe, 0x70, 0xb4, 0x75, 0xb3, 0x92, 0x2f, 0x61, 0x41, 0x45, 0xa1,
-	0x66, 0x1f, 0xb9, 0x31, 0xd5, 0xff, 0xc8, 0xf0, 0xfc, 0x0f, 0x3c, 0xeb, 0x49, 0x4b, 0xbe, 0x82,
-	0xc5, 0x7d, 0x94, 0xa3, 0x23, 0x90, 0xdc, 0xfb, 0x07, 0x83, 0xb2, 0xb5, 0xe4, 0x98, 0x8f, 0x8b,
-	0x93, 0x7f, 0x5c, 0x9c, 0x6d, 0xf5, 0x71, 0xb1, 0xaf, 0x6b, 0xd7, 0x57, 0xed, 0xcb, 0x93, 0x5c,
-	0x47, 0xc6, 0x10, 0xf9, 0xce, 0x82, 0x4b, 0x3b, 0x28, 0x27, 0x0d, 0x07, 0x32, 0xc5, 0x70, 0xeb,
-	0xbd, 0x7f, 0x33, 0x62, 0xec, 0x9b, 0x3a, 0x9c, 0x55, 0xb2, 0x3c, 0x29, 0x9c, 0x2e, 0x4f, 0x0e,
-	0x7d, 0xe3, 0x35, 0x81, 0xca, 0x5e, 0x28, 0xa4, 0xba, 0x19, 0x62, 0x6a, 0x08, 0x77, 0xcf, 0x7c,
-	0xbb, 0xc5, 0x9b, 0x4b, 0x10, 0x6b, 0x37, 0xaf, 0x60, 0x5e, 0x25, 0x01, 0x31, 0x21, 0xf6, 0x1b,
-	0x5e, 0xbe, 0x3c, 0xe3, 0x67, 0x7f, 0xad, 0xed, 0x55, 0xed, 0xbc, 0x45, 0x9a, 0xd3, 0x9c, 0x93,
-	0x1f, 0x2c, 0x68, 0xec, 0xa0, 0x1c, 0xfb, 0x21, 0x92, 0x77, 0xa6, 0x79, 0x98, 0xf4, 0x09, 0x6d,
-	0xdd, 0x3f, 0x23, 0x3b, 0x8b, 0xe9, 0x6d, 0x1d, 0xd3, 0x0a, 0xb9, 0x3a, 0x29, 0xa6, 0x30, 0x57,
-	0xd9, 0xa8, 0xfd, 0x7c, 0xb2, 0x6c, 0xfd, 0x72, 0xb2, 0x6c, 0xfd, 0x76, 0xb2, 0x6c, 0x1d, 0xcc,
-	0xe9, 0x0a, 0xbc, 0xfb, 0x67, 0x00, 0x00, 0x00, 0xff, 0xff, 0x03, 0xf6, 0x1f, 0xf4, 0xba, 0x0b,
-	0x00, 0x00,
+	// 1587 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x57, 0xcd, 0x6f, 0x1b, 0xc7,
+	0x15, 0xf7, 0x52, 0xa2, 0xa4, 0x7d, 0x64, 0x29, 0x7a, 0xe2, 0xc8, 0x2c, 0x6d, 0x4b, 0xf2, 0x3a,
+	0x8d, 0xed, 0x24, 0x5a, 0x56, 0x6c, 0x51, 0x04, 0x41, 0x80, 0xda, 0xfa, 0x88, 0x22, 0xc0, 0x4e,
+	0xdc, 0x95, 0x1d, 0xa0, 0x2d, 0x8a, 0xc5, 0x68, 0xf7, 0x91, 0x3b, 0xf1, 0x6a, 0x67, 0x33, 0x33,
+	0x64, 0xab, 0xf4, 0x56, 0x14, 0x28, 0x7a, 0x69, 0x0f, 0x05, 0x7a, 0xee, 0x9f, 0x53, 0xa0, 0x97,
+	0x02, 0xbd, 0x07, 0x85, 0x11, 0xf4, 0x8f, 0xd0, 0xa9, 0x98, 0x99, 0xdd, 0x25, 0x15, 0x91, 0x89,
+	0x6c, 0x38, 0xb7, 0x79, 0x5f, 0xbf, 0xf7, 0xf6, 0x7d, 0xec, 0xbc, 0x81, 0x8d, 0x5c, 0x70, 0xc5,
+	0x7b, 0xc7, 0x48, 0x23, 0x9e, 0xf5, 0x44, 0x1e, 0xf5, 0xc6, 0xdb, 0xbd, 0x18, 0x8f, 0x47, 0x43,
+	0xdf, 0x48, 0xc8, 0x1a, 0xaa, 0x04, 0x05, 0x8e, 0x4e, 0x7c, 0xab, 0xe3, 0x8b, 0x3c, 0xf2, 0xc7,
+	0xdb, 0xdd, 0xeb, 0xa8, 0x92, 0xde, 0x78, 0x9b, 0xa6, 0x79, 0x42, 0xb7, 0x7b, 0x19, 0x8f, 0xd1,
+	0x1a, 0x74, 0xbd, 0x73, 0x88, 0x79, 0x3f, 0xd7, 0x88, 0x27, 0x28, 0x25, 0x1d, 0xa2, 0x2c, 0x74,
+	0x6e, 0x0e, 0x39, 0x1f, 0xa6, 0xd8, 0xa3, 0x39, 0xeb, 0xd1, 0x2c, 0xe3, 0x8a, 0x2a, 0xc6, 0xb3,
+	0x52, 0x7a, 0xa3, 0x90, 0x1a, 0xea, 0x78, 0x34, 0xe8, 0xe1, 0x49, 0xae, 0x4e, 0x0b, 0xe1, 0xd6,
+	0x90, 0xa9, 0x64, 0x74, 0xec, 0x47, 0xfc, 0xa4, 0x37, 0xe4, 0x43, 0x3e, 0xd1, 0xd2, 0x94, 0xf5,
+	0xad, 0x4f, 0x56, 0xdd, 0x4b, 0xe0, 0xda, 0x61, 0x16, 0xa5, 0x23, 0xc9, 0x78, 0x76, 0x94, 0x72,
+	0x15, 0xe0, 0x17, 0x23, 0x94, 0x8a, 0xb4, 0xa0, 0xc6, 0xe2, 0x8e, 0xb3, 0xe9, 0xdc, 0x5b, 0x0c,
+	0x6a, 0x2c, 0x26, 0x0f, 0x60, 0x51, 0xa6, 0x5c, 0x75, 0x6a, 0x9a, 0xb3, 0xf3, 0xde, 0xd9, 0x57,
+	0x1b, 0xf7, 0xa6, 0x1c, 0xe5, 0xe2, 0x54, 0x9e, 0x50, 0xc5, 0xa2, 0x94, 0x1e, 0xcb, 0x1e, 0xaa,
+	0xa4, 0xbf, 0xa5, 0x4e, 0x73, 0x94, 0xbe, 0x81, 0x34, 0x96, 0xde, 0x2f, 0xe1, 0xcd, 0x6f, 0x78,
+	0x92, 0x39, 0xcf, 0x24, 0xbe, 0x06, 0xe8, 0x3f, 0x3b, 0x40, 0x76, 0x4c, 0x3e, 0x8f, 0x14, 0x55,
+	0x58, 0x7e, 0xc3, 0x4e, 0x01, 0xec, 0xbc, 0x3c, 0xf0, 0xc7, 0x57, 0x2c, 0x34, 0xd9, 0x00, 0x38,
+	0x4e, 0x79, 0xf4, 0x3c, 0x14, 0xbc, 0x08, 0xb1, 0xf9, 0xf1, 0x95, 0xc0, 0x35, 0xbc, 0x80, 0x73,
+	0xb5, 0xd3, 0x82, 0xe6, 0x17, 0x23, 0x14, 0xa7, 0xe1, 0x80, 0xa5, 0x0a, 0x85, 0xb7, 0x05, 0xcd,
+	0x1d, 0x23, 0x2c, 0x82, 0xb8, 0x75, 0x0e, 0x40, 0x87, 0xd2, 0x9c, 0x32, 0xf7, 0xee, 0x42, 0xe3,
+	0xe8, 0xe8, 0x57, 0x55, 0x2e, 0x3a, 0xb0, 0x8c, 0x59, 0xc4, 0x63, 0x8c, 0x0b, 0xd5, 0x92, 0xf4,
+	0xfe, 0xe4, 0xc0, 0x1b, 0x8f, 0xf8, 0x70, 0xc8, 0xb2, 0xe1, 0x23, 0x1c, 0x63, 0x5a, 0xe2, 0x1f,
+	0x40, 0x3d, 0xd5, 0xb4, 0xd1, 0x6f, 0xf5, 0xb7, 0xfd, 0xd9, 0xfd, 0xe8, 0xcf, 0xb0, 0xf5, 0x2d,
+	0x61, 0xed, 0xbd, 0xbb, 0x50, 0x37, 0x34, 0x59, 0x81, 0xc5, 0xc3, 0x4f, 0x3e, 0xfa, 0xb4, 0x7d,
+	0x85, 0xb8, 0x50, 0xdf, 0xdb, 0xdf, 0x79, 0x76, 0xd0, 0x76, 0xf4, 0xf1, 0x69, 0xf0, 0x70, 0x77,
+	0xbf, 0x5d, 0xf3, 0xbe, 0x5e, 0x80, 0x9b, 0x4f, 0x74, 0xf3, 0x3c, 0x14, 0x82, 0x9e, 0x7e, 0xc4,
+	0xc5, 0xf3, 0xdd, 0x84, 0xb3, 0x08, 0xab, 0x8f, 0xb8, 0x0b, 0xab, 0xb9, 0x18, 0x65, 0x18, 0xaa,
+	0x44, 0xa0, 0x4c, 0x78, 0x5a, 0x36, 0x52, 0xcb, 0xb0, 0x9f, 0x96, 0x5c, 0xf2, 0x19, 0xac, 0x7e,
+	0x3e, 0x92, 0x8a, 0x0d, 0x18, 0xc6, 0x21, 0xe6, 0x3c, 0x4a, 0x8a, 0x26, 0xd8, 0x3a, 0xfb, 0x6a,
+	0xe3, 0xfe, 0x65, 0x6a, 0xb5, 0xaf, 0x8d, 0x82, 0x56, 0x85, 0x62, 0x68, 0x8d, 0x3b, 0x60, 0x19,
+	0x4d, 0xd9, 0x97, 0x15, 0xee, 0xc2, 0x2b, 0xe1, 0x56, 0x28, 0x16, 0x37, 0x80, 0xab, 0x66, 0x6a,
+	0x42, 0xaa, 0xbf, 0x3c, 0xd4, 0x43, 0x2d, 0x3b, 0x8b, 0x9b, 0x0b, 0xf7, 0x1a, 0xfd, 0xb7, 0xe7,
+	0xe5, 0x7d, 0x92, 0xa9, 0x4f, 0x78, 0x8c, 0xc1, 0x6a, 0x7e, 0x8e, 0x96, 0xe4, 0xd7, 0xb0, 0xcc,
+	0xb2, 0x98, 0x45, 0x28, 0x3b, 0x75, 0x83, 0xf4, 0xf0, 0xbb, 0x91, 0x2e, 0xe6, 0xdc, 0x3f, 0xb4,
+	0x18, 0xfb, 0x99, 0x12, 0xa7, 0x41, 0x89, 0xd8, 0xfd, 0x00, 0x9a, 0xd3, 0x02, 0xd2, 0x86, 0x85,
+	0xe7, 0x78, 0x6a, 0xaa, 0xe1, 0x06, 0xfa, 0x48, 0xae, 0x41, 0x7d, 0x4c, 0xd3, 0x11, 0xda, 0xc4,
+	0x07, 0x96, 0xf8, 0xa0, 0xf6, 0xbe, 0xe3, 0xfd, 0x65, 0x01, 0x5a, 0xe7, 0x83, 0xaf, 0x26, 0xd5,
+	0x79, 0xd5, 0x49, 0x25, 0x04, 0x16, 0x27, 0x83, 0x14, 0x98, 0x33, 0x59, 0x83, 0xa5, 0x9c, 0x0a,
+	0xcc, 0x94, 0x2d, 0x52, 0x50, 0x50, 0xb3, 0xba, 0x63, 0xf1, 0x7b, 0xea, 0x8e, 0xfa, 0xeb, 0xe8,
+	0x8e, 0x35, 0x58, 0xfa, 0x2d, 0xb2, 0x61, 0xa2, 0x3a, 0x4b, 0xf6, 0x3b, 0x2c, 0x65, 0xfe, 0x00,
+	0x28, 0x55, 0x18, 0x25, 0x2c, 0x8d, 0x3b, 0xcb, 0x46, 0xe6, 0x6a, 0xce, 0xae, 0x66, 0xe8, 0x69,
+	0x31, 0xe2, 0x18, 0x65, 0x84, 0x59, 0x4c, 0x33, 0xd5, 0x59, 0xb1, 0xd3, 0xa2, 0xd9, 0x7b, 0x15,
+	0xd7, 0xfb, 0x0d, 0x90, 0x3d, 0x7d, 0xf1, 0x3c, 0x41, 0x14, 0x65, 0xdd, 0x25, 0x39, 0x00, 0x57,
+	0x94, 0x44, 0xc7, 0x31, 0x1d, 0x74, 0x7f, 0x5e, 0x07, 0x5d, 0x30, 0x0f, 0x26, 0xb6, 0xde, 0x59,
+	0x1d, 0xae, 0x5e, 0x50, 0x20, 0x3d, 0x78, 0x23, 0x65, 0x52, 0x61, 0xc6, 0xb2, 0x61, 0x48, 0xe3,
+	0x58, 0xa0, 0x2c, 0x1d, 0xb9, 0x01, 0xa9, 0x44, 0x0f, 0x4b, 0x09, 0xd9, 0x01, 0x37, 0x66, 0x02,
+	0x23, 0x7d, 0x61, 0x99, 0x32, 0xb7, 0xfa, 0x6f, 0x4d, 0xe2, 0x41, 0x95, 0xf8, 0xe5, 0xa5, 0xe8,
+	0x6b, 0x47, 0x7b, 0xa5, 0x6e, 0x30, 0x31, 0x23, 0xbf, 0x80, 0x76, 0xc4, 0xb3, 0xcc, 0x52, 0xa1,
+	0xd4, 0xff, 0x74, 0xd3, 0x1b, 0xad, 0xe9, 0x31, 0x3b, 0x07, 0xb5, 0x5b, 0xa9, 0xdb, 0x1b, 0x60,
+	0x35, 0x3a, 0xcf, 0x20, 0xd7, 0x61, 0x39, 0x47, 0x14, 0x21, 0x8b, 0x4d, 0x13, 0xb9, 0xc1, 0x92,
+	0x26, 0x0f, 0x63, 0x3d, 0x12, 0x98, 0x09, 0xd3, 0x01, 0x6e, 0xa0, 0x8f, 0xe4, 0x53, 0x70, 0xad,
+	0x6a, 0x36, 0xe0, 0xa6, 0x94, 0x8d, 0x7e, 0xff, 0xd2, 0x19, 0x35, 0x1f, 0x75, 0x98, 0x0d, 0x78,
+	0xb0, 0x92, 0x17, 0x27, 0xf2, 0x73, 0x68, 0x18, 0x40, 0xfd, 0x21, 0x23, 0x69, 0x3a, 0xa0, 0xd1,
+	0x5f, 0xbf, 0x00, 0x99, 0xf7, 0x73, 0x0d, 0x79, 0x64, 0xb4, 0x02, 0xd0, 0x26, 0xf6, 0x4c, 0x6e,
+	0x43, 0x33, 0xa5, 0x52, 0x85, 0xa3, 0x3c, 0xa6, 0x0a, 0xe3, 0xa2, 0x3f, 0x1a, 0x9a, 0xf7, 0xcc,
+	0xb2, 0xc8, 0x03, 0x00, 0x19, 0x71, 0x81, 0x36, 0x6a, 0xd7, 0xb8, 0xb8, 0x3d, 0x2f, 0xea, 0x23,
+	0xad, 0x69, 0x82, 0x74, 0x65, 0x79, 0xec, 0x9e, 0x39, 0xb0, 0x52, 0x06, 0x4f, 0x3e, 0x84, 0x95,
+	0x13, 0x54, 0x34, 0xa6, 0x8a, 0x9a, 0x69, 0x6f, 0xf4, 0x37, 0xe7, 0xc5, 0xfb, 0x18, 0x15, 0xdd,
+	0xa3, 0x8a, 0x06, 0x95, 0x05, 0xb9, 0x09, 0xae, 0xf9, 0xcd, 0x45, 0x3c, 0x95, 0x9d, 0x9a, 0x69,
+	0x95, 0x09, 0x83, 0x6c, 0x40, 0x63, 0x40, 0x47, 0xa9, 0x0a, 0x23, 0x3e, 0xaa, 0x86, 0x1e, 0x0c,
+	0x6b, 0x57, 0x73, 0xc8, 0x7d, 0x68, 0x97, 0xda, 0xe1, 0x18, 0x85, 0x5e, 0x18, 0x8a, 0xa2, 0xad,
+	0x96, 0xfc, 0xcf, 0x2c, 0x9b, 0xdc, 0x81, 0x1f, 0xd0, 0x21, 0x66, 0xaa, 0xd2, 0xb3, 0x75, 0x6c,
+	0x1a, 0x66, 0xa9, 0x74, 0x1b, 0x9a, 0x26, 0xff, 0x29, 0x55, 0x98, 0x45, 0xa7, 0xc5, 0x78, 0x9a,
+	0x9a, 0x3c, 0xb2, 0x2c, 0xef, 0x5f, 0x0b, 0xe0, 0x56, 0x59, 0xd1, 0xa8, 0x7c, 0x8c, 0x82, 0xa6,
+	0x69, 0x68, 0xf2, 0x63, 0x52, 0x50, 0x0b, 0x9a, 0x05, 0xd3, 0x28, 0x16, 0x51, 0x46, 0xba, 0xeb,
+	0xe3, 0xd0, 0x5c, 0xe8, 0xb2, 0xf8, 0x89, 0xae, 0x56, 0x7c, 0xb3, 0x09, 0x48, 0xf2, 0x63, 0xb8,
+	0x66, 0x77, 0x80, 0x5c, 0xf0, 0x31, 0x8b, 0x75, 0x2b, 0x18, 0xd8, 0x05, 0x03, 0x4b, 0x8c, 0xec,
+	0x49, 0x21, 0xb2, 0xe0, 0xcf, 0xa0, 0xa9, 0x78, 0xce, 0x22, 0xab, 0x58, 0x5e, 0x32, 0xfd, 0xef,
+	0x2c, 0xa8, 0xff, 0x54, 0x5b, 0x19, 0xb2, 0xb8, 0x0b, 0x1a, 0x6a, 0xc2, 0xd1, 0x99, 0x18, 0x72,
+	0x29, 0x59, 0x5e, 0x04, 0x50, 0x37, 0x01, 0x34, 0x2c, 0xcf, 0x7a, 0x7e, 0x17, 0xae, 0x1e, 0x63,
+	0x42, 0xc7, 0x8c, 0x8f, 0x44, 0x98, 0x63, 0x46, 0x53, 0x65, 0x33, 0x56, 0x0b, 0xda, 0x95, 0xe0,
+	0x89, 0xe5, 0xeb, 0x1c, 0x8c, 0x69, 0xca, 0x62, 0xb3, 0x9e, 0x86, 0x28, 0x04, 0x17, 0xa6, 0xbd,
+	0xdd, 0x60, 0x75, 0xc2, 0xdf, 0xd7, 0xec, 0xee, 0xe7, 0xd0, 0xfe, 0x66, 0x6c, 0x33, 0xae, 0xa3,
+	0x07, 0xd3, 0xd7, 0x51, 0xa3, 0xff, 0xce, 0xbc, 0x0f, 0x9e, 0x40, 0x1d, 0x65, 0x34, 0x97, 0x09,
+	0x57, 0xd3, 0x57, 0xd7, 0xff, 0x1c, 0x20, 0x17, 0x35, 0xc8, 0x26, 0x34, 0x15, 0x3b, 0xd1, 0x23,
+	0x12, 0x9e, 0xa0, 0x4c, 0x8a, 0xa5, 0x04, 0x34, 0xef, 0x30, 0x7b, 0x8c, 0x32, 0x21, 0xef, 0x43,
+	0x67, 0xc0, 0x84, 0x54, 0x61, 0xb1, 0x8f, 0x87, 0x31, 0xa6, 0x6c, 0x8c, 0x82, 0xa1, 0xad, 0x6d,
+	0x2d, 0x58, 0x33, 0xf2, 0xc7, 0x56, 0xbc, 0x57, 0x49, 0xc9, 0xcf, 0xe0, 0xba, 0xc6, 0x9c, 0x65,
+	0x68, 0xab, 0xfc, 0xa6, 0x16, 0x5f, 0xb4, 0xfb, 0x10, 0xba, 0x2c, 0x33, 0xb9, 0x9a, 0x65, 0xba,
+	0x68, 0x4c, 0x3b, 0x85, 0xc6, 0x05, 0xeb, 0xfe, 0x3f, 0x96, 0xa1, 0x6e, 0x7e, 0x41, 0xe4, 0x8f,
+	0x0e, 0xb4, 0x0e, 0x50, 0x4d, 0x6d, 0xc1, 0x64, 0x6e, 0xf2, 0x2e, 0xae, 0xca, 0xdd, 0x3b, 0x73,
+	0x3b, 0x6b, 0xb2, 0x9c, 0x7a, 0xb7, 0xff, 0xf0, 0x9f, 0xaf, 0xff, 0x56, 0xbb, 0x41, 0x7e, 0xd8,
+	0x3b, 0xf7, 0xb6, 0x31, 0xaf, 0xa1, 0x9e, 0xf9, 0x4b, 0x93, 0xdf, 0xc1, 0x8a, 0x8e, 0x42, 0x37,
+	0x34, 0x79, 0x6b, 0xae, 0xff, 0xa9, 0xfd, 0xf8, 0x35, 0x78, 0x36, 0xe3, 0x43, 0x7e, 0x0f, 0xab,
+	0x47, 0xa8, 0xa6, 0xb7, 0x5c, 0xf2, 0xee, 0x4b, 0xec, 0xc2, 0xdd, 0x35, 0xdf, 0xbe, 0xaa, 0xfc,
+	0xf2, 0xbd, 0xe4, 0xef, 0xeb, 0x57, 0x95, 0x77, 0xc7, 0xb8, 0xbe, 0xe5, 0xdd, 0x98, 0xe5, 0x3a,
+	0xb5, 0x40, 0xe4, 0xaf, 0x0e, 0x5c, 0x3f, 0x40, 0x35, 0x6b, 0x43, 0x23, 0x73, 0x80, 0xbb, 0x3f,
+	0x7d, 0x95, 0x3d, 0xcf, 0x7b, 0xdb, 0x84, 0xb3, 0x49, 0xd6, 0x67, 0x85, 0x33, 0xe0, 0xe2, 0x79,
+	0x64, 0xbd, 0x0a, 0x70, 0x1f, 0x31, 0xa9, 0xf4, 0x0f, 0x5d, 0xce, 0x0d, 0xe1, 0x9d, 0x4b, 0x5f,
+	0x6b, 0xf2, 0xdb, 0x4b, 0x90, 0x1b, 0x37, 0x5f, 0xc2, 0xb2, 0x4e, 0x02, 0xa2, 0x20, 0xde, 0xb7,
+	0x5c, 0xf9, 0x65, 0xc6, 0x2f, 0xbf, 0xa6, 0x78, 0x9b, 0xc6, 0x79, 0x97, 0x74, 0xe6, 0x39, 0x27,
+	0x7f, 0x77, 0xa0, 0x7d, 0x80, 0xea, 0xdc, 0x0b, 0x93, 0xbc, 0x37, 0xcf, 0xc3, 0xac, 0x27, 0x6f,
+	0x77, 0xeb, 0x92, 0xda, 0x45, 0x4c, 0x3f, 0x32, 0x31, 0x6d, 0x90, 0x5b, 0xb3, 0x62, 0x62, 0xa5,
+	0xc9, 0x4e, 0xf3, 0x9f, 0x2f, 0xd6, 0x9d, 0x7f, 0xbf, 0x58, 0x77, 0xfe, 0xfb, 0x62, 0xdd, 0x39,
+	0x5e, 0x32, 0x15, 0xf8, 0xc9, 0xff, 0x03, 0x00, 0x00, 0xff, 0xff, 0xdf, 0x0a, 0x6e, 0xd4, 0x57,
+	0x10, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -922,9 +1125,9 @@ const _ = grpc.SupportPackageIsVersion4
 type DebugClient interface {
 	GetBeaconState(ctx context.Context, in *BeaconStateRequest, opts ...grpc.CallOption) (*SSZResponse, error)
 	GetBlock(ctx context.Context, in *BlockRequest, opts ...grpc.CallOption) (*SSZResponse, error)
-	SetLoggingLevel(ctx context.Context, in *LoggingLevelRequest, opts ...grpc.CallOption) (*types.Empty, error)
-	GetProtoArrayForkChoice(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*ProtoArrayForkChoiceResponse, error)
-	ListPeers(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*DebugPeerResponses, error)
+	SetLoggingLevel(ctx context.Context, in *LoggingLevelRequest, opts ...grpc.CallOption) (*empty.Empty, error)
+	GetProtoArrayForkChoice(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*ProtoArrayForkChoiceResponse, error)
+	ListPeers(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*DebugPeerResponses, error)
 	GetPeer(ctx context.Context, in *v1alpha1.PeerRequest, opts ...grpc.CallOption) (*DebugPeerResponse, error)
 	GetInclusionSlot(ctx context.Context, in *InclusionSlotRequest, opts ...grpc.CallOption) (*InclusionSlotResponse, error)
 }
@@ -955,8 +1158,8 @@ func (c *debugClient) GetBlock(ctx context.Context, in *BlockRequest, opts ...gr
 	return out, nil
 }
 
-func (c *debugClient) SetLoggingLevel(ctx context.Context, in *LoggingLevelRequest, opts ...grpc.CallOption) (*types.Empty, error) {
-	out := new(types.Empty)
+func (c *debugClient) SetLoggingLevel(ctx context.Context, in *LoggingLevelRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
+	out := new(empty.Empty)
 	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.Debug/SetLoggingLevel", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -964,7 +1167,7 @@ func (c *debugClient) SetLoggingLevel(ctx context.Context, in *LoggingLevelReque
 	return out, nil
 }
 
-func (c *debugClient) GetProtoArrayForkChoice(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*ProtoArrayForkChoiceResponse, error) {
+func (c *debugClient) GetProtoArrayForkChoice(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*ProtoArrayForkChoiceResponse, error) {
 	out := new(ProtoArrayForkChoiceResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.Debug/GetProtoArrayForkChoice", in, out, opts...)
 	if err != nil {
@@ -973,7 +1176,7 @@ func (c *debugClient) GetProtoArrayForkChoice(ctx context.Context, in *types.Emp
 	return out, nil
 }
 
-func (c *debugClient) ListPeers(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*DebugPeerResponses, error) {
+func (c *debugClient) ListPeers(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*DebugPeerResponses, error) {
 	out := new(DebugPeerResponses)
 	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.Debug/ListPeers", in, out, opts...)
 	if err != nil {
@@ -1004,9 +1207,9 @@ func (c *debugClient) GetInclusionSlot(ctx context.Context, in *InclusionSlotReq
 type DebugServer interface {
 	GetBeaconState(context.Context, *BeaconStateRequest) (*SSZResponse, error)
 	GetBlock(context.Context, *BlockRequest) (*SSZResponse, error)
-	SetLoggingLevel(context.Context, *LoggingLevelRequest) (*types.Empty, error)
-	GetProtoArrayForkChoice(context.Context, *types.Empty) (*ProtoArrayForkChoiceResponse, error)
-	ListPeers(context.Context, *types.Empty) (*DebugPeerResponses, error)
+	SetLoggingLevel(context.Context, *LoggingLevelRequest) (*empty.Empty, error)
+	GetProtoArrayForkChoice(context.Context, *empty.Empty) (*ProtoArrayForkChoiceResponse, error)
+	ListPeers(context.Context, *empty.Empty) (*DebugPeerResponses, error)
 	GetPeer(context.Context, *v1alpha1.PeerRequest) (*DebugPeerResponse, error)
 	GetInclusionSlot(context.Context, *InclusionSlotRequest) (*InclusionSlotResponse, error)
 }
@@ -1021,13 +1224,13 @@ func (*UnimplementedDebugServer) GetBeaconState(ctx context.Context, req *Beacon
 func (*UnimplementedDebugServer) GetBlock(ctx context.Context, req *BlockRequest) (*SSZResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBlock not implemented")
 }
-func (*UnimplementedDebugServer) SetLoggingLevel(ctx context.Context, req *LoggingLevelRequest) (*types.Empty, error) {
+func (*UnimplementedDebugServer) SetLoggingLevel(ctx context.Context, req *LoggingLevelRequest) (*empty.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetLoggingLevel not implemented")
 }
-func (*UnimplementedDebugServer) GetProtoArrayForkChoice(ctx context.Context, req *types.Empty) (*ProtoArrayForkChoiceResponse, error) {
+func (*UnimplementedDebugServer) GetProtoArrayForkChoice(ctx context.Context, req *empty.Empty) (*ProtoArrayForkChoiceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetProtoArrayForkChoice not implemented")
 }
-func (*UnimplementedDebugServer) ListPeers(ctx context.Context, req *types.Empty) (*DebugPeerResponses, error) {
+func (*UnimplementedDebugServer) ListPeers(ctx context.Context, req *empty.Empty) (*DebugPeerResponses, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListPeers not implemented")
 }
 func (*UnimplementedDebugServer) GetPeer(ctx context.Context, req *v1alpha1.PeerRequest) (*DebugPeerResponse, error) {
@@ -1096,7 +1299,7 @@ func _Debug_SetLoggingLevel_Handler(srv interface{}, ctx context.Context, dec fu
 }
 
 func _Debug_GetProtoArrayForkChoice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(types.Empty)
+	in := new(empty.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -1108,13 +1311,13 @@ func _Debug_GetProtoArrayForkChoice_Handler(srv interface{}, ctx context.Context
 		FullMethod: "/ethereum.beacon.rpc.v1.Debug/GetProtoArrayForkChoice",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DebugServer).GetProtoArrayForkChoice(ctx, req.(*types.Empty))
+		return srv.(DebugServer).GetProtoArrayForkChoice(ctx, req.(*empty.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Debug_ListPeers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(types.Empty)
+	in := new(empty.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -1126,7 +1329,7 @@ func _Debug_ListPeers_Handler(srv interface{}, ctx context.Context, dec func(int
 		FullMethod: "/ethereum.beacon.rpc.v1.Debug/ListPeers",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DebugServer).ListPeers(ctx, req.(*types.Empty))
+		return srv.(DebugServer).ListPeers(ctx, req.(*empty.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1644,6 +1847,18 @@ func (m *DebugPeerResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i -= len(m.XXX_unrecognized)
 		copy(dAtA[i:], m.XXX_unrecognized)
 	}
+	if m.ScoreInfo != nil {
+		{
+			size, err := m.ScoreInfo.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintDebug(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x4a
+	}
 	if m.LastUpdated != 0 {
 		i = encodeVarintDebug(dAtA, i, uint64(m.LastUpdated))
 		i--
@@ -1777,6 +1992,145 @@ func (m *DebugPeerResponse_PeerInfo) MarshalToSizedBuffer(dAtA []byte) (int, err
 		}
 		i--
 		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *ScoreInfo) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ScoreInfo) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ScoreInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if len(m.ValidationError) > 0 {
+		i -= len(m.ValidationError)
+		copy(dAtA[i:], m.ValidationError)
+		i = encodeVarintDebug(dAtA, i, uint64(len(m.ValidationError)))
+		i--
+		dAtA[i] = 0x3a
+	}
+	if m.BehaviourPenalty != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.BehaviourPenalty))))
+		i--
+		dAtA[i] = 0x35
+	}
+	if m.GossipScore != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.GossipScore))))
+		i--
+		dAtA[i] = 0x2d
+	}
+	if len(m.TopicScores) > 0 {
+		for k := range m.TopicScores {
+			v := m.TopicScores[k]
+			baseI := i
+			if v != nil {
+				{
+					size, err := v.MarshalToSizedBuffer(dAtA[:i])
+					if err != nil {
+						return 0, err
+					}
+					i -= size
+					i = encodeVarintDebug(dAtA, i, uint64(size))
+				}
+				i--
+				dAtA[i] = 0x12
+			}
+			i -= len(k)
+			copy(dAtA[i:], k)
+			i = encodeVarintDebug(dAtA, i, uint64(len(k)))
+			i--
+			dAtA[i] = 0xa
+			i = encodeVarintDebug(dAtA, i, uint64(baseI-i))
+			i--
+			dAtA[i] = 0x22
+		}
+	}
+	if m.BlockProviderScore != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.BlockProviderScore))))
+		i--
+		dAtA[i] = 0x1d
+	}
+	if m.ProcessedBlocks != 0 {
+		i = encodeVarintDebug(dAtA, i, uint64(m.ProcessedBlocks))
+		i--
+		dAtA[i] = 0x10
+	}
+	if m.OverallScore != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.OverallScore))))
+		i--
+		dAtA[i] = 0xd
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *TopicScoreSnapshot) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *TopicScoreSnapshot) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *TopicScoreSnapshot) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if m.InvalidMessageDeliveries != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.InvalidMessageDeliveries))))
+		i--
+		dAtA[i] = 0x25
+	}
+	if m.MeshMessageDeliveries != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.MeshMessageDeliveries))))
+		i--
+		dAtA[i] = 0x1d
+	}
+	if m.FirstMessageDeliveries != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.FirstMessageDeliveries))))
+		i--
+		dAtA[i] = 0x15
+	}
+	if m.TimeInMesh != 0 {
+		i = encodeVarintDebug(dAtA, i, uint64(m.TimeInMesh))
+		i--
+		dAtA[i] = 0x8
 	}
 	return len(dAtA) - i, nil
 }
@@ -2035,6 +2389,10 @@ func (m *DebugPeerResponse) Size() (n int) {
 	if m.LastUpdated != 0 {
 		n += 1 + sovDebug(uint64(m.LastUpdated))
 	}
+	if m.ScoreInfo != nil {
+		l = m.ScoreInfo.Size()
+		n += 1 + l + sovDebug(uint64(l))
+	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
 	}
@@ -2070,6 +2428,74 @@ func (m *DebugPeerResponse_PeerInfo) Size() (n int) {
 	}
 	if m.PeerLatency != 0 {
 		n += 1 + sovDebug(uint64(m.PeerLatency))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *ScoreInfo) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.OverallScore != 0 {
+		n += 5
+	}
+	if m.ProcessedBlocks != 0 {
+		n += 1 + sovDebug(uint64(m.ProcessedBlocks))
+	}
+	if m.BlockProviderScore != 0 {
+		n += 5
+	}
+	if len(m.TopicScores) > 0 {
+		for k, v := range m.TopicScores {
+			_ = k
+			_ = v
+			l = 0
+			if v != nil {
+				l = v.Size()
+				l += 1 + sovDebug(uint64(l))
+			}
+			mapEntrySize := 1 + len(k) + sovDebug(uint64(len(k))) + l
+			n += mapEntrySize + 1 + sovDebug(uint64(mapEntrySize))
+		}
+	}
+	if m.GossipScore != 0 {
+		n += 5
+	}
+	if m.BehaviourPenalty != 0 {
+		n += 5
+	}
+	l = len(m.ValidationError)
+	if l > 0 {
+		n += 1 + l + sovDebug(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *TopicScoreSnapshot) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.TimeInMesh != 0 {
+		n += 1 + sovDebug(uint64(m.TimeInMesh))
+	}
+	if m.FirstMessageDeliveries != 0 {
+		n += 5
+	}
+	if m.MeshMessageDeliveries != 0 {
+		n += 5
+	}
+	if m.InvalidMessageDeliveries != 0 {
+		n += 5
 	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
@@ -2145,7 +2571,7 @@ func (m *InclusionSlotRequest) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Slot |= uint64(b&0x7F) << shift
+				m.Slot |= github_com_prysmaticlabs_eth2_types.Slot(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -2156,10 +2582,7 @@ func (m *InclusionSlotRequest) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthDebug
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthDebug
 			}
 			if (iNdEx + skippy) > l {
@@ -2218,7 +2641,7 @@ func (m *InclusionSlotResponse) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Slot |= uint64(b&0x7F) << shift
+				m.Slot |= github_com_prysmaticlabs_eth2_types.Slot(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -2229,10 +2652,7 @@ func (m *InclusionSlotResponse) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthDebug
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthDebug
 			}
 			if (iNdEx + skippy) > l {
@@ -2281,7 +2701,7 @@ func (m *BeaconStateRequest) Unmarshal(dAtA []byte) error {
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Slot", wireType)
 			}
-			var v uint64
+			var v github_com_prysmaticlabs_eth2_types.Slot
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowDebug
@@ -2291,7 +2711,7 @@ func (m *BeaconStateRequest) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				v |= uint64(b&0x7F) << shift
+				v |= github_com_prysmaticlabs_eth2_types.Slot(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -2336,10 +2756,7 @@ func (m *BeaconStateRequest) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthDebug
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthDebug
 			}
 			if (iNdEx + skippy) > l {
@@ -2424,10 +2841,7 @@ func (m *BlockRequest) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthDebug
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthDebug
 			}
 			if (iNdEx + skippy) > l {
@@ -2512,10 +2926,7 @@ func (m *SSZResponse) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthDebug
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthDebug
 			}
 			if (iNdEx + skippy) > l {
@@ -2585,10 +2996,7 @@ func (m *LoggingLevelRequest) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthDebug
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthDebug
 			}
 			if (iNdEx + skippy) > l {
@@ -2666,7 +3074,7 @@ func (m *ProtoArrayForkChoiceResponse) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.JustifiedEpoch |= uint64(b&0x7F) << shift
+				m.JustifiedEpoch |= github_com_prysmaticlabs_eth2_types.Epoch(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -2685,7 +3093,7 @@ func (m *ProtoArrayForkChoiceResponse) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.FinalizedEpoch |= uint64(b&0x7F) << shift
+				m.FinalizedEpoch |= github_com_prysmaticlabs_eth2_types.Epoch(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -2826,7 +3234,7 @@ func (m *ProtoArrayForkChoiceResponse) Unmarshal(dAtA []byte) error {
 					if err != nil {
 						return err
 					}
-					if skippy < 0 {
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
 						return ErrInvalidLengthDebug
 					}
 					if (iNdEx + skippy) > postIndex {
@@ -2843,10 +3251,7 @@ func (m *ProtoArrayForkChoiceResponse) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthDebug
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthDebug
 			}
 			if (iNdEx + skippy) > l {
@@ -2905,7 +3310,7 @@ func (m *ProtoArrayNode) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Slot |= uint64(b&0x7F) << shift
+				m.Slot |= github_com_prysmaticlabs_eth2_types.Slot(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -2977,7 +3382,7 @@ func (m *ProtoArrayNode) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.JustifiedEpoch |= uint64(b&0x7F) << shift
+				m.JustifiedEpoch |= github_com_prysmaticlabs_eth2_types.Epoch(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -2996,7 +3401,7 @@ func (m *ProtoArrayNode) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.FinalizedEpoch |= uint64(b&0x7F) << shift
+				m.FinalizedEpoch |= github_com_prysmaticlabs_eth2_types.Epoch(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -3064,10 +3469,7 @@ func (m *ProtoArrayNode) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthDebug
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthDebug
 			}
 			if (iNdEx + skippy) > l {
@@ -3152,10 +3554,7 @@ func (m *DebugPeerResponses) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthDebug
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthDebug
 			}
 			if (iNdEx + skippy) > l {
@@ -3425,16 +3824,49 @@ func (m *DebugPeerResponse) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
+		case 9:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ScoreInfo", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowDebug
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthDebug
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthDebug
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.ScoreInfo == nil {
+				m.ScoreInfo = &ScoreInfo{}
+			}
+			if err := m.ScoreInfo.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipDebug(dAtA[iNdEx:])
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthDebug
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthDebug
 			}
 			if (iNdEx + skippy) > l {
@@ -3655,10 +4087,385 @@ func (m *DebugPeerResponse_PeerInfo) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthDebug
 			}
-			if (iNdEx + skippy) < 0 {
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ScoreInfo) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowDebug
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ScoreInfo: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ScoreInfo: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field OverallScore", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.OverallScore = float32(math.Float32frombits(v))
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ProcessedBlocks", wireType)
+			}
+			m.ProcessedBlocks = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowDebug
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.ProcessedBlocks |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 3:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field BlockProviderScore", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.BlockProviderScore = float32(math.Float32frombits(v))
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TopicScores", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowDebug
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthDebug
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthDebug
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.TopicScores == nil {
+				m.TopicScores = make(map[string]*TopicScoreSnapshot)
+			}
+			var mapkey string
+			var mapvalue *TopicScoreSnapshot
+			for iNdEx < postIndex {
+				entryPreIndex := iNdEx
+				var wire uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return ErrIntOverflowDebug
+					}
+					if iNdEx >= l {
+						return io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					wire |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				fieldNum := int32(wire >> 3)
+				if fieldNum == 1 {
+					var stringLenmapkey uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowDebug
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapkey |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapkey := int(stringLenmapkey)
+					if intStringLenmapkey < 0 {
+						return ErrInvalidLengthDebug
+					}
+					postStringIndexmapkey := iNdEx + intStringLenmapkey
+					if postStringIndexmapkey < 0 {
+						return ErrInvalidLengthDebug
+					}
+					if postStringIndexmapkey > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapkey = string(dAtA[iNdEx:postStringIndexmapkey])
+					iNdEx = postStringIndexmapkey
+				} else if fieldNum == 2 {
+					var mapmsglen int
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowDebug
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						mapmsglen |= int(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					if mapmsglen < 0 {
+						return ErrInvalidLengthDebug
+					}
+					postmsgIndex := iNdEx + mapmsglen
+					if postmsgIndex < 0 {
+						return ErrInvalidLengthDebug
+					}
+					if postmsgIndex > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapvalue = &TopicScoreSnapshot{}
+					if err := mapvalue.Unmarshal(dAtA[iNdEx:postmsgIndex]); err != nil {
+						return err
+					}
+					iNdEx = postmsgIndex
+				} else {
+					iNdEx = entryPreIndex
+					skippy, err := skipDebug(dAtA[iNdEx:])
+					if err != nil {
+						return err
+					}
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
+						return ErrInvalidLengthDebug
+					}
+					if (iNdEx + skippy) > postIndex {
+						return io.ErrUnexpectedEOF
+					}
+					iNdEx += skippy
+				}
+			}
+			m.TopicScores[mapkey] = mapvalue
+			iNdEx = postIndex
+		case 5:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field GossipScore", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.GossipScore = float32(math.Float32frombits(v))
+		case 6:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field BehaviourPenalty", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.BehaviourPenalty = float32(math.Float32frombits(v))
+		case 7:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ValidationError", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowDebug
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthDebug
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthDebug
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ValidationError = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipDebug(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthDebug
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *TopicScoreSnapshot) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowDebug
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: TopicScoreSnapshot: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: TopicScoreSnapshot: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TimeInMesh", wireType)
+			}
+			m.TimeInMesh = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowDebug
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.TimeInMesh |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field FirstMessageDeliveries", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.FirstMessageDeliveries = float32(math.Float32frombits(v))
+		case 3:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field MeshMessageDeliveries", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.MeshMessageDeliveries = float32(math.Float32frombits(v))
+		case 4:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field InvalidMessageDeliveries", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.InvalidMessageDeliveries = float32(math.Float32frombits(v))
+		default:
+			iNdEx = preIndex
+			skippy, err := skipDebug(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthDebug
 			}
 			if (iNdEx + skippy) > l {

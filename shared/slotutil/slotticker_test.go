@@ -3,13 +3,15 @@ package slotutil
 import (
 	"testing"
 	"time"
+
+	types "github.com/prysmaticlabs/eth2-types"
 )
 
 var _ Ticker = (*SlotTicker)(nil)
 
 func TestSlotTicker(t *testing.T) {
 	ticker := &SlotTicker{
-		c:    make(chan uint64),
+		c:    make(chan types.Slot),
 		done: make(chan struct{}),
 	}
 	defer ticker.Done()
@@ -64,7 +66,7 @@ func TestSlotTicker(t *testing.T) {
 
 func TestSlotTickerGenesis(t *testing.T) {
 	ticker := &SlotTicker{
-		c:    make(chan uint64),
+		c:    make(chan types.Slot),
 		done: make(chan struct{}),
 	}
 	defer ticker.Done()
@@ -115,8 +117,8 @@ func TestGetSlotTickerWithOffset_OK(t *testing.T) {
 	secondsPerSlot := uint64(4)
 	offset := time.Duration(secondsPerSlot/2) * time.Second
 
-	offsetTicker := GetSlotTickerWithOffset(genesisTime, offset, secondsPerSlot)
-	normalTicker := GetSlotTicker(genesisTime, secondsPerSlot)
+	offsetTicker := NewSlotTickerWithOffset(genesisTime, offset, secondsPerSlot)
+	normalTicker := NewSlotTicker(genesisTime, secondsPerSlot)
 
 	firstTicked := 0
 	for {

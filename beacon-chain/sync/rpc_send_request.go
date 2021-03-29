@@ -4,13 +4,12 @@ import (
 	"context"
 	"io"
 
-	streamhelpers "github.com/libp2p/go-libp2p-core/helpers"
-	"github.com/libp2p/go-libp2p-core/mux"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -31,11 +30,7 @@ func SendBeaconBlocksByRangeRequest(
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		if err := streamhelpers.FullClose(stream); err != nil && err.Error() != mux.ErrReset.Error() {
-			log.WithError(err).Debugf("Could not close stream with protocol %s", stream.Protocol())
-		}
-	}()
+	defer closeStream(stream, log)
 
 	// Augment block processing function, if non-nil block processor is provided.
 	blocks := make([]*ethpb.SignedBeaconBlock, 0, req.Count)
@@ -46,7 +41,7 @@ func SendBeaconBlocksByRangeRequest(
 		}
 		return nil
 	}
-	var prevSlot uint64
+	var prevSlot types.Slot
 	for i := uint64(0); ; i++ {
 		isFirstChunk := i == 0
 		blk, err := ReadChunkedBlock(stream, p2pProvider, isFirstChunk)
@@ -62,12 +57,18 @@ func SendBeaconBlocksByRangeRequest(
 			return nil, ErrInvalidFetchedData
 		}
 		// Returned blocks MUST be in the slot range [start_slot, start_slot + count * step).
-		if blk.Block.Slot < req.StartSlot || blk.Block.Slot >= req.StartSlot+req.Count*req.Step {
+		if blk.Block.Slot < req.StartSlot || blk.Block.Slot >= req.StartSlot.Add(req.Count*req.Step) {
 			return nil, ErrInvalidFetchedData
 		}
 		// Returned blocks, where they exist, MUST be sent in a consecutive order.
 		// Consecutive blocks MUST have values in `step` increments (slots may be skipped in between).
-		if !isFirstChunk && (prevSlot >= blk.Block.Slot || (blk.Block.Slot-prevSlot)%req.Step != 0) {
+		isSlotOutOfOrder := false
+		if prevSlot >= blk.Block.Slot {
+			isSlotOutOfOrder = true
+		} else if req.Step != 0 && blk.Block.Slot.SubSlot(prevSlot).Mod(req.Step) != 0 {
+			isSlotOutOfOrder = true
+		}
+		if !isFirstChunk && isSlotOutOfOrder {
 			return nil, ErrInvalidFetchedData
 		}
 		prevSlot = blk.Block.Slot
@@ -81,17 +82,13 @@ func SendBeaconBlocksByRangeRequest(
 // SendBeaconBlocksByRootRequest sends BeaconBlocksByRoot and returns fetched blocks, if any.
 func SendBeaconBlocksByRootRequest(
 	ctx context.Context, p2pProvider p2p.P2P, pid peer.ID,
-	req *types.BeaconBlockByRootsReq, blockProcessor BeaconBlockProcessor,
+	req *p2ptypes.BeaconBlockByRootsReq, blockProcessor BeaconBlockProcessor,
 ) ([]*ethpb.SignedBeaconBlock, error) {
 	stream, err := p2pProvider.Send(ctx, req, p2p.RPCBlocksByRootTopic, pid)
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		if err := streamhelpers.FullClose(stream); err != nil && err.Error() != mux.ErrReset.Error() {
-			log.WithError(err).Debugf("Could not reset stream with protocol %s", stream.Protocol())
-		}
-	}()
+	defer closeStream(stream, log)
 
 	// Augment block processing function, if non-nil block processor is provided.
 	blocks := make([]*ethpb.SignedBeaconBlock, 0, len(*req))

@@ -4,7 +4,6 @@ import (
 	"context"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	log "github.com/sirupsen/logrus"
 )
 
 // CheckBlockSafety this function is part of slashing protection for block proposals it performs

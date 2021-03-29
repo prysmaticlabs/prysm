@@ -17,6 +17,8 @@ import (
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
+const password = "secretPassw0rd$1999"
+
 func createRandomKeystore(t testing.TB, password string) *keymanager.Keystore {
 	encryptor := keystorev4.New()
 	id, err := uuid.NewRandom()
@@ -52,7 +54,7 @@ func TestImportedKeymanager_CreateAccountsKeystore_NoDuplicates(t *testing.T) {
 		wallet: wallet,
 	}
 	ctx := context.Background()
-	_, err := dr.createAccountsKeystore(ctx, privKeys, pubKeys)
+	_, err := dr.CreateAccountsKeystore(ctx, privKeys, pubKeys)
 	require.NoError(t, err)
 
 	// We expect the 50 keys in the account store to match.
@@ -65,7 +67,7 @@ func TestImportedKeymanager_CreateAccountsKeystore_NoDuplicates(t *testing.T) {
 	}
 
 	// Re-run the create accounts keystore function with the same pubkeys.
-	_, err = dr.createAccountsKeystore(ctx, privKeys, pubKeys)
+	_, err = dr.CreateAccountsKeystore(ctx, privKeys, pubKeys)
 	require.NoError(t, err)
 
 	// We expect nothing to change.
@@ -84,7 +86,7 @@ func TestImportedKeymanager_CreateAccountsKeystore_NoDuplicates(t *testing.T) {
 	privKeys = append(privKeys, privKey.Marshal())
 	pubKeys = append(pubKeys, privKey.PublicKey().Marshal())
 
-	_, err = dr.createAccountsKeystore(ctx, privKeys, pubKeys)
+	_, err = dr.CreateAccountsKeystore(ctx, privKeys, pubKeys)
 	require.NoError(t, err)
 	require.Equal(t, len(dr.accountsStore.PublicKeys), len(dr.accountsStore.PrivateKeys))
 
@@ -93,7 +95,6 @@ func TestImportedKeymanager_CreateAccountsKeystore_NoDuplicates(t *testing.T) {
 }
 
 func TestImportedKeymanager_ImportKeystores(t *testing.T) {
-	password := "secretPassw0rd$1999"
 	// Setup the keymanager.
 	wallet := &mock.Wallet{
 		Files:          make(map[string]map[string][]byte),

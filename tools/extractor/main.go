@@ -5,10 +5,10 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
 
@@ -24,13 +24,13 @@ func main() {
 	defer resetCfg()
 	flag.Parse()
 	fmt.Println("Starting process...")
-	d, err := db.NewDB(*datadir, cache.NewStateSummaryCache())
+	d, err := db.NewDB(context.Background(), *datadir, &kv.Config{})
 	if err != nil {
 		panic(err)
 	}
 	ctx := context.Background()
-	slot := uint64(*state)
-	roots, err := d.BlockRoots(ctx, filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot))
+	slot := types.Slot(*state)
+	_, roots, err := d.BlockRootsBySlot(ctx, slot)
 	if err != nil {
 		panic(err)
 	}

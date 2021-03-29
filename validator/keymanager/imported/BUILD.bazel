@@ -6,9 +6,9 @@ go_library(
     srcs = [
         "backup.go",
         "doc.go",
-        "enable_disable.go",
         "import.go",
         "keymanager.go",
+        "log.go",
         "refresh.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/keymanager/imported",
@@ -22,6 +22,7 @@ go_library(
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/event:go_default_library",
+        "//shared/featureconfig:go_default_library",
         "//shared/fileutil:go_default_library",
         "//shared/interop:go_default_library",
         "//shared/petnames:go_default_library",
@@ -43,7 +44,6 @@ go_test(
     name = "go_default_test",
     srcs = [
         "backup_test.go",
-        "enable_disable_test.go",
         "import_test.go",
         "keymanager_test.go",
         "refresh_test.go",

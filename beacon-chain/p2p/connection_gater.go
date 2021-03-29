@@ -8,7 +8,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
-	filter "github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr/net"
 	"github.com/sirupsen/logrus"
 )
@@ -84,15 +83,15 @@ func (s *Service) validateDial(addr multiaddr.Multiaddr) bool {
 
 // configureFilter looks at the provided allow lists and
 // deny lists to appropriately create a filter.
-func configureFilter(cfg *Config) (*filter.Filters, error) {
-	addrFilter := filter.NewFilters()
+func configureFilter(cfg *Config) (*multiaddr.Filters, error) {
+	addrFilter := multiaddr.NewFilters()
 	// Configure from provided allow list in the config.
 	if cfg.AllowListCIDR != "" {
 		_, ipnet, err := net.ParseCIDR(cfg.AllowListCIDR)
 		if err != nil {
 			return nil, err
 		}
-		addrFilter.AddFilter(*ipnet, filter.ActionAccept)
+		addrFilter.AddFilter(*ipnet, multiaddr.ActionAccept)
 	}
 	// Configure from provided deny list in the config.
 	if len(cfg.DenyListCIDR) > 0 {
@@ -101,7 +100,7 @@ func configureFilter(cfg *Config) (*filter.Filters, error) {
 			if err != nil {
 				return nil, err
 			}
-			addrFilter.AddFilter(*ipnet, filter.ActionDeny)
+			addrFilter.AddFilter(*ipnet, multiaddr.ActionDeny)
 		}
 	}
 	return addrFilter, nil
@@ -112,8 +111,8 @@ func configureFilter(cfg *Config) (*filter.Filters, error) {
 // accepts all incoming dials, so if we have an allow list
 // we will reject all inbound dials except for those in the
 // appropriate ip subnets.
-func filterConnections(f *filter.Filters, a filter.Multiaddr) bool {
-	acceptedNets := f.FiltersForAction(filter.ActionAccept)
+func filterConnections(f *multiaddr.Filters, a multiaddr.Multiaddr) bool {
+	acceptedNets := f.FiltersForAction(multiaddr.ActionAccept)
 	restrictConns := len(acceptedNets) != 0
 
 	// If we have an allow list added in, we by default reject all

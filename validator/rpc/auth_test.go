@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/dgrijalva/jwt-go"
-	ptypes "github.com/gogo/protobuf/types"
+	"github.com/golang/protobuf/ptypes/empty"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
@@ -31,7 +31,6 @@ func TestServer_SignupAndLogin_RoundTrip(t *testing.T) {
 
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
-	strongPass := "29384283xasjasd32%%&*@*#*"
 
 	ss := &Server{
 		valDB:                 valDB,
@@ -88,7 +87,7 @@ func TestServer_Logout(t *testing.T) {
 	_, err = jwt.Parse(tokenString, checkParsedKey)
 	assert.NoError(t, err)
 
-	_, err = ss.Logout(context.Background(), &ptypes.Empty{})
+	_, err = ss.Logout(context.Background(), &empty.Empty{})
 	require.NoError(t, err)
 
 	// Attempting to validate the same token string after logout should fail.
@@ -100,7 +99,6 @@ func TestServer_ChangePassword_Preconditions(t *testing.T) {
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
 	ctx := context.Background()
-	strongPass := "29384283xasjasd32%%&*@*#*"
 	ss := &Server{
 		walletDir: defaultWalletPath,
 	}
