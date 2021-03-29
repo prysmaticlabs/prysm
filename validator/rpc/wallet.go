@@ -140,7 +140,7 @@ func (s *Server) WalletConfig(ctx context.Context, _ *empty.Empty) (*pb.WalletRe
 // the provided Mnemonic and return CreateWalletResponse,nil if nothing went wrong
 func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest) (*pb.CreateWalletResponse, error) {
 	numAccounts := int(req.NumAccounts)
-	if numAccounts < 1 {
+	if numAccounts == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Must create at least 1 validator account")
 	}
 
