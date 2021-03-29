@@ -3,14 +3,12 @@ package slasher
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -79,7 +77,6 @@ func (s *Service) detectAllAttesterSlashings(
 	groupedAtts := s.groupByChunkIndex(attestations)
 
 	// Update min and max spans and retrieve any detected slashable offenses.
-	start := time.Now()
 	surroundingSlashings, err := s.updateSpans(ctx, &chunkUpdateArgs{
 		kind:                slashertypes.MinSpan,
 		validatorChunkIndex: args.validatorChunkIndex,
@@ -92,14 +89,7 @@ func (s *Service) detectAllAttesterSlashings(
 			args.validatorChunkIndex,
 		)
 	}
-	log.WithFields(logrus.Fields{
-		"timeElapsed":               time.Since(start),
-		"surroundingSlashingsFound": len(surroundingSlashings),
-		"currentEpoch":              args.currentEpoch,
-		"validatorChunkIndex":       args.validatorChunkIndex,
-	}).Debug("Done updating min spans")
 
-	start = time.Now()
 	surroundedSlashings, err := s.updateSpans(ctx, &chunkUpdateArgs{
 		kind:                slashertypes.MaxSpan,
 		validatorChunkIndex: args.validatorChunkIndex,
@@ -112,12 +102,6 @@ func (s *Service) detectAllAttesterSlashings(
 			args.validatorChunkIndex,
 		)
 	}
-	log.WithFields(logrus.Fields{
-		"timeElapsed":              time.Since(start),
-		"surroundedSlashingsFound": len(surroundingSlashings),
-		"currentEpoch":             args.currentEpoch,
-		"validatorChunkIndex":      args.validatorChunkIndex,
-	}).Debug("Done updating max spans")
 
 	// Consolidate all slashings into a slice.
 	slashings := make([]*ethpb.AttesterSlashing, 0)

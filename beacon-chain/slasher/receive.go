@@ -2,6 +2,7 @@ package slasher
 
 import (
 	"context"
+	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -95,6 +96,7 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 				"numDroppedAtts":  numDropped,
 			}).Info("New slot, processing queued atts for slashing detection")
 
+			start := time.Now()
 			// Save the attestation records to our database.
 			if err := s.serviceCfg.Database.SaveAttestationRecordsForValidators(
 				ctx, validAtts,
@@ -116,6 +118,8 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 				log.WithError(err).Error("Could not process attester slashings")
 				continue
 			}
+
+			log.WithField("elapsed", time.Now().Sub(start)).Debug("Done checking slashable attestations")
 
 			processedAttestationsTotal.Add(float64(len(validAtts)))
 		case <-ctx.Done():
@@ -141,6 +145,7 @@ func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan typ
 				"numBlocks":    len(blocks),
 			}).Info("New slot, processing queued blocks for slashing detection")
 
+			start := time.Now()
 			slashings, err := s.detectProposerSlashings(ctx, blocks)
 			if err != nil {
 				log.WithError(err).Error("Could not detect slashable blocks")
@@ -153,6 +158,8 @@ func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan typ
 				log.WithError(err).Error("Could not process proposer slashings")
 				continue
 			}
+
+			log.WithField("elapsed", time.Now().Sub(start)).Debug("Done checking slashable blocks")
 
 			processedBlocksTotal.Add(float64(len(blocks)))
 		case <-ctx.Done():
