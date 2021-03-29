@@ -130,7 +130,6 @@ type Service struct {
 	headTicker              *time.Ticker
 	httpEndpoint            string
 	auth                    string
-	stateNotifier           statefeed.Notifier
 	currHttpEndpoint        string
 	httpLogger              bind.ContractFilterer
 	eth1DataFetcher         RPCDataFetcher
