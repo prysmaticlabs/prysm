@@ -596,6 +596,7 @@ func TestStore_ChainHeads(t *testing.T) {
 		{slot: 101, root: [32]byte{'b'}},
 		{slot: 102, root: [32]byte{'c'}, bestDescendant: NonExistentNode},
 		{slot: 103, root: [32]byte{'d'}, bestChild: NonExistentNode, bestDescendant: NonExistentNode},
+		{slot: 104, root: [32]byte{'e'}, bestChild: NonExistentNode},
 	}
 
 	s := &Store{
