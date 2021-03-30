@@ -33,7 +33,7 @@ const (
 )
 
 // CreateWallet via an API request, allowing a user to save a new
-// imported (derived is RecoverWallet and remote is not supported through web)
+// imported wallet via RPC
 func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) (*pb.CreateWalletResponse, error) {
 	walletDir := s.walletDir
 	exists, err := wallet.Exists(walletDir)
