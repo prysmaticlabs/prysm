@@ -20,12 +20,15 @@ import (
 func main() {
 	port := flag.Int("port", 8080, "port to listen on")
 	writeDirPath := flag.String("write-dir", "", "directory to write an append-only file")
-	podName := flag.String("pod-name", "", "The name of the pod running this tool")
 	flag.Parse()
+	if *writeDirPath == "" {
+		log.Fatal("Needs a -write-dir path")
+	}
 
+	// If the file doesn't exist, create it, or append to the file.
 	f, err := os.OpenFile(
-		filepath.Join(*writeDirPath, fmt.Sprintf("%s.log", *podName)),
-		os.O_CREATE|os.O_RDWR,
+		filepath.Join(*writeDirPath, "requests.log"),
+		os.O_APPEND|os.O_CREATE|os.O_RDWR,
 		params.BeaconIoConfig().ReadWritePermissions,
 	)
 	if err != nil {

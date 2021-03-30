@@ -38,9 +38,10 @@ func Test_parseAndCaptureRequest(t *testing.T) {
 	err = parseRequest(httpReq, &reqContent)
 	require.NoError(t, err)
 
+	// If the file doesn't exist, create it, or append to the file.
 	f, err := os.OpenFile(
 		tmpFile,
-		os.O_CREATE|os.O_RDWR,
+		os.O_APPEND|os.O_CREATE|os.O_RDWR,
 		params.BeaconIoConfig().ReadWritePermissions,
 	)
 	require.NoError(t, err)
