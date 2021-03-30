@@ -61,7 +61,12 @@ func ProcessAttesterSlashings(
 			if err != nil {
 				return nil, err
 			}
-			if helpers.IsSlashableValidator(val.ActivationEpoch(), val.WithdrawableEpoch(), val.Slashed(), currentEpoch) {
+			if helpers.IsSlashableValidator(
+				val.ActivationEpoch(),
+				val.WithdrawableEpoch(),
+				val.Slashed(),
+				currentEpoch,
+			) {
 				beaconState, err = v.SlashValidator(beaconState, types.ValidatorIndex(validatorIndex))
 				if err != nil {
 					return nil, errors.Wrapf(err, "could not slash validator index %d",
@@ -78,7 +83,11 @@ func ProcessAttesterSlashings(
 }
 
 // VerifyAttesterSlashing validates the attestation data in both attestations in the slashing object.
-func VerifyAttesterSlashing(ctx context.Context, beaconState iface.ReadOnlyBeaconState, slashing *ethpb.AttesterSlashing) error {
+func VerifyAttesterSlashing(
+	ctx context.Context,
+	beaconState iface.ReadOnlyBeaconState,
+	slashing *ethpb.AttesterSlashing,
+) error {
 	if slashing == nil {
 		return errors.New("nil slashing")
 	}

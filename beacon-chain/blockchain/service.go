@@ -244,7 +244,12 @@ func (s *Service) Start() {
 // deposit contract, initializes the beacon chain's state, and kicks off the beacon chain.
 func (s *Service) processChainStartTime(ctx context.Context, genesisTime time.Time) {
 	preGenesisState := s.cfg.ChainStartFetcher.PreGenesisState()
-	initializedState, err := s.initializeBeaconChain(ctx, genesisTime, preGenesisState, s.cfg.ChainStartFetcher.ChainStartEth1Data())
+	initializedState, err := s.initializeBeaconChain(
+		ctx,
+		genesisTime,
+		preGenesisState,
+		s.cfg.ChainStartFetcher.ChainStartEth1Data(),
+	)
 	if err != nil {
 		log.Fatalf("Could not initialize beacon chain: %v", err)
 	}
@@ -459,7 +464,11 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 // This is called when a client starts from non-genesis slot. This passes last justified and finalized
 // information to fork choice service to initializes fork choice store.
 func (s *Service) resumeForkChoice(justifiedCheckpoint, finalizedCheckpoint *ethpb.Checkpoint) {
-	store := protoarray.New(justifiedCheckpoint.Epoch, finalizedCheckpoint.Epoch, bytesutil.ToBytes32(finalizedCheckpoint.Root))
+	store := protoarray.New(
+		justifiedCheckpoint.Epoch,
+		finalizedCheckpoint.Epoch,
+		bytesutil.ToBytes32(finalizedCheckpoint.Root),
+	)
 	s.cfg.ForkChoiceStore = store
 }
 

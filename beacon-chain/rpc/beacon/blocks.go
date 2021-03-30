@@ -363,7 +363,10 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 }
 
 // GetWeakSubjectivityCheckpoint retrieves weak subjectivity state root, block root, and epoch.
-func (bs *Server) GetWeakSubjectivityCheckpoint(ctx context.Context, _ *ptypes.Empty) (*ethpb.WeakSubjectivityCheckpoint, error) {
+func (bs *Server) GetWeakSubjectivityCheckpoint(
+	ctx context.Context,
+	_ *ptypes.Empty,
+) (*ethpb.WeakSubjectivityCheckpoint, error) {
 	hs, err := bs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")

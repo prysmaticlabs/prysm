@@ -302,7 +302,9 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 
 // ApplyToEveryValidator applies the provided callback function to each validator in the
 // validator registry.
-func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator) (bool, *ethpb.Validator, error)) error {
+func (b *BeaconState) ApplyToEveryValidator(
+	f func(idx int, val *ethpb.Validator) (bool, *ethpb.Validator, error),
+) error {
 	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
@@ -570,7 +572,10 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *pbp2p.PendingAttestati
 
 	b.state.CurrentEpochAttestations = append(atts, val)
 	b.markFieldAsDirty(currentEpochAttestations)
-	b.dirtyIndices[currentEpochAttestations] = append(b.dirtyIndices[currentEpochAttestations], uint64(len(b.state.CurrentEpochAttestations)-1))
+	b.dirtyIndices[currentEpochAttestations] = append(
+		b.dirtyIndices[currentEpochAttestations],
+		uint64(len(b.state.CurrentEpochAttestations)-1),
+	)
 	return nil
 }
 

@@ -24,7 +24,11 @@ import (
 
 // validateAggregateAndProof verifies the aggregated signature and the selection proof is valid before forwarding to the
 // network and downstream services.
-func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
+func (s *Service) validateAggregateAndProof(
+	ctx context.Context,
+	pid peer.ID,
+	msg *pubsub.Message,
+) pubsub.ValidationResult {
 	if pid == s.cfg.P2P.PeerID() {
 		return pubsub.ValidationAccept
 	}
@@ -108,7 +112,10 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	return pubsub.ValidationAccept
 }
 
-func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.SignedAggregateAttestationAndProof) pubsub.ValidationResult {
+func (s *Service) validateAggregatedAtt(
+	ctx context.Context,
+	signed *ethpb.SignedAggregateAttestationAndProof,
+) pubsub.ValidationResult {
 	ctx, span := trace.StartSpan(ctx, "sync.validateAggregatedAtt")
 	defer span.End()
 
@@ -154,9 +161,18 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	}
 
 	// Verify selection proof reflects to the right validator.
-	selectionSigSet, err := validateSelectionIndex(ctx, bs, signed.Message.Aggregate.Data, signed.Message.AggregatorIndex, signed.Message.SelectionProof)
+	selectionSigSet, err := validateSelectionIndex(
+		ctx,
+		bs,
+		signed.Message.Aggregate.Data,
+		signed.Message.AggregatorIndex,
+		signed.Message.SelectionProof,
+	)
 	if err != nil {
-		traceutil.AnnotateError(span, errors.Wrapf(err, "Could not validate selection for validator %d", signed.Message.AggregatorIndex))
+		traceutil.AnnotateError(
+			span,
+			errors.Wrapf(err, "Could not validate selection for validator %d", signed.Message.AggregatorIndex),
+		)
 		return pubsub.ValidationReject
 	}
 
@@ -164,12 +180,18 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	// We use batch verify here to save compute.
 	aggregatorSigSet, err := aggSigSet(bs, signed)
 	if err != nil {
-		traceutil.AnnotateError(span, errors.Wrapf(err, "Could not get aggregator sig set %d", signed.Message.AggregatorIndex))
+		traceutil.AnnotateError(
+			span,
+			errors.Wrapf(err, "Could not get aggregator sig set %d", signed.Message.AggregatorIndex),
+		)
 		return pubsub.ValidationIgnore
 	}
 	attSigSet, err := blocks.AttestationSignatureSet(ctx, bs, []*ethpb.Attestation{signed.Message.Aggregate})
 	if err != nil {
-		traceutil.AnnotateError(span, errors.Wrapf(err, "Could not verify aggregator signature %d", signed.Message.AggregatorIndex))
+		traceutil.AnnotateError(
+			span,
+			errors.Wrapf(err, "Could not verify aggregator signature %d", signed.Message.AggregatorIndex),
+		)
 		return pubsub.ValidationIgnore
 	}
 	set := bls.NewSet()
@@ -180,7 +202,10 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 		return pubsub.ValidationIgnore
 	}
 	if !valid {
-		traceutil.AnnotateError(span, errors.Errorf("Could not verify selection or aggregator or attestation signature"))
+		traceutil.AnnotateError(
+			span,
+			errors.Errorf("Could not verify selection or aggregator or attestation signature"),
+		)
 		return pubsub.ValidationReject
 	}
 
@@ -217,7 +242,12 @@ func (s *Service) setAggregatorIndexEpochSeen(epoch types.Epoch, aggregatorIndex
 }
 
 // This validates the aggregator's index in state is within the beacon committee.
-func validateIndexInCommittee(ctx context.Context, bs iface.ReadOnlyBeaconState, a *ethpb.Attestation, validatorIndex types.ValidatorIndex) error {
+func validateIndexInCommittee(
+	ctx context.Context,
+	bs iface.ReadOnlyBeaconState,
+	a *ethpb.Attestation,
+	validatorIndex types.ValidatorIndex,
+) error {
 	ctx, span := trace.StartSpan(ctx, "sync.validateIndexInCommittee")
 	defer span.End()
 
@@ -241,7 +271,13 @@ func validateIndexInCommittee(ctx context.Context, bs iface.ReadOnlyBeaconState,
 
 // This validates selection proof by validating it's from the correct validator index of the slot.
 // It does not verify the selection proof, it returns the signature set of selection proof which can be used for batch verify.
-func validateSelectionIndex(ctx context.Context, bs iface.ReadOnlyBeaconState, data *ethpb.AttestationData, validatorIndex types.ValidatorIndex, proof []byte) (*bls.SignatureSet, error) {
+func validateSelectionIndex(
+	ctx context.Context,
+	bs iface.ReadOnlyBeaconState,
+	data *ethpb.AttestationData,
+	validatorIndex types.ValidatorIndex,
+	proof []byte,
+) (*bls.SignatureSet, error) {
 	_, span := trace.StartSpan(ctx, "sync.validateSelectionIndex")
 	defer span.End()
 

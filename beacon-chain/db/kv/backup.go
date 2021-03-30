@@ -47,7 +47,12 @@ func (s *Store) Backup(ctx context.Context, outputDir string) error {
 	copyDB, err := bolt.Open(
 		backupPath,
 		params.BeaconIoConfig().ReadWritePermissions,
-		&bolt.Options{NoFreelistSync: true, NoSync: true, Timeout: params.BeaconIoConfig().BoltTimeout, FreelistType: bolt.FreelistMapType},
+		&bolt.Options{
+			NoFreelistSync: true,
+			NoSync:         true,
+			Timeout:        params.BeaconIoConfig().BoltTimeout,
+			FreelistType:   bolt.FreelistMapType,
+		},
 	)
 	if err != nil {
 		return err

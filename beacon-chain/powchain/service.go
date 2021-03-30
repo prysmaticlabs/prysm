@@ -409,11 +409,19 @@ func (s *Service) dialETH1Nodes(endpoint string) (*ethclient.Client, *gethRPC.Cl
 	}
 	if cID.Uint64() != params.BeaconConfig().DepositChainID {
 		closeClients()
-		return nil, nil, fmt.Errorf("eth1 node using incorrect chain id, %d != %d", cID.Uint64(), params.BeaconConfig().DepositChainID)
+		return nil, nil, fmt.Errorf(
+			"eth1 node using incorrect chain id, %d != %d",
+			cID.Uint64(),
+			params.BeaconConfig().DepositChainID,
+		)
 	}
 	if nID.Uint64() != params.BeaconConfig().DepositNetworkID {
 		closeClients()
-		return nil, nil, fmt.Errorf("eth1 node using incorrect network id, %d != %d", nID.Uint64(), params.BeaconConfig().DepositNetworkID)
+		return nil, nil, fmt.Errorf(
+			"eth1 node using incorrect network id, %d != %d",
+			nID.Uint64(),
+			params.BeaconConfig().DepositNetworkID,
+		)
 	}
 
 	return httpClient, httpRPCClient, nil
@@ -573,7 +581,13 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.Deposit
 	// is more than the current index in state.
 	if uint64(len(ctrs)) > currIndex {
 		for _, c := range ctrs[currIndex:] {
-			s.cfg.DepositCache.InsertPendingDeposit(ctx, c.Deposit, c.Eth1BlockHeight, c.Index, bytesutil.ToBytes32(c.DepositRoot))
+			s.cfg.DepositCache.InsertPendingDeposit(
+				ctx,
+				c.Deposit,
+				c.Eth1BlockHeight,
+				c.Index,
+				bytesutil.ToBytes32(c.DepositRoot),
+			)
 		}
 	}
 	return nil
@@ -721,7 +735,10 @@ func (s *Service) initPOWService() {
 			// Handle edge case with embedded genesis state by fetching genesis header to determine
 			// its height.
 			if s.chainStartData.Chainstarted && s.chainStartData.GenesisBlock == 0 {
-				genHeader, err := s.eth1DataFetcher.HeaderByHash(ctx, common.BytesToHash(s.chainStartData.Eth1Data.BlockHash))
+				genHeader, err := s.eth1DataFetcher.HeaderByHash(
+					ctx,
+					common.BytesToHash(s.chainStartData.Eth1Data.BlockHash),
+				)
 				if err != nil {
 					log.Errorf("Unable to retrieve genesis ETH1.0 chain header: %v", err)
 					s.retryETH1Node(err)

@@ -147,7 +147,9 @@ func (is *infostream) handleConnection() error {
 					return
 				default:
 				}
-				log.WithError(err).Debug("Receive from validators stream listener failed; client probably closed connection")
+				log.
+					WithError(err).
+					Debug("Receive from validators stream listener failed; client probably closed connection")
 				return
 			}
 			is.handleMessage(msg)
@@ -298,7 +300,12 @@ func (is *infostream) generateValidatorsInfo(pubKeys [][]byte) ([]*ethpb.Validat
 }
 
 // generateValidatorInfo generates the validator info for a public key.
-func (is *infostream) generateValidatorInfo(pubKey []byte, validator iface.ReadOnlyValidator, headState iface.ReadOnlyBeaconState, epoch types.Epoch) (*ethpb.ValidatorInfo, error) {
+func (is *infostream) generateValidatorInfo(
+	pubKey []byte,
+	validator iface.ReadOnlyValidator,
+	headState iface.ReadOnlyBeaconState,
+	epoch types.Epoch,
+) (*ethpb.ValidatorInfo, error) {
 	info := &ethpb.ValidatorInfo{
 		PublicKey: pubKey,
 		Epoch:     epoch,
@@ -368,7 +375,11 @@ func (is *infostream) generatePendingValidatorInfo(info *ethpb.ValidatorInfo) (*
 	return info, nil
 }
 
-func (is *infostream) calculateActivationTimeForPendingValidators(res []*ethpb.ValidatorInfo, headState iface.ReadOnlyBeaconState, epoch types.Epoch) error {
+func (is *infostream) calculateActivationTimeForPendingValidators(
+	res []*ethpb.ValidatorInfo,
+	headState iface.ReadOnlyBeaconState,
+	epoch types.Epoch,
+) error {
 	// pendingValidatorsMap is map from the validator pubkey to the index in our return array
 	pendingValidatorsMap := make(map[[48]byte]int)
 	for i, info := range res {
@@ -471,7 +482,10 @@ func (s indicesSorter) Less(i, j int) bool {
 	return s.indices[i] < s.indices[j]
 }
 
-func (is *infostream) calculateStatusAndTransition(validator iface.ReadOnlyValidator, currentEpoch types.Epoch) (ethpb.ValidatorStatus, uint64) {
+func (is *infostream) calculateStatusAndTransition(
+	validator iface.ReadOnlyValidator,
+	currentEpoch types.Epoch,
+) (ethpb.ValidatorStatus, uint64) {
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
 
 	if validator.IsNil() {

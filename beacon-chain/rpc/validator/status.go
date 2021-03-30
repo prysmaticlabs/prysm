@@ -218,7 +218,10 @@ func (vs *Server) validatorStatus(
 	}
 }
 
-func statusForPubKey(headState iface.ReadOnlyBeaconState, pubKey []byte) (ethpb.ValidatorStatus, types.ValidatorIndex, error) {
+func statusForPubKey(
+	headState iface.ReadOnlyBeaconState,
+	pubKey []byte,
+) (ethpb.ValidatorStatus, types.ValidatorIndex, error) {
 	if headState == nil {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS, 0, errors.New("head state does not exist")
 	}
@@ -229,7 +232,10 @@ func statusForPubKey(headState iface.ReadOnlyBeaconState, pubKey []byte) (ethpb.
 	return assignmentStatus(headState, idx), idx, nil
 }
 
-func assignmentStatus(beaconState iface.ReadOnlyBeaconState, validatorIndex types.ValidatorIndex) ethpb.ValidatorStatus {
+func assignmentStatus(
+	beaconState iface.ReadOnlyBeaconState,
+	validatorIndex types.ValidatorIndex,
+) ethpb.ValidatorStatus {
 	validator, err := beaconState.ValidatorAtIndexReadOnly(validatorIndex)
 	if err != nil {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS

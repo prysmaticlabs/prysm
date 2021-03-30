@@ -79,8 +79,12 @@ func (s *Service) AddConnectionHandler(reqFunc, goodByeFunc func(ctx context.Con
 				defer peerFinished(remotePeer)
 				// Handle the various pre-existing conditions that will result in us not handshaking.
 				peerConnectionState, err := s.peers.ConnectionState(remotePeer)
-				if err == nil && (peerConnectionState == peers.PeerConnected || peerConnectionState == peers.PeerConnecting) {
-					log.WithField("currentState", peerConnectionState).WithField("reason", "already active").Trace("Ignoring connection request")
+				if err == nil &&
+					(peerConnectionState == peers.PeerConnected || peerConnectionState == peers.PeerConnecting) {
+					log.
+						WithField("currentState", peerConnectionState).
+						WithField("reason", "already active").
+						Trace("Ignoring connection request")
 					return
 				}
 				s.peers.Add(nil /* ENR */, remotePeer, conn.RemoteMultiaddr(), conn.Stat().Direction)

@@ -61,7 +61,10 @@ func (s *Service) pingHandler(_ context.Context, msg interface{}, stream libp2pc
 			// type isn't compatible with the error we have, so a direct
 			// equality checks fails.
 			if !strings.Contains(err.Error(), p2ptypes.ErrIODeadline.Error()) {
-				log.WithField("peer", stream.Conn().RemotePeer()).WithError(err).Debug("Could not send metadata request")
+				log.
+					WithField("peer", stream.Conn().RemotePeer()).
+					WithError(err).
+					Debug("Could not send metadata request")
 			}
 			return
 		}

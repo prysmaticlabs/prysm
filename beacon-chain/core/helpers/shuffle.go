@@ -65,7 +65,12 @@ func UnShuffledIndex(index types.ValidatorIndex, indexCount uint64, seed [32]byt
 //        index = flip if bit else index
 //
 //    return ValidatorIndex(index)
-func ComputeShuffledIndex(index types.ValidatorIndex, indexCount uint64, seed [32]byte, shuffle bool) (types.ValidatorIndex, error) {
+func ComputeShuffledIndex(
+	index types.ValidatorIndex,
+	indexCount uint64,
+	seed [32]byte,
+	shuffle bool,
+) (types.ValidatorIndex, error) {
 	if params.BeaconConfig().ShuffleRoundCount == 0 {
 		return index, nil
 	}
@@ -184,7 +189,15 @@ func innerShuffleList(input []types.ValidatorIndex, seed [32]byte, shuffle bool)
 		source := hashfunc(buf)
 		byteV := source[(pivot&0xff)>>3]
 		for i, j := uint64(0), pivot; i < mirror; i, j = i+1, j-1 {
-			byteV, source = swapOrNot(buf, byteV, types.ValidatorIndex(i), input, types.ValidatorIndex(j), source, hashfunc)
+			byteV, source = swapOrNot(
+				buf,
+				byteV,
+				types.ValidatorIndex(i),
+				input,
+				types.ValidatorIndex(j),
+				source,
+				hashfunc,
+			)
 		}
 		// Now repeat, but for the part after the pivot.
 		mirror = (pivot + listSize + 1) >> 1
@@ -193,7 +206,15 @@ func innerShuffleList(input []types.ValidatorIndex, seed [32]byte, shuffle bool)
 		source = hashfunc(buf)
 		byteV = source[(end&0xff)>>3]
 		for i, j := pivot+1, end; i < mirror; i, j = i+1, j-1 {
-			byteV, source = swapOrNot(buf, byteV, types.ValidatorIndex(i), input, types.ValidatorIndex(j), source, hashfunc)
+			byteV, source = swapOrNot(
+				buf,
+				byteV,
+				types.ValidatorIndex(i),
+				input,
+				types.ValidatorIndex(j),
+				source,
+				hashfunc,
+			)
 		}
 		if shuffle {
 			r++

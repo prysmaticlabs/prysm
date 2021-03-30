@@ -139,7 +139,13 @@ func SameHead(state iface.ReadOnlyBeaconState, a *pb.PendingAttestation) (bool, 
 }
 
 // UpdateValidator updates pre computed validator store.
-func UpdateValidator(vp []*Validator, record *Validator, indices []uint64, a *pb.PendingAttestation, aSlot types.Slot) []*Validator {
+func UpdateValidator(
+	vp []*Validator,
+	record *Validator,
+	indices []uint64,
+	a *pb.PendingAttestation,
+	aSlot types.Slot,
+) []*Validator {
 	inclusionSlot := aSlot + a.InclusionDelay
 
 	for _, i := range indices {

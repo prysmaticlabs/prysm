@@ -68,7 +68,10 @@ type Server struct {
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current
 // beacon state, if not, then it creates a stream which listens for canonical states which contain
 // the validator with the public key as an active validator record.
-func (vs *Server) WaitForActivation(req *ethpb.ValidatorActivationRequest, stream ethpb.BeaconNodeValidator_WaitForActivationServer) error {
+func (vs *Server) WaitForActivation(
+	req *ethpb.ValidatorActivationRequest,
+	stream ethpb.BeaconNodeValidator_WaitForActivationServer,
+) error {
 	activeValidatorExists, validatorStatuses, err := vs.activationStatus(stream.Context(), req.PublicKeys)
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not fetch validator status: %v", err)
@@ -109,14 +112,21 @@ func (vs *Server) WaitForActivation(req *ethpb.ValidatorActivationRequest, strea
 }
 
 // ValidatorIndex is called by a validator to get its index location in the beacon state.
-func (vs *Server) ValidatorIndex(ctx context.Context, req *ethpb.ValidatorIndexRequest) (*ethpb.ValidatorIndexResponse, error) {
+func (vs *Server) ValidatorIndex(
+	ctx context.Context,
+	req *ethpb.ValidatorIndexRequest,
+) (*ethpb.ValidatorIndexResponse, error) {
 	st, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not determine head state: %v", err)
 	}
 	index, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(req.PublicKey))
 	if !ok {
-		return nil, status.Errorf(codes.Internal, "Could not find validator index for public key %#x not found", req.PublicKey)
+		return nil, status.Errorf(
+			codes.Internal,
+			"Could not find validator index for public key %#x not found",
+			req.PublicKey,
+		)
 	}
 
 	return &ethpb.ValidatorIndexResponse{Index: index}, nil

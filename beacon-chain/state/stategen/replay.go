@@ -15,7 +15,12 @@ import (
 )
 
 // ReplayBlocks replays the input blocks on the input state until the target slot is reached.
-func (s *State) ReplayBlocks(ctx context.Context, state iface.BeaconState, signed []*ethpb.SignedBeaconBlock, targetSlot types.Slot) (iface.BeaconState, error) {
+func (s *State) ReplayBlocks(
+	ctx context.Context,
+	state iface.BeaconState,
+	signed []*ethpb.SignedBeaconBlock,
+	targetSlot types.Slot,
+) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.ReplayBlocks")
 	defer span.End()
 
@@ -53,7 +58,11 @@ func (s *State) ReplayBlocks(ctx context.Context, state iface.BeaconState, signe
 
 // LoadBlocks loads the blocks between start slot and end slot by recursively fetching from end block root.
 // The Blocks are returned in slot-descending order.
-func (s *State) LoadBlocks(ctx context.Context, startSlot, endSlot types.Slot, endBlockRoot [32]byte) ([]*ethpb.SignedBeaconBlock, error) {
+func (s *State) LoadBlocks(
+	ctx context.Context,
+	startSlot, endSlot types.Slot,
+	endBlockRoot [32]byte,
+) ([]*ethpb.SignedBeaconBlock, error) {
 	// Nothing to load for invalid range.
 	if endSlot < startSlot {
 		return nil, fmt.Errorf("start slot %d >= end slot %d", startSlot, endSlot)
@@ -259,7 +268,10 @@ func (s *State) genesisRoot(ctx context.Context) ([32]byte, error) {
 
 // Given the start slot and the end slot, this returns the finalized beacon blocks in between.
 // Since hot states don't have finalized blocks, this should ONLY be used for replaying cold state.
-func (s *State) loadFinalizedBlocks(ctx context.Context, startSlot, endSlot types.Slot) ([]*ethpb.SignedBeaconBlock, error) {
+func (s *State) loadFinalizedBlocks(
+	ctx context.Context,
+	startSlot, endSlot types.Slot,
+) ([]*ethpb.SignedBeaconBlock, error) {
 	f := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
 	bs, bRoots, err := s.beaconDB.Blocks(ctx, f)
 	if err != nil {

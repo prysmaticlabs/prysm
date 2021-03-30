@@ -224,12 +224,20 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState iface.Be
 		return vs.HeadFetcher.HeadETH1Data(), nil
 	}
 
-	lastBlockDepositCount, lastBlockDepositRoot := vs.DepositFetcher.DepositsNumberAndRootAtHeight(ctx, lastBlockByLatestValidTime.Number)
+	lastBlockDepositCount, lastBlockDepositRoot := vs.DepositFetcher.DepositsNumberAndRootAtHeight(
+		ctx,
+		lastBlockByLatestValidTime.Number,
+	)
 	if lastBlockDepositCount == 0 {
 		return vs.ChainStartFetcher.ChainStartEth1Data(), nil
 	}
 
-	inRangeVotes, err := vs.inRangeVotes(ctx, beaconState, lastBlockByEarliestValidTime.Number, lastBlockByLatestValidTime.Number)
+	inRangeVotes, err := vs.inRangeVotes(
+		ctx,
+		beaconState,
+		lastBlockByEarliestValidTime.Number,
+		lastBlockByLatestValidTime.Number,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -443,7 +451,11 @@ func (vs *Server) deposits(
 		if uint64(i) == params.BeaconConfig().MaxDeposits {
 			break
 		}
-		pendingDeps[i].Deposit, err = constructMerkleProof(depositTrie, int(pendingDeps[i].Index), pendingDeps[i].Deposit)
+		pendingDeps[i].Deposit, err = constructMerkleProof(
+			depositTrie,
+			int(pendingDeps[i].Index),
+			pendingDeps[i].Deposit,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -487,7 +499,10 @@ func (vs *Server) canonicalEth1Data(
 	return canonicalEth1Data, canonicalEth1DataHeight, nil
 }
 
-func (vs *Server) depositTrie(ctx context.Context, canonicalEth1DataHeight *big.Int) (*trieutil.SparseMerkleTrie, error) {
+func (vs *Server) depositTrie(
+	ctx context.Context,
+	canonicalEth1DataHeight *big.Int,
+) (*trieutil.SparseMerkleTrie, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.depositTrie")
 	defer span.End()
 
@@ -542,7 +557,11 @@ func (vs *Server) defaultEth1DataResponse(ctx context.Context, currentHeight *bi
 }
 
 // This filters the input attestations to return a list of valid attestations to be packaged inside a beacon block.
-func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, st iface.BeaconState, atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
+func (vs *Server) filterAttestationsForBlockInclusion(
+	ctx context.Context,
+	st iface.BeaconState,
+	atts []*ethpb.Attestation,
+) ([]*ethpb.Attestation, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.filterAttestationsForBlockInclusion")
 	defer span.End()
 

@@ -200,7 +200,10 @@ func BeaconProposerIndex(state iface.ReadOnlyBeaconState) (types.ValidatorIndex,
 			}
 			if proposerIndices != nil {
 				if len(proposerIndices) != int(params.BeaconConfig().SlotsPerEpoch) {
-					return 0, errors.Errorf("length of proposer indices is not equal %d to slots per epoch", len(proposerIndices))
+					return 0, errors.Errorf(
+						"length of proposer indices is not equal %d to slots per epoch",
+						len(proposerIndices),
+					)
 				}
 				return proposerIndices[state.Slot()%params.BeaconConfig().SlotsPerEpoch], nil
 			}
@@ -243,7 +246,11 @@ func BeaconProposerIndex(state iface.ReadOnlyBeaconState) (types.ValidatorIndex,
 //        if effective_balance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * random_byte:
 //            return ValidatorIndex(candidate_index)
 //        i += 1
-func ComputeProposerIndex(bState iface.ReadOnlyValidators, activeIndices []types.ValidatorIndex, seed [32]byte) (types.ValidatorIndex, error) {
+func ComputeProposerIndex(
+	bState iface.ReadOnlyValidators,
+	activeIndices []types.ValidatorIndex,
+	seed [32]byte,
+) (types.ValidatorIndex, error) {
 	length := uint64(len(activeIndices))
 	if length == 0 {
 		return 0, errors.New("empty active indices list")
@@ -284,7 +291,12 @@ func ComputeProposerIndex(bState iface.ReadOnlyValidators, activeIndices []types
 //    epoch = get_current_epoch(state) if epoch is None else epoch
 //    fork_version = state.fork.previous_version if epoch < state.fork.epoch else state.fork.current_version
 //    return compute_domain(domain_type, fork_version, state.genesis_validators_root)
-func Domain(fork *pb.Fork, epoch types.Epoch, domainType [bls.DomainByteLength]byte, genesisRoot []byte) ([]byte, error) {
+func Domain(
+	fork *pb.Fork,
+	epoch types.Epoch,
+	domainType [bls.DomainByteLength]byte,
+	genesisRoot []byte,
+) ([]byte, error) {
 	if fork == nil {
 		return []byte{}, errors.New("nil fork or domain type")
 	}

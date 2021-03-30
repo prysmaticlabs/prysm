@@ -175,7 +175,11 @@ func (s *Service) BlockByTimestamp(ctx context.Context, time uint64) (*types.Hea
 
 // Performs a search to find a target eth1 block which is earlier than or equal to the
 // target time. This method is used when head.time > targetTime
-func (s *Service) findLessTargetEth1Block(ctx context.Context, startBlk *big.Int, targetTime uint64) (*types.HeaderInfo, error) {
+func (s *Service) findLessTargetEth1Block(
+	ctx context.Context,
+	startBlk *big.Int,
+	targetTime uint64,
+) (*types.HeaderInfo, error) {
 	for bn := startBlk; ; bn = big.NewInt(0).Sub(bn, big.NewInt(1)) {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
@@ -192,7 +196,11 @@ func (s *Service) findLessTargetEth1Block(ctx context.Context, startBlk *big.Int
 
 // Performs a search to find a target eth1 block which is just earlier than or equal to the
 // target time. This method is used when head.time < targetTime
-func (s *Service) findMoreTargetEth1Block(ctx context.Context, startBlk *big.Int, targetTime uint64) (*types.HeaderInfo, error) {
+func (s *Service) findMoreTargetEth1Block(
+	ctx context.Context,
+	startBlk *big.Int,
+	targetTime uint64,
+) (*types.HeaderInfo, error) {
 	for bn := startBlk; ; bn = big.NewInt(0).Add(bn, big.NewInt(1)) {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()

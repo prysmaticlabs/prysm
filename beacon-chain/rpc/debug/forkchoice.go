@@ -9,7 +9,10 @@ import (
 )
 
 // GetProtoArrayForkChoice returns proto array fork choice store.
-func (ds *Server) GetProtoArrayForkChoice(_ context.Context, _ *empty.Empty) (*pbrpc.ProtoArrayForkChoiceResponse, error) {
+func (ds *Server) GetProtoArrayForkChoice(
+	_ context.Context,
+	_ *empty.Empty,
+) (*pbrpc.ProtoArrayForkChoiceResponse, error) {
 	store := ds.HeadFetcher.ProtoArrayStore()
 
 	nodes := store.Nodes()

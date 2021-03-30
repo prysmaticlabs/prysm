@@ -556,7 +556,11 @@ func ProcessOperationsNoVerifyAttsSigs(
 }
 
 // VerifyOperationLengths verifies that block operation lengths are valid.
-func VerifyOperationLengths(_ context.Context, state iface.BeaconState, b *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
+func VerifyOperationLengths(
+	_ context.Context,
+	state iface.BeaconState,
+	b *ethpb.SignedBeaconBlock,
+) (iface.BeaconState, error) {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err
 	}
@@ -598,7 +602,11 @@ func VerifyOperationLengths(_ context.Context, state iface.BeaconState, b *ethpb
 		return nil, errors.New("nil eth1data in state")
 	}
 	if state.Eth1DepositIndex() > eth1Data.DepositCount {
-		return nil, fmt.Errorf("expected state.deposit_index %d <= eth1data.deposit_count %d", state.Eth1DepositIndex(), eth1Data.DepositCount)
+		return nil, fmt.Errorf(
+			"expected state.deposit_index %d <= eth1data.deposit_count %d",
+			state.Eth1DepositIndex(),
+			eth1Data.DepositCount,
+		)
 	}
 	maxDeposits := mathutil.Min(params.BeaconConfig().MaxDeposits, eth1Data.DepositCount-state.Eth1DepositIndex())
 	// Verify outstanding deposits are processed up to max number of deposits

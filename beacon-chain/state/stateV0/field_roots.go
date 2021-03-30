@@ -89,14 +89,22 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(state *pb.BeaconState) ([]
 	fieldRoots[4] = headerHashTreeRoot[:]
 
 	// BlockRoots array root.
-	blockRootsRoot, err := h.arraysRoot(state.BlockRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "BlockRoots")
+	blockRootsRoot, err := h.arraysRoot(
+		state.BlockRoots,
+		uint64(params.BeaconConfig().SlotsPerHistoricalRoot),
+		"BlockRoots",
+	)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute block roots merkleization")
 	}
 	fieldRoots[5] = blockRootsRoot[:]
 
 	// StateRoots array root.
-	stateRootsRoot, err := h.arraysRoot(state.StateRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "StateRoots")
+	stateRootsRoot, err := h.arraysRoot(
+		state.StateRoots,
+		uint64(params.BeaconConfig().SlotsPerHistoricalRoot),
+		"StateRoots",
+	)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute state roots merkleization")
 	}
@@ -144,7 +152,11 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(state *pb.BeaconState) ([]
 	fieldRoots[12] = balancesRoot[:]
 
 	// RandaoMixes array root.
-	randaoRootsRoot, err := h.arraysRoot(state.RandaoMixes, uint64(params.BeaconConfig().EpochsPerHistoricalVector), "RandaoMixes")
+	randaoRootsRoot, err := h.arraysRoot(
+		state.RandaoMixes,
+		uint64(params.BeaconConfig().EpochsPerHistoricalVector),
+		"RandaoMixes",
+	)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute randao roots merkleization")
 	}

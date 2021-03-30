@@ -27,7 +27,11 @@ import (
 // - The attestation is unaggregated -- that is, it has exactly one participating validator (len(get_attesting_indices(state, attestation.data, attestation.aggregation_bits)) == 1).
 // - attestation.data.slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots (attestation.data.slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= current_slot >= attestation.data.slot).
 // - The signature of attestation is valid.
-func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, pid peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
+func (s *Service) validateCommitteeIndexBeaconAttestation(
+	ctx context.Context,
+	pid peer.ID,
+	msg *pubsub.Message,
+) pubsub.ValidationResult {
 	if pid == s.cfg.P2P.PeerID() {
 		return pubsub.ValidationAccept
 	}
@@ -100,7 +104,9 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	blockRoot := bytesutil.ToBytes32(att.Data.BeaconBlockRoot)
 	if !s.hasBlockAndState(ctx, blockRoot) {
 		// A node doesn't have the block, it'll request from peer while saving the pending attestation to a queue.
-		s.savePendingAtt(&eth.SignedAggregateAttestationAndProof{Message: &eth.AggregateAttestationAndProof{Aggregate: att}})
+		s.savePendingAtt(
+			&eth.SignedAggregateAttestationAndProof{Message: &eth.AggregateAttestationAndProof{Aggregate: att}},
+		)
 		return pubsub.ValidationIgnore
 	}
 
@@ -138,7 +144,12 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 }
 
 // This validates beacon unaggregated attestation has correct topic string.
-func (s *Service) validateUnaggregatedAttTopic(ctx context.Context, a *eth.Attestation, bs iface.ReadOnlyBeaconState, t string) pubsub.ValidationResult {
+func (s *Service) validateUnaggregatedAttTopic(
+	ctx context.Context,
+	a *eth.Attestation,
+	bs iface.ReadOnlyBeaconState,
+	t string,
+) pubsub.ValidationResult {
 	ctx, span := trace.StartSpan(ctx, "sync.validateUnaggregatedAttTopic")
 	defer span.End()
 
@@ -169,7 +180,11 @@ func (s *Service) validateUnaggregatedAttTopic(ctx context.Context, a *eth.Attes
 
 // This validates beacon unaggregated attestation using the given state, the validation consists of bitfield length and count consistency
 // and signature verification.
-func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a *eth.Attestation, bs iface.ReadOnlyBeaconState) pubsub.ValidationResult {
+func (s *Service) validateUnaggregatedAttWithState(
+	ctx context.Context,
+	a *eth.Attestation,
+	bs iface.ReadOnlyBeaconState,
+) pubsub.ValidationResult {
 	ctx, span := trace.StartSpan(ctx, "sync.validateUnaggregatedAttWithState")
 	defer span.End()
 
@@ -201,7 +216,11 @@ func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a *eth.A
 }
 
 // Returns true if the attestation was already seen for the participating validator for the slot.
-func (s *Service) hasSeenCommitteeIndicesSlot(slot types.Slot, committeeID types.CommitteeIndex, aggregateBits []byte) bool {
+func (s *Service) hasSeenCommitteeIndicesSlot(
+	slot types.Slot,
+	committeeID types.CommitteeIndex,
+	aggregateBits []byte,
+) bool {
 	s.seenAttestationLock.RLock()
 	defer s.seenAttestationLock.RUnlock()
 	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(uint64(committeeID))...)

@@ -422,12 +422,20 @@ func (bs *Server) GetValidatorActiveSetChanges(
 	}
 	vs := requestedState.Validators()
 	activatedIndices := validators.ActivatedValidatorIndices(helpers.CurrentEpoch(requestedState), vs)
-	exitedIndices, err := validators.ExitedValidatorIndices(helpers.CurrentEpoch(requestedState), vs, activeValidatorCount)
+	exitedIndices, err := validators.ExitedValidatorIndices(
+		helpers.CurrentEpoch(requestedState),
+		vs,
+		activeValidatorCount,
+	)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not determine exited validator indices: %v", err)
 	}
 	slashedIndices := validators.SlashedValidatorIndices(helpers.CurrentEpoch(requestedState), vs)
-	ejectedIndices, err := validators.EjectedValidatorIndices(helpers.CurrentEpoch(requestedState), vs, activeValidatorCount)
+	ejectedIndices, err := validators.EjectedValidatorIndices(
+		helpers.CurrentEpoch(requestedState),
+		vs,
+		activeValidatorCount,
+	)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not determine ejected validator indices: %v", err)
 	}
@@ -796,7 +804,13 @@ func (bs *Server) GetIndividualVotes(
 	for _, pubKey := range req.PublicKeys {
 		index, ok := requestedState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
 		if !ok {
-			votes = append(votes, &ethpb.IndividualVotesRespond_IndividualVote{PublicKey: pubKey, ValidatorIndex: types.ValidatorIndex(^uint64(0))})
+			votes = append(
+				votes,
+				&ethpb.IndividualVotesRespond_IndividualVote{
+					PublicKey:      pubKey,
+					ValidatorIndex: types.ValidatorIndex(^uint64(0)),
+				},
+			)
 			continue
 		}
 		filtered[index] = true

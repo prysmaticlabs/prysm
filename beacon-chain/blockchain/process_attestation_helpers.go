@@ -85,7 +85,12 @@ func (s *Service) verifyAttTargetEpoch(_ context.Context, genesisTime, nowTime u
 		prevEpoch = currentEpoch - 1
 	}
 	if c.Epoch != prevEpoch && c.Epoch != currentEpoch {
-		return fmt.Errorf("target epoch %d does not match current epoch %d or prev epoch %d", c.Epoch, currentEpoch, prevEpoch)
+		return fmt.Errorf(
+			"target epoch %d does not match current epoch %d or prev epoch %d",
+			c.Epoch,
+			currentEpoch,
+			prevEpoch,
+		)
 	}
 	return nil
 }
@@ -106,7 +111,11 @@ func (s *Service) verifyBeaconBlock(ctx context.Context, data *ethpb.Attestation
 		return err
 	}
 	if b.Block.Slot > data.Slot {
-		return fmt.Errorf("could not process attestation for future block, block.Slot=%d > attestation.Data.Slot=%d", b.Block.Slot, data.Slot)
+		return fmt.Errorf(
+			"could not process attestation for future block, block.Slot=%d > attestation.Data.Slot=%d",
+			b.Block.Slot,
+			data.Slot,
+		)
 	}
 	return nil
 }

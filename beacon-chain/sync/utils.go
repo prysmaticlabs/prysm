@@ -29,7 +29,10 @@ func (s sortedObj) Len() int {
 }
 
 // removes duplicates from provided blocks and roots.
-func (s *Service) dedupBlocksAndRoots(blks []*ethpb.SignedBeaconBlock, roots [][32]byte) ([]*ethpb.SignedBeaconBlock, [][32]byte, error) {
+func (s *Service) dedupBlocksAndRoots(
+	blks []*ethpb.SignedBeaconBlock,
+	roots [][32]byte,
+) ([]*ethpb.SignedBeaconBlock, [][32]byte, error) {
 	if len(blks) != len(roots) {
 		return nil, nil, errors.New("input blks and roots are diff lengths")
 	}
@@ -64,7 +67,10 @@ func (s *Service) dedupRoots(roots [][32]byte) [][32]byte {
 
 // sort the provided blocks and roots in ascending order. This method assumes that the size of
 // block slice and root slice is equal.
-func (s *Service) sortBlocksAndRoots(blks []*ethpb.SignedBeaconBlock, roots [][32]byte) ([]*ethpb.SignedBeaconBlock, [][32]byte) {
+func (s *Service) sortBlocksAndRoots(
+	blks []*ethpb.SignedBeaconBlock,
+	roots [][32]byte,
+) ([]*ethpb.SignedBeaconBlock, [][32]byte) {
 	obj := sortedObj{
 		blks:  blks,
 		roots: roots,

@@ -26,8 +26,17 @@ type StateManager interface {
 	Resume(ctx context.Context) (iface.BeaconState, error)
 	SaveFinalizedState(fSlot types.Slot, fRoot [32]byte, fState iface.BeaconState)
 	MigrateToCold(ctx context.Context, fRoot [32]byte) error
-	ReplayBlocks(ctx context.Context, state iface.BeaconState, signed []*eth.SignedBeaconBlock, targetSlot types.Slot) (iface.BeaconState, error)
-	LoadBlocks(ctx context.Context, startSlot, endSlot types.Slot, endBlockRoot [32]byte) ([]*eth.SignedBeaconBlock, error)
+	ReplayBlocks(
+		ctx context.Context,
+		state iface.BeaconState,
+		signed []*eth.SignedBeaconBlock,
+		targetSlot types.Slot,
+	) (iface.BeaconState, error)
+	LoadBlocks(
+		ctx context.Context,
+		startSlot, endSlot types.Slot,
+		endBlockRoot [32]byte,
+	) ([]*eth.SignedBeaconBlock, error)
 	HasState(ctx context.Context, blockRoot [32]byte) (bool, error)
 	HasStateInCache(ctx context.Context, blockRoot [32]byte) (bool, error)
 	StateByRoot(ctx context.Context, blockRoot [32]byte) (iface.BeaconState, error)

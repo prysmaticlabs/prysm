@@ -12,8 +12,16 @@ import (
 // PoolManager maintains a pool of pending and recently included attester and proposer slashings.
 // This pool is used by proposers to insert data into new blocks.
 type PoolManager interface {
-	PendingAttesterSlashings(ctx context.Context, state iface.ReadOnlyBeaconState, noLimit bool) []*ethpb.AttesterSlashing
-	PendingProposerSlashings(ctx context.Context, state iface.ReadOnlyBeaconState, noLimit bool) []*ethpb.ProposerSlashing
+	PendingAttesterSlashings(
+		ctx context.Context,
+		state iface.ReadOnlyBeaconState,
+		noLimit bool,
+	) []*ethpb.AttesterSlashing
+	PendingProposerSlashings(
+		ctx context.Context,
+		state iface.ReadOnlyBeaconState,
+		noLimit bool,
+	) []*ethpb.ProposerSlashing
 	InsertAttesterSlashing(
 		ctx context.Context,
 		state iface.ReadOnlyBeaconState,

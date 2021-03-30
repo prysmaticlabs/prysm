@@ -54,7 +54,10 @@ func (q *blocksQueue) resetFromSlot(ctx context.Context, startSlot types.Slot) e
 	}
 
 	// Replace the last (currently activated) state machine to start with best known non-skipped slot.
-	nonSkippedSlot, err := q.blocksFetcher.nonSkippedSlotAfter(ctx, startSlot.Add(blocksPerRequest*(lookaheadSteps-1)-1))
+	nonSkippedSlot, err := q.blocksFetcher.nonSkippedSlotAfter(
+		ctx,
+		startSlot.Add(blocksPerRequest*(lookaheadSteps-1)-1),
+	)
 	if err != nil {
 		return err
 	}

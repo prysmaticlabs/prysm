@@ -164,7 +164,10 @@ func (s *Service) waitForMinimumPeers() {
 		required = flags.Get().MinimumSyncPeers
 	}
 	for {
-		_, peers := s.cfg.P2P.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers, s.cfg.Chain.FinalizedCheckpt().Epoch)
+		_, peers := s.cfg.P2P.Peers().BestNonFinalized(
+			flags.Get().MinimumSyncPeers,
+			s.cfg.Chain.FinalizedCheckpt().Epoch,
+		)
 		if len(peers) >= required {
 			break
 		}

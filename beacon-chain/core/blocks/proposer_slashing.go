@@ -73,11 +73,19 @@ func VerifyProposerSlashing(
 	}
 	hSlot := slashing.Header_1.Header.Slot
 	if hSlot != slashing.Header_2.Header.Slot {
-		return fmt.Errorf("mismatched header slots, received %d == %d", slashing.Header_1.Header.Slot, slashing.Header_2.Header.Slot)
+		return fmt.Errorf(
+			"mismatched header slots, received %d == %d",
+			slashing.Header_1.Header.Slot,
+			slashing.Header_2.Header.Slot,
+		)
 	}
 	pIdx := slashing.Header_1.Header.ProposerIndex
 	if pIdx != slashing.Header_2.Header.ProposerIndex {
-		return fmt.Errorf("mismatched indices, received %d == %d", slashing.Header_1.Header.ProposerIndex, slashing.Header_2.Header.ProposerIndex)
+		return fmt.Errorf(
+			"mismatched indices, received %d == %d",
+			slashing.Header_1.Header.ProposerIndex,
+			slashing.Header_2.Header.ProposerIndex,
+		)
 	}
 	if proto.Equal(slashing.Header_1.Header, slashing.Header_2.Header) {
 		return errors.New("expected slashing headers to differ")

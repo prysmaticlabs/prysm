@@ -65,7 +65,9 @@ func (m *MockPeersProvider) Peers() *peers.Status {
 		if err != nil {
 			log.WithError(err).Debug("Cannot decode")
 		}
-		ma1, err := ma.NewMultiaddr("/ip4/52.23.23.253/tcp/30000/ipfs/QmfAgkmjiZNZhr2wFN9TwaRgHouMTBT6HELyzE5A3BT2wK/p2p-circuit")
+		ma1, err := ma.NewMultiaddr(
+			"/ip4/52.23.23.253/tcp/30000/ipfs/QmfAgkmjiZNZhr2wFN9TwaRgHouMTBT6HELyzE5A3BT2wK/p2p-circuit",
+		)
 		if err != nil {
 			log.WithError(err).Debug("Cannot decode")
 		}

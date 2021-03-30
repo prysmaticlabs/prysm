@@ -93,7 +93,13 @@ func ProcessVoluntaryExits(
 //    # Verify signature
 //    domain = get_domain(state, DOMAIN_VOLUNTARY_EXIT, exit.epoch)
 //    assert bls_verify(validator.pubkey, signing_root(exit), exit.signature, domain)
-func VerifyExitAndSignature(validator iface.ReadOnlyValidator, currentSlot types.Slot, fork *pb.Fork, signed *ethpb.SignedVoluntaryExit, genesisRoot []byte) error {
+func VerifyExitAndSignature(
+	validator iface.ReadOnlyValidator,
+	currentSlot types.Slot,
+	fork *pb.Fork,
+	signed *ethpb.SignedVoluntaryExit,
+	genesisRoot []byte,
+) error {
 	if signed == nil || signed.Exit == nil {
 		return errors.New("nil exit")
 	}
@@ -137,7 +143,12 @@ func verifyExitConditions(validator iface.ReadOnlyValidator, currentSlot types.S
 	}
 	// Verify the validator has not yet submitted an exit.
 	if validator.ExitEpoch() != params.BeaconConfig().FarFutureEpoch {
-		return fmt.Errorf("validator with index %d %s: %v", exit.ValidatorIndex, ValidatorAlreadyExitedMsg, validator.ExitEpoch())
+		return fmt.Errorf(
+			"validator with index %d %s: %v",
+			exit.ValidatorIndex,
+			ValidatorAlreadyExitedMsg,
+			validator.ExitEpoch(),
+		)
 	}
 	// Exits must specify an epoch when they become valid; they are not valid before then.
 	if currentEpoch < exit.Epoch {

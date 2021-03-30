@@ -98,7 +98,11 @@ func ProcessBlockHeaderNoVerify(
 	}
 	parentHeader := beaconState.LatestBlockHeader()
 	if parentHeader.Slot >= block.Slot {
-		return nil, fmt.Errorf("block.Slot %d must be greater than state.LatestBlockHeader.Slot %d", block.Slot, parentHeader.Slot)
+		return nil, fmt.Errorf(
+			"block.Slot %d must be greater than state.LatestBlockHeader.Slot %d",
+			block.Slot,
+			parentHeader.Slot,
+		)
 	}
 	parentRoot, err := parentHeader.HashTreeRoot()
 	if err != nil {

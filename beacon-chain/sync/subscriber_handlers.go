@@ -34,8 +34,10 @@ func (s *Service) attesterSlashingSubscriber(ctx context.Context, msg proto.Mess
 		return fmt.Errorf("wrong type, expected: *ethpb.AttesterSlashing got: %T", msg)
 	}
 	// Do some nil checks to prevent easy DoS'ing of this handler.
-	aSlashing1IsNil := aSlashing == nil || aSlashing.Attestation_1 == nil || aSlashing.Attestation_1.AttestingIndices == nil
-	aSlashing2IsNil := aSlashing == nil || aSlashing.Attestation_2 == nil || aSlashing.Attestation_2.AttestingIndices == nil
+	aSlashing1IsNil := aSlashing == nil || aSlashing.Attestation_1 == nil ||
+		aSlashing.Attestation_1.AttestingIndices == nil
+	aSlashing2IsNil := aSlashing == nil || aSlashing.Attestation_2 == nil ||
+		aSlashing.Attestation_2.AttestingIndices == nil
 	if !aSlashing1IsNil && !aSlashing2IsNil {
 		headState, err := s.cfg.Chain.HeadState(ctx)
 		if err != nil {
@@ -44,7 +46,10 @@ func (s *Service) attesterSlashingSubscriber(ctx context.Context, msg proto.Mess
 		if err := s.cfg.SlashingPool.InsertAttesterSlashing(ctx, headState, aSlashing); err != nil {
 			return errors.Wrap(err, "could not insert attester slashing into pool")
 		}
-		s.setAttesterSlashingIndicesSeen(aSlashing.Attestation_1.AttestingIndices, aSlashing.Attestation_2.AttestingIndices)
+		s.setAttesterSlashingIndicesSeen(
+			aSlashing.Attestation_1.AttestingIndices,
+			aSlashing.Attestation_2.AttestingIndices,
+		)
 	}
 	return nil
 }

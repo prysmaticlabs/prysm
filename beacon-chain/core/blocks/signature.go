@@ -62,7 +62,12 @@ func verifySignature(signedData, pub, signature, domain []byte) error {
 // VerifyBlockSignature verifies the proposer signature of a beacon block.
 func VerifyBlockSignature(beaconState iface.ReadOnlyBeaconState, block *ethpb.SignedBeaconBlock) error {
 	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
-	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
+	domain, err := helpers.Domain(
+		beaconState.Fork(),
+		currentEpoch,
+		params.BeaconConfig().DomainBeaconProposer,
+		beaconState.GenesisValidatorRoot(),
+	)
 	if err != nil {
 		return err
 	}
@@ -75,9 +80,17 @@ func VerifyBlockSignature(beaconState iface.ReadOnlyBeaconState, block *ethpb.Si
 }
 
 // BlockSignatureSet retrieves the block signature set from the provided block and its corresponding state.
-func BlockSignatureSet(beaconState iface.ReadOnlyBeaconState, block *ethpb.SignedBeaconBlock) (*bls.SignatureSet, error) {
+func BlockSignatureSet(
+	beaconState iface.ReadOnlyBeaconState,
+	block *ethpb.SignedBeaconBlock,
+) (*bls.SignatureSet, error) {
 	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
-	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
+	domain, err := helpers.Domain(
+		beaconState.Fork(),
+		currentEpoch,
+		params.BeaconConfig().DomainBeaconProposer,
+		beaconState.GenesisValidatorRoot(),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +130,12 @@ func randaoSigningData(beaconState iface.ReadOnlyBeaconState) ([]byte, []byte, [
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, uint64(currentEpoch))
 
-	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainRandao, beaconState.GenesisValidatorRoot())
+	domain, err := helpers.Domain(
+		beaconState.Fork(),
+		currentEpoch,
+		params.BeaconConfig().DomainRandao,
+		beaconState.GenesisValidatorRoot(),
+	)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -125,7 +143,12 @@ func randaoSigningData(beaconState iface.ReadOnlyBeaconState) ([]byte, []byte, [
 }
 
 // Method to break down attestations of the same domain and collect them into a single signature set.
-func createAttestationSignatureSet(ctx context.Context, beaconState iface.ReadOnlyBeaconState, atts []*ethpb.Attestation, domain []byte) (*bls.SignatureSet, error) {
+func createAttestationSignatureSet(
+	ctx context.Context,
+	beaconState iface.ReadOnlyBeaconState,
+	atts []*ethpb.Attestation,
+	domain []byte,
+) (*bls.SignatureSet, error) {
 	if len(atts) == 0 {
 		return nil, nil
 	}
@@ -173,7 +196,11 @@ func createAttestationSignatureSet(ctx context.Context, beaconState iface.ReadOn
 
 // AttestationSignatureSet retrieves all the related attestation signature data such as the relevant public keys,
 // signatures and attestation signing data and collate it into a signature set object.
-func AttestationSignatureSet(ctx context.Context, beaconState iface.ReadOnlyBeaconState, atts []*ethpb.Attestation) (*bls.SignatureSet, error) {
+func AttestationSignatureSet(
+	ctx context.Context,
+	beaconState iface.ReadOnlyBeaconState,
+	atts []*ethpb.Attestation,
+) (*bls.SignatureSet, error) {
 	if len(atts) == 0 {
 		return bls.NewSet(), nil
 	}

@@ -106,7 +106,11 @@ func ReturnTrieLayerVariable(elements [][32]byte, length uint64) [][]*[32]byte {
 }
 
 // RecomputeFromLayer recomputes specific branches of a fixed sized trie depending on the provided changed indexes.
-func RecomputeFromLayer(changedLeaves [][32]byte, changedIdx []uint64, layer [][]*[32]byte) ([32]byte, [][]*[32]byte, error) {
+func RecomputeFromLayer(
+	changedLeaves [][32]byte,
+	changedIdx []uint64,
+	layer [][]*[32]byte,
+) ([32]byte, [][]*[32]byte, error) {
 	hasher := hashutil.CustomSHA256Hasher()
 	for i, idx := range changedIdx {
 		layer[0][idx] = &changedLeaves[i]
@@ -139,7 +143,11 @@ func RecomputeFromLayer(changedLeaves [][32]byte, changedIdx []uint64, layer [][
 }
 
 // RecomputeFromLayerVariable recomputes specific branches of a variable sized trie depending on the provided changed indexes.
-func RecomputeFromLayerVariable(changedLeaves [][32]byte, changedIdx []uint64, layer [][]*[32]byte) ([32]byte, [][]*[32]byte, error) {
+func RecomputeFromLayerVariable(
+	changedLeaves [][32]byte,
+	changedIdx []uint64,
+	layer [][]*[32]byte,
+) ([32]byte, [][]*[32]byte, error) {
 	hasher := hashutil.CustomSHA256Hasher()
 	if len(changedIdx) == 0 {
 		return *layer[0][0], layer, nil

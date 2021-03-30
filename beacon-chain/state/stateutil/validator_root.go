@@ -46,7 +46,12 @@ func ValidatorRootWithHasher(hasher htrutils.HashFn, validator *ethpb.Validator)
 		if err != nil {
 			return [32]byte{}, err
 		}
-		pubKeyRoot, err := htrutils.BitwiseMerkleize(hasher, pubKeyChunks, uint64(len(pubKeyChunks)), uint64(len(pubKeyChunks)))
+		pubKeyRoot, err := htrutils.BitwiseMerkleize(
+			hasher,
+			pubKeyChunks,
+			uint64(len(pubKeyChunks)),
+			uint64(len(pubKeyChunks)),
+		)
 		if err != nil {
 			return [32]byte{}, err
 		}
