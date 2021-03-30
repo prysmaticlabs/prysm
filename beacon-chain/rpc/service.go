@@ -30,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/beacon"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/beaconv1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/debug"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/debugv1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/node"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/nodev1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
@@ -254,7 +255,7 @@ func (s *Service) Start() {
 		Broadcaster:         s.cfg.Broadcaster,
 		StateGenService:     s.cfg.StateGen,
 		SyncChecker:         s.cfg.SyncService,
-		StateFetcher: statefetcher.StateFetcher{
+		StateFetcher: statefetcher.StateProvider{
 			BeaconDB:           s.cfg.BeaconDB,
 			ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
 			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
@@ -276,7 +277,18 @@ func (s *Service) Start() {
 			PeerManager:        s.cfg.PeerManager,
 			PeersFetcher:       s.cfg.PeersFetcher,
 		}
+		debugServerV1 := &debugv1.Server{
+			Ctx:      s.ctx,
+			BeaconDB: s.cfg.BeaconDB,
+			StateFetcher: &statefetcher.StateProvider{
+				BeaconDB:           s.cfg.BeaconDB,
+				ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
+				GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
+				StateGenService:    s.cfg.StateGen,
+			},
+		}
 		pbrpc.RegisterDebugServer(s.grpcServer, debugServer)
+		ethpbv1.RegisterBeaconDebugServer(s.grpcServer, debugServerV1)
 	}
 	ethpb.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServer)
 
