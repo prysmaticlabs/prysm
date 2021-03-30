@@ -81,7 +81,8 @@ func (s *Service) AddConnectionHandler(reqFunc, goodByeFunc func(ctx context.Con
 				peerConnectionState, err := s.peers.ConnectionState(remotePeer)
 				if err == nil &&
 					(peerConnectionState == peers.PeerConnected || peerConnectionState == peers.PeerConnecting) {
-					log.WithField("currentState", peerConnectionState).
+					log.
+						WithField("currentState", peerConnectionState).
 						WithField("reason", "already active").
 						Trace("Ignoring connection request")
 					return
