@@ -39,7 +39,13 @@ func New(justifiedEpoch, finalizedEpoch types.Epoch, finalizedRoot [32]byte) *Fo
 
 // Head returns the head root from fork choice store.
 // It firsts computes validator's balance changes then recalculates block tree from leaves to root.
-func (f *ForkChoice) Head(ctx context.Context, justifiedEpoch types.Epoch, justifiedRoot [32]byte, justifiedStateBalances []uint64, finalizedEpoch types.Epoch) ([32]byte, error) {
+func (f *ForkChoice) Head(
+	ctx context.Context,
+	justifiedEpoch types.Epoch,
+	justifiedRoot [32]byte,
+	justifiedStateBalances []uint64,
+	finalizedEpoch types.Epoch,
+) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.Head")
 	defer span.End()
 	f.votesLock.Lock()
@@ -95,7 +101,12 @@ func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []
 }
 
 // ProcessBlock processes a new block by inserting it to the fork choice store.
-func (f *ForkChoice) ProcessBlock(ctx context.Context, slot types.Slot, blockRoot, parentRoot, graffiti [32]byte, justifiedEpoch, finalizedEpoch types.Epoch) error {
+func (f *ForkChoice) ProcessBlock(
+	ctx context.Context,
+	slot types.Slot,
+	blockRoot, parentRoot, graffiti [32]byte,
+	justifiedEpoch, finalizedEpoch types.Epoch,
+) error {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.ProcessBlock")
 	defer span.End()
 

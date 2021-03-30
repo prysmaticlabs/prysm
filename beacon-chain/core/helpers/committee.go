@@ -94,7 +94,12 @@ func BeaconCommitteeFromState(state iface.ReadOnlyBeaconState, slot types.Slot, 
 // BeaconCommittee returns the crosslink committee of a given slot and committee index. The
 // validator indices and seed are provided as an argument rather than a imported implementation
 // from the spec definition. Having them as an argument allows for cheaper computation run time.
-func BeaconCommittee(validatorIndices []types.ValidatorIndex, seed [32]byte, slot types.Slot, committeeIndex types.CommitteeIndex) ([]types.ValidatorIndex, error) {
+func BeaconCommittee(
+	validatorIndices []types.ValidatorIndex,
+	seed [32]byte,
+	slot types.Slot,
+	committeeIndex types.CommitteeIndex,
+) ([]types.ValidatorIndex, error) {
 	indices, err := committeeCache.Committee(slot, seed, committeeIndex)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not interface with committee cache")

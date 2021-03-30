@@ -298,7 +298,12 @@ func (is *infostream) generateValidatorsInfo(pubKeys [][]byte) ([]*ethpb.Validat
 }
 
 // generateValidatorInfo generates the validator info for a public key.
-func (is *infostream) generateValidatorInfo(pubKey []byte, validator iface.ReadOnlyValidator, headState iface.ReadOnlyBeaconState, epoch types.Epoch) (*ethpb.ValidatorInfo, error) {
+func (is *infostream) generateValidatorInfo(
+	pubKey []byte,
+	validator iface.ReadOnlyValidator,
+	headState iface.ReadOnlyBeaconState,
+	epoch types.Epoch,
+) (*ethpb.ValidatorInfo, error) {
 	info := &ethpb.ValidatorInfo{
 		PublicKey: pubKey,
 		Epoch:     epoch,

@@ -15,7 +15,12 @@ import (
 )
 
 // ReplayBlocks replays the input blocks on the input state until the target slot is reached.
-func (s *State) ReplayBlocks(ctx context.Context, state iface.BeaconState, signed []*ethpb.SignedBeaconBlock, targetSlot types.Slot) (iface.BeaconState, error) {
+func (s *State) ReplayBlocks(
+	ctx context.Context,
+	state iface.BeaconState,
+	signed []*ethpb.SignedBeaconBlock,
+	targetSlot types.Slot,
+) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.ReplayBlocks")
 	defer span.End()
 
