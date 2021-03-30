@@ -7,12 +7,12 @@ import (
 
 // SetPreviousEpochAttestations is not supported for HF1 beacon state.
 func (b *BeaconState) SetPreviousEpochAttestations(val []*pbp2p.PendingAttestation) error {
-	return errors.New("CurrentEpochAttestations is not supported for hard fork 1 beacon state")
+	return errors.New("SetPreviousEpochAttestations is not supported for hard fork 1 beacon state")
 }
 
 // SetCurrentEpochAttestations is not supported for HF1 beacon state.
 func (b *BeaconState) SetCurrentEpochAttestations(val []*pbp2p.PendingAttestation) error {
-	return errors.New("CurrentEpochAttestations is not supported for hard fork 1 beacon state")
+	return errors.New("SetCurrentEpochAttestations is not supported for hard fork 1 beacon state")
 }
 
 // AppendCurrentEpochAttestations is not supported for HF1 beacon state.
