@@ -33,7 +33,7 @@ func main() {
 		panic(err)
 	}
 	defer func() {
-		if err := f.Close(); err != nil {
+		if err = f.Close(); err != nil {
 			panic(err)
 		}
 	}()
@@ -64,7 +64,7 @@ func main() {
 	}
 
 	fmt.Printf("Splitting %d keys across %d wallets\n", len(privKeys), *numberOfWalletsFlag)
-	
+
 	wPass, err := ioutil.ReadFile(*walletPasswordFileFlag)
 	if err != nil {
 		panic(err)
@@ -100,4 +100,30 @@ func seedFromMnemonic(mnemonic, mnemonicPassphrase string) ([]byte, error) {
 		return nil, bip39.ErrInvalidMnemonic
 	}
 	return bip39.NewSeed(mnemonic, mnemonicPassphrase), nil
+}
+
+func generateKeysFromMnemonicList(mnemonicListFile bufio.Scanner) {
+	privKeys := make([][]byte, 0)
+	pubKeys := make([][]byte, 0)
+	for mnemonicListFile.Scan() {
+		fmt.Printf("Generating %d keys from mneomic\n", *keysPerMnemonicFlag)
+		mnemonic := mnemonicListFile.Text()
+		seed, err := seedFromMnemonic(mnemonic, "" /* 25th word*/)
+		if err != nil {
+			panic(err)
+		}
+		for i := 0; i < *keysPerMnemonicFlag; i++ {
+			if i%250 == 0 && i > 0 {
+				fmt.Printf("%d/%d keys generated\n", i, *keysPerMnemonicFlag)
+			}
+			privKey, err := util.PrivateKeyFromSeedAndPath(
+				seed, fmt.Sprintf(derived.ValidatingKeyDerivationPathTemplate, i),
+			)
+			if err != nil {
+				panic(err)
+			}
+			privKeys = append(privKeys, privKey.Marshal())
+			pubKeys = append(pubKeys, privKey.PublicKey().Marshal())
+		}
+	}
 }
