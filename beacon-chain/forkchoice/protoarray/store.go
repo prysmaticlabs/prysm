@@ -230,6 +230,29 @@ func (s *Store) NodesIndices() map[[32]byte]uint64 {
 	return s.nodesIndices
 }
 
+// ChainHeads returns all possible chain heads (leaves of fork choice tree).
+// Heads roots and heads slots are returned.
+func (s *Store) ChainHeads() ([][32]byte, []types.Slot) {
+	s.nodesLock.RLock()
+	nodes := s.Nodes()
+	s.nodesLock.RUnlock()
+
+	// Deliberate choice to not preallocate space for below.
+	// Heads cant be more than 2-3 in the worst case where pre-allocation will be 64 to begin with.
+	headsRoots := make([][32]byte, 0)
+	headsSlots := make([]types.Slot, 0)
+
+	for _, node := range nodes {
+		// Possible heads have no children.
+		if node.bestDescendant == NonExistentNode && node.bestChild == NonExistentNode {
+			headsRoots = append(headsRoots, node.root)
+			headsSlots = append(headsSlots, node.slot)
+		}
+	}
+
+	return headsRoots, headsSlots
+}
+
 // head starts from justified root and then follows the best descendant links
 // to find the best block for head.
 func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, error) {

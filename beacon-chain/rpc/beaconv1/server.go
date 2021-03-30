@@ -47,5 +47,5 @@ type Server struct {
 	ChainStartChan      chan time.Time
 	StateGenService     stategen.StateManager
 	SyncChecker         sync.Checker
-	StateFetcher        statefetcher.StateFetcher
+	StateFetcher        statefetcher.StateProvider
 }
