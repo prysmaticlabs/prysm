@@ -964,8 +964,8 @@ def prysm_deps():
         importpath = "github.com/golang/protobuf",
         patch_args = ["-p1"],
         patches = ["@io_bazel_rules_go//third_party:com_github_golang_protobuf-extras.patch"],
-        sum = "h1:jAbXjIeW2ZSW2AwFxlGTDoc2CjI2XujLkV3ArsZFCvc=",
-        version = "v1.5.1",
+        sum = "h1:ROPKBNFfQgOUMifHyP+KYbvpjbdoFNs+aK7DXlji0Tw=",
+        version = "v1.5.2",
     )
 
     go_repository(
@@ -1127,8 +1127,9 @@ def prysm_deps():
     go_repository(
         name = "com_github_grpc_ecosystem_grpc_gateway_v2",
         importpath = "github.com/grpc-ecosystem/grpc-gateway/v2",
-        sum = "h1:X2vfSnm1WC8HEo0MBHZg2TcuDUHJj6kd1TmEAQncnSA=",
-        version = "v2.0.1",
+        replace = "github.com/prysmaticlabs/grpc-gateway/v2",
+        sum = "h1:qtPHbbK9bulINik9qcgaC9sdaTopMwB5udK/OgGGWbE=",
+        version = "v2.3.1-0.20210330070718-b57834d108b1",
     )
 
     go_repository(
@@ -2585,8 +2586,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_prysmaticlabs_eth2_types",
         importpath = "github.com/prysmaticlabs/eth2-types",
-        sum = "h1:b4WxLSz1KzkEdF/DPcog9gIKN9d9YAFgbZO1hqjNrW0=",
-        version = "v0.0.0-20210219172114-1da477c09a06",
+        sum = "h1:1dN7YAqMN3oAJ0LceWcyv/U4jHLh+5urnSnr4br6zg4=",
+        version = "v0.0.0-20210303084904-c9735a06829d",
     )
     go_repository(
         name = "com_github_prysmaticlabs_ethereumapis",
@@ -2612,8 +2613,9 @@ def prysm_deps():
     go_repository(
         name = "com_github_prysmaticlabs_protoc_gen_go_cast",
         importpath = "github.com/prysmaticlabs/protoc-gen-go-cast",
-        sum = "h1:pwI7b0PrWFeDFtqToRdj/p8hTcvjVHPsDc/n/msmg5M=",
-        version = "v0.0.0-20210210020219-d301fc202b82",
+        replace = "github.com/prysmaticlabs/protoc-gen-go-cast",
+        sum = "h1:KTxdFfGQspvluy+c6pvurjYH7wHJrjAAi/wTo8r6+po=",
+        version = "v0.0.0-20210326191636-dbd8bd594bbc",
     )
 
     go_repository(

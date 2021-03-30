@@ -10,6 +10,7 @@ proto_library(
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:proto",
+        "@com_github_prysmaticlabs_ethereumapis//eth/ext:proto",
         "@com_google_protobuf//:empty_proto",
     ],
 )

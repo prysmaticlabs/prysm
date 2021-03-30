@@ -30,7 +30,7 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/gddo v0.0.0-20200528160355-8d077c1d8f4c
 	github.com/golang/mock v1.4.4
-	github.com/golang/protobuf v1.5.1
+	github.com/golang/protobuf v1.5.2
 	github.com/golang/snappy v0.0.3
 	github.com/google/gofuzz v1.2.0
 	github.com/google/gopacket v1.1.19 // indirect
@@ -85,11 +85,12 @@ require (
 	github.com/prometheus/procfs v0.3.0 // indirect
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/protolambda/zssz v0.1.5 // indirect
-	github.com/prysmaticlabs/eth2-types v0.0.0-20210219172114-1da477c09a06
+	github.com/prysmaticlabs/eth2-types v0.0.0-20210303084904-c9735a06829d
 	github.com/prysmaticlabs/ethereumapis v0.0.0-20210330180818-b69e962c600b
 	github.com/prysmaticlabs/go-bitfield v0.0.0-20210202205921-7fcea7c45dc8
 	github.com/prysmaticlabs/go-ssz v0.0.0-20200612203617-6d5c9aa213ae // indirect
 	github.com/prysmaticlabs/prombbolt v0.0.0-20210126082820-9b7adba6db7c
+	github.com/prysmaticlabs/protoc-gen-go-cast v0.0.0-20210326191636-dbd8bd594bbc // indirect
 	github.com/rs/cors v1.7.0
 	github.com/schollz/progressbar/v3 v3.3.4
 	github.com/sirupsen/logrus v1.6.0
@@ -134,3 +135,5 @@ replace github.com/ethereum/go-ethereum => github.com/prysmaticlabs/bazel-go-eth
 replace github.com/json-iterator/go => github.com/prestonvanloon/go v1.1.7-0.20190722034630-4f2e55fcf87b
 
 replace github.com/prysmaticlabs/ethereumapis => github.com/prysmaticlabs/ethereumapis v0.0.0-20210330180818-b69e962c600b
+
+replace github.com/prysmaticlabs/protoc-gen-go-cast => github.com/prysmaticlabs/protoc-gen-go-cast v0.0.0-20210326191636-dbd8bd594bbc

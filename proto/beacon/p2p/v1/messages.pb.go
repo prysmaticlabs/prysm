@@ -91,7 +91,7 @@ func (x *Status) GetFinalizedEpoch() github_com_prysmaticlabs_eth2_types.Epoch {
 	if x != nil {
 		return x.FinalizedEpoch
 	}
-	return 0
+	return github_com_prysmaticlabs_eth2_types.Epoch(0)
 }
 
 func (x *Status) GetHeadRoot() []byte {
@@ -105,7 +105,7 @@ func (x *Status) GetHeadSlot() github_com_prysmaticlabs_eth2_types.Slot {
 	if x != nil {
 		return x.HeadSlot
 	}
-	return 0
+	return github_com_prysmaticlabs_eth2_types.Slot(0)
 }
 
 type BeaconBlocksByRangeRequest struct {
@@ -154,7 +154,7 @@ func (x *BeaconBlocksByRangeRequest) GetStartSlot() github_com_prysmaticlabs_eth
 	if x != nil {
 		return x.StartSlot
 	}
-	return 0
+	return github_com_prysmaticlabs_eth2_types.Slot(0)
 }
 
 func (x *BeaconBlocksByRangeRequest) GetCount() uint64 {
@@ -231,7 +231,7 @@ func (x *ENRForkID) GetNextForkEpoch() github_com_prysmaticlabs_eth2_types.Epoch
 	if x != nil {
 		return x.NextForkEpoch
 	}
-	return 0
+	return github_com_prysmaticlabs_eth2_types.Epoch(0)
 }
 
 type MetaData struct {
@@ -286,7 +286,7 @@ func (x *MetaData) GetAttnets() github_com_prysmaticlabs_go_bitfield.Bitvector64
 	if x != nil {
 		return x.Attnets
 	}
-	return nil
+	return github_com_prysmaticlabs_go_bitfield.Bitvector64(nil)
 }
 
 var File_proto_beacon_p2p_v1_messages_proto protoreflect.FileDescriptor

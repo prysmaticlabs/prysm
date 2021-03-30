@@ -107,7 +107,7 @@ func (x *BeaconState) GetSlot() github_com_prysmaticlabs_eth2_types.Slot {
 	if x != nil {
 		return x.Slot
 	}
-	return 0
+	return github_com_prysmaticlabs_eth2_types.Slot(0)
 }
 
 func (x *BeaconState) GetFork() *Fork {
@@ -212,7 +212,7 @@ func (x *BeaconState) GetJustificationBits() github_com_prysmaticlabs_go_bitfiel
 	if x != nil {
 		return x.JustificationBits
 	}
-	return nil
+	return github_com_prysmaticlabs_go_bitfield.Bitvector4(nil)
 }
 
 func (x *BeaconState) GetPreviousJustifiedCheckpoint() *v1alpha1.Checkpoint {
@@ -296,7 +296,7 @@ func (x *Fork) GetEpoch() github_com_prysmaticlabs_eth2_types.Epoch {
 	if x != nil {
 		return x.Epoch
 	}
-	return 0
+	return github_com_prysmaticlabs_eth2_types.Epoch(0)
 }
 
 type PendingAttestation struct {
@@ -346,7 +346,7 @@ func (x *PendingAttestation) GetAggregationBits() github_com_prysmaticlabs_go_bi
 	if x != nil {
 		return x.AggregationBits
 	}
-	return nil
+	return github_com_prysmaticlabs_go_bitfield.Bitlist(nil)
 }
 
 func (x *PendingAttestation) GetData() *v1alpha1.AttestationData {
@@ -360,14 +360,14 @@ func (x *PendingAttestation) GetInclusionDelay() github_com_prysmaticlabs_eth2_t
 	if x != nil {
 		return x.InclusionDelay
 	}
-	return 0
+	return github_com_prysmaticlabs_eth2_types.Slot(0)
 }
 
 func (x *PendingAttestation) GetProposerIndex() github_com_prysmaticlabs_eth2_types.ValidatorIndex {
 	if x != nil {
 		return x.ProposerIndex
 	}
-	return 0
+	return github_com_prysmaticlabs_eth2_types.ValidatorIndex(0)
 }
 
 type HistoricalBatch struct {
@@ -470,7 +470,7 @@ func (x *StateSummary) GetSlot() github_com_prysmaticlabs_eth2_types.Slot {
 	if x != nil {
 		return x.Slot
 	}
-	return 0
+	return github_com_prysmaticlabs_eth2_types.Slot(0)
 }
 
 func (x *StateSummary) GetRoot() []byte {

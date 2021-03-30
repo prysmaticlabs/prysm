@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package ethereum.beacon.rpc.v1;
 
-import "eth/ext/node.proto"
+import "eth/ext/options.proto";
 import "eth/v1alpha1/node.proto";
 import "proto/beacon/p2p/v1/messages.proto";
 import "google/api/annotations.proto";
