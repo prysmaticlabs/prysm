@@ -191,10 +191,6 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState iface.BeaconState,
 		ApplicationBlockHash: make([]byte, 32),
 	}
 
-	logsBloom := make([][]byte, 8)
-	for i := 0; i < len(logsBloom); i++ {
-		logsBloom[i] = params.BeaconConfig().ZeroHash[:]
-	}
 	bodyRoot, err := (&ethpb.BeaconBlockBody{
 		RandaoReveal: make([]byte, 96),
 		Eth1Data: &ethpb.Eth1Data{
@@ -203,14 +199,13 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState iface.BeaconState,
 		},
 		Graffiti: make([]byte, 32),
 		ApplicationPayload: &ethpb.ApplicationPayload{
-			BlockHash:    make([]byte, 32),
-			Coinbase:     make([]byte, 20),
-			StateRoot:    make([]byte, 32),
-			GasLimit:     0,
-			GasUsed:      0,
-			ReceiptRoot:  make([]byte, 32),
-			LogsBloom:    logsBloom,
-			Transactions: make([]*ethpb.Transaction, 0),
+			BlockHash:   make([]byte, 32),
+			Coinbase:    make([]byte, 20),
+			StateRoot:   make([]byte, 32),
+			GasLimit:    0,
+			GasUsed:     0,
+			ReceiptRoot: make([]byte, 32),
+			LogsBloom:   make([]byte, 256),
 		},
 	}).HashTreeRoot()
 	if err != nil {

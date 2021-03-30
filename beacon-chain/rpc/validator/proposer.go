@@ -112,63 +112,9 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 		return nil, status.Errorf(codes.Internal, "Could not calculate proposer index %v", err)
 	}
 
-	// Get application payload using beacon state's application_block_hash and beacon_chain_data.
-	// beacon_chain_data consists of slot,timestamp and randao mix.
-	// TODO: This is hard coded to my catalyst instance genesis hash.
-	eth1ParentHash := "0x3a3fdfc9ab6e17ff530b57bc21494da3848ebbeaf9343545fded7a18d221ffec"
-	payload, err := vs.ApplicationExecutor.ProduceApplicationData(ctx, eth.ProduceBlockParams{
-		ParentHash: common.HexToHash(eth1ParentHash),
-		RandaoMix:  common.BytesToHash(req.RandaoReveal),
-		Slot:       uint64(req.Slot),
-		Timestamp:  uint64(time.Now().Unix()),
-		RecentBeaconBlockRoots: []common.Hash{
-			params.BeaconConfig().ZeroHash,
-		},
-	})
+	payload, err := vs.produceAppPayload(ctx, head, req.Slot, req.RandaoReveal)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not produce application data %v", err)
-	}
-	log.WithFields(logrus.Fields{
-		"coinbase":        fmt.Sprintf("%#x", payload.Coinbase),
-		"blockHash":       fmt.Sprintf("%#x", payload.BlockHash),
-		"difficulty":      payload.Difficulty,
-		"gasLimit":        payload.GasLimit,
-		"gasUsed":         payload.GasUsed,
-		"logsBloom":       fmt.Sprintf("%#x", payload.BlockHash),
-		"parentHash":      fmt.Sprintf("%#x", payload.ParentHash),
-		"receiptRoot":     fmt.Sprintf("%#x", payload.ReceiptRoot),
-		"stateRoot":       fmt.Sprintf("%#x", payload.StateRoot),
-		"numTransactions": len(payload.Transactions),
-	}).Info("Received response, executable data is ready to be put into a beacon block")
-
-	// TODO: Need a general helper here
-	eth2Txs := make([]*ethpb.Transaction, len(payload.Transactions))
-	for i := range eth2Txs {
-		eth2Txs[i] = &ethpb.Transaction{
-			Nounce:    payload.Transactions[i].Nonce(),
-			GasPrice:  payload.Transactions[i].GasPrice().Bytes(),
-			GasLimit:  0,        // Not exported in geth?
-			Recipient: []byte{}, // Not exported  in geth?
-			Value:     payload.Transactions[i].Value().Bytes(),
-			Data:      [][]byte{payload.Transactions[i].Data()}, // TODO: Fix this in ethereumapi
-			V:         []byte{},                                 // Not exported  in geth?
-			R:         []byte{},                                 // Not exported  in geth?
-			S:         []byte{},                                 // Not exported  in geth?
-		}
-	}
-	logsBloom := make([][]byte, 8)
-	for i := 0; i < len(logsBloom); i++ {
-		logsBloom[i] = params.BeaconConfig().ZeroHash[:]
-	}
-	eth2Payload := &ethpb.ApplicationPayload{
-		BlockHash:   bytesutil.PadTo(payload.BlockHash.Bytes(), 32),
-		Coinbase:    bytesutil.PadTo(payload.Coinbase.Bytes(), 20),
-		StateRoot:   bytesutil.PadTo(payload.StateRoot.Bytes(), 32),
-		GasLimit:    payload.GasLimit,
-		GasUsed:     payload.GasUsed,
-		ReceiptRoot: bytesutil.PadTo(payload.ReceiptRoot.Bytes(), 32),
-		LogsBloom:   logsBloom, // TODO: Fix this in ethereumapi
-		// Transactions: eth2Txs,
+		return nil, status.Errorf(codes.Internal, "Could not get app payload %v", err)
 	}
 
 	blk := &ethpb.BeaconBlock{
@@ -185,7 +131,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 			AttesterSlashings:  vs.SlashingsPool.PendingAttesterSlashings(ctx, head, false /*noLimit*/),
 			VoluntaryExits:     vs.ExitPool.PendingExits(head, req.Slot, false /*noLimit*/),
 			Graffiti:           graffiti[:],
-			ApplicationPayload: eth2Payload,
+			ApplicationPayload: helpers.AppPayloadProtobuf(payload),
 		},
 	}
 
@@ -693,4 +639,32 @@ func (vs *Server) packAttestations(ctx context.Context, latestState iface.Beacon
 		atts = attsForInclusion.dedup().sortByProfitability().limitToMaxAttestations()
 	}
 	return atts, nil
+}
+
+// produceAppPayload calls the eth1 node for application payload and returns it to block producer.
+func (vs *Server) produceAppPayload(ctx context.Context, state iface.ReadOnlyBeaconState, slot types.Slot, reveal []byte) (*eth.ApplicationPayload, error) {
+	randaoMix, err := helpers.ComputeRandaoMixWithReveal(state, reveal)
+	if err != nil {
+		return nil, err
+	}
+
+	payload, err := vs.ApplicationExecutor.ProduceApplicationData(ctx, eth.ProduceBlockParams{
+		ParentHash:             common.BytesToHash(state.ApplicationBlockHash()),
+		RandaoMix:              common.BytesToHash(randaoMix),
+		Slot:                   uint64(slot),
+		Timestamp:              uint64(time.Now().Unix()),
+		RecentBeaconBlockRoots: []common.Hash{},
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not produce application data %v", err)
+	}
+	log.WithFields(logrus.Fields{
+		"coinbase":        fmt.Sprintf("%#x", bytesutil.Trunc(payload.Coinbase.Bytes())),
+		"gasUsed":         payload.GasUsed,
+		"parentBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.ParentHash.Bytes())),
+		"blockHash":       fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash.Bytes())),
+		"numTransactions": len(payload.Transactions),
+	}).Info("Received app data from eth1 node")
+
+	return payload, nil
 }

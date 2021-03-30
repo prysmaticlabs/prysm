@@ -4,7 +4,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // CopyETH1Data copies the provided eth1data object.
@@ -274,21 +273,26 @@ func CopyApplicationPayload(payload *ethpb.ApplicationPayload) *ethpb.Applicatio
 	if payload == nil {
 		return nil
 	}
-	// TODO: Implement this!
-	logsBloom := make([][]byte, 8)
-	for i := 0; i < len(logsBloom); i++ {
-		logsBloom[i] = params.BeaconConfig().ZeroHash[:]
-	}
+
 	return &ethpb.ApplicationPayload{
-		BlockHash:    make([]byte, 32),
-		Coinbase:     make([]byte, 20),
-		StateRoot:    make([]byte, 32),
-		GasLimit:     0,
-		GasUsed:      0,
-		ReceiptRoot:  make([]byte, 32),
-		LogsBloom:    logsBloom,
-		Transactions: make([]*ethpb.Transaction, 0),
+		BlockHash:    bytesutil.SafeCopyBytes(payload.BlockHash),
+		Coinbase:     bytesutil.SafeCopyBytes(payload.Coinbase),
+		StateRoot:    bytesutil.SafeCopyBytes(payload.StateRoot),
+		GasLimit:     payload.GasLimit,
+		GasUsed:      payload.GasUsed,
+		ReceiptRoot:  bytesutil.SafeCopyBytes(payload.ReceiptRoot),
+		LogsBloom:    bytesutil.SafeCopyBytes(payload.LogsBloom),
+		Transactions: CopyTransactions(payload.Transactions),
 	}
+}
+
+// CopyTransactions copies the transactions.
+func CopyTransactions(txs []*ethpb.OpaqueTransaction) []*ethpb.OpaqueTransaction {
+	newTxs := make([]*ethpb.OpaqueTransaction, len(txs))
+	for i, tx := range newTxs {
+		newTxs[i] = &ethpb.OpaqueTransaction{Data: bytesutil.SafeCopyBytes(tx.Data)}
+	}
+	return newTxs
 }
 
 // CopyValidator copies the provided validator.

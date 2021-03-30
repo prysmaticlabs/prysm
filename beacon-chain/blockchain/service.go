@@ -69,21 +69,22 @@ type Service struct {
 
 // Config options for the service.
 type Config struct {
-	BeaconBlockBuf    int
-	ChainStartFetcher powchain.ChainStartFetcher
-	BeaconDB          db.HeadAccessDatabase
-	DepositCache      *depositcache.DepositCache
-	AttPool           attestations.Pool
-	ExitPool          voluntaryexits.PoolManager
-	SlashingPool      slashings.PoolManager
-	P2p               p2p.Broadcaster
-	MaxRoutines       int
-	StateNotifier     statefeed.Notifier
-	ForkChoiceStore   f.ForkChoicer
-	OpsService        *attestations.Service
-	StateGen          *stategen.State
-	WspBlockRoot      []byte
-	WspEpoch          types.Epoch
+	BeaconBlockBuf      int
+	ChainStartFetcher   powchain.ChainStartFetcher
+	ApplicationExecutor powchain.ApplicationDataExecutor
+	BeaconDB            db.HeadAccessDatabase
+	DepositCache        *depositcache.DepositCache
+	AttPool             attestations.Pool
+	ExitPool            voluntaryexits.PoolManager
+	SlashingPool        slashings.PoolManager
+	P2p                 p2p.Broadcaster
+	MaxRoutines         int
+	StateNotifier       statefeed.Notifier
+	ForkChoiceStore     f.ForkChoicer
+	OpsService          *attestations.Service
+	StateGen            *stategen.State
+	WspBlockRoot        []byte
+	WspEpoch            types.Epoch
 }
 
 // NewService instantiates a new block service instance that will

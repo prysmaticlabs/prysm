@@ -483,6 +483,14 @@ func ProcessBlockNoVerifyAnySig(
 		traceutil.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not process block operation")
 	}
+
+	if err := state.SetApplicationBlockHash(signed.Block.Body.ApplicationPayload.BlockHash); err != nil {
+		return nil, nil, err
+	}
+	if err := state.SetApplicationStateHash(signed.Block.Body.ApplicationPayload.StateRoot); err != nil {
+		return nil, nil, err
+	}
+
 	aSet, err := b.AttestationSignatureSet(ctx, state, signed.Block.Body.Attestations)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not retrieve attestation signature set")
@@ -697,6 +705,13 @@ func ProcessBlockForStateRoot(
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block operation")
+	}
+
+	if err := state.SetApplicationBlockHash(signed.Block.Body.ApplicationPayload.BlockHash); err != nil {
+		return nil, err
+	}
+	if err := state.SetApplicationStateHash(signed.Block.Body.ApplicationPayload.StateRoot); err != nil {
+		return nil, err
 	}
 
 	return state, nil
