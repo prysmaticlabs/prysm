@@ -44,16 +44,13 @@ type Config struct {
 
 // Service service.
 type Service struct {
-	ctx           context.Context
-	cancel        context.CancelFunc
-	chain         blockchainService
-	p2p           p2p.P2P
-	db            db.ReadOnlyDatabase
-	synced        *abool.AtomicBool
-	chainStarted  *abool.AtomicBool
-	stateNotifier statefeed.Notifier
-	counter       *ratecounter.RateCounter
-	genesisChan   chan time.Time
+	cfg          *Config
+	ctx          context.Context
+	cancel       context.CancelFunc
+	synced       *abool.AtomicBool
+	chainStarted *abool.AtomicBool
+	counter      *ratecounter.RateCounter
+	genesisChan  chan time.Time
 }
 
 // NewService configures the initial sync service responsible for bringing the node up to the
@@ -61,16 +58,13 @@ type Service struct {
 func NewService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	s := &Service{
-		ctx:           ctx,
-		cancel:        cancel,
-		chain:         cfg.Chain,
-		p2p:           cfg.P2P,
-		db:            cfg.DB,
-		synced:        abool.New(),
-		chainStarted:  abool.New(),
-		stateNotifier: cfg.StateNotifier,
-		counter:       ratecounter.NewRateCounter(counterSeconds * time.Second),
-		genesisChan:   make(chan time.Time),
+		cfg:          cfg,
+		ctx:          ctx,
+		cancel:       cancel,
+		synced:       abool.New(),
+		chainStarted: abool.New(),
+		counter:      ratecounter.NewRateCounter(counterSeconds * time.Second),
+		genesisChan:  make(chan time.Time),
 	}
 	go s.waitForStateInitialization()
 	return s
@@ -103,7 +97,7 @@ func (s *Service) Start() {
 	s.chainStarted.Set()
 	log.Info("Starting initial chain sync...")
 	// Are we already in sync, or close to it?
-	if helpers.SlotToEpoch(s.chain.HeadSlot()) == helpers.SlotToEpoch(currentSlot) {
+	if helpers.SlotToEpoch(s.cfg.Chain.HeadSlot()) == helpers.SlotToEpoch(currentSlot) {
 		log.Info("Already synced to the current chain head")
 		s.markSynced(genesis)
 		return
@@ -115,7 +109,7 @@ func (s *Service) Start() {
 		}
 		panic(err)
 	}
-	log.Infof("Synced up to slot %d", s.chain.HeadSlot())
+	log.Infof("Synced up to slot %d", s.cfg.Chain.HeadSlot())
 	s.markSynced(genesis)
 }
 
@@ -146,7 +140,7 @@ func (s *Service) Initialized() bool {
 // Resync allows a node to start syncing again if it has fallen
 // behind the current network head.
 func (s *Service) Resync() error {
-	headState, err := s.chain.HeadState(s.ctx)
+	headState, err := s.cfg.Chain.HeadState(s.ctx)
 	if err != nil || headState == nil {
 		return errors.Errorf("could not retrieve head state: %v", err)
 	}
@@ -160,7 +154,7 @@ func (s *Service) Resync() error {
 	if err = s.roundRobinSync(genesis); err != nil {
 		log = log.WithError(err)
 	}
-	log.WithField("slot", s.chain.HeadSlot()).Info("Resync attempt complete")
+	log.WithField("slot", s.cfg.Chain.HeadSlot()).Info("Resync attempt complete")
 	return nil
 }
 
@@ -170,7 +164,7 @@ func (s *Service) waitForMinimumPeers() {
 		required = flags.Get().MinimumSyncPeers
 	}
 	for {
-		_, peers := s.p2p.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers, s.chain.FinalizedCheckpt().Epoch)
+		_, peers := s.cfg.P2P.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers, s.cfg.Chain.FinalizedCheckpt().Epoch)
 		if len(peers) >= required {
 			break
 		}
@@ -187,7 +181,7 @@ func (s *Service) waitForMinimumPeers() {
 func (s *Service) waitForStateInitialization() {
 	// Wait for state to be initialized.
 	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
+	stateSub := s.cfg.StateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
 	log.Info("Waiting for state to be initialized")
 	for {
@@ -220,7 +214,7 @@ func (s *Service) waitForStateInitialization() {
 // markSynced marks node as synced and notifies feed listeners.
 func (s *Service) markSynced(genesis time.Time) {
 	s.synced.Set()
-	s.stateNotifier.StateFeed().Send(&feed.Event{
+	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.Synced,
 		Data: &statefeed.SyncedData{
 			StartTime: genesis,

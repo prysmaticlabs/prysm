@@ -781,18 +781,18 @@ func (b *BeaconState) slashings() []uint64 {
 }
 
 // PreviousEpochAttestations corresponding to blocks on the beacon chain.
-func (b *BeaconState) PreviousEpochAttestations() []*pbp2p.PendingAttestation {
+func (b *BeaconState) PreviousEpochAttestations() ([]*pbp2p.PendingAttestation, error) {
 	if !b.hasInnerState() {
-		return nil
+		return nil, nil
 	}
 	if b.state.PreviousEpochAttestations == nil {
-		return nil
+		return nil, nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.previousEpochAttestations()
+	return b.previousEpochAttestations(), nil
 }
 
 // previousEpochAttestations corresponding to blocks on the beacon chain.
@@ -806,18 +806,18 @@ func (b *BeaconState) previousEpochAttestations() []*pbp2p.PendingAttestation {
 }
 
 // CurrentEpochAttestations corresponding to blocks on the beacon chain.
-func (b *BeaconState) CurrentEpochAttestations() []*pbp2p.PendingAttestation {
+func (b *BeaconState) CurrentEpochAttestations() ([]*pbp2p.PendingAttestation, error) {
 	if !b.hasInnerState() {
-		return nil
+		return nil, nil
 	}
 	if b.state.CurrentEpochAttestations == nil {
-		return nil
+		return nil, nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.currentEpochAttestations()
+	return b.currentEpochAttestations(), nil
 }
 
 // currentEpochAttestations corresponding to blocks on the beacon chain.
