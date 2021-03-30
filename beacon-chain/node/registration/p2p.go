@@ -11,7 +11,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// P2PPreconfiguration TODO
+// P2PPreconfiguration prepares data for p2p.Service's registration config.
 func P2PPreconfiguration(cliCtx *cli.Context) (bootstrapNodeAddrs []string, dataDir string, err error) {
 	// Bootnode ENR may be a filepath to a YAML file
 	bootnodesTemp := params.BeaconNetworkConfig().BootstrapNodes // actual CLI values

@@ -8,7 +8,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// PowchainPreconfiguration TODO
+// PowchainPreconfiguration prepares data for powchain.Service's registration config.
 func PowchainPreconfiguration(cliCtx *cli.Context) (depositContractAddress string, endpoints []string) {
 	depositContractAddress = params.BeaconConfig().DepositContractAddress
 	if depositContractAddress == "" {

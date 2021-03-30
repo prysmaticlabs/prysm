@@ -12,7 +12,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// BlockchainPreconfiguration TODO
+// BlockchainPreconfiguration prepares data for blockchain.Service's registration config.
 func BlockchainPreconfiguration(cliCtx *cli.Context) (bRoot []byte, epoch types.Epoch, err error) {
 	wsp := cliCtx.String(flags.WeakSubjectivityCheckpt.Name)
 	bRoot, epoch, err = convertWspInput(wsp)
