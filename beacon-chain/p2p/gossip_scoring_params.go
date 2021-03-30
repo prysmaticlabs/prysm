@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"math"
+	"reflect"
 	"strings"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -31,6 +33,11 @@ const (
 	// voluntaryExitWeight specifies the scoring weight that we apply to
 	// our voluntary exit topic.
 	voluntaryExitWeight = 0.05
+
+	// maxInMeshScore describes the max score a peer can attain from being in the mesh.
+	maxInMeshScore = 10
+	// maxFirstDeliveryScore describes the max score a peer can obtain from first deliveries.
+	maxFirstDeliveryScore = 40
 
 	// decayToZero specifies the terminal value that we will use when decaying
 	// a value.
@@ -118,9 +125,9 @@ func defaultBlockTopicParams() *pubsub.TopicScoreParams {
 	blocksPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch)
 	return &pubsub.TopicScoreParams{
 		TopicWeight:                     beaconBlockWeight,
-		TimeInMeshWeight:                0.0324,
-		TimeInMeshQuantum:               1 * oneSlotDuration(),
-		TimeInMeshCap:                   300,
+		TimeInMeshWeight:                maxInMeshScore / inMeshCap(),
+		TimeInMeshQuantum:               inMeshTime(),
+		TimeInMeshCap:                   inMeshCap(),
 		FirstMessageDeliveriesWeight:    1,
 		FirstMessageDeliveriesDecay:     scoreDecay(20 * oneEpochDuration()),
 		FirstMessageDeliveriesCap:       23,
@@ -139,17 +146,19 @@ func defaultBlockTopicParams() *pubsub.TopicScoreParams {
 
 func defaultAggregateTopicParams(activeValidators uint64) *pubsub.TopicScoreParams {
 	aggPerSlot := aggregatorsPerSlot(activeValidators)
+	firstMessageCap := decay(scoreDecay(1*oneEpochDuration()), float64(aggPerSlot*2/8))
+	firstMessageWeight := maxFirstDeliveryScore / firstMessageCap
 	meshThreshold := decayThreshold(scoreDecay(1*oneEpochDuration()), float64(aggPerSlot)/50)
-	meshWeight := -122.5 / (aggregateWeight * meshThreshold * meshThreshold)
+	meshWeight := -maxScore() / (aggregateWeight * meshThreshold * meshThreshold)
 	meshCap := 4 * meshThreshold
 	return &pubsub.TopicScoreParams{
 		TopicWeight:                     aggregateWeight,
-		TimeInMeshWeight:                0.0324,
-		TimeInMeshQuantum:               1 * oneSlotDuration(),
-		TimeInMeshCap:                   300,
-		FirstMessageDeliveriesWeight:    0.128,
+		TimeInMeshWeight:                maxInMeshScore / inMeshCap(),
+		TimeInMeshQuantum:               inMeshTime(),
+		TimeInMeshCap:                   inMeshCap(),
+		FirstMessageDeliveriesWeight:    firstMessageWeight,
 		FirstMessageDeliveriesDecay:     scoreDecay(1 * oneEpochDuration()),
-		FirstMessageDeliveriesCap:       179,
+		FirstMessageDeliveriesCap:       firstMessageCap,
 		MeshMessageDeliveriesWeight:     meshWeight,
 		MeshMessageDeliveriesDecay:      scoreDecay(1 * oneEpochDuration()),
 		MeshMessageDeliveriesCap:        meshCap,
@@ -178,9 +187,9 @@ func defaultAggregateSubnetTopicParams(activeValidators uint64) *pubsub.TopicSco
 	}
 	return &pubsub.TopicScoreParams{
 		TopicWeight:                     topicWeight,
-		TimeInMeshWeight:                0.0324,
+		TimeInMeshWeight:                maxInMeshScore / inMeshCap(),
 		TimeInMeshQuantum:               numPerSlot,
-		TimeInMeshCap:                   300,
+		TimeInMeshCap:                   inMeshCap(),
 		FirstMessageDeliveriesWeight:    0.955,
 		FirstMessageDeliveriesDecay:     scoreDecay(firstDecay * oneEpochDuration()),
 		FirstMessageDeliveriesCap:       24,
@@ -200,9 +209,9 @@ func defaultAggregateSubnetTopicParams(activeValidators uint64) *pubsub.TopicSco
 func defaultAttesterSlashingTopicParams() *pubsub.TopicScoreParams {
 	return &pubsub.TopicScoreParams{
 		TopicWeight:                     attesterSlashingWeight,
-		TimeInMeshWeight:                0.0324,
-		TimeInMeshQuantum:               1 * oneSlotDuration(),
-		TimeInMeshCap:                   300,
+		TimeInMeshWeight:                maxInMeshScore / inMeshCap(),
+		TimeInMeshQuantum:               inMeshTime(),
+		TimeInMeshCap:                   inMeshCap(),
 		FirstMessageDeliveriesWeight:    36,
 		FirstMessageDeliveriesDecay:     scoreDecay(100 * oneEpochDuration()),
 		FirstMessageDeliveriesCap:       1,
@@ -222,9 +231,9 @@ func defaultAttesterSlashingTopicParams() *pubsub.TopicScoreParams {
 func defaultProposerSlashingTopicParams() *pubsub.TopicScoreParams {
 	return &pubsub.TopicScoreParams{
 		TopicWeight:                     proposerSlashingWeight,
-		TimeInMeshWeight:                0.0324,
-		TimeInMeshQuantum:               1 * oneSlotDuration(),
-		TimeInMeshCap:                   300,
+		TimeInMeshWeight:                maxInMeshScore / inMeshCap(),
+		TimeInMeshQuantum:               inMeshTime(),
+		TimeInMeshCap:                   inMeshCap(),
 		FirstMessageDeliveriesWeight:    36,
 		FirstMessageDeliveriesDecay:     scoreDecay(100 * oneEpochDuration()),
 		FirstMessageDeliveriesCap:       1,
@@ -244,9 +253,9 @@ func defaultProposerSlashingTopicParams() *pubsub.TopicScoreParams {
 func defaultVoluntaryExitTopicParams() *pubsub.TopicScoreParams {
 	return &pubsub.TopicScoreParams{
 		TopicWeight:                     voluntaryExitWeight,
-		TimeInMeshWeight:                0.0324,
-		TimeInMeshQuantum:               1 * oneSlotDuration(),
-		TimeInMeshCap:                   300,
+		TimeInMeshWeight:                maxInMeshScore / inMeshCap(),
+		TimeInMeshQuantum:               inMeshTime(),
+		TimeInMeshCap:                   inMeshCap(),
 		FirstMessageDeliveriesWeight:    2,
 		FirstMessageDeliveriesDecay:     scoreDecay(100 * oneEpochDuration()),
 		FirstMessageDeliveriesCap:       5,
@@ -276,8 +285,12 @@ func scoreDecay(totalDurationDecay time.Duration) float64 {
 	return math.Pow(decayToZero, 1/float64(numOfTimes))
 }
 
-func decayThreshold(decay, rate float64) float64 {
-	return (rate/1 - decay) * decay
+func decayThreshold(decayRate, rate float64) float64 {
+	return decay(decayRate, rate) * decayRate
+}
+
+func decay(decayRate, rate float64) float64 {
+	return rate/1 - decayRate
 }
 
 func committeeCountPerSlot(activeValidators uint64) uint64 {
@@ -292,4 +305,34 @@ func aggregatorsPerSlot(activeValidators uint64) uint64 {
 	comms := committeeCountPerSlot(activeValidators)
 	totalAggs := comms * params.BeaconConfig().TargetAggregatorsPerCommittee
 	return totalAggs
+}
+
+// maxScore attainable by a peer.
+func maxScore() float64 {
+	totalWeight := beaconBlockWeight + aggregateWeight + attestationTotalWeight +
+		attesterSlashingWeight + proposerSlashingWeight + voluntaryExitWeight
+	return (maxInMeshScore + maxFirstDeliveryScore) * totalWeight
+}
+
+func inMeshTime() time.Duration {
+	return 1 * oneSlotDuration()
+}
+
+func inMeshCap() float64 {
+	return float64((3600 * time.Second) / inMeshTime())
+}
+
+func logGossipParameters(topic string, params *pubsub.TopicScoreParams) {
+	// Exit early in the event the parameter struct is nil.
+	if params == nil {
+		return
+	}
+	rawParams := reflect.ValueOf(params).Elem()
+	numOfFields := rawParams.NumField()
+
+	fields := make(logrus.Fields, numOfFields)
+	for i := 0; i < numOfFields; i++ {
+		fields[reflect.TypeOf(params).Elem().Field(i).Name] = rawParams.Field(i).Interface()
+	}
+	log.WithFields(fields).Debugf("Topic Parameters for %s", topic)
 }

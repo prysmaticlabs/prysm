@@ -80,10 +80,12 @@ func (s *Service) SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub
 		if err != nil {
 			return nil, err
 		}
+
 		if scoringParams != nil {
 			if err := topicHandle.SetScoreParams(scoringParams); err != nil {
 				return nil, err
 			}
+			logGossipParameters(topic, scoringParams)
 		}
 	}
 	return topicHandle.Subscribe(opts...)
