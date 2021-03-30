@@ -152,6 +152,7 @@ func defaultBlockTopicParams() *pubsub.TopicScoreParams {
 }
 
 func defaultAggregateTopicParams(activeValidators uint64) (*pubsub.TopicScoreParams, error) {
+	// Determine the expected message rate for the particular gossip topic.
 	aggPerSlot := aggregatorsPerSlot(activeValidators)
 	firstMessageCap, err := decay(scoreDecay(1*oneEpochDuration()), float64(aggPerSlot*2/gossipSubD))
 	if err != nil {
@@ -200,11 +201,13 @@ func defaultAggregateSubnetTopicParams(activeValidators uint64) (*pubsub.TopicSc
 		firstDecay = 4
 		meshDecay = 16
 	}
+	// Determine expected first deliveries based on the message rate.
 	firstMessageCap, err := decay(scoreDecay(firstDecay*oneEpochDuration()), float64(numPerSlot*2/gossipSubD))
 	if err != nil {
 		return nil, err
 	}
 	firstMessageWeight := maxFirstDeliveryScore / firstMessageCap
+	// Determine expected mesh deliveries based on message rate applied with a dampening factor.
 	meshThreshold, err := decayThreshold(scoreDecay(meshDecay*oneEpochDuration()), float64(numPerSlot)/dampeningFactor)
 	if err != nil {
 		return nil, err
