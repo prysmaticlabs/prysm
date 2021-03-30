@@ -147,8 +147,7 @@ func (is *infostream) handleConnection() error {
 					return
 				default:
 				}
-				log.
-					WithError(err).
+				log.WithError(err).
 					Debug("Receive from validators stream listener failed; client probably closed connection")
 				return
 			}
