@@ -115,7 +115,6 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 	req.Mnemonic = mnemonicResp.Mnemonic
 
 	req.Mnemonic25ThWord = " "
-	req.SkipMnemonic25ThWord = false
 	_, err = s.RecoverWallet(ctx, req)
 	require.ErrorContains(t, "mnemonic 25th word cannot be empty", err)
 	req.Mnemonic25ThWord = "outer"
