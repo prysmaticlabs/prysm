@@ -120,7 +120,7 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 	require.ErrorContains(t, "mnemonic 25th word cannot be empty", err)
 	req.Mnemonic25ThWord = "outer"
 
-	//test weak password
+	// Test weak password.
 	req.WalletPassword = "123qwe"
 	_, err = s.RecoverWallet(ctx, req)
 	require.ErrorContains(t, "password did not pass validation", err)
