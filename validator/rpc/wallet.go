@@ -164,7 +164,9 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 	if err := accounts.ValidateMnemonic(mnemonic); err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid mnemonic in request")
 	}
-	if strings.TrimSpace(req.Mnemonic25ThWord) == "" {
+	
+	// Check it is not null and not an empty string.
+	if req.Mnemonic25ThWord != "" && strings.TrimSpace(req.Mnemonic25ThWord) == "" {
 		return nil, status.Error(codes.InvalidArgument, "mnemonic 25th word cannot be empty")
 	}
 
