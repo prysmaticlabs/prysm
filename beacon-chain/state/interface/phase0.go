@@ -7,6 +7,7 @@ import (
 	"context"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	v1 "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -18,6 +19,7 @@ type BeaconState interface {
 	WriteOnlyBeaconState
 	Copy() BeaconState
 	HashTreeRoot(ctx context.Context) ([32]byte, error)
+	ToProto() (*v1.BeaconState, error)
 }
 
 // ReadOnlyBeaconState defines a struct which only has read access to beacon state methods.
