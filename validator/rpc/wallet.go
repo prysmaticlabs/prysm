@@ -33,7 +33,7 @@ const (
 )
 
 // CreateWallet via an API request, allowing a user to save a new
-// imported (derived is RecoverWallet and remote is not supported through web)
+// imported wallet via RPC
 func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) (*pb.CreateWalletResponse, error) {
 	walletDir := s.walletDir
 	exists, err := wallet.Exists(walletDir)
@@ -137,7 +137,7 @@ func (s *Server) WalletConfig(ctx context.Context, _ *empty.Empty) (*pb.WalletRe
 // Generate the seed from the mnemonic + language + 25th passphrase(optional).
 // Create N validator keystores from the seed specified by req.NumAccounts.
 // Set the wallet password to req.WalletPassword, then create the wallet from
-// the provided Mnemonic and return CreateWalletResponse,nil if nothing went wrong
+// the provided Mnemonic and return CreateWalletResponse.
 func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest) (*pb.CreateWalletResponse, error) {
 	numAccounts := int(req.NumAccounts)
 	if numAccounts == 0 {
