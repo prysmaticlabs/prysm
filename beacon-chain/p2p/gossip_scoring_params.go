@@ -88,9 +88,9 @@ func (s *Service) topicScoreParams(topic string) (*pubsub.TopicScoreParams, erro
 	case strings.Contains(topic, "beacon_block"):
 		return defaultBlockTopicParams(), nil
 	case strings.Contains(topic, "beacon_aggregate_and_proof"):
-		return defaultAggregateTopicParams(activeValidators), nil
+		return defaultAggregateTopicParams(activeValidators)
 	case strings.Contains(topic, "beacon_attestation"):
-		return defaultAggregateSubnetTopicParams(activeValidators), nil
+		return defaultAggregateSubnetTopicParams(activeValidators)
 	case strings.Contains(topic, "voluntary_exit"):
 		return defaultVoluntaryExitTopicParams(), nil
 	case strings.Contains(topic, "proposer_slashing"):
@@ -124,7 +124,7 @@ func (s *Service) retrieveActiveValidators() (uint64, error) {
 	return helpers.ActiveValidatorCount(bState, helpers.CurrentEpoch(bState))
 }
 
-// Based on Ben's tested parameters for lighthouse.
+// Based on the lighthouse parameters.
 // https://gist.github.com/blacktemplar/5c1862cb3f0e32a1a7fb0b25e79e6e2c
 
 func defaultBlockTopicParams() *pubsub.TopicScoreParams {
@@ -151,11 +151,17 @@ func defaultBlockTopicParams() *pubsub.TopicScoreParams {
 	}
 }
 
-func defaultAggregateTopicParams(activeValidators uint64) *pubsub.TopicScoreParams {
+func defaultAggregateTopicParams(activeValidators uint64) (*pubsub.TopicScoreParams, error) {
 	aggPerSlot := aggregatorsPerSlot(activeValidators)
-	firstMessageCap := decay(scoreDecay(1*oneEpochDuration()), float64(aggPerSlot*2/gossipSubD))
+	firstMessageCap, err := decay(scoreDecay(1*oneEpochDuration()), float64(aggPerSlot*2/gossipSubD))
+	if err != nil {
+		return nil, err
+	}
 	firstMessageWeight := maxFirstDeliveryScore / firstMessageCap
-	meshThreshold := decayThreshold(scoreDecay(1*oneEpochDuration()), float64(aggPerSlot)/dampeningFactor)
+	meshThreshold, err := decayThreshold(scoreDecay(1*oneEpochDuration()), float64(aggPerSlot)/dampeningFactor)
+	if err != nil {
+		return nil, err
+	}
 	meshWeight := -maxScore() / (aggregateWeight * meshThreshold * meshThreshold)
 	meshCap := 4 * meshThreshold
 	return &pubsub.TopicScoreParams{
@@ -176,10 +182,10 @@ func defaultAggregateTopicParams(activeValidators uint64) *pubsub.TopicScorePara
 		MeshFailurePenaltyDecay:         scoreDecay(1 * oneEpochDuration()),
 		InvalidMessageDeliveriesWeight:  -maxScore() / aggregateWeight,
 		InvalidMessageDeliveriesDecay:   scoreDecay(50 * oneEpochDuration()),
-	}
+	}, nil
 }
 
-func defaultAggregateSubnetTopicParams(activeValidators uint64) *pubsub.TopicScoreParams {
+func defaultAggregateSubnetTopicParams(activeValidators uint64) (*pubsub.TopicScoreParams, error) {
 	subnetCount := params.BeaconNetworkConfig().AttestationSubnetCount
 	// Get weight for each specific subnet.
 	topicWeight := attestationTotalWeight / float64(subnetCount)
@@ -194,10 +200,15 @@ func defaultAggregateSubnetTopicParams(activeValidators uint64) *pubsub.TopicSco
 		firstDecay = 4
 		meshDecay = 16
 	}
-	firstMessageCap := decay(scoreDecay(firstDecay*oneEpochDuration()), float64(numPerSlot*2/gossipSubD))
+	firstMessageCap, err := decay(scoreDecay(firstDecay*oneEpochDuration()), float64(numPerSlot*2/gossipSubD))
+	if err != nil {
+		return nil, err
+	}
 	firstMessageWeight := maxFirstDeliveryScore / firstMessageCap
-
-	meshThreshold := decayThreshold(scoreDecay(meshDecay*oneEpochDuration()), float64(numPerSlot)/dampeningFactor)
+	meshThreshold, err := decayThreshold(scoreDecay(meshDecay*oneEpochDuration()), float64(numPerSlot)/dampeningFactor)
+	if err != nil {
+		return nil, err
+	}
 	meshWeight := -maxScore() / (aggregateWeight * meshThreshold * meshThreshold)
 	meshCap := 4 * meshThreshold
 	return &pubsub.TopicScoreParams{
@@ -218,7 +229,7 @@ func defaultAggregateSubnetTopicParams(activeValidators uint64) *pubsub.TopicSco
 		MeshFailurePenaltyDecay:         scoreDecay(meshDecay * oneEpochDuration()),
 		InvalidMessageDeliveriesWeight:  -maxScore() / float64(attestationTotalWeight/subnetCount),
 		InvalidMessageDeliveriesDecay:   scoreDecay(50 * oneEpochDuration()),
-	}
+	}, nil
 }
 
 func defaultAttesterSlashingTopicParams() *pubsub.TopicScoreParams {
@@ -300,12 +311,19 @@ func scoreDecay(totalDurationDecay time.Duration) float64 {
 	return math.Pow(decayToZero, 1/float64(numOfTimes))
 }
 
-func decayThreshold(decayRate, rate float64) float64 {
-	return decay(decayRate, rate) * decayRate
+func decayThreshold(decayRate, rate float64) (float64, error) {
+	d, err := decay(decayRate, rate)
+	if err != nil {
+		return 0, err
+	}
+	return d * decayRate, nil
 }
 
-func decay(decayRate, rate float64) float64 {
-	return rate/1 - decayRate
+func decay(decayRate, rate float64) (float64, error) {
+	if 1 <= decayRate {
+		return 0, errors.Errorf("got an invalid decay rate: %f", decayRate)
+	}
+	return rate / (1 - decayRate), nil
 }
 
 func committeeCountPerSlot(activeValidators uint64) uint64 {
