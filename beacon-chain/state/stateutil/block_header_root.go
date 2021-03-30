@@ -30,10 +30,5 @@ func BlockHeaderRoot(header *ethpb.BeaconBlockHeader) ([32]byte, error) {
 		bodyRoot := bytesutil.ToBytes32(header.BodyRoot)
 		fieldRoots[4] = bodyRoot[:]
 	}
-	return htrutils.BitwiseMerkleize(
-		hashutil.CustomSHA256Hasher(),
-		fieldRoots,
-		uint64(len(fieldRoots)),
-		uint64(len(fieldRoots)),
-	)
+	return htrutils.BitwiseMerkleize(hashutil.CustomSHA256Hasher(), fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }

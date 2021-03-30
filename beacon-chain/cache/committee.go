@@ -56,11 +56,7 @@ func NewCommitteesCache() *CommitteeCache {
 
 // Committee fetches the shuffled indices by slot and committee index. Every list of indices
 // represent one committee. Returns true if the list exists with slot and committee index. Otherwise returns false, nil.
-func (c *CommitteeCache) Committee(
-	slot types.Slot,
-	seed [32]byte,
-	index types.CommitteeIndex,
-) ([]types.ValidatorIndex, error) {
+func (c *CommitteeCache) Committee(slot types.Slot, seed [32]byte, index types.CommitteeIndex) ([]types.ValidatorIndex, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 

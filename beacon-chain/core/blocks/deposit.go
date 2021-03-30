@@ -45,10 +45,7 @@ func ProcessPreGenesisDeposits(
 		if err != nil {
 			return nil, err
 		}
-		validator.EffectiveBalance = mathutil.Min(
-			balance-balance%params.BeaconConfig().EffectiveBalanceIncrement,
-			params.BeaconConfig().MaxEffectiveBalance,
-		)
+		validator.EffectiveBalance = mathutil.Min(balance-balance%params.BeaconConfig().EffectiveBalanceIncrement, params.BeaconConfig().MaxEffectiveBalance)
 		if validator.EffectiveBalance ==
 			params.BeaconConfig().MaxEffectiveBalance {
 			validator.ActivationEligibilityEpoch = 0
@@ -143,11 +140,7 @@ func ProcessDeposits(
 //        # Increase balance by deposit amount
 //        index = ValidatorIndex(validator_pubkeys.index(pubkey))
 //        increase_balance(state, index, amount)
-func ProcessDeposit(
-	beaconState iface.BeaconState,
-	deposit *ethpb.Deposit,
-	verifySignature bool,
-) (iface.BeaconState, error) {
+func ProcessDeposit(beaconState iface.BeaconState, deposit *ethpb.Deposit, verifySignature bool) (iface.BeaconState, error) {
 	if err := verifyDeposit(beaconState, deposit); err != nil {
 		if deposit == nil || deposit.Data == nil {
 			return nil, err

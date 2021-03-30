@@ -17,11 +17,7 @@ func PendingAttRootWithHasher(hasher htrutils.HashFn, att *pb.PendingAttestation
 	var fieldRoots [][32]byte
 
 	// Bitfield.
-	aggregationRoot, err := htrutils.BitlistRoot(
-		hasher,
-		att.AggregationBits,
-		params.BeaconConfig().MaxValidatorsPerCommittee,
-	)
+	aggregationRoot, err := htrutils.BitlistRoot(hasher, att.AggregationBits, params.BeaconConfig().MaxValidatorsPerCommittee)
 	if err != nil {
 		return [32]byte{}, err
 	}

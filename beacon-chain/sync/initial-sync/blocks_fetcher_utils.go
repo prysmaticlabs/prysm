@@ -257,11 +257,7 @@ func (f *blocksFetcher) findForkWithPeer(ctx context.Context, pid peer.ID, slot 
 }
 
 // findAncestor tries to figure out common ancestor slot that connects a given root to known block.
-func (f *blocksFetcher) findAncestor(
-	ctx context.Context,
-	pid peer.ID,
-	block *eth.SignedBeaconBlock,
-) (*forkData, error) {
+func (f *blocksFetcher) findAncestor(ctx context.Context, pid peer.ID, block *eth.SignedBeaconBlock) (*forkData, error) {
 	outBlocks := []*eth.SignedBeaconBlock{block}
 	for i := uint64(0); i < backtrackingMaxHops; i++ {
 		parentRoot := bytesutil.ToBytes32(outBlocks[len(outBlocks)-1].Block.ParentRoot)

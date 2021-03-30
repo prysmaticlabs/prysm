@@ -35,13 +35,7 @@ func logStateTransitionData(b *ethpb.BeaconBlock) {
 	log.Info("Finished applying state transition")
 }
 
-func logBlockSyncStatus(
-	block *ethpb.BeaconBlock,
-	blockRoot [32]byte,
-	finalized *ethpb.Checkpoint,
-	receivedTime time.Time,
-	genesisTime uint64,
-) error {
+func logBlockSyncStatus(block *ethpb.BeaconBlock, blockRoot [32]byte, finalized *ethpb.Checkpoint, receivedTime time.Time, genesisTime uint64) error {
 	startTime, err := helpers.SlotToTime(genesisTime, block.Slot)
 	if err != nil {
 		return err

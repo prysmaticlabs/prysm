@@ -22,10 +22,7 @@ func ProcessSlashingsPrecompute(state iface.BeaconState, pBal *Balance) error {
 		totalSlashing += slashing
 	}
 
-	minSlashing := mathutil.Min(
-		totalSlashing*params.BeaconConfig().ProportionalSlashingMultiplier,
-		pBal.ActiveCurrentEpoch,
-	)
+	minSlashing := mathutil.Min(totalSlashing*params.BeaconConfig().ProportionalSlashingMultiplier, pBal.ActiveCurrentEpoch)
 	epochToWithdraw := currentEpoch + exitLength/2
 
 	var hasSlashing bool

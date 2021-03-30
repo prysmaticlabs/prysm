@@ -17,10 +17,7 @@ import (
 
 // ListPoolAttestations retrieves attestations known by the node but
 // not necessarily incorporated into any block.
-func (bs *Server) ListPoolAttestations(
-	ctx context.Context,
-	req *ethpb.AttestationsPoolRequest,
-) (*ethpb.AttestationsPoolResponse, error) {
+func (bs *Server) ListPoolAttestations(ctx context.Context, req *ethpb.AttestationsPoolRequest) (*ethpb.AttestationsPoolResponse, error) {
 	return nil, errors.New("unimplemented")
 }
 
@@ -68,10 +65,7 @@ func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpb.SubmitAttes
 
 // ListPoolAttesterSlashings retrieves attester slashings known by the node but
 // not necessarily incorporated into any block.
-func (bs *Server) ListPoolAttesterSlashings(
-	ctx context.Context,
-	req *ptypes.Empty,
-) (*ethpb.AttesterSlashingsPoolResponse, error) {
+func (bs *Server) ListPoolAttesterSlashings(ctx context.Context, req *ptypes.Empty) (*ethpb.AttesterSlashingsPoolResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconv1.ListPoolAttesterSlashings")
 	defer span.End()
 
@@ -123,10 +117,7 @@ func (bs *Server) SubmitAttesterSlashing(ctx context.Context, req *ethpb.Atteste
 
 // ListPoolProposerSlashings retrieves proposer slashings known by the node
 // but not necessarily incorporated into any block.
-func (bs *Server) ListPoolProposerSlashings(
-	ctx context.Context,
-	req *ptypes.Empty,
-) (*ethpb.ProposerSlashingPoolResponse, error) {
+func (bs *Server) ListPoolProposerSlashings(ctx context.Context, req *ptypes.Empty) (*ethpb.ProposerSlashingPoolResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconv1.ListPoolProposerSlashings")
 	defer span.End()
 
@@ -178,10 +169,7 @@ func (bs *Server) SubmitProposerSlashing(ctx context.Context, req *ethpb.Propose
 
 // ListPoolVoluntaryExits retrieves voluntary exits known by the node but
 // not necessarily incorporated into any block.
-func (bs *Server) ListPoolVoluntaryExits(
-	ctx context.Context,
-	req *ptypes.Empty,
-) (*ethpb.VoluntaryExitsPoolResponse, error) {
+func (bs *Server) ListPoolVoluntaryExits(ctx context.Context, req *ptypes.Empty) (*ethpb.VoluntaryExitsPoolResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconv1.ListPoolVoluntaryExits")
 	defer span.End()
 
@@ -218,13 +206,7 @@ func (bs *Server) SubmitVoluntaryExit(ctx context.Context, req *ethpb.SignedVolu
 		return nil, status.Errorf(codes.Internal, "Could not get exiting validator: %v", err)
 	}
 	alphaExit := migration.V1ExitToV1Alpha1(req)
-	err = blocks.VerifyExitAndSignature(
-		validator,
-		headState.Slot(),
-		headState.Fork(),
-		alphaExit,
-		headState.GenesisValidatorRoot(),
-	)
+	err = blocks.VerifyExitAndSignature(validator, headState.Slot(), headState.Fork(), alphaExit, headState.GenesisValidatorRoot())
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Invalid voluntary exit: %v", err)
 	}

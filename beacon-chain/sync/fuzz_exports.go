@@ -31,11 +31,7 @@ func NewRegularSyncFuzz(cfg *Config) *Service {
 }
 
 // FuzzValidateBeaconBlockPubSub exports private method validateBeaconBlockPubSub for fuzz testing.
-func (s *Service) FuzzValidateBeaconBlockPubSub(
-	ctx context.Context,
-	pid peer.ID,
-	msg *pubsub.Message,
-) pubsub.ValidationResult {
+func (s *Service) FuzzValidateBeaconBlockPubSub(ctx context.Context, pid peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
 	return s.validateBeaconBlockPubSub(ctx, pid, msg)
 }
 

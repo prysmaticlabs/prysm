@@ -36,12 +36,7 @@ func (h *stateRootHasher) validatorRegistryRoot(validators []*ethpb.Validator) (
 		}
 	}
 
-	validatorsRootsRoot, err := htrutils.BitwiseMerkleizeArrays(
-		hasher,
-		roots,
-		uint64(len(roots)),
-		params.BeaconConfig().ValidatorRegistryLimit,
-	)
+	validatorsRootsRoot, err := htrutils.BitwiseMerkleizeArrays(hasher, roots, uint64(len(roots)), params.BeaconConfig().ValidatorRegistryLimit)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute validator registry merkleization")
 	}

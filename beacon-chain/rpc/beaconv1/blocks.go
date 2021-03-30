@@ -60,10 +60,7 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpb.BlockRequest) (
 }
 
 // ListBlockHeaders retrieves block headers matching given query. By default it will fetch current head slot blocks.
-func (bs *Server) ListBlockHeaders(
-	ctx context.Context,
-	req *ethpb.BlockHeadersRequest,
-) (*ethpb.BlockHeadersResponse, error) {
+func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpb.BlockHeadersRequest) (*ethpb.BlockHeadersResponse, error) {
 	var err error
 	var blks []*ethpb_alpha.SignedBeaconBlock
 	var blkRoots [][32]byte
@@ -209,12 +206,7 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpb.BlockRequest) (*e
 		if len(req.BlockId) == 32 {
 			block, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(req.BlockId))
 			if err != nil {
-				return nil, status.Errorf(
-					codes.Internal,
-					"Could not retrieve block for block root %#x: %v",
-					req.BlockId,
-					err,
-				)
+				return nil, status.Errorf(codes.Internal, "Could not retrieve block for block root %#x: %v", req.BlockId, err)
 			}
 			if block == nil {
 				return nil, status.Error(codes.NotFound, "Could not find any blocks with given root")
@@ -259,10 +251,7 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpb.BlockRequest) (*e
 }
 
 // ListBlockAttestations retrieves attestation included in requested block.
-func (bs *Server) ListBlockAttestations(
-	ctx context.Context,
-	req *ethpb.BlockRequest,
-) (*ethpb.BlockAttestationsResponse, error) {
+func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BlockAttestationsResponse, error) {
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)

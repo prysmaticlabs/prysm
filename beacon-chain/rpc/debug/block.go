@@ -39,10 +39,7 @@ func (ds *Server) GetBlock(
 }
 
 // GetInclusionSlot of an attestation in block.
-func (ds *Server) GetInclusionSlot(
-	ctx context.Context,
-	req *pbrpc.InclusionSlotRequest,
-) (*pbrpc.InclusionSlotResponse, error) {
+func (ds *Server) GetInclusionSlot(ctx context.Context, req *pbrpc.InclusionSlotRequest) (*pbrpc.InclusionSlotResponse, error) {
 	ds.GenesisTimeFetcher.CurrentSlot()
 
 	// Attestation has one epoch to get included in the chain. This blocks users from requesting too soon.

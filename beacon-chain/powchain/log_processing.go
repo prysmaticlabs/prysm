@@ -102,8 +102,7 @@ func (s *Service) ProcessLog(ctx context.Context, depositLog gethTypes.Log) erro
 // the ETH1.0 chain by trying to ascertain which participant deposited
 // in the contract.
 func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Log) error {
-	pubkey, withdrawalCredentials, amount, signature, merkleTreeIndex, err :=
-		contracts.UnpackDepositLogData(depositLog.Data)
+	pubkey, withdrawalCredentials, amount, signature, merkleTreeIndex, err := contracts.UnpackDepositLogData(depositLog.Data)
 	if err != nil {
 		return errors.Wrap(err, "Could not unpack log")
 	}
@@ -393,10 +392,7 @@ func (s *Service) requestBatchedHeadersAndLogs(ctx context.Context) error {
 	}
 	if requestedBlock > s.latestEth1Data.LastRequestedBlock &&
 		requestedBlock-s.latestEth1Data.LastRequestedBlock > maxTolerableDifference {
-		log.Infof(
-			"Falling back to historical headers and logs sync. Current difference is %d",
-			requestedBlock-s.latestEth1Data.LastRequestedBlock,
-		)
+		log.Infof("Falling back to historical headers and logs sync. Current difference is %d", requestedBlock-s.latestEth1Data.LastRequestedBlock)
 		return s.processPastLogs(ctx)
 	}
 	for i := s.latestEth1Data.LastRequestedBlock + 1; i <= requestedBlock; i++ {

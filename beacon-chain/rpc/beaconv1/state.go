@@ -97,10 +97,7 @@ func (bs *Server) GetStateFork(ctx context.Context, req *ethpb.StateRequest) (*e
 
 // GetFinalityCheckpoints returns finality checkpoints for state with given 'stateId'. In case finality is
 // not yet achieved, checkpoint should return epoch 0 and ZERO_HASH as root.
-func (bs *Server) GetFinalityCheckpoints(
-	ctx context.Context,
-	req *ethpb.StateRequest,
-) (*ethpb.StateFinalityCheckpointResponse, error) {
+func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRequest) (*ethpb.StateFinalityCheckpointResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconv1.GetFinalityCheckpoints")
 	defer span.End()
 

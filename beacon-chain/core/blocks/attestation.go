@@ -226,11 +226,7 @@ func ProcessAttestationNoVerifySignature(
 
 // VerifyAttestationSignature converts and attestation into an indexed attestation and verifies
 // the signature in that attestation.
-func VerifyAttestationSignature(
-	ctx context.Context,
-	beaconState iface.ReadOnlyBeaconState,
-	att *ethpb.Attestation,
-) error {
+func VerifyAttestationSignature(ctx context.Context, beaconState iface.ReadOnlyBeaconState, att *ethpb.Attestation) error {
 	if err := helpers.ValidateNilAttestation(att); err != nil {
 		return err
 	}
@@ -261,23 +257,14 @@ func VerifyAttestationSignature(
 //    domain = get_domain(state, DOMAIN_BEACON_ATTESTER, indexed_attestation.data.target.epoch)
 //    signing_root = compute_signing_root(indexed_attestation.data, domain)
 //    return bls.FastAggregateVerify(pubkeys, signing_root, indexed_attestation.signature)
-func VerifyIndexedAttestation(
-	ctx context.Context,
-	beaconState iface.ReadOnlyBeaconState,
-	indexedAtt *ethpb.IndexedAttestation,
-) error {
+func VerifyIndexedAttestation(ctx context.Context, beaconState iface.ReadOnlyBeaconState, indexedAtt *ethpb.IndexedAttestation) error {
 	ctx, span := trace.StartSpan(ctx, "core.VerifyIndexedAttestation")
 	defer span.End()
 
 	if err := attestationutil.IsValidAttestationIndices(ctx, indexedAtt); err != nil {
 		return err
 	}
-	domain, err := helpers.Domain(
-		beaconState.Fork(),
-		indexedAtt.Data.Target.Epoch,
-		params.BeaconConfig().DomainBeaconAttester,
-		beaconState.GenesisValidatorRoot(),
-	)
+	domain, err := helpers.Domain(beaconState.Fork(), indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		return err
 	}

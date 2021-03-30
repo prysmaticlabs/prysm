@@ -14,11 +14,7 @@ import (
 
 // Clients who receive a proposer slashing on this topic MUST validate the conditions within VerifyProposerSlashing before
 // forwarding it across the network.
-func (s *Service) validateProposerSlashing(
-	ctx context.Context,
-	pid peer.ID,
-	msg *pubsub.Message,
-) pubsub.ValidationResult {
+func (s *Service) validateProposerSlashing(ctx context.Context, pid peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
 	// Validation runs on publish (not just subscriptions), so we should approve any message from
 	// ourselves.
 	if pid == s.cfg.P2P.PeerID() {

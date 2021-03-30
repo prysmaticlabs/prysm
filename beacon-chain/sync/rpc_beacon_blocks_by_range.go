@@ -207,14 +207,8 @@ func (s *Service) validateRangeRequest(r *pb.BeaconBlocksByRangeRequest) error {
 
 // filters all the provided blocks to ensure they are canonical
 // and are strictly linear.
-func (s *Service) filterBlocks(
-	ctx context.Context,
-	blks []*ethpb.SignedBeaconBlock,
-	roots [][32]byte,
-	prevRoot *[32]byte,
-	step uint64,
-	startSlot types.Slot,
-) ([]*ethpb.SignedBeaconBlock, error) {
+func (s *Service) filterBlocks(ctx context.Context, blks []*ethpb.SignedBeaconBlock, roots [][32]byte, prevRoot *[32]byte,
+	step uint64, startSlot types.Slot) ([]*ethpb.SignedBeaconBlock, error) {
 	if len(blks) != len(roots) {
 		return nil, errors.New("input blks and roots are diff lengths")
 	}

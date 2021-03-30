@@ -131,11 +131,7 @@ func VerifySlotTime(genesisTime uint64, slot types.Slot, timeTolerance time.Dura
 	diff := slotTime.Sub(currentTime)
 
 	if diff > timeTolerance {
-		return fmt.Errorf(
-			"could not process slot from the future, slot time %s > current time %s",
-			slotTime,
-			currentTime,
-		)
+		return fmt.Errorf("could not process slot from the future, slot time %s > current time %s", slotTime, currentTime)
 	}
 	return nil
 }
@@ -177,11 +173,7 @@ func ValidateSlotClock(slot types.Slot, genesisTimeSec uint64) error {
 	// Defensive check to ensure that we only process slots up to a hard limit
 	// from our local clock.
 	if slot > maxPossibleSlot {
-		return fmt.Errorf(
-			"slot %d > %d which exceeds max allowed value relative to the local clock",
-			slot,
-			maxPossibleSlot,
-		)
+		return fmt.Errorf("slot %d > %d which exceeds max allowed value relative to the local clock", slot, maxPossibleSlot)
 	}
 	return nil
 }

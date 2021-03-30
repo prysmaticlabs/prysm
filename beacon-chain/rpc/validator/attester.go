@@ -25,10 +25,7 @@ import (
 
 // GetAttestationData requests that the beacon node produce an attestation data object,
 // which the validator acting as an attester will then sign.
-func (vs *Server) GetAttestationData(
-	ctx context.Context,
-	req *ethpb.AttestationDataRequest,
-) (*ethpb.AttestationData, error) {
+func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.AttestationDataRequest) (*ethpb.AttestationData, error) {
 	ctx, span := trace.StartSpan(ctx, "AttesterServer.RequestAttestation")
 	defer span.End()
 	span.AddAttributes(
@@ -198,10 +195,7 @@ func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation
 }
 
 // SubscribeCommitteeSubnets subscribes to the committee ID subnet given subscribe request.
-func (vs *Server) SubscribeCommitteeSubnets(
-	ctx context.Context,
-	req *ethpb.CommitteeSubnetsSubscribeRequest,
-) (*ptypes.Empty, error) {
+func (vs *Server) SubscribeCommitteeSubnets(ctx context.Context, req *ethpb.CommitteeSubnetsSubscribeRequest) (*ptypes.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "AttesterServer.SubscribeCommitteeSubnets")
 	defer span.End()
 
@@ -238,11 +232,7 @@ func (vs *Server) SubscribeCommitteeSubnets(
 			}
 			currEpoch = helpers.SlotToEpoch(req.Slots[i])
 		}
-		subnet := helpers.ComputeSubnetFromCommitteeAndSlot(
-			currValsLen,
-			types.CommitteeIndex(req.CommitteeIds[i]),
-			req.Slots[i],
-		)
+		subnet := helpers.ComputeSubnetFromCommitteeAndSlot(currValsLen, types.CommitteeIndex(req.CommitteeIds[i]), req.Slots[i])
 		cache.SubnetIDs.AddAttesterSubnetID(req.Slots[i], subnet)
 		if req.IsAggregator[i] {
 			cache.SubnetIDs.AddAggregatorSubnetID(req.Slots[i], subnet)

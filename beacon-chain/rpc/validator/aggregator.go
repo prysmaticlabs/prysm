@@ -17,10 +17,7 @@ import (
 // SubmitAggregateSelectionProof is called by a validator when its assigned to be an aggregator.
 // The aggregator submits the selection proof to obtain the aggregated attestation
 // object to sign over.
-func (vs *Server) SubmitAggregateSelectionProof(
-	ctx context.Context,
-	req *ethpb.AggregateSelectionRequest,
-) (*ethpb.AggregateSelectionResponse, error) {
+func (vs *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.AggregateSelectionRequest) (*ethpb.AggregateSelectionResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "AggregatorServer.SubmitAggregateSelectionProof")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
@@ -111,10 +108,7 @@ func (vs *Server) SubmitAggregateSelectionProof(
 
 // SubmitSignedAggregateSelectionProof is called by a validator to broadcast a signed
 // aggregated and proof object.
-func (vs *Server) SubmitSignedAggregateSelectionProof(
-	ctx context.Context,
-	req *ethpb.SignedAggregateSubmitRequest,
-) (*ethpb.SignedAggregateSubmitResponse, error) {
+func (vs *Server) SubmitSignedAggregateSelectionProof(ctx context.Context, req *ethpb.SignedAggregateSubmitRequest) (*ethpb.SignedAggregateSubmitResponse, error) {
 	if req.SignedAggregateAndProof == nil || req.SignedAggregateAndProof.Message == nil ||
 		req.SignedAggregateAndProof.Message.Aggregate == nil || req.SignedAggregateAndProof.Message.Aggregate.Data == nil {
 		return nil, status.Error(codes.InvalidArgument, "Signed aggregate request can't be nil")

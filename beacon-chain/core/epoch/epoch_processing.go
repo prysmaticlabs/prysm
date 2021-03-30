@@ -256,11 +256,7 @@ func ProcessFinalUpdates(state iface.BeaconState) (iface.BeaconState, error) {
 			return false, nil, fmt.Errorf("validator %d is nil in state", idx)
 		}
 		if idx >= len(bals) {
-			return false, nil, fmt.Errorf(
-				"validator index exceeds validator length in state %d >= %d",
-				idx,
-				len(state.Balances()),
-			)
+			return false, nil, fmt.Errorf("validator index exceeds validator length in state %d >= %d", idx, len(state.Balances()))
 		}
 		balance := bals[idx]
 
@@ -344,10 +340,7 @@ func ProcessFinalUpdates(state iface.BeaconState) (iface.BeaconState, error) {
 //    for a in attestations:
 //        output = output.union(get_attesting_indices(state, a.data, a.aggregation_bits))
 //    return set(filter(lambda index: not state.validators[index].slashed, output))
-func UnslashedAttestingIndices(
-	state iface.ReadOnlyBeaconState,
-	atts []*pb.PendingAttestation,
-) ([]types.ValidatorIndex, error) {
+func UnslashedAttestingIndices(state iface.ReadOnlyBeaconState, atts []*pb.PendingAttestation) ([]types.ValidatorIndex, error) {
 	var setIndices []types.ValidatorIndex
 	seen := make(map[uint64]bool)
 

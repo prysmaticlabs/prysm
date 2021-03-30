@@ -14,11 +14,7 @@ import (
 
 // Clients who receive an attester slashing on this topic MUST validate the conditions within VerifyAttesterSlashing before
 // forwarding it across the network.
-func (s *Service) validateAttesterSlashing(
-	ctx context.Context,
-	pid peer.ID,
-	msg *pubsub.Message,
-) pubsub.ValidationResult {
+func (s *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
 	// Validation runs on publish (not just subscriptions), so we should approve any message from
 	// ourselves.
 	if pid == s.cfg.P2P.PeerID() {
@@ -47,10 +43,7 @@ func (s *Service) validateAttesterSlashing(
 	if slashing == nil || slashing.Attestation_1 == nil || slashing.Attestation_2 == nil {
 		return pubsub.ValidationReject
 	}
-	if s.hasSeenAttesterSlashingIndices(
-		slashing.Attestation_1.AttestingIndices,
-		slashing.Attestation_2.AttestingIndices,
-	) {
+	if s.hasSeenAttesterSlashingIndices(slashing.Attestation_1.AttestingIndices, slashing.Attestation_2.AttestingIndices) {
 		return pubsub.ValidationIgnore
 	}
 

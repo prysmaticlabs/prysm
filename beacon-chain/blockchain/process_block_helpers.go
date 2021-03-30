@@ -135,10 +135,7 @@ func (s *Service) verifyBlkFinalizedSlot(b *ethpb.BeaconBlock) error {
 // checkpoints in the fork choice if in the early slots of the epoch.
 // Otherwise, delay incorporation of new justified checkpoint until next epoch boundary.
 // See https://ethresear.ch/t/prevention-of-bouncing-attack-on-ffg/6114 for more detailed analysis and discussion.
-func (s *Service) shouldUpdateCurrentJustified(
-	ctx context.Context,
-	newJustifiedCheckpt *ethpb.Checkpoint,
-) (bool, error) {
+func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustifiedCheckpt *ethpb.Checkpoint) (bool, error) {
 	if helpers.SlotsSinceEpochStarts(s.CurrentSlot()) < params.BeaconConfig().SafeSlotsToUpdateJustified {
 		return true, nil
 	}

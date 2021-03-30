@@ -270,10 +270,7 @@ func (ns *Server) GetHealth(ctx context.Context, _ *ptypes.Empty) (*ptypes.Empty
 	return &ptypes.Empty{}, status.Error(codes.Internal, "Node not initialized or having issues")
 }
 
-func (ns *Server) handleEmptyFilters(
-	req *ethpb.PeersRequest,
-	peerStatus *peers.Status,
-) (emptyState, emptyDirection bool) {
+func (ns *Server) handleEmptyFilters(req *ethpb.PeersRequest, peerStatus *peers.Status) (emptyState, emptyDirection bool) {
 	emptyState = true
 	for _, stateFilter := range req.State {
 		normalized := strings.ToUpper(stateFilter)

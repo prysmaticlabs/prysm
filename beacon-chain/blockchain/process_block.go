@@ -342,12 +342,8 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState iface.Beaco
 
 // This feeds in the block and block's attestations to fork choice store. It's allows fork choice store
 // to gain information on the most current chain.
-func (s *Service) insertBlockAndAttestationsToForkChoiceStore(
-	ctx context.Context,
-	blk *ethpb.BeaconBlock,
-	root [32]byte,
-	st iface.BeaconState,
-) error {
+func (s *Service) insertBlockAndAttestationsToForkChoiceStore(ctx context.Context, blk *ethpb.BeaconBlock, root [32]byte,
+	st iface.BeaconState) error {
 	fCheckpoint := st.FinalizedCheckpoint()
 	jCheckpoint := st.CurrentJustifiedCheckpoint()
 	if err := s.insertBlockToForkChoiceStore(ctx, blk, root, fCheckpoint, jCheckpoint); err != nil {
@@ -363,12 +359,7 @@ func (s *Service) insertBlockAndAttestationsToForkChoiceStore(
 		if err != nil {
 			return err
 		}
-		s.cfg.ForkChoiceStore.ProcessAttestation(
-			ctx,
-			indices,
-			bytesutil.ToBytes32(a.Data.BeaconBlockRoot),
-			a.Data.Target.Epoch,
-		)
+		s.cfg.ForkChoiceStore.ProcessAttestation(ctx, indices, bytesutil.ToBytes32(a.Data.BeaconBlockRoot), a.Data.Target.Epoch)
 	}
 	return nil
 }
@@ -390,13 +381,7 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk *ethpb.B
 
 // This saves post state info to DB or cache. This also saves post state info to fork choice store.
 // Post state info consists of processed block and state. Do not call this method unless the block and state are verified.
-func (s *Service) savePostStateInfo(
-	ctx context.Context,
-	r [32]byte,
-	b *ethpb.SignedBeaconBlock,
-	st iface.BeaconState,
-	initSync bool,
-) error {
+func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b *ethpb.SignedBeaconBlock, st iface.BeaconState, initSync bool) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.savePostStateInfo")
 	defer span.End()
 	if initSync {

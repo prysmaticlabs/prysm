@@ -39,13 +39,7 @@ func New(justifiedEpoch, finalizedEpoch types.Epoch, finalizedRoot [32]byte) *Fo
 
 // Head returns the head root from fork choice store.
 // It firsts computes validator's balance changes then recalculates block tree from leaves to root.
-func (f *ForkChoice) Head(
-	ctx context.Context,
-	justifiedEpoch types.Epoch,
-	justifiedRoot [32]byte,
-	justifiedStateBalances []uint64,
-	finalizedEpoch types.Epoch,
-) ([32]byte, error) {
+func (f *ForkChoice) Head(ctx context.Context, justifiedEpoch types.Epoch, justifiedRoot [32]byte, justifiedStateBalances []uint64, finalizedEpoch types.Epoch) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.Head")
 	defer span.End()
 	f.votesLock.Lock()
@@ -74,12 +68,7 @@ func (f *ForkChoice) Head(
 
 // ProcessAttestation processes attestation for vote accounting, it iterates around validator indices
 // and update their votes accordingly.
-func (f *ForkChoice) ProcessAttestation(
-	ctx context.Context,
-	validatorIndices []uint64,
-	blockRoot [32]byte,
-	targetEpoch types.Epoch,
-) {
+func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []uint64, blockRoot [32]byte, targetEpoch types.Epoch) {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.ProcessAttestation")
 	defer span.End()
 	f.votesLock.Lock()
@@ -88,10 +77,7 @@ func (f *ForkChoice) ProcessAttestation(
 	for _, index := range validatorIndices {
 		// Validator indices will grow the vote cache.
 		for index >= uint64(len(f.votes)) {
-			f.votes = append(
-				f.votes,
-				Vote{currentRoot: params.BeaconConfig().ZeroHash, nextRoot: params.BeaconConfig().ZeroHash},
-			)
+			f.votes = append(f.votes, Vote{currentRoot: params.BeaconConfig().ZeroHash, nextRoot: params.BeaconConfig().ZeroHash})
 		}
 
 		// Newly allocated vote if the root fields are untouched.
@@ -109,12 +95,7 @@ func (f *ForkChoice) ProcessAttestation(
 }
 
 // ProcessBlock processes a new block by inserting it to the fork choice store.
-func (f *ForkChoice) ProcessBlock(
-	ctx context.Context,
-	slot types.Slot,
-	blockRoot, parentRoot, graffiti [32]byte,
-	justifiedEpoch, finalizedEpoch types.Epoch,
-) error {
+func (f *ForkChoice) ProcessBlock(ctx context.Context, slot types.Slot, blockRoot, parentRoot, graffiti [32]byte, justifiedEpoch, finalizedEpoch types.Epoch) error {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.ProcessBlock")
 	defer span.End()
 
@@ -301,15 +282,8 @@ func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, err
 	bestNode := s.nodes[bestDescendantIndex]
 
 	if !s.viableForHead(bestNode) {
-		return [32]byte{}, fmt.Errorf(
-			"head at slot %d with weight %d is not eligible, finalizedEpoch %d != %d, justifiedEpoch %d != %d",
-			bestNode.slot,
-			bestNode.weight/10e9,
-			bestNode.finalizedEpoch,
-			s.finalizedEpoch,
-			bestNode.justifiedEpoch,
-			s.justifiedEpoch,
-		)
+		return [32]byte{}, fmt.Errorf("head at slot %d with weight %d is not eligible, finalizedEpoch %d != %d, justifiedEpoch %d != %d",
+			bestNode.slot, bestNode.weight/10e9, bestNode.finalizedEpoch, s.finalizedEpoch, bestNode.justifiedEpoch, s.justifiedEpoch)
 	}
 
 	// Update metrics.

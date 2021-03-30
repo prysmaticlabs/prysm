@@ -39,10 +39,7 @@ func mapAttestationsByTargetRoot(atts []*ethpb.Attestation) map[[32]byte][]*ethp
 		return attsMap
 	}
 	for _, att := range atts {
-		attsMap[bytesutil.ToBytes32(att.Data.Target.Root)] = append(
-			attsMap[bytesutil.ToBytes32(att.Data.Target.Root)],
-			att,
-		)
+		attsMap[bytesutil.ToBytes32(att.Data.Target.Root)] = append(attsMap[bytesutil.ToBytes32(att.Data.Target.Root)], att)
 	}
 	return attsMap
 }
@@ -250,10 +247,7 @@ func (bs *Server) StreamIndexedAttestations(
 				data, ok := event.Data.(*operation.UnAggregatedAttReceivedData)
 				if !ok {
 					// Got bad data over the stream.
-					log.Warningf(
-						"Indexed attestations stream got data of wrong type on stream expected *UnAggregatedAttReceivedData, received %T",
-						event.Data,
-					)
+					log.Warningf("Indexed attestations stream got data of wrong type on stream expected *UnAggregatedAttReceivedData, received %T", event.Data)
 					continue
 				}
 				if data.Attestation == nil {
@@ -340,11 +334,7 @@ func (bs *Server) StreamIndexedAttestations(
 func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 	attsByRoot := make(map[[32]byte][]*ethpb.Attestation)
 	twoThirdsASlot := 2 * slotutil.DivideSlotBy(3) /* 2/3 slot duration */
-	ticker := slotutil.NewSlotTickerWithOffset(
-		bs.GenesisTimeFetcher.GenesisTime(),
-		twoThirdsASlot,
-		params.BeaconConfig().SecondsPerSlot,
-	)
+	ticker := slotutil.NewSlotTickerWithOffset(bs.GenesisTimeFetcher.GenesisTime(), twoThirdsASlot, params.BeaconConfig().SecondsPerSlot)
 	for {
 		select {
 		case <-ticker.C():

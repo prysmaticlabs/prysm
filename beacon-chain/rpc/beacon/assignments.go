@@ -59,12 +59,7 @@ func (bs *Server) ListValidatorAssignments(
 	}
 	requestedState, err := bs.StateGen.StateBySlot(ctx, startSlot)
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Internal,
-			"Could not retrieve archived state for epoch %d: %v",
-			requestedEpoch,
-			err,
-		)
+		return nil, status.Errorf(codes.Internal, "Could not retrieve archived state for epoch %d: %v", requestedEpoch, err)
 	}
 
 	// Filter out assignments by public keys.
