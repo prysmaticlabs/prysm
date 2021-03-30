@@ -33,7 +33,7 @@ const (
 )
 
 // CreateWallet via an API request, allowing a user to save a new
-// imported wallet via RPC
+// imported wallet via RPC.
 func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) (*pb.CreateWalletResponse, error) {
 	walletDir := s.walletDir
 	exists, err := wallet.Exists(walletDir)
@@ -169,10 +169,10 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 	}
 
 	// Web UI is structured to only write to the default wallet directory
-	// accounts.Recoverwallet checks if wallet already exists
+	// accounts.Recoverwallet checks if wallet already exists.
 	walletDir := s.walletDir
 
-	// Web-ui should check the new and confirmed password are equal
+	// Web UI should check the new and confirmed password are equal.
 	walletPassword := req.WalletPassword
 	if err := promptutil.ValidatePasswordInput(walletPassword); err != nil {
 		return nil, status.Error(codes.InvalidArgument, "password did not pass validation")

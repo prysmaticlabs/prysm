@@ -126,7 +126,7 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 	require.ErrorContains(t, "password did not pass validation", err)
 
 	req.WalletPassword = strongPass
-	//create(drived should fail) then test recover
+	// Create(derived) should fail then test recover.
 	reqCreate := &pb.CreateWalletRequest{
 		Keymanager:     pb.KeymanagerKind_DERIVED,
 		WalletPassword: strongPass,
@@ -136,7 +136,7 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 	_, err = s.CreateWallet(ctx, reqCreate)
 	require.ErrorContains(t, "create wallet not supported through web", err, "Create wallet for DERIVED or REMOTE types not supported through web, either import keystore or recover")
 
-	//remove the defaultwallet then recover
+	// Finally remove the defaultwallet then recover.
 	require.NoError(t, os.RemoveAll(defaultWalletPath))
 	_, err = s.RecoverWallet(ctx, req)
 	require.NoError(t, err)
