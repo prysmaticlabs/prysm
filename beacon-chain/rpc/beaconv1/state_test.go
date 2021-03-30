@@ -281,7 +281,7 @@ func TestGetStateFork(t *testing.T) {
 
 	t.Run("Head", func(t *testing.T) {
 		s := Server{
-			StateFetcher: statefetcher.StateFetcher{
+			StateFetcher: statefetcher.StateProvider{
 				ChainInfoFetcher: &chainMock.ChainService{State: state},
 			},
 		}
@@ -316,7 +316,7 @@ func TestGetStateFork(t *testing.T) {
 		require.NoError(t, db.SaveState(ctx, st, r))
 
 		s := Server{
-			StateFetcher: statefetcher.StateFetcher{
+			StateFetcher: statefetcher.StateProvider{
 				BeaconDB: db,
 			},
 		}
@@ -335,7 +335,7 @@ func TestGetStateFork(t *testing.T) {
 		stateGen.StatesByRoot[stateRoot] = state
 
 		s := Server{
-			StateFetcher: statefetcher.StateFetcher{
+			StateFetcher: statefetcher.StateProvider{
 				ChainInfoFetcher: &chainMock.ChainService{
 					FinalizedCheckPoint: &eth.Checkpoint{
 						Root: stateRoot[:],
@@ -359,7 +359,7 @@ func TestGetStateFork(t *testing.T) {
 		stateGen.StatesByRoot[stateRoot] = state
 
 		s := Server{
-			StateFetcher: statefetcher.StateFetcher{
+			StateFetcher: statefetcher.StateProvider{
 				ChainInfoFetcher: &chainMock.ChainService{
 					CurrentJustifiedCheckPoint: &eth.Checkpoint{
 						Root: stateRoot[:],
@@ -385,7 +385,7 @@ func TestGetStateFork(t *testing.T) {
 		stateGen.StatesByRoot[bytesutil.ToBytes32(stateId)] = state
 
 		s := Server{
-			StateFetcher: statefetcher.StateFetcher{
+			StateFetcher: statefetcher.StateProvider{
 				ChainInfoFetcher: &chainMock.ChainService{State: state},
 				StateGenService:  stateGen,
 			},
@@ -402,7 +402,7 @@ func TestGetStateFork(t *testing.T) {
 
 	t.Run("Hex root not found", func(t *testing.T) {
 		s := Server{
-			StateFetcher: statefetcher.StateFetcher{
+			StateFetcher: statefetcher.StateProvider{
 				ChainInfoFetcher: &chainMock.ChainService{State: state},
 			},
 		}
@@ -419,7 +419,7 @@ func TestGetStateFork(t *testing.T) {
 		stateGen.StatesBySlot[headSlot] = state
 
 		s := Server{
-			StateFetcher: statefetcher.StateFetcher{
+			StateFetcher: statefetcher.StateProvider{
 				GenesisTimeFetcher: &chainMock.ChainService{Slot: &headSlot},
 				StateGenService:    stateGen,
 			},
@@ -436,7 +436,7 @@ func TestGetStateFork(t *testing.T) {
 
 	t.Run("Slot too big", func(t *testing.T) {
 		s := Server{
-			StateFetcher: statefetcher.StateFetcher{
+			StateFetcher: statefetcher.StateProvider{
 				GenesisTimeFetcher: &chainMock.ChainService{
 					Genesis: time.Now(),
 				},
@@ -487,7 +487,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 
 	t.Run("Head", func(t *testing.T) {
 		s := Server{
-			StateFetcher: statefetcher.StateFetcher{
+			StateFetcher: statefetcher.StateProvider{
 				ChainInfoFetcher: &chainMock.ChainService{State: state},
 			},
 		}
@@ -532,7 +532,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 		require.NoError(t, db.SaveState(ctx, st, r))
 
 		s := Server{
-			StateFetcher: statefetcher.StateFetcher{
+			StateFetcher: statefetcher.StateProvider{
 				BeaconDB: db,
 			},
 		}
@@ -554,7 +554,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 		stateGen.StatesByRoot[stateRoot] = state
 
 		s := Server{
-			StateFetcher: statefetcher.StateFetcher{
+			StateFetcher: statefetcher.StateProvider{
 				ChainInfoFetcher: &chainMock.ChainService{
 					FinalizedCheckPoint: &eth.Checkpoint{
 						Root: stateRoot[:],
@@ -581,7 +581,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 		stateGen.StatesByRoot[stateRoot] = state
 
 		s := Server{
-			StateFetcher: statefetcher.StateFetcher{
+			StateFetcher: statefetcher.StateProvider{
 				ChainInfoFetcher: &chainMock.ChainService{
 					CurrentJustifiedCheckPoint: &eth.Checkpoint{
 						Root: stateRoot[:],
@@ -610,7 +610,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 		stateGen.StatesByRoot[bytesutil.ToBytes32(stateId)] = state
 
 		s := Server{
-			StateFetcher: statefetcher.StateFetcher{
+			StateFetcher: statefetcher.StateProvider{
 				ChainInfoFetcher: &chainMock.ChainService{State: state},
 				StateGenService:  stateGen,
 			},
@@ -630,7 +630,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 
 	t.Run("Hex root not found", func(t *testing.T) {
 		s := Server{
-			StateFetcher: statefetcher.StateFetcher{
+			StateFetcher: statefetcher.StateProvider{
 				ChainInfoFetcher: &chainMock.ChainService{State: state},
 			},
 		}
@@ -647,7 +647,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 		stateGen.StatesBySlot[headSlot] = state
 
 		s := Server{
-			StateFetcher: statefetcher.StateFetcher{
+			StateFetcher: statefetcher.StateProvider{
 				GenesisTimeFetcher: &chainMock.ChainService{Slot: &headSlot},
 				StateGenService:    stateGen,
 			},
@@ -667,7 +667,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 
 	t.Run("Slot too big", func(t *testing.T) {
 		s := Server{
-			StateFetcher: statefetcher.StateFetcher{
+			StateFetcher: statefetcher.StateProvider{
 				GenesisTimeFetcher: &chainMock.ChainService{
 					Genesis: time.Now(),
 				},
@@ -690,7 +690,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 		require.NoError(t, err)
 
 		s := Server{
-			StateFetcher: statefetcher.StateFetcher{
+			StateFetcher: statefetcher.StateProvider{
 				ChainInfoFetcher: &chainMock.ChainService{State: st},
 			},
 		}

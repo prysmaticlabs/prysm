@@ -35,11 +35,11 @@ func TestGetStateRoot(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("Head", func(t *testing.T) {
-		f := StateFetcher{
+		p := StateProvider{
 			ChainInfoFetcher: &chainMock.ChainService{State: state},
 		}
 
-		s, err := f.State(ctx, []byte("head"))
+		s, err := p.State(ctx, []byte("head"))
 		require.NoError(t, err)
 		sRoot, err := s.HashTreeRoot(ctx)
 		require.NoError(t, err)
@@ -71,11 +71,11 @@ func TestGetStateRoot(t *testing.T) {
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, r))
 		require.NoError(t, db.SaveState(ctx, state, r))
 
-		f := StateFetcher{
+		p := StateProvider{
 			BeaconDB: db,
 		}
 
-		s, err := f.State(ctx, []byte("genesis"))
+		s, err := p.State(ctx, []byte("genesis"))
 		require.NoError(t, err)
 		sRoot, err := s.HashTreeRoot(ctx)
 		require.NoError(t, err)
@@ -86,7 +86,7 @@ func TestGetStateRoot(t *testing.T) {
 		stateGen := stategen.NewMockService()
 		stateGen.StatesByRoot[stateRoot] = state
 
-		f := StateFetcher{
+		p := StateProvider{
 			ChainInfoFetcher: &chainMock.ChainService{
 				FinalizedCheckPoint: &eth.Checkpoint{
 					Root: stateRoot[:],
@@ -95,7 +95,7 @@ func TestGetStateRoot(t *testing.T) {
 			StateGenService: stateGen,
 		}
 
-		s, err := f.State(ctx, []byte("finalized"))
+		s, err := p.State(ctx, []byte("finalized"))
 		require.NoError(t, err)
 		sRoot, err := s.HashTreeRoot(ctx)
 		require.NoError(t, err)
@@ -106,7 +106,7 @@ func TestGetStateRoot(t *testing.T) {
 		stateGen := stategen.NewMockService()
 		stateGen.StatesByRoot[stateRoot] = state
 
-		f := StateFetcher{
+		p := StateProvider{
 			ChainInfoFetcher: &chainMock.ChainService{
 				CurrentJustifiedCheckPoint: &eth.Checkpoint{
 					Root: stateRoot[:],
@@ -115,7 +115,7 @@ func TestGetStateRoot(t *testing.T) {
 			StateGenService: stateGen,
 		}
 
-		s, err := f.State(ctx, []byte("justified"))
+		s, err := p.State(ctx, []byte("justified"))
 		require.NoError(t, err)
 		sRoot, err := s.HashTreeRoot(ctx)
 		require.NoError(t, err)
@@ -128,12 +128,12 @@ func TestGetStateRoot(t *testing.T) {
 		stateGen := stategen.NewMockService()
 		stateGen.StatesByRoot[bytesutil.ToBytes32(stateId)] = state
 
-		f := StateFetcher{
+		p := StateProvider{
 			ChainInfoFetcher: &chainMock.ChainService{State: state},
 			StateGenService:  stateGen,
 		}
 
-		s, err := f.State(ctx, stateId)
+		s, err := p.State(ctx, stateId)
 		require.NoError(t, err)
 		sRoot, err := s.HashTreeRoot(ctx)
 		require.NoError(t, err)
@@ -141,12 +141,12 @@ func TestGetStateRoot(t *testing.T) {
 	})
 
 	t.Run("Hex root not found", func(t *testing.T) {
-		f := StateFetcher{
+		p := StateProvider{
 			ChainInfoFetcher: &chainMock.ChainService{State: state},
 		}
 		stateId, err := hexutil.Decode("0x" + strings.Repeat("f", 64))
 		require.NoError(t, err)
-		_, err = f.State(ctx, stateId)
+		_, err = p.State(ctx, stateId)
 		require.ErrorContains(t, "state not found in the last 8192 state roots in head state", err)
 	})
 
@@ -154,12 +154,12 @@ func TestGetStateRoot(t *testing.T) {
 		stateGen := stategen.NewMockService()
 		stateGen.StatesBySlot[headSlot] = state
 
-		f := StateFetcher{
+		p := StateProvider{
 			GenesisTimeFetcher: &chainMock.ChainService{Slot: &headSlot},
 			StateGenService:    stateGen,
 		}
 
-		s, err := f.State(ctx, []byte(strconv.FormatUint(uint64(headSlot), 10)))
+		s, err := p.State(ctx, []byte(strconv.FormatUint(uint64(headSlot), 10)))
 		require.NoError(t, err)
 		sRoot, err := s.HashTreeRoot(ctx)
 		require.NoError(t, err)
@@ -167,18 +167,18 @@ func TestGetStateRoot(t *testing.T) {
 	})
 
 	t.Run("Slot too big", func(t *testing.T) {
-		f := StateFetcher{
+		p := StateProvider{
 			GenesisTimeFetcher: &chainMock.ChainService{
 				Genesis: time.Now(),
 			},
 		}
-		_, err := f.State(ctx, []byte(strconv.FormatUint(1, 10)))
+		_, err := p.State(ctx, []byte(strconv.FormatUint(1, 10)))
 		assert.ErrorContains(t, "slot cannot be in the future", err)
 	})
 
 	t.Run("Invalid state", func(t *testing.T) {
-		f := StateFetcher{}
-		_, err := f.State(ctx, []byte("foo"))
+		p := StateProvider{}
+		_, err := p.State(ctx, []byte("foo"))
 		require.ErrorContains(t, "invalid state ID: foo", err)
 	})
 }

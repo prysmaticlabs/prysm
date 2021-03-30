@@ -264,7 +264,12 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState iface.ReadOnlyBea
 	if err := attestationutil.IsValidAttestationIndices(ctx, indexedAtt); err != nil {
 		return err
 	}
-	domain, err := helpers.Domain(beaconState.Fork(), indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
+	domain, err := helpers.Domain(
+		beaconState.Fork(),
+		indexedAtt.Data.Target.Epoch,
+		params.BeaconConfig().DomainBeaconAttester,
+		beaconState.GenesisValidatorRoot(),
+	)
 	if err != nil {
 		return err
 	}
