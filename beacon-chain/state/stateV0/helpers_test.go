@@ -8,13 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
-func Test_handleValidatorSlice_OutOfRange(t *testing.T) {
-	vals := make([]*ethpb.Validator, 1)
-	indices := []uint64{3}
-	_, err := handleValidatorSlice(vals, indices, false)
-	assert.ErrorContains(t, "index 3 greater than number of validators 1", err)
-}
-
 func Test_handlePendingAttestation_OutOfRange(t *testing.T) {
 	items := make([]*pb.PendingAttestation, 1)
 	indices := []uint64{3}

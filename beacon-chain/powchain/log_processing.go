@@ -53,7 +53,7 @@ func (s *Service) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
 func (s *Service) ProcessETH1Block(ctx context.Context, blkNum *big.Int) error {
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
-			s.depositContractAddress,
+			s.cfg.DepositContract,
 		},
 		FromBlock: blkNum,
 		ToBlock:   blkNum,
@@ -154,7 +154,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 	}
 
 	// We always store all historical deposits in the DB.
-	s.depositCache.InsertDeposit(ctx, deposit, depositLog.BlockNumber, index, s.depositTrie.Root())
+	s.cfg.DepositCache.InsertDeposit(ctx, deposit, depositLog.BlockNumber, index, s.depositTrie.Root())
 	validData := true
 	if !s.chainStartData.Chainstarted {
 		s.chainStartData.ChainstartDeposits = append(s.chainStartData.ChainstartDeposits, deposit)
@@ -168,7 +168,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 			validData = false
 		}
 	} else {
-		s.depositCache.InsertPendingDeposit(ctx, deposit, depositLog.BlockNumber, index, s.depositTrie.Root())
+		s.cfg.DepositCache.InsertPendingDeposit(ctx, deposit, depositLog.BlockNumber, index, s.depositTrie.Root())
 	}
 	if validData {
 		log.WithFields(logrus.Fields{
@@ -227,7 +227,7 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 	log.WithFields(logrus.Fields{
 		"ChainStartTime": chainStartTime,
 	}).Info("Minimum number of validators reached for beacon-chain to start")
-	s.stateNotifier.StateFeed().Send(&feed.Event{
+	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.ChainStarted,
 		Data: &statefeed.ChainStartedData{
 			StartTime: chainStartTime,
@@ -284,7 +284,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		return err
 	}
 
-	batchSize := s.eth1HeaderReqLimit
+	batchSize := s.cfg.Eth1HeaderReqLimit
 	additiveFactor := uint64(float64(batchSize) * additiveFactorMultiplier)
 
 	for currentBlockNum < latestFollowHeight {
@@ -297,7 +297,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		}
 		query := ethereum.FilterQuery{
 			Addresses: []common.Address{
-				s.depositContractAddress,
+				s.cfg.DepositContract,
 			},
 			FromBlock: big.NewInt(int64(start)),
 			ToBlock:   big.NewInt(int64(end)),
@@ -350,18 +350,18 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		}
 		currentBlockNum = end
 
-		if batchSize < s.eth1HeaderReqLimit {
+		if batchSize < s.cfg.Eth1HeaderReqLimit {
 			// update the batchSize with additive increase
 			batchSize += additiveFactor
-			if batchSize > s.eth1HeaderReqLimit {
-				batchSize = s.eth1HeaderReqLimit
+			if batchSize > s.cfg.Eth1HeaderReqLimit {
+				batchSize = s.cfg.Eth1HeaderReqLimit
 			}
 		}
 	}
 
 	s.latestEth1Data.LastRequestedBlock = currentBlockNum
 
-	c, err := s.beaconDB.FinalizedCheckpoint(ctx)
+	c, err := s.cfg.BeaconDB.FinalizedCheckpoint(ctx)
 	if err != nil {
 		return err
 	}
@@ -370,12 +370,12 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	if fRoot == params.BeaconConfig().ZeroHash {
 		return nil
 	}
-	fState, err := s.stateGen.StateByRoot(ctx, fRoot)
+	fState, err := s.cfg.StateGen.StateByRoot(ctx, fRoot)
 	if err != nil {
 		return err
 	}
 	if fState != nil && fState.Eth1DepositIndex() > 0 {
-		s.depositCache.PrunePendingDeposits(ctx, int64(fState.Eth1DepositIndex()))
+		s.cfg.DepositCache.PrunePendingDeposits(ctx, int64(fState.Eth1DepositIndex()))
 	}
 	return nil
 }
@@ -540,7 +540,7 @@ func (s *Service) savePowchainData(ctx context.Context) error {
 		ChainstartData:    s.chainStartData,
 		BeaconState:       pbState, // I promise not to mutate it!
 		Trie:              s.depositTrie.ToProto(),
-		DepositContainers: s.depositCache.AllDepositContainers(ctx),
+		DepositContainers: s.cfg.DepositCache.AllDepositContainers(ctx),
 	}
-	return s.beaconDB.SavePowchainData(ctx, eth1Data)
+	return s.cfg.BeaconDB.SavePowchainData(ctx, eth1Data)
 }

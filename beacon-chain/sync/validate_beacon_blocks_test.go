@@ -57,13 +57,15 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 			Epoch: 0,
 		}}
 	r := &Service{
-		db:             db,
-		p2p:            p,
-		initialSync:    &mockSync.Sync{IsSyncing: false},
-		chain:          chainService,
+		cfg: &Config{
+			DB:            db,
+			P2P:           p,
+			InitialSync:   &mockSync.Sync{IsSyncing: false},
+			Chain:         chainService,
+			BlockNotifier: chainService.BlockNotifier(),
+		},
 		seenBlockCache: c,
 		badBlockCache:  c2,
-		blockNotifier:  chainService.BlockNotifier(),
 	}
 
 	buf := new(bytes.Buffer)
@@ -96,13 +98,15 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 	require.NoError(t, err)
 	chainService := &mock.ChainService{Genesis: time.Now()}
 	r := &Service{
-		db:             db,
-		p2p:            p,
-		initialSync:    &mockSync.Sync{IsSyncing: false},
-		chain:          chainService,
+		cfg: &Config{
+			DB:            db,
+			P2P:           p,
+			InitialSync:   &mockSync.Sync{IsSyncing: false},
+			Chain:         chainService,
+			BlockNotifier: chainService.BlockNotifier(),
+		},
 		seenBlockCache: c,
 		badBlockCache:  c2,
-		blockNotifier:  chainService.BlockNotifier(),
 	}
 
 	buf := new(bytes.Buffer)
@@ -154,16 +158,18 @@ func TestValidateBeaconBlockPubSub_CanRecoverStateSummary(t *testing.T) {
 		},
 	}
 	r := &Service{
-		db:                  db,
-		p2p:                 p,
-		initialSync:         &mockSync.Sync{IsSyncing: false},
-		chain:               chainService,
-		blockNotifier:       chainService.BlockNotifier(),
+		cfg: &Config{
+			DB:            db,
+			P2P:           p,
+			InitialSync:   &mockSync.Sync{IsSyncing: false},
+			Chain:         chainService,
+			BlockNotifier: chainService.BlockNotifier(),
+			StateGen:      stateGen,
+		},
 		seenBlockCache:      c,
 		badBlockCache:       c2,
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
-		stateGen:            stateGen,
 	}
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, msg)
@@ -215,16 +221,18 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 		},
 	}
 	r := &Service{
-		db:                  db,
-		p2p:                 p,
-		initialSync:         &mockSync.Sync{IsSyncing: false},
-		chain:               chainService,
-		blockNotifier:       chainService.BlockNotifier(),
+		cfg: &Config{
+			DB:            db,
+			P2P:           p,
+			InitialSync:   &mockSync.Sync{IsSyncing: false},
+			Chain:         chainService,
+			BlockNotifier: chainService.BlockNotifier(),
+			StateGen:      stateGen,
+		},
 		seenBlockCache:      c,
 		badBlockCache:       c2,
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
-		stateGen:            stateGen,
 	}
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, msg)
@@ -278,16 +286,18 @@ func TestValidateBeaconBlockPubSub_WithLookahead(t *testing.T) {
 			Epoch: 0,
 		}}
 	r := &Service{
-		db:                  db,
-		p2p:                 p,
-		initialSync:         &mockSync.Sync{IsSyncing: false},
-		chain:               chainService,
-		blockNotifier:       chainService.BlockNotifier(),
+		cfg: &Config{
+			DB:            db,
+			P2P:           p,
+			InitialSync:   &mockSync.Sync{IsSyncing: false},
+			Chain:         chainService,
+			BlockNotifier: chainService.BlockNotifier(),
+			StateGen:      stateGen,
+		},
 		seenBlockCache:      c,
 		badBlockCache:       c2,
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
-		stateGen:            stateGen,
 	}
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, msg)
@@ -341,17 +351,18 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 			Epoch: 0,
 		}}
 	r := &Service{
-		db:                  db,
-		p2p:                 p,
-		initialSync:         &mockSync.Sync{IsSyncing: false},
-		chain:               chainService,
-		blockNotifier:       chainService.BlockNotifier(),
+		cfg: &Config{
+			DB:            db,
+			P2P:           p,
+			InitialSync:   &mockSync.Sync{IsSyncing: false},
+			Chain:         chainService,
+			BlockNotifier: chainService.BlockNotifier(),
+			StateGen:      stateGen,
+		},
 		seenBlockCache:      c,
 		badBlockCache:       c2,
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
-
-		stateGen: stateGen,
 	}
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, msg)
@@ -385,11 +396,13 @@ func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 			Epoch: 0,
 		}}
 	r := &Service{
-		db:            db,
-		p2p:           p,
-		initialSync:   &mockSync.Sync{IsSyncing: true},
-		chain:         chainService,
-		blockNotifier: chainService.BlockNotifier(),
+		cfg: &Config{
+			DB:            db,
+			P2P:           p,
+			InitialSync:   &mockSync.Sync{IsSyncing: true},
+			Chain:         chainService,
+			BlockNotifier: chainService.BlockNotifier(),
+		},
 	}
 
 	buf := new(bytes.Buffer)
@@ -425,12 +438,14 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 	require.NoError(t, err)
 	chainService := &mock.ChainService{Genesis: time.Now()}
 	r := &Service{
-		p2p:                 p,
-		db:                  db,
+		cfg: &Config{
+			P2P:           p,
+			DB:            db,
+			InitialSync:   &mockSync.Sync{IsSyncing: false},
+			Chain:         chainService,
+			BlockNotifier: chainService.BlockNotifier(),
+		},
 		chainStarted:        abool.New(),
-		initialSync:         &mockSync.Sync{IsSyncing: false},
-		chain:               chainService,
-		blockNotifier:       chainService.BlockNotifier(),
 		seenBlockCache:      c,
 		badBlockCache:       c2,
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
@@ -476,11 +491,13 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 		},
 	}
 	r := &Service{
-		db:             db,
-		p2p:            p,
-		initialSync:    &mockSync.Sync{IsSyncing: false},
-		chain:          chainService,
-		blockNotifier:  chainService.BlockNotifier(),
+		cfg: &Config{
+			DB:            db,
+			P2P:           p,
+			InitialSync:   &mockSync.Sync{IsSyncing: false},
+			Chain:         chainService,
+			BlockNotifier: chainService.BlockNotifier(),
+		},
 		seenBlockCache: c,
 		badBlockCache:  c2,
 	}
@@ -531,11 +548,13 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 		},
 	}
 	r := &Service{
-		db:                  db,
-		p2p:                 p,
-		initialSync:         &mockSync.Sync{IsSyncing: false},
-		chain:               chainService,
-		blockNotifier:       chainService.BlockNotifier(),
+		cfg: &Config{
+			DB:            db,
+			P2P:           p,
+			InitialSync:   &mockSync.Sync{IsSyncing: false},
+			Chain:         chainService,
+			BlockNotifier: chainService.BlockNotifier(),
+		},
 		seenBlockCache:      c,
 		badBlockCache:       c2,
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
@@ -576,14 +595,16 @@ func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
 	c2, err := lru.New(10)
 	require.NoError(t, err)
 	r := &Service{
-		db:             db,
-		p2p:            p,
-		chain:          chain,
-		blockNotifier:  chain.BlockNotifier(),
-		attPool:        attestations.NewPool(),
+		cfg: &Config{
+			DB:            db,
+			P2P:           p,
+			Chain:         chain,
+			BlockNotifier: chain.BlockNotifier(),
+			AttPool:       attestations.NewPool(),
+			InitialSync:   &mockSync.Sync{IsSyncing: false},
+		},
 		seenBlockCache: c,
 		badBlockCache:  c2,
-		initialSync:    &mockSync.Sync{IsSyncing: false},
 	}
 
 	b := testutil.NewBeaconBlock()
@@ -654,16 +675,18 @@ func TestValidateBeaconBlockPubSub_ParentNotFinalizedDescendant(t *testing.T) {
 		VerifyBlkDescendantErr: errors.New("not part of finalized chain"),
 	}
 	r := &Service{
-		db:                  db,
-		p2p:                 p,
-		initialSync:         &mockSync.Sync{IsSyncing: false},
-		chain:               chainService,
-		blockNotifier:       chainService.BlockNotifier(),
+		cfg: &Config{
+			DB:            db,
+			P2P:           p,
+			InitialSync:   &mockSync.Sync{IsSyncing: false},
+			Chain:         chainService,
+			BlockNotifier: chainService.BlockNotifier(),
+			StateGen:      stateGen,
+		},
 		seenBlockCache:      c,
 		badBlockCache:       c2,
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
-		stateGen:            stateGen,
 	}
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, msg)
@@ -717,16 +740,18 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 			Epoch: 0,
 		}}
 	r := &Service{
-		db:                  db,
-		p2p:                 p,
-		initialSync:         &mockSync.Sync{IsSyncing: false},
-		chain:               chainService,
-		blockNotifier:       chainService.BlockNotifier(),
+		cfg: &Config{
+			DB:            db,
+			P2P:           p,
+			InitialSync:   &mockSync.Sync{IsSyncing: false},
+			Chain:         chainService,
+			BlockNotifier: chainService.BlockNotifier(),
+			StateGen:      stateGen,
+		},
 		seenBlockCache:      c,
 		badBlockCache:       c2,
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
-		stateGen:            stateGen,
 	}
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, msg)
@@ -816,16 +841,18 @@ func TestValidateBeaconBlockPubSub_RejectEvilBlocksFromFuture(t *testing.T) {
 		},
 	}
 	r := &Service{
-		db:                  db,
-		p2p:                 p,
-		initialSync:         &mockSync.Sync{IsSyncing: false},
-		chain:               chainService,
-		blockNotifier:       chainService.BlockNotifier(),
+		cfg: &Config{
+			DB:            db,
+			P2P:           p,
+			InitialSync:   &mockSync.Sync{IsSyncing: false},
+			Chain:         chainService,
+			BlockNotifier: chainService.BlockNotifier(),
+			StateGen:      stateGen,
+		},
 		seenBlockCache:      c,
 		badBlockCache:       c2,
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
-		stateGen:            stateGen,
 	}
 
 	buf := new(bytes.Buffer)

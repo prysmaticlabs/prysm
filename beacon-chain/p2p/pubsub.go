@@ -76,7 +76,10 @@ func (s *Service) SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub
 		return nil, err
 	}
 	if featureconfig.Get().EnablePeerScorer {
-		scoringParams := topicScoreParams(topic)
+		scoringParams, err := s.topicScoreParams(topic)
+		if err != nil {
+			return nil, err
+		}
 		if scoringParams != nil {
 			if err := topicHandle.SetScoreParams(scoringParams); err != nil {
 				return nil, err
