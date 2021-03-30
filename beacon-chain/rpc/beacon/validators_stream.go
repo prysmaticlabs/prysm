@@ -298,7 +298,12 @@ func (is *infostream) generateValidatorsInfo(pubKeys [][]byte) ([]*ethpb.Validat
 }
 
 // generateValidatorInfo generates the validator info for a public key.
-func (is *infostream) generateValidatorInfo(pubKey []byte, validator iface.ReadOnlyValidator, headState iface.ReadOnlyBeaconState, epoch types.Epoch) (*ethpb.ValidatorInfo, error) {
+func (is *infostream) generateValidatorInfo(
+	pubKey []byte,
+	validator iface.ReadOnlyValidator,
+	headState iface.ReadOnlyBeaconState,
+	epoch types.Epoch,
+) (*ethpb.ValidatorInfo, error) {
 	info := &ethpb.ValidatorInfo{
 		PublicKey: pubKey,
 		Epoch:     epoch,
@@ -330,7 +335,7 @@ func (is *infostream) generateValidatorInfo(pubKey []byte, validator iface.ReadO
 
 // generatePendingValidatorInfo generates the validator info for a pending (or unknown) key.
 func (is *infostream) generatePendingValidatorInfo(info *ethpb.ValidatorInfo) (*ethpb.ValidatorInfo, error) {
-	key := fmt.Sprintf("%s", info.PublicKey)
+	key := string(info.PublicKey)
 	var deposit *eth1Deposit
 	is.eth1DepositsMutex.Lock()
 	if fetchedDeposit, exists := is.eth1Deposits.Get(key); exists {

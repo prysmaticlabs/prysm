@@ -16,7 +16,7 @@ func TestEndToEnd_Slashing_MinimalConfig(t *testing.T) {
 	params.UseE2EConfig()
 	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
 
-	minimalConfig := &types.E2EConfig{
+	testConfig := &types.E2EConfig{
 		BeaconFlags:    []string{},
 		ValidatorFlags: []string{},
 		EpochsToRun:    4,
@@ -33,5 +33,5 @@ func TestEndToEnd_Slashing_MinimalConfig(t *testing.T) {
 		},
 	}
 
-	runEndToEndTest(t, minimalConfig)
+	newTestRunner(t, testConfig).run()
 }
