@@ -157,8 +157,19 @@ func (s *Simulator) simulateBlocksAndAttestations(ctx context.Context) {
 		select {
 		case slot := <-ticker.C():
 			// We only run the simulator for a specified number of epochs.
-			if helpers.SlotToEpoch(slot) >= types.Epoch(s.srvConfig.Params.NumEpochs) {
+			totalEpochs := types.Epoch(s.srvConfig.Params.NumEpochs)
+			if helpers.SlotToEpoch(slot) >= totalEpochs {
 				return
+			}
+
+			// Since processing slashings requires at least one slot, we do nothing
+			// if we are a few slots from the end of the simulation.
+			endSlot, err := helpers.StartSlot(totalEpochs)
+			if err != nil {
+				log.WithError(err).Fatal("Could not get epoch start slot")
+			}
+			if slot+3 > endSlot {
+				continue
 			}
 
 			blockHeaders, propSlashings, err := s.generateBlockHeadersForSlot(ctx, slot)
