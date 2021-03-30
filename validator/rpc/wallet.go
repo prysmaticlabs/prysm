@@ -137,7 +137,7 @@ func (s *Server) WalletConfig(ctx context.Context, _ *empty.Empty) (*pb.WalletRe
 // Generate the seed from the mnemonic + language + 25th passphrase(optional).
 // Create N validator keystores from the seed specified by req.NumAccounts.
 // Set the wallet password to req.WalletPassword, then create the wallet from
-// the provided Mnemonic and return CreateWalletResponse,nil if nothing went wrong
+// the provided Mnemonic and return CreateWalletResponse.
 func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest) (*pb.CreateWalletResponse, error) {
 	numAccounts := int(req.NumAccounts)
 	if numAccounts == 0 {
