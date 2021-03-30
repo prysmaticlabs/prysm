@@ -230,21 +230,6 @@ func (s *Store) NodesIndices() map[[32]byte]uint64 {
 	return s.nodesIndices
 }
 
-// ViableHeads returns all possible chain heads.
-func (s *Store) ViableHeads() []*Node {
-	s.nodesLock.RLock()
-	defer s.nodesLock.RUnlock()
-
-	heads := make([]*Node, 0)
-	for _, node := range s.nodes {
-		if s.viableForHead(node) {
-			heads = append(heads, node)
-		}
-	}
-
-	return heads
-}
-
 // ChainHeads returns all possible chain heads (leaves of fork choice tree).
 // Heads roots and heads slots are returned.
 func (s *Store) ChainHeads() ([][32]byte, []types.Slot) {
