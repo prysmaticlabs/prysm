@@ -4,7 +4,8 @@ import (
 	"encoding/binary"
 	"testing"
 
-	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -19,10 +20,10 @@ func TestRandaoMix_OK(t *testing.T) {
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
 		randaoMixes[i] = intInBytes
 	}
-	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{RandaoMixes: randaoMixes})
+	state, err := stateV0.InitializeFromProto(&pb.BeaconState{RandaoMixes: randaoMixes})
 	require.NoError(t, err)
 	tests := []struct {
-		epoch     uint64
+		epoch     types.Epoch
 		randaoMix []byte
 	}{
 		{
@@ -39,7 +40,7 @@ func TestRandaoMix_OK(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		require.NoError(t, state.SetSlot((test.epoch+1)*params.BeaconConfig().SlotsPerEpoch))
+		require.NoError(t, state.SetSlot(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(test.epoch+1))))
 		mix, err := RandaoMix(state, test.epoch)
 		require.NoError(t, err)
 		assert.DeepEqual(t, test.randaoMix, mix, "Incorrect randao mix")
@@ -53,10 +54,10 @@ func TestRandaoMix_CopyOK(t *testing.T) {
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
 		randaoMixes[i] = intInBytes
 	}
-	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{RandaoMixes: randaoMixes})
+	state, err := stateV0.InitializeFromProto(&pb.BeaconState{RandaoMixes: randaoMixes})
 	require.NoError(t, err)
 	tests := []struct {
-		epoch     uint64
+		epoch     types.Epoch
 		randaoMix []byte
 	}{
 		{
@@ -73,10 +74,10 @@ func TestRandaoMix_CopyOK(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		require.NoError(t, state.SetSlot((test.epoch+1)*params.BeaconConfig().SlotsPerEpoch))
+		require.NoError(t, state.SetSlot(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(test.epoch+1))))
 		mix, err := RandaoMix(state, test.epoch)
 		require.NoError(t, err)
-		uniqueNumber := params.BeaconConfig().EpochsPerHistoricalVector + 1000
+		uniqueNumber := uint64(params.BeaconConfig().EpochsPerHistoricalVector.Add(1000))
 		binary.LittleEndian.PutUint64(mix, uniqueNumber)
 
 		for _, mx := range randaoMixes {
@@ -93,8 +94,8 @@ func TestGenerateSeed_OK(t *testing.T) {
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
 		randaoMixes[i] = intInBytes
 	}
-	slot := 10 * params.BeaconConfig().MinSeedLookahead * params.BeaconConfig().SlotsPerEpoch
-	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+	slot := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().MinSeedLookahead * 10))
+	state, err := stateV0.InitializeFromProto(&pb.BeaconState{
 		RandaoMixes: randaoMixes,
 		Slot:        slot,
 	})

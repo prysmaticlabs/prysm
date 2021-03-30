@@ -11,6 +11,8 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
+	types "github.com/prysmaticlabs/eth2-types"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
@@ -228,17 +230,17 @@ func TestPeerSubscribedToSubnet(t *testing.T) {
 	for i := 0; i < numPeers; i++ {
 		addPeer(t, p, peers.PeerDisconnected)
 	}
-	peers := p.SubscribedToSubnet(2)
-	assert.Equal(t, 1, len(peers), "Unexpected num of peers")
-	assert.Equal(t, expectedPeer, peers[0])
+	ps := p.SubscribedToSubnet(2)
+	assert.Equal(t, 1, len(ps), "Unexpected num of peers")
+	assert.Equal(t, expectedPeer, ps[0])
 
-	peers = p.SubscribedToSubnet(8)
-	assert.Equal(t, 1, len(peers), "Unexpected num of peers")
-	assert.Equal(t, expectedPeer, peers[0])
+	ps = p.SubscribedToSubnet(8)
+	assert.Equal(t, 1, len(ps), "Unexpected num of peers")
+	assert.Equal(t, expectedPeer, ps[0])
 
-	peers = p.SubscribedToSubnet(9)
-	assert.Equal(t, 1, len(peers), "Unexpected num of peers")
-	assert.Equal(t, expectedPeer, peers[0])
+	ps = p.SubscribedToSubnet(9)
+	assert.Equal(t, 1, len(ps), "Unexpected num of peers")
+	assert.Equal(t, expectedPeer, ps[0])
 }
 
 func TestPeerImplicitAdd(t *testing.T) {
@@ -285,7 +287,7 @@ func TestPeerChainState(t *testing.T) {
 	oldChainStartLastUpdated, err := p.ChainStateLastUpdated(id)
 	require.NoError(t, err)
 
-	finalizedEpoch := uint64(123)
+	finalizedEpoch := types.Epoch(123)
 	p.SetChainState(id, &pb.Status{FinalizedEpoch: finalizedEpoch})
 
 	resChainState, err := p.ChainState(id)
@@ -530,14 +532,14 @@ func TestPeerIPTracker(t *testing.T) {
 	})
 
 	badIP := "211.227.218.116"
-	badPeers := []peer.ID{}
+	var badPeers []peer.ID
 	for i := 0; i < peers.ColocationLimit+10; i++ {
 		port := strconv.Itoa(3000 + i)
 		addr, err := ma.NewMultiaddr("/ip4/" + badIP + "/tcp/" + port)
 		if err != nil {
 			t.Fatal(err)
 		}
-		badPeers = append(badPeers, createPeer(t, p, addr))
+		badPeers = append(badPeers, createPeer(t, p, addr, network.DirUnknown, peerdata.PeerConnectionState(ethpb.ConnectionState_DISCONNECTED)))
 	}
 	for _, pr := range badPeers {
 		assert.Equal(t, true, p.IsBad(pr), "peer with bad ip is not bad")
@@ -547,7 +549,7 @@ func TestPeerIPTracker(t *testing.T) {
 	// from the peer store.
 	for i := 0; i < p.MaxPeerLimit()+100; i++ {
 		// Peer added to peer handler.
-		pid := addPeer(t, p, peers.PeerConnected)
+		pid := addPeer(t, p, peers.PeerDisconnected)
 		p.Scorers().BadResponsesScorer().Increment(pid)
 	}
 	p.Prune()
@@ -567,7 +569,7 @@ func TestTrimmedOrderedPeers(t *testing.T) {
 		},
 	})
 
-	expectedTarget := uint64(2)
+	expectedTarget := types.Epoch(2)
 	maxPeers := 3
 	mockroot2 := [32]byte{}
 	mockroot3 := [32]byte{}
@@ -623,17 +625,111 @@ func TestTrimmedOrderedPeers(t *testing.T) {
 	assert.Equal(t, pid1, pids[2], "Incorrect third peer")
 }
 
+func TestConcurrentPeerLimitHolds(t *testing.T) {
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
+				Threshold: 1,
+			},
+		},
+	})
+	assert.Equal(t, true, uint64(p.MaxPeerLimit()) > p.ConnectedPeerLimit(), "max peer limit doesnt exceed connected peer limit")
+}
+
+func TestAtInboundPeerLimit(t *testing.T) {
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
+				Threshold: 1,
+			},
+		},
+	})
+	for i := 0; i < 15; i++ {
+		// Peer added to peer handler.
+		createPeer(t, p, nil, network.DirOutbound, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
+	}
+	assert.Equal(t, false, p.IsAboveInboundLimit(), "Inbound limit exceeded")
+	for i := 0; i < 31; i++ {
+		// Peer added to peer handler.
+		createPeer(t, p, nil, network.DirInbound, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
+	}
+	assert.Equal(t, true, p.IsAboveInboundLimit(), "Inbound limit not exceeded")
+}
+
+func TestPrunePeers(t *testing.T) {
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
+				Threshold: 1,
+			},
+		},
+	})
+	for i := 0; i < 15; i++ {
+		// Peer added to peer handler.
+		createPeer(t, p, nil, network.DirOutbound, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
+	}
+	// Assert there are no prunable peers.
+	peersToPrune := p.PeersToPrune()
+	assert.Equal(t, 0, len(peersToPrune))
+
+	for i := 0; i < 18; i++ {
+		// Peer added to peer handler.
+		createPeer(t, p, nil, network.DirInbound, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
+	}
+
+	// Assert there are the correct prunable peers.
+	peersToPrune = p.PeersToPrune()
+	assert.Equal(t, 3, len(peersToPrune))
+
+	// Add in more peers.
+	for i := 0; i < 13; i++ {
+		// Peer added to peer handler.
+		createPeer(t, p, nil, network.DirInbound, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
+	}
+
+	// Set up bad scores for inbound peers.
+	inboundPeers := p.InboundConnected()
+	for i, pid := range inboundPeers {
+		modulo := i % 5
+		// Increment bad scores for peers.
+		for j := 0; j < modulo; j++ {
+			p.Scorers().BadResponsesScorer().Increment(pid)
+		}
+	}
+	// Assert all peers more than max are prunable.
+	peersToPrune = p.PeersToPrune()
+	assert.Equal(t, 16, len(peersToPrune))
+	for _, pid := range peersToPrune {
+		dir, err := p.Direction(pid)
+		require.NoError(t, err)
+		assert.Equal(t, network.DirInbound, dir)
+	}
+
+	// Ensure it is in the descending order.
+	currCount, err := p.Scorers().BadResponsesScorer().Count(peersToPrune[0])
+	require.NoError(t, err)
+	for _, pid := range peersToPrune {
+		count, err := p.Scorers().BadResponsesScorer().Count(pid)
+		require.NoError(t, err)
+		assert.Equal(t, true, currCount >= count)
+		currCount = count
+	}
+}
+
 func TestStatus_BestPeer(t *testing.T) {
 	type peerConfig struct {
-		headSlot       uint64
-		finalizedEpoch uint64
+		headSlot       types.Slot
+		finalizedEpoch types.Epoch
 	}
 	tests := []struct {
 		name              string
 		peers             []*peerConfig
 		limitPeers        int
-		ourFinalizedEpoch uint64
-		targetEpoch       uint64
+		ourFinalizedEpoch types.Epoch
+		targetEpoch       types.Epoch
 		// targetEpochSupport denotes how many peers support returned epoch.
 		targetEpochSupport int
 	}{
@@ -811,7 +907,7 @@ func TestStatus_BestNonFinalized(t *testing.T) {
 		},
 	})
 
-	peerSlots := []uint64{32, 32, 32, 32, 235, 233, 258, 268, 270}
+	peerSlots := []types.Slot{32, 32, 32, 32, 235, 233, 258, 268, 270}
 	for i, headSlot := range peerSlots {
 		p.Add(new(enr.Record), peer.ID(rune(i)), nil, network.DirOutbound)
 		p.SetConnectionState(peer.ID(rune(i)), peers.PeerConnected)
@@ -820,7 +916,7 @@ func TestStatus_BestNonFinalized(t *testing.T) {
 		})
 	}
 
-	expectedEpoch := uint64(8)
+	expectedEpoch := types.Epoch(8)
 	retEpoch, pids := p.BestNonFinalized(3, 5)
 	assert.Equal(t, expectedEpoch, retEpoch, "Incorrect Finalized epoch retrieved")
 	assert.Equal(t, 3, len(pids), "Unexpected number of peers")
@@ -852,7 +948,45 @@ func TestStatus_CurrentEpoch(t *testing.T) {
 		HeadSlot: params.BeaconConfig().SlotsPerEpoch * 4,
 	})
 
-	assert.Equal(t, uint64(5), p.HighestEpoch(), "Expected current epoch to be 5")
+	assert.Equal(t, types.Epoch(5), p.HighestEpoch(), "Expected current epoch to be 5")
+}
+
+func TestInbound(t *testing.T) {
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
+				Threshold: 0,
+			},
+		},
+	})
+	addr, err := ma.NewMultiaddr("/ip4/127.0.0.1/tcp/33333")
+	require.NoError(t, err)
+	inbound := createPeer(t, p, addr, network.DirInbound, peers.PeerConnected)
+	createPeer(t, p, addr, network.DirOutbound, peers.PeerConnected)
+
+	result := p.Inbound()
+	require.Equal(t, 1, len(result))
+	assert.Equal(t, inbound.Pretty(), result[0].Pretty())
+}
+
+func TestOutbound(t *testing.T) {
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
+				Threshold: 0,
+			},
+		},
+	})
+	addr, err := ma.NewMultiaddr("/ip4/127.0.0.1/tcp/33333")
+	require.NoError(t, err)
+	createPeer(t, p, addr, network.DirInbound, peers.PeerConnected)
+	outbound := createPeer(t, p, addr, network.DirOutbound, peers.PeerConnected)
+
+	result := p.Outbound()
+	require.Equal(t, 1, len(result))
+	assert.Equal(t, outbound.Pretty(), result[0].Pretty())
 }
 
 // addPeer is a helper to add a peer with a given connection state)
@@ -874,7 +1008,8 @@ func addPeer(t *testing.T, p *peers.Status, state peerdata.PeerConnectionState) 
 	return id
 }
 
-func createPeer(t *testing.T, p *peers.Status, addr ma.Multiaddr) peer.ID {
+func createPeer(t *testing.T, p *peers.Status, addr ma.Multiaddr,
+	dir network.Direction, state peerdata.PeerConnectionState) peer.ID {
 	mhBytes := []byte{0x11, 0x04}
 	idBytes := make([]byte, 4)
 	_, err := rand.Read(idBytes)
@@ -882,6 +1017,7 @@ func createPeer(t *testing.T, p *peers.Status, addr ma.Multiaddr) peer.ID {
 	mhBytes = append(mhBytes, idBytes...)
 	id, err := peer.IDFromBytes(mhBytes)
 	require.NoError(t, err)
-	p.Add(new(enr.Record), id, addr, network.DirUnknown)
+	p.Add(new(enr.Record), id, addr, dir)
+	p.SetConnectionState(id, state)
 	return id
 }

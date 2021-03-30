@@ -10,10 +10,10 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/tyler-smith/go-bip39"
@@ -58,7 +58,7 @@ func RecoverWalletCli(cliCtx *cli.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "could not validate choice")
 		}
-		if strings.ToLower(resp) == "y" {
+		if strings.EqualFold(resp, "y") {
 			mnemonicPassphrase, err := promptutil.InputPassword(
 				cliCtx,
 				flags.Mnemonic25thWordFileFlag,
@@ -129,7 +129,8 @@ func RecoverWallet(ctx context.Context, cfg *RecoverWalletConfig) (*wallet.Walle
 		return nil, errors.Wrap(err, "could not save wallet to disk")
 	}
 	km, err := derived.NewKeymanager(ctx, &derived.SetupConfig{
-		Wallet: w,
+		Wallet:           w,
+		ListenForChanges: false,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "could not make keymanager for given phrase")
@@ -138,13 +139,13 @@ func RecoverWallet(ctx context.Context, cfg *RecoverWalletConfig) (*wallet.Walle
 		return nil, err
 	}
 	log.WithField("wallet-path", w.AccountsDir()).Infof(
-		"Successfully recovered HD wallet with %d accounts. Please use accounts list to view details for your accounts",
+		"Successfully recovered HD wallet with %d accounts. Please use `accounts list` to view details for your accounts",
 		cfg.NumAccounts,
 	)
 	return w, nil
 }
 
-func inputMnemonic(cliCtx *cli.Context) (string, error) {
+func inputMnemonic(cliCtx *cli.Context) (mnemonicPhrase string, err error) {
 	if cliCtx.IsSet(flags.MnemonicFileFlag.Name) {
 		mnemonicFilePath := cliCtx.String(flags.MnemonicFileFlag.Name)
 		data, err := ioutil.ReadFile(mnemonicFilePath)
@@ -186,7 +187,7 @@ func inputMnemonic(cliCtx *cli.Context) (string, error) {
 		return "", fmt.Errorf("could not get mnemonic language: %w", err)
 	}
 	bip39.SetWordList(allowedLanguages[selectedLanguage])
-	mnemonicPhrase, err := promptutil.ValidatePrompt(
+	mnemonicPhrase, err = promptutil.ValidatePrompt(
 		os.Stdin,
 		"Enter the seed phrase for the wallet you would like to recover",
 		validateMnemonic)

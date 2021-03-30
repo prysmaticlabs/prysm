@@ -150,7 +150,7 @@ var (
 	P2PMaxPeers = &cli.IntFlag{
 		Name:  "p2p-max-peers",
 		Usage: "The max number of p2p peers to maintain.",
-		Value: 30,
+		Value: 45,
 	}
 	// P2PAllowList defines a CIDR subnet to exclusively allow connections.
 	P2PAllowList = &cli.StringFlag{
@@ -218,6 +218,24 @@ var (
 	AcceptTosFlag = &cli.BoolFlag{
 		Name:  "accept-terms-of-use",
 		Usage: "Accept Terms and Conditions (for non-interactive environments)",
+	}
+	// RestoreSourceFileFlag specifies the filepath to the backed-up database file
+	// which will be used to restore the database.
+	RestoreSourceFileFlag = &cli.StringFlag{
+		Name:  "restore-source-file",
+		Usage: "Filepath to the backed-up database file which will be used to restore the database",
+	}
+	// RestoreTargetDirFlag specifies the target directory of the restored database.
+	RestoreTargetDirFlag = &cli.StringFlag{
+		Name:  "restore-target-dir",
+		Usage: "Target directory of the restored database",
+		Value: DefaultDataDir(),
+	}
+	// BoltMMapInitialSizeFlag specifies the initial size in bytes of boltdb's mmap syscall.
+	BoltMMapInitialSizeFlag = &cli.IntFlag{
+		Name:  "bolt-mmap-initial-size",
+		Usage: "Specifies the size in bytes of bolt db's mmap syscall allocation",
+		Value: 536870912, // 512 Mb as a default value.
 	}
 )
 

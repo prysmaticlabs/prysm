@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -85,9 +86,9 @@ func TestBatchAttestations_Multiple(t *testing.T) {
 			Source:          &ethpb.Checkpoint{Root: mockRoot[:]},
 			Target:          &ethpb.Checkpoint{Root: mockRoot[:]}}, AggregationBits: bitfield.Bitlist{0b100011}, Signature: sig.Marshal()}, // Duplicated
 	}
-	require.NoError(t, s.pool.SaveUnaggregatedAttestations(unaggregatedAtts))
-	require.NoError(t, s.pool.SaveAggregatedAttestations(aggregatedAtts))
-	require.NoError(t, s.pool.SaveBlockAttestations(blockAtts))
+	require.NoError(t, s.cfg.Pool.SaveUnaggregatedAttestations(unaggregatedAtts))
+	require.NoError(t, s.cfg.Pool.SaveAggregatedAttestations(aggregatedAtts))
+	require.NoError(t, s.cfg.Pool.SaveBlockAttestations(blockAtts))
 	require.NoError(t, s.batchForkChoiceAtts(context.Background()))
 
 	wanted, err := attaggregation.Aggregate([]*ethpb.Attestation{aggregatedAtts[0], blockAtts[0]})
@@ -99,8 +100,8 @@ func TestBatchAttestations_Multiple(t *testing.T) {
 	require.NoError(t, err)
 
 	wanted = append(wanted, aggregated...)
-	require.NoError(t, s.pool.AggregateUnaggregatedAttestations())
-	received := s.pool.ForkchoiceAttestations()
+	require.NoError(t, s.cfg.Pool.AggregateUnaggregatedAttestations(context.Background()))
+	received := s.cfg.Pool.ForkchoiceAttestations()
 
 	sort.Slice(received, func(i, j int) bool {
 		return received[i].Data.Slot < received[j].Data.Slot
@@ -139,9 +140,9 @@ func TestBatchAttestations_Single(t *testing.T) {
 		{Data: d, AggregationBits: bitfield.Bitlist{0b100010}, Signature: sig.Marshal()},
 		{Data: d, AggregationBits: bitfield.Bitlist{0b110010}, Signature: sig.Marshal()}, // Duplicated
 	}
-	require.NoError(t, s.pool.SaveUnaggregatedAttestations(unaggregatedAtts))
-	require.NoError(t, s.pool.SaveAggregatedAttestations(aggregatedAtts))
-	require.NoError(t, s.pool.SaveBlockAttestations(blockAtts))
+	require.NoError(t, s.cfg.Pool.SaveUnaggregatedAttestations(unaggregatedAtts))
+	require.NoError(t, s.cfg.Pool.SaveAggregatedAttestations(aggregatedAtts))
+	require.NoError(t, s.cfg.Pool.SaveBlockAttestations(blockAtts))
 	require.NoError(t, s.batchForkChoiceAtts(context.Background()))
 
 	wanted, err := attaggregation.Aggregate(append(aggregatedAtts, unaggregatedAtts...))
@@ -150,7 +151,7 @@ func TestBatchAttestations_Single(t *testing.T) {
 	wanted, err = attaggregation.Aggregate(append(wanted, blockAtts...))
 	require.NoError(t, err)
 
-	got := s.pool.ForkchoiceAttestations()
+	got := s.cfg.Pool.ForkchoiceAttestations()
 	assert.DeepEqual(t, wanted, got)
 }
 
@@ -175,7 +176,7 @@ func TestAggregateAndSaveForkChoiceAtts_Single(t *testing.T) {
 
 	wanted, err := attaggregation.Aggregate(atts)
 	require.NoError(t, err)
-	assert.DeepEqual(t, wanted, s.pool.ForkchoiceAttestations())
+	assert.DeepEqual(t, wanted, s.cfg.Pool.ForkchoiceAttestations())
 }
 
 func TestAggregateAndSaveForkChoiceAtts_Multiple(t *testing.T) {
@@ -222,7 +223,7 @@ func TestAggregateAndSaveForkChoiceAtts_Multiple(t *testing.T) {
 	wanted = append(wanted, aggregated...)
 	wanted = append(wanted, att3...)
 
-	received := s.pool.ForkchoiceAttestations()
+	received := s.cfg.Pool.ForkchoiceAttestations()
 	sort.Slice(received, func(i, j int) bool {
 		return received[i].Data.Slot < received[j].Data.Slot
 	})
@@ -233,19 +234,7 @@ func TestSeenAttestations_PresentInCache(t *testing.T) {
 	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
 	require.NoError(t, err)
 
-	ad1 := &ethpb.AttestationData{
-		Slot:            0,
-		CommitteeIndex:  0,
-		BeaconBlockRoot: make([]byte, 32),
-		Source: &ethpb.Checkpoint{
-			Epoch: 0,
-			Root:  make([]byte, 32),
-		},
-		Target: &ethpb.Checkpoint{
-			Epoch: 0,
-			Root:  make([]byte, 32),
-		},
-	}
+	ad1 := testutil.HydrateAttestationData(&ethpb.AttestationData{})
 	att1 := &ethpb.Attestation{Data: ad1, Signature: []byte{'A'}, AggregationBits: bitfield.Bitlist{0x13} /* 0b00010011 */}
 	got, err := s.seen(att1)
 	require.NoError(t, err)
@@ -263,33 +252,9 @@ func TestSeenAttestations_PresentInCache(t *testing.T) {
 }
 
 func TestService_seen(t *testing.T) {
-	ad1 := &ethpb.AttestationData{
-		Slot:            1,
-		CommitteeIndex:  0,
-		BeaconBlockRoot: make([]byte, 32),
-		Source: &ethpb.Checkpoint{
-			Epoch: 0,
-			Root:  make([]byte, 32),
-		},
-		Target: &ethpb.Checkpoint{
-			Epoch: 0,
-			Root:  make([]byte, 32),
-		},
-	}
+	ad1 := testutil.HydrateAttestationData(&ethpb.AttestationData{Slot: 1})
 
-	ad2 := &ethpb.AttestationData{
-		Slot:            2,
-		CommitteeIndex:  0,
-		BeaconBlockRoot: make([]byte, 32),
-		Source: &ethpb.Checkpoint{
-			Epoch: 0,
-			Root:  make([]byte, 32),
-		},
-		Target: &ethpb.Checkpoint{
-			Epoch: 0,
-			Root:  make([]byte, 32),
-		},
-	}
+	ad2 := testutil.HydrateAttestationData(&ethpb.AttestationData{Slot: 2})
 
 	// Attestation are checked in order of this list.
 	tests := []struct {

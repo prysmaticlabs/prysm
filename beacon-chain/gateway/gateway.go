@@ -10,11 +10,13 @@ import (
 	"time"
 
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/runtime"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1_gateway"
+	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1_gateway"
 	"github.com/prysmaticlabs/prysm/shared"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
+	"google.golang.org/grpc/credentials"
 )
 
 var _ shared.Service = (*Gateway)(nil)
@@ -27,6 +29,7 @@ type Gateway struct {
 	cancel                  context.CancelFunc
 	gatewayAddr             string
 	remoteAddr              string
+	remoteCert              string
 	server                  *http.Server
 	mux                     *http.ServeMux
 	allowedOrigins          []string
@@ -106,8 +109,14 @@ func (g *Gateway) Status() error {
 // Stop the gateway with a graceful shutdown.
 func (g *Gateway) Stop() error {
 	if g.server != nil {
-		if err := g.server.Shutdown(g.ctx); err != nil {
-			log.WithError(err).Error("Failed to shut down server")
+		shutdownCtx, shutdownCancel := context.WithTimeout(g.ctx, 2*time.Second)
+		defer shutdownCancel()
+		if err := g.server.Shutdown(shutdownCtx); err != nil {
+			if errors.Is(err, context.DeadlineExceeded) {
+				log.Warn("Existing connections terminated")
+			} else {
+				log.WithError(err).Error("Failed to gracefully shut down server")
+			}
 		}
 	}
 
@@ -123,6 +132,7 @@ func (g *Gateway) Stop() error {
 func New(
 	ctx context.Context,
 	remoteAddress,
+	remoteCert,
 	gatewayAddress string,
 	mux *http.ServeMux,
 	allowedOrigins []string,
@@ -135,6 +145,7 @@ func New(
 
 	return &Gateway{
 		remoteAddr:              remoteAddress,
+		remoteCert:              remoteCert,
 		gatewayAddr:             gatewayAddress,
 		ctx:                     ctx,
 		mux:                     mux,
@@ -159,8 +170,16 @@ func (g *Gateway) dial(ctx context.Context, network, addr string) (*grpc.ClientC
 // dialTCP creates a client connection via TCP.
 // "addr" must be a valid TCP address with a port number.
 func (g *Gateway) dialTCP(ctx context.Context, addr string) (*grpc.ClientConn, error) {
+	security := grpc.WithInsecure()
+	if len(g.remoteCert) > 0 {
+		creds, err := credentials.NewClientTLSFromFile(g.remoteCert, "")
+		if err != nil {
+			return nil, err
+		}
+		security = grpc.WithTransportCredentials(creds)
+	}
 	opts := []grpc.DialOption{
-		grpc.WithInsecure(),
+		security,
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(int(g.maxCallRecvMsgSize))),
 	}
 

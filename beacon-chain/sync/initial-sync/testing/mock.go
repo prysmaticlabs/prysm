@@ -4,12 +4,18 @@ package testing
 
 // Sync defines a mock for the sync service.
 type Sync struct {
-	IsSyncing bool
+	IsSyncing     bool
+	IsInitialized bool
 }
 
 // Syncing --
 func (s *Sync) Syncing() bool {
 	return s.IsSyncing
+}
+
+// Initialized --
+func (s *Sync) Initialized() bool {
+	return s.IsInitialized
 }
 
 // Status --

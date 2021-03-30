@@ -1,9 +1,12 @@
 package interchangeformat
 
 import (
+	"fmt"
 	"math"
 	"reflect"
 	"testing"
+
+	types "github.com/prysmaticlabs/eth2-types"
 )
 
 func Test_uint64FromString(t *testing.T) {
@@ -47,14 +50,34 @@ func Test_uint64FromString(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := uint64FromString(tt.str)
+		t.Run(fmt.Sprintf("Uint64/%s", tt.name), func(t *testing.T) {
+			got, err := Uint64FromString(tt.str)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("uint64FromString() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Uint64FromString() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.want {
-				t.Errorf("uint64FromString() got = %v, want %v", got, tt.want)
+				t.Errorf("Uint64FromString() got = %v, want %v", got, tt.want)
+			}
+		})
+		t.Run(fmt.Sprintf("Epoch/%s", tt.name), func(t *testing.T) {
+			got, err := EpochFromString(tt.str)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("EpochFromString() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != types.Epoch(tt.want) {
+				t.Errorf("EpochFromString() got = %v, want %v", got, tt.want)
+			}
+		})
+		t.Run(fmt.Sprintf("Slot/%s", tt.name), func(t *testing.T) {
+			got, err := SlotFromString(tt.str)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("SlotFromString() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != types.Slot(tt.want) {
+				t.Errorf("SlotFromString() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -100,13 +123,13 @@ func Test_pubKeyFromHex(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := pubKeyFromHex(tt.str)
+			got, err := PubKeyFromHex(tt.str)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("pubKeyFromHex() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("PubKeyFromHex() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("pubKeyFromHex() got = %v, want %v", got, tt.want)
+				t.Errorf("PubKeyFromHex() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -152,7 +175,7 @@ func Test_rootFromHex(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := rootFromHex(tt.str)
+			got, err := RootFromHex(tt.str)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("rootFromHex() error = %v, wantErr %v", err, tt.wantErr)
 				return

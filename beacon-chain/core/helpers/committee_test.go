@@ -6,9 +6,10 @@ import (
 	"strconv"
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -34,7 +35,7 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 		}
 	}
 
-	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+	state, err := stateV0.InitializeFromProto(&pb.BeaconState{
 		Validators:  validators,
 		Slot:        200,
 		BlockRoots:  make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
@@ -69,7 +70,7 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 }
 
 func TestComputeCommittee_RegressionTest(t *testing.T) {
-	indices := []uint64{1, 3, 8, 16, 18, 19, 20, 23, 30, 35, 43, 46, 47, 54, 56, 58, 69, 70, 71, 83, 84, 85, 91, 96, 100, 103, 105, 106, 112, 121, 127, 128, 129, 140, 142, 144, 146, 147, 149, 152, 153, 154, 157, 160, 173, 175, 180, 182, 188, 189, 191, 194, 201, 204, 217, 221, 226, 228, 230, 231, 239, 241, 249, 250, 255}
+	indices := []types.ValidatorIndex{1, 3, 8, 16, 18, 19, 20, 23, 30, 35, 43, 46, 47, 54, 56, 58, 69, 70, 71, 83, 84, 85, 91, 96, 100, 103, 105, 106, 112, 121, 127, 128, 129, 140, 142, 144, 146, 147, 149, 152, 153, 154, 157, 160, 173, 175, 180, 182, 188, 189, 191, 194, 201, 204, 217, 221, 226, 228, 230, 231, 239, 241, 249, 250, 255}
 	seed := [32]byte{68, 110, 161, 250, 98, 230, 161, 172, 227, 226, 99, 11, 138, 124, 201, 134, 38, 197, 0, 120, 6, 165, 122, 34, 19, 216, 43, 226, 210, 114, 165, 183}
 	index := uint64(215)
 	count := uint64(32)
@@ -89,8 +90,8 @@ func TestVerifyBitfieldLength_OK(t *testing.T) {
 
 func TestCommitteeAssignments_CannotRetrieveFutureEpoch(t *testing.T) {
 	ClearCache()
-	epoch := uint64(1)
-	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+	epoch := types.Epoch(1)
+	state, err := stateV0.InitializeFromProto(&pb.BeaconState{
 		Slot: 0, // Epoch 0.
 	})
 	require.NoError(t, err)
@@ -101,7 +102,7 @@ func TestCommitteeAssignments_CannotRetrieveFutureEpoch(t *testing.T) {
 func TestCommitteeAssignments_NoProposerForSlot0(t *testing.T) {
 	validators := make([]*ethpb.Validator, 4*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
-		var activationEpoch uint64
+		var activationEpoch types.Epoch
 		if i >= len(validators)/2 {
 			activationEpoch = 3
 		}
@@ -110,7 +111,7 @@ func TestCommitteeAssignments_NoProposerForSlot0(t *testing.T) {
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 		}
 	}
-	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+	state, err := stateV0.InitializeFromProto(&pb.BeaconState{
 		Validators:  validators,
 		Slot:        2 * params.BeaconConfig().SlotsPerEpoch, // epoch 2
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
@@ -131,7 +132,7 @@ func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 	validators := make([]*ethpb.Validator, 4*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
 		// First 2 epochs only half validators are activated.
-		var activationEpoch uint64
+		var activationEpoch types.Epoch
 		if i >= len(validators)/2 {
 			activationEpoch = 3
 		}
@@ -141,7 +142,7 @@ func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 		}
 	}
 
-	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+	state, err := stateV0.InitializeFromProto(&pb.BeaconState{
 		Validators:  validators,
 		Slot:        2 * params.BeaconConfig().SlotsPerEpoch, // epoch 2
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
@@ -149,24 +150,24 @@ func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 	require.NoError(t, err)
 
 	tests := []struct {
-		index          uint64
-		slot           uint64
-		committee      []uint64
-		committeeIndex uint64
+		index          types.ValidatorIndex
+		slot           types.Slot
+		committee      []types.ValidatorIndex
+		committeeIndex types.CommitteeIndex
 		isProposer     bool
-		proposerSlot   uint64
+		proposerSlot   types.Slot
 	}{
 		{
 			index:          0,
 			slot:           78,
-			committee:      []uint64{0, 38},
+			committee:      []types.ValidatorIndex{0, 38},
 			committeeIndex: 0,
 			isProposer:     false,
 		},
 		{
 			index:          1,
 			slot:           71,
-			committee:      []uint64{1, 4},
+			committee:      []types.ValidatorIndex{1, 4},
 			committeeIndex: 0,
 			isProposer:     true,
 			proposerSlot:   79,
@@ -174,13 +175,13 @@ func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 		{
 			index:          11,
 			slot:           90,
-			committee:      []uint64{31, 11},
+			committee:      []types.ValidatorIndex{31, 11},
 			committeeIndex: 0,
 			isProposer:     false,
 		}, {
 			index:          2,
 			slot:           127, // 3rd epoch has more active validators
-			committee:      []uint64{89, 2, 81, 5},
+			committee:      []types.ValidatorIndex{89, 2, 81, 5},
 			committeeIndex: 0,
 			isProposer:     false,
 		},
@@ -208,7 +209,7 @@ func TestCommitteeAssignments_CannotRetrieveFuture(t *testing.T) {
 	validators := make([]*ethpb.Validator, 4*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
 		// First 2 epochs only half validators are activated.
-		var activationEpoch uint64
+		var activationEpoch types.Epoch
 		if i >= len(validators)/2 {
 			activationEpoch = 3
 		}
@@ -218,7 +219,7 @@ func TestCommitteeAssignments_CannotRetrieveFuture(t *testing.T) {
 		}
 	}
 
-	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+	state, err := stateV0.InitializeFromProto(&pb.BeaconState{
 		Validators:  validators,
 		Slot:        2 * params.BeaconConfig().SlotsPerEpoch, // epoch 2
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
@@ -242,24 +243,24 @@ func TestCommitteeAssignments_EverySlotHasMin1Proposer(t *testing.T) {
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 		}
 	}
-	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+	state, err := stateV0.InitializeFromProto(&pb.BeaconState{
 		Validators:  validators,
 		Slot:        2 * params.BeaconConfig().SlotsPerEpoch, // epoch 2
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
 	require.NoError(t, err)
 	ClearCache()
-	epoch := uint64(1)
+	epoch := types.Epoch(1)
 	_, proposerIndexToSlots, err := CommitteeAssignments(state, epoch)
 	require.NoError(t, err, "Failed to determine CommitteeAssignments")
 
-	slotsWithProposers := make(map[uint64]bool)
+	slotsWithProposers := make(map[types.Slot]bool)
 	for _, proposerSlots := range proposerIndexToSlots {
 		for _, slot := range proposerSlots {
 			slotsWithProposers[slot] = true
 		}
 	}
-	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch, uint64(len(slotsWithProposers)), "Unexpected slots")
+	assert.Equal(t, uint64(params.BeaconConfig().SlotsPerEpoch), uint64(len(slotsWithProposers)), "Unexpected slots")
 	startSlot, err := StartSlot(epoch)
 	require.NoError(t, err)
 	endSlot, err := StartSlot(epoch + 1)
@@ -279,7 +280,7 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 		}
 	}
 
-	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+	state, err := stateV0.InitializeFromProto(&pb.BeaconState{
 		Validators:  validators,
 		RandaoMixes: activeRoots,
 	})
@@ -287,7 +288,7 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 
 	tests := []struct {
 		attestation         *ethpb.Attestation
-		stateSlot           uint64
+		stateSlot           types.Slot
 		verificationFailure bool
 	}{
 		{
@@ -377,7 +378,7 @@ func TestShuffledIndices_ShuffleRightLength(t *testing.T) {
 		}
 		indices[i] = uint64(i)
 	}
-	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+	state, err := stateV0.InitializeFromProto(&pb.BeaconState{
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
@@ -403,26 +404,26 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 	ClearCache()
 	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount
 	validators := make([]*ethpb.Validator, validatorCount)
-	indices := make([]uint64, validatorCount)
-	for i := uint64(0); i < validatorCount; i++ {
+	indices := make([]types.ValidatorIndex, validatorCount)
+	for i := types.ValidatorIndex(0); uint64(i) < validatorCount; i++ {
 		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 		indices[i] = i
 	}
-	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+	state, err := stateV0.InitializeFromProto(&pb.BeaconState{
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
 	require.NoError(t, err)
 	require.NoError(t, UpdateCommitteeCache(state, CurrentEpoch(state)))
 
-	epoch := uint64(1)
-	idx := uint64(1)
+	epoch := types.Epoch(1)
+	idx := types.CommitteeIndex(1)
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(t, err)
 
-	indices, err = committeeCache.Committee(epoch*params.BeaconConfig().SlotsPerEpoch, seed, idx)
+	indices, err = committeeCache.Committee(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch)), seed, idx)
 	require.NoError(t, err)
 	assert.Equal(t, params.BeaconConfig().TargetCommitteeSize, uint64(len(indices)), "Did not save correct indices lengths")
 }
@@ -434,7 +435,7 @@ func BenchmarkComputeCommittee300000_WithPreCache(b *testing.B) {
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
-	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+	state, err := stateV0.InitializeFromProto(&pb.BeaconState{
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
@@ -468,7 +469,7 @@ func BenchmarkComputeCommittee3000000_WithPreCache(b *testing.B) {
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
-	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+	state, err := stateV0.InitializeFromProto(&pb.BeaconState{
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
@@ -502,7 +503,7 @@ func BenchmarkComputeCommittee128000_WithOutPreCache(b *testing.B) {
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
-	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+	state, err := stateV0.InitializeFromProto(&pb.BeaconState{
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
@@ -537,7 +538,7 @@ func BenchmarkComputeCommittee1000000_WithOutCache(b *testing.B) {
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
-	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+	state, err := stateV0.InitializeFromProto(&pb.BeaconState{
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
@@ -572,7 +573,7 @@ func BenchmarkComputeCommittee4000000_WithOutCache(b *testing.B) {
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
-	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+	state, err := stateV0.InitializeFromProto(&pb.BeaconState{
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
@@ -602,14 +603,14 @@ func BenchmarkComputeCommittee4000000_WithOutCache(b *testing.B) {
 
 func TestBeaconCommitteeFromState_UpdateCacheForPreviousEpoch(t *testing.T) {
 	committeeSize := uint64(16)
-	validators := make([]*ethpb.Validator, committeeSize*params.BeaconConfig().SlotsPerEpoch)
+	validators := make([]*ethpb.Validator, params.BeaconConfig().SlotsPerEpoch.Mul(committeeSize))
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
 
-	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+	state, err := stateV0.InitializeFromProto(&pb.BeaconState{
 		Slot:        params.BeaconConfig().SlotsPerEpoch,
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
@@ -634,7 +635,7 @@ func TestPrecomputeProposerIndices_Ok(t *testing.T) {
 		}
 	}
 
-	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+	state, err := stateV0.InitializeFromProto(&pb.BeaconState{
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
@@ -646,10 +647,10 @@ func TestPrecomputeProposerIndices_Ok(t *testing.T) {
 	proposerIndices, err := precomputeProposerIndices(state, indices)
 	require.NoError(t, err)
 
-	var wantedProposerIndices []uint64
+	var wantedProposerIndices []types.ValidatorIndex
 	seed, err := Seed(state, 0, params.BeaconConfig().DomainBeaconProposer)
 	require.NoError(t, err)
-	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
+	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerEpoch); i++ {
 		seedWithSlot := append(seed[:], bytesutil.Bytes8(i)...)
 		seedWithSlotHash := hashutil.Hash(seedWithSlot)
 		index, err := ComputeProposerIndex(state, indices, seedWithSlotHash)
@@ -657,10 +658,4 @@ func TestPrecomputeProposerIndices_Ok(t *testing.T) {
 		wantedProposerIndices = append(wantedProposerIndices, index)
 	}
 	assert.DeepEqual(t, wantedProposerIndices, proposerIndices, "Did not precompute proposer indices correctly")
-}
-
-func TestUpdateProposerIndicesInCache_CouldNotGetActiveIndices(t *testing.T) {
-	err := UpdateProposerIndicesInCache(&beaconstate.BeaconState{}, 2)
-	want := "nil inner state"
-	require.ErrorContains(t, want, err)
 }

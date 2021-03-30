@@ -8,8 +8,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -47,11 +47,12 @@ var (
 			Help: "Count the number of times a node resyncs.",
 		},
 	)
+
 	arrivalBlockPropagationHistogram = promauto.NewHistogram(
 		prometheus.HistogramOpts{
 			Name:    "block_arrival_latency_milliseconds",
 			Help:    "Captures blocks propagation time. Blocks arrival in milliseconds distribution",
-			Buckets: []float64{1000, 2000, 3000, 4000, 5000, 6000},
+			Buckets: []float64{250, 500, 1000, 1500, 2000, 4000, 8000, 16000},
 		},
 	)
 )
@@ -59,7 +60,7 @@ var (
 func (s *Service) updateMetrics() {
 	// do not update metrics if genesis time
 	// has not been initialized
-	if s.chain.GenesisTime().IsZero() {
+	if s.cfg.Chain.GenesisTime().IsZero() {
 		return
 	}
 	// We update the dynamic subnet topics.
@@ -67,18 +68,18 @@ func (s *Service) updateMetrics() {
 	if err != nil {
 		log.WithError(err).Debugf("Could not compute fork digest")
 	}
-	indices := s.aggregatorSubnetIndices(s.chain.CurrentSlot())
+	indices := s.aggregatorSubnetIndices(s.cfg.Chain.CurrentSlot())
 	attTopic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.Attestation{})]
-	attTopic += s.p2p.Encoding().ProtocolSuffix()
+	attTopic += s.cfg.P2P.Encoding().ProtocolSuffix()
 	if flags.Get().SubscribeToAllSubnets {
 		for i := uint64(0); i < params.BeaconNetworkConfig().AttestationSubnetCount; i++ {
 			formattedTopic := fmt.Sprintf(attTopic, digest, i)
-			topicPeerCount.WithLabelValues(formattedTopic).Set(float64(len(s.p2p.PubSub().ListPeers(formattedTopic))))
+			topicPeerCount.WithLabelValues(formattedTopic).Set(float64(len(s.cfg.P2P.PubSub().ListPeers(formattedTopic))))
 		}
 	} else {
 		for _, committeeIdx := range indices {
 			formattedTopic := fmt.Sprintf(attTopic, digest, committeeIdx)
-			topicPeerCount.WithLabelValues(formattedTopic).Set(float64(len(s.p2p.PubSub().ListPeers(formattedTopic))))
+			topicPeerCount.WithLabelValues(formattedTopic).Set(float64(len(s.cfg.P2P.PubSub().ListPeers(formattedTopic))))
 		}
 	}
 
@@ -88,12 +89,12 @@ func (s *Service) updateMetrics() {
 		if strings.Contains(topic, "beacon_attestation") {
 			continue
 		}
-		topic += s.p2p.Encoding().ProtocolSuffix()
+		topic += s.cfg.P2P.Encoding().ProtocolSuffix()
 		if !strings.Contains(topic, "%x") {
-			topicPeerCount.WithLabelValues(topic).Set(float64(len(s.p2p.PubSub().ListPeers(topic))))
+			topicPeerCount.WithLabelValues(topic).Set(float64(len(s.cfg.P2P.PubSub().ListPeers(topic))))
 			continue
 		}
 		formattedTopic := fmt.Sprintf(topic, digest)
-		topicPeerCount.WithLabelValues(formattedTopic).Set(float64(len(s.p2p.PubSub().ListPeers(formattedTopic))))
+		topicPeerCount.WithLabelValues(formattedTopic).Set(float64(len(s.cfg.P2P.PubSub().ListPeers(formattedTopic))))
 	}
 }

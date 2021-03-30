@@ -5,15 +5,9 @@ import (
 	"net/http"
 	"net/url"
 	"path"
-
-	"github.com/sirupsen/logrus"
 )
 
 const prefix = "external/prysm_web_ui/prysm-web-ui"
-
-var (
-	log = logrus.WithField("prefix", "prysm-web")
-)
 
 // Handler serves web requests from the bundled site data.
 var Handler = func(res http.ResponseWriter, req *http.Request) {

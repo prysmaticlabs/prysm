@@ -43,7 +43,7 @@ func main() {
 	app := cli.App{}
 	app.Name = "deployDepositContract"
 	app.Usage = "this is a util to deploy deposit contract"
-	app.Version = version.GetVersion()
+	app.Version = version.Version()
 	app.Flags = []cli.Flag{
 		&cli.StringFlag{
 			Name:        "keystoreUTCPath",

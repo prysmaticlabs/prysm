@@ -9,7 +9,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
-	"github.com/sirupsen/logrus"
 )
 
 // InfoHandler is a handler to serve /p2p page in metrics.
@@ -26,7 +25,7 @@ self=%s
 		len(s.host.Network().Peers()),
 		formatPeers(s.host), // Must be last. Writes one entry per row.
 	); err != nil {
-		logrus.WithError(err).Error("Failed to render p2p info page")
+		log.WithError(err).Error("Failed to render p2p info page")
 		return
 	}
 
@@ -42,8 +41,8 @@ func (s *Service) selfAddresses() string {
 	if s.dv5Listener != nil {
 		addresses = append(addresses, s.dv5Listener.Self().String())
 	}
-	for _, ma := range s.host.Addrs() {
-		addresses = append(addresses, ma.String()+"/p2p/"+s.host.ID().Pretty())
+	for _, addr := range s.host.Addrs() {
+		addresses = append(addresses, addr.String()+"/p2p/"+s.host.ID().Pretty())
 	}
 	return strings.Join(addresses, ",")
 }

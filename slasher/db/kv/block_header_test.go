@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -16,14 +17,14 @@ func TestNilDBHistoryBlkHdr(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	slot := uint64(1)
-	validatorID := uint64(1)
+	slot := types.Slot(1)
+	validatorIndex := types.ValidatorIndex(1)
 
-	require.Equal(t, false, db.HasBlockHeader(ctx, slot, validatorID))
+	require.Equal(t, false, db.HasBlockHeader(ctx, slot, validatorIndex))
 
-	bPrime, err := db.BlockHeaders(ctx, slot, validatorID)
+	bPrime, err := db.BlockHeaders(ctx, slot, validatorIndex)
 	require.NoError(t, err, "Failed to get block")
-	require.DeepEqual(t, ([]*ethpb.SignedBeaconBlockHeader)(nil), bPrime, "Should return nil for a non existent key")
+	require.DeepEqual(t, []*ethpb.SignedBeaconBlockHeader(nil), bPrime, "Should return nil for a non existent key")
 }
 
 func TestSaveHistoryBlkHdr(t *testing.T) {
@@ -90,7 +91,7 @@ func TestDeleteHistoryBlkHdr(t *testing.T) {
 		require.NoError(t, err, "Save block failed")
 		bh, err := db.BlockHeaders(ctx, tt.bh.Header.Slot, tt.bh.Header.ProposerIndex)
 		require.NoError(t, err)
-		assert.DeepEqual(t, ([]*ethpb.SignedBeaconBlockHeader)(nil), bh, "Expected block to have been deleted")
+		assert.DeepEqual(t, []*ethpb.SignedBeaconBlockHeader(nil), bh, "Expected block to have been deleted")
 	}
 }
 
@@ -116,7 +117,7 @@ func TestHasHistoryBlkHdr(t *testing.T) {
 	}
 	for _, tt := range tests {
 		found := db.HasBlockHeader(ctx, tt.bh.Header.Slot, tt.bh.Header.ProposerIndex)
-		require.Equal(t, false, found, "Has block header should return false for block headers that are not in db")
+		require.Equal(t, false, found, "has block header should return false for block headers that are not in db")
 		err := db.SaveBlockHeader(ctx, tt.bh)
 		require.NoError(t, err, "Save block failed")
 	}
@@ -162,8 +163,8 @@ func TestPruneHistoryBlkHdr(t *testing.T) {
 		require.NotNil(t, bha)
 		require.DeepEqual(t, tt.bh, bha[0], "Should return bh")
 	}
-	currentEpoch := uint64(3)
-	historyToKeep := uint64(2)
+	currentEpoch := types.Epoch(3)
+	historyToKeep := types.Epoch(2)
 	err := db.PruneBlockHistory(ctx, currentEpoch, historyToKeep)
 	require.NoError(t, err, "Failed to prune")
 

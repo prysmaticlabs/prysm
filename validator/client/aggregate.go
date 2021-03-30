@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
@@ -12,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -21,7 +23,7 @@ import (
 // via gRPC. Beacon node will verify the slot signature and determine if the validator is also
 // an aggregator. If yes, then beacon node will broadcast aggregated signature and
 // proof on the validator's behalf.
-func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pubKey [48]byte) {
+func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot types.Slot, pubKey [48]byte) {
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitAggregateAndProof")
 	defer span.End()
 
@@ -68,8 +70,8 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 		SlotSignature:  slotSig,
 	})
 	if err != nil {
-		status, ok := status.FromError(err)
-		if ok && status.Code() == codes.NotFound {
+		s, ok := status.FromError(err)
+		if ok && s.Code() == codes.NotFound {
 			log.WithField("slot", slot).WithError(err).Warn("No attestations to aggregate")
 		} else {
 			log.WithField("slot", slot).WithError(err).Error("Could not submit slot signature to beacon node")
@@ -115,14 +117,15 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 
 // This implements selection logic outlined in:
 // https://github.com/ethereum/eth2.0-specs/blob/v0.9.3/specs/validator/0_beacon-chain-validator.md#aggregation-selection
-func (v *validator) signSlot(ctx context.Context, pubKey [48]byte, slot uint64) ([]byte, error) {
+func (v *validator) signSlot(ctx context.Context, pubKey [48]byte, slot types.Slot) ([]byte, error) {
 	domain, err := v.domainData(ctx, helpers.SlotToEpoch(slot), params.BeaconConfig().DomainSelectionProof[:])
 	if err != nil {
 		return nil, err
 	}
 
 	var sig bls.Signature
-	root, err := helpers.ComputeSigningRoot(slot, domain.SignatureDomain)
+	sszUint := types.SSZUint64(slot)
+	root, err := helpers.ComputeSigningRoot(&sszUint, domain.SignatureDomain)
 	if err != nil {
 		return nil, err
 	}
@@ -142,8 +145,8 @@ func (v *validator) signSlot(ctx context.Context, pubKey [48]byte, slot uint64) 
 // waitToSlotTwoThirds waits until two third through the current slot period
 // such that any attestations from this slot have time to reach the beacon node
 // before creating the aggregated attestation.
-func (v *validator) waitToSlotTwoThirds(ctx context.Context, slot uint64) {
-	_, span := trace.StartSpan(ctx, "validator.waitToSlotTwoThirds")
+func (v *validator) waitToSlotTwoThirds(ctx context.Context, slot types.Slot) {
+	ctx, span := trace.StartSpan(ctx, "validator.waitToSlotTwoThirds")
 	defer span.End()
 
 	oneThird := slotutil.DivideSlotBy(3 /* one third of slot duration */)
@@ -152,7 +155,19 @@ func (v *validator) waitToSlotTwoThirds(ctx context.Context, slot uint64) {
 
 	startTime := slotutil.SlotStartTime(v.genesisTime, slot)
 	finalTime := startTime.Add(delay)
-	time.Sleep(timeutils.Until(finalTime))
+	wait := timeutils.Until(finalTime)
+	if wait <= 0 {
+		return
+	}
+	t := time.NewTimer(wait)
+	defer t.Stop()
+	select {
+	case <-ctx.Done():
+		traceutil.AnnotateError(span, ctx.Err())
+		return
+	case <-t.C:
+		return
+	}
 }
 
 // This returns the signature of validator signing over aggregate and

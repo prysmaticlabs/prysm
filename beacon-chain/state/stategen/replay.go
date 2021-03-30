@@ -5,16 +5,22 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	transition "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"go.opencensus.io/trace"
 )
 
 // ReplayBlocks replays the input blocks on the input state until the target slot is reached.
-func (s *State) ReplayBlocks(ctx context.Context, state *stateTrie.BeaconState, signed []*ethpb.SignedBeaconBlock, targetSlot uint64) (*stateTrie.BeaconState, error) {
+func (s *State) ReplayBlocks(
+	ctx context.Context,
+	state iface.BeaconState,
+	signed []*ethpb.SignedBeaconBlock,
+	targetSlot types.Slot,
+) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.ReplayBlocks")
 	defer span.End()
 
@@ -52,7 +58,7 @@ func (s *State) ReplayBlocks(ctx context.Context, state *stateTrie.BeaconState, 
 
 // LoadBlocks loads the blocks between start slot and end slot by recursively fetching from end block root.
 // The Blocks are returned in slot-descending order.
-func (s *State) LoadBlocks(ctx context.Context, startSlot, endSlot uint64, endBlockRoot [32]byte) ([]*ethpb.SignedBeaconBlock, error) {
+func (s *State) LoadBlocks(ctx context.Context, startSlot, endSlot types.Slot, endBlockRoot [32]byte) ([]*ethpb.SignedBeaconBlock, error) {
 	// Nothing to load for invalid range.
 	if endSlot < startSlot {
 		return nil, fmt.Errorf("start slot %d >= end slot %d", startSlot, endSlot)
@@ -112,9 +118,9 @@ func (s *State) LoadBlocks(ctx context.Context, startSlot, endSlot uint64, endBl
 // WARNING: This method should not be used on an unverified new block.
 func executeStateTransitionStateGen(
 	ctx context.Context,
-	state *stateTrie.BeaconState,
+	state iface.BeaconState,
 	signed *ethpb.SignedBeaconBlock,
-) (*stateTrie.BeaconState, error) {
+) (iface.BeaconState, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -122,7 +128,7 @@ func executeStateTransitionStateGen(
 		return nil, errUnknownBlock
 	}
 
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ExecuteStateTransitionStateGen")
+	ctx, span := trace.StartSpan(ctx, "stategen.ExecuteStateTransitionStateGen")
 	defer span.End()
 	var err error
 
@@ -147,8 +153,8 @@ func executeStateTransitionStateGen(
 // processSlotsStateGen to process old slots for state gen usages.
 // There's no skip slot cache involved given state gen only works with already stored block and state in DB.
 // WARNING: This method should not be used for future slot.
-func processSlotsStateGen(ctx context.Context, state *stateTrie.BeaconState, slot uint64) (*stateTrie.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ProcessSlotsStateGen")
+func processSlotsStateGen(ctx context.Context, state iface.BeaconState, slot types.Slot) (iface.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "stategen.ProcessSlotsStateGen")
 	defer span.End()
 	if state == nil {
 		return nil, errUnknownState
@@ -186,7 +192,7 @@ func processSlotsStateGen(ctx context.Context, state *stateTrie.BeaconState, slo
 // This finds the last saved block in DB from searching backwards from input slot,
 // it returns the block root and the slot of the block.
 // This is used by both hot and cold state management.
-func (s *State) lastSavedBlock(ctx context.Context, slot uint64) ([32]byte, uint64, error) {
+func (s *State) lastSavedBlock(ctx context.Context, slot types.Slot) ([32]byte, types.Slot, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.lastSavedBlock")
 	defer span.End()
 
@@ -222,7 +228,7 @@ func (s *State) lastSavedBlock(ctx context.Context, slot uint64) ([32]byte, uint
 // This finds the last saved state in DB from searching backwards from input slot,
 // it returns the block root of the block which was used to produce the state.
 // This is used by both hot and cold state management.
-func (s *State) lastSavedState(ctx context.Context, slot uint64) (*stateTrie.BeaconState, error) {
+func (s *State) lastSavedState(ctx context.Context, slot types.Slot) (iface.ReadOnlyBeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.lastSavedState")
 	defer span.End()
 
@@ -258,7 +264,7 @@ func (s *State) genesisRoot(ctx context.Context) ([32]byte, error) {
 
 // Given the start slot and the end slot, this returns the finalized beacon blocks in between.
 // Since hot states don't have finalized blocks, this should ONLY be used for replaying cold state.
-func (s *State) loadFinalizedBlocks(ctx context.Context, startSlot, endSlot uint64) ([]*ethpb.SignedBeaconBlock, error) {
+func (s *State) loadFinalizedBlocks(ctx context.Context, startSlot, endSlot types.Slot) ([]*ethpb.SignedBeaconBlock, error) {
 	f := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
 	bs, bRoots, err := s.beaconDB.Blocks(ctx, f)
 	if err != nil {

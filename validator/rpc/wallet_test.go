@@ -8,10 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	ptypes "github.com/gogo/protobuf/types"
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/google/uuid"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
-
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -20,16 +18,19 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
+
+const strongPass = "29384283xasjasd32%%&*@*#*"
 
 func TestServer_CreateWallet_Imported(t *testing.T) {
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
 	ctx := context.Background()
-	strongPass := "29384283xasjasd32%%&*@*#*"
 	s := &Server{
 		walletInitializedFeed: new(event.Feed),
 		walletDir:             defaultWalletPath,
@@ -86,7 +87,6 @@ func TestServer_CreateWallet_Derived(t *testing.T) {
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
 	ctx := context.Background()
-	strongPass := "29384283xasjasd32%%&*@*#*"
 	s := &Server{
 		walletInitializedFeed: new(event.Feed),
 		walletDir:             localWalletDir,
@@ -106,7 +106,7 @@ func TestServer_CreateWallet_Derived(t *testing.T) {
 	_, err = s.CreateWallet(ctx, req)
 	require.ErrorContains(t, "Must include mnemonic", err)
 
-	mnemonicResp, err := s.GenerateMnemonic(ctx, &ptypes.Empty{})
+	mnemonicResp, err := s.GenerateMnemonic(ctx, &empty.Empty{})
 	require.NoError(t, err)
 	req.Mnemonic = mnemonicResp.Mnemonic
 
@@ -116,7 +116,7 @@ func TestServer_CreateWallet_Derived(t *testing.T) {
 
 func TestServer_WalletConfig_NoWalletFound(t *testing.T) {
 	s := &Server{}
-	resp, err := s.WalletConfig(context.Background(), &ptypes.Empty{})
+	resp, err := s.WalletConfig(context.Background(), &empty.Empty{})
 	require.NoError(t, err)
 	assert.DeepEqual(t, resp, &pb.WalletResponse{})
 }
@@ -125,7 +125,6 @@ func TestServer_WalletConfig(t *testing.T) {
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
 	ctx := context.Background()
-	strongPass := "29384283xasjasd32%%&*@*#*"
 	s := &Server{
 		walletInitializedFeed: new(event.Feed),
 		walletDir:             defaultWalletPath,
@@ -140,11 +139,11 @@ func TestServer_WalletConfig(t *testing.T) {
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx)
+	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
 	s.wallet = w
 	s.keymanager = km
-	resp, err := s.WalletConfig(ctx, &ptypes.Empty{})
+	resp, err := s.WalletConfig(ctx, &empty.Empty{})
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, resp, &pb.WalletResponse{
@@ -157,7 +156,6 @@ func TestServer_ImportKeystores_FailedPreconditions_WrongKeymanagerKind(t *testi
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
 	ctx := context.Background()
-	strongPass := "29384283xasjasd32%%&*@*#*"
 	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
@@ -167,7 +165,7 @@ func TestServer_ImportKeystores_FailedPreconditions_WrongKeymanagerKind(t *testi
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx)
+	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
 	ss := &Server{
 		wallet:     w,
@@ -181,7 +179,6 @@ func TestServer_ImportKeystores_FailedPreconditions(t *testing.T) {
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
 	ctx := context.Background()
-	strongPass := "29384283xasjasd32%%&*@*#*"
 	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
@@ -191,7 +188,7 @@ func TestServer_ImportKeystores_FailedPreconditions(t *testing.T) {
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx)
+	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
 	ss := &Server{
 		keymanager: km,
@@ -217,7 +214,6 @@ func TestServer_ImportKeystores_OK(t *testing.T) {
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
 	ctx := context.Background()
-	strongPass := "29384283xasjasd32%%&*@*#*"
 	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
@@ -227,7 +223,7 @@ func TestServer_ImportKeystores_OK(t *testing.T) {
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx)
+	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
 	ss := &Server{
 		keymanager:            km,
@@ -275,7 +271,7 @@ func TestServer_ImportKeystores_OK(t *testing.T) {
 		ImportedPublicKeys: pubKeys,
 	}, res)
 
-	km, err = w.InitializeKeymanager(ctx)
+	km, err = w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
 	keys, err = km.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)

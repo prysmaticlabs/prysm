@@ -2,6 +2,7 @@ package kv
 
 import (
 	"bytes"
+	"context"
 	"sort"
 	"testing"
 
@@ -9,6 +10,7 @@ import (
 	c "github.com/patrickmn/go-cache"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -26,7 +28,7 @@ func TestKV_Unaggregated_SaveUnaggregatedAttestation(t *testing.T) {
 		},
 		{
 			name:          "already aggregated",
-			att:           &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b10101}, Data: &ethpb.AttestationData{Slot: 2, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}},
+			att:           &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b10101}, Data: &ethpb.AttestationData{Slot: 2}},
 			wantErrString: "attestation is aggregated",
 		},
 		{
@@ -40,30 +42,21 @@ func TestKV_Unaggregated_SaveUnaggregatedAttestation(t *testing.T) {
 		},
 		{
 			name:  "normal save",
-			att:   &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b0001}, Data: &ethpb.AttestationData{BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}},
+			att:   testutil.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b0001}}),
 			count: 1,
 		},
 		{
 			name: "already seen",
-			att: &ethpb.Attestation{
+			att: testutil.HydrateAttestation(&ethpb.Attestation{
 				Data: &ethpb.AttestationData{
-					Slot:            100,
-					BeaconBlockRoot: make([]byte, 32),
-					Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-					Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+					Slot: 100,
 				},
 				AggregationBits: bitfield.Bitlist{0b10000001},
-				Signature:       make([]byte, 96),
-			},
+			}),
 			count: 0,
 		},
 	}
-	r, err := hashFn(&ethpb.AttestationData{
-		Slot:            100,
-		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-		BeaconBlockRoot: make([]byte, 32),
-	})
+	r, err := hashFn(testutil.HydrateAttestationData(&ethpb.AttestationData{Slot: 100}))
 	require.NoError(t, err)
 
 	for _, tt := range tests {
@@ -98,18 +91,18 @@ func TestKV_Unaggregated_SaveUnaggregatedAttestations(t *testing.T) {
 		{
 			name: "unaggregated only",
 			atts: []*ethpb.Attestation{
-				{Data: &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, Signature: make([]byte, 96)},
-				{Data: &ethpb.AttestationData{Slot: 2, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, Signature: make([]byte, 96)},
-				{Data: &ethpb.AttestationData{Slot: 3, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, Signature: make([]byte, 96)},
+				testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}}),
+				testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}}),
+				testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}}),
 			},
 			count: 3,
 		},
 		{
 			name: "has aggregated",
 			atts: []*ethpb.Attestation{
-				{Data: &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, Signature: make([]byte, 96)},
-				{AggregationBits: bitfield.Bitlist{0b1111}, Data: &ethpb.AttestationData{Slot: 2, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, Signature: make([]byte, 96)},
-				{Data: &ethpb.AttestationData{Slot: 3, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, Signature: make([]byte, 96)},
+				testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}}),
+				{AggregationBits: bitfield.Bitlist{0b1111}, Data: &ethpb.AttestationData{Slot: 2}},
+				testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}}),
 			},
 			wantErrString: "attestation is aggregated",
 			count:         1,
@@ -141,16 +134,16 @@ func TestKV_Unaggregated_DeleteUnaggregatedAttestation(t *testing.T) {
 
 	t.Run("aggregated attestation", func(t *testing.T) {
 		cache := NewAttCaches()
-		att := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1111}, Data: &ethpb.AttestationData{Slot: 2, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, Signature: make([]byte, 96)}
+		att := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1111}, Data: &ethpb.AttestationData{Slot: 2}}
 		err := cache.DeleteUnaggregatedAttestation(att)
 		assert.ErrorContains(t, "attestation is aggregated", err)
 	})
 
 	t.Run("successful deletion", func(t *testing.T) {
 		cache := NewAttCaches()
-		att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b101}, Signature: make([]byte, 96)}
-		att2 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b110}, Signature: make([]byte, 96)}
-		att3 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b110}, Signature: make([]byte, 96)}
+		att1 := testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b101}})
+		att2 := testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b110}})
+		att3 := testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b110}})
 		atts := []*ethpb.Attestation{att1, att2, att3}
 		require.NoError(t, cache.SaveUnaggregatedAttestations(atts))
 		for _, att := range atts {
@@ -163,11 +156,7 @@ func TestKV_Unaggregated_DeleteUnaggregatedAttestation(t *testing.T) {
 }
 
 func TestKV_Unaggregated_DeleteSeenUnaggregatedAttestations(t *testing.T) {
-	d := &ethpb.AttestationData{
-		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-		BeaconBlockRoot: make([]byte, 32),
-	}
+	d := testutil.HydrateAttestationData(&ethpb.AttestationData{})
 
 	t.Run("no attestations", func(t *testing.T) {
 		cache := NewAttCaches()
@@ -179,9 +168,9 @@ func TestKV_Unaggregated_DeleteSeenUnaggregatedAttestations(t *testing.T) {
 	t.Run("none seen", func(t *testing.T) {
 		cache := NewAttCaches()
 		atts := []*ethpb.Attestation{
-			{Data: d, AggregationBits: bitfield.Bitlist{0b1001}, Signature: make([]byte, 96)},
-			{Data: d, AggregationBits: bitfield.Bitlist{0b1010}, Signature: make([]byte, 96)},
-			{Data: d, AggregationBits: bitfield.Bitlist{0b1100}, Signature: make([]byte, 96)},
+			testutil.HydrateAttestation(&ethpb.Attestation{Data: d, AggregationBits: bitfield.Bitlist{0b1001}}),
+			testutil.HydrateAttestation(&ethpb.Attestation{Data: d, AggregationBits: bitfield.Bitlist{0b1010}}),
+			testutil.HydrateAttestation(&ethpb.Attestation{Data: d, AggregationBits: bitfield.Bitlist{0b1100}}),
 		}
 		require.NoError(t, cache.SaveUnaggregatedAttestations(atts))
 		assert.Equal(t, 3, cache.UnaggregatedAttestationCount())
@@ -196,9 +185,9 @@ func TestKV_Unaggregated_DeleteSeenUnaggregatedAttestations(t *testing.T) {
 	t.Run("some seen", func(t *testing.T) {
 		cache := NewAttCaches()
 		atts := []*ethpb.Attestation{
-			{Data: d, AggregationBits: bitfield.Bitlist{0b1001}, Signature: make([]byte, 96)},
-			{Data: d, AggregationBits: bitfield.Bitlist{0b1010}, Signature: make([]byte, 96)},
-			{Data: d, AggregationBits: bitfield.Bitlist{0b1100}, Signature: make([]byte, 96)},
+			testutil.HydrateAttestation(&ethpb.Attestation{Data: d, AggregationBits: bitfield.Bitlist{0b1001}}),
+			testutil.HydrateAttestation(&ethpb.Attestation{Data: d, AggregationBits: bitfield.Bitlist{0b1010}}),
+			testutil.HydrateAttestation(&ethpb.Attestation{Data: d, AggregationBits: bitfield.Bitlist{0b1100}}),
 		}
 		require.NoError(t, cache.SaveUnaggregatedAttestations(atts))
 		assert.Equal(t, 3, cache.UnaggregatedAttestationCount())
@@ -221,9 +210,9 @@ func TestKV_Unaggregated_DeleteSeenUnaggregatedAttestations(t *testing.T) {
 	t.Run("all seen", func(t *testing.T) {
 		cache := NewAttCaches()
 		atts := []*ethpb.Attestation{
-			{Data: d, AggregationBits: bitfield.Bitlist{0b1001}, Signature: make([]byte, 96)},
-			{Data: d, AggregationBits: bitfield.Bitlist{0b1010}, Signature: make([]byte, 96)},
-			{Data: d, AggregationBits: bitfield.Bitlist{0b1100}, Signature: make([]byte, 96)},
+			testutil.HydrateAttestation(&ethpb.Attestation{Data: d, AggregationBits: bitfield.Bitlist{0b1001}}),
+			testutil.HydrateAttestation(&ethpb.Attestation{Data: d, AggregationBits: bitfield.Bitlist{0b1010}}),
+			testutil.HydrateAttestation(&ethpb.Attestation{Data: d, AggregationBits: bitfield.Bitlist{0b1100}}),
 		}
 		require.NoError(t, cache.SaveUnaggregatedAttestations(atts))
 		assert.Equal(t, 3, cache.UnaggregatedAttestationCount())
@@ -246,19 +235,19 @@ func TestKV_Unaggregated_DeleteSeenUnaggregatedAttestations(t *testing.T) {
 func TestKV_Unaggregated_UnaggregatedAttestationsBySlotIndex(t *testing.T) {
 	cache := NewAttCaches()
 
-	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1, CommitteeIndex: 1, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b101}, Signature: make([]byte, 96)}
-	att2 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1, CommitteeIndex: 2, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b110}, Signature: make([]byte, 96)}
-	att3 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2, CommitteeIndex: 1, BeaconBlockRoot: make([]byte, 32), Target: &ethpb.Checkpoint{Root: make([]byte, 32)}, Source: &ethpb.Checkpoint{Root: make([]byte, 32)}}, AggregationBits: bitfield.Bitlist{0b110}, Signature: make([]byte, 96)}
+	att1 := testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1, CommitteeIndex: 1}, AggregationBits: bitfield.Bitlist{0b101}})
+	att2 := testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1, CommitteeIndex: 2}, AggregationBits: bitfield.Bitlist{0b110}})
+	att3 := testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2, CommitteeIndex: 1}, AggregationBits: bitfield.Bitlist{0b110}})
 	atts := []*ethpb.Attestation{att1, att2, att3}
 
 	for _, att := range atts {
 		require.NoError(t, cache.SaveUnaggregatedAttestation(att))
 	}
-
-	returned := cache.UnaggregatedAttestationsBySlotIndex(1, 1)
+	ctx := context.Background()
+	returned := cache.UnaggregatedAttestationsBySlotIndex(ctx, 1, 1)
 	assert.DeepEqual(t, []*ethpb.Attestation{att1}, returned)
-	returned = cache.UnaggregatedAttestationsBySlotIndex(1, 2)
+	returned = cache.UnaggregatedAttestationsBySlotIndex(ctx, 1, 2)
 	assert.DeepEqual(t, []*ethpb.Attestation{att2}, returned)
-	returned = cache.UnaggregatedAttestationsBySlotIndex(2, 1)
+	returned = cache.UnaggregatedAttestationsBySlotIndex(ctx, 2, 1)
 	assert.DeepEqual(t, []*ethpb.Attestation{att3}, returned)
 }

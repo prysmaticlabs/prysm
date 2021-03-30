@@ -20,6 +20,8 @@ type Server struct {
 	BeaconDB           db.ReadOnlyDatabase
 	PeersFetcher       p2p.PeersProvider
 	PeerManager        p2p.PeerManager
+	MetadataProvider   p2p.MetadataProvider
 	GenesisTimeFetcher blockchain.TimeFetcher
 	GenesisFetcher     blockchain.GenesisFetcher
+	HeadFetcher        blockchain.HeadFetcher
 }

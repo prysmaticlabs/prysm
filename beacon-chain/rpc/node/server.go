@@ -19,7 +19,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -30,6 +31,8 @@ import (
 // providing RPC endpoints for verifying a beacon node's sync status, genesis and
 // version information, and services the node implements and runs.
 type Server struct {
+	LogsStreamer         logutil.Streamer
+	StreamLogsBufferSize int
 	SyncChecker          sync.Checker
 	Server               *grpc.Server
 	BeaconDB             db.ReadOnlyDatabase
@@ -78,7 +81,7 @@ func (ns *Server) GetGenesis(ctx context.Context, _ *empty.Empty) (*ethpb.Genesi
 // GetVersion checks the version information of the beacon node.
 func (ns *Server) GetVersion(_ context.Context, _ *empty.Empty) (*ethpb.Version, error) {
 	return &ethpb.Version{
-		Version: version.GetVersion(),
+		Version: version.Version(),
 	}, nil
 }
 
@@ -225,4 +228,40 @@ func (ns *Server) ListPeers(ctx context.Context, _ *empty.Empty) (*ethpb.Peers, 
 	return &ethpb.Peers{
 		Peers: res,
 	}, nil
+}
+
+// StreamBeaconLogs from the beacon node via a gRPC server-side stream.
+func (ns *Server) StreamBeaconLogs(_ *empty.Empty, stream pb.Health_StreamBeaconLogsServer) error {
+	ch := make(chan []byte, ns.StreamLogsBufferSize)
+	sub := ns.LogsStreamer.LogsFeed().Subscribe(ch)
+	defer func() {
+		sub.Unsubscribe()
+		close(ch)
+	}()
+
+	recentLogs := ns.LogsStreamer.GetLastFewLogs()
+	logStrings := make([]string, len(recentLogs))
+	for i, log := range recentLogs {
+		logStrings[i] = string(log)
+	}
+	if err := stream.Send(&pb.LogsResponse{
+		Logs: logStrings,
+	}); err != nil {
+		return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
+	}
+	for {
+		select {
+		case log := <-ch:
+			resp := &pb.LogsResponse{
+				Logs: []string{string(log)},
+			}
+			if err := stream.Send(resp); err != nil {
+				return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
+			}
+		case err := <-sub.Err():
+			return status.Errorf(codes.Canceled, "Subscriber error, closing: %v", err)
+		case <-stream.Context().Done():
+			return status.Error(codes.Canceled, "Context canceled")
+		}
+	}
 }

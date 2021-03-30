@@ -5,7 +5,8 @@ import (
 	"strconv"
 	"sync"
 
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	types "github.com/prysmaticlabs/eth2-types"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -19,7 +20,7 @@ var (
 
 // slotRootInfo specifies the slot root info in the epoch boundary state cache.
 type slotRootInfo struct {
-	slot uint64
+	slot types.Slot
 	root [32]byte
 }
 
@@ -36,7 +37,7 @@ func slotKeyFn(obj interface{}) (string, error) {
 // rootStateInfo specifies the root state info in the epoch boundary state cache.
 type rootStateInfo struct {
 	root  [32]byte
-	state *stateTrie.BeaconState
+	state iface.BeaconState
 }
 
 // rootKeyFn takes the string representation of the block root to be used as key
@@ -89,7 +90,7 @@ func (e *epochBoundaryState) getByRoot(r [32]byte) (*rootStateInfo, bool, error)
 }
 
 // get epoch boundary state by its slot. Returns copied state in state info object if exists. Otherwise returns nil.
-func (e *epochBoundaryState) getBySlot(s uint64) (*rootStateInfo, bool, error) {
+func (e *epochBoundaryState) getBySlot(s types.Slot) (*rootStateInfo, bool, error) {
 	e.lock.RLock()
 	defer e.lock.RUnlock()
 
@@ -111,7 +112,7 @@ func (e *epochBoundaryState) getBySlot(s uint64) (*rootStateInfo, bool, error) {
 // put adds a state to the epoch boundary state cache. This method also trims the
 // least recently added state info if the cache size has reached the max cache
 // size limit.
-func (e *epochBoundaryState) put(r [32]byte, s *stateTrie.BeaconState) error {
+func (e *epochBoundaryState) put(r [32]byte, s iface.BeaconState) error {
 	e.lock.Lock()
 	defer e.lock.Unlock()
 
@@ -149,6 +150,6 @@ func popProcessNoopFunc(_ interface{}) error {
 }
 
 // Converts input uint64 to string. To be used as key for slot to get root.
-func slotToString(s uint64) string {
-	return strconv.FormatUint(s, 10)
+func slotToString(s types.Slot) string {
+	return strconv.FormatUint(uint64(s), 10)
 }

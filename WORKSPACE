@@ -60,10 +60,10 @@ bazel_skylib_workspace()
 
 http_archive(
     name = "bazel_gazelle",
-    sha256 = "1f4fc1d91826ec436ae04833430626f4cc02c20bb0a813c0c2f3c4c421307b1d",
-    strip_prefix = "bazel-gazelle-e368a11b76e92932122d824970dc0ce5feb9c349",
+    sha256 = "62ca106be173579c0a167deb23358fdfe71ffa1e4cfdddf5582af26520f1c66f",
     urls = [
-        "https://github.com/bazelbuild/bazel-gazelle/archive/e368a11b76e92932122d824970dc0ce5feb9c349.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-gazelle/releases/download/v0.23.0/bazel-gazelle-v0.23.0.tar.gz",
+        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.23.0/bazel-gazelle-v0.23.0.tar.gz",
     ],
 )
 
@@ -76,9 +76,9 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_docker",
-    sha256 = "1698624e878b0607052ae6131aa216d45ebb63871ec497f26c67455b34119c80",
-    strip_prefix = "rules_docker-0.15.0",
-    urls = ["https://github.com/bazelbuild/rules_docker/releases/download/v0.15.0/rules_docker-v0.15.0.tar.gz"],
+    sha256 = "1286175a94c0b1335efe1d75d22ea06e89742557d3fac2a0366f242a6eac6f5a",
+    strip_prefix = "rules_docker-ba4310833230294fa69b7d6ea1787ac684631a7d",
+    urls = ["https://github.com/bazelbuild/rules_docker/archive/ba4310833230294fa69b7d6ea1787ac684631a7d.tar.gz"],
 )
 
 http_archive(
@@ -89,10 +89,10 @@ http_archive(
         # nogo check fails for certain third_party dependencies.
         "//third_party:io_bazel_rules_go.patch",
     ],
-    sha256 = "81eff5df9077783b18e93d0c7ff990d8ad7a3b8b3ca5b785e1c483aacdb342d7",
+    sha256 = "7c10271940c6bce577d51a075ae77728964db285dac0a46614a7934dc34303e6",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.24.9/rules_go-v0.24.9.tar.gz",
-        "https://github.com/bazelbuild/rules_go/releases/download/v0.24.9/rules_go-v0.24.9.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.26.0/rules_go-v0.26.0.tar.gz",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.26.0/rules_go-v0.26.0.tar.gz",
     ],
 )
 
@@ -100,14 +100,14 @@ http_archive(
 # https://github.com/gogo/protobuf/pull/582 is merged.
 git_repository(
     name = "com_github_gogo_protobuf",
-    commit = "5628607bb4c51c3157aacc3a50f0ab707582b805",
+    commit = "b03c65ea87cdc3521ede29f62fe3ce239267c1bc",
     patch_args = ["-p1"],
     patches = [
         "@io_bazel_rules_go//third_party:com_github_gogo_protobuf-gazelle.patch",
         "//third_party:com_github_gogo_protobuf-equal.patch",
     ],
     remote = "https://github.com/gogo/protobuf",
-    shallow_since = "1571033717 +0200",
+    shallow_since = "1610265707 +0000",
     # gazelle args: -go_prefix github.com/gogo/protobuf -proto legacy
 )
 
@@ -156,52 +156,24 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_depe
 go_rules_dependencies()
 
 go_register_toolchains(
-    go_version = "1.15.6",
+    go_version = "1.16",
     nogo = "@//:nogo",
 )
 
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
 
 go_repository(
-    name = "com_github_grpc_ecosystem_grpc_gateway_v2",
-    importpath = "github.com/grpc-ecosystem/grpc-gateway/v2",
-    sum = "h1:X2vfSnm1WC8HEo0MBHZg2TcuDUHJj6kd1TmEAQncnSA=",
-    version = "v2.0.1",
+    name = "com_github_protolambda_zssz",
+    importpath = "github.com/protolambda/zssz",
+    sum = "h1:7fjJjissZIIaa2QcvmhS/pZISMX21zVITt49sW1ouek=",
+    version = "v0.1.5",
 )
 
 go_repository(
-    name = "com_github_iancoleman_strcase",
-    importpath = "github.com/iancoleman/strcase",
-    sum = "h1:gnomlvw9tnV3ITTAxzKSgTF+8kFWcU/f+TgttpXGz1U=",
-    version = "v0.1.2",
-)
-
-go_repository(
-    name = "com_github_prysmaticlabs_protoc_gen_go_cast",
-    importpath = "github.com/prysmaticlabs/protoc-gen-go-cast",
-    sum = "h1:0yt1t312VhbUNcJwKuG51w7DLP3HbrTLFtwCpjLt8wU=",
-    version = "v0.0.0-20201215233554-4f4b9d357e1b",
-)
-
-go_repository(
-    name = "org_golang_google_grpc_cmd_protoc_gen_go_grpc",
-    importpath = "google.golang.org/grpc/cmd/protoc-gen-go-grpc",
-    sum = "h1:lQ+dE99pFsb8osbJB3oRfE5eW4Hx6a/lZQr8Jh+eoT4=",
-    version = "v1.0.0",
-)
-
-go_repository(
-    name = "com_github_prysmaticlabs_eth2_types",
-    importpath = "github.com/prysmaticlabs/eth2-types",
-    sum = "h1:n/ZI+/bZfkMoGoV2Rult3YvS5LT4dvpAFOuISq+I+GY=",
-    version = "v0.0.0-20210127031309-22cbe426eba6",
-)
-
-go_repository(
-    name = "org_golang_x_term",
-    importpath = "golang.org/x/term",
-    sum = "h1:v+OssWQX+hTHEmOBgwxdZxK4zHq3yOs8F9J7mk0PY8E=",
-    version = "v0.0.0-20201126162022-7de9c90e9dd1",
+    name = "com_github_prysmaticlabs_go_ssz",
+    importpath = "github.com/prysmaticlabs/go-ssz",
+    sum = "h1:7qd0Af1ozWKBU3c93YW2RH+/09hJns9+ftqWUZyts9c=",
+    version = "v0.0.0-20200612203617-6d5c9aa213ae",
 )
 
 gazelle_dependencies()
@@ -250,6 +222,21 @@ http_archive(
     sha256 = "b84fbd1173acee9d02a7d3698ad269fdf4f7aa081e9cecd40e012ad0ad8cfa2a",
     strip_prefix = "repo-infra-6537f2101fb432b679f3d103ee729dd8ac5d30a0",
     url = "https://github.com/kubernetes/repo-infra/archive/6537f2101fb432b679f3d103ee729dd8ac5d30a0.tar.gz",
+)
+
+http_archive(
+    name = "eip3076_spec_tests",
+    build_file_content = """
+filegroup(
+    name = "test_data",
+    srcs = glob([
+        "**/*.json",
+    ]),
+    visibility = ["//visibility:public"],
+)
+    """,
+    sha256 = "91434d5fd5e1c6eb7b0174fed2afe25e09bddf00e1e4c431db931b2cee4e7773",
+    url = "https://github.com/eth2-clients/slashing-protection-interchange-tests/archive/b8413ca42dc92308019d0d4db52c87e9e125c4e9.tar.gz",
 )
 
 http_archive(
@@ -394,9 +381,9 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 """,
-    sha256 = "117f5366af9cf009354ed1abe02f906168158473461d69c8056984b9b0292619",
+    sha256 = "edb80f3a695d84f6000f0e05abf7a4bbf207c03abb91219780ec97e7d6ad21c8",
     urls = [
-        "https://github.com/prysmaticlabs/prysm-web-ui/releases/download/v1.0.0-beta.2/prysm-web-ui.tar.gz",
+        "https://github.com/prysmaticlabs/prysm-web-ui/releases/download/v1.0.0-beta.3/prysm-web-ui.tar.gz",
     ],
 )
 
@@ -404,10 +391,6 @@ load("//:deps.bzl", "prysm_deps")
 
 # gazelle:repository_macro deps.bzl%prysm_deps
 prysm_deps()
-
-load("@com_github_prysmaticlabs_go_ssz//:deps.bzl", "go_ssz_dependencies")
-
-go_ssz_dependencies()
 
 load("@prysm//third_party/herumi:herumi.bzl", "bls_dependencies")
 

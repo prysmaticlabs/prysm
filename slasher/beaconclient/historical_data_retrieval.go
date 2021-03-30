@@ -3,6 +3,7 @@ package beaconclient
 import (
 	"context"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"go.opencensus.io/trace"
@@ -10,9 +11,9 @@ import (
 
 // RequestHistoricalAttestations requests all indexed attestations for a
 // given epoch from a beacon node via gRPC.
-func (bs *Service) RequestHistoricalAttestations(
+func (s *Service) RequestHistoricalAttestations(
 	ctx context.Context,
-	epoch uint64,
+	epoch types.Epoch,
 ) ([]*ethpb.IndexedAttestation, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconclient.RequestHistoricalAttestations")
 	defer span.End()
@@ -26,7 +27,7 @@ func (bs *Service) RequestHistoricalAttestations(
 		if res == nil {
 			res = &ethpb.ListIndexedAttestationsResponse{}
 		}
-		res, err = bs.beaconClient.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
+		res, err = s.cfg.BeaconClient.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
 			QueryFilter: &ethpb.ListIndexedAttestationsRequest_Epoch{
 				Epoch: epoch,
 			},

@@ -9,10 +9,12 @@ import (
 	"sort"
 
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
@@ -22,7 +24,7 @@ import (
 // sortableIndices implements the Sort interface to sort newly activated validator indices
 // by activation epoch and by index number.
 type sortableIndices struct {
-	indices    []uint64
+	indices    []types.ValidatorIndex
 	validators []*ethpb.Validator
 }
 
@@ -44,7 +46,7 @@ func (s sortableIndices) Less(i, j int) bool {
 // Spec pseudocode definition:
 //  def get_attesting_balance(state: BeaconState, attestations: List[PendingAttestation]) -> Gwei:
 //    return get_total_balance(state, get_unslashed_attesting_indices(state, attestations))
-func AttestingBalance(state *stateTrie.BeaconState, atts []*pb.PendingAttestation) (uint64, error) {
+func AttestingBalance(state iface.ReadOnlyBeaconState, atts []*pb.PendingAttestation) (uint64, error) {
 	indices, err := UnslashedAttestingIndices(state, atts)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not get attesting indices")
@@ -75,7 +77,7 @@ func AttestingBalance(state *stateTrie.BeaconState, atts []*pb.PendingAttestatio
 //    for index in activation_queue[:get_validator_churn_limit(state)]:
 //        validator = state.validators[index]
 //        validator.activation_epoch = compute_activation_exit_epoch(get_current_epoch(state))
-func ProcessRegistryUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, error) {
+func ProcessRegistryUpdates(state iface.BeaconState) (iface.BeaconState, error) {
 	currentEpoch := helpers.CurrentEpoch(state)
 	vals := state.Validators()
 	var err error
@@ -85,7 +87,7 @@ func ProcessRegistryUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconStat
 		// Process the validators for activation eligibility.
 		if helpers.IsEligibleForActivationQueue(validator) {
 			validator.ActivationEligibilityEpoch = activationEligibilityEpoch
-			if err := state.UpdateValidatorAtIndex(uint64(idx), validator); err != nil {
+			if err := state.UpdateValidatorAtIndex(types.ValidatorIndex(idx), validator); err != nil {
 				return nil, err
 			}
 		}
@@ -94,7 +96,7 @@ func ProcessRegistryUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconStat
 		isActive := helpers.IsActiveValidator(validator, currentEpoch)
 		belowEjectionBalance := validator.EffectiveBalance <= ejectionBal
 		if isActive && belowEjectionBalance {
-			state, err = validators.InitiateValidatorExit(state, uint64(idx))
+			state, err = validators.InitiateValidatorExit(state, types.ValidatorIndex(idx))
 			if err != nil {
 				return nil, errors.Wrapf(err, "could not initiate exit for validator %d", idx)
 			}
@@ -102,10 +104,10 @@ func ProcessRegistryUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconStat
 	}
 
 	// Queue validators eligible for activation and not yet dequeued for activation.
-	var activationQ []uint64
+	var activationQ []types.ValidatorIndex
 	for idx, validator := range vals {
 		if helpers.IsEligibleForActivation(state, validator) {
-			activationQ = append(activationQ, uint64(idx))
+			activationQ = append(activationQ, types.ValidatorIndex(idx))
 		}
 	}
 
@@ -154,7 +156,7 @@ func ProcessRegistryUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconStat
 //			  penalty_numerator = validator.effective_balance // increment * adjusted_total_slashing_balance
 //            penalty = penalty_numerator // total_balance * increment
 //            decrease_balance(state, ValidatorIndex(index), penalty)
-func ProcessSlashings(state *stateTrie.BeaconState) (*stateTrie.BeaconState, error) {
+func ProcessSlashings(state iface.BeaconState) (iface.BeaconState, error) {
 	currentEpoch := helpers.CurrentEpoch(state)
 	totalBalance, err := helpers.TotalActiveBalance(state)
 	if err != nil {
@@ -175,17 +177,17 @@ func ProcessSlashings(state *stateTrie.BeaconState) (*stateTrie.BeaconState, err
 	// below equally.
 	increment := params.BeaconConfig().EffectiveBalanceIncrement
 	minSlashing := mathutil.Min(totalSlashing*params.BeaconConfig().ProportionalSlashingMultiplier, totalBalance)
-	err = state.ApplyToEveryValidator(func(idx int, val *ethpb.Validator) (bool, error) {
+	err = state.ApplyToEveryValidator(func(idx int, val *ethpb.Validator) (bool, *ethpb.Validator, error) {
 		correctEpoch := (currentEpoch + exitLength/2) == val.WithdrawableEpoch
 		if val.Slashed && correctEpoch {
 			penaltyNumerator := val.EffectiveBalance / increment * minSlashing
 			penalty := penaltyNumerator / totalBalance * increment
-			if err := helpers.DecreaseBalance(state, uint64(idx), penalty); err != nil {
-				return false, err
+			if err := helpers.DecreaseBalance(state, types.ValidatorIndex(idx), penalty); err != nil {
+				return false, val, err
 			}
-			return true, nil
+			return true, val, nil
 		}
-		return false, nil
+		return false, val, nil
 	})
 	return state, err
 }
@@ -230,7 +232,7 @@ func ProcessSlashings(state *stateTrie.BeaconState) (*stateTrie.BeaconState, err
 //    # Rotate current/previous epoch attestations
 //    state.previous_epoch_attestations = state.current_epoch_attestations
 //    state.current_epoch_attestations = []
-func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, error) {
+func ProcessFinalUpdates(state iface.BeaconState) (iface.BeaconState, error) {
 	currentEpoch := helpers.CurrentEpoch(state)
 	nextEpoch := currentEpoch + 1
 
@@ -249,23 +251,24 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 
 	bals := state.Balances()
 	// Update effective balances with hysteresis.
-	validatorFunc := func(idx int, val *ethpb.Validator) (bool, error) {
+	validatorFunc := func(idx int, val *ethpb.Validator) (bool, *ethpb.Validator, error) {
 		if val == nil {
-			return false, fmt.Errorf("validator %d is nil in state", idx)
+			return false, nil, fmt.Errorf("validator %d is nil in state", idx)
 		}
 		if idx >= len(bals) {
-			return false, fmt.Errorf("validator index exceeds validator length in state %d >= %d", idx, len(state.Balances()))
+			return false, nil, fmt.Errorf("validator index exceeds validator length in state %d >= %d", idx, len(state.Balances()))
 		}
 		balance := bals[idx]
 
 		if balance+downwardThreshold < val.EffectiveBalance || val.EffectiveBalance+upwardThreshold < balance {
-			val.EffectiveBalance = maxEffBalance
-			if val.EffectiveBalance > balance-balance%effBalanceInc {
-				val.EffectiveBalance = balance - balance%effBalanceInc
+			newVal := stateV0.CopyValidator(val)
+			newVal.EffectiveBalance = maxEffBalance
+			if newVal.EffectiveBalance > balance-balance%effBalanceInc {
+				newVal.EffectiveBalance = balance - balance%effBalanceInc
 			}
-			return true, nil
+			return true, newVal, nil
 		}
-		return false, nil
+		return false, val, nil
 	}
 
 	if err := state.ApplyToEveryValidator(validatorFunc); err != nil {
@@ -276,20 +279,20 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 	slashedExitLength := params.BeaconConfig().EpochsPerSlashingsVector
 	slashedEpoch := nextEpoch % slashedExitLength
 	slashings := state.Slashings()
-	if uint64(len(slashings)) != slashedExitLength {
+	if uint64(len(slashings)) != uint64(slashedExitLength) {
 		return nil, fmt.Errorf(
 			"state slashing length %d different than EpochsPerHistoricalVector %d",
 			len(slashings),
 			slashedExitLength,
 		)
 	}
-	if err := state.UpdateSlashingsAtIndex(slashedEpoch /* index */, 0 /* value */); err != nil {
+	if err := state.UpdateSlashingsAtIndex(uint64(slashedEpoch) /* index */, 0 /* value */); err != nil {
 		return nil, err
 	}
 
 	// Set RANDAO mix.
 	randaoMixLength := params.BeaconConfig().EpochsPerHistoricalVector
-	if uint64(state.RandaoMixesLength()) != randaoMixLength {
+	if uint64(state.RandaoMixesLength()) != uint64(randaoMixLength) {
 		return nil, fmt.Errorf(
 			"state randao length %d different than EpochsPerHistoricalVector %d",
 			state.RandaoMixesLength(),
@@ -300,13 +303,13 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 	if err != nil {
 		return nil, err
 	}
-	if err := state.UpdateRandaoMixesAtIndex(nextEpoch%randaoMixLength, mix); err != nil {
+	if err := state.UpdateRandaoMixesAtIndex(uint64(nextEpoch%randaoMixLength), mix); err != nil {
 		return nil, err
 	}
 
 	// Set historical root accumulator.
-	epochsPerHistoricalRoot := params.BeaconConfig().SlotsPerHistoricalRoot / params.BeaconConfig().SlotsPerEpoch
-	if nextEpoch%epochsPerHistoricalRoot == 0 {
+	epochsPerHistoricalRoot := params.BeaconConfig().SlotsPerHistoricalRoot.DivSlot(params.BeaconConfig().SlotsPerEpoch)
+	if nextEpoch.Mod(uint64(epochsPerHistoricalRoot)) == 0 {
 		historicalBatch := &pb.HistoricalBatch{
 			BlockRoots: state.BlockRoots(),
 			StateRoots: state.StateRoots(),
@@ -321,10 +324,7 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 	}
 
 	// Rotate current and previous epoch attestations.
-	if err := state.SetPreviousEpochAttestations(state.CurrentEpochAttestations()); err != nil {
-		return nil, err
-	}
-	if err := state.SetCurrentEpochAttestations([]*pb.PendingAttestation{}); err != nil {
+	if err := state.RotateAttestations(); err != nil {
 		return nil, err
 	}
 	return state, nil
@@ -340,8 +340,8 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 //    for a in attestations:
 //        output = output.union(get_attesting_indices(state, a.data, a.aggregation_bits))
 //    return set(filter(lambda index: not state.validators[index].slashed, output))
-func UnslashedAttestingIndices(state *stateTrie.BeaconState, atts []*pb.PendingAttestation) ([]uint64, error) {
-	var setIndices []uint64
+func UnslashedAttestingIndices(state iface.ReadOnlyBeaconState, atts []*pb.PendingAttestation) ([]types.ValidatorIndex, error) {
+	var setIndices []types.ValidatorIndex
 	seen := make(map[uint64]bool)
 
 	for _, att := range atts {
@@ -349,11 +349,14 @@ func UnslashedAttestingIndices(state *stateTrie.BeaconState, atts []*pb.PendingA
 		if err != nil {
 			return nil, err
 		}
-		attestingIndices := attestationutil.AttestingIndices(att.AggregationBits, committee)
+		attestingIndices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
+		if err != nil {
+			return nil, err
+		}
 		// Create a set for attesting indices
 		for _, index := range attestingIndices {
 			if !seen[index] {
-				setIndices = append(setIndices, index)
+				setIndices = append(setIndices, types.ValidatorIndex(index))
 			}
 			seen[index] = true
 		}
@@ -385,7 +388,7 @@ func UnslashedAttestingIndices(state *stateTrie.BeaconState, atts []*pb.PendingA
 //      total_balance = get_total_active_balance(state)
 //	    effective_balance = state.validator_registry[index].effective_balance
 //	    return effective_balance * BASE_REWARD_FACTOR // integer_squareroot(total_balance) // BASE_REWARDS_PER_EPOCH
-func BaseReward(state *stateTrie.BeaconState, index uint64) (uint64, error) {
+func BaseReward(state iface.ReadOnlyBeaconState, index types.ValidatorIndex) (uint64, error) {
 	totalBalance, err := helpers.TotalActiveBalance(state)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not calculate active balance")

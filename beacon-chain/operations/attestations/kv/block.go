@@ -3,11 +3,11 @@ package kv
 import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 )
 
 // SaveBlockAttestation saves an block attestation in cache.
-func (p *AttCaches) SaveBlockAttestation(att *ethpb.Attestation) error {
+func (c *AttCaches) SaveBlockAttestation(att *ethpb.Attestation) error {
 	if att == nil {
 		return nil
 	}
@@ -16,9 +16,9 @@ func (p *AttCaches) SaveBlockAttestation(att *ethpb.Attestation) error {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
 
-	p.blockAttLock.Lock()
-	defer p.blockAttLock.Unlock()
-	atts, ok := p.blockAtt[r]
+	c.blockAttLock.Lock()
+	defer c.blockAttLock.Unlock()
+	atts, ok := c.blockAtt[r]
 	if !ok {
 		atts = make([]*ethpb.Attestation, 0, 1)
 	}
@@ -30,15 +30,15 @@ func (p *AttCaches) SaveBlockAttestation(att *ethpb.Attestation) error {
 		}
 	}
 
-	p.blockAtt[r] = append(atts, stateTrie.CopyAttestation(att))
+	c.blockAtt[r] = append(atts, stateV0.CopyAttestation(att))
 
 	return nil
 }
 
 // SaveBlockAttestations saves a list of block attestations in cache.
-func (p *AttCaches) SaveBlockAttestations(atts []*ethpb.Attestation) error {
+func (c *AttCaches) SaveBlockAttestations(atts []*ethpb.Attestation) error {
 	for _, att := range atts {
-		if err := p.SaveBlockAttestation(att); err != nil {
+		if err := c.SaveBlockAttestation(att); err != nil {
 			return err
 		}
 	}
@@ -47,12 +47,12 @@ func (p *AttCaches) SaveBlockAttestations(atts []*ethpb.Attestation) error {
 }
 
 // BlockAttestations returns the block attestations in cache.
-func (p *AttCaches) BlockAttestations() []*ethpb.Attestation {
+func (c *AttCaches) BlockAttestations() []*ethpb.Attestation {
 	atts := make([]*ethpb.Attestation, 0)
 
-	p.blockAttLock.RLock()
-	defer p.blockAttLock.RUnlock()
-	for _, att := range p.blockAtt {
+	c.blockAttLock.RLock()
+	defer c.blockAttLock.RUnlock()
+	for _, att := range c.blockAtt {
 		atts = append(atts, att...)
 	}
 
@@ -60,7 +60,7 @@ func (p *AttCaches) BlockAttestations() []*ethpb.Attestation {
 }
 
 // DeleteBlockAttestation deletes a block attestation in cache.
-func (p *AttCaches) DeleteBlockAttestation(att *ethpb.Attestation) error {
+func (c *AttCaches) DeleteBlockAttestation(att *ethpb.Attestation) error {
 	if att == nil {
 		return nil
 	}
@@ -69,9 +69,9 @@ func (p *AttCaches) DeleteBlockAttestation(att *ethpb.Attestation) error {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
 
-	p.blockAttLock.Lock()
-	defer p.blockAttLock.Unlock()
-	delete(p.blockAtt, r)
+	c.blockAttLock.Lock()
+	defer c.blockAttLock.Unlock()
+	delete(c.blockAtt, r)
 
 	return nil
 }

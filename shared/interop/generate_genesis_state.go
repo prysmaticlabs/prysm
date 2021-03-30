@@ -7,9 +7,9 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	coreState "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -56,7 +56,7 @@ func GenerateGenesisStateFromDepositData(
 	if genesisTime == 0 {
 		genesisTime = uint64(timeutils.Now().Unix())
 	}
-	beaconState, err := state.GenesisBeaconState(deposits, genesisTime, &ethpb.Eth1Data{
+	beaconState, err := coreState.GenesisBeaconState(deposits, genesisTime, &ethpb.Eth1Data{
 		DepositRoot:  root[:],
 		DepositCount: uint64(len(deposits)),
 		BlockHash:    mockEth1BlockHash,
@@ -64,7 +64,12 @@ func GenerateGenesisStateFromDepositData(
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not generate genesis state")
 	}
-	return beaconState.CloneInnerState(), deposits, nil
+
+	pbState, err := stateV0.ProtobufBeaconState(beaconState.CloneInnerState())
+	if err != nil {
+		return nil, nil, err
+	}
+	return pbState, deposits, nil
 }
 
 // GenerateDepositsFromData a list of deposit items by creating proofs for each of them from a sparse Merkle trie.
@@ -148,12 +153,12 @@ func depositDataFromKeys(privKeys []bls.SecretKey, pubKeys []bls.PublicKey) ([]*
 
 // Generates a deposit data item from BLS keys and signs the hash tree root of the data.
 func createDepositData(privKey bls.SecretKey, pubKey bls.PublicKey) (*ethpb.DepositData, error) {
-	di := &ethpb.DepositData{
+	depositMessage := &pb.DepositMessage{
 		PublicKey:             pubKey.Marshal(),
 		WithdrawalCredentials: withdrawalCredentialsHash(pubKey.Marshal()),
 		Amount:                params.BeaconConfig().MaxEffectiveBalance,
 	}
-	sr, err := ssz.SigningRoot(di)
+	sr, err := depositMessage.HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +170,12 @@ func createDepositData(privKey bls.SecretKey, pubKey bls.PublicKey) (*ethpb.Depo
 	if err != nil {
 		return nil, err
 	}
-	di.Signature = privKey.Sign(root[:]).Marshal()
+	di := &ethpb.Deposit_Data{
+		PublicKey:             depositMessage.PublicKey,
+		WithdrawalCredentials: depositMessage.WithdrawalCredentials,
+		Amount:                depositMessage.Amount,
+		Signature:             privKey.Sign(root[:]).Marshal(),
+	}
 	return di, nil
 }
 

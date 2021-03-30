@@ -39,7 +39,7 @@ func main() {
 	app := cli.App{}
 	app.Name = "drainContracts"
 	app.Usage = "this is a util to drain all (testing) deposit contracts of their ETH."
-	app.Version = version.GetVersion()
+	app.Version = version.Version()
 	app.Flags = []cli.Flag{
 		&cli.StringFlag{
 			Name:        "keystoreUTCPath",

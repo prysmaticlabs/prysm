@@ -10,18 +10,16 @@ import (
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 	_ "gopkg.in/confluentinc/confluent-kafka-go.v1/kafka/librdkafka" // Required for c++ kafka library.
+	"gopkg.in/errgo.v2/fmt/errors"
 )
 
 var _ iface.Database = (*Exporter)(nil)
-var log = logrus.WithField("prefix", "exporter")
 var marshaler = &jsonpb.Marshaler{}
 
 // Exporter wraps a database interface and exports certain objects to kafka topics.
@@ -61,7 +59,7 @@ func (e Exporter) publish(ctx context.Context, topic string, msg proto.Message) 
 	if v, ok := msg.(fssz.HashRoot); ok {
 		key, err = v.HashTreeRoot()
 	} else {
-		key, err = ssz.HashTreeRoot(msg)
+		err = errors.New("object does not follow hash tree root interface")
 	}
 	if err != nil {
 		traceutil.AnnotateError(span, err)

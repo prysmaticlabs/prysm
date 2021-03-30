@@ -15,12 +15,12 @@ var syncStatusPollingInterval = time.Duration(params.BeaconConfig().SecondsPerSl
 
 // ChainHead requests the latest beacon chain head
 // from a beacon node via gRPC.
-func (bs *Service) ChainHead(
+func (s *Service) ChainHead(
 	ctx context.Context,
 ) (*ethpb.ChainHead, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconclient.ChainHead")
 	defer span.End()
-	res, err := bs.beaconClient.GetChainHead(ctx, &ptypes.Empty{})
+	res, err := s.cfg.BeaconClient.GetChainHead(ctx, &ptypes.Empty{})
 	if err != nil || res == nil {
 		return nil, errors.Wrap(err, "Could not retrieve chain head or got nil chain head")
 	}
@@ -29,29 +29,29 @@ func (bs *Service) ChainHead(
 
 // GenesisValidatorsRoot requests or fetch from memory the beacon chain genesis
 // validators root via gRPC.
-func (bs *Service) GenesisValidatorsRoot(
+func (s *Service) GenesisValidatorsRoot(
 	ctx context.Context,
 ) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconclient.GenesisValidatorsRoot")
 	defer span.End()
 
-	if bs.genesisValidatorRoot == nil {
-		res, err := bs.nodeClient.GetGenesis(ctx, &ptypes.Empty{})
+	if s.genesisValidatorRoot == nil {
+		res, err := s.cfg.NodeClient.GetGenesis(ctx, &ptypes.Empty{})
 		if err != nil {
 			return nil, errors.Wrap(err, "could not retrieve genesis data")
 		}
 		if res == nil {
 			return nil, errors.Wrap(err, "nil genesis data")
 		}
-		bs.genesisValidatorRoot = res.GenesisValidatorsRoot
+		s.genesisValidatorRoot = res.GenesisValidatorsRoot
 	}
-	return bs.genesisValidatorRoot, nil
+	return s.genesisValidatorRoot, nil
 }
 
 // Poll the beacon node every syncStatusPollingInterval until the node
 // is no longer syncing.
-func (bs *Service) querySyncStatus(ctx context.Context) {
-	status, err := bs.nodeClient.GetSyncStatus(ctx, &ptypes.Empty{})
+func (s *Service) querySyncStatus(ctx context.Context) {
+	status, err := s.cfg.NodeClient.GetSyncStatus(ctx, &ptypes.Empty{})
 	if err != nil {
 		log.WithError(err).Error("Could not fetch sync status")
 	}
@@ -65,7 +65,7 @@ func (bs *Service) querySyncStatus(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
-			status, err := bs.nodeClient.GetSyncStatus(ctx, &ptypes.Empty{})
+			status, err := s.cfg.NodeClient.GetSyncStatus(ctx, &ptypes.Empty{})
 			if err != nil {
 				log.WithError(err).Error("Could not fetch sync status")
 			}

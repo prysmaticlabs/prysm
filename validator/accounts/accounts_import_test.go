@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
@@ -50,7 +51,8 @@ func TestImport_Noninteractive(t *testing.T) {
 	keymanager, err := imported.NewKeymanager(
 		cliCtx.Context,
 		&imported.SetupConfig{
-			Wallet: w,
+			Wallet:           w,
+			ListenForChanges: false,
 		},
 	)
 	require.NoError(t, err)
@@ -72,7 +74,7 @@ func TestImport_Noninteractive(t *testing.T) {
 		WalletPassword: password,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(cliCtx.Context)
+	km, err := w.InitializeKeymanager(cliCtx.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
 	keys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
@@ -103,18 +105,6 @@ func TestImport_DuplicateKeys(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	keymanager, err := imported.NewKeymanager(
-		cliCtx.Context,
-		&imported.SetupConfig{
-			Wallet: w,
-		},
-	)
-	require.NoError(t, err)
-
-	// Make sure there are no accounts at the start.
-	accounts, err := keymanager.ValidatingAccountNames()
-	require.NoError(t, err)
-	assert.Equal(t, len(accounts), 0)
 
 	// Create a key and then copy it to create a duplicate
 	_, keystorePath := createKeystore(t, keysDir)
@@ -127,12 +117,12 @@ func TestImport_DuplicateKeys(t *testing.T) {
 
 	require.NoError(t, ImportAccountsCli(cliCtx))
 
-	w, err = wallet.OpenWallet(cliCtx.Context, &wallet.Config{
+	_, err = wallet.OpenWallet(cliCtx.Context, &wallet.Config{
 		WalletDir:      walletDir,
 		WalletPassword: password,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(cliCtx.Context)
+	km, err := w.InitializeKeymanager(cliCtx.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
 	keys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
@@ -165,7 +155,7 @@ func TestImport_NonImportedWallet(t *testing.T) {
 
 	// Create a key
 	createKeystore(t, keysDir)
-	require.ErrorContains(t, "Only imported wallets", ImportAccountsCli(cliCtx))
+	require.ErrorContains(t, "only imported wallets", ImportAccountsCli(cliCtx))
 }
 
 func TestImport_Noninteractive_RandomName(t *testing.T) {
@@ -193,7 +183,8 @@ func TestImport_Noninteractive_RandomName(t *testing.T) {
 	keymanager, err := imported.NewKeymanager(
 		cliCtx.Context,
 		&imported.SetupConfig{
-			Wallet: w,
+			Wallet:           w,
+			ListenForChanges: false,
 		},
 	)
 	require.NoError(t, err)
@@ -215,7 +206,7 @@ func TestImport_Noninteractive_RandomName(t *testing.T) {
 		WalletPassword: password,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(cliCtx.Context)
+	km, err := w.InitializeKeymanager(cliCtx.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
 	keys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
@@ -249,7 +240,8 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 	keymanager, err := imported.NewKeymanager(
 		cliCtx.Context,
 		&imported.SetupConfig{
-			Wallet: w,
+			Wallet:           w,
+			ListenForChanges: false,
 		},
 	)
 	require.NoError(t, err)
@@ -266,7 +258,7 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 		WalletPassword: password,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(cliCtx.Context)
+	km, err := w.InitializeKeymanager(cliCtx.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
 	keys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
@@ -370,7 +362,8 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 	keymanager, err := imported.NewKeymanager(
 		cliCtx.Context,
 		&imported.SetupConfig{
-			Wallet: wallet,
+			Wallet:           wallet,
+			ListenForChanges: false,
 		},
 	)
 	require.NoError(t, err)
@@ -380,7 +373,8 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 	keymanager, err = imported.NewKeymanager(
 		cliCtx.Context,
 		&imported.SetupConfig{
-			Wallet: wallet,
+			Wallet:           wallet,
+			ListenForChanges: false,
 		},
 	)
 	require.NoError(t, err)

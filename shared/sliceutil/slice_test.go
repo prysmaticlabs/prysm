@@ -5,6 +5,7 @@ import (
 	"sort"
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
@@ -496,5 +497,93 @@ func TestSplitOffset_OK(t *testing.T) {
 			t.Errorf("got %d, want %d", result, tt.offset)
 		}
 
+	}
+}
+
+func TestIntersectionSlot(t *testing.T) {
+	testCases := []struct {
+		setA []types.Slot
+		setB []types.Slot
+		setC []types.Slot
+		out  []types.Slot
+	}{
+		{[]types.Slot{2, 3, 5}, []types.Slot{3}, []types.Slot{3}, []types.Slot{3}},
+		{[]types.Slot{2, 3, 5}, []types.Slot{3, 5}, []types.Slot{5}, []types.Slot{5}},
+		{[]types.Slot{2, 3, 5}, []types.Slot{3, 5}, []types.Slot{3, 5}, []types.Slot{3, 5}},
+		{[]types.Slot{2, 3, 5}, []types.Slot{5, 3, 2}, []types.Slot{3, 2, 5}, []types.Slot{2, 3, 5}},
+		{[]types.Slot{3, 2, 5}, []types.Slot{5, 3, 2}, []types.Slot{3, 2, 5}, []types.Slot{2, 3, 5}},
+		{[]types.Slot{3, 3, 5}, []types.Slot{5, 3, 2}, []types.Slot{3, 2, 5}, []types.Slot{3, 5}},
+		{[]types.Slot{2, 3, 5}, []types.Slot{2, 3, 5}, []types.Slot{2, 3, 5}, []types.Slot{2, 3, 5}},
+		{[]types.Slot{2, 3, 5}, []types.Slot{}, []types.Slot{}, []types.Slot{}},
+		{[]types.Slot{2, 3, 5}, []types.Slot{2, 3, 5}, []types.Slot{}, []types.Slot{}},
+		{[]types.Slot{2, 3}, []types.Slot{2, 3, 5}, []types.Slot{5}, []types.Slot{}},
+		{[]types.Slot{2, 2, 2}, []types.Slot{2, 2, 2}, []types.Slot{}, []types.Slot{}},
+		{[]types.Slot{}, []types.Slot{2, 3, 5}, []types.Slot{}, []types.Slot{}},
+		{[]types.Slot{}, []types.Slot{}, []types.Slot{}, []types.Slot{}},
+		{[]types.Slot{1}, []types.Slot{1}, []types.Slot{}, []types.Slot{}},
+		{[]types.Slot{1, 1, 1}, []types.Slot{1, 1}, []types.Slot{1, 2, 3}, []types.Slot{1}},
+	}
+	for _, tt := range testCases {
+		setA := append([]types.Slot{}, tt.setA...)
+		setB := append([]types.Slot{}, tt.setB...)
+		setC := append([]types.Slot{}, tt.setC...)
+		result := sliceutil.IntersectionSlot(setA, setB, setC)
+		sort.Slice(result, func(i, j int) bool {
+			return result[i] < result[j]
+		})
+		if !reflect.DeepEqual(result, tt.out) {
+			t.Errorf("got %d, want %d", result, tt.out)
+		}
+		if !reflect.DeepEqual(setA, tt.setA) {
+			t.Errorf("slice modified, got %v, want %v", setA, tt.setA)
+		}
+		if !reflect.DeepEqual(setB, tt.setB) {
+			t.Errorf("slice modified, got %v, want %v", setB, tt.setB)
+		}
+		if !reflect.DeepEqual(setC, tt.setC) {
+			t.Errorf("slice modified, got %v, want %v", setC, tt.setC)
+		}
+	}
+}
+
+func TestNotSlot(t *testing.T) {
+	testCases := []struct {
+		setA []types.Slot
+		setB []types.Slot
+		out  []types.Slot
+	}{
+		{[]types.Slot{4, 6}, []types.Slot{2, 3, 5, 4, 6}, []types.Slot{2, 3, 5}},
+		{[]types.Slot{3, 5}, []types.Slot{2, 3, 5}, []types.Slot{2}},
+		{[]types.Slot{2, 3, 5}, []types.Slot{2, 3, 5}, []types.Slot{}},
+		{[]types.Slot{2}, []types.Slot{2, 3, 5}, []types.Slot{3, 5}},
+		{[]types.Slot{}, []types.Slot{2, 3, 5}, []types.Slot{2, 3, 5}},
+		{[]types.Slot{}, []types.Slot{}, []types.Slot{}},
+		{[]types.Slot{1}, []types.Slot{1}, []types.Slot{}},
+	}
+	for _, tt := range testCases {
+		result := sliceutil.NotSlot(tt.setA, tt.setB)
+		if !reflect.DeepEqual(result, tt.out) {
+			t.Errorf("got %d, want %d", result, tt.out)
+		}
+	}
+}
+
+func TestIsInSlots(t *testing.T) {
+	testCases := []struct {
+		a      types.Slot
+		b      []types.Slot
+		result bool
+	}{
+		{0, []types.Slot{}, false},
+		{0, []types.Slot{0}, true},
+		{4, []types.Slot{2, 3, 5, 4, 6}, true},
+		{100, []types.Slot{2, 3, 5, 4, 6}, false},
+	}
+	for _, tt := range testCases {
+		result := sliceutil.IsInSlots(tt.a, tt.b)
+		if result != tt.result {
+			t.Errorf("IsIn(%d, %v)=%v, wanted: %v",
+				tt.a, tt.b, result, tt.result)
+		}
 	}
 }

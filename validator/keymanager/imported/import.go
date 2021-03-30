@@ -17,7 +17,7 @@ import (
 )
 
 // ImportKeystores into the imported keymanager from an external source.
-func (dr *Keymanager) ImportKeystores(
+func (km *Keymanager) ImportKeystores(
 	ctx context.Context,
 	keystores []*keymanager.Keystore,
 	importsPassword string,
@@ -29,7 +29,7 @@ func (dr *Keymanager) ImportKeystores(
 	for i := 0; i < len(keystores); i++ {
 		var privKeyBytes []byte
 		var pubKeyBytes []byte
-		privKeyBytes, pubKeyBytes, importsPassword, err = dr.attemptDecryptKeystore(decryptor, keystores[i], importsPassword)
+		privKeyBytes, pubKeyBytes, importsPassword, err = km.attemptDecryptKeystore(decryptor, keystores[i], importsPassword)
 		if err != nil {
 			return err
 		}
@@ -50,7 +50,7 @@ func (dr *Keymanager) ImportKeystores(
 	}
 
 	// Write the accounts to disk into a single keystore.
-	accountsKeystore, err := dr.createAccountsKeystore(ctx, privKeys, pubKeys)
+	accountsKeystore, err := km.CreateAccountsKeystore(ctx, privKeys, pubKeys)
 	if err != nil {
 		return err
 	}
@@ -58,13 +58,13 @@ func (dr *Keymanager) ImportKeystores(
 	if err != nil {
 		return err
 	}
-	return dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encodedAccounts)
+	return km.wallet.WriteFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName, encodedAccounts)
 }
 
 // ImportKeypairs directly into the keymanager.
-func (dr *Keymanager) ImportKeypairs(ctx context.Context, privKeys, pubKeys [][]byte) error {
+func (km *Keymanager) ImportKeypairs(ctx context.Context, privKeys, pubKeys [][]byte) error {
 	// Write the accounts to disk into a single keystore.
-	accountsKeystore, err := dr.createAccountsKeystore(ctx, privKeys, pubKeys)
+	accountsKeystore, err := km.CreateAccountsKeystore(ctx, privKeys, pubKeys)
 	if err != nil {
 		return errors.Wrap(err, "could not import account keypairs")
 	}
@@ -72,13 +72,13 @@ func (dr *Keymanager) ImportKeypairs(ctx context.Context, privKeys, pubKeys [][]
 	if err != nil {
 		return errors.Wrap(err, "could not marshal accounts keystore into JSON")
 	}
-	return dr.wallet.WriteFileAtPath(ctx, AccountsPath, accountsKeystoreFileName, encodedAccounts)
+	return km.wallet.WriteFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName, encodedAccounts)
 }
 
 // Retrieves the private key and public key from an EIP-2335 keystore file
 // by decrypting using a specified password. If the password fails,
 // it prompts the user for the correct password until it confirms.
-func (dr *Keymanager) attemptDecryptKeystore(
+func (km *Keymanager) attemptDecryptKeystore(
 	enc *keystorev4.Encryptor, keystore *keymanager.Keystore, password string,
 ) ([]byte, []byte, string, error) {
 	// Attempt to decrypt the keystore with the specifies password.
@@ -88,7 +88,7 @@ func (dr *Keymanager) attemptDecryptKeystore(
 	doesNotDecrypt := err != nil && strings.Contains(err.Error(), "invalid checksum")
 	for doesNotDecrypt {
 		password, err = promptutil.PasswordPrompt(
-			"Password incorrect for keystore, input correct password", promptutil.NotEmpty,
+			fmt.Sprintf("Password incorrect for key 0x%s, input correct password", keystore.Pubkey), promptutil.NotEmpty,
 		)
 		if err != nil {
 			return nil, nil, "", fmt.Errorf("could not read keystore password: %w", err)

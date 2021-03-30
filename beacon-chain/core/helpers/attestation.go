@@ -2,15 +2,48 @@ package helpers
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"time"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
+
+// ValidateNilAttestation checks if any composite field of input attestation is nil.
+// Access to these nil fields will result in run time panic,
+// it is recommended to run these checks as first line of defense.
+func ValidateNilAttestation(attestation *ethpb.Attestation) error {
+	if attestation == nil {
+		return errors.New("attestation can't be nil")
+	}
+	if attestation.Data == nil {
+		return errors.New("attestation's data can't be nil")
+	}
+	if attestation.Data.Source == nil {
+		return errors.New("attestation's source can't be nil")
+	}
+	if attestation.Data.Target == nil {
+		return errors.New("attestation's target can't be nil")
+	}
+	if attestation.AggregationBits == nil {
+		return errors.New("attestation's bitfield can't be nil")
+	}
+	return nil
+}
+
+// ValidateSlotTargetEpoch checks if attestation data's epoch matches target checkpoint's epoch.
+// It is recommended to run `ValidateNilAttestation` first to ensure `data.Target` can't be nil.
+func ValidateSlotTargetEpoch(data *ethpb.AttestationData) error {
+	if SlotToEpoch(data.Slot) != data.Target.Epoch {
+		return fmt.Errorf("slot %d does not match target epoch %d", data.Slot, data.Target.Epoch)
+	}
+	return nil
+}
 
 // IsAggregator returns true if the signature is from the input validator. The committee
 // count is provided as an argument rather than imported implementation from spec. Having
@@ -84,11 +117,11 @@ func ComputeSubnetForAttestation(activeValCount uint64, att *ethpb.Attestation) 
 //    slots_since_epoch_start = attestation.data.slot % SLOTS_PER_EPOCH
 //    committees_since_epoch_start = get_committee_count_at_slot(state, attestation.data.slot) * slots_since_epoch_start
 //    return (committees_since_epoch_start + attestation.data.index) % ATTESTATION_SUBNET_COUNT
-func ComputeSubnetFromCommitteeAndSlot(activeValCount, comIdx, attSlot uint64) uint64 {
+func ComputeSubnetFromCommitteeAndSlot(activeValCount uint64, comIdx types.CommitteeIndex, attSlot types.Slot) uint64 {
 	slotSinceStart := SlotsSinceEpochStarts(attSlot)
 	comCount := SlotCommitteeCount(activeValCount)
-	commsSinceStart := comCount * slotSinceStart
-	computedSubnet := (commsSinceStart + comIdx) % params.BeaconNetworkConfig().AttestationSubnetCount
+	commsSinceStart := uint64(slotSinceStart.Mul(comCount))
+	computedSubnet := (commsSinceStart + uint64(comIdx)) % params.BeaconNetworkConfig().AttestationSubnetCount
 	return computedSubnet
 }
 
@@ -103,7 +136,7 @@ func ComputeSubnetFromCommitteeAndSlot(activeValCount, comIdx, attSlot uint64) u
 //   invalid_attestation_slot = 101
 //   valid_attestation_slot = 98
 // In the attestation must be within the range of 95 to 100 in the example above.
-func ValidateAttestationTime(attSlot uint64, genesisTime time.Time) error {
+func ValidateAttestationTime(attSlot types.Slot, genesisTime time.Time) error {
 	if err := ValidateSlotClock(attSlot, uint64(genesisTime.Unix())); err != nil {
 		return err
 	}
@@ -123,7 +156,7 @@ func ValidateAttestationTime(attSlot uint64, genesisTime time.Time) error {
 
 	// An attestation cannot be older than the current slot - attestation propagation slot range
 	// with a minor tolerance for peer clock disparity.
-	lowerBoundsSlot := uint64(0)
+	lowerBoundsSlot := types.Slot(0)
 	if currentSlot > params.BeaconNetworkConfig().AttestationPropagationSlotRange {
 		lowerBoundsSlot = currentSlot - params.BeaconNetworkConfig().AttestationPropagationSlotRange
 	}
@@ -150,10 +183,10 @@ func ValidateAttestationTime(attSlot uint64, genesisTime time.Time) error {
 func VerifyCheckpointEpoch(c *ethpb.Checkpoint, genesis time.Time) bool {
 	now := uint64(timeutils.Now().Unix())
 	genesisTime := uint64(genesis.Unix())
-	currentSlot := (now - genesisTime) / params.BeaconConfig().SecondsPerSlot
+	currentSlot := types.Slot((now - genesisTime) / params.BeaconConfig().SecondsPerSlot)
 	currentEpoch := SlotToEpoch(currentSlot)
 
-	var prevEpoch uint64
+	var prevEpoch types.Epoch
 	if currentEpoch > 1 {
 		prevEpoch = currentEpoch - 1
 	}

@@ -3,14 +3,12 @@ package powchain
 import (
 	"context"
 	"encoding/binary"
-	"fmt"
 	"math/big"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
-	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -26,7 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func TestProcessDepositLog_OK(t *testing.T) {
@@ -35,12 +32,12 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 
-	beaconDB, _ := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndPoint:    endpoint,
+		HTTPEndpoints:   []string{endpoint},
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
 		DepositCache:    depositCache,
@@ -68,7 +65,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
-			web3Service.depositContractAddress,
+			web3Service.cfg.DepositContract,
 		},
 	}
 
@@ -99,12 +96,12 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	hook := logTest.NewGlobal()
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	beaconDB, _ := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndPoint:    endpoint,
+		HTTPEndpoints:   []string{endpoint},
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
 		DepositCache:    depositCache,
@@ -136,7 +133,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
-			web3Service.depositContractAddress,
+			web3Service.cfg.DepositContract,
 		},
 	}
 
@@ -150,7 +147,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	err = web3Service.ProcessDepositLog(context.Background(), logs[1])
 	require.NoError(t, err)
 
-	pendingDeposits := web3Service.depositCache.PendingDeposits(context.Background(), nil /*blockNum*/)
+	pendingDeposits := web3Service.cfg.DepositCache.PendingDeposits(context.Background(), nil /*blockNum*/)
 	require.Equal(t, 2, len(pendingDeposits), "Unexpected number of deposits")
 
 	hook.Reset()
@@ -159,9 +156,9 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 func TestUnpackDepositLogData_OK(t *testing.T) {
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	beaconDB, _ := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndPoint:    endpoint,
+		HTTPEndpoints:   []string{endpoint},
 		BeaconDB:        beaconDB,
 		DepositContract: testAcc.ContractAddr,
 	})
@@ -187,7 +184,7 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
-			web3Service.depositContractAddress,
+			web3Service.cfg.DepositContract,
 		},
 	}
 
@@ -207,12 +204,12 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	hook := logTest.NewGlobal()
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	beaconDB, _ := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndPoint:    endpoint,
+		HTTPEndpoints:   []string{endpoint},
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
 		DepositCache:    depositCache,
@@ -253,7 +250,7 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
-			web3Service.depositContractAddress,
+			web3Service.cfg.DepositContract,
 		},
 	}
 
@@ -278,12 +275,12 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	hook := logTest.NewGlobal()
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	beaconDB, _ := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndPoint:    endpoint,
+		HTTPEndpoints:   []string{endpoint},
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
 		DepositCache:    depositCache,
@@ -321,7 +318,7 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
-			web3Service.depositContractAddress,
+			web3Service.cfg.DepositContract,
 		},
 	}
 
@@ -331,7 +328,7 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 
 	// Set up our subscriber now to listen for the chain started event.
 	stateChannel := make(chan *feed.Event, 1)
-	stateSub := web3Service.stateNotifier.StateFeed().Subscribe(stateChannel)
+	stateSub := web3Service.cfg.StateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
 
 	for _, log := range logs {
@@ -365,12 +362,12 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	hook := logTest.NewGlobal()
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	kvStore, _ := testDB.SetupDB(t)
+	kvStore := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndPoint:    endpoint,
+		HTTPEndpoints:   []string{endpoint},
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        kvStore,
 		DepositCache:    depositCache,
@@ -428,7 +425,7 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 
 	// Set up our subscriber now to listen for the chain started event.
 	stateChannel := make(chan *feed.Event, 1)
-	stateSub := web3Service.stateNotifier.StateFeed().Subscribe(stateChannel)
+	stateSub := web3Service.cfg.StateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
 
 	err = web3Service.processPastLogs(context.Background())
@@ -458,12 +455,12 @@ func TestProcessETH2GenesisLog_LargePeriodOfNoLogs(t *testing.T) {
 	hook := logTest.NewGlobal()
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	kvStore, _ := testDB.SetupDB(t)
+	kvStore := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndPoint:    endpoint,
+		HTTPEndpoints:   []string{endpoint},
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        kvStore,
 		DepositCache:    depositCache,
@@ -532,7 +529,7 @@ func TestProcessETH2GenesisLog_LargePeriodOfNoLogs(t *testing.T) {
 
 	// Set up our subscriber now to listen for the chain started event.
 	stateChannel := make(chan *feed.Event, 1)
-	stateSub := web3Service.stateNotifier.StateFeed().Subscribe(stateChannel)
+	stateSub := web3Service.cfg.StateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
 
 	err = web3Service.processPastLogs(context.Background())
@@ -561,12 +558,12 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 	hook := logTest.NewGlobal()
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	beaconDB, _ := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndPoint:    endpoint,
+		HTTPEndpoints:   []string{endpoint},
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
 		DepositCache:    depositCache,
@@ -602,7 +599,7 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
-			web3Service.depositContractAddress,
+			web3Service.cfg.DepositContract,
 		},
 	}
 
@@ -643,71 +640,11 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 	hook.Reset()
 }
 
-func TestConsistentGenesisState(t *testing.T) {
-	t.Skip("Incorrect test setup")
-	testAcc, err := contracts.Setup()
-	require.NoError(t, err, "Unable to set up simulated backend")
-	beaconDB, _ := testDB.SetupDB(t)
-	web3Service := newPowchainService(t, testAcc, beaconDB)
-
-	testAcc.Backend.Commit()
-	err = testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
-	require.NoError(t, err)
-
-	testutil.ResetCache()
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(uint64(depositsReqForChainStart))
-	require.NoError(t, err)
-
-	_, roots, err := testutil.DeterministicDepositTrie(len(deposits))
-	require.NoError(t, err)
-	ctx, cancel := context.WithCancel(context.Background())
-	go web3Service.run(ctx.Done())
-
-	// 64 Validators are used as size required for beacon-chain to start. This number
-	// is defined in the deposit contract as the number required for the testnet. The actual number
-	// is 2**14.
-	for i := 0; i < depositsReqForChainStart; i++ {
-		data := deposits[i].Data
-		testAcc.TxOpts.Value = contracts.Amount32Eth()
-		testAcc.TxOpts.GasLimit = 1000000
-		_, err = testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature, roots[i])
-		require.NoError(t, err, "Could not deposit to deposit contract")
-
-		testAcc.Backend.Commit()
-	}
-
-	for i := uint64(0); i < params.BeaconConfig().Eth1FollowDistance; i++ {
-		testAcc.Backend.Commit()
-	}
-
-	time.Sleep(2 * time.Second)
-	require.Equal(t, true, web3Service.chainStartData.Chainstarted, fmt.Sprintf("Service hasn't chainstarted yet with a block height of %d", web3Service.latestEth1Data.BlockHeight))
-
-	// Advance 10 blocks.
-	for i := 0; i < 10; i++ {
-		testAcc.Backend.Commit()
-	}
-
-	// New db to prevent registration error.
-	newBeaconDB, _ := testDB.SetupDB(t)
-
-	newWeb3Service := newPowchainService(t, testAcc, newBeaconDB)
-	go newWeb3Service.run(ctx.Done())
-
-	time.Sleep(2 * time.Second)
-	require.Equal(t, true, newWeb3Service.chainStartData.Chainstarted, fmt.Sprintf("Service hasn't chainstarted yet with a block height of %d", newWeb3Service.latestEth1Data.BlockHeight))
-
-	diff, _ := messagediff.PrettyDiff(web3Service.chainStartData.Eth1Data, newWeb3Service.chainStartData.Eth1Data)
-	assert.Equal(t, "", diff, "Two services have different eth1data")
-
-	cancel()
-}
-
 func TestCheckForChainstart_NoValidator(t *testing.T) {
 	hook := logTest.NewGlobal()
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	beaconDB, _ := testDB.SetupDB(t)
+	beaconDB := testDB.SetupDB(t)
 	s := newPowchainService(t, testAcc, beaconDB)
 	s.checkForChainstart([32]byte{}, nil, 0)
 	require.LogsDoNotContain(t, hook, "Could not determine active validator count from pre genesis state")
@@ -718,7 +655,7 @@ func newPowchainService(t *testing.T, eth1Backend *contracts.TestAccount, beacon
 	require.NoError(t, err)
 
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndPoint:    endpoint,
+		HTTPEndpoints:   []string{endpoint},
 		DepositContract: eth1Backend.ContractAddr,
 		BeaconDB:        beaconDB,
 		DepositCache:    depositCache,
@@ -735,6 +672,5 @@ func newPowchainService(t *testing.T, eth1Backend *contracts.TestAccount, beacon
 	bConfig := params.MinimalSpecConfig()
 	bConfig.MinGenesisTime = 0
 	params.OverrideBeaconConfig(bConfig)
-	web3Service.headerChan = make(chan *gethTypes.Header)
 	return web3Service
 }

@@ -5,6 +5,7 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -16,12 +17,12 @@ import (
 func (s *Service) validateProposerSlashing(ctx context.Context, pid peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
 	// Validation runs on publish (not just subscriptions), so we should approve any message from
 	// ourselves.
-	if pid == s.p2p.PeerID() {
+	if pid == s.cfg.P2P.PeerID() {
 		return pubsub.ValidationAccept
 	}
 
 	// The head state will be too far away to validate any slashing.
-	if s.initialSync.Syncing() {
+	if s.cfg.InitialSync.Syncing() {
 		return pubsub.ValidationIgnore
 	}
 
@@ -47,7 +48,7 @@ func (s *Service) validateProposerSlashing(ctx context.Context, pid peer.ID, msg
 		return pubsub.ValidationIgnore
 	}
 
-	headState, err := s.chain.HeadState(ctx)
+	headState, err := s.cfg.Chain.HeadState(ctx)
 	if err != nil {
 		return pubsub.ValidationIgnore
 	}
@@ -60,7 +61,7 @@ func (s *Service) validateProposerSlashing(ctx context.Context, pid peer.ID, msg
 }
 
 // Returns true if the node has already received a valid proposer slashing received for the proposer with index
-func (s *Service) hasSeenProposerSlashingIndex(i uint64) bool {
+func (s *Service) hasSeenProposerSlashingIndex(i types.ValidatorIndex) bool {
 	s.seenProposerSlashingLock.RLock()
 	defer s.seenProposerSlashingLock.RUnlock()
 	_, seen := s.seenProposerSlashingCache.Get(i)
@@ -68,7 +69,7 @@ func (s *Service) hasSeenProposerSlashingIndex(i uint64) bool {
 }
 
 // Set proposer slashing index in proposer slashing cache.
-func (s *Service) setProposerSlashingIndexSeen(i uint64) {
+func (s *Service) setProposerSlashingIndexSeen(i types.ValidatorIndex) {
 	s.seenProposerSlashingLock.Lock()
 	defer s.seenProposerSlashingLock.Unlock()
 	s.seenProposerSlashingCache.Add(i, true)

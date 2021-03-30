@@ -5,17 +5,23 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -24,10 +30,28 @@ import (
 // It fetches the latest beacon block head along with the latest canonical beacon state
 // information in order to sign the block and include information about the validator's
 // participation in voting on the block.
-func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [48]byte) {
+func (v *validator) SubmitAttestation(ctx context.Context, slot types.Slot, pubKey [48]byte) {
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitAttestation")
 	defer span.End()
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
+
+	v.waitOneThirdOrValidBlock(ctx, slot)
+
+	var b strings.Builder
+	if err := b.WriteByte(byte(iface.RoleAttester)); err != nil {
+		log.WithError(err).Error("Could not write role byte for lock key")
+		traceutil.AnnotateError(span, err)
+		return
+	}
+	_, err := b.Write(pubKey[:])
+	if err != nil {
+		log.WithError(err).Error("Could not write pubkey bytes for lock key")
+		traceutil.AnnotateError(span, err)
+		return
+	}
+	lock := mputil.NewMultilock(b.String())
+	lock.Lock()
+	defer lock.Unlock()
 
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).WithField("slot", slot)
@@ -37,14 +61,13 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
+		traceutil.AnnotateError(span, err)
 		return
 	}
 	if len(duty.Committee) == 0 {
 		log.Debug("Empty committee for validator duty, not attesting")
 		return
 	}
-
-	v.waitToSlotOneThird(ctx, slot)
 
 	req := &ethpb.AttestationDataRequest{
 		Slot:           slot,
@@ -56,27 +79,32 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
+		traceutil.AnnotateError(span, err)
 		return
 	}
 
 	indexedAtt := &ethpb.IndexedAttestation{
-		AttestingIndices: []uint64{duty.ValidatorIndex},
+		AttestingIndices: []uint64{uint64(duty.ValidatorIndex)},
 		Data:             data,
 	}
-	if err := v.preAttSignValidations(ctx, indexedAtt, pubKey); err != nil {
-		log.WithError(err).Error("Failed attestation slashing protection check")
-		log.WithFields(
-			attestationLogFields(pubKey, indexedAtt),
-		).Debug("Attempted slashable attestation details")
+
+	_, signingRoot, err := v.getDomainAndSigningRoot(ctx, indexedAtt.Data)
+	if err != nil {
+		log.WithError(err).Error("Could not get domain and signing root from attestation")
+		if v.emitAccountMetrics {
+			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		traceutil.AnnotateError(span, err)
 		return
 	}
 
-	sig, signingRoot, err := v.signAtt(ctx, pubKey, data)
+	sig, _, err := v.signAtt(ctx, pubKey, data)
 	if err != nil {
 		log.WithError(err).Error("Could not sign attestation")
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
+		traceutil.AnnotateError(span, err)
 		return
 	}
 
@@ -105,16 +133,15 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		Signature:       sig,
 	}
 
+	// Set the signature of the attestation and send it out to the beacon node.
 	indexedAtt.Signature = sig
-	if err := v.postAttSignUpdate(ctx, indexedAtt, pubKey, signingRoot); err != nil {
+	if err := v.slashableAttestationCheck(ctx, indexedAtt, pubKey, signingRoot); err != nil {
 		log.WithError(err).Error("Failed attestation slashing protection check")
 		log.WithFields(
 			attestationLogFields(pubKey, indexedAtt),
 		).Debug("Attempted slashable attestation details")
+		traceutil.AnnotateError(span, err)
 		return
-	}
-	if err := v.SaveProtection(ctx, pubKey); err != nil {
-		log.WithError(err).Errorf("Could not save validator: %#x protection", pubKey)
 	}
 	attResp, err := v.validatorClient.ProposeAttestation(ctx, attestation)
 	if err != nil {
@@ -122,6 +149,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
+		traceutil.AnnotateError(span, err)
 		return
 	}
 
@@ -130,6 +158,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
+		traceutil.AnnotateError(span, err)
 		return
 	}
 
@@ -198,7 +227,7 @@ func (v *validator) getDomainAndSigningRoot(ctx context.Context, data *ethpb.Att
 
 // For logging, this saves the last submitted attester index to its attestation data. The purpose of this
 // is to enhance attesting logs to be readable when multiple validator keys ran in a single client.
-func (v *validator) saveAttesterIndexToData(data *ethpb.AttestationData, index uint64) error {
+func (v *validator) saveAttesterIndexToData(data *ethpb.AttestationData, index types.ValidatorIndex) error {
 	v.attLogsLock.Lock()
 	defer v.attLogsLock.Unlock()
 
@@ -208,23 +237,57 @@ func (v *validator) saveAttesterIndexToData(data *ethpb.AttestationData, index u
 	}
 
 	if v.attLogs[h] == nil {
-		v.attLogs[h] = &attSubmitted{data, []uint64{}, []uint64{}}
+		v.attLogs[h] = &attSubmitted{data, []types.ValidatorIndex{}, []types.ValidatorIndex{}}
 	}
-	v.attLogs[h] = &attSubmitted{data, append(v.attLogs[h].attesterIndices, index), []uint64{}}
+	v.attLogs[h] = &attSubmitted{data, append(v.attLogs[h].attesterIndices, index), []types.ValidatorIndex{}}
 
 	return nil
 }
 
-// waitToSlotOneThird waits until one third through the current slot period
-// such that head block for beacon node can get updated.
-func (v *validator) waitToSlotOneThird(ctx context.Context, slot uint64) {
-	_, span := trace.StartSpan(ctx, "validator.waitToSlotOneThird")
+// waitOneThirdOrValidBlock waits until (a) or (b) whichever comes first:
+//   (a) the validator has received a valid block that is the same slot as input slot
+//   (b) one-third of the slot has transpired (SECONDS_PER_SLOT / 3 seconds after the start of slot)
+func (v *validator) waitOneThirdOrValidBlock(ctx context.Context, slot types.Slot) {
+	ctx, span := trace.StartSpan(ctx, "validator.waitOneThirdOrValidBlock")
 	defer span.End()
+
+	// Don't need to wait if requested slot is the same as highest valid slot.
+	if slot <= v.highestValidSlot {
+		return
+	}
 
 	delay := slotutil.DivideSlotBy(3 /* a third of the slot duration */)
 	startTime := slotutil.SlotStartTime(v.genesisTime, slot)
 	finalTime := startTime.Add(delay)
-	time.Sleep(timeutils.Until(finalTime))
+	wait := timeutils.Until(finalTime)
+	if wait <= 0 {
+		return
+	}
+	t := time.NewTimer(wait)
+	defer t.Stop()
+
+	bChannel := make(chan *ethpb.SignedBeaconBlock, 1)
+	sub := v.blockFeed.Subscribe(bChannel)
+	defer sub.Unsubscribe()
+
+	for {
+		select {
+		case b := <-bChannel:
+			if featureconfig.Get().AttestTimely {
+				if slot <= b.Block.Slot {
+					return
+				}
+			}
+		case <-ctx.Done():
+			traceutil.AnnotateError(span, ctx.Err())
+			return
+		case <-sub.Err():
+			log.Error("Subscriber closed, exiting goroutine")
+			return
+		case <-t.C:
+			return
+		}
+	}
 }
 
 func attestationLogFields(pubKey [48]byte, indexedAtt *ethpb.IndexedAttestation) logrus.Fields {

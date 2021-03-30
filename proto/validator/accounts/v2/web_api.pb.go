@@ -6,6 +6,13 @@ package ethereum_validator_accounts_v2
 import (
 	context "context"
 	fmt "fmt"
+<<<<<<< HEAD
+=======
+	io "io"
+	math "math"
+	math_bits "math/bits"
+
+>>>>>>> d7103fdef302dd5f99f9a0f76a3f42f30848a9d3
 	proto "github.com/gogo/protobuf/proto"
 	empty "github.com/golang/protobuf/ptypes/empty"
 	v1alpha1 "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -2007,6 +2014,7 @@ func (c *beaconClient) GetValidatorBalances(ctx context.Context, in *v1alpha1.Li
 		return nil, err
 	}
 	return out, nil
+<<<<<<< HEAD
 }
 
 func (c *beaconClient) GetValidatorQueue(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*v1alpha1.ValidatorQueue, error) {
@@ -2018,6 +2026,70 @@ func (c *beaconClient) GetValidatorQueue(ctx context.Context, in *empty.Empty, o
 	return out, nil
 }
 
+func (c *beaconClient) GetPeers(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*v1alpha1.Peers, error) {
+	out := new(v1alpha1.Peers)
+	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Beacon/GetPeers", in, out, opts...)
+=======
+}
+
+func (c *beaconClient) GetValidatorQueue(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*v1alpha1.ValidatorQueue, error) {
+	out := new(v1alpha1.ValidatorQueue)
+	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Beacon/GetValidatorQueue", in, out, opts...)
+>>>>>>> d7103fdef302dd5f99f9a0f76a3f42f30848a9d3
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+<<<<<<< HEAD
+// BeaconServer is the server API for Beacon service.
+type BeaconServer interface {
+	GetBeaconStatus(context.Context, *empty.Empty) (*BeaconStatusResponse, error)
+	GetValidatorParticipation(context.Context, *v1alpha1.GetValidatorParticipationRequest) (*v1alpha1.ValidatorParticipationResponse, error)
+	GetValidatorPerformance(context.Context, *v1alpha1.ValidatorPerformanceRequest) (*v1alpha1.ValidatorPerformanceResponse, error)
+	GetValidators(context.Context, *v1alpha1.ListValidatorsRequest) (*v1alpha1.Validators, error)
+	GetValidatorBalances(context.Context, *v1alpha1.ListValidatorBalancesRequest) (*v1alpha1.ValidatorBalances, error)
+	GetValidatorQueue(context.Context, *empty.Empty) (*v1alpha1.ValidatorQueue, error)
+	GetPeers(context.Context, *empty.Empty) (*v1alpha1.Peers, error)
+}
+
+// UnimplementedBeaconServer can be embedded to have forward compatible implementations.
+type UnimplementedBeaconServer struct {
+}
+
+func (*UnimplementedBeaconServer) GetBeaconStatus(ctx context.Context, req *empty.Empty) (*BeaconStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBeaconStatus not implemented")
+}
+func (*UnimplementedBeaconServer) GetValidatorParticipation(ctx context.Context, req *v1alpha1.GetValidatorParticipationRequest) (*v1alpha1.ValidatorParticipationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetValidatorParticipation not implemented")
+}
+func (*UnimplementedBeaconServer) GetValidatorPerformance(ctx context.Context, req *v1alpha1.ValidatorPerformanceRequest) (*v1alpha1.ValidatorPerformanceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetValidatorPerformance not implemented")
+}
+func (*UnimplementedBeaconServer) GetValidators(ctx context.Context, req *v1alpha1.ListValidatorsRequest) (*v1alpha1.Validators, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetValidators not implemented")
+}
+func (*UnimplementedBeaconServer) GetValidatorBalances(ctx context.Context, req *v1alpha1.ListValidatorBalancesRequest) (*v1alpha1.ValidatorBalances, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetValidatorBalances not implemented")
+}
+func (*UnimplementedBeaconServer) GetValidatorQueue(ctx context.Context, req *empty.Empty) (*v1alpha1.ValidatorQueue, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetValidatorQueue not implemented")
+}
+func (*UnimplementedBeaconServer) GetPeers(ctx context.Context, req *empty.Empty) (*v1alpha1.Peers, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPeers not implemented")
+}
+
+func RegisterBeaconServer(s *grpc.Server, srv BeaconServer) {
+	s.RegisterService(&_Beacon_serviceDesc, srv)
+}
+
+func _Beacon_GetBeaconStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(empty.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+=======
 func (c *beaconClient) GetPeers(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*v1alpha1.Peers, error) {
 	out := new(v1alpha1.Peers)
 	err := c.cc.Invoke(ctx, "/ethereum.validator.accounts.v2.Beacon/GetPeers", in, out, opts...)
@@ -2073,6 +2145,7 @@ func _Beacon_GetBeaconStatus_Handler(srv interface{}, ctx context.Context, dec f
 	if err := dec(in); err != nil {
 		return nil, err
 	}
+>>>>>>> d7103fdef302dd5f99f9a0f76a3f42f30848a9d3
 	if interceptor == nil {
 		return srv.(BeaconServer).GetBeaconStatus(ctx, in)
 	}
@@ -2485,6 +2558,8 @@ var _Health_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetVersion",
 			Handler:    _Health_GetVersion_Handler,
+<<<<<<< HEAD
+=======
 		},
 	},
 	Streams: []grpc.StreamDesc{
@@ -2492,8 +2567,19 @@ var _Health_serviceDesc = grpc.ServiceDesc{
 			StreamName:    "StreamBeaconLogs",
 			Handler:       _Health_StreamBeaconLogs_Handler,
 			ServerStreams: true,
+>>>>>>> d7103fdef302dd5f99f9a0f76a3f42f30848a9d3
+		},
+	},
+	Streams: []grpc.StreamDesc{
+		{
+<<<<<<< HEAD
+			StreamName:    "StreamBeaconLogs",
+			Handler:       _Health_StreamBeaconLogs_Handler,
+			ServerStreams: true,
 		},
 		{
+=======
+>>>>>>> d7103fdef302dd5f99f9a0f76a3f42f30848a9d3
 			StreamName:    "StreamValidatorLogs",
 			Handler:       _Health_StreamValidatorLogs_Handler,
 			ServerStreams: true,
@@ -3630,6 +3716,192 @@ func (m *BeaconStatusResponse) Marshal() (dAtA []byte, err error) {
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
+<<<<<<< HEAD
+	}
+	return dAtA[:n], nil
+}
+
+func (m *BeaconStatusResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *BeaconStatusResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if m.ChainHead != nil {
+		{
+			size, err := m.ChainHead.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintWebApi(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x32
+	}
+	if len(m.DepositContractAddress) > 0 {
+		i -= len(m.DepositContractAddress)
+		copy(dAtA[i:], m.DepositContractAddress)
+		i = encodeVarintWebApi(dAtA, i, uint64(len(m.DepositContractAddress)))
+		i--
+		dAtA[i] = 0x2a
+	}
+	if m.GenesisTime != 0 {
+		i = encodeVarintWebApi(dAtA, i, uint64(m.GenesisTime))
+		i--
+		dAtA[i] = 0x20
+	}
+	if m.Syncing {
+		i--
+		if m.Syncing {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x18
+	}
+	if m.Connected {
+		i--
+		if m.Connected {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x10
+	}
+	if len(m.BeaconNodeEndpoint) > 0 {
+		i -= len(m.BeaconNodeEndpoint)
+		copy(dAtA[i:], m.BeaconNodeEndpoint)
+		i = encodeVarintWebApi(dAtA, i, uint64(len(m.BeaconNodeEndpoint)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *BackupAccountsRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *BackupAccountsRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *BackupAccountsRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if len(m.BackupPassword) > 0 {
+		i -= len(m.BackupPassword)
+		copy(dAtA[i:], m.BackupPassword)
+		i = encodeVarintWebApi(dAtA, i, uint64(len(m.BackupPassword)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.PublicKeys) > 0 {
+		for iNdEx := len(m.PublicKeys) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.PublicKeys[iNdEx])
+			copy(dAtA[i:], m.PublicKeys[iNdEx])
+			i = encodeVarintWebApi(dAtA, i, uint64(len(m.PublicKeys[iNdEx])))
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *BackupAccountsResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *BackupAccountsResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *BackupAccountsResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if len(m.ZipFile) > 0 {
+		i -= len(m.ZipFile)
+		copy(dAtA[i:], m.ZipFile)
+		i = encodeVarintWebApi(dAtA, i, uint64(len(m.ZipFile)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func encodeVarintWebApi(dAtA []byte, offset int, v uint64) int {
+	offset -= sovWebApi(v)
+	base := offset
+	for v >= 1<<7 {
+		dAtA[offset] = uint8(v&0x7f | 0x80)
+		v >>= 7
+		offset++
+	}
+	dAtA[offset] = uint8(v)
+	return base
+}
+func (m *CreateWalletRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Keymanager != 0 {
+		n += 1 + sovWebApi(uint64(m.Keymanager))
+	}
+	l = len(m.WalletPassword)
+	if l > 0 {
+		n += 1 + l + sovWebApi(uint64(l))
+	}
+	l = len(m.Mnemonic)
+	if l > 0 {
+		n += 1 + l + sovWebApi(uint64(l))
+	}
+	if m.NumAccounts != 0 {
+		n += 1 + sovWebApi(uint64(m.NumAccounts))
+	}
+	l = len(m.RemoteAddr)
+	if l > 0 {
+		n += 1 + l + sovWebApi(uint64(l))
+=======
+>>>>>>> d7103fdef302dd5f99f9a0f76a3f42f30848a9d3
 	}
 	return dAtA[:n], nil
 }

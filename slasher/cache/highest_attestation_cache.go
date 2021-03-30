@@ -3,7 +3,6 @@ package cache
 import (
 	lru "github.com/hashicorp/golang-lru"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
-	log "github.com/sirupsen/logrus"
 )
 
 var (

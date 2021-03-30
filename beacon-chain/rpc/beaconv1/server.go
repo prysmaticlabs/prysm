@@ -15,8 +15,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -39,9 +41,11 @@ type Server struct {
 	AttestationNotifier operation.Notifier
 	Broadcaster         p2p.Broadcaster
 	AttestationsPool    attestations.Pool
-	SlashingsPool       *slashings.Pool
+	SlashingsPool       slashings.PoolManager
+	VoluntaryExitsPool  voluntaryexits.PoolManager
 	CanonicalStateChan  chan *pbp2p.BeaconState
 	ChainStartChan      chan time.Time
-	StateGen            *stategen.State
+	StateGenService     stategen.StateManager
 	SyncChecker         sync.Checker
+	StateFetcher        statefetcher.StateProvider
 }

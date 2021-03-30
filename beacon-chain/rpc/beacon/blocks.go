@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
@@ -62,9 +63,14 @@ func (bs *Server) ListBlocks(
 			if err != nil {
 				return nil, err
 			}
+			canonical, err := bs.CanonicalFetcher.IsCanonical(ctx, root)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not determine if block is canonical: %v", err)
+			}
 			containers[i] = &ethpb.BeaconBlockContainer{
 				Block:     b,
 				BlockRoot: root[:],
+				Canonical: canonical,
 			}
 		}
 
@@ -89,29 +95,34 @@ func (bs *Server) ListBlocks(
 		if err != nil {
 			return nil, err
 		}
+		canonical, err := bs.CanonicalFetcher.IsCanonical(ctx, root)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not determine if block is canonical: %v", err)
+		}
 
 		return &ethpb.ListBlocksResponse{
 			BlockContainers: []*ethpb.BeaconBlockContainer{{
 				Block:     blk,
-				BlockRoot: root[:]},
+				BlockRoot: root[:],
+				Canonical: canonical},
 			},
 			TotalSize: 1,
 		}, nil
 
 	case *ethpb.ListBlocksRequest_Slot:
-		blks, _, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(q.Slot).SetEndSlot(q.Slot))
+		hasBlocks, blks, err := bs.BeaconDB.BlocksBySlot(ctx, q.Slot)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for slot %d: %v", q.Slot, err)
 		}
-
-		numBlks := len(blks)
-		if numBlks == 0 {
+		if !hasBlocks {
 			return &ethpb.ListBlocksResponse{
 				BlockContainers: make([]*ethpb.BeaconBlockContainer, 0),
 				TotalSize:       0,
 				NextPageToken:   strconv.Itoa(0),
 			}, nil
 		}
+
+		numBlks := len(blks)
 
 		start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numBlks)
 		if err != nil {
@@ -125,9 +136,14 @@ func (bs *Server) ListBlocks(
 			if err != nil {
 				return nil, err
 			}
+			canonical, err := bs.CanonicalFetcher.IsCanonical(ctx, root)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not determine if block is canonical: %v", err)
+			}
 			containers[i] = &ethpb.BeaconBlockContainer{
 				Block:     b,
 				BlockRoot: root[:],
+				Canonical: canonical,
 			}
 		}
 
@@ -152,6 +168,7 @@ func (bs *Server) ListBlocks(
 			{
 				Block:     genBlk,
 				BlockRoot: root[:],
+				Canonical: true,
 			},
 		}
 
@@ -175,35 +192,53 @@ func (bs *Server) GetChainHead(ctx context.Context, _ *ptypes.Empty) (*ethpb.Cha
 }
 
 // StreamBlocks to clients every single time a block is received by the beacon node.
-func (bs *Server) StreamBlocks(_ *ptypes.Empty, stream ethpb.BeaconChain_StreamBlocksServer) error {
+func (bs *Server) StreamBlocks(req *ethpb.StreamBlocksRequest, stream ethpb.BeaconChain_StreamBlocksServer) error {
 	blocksChannel := make(chan *feed.Event, 1)
-	blockSub := bs.BlockNotifier.BlockFeed().Subscribe(blocksChannel)
+	var blockSub event.Subscription
+	if req.VerifiedOnly {
+		blockSub = bs.StateNotifier.StateFeed().Subscribe(blocksChannel)
+	} else {
+		blockSub = bs.BlockNotifier.BlockFeed().Subscribe(blocksChannel)
+	}
 	defer blockSub.Unsubscribe()
+
 	for {
 		select {
-		case event := <-blocksChannel:
-			if event.Type == blockfeed.ReceivedBlock {
-				data, ok := event.Data.(*blockfeed.ReceivedBlockData)
-				if !ok {
-					// Got bad data over the stream.
-					continue
+		case blockEvent := <-blocksChannel:
+			if req.VerifiedOnly {
+				if blockEvent.Type == statefeed.BlockProcessed {
+					data, ok := blockEvent.Data.(*statefeed.BlockProcessedData)
+					if !ok || data == nil {
+						continue
+					}
+					if err := stream.Send(data.SignedBlock); err != nil {
+						return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
+					}
 				}
-				if data.SignedBlock == nil {
-					// One nil block shouldn't stop the stream.
-					continue
-				}
-				headState, err := bs.HeadFetcher.HeadState(bs.Ctx)
-				if err != nil {
-					log.WithError(err).WithField("blockSlot", data.SignedBlock.Block.Slot).Error("Could not get head state")
-					continue
-				}
+			} else {
+				if blockEvent.Type == blockfeed.ReceivedBlock {
+					data, ok := blockEvent.Data.(*blockfeed.ReceivedBlockData)
+					if !ok {
+						// Got bad data over the stream.
+						continue
+					}
+					if data.SignedBlock == nil {
+						// One nil block shouldn't stop the stream.
+						continue
+					}
+					headState, err := bs.HeadFetcher.HeadState(bs.Ctx)
+					if err != nil {
+						log.WithError(err).WithField("blockSlot", data.SignedBlock.Block.Slot).Error("Could not get head state")
+						continue
+					}
 
-				if err := blocks.VerifyBlockSignature(headState, data.SignedBlock); err != nil {
-					log.WithError(err).WithField("blockSlot", data.SignedBlock.Block.Slot).Error("Could not verify block signature")
-					continue
-				}
-				if err := stream.Send(data.SignedBlock); err != nil {
-					return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
+					if err := blocks.VerifyBlockSignature(headState, data.SignedBlock); err != nil {
+						log.WithError(err).WithField("blockSlot", data.SignedBlock.Block.Slot).Error("Could not verify block signature")
+						continue
+					}
+					if err := stream.Send(data.SignedBlock); err != nil {
+						return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
+					}
 				}
 			}
 		case <-blockSub.Err():
@@ -223,8 +258,8 @@ func (bs *Server) StreamChainHead(_ *ptypes.Empty, stream ethpb.BeaconChain_Stre
 	defer stateSub.Unsubscribe()
 	for {
 		select {
-		case event := <-stateChannel:
-			if event.Type == statefeed.BlockProcessed {
+		case stateEvent := <-stateChannel:
+			if stateEvent.Type == statefeed.BlockProcessed {
 				res, err := bs.chainHeadRetrieval(stream.Context())
 				if err != nil {
 					return status.Errorf(codes.Internal, "Could not retrieve chain head: %v", err)
@@ -269,24 +304,33 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 	finalizedCheckpoint := bs.FinalizationFetcher.FinalizedCheckpt()
 	if !isGenesis(finalizedCheckpoint) {
 		b, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(finalizedCheckpoint.Root))
-		if err != nil || b == nil || b.Block == nil {
+		if err != nil {
 			return nil, status.Error(codes.Internal, "Could not get finalized block")
+		}
+		if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get finalized block: %v", err)
 		}
 	}
 
 	justifiedCheckpoint := bs.FinalizationFetcher.CurrentJustifiedCheckpt()
 	if !isGenesis(justifiedCheckpoint) {
 		b, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(justifiedCheckpoint.Root))
-		if err != nil || b == nil || b.Block == nil {
+		if err != nil {
 			return nil, status.Error(codes.Internal, "Could not get justified block")
+		}
+		if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get justified block: %v", err)
 		}
 	}
 
 	prevJustifiedCheckpoint := bs.FinalizationFetcher.PreviousJustifiedCheckpt()
 	if !isGenesis(prevJustifiedCheckpoint) {
 		b, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(prevJustifiedCheckpoint.Root))
-		if err != nil || b == nil || b.Block == nil {
+		if err != nil {
 			return nil, status.Error(codes.Internal, "Could not get prev justified block")
+		}
+		if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get prev justified block: %v", err)
 		}
 	}
 

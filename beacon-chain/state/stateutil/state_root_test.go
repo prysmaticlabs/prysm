@@ -15,7 +15,7 @@ import (
 )
 
 func TestState_FieldCount(t *testing.T) {
-	count := 21
+	count := params.BeaconConfig().BeaconStateFieldCount
 	typ := reflect.TypeOf(pb.BeaconState{})
 	numFields := 0
 	for i := 0; i < typ.NumField(); i++ {

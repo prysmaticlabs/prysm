@@ -25,7 +25,7 @@ go_test(
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/state:go_default_library",
-        "//beacon-chain/state:go_default_library",
+        "//beacon-chain/state/stateV0:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/params:go_default_library",
@@ -34,7 +34,6 @@ go_test(
         "//shared/testutil/require:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
-        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
         "@com_github_urfave_cli_v2//:go_default_library",
         "@in_gopkg_d4l3k_messagediff_v1//:go_default_library",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
@@ -60,7 +59,7 @@ go_test(
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/state:go_default_library",
-        "//beacon-chain/state:go_default_library",
+        "//beacon-chain/state/stateV0:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/params:go_default_library",
@@ -69,7 +68,6 @@ go_test(
         "//shared/testutil/require:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
-        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
         "@com_github_urfave_cli_v2//:go_default_library",
         "@in_gopkg_d4l3k_messagediff_v1//:go_default_library",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",

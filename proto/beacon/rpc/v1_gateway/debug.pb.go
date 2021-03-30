@@ -8,6 +8,12 @@ package ethereum_beacon_rpc_v1
 
 import (
 	context "context"
+<<<<<<< HEAD
+=======
+	reflect "reflect"
+	sync "sync"
+
+>>>>>>> d7103fdef302dd5f99f9a0f76a3f42f30848a9d3
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/golang/protobuf/proto"
 	empty "github.com/golang/protobuf/ptypes/empty"

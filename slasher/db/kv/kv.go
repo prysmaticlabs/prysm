@@ -16,7 +16,12 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var databaseFileName = "slasher.db"
+const (
+	// SlasherDbDirName is the name of the directory containing the slasher database.
+	SlasherDbDirName = "slasherdata"
+	// DatabaseFileName is the name of the slasher database.
+	DatabaseFileName = "slasher.db"
+)
 
 // Store defines an implementation of the slasher Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
@@ -37,43 +42,43 @@ type Config struct {
 }
 
 // Close closes the underlying boltdb database.
-func (db *Store) Close() error {
-	db.flatSpanCache.Purge()
-	db.highestAttestationCache.Purge()
-	return db.db.Close()
+func (s *Store) Close() error {
+	s.flatSpanCache.Purge()
+	s.highestAttestationCache.Purge()
+	return s.db.Close()
 }
 
 // RemoveOldestFromCache clears the oldest key out of the cache only if the cache is at max capacity.
-func (db *Store) RemoveOldestFromCache(ctx context.Context) uint64 {
+func (s *Store) RemoveOldestFromCache(ctx context.Context) uint64 {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.removeOldestFromCache")
 	defer span.End()
-	epochRemoved := db.flatSpanCache.PruneOldest()
+	epochRemoved := s.flatSpanCache.PruneOldest()
 	return epochRemoved
 }
 
 // ClearSpanCache clears the spans cache.
-func (db *Store) ClearSpanCache() {
-	db.flatSpanCache.Purge()
+func (s *Store) ClearSpanCache() {
+	s.flatSpanCache.Purge()
 }
 
-func (db *Store) update(fn func(*bolt.Tx) error) error {
-	return db.db.Update(fn)
+func (s *Store) update(fn func(*bolt.Tx) error) error {
+	return s.db.Update(fn)
 }
-func (db *Store) view(fn func(*bolt.Tx) error) error {
-	return db.db.View(fn)
+func (s *Store) view(fn func(*bolt.Tx) error) error {
+	return s.db.View(fn)
 }
 
 // ClearDB removes any previously stored data at the configured data directory.
-func (db *Store) ClearDB() error {
-	if _, err := os.Stat(db.databasePath); os.IsNotExist(err) {
+func (s *Store) ClearDB() error {
+	if _, err := os.Stat(s.databasePath); os.IsNotExist(err) {
 		return nil
 	}
-	return os.Remove(filepath.Join(db.databasePath, databaseFileName))
+	return os.Remove(filepath.Join(s.databasePath, DatabaseFileName))
 }
 
 // DatabasePath at which this database writes files.
-func (db *Store) DatabasePath() string {
-	return db.databasePath
+func (s *Store) DatabasePath() string {
+	return s.databasePath
 }
 
 func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
@@ -99,7 +104,7 @@ func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 		}
 	}
 
-	datafile := path.Join(dirPath, databaseFileName)
+	datafile := path.Join(dirPath, DatabaseFileName)
 	boltDB, err := bolt.Open(datafile, params.BeaconIoConfig().ReadWritePermissions, &bolt.Options{Timeout: params.BeaconIoConfig().BoltTimeout})
 	if err != nil {
 		if errors.Is(err, bolt.ErrTimeout) {
@@ -141,9 +146,9 @@ func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 }
 
 // Size returns the db size in bytes.
-func (db *Store) Size() (int64, error) {
+func (s *Store) Size() (int64, error) {
 	var size int64
-	err := db.db.View(func(tx *bolt.Tx) error {
+	err := s.db.View(func(tx *bolt.Tx) error {
 		size = tx.Size()
 		return nil
 	})

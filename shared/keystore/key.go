@@ -33,14 +33,6 @@ import (
 const (
 	keyHeaderKDF = "scrypt"
 
-	// StandardScryptN is the N parameter of Scrypt encryption algorithm, using 256MB
-	// memory and taking approximately 1s CPU time on a modern processor.
-	StandardScryptN = 1 << 18
-
-	// StandardScryptP is the P parameter of Scrypt encryption algorithm, using 256MB
-	// memory and taking approximately 1s CPU time on a modern processor.
-	StandardScryptP = 1
-
 	// LightScryptN is the N parameter of Scrypt encryption algorithm, using 4MB
 	// memory and taking approximately 100ms CPU time on a modern processor.
 	LightScryptN = 1 << 12

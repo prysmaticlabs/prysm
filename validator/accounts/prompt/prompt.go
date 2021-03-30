@@ -8,17 +8,20 @@ import (
 	"github.com/logrusorgru/aurora"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
-	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
-	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
 const (
 	// ImportKeysDirPromptText for the import keys cli function.
 	ImportKeysDirPromptText = "Enter the directory or filepath where your keystores to import are located"
+	// DataDirDirPromptText for the validator database directory.
+	DataDirDirPromptText = "Enter the directory of the validator database you would like to use"
+	// SlashingProtectionJSONPromptText for the EIP-3076 slashing protection JSON prompt.
+	SlashingProtectionJSONPromptText = "Enter the the filepath of your EIP-3076 Slashing Protection JSON from your previously used validator client"
 	// WalletDirPromptText for the wallet.
 	WalletDirPromptText = "Enter a wallet directory"
 	// SelectAccountsDeletePromptText --
@@ -27,16 +30,9 @@ const (
 	SelectAccountsBackupPromptText = "Select the account(s) you wish to backup"
 	// SelectAccountsVoluntaryExitPromptText --
 	SelectAccountsVoluntaryExitPromptText = "Select the account(s) on which you wish to perform a voluntary exit"
-	// SelectAccountsDisablePromptText --
-	SelectAccountsDisablePromptText = "Select the account(s) you would like to disable"
-	// SelectAccountsEnablePromptText --
-	SelectAccountsEnablePromptText = "Select the account(s) you would like to enable"
 )
 
-var (
-	au  = aurora.NewAurora(true)
-	log = logrus.WithField("prefix", "prompt")
-)
+var au = aurora.NewAurora(true)
 
 // InputDirectory from the cli.
 func InputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag) (string, error) {

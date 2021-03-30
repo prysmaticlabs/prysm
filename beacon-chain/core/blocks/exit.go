@@ -5,10 +5,11 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -45,11 +46,11 @@ var ValidatorCannotExitYetMsg = "validator has not been active long enough to ex
 //    initiate_validator_exit(state, exit.validator_index)
 func ProcessVoluntaryExits(
 	_ context.Context,
-	beaconState *stateTrie.BeaconState,
+	beaconState iface.BeaconState,
 	b *ethpb.SignedBeaconBlock,
-) (*stateTrie.BeaconState, error) {
-	if b.Block == nil || b.Block.Body == nil {
-		return nil, errors.New("block and block body can't be nil")
+) (iface.BeaconState, error) {
+	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+		return nil, err
 	}
 
 	body := b.Block.Body
@@ -68,39 +69,6 @@ func ProcessVoluntaryExits(
 		beaconState, err = v.InitiateValidatorExit(beaconState, exit.Exit.ValidatorIndex)
 		if err != nil {
 			return nil, err
-		}
-	}
-	return beaconState, nil
-}
-
-// ProcessVoluntaryExitsNoVerifySignature processes all the voluntary exits in
-// a block body, without verifying their BLS signatures.
-// This function is here to satisfy fuzz tests.
-func ProcessVoluntaryExitsNoVerifySignature(
-	beaconState *stateTrie.BeaconState,
-	body *ethpb.BeaconBlockBody,
-) (*stateTrie.BeaconState, error) {
-	exits := body.VoluntaryExits
-
-	for idx, exit := range exits {
-		if exit == nil || exit.Exit == nil {
-			return nil, errors.New("nil exit")
-		}
-		val, err := beaconState.ValidatorAtIndexReadOnly(exit.Exit.ValidatorIndex)
-		if err != nil {
-			return nil, err
-		}
-		if err := verifyExitConditions(val, beaconState.Slot(), exit.Exit); err != nil {
-			return nil, err
-		}
-		// Validate that fork and genesis root are valid.
-		_, err = helpers.Domain(beaconState.Fork(), exit.Exit.Epoch, params.BeaconConfig().DomainVoluntaryExit, beaconState.GenesisValidatorRoot())
-		if err != nil {
-			return nil, err
-		}
-		beaconState, err = v.InitiateValidatorExit(beaconState, exit.Exit.ValidatorIndex)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to process voluntary exit at index %d", idx)
 		}
 	}
 	return beaconState, nil
@@ -125,7 +93,13 @@ func ProcessVoluntaryExitsNoVerifySignature(
 //    # Verify signature
 //    domain = get_domain(state, DOMAIN_VOLUNTARY_EXIT, exit.epoch)
 //    assert bls_verify(validator.pubkey, signing_root(exit), exit.signature, domain)
-func VerifyExitAndSignature(validator stateTrie.ReadOnlyValidator, currentSlot uint64, fork *pb.Fork, signed *ethpb.SignedVoluntaryExit, genesisRoot []byte) error {
+func VerifyExitAndSignature(
+	validator iface.ReadOnlyValidator,
+	currentSlot types.Slot,
+	fork *pb.Fork,
+	signed *ethpb.SignedVoluntaryExit,
+	genesisRoot []byte,
+) error {
 	if signed == nil || signed.Exit == nil {
 		return errors.New("nil exit")
 	}
@@ -161,7 +135,7 @@ func VerifyExitAndSignature(validator stateTrie.ReadOnlyValidator, currentSlot u
 //    assert get_current_epoch(state) >= exit.epoch
 //    # Verify the validator has been active long enough
 //    assert get_current_epoch(state) >= validator.activation_epoch + SHARD_COMMITTEE_PERIOD
-func verifyExitConditions(validator stateTrie.ReadOnlyValidator, currentSlot uint64, exit *ethpb.VoluntaryExit) error {
+func verifyExitConditions(validator iface.ReadOnlyValidator, currentSlot types.Slot, exit *ethpb.VoluntaryExit) error {
 	currentEpoch := helpers.SlotToEpoch(currentSlot)
 	// Verify the validator is active.
 	if !helpers.IsActiveValidatorUsingTrie(validator, currentEpoch) {
@@ -178,9 +152,10 @@ func verifyExitConditions(validator stateTrie.ReadOnlyValidator, currentSlot uin
 	// Verify the validator has been active long enough.
 	if currentEpoch < validator.ActivationEpoch()+params.BeaconConfig().ShardCommitteePeriod {
 		return fmt.Errorf(
-			"%s: %d epochs vs required %d epochs",
+			"%s: %d of %d epochs. Validator will be eligible for exit at epoch %d.",
 			ValidatorCannotExitYetMsg,
-			currentEpoch,
+			currentEpoch-validator.ActivationEpoch(),
+			params.BeaconConfig().ShardCommitteePeriod,
 			validator.ActivationEpoch()+params.BeaconConfig().ShardCommitteePeriod,
 		)
 	}

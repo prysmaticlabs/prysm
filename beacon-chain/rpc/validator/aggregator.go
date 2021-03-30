@@ -59,14 +59,14 @@ func (vs *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 		return nil, status.Errorf(codes.InvalidArgument, "Validator is not an aggregator")
 	}
 
-	if err := vs.AttPool.AggregateUnaggregatedAttestationsBySlotIndex(req.Slot, req.CommitteeIndex); err != nil {
+	if err := vs.AttPool.AggregateUnaggregatedAttestationsBySlotIndex(ctx, req.Slot, req.CommitteeIndex); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not aggregate unaggregated attestations")
 	}
-	aggregatedAtts := vs.AttPool.AggregatedAttestationsBySlotIndex(req.Slot, req.CommitteeIndex)
+	aggregatedAtts := vs.AttPool.AggregatedAttestationsBySlotIndex(ctx, req.Slot, req.CommitteeIndex)
 
 	// Filter out the best aggregated attestation (ie. the one with the most aggregated bits).
 	if len(aggregatedAtts) == 0 {
-		aggregatedAtts = vs.AttPool.UnaggregatedAttestationsBySlotIndex(req.Slot, req.CommitteeIndex)
+		aggregatedAtts = vs.AttPool.UnaggregatedAttestationsBySlotIndex(ctx, req.Slot, req.CommitteeIndex)
 		if len(aggregatedAtts) == 0 {
 			return nil, status.Errorf(codes.NotFound, "Could not find attestation for slot and committee in pool")
 		}
@@ -108,7 +108,10 @@ func (vs *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 
 // SubmitSignedAggregateSelectionProof is called by a validator to broadcast a signed
 // aggregated and proof object.
-func (vs *Server) SubmitSignedAggregateSelectionProof(ctx context.Context, req *ethpb.SignedAggregateSubmitRequest) (*ethpb.SignedAggregateSubmitResponse, error) {
+func (vs *Server) SubmitSignedAggregateSelectionProof(
+	ctx context.Context,
+	req *ethpb.SignedAggregateSubmitRequest,
+) (*ethpb.SignedAggregateSubmitResponse, error) {
 	if req.SignedAggregateAndProof == nil || req.SignedAggregateAndProof.Message == nil ||
 		req.SignedAggregateAndProof.Message.Aggregate == nil || req.SignedAggregateAndProof.Message.Aggregate.Data == nil {
 		return nil, status.Error(codes.InvalidArgument, "Signed aggregate request can't be nil")
@@ -120,7 +123,7 @@ func (vs *Server) SubmitSignedAggregateSelectionProof(ctx context.Context, req *
 	}
 
 	// As a preventive measure, a beacon node shouldn't broadcast an attestation whose slot is out of range.
-	if err := helpers.ValidateAttestationTime(req.SignedAggregateAndProof.Message.Aggregate.Data.Slot, vs.GenesisTimeFetcher.GenesisTime()); err != nil {
+	if err := helpers.ValidateAttestationTime(req.SignedAggregateAndProof.Message.Aggregate.Data.Slot, vs.TimeFetcher.GenesisTime()); err != nil {
 		return nil, status.Error(codes.InvalidArgument, "Attestation slot is no longer valid from current time")
 	}
 

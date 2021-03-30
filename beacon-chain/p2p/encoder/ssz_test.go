@@ -29,7 +29,7 @@ func TestSszNetworkEncoder_FailsSnappyLength(t *testing.T) {
 	data := make([]byte, 32)
 	binary.PutUvarint(data, encoder.MaxGossipSize+32)
 	err := e.DecodeGossip(data, att)
-	require.ErrorContains(t, "gossip message exceeds max gossip size", err)
+	require.ErrorContains(t, "snappy message exceeds max size", err)
 }
 
 func testRoundTripWithLength(t *testing.T, e *encoder.SszNetworkEncoder) {

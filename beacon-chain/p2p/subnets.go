@@ -6,7 +6,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/prysmaticlabs/go-bitfield"
 	"go.opencensus.io/trace"
 
@@ -20,8 +19,10 @@ var attSubnetEnrKey = params.BeaconNetworkConfig().AttSubnetKey
 
 // FindPeersWithSubnet performs a network search for peers
 // subscribed to a particular subnet. Then we try to connect
-// with those peers.
-func (s *Service) FindPeersWithSubnet(ctx context.Context, index uint64) (bool, error) {
+// with those peers. This method will block until the required amount of
+// peers are found, the method only exits in the event of context timeouts.
+func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
+	index, threshold uint64) (bool, error) {
 	ctx, span := trace.StartSpan(ctx, "p2p.FindPeersWithSubnet")
 	defer span.End()
 
@@ -31,59 +32,67 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, index uint64) (bool, 
 		// return if discovery isn't set
 		return false, nil
 	}
+
+	topic += s.Encoding().ProtocolSuffix()
 	iterator := s.dv5Listener.RandomNodes()
-	nodes := enode.ReadNodes(iterator, lookupLimit)
-	exists := false
-	for _, node := range nodes {
+	iterator = filterNodes(ctx, iterator, s.filterPeerForSubnet(index))
+
+	currNum := uint64(len(s.pubsub.ListPeers(topic)))
+	wg := new(sync.WaitGroup)
+	for {
 		if err := ctx.Err(); err != nil {
 			return false, err
 		}
-		if node.IP() == nil {
-			continue
+		if currNum >= threshold {
+			break
 		}
-		// do not look for nodes with no tcp port set
-		if err := node.Record().Load(enr.WithEntry("tcp", new(enr.TCP))); err != nil {
-			if !enr.IsNotFound(err) {
-				log.WithError(err).Debug("Could not retrieve tcp port")
+		nodes := enode.ReadNodes(iterator, int(params.BeaconNetworkConfig().MinimumPeersInSubnetSearch))
+		for _, node := range nodes {
+			info, _, err := convertToAddrInfo(node)
+			if err != nil {
+				continue
 			}
-			continue
-		}
-		subnets, err := retrieveAttSubnets(node.Record())
-		if err != nil {
-			log.Debugf("could not retrieve subnets: %v", err)
-			continue
-		}
-		for _, comIdx := range subnets {
-			if comIdx == index {
-				info, multiAddr, err := convertToAddrInfo(node)
-				if err != nil {
-					return false, err
-				}
-				if s.peers.IsActive(info.ID) {
-					exists = true
-					continue
-				}
-				if s.host.Network().Connectedness(info.ID) == network.Connected {
-					exists = true
-					continue
-				}
-				if !s.peers.IsReadyToDial(info.ID) {
-					continue
-				}
-				s.peers.Add(node.Record(), info.ID, multiAddr, network.DirUnknown)
+			wg.Add(1)
+			go func() {
 				if err := s.connectWithPeer(ctx, *info); err != nil {
 					log.WithError(err).Tracef("Could not connect with peer %s", info.String())
-					continue
 				}
-				exists = true
-			}
+				wg.Done()
+			}()
 		}
+		// Wait for all dials to be completed.
+		wg.Wait()
+		currNum = uint64(len(s.pubsub.ListPeers(topic)))
 	}
-	return exists, nil
+	return true, nil
 }
 
-func (s *Service) hasPeerWithSubnet(subnet uint64) bool {
-	return len(s.Peers().SubscribedToSubnet(subnet)) > 0
+// returns a method with filters peers specifically for a particular attestation subnet.
+func (s *Service) filterPeerForSubnet(index uint64) func(node *enode.Node) bool {
+	return func(node *enode.Node) bool {
+		if !s.filterPeer(node) {
+			return false
+		}
+		subnets, err := attSubnets(node.Record())
+		if err != nil {
+			return false
+		}
+		indExists := false
+		for _, comIdx := range subnets {
+			if comIdx == index {
+				indExists = true
+				break
+			}
+		}
+		return indExists
+	}
+}
+
+// lower threshold to broadcast object compared to searching
+// for a subnet. So that even in the event of poor peer
+// connectivity, we can still broadcast an attestation.
+func (s *Service) hasPeerWithSubnet(topic string) bool {
+	return len(s.pubsub.ListPeers(topic+s.Encoding().ProtocolSuffix())) >= 1
 }
 
 // Updates the service's discv5 listener record's attestation subnet
@@ -110,8 +119,8 @@ func intializeAttSubnets(node *enode.LocalNode) *enode.LocalNode {
 
 // Reads the attestation subnets entry from a node's ENR and determines
 // the committee indices of the attestation subnets the node is subscribed to.
-func retrieveAttSubnets(record *enr.Record) ([]uint64, error) {
-	bitV, err := retrieveBitvector(record)
+func attSubnets(record *enr.Record) ([]uint64, error) {
+	bitV, err := bitvector(record)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +135,7 @@ func retrieveAttSubnets(record *enr.Record) ([]uint64, error) {
 
 // Parses the attestation subnets ENR entry in a node and extracts its value
 // as a bitvector for further manipulation.
-func retrieveBitvector(record *enr.Record) (bitfield.Bitvector64, error) {
+func bitvector(record *enr.Record) (bitfield.Bitvector64, error) {
 	bitV := bitfield.NewBitvector64()
 	entry := enr.WithEntry(attSubnetEnrKey, &bitV)
 	err := record.Load(entry)

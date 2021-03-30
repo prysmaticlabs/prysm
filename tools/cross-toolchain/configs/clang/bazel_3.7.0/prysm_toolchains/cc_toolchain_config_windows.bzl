@@ -37,6 +37,7 @@ def _impl(ctx):
     action_configs = []
 
     install = "/usr/x86_64-w64-mingw32/"
+    gcc_libpath = "/usr/lib/gcc/x86_64-w64-mingw32/8.3-win32/"
     bin_prefix = "/usr/bin/x86_64-w64-mingw32-"
 
 
@@ -158,7 +159,10 @@ def _impl(ctx):
     ]
 
     cxx_builtin_include_directories = [
-        install +"include"
+        install +"include",
+        gcc_libpath +"include",
+        gcc_libpath +"include-fixed",
+        "/usr/share/mingw-w64/include/"
     ]
 
     artifact_name_patterns = [

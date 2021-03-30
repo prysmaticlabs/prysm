@@ -3,7 +3,7 @@ package debug
 import (
 	"context"
 
-	"github.com/gogo/protobuf/types"
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -24,7 +24,7 @@ func (ds *Server) GetPeer(_ context.Context, peerReq *ethpb.PeerRequest) (*pbrpc
 
 // ListPeers returns all peers known to the host node, irregardless of if they are connected/
 // disconnected.
-func (ds *Server) ListPeers(_ context.Context, _ *types.Empty) (*pbrpc.DebugPeerResponses, error) {
+func (ds *Server) ListPeers(_ context.Context, _ *empty.Empty) (*pbrpc.DebugPeerResponses, error) {
 	var responses []*pbrpc.DebugPeerResponse
 	for _, pid := range ds.PeersFetcher.Peers().All() {
 		resp, err := ds.getPeer(pid)
@@ -124,6 +124,19 @@ func (ds *Server) getPeer(pid peer.ID) (*pbrpc.DebugPeerResponse, error) {
 	if !lastUpdated.IsZero() {
 		unixTime = uint64(lastUpdated.Unix())
 	}
+	gScore, bPenalty, topicMaps, err := peers.Scorers().GossipScorer().GossipData(pid)
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "Requested peer does not exist: %v", err)
+	}
+	scoreInfo := &pbrpc.ScoreInfo{
+		OverallScore:       float32(peers.Scorers().Score(pid)),
+		ProcessedBlocks:    peers.Scorers().BlockProviderScorer().ProcessedBlocks(pid),
+		BlockProviderScore: float32(peers.Scorers().BlockProviderScorer().Score(pid)),
+		TopicScores:        topicMaps,
+		GossipScore:        float32(gScore),
+		BehaviourPenalty:   float32(bPenalty),
+		ValidationError:    errorToString(peers.Scorers().ValidationError(pid)),
+	}
 	return &pbrpc.DebugPeerResponse{
 		ListeningAddresses: stringAddrs,
 		Direction:          pbDirection,
@@ -133,5 +146,13 @@ func (ds *Server) getPeer(pid peer.ID) (*pbrpc.DebugPeerResponse, error) {
 		PeerInfo:           peerInfo,
 		PeerStatus:         pStatus,
 		LastUpdated:        unixTime,
+		ScoreInfo:          scoreInfo,
 	}, nil
+}
+
+func errorToString(err error) string {
+	if err == nil {
+		return ""
+	}
+	return err.Error()
 }

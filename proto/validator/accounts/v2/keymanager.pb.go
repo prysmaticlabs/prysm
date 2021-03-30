@@ -6,6 +6,13 @@ package ethereum_validator_accounts_v2
 import (
 	context "context"
 	fmt "fmt"
+<<<<<<< HEAD
+=======
+	io "io"
+	math "math"
+	math_bits "math/bits"
+
+>>>>>>> d7103fdef302dd5f99f9a0f76a3f42f30848a9d3
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	empty "github.com/golang/protobuf/ptypes/empty"
