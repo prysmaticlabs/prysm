@@ -402,7 +402,11 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 		return eth1Root(hasher, b.state.Eth1Data)
 	case eth1DataVotes:
 		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.state.Eth1DataVotes, uint64(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod))))
+			err := b.resetFieldTrie(
+				field,
+				b.state.Eth1DataVotes,
+				uint64(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod))),
+			)
 			if err != nil {
 				return [32]byte{}, err
 			}
@@ -439,7 +443,11 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 		return htrutils.SlashingsRoot(b.state.Slashings)
 	case previousEpochAttestations:
 		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.state.PreviousEpochAttestations, uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().MaxAttestations)))
+			err := b.resetFieldTrie(
+				field,
+				b.state.PreviousEpochAttestations,
+				uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().MaxAttestations)),
+			)
 			if err != nil {
 				return [32]byte{}, err
 			}
@@ -450,7 +458,11 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 		return b.recomputeFieldTrie(field, b.state.PreviousEpochAttestations)
 	case currentEpochAttestations:
 		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.state.CurrentEpochAttestations, uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().MaxAttestations)))
+			err := b.resetFieldTrie(
+				field,
+				b.state.CurrentEpochAttestations,
+				uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().MaxAttestations)),
+			)
 			if err != nil {
 				return [32]byte{}, err
 			}

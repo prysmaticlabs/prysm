@@ -125,7 +125,12 @@ func randaoSigningData(beaconState iface.ReadOnlyBeaconState) ([]byte, []byte, [
 }
 
 // Method to break down attestations of the same domain and collect them into a single signature set.
-func createAttestationSignatureSet(ctx context.Context, beaconState iface.ReadOnlyBeaconState, atts []*ethpb.Attestation, domain []byte) (*bls.SignatureSet, error) {
+func createAttestationSignatureSet(
+	ctx context.Context,
+	beaconState iface.ReadOnlyBeaconState,
+	atts []*ethpb.Attestation,
+	domain []byte,
+) (*bls.SignatureSet, error) {
 	if len(atts) == 0 {
 		return nil, nil
 	}
