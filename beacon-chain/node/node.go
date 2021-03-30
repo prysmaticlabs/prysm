@@ -432,7 +432,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 		return err
 	}
 
-	bRoot, epoch, maxRoutines, err := registration.BlockchainPreconfiguration(b.cliCtx)
+	bRoot, epoch, err := registration.BlockchainPreconfiguration(b.cliCtx)
 	if err != nil {
 		return err
 	}
@@ -445,7 +445,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 		ExitPool:          b.exitPool,
 		SlashingPool:      b.slashingsPool,
 		P2p:               b.fetchP2P(),
-		MaxRoutines:       maxRoutines,
+		MaxRoutines:       b.cliCtx.Int(cmd.MaxGoroutines.Name),
 		StateNotifier:     b,
 		ForkChoiceStore:   b.forkChoiceStore,
 		OpsService:        opsService,
