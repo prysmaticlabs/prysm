@@ -1,14 +1,29 @@
-package node
+package registration
 
 import (
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/shared/cmd"
+	"github.com/urfave/cli/v2"
 )
+
+// BlockchainPreconfiguration TODO
+func BlockchainPreconfiguration(cliCtx *cli.Context) (bRoot []byte, epoch types.Epoch, maxRoutines int, err error) {
+	wsp := cliCtx.String(flags.WeakSubjectivityCheckpt.Name)
+	bRoot, epoch, err = convertWspInput(wsp)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+	maxRoutines = cliCtx.Int(cmd.MaxGoroutines.Name)
+
+	return
+}
 
 // Given input string `block_root:epoch_number`, this verifies the input string is valid, and
 // returns the block root as bytes and epoch number as unsigned integers.
