@@ -318,7 +318,7 @@ func createImportedWalletWithAccounts(t testing.TB, numAccounts int) (*Server, [
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	//require.NoError(t, w.SaveHashedPassword(ctx))
+
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
 	ss := &Server{
