@@ -63,13 +63,13 @@ type Simulator struct {
 // DefaultParams for launching a slasher simulator.
 func DefaultParams() *Parameters {
 	return &Parameters{
-		SecondsPerSlot:         6,
-		SlotsPerEpoch:          8,
+		SecondsPerSlot:         params.BeaconConfig().SecondsPerSlot,
+		SlotsPerEpoch:          4,
 		AggregationPercent:     1.0,
 		ProposerSlashingProbab: 0.3,
 		AttesterSlashingProbab: 0.3,
-		NumValidators:          1024,
-		NumEpochs:              5,
+		NumValidators:          params.BeaconConfig().MinGenesisActiveValidatorCount,
+		NumEpochs:              4,
 	}
 }
 
