@@ -42,6 +42,13 @@ const (
 	// decayToZero specifies the terminal value that we will use when decaying
 	// a value.
 	decayToZero = 0.01
+
+	// dampeningFactor reduces the amount by which the various thresholds and caps are created.
+	dampeningFactor = 90
+
+	// gossipSubD is a hardcoded value representing the D gossip paramter, which signifies the
+	// degree of the gossip mesh.
+	gossipSubD = 8
 )
 
 func peerScoringParams() (*pubsub.PeerScoreParams, *pubsub.PeerScoreThresholds) {
@@ -146,9 +153,9 @@ func defaultBlockTopicParams() *pubsub.TopicScoreParams {
 
 func defaultAggregateTopicParams(activeValidators uint64) *pubsub.TopicScoreParams {
 	aggPerSlot := aggregatorsPerSlot(activeValidators)
-	firstMessageCap := decay(scoreDecay(1*oneEpochDuration()), float64(aggPerSlot*2/8))
+	firstMessageCap := decay(scoreDecay(1*oneEpochDuration()), float64(aggPerSlot*2/gossipSubD))
 	firstMessageWeight := maxFirstDeliveryScore / firstMessageCap
-	meshThreshold := decayThreshold(scoreDecay(1*oneEpochDuration()), float64(aggPerSlot)/50)
+	meshThreshold := decayThreshold(scoreDecay(1*oneEpochDuration()), float64(aggPerSlot)/dampeningFactor)
 	meshWeight := -maxScore() / (aggregateWeight * meshThreshold * meshThreshold)
 	meshCap := 4 * meshThreshold
 	return &pubsub.TopicScoreParams{
@@ -164,44 +171,52 @@ func defaultAggregateTopicParams(activeValidators uint64) *pubsub.TopicScorePara
 		MeshMessageDeliveriesCap:        meshCap,
 		MeshMessageDeliveriesThreshold:  meshThreshold,
 		MeshMessageDeliveriesWindow:     2 * time.Second,
-		MeshMessageDeliveriesActivation: 32 * oneSlotDuration(),
-		MeshFailurePenaltyWeight:        -0.064,
+		MeshMessageDeliveriesActivation: 1 * oneEpochDuration(),
+		MeshFailurePenaltyWeight:        meshWeight,
 		MeshFailurePenaltyDecay:         scoreDecay(1 * oneEpochDuration()),
-		InvalidMessageDeliveriesWeight:  -140.4475,
+		InvalidMessageDeliveriesWeight:  -maxScore() / aggregateWeight,
 		InvalidMessageDeliveriesDecay:   scoreDecay(50 * oneEpochDuration()),
 	}
 }
 
 func defaultAggregateSubnetTopicParams(activeValidators uint64) *pubsub.TopicScoreParams {
-	topicWeight := attestationTotalWeight / float64(params.BeaconNetworkConfig().AttestationSubnetCount)
-	subnetWeight := activeValidators / params.BeaconNetworkConfig().AttestationSubnetCount
-	minimumWeight := subnetWeight / 50
+	subnetCount := params.BeaconNetworkConfig().AttestationSubnetCount
+	// Get weight for each specific subnet.
+	topicWeight := attestationTotalWeight / float64(subnetCount)
+	subnetWeight := activeValidators / subnetCount
+	// Determine the amount of validators expected in a subnet in a single slot.
 	numPerSlot := time.Duration(subnetWeight / uint64(params.BeaconConfig().SlotsPerEpoch))
 	comsPerSlot := committeeCountPerSlot(activeValidators)
-	exceedsThreshold := comsPerSlot >= 2*params.BeaconNetworkConfig().AttestationSubnetCount/uint64(params.BeaconConfig().SlotsPerEpoch)
+	exceedsThreshold := comsPerSlot >= 2*subnetCount/uint64(params.BeaconConfig().SlotsPerEpoch)
 	firstDecay := time.Duration(1)
 	meshDecay := time.Duration(4)
 	if exceedsThreshold {
 		firstDecay = 4
 		meshDecay = 16
 	}
+	firstMessageCap := decay(scoreDecay(firstDecay*oneEpochDuration()), float64(numPerSlot*2/gossipSubD))
+	firstMessageWeight := maxFirstDeliveryScore / firstMessageCap
+
+	meshThreshold := decayThreshold(scoreDecay(meshDecay*oneEpochDuration()), float64(numPerSlot)/dampeningFactor)
+	meshWeight := -maxScore() / (aggregateWeight * meshThreshold * meshThreshold)
+	meshCap := 4 * meshThreshold
 	return &pubsub.TopicScoreParams{
 		TopicWeight:                     topicWeight,
 		TimeInMeshWeight:                maxInMeshScore / inMeshCap(),
 		TimeInMeshQuantum:               numPerSlot,
 		TimeInMeshCap:                   inMeshCap(),
-		FirstMessageDeliveriesWeight:    0.955,
+		FirstMessageDeliveriesWeight:    firstMessageWeight,
 		FirstMessageDeliveriesDecay:     scoreDecay(firstDecay * oneEpochDuration()),
-		FirstMessageDeliveriesCap:       24,
-		MeshMessageDeliveriesWeight:     -37.55,
+		FirstMessageDeliveriesCap:       firstMessageCap,
+		MeshMessageDeliveriesWeight:     meshWeight,
 		MeshMessageDeliveriesDecay:      scoreDecay(meshDecay * oneEpochDuration()),
-		MeshMessageDeliveriesCap:        float64(subnetWeight),
-		MeshMessageDeliveriesThreshold:  float64(minimumWeight),
+		MeshMessageDeliveriesCap:        meshCap,
+		MeshMessageDeliveriesThreshold:  meshThreshold,
 		MeshMessageDeliveriesWindow:     2 * time.Second,
-		MeshMessageDeliveriesActivation: 17 * oneSlotDuration(),
-		MeshFailurePenaltyWeight:        -37.55,
+		MeshMessageDeliveriesActivation: 1 * oneEpochDuration(),
+		MeshFailurePenaltyWeight:        meshWeight,
 		MeshFailurePenaltyDecay:         scoreDecay(meshDecay * oneEpochDuration()),
-		InvalidMessageDeliveriesWeight:  -4544,
+		InvalidMessageDeliveriesWeight:  -maxScore() / float64(attestationTotalWeight/subnetCount),
 		InvalidMessageDeliveriesDecay:   scoreDecay(50 * oneEpochDuration()),
 	}
 }
