@@ -8,8 +8,8 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// PowchainPreconfiguration prepares data for powchain.Service's registration config.
-func PowchainPreconfiguration(cliCtx *cli.Context) (depositContractAddress string, endpoints []string) {
+// PowchainPreregistration prepares data for powchain.Service's registration.
+func PowchainPreregistration(cliCtx *cli.Context) (depositContractAddress string, endpoints []string) {
 	depositContractAddress = params.BeaconConfig().DepositContractAddress
 	if depositContractAddress == "" {
 		log.Fatal("Valid deposit contract is required")

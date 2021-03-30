@@ -371,7 +371,7 @@ func (b *BeaconNode) startStateGen() {
 }
 
 func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
-	bootstrapNodeAddrs, dataDir, err := registration.P2PPreconfiguration(cliCtx)
+	bootstrapNodeAddrs, dataDir, err := registration.P2PPreregistration(cliCtx)
 	if err != nil {
 		return err
 	}
@@ -432,7 +432,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 		return err
 	}
 
-	bRoot, epoch, err := registration.BlockchainPreconfiguration(b.cliCtx)
+	bRoot, epoch, err := registration.BlockchainPreregistration(b.cliCtx)
 	if err != nil {
 		return err
 	}
@@ -464,7 +464,7 @@ func (b *BeaconNode) registerPOWChainService() error {
 		return b.services.RegisterService(&powchain.Service{})
 	}
 
-	depAddress, endpoints := registration.PowchainPreconfiguration(b.cliCtx)
+	depAddress, endpoints := registration.PowchainPreregistration(b.cliCtx)
 
 	cfg := &powchain.Web3ServiceConfig{
 		HTTPEndpoints:      endpoints,
