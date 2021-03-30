@@ -39,7 +39,13 @@ func New(justifiedEpoch, finalizedEpoch types.Epoch, finalizedRoot [32]byte) *Fo
 
 // Head returns the head root from fork choice store.
 // It firsts computes validator's balance changes then recalculates block tree from leaves to root.
-func (f *ForkChoice) Head(ctx context.Context, justifiedEpoch types.Epoch, justifiedRoot [32]byte, justifiedStateBalances []uint64, finalizedEpoch types.Epoch) ([32]byte, error) {
+func (f *ForkChoice) Head(
+	ctx context.Context,
+	justifiedEpoch types.Epoch,
+	justifiedRoot [32]byte,
+	justifiedStateBalances []uint64,
+	finalizedEpoch types.Epoch,
+) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.Head")
 	defer span.End()
 	f.votesLock.Lock()
@@ -95,7 +101,12 @@ func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []
 }
 
 // ProcessBlock processes a new block by inserting it to the fork choice store.
-func (f *ForkChoice) ProcessBlock(ctx context.Context, slot types.Slot, blockRoot, parentRoot, graffiti [32]byte, justifiedEpoch, finalizedEpoch types.Epoch) error {
+func (f *ForkChoice) ProcessBlock(
+	ctx context.Context,
+	slot types.Slot,
+	blockRoot, parentRoot, graffiti [32]byte,
+	justifiedEpoch, finalizedEpoch types.Epoch,
+) error {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.ProcessBlock")
 	defer span.End()
 
@@ -228,6 +239,29 @@ func (s *Store) NodesIndices() map[[32]byte]uint64 {
 	s.nodesLock.RLock()
 	defer s.nodesLock.RUnlock()
 	return s.nodesIndices
+}
+
+// ChainHeads returns all possible chain heads (leaves of fork choice tree).
+// Heads roots and heads slots are returned.
+func (s *Store) ChainHeads() ([][32]byte, []types.Slot) {
+	s.nodesLock.RLock()
+	nodes := s.Nodes()
+	s.nodesLock.RUnlock()
+
+	// Deliberate choice to not preallocate space for below.
+	// Heads cant be more than 2-3 in the worst case where pre-allocation will be 64 to begin with.
+	headsRoots := make([][32]byte, 0)
+	headsSlots := make([]types.Slot, 0)
+
+	for _, node := range nodes {
+		// Possible heads have no children.
+		if node.bestDescendant == NonExistentNode && node.bestChild == NonExistentNode {
+			headsRoots = append(headsRoots, node.root)
+			headsSlots = append(headsSlots, node.slot)
+		}
+	}
+
+	return headsRoots, headsSlots
 }
 
 // head starts from justified root and then follows the best descendant links
