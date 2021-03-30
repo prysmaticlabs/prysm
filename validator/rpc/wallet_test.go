@@ -116,7 +116,7 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 	req.Mnemonic25ThWord = " "
 	_, err = s.RecoverWallet(ctx, req)
 	require.ErrorContains(t, "mnemonic 25th word cannot be empty", err)
-	req.Mnemonic25ThWord = "outer" 
+	req.Mnemonic25ThWord = "outer"
 
 	// Test weak password.
 	req.WalletPassword = "123qwe"
@@ -133,8 +133,8 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 	}
 	_, err = s.CreateWallet(ctx, reqCreate)
 	require.ErrorContains(t, "create wallet not supported through web", err, "Create wallet for DERIVED or REMOTE types not supported through web, either import keystore or recover")
-	
-	// This defer will be the last to execute in this func. 
+
+	// This defer will be the last to execute in this func.
 	resetCfgFalse := featureconfig.InitWithReset(&featureconfig.Flags{
 		WriteWalletPasswordOnWebOnboarding: false,
 	})
@@ -144,19 +144,19 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 		WriteWalletPasswordOnWebOnboarding: true,
 	})
 	resetCfgTrue()
-	
+
 	// Finally remove the defaultwallet then recover.
 	require.NoError(t, os.RemoveAll(localWalletDir))
 	_, err = s.RecoverWallet(ctx, req)
 	require.NoError(t, err)
-	
+
 	// File should have been written.
 	assert.Equal(t, true, fileutil.FileExists(localWalletDir))
 
 	// Attempting to write again should trigger an error.
 	err = writeWalletPasswordToDisk(localWalletDir, "somepassword")
 	require.NotNil(t, err)
-	
+
 }
 
 func TestServer_WalletConfig_NoWalletFound(t *testing.T) {
