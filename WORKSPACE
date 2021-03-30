@@ -190,6 +190,20 @@ go_repository(
     version = "v1.0.0",
 )
 
+go_repository(
+    name = "com_github_prysmaticlabs_eth2_types",
+    importpath = "github.com/prysmaticlabs/eth2-types",
+    sum = "h1:n/ZI+/bZfkMoGoV2Rult3YvS5LT4dvpAFOuISq+I+GY=",
+    version = "v0.0.0-20210127031309-22cbe426eba6",
+)
+
+go_repository(
+    name = "org_golang_x_term",
+    importpath = "golang.org/x/term",
+    sum = "h1:v+OssWQX+hTHEmOBgwxdZxK4zHq3yOs8F9J7mk0PY8E=",
+    version = "v0.0.0-20201126162022-7de9c90e9dd1",
+)
+
 gazelle_dependencies()
 
 load("@io_bazel_rules_go//extras:embed_data_deps.bzl", "go_embed_data_dependencies")

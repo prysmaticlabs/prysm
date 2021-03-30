@@ -31,16 +31,16 @@ const (
 // of the legacy proto package is being used.
 const _ = proto.ProtoPackageIsVersion4
 
-type LogsEndpointResponse struct {
+type LogsResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	BeaconLogsEndpoint string `protobuf:"bytes,1,opt,name=beacon_logs_endpoint,json=beaconLogsEndpoint,proto3" json:"beacon_logs_endpoint,omitempty"`
+	Logs []string `protobuf:"bytes,1,rep,name=logs,proto3" json:"logs,omitempty"`
 }
 
-func (x *LogsEndpointResponse) Reset() {
-	*x = LogsEndpointResponse{}
+func (x *LogsResponse) Reset() {
+	*x = LogsResponse{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_proto_beacon_rpc_v1_health_proto_msgTypes[0]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -48,13 +48,13 @@ func (x *LogsEndpointResponse) Reset() {
 	}
 }
 
-func (x *LogsEndpointResponse) String() string {
+func (x *LogsResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*LogsEndpointResponse) ProtoMessage() {}
+func (*LogsResponse) ProtoMessage() {}
 
-func (x *LogsEndpointResponse) ProtoReflect() protoreflect.Message {
+func (x *LogsResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_beacon_rpc_v1_health_proto_msgTypes[0]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -66,16 +66,16 @@ func (x *LogsEndpointResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use LogsEndpointResponse.ProtoReflect.Descriptor instead.
-func (*LogsEndpointResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use LogsResponse.ProtoReflect.Descriptor instead.
+func (*LogsResponse) Descriptor() ([]byte, []int) {
 	return file_proto_beacon_rpc_v1_health_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *LogsEndpointResponse) GetBeaconLogsEndpoint() string {
+func (x *LogsResponse) GetLogs() []string {
 	if x != nil {
-		return x.BeaconLogsEndpoint
+		return x.Logs
 	}
-	return ""
+	return nil
 }
 
 var File_proto_beacon_rpc_v1_health_proto protoreflect.FileDescriptor
@@ -88,21 +88,18 @@ var file_proto_beacon_rpc_v1_health_proto_rawDesc = []byte{
 	0x6c, 0x65, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x61, 0x6e, 0x6e, 0x6f, 0x74, 0x61, 0x74, 0x69, 0x6f,
 	0x6e, 0x73, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x1b, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65,
 	0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2f, 0x65, 0x6d, 0x70, 0x74, 0x79, 0x2e,
-	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x48, 0x0a, 0x14, 0x4c, 0x6f, 0x67, 0x73, 0x45, 0x6e, 0x64,
-	0x70, 0x6f, 0x69, 0x6e, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x30, 0x0a,
-	0x14, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x5f, 0x6c, 0x6f, 0x67, 0x73, 0x5f, 0x65, 0x6e, 0x64,
-	0x70, 0x6f, 0x69, 0x6e, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x12, 0x62, 0x65, 0x61,
-	0x63, 0x6f, 0x6e, 0x4c, 0x6f, 0x67, 0x73, 0x45, 0x6e, 0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x32,
-	0x8e, 0x01, 0x0a, 0x06, 0x48, 0x65, 0x61, 0x6c, 0x74, 0x68, 0x12, 0x83, 0x01, 0x0a, 0x0f, 0x47,
-	0x65, 0x74, 0x4c, 0x6f, 0x67, 0x73, 0x45, 0x6e, 0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x12, 0x16,
-	0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66,
-	0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x2c, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75,
-	0x6d, 0x2e, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x76, 0x31, 0x2e,
-	0x4c, 0x6f, 0x67, 0x73, 0x45, 0x6e, 0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x52, 0x65, 0x73, 0x70,
-	0x6f, 0x6e, 0x73, 0x65, 0x22, 0x2a, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x24, 0x12, 0x22, 0x2f, 0x65,
-	0x74, 0x68, 0x2f, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2f, 0x68, 0x65, 0x61, 0x6c,
-	0x74, 0x68, 0x2f, 0x6c, 0x6f, 0x67, 0x73, 0x2f, 0x65, 0x6e, 0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74,
-	0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x22, 0x0a, 0x0c, 0x4c, 0x6f, 0x67, 0x73, 0x52, 0x65, 0x73,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x6c, 0x6f, 0x67, 0x73, 0x18, 0x01, 0x20,
+	0x03, 0x28, 0x09, 0x52, 0x04, 0x6c, 0x6f, 0x67, 0x73, 0x32, 0x86, 0x01, 0x0a, 0x06, 0x48, 0x65,
+	0x61, 0x6c, 0x74, 0x68, 0x12, 0x7c, 0x0a, 0x10, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x42, 0x65,
+	0x61, 0x63, 0x6f, 0x6e, 0x4c, 0x6f, 0x67, 0x73, 0x12, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c,
+	0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79,
+	0x1a, 0x24, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x62, 0x65, 0x61, 0x63,
+	0x6f, 0x6e, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x76, 0x31, 0x2e, 0x4c, 0x6f, 0x67, 0x73, 0x52, 0x65,
+	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x28, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x22, 0x12, 0x20,
+	0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2f, 0x68, 0x65,
+	0x61, 0x6c, 0x74, 0x68, 0x2f, 0x6c, 0x6f, 0x67, 0x73, 0x2f, 0x73, 0x74, 0x72, 0x65, 0x61, 0x6d,
+	0x30, 0x01, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -119,12 +116,12 @@ func file_proto_beacon_rpc_v1_health_proto_rawDescGZIP() []byte {
 
 var file_proto_beacon_rpc_v1_health_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_proto_beacon_rpc_v1_health_proto_goTypes = []interface{}{
-	(*LogsEndpointResponse)(nil), // 0: ethereum.beacon.rpc.v1.LogsEndpointResponse
-	(*empty.Empty)(nil),          // 1: google.protobuf.Empty
+	(*LogsResponse)(nil), // 0: ethereum.beacon.rpc.v1.LogsResponse
+	(*empty.Empty)(nil),  // 1: google.protobuf.Empty
 }
 var file_proto_beacon_rpc_v1_health_proto_depIdxs = []int32{
-	1, // 0: ethereum.beacon.rpc.v1.Health.GetLogsEndpoint:input_type -> google.protobuf.Empty
-	0, // 1: ethereum.beacon.rpc.v1.Health.GetLogsEndpoint:output_type -> ethereum.beacon.rpc.v1.LogsEndpointResponse
+	1, // 0: ethereum.beacon.rpc.v1.Health.StreamBeaconLogs:input_type -> google.protobuf.Empty
+	0, // 1: ethereum.beacon.rpc.v1.Health.StreamBeaconLogs:output_type -> ethereum.beacon.rpc.v1.LogsResponse
 	1, // [1:2] is the sub-list for method output_type
 	0, // [0:1] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
@@ -139,7 +136,7 @@ func file_proto_beacon_rpc_v1_health_proto_init() {
 	}
 	if !protoimpl.UnsafeEnabled {
 		file_proto_beacon_rpc_v1_health_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*LogsEndpointResponse); i {
+			switch v := v.(*LogsResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -183,7 +180,7 @@ const _ = grpc.SupportPackageIsVersion6
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type HealthClient interface {
-	GetLogsEndpoint(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*LogsEndpointResponse, error)
+	StreamBeaconLogs(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (Health_StreamBeaconLogsClient, error)
 }
 
 type healthClient struct {
@@ -194,59 +191,86 @@ func NewHealthClient(cc grpc.ClientConnInterface) HealthClient {
 	return &healthClient{cc}
 }
 
-func (c *healthClient) GetLogsEndpoint(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*LogsEndpointResponse, error) {
-	out := new(LogsEndpointResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.Health/GetLogsEndpoint", in, out, opts...)
+func (c *healthClient) StreamBeaconLogs(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (Health_StreamBeaconLogsClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_Health_serviceDesc.Streams[0], "/ethereum.beacon.rpc.v1.Health/StreamBeaconLogs", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &healthStreamBeaconLogsClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Health_StreamBeaconLogsClient interface {
+	Recv() (*LogsResponse, error)
+	grpc.ClientStream
+}
+
+type healthStreamBeaconLogsClient struct {
+	grpc.ClientStream
+}
+
+func (x *healthStreamBeaconLogsClient) Recv() (*LogsResponse, error) {
+	m := new(LogsResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // HealthServer is the server API for Health service.
 type HealthServer interface {
-	GetLogsEndpoint(context.Context, *empty.Empty) (*LogsEndpointResponse, error)
+	StreamBeaconLogs(*empty.Empty, Health_StreamBeaconLogsServer) error
 }
 
 // UnimplementedHealthServer can be embedded to have forward compatible implementations.
 type UnimplementedHealthServer struct {
 }
 
-func (*UnimplementedHealthServer) GetLogsEndpoint(context.Context, *empty.Empty) (*LogsEndpointResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetLogsEndpoint not implemented")
+func (*UnimplementedHealthServer) StreamBeaconLogs(*empty.Empty, Health_StreamBeaconLogsServer) error {
+	return status.Errorf(codes.Unimplemented, "method StreamBeaconLogs not implemented")
 }
 
 func RegisterHealthServer(s *grpc.Server, srv HealthServer) {
 	s.RegisterService(&_Health_serviceDesc, srv)
 }
 
-func _Health_GetLogsEndpoint_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(empty.Empty)
-	if err := dec(in); err != nil {
-		return nil, err
+func _Health_StreamBeaconLogs_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(empty.Empty)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
 	}
-	if interceptor == nil {
-		return srv.(HealthServer).GetLogsEndpoint(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ethereum.beacon.rpc.v1.Health/GetLogsEndpoint",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HealthServer).GetLogsEndpoint(ctx, req.(*empty.Empty))
-	}
-	return interceptor(ctx, in, info, handler)
+	return srv.(HealthServer).StreamBeaconLogs(m, &healthStreamBeaconLogsServer{stream})
+}
+
+type Health_StreamBeaconLogsServer interface {
+	Send(*LogsResponse) error
+	grpc.ServerStream
+}
+
+type healthStreamBeaconLogsServer struct {
+	grpc.ServerStream
+}
+
+func (x *healthStreamBeaconLogsServer) Send(m *LogsResponse) error {
+	return x.ServerStream.SendMsg(m)
 }
 
 var _Health_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "ethereum.beacon.rpc.v1.Health",
 	HandlerType: (*HealthServer)(nil),
-	Methods: []grpc.MethodDesc{
+	Methods:     []grpc.MethodDesc{},
+	Streams: []grpc.StreamDesc{
 		{
-			MethodName: "GetLogsEndpoint",
-			Handler:    _Health_GetLogsEndpoint_Handler,
+			StreamName:    "StreamBeaconLogs",
+			Handler:       _Health_StreamBeaconLogs_Handler,
+			ServerStreams: true,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
 	Metadata: "proto/beacon/rpc/v1/health.proto",
 }
