@@ -1,0 +1,56 @@
+load("@prysm//tools/go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_test")
+load("@io_bazel_rules_docker//go:image.bzl", "go_image")
+load("@io_bazel_rules_docker//container:container.bzl", "container_bundle")
+load("@io_bazel_rules_docker//contrib:push-all.bzl", "docker_push")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["main.go"],
+    importpath = "github.com/prysmaticlabs/prysm/tools/http-request-sink",
+    visibility = ["//visibility:private"],
+    deps = ["//shared/params:go_default_library"],
+)
+
+go_binary(
+    name = "http-request-sink",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)
+
+go_image(
+    name = "image",
+    base = select({
+        "//tools:base_image_alpine": "//tools:alpine_cc_image",
+        "//tools:base_image_cc": "//tools:cc_image",
+        "//conditions:default": "//tools:cc_image",
+    }),
+    binary = ":http-request-sink",
+    tags = ["manual"],
+    visibility = ["//visibility:private"],
+)
+
+container_bundle(
+    name = "image_bundle",
+    images = {
+        "gcr.io/prysmaticlabs/prysm/http-request-sink:latest": ":image",
+        "gcr.io/prysmaticlabs/prysm/http-request-sink:{DOCKER_TAG}": ":image",
+    },
+    tags = ["manual"],
+)
+
+docker_push(
+    name = "push_images",
+    bundle = ":image_bundle",
+    tags = ["manual"],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["main_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//shared/params:go_default_library",
+        "//shared/testutil/require:go_default_library",
+    ],
+)
