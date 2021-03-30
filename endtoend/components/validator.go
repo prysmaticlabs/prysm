@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"os/exec"
 	"strings"
+	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -18,7 +19,7 @@ import (
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
-	e2etypes "github.com/prysmaticlabs/prysm/endtoend/types"
+	"github.com/prysmaticlabs/prysm/endtoend/types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -27,82 +28,28 @@ import (
 
 const depositGasLimit = 4000000
 
-var _ e2etypes.ComponentRunner = (*ValidatorNode)(nil)
-var _ e2etypes.ComponentRunner = (*ValidatorNodeSet)(nil)
-
-// ValidatorNodeSet represents set of validator nodes.
-type ValidatorNodeSet struct {
-	e2etypes.ComponentRunner
-	config  *e2etypes.E2EConfig
-	started chan struct{}
-}
-
-// NewValidatorNodeSet creates and returns a set of validator nodes.
-func NewValidatorNodeSet(config *e2etypes.E2EConfig) *ValidatorNodeSet {
-	return &ValidatorNodeSet{
-		config:  config,
-		started: make(chan struct{}, 1),
-	}
-}
-
-// Start starts the configured amount of validators, also sending and mining their deposits.
-func (s *ValidatorNodeSet) Start(ctx context.Context) error {
+// StartValidatorClients starts the configured amount of validators, also sending and mining their validator deposits.
+// Should only be used on initialization.
+func StartValidatorClients(t *testing.T, config *types.E2EConfig) {
 	// Always using genesis count since using anything else would be difficult to test for.
 	validatorNum := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 	beaconNodeNum := e2e.TestParams.BeaconNodeCount
 	if validatorNum%beaconNodeNum != 0 {
-		return errors.New("validator count is not easily divisible by beacon node count")
+		t.Fatal("Validator count is not easily divisible by beacon node count.")
 	}
 	validatorsPerNode := validatorNum / beaconNodeNum
-
-	// Create validator nodes.
-	nodes := make([]e2etypes.ComponentRunner, beaconNodeNum)
 	for i := 0; i < beaconNodeNum; i++ {
-		nodes[i] = NewValidatorNode(s.config, validatorsPerNode, i, validatorsPerNode*i)
-	}
-
-	// Wait for all nodes to finish their job (blocking).
-	// Once nodes are ready passed in handler function will be called.
-	return helpers.WaitOnNodes(ctx, nodes, func() {
-		// All nodes stated, close channel, so that all services waiting on a set, can proceed.
-		close(s.started)
-	})
-}
-
-// Started checks whether validator node set is started and all nodes are ready to be queried.
-func (s *ValidatorNodeSet) Started() <-chan struct{} {
-	return s.started
-}
-
-// ValidatorNode represents a validator node.
-type ValidatorNode struct {
-	e2etypes.ComponentRunner
-	config       *e2etypes.E2EConfig
-	started      chan struct{}
-	validatorNum int
-	index        int
-	offset       int
-}
-
-// NewValidatorNode creates and returns a validator node.
-func NewValidatorNode(config *e2etypes.E2EConfig, validatorNum, index, offset int) *ValidatorNode {
-	return &ValidatorNode{
-		config:       config,
-		validatorNum: validatorNum,
-		index:        index,
-		offset:       offset,
-		started:      make(chan struct{}, 1),
+		go StartNewValidatorClient(t, config, validatorsPerNode, i, validatorsPerNode*i)
 	}
 }
 
-// StartNewValidatorNode starts a validator client.
-func (v *ValidatorNode) Start(ctx context.Context) error {
+// StartNewValidatorClient starts a validator client with the passed in configuration.
+func StartNewValidatorClient(t *testing.T, config *types.E2EConfig, validatorNum, index, offset int) {
 	binaryPath, found := bazel.FindBinary("cmd/validator", "validator")
 	if !found {
-		return errors.New("validator binary not found")
+		t.Fatal("validator binary not found")
 	}
 
-	config, validatorNum, index, offset := v.config, v.validatorNum, v.index, v.offset
 	beaconRPCPort := e2e.TestParams.BeaconNodeRPCPort + index
 	if beaconRPCPort >= e2e.TestParams.BeaconNodeRPCPort+e2e.TestParams.BeaconNodeCount {
 		// Point any extra validator clients to a node we know is running.
@@ -111,11 +58,11 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 
 	file, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, fmt.Sprintf(e2e.ValidatorLogFileName, index))
 	if err != nil {
-		return err
+		t.Fatal(err)
 	}
 	gFile, err := helpers.GraffitiYamlFile(e2e.TestParams.TestPath)
 	if err != nil {
-		return err
+		t.Fatal(err)
 	}
 	args := []string{
 		fmt.Sprintf("--datadir=%s/eth2-val-%d", e2e.TestParams.TestPath, index),
@@ -135,47 +82,36 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 	args = append(args, featureconfig.E2EValidatorFlags...)
 	args = append(args, config.ValidatorFlags...)
 
-	cmd := exec.CommandContext(ctx, binaryPath, args...)
-	log.Infof("Starting validator client %d with flags: %s", index, strings.Join(args[2:], " "))
+	cmd := exec.Command(binaryPath, args...)
+	t.Logf("Starting validator client %d with flags: %s", index, strings.Join(args[2:], " "))
 	if err = cmd.Start(); err != nil {
-		return err
+		t.Fatal(err)
 	}
-
-	// Mark node as ready.
-	close(v.started)
-
-	return cmd.Wait()
-}
-
-// Started checks whether validator node is started and ready to be queried.
-func (v *ValidatorNode) Started() <-chan struct{} {
-	return v.started
 }
 
 // SendAndMineDeposits sends the requested amount of deposits and mines the chain after to ensure the deposits are seen.
-func SendAndMineDeposits(keystorePath string, validatorNum, offset int, partial bool) error {
+func SendAndMineDeposits(t *testing.T, keystorePath string, validatorNum, offset int, partial bool) {
 	client, err := rpc.DialHTTP(fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.Eth1RPCPort))
 	if err != nil {
-		return err
+		t.Fatal(err)
 	}
 	defer client.Close()
 	web3 := ethclient.NewClient(client)
 
 	keystoreBytes, err := ioutil.ReadFile(keystorePath)
 	if err != nil {
-		return err
+		t.Fatal(err)
 	}
 	if err = sendDeposits(web3, keystoreBytes, validatorNum, offset, partial); err != nil {
-		return err
+		t.Fatal(err)
 	}
 	mineKey, err := keystore.DecryptKey(keystoreBytes, "" /*password*/)
 	if err != nil {
-		return err
+		t.Fatal(err)
 	}
 	if err = mineBlocks(web3, mineKey, params.BeaconConfig().Eth1FollowDistance); err != nil {
-		return fmt.Errorf("failed to mine blocks %w", err)
+		t.Fatalf("failed to mine blocks %v", err)
 	}
-	return nil
 }
 
 // sendDeposits uses the passed in web3 and keystore bytes to send the requested deposits.

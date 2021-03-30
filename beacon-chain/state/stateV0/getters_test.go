@@ -69,10 +69,8 @@ func TestNilState_NoPanic(t *testing.T) {
 	_ = err
 	_ = st.RandaoMixesLength()
 	_ = st.Slashings()
-	_, err = st.PreviousEpochAttestations()
-	require.NoError(t, err)
-	_, err = st.CurrentEpochAttestations()
-	require.NoError(t, err)
+	_ = st.PreviousEpochAttestations()
+	_ = st.CurrentEpochAttestations()
 	_ = st.JustificationBits()
 	_ = st.PreviousJustifiedCheckpoint()
 	_ = st.CurrentJustifiedCheckpoint()

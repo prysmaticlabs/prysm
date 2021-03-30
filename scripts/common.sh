@@ -27,6 +27,6 @@ if [ "$system" == "darwin" ]; then
         color 31 "Make sure that GNU 'findutils' package is installed: brew install findutils"
         exit 1
     else
-        export findutil="gfind"  # skipcq: SH-2034
+        findutil="gfind"
     fi
 fi
