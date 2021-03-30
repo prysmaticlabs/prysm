@@ -143,15 +143,15 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 	resetCfgTrue := featureconfig.InitWithReset(&featureconfig.Flags{
 		WriteWalletPasswordOnWebOnboarding: true,
 	})
-	resetCfgTrue()
+	defer resetCfgTrue()
 
-	// Finally remove the defaultwallet then recover.
-	require.NoError(t, os.RemoveAll(localWalletDir))
+	// Finally test recover.
 	_, err = s.RecoverWallet(ctx, req)
 	require.NoError(t, err)
 
-	// File should have been written.
-	assert.Equal(t, true, fileutil.FileExists(localWalletDir))
+	// Password File should have been written.
+	passwordFilePath := filepath.Join(localWalletDir, wallet.DefaultWalletPasswordFile)
+	assert.Equal(t, true, fileutil.FileExists(passwordFilePath))
 
 	// Attempting to write again should trigger an error.
 	err = writeWalletPasswordToDisk(localWalletDir, "somepassword")
