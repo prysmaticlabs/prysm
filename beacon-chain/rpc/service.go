@@ -257,7 +257,7 @@ func (s *Service) Start() {
 		Broadcaster:         s.cfg.Broadcaster,
 		StateGenService:     s.cfg.StateGen,
 		SyncChecker:         s.cfg.SyncService,
-		StateFetcher: statefetcher.StateFetcher{
+		StateFetcher: statefetcher.StateProvider{
 			BeaconDB:           s.cfg.BeaconDB,
 			ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
 			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
@@ -283,6 +283,12 @@ func (s *Service) Start() {
 			Ctx:             s.ctx,
 			BeaconDB:        s.cfg.BeaconDB,
 			ForkChoiceStore: &s.cfg.ForkChoiceStore,
+			StateFetcher: &statefetcher.StateProvider{
+				BeaconDB:           s.cfg.BeaconDB,
+				ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
+				GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
+				StateGenService:    s.cfg.StateGen,
+			},
 		}
 		pbrpc.RegisterDebugServer(s.grpcServer, debugServer)
 		ethpbv1.RegisterBeaconDebugServer(s.grpcServer, debugServerV1)

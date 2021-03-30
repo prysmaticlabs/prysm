@@ -7,6 +7,7 @@ import (
 	"context"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	v1 "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -18,6 +19,7 @@ type BeaconState interface {
 	WriteOnlyBeaconState
 	Copy() BeaconState
 	HashTreeRoot(ctx context.Context) ([32]byte, error)
+	ToProto() (*v1.BeaconState, error)
 }
 
 // ReadOnlyBeaconState defines a struct which only has read access to beacon state methods.
@@ -134,8 +136,8 @@ type ReadOnlyEth1Data interface {
 
 // ReadOnlyAttestations defines a struct which only has read access to attestations methods.
 type ReadOnlyAttestations interface {
-	PreviousEpochAttestations() []*pbp2p.PendingAttestation
-	CurrentEpochAttestations() []*pbp2p.PendingAttestation
+	PreviousEpochAttestations() ([]*pbp2p.PendingAttestation, error)
+	CurrentEpochAttestations() ([]*pbp2p.PendingAttestation, error)
 }
 
 // WriteOnlyBlockRoots defines a struct which only has write access to block roots methods.
@@ -189,8 +191,6 @@ type WriteOnlyCheckpoint interface {
 
 // WriteOnlyAttestations defines a struct which only has write access to attestations methods.
 type WriteOnlyAttestations interface {
-	SetPreviousEpochAttestations(val []*pbp2p.PendingAttestation) error
-	SetCurrentEpochAttestations(val []*pbp2p.PendingAttestation) error
 	AppendCurrentEpochAttestations(val *pbp2p.PendingAttestation) error
 	AppendPreviousEpochAttestations(val *pbp2p.PendingAttestation) error
 	RotateAttestations() error
