@@ -36,7 +36,7 @@ func (ds *Server) ListForkChoiceHeads(ctx context.Context, _ *ptypes.Empty) (*et
 	resp := &ethpb.ForkChoiceHeadsResponse{
 		Data: make([]*ethpb.ForkChoiceHead, len(headRoots)),
 	}
-	for i, _ := range headRoots {
+	for i := range headRoots {
 		resp.Data[i] = &ethpb.ForkChoiceHead{
 			Root: headRoots[i][:],
 			Slot: headSlots[i],
