@@ -45,4 +45,5 @@ type Getter interface {
 	HasParent(root [32]byte) bool
 	AncestorRoot(ctx context.Context, root [32]byte, slot types.Slot) ([]byte, error)
 	IsCanonical(root [32]byte) bool
+	ChainHeads() ([][32]byte, []types.Slot)
 }

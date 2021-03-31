@@ -7,7 +7,7 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 )
 
@@ -17,6 +17,6 @@ import (
 type Server struct {
 	Ctx             context.Context
 	BeaconDB        db.ReadOnlyDatabase
-	ForkChoiceStore *protoarray.Store
+	ForkChoiceStore forkchoice.Getter
 	StateFetcher    statefetcher.Fetcher
 }

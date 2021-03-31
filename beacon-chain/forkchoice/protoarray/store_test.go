@@ -590,7 +590,7 @@ func TestStore_UpdateCanonicalNodes_ContextCancelled(t *testing.T) {
 	require.ErrorContains(t, "context canceled", f.store.updateCanonicalNodes(ctx, [32]byte{'c'}))
 }
 
-func TestStore_ChainHeads(t *testing.T) {
+func TestForkChoice_ChainHeads(t *testing.T) {
 	nodes := []*Node{
 		{slot: 100, root: [32]byte{'a'}, bestChild: NonExistentNode, bestDescendant: NonExistentNode},
 		{slot: 101, root: [32]byte{'b'}},
@@ -599,10 +599,8 @@ func TestStore_ChainHeads(t *testing.T) {
 		{slot: 104, root: [32]byte{'e'}, bestChild: NonExistentNode},
 	}
 
-	s := &Store{
-		nodes: nodes,
-	}
-	roots, slots := s.ChainHeads()
+	f := &ForkChoice{store: &Store{nodes: nodes}}
+	roots, slots := f.ChainHeads()
 	require.DeepEqual(t, [][32]byte{{'a'}, {'d'}}, roots)
 	require.DeepEqual(t, []types.Slot{100, 103}, slots)
 }

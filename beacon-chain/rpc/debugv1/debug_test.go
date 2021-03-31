@@ -50,7 +50,7 @@ func TestListForkChoiceHeads(t *testing.T) {
 	}}
 
 	server := &Server{
-		ForkChoiceStore: forkChoice.Store(),
+		ForkChoiceStore: forkChoice,
 	}
 	resp, err := server.ListForkChoiceHeads(ctx, &protoTypes.Empty{})
 	require.NoError(t, err)
