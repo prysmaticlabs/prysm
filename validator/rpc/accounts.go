@@ -150,7 +150,7 @@ func (s *Server) BackupAccounts(
 	}, nil
 }
 
-// DeleteAccounts deletes accounts from a user if their wallet is an imported wallet.
+// DeleteAccounts deletes accounts from a user's wallet is an imported or derived wallet.
 func (s *Server) DeleteAccounts(
 	ctx context.Context, req *pb.DeleteAccountsRequest,
 ) (*pb.DeleteAccountsResponse, error) {
@@ -160,7 +160,7 @@ func (s *Server) DeleteAccounts(
 	if s.wallet == nil || s.keymanager == nil {
 		return nil, status.Error(codes.FailedPrecondition, "No wallet found")
 	}
-	if s.wallet.KeymanagerKind() != keymanager.Imported && s.wallet.KeymanagerKind() != keymanager.Derived{
+	if s.wallet.KeymanagerKind() != keymanager.Imported && s.wallet.KeymanagerKind() != keymanager.Derived {
 		return nil, status.Error(codes.FailedPrecondition, "Only Imported or Derived wallets can delete accounts")
 	}
 	if err := accounts.DeleteAccount(ctx, &accounts.Config{

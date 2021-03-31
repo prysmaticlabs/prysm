@@ -12,9 +12,9 @@ import (
 
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -188,7 +188,7 @@ func TestServer_DeleteAccounts_FailedPreconditions_DerivedWallet(t *testing.T) {
 	require.Equal(t, true, ok)
 	err = dr.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "", numAccounts)
 	require.NoError(t, err)
-		
+
 	_, err = s.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
 		PublicKeysToDelete: nil,
 	})
