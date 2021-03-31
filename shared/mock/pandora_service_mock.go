@@ -54,7 +54,7 @@ func (mr *MockPandoraServiceMockRecorder) GetShardBlockHeader(ctx interface{}) *
 }
 
 // SubmitShardBlockHeader mocks base method
-func (m *MockPandoraService) SubmitShardBlockHeader(ctx context.Context, blockNonce uint64, headerHash common.Hash, sig [32]byte) (bool, error) {
+func (m *MockPandoraService) SubmitShardBlockHeader(ctx context.Context, blockNonce uint64, headerHash common.Hash, sig [96]byte) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SubmitShardBlockHeader", ctx, blockNonce, headerHash, sig)
 	ret0, _ := ret[0].(bool)

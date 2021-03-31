@@ -33,7 +33,7 @@ type PandoraService interface {
 	// GetShardBlockHeader gets the new block header and hash of pandora client
 	GetShardBlockHeader(ctx context.Context) (*eth1Types.Header, common.Hash, *ExtraData, error)
 	// SubmitShardBlockHeader submits the header hash and signature of pandora block header
-	SubmitShardBlockHeader(ctx context.Context, blockNonce uint64, headerHash common.Hash, sig [32]byte) (bool, error)
+	SubmitShardBlockHeader(ctx context.Context, blockNonce uint64, headerHash common.Hash, sig [96]byte) (bool, error)
 }
 
 type RPCClient interface {
@@ -190,7 +190,7 @@ func (s *Service) GetShardBlockHeader(ctx context.Context) (*eth1Types.Header, c
 // SubmitShardBlockHeader method calls pandora client's `eth_submitWork` api
 // This method returns a boolean status
 func (s *Service) SubmitShardBlockHeader(ctx context.Context, blockNonce uint64,
-	headerHash common.Hash, sig [32]byte) (bool, error) {
+	headerHash common.Hash, sig [96]byte) (bool, error) {
 
 	if !s.connected {
 		log.WithError(ConnectionError).Error("Pandora chain is not connected")

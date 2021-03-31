@@ -48,7 +48,7 @@ func TestSubmitShardBlockHeader_Success(t *testing.T) {
 	defer mockedPandoraClient.Close()
 
 	block := getDummyBlock()
-	dummySig := [32]byte{}
+	dummySig := [96]byte{}
 	response, err := mockedPandoraClient.SubmitShardBlockHeader(context.Background(), block.Nonce(), block.Header().Hash(), dummySig)
 	if err != nil {
 		t.Fatal(err)
