@@ -86,11 +86,11 @@ require (
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/protolambda/zssz v0.1.5 // indirect
 	github.com/prysmaticlabs/eth2-types v0.0.0-20210303084904-c9735a06829d
-	github.com/prysmaticlabs/ethereumapis v0.0.0-20210330180818-b69e962c600b
+	github.com/prysmaticlabs/ethereumapis v0.0.0-20210331181032-566f2b46d746
 	github.com/prysmaticlabs/go-bitfield v0.0.0-20210202205921-7fcea7c45dc8
 	github.com/prysmaticlabs/go-ssz v0.0.0-20200612203617-6d5c9aa213ae // indirect
 	github.com/prysmaticlabs/prombbolt v0.0.0-20210126082820-9b7adba6db7c
-	github.com/prysmaticlabs/protoc-gen-go-cast v0.0.0-20210326191636-dbd8bd594bbc // indirect
+	github.com/prysmaticlabs/protoc-gen-go-cast v0.0.0-20210331180400-9bcfa8a53194 // indirect
 	github.com/rs/cors v1.7.0
 	github.com/schollz/progressbar/v3 v3.3.4
 	github.com/sirupsen/logrus v1.6.0

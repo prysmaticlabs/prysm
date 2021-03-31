@@ -344,7 +344,7 @@ func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*ethpb.Dep
 				return nil, nil, errors.Wrap(err, "could not get signing root of deposit data and domain")
 			}
 			// Always use the same validator to sign
-			depositData := &ethpb.Deposit_Data{
+			depositData := &ethpb.DepositData{
 				PublicKey:             depositMessage.PublicKey,
 				Amount:                depositMessage.Amount,
 				WithdrawalCredentials: depositMessage.WithdrawalCredentials,
