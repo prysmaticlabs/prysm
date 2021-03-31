@@ -55,11 +55,12 @@ func ComputeWeakSubjectivityCheckptEpoch(st iface.ReadOnlyBeaconState) (types.Ep
 		return 0, fmt.Errorf("cannot obtain active valiadtor count: %w", err)
 	}
 
-	// Average effective balance in the given validator set.
-	t, err := avgEffectiveBalanceInEther(st)
+	// Average effective balance in the given validator set, in Ether.
+	t, err := TotalActiveBalance(st)
 	if err != nil {
-		return 0, fmt.Errorf("cannot find average effective balance of validators: %w", err)
+		return 0, fmt.Errorf("cannot find total active balance of validators: %w", err)
 	}
+	t = t / N / params.BeaconConfig().GweiPerEth
 
 	// Maximum effective balance per validator.
 	T := params.BeaconConfig().MaxEffectiveBalance / params.BeaconConfig().GweiPerEth
@@ -85,15 +86,4 @@ func ComputeWeakSubjectivityCheckptEpoch(st iface.ReadOnlyBeaconState) (types.Ep
 	}
 
 	return types.Epoch(wsp), nil
-}
-
-// avgEffectiveBalanceInEther returns average effective balance of the validator set, in Ether.
-func avgEffectiveBalanceInEther(st iface.ReadOnlyBeaconState) (uint64, error) {
-	N := uint64(st.NumValidators())
-	t, err := TotalActiveBalance(st)
-	if err != nil {
-		return 0, fmt.Errorf("cannot find total active balance of validators: %w", err)
-	}
-	t = t / N / params.BeaconConfig().GweiPerEth
-	return t, nil
 }
