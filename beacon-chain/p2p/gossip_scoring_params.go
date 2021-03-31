@@ -45,10 +45,6 @@ const (
 
 	// dampeningFactor reduces the amount by which the various thresholds and caps are created.
 	dampeningFactor = 90
-
-	// gossipSubD is a hardcoded value representing the D gossip paramter, which signifies the
-	// degree of the gossip mesh.
-	gossipSubD = 8
 )
 
 func peerScoringParams() (*pubsub.PeerScoreParams, *pubsub.PeerScoreThresholds) {
