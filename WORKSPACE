@@ -160,21 +160,7 @@ go_register_toolchains(
     nogo = "@//:nogo",
 )
 
-load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
-
-go_repository(
-    name = "com_github_protolambda_zssz",
-    importpath = "github.com/protolambda/zssz",
-    sum = "h1:7fjJjissZIIaa2QcvmhS/pZISMX21zVITt49sW1ouek=",
-    version = "v0.1.5",
-)
-
-go_repository(
-    name = "com_github_prysmaticlabs_go_ssz",
-    importpath = "github.com/prysmaticlabs/go-ssz",
-    sum = "h1:7qd0Af1ozWKBU3c93YW2RH+/09hJns9+ftqWUZyts9c=",
-    version = "v0.0.0-20200612203617-6d5c9aa213ae",
-)
+load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
 
 gazelle_dependencies()
 
@@ -298,11 +284,11 @@ load("@com_github_bazelbuild_buildtools//buildifier:deps.bzl", "buildifier_depen
 
 buildifier_dependencies()
 
-git_repository(
+http_archive(
     name = "com_google_protobuf",
-    commit = "fde7cf7358ec7cd69e8db9be4f1fa6a5c431386a",  # v3.13.0
-    remote = "https://github.com/protocolbuffers/protobuf",
-    shallow_since = "1597443653 -0700",
+    sha256 = "65e020a42bdab44a66664d34421995829e9e79c60e5adaa08282fd14ca552f57",
+    strip_prefix = "protobuf-3.15.6",
+    urls = ["https://github.com/protocolbuffers/protobuf/archive/v3.15.6.tar.gz"],
 )
 
 load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
