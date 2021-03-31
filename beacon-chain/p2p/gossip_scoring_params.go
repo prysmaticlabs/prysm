@@ -150,7 +150,7 @@ func defaultBlockTopicParams() *pubsub.TopicScoreParams {
 func defaultAggregateTopicParams(activeValidators uint64) (*pubsub.TopicScoreParams, error) {
 	// Determine the expected message rate for the particular gossip topic.
 	aggPerSlot := aggregatorsPerSlot(activeValidators)
-	firstMessageCap, err := decay(scoreDecay(1*oneEpochDuration()), float64(aggPerSlot*2/gossipSubD))
+	firstMessageCap, err := decayLimit(scoreDecay(1*oneEpochDuration()), float64(aggPerSlot*2/gossipSubD))
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +159,7 @@ func defaultAggregateTopicParams(activeValidators uint64) (*pubsub.TopicScorePar
 	if err != nil {
 		return nil, err
 	}
-	meshWeight := -maxScore() / (aggregateWeight * meshThreshold * meshThreshold)
+	meshWeight := -scoreByWeight(aggregateWeight, meshThreshold)
 	meshCap := 4 * meshThreshold
 	return &pubsub.TopicScoreParams{
 		TopicWeight:                     aggregateWeight,
@@ -198,7 +198,7 @@ func defaultAggregateSubnetTopicParams(activeValidators uint64) (*pubsub.TopicSc
 		meshDecay = 16
 	}
 	// Determine expected first deliveries based on the message rate.
-	firstMessageCap, err := decay(scoreDecay(firstDecay*oneEpochDuration()), float64(numPerSlot*2/gossipSubD))
+	firstMessageCap, err := decayLimit(scoreDecay(firstDecay*oneEpochDuration()), float64(numPerSlot*2/gossipSubD))
 	if err != nil {
 		return nil, err
 	}
@@ -208,7 +208,7 @@ func defaultAggregateSubnetTopicParams(activeValidators uint64) (*pubsub.TopicSc
 	if err != nil {
 		return nil, err
 	}
-	meshWeight := -maxScore() / (aggregateWeight * meshThreshold * meshThreshold)
+	meshWeight := -scoreByWeight(topicWeight, meshThreshold)
 	meshCap := 4 * meshThreshold
 	return &pubsub.TopicScoreParams{
 		TopicWeight:                     topicWeight,
@@ -305,22 +305,29 @@ func oneEpochDuration() time.Duration {
 	return time.Duration(params.BeaconConfig().SlotsPerEpoch) * oneSlotDuration()
 }
 
+// determines the decay rate from the provided time period till
+// the decayToZero value. Ex: ( 1 -> 0.01)
 func scoreDecay(totalDurationDecay time.Duration) float64 {
 	numOfTimes := totalDurationDecay / oneSlotDuration()
 	return math.Pow(decayToZero, 1/float64(numOfTimes))
 }
 
+// is used to determine the threshold from the decay limit with
+// a provided growth rate. This applies the decay rate to a
+// computed limit.
 func decayThreshold(decayRate, rate float64) (float64, error) {
-	d, err := decay(decayRate, rate)
+	d, err := decayLimit(decayRate, rate)
 	if err != nil {
 		return 0, err
 	}
 	return d * decayRate, nil
 }
 
-func decay(decayRate, rate float64) (float64, error) {
+// decayLimit provides the value till which a decay process will
+// limit till provided with an expected growth rate.
+func decayLimit(decayRate, rate float64) (float64, error) {
 	if 1 <= decayRate {
-		return 0, errors.Errorf("got an invalid decay rate: %f", decayRate)
+		return 0, errors.Errorf("got an invalid decayLimit rate: %f", decayRate)
 	}
 	return rate / (1 - decayRate), nil
 }
@@ -339,6 +346,11 @@ func aggregatorsPerSlot(activeValidators uint64) uint64 {
 	return totalAggs
 }
 
+// provides the relevant score by the provided weight and threshold.
+func scoreByWeight(weight float64, threshold float64) float64 {
+	return maxScore() / (weight * threshold * threshold)
+}
+
 // maxScore attainable by a peer.
 func maxScore() float64 {
 	totalWeight := beaconBlockWeight + aggregateWeight + attestationTotalWeight +
@@ -346,10 +358,12 @@ func maxScore() float64 {
 	return (maxInMeshScore + maxFirstDeliveryScore) * totalWeight
 }
 
+// denotes the unit time in mesh for scoring tallying.
 func inMeshTime() time.Duration {
 	return 1 * oneSlotDuration()
 }
 
+// the cap for `inMesh` time scoring.
 func inMeshCap() float64 {
 	return float64((3600 * time.Second) / inMeshTime())
 }
