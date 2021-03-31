@@ -88,7 +88,9 @@ func (s *Service) Start() {
 // Stop method stops the service
 func (s *Service) Stop() error {
 	s.cancel()
-	s.closeClient()
+	if err := s.closeClient(); err != nil {
+		return nil
+	}
 	return nil
 }
 
