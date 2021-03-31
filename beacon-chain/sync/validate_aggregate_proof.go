@@ -241,7 +241,13 @@ func validateIndexInCommittee(ctx context.Context, bs iface.ReadOnlyBeaconState,
 
 // This validates selection proof by validating it's from the correct validator index of the slot.
 // It does not verify the selection proof, it returns the signature set of selection proof which can be used for batch verify.
-func validateSelectionIndex(ctx context.Context, bs iface.ReadOnlyBeaconState, data *ethpb.AttestationData, validatorIndex types.ValidatorIndex, proof []byte) (*bls.SignatureSet, error) {
+func validateSelectionIndex(
+	ctx context.Context,
+	bs iface.ReadOnlyBeaconState,
+	data *ethpb.AttestationData,
+	validatorIndex types.ValidatorIndex,
+	proof []byte,
+) (*bls.SignatureSet, error) {
 	_, span := trace.StartSpan(ctx, "sync.validateSelectionIndex")
 	defer span.End()
 

@@ -50,7 +50,7 @@ func (s *Store) SaveGenesisData(ctx context.Context, genesisState iface.BeaconSt
 	return nil
 }
 
-// LoadGenesisFromFile loads a genesis state from a given file path, if no genesis exists already.
+// LoadGenesis loads a genesis state from a given file path, if no genesis exists already.
 func (s *Store) LoadGenesis(ctx context.Context, r io.Reader) error {
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
