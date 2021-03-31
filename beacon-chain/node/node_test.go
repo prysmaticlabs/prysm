@@ -88,16 +88,16 @@ func TestBeaconNode_extractAuthStringFromFlag(t *testing.T) {
 	httpWeb3 := "http://infura"
 	auth := "bearer xxxxxxxxx"
 	separator := ","
-	web3, au := extractAuthStringFromFlag(httpWeb3 + separator + auth)
+	web3, au := httpEndpoint(httpWeb3 + separator + auth)
 	require.Equal(t, httpWeb3, web3)
 	require.Equal(t, auth, au)
-	web3, au = extractAuthStringFromFlag(httpWeb3 + separator)
+	web3, au = httpEndpoint(httpWeb3 + separator)
 	require.Equal(t, httpWeb3, web3)
 	require.Equal(t, "", au)
-	web3, au = extractAuthStringFromFlag(httpWeb3)
+	web3, au = httpEndpoint(httpWeb3)
 	require.Equal(t, httpWeb3, web3)
 	require.Equal(t, "", au)
-	web3, au = extractAuthStringFromFlag(httpWeb3 + separator + auth + separator)
+	web3, au = httpEndpoint(httpWeb3 + separator + auth + separator)
 	require.Equal(t, httpWeb3, web3)
 	require.Equal(t, "", au)
 	require.LogsContain(t, hook, "Web 3 provider string can contain one comma")

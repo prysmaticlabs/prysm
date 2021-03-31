@@ -128,9 +128,7 @@ type Service struct {
 	ctx                     context.Context
 	cancel                  context.CancelFunc
 	headTicker              *time.Ticker
-	httpEndpoint            string
-	auth                    string
-	currHttpEndpoint        string
+	currHttpEndpoint        *HttpEndpoint
 	httpLogger              bind.ContractFilterer
 	eth1DataFetcher         RPCDataFetcher
 	rpcClient               RPCClient
@@ -146,15 +144,50 @@ type Service struct {
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
 type Web3ServiceConfig struct {
-	HTTPEndPoint       string
-	Auth               string
-	HTTPEndpoints      []string
+	HttpEndpoints      []HttpEndpoint
 	DepositContract    common.Address
 	BeaconDB           db.HeadAccessDatabase
 	DepositCache       *depositcache.DepositCache
 	StateNotifier      statefeed.Notifier
 	StateGen           *stategen.State
 	Eth1HeaderReqLimit uint64
+}
+
+// HttpEndpoint is an endpoint with authorization data.
+type HttpEndpoint struct {
+	Endpoint string
+	Auth     HttpAuthorizationData
+}
+
+// HttpAuthorizationData holds all information necessary to authorize with HTTP.
+type HttpAuthorizationData struct {
+	Method HttpAuthorizationMethod
+	Value  string
+}
+
+// HttpAuthorizationMethod is an authorization method such as 'Basic' or 'Bearer'.
+type HttpAuthorizationMethod uint8
+
+const (
+	// None represents no authorization method.
+	None HttpAuthorizationMethod = iota
+	// Basic represents Basic Authentication.
+	Basic
+	// Bearer represents Bearer Authentication (token authentication).
+	Bearer
+)
+
+func (e *HttpAuthorizationData) ToHttpHeaderValue() (string, error) {
+	switch e.Method {
+	case Basic:
+		return "Basic " + e.Value, nil
+	case Bearer:
+		return "Bearer " + e.Value, nil
+	case None:
+		return "", nil
+	}
+
+	return "", errors.New("could not create HTTP header for unknown authorization kind")
 }
 
 // NewService sets up a new instance with an ethclient when
@@ -176,19 +209,17 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		config.Eth1HeaderReqLimit = defaultEth1HeaderReqLimit
 	}
 
-	config.HTTPEndpoints = dedupEndpoints(config.HTTPEndpoints)
+	config.HttpEndpoints = dedupEndpoints(config.HttpEndpoints)
 	// Select first http endpoint in the provided list.
-	currEndpoint := ""
-	if len(config.HTTPEndpoints) > 0 {
-		currEndpoint = config.HTTPEndpoints[0]
+	var currEndpoint HttpEndpoint
+	if len(config.HttpEndpoints) > 0 {
+		currEndpoint = config.HttpEndpoints[0]
 	}
 	s := &Service{
 		ctx:              ctx,
 		cancel:           cancel,
-		httpEndpoint:     config.HTTPEndPoint,
-		auth:             config.Auth,
 		cfg:              config,
-		currHttpEndpoint: currEndpoint,
+		currHttpEndpoint: &currEndpoint,
 		latestEth1Data: &protodb.LatestETH1Data{
 			BlockHeight:        0,
 			BlockTime:          0,
@@ -236,7 +267,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 func (s *Service) Start() {
 	// If the chain has not started already and we don't have access to eth1 nodes, we will not be
 	// able to generate the genesis state.
-	if !s.chainStartData.Chainstarted && s.currHttpEndpoint == "" {
+	if !s.chainStartData.Chainstarted && s.currHttpEndpoint == nil {
 		// check for genesis state before shutting down the node,
 		// if a genesis state exists, we can continue on.
 		genState, err := s.cfg.BeaconDB.GenesisState(s.ctx)
@@ -249,7 +280,7 @@ func (s *Service) Start() {
 	}
 
 	// Exit early if eth1 endpoint is not set.
-	if s.currHttpEndpoint == "" {
+	if s.currHttpEndpoint == nil {
 		return
 	}
 	go func() {
@@ -363,7 +394,7 @@ func (s *Service) followBlockHeight(ctx context.Context) (uint64, error) {
 }
 
 func (s *Service) connectToPowChain() error {
-	httpClient, rpcClient, err := s.dialETH1Nodes(s.currHttpEndpoint)
+	httpClient, rpcClient, err := s.dialETH1Nodes(*s.currHttpEndpoint)
 	if err != nil {
 		return errors.Wrap(err, "could not dial eth1 nodes")
 	}
@@ -381,13 +412,17 @@ func (s *Service) connectToPowChain() error {
 	return nil
 }
 
-func (s *Service) dialETH1Nodes(endpoint string) (*ethclient.Client, *gethRPC.Client, error) {
-	httpRPCClient, err := gethRPC.Dial(endpoint)
+func (s *Service) dialETH1Nodes(endpoint HttpEndpoint) (*ethclient.Client, *gethRPC.Client, error) {
+	httpRPCClient, err := gethRPC.Dial(endpoint.Endpoint)
 	if err != nil {
 		return nil, nil, err
 	}
-	if s.auth != "" {
-		httpRPCClient.SetHeader("Authorization", s.auth)
+	if endpoint.Auth.Method != None {
+		header, err := endpoint.Auth.ToHttpHeaderValue()
+		if err != nil {
+			return nil, nil, err
+		}
+		httpRPCClient.SetHeader("Authorization", header)
 	}
 	httpClient := ethclient.NewClient(httpRPCClient)
 	// Add a method to clean-up and close clients in the event
@@ -460,7 +495,7 @@ func (s *Service) waitForConnection() {
 			s.connectedETH1 = true
 			s.runError = nil
 			log.WithFields(logrus.Fields{
-				"endpoint": logutil.MaskCredentialsLogging(s.currHttpEndpoint),
+				"endpoint": logutil.MaskCredentialsLogging(s.currHttpEndpoint.Endpoint),
 			}).Info("Connected to eth1 proof-of-work chain")
 			return
 		}
@@ -489,7 +524,7 @@ func (s *Service) waitForConnection() {
 	for {
 		select {
 		case <-ticker.C:
-			log.Debugf("Trying to dial endpoint: %s", logutil.MaskCredentialsLogging(s.currHttpEndpoint))
+			log.Debugf("Trying to dial endpoint: %s", logutil.MaskCredentialsLogging(s.currHttpEndpoint.Endpoint))
 			errConnect := s.connectToPowChain()
 			if errConnect != nil {
 				errorLogger(errConnect, "Could not connect to powchain endpoint")
@@ -508,7 +543,7 @@ func (s *Service) waitForConnection() {
 				s.connectedETH1 = true
 				s.runError = nil
 				log.WithFields(logrus.Fields{
-					"endpoint": logutil.MaskCredentialsLogging(s.currHttpEndpoint),
+					"endpoint": logutil.MaskCredentialsLogging(s.currHttpEndpoint.Endpoint),
 				}).Info("Connected to eth1 proof-of-work chain")
 				return
 			}
@@ -863,10 +898,10 @@ func (s *Service) determineEarliestVotingBlock(ctx context.Context, followBlock 
 // is ready to serve we connect to it again. This method is only
 // relevant if we are on our backup endpoint.
 func (s *Service) checkDefaultEndpoint() {
-	primaryEndpoint := s.cfg.HTTPEndpoints[0]
+	primaryEndpoint := s.cfg.HttpEndpoints[0]
 	// Return early if we are running on our primary
 	// endpoint.
-	if s.currHttpEndpoint == primaryEndpoint {
+	if s.currHttpEndpoint.Endpoint == primaryEndpoint.Endpoint {
 		return
 	}
 
@@ -885,7 +920,7 @@ func (s *Service) checkDefaultEndpoint() {
 
 	// Switch back to primary endpoint and try connecting
 	// to it again.
-	s.currHttpEndpoint = primaryEndpoint
+	s.currHttpEndpoint = &primaryEndpoint
 	s.retryETH1Node(nil)
 }
 
@@ -894,10 +929,10 @@ func (s *Service) checkDefaultEndpoint() {
 func (s *Service) fallbackToNextEndpoint() {
 	currEndpoint := s.currHttpEndpoint
 	currIndex := 0
-	totalEndpoints := len(s.cfg.HTTPEndpoints)
+	totalEndpoints := len(s.cfg.HttpEndpoints)
 
-	for i, endpoint := range s.cfg.HTTPEndpoints {
-		if endpoint == currEndpoint {
+	for i, endpoint := range s.cfg.HttpEndpoints {
+		if endpoint.Endpoint == currEndpoint.Endpoint {
 			currIndex = i
 			break
 		}
@@ -910,8 +945,8 @@ func (s *Service) fallbackToNextEndpoint() {
 	if nextIndex == currIndex {
 		return
 	}
-	s.currHttpEndpoint = s.cfg.HTTPEndpoints[nextIndex]
-	log.Infof("Falling back to alternative endpoint: %s", logutil.MaskCredentialsLogging(s.currHttpEndpoint))
+	s.currHttpEndpoint = &s.cfg.HttpEndpoints[nextIndex]
+	log.Infof("Falling back to alternative endpoint: %s", logutil.MaskCredentialsLogging(s.currHttpEndpoint.Endpoint))
 }
 
 // validates the current powchain data saved and makes sure that any
@@ -953,15 +988,15 @@ func (s *Service) ensureValidPowchainData(ctx context.Context) error {
 	return nil
 }
 
-func dedupEndpoints(endpoints []string) []string {
+func dedupEndpoints(endpoints []HttpEndpoint) []HttpEndpoint {
 	selectionMap := make(map[string]bool)
-	newEndpoints := make([]string, 0, len(endpoints))
+	newEndpoints := make([]HttpEndpoint, 0, len(endpoints))
 	for _, point := range endpoints {
-		if selectionMap[point] {
+		if selectionMap[point.Endpoint] {
 			continue
 		}
 		newEndpoints = append(newEndpoints, point)
-		selectionMap[point] = true
+		selectionMap[point.Endpoint] = true
 	}
 	return newEndpoints
 }

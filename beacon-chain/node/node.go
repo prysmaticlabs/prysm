@@ -6,6 +6,7 @@ package node
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -514,13 +515,15 @@ func (b *BeaconNode) registerPOWChainService() error {
 		log.Error("You will need to specify --http-web3provider to attach an ETH1 node to the Prysm node. Without an ETH1 node block proposals for your validator will be affected and the beacon node will not be able to initialize the genesis state.")
 	}
 
-	httpProvider, auth := extractAuthStringFromFlag(b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name))
-	endpoints := append([]string{httpProvider}, b.cliCtx.StringSlice(flags.FallbackWeb3ProviderFlag.Name)...)
+	primaryEndpoint := httpEndpoint(b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name))
+	endpoints := []powchain.HttpEndpoint{primaryEndpoint}
+	for _, value := range b.cliCtx.StringSlice(flags.FallbackWeb3ProviderFlag.Name) {
+		e := httpEndpoint(value)
+		endpoints = append(endpoints, e)
+	}
 
 	cfg := &powchain.Web3ServiceConfig{
-		HTTPEndPoint:       httpProvider,
-		Auth:               auth,
-		HTTPEndpoints:      endpoints,
+		HttpEndpoints:      endpoints,
 		DepositContract:    common.HexToAddress(depAddress),
 		BeaconDB:           b.db,
 		DepositCache:       b.depositCache,
@@ -552,20 +555,51 @@ func (b *BeaconNode) registerPOWChainService() error {
 	return b.services.RegisterService(web3Service)
 }
 
-func extractAuthStringFromFlag(flag string) (string, string) {
-	var httpProvider, auth string
-	authProvider := strings.Split(flag, ",")
-	if len(authProvider) > 2 {
-		log.Errorf("Web 3 provider string can contain one comma for specifying the authorization header to access the provider. String contains too many commas: %d", len(authProvider))
-		httpProvider = authProvider[0]
-		auth = ""
-	} else if len(authProvider) == 2 {
-		httpProvider = authProvider[0]
-		auth = authProvider[1]
-	} else if len(authProvider) == 1 {
-		httpProvider = flag
+func httpEndpoint(flag string) powchain.HttpEndpoint {
+	endpoint := powchain.HttpEndpoint{
+		Endpoint: "",
+		Auth: powchain.HttpAuthorizationData{
+			Method: powchain.None,
+			Value:  "",
+		}}
+
+	authValues := strings.Split(flag, ",")
+	if len(authValues) > 2 {
+		log.Errorf(
+			"ETH1 endpoint string can contain one comma for specifying the authorization header to access the provider."+
+				" String contains too many commas: %d. Skipping authorization.", len(authValues)-1)
+		endpoint.Endpoint = authValues[0]
+	} else if len(authValues) == 2 {
+		endpoint.Endpoint = authValues[0]
+		switch authKind(authValues[1]) {
+		case powchain.Basic:
+			basicAuthValues := strings.Split(authValues[1], " ")
+			if len(basicAuthValues) != 2 {
+				log.Errorf("Basic Authentication has incorrect format. Skipping authorization.")
+			} else {
+				endpoint.Auth.Method = powchain.Basic
+				endpoint.Auth.Value = base64.StdEncoding.EncodeToString([]byte(basicAuthValues[1]))
+			}
+		case powchain.Bearer:
+			endpoint.Auth.Method = powchain.Bearer
+			endpoint.Auth.Value = authValues[1]
+		case powchain.None:
+			log.Errorf("Authorization has incorrect format or authorization type is not supported.")
+		}
+	} else if len(authValues) == 1 {
+		endpoint.Endpoint = authValues[0]
 	}
-	return httpProvider, auth
+	return endpoint
+}
+
+func authKind(auth string) powchain.HttpAuthorizationMethod {
+	if strings.HasPrefix(strings.ToLower(auth), "basic") {
+		return powchain.Basic
+	}
+	if strings.HasPrefix(strings.ToLower(auth), "bearer") {
+		return powchain.Bearer
+	}
+	return powchain.None
 }
 
 func (b *BeaconNode) registerSyncService() error {
