@@ -90,7 +90,9 @@ func (dc *DepositCache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blo
 	defer dc.depositsLock.Unlock()
 	// Keep the slice sorted on insertion in order to avoid costly sorting on retrieval.
 	heightIdx := sort.Search(len(dc.deposits), func(i int) bool { return dc.deposits[i].Index >= index })
-	newDeposits := append([]*dbpb.DepositContainer{{Deposit: d, Eth1BlockHeight: blockNum, DepositRoot: depositRoot[:], Index: index}}, dc.deposits[heightIdx:]...)
+	newDeposits := append(
+		[]*dbpb.DepositContainer{{Deposit: d, Eth1BlockHeight: blockNum, DepositRoot: depositRoot[:], Index: index}},
+		dc.deposits[heightIdx:]...)
 	dc.deposits = append(dc.deposits[:heightIdx], newDeposits...)
 	historicalDepositsCount.Inc()
 }

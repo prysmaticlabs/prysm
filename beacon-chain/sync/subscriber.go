@@ -223,7 +223,12 @@ func (s *Service) subscribeStaticWithSubnets(topic string, validator pubsub.Vali
 					if !s.validPeersExist(s.addDigestAndIndexToTopic(topic, i)) {
 						log.Debugf("No peers found subscribed to attestation gossip subnet with "+
 							"committee index %d. Searching network for peers subscribed to the subnet.", i)
-						_, err := s.cfg.P2P.FindPeersWithSubnet(s.ctx, s.addDigestAndIndexToTopic(topic, i), i, params.BeaconNetworkConfig().MinimumPeersInSubnet)
+						_, err := s.cfg.P2P.FindPeersWithSubnet(
+							s.ctx,
+							s.addDigestAndIndexToTopic(topic, i),
+							i,
+							params.BeaconNetworkConfig().MinimumPeersInSubnet,
+						)
 						if err != nil {
 							log.WithError(err).Debug("Could not search for peers")
 							return
