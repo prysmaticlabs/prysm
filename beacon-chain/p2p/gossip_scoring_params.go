@@ -213,7 +213,7 @@ func defaultAggregateSubnetTopicParams(activeValidators uint64) (*pubsub.TopicSc
 	return &pubsub.TopicScoreParams{
 		TopicWeight:                     topicWeight,
 		TimeInMeshWeight:                maxInMeshScore / inMeshCap(),
-		TimeInMeshQuantum:               numPerSlot,
+		TimeInMeshQuantum:               inMeshTime(),
 		TimeInMeshCap:                   inMeshCap(),
 		FirstMessageDeliveriesWeight:    firstMessageWeight,
 		FirstMessageDeliveriesDecay:     scoreDecay(firstDecay * oneEpochDuration()),
@@ -226,7 +226,7 @@ func defaultAggregateSubnetTopicParams(activeValidators uint64) (*pubsub.TopicSc
 		MeshMessageDeliveriesActivation: 1 * oneEpochDuration(),
 		MeshFailurePenaltyWeight:        meshWeight,
 		MeshFailurePenaltyDecay:         scoreDecay(meshDecay * oneEpochDuration()),
-		InvalidMessageDeliveriesWeight:  -maxScore() / float64(attestationTotalWeight/subnetCount),
+		InvalidMessageDeliveriesWeight:  -maxScore() / topicWeight,
 		InvalidMessageDeliveriesDecay:   scoreDecay(50 * oneEpochDuration()),
 	}, nil
 }
