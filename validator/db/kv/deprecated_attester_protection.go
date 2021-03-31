@@ -81,7 +81,10 @@ func (dh deprecatedEncodedAttestingHistory) getLatestEpochWritten(ctx context.Co
 	return types.Epoch(bytesutil.FromBytes8(dh[:latestEpochWrittenSize])), nil
 }
 
-func (dh deprecatedEncodedAttestingHistory) setLatestEpochWritten(ctx context.Context, latestEpochWritten types.Epoch) (deprecatedEncodedAttestingHistory, error) {
+func (dh deprecatedEncodedAttestingHistory) setLatestEpochWritten(
+	ctx context.Context,
+	latestEpochWritten types.Epoch,
+) (deprecatedEncodedAttestingHistory, error) {
 	if err := dh.assertSize(); err != nil {
 		return nil, err
 	}
@@ -107,7 +110,11 @@ func (dh deprecatedEncodedAttestingHistory) getTargetData(ctx context.Context, t
 	return history, nil
 }
 
-func (dh deprecatedEncodedAttestingHistory) setTargetData(ctx context.Context, target types.Epoch, historyData *deprecatedHistoryData) (deprecatedEncodedAttestingHistory, error) {
+func (dh deprecatedEncodedAttestingHistory) setTargetData(
+	ctx context.Context,
+	target types.Epoch,
+	historyData *deprecatedHistoryData,
+) (deprecatedEncodedAttestingHistory, error) {
 	if err := dh.assertSize(); err != nil {
 		return nil, err
 	}
