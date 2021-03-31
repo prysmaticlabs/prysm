@@ -321,7 +321,7 @@ func createImportedWalletWithAccounts(t testing.TB, numAccounts int) (*Server, [
 
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
-	ss := &Server{
+	s := &Server{
 		keymanager:            km,
 		wallet:                w,
 		walletDir:             defaultWalletPath,
@@ -351,12 +351,12 @@ func createImportedWalletWithAccounts(t testing.TB, numAccounts int) (*Server, [
 		keystores[i] = string(encodedFile)
 		pubKeys[i] = privKey.PublicKey().Marshal()
 	}
-	_, err = ss.ImportKeystores(ctx, &pb.ImportKeystoresRequest{
+	_, err = s.ImportKeystores(ctx, &pb.ImportKeystoresRequest{
 		KeystoresImported: keystores,
 		KeystoresPassword: strongPass,
 	})
 	require.NoError(t, err)
-	ss.keymanager, err = ss.wallet.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
+	s.keymanager, err = s.wallet.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
-	return ss, pubKeys
+	return s, pubKeys
 }
