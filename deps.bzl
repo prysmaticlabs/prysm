@@ -1128,8 +1128,8 @@ def prysm_deps():
         name = "com_github_grpc_ecosystem_grpc_gateway_v2",
         importpath = "github.com/grpc-ecosystem/grpc-gateway/v2",
         replace = "github.com/prysmaticlabs/grpc-gateway/v2",
-        sum = "h1:qtPHbbK9bulINik9qcgaC9sdaTopMwB5udK/OgGGWbE=",
-        version = "v2.3.1-0.20210330070718-b57834d108b1",
+        sum = "h1:roLNAyHR6c9yx1F+shJbbDvi/YopEreddO2Pmga20Lo=",
+        version = "v2.3.1-0.20210330221950-3beba9ed0e19",
     )
 
     go_repository(

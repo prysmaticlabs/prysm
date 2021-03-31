@@ -52,7 +52,7 @@ func DepositInput(depositKey, withdrawalKey bls.SecretKey, amountInGwei uint64) 
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
-	di := &ethpb.Deposit_Data{
+	di := &ethpb.DepositData{
 		PublicKey:             depositMessage.PublicKey,
 		WithdrawalCredentials: depositMessage.WithdrawalCredentials,
 		Amount:                depositMessage.Amount,
