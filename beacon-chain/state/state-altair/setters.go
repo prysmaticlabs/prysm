@@ -497,14 +497,12 @@ func (b *BeaconState) UpdateSlashingsAtIndex(idx, val uint64) error {
 	return nil
 }
 
-// SetPreviousParticipationBits for the beacon state. Updates the entire
+// setPreviousParticipationBits for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
-func (b *BeaconState) SetPreviousParticipationBits(val []byte) error {
+func (b *BeaconState) setPreviousParticipationBits(val []byte) error {
 	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
-	b.lock.Lock()
-	defer b.lock.Unlock()
 
 	b.sharedFieldReferences[previousEpochParticipationBits].MinusRef()
 	b.sharedFieldReferences[previousEpochParticipationBits] = stateutil.NewRef(1)
@@ -515,14 +513,12 @@ func (b *BeaconState) SetPreviousParticipationBits(val []byte) error {
 	return nil
 }
 
-// SetCurrentParticipationBits for the beacon state. Updates the entire
+// setCurrentParticipationBits for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
-func (b *BeaconState) SetCurrentParticipationBits(val []byte) error {
+func (b *BeaconState) setCurrentParticipationBits(val []byte) error {
 	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
-	b.lock.Lock()
-	defer b.lock.Unlock()
 
 	b.sharedFieldReferences[currentEpochParticipationBits].MinusRef()
 	b.sharedFieldReferences[currentEpochParticipationBits] = stateutil.NewRef(1)
@@ -530,6 +526,24 @@ func (b *BeaconState) SetCurrentParticipationBits(val []byte) error {
 	b.state.CurrentEpochParticipation = val
 	b.markFieldAsDirty(currentEpochParticipationBits)
 	b.rebuildTrie[currentEpochParticipationBits] = true
+	return nil
+}
+
+// RotateAttestations sets the previous epoch participation to the current epoch participation and
+// then clears the current epoch participation.
+func (b *BeaconState) RotateAttestations() error {
+	if !b.hasInnerState() {
+		return ErrNilInnerState
+	}
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	if err := b.setPreviousParticipationBits(b.currentEpochParticipation()); err != nil {
+		return err
+	}
+	if err := b.setCurrentParticipationBits([]byte{}); err != nil {
+		return err
+	}
 	return nil
 }
 
