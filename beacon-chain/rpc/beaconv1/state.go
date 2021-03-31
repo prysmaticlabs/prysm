@@ -19,6 +19,7 @@ import (
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // GetGenesis retrieves details of the chain's genesis which can be used to identify chain.
@@ -37,8 +38,8 @@ func (bs *Server) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.Genes
 	forkVersion := params.BeaconConfig().GenesisForkVersion
 
 	return &ethpb.GenesisResponse{
-		Data: &ethpb.GenesisResponse_Genesis{
-			GenesisTime: &ptypes.Timestamp{
+		Data: &ethpb.Genesis{
+			GenesisTime: &timestamppb.Timestamp{
 				Seconds: genesisTime.Unix(),
 				Nanos:   0,
 			},
@@ -64,7 +65,7 @@ func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*e
 	}
 
 	return &ethpb.StateRootResponse{
-		Data: &ethpb.StateRootResponse_StateRoot{
+		Data: &ethpb.StateRoot{
 			StateRoot: root,
 		},
 	}, nil
@@ -112,7 +113,7 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 	}
 
 	return &ethpb.StateFinalityCheckpointResponse{
-		Data: &ethpb.StateFinalityCheckpointResponse_StateFinalityCheckpoint{
+		Data: &ethpb.StateFinalityCheckpoint{
 			PreviousJustified: checkpoint(state.PreviousJustifiedCheckpoint()),
 			CurrentJustified:  checkpoint(state.CurrentJustifiedCheckpoint()),
 			Finalized:         checkpoint(state.FinalizedCheckpoint()),

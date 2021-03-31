@@ -1127,8 +1127,9 @@ def prysm_deps():
     go_repository(
         name = "com_github_grpc_ecosystem_grpc_gateway_v2",
         importpath = "github.com/grpc-ecosystem/grpc-gateway/v2",
-        sum = "h1:X2vfSnm1WC8HEo0MBHZg2TcuDUHJj6kd1TmEAQncnSA=",
-        version = "v2.0.1",
+        replace = "github.com/prysmaticlabs/grpc-gateway/v2",
+        sum = "h1:roLNAyHR6c9yx1F+shJbbDvi/YopEreddO2Pmga20Lo=",
+        version = "v2.3.1-0.20210330221950-3beba9ed0e19",
     )
 
     go_repository(
@@ -2612,9 +2613,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_prysmaticlabs_protoc_gen_go_cast",
         importpath = "github.com/prysmaticlabs/protoc-gen-go-cast",
-        replace = "github.com/prysmaticlabs/protoc-gen-go-cast",
-        sum = "h1:KTxdFfGQspvluy+c6pvurjYH7wHJrjAAi/wTo8r6+po=",
-        version = "v0.0.0-20210326191636-dbd8bd594bbc",
+        sum = "h1:VGW6gU39txf47WXz3lUQPb3tpwIPWqNRAAjiOYN+18I=",
+        version = "v0.0.0-20210331180400-9bcfa8a53194",
     )
 
     go_repository(
