@@ -1127,9 +1127,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_grpc_ecosystem_grpc_gateway_v2",
         importpath = "github.com/grpc-ecosystem/grpc-gateway/v2",
-        replace = "github.com/prysmaticlabs/grpc-gateway/v2",
-        sum = "h1:roLNAyHR6c9yx1F+shJbbDvi/YopEreddO2Pmga20Lo=",
-        version = "v2.3.1-0.20210330221950-3beba9ed0e19",
+        sum = "h1:X2vfSnm1WC8HEo0MBHZg2TcuDUHJj6kd1TmEAQncnSA=",
+        version = "v2.0.1",
     )
 
     go_repository(
@@ -2594,8 +2593,8 @@ def prysm_deps():
         build_file_generation = "off",
         importpath = "github.com/prysmaticlabs/ethereumapis",
         replace = "github.com/prysmaticlabs/ethereumapis",
-        sum = "h1:C3Bai8P6BRCqPh2egsnVn/d6GWQr6yrDI4zxdlFRLsY=",
-        version = "v0.0.0-20210330180818-b69e962c600b",
+        sum = "h1:X6TG0WRyodb0aSAWX5Ilr9bSQWRa+rp/bjTLlDsHjyU=",
+        version = "v0.0.0-20210331181032-566f2b46d746",
     )
     go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",
