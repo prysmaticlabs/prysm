@@ -26,10 +26,14 @@ go_test(
     srcs = ["debug_test.go"],
     embed = [":go_default_library"],
     deps = [
+        "//beacon-chain/forkchoice/protoarray:go_default_library",
         "//beacon-chain/rpc/testutil:go_default_library",
+        "//shared/bytesutil:go_default_library",
         "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
+        "@com_github_gogo_protobuf//types:go_default_library",
+        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1:go_default_library",
     ],
 )
