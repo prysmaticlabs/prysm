@@ -160,8 +160,8 @@ func (s *Server) DeleteAccounts(
 	if s.wallet == nil || s.keymanager == nil {
 		return nil, status.Error(codes.FailedPrecondition, "No wallet found")
 	}
-	if s.wallet.KeymanagerKind() != keymanager.Imported {
-		return nil, status.Error(codes.FailedPrecondition, "Only imported wallets can delete accounts")
+	if s.wallet.KeymanagerKind() != keymanager.Imported && s.wallet.KeymanagerKind() != keymanager.Derived{
+		return nil, status.Error(codes.FailedPrecondition, "Only Imported or Derived wallets can delete accounts")
 	}
 	if err := accounts.DeleteAccount(ctx, &accounts.Config{
 		Wallet:           s.wallet,

@@ -14,6 +14,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -161,10 +162,11 @@ func TestServer_BackupAccounts(t *testing.T) {
 	}
 }
 
-func TestServer_DeleteAccounts_FailedPreconditions_WrongKeymanagerKind(t *testing.T) {
+func TestServer_DeleteAccounts_FailedPreconditions_DerivedWallet(t *testing.T) {
+	ctx := context.Background()
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
-	ctx := context.Background()
+	// We attempt to create the wallet.
 	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
@@ -177,32 +179,41 @@ func TestServer_DeleteAccounts_FailedPreconditions_WrongKeymanagerKind(t *testin
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
 	s := &Server{
-		wallet:     w,
-		keymanager: km,
+		keymanager:        km,
+		walletInitialized: true,
+		wallet:            w,
 	}
+	numAccounts := 5
+	dr, ok := km.(*derived.Keymanager)
+	require.Equal(t, true, ok)
+	err = dr.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "", numAccounts)
+	require.NoError(t, err)
+		
 	_, err = s.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
 		PublicKeysToDelete: nil,
 	})
 	assert.ErrorContains(t, "No public keys specified to delete", err)
 
+	keys, err := s.keymanager.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
 	_, err = s.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
-		PublicKeysToDelete: make([][]byte, 1),
+		PublicKeysToDelete: bytesutil.FromBytes48Array(keys),
 	})
-	assert.ErrorContains(t, "Only imported wallets can delete accounts", err)
+	require.NoError(t, err)
 }
 
 func TestServer_DeleteAccounts_FailedPreconditions_NoWallet(t *testing.T) {
 	s := &Server{}
 	ctx := context.Background()
 	_, err := s.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{})
-	assert.ErrorContains(t, "No public keys specified", err)
+	assert.ErrorContains(t, "No public keys specified to delete", err)
 	_, err = s.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
 		PublicKeysToDelete: make([][]byte, 1),
 	})
 	assert.ErrorContains(t, "No wallet found", err)
 }
 
-func TestServer_DeleteAccounts_OK(t *testing.T) {
+func TestServer_DeleteAccounts_OK_ImportedWallet(t *testing.T) {
 	s, pubKeys := createImportedWalletWithAccounts(t, 3)
 	ctx := context.Background()
 	keys, err := s.keymanager.FetchValidatingPublicKeys(ctx)
