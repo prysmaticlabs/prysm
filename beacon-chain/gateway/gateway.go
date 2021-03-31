@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	gwruntime "github.com/grpc-ecosystem/grpc-gateway/runtime"
+	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1_gateway"
@@ -56,10 +56,11 @@ func (g *Gateway) Start() {
 	g.conn = conn
 
 	gwmux := gwruntime.NewServeMux(
-		gwruntime.WithMarshalerOption(
-			gwruntime.MIMEWildcard,
-			&gwruntime.JSONPb{OrigName: false, EmitDefaults: true},
-		),
+	//gwruntime.WithMarshalerOption(
+	//	gwruntime.MIMEWildcard,
+	//	gwruntime.Marshaler
+	//	//protojson.MarshalOptions{EmitUnpopulated: true, UseProtoNames: true},
+	//),
 	)
 	handlers := []func(context.Context, *gwruntime.ServeMux, *grpc.ClientConn) error{
 		ethpb.RegisterNodeHandler,
