@@ -22,7 +22,6 @@ import (
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
@@ -104,7 +103,6 @@ type Config struct {
 	BlockNotifier           blockfeed.Notifier
 	OperationNotifier       opfeed.Notifier
 	StateGen                *stategen.State
-	ForkChoiceStore         protoarray.Store
 	MaxMsgSize              int
 }
 
@@ -280,9 +278,8 @@ func (s *Service) Start() {
 			PeersFetcher:       s.cfg.PeersFetcher,
 		}
 		debugServerV1 := &debugv1.Server{
-			Ctx:             s.ctx,
-			BeaconDB:        s.cfg.BeaconDB,
-			ForkChoiceStore: &s.cfg.ForkChoiceStore,
+			Ctx:      s.ctx,
+			BeaconDB: s.cfg.BeaconDB,
 			StateFetcher: &statefetcher.StateProvider{
 				BeaconDB:           s.cfg.BeaconDB,
 				ChainInfoFetcher:   s.cfg.ChainInfoFetcher,

@@ -17,7 +17,6 @@ go_library(
         "//beacon-chain/core/feed/operation:go_default_library",
         "//beacon-chain/core/feed/state:go_default_library",
         "//beacon-chain/db:go_default_library",
-        "//beacon-chain/forkchoice/protoarray:go_default_library",
         "//beacon-chain/operations/attestations:go_default_library",
         "//beacon-chain/operations/slashings:go_default_library",
         "//beacon-chain/operations/voluntaryexits:go_default_library",

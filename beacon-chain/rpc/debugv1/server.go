@@ -7,7 +7,6 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 )
 
@@ -15,8 +14,7 @@ import (
 // providing RPC endpoints to access data relevant to the Ethereum 2.0 phase 0
 // beacon chain.
 type Server struct {
-	Ctx             context.Context
-	BeaconDB        db.ReadOnlyDatabase
-	ForkChoiceStore *protoarray.Store
-	StateFetcher    statefetcher.Fetcher
+	Ctx          context.Context
+	BeaconDB     db.ReadOnlyDatabase
+	StateFetcher statefetcher.Fetcher
 }
