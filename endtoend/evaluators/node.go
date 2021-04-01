@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"time"
 
-	ptypes "github.com/gogo/protobuf/types"
+	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -101,7 +101,7 @@ func peersConnect(conns ...*grpc.ClientConn) error {
 	ctx := context.Background()
 	for _, conn := range conns {
 		nodeClient := eth.NewNodeClient(conn)
-		peersResp, err := nodeClient.ListPeers(ctx, &ptypes.Empty{})
+		peersResp, err := nodeClient.ListPeers(ctx, &emptypb.Empty{})
 		if err != nil {
 			return err
 		}
@@ -117,7 +117,7 @@ func peersConnect(conns ...*grpc.ClientConn) error {
 func finishedSyncing(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	syncNodeClient := eth.NewNodeClient(conn)
-	syncStatus, err := syncNodeClient.GetSyncStatus(context.Background(), &ptypes.Empty{})
+	syncStatus, err := syncNodeClient.GetSyncStatus(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return err
 	}
@@ -134,7 +134,7 @@ func allNodesHaveSameHead(conns ...*grpc.ClientConn) error {
 	finalizedRoots := make([][]byte, len(conns))
 	for i, conn := range conns {
 		beaconClient := eth.NewBeaconChainClient(conn)
-		chainHead, err := beaconClient.GetChainHead(context.Background(), &ptypes.Empty{})
+		chainHead, err := beaconClient.GetChainHead(context.Background(), &emptypb.Empty{})
 		if err != nil {
 			return err
 		}

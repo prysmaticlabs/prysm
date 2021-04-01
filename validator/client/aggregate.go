@@ -201,7 +201,7 @@ func (v *validator) addIndicesToLog(duty *ethpb.DutiesResponse_Duty) error {
 
 	for _, log := range v.attLogs {
 		if duty.CommitteeIndex == log.data.CommitteeIndex {
-			log.aggregatorIndices = append(log.aggregatorIndices, duty.ValidatorIndex)
+			log.aggregatorIndices = append(log.aggregatorIndices, duty.ValidatorrIndex)
 		}
 	}
 

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/dgraph-io/ristretto"
-	ptypes "github.com/gogo/protobuf/types"
+	emptypb "github.com/golang/protobuf/ptypes/empty"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -312,7 +312,7 @@ func ConstructDialOptions(
 // Syncing returns whether or not the beacon node is currently synchronizing the chain.
 func (v *ValidatorService) Syncing(ctx context.Context) (bool, error) {
 	nc := ethpb.NewNodeClient(v.conn)
-	resp, err := nc.GetSyncStatus(ctx, &ptypes.Empty{})
+	resp, err := nc.GetSyncStatus(ctx, &emptypb.Empty{})
 	if err != nil {
 		return false, err
 	}
@@ -323,7 +323,7 @@ func (v *ValidatorService) Syncing(ctx context.Context) (bool, error) {
 // the genesis time along with the validator deposit contract address.
 func (v *ValidatorService) GenesisInfo(ctx context.Context) (*ethpb.Genesis, error) {
 	nc := ethpb.NewNodeClient(v.conn)
-	return nc.GetGenesis(ctx, &ptypes.Empty{})
+	return nc.GetGenesis(ctx, &emptypb.Empty{})
 }
 
 // to accounts changes in the keymanager, then updates those keys'

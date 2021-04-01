@@ -156,7 +156,7 @@ func genesisStateFromJSONValidators(r io.Reader, genesisTime uint64) (*pb.Beacon
 	return beaconState, nil
 }
 
-func depositJSONToDepositData(input *DepositDataJSON) (depositData *ethpb.Deposit_Data, dataRoot []byte, err error) {
+func depositJSONToDepositData(input *DepositDataJSON) (depositData *ethpb.DepositData, dataRoot []byte, err error) {
 	pubKeyBytes, err := hex.DecodeString(strings.TrimPrefix(input.PubKey, "0x"))
 	if err != nil {
 		return

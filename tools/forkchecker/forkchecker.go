@@ -16,7 +16,7 @@ import (
 	"reflect"
 	"time"
 
-	ptypes "github.com/gogo/protobuf/types"
+	emptypb "github.com/golang/protobuf/ptypes/empty"
 	types "github.com/prysmaticlabs/eth2-types"
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -69,7 +69,7 @@ func main() {
 // log heads for all RPC end points
 func displayHeads(clients map[string]pb.BeaconChainClient) {
 	for endpt, client := range clients {
-		head, err := client.GetChainHead(context.Background(), &ptypes.Empty{})
+		head, err := client.GetChainHead(context.Background(), &emptypb.Empty{})
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -80,7 +80,7 @@ func displayHeads(clients map[string]pb.BeaconChainClient) {
 // compare heads between all RPC end points, log the missmatch if there's one.
 func compareHeads(clients map[string]pb.BeaconChainClient) {
 	endpt1 := randomEndpt(clients)
-	head1, err := clients[endpt1].GetChainHead(context.Background(), &ptypes.Empty{})
+	head1, err := clients[endpt1].GetChainHead(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -95,7 +95,7 @@ func compareHeads(clients map[string]pb.BeaconChainClient) {
 	}
 
 	for endpt2, client := range clients {
-		head2, err := client.GetChainHead(context.Background(), &ptypes.Empty{})
+		head2, err := client.GetChainHead(context.Background(), &emptypb.Empty{})
 		if err != nil {
 			log.Fatal(err)
 		}

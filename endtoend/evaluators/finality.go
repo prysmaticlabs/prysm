@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	ptypes "github.com/gogo/protobuf/types"
+	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/endtoend/policies"
@@ -23,7 +23,7 @@ var FinalizationOccurs = types.Evaluator{
 func finalizationOccurs(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := eth.NewBeaconChainClient(conn)
-	chainHead, err := client.GetChainHead(context.Background(), &ptypes.Empty{})
+	chainHead, err := client.GetChainHead(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "failed to get chain head")
 	}

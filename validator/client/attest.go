@@ -111,14 +111,14 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot types.Slot, pubK
 	var indexInCommittee uint64
 	var found bool
 	for i, vID := range duty.Committee {
-		if vID == duty.ValidatorIndex {
+		if vID == duty.ValidatorrIndex {
 			indexInCommittee = uint64(i)
 			found = true
 			break
 		}
 	}
 	if !found {
-		log.Errorf("Validator ID %d not found in committee of %v", duty.ValidatorIndex, duty.Committee)
+		log.Errorf("Validator ID %d not found in committee of %v", duty.ValidatorrIndex, duty.Committee)
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
@@ -153,7 +153,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot types.Slot, pubK
 		return
 	}
 
-	if err := v.saveAttesterIndexToData(data, duty.ValidatorIndex); err != nil {
+	if err := v.saveAttesterIndexToData(data, duty.ValidatorrIndex); err != nil {
 		log.WithError(err).Error("Could not save validator index for logging")
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()

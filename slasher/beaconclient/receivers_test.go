@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	ptypes "github.com/gogo/protobuf/types"
+	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -60,7 +60,7 @@ func TestService_ReceiveAttestations(t *testing.T) {
 	}
 	client.EXPECT().StreamIndexedAttestations(
 		gomock.Any(),
-		&ptypes.Empty{},
+		&emptypb.Empty{},
 	).Return(stream, nil)
 	stream.EXPECT().Context().Return(ctx).AnyTimes()
 	stream.EXPECT().Recv().Return(
@@ -101,7 +101,7 @@ func TestService_ReceiveAttestations_Batched(t *testing.T) {
 	}
 	client.EXPECT().StreamIndexedAttestations(
 		gomock.Any(),
-		&ptypes.Empty{},
+		&emptypb.Empty{},
 	).Return(stream, nil)
 	stream.EXPECT().Context().Return(ctx).AnyTimes()
 	stream.EXPECT().Recv().Return(

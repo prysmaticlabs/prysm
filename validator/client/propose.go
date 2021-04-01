@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	pbtypes "github.com/gogo/protobuf/types"
+	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -165,7 +165,7 @@ func ProposeExit(
 	if err != nil {
 		return errors.Wrap(err, "gRPC call to get validator index failed")
 	}
-	genesisResponse, err := nodeClient.GetGenesis(ctx, &pbtypes.Empty{})
+	genesisResponse, err := nodeClient.GetGenesis(ctx, &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "gRPC call to get genesis time failed")
 	}

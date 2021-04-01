@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
+	emptypb "github.com/golang/protobuf/ptypes/empty"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
@@ -126,7 +126,7 @@ func TestWaitForChainStart_SetsGenesisInfo(t *testing.T) {
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
-		&ptypes.Empty{},
+		&emptypb.Empty{},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
 		&ethpb.ChainStartResponse{
@@ -147,7 +147,7 @@ func TestWaitForChainStart_SetsGenesisInfo(t *testing.T) {
 	// Make sure theres no errors running if its the same data.
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
-		&ptypes.Empty{},
+		&emptypb.Empty{},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
 		&ethpb.ChainStartResponse{
@@ -175,7 +175,7 @@ func TestWaitForChainStart_SetsGenesisInfo_IncorrectSecondTry(t *testing.T) {
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
-		&ptypes.Empty{},
+		&emptypb.Empty{},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
 		&ethpb.ChainStartResponse{
@@ -198,7 +198,7 @@ func TestWaitForChainStart_SetsGenesisInfo_IncorrectSecondTry(t *testing.T) {
 	// Make sure theres no errors running if its the same data.
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
-		&ptypes.Empty{},
+		&emptypb.Empty{},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
 		&ethpb.ChainStartResponse{
@@ -226,7 +226,7 @@ func TestWaitForChainStart_ContextCanceled(t *testing.T) {
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
-		&ptypes.Empty{},
+		&emptypb.Empty{},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
 		&ethpb.ChainStartResponse{
@@ -260,7 +260,7 @@ func TestWaitForChainStart_StreamSetupFails(t *testing.T) {
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
-		&ptypes.Empty{},
+		&emptypb.Empty{},
 	).Return(clientStream, errors.New("failed stream"))
 	err = v.WaitForChainStart(context.Background())
 	want := "could not setup beacon chain ChainStart streaming client"
@@ -278,7 +278,7 @@ func TestWaitForChainStart_ReceiveErrorFromStream(t *testing.T) {
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
-		&ptypes.Empty{},
+		&emptypb.Empty{},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
 		nil,
@@ -535,12 +535,12 @@ func TestUpdateDuties_OK(t *testing.T) {
 	resp := &ethpb.DutiesResponse{
 		Duties: []*ethpb.DutiesResponse_Duty{
 			{
-				AttesterSlot:   params.BeaconConfig().SlotsPerEpoch,
-				ValidatorIndex: 200,
-				CommitteeIndex: 100,
-				Committee:      []types.ValidatorIndex{0, 1, 2, 3},
-				PublicKey:      []byte("testPubKey_1"),
-				ProposerSlots:  []types.Slot{params.BeaconConfig().SlotsPerEpoch + 1},
+				AttesterSlot:    params.BeaconConfig().SlotsPerEpoch,
+				ValidatorrIndex: 200,
+				CommitteeIndex:  100,
+				Committee:       []types.ValidatorIndex{0, 1, 2, 3},
+				PublicKey:       []byte("testPubKey_1"),
+				ProposerSlots:   []types.Slot{params.BeaconConfig().SlotsPerEpoch + 1},
 			},
 		},
 	}
@@ -559,7 +559,7 @@ func TestUpdateDuties_OK(t *testing.T) {
 	client.EXPECT().SubscribeCommitteeSubnets(
 		gomock.Any(),
 		gomock.Any(),
-	).DoAndReturn(func(_ context.Context, _ *ethpb.CommitteeSubnetsSubscribeRequest) (*ptypes.Empty, error) {
+	).DoAndReturn(func(_ context.Context, _ *ethpb.CommitteeSubnetsSubscribeRequest) (*emptypb.Empty, error) {
 		wg.Done()
 		return nil, nil
 	})
@@ -571,7 +571,7 @@ func TestUpdateDuties_OK(t *testing.T) {
 	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch+1, v.duties.Duties[0].ProposerSlots[0], "Unexpected validator assignments")
 	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch, v.duties.Duties[0].AttesterSlot, "Unexpected validator assignments")
 	assert.Equal(t, resp.Duties[0].CommitteeIndex, v.duties.Duties[0].CommitteeIndex, "Unexpected validator assignments")
-	assert.Equal(t, resp.Duties[0].ValidatorIndex, v.duties.Duties[0].ValidatorIndex, "Unexpected validator assignments")
+	assert.Equal(t, resp.Duties[0].ValidatorrIndex, v.duties.Duties[0].ValidatorrIndex, "Unexpected validator assignments")
 }
 
 func TestUpdateDuties_OK_FilterBlacklistedPublicKeys(t *testing.T) {
@@ -614,7 +614,7 @@ func TestUpdateDuties_OK_FilterBlacklistedPublicKeys(t *testing.T) {
 	client.EXPECT().SubscribeCommitteeSubnets(
 		gomock.Any(),
 		gomock.Any(),
-	).DoAndReturn(func(_ context.Context, _ *ethpb.CommitteeSubnetsSubscribeRequest) (*ptypes.Empty, error) {
+	).DoAndReturn(func(_ context.Context, _ *ethpb.CommitteeSubnetsSubscribeRequest) (*emptypb.Empty, error) {
 		wg.Done()
 		return nil, nil
 	})

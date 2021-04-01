@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	ptypes "github.com/gogo/protobuf/types"
+	emptypb "github.com/golang/protobuf/ptypes/empty"
 	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -168,7 +168,7 @@ func (r *testRunner) run() {
 
 		// Calculate genesis time.
 		nodeClient := eth.NewNodeClient(conns[0])
-		genesis, err := nodeClient.GetGenesis(context.Background(), &ptypes.Empty{})
+		genesis, err := nodeClient.GetGenesis(context.Background(), &emptypb.Empty{})
 		require.NoError(t, err)
 		tickingStartTime := helpers.EpochTickerStartTime(genesis)
 

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	gwruntime "github.com/grpc-ecosystem/grpc-gateway/runtime"
+	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2_gateway"
 	"github.com/prysmaticlabs/prysm/validator/web"
@@ -50,10 +50,10 @@ func (g *Gateway) Start() {
 	g.cancel = cancel
 
 	gwmux := gwruntime.NewServeMux(
-		gwruntime.WithMarshalerOption(
-			gwruntime.MIMEWildcard,
-			&gwruntime.JSONPb{OrigName: false},
-		),
+	//gwruntime.WithMarshalerOption(
+	//	gwruntime.MIMEWildcard,
+	//	&gwruntime.JSONPb{OrigName: false},
+	//),
 	)
 	opts := []grpc.DialOption{grpc.WithInsecure()}
 	handlers := []func(context.Context, *gwruntime.ServeMux, string, []grpc.DialOption) error{

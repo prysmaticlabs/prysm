@@ -8,7 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gogo/protobuf/types"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/mock"
@@ -32,7 +33,7 @@ func TestExitAccountsCli_OK(t *testing.T) {
 		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
 
 	// Any time in the past will suffice
-	genesisTime := &types.Timestamp{
+	genesisTime := &timestamppb.Timestamp{
 		Seconds: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
 	}
 
@@ -122,7 +123,7 @@ func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
 
 	// Any time in the past will suffice
-	genesisTime := &types.Timestamp{
+	genesisTime := &timestamppb.Timestamp{
 		Seconds: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
 	}
 
