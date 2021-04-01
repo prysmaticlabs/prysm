@@ -10,13 +10,21 @@ import (
 
 // PowchainPreregistration prepares data for powchain.Service's registration.
 func PowchainPreregistration(cliCtx *cli.Context) (depositContractAddress string, endpoints []string) {
-	depositContractAddress = params.BeaconConfig().DepositContractAddress
-	if depositContractAddress == "" {
+	depositContractAddress = DepositContractAddress(cliCtx)
+	endpoints = []string{cliCtx.String(flags.HTTPWeb3ProviderFlag.Name)}
+	endpoints = append(endpoints, cliCtx.StringSlice(flags.FallbackWeb3ProviderFlag.Name)...)
+	return
+}
+
+// DepositContractAddress returns the address of the deposit contract.
+func DepositContractAddress(cliCtx *cli.Context) string {
+	address := params.BeaconConfig().DepositContractAddress
+	if address == "" {
 		log.Fatal("Valid deposit contract is required")
 	}
 
-	if !common.IsHexAddress(depositContractAddress) {
-		log.Fatalf("Invalid deposit contract address given: %s", depositContractAddress)
+	if !common.IsHexAddress(address) {
+		log.Fatalf("Invalid deposit contract address given: %s", address)
 	}
 
 	if cliCtx.String(flags.HTTPWeb3ProviderFlag.Name) == "" {
@@ -27,8 +35,6 @@ func PowchainPreregistration(cliCtx *cli.Context) (depositContractAddress string
 			"You will need to specify --http-web3provider to attach an eth1 node to the prysm node. Without an eth1 node block proposals for your validator will be affected and the beacon node will not be able to initialize the genesis state.",
 		)
 	}
-	endpoints = []string{cliCtx.String(flags.HTTPWeb3ProviderFlag.Name)}
-	endpoints = append(endpoints, cliCtx.StringSlice(flags.FallbackWeb3ProviderFlag.Name)...)
 
-	return
+	return address
 }
