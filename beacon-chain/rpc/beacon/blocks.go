@@ -368,7 +368,7 @@ func (bs *Server) GetWeakSubjectivityCheckpoint(ctx context.Context, _ *ptypes.E
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
-	wsEpoch, err := helpers.ComputeWeakSubjectivityCheckptEpoch(hs)
+	wsEpoch, err := helpers.ComputeWeakSubjectivityPeriod(hs)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get weak subjectivity epoch")
 	}

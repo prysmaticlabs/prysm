@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// ComputeWeakSubjectivityCheckptEpoch returns weak subjectivity period for the active validator count and finalized epoch.
+// ComputeWeakSubjectivityPeriod returns weak subjectivity period for the active validator count and finalized epoch.
 //
 // Reference spec implementation:
 // https://github.com/ethereum/eth2.0-specs/blob/master/specs/phase0/weak-subjectivity.md#calculating-the-weak-subjectivity-period
@@ -46,7 +46,7 @@ import (
 //        )
 //
 //    return ws_period
-func ComputeWeakSubjectivityCheckptEpoch(st iface.ReadOnlyBeaconState) (types.Epoch, error) {
+func ComputeWeakSubjectivityPeriod(st iface.ReadOnlyBeaconState) (types.Epoch, error) {
 	// Weak subjectivity period cannot be smaller than withdrawal delay.
 	wsp := uint64(params.BeaconConfig().MinValidatorWithdrawabilityDelay)
 

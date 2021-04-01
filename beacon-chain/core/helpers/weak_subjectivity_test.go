@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func TestWeakSubjectivity_ComputeWeakSubjectivityCheckptEpoch(t *testing.T) {
+func TestWeakSubjectivity_ComputeWeakSubjectivityPeriod(t *testing.T) {
 	genState := func(valCount uint64, avgBalance uint64) iface.ReadOnlyBeaconState {
 		registry := make([]*ethpb.Validator, valCount)
 		for i := uint64(0); i < valCount; i++ {
@@ -63,7 +63,7 @@ func TestWeakSubjectivity_ComputeWeakSubjectivityCheckptEpoch(t *testing.T) {
 		t.Run(fmt.Sprintf("valCount: %d, avgBalance: %d", tt.valCount, tt.avgBalance), func(t *testing.T) {
 			// Reset committee cache - as we need to recalculate active validator set for each test.
 			committeeCache = cache.NewCommitteesCache()
-			got, err := ComputeWeakSubjectivityCheckptEpoch(genState(tt.valCount, tt.avgBalance))
+			got, err := ComputeWeakSubjectivityPeriod(genState(tt.valCount, tt.avgBalance))
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, got, "valCount: %v, avgBalance: %v", tt.valCount, tt.avgBalance)
 		})
