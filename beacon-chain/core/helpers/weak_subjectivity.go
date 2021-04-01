@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"errors"
 	"fmt"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -54,6 +55,9 @@ func ComputeWeakSubjectivityCheckptEpoch(st iface.ReadOnlyBeaconState) (types.Ep
 	if err != nil {
 		return 0, fmt.Errorf("cannot obtain active valiadtor count: %w", err)
 	}
+	if N == 0 {
+		return 0, errors.New("no active validators found")
+	}
 
 	// Average effective balance in the given validator set, in Ether.
 	t, err := TotalActiveBalance(st)
@@ -73,6 +77,10 @@ func ComputeWeakSubjectivityCheckptEpoch(st iface.ReadOnlyBeaconState) (types.Ep
 
 	// Balance top-ups.
 	Delta := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().MaxDeposits))
+
+	if delta == 0 || Delta == 0 {
+		return 0, errors.New("either validator churn limit or balance top-ups is zero")
+	}
 
 	// Safety decay, maximum tolerable loss of safety margin of FFG finality.
 	D := params.BeaconConfig().SafetyDecay
