@@ -137,30 +137,34 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MaxVoluntaryExits:    16,
 
 	// BLS domain values.
-	DomainBeaconProposer:    bytesutil.ToBytes4(bytesutil.Bytes4(0)),
-	DomainBeaconAttester:    bytesutil.ToBytes4(bytesutil.Bytes4(1)),
-	DomainRandao:            bytesutil.ToBytes4(bytesutil.Bytes4(2)),
-	DomainDeposit:           bytesutil.ToBytes4(bytesutil.Bytes4(3)),
-	DomainVoluntaryExit:     bytesutil.ToBytes4(bytesutil.Bytes4(4)),
-	DomainSelectionProof:    bytesutil.ToBytes4(bytesutil.Bytes4(5)),
-	DomainAggregateAndProof: bytesutil.ToBytes4(bytesutil.Bytes4(6)),
+	DomainBeaconProposer:              bytesutil.ToBytes4(bytesutil.Bytes4(0)),
+	DomainBeaconAttester:              bytesutil.ToBytes4(bytesutil.Bytes4(1)),
+	DomainRandao:                      bytesutil.ToBytes4(bytesutil.Bytes4(2)),
+	DomainDeposit:                     bytesutil.ToBytes4(bytesutil.Bytes4(3)),
+	DomainVoluntaryExit:               bytesutil.ToBytes4(bytesutil.Bytes4(4)),
+	DomainSelectionProof:              bytesutil.ToBytes4(bytesutil.Bytes4(5)),
+	DomainAggregateAndProof:           bytesutil.ToBytes4(bytesutil.Bytes4(6)),
+	DomainSyncCommittee:               bytesutil.ToBytes4(bytesutil.Bytes4(7)),
+	DomainSyncCommitteeSelectionProof: bytesutil.ToBytes4(bytesutil.Bytes4(8)),
+	DomainContributionAndProof:        bytesutil.ToBytes4(bytesutil.Bytes4(9)),
 
 	// Prysm constants.
-	GweiPerEth:                1000000000,
-	BLSSecretKeyLength:        32,
-	BLSPubkeyLength:           48,
-	BLSSignatureLength:        96,
-	DefaultBufferSize:         10000,
-	WithdrawalPrivkeyFileName: "/shardwithdrawalkey",
-	ValidatorPrivkeyFileName:  "/validatorprivatekey",
-	RPCSyncCheck:              1,
-	EmptySignature:            [96]byte{},
-	DefaultPageSize:           250,
-	MaxPeersToSync:            15,
-	SlotsPerArchivedPoint:     2048,
-	GenesisCountdownInterval:  time.Minute,
-	ConfigName:                ConfigNames[Mainnet],
-	BeaconStateFieldCount:     21,
+	GweiPerEth:                  1000000000,
+	BLSSecretKeyLength:          32,
+	BLSPubkeyLength:             48,
+	BLSSignatureLength:          96,
+	DefaultBufferSize:           10000,
+	WithdrawalPrivkeyFileName:   "/shardwithdrawalkey",
+	ValidatorPrivkeyFileName:    "/validatorprivatekey",
+	RPCSyncCheck:                1,
+	EmptySignature:              [96]byte{},
+	DefaultPageSize:             250,
+	MaxPeersToSync:              15,
+	SlotsPerArchivedPoint:       2048,
+	GenesisCountdownInterval:    time.Minute,
+	ConfigName:                  ConfigNames[Mainnet],
+	BeaconStateFieldCount:       21,
+	BeaconStateAltairFieldCount: 24,
 
 	// Slasher related values.
 	WeakSubjectivityPeriod:          54000,
@@ -177,4 +181,32 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	ForkVersionSchedule: map[types.Epoch][]byte{
 		// Any further forks must be specified here by their epoch number.
 	},
+
+	// New values introduced in Altair hard fork 1.
+	// Participation flag indices.
+	TimelyHeadFlagIndex:   0,
+	TimelySourceFlagIndex: 1,
+	TimelyTargetFlagIndex: 2,
+
+	// Incentivization weight values.
+	TimelyHeadWeight:   12,
+	TimelySourceWeight: 12,
+	TimelyTargetWeight: 24,
+	SyncRewardWeight:   8,
+	WeightDenominator:  64,
+
+	// Validator related values.
+	TargetAggregatorsPerSyncSubcommittee: 4,
+	SyncCommitteeSubnetCount:             8,
+
+	// Misc values.
+	SyncCommitteeSize:            1024,
+	SyncPubkeysPerAggregate:      64,
+	InactivityScoreBias:          4,
+	EpochsPerSyncCommitteePeriod: 256,
+
+	// Updated penalty values.
+	InactivityPenaltyQuotientAltair:      3 * 1 << 24, //50331648
+	MinSlashingPenaltyQuotientAltair:     64,
+	ProportionalSlashingMultiplierAltair: 2,
 }

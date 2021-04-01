@@ -79,5 +79,11 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.FarFutureEpoch = 1<<64 - 1
 	minimalConfig.FarFutureSlot = 1<<64 - 1
 
+	// New Altair params
+	minimalConfig.SyncCommitteeSize = 32
+	minimalConfig.SyncPubkeysPerAggregate = 16
+	minimalConfig.InactivityScoreBias = 4
+	minimalConfig.EpochsPerSyncCommitteePeriod = 8
+
 	return minimalConfig
 }

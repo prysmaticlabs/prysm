@@ -108,6 +108,8 @@ func prepareConfigSpec() (map[string]string, error) {
 		tagValue := strings.ToLower(tField.Tag.Get("yaml"))
 		vField := v.Field(i)
 		switch vField.Kind() {
+		case reflect.Int:
+			data[tagValue] = strconv.FormatInt(vField.Int(), 10)
 		case reflect.Uint64:
 			data[tagValue] = strconv.FormatUint(vField.Uint(), 10)
 		case reflect.Slice:
