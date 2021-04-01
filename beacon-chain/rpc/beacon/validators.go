@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	ptypes "github.com/gogo/protobuf/types"
+	emptypb "github.com/golang/protobuf/ptypes/empty"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
@@ -552,7 +552,7 @@ func (bs *Server) GetValidatorParticipation(
 
 // GetValidatorQueue retrieves the current validator queue information.
 func (bs *Server) GetValidatorQueue(
-	ctx context.Context, _ *ptypes.Empty,
+	ctx context.Context, _ *emptypb.Empty,
 ) (*ethpb.ValidatorQueue, error) {
 	headState, err := bs.HeadFetcher.HeadState(ctx)
 	if err != nil {

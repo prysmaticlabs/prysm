@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	ptypes "github.com/gogo/protobuf/types"
+	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -15,7 +15,7 @@ import (
 func TestServer_GetBeaconConfig(t *testing.T) {
 	ctx := context.Background()
 	bs := &Server{}
-	res, err := bs.GetBeaconConfig(ctx, &ptypes.Empty{})
+	res, err := bs.GetBeaconConfig(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
 	conf := params.BeaconConfig()
 	numFields := reflect.TypeOf(conf).Elem().NumField()

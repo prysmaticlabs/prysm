@@ -84,7 +84,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot types.Slot, pubK
 	}
 
 	indexedAtt := &ethpb.IndexedAttestation{
-		AttestingIndices: []uint64{uint64(duty.ValidatorIndex)},
+		AttestingIndices: []uint64{uint64(duty.ValidatorrIndex)},
 		Data:             data,
 	}
 

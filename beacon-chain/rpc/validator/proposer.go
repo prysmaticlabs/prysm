@@ -39,12 +39,12 @@ var eth1DataNotification bool
 const eth1dataTimeout = 2 * time.Second
 
 type eth1DataSingleVote struct {
-	eth1Data    ethpb.Eth1Data
+	eth1Data    *ethpb.Eth1Data
 	blockHeight *big.Int
 }
 
 type eth1DataAggregatedVote struct {
-	data  eth1DataSingleVote
+	data  *eth1DataSingleVote
 	votes int
 }
 
@@ -250,7 +250,7 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState iface.Be
 	}
 
 	chosenVote := chosenEth1DataMajorityVote(inRangeVotes)
-	return &chosenVote.data.eth1Data, nil
+	return chosenVote.data.eth1Data, nil
 }
 
 func (vs *Server) slotStartTime(slot types.Slot) uint64 {
@@ -260,11 +260,13 @@ func (vs *Server) slotStartTime(slot types.Slot) uint64 {
 
 func (vs *Server) inRangeVotes(ctx context.Context,
 	beaconState iface.ReadOnlyBeaconState,
-	firstValidBlockNumber, lastValidBlockNumber *big.Int) ([]eth1DataSingleVote, error) {
+	firstValidBlockNumber,
+	lastValidBlockNumber *big.Int,
+) ([]*eth1DataSingleVote, error) {
 
 	currentETH1Data := vs.HeadFetcher.HeadETH1Data()
 
-	var inRangeVotes []eth1DataSingleVote
+	var inRangeVotes []*eth1DataSingleVote
 	for _, eth1Data := range beaconState.Eth1DataVotes() {
 		exists, height, err := vs.BlockFetcher.BlockExistsWithCache(ctx, bytesutil.ToBytes32(eth1Data.BlockHash))
 		if err != nil {
@@ -278,15 +280,15 @@ func (vs *Server) inRangeVotes(ctx context.Context,
 		// lastValidBlockNumber.Cmp(height) > -1 filters out all blocks after lastValidBlockNumber
 		// These filters result in the range [firstValidBlockNumber, lastValidBlockNumber]
 		if exists && firstValidBlockNumber.Cmp(height) < 1 && lastValidBlockNumber.Cmp(height) > -1 {
-			inRangeVotes = append(inRangeVotes, eth1DataSingleVote{eth1Data: *eth1Data, blockHeight: height})
+			inRangeVotes = append(inRangeVotes, &eth1DataSingleVote{eth1Data: eth1Data, blockHeight: height})
 		}
 	}
 
 	return inRangeVotes, nil
 }
 
-func chosenEth1DataMajorityVote(votes []eth1DataSingleVote) eth1DataAggregatedVote {
-	var voteCount []eth1DataAggregatedVote
+func chosenEth1DataMajorityVote(votes []*eth1DataSingleVote) *eth1DataAggregatedVote {
+	var voteCount []*eth1DataAggregatedVote
 	for _, singleVote := range votes {
 		newVote := true
 		for i, aggregatedVote := range voteCount {
@@ -299,11 +301,11 @@ func chosenEth1DataMajorityVote(votes []eth1DataSingleVote) eth1DataAggregatedVo
 		}
 
 		if newVote {
-			voteCount = append(voteCount, eth1DataAggregatedVote{data: singleVote, votes: 1})
+			voteCount = append(voteCount, &eth1DataAggregatedVote{data: singleVote, votes: 1})
 		}
 	}
 	if len(voteCount) == 0 {
-		return eth1DataAggregatedVote{}
+		return &eth1DataAggregatedVote{}
 	}
 	currentVote := voteCount[0]
 	for _, aggregatedVote := range voteCount[1:] {
