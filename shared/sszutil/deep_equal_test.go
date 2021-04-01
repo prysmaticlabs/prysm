@@ -60,15 +60,15 @@ func TestDeepEqualStructs_Unexported(t *testing.T) {
 }
 
 func TestDeepEqualProto(t *testing.T) {
-	var fork1, fork2 pb.Fork
+	var fork1, fork2 *pb.Fork
 	assert.Equal(t, true, sszutil.DeepEqual(fork1, fork2))
 
-	fork1 = pb.Fork{
+	fork1 = &pb.Fork{
 		PreviousVersion: []byte{123},
 		CurrentVersion:  []byte{124},
 		Epoch:           1234567890,
 	}
-	fork2 = pb.Fork{
+	fork2 = &pb.Fork{
 		PreviousVersion: []byte{123},
 		CurrentVersion:  []byte{125},
 		Epoch:           1234567890,
@@ -76,11 +76,11 @@ func TestDeepEqualProto(t *testing.T) {
 	assert.Equal(t, true, sszutil.DeepEqual(fork1, fork1))
 	assert.Equal(t, false, sszutil.DeepEqual(fork1, fork2))
 
-	checkpoint1 := ethpb.Checkpoint{
+	checkpoint1 := &ethpb.Checkpoint{
 		Epoch: 1234567890,
 		Root:  []byte{},
 	}
-	checkpoint2 := ethpb.Checkpoint{
+	checkpoint2 := &ethpb.Checkpoint{
 		Epoch: 1234567890,
 		Root:  nil,
 	}

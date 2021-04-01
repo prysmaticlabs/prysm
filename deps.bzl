@@ -2652,8 +2652,8 @@ def prysm_deps():
         name = "com_github_prysmaticlabs_ethereumapis",
         build_file_generation = "off",
         importpath = "github.com/prysmaticlabs/ethereumapis",
-        sum = "h1:PM7r6TGP48BDyiJySCFyXeIKyUzUGNyPg/It0B8y55w=",
-        version = "v0.0.0-20210331223346-44ee7788eea2",
+        sum = "h1:eU2PgZzEXzp4EEmHHCqS0ZUnbHz9E78s3dss9BXSOM8=",
+        version = "v0.0.0-20210401210457-db0002bfd4ac",
     )
     go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",
@@ -2671,8 +2671,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_prysmaticlabs_protoc_gen_go_cast",
         importpath = "github.com/prysmaticlabs/protoc-gen-go-cast",
-        sum = "h1:VGW6gU39txf47WXz3lUQPb3tpwIPWqNRAAjiOYN+18I=",
-        version = "v0.0.0-20210331180400-9bcfa8a53194",
+        sum = "h1:YSp7NCCDMdW4AIsdmef1Ica8CV+e5onmkPcws0+NWPQ=",
+        version = "v0.0.0-20210401203017-e5049b268be2",
     )
 
     go_repository(
