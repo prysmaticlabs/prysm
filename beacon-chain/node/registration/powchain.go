@@ -1,6 +1,8 @@
 package registration
 
 import (
+	"errors"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -9,22 +11,25 @@ import (
 )
 
 // PowchainPreregistration prepares data for powchain.Service's registration.
-func PowchainPreregistration(cliCtx *cli.Context) (depositContractAddress string, endpoints []string) {
-	depositContractAddress = DepositContractAddress(cliCtx)
+func PowchainPreregistration(cliCtx *cli.Context) (depositContractAddress string, endpoints []string, err error) {
+	depositContractAddress, err = DepositContractAddress(cliCtx)
+	if err != nil {
+		return "", nil, err
+	}
 	endpoints = []string{cliCtx.String(flags.HTTPWeb3ProviderFlag.Name)}
 	endpoints = append(endpoints, cliCtx.StringSlice(flags.FallbackWeb3ProviderFlag.Name)...)
 	return
 }
 
 // DepositContractAddress returns the address of the deposit contract.
-func DepositContractAddress(cliCtx *cli.Context) string {
+func DepositContractAddress(cliCtx *cli.Context) (string, error) {
 	address := params.BeaconConfig().DepositContractAddress
 	if address == "" {
-		log.Fatal("Valid deposit contract is required")
+		return "", errors.New("valid deposit contract is required")
 	}
 
 	if !common.IsHexAddress(address) {
-		log.Fatalf("Invalid deposit contract address given: %s", address)
+		return "", errors.New("invalid deposit contract address given: " + address)
 	}
 
 	if cliCtx.String(flags.HTTPWeb3ProviderFlag.Name) == "" {
@@ -36,5 +41,5 @@ func DepositContractAddress(cliCtx *cli.Context) string {
 		)
 	}
 
-	return address
+	return address, nil
 }

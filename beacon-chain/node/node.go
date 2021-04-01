@@ -107,7 +107,10 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 		slashingsPool:   slashings.NewPool(),
 	}
 
-	depositAddress := registration.DepositContractAddress(cliCtx)
+	depositAddress, err := registration.DepositContractAddress(cliCtx)
+	if err != nil {
+		return nil, err
+	}
 	if err := beacon.startDB(cliCtx, depositAddress); err != nil {
 		return nil, err
 	}
@@ -425,7 +428,10 @@ func (b *BeaconNode) registerPOWChainService() error {
 		return b.services.RegisterService(&powchain.Service{})
 	}
 
-	depAddress, endpoints := registration.PowchainPreregistration(b.cliCtx)
+	depAddress, endpoints, err := registration.PowchainPreregistration(b.cliCtx)
+	if err != nil {
+		return err
+	}
 
 	cfg := &powchain.Web3ServiceConfig{
 		HTTPEndpoints:      endpoints,
