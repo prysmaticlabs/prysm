@@ -106,7 +106,7 @@ func TestWarnIfNotSupported(t *testing.T) {
 	runtimeOS = "linux"
 	runtimeArch = "amd64"
 	hook := logTest.NewGlobal()
-	WarnIfNotSupported(context.Background())
+	WarnIfPlatformNotSupported(context.Background())
 	require.LogsDoNotContain(t, hook, "Failed to detect host platform")
 	require.LogsDoNotContain(t, hook, "platform is not supported")
 
@@ -116,13 +116,13 @@ func TestWarnIfNotSupported(t *testing.T) {
 	runtimeOS = "darwin"
 	runtimeArch = "amd64"
 	hook = logTest.NewGlobal()
-	WarnIfNotSupported(context.Background())
+	WarnIfPlatformNotSupported(context.Background())
 	require.LogsContain(t, hook, "Failed to detect host platform")
 	require.LogsContain(t, hook, "error parsing version")
 
 	runtimeOS = "falseOs"
 	runtimeArch = "falseArch"
 	hook = logTest.NewGlobal()
-	WarnIfNotSupported(context.Background())
+	WarnIfPlatformNotSupported(context.Background())
 	require.LogsContain(t, hook, "platform is not supported")
 }
