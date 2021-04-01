@@ -1,0 +1,46 @@
+WORKSPACE:    name = "sigp_beacon_fuzz_corpora",
+WORKSPACE:    build_file = "//third_party:beacon-fuzz/corpora.BUILD",
+WORKSPACE:    strip_prefix = "beacon-fuzz-corpora-bac24ad78d45cc3664c0172241feac969c1ac29b",
+WORKSPACE:        "https://github.com/sigp/beacon-fuzz-corpora/archive/bac24ad78d45cc3664c0172241feac969c1ac29b.tar.gz",
+README.md:To participate in staking, you can join the [official eth2 launchpad](https://launchpad.ethereum.org). The launchpad is the only recommended way to become a validator on mainnet. You can visualize the nodes in the network on [eth2stats.io](https://eth2stats.io), explore validator rewards/penalties via Bitfly's block explorer: [beaconcha.in](https://beaconcha.in), and follow the latest blocks added to the chain on [beaconscan](https://beaconscan.com).
+prysm.sh:#   PROCESS can be one of beacon-chain or validator.
+prysm.sh:#   Example: USE_PRYSM_VERSION=v0.3.3 ./prysm.sh beacon-chain
+prysm.sh:    color "31" "PROCESS can be beacon-chain, validator, or slasher."
+prysm.sh:        prysm_version=$(curl -f -s https://prysmaticlabs.com/releases/latest) || (color "31" "Starting prysm requires an internet connection. If you are being blocked by your antivirus, you can download the beacon chain and validator executables from our releases page on Github here https://github.com/prysmaticlabs/prysm/releases/" && exit 1)
+prysm.sh:BEACON_CHAIN_REAL="${wrapper_dir}/beacon-chain-${prysm_version}-${system}-${arch}"
+prysm.sh:if [[ $1 == beacon-chain ]]; then
+prysm.sh:        color "34" "Downloading beacon chain@${prysm_version} to ${BEACON_CHAIN_REAL} (${reason})"
+prysm.sh:        file=beacon-chain-${prysm_version}-${system}-${arch}
+prysm.sh:beacon-chain)
+prysm.sh:    color "31" "PROCESS can be beacon-chain, validator, or slasher."
+prysm.ps1:if ("beacon-chain", "validator", "slasher" -notcontains $args[0]) {
+prysm.ps1:PROCESS can be beacon-chain, validator, or slasher.
+prysm.ps1:  `$env:PRYSM_AUTORESTART=`$TRUE ; .\prysm.sh1 beacon-chain
+prysm.bat:for %%a in (beacon-chain validator slasher) do (
+prysm.bat:echo PROCESS can be beacon-chain, validator, or slasher.
+prysm.bat:echo  set PRYSM_AUTORESTART=true^& .\prysm.bat beacon-chain
+prysm.bat:(for /f %%i in ('curl -f -s https://prysmaticlabs.com/releases/latest') do set prysm_version=%%i) || (echo [31mERROR: Starting prysm requires an internet connection. If you are being blocked by your antivirus, you can download the beacon chain and validator executables from our releases page on Github here https://github.com/prysmaticlabs/prysm/releases/ [0m && exit /b 1)
+prysm.bat:set BEACON_CHAIN_REAL=%wrapper_dir%\beacon-chain-%prysm_version%-%system%-%arch%
+prysm.bat:if [%1]==[beacon-chain] (
+prysm.bat:        echo [35mDownloading beacon chain %prysm_version% to %BEACON_CHAIN_REAL% %reason%[0m
+prysm.bat:        curl -L https://prysmaticlabs.com/releases/beacon-chain-%prysm_version%-%system%-%arch% -o %BEACON_CHAIN_REAL%
+prysm.bat:        curl --silent -L https://prysmaticlabs.com/releases/beacon-chain-%prysm_version%-%system%-%arch%.sha256 -o %wrapper_dir%\beacon-chain-%prysm_version%-%system%-%arch%.sha256
+prysm.bat:        curl --silent -L https://prysmaticlabs.com/releases/beacon-chain-%prysm_version%-%system%-%arch%.sig -o %wrapper_dir%\beacon-chain-%prysm_version%-%system%-%arch%.sig
+prysm.bat:if [%1]==[beacon-chain] ( set process=%BEACON_CHAIN_REAL%)
+nogo_config.json:      "beacon-chain/.*": "",
+nogo_config.json:      "beacon-chain/.*": "",
+nogo_config.json:      "beacon-chain/.*": "",
+INTEROP.md:Prysm supports a few ways to quickly launch a beacon node from basic configurations:
+INTEROP.md:- `NumValidators + GenesisTime`: Launches a beacon node by deterministically generating a state from a num-validators flag along with a genesis time **(Recommended)**
+INTEROP.md:- `SSZ Genesis`: Launches a beacon node  from a .ssz file containing a SSZ-encoded, genesis beacon state
+INTEROP.md:and finally writes a ssz encoded output to ~/Desktop/genesis.ssz. This file can be used to kickstart the beacon chain in the next section.
+INTEROP.md:bazel run //beacon-chain -- \
+INTEROP.md:This will deterministically generate a beacon genesis state and start
+INTEROP.md:Wait a bit until your beacon chain starts, and in the other window:
+INTEROP.md: bazel run //beacon-chain -- \
+INTEROP.md:Wait a bit until your beacon chain starts, and in the other window:
+interop.Dockerfile:  //beacon-chain \
+interop.Dockerfile:COPY --from=builder /workspace/bazel-bin/beacon-chain/linux_amd64_stripped/beacon-chain .
+DEPENDENCIES.md:bazel build //beacon-chain --config=release
+DEPENDENCIES.md:go test ./beacon-chain/sync/initial-sync -tags develop 
+CONTRIBUTING.md:-   Stay up to date on the latest beacon chain sepcification
