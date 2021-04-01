@@ -2,6 +2,7 @@ package state_altair
 
 import (
 	"github.com/pkg/errors"
+	v1 "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
@@ -23,4 +24,9 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *pbp2p.PendingAttestati
 // AppendPreviousEpochAttestations is not supported for HF1 beacon state.
 func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestation) error {
 	return errors.New("AppendPreviousEpochAttestations is not supported for hard fork 1 beacon state")
+}
+
+// ToProto is not supported for HF1 beacon state.
+func (b *BeaconState) ToProto() (*v1.BeaconState, error) {
+	return nil, errors.New("ToProto is not yet supported for hard fork 1 beacon state")
 }
