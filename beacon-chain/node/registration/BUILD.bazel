@@ -9,7 +9,7 @@ go_library(
         "powchain.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/node/registration",
-    visibility = ["//visibility:public"],
+    visibility = ["//beacon-chain/node:__subpackages__"],
     deps = [
         "//cmd/beacon-chain/flags:go_default_library",
         "//shared/cmd:go_default_library",
@@ -25,9 +25,13 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["blockchain_test.go"],
+    srcs = [
+        "blockchain_test.go",
+        "p2p_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
+        "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
     ],
