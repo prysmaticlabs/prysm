@@ -12,6 +12,24 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+func TestPowchainPreregistration(t *testing.T) {
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.String(flags.HTTPWeb3ProviderFlag.Name, "primary", "")
+	fallback := cli.StringSlice{}
+	err := fallback.Set("fallback1")
+	require.NoError(t, err)
+	err = fallback.Set("fallback2")
+	require.NoError(t, err)
+	set.Var(&fallback, flags.FallbackWeb3ProviderFlag.Name, "")
+	ctx := cli.NewContext(&app, set, nil)
+
+	address, endpoints, err := PowchainPreregistration(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, params.BeaconConfig().DepositContractAddress, address)
+	assert.DeepEqual(t, []string{"primary", "fallback1", "fallback2"}, endpoints)
+}
+
 func TestDepositContractAddress_Ok(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
@@ -37,6 +55,10 @@ func TestDepositContractAddress_EmptyAddress(t *testing.T) {
 }
 
 func TestDepositContractAddress_NotHexAddress(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	config := params.BeaconConfig()
+	config.DepositContractAddress = "abc?!"
+	params.OverrideBeaconConfig(config)
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	set.String(flags.HTTPWeb3ProviderFlag.Name, "", "")
