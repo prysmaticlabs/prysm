@@ -28,7 +28,6 @@ func TestP2PPreregistration(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	set.String(cmd.DataDirFlag.Name, testDataDir, "")
-	set.String(cmd.RestoreTargetDirFlag.Name, "", "")
 	ctx := cli.NewContext(&app, set, nil)
 
 	bootstrapNodeAddrs, dataDir, err := P2PPreregistration(ctx)
