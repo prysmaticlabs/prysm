@@ -1,12 +1,53 @@
 package registration
 
 import (
+	"flag"
 	"io/ioutil"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/cmd"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/urfave/cli/v2"
 )
+
+func TestP2PPreregistration(t *testing.T) {
+	sampleNode := "- enr:-TESTNODE"
+	testDataDir := "testDataDir"
+
+	file, err := ioutil.TempFile(t.TempDir(), "bootstrapFile*.yaml")
+	require.NoError(t, err)
+	err = ioutil.WriteFile(file.Name(), []byte(sampleNode), 0644)
+	require.NoError(t, err, "Error in WriteFile call")
+	params.SetupTestConfigCleanup(t)
+	config := params.BeaconNetworkConfig()
+	config.BootstrapNodes = []string{file.Name()}
+	params.OverrideBeaconNetworkConfig(config)
+
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.String(cmd.DataDirFlag.Name, testDataDir, "")
+	set.String(cmd.RestoreTargetDirFlag.Name, "", "")
+	ctx := cli.NewContext(&app, set, nil)
+
+	bootstrapNodeAddrs, dataDir, err := P2PPreregistration(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(bootstrapNodeAddrs))
+	assert.Equal(t, sampleNode[2:], bootstrapNodeAddrs[0])
+	assert.Equal(t, testDataDir, dataDir)
+}
+
+func TestP2PPreregistration_DefaultDataDir(t *testing.T) {
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.String(cmd.DataDirFlag.Name, "", "")
+	ctx := cli.NewContext(&app, set, nil)
+
+	_, dataDir, err := P2PPreregistration(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, cmd.DefaultDataDir(), dataDir)
+}
 
 func TestBootStrapNodeFile(t *testing.T) {
 	file, err := ioutil.TempFile(t.TempDir(), "bootstrapFile")
