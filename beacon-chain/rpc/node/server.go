@@ -20,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"google.golang.org/grpc"
@@ -123,13 +122,6 @@ func (ns *Server) GetHost(_ context.Context, _ *empty.Empty) (*ethpb.HostData, e
 		Addresses: stringAddr,
 		PeerId:    ns.PeerManager.PeerID().String(),
 		Enr:       enr,
-	}, nil
-}
-
-// GetLogsEndpoint
-func (ns *Server) GetLogsEndpoint(_ context.Context, _ *empty.Empty) (*pbrpc.LogsEndpointResponse, error) {
-	return &pbrpc.LogsEndpointResponse{
-		BeaconLogsEndpoint: fmt.Sprintf("%s:%d", ns.BeaconMonitoringHost, ns.BeaconMonitoringPort),
 	}, nil
 }
 

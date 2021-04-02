@@ -21,15 +21,13 @@ go_proto_library(
         "@go_googleapis//google/api:annotations_go_proto",
         "@io_bazel_rules_go//proto/wkt:descriptor_go_proto",
         "@io_bazel_rules_go//proto/wkt:empty_go_proto",
-	"@com_github_prysmaticlabs_ethereumapis//eth/ext:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/ext:go_default_library",
     ],
 )
 
 go_proto_library(
     name = "v1_go_proto",
-    compilers = [
-        "@prysm//:grpc_proto_compiler",
-    ],
+    compilers = ["@prysm//:grpc_proto_compiler"],
     importpath = "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1",
     proto = ":v1_proto",
     visibility = ["//visibility:public"],
@@ -39,7 +37,7 @@ go_proto_library(
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@go_googleapis//google/api:annotations_go_proto",
         "@io_bazel_rules_go//proto/wkt:empty_go_proto",
-	"@com_github_prysmaticlabs_ethereumapis//eth/ext:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/ext:go_default_library",
     ],
 )
 
