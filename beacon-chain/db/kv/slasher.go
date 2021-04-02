@@ -3,6 +3,7 @@ package kv
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"fmt"
 	"sort"
 
@@ -343,6 +344,7 @@ func (s *Store) PruneProposals(ctx context.Context, currentEpoch types.Epoch, hi
 			if !prefixLessThan(k, endEnc) {
 				continue
 			}
+			slasherProposalsPrunedTotal.Inc()
 			if err := proposalBkt.Delete(k); err != nil {
 				return err
 			}
@@ -369,6 +371,7 @@ func (s *Store) PruneAttestations(ctx context.Context, currentEpoch types.Epoch,
 			if !prefixLessThan(k, epochEnc) {
 				continue
 			}
+			slasherAttestationsPrunedTotal.Inc()
 			if err := attBkt.Delete(k); err != nil {
 				return err
 			}
@@ -480,7 +483,8 @@ func encodeAttestationRecord(att *slashertypes.IndexedAttestationWrapper) ([]byt
 	if err != nil {
 		return nil, err
 	}
-	return append(att.SigningRoot[:], encodedAtt...), nil
+	compressedAtt := snappy.Encode(nil, encodedAtt)
+	return append(att.SigningRoot[:], compressedAtt...), nil
 }
 
 // Decode attestation record from bytes.
@@ -490,7 +494,11 @@ func decodeAttestationRecord(encoded []byte) (*slashertypes.IndexedAttestationWr
 	}
 	signingRoot := encoded[:32]
 	decodedAtt := &ethpb.IndexedAttestation{}
-	if err := decodedAtt.UnmarshalSSZ(encoded[32:]); err != nil {
+	decodedAttBytes, err := snappy.Decode(nil, encoded[:32])
+	if err != nil {
+		return nil, err
+	}
+	if err := decodedAtt.UnmarshalSSZ(decodedAttBytes); err != nil {
 		return nil, err
 	}
 	return &slashertypes.IndexedAttestationWrapper{
@@ -507,7 +515,8 @@ func encodeProposalRecord(blkHdr *slashertypes.SignedBlockHeaderWrapper) ([]byte
 	if err != nil {
 		return nil, err
 	}
-	return append(blkHdr.SigningRoot[:], encodedHdr...), nil
+	compressedHdr := snappy.Encode(nil, encodedHdr)
+	return append(blkHdr.SigningRoot[:], compressedHdr...), nil
 }
 
 func decodeProposalRecord(encoded []byte) (*slashertypes.SignedBlockHeaderWrapper, error) {
@@ -516,11 +525,43 @@ func decodeProposalRecord(encoded []byte) (*slashertypes.SignedBlockHeaderWrappe
 	}
 	signingRoot := encoded[:32]
 	decodedBlkHdr := &ethpb.SignedBeaconBlockHeader{}
-	if err := decodedBlkHdr.UnmarshalSSZ(encoded[32:]); err != nil {
+	decodedHdrBytes, err := snappy.Decode(nil, encoded[:32])
+	if err != nil {
+		return nil, err
+	}
+	if err := decodedBlkHdr.UnmarshalSSZ(decodedHdrBytes); err != nil {
 		return nil, err
 	}
 	return &slashertypes.SignedBlockHeaderWrapper{
 		SignedBeaconBlockHeader: decodedBlkHdr,
 		SigningRoot:             bytesutil.ToBytes32(signingRoot),
 	}, nil
+}
+
+// Encodes an epoch by performing modulo HISTORY_SIZE from slasher using 2 bytes instead of 8 as a
+// client optimization to save space in the database.
+func encodeTargetEpoch(epoch types.Epoch, historySize uint64) []byte {
+	buf := make([]byte, 2)
+	binary.LittleEndian.PutUint16(buf, uint16(uint64(epoch.Mod(historySize))))
+	return buf
+}
+
+// Decodes a target epoch that was stored modulo HISTORY_SIZE.
+func decodeTargetEpoch(enc []byte) types.Epoch {
+	return types.Epoch(binary.LittleEndian.Uint16(enc[:2]))
+}
+
+// Encodes a validator index using 5 bytes instead of 8 as a
+// client optimization to save space in the database. Because the max validator
+// registry size is 2**40, this is a safe optimization.
+func encodeValidatorIndex(index types.ValidatorIndex) []byte {
+	buf := make([]byte, 8)
+	binary.LittleEndian.PutUint64(buf, uint64(index))
+	return buf[:5]
+}
+
+// Decodes a 5 byte validator index into a types.ValidatorIndex value.
+func decodeValidatorIndex(enc []byte) types.ValidatorIndex {
+	encodedIndex := append(enc[:5], 0, 0, 0)
+	return types.ValidatorIndex(binary.LittleEndian.Uint64(encodedIndex))
 }

@@ -664,3 +664,66 @@ func createAttestationWrapper(source, target types.Epoch, indices []uint64, sign
 		SigningRoot: signRoot,
 	}
 }
+
+func Test_encodeValidatorIndex(t *testing.T) {
+	tests := []struct {
+		name  string
+		index types.ValidatorIndex
+	}{
+		{
+			name:  "0",
+			index: types.ValidatorIndex(0),
+		},
+		{
+			name:  "genesis_validator_count",
+			index: types.ValidatorIndex(params.BeaconConfig().MinGenesisActiveValidatorCount),
+		},
+		{
+			name:  "max_possible_value",
+			index: types.ValidatorIndex(params.BeaconConfig().ValidatorRegistryLimit - 1),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := encodeValidatorIndex(tt.index)
+			decoded := decodeValidatorIndex(got)
+			require.DeepEqual(t, tt.index, decoded)
+		})
+	}
+}
+
+func Test_encodeTargetEpoch(t *testing.T) {
+	tests := []struct {
+		name        string
+		epoch       types.Epoch
+		historySize uint64
+	}{
+		{
+			name:        "0",
+			epoch:       0,
+			historySize: 8,
+		},
+		{
+			name:        "epoch == HISTORY_SIZE",
+			epoch:       8,
+			historySize: 8,
+		},
+		{
+			name:        "epoch < HISTORY_SIZE",
+			epoch:       4,
+			historySize: 8,
+		},
+		{
+			name:        "epoch > HISTORY_SIZE",
+			epoch:       9,
+			historySize: 8,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := encodeTargetEpoch(tt.epoch, tt.historySize)
+			decoded := decodeTargetEpoch(got)
+			require.DeepEqual(t, tt.epoch.Mod(tt.historySize), decoded)
+		})
+	}
+}
