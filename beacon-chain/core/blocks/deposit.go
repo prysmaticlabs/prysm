@@ -64,7 +64,7 @@ func activateValidatorWithEffectiveBalance(beaconState iface.BeaconState, deposi
 			return nil, err
 		}
 	}
-	return nil, nil
+	return beaconState, nil
 }
 
 // ProcessDeposits is one of the operations performed on each processed
