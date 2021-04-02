@@ -535,12 +535,12 @@ func TestUpdateDuties_OK(t *testing.T) {
 	resp := &ethpb.DutiesResponse{
 		Duties: []*ethpb.DutiesResponse_Duty{
 			{
-				AttesterSlot:    params.BeaconConfig().SlotsPerEpoch,
-				ValidatorrIndex: 200,
-				CommitteeIndex:  100,
-				Committee:       []types.ValidatorIndex{0, 1, 2, 3},
-				PublicKey:       []byte("testPubKey_1"),
-				ProposerSlots:   []types.Slot{params.BeaconConfig().SlotsPerEpoch + 1},
+				AttesterSlot:   params.BeaconConfig().SlotsPerEpoch,
+				ValidatorIndex: 200,
+				CommitteeIndex: 100,
+				Committee:      []types.ValidatorIndex{0, 1, 2, 3},
+				PublicKey:      []byte("testPubKey_1"),
+				ProposerSlots:  []types.Slot{params.BeaconConfig().SlotsPerEpoch + 1},
 			},
 		},
 	}
@@ -571,7 +571,7 @@ func TestUpdateDuties_OK(t *testing.T) {
 	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch+1, v.duties.Duties[0].ProposerSlots[0], "Unexpected validator assignments")
 	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch, v.duties.Duties[0].AttesterSlot, "Unexpected validator assignments")
 	assert.Equal(t, resp.Duties[0].CommitteeIndex, v.duties.Duties[0].CommitteeIndex, "Unexpected validator assignments")
-	assert.Equal(t, resp.Duties[0].ValidatorrIndex, v.duties.Duties[0].ValidatorrIndex, "Unexpected validator assignments")
+	assert.Equal(t, resp.Duties[0].ValidatorIndex, v.duties.Duties[0].ValidatorIndex, "Unexpected validator assignments")
 }
 
 func TestUpdateDuties_OK_FilterBlacklistedPublicKeys(t *testing.T) {
