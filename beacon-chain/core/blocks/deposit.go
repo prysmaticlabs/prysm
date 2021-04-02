@@ -29,9 +29,9 @@ func ProcessPreGenesisDeposits(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process deposit")
 	}
-	state, err := activateValidatorWithEffectiveBalance(beaconState, deposits)
+	beaconState, err = activateValidatorWithEffectiveBalance(beaconState, deposits)
 	if err != nil {
-		return state, err
+		return nil, err
 	}
 	return beaconState, nil
 }
