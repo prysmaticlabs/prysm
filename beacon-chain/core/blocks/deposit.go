@@ -24,8 +24,7 @@ func ProcessPreGenesisDeposits(
 	deposits []*ethpb.Deposit,
 ) (iface.BeaconState, error) {
 	var err error
-	beaconState, err = ProcessDeposits(ctx, beaconState, &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{Deposits: deposits}}})
+	beaconState, err = ProcessDeposits(ctx, beaconState, deposits)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process deposit")
 	}
@@ -77,15 +76,10 @@ func activateValidatorWithEffectiveBalance(beaconState iface.BeaconState, deposi
 func ProcessDeposits(
 	ctx context.Context,
 	beaconState iface.BeaconState,
-	b *ethpb.SignedBeaconBlock,
+	deposits []*ethpb.Deposit,
 ) (iface.BeaconState, error) {
-	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
-		return nil, err
-	}
-
 	// Attempt to verify all deposit signatures at once, if this fails then fall back to processing
 	// individual deposits with signature verification enabled.
-	deposits := b.Block.Body.Deposits
 	batchVerified, err := batchVerifyDepositsSignatures(ctx, deposits)
 	if err != nil {
 		return nil, err
@@ -110,7 +104,7 @@ func batchVerifyDepositsSignatures(ctx context.Context, deposits []*ethpb.Deposi
 		return false, err
 	}
 
-	var verified bool
+	verified := false
 	if err := verifyDepositDataWithDomain(ctx, deposits, domain); err != nil {
 		log.WithError(err).Debug("Failed to batch verify deposits signatures, will try individual verify")
 		verified = true
