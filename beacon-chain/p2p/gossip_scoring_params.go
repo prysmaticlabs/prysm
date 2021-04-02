@@ -47,6 +47,11 @@ const (
 	dampeningFactor = 90
 )
 
+var (
+	// a bool to check if we enable scoring for messages in the mesh sent for near first deliveries.
+	meshDeliveryIsScored = false
+)
+
 func peerScoringParams() (*pubsub.PeerScoreParams, *pubsub.PeerScoreThresholds) {
 	thresholds := &pubsub.PeerScoreThresholds{
 		GossipThreshold:             -4000,
@@ -161,6 +166,11 @@ func defaultAggregateTopicParams(activeValidators uint64) (*pubsub.TopicScorePar
 	}
 	meshWeight := -scoreByWeight(aggregateWeight, meshThreshold)
 	meshCap := 4 * meshThreshold
+	if !meshDeliveryIsScored {
+		// Set the mesh weight as zero as a temporary measure, so as to prevent
+		// the average nodes from being penalised.
+		meshWeight = 0
+	}
 	return &pubsub.TopicScoreParams{
 		TopicWeight:                     aggregateWeight,
 		TimeInMeshWeight:                maxInMeshScore / inMeshCap(),
@@ -210,6 +220,11 @@ func defaultAggregateSubnetTopicParams(activeValidators uint64) (*pubsub.TopicSc
 	}
 	meshWeight := -scoreByWeight(topicWeight, meshThreshold)
 	meshCap := 4 * meshThreshold
+	if !meshDeliveryIsScored {
+		// Set the mesh weight as zero as a temporary measure, so as to prevent
+		// the average nodes from being penalised.
+		meshWeight = 0
+	}
 	return &pubsub.TopicScoreParams{
 		TopicWeight:                     topicWeight,
 		TimeInMeshWeight:                maxInMeshScore / inMeshCap(),
