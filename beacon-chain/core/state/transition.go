@@ -29,6 +29,10 @@ import (
 // processFunc is a function that processes a block with a given state. State is mutated.
 type processFunc func(context.Context, iface.BeaconState, *ethpb.SignedBeaconBlock) (iface.BeaconState, error)
 
+var processDepositsFunc = func(ctx context.Context, s iface.BeaconState, blk *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
+	return b.ProcessDeposits(ctx, s, blk.Block.Body.Deposits)
+}
+
 // This defines the processing block routine as outlined in eth2 spec:
 // https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#block-processing
 var processingPipeline = []processFunc{
@@ -39,7 +43,7 @@ var processingPipeline = []processFunc{
 	b.ProcessProposerSlashings,
 	b.ProcessAttesterSlashings,
 	b.ProcessAttestations,
-	b.ProcessDeposits,
+	processDepositsFunc,
 	b.ProcessVoluntaryExits,
 }
 
@@ -543,7 +547,7 @@ func ProcessOperationsNoVerifyAttsSigs(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block attestations")
 	}
-	state, err = b.ProcessDeposits(ctx, state, signedBeaconBlock)
+	state, err = b.ProcessDeposits(ctx, state, signedBeaconBlock.Block.Body.Deposits)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block validator deposits")
 	}
