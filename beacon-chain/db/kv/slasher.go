@@ -30,11 +30,7 @@ func (s *Store) LastEpochWrittenForValidators(
 	attestedEpochs := make([]*slashertypes.AttestedEpochForValidator, 0)
 	encodedIndices := make([][]byte, len(validatorIndices))
 	for i, valIdx := range validatorIndices {
-		enc, err := valIdx.MarshalSSZ()
-		if err != nil {
-			return nil, err
-		}
-		encodedIndices[i] = enc
+		encodedIndices[i] = encodeValidatorIndex(valIdx)
 	}
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestedEpochsByValidator)
@@ -65,11 +61,7 @@ func (s *Store) SaveLastEpochWrittenForValidators(
 	defer span.End()
 	encodedIndices := make([][]byte, len(validatorIndices))
 	for i, valIdx := range validatorIndices {
-		enc, err := valIdx.MarshalSSZ()
-		if err != nil {
-			return err
-		}
-		encodedIndices[i] = enc
+		encodedIndices[i] = encodeValidatorIndex(valIdx)
 	}
 	encodedEpoch, err := epoch.MarshalSSZ()
 	if err != nil {
@@ -89,7 +81,7 @@ func (s *Store) SaveLastEpochWrittenForValidators(
 // CheckDoubleAttesterVotes retries any slashable double votes that exist
 // for a series of input attestations.
 func (s *Store) CheckAttesterDoubleVotes(
-	ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper,
+	ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper, historySize uint64,
 ) ([]*slashertypes.AttesterDoubleVote, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.CheckAttesterDoubleVotes")
 	defer span.End()
@@ -97,12 +89,9 @@ func (s *Store) CheckAttesterDoubleVotes(
 	err := s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationRecordsBucket)
 		for _, att := range attestations {
-			encEpoch, err := att.IndexedAttestation.Data.Target.Epoch.MarshalSSZ()
-			if err != nil {
-				return err
-			}
+			encEpoch := encodeTargetEpoch(att.IndexedAttestation.Data.Target.Epoch, historySize)
 			for _, valIdx := range att.IndexedAttestation.AttestingIndices {
-				encIdx := ssz.MarshalUint64(make([]byte, 0), valIdx)
+				encIdx := encodeValidatorIndex(types.ValidatorIndex(valIdx))
 				key := append(encEpoch, encIdx...)
 				encExistingAttRecord := bkt.Get(key)
 				if len(encExistingAttRecord) < 32 {
@@ -131,21 +120,15 @@ func (s *Store) CheckAttesterDoubleVotes(
 // AttestationRecordForValidator given a validator index and a target epoch,
 // retrieves an existing attestation record we have stored in the database.
 func (s *Store) AttestationRecordForValidator(
-	ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch,
+	ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch, historySize uint64,
 ) (*slashertypes.IndexedAttestationWrapper, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.AttestationRecordForValidator")
 	defer span.End()
 	var record *slashertypes.IndexedAttestationWrapper
-	encIdx, err := validatorIdx.MarshalSSZ()
-	if err != nil {
-		return nil, err
-	}
-	encEpoch, err := targetEpoch.MarshalSSZ()
-	if err != nil {
-		return nil, err
-	}
+	encIdx := encodeValidatorIndex(validatorIdx)
+	encEpoch := encodeTargetEpoch(targetEpoch, historySize)
 	key := append(encEpoch, encIdx...)
-	err = s.db.View(func(tx *bolt.Tx) error {
+	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationRecordsBucket)
 		value := bkt.Get(key)
 		if value == nil {
@@ -166,16 +149,14 @@ func (s *Store) AttestationRecordForValidator(
 func (s *Store) SaveAttestationRecordsForValidators(
 	ctx context.Context,
 	attestations []*slashertypes.IndexedAttestationWrapper,
+	historySize uint64,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveAttestationRecordsForValidators")
 	defer span.End()
 	encodedTargetEpoch := make([][]byte, len(attestations))
 	encodedRecords := make([][]byte, len(attestations))
 	for i, att := range attestations {
-		encEpoch, err := att.IndexedAttestation.Data.Target.Epoch.MarshalSSZ()
-		if err != nil {
-			return err
-		}
+		encEpoch := encodeTargetEpoch(att.IndexedAttestation.Data.Target.Epoch, historySize)
 		value, err := encodeAttestationRecord(att)
 		if err != nil {
 			return err
@@ -187,7 +168,7 @@ func (s *Store) SaveAttestationRecordsForValidators(
 		bkt := tx.Bucket(attestationRecordsBucket)
 		for i, att := range attestations {
 			for _, valIdx := range att.IndexedAttestation.AttestingIndices {
-				encIdx := ssz.MarshalUint64(make([]byte, 0), valIdx)
+				encIdx := encodeValidatorIndex(types.ValidatorIndex(valIdx))
 				key := append(encodedTargetEpoch[i], encIdx...)
 				if err := bkt.Put(key, encodedRecords[i]); err != nil {
 					return err
@@ -360,10 +341,7 @@ func (s *Store) PruneAttestations(ctx context.Context, currentEpoch types.Epoch,
 	}
 	// + 1 here so we can prune everything less than this, but not equal.
 	endPruneEpoch := currentEpoch - types.Epoch(historySize)
-	epochEnc, err := endPruneEpoch.MarshalSSZ()
-	if err != nil {
-		return err
-	}
+	epochEnc := encodeTargetEpoch(endPruneEpoch, historySize)
 	return s.db.Update(func(tx *bolt.Tx) error {
 		attBkt := tx.Bucket(attestationRecordsBucket)
 		c := attBkt.Cursor()
@@ -388,7 +366,6 @@ func (s *Store) HighestAttestations(
 	if len(indices) == 0 {
 		return nil, nil
 	}
-
 	// Sort indices to keep DB interactions short.
 	sort.SliceStable(indices, func(i, j int) bool {
 		return uint64(indices[i]) < uint64(indices[j])
@@ -396,15 +373,11 @@ func (s *Store) HighestAttestations(
 
 	var err error
 	encodedIndices := make([][]byte, len(indices))
-	for i, idx := range indices {
-		encodedIndices[i], err = idx.MarshalSSZ()
-		if err != nil {
-			return nil, err
-		}
+	for i, valIdx := range indices {
+		encodedIndices[i] = encodeValidatorIndex(valIdx)
 	}
 
 	history := make([]*slashpb.HighestAttestation, 0, len(encodedIndices))
-
 	err = s.db.View(func(tx *bolt.Tx) error {
 		attBkt := tx.Bucket(attestationRecordsBucket)
 		for i := 0; i < len(encodedIndices); i++ {
@@ -446,10 +419,7 @@ func keyForValidatorProposal(proposal *slashertypes.SignedBlockHeaderWrapper) ([
 	if err != nil {
 		return nil, err
 	}
-	encValidatorIdx, err := proposal.SignedBeaconBlockHeader.Header.ProposerIndex.MarshalSSZ()
-	if err != nil {
-		return nil, err
-	}
+	encValidatorIdx := encodeValidatorIndex(proposal.SignedBeaconBlockHeader.Header.ProposerIndex)
 	return append(encSlot, encValidatorIdx...), nil
 }
 

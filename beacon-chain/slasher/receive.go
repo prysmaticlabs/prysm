@@ -99,7 +99,7 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 			start := time.Now()
 			// Save the attestation records to our database.
 			if err := s.serviceCfg.Database.SaveAttestationRecordsForValidators(
-				ctx, validAtts,
+				ctx, validAtts, s.params.historyLength,
 			); err != nil {
 				log.WithError(err).Error("Could not save attestation records to DB")
 				continue

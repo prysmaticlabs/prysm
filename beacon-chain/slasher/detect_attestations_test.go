@@ -505,7 +505,7 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	att.IndexedAttestation.AttestingIndices = []uint64{uint64(validatorIdx)}
 	err = beaconDB.SaveAttestationRecordsForValidators(
 		ctx,
-		[]*slashertypes.IndexedAttestationWrapper{att},
+		[]*slashertypes.IndexedAttestationWrapper{att}, srv.params.historyLength,
 	)
 	require.NoError(t, err)
 
@@ -565,7 +565,7 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	att.IndexedAttestation.AttestingIndices = []uint64{uint64(validatorIdx)}
 	err = beaconDB.SaveAttestationRecordsForValidators(
 		ctx,
-		[]*slashertypes.IndexedAttestationWrapper{att},
+		[]*slashertypes.IndexedAttestationWrapper{att}, srv.params.historyLength,
 	)
 	require.NoError(t, err)
 
@@ -601,6 +601,7 @@ func Test_checkDoubleVotes_SlashableInputAttestations(t *testing.T) {
 			Database:      beaconDB,
 			StateNotifier: &mock.MockStateNotifier{},
 		},
+		params: DefaultParams(),
 	}
 	prev1 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{1})
 	cur1 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{2})
@@ -631,15 +632,16 @@ func Test_checkDoubleVotes_SlashableAttestationsOnDisk(t *testing.T) {
 		createAttestationWrapper(t, 0, 1, []uint64{1, 2}, []byte{1}),
 		createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{1}),
 	}
-	err := beaconDB.SaveAttestationRecordsForValidators(ctx, prevAtts)
-	require.NoError(t, err)
-
 	srv := &Service{
 		serviceCfg: &ServiceConfig{
 			Database:      beaconDB,
 			StateNotifier: &mock.MockStateNotifier{},
 		},
+		params: DefaultParams(),
 	}
+	err := beaconDB.SaveAttestationRecordsForValidators(ctx, prevAtts, srv.params.historyLength)
+	require.NoError(t, err)
+
 	prev1 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{1})
 	cur1 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{2})
 	prev2 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{1})

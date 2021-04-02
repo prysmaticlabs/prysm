@@ -189,7 +189,9 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 		)
 	}
 	if targetEpoch > minTarget {
-		existingAttRecord, err := slasherDB.AttestationRecordForValidator(ctx, validatorIdx, minTarget)
+		existingAttRecord, err := slasherDB.AttestationRecordForValidator(
+			ctx, validatorIdx, minTarget, m.params.historyLength,
+		)
 		if err != nil {
 			return nil, errors.Wrapf(
 				err, "could not get existing attestation record at target %d", minTarget,
@@ -234,7 +236,9 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 		)
 	}
 	if targetEpoch < maxTarget {
-		existingAttRecord, err := slasherDB.AttestationRecordForValidator(ctx, validatorIdx, maxTarget)
+		existingAttRecord, err := slasherDB.AttestationRecordForValidator(
+			ctx, validatorIdx, maxTarget, m.params.historyLength,
+		)
 		if err != nil {
 			return nil, errors.Wrapf(
 				err, "could not get existing attestation record at target %d", maxTarget,
