@@ -131,6 +131,12 @@ func (s *Service) retrieveActiveValidators() (uint64, error) {
 func defaultBlockTopicParams() *pubsub.TopicScoreParams {
 	decayEpoch := time.Duration(5)
 	blocksPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch)
+	meshWeight := -0.717
+	if !meshDeliveryIsScored {
+		// Set the mesh weight as zero as a temporary measure, so as to prevent
+		// the average nodes from being penalised.
+		meshWeight = 0
+	}
 	return &pubsub.TopicScoreParams{
 		TopicWeight:                     beaconBlockWeight,
 		TimeInMeshWeight:                maxInMeshScore / inMeshCap(),
@@ -139,13 +145,13 @@ func defaultBlockTopicParams() *pubsub.TopicScoreParams {
 		FirstMessageDeliveriesWeight:    1,
 		FirstMessageDeliveriesDecay:     scoreDecay(20 * oneEpochDuration()),
 		FirstMessageDeliveriesCap:       23,
-		MeshMessageDeliveriesWeight:     -0.717,
+		MeshMessageDeliveriesWeight:     meshWeight,
 		MeshMessageDeliveriesDecay:      scoreDecay(decayEpoch * oneEpochDuration()),
 		MeshMessageDeliveriesCap:        float64(blocksPerEpoch * uint64(decayEpoch)),
 		MeshMessageDeliveriesThreshold:  float64(blocksPerEpoch*uint64(decayEpoch)) / 10,
 		MeshMessageDeliveriesWindow:     2 * time.Second,
 		MeshMessageDeliveriesActivation: 4 * oneEpochDuration(),
-		MeshFailurePenaltyWeight:        -0.717,
+		MeshFailurePenaltyWeight:        meshWeight,
 		MeshFailurePenaltyDecay:         scoreDecay(decayEpoch * oneEpochDuration()),
 		InvalidMessageDeliveriesWeight:  -140.4475,
 		InvalidMessageDeliveriesDecay:   scoreDecay(50 * oneEpochDuration()),
