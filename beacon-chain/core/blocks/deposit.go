@@ -29,6 +29,15 @@ func ProcessPreGenesisDeposits(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process deposit")
 	}
+	state, err := activateValidatorWithEffectiveBalance(beaconState, deposits)
+	if err != nil {
+		return state, err
+	}
+	return beaconState, nil
+}
+
+// This updates validator's effective balance, and if it's above MaxEffectiveBalance, validator becomes active in genesis.
+func activateValidatorWithEffectiveBalance(beaconState iface.BeaconState, deposits []*ethpb.Deposit) (iface.BeaconState, error) {
 	for _, deposit := range deposits {
 		pubkey := deposit.Data.PublicKey
 		index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubkey))
@@ -55,7 +64,7 @@ func ProcessPreGenesisDeposits(
 			return nil, err
 		}
 	}
-	return beaconState, nil
+	return nil, nil
 }
 
 // ProcessDeposits is one of the operations performed on each processed
@@ -74,31 +83,39 @@ func ProcessDeposits(
 		return nil, err
 	}
 
-	deposits := b.Block.Body.Deposits
-	var err error
-	domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-
 	// Attempt to verify all deposit signatures at once, if this fails then fall back to processing
 	// individual deposits with signature verification enabled.
-	var verifySignature bool
-	if err := verifyDepositDataWithDomain(ctx, deposits, domain); err != nil {
-		log.WithError(err).Debug("Failed to verify deposit data, verifying signatures individually")
-		verifySignature = true
+	deposits := b.Block.Body.Deposits
+	batchVerified, err := batchVerifyDepositsSignatures(ctx, deposits)
+	if err != nil {
+		return nil, err
 	}
 
 	for _, deposit := range deposits {
 		if deposit == nil || deposit.Data == nil {
 			return nil, errors.New("got a nil deposit in block")
 		}
-		beaconState, err = ProcessDeposit(beaconState, deposit, verifySignature)
+		beaconState, err = ProcessDeposit(beaconState, deposit, batchVerified)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
 		}
 	}
 	return beaconState, nil
+}
+
+func batchVerifyDepositsSignatures(ctx context.Context, deposits []*ethpb.Deposit) (bool, error) {
+	var err error
+	domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
+	if err != nil {
+		return false, err
+	}
+
+	var verified bool
+	if err := verifyDepositDataWithDomain(ctx, deposits, domain); err != nil {
+		log.WithError(err).Debug("Failed to batch verify deposits signatures, will try individual verify")
+		verified = true
+	}
+	return verified, nil
 }
 
 // ProcessDeposit takes in a deposit object and inserts it
