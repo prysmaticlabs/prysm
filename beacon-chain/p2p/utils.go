@@ -13,6 +13,8 @@ import (
 	"path"
 	"time"
 
+	"google.golang.org/protobuf/proto"
+
 	gcrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p-core/crypto"
@@ -125,7 +127,7 @@ func metaDataFromConfig(cfg *Config) (*pbp2p.MetaData, error) {
 			SeqNumber: 0,
 			Attnets:   bitfield.NewBitvector64(),
 		}
-		dst, err := metaData.MarshalSSZ()
+		dst, err := proto.Marshal(metaData)
 		if err != nil {
 			return nil, err
 		}
@@ -143,7 +145,7 @@ func metaDataFromConfig(cfg *Config) (*pbp2p.MetaData, error) {
 		return nil, err
 	}
 	metaData := &pbp2p.MetaData{}
-	if err := metaData.UnmarshalSSZ(src); err != nil {
+	if err := proto.Unmarshal(src, metaData); err != nil {
 		return nil, err
 	}
 	return metaData, nil

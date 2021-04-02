@@ -6,7 +6,8 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/gogo/protobuf/proto"
+	"google.golang.org/protobuf/proto"
+
 	"github.com/pkg/errors"
 	v1 "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
