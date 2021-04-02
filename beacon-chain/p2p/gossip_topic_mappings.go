@@ -3,7 +3,7 @@ package p2p
 import (
 	"reflect"
 
-	"github.com/gogo/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
 

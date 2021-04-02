@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/dgraph-io/ristretto"
-	"github.com/gogo/protobuf/proto"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
@@ -37,6 +36,7 @@ import (
 	slashingiface "github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+	"google.golang.org/protobuf/proto"
 )
 
 // reconnectPeriod is the frequency that we try to restart our

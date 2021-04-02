@@ -3,7 +3,7 @@ package kv
 import (
 	"context"
 
-	"github.com/gogo/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	bolt "go.etcd.io/bbolt"

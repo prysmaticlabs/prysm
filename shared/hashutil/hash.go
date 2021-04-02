@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	fastssz "github.com/ferranbt/fastssz"
-	"github.com/gogo/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 	"github.com/minio/highwayhash"
 	"github.com/minio/sha256-simd"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"

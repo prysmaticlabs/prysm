@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/d4l3k/messagediff"
-	"github.com/gogo/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pb "github.com/libp2p/go-libp2p-pubsub/pb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
