@@ -12,6 +12,17 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+func TestP2PPreregistration_DefaultDataDir(t *testing.T) {
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.String(cmd.DataDirFlag.Name, "", "")
+	ctx := cli.NewContext(&app, set, nil)
+
+	_, dataDir, err := P2PPreregistration(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, cmd.DefaultDataDir(), dataDir)
+}
+
 func TestP2PPreregistration(t *testing.T) {
 	sampleNode := "- enr:-TESTNODE"
 	testDataDir := "testDataDir"
@@ -35,17 +46,6 @@ func TestP2PPreregistration(t *testing.T) {
 	require.Equal(t, 1, len(bootstrapNodeAddrs))
 	assert.Equal(t, sampleNode[2:], bootstrapNodeAddrs[0])
 	assert.Equal(t, testDataDir, dataDir)
-}
-
-func TestP2PPreregistration_DefaultDataDir(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	set.String(cmd.DataDirFlag.Name, "", "")
-	ctx := cli.NewContext(&app, set, nil)
-
-	_, dataDir, err := P2PPreregistration(ctx)
-	require.NoError(t, err)
-	assert.Equal(t, cmd.DefaultDataDir(), dataDir)
 }
 
 func TestBootStrapNodeFile(t *testing.T) {
