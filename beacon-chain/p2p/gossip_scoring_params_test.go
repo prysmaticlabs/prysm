@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -59,4 +60,20 @@ func TestCorrect_ActiveValidatorsCount(t *testing.T) {
 	vals, err = s.retrieveActiveValidators()
 	assert.NoError(t, err, "genesis state not retrieved")
 	assert.Equal(t, int(params.BeaconConfig().MinGenesisActiveValidatorCount)+100, int(vals), "mainnet genesis active count isn't accurate")
+}
+
+func TestLoggingParameters(t *testing.T) {
+	logGossipParameters("testing", nil)
+	logGossipParameters("testing", &pubsub.TopicScoreParams{})
+	// Test out actual gossip parameters.
+	logGossipParameters("testing", defaultBlockTopicParams())
+	p, err := defaultAggregateSubnetTopicParams(10000)
+	assert.NoError(t, err)
+	logGossipParameters("testing", p)
+	p, err = defaultAggregateTopicParams(10000)
+	assert.NoError(t, err)
+	logGossipParameters("testing", p)
+	logGossipParameters("testing", defaultAttesterSlashingTopicParams())
+	logGossipParameters("testing", defaultProposerSlashingTopicParams())
+	logGossipParameters("testing", defaultVoluntaryExitTopicParams())
 }
