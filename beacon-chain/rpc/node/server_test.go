@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"google.golang.org/protobuf/types/known/timestamppb"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
@@ -58,17 +60,15 @@ func TestNodeServer_GetGenesis(t *testing.T) {
 	res, err := ns.GetGenesis(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.DeepEqual(t, addr.Bytes(), res.DepositContractAddress)
-	pUnix, err := ptypes.TimestampProto(time.Unix(0, 0))
-	require.NoError(t, err)
-	assert.Equal(t, true, res.GenesisTime.Equal(pUnix))
+	pUnix := timestamppb.New(time.Unix(0, 0))
+	assert.Equal(t, res.GenesisTime.Seconds, pUnix.Seconds)
 	assert.DeepEqual(t, genValRoot[:], res.GenesisValidatorsRoot)
 
 	ns.GenesisTimeFetcher = &mock.ChainService{Genesis: time.Unix(10, 0)}
 	res, err = ns.GetGenesis(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
-	pUnix, err = ptypes.TimestampProto(time.Unix(10, 0))
-	require.NoError(t, err)
-	assert.Equal(t, true, res.GenesisTime.Equal(pUnix))
+	pUnix = timestamppb.New(time.Unix(10, 0))
+	assert.Equal(t, res.GenesisTime.Seconds, pUnix.Seconds)
 }
 
 func TestNodeServer_GetVersion(t *testing.T) {

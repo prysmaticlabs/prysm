@@ -53,7 +53,7 @@ type infostream struct {
 // eth1Deposit contains information about a deposit made on the Ethereum 1 chain.
 type eth1Deposit struct {
 	block *big.Int
-	data  *ethpb.DepositData
+	data  *ethpb.Deposit_Data
 }
 
 var (

@@ -38,7 +38,7 @@ func (bs *Server) GetGenesis(ctx context.Context, _ *emptypb.Empty) (*ethpb.Gene
 	forkVersion := params.BeaconConfig().GenesisForkVersion
 
 	return &ethpb.GenesisResponse{
-		Data: &ethpb.Genesis{
+		Data: &ethpb.GenesisResponse_Genesis{
 			GenesisTime: &timestamppb.Timestamp{
 				Seconds: genesisTime.Unix(),
 				Nanos:   0,
@@ -65,7 +65,7 @@ func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*e
 	}
 
 	return &ethpb.StateRootResponse{
-		Data: &ethpb.StateRoot{
+		Data: &ethpb.StateRootResponse_StateRoot{
 			StateRoot: root,
 		},
 	}, nil
@@ -113,7 +113,7 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 	}
 
 	return &ethpb.StateFinalityCheckpointResponse{
-		Data: &ethpb.StateFinalityCheckpoint{
+		Data: &ethpb.StateFinalityCheckpointResponse_StateFinalityCheckpoint{
 			PreviousJustified: checkpoint(state.PreviousJustifiedCheckpoint()),
 			CurrentJustified:  checkpoint(state.CurrentJustifiedCheckpoint()),
 			Finalized:         checkpoint(state.FinalizedCheckpoint()),

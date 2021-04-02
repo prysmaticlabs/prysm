@@ -139,7 +139,7 @@ func genesisStateFromJSONValidators(r io.Reader, genesisTime uint64) (*pb.Beacon
 	if err := json.Unmarshal(enc, &depositJSON); err != nil {
 		return nil, err
 	}
-	depositDataList := make([]*ethpb.DepositData, len(depositJSON))
+	depositDataList := make([]*ethpb.Deposit_Data, len(depositJSON))
 	depositDataRoots := make([][]byte, len(depositJSON))
 	for i, val := range depositJSON {
 		data, dataRootBytes, err := depositJSONToDepositData(val)
@@ -156,7 +156,7 @@ func genesisStateFromJSONValidators(r io.Reader, genesisTime uint64) (*pb.Beacon
 	return beaconState, nil
 }
 
-func depositJSONToDepositData(input *DepositDataJSON) (depositData *ethpb.DepositData, dataRoot []byte, err error) {
+func depositJSONToDepositData(input *DepositDataJSON) (depositData *ethpb.Deposit_Data, dataRoot []byte, err error) {
 	pubKeyBytes, err := hex.DecodeString(strings.TrimPrefix(input.PubKey, "0x"))
 	if err != nil {
 		return
@@ -173,7 +173,7 @@ func depositJSONToDepositData(input *DepositDataJSON) (depositData *ethpb.Deposi
 	if err != nil {
 		return
 	}
-	depositData = &ethpb.DepositData{
+	depositData = &ethpb.Deposit_Data{
 		PublicKey:             pubKeyBytes,
 		WithdrawalCredentials: withdrawalbytes,
 		Amount:                input.Amount,

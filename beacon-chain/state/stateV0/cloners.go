@@ -229,11 +229,11 @@ func CopyDeposit(deposit *ethpb.Deposit) *ethpb.Deposit {
 }
 
 // CopyDepositData copies the provided deposit data.
-func CopyDepositData(depData *ethpb.DepositData) *ethpb.DepositData {
+func CopyDepositData(depData *ethpb.Deposit_Data) *ethpb.Deposit_Data {
 	if depData == nil {
 		return nil
 	}
-	return &ethpb.DepositData{
+	return &ethpb.Deposit_Data{
 		PublicKey:             bytesutil.SafeCopyBytes(depData.PublicKey),
 		WithdrawalCredentials: bytesutil.SafeCopyBytes(depData.WithdrawalCredentials),
 		Amount:                depData.Amount,

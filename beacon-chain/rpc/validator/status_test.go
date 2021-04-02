@@ -67,7 +67,7 @@ func TestValidatorStatus_Deposited(t *testing.T) {
 	ctx := context.Background()
 
 	pubKey1 := pubKey(1)
-	depData := &ethpb.DepositData{
+	depData := &ethpb.Deposit_Data{
 		Amount:                params.BeaconConfig().MaxEffectiveBalance,
 		PublicKey:             pubKey1,
 		Signature:             bytesutil.PadTo([]byte("hi"), 96),
@@ -119,7 +119,7 @@ func TestValidatorStatus_PartiallyDeposited(t *testing.T) {
 	ctx := context.Background()
 
 	pubKey1 := pubKey(1)
-	depData := &ethpb.DepositData{
+	depData := &ethpb.Deposit_Data{
 		Amount:                params.BeaconConfig().MinDepositAmount,
 		PublicKey:             pubKey1,
 		Signature:             []byte("hi"),
@@ -192,7 +192,7 @@ func TestValidatorStatus_Pending(t *testing.T) {
 	require.NoError(t, db.SaveState(ctx, state, genesisRoot), "Could not save state")
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, genesisRoot), "Could not save genesis state")
 
-	depData := &ethpb.DepositData{
+	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
 		Signature:             bytesutil.PadTo([]byte("hi"), 96),
 		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 32),
@@ -239,7 +239,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 
 	pubKey := pubKey(1)
 
-	depData := &ethpb.DepositData{
+	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
 		Signature:             bytesutil.PadTo([]byte("hi"), 96),
 		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 32),
@@ -330,7 +330,7 @@ func TestValidatorStatus_Exiting(t *testing.T) {
 		}}
 	stateObj, err := stateV0.InitializeFromProtoUnsafe(state)
 	require.NoError(t, err)
-	depData := &ethpb.DepositData{
+	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
 		Signature:             bytesutil.PadTo([]byte("hi"), 96),
 		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 32),
@@ -390,7 +390,7 @@ func TestValidatorStatus_Slashing(t *testing.T) {
 		}}
 	stateObj, err := stateV0.InitializeFromProtoUnsafe(state)
 	require.NoError(t, err)
-	depData := &ethpb.DepositData{
+	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
 		Signature:             bytesutil.PadTo([]byte("hi"), 96),
 		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 32),
@@ -455,7 +455,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 		WithdrawalCredentials: make([]byte, 32)},
 	})
 	require.NoError(t, err)
-	depData := &ethpb.DepositData{
+	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
 		Signature:             bytesutil.PadTo([]byte("hi"), 96),
 		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 32),
@@ -676,7 +676,7 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 	require.NoError(t, err)
 
 	for i := 0; i < 6; i++ {
-		depData := &ethpb.DepositData{
+		depData := &ethpb.Deposit_Data{
 			PublicKey:             pubKey(uint64(i)),
 			Signature:             bytesutil.PadTo([]byte("hi"), 96),
 			WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 32),

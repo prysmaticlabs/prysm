@@ -1334,6 +1334,8 @@ github.com/prysmaticlabs/ethereumapis v0.0.0-20210401210457-db0002bfd4ac h1:eU2P
 github.com/prysmaticlabs/ethereumapis v0.0.0-20210401210457-db0002bfd4ac/go.mod h1:yFNwF5kufqrRfIo6/3hoHVvJZ7KS+c0iHdX/0vfZg4s=
 github.com/prysmaticlabs/ethereumapis v0.0.0-20210402012917-8455b2d9ce2a h1:Kfg4e6IV2+snYkB4lAWKLEkPNPWwDp5hEqqQWocpLIc=
 github.com/prysmaticlabs/ethereumapis v0.0.0-20210402012917-8455b2d9ce2a/go.mod h1:rG3cLpVzvg0cHaXsudyT7xCUhPr4wLa2I93WE6b2VcI=
+github.com/prysmaticlabs/ethereumapis v0.0.0-20210402021816-cbf53adfd7f7 h1:CpQHKy12zdD0IPbeX5Tuq8v6P3Ad7upRgMbWjnZyUZ8=
+github.com/prysmaticlabs/ethereumapis v0.0.0-20210402021816-cbf53adfd7f7/go.mod h1:g/1Q9/Q2aFdRqQOCxPmowqTERrs/jFbvtVWE7UM9Tnk=
 github.com/prysmaticlabs/go-bitfield v0.0.0-20210108222456-8e92c3709aa0/go.mod h1:hCwmef+4qXWjv0jLDbQdWnL0Ol7cS7/lCSS26WR+u6s=
 github.com/prysmaticlabs/go-bitfield v0.0.0-20210202205921-7fcea7c45dc8 h1:18+Qqobq3HAUY0hgIhPGSqmLFnaLLocemmU7+Sj2aYQ=
 github.com/prysmaticlabs/go-bitfield v0.0.0-20210202205921-7fcea7c45dc8/go.mod h1:hCwmef+4qXWjv0jLDbQdWnL0Ol7cS7/lCSS26WR+u6s=
@@ -1347,6 +1349,8 @@ github.com/prysmaticlabs/protoc-gen-go-cast v0.0.0-20210401203017-e5049b268be2 h
 github.com/prysmaticlabs/protoc-gen-go-cast v0.0.0-20210401203017-e5049b268be2/go.mod h1:VF2m4ZvSpE1gvUcGaamwUYF7BbjEKQE0UlofJM9R0wE=
 github.com/prysmaticlabs/protoc-gen-go-cast v0.0.0-20210402012710-095d2ebc6bcd h1:he7zIQt18zCCuHwL7By22BUk8vhCAIy/BQ+Ad2K8Z3k=
 github.com/prysmaticlabs/protoc-gen-go-cast v0.0.0-20210402012710-095d2ebc6bcd/go.mod h1:VF2m4ZvSpE1gvUcGaamwUYF7BbjEKQE0UlofJM9R0wE=
+github.com/prysmaticlabs/protoc-gen-go-cast v0.0.0-20210402021330-b4f820ca0bcc h1:TTQHMinGGPITNCs5F9yBmkMHJFmfPI0SuU5WK5B++EE=
+github.com/prysmaticlabs/protoc-gen-go-cast v0.0.0-20210402021330-b4f820ca0bcc/go.mod h1:VF2m4ZvSpE1gvUcGaamwUYF7BbjEKQE0UlofJM9R0wE=
 github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
 github.com/rcrowley/go-metrics v0.0.0-20190826022208-cac0b30c2563 h1:dY6ETXrvDG7Sa4vE8ZQG4yqWg6UnOcbqTAahkV813vQ=
 github.com/rcrowley/go-metrics v0.0.0-20190826022208-cac0b30c2563/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=

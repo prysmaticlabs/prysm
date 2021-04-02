@@ -171,7 +171,7 @@ func (s *Service) saveGenesisState(ctx context.Context, genesisState iface.Beaco
 	for i := types.ValidatorIndex(0); uint64(i) < uint64(genesisState.NumValidators()); i++ {
 		pk := genesisState.PubkeyAtIndex(i)
 		s.chainStartDeposits[i] = &ethpb.Deposit{
-			Data: &ethpb.DepositData{
+			Data: &ethpb.Deposit_Data{
 				PublicKey: pk[:],
 			},
 		}
