@@ -1,10 +1,12 @@
 package helpers
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -94,4 +96,48 @@ func ComputeWeakSubjectivityPeriod(st iface.ReadOnlyBeaconState) (types.Epoch, e
 	}
 
 	return types.Epoch(wsp), nil
+}
+
+// IsWithinWeakSubjectivityPeriod verifies if a given weak subjectivity checkpoint is not stale i.e.
+// the current node is so far beyond, that a given state and checkpoint are not for the latest weak
+// subjectivity point. Provided checkpoint still can be used to double-check that node's block root
+// at a given epoch matches that of the checkpoint.
+//
+// Reference implementation:
+// https://github.com/ethereum/eth2.0-specs/blob/master/specs/phase0/weak-subjectivity.md#checking-for-stale-weak-subjectivity-checkpoint
+
+// def is_within_weak_subjectivity_period(store: Store, ws_state: BeaconState, ws_checkpoint: Checkpoint) -> bool:
+//    # Clients may choose to validate the input state against the input Weak Subjectivity Checkpoint
+//    assert ws_state.latest_block_header.state_root == ws_checkpoint.root
+//    assert compute_epoch_at_slot(ws_state.slot) == ws_checkpoint.epoch
+//
+//    ws_period = compute_weak_subjectivity_period(ws_state)
+//    ws_state_epoch = compute_epoch_at_slot(ws_state.slot)
+//    current_epoch = compute_epoch_at_slot(get_current_slot(store))
+//    return current_epoch <= ws_state_epoch + ws_period
+func IsWithinWeakSubjectivityPeriod(
+	currentEpoch types.Epoch, wsState iface.ReadOnlyBeaconState, wsCheckpoint *eth.WeakSubjectivityCheckpoint) (bool, error) {
+	// Make sure that incoming objects are not nil.
+	if wsState == nil || wsState.LatestBlockHeader() == nil || wsCheckpoint == nil {
+		return false, errors.New("invalid weak subjectivity state or checkpoint")
+	}
+
+	// Assert that state and checkpoint have the same root and epoch.
+	if !bytes.Equal(wsState.LatestBlockHeader().StateRoot, wsCheckpoint.StateRoot) {
+		return false, fmt.Errorf("state (%#x) and checkpoint (%#x) roots do not match",
+			wsState.LatestBlockHeader().StateRoot, wsCheckpoint.StateRoot)
+	}
+	if SlotToEpoch(wsState.Slot()) != wsCheckpoint.Epoch {
+		return false, fmt.Errorf("state (%v) and checkpoint (%v) epochs do not match",
+			SlotToEpoch(wsState.Slot()), wsCheckpoint.Epoch)
+	}
+
+	// Compare given epoch to state epoch + weak subjectivity period.
+	wsPeriod, err := ComputeWeakSubjectivityPeriod(wsState)
+	if err != nil {
+		return false, fmt.Errorf("cannot compute weak subjectivity period: %w", err)
+	}
+	wsStateEpoch := SlotToEpoch(wsState.Slot())
+
+	return currentEpoch <= wsStateEpoch+wsPeriod, nil
 }

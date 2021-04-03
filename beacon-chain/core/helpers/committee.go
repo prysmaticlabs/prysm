@@ -22,6 +22,11 @@ import (
 var committeeCache = cache.NewCommitteesCache()
 var proposerIndicesCache = cache.NewProposerIndicesCache()
 
+// ResetCommitteeCache is used from other packages (in tests) to reset the cache.
+func ResetCommitteeCache() {
+	committeeCache = cache.NewCommitteesCache()
+}
+
 // SlotCommitteeCount returns the number of crosslink committees of a slot. The
 // active validator count is provided as an argument rather than a imported implementation
 // from the spec definition. Having the active validator count as an argument allows for
