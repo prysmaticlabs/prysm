@@ -15,6 +15,27 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+const (
+	// overlay parameters
+	gossipSubD   = 8  // topic stable mesh target count
+	gossipSubDlo = 6  // topic stable mesh low watermark
+	gossipSubDhi = 12 // topic stable mesh high watermark
+
+	// gossip parameters
+	gossipSubMcacheLen    = 6   // number of windows to retain full messages in cache for `IWANT` responses
+	gossipSubMcacheGossip = 3   // number of windows to gossip about
+	gossipSubSeenTTL      = 550 // number of heartbeat intervals to retain message IDs
+
+	// fanout ttl
+	gossipSubFanoutTTL = 60000000000 // TTL for fanout maps for topics we are not subscribed to but have published to, in nano seconds
+
+	// heartbeat interval
+	gossipSubHeartbeatInterval = 700 * time.Millisecond // frequency of heartbeat, milliseconds
+
+	// misc
+	randomSubD = 6 // random gossip target
+)
+
 // JoinTopic will join PubSub topic, if not already joined.
 func (s *Service) JoinTopic(topic string, opts ...pubsub.TopicOpt) (*pubsub.Topic, error) {
 	s.joinedTopicsLock.Lock()
@@ -80,10 +101,12 @@ func (s *Service) SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub
 		if err != nil {
 			return nil, err
 		}
+
 		if scoringParams != nil {
 			if err := topicHandle.SetScoreParams(scoringParams); err != nil {
 				return nil, err
 			}
+			logGossipParameters(topic, scoringParams)
 		}
 	}
 	return topicHandle.Subscribe(opts...)
@@ -124,13 +147,12 @@ func msgIDFunction(pmsg *pubsub_pb.Message) string {
 }
 
 func setPubSubParameters() {
-	heartBeatInterval := 700 * time.Millisecond
-	pubsub.GossipSubDlo = 6
-	pubsub.GossipSubD = 8
-	pubsub.GossipSubHeartbeatInterval = heartBeatInterval
-	pubsub.GossipSubHistoryLength = 6
-	pubsub.GossipSubHistoryGossip = 3
-	pubsub.TimeCacheDuration = 550 * heartBeatInterval
+	pubsub.GossipSubDlo = gossipSubDlo
+	pubsub.GossipSubD = gossipSubD
+	pubsub.GossipSubHeartbeatInterval = gossipSubHeartbeatInterval
+	pubsub.GossipSubHistoryLength = gossipSubMcacheLen
+	pubsub.GossipSubHistoryGossip = gossipSubMcacheGossip
+	pubsub.TimeCacheDuration = 550 * gossipSubHeartbeatInterval
 
 	// Set a larger gossip history to ensure that slower
 	// messages have a longer time to be propagated. This
