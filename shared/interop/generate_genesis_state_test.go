@@ -1,6 +1,7 @@
 package interop_test
 
 import (
+	"context"
 	"testing"
 
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -23,7 +24,7 @@ func TestGenerateGenesisState(t *testing.T) {
 	deposits, err := interop.GenerateDepositsFromData(depositDataItems, trie)
 	require.NoError(t, err)
 	root := trie.Root()
-	genesisState, err := state.GenesisBeaconState(deposits, 0, &eth.Eth1Data{
+	genesisState, err := state.GenesisBeaconState(context.Background(), deposits, 0, &eth.Eth1Data{
 		DepositRoot:  root[:],
 		DepositCount: uint64(len(deposits)),
 	})

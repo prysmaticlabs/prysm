@@ -55,7 +55,7 @@ import (
 //	    state.compact_committees_roots[index] = committee_root
 //	  return state
 // This method differs from the spec so as to process deposits beforehand instead of the end of the function.
-func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (iface.BeaconState, error) {
+func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (iface.BeaconState, error) {
 	if eth1Data == nil {
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
@@ -95,7 +95,7 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 		return nil, err
 	}
 
-	state, err = b.ProcessPreGenesisDeposits(context.TODO(), state, deposits)
+	state, err = b.ProcessPreGenesisDeposits(ctx, state, deposits)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process validator deposits")
 	}
