@@ -10,12 +10,11 @@ package ethereum_beacon_rpc_v1
 
 import (
 	"context"
-	"io"
-	"net/http"
-
 	"github.com/golang/protobuf/ptypes/empty"
+	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/utilities"
+	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -23,6 +22,8 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
+	"io"
+	"net/http"
 )
 
 // Suppress "imported and not used" errors
@@ -32,6 +33,9 @@ var _ status.Status
 var _ = runtime.String
 var _ = utilities.NewDoubleArray
 var _ = metadata.Join
+var _ = github_com_prysmaticlabs_eth2_types.Epoch(0)
+var _ = emptypb.Empty{}
+var _ = empty.Empty{}
 
 var (
 	filter_Debug_GetBeaconState_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
@@ -142,7 +146,7 @@ func local_request_Debug_SetLoggingLevel_0(ctx context.Context, marshaler runtim
 }
 
 func request_Debug_GetProtoArrayForkChoice_0(ctx context.Context, marshaler runtime.Marshaler, client DebugClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq empty.Empty
+	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
 	msg, err := client.GetProtoArrayForkChoice(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
@@ -151,7 +155,7 @@ func request_Debug_GetProtoArrayForkChoice_0(ctx context.Context, marshaler runt
 }
 
 func local_request_Debug_GetProtoArrayForkChoice_0(ctx context.Context, marshaler runtime.Marshaler, server DebugServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq empty.Empty
+	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
 	msg, err := server.GetProtoArrayForkChoice(ctx, &protoReq)
@@ -160,7 +164,7 @@ func local_request_Debug_GetProtoArrayForkChoice_0(ctx context.Context, marshale
 }
 
 func request_Debug_ListPeers_0(ctx context.Context, marshaler runtime.Marshaler, client DebugClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq empty.Empty
+	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
 	msg, err := client.ListPeers(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
@@ -169,7 +173,7 @@ func request_Debug_ListPeers_0(ctx context.Context, marshaler runtime.Marshaler,
 }
 
 func local_request_Debug_ListPeers_0(ctx context.Context, marshaler runtime.Marshaler, server DebugServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq empty.Empty
+	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
 	msg, err := server.ListPeers(ctx, &protoReq)

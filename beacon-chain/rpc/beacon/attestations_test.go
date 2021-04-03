@@ -8,9 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"google.golang.org/protobuf/proto"
 	"github.com/golang/mock/gomock"
-	emptypb "github.com/golang/protobuf/ptypes/empty"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -32,6 +30,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestServer_ListAttestations_NoResults(t *testing.T) {
