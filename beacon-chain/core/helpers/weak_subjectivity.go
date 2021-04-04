@@ -141,3 +141,18 @@ func IsWithinWeakSubjectivityPeriod(
 
 	return currentEpoch <= wsStateEpoch+wsPeriod, nil
 }
+
+// LatestWeakSubjectivityEpoch returns epoch of the most recent weak subjectivity checkpoint known to a node.
+//
+// Within the weak subjectivity period, if two conflicting blocks are finalized, 1/3 - D (D := safety decay)
+// of validators will get slashed. Therefore, it is safe to assume that any finalized checkpoint within that
+// period is protected by this safety margin.
+func LatestWeakSubjectivityEpoch(st iface.ReadOnlyBeaconState) (types.Epoch, error) {
+	wsPeriod, err := ComputeWeakSubjectivityPeriod(st)
+	if err != nil {
+		return 0, err
+	}
+
+	finalizedEpoch := st.FinalizedCheckpointEpoch()
+	return finalizedEpoch - (finalizedEpoch % wsPeriod), nil
+}
