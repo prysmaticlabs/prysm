@@ -304,3 +304,59 @@ func Test_writeWalletPasswordToDisk(t *testing.T) {
 	err = writeWalletPasswordToDisk(walletDir, "somepassword")
 	require.NotNil(t, err)
 }
+
+func createImportedWalletWithAccounts(t testing.TB, numAccounts int) (*Server, [][]byte) {
+	localWalletDir := setupWalletDir(t)
+	defaultWalletPath = localWalletDir
+	ctx := context.Background()
+	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
+		WalletCfg: &wallet.Config{
+			WalletDir:      defaultWalletPath,
+			KeymanagerKind: keymanager.Imported,
+			WalletPassword: strongPass,
+		},
+		SkipMnemonicConfirm: true,
+	})
+	require.NoError(t, err)
+
+	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
+	require.NoError(t, err)
+	s := &Server{
+		keymanager:            km,
+		wallet:                w,
+		walletDir:             defaultWalletPath,
+		walletInitializedFeed: new(event.Feed),
+	}
+	// First we import accounts into the wallet.
+	encryptor := keystorev4.New()
+	keystores := make([]string, numAccounts)
+	pubKeys := make([][]byte, len(keystores))
+	for i := 0; i < len(keystores); i++ {
+		privKey, err := bls.RandKey()
+		require.NoError(t, err)
+		pubKey := fmt.Sprintf("%x", privKey.PublicKey().Marshal())
+		id, err := uuid.NewRandom()
+		require.NoError(t, err)
+		cryptoFields, err := encryptor.Encrypt(privKey.Marshal(), strongPass)
+		require.NoError(t, err)
+		item := &keymanager.Keystore{
+			Crypto:  cryptoFields,
+			ID:      id.String(),
+			Version: encryptor.Version(),
+			Pubkey:  pubKey,
+			Name:    encryptor.Name(),
+		}
+		encodedFile, err := json.MarshalIndent(item, "", "\t")
+		require.NoError(t, err)
+		keystores[i] = string(encodedFile)
+		pubKeys[i] = privKey.PublicKey().Marshal()
+	}
+	_, err = s.ImportKeystores(ctx, &pb.ImportKeystoresRequest{
+		KeystoresImported: keystores,
+		KeystoresPassword: strongPass,
+	})
+	require.NoError(t, err)
+	s.keymanager, err = s.wallet.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
+	require.NoError(t, err)
+	return s, pubKeys
+}
