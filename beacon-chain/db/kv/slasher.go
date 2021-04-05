@@ -322,7 +322,7 @@ func (s *Store) PruneProposals(ctx context.Context, currentEpoch types.Epoch, hi
 		proposalBkt := tx.Bucket(proposalRecordsBucket)
 		c := proposalBkt.Cursor()
 		for k, _ := c.Seek(endEnc); k != nil; k, _ = c.Prev() {
-			if !prefixLessThan(k, endEnc) {
+			if !slotPrefixLessThan(k, endEnc) {
 				continue
 			}
 			slasherProposalsPrunedTotal.Inc()
@@ -346,7 +346,7 @@ func (s *Store) PruneAttestations(ctx context.Context, currentEpoch types.Epoch,
 		attBkt := tx.Bucket(attestationRecordsBucket)
 		c := attBkt.Cursor()
 		for k, _ := c.Seek(epochEnc); k != nil; k, _ = c.Prev() {
-			if !prefixLessThan(k, epochEnc) {
+			if !epochPrefixLessThan(k, epochEnc) {
 				continue
 			}
 			slasherAttestationsPrunedTotal.Inc()
@@ -383,7 +383,7 @@ func (s *Store) HighestAttestations(
 		for i := 0; i < len(encodedIndices); i++ {
 			c := attBkt.Cursor()
 			for k, v := c.Last(); k != nil; k, v = c.Prev() {
-				if suffixForIndex(k, encodedIndices[i]) {
+				if suffixForAttestationRecordsKey(k, encodedIndices[i]) {
 					attWrapper, err := decodeAttestationRecord(v)
 					if err != nil {
 						return err
@@ -403,14 +403,19 @@ func (s *Store) HighestAttestations(
 	return history, err
 }
 
-func prefixLessThan(key, lessThan []byte) bool {
+func slotPrefixLessThan(key, lessThan []byte) bool {
 	encSlot := key[:8]
 	return bytes.Compare(encSlot, lessThan) < 0
 }
 
-func suffixForIndex(key, index []byte) bool {
-	encIdx := key[8:]
-	return bytes.Equal(encIdx, index)
+func epochPrefixLessThan(key, lessThan []byte) bool {
+	encSlot := key[:2]
+	return bytes.Compare(encSlot, lessThan) < 0
+}
+
+func suffixForAttestationRecordsKey(key, encodedValidatorIndex []byte) bool {
+	encIdx := key[2:]
+	return bytes.Equal(encIdx, encodedValidatorIndex)
 }
 
 // Disk key for a validator proposal, including a slot+validatorIndex as a byte slice.
@@ -464,7 +469,7 @@ func decodeAttestationRecord(encoded []byte) (*slashertypes.IndexedAttestationWr
 	}
 	signingRoot := encoded[:32]
 	decodedAtt := &ethpb.IndexedAttestation{}
-	decodedAttBytes, err := snappy.Decode(nil, encoded[:32])
+	decodedAttBytes, err := snappy.Decode(nil, encoded[32:])
 	if err != nil {
 		return nil, err
 	}
@@ -512,7 +517,7 @@ func decodeProposalRecord(encoded []byte) (*slashertypes.SignedBlockHeaderWrappe
 // client optimization to save space in the database.
 func encodeTargetEpoch(epoch types.Epoch, historyLength uint64) []byte {
 	buf := make([]byte, 2)
-	binary.LittleEndian.PutUint16(buf, uint16(uint64(epoch.Mod(historyLength))))
+	binary.LittleEndian.PutUint16(buf, uint16(epoch.Mod(historyLength)))
 	return buf
 }
 

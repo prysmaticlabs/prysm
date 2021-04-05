@@ -9,7 +9,6 @@ import (
 	ssz "github.com/ferranbt/fastssz"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/slasher"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	slashpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -18,14 +17,15 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
+const defaultHistoryLength = 4096
+
 func TestStore_AttestationRecordForValidator_SaveRetrieve(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := setupDB(t)
 	valIdx := types.ValidatorIndex(1)
 	target := types.Epoch(5)
 	source := types.Epoch(4)
-	params := slasher.DefaultParams()
-	attRecord, err := beaconDB.AttestationRecordForValidator(ctx, valIdx, target, params.HistoryLength)
+	attRecord, err := beaconDB.AttestationRecordForValidator(ctx, valIdx, target, defaultHistoryLength)
 	require.NoError(t, err)
 	require.Equal(t, true, attRecord == nil)
 
@@ -35,10 +35,10 @@ func TestStore_AttestationRecordForValidator_SaveRetrieve(t *testing.T) {
 		[]*slashertypes.IndexedAttestationWrapper{
 			createAttestationWrapper(source, target, []uint64{uint64(valIdx)}, sr[:]),
 		},
-		params.HistoryLength,
+		defaultHistoryLength,
 	)
 	require.NoError(t, err)
-	attRecord, err = beaconDB.AttestationRecordForValidator(ctx, valIdx, target, params.HistoryLength)
+	attRecord, err = beaconDB.AttestationRecordForValidator(ctx, valIdx, target, defaultHistoryLength)
 	require.NoError(t, err)
 	assert.DeepEqual(t, target, attRecord.IndexedAttestation.Data.Target.Epoch)
 	assert.DeepEqual(t, source, attRecord.IndexedAttestation.Data.Source.Epoch)
@@ -74,11 +74,10 @@ func TestStore_LastEpochWrittenForValidators(t *testing.T) {
 func TestStore_CheckAttesterDoubleVotes(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := setupDB(t)
-	params := slasher.DefaultParams()
 	err := beaconDB.SaveAttestationRecordsForValidators(ctx, []*slashertypes.IndexedAttestationWrapper{
 		createAttestationWrapper(2, 3, []uint64{0, 1}, []byte{1}),
 		createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{1}),
-	}, params.HistoryLength)
+	}, defaultHistoryLength)
 	require.NoError(t, err)
 
 	slashableAtts := []*slashertypes.IndexedAttestationWrapper{
@@ -112,7 +111,7 @@ func TestStore_CheckAttesterDoubleVotes(t *testing.T) {
 			AttestationWrapper:     createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{2}),
 		},
 	}
-	doubleVotes, err := beaconDB.CheckAttesterDoubleVotes(ctx, slashableAtts, params.HistoryLength)
+	doubleVotes, err := beaconDB.CheckAttesterDoubleVotes(ctx, slashableAtts, defaultHistoryLength)
 	require.NoError(t, err)
 	require.DeepEqual(t, wanted, doubleVotes)
 }
@@ -464,8 +463,7 @@ func TestStore_PruneAttestations(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			beaconDB := setupDB(t)
-			params := slasher.DefaultParams()
-			require.NoError(t, beaconDB.SaveAttestationRecordsForValidators(ctx, tt.attestationsInDB, params.HistoryLength))
+			require.NoError(t, beaconDB.SaveAttestationRecordsForValidators(ctx, tt.attestationsInDB, defaultHistoryLength))
 			if err := beaconDB.PruneProposals(ctx, tt.epoch, tt.historyLength); (err != nil) != tt.wantErr {
 				t.Errorf("PruneProposals() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -482,7 +480,7 @@ func TestStore_PruneAttestations(t *testing.T) {
 				)
 			}
 
-			doubleProposals, err := beaconDB.CheckAttesterDoubleVotes(ctx, slashable, params.HistoryLength)
+			doubleProposals, err := beaconDB.CheckAttesterDoubleVotes(ctx, slashable, defaultHistoryLength)
 			require.NoError(t, err)
 			require.Equal(t, len(tt.afterPruning), len(doubleProposals))
 			for i, existing := range doubleProposals {
@@ -578,8 +576,7 @@ func TestStore_HighestAttestations(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			beaconDB := setupDB(t)
-			params := slasher.DefaultParams()
-			require.NoError(t, beaconDB.SaveAttestationRecordsForValidators(ctx, tt.attestationsInDB, params.HistoryLength))
+			require.NoError(t, beaconDB.SaveAttestationRecordsForValidators(ctx, tt.attestationsInDB, defaultHistoryLength))
 
 			highestAttestations, err := beaconDB.HighestAttestations(ctx, tt.indices)
 			require.NoError(t, err)
@@ -610,8 +607,7 @@ func BenchmarkHighestAttestations(b *testing.B) {
 
 	ctx := context.Background()
 	beaconDB := setupDB(b)
-	params := slasher.DefaultParams()
-	require.NoError(b, beaconDB.SaveAttestationRecordsForValidators(ctx, atts, params.HistoryLength))
+	require.NoError(b, beaconDB.SaveAttestationRecordsForValidators(ctx, atts, defaultHistoryLength))
 
 	allIndices := make([]types.ValidatorIndex, valsPerAtt*count)
 	for i := 0; i < count; i++ {

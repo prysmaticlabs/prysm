@@ -96,7 +96,6 @@ go_test(
     deps = [
         "//beacon-chain/db/filters:go_default_library",
         "//beacon-chain/db/iface:go_default_library",
-        "//beacon-chain/slasher:go_default_library",
         "//beacon-chain/slasher/types:go_default_library",
         "//beacon-chain/state/interface:go_default_library",
         "//proto/beacon/db:go_default_library",
