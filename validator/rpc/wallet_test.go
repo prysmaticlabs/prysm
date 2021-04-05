@@ -155,7 +155,7 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 
 	// Attempting to write again should trigger an error.
 	err = writeWalletPasswordToDisk(localWalletDir, "somepassword")
-	require.NotNil(t, err)
+	require.ErrorContains(t, "cannot write wallet password file as it already exists", err)
 
 }
 
