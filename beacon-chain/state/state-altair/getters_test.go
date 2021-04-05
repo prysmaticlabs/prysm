@@ -70,14 +70,19 @@ func TestNilState_NoPanic(t *testing.T) {
 	_ = st.RandaoMixesLength()
 	_ = st.Slashings()
 	_, err = st.CurrentEpochParticipation()
+	_ = err
 	_, err = st.PreviousEpochParticipation()
+	_ = err
 	_ = st.JustificationBits()
 	_ = st.PreviousJustifiedCheckpoint()
 	_ = st.CurrentJustifiedCheckpoint()
 	_ = st.FinalizedCheckpoint()
 	_, err = st.CurrentEpochParticipation()
+	_ = err
 	_, err = st.PreviousEpochParticipation()
+	_ = err
 	_, err = st.InactivityScores()
+	_ = err
 	_ = st.CurrentSyncCommittee()
 	_ = st.NextSyncCommittee()
 }
