@@ -16,6 +16,7 @@ go_library(
         "setters.go",
         "state_trie.go",
         "types.go",
+        "unsupported_setters.go",
         "validator_getters.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0",
