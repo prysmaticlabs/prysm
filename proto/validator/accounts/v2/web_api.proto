@@ -44,6 +44,12 @@ service Accounts {
             body: "*"
         };
     }
+    rpc DeleteAccounts(DeleteAccountsRequest) returns (DeleteAccountsResponse) {
+        option (google.api.http) = {
+            post: "/v2/validator/wallet/accounts/delete",
+            body: "*"
+        };
+    }
     rpc ChangePassword(ChangePasswordRequest) returns (google.protobuf.Empty) {
         option (google.api.http) = {
             post: "/v2/validator/password/edit",
@@ -340,4 +346,14 @@ message BackupAccountsRequest {
 message BackupAccountsResponse {
     // Zip file containing backed up keystores.
     bytes zip_file = 1;
+}
+
+message DeleteAccountsRequest {
+    // List of public keys to delete.
+    repeated bytes public_keys_to_delete = 1;
+}
+
+message DeleteAccountsResponse {
+    // List of public keys successfully deleted.
+    repeated bytes deleted_keys = 1;
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
+	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
@@ -146,5 +147,30 @@ func (s *Server) BackupAccounts(
 	}
 	return &pb.BackupAccountsResponse{
 		ZipFile: buf.Bytes(),
+	}, nil
+}
+
+// DeleteAccounts deletes accounts from a user's wallet is an imported or derived wallet.
+func (s *Server) DeleteAccounts(
+	ctx context.Context, req *pb.DeleteAccountsRequest,
+) (*pb.DeleteAccountsResponse, error) {
+	if req.PublicKeysToDelete == nil || len(req.PublicKeysToDelete) < 1 {
+		return nil, status.Error(codes.InvalidArgument, "No public keys specified to delete")
+	}
+	if s.wallet == nil || s.keymanager == nil {
+		return nil, status.Error(codes.FailedPrecondition, "No wallet found")
+	}
+	if s.wallet.KeymanagerKind() != keymanager.Imported && s.wallet.KeymanagerKind() != keymanager.Derived {
+		return nil, status.Error(codes.FailedPrecondition, "Only Imported or Derived wallets can delete accounts")
+	}
+	if err := accounts.DeleteAccount(ctx, &accounts.Config{
+		Wallet:           s.wallet,
+		Keymanager:       s.keymanager,
+		DeletePublicKeys: req.PublicKeysToDelete,
+	}); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not delete public keys: %v", err)
+	}
+	return &pb.DeleteAccountsResponse{
+		DeletedKeys: req.PublicKeysToDelete,
 	}, nil
 }

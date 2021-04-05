@@ -382,3 +382,8 @@ func (s *ChainService) VerifyFinalizedConsistency(_ context.Context, r []byte) e
 	}
 	return nil
 }
+
+// ChainHeads mocks ChainHeads and always return nil.
+func (s *ChainService) ChainHeads() ([][32]byte, []types.Slot) {
+	return [][32]byte{}, []types.Slot{}
+}
