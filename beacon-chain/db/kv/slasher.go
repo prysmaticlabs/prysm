@@ -516,11 +516,6 @@ func encodeTargetEpoch(epoch types.Epoch, historySize uint64) []byte {
 	return buf
 }
 
-// Decodes a target epoch that was stored modulo HISTORY_SIZE.
-func decodeTargetEpoch(enc []byte) types.Epoch {
-	return types.Epoch(binary.LittleEndian.Uint16(enc[:2]))
-}
-
 // Encodes a validator index using 5 bytes instead of 8 as a
 // client optimization to save space in the database. Because the max validator
 // registry size is 2**40, this is a safe optimization.
@@ -528,10 +523,4 @@ func encodeValidatorIndex(index types.ValidatorIndex) []byte {
 	buf := make([]byte, 8)
 	binary.LittleEndian.PutUint64(buf, uint64(index))
 	return buf[:5]
-}
-
-// Decodes a 5 byte validator index into a types.ValidatorIndex value.
-func decodeValidatorIndex(enc []byte) types.ValidatorIndex {
-	encodedIndex := append(enc[:5], 0, 0, 0)
-	return types.ValidatorIndex(binary.LittleEndian.Uint64(encodedIndex))
 }
