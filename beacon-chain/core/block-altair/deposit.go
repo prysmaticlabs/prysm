@@ -6,51 +6,44 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	log "github.com/sirupsen/logrus"
 )
 
-// ProcessPreGenesisDepositsV1 processes a deposit for the beacon state hard fork 1 before chainstart.
-func ProcessPreGenesisDepositsV1(
+// ProcessPreGenesisDeposits processes a deposit for the beacon state Altair before chain start.
+func ProcessPreGenesisDeposits(
 	ctx context.Context,
 	beaconState iface.BeaconStateAltair,
 	deposits []*ethpb.Deposit,
 ) (iface.BeaconStateAltair, error) {
-
-}
-
-func ProcessDeposits(
-	ctx context.Context,
-	beaconState iface.BeaconStateAltair,
-	b *ethpb.SignedBeaconBlock,
-) (iface.BeaconStateAltair, error) {
-	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
-		return nil, err
-	}
-
-	deposits := b.Block.Body.Deposits
 	var err error
-	domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
+	beaconState, err = ProcessDeposits(ctx, beaconState, deposits)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process deposit")
+	}
+	beaconState, err = blocks.ActivateValidatorWithEffectiveBalance(beaconState, deposits)
 	if err != nil {
 		return nil, err
 	}
+	return beaconState, nil
+}
 
-	// Attempt to verify all deposit signatures at once, if this fails then fall back to processing
-	// individual deposits with signature verification enabled.
-	var verifySignature bool
-	if err := verifyDepositDataWithDomain(ctx, deposits, domain); err != nil {
-		log.WithError(err).Debug("Failed to verify deposit data, verifying signatures individually")
-		verifySignature = true
+// ProcessDeposits processes validator deposits for beacon state Altair.
+func ProcessDeposits(
+	ctx context.Context,
+	beaconState iface.BeaconStateAltair,
+	deposits []*ethpb.Deposit,
+) (iface.BeaconStateAltair, error) {
+	batchVerified, err := blocks.BatchVerifyDepositsSignatures(ctx, deposits)
+	if err != nil {
+		return nil, err
 	}
 
 	for _, deposit := range deposits {
 		if deposit == nil || deposit.Data == nil {
 			return nil, errors.New("got a nil deposit in block")
 		}
-		beaconState, err = ProcessDepositV1(beaconState, deposit, verifySignature)
+		beaconState, err = ProcessDeposit(ctx, beaconState, deposit, batchVerified)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
 		}
@@ -58,7 +51,8 @@ func ProcessDeposits(
 	return beaconState, nil
 }
 
-func ProcessDeposit(beaconState iface.BeaconStateAltair, deposit *ethpb.Deposit, verifySignature bool) (iface.BeaconStateAltair, error) {
+// ProcessDeposit processes validator deposit for beacon state Altair.
+func ProcessDeposit(ctx context.Context, beaconState iface.BeaconStateAltair, deposit *ethpb.Deposit, verifySignature bool) (iface.BeaconStateAltair, error) {
 	beaconState, err := blocks.ProcessDeposit(beaconState, deposit, verifySignature)
 	if err != nil {
 		return nil, err
