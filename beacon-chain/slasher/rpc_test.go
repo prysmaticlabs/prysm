@@ -90,7 +90,7 @@ func TestIsSlashableAttestation(t *testing.T) {
 		createAttestationWrapper(t, 2, 3, []uint64{0}, []byte{1}),
 		createAttestationWrapper(t, 2, 3, []uint64{1}, []byte{1}),
 	}
-	err := beaconDB.SaveAttestationRecordsForValidators(ctx, prevAtts, s.params.historyLength)
+	err := beaconDB.SaveAttestationRecordsForValidators(ctx, prevAtts, s.params.HistoryLength)
 	require.NoError(t, err)
 	attesterSlashings, err := s.checkSlashableAttestations(ctx, prevAtts)
 	require.NoError(t, err)

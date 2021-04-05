@@ -28,7 +28,7 @@ func TestService_groupByValidatorChunkIndex(t *testing.T) {
 		{
 			name: "Groups multiple attestations belonging to single validator chunk",
 			params: &Parameters{
-				validatorChunkSize: 2,
+				ValidatorChunkSize: 2,
 			},
 			atts: []*slashertypes.IndexedAttestationWrapper{
 				createAttestationWrapper(t, 0, 0, []uint64{0, 1}, nil),
@@ -44,7 +44,7 @@ func TestService_groupByValidatorChunkIndex(t *testing.T) {
 		{
 			name: "Groups single attestation belonging to multiple validator chunk",
 			params: &Parameters{
-				validatorChunkSize: 2,
+				ValidatorChunkSize: 2,
 			},
 			atts: []*slashertypes.IndexedAttestationWrapper{
 				createAttestationWrapper(t, 0, 0, []uint64{0, 2, 4}, nil),
@@ -90,8 +90,8 @@ func TestService_groupByChunkIndex(t *testing.T) {
 		{
 			name: "Groups multiple attestations belonging to single chunk",
 			params: &Parameters{
-				chunkSize:     2,
-				historyLength: 3,
+				ChunkSize:     2,
+				HistoryLength: 3,
 			},
 			atts: []*slashertypes.IndexedAttestationWrapper{
 				createAttestationWrapper(t, 0, 0, nil, nil),
@@ -107,8 +107,8 @@ func TestService_groupByChunkIndex(t *testing.T) {
 		{
 			name: "Groups multiple attestations belonging to multiple chunks",
 			params: &Parameters{
-				chunkSize:     2,
-				historyLength: 3,
+				ChunkSize:     2,
+				HistoryLength: 3,
 			},
 			atts: []*slashertypes.IndexedAttestationWrapper{
 				createAttestationWrapper(t, 0, 0, nil, nil),

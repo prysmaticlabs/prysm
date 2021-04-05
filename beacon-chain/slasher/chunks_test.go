@@ -20,8 +20,8 @@ var (
 
 func TestMinSpanChunksSlice_Chunk(t *testing.T) {
 	chunk := EmptyMinSpanChunksSlice(&Parameters{
-		chunkSize:          2,
-		validatorChunkSize: 2,
+		ChunkSize:          2,
+		ValidatorChunkSize: 2,
 	})
 	wanted := []uint16{math.MaxUint16, math.MaxUint16, math.MaxUint16, math.MaxUint16}
 	require.DeepEqual(t, wanted, chunk.Chunk())
@@ -29,8 +29,8 @@ func TestMinSpanChunksSlice_Chunk(t *testing.T) {
 
 func TestMaxSpanChunksSlice_Chunk(t *testing.T) {
 	chunk := EmptyMaxSpanChunksSlice(&Parameters{
-		chunkSize:          2,
-		validatorChunkSize: 2,
+		ChunkSize:          2,
+		ValidatorChunkSize: 2,
 	})
 	wanted := []uint16{0, 0, 0, 0}
 	require.DeepEqual(t, wanted, chunk.Chunk())
@@ -48,16 +48,16 @@ func TestMaxSpanChunksSlice_NeutralElement(t *testing.T) {
 
 func TestMinSpanChunksSlice_MinChunkSpanFrom(t *testing.T) {
 	params := &Parameters{
-		chunkSize:          3,
-		validatorChunkSize: 2,
+		ChunkSize:          3,
+		ValidatorChunkSize: 2,
 	}
 	_, err := MinChunkSpansSliceFrom(params, []uint16{})
 	require.ErrorContains(t, "chunk has wrong length", err)
 
 	data := []uint16{2, 2, 2, 2, 2, 2}
 	chunk, err := MinChunkSpansSliceFrom(&Parameters{
-		chunkSize:          3,
-		validatorChunkSize: 2,
+		ChunkSize:          3,
+		ValidatorChunkSize: 2,
 	}, data)
 	require.NoError(t, err)
 	require.DeepEqual(t, data, chunk.Chunk())
@@ -65,16 +65,16 @@ func TestMinSpanChunksSlice_MinChunkSpanFrom(t *testing.T) {
 
 func TestMaxSpanChunksSlice_MaxChunkSpanFrom(t *testing.T) {
 	params := &Parameters{
-		chunkSize:          3,
-		validatorChunkSize: 2,
+		ChunkSize:          3,
+		ValidatorChunkSize: 2,
 	}
 	_, err := MaxChunkSpansSliceFrom(params, []uint16{})
 	require.ErrorContains(t, "chunk has wrong length", err)
 
 	data := []uint16{2, 2, 2, 2, 2, 2}
 	chunk, err := MaxChunkSpansSliceFrom(&Parameters{
-		chunkSize:          3,
-		validatorChunkSize: 2,
+		ChunkSize:          3,
+		ValidatorChunkSize: 2,
 	}, data)
 	require.NoError(t, err)
 	require.DeepEqual(t, data, chunk.Chunk())
@@ -84,9 +84,9 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := dbtest.SetupDB(t)
 	params := &Parameters{
-		chunkSize:          3,
-		validatorChunkSize: 2,
-		historyLength:      3,
+		ChunkSize:          3,
+		ValidatorChunkSize: 2,
+		HistoryLength:      3,
 	}
 	validatorIdx := types.ValidatorIndex(1)
 	source := types.Epoch(1)
@@ -153,7 +153,7 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 	attRecord := createAttestationWrapper(t, attData.Source.Epoch, attData.Target.Epoch, []uint64{uint64(validatorIdx)}, []byte{1})
 	err = beaconDB.SaveAttestationRecordsForValidators(
 		ctx,
-		[]*slashertypes.IndexedAttestationWrapper{attRecord}, params.historyLength,
+		[]*slashertypes.IndexedAttestationWrapper{attRecord}, params.HistoryLength,
 	)
 	require.NoError(t, err)
 
@@ -166,9 +166,9 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := dbtest.SetupDB(t)
 	params := &Parameters{
-		chunkSize:          4,
-		validatorChunkSize: 2,
-		historyLength:      4,
+		ChunkSize:          4,
+		ValidatorChunkSize: 2,
+		HistoryLength:      4,
 	}
 	validatorIdx := types.ValidatorIndex(1)
 	source := types.Epoch(1)
@@ -239,7 +239,7 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 	err = beaconDB.SaveAttestationRecordsForValidators(
 		ctx,
 		[]*slashertypes.IndexedAttestationWrapper{attRecord},
-		params.historyLength,
+		params.HistoryLength,
 	)
 	require.NoError(t, err)
 
@@ -249,7 +249,7 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 }
 
 func TestMinSpanChunksSlice_Update_MultipleChunks(t *testing.T) {
-	// Let's set H = historyLength = 2, meaning a min span
+	// Let's set H = HistoryLength = 2, meaning a min span
 	// will hold 2 epochs worth of attesting history. Then we set C = 2 meaning we will
 	// chunk the min span into arrays each of length 2 and K = 3 meaning we store each chunk index
 	// for 3 validators at a time.
@@ -283,9 +283,9 @@ func TestMinSpanChunksSlice_Update_MultipleChunks(t *testing.T) {
 	// to update, in our example, we stop at 0, which is a part chunk 0, so we need to perform updates
 	// across 2 different min span chunk slices as shown above.
 	params := &Parameters{
-		chunkSize:          2,
-		validatorChunkSize: 3,
-		historyLength:      4,
+		ChunkSize:          2,
+		ValidatorChunkSize: 3,
+		HistoryLength:      4,
 	}
 	chunk := EmptyMinSpanChunksSlice(params)
 	target := types.Epoch(3)
@@ -324,9 +324,9 @@ func TestMinSpanChunksSlice_Update_MultipleChunks(t *testing.T) {
 
 func TestMaxSpanChunksSlice_Update_MultipleChunks(t *testing.T) {
 	params := &Parameters{
-		chunkSize:          2,
-		validatorChunkSize: 3,
-		historyLength:      4,
+		ChunkSize:          2,
+		ValidatorChunkSize: 3,
+		HistoryLength:      4,
 	}
 	chunk := EmptyMaxSpanChunksSlice(params)
 	target := types.Epoch(3)
@@ -364,7 +364,7 @@ func TestMaxSpanChunksSlice_Update_MultipleChunks(t *testing.T) {
 }
 
 func TestMinSpanChunksSlice_Update_SingleChunk(t *testing.T) {
-	// Let's set H = historyLength = 2, meaning a min span
+	// Let's set H = HistoryLength = 2, meaning a min span
 	// will hold 2 epochs worth of attesting history. Then we set C = 2 meaning we will
 	// chunk the min span into arrays each of length 2 and K = 3 meaning we store each chunk index
 	// for 3 validators at a time.
@@ -388,9 +388,9 @@ func TestMinSpanChunksSlice_Update_SingleChunk(t *testing.T) {
 	// to update, in our example, we stop at 0, which is still part of chunk 0, so there is no
 	// need to keep going.
 	params := &Parameters{
-		chunkSize:          2,
-		validatorChunkSize: 3,
-		historyLength:      2,
+		ChunkSize:          2,
+		ValidatorChunkSize: 3,
+		HistoryLength:      2,
 	}
 	chunk := EmptyMinSpanChunksSlice(params)
 	target := types.Epoch(1)
@@ -411,9 +411,9 @@ func TestMinSpanChunksSlice_Update_SingleChunk(t *testing.T) {
 
 func TestMaxSpanChunksSlice_Update_SingleChunk(t *testing.T) {
 	params := &Parameters{
-		chunkSize:          4,
-		validatorChunkSize: 2,
-		historyLength:      4,
+		ChunkSize:          4,
+		ValidatorChunkSize: 2,
+		HistoryLength:      4,
 	}
 	chunk := EmptyMaxSpanChunksSlice(params)
 	target := types.Epoch(3)
@@ -455,7 +455,7 @@ func TestMinSpanChunksSlice_StartEpoch(t *testing.T) {
 		{
 			name: "source_epoch == (current_epoch - HISTORY_LENGTH) returns false",
 			params: &Parameters{
-				historyLength: 3,
+				HistoryLength: 3,
 			},
 			args: args{
 				sourceEpoch:  1,
@@ -466,7 +466,7 @@ func TestMinSpanChunksSlice_StartEpoch(t *testing.T) {
 		{
 			name: "source_epoch < (current_epoch - HISTORY_LENGTH) returns false",
 			params: &Parameters{
-				historyLength: 3,
+				HistoryLength: 3,
 			},
 			args: args{
 				sourceEpoch:  1,
@@ -477,7 +477,7 @@ func TestMinSpanChunksSlice_StartEpoch(t *testing.T) {
 		{
 			name: "source_epoch > (current_epoch - HISTORY_LENGTH) returns true",
 			params: &Parameters{
-				historyLength: 3,
+				HistoryLength: 3,
 			},
 			args: args{
 				sourceEpoch:  1,
@@ -568,8 +568,8 @@ func TestMinSpanChunksSlice_NextChunkStartEpoch(t *testing.T) {
 		{
 			name: "Start epoch 0",
 			params: &Parameters{
-				chunkSize:     3,
-				historyLength: 4096,
+				ChunkSize:     3,
+				HistoryLength: 4096,
 			},
 			startEpoch: 0,
 			want:       2,
@@ -577,8 +577,8 @@ func TestMinSpanChunksSlice_NextChunkStartEpoch(t *testing.T) {
 		{
 			name: "Start epoch of chunk 1 returns last epoch of chunk 0",
 			params: &Parameters{
-				chunkSize:     3,
-				historyLength: 4096,
+				ChunkSize:     3,
+				HistoryLength: 4096,
 			},
 			startEpoch: 3,
 			want:       2,
@@ -586,8 +586,8 @@ func TestMinSpanChunksSlice_NextChunkStartEpoch(t *testing.T) {
 		{
 			name: "Start epoch inside of chunk 2 returns last epoch of chunk 1",
 			params: &Parameters{
-				chunkSize:     3,
-				historyLength: 4096,
+				ChunkSize:     3,
+				HistoryLength: 4096,
 			},
 			startEpoch: 8,
 			want:       5,
@@ -615,8 +615,8 @@ func TestMaxSpanChunksSlice_NextChunkStartEpoch(t *testing.T) {
 		{
 			name: "Start epoch 0",
 			params: &Parameters{
-				chunkSize:     3,
-				historyLength: 4,
+				ChunkSize:     3,
+				HistoryLength: 4,
 			},
 			startEpoch: 0,
 			want:       3,
@@ -624,8 +624,8 @@ func TestMaxSpanChunksSlice_NextChunkStartEpoch(t *testing.T) {
 		{
 			name: "Start epoch of chunk 1 returns start epoch of chunk 2",
 			params: &Parameters{
-				chunkSize:     3,
-				historyLength: 4,
+				ChunkSize:     3,
+				HistoryLength: 4,
 			},
 			startEpoch: 3,
 			want:       6,
@@ -656,8 +656,8 @@ func Test_chunkDataAtEpoch_SetRetrieve(t *testing.T) {
 	//  [2, 2, 2, 2, 2, 2]
 	//               |-> epoch 1, validator 1.
 	params := &Parameters{
-		chunkSize:          3,
-		validatorChunkSize: 2,
+		ChunkSize:          3,
+		ValidatorChunkSize: 2,
 	}
 	chunk := []uint16{2, 2, 2, 2, 2, 2}
 	validatorIdx := types.ValidatorIndex(1)

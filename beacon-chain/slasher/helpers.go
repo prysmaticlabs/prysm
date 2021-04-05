@@ -63,7 +63,7 @@ func (s *Service) filterAttestations(
 
 		// If an attestation's source is epoch is older than the max history length
 		// we keep track of for slashing detection, we drop it.
-		if attWrapper.IndexedAttestation.Data.Source.Epoch+types.Epoch(s.params.historyLength) <= currentEpoch {
+		if attWrapper.IndexedAttestation.Data.Source.Epoch+types.Epoch(s.params.HistoryLength) <= currentEpoch {
 			numDropped++
 			continue
 		}

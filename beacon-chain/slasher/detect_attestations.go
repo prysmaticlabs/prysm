@@ -161,7 +161,7 @@ func (s *Service) checkDoubleVotesOnDisk(
 	ctx, span := trace.StartSpan(ctx, "Slasher.checkDoubleVotesOnDisk")
 	defer span.End()
 	doubleVotes, err := s.serviceCfg.Database.CheckAttesterDoubleVotes(
-		ctx, attestations, s.params.historyLength,
+		ctx, attestations, s.params.HistoryLength,
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve potential double votes from disk")

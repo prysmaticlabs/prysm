@@ -273,8 +273,8 @@ func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
 	// What we want to test here is if we can proceed
 	// with processing queued attestations once the chunk index changes.
 	// For example, epochs 0 - 15 are chunk 0, epochs 16 - 31 are chunk 1, etc.
-	startEpoch := types.Epoch(slasherParams.chunkSize)
-	endEpoch := types.Epoch(slasherParams.chunkSize + 1)
+	startEpoch := types.Epoch(slasherParams.ChunkSize)
+	endEpoch := types.Epoch(slasherParams.ChunkSize + 1)
 
 	currentTime := time.Now()
 	totalSlots := uint64(startEpoch) * uint64(params.BeaconConfig().SlotsPerEpoch)
@@ -337,7 +337,7 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	slasherParams := DefaultParams()
 
-	startEpoch := types.Epoch(slasherParams.chunkSize)
+	startEpoch := types.Epoch(slasherParams.ChunkSize)
 
 	currentTime := time.Now()
 	totalSlots := uint64(startEpoch) * uint64(params.BeaconConfig().SlotsPerEpoch)
@@ -370,8 +370,8 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 	}()
 
 	// We create two attestations fully spanning chunk indices 0 and chunk 1
-	att1 := createAttestationWrapper(t, types.Epoch(slasherParams.chunkSize-2), types.Epoch(slasherParams.chunkSize), []uint64{0, 1}, nil)
-	att2 := createAttestationWrapper(t, types.Epoch(slasherParams.chunkSize-1), types.Epoch(slasherParams.chunkSize+1), []uint64{0, 1}, nil)
+	att1 := createAttestationWrapper(t, types.Epoch(slasherParams.ChunkSize-2), types.Epoch(slasherParams.ChunkSize), []uint64{0, 1}, nil)
+	att2 := createAttestationWrapper(t, types.Epoch(slasherParams.ChunkSize-1), types.Epoch(slasherParams.ChunkSize+1), []uint64{0, 1}, nil)
 
 	// We attempt to process the batch.
 	s.attsQueue = newAttestationsQueue()
@@ -394,9 +394,9 @@ func Test_determineChunksToUpdateForValidators_FromLatestWrittenEpoch(t *testing
 	// Check if the chunk at chunk index already exists in-memory.
 	s := &Service{
 		params: &Parameters{
-			chunkSize:          2, // 2 epochs in a chunk.
-			validatorChunkSize: 2, // 2 validators in a chunk.
-			historyLength:      4,
+			ChunkSize:          2, // 2 epochs in a chunk.
+			ValidatorChunkSize: 2, // 2 validators in a chunk.
+			HistoryLength:      4,
 		},
 		serviceCfg: &ServiceConfig{
 			Database:      beaconDB,
@@ -435,9 +435,9 @@ func Test_determineChunksToUpdateForValidators_FromGenesis(t *testing.T) {
 	// Check if the chunk at chunk index already exists in-memory.
 	s := &Service{
 		params: &Parameters{
-			chunkSize:          2, // 2 epochs in a chunk.
-			validatorChunkSize: 2, // 2 validators in a chunk.
-			historyLength:      4,
+			ChunkSize:          2, // 2 epochs in a chunk.
+			ValidatorChunkSize: 2, // 2 validators in a chunk.
+			HistoryLength:      4,
 		},
 		serviceCfg: &ServiceConfig{
 			Database:      beaconDB,
@@ -505,7 +505,7 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	att.IndexedAttestation.AttestingIndices = []uint64{uint64(validatorIdx)}
 	err = beaconDB.SaveAttestationRecordsForValidators(
 		ctx,
-		[]*slashertypes.IndexedAttestationWrapper{att}, srv.params.historyLength,
+		[]*slashertypes.IndexedAttestationWrapper{att}, srv.params.HistoryLength,
 	)
 	require.NoError(t, err)
 
@@ -565,7 +565,7 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	att.IndexedAttestation.AttestingIndices = []uint64{uint64(validatorIdx)}
 	err = beaconDB.SaveAttestationRecordsForValidators(
 		ctx,
-		[]*slashertypes.IndexedAttestationWrapper{att}, srv.params.historyLength,
+		[]*slashertypes.IndexedAttestationWrapper{att}, srv.params.HistoryLength,
 	)
 	require.NoError(t, err)
 
@@ -639,7 +639,7 @@ func Test_checkDoubleVotes_SlashableAttestationsOnDisk(t *testing.T) {
 		},
 		params: DefaultParams(),
 	}
-	err := beaconDB.SaveAttestationRecordsForValidators(ctx, prevAtts, srv.params.historyLength)
+	err := beaconDB.SaveAttestationRecordsForValidators(ctx, prevAtts, srv.params.HistoryLength)
 	require.NoError(t, err)
 
 	prev1 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{1})
