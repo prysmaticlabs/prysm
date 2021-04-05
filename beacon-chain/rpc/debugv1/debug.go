@@ -3,7 +3,7 @@ package debugv1
 import (
 	"context"
 
-	emptypb "github.com/golang/protobuf/ptypes/empty"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	"google.golang.org/grpc/codes"

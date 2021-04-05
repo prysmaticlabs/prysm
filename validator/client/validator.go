@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/dgraph-io/ristretto"
-	emptypb "github.com/golang/protobuf/ptypes/empty"
+	"google.golang.org/protobuf/types/known/emptypb"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"

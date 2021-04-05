@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"testing"
 
-	emptypb "github.com/golang/protobuf/ptypes/empty"
 	eth2types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -24,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestListPoolAttesterSlashings(t *testing.T) {
