@@ -58,7 +58,6 @@ func TestNilState_NoPanic(t *testing.T) {
 	_, err = st.ValidatorAtIndexReadOnly(0)
 	_ = err
 	_, _ = st.ValidatorIndexByPubkey([48]byte{})
-	_ = st.validatorIndexMap()
 	_ = st.PubkeyAtIndex(0)
 	_ = st.NumValidators()
 	_ = st.Balances()
@@ -70,15 +69,15 @@ func TestNilState_NoPanic(t *testing.T) {
 	_ = err
 	_ = st.RandaoMixesLength()
 	_ = st.Slashings()
-	_ = st.CurrentEpochParticipation()
-	_ = st.PreviousEpochParticipation()
+	_, err = st.CurrentEpochParticipation()
+	_, err = st.PreviousEpochParticipation()
 	_ = st.JustificationBits()
 	_ = st.PreviousJustifiedCheckpoint()
 	_ = st.CurrentJustifiedCheckpoint()
 	_ = st.FinalizedCheckpoint()
-	_ = st.CurrentEpochParticipation()
-	_ = st.PreviousEpochParticipation()
-	_ = st.InactivityScores()
+	_, err = st.CurrentEpochParticipation()
+	_, err = st.PreviousEpochParticipation()
+	_, err = st.InactivityScores()
 	_ = st.CurrentSyncCommittee()
 	_ = st.NextSyncCommittee()
 }
