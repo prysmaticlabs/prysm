@@ -1035,33 +1035,33 @@ func (b *BeaconState) NextSyncCommittee() *pbp2p.SyncCommittee {
 }
 
 // CurrentEpochParticipation corresponding to participation bits on the beacon chain.
-func (b *BeaconState) CurrentEpochParticipation() []byte {
+func (b *BeaconState) CurrentEpochParticipation() ([]byte, error) {
 	if !b.hasInnerState() {
-		return nil
+		return nil, nil
 	}
 	if b.state.CurrentEpochParticipation == nil {
-		return nil
+		return nil, nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.currentEpochParticipation()
+	return b.currentEpochParticipation(), nil
 }
 
 // PreviousEpochParticipation corresponding to participation bits on the beacon chain.
-func (b *BeaconState) PreviousEpochParticipation() []byte {
+func (b *BeaconState) PreviousEpochParticipation() ([]byte, error) {
 	if !b.hasInnerState() {
-		return nil
+		return nil, nil
 	}
 	if b.state.PreviousEpochParticipation == nil {
-		return nil
+		return nil, nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.previousEpochParticipation()
+	return b.previousEpochParticipation(), nil
 }
 
 // currentEpochParticipation corresponding to participation bits on the beacon chain.
@@ -1102,18 +1102,18 @@ func (b *BeaconState) inactivityScores() []uint64 {
 }
 
 // InactivityScores of validators participating in consensus on the beacon chain.
-func (b *BeaconState) InactivityScores() []uint64 {
+func (b *BeaconState) InactivityScores() ([]uint64, error) {
 	if !b.hasInnerState() {
-		return nil
+		return nil, nil
 	}
 	if b.state.Balances == nil {
-		return nil
+		return nil, nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.inactivityScores()
+	return b.inactivityScores(), nil
 }
 
 func (b *BeaconState) safeCopy2DByteSlice(input [][]byte) [][]byte {
