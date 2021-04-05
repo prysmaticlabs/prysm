@@ -46,7 +46,7 @@ func TestWeakSubjectivity_ComputeWeakSubjectivityPeriod(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("valCount: %d, avgBalance: %d", tt.valCount, tt.avgBalance), func(t *testing.T) {
 			// Reset committee cache - as we need to recalculate active validator set for each test.
-			helpers.ResetCommitteeCache()
+			helpers.ClearCache()
 			got, err := helpers.ComputeWeakSubjectivityPeriod(genState(t, tt.valCount, tt.avgBalance))
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, got, "valCount: %v, avgBalance: %v", tt.valCount, tt.avgBalance)
