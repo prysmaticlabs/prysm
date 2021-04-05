@@ -278,16 +278,16 @@ func (e Exporter) LastEpochWrittenForValidators(
 
 // AttestationRecordForValidator -- passthrough
 func (e Exporter) AttestationRecordForValidator(
-	ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch,
+	ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch, historySize uint64,
 ) (*slashertypes.IndexedAttestationWrapper, error) {
-	return e.db.AttestationRecordForValidator(ctx, validatorIdx, targetEpoch)
+	return e.db.AttestationRecordForValidator(ctx, validatorIdx, targetEpoch, historySize)
 }
 
 // CheckAttesterDoubleVotes -- passthrough
 func (e Exporter) CheckAttesterDoubleVotes(
-	ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper,
+	ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper, historySize uint64,
 ) ([]*slashertypes.AttesterDoubleVote, error) {
-	return e.db.CheckAttesterDoubleVotes(ctx, attestations)
+	return e.db.CheckAttesterDoubleVotes(ctx, attestations, historySize)
 }
 
 // LoadSlasherChunk -- passthrough
@@ -308,8 +308,9 @@ func (e Exporter) SaveLastEpochWrittenForValidators(
 func (e Exporter) SaveAttestationRecordsForValidators(
 	ctx context.Context,
 	attestations []*slashertypes.IndexedAttestationWrapper,
+	historySize uint64,
 ) error {
-	return e.db.SaveAttestationRecordsForValidators(ctx, attestations)
+	return e.db.SaveAttestationRecordsForValidators(ctx, attestations, historySize)
 }
 
 // CheckDoubleBlockProposals -- passthrough
