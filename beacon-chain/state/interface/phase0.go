@@ -20,6 +20,7 @@ type BeaconState interface {
 	Copy() BeaconState
 	HashTreeRoot(ctx context.Context) ([32]byte, error)
 	ToProto() (*v1.BeaconState, error)
+	FutureForkStub
 }
 
 // ReadOnlyBeaconState defines a struct which only has read access to beacon state methods.
@@ -194,4 +195,12 @@ type WriteOnlyAttestations interface {
 	AppendCurrentEpochAttestations(val *pbp2p.PendingAttestation) error
 	AppendPreviousEpochAttestations(val *pbp2p.PendingAttestation) error
 	RotateAttestations() error
+}
+
+// FutureForkStub defines methods that are used for future forks. This is a low cost solution to enable
+// various state casting of interface to work.
+type FutureForkStub interface {
+	AppendCurrentParticipationBits(val byte) error
+	AppendPreviousParticipationBits(val byte) error
+	AppendInactivityScore(s uint64) error
 }
