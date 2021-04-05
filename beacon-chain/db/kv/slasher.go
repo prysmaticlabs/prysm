@@ -464,7 +464,7 @@ func decodeAttestationRecord(encoded []byte) (*slashertypes.IndexedAttestationWr
 	}
 	signingRoot := encoded[:32]
 	decodedAtt := &ethpb.IndexedAttestation{}
-	decodedAttBytes, err := snappy.Decode(nil, encoded[32:])
+	decodedAttBytes, err := snappy.Decode(nil, encoded[:32])
 	if err != nil {
 		return nil, err
 	}
