@@ -12,7 +12,7 @@ import (
 )
 
 func TestEndToEnd_Slashing_MinimalConfig(t *testing.T) {
-	t.Skip("Slasher is now deprecated, skipping until proper removal is complete")
+	t.Skip("To be replaced with the new slasher implementation")
 	testutil.ResetCache()
 	params.UseE2EConfig()
 	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))

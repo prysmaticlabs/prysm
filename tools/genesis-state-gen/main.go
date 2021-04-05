@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"flag"
@@ -85,7 +86,7 @@ func main() {
 			return
 		}
 		// If no JSON input is specified, we create the state deterministically from interop keys.
-		genesisState, _, err = interop.GenerateGenesisState(*genesisTime, uint64(*numValidators))
+		genesisState, _, err = interop.GenerateGenesisState(context.Background(), *genesisTime, uint64(*numValidators))
 		if err != nil {
 			log.Printf("Could not generate genesis beacon state: %v", err)
 			return
@@ -149,7 +150,7 @@ func genesisStateFromJSONValidators(r io.Reader, genesisTime uint64) (*pb.Beacon
 		depositDataList[i] = data
 		depositDataRoots[i] = dataRootBytes
 	}
-	beaconState, _, err := interop.GenerateGenesisStateFromDepositData(genesisTime, depositDataList, depositDataRoots)
+	beaconState, _, err := interop.GenerateGenesisStateFromDepositData(context.Background(), genesisTime, depositDataList, depositDataRoots)
 	if err != nil {
 		return nil, err
 	}
