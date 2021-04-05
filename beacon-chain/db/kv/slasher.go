@@ -81,7 +81,7 @@ func (s *Store) SaveLastEpochWrittenForValidators(
 // CheckDoubleAttesterVotes retries any slashable double votes that exist
 // for a series of input attestations.
 func (s *Store) CheckAttesterDoubleVotes(
-	ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper, historySize uint64,
+	ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper, historyLength uint64,
 ) ([]*slashertypes.AttesterDoubleVote, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.CheckAttesterDoubleVotes")
 	defer span.End()
@@ -89,7 +89,7 @@ func (s *Store) CheckAttesterDoubleVotes(
 	err := s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationRecordsBucket)
 		for _, att := range attestations {
-			encEpoch := encodeTargetEpoch(att.IndexedAttestation.Data.Target.Epoch, historySize)
+			encEpoch := encodeTargetEpoch(att.IndexedAttestation.Data.Target.Epoch, historyLength)
 			for _, valIdx := range att.IndexedAttestation.AttestingIndices {
 				encIdx := encodeValidatorIndex(types.ValidatorIndex(valIdx))
 				key := append(encEpoch, encIdx...)
@@ -120,13 +120,13 @@ func (s *Store) CheckAttesterDoubleVotes(
 // AttestationRecordForValidator given a validator index and a target epoch,
 // retrieves an existing attestation record we have stored in the database.
 func (s *Store) AttestationRecordForValidator(
-	ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch, historySize uint64,
+	ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch, historyLength uint64,
 ) (*slashertypes.IndexedAttestationWrapper, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.AttestationRecordForValidator")
 	defer span.End()
 	var record *slashertypes.IndexedAttestationWrapper
 	encIdx := encodeValidatorIndex(validatorIdx)
-	encEpoch := encodeTargetEpoch(targetEpoch, historySize)
+	encEpoch := encodeTargetEpoch(targetEpoch, historyLength)
 	key := append(encEpoch, encIdx...)
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationRecordsBucket)
@@ -149,14 +149,14 @@ func (s *Store) AttestationRecordForValidator(
 func (s *Store) SaveAttestationRecordsForValidators(
 	ctx context.Context,
 	attestations []*slashertypes.IndexedAttestationWrapper,
-	historySize uint64,
+	historyLength uint64,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveAttestationRecordsForValidators")
 	defer span.End()
 	encodedTargetEpoch := make([][]byte, len(attestations))
 	encodedRecords := make([][]byte, len(attestations))
 	for i, att := range attestations {
-		encEpoch := encodeTargetEpoch(att.IndexedAttestation.Data.Target.Epoch, historySize)
+		encEpoch := encodeTargetEpoch(att.IndexedAttestation.Data.Target.Epoch, historyLength)
 		value, err := encodeAttestationRecord(att)
 		if err != nil {
 			return err
@@ -304,13 +304,13 @@ func (s *Store) SaveBlockProposals(
 	})
 }
 
-// PruneProposals prunes all proposal data older than historySize.
-func (s *Store) PruneProposals(ctx context.Context, currentEpoch types.Epoch, historySize uint64) error {
-	if uint64(currentEpoch) < historySize {
+// PruneProposals prunes all proposal data older than historyLength.
+func (s *Store) PruneProposals(ctx context.Context, currentEpoch types.Epoch, historyLength uint64) error {
+	if uint64(currentEpoch) < historyLength {
 		return nil
 	}
 	// + 1 here so we can prune everything less than this, but not equal.
-	endPruneSlot, err := helpers.StartSlot(currentEpoch - types.Epoch(historySize))
+	endPruneSlot, err := helpers.StartSlot(currentEpoch - types.Epoch(historyLength))
 	if err != nil {
 		return err
 	}
@@ -334,14 +334,14 @@ func (s *Store) PruneProposals(ctx context.Context, currentEpoch types.Epoch, hi
 	})
 }
 
-// PruneAttestations prunes all proposal data older than historySize.
-func (s *Store) PruneAttestations(ctx context.Context, currentEpoch types.Epoch, historySize uint64) error {
-	if uint64(currentEpoch) < historySize {
+// PruneAttestations prunes all proposal data older than historyLength.
+func (s *Store) PruneAttestations(ctx context.Context, currentEpoch types.Epoch, historyLength uint64) error {
+	if uint64(currentEpoch) < historyLength {
 		return nil
 	}
 	// + 1 here so we can prune everything less than this, but not equal.
-	endPruneEpoch := currentEpoch - types.Epoch(historySize)
-	epochEnc := encodeTargetEpoch(endPruneEpoch, historySize)
+	endPruneEpoch := currentEpoch - types.Epoch(historyLength)
+	epochEnc := encodeTargetEpoch(endPruneEpoch, historyLength)
 	return s.db.Update(func(tx *bolt.Tx) error {
 		attBkt := tx.Bucket(attestationRecordsBucket)
 		c := attBkt.Cursor()
@@ -510,9 +510,9 @@ func decodeProposalRecord(encoded []byte) (*slashertypes.SignedBlockHeaderWrappe
 
 // Encodes an epoch by performing modulo HISTORY_SIZE from slasher using 2 bytes instead of 8 as a
 // client optimization to save space in the database.
-func encodeTargetEpoch(epoch types.Epoch, historySize uint64) []byte {
+func encodeTargetEpoch(epoch types.Epoch, historyLength uint64) []byte {
 	buf := make([]byte, 2)
-	binary.LittleEndian.PutUint16(buf, uint16(uint64(epoch.Mod(historySize))))
+	binary.LittleEndian.PutUint16(buf, uint16(uint64(epoch.Mod(historyLength))))
 	return buf
 }
 

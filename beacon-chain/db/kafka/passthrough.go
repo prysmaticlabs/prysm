@@ -278,16 +278,16 @@ func (e Exporter) LastEpochWrittenForValidators(
 
 // AttestationRecordForValidator -- passthrough
 func (e Exporter) AttestationRecordForValidator(
-	ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch, historySize uint64,
+	ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch, historyLength uint64,
 ) (*slashertypes.IndexedAttestationWrapper, error) {
-	return e.db.AttestationRecordForValidator(ctx, validatorIdx, targetEpoch, historySize)
+	return e.db.AttestationRecordForValidator(ctx, validatorIdx, targetEpoch, historyLength)
 }
 
 // CheckAttesterDoubleVotes -- passthrough
 func (e Exporter) CheckAttesterDoubleVotes(
-	ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper, historySize uint64,
+	ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper, historyLength uint64,
 ) ([]*slashertypes.AttesterDoubleVote, error) {
-	return e.db.CheckAttesterDoubleVotes(ctx, attestations, historySize)
+	return e.db.CheckAttesterDoubleVotes(ctx, attestations, historyLength)
 }
 
 // LoadSlasherChunk -- passthrough
@@ -308,9 +308,9 @@ func (e Exporter) SaveLastEpochWrittenForValidators(
 func (e Exporter) SaveAttestationRecordsForValidators(
 	ctx context.Context,
 	attestations []*slashertypes.IndexedAttestationWrapper,
-	historySize uint64,
+	historyLength uint64,
 ) error {
-	return e.db.SaveAttestationRecordsForValidators(ctx, attestations, historySize)
+	return e.db.SaveAttestationRecordsForValidators(ctx, attestations, historyLength)
 }
 
 // CheckDoubleBlockProposals -- passthrough
@@ -336,16 +336,16 @@ func (e Exporter) SaveSlasherChunks(
 
 // PruneAttestations -- passthrough
 func (e Exporter) PruneAttestations(
-	ctx context.Context, currentEpoch types.Epoch, historySize uint64,
+	ctx context.Context, currentEpoch types.Epoch, historyLength uint64,
 ) error {
-	return e.db.PruneAttestations(ctx, currentEpoch, historySize)
+	return e.db.PruneAttestations(ctx, currentEpoch, historyLength)
 }
 
 // PruneProposals -- passthrough
 func (e Exporter) PruneProposals(
-	ctx context.Context, currentEpoch types.Epoch, historySize uint64,
+	ctx context.Context, currentEpoch types.Epoch, historyLength uint64,
 ) error {
-	return e.db.PruneProposals(ctx, currentEpoch, historySize)
+	return e.db.PruneProposals(ctx, currentEpoch, historyLength)
 }
 
 // LoadGenesisFromFile -- passthrough
