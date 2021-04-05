@@ -71,7 +71,7 @@ func main() {
 }
 
 func generateGenesisBeaconState() error {
-	genesisState, _, err := interop.GenerateGenesisState(0, benchutil.ValidatorCount)
+	genesisState, _, err := interop.GenerateGenesisState(context.Background(), 0, benchutil.ValidatorCount)
 	if err != nil {
 		return err
 	}
