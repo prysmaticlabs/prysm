@@ -28,7 +28,7 @@ export xargs=$(which gxargs || which xargs)
 # Validate settings.
 [ "$TRACE" ] && set -x
 
-CONFIG=$@
+CONFIG=$*
 
 for line in $CONFIG; do
   eval "$line"
