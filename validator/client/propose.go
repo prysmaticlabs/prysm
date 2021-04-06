@@ -389,7 +389,7 @@ func (v *validator) processPandoraShardHeader(ctx context.Context, beaconBlk *et
 		SignatureDomain: nil,
 		Object:          nil,
 	})
-	compressedSig := headerHashSig.Marshal()[:32]
+	//compressedSig := headerHashSig.Marshal()
 	if err != nil {
 		log.WithField("blockSlot", slot).WithError(err).Error("Failed to sign pandora header hash")
 		if v.emitAccountMetrics {
@@ -397,10 +397,10 @@ func (v *validator) processPandoraShardHeader(ctx context.Context, beaconBlk *et
 		}
 		return false, err
 	}
-	header.MixDigest = common.BytesToHash(compressedSig)
-	var headerHashSig32Bytes [32]byte
-	copy(headerHashSig32Bytes[:], compressedSig)
-	return v.pandoraService.SubmitShardBlockHeader(ctx, header.Nonce.Uint64(), headerHash, headerHashSig32Bytes)
+	header.MixDigest = common.BytesToHash(headerHashSig.Marshal())
+	var headerHashSig96Bytes [96]byte
+	copy(headerHashSig96Bytes[:], headerHashSig.Marshal())
+	return v.pandoraService.SubmitShardBlockHeader(ctx, header.Nonce.Uint64(), headerHash, headerHashSig96Bytes)
 }
 
 // verifyPandoraShardHeader verifies pandora sharding chain header hash and extraData field
