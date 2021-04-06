@@ -278,14 +278,14 @@ func (e Exporter) LastEpochWrittenForValidators(
 
 // AttestationRecordForValidator -- passthrough
 func (e Exporter) AttestationRecordForValidator(
-	ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch, historyLength uint64,
+	ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch, historyLength types.Epoch,
 ) (*slashertypes.IndexedAttestationWrapper, error) {
 	return e.db.AttestationRecordForValidator(ctx, validatorIdx, targetEpoch, historyLength)
 }
 
 // CheckAttesterDoubleVotes -- passthrough
 func (e Exporter) CheckAttesterDoubleVotes(
-	ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper, historyLength uint64,
+	ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper, historyLength types.Epoch,
 ) ([]*slashertypes.AttesterDoubleVote, error) {
 	return e.db.CheckAttesterDoubleVotes(ctx, attestations, historyLength)
 }
@@ -308,7 +308,7 @@ func (e Exporter) SaveLastEpochWrittenForValidators(
 func (e Exporter) SaveAttestationRecordsForValidators(
 	ctx context.Context,
 	attestations []*slashertypes.IndexedAttestationWrapper,
-	historyLength uint64,
+	historyLength types.Epoch,
 ) error {
 	return e.db.SaveAttestationRecordsForValidators(ctx, attestations, historyLength)
 }
@@ -336,14 +336,14 @@ func (e Exporter) SaveSlasherChunks(
 
 // PruneAttestations -- passthrough
 func (e Exporter) PruneAttestations(
-	ctx context.Context, currentEpoch types.Epoch, historyLength uint64,
+	ctx context.Context, currentEpoch types.Epoch, historyLength types.Epoch,
 ) error {
 	return e.db.PruneAttestations(ctx, currentEpoch, historyLength)
 }
 
 // PruneProposals -- passthrough
 func (e Exporter) PruneProposals(
-	ctx context.Context, currentEpoch types.Epoch, historyLength uint64,
+	ctx context.Context, currentEpoch types.Epoch, historyLength types.Epoch,
 ) error {
 	return e.db.PruneProposals(ctx, currentEpoch, historyLength)
 }

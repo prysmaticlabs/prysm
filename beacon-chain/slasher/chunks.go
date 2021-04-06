@@ -321,8 +321,8 @@ func (m *MinSpanChunksSlice) Update(
 	// The lowest epoch we need to update. This is a sliding window from (current epoch - H) where
 	// H is the history length a min span for a validator stores.
 	var minEpoch types.Epoch
-	if uint64(args.currentEpoch) > (m.params.historyLength - 1) {
-		minEpoch = args.currentEpoch.Sub(m.params.historyLength - 1)
+	if args.currentEpoch > (m.params.historyLength - 1) {
+		minEpoch = args.currentEpoch - (m.params.historyLength - 1)
 	}
 	epochInChunk := startEpoch
 	// We go down the chunk for the validator, updating every value starting at start_epoch down to min_epoch.
@@ -416,11 +416,11 @@ func (m *MinSpanChunksSlice) StartEpoch(
 	if sourceEpoch == 0 {
 		return
 	}
-	var difference uint64
-	if uint64(currentEpoch) > m.params.historyLength {
-		difference = uint64(currentEpoch) - m.params.historyLength
+	var difference types.Epoch
+	if currentEpoch > m.params.historyLength {
+		difference = currentEpoch - m.params.historyLength
 	}
-	if uint64(sourceEpoch) <= difference {
+	if sourceEpoch <= difference {
 		return
 	}
 	epoch = sourceEpoch.Sub(1)

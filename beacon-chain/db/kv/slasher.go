@@ -81,7 +81,7 @@ func (s *Store) SaveLastEpochWrittenForValidators(
 // CheckDoubleAttesterVotes retries any slashable double votes that exist
 // for a series of input attestations.
 func (s *Store) CheckAttesterDoubleVotes(
-	ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper, historyLength uint64,
+	ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper, historyLength types.Epoch,
 ) ([]*slashertypes.AttesterDoubleVote, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.CheckAttesterDoubleVotes")
 	defer span.End()
@@ -120,7 +120,7 @@ func (s *Store) CheckAttesterDoubleVotes(
 // AttestationRecordForValidator given a validator index and a target epoch,
 // retrieves an existing attestation record we have stored in the database.
 func (s *Store) AttestationRecordForValidator(
-	ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch, historyLength uint64,
+	ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch, historyLength types.Epoch,
 ) (*slashertypes.IndexedAttestationWrapper, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.AttestationRecordForValidator")
 	defer span.End()
@@ -149,7 +149,7 @@ func (s *Store) AttestationRecordForValidator(
 func (s *Store) SaveAttestationRecordsForValidators(
 	ctx context.Context,
 	attestations []*slashertypes.IndexedAttestationWrapper,
-	historyLength uint64,
+	historyLength types.Epoch,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveAttestationRecordsForValidators")
 	defer span.End()
@@ -305,12 +305,12 @@ func (s *Store) SaveBlockProposals(
 }
 
 // PruneProposals prunes all proposal data older than historyLength.
-func (s *Store) PruneProposals(ctx context.Context, currentEpoch types.Epoch, historyLength uint64) error {
-	if uint64(currentEpoch) < historyLength {
+func (s *Store) PruneProposals(ctx context.Context, currentEpoch types.Epoch, historyLength types.Epoch) error {
+	if currentEpoch < historyLength {
 		return nil
 	}
 	// + 1 here so we can prune everything less than this, but not equal.
-	endPruneSlot, err := helpers.StartSlot(currentEpoch - types.Epoch(historyLength))
+	endPruneSlot, err := helpers.StartSlot(currentEpoch - historyLength)
 	if err != nil {
 		return err
 	}
@@ -335,8 +335,8 @@ func (s *Store) PruneProposals(ctx context.Context, currentEpoch types.Epoch, hi
 }
 
 // PruneAttestations prunes all proposal data older than historyLength.
-func (s *Store) PruneAttestations(ctx context.Context, currentEpoch types.Epoch, historyLength uint64) error {
-	if uint64(currentEpoch) < historyLength {
+func (s *Store) PruneAttestations(ctx context.Context, currentEpoch types.Epoch, historyLength types.Epoch) error {
+	if currentEpoch < historyLength {
 		return nil
 	}
 	// + 1 here so we can prune everything less than this, but not equal.
@@ -515,9 +515,9 @@ func decodeProposalRecord(encoded []byte) (*slashertypes.SignedBlockHeaderWrappe
 
 // Encodes an epoch by performing modulo HISTORY_SIZE from slasher using 2 bytes instead of 8 as a
 // client optimization to save space in the database.
-func encodeTargetEpoch(epoch types.Epoch, historyLength uint64) []byte {
+func encodeTargetEpoch(epoch types.Epoch, historyLength types.Epoch) []byte {
 	buf := make([]byte, 2)
-	binary.LittleEndian.PutUint16(buf, uint16(epoch.Mod(historyLength)))
+	binary.LittleEndian.PutUint16(buf, uint16(epoch%historyLength))
 	return buf
 }
 

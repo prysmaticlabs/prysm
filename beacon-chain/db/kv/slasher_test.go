@@ -317,7 +317,7 @@ func TestStore_PruneProposals(t *testing.T) {
 		proposalsInDB []*slashertypes.SignedBlockHeaderWrapper
 		afterPruning  []*slashertypes.SignedBlockHeaderWrapper
 		epoch         types.Epoch
-		historyLength uint64
+		historyLength types.Epoch
 		wantErr       bool
 	}{
 		{
@@ -704,7 +704,7 @@ func Test_encodeTargetEpoch(t *testing.T) {
 	tests := []struct {
 		name          string
 		epoch         types.Epoch
-		historyLength uint64
+		historyLength types.Epoch
 	}{
 		{
 			name:          "0",
