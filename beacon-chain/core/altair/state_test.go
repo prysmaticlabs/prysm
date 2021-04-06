@@ -76,10 +76,10 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	assert.DeepEqual(t, make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector), newState.Slashings(), "Slashings was not correctly initialized")
 	currParticipation, err := newState.CurrentEpochParticipation()
 	require.NoError(t, err)
-	assert.DeepSSZEqual(t, []byte{}, currParticipation, "CurrentEpochParticipation was not correctly initialized")
+	assert.DeepSSZEqual(t, make([]byte, depositsForChainStart), currParticipation, "CurrentEpochParticipation was not correctly initialized")
 	prevParticipation, err := newState.PreviousEpochParticipation()
 	require.NoError(t, err)
-	assert.DeepSSZEqual(t, []byte{}, prevParticipation, "PreviousEpochParticipation was not correctly initialized")
+	assert.DeepSSZEqual(t, make([]byte, depositsForChainStart), prevParticipation, "PreviousEpochParticipation was not correctly initialized")
 
 	zeroHash := params.BeaconConfig().ZeroHash[:]
 	// History root checks.
