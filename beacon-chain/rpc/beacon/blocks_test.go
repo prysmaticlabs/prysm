@@ -711,6 +711,18 @@ func TestServer_GetWeakSubjectivityCheckpoint(t *testing.T) {
 	require.NoError(t, db.SaveState(ctx, beaconState, genesisBlockRoot))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesisBlockRoot))
 
+	// Finalized checkpoint.
+	finalizedEpoch := types.Epoch(1020)
+	require.NoError(t, beaconState.SetSlot(types.Slot(finalizedEpoch.Mul(uint64(params.BeaconConfig().SlotsPerEpoch)))))
+	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
+		Epoch: finalizedEpoch - 1,
+		Root:  bytesutil.PadTo([]byte{'A'}, 32),
+	}))
+	require.NoError(t, beaconState.SetFinalizedCheckpoint(&ethpb.Checkpoint{
+		Epoch: finalizedEpoch,
+		Root:  bytesutil.PadTo([]byte{'B'}, 32),
+	}))
+
 	chainService := &chainMock.ChainService{State: beaconState}
 	server := &Server{
 		Ctx:           ctx,
@@ -720,9 +732,12 @@ func TestServer_GetWeakSubjectivityCheckpoint(t *testing.T) {
 		StateGen:      stategen.New(db),
 	}
 
+	wsEpoch, err := helpers.ComputeWeakSubjectivityPeriod(beaconState)
+	require.NoError(t, err)
+
 	c, err := server.GetWeakSubjectivityCheckpoint(ctx, &ptypes.Empty{})
 	require.NoError(t, err)
-	e := types.Epoch(257)
+	e := finalizedEpoch - (finalizedEpoch % wsEpoch)
 	require.Equal(t, e, c.Epoch)
 	wsState, err := server.StateGen.StateBySlot(ctx, params.BeaconConfig().SlotsPerEpoch.Mul(uint64(e)))
 	require.NoError(t, err)

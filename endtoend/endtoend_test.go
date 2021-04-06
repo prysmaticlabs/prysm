@@ -181,11 +181,7 @@ func (r *testRunner) run() {
 		if !config.TestSync {
 			return nil
 		}
-		if err := r.testBeaconChainSync(ctx, g, conns, tickingStartTime, bootNode.ENR()); err != nil {
-			return err
-		}
-
-		return nil
+		return r.testBeaconChainSync(ctx, g, conns, tickingStartTime, bootNode.ENR())
 	})
 
 	if err := g.Wait(); err != nil && !errors.Is(err, context.Canceled) {
