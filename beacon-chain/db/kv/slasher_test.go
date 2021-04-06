@@ -405,7 +405,7 @@ func TestStore_PruneAttestations(t *testing.T) {
 		attestationsInDB []*slashertypes.IndexedAttestationWrapper
 		afterPruning     []*slashertypes.IndexedAttestationWrapper
 		epoch            types.Epoch
-		historyLength    uint64
+		historyLength    types.Epoch
 		wantErr          bool
 	}{
 		{
@@ -731,7 +731,7 @@ func Test_encodeTargetEpoch(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := encodeTargetEpoch(tt.epoch, tt.historyLength)
 			decoded := types.Epoch(binary.LittleEndian.Uint16(got[:2]))
-			require.DeepEqual(t, tt.epoch.Mod(tt.historyLength), decoded)
+			require.DeepEqual(t, tt.epoch%tt.historyLength, decoded)
 		})
 	}
 }
