@@ -4,10 +4,12 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // ProcessPreGenesisDeposits processes a deposit for the beacon state Altair before chain start.
@@ -58,9 +60,16 @@ func ProcessDeposit(ctx context.Context, beaconState iface.BeaconStateAltair, de
 		return nil, err
 	}
 
-	pubKey := deposit.Data.PublicKey
-	_, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
-	if !ok {
+	v, err := beaconState.ValidatorAtIndexReadOnly(types.ValidatorIndex(beaconState.NumValidators() - 1))
+	if err != nil {
+		return nil, err
+	}
+	// We know a validator is new when its status epochs are all far future epoch.
+	// In this case, we append 0 to inactivity score and participation bits.
+	if v.ActivationEligibilityEpoch() == v.ActivationEpoch() &&
+		v.ActivationEpoch() == v.ExitEpoch() &&
+		v.ExitEpoch() == v.WithdrawableEpoch() &&
+		v.WithdrawableEpoch() == params.BeaconConfig().FarFutureEpoch {
 		if err := beaconState.AppendInactivityScore(0); err != nil {
 			return nil, err
 		}

@@ -6,5 +6,8 @@ import pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 // a SyncCommitteeRoot struct according to the eth2
 // Simple Serialize specification.
 func syncCommitteeRoot(committee *pb.SyncCommittee) ([32]byte, error) {
+	if committee == nil {
+		return [32]byte{}, nil
+	}
 	return committee.HashTreeRoot()
 }
