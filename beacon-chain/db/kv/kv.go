@@ -48,6 +48,7 @@ var blockedBuckets = [][]byte{
 	finalizedBlockRootsIndexBucket,
 	proposalRecordsBucket,
 	attestationRecordsBucket,
+	slasherChunksBucket,
 }
 
 // Config for the bolt db kv store.

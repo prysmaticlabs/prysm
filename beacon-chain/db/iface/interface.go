@@ -62,10 +62,10 @@ type ReadOnlyDatabase interface {
 		ctx context.Context, validatorIndices []types.ValidatorIndex,
 	) ([]*slashertypes.AttestedEpochForValidator, error)
 	AttestationRecordForValidator(
-		ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch,
+		ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch, historyLength types.Epoch,
 	) (*slashertypes.IndexedAttestationWrapper, error)
 	CheckAttesterDoubleVotes(
-		ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper,
+		ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper, historyLength types.Epoch,
 	) ([]*slashertypes.AttesterDoubleVote, error)
 	LoadSlasherChunks(
 		ctx context.Context, kind slashertypes.ChunkKind, diskKeys [][]byte,
@@ -74,10 +74,10 @@ type ReadOnlyDatabase interface {
 		ctx context.Context, proposals []*slashertypes.SignedBlockHeaderWrapper,
 	) ([]*eth.ProposerSlashing, error)
 	PruneAttestations(
-		ctx context.Context, currentEpoch types.Epoch, historySize uint64,
+		ctx context.Context, currentEpoch types.Epoch, historyLength types.Epoch,
 	) error
 	PruneProposals(
-		ctx context.Context, currentEpoch types.Epoch, historySize uint64,
+		ctx context.Context, currentEpoch types.Epoch, historyLength types.Epoch,
 	) error
 }
 
@@ -115,6 +115,7 @@ type NoHeadAccessDatabase interface {
 	SaveAttestationRecordsForValidators(
 		ctx context.Context,
 		attestations []*slashertypes.IndexedAttestationWrapper,
+		historyLength types.Epoch,
 	) error
 	SaveSlasherChunks(
 		ctx context.Context, kind slashertypes.ChunkKind, chunkKeys [][]byte, chunks [][]uint16,

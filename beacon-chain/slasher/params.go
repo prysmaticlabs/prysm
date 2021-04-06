@@ -19,7 +19,7 @@ import (
 type Parameters struct {
 	chunkSize          uint64
 	validatorChunkSize uint64
-	historyLength      uint64
+	historyLength      types.Epoch
 }
 
 // DefaultParams defines default values for slasher's important parameters, defined
@@ -49,7 +49,7 @@ func DefaultParams() *Parameters {
 //                              |-> epoch 4, chunk idx 2
 //
 func (p *Parameters) chunkIndex(epoch types.Epoch) uint64 {
-	return uint64(epoch.Mod(p.historyLength).Div(p.chunkSize))
+	return uint64(epoch.Mod(uint64(p.historyLength)).Div(p.chunkSize))
 }
 
 // When storing data on disk, we take K validators' chunks. To figure out
@@ -146,8 +146,8 @@ func (p *Parameters) validatorOffset(validatorIndex types.ValidatorIndex) uint64
 //  validatorChunkIndex * width + chunkIndex = 2*4 + 2 = 10
 //
 func (p *Parameters) flatSliceID(validatorChunkIndex, chunkIndex uint64) []byte {
-	width := p.historyLength / p.chunkSize
-	return ssz.MarshalUint64(make([]byte, 0), validatorChunkIndex*width+chunkIndex)
+	width := p.historyLength.Div(p.chunkSize)
+	return ssz.MarshalUint64(make([]byte, 0), uint64(width.Mul(validatorChunkIndex).Add(chunkIndex)))
 }
 
 // Given a validator chunk index, we determine all of the validator

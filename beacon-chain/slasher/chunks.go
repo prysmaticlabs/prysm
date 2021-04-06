@@ -189,7 +189,9 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 		)
 	}
 	if targetEpoch > minTarget {
-		existingAttRecord, err := slasherDB.AttestationRecordForValidator(ctx, validatorIdx, minTarget)
+		existingAttRecord, err := slasherDB.AttestationRecordForValidator(
+			ctx, validatorIdx, minTarget, m.params.historyLength,
+		)
 		if err != nil {
 			return nil, errors.Wrapf(
 				err, "could not get existing attestation record at target %d", minTarget,
@@ -234,7 +236,9 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 		)
 	}
 	if targetEpoch < maxTarget {
-		existingAttRecord, err := slasherDB.AttestationRecordForValidator(ctx, validatorIdx, maxTarget)
+		existingAttRecord, err := slasherDB.AttestationRecordForValidator(
+			ctx, validatorIdx, maxTarget, m.params.historyLength,
+		)
 		if err != nil {
 			return nil, errors.Wrapf(
 				err, "could not get existing attestation record at target %d", maxTarget,
@@ -317,8 +321,8 @@ func (m *MinSpanChunksSlice) Update(
 	// The lowest epoch we need to update. This is a sliding window from (current epoch - H) where
 	// H is the history length a min span for a validator stores.
 	var minEpoch types.Epoch
-	if uint64(args.currentEpoch) > (m.params.historyLength - 1) {
-		minEpoch = args.currentEpoch.Sub(m.params.historyLength - 1)
+	if args.currentEpoch > (m.params.historyLength - 1) {
+		minEpoch = args.currentEpoch - (m.params.historyLength - 1)
 	}
 	epochInChunk := startEpoch
 	// We go down the chunk for the validator, updating every value starting at start_epoch down to min_epoch.
@@ -397,7 +401,7 @@ func (m *MaxSpanChunksSlice) Update(
 
 // StartEpoch given a source epoch and current epoch, determines the start epoch of
 // a min span chunk for use in chunk updates. To compute this value, we look at the difference between
-// H = HistoryLength and the current epoch. Then, we check if the source epoch > difference. If so,
+// H = historyLength and the current epoch. Then, we check if the source epoch > difference. If so,
 // then the start epoch is source epoch - 1. Otherwise, we return the caller a boolean signifying
 // the input argumets are invalid for the chunk and the start epoch does not exist.
 func (m *MinSpanChunksSlice) StartEpoch(
@@ -412,11 +416,11 @@ func (m *MinSpanChunksSlice) StartEpoch(
 	if sourceEpoch == 0 {
 		return
 	}
-	var difference uint64
-	if uint64(currentEpoch) > m.params.historyLength {
-		difference = uint64(currentEpoch) - m.params.historyLength
+	var difference types.Epoch
+	if currentEpoch > m.params.historyLength {
+		difference = currentEpoch - m.params.historyLength
 	}
-	if uint64(sourceEpoch) <= difference {
+	if sourceEpoch <= difference {
 		return
 	}
 	epoch = sourceEpoch.Sub(1)
@@ -447,7 +451,7 @@ func (m *MaxSpanChunksSlice) StartEpoch(
 //                         |          |          |
 //  max_spans_val_i = [[-, -, -], [-, -, -], [-, -, -]]
 //
-// If C = ChunkSize is 3 epochs per chunk, and we input start epoch of chunk 1 which is 3. The next start
+// If C = chunkSize is 3 epochs per chunk, and we input start epoch of chunk 1 which is 3. The next start
 // epoch is the last epoch of chunk 0, which is epoch 2. This is computed as:
 //
 //  last_epoch(chunkIndex(startEpoch)-1)
@@ -471,7 +475,7 @@ func (m *MinSpanChunksSlice) NextChunkStartEpoch(startEpoch types.Epoch) types.E
 //                         |          |          |
 //  max_spans_val_i = [[-, -, -], [-, -, -], [-, -, -]]
 //
-// If C = ChunkSize is 3 epochs per chunk, and we input start epoch of chunk 1 which is 3. The next start
+// If C = chunkSize is 3 epochs per chunk, and we input start epoch of chunk 1 which is 3. The next start
 // epoch is the start epoch of chunk 2, which is epoch 6. This is computed as:
 
 //  first_epoch(chunkIndex(startEpoch)+1)

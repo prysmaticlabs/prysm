@@ -3,6 +3,7 @@ package kv
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"fmt"
 	"sort"
 
@@ -29,11 +30,7 @@ func (s *Store) LastEpochWrittenForValidators(
 	attestedEpochs := make([]*slashertypes.AttestedEpochForValidator, 0)
 	encodedIndices := make([][]byte, len(validatorIndices))
 	for i, valIdx := range validatorIndices {
-		enc, err := valIdx.MarshalSSZ()
-		if err != nil {
-			return nil, err
-		}
-		encodedIndices[i] = enc
+		encodedIndices[i] = encodeValidatorIndex(valIdx)
 	}
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestedEpochsByValidator)
@@ -64,11 +61,7 @@ func (s *Store) SaveLastEpochWrittenForValidators(
 	defer span.End()
 	encodedIndices := make([][]byte, len(validatorIndices))
 	for i, valIdx := range validatorIndices {
-		enc, err := valIdx.MarshalSSZ()
-		if err != nil {
-			return err
-		}
-		encodedIndices[i] = enc
+		encodedIndices[i] = encodeValidatorIndex(valIdx)
 	}
 	encodedEpoch, err := epoch.MarshalSSZ()
 	if err != nil {
@@ -88,7 +81,7 @@ func (s *Store) SaveLastEpochWrittenForValidators(
 // CheckDoubleAttesterVotes retries any slashable double votes that exist
 // for a series of input attestations.
 func (s *Store) CheckAttesterDoubleVotes(
-	ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper,
+	ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper, historyLength types.Epoch,
 ) ([]*slashertypes.AttesterDoubleVote, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.CheckAttesterDoubleVotes")
 	defer span.End()
@@ -96,12 +89,9 @@ func (s *Store) CheckAttesterDoubleVotes(
 	err := s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationRecordsBucket)
 		for _, att := range attestations {
-			encEpoch, err := att.IndexedAttestation.Data.Target.Epoch.MarshalSSZ()
-			if err != nil {
-				return err
-			}
+			encEpoch := encodeTargetEpoch(att.IndexedAttestation.Data.Target.Epoch, historyLength)
 			for _, valIdx := range att.IndexedAttestation.AttestingIndices {
-				encIdx := ssz.MarshalUint64(make([]byte, 0), valIdx)
+				encIdx := encodeValidatorIndex(types.ValidatorIndex(valIdx))
 				key := append(encEpoch, encIdx...)
 				encExistingAttRecord := bkt.Get(key)
 				if len(encExistingAttRecord) < 32 {
@@ -130,21 +120,15 @@ func (s *Store) CheckAttesterDoubleVotes(
 // AttestationRecordForValidator given a validator index and a target epoch,
 // retrieves an existing attestation record we have stored in the database.
 func (s *Store) AttestationRecordForValidator(
-	ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch,
+	ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch, historyLength types.Epoch,
 ) (*slashertypes.IndexedAttestationWrapper, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.AttestationRecordForValidator")
 	defer span.End()
 	var record *slashertypes.IndexedAttestationWrapper
-	encIdx, err := validatorIdx.MarshalSSZ()
-	if err != nil {
-		return nil, err
-	}
-	encEpoch, err := targetEpoch.MarshalSSZ()
-	if err != nil {
-		return nil, err
-	}
+	encIdx := encodeValidatorIndex(validatorIdx)
+	encEpoch := encodeTargetEpoch(targetEpoch, historyLength)
 	key := append(encEpoch, encIdx...)
-	err = s.db.View(func(tx *bolt.Tx) error {
+	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationRecordsBucket)
 		value := bkt.Get(key)
 		if value == nil {
@@ -165,16 +149,14 @@ func (s *Store) AttestationRecordForValidator(
 func (s *Store) SaveAttestationRecordsForValidators(
 	ctx context.Context,
 	attestations []*slashertypes.IndexedAttestationWrapper,
+	historyLength types.Epoch,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveAttestationRecordsForValidators")
 	defer span.End()
 	encodedTargetEpoch := make([][]byte, len(attestations))
 	encodedRecords := make([][]byte, len(attestations))
 	for i, att := range attestations {
-		encEpoch, err := att.IndexedAttestation.Data.Target.Epoch.MarshalSSZ()
-		if err != nil {
-			return err
-		}
+		encEpoch := encodeTargetEpoch(att.IndexedAttestation.Data.Target.Epoch, historyLength)
 		value, err := encodeAttestationRecord(att)
 		if err != nil {
 			return err
@@ -186,7 +168,7 @@ func (s *Store) SaveAttestationRecordsForValidators(
 		bkt := tx.Bucket(attestationRecordsBucket)
 		for i, att := range attestations {
 			for _, valIdx := range att.IndexedAttestation.AttestingIndices {
-				encIdx := ssz.MarshalUint64(make([]byte, 0), valIdx)
+				encIdx := encodeValidatorIndex(types.ValidatorIndex(valIdx))
 				key := append(encodedTargetEpoch[i], encIdx...)
 				if err := bkt.Put(key, encodedRecords[i]); err != nil {
 					return err
@@ -322,13 +304,13 @@ func (s *Store) SaveBlockProposals(
 	})
 }
 
-// PruneProposals prunes all proposal data older than historySize.
-func (s *Store) PruneProposals(ctx context.Context, currentEpoch types.Epoch, historySize uint64) error {
-	if uint64(currentEpoch) < historySize {
+// PruneProposals prunes all proposal data older than historyLength.
+func (s *Store) PruneProposals(ctx context.Context, currentEpoch types.Epoch, historyLength types.Epoch) error {
+	if currentEpoch < historyLength {
 		return nil
 	}
 	// + 1 here so we can prune everything less than this, but not equal.
-	endPruneSlot, err := helpers.StartSlot(currentEpoch - types.Epoch(historySize))
+	endPruneSlot, err := helpers.StartSlot(currentEpoch - historyLength)
 	if err != nil {
 		return err
 	}
@@ -340,9 +322,10 @@ func (s *Store) PruneProposals(ctx context.Context, currentEpoch types.Epoch, hi
 		proposalBkt := tx.Bucket(proposalRecordsBucket)
 		c := proposalBkt.Cursor()
 		for k, _ := c.Seek(endEnc); k != nil; k, _ = c.Prev() {
-			if !prefixLessThan(k, endEnc) {
+			if !slotPrefixLessThan(k, endEnc) {
 				continue
 			}
+			slasherProposalsPrunedTotal.Inc()
 			if err := proposalBkt.Delete(k); err != nil {
 				return err
 			}
@@ -351,24 +334,22 @@ func (s *Store) PruneProposals(ctx context.Context, currentEpoch types.Epoch, hi
 	})
 }
 
-// PruneAttestations prunes all proposal data older than historySize.
-func (s *Store) PruneAttestations(ctx context.Context, currentEpoch types.Epoch, historySize uint64) error {
-	if uint64(currentEpoch) < historySize {
+// PruneAttestations prunes all proposal data older than historyLength.
+func (s *Store) PruneAttestations(ctx context.Context, currentEpoch types.Epoch, historyLength types.Epoch) error {
+	if currentEpoch < historyLength {
 		return nil
 	}
 	// + 1 here so we can prune everything less than this, but not equal.
-	endPruneEpoch := currentEpoch - types.Epoch(historySize)
-	epochEnc, err := endPruneEpoch.MarshalSSZ()
-	if err != nil {
-		return err
-	}
+	endPruneEpoch := currentEpoch - types.Epoch(historyLength)
+	epochEnc := encodeTargetEpoch(endPruneEpoch, historyLength)
 	return s.db.Update(func(tx *bolt.Tx) error {
 		attBkt := tx.Bucket(attestationRecordsBucket)
 		c := attBkt.Cursor()
 		for k, _ := c.Seek(epochEnc); k != nil; k, _ = c.Prev() {
-			if !prefixLessThan(k, epochEnc) {
+			if !epochPrefixLessThan(k, epochEnc) {
 				continue
 			}
+			slasherAttestationsPrunedTotal.Inc()
 			if err := attBkt.Delete(k); err != nil {
 				return err
 			}
@@ -385,7 +366,6 @@ func (s *Store) HighestAttestations(
 	if len(indices) == 0 {
 		return nil, nil
 	}
-
 	// Sort indices to keep DB interactions short.
 	sort.SliceStable(indices, func(i, j int) bool {
 		return uint64(indices[i]) < uint64(indices[j])
@@ -393,21 +373,17 @@ func (s *Store) HighestAttestations(
 
 	var err error
 	encodedIndices := make([][]byte, len(indices))
-	for i, idx := range indices {
-		encodedIndices[i], err = idx.MarshalSSZ()
-		if err != nil {
-			return nil, err
-		}
+	for i, valIdx := range indices {
+		encodedIndices[i] = encodeValidatorIndex(valIdx)
 	}
 
 	history := make([]*slashpb.HighestAttestation, 0, len(encodedIndices))
-
 	err = s.db.View(func(tx *bolt.Tx) error {
 		attBkt := tx.Bucket(attestationRecordsBucket)
 		for i := 0; i < len(encodedIndices); i++ {
 			c := attBkt.Cursor()
 			for k, v := c.Last(); k != nil; k, v = c.Prev() {
-				if suffixForIndex(k, encodedIndices[i]) {
+				if suffixForAttestationRecordsKey(k, encodedIndices[i]) {
 					attWrapper, err := decodeAttestationRecord(v)
 					if err != nil {
 						return err
@@ -427,14 +403,19 @@ func (s *Store) HighestAttestations(
 	return history, err
 }
 
-func prefixLessThan(key, lessThan []byte) bool {
+func slotPrefixLessThan(key, lessThan []byte) bool {
 	encSlot := key[:8]
 	return bytes.Compare(encSlot, lessThan) < 0
 }
 
-func suffixForIndex(key, index []byte) bool {
-	encIdx := key[8:]
-	return bytes.Equal(encIdx, index)
+func epochPrefixLessThan(key, lessThan []byte) bool {
+	encSlot := key[:2]
+	return bytes.Compare(encSlot, lessThan) < 0
+}
+
+func suffixForAttestationRecordsKey(key, encodedValidatorIndex []byte) bool {
+	encIdx := key[2:]
+	return bytes.Equal(encIdx, encodedValidatorIndex)
 }
 
 // Disk key for a validator proposal, including a slot+validatorIndex as a byte slice.
@@ -443,10 +424,7 @@ func keyForValidatorProposal(proposal *slashertypes.SignedBlockHeaderWrapper) ([
 	if err != nil {
 		return nil, err
 	}
-	encValidatorIdx, err := proposal.SignedBeaconBlockHeader.Header.ProposerIndex.MarshalSSZ()
-	if err != nil {
-		return nil, err
-	}
+	encValidatorIdx := encodeValidatorIndex(proposal.SignedBeaconBlockHeader.Header.ProposerIndex)
 	return append(encSlot, encValidatorIdx...), nil
 }
 
@@ -480,7 +458,8 @@ func encodeAttestationRecord(att *slashertypes.IndexedAttestationWrapper) ([]byt
 	if err != nil {
 		return nil, err
 	}
-	return append(att.SigningRoot[:], encodedAtt...), nil
+	compressedAtt := snappy.Encode(nil, encodedAtt)
+	return append(att.SigningRoot[:], compressedAtt...), nil
 }
 
 // Decode attestation record from bytes.
@@ -490,7 +469,11 @@ func decodeAttestationRecord(encoded []byte) (*slashertypes.IndexedAttestationWr
 	}
 	signingRoot := encoded[:32]
 	decodedAtt := &ethpb.IndexedAttestation{}
-	if err := decodedAtt.UnmarshalSSZ(encoded[32:]); err != nil {
+	decodedAttBytes, err := snappy.Decode(nil, encoded[32:])
+	if err != nil {
+		return nil, err
+	}
+	if err := decodedAtt.UnmarshalSSZ(decodedAttBytes); err != nil {
 		return nil, err
 	}
 	return &slashertypes.IndexedAttestationWrapper{
@@ -507,7 +490,8 @@ func encodeProposalRecord(blkHdr *slashertypes.SignedBlockHeaderWrapper) ([]byte
 	if err != nil {
 		return nil, err
 	}
-	return append(blkHdr.SigningRoot[:], encodedHdr...), nil
+	compressedHdr := snappy.Encode(nil, encodedHdr)
+	return append(blkHdr.SigningRoot[:], compressedHdr...), nil
 }
 
 func decodeProposalRecord(encoded []byte) (*slashertypes.SignedBlockHeaderWrapper, error) {
@@ -516,11 +500,37 @@ func decodeProposalRecord(encoded []byte) (*slashertypes.SignedBlockHeaderWrappe
 	}
 	signingRoot := encoded[:32]
 	decodedBlkHdr := &ethpb.SignedBeaconBlockHeader{}
-	if err := decodedBlkHdr.UnmarshalSSZ(encoded[32:]); err != nil {
+	decodedHdrBytes, err := snappy.Decode(nil, encoded[32:])
+	if err != nil {
+		return nil, err
+	}
+	if err := decodedBlkHdr.UnmarshalSSZ(decodedHdrBytes); err != nil {
 		return nil, err
 	}
 	return &slashertypes.SignedBlockHeaderWrapper{
 		SignedBeaconBlockHeader: decodedBlkHdr,
 		SigningRoot:             bytesutil.ToBytes32(signingRoot),
 	}, nil
+}
+
+// Encodes an epoch by performing modulo HISTORY_SIZE from slasher using 2 bytes instead of 8 as a
+// client optimization to save space in the database.
+func encodeTargetEpoch(epoch types.Epoch, historyLength types.Epoch) []byte {
+	buf := make([]byte, 2)
+	binary.LittleEndian.PutUint16(buf, uint16(epoch%historyLength))
+	return buf
+}
+
+// Encodes a validator index using 5 bytes instead of 8 as a
+// client optimization to save space in the database. Because the max validator
+// registry size is 2**40, this is a safe optimization.
+func encodeValidatorIndex(index types.ValidatorIndex) []byte {
+	buf := make([]byte, 5)
+	v := uint64(index)
+	buf[0] = byte(v)
+	buf[1] = byte(v >> 8)
+	buf[2] = byte(v >> 16)
+	buf[3] = byte(v >> 24)
+	buf[4] = byte(v >> 32)
+	return buf
 }

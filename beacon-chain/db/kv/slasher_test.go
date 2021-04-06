@@ -2,6 +2,7 @@ package kv
 
 import (
 	"context"
+	"encoding/binary"
 	"reflect"
 	"testing"
 
@@ -16,22 +17,28 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
+const defaultHistoryLength = 4096
+
 func TestStore_AttestationRecordForValidator_SaveRetrieve(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := setupDB(t)
 	valIdx := types.ValidatorIndex(1)
 	target := types.Epoch(5)
 	source := types.Epoch(4)
-	attRecord, err := beaconDB.AttestationRecordForValidator(ctx, valIdx, target)
+	attRecord, err := beaconDB.AttestationRecordForValidator(ctx, valIdx, target, defaultHistoryLength)
 	require.NoError(t, err)
 	require.Equal(t, true, attRecord == nil)
 
 	sr := [32]byte{1}
-	err = beaconDB.SaveAttestationRecordsForValidators(ctx, []*slashertypes.IndexedAttestationWrapper{
-		createAttestationWrapper(source, target, []uint64{uint64(valIdx)}, sr[:]),
-	})
+	err = beaconDB.SaveAttestationRecordsForValidators(
+		ctx,
+		[]*slashertypes.IndexedAttestationWrapper{
+			createAttestationWrapper(source, target, []uint64{uint64(valIdx)}, sr[:]),
+		},
+		defaultHistoryLength,
+	)
 	require.NoError(t, err)
-	attRecord, err = beaconDB.AttestationRecordForValidator(ctx, valIdx, target)
+	attRecord, err = beaconDB.AttestationRecordForValidator(ctx, valIdx, target, defaultHistoryLength)
 	require.NoError(t, err)
 	assert.DeepEqual(t, target, attRecord.IndexedAttestation.Data.Target.Epoch)
 	assert.DeepEqual(t, source, attRecord.IndexedAttestation.Data.Source.Epoch)
@@ -70,7 +77,7 @@ func TestStore_CheckAttesterDoubleVotes(t *testing.T) {
 	err := beaconDB.SaveAttestationRecordsForValidators(ctx, []*slashertypes.IndexedAttestationWrapper{
 		createAttestationWrapper(2, 3, []uint64{0, 1}, []byte{1}),
 		createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{1}),
-	})
+	}, defaultHistoryLength)
 	require.NoError(t, err)
 
 	slashableAtts := []*slashertypes.IndexedAttestationWrapper{
@@ -104,7 +111,7 @@ func TestStore_CheckAttesterDoubleVotes(t *testing.T) {
 			AttestationWrapper:     createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{2}),
 		},
 	}
-	doubleVotes, err := beaconDB.CheckAttesterDoubleVotes(ctx, slashableAtts)
+	doubleVotes, err := beaconDB.CheckAttesterDoubleVotes(ctx, slashableAtts, defaultHistoryLength)
 	require.NoError(t, err)
 	require.DeepEqual(t, wanted, doubleVotes)
 }
@@ -310,7 +317,7 @@ func TestStore_PruneProposals(t *testing.T) {
 		proposalsInDB []*slashertypes.SignedBlockHeaderWrapper
 		afterPruning  []*slashertypes.SignedBlockHeaderWrapper
 		epoch         types.Epoch
-		historySize   uint64
+		historyLength types.Epoch
 		wantErr       bool
 	}{
 		{
@@ -326,7 +333,7 @@ func TestStore_PruneProposals(t *testing.T) {
 			epoch: 2,
 		},
 		{
-			name: "should delete all proposals under epoch 5 - historySize 3",
+			name: "should delete all proposals under epoch 5 - historyLength 3",
 			proposalsInDB: []*slashertypes.SignedBlockHeaderWrapper{
 				createProposalWrapper(t, types.Slot(2), 0, []byte{1}),
 				createProposalWrapper(t, types.Slot(8), 0, []byte{1}),
@@ -339,8 +346,8 @@ func TestStore_PruneProposals(t *testing.T) {
 				createProposalWrapper(t, params.BeaconConfig().SlotsPerEpoch*4, 0, []byte{1}),
 				createProposalWrapper(t, params.BeaconConfig().SlotsPerEpoch*5, 0, []byte{1}),
 			},
-			historySize: 3,
-			epoch:       5,
+			historyLength: 3,
+			epoch:         5,
 		},
 		{
 			name: "should delete all proposals under epoch 4",
@@ -370,7 +377,7 @@ func TestStore_PruneProposals(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			beaconDB := setupDB(t)
 			require.NoError(t, beaconDB.SaveBlockProposals(ctx, tt.proposalsInDB))
-			if err := beaconDB.PruneProposals(ctx, tt.epoch, tt.historySize); (err != nil) != tt.wantErr {
+			if err := beaconDB.PruneProposals(ctx, tt.epoch, tt.historyLength); (err != nil) != tt.wantErr {
 				t.Errorf("PruneProposals() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
@@ -398,7 +405,7 @@ func TestStore_PruneAttestations(t *testing.T) {
 		attestationsInDB []*slashertypes.IndexedAttestationWrapper
 		afterPruning     []*slashertypes.IndexedAttestationWrapper
 		epoch            types.Epoch
-		historySize      uint64
+		historyLength    types.Epoch
 		wantErr          bool
 	}{
 		{
@@ -415,7 +422,7 @@ func TestStore_PruneAttestations(t *testing.T) {
 			epoch: 5000,
 		},
 		{
-			name: "should delete all attestations under epoch 6 - 2 historySize",
+			name: "should delete all attestations under epoch 6 - 2 historyLength",
 			attestationsInDB: []*slashertypes.IndexedAttestationWrapper{
 				createAttestationWrapper(0, 1, []uint64{1}, []byte{1}),
 				createAttestationWrapper(0, 2, []uint64{1}, []byte{1}),
@@ -429,8 +436,8 @@ func TestStore_PruneAttestations(t *testing.T) {
 				createAttestationWrapper(0, 5, []uint64{1}, []byte{1}),
 				createAttestationWrapper(0, 6, []uint64{1}, []byte{1}),
 			},
-			historySize: 2,
-			epoch:       4,
+			historyLength: 2,
+			epoch:         4,
 		},
 		{
 			name: "should delete all attestations under epoch 4",
@@ -456,8 +463,8 @@ func TestStore_PruneAttestations(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			beaconDB := setupDB(t)
-			require.NoError(t, beaconDB.SaveAttestationRecordsForValidators(ctx, tt.attestationsInDB))
-			if err := beaconDB.PruneProposals(ctx, tt.epoch, tt.historySize); (err != nil) != tt.wantErr {
+			require.NoError(t, beaconDB.SaveAttestationRecordsForValidators(ctx, tt.attestationsInDB, defaultHistoryLength))
+			if err := beaconDB.PruneProposals(ctx, tt.epoch, tt.historyLength); (err != nil) != tt.wantErr {
 				t.Errorf("PruneProposals() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
@@ -473,7 +480,7 @@ func TestStore_PruneAttestations(t *testing.T) {
 				)
 			}
 
-			doubleProposals, err := beaconDB.CheckAttesterDoubleVotes(ctx, slashable)
+			doubleProposals, err := beaconDB.CheckAttesterDoubleVotes(ctx, slashable, defaultHistoryLength)
 			require.NoError(t, err)
 			require.Equal(t, len(tt.afterPruning), len(doubleProposals))
 			for i, existing := range doubleProposals {
@@ -569,7 +576,7 @@ func TestStore_HighestAttestations(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			beaconDB := setupDB(t)
-			require.NoError(t, beaconDB.SaveAttestationRecordsForValidators(ctx, tt.attestationsInDB))
+			require.NoError(t, beaconDB.SaveAttestationRecordsForValidators(ctx, tt.attestationsInDB, defaultHistoryLength))
 
 			highestAttestations, err := beaconDB.HighestAttestations(ctx, tt.indices)
 			require.NoError(t, err)
@@ -600,7 +607,7 @@ func BenchmarkHighestAttestations(b *testing.B) {
 
 	ctx := context.Background()
 	beaconDB := setupDB(b)
-	require.NoError(b, beaconDB.SaveAttestationRecordsForValidators(ctx, atts))
+	require.NoError(b, beaconDB.SaveAttestationRecordsForValidators(ctx, atts, defaultHistoryLength))
 
 	allIndices := make([]types.ValidatorIndex, valsPerAtt*count)
 	for i := 0; i < count; i++ {
@@ -662,5 +669,69 @@ func createAttestationWrapper(source, target types.Epoch, indices []uint64, sign
 			Signature:        params.BeaconConfig().EmptySignature[:],
 		},
 		SigningRoot: signRoot,
+	}
+}
+
+func Test_encodeValidatorIndex(t *testing.T) {
+	tests := []struct {
+		name  string
+		index types.ValidatorIndex
+	}{
+		{
+			name:  "0",
+			index: types.ValidatorIndex(0),
+		},
+		{
+			name:  "genesis_validator_count",
+			index: types.ValidatorIndex(params.BeaconConfig().MinGenesisActiveValidatorCount),
+		},
+		{
+			name:  "max_possible_value",
+			index: types.ValidatorIndex(params.BeaconConfig().ValidatorRegistryLimit - 1),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := encodeValidatorIndex(tt.index)
+			encodedIndex := append(got[:5], 0, 0, 0)
+			decoded := binary.LittleEndian.Uint64(encodedIndex)
+			require.DeepEqual(t, tt.index, types.ValidatorIndex(decoded))
+		})
+	}
+}
+
+func Test_encodeTargetEpoch(t *testing.T) {
+	tests := []struct {
+		name          string
+		epoch         types.Epoch
+		historyLength types.Epoch
+	}{
+		{
+			name:          "0",
+			epoch:         0,
+			historyLength: 8,
+		},
+		{
+			name:          "epoch == HISTORY_SIZE",
+			epoch:         8,
+			historyLength: 8,
+		},
+		{
+			name:          "epoch < HISTORY_SIZE",
+			epoch:         4,
+			historyLength: 8,
+		},
+		{
+			name:          "epoch > HISTORY_SIZE",
+			epoch:         9,
+			historyLength: 8,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := encodeTargetEpoch(tt.epoch, tt.historyLength)
+			decoded := types.Epoch(binary.LittleEndian.Uint16(got[:2]))
+			require.DeepEqual(t, tt.epoch%tt.historyLength, decoded)
+		})
 	}
 }
