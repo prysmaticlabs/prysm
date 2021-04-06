@@ -331,16 +331,18 @@ func TestFuzzVerifyAttestation_10000(t *testing.T) {
 func TestFuzzProcessDeposits_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	state := &pb.BeaconState{}
-	b := &eth.SignedBeaconBlock{}
+	deposits := make([]*eth.Deposit, 100)
 	ctx := context.Background()
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
-		fuzzer.Fuzz(b)
+		for i := range deposits {
+			fuzzer.Fuzz(deposits[i])
+		}
 		s, err := stateV0.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
-		r, err := ProcessDeposits(ctx, s, b)
+		r, err := ProcessDeposits(ctx, s, deposits)
 		if err != nil && r != nil {
-			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, b)
+			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, deposits)
 		}
 	}
 }

@@ -30,6 +30,12 @@ service Wallet {
             body: "*"
         };
     }
+    rpc RecoverWallet(RecoverWalletRequest) returns (CreateWalletResponse) {
+        option (google.api.http) = {
+            post: "/v2/validator/wallet/recover"
+            body: "*"
+        };
+    }
 }
 
 service Accounts {
@@ -221,6 +227,14 @@ message WalletResponse {
     KeymanagerKind keymanager_kind = 2;
 }
 
+message RecoverWalletRequest {
+    string mnemonic = 1;
+    uint64 num_accounts = 2;
+    string wallet_password = 3;
+    string language = 4;
+    string mnemonic25th_word = 5;
+}
+
 message ListAccountsRequest {
     // Whether or not to return the raw RLP deposit tx data.
     bool get_deposit_tx_data = 1;
@@ -372,7 +386,6 @@ message DeleteAccountsResponse {
     // List of public keys successfully deleted.
     repeated bytes deleted_keys = 1;
 }
-
 message ExportSlashingProtectionResponse{
     // JSON representation of the slash protection
     string file = 1;
