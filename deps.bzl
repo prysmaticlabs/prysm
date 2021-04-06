@@ -698,7 +698,7 @@ def prysm_deps():
     # Note: The keep directives help gazelle leave this alone.
     go_repository(
         name = "com_github_ethereum_go_ethereum",
-        commit = "b9c0d847ae7b07a9a86b81aebacf986c8d310ae7",  # keep
+        commit = "a7522982fb2a9f60ddb08f28d42029c3d23267a2",  # keep
         importpath = "github.com/ethereum/go-ethereum",  # keep
         # Note: go-ethereum is not bazel-friendly with regards to cgo. We have a
         # a fork that has resolved these issues by disabling HID/USB support and
@@ -2579,8 +2579,8 @@ def prysm_deps():
         name = "com_github_prysmaticlabs_ethereumapis",
         build_file_generation = "off",
         importpath = "github.com/prysmaticlabs/ethereumapis",
-        sum = "h1:6qCWUpx87Ahd+GqthQz4k1wLLI2K5yJQ7kwvrs1+zzg=",
-        version = "v0.0.0-20210311175904-cf9f64632dd4",
+        sum = "h1:Ys0W+CbcJOVALCmGzmLm3rUmf4Be571T+0vglJNAU10=",
+        version = "v0.0.0-20210326223848-88341aec74a9",
     )
     go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",
@@ -2890,11 +2890,11 @@ def prysm_deps():
     http_archive(
         name = "com_github_supranational_blst",
         urls = [
-            "https://github.com/supranational/blst/archive/624d0351000111276aa70a32145945d2645e49a9.tar.gz",
+            "https://github.com/supranational/blst/archive/575c3dd0219299ecf08d47d016ea392be9e47fe8.tar.gz",
         ],
-        strip_prefix = "blst-624d0351000111276aa70a32145945d2645e49a9",
+        strip_prefix = "blst-575c3dd0219299ecf08d47d016ea392be9e47fe8",
         build_file = "//third_party:blst/blst.BUILD",
-        sha256 = "6118737ddc0652f3a874fbe29e09a80c66c604d933b8cd478e5f2b7454860c6e",
+        sha256 = "6be8a61424fed7d31cdc0277c7c08cffbe5b0d13d6afc4456dd84d42f9423c59",
     )
     go_repository(
         name = "com_github_syndtr_goleveldb",
@@ -3683,4 +3683,22 @@ def prysm_deps():
         importpath = "gotest.tools",
         sum = "h1:VsBPFP1AI068pPrMxtb/S8Zkgf9xEmTLJjfM+P5UIEo=",
         version = "v2.2.0+incompatible",
+    )
+
+    # Note: It is required to define com_github_prysmaticlabs_prysm like this for some reason...
+    # Note: The keep directives help gazelle leave this alone.
+    go_repository(
+        name = "com_github_prysmaticlabs_prysm",
+        commit = "9ca9f8244a4fc1858d6914490bd2ffb188825a69",  # keep
+        importpath = "github.com/prysmaticlabs/prysm",  # keep
+        # Note: go-ethereum is not bazel-friendly with regards to cgo. We have a
+        # a fork that has resolved these issues by disabling HID/USB support and
+        # some manual fixes for c imports in the crypto package. This is forked
+        # branch should be updated from time to time with the latest go-ethereum
+        # code.
+        remote = "https://github.com/lukso-network/vanguard-consensus-engine",  # keep
+        replace = None,  # keep
+        sum = None,  # keep
+        vcs = "git",  # keep
+        version = None,  # keep
     )
