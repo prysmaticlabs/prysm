@@ -146,5 +146,16 @@
       ".*_test\\.go": "Tests are ok",
       "shared/fileutil/fileutil.go": "Package which defines the proper rules"
     }
+  },
+  "specdocs": {
+    "only_files": {
+      "beacon-chain/.*": "",
+      "shared/.*": "",
+      "slasher/.*": "",
+      "validator/.*": ""
+    },
+    "exclude_files": {
+      ".*/.*_test\\.go": "No spec comments are expected in tests"
+    }
   }
 }
