@@ -169,7 +169,6 @@ def go_fuzz_test(
         testonly = 1,
         srcs = [":" + name],
         deps = [
-            "@herumi_bls_eth_go_binary//:lib",
             "//third_party/afl:fuzzing_engine",
         ],
         tags = ["manual", "fuzzer"] + tags,
