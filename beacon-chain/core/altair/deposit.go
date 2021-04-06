@@ -60,11 +60,12 @@ func ProcessDeposit(ctx context.Context, beaconState iface.BeaconStateAltair, de
 		return nil, err
 	}
 
+	// The last validator in the beacon state validator registry.
 	v, err := beaconState.ValidatorAtIndexReadOnly(types.ValidatorIndex(beaconState.NumValidators() - 1))
 	if err != nil {
 		return nil, err
 	}
-	// We know a validator is new when its status epochs are all far future epoch.
+	// We know a validator is brand new when its status epochs are all far future epoch.
 	// In this case, we append 0 to inactivity score and participation bits.
 	if v.ActivationEligibilityEpoch() == v.ActivationEpoch() &&
 		v.ActivationEpoch() == v.ExitEpoch() &&
