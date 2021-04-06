@@ -24,7 +24,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	genesisForkVersion := params.BeaconConfig().GenesisForkVersion
 
 	assert.Equal(t, [32]byte{}, params.BeaconConfig().ZeroHash, "ZeroHash should be all 0s for these tests to pass")
-	assert.Equal(t, types.Epoch(65536), params.BeaconConfig().EpochsPerHistoricalVector, "EpochsPerHistoricalVector should be 8192 for these tests to pass")
+	assert.Equal(t, types.Epoch(65536), params.BeaconConfig().EpochsPerHistoricalVector, "EpochsPerHistoricalVector should be 65536 for these tests to pass")
 
 	latestRandaoMixesLength := params.BeaconConfig().EpochsPerHistoricalVector
 	assert.Equal(t, uint64(16777216), params.BeaconConfig().HistoricalRootsLimit, "HistoricalRootsLimit should be 16777216 for these tests to pass")
