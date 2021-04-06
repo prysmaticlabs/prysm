@@ -125,7 +125,6 @@ require (
 	k8s.io/client-go v0.18.3
 	k8s.io/klog/v2 v2.3.0 // indirect
 	k8s.io/utils v0.0.0-20200520001619-278ece378a50 // indirect
-	github.com/prysmaticlabs/prysm v0.0.0-00010101000000-000000000000
 )
 
 replace github.com/ethereum/go-ethereum => github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20210311182818-b9c0d847ae7b
