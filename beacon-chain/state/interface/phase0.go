@@ -203,4 +203,7 @@ type FutureForkStub interface {
 	AppendCurrentParticipationBits(val byte) error
 	AppendPreviousParticipationBits(val byte) error
 	AppendInactivityScore(s uint64) error
+	CurrentEpochParticipation() ([]byte, error)
+	PreviousEpochParticipation() ([]byte, error)
+	InactivityScores() ([]uint64, error)
 }

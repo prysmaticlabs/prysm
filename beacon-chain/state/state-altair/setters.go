@@ -541,10 +541,7 @@ func (b *BeaconState) RotateAttestations() error {
 	if err := b.setPreviousParticipationBits(b.currentEpochParticipation()); err != nil {
 		return err
 	}
-	if err := b.setCurrentParticipationBits([]byte{}); err != nil {
-		return err
-	}
-	return nil
+	return b.setCurrentParticipationBits([]byte{})
 }
 
 // AppendHistoricalRoots for the beacon state. Appends the new value

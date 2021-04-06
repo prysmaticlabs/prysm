@@ -1,4 +1,4 @@
-package block_altair_test
+package altair_test
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	altair "github.com/prysmaticlabs/prysm/beacon-chain/core/block-altair"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"

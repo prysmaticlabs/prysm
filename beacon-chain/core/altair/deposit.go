@@ -1,4 +1,4 @@
-package block_altair
+package altair
 
 import (
 	"context"

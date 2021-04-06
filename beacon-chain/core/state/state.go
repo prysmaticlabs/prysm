@@ -62,7 +62,7 @@ func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisT
 	}
 
 	// Process initial deposits.
-	state, err = updateGenesisEth1Data(state, deposits, eth1Data)
+	state, err = UpdateGenesisEth1Data(state, deposits, eth1Data)
 	if err != nil {
 		return nil, err
 	}
@@ -231,7 +231,8 @@ func IsValidGenesisState(chainStartDepositCount, currentTime uint64) bool {
 	return true
 }
 
-func updateGenesisEth1Data(state iface.BeaconState, deposits []*ethpb.Deposit, eth1Data *ethpb.Eth1Data) (iface.BeaconState, error) {
+// UpdateGenesisEth1Data updates eth1 data for genesis state.
+func UpdateGenesisEth1Data(state iface.BeaconState, deposits []*ethpb.Deposit, eth1Data *ethpb.Eth1Data) (iface.BeaconState, error) {
 	if eth1Data == nil {
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
