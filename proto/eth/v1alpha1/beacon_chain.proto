@@ -279,7 +279,7 @@ service BeaconChain {
 
     // Server-side stream of all unconfirmed blocks as they are received by
     // the beacon chain node.
-    rpc StreamNewPendingBlocks(google.protobuf.Empty) returns (stream BeaconBlock) {
+    rpc StreamNewPendingBlocks(StreamPendingBlocksRequest) returns (stream BeaconBlock) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/vanguard/pending_blocks/stream"
         };
@@ -909,4 +909,11 @@ message MinimalConsensusInfo {
     uint64 epoch_time_start = 3;
     // The slot time duration of the requested epoch.
     google.protobuf.Duration slot_time_duration = 4;
+}
+
+message StreamPendingBlocksRequest {
+    // The block root of weak subjectivity checkpoint.
+    bytes block_root = 1;
+
+    uint64 from_slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
 }

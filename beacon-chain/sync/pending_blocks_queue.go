@@ -154,7 +154,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				case errors.Is(err, errInvalidBlock):
 					log.WithError(err).Debug("Block is not processed")
 				default:
-					log.Debugf("Could not process block from slot %d: %v", b.Block.Slot, err)
+					log.Debugf("Could not process block from slot %d: %v", b.Block().Slot(), err)
 					s.setBadBlock(ctx, blkRoot)
 				}
 				traceutil.AnnotateError(span, err)

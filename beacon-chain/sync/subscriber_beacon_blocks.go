@@ -40,7 +40,7 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 		case errors.Is(err, errInvalidBlock):
 			log.WithError(err).Debug("Block is not processed")
 		default:
-			log.Debugf("Could not process block from slot %d: %v", block.Slot, err)
+			log.Debugf("Could not process block from slot %d: %v", block.Slot(), err)
 			s.setBadBlock(ctx, root)
 		}
 		return err

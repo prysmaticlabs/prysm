@@ -1,26 +1,29 @@
 package validator
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"math/big"
 	"reflect"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	fastssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -40,7 +43,7 @@ var eth1DataNotification bool
 const eth1dataTimeout = 2 * time.Second
 
 type eth1DataSingleVote struct {
-	eth1Data    ethpb.Eth1Data
+	eth1Data    *ethpb.Eth1Data
 	blockHeight *big.Int
 }
 
@@ -138,9 +141,9 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	}
 
 	// Compute state root with the newly constructed block.
-	stateRoot, err = vs.computeStateRoot(ctx, &ethpb.SignedBeaconBlock{Block: blk, Signature: make([]byte, 96)})
+	stateRoot, err = vs.computeStateRoot(ctx, wrapper.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: blk, Signature: make([]byte, 96)}))
 	if err != nil {
-		interop.WriteBlockToDisk(&ethpb.SignedBeaconBlock{Block: blk}, true /*failed*/)
+		interop.WriteBlockToDisk(wrapper.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: blk}), true /*failed*/)
 		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
 	}
 	blk.StateRoot = stateRoot
@@ -154,22 +157,22 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 			return nil, status.Errorf(codes.Internal, "Could not get head block: %v", err)
 		}
 
-		if headBlk == nil || headBlk.Block == nil {
+		if headBlk == nil || headBlk.Block().IsNil() {
 			log.WithField("slot", blk.Slot).Debug("Head block of chain was nil")
 			return blk, nil
 		}
 
-		canonicalPandoraShard := headBlk.Block.Body.PandoraShard
-		if len(canonicalPandoraShard) > 0 {
-			log.WithField("slot", headBlk.Block.Slot).
-				WithField("blockNumber", canonicalPandoraShard[0].BlockNumber).
-				WithField("hash", hexutil.Encode(canonicalPandoraShard[0].Hash)).
-				WithField("sealHash", hexutil.Encode(canonicalPandoraShard[0].SealHash)).
-				WithField("StateRoot", hexutil.Encode(canonicalPandoraShard[0].StateRoot)).
-				WithField("signature", hexutil.Encode(canonicalPandoraShard[0].Signature)).
+		canonicalPandoraShards := headBlk.Block().Body().PandoraShards()
+		if len(canonicalPandoraShards) > 0 {
+			log.WithField("slot", headBlk.Block().Slot).
+				WithField("blockNumber", canonicalPandoraShards[0].BlockNumber).
+				WithField("hash", hexutil.Encode(canonicalPandoraShards[0].Hash)).
+				WithField("sealHash", hexutil.Encode(canonicalPandoraShards[0].SealHash)).
+				WithField("StateRoot", hexutil.Encode(canonicalPandoraShards[0].StateRoot)).
+				WithField("signature", hexutil.Encode(canonicalPandoraShards[0].Signature)).
 				Debug("pandora canonical sharding info")
 		}
-		blk.Body.PandoraShard = canonicalPandoraShard
+		blk.Body.PandoraShard = canonicalPandoraShards
 	}
 
 	return blk, nil
@@ -177,8 +180,9 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 
 // ProposeBlock is called by a proposer during its assigned slot to create a block in an attempt
 // to get it processed by the beacon node as the canonical head.
-func (vs *Server) ProposeBlock(ctx context.Context, blk *ethpb.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
-	root, err := blk.Block.HashTreeRoot()
+func (vs *Server) ProposeBlock(ctx context.Context, rBlk *ethpb.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
+	blk := wrapper.WrappedPhase0SignedBeaconBlock(rBlk)
+	root, err := blk.Block().HashTreeRoot()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not tree hash block: %v", err)
 	}
@@ -194,7 +198,7 @@ func (vs *Server) ProposeBlock(ctx context.Context, blk *ethpb.SignedBeaconBlock
 	}()
 
 	// Broadcast the new block to the network.
-	if err := vs.P2P.Broadcast(ctx, blk); err != nil {
+	if err := vs.P2P.Broadcast(ctx, blk.Proto()); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
 	}
 	log.WithFields(logrus.Fields{
@@ -203,7 +207,7 @@ func (vs *Server) ProposeBlock(ctx context.Context, blk *ethpb.SignedBeaconBlock
 
 	//Vanguard: Activating orchestrator verification in live sync mode when pandora client will be also in live sync mode
 	if vs.EnableVanguardNode && !vs.PendingQueueFetcher.OrcVerification() {
-		log.WithField("slot", blk.Block.Slot).Info("Activating orchestrator verification in live sync mode")
+		log.WithField("slot", blk.Block().Slot()).Info("Activating orchestrator verification in live sync mode")
 		vs.PendingQueueFetcher.ActivateOrcVerification()
 	}
 
@@ -228,7 +232,7 @@ func (vs *Server) ProposeBlock(ctx context.Context, blk *ethpb.SignedBeaconBlock
 //  - Otherwise:
 //    - Determine the vote with the highest count. Prefer the vote with the highest eth1 block height in the event of a tie.
 //    - This vote's block is the eth1 block to use for the block proposal.
-func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState *stateTrie.BeaconState) (*ethpb.Eth1Data, error) {
+func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState iface.BeaconState) (*ethpb.Eth1Data, error) {
 	ctx, cancel := context.WithTimeout(ctx, eth1dataTimeout)
 	defer cancel()
 
@@ -293,7 +297,7 @@ func (vs *Server) slotStartTime(slot types.Slot) uint64 {
 }
 
 func (vs *Server) inRangeVotes(ctx context.Context,
-	beaconState *stateTrie.BeaconState,
+	beaconState iface.ReadOnlyBeaconState,
 	firstValidBlockNumber, lastValidBlockNumber *big.Int) ([]eth1DataSingleVote, error) {
 
 	currentETH1Data := vs.HeadFetcher.HeadETH1Data()
@@ -312,7 +316,7 @@ func (vs *Server) inRangeVotes(ctx context.Context,
 		// lastValidBlockNumber.Cmp(height) > -1 filters out all blocks after lastValidBlockNumber
 		// These filters result in the range [firstValidBlockNumber, lastValidBlockNumber]
 		if exists && firstValidBlockNumber.Cmp(height) < 1 && lastValidBlockNumber.Cmp(height) > -1 {
-			inRangeVotes = append(inRangeVotes, eth1DataSingleVote{eth1Data: *eth1Data, blockHeight: height})
+			inRangeVotes = append(inRangeVotes, eth1DataSingleVote{eth1Data: eth1Data, blockHeight: height})
 		}
 	}
 
@@ -406,8 +410,8 @@ func (vs *Server) randomETH1DataVote(ctx context.Context) (*ethpb.Eth1Data, erro
 
 // computeStateRoot computes the state root after a block has been processed through a state transition and
 // returns it to the validator client.
-func (vs *Server) computeStateRoot(ctx context.Context, block *ethpb.SignedBeaconBlock) ([]byte, error) {
-	beaconState, err := vs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(block.Block.ParentRoot))
+func (vs *Server) computeStateRoot(ctx context.Context, block interfaces.SignedBeaconBlock) ([]byte, error) {
+	beaconState, err := vs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(block.Block().ParentRoot()))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve beacon state")
 	}
@@ -431,7 +435,7 @@ func (vs *Server) computeStateRoot(ctx context.Context, block *ethpb.SignedBeaco
 // eth1data.
 func (vs *Server) deposits(
 	ctx context.Context,
-	beaconState *stateTrie.BeaconState,
+	beaconState iface.BeaconState,
 	currentVote *ethpb.Eth1Data,
 ) ([]*ethpb.Deposit, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.deposits")
@@ -444,7 +448,7 @@ func (vs *Server) deposits(
 	// the number of all deposits in this RPC call. If not, then we return nil.
 	canonicalEth1Data, canonicalEth1DataHeight, err := vs.canonicalEth1Data(ctx, beaconState, currentVote)
 	if err != nil {
-		return []*ethpb.Deposit{}, nil
+		return nil, err
 	}
 
 	_, genesisEth1Block := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
@@ -458,7 +462,7 @@ func (vs *Server) deposits(
 		return []*ethpb.Deposit{}, nil
 	}
 
-	depositTrie, err := vs.depositTrie(ctx, canonicalEth1DataHeight)
+	depositTrie, err := vs.depositTrie(ctx, canonicalEth1Data, canonicalEth1DataHeight)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve deposit trie")
 	}
@@ -487,15 +491,13 @@ func (vs *Server) deposits(
 	for i := uint64(0); i < uint64(len(pendingDeps)) && i < params.BeaconConfig().MaxDeposits; i++ {
 		pendingDeposits = append(pendingDeposits, pendingDeps[i].Deposit)
 	}
-
-	log.WithField("pendingDepositsLen", len(pendingDeposits)).Debug("pending deposits")
 	return pendingDeposits, nil
 }
 
 // canonicalEth1Data determines the canonical eth1data and eth1 block height to use for determining deposits.
 func (vs *Server) canonicalEth1Data(
 	ctx context.Context,
-	beaconState *stateTrie.BeaconState,
+	beaconState iface.BeaconState,
 	currentVote *ethpb.Eth1Data) (*ethpb.Eth1Data, *big.Int, error) {
 
 	var eth1BlockHash [32]byte
@@ -523,7 +525,7 @@ func (vs *Server) canonicalEth1Data(
 	return canonicalEth1Data, canonicalEth1DataHeight, nil
 }
 
-func (vs *Server) depositTrie(ctx context.Context, canonicalEth1DataHeight *big.Int) (*trieutil.SparseMerkleTrie, error) {
+func (vs *Server) depositTrie(ctx context.Context, canonicalEth1Data *ethpb.Eth1Data, canonicalEth1DataHeight *big.Int) (*trieutil.SparseMerkleTrie, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.depositTrie")
 	defer span.End()
 
@@ -531,7 +533,6 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1DataHeight *big.
 
 	finalizedDeposits := vs.DepositFetcher.FinalizedDeposits(ctx)
 	depositTrie = finalizedDeposits.Deposits
-
 	upToEth1DataDeposits := vs.DepositFetcher.NonFinalizedDeposits(ctx, canonicalEth1DataHeight)
 	insertIndex := finalizedDeposits.MerkleTrieIndex + 1
 
@@ -543,7 +544,54 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1DataHeight *big.
 		depositTrie.Insert(depHash[:], int(insertIndex))
 		insertIndex++
 	}
+	valid, err := vs.validateDepositTrie(depositTrie, canonicalEth1Data)
+	// Log a warning here, as the cached trie is invalid.
+	if !valid {
+		log.Warnf("Cached deposit trie is invalid, rebuilding it now: %v", err)
+		return vs.rebuildDepositTrie(ctx, canonicalEth1Data, canonicalEth1DataHeight)
+	}
+
 	return depositTrie, nil
+}
+
+// rebuilds our deposit trie by recreating it from all processed deposits till
+// specified eth1 block height.
+func (vs *Server) rebuildDepositTrie(ctx context.Context, canonicalEth1Data *ethpb.Eth1Data, canonicalEth1DataHeight *big.Int) (*trieutil.SparseMerkleTrie, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.rebuildDepositTrie")
+	defer span.End()
+
+	deposits := vs.DepositFetcher.AllDeposits(ctx, canonicalEth1DataHeight)
+	trieItems := make([][]byte, 0, len(deposits))
+	for _, dep := range deposits {
+		depHash, err := dep.Data.HashTreeRoot()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not hash deposit data")
+		}
+		trieItems = append(trieItems, depHash[:])
+	}
+	depositTrie, err := trieutil.GenerateTrieFromItems(trieItems, params.BeaconConfig().DepositContractTreeDepth)
+	if err != nil {
+		return nil, err
+	}
+
+	valid, err := vs.validateDepositTrie(depositTrie, canonicalEth1Data)
+	// Log an error here, as even with rebuilding the trie, it is still invalid.
+	if !valid {
+		log.Errorf("Rebuilt deposit trie is invalid: %v", err)
+	}
+	return depositTrie, nil
+}
+
+// validate that the provided deposit trie matches up with the canonical eth1 data provided.
+func (vs *Server) validateDepositTrie(trie *trieutil.SparseMerkleTrie, canonicalEth1Data *ethpb.Eth1Data) (bool, error) {
+	if trie.NumOfItems() != int(canonicalEth1Data.DepositCount) {
+		return false, errors.Errorf("wanted the canonical count of %d but received %d", canonicalEth1Data.DepositCount, trie.NumOfItems())
+	}
+	rt := trie.HashTreeRoot()
+	if !bytes.Equal(rt[:], canonicalEth1Data.DepositRoot) {
+		return false, errors.Errorf("wanted the canonical deposit root of %#x but received %#x", canonicalEth1Data.DepositRoot, rt)
+	}
+	return true, nil
 }
 
 // in case no vote for new eth1data vote considered best vote we
@@ -578,7 +626,7 @@ func (vs *Server) defaultEth1DataResponse(ctx context.Context, currentHeight *bi
 }
 
 // This filters the input attestations to return a list of valid attestations to be packaged inside a beacon block.
-func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, st *stateTrie.BeaconState, atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
+func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, st iface.BeaconState, atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.filterAttestationsForBlockInclusion")
 	defer span.End()
 
@@ -586,7 +634,15 @@ func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, st *s
 	if err := vs.deleteAttsInPool(ctx, invalidAtts); err != nil {
 		return nil, err
 	}
-	return validAtts.dedup().sortByProfitability().limitToMaxAttestations(), nil
+	deduped, err := validAtts.dedup()
+	if err != nil {
+		return nil, err
+	}
+	sorted, err := deduped.sortByProfitability()
+	if err != nil {
+		return nil, err
+	}
+	return sorted.limitToMaxAttestations(), nil
 }
 
 // The input attestations are processed and seen by the node, this deletes them from pool
@@ -624,7 +680,7 @@ func constructMerkleProof(trie *trieutil.SparseMerkleTrie, index int, deposit *e
 	return deposit, nil
 }
 
-func (vs *Server) packAttestations(ctx context.Context, latestState *stateTrie.BeaconState) ([]*ethpb.Attestation, error) {
+func (vs *Server) packAttestations(ctx context.Context, latestState iface.BeaconState) ([]*ethpb.Attestation, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.packAttestations")
 	defer span.End()
 
@@ -664,7 +720,15 @@ func (vs *Server) packAttestations(ctx context.Context, latestState *stateTrie.B
 			}
 			attsForInclusion = append(attsForInclusion, as...)
 		}
-		atts = attsForInclusion.dedup().sortByProfitability().limitToMaxAttestations()
+		deduped, err := attsForInclusion.dedup()
+		if err != nil {
+			return nil, err
+		}
+		sorted, err := deduped.sortByProfitability()
+		if err != nil {
+			return nil, err
+		}
+		atts = sorted.limitToMaxAttestations()
 	}
 	return atts, nil
 }

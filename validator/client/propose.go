@@ -5,7 +5,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/prysmaticlabs/prysm/validator/pandora"
+	"golang.org/x/crypto/sha3"
 	"time"
 
 	eth1Types "github.com/ethereum/go-ethereum/core/types"
@@ -407,7 +409,7 @@ func (v *validator) verifyPandoraShardHeader(beaconBlk *ethpb.BeaconBlock, slot 
 	header *eth1Types.Header, headerHash common.Hash, extraData *pandora.ExtraData) error {
 
 	// verify header hash
-	if header.Hash() != headerHash {
+	if sealHash(header) != headerHash {
 		log.WithError(errInvalidHeaderHash).Error("invalid header hash from pandora chain")
 		return errInvalidHeaderHash
 	}
@@ -427,10 +429,35 @@ func (v *validator) verifyPandoraShardHeader(beaconBlk *ethpb.BeaconBlock, slot 
 		return errInvalidEpoch
 	}
 	// verify proposer index
-	if extraData.ProposerIndex != uint64(beaconBlk.ProposerIndex) {
-		log.WithError(errInvalidProposerIndex).Error("invalid proposer index from pandora chain")
-		return errInvalidProposerIndex
-	}
+	//if extraData.ProposerIndex != uint64(beaconBlk.ProposerIndex) {
+	//	log.WithError(errInvalidProposerIndex).Error("invalid proposer index from pandora chain")
+	//	return errInvalidProposerIndex
+	//}
 
 	return nil
+}
+
+// SealHash returns the hash of a block prior to it being sealed.
+func sealHash(header *eth1Types.Header) (hash common.Hash) {
+	hasher := sha3.NewLegacyKeccak256()
+
+	if err := rlp.Encode(hasher, []interface{}{
+		header.ParentHash,
+		header.UncleHash,
+		header.Coinbase,
+		header.Root,
+		header.TxHash,
+		header.ReceiptHash,
+		header.Bloom,
+		header.Difficulty,
+		header.Number,
+		header.GasLimit,
+		header.GasUsed,
+		header.Time,
+		header.Extra,
+	}); err != nil {
+		return eth1Types.EmptyRootHash
+	}
+	hasher.Sum(hash[:0])
+	return hash
 }

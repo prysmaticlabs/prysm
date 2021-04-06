@@ -808,9 +808,20 @@ func request_BeaconChain_StreamMinimalConsensusInfo_0(ctx context.Context, marsh
 
 }
 
+var (
+	filter_BeaconChain_StreamNewPendingBlocks_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
+)
+
 func request_BeaconChain_StreamNewPendingBlocks_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (BeaconChain_StreamNewPendingBlocksClient, runtime.ServerMetadata, error) {
-	var protoReq emptypb.Empty
+	var protoReq StreamPendingBlocksRequest
 	var metadata runtime.ServerMetadata
+
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BeaconChain_StreamNewPendingBlocks_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
 
 	stream, err := client.StreamNewPendingBlocks(ctx, &protoReq)
 	if err != nil {

@@ -118,6 +118,11 @@ func (w Phase0BeaconBlock) Proto() proto.Message {
 	return w.b
 }
 
+// pbPhase0UnwrappedBlock
+func (w Phase0BeaconBlock) PbPhase0UnsignedBlock() (*eth.BeaconBlock, error) {
+	return w.b, nil
+}
+
 // Phase0BeaconBlockBody is a wrapper of a beacon block body.
 type Phase0BeaconBlockBody struct {
 	b *eth.BeaconBlockBody

@@ -14,7 +14,7 @@ import (
 
 var (
 	logThreshold = 8
-	dialInterval = 5 * time.Second
+	dialInterval = 2 * time.Second
 
 	ConnectionError = errors.New("Client not connected")
 	errNotSynced    = errors.New("Pandora node is still syncing")
@@ -186,6 +186,10 @@ func (s *Service) GetShardBlockHeader(ctx context.Context) (*eth1Types.Header, c
 	if err := rlp.DecodeBytes(header.Extra, &extraData); err != nil {
 		return nil, common.Hash{}, nil, errors.Wrap(err, "Failed to decode extra data fields")
 	}
+	log.WithField("header", header).WithField(
+		"generatedHeaderHash", header.Hash()).WithField(
+			"headerHash", response.HeaderHash).WithField(
+				"extraData", extraData).Debug("Got header info from pandora")
 	return header, response.HeaderHash, &extraData, nil
 }
 
@@ -194,6 +198,7 @@ func (s *Service) GetShardBlockHeader(ctx context.Context) (*eth1Types.Header, c
 func (s *Service) SubmitShardBlockHeader(ctx context.Context, blockNonce uint64,
 	headerHash common.Hash, sig [96]byte) (bool, error) {
 
+	log.WithField("signature", sig).Debug("Sending header signature to pandora")
 	if !s.connected {
 		log.WithError(ConnectionError).Error("Pandora chain is not connected")
 		return false, ConnectionError
@@ -210,9 +215,9 @@ func (s *Service) SubmitShardBlockHeader(ctx context.Context, blockNonce uint64,
 // isPandoraNodeSynced method checks if the pandora node is healthy and ready to serve before
 // fetching data from  it.
 func (s *Service) isPandoraNodeSynced() (bool, error) {
-	syncProg, err := s.pandoraClient.GetShardSyncProgress(s.ctx)
+	_, err := s.pandoraClient.GetShardSyncProgress(s.ctx)
 	if err != nil {
 		return false, err
 	}
-	return syncProg != nil, nil
+	return true, nil
 }

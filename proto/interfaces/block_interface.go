@@ -30,6 +30,7 @@ type BeaconBlock interface {
 	HashTreeRoot() ([32]byte, error)
 	MarshalSSZ() ([]byte, error)
 	Proto() proto.Message
+	PbPhase0UnsignedBlock() (*ethpb.BeaconBlock, error)
 }
 
 // BeaconBlockBody describes the method set employed by an object

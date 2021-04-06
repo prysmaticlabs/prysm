@@ -1,10 +1,10 @@
 name: Go
 
 on:
-  create:
-    tags:
-      - v*
-      - v-v*
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ '*' ]
 
 jobs:
 
@@ -44,32 +44,8 @@ jobs:
 
       - name: Build
         # Use blst tag to allow go and bazel builds for blst.
-        run: |
-          mkdir builds &&
-          go build -v --tags=blst_enabled -o ./builds ./...
+        run: go build -v --tags=blst_enabled ./...
 
-#      # Tests run via Bazel for now...
+# Tests run via Bazel for now...
 #      - name: Test
-#        run: go test -v --tags=develop,blst_enabled ./...
-
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ github.event.release.tag_name }}
-          files: |
-            ./builds/beacon-chain
-            ./builds/validator
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-          
-      - name: Request Multinet Upgrade
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
-          export GH_TAG=${GITHUB_REF/refs\/tags\//} &&
-          curl -X POST \
-          -H "Accept: application/vnd.github.v3+json" \
-          -d '{"event_type":"upgrade dev", "client_payload": {"repository": "VANGUARD", "tag": "'$GH_TAG'"}}' \
-          -u "$GITHUB_TOKEN" \
-          https://api.github.com/repos/lukso-network/l16-multinet/dispatches   
-
+#        run: go test -v ./...
