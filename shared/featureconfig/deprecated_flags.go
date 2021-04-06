@@ -45,4 +45,5 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisableSyncBacktracking,
 	deprecatedDisablePruningDepositProofs,
 	deprecatedDisableEth1DataMajorityVote,
+	deprecatedDisableBlst,
 }
