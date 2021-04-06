@@ -8,8 +8,11 @@ go_library(
         "state.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/altair",
-    visibility = ["//beacon-chain:__subpackages__"],
-    deps = [
+visibility = [
+        "//beacon-chain:__subpackages__",
+        "//shared/testutil/altair:__pkg__",
+    ],
+deps = [
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/state/interface:go_default_library",
