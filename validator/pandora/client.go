@@ -93,14 +93,13 @@ func (oc *PandoraClient) GetShardBlockHeader(ctx context.Context) (*ShardBlockHe
 
 // SubmitShardBlockHeader methods call to pandora client's `eth_submitWork` api
 func (oc *PandoraClient) SubmitShardBlockHeader(ctx context.Context, blockNonce uint64, headerHash common.Hash,
-	sig [32]byte) (bool, error) {
+	sig [96]byte) (bool, error) {
 
 	nonecHex := types.EncodeNonce(blockNonce)
 	headerHashHex := headerHash.Hex()
-	sigHex := common.BytesToHash(sig[:])
 
 	var status bool
-	if err := oc.c.CallContext(ctx, &status, "eth_submitWork", nonecHex, headerHashHex, sigHex); err != nil {
+	if err := oc.c.CallContext(ctx, &status, "eth_submitWorkBLS", nonecHex, headerHashHex, sig); err != nil {
 		return false, errors.Wrap(err, "Got error when calls to eth_submitWork api")
 	}
 	return status, nil
