@@ -11,7 +11,7 @@ package ethereum_validator_accounts_v2
 import (
 	"context"
 	"github.com/golang/protobuf/ptypes/empty"
-	"google.golang.org/protobuf/types/known/emptypb"
+	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/utilities"
 	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/eth2-types"

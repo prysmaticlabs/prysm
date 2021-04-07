@@ -7,4 +7,7 @@ go_proto_library(
     importpath = "github.com/prysmaticlabs/prysm/proto/faucet",
     proto = "@prysm_testnet_site//:faucet_proto",
     visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_golang_protobuf//proto:go_default_library",
+    ],
 )
