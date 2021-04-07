@@ -5,11 +5,11 @@ import (
 
 	"github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -43,9 +43,16 @@ func ProcessSyncCommittee(state iface.BeaconStateAltair, sync *ethpb.SyncAggrega
 	if err != nil {
 		return nil, err
 	}
-	committeeKeys := state.CurrentSyncCommittee().Pubkeys
+
+	currentSyncCommittee, err := state.CurrentSyncCommittee()
+	if err != nil {
+		return nil, err
+	}
+	committeeKeys := currentSyncCommittee.Pubkeys
 	votedKeys := make([]bls.PublicKey, 0, len(committeeKeys))
 	votedIndices := make([]types.ValidatorIndex, 0, len(committeeKeys))
+
+	// Verify sync committee signature.
 	for i := uint64(0); i < sync.SyncCommitteeBits.Len(); i++ {
 		if sync.SyncCommitteeBits.BitAt(i) {
 			pubKey, err := bls.PublicKeyFromBytes(committeeKeys[i])
@@ -70,7 +77,7 @@ func ProcessSyncCommittee(state iface.BeaconStateAltair, sync *ethpb.SyncAggrega
 	if err != nil {
 		return nil, err
 	}
-	sig, err := bls.SignatureFromBytes(body.SyncCommitteeSignature)
+	sig, err := bls.SignatureFromBytes(sync.SyncCommitteeSignature)
 	if err != nil {
 		return nil, err
 	}
@@ -78,30 +85,39 @@ func ProcessSyncCommittee(state iface.BeaconStateAltair, sync *ethpb.SyncAggrega
 		return nil, errors.New("could not verify sync committee signature")
 	}
 
-	proposerRewards := uint64(0)
-	aCount, err := helpers.ActiveValidatorCount(state, helpers.CurrentEpoch(state))
+	// Calculate sync committee and proposer rewards
+	activeBalance, err := helpers.TotalActiveBalance(state)
 	if err != nil {
 		return nil, err
 	}
+	totalActiveIncrements := activeBalance / params.BeaconConfig().EffectiveBalanceIncrement
+	totalBaseRewards := baseRewardPerIncrement(activeBalance) * totalActiveIncrements
+	maxParticipantRewards := totalBaseRewards * params.BeaconConfig().SyncRewardWeight / params.BeaconConfig().WeightDenominator / uint64(params.BeaconConfig().SlotsPerEpoch)
+	participantReward := maxParticipantRewards / params.BeaconConfig().SyncCommitteeSize
+	proposerReward := participantReward * params.BeaconConfig().ProposerWeight / (params.BeaconConfig().WeightDenominator - params.BeaconConfig().ProposerWeight)
+
+	// Apply sync committee rewards.
+	earnedProposerReward := uint64(0)
 	for _, index := range votedIndices {
-		br, err := epoch.BaseReward(state, index)
-		if err != nil {
+		if err := helpers.IncreaseBalance(state, index, participantReward); err != nil {
 			return nil, err
 		}
-		proposerReward := br / params.BeaconConfig().ProposerRewardQuotient
-		maxReward := br - proposerReward
-		r := maxReward * aCount / uint64(len(committeeIndices)) / uint64(params.BeaconConfig().SlotsPerEpoch)
-		if err := helpers.IncreaseBalance(state, index, r); err != nil {
-			return nil, err
-		}
-		proposerRewards += proposerReward
+		earnedProposerReward += proposerReward
 	}
+	// Apply proposer rewards.
 	proposerIndex, err := helpers.BeaconProposerIndex(state)
 	if err != nil {
 		return nil, err
 	}
-	if err := helpers.IncreaseBalance(state, proposerIndex, proposerRewards); err != nil {
+	if err := helpers.IncreaseBalance(state, proposerIndex, earnedProposerReward); err != nil {
 		return nil, err
 	}
+
 	return state, nil
+}
+
+// def get_base_reward_per_increment(state: BeaconState) -> Gwei:
+//    return Gwei(EFFECTIVE_BALANCE_INCREMENT * BASE_REWARD_FACTOR // integer_squareroot(get_total_active_balance(state))
+func baseRewardPerIncrement(activeBalance uint64) uint64 {
+	return params.BeaconConfig().EffectiveBalanceIncrement * params.BeaconConfig().BaseRewardFactor / mathutil.IntegerSquareRoot(activeBalance)
 }

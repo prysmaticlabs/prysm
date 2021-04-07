@@ -78,6 +78,7 @@ func (b *BeaconState) Copy() iface.BeaconState {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 	fieldCount := params.BeaconConfig().BeaconStateAltairFieldCount
+
 	dst := &BeaconState{
 		state: &pbp2p.BeaconStateAltair{
 			// Primitive types, safe to copy.
@@ -109,8 +110,8 @@ func (b *BeaconState) Copy() iface.BeaconState {
 			CurrentJustifiedCheckpoint:  b.currentJustifiedCheckpoint(),
 			FinalizedCheckpoint:         b.finalizedCheckpoint(),
 			GenesisValidatorsRoot:       b.genesisValidatorRoot(),
-			CurrentSyncCommittee:        b.CurrentSyncCommittee(),
-			NextSyncCommittee:           b.NextSyncCommittee(),
+			CurrentSyncCommittee:        b.currentSyncCommittee(),
+			NextSyncCommittee:           b.nextSyncCommittee(),
 		},
 		dirtyFields:           make(map[fieldIndex]interface{}, fieldCount),
 		dirtyIndices:          make(map[fieldIndex][]uint64, fieldCount),
