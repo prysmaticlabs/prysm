@@ -7,6 +7,7 @@ import (
 	"github.com/golang/mock/gomock"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	slashpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -42,7 +43,7 @@ func Test_slashableAttestationCheck(t *testing.T) {
 	m.slasherClient.EXPECT().IsSlashableAttestation(
 		gomock.Any(), // ctx
 		gomock.Any(),
-	).Return(&ethpb.AttesterSlashing{}, nil /*err*/)
+	).Return(&slashpb.AttesterSlashingResponse{AttesterSlashing: &ethpb.AttesterSlashing{}}, nil /*err*/)
 
 	err := validator.slashableAttestationCheck(context.Background(), att, pubKey, [32]byte{1})
 	require.ErrorContains(t, failedPostAttSignExternalErr, err)
@@ -50,7 +51,7 @@ func Test_slashableAttestationCheck(t *testing.T) {
 	m.slasherClient.EXPECT().IsSlashableAttestation(
 		gomock.Any(), // ctx
 		gomock.Any(),
-	).Return(nil, nil /*err*/)
+	).Return(&slashpb.AttesterSlashingResponse{}, nil /*err*/)
 
 	err = validator.slashableAttestationCheck(context.Background(), att, pubKey, [32]byte{1})
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
@@ -87,7 +88,7 @@ func Test_slashableAttestationCheck_UpdatesLowestSignedEpochs(t *testing.T) {
 	m.slasherClient.EXPECT().IsSlashableAttestation(
 		gomock.Any(), // ctx
 		gomock.Any(),
-	).Return(nil, nil /*err*/)
+	).Return(&slashpb.AttesterSlashingResponse{}, nil /*err*/)
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
