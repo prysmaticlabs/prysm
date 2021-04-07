@@ -904,7 +904,7 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 	}
 
 	// Note: Index 6 should be skipped.
-	req := &ethpb.MultipleValidatorStatusRequest{Indices: []types.ValidatorIndex{0, 1, 2, 3, 4, 5, 6}}
+	req := &ethpb.MultipleValidatorStatusRequest{Indices: []int64{0, 1, 2, 3, 4, 5, 6}}
 	response, err := vs.MultipleValidatorStatus(context.Background(), req)
 	require.NoError(t, err)
 
