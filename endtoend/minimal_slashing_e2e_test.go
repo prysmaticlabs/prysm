@@ -30,7 +30,7 @@ func TestEndToEnd_Slashing_MinimalConfig(t *testing.T) {
 			ev.ValidatorsSlashed,
 			ev.SlashedValidatorsLoseBalance,
 			ev.InjectDoubleVote,
-			//ev.ProposeDoubleBlock,
+			ev.ProposeDoubleBlock,
 		},
 	}
 

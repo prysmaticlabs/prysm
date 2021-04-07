@@ -193,7 +193,6 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get chain head")
 	}
-
 	_, privKeys, err := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
 	if err != nil {
 		return err
@@ -212,7 +211,7 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 
 	var proposerIndex types.ValidatorIndex
 	for i, duty := range duties.CurrentEpochDuties {
-		if sliceutil.IsInSlots(chainHead.HeadSlot-1, duty.ProposerSlots) {
+		if sliceutil.IsInSlots(chainHead.HeadSlot+1, duty.ProposerSlots) {
 			proposerIndex = types.ValidatorIndex(i)
 			break
 		}
@@ -220,8 +219,8 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 
 	hashLen := 32
 	blk := &eth.BeaconBlock{
-		Slot:          chainHead.HeadSlot - 1,
-		ParentRoot:    bytesutil.PadTo([]byte("bad parent root"), hashLen),
+		Slot:          chainHead.HeadSlot + 1,
+		ParentRoot:    chainHead.HeadBlockRoot,
 		StateRoot:     bytesutil.PadTo([]byte("bad state root"), hashLen),
 		ProposerIndex: proposerIndex,
 		Body: &eth.BeaconBlockBody{
