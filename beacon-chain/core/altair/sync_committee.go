@@ -109,7 +109,6 @@ func SyncCommitteeIndices(state iface.BeaconStateAltair, epoch types.Epoch) ([]t
 
 		effectiveBal := v.EffectiveBalance()
 		if effectiveBal*maxRandomByte >= params.BeaconConfig().MaxEffectiveBalance*uint64(randomByte) {
-			i++
 			cIndices = append(cIndices, cIndex)
 		}
 		i++
