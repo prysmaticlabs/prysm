@@ -64,7 +64,7 @@ func IsWithinWeakSubjectivityPeriod(st string) (bool, error) {
 // SlotToEpoch returns the epoch number of the input slot.
 //
 // Spec pseudocode definition:
-//  def compute_epoch_of_slot(slot: Slot) -> Epoch:
+//  def compute_epoch_at_slot(slot: Slot) -> Epoch:
 //    """
 //    Return the epoch number of ``slot``.
 //    """
@@ -82,6 +82,17 @@ func SlotToEpoch(slot uint64) uint64 {
 //    Return the current epoch.
 //    """
 //    return compute_epoch_of_slot(state.slot)
+// We might have further comments, they shouldn't trigger analyzer.
 func CurrentEpoch(state string) uint64 {
 	return 42
+}
+
+func FuncWithoutComment() {
+
+}
+
+// FuncWithNoSpecComment is just a function that has comments, but none of those is from specs.
+// So, parser should ignore it.
+func FuncWithNoSpecComment() {
+
 }
