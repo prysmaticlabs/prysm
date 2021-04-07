@@ -30,6 +30,12 @@ service Wallet {
             body: "*"
         };
     }
+    rpc RecoverWallet(RecoverWalletRequest) returns (CreateWalletResponse) {
+        option (google.api.http) = {
+            post: "/v2/validator/wallet/recover"
+            body: "*"
+        };
+    }
 }
 
 service Accounts {
@@ -41,6 +47,12 @@ service Accounts {
     rpc BackupAccounts(BackupAccountsRequest) returns (BackupAccountsResponse) {
         option (google.api.http) = {
             post: "/v2/validator/accounts/backup",
+            body: "*"
+        };
+    }
+    rpc DeleteAccounts(DeleteAccountsRequest) returns (DeleteAccountsResponse) {
+        option (google.api.http) = {
+            post: "/v2/validator/wallet/accounts/delete",
             body: "*"
         };
     }
@@ -200,6 +212,14 @@ message WalletResponse {
     KeymanagerKind keymanager_kind = 2;
 }
 
+message RecoverWalletRequest {
+    string mnemonic = 1;
+    uint64 num_accounts = 2;
+    string wallet_password = 3;
+    string language = 4;
+    string mnemonic25th_word = 5;
+}
+
 message ListAccountsRequest {
     // Whether or not to return the raw RLP deposit tx data.
     bool get_deposit_tx_data = 1;
@@ -340,4 +360,14 @@ message BackupAccountsRequest {
 message BackupAccountsResponse {
     // Zip file containing backed up keystores.
     bytes zip_file = 1;
+}
+
+message DeleteAccountsRequest {
+    // List of public keys to delete.
+    repeated bytes public_keys_to_delete = 1;
+}
+
+message DeleteAccountsResponse {
+    // List of public keys successfully deleted.
+    repeated bytes deleted_keys = 1;
 }

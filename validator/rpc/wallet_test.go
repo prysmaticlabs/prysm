@@ -83,35 +83,80 @@ func TestServer_CreateWallet_Imported(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestServer_CreateWallet_Derived(t *testing.T) {
+func TestServer_RecoverWallet_Derived(t *testing.T) {
 	localWalletDir := setupWalletDir(t)
-	defaultWalletPath = localWalletDir
 	ctx := context.Background()
 	s := &Server{
 		walletInitializedFeed: new(event.Feed),
 		walletDir:             localWalletDir,
 	}
-	req := &pb.CreateWalletRequest{
-		Keymanager:     pb.KeymanagerKind_DERIVED,
+	req := &pb.RecoverWalletRequest{
 		WalletPassword: strongPass,
 		NumAccounts:    0,
 	}
-	// We delete the directory at defaultWalletPath as CreateWallet will return an error if it tries to create a wallet
+	// We delete the directory at defaultWalletPath as RecoverWallet will return an error if it tries to create a wallet
 	// where a directory already exists
-	require.NoError(t, os.RemoveAll(defaultWalletPath))
-	_, err := s.CreateWallet(ctx, req)
+	require.NoError(t, os.RemoveAll(localWalletDir))
+	_, err := s.RecoverWallet(ctx, req)
 	require.ErrorContains(t, "Must create at least 1 validator account", err)
 
 	req.NumAccounts = 2
-	_, err = s.CreateWallet(ctx, req)
-	require.ErrorContains(t, "Must include mnemonic", err)
+	req.Language = "Swahili"
+	_, err = s.RecoverWallet(ctx, req)
+	require.ErrorContains(t, "input not in the list of supported languages", err)
+
+	req.Language = "ENglish"
+	_, err = s.RecoverWallet(ctx, req)
+	require.ErrorContains(t, "invalid mnemonic in request", err)
 
 	mnemonicResp, err := s.GenerateMnemonic(ctx, &empty.Empty{})
 	require.NoError(t, err)
 	req.Mnemonic = mnemonicResp.Mnemonic
 
-	_, err = s.CreateWallet(ctx, req)
+	req.Mnemonic25ThWord = " "
+	_, err = s.RecoverWallet(ctx, req)
+	require.ErrorContains(t, "mnemonic 25th word cannot be empty", err)
+	req.Mnemonic25ThWord = "outer"
+
+	// Test weak password.
+	req.WalletPassword = "123qwe"
+	_, err = s.RecoverWallet(ctx, req)
+	require.ErrorContains(t, "password did not pass validation", err)
+
+	req.WalletPassword = strongPass
+	// Create(derived) should fail then test recover.
+	reqCreate := &pb.CreateWalletRequest{
+		Keymanager:     pb.KeymanagerKind_DERIVED,
+		WalletPassword: strongPass,
+		NumAccounts:    2,
+		Mnemonic:       mnemonicResp.Mnemonic,
+	}
+	_, err = s.CreateWallet(ctx, reqCreate)
+	require.ErrorContains(t, "create wallet not supported through web", err, "Create wallet for DERIVED or REMOTE types not supported through web, either import keystore or recover")
+
+	// This defer will be the last to execute in this func.
+	resetCfgFalse := featureconfig.InitWithReset(&featureconfig.Flags{
+		WriteWalletPasswordOnWebOnboarding: false,
+	})
+	defer resetCfgFalse()
+
+	resetCfgTrue := featureconfig.InitWithReset(&featureconfig.Flags{
+		WriteWalletPasswordOnWebOnboarding: true,
+	})
+	defer resetCfgTrue()
+
+	// Finally test recover.
+	_, err = s.RecoverWallet(ctx, req)
 	require.NoError(t, err)
+
+	// Password File should have been written.
+	passwordFilePath := filepath.Join(localWalletDir, wallet.DefaultWalletPasswordFile)
+	assert.Equal(t, true, fileutil.FileExists(passwordFilePath))
+
+	// Attempting to write again should trigger an error.
+	err = writeWalletPasswordToDisk(localWalletDir, "somepassword")
+	require.ErrorContains(t, "cannot write wallet password file as it already exists", err)
+
 }
 
 func TestServer_WalletConfig_NoWalletFound(t *testing.T) {
@@ -303,4 +348,60 @@ func Test_writeWalletPasswordToDisk(t *testing.T) {
 	// Attempting to write again should trigger an error.
 	err = writeWalletPasswordToDisk(walletDir, "somepassword")
 	require.NotNil(t, err)
+}
+
+func createImportedWalletWithAccounts(t testing.TB, numAccounts int) (*Server, [][]byte) {
+	localWalletDir := setupWalletDir(t)
+	defaultWalletPath = localWalletDir
+	ctx := context.Background()
+	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
+		WalletCfg: &wallet.Config{
+			WalletDir:      defaultWalletPath,
+			KeymanagerKind: keymanager.Imported,
+			WalletPassword: strongPass,
+		},
+		SkipMnemonicConfirm: true,
+	})
+	require.NoError(t, err)
+
+	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
+	require.NoError(t, err)
+	s := &Server{
+		keymanager:            km,
+		wallet:                w,
+		walletDir:             defaultWalletPath,
+		walletInitializedFeed: new(event.Feed),
+	}
+	// First we import accounts into the wallet.
+	encryptor := keystorev4.New()
+	keystores := make([]string, numAccounts)
+	pubKeys := make([][]byte, len(keystores))
+	for i := 0; i < len(keystores); i++ {
+		privKey, err := bls.RandKey()
+		require.NoError(t, err)
+		pubKey := fmt.Sprintf("%x", privKey.PublicKey().Marshal())
+		id, err := uuid.NewRandom()
+		require.NoError(t, err)
+		cryptoFields, err := encryptor.Encrypt(privKey.Marshal(), strongPass)
+		require.NoError(t, err)
+		item := &keymanager.Keystore{
+			Crypto:  cryptoFields,
+			ID:      id.String(),
+			Version: encryptor.Version(),
+			Pubkey:  pubKey,
+			Name:    encryptor.Name(),
+		}
+		encodedFile, err := json.MarshalIndent(item, "", "\t")
+		require.NoError(t, err)
+		keystores[i] = string(encodedFile)
+		pubKeys[i] = privKey.PublicKey().Marshal()
+	}
+	_, err = s.ImportKeystores(ctx, &pb.ImportKeystoresRequest{
+		KeystoresImported: keystores,
+		KeystoresPassword: strongPass,
+	})
+	require.NoError(t, err)
+	s.keymanager, err = s.wallet.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
+	require.NoError(t, err)
+	return s, pubKeys
 }
