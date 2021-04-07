@@ -23,7 +23,7 @@ for file in "${files[@]}"; do
   echo "- downloading"
   wget -q -O "$OUTPUT_PATH" --no-check-certificate --content-disposition $BASE_URL/"$file"
   echo "- extracting all code blocks"
-  sed -n '/^```/,/^```/ p' <"$OUTPUT_PATH" >>"${OUTPUT_PATH%/*}"/all-defs.md
+  sed -n '/^```python/,/^```/ p' <"$OUTPUT_PATH" >>"${OUTPUT_PATH%/*}"/all-defs.md
   echo "- removing raw file"
   rm "$OUTPUT_PATH"
 done
