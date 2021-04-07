@@ -86,6 +86,7 @@ cc_library(
         ],
         "//conditions:default": [],
     }),
+    visibility = ["//visibility:public"],
 )
 
 cc_library(
@@ -149,6 +150,7 @@ go_library(
     visibility = [
         "@prysm//shared/bls/herumi:__pkg__",
         # Additional access will require security approval.
+        "@prysm//shared/bls/herumi:__pkg__",
         "@com_github_wealdtech_go_eth2_types_v2//:__pkg__",
     ],
     clinkopts = select({

@@ -196,6 +196,7 @@ def go_fuzz_test(
         linkstatic = 1,
         testonly = 1,
         srcs = [":" + name],
+        deps = ["@herumi_bls_eth_go_binary//:lib"],
         tags = ["manual", "fuzzer"] + tags,
         args = [
             corpus_path,
