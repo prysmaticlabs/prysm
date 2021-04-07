@@ -204,6 +204,76 @@ func TestWeakSubjectivity_IsWithinWeakSubjectivityPeriod(t *testing.T) {
 	}
 }
 
+func TestWeakSubjectivity_ParseWeakSubjectivityInputString(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		checkpt   *ethpb.Checkpoint
+		wantedErr string
+	}{
+		{
+			name:      "No column in string",
+			input:     "0x111111;123",
+			wantedErr: "did not contain column",
+		},
+		{
+			name:      "Too many columns in string",
+			input:     "0x010203:123:456",
+			wantedErr: "weak subjectivity checkpoint input should be in `block_root:epoch_number` format",
+		},
+		{
+			name:      "Incorrect block root length",
+			input:     "0x010203:987",
+			wantedErr: "block root is not length of 32",
+		},
+		{
+			name:  "Correct input",
+			input: "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:123456789",
+			checkpt: &ethpb.Checkpoint{
+				Root:  []byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+				Epoch: types.Epoch(123456789),
+			},
+		},
+		{
+			name:  "Correct input without 0x",
+			input: "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:123456789",
+			checkpt: &ethpb.Checkpoint{
+				Root:  []byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+				Epoch: types.Epoch(123456789),
+			},
+		},
+		{
+			name:  "Correct input",
+			input: "0xF0FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:123456789",
+			checkpt: &ethpb.Checkpoint{
+				Root:  []byte{0xf0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+				Epoch: types.Epoch(123456789),
+			},
+		},
+		{
+			name:  "Correct input without 0x",
+			input: "F0FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:123456789",
+			checkpt: &ethpb.Checkpoint{
+				Root:  []byte{0xf0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+				Epoch: types.Epoch(123456789),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			wsCheckpt, err := helpers.ParseWeakSubjectivityInputString(tt.input)
+			if tt.wantedErr != "" {
+				require.ErrorContains(t, tt.wantedErr, err)
+				return
+			}
+			require.NoError(t, err)
+			require.NotNil(t, wsCheckpt)
+			require.DeepEqual(t, tt.checkpt.Root, wsCheckpt.Root, "Roots do not match")
+			require.Equal(t, tt.checkpt.Epoch, wsCheckpt.Epoch, "Epochs do not match")
+		})
+	}
+}
+
 func genState(t *testing.T, valCount uint64, avgBalance uint64) iface.BeaconState {
 	beaconState, err := testutil.NewBeaconState()
 	require.NoError(t, err)

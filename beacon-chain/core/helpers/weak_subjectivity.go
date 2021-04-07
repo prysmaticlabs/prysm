@@ -2,8 +2,11 @@ package helpers
 
 import (
 	"bytes"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -155,4 +158,44 @@ func LatestWeakSubjectivityEpoch(st iface.ReadOnlyBeaconState) (types.Epoch, err
 
 	finalizedEpoch := st.FinalizedCheckpointEpoch()
 	return finalizedEpoch - (finalizedEpoch % wsPeriod), nil
+}
+
+// ParseWeakSubjectivityInputString parses "blocks_root:epoch_number" string into a checkpoint.
+func ParseWeakSubjectivityInputString(wsCheckpointString string) (*eth.Checkpoint, error) {
+	if wsCheckpointString == "" {
+		return nil, nil
+	}
+
+	// Weak subjectivity input string must contain ":" to separate epoch and block root.
+	if !strings.Contains(wsCheckpointString, ":") {
+		return nil, fmt.Errorf("%s did not contain column", wsCheckpointString)
+	}
+
+	// Strip prefix "0x" if it's part of the input string.
+	wsCheckpointString = strings.TrimPrefix(wsCheckpointString, "0x")
+
+	// Get the hexadecimal block root from input string.
+	s := strings.Split(wsCheckpointString, ":")
+	if len(s) != 2 {
+		return nil, errors.New("weak subjectivity checkpoint input should be in `block_root:epoch_number` format")
+	}
+
+	bRoot, err := hex.DecodeString(s[0])
+	if err != nil {
+		return nil, err
+	}
+	if len(bRoot) != 32 {
+		return nil, errors.New("block root is not length of 32")
+	}
+
+	// Get the epoch number from input string.
+	epoch, err := strconv.ParseUint(s[1], 10, 64)
+	if err != nil {
+		return nil, err
+	}
+
+	return &eth.Checkpoint{
+		Epoch: types.Epoch(epoch),
+		Root:  bRoot,
+	}, nil
 }
