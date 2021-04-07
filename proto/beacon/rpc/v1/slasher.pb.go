@@ -12,7 +12,7 @@ import (
 
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
-	_ "github.com/gogo/protobuf/types"
+	_ "github.com/golang/protobuf/ptypes/empty"
 	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/eth2-types"
 	v1alpha1 "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
@@ -32,6 +32,100 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
+type AttesterSlashingResponse struct {
+	AttesterSlashing     *v1alpha1.AttesterSlashing `protobuf:"bytes,1,opt,name=attester_slashing,json=attesterSlashing,proto3" json:"attester_slashing,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                   `json:"-"`
+	XXX_unrecognized     []byte                     `json:"-"`
+	XXX_sizecache        int32                      `json:"-"`
+}
+
+func (m *AttesterSlashingResponse) Reset()         { *m = AttesterSlashingResponse{} }
+func (m *AttesterSlashingResponse) String() string { return proto.CompactTextString(m) }
+func (*AttesterSlashingResponse) ProtoMessage()    {}
+func (*AttesterSlashingResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_d75c5a5be5c552fc, []int{0}
+}
+func (m *AttesterSlashingResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *AttesterSlashingResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_AttesterSlashingResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *AttesterSlashingResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AttesterSlashingResponse.Merge(m, src)
+}
+func (m *AttesterSlashingResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *AttesterSlashingResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_AttesterSlashingResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_AttesterSlashingResponse proto.InternalMessageInfo
+
+func (m *AttesterSlashingResponse) GetAttesterSlashing() *v1alpha1.AttesterSlashing {
+	if m != nil {
+		return m.AttesterSlashing
+	}
+	return nil
+}
+
+type ProposerSlashingResponse struct {
+	ProposerSlashing     *v1alpha1.ProposerSlashing `protobuf:"bytes,1,opt,name=proposer_slashing,json=proposerSlashing,proto3" json:"proposer_slashing,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                   `json:"-"`
+	XXX_unrecognized     []byte                     `json:"-"`
+	XXX_sizecache        int32                      `json:"-"`
+}
+
+func (m *ProposerSlashingResponse) Reset()         { *m = ProposerSlashingResponse{} }
+func (m *ProposerSlashingResponse) String() string { return proto.CompactTextString(m) }
+func (*ProposerSlashingResponse) ProtoMessage()    {}
+func (*ProposerSlashingResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_d75c5a5be5c552fc, []int{1}
+}
+func (m *ProposerSlashingResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ProposerSlashingResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ProposerSlashingResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *ProposerSlashingResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ProposerSlashingResponse.Merge(m, src)
+}
+func (m *ProposerSlashingResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *ProposerSlashingResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_ProposerSlashingResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ProposerSlashingResponse proto.InternalMessageInfo
+
+func (m *ProposerSlashingResponse) GetProposerSlashing() *v1alpha1.ProposerSlashing {
+	if m != nil {
+		return m.ProposerSlashing
+	}
+	return nil
+}
+
 type HighestAttestationRequest struct {
 	ValidatorIndices     []uint64 `protobuf:"varint,1,rep,packed,name=validator_indices,json=validatorIndices,proto3" json:"validator_indices,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -43,7 +137,7 @@ func (m *HighestAttestationRequest) Reset()         { *m = HighestAttestationReq
 func (m *HighestAttestationRequest) String() string { return proto.CompactTextString(m) }
 func (*HighestAttestationRequest) ProtoMessage()    {}
 func (*HighestAttestationRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d75c5a5be5c552fc, []int{0}
+	return fileDescriptor_d75c5a5be5c552fc, []int{2}
 }
 func (m *HighestAttestationRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -90,7 +184,7 @@ func (m *HighestAttestationResponse) Reset()         { *m = HighestAttestationRe
 func (m *HighestAttestationResponse) String() string { return proto.CompactTextString(m) }
 func (*HighestAttestationResponse) ProtoMessage()    {}
 func (*HighestAttestationResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d75c5a5be5c552fc, []int{1}
+	return fileDescriptor_d75c5a5be5c552fc, []int{3}
 }
 func (m *HighestAttestationResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -139,7 +233,7 @@ func (m *HighestAttestation) Reset()         { *m = HighestAttestation{} }
 func (m *HighestAttestation) String() string { return proto.CompactTextString(m) }
 func (*HighestAttestation) ProtoMessage()    {}
 func (*HighestAttestation) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d75c5a5be5c552fc, []int{2}
+	return fileDescriptor_d75c5a5be5c552fc, []int{4}
 }
 func (m *HighestAttestation) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -190,6 +284,8 @@ func (m *HighestAttestation) GetHighestTargetEpoch() github_com_prysmaticlabs_et
 }
 
 func init() {
+	proto.RegisterType((*AttesterSlashingResponse)(nil), "ethereum.beacon.rpc.v1.AttesterSlashingResponse")
+	proto.RegisterType((*ProposerSlashingResponse)(nil), "ethereum.beacon.rpc.v1.ProposerSlashingResponse")
 	proto.RegisterType((*HighestAttestationRequest)(nil), "ethereum.beacon.rpc.v1.HighestAttestationRequest")
 	proto.RegisterType((*HighestAttestationResponse)(nil), "ethereum.beacon.rpc.v1.HighestAttestationResponse")
 	proto.RegisterType((*HighestAttestation)(nil), "ethereum.beacon.rpc.v1.HighestAttestation")
@@ -198,41 +294,44 @@ func init() {
 func init() { proto.RegisterFile("proto/beacon/rpc/v1/slasher.proto", fileDescriptor_d75c5a5be5c552fc) }
 
 var fileDescriptor_d75c5a5be5c552fc = []byte{
-	// 530 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x53, 0x41, 0x6b, 0x13, 0x41,
-	0x14, 0x66, 0xda, 0xa0, 0x30, 0x16, 0xad, 0xa3, 0x94, 0x18, 0x25, 0xad, 0x7b, 0xb0, 0x69, 0x6c,
-	0x66, 0xd8, 0x78, 0x10, 0xbc, 0x19, 0x10, 0xd2, 0x8b, 0x48, 0xe2, 0x3d, 0xcc, 0x6e, 0x9e, 0xbb,
-	0x83, 0x9b, 0x9d, 0x71, 0x66, 0x36, 0x34, 0xd7, 0xfe, 0x05, 0x8f, 0x9e, 0xbd, 0xfb, 0x33, 0x3c,
-	0x0a, 0xde, 0x45, 0x82, 0xbf, 0xc2, 0x8b, 0xb2, 0x33, 0xab, 0xd9, 0xd0, 0x04, 0x2c, 0xde, 0x76,
-	0xde, 0xfb, 0xde, 0xf7, 0x3e, 0xbe, 0xfd, 0x1e, 0x7e, 0xa8, 0xb4, 0xb4, 0x92, 0x45, 0xc0, 0x63,
-	0x99, 0x33, 0xad, 0x62, 0x36, 0x0f, 0x99, 0xc9, 0xb8, 0x49, 0x41, 0x53, 0xd7, 0x23, 0x07, 0x60,
-	0x53, 0xd0, 0x50, 0xcc, 0xa8, 0x47, 0x51, 0xad, 0x62, 0x3a, 0x0f, 0x5b, 0x87, 0x60, 0x53, 0x36,
-	0x0f, 0x79, 0xa6, 0x52, 0x1e, 0x56, 0x0c, 0x93, 0x28, 0x93, 0xf1, 0x5b, 0x3f, 0xd8, 0x7a, 0x90,
-	0x48, 0x99, 0x64, 0xc0, 0xb8, 0x12, 0x8c, 0xe7, 0xb9, 0xb4, 0xdc, 0x0a, 0x99, 0x9b, 0xaa, 0x7b,
-	0xbf, 0xea, 0xba, 0x57, 0x54, 0xbc, 0x61, 0x30, 0x53, 0x76, 0x51, 0x35, 0x7b, 0x89, 0xb0, 0x69,
-	0x11, 0xd1, 0x58, 0xce, 0x58, 0x22, 0x13, 0xb9, 0x42, 0x95, 0x2f, 0xaf, 0xb9, 0xfc, 0xf2, 0xf0,
-	0x60, 0x88, 0xef, 0x0d, 0x45, 0x92, 0x82, 0xb1, 0xcf, 0xad, 0x05, 0xe3, 0x17, 0x8d, 0xe0, 0x5d,
-	0x01, 0xc6, 0x92, 0xc7, 0xf8, 0xf6, 0x9c, 0x67, 0x62, 0xca, 0xad, 0xd4, 0x13, 0x91, 0x4f, 0x45,
-	0x0c, 0xa6, 0x89, 0x8e, 0x76, 0x3b, 0x8d, 0xd1, 0xfe, 0xdf, 0xc6, 0x99, 0xaf, 0x07, 0x19, 0x6e,
-	0x6d, 0x62, 0x32, 0x4a, 0xe6, 0x06, 0xc8, 0x4b, 0xbc, 0xc7, 0x57, 0x65, 0xcf, 0x72, 0xa3, 0xdf,
-	0xa5, 0x9b, 0x1d, 0xa2, 0x1b, 0x98, 0xd6, 0xe6, 0x83, 0x5f, 0x08, 0x93, 0xcb, 0x20, 0x72, 0x8c,
-	0x6f, 0xad, 0x29, 0x86, 0xf3, 0x26, 0x3a, 0x42, 0x9d, 0xc6, 0xe8, 0x66, 0x5d, 0x2f, 0x9c, 0x93,
-	0x09, 0xbe, 0x9b, 0xfa, 0xf1, 0x89, 0x91, 0x85, 0x8e, 0x61, 0x02, 0x4a, 0xc6, 0x69, 0x73, 0xa7,
-	0x44, 0x0f, 0x7a, 0x3f, 0xbf, 0x1d, 0x9e, 0xd4, 0x8c, 0x54, 0x7a, 0x61, 0x66, 0xdc, 0x8a, 0x38,
-	0xe3, 0x91, 0x61, 0x60, 0xd3, 0x7e, 0xcf, 0x2e, 0x14, 0x18, 0xfa, 0xa2, 0x1c, 0x1a, 0x91, 0x8a,
-	0x6a, 0xec, 0x98, 0x5c, 0xad, 0xbe, 0xc0, 0x72, 0x9d, 0x80, 0xad, 0x16, 0xec, 0xfe, 0xcf, 0x82,
-	0xd7, 0x8e, 0xc9, 0xd5, 0xfa, 0x17, 0x0d, 0x7c, 0x7d, 0xec, 0xe3, 0x46, 0x3e, 0x22, 0x7c, 0x70,
-	0x66, 0xdc, 0x8b, 0x47, 0x19, 0xd4, 0x1d, 0x39, 0x59, 0x59, 0x0c, 0x36, 0xa5, 0x7f, 0x52, 0x47,
-	0x9d, 0x0d, 0x30, 0xad, 0x41, 0x5b, 0xc7, 0x5b, 0xa0, 0x1e, 0x03, 0xda, 0xf1, 0x8b, 0x3c, 0x09,
-	0x9e, 0x5e, 0x7c, 0xfd, 0xf1, 0x7e, 0x27, 0x0c, 0x4e, 0xd9, 0x5a, 0x90, 0xab, 0xf0, 0xb3, 0xfa,
-	0x8f, 0xf2, 0xc5, 0x52, 0xd4, 0x33, 0xd4, 0x25, 0x1f, 0x10, 0xde, 0xaf, 0xe9, 0x1c, 0x94, 0x91,
-	0x27, 0x74, 0xcb, 0xda, 0xb1, 0x48, 0x72, 0x98, 0x0e, 0x5c, 0x2e, 0x1c, 0x72, 0x08, 0x7c, 0x0a,
-	0x7a, 0xab, 0xcc, 0x57, 0x5a, 0x2a, 0x69, 0x6a, 0x32, 0xa9, 0x93, 0xd9, 0x21, 0x8f, 0x36, 0xcb,
-	0x74, 0x07, 0x57, 0x13, 0x48, 0x3e, 0x21, 0x7c, 0xe7, 0x72, 0xa6, 0x0c, 0x09, 0xaf, 0x90, 0x52,
-	0x7f, 0x39, 0xad, 0xfe, 0x55, 0x46, 0xfc, 0x89, 0x04, 0x7d, 0x27, 0xf7, 0x94, 0x74, 0xff, 0xc1,
-	0xd5, 0x2a, 0x0f, 0x83, 0xbd, 0xcf, 0xcb, 0x36, 0xfa, 0xb2, 0x6c, 0xa3, 0xef, 0xcb, 0x36, 0x8a,
-	0xae, 0xb9, 0x9b, 0x7e, 0xf2, 0x3b, 0x00, 0x00, 0xff, 0xff, 0x82, 0x0d, 0x6d, 0xd6, 0x9b, 0x04,
-	0x00, 0x00,
+	// 582 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x94, 0xcf, 0x6f, 0xd3, 0x30,
+	0x14, 0xc7, 0x95, 0x6d, 0x02, 0xc9, 0x9b, 0xa0, 0x33, 0x68, 0x2a, 0x05, 0x75, 0x23, 0x07, 0xd6,
+	0x95, 0xd5, 0x26, 0xe1, 0x80, 0xc4, 0x8d, 0x4a, 0x48, 0xdd, 0x05, 0xa1, 0x76, 0xf7, 0xc8, 0x49,
+	0x1f, 0x49, 0x44, 0x1a, 0x1b, 0xdb, 0xad, 0xd6, 0x2b, 0xff, 0x02, 0xfc, 0x09, 0x9c, 0x11, 0x7f,
+	0x06, 0x47, 0x24, 0xee, 0x08, 0x55, 0xfc, 0x15, 0x5c, 0x40, 0x71, 0xcc, 0x96, 0xae, 0x8d, 0xb4,
+	0x89, 0x5b, 0xfc, 0x7e, 0x7c, 0xdf, 0x27, 0xcf, 0xef, 0x19, 0x3d, 0x14, 0x92, 0x6b, 0x4e, 0x43,
+	0x60, 0x11, 0xcf, 0xa9, 0x14, 0x11, 0x9d, 0x79, 0x54, 0x65, 0x4c, 0x25, 0x20, 0x89, 0xf1, 0xe1,
+	0x3d, 0xd0, 0x09, 0x48, 0x98, 0x4e, 0x48, 0x19, 0x45, 0xa4, 0x88, 0xc8, 0xcc, 0x6b, 0xed, 0x83,
+	0x4e, 0xe8, 0xcc, 0x63, 0x99, 0x48, 0x98, 0x67, 0x15, 0x82, 0x30, 0xe3, 0xd1, 0xdb, 0x32, 0xb1,
+	0xf5, 0x20, 0xe6, 0x3c, 0xce, 0x80, 0x32, 0x91, 0x52, 0x96, 0xe7, 0x5c, 0x33, 0x9d, 0xf2, 0x5c,
+	0x59, 0xef, 0x7d, 0xeb, 0x35, 0xa7, 0x70, 0xfa, 0x86, 0xc2, 0x44, 0xe8, 0xb9, 0x75, 0xf6, 0xe2,
+	0x54, 0x27, 0xd3, 0x90, 0x44, 0x7c, 0x42, 0x63, 0x1e, 0xf3, 0x8b, 0xa8, 0xe2, 0x54, 0x32, 0x17,
+	0x5f, 0x65, 0xb8, 0x2b, 0x50, 0xf3, 0x85, 0xd6, 0xa0, 0x34, 0xc8, 0x51, 0xc1, 0x9e, 0xe6, 0xf1,
+	0x10, 0x94, 0xe0, 0xb9, 0x02, 0x7c, 0x8a, 0x76, 0x99, 0xf5, 0x05, 0xca, 0x3a, 0x9b, 0xce, 0x81,
+	0xd3, 0xd9, 0xf6, 0x0f, 0xc9, 0xf9, 0xaf, 0x81, 0x4e, 0xc8, 0xbf, 0x7f, 0x21, 0x2b, 0x5a, 0x0d,
+	0x76, 0xc9, 0x52, 0x54, 0x7c, 0x2d, 0xb9, 0xe0, 0x6a, 0x7d, 0x45, 0x61, 0x7d, 0x57, 0xad, 0xb8,
+	0xa2, 0xd5, 0x10, 0x97, 0x2c, 0xee, 0x00, 0xdd, 0x1b, 0xa4, 0x71, 0x02, 0x4a, 0x97, 0x78, 0xa6,
+	0x99, 0x43, 0x78, 0x37, 0x05, 0xa5, 0xf1, 0x63, 0xb4, 0x3b, 0x63, 0x59, 0x3a, 0x66, 0x9a, 0xcb,
+	0x20, 0xcd, 0xc7, 0x69, 0x04, 0xaa, 0xe9, 0x1c, 0x6c, 0x76, 0xb6, 0x86, 0x8d, 0x73, 0xc7, 0x49,
+	0x69, 0x77, 0x33, 0xd4, 0x5a, 0xa7, 0x64, 0xe9, 0x5f, 0xa1, 0x1d, 0x76, 0x61, 0x2e, 0x55, 0xb6,
+	0xfd, 0x2e, 0x59, 0x3f, 0x05, 0x64, 0x8d, 0xd2, 0x52, 0xbe, 0xfb, 0xc7, 0x41, 0x78, 0x35, 0x08,
+	0x1f, 0xa2, 0xdb, 0x4b, 0xc4, 0x70, 0x66, 0x5a, 0xb4, 0x35, 0xbc, 0x55, 0xe5, 0x85, 0x33, 0x1c,
+	0xa0, 0xbb, 0x49, 0x99, 0x1e, 0x28, 0x3e, 0x95, 0x11, 0x04, 0x20, 0x78, 0x94, 0x34, 0x37, 0x8a,
+	0xe8, 0x7e, 0xef, 0xf7, 0x8f, 0xfd, 0xa3, 0xca, 0xb0, 0x08, 0x39, 0x57, 0x13, 0xa6, 0xd3, 0x28,
+	0x63, 0xa1, 0xa2, 0xa0, 0x13, 0xbf, 0xa7, 0xe7, 0x02, 0x14, 0x79, 0x59, 0x24, 0x0d, 0xb1, 0x95,
+	0x1a, 0x19, 0x25, 0x63, 0xab, 0x16, 0xd0, 0x4c, 0xc6, 0xa0, 0x6d, 0x81, 0xcd, 0xff, 0x29, 0x70,
+	0x6a, 0x94, 0x8c, 0xcd, 0xff, 0xb8, 0x85, 0x6e, 0x8e, 0xca, 0x95, 0xc2, 0x9f, 0x1d, 0xb4, 0x77,
+	0xa2, 0xcc, 0x89, 0x85, 0x19, 0x54, 0x3b, 0x72, 0x54, 0x33, 0x1b, 0xa6, 0x0d, 0x30, 0xae, 0x84,
+	0xb6, 0x9e, 0xd4, 0xdd, 0x46, 0xdd, 0x16, 0xb8, 0xcf, 0xde, 0x7f, 0xff, 0xf5, 0x61, 0xc3, 0x73,
+	0x8f, 0xe9, 0xd2, 0xd6, 0xda, 0x4d, 0xa7, 0xd5, 0x1b, 0x2b, 0x8d, 0x05, 0xdd, 0x73, 0xa7, 0x8b,
+	0x3f, 0x39, 0xa8, 0x51, 0x01, 0xee, 0x17, 0xfb, 0x8d, 0x49, 0x0d, 0xea, 0x28, 0x8d, 0x73, 0x18,
+	0xf7, 0x0d, 0x92, 0x89, 0x1c, 0x00, 0x1b, 0x83, 0xac, 0xe7, 0xad, 0xdb, 0x21, 0x97, 0x18, 0xde,
+	0x0e, 0x7e, 0xb4, 0x9e, 0xd7, 0x3c, 0x33, 0x15, 0x52, 0xfc, 0xc5, 0x41, 0x77, 0x56, 0xa7, 0x4c,
+	0x61, 0xef, 0x1a, 0x73, 0x5b, 0xee, 0x52, 0xcb, 0xbf, 0x4e, 0x8a, 0xc5, 0xf5, 0x0d, 0xee, 0x31,
+	0xee, 0x5e, 0xa1, 0xbd, 0x76, 0x42, 0xfa, 0x3b, 0x5f, 0x17, 0x6d, 0xe7, 0xdb, 0xa2, 0xed, 0xfc,
+	0x5c, 0xb4, 0x9d, 0xf0, 0x86, 0x79, 0xc9, 0x9e, 0xfe, 0x0d, 0x00, 0x00, 0xff, 0xff, 0x0b, 0x72,
+	0x17, 0x12, 0x91, 0x05, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -247,8 +346,8 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type SlasherClient interface {
-	IsSlashableAttestation(ctx context.Context, in *v1alpha1.IndexedAttestation, opts ...grpc.CallOption) (*v1alpha1.AttesterSlashing, error)
-	IsSlashableBlock(ctx context.Context, in *v1alpha1.SignedBeaconBlockHeader, opts ...grpc.CallOption) (*v1alpha1.ProposerSlashing, error)
+	IsSlashableAttestation(ctx context.Context, in *v1alpha1.IndexedAttestation, opts ...grpc.CallOption) (*AttesterSlashingResponse, error)
+	IsSlashableBlock(ctx context.Context, in *v1alpha1.SignedBeaconBlockHeader, opts ...grpc.CallOption) (*ProposerSlashingResponse, error)
 	HighestAttestations(ctx context.Context, in *HighestAttestationRequest, opts ...grpc.CallOption) (*HighestAttestationResponse, error)
 }
 
@@ -260,8 +359,8 @@ func NewSlasherClient(cc *grpc.ClientConn) SlasherClient {
 	return &slasherClient{cc}
 }
 
-func (c *slasherClient) IsSlashableAttestation(ctx context.Context, in *v1alpha1.IndexedAttestation, opts ...grpc.CallOption) (*v1alpha1.AttesterSlashing, error) {
-	out := new(v1alpha1.AttesterSlashing)
+func (c *slasherClient) IsSlashableAttestation(ctx context.Context, in *v1alpha1.IndexedAttestation, opts ...grpc.CallOption) (*AttesterSlashingResponse, error) {
+	out := new(AttesterSlashingResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.Slasher/IsSlashableAttestation", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -269,8 +368,8 @@ func (c *slasherClient) IsSlashableAttestation(ctx context.Context, in *v1alpha1
 	return out, nil
 }
 
-func (c *slasherClient) IsSlashableBlock(ctx context.Context, in *v1alpha1.SignedBeaconBlockHeader, opts ...grpc.CallOption) (*v1alpha1.ProposerSlashing, error) {
-	out := new(v1alpha1.ProposerSlashing)
+func (c *slasherClient) IsSlashableBlock(ctx context.Context, in *v1alpha1.SignedBeaconBlockHeader, opts ...grpc.CallOption) (*ProposerSlashingResponse, error) {
+	out := new(ProposerSlashingResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.Slasher/IsSlashableBlock", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -289,8 +388,8 @@ func (c *slasherClient) HighestAttestations(ctx context.Context, in *HighestAtte
 
 // SlasherServer is the server API for Slasher service.
 type SlasherServer interface {
-	IsSlashableAttestation(context.Context, *v1alpha1.IndexedAttestation) (*v1alpha1.AttesterSlashing, error)
-	IsSlashableBlock(context.Context, *v1alpha1.SignedBeaconBlockHeader) (*v1alpha1.ProposerSlashing, error)
+	IsSlashableAttestation(context.Context, *v1alpha1.IndexedAttestation) (*AttesterSlashingResponse, error)
+	IsSlashableBlock(context.Context, *v1alpha1.SignedBeaconBlockHeader) (*ProposerSlashingResponse, error)
 	HighestAttestations(context.Context, *HighestAttestationRequest) (*HighestAttestationResponse, error)
 }
 
@@ -298,10 +397,10 @@ type SlasherServer interface {
 type UnimplementedSlasherServer struct {
 }
 
-func (*UnimplementedSlasherServer) IsSlashableAttestation(ctx context.Context, req *v1alpha1.IndexedAttestation) (*v1alpha1.AttesterSlashing, error) {
+func (*UnimplementedSlasherServer) IsSlashableAttestation(ctx context.Context, req *v1alpha1.IndexedAttestation) (*AttesterSlashingResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method IsSlashableAttestation not implemented")
 }
-func (*UnimplementedSlasherServer) IsSlashableBlock(ctx context.Context, req *v1alpha1.SignedBeaconBlockHeader) (*v1alpha1.ProposerSlashing, error) {
+func (*UnimplementedSlasherServer) IsSlashableBlock(ctx context.Context, req *v1alpha1.SignedBeaconBlockHeader) (*ProposerSlashingResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method IsSlashableBlock not implemented")
 }
 func (*UnimplementedSlasherServer) HighestAttestations(ctx context.Context, req *HighestAttestationRequest) (*HighestAttestationResponse, error) {
@@ -387,6 +486,84 @@ var _Slasher_serviceDesc = grpc.ServiceDesc{
 	Metadata: "proto/beacon/rpc/v1/slasher.proto",
 }
 
+func (m *AttesterSlashingResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *AttesterSlashingResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AttesterSlashingResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if m.AttesterSlashing != nil {
+		{
+			size, err := m.AttesterSlashing.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintSlasher(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *ProposerSlashingResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ProposerSlashingResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ProposerSlashingResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if m.ProposerSlashing != nil {
+		{
+			size, err := m.ProposerSlashing.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintSlasher(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
 func (m *HighestAttestationRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -412,20 +589,20 @@ func (m *HighestAttestationRequest) MarshalToSizedBuffer(dAtA []byte) (int, erro
 		copy(dAtA[i:], m.XXX_unrecognized)
 	}
 	if len(m.ValidatorIndices) > 0 {
-		dAtA2 := make([]byte, len(m.ValidatorIndices)*10)
-		var j1 int
+		dAtA4 := make([]byte, len(m.ValidatorIndices)*10)
+		var j3 int
 		for _, num := range m.ValidatorIndices {
 			for num >= 1<<7 {
-				dAtA2[j1] = uint8(uint64(num)&0x7f | 0x80)
+				dAtA4[j3] = uint8(uint64(num)&0x7f | 0x80)
 				num >>= 7
-				j1++
+				j3++
 			}
-			dAtA2[j1] = uint8(num)
-			j1++
+			dAtA4[j3] = uint8(num)
+			j3++
 		}
-		i -= j1
-		copy(dAtA[i:], dAtA2[:j1])
-		i = encodeVarintSlasher(dAtA, i, uint64(j1))
+		i -= j3
+		copy(dAtA[i:], dAtA4[:j3])
+		i = encodeVarintSlasher(dAtA, i, uint64(j3))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -526,6 +703,38 @@ func encodeVarintSlasher(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return base
 }
+func (m *AttesterSlashingResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.AttesterSlashing != nil {
+		l = m.AttesterSlashing.Size()
+		n += 1 + l + sovSlasher(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *ProposerSlashingResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.ProposerSlashing != nil {
+		l = m.ProposerSlashing.Size()
+		n += 1 + l + sovSlasher(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
 func (m *HighestAttestationRequest) Size() (n int) {
 	if m == nil {
 		return 0
@@ -589,6 +798,180 @@ func sovSlasher(x uint64) (n int) {
 }
 func sozSlasher(x uint64) (n int) {
 	return sovSlasher(uint64((x << 1) ^ uint64((int64(x) >> 63))))
+}
+func (m *AttesterSlashingResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSlasher
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: AttesterSlashingResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: AttesterSlashingResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AttesterSlashing", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSlasher
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.AttesterSlashing == nil {
+				m.AttesterSlashing = &v1alpha1.AttesterSlashing{}
+			}
+			if err := m.AttesterSlashing.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSlasher(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ProposerSlashingResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSlasher
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ProposerSlashingResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ProposerSlashingResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ProposerSlashing", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSlasher
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.ProposerSlashing == nil {
+				m.ProposerSlashing = &v1alpha1.ProposerSlashing{}
+			}
+			if err := m.ProposerSlashing.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSlasher(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthSlasher
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
 }
 func (m *HighestAttestationRequest) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)

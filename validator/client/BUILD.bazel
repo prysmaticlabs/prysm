@@ -98,6 +98,7 @@ go_test(
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
+        "//proto/beacon/rpc/v1:go_default_library",
         "//proto/validator/accounts/v2:go_default_library",
         "//shared:go_default_library",
         "//shared/bls:go_default_library",
