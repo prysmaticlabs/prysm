@@ -86,7 +86,7 @@ func (v *validator) slashableAttestationCheck(
 		if err != nil {
 			return errors.Wrap(err, "could not check if attestation is slashable")
 		}
-		if slashing != nil {
+		if slashing != nil && slashing.AttesterSlashing != nil {
 			if v.emitAccountMetrics {
 				ValidatorAttestFailVecSlasher.WithLabelValues(fmtKey).Inc()
 			}
