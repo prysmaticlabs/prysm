@@ -96,6 +96,9 @@ func (s *Store) CheckAttesterDoubleVotes(
 				encIdx := encodeValidatorIndex(types.ValidatorIndex(valIdx))
 				validatorEpochKey := append(encEpoch, encIdx...)
 				attRecordsKey := signingRootsBkt.Get(validatorEpochKey)
+
+				// An attestation record key is comprised of a signing root (32 bytes)
+				// and a fast sum hash of the attesting indices (8 bytes).
 				if len(attRecordsKey) < 40 {
 					continue
 				}
@@ -182,15 +185,18 @@ func (s *Store) SaveAttestationRecordsForValidators(
 		attRecordsBkt := tx.Bucket(attestationRecordsBucket)
 		signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
 		for i, att := range attestations {
+			// An attestation record key is comprised of the signing root (32 bytes)
+			// and a fastsum64 of the attesting indices (8 bytes). This is used
+			// to have a more optimal schema
 			attIndicesHash := hashutil.FastSum64(encodedIndices[i])
-			recordKey := append(att.SigningRoot[:], ssz.MarshalUint64(nil, attIndicesHash)...)
-			if err := attRecordsBkt.Put(recordKey, encodedRecords[i]); err != nil {
+			attRecordKey := append(att.SigningRoot[:], ssz.MarshalUint64(nil, attIndicesHash)...)
+			if err := attRecordsBkt.Put(attRecordKey, encodedRecords[i]); err != nil {
 				return err
 			}
 			for _, valIdx := range att.IndexedAttestation.AttestingIndices {
 				encIdx := encodeValidatorIndex(types.ValidatorIndex(valIdx))
 				key := append(encodedTargetEpoch[i], encIdx...)
-				if err := signingRootsBkt.Put(key, recordKey); err != nil {
+				if err := signingRootsBkt.Put(key, attRecordKey); err != nil {
 					return err
 				}
 			}
