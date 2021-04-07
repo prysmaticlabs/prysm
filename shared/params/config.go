@@ -152,10 +152,10 @@ type BeaconChainConfig struct {
 	SyncCommitteeSubnetCount             uint64 `yaml:"SYNC_COMMITTEE_SUBNET_COUNT" spec:"true"`              // SyncCommitteeSubnetCount for sync committee subnet count.
 
 	// Misc.
-	SyncCommitteeSize            uint64 `yaml:"SYNC_COMMITTEE_SIZE" spec:"true"`              // SyncCommitteeSize for light client.
-	SyncPubkeysPerAggregate      uint64 `yaml:"SYNC_PUBKEYS_PER_AGGREGATE" spec:"true"`       // SyncPubkeysPerAggregate for light client.
-	InactivityScoreBias          uint64 `yaml:"INACTIVITY_SCORE_BIAS" spec:"true"`            // InactivityScoreBias for penalties during inactivity
-	EpochsPerSyncCommitteePeriod uint64 `yaml:"EPOCHS_PER_SYNC_COMMITTEE_PERIOD" spec:"true"` // EpochsPerSyncCommitteePeriod for light client.
+	SyncCommitteeSize            uint64      `yaml:"SYNC_COMMITTEE_SIZE" spec:"true"`              // SyncCommitteeSize for light client.
+	SyncPubkeysPerAggregate      uint64      `yaml:"SYNC_PUBKEYS_PER_AGGREGATE" spec:"true"`       // SyncPubkeysPerAggregate for light client.
+	InactivityScoreBias          uint64      `yaml:"INACTIVITY_SCORE_BIAS" spec:"true"`            // InactivityScoreBias for penalties during inactivity
+	EpochsPerSyncCommitteePeriod types.Epoch `yaml:"EPOCHS_PER_SYNC_COMMITTEE_PERIOD" spec:"true"` // EpochsPerSyncCommitteePeriod for light client.
 
 	// Updated penalty values. This moves penalty parameters toward their final, maximum security values.
 	// Note: We do not override previous configuration values but instead creates new values and replaces usage throughout.
