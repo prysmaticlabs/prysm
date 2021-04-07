@@ -14,7 +14,7 @@ import (
 
 var (
 	logThreshold = 8
-	dialInterval = 5 * time.Second
+	dialInterval = 2 * time.Second
 
 	ConnectionError = errors.New("Client not connected")
 	errNotSynced    = errors.New("Pandora node is still syncing")
@@ -210,9 +210,9 @@ func (s *Service) SubmitShardBlockHeader(ctx context.Context, blockNonce uint64,
 // isPandoraNodeSynced method checks if the pandora node is healthy and ready to serve before
 // fetching data from  it.
 func (s *Service) isPandoraNodeSynced() (bool, error) {
-	syncProg, err := s.pandoraClient.GetShardSyncProgress(s.ctx)
+	_, err := s.pandoraClient.GetShardSyncProgress(s.ctx)
 	if err != nil {
 		return false, err
 	}
-	return syncProg != nil, nil
+	return true, nil
 }
