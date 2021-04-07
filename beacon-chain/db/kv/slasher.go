@@ -16,6 +16,7 @@ import (
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	slashpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -86,18 +87,20 @@ func (s *Store) CheckAttesterDoubleVotes(
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.CheckAttesterDoubleVotes")
 	defer span.End()
 	doubleVotes := make([]*slashertypes.AttesterDoubleVote, 0)
-	err := s.db.Update(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(attestationRecordsBucket)
+	err := s.db.View(func(tx *bolt.Tx) error {
+		signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
+		attRecordsBkt := tx.Bucket(attestationRecordsBucket)
 		for _, att := range attestations {
 			encEpoch := encodeTargetEpoch(att.IndexedAttestation.Data.Target.Epoch, historyLength)
 			for _, valIdx := range att.IndexedAttestation.AttestingIndices {
 				encIdx := encodeValidatorIndex(types.ValidatorIndex(valIdx))
-				key := append(encEpoch, encIdx...)
-				encExistingAttRecord := bkt.Get(key)
-				if len(encExistingAttRecord) < 32 {
+				validatorEpochKey := append(encEpoch, encIdx...)
+				attRecordsKey := signingRootsBkt.Get(validatorEpochKey)
+				if len(attRecordsKey) < 40 {
 					continue
 				}
-				existingSigningRoot := bytesutil.ToBytes32(encExistingAttRecord[:32])
+				encExistingAttRecord := attRecordsBkt.Get(attRecordsKey)
+				existingSigningRoot := bytesutil.ToBytes32(attRecordsKey[:32])
 				if existingSigningRoot != att.SigningRoot {
 					existingAttRecord, err := decodeAttestationRecord(encExistingAttRecord)
 					if err != nil {
@@ -130,15 +133,12 @@ func (s *Store) AttestationRecordForValidator(
 	key := append(encEpoch, encIdx...)
 	err := s.db.View(func(tx *bolt.Tx) error {
 		signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
-		encoded := signingRootsBkt.Get(key)
-		if len(encoded) < 40 {
+		attRecordKey := signingRootsBkt.Get(key)
+		if attRecordKey == nil {
 			return nil
 		}
-		signingRoot := encoded[:32]
-		attestingIndicesHash := encoded[32:40]
-
 		attRecordsBkt := tx.Bucket(attestationRecordsBucket)
-		indexedAttBytes := attRecordsBkt.Get(signingRoot)
+		indexedAttBytes := attRecordsBkt.Get(attRecordKey)
 		if indexedAttBytes == nil {
 			return nil
 		}
@@ -152,8 +152,7 @@ func (s *Store) AttestationRecordForValidator(
 	return record, err
 }
 
-// SaveAttestationRecordsForValidators saves an attestation records for the
-// specified validator indices.
+// SaveAttestationRecordsForValidators saves attestation records for the specified indices.
 func (s *Store) SaveAttestationRecordsForValidators(
 	ctx context.Context,
 	attestations []*slashertypes.IndexedAttestationWrapper,
@@ -163,22 +162,35 @@ func (s *Store) SaveAttestationRecordsForValidators(
 	defer span.End()
 	encodedTargetEpoch := make([][]byte, len(attestations))
 	encodedRecords := make([][]byte, len(attestations))
+	encodedIndices := make([][]byte, len(attestations))
 	for i, att := range attestations {
 		encEpoch := encodeTargetEpoch(att.IndexedAttestation.Data.Target.Epoch, historyLength)
 		value, err := encodeAttestationRecord(att)
 		if err != nil {
 			return err
 		}
+		indicesBytes := make([]byte, len(att.IndexedAttestation.AttestingIndices)*8)
+		for _, idx := range att.IndexedAttestation.AttestingIndices {
+			encodedIdx := encodeValidatorIndex(types.ValidatorIndex(idx))
+			indicesBytes = append(indicesBytes, encodedIdx...)
+		}
+		encodedIndices[i] = indicesBytes
 		encodedTargetEpoch[i] = encEpoch
 		encodedRecords[i] = value
 	}
 	return s.db.Update(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(attestationRecordsBucket)
+		attRecordsBkt := tx.Bucket(attestationRecordsBucket)
+		signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
 		for i, att := range attestations {
+			attIndicesHash := hashutil.FastSum64(encodedIndices[i])
+			recordKey := append(att.SigningRoot[:], ssz.MarshalUint64(nil, attIndicesHash)...)
+			if err := attRecordsBkt.Put(recordKey, encodedRecords[i]); err != nil {
+				return err
+			}
 			for _, valIdx := range att.IndexedAttestation.AttestingIndices {
 				encIdx := encodeValidatorIndex(types.ValidatorIndex(valIdx))
 				key := append(encodedTargetEpoch[i], encIdx...)
-				if err := bkt.Put(key, encodedRecords[i]); err != nil {
+				if err := signingRootsBkt.Put(key, recordKey); err != nil {
 					return err
 				}
 			}
@@ -348,17 +360,21 @@ func (s *Store) PruneAttestations(ctx context.Context, currentEpoch types.Epoch,
 		return nil
 	}
 	// + 1 here so we can prune everything less than this, but not equal.
-	endPruneEpoch := currentEpoch - types.Epoch(historyLength)
+	endPruneEpoch := currentEpoch - historyLength
 	epochEnc := encodeTargetEpoch(endPruneEpoch, historyLength)
 	return s.db.Update(func(tx *bolt.Tx) error {
-		attBkt := tx.Bucket(attestationRecordsBucket)
-		c := attBkt.Cursor()
-		for k, _ := c.Seek(epochEnc); k != nil; k, _ = c.Prev() {
+		signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
+		attRecordsBkt := tx.Bucket(attestationRecordsBucket)
+		c := signingRootsBkt.Cursor()
+		for k, v := c.Seek(epochEnc); k != nil; k, v = c.Prev() {
 			if !epochPrefixLessThan(k, epochEnc) {
 				continue
 			}
 			slasherAttestationsPrunedTotal.Inc()
-			if err := attBkt.Delete(k); err != nil {
+			if err := signingRootsBkt.Delete(k); err != nil {
+				return err
+			}
+			if err := attRecordsBkt.Delete(v); err != nil {
 				return err
 			}
 		}
@@ -387,12 +403,17 @@ func (s *Store) HighestAttestations(
 
 	history := make([]*slashpb.HighestAttestation, 0, len(encodedIndices))
 	err = s.db.View(func(tx *bolt.Tx) error {
-		attBkt := tx.Bucket(attestationRecordsBucket)
+		signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
+		attRecordsBkt := tx.Bucket(attestationRecordsBucket)
 		for i := 0; i < len(encodedIndices); i++ {
-			c := attBkt.Cursor()
+			c := signingRootsBkt.Cursor()
 			for k, v := c.Last(); k != nil; k, v = c.Prev() {
 				if suffixForAttestationRecordsKey(k, encodedIndices[i]) {
-					attWrapper, err := decodeAttestationRecord(v)
+					encodedAttRecord := attRecordsBkt.Get(v)
+					if encodedAttRecord == nil {
+						continue
+					}
+					attWrapper, err := decodeAttestationRecord(encodedAttRecord)
 					if err != nil {
 						return err
 					}
