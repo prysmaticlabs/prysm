@@ -20,6 +20,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
@@ -468,27 +469,26 @@ func (b *BeaconNode) registerBlockchainService() error {
 	}
 
 	wsp := b.cliCtx.String(flags.WeakSubjectivityCheckpt.Name)
-	bRoot, epoch, err := convertWspInput(wsp)
+	wsCheckpt, err := helpers.ParseWeakSubjectivityInputString(wsp)
 	if err != nil {
 		return err
 	}
 
 	maxRoutines := b.cliCtx.Int(cmd.MaxGoroutines.Name)
 	blockchainService, err := blockchain.NewService(b.ctx, &blockchain.Config{
-		BeaconDB:          b.db,
-		DepositCache:      b.depositCache,
-		ChainStartFetcher: web3Service,
-		AttPool:           b.attestationPool,
-		ExitPool:          b.exitPool,
-		SlashingPool:      b.slashingsPool,
-		P2p:               b.fetchP2P(),
-		MaxRoutines:       maxRoutines,
-		StateNotifier:     b,
-		ForkChoiceStore:   b.forkChoiceStore,
-		OpsService:        opsService,
-		StateGen:          b.stateGen,
-		WspBlockRoot:      bRoot,
-		WspEpoch:          epoch,
+		BeaconDB:                b.db,
+		DepositCache:            b.depositCache,
+		ChainStartFetcher:       web3Service,
+		AttPool:                 b.attestationPool,
+		ExitPool:                b.exitPool,
+		SlashingPool:            b.slashingsPool,
+		P2p:                     b.fetchP2P(),
+		MaxRoutines:             maxRoutines,
+		StateNotifier:           b,
+		ForkChoiceStore:         b.forkChoiceStore,
+		OpsService:              opsService,
+		StateGen:                b.stateGen,
+		WeakSubjectivityCheckpt: wsCheckpt,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")
