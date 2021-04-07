@@ -21,6 +21,12 @@ import (
 	"go.opencensus.io/trace"
 )
 
+const (
+	// Signing root (32 bytes) + fastsum64(attesting_indices) (8 bytes).
+	attestationRecordKeySize = 40
+	signingRootSize          = 32 // Bytes.
+)
+
 // LastEpochWrittenForValidator given a validator index returns the latest
 // epoch we have recorded the validator attested for.
 func (s *Store) LastEpochWrittenForValidators(
@@ -99,11 +105,14 @@ func (s *Store) CheckAttesterDoubleVotes(
 
 				// An attestation record key is comprised of a signing root (32 bytes)
 				// and a fast sum hash of the attesting indices (8 bytes).
-				if len(attRecordsKey) < 40 {
+				if len(attRecordsKey) < attestationRecordKeySize {
 					continue
 				}
 				encExistingAttRecord := attRecordsBkt.Get(attRecordsKey)
-				existingSigningRoot := bytesutil.ToBytes32(attRecordsKey[:32])
+				if encExistingAttRecord == nil {
+					continue
+				}
+				existingSigningRoot := bytesutil.ToBytes32(attRecordsKey[:signingRootSize])
 				if existingSigningRoot != att.SigningRoot {
 					existingAttRecord, err := decodeAttestationRecord(encExistingAttRecord)
 					if err != nil {
@@ -189,7 +198,9 @@ func (s *Store) SaveAttestationRecordsForValidators(
 			// and a fastsum64 of the attesting indices (8 bytes). This is used
 			// to have a more optimal schema
 			attIndicesHash := hashutil.FastSum64(encodedIndices[i])
-			attRecordKey := append(att.SigningRoot[:], ssz.MarshalUint64(nil, attIndicesHash)...)
+			attRecordKey := append(
+				att.SigningRoot[:], ssz.MarshalUint64(make([]byte, 0), attIndicesHash)...,
+			)
 			if err := attRecordsBkt.Put(attRecordKey, encodedRecords[i]); err != nil {
 				return err
 			}
@@ -278,10 +289,10 @@ func (s *Store) CheckDoubleBlockProposals(
 				return err
 			}
 			encExistingProposalWrapper := bkt.Get(key)
-			if len(encExistingProposalWrapper) < 32 {
+			if len(encExistingProposalWrapper) < signingRootSize {
 				continue
 			}
-			existingSigningRoot := bytesutil.ToBytes32(encExistingProposalWrapper[:32])
+			existingSigningRoot := bytesutil.ToBytes32(encExistingProposalWrapper[:signingRootSize])
 			if existingSigningRoot != proposal.SigningRoot {
 				existingProposalWrapper, err := decodeProposalRecord(encExistingProposalWrapper)
 				if err != nil {
@@ -499,12 +510,12 @@ func encodeAttestationRecord(att *slashertypes.IndexedAttestationWrapper) ([]byt
 
 // Decode attestation record from bytes.
 func decodeAttestationRecord(encoded []byte) (*slashertypes.IndexedAttestationWrapper, error) {
-	if len(encoded) < 32 {
+	if len(encoded) < signingRootSize {
 		return nil, fmt.Errorf("wrong length for encoded attestation record, want 32, got %d", len(encoded))
 	}
-	signingRoot := encoded[:32]
+	signingRoot := encoded[:signingRootSize]
 	decodedAtt := &ethpb.IndexedAttestation{}
-	decodedAttBytes, err := snappy.Decode(nil, encoded[32:])
+	decodedAttBytes, err := snappy.Decode(nil, encoded[signingRootSize:])
 	if err != nil {
 		return nil, err
 	}
@@ -530,12 +541,14 @@ func encodeProposalRecord(blkHdr *slashertypes.SignedBlockHeaderWrapper) ([]byte
 }
 
 func decodeProposalRecord(encoded []byte) (*slashertypes.SignedBlockHeaderWrapper, error) {
-	if len(encoded) < 32 {
-		return nil, fmt.Errorf("wrong length for encoded proposal record, want 32, got %d", len(encoded))
+	if len(encoded) < signingRootSize {
+		return nil, fmt.Errorf(
+			"wrong length for encoded proposal record, want %d, got %d", signingRootSize, len(encoded),
+		)
 	}
-	signingRoot := encoded[:32]
+	signingRoot := encoded[:signingRootSize]
 	decodedBlkHdr := &ethpb.SignedBeaconBlockHeader{}
-	decodedHdrBytes, err := snappy.Decode(nil, encoded[32:])
+	decodedHdrBytes, err := snappy.Decode(nil, encoded[signingRootSize:])
 	if err != nil {
 		return nil, err
 	}
