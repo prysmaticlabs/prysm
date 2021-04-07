@@ -1,37 +1,5 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
-config_setting(
-    name = "use_gmp",
-    values = {"define": "BLS_USE_GMP=true"},
-)
-
-config_setting(
-    name = "use_openssl",
-    values = {"define": "BLS_USE_OPENSSL=true"},
-)
-
-OPTS = [
-    "-DMCL_LLVM_BMI2=0",
-    "-DMCL_USE_LLVM=1",
-    "-DMCL_VINT_FIXED_BUFFER",
-    "-DMCL_SIZEOF_UNIT=8",
-    "-DMCL_MAX_BIT_SIZE=384",
-    "-DCYBOZU_DONT_USE_EXCEPTION",
-    "-DCYBOZU_DONT_USE_STRING",
-    "-DBLS_SWAP_G",
-    "-DBLS_ETH",
-] + select({
-    ":use_gmp": [],
-    "//conditions:default": [
-        "-DMCL_USE_VINT",
-    ],
-}) + select({
-    ":use_openssl": [],
-    "//conditions:default": [
-        "-DMCL_DONT_USE_OPENSSL",
-    ],
-})
-
 cc_library(
     name = "precompiled",
     srcs = select({
