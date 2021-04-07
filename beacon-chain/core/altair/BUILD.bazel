@@ -8,7 +8,10 @@ go_library(
         "state.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/altair",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//shared/testutil/altair:__pkg__",
+    ],
     deps = [
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/state:go_default_library",
@@ -19,6 +22,7 @@ go_library(
         "//shared/bytesutil:go_default_library",
         "//shared/params:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
+        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
     ],
 )
@@ -36,7 +40,6 @@ go_test(
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/state/state-altair:go_default_library",
-        "//beacon-chain/state/stateV0:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",

@@ -5,7 +5,6 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	s "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
@@ -28,7 +27,7 @@ func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisT
 		return nil, err
 	}
 
-	state, err = b.ProcessPreGenesisDeposits(ctx, state, deposits)
+	state, err = ProcessPreGenesisDeposits(ctx, state, deposits)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process validator deposits")
 	}
