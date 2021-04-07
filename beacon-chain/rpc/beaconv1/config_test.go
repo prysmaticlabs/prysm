@@ -114,7 +114,7 @@ func TestGetSpec(t *testing.T) {
 	resp, err := server.GetSpec(context.Background(), &pbtypes.Empty{})
 	require.NoError(t, err)
 
-	assert.Equal(t, 80, len(resp.Data))
+	assert.Equal(t, 81, len(resp.Data))
 	for k, v := range resp.Data {
 		switch k {
 		case "config_name":
@@ -263,6 +263,8 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "68", v)
 		case "proportional_slashing_multiplier_altair":
 			assert.Equal(t, "69", v)
+		case "proposer_weight":
+			assert.Equal(t, "8", v)
 		case "domain_beacon_proposer":
 			assert.Equal(t, "0x30303031", v)
 		case "domain_beacon_attester":
