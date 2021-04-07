@@ -9,7 +9,13 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bls/blst"
 	"github.com/prysmaticlabs/prysm/shared/bls/common"
+	"github.com/prysmaticlabs/prysm/shared/bls/herumi"
 )
+
+// Initialize herumi temporarily while we transition to blst for ethdo.
+func init() {
+	herumi.HerumiInit()
+}
 
 // SecretKeyFromBytes creates a BLS private key from a BigEndian byte slice.
 func SecretKeyFromBytes(privKey []byte) (SecretKey, error) {

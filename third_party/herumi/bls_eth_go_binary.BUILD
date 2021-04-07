@@ -83,6 +83,7 @@ go_library(
     cgo = True,
     copts = OPTS,
     visibility = [
+        "@prysm//shared/bls/herumi:__pkg__",
         # Additional access will require security approval.
         "@com_github_wealdtech_go_eth2_types_v2//:__pkg__",
     ],
