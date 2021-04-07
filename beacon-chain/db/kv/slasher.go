@@ -129,12 +129,20 @@ func (s *Store) AttestationRecordForValidator(
 	encEpoch := encodeTargetEpoch(targetEpoch, historyLength)
 	key := append(encEpoch, encIdx...)
 	err := s.db.View(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(attestationRecordsBucket)
-		value := bkt.Get(key)
-		if value == nil {
+		signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
+		encoded := signingRootsBkt.Get(key)
+		if len(encoded) < 40 {
 			return nil
 		}
-		decoded, err := decodeAttestationRecord(value)
+		signingRoot := encoded[:32]
+		attestingIndicesHash := encoded[32:40]
+
+		attRecordsBkt := tx.Bucket(attestationRecordsBucket)
+		indexedAttBytes := attRecordsBkt.Get(signingRoot)
+		if indexedAttBytes == nil {
+			return nil
+		}
+		decoded, err := decodeAttestationRecord(indexedAttBytes)
 		if err != nil {
 			return err
 		}
