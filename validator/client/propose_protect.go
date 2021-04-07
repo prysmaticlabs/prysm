@@ -67,7 +67,7 @@ func (v *validator) slashableProposalCheck(
 		if err != nil {
 			return errors.Wrap(err, "could not check if block is slashable")
 		}
-		if slashing != nil {
+		if slashing != nil && slashing.ProposerSlashing != nil {
 			if v.emitAccountMetrics {
 				ValidatorProposeFailVecSlasher.WithLabelValues(fmtKey).Inc()
 			}

@@ -7,6 +7,7 @@ import (
 	"github.com/golang/mock/gomock"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	slashpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -142,7 +143,7 @@ func Test_slashableProposalCheck_RemoteProtection(t *testing.T) {
 	m.slasherClient.EXPECT().IsSlashableBlock(
 		gomock.Any(), // ctx
 		gomock.Any(),
-	).Return(&ethpb.ProposerSlashing{}, nil /*err*/)
+	).Return(&slashpb.ProposerSlashingResponse{ProposerSlashing: &ethpb.ProposerSlashing{}}, nil /*err*/)
 
 	err := validator.slashableProposalCheck(context.Background(), pubKey, block, [32]byte{2})
 	require.ErrorContains(t, failedBlockSignExternalErr, err)
@@ -150,7 +151,7 @@ func Test_slashableProposalCheck_RemoteProtection(t *testing.T) {
 	m.slasherClient.EXPECT().IsSlashableBlock(
 		gomock.Any(), // ctx
 		gomock.Any(),
-	).Return(nil, nil /*err*/)
+	).Return(&slashpb.ProposerSlashingResponse{}, nil /*err*/)
 
 	err = validator.slashableProposalCheck(context.Background(), pubKey, block, [32]byte{2})
 	require.NoError(t, err, "Expected allowed block not to throw error")
