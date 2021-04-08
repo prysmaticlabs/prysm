@@ -31,7 +31,7 @@ func TestImportSlashingProtection_Preconditions(t *testing.T) {
 	_, err := s.ImportSlashingProtection(ctx, req)
 	require.ErrorContains(t, "err finding validator database at path ", err)
 
-	// Create Wallet and add to server for more realistic testing
+	// Create Wallet and add to server for more realistic testing.
 	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
