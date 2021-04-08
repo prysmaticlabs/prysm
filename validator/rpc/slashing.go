@@ -94,10 +94,10 @@ func (s *Server) ImportSlashingProtection(ctx context.Context, req *pb.ImportSla
 			log.WithError(err).Errorf("Could not close validator DB")
 		}
 	}()
-	if req.SlashingProtectionJSON == "" {
+	if req.SlashingProtectionJson == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "empty slashing_protection json specified")
 	}
-	enc := []byte(req.SlashingProtectionJSON)
+	enc := []byte(req.SlashingProtectionJson)
 
 	buf := bytes.NewBuffer(enc)
 	if err := slashing.ImportStandardProtectionJSON(ctx, valDB, buf); err != nil {

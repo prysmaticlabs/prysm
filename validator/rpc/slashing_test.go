@@ -3,12 +3,11 @@ package rpc
 import (
 	"context"
 	"encoding/json"
-	"math/rand"
 	"path/filepath"
 	"testing"
 
-	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/golang/protobuf/ptypes/empty"
+	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
@@ -20,7 +19,6 @@ import (
 
 const jsonExportFileName = "slashing_protection.json"
 
-
 func TestImportSlashingProtection_Preconditions(t *testing.T) {
 	ctx := context.Background()
 	localWalletDir := setupWalletDir(t)
@@ -28,7 +26,7 @@ func TestImportSlashingProtection_Preconditions(t *testing.T) {
 
 	// Empty JSON.
 	req := &pb.ImportSlashingProtectionRequest{
-		SlashingProtectionJSON: "",
+		SlashingProtectionJson: "",
 	}
 	s := &Server{
 		walletDir: defaultWalletPath,
@@ -79,7 +77,7 @@ func TestImportSlashingProtection_Preconditions(t *testing.T) {
 	// JSON encode the protection JSON and save it in rpc req.
 	encoded, err := json.Marshal(mockJSON)
 	require.NoError(t, err)
-	req.SlashingProtectionJSON = string(encoded)
+	req.SlashingProtectionJson = string(encoded)
 
 	_, err = s.ImportSlashingProtection(ctx, req)
 	require.NoError(t, err)
@@ -132,18 +130,11 @@ func TestExportSlashingProtection_Preconditions(t *testing.T) {
 	encoded, err := json.Marshal(mockJSON)
 	require.NoError(t, err)
 
-	// Scramble the JSON
-	scamEncoded := make([]byte,len(encoded))
-	perm := rand.Perm(len(encoded))
-	for i,v := range perm{
-		scamEncoded[v]=encoded[i]
-	}
 	protectionFilePath := filepath.Join(defaultWalletPath, jsonExportFileName)
-	err = fileutil.WriteFile(protectionFilePath, scamEncoded)
+	err = fileutil.WriteFile(protectionFilePath, encoded)
 	require.NoError(t, err)
-	log.Infof("%s",string(scamEncoded))
+
 	_, err = s.ExportSlashingProtection(ctx, &empty.Empty{})
 	require.NoError(t, err)
 
 }
-
