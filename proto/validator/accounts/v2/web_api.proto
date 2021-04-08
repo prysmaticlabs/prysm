@@ -386,7 +386,7 @@ message DeleteAccountsResponse {
     // List of public keys successfully deleted.
     repeated bytes deleted_keys = 1;
 }
-message ExportSlashingProtectionResponse{
+message ExportSlashingProtectionResponse {
     // JSON representation of the slash protection
     string file = 1;
 }
