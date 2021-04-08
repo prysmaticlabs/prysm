@@ -26,6 +26,11 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestat
 	return errors.New("AppendPreviousEpochAttestations is not supported for hard fork 1 beacon state")
 }
 
+// RotateAttestations is not supported for HF1 beacon state.
+func (b *BeaconState) RotateAttestations() error {
+	return errors.New("RotateAttestations is not supported for hard fork 1 beacon state")
+}
+
 // ToProto is not supported for HF1 beacon state.
 func (b *BeaconState) ToProto() (*v1.BeaconState, error) {
 	return nil, errors.New("ToProto is not yet supported for hard fork 1 beacon state")

@@ -4,6 +4,7 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
+        "attestation.go",
         "block.go",
         "deposit.go",
         "state.go",
@@ -16,6 +17,7 @@ go_library(
     ],
     deps = [
         "//beacon-chain/core/blocks:go_default_library",
+        "//beacon-chain/core/epoch:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/p2p/types:go_default_library",
@@ -23,6 +25,7 @@ go_library(
         "//beacon-chain/state/state-altair:go_default_library",
         "//beacon-chain/state/stateV0:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/attestationutil:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/hashutil:go_default_library",
@@ -31,6 +34,7 @@ go_library(
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "@io_opencensus_go//trace:go_default_library",
     ],
 )
 
