@@ -30,7 +30,7 @@ func VerifyNilBeaconBlock(b *ethpb.SignedBeaconBlock) error {
 // It returns an error if the requested block root is not within the slot range.
 //
 // Spec pseudocode definition:
-//  def get_block_root_at_slot(state: BeaconState, slot: Slot) -> Hash:
+//  def get_block_root_at_slot(state: BeaconState, slot: Slot) -> Root:
 //    """
 //    Return the block root at a recent ``slot``.
 //    """
@@ -58,7 +58,7 @@ func StateRootAtSlot(state iface.ReadOnlyBeaconState, slot types.Slot) ([]byte, 
 // BlockRoot returns the block root stored in the BeaconState for epoch start slot.
 //
 // Spec pseudocode definition:
-//  def get_block_root(state: BeaconState, epoch: Epoch) -> Hash:
+//  def get_block_root(state: BeaconState, epoch: Epoch) -> Root:
 //    """
 //    Return the block root at the start of a recent ``epoch``.
 //    """

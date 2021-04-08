@@ -50,7 +50,7 @@ var processingPipeline = []processFunc{
 // ExecuteStateTransition defines the procedure for a state transition function.
 //
 // Spec pseudocode definition:
-//  def state_transition(state: BeaconState, signed_block: SignedBeaconBlock, validate_result: bool=True) -> BeaconState:
+//  def state_transition(state: BeaconState, signed_block: SignedBeaconBlock, validate_result: bool=True) -> None:
 //    block = signed_block.message
 //    # Process slots (including those with no blocks) since block
 //    process_slots(state, block.slot)
@@ -62,8 +62,6 @@ var processingPipeline = []processFunc{
 //    # Verify state root
 //    if validate_result:
 //        assert block.state_root == hash_tree_root(state)
-//    # Return post-state
-//    return state
 func ExecuteStateTransition(
 	ctx context.Context,
 	state iface.BeaconState,
@@ -111,15 +109,6 @@ func ExecuteStateTransition(
 // set of all signatures not verified, so that they can be stored and verified later.
 //
 // WARNING: This method does not validate any signatures in a block. This method also modifies the passed in state.
-//
-// Spec pseudocode definition:
-//  def state_transition(state: BeaconState, block: BeaconBlock, validate_state_root: bool=False) -> BeaconState:
-//    # Process slots (including those with no blocks) since block
-//    process_slots(state, block.slot)
-//    # Process block
-//    process_block(state, block)
-//    # Return post-state
-//    return state
 func ExecuteStateTransitionNoVerifyAnySig(
 	ctx context.Context,
 	state iface.BeaconState,
@@ -164,15 +153,6 @@ func ExecuteStateTransitionNoVerifyAnySig(
 //
 // WARNING: This method does not validate any BLS signatures. This is used for proposer to compute
 // state root before proposing a new block, and this does not modify state.
-//
-// Spec pseudocode definition:
-//  def state_transition(state: BeaconState, block: BeaconBlock, validate_state_root: bool=False) -> BeaconState:
-//    # Process slots (including those with no blocks) since block
-//    process_slots(state, block.slot)
-//    # Process block
-//    process_block(state, block)
-//    # Return post-state
-//    return state
 func CalculateStateRoot(
 	ctx context.Context,
 	state iface.BeaconState,
