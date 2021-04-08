@@ -12,7 +12,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/logrusorgru/aurora"
 	"github.com/urfave/cli/v2"
 )
 
@@ -20,7 +19,7 @@ import (
 var specText string
 
 // Regex to find Python's "def".
-var m = regexp.MustCompile("def\\s(.*)\\(.*")
+var m = regexp.MustCompile(`def\s(.*)\(.*`)
 
 var (
 	dirFlag = &cli.StringFlag{
@@ -29,7 +28,6 @@ var (
 		Usage:    "Path to a directory containing Golang files to check",
 		Required: true,
 	}
-	au = aurora.NewAurora(true /* enable colors */)
 )
 
 func main() {
@@ -75,16 +73,9 @@ func check(cliCtx *cli.Context) error {
 		if !strings.HasSuffix(info.Name(), ".go") {
 			return nil
 		}
-		if err := inspectFile(path, defs); err != nil {
-			return err
-		}
-		return nil
+		return inspectFile(path, defs)
 	}
-	if err := filepath.Walk(cliCtx.String(dirFlag.Name), fileWalker); err != nil {
-		return err
-	}
-
-	return nil
+	return filepath.Walk(cliCtx.String(dirFlag.Name), fileWalker)
 }
 
 func inspectFile(path string, defs map[string][]string) error {
@@ -96,38 +87,40 @@ func inspectFile(path string, defs map[string][]string) error {
 	}
 
 	ast.Inspect(file, func(node ast.Node) bool {
-		switch stmt := node.(type) {
-		case *ast.CommentGroup:
-			// Ignore comment groups that do not have python pseudo-code.
-			chunk := stmt.Text()
-			if !m.MatchString(chunk) {
-				return true
-			}
-
-			pos := fset.Position(node.Pos())
-
-			// Trim the chunk, so that it starts from Python's "def".
-			loc := m.FindStringIndex(chunk)
-			chunk = chunk[loc[0]:]
-
-			// Find out Python function name.
-			defName, defBody := parseDefChunk(chunk)
-			if defName == "" {
-				fmt.Printf("%s: cannot parse comment pseudo code\n", pos)
-				return false
-			}
-
-			// Calculate differences with reference implementation.
-			refDefs, ok := defs[defName]
-			if !ok {
-				fmt.Printf("%s: %q is not found in spec docs\n", pos, defName)
-				return false
-			}
-			if !matchesRefImplementation(defName, refDefs, defBody) {
-				fmt.Printf("%s: %q code does not match reference implementation in specs\n", pos, defName)
-				return false
-			}
+		stmt, ok := node.(*ast.CommentGroup)
+		if !ok {
+			return true
 		}
+		// Ignore comment groups that do not have python pseudo-code.
+		chunk := stmt.Text()
+		if !m.MatchString(chunk) {
+			return true
+		}
+
+		pos := fset.Position(node.Pos())
+
+		// Trim the chunk, so that it starts from Python's "def".
+		loc := m.FindStringIndex(chunk)
+		chunk = chunk[loc[0]:]
+
+		// Find out Python function name.
+		defName, defBody := parseDefChunk(chunk)
+		if defName == "" {
+			fmt.Printf("%s: cannot parse comment pseudo code\n", pos)
+			return false
+		}
+
+		// Calculate differences with reference implementation.
+		refDefs, ok := defs[defName]
+		if !ok {
+			fmt.Printf("%s: %q is not found in spec docs\n", pos, defName)
+			return false
+		}
+		if !matchesRefImplementation(defName, refDefs, defBody) {
+			fmt.Printf("%s: %q code does not match reference implementation in specs\n", pos, defName)
+			return false
+		}
+
 		return true
 	})
 
