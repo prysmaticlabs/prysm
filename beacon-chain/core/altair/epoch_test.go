@@ -38,6 +38,6 @@ func TestProcessSyncCommitteeUpdates_CanRotate(t *testing.T) {
 	n, err = postState.NextSyncCommittee()
 	require.NoError(t, err)
 	require.NotEqual(t, current, c)
-	require.NotEqual(t, next, c)
+	require.NotEqual(t, next, n)
 	require.DeepEqual(t, next, c)
 }
