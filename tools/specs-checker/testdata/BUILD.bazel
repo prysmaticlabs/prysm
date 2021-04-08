@@ -3,6 +3,6 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["weak_subjectivity.go"],
-    importpath = "github.com/prysmaticlabs/prysm/tools/analyzers/specdocs/testdata",
+    importpath = "github.com/prysmaticlabs/prysm/tools/specs-checker/testdata",
     visibility = ["//visibility:public"],
 )
