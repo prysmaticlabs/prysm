@@ -13,9 +13,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
-	export "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format"
-	slashingProtectionFormat "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format"
-
+	slashing "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format"
 )
 
 // Export func to handle the rpc call returning the json slashing history.
@@ -25,11 +23,11 @@ import (
 // Steps:
 // 1. Open the validator database at the default location.
 // 2. Call the function which actually exports the data from
-// from the validator's db into an EIP standard slashing protection format
+//  the validator's db into an EIP standard slashing protection format.
 // 3. Format and save the JSON file to a user's specified output directory.
 func (s *Server) ExportSlashingProtection(ctx context.Context, _ *empty.Empty) (*pb.ExportSlashingProtectionResponse, error) {
 	var err error
-	// Slashing Directory
+	// Default location
 	dataDir := s.walletDir
 
 	// Ensure that the validator.db is found under the specified dir or its subdirectories.
@@ -47,10 +45,10 @@ func (s *Server) ExportSlashingProtection(ctx context.Context, _ *empty.Empty) (
 	}
 	defer func() {
 		if err := validatorDB.Close(); err != nil {
-		log.WithError(err).Errorf("Could not close validator DB")
-	}
+			log.WithError(err).Errorf("Could not close validator DB")
+		}
 	}()
-	eipJSON, err := export.ExportStandardProtectionJSON(ctx, validatorDB)
+	eipJSON, err := slashing.ExportStandardProtectionJSON(ctx, validatorDB)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not export slashing protection history")
 	}
@@ -65,7 +63,7 @@ func (s *Server) ExportSlashingProtection(ctx context.Context, _ *empty.Empty) (
 
 }
 
-// ImportSlashingProtection reads an input slashing protection EIP-3076
+// Import Slashing reads an input slashing protection EIP-3076
 // standard JSON file and attempts to insert its data into our validator DB.
 //
 // Steps:
@@ -73,7 +71,7 @@ func (s *Server) ExportSlashingProtection(ctx context.Context, _ *empty.Empty) (
 // 2. Read the JSON string passed through rpc.
 // 3. Call the function which actually imports the data from
 // from the standard slashing protection JSON file into our database.
-func (s *Server) ImportSlashingProtection(ctx context.Context, req *pb.ImportSlashingProtectionRequest)  (*emptypb.Empty, error) {
+func (s *Server) ImportSlashingProtection(ctx context.Context, req *pb.ImportSlashingProtectionRequest) (*emptypb.Empty, error) {
 	var err error
 	// Slashing Directory
 	dataDir := s.walletDir
@@ -84,7 +82,7 @@ func (s *Server) ImportSlashingProtection(ctx context.Context, req *pb.ImportSla
 		return nil, errors.Wrapf(err, "err finding validator database at path %s", dataDir)
 	}
 	if !found {
-		return nil, errors.Wrapf(err, "err finding validator database at path %s", dataDir)
+		return nil, errors.New("err finding validator database at path %s" + dataDir)
 	}
 
 	valDB, err := kv.NewKVStore(ctx, dataDir, &kv.Config{})
@@ -97,14 +95,12 @@ func (s *Server) ImportSlashingProtection(ctx context.Context, req *pb.ImportSla
 		}
 	}()
 	if req.SlashingProtectionJSON == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "no slashing_protection.json file specified")
+		return nil, status.Errorf(codes.InvalidArgument, "empty slashing_protection json specified")
 	}
 	enc := []byte(req.SlashingProtectionJSON)
 
 	buf := bytes.NewBuffer(enc)
-	if err := slashingProtectionFormat.ImportStandardProtectionJSON(
-		ctx, valDB, buf,
-	); err != nil {
+	if err := slashing.ImportStandardProtectionJSON(ctx, valDB, buf); err != nil {
 		return nil, err
 	}
 	log.Info("Slashing protection JSON successfully imported")
