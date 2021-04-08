@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/sszutil"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
@@ -706,7 +708,7 @@ func TestServer_MapResultsToAtts(t *testing.T) {
 
 	resultsToAtts, err := ds.mapResultsToAtts(ctx, results)
 	require.NoError(t, err)
-	if !ssszutil.DeepSSZEqual(expectedResultsToAtts, resultsToAtts) {
+	if !sszutil.DeepEqual(expectedResultsToAtts, resultsToAtts) {
 		t.Error("Expected map:")
 		for key, value := range resultsToAtts {
 			t.Errorf("Key %#x: %d atts", key, len(value))
