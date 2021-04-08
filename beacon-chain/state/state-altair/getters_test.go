@@ -83,8 +83,10 @@ func TestNilState_NoPanic(t *testing.T) {
 	_ = err
 	_, err = st.InactivityScores()
 	_ = err
-	_ = st.CurrentSyncCommittee()
-	_ = st.NextSyncCommittee()
+	_, err = st.CurrentSyncCommittee()
+	_ = err
+	_, err = st.NextSyncCommittee()
+	_ = err
 }
 
 func TestReadOnlyValidator_NoPanic(t *testing.T) {

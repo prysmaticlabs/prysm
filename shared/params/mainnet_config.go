@@ -193,6 +193,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	TimelySourceWeight: 12,
 	TimelyTargetWeight: 24,
 	SyncRewardWeight:   8,
+	ProposerWeight:     8,
 	WeightDenominator:  64,
 
 	// Validator related values.

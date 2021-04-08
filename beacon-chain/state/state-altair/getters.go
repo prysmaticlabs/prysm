@@ -993,35 +993,35 @@ func (b *BeaconState) nextSyncCommittee() *pbp2p.SyncCommittee {
 }
 
 // CurrentSyncCommittee of the current sync committee in beacon chain state.
-func (b *BeaconState) CurrentSyncCommittee() *pbp2p.SyncCommittee {
+func (b *BeaconState) CurrentSyncCommittee() (*pbp2p.SyncCommittee, error) {
 	if !b.hasInnerState() {
-		return nil
+		return nil, nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
 	if b.state.CurrentSyncCommittee == nil {
-		return nil
+		return nil, nil
 	}
 
-	return b.currentSyncCommittee()
+	return b.currentSyncCommittee(), nil
 }
 
 // NextSyncCommittee of the next sync committee in beacon chain state.
-func (b *BeaconState) NextSyncCommittee() *pbp2p.SyncCommittee {
+func (b *BeaconState) NextSyncCommittee() (*pbp2p.SyncCommittee, error) {
 	if !b.hasInnerState() {
-		return nil
+		return nil, nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
 	if b.state.NextSyncCommittee == nil {
-		return nil
+		return nil, nil
 	}
 
-	return b.nextSyncCommittee()
+	return b.nextSyncCommittee(), nil
 }
 
 // CurrentEpochParticipation corresponding to participation bits on the beacon chain.

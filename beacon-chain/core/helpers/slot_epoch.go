@@ -193,3 +193,11 @@ func VotingPeriodStartTime(genesis uint64, slot types.Slot) uint64 {
 	startTime := uint64((slot - slot.ModSlot(slots)).Mul(params.BeaconConfig().SecondsPerSlot))
 	return genesis + startTime
 }
+
+// PrevSlot returns previous slot, with an exception in slot 0 to prevent underflow.
+func PrevSlot(slot types.Slot) types.Slot {
+	if slot > 0 {
+		return slot.Sub(1)
+	}
+	return 0
+}
