@@ -166,7 +166,8 @@ func parseMsg(defaultMsg string, msg ...interface{}) string {
 }
 
 func isDeepEqual(expected, actual interface{}) bool {
-	if sszutil.IsProtoSlice(expected) {
+	_, isProto := expected.(proto.Message)
+	if isProto {
 		return proto.Equal(expected.(proto.Message), actual.(proto.Message))
 	}
 	return reflect.DeepEqual(expected, actual)
