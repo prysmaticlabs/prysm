@@ -332,6 +332,9 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState iface.Beaco
 		if err := helpers.UpdateProposerIndicesInCache(copied); err != nil {
 			return err
 		}
+
+		// TODO: current process - trigger event feed here
+
 	} else if postState.Slot() >= s.nextEpochBoundarySlot {
 		if err := reportEpochMetrics(ctx, postState, s.head.state); err != nil {
 			return err

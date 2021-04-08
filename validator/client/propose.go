@@ -42,7 +42,7 @@ var (
 
 type signingFunc func(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
 
-const domainDataErr = "could not get domain data"
+const domainDataErr = "could not getverify domain data"
 const signingRootErr = "could not get signing root"
 const signExitErr = "could not sign voluntary exit proposal"
 
@@ -101,7 +101,10 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [4
 
 	// processPandoraShardHeader method process the block header from pandora chain
 	if status, err := v.processPandoraShardHeader(ctx, b, slot, epoch, pubKey); !status || err != nil {
-		log.WithError(err).Error("Failed to process pandora chain shard header")
+		log.WithError(err).
+			WithField("pubKey", fmt.Sprintf("%#x", pubKey)).
+			WithField("slot", slot).
+			Error("Failed to process pandora chain shard header")
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
@@ -370,7 +373,9 @@ func (v *validator) processPandoraShardHeader(ctx context.Context, beaconBlk *et
 	// Request for pandora chain header
 	header, headerHash, extraData, err := v.pandoraService.GetShardBlockHeader(ctx)
 	if err != nil {
-		log.WithField("blockSlot", slot).WithError(err).Error("Failed to request block from pandora node")
+		log.WithField("blockSlot", slot).
+			WithField("fmtKey", fmtKey).
+			WithError(err).Error("Failed to request block from pandora node")
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
@@ -378,7 +383,9 @@ func (v *validator) processPandoraShardHeader(ctx context.Context, beaconBlk *et
 	}
 	// Validate pandora chain header hash, extraData fields
 	if err := v.verifyPandoraShardHeader(beaconBlk, slot, epoch, header, headerHash, extraData); err != nil {
-		log.WithField("blockSlot", slot).WithError(err).Error("Failed to validate pandora block header")
+		log.WithField("blockSlot", slot).
+			WithField("fmtKey", fmtKey).
+			WithError(err).Error("Failed to validate pandora block header")
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
@@ -420,7 +427,11 @@ func (v *validator) verifyPandoraShardHeader(beaconBlk *ethpb.BeaconBlock, slot 
 	}
 	// verify slot number
 	if extraData.Slot != uint64(slot) {
-		log.WithError(errInvalidSlot).Error("invalid slot from pandora chain")
+		log.WithError(errInvalidSlot).
+			WithField("slot", slot).
+			WithField("extraDataSlot", extraData.Slot).
+			WithField("header", header.Extra).
+			Error("invalid slot from pandora chain")
 		return errInvalidSlot
 	}
 	// verify epoch number

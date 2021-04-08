@@ -25,6 +25,14 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 )
 
+const (
+	DefaultHTTPHost = "0.0.0.0" // Default host interface for the HTTP RPC server
+	DefaultHTTPPort = 8565        // Default TCP port for the HTTP RPC server
+	DefaultWSHost   = "0.0.0.0" // Default host interface for the websocket RPC server
+	DefaultWSPort   = 8566        // Default TCP port for the websocket RPC server
+	DefaultIpcPath  = "vanguard.ipc"
+)
+
 // DefaultDataDir is the default data directory to use for the databases and other
 // persistence requirements.
 func DefaultDataDir() string {

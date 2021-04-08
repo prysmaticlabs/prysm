@@ -432,9 +432,16 @@ func ProposerAssignments(
 	if err != nil {
 		return nil, err
 	}
-	proposerIndexToSlots := make(map[types.ValidatorIndex][]types.Slot, params.BeaconConfig().SlotsPerEpoch)
 
-	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
+	sliceRange := int(params.BeaconConfig().SlotsPerEpoch)
+	if types.Epoch(0) == epoch {
+		sliceRange = int(params.BeaconConfig().SlotsPerEpoch) - 1
+	}
+	proposerIndexToSlots := make(map[types.ValidatorIndex][]types.Slot, sliceRange)
+
+	rangeSlot := startSlot+params.BeaconConfig().SlotsPerEpoch
+
+	for slot := startSlot; slot < rangeSlot; slot++ {
 		// Skip proposer assignment for genesis slot.
 		if slot == 0 {
 			continue

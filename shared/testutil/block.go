@@ -517,7 +517,12 @@ func NewPandoraBlock(slot types.Slot, proposerIndex uint64) (*gethTypes.Header, 
 		Epoch:         uint64(epoch),
 		ProposerIndex: proposerIndex,
 	}
-	extraDataByte, _ := rlp.EncodeToBytes(extraData)
+	extraDataByte, err := rlp.EncodeToBytes(extraData)
+
+	if nil != err {
+		panic(err.Error())
+	}
+
 	block := gethTypes.NewBlock(&gethTypes.Header{
 		ParentHash:  gethTypes.EmptyRootHash,
 		UncleHash:   gethTypes.EmptyUncleHash,
