@@ -26,7 +26,6 @@ func TestProcessSyncCommittee_OK(t *testing.T) {
 	for i := range syncBits {
 		syncBits[i] = 0xff
 	}
-	beaconState.RotateAttestations()
 	indices, err := altair.SyncCommitteeIndices(beaconState, helpers.CurrentEpoch(beaconState))
 	require.NoError(t, err)
 	ps := helpers.PrevSlot(beaconState.Slot())
