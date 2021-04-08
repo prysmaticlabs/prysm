@@ -119,7 +119,7 @@ service SlashingProtection {
     }
     rpc ImportSlashingProtection(ImportSlashingProtectionRequest) returns (google.protobuf.Empty) {
         option (google.api.http) = {
-            post: "/v2/validator/slashing/import"
+            post: "/v2/validator/slashing-protection/import"
             body: "*"
         };
     }
