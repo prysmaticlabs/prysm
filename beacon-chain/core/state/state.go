@@ -55,47 +55,19 @@ import (
 //	    state.compact_committees_roots[index] = committee_root
 //	  return state
 // This method differs from the spec so as to process deposits beforehand instead of the end of the function.
-func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (iface.BeaconState, error) {
-	if eth1Data == nil {
-		return nil, errors.New("no eth1data provided for genesis state")
-	}
+func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (iface.BeaconState, error) {
 	state, err := EmptyGenesisState()
 	if err != nil {
 		return nil, err
 	}
-	// Process initial deposits.
-	var leaves [][]byte
-	for _, deposit := range deposits {
-		if deposit == nil || deposit.Data == nil {
-			return nil, fmt.Errorf("nil deposit or deposit with nil data cannot be processed: %v", deposit)
-		}
-		hash, err := deposit.Data.HashTreeRoot()
-		if err != nil {
-			return nil, err
-		}
-		leaves = append(leaves, hash[:])
-	}
-	var trie *trieutil.SparseMerkleTrie
-	if len(leaves) > 0 {
-		trie, err = trieutil.GenerateTrieFromItems(leaves, params.BeaconConfig().DepositContractTreeDepth)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		trie, err = trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
-		if err != nil {
-			return nil, err
-		}
-	}
 
-	depositRoot := trie.Root()
-	eth1Data.DepositRoot = depositRoot[:]
-	err = state.SetEth1Data(eth1Data)
+	// Process initial deposits.
+	state, err = updateGenesisEth1Data(state, deposits, eth1Data)
 	if err != nil {
 		return nil, err
 	}
 
-	state, err = b.ProcessPreGenesisDeposits(context.TODO(), state, deposits)
+	state, err = b.ProcessPreGenesisDeposits(ctx, state, deposits)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process validator deposits")
 	}
@@ -257,4 +229,43 @@ func IsValidGenesisState(chainStartDepositCount, currentTime uint64) bool {
 		return false
 	}
 	return true
+}
+
+func updateGenesisEth1Data(state iface.BeaconState, deposits []*ethpb.Deposit, eth1Data *ethpb.Eth1Data) (iface.BeaconState, error) {
+	if eth1Data == nil {
+		return nil, errors.New("no eth1data provided for genesis state")
+	}
+
+	var leaves [][]byte
+	for _, deposit := range deposits {
+		if deposit == nil || deposit.Data == nil {
+			return nil, fmt.Errorf("nil deposit or deposit with nil data cannot be processed: %v", deposit)
+		}
+		hash, err := deposit.Data.HashTreeRoot()
+		if err != nil {
+			return nil, err
+		}
+		leaves = append(leaves, hash[:])
+	}
+	var trie *trieutil.SparseMerkleTrie
+	var err error
+	if len(leaves) > 0 {
+		trie, err = trieutil.GenerateTrieFromItems(leaves, params.BeaconConfig().DepositContractTreeDepth)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		trie, err = trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	depositRoot := trie.Root()
+	eth1Data.DepositRoot = depositRoot[:]
+	err = state.SetEth1Data(eth1Data)
+	if err != nil {
+		return nil, err
+	}
+	return state, nil
 }

@@ -14,7 +14,7 @@ import (
 // Reference design: https://github.com/ethereum/eth2.0-specs/blob/master/specs/phase0/weak-subjectivity.md#weak-subjectivity-sync-procedure
 func (s *Service) VerifyWeakSubjectivityRoot(ctx context.Context) error {
 	// TODO(7342): Remove the following to fully use weak subjectivity in production.
-	if len(s.cfg.WspBlockRoot) == 0 || s.cfg.WspEpoch == 0 {
+	if s.cfg.WeakSubjectivityCheckpt == nil || len(s.cfg.WeakSubjectivityCheckpt.Root) == 0 || s.cfg.WeakSubjectivityCheckpt.Epoch == 0 {
 		return nil
 	}
 
@@ -23,12 +23,12 @@ func (s *Service) VerifyWeakSubjectivityRoot(ctx context.Context) error {
 	if s.wsVerified {
 		return nil
 	}
-	if s.cfg.WspEpoch > s.finalizedCheckpt.Epoch {
+	if s.cfg.WeakSubjectivityCheckpt.Epoch > s.finalizedCheckpt.Epoch {
 		return nil
 	}
 
-	r := bytesutil.ToBytes32(s.cfg.WspBlockRoot)
-	log.Infof("Performing weak subjectivity check for root %#x in epoch %d", r, s.cfg.WspEpoch)
+	r := bytesutil.ToBytes32(s.cfg.WeakSubjectivityCheckpt.Root)
+	log.Infof("Performing weak subjectivity check for root %#x in epoch %d", r, s.cfg.WeakSubjectivityCheckpt.Epoch)
 	// Save initial sync cached blocks to DB.
 	if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
 		return err
@@ -38,7 +38,7 @@ func (s *Service) VerifyWeakSubjectivityRoot(ctx context.Context) error {
 		return fmt.Errorf("node does not have root in DB: %#x", r)
 	}
 
-	startSlot, err := helpers.StartSlot(s.cfg.WspEpoch)
+	startSlot, err := helpers.StartSlot(s.cfg.WeakSubjectivityCheckpt.Epoch)
 	if err != nil {
 		return err
 	}
@@ -56,5 +56,5 @@ func (s *Service) VerifyWeakSubjectivityRoot(ctx context.Context) error {
 		}
 	}
 
-	return fmt.Errorf("node does not have root in db corresponding to epoch: %#x %d", r, s.cfg.WspEpoch)
+	return fmt.Errorf("node does not have root in db corresponding to epoch: %#x %d", r, s.cfg.WeakSubjectivityCheckpt.Epoch)
 }

@@ -368,7 +368,7 @@ func aggregatorsPerSlot(activeValidators uint64) uint64 {
 }
 
 // provides the relevant score by the provided weight and threshold.
-func scoreByWeight(weight float64, threshold float64) float64 {
+func scoreByWeight(weight, threshold float64) float64 {
 	return maxScore() / (weight * threshold * threshold)
 }
 

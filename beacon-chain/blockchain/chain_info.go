@@ -48,6 +48,7 @@ type HeadFetcher interface {
 	HeadGenesisValidatorRoot() [32]byte
 	HeadETH1Data() *ethpb.Eth1Data
 	ProtoArrayStore() *protoarray.Store
+	ChainHeads() ([][32]byte, []types.Slot)
 }
 
 // ForkFetcher retrieves the current fork information of the Ethereum beacon chain.
@@ -258,4 +259,26 @@ func (s *Service) IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, er
 
 	// If the block has not been finalized, check fork choice store to see if the block is canonical
 	return s.cfg.ForkChoiceStore.IsCanonical(blockRoot), nil
+}
+
+// ChainHeads returns all possible chain heads (leaves of fork choice tree).
+// Heads roots and heads slots are returned.
+func (s *Service) ChainHeads() ([][32]byte, []types.Slot) {
+	nodes := s.ProtoArrayStore().Nodes()
+
+	// Deliberate choice to not preallocate space for below.
+	// Heads cant be more than 2-3 in the worst case where pre-allocation will be 64 to begin with.
+	headsRoots := make([][32]byte, 0)
+	headsSlots := make([]types.Slot, 0)
+
+	nonExistentNode := ^uint64(0)
+	for _, node := range nodes {
+		// Possible heads have no children.
+		if node.BestDescendant() == nonExistentNode && node.BestChild() == nonExistentNode {
+			headsRoots = append(headsRoots, node.Root())
+			headsSlots = append(headsSlots, node.Slot())
+		}
+	}
+
+	return headsRoots, headsSlots
 }
