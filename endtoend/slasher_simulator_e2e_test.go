@@ -19,7 +19,7 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-func TestEndToEnd_Slasher(t *testing.T) {
+func TestEndToEnd_SlasherSimulator(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	testutil.ResetCache()

@@ -105,18 +105,6 @@ func (r *testRunner) run() {
 		return validatorNodes.Start(ctx)
 	})
 
-	// Slasher nodes.
-	var slasherNodes e2etypes.ComponentRunner
-	if config.TestSlasher {
-		slasherNodes := components.NewSlasherNodeSet(config)
-		g.Go(func() error {
-			if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{beaconNodes}); err != nil {
-				return fmt.Errorf("slasher nodes require beacon nodes to run: %w", err)
-			}
-			return slasherNodes.Start(ctx)
-		})
-	}
-
 	// Run E2E evaluators and tests.
 	g.Go(func() error {
 		// When everything is done, cancel parent context (will stop all spawned nodes).
@@ -128,9 +116,6 @@ func (r *testRunner) run() {
 		// Wait for all required nodes to start.
 		requiredComponents := []e2etypes.ComponentRunner{
 			eth1Node, bootNode, beaconNodes, validatorNodes,
-		}
-		if config.TestSlasher && slasherNodes != nil {
-			requiredComponents = append(requiredComponents, slasherNodes)
 		}
 		ctxAllNodesReady, cancel := context.WithTimeout(ctx, allNodesStartTimeout)
 		defer cancel()
