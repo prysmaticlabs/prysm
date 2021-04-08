@@ -393,5 +393,5 @@ message ExportSlashingProtectionResponse{
 
 message ImportSlashingProtectionRequest{
     // JSON representation of the slash protection
-    string slashingProtectionJSON = 1;
+    string slashing_protection_json = 1;
 }

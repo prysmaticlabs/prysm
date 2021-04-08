@@ -27,7 +27,7 @@ import (
 // 3. Format and save the JSON file to a user's specified output directory.
 func (s *Server) ExportSlashingProtection(ctx context.Context, _ *empty.Empty) (*pb.ExportSlashingProtectionResponse, error) {
 	var err error
-	// Default location
+	// Default location.
 	dataDir := s.walletDir
 
 	// Ensure that the validator.db is found under the specified dir or its subdirectories.
@@ -36,7 +36,7 @@ func (s *Server) ExportSlashingProtection(ctx context.Context, _ *empty.Empty) (
 		return nil, errors.Wrapf(err, "error finding validator database at path %s", dataDir)
 	}
 	if !found {
-		return nil, errors.New("err finding validator database at pathh" + dataDir)
+		return nil, errors.New("err finding validator database at path " + dataDir)
 	}
 
 	validatorDB, err := kv.NewKVStore(ctx, dataDir, &kv.Config{})
@@ -73,10 +73,10 @@ func (s *Server) ExportSlashingProtection(ctx context.Context, _ *empty.Empty) (
 // from the standard slashing protection JSON file into our database.
 func (s *Server) ImportSlashingProtection(ctx context.Context, req *pb.ImportSlashingProtectionRequest) (*emptypb.Empty, error) {
 	var err error
-	// Slashing Directory
+	// Slashing Directory.
 	dataDir := s.walletDir
 
-	// ensure that the validator.db is found under the specified dir or its subdirectories
+	// Ensure that the validator.db is found under the specified dir or its subdirectories.
 	found, _, err := fileutil.RecursiveFileFind(kv.ProtectionDbFileName, dataDir)
 	if err != nil {
 		return nil, errors.Wrapf(err, "err finding validator database at path %s", dataDir)
