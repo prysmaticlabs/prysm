@@ -6,6 +6,7 @@ go_library(
     srcs = [
         "block.go",
         "deposit.go",
+        "epoch.go",
         "state.go",
         "sync_committee.go",
     ],
@@ -40,6 +41,7 @@ go_test(
         "block_test.go",
         "deposit_fuzz_test.go",
         "deposit_test.go",
+        "epoch_test.go",
         "state_fuzz_test.go",
         "state_test.go",
         "sync_committee_test.go",

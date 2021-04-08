@@ -24,3 +24,8 @@ func (b *BeaconState) AppendInactivityScore(s uint64) error {
 func (b *BeaconState) SetCurrentSyncCommittee(val *pbp2p.SyncCommittee) error {
 	return errors.New("SetCurrentSyncCommittee is not supported for phase 0 beacon state")
 }
+
+// SetNextSyncCommittee is not supported for phase 0 beacon state.
+func (b *BeaconState) SetNextSyncCommittee(val *pbp2p.SyncCommittee) error {
+	return errors.New("SetNextSyncCommittee is not supported for phase 0 beacon state")
+}
