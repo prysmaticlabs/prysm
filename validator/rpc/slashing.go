@@ -36,7 +36,7 @@ func (s *Server) ExportSlashingProtection(ctx context.Context, _ *empty.Empty) (
 		return nil, errors.Wrapf(err, "error finding validator database at path %s", dataDir)
 	}
 	if !found {
-		return nil, errors.Wrapf(err, "validator database not found at path %s", dataDir)
+		return nil, errors.New("err finding validator database at pathh" + dataDir)
 	}
 
 	validatorDB, err := kv.NewKVStore(ctx, dataDir, &kv.Config{})
@@ -64,7 +64,7 @@ func (s *Server) ExportSlashingProtection(ctx context.Context, _ *empty.Empty) (
 }
 
 // Import Slashing reads an input slashing protection EIP-3076
-// standard JSON file and attempts to insert its data into our validator DB.
+// standard JSON string and attempts to insert its data into our validator DB.
 //
 // Steps:
 // 1. Open the validator database using the default datadir.

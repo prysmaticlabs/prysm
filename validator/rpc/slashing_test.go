@@ -31,8 +31,7 @@ func TestImportSlashingProtection_Preconditions(t *testing.T) {
 	_, err := s.ImportSlashingProtection(ctx, req)
 	require.ErrorContains(t, "err finding validator database at path ", err)
 
-	// Create Wallet
-	// We attempt to create the wallet.
+	// Create Wallet and add to server for more realistic testing
 	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
@@ -70,7 +69,7 @@ func TestImportSlashingProtection_Preconditions(t *testing.T) {
 	mockJSON, err := mocks.MockSlashingProtectionJSON(pubKeys, attestingHistory, proposalHistory)
 	require.NoError(t, err)
 
-	// We JSON encode the protection file and save it rpc req JSON file.
+	// JSON encode the protection JSON and save it in rpc req.
 	encoded, err := json.Marshal(mockJSON)
 	require.NoError(t, err)
 	req.SlashingProtectionJSON = string(encoded)
