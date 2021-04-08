@@ -500,6 +500,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 		OpsService:              opsService,
 		StateGen:                b.stateGen,
 		SlasherAttestationsFeed: b.slasherAttestationsFeed,
+		WeakSubjectivityCheckpt: wsCheckpt,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")
