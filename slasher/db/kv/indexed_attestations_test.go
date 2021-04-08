@@ -474,7 +474,7 @@ func TestIndexedAttestationsForTarget(t *testing.T) {
 
 			idxAtts, err := db.IndexedAttestationsForTarget(ctx, tt.targetEpoch)
 			require.NoError(t, err, "Failed to get indexed attestation: %v", err)
-			require.DeepEqual(t, tt.expectedResult, idxAtts)
+			require.DeepSSZEqual(t, tt.expectedResult, idxAtts)
 		})
 	}
 }
