@@ -302,12 +302,20 @@ func DeepEqual(x, y interface{}) bool {
 	if v1.Type() != v2.Type() {
 		return false
 	}
-	_, isProto := x.(proto.Message)
-	_, isProtoArray := x.([]proto.Message)
-	_, isProtoMap := x.(map[uint64]proto.Message)
-	if isProto || isProtoArray || isProtoMap {
+	if IsProtoSlice(x) && IsProtoSlice(y) {
 		// Exclude unexported fields for protos.
 		return deepValueEqualExportedOnly(v1, v2, make(map[visit]bool), 0)
 	}
 	return deepValueEqual(v1, v2, make(map[visit]bool), 0)
+}
+
+func IsProtoSlice(item interface{}) bool {
+	typ := reflect.TypeOf(item)
+	if typ.Kind() != reflect.Slice && typ.Kind() != reflect.Array && typ.Kind() != reflect.Map {
+		_, ok := item.(proto.Message)
+		return ok
+	}
+	elemTyp := typ.Elem()
+	modelType := reflect.TypeOf((*proto.Message)(nil)).Elem()
+	return elemTyp.Implements(modelType)
 }

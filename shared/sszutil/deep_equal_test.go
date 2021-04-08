@@ -86,3 +86,49 @@ func TestDeepEqualProto(t *testing.T) {
 	}
 	assert.Equal(t, true, sszutil.DeepEqual(checkpoint1, checkpoint2))
 }
+
+func Test_IsProtoSlice(t *testing.T) {
+	tests := []struct {
+		name string
+		item interface{}
+		want bool
+	}{
+		{
+			name: "uint64",
+			item: 0,
+			want: false,
+		},
+		{
+			name: "string",
+			item: "foobar cheese",
+			want: false,
+		},
+		{
+			name: "uint64 array",
+			item: []uint64{1, 2, 3, 4, 5, 6},
+			want: false,
+		},
+		{
+			name: "Attestation",
+			item: &ethpb.Attestation{},
+			want: true,
+		},
+		{
+			name: "Array of attestations",
+			item: []*ethpb.Attestation{},
+			want: true,
+		},
+		{
+			name: "Map of attestations",
+			item: make(map[uint64]*ethpb.Attestation),
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := sszutil.IsProtoSlice(tt.item); got != tt.want {
+				t.Errorf("isProtoSlice() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

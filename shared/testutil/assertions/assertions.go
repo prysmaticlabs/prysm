@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	"github.com/d4l3k/messagediff"
-	"google.golang.org/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/sirupsen/logrus/hooks/test"
+	"google.golang.org/protobuf/proto"
 )
 
 // AssertionTestingTB exposes enough testing.TB methods for assertions.
@@ -166,8 +166,7 @@ func parseMsg(defaultMsg string, msg ...interface{}) string {
 }
 
 func isDeepEqual(expected, actual interface{}) bool {
-	_, isProto := expected.(proto.Message)
-	if isProto {
+	if sszutil.IsProtoSlice(expected) {
 		return proto.Equal(expected.(proto.Message), actual.(proto.Message))
 	}
 	return reflect.DeepEqual(expected, actual)
