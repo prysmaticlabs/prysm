@@ -391,7 +391,7 @@ message ExportSlashingProtectionResponse{
     string file = 1;
 }
 
-message ImportSlashingProtectionRequest{
+message ImportSlashingProtectionRequest {
     // JSON representation of the slash protection
     string slashingProtectionJSON = 1;
 }
