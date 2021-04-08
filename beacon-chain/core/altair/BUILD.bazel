@@ -7,6 +7,7 @@ go_library(
         "attestation.go",
         "block.go",
         "deposit.go",
+        "epoch.go",
         "state.go",
         "sync_committee.go",
     ],
@@ -41,9 +42,11 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "attestation_test.go",
         "block_test.go",
         "deposit_fuzz_test.go",
         "deposit_test.go",
+        "epoch_test.go",
         "state_fuzz_test.go",
         "state_test.go",
         "sync_committee_test.go",
@@ -55,6 +58,7 @@ go_test(
         "//beacon-chain/p2p/types:go_default_library",
         "//beacon-chain/state/state-altair:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/attestationutil:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/hashutil:go_default_library",
