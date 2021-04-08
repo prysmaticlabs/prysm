@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/dgraph-io/ristretto"
-	"google.golang.org/protobuf/types/known/emptypb"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -37,6 +36,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // reconnectPeriod is the frequency that we try to restart our

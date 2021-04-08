@@ -3,8 +3,8 @@ package p2p
 import (
 	"reflect"
 
-	"google.golang.org/protobuf/proto"
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"google.golang.org/protobuf/proto"
 )
 
 // GossipTopicMappings represent the protocol ID to protobuf message type map for easy

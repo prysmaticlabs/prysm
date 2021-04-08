@@ -7,7 +7,6 @@ import (
 	"context"
 	"time"
 
-	"google.golang.org/protobuf/types/known/emptypb"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -31,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // Server defines a server implementation of the gRPC Validator service,

@@ -16,12 +16,12 @@ import (
 	"reflect"
 	"time"
 
-	"google.golang.org/protobuf/types/known/emptypb"
 	types "github.com/prysmaticlabs/eth2-types"
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 var log = logrus.WithField("prefix", "forkchoice_checker")

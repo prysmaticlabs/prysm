@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"reflect"
 
-	"google.golang.org/protobuf/types/known/emptypb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // GetBeaconConfig retrieves the current configuration parameters of the beacon chain.

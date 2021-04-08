@@ -4,11 +4,11 @@ import (
 	"context"
 	"time"
 
-	"google.golang.org/protobuf/types/known/emptypb"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 var syncStatusPollingInterval = time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second

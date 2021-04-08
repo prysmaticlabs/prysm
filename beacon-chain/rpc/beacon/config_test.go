@@ -6,10 +6,10 @@ import (
 	"reflect"
 	"testing"
 
-	"google.golang.org/protobuf/types/known/emptypb"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestServer_GetBeaconConfig(t *testing.T) {

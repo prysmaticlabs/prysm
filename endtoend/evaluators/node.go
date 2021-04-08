@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"time"
 
-	"google.golang.org/protobuf/types/known/emptypb"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -18,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/endtoend/policies"
 	e2etypes "github.com/prysmaticlabs/prysm/endtoend/types"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // Allow a very short delay after disconnecting to prevent connection refused issues.

@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	"google.golang.org/protobuf/types/known/emptypb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
@@ -21,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // sortableAttestations implements the Sort interface to sort attestations

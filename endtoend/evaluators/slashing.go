@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"google.golang.org/protobuf/types/known/emptypb"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -17,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // InjectDoubleVote broadcasts a double vote into the beacon node pool for the slasher to detect.

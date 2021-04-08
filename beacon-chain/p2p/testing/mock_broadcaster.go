@@ -3,8 +3,8 @@ package testing
 import (
 	"context"
 
-	"google.golang.org/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"google.golang.org/protobuf/proto"
 )
 
 // MockBroadcaster implements p2p.Broadcaster for testing.

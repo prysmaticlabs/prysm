@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"google.golang.org/protobuf/types/known/emptypb"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -21,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type signingFunc func(context.Context, *validatorpb.SignRequest) (bls.Signature, error)

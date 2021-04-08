@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"google.golang.org/protobuf/types/known/emptypb"
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -28,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestValidatorIndex_OK(t *testing.T) {

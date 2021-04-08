@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"time"
 
-	"google.golang.org/protobuf/types/known/emptypb"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
@@ -21,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // BalancesTimeout for gRPC requests to ListValidatorBalances.

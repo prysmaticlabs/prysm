@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math"
 
-	"google.golang.org/protobuf/types/known/emptypb"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -20,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"golang.org/x/exp/rand"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // exitedIndex holds the exited index from ProposeVoluntaryExit in memory so other functions don't confuse it

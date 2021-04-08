@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"google.golang.org/protobuf/types/known/emptypb"
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -13,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestService_ReceiveBlocks(t *testing.T) {
