@@ -151,6 +151,7 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 			// Slasher buckets.
 			attestedEpochsByValidator,
 			attestationRecordsBucket,
+			attestationDataRootsBucket,
 			proposalRecordsBucket,
 			slasherChunksBucket,
 			// Migrations
