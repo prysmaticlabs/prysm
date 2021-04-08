@@ -41,7 +41,6 @@ type Flags struct {
 	// Feature related flags.
 	WriteSSZStateTransitions           bool // WriteSSZStateTransitions to tmp directory.
 	SkipBLSVerify                      bool // Skips BLS verification across the runtime.
-	EnableBlst                         bool // Enables new BLS library from supranational.
 	SlasherProtection                  bool // SlasherProtection protects validator fron sending over a slashable offense over the network using external slasher.
 	EnablePeerScorer                   bool // EnablePeerScorer enables experimental peer scoring in p2p.
 	EnableLargerGossipHistory          bool // EnableLargerGossipHistory increases the gossip history we store in our caches.
@@ -171,11 +170,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(checkPtInfoCache.Name) {
 		log.Warn("Advance check point info cache is no longer supported and will soon be deleted")
 	}
-	cfg.EnableBlst = true
-	if ctx.Bool(disableBlst.Name) {
-		log.WithField(disableBlst.Name, disableBlst.Usage).Warn(enabledFeatureFlag)
-		cfg.EnableBlst = false
-	}
 	if ctx.Bool(enableLargerGossipHistory.Name) {
 		log.WithField(enableLargerGossipHistory.Name, enableLargerGossipHistory.Usage).Warn(enabledFeatureFlag)
 		cfg.EnableLargerGossipHistory = true
@@ -230,11 +224,6 @@ func ConfigureValidator(ctx *cli.Context) {
 	if ctx.Bool(disableAttestingHistoryDBCache.Name) {
 		log.WithField(disableAttestingHistoryDBCache.Name, disableAttestingHistoryDBCache.Usage).Warn(enabledFeatureFlag)
 		cfg.DisableAttestingHistoryDBCache = true
-	}
-	cfg.EnableBlst = true
-	if ctx.Bool(disableBlst.Name) {
-		log.WithField(disableBlst.Name, disableBlst.Usage).Warn(enabledFeatureFlag)
-		cfg.EnableBlst = false
 	}
 	if ctx.Bool(attestTimely.Name) {
 		log.WithField(attestTimely.Name, attestTimely.Usage).Warn(enabledFeatureFlag)
