@@ -156,7 +156,7 @@ var (
 	// WeakSubjectivityCheckpt defines the weak subjectivity checkpoint the node must sync through to defend against long range attacks.
 	WeakSubjectivityCheckpt = &cli.StringFlag{
 		Name: "weak-subjectivity-checkpoint",
-		Usage: "Input in `block_root:epoch_number` format. This guarantee that syncing leads to the given Weak Subjectivity Checkpoint being in the canonical chain. " +
+		Usage: "Input in `block_root:epoch_number` format. This guarantees that syncing leads to the given Weak Subjectivity Checkpoint along the canonical chain. " +
 			"If such a sync is not possible, the node will treat it a critical and irrecoverable failure",
 		Value: "",
 	}

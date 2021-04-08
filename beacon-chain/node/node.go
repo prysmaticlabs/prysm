@@ -20,6 +20,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
@@ -479,7 +480,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 	}
 
 	wsp := b.cliCtx.String(flags.WeakSubjectivityCheckpt.Name)
-	bRoot, epoch, err := convertWspInput(wsp)
+	wsCheckpt, err := helpers.ParseWeakSubjectivityInputString(wsp)
 	if err != nil {
 		return err
 	}
@@ -498,8 +499,6 @@ func (b *BeaconNode) registerBlockchainService() error {
 		ForkChoiceStore:         b.forkChoiceStore,
 		OpsService:              opsService,
 		StateGen:                b.stateGen,
-		WspBlockRoot:            bRoot,
-		WspEpoch:                epoch,
 		SlasherAttestationsFeed: b.slasherAttestationsFeed,
 	})
 	if err != nil {

@@ -30,6 +30,12 @@ service Wallet {
             body: "*"
         };
     }
+    rpc RecoverWallet(RecoverWalletRequest) returns (CreateWalletResponse) {
+        option (google.api.http) = {
+            post: "/v2/validator/wallet/recover"
+            body: "*"
+        };
+    }
 }
 
 service Accounts {
@@ -204,6 +210,14 @@ message GenerateMnemonicResponse {
 message WalletResponse {
     string wallet_path = 1;
     KeymanagerKind keymanager_kind = 2;
+}
+
+message RecoverWalletRequest {
+    string mnemonic = 1;
+    uint64 num_accounts = 2;
+    string wallet_password = 3;
+    string language = 4;
+    string mnemonic25th_word = 5;
 }
 
 message ListAccountsRequest {

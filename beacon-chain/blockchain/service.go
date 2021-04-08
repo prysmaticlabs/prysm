@@ -86,6 +86,7 @@ type Config struct {
 	WspBlockRoot            []byte
 	WspEpoch                types.Epoch
 	SlasherAttestationsFeed *event.Feed
+	WeakSubjectivityCheckpt *ethpb.Checkpoint
 }
 
 // NewService instantiates a new block service instance that will
