@@ -46,6 +46,14 @@ func (s *Service) IsSlashableAttestation(
 		IndexedAttestation: attestation,
 		SigningRoot:        dataRoot,
 	}
+
+	// Save the attestation record to our database.
+	if err := s.serviceCfg.Database.SaveAttestationRecordsForValidators(
+		ctx, []*slashertypes.IndexedAttestationWrapper{indexedAttWrapper}, s.params.historyLength,
+	); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not save attestation records to DB: %v", err)
+	}
+
 	attesterSlashings, err := s.checkSlashableAttestations(ctx, []*slashertypes.IndexedAttestationWrapper{indexedAttWrapper})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if attestation is slashable: %v", err)
