@@ -208,22 +208,21 @@ func ProcessAttestationNoVerifySignature(
 }
 
 // This returns the matching statues for attestation data's source target and head.
-func matchingStatus(beaconState iface.BeaconState, data *ethpb.AttestationData, cp *ethpb.Checkpoint) (matchingSource, matchingTarget, matchingHead, error) {
-	s := attestationutil.CheckPointIsEqual(data.Source, cp)
+func matchingStatus(beaconState iface.BeaconState, data *ethpb.AttestationData, cp *ethpb.Checkpoint) (s matchingSource, t matchingTarget, h matchingHead, err error) {
+	s = matchingSource(attestationutil.CheckPointIsEqual(data.Source, cp))
 
 	r, err := helpers.BlockRoot(beaconState, data.Target.Epoch)
 	if err != nil {
 		return false, false, false, err
 	}
-	t := bytes.Equal(r, data.Target.Root)
+	t = matchingTarget(bytes.Equal(r, data.Target.Root))
 
 	r, err = helpers.BlockRootAtSlot(beaconState, data.Slot)
 	if err != nil {
 		return false, false, false, err
 	}
-	h := bytes.Equal(r, data.BeaconBlockRoot)
-
-	return matchingSource(s), matchingTarget(t), matchingHead(h), nil
+	h = matchingHead(bytes.Equal(r, data.BeaconBlockRoot))
+	return
 }
 
 // This rewards proposer by increasing proposer's balance with input reward numerator and calculated reward denominator.
