@@ -110,6 +110,21 @@ service Beacon {
     }
 }
 
+service SlashingProtection {
+    rpc ExportSlashingProtection(google.protobuf.Empty) returns (ExportSlashingProtectionResponse) {
+        option (google.api.http) = {
+            post: "/v2/validator/slashing-protection/export"
+            body: "*"
+        };
+    }
+    rpc ImportSlashingProtection(ImportSlashingProtectionRequest) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            post: "/v2/validator/slashing-protection/import"
+            body: "*"
+        };
+    }
+}
+
 service Health {
     rpc GetBeaconNodeConnection(google.protobuf.Empty) returns (NodeConnectionResponse) {
         option (google.api.http) = {
@@ -370,4 +385,13 @@ message DeleteAccountsRequest {
 message DeleteAccountsResponse {
     // List of public keys successfully deleted.
     repeated bytes deleted_keys = 1;
+}
+message ExportSlashingProtectionResponse {
+    // JSON representation of the slash protection
+    string file = 1;
+}
+
+message ImportSlashingProtectionRequest {
+    // JSON representation of the slash protection
+    string slashing_protection_json = 1;
 }

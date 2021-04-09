@@ -26,24 +26,23 @@ var ValidatorCannotExitYetMsg = "validator has not been active long enough to ex
 // should exit the state's validator registry.
 //
 // Spec pseudocode definition:
-//   def process_voluntary_exit(state: BeaconState, exit: VoluntaryExit) -> None:
-//    """
-//    Process ``VoluntaryExit`` operation.
-//    """
-//    validator = state.validator_registry[exit.validator_index]
+//   def process_voluntary_exit(state: BeaconState, signed_voluntary_exit: SignedVoluntaryExit) -> None:
+//    voluntary_exit = signed_voluntary_exit.message
+//    validator = state.validators[voluntary_exit.validator_index]
 //    # Verify the validator is active
 //    assert is_active_validator(validator, get_current_epoch(state))
-//    # Verify the validator has not yet exited
+//    # Verify exit has not been initiated
 //    assert validator.exit_epoch == FAR_FUTURE_EPOCH
 //    # Exits must specify an epoch when they become valid; they are not valid before then
-//    assert get_current_epoch(state) >= exit.epoch
+//    assert get_current_epoch(state) >= voluntary_exit.epoch
 //    # Verify the validator has been active long enough
-//    assert get_current_epoch(state) >= validator.activation_epoch + PERSISTENT_COMMITTEE_PERIOD
+//    assert get_current_epoch(state) >= validator.activation_epoch + SHARD_COMMITTEE_PERIOD
 //    # Verify signature
-//    domain = get_domain(state, DOMAIN_VOLUNTARY_EXIT, exit.epoch)
-//    assert bls_verify(validator.pubkey, signing_root(exit), exit.signature, domain)
+//    domain = get_domain(state, DOMAIN_VOLUNTARY_EXIT, voluntary_exit.epoch)
+//    signing_root = compute_signing_root(voluntary_exit, domain)
+//    assert bls.Verify(validator.pubkey, signing_root, signed_voluntary_exit.signature)
 //    # Initiate exit
-//    initiate_validator_exit(state, exit.validator_index)
+//    initiate_validator_exit(state, voluntary_exit.validator_index)
 func ProcessVoluntaryExits(
 	_ context.Context,
 	beaconState iface.BeaconState,
@@ -77,22 +76,23 @@ func ProcessVoluntaryExits(
 // VerifyExitAndSignature implements the spec defined validation for voluntary exits.
 //
 // Spec pseudocode definition:
-//   def process_voluntary_exit(state: BeaconState, exit: VoluntaryExit) -> None:
-//    """
-//    Process ``VoluntaryExit`` operation.
-//    """
-//    validator = state.validator_registry[exit.validator_index]
+//   def process_voluntary_exit(state: BeaconState, signed_voluntary_exit: SignedVoluntaryExit) -> None:
+//    voluntary_exit = signed_voluntary_exit.message
+//    validator = state.validators[voluntary_exit.validator_index]
 //    # Verify the validator is active
 //    assert is_active_validator(validator, get_current_epoch(state))
-//    # Verify the validator has not yet exited
+//    # Verify exit has not been initiated
 //    assert validator.exit_epoch == FAR_FUTURE_EPOCH
 //    # Exits must specify an epoch when they become valid; they are not valid before then
-//    assert get_current_epoch(state) >= exit.epoch
+//    assert get_current_epoch(state) >= voluntary_exit.epoch
 //    # Verify the validator has been active long enough
-//    assert get_current_epoch(state) >= validator.activation_epoch + PERSISTENT_COMMITTEE_PERIOD
+//    assert get_current_epoch(state) >= validator.activation_epoch + SHARD_COMMITTEE_PERIOD
 //    # Verify signature
-//    domain = get_domain(state, DOMAIN_VOLUNTARY_EXIT, exit.epoch)
-//    assert bls_verify(validator.pubkey, signing_root(exit), exit.signature, domain)
+//    domain = get_domain(state, DOMAIN_VOLUNTARY_EXIT, voluntary_exit.epoch)
+//    signing_root = compute_signing_root(voluntary_exit, domain)
+//    assert bls.Verify(validator.pubkey, signing_root, signed_voluntary_exit.signature)
+//    # Initiate exit
+//    initiate_validator_exit(state, voluntary_exit.validator_index)
 func VerifyExitAndSignature(
 	validator iface.ReadOnlyValidator,
 	currentSlot types.Slot,
@@ -122,19 +122,23 @@ func VerifyExitAndSignature(
 // verifyExitConditions implements the spec defined validation for voluntary exits(excluding signatures).
 //
 // Spec pseudocode definition:
-//   def process_voluntary_exit(state: BeaconState, exit: VoluntaryExit) -> None:
-//    """
-//    Process ``VoluntaryExit`` operation.
-//    """
-//    validator = state.validator_registry[exit.validator_index]
+//   def process_voluntary_exit(state: BeaconState, signed_voluntary_exit: SignedVoluntaryExit) -> None:
+//    voluntary_exit = signed_voluntary_exit.message
+//    validator = state.validators[voluntary_exit.validator_index]
 //    # Verify the validator is active
 //    assert is_active_validator(validator, get_current_epoch(state))
-//    # Verify the validator has not yet exited
+//    # Verify exit has not been initiated
 //    assert validator.exit_epoch == FAR_FUTURE_EPOCH
 //    # Exits must specify an epoch when they become valid; they are not valid before then
-//    assert get_current_epoch(state) >= exit.epoch
+//    assert get_current_epoch(state) >= voluntary_exit.epoch
 //    # Verify the validator has been active long enough
 //    assert get_current_epoch(state) >= validator.activation_epoch + SHARD_COMMITTEE_PERIOD
+//    # Verify signature
+//    domain = get_domain(state, DOMAIN_VOLUNTARY_EXIT, voluntary_exit.epoch)
+//    signing_root = compute_signing_root(voluntary_exit, domain)
+//    assert bls.Verify(validator.pubkey, signing_root, signed_voluntary_exit.signature)
+//    # Initiate exit
+//    initiate_validator_exit(state, voluntary_exit.validator_index)
 func verifyExitConditions(validator iface.ReadOnlyValidator, currentSlot types.Slot, exit *ethpb.VoluntaryExit) error {
 	currentEpoch := helpers.SlotToEpoch(currentSlot)
 	// Verify the validator is active.
