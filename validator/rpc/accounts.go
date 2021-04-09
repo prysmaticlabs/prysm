@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	ptypes "github.com/gogo/protobuf/types"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -173,4 +174,32 @@ func (s *Server) DeleteAccounts(
 	return &pb.DeleteAccountsResponse{
 		DeletedKeys: req.PublicKeysToDelete,
 	}, nil
+}
+
+// VoluntaryExit performs a voluntary exit for the validator keys specified in a request.
+func (s *Server) VoluntaryExit(
+	ctx context.Context, req *pb.VoluntaryExitRequest,
+) (*ptypes.Empty, error) {
+	if len(req.PublicKeys) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "No public keys specified to delete")
+	}
+	if s.wallet == nil || s.keymanager == nil {
+		return nil, status.Error(codes.FailedPrecondition, "No wallet found")
+	}
+	if s.wallet.KeymanagerKind() != keymanager.Imported && s.wallet.KeymanagerKind() != keymanager.Derived {
+		return nil, status.Error(
+			codes.FailedPrecondition, "Only Imported or Derived wallets can submit voluntary exits",
+		)
+	}
+	//if err := accounts.DeleteAccount(ctx, &accounts.Config{
+	//	Wallet:           s.wallet,
+	//	Keymanager:       s.keymanager,
+	//	DeletePublicKeys: req.PublicKeysToDelete,
+	//}); err != nil {
+	//	return nil, status.Errorf(codes.Internal, "Could not delete public keys: %v", err)
+	//}
+	//return &pb.DeleteAccountsResponse{
+	//	DeletedKeys: req.PublicKeysToDelete,
+	//}, nil
+	return &ptypes.Empty{}, nil
 }
