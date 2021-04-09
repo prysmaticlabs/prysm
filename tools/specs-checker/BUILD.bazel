@@ -3,8 +3,19 @@ load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["main.go"],
-    embedsrcs = ["data/phase0/all-defs.md"],
+    srcs = [
+        "check.go",
+        "download.go",
+        "main.go",
+    ],
+    embedsrcs = [
+        "data/specs/phase0/beacon-chain.md",
+        "data/specs/phase0/deposit-contract.md",
+        "data/specs/phase0/fork-choice.md",
+        "data/specs/phase0/p2p-interface.md",
+        "data/specs/phase0/validator.md",
+        "data/specs/phase0/weak-subjectivity.md",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/tools/specs-checker",
     visibility = ["//visibility:public"],
     deps = ["@com_github_urfave_cli_v2//:go_default_library"],
