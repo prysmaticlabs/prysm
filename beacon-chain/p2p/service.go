@@ -29,7 +29,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -142,13 +141,8 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		pubsub.WithSubscriptionFilter(s),
 		pubsub.WithPeerOutboundQueueSize(256),
 		pubsub.WithValidateQueueSize(256),
-	}
-	// Add gossip scoring options.
-	if featureconfig.Get().EnablePeerScorer {
-		psOpts = append(
-			psOpts,
-			pubsub.WithPeerScore(peerScoringParams()),
-			pubsub.WithPeerScoreInspect(s.peerInspector, time.Minute))
+		pubsub.WithPeerScore(peerScoringParams()),
+		pubsub.WithPeerScoreInspect(s.peerInspector, time.Minute),
 	}
 	// Set the pubsub global parameters that we require.
 	setPubSubParameters()
