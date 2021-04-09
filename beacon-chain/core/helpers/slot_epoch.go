@@ -19,7 +19,7 @@ const MaxSlotBuffer = uint64(1 << 7)
 // SlotToEpoch returns the epoch number of the input slot.
 //
 // Spec pseudocode definition:
-//  def compute_epoch_of_slot(slot: Slot) -> Epoch:
+//  def compute_epoch_at_slot(slot: Slot) -> Epoch:
 //    """
 //    Return the epoch number of ``slot``.
 //    """
