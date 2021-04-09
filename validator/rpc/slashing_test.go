@@ -12,9 +12,8 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	mocks "github.com/prysmaticlabs/prysm/validator/testing"
 	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format/format"
-
+	mocks "github.com/prysmaticlabs/prysm/validator/testing"
 )
 
 func TestImportSlashingProtection_Preconditions(t *testing.T) {
