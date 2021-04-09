@@ -1,4 +1,4 @@
-// +build  blst_disabled
+// +build  blst_disabled linux,amd64
 
 package blst
 
