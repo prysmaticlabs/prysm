@@ -14,7 +14,7 @@ import (
 	slashing "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format"
 )
 
-// Export func to handle the rpc call returning the json slashing history.
+// ExportSlashingProtection handles the rpc call returning the json slashing history.
 // The format of the export follows an EIP-3076 standard JSON making it
 // easy to migrate machines or eth2 clients.
 // Validator DB will be defined part of the rpc server.
