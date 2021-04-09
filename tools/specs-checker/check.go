@@ -56,8 +56,6 @@ func inspectFile(path string, defs map[string][]string) error {
 			return true
 		}
 
-		pos := fset.Position(node.Pos())
-
 		// Trim the chunk, so that it starts from Python's "def".
 		loc := reg1.FindStringIndex(chunk)
 		chunk = chunk[loc[0]:]
@@ -65,18 +63,18 @@ func inspectFile(path string, defs map[string][]string) error {
 		// Find out Python function name.
 		defName, defBody := parseDefChunk(chunk)
 		if defName == "" {
-			fmt.Printf("%s: cannot parse comment pseudo code\n", pos)
+			fmt.Printf("%s: cannot parse comment pseudo code\n", fset.Position(node.Pos()))
 			return false
 		}
 
 		// Calculate differences with reference implementation.
 		refDefs, ok := defs[defName]
 		if !ok {
-			fmt.Printf("%s: %q is not found in spec docs\n", pos, defName)
+			fmt.Printf("%s: %q is not found in spec docs\n", fset.Position(node.Pos()), defName)
 			return false
 		}
 		if !matchesRefImplementation(defName, refDefs, defBody) {
-			fmt.Printf("%s: %q code does not match reference implementation in specs\n", pos, defName)
+			fmt.Printf("%s: %q code does not match reference implementation in specs\n", fset.Position(node.Pos()), defName)
 			return false
 		}
 
@@ -89,7 +87,8 @@ func inspectFile(path string, defs map[string][]string) error {
 // parseSpecs parses input spec docs into map of function name -> array of function bodies
 // (single entity may have several definitions).
 func parseSpecs() (map[string][]string, error) {
-	var sb  strings.Builder
+	// Traverse all spec files, and aggregate them within as single string.
+	var sb strings.Builder
 	for dirName, fileNames := range specDirs {
 		for _, fileName := range fileNames {
 			chunk, err := specFS.ReadFile(path.Join("data", dirName, fileName))
@@ -102,6 +101,8 @@ func parseSpecs() (map[string][]string, error) {
 			}
 		}
 	}
+
+	// Parse docs into function name -> array of function bodies map.
 	chunks := strings.Split(strings.ReplaceAll(sb.String(), "```python", ""), "```")
 	defs := make(map[string][]string, len(chunks))
 	for _, chunk := range chunks {
@@ -114,6 +115,7 @@ func parseSpecs() (map[string][]string, error) {
 	return defs, nil
 }
 
+// parseDefChunk extract function name and function body from a Python's "def" chunk.
 func parseDefChunk(chunk string) (string, string) {
 	chunk = strings.TrimLeft(chunk, "\n")
 	if chunk == "" {
@@ -138,7 +140,7 @@ func matchesRefImplementation(defName string, refDefs []string, input string) bo
 		inputLines := strings.Split(input, "\n")
 
 		matchesPerfectly := true
-		for i := 0; i < len(refDefs); i++ {
+		for i := 0; i < len(refDefLines); i++ {
 			a, b := strings.Trim(refDefLines[i], " "), strings.Trim(inputLines[i], " ")
 			if a != b {
 				matchesPerfectly = false
