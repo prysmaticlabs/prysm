@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	altair "github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -63,7 +62,6 @@ func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 	pfc := beaconState.PreviousJustifiedCheckpoint()
 	pfc.Root = []byte("hello-world")
 	require.NoError(t, beaconState.SetPreviousJustifiedCheckpoint(pfc))
-	require.NoError(t, beaconState.AppendPreviousEpochAttestations(&pb.PendingAttestation{}))
 
 	want := fmt.Sprintf(
 		"expected target epoch (%d) to be the previous epoch (%d) or the current epoch (%d)",
@@ -96,7 +94,6 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 	cfc := beaconState.CurrentJustifiedCheckpoint()
 	cfc.Root = []byte("hello-world")
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cfc))
-	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&pb.PendingAttestation{}))
 
 	want := "source check point not equal to current justified checkpoint"
 	_, err := altair.ProcessAttestations(context.Background(), beaconState, b)
@@ -134,7 +131,6 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	pfc := beaconState.PreviousJustifiedCheckpoint()
 	pfc.Root = []byte("hello-world")
 	require.NoError(t, beaconState.SetPreviousJustifiedCheckpoint(pfc))
-	require.NoError(t, beaconState.AppendPreviousEpochAttestations(&pb.PendingAttestation{}))
 
 	want := "source check point not equal to previous justified checkpoint"
 	_, err = altair.ProcessAttestations(context.Background(), beaconState, b)
@@ -170,7 +166,6 @@ func TestProcessAttestations_InvalidAggregationBitsLength(t *testing.T) {
 	cfc := beaconState.CurrentJustifiedCheckpoint()
 	cfc.Root = []byte("hello-world")
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cfc))
-	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&pb.PendingAttestation{}))
 
 	expected := "failed to verify aggregation bitfield: wanted participants bitfield length 3, got: 4"
 	_, err = altair.ProcessAttestations(context.Background(), beaconState, b)
