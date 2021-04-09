@@ -41,3 +41,33 @@ func TestProcessSyncCommitteeUpdates_CanRotate(t *testing.T) {
 	require.NotEqual(t, next, n)
 	require.DeepEqual(t, next, c)
 }
+
+func TestProcessParticipationFlagUpdates_CanRotate(t *testing.T) {
+	s, _ := altairState.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	c, err := s.CurrentEpochParticipation()
+	require.NoError(t, err)
+	require.DeepEqual(t, make([]byte, params.BeaconConfig().MaxValidatorsPerCommittee), c)
+	p, err := s.PreviousEpochParticipation()
+	require.NoError(t, err)
+	require.DeepEqual(t, make([]byte, params.BeaconConfig().MaxValidatorsPerCommittee), p)
+
+	newC := []byte{'a'}
+	newP := []byte{'b'}
+	require.NoError(t, s.SetCurrentParticipationBits(newC))
+	require.NoError(t, s.SetPreviousParticipationBits(newP))
+	c, err = s.CurrentEpochParticipation()
+	require.NoError(t, err)
+	require.DeepEqual(t, newC, c)
+	p, err = s.PreviousEpochParticipation()
+	require.NoError(t, err)
+	require.DeepEqual(t, newP, p)
+
+	s, err = altair.ProcessParticipationFlagUpdates(s)
+	require.NoError(t, err)
+	c, err = s.CurrentEpochParticipation()
+	require.NoError(t, err)
+	require.DeepEqual(t, make([]byte, params.BeaconConfig().MaxValidatorsPerCommittee), c)
+	p, err = s.PreviousEpochParticipation()
+	require.NoError(t, err)
+	require.DeepEqual(t, newC, p)
+}
