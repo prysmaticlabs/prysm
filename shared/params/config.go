@@ -136,9 +136,9 @@ type BeaconChainConfig struct {
 
 	// New values introduced in Altair hard fork 1.
 	// Participation flag indices.
-	TimelyHeadFlagIndex   int `yaml:"TIMELY_HEAD_FLAG_INDEX" spec:"true"`   // TimelyHeadFlagIndex for participation bits.
-	TimelySourceFlagIndex int `yaml:"TIMELY_SOURCE_FLAG_INDEX" spec:"true"` // TimelySourceFlagIndex for participation bits.
-	TimelyTargetFlagIndex int `yaml:"TIMELY_TARGET_FLAG_INDEX" spec:"true"` // TimelyTargetFlagIndex for participation bits.
+	TimelyHeadFlagIndex   uint8 `yaml:"TIMELY_HEAD_FLAG_INDEX" spec:"true"`   // TimelyHeadFlagIndex for participation bits.
+	TimelySourceFlagIndex uint8 `yaml:"TIMELY_SOURCE_FLAG_INDEX" spec:"true"` // TimelySourceFlagIndex for participation bits.
+	TimelyTargetFlagIndex uint8 `yaml:"TIMELY_TARGET_FLAG_INDEX" spec:"true"` // TimelyTargetFlagIndex for participation bits.
 
 	// Incentivization weights.
 	TimelyHeadWeight   uint64 `yaml:"TIMELY_HEAD_WEIGHT" spec:"true"`   // TimelyHeadWeight for rewards and penalties.

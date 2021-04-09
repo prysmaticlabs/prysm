@@ -208,6 +208,8 @@ type FutureForkStub interface {
 	InactivityScores() ([]uint64, error)
 	CurrentSyncCommittee() (*pbp2p.SyncCommittee, error)
 	SetCurrentSyncCommittee(val *pbp2p.SyncCommittee) error
+	SetPreviousParticipationBits(val []byte) error
+	SetCurrentParticipationBits(val []byte) error
 	NextSyncCommittee() (*pbp2p.SyncCommittee, error)
 	SetNextSyncCommittee(val *pbp2p.SyncCommittee) error
 }

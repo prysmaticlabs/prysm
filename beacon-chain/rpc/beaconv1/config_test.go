@@ -230,11 +230,11 @@ func TestGetSpec(t *testing.T) {
 		case "max_voluntary_exits":
 			assert.Equal(t, "52", v)
 		case "timely_head_flag_index":
-			assert.Equal(t, "53", v)
+			assert.Equal(t, "0x35", v)
 		case "timely_source_flag_index":
-			assert.Equal(t, "54", v)
+			assert.Equal(t, "0x36", v)
 		case "timely_target_flag_index":
-			assert.Equal(t, "55", v)
+			assert.Equal(t, "0x37", v)
 		case "timely_head_weight":
 			assert.Equal(t, "56", v)
 		case "timely_source_weight":

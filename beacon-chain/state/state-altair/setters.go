@@ -497,12 +497,14 @@ func (b *BeaconState) UpdateSlashingsAtIndex(idx, val uint64) error {
 	return nil
 }
 
-// setPreviousParticipationBits for the beacon state. Updates the entire
+// SetPreviousParticipationBits for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
-func (b *BeaconState) setPreviousParticipationBits(val []byte) error {
+func (b *BeaconState) SetPreviousParticipationBits(val []byte) error {
 	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
+	b.lock.Lock()
+	defer b.lock.Unlock()
 
 	b.sharedFieldReferences[previousEpochParticipationBits].MinusRef()
 	b.sharedFieldReferences[previousEpochParticipationBits] = stateutil.NewRef(1)
@@ -513,12 +515,14 @@ func (b *BeaconState) setPreviousParticipationBits(val []byte) error {
 	return nil
 }
 
-// setCurrentParticipationBits for the beacon state. Updates the entire
+// SetCurrentParticipationBits for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
-func (b *BeaconState) setCurrentParticipationBits(val []byte) error {
+func (b *BeaconState) SetCurrentParticipationBits(val []byte) error {
 	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
+	b.lock.Lock()
+	defer b.lock.Unlock()
 
 	b.sharedFieldReferences[currentEpochParticipationBits].MinusRef()
 	b.sharedFieldReferences[currentEpochParticipationBits] = stateutil.NewRef(1)
@@ -527,21 +531,6 @@ func (b *BeaconState) setCurrentParticipationBits(val []byte) error {
 	b.markFieldAsDirty(currentEpochParticipationBits)
 	b.rebuildTrie[currentEpochParticipationBits] = true
 	return nil
-}
-
-// RotateAttestations sets the previous epoch participation to the current epoch participation and
-// then clears the current epoch participation.
-func (b *BeaconState) RotateAttestations() error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
-	b.lock.Lock()
-	defer b.lock.Unlock()
-
-	if err := b.setPreviousParticipationBits(b.currentEpochParticipation()); err != nil {
-		return err
-	}
-	return b.setCurrentParticipationBits([]byte{})
 }
 
 // AppendHistoricalRoots for the beacon state. Appends the new value
