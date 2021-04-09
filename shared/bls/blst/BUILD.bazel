@@ -4,18 +4,14 @@ load("@prysm//tools/go:def.bzl", "go_library")
 
 #  Build with --define=blst_disabled=false to exclude blst library.
 config_setting(
-    name = "disable_blst",
-    values = {
-        "define": "blst_disabled=true",
-    },
-)
-
-config_setting(
     name = "linux_amd64",
     constraint_values = [
         "@platforms//os:linux",
         "@platforms//cpu:x86_64",
     ],
+    values = {
+        "define": "blst_disabled=false",
+    },
 )
 
 config_setting(
@@ -24,6 +20,9 @@ config_setting(
         "@platforms//os:osx",
         "@platforms//cpu:x86_64",
     ],
+    values = {
+        "define": "blst_disabled=false",
+    },
 )
 
 config_setting(
@@ -32,6 +31,9 @@ config_setting(
         "@platforms//os:windows",
         "@platforms//cpu:x86_64",
     ],
+    values = {
+        "define": "blst_disabled=false",
+    },
 )
 
 config_setting(
@@ -40,6 +42,9 @@ config_setting(
         "@platforms//os:linux",
         "@platforms//cpu:aarch64",
     ],
+    values = {
+        "define": "blst_disabled=false",
+    },
 )
 
 config_setting(
@@ -48,6 +53,9 @@ config_setting(
         "@platforms//os:android",
         "@platforms//cpu:x86_64",
     ],
+    values = {
+        "define": "blst_disabled=false",
+    },
 )
 
 config_setting(
@@ -56,6 +64,9 @@ config_setting(
         "@platforms//os:android",
         "@platforms//cpu:aarch64",
     ],
+    values = {
+        "define": "blst_disabled=false",
+    },
 )
 
 # gazelle:resolve go github.com/supranational/blst/bindings/go @com_github_supranational_blst//:go_default_library
@@ -64,9 +75,6 @@ go_library(
     name = "go_default_library",
     srcs =
         selects.with_or({
-            ":disable_blst": [
-                "stub.go",
-            ],
             (
                 ":linux_amd64",
                 ":linux_arm64",
@@ -91,7 +99,6 @@ go_library(
         "//shared/bls:__pkg__",
     ],
     deps = selects.with_or({
-        ":disable_blst": ["//shared/bls/common:go_default_library"],
         (
             ":linux_amd64",
             ":linux_arm64",
@@ -116,7 +123,6 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = selects.with_or({
-        ":disable_blst": [],
         (
             ":linux_amd64",
             ":linux_arm64",
@@ -131,7 +137,6 @@ go_test(
         "//conditions:default": [],
     }),
     deps = selects.with_or({
-        ":disable_blst": [],
         (
             ":linux_amd64",
             ":linux_arm64",
@@ -154,7 +159,6 @@ go_test(
 go_test(
     name = "go_signature_test",
     srcs = selects.with_or({
-        ":disable_blst": [],
         (
             ":linux_amd64",
             ":linux_arm64",
@@ -169,7 +173,6 @@ go_test(
     }),
     embed = [":go_default_library"],
     deps = selects.with_or({
-        ":disable_blst": [],
         (
             ":linux_amd64",
             ":linux_arm64",
