@@ -24,15 +24,14 @@ import (
 
 // InitializeFromProto the beacon state from a protobuf representation.
 func InitializeFromProto(st *pbp2p.BeaconState) (*BeaconState, error) {
-	return InitializeFromProtoUnsafe(cloneState(st))
+	return InitializeFromProtoUnsafe(hydrateState(proto.Clone(st).(*pbp2p.BeaconState)))
 }
 
-func cloneState(st *pbp2p.BeaconState) *pbp2p.BeaconState {
-	cloned := proto.Clone(st).(*pbp2p.BeaconState)
-	if cloned.Validators == nil {
-		cloned.Validators = []*ethpb.Validator{}
+func hydrateState(st *pbp2p.BeaconState) *pbp2p.BeaconState {
+	if st.Validators == nil {
+		st.Validators = []*ethpb.Validator{}
 	}
-	return cloned
+	return st
 }
 
 // InitializeFromProtoUnsafe directly uses the beacon state protobuf pointer
