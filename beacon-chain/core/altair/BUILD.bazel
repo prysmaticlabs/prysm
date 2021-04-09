@@ -10,6 +10,7 @@ go_library(
         "epoch.go",
         "state.go",
         "sync_committee.go",
+        "validator.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/altair",
     visibility = [
@@ -21,6 +22,7 @@ go_library(
         "//beacon-chain/core/epoch:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/state:go_default_library",
+        "//beacon-chain/core/validators:go_default_library",
         "//beacon-chain/p2p/types:go_default_library",
         "//beacon-chain/state/interface:go_default_library",
         "//beacon-chain/state/state-altair:go_default_library",
@@ -50,6 +52,7 @@ go_test(
         "state_fuzz_test.go",
         "state_test.go",
         "sync_committee_test.go",
+        "validator_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
