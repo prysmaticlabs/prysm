@@ -15,7 +15,7 @@ import (
 )
 
 // ExportSlashingProtection handles the rpc call returning the json slashing history.
-// The format of the export follows an EIP-3076 standard JSON making it
+// The format of the export follows the EIP-3076 standard which makes it
 // easy to migrate machines or eth2 clients.
 // Validator DB will be defined part of the rpc server.
 //
