@@ -23,9 +23,7 @@ var specFS embed.FS
 var specDirs = map[string][]string{
 	"specs/phase0": {
 		"beacon-chain.md",
-		"deposit-contract.md",
 		"fork-choice.md",
-		"p2p-interface.md",
 		"validator.md",
 		"weak-subjectivity.md",
 	},

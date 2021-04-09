@@ -10,9 +10,7 @@ go_library(
     ],
     embedsrcs = [
         "data/specs/phase0/beacon-chain.md",
-        "data/specs/phase0/deposit-contract.md",
         "data/specs/phase0/fork-choice.md",
-        "data/specs/phase0/p2p-interface.md",
         "data/specs/phase0/validator.md",
         "data/specs/phase0/weak-subjectivity.md",
     ],
