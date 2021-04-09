@@ -48,7 +48,6 @@ func getAndSaveFile(specDocUrl, outFilePath string) error {
 	}()
 
 	// Download spec doc.
-	fmt.Printf("URL: %v\n", specDocUrl)
 	resp, err := http.Get(specDocUrl)
 	if err != nil {
 		return err
@@ -66,13 +65,10 @@ func getAndSaveFile(specDocUrl, outFilePath string) error {
 	}
 	specDocString := string(specDoc)
 	for _, snippet := range reg2.FindAllString(specDocString, -1) {
-		fmt.Printf("Snippet:\n>>%v<<\n\n", snippet)
 		if _, err = f.WriteString(snippet + "\n"); err != nil {
 			return err
 		}
 	}
-
-	fmt.Printf("f: %v, path: %v\n", f, outFilePath)
 
 	return nil
 }
