@@ -3,12 +3,10 @@ package rpc
 import (
 	"context"
 	"encoding/json"
-	"path/filepath"
+	"github.com/golang/protobuf/ptypes/empty"
 	"testing"
 
-	"github.com/golang/protobuf/ptypes/empty"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -16,8 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	mocks "github.com/prysmaticlabs/prysm/validator/testing"
 )
-
-const jsonExportFileName = "slashing_protection.json"
 
 func TestImportSlashingProtection_Preconditions(t *testing.T) {
 	ctx := context.Background()
@@ -34,7 +30,7 @@ func TestImportSlashingProtection_Preconditions(t *testing.T) {
 
 	// No validator DB provided.
 	_, err := s.ImportSlashingProtection(ctx, req)
-	require.ErrorContains(t, "err finding validator database at path ", err)
+	require.ErrorContains(t, "err finding validator database at path", err)
 
 	// Create Wallet and add to server for more realistic testing.
 	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
@@ -48,18 +44,22 @@ func TestImportSlashingProtection_Preconditions(t *testing.T) {
 	require.NoError(t, err)
 	s.wallet = w
 
-	numValidators := 10
-	// Create public keys for the mock validator DB
+	numValidators := 1
+	// Create public keys for the mock validator DB.
 	pubKeys, err := mocks.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
 
-	// We create a validator database.
+	// Create a validator database.
 	validatorDB, err := kv.NewKVStore(ctx, defaultWalletPath, &kv.Config{
 		PubKeys: pubKeys,
 	})
 	require.NoError(t, err)
 	s.valDB = validatorDB
-	require.NoError(t, validatorDB.Close())
+
+	// Have to close it after import is done otherwise it complains db is not open.
+	defer func() {
+		require.NoError(t, validatorDB.Close())
+	}()
 
 	// Test empty JSON.
 	_, err = s.ImportSlashingProtection(ctx, req)
@@ -93,7 +93,7 @@ func TestExportSlashingProtection_Preconditions(t *testing.T) {
 	}
 	// No validator DB provided.
 	_, err := s.ExportSlashingProtection(ctx, &empty.Empty{})
-	require.ErrorContains(t, "err finding validator database at path ", err)
+	require.ErrorContains(t, "err finding validator database at path", err)
 
 	// Create Wallet and add to server for more realistic testing.
 	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
@@ -108,7 +108,7 @@ func TestExportSlashingProtection_Preconditions(t *testing.T) {
 	s.wallet = w
 
 	numValidators := 10
-	// Create public keys for the mock validator DB
+	// Create public keys for the mock validator DB.
 	pubKeys, err := mocks.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
 
@@ -118,23 +118,12 @@ func TestExportSlashingProtection_Preconditions(t *testing.T) {
 	})
 	require.NoError(t, err)
 	s.valDB = validatorDB
-	require.NoError(t, validatorDB.Close())
 
-	// Create mock Slashing history
-	attestingHistory, proposalHistory := mocks.MockAttestingAndProposalHistories(numValidators)
-	require.NoError(t, err)
-	mockJSON, err := mocks.MockSlashingProtectionJSON(pubKeys, attestingHistory, proposalHistory)
-	require.NoError(t, err)
-
-	// We JSON encode the protection file and save it to disk as a JSON file.
-	encoded, err := json.Marshal(mockJSON)
-	require.NoError(t, err)
-
-	protectionFilePath := filepath.Join(defaultWalletPath, jsonExportFileName)
-	err = fileutil.WriteFile(protectionFilePath, encoded)
-	require.NoError(t, err)
+	// Have to close it after export is done otherwise it complains db is not open.
+	defer func() {
+		require.NoError(t, validatorDB.Close())
+	}()
 
 	_, err = s.ExportSlashingProtection(ctx, &empty.Empty{})
 	require.NoError(t, err)
-
 }
