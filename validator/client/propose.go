@@ -430,10 +430,10 @@ func (v *validator) verifyPandoraShardHeader(beaconBlk *ethpb.BeaconBlock, slot 
 		return errInvalidEpoch
 	}
 	// verify proposer index
-	if extraData.ProposerIndex != uint64(beaconBlk.ProposerIndex) {
-		log.WithError(errInvalidProposerIndex).Error("invalid proposer index from pandora chain")
-		return errInvalidProposerIndex
-	}
+	//if extraData.ProposerIndex != uint64(beaconBlk.ProposerIndex) {
+	//	log.WithError(errInvalidProposerIndex).Error("invalid proposer index from pandora chain")
+	//	return errInvalidProposerIndex
+	//}
 
 	return nil
 }
