@@ -6,6 +6,8 @@ import (
 	"sort"
 	"sync"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+
 	"github.com/pkg/errors"
 	v1 "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
@@ -22,7 +24,15 @@ import (
 
 // InitializeFromProto the beacon state from a protobuf representation.
 func InitializeFromProto(st *pbp2p.BeaconState) (*BeaconState, error) {
-	return InitializeFromProtoUnsafe(proto.Clone(st).(*pbp2p.BeaconState))
+	return InitializeFromProtoUnsafe(cloneState(st))
+}
+
+func cloneState(st *pbp2p.BeaconState) *pbp2p.BeaconState {
+	cloned := proto.Clone(st).(*pbp2p.BeaconState)
+	if cloned.Validators == nil {
+		cloned.Validators = []*ethpb.Validator{}
+	}
+	return cloned
 }
 
 // InitializeFromProtoUnsafe directly uses the beacon state protobuf pointer
