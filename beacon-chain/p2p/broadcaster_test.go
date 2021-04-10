@@ -344,7 +344,7 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 	wg.Add(1)
 	go func(tt *testing.T) {
 		defer wg.Done()
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
 		defer cancel()
 
 		incomingMessage, err := sub.Next(ctx)
