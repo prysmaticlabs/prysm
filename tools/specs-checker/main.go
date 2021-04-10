@@ -12,7 +12,7 @@ var (
 	dirFlag = &cli.StringFlag{
 		Name:     "dir",
 		Value:    "",
-		Usage:    "Path to a directory containing Golang files to check",
+		Usage:    "Target directory",
 		Required: true,
 	}
 )
