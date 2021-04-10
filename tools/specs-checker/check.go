@@ -73,7 +73,7 @@ func inspectFile(path string, defs map[string][]string) error {
 			fmt.Printf("%s: %q is not found in spec docs\n", fset.Position(node.Pos()), defName)
 			return false
 		}
-		if !matchesRefImplementation(refDefs, defBody) {
+		if !matchesRefImplementation(defName, refDefs, defBody, fset.Position(node.Pos())) {
 			fmt.Printf("%s: %q code does not match reference implementation in specs\n", fset.Position(node.Pos()), defName)
 			return false
 		}
@@ -146,7 +146,7 @@ func parseDefChunk(chunk string) (string, string) {
 }
 
 // matchesRefImplementation compares input string to reference code snippets (there might be multiple implementations).
-func matchesRefImplementation(refDefs []string, input string) bool {
+func matchesRefImplementation(defName string, refDefs []string, input string, pos token.Position) bool {
 	for _, refDef := range refDefs {
 		refDefLines := strings.Split(refDef, "\n")
 		inputLines := strings.Split(input, "\n")
@@ -158,6 +158,11 @@ func matchesRefImplementation(refDefs []string, input string) bool {
 				matchesPerfectly = false
 				break
 			}
+		}
+		// Mark potential issues, when there's some more comments in our code (which might be ok, as we are not required
+		// to put specs comments as the last one in the doc block).
+		if len(refDefLines) != len(inputLines) {
+			fmt.Printf("%s: %q potentially has issues (comment is longer than reference implementation)\n", pos, defName)
 		}
 		if matchesPerfectly {
 			return true
