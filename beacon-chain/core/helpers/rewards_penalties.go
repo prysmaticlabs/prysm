@@ -119,3 +119,21 @@ func DecreaseBalanceWithVal(currBalance, delta uint64) uint64 {
 	}
 	return currBalance - delta
 }
+
+// IsInInactivityLeak returns true if the state is experiencing inactivity leak.
+//
+// Spec code:
+// def is_in_inactivity_leak(state: BeaconState) -> bool:
+//    return get_finality_delay(state) > MIN_EPOCHS_TO_INACTIVITY_PENALTY
+func IsInInactivityLeak(prevEpoch, finalizedEpoch types.Epoch) bool {
+	return FinalityDelay(prevEpoch, finalizedEpoch) > params.BeaconConfig().MinEpochsToInactivityPenalty
+}
+
+// FinalityDelay returns the finality delay using the beacon state.
+//
+// Spec code:
+// def get_finality_delay(state: BeaconState) -> uint64:
+//    return get_previous_epoch(state) - state.finalized_checkpoint.epoch
+func FinalityDelay(prevEpoch, finalizedEpoch types.Epoch) types.Epoch {
+	return prevEpoch - finalizedEpoch
+}
