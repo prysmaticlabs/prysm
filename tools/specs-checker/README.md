@@ -13,6 +13,9 @@ var specDirs = map[string][]string{
 		"validator.md",
 		"weak-subjectivity.md",
 	},
+	"ssz": {
+		"merkle-proofs.md",
+	},
 }
 ```
 
