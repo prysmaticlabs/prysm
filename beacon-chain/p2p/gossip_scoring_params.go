@@ -163,12 +163,14 @@ func defaultAggregateTopicParams(activeValidators uint64) (*pubsub.TopicScorePar
 	aggPerSlot := aggregatorsPerSlot(activeValidators)
 	firstMessageCap, err := decayLimit(scoreDecay(1*oneEpochDuration()), float64(aggPerSlot*2/gossipSubD))
 	if err != nil {
-		return nil, err
+		log.Warnf("skipping initializing topic scoring: %v", err)
+		return nil, nil
 	}
 	firstMessageWeight := maxFirstDeliveryScore / firstMessageCap
 	meshThreshold, err := decayThreshold(scoreDecay(1*oneEpochDuration()), float64(aggPerSlot)/dampeningFactor)
 	if err != nil {
-		return nil, err
+		log.Warnf("skipping initializing topic scoring: %v", err)
+		return nil, nil
 	}
 	meshWeight := -scoreByWeight(aggregateWeight, meshThreshold)
 	meshCap := 4 * meshThreshold
@@ -203,8 +205,16 @@ func defaultAggregateSubnetTopicParams(activeValidators uint64) (*pubsub.TopicSc
 	// Get weight for each specific subnet.
 	topicWeight := attestationTotalWeight / float64(subnetCount)
 	subnetWeight := activeValidators / subnetCount
+	if subnetWeight == 0 {
+		log.Warn("Subnet weight is 0, skipping initializing topic scoring")
+		return nil, nil
+	}
 	// Determine the amount of validators expected in a subnet in a single slot.
 	numPerSlot := time.Duration(subnetWeight / uint64(params.BeaconConfig().SlotsPerEpoch))
+	if numPerSlot == 0 {
+		log.Warn("numPerSlot is 0, skipping initializing topic scoring")
+		return nil, nil
+	}
 	comsPerSlot := committeeCountPerSlot(activeValidators)
 	exceedsThreshold := comsPerSlot >= 2*subnetCount/uint64(params.BeaconConfig().SlotsPerEpoch)
 	firstDecay := time.Duration(1)
@@ -216,13 +226,15 @@ func defaultAggregateSubnetTopicParams(activeValidators uint64) (*pubsub.TopicSc
 	// Determine expected first deliveries based on the message rate.
 	firstMessageCap, err := decayLimit(scoreDecay(firstDecay*oneEpochDuration()), float64(numPerSlot*2/gossipSubD))
 	if err != nil {
-		return nil, err
+		log.Warnf("skipping initializing topic scoring: %v", err)
+		return nil, nil
 	}
 	firstMessageWeight := maxFirstDeliveryScore / firstMessageCap
 	// Determine expected mesh deliveries based on message rate applied with a dampening factor.
 	meshThreshold, err := decayThreshold(scoreDecay(meshDecay*oneEpochDuration()), float64(numPerSlot)/dampeningFactor)
 	if err != nil {
-		return nil, err
+		log.Warnf("skipping initializing topic scoring: %v", err)
+		return nil, nil
 	}
 	meshWeight := -scoreByWeight(topicWeight, meshThreshold)
 	meshCap := 4 * meshThreshold
