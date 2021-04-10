@@ -16,7 +16,6 @@ import (
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
@@ -279,27 +278,24 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 		}
 	}()
 
-	ps1, err := pubsub.NewGossipSub(context.Background(), hosts[0],
+	ps1, err := pubsub.NewFloodSub(context.Background(), hosts[0],
 		pubsub.WithMessageSigning(false),
 		pubsub.WithStrictSignatureVerification(false),
-		pubsub.WithPeerScore(peerScoringParams()),
 	)
 	require.NoError(t, err)
 
-	ps2, err := pubsub.NewGossipSub(context.Background(), hosts[1],
+	ps2, err := pubsub.NewFloodSub(context.Background(), hosts[1],
 		pubsub.WithMessageSigning(false),
 		pubsub.WithStrictSignatureVerification(false),
-		pubsub.WithPeerScore(peerScoringParams()),
 	)
 	require.NoError(t, err)
-	db := dbutil.SetupDB(t)
 	p := &Service{
 		host:                  hosts[0],
 		ctx:                   context.Background(),
 		pubsub:                ps1,
 		dv5Listener:           listeners[0],
 		joinedTopics:          map[string]*pubsub.Topic{},
-		cfg:                   &Config{DB: db},
+		cfg:                   &Config{},
 		genesisTime:           time.Now(),
 		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
 		subnetsLock:           make(map[uint64]*sync.RWMutex),
@@ -315,7 +311,7 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 		pubsub:                ps2,
 		dv5Listener:           listeners[1],
 		joinedTopics:          map[string]*pubsub.Topic{},
-		cfg:                   &Config{DB: db},
+		cfg:                   &Config{},
 		genesisTime:           time.Now(),
 		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
 		subnetsLock:           make(map[uint64]*sync.RWMutex),
@@ -334,7 +330,11 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 
 	// External peer subscribes to the topic.
 	topic += p.Encoding().ProtocolSuffix()
-	sub, err := p2.SubscribeToTopic(topic)
+	// We dont use our internal subscribe method
+	// due to using floodsub over here.
+	tpHandle, err := p2.JoinTopic(topic)
+	require.NoError(t, err)
+	sub, err := tpHandle.Subscribe()
 	require.NoError(t, err)
 
 	time.Sleep(50 * time.Millisecond) // libp2p fails without this delay...
@@ -359,7 +359,7 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 
 	// Broadcast to peers and wait.
 	require.NoError(t, p.BroadcastAttestation(context.Background(), subnet, msg))
-	if testutil.WaitTimeout(&wg, 1*time.Second) {
-		t.Error("Failed to receive pubsub within 5s")
+	if testutil.WaitTimeout(&wg, 4*time.Second) {
+		t.Error("Failed to receive pubsub within 4s")
 	}
 }
