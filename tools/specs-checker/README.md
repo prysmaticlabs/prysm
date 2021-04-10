@@ -35,7 +35,7 @@ bazel run //tools/specs-checker check -- --dir $PWD/beacon-chain
 bazel run //tools/specs-checker check -- --dir $PWD/validator
 bazel run //tools/specs-checker check -- --dir $PWD/shared
 ```
-Or, to check whole project:
+Or, to check the whole project:
 ```bash
 bazel run //tools/specs-checker check -- --dir $PWD
 ```
