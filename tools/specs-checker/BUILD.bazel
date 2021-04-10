@@ -14,6 +14,7 @@ go_library(
         "data/specs/phase0/validator.md",
         "data/specs/phase0/weak-subjectivity.md",
         "data/ssz/merkle-proofs.md",
+        "data/extra.md",
     ],
     importpath = "github.com/prysmaticlabs/prysm/tools/specs-checker",
     visibility = ["//visibility:public"],

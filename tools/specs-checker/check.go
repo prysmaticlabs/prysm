@@ -73,7 +73,7 @@ func inspectFile(path string, defs map[string][]string) error {
 			fmt.Printf("%s: %q is not found in spec docs\n", fset.Position(node.Pos()), defName)
 			return false
 		}
-		if !matchesRefImplementation(defName, refDefs, defBody) {
+		if !matchesRefImplementation(refDefs, defBody) {
 			fmt.Printf("%s: %q code does not match reference implementation in specs\n", fset.Position(node.Pos()), defName)
 			return false
 		}
@@ -87,19 +87,31 @@ func inspectFile(path string, defs map[string][]string) error {
 // parseSpecs parses input spec docs into map of function name -> array of function bodies
 // (single entity may have several definitions).
 func parseSpecs() (map[string][]string, error) {
+	loadSpecsFile := func(sb *strings.Builder, specFilePath string) error {
+		chunk, err := specFS.ReadFile(specFilePath)
+		if err != nil {
+			return fmt.Errorf("cannot read specs file: %w", err)
+		}
+		_, err = sb.Write(chunk)
+		if err != nil {
+			return fmt.Errorf("cannot copy specs file: %w", err)
+		}
+		return nil
+	}
+
 	// Traverse all spec files, and aggregate them within as single string.
 	var sb strings.Builder
 	for dirName, fileNames := range specDirs {
 		for _, fileName := range fileNames {
-			chunk, err := specFS.ReadFile(path.Join("data", dirName, fileName))
-			if err != nil {
-				return nil, fmt.Errorf("cannot read specs file: %w", err)
-			}
-			_, err = sb.Write(chunk)
-			if err != nil {
-				return nil, fmt.Errorf("cannot copy specs file: %w", err)
+			if err := loadSpecsFile(&sb, path.Join("data", dirName, fileName)); err != nil {
+				return nil, err
 			}
 		}
+	}
+
+	// Load file with extra definitions (this allows us to use pseudo-code that is not from specs).
+	if err := loadSpecsFile(&sb, path.Join("data", "extra.md")); err != nil {
+		return nil, err
 	}
 
 	// Parse docs into function name -> array of function bodies map.
@@ -134,7 +146,7 @@ func parseDefChunk(chunk string) (string, string) {
 }
 
 // matchesRefImplementation compares input string to reference code snippets (there might be multiple implementations).
-func matchesRefImplementation(defName string, refDefs []string, input string) bool {
+func matchesRefImplementation(refDefs []string, input string) bool {
 	for _, refDef := range refDefs {
 		refDefLines := strings.Split(refDef, "\n")
 		inputLines := strings.Split(input, "\n")
