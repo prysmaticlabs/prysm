@@ -1,23 +1,4 @@
 ```python
-@dataclass(eq=True, frozen=True)
-class LatestMessage(object):
-    epoch: Epoch
-    root: Root
-```
-```python
-@dataclass
-class Store(object):
-    time: uint64
-    genesis_time: uint64
-    justified_checkpoint: Checkpoint
-    finalized_checkpoint: Checkpoint
-    best_justified_checkpoint: Checkpoint
-    blocks: Dict[Root, BeaconBlock] = field(default_factory=dict)
-    block_states: Dict[Root, BeaconState] = field(default_factory=dict)
-    checkpoint_states: Dict[Checkpoint, BeaconState] = field(default_factory=dict)
-    latest_messages: Dict[ValidatorIndex, LatestMessage] = field(default_factory=dict)
-```
-```python
 def get_forkchoice_store(anchor_state: BeaconState, anchor_block: BeaconBlock) -> Store:
     assert anchor_block.state_root == hash_tree_root(anchor_state)
     anchor_root = hash_tree_root(anchor_block)

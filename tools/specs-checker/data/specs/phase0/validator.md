@@ -1,22 +1,4 @@
 ```python
-class Eth1Block(Container):
-    timestamp: uint64
-    deposit_root: Root
-    deposit_count: uint64
-    # All other eth1 block fields
-```
-```python
-class AggregateAndProof(Container):
-    aggregator_index: ValidatorIndex
-    aggregate: Attestation
-    selection_proof: BLSSignature
-```
-```python
-class SignedAggregateAndProof(Container):
-    message: AggregateAndProof
-    signature: BLSSignature
-```
-```python
 def check_if_validator_active(state: BeaconState, validator_index: ValidatorIndex) -> bool:
     validator = state.validators[validator_index]
     return is_active_validator(validator, get_current_epoch(state))
