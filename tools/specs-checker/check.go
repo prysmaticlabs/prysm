@@ -17,6 +17,10 @@ import (
 // Regex to find Python's "def".
 var reg1 = regexp.MustCompile(`def\s(.*)\(.*`)
 
+// checkNumRows defines whether tool should check that the spec comment is the last comment of the block, so not only
+// it matches the reference snippet, but it also has the same number of rows.
+const checkNumRows = false
+
 func check(cliCtx *cli.Context) error {
 	// Obtain reference snippets.
 	defs, err := parseSpecs()
@@ -161,7 +165,7 @@ func matchesRefImplementation(defName string, refDefs []string, input string, po
 		}
 		// Mark potential issues, when there's some more comments in our code (which might be ok, as we are not required
 		// to put specs comments as the last one in the doc block).
-		if len(refDefLines) != len(inputLines) {
+		if checkNumRows && len(refDefLines) != len(inputLines) {
 			fmt.Printf("%s: %q potentially has issues (comment is longer than reference implementation)\n", pos, defName)
 		}
 		if matchesPerfectly {
