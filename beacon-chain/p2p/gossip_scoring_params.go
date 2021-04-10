@@ -104,6 +104,9 @@ func (s *Service) topicScoreParams(topic string) (*pubsub.TopicScoreParams, erro
 }
 
 func (s *Service) retrieveActiveValidators() (uint64, error) {
+	if s.activeValidatorCount != 0 {
+		return s.activeValidatorCount, nil
+	}
 	rt := s.cfg.DB.LastArchivedRoot(s.ctx)
 	if rt == params.BeaconConfig().ZeroHash {
 		genState, err := s.cfg.DB.GenesisState(s.ctx)
@@ -113,7 +116,13 @@ func (s *Service) retrieveActiveValidators() (uint64, error) {
 		if genState == nil {
 			return 0, errors.New("no genesis state exists")
 		}
-		return helpers.ActiveValidatorCount(genState, helpers.CurrentEpoch(genState))
+		activeVals, err := helpers.ActiveValidatorCount(genState, helpers.CurrentEpoch(genState))
+		if err != nil {
+			return 0, err
+		}
+		// Cache active validator count
+		s.activeValidatorCount = activeVals
+		return activeVals, nil
 	}
 	bState, err := s.cfg.DB.State(s.ctx, rt)
 	if err != nil {
@@ -122,7 +131,13 @@ func (s *Service) retrieveActiveValidators() (uint64, error) {
 	if bState == nil {
 		return 0, errors.Errorf("no state with root %#x exists", rt)
 	}
-	return helpers.ActiveValidatorCount(bState, helpers.CurrentEpoch(bState))
+	activeVals, err := helpers.ActiveValidatorCount(bState, helpers.CurrentEpoch(bState))
+	if err != nil {
+		return 0, err
+	}
+	// Cache active validator count
+	s.activeValidatorCount = activeVals
+	return activeVals, nil
 }
 
 // Based on the lighthouse parameters.
