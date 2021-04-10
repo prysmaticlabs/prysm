@@ -18,6 +18,7 @@ const baseUrl = "https://raw.githubusercontent.com/ethereum/eth2.0-specs/dev"
 var reg2 = regexp.MustCompile(`(?msU)^\x60\x60\x60python(.*)^\x60\x60\x60`)
 
 func download(cliCtx *cli.Context) error {
+	fmt.Print("Downloading specs:\n")
 	baseDir := cliCtx.String(dirFlag.Name)
 	for dirName, fileNames := range specDirs {
 		if err := prepareDir(path.Join(baseDir, dirName)); err != nil {
@@ -26,6 +27,7 @@ func download(cliCtx *cli.Context) error {
 		for _, fileName := range fileNames {
 			outFilePath := path.Join(baseDir, dirName, fileName)
 			specDocUrl := fmt.Sprintf("%s/%s", baseUrl, fmt.Sprintf("%s/%s", dirName, fileName))
+			fmt.Printf("- %s\n", specDocUrl)
 			if err := getAndSaveFile(specDocUrl, outFilePath); err != nil {
 				return err
 			}
