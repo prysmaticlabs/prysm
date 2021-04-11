@@ -2,7 +2,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@prysm//tools/go:def.bzl", "go_library")
 
-#  Build with --define=blst_disabled=false to exclude blst library.
+#  Build with --define=blst_disabled=true to exclude blst library.
 config_setting(
     name = "linux_amd64",
     constraint_values = [
