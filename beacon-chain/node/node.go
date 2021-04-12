@@ -678,7 +678,6 @@ func (b *BeaconNode) registerRPCService() error {
 		StateNotifier:           b,
 		OperationNotifier:       b,
 		StateGen:                b.stateGen,
-		ForkChoiceStore:         b.forkChoiceStore,
 		EnableDebugRPCEndpoints: enableDebugRPCEndpoints,
 		MaxMsgSize:              maxMsgSize,
 	})
