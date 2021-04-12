@@ -11,6 +11,7 @@ go_library(
         "state.go",
         "trailing_slot_state_cache.go",
         "transition.go",
+        "transition_no_verify_sig.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/state",
     visibility = [
@@ -61,6 +62,7 @@ go_test(
         "state_test.go",
         "trailing_slot_state_cache_test.go",
         "transition_fuzz_test.go",
+        "transition_no_verify_sig_test.go",
         "transition_test.go",
     ],
     data = [
