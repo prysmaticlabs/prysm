@@ -152,8 +152,8 @@ func parseDefChunk(chunk string) (string, string) {
 // matchesRefImplementation compares input string to reference code snippets (there might be multiple implementations).
 func matchesRefImplementation(defName string, refDefs []string, input string, pos token.Position) bool {
 	for _, refDef := range refDefs {
-		refDefLines := strings.Split(refDef, "\n")
-		inputLines := strings.Split(input, "\n")
+		refDefLines := strings.Split(strings.TrimRight(refDef, "\n"), "\n")
+		inputLines := strings.Split(strings.TrimRight(input, "\n"), "\n")
 
 		matchesPerfectly := true
 		for i := 0; i < len(refDefLines); i++ {
