@@ -9,8 +9,8 @@ import (
 
 // Endpoint is an endpoint with authorization data.
 type Endpoint struct {
-	Endpoint string
-	Auth     AuthorizationData
+	Url  string
+	Auth AuthorizationData
 }
 
 // AuthorizationData holds all information necessary to authorize with HTTP.

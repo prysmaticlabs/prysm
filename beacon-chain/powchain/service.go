@@ -232,7 +232,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 func (s *Service) Start() {
 	// If the chain has not started already and we don't have access to eth1 nodes, we will not be
 	// able to generate the genesis state.
-	if !s.chainStartData.Chainstarted && (s.currHttpEndpoint == nil || s.currHttpEndpoint.Endpoint == "") {
+	if !s.chainStartData.Chainstarted && (s.currHttpEndpoint == nil || s.currHttpEndpoint.Url == "") {
 		// check for genesis state before shutting down the node,
 		// if a genesis state exists, we can continue on.
 		genState, err := s.cfg.BeaconDB.GenesisState(s.ctx)
@@ -245,7 +245,7 @@ func (s *Service) Start() {
 	}
 
 	// Exit early if eth1 endpoint is not set.
-	if s.currHttpEndpoint == nil || s.currHttpEndpoint.Endpoint == "" {
+	if s.currHttpEndpoint == nil || s.currHttpEndpoint.Url == "" {
 		return
 	}
 	go func() {
@@ -378,7 +378,7 @@ func (s *Service) connectToPowChain() error {
 }
 
 func (s *Service) dialETH1Nodes(endpoint httputils.Endpoint) (*ethclient.Client, *gethRPC.Client, error) {
-	httpRPCClient, err := gethRPC.Dial(endpoint.Endpoint)
+	httpRPCClient, err := gethRPC.Dial(endpoint.Url)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -460,7 +460,7 @@ func (s *Service) waitForConnection() {
 			s.connectedETH1 = true
 			s.runError = nil
 			log.WithFields(logrus.Fields{
-				"endpoint": logutil.MaskCredentialsLogging(s.currHttpEndpoint.Endpoint),
+				"endpoint": logutil.MaskCredentialsLogging(s.currHttpEndpoint.Url),
 			}).Info("Connected to eth1 proof-of-work chain")
 			return
 		}
@@ -489,7 +489,7 @@ func (s *Service) waitForConnection() {
 	for {
 		select {
 		case <-ticker.C:
-			log.Debugf("Trying to dial endpoint: %s", logutil.MaskCredentialsLogging(s.currHttpEndpoint.Endpoint))
+			log.Debugf("Trying to dial endpoint: %s", logutil.MaskCredentialsLogging(s.currHttpEndpoint.Url))
 			errConnect := s.connectToPowChain()
 			if errConnect != nil {
 				errorLogger(errConnect, "Could not connect to powchain endpoint")
@@ -508,7 +508,7 @@ func (s *Service) waitForConnection() {
 				s.connectedETH1 = true
 				s.runError = nil
 				log.WithFields(logrus.Fields{
-					"endpoint": logutil.MaskCredentialsLogging(s.currHttpEndpoint.Endpoint),
+					"endpoint": logutil.MaskCredentialsLogging(s.currHttpEndpoint.Url),
 				}).Info("Connected to eth1 proof-of-work chain")
 				return
 			}
@@ -866,7 +866,7 @@ func (s *Service) checkDefaultEndpoint() {
 	primaryEndpoint := s.cfg.HttpEndpoints[0]
 	// Return early if we are running on our primary
 	// endpoint.
-	if s.currHttpEndpoint.Endpoint == primaryEndpoint.Endpoint {
+	if s.currHttpEndpoint.Url == primaryEndpoint.Url {
 		return
 	}
 
@@ -897,7 +897,7 @@ func (s *Service) fallbackToNextEndpoint() {
 	totalEndpoints := len(s.cfg.HttpEndpoints)
 
 	for i, endpoint := range s.cfg.HttpEndpoints {
-		if endpoint.Endpoint == currEndpoint.Endpoint {
+		if endpoint.Url == currEndpoint.Url {
 			currIndex = i
 			break
 		}
@@ -911,7 +911,7 @@ func (s *Service) fallbackToNextEndpoint() {
 		return
 	}
 	s.currHttpEndpoint = &s.cfg.HttpEndpoints[nextIndex]
-	log.Infof("Falling back to alternative endpoint: %s", logutil.MaskCredentialsLogging(s.currHttpEndpoint.Endpoint))
+	log.Infof("Falling back to alternative endpoint: %s", logutil.MaskCredentialsLogging(s.currHttpEndpoint.Url))
 }
 
 // validates the current powchain data saved and makes sure that any
@@ -957,11 +957,11 @@ func dedupEndpoints(endpoints []httputils.Endpoint) []httputils.Endpoint {
 	selectionMap := make(map[string]bool)
 	newEndpoints := make([]httputils.Endpoint, 0, len(endpoints))
 	for _, point := range endpoints {
-		if selectionMap[point.Endpoint] {
+		if selectionMap[point.Url] {
 			continue
 		}
 		newEndpoints = append(newEndpoints, point)
-		selectionMap[point.Endpoint] = true
+		selectionMap[point.Url] = true
 	}
 	return newEndpoints
 }
