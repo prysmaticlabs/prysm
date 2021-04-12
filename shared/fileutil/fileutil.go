@@ -173,17 +173,19 @@ func ReadFileAsBytes(filename string) ([]byte, error) {
 
 // CopyFile copy a file from source to destination path.
 func CopyFile(src, dst string) error {
-	input, err := ioutil.ReadFile(src)
+	if !FileExists(src) {
+		return errors.New("source file does not exist at provided path")
+	}
+	f, err := os.Open(src)
 	if err != nil {
 		return err
 	}
-
-	err = ioutil.WriteFile(dst, input, params.BeaconIoConfig().ReadWritePermissions)
+	dstFile, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, params.BeaconIoConfig().ReadWritePermissions)
 	if err != nil {
-		err := errors.Wrapf(err, "error creating file %s", dst)
 		return err
 	}
-	return nil
+	_, err = io.Copy(dstFile, f)
+	return err
 }
 
 // CopyDir copies contents of one directory into another, recursively.

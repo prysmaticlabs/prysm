@@ -187,6 +187,7 @@ func (s *Server) Start() {
 	pb.RegisterHealthServer(s.grpcServer, s)
 	pb.RegisterBeaconServer(s.grpcServer, s)
 	pb.RegisterAccountsServer(s.grpcServer, s)
+	pb.RegisterSlashingProtectionServer(s.grpcServer, s)
 
 	go func() {
 		if s.listener != nil {
