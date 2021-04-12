@@ -26,7 +26,7 @@ go_test(
     srcs = ["debug_test.go"],
     embed = [":go_default_library"],
     deps = [
-        "//beacon-chain/forkchoice/protoarray:go_default_library",
+        "//beacon-chain/blockchain/testing:go_default_library",
         "//beacon-chain/rpc/testutil:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/testutil:go_default_library",
