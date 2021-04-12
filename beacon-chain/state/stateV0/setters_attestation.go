@@ -97,4 +97,3 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestat
 
 	return nil
 }
-

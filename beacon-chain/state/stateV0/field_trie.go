@@ -145,4 +145,3 @@ func (f *FieldTrie) TrieRoot() ([32]byte, error) {
 		return [32]byte{}, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(datType).Name())
 	}
 }
-

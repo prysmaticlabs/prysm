@@ -56,4 +56,3 @@ func (b *BeaconState) SetFinalizedCheckpoint(val *ethpb.Checkpoint) error {
 	b.markFieldAsDirty(finalizedCheckpoint)
 	return nil
 }
-

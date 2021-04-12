@@ -51,4 +51,3 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(idx uint64, val []byte) error {
 
 	return nil
 }
-

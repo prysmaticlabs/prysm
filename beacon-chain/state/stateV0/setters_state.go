@@ -57,4 +57,3 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 	b.addDirtyIndices(stateRoots, []uint64{idx})
 	return nil
 }
-

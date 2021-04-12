@@ -94,4 +94,3 @@ func (b *BeaconState) blockRootAtIndex(idx uint64) ([]byte, error) {
 	}
 	return b.safeCopyBytesAtIndex(b.state.BlockRoots, idx)
 }
-

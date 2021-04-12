@@ -66,7 +66,7 @@ func (b *BeaconState) currentEpochAttestations() []*pbp2p.PendingAttestation {
 func (h *stateRootHasher) epochAttestationsRoot(atts []*pbp2p.PendingAttestation) ([32]byte, error) {
 	max := uint64(params.BeaconConfig().SlotsPerEpoch) * params.BeaconConfig().MaxAttestations
 	if uint64(len(atts)) > max {
-		return [32]byte {}, fmt.Errorf("epoch attestation exceeds max length %d", max)
+		return [32]byte{}, fmt.Errorf("epoch attestation exceeds max length %d", max)
 	}
 
 	hasher := hashutil.CustomSHA256Hasher()
@@ -122,4 +122,3 @@ func (h *stateRootHasher) pendingAttestationRoot(hasher htrutils.HashFn, att *pb
 	}
 	return res, nil
 }
-

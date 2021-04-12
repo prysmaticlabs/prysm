@@ -79,4 +79,3 @@ func (b *BeaconState) randaoMixesLength() int {
 
 	return len(b.state.RandaoMixes)
 }
-

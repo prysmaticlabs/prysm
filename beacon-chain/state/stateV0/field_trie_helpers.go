@@ -139,4 +139,3 @@ func handlePendingAttestation(val []*pb.PendingAttestation, indices []uint64, co
 	}
 	return roots, nil
 }
-
