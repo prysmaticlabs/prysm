@@ -57,28 +57,6 @@ type ReadOnlyDatabase interface {
 	DepositContractAddress(ctx context.Context) ([]byte, error)
 	// Powchain operations.
 	PowchainData(ctx context.Context) (*db.ETH1ChainData, error)
-	// Slasher operations.
-	LastEpochWrittenForValidators(
-		ctx context.Context, validatorIndices []types.ValidatorIndex,
-	) ([]*slashertypes.AttestedEpochForValidator, error)
-	AttestationRecordForValidator(
-		ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch, historyLength types.Epoch,
-	) (*slashertypes.IndexedAttestationWrapper, error)
-	CheckAttesterDoubleVotes(
-		ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper, historyLength types.Epoch,
-	) ([]*slashertypes.AttesterDoubleVote, error)
-	LoadSlasherChunks(
-		ctx context.Context, kind slashertypes.ChunkKind, diskKeys [][]byte,
-	) ([][]uint16, []bool, error)
-	CheckDoubleBlockProposals(
-		ctx context.Context, proposals []*slashertypes.SignedBlockHeaderWrapper,
-	) ([]*eth.ProposerSlashing, error)
-	PruneAttestations(
-		ctx context.Context, currentEpoch types.Epoch, historyLength types.Epoch,
-	) error
-	PruneProposals(
-		ctx context.Context, currentEpoch types.Epoch, historyLength types.Epoch,
-	) error
 }
 
 // NoHeadAccessDatabase defines a struct without access to chain head data.
@@ -108,21 +86,6 @@ type NoHeadAccessDatabase interface {
 	SaveDepositContractAddress(ctx context.Context, addr common.Address) error
 	// Powchain operations.
 	SavePowchainData(ctx context.Context, data *db.ETH1ChainData) error
-	// Slasher operations.
-	SaveLastEpochWrittenForValidators(
-		ctx context.Context, validatorIndices []types.ValidatorIndex, epoch types.Epoch,
-	) error
-	SaveAttestationRecordsForValidators(
-		ctx context.Context,
-		attestations []*slashertypes.IndexedAttestationWrapper,
-		historyLength types.Epoch,
-	) error
-	SaveSlasherChunks(
-		ctx context.Context, kind slashertypes.ChunkKind, chunkKeys [][]byte, chunks [][]uint16,
-	) error
-	SaveBlockProposals(
-		ctx context.Context, proposal []*slashertypes.SignedBlockHeaderWrapper,
-	) error
 	// Run any required database migrations.
 	RunMigrations(ctx context.Context) error
 
@@ -141,6 +104,48 @@ type HeadAccessDatabase interface {
 	LoadGenesis(ctx context.Context, r io.Reader) error
 	SaveGenesisData(ctx context.Context, state iface.BeaconState) error
 	EnsureEmbeddedGenesis(ctx context.Context) error
+}
+
+// SlasherDatabase interface for persisting data related to detecting slashable offenses on eth2.
+type SlasherDatabase interface {
+	io.Closer
+	SaveLastEpochWrittenForValidators(
+		ctx context.Context, validatorIndices []types.ValidatorIndex, epoch types.Epoch,
+	) error
+	SaveAttestationRecordsForValidators(
+		ctx context.Context,
+		attestations []*slashertypes.IndexedAttestationWrapper,
+		historyLength types.Epoch,
+	) error
+	SaveSlasherChunks(
+		ctx context.Context, kind slashertypes.ChunkKind, chunkKeys [][]byte, chunks [][]uint16,
+	) error
+	SaveBlockProposals(
+		ctx context.Context, proposal []*slashertypes.SignedBlockHeaderWrapper,
+	) error
+	LastEpochWrittenForValidators(
+		ctx context.Context, validatorIndices []types.ValidatorIndex,
+	) ([]*slashertypes.AttestedEpochForValidator, error)
+	AttestationRecordForValidator(
+		ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch, historyLength types.Epoch,
+	) (*slashertypes.IndexedAttestationWrapper, error)
+	CheckAttesterDoubleVotes(
+		ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper, historyLength types.Epoch,
+	) ([]*slashertypes.AttesterDoubleVote, error)
+	LoadSlasherChunks(
+		ctx context.Context, kind slashertypes.ChunkKind, diskKeys [][]byte,
+	) ([][]uint16, []bool, error)
+	CheckDoubleBlockProposals(
+		ctx context.Context, proposals []*slashertypes.SignedBlockHeaderWrapper,
+	) ([]*eth.ProposerSlashing, error)
+	PruneAttestations(
+		ctx context.Context, currentEpoch types.Epoch, historyLength types.Epoch,
+	) error
+	PruneProposals(
+		ctx context.Context, currentEpoch types.Epoch, historyLength types.Epoch,
+	) error
+	DatabasePath() string
+	ClearDB() error
 }
 
 // Database interface with full access.

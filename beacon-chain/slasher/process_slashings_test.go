@@ -21,7 +21,7 @@ import (
 
 func TestService_processAttesterSlashings(t *testing.T) {
 	ctx := context.Background()
-	beaconDB := dbtest.SetupDB(t)
+	slasherDB := dbtest.SetupSlasherDB(t)
 
 	beaconState, err := testutil.NewBeaconState()
 	require.NoError(t, err)
@@ -42,9 +42,9 @@ func TestService_processAttesterSlashings(t *testing.T) {
 	}
 	s := &Service{
 		serviceCfg: &ServiceConfig{
-			Database:                beaconDB,
+			Database:                slasherDB,
 			AttestationStateFetcher: mockChain,
-			StateGen:                stategen.New(beaconDB),
+			StateGen:                stategen.New(slasherDB),
 			SlashingPoolInserter:    &slashings.PoolMock{},
 			HeadStateFetcher:        mockChain,
 		},
@@ -127,7 +127,7 @@ func TestService_processAttesterSlashings(t *testing.T) {
 
 func TestService_processProposerSlashings(t *testing.T) {
 	ctx := context.Background()
-	beaconDB := dbtest.SetupDB(t)
+	slasherDB := dbtest.SetupSlasherDB(t)
 
 	beaconState, err := testutil.NewBeaconState()
 	require.NoError(t, err)
@@ -148,9 +148,9 @@ func TestService_processProposerSlashings(t *testing.T) {
 	}
 	s := &Service{
 		serviceCfg: &ServiceConfig{
-			Database:                beaconDB,
+			Database:                slasherDB,
 			AttestationStateFetcher: mockChain,
-			StateGen:                stategen.New(beaconDB),
+			StateGen:                stategen.New(slasherDB),
 			SlashingPoolInserter:    &slashings.PoolMock{},
 			HeadStateFetcher:        mockChain,
 		},

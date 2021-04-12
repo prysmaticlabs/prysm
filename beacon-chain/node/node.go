@@ -21,7 +21,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/slasherkv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
@@ -67,6 +69,7 @@ type BeaconNode struct {
 	lock                    sync.RWMutex
 	stop                    chan struct{} // Channel to wait for termination notifications.
 	db                      db.Database
+	slasherDB               iface.SlasherDatabase
 	attestationPool         attestations.Pool
 	exitPool                voluntaryexits.PoolManager
 	slashingsPool           slashings.PoolManager
@@ -117,6 +120,12 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 
 	if err := beacon.startDB(cliCtx); err != nil {
 		return nil, err
+	}
+
+	if featureconfig.Get().EnableSlasher {
+		if err := beacon.startSlaherDB(cliCtx); err != nil {
+			return nil, err
+		}
 	}
 
 	beacon.startStateGen()
@@ -316,6 +325,50 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
 	}
 
 	return b.db.EnsureEmbeddedGenesis(b.ctx)
+}
+
+func (b *BeaconNode) startSlaherDB(cliCtx *cli.Context) error {
+	baseDir := cliCtx.String(cmd.DataDirFlag.Name)
+	dbPath := filepath.Join(baseDir, kv.BeaconNodeDbDirName)
+	clearDB := cliCtx.Bool(cmd.ClearDB.Name)
+	forceClearDB := cliCtx.Bool(cmd.ForceClearDB.Name)
+
+	log.WithField("database-path", dbPath).Info("Checking DB")
+
+	d, err := db.NewSlasherDB(b.ctx, dbPath, &slasherkv.Config{
+		InitialMMapSize: cliCtx.Int(cmd.BoltMMapInitialSizeFlag.Name),
+	})
+	if err != nil {
+		return err
+	}
+	clearDBConfirmed := false
+	if clearDB && !forceClearDB {
+		actionText := "This will delete your beacon chain database stored in your data directory. " +
+			"Your database backups will not be removed - do you want to proceed? (Y/N)"
+		deniedText := "Database will not be deleted. No changes have been made."
+		clearDBConfirmed, err = cmd.ConfirmAction(actionText, deniedText)
+		if err != nil {
+			return err
+		}
+	}
+	if clearDBConfirmed || forceClearDB {
+		log.Warning("Removing database")
+		if err := d.Close(); err != nil {
+			return errors.Wrap(err, "could not close db prior to clearing")
+		}
+		if err := d.ClearDB(); err != nil {
+			return errors.Wrap(err, "could not clear database")
+		}
+		d, err = db.NewSlasherDB(b.ctx, dbPath, &slasherkv.Config{
+			InitialMMapSize: cliCtx.Int(cmd.BoltMMapInitialSizeFlag.Name),
+		})
+		if err != nil {
+			return errors.Wrap(err, "could not create new database")
+		}
+	}
+
+	b.slasherDB = d
+	return nil
 }
 
 func (b *BeaconNode) startStateGen() {
@@ -543,7 +596,7 @@ func (b *BeaconNode) registerSlasherService() error {
 	slasherSrv, err := slasher.New(b.ctx, &slasher.ServiceConfig{
 		IndexedAttestationsFeed: b.slasherAttestationsFeed,
 		BeaconBlockHeadersFeed:  b.slasherBlockHeadersFeed,
-		Database:                b.db,
+		Database:                b.slasherDB,
 		StateNotifier:           b,
 		AttestationStateFetcher: chainService,
 		StateGen:                b.stateGen,

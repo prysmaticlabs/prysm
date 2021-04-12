@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/slasher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
@@ -25,7 +25,7 @@ import (
 // ServiceConfig for the simulator.
 type ServiceConfig struct {
 	Params                      *Parameters
-	Database                    db.Database
+	Database                    iface.SlasherDatabase
 	StateNotifier               statefeed.Notifier
 	AttestationStateFetcher     blockchain.AttestationStateFetcher
 	HeadStateFetcher            blockchain.HeadFetcher

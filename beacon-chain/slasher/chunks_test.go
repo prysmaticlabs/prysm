@@ -82,7 +82,7 @@ func TestMaxSpanChunksSlice_MaxChunkSpanFrom(t *testing.T) {
 
 func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 	ctx := context.Background()
-	beaconDB := dbtest.SetupDB(t)
+	slasherDB := dbtest.SetupSlasherDB(t)
 	params := &Parameters{
 		chunkSize:          3,
 		validatorChunkSize: 2,
@@ -113,11 +113,11 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 
 	// An attestation with source 1 and target 2 should not be slashable
 	// based on our min chunk for either validator.
-	slashing, err := chunk.CheckSlashable(ctx, beaconDB, validatorIdx, att)
+	slashing, err := chunk.CheckSlashable(ctx, slasherDB, validatorIdx, att)
 	require.NoError(t, err)
 	require.Equal(t, (*ethpb.AttesterSlashing)(nil), slashing)
 
-	slashing, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx.Sub(1), att)
+	slashing, err = chunk.CheckSlashable(ctx, slasherDB, validatorIdx.Sub(1), att)
 	require.NoError(t, err)
 	require.Equal(t, (*ethpb.AttesterSlashing)(nil), slashing)
 
@@ -143,7 +143,7 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 	target = types.Epoch(3)
 	surroundingVote := createAttestationWrapper(t, source, target, nil, nil)
 
-	slashing, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx, surroundingVote)
+	slashing, err = chunk.CheckSlashable(ctx, slasherDB, validatorIdx, surroundingVote)
 	require.NoError(t, err)
 	require.Equal(t, (*ethpb.AttesterSlashing)(nil), slashing)
 
@@ -151,20 +151,20 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 	// surrounding vote is indeed slashable.
 	attData := att.IndexedAttestation.Data
 	attRecord := createAttestationWrapper(t, attData.Source.Epoch, attData.Target.Epoch, []uint64{uint64(validatorIdx)}, []byte{1})
-	err = beaconDB.SaveAttestationRecordsForValidators(
+	err = slasherDB.SaveAttestationRecordsForValidators(
 		ctx,
 		[]*slashertypes.IndexedAttestationWrapper{attRecord}, params.historyLength,
 	)
 	require.NoError(t, err)
 
-	slashing, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx, surroundingVote)
+	slashing, err = chunk.CheckSlashable(ctx, slasherDB, validatorIdx, surroundingVote)
 	require.NoError(t, err)
 	require.NotEqual(t, (*ethpb.AttesterSlashing)(nil), slashing)
 }
 
 func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 	ctx := context.Background()
-	beaconDB := dbtest.SetupDB(t)
+	slasherDB := dbtest.SetupSlasherDB(t)
 	params := &Parameters{
 		chunkSize:          4,
 		validatorChunkSize: 2,
@@ -195,11 +195,11 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 
 	// An attestation with source 1 and target 2 should not be slashable
 	// based on our max chunk for either validator.
-	slashing, err := chunk.CheckSlashable(ctx, beaconDB, validatorIdx, att)
+	slashing, err := chunk.CheckSlashable(ctx, slasherDB, validatorIdx, att)
 	require.NoError(t, err)
 	require.Equal(t, (*ethpb.AttesterSlashing)(nil), slashing)
 
-	slashing, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx.Sub(1), att)
+	slashing, err = chunk.CheckSlashable(ctx, slasherDB, validatorIdx.Sub(1), att)
 	require.NoError(t, err)
 	require.Equal(t, (*ethpb.AttesterSlashing)(nil), slashing)
 
@@ -225,7 +225,7 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 	target = types.Epoch(2)
 	surroundedVote := createAttestationWrapper(t, source, target, nil, nil)
 
-	slashing, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx, surroundedVote)
+	slashing, err = chunk.CheckSlashable(ctx, slasherDB, validatorIdx, surroundedVote)
 	require.NoError(t, err)
 	require.Equal(t, (*ethpb.AttesterSlashing)(nil), slashing)
 
@@ -236,14 +236,14 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 	attRecord := createAttestationWrapper(
 		t, attData.Source.Epoch, attData.Target.Epoch, []uint64{uint64(validatorIdx)}, signingRoot[:],
 	)
-	err = beaconDB.SaveAttestationRecordsForValidators(
+	err = slasherDB.SaveAttestationRecordsForValidators(
 		ctx,
 		[]*slashertypes.IndexedAttestationWrapper{attRecord},
 		params.historyLength,
 	)
 	require.NoError(t, err)
 
-	slashing, err = chunk.CheckSlashable(ctx, beaconDB, validatorIdx, surroundedVote)
+	slashing, err = chunk.CheckSlashable(ctx, slasherDB, validatorIdx, surroundedVote)
 	require.NoError(t, err)
 	require.NotEqual(t, (*ethpb.AttesterSlashing)(nil), slashing)
 }

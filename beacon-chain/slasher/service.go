@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -26,7 +26,7 @@ import (
 type ServiceConfig struct {
 	IndexedAttestationsFeed *event.Feed
 	BeaconBlockHeadersFeed  *event.Feed
-	Database                db.Database
+	Database                iface.SlasherDatabase
 	StateNotifier           statefeed.Notifier
 	AttestationStateFetcher blockchain.AttestationStateFetcher
 	StateGen                stategen.StateManager
