@@ -39,7 +39,14 @@ func TestHttpEndpoint(t *testing.T) {
 		endpoint := HttpEndpoint(url + ",Bearer token")
 		assert.Equal(t, url, endpoint.Url)
 		assert.Equal(t, authorizationmethod.Bearer, endpoint.Auth.Method)
-		assert.Equal(t, "Bearer token", endpoint.Auth.Value)
+		assert.Equal(t, "token", endpoint.Auth.Value)
+	})
+	t.Run("Bearer auth with incorrect format", func(t *testing.T) {
+		hook.Reset()
+		endpoint := HttpEndpoint(url + ",Bearer token foo")
+		assert.Equal(t, url, endpoint.Url)
+		assert.Equal(t, authorizationmethod.None, endpoint.Auth.Method)
+		assert.LogsContain(t, hook, "Skipping authorization")
 	})
 	t.Run("Too many separators", func(t *testing.T) {
 		endpoint := HttpEndpoint(url + ",Bearer token,foo")

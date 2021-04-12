@@ -34,8 +34,13 @@ func HttpEndpoint(eth1Provider string) httputils.Endpoint {
 				endpoint.Auth.Value = base64.StdEncoding.EncodeToString([]byte(basicAuthValues[1]))
 			}
 		case authorizationmethod.Bearer:
-			endpoint.Auth.Method = authorizationmethod.Bearer
-			endpoint.Auth.Value = authValues[1]
+			bearerAuthValues := strings.Split(authValues[1], " ")
+			if len(bearerAuthValues) != 2 {
+				log.Errorf("Bearer Authentication has incorrect format. Skipping authorization.")
+			} else {
+				endpoint.Auth.Method = authorizationmethod.Bearer
+				endpoint.Auth.Value = bearerAuthValues[1]
+			}
 		case authorizationmethod.None:
 			log.Errorf("Authorization has incorrect format or authorization type is not supported.")
 		}
