@@ -5,8 +5,6 @@ import (
 	"sort"
 	"testing"
 
-	"google.golang.org/protobuf/proto"
-
 	fssz "github.com/ferranbt/fastssz"
 	c "github.com/patrickmn/go-cache"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -16,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"google.golang.org/protobuf/proto"
 )
 
 func TestKV_Aggregated_AggregateUnaggregatedAttestations(t *testing.T) {
