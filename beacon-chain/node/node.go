@@ -82,7 +82,7 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 	if err := configureTracing(cliCtx); err != nil {
 		return nil, err
 	}
-	prereq.WarnIfNotSupported(cliCtx.Context)
+	prereq.WarnIfPlatformNotSupported(cliCtx.Context)
 	featureconfig.ConfigureBeaconChain(cliCtx)
 	cmd.ConfigureBeaconChain(cliCtx)
 	flags.ConfigureGlobalFlags(cliCtx)
