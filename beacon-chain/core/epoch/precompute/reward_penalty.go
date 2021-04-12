@@ -70,8 +70,7 @@ func AttestationsDelta(state iface.ReadOnlyBeaconState, pBal *Balance, vp []*Val
 }
 
 func attestationDelta(pBal *Balance, v *Validator, prevEpoch, finalizedEpoch types.Epoch) (uint64, uint64) {
-	eligible := v.IsActivePrevEpoch || (v.IsSlashed && !v.IsWithdrawableCurrentEpoch)
-	if !eligible || pBal.ActiveCurrentEpoch == 0 {
+	if !EligibleForRewards(v) || pBal.ActiveCurrentEpoch == 0 {
 		return 0, 0
 	}
 
@@ -176,4 +175,12 @@ func ProposersDelta(state iface.ReadOnlyBeaconState, pBal *Balance, vp []*Valida
 		}
 	}
 	return rewards, nil
+}
+
+// EligibleForRewards for validator.
+//
+// Spec code:
+// if is_active_validator(v, previous_epoch) or (v.slashed and previous_epoch + 1 < v.withdrawable_epoch)
+func EligibleForRewards(v *Validator) bool {
+	return v.IsActivePrevEpoch || (v.IsSlashed && !v.IsWithdrawableCurrentEpoch)
 }
