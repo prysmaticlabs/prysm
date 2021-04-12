@@ -280,9 +280,9 @@ func (s *Service) Start() {
 			PeersFetcher:       s.cfg.PeersFetcher,
 		}
 		debugServerV1 := &debugv1.Server{
-			Ctx:             s.ctx,
-			BeaconDB:        s.cfg.BeaconDB,
-			ForkChoiceStore: s.cfg.ForkChoiceStore,
+			Ctx:         s.ctx,
+			BeaconDB:    s.cfg.BeaconDB,
+			HeadFetcher: s.cfg.HeadFetcher,
 			StateFetcher: &statefetcher.StateProvider{
 				BeaconDB:           s.cfg.BeaconDB,
 				ChainInfoFetcher:   s.cfg.ChainInfoFetcher,

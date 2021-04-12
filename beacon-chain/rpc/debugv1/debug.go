@@ -32,7 +32,7 @@ func (ds *Server) ListForkChoiceHeads(ctx context.Context, _ *ptypes.Empty) (*et
 	ctx, span := trace.StartSpan(ctx, "debugv1.ListForkChoiceHeads")
 	defer span.End()
 
-	headRoots, headSlots := ds.ForkChoiceStore.ChainHeads()
+	headRoots, headSlots := ds.HeadFetcher.ChainHeads()
 	resp := &ethpb.ForkChoiceHeadsResponse{
 		Data: make([]*ethpb.ForkChoiceHead, len(headRoots)),
 	}
