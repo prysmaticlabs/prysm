@@ -5,6 +5,8 @@ import (
 	"sort"
 	"testing"
 
+	"google.golang.org/protobuf/proto"
+
 	fssz "github.com/ferranbt/fastssz"
 	c "github.com/patrickmn/go-cache"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -260,6 +262,7 @@ func TestKV_Aggregated_AggregatedAttestations(t *testing.T) {
 }
 
 func TestKV_Aggregated_DeleteAggregatedAttestation(t *testing.T) {
+	proto.Equal()
 	t.Run("nil attestation", func(t *testing.T) {
 		cache := NewAttCaches()
 		assert.ErrorContains(t, "attestation can't be nil", cache.DeleteAggregatedAttestation(nil))

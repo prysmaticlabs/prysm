@@ -5,9 +5,8 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/sszutil"
-
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/slasher/db/types"
@@ -15,7 +14,6 @@ import (
 )
 
 func TestStore_ProposerSlashingNilBucket(t *testing.T) {
-
 	db := setupDB(t)
 	ctx := context.Background()
 
