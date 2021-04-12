@@ -8,7 +8,7 @@ load("@com_github_prysmaticlabs_ethereumapis//tools:ssz.bzl", "SSZ_DEPS", "ssz_g
 
 go_proto_library(
     name = "v1_go_proto",
-    compiler = "//:proto_compiler",
+    compiler = "@prysm//:cast_proto_compiler",
     importpath = "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1",
     proto = ":v1_proto",
     visibility = ["//visibility:public"],
