@@ -137,7 +137,6 @@ func CalculateStateRoot(
 	return state.HashTreeRoot(ctx)
 }
 
-
 // ProcessBlockNoVerifyAnySig creates a new, modified beacon state by applying block operation
 // transformations as defined in the Ethereum Serenity specification. It does not validate
 // any block signature except for deposit and slashing signatures. It also returns the relevant
