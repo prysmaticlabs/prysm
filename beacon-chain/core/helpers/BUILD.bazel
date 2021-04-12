@@ -13,6 +13,7 @@ go_library(
         "signing_root.go",
         "slot_epoch.go",
         "validators.go",
+        "weak_subjectivity.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers",
     visibility = [
@@ -62,6 +63,7 @@ go_test(
         "signing_root_test.go",
         "slot_epoch_test.go",
         "validators_test.go",
+        "weak_subjectivity_test.go",
     ],
     embed = [":go_default_library"],
     shard_count = 2,
