@@ -44,7 +44,11 @@ func (s sortableIndices) Less(i, j int) bool {
 // need to get attesting balance from attestations.
 //
 // Spec pseudocode definition:
-//  def get_attesting_balance(state: BeaconState, attestations: List[PendingAttestation]) -> Gwei:
+//  def get_attesting_balance(state: BeaconState, attestations: Sequence[PendingAttestation]) -> Gwei:
+//    """
+//    Return the combined effective balance of the set of unslashed validators participating in ``attestations``.
+//    Note: ``get_total_balance`` returns ``EFFECTIVE_BALANCE_INCREMENT`` Gwei minimum to avoid divisions by zero.
+//    """
 //    return get_total_balance(state, get_unslashed_attesting_indices(state, attestations))
 func AttestingBalance(state iface.ReadOnlyBeaconState, atts []*pb.PendingAttestation) (uint64, error) {
 	indices, err := UnslashedAttestingIndices(state, atts)
@@ -192,47 +196,15 @@ func ProcessSlashings(state iface.BeaconState) (iface.BeaconState, error) {
 	return state, err
 }
 
-// ProcessFinalUpdates processes the final updates during epoch processing.
+// ProcessEth1DataReset processes updates to ETH1 data votes during epoch processing.
 //
 // Spec pseudocode definition:
-//  def process_final_updates(state: BeaconState) -> None:
-//    current_epoch = get_current_epoch(state)
-//    next_epoch = Epoch(current_epoch + 1)
+//  def process_eth1_data_reset(state: BeaconState) -> None:
+//    next_epoch = Epoch(get_current_epoch(state) + 1)
 //    # Reset eth1 data votes
 //    if next_epoch % EPOCHS_PER_ETH1_VOTING_PERIOD == 0:
 //        state.eth1_data_votes = []
-//    # Update effective balances with hysteresis
-//    for index, validator in enumerate(state.validators):
-//        balance = state.balances[index]
-//        HYSTERESIS_INCREMENT = EFFECTIVE_BALANCE_INCREMENT // HYSTERESIS_QUOTIENT
-//        DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_DOWNWARD_MULTIPLIER
-//        UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_UPWARD_MULTIPLIER
-//        if (
-//            balance + DOWNWARD_THRESHOLD < validator.effective_balance
-//            or validator.effective_balance + UPWARD_THRESHOLD < balance
-//        ):
-//        validator.effective_balance = min(balance - balance % EFFECTIVE_BALANCE_INCREMENT, MAX_EFFECTIVE_BALANCE)
-//    index_epoch = Epoch(next_epoch + ACTIVATION_EXIT_DELAY)
-//    index_root_position = index_epoch % EPOCHS_PER_HISTORICAL_VECTOR
-//    indices_list = List[ValidatorIndex, VALIDATOR_REGISTRY_LIMIT](get_active_validator_indices(state, index_epoch))
-//    state.active_index_roots[index_root_position] = hash_tree_root(indices_list)
-//    # Set committees root
-//    committee_root_position = next_epoch % EPOCHS_PER_HISTORICAL_VECTOR
-//    state.compact_committees_roots[committee_root_position] = get_compact_committees_root(state, next_epoch)
-//    # Reset slashings
-//    state.slashings[next_epoch % EPOCHS_PER_SLASHINGS_VECTOR] = Gwei(0)
-//    # Set randao mix
-//    state.randao_mixes[next_epoch % EPOCHS_PER_HISTORICAL_VECTOR] = get_randao_mix(state, current_epoch)
-//    # Set historical root accumulator
-//    if next_epoch % (SLOTS_PER_HISTORICAL_ROOT // SLOTS_PER_EPOCH) == 0:
-//        historical_batch = HistoricalBatch(block_roots=state.block_roots, state_roots=state.state_roots)
-//        state.historical_roots.append(hash_tree_root(historical_batch))
-//    # Update start shard
-//    state.start_shard = Shard((state.start_shard + get_shard_delta(state, current_epoch)) % SHARD_COUNT)
-//    # Rotate current/previous epoch attestations
-//    state.previous_epoch_attestations = state.current_epoch_attestations
-//    state.current_epoch_attestations = []
-func ProcessFinalUpdates(state iface.BeaconState) (iface.BeaconState, error) {
+func ProcessEth1DataReset(state iface.BeaconState) (iface.BeaconState, error) {
 	currentEpoch := helpers.CurrentEpoch(state)
 	nextEpoch := currentEpoch + 1
 
@@ -243,6 +215,25 @@ func ProcessFinalUpdates(state iface.BeaconState) (iface.BeaconState, error) {
 		}
 	}
 
+	return state, nil
+}
+
+// ProcessEffectiveBalanceUpdates processes effective balance updates during epoch processing.
+//
+// Spec pseudocode definition:
+//  def process_effective_balance_updates(state: BeaconState) -> None:
+//    # Update effective balances with hysteresis
+//    for index, validator in enumerate(state.validators):
+//        balance = state.balances[index]
+//        HYSTERESIS_INCREMENT = uint64(EFFECTIVE_BALANCE_INCREMENT // HYSTERESIS_QUOTIENT)
+//        DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_DOWNWARD_MULTIPLIER
+//        UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_UPWARD_MULTIPLIER
+//        if (
+//            balance + DOWNWARD_THRESHOLD < validator.effective_balance
+//            or validator.effective_balance + UPWARD_THRESHOLD < balance
+//        ):
+//            validator.effective_balance = min(balance - balance % EFFECTIVE_BALANCE_INCREMENT, MAX_EFFECTIVE_BALANCE)
+func ProcessEffectiveBalanceUpdates(state iface.BeaconState) (iface.BeaconState, error) {
 	effBalanceInc := params.BeaconConfig().EffectiveBalanceIncrement
 	maxEffBalance := params.BeaconConfig().MaxEffectiveBalance
 	hysteresisInc := effBalanceInc / params.BeaconConfig().HysteresisQuotient
@@ -275,6 +266,20 @@ func ProcessFinalUpdates(state iface.BeaconState) (iface.BeaconState, error) {
 		return nil, err
 	}
 
+	return state, nil
+}
+
+// ProcessSlashingsReset processes the total slashing balances updates during epoch processing.
+//
+// Spec pseudocode definition:
+//  def process_slashings_reset(state: BeaconState) -> None:
+//    next_epoch = Epoch(get_current_epoch(state) + 1)
+//    # Reset slashings
+//    state.slashings[next_epoch % EPOCHS_PER_SLASHINGS_VECTOR] = Gwei(0)
+func ProcessSlashingsReset(state iface.BeaconState) (iface.BeaconState, error) {
+	currentEpoch := helpers.CurrentEpoch(state)
+	nextEpoch := currentEpoch + 1
+
 	// Set total slashed balances.
 	slashedExitLength := params.BeaconConfig().EpochsPerSlashingsVector
 	slashedEpoch := nextEpoch % slashedExitLength
@@ -289,6 +294,21 @@ func ProcessFinalUpdates(state iface.BeaconState) (iface.BeaconState, error) {
 	if err := state.UpdateSlashingsAtIndex(uint64(slashedEpoch) /* index */, 0 /* value */); err != nil {
 		return nil, err
 	}
+
+	return state, nil
+}
+
+// ProcessRandaoMixesReset processes the final updates to RANDAO mix during epoch processing.
+//
+// Spec pseudocode definition:
+//  def process_randao_mixes_reset(state: BeaconState) -> None:
+//    current_epoch = get_current_epoch(state)
+//    next_epoch = Epoch(current_epoch + 1)
+//    # Set randao mix
+//    state.randao_mixes[next_epoch % EPOCHS_PER_HISTORICAL_VECTOR] = get_randao_mix(state, current_epoch)
+func ProcessRandaoMixesReset(state iface.BeaconState) (iface.BeaconState, error) {
+	currentEpoch := helpers.CurrentEpoch(state)
+	nextEpoch := currentEpoch + 1
 
 	// Set RANDAO mix.
 	randaoMixLength := params.BeaconConfig().EpochsPerHistoricalVector
@@ -307,6 +327,22 @@ func ProcessFinalUpdates(state iface.BeaconState) (iface.BeaconState, error) {
 		return nil, err
 	}
 
+	return state, nil
+}
+
+// ProcessHistoricalRootsUpdate processes the updates to historical root accumulator during epoch processing.
+//
+// Spec pseudocode definition:
+//  def process_historical_roots_update(state: BeaconState) -> None:
+//    # Set historical root accumulator
+//    next_epoch = Epoch(get_current_epoch(state) + 1)
+//    if next_epoch % (SLOTS_PER_HISTORICAL_ROOT // SLOTS_PER_EPOCH) == 0:
+//        historical_batch = HistoricalBatch(block_roots=state.block_roots, state_roots=state.state_roots)
+//        state.historical_roots.append(hash_tree_root(historical_batch))
+func ProcessHistoricalRootsUpdate(state iface.BeaconState) (iface.BeaconState, error) {
+	currentEpoch := helpers.CurrentEpoch(state)
+	nextEpoch := currentEpoch + 1
+
 	// Set historical root accumulator.
 	epochsPerHistoricalRoot := params.BeaconConfig().SlotsPerHistoricalRoot.DivSlot(params.BeaconConfig().SlotsPerEpoch)
 	if nextEpoch.Mod(uint64(epochsPerHistoricalRoot)) == 0 {
@@ -323,10 +359,63 @@ func ProcessFinalUpdates(state iface.BeaconState) (iface.BeaconState, error) {
 		}
 	}
 
-	// Rotate current and previous epoch attestations.
+	return state, nil
+}
+
+// ProcessParticipationRecordUpdates rotates current/previous epoch attestations during epoch processing.
+//
+// Spec pseudocode definition:
+//  def process_participation_record_updates(state: BeaconState) -> None:
+//    # Rotate current/previous epoch attestations
+//    state.previous_epoch_attestations = state.current_epoch_attestations
+//    state.current_epoch_attestations = []
+func ProcessParticipationRecordUpdates(state iface.BeaconState) (iface.BeaconState, error) {
 	if err := state.RotateAttestations(); err != nil {
 		return nil, err
 	}
+	return state, nil
+}
+
+// ProcessFinalUpdates processes the final updates during epoch processing.
+func ProcessFinalUpdates(state iface.BeaconState) (iface.BeaconState, error) {
+	var err error
+
+	// Reset ETH1 data votes.
+	state, err = ProcessEth1DataReset(state)
+	if err != nil {
+		return nil, err
+	}
+
+	// Update effective balances with hysteresis.
+	state, err = ProcessEffectiveBalanceUpdates(state)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set total slashed balances.
+	state, err = ProcessSlashingsReset(state)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set RANDAO mix.
+	state, err = ProcessRandaoMixesReset(state)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set historical root accumulator.
+	state, err = ProcessHistoricalRootsUpdate(state)
+	if err != nil {
+		return nil, err
+	}
+
+	// Rotate current and previous epoch attestations.
+	state, err = ProcessParticipationRecordUpdates(state)
+	if err != nil {
+		return nil, err
+	}
+
 	return state, nil
 }
 

@@ -52,7 +52,7 @@ func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 }
 
 func setupGenesisState(tb testing.TB, count uint64) *pb.BeaconState {
-	genesisState, _, err := interop.GenerateGenesisState(0, count)
+	genesisState, _, err := interop.GenerateGenesisState(context.Background(), 0, count)
 	require.NoError(tb, err, "Could not generate genesis beacon state")
 	for i := uint64(1); i < count; i++ {
 		someRoot := [32]byte{}

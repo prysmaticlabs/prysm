@@ -5,7 +5,6 @@ go_library(
     name = "go_default_library",
     srcs = [
         "configuration.go",
-        "helper.go",
         "log.go",
         "node.go",
     ],
@@ -17,6 +16,7 @@ go_library(
     deps = [
         "//beacon-chain/blockchain:go_default_library",
         "//beacon-chain/cache/depositcache:go_default_library",
+        "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/db/kv:go_default_library",
         "//beacon-chain/forkchoice:go_default_library",
@@ -57,17 +57,13 @@ go_library(
 go_test(
     name = "go_default_test",
     size = "small",
-    srcs = [
-        "helper_test.go",
-        "node_test.go",
-    ],
+    srcs = ["node_test.go"],
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/core/feed/state:go_default_library",
         "//shared/cmd:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
-        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
         "@com_github_urfave_cli_v2//:go_default_library",
     ],

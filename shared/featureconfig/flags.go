@@ -62,10 +62,6 @@ var (
 		Name:  "attestation-aggregation-force-opt-maxcover",
 		Usage: "When enabled, forces --attestation-aggregation-strategy=opt_max_cover setting.",
 	}
-	disableBlst = &cli.BoolFlag{
-		Name:  "disable-blst",
-		Usage: "Disables the new BLS library, blst, from Supranational",
-	}
 	disableAccountsV2 = &cli.BoolFlag{
 		Name:  "disable-accounts-v2",
 		Usage: "Disables usage of v2 for Prysm validator accounts",
@@ -143,7 +139,6 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	PraterTestnet,
 	Mainnet,
 	disableAccountsV2,
-	disableBlst,
 	dynamicKeyReloadDebounceInterval,
 	attestTimely,
 	enableSlashingProtectionPruning,
@@ -172,7 +167,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	PyrmontTestnet,
 	PraterTestnet,
 	Mainnet,
-	disableBlst,
 	enablePeerScorer,
 	enableLargerGossipHistory,
 	checkPtInfoCache,

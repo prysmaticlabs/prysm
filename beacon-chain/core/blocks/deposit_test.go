@@ -50,7 +50,7 @@ func TestProcessDeposits_SameValidatorMultipleDepositsSameBlock(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	newState, err := blocks.ProcessDeposits(context.Background(), beaconState, b)
+	newState, err := blocks.ProcessDeposits(context.Background(), beaconState, b.Block.Body.Deposits)
 	require.NoError(t, err, "Expected block deposits to process correctly")
 
 	assert.Equal(t, 2, len(newState.Validators()), "Incorrect validator count")
@@ -88,7 +88,7 @@ func TestProcessDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	})
 	require.NoError(t, err)
 	want := "deposit root did not verify"
-	_, err = blocks.ProcessDeposits(context.Background(), beaconState, b)
+	_, err = blocks.ProcessDeposits(context.Background(), beaconState, b.Block.Body.Deposits)
 	assert.ErrorContains(t, want, err)
 }
 
@@ -121,7 +121,7 @@ func TestProcessDeposits_AddsNewValidatorDeposit(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	newState, err := blocks.ProcessDeposits(context.Background(), beaconState, b)
+	newState, err := blocks.ProcessDeposits(context.Background(), beaconState, b.Block.Body.Deposits)
 	require.NoError(t, err, "Expected block deposits to process correctly")
 	if newState.Balances()[1] != dep[0].Data.Amount {
 		t.Errorf(
@@ -183,7 +183,7 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 		},
 	})
 	require.NoError(t, err)
-	newState, err := blocks.ProcessDeposits(context.Background(), beaconState, b)
+	newState, err := blocks.ProcessDeposits(context.Background(), beaconState, b.Block.Body.Deposits)
 	require.NoError(t, err, "Process deposit failed")
 	assert.Equal(t, uint64(1000+50), newState.Balances()[1], "Expected balance at index 1 to be 1050")
 }
