@@ -118,7 +118,7 @@ func spreadKeysAcrossImportedWallets(
 	privKeys [][]byte,
 	numWallets,
 	keysPerWallet int,
-	walletOutputDir string,
+	walletOutputDir,
 	walletPassword string,
 ) error {
 	ctx := context.Background()

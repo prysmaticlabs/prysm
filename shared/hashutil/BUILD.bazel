@@ -3,10 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = [
-        "hash.go",
-        "merkleRoot.go",
-    ],
+    srcs = ["hash.go"],
     importpath = "github.com/prysmaticlabs/prysm/shared/hashutil",
     visibility = ["//visibility:public"],
     deps = [
@@ -22,10 +19,7 @@ go_library(
 go_test(
     name = "go_default_test",
     size = "small",
-    srcs = [
-        "hash_test.go",
-        "merkleRoot_test.go",
-    ],
+    srcs = ["hash_test.go"],
     deps = [
         ":go_default_library",
         "//proto/testing:go_default_library",

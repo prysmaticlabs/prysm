@@ -29,6 +29,10 @@ import (
 // processFunc is a function that processes a block with a given state. State is mutated.
 type processFunc func(context.Context, iface.BeaconState, *ethpb.SignedBeaconBlock) (iface.BeaconState, error)
 
+var processDepositsFunc = func(ctx context.Context, s iface.BeaconState, blk *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
+	return b.ProcessDeposits(ctx, s, blk.Block.Body.Deposits)
+}
+
 // This defines the processing block routine as outlined in eth2 spec:
 // https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#block-processing
 var processingPipeline = []processFunc{
@@ -39,14 +43,14 @@ var processingPipeline = []processFunc{
 	b.ProcessProposerSlashings,
 	b.ProcessAttesterSlashings,
 	b.ProcessAttestations,
-	b.ProcessDeposits,
+	processDepositsFunc,
 	b.ProcessVoluntaryExits,
 }
 
 // ExecuteStateTransition defines the procedure for a state transition function.
 //
 // Spec pseudocode definition:
-//  def state_transition(state: BeaconState, signed_block: SignedBeaconBlock, validate_result: bool=True) -> BeaconState:
+//  def state_transition(state: BeaconState, signed_block: SignedBeaconBlock, validate_result: bool=True) -> None:
 //    block = signed_block.message
 //    # Process slots (including those with no blocks) since block
 //    process_slots(state, block.slot)
@@ -58,8 +62,6 @@ var processingPipeline = []processFunc{
 //    # Verify state root
 //    if validate_result:
 //        assert block.state_root == hash_tree_root(state)
-//    # Return post-state
-//    return state
 func ExecuteStateTransition(
 	ctx context.Context,
 	state iface.BeaconState,
@@ -107,15 +109,6 @@ func ExecuteStateTransition(
 // set of all signatures not verified, so that they can be stored and verified later.
 //
 // WARNING: This method does not validate any signatures in a block. This method also modifies the passed in state.
-//
-// Spec pseudocode definition:
-//  def state_transition(state: BeaconState, block: BeaconBlock, validate_state_root: bool=False) -> BeaconState:
-//    # Process slots (including those with no blocks) since block
-//    process_slots(state, block.slot)
-//    # Process block
-//    process_block(state, block)
-//    # Return post-state
-//    return state
 func ExecuteStateTransitionNoVerifyAnySig(
 	ctx context.Context,
 	state iface.BeaconState,
@@ -160,15 +153,6 @@ func ExecuteStateTransitionNoVerifyAnySig(
 //
 // WARNING: This method does not validate any BLS signatures. This is used for proposer to compute
 // state root before proposing a new block, and this does not modify state.
-//
-// Spec pseudocode definition:
-//  def state_transition(state: BeaconState, block: BeaconBlock, validate_state_root: bool=False) -> BeaconState:
-//    # Process slots (including those with no blocks) since block
-//    process_slots(state, block.slot)
-//    # Process block
-//    process_block(state, block)
-//    # Return post-state
-//    return state
 func CalculateStateRoot(
 	ctx context.Context,
 	state iface.BeaconState,
@@ -543,7 +527,7 @@ func ProcessOperationsNoVerifyAttsSigs(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block attestations")
 	}
-	state, err = b.ProcessDeposits(ctx, state, signedBeaconBlock)
+	state, err = b.ProcessDeposits(ctx, state, signedBeaconBlock.Block.Body.Deposits)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block validator deposits")
 	}

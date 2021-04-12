@@ -77,7 +77,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 	}
 
 	// Save genesis state in db
-	genesisState, _, err := interop.GenerateGenesisState(s.cfg.GenesisTime, s.cfg.NumValidators)
+	genesisState, _, err := interop.GenerateGenesisState(ctx, s.cfg.GenesisTime, s.cfg.NumValidators)
 	if err != nil {
 		log.Fatalf("Could not generate interop genesis state: %v", err)
 	}
