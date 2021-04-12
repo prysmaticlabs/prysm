@@ -35,6 +35,8 @@ import (
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/httputils"
+	"github.com/prysmaticlabs/prysm/shared/httputils/authorizationmethod"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
@@ -128,7 +130,7 @@ type Service struct {
 	ctx                     context.Context
 	cancel                  context.CancelFunc
 	headTicker              *time.Ticker
-	currHttpEndpoint        *HttpEndpoint
+	currHttpEndpoint        *httputils.Endpoint
 	httpLogger              bind.ContractFilterer
 	eth1DataFetcher         RPCDataFetcher
 	rpcClient               RPCClient
@@ -144,50 +146,13 @@ type Service struct {
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
 type Web3ServiceConfig struct {
-	HttpEndpoints      []HttpEndpoint
+	HttpEndpoints      []httputils.Endpoint
 	DepositContract    common.Address
 	BeaconDB           db.HeadAccessDatabase
 	DepositCache       *depositcache.DepositCache
 	StateNotifier      statefeed.Notifier
 	StateGen           *stategen.State
 	Eth1HeaderReqLimit uint64
-}
-
-// HttpEndpoint is an endpoint with authorization data.
-type HttpEndpoint struct {
-	Endpoint string
-	Auth     HttpAuthorizationData
-}
-
-// HttpAuthorizationData holds all information necessary to authorize with HTTP.
-type HttpAuthorizationData struct {
-	Method HttpAuthorizationMethod
-	Value  string
-}
-
-// HttpAuthorizationMethod is an authorization method such as 'Basic' or 'Bearer'.
-type HttpAuthorizationMethod uint8
-
-const (
-	// None represents no authorization method.
-	None HttpAuthorizationMethod = iota
-	// Basic represents Basic Authentication.
-	Basic
-	// Bearer represents Bearer Authentication (token authentication).
-	Bearer
-)
-
-func (e *HttpAuthorizationData) ToHttpHeaderValue() (string, error) {
-	switch e.Method {
-	case Basic:
-		return "Basic " + e.Value, nil
-	case Bearer:
-		return "Bearer " + e.Value, nil
-	case None:
-		return "", nil
-	}
-
-	return "", errors.New("could not create HTTP header for unknown authorization kind")
 }
 
 // NewService sets up a new instance with an ethclient when
@@ -211,7 +176,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 
 	config.HttpEndpoints = dedupEndpoints(config.HttpEndpoints)
 	// Select first http endpoint in the provided list.
-	var currEndpoint HttpEndpoint
+	var currEndpoint httputils.Endpoint
 	if len(config.HttpEndpoints) > 0 {
 		currEndpoint = config.HttpEndpoints[0]
 	}
@@ -412,13 +377,13 @@ func (s *Service) connectToPowChain() error {
 	return nil
 }
 
-func (s *Service) dialETH1Nodes(endpoint HttpEndpoint) (*ethclient.Client, *gethRPC.Client, error) {
+func (s *Service) dialETH1Nodes(endpoint httputils.Endpoint) (*ethclient.Client, *gethRPC.Client, error) {
 	httpRPCClient, err := gethRPC.Dial(endpoint.Endpoint)
 	if err != nil {
 		return nil, nil, err
 	}
-	if endpoint.Auth.Method != None {
-		header, err := endpoint.Auth.ToHttpHeaderValue()
+	if endpoint.Auth.Method != authorizationmethod.None {
+		header, err := endpoint.Auth.ToHeaderValue()
 		if err != nil {
 			return nil, nil, err
 		}
@@ -988,9 +953,9 @@ func (s *Service) ensureValidPowchainData(ctx context.Context) error {
 	return nil
 }
 
-func dedupEndpoints(endpoints []HttpEndpoint) []HttpEndpoint {
+func dedupEndpoints(endpoints []httputils.Endpoint) []httputils.Endpoint {
 	selectionMap := make(map[string]bool)
-	newEndpoints := make([]HttpEndpoint, 0, len(endpoints))
+	newEndpoints := make([]httputils.Endpoint, 0, len(endpoints))
 	for _, point := range endpoints {
 		if selectionMap[point.Endpoint] {
 			continue

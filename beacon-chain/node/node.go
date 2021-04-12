@@ -6,7 +6,6 @@ package node
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -43,6 +42,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/httputils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prereq"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
@@ -515,10 +515,10 @@ func (b *BeaconNode) registerPOWChainService() error {
 		log.Error("You will need to specify --http-web3provider to attach an ETH1 node to the Prysm node. Without an ETH1 node block proposals for your validator will be affected and the beacon node will not be able to initialize the genesis state.")
 	}
 
-	primaryEndpoint := httpEndpoint(b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name))
-	endpoints := []powchain.HttpEndpoint{primaryEndpoint}
+	primaryEndpoint := powchain.HttpEndpoint(b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name))
+	endpoints := []httputils.Endpoint{primaryEndpoint}
 	for _, value := range b.cliCtx.StringSlice(flags.FallbackWeb3ProviderFlag.Name) {
-		e := httpEndpoint(value)
+		e := powchain.HttpEndpoint(value)
 		endpoints = append(endpoints, e)
 	}
 
@@ -553,53 +553,6 @@ func (b *BeaconNode) registerPOWChainService() error {
 
 	log.Infof("Deposit contract: %#x", cfg.DepositContract.Bytes())
 	return b.services.RegisterService(web3Service)
-}
-
-func httpEndpoint(flag string) powchain.HttpEndpoint {
-	endpoint := powchain.HttpEndpoint{
-		Endpoint: "",
-		Auth: powchain.HttpAuthorizationData{
-			Method: powchain.None,
-			Value:  "",
-		}}
-
-	authValues := strings.Split(flag, ",")
-	if len(authValues) > 2 {
-		log.Errorf(
-			"ETH1 endpoint string can contain one comma for specifying the authorization header to access the provider."+
-				" String contains too many commas: %d. Skipping authorization.", len(authValues)-1)
-		endpoint.Endpoint = authValues[0]
-	} else if len(authValues) == 2 {
-		endpoint.Endpoint = authValues[0]
-		switch authKind(authValues[1]) {
-		case powchain.Basic:
-			basicAuthValues := strings.Split(authValues[1], " ")
-			if len(basicAuthValues) != 2 {
-				log.Errorf("Basic Authentication has incorrect format. Skipping authorization.")
-			} else {
-				endpoint.Auth.Method = powchain.Basic
-				endpoint.Auth.Value = base64.StdEncoding.EncodeToString([]byte(basicAuthValues[1]))
-			}
-		case powchain.Bearer:
-			endpoint.Auth.Method = powchain.Bearer
-			endpoint.Auth.Value = authValues[1]
-		case powchain.None:
-			log.Errorf("Authorization has incorrect format or authorization type is not supported.")
-		}
-	} else if len(authValues) == 1 {
-		endpoint.Endpoint = authValues[0]
-	}
-	return endpoint
-}
-
-func authKind(auth string) powchain.HttpAuthorizationMethod {
-	if strings.HasPrefix(strings.ToLower(auth), "basic") {
-		return powchain.Basic
-	}
-	if strings.HasPrefix(strings.ToLower(auth), "bearer") {
-		return powchain.Bearer
-	}
-	return powchain.None
 }
 
 func (b *BeaconNode) registerSyncService() error {
