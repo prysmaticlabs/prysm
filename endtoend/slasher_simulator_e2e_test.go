@@ -34,7 +34,7 @@ func TestEndToEnd_SlasherSimulator(t *testing.T) {
 		simulatorParams.NumEpochs = uint64(epochsToRun)
 	}
 
-	beaconDB := dbtest.SetupDB(t)
+	slasherDB := dbtest.SetupSlasherDB(t)
 	beaconState, err := testutil.NewBeaconState()
 	require.NoError(t, err)
 
@@ -60,7 +60,7 @@ func TestEndToEnd_SlasherSimulator(t *testing.T) {
 
 	sim, err := slashersimulator.New(ctx, &slashersimulator.ServiceConfig{
 		Params:                      simulatorParams,
-		Database:                    beaconDB,
+		Database:                    slasherDB,
 		StateNotifier:               &mock.MockStateNotifier{},
 		HeadStateFetcher:            mockChain,
 		AttestationStateFetcher:     mockChain,

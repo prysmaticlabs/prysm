@@ -24,6 +24,7 @@ import (
 func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 	hook := logTest.NewGlobal()
 	slasherDB := dbtest.SetupSlasherDB(t)
+	beaconDB := dbtest.SetupDB(t)
 	ctx, cancel := context.WithCancel(context.Background())
 
 	beaconState, err := testutil.NewBeaconState()
@@ -60,7 +61,7 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 			Database:             slasherDB,
 			StateNotifier:        &mock.MockStateNotifier{},
 			HeadStateFetcher:     mockChain,
-			StateGen:             stategen.New(slasherDB),
+			StateGen:             stategen.New(beaconDB),
 			SlashingPoolInserter: &slashings.PoolMock{},
 		},
 		params:    DefaultParams(),
