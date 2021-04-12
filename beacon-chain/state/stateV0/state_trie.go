@@ -44,7 +44,7 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 	fieldCount := params.BeaconConfig().BeaconStateFieldCount
 	b := &BeaconState{
 		state:                 st,
-		dirtyFields:           make(map[fieldIndex]interface{}, fieldCount),
+		dirtyFields:           make(map[fieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[fieldIndex][]uint64, fieldCount),
 		stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, fieldCount),
 		sharedFieldReferences: make(map[fieldIndex]*stateutil.Reference, 10),
@@ -119,7 +119,7 @@ func (b *BeaconState) Copy() iface.BeaconState {
 			FinalizedCheckpoint:         b.finalizedCheckpoint(),
 			GenesisValidatorsRoot:       b.genesisValidatorRoot(),
 		},
-		dirtyFields:           make(map[fieldIndex]interface{}, fieldCount),
+		dirtyFields:           make(map[fieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[fieldIndex][]uint64, fieldCount),
 		rebuildTrie:           make(map[fieldIndex]bool, fieldCount),
 		sharedFieldReferences: make(map[fieldIndex]*stateutil.Reference, 10),
@@ -210,7 +210,7 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 		}
 		layers := stateutil.Merkleize(fieldRoots)
 		b.merkleLayers = layers
-		b.dirtyFields = make(map[fieldIndex]interface{}, params.BeaconConfig().BeaconStateFieldCount)
+		b.dirtyFields = make(map[fieldIndex]bool, params.BeaconConfig().BeaconStateFieldCount)
 	}
 
 	for field := range b.dirtyFields {
