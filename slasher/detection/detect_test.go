@@ -708,16 +708,20 @@ func TestServer_MapResultsToAtts(t *testing.T) {
 
 	resultsToAtts, err := ds.mapResultsToAtts(ctx, results)
 	require.NoError(t, err)
-	if !sszutil.DeepEqual(expectedResultsToAtts, resultsToAtts) {
-		t.Error("Expected map:")
-		for key, value := range resultsToAtts {
-			t.Errorf("Key %#x: %d atts", key, len(value))
-			t.Errorf("%+v", value)
-		}
-		t.Error("To equal:")
-		for key, value := range expectedResultsToAtts {
-			t.Errorf("Key %#x: %d atts", key, len(value))
-			t.Errorf("%+v", value)
+	for k := range expectedResultsToAtts {
+		exp := expectedResultsToAtts[k]
+		recv := resultsToAtts[k]
+		if !sszutil.DeepEqual(exp, recv) {
+			t.Error("Expected map:")
+			for key, value := range resultsToAtts {
+				t.Errorf("Key %#x: %d atts", key, len(value))
+				t.Errorf("%+v", value)
+			}
+			t.Error("To equal:")
+			for key, value := range expectedResultsToAtts {
+				t.Errorf("Key %#x: %d atts", key, len(value))
+				t.Errorf("%+v", value)
+			}
 		}
 	}
 }

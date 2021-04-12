@@ -311,7 +311,8 @@ func DeepEqual(x, y interface{}) bool {
 
 func IsProto(item interface{}) bool {
 	typ := reflect.TypeOf(item)
-	if typ.Kind() != reflect.Slice && typ.Kind() != reflect.Array && typ.Kind() != reflect.Map {
+	kind := typ.Kind()
+	if kind != reflect.Slice && kind != reflect.Array && kind != reflect.Map {
 		_, ok := item.(proto.Message)
 		return ok
 	}

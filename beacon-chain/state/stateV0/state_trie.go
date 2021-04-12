@@ -34,7 +34,7 @@ func hydrateState(st *pbp2p.BeaconState) *pbp2p.BeaconState {
 	return st
 }
 
-// InitializeFromProtoUnsafe directly uses the beacon state protobuf pointer
+// InitializeFromProtoUnsafe direcTestServer_MapResultsToAttstly uses the beacon state protobuf pointer
 // and sets it as the inner state of the BeaconState type.
 func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 	if st == nil {
