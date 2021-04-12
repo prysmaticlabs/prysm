@@ -3,27 +3,48 @@ package powchain
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/shared/httputils/authorizationmethod"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-// TestBeaconNode_extractAuthStringFromFlag tests extract auth string from flag
 func TestHttpEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
-	httpWeb3 := "http://infura"
-	auth := "bearer xxxxxxxxx"
-	separator := ","
-	web3, au := HttpEndpoint(httpWeb3 + separator + auth)
-	require.Equal(t, httpWeb3, web3)
-	require.Equal(t, auth, au)
-	web3, au = HttpEndpoint(httpWeb3 + separator)
-	require.Equal(t, httpWeb3, web3)
-	require.Equal(t, "", au)
-	web3, au = HttpEndpoint(httpWeb3)
-	require.Equal(t, httpWeb3, web3)
-	require.Equal(t, "", au)
-	web3, au = HttpEndpoint(httpWeb3 + separator + auth + separator)
-	require.Equal(t, httpWeb3, web3)
-	require.Equal(t, "", au)
-	require.LogsContain(t, hook, "Web 3 provider string can contain one comma")
+	url := "http://test"
+
+	t.Run("URL", func(t *testing.T) {
+		endpoint := HttpEndpoint(url)
+		assert.Equal(t, url, endpoint.Url)
+		assert.Equal(t, authorizationmethod.None, endpoint.Auth.Method)
+	})
+	t.Run("URL with separator", func(t *testing.T) {
+		endpoint := HttpEndpoint(url + ",")
+		assert.Equal(t, url, endpoint.Url)
+		assert.Equal(t, authorizationmethod.None, endpoint.Auth.Method)
+	})
+	t.Run("Basic auth", func(t *testing.T) {
+		endpoint := HttpEndpoint(url + ",Basic username:password")
+		assert.Equal(t, url, endpoint.Url)
+		assert.Equal(t, authorizationmethod.Basic, endpoint.Auth.Method)
+		assert.Equal(t, "dXNlcm5hbWU6cGFzc3dvcmQ=", endpoint.Auth.Value)
+	})
+	t.Run("Basic auth with incorrect format", func(t *testing.T) {
+		hook.Reset()
+		endpoint := HttpEndpoint(url + ",Basic username:password foo")
+		assert.Equal(t, url, endpoint.Url)
+		assert.Equal(t, authorizationmethod.None, endpoint.Auth.Method)
+		assert.LogsContain(t, hook, "Skipping authorization")
+	})
+	t.Run("Bearer auth", func(t *testing.T) {
+		endpoint := HttpEndpoint(url + ",Bearer token")
+		assert.Equal(t, url, endpoint.Url)
+		assert.Equal(t, authorizationmethod.Bearer, endpoint.Auth.Method)
+		assert.Equal(t, "Bearer token", endpoint.Auth.Value)
+	})
+	t.Run("Too many separators", func(t *testing.T) {
+		endpoint := HttpEndpoint(url + ",Bearer token,foo")
+		assert.Equal(t, url, endpoint.Url)
+		assert.Equal(t, authorizationmethod.None, endpoint.Auth.Method)
+		assert.LogsContain(t, hook, "Skipping authorization")
+	})
 }
