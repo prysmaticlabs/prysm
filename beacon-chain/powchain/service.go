@@ -232,7 +232,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 func (s *Service) Start() {
 	// If the chain has not started already and we don't have access to eth1 nodes, we will not be
 	// able to generate the genesis state.
-	if !s.chainStartData.Chainstarted && s.currHttpEndpoint == nil {
+	if !s.chainStartData.Chainstarted && (s.currHttpEndpoint == nil || s.currHttpEndpoint.Endpoint == "") {
 		// check for genesis state before shutting down the node,
 		// if a genesis state exists, we can continue on.
 		genState, err := s.cfg.BeaconDB.GenesisState(s.ctx)
@@ -245,7 +245,7 @@ func (s *Service) Start() {
 	}
 
 	// Exit early if eth1 endpoint is not set.
-	if s.currHttpEndpoint == nil {
+	if s.currHttpEndpoint == nil || s.currHttpEndpoint.Endpoint == "" {
 		return
 	}
 	go func() {
