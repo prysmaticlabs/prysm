@@ -49,7 +49,7 @@ func NextPowerOf2(n int) int {
 //    else:
 //        return 2 * get_power_of_two_floor(x // 2)
 func PrevPowerOf2(n int) int {
-	if n <=1 {
+	if n <= 1 {
 		return 1
 	}
 	if n == 2 {
