@@ -570,7 +570,7 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *pbp2p.PendingAttestati
 
 	b.state.CurrentEpochAttestations = append(atts, val)
 	b.markFieldAsDirty(currentEpochAttestations)
-	b.dirtyIndices[currentEpochAttestations] = append(b.dirtyIndices[currentEpochAttestations], uint64(len(b.state.CurrentEpochAttestations)-1))
+	b.addDirtyIndices(currentEpochAttestations, []uint64{uint64(len(b.state.CurrentEpochAttestations) - 1)})
 	return nil
 }
 
@@ -750,5 +750,12 @@ func (b *BeaconState) markFieldAsDirty(field fieldIndex) {
 // addDirtyIndices adds the relevant dirty field indices, so that they
 // can be recomputed.
 func (b *BeaconState) addDirtyIndices(index fieldIndex, indices []uint64) {
+	if b.rebuildTrie[index] {
+		return
+	}
 	b.dirtyIndices[index] = append(b.dirtyIndices[index], indices...)
+	if len(b.dirtyIndices[index]) > 1000 {
+		b.rebuildTrie[index] = true
+		b.dirtyIndices[index] = []uint64{}
+	}
 }
