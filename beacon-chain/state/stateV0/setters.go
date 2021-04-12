@@ -27,12 +27,20 @@ import (
 // 5) HistoricalRoots
 // 6) CurrentEpochAttestations
 // 7) PreviousEpochAttestations
+// 8) Validators
 //
 // The fields referred to above are instead copied by reference, where
 // we simply copy the reference to the underlying object instead of the
 // whole object. This is possible due to how we have structured our state
 // as we copy the value on read, so as to ensure the underlying object is
 // not mutated while it is being accessed during a state read.
+
+const (
+	// This specifies the limit till which we process all dirty indices for a certain field.
+	// If we have more dirty indices than the theshold, then we rebuild the whole trie. This
+	// comes due to the fact that O(alogn) > O(n) beyong a certain value of a.
+	indicesLimit = 8000
+)
 
 // SetGenesisTime for the beacon state.
 func (b *BeaconState) SetGenesisTime(val uint64) error {
@@ -754,7 +762,7 @@ func (b *BeaconState) addDirtyIndices(index fieldIndex, indices []uint64) {
 		return
 	}
 	b.dirtyIndices[index] = append(b.dirtyIndices[index], indices...)
-	if len(b.dirtyIndices[index]) > 1000 {
+	if len(b.dirtyIndices[index]) > indicesLimit {
 		b.rebuildTrie[index] = true
 		b.dirtyIndices[index] = []uint64{}
 	}
