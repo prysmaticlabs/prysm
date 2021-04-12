@@ -2,11 +2,161 @@ package stateV0
 
 import (
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+// GenesisTime of the beacon state as a uint64.
+func (b *BeaconState) GenesisTime() uint64 {
+	if !b.hasInnerState() {
+		return 0
+	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.genesisTime()
+}
+
+// genesisTime of the beacon state as a uint64.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) genesisTime() uint64 {
+	if !b.hasInnerState() {
+		return 0
+	}
+
+	return b.state.GenesisTime
+}
+
+// GenesisValidatorRoot of the beacon state.
+func (b *BeaconState) GenesisValidatorRoot() []byte {
+	if !b.hasInnerState() {
+		return nil
+	}
+	if b.state.GenesisValidatorsRoot == nil {
+		return params.BeaconConfig().ZeroHash[:]
+	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.genesisValidatorRoot()
+}
+
+// genesisValidatorRoot of the beacon state.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) genesisValidatorRoot() []byte {
+	if !b.hasInnerState() {
+		return nil
+	}
+	if b.state.GenesisValidatorsRoot == nil {
+		return params.BeaconConfig().ZeroHash[:]
+	}
+
+	root := make([]byte, 32)
+	copy(root, b.state.GenesisValidatorsRoot)
+	return root
+}
+
+// Slot of the current beacon chain state.
+func (b *BeaconState) Slot() types.Slot {
+	if !b.hasInnerState() {
+		return 0
+	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.slot()
+}
+
+// slot of the current beacon chain state.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) slot() types.Slot {
+	if !b.hasInnerState() {
+		return 0
+	}
+
+	return b.state.Slot
+}
+
+// Fork version of the beacon chain.
+func (b *BeaconState) Fork() *pbp2p.Fork {
+	if !b.hasInnerState() {
+		return nil
+	}
+	if b.state.Fork == nil {
+		return nil
+	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.fork()
+}
+
+// fork version of the beacon chain.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) fork() *pbp2p.Fork {
+	if !b.hasInnerState() {
+		return nil
+	}
+	if b.state.Fork == nil {
+		return nil
+	}
+
+	prevVersion := make([]byte, len(b.state.Fork.PreviousVersion))
+	copy(prevVersion, b.state.Fork.PreviousVersion)
+	currVersion := make([]byte, len(b.state.Fork.CurrentVersion))
+	copy(currVersion, b.state.Fork.CurrentVersion)
+	return &pbp2p.Fork{
+		PreviousVersion: prevVersion,
+		CurrentVersion:  currVersion,
+		Epoch:           b.state.Fork.Epoch,
+	}
+}
+
+// HistoricalRoots based on epochs stored in the beacon state.
+func (b *BeaconState) HistoricalRoots() [][]byte {
+	if !b.hasInnerState() {
+		return nil
+	}
+	if b.state.HistoricalRoots == nil {
+		return nil
+	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.historicalRoots()
+}
+
+// historicalRoots based on epochs stored in the beacon state.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) historicalRoots() [][]byte {
+	if !b.hasInnerState() {
+		return nil
+	}
+	return b.safeCopy2DByteSlice(b.state.HistoricalRoots)
+}
+
+// balancesLength returns the length of the balances slice.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) balancesLength() int {
+	if !b.hasInnerState() {
+		return 0
+	}
+	if b.state.Balances == nil {
+		return 0
+	}
+
+	return len(b.state.Balances)
+}
 
 // RootsArrayHashTreeRoot computes the Merkle root of arrays of 32-byte hashes, such as [64][32]byte
 // according to the Simple Serialize specification of eth2.
