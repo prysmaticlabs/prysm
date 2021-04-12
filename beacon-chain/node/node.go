@@ -21,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/slasherkv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
@@ -69,7 +68,7 @@ type BeaconNode struct {
 	lock                    sync.RWMutex
 	stop                    chan struct{} // Channel to wait for termination notifications.
 	db                      db.Database
-	slasherDB               iface.SlasherDatabase
+	slasherDB               db.SlasherDatabase
 	attestationPool         attestations.Pool
 	exitPool                voluntaryexits.PoolManager
 	slashingsPool           slashings.PoolManager
@@ -123,7 +122,7 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 	}
 
 	if featureconfig.Get().EnableSlasher {
-		if err := beacon.startSlaherDB(cliCtx); err != nil {
+		if err := beacon.startSlasherDB(cliCtx); err != nil {
 			return nil, err
 		}
 	}
@@ -327,7 +326,7 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
 	return b.db.EnsureEmbeddedGenesis(b.ctx)
 }
 
-func (b *BeaconNode) startSlaherDB(cliCtx *cli.Context) error {
+func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
 	baseDir := cliCtx.String(cmd.DataDirFlag.Name)
 	dbPath := filepath.Join(baseDir, kv.BeaconNodeDbDirName)
 	clearDB := cliCtx.Bool(cmd.ClearDB.Name)

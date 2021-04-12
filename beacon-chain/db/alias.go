@@ -23,6 +23,9 @@ type HeadAccessDatabase = iface.HeadAccessDatabase
 // not be used often. Prefer a more restrictive interface in this package.
 type Database = iface.Database
 
+// SlasherDatabase defines necessary methods for Prysm's slasher implementation.
+type SlasherDatabase = iface.SlasherDatabase
+
 // ErrExistingGenesisState is an error when the user attempts to save a different genesis state
 // when one already exists in a database.
 var ErrExistingGenesisState = iface.ErrExistingGenesisState

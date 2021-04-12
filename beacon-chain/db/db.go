@@ -5,7 +5,6 @@ package db
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/slasherkv"
 )
@@ -16,6 +15,6 @@ func NewDB(ctx context.Context, dirPath string, config *kv.Config) (Database, er
 }
 
 // NewSlasherDB initializes a new DB for slasher.
-func NewSlasherDB(ctx context.Context, dirPath string, config *slasherkv.Config) (iface.SlasherDatabase, error) {
+func NewSlasherDB(ctx context.Context, dirPath string, config *slasherkv.Config) (SlasherDatabase, error) {
 	return slasherkv.NewKVStore(ctx, dirPath, config)
 }

@@ -9,8 +9,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
-	prombolt "github.com/prysmaticlabs/prombbolt"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -24,15 +22,6 @@ const (
 	DatabaseFileName = "slasher.db"
 	boltAllocSize    = 8 * 1024 * 1024
 )
-
-// blockedBuckets represents the buckets that we want to restrict
-// from our metrics fetching for performance reasons. For a detailed
-// summary, it can be read in https://github.com/prysmaticlabs/prysm/issues/8274.
-var blockedBuckets = [][]byte{
-	proposalRecordsBucket,
-	attestationRecordsBucket,
-	slasherChunksBucket,
-}
 
 // Config for the bolt db kv store.
 type Config struct {
@@ -96,8 +85,6 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 		return nil, err
 	}
 
-	err = prometheus.Register(createBoltCollector(kv.db))
-
 	return kv, err
 }
 
@@ -106,7 +93,6 @@ func (s *Store) ClearDB() error {
 	if _, err := os.Stat(s.databasePath); os.IsNotExist(err) {
 		return nil
 	}
-	prometheus.Unregister(createBoltCollector(s.db))
 	if err := os.Remove(path.Join(s.databasePath, DatabaseFileName)); err != nil {
 		return errors.Wrap(err, "could not remove database file")
 	}
@@ -115,7 +101,6 @@ func (s *Store) ClearDB() error {
 
 // Close closes the underlying BoltDB database.
 func (s *Store) Close() error {
-	prometheus.Unregister(createBoltCollector(s.db))
 	return s.db.Close()
 }
 
@@ -131,9 +116,4 @@ func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 		}
 	}
 	return nil
-}
-
-// createBoltCollector returns a prometheus collector specifically configured for boltdb.
-func createBoltCollector(db *bolt.DB) prometheus.Collector {
-	return prombolt.New("boltDB", db, blockedBuckets...)
 }
