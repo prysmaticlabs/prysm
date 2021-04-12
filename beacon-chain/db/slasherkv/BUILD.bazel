@@ -10,7 +10,7 @@ go_library(
         "slasher.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/db/slasherkv",
-    visibility = ["//visibility:public"],
+    visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/db/iface:go_default_library",
