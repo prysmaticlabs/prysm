@@ -233,10 +233,7 @@ func rewardProposer(beaconState iface.BeaconState, proposerRewardNumerator uint6
 	if err != nil {
 		return err
 	}
-	if err := helpers.IncreaseBalance(beaconState, i, proposerReward); err != nil {
-		return err
-	}
-	return nil
+	return helpers.IncreaseBalance(beaconState, i, proposerReward)
 }
 
 // HasValidatorFlag returns true if the flag at position has set.
