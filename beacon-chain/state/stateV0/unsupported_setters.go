@@ -39,3 +39,8 @@ func (b *BeaconState) SetPreviousParticipationBits(val []byte) error {
 func (b *BeaconState) SetCurrentParticipationBits(val []byte) error {
 	return errors.New("SetCurrentParticipationBits is not supported for phase 0 beacon state")
 }
+
+// SetInactivityScores is not supported for phase 0 beacon state.
+func (b *BeaconState) SetInactivityScores(val []uint64) error {
+	return errors.New("SetInactivityScores is not supported for phase 0 beacon state")
+}

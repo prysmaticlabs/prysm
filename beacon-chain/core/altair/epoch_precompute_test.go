@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
@@ -197,6 +198,27 @@ func TestProcessRewardsAndPenaltiesPrecompute_InactivityLeak(t *testing.T) {
 	for i := 0; i < len(balances); i++ {
 		require.Equal(t, true, balances[i] >= inactivityBalances[i])
 	}
+}
+
+func TestProcessRewardsAndPenaltiesPrecompute_UpdateInactivityScores(t *testing.T) {
+	s, err := testState()
+	require.NoError(t, err)
+	defaultScore := uint64(5)
+	require.NoError(t, s.SetInactivityScores([]uint64{defaultScore, defaultScore, defaultScore, defaultScore}))
+	require.NoError(t, s.SetSlot(params.BeaconConfig().SlotsPerEpoch*types.Slot(params.BeaconConfig().MinEpochsToInactivityPenalty+2)))
+	validators, balance, err := InitializeEpochValidators(context.Background(), s)
+	require.NoError(t, err)
+	validators, balance, err = ProcessEpochParticipation(context.Background(), s, balance, validators)
+	require.NoError(t, err)
+	s, err = ProcessRewardsAndPenaltiesPrecompute(s, balance, validators)
+	require.NoError(t, err)
+	inactivityScores, err := s.InactivityScores()
+	require.NoError(t, err)
+	// V0 and V1 didn't vote head. V2 and V3 did.
+	require.Equal(t, defaultScore+params.BeaconConfig().InactivityScoreBias, inactivityScores[0])
+	require.Equal(t, defaultScore+params.BeaconConfig().InactivityScoreBias, inactivityScores[1])
+	require.Equal(t, defaultScore-1, inactivityScores[2])
+	require.Equal(t, defaultScore-1, inactivityScores[3])
 }
 
 func TestProcessRewardsAndPenaltiesPrecompute_GenesisEpoch(t *testing.T) {
