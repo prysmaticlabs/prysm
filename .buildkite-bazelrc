@@ -10,9 +10,13 @@
 
 # Prysm specific remote-cache properties.
 #build:remote-cache --disk_cache=
-#build:remote-cache --remote_download_minimal
+build:remote-cache --remote_download_minimal
 build:remote-cache --remote_cache=grpc://bazel-remote-cache:9092
 build:remote-cache --remote_local_fallback
+# Enforce stricter environment rules, which eliminates some non-hermetic
+# behavior and therefore improves both the remote cache hit rate and the
+# correctness and repeatability of the build.
+build:remote-cache --incompatible_strict_action_env=true
 
 # Import workspace options.
 import %workspace%/.bazelrc
