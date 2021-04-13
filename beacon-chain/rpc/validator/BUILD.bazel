@@ -69,6 +69,7 @@ go_library(
 # gazelle:exclude proposer_utils_bench_test.go
 go_test(
     name = "go_default_test",
+    timeout = "moderate",
     srcs = [
         "aggregator_test.go",
         "assignments_test.go",
