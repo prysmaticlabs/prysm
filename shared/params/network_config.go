@@ -42,7 +42,7 @@ func BeaconNetworkConfig() *NetworkConfig {
 // OverrideBeaconNetworkConfig will override the network
 // config with the added argument.
 func OverrideBeaconNetworkConfig(cfg *NetworkConfig) {
-	networkConfig = cfg.Copy()
+	networkConfig = cfg
 }
 
 // Copy returns Copy of the config object.
