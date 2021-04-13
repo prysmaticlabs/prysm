@@ -118,7 +118,7 @@ func ProcessRewardsAndPenaltiesPrecompute(
 		return state, errors.New("validator registries not the same length as state's validator registries")
 	}
 
-	attsRewards, attsPenalties, err := AttestationsDelta(state, bal, vals)
+	attsRewards, attsPenalties, err := attestationsDelta(state, bal, vals)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get attestation delta")
 	}
@@ -142,12 +142,12 @@ func ProcessRewardsAndPenaltiesPrecompute(
 	return state, nil
 }
 
-// AttestationsDelta computes and returns the rewards and penalties differences for individual validators based on the
+// attestationsDelta computes and returns the rewards and penalties differences for individual validators based on the
 // voting records.
-func AttestationsDelta(state iface.BeaconStateAltair, bal *precompute.Balance, vals []*precompute.Validator) ([]uint64, []uint64, error) {
+func attestationsDelta(state iface.BeaconStateAltair, bal *precompute.Balance, vals []*precompute.Validator) (rewards []uint64, penalties []uint64, err error) {
 	numOfVals := state.NumValidators()
-	rewards := make([]uint64, numOfVals)
-	penalties := make([]uint64, numOfVals)
+	rewards = make([]uint64, numOfVals)
+	penalties = make([]uint64, numOfVals)
 	prevEpoch := helpers.PrevEpoch(state)
 	finalizedEpoch := state.FinalizedCheckpointEpoch()
 
@@ -157,7 +157,7 @@ func AttestationsDelta(state iface.BeaconStateAltair, bal *precompute.Balance, v
 	return rewards, penalties, nil
 }
 
-func attestationDelta(bal *precompute.Balance, v *precompute.Validator, prevEpoch, finalizedEpoch types.Epoch) (uint64, uint64) {
+func attestationDelta(bal *precompute.Balance, v *precompute.Validator, prevEpoch, finalizedEpoch types.Epoch) (r uint64, p uint64) {
 	eligible := v.IsActivePrevEpoch || (v.IsSlashed && !v.IsWithdrawableCurrentEpoch)
 	if !eligible || bal.ActiveCurrentEpoch == 0 {
 		return 0, 0
@@ -168,7 +168,7 @@ func attestationDelta(bal *precompute.Balance, v *precompute.Validator, prevEpoc
 	br := eb * params.BeaconConfig().BaseRewardFactor / mathutil.IntegerSquareRoot(bal.ActiveCurrentEpoch)
 	activeCurrentEpochIncrements := bal.ActiveCurrentEpoch / ebi
 
-	r, p := uint64(0), uint64(0)
+	r, p = uint64(0), uint64(0)
 	// Process source reward / penalty
 	if v.IsPrevEpochAttester && !v.IsSlashed {
 		if helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch) {
