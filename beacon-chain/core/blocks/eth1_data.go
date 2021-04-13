@@ -19,7 +19,7 @@ import (
 //   def process_eth1_data(state: BeaconState, body: BeaconBlockBody) -> None:
 //    state.eth1_data_votes.append(body.eth1_data)
 //    if state.eth1_data_votes.count(body.eth1_data) * 2 > EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH:
-//        state.latest_eth1_data = body.eth1_data
+//        state.eth1_data = body.eth1_data
 func ProcessEth1DataInBlock(_ context.Context, beaconState iface.BeaconState, b *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
 	block := b.Block
 	if beaconState == nil {

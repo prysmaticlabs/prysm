@@ -12,7 +12,7 @@ func TestNextPowerOf2(t *testing.T) {
 		input  int
 		result int
 	}{
-		{input: 0, result: 0},
+		{input: 0, result: 1},
 		{input: 1, result: 1},
 		{input: 2, result: 2},
 		{input: 3, result: 4},
@@ -32,7 +32,7 @@ func TestPrevPowerOf2(t *testing.T) {
 		input  int
 		result int
 	}{
-		{input: 0, result: 0},
+		{input: 0, result: 1},
 		{input: 1, result: 1},
 		{input: 2, result: 2},
 		{input: 3, result: 2},
