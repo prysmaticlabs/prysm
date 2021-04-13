@@ -43,7 +43,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/httputils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prereq"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
@@ -437,15 +436,11 @@ func (b *BeaconNode) registerPOWChainService() error {
 		)
 	}
 
-	primaryEndpoint := powchain.HttpEndpoint(b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name))
-	endpoints := []httputils.Endpoint{primaryEndpoint}
-	for _, value := range b.cliCtx.StringSlice(flags.FallbackWeb3ProviderFlag.Name) {
-		e := powchain.HttpEndpoint(value)
-		endpoints = append(endpoints, e)
-	}
+	primaryEndpoint := []string{b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name)}
+	fallbackEndpoints := b.cliCtx.StringSlice(flags.FallbackWeb3ProviderFlag.Name)
 
 	cfg := &powchain.Web3ServiceConfig{
-		HttpEndpoints:      endpoints,
+		HttpEndpoints:      append(primaryEndpoint, fallbackEndpoints...),
 		DepositContract:    common.HexToAddress(depAddress),
 		BeaconDB:           b.db,
 		DepositCache:       b.depositCache,

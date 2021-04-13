@@ -130,6 +130,7 @@ type Service struct {
 	ctx                     context.Context
 	cancel                  context.CancelFunc
 	headTicker              *time.Ticker
+	httpEndpoints           []httputils.Endpoint
 	currHttpEndpoint        *httputils.Endpoint
 	httpLogger              bind.ContractFilterer
 	eth1DataFetcher         RPCDataFetcher
@@ -146,7 +147,7 @@ type Service struct {
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
 type Web3ServiceConfig struct {
-	HttpEndpoints      []httputils.Endpoint
+	HttpEndpoints      []string
 	DepositContract    common.Address
 	BeaconDB           db.HeadAccessDatabase
 	DepositCache       *depositcache.DepositCache
@@ -174,16 +175,22 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		config.Eth1HeaderReqLimit = defaultEth1HeaderReqLimit
 	}
 
-	config.HttpEndpoints = dedupEndpoints(config.HttpEndpoints)
+	stringEndpoints := dedupEndpoints(config.HttpEndpoints)
+	endpoints := make([]httputils.Endpoint, len(stringEndpoints))
+	for i, e := range stringEndpoints {
+		endpoints[i] = HttpEndpoint(e)
+	}
+
 	// Select first http endpoint in the provided list.
 	var currEndpoint httputils.Endpoint
 	if len(config.HttpEndpoints) > 0 {
-		currEndpoint = config.HttpEndpoints[0]
+		currEndpoint = endpoints[0]
 	}
 	s := &Service{
 		ctx:              ctx,
 		cancel:           cancel,
 		cfg:              config,
+		httpEndpoints:    endpoints,
 		currHttpEndpoint: &currEndpoint,
 		latestEth1Data: &protodb.LatestETH1Data{
 			BlockHeight:        0,
@@ -863,7 +870,7 @@ func (s *Service) determineEarliestVotingBlock(ctx context.Context, followBlock 
 // is ready to serve we connect to it again. This method is only
 // relevant if we are on our backup endpoint.
 func (s *Service) checkDefaultEndpoint() {
-	primaryEndpoint := s.cfg.HttpEndpoints[0]
+	primaryEndpoint := s.httpEndpoints[0]
 	// Return early if we are running on our primary
 	// endpoint.
 	if s.currHttpEndpoint.Url == primaryEndpoint.Url {
@@ -896,7 +903,7 @@ func (s *Service) fallbackToNextEndpoint() {
 	currIndex := 0
 	totalEndpoints := len(s.cfg.HttpEndpoints)
 
-	for i, endpoint := range s.cfg.HttpEndpoints {
+	for i, endpoint := range s.httpEndpoints {
 		if endpoint.Url == currEndpoint.Url {
 			currIndex = i
 			break
@@ -910,7 +917,7 @@ func (s *Service) fallbackToNextEndpoint() {
 	if nextIndex == currIndex {
 		return
 	}
-	s.currHttpEndpoint = &s.cfg.HttpEndpoints[nextIndex]
+	s.currHttpEndpoint = &s.httpEndpoints[nextIndex]
 	log.Infof("Falling back to alternative endpoint: %s", logutil.MaskCredentialsLogging(s.currHttpEndpoint.Url))
 }
 
@@ -953,15 +960,15 @@ func (s *Service) ensureValidPowchainData(ctx context.Context) error {
 	return nil
 }
 
-func dedupEndpoints(endpoints []httputils.Endpoint) []httputils.Endpoint {
+func dedupEndpoints(endpoints []string) []string {
 	selectionMap := make(map[string]bool)
-	newEndpoints := make([]httputils.Endpoint, 0, len(endpoints))
+	newEndpoints := make([]string, 0, len(endpoints))
 	for _, point := range endpoints {
-		if selectionMap[point.Url] {
+		if selectionMap[point] {
 			continue
 		}
 		newEndpoints = append(newEndpoints, point)
-		selectionMap[point.Url] = true
+		selectionMap[point] = true
 	}
 	return newEndpoints
 }
