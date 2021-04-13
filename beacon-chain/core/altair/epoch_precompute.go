@@ -29,10 +29,9 @@ func InitializeEpochValidators(ctx context.Context, state iface.BeaconStateAltai
 	}
 
 	// This shouldn't happen with a correct beacon state,
-	// but rather be safe to defend against index  out of bound panics.
+	// but rather be safe to defend against index out of bound panics.
 	if state.NumValidators() > len(inactivityScores) {
 		return nil, nil, errors.New("num of validators can't be greater than length of inactivity scores")
-
 	}
 	if err := state.ReadFromEveryValidator(func(idx int, val iface.ReadOnlyValidator) error {
 		// Was validator withdrawable or slashed
