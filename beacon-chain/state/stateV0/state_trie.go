@@ -8,6 +8,8 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	v1 "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
@@ -18,6 +20,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"go.opencensus.io/trace"
+)
+
+var (
+	stateCount = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "beacon_state_count",
+		Help: "Count the number of active beacon state objects.",
+	})
 )
 
 // InitializeFromProto the beacon state from a protobuf representation.
@@ -35,7 +44,7 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 	fieldCount := params.BeaconConfig().BeaconStateFieldCount
 	b := &BeaconState{
 		state:                 st,
-		dirtyFields:           make(map[fieldIndex]interface{}, fieldCount),
+		dirtyFields:           make(map[fieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[fieldIndex][]uint64, fieldCount),
 		stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, fieldCount),
 		sharedFieldReferences: make(map[fieldIndex]*stateutil.Reference, 10),
@@ -66,6 +75,7 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 	b.sharedFieldReferences[balances] = stateutil.NewRef(1)
 	b.sharedFieldReferences[historicalRoots] = stateutil.NewRef(1)
 
+	stateCount.Inc()
 	return b, nil
 }
 
@@ -109,7 +119,7 @@ func (b *BeaconState) Copy() iface.BeaconState {
 			FinalizedCheckpoint:         b.finalizedCheckpoint(),
 			GenesisValidatorsRoot:       b.genesisValidatorRoot(),
 		},
-		dirtyFields:           make(map[fieldIndex]interface{}, fieldCount),
+		dirtyFields:           make(map[fieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[fieldIndex][]uint64, fieldCount),
 		rebuildTrie:           make(map[fieldIndex]bool, fieldCount),
 		sharedFieldReferences: make(map[fieldIndex]*stateutil.Reference, 10),
@@ -161,6 +171,7 @@ func (b *BeaconState) Copy() iface.BeaconState {
 		}
 	}
 
+	stateCount.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
 	runtime.SetFinalizer(dst, func(b *BeaconState) {
 		for field, v := range b.sharedFieldReferences {
@@ -168,9 +179,18 @@ func (b *BeaconState) Copy() iface.BeaconState {
 			if b.stateFieldLeaves[field].reference != nil {
 				b.stateFieldLeaves[field].reference.MinusRef()
 			}
-		}
-	})
 
+		}
+		for i := 0; i < fieldCount; i++ {
+			field := fieldIndex(i)
+			delete(b.stateFieldLeaves, field)
+			delete(b.dirtyIndices, field)
+			delete(b.dirtyFields, field)
+			delete(b.sharedFieldReferences, field)
+			delete(b.stateFieldLeaves, field)
+		}
+		stateCount.Sub(1)
+	})
 	return dst
 }
 
@@ -190,7 +210,7 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 		}
 		layers := stateutil.Merkleize(fieldRoots)
 		b.merkleLayers = layers
-		b.dirtyFields = make(map[fieldIndex]interface{}, params.BeaconConfig().BeaconStateFieldCount)
+		b.dirtyFields = make(map[fieldIndex]bool, params.BeaconConfig().BeaconStateFieldCount)
 	}
 
 	for field := range b.dirtyFields {
