@@ -70,8 +70,7 @@ func AttestationsDelta(state iface.ReadOnlyBeaconState, pBal *Balance, vp []*Val
 }
 
 func attestationDelta(pBal *Balance, v *Validator, prevEpoch, finalizedEpoch types.Epoch) (uint64, uint64) {
-	eligible := v.IsActivePrevEpoch || (v.IsSlashed && !v.IsWithdrawableCurrentEpoch)
-	if !eligible || pBal.ActiveCurrentEpoch == 0 {
+	if !EligibleForRewards(v) || pBal.ActiveCurrentEpoch == 0 {
 		return 0, 0
 	}
 
@@ -88,7 +87,7 @@ func attestationDelta(pBal *Balance, v *Validator, prevEpoch, finalizedEpoch typ
 		maxAttesterReward := br - proposerReward
 		r += maxAttesterReward / uint64(v.InclusionDistance)
 
-		if isInInactivityLeak(prevEpoch, finalizedEpoch) {
+		if helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch) {
 			// Since full base reward will be canceled out by inactivity penalty deltas,
 			// optimal participation receives full base reward compensation here.
 			r += br
@@ -103,7 +102,7 @@ func attestationDelta(pBal *Balance, v *Validator, prevEpoch, finalizedEpoch typ
 
 	// Process target reward / penalty
 	if v.IsPrevEpochTargetAttester && !v.IsSlashed {
-		if isInInactivityLeak(prevEpoch, finalizedEpoch) {
+		if helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch) {
 			// Since full base reward will be canceled out by inactivity penalty deltas,
 			// optimal participation receives full base reward compensation here.
 			r += br
@@ -117,7 +116,7 @@ func attestationDelta(pBal *Balance, v *Validator, prevEpoch, finalizedEpoch typ
 
 	// Process head reward / penalty
 	if v.IsPrevEpochHeadAttester && !v.IsSlashed {
-		if isInInactivityLeak(prevEpoch, finalizedEpoch) {
+		if helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch) {
 			// Since full base reward will be canceled out by inactivity penalty deltas,
 			// optimal participation receives full base reward compensation here.
 			r += br
@@ -130,9 +129,9 @@ func attestationDelta(pBal *Balance, v *Validator, prevEpoch, finalizedEpoch typ
 	}
 
 	// Process finality delay penalty
-	finalityDelay := finalityDelay(prevEpoch, finalizedEpoch)
+	finalityDelay := helpers.FinalityDelay(prevEpoch, finalizedEpoch)
 
-	if isInInactivityLeak(prevEpoch, finalizedEpoch) {
+	if helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch) {
 		// If validator is performing optimally, this cancels all rewards for a neutral balance.
 		proposerReward := br / params.BeaconConfig().ProposerRewardQuotient
 		p += baseRewardsPerEpoch*br - proposerReward
@@ -178,20 +177,10 @@ func ProposersDelta(state iface.ReadOnlyBeaconState, pBal *Balance, vp []*Valida
 	return rewards, nil
 }
 
-// isInInactivityLeak returns true if the state is experiencing inactivity leak.
+// EligibleForRewards for validator.
 //
 // Spec code:
-// def is_in_inactivity_leak(state: BeaconState) -> bool:
-//    return get_finality_delay(state) > MIN_EPOCHS_TO_INACTIVITY_PENALTY
-func isInInactivityLeak(prevEpoch, finalizedEpoch types.Epoch) bool {
-	return finalityDelay(prevEpoch, finalizedEpoch) > params.BeaconConfig().MinEpochsToInactivityPenalty
-}
-
-// finalityDelay returns the finality delay using the beacon state.
-//
-// Spec code:
-// def get_finality_delay(state: BeaconState) -> uint64:
-//    return get_previous_epoch(state) - state.finalized_checkpoint.epoch
-func finalityDelay(prevEpoch, finalizedEpoch types.Epoch) types.Epoch {
-	return prevEpoch - finalizedEpoch
+// if is_active_validator(v, previous_epoch) or (v.slashed and previous_epoch + 1 < v.withdrawable_epoch)
+func EligibleForRewards(v *Validator) bool {
+	return v.IsActivePrevEpoch || (v.IsSlashed && !v.IsWithdrawableCurrentEpoch)
 }
