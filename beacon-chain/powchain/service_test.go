@@ -22,6 +22,7 @@ import (
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/httputils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -545,30 +546,30 @@ func TestServiceFallbackCorrectly(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	assert.Equal(t, firstEndpoint, s1.currHttpEndpoint, "Unexpected http endpoint")
+	assert.Equal(t, firstEndpoint, s1.currHttpEndpoint.Url, "Unexpected http endpoint")
 	// Stay at the first endpoint.
 	s1.fallbackToNextEndpoint()
-	assert.Equal(t, firstEndpoint, s1.currHttpEndpoint, "Unexpected http endpoint")
+	assert.Equal(t, firstEndpoint, s1.currHttpEndpoint.Url, "Unexpected http endpoint")
 
-	s1.cfg.HttpEndpoints = append(s1.cfg.HttpEndpoints, secondEndpoint)
+	s1.httpEndpoints = append(s1.httpEndpoints, httputils.Endpoint{Url: secondEndpoint})
 
 	s1.fallbackToNextEndpoint()
-	assert.Equal(t, secondEndpoint, s1.currHttpEndpoint, "Unexpected http endpoint")
+	assert.Equal(t, secondEndpoint, s1.currHttpEndpoint.Url, "Unexpected http endpoint")
 
 	thirdEndpoint := "C"
 	fourthEndpoint := "D"
 
-	s1.cfg.HttpEndpoints = append(s1.cfg.HttpEndpoints, thirdEndpoint, fourthEndpoint)
+	s1.httpEndpoints = append(s1.httpEndpoints, httputils.Endpoint{Url: thirdEndpoint}, httputils.Endpoint{Url: fourthEndpoint})
 
 	s1.fallbackToNextEndpoint()
-	assert.Equal(t, thirdEndpoint, s1.currHttpEndpoint, "Unexpected http endpoint")
+	assert.Equal(t, thirdEndpoint, s1.currHttpEndpoint.Url, "Unexpected http endpoint")
 
 	s1.fallbackToNextEndpoint()
-	assert.Equal(t, fourthEndpoint, s1.currHttpEndpoint, "Unexpected http endpoint")
+	assert.Equal(t, fourthEndpoint, s1.currHttpEndpoint.Url, "Unexpected http endpoint")
 
 	// Rollover correctly back to the first endpoint
 	s1.fallbackToNextEndpoint()
-	assert.Equal(t, firstEndpoint, s1.currHttpEndpoint, "Unexpected http endpoint")
+	assert.Equal(t, firstEndpoint, s1.currHttpEndpoint.Url, "Unexpected http endpoint")
 }
 
 func TestDedupEndpoints(t *testing.T) {

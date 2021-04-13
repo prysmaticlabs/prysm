@@ -901,7 +901,7 @@ func (s *Service) checkDefaultEndpoint() {
 func (s *Service) fallbackToNextEndpoint() {
 	currEndpoint := s.currHttpEndpoint
 	currIndex := 0
-	totalEndpoints := len(s.cfg.HttpEndpoints)
+	totalEndpoints := len(s.httpEndpoints)
 
 	for i, endpoint := range s.httpEndpoints {
 		if endpoint.Url == currEndpoint.Url {
