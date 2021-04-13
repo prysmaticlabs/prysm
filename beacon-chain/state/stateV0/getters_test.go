@@ -57,7 +57,6 @@ func TestNilState_NoPanic(t *testing.T) {
 	_, err = st.ValidatorAtIndexReadOnly(0)
 	_ = err
 	_, _ = st.ValidatorIndexByPubkey([48]byte{})
-	_ = st.validatorIndexMap()
 	_ = st.PubkeyAtIndex(0)
 	_ = st.NumValidators()
 	_ = st.Balances()

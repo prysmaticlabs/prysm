@@ -17,15 +17,16 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
 	interopcoldstart "github.com/prysmaticlabs/prysm/beacon-chain/interop-cold-start"
+	"github.com/prysmaticlabs/prysm/beacon-chain/node/registration"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
@@ -47,7 +48,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/prereq"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -81,78 +81,18 @@ type BeaconNode struct {
 // New creates a new node instance, sets up configuration options, and registers
 // every required service to the node.
 func New(cliCtx *cli.Context) (*BeaconNode, error) {
-	if err := tracing.Setup(
-		"beacon-chain", // service name
-		cliCtx.String(cmd.TracingProcessNameFlag.Name),
-		cliCtx.String(cmd.TracingEndpointFlag.Name),
-		cliCtx.Float64(cmd.TraceSampleFractionFlag.Name),
-		cliCtx.Bool(cmd.EnableTracingFlag.Name),
-	); err != nil {
+	if err := configureTracing(cliCtx); err != nil {
 		return nil, err
 	}
-
-	// Warn if user's platform is not supported
-	prereq.WarnIfNotSupported(cliCtx.Context)
-
+	prereq.WarnIfPlatformNotSupported(cliCtx.Context)
 	featureconfig.ConfigureBeaconChain(cliCtx)
 	cmd.ConfigureBeaconChain(cliCtx)
 	flags.ConfigureGlobalFlags(cliCtx)
-
-	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
-		chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
-		params.LoadChainConfigFile(chainConfigFileName)
-	}
-
-	if cliCtx.Bool(flags.HistoricalSlasherNode.Name) {
-		c := params.BeaconConfig()
-		// Save a state every 4 epochs.
-		c.SlotsPerArchivedPoint = params.BeaconConfig().SlotsPerEpoch * 4
-		params.OverrideBeaconConfig(c)
-		cmdConfig := cmd.Get()
-		// Allow up to 4096 attestations at a time to be requested from the beacon nde.
-		cmdConfig.MaxRPCPageSize = int(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().MaxAttestations))
-		cmd.Init(cmdConfig)
-		log.Warnf(
-			"Setting %d slots per archive point and %d max RPC page size for historical slasher usage. This requires additional storage",
-			c.SlotsPerArchivedPoint,
-			cmdConfig.MaxRPCPageSize,
-		)
-	}
-
-	if cliCtx.IsSet(flags.SlotsPerArchivedPoint.Name) {
-		c := params.BeaconConfig()
-		c.SlotsPerArchivedPoint = types.Slot(cliCtx.Int(flags.SlotsPerArchivedPoint.Name))
-		params.OverrideBeaconConfig(c)
-	}
-
-	// ETH PoW related flags.
-	if cliCtx.IsSet(flags.ChainID.Name) {
-		c := params.BeaconConfig()
-		c.DepositChainID = cliCtx.Uint64(flags.ChainID.Name)
-		params.OverrideBeaconConfig(c)
-	}
-	if cliCtx.IsSet(flags.NetworkID.Name) {
-		c := params.BeaconConfig()
-		c.DepositNetworkID = cliCtx.Uint64(flags.NetworkID.Name)
-		params.OverrideBeaconConfig(c)
-	}
-	if cliCtx.IsSet(flags.DepositContractFlag.Name) {
-		c := params.BeaconConfig()
-		c.DepositContractAddress = cliCtx.String(flags.DepositContractFlag.Name)
-		params.OverrideBeaconConfig(c)
-	}
-
-	// Setting chain network specific flags.
-	if cliCtx.IsSet(cmd.BootstrapNode.Name) {
-		c := params.BeaconNetworkConfig()
-		c.BootstrapNodes = cliCtx.StringSlice(cmd.BootstrapNode.Name)
-		params.OverrideBeaconNetworkConfig(c)
-	}
-	if cliCtx.IsSet(flags.ContractDeploymentBlock.Name) {
-		networkCfg := params.BeaconNetworkConfig()
-		networkCfg.ContractDeploymentBlock = uint64(cliCtx.Int(flags.ContractDeploymentBlock.Name))
-		params.OverrideBeaconNetworkConfig(networkCfg)
-	}
+	configureChainConfig(cliCtx)
+	configureHistoricalSlasher(cliCtx)
+	configureSlotsPerArchivedPoint(cliCtx)
+	configureProofOfWork(cliCtx)
+	configureNetwork(cliCtx)
 
 	registry := shared.NewServiceRegistry()
 
@@ -386,38 +326,17 @@ func readbootNodes(fileName string) ([]string, error) {
 }
 
 func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
-	// Bootnode ENR may be a filepath to a YAML file
-	bootnodesTemp := params.BeaconNetworkConfig().BootstrapNodes // actual CLI values
-	bootnodeAddrs := make([]string, 0)                           // dest of final list of nodes
-	for _, addr := range bootnodesTemp {
-		if filepath.Ext(addr) == ".yaml" {
-			fileNodes, err := readbootNodes(addr)
-			if err != nil {
-				return err
-			}
-			bootnodeAddrs = append(bootnodeAddrs, fileNodes...)
-		} else {
-			bootnodeAddrs = append(bootnodeAddrs, addr)
-		}
-	}
-
-	datadir := cliCtx.String(cmd.DataDirFlag.Name)
-	if datadir == "" {
-		datadir = cmd.DefaultDataDir()
-		if datadir == "" {
-			log.Fatal(
-				"Could not determine your system's HOME path, please specify a --datadir you wish " +
-					"to use for your chain data",
-			)
-		}
+	bootstrapNodeAddrs, dataDir, err := registration.P2PPreregistration(cliCtx)
+	if err != nil {
+		return err
 	}
 
 	svc, err := p2p.NewService(b.ctx, &p2p.Config{
 		NoDiscovery:       cliCtx.Bool(cmd.NoDiscovery.Name),
 		StaticPeers:       sliceutil.SplitCommaSeparated(cliCtx.StringSlice(cmd.StaticPeers.Name)),
-		BootstrapNodeAddr: bootnodeAddrs,
+		BootstrapNodeAddr: bootstrapNodeAddrs,
 		RelayNodeAddr:     cliCtx.String(cmd.RelayNode.Name),
-		DataDir:           datadir,
+		DataDir:           dataDir,
 		LocalIP:           cliCtx.String(cmd.P2PIP.Name),
 		HostAddress:       cliCtx.String(cmd.P2PHost.Name),
 		HostDNS:           cliCtx.String(cmd.P2PHostDNS.Name),
@@ -469,27 +388,26 @@ func (b *BeaconNode) registerBlockchainService() error {
 	}
 
 	wsp := b.cliCtx.String(flags.WeakSubjectivityCheckpt.Name)
-	bRoot, epoch, err := convertWspInput(wsp)
+	wsCheckpt, err := helpers.ParseWeakSubjectivityInputString(wsp)
 	if err != nil {
 		return err
 	}
 
 	maxRoutines := b.cliCtx.Int(cmd.MaxGoroutines.Name)
 	blockchainService, err := blockchain.NewService(b.ctx, &blockchain.Config{
-		BeaconDB:          b.db,
-		DepositCache:      b.depositCache,
-		ChainStartFetcher: web3Service,
-		AttPool:           b.attestationPool,
-		ExitPool:          b.exitPool,
-		SlashingPool:      b.slashingsPool,
-		P2p:               b.fetchP2P(),
-		MaxRoutines:       maxRoutines,
-		StateNotifier:     b,
-		ForkChoiceStore:   b.forkChoiceStore,
-		OpsService:        opsService,
-		StateGen:          b.stateGen,
-		WspBlockRoot:      bRoot,
-		WspEpoch:          epoch,
+		BeaconDB:                b.db,
+		DepositCache:            b.depositCache,
+		ChainStartFetcher:       web3Service,
+		AttPool:                 b.attestationPool,
+		ExitPool:                b.exitPool,
+		SlashingPool:            b.slashingsPool,
+		P2p:                     b.fetchP2P(),
+		MaxRoutines:             maxRoutines,
+		StateNotifier:           b,
+		ForkChoiceStore:         b.forkChoiceStore,
+		OpsService:              opsService,
+		StateGen:                b.stateGen,
+		WeakSubjectivityCheckpt: wsCheckpt,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")
@@ -511,15 +429,14 @@ func (b *BeaconNode) registerPOWChainService() error {
 	}
 
 	if b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name) == "" {
-		log.Error("No ETH1 node specified to run with the beacon node. Please consider running your own ETH1 node for better uptime, security, and decentralization of ETH2. Visit https://docs.prylabs.network/docs/prysm-usage/setup-eth1 for more information.")
-		log.Error("You will need to specify --http-web3provider to attach an ETH1 node to the Prysm node. Without an ETH1 node block proposals for your validator will be affected and the beacon node will not be able to initialize the genesis state.")
+		log.Error(
+			"No ETH1 node specified to run with the beacon node. Please consider running your own ETH1 node for better uptime, security, and decentralization of ETH2. Visit https://docs.prylabs.network/docs/prysm-usage/setup-eth1 for more information.",
+		)
+		log.Error(
+			"You will need to specify --http-web3provider to attach an eth1 node to the prysm node. Without an eth1 node block proposals for your validator will be affected and the beacon node will not be able to initialize the genesis state.",
+		)
 	}
-
-	primaryEndpoint := powchain.HttpEndpoint(b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name))
-	endpoints := []httputils.Endpoint{primaryEndpoint}
-	for _, value := range b.cliCtx.StringSlice(flags.FallbackWeb3ProviderFlag.Name) {
-		e := powchain.HttpEndpoint(value)
-		endpoints = append(endpoints, e)
+	endpoints := []string{b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name)}
 	}
 
 	cfg := &powchain.Web3ServiceConfig{
