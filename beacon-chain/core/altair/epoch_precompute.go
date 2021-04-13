@@ -235,12 +235,12 @@ func attestationDelta(bal *precompute.Balance, v *precompute.Validator, prevEpoc
 
 		// Apply an additional penalty to validators that did not vote on the correct target.
 		if !v.IsPrevEpochTargetAttester {
+			// Increase validator's inactivity score by bias when validator didn't vote target.
+			v.InactivityScore += params.BeaconConfig().InactivityScoreBias
+
 			penaltyNumerator := eb * v.InactivityScore
 			penaltyDenominator := params.BeaconConfig().InactivityScoreBias * params.BeaconConfig().InactivityPenaltyQuotientAltair
 			p += penaltyNumerator / penaltyDenominator
-
-			// Increase validator's inactivity score by bias when validator didn't vote target.
-			v.InactivityScore += params.BeaconConfig().InactivityScoreBias
 		}
 	}
 	return r, p
