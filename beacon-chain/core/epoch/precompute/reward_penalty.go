@@ -134,8 +134,6 @@ func attestationDelta(pBal *Balance, v *Validator, prevEpoch, finalizedEpoch typ
 	}
 
 	// Process finality delay penalty
-	finalityDelay := helpers.FinalityDelay(prevEpoch, finalizedEpoch)
-
 	if helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch) {
 		// If validator is performing optimally, this cancels all rewards for a neutral balance.
 		proposerReward := br / params.BeaconConfig().ProposerRewardQuotient
@@ -144,6 +142,7 @@ func attestationDelta(pBal *Balance, v *Validator, prevEpoch, finalizedEpoch typ
 		// Equivalent to the following condition from the spec:
 		// `index not in get_unslashed_attesting_indices(state, matching_target_attestations)`
 		if !v.IsPrevEpochTargetAttester || v.IsSlashed {
+			finalityDelay := helpers.FinalityDelay(prevEpoch, finalizedEpoch)
 			p += vb * uint64(finalityDelay) / params.BeaconConfig().InactivityPenaltyQuotient
 		}
 	}
