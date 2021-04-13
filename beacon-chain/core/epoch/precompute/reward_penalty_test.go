@@ -42,7 +42,7 @@ func TestProcessRewardsAndPenaltiesPrecompute(t *testing.T) {
 	vp, bp, err = ProcessAttestations(context.Background(), beaconState, vp, bp)
 	require.NoError(t, err)
 
-	processedState, err := ProcessRewardsAndPenaltiesPrecompute(beaconState, bp, vp)
+	processedState, err := ProcessRewardsAndPenaltiesPrecompute(beaconState, bp, vp, AttestationsDelta, ProposersDelta)
 	require.NoError(t, err)
 	beaconState, ok := processedState.(*stateV0.BeaconState)
 	require.Equal(t, true, ok)

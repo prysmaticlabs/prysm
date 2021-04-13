@@ -407,7 +407,7 @@ func ProcessEpochPrecompute(ctx context.Context, state iface.BeaconState) (iface
 		return nil, errors.Wrap(err, "could not process justification")
 	}
 
-	state, err = precompute.ProcessRewardsAndPenaltiesPrecompute(state, bp, vp)
+	state, err = precompute.ProcessRewardsAndPenaltiesPrecompute(state, bp, vp, precompute.AttestationsDelta, precompute.ProposersDelta)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process rewards and penalties")
 	}
