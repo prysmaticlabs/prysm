@@ -252,12 +252,16 @@ func ProcessEffectiveBalanceUpdates(state iface.BeaconState) (iface.BeaconState,
 		balance := bals[idx]
 
 		if balance+downwardThreshold < val.EffectiveBalance || val.EffectiveBalance+upwardThreshold < balance {
-			newVal := stateV0.CopyValidator(val)
-			newVal.EffectiveBalance = maxEffBalance
-			if newVal.EffectiveBalance > balance-balance%effBalanceInc {
-				newVal.EffectiveBalance = balance - balance%effBalanceInc
+			effectiveBal := maxEffBalance
+			if effectiveBal > balance-balance%effBalanceInc {
+				effectiveBal = balance - balance%effBalanceInc
 			}
-			return true, newVal, nil
+			if effectiveBal != val.EffectiveBalance {
+				newVal := stateV0.CopyValidator(val)
+				newVal.EffectiveBalance = effectiveBal
+				return true, newVal, nil
+			}
+			return false, val, nil
 		}
 		return false, val, nil
 	}
