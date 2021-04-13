@@ -55,6 +55,8 @@ func TestCorrect_ActiveValidatorsCount(t *testing.T) {
 	}
 	require.NoError(t, bState.SetSlot(10000))
 	require.NoError(t, db.SaveState(s.ctx, bState, [32]byte{'a'}))
+	// Reset count
+	s.activeValidatorCount = 0
 
 	// Retrieve last archived state.
 	vals, err = s.retrieveActiveValidators()
