@@ -4,6 +4,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "config.go",
         "log.go",
         "node.go",
     ],
@@ -22,6 +23,7 @@ go_library(
         "//beacon-chain/forkchoice/protoarray:go_default_library",
         "//beacon-chain/gateway:go_default_library",
         "//beacon-chain/interop-cold-start:go_default_library",
+        "//beacon-chain/node/registration:go_default_library",
         "//beacon-chain/operations/attestations:go_default_library",
         "//beacon-chain/operations/slashings:go_default_library",
         "//beacon-chain/operations/voluntaryexits:go_default_library",
