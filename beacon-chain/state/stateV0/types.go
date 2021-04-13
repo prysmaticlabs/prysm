@@ -81,7 +81,7 @@ var ErrNilInnerState = errors.New("nil inner state")
 type BeaconState struct {
 	state                 *pbp2p.BeaconState
 	lock                  sync.RWMutex
-	dirtyFields           map[fieldIndex]interface{}
+	dirtyFields           map[fieldIndex]bool
 	dirtyIndices          map[fieldIndex][]uint64
 	stateFieldLeaves      map[fieldIndex]*FieldTrie
 	rebuildTrie           map[fieldIndex]bool
