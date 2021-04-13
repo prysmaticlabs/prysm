@@ -29,6 +29,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/httputils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -90,7 +91,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	require.NoError(t, err)
 	web3Service, err = powchain.NewService(ctx, &powchain.Web3ServiceConfig{
 		BeaconDB:        beaconDB,
-		HTTPEndpoints:   []string{endpoint},
+		HttpEndpoints:   []httputils.Endpoint{{Url: endpoint}},
 		DepositContract: common.Address{},
 	})
 	require.NoError(t, err, "Unable to set up web3 service")
