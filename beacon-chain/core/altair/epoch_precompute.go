@@ -4,9 +4,11 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -14,14 +16,24 @@ import (
 // InitializeEpochValidators gets called at the beginning of process epoch cycle to return
 // pre computed instances of validators attesting records and total
 // balances attested in an epoch.
-func InitializeEpochValidators(ctx context.Context, state iface.BeaconState) ([]*precompute.Validator, *precompute.Balance, error) {
+func InitializeEpochValidators(ctx context.Context, state iface.BeaconStateAltair) ([]*precompute.Validator, *precompute.Balance, error) {
 	ctx, span := trace.StartSpan(ctx, "altair.InitializeEpochValidators")
 	defer span.End()
 	pValidators := make([]*precompute.Validator, state.NumValidators())
-	pBal := &precompute.Balance{}
-
+	bal := &precompute.Balance{}
 	prevEpoch := helpers.PrevEpoch(state)
 
+	inactivityScores, err := state.InactivityScores()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// This shouldn't happen with a correct beacon state,
+	// but rather be safe to defend against index  out of bound panics.
+	if state.NumValidators() > len(inactivityScores) {
+		return nil, nil, errors.New("num of validators can't be greater than length of inactivity scores")
+
+	}
 	if err := state.ReadFromEveryValidator(func(idx int, val iface.ReadOnlyValidator) error {
 		// Was validator withdrawable or slashed
 		withdrawable := prevEpoch+1 >= val.WithdrawableEpoch()
@@ -29,19 +41,25 @@ func InitializeEpochValidators(ctx context.Context, state iface.BeaconState) ([]
 			IsSlashed:                    val.Slashed(),
 			IsWithdrawableCurrentEpoch:   withdrawable,
 			CurrentEpochEffectiveBalance: val.EffectiveBalance(),
+			InactivityScore:              inactivityScores[idx],
 		}
-		// Was validator active previous epoch
+		// Validator active current epoch
+		if helpers.IsActiveValidatorUsingTrie(val, helpers.CurrentEpoch(state)) {
+			pVal.IsActiveCurrentEpoch = true
+			bal.ActiveCurrentEpoch += val.EffectiveBalance()
+		}
+		// Validator active previous epoch
 		if helpers.IsActiveValidatorUsingTrie(val, prevEpoch) {
 			pVal.IsActivePrevEpoch = true
-			pBal.ActivePrevEpoch += val.EffectiveBalance()
+			bal.ActivePrevEpoch += val.EffectiveBalance()
 		}
 
 		pValidators[idx] = pVal
 		return nil
 	}); err != nil {
-		return nil, nil, errors.Wrap(err, "failed to initialize precompute")
+		return nil, nil, errors.Wrap(err, "could not initialize epoch validator")
 	}
-	return pValidators, pBal, nil
+	return pValidators, bal, nil
 }
 
 // ProcessEpochParticipation processes the epoch participation in state and update individual validator's pre computes,
@@ -49,42 +67,164 @@ func InitializeEpochValidators(ctx context.Context, state iface.BeaconState) ([]
 func ProcessEpochParticipation(
 	ctx context.Context,
 	state iface.BeaconState,
-	vp []*precompute.Validator,
-	pBal *precompute.Balance,
+	bal *precompute.Balance,
+	vals []*precompute.Validator,
 ) ([]*precompute.Validator, *precompute.Balance, error) {
 	ctx, span := trace.StartSpan(ctx, "altair.ProcessEpochParticipation")
 	defer span.End()
 
-	v := &precompute.Validator{}
 	cp, err := state.CurrentEpochParticipation()
 	if err != nil {
 		return nil, nil, err
 	}
 	for i, b := range cp {
 		if HasValidatorFlag(b, params.BeaconConfig().TimelyTargetFlagIndex) {
-			v.IsCurrentEpochTargetAttester = true
+			vals[i].IsCurrentEpochTargetAttester = true
 		}
-		vp[i] = v
 	}
 	pp, err := state.PreviousEpochParticipation()
 	if err != nil {
 		return nil, nil, err
 	}
 	for i, b := range pp {
-		v = vp[i]
 		if HasValidatorFlag(b, params.BeaconConfig().TimelySourceFlagIndex) {
-			v.IsPrevEpochAttester = true
+			vals[i].IsPrevEpochAttester = true
 		}
 		if HasValidatorFlag(b, params.BeaconConfig().TimelyTargetFlagIndex) {
-			v.IsPrevEpochTargetAttester = true
+			vals[i].IsPrevEpochTargetAttester = true
 		}
 		if HasValidatorFlag(b, params.BeaconConfig().TimelyHeadFlagIndex) {
-			v.IsPrevEpochHeadAttester = true
+			vals[i].IsPrevEpochHeadAttester = true
 		}
-		vp[i] = v
+	}
+	bal = precompute.UpdateBalance(vals, bal)
+	return vals, bal, nil
+}
+
+// ProcessRewardsAndPenaltiesPrecompute processes the rewards and penalties of individual validator.
+// This is an optimized version by passing in precomputed validator attesting records and and total epoch balances.
+func ProcessRewardsAndPenaltiesPrecompute(
+	state iface.BeaconStateAltair,
+	bal *precompute.Balance,
+	vals []*precompute.Validator,
+) (iface.BeaconStateAltair, error) {
+	// Don't process rewards and penalties in genesis epoch.
+	if helpers.CurrentEpoch(state) == 0 {
+		return state, nil
 	}
 
-	pBal = precompute.UpdateBalance(vp, pBal)
+	numOfVals := state.NumValidators()
+	// Guard against an out-of-bounds using validator balance precompute.
+	if len(vals) != numOfVals || len(vals) != state.BalancesLength() {
+		return state, errors.New("registries not the same length as state registries")
+	}
 
-	return vp, pBal, nil
+	attsRewards, attsPenalties, err := AttestationsDelta(state, bal, vals)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get attestation delta")
+	}
+
+	balances := state.Balances()
+	for i := 0; i < numOfVals; i++ {
+		vals[i].BeforeEpochTransitionBalance = balances[i]
+
+		// Compute the post balance of the validator after accounting for the
+		// attester and proposer rewards and penalties.
+		balances[i] = helpers.IncreaseBalanceWithVal(balances[i], attsRewards[i])
+		balances[i] = helpers.DecreaseBalanceWithVal(balances[i], attsPenalties[i])
+
+		vals[i].AfterEpochTransitionBalance = balances[i]
+	}
+
+	if err := state.SetBalances(balances); err != nil {
+		return nil, errors.Wrap(err, "could not set validator balances")
+	}
+
+	return state, nil
+}
+
+// AttestationsDelta computes and returns the rewards and penalties differences for individual validators based on the
+// voting records.
+func AttestationsDelta(state iface.BeaconStateAltair, bal *precompute.Balance, vals []*precompute.Validator) ([]uint64, []uint64, error) {
+	numOfVals := state.NumValidators()
+	rewards := make([]uint64, numOfVals)
+	penalties := make([]uint64, numOfVals)
+	prevEpoch := helpers.PrevEpoch(state)
+	finalizedEpoch := state.FinalizedCheckpointEpoch()
+
+	for i, v := range vals {
+		rewards[i], penalties[i] = attestationDelta(bal, v, prevEpoch, finalizedEpoch)
+	}
+	return rewards, penalties, nil
+}
+
+func attestationDelta(bal *precompute.Balance, v *precompute.Validator, prevEpoch, finalizedEpoch types.Epoch) (uint64, uint64) {
+	eligible := v.IsActivePrevEpoch || (v.IsSlashed && !v.IsWithdrawableCurrentEpoch)
+	if !eligible || bal.ActiveCurrentEpoch == 0 {
+		return 0, 0
+	}
+
+	ebi := params.BeaconConfig().EffectiveBalanceIncrement
+	eb := v.CurrentEpochEffectiveBalance
+	br := eb * params.BeaconConfig().BaseRewardFactor / mathutil.IntegerSquareRoot(bal.ActiveCurrentEpoch)
+	activeCurrentEpochIncrements := bal.ActiveCurrentEpoch / ebi
+
+	r, p := uint64(0), uint64(0)
+	// Process source reward / penalty
+	if v.IsPrevEpochAttester && !v.IsSlashed {
+		if helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch) {
+			// Since full base reward will be canceled out by inactivity penalty deltas,
+			// optimal participation receives full base reward compensation here.
+			r += br * params.BeaconConfig().TimelySourceWeight / params.BeaconConfig().WeightDenominator
+		} else {
+			rewardNumerator := br * params.BeaconConfig().TimelySourceWeight * (bal.PrevEpochAttested / ebi)
+			r += rewardNumerator / (activeCurrentEpochIncrements * params.BeaconConfig().WeightDenominator)
+		}
+	} else {
+		p += br * params.BeaconConfig().TimelySourceWeight / params.BeaconConfig().WeightDenominator
+	}
+
+	// Process target reward / penalty
+	if v.IsPrevEpochTargetAttester && !v.IsSlashed {
+		if helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch) {
+			// Since full base reward will be canceled out by inactivity penalty deltas,
+			// optimal participation receives full base reward compensation here.
+			r += br * params.BeaconConfig().TimelyTargetWeight / params.BeaconConfig().WeightDenominator
+		} else {
+			rewardNumerator := br * params.BeaconConfig().TimelyTargetWeight * (bal.PrevEpochTargetAttested / ebi)
+			r += rewardNumerator / (activeCurrentEpochIncrements * params.BeaconConfig().WeightDenominator)
+		}
+	} else {
+		p += br * params.BeaconConfig().TimelyTargetWeight / params.BeaconConfig().WeightDenominator
+	}
+
+	// Process head reward / penalty
+	if v.IsPrevEpochHeadAttester && !v.IsSlashed {
+		if helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch) {
+			// Since full base reward will be canceled out by inactivity penalty deltas,
+			// optimal participation receives full base reward compensation here.
+			r += br * params.BeaconConfig().TimelyHeadWeight / params.BeaconConfig().WeightDenominator
+		} else {
+			rewardNumerator := br * params.BeaconConfig().TimelyHeadWeight * (bal.PrevEpochHeadAttested / ebi)
+			r += rewardNumerator / (activeCurrentEpochIncrements * params.BeaconConfig().WeightDenominator)
+		}
+	} else {
+		p += br * params.BeaconConfig().TimelyHeadWeight / params.BeaconConfig().WeightDenominator
+	}
+
+	// Process finality delay penalty
+	if helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch) {
+		// If validator is performing optimally, this cancels all rewards for a neutral balance.
+		p += br * params.BeaconConfig().TimelySourceWeight / params.BeaconConfig().WeightDenominator
+		p += br * params.BeaconConfig().TimelyTargetWeight / params.BeaconConfig().WeightDenominator
+		p += br * params.BeaconConfig().TimelyHeadWeight / params.BeaconConfig().WeightDenominator
+
+		// Apply an additional penalty to validators that did not vote on the correct target.
+		if !v.IsPrevEpochTargetAttester {
+			penaltyNumerator := eb * v.InactivityScore
+			penaltyDenominator := params.BeaconConfig().InactivityScoreBias * params.BeaconConfig().InactivityPenaltyQuotientAltair
+			p += penaltyNumerator / penaltyDenominator
+		}
+	}
+	return r, p
 }
