@@ -1096,7 +1096,7 @@ func (b *BeaconState) InactivityScores() ([]uint64, error) {
 	if !b.hasInnerState() {
 		return nil, nil
 	}
-	if b.state.Balances == nil {
+	if b.state.InactivityScores == nil {
 		return nil, nil
 	}
 
