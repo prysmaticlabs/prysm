@@ -11,7 +11,6 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/httputils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -25,7 +24,7 @@ const pubKeyErr = "could not convert bytes to public key"
 func TestProcessDeposit_OK(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HttpEndpoints: []httputils.Endpoint{{Url: endpoint}},
+		HTTPEndpoints: []string{endpoint},
 		BeaconDB:      beaconDB,
 	})
 	require.NoError(t, err, "Unable to setup web3 ETH1.0 chain service")
@@ -49,7 +48,7 @@ func TestProcessDeposit_OK(t *testing.T) {
 func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HttpEndpoints: []httputils.Endpoint{{Url: endpoint}},
+		HTTPEndpoints: []string{endpoint},
 		BeaconDB:      beaconDB,
 	})
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
@@ -75,7 +74,7 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HttpEndpoints: []httputils.Endpoint{{Url: endpoint}},
+		HTTPEndpoints: []string{endpoint},
 		BeaconDB:      beaconDB,
 	})
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
@@ -111,7 +110,7 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HttpEndpoints: []httputils.Endpoint{{Url: endpoint}},
+		HTTPEndpoints: []string{endpoint},
 		BeaconDB:      beaconDB,
 	})
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
@@ -146,7 +145,7 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HttpEndpoints: []httputils.Endpoint{{Url: endpoint}},
+		HTTPEndpoints: []string{endpoint},
 		BeaconDB:      beaconDB,
 	})
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
@@ -179,7 +178,7 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HttpEndpoints: []httputils.Endpoint{{Url: endpoint}},
+		HTTPEndpoints: []string{endpoint},
 		BeaconDB:      beaconDB,
 	})
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
@@ -240,7 +239,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 func TestProcessDeposit_AllDepositedSuccessfully(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HttpEndpoints: []httputils.Endpoint{{Url: endpoint}},
+		HTTPEndpoints: []string{endpoint},
 		BeaconDB:      beaconDB,
 	})
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
