@@ -26,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
 	interopcoldstart "github.com/prysmaticlabs/prysm/beacon-chain/interop-cold-start"
+	"github.com/prysmaticlabs/prysm/beacon-chain/node/registration"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
@@ -324,38 +325,17 @@ func readbootNodes(fileName string) ([]string, error) {
 }
 
 func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
-	// Bootnode ENR may be a filepath to a YAML file
-	bootnodesTemp := params.BeaconNetworkConfig().BootstrapNodes // actual CLI values
-	bootnodeAddrs := make([]string, 0)                           // dest of final list of nodes
-	for _, addr := range bootnodesTemp {
-		if filepath.Ext(addr) == ".yaml" {
-			fileNodes, err := readbootNodes(addr)
-			if err != nil {
-				return err
-			}
-			bootnodeAddrs = append(bootnodeAddrs, fileNodes...)
-		} else {
-			bootnodeAddrs = append(bootnodeAddrs, addr)
-		}
-	}
-
-	datadir := cliCtx.String(cmd.DataDirFlag.Name)
-	if datadir == "" {
-		datadir = cmd.DefaultDataDir()
-		if datadir == "" {
-			log.Fatal(
-				"Could not determine your system's HOME path, please specify a --datadir you wish " +
-					"to use for your chain data",
-			)
-		}
+	bootstrapNodeAddrs, dataDir, err := registration.P2PPreregistration(cliCtx)
+	if err != nil {
+		return err
 	}
 
 	svc, err := p2p.NewService(b.ctx, &p2p.Config{
 		NoDiscovery:       cliCtx.Bool(cmd.NoDiscovery.Name),
 		StaticPeers:       sliceutil.SplitCommaSeparated(cliCtx.StringSlice(cmd.StaticPeers.Name)),
-		BootstrapNodeAddr: bootnodeAddrs,
+		BootstrapNodeAddr: bootstrapNodeAddrs,
 		RelayNodeAddr:     cliCtx.String(cmd.RelayNode.Name),
-		DataDir:           datadir,
+		DataDir:           dataDir,
 		LocalIP:           cliCtx.String(cmd.P2PIP.Name),
 		HostAddress:       cliCtx.String(cmd.P2PHost.Name),
 		HostDNS:           cliCtx.String(cmd.P2PHostDNS.Name),
