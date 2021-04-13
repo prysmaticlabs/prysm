@@ -19,22 +19,25 @@ import (
 //
 // Spec pseudocode definition:
 //   def process_proposer_slashing(state: BeaconState, proposer_slashing: ProposerSlashing) -> None:
-//    """
-//    Process ``ProposerSlashing`` operation.
-//    """
-//    proposer = state.validator_registry[proposer_slashing.proposer_index]
-//    # Verify slots match
-//    assert proposer_slashing.header_1.slot == proposer_slashing.header_2.slot
-//    # But the headers are different
-//    assert proposer_slashing.header_1 != proposer_slashing.header_2
-//    # Check proposer is slashable
-//    assert is_slashable_validator(proposer, get_current_epoch(state))
-//    # Signatures are valid
-//    for header in (proposer_slashing.header_1, proposer_slashing.header_2):
-//        domain = get_domain(state, DOMAIN_BEACON_PROPOSER, slot_to_epoch(header.slot))
-//        assert bls_verify(proposer.pubkey, signing_root(header), header.signature, domain)
+//    header_1 = proposer_slashing.signed_header_1.message
+//    header_2 = proposer_slashing.signed_header_2.message
 //
-//    slash_validator(state, proposer_slashing.proposer_index)
+//    # Verify header slots match
+//    assert header_1.slot == header_2.slot
+//    # Verify header proposer indices match
+//    assert header_1.proposer_index == header_2.proposer_index
+//    # Verify the headers are different
+//    assert header_1 != header_2
+//    # Verify the proposer is slashable
+//    proposer = state.validators[header_1.proposer_index]
+//    assert is_slashable_validator(proposer, get_current_epoch(state))
+//    # Verify signatures
+//    for signed_header in (proposer_slashing.signed_header_1, proposer_slashing.signed_header_2):
+//        domain = get_domain(state, DOMAIN_BEACON_PROPOSER, compute_epoch_at_slot(signed_header.message.slot))
+//        signing_root = compute_signing_root(signed_header.message, domain)
+//        assert bls.Verify(proposer.pubkey, signing_root, signed_header.signature)
+//
+//    slash_validator(state, header_1.proposer_index)
 func ProcessProposerSlashings(
 	_ context.Context,
 	beaconState iface.BeaconState,
