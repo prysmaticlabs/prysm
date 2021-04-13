@@ -64,7 +64,7 @@ func ProcessAttestations(
 //        assert data.source == state.previous_justified_checkpoint
 //        state.previous_epoch_attestations.append(pending_attestation)
 //
-//    # Check signature
+//    # Verify signature
 //    assert is_valid_indexed_attestation(state, get_indexed_attestation(state, attestation))
 func ProcessAttestation(
 	ctx context.Context,
