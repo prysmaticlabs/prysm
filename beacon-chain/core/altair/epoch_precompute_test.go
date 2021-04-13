@@ -222,10 +222,10 @@ func TestProcessRewardsAndPenaltiesPrecompute_BadState(t *testing.T) {
 	require.NoError(t, err)
 	validators, balance, err := InitializeEpochValidators(context.Background(), s)
 	require.NoError(t, err)
-	validators, balance, err = ProcessEpochParticipation(context.Background(), s, balance, validators)
+	_, balance, err = ProcessEpochParticipation(context.Background(), s, balance, validators)
 	require.NoError(t, err)
-	s, err = ProcessRewardsAndPenaltiesPrecompute(s, balance, []*precompute.Validator{})
-	require.ErrorContains(t, "registries not the same length as state registries", err)
+	_, err = ProcessRewardsAndPenaltiesPrecompute(s, balance, []*precompute.Validator{})
+	require.ErrorContains(t, "validator registries not the same length as state's validator registries", err)
 }
 
 func testState() (iface.BeaconState, error) {
