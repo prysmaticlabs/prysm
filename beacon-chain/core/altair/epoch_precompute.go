@@ -115,7 +115,7 @@ func ProcessRewardsAndPenaltiesPrecompute(
 	numOfVals := state.NumValidators()
 	// Guard against an out-of-bounds using validator balance precompute.
 	if len(vals) != numOfVals || len(vals) != state.BalancesLength() {
-		return state, errors.New("registries not the same length as state registries")
+		return state, errors.New("validator registries not the same length as state's validator registries")
 	}
 
 	attsRewards, attsPenalties, err := AttestationsDelta(state, bal, vals)
