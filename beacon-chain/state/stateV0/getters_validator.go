@@ -160,8 +160,8 @@ func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val iface.ReadOnlyV
 	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
-	if b.state.Validators == nil {
-		return errors.New("nil validators in state")
+	if len(b.state.Validators) == 0 {
+		return nil
 	}
 	b.lock.RLock()
 	validators := b.state.Validators
