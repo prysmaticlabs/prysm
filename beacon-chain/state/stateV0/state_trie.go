@@ -28,6 +28,9 @@ func InitializeFromProto(st *pbp2p.BeaconState) (*BeaconState, error) {
 }
 
 func hydrateBeaconState(st *pbp2p.BeaconState) *pbp2p.BeaconState {
+	if st == nil {
+		return st
+	}
 	if st.Validators == nil {
 		st.Validators = []*ethpb.Validator{}
 	}
