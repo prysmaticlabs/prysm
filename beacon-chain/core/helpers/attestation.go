@@ -53,7 +53,7 @@ func ValidateSlotTargetEpoch(data *ethpb.AttestationData) error {
 //   def is_aggregator(state: BeaconState, slot: Slot, index: CommitteeIndex, slot_signature: BLSSignature) -> bool:
 //    committee = get_beacon_committee(state, slot, index)
 //    modulo = max(1, len(committee) // TARGET_AGGREGATORS_PER_COMMITTEE)
-//    return bytes_to_int(hash(slot_signature)[0:8]) % modulo == 0
+//    return bytes_to_uint64(hash(slot_signature)[0:8]) % modulo == 0
 func IsAggregator(committeeCount uint64, slotSig []byte) (bool, error) {
 	modulo := uint64(1)
 	if committeeCount/params.BeaconConfig().TargetAggregatorsPerCommittee > 1 {
@@ -69,7 +69,7 @@ func IsAggregator(committeeCount uint64, slotSig []byte) (bool, error) {
 // Spec pseudocode definition:
 //   def get_aggregate_signature(attestations: Sequence[Attestation]) -> BLSSignature:
 //    signatures = [attestation.signature for attestation in attestations]
-//    return bls_aggregate_signatures(signatures)
+//    return bls.Aggregate(signatures)
 func AggregateSignature(attestations []*ethpb.Attestation) (bls.Signature, error) {
 	sigs := make([]bls.Signature, len(attestations))
 	var err error
