@@ -61,7 +61,7 @@ func InitializeEpochValidators(ctx context.Context, state iface.BeaconStateAltai
 	return pValidators, bal, nil
 }
 
-// ProcessEpochParticipation processes the epoch participation in state and update individual validator's pre computes,
+// ProcessEpochParticipation processes the epoch participation in state and updates individual validator's pre computes,
 // it also tracks and updates epoch attesting balances.
 func ProcessEpochParticipation(
 	ctx context.Context,
