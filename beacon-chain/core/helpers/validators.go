@@ -156,7 +156,7 @@ func ActivationExitEpoch(epoch types.Epoch) types.Epoch {
 //    Return the validator churn limit for the current epoch.
 //    """
 //    active_validator_indices = get_active_validator_indices(state, get_current_epoch(state))
-//    return max(MIN_PER_EPOCH_CHURN_LIMIT, len(active_validator_indices) // CHURN_LIMIT_QUOTIENT)
+//    return max(MIN_PER_EPOCH_CHURN_LIMIT, uint64(len(active_validator_indices)) // CHURN_LIMIT_QUOTIENT)
 func ValidatorChurnLimit(activeValidatorCount uint64) (uint64, error) {
 	churnLimit := activeValidatorCount / params.BeaconConfig().ChurnLimitQuotient
 	if churnLimit < params.BeaconConfig().MinPerEpochChurnLimit {
@@ -173,7 +173,7 @@ func ValidatorChurnLimit(activeValidatorCount uint64) (uint64, error) {
 //    Return the beacon proposer index at the current slot.
 //    """
 //    epoch = get_current_epoch(state)
-//    seed = hash(get_seed(state, epoch, DOMAIN_BEACON_PROPOSER) + int_to_bytes(state.slot, length=8))
+//    seed = hash(get_seed(state, epoch, DOMAIN_BEACON_PROPOSER) + uint_to_bytes(state.slot))
 //    indices = get_active_validator_indices(state, epoch)
 //    return compute_proposer_index(state, indices, seed)
 func BeaconProposerIndex(state iface.ReadOnlyBeaconState) (types.ValidatorIndex, error) {

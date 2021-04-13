@@ -157,7 +157,7 @@ func ProcessRegistryUpdates(state iface.BeaconState) (iface.BeaconState, error) 
 //    for index, validator in enumerate(state.validators):
 //        if validator.slashed and epoch + EPOCHS_PER_SLASHINGS_VECTOR // 2 == validator.withdrawable_epoch:
 //            increment = EFFECTIVE_BALANCE_INCREMENT  # Factored out from penalty numerator to avoid uint64 overflow
-//			  penalty_numerator = validator.effective_balance // increment * adjusted_total_slashing_balance
+//            penalty_numerator = validator.effective_balance // increment * adjusted_total_slashing_balance
 //            penalty = penalty_numerator // total_balance * increment
 //            decrease_balance(state, ValidatorIndex(index), penalty)
 func ProcessSlashings(state iface.BeaconState) (iface.BeaconState, error) {
@@ -252,12 +252,16 @@ func ProcessEffectiveBalanceUpdates(state iface.BeaconState) (iface.BeaconState,
 		balance := bals[idx]
 
 		if balance+downwardThreshold < val.EffectiveBalance || val.EffectiveBalance+upwardThreshold < balance {
-			newVal := stateV0.CopyValidator(val)
-			newVal.EffectiveBalance = maxEffBalance
-			if newVal.EffectiveBalance > balance-balance%effBalanceInc {
-				newVal.EffectiveBalance = balance - balance%effBalanceInc
+			effectiveBal := maxEffBalance
+			if effectiveBal > balance-balance%effBalanceInc {
+				effectiveBal = balance - balance%effBalanceInc
 			}
-			return true, newVal, nil
+			if effectiveBal != val.EffectiveBalance {
+				newVal := stateV0.CopyValidator(val)
+				newVal.EffectiveBalance = effectiveBal
+				return true, newVal, nil
+			}
+			return false, val, nil
 		}
 		return false, val, nil
 	}
@@ -474,9 +478,9 @@ func UnslashedAttestingIndices(state iface.ReadOnlyBeaconState, atts []*pb.Pendi
 //
 // Spec pseudocode definition:
 //  def get_base_reward(state: BeaconState, index: ValidatorIndex) -> Gwei:
-//      total_balance = get_total_active_balance(state)
-//	    effective_balance = state.validator_registry[index].effective_balance
-//	    return effective_balance * BASE_REWARD_FACTOR // integer_squareroot(total_balance) // BASE_REWARDS_PER_EPOCH
+//    total_balance = get_total_active_balance(state)
+//    effective_balance = state.validators[index].effective_balance
+//    return Gwei(effective_balance * BASE_REWARD_FACTOR // integer_squareroot(total_balance) // BASE_REWARDS_PER_EPOCH)
 func BaseReward(state iface.ReadOnlyBeaconState, index types.ValidatorIndex) (uint64, error) {
 	totalBalance, err := helpers.TotalActiveBalance(state)
 	if err != nil {
