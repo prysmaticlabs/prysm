@@ -237,11 +237,11 @@ func rewardProposer(beaconState iface.BeaconState, proposerRewardNumerator uint6
 }
 
 // HasValidatorFlag returns true if the flag at position has set.
-func HasValidatorFlag(flag uint8, flagPosition uint8) bool {
+func HasValidatorFlag(flag, flagPosition uint8) bool {
 	return ((flag >> flagPosition) & 1) == 1
 }
 
 // AddValidatorFlag adds new validator flag to existing one.
-func AddValidatorFlag(flag uint8, flagPosition uint8) uint8 {
+func AddValidatorFlag(flag, flagPosition uint8) uint8 {
 	return flag | (1 << flagPosition)
 }
