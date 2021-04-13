@@ -436,7 +436,12 @@ func (b *BeaconNode) registerPOWChainService() error {
 			"You will need to specify --http-web3provider to attach an eth1 node to the prysm node. Without an eth1 node block proposals for your validator will be affected and the beacon node will not be able to initialize the genesis state.",
 		)
 	}
-	endpoints := []string{b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name)}
+
+	primaryEndpoint := powchain.HttpEndpoint(b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name))
+	endpoints := []httputils.Endpoint{primaryEndpoint}
+	for _, value := range b.cliCtx.StringSlice(flags.FallbackWeb3ProviderFlag.Name) {
+		e := powchain.HttpEndpoint(value)
+		endpoints = append(endpoints, e)
 	}
 
 	cfg := &powchain.Web3ServiceConfig{
