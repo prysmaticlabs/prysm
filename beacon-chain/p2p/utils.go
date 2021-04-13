@@ -72,15 +72,6 @@ func privKey(cfg *Config) (*ecdsa.PrivateKey, error) {
 		if err != nil {
 			return nil, err
 		}
-		rawbytes, err := priv.Raw()
-		if err != nil {
-			return nil, err
-		}
-		dst := make([]byte, hex.EncodedLen(len(rawbytes)))
-		hex.Encode(dst, rawbytes)
-		if err := fileutil.WriteFile(defaultKeyPath, dst); err != nil {
-			return nil, err
-		}
 		convertedKey := convertFromInterfacePrivKey(priv)
 		return convertedKey, nil
 	}
