@@ -206,6 +206,7 @@ type FutureForkStub interface {
 	CurrentEpochParticipation() ([]byte, error)
 	PreviousEpochParticipation() ([]byte, error)
 	InactivityScores() ([]uint64, error)
+	SetInactivityScores(val []uint64) error
 	CurrentSyncCommittee() (*pbp2p.SyncCommittee, error)
 	SetCurrentSyncCommittee(val *pbp2p.SyncCommittee) error
 	SetPreviousParticipationBits(val []byte) error

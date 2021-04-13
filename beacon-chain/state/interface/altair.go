@@ -15,6 +15,7 @@ type BeaconStateAltair interface {
 	AppendCurrentParticipationBits(val byte) error
 	AppendPreviousParticipationBits(val byte) error
 	AppendInactivityScore(s uint64) error
+	SetInactivityScores(val []uint64) error
 	SetPreviousParticipationBits(val []byte) error
 	SetCurrentParticipationBits(val []byte) error
 }

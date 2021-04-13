@@ -755,6 +755,23 @@ func (b *BeaconState) AppendInactivityScore(s uint64) error {
 	return nil
 }
 
+// SetInactivityScores for the beacon state. Updates the entire
+// list to a new value by overwriting the previous one.
+func (b *BeaconState) SetInactivityScores(val []uint64) error {
+	if !b.hasInnerState() {
+		return ErrNilInnerState
+	}
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.sharedFieldReferences[inactivityScores].MinusRef()
+	b.sharedFieldReferences[inactivityScores] = stateutil.NewRef(1)
+
+	b.state.InactivityScores = val
+	b.markFieldAsDirty(inactivityScores)
+	return nil
+}
+
 // Recomputes the branch up the index in the Merkle trie representation
 // of the beacon state. This method performs map reads and the caller MUST
 // hold the lock before calling this method.
