@@ -17,7 +17,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -47,7 +46,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/prereq"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -81,78 +79,18 @@ type BeaconNode struct {
 // New creates a new node instance, sets up configuration options, and registers
 // every required service to the node.
 func New(cliCtx *cli.Context) (*BeaconNode, error) {
-	if err := tracing.Setup(
-		"beacon-chain", // service name
-		cliCtx.String(cmd.TracingProcessNameFlag.Name),
-		cliCtx.String(cmd.TracingEndpointFlag.Name),
-		cliCtx.Float64(cmd.TraceSampleFractionFlag.Name),
-		cliCtx.Bool(cmd.EnableTracingFlag.Name),
-	); err != nil {
+	if err := configureTracing(cliCtx); err != nil {
 		return nil, err
 	}
-
-	// Warn if user's platform is not supported
-	prereq.WarnIfNotSupported(cliCtx.Context)
-
+	prereq.WarnIfPlatformNotSupported(cliCtx.Context)
 	featureconfig.ConfigureBeaconChain(cliCtx)
 	cmd.ConfigureBeaconChain(cliCtx)
 	flags.ConfigureGlobalFlags(cliCtx)
-
-	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
-		chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
-		params.LoadChainConfigFile(chainConfigFileName)
-	}
-
-	if cliCtx.Bool(flags.HistoricalSlasherNode.Name) {
-		c := params.BeaconConfig()
-		// Save a state every 4 epochs.
-		c.SlotsPerArchivedPoint = params.BeaconConfig().SlotsPerEpoch * 4
-		params.OverrideBeaconConfig(c)
-		cmdConfig := cmd.Get()
-		// Allow up to 4096 attestations at a time to be requested from the beacon nde.
-		cmdConfig.MaxRPCPageSize = int(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().MaxAttestations))
-		cmd.Init(cmdConfig)
-		log.Warnf(
-			"Setting %d slots per archive point and %d max RPC page size for historical slasher usage. This requires additional storage",
-			c.SlotsPerArchivedPoint,
-			cmdConfig.MaxRPCPageSize,
-		)
-	}
-
-	if cliCtx.IsSet(flags.SlotsPerArchivedPoint.Name) {
-		c := params.BeaconConfig()
-		c.SlotsPerArchivedPoint = types.Slot(cliCtx.Int(flags.SlotsPerArchivedPoint.Name))
-		params.OverrideBeaconConfig(c)
-	}
-
-	// ETH PoW related flags.
-	if cliCtx.IsSet(flags.ChainID.Name) {
-		c := params.BeaconConfig()
-		c.DepositChainID = cliCtx.Uint64(flags.ChainID.Name)
-		params.OverrideBeaconConfig(c)
-	}
-	if cliCtx.IsSet(flags.NetworkID.Name) {
-		c := params.BeaconConfig()
-		c.DepositNetworkID = cliCtx.Uint64(flags.NetworkID.Name)
-		params.OverrideBeaconConfig(c)
-	}
-	if cliCtx.IsSet(flags.DepositContractFlag.Name) {
-		c := params.BeaconConfig()
-		c.DepositContractAddress = cliCtx.String(flags.DepositContractFlag.Name)
-		params.OverrideBeaconConfig(c)
-	}
-
-	// Setting chain network specific flags.
-	if cliCtx.IsSet(cmd.BootstrapNode.Name) {
-		c := params.BeaconNetworkConfig()
-		c.BootstrapNodes = cliCtx.StringSlice(cmd.BootstrapNode.Name)
-		params.OverrideBeaconNetworkConfig(c)
-	}
-	if cliCtx.IsSet(flags.ContractDeploymentBlock.Name) {
-		networkCfg := params.BeaconNetworkConfig()
-		networkCfg.ContractDeploymentBlock = uint64(cliCtx.Int(flags.ContractDeploymentBlock.Name))
-		params.OverrideBeaconNetworkConfig(networkCfg)
-	}
+	configureChainConfig(cliCtx)
+	configureHistoricalSlasher(cliCtx)
+	configureSlotsPerArchivedPoint(cliCtx)
+	configureProofOfWork(cliCtx)
+	configureNetwork(cliCtx)
 
 	registry := shared.NewServiceRegistry()
 
