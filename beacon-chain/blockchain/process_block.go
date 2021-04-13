@@ -51,7 +51,8 @@ var initialSyncBlockCacheSize = uint64(2 * params.BeaconConfig().SlotsPerEpoch)
 //    assert get_ancestor(store, block.parent_root, finalized_slot) == store.finalized_checkpoint.root
 //
 //    # Check the block is valid and compute the post-state
-//    state = state_transition(pre_state, signed_block, True)
+//    state = pre_state.copy()
+//    state_transition(state, signed_block, True)
 //    # Add new block to the store
 //    store.blocks[hash_tree_root(block)] = block
 //    # Add new state for this block to the store
