@@ -144,7 +144,7 @@ func ProcessRewardsAndPenaltiesPrecompute(
 
 // attestationsDelta computes and returns the rewards and penalties differences for individual validators based on the
 // voting records.
-func attestationsDelta(state iface.BeaconStateAltair, bal *precompute.Balance, vals []*precompute.Validator) (rewards []uint64, penalties []uint64, err error) {
+func attestationsDelta(state iface.BeaconStateAltair, bal *precompute.Balance, vals []*precompute.Validator) (rewards, penalties []uint64, err error) {
 	numOfVals := state.NumValidators()
 	rewards = make([]uint64, numOfVals)
 	penalties = make([]uint64, numOfVals)
@@ -157,7 +157,7 @@ func attestationsDelta(state iface.BeaconStateAltair, bal *precompute.Balance, v
 	return rewards, penalties, nil
 }
 
-func attestationDelta(bal *precompute.Balance, v *precompute.Validator, prevEpoch, finalizedEpoch types.Epoch) (r uint64, p uint64) {
+func attestationDelta(bal *precompute.Balance, v *precompute.Validator, prevEpoch, finalizedEpoch types.Epoch) (r, p uint64) {
 	eligible := v.IsActivePrevEpoch || (v.IsSlashed && !v.IsWithdrawableCurrentEpoch)
 	if !eligible || bal.ActiveCurrentEpoch == 0 {
 		return 0, 0
