@@ -109,11 +109,9 @@ func ExecuteStateTransition(
 //    # Cache state root
 //    previous_state_root = hash_tree_root(state)
 //    state.state_roots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = previous_state_root
-//
 //    # Cache latest block header state root
 //    if state.latest_block_header.state_root == Bytes32():
 //        state.latest_block_header.state_root = previous_state_root
-//
 //    # Cache block root
 //    previous_block_root = hash_tree_root(state.latest_block_header)
 //    state.block_roots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = previous_block_root
@@ -192,14 +190,13 @@ func ProcessSlotsUsingNextSlotCache(
 //
 // Spec pseudocode definition:
 //  def process_slots(state: BeaconState, slot: Slot) -> None:
-//    assert state.slot <= slot
+//    assert state.slot < slot
 //    while state.slot < slot:
 //        process_slot(state)
-//        # Process epoch on the first slot of the next epoch
+//        # Process epoch on the start slot of the next epoch
 //        if (state.slot + 1) % SLOTS_PER_EPOCH == 0:
 //            process_epoch(state)
-//        state.slot += 1
-//    ]
+//        state.slot = Slot(state.slot + 1)
 func ProcessSlots(ctx context.Context, state iface.BeaconState, slot types.Slot) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessSlots")
 	defer span.End()
