@@ -2,7 +2,6 @@ package registration
 
 import (
 	"io/ioutil"
-	"log"
 	"path/filepath"
 
 	"github.com/prysmaticlabs/prysm/shared/cmd"

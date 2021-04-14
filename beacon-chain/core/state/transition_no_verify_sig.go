@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -20,16 +21,22 @@ import (
 // it is used for performing a state transition as quickly as possible. This function also returns a signature
 // set of all signatures not verified, so that they can be stored and verified later.
 //
-// WARNING: This method does not validate any signatures in a block. This method also modifies the passed in state.
+// WARNING: This method does not validate any signatures (i.e. calling `state_transition()` with `validate_result=False`).
+// This method also modifies the passed in state.
 //
 // Spec pseudocode definition:
-//  def state_transition(state: BeaconState, block: BeaconBlock, validate_state_root: bool=False) -> BeaconState:
+//  def state_transition(state: BeaconState, signed_block: SignedBeaconBlock, validate_result: bool=True) -> None:
+//    block = signed_block.message
 //    # Process slots (including those with no blocks) since block
 //    process_slots(state, block.slot)
+//    # Verify signature
+//    if validate_result:
+//        assert verify_block_signature(state, signed_block)
 //    # Process block
 //    process_block(state, block)
-//    # Return post-state
-//    return state
+//    # Verify state root
+//    if validate_result:
+//        assert block.state_root == hash_tree_root(state)
 func ExecuteStateTransitionNoVerifyAnySig(
 	ctx context.Context,
 	state iface.BeaconState,
@@ -82,17 +89,22 @@ func ExecuteStateTransitionNoVerifyAnySig(
 // state root of the state for the block proposer to use.
 // This does not modify state.
 //
-// WARNING: This method does not validate any BLS signatures. This is used for proposer to compute
-// state root before proposing a new block, and this does not modify state.
+// WARNING: This method does not validate any BLS signatures (i.e. calling `state_transition()` with `validate_result=False`).
+// This is used for proposer to compute state root before proposing a new block, and this does not modify state.
 //
 // Spec pseudocode definition:
-//  def state_transition(state: BeaconState, block: BeaconBlock, validate_state_root: bool=False) -> BeaconState:
+//  def state_transition(state: BeaconState, signed_block: SignedBeaconBlock, validate_result: bool=True) -> None:
+//    block = signed_block.message
 //    # Process slots (including those with no blocks) since block
 //    process_slots(state, block.slot)
+//    # Verify signature
+//    if validate_result:
+//        assert verify_block_signature(state, signed_block)
 //    # Process block
 //    process_block(state, block)
-//    # Return post-state
-//    return state
+//    # Verify state root
+//    if validate_result:
+//        assert block.state_root == hash_tree_root(state)
 func CalculateStateRoot(
 	ctx context.Context,
 	state iface.BeaconState,
@@ -212,20 +224,16 @@ func ProcessBlockNoVerifyAnySig(
 //  def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
 //    # Verify that outstanding deposits are processed up to the maximum number of deposits
 //    assert len(body.deposits) == min(MAX_DEPOSITS, state.eth1_data.deposit_count - state.eth1_deposit_index)
-//    # Verify that there are no duplicate transfers
-//    assert len(body.transfers) == len(set(body.transfers))
 //
-//    all_operations = (
-//        (body.proposer_slashings, process_proposer_slashing),
-//        (body.attester_slashings, process_attester_slashing),
-//        (body.attestations, process_attestation),
-//        (body.deposits, process_deposit),
-//        (body.voluntary_exits, process_voluntary_exit),
-//        (body.transfers, process_transfer),
-//    )  # type: Sequence[Tuple[List, Callable]]
-//    for operations, function in all_operations:
+//    def for_ops(operations: Sequence[Any], fn: Callable[[BeaconState, Any], None]) -> None:
 //        for operation in operations:
-//            function(state, operation)
+//            fn(state, operation)
+//
+//    for_ops(body.proposer_slashings, process_proposer_slashing)
+//    for_ops(body.attester_slashings, process_attester_slashing)
+//    for_ops(body.attestations, process_attestation)
+//    for_ops(body.deposits, process_deposit)
+//    for_ops(body.voluntary_exits, process_voluntary_exit)
 func ProcessOperationsNoVerifyAttsSigs(
 	ctx context.Context,
 	state iface.BeaconState,
@@ -237,11 +245,11 @@ func ProcessOperationsNoVerifyAttsSigs(
 		return nil, errors.Wrap(err, "could not verify operation lengths")
 	}
 
-	state, err := b.ProcessProposerSlashings(ctx, state, signedBeaconBlock)
+	state, err := b.ProcessProposerSlashings(ctx, state, signedBeaconBlock, v.SlashValidator)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block proposer slashings")
 	}
-	state, err = b.ProcessAttesterSlashings(ctx, state, signedBeaconBlock)
+	state, err = b.ProcessAttesterSlashings(ctx, state, signedBeaconBlock, v.SlashValidator)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block attester slashings")
 	}
