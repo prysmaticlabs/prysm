@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
+	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -30,6 +31,13 @@ type processFunc func(context.Context, iface.BeaconState, *ethpb.SignedBeaconBlo
 var processDepositsFunc = func(ctx context.Context, s iface.BeaconState, blk *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
 	return b.ProcessDeposits(ctx, s, blk.Block.Body.Deposits)
 }
+var processProposerSlashingFunc = func(ctx context.Context, s iface.BeaconState, blk *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
+	return b.ProcessProposerSlashings(ctx, s, blk, v.SlashValidator)
+}
+
+var processAttesterSlashingFunc = func(ctx context.Context, s iface.BeaconState, blk *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
+	return b.ProcessAttesterSlashings(ctx, s, blk, v.SlashValidator)
+}
 
 // This defines the processing block routine as outlined in eth2 spec:
 // https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#block-processing
@@ -38,8 +46,8 @@ var processingPipeline = []processFunc{
 	b.ProcessRandao,
 	b.ProcessEth1DataInBlock,
 	VerifyOperationLengths,
-	b.ProcessProposerSlashings,
-	b.ProcessAttesterSlashings,
+	processProposerSlashingFunc,
+	processAttesterSlashingFunc,
 	b.ProcessAttestations,
 	processDepositsFunc,
 	b.ProcessVoluntaryExits,
