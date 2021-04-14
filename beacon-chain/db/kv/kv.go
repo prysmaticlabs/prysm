@@ -46,9 +46,6 @@ var blockedBuckets = [][]byte{
 	blockParentRootIndicesBucket,
 	blockSlotIndicesBucket,
 	finalizedBlockRootsIndexBucket,
-	proposalRecordsBucket,
-	attestationRecordsBucket,
-	slasherChunksBucket,
 }
 
 // Config for the bolt db kv store.
@@ -148,12 +145,6 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 			finalizedBlockRootsIndexBucket,
 			// State management service bucket.
 			newStateServiceCompatibleBucket,
-			// Slasher buckets.
-			attestedEpochsByValidator,
-			attestationRecordsBucket,
-			attestationDataRootsBucket,
-			proposalRecordsBucket,
-			slasherChunksBucket,
 			// Migrations
 			migrationsBucket,
 		)

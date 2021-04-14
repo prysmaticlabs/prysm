@@ -178,7 +178,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			hook := logTest.NewGlobal()
 			defer hook.Reset()
-			beaconDB := dbtest.SetupDB(t)
+			slasherDB := dbtest.SetupSlasherDB(t)
 			ctx, cancel := context.WithCancel(context.Background())
 
 			currentTime := time.Now()
@@ -230,7 +230,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 
 			s := &Service{
 				serviceCfg: &ServiceConfig{
-					Database:                beaconDB,
+					Database:                slasherDB,
 					StateNotifier:           &mock.MockStateNotifier{},
 					HeadStateFetcher:        mockChain,
 					AttestationStateFetcher: mockChain,
@@ -265,7 +265,7 @@ func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
 	hook := logTest.NewGlobal()
 	defer hook.Reset()
 
-	beaconDB := dbtest.SetupDB(t)
+	slasherDB := dbtest.SetupSlasherDB(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	slasherParams := DefaultParams()
 
@@ -289,7 +289,7 @@ func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
 
 	s := &Service{
 		serviceCfg: &ServiceConfig{
-			Database:                beaconDB,
+			Database:                slasherDB,
 			StateNotifier:           &mock.MockStateNotifier{},
 			HeadStateFetcher:        mockChain,
 			AttestationStateFetcher: mockChain,
@@ -333,7 +333,7 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 	hook := logTest.NewGlobal()
 	defer hook.Reset()
 
-	beaconDB := dbtest.SetupDB(t)
+	slasherDB := dbtest.SetupSlasherDB(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	slasherParams := DefaultParams()
 
@@ -352,7 +352,7 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 
 	s := &Service{
 		serviceCfg: &ServiceConfig{
-			Database:                beaconDB,
+			Database:                slasherDB,
 			StateNotifier:           &mock.MockStateNotifier{},
 			HeadStateFetcher:        mockChain,
 			AttestationStateFetcher: mockChain,
@@ -388,7 +388,7 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 }
 
 func Test_determineChunksToUpdateForValidators_FromLatestWrittenEpoch(t *testing.T) {
-	beaconDB := dbtest.SetupDB(t)
+	slasherDB := dbtest.SetupSlasherDB(t)
 	ctx := context.Background()
 
 	// Check if the chunk at chunk index already exists in-memory.
@@ -399,7 +399,7 @@ func Test_determineChunksToUpdateForValidators_FromLatestWrittenEpoch(t *testing
 			historyLength:      4,
 		},
 		serviceCfg: &ServiceConfig{
-			Database:      beaconDB,
+			Database:      slasherDB,
 			StateNotifier: &mock.MockStateNotifier{},
 		},
 	}
@@ -410,7 +410,7 @@ func Test_determineChunksToUpdateForValidators_FromLatestWrittenEpoch(t *testing
 
 	// Set the latest written epoch for validators to current epoch - 1.
 	latestWrittenEpoch := currentEpoch - 1
-	err := beaconDB.SaveLastEpochWrittenForValidators(ctx, validators, latestWrittenEpoch)
+	err := slasherDB.SaveLastEpochWrittenForValidators(ctx, validators, latestWrittenEpoch)
 	require.NoError(t, err)
 
 	// Because the validators have no recorded latest epoch written in the database,
@@ -429,7 +429,7 @@ func Test_determineChunksToUpdateForValidators_FromLatestWrittenEpoch(t *testing
 }
 
 func Test_determineChunksToUpdateForValidators_FromGenesis(t *testing.T) {
-	beaconDB := dbtest.SetupDB(t)
+	slasherDB := dbtest.SetupSlasherDB(t)
 	ctx := context.Background()
 
 	// Check if the chunk at chunk index already exists in-memory.
@@ -440,7 +440,7 @@ func Test_determineChunksToUpdateForValidators_FromGenesis(t *testing.T) {
 			historyLength:      4,
 		},
 		serviceCfg: &ServiceConfig{
-			Database:      beaconDB,
+			Database:      slasherDB,
 			StateNotifier: &mock.MockStateNotifier{},
 		},
 	}
@@ -467,12 +467,12 @@ func Test_determineChunksToUpdateForValidators_FromGenesis(t *testing.T) {
 
 func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	ctx := context.Background()
-	beaconDB := dbtest.SetupDB(t)
+	slasherDB := dbtest.SetupSlasherDB(t)
 	params := DefaultParams()
 	srv := &Service{
 		params: params,
 		serviceCfg: &ServiceConfig{
-			Database:      beaconDB,
+			Database:      slasherDB,
 			StateNotifier: &mock.MockStateNotifier{},
 		},
 	}
@@ -503,7 +503,7 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, true, slashing == nil)
 	att.IndexedAttestation.AttestingIndices = []uint64{uint64(validatorIdx)}
-	err = beaconDB.SaveAttestationRecordsForValidators(
+	err = slasherDB.SaveAttestationRecordsForValidators(
 		ctx,
 		[]*slashertypes.IndexedAttestationWrapper{att}, srv.params.historyLength,
 	)
@@ -527,12 +527,12 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 
 func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	ctx := context.Background()
-	beaconDB := dbtest.SetupDB(t)
+	slasherDB := dbtest.SetupSlasherDB(t)
 	params := DefaultParams()
 	srv := &Service{
 		params: params,
 		serviceCfg: &ServiceConfig{
-			Database:      beaconDB,
+			Database:      slasherDB,
 			StateNotifier: &mock.MockStateNotifier{},
 		},
 	}
@@ -563,7 +563,7 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, true, slashing == nil)
 	att.IndexedAttestation.AttestingIndices = []uint64{uint64(validatorIdx)}
-	err = beaconDB.SaveAttestationRecordsForValidators(
+	err = slasherDB.SaveAttestationRecordsForValidators(
 		ctx,
 		[]*slashertypes.IndexedAttestationWrapper{att}, srv.params.historyLength,
 	)
@@ -586,7 +586,7 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 }
 
 func Test_checkDoubleVotes_SlashableInputAttestations(t *testing.T) {
-	beaconDB := dbtest.SetupDB(t)
+	slasherDB := dbtest.SetupSlasherDB(t)
 	ctx := context.Background()
 	// For a list of input attestations, check that we can
 	// indeed check there could exist a double vote offense
@@ -598,7 +598,7 @@ func Test_checkDoubleVotes_SlashableInputAttestations(t *testing.T) {
 	}
 	srv := &Service{
 		serviceCfg: &ServiceConfig{
-			Database:      beaconDB,
+			Database:      slasherDB,
 			StateNotifier: &mock.MockStateNotifier{},
 		},
 		params: DefaultParams(),
@@ -623,7 +623,7 @@ func Test_checkDoubleVotes_SlashableInputAttestations(t *testing.T) {
 }
 
 func Test_checkDoubleVotes_SlashableAttestationsOnDisk(t *testing.T) {
-	beaconDB := dbtest.SetupDB(t)
+	slasherDB := dbtest.SetupSlasherDB(t)
 	ctx := context.Background()
 	// For a list of input attestations, check that we can
 	// indeed check there could exist a double vote offense
@@ -634,12 +634,12 @@ func Test_checkDoubleVotes_SlashableAttestationsOnDisk(t *testing.T) {
 	}
 	srv := &Service{
 		serviceCfg: &ServiceConfig{
-			Database:      beaconDB,
+			Database:      slasherDB,
 			StateNotifier: &mock.MockStateNotifier{},
 		},
 		params: DefaultParams(),
 	}
-	err := beaconDB.SaveAttestationRecordsForValidators(ctx, prevAtts, srv.params.historyLength)
+	err := slasherDB.SaveAttestationRecordsForValidators(ctx, prevAtts, srv.params.historyLength)
 	require.NoError(t, err)
 
 	prev1 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{1})
@@ -673,7 +673,7 @@ func Test_loadChunks_MaxSpans(t *testing.T) {
 }
 
 func testLoadChunks(t *testing.T, kind slashertypes.ChunkKind) {
-	beaconDB := dbtest.SetupDB(t)
+	slasherDB := dbtest.SetupSlasherDB(t)
 	ctx := context.Background()
 
 	// Check if the chunk at chunk index already exists in-memory.
@@ -681,7 +681,7 @@ func testLoadChunks(t *testing.T, kind slashertypes.ChunkKind) {
 	s := &Service{
 		params: DefaultParams(),
 		serviceCfg: &ServiceConfig{
-			Database:      beaconDB,
+			Database:      slasherDB,
 			StateNotifier: &mock.MockStateNotifier{},
 		},
 	}
@@ -749,11 +749,11 @@ func testLoadChunks(t *testing.T, kind slashertypes.ChunkKind) {
 
 func TestService_processQueuedAttestations(t *testing.T) {
 	hook := logTest.NewGlobal()
-	beaconDB := dbtest.SetupDB(t)
+	slasherDB := dbtest.SetupSlasherDB(t)
 	s := &Service{
 		params: DefaultParams(),
 		serviceCfg: &ServiceConfig{
-			Database:      beaconDB,
+			Database:      slasherDB,
 			StateNotifier: &mock.MockStateNotifier{},
 		},
 		attsQueue: newAttestationsQueue(),

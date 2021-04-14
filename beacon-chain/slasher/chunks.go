@@ -23,7 +23,7 @@ type Chunker interface {
 	Chunk() []uint16
 	CheckSlashable(
 		ctx context.Context,
-		slasherDB db.Database,
+		slasherDB db.SlasherDatabase,
 		validatorIdx types.ValidatorIndex,
 		attestation *slashertypes.IndexedAttestationWrapper,
 	) (*ethpb.AttesterSlashing, error)
@@ -176,7 +176,7 @@ func (m *MaxSpanChunksSlice) Chunk() []uint16 {
 // to be confident of a slashable offense.
 func (m *MinSpanChunksSlice) CheckSlashable(
 	ctx context.Context,
-	slasherDB db.Database,
+	slasherDB db.SlasherDatabase,
 	validatorIdx types.ValidatorIndex,
 	attestation *slashertypes.IndexedAttestationWrapper,
 ) (*ethpb.AttesterSlashing, error) {
@@ -223,7 +223,7 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 // to be confident of a slashable offense.
 func (m *MaxSpanChunksSlice) CheckSlashable(
 	ctx context.Context,
-	slasherDB db.Database,
+	slasherDB db.SlasherDatabase,
 	validatorIdx types.ValidatorIndex,
 	attestation *slashertypes.IndexedAttestationWrapper,
 ) (*ethpb.AttesterSlashing, error) {

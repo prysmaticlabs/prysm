@@ -14,7 +14,7 @@ import (
 )
 
 func setupService(t *testing.T, params *Parameters) *Simulator {
-	beaconDB := dbtest.SetupDB(t)
+	slasherDB := dbtest.SetupSlasherDB(t)
 	beaconState, err := testutil.NewBeaconState()
 	require.NoError(t, err)
 
@@ -39,7 +39,7 @@ func setupService(t *testing.T, params *Parameters) *Simulator {
 	return &Simulator{
 		srvConfig: &ServiceConfig{
 			Params:                      params,
-			Database:                    beaconDB,
+			Database:                    slasherDB,
 			AttestationStateFetcher:     &mock.ChainService{State: beaconState},
 			PrivateKeysByValidatorIndex: privKeys,
 			StateGen:                    gen,

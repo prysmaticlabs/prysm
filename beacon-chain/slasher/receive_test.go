@@ -111,11 +111,11 @@ func TestSlasher_receiveBlocks_OK(t *testing.T) {
 
 func TestService_processQueuedBlocks(t *testing.T) {
 	hook := logTest.NewGlobal()
-	beaconDB := dbtest.SetupDB(t)
+	slasherDB := dbtest.SetupSlasherDB(t)
 	s := &Service{
 		params: DefaultParams(),
 		serviceCfg: &ServiceConfig{
-			Database:      beaconDB,
+			Database:      slasherDB,
 			StateNotifier: &mock.MockStateNotifier{},
 		},
 		blksQueue: newBlocksQueue(),

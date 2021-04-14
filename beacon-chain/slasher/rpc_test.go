@@ -15,15 +15,15 @@ import (
 
 func TestIsSlashableBlock(t *testing.T) {
 	ctx := context.Background()
-	beaconDB := dbtest.SetupDB(t)
+	slasherDB := dbtest.SetupSlasherDB(t)
 	s := &Service{
 		serviceCfg: &ServiceConfig{
-			Database: beaconDB,
+			Database: slasherDB,
 		},
 		params:    DefaultParams(),
 		blksQueue: newBlocksQueue(),
 	}
-	err := beaconDB.SaveBlockProposals(ctx, []*slashertypes.SignedBlockHeaderWrapper{
+	err := slasherDB.SaveBlockProposals(ctx, []*slashertypes.SignedBlockHeaderWrapper{
 		createProposalWrapper(t, 2, 3, []byte{1}),
 		createProposalWrapper(t, 3, 3, []byte{1}),
 	})
@@ -70,7 +70,7 @@ func TestIsSlashableBlock(t *testing.T) {
 
 func TestIsSlashableAttestation(t *testing.T) {
 	ctx := context.Background()
-	beaconDB := dbtest.SetupDB(t)
+	slasherDB := dbtest.SetupSlasherDB(t)
 
 	currentEpoch := types.Epoch(3)
 	currentTime := time.Now()
@@ -80,7 +80,7 @@ func TestIsSlashableAttestation(t *testing.T) {
 
 	s := &Service{
 		serviceCfg: &ServiceConfig{
-			Database: beaconDB,
+			Database: slasherDB,
 		},
 		params:      DefaultParams(),
 		blksQueue:   newBlocksQueue(),
@@ -90,7 +90,7 @@ func TestIsSlashableAttestation(t *testing.T) {
 		createAttestationWrapper(t, 2, 3, []uint64{0}, []byte{1}),
 		createAttestationWrapper(t, 2, 3, []uint64{1}, []byte{1}),
 	}
-	err := beaconDB.SaveAttestationRecordsForValidators(ctx, prevAtts, s.params.historyLength)
+	err := slasherDB.SaveAttestationRecordsForValidators(ctx, prevAtts, s.params.historyLength)
 	require.NoError(t, err)
 	attesterSlashings, err := s.checkSlashableAttestations(ctx, prevAtts)
 	require.NoError(t, err)

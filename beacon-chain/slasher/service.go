@@ -26,7 +26,7 @@ import (
 type ServiceConfig struct {
 	IndexedAttestationsFeed *event.Feed
 	BeaconBlockHeadersFeed  *event.Feed
-	Database                db.Database
+	Database                db.SlasherDatabase
 	StateNotifier           statefeed.Notifier
 	AttestationStateFetcher blockchain.AttestationStateFetcher
 	StateGen                stategen.StateManager

@@ -28,13 +28,13 @@ func TestMain(m *testing.M) {
 }
 
 func TestService_StartStop_ChainStartEvent(t *testing.T) {
-	beaconDB := dbtest.SetupDB(t)
+	slasherDB := dbtest.SetupSlasherDB(t)
 	hook := logTest.NewGlobal()
 	srv, err := New(context.Background(), &ServiceConfig{
 		IndexedAttestationsFeed: new(event.Feed),
 		BeaconBlockHeadersFeed:  new(event.Feed),
 		StateNotifier:           &mock.MockStateNotifier{},
-		Database:                beaconDB,
+		Database:                slasherDB,
 	})
 	require.NoError(t, err)
 	go srv.Start()
@@ -51,13 +51,13 @@ func TestService_StartStop_ChainStartEvent(t *testing.T) {
 }
 
 func TestService_StartStop_ChainAlreadyInitialized(t *testing.T) {
-	beaconDB := dbtest.SetupDB(t)
+	slasherDB := dbtest.SetupSlasherDB(t)
 	hook := logTest.NewGlobal()
 	srv, err := New(context.Background(), &ServiceConfig{
 		IndexedAttestationsFeed: new(event.Feed),
 		BeaconBlockHeadersFeed:  new(event.Feed),
 		StateNotifier:           &mock.MockStateNotifier{},
-		Database:                beaconDB,
+		Database:                slasherDB,
 	})
 	require.NoError(t, err)
 	go srv.Start()

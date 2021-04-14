@@ -25,7 +25,7 @@ import (
 // ServiceConfig for the simulator.
 type ServiceConfig struct {
 	Params                      *Parameters
-	Database                    db.Database
+	Database                    db.SlasherDatabase
 	StateNotifier               statefeed.Notifier
 	AttestationStateFetcher     blockchain.AttestationStateFetcher
 	HeadStateFetcher            blockchain.HeadFetcher
