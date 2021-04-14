@@ -274,7 +274,7 @@ func ProcessOperationsNoVerifyAttsSigs(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block validator deposits")
 	}
-	state, err = b.ProcessVoluntaryExits(ctx, state, signedBeaconBlock)
+	state, err = b.ProcessVoluntaryExits(ctx, state, signedBeaconBlock.Block.Body.VoluntaryExits)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process validator exits")
 	}

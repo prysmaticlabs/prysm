@@ -43,6 +43,10 @@ var processEth1DataFunc = func(ctx context.Context, s iface.BeaconState, blk *et
 	return b.ProcessEth1DataInBlock(ctx, s, blk.Block.Body.Eth1Data)
 }
 
+var processExitFunc = func(ctx context.Context, s iface.BeaconState, blk *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
+	return b.ProcessVoluntaryExits(ctx, s, blk.Block.Body.VoluntaryExits)
+}
+
 // This defines the processing block routine as outlined in eth2 spec:
 // https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#block-processing
 var processingPipeline = []processFunc{
@@ -54,7 +58,7 @@ var processingPipeline = []processFunc{
 	processAttesterSlashingFunc,
 	b.ProcessAttestations,
 	processDepositsFunc,
-	b.ProcessVoluntaryExits,
+	processExitFunc,
 }
 
 // ExecuteStateTransition defines the procedure for a state transition function.
