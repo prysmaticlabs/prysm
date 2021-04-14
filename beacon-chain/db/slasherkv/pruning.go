@@ -49,7 +49,6 @@ func (s *Store) PruneProposals(
 
 	// We prune in increments of `pruningEpochIncrements` at a time to prevent
 	// a long-running bolt transaction which overwhelms CPU and memory.
-	lowestEpoch := helpers.SlotToEpoch(lowestSlot)
 	slotCursor := lowestSlot
 	var encodedSlotCursor []byte
 
@@ -59,7 +58,7 @@ func (s *Store) PruneProposals(
 		// Each pruning iteration involves a unique bolt transaction. Given pruning can be
 		// a very expensive process which puts pressure on the database, we perform
 		// the process in a batch-based method using a cursor to proceed to the next batch.
-		log.Debugf("Pruned %d/%d epochs worth of proposals", epochAtCursor-lowestEpoch, endEpoch-lowestEpoch)
+		log.Debugf("Pruned %d/%d epochs worth of proposals", endEpoch-epochAtCursor, endEpoch)
 		encodedSlotCursor = fssz.MarshalUint64([]byte{}, uint64(slotCursor))
 		if err = s.db.Update(func(tx *bolt.Tx) error {
 			proposalBkt := tx.Bucket(proposalRecordsBucket)
