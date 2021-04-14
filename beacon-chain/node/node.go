@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -50,7 +49,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	"gopkg.in/yaml.v2"
 )
 
 const testSkipPowFlag = "test-skip-pow"
@@ -110,7 +108,11 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 		slashingsPool:   slashings.NewPool(),
 	}
 
-	if err := beacon.startDB(cliCtx); err != nil {
+	depositAddress, err := registration.DepositContractAddress()
+	if err != nil {
+		return nil, err
+	}
+	if err := beacon.startDB(cliCtx, depositAddress); err != nil {
 		return nil, err
 	}
 
@@ -231,7 +233,7 @@ func (b *BeaconNode) startForkChoice() {
 	b.forkChoiceStore = f
 }
 
-func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
+func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 	baseDir := cliCtx.String(cmd.DataDirFlag.Name)
 	dbPath := filepath.Join(baseDir, kv.BeaconNodeDbDirName)
 	clearDB := cliCtx.Bool(cmd.ClearDB.Name)
@@ -304,24 +306,33 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
 		}
 	}
 
-	return b.db.EnsureEmbeddedGenesis(b.ctx)
+	if err := b.db.EnsureEmbeddedGenesis(b.ctx); err != nil {
+		return err
+	}
+
+	knownContract, err := b.db.DepositContractAddress(b.ctx)
+	if err != nil {
+		return err
+	}
+	addr := common.HexToAddress(depositAddress)
+	if len(knownContract) == 0 {
+		if err := b.db.SaveDepositContractAddress(b.ctx, addr); err != nil {
+			return errors.Wrap(err, "could not save deposit contract")
+		}
+	}
+	if len(knownContract) > 0 && !bytes.Equal(addr.Bytes(), knownContract) {
+		return fmt.Errorf("database contract is %#x but tried to run with %#x. This likely means "+
+			"you are trying to run on a different network than what the database contains. You can run once with "+
+			"'--clear-db' to wipe the old database or use an alternative data directory with '--datadir'",
+			knownContract, addr.Bytes())
+	}
+	log.Infof("Deposit contract: %#x", addr.Bytes())
+
+	return nil
 }
 
 func (b *BeaconNode) startStateGen() {
 	b.stateGen = stategen.New(b.db)
-}
-
-func readbootNodes(fileName string) ([]string, error) {
-	fileContent, err := ioutil.ReadFile(fileName)
-	if err != nil {
-		return nil, err
-	}
-	listNodes := make([]string, 0)
-	err = yaml.Unmarshal(fileContent, &listNodes)
-	if err != nil {
-		return nil, err
-	}
-	return listNodes, nil
 }
 
 func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
@@ -418,25 +429,11 @@ func (b *BeaconNode) registerPOWChainService() error {
 	if b.cliCtx.Bool(testSkipPowFlag) {
 		return b.services.RegisterService(&powchain.Service{})
 	}
-	depAddress := params.BeaconConfig().DepositContractAddress
-	if depAddress == "" {
-		log.Fatal("Valid deposit contract is required")
-	}
 
-	if !common.IsHexAddress(depAddress) {
-		log.Fatalf("Invalid deposit contract address given: %s", depAddress)
+	depAddress, endpoints, err := registration.PowchainPreregistration(b.cliCtx)
+	if err != nil {
+		return err
 	}
-
-	if b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name) == "" {
-		log.Error(
-			"No ETH1 node specified to run with the beacon node. Please consider running your own ETH1 node for better uptime, security, and decentralization of ETH2. Visit https://docs.prylabs.network/docs/prysm-usage/setup-eth1 for more information.",
-		)
-		log.Error(
-			"You will need to specify --http-web3provider to attach an eth1 node to the prysm node. Without an eth1 node block proposals for your validator will be affected and the beacon node will not be able to initialize the genesis state.",
-		)
-	}
-	endpoints := []string{b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name)}
-	endpoints = append(endpoints, b.cliCtx.StringSlice(flags.FallbackWeb3ProviderFlag.Name)...)
 
 	cfg := &powchain.Web3ServiceConfig{
 		HTTPEndpoints:      endpoints,
@@ -451,23 +448,7 @@ func (b *BeaconNode) registerPOWChainService() error {
 	if err != nil {
 		return errors.Wrap(err, "could not register proof-of-work chain web3Service")
 	}
-	knownContract, err := b.db.DepositContractAddress(b.ctx)
-	if err != nil {
-		return err
-	}
-	if len(knownContract) == 0 {
-		if err := b.db.SaveDepositContractAddress(b.ctx, cfg.DepositContract); err != nil {
-			return errors.Wrap(err, "could not save deposit contract")
-		}
-	}
-	if len(knownContract) > 0 && !bytes.Equal(cfg.DepositContract.Bytes(), knownContract) {
-		return fmt.Errorf("database contract is %#x but tried to run with %#x. This likely means "+
-			"you are trying to run on a different network than what the database contains. You can run once with "+
-			"'--clear-db' to wipe the old database or use an alternative data directory with '--datadir'",
-			knownContract, cfg.DepositContract.Bytes())
-	}
 
-	log.Infof("Deposit contract: %#x", cfg.DepositContract.Bytes())
 	return b.services.RegisterService(web3Service)
 }
 
