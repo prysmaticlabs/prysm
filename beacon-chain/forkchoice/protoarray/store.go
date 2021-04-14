@@ -212,29 +212,6 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types
 	return f.store.nodes[i].root[:], nil
 }
 
-// ChainHeads returns all possible chain heads (leaves of fork choice tree).
-// Heads roots and heads slots are returned.
-func (f *ForkChoice) ChainHeads() ([][32]byte, []types.Slot) {
-	f.store.nodesLock.RLock()
-	nodes := f.Nodes()
-	f.store.nodesLock.RUnlock()
-
-	// Deliberate choice to not preallocate space for below.
-	// Heads cant be more than 2-3 in the worst case where pre-allocation will be 64 to begin with.
-	headsRoots := make([][32]byte, 0)
-	headsSlots := make([]types.Slot, 0)
-
-	for _, node := range nodes {
-		// Possible heads have no children.
-		if node.bestDescendant == NonExistentNode && node.bestChild == NonExistentNode {
-			headsRoots = append(headsRoots, node.root)
-			headsSlots = append(headsSlots, node.slot)
-		}
-	}
-
-	return headsRoots, headsSlots
-}
-
 // PruneThreshold of fork choice store.
 func (s *Store) PruneThreshold() uint64 {
 	return s.pruneThreshold
