@@ -54,7 +54,7 @@ func (s *Store) PruneProposals(
 	var encodedSlotCursor []byte
 
 	// While we still have epochs to prune based on a cursor, we continue the pruning process.
-	for epochAtCursor := helpers.SlotToEpoch(slotCursor); epochAtCursor-lowestEpoch > 0; {
+	for epochAtCursor := helpers.SlotToEpoch(slotCursor); endEpoch-epochAtCursor > 0; {
 
 		// Each pruning iteration involves a unique bolt transaction. Given pruning can be
 		// a very expensive process which puts pressure on the database, we perform
