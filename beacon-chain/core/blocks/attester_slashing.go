@@ -8,6 +8,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	interfaces "github.com/prysmaticlabs/prysm/beacon-chain/core/interface"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/slashutil"
@@ -36,15 +37,15 @@ import (
 func ProcessAttesterSlashings(
 	ctx context.Context,
 	beaconState iface.BeaconState,
-	b *ethpb.SignedBeaconBlock,
+	b interfaces.SignedBeaconBlock,
 	slashFunc slashValidatorFunc,
 ) (iface.BeaconState, error) {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err
 	}
 
-	body := b.Block.Body
-	for idx, slashing := range body.AttesterSlashings {
+	body := b.GetBlock().GetBody()
+	for idx, slashing := range body.GetAttesterSlashings() {
 		if err := VerifyAttesterSlashing(ctx, beaconState, slashing); err != nil {
 			return nil, errors.Wrapf(err, "could not verify attester slashing %d", idx)
 		}

@@ -16,6 +16,7 @@ import (
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	interfaces "github.com/prysmaticlabs/prysm/beacon-chain/core/interface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
@@ -26,16 +27,16 @@ import (
 )
 
 // processFunc is a function that processes a block with a given state. State is mutated.
-type processFunc func(context.Context, iface.BeaconState, *ethpb.SignedBeaconBlock) (iface.BeaconState, error)
+type processFunc func(context.Context, iface.BeaconState, interfaces.SignedBeaconBlock) (iface.BeaconState, error)
 
-var processDepositsFunc = func(ctx context.Context, s iface.BeaconState, blk *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
-	return b.ProcessDeposits(ctx, s, blk.Block.Body.Deposits)
+var processDepositsFunc = func(ctx context.Context, s iface.BeaconState, blk interfaces.SignedBeaconBlock) (iface.BeaconState, error) {
+	return b.ProcessDeposits(ctx, s, blk.GetBlock().GetBody().GetDeposits())
 }
-var processProposerSlashingFunc = func(ctx context.Context, s iface.BeaconState, blk *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
+var processProposerSlashingFunc = func(ctx context.Context, s iface.BeaconState, blk interfaces.SignedBeaconBlock) (iface.BeaconState, error) {
 	return b.ProcessProposerSlashings(ctx, s, blk, v.SlashValidator)
 }
 
-var processAttesterSlashingFunc = func(ctx context.Context, s iface.BeaconState, blk *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
+var processAttesterSlashingFunc = func(ctx context.Context, s iface.BeaconState, blk interfaces.SignedBeaconBlock) (iface.BeaconState, error) {
 	return b.ProcessAttesterSlashings(ctx, s, blk, v.SlashValidator)
 }
 
@@ -90,6 +91,7 @@ func ExecuteStateTransition(
 	}
 
 	// Execute per block transition.
+
 	state, err = ProcessBlock(ctx, state, signed)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not process block in slot %d", signed.Block.Slot)
@@ -308,7 +310,7 @@ func ProcessSlots(ctx context.Context, state iface.BeaconState, slot types.Slot)
 func ProcessBlock(
 	ctx context.Context,
 	state iface.BeaconState,
-	signed *ethpb.SignedBeaconBlock,
+	signed interfaces.SignedBeaconBlock,
 ) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessBlock")
 	defer span.End()
@@ -325,11 +327,11 @@ func ProcessBlock(
 }
 
 // VerifyOperationLengths verifies that block operation lengths are valid.
-func VerifyOperationLengths(_ context.Context, state iface.BeaconState, b *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
+func VerifyOperationLengths(_ context.Context, state iface.BeaconState, b interfaces.SignedBeaconBlock) (iface.BeaconState, error) {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err
 	}
-	body := b.Block.Body
+	body := b.GetBlock().GetBody()
 
 	if uint64(len(body.ProposerSlashings)) > params.BeaconConfig().MaxProposerSlashings {
 		return nil, fmt.Errorf(

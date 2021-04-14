@@ -8,6 +8,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	interfaces "github.com/prysmaticlabs/prysm/beacon-chain/core/interface"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
@@ -60,45 +61,45 @@ func verifySignature(signedData, pub, signature, domain []byte) error {
 }
 
 // VerifyBlockSignature verifies the proposer signature of a beacon block.
-func VerifyBlockSignature(beaconState iface.ReadOnlyBeaconState, block *ethpb.SignedBeaconBlock) error {
+func VerifyBlockSignature(beaconState iface.ReadOnlyBeaconState, block interfaces.SignedBeaconBlock) error {
 	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
 	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		return err
 	}
-	proposer, err := beaconState.ValidatorAtIndex(block.Block.ProposerIndex)
+	proposer, err := beaconState.ValidatorAtIndex(block.GetBlock().GetProposerIndex())
 	if err != nil {
 		return err
 	}
 	proposerPubKey := proposer.PublicKey
-	return helpers.VerifyBlockSigningRoot(block.Block, proposerPubKey, block.Signature, domain)
+	return helpers.VerifyBlockSigningRoot(block.GetBlock(), proposerPubKey, block.GetSignature(), domain)
 }
 
 // BlockSignatureSet retrieves the block signature set from the provided block and its corresponding state.
-func BlockSignatureSet(beaconState iface.ReadOnlyBeaconState, block *ethpb.SignedBeaconBlock) (*bls.SignatureSet, error) {
+func BlockSignatureSet(beaconState iface.ReadOnlyBeaconState, block interfaces.SignedBeaconBlock) (*bls.SignatureSet, error) {
 	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
 	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err
 	}
-	proposer, err := beaconState.ValidatorAtIndex(block.Block.ProposerIndex)
+	proposer, err := beaconState.ValidatorAtIndex(block.GetBlock().GetProposerIndex())
 	if err != nil {
 		return nil, err
 	}
 	proposerPubKey := proposer.PublicKey
-	return helpers.BlockSignatureSet(block.Block, proposerPubKey, block.Signature, domain)
+	return helpers.BlockSignatureSet(block.GetBlock(), proposerPubKey, block.GetSignature(), domain)
 }
 
 // RandaoSignatureSet retrieves the relevant randao specific signature set object
 // from a block and its corresponding state.
 func RandaoSignatureSet(beaconState iface.ReadOnlyBeaconState,
-	body *ethpb.BeaconBlockBody,
+	body interfaces.BeaconBlockBody,
 ) (*bls.SignatureSet, error) {
 	buf, proposerPub, domain, err := randaoSigningData(beaconState)
 	if err != nil {
 		return nil, err
 	}
-	set, err := signatureSet(buf, proposerPub, body.RandaoReveal, domain)
+	set, err := signatureSet(buf, proposerPub, body.GetRandaoReveal(), domain)
 	if err != nil {
 		return nil, err
 	}

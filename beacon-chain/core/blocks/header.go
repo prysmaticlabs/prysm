@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	interfaces "github.com/prysmaticlabs/prysm/beacon-chain/core/interface"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -40,9 +41,9 @@ import (
 func ProcessBlockHeader(
 	_ context.Context,
 	beaconState iface.BeaconState,
-	block *ethpb.SignedBeaconBlock,
+	block interfaces.SignedBeaconBlock,
 ) (iface.BeaconState, error) {
-	beaconState, err := ProcessBlockHeaderNoVerify(beaconState, block.Block)
+	beaconState, err := ProcessBlockHeaderNoVerify(beaconState, block.GetBlock())
 	if err != nil {
 		return nil, err
 	}
@@ -85,34 +86,34 @@ func ProcessBlockHeader(
 //    assert not proposer.slashed
 func ProcessBlockHeaderNoVerify(
 	beaconState iface.BeaconState,
-	block *ethpb.BeaconBlock,
+	block interfaces.BeaconBlock,
 ) (iface.BeaconState, error) {
 	if block == nil {
 		return nil, errors.New("nil block")
 	}
-	if beaconState.Slot() != block.Slot {
-		return nil, fmt.Errorf("state slot: %d is different than block slot: %d", beaconState.Slot(), block.Slot)
+	if beaconState.Slot() != block.GetSlot() {
+		return nil, fmt.Errorf("state slot: %d is different than block slot: %d", beaconState.Slot(), block.GetSlot())
 	}
 	idx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
 		return nil, err
 	}
-	if block.ProposerIndex != idx {
-		return nil, fmt.Errorf("proposer index: %d is different than calculated: %d", block.ProposerIndex, idx)
+	if block.GetProposerIndex() != idx {
+		return nil, fmt.Errorf("proposer index: %d is different than calculated: %d", block.GetProposerIndex(), idx)
 	}
 	parentHeader := beaconState.LatestBlockHeader()
-	if parentHeader.Slot >= block.Slot {
-		return nil, fmt.Errorf("block.Slot %d must be greater than state.LatestBlockHeader.Slot %d", block.Slot, parentHeader.Slot)
+	if parentHeader.Slot >= block.GetSlot() {
+		return nil, fmt.Errorf("block.Slot %d must be greater than state.LatestBlockHeader.Slot %d", block.GetSlot(), parentHeader.Slot)
 	}
 	parentRoot, err := parentHeader.HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}
 
-	if !bytes.Equal(block.ParentRoot, parentRoot[:]) {
+	if !bytes.Equal(block.GetParentRoot(), parentRoot[:]) {
 		return nil, fmt.Errorf(
 			"parent root %#x does not match the latest block header signing root in state %#x",
-			block.ParentRoot, parentRoot)
+			block.GetParentRoot(), parentRoot)
 	}
 
 	proposer, err := beaconState.ValidatorAtIndexReadOnly(idx)
@@ -123,14 +124,14 @@ func ProcessBlockHeaderNoVerify(
 		return nil, fmt.Errorf("proposer at index %d was previously slashed", idx)
 	}
 
-	bodyRoot, err := block.Body.HashTreeRoot()
+	bodyRoot, err := block.GetBody().HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}
 	if err := beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
-		Slot:          block.Slot,
-		ProposerIndex: block.ProposerIndex,
-		ParentRoot:    block.ParentRoot,
+		Slot:          block.GetSlot(),
+		ProposerIndex: block.GetProposerIndex(),
+		ParentRoot:    block.GetParentRoot(),
 		StateRoot:     params.BeaconConfig().ZeroHash[:],
 		BodyRoot:      bodyRoot[:],
 	}); err != nil {

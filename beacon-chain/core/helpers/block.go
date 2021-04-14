@@ -5,7 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	interfaces "github.com/prysmaticlabs/prysm/beacon-chain/core/interface"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -13,14 +13,14 @@ import (
 // VerifyNilBeaconBlock checks if any composite field of input signed beacon block is nil.
 // Access to these nil fields will result in run time panic,
 // it is recommended to run these checks as first line of defense.
-func VerifyNilBeaconBlock(b *ethpb.SignedBeaconBlock) error {
+func VerifyNilBeaconBlock(b interfaces.SignedBeaconBlock) error {
 	if b == nil {
 		return errors.New("signed beacon block can't be nil")
 	}
-	if b.Block == nil {
+	if b.GetBlock() == nil {
 		return errors.New("beacon block can't be nil")
 	}
-	if b.Block.Body == nil {
+	if b.GetBlock().GetBody() == nil {
 		return errors.New("beacon block body can't be nil")
 	}
 	return nil

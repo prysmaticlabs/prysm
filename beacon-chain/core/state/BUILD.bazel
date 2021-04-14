@@ -30,6 +30,7 @@ go_library(
         "//beacon-chain/core/epoch:go_default_library",
         "//beacon-chain/core/epoch/precompute:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
+        "//beacon-chain/core/interface:go_default_library",
         "//beacon-chain/core/state/interop:go_default_library",
         "//beacon-chain/core/validators:go_default_library",
         "//beacon-chain/state/interface:go_default_library",

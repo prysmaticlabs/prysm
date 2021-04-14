@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	interfaces "github.com/prysmaticlabs/prysm/beacon-chain/core/interface"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -40,12 +40,12 @@ import (
 func ExecuteStateTransitionNoVerifyAnySig(
 	ctx context.Context,
 	state iface.BeaconState,
-	signed *ethpb.SignedBeaconBlock,
+	signed interfaces.SignedBeaconBlock,
 ) (*bls.SignatureSet, iface.BeaconState, error) {
 	if ctx.Err() != nil {
 		return nil, nil, ctx.Err()
 	}
-	if signed == nil || signed.Block == nil {
+	if signed == nil || signed.GetBlock() == nil {
 		return nil, nil, errors.New("nil block")
 	}
 
@@ -54,12 +54,12 @@ func ExecuteStateTransitionNoVerifyAnySig(
 	var err error
 
 	if featureconfig.Get().EnableNextSlotStateCache {
-		state, err = ProcessSlotsUsingNextSlotCache(ctx, state, signed.Block.ParentRoot, signed.Block.Slot)
+		state, err = ProcessSlotsUsingNextSlotCache(ctx, state, signed.GetBlock().GetParentRoot(), signed.GetBlock().GetSlot())
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not process slots")
 		}
 	} else {
-		state, err = ProcessSlots(ctx, state, signed.Block.Slot)
+		state, err = ProcessSlots(ctx, state, signed.GetBlock().GetSlot())
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not process slot")
 		}
@@ -76,9 +76,9 @@ func ExecuteStateTransitionNoVerifyAnySig(
 	if err != nil {
 		return nil, nil, err
 	}
-	if !bytes.Equal(postStateRoot[:], signed.Block.StateRoot) {
+	if !bytes.Equal(postStateRoot[:], signed.GetBlock().GetStateRoot()) {
 		return nil, nil, fmt.Errorf("could not validate state root, wanted: %#x, received: %#x",
-			postStateRoot[:], signed.Block.StateRoot)
+			postStateRoot[:], signed.GetBlock().GetStateRoot())
 	}
 
 	return set, state, nil
@@ -108,7 +108,7 @@ func ExecuteStateTransitionNoVerifyAnySig(
 func CalculateStateRoot(
 	ctx context.Context,
 	state iface.BeaconState,
-	signed *ethpb.SignedBeaconBlock,
+	signed interfaces.SignedBeaconBlock,
 ) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.CalculateStateRoot")
 	defer span.End()
@@ -119,7 +119,7 @@ func CalculateStateRoot(
 	if state == nil {
 		return [32]byte{}, errors.New("nil state")
 	}
-	if signed == nil || signed.Block == nil {
+	if signed == nil || signed.GetBlock() == nil {
 		return [32]byte{}, errors.New("nil block")
 	}
 
@@ -129,12 +129,12 @@ func CalculateStateRoot(
 	// Execute per slots transition.
 	var err error
 	if featureconfig.Get().EnableNextSlotStateCache {
-		state, err = ProcessSlotsUsingNextSlotCache(ctx, state, signed.Block.ParentRoot, signed.Block.Slot)
+		state, err = ProcessSlotsUsingNextSlotCache(ctx, state, signed.GetBlock().GetParentRoot(), signed.GetBlock().GetSlot())
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not process slots")
 		}
 	} else {
-		state, err = ProcessSlots(ctx, state, signed.Block.Slot)
+		state, err = ProcessSlots(ctx, state, signed.GetBlock().GetSlot())
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not process slot")
 		}
@@ -164,12 +164,12 @@ func CalculateStateRoot(
 func ProcessBlockNoVerifyAnySig(
 	ctx context.Context,
 	state iface.BeaconState,
-	signed *ethpb.SignedBeaconBlock,
+	signed interfaces.SignedBeaconBlock,
 ) (*bls.SignatureSet, iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessBlockNoVerifyAnySig")
 	defer span.End()
 
-	state, err := b.ProcessBlockHeaderNoVerify(state, signed.Block)
+	state, err := b.ProcessBlockHeaderNoVerify(state, signed.GetBlock())
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not process block header")
@@ -179,12 +179,12 @@ func ProcessBlockNoVerifyAnySig(
 		traceutil.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not retrieve block signature set")
 	}
-	rSet, err := b.RandaoSignatureSet(state, signed.Block.Body)
+	rSet, err := b.RandaoSignatureSet(state, signed.GetBlock().GetBody())
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not retrieve randao signature set")
 	}
-	state, err = b.ProcessRandaoNoVerify(state, signed.Block.Body)
+	state, err = b.ProcessRandaoNoVerify(state, signed.GetBlock().GetBody())
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not verify and process randao")
@@ -201,7 +201,7 @@ func ProcessBlockNoVerifyAnySig(
 		traceutil.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not process block operation")
 	}
-	aSet, err := b.AttestationSignatureSet(ctx, state, signed.Block.Body.Attestations)
+	aSet, err := b.AttestationSignatureSet(ctx, state, signed.GetBlock().GetBody().GetAttestations())
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not retrieve attestation signature set")
 	}
@@ -237,7 +237,7 @@ func ProcessBlockNoVerifyAnySig(
 func ProcessOperationsNoVerifyAttsSigs(
 	ctx context.Context,
 	state iface.BeaconState,
-	signedBeaconBlock *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
+	signedBeaconBlock interfaces.SignedBeaconBlock) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessOperationsNoVerifyAttsSigs")
 	defer span.End()
 
@@ -257,7 +257,7 @@ func ProcessOperationsNoVerifyAttsSigs(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block attestations")
 	}
-	state, err = b.ProcessDeposits(ctx, state, signedBeaconBlock.Block.Body.Deposits)
+	state, err = b.ProcessDeposits(ctx, state, signedBeaconBlock.GetBlock().GetBody().GetDeposits())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block validator deposits")
 	}
@@ -274,18 +274,18 @@ func ProcessOperationsNoVerifyAttsSigs(
 func ProcessBlockForStateRoot(
 	ctx context.Context,
 	state iface.BeaconState,
-	signed *ethpb.SignedBeaconBlock,
+	signed interfaces.SignedBeaconBlock,
 ) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessBlockForStateRoot")
 	defer span.End()
 
-	state, err := b.ProcessBlockHeaderNoVerify(state, signed.Block)
+	state, err := b.ProcessBlockHeaderNoVerify(state, signed.GetBlock())
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block header")
 	}
 
-	state, err = b.ProcessRandaoNoVerify(state, signed.Block.Body)
+	state, err = b.ProcessRandaoNoVerify(state, signed.GetBlock().GetBody())
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not verify and process randao")
