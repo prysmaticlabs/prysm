@@ -448,21 +448,6 @@ func (b *BeaconNode) registerPOWChainService() error {
 	if err != nil {
 		return errors.Wrap(err, "could not register proof-of-work chain web3Service")
 	}
-	knownContract, err := b.db.DepositContractAddress(b.ctx)
-	if err != nil {
-		return err
-	}
-	if len(knownContract) == 0 {
-		if err := b.db.SaveDepositContractAddress(b.ctx, cfg.DepositContract); err != nil {
-			return errors.Wrap(err, "could not save deposit contract")
-		}
-	}
-	if len(knownContract) > 0 && !bytes.Equal(cfg.DepositContract.Bytes(), knownContract) {
-		return fmt.Errorf("database contract is %#x but tried to run with %#x. This likely means "+
-			"you are trying to run on a different network than what the database contains. You can run once with "+
-			"'--clear-db' to wipe the old database or use an alternative data directory with '--datadir'",
-			knownContract, cfg.DepositContract.Bytes())
-	}
 
 	log.Infof("Deposit contract: %#x", cfg.DepositContract.Bytes())
 	return b.services.RegisterService(web3Service)
