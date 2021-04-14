@@ -108,7 +108,7 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 		slashingsPool:   slashings.NewPool(),
 	}
 
-	depositAddress, err := registration.DepositContractAddress(cliCtx)
+	depositAddress, err := registration.DepositContractAddress()
 	if err != nil {
 		return nil, err
 	}

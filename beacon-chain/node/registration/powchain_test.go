@@ -30,13 +30,22 @@ func TestPowchainPreregistration(t *testing.T) {
 	assert.DeepEqual(t, []string{"primary", "fallback1", "fallback2"}, endpoints)
 }
 
-func TestDepositContractAddress_Ok(t *testing.T) {
+func TestPowchainPreregistration_EmptyWeb3Provider(t *testing.T) {
+	hook := logTest.NewGlobal()
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	set.String(flags.HTTPWeb3ProviderFlag.Name, "provider", "")
+	set.String(flags.HTTPWeb3ProviderFlag.Name, "", "")
+	fallback := cli.StringSlice{}
+	set.Var(&fallback, flags.FallbackWeb3ProviderFlag.Name, "")
 	ctx := cli.NewContext(&app, set, nil)
 
-	address, err := DepositContractAddress(ctx)
+	_, _, err := PowchainPreregistration(ctx)
+	require.NoError(t, err)
+	assert.LogsContain(t, hook, "No ETH1 node specified to run with the beacon node")
+}
+
+func TestDepositContractAddress_Ok(t *testing.T) {
+	address, err := DepositContractAddress()
 	require.NoError(t, err)
 	assert.Equal(t, params.BeaconConfig().DepositContractAddress, address)
 }
@@ -46,11 +55,8 @@ func TestDepositContractAddress_EmptyAddress(t *testing.T) {
 	config := params.BeaconConfig()
 	config.DepositContractAddress = ""
 	params.OverrideBeaconConfig(config)
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	ctx := cli.NewContext(&app, set, nil)
 
-	_, err := DepositContractAddress(ctx)
+	_, err := DepositContractAddress()
 	assert.ErrorContains(t, "valid deposit contract is required", err)
 }
 
@@ -59,23 +65,7 @@ func TestDepositContractAddress_NotHexAddress(t *testing.T) {
 	config := params.BeaconConfig()
 	config.DepositContractAddress = "abc?!"
 	params.OverrideBeaconConfig(config)
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	set.String(flags.HTTPWeb3ProviderFlag.Name, "", "")
-	ctx := cli.NewContext(&app, set, nil)
 
-	_, err := DepositContractAddress(ctx)
+	_, err := DepositContractAddress()
 	assert.ErrorContains(t, "invalid deposit contract address given", err)
-}
-
-func TestDepositContractAddress_EmptyWeb3Provider(t *testing.T) {
-	hook := logTest.NewGlobal()
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	ctx := cli.NewContext(&app, set, nil)
-
-	address, err := DepositContractAddress(ctx)
-	require.NoError(t, err)
-	assert.Equal(t, params.BeaconConfig().DepositContractAddress, address)
-	assert.LogsContain(t, hook, "No ETH1 node specified to run with the beacon node")
 }
