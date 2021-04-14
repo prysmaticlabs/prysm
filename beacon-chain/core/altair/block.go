@@ -13,6 +13,22 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+// VerifyNilBeaconBlock checks if any composite field of input signed beacon block is nil.
+// Access to these nil fields will result in run time panic,
+// it is recommended to run these checks as first line of defense.
+func VerifyNilBeaconBlock(b *ethpb.SignedBeaconBlockAltair) error {
+	if b == nil {
+		return errors.New("signed beacon block can't be nil")
+	}
+	if b.Block == nil {
+		return errors.New("beacon block can't be nil")
+	}
+	if b.Block.Body == nil {
+		return errors.New("beacon block body can't be nil")
+	}
+	return nil
+}
+
 // ProcessSyncCommittee verifies sync committee aggregate signature signing over the previous slot block root.
 //
 // Spec code:
