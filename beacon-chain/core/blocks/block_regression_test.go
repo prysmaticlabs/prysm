@@ -8,6 +8,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -90,7 +91,7 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 		},
 	}
 
-	newState, err := blocks.ProcessAttesterSlashings(context.Background(), beaconState, b)
+	newState, err := blocks.ProcessAttesterSlashings(context.Background(), beaconState, b, v.SlashValidator)
 	require.NoError(t, err)
 	newRegistry := newState.Validators()
 	if !newRegistry[expectedSlashedVal].Slashed {

@@ -274,7 +274,7 @@ func TestWeakSubjectivity_ParseWeakSubjectivityInputString(t *testing.T) {
 	}
 }
 
-func genState(t *testing.T, valCount uint64, avgBalance uint64) iface.BeaconState {
+func genState(t *testing.T, valCount, avgBalance uint64) iface.BeaconState {
 	beaconState, err := testutil.NewBeaconState()
 	require.NoError(t, err)
 

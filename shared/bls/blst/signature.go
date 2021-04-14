@@ -229,7 +229,7 @@ func (s *Signature) Copy() common.Signature {
 
 // VerifyCompressed verifies that the compressed signature and pubkey
 // are valid from the message provided.
-func VerifyCompressed(signature []byte, pub []byte, msg []byte) bool {
+func VerifyCompressed(signature, pub, msg []byte) bool {
 	// Validate signature and PKs since we will uncompress them here
 	return new(blstSignature).VerifyCompressed(signature, true, pub, true, msg, dst)
 }
