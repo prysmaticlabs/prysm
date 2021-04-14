@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -168,8 +169,17 @@ func ProcessBlockNoVerifyAnySig(
 ) (*bls.SignatureSet, iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessBlockNoVerifyAnySig")
 	defer span.End()
+	if err := helpers.VerifyNilBeaconBlock(signed); err != nil {
+		return nil, nil, err
+	}
 
-	state, err := b.ProcessBlockHeaderNoVerify(state, signed.Block)
+	blk := signed.Block
+	body := blk.Body
+	bodyRoot, err := body.HashTreeRoot()
+	if err != nil {
+		return nil, nil, err
+	}
+	state, err = b.ProcessBlockHeaderNoVerify(state, blk.Slot, blk.ProposerIndex, blk.ParentRoot, bodyRoot[:])
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not process block header")
@@ -278,8 +288,17 @@ func ProcessBlockForStateRoot(
 ) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessBlockForStateRoot")
 	defer span.End()
+	if err := helpers.VerifyNilBeaconBlock(signed); err != nil {
+		return nil, err
+	}
 
-	state, err := b.ProcessBlockHeaderNoVerify(state, signed.Block)
+	blk := signed.Block
+	body := blk.Body
+	bodyRoot, err := body.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	state, err = b.ProcessBlockHeaderNoVerify(state, blk.Slot, blk.ProposerIndex, blk.ParentRoot, bodyRoot[:])
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block header")
