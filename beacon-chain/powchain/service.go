@@ -131,7 +131,7 @@ type Service struct {
 	cancel                  context.CancelFunc
 	headTicker              *time.Ticker
 	httpEndpoints           []httputils.Endpoint
-	currHttpEndpoint        *httputils.Endpoint
+	currHttpEndpoint        httputils.Endpoint
 	httpLogger              bind.ContractFilterer
 	eth1DataFetcher         RPCDataFetcher
 	rpcClient               RPCClient
@@ -191,7 +191,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		cancel:           cancel,
 		cfg:              config,
 		httpEndpoints:    endpoints,
-		currHttpEndpoint: &currEndpoint,
+		currHttpEndpoint: currEndpoint,
 		latestEth1Data: &protodb.LatestETH1Data{
 			BlockHeight:        0,
 			BlockTime:          0,
@@ -239,7 +239,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 func (s *Service) Start() {
 	// If the chain has not started already and we don't have access to eth1 nodes, we will not be
 	// able to generate the genesis state.
-	if !s.chainStartData.Chainstarted && (s.currHttpEndpoint == nil || s.currHttpEndpoint.Url == "") {
+	if !s.chainStartData.Chainstarted && s.currHttpEndpoint.Url == "" {
 		// check for genesis state before shutting down the node,
 		// if a genesis state exists, we can continue on.
 		genState, err := s.cfg.BeaconDB.GenesisState(s.ctx)
@@ -252,7 +252,7 @@ func (s *Service) Start() {
 	}
 
 	// Exit early if eth1 endpoint is not set.
-	if s.currHttpEndpoint == nil || s.currHttpEndpoint.Url == "" {
+	if s.currHttpEndpoint.Url == "" {
 		return
 	}
 	go func() {
@@ -366,7 +366,7 @@ func (s *Service) followBlockHeight(ctx context.Context) (uint64, error) {
 }
 
 func (s *Service) connectToPowChain() error {
-	httpClient, rpcClient, err := s.dialETH1Nodes(*s.currHttpEndpoint)
+	httpClient, rpcClient, err := s.dialETH1Nodes(s.currHttpEndpoint)
 	if err != nil {
 		return errors.Wrap(err, "could not dial eth1 nodes")
 	}
@@ -892,7 +892,7 @@ func (s *Service) checkDefaultEndpoint() {
 
 	// Switch back to primary endpoint and try connecting
 	// to it again.
-	s.currHttpEndpoint = &primaryEndpoint
+	s.currHttpEndpoint = primaryEndpoint
 	s.retryETH1Node(nil)
 }
 
@@ -917,7 +917,7 @@ func (s *Service) fallbackToNextEndpoint() {
 	if nextIndex == currIndex {
 		return
 	}
-	s.currHttpEndpoint = &s.httpEndpoints[nextIndex]
+	s.currHttpEndpoint = s.httpEndpoints[nextIndex]
 	log.Infof("Falling back to alternative endpoint: %s", logutil.MaskCredentialsLogging(s.currHttpEndpoint.Url))
 }
 
