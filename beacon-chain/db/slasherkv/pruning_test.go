@@ -12,49 +12,32 @@ import (
 
 func TestStore_PruneProposals_Logs(t *testing.T) {
 	ctx := context.Background()
-	tests := []struct {
-		name          string
-		proposalsInDB []*slashertypes.SignedBlockHeaderWrapper
-		afterPruning  []*slashertypes.SignedBlockHeaderWrapper
-		epoch         types.Epoch
-		historyLength types.Epoch
-		wantErr       bool
-	}{
-		{
-			name: "should delete all proposals under epoch 2",
-			proposalsInDB: []*slashertypes.SignedBlockHeaderWrapper{
-				createProposalWrapper(t, types.Slot(2), 0, []byte{1}),
-				createProposalWrapper(t, types.Slot(8), 0, []byte{1}),
-				createProposalWrapper(t, params.BeaconConfig().SlotsPerEpoch*3, 0, []byte{1}),
-			},
-			afterPruning: []*slashertypes.SignedBlockHeaderWrapper{
-				createProposalWrapper(t, params.BeaconConfig().SlotsPerEpoch*3, 0, []byte{1}),
-			},
-			epoch: 2,
-		},
+	proposalsInDB := []*slashertypes.SignedBlockHeaderWrapper{
+		createProposalWrapper(t, types.Slot(2), 0, []byte{1}),
+		createProposalWrapper(t, types.Slot(8), 0, []byte{1}),
+		createProposalWrapper(t, params.BeaconConfig().SlotsPerEpoch*3, 0, []byte{1}),
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			beaconDB := setupDB(t)
-			require.NoError(t, beaconDB.SaveBlockProposals(ctx, tt.proposalsInDB))
-			if err := beaconDB.PruneProposals(ctx, tt.epoch, tt.historyLength); (err != nil) != tt.wantErr {
-				t.Errorf("PruneProposals() error = %v, wantErr %v", err, tt.wantErr)
-			}
+	afterPruning := []*slashertypes.SignedBlockHeaderWrapper{
+		createProposalWrapper(t, params.BeaconConfig().SlotsPerEpoch*3, 0, []byte{1}),
+	}
+	epoch := types.Epoch(2)
+	beaconDB := setupDB(t)
+	require.NoError(t, beaconDB.SaveBlockProposals(ctx, proposalsInDB))
 
-			// Second time checking same proposals but all with different signing root should
-			// return all double proposals.
-			slashable := make([]*slashertypes.SignedBlockHeaderWrapper, len(tt.afterPruning))
-			for i := 0; i < len(tt.afterPruning); i++ {
-				slashable[i] = createProposalWrapper(t, tt.afterPruning[i].SignedBeaconBlockHeader.Header.Slot, tt.afterPruning[i].SignedBeaconBlockHeader.Header.ProposerIndex, []byte{2})
-			}
+	err := beaconDB.PruneProposals(ctx, epoch, defaultHistoryLength)
 
-			doubleProposals, err := beaconDB.CheckDoubleBlockProposals(ctx, slashable)
-			require.NoError(t, err)
-			require.Equal(t, len(tt.afterPruning), len(doubleProposals))
-			for i, existing := range doubleProposals {
-				require.DeepSSZEqual(t, existing.Header_1, tt.afterPruning[i].SignedBeaconBlockHeader)
-			}
-		})
+	// Second time checking same proposals but all with different signing root should
+	// return all double proposals.
+	slashable := make([]*slashertypes.SignedBlockHeaderWrapper, len(afterPruning))
+	for i := 0; i < len(afterPruning); i++ {
+		slashable[i] = createProposalWrapper(t, afterPruning[i].SignedBeaconBlockHeader.Header.Slot, afterPruning[i].SignedBeaconBlockHeader.Header.ProposerIndex, []byte{2})
+	}
+
+	doubleProposals, err := beaconDB.CheckDoubleBlockProposals(ctx, slashable)
+	require.NoError(t, err)
+	require.Equal(t, len(afterPruning), len(doubleProposals))
+	for i, existing := range doubleProposals {
+		require.DeepSSZEqual(t, existing.Header_1, afterPruning[i].SignedBeaconBlockHeader)
 	}
 }
 
