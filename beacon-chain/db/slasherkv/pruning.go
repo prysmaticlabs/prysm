@@ -19,6 +19,7 @@ func (s *Store) PruneProposals(
 	ctx context.Context, currentEpoch, pruningEpochIncrements, historyLength types.Epoch,
 ) error {
 	if currentEpoch < historyLength {
+		log.Debugf("Current epoch %d < history length %d, nothing to prune", currentEpoch, historyLength)
 		return nil
 	}
 	// We can prune everything less than the current epoch - history length.
