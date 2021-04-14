@@ -45,6 +45,7 @@ func (s *Store) PruneProposals(
 	// If the lowest slot is greater than or equal to the end pruning slot,
 	// there is nothing to prune, so we return early.
 	if lowestSlot >= endPruneSlot {
+		log.Debugf("Lowest slot %d is >= pruning slot %d, nothing to prune", lowestSlot, endPruneSlot)
 		return nil
 	}
 
@@ -54,8 +55,8 @@ func (s *Store) PruneProposals(
 	var encodedSlotCursor []byte
 
 	// While we still have epochs to prune based on a cursor, we continue the pruning process.
-	for epochAtCursor := helpers.SlotToEpoch(slotCursor); endEpoch-epochAtCursor > 0; {
-
+	epochAtCursor := helpers.SlotToEpoch(slotCursor)
+	for endEpoch-epochAtCursor > 0 {
 		// Each pruning iteration involves a unique bolt transaction. Given pruning can be
 		// a very expensive process which puts pressure on the database, we perform
 		// the process in a batch-based method using a cursor to proceed to the next batch.
@@ -78,8 +79,9 @@ func (s *Store) PruneProposals(
 					return nil
 				}
 				slot := slotFromProposalKey(k)
-				epoch := helpers.SlotToEpoch(slot)
 				slotCursor = slot
+				encodedSlotCursor = fssz.MarshalUint64([]byte{}, uint64(slotCursor))
+				epochAtCursor = helpers.SlotToEpoch(slot)
 
 				// If we have pruned N epochs in this pruning iteration,
 				// we exit from the bolt transaction.
@@ -95,9 +97,9 @@ func (s *Store) PruneProposals(
 				//  (slot = 3 ++ validatorIndex = 2) => ...
 				// so we only mark an epoch as pruned if the epoch of the current object
 				// under the cursor has changed.
-				if epoch != lastPrunedEpoch {
+				if epochAtCursor > lastPrunedEpoch {
 					epochsPruned++
-					lastPrunedEpoch = epoch
+					lastPrunedEpoch = epochAtCursor
 				}
 				slasherProposalsPrunedTotal.Inc()
 
