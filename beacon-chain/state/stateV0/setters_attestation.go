@@ -65,7 +65,7 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *pbp2p.PendingAttestati
 
 	b.state.CurrentEpochAttestations = append(atts, val)
 	b.markFieldAsDirty(currentEpochAttestations)
-	b.dirtyIndices[currentEpochAttestations] = append(b.dirtyIndices[currentEpochAttestations], uint64(len(b.state.CurrentEpochAttestations)-1))
+	b.addDirtyIndices(currentEpochAttestations, []uint64{uint64(len(b.state.CurrentEpochAttestations) - 1)})
 	return nil
 }
 
@@ -94,6 +94,5 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestat
 	b.state.PreviousEpochAttestations = append(atts, val)
 	b.markFieldAsDirty(previousEpochAttestations)
 	b.addDirtyIndices(previousEpochAttestations, []uint64{uint64(len(b.state.PreviousEpochAttestations) - 1)})
-
 	return nil
 }

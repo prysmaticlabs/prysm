@@ -7,6 +7,7 @@ import (
 	fuzz "github.com/google/gofuzz"
 	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -172,7 +173,7 @@ func TestFuzzProcessProposerSlashings_10000(t *testing.T) {
 		fuzzer.Fuzz(b)
 		s, err := stateV0.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
-		r, err := ProcessProposerSlashings(ctx, s, b)
+		r, err := ProcessProposerSlashings(ctx, s, b, v.SlashValidator)
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, b)
 		}
@@ -203,7 +204,7 @@ func TestFuzzProcessAttesterSlashings_10000(t *testing.T) {
 		fuzzer.Fuzz(b)
 		s, err := stateV0.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
-		r, err := ProcessAttesterSlashings(ctx, s, b)
+		r, err := ProcessAttesterSlashings(ctx, s, b, v.SlashValidator)
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, b)
 		}
