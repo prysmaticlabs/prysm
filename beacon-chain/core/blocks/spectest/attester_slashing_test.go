@@ -1,11 +1,14 @@
 package spectest
 
 import (
+	"context"
 	"path"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -24,7 +27,9 @@ func runAttesterSlashingTest(t *testing.T, config string) {
 			require.NoError(t, attSlashing.UnmarshalSSZ(attSlashingFile), "Failed to unmarshal")
 
 			body := &ethpb.BeaconBlockBody{AttesterSlashings: []*ethpb.AttesterSlashing{attSlashing}}
-			testutil.RunBlockOperationTest(t, folderPath, body, blocks.ProcessAttesterSlashings)
+			testutil.RunBlockOperationTest(t, folderPath, body, func(ctx context.Context, s iface.BeaconState, b *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
+				return blocks.ProcessAttesterSlashings(ctx, s, b, v.SlashValidator)
+			})
 		})
 	}
 }
