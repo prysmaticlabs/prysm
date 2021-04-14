@@ -32,7 +32,7 @@ var processDepositsFunc = func(ctx context.Context, s iface.BeaconState, blk *et
 	return b.ProcessDeposits(ctx, s, blk.Block.Body.Deposits)
 }
 var processProposerSlashingFunc = func(ctx context.Context, s iface.BeaconState, blk *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
-	return b.ProcessProposerSlashings(ctx, s, blk, v.SlashValidator)
+	return b.ProcessProposerSlashings(ctx, s, blk.Block.Body.ProposerSlashings, v.SlashValidator)
 }
 
 var processAttesterSlashingFunc = func(ctx context.Context, s iface.BeaconState, blk *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {

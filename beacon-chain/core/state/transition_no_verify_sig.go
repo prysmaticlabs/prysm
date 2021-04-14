@@ -250,12 +250,15 @@ func ProcessOperationsNoVerifyAttsSigs(
 	signedBeaconBlock *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessOperationsNoVerifyAttsSigs")
 	defer span.End()
+	if err := helpers.VerifyNilBeaconBlock(signedBeaconBlock); err != nil {
+		return nil, err
+	}
 
 	if _, err := VerifyOperationLengths(ctx, state, signedBeaconBlock); err != nil {
 		return nil, errors.Wrap(err, "could not verify operation lengths")
 	}
 
-	state, err := b.ProcessProposerSlashings(ctx, state, signedBeaconBlock, v.SlashValidator)
+	state, err := b.ProcessProposerSlashings(ctx, state, signedBeaconBlock.Block.Body.ProposerSlashings, v.SlashValidator)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block proposer slashings")
 	}
