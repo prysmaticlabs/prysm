@@ -8,14 +8,16 @@ import (
 	fssz "github.com/ferranbt/fastssz"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	log "github.com/sirupsen/logrus"
 	bolt "go.etcd.io/bbolt"
 )
 
-const pruningEpochIncrements = types.Epoch(100) // Prune in increments of 100 epochs worth of data.
-
-// PruneProposals prunes all proposal data older than historyLength.
-func (s *Store) PruneProposals(ctx context.Context, currentEpoch types.Epoch, historyLength types.Epoch) error {
+// PruneProposals prunes all proposal data older than currentEpoch - historyLength in
+// specified epoch increments. BoltDB cannot handle long-running transactions, so we instead
+// use a cursor-based mechanism to prune at pruningEpochIncrements by opening individual bolt
+// transactions for each pruning iteration.
+func (s *Store) PruneProposals(
+	ctx context.Context, currentEpoch, pruningEpochIncrements, historyLength types.Epoch,
+) error {
 	if currentEpoch < historyLength {
 		return nil
 	}
@@ -39,15 +41,25 @@ func (s *Store) PruneProposals(ctx context.Context, currentEpoch types.Epoch, hi
 		return err
 	}
 
+	// If the lowest slot is greater than or equal to the end pruning slot,
+	// there is nothing to prune, so we return early.
+	if lowestSlot >= endPruneSlot {
+		return nil
+	}
+
 	// We prune in increments of `pruningEpochIncrements` at a time to prevent
 	// a long-running bolt transaction which overwhelms CPU and memory.
 	lowestEpoch := helpers.SlotToEpoch(lowestSlot)
 	slotCursor := lowestSlot
-	var finished bool
 	var encodedSlotCursor []byte
-	for !finished {
-		epochAtCursor := helpers.SlotToEpoch(slotCursor)
-		log.Infof("Pruned %d/%d epochs worth of proposals", epochAtCursor-lowestEpoch, endEpoch-lowestEpoch)
+
+	// While we still have epochs to prune based on a cursor, we continue the pruning process.
+	for epochAtCursor := helpers.SlotToEpoch(slotCursor); epochAtCursor-lowestEpoch > 0; {
+
+		// Each pruning iteration involves a unique bolt transaction. Given pruning can be
+		// a very expensive process which puts pressure on the database, we perform
+		// the process in a batch-based method using a cursor to proceed to the next batch.
+		log.Debugf("Pruned %d/%d epochs worth of proposals", epochAtCursor-lowestEpoch, endEpoch-lowestEpoch)
 		encodedSlotCursor = fssz.MarshalUint64([]byte{}, uint64(slotCursor))
 		if err = s.db.Update(func(tx *bolt.Tx) error {
 			proposalBkt := tx.Bucket(proposalRecordsBucket)
@@ -56,14 +68,15 @@ func (s *Store) PruneProposals(ctx context.Context, currentEpoch types.Epoch, hi
 			var lastPrunedEpoch, epochsPruned types.Epoch
 			// We begin a pruning iteration at starting from the current slot cursor.
 			for k, _ := c.Seek(encodedSlotCursor); k != nil; k, _ = c.Next() {
+				// We check the slot from the current key in the database.
 				// If we have hit a slot that is greater than the end slot of the pruning process,
 				// we then completely exit the process as we are done.
 				if !slotPrefixLessThan(k, encodedEndSlot) {
-					finished = true
+					// We don't want to unmarshal the key bytes every time
+					// into the cursor value, so we only do it if needed here.
+					slotCursor = slotFromProposalKey(k)
 					return nil
 				}
-
-				// We check the slot from the current key in the database.
 				slot := slotFromProposalKey(k)
 				epoch := helpers.SlotToEpoch(slot)
 				slotCursor = slot
@@ -102,7 +115,7 @@ func (s *Store) PruneProposals(ctx context.Context, currentEpoch types.Epoch, hi
 }
 
 // PruneAttestations prunes all proposal data older than historyLength.
-func (s *Store) PruneAttestations(ctx context.Context, currentEpoch types.Epoch, historyLength types.Epoch) error {
+func (s *Store) PruneAttestations(ctx context.Context, currentEpoch, pruningEpochIncrements, historyLength types.Epoch) error {
 	if currentEpoch < historyLength {
 		return nil
 	}

@@ -139,10 +139,10 @@ type SlasherDatabase interface {
 		ctx context.Context, proposals []*slashertypes.SignedBlockHeaderWrapper,
 	) ([]*eth.ProposerSlashing, error)
 	PruneAttestations(
-		ctx context.Context, currentEpoch types.Epoch, historyLength types.Epoch,
+		ctx context.Context, currentEpoch, pruningEpochIncrements, historyLength types.Epoch,
 	) error
 	PruneProposals(
-		ctx context.Context, currentEpoch types.Epoch, historyLength types.Epoch,
+		ctx context.Context, currentEpoch, pruningEpochIncrements, historyLength types.Epoch,
 	) error
 	DatabasePath() string
 	ClearDB() error

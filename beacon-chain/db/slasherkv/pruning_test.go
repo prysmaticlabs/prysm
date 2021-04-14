@@ -24,7 +24,8 @@ func TestStore_PruneProposals_Logs(t *testing.T) {
 	beaconDB := setupDB(t)
 	require.NoError(t, beaconDB.SaveBlockProposals(ctx, proposalsInDB))
 
-	err := beaconDB.PruneProposals(ctx, epoch, defaultHistoryLength)
+	epochPruningIncrements := types.Epoch(100)
+	err := beaconDB.PruneProposals(ctx, epoch, epochPruningIncrements, defaultHistoryLength)
 
 	// Second time checking same proposals but all with different signing root should
 	// return all double proposals.
@@ -106,9 +107,10 @@ func TestStore_PruneProposals(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			epochPruningIncrements := types.Epoch(100)
 			beaconDB := setupDB(t)
 			require.NoError(t, beaconDB.SaveBlockProposals(ctx, tt.proposalsInDB))
-			if err := beaconDB.PruneProposals(ctx, tt.epoch, tt.historyLength); (err != nil) != tt.wantErr {
+			if err := beaconDB.PruneProposals(ctx, tt.epoch, epochPruningIncrements, tt.historyLength); (err != nil) != tt.wantErr {
 				t.Errorf("PruneProposals() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
@@ -195,7 +197,8 @@ func TestStore_PruneAttestations(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			beaconDB := setupDB(t)
 			require.NoError(t, beaconDB.SaveAttestationRecordsForValidators(ctx, tt.attestationsInDB, defaultHistoryLength))
-			if err := beaconDB.PruneProposals(ctx, tt.epoch, tt.historyLength); (err != nil) != tt.wantErr {
+			pruningEpochIncrements := types.Epoch(100)
+			if err := beaconDB.PruneProposals(ctx, tt.epoch, pruningEpochIncrements, tt.historyLength); (err != nil) != tt.wantErr {
 				t.Errorf("PruneProposals() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
