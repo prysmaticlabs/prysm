@@ -36,7 +36,7 @@ var processProposerSlashingFunc = func(ctx context.Context, s iface.BeaconState,
 }
 
 var processAttesterSlashingFunc = func(ctx context.Context, s iface.BeaconState, blk *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
-	return b.ProcessAttesterSlashings(ctx, s, blk, v.SlashValidator)
+	return b.ProcessAttesterSlashings(ctx, s, blk.Block.Body.AttesterSlashings, v.SlashValidator)
 }
 
 var processEth1DataFunc = func(ctx context.Context, s iface.BeaconState, blk *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {

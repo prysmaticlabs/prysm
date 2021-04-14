@@ -58,7 +58,7 @@ func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
 			AttesterSlashings: slashings,
 		},
 	}
-	_, err = blocks.ProcessAttesterSlashings(context.Background(), beaconState, b, v.SlashValidator)
+	_, err = blocks.ProcessAttesterSlashings(context.Background(), beaconState, b.Block.Body.AttesterSlashings, v.SlashValidator)
 	assert.ErrorContains(t, "attestations are not slashable", err)
 }
 
@@ -93,7 +93,7 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 		},
 	}
 
-	_, err = blocks.ProcessAttesterSlashings(context.Background(), beaconState, b, v.SlashValidator)
+	_, err = blocks.ProcessAttesterSlashings(context.Background(), beaconState, b.Block.Body.AttesterSlashings, v.SlashValidator)
 	assert.ErrorContains(t, "validator indices count exceeds MAX_VALIDATORS_PER_COMMITTEE", err)
 }
 
@@ -145,7 +145,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 		},
 	}
 
-	newState, err := blocks.ProcessAttesterSlashings(context.Background(), beaconState, b, v.SlashValidator)
+	newState, err := blocks.ProcessAttesterSlashings(context.Background(), beaconState, b.Block.Body.AttesterSlashings, v.SlashValidator)
 	require.NoError(t, err)
 	newRegistry := newState.Validators()
 

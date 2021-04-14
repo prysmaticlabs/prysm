@@ -262,7 +262,7 @@ func ProcessOperationsNoVerifyAttsSigs(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block proposer slashings")
 	}
-	state, err = b.ProcessAttesterSlashings(ctx, state, signedBeaconBlock, v.SlashValidator)
+	state, err = b.ProcessAttesterSlashings(ctx, state, signedBeaconBlock.Block.Body.AttesterSlashings, v.SlashValidator)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block attester slashings")
 	}
