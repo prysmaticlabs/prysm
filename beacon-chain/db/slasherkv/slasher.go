@@ -12,7 +12,6 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	slashpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -27,8 +26,8 @@ const (
 	signingRootSize          = 32 // Bytes.
 )
 
-// LastEpochWrittenForValidator given a validator index returns the latest
-// epoch we have recorded the validator attested for.
+// LastEpochWrittenForValidators given a list of validator indices returns the latest
+// epoch we have recorded the validators writing data for.
 func (s *Store) LastEpochWrittenForValidators(
 	ctx context.Context, validatorIndices []types.ValidatorIndex,
 ) ([]*slashertypes.AttestedEpochForValidator, error) {
@@ -85,7 +84,7 @@ func (s *Store) SaveLastEpochWrittenForValidators(
 	})
 }
 
-// CheckDoubleAttesterVotes retries any slashable double votes that exist
+// CheckAttesterDoubleVotes retries any slashable double votes that exist
 // for a series of input attestations.
 func (s *Store) CheckAttesterDoubleVotes(
 	ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper, historyLength types.Epoch,
@@ -247,7 +246,7 @@ func (s *Store) LoadSlasherChunks(
 	return chunks, exists, err
 }
 
-// SaveSlasherChunk given a chunk kind, list of disk keys, and list of chunks,
+// SaveSlasherChunks given a chunk kind, list of disk keys, and list of chunks,
 // saves the chunks to our database for use by slasher in slashing detection.
 func (s *Store) SaveSlasherChunks(
 	ctx context.Context, kind slashertypes.ChunkKind, chunkKeys [][]byte, chunks [][]uint16,
@@ -341,64 +340,6 @@ func (s *Store) SaveBlockProposals(
 	})
 }
 
-// PruneProposals prunes all proposal data older than historyLength.
-func (s *Store) PruneProposals(ctx context.Context, currentEpoch types.Epoch, historyLength types.Epoch) error {
-	if currentEpoch < historyLength {
-		return nil
-	}
-	// + 1 here so we can prune everything less than this, but not equal.
-	endPruneSlot, err := helpers.StartSlot(currentEpoch - historyLength)
-	if err != nil {
-		return err
-	}
-	endEnc, err := endPruneSlot.MarshalSSZ()
-	if err != nil {
-		return err
-	}
-	return s.db.Update(func(tx *bolt.Tx) error {
-		proposalBkt := tx.Bucket(proposalRecordsBucket)
-		c := proposalBkt.Cursor()
-		for k, _ := c.Seek(endEnc); k != nil; k, _ = c.Prev() {
-			if !slotPrefixLessThan(k, endEnc) {
-				continue
-			}
-			slasherProposalsPrunedTotal.Inc()
-			if err := proposalBkt.Delete(k); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-}
-
-// PruneAttestations prunes all proposal data older than historyLength.
-func (s *Store) PruneAttestations(ctx context.Context, currentEpoch types.Epoch, historyLength types.Epoch) error {
-	if currentEpoch < historyLength {
-		return nil
-	}
-	// + 1 here so we can prune everything less than this, but not equal.
-	endPruneEpoch := currentEpoch - historyLength
-	epochEnc := encodeTargetEpoch(endPruneEpoch, historyLength)
-	return s.db.Update(func(tx *bolt.Tx) error {
-		signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
-		attRecordsBkt := tx.Bucket(attestationRecordsBucket)
-		c := signingRootsBkt.Cursor()
-		for k, v := c.Seek(epochEnc); k != nil; k, v = c.Prev() {
-			if !epochPrefixLessThan(k, epochEnc) {
-				continue
-			}
-			slasherAttestationsPrunedTotal.Inc()
-			if err := signingRootsBkt.Delete(k); err != nil {
-				return err
-			}
-			if err := attRecordsBkt.Delete(v); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-}
-
 // HighestAttestations retrieves the last attestation data from the database for all indices.
 func (s *Store) HighestAttestations(
 	ctx context.Context,
@@ -447,16 +388,6 @@ func (s *Store) HighestAttestations(
 		return nil
 	})
 	return history, err
-}
-
-func slotPrefixLessThan(key, lessThan []byte) bool {
-	encSlot := key[:8]
-	return bytes.Compare(encSlot, lessThan) < 0
-}
-
-func epochPrefixLessThan(key, lessThan []byte) bool {
-	encSlot := key[:2]
-	return bytes.Compare(encSlot, lessThan) < 0
 }
 
 func suffixForAttestationRecordsKey(key, encodedValidatorIndex []byte) bool {
