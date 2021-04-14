@@ -72,14 +72,14 @@ func TestFuzzverifyDepositDataSigningRoot_10000(t *testing.T) {
 
 func TestFuzzProcessEth1DataInBlock_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
-	b := &eth.SignedBeaconBlock{}
+	e := &eth.Eth1Data{}
 	state := &stateV0.BeaconState{}
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
-		fuzzer.Fuzz(b)
-		s, err := ProcessEth1DataInBlock(context.Background(), state, b)
+		fuzzer.Fuzz(e)
+		s, err := ProcessEth1DataInBlock(context.Background(), state, e)
 		if err != nil && s != nil {
-			t.Fatalf("state should be nil on err. found: %v on error: %v for state: %v and block: %v", s, err, state, b)
+			t.Fatalf("state should be nil on err. found: %v on error: %v for state: %v and eth1data: %v", s, err, state, e)
 		}
 	}
 }
@@ -156,7 +156,7 @@ func TestFuzzProcessRandaoNoVerify_10000(t *testing.T) {
 		fuzzer.Fuzz(blockBody)
 		s, err := stateV0.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
-		r, err := ProcessRandaoNoVerify(s, blockBody)
+		r, err := ProcessRandaoNoVerify(s, blockBody.RandaoReveal)
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, blockBody)
 		}

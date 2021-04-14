@@ -39,12 +39,16 @@ var processAttesterSlashingFunc = func(ctx context.Context, s iface.BeaconState,
 	return b.ProcessAttesterSlashings(ctx, s, blk, v.SlashValidator)
 }
 
+var processEth1DataFunc = func(ctx context.Context, s iface.BeaconState, blk *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
+	return b.ProcessEth1DataInBlock(ctx, s, blk.Block.Body.Eth1Data)
+}
+
 // This defines the processing block routine as outlined in eth2 spec:
 // https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#block-processing
 var processingPipeline = []processFunc{
 	b.ProcessBlockHeader,
 	b.ProcessRandao,
-	b.ProcessEth1DataInBlock,
+	processEth1DataFunc,
 	VerifyOperationLengths,
 	processProposerSlashingFunc,
 	processAttesterSlashingFunc,
