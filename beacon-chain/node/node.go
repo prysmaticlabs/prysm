@@ -449,7 +449,6 @@ func (b *BeaconNode) registerPOWChainService() error {
 		return errors.Wrap(err, "could not register proof-of-work chain web3Service")
 	}
 
-	log.Infof("Deposit contract: %#x", cfg.DepositContract.Bytes())
 	return b.services.RegisterService(web3Service)
 }
 
