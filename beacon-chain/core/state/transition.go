@@ -32,11 +32,19 @@ var processDepositsFunc = func(ctx context.Context, s iface.BeaconState, blk *et
 	return b.ProcessDeposits(ctx, s, blk.Block.Body.Deposits)
 }
 var processProposerSlashingFunc = func(ctx context.Context, s iface.BeaconState, blk *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
-	return b.ProcessProposerSlashings(ctx, s, blk, v.SlashValidator)
+	return b.ProcessProposerSlashings(ctx, s, blk.Block.Body.ProposerSlashings, v.SlashValidator)
 }
 
 var processAttesterSlashingFunc = func(ctx context.Context, s iface.BeaconState, blk *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
-	return b.ProcessAttesterSlashings(ctx, s, blk, v.SlashValidator)
+	return b.ProcessAttesterSlashings(ctx, s, blk.Block.Body.AttesterSlashings, v.SlashValidator)
+}
+
+var processEth1DataFunc = func(ctx context.Context, s iface.BeaconState, blk *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
+	return b.ProcessEth1DataInBlock(ctx, s, blk.Block.Body.Eth1Data)
+}
+
+var processExitFunc = func(ctx context.Context, s iface.BeaconState, blk *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
+	return b.ProcessVoluntaryExits(ctx, s, blk.Block.Body.VoluntaryExits)
 }
 
 // This defines the processing block routine as outlined in eth2 spec:
@@ -44,13 +52,13 @@ var processAttesterSlashingFunc = func(ctx context.Context, s iface.BeaconState,
 var processingPipeline = []processFunc{
 	b.ProcessBlockHeader,
 	b.ProcessRandao,
-	b.ProcessEth1DataInBlock,
+	processEth1DataFunc,
 	VerifyOperationLengths,
 	processProposerSlashingFunc,
 	processAttesterSlashingFunc,
 	b.ProcessAttestations,
 	processDepositsFunc,
-	b.ProcessVoluntaryExits,
+	processExitFunc,
 }
 
 // ExecuteStateTransition defines the procedure for a state transition function.
@@ -314,6 +322,10 @@ func ProcessBlock(
 	defer span.End()
 
 	var err error
+	if err = helpers.VerifyNilBeaconBlock(signed); err != nil {
+		return nil, err
+	}
+
 	for _, p := range processingPipeline {
 		state, err = p(ctx, state, signed)
 		if err != nil {
