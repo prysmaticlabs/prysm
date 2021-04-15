@@ -516,39 +516,3 @@ func Test_encodeValidatorIndex(t *testing.T) {
 		})
 	}
 }
-
-func Test_encodeTargetEpoch(t *testing.T) {
-	tests := []struct {
-		name          string
-		epoch         types.Epoch
-		historyLength types.Epoch
-	}{
-		{
-			name:          "0",
-			epoch:         0,
-			historyLength: 8,
-		},
-		{
-			name:          "epoch == HISTORY_SIZE",
-			epoch:         8,
-			historyLength: 8,
-		},
-		{
-			name:          "epoch < HISTORY_SIZE",
-			epoch:         4,
-			historyLength: 8,
-		},
-		{
-			name:          "epoch > HISTORY_SIZE",
-			epoch:         9,
-			historyLength: 8,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := encodeTargetEpoch(tt.epoch)
-			decoded := types.Epoch(binary.LittleEndian.Uint16(got[:2]))
-			require.DeepEqual(t, tt.epoch%tt.historyLength, decoded)
-		})
-	}
-}
