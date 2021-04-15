@@ -37,7 +37,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	require.NoError(t, err)
 
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndpoints:   []string{endpoint},
+		HttpEndpoints:   []string{endpoint},
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
 		DepositCache:    depositCache,
@@ -101,7 +101,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	require.NoError(t, err)
 
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndpoints:   []string{endpoint},
+		HttpEndpoints:   []string{endpoint},
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
 		DepositCache:    depositCache,
@@ -158,7 +158,7 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndpoints:   []string{endpoint},
+		HttpEndpoints:   []string{endpoint},
 		BeaconDB:        beaconDB,
 		DepositContract: testAcc.ContractAddr,
 	})
@@ -209,7 +209,7 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	require.NoError(t, err)
 
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndpoints:   []string{endpoint},
+		HttpEndpoints:   []string{endpoint},
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
 		DepositCache:    depositCache,
@@ -280,7 +280,7 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	require.NoError(t, err)
 
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndpoints:   []string{endpoint},
+		HttpEndpoints:   []string{endpoint},
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
 		DepositCache:    depositCache,
@@ -367,7 +367,7 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	require.NoError(t, err)
 
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndpoints:   []string{endpoint},
+		HttpEndpoints:   []string{endpoint},
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        kvStore,
 		DepositCache:    depositCache,
@@ -460,7 +460,7 @@ func TestProcessETH2GenesisLog_LargePeriodOfNoLogs(t *testing.T) {
 	require.NoError(t, err)
 
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndpoints:   []string{endpoint},
+		HttpEndpoints:   []string{endpoint},
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        kvStore,
 		DepositCache:    depositCache,
@@ -563,7 +563,7 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 	require.NoError(t, err)
 
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndpoints:   []string{endpoint},
+		HttpEndpoints:   []string{endpoint},
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
 		DepositCache:    depositCache,
@@ -655,7 +655,7 @@ func newPowchainService(t *testing.T, eth1Backend *contracts.TestAccount, beacon
 	require.NoError(t, err)
 
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HTTPEndpoints:   []string{endpoint},
+		HttpEndpoints:   []string{endpoint},
 		DepositContract: eth1Backend.ContractAddr,
 		BeaconDB:        beaconDB,
 		DepositCache:    depositCache,
