@@ -46,14 +46,8 @@ var ValidatorCannotExitYetMsg = "validator has not been active long enough to ex
 func ProcessVoluntaryExits(
 	_ context.Context,
 	beaconState iface.BeaconState,
-	b *ethpb.SignedBeaconBlock,
+	exits []*ethpb.SignedVoluntaryExit,
 ) (iface.BeaconState, error) {
-	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
-		return nil, err
-	}
-
-	body := b.Block.Body
-	exits := body.VoluntaryExits
 	for idx, exit := range exits {
 		if exit == nil || exit.Exit == nil {
 			return nil, errors.New("nil voluntary exit in block body")
