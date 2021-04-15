@@ -184,12 +184,12 @@ func ProcessBlockNoVerifyAnySig(
 		traceutil.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not process block header")
 	}
-	bSet, err := b.BlockSignatureSet(state, signed)
+	bSet, err := b.BlockSignatureSet(state, blk.ProposerIndex, signed.Signature, blk.HashTreeRoot)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not retrieve block signature set")
 	}
-	rSet, err := b.RandaoSignatureSet(state, signed.Block.Body)
+	rSet, err := b.RandaoSignatureSet(state, signed.Block.Body.RandaoReveal)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not retrieve randao signature set")
