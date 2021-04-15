@@ -99,7 +99,7 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 			start := time.Now()
 			// Save the attestation records to our database.
 			if err := s.serviceCfg.Database.SaveAttestationRecordsForValidators(
-				ctx, validAtts, s.params.historyLength,
+				ctx, validAtts,
 			); err != nil {
 				log.WithError(err).Error("Could not save attestation records to DB")
 				continue
@@ -176,12 +176,16 @@ func (s *Service) pruneSlasherData(ctx context.Context, slotTicker <-chan types.
 				continue
 			}
 			currentEpoch := helpers.SlotToEpoch(currentSlot)
-			if err := s.serviceCfg.Database.PruneAttestations(ctx, currentEpoch, s.params.historyLength); err != nil {
+			if err := s.serviceCfg.Database.PruneAttestations(
+				ctx, currentEpoch, s.params.pruningEpochIncrements, s.params.historyLength,
+			); err != nil {
 				log.WithError(err).Error("Could not prune attestations")
 				continue
 			}
 
-			if err := s.serviceCfg.Database.PruneProposals(ctx, currentEpoch, s.params.historyLength); err != nil {
+			if err := s.serviceCfg.Database.PruneProposals(
+				ctx, currentEpoch, s.params.pruningEpochIncrements, s.params.historyLength,
+			); err != nil {
 				log.WithError(err).Error("Could not prune proposals")
 				continue
 			}

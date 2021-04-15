@@ -55,7 +55,7 @@ func (s *Service) IsSlashableAttestation(
 		// If the incoming attestations are not slashable, we mark them as saved in
 		// slasher's DB storage to help us with future detection.
 		if err := s.serviceCfg.Database.SaveAttestationRecordsForValidators(
-			ctx, []*slashertypes.IndexedAttestationWrapper{indexedAttWrapper}, s.params.historyLength,
+			ctx, []*slashertypes.IndexedAttestationWrapper{indexedAttWrapper},
 		); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not save attestation records to DB: %v", err)
 		}

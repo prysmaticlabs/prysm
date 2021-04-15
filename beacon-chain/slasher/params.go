@@ -20,6 +20,7 @@ type Parameters struct {
 	chunkSize          uint64
 	validatorChunkSize uint64
 	historyLength      types.Epoch
+	pruningEpochIncrements types.Epoch
 }
 
 // DefaultParams defines default values for slasher's important parameters, defined
@@ -35,6 +36,7 @@ func DefaultParams() *Parameters {
 		chunkSize:          16,
 		validatorChunkSize: 256,
 		historyLength:      4096,
+		pruningEpochIncrements: 100,
 	}
 }
 

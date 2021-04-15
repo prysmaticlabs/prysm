@@ -153,7 +153,7 @@ func TestMinSpanChunksSlice_CheckSlashable(t *testing.T) {
 	attRecord := createAttestationWrapper(t, attData.Source.Epoch, attData.Target.Epoch, []uint64{uint64(validatorIdx)}, []byte{1})
 	err = slasherDB.SaveAttestationRecordsForValidators(
 		ctx,
-		[]*slashertypes.IndexedAttestationWrapper{attRecord}, params.historyLength,
+		[]*slashertypes.IndexedAttestationWrapper{attRecord},
 	)
 	require.NoError(t, err)
 
@@ -239,7 +239,6 @@ func TestMaxSpanChunksSlice_CheckSlashable(t *testing.T) {
 	err = slasherDB.SaveAttestationRecordsForValidators(
 		ctx,
 		[]*slashertypes.IndexedAttestationWrapper{attRecord},
-		params.historyLength,
 	)
 	require.NoError(t, err)
 
