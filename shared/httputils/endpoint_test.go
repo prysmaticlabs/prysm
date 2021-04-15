@@ -135,10 +135,10 @@ func TestAuthorizationDataEquals(t *testing.T) {
 		}
 		assert.Equal(t, false, d.Equals(other))
 	})
-	t.Run("different method", func(t *testing.T) {
+	t.Run("different value", func(t *testing.T) {
 		other := &AuthorizationData{
-			Method: authorizationmethod.None,
-			Value:  "username:password",
+			Method: authorizationmethod.Basic,
+			Value:  "different:different",
 		}
 		assert.Equal(t, false, d.Equals(other))
 	})
