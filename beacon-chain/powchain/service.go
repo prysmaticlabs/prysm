@@ -873,7 +873,7 @@ func (s *Service) checkDefaultEndpoint() {
 	primaryEndpoint := s.httpEndpoints[0]
 	// Return early if we are running on our primary
 	// endpoint.
-	if s.currHttpEndpoint.Equals(&primaryEndpoint) {
+	if s.currHttpEndpoint.Equals(primaryEndpoint) {
 		return
 	}
 
@@ -904,7 +904,7 @@ func (s *Service) fallbackToNextEndpoint() {
 	totalEndpoints := len(s.httpEndpoints)
 
 	for i, endpoint := range s.httpEndpoints {
-		if endpoint.Equals(&currEndpoint) {
+		if endpoint.Equals(currEndpoint) {
 			currIndex = i
 			break
 		}

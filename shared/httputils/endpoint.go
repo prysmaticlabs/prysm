@@ -19,17 +19,11 @@ type AuthorizationData struct {
 	Value  string
 }
 
-func (e *Endpoint) Equals(other *Endpoint) bool {
-	if other == nil {
-		return false
-	}
-	return e.Url == other.Url && e.Auth.Equals(&other.Auth)
+func (e Endpoint) Equals(other Endpoint) bool {
+	return e.Url == other.Url && e.Auth.Equals(other.Auth)
 }
 
-func (d *AuthorizationData) Equals(other *AuthorizationData) bool {
-	if other == nil {
-		return false
-	}
+func (d AuthorizationData) Equals(other AuthorizationData) bool {
 	return d.Method == other.Method && d.Value == other.Value
 }
 

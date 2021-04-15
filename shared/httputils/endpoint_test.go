@@ -72,7 +72,7 @@ func TestMethod(t *testing.T) {
 }
 
 func TestEndpointEquals(t *testing.T) {
-	e := &Endpoint{
+	e := Endpoint{
 		Url: "Url",
 		Auth: AuthorizationData{
 			Method: authorizationmethod.Basic,
@@ -81,7 +81,7 @@ func TestEndpointEquals(t *testing.T) {
 	}
 
 	t.Run("equal", func(t *testing.T) {
-		other := &Endpoint{
+		other := Endpoint{
 			Url: "Url",
 			Auth: AuthorizationData{
 				Method: authorizationmethod.Basic,
@@ -91,7 +91,7 @@ func TestEndpointEquals(t *testing.T) {
 		assert.Equal(t, true, e.Equals(other))
 	})
 	t.Run("different URL", func(t *testing.T) {
-		other := &Endpoint{
+		other := Endpoint{
 			Url: "Different",
 			Auth: AuthorizationData{
 				Method: authorizationmethod.Basic,
@@ -101,7 +101,7 @@ func TestEndpointEquals(t *testing.T) {
 		assert.Equal(t, false, e.Equals(other))
 	})
 	t.Run("different auth data", func(t *testing.T) {
-		other := &Endpoint{
+		other := Endpoint{
 			Url: "Url",
 			Auth: AuthorizationData{
 				Method: authorizationmethod.Bearer,
@@ -110,39 +110,33 @@ func TestEndpointEquals(t *testing.T) {
 		}
 		assert.Equal(t, false, e.Equals(other))
 	})
-	t.Run("nil value", func(t *testing.T) {
-		assert.Equal(t, false, e.Equals(nil))
-	})
 }
 
 func TestAuthorizationDataEquals(t *testing.T) {
-	d := &AuthorizationData{
+	d := AuthorizationData{
 		Method: authorizationmethod.Basic,
 		Value:  "username:password",
 	}
 
 	t.Run("equal", func(t *testing.T) {
-		other := &AuthorizationData{
+		other := AuthorizationData{
 			Method: authorizationmethod.Basic,
 			Value:  "username:password",
 		}
 		assert.Equal(t, true, d.Equals(other))
 	})
 	t.Run("different method", func(t *testing.T) {
-		other := &AuthorizationData{
+		other := AuthorizationData{
 			Method: authorizationmethod.None,
 			Value:  "username:password",
 		}
 		assert.Equal(t, false, d.Equals(other))
 	})
 	t.Run("different value", func(t *testing.T) {
-		other := &AuthorizationData{
+		other := AuthorizationData{
 			Method: authorizationmethod.Basic,
 			Value:  "different:different",
 		}
 		assert.Equal(t, false, d.Equals(other))
-	})
-	t.Run("nil value", func(t *testing.T) {
-		assert.Equal(t, false, d.Equals(nil))
 	})
 }
