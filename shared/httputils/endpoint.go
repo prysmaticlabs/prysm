@@ -19,13 +19,27 @@ type AuthorizationData struct {
 	Value  string
 }
 
+func (e *Endpoint) Equals(other *Endpoint) bool {
+	if other == nil {
+		return false
+	}
+	return e.Url == other.Url && e.Auth.Equals(&other.Auth)
+}
+
+func (d *AuthorizationData) Equals(other *AuthorizationData) bool {
+	if other == nil {
+		return false
+	}
+	return d.Method == other.Method && d.Value == other.Value
+}
+
 // ToHeaderValue retrieves the value of the authorization header from AuthorizationData.
-func (e *AuthorizationData) ToHeaderValue() (string, error) {
-	switch e.Method {
+func (d *AuthorizationData) ToHeaderValue() (string, error) {
+	switch d.Method {
 	case authorizationmethod.Basic:
-		return "Basic " + e.Value, nil
+		return "Basic " + d.Value, nil
 	case authorizationmethod.Bearer:
-		return "Bearer " + e.Value, nil
+		return "Bearer " + d.Value, nil
 	case authorizationmethod.None:
 		return "", nil
 	}

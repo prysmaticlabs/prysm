@@ -70,3 +70,79 @@ func TestMethod(t *testing.T) {
 		assert.Equal(t, authorizationmethod.Bearer, method)
 	})
 }
+
+func TestEndpointEquals(t *testing.T) {
+	e := &Endpoint{
+		Url: "Url",
+		Auth: AuthorizationData{
+			Method: authorizationmethod.Basic,
+			Value:  "Basic username:password",
+		},
+	}
+
+	t.Run("equal", func(t *testing.T) {
+		other := &Endpoint{
+			Url: "Url",
+			Auth: AuthorizationData{
+				Method: authorizationmethod.Basic,
+				Value:  "Basic username:password",
+			},
+		}
+		assert.Equal(t, true, e.Equals(other))
+	})
+	t.Run("different URL", func(t *testing.T) {
+		other := &Endpoint{
+			Url: "Different",
+			Auth: AuthorizationData{
+				Method: authorizationmethod.Basic,
+				Value:  "Basic username:password",
+			},
+		}
+		assert.Equal(t, false, e.Equals(other))
+	})
+	t.Run("different auth data", func(t *testing.T) {
+		other := &Endpoint{
+			Url: "Url",
+			Auth: AuthorizationData{
+				Method: authorizationmethod.Bearer,
+				Value:  "Bearer token",
+			},
+		}
+		assert.Equal(t, false, e.Equals(other))
+	})
+	t.Run("nil value", func(t *testing.T) {
+		assert.Equal(t, false, e.Equals(nil))
+	})
+}
+
+func TestAuthorizationDataEquals(t *testing.T) {
+	d := &AuthorizationData{
+		Method: authorizationmethod.Basic,
+		Value:  "username:password",
+	}
+
+	t.Run("equal", func(t *testing.T) {
+		other := &AuthorizationData{
+			Method: authorizationmethod.Basic,
+			Value:  "username:password",
+		}
+		assert.Equal(t, true, d.Equals(other))
+	})
+	t.Run("different method", func(t *testing.T) {
+		other := &AuthorizationData{
+			Method: authorizationmethod.None,
+			Value:  "username:password",
+		}
+		assert.Equal(t, false, d.Equals(other))
+	})
+	t.Run("different method", func(t *testing.T) {
+		other := &AuthorizationData{
+			Method: authorizationmethod.None,
+			Value:  "username:password",
+		}
+		assert.Equal(t, false, d.Equals(other))
+	})
+	t.Run("nil value", func(t *testing.T) {
+		assert.Equal(t, false, d.Equals(nil))
+	})
+}
