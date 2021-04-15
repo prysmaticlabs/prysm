@@ -132,6 +132,7 @@ func TestStore_PruneProposals(t *testing.T) {
 				startSlot, err := helpers.StartSlot(i)
 				require.NoError(t, err)
 				endSlot, err := helpers.StartSlot(i + 1)
+				require.NoError(t, err)
 				for j := startSlot; j < endSlot; j++ {
 					prop1 := createProposalWrapper(t, j, 0 /* proposer index */, []byte{0})
 					prop1Key, err := keyForValidatorProposal(prop1)
@@ -264,6 +265,7 @@ func TestStore_PruneAttestations_OK(t *testing.T) {
 				startSlot, err := helpers.StartSlot(i)
 				require.NoError(t, err)
 				endSlot, err := helpers.StartSlot(i + 1)
+				require.NoError(t, err)
 				for j := startSlot; j < endSlot; j++ {
 					attester1 := types.ValidatorIndex(j+10)
 					attester2 := types.ValidatorIndex(j+11)
