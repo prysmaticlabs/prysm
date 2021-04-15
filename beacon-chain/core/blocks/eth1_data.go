@@ -20,23 +20,19 @@ import (
 //    state.eth1_data_votes.append(body.eth1_data)
 //    if state.eth1_data_votes.count(body.eth1_data) * 2 > EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH:
 //        state.eth1_data = body.eth1_data
-func ProcessEth1DataInBlock(_ context.Context, beaconState iface.BeaconState, b *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
-	block := b.Block
+func ProcessEth1DataInBlock(_ context.Context, beaconState iface.BeaconState, eth1Data *ethpb.Eth1Data) (iface.BeaconState, error) {
 	if beaconState == nil {
 		return nil, errors.New("nil state")
 	}
-	if block == nil || block.Body == nil {
-		return nil, errors.New("nil block or block withought body")
-	}
-	if err := beaconState.AppendEth1DataVotes(block.Body.Eth1Data); err != nil {
+	if err := beaconState.AppendEth1DataVotes(eth1Data); err != nil {
 		return nil, err
 	}
-	hasSupport, err := Eth1DataHasEnoughSupport(beaconState, block.Body.Eth1Data)
+	hasSupport, err := Eth1DataHasEnoughSupport(beaconState, eth1Data)
 	if err != nil {
 		return nil, err
 	}
 	if hasSupport {
-		if err := beaconState.SetEth1Data(block.Body.Eth1Data); err != nil {
+		if err := beaconState.SetEth1Data(eth1Data); err != nil {
 			return nil, err
 		}
 	}
