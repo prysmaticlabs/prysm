@@ -102,31 +102,57 @@ func TestStore_PruneProposals_OK(t *testing.T) {
 		// at each slot to ensure the entire pruning logic works correctly.
 		slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 		proposals := make([]*slashertypes.SignedBlockHeaderWrapper, 0, uint64(currentEpoch)*uint64(slotsPerEpoch)*2)
-		t.Log("Creating proposals")
 		for i := types.Epoch(0); i < currentEpoch; i++ {
 			startSlot, err := helpers.StartSlot(i)
 			require.NoError(t, err)
-			for j := startSlot; j < slotsPerEpoch; j++ {
+			endSlot, err := helpers.StartSlot(i + 1)
+			require.NoError(t, err)
+			for j := startSlot; j < endSlot; j++ {
 				prop1 := createProposalWrapper(t, j, 0 /* proposer index */, []byte{0})
 				prop2 := createProposalWrapper(t, j, 2 /* proposer index */, []byte{1})
 				proposals = append(proposals, prop1, prop2)
 			}
 		}
-		t.Log("Finished proposals")
 
-		t.Log("Saving proposals")
 		require.NoError(t, beaconDB.SaveBlockProposals(ctx, proposals))
-		t.Log("Saved proposals")
 
-		t.Log("Pruning proposals")
 		// We expect pruning completes without an issue and properly logs progress.
 		err := beaconDB.PruneProposals(ctx, currentEpoch, epochPruningIncrements, historyLength)
 		require.NoError(t, err)
-		t.Log("Pruned proposals")
 
-		for i := types.Epoch(0); i < pruningLimitEpoch; i += epochPruningIncrements {
-			wantedLog := fmt.Sprintf("Pruned %d/%d epochs worth of proposals", i, pruningLimitEpoch)
+		for i := types.Epoch(0); i < pruningLimitEpoch; i++ {
+			wantedLog := fmt.Sprintf("Pruned %d/%d epochs worth of proposals", i, pruningLimitEpoch-1)
 			require.LogsContain(t, hook, wantedLog)
+		}
+
+		// Everything before epoch 10 should be deleted.
+		for i := types.Epoch(0); i < pruningLimitEpoch; i++ {
+			err = beaconDB.db.View(func(tx *bolt.Tx) error {
+				bkt := tx.Bucket(proposalRecordsBucket)
+				startSlot, err := helpers.StartSlot(i)
+				require.NoError(t, err)
+				endSlot, err := helpers.StartSlot(i + 1)
+				for j := startSlot; j < endSlot; j++ {
+					prop1 := createProposalWrapper(t, j, 0 /* proposer index */, []byte{0})
+					prop1Key, err := keyForValidatorProposal(prop1)
+					if err != nil {
+						return err
+					}
+					prop2 := createProposalWrapper(t, j, 2 /* proposer index */, []byte{1})
+					prop2Key, err := keyForValidatorProposal(prop2)
+					if err != nil {
+						return err
+					}
+					if bkt.Get(prop1Key) != nil {
+						return fmt.Errorf("proposal still exists for epoch %d, validator 0", j)
+					}
+					if bkt.Get(prop2Key) != nil {
+						return fmt.Errorf("proposal still exists for slot %d, validator 1", j)
+					}
+				}
+				return nil
+			})
+			require.NoError(t, err)
 		}
 	})
 }

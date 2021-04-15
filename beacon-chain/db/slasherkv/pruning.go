@@ -28,7 +28,7 @@ func (s *Store) PruneProposals(
 	if err != nil {
 		return err
 	}
-	encodedEndSlot := fssz.MarshalUint64([]byte{}, uint64(endPruneSlot))
+	encodedEndPruneSlot := fssz.MarshalUint64([]byte{}, uint64(endPruneSlot))
 
 	// We retrieve the lowest stored slot in the proposals bucket.
 	var lowestSlot types.Slot
@@ -51,43 +51,33 @@ func (s *Store) PruneProposals(
 
 	// We prune in increments of `pruningEpochIncrements` at a time to prevent
 	// a long-running bolt transaction which overwhelms CPU and memory.
-	slotCursor := lowestSlot
-	var encodedSlotCursor []byte
-
 	// While we still have epochs to prune based on a cursor, we continue the pruning process.
-	epochAtCursor := helpers.SlotToEpoch(slotCursor)
+	epochAtCursor := helpers.SlotToEpoch(lowestSlot)
 	for endEpoch-epochAtCursor > 0 {
 		// Each pruning iteration involves a unique bolt transaction. Given pruning can be
 		// a very expensive process which puts pressure on the database, we perform
 		// the process in a batch-based method using a cursor to proceed to the next batch.
-		log.Debugf("Pruned %d/%d epochs worth of proposals", endEpoch-epochAtCursor, endEpoch)
-		encodedSlotCursor = fssz.MarshalUint64([]byte{}, uint64(slotCursor))
+		log.Debugf("Pruned %d/%d epochs worth of proposals", epochAtCursor, endEpoch-1)
 		if err = s.db.Update(func(tx *bolt.Tx) error {
 			proposalBkt := tx.Bucket(proposalRecordsBucket)
 			c := proposalBkt.Cursor()
 
 			var lastPrunedEpoch, epochsPruned types.Epoch
 			// We begin a pruning iteration at starting from the current slot cursor.
-			for k, _ := c.Seek(encodedSlotCursor); k != nil; k, _ = c.Next() {
+			for k, _ := c.First(); k != nil; k, _ = c.Next() {
 				// We check the slot from the current key in the database.
 				// If we have hit a slot that is greater than the end slot of the pruning process,
 				// we then completely exit the process as we are done.
-				if !slotPrefixLessThan(k, encodedEndSlot) {
-					// We don't want to unmarshal the key bytes every time
-					// into the cursor value, so we only do it if needed here.
-					slotCursor = slotFromProposalKey(k)
+				if !slotPrefixLessThan(k, encodedEndPruneSlot) {
+					epochAtCursor = endEpoch
 					return nil
 				}
-				slot := slotFromProposalKey(k)
-				slotCursor = slot
-				encodedSlotCursor = fssz.MarshalUint64([]byte{}, uint64(slotCursor))
-				epochAtCursor = helpers.SlotToEpoch(slot)
-
 				// If we have pruned N epochs in this pruning iteration,
 				// we exit from the bolt transaction.
 				if epochsPruned >= pruningEpochIncrements {
 					return nil
 				}
+				epochAtCursor = helpers.SlotToEpoch(slotFromProposalKey(k))
 
 				// Proposals in the database look like this:
 				//  (slot ++ validatorIndex) => encode(proposal)
@@ -97,16 +87,17 @@ func (s *Store) PruneProposals(
 				//  (slot = 3 ++ validatorIndex = 2) => ...
 				// so we only mark an epoch as pruned if the epoch of the current object
 				// under the cursor has changed.
-				if epochAtCursor > lastPrunedEpoch {
-					epochsPruned++
-					lastPrunedEpoch = epochAtCursor
-				}
-				slasherProposalsPrunedTotal.Inc()
-
 				// We delete the proposal object from the database.
 				if err := proposalBkt.Delete(k); err != nil {
 					return err
 				}
+				if epochAtCursor == 0 {
+					epochsPruned = 1
+				} else if epochAtCursor > lastPrunedEpoch {
+					epochsPruned++
+					lastPrunedEpoch = epochAtCursor
+				}
+				slasherProposalsPrunedTotal.Inc()
 			}
 			return nil
 		}); err != nil {
