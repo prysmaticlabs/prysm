@@ -55,7 +55,7 @@ func ProcessBlockHeader(
 	}
 
 	// Verify proposer signature.
-	if err := VerifyBlockSignature(beaconState, block); err != nil {
+	if err := VerifyBlockSignature(beaconState, block.Block.ProposerIndex, block.Signature, block.Block.HashTreeRoot); err != nil {
 		return nil, err
 	}
 
