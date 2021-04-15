@@ -9,12 +9,17 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+type attesterRewardsFunc func(iface.ReadOnlyBeaconState, *Balance, []*Validator) ([]uint64, []uint64, error)
+type proposerRewardsFunc func(iface.ReadOnlyBeaconState, *Balance, []*Validator) ([]uint64, error)
+
 // ProcessRewardsAndPenaltiesPrecompute processes the rewards and penalties of individual validator.
 // This is an optimized version by passing in precomputed validator attesting records and and total epoch balances.
 func ProcessRewardsAndPenaltiesPrecompute(
 	state iface.BeaconState,
 	pBal *Balance,
 	vp []*Validator,
+	attRewardsFunc attesterRewardsFunc,
+	proRewardsFunc proposerRewardsFunc,
 ) (iface.BeaconState, error) {
 	// Can't process rewards and penalties in genesis epoch.
 	if helpers.CurrentEpoch(state) == 0 {
@@ -27,13 +32,13 @@ func ProcessRewardsAndPenaltiesPrecompute(
 		return state, errors.New("precomputed registries not the same length as state registries")
 	}
 
-	attsRewards, attsPenalties, err := AttestationsDelta(state, pBal, vp)
+	attsRewards, attsPenalties, err := attRewardsFunc(state, pBal, vp)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get attestation delta")
+		return nil, errors.Wrap(err, "could not get attester attestation delta")
 	}
-	proposerRewards, err := ProposersDelta(state, pBal, vp)
+	proposerRewards, err := proRewardsFunc(state, pBal, vp)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get attestation delta")
+		return nil, errors.Wrap(err, "could not get proposer attestation delta")
 	}
 	validatorBals := state.Balances()
 	for i := 0; i < numOfVals; i++ {
@@ -70,8 +75,7 @@ func AttestationsDelta(state iface.ReadOnlyBeaconState, pBal *Balance, vp []*Val
 }
 
 func attestationDelta(pBal *Balance, v *Validator, prevEpoch, finalizedEpoch types.Epoch) (uint64, uint64) {
-	eligible := v.IsActivePrevEpoch || (v.IsSlashed && !v.IsWithdrawableCurrentEpoch)
-	if !eligible || pBal.ActiveCurrentEpoch == 0 {
+	if !EligibleForRewards(v) || pBal.ActiveCurrentEpoch == 0 {
 		return 0, 0
 	}
 
@@ -130,8 +134,6 @@ func attestationDelta(pBal *Balance, v *Validator, prevEpoch, finalizedEpoch typ
 	}
 
 	// Process finality delay penalty
-	finalityDelay := helpers.FinalityDelay(prevEpoch, finalizedEpoch)
-
 	if helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch) {
 		// If validator is performing optimally, this cancels all rewards for a neutral balance.
 		proposerReward := br / params.BeaconConfig().ProposerRewardQuotient
@@ -140,6 +142,7 @@ func attestationDelta(pBal *Balance, v *Validator, prevEpoch, finalizedEpoch typ
 		// Equivalent to the following condition from the spec:
 		// `index not in get_unslashed_attesting_indices(state, matching_target_attestations)`
 		if !v.IsPrevEpochTargetAttester || v.IsSlashed {
+			finalityDelay := helpers.FinalityDelay(prevEpoch, finalizedEpoch)
 			p += vb * uint64(finalityDelay) / params.BeaconConfig().InactivityPenaltyQuotient
 		}
 	}
@@ -176,4 +179,12 @@ func ProposersDelta(state iface.ReadOnlyBeaconState, pBal *Balance, vp []*Valida
 		}
 	}
 	return rewards, nil
+}
+
+// EligibleForRewards for validator.
+//
+// Spec code:
+// if is_active_validator(v, previous_epoch) or (v.slashed and previous_epoch + 1 < v.withdrawable_epoch)
+func EligibleForRewards(v *Validator) bool {
+	return v.IsActivePrevEpoch || (v.IsSlashed && !v.IsWithdrawableCurrentEpoch)
 }

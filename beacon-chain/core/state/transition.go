@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
+	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -30,19 +31,34 @@ type processFunc func(context.Context, iface.BeaconState, *ethpb.SignedBeaconBlo
 var processDepositsFunc = func(ctx context.Context, s iface.BeaconState, blk *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
 	return b.ProcessDeposits(ctx, s, blk.Block.Body.Deposits)
 }
+var processProposerSlashingFunc = func(ctx context.Context, s iface.BeaconState, blk *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
+	return b.ProcessProposerSlashings(ctx, s, blk.Block.Body.ProposerSlashings, v.SlashValidator)
+}
+
+var processAttesterSlashingFunc = func(ctx context.Context, s iface.BeaconState, blk *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
+	return b.ProcessAttesterSlashings(ctx, s, blk.Block.Body.AttesterSlashings, v.SlashValidator)
+}
+
+var processEth1DataFunc = func(ctx context.Context, s iface.BeaconState, blk *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
+	return b.ProcessEth1DataInBlock(ctx, s, blk.Block.Body.Eth1Data)
+}
+
+var processExitFunc = func(ctx context.Context, s iface.BeaconState, blk *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
+	return b.ProcessVoluntaryExits(ctx, s, blk.Block.Body.VoluntaryExits)
+}
 
 // This defines the processing block routine as outlined in eth2 spec:
 // https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#block-processing
 var processingPipeline = []processFunc{
 	b.ProcessBlockHeader,
 	b.ProcessRandao,
-	b.ProcessEth1DataInBlock,
+	processEth1DataFunc,
 	VerifyOperationLengths,
-	b.ProcessProposerSlashings,
-	b.ProcessAttesterSlashings,
+	processProposerSlashingFunc,
+	processAttesterSlashingFunc,
 	b.ProcessAttestations,
 	processDepositsFunc,
-	b.ProcessVoluntaryExits,
+	processExitFunc,
 }
 
 // ExecuteStateTransition defines the procedure for a state transition function.
@@ -109,11 +125,9 @@ func ExecuteStateTransition(
 //    # Cache state root
 //    previous_state_root = hash_tree_root(state)
 //    state.state_roots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = previous_state_root
-//
 //    # Cache latest block header state root
 //    if state.latest_block_header.state_root == Bytes32():
 //        state.latest_block_header.state_root = previous_state_root
-//
 //    # Cache block root
 //    previous_block_root = hash_tree_root(state.latest_block_header)
 //    state.block_roots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = previous_block_root
@@ -192,14 +206,13 @@ func ProcessSlotsUsingNextSlotCache(
 //
 // Spec pseudocode definition:
 //  def process_slots(state: BeaconState, slot: Slot) -> None:
-//    assert state.slot <= slot
+//    assert state.slot < slot
 //    while state.slot < slot:
 //        process_slot(state)
-//        # Process epoch on the first slot of the next epoch
+//        # Process epoch on the start slot of the next epoch
 //        if (state.slot + 1) % SLOTS_PER_EPOCH == 0:
 //            process_epoch(state)
-//        state.slot += 1
-//    ]
+//        state.slot = Slot(state.slot + 1)
 func ProcessSlots(ctx context.Context, state iface.BeaconState, slot types.Slot) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessSlots")
 	defer span.End()
@@ -309,6 +322,10 @@ func ProcessBlock(
 	defer span.End()
 
 	var err error
+	if err = helpers.VerifyNilBeaconBlock(signed); err != nil {
+		return nil, err
+	}
+
 	for _, p := range processingPipeline {
 		state, err = p(ctx, state, signed)
 		if err != nil {
@@ -407,7 +424,7 @@ func ProcessEpochPrecompute(ctx context.Context, state iface.BeaconState) (iface
 		return nil, errors.Wrap(err, "could not process justification")
 	}
 
-	state, err = precompute.ProcessRewardsAndPenaltiesPrecompute(state, bp, vp)
+	state, err = precompute.ProcessRewardsAndPenaltiesPrecompute(state, bp, vp, precompute.AttestationsDelta, precompute.ProposersDelta)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process rewards and penalties")
 	}

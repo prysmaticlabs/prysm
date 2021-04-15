@@ -3,8 +3,8 @@ package debugv1
 import (
 	"context"
 
-	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
+	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -29,5 +29,19 @@ func (ds *Server) GetBeaconState(ctx context.Context, req *ethpb.StateRequest) (
 
 // ListForkChoiceHeads retrieves the fork choice leaves for the current head.
 func (ds *Server) ListForkChoiceHeads(ctx context.Context, _ *emptypb.Empty) (*ethpb.ForkChoiceHeadsResponse, error) {
-	return nil, errors.New("unimplemented")
+	ctx, span := trace.StartSpan(ctx, "debugv1.ListForkChoiceHeads")
+	defer span.End()
+
+	headRoots, headSlots := ds.HeadFetcher.ChainHeads()
+	resp := &ethpb.ForkChoiceHeadsResponse{
+		Data: make([]*ethpb.ForkChoiceHead, len(headRoots)),
+	}
+	for i := range headRoots {
+		resp.Data[i] = &ethpb.ForkChoiceHead{
+			Root: headRoots[i][:],
+			Slot: headSlots[i],
+		}
+	}
+
+	return resp, nil
 }
