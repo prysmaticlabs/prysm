@@ -1062,6 +1062,8 @@ github.com/prysmaticlabs/eth2-types v0.0.0-20210303084904-c9735a06829d h1:1dN7YA
 github.com/prysmaticlabs/eth2-types v0.0.0-20210303084904-c9735a06829d/go.mod h1:kOmQ/zdobQf7HUohDTifDNFEZfNaSCIY5fkONPL+dWU=
 github.com/prysmaticlabs/ethereumapis v0.0.0-20210413004609-218adb2fcdd9 h1:rLbeeu/p9O3PtR9Z0OKCLffuiu31dZaZbNTasMAiC5M=
 github.com/prysmaticlabs/ethereumapis v0.0.0-20210413004609-218adb2fcdd9/go.mod h1:a0kvrMazsvz/yGbrGIdx/Xtm5rhf/bfELx81A9pbuG0=
+github.com/prysmaticlabs/ethereumapis v0.0.0-20210415180552-398a82292a20 h1:15AQU+TaTiZpIMnNvzByM3Szb1YmHR7vhswykdlSMGo=
+github.com/prysmaticlabs/ethereumapis v0.0.0-20210415180552-398a82292a20/go.mod h1:a0kvrMazsvz/yGbrGIdx/Xtm5rhf/bfELx81A9pbuG0=
 github.com/prysmaticlabs/go-bitfield v0.0.0-20210202205921-7fcea7c45dc8 h1:18+Qqobq3HAUY0hgIhPGSqmLFnaLLocemmU7+Sj2aYQ=
 github.com/prysmaticlabs/go-bitfield v0.0.0-20210202205921-7fcea7c45dc8/go.mod h1:hCwmef+4qXWjv0jLDbQdWnL0Ol7cS7/lCSS26WR+u6s=
 github.com/prysmaticlabs/grpc-gateway/v2 v2.3.1-0.20210330221950-3beba9ed0e19 h1:roLNAyHR6c9yx1F+shJbbDvi/YopEreddO2Pmga20Lo=
