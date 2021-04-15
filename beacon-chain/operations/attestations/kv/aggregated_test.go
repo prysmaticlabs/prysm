@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"google.golang.org/protobuf/proto"
 )
 
 func TestKV_Aggregated_AggregateUnaggregatedAttestations(t *testing.T) {
@@ -260,6 +261,7 @@ func TestKV_Aggregated_AggregatedAttestations(t *testing.T) {
 }
 
 func TestKV_Aggregated_DeleteAggregatedAttestation(t *testing.T) {
+	proto.Equal()
 	t.Run("nil attestation", func(t *testing.T) {
 		cache := NewAttCaches()
 		assert.ErrorContains(t, "attestation can't be nil", cache.DeleteAggregatedAttestation(nil))
