@@ -8,10 +8,11 @@ import (
 
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
-	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2_gateway"
+	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/validator/web"
 	"github.com/rs/cors"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // Gateway is the gRPC gateway to serve HTTP JSON traffic as a
@@ -50,10 +51,17 @@ func (g *Gateway) Start() {
 	g.cancel = cancel
 
 	gwmux := gwruntime.NewServeMux(
-	//gwruntime.WithMarshalerOption(
-	//	gwruntime.MIMEWildcard,
-	//	&gwruntime.JSONPb{OrigName: false},
-	//),
+		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
+			Marshaler: &gwruntime.JSONPb{
+				MarshalOptions: protojson.MarshalOptions{
+					UseProtoNames:   true,
+					EmitUnpopulated: true,
+				},
+				UnmarshalOptions: protojson.UnmarshalOptions{
+					DiscardUnknown: true,
+				},
+			},
+		}),
 	)
 	opts := []grpc.DialOption{grpc.WithInsecure()}
 	handlers := []func(context.Context, *gwruntime.ServeMux, string, []grpc.DialOption) error{

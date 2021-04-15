@@ -17,6 +17,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 var _ shared.Service = (*Gateway)(nil)
@@ -56,11 +57,17 @@ func (g *Gateway) Start() {
 	g.conn = conn
 
 	gwmux := gwruntime.NewServeMux(
-	//gwruntime.WithMarshalerOption(
-	//	gwruntime.MIMEWildcard,
-	//	gwruntime.Marshaler
-	//	//protojson.MarshalOptions{EmitUnpopulated: true, UseProtoNames: true},
-	//),
+		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
+			Marshaler: &gwruntime.JSONPb{
+				MarshalOptions: protojson.MarshalOptions{
+					UseProtoNames:   true,
+					EmitUnpopulated: true,
+				},
+				UnmarshalOptions: protojson.UnmarshalOptions{
+					DiscardUnknown: true,
+				},
+			},
+		}),
 	)
 	handlers := []func(context.Context, *gwruntime.ServeMux, *grpc.ClientConn) error{
 		ethpb.RegisterNodeHandler,
