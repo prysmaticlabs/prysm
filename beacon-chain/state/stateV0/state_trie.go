@@ -197,14 +197,14 @@ func (b *BeaconState) Copy() iface.BeaconState {
 // HashTreeRoot of the beacon state retrieves the Merkle root of the trie
 // representation of the beacon state based on the eth2 Simple Serialize specification.
 func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
-	_, span := trace.StartSpan(ctx, "beaconState.HashTreeRoot")
+	ctx, span := trace.StartSpan(ctx, "beaconState.HashTreeRoot")
 	defer span.End()
 
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	if b.merkleLayers == nil || len(b.merkleLayers) == 0 {
-		fieldRoots, err := computeFieldRoots(b.state)
+		fieldRoots, err := computeFieldRoots(ctx, b.state)
 		if err != nil {
 			return [32]byte{}, err
 		}
@@ -214,7 +214,7 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 	}
 
 	for field := range b.dirtyFields {
-		root, err := b.rootSelector(field)
+		root, err := b.rootSelector(ctx, field)
 		if err != nil {
 			return [32]byte{}, err
 		}
@@ -379,7 +379,11 @@ func (b *BeaconState) FieldReferencesCount() map[string]uint64 {
 	return refMap
 }
 
-func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
+func (b *BeaconState) rootSelector(ctx context.Context, field fieldIndex) ([32]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "beaconState.rootSelector")
+	defer span.End()
+	span.AddAttributes(trace.StringAttribute("field", field.String()))
+
 	hasher := hashutil.CustomSHA256Hasher()
 	switch field {
 	case genesisTime:
