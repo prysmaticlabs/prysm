@@ -193,6 +193,7 @@ func TestStore_PruneAttestations_OK(t *testing.T) {
 			encIdx := encodeValidatorIndex(types.ValidatorIndex(0))
 			encodedTargetEpoch := encodeTargetEpoch(lowestStoredEpoch, historyLength)
 			key := append(encodedTargetEpoch, encIdx...)
+			fmt.Println("Putting", lowestStoredEpoch, key)
 			return bkt.Put(key, []byte("hi"))
 		})
 		require.NoError(t, err)

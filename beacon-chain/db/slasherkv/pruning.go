@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"fmt"
 
 	fssz "github.com/ferranbt/fastssz"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -127,6 +128,8 @@ func (s *Store) PruneAttestations(ctx context.Context, currentEpoch, pruningEpoc
 	}); err != nil {
 		return err
 	}
+
+	fmt.Println(lowestEpoch)
 
 	// If the lowest slot is greater than or equal to the end pruning slot,
 	// there is nothing to prune, so we return early.

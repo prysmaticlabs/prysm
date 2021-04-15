@@ -87,7 +87,7 @@ func (s *Store) SaveLastEpochWrittenForValidators(
 // CheckAttesterDoubleVotes retries any slashable double votes that exist
 // for a series of input attestations.
 func (s *Store) CheckAttesterDoubleVotes(
-	ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper, historyLength types.Epoch,
+	ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper,
 ) ([]*slashertypes.AttesterDoubleVote, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.CheckAttesterDoubleVotes")
 	defer span.End()
@@ -96,7 +96,7 @@ func (s *Store) CheckAttesterDoubleVotes(
 		signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
 		attRecordsBkt := tx.Bucket(attestationRecordsBucket)
 		for _, att := range attestations {
-			encEpoch := encodeTargetEpoch(att.IndexedAttestation.Data.Target.Epoch, historyLength)
+			encEpoch := encodeTargetEpoch(att.IndexedAttestation.Data.Target.Epoch)
 			for _, valIdx := range att.IndexedAttestation.AttestingIndices {
 				encIdx := encodeValidatorIndex(types.ValidatorIndex(valIdx))
 				validatorEpochKey := append(encEpoch, encIdx...)
@@ -134,13 +134,13 @@ func (s *Store) CheckAttesterDoubleVotes(
 // AttestationRecordForValidator given a validator index and a target epoch,
 // retrieves an existing attestation record we have stored in the database.
 func (s *Store) AttestationRecordForValidator(
-	ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch, historyLength types.Epoch,
+	ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch,
 ) (*slashertypes.IndexedAttestationWrapper, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.AttestationRecordForValidator")
 	defer span.End()
 	var record *slashertypes.IndexedAttestationWrapper
 	encIdx := encodeValidatorIndex(validatorIdx)
-	encEpoch := encodeTargetEpoch(targetEpoch, historyLength)
+	encEpoch := encodeTargetEpoch(targetEpoch)
 	key := append(encEpoch, encIdx...)
 	err := s.db.View(func(tx *bolt.Tx) error {
 		signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
@@ -175,7 +175,7 @@ func (s *Store) SaveAttestationRecordsForValidators(
 	encodedRecords := make([][]byte, len(attestations))
 	encodedIndices := make([][]byte, len(attestations))
 	for i, att := range attestations {
-		encEpoch := encodeTargetEpoch(att.IndexedAttestation.Data.Target.Epoch, historyLength)
+		encEpoch := encodeTargetEpoch(att.IndexedAttestation.Data.Target.Epoch)
 		value, err := encodeAttestationRecord(att)
 		if err != nil {
 			return err
@@ -492,11 +492,10 @@ func decodeProposalRecord(encoded []byte) (*slashertypes.SignedBlockHeaderWrappe
 	}, nil
 }
 
-// Encodes an epoch by performing modulo HISTORY_SIZE from slasher using 2 bytes instead of 8 as a
-// client optimization to save space in the database.
-func encodeTargetEpoch(epoch types.Epoch, historyLength types.Epoch) []byte {
-	buf := make([]byte, 2)
-	binary.LittleEndian.PutUint16(buf, uint16(epoch%historyLength))
+// Encodes an epoch into little-endian bytes.
+func encodeTargetEpoch(epoch types.Epoch) []byte {
+	buf := make([]byte, 8)
+	binary.LittleEndian.PutUint64(buf, uint64(epoch))
 	return buf
 }
 
