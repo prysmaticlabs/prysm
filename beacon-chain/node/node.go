@@ -436,7 +436,7 @@ func (b *BeaconNode) registerPOWChainService() error {
 	}
 
 	cfg := &powchain.Web3ServiceConfig{
-		HTTPEndpoints:      endpoints,
+		HttpEndpoints:      endpoints,
 		DepositContract:    common.HexToAddress(depAddress),
 		BeaconDB:           b.db,
 		DepositCache:       b.depositCache,

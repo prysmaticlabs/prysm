@@ -35,6 +35,8 @@ import (
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/httputils"
+	"github.com/prysmaticlabs/prysm/shared/httputils/authorizationmethod"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
@@ -128,7 +130,8 @@ type Service struct {
 	ctx                     context.Context
 	cancel                  context.CancelFunc
 	headTicker              *time.Ticker
-	currHttpEndpoint        string
+	httpEndpoints           []httputils.Endpoint
+	currHttpEndpoint        httputils.Endpoint
 	httpLogger              bind.ContractFilterer
 	eth1DataFetcher         RPCDataFetcher
 	rpcClient               RPCClient
@@ -144,7 +147,7 @@ type Service struct {
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
 type Web3ServiceConfig struct {
-	HTTPEndpoints      []string
+	HttpEndpoints      []string
 	DepositContract    common.Address
 	BeaconDB           db.HeadAccessDatabase
 	DepositCache       *depositcache.DepositCache
@@ -172,16 +175,22 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		config.Eth1HeaderReqLimit = defaultEth1HeaderReqLimit
 	}
 
-	config.HTTPEndpoints = dedupEndpoints(config.HTTPEndpoints)
+	stringEndpoints := dedupEndpoints(config.HttpEndpoints)
+	endpoints := make([]httputils.Endpoint, len(stringEndpoints))
+	for i, e := range stringEndpoints {
+		endpoints[i] = HttpEndpoint(e)
+	}
+
 	// Select first http endpoint in the provided list.
-	currEndpoint := ""
-	if len(config.HTTPEndpoints) > 0 {
-		currEndpoint = config.HTTPEndpoints[0]
+	var currEndpoint httputils.Endpoint
+	if len(config.HttpEndpoints) > 0 {
+		currEndpoint = endpoints[0]
 	}
 	s := &Service{
-		cfg:              config,
 		ctx:              ctx,
 		cancel:           cancel,
+		cfg:              config,
+		httpEndpoints:    endpoints,
 		currHttpEndpoint: currEndpoint,
 		latestEth1Data: &protodb.LatestETH1Data{
 			BlockHeight:        0,
@@ -230,7 +239,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 func (s *Service) Start() {
 	// If the chain has not started already and we don't have access to eth1 nodes, we will not be
 	// able to generate the genesis state.
-	if !s.chainStartData.Chainstarted && s.currHttpEndpoint == "" {
+	if !s.chainStartData.Chainstarted && s.currHttpEndpoint.Url == "" {
 		// check for genesis state before shutting down the node,
 		// if a genesis state exists, we can continue on.
 		genState, err := s.cfg.BeaconDB.GenesisState(s.ctx)
@@ -243,7 +252,7 @@ func (s *Service) Start() {
 	}
 
 	// Exit early if eth1 endpoint is not set.
-	if s.currHttpEndpoint == "" {
+	if s.currHttpEndpoint.Url == "" {
 		return
 	}
 	go func() {
@@ -375,10 +384,17 @@ func (s *Service) connectToPowChain() error {
 	return nil
 }
 
-func (s *Service) dialETH1Nodes(endpoint string) (*ethclient.Client, *gethRPC.Client, error) {
-	httpRPCClient, err := gethRPC.Dial(endpoint)
+func (s *Service) dialETH1Nodes(endpoint httputils.Endpoint) (*ethclient.Client, *gethRPC.Client, error) {
+	httpRPCClient, err := gethRPC.Dial(endpoint.Url)
 	if err != nil {
 		return nil, nil, err
+	}
+	if endpoint.Auth.Method != authorizationmethod.None {
+		header, err := endpoint.Auth.ToHeaderValue()
+		if err != nil {
+			return nil, nil, err
+		}
+		httpRPCClient.SetHeader("Authorization", header)
 	}
 	httpClient := ethclient.NewClient(httpRPCClient)
 	// Add a method to clean-up and close clients in the event
@@ -451,7 +467,7 @@ func (s *Service) waitForConnection() {
 			s.connectedETH1 = true
 			s.runError = nil
 			log.WithFields(logrus.Fields{
-				"endpoint": logutil.MaskCredentialsLogging(s.currHttpEndpoint),
+				"endpoint": logutil.MaskCredentialsLogging(s.currHttpEndpoint.Url),
 			}).Info("Connected to eth1 proof-of-work chain")
 			return
 		}
@@ -480,7 +496,7 @@ func (s *Service) waitForConnection() {
 	for {
 		select {
 		case <-ticker.C:
-			log.Debugf("Trying to dial endpoint: %s", logutil.MaskCredentialsLogging(s.currHttpEndpoint))
+			log.Debugf("Trying to dial endpoint: %s", logutil.MaskCredentialsLogging(s.currHttpEndpoint.Url))
 			errConnect := s.connectToPowChain()
 			if errConnect != nil {
 				errorLogger(errConnect, "Could not connect to powchain endpoint")
@@ -499,7 +515,7 @@ func (s *Service) waitForConnection() {
 				s.connectedETH1 = true
 				s.runError = nil
 				log.WithFields(logrus.Fields{
-					"endpoint": logutil.MaskCredentialsLogging(s.currHttpEndpoint),
+					"endpoint": logutil.MaskCredentialsLogging(s.currHttpEndpoint.Url),
 				}).Info("Connected to eth1 proof-of-work chain")
 				return
 			}
@@ -854,10 +870,10 @@ func (s *Service) determineEarliestVotingBlock(ctx context.Context, followBlock 
 // is ready to serve we connect to it again. This method is only
 // relevant if we are on our backup endpoint.
 func (s *Service) checkDefaultEndpoint() {
-	primaryEndpoint := s.cfg.HTTPEndpoints[0]
+	primaryEndpoint := s.httpEndpoints[0]
 	// Return early if we are running on our primary
 	// endpoint.
-	if s.currHttpEndpoint == primaryEndpoint {
+	if s.currHttpEndpoint.Equals(primaryEndpoint) {
 		return
 	}
 
@@ -885,10 +901,10 @@ func (s *Service) checkDefaultEndpoint() {
 func (s *Service) fallbackToNextEndpoint() {
 	currEndpoint := s.currHttpEndpoint
 	currIndex := 0
-	totalEndpoints := len(s.cfg.HTTPEndpoints)
+	totalEndpoints := len(s.httpEndpoints)
 
-	for i, endpoint := range s.cfg.HTTPEndpoints {
-		if endpoint == currEndpoint {
+	for i, endpoint := range s.httpEndpoints {
+		if endpoint.Equals(currEndpoint) {
 			currIndex = i
 			break
 		}
@@ -901,8 +917,8 @@ func (s *Service) fallbackToNextEndpoint() {
 	if nextIndex == currIndex {
 		return
 	}
-	s.currHttpEndpoint = s.cfg.HTTPEndpoints[nextIndex]
-	log.Infof("Falling back to alternative endpoint: %s", logutil.MaskCredentialsLogging(s.currHttpEndpoint))
+	s.currHttpEndpoint = s.httpEndpoints[nextIndex]
+	log.Infof("Falling back to alternative endpoint: %s", logutil.MaskCredentialsLogging(s.currHttpEndpoint.Url))
 }
 
 // validates the current powchain data saved and makes sure that any
