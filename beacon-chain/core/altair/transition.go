@@ -51,6 +51,7 @@ func ProcessEpoch(ctx context.Context, state iface.BeaconStateAltair) (iface.Bea
 	}
 
 	// New in Altair.
+	// process_inactivity_updates is embedded in the below.
 	state, err = ProcessRewardsAndPenaltiesPrecompute(state, bp, vp)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process rewards and penalties")
