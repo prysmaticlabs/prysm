@@ -313,6 +313,10 @@ func ProcessBlock(
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessBlock")
 	defer span.End()
 
+	if err := helpers.VerifyNilBeaconBlock(signed); err != nil {
+		return nil, err
+	}
+
 	var err error
 	for _, p := range processingPipeline {
 		state, err = p(ctx, state, signed)
