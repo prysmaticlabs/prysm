@@ -92,7 +92,7 @@ func BlockSignatureSet(beaconState iface.ReadOnlyBeaconState,
 		return nil, err
 	}
 	proposerPubKey := proposer.PublicKey
-	return helpers.BlockSignatureSet(rootFunc, proposerPubKey, sig, domain)
+	return helpers.BlockSignatureSet(proposerPubKey, sig, domain, rootFunc)
 }
 
 // RandaoSignatureSet retrieves the relevant randao specific signature set object

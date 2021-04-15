@@ -99,7 +99,7 @@ func VerifySigningRoot(obj fssz.HashRoot, pub, signature, domain []byte) error {
 
 // VerifyBlockSigningRoot verifies the signing root of a block given it's public key, signature and domain.
 func VerifyBlockSigningRoot(rootFunc func() ([32]byte, error), pub, signature, domain []byte) error {
-	set, err := BlockSignatureSet(rootFunc, pub, signature, domain)
+	set, err := BlockSignatureSet(pub, signature, domain, rootFunc)
 	if err != nil {
 		return err
 	}
@@ -120,7 +120,7 @@ func VerifyBlockSigningRoot(rootFunc func() ([32]byte, error), pub, signature, d
 
 // BlockSignatureSet retrieves the relevant signature, message and pubkey data from a block and collating it
 // into a signature set object.
-func BlockSignatureSet(rootFunc func() ([32]byte, error), pub, signature, domain []byte) (*bls.SignatureSet, error) {
+func BlockSignatureSet(pub, signature, domain []byte, rootFunc func() ([32]byte, error)) (*bls.SignatureSet, error) {
 	publicKey, err := bls.PublicKeyFromBytes(pub)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert bytes to public key")
