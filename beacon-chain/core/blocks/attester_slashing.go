@@ -36,15 +36,10 @@ import (
 func ProcessAttesterSlashings(
 	ctx context.Context,
 	beaconState iface.BeaconState,
-	b *ethpb.SignedBeaconBlock,
+	slashings []*ethpb.AttesterSlashing,
 	slashFunc slashValidatorFunc,
 ) (iface.BeaconState, error) {
-	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
-		return nil, err
-	}
-
-	body := b.Block.Body
-	for idx, slashing := range body.AttesterSlashings {
+	for idx, slashing := range slashings {
 		if err := VerifyAttesterSlashing(ctx, beaconState, slashing); err != nil {
 			return nil, errors.Wrapf(err, "could not verify attester slashing %d", idx)
 		}
