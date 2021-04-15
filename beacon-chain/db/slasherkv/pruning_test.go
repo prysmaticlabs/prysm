@@ -186,22 +186,13 @@ func TestStore_PruneAttestations_OK(t *testing.T) {
 		historyLength := types.Epoch(10)
 
 		pruningLimitEpoch := currentEpoch - historyLength
-		lowestStoredSlot, err := helpers.StartSlot(pruningLimitEpoch)
-		require.NoError(t, err)
+		lowestStoredEpoch := pruningLimitEpoch
 
-		err = beaconDB.db.Update(func(tx *bolt.Tx) error {
+		err := beaconDB.db.Update(func(tx *bolt.Tx) error {
 			bkt := tx.Bucket(attestationDataRootsBucket)
-			key, err := keyForValidatorProposal(&slashertypes.SignedBlockHeaderWrapper{
-				SignedBeaconBlockHeader: &ethpb.SignedBeaconBlockHeader{
-					Header: &ethpb.BeaconBlockHeader{
-						Slot:          lowestStoredSlot,
-						ProposerIndex: 0,
-					},
-				},
-			})
-			if err != nil {
-				return err
-			}
+			encIdx := encodeValidatorIndex(types.ValidatorIndex(0))
+			encodedTargetEpoch := encodeTargetEpoch(lowestStoredEpoch, historyLength)
+			key := append(encodedTargetEpoch, encIdx...)
 			return bkt.Put(key, []byte("hi"))
 		})
 		require.NoError(t, err)
@@ -209,7 +200,7 @@ func TestStore_PruneAttestations_OK(t *testing.T) {
 		err = beaconDB.PruneAttestations(ctx, currentEpoch, epochPruningIncrements, historyLength)
 		require.NoError(t, err)
 		expectedLog := fmt.Sprintf(
-			"Lowest slot %d is >= pruning slot %d, nothing to prune", lowestStoredSlot, lowestStoredSlot,
+			"Lowest epoch %d is >= pruning epoch %d, nothing to prune", lowestStoredEpoch, lowestStoredEpoch,
 		)
 		require.LogsContain(t, hook, expectedLog)
 	})

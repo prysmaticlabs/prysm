@@ -122,7 +122,7 @@ func (s *Store) PruneAttestations(ctx context.Context, currentEpoch, pruningEpoc
 		bkt := tx.Bucket(attestationDataRootsBucket)
 		c := bkt.Cursor()
 		k, _ := c.First()
-		lowestEpoch = types.Epoch(binary.LittleEndian.Uint64(k[:2]))
+		lowestEpoch = types.Epoch(binary.LittleEndian.Uint16(k[:2]))
 		return nil
 	}); err != nil {
 		return err
@@ -163,7 +163,7 @@ func (s *Store) PruneAttestations(ctx context.Context, currentEpoch, pruningEpoc
 				if epochsPruned >= pruningEpochIncrements {
 					return nil
 				}
-				epochAtCursor = types.Epoch(binary.LittleEndian.Uint64(k[:2]))
+				epochAtCursor = types.Epoch(binary.LittleEndian.Uint16(k[:2]))
 
 				// Attestation in the database look like this:
 				//  (target_epoch ++ _) => encode(attestation)
