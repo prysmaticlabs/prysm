@@ -8,7 +8,6 @@ import (
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
-	s "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -35,28 +34,39 @@ func ProcessBlockNoVerifyAnySig(
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessBlockNoVerifyAnySig")
 	defer span.End()
 
-	state, err := b.ProcessBlockHeaderNoVerify(state, signed.Block)
+	// Verify block is not nil.
+	if err := VerifyNilBeaconBlock(signed); err != nil {
+		return nil, nil, err
+	}
+
+	blk := signed.Block
+	body := blk.Body
+	bodyRoot, err := body.HashTreeRoot()
+	if err != nil {
+		return nil, nil, err
+	}
+	state, err = b.ProcessBlockHeaderNoVerify(state, blk.Slot, blk.ProposerIndex, blk.ParentRoot, bodyRoot[:])
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not process block header")
 	}
-	bSet, err := b.BlockSignatureSet(state, signed)
+	bSet, err := b.BlockSignatureSet(state, blk.ProposerIndex, signed.Signature, blk.HashTreeRoot)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not retrieve block signature set")
 	}
-	rSet, err := b.RandaoSignatureSet(state, signed.Block.Body)
+	rSet, err := b.RandaoSignatureSet(state, body.RandaoReveal)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not retrieve randao signature set")
 	}
-	state, err = b.ProcessRandaoNoVerify(state, signed.Block.Body)
+	state, err = b.ProcessRandaoNoVerify(state, body.RandaoReveal)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not verify and process randao")
 	}
 
-	state, err = b.ProcessEth1DataInBlock(ctx, state, signed)
+	state, err = b.ProcessEth1DataInBlock(ctx, state, body.Eth1Data)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not process eth1 data")
@@ -77,6 +87,88 @@ func ProcessBlockNoVerifyAnySig(
 	set.Join(bSet).Join(rSet).Join(aSet)
 
 	return set, state, nil
+}
+
+func CalculateStateRoot(
+	ctx context.Context,
+	state iface.BeaconState,
+	signed *ethpb.SignedBeaconBlockAltair,
+) ([32]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "core.state.CalculateStateRoot")
+	defer span.End()
+	if ctx.Err() != nil {
+		traceutil.AnnotateError(span, ctx.Err())
+		return [32]byte{}, ctx.Err()
+	}
+	if state == nil {
+		return [32]byte{}, errors.New("nil state")
+	}
+	if err := VerifyNilBeaconBlock(signed); err != nil {
+		return [32]byte{}, err
+	}
+
+	// Copy state to avoid mutating the state reference.
+	state = state.Copy()
+
+	// TODO(): Enable skip slop cache here.
+	state, err = ProcessSlots(ctx, state, signed.Block.Slot)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not process slot")
+	}
+
+	// Execute per block transition.
+	state, err := ProcessBlockForStateRoot(ctx, state, signed)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not process block")
+	}
+
+	return state.HashTreeRoot(ctx)
+}
+
+// ProcessBlockForStateRoot processes the state for state root computation. It skips proposer signature
+// and randao signature verifications.
+func ProcessBlockForStateRoot(
+	ctx context.Context,
+	state iface.BeaconState,
+	signed *ethpb.SignedBeaconBlockAltair,
+) (iface.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "core.state.ProcessBlockForStateRoot")
+	defer span.End()
+	if err := VerifyNilBeaconBlock(signed); err != nil {
+		return nil, err
+	}
+
+	blk := signed.Block
+	body := blk.Body
+	bodyRoot, err := body.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	state, err = b.ProcessBlockHeaderNoVerify(state, blk.Slot, blk.ProposerIndex, blk.ParentRoot, bodyRoot[:])
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+		return nil, errors.Wrap(err, "could not process block header")
+	}
+
+	state, err = b.ProcessRandaoNoVerify(state, signed.Block.Body.RandaoReveal)
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+		return nil, errors.Wrap(err, "could not verify and process randao")
+	}
+
+	state, err = b.ProcessEth1DataInBlock(ctx, state, signed.Block.Body.Eth1Data)
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+		return nil, errors.Wrap(err, "could not process eth1 data")
+	}
+
+	state, err = ProcessOperationsNoVerifyAttsSigs(ctx, state, signed)
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+		return nil, errors.Wrap(err, "could not process block operation")
+	}
+
+	return state, nil
 }
 
 // ProcessOperationsNoVerifyAttsSigs processes the operations in the beacon block and updates beacon state
@@ -103,35 +195,46 @@ func ProcessBlockNoVerifyAnySig(
 func ProcessOperationsNoVerifyAttsSigs(
 	ctx context.Context,
 	state iface.BeaconState,
-	signedBeaconBlock *ethpb.SignedBeaconBlockAltair) (iface.BeaconState, error) {
+	signed *ethpb.SignedBeaconBlockAltair) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessOperationsNoVerifyAttsSigs")
 	defer span.End()
 
-	if _, err := s.VerifyOperationLengths(ctx, state, signedBeaconBlock); err != nil {
+	if err := VerifyNilBeaconBlock(signed); err != nil {
+		return nil, err
+	}
+
+	blk := signed.Block
+	body := blk.Body
+
+	if _, err := VerifyOperationLengths(state, signed); err != nil {
 		return nil, errors.Wrap(err, "could not verify operation lengths")
 	}
 
 	// Modified in Altair.
-	state, err := b.ProcessProposerSlashings(ctx, state, signedBeaconBlock, SlashValidator)
+	state, err := b.ProcessProposerSlashings(ctx, state, body.ProposerSlashings, SlashValidator)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block proposer slashings")
 	}
+
 	// Modified in Altair.
-	state, err = b.ProcessAttesterSlashings(ctx, state, signedBeaconBlock, SlashValidator)
+	state, err = b.ProcessAttesterSlashings(ctx, state, body.AttesterSlashings, SlashValidator)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block attester slashings")
 	}
+
 	// Modified in Altair.
-	state, err = ProcessAttestationsNoVerifySignature(ctx, state, signedBeaconBlock)
+	state, err = ProcessAttestationsNoVerifySignature(ctx, state, signed)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block attestations")
 	}
+
 	// Modified in Altair.
-	state, err = ProcessDeposits(ctx, state, signedBeaconBlock.Block.Body.Deposits)
+	state, err = ProcessDeposits(ctx, state, signed.Block.Body.Deposits)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block validator deposits")
 	}
-	state, err = b.ProcessVoluntaryExits(ctx, state, signedBeaconBlock)
+
+	state, err = b.ProcessVoluntaryExits(ctx, state, body.VoluntaryExits)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process validator exits")
 	}

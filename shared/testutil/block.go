@@ -503,3 +503,50 @@ func HydrateV1BeaconBlockBody(b *v1.BeaconBlockBody) *v1.BeaconBlockBody {
 	}
 	return b
 }
+
+// HydrateSignedBeaconBlockAltair hydrates a signed beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateSignedBeaconBlockAltair(b *ethpb.SignedBeaconBlockAltair) *ethpb.SignedBeaconBlockAltair {
+	if b.Signature == nil {
+		b.Signature = make([]byte, params.BeaconConfig().BLSSignatureLength)
+	}
+	b.Block = HydrateBeaconBlockAltair(b.Block)
+	return b
+}
+
+// HydrateBeaconBlockAltair hydrates a beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateBeaconBlockAltair(b *ethpb.BeaconBlockAltair) *ethpb.BeaconBlockAltair {
+	if b == nil {
+		b = &ethpb.BeaconBlockAltair{}
+	}
+	if b.ParentRoot == nil {
+		b.ParentRoot = make([]byte, 32)
+	}
+	if b.StateRoot == nil {
+		b.StateRoot = make([]byte, 32)
+	}
+	b.Body = HydrateBeaconBlockBodyAltair(b.Body)
+	return b
+}
+
+// HydrateBeaconBlockBodyAltair hydrates a beacon block body with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateBeaconBlockBodyAltair(b *ethpb.BeaconBlockBodyAltair) *ethpb.BeaconBlockBodyAltair {
+	if b == nil {
+		b = &ethpb.BeaconBlockBodyAltair{}
+	}
+	if b.RandaoReveal == nil {
+		b.RandaoReveal = make([]byte, params.BeaconConfig().BLSSignatureLength)
+	}
+	if b.Graffiti == nil {
+		b.Graffiti = make([]byte, 32)
+	}
+	if b.Eth1Data == nil {
+		b.Eth1Data = &ethpb.Eth1Data{
+			DepositRoot: make([]byte, 32),
+			BlockHash:   make([]byte, 32),
+		}
+	}
+	return b
+}
