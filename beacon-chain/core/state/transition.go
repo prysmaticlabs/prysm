@@ -322,6 +322,10 @@ func ProcessBlock(
 	defer span.End()
 
 	var err error
+	if err = helpers.VerifyNilBeaconBlock(signed); err != nil {
+		return nil, err
+	}
+
 	for _, p := range processingPipeline {
 		state, err = p(ctx, state, signed)
 		if err != nil {
