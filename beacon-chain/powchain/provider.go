@@ -18,15 +18,15 @@ func HttpEndpoint(eth1Provider string) httputils.Endpoint {
 		}}
 
 	authValues := strings.Split(eth1Provider, ",")
-	endpoint.Url = authValues[0]
+	endpoint.Url = strings.TrimSpace(authValues[0])
 	if len(authValues) > 2 {
 		log.Errorf(
 			"ETH1 endpoint string can contain one comma for specifying the authorization header to access the provider."+
 				" String contains too many commas: %d. Skipping authorization.", len(authValues)-1)
 	} else if len(authValues) == 2 {
-		switch httputils.Method(authValues[1]) {
+		switch httputils.Method(strings.TrimSpace(authValues[1])) {
 		case authorizationmethod.Basic:
-			basicAuthValues := strings.Split(authValues[1], " ")
+			basicAuthValues := strings.Split(strings.TrimSpace(authValues[1]), " ")
 			if len(basicAuthValues) != 2 {
 				log.Errorf("Basic Authentication has incorrect format. Skipping authorization.")
 			} else {
@@ -34,7 +34,7 @@ func HttpEndpoint(eth1Provider string) httputils.Endpoint {
 				endpoint.Auth.Value = base64.StdEncoding.EncodeToString([]byte(basicAuthValues[1]))
 			}
 		case authorizationmethod.Bearer:
-			bearerAuthValues := strings.Split(authValues[1], " ")
+			bearerAuthValues := strings.Split(strings.TrimSpace(authValues[1]), " ")
 			if len(bearerAuthValues) != 2 {
 				log.Errorf("Bearer Authentication has incorrect format. Skipping authorization.")
 			} else {

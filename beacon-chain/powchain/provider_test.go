@@ -22,8 +22,19 @@ func TestHttpEndpoint(t *testing.T) {
 		assert.Equal(t, url, endpoint.Url)
 		assert.Equal(t, authorizationmethod.None, endpoint.Auth.Method)
 	})
+	t.Run("URL with whitespace", func(t *testing.T) {
+		endpoint := HttpEndpoint("   " + url + "   ,")
+		assert.Equal(t, url, endpoint.Url)
+		assert.Equal(t, authorizationmethod.None, endpoint.Auth.Method)
+	})
 	t.Run("Basic auth", func(t *testing.T) {
 		endpoint := HttpEndpoint(url + ",Basic username:password")
+		assert.Equal(t, url, endpoint.Url)
+		assert.Equal(t, authorizationmethod.Basic, endpoint.Auth.Method)
+		assert.Equal(t, "dXNlcm5hbWU6cGFzc3dvcmQ=", endpoint.Auth.Value)
+	})
+	t.Run("Basic auth with whitespace", func(t *testing.T) {
+		endpoint := HttpEndpoint(url + ",   Basic username:password   ")
 		assert.Equal(t, url, endpoint.Url)
 		assert.Equal(t, authorizationmethod.Basic, endpoint.Auth.Method)
 		assert.Equal(t, "dXNlcm5hbWU6cGFzc3dvcmQ=", endpoint.Auth.Value)
@@ -37,6 +48,12 @@ func TestHttpEndpoint(t *testing.T) {
 	})
 	t.Run("Bearer auth", func(t *testing.T) {
 		endpoint := HttpEndpoint(url + ",Bearer token")
+		assert.Equal(t, url, endpoint.Url)
+		assert.Equal(t, authorizationmethod.Bearer, endpoint.Auth.Method)
+		assert.Equal(t, "token", endpoint.Auth.Value)
+	})
+	t.Run("Bearer auth with whitespace", func(t *testing.T) {
+		endpoint := HttpEndpoint(url + ",   Bearer token   ")
 		assert.Equal(t, url, endpoint.Url)
 		assert.Equal(t, authorizationmethod.Bearer, endpoint.Auth.Method)
 		assert.Equal(t, "token", endpoint.Auth.Value)
