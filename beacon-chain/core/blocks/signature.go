@@ -74,7 +74,7 @@ func VerifyBlockSignature(beaconState iface.ReadOnlyBeaconState,
 		return err
 	}
 	proposerPubKey := proposer.PublicKey
-	return helpers.VerifyBlockSigningRoot(rootFunc, proposerPubKey, sig, domain)
+	return helpers.VerifyBlockSigningRoot(proposerPubKey, sig, domain, rootFunc)
 }
 
 // BlockSignatureSet retrieves the block signature set from the provided block and its corresponding state.

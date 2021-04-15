@@ -98,7 +98,7 @@ func VerifySigningRoot(obj fssz.HashRoot, pub, signature, domain []byte) error {
 }
 
 // VerifyBlockSigningRoot verifies the signing root of a block given it's public key, signature and domain.
-func VerifyBlockSigningRoot(rootFunc func() ([32]byte, error), pub, signature, domain []byte) error {
+func VerifyBlockSigningRoot(pub, signature, domain []byte, rootFunc func() ([32]byte, error)) error {
 	set, err := BlockSignatureSet(pub, signature, domain, rootFunc)
 	if err != nil {
 		return err
