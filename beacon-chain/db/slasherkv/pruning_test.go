@@ -121,7 +121,7 @@ func TestStore_PruneProposals(t *testing.T) {
 		require.NoError(t, err)
 
 		for i := types.Epoch(0); i < pruningLimitEpoch; i++ {
-			wantedLog := fmt.Sprintf("Pruned %d/%d epochs worth of proposals", i, pruningLimitEpoch-1)
+			wantedLog := fmt.Sprintf("Pruned %d/%d epochs", i, pruningLimitEpoch-1)
 			require.LogsContain(t, hook, wantedLog)
 		}
 
@@ -191,9 +191,8 @@ func TestStore_PruneAttestations_OK(t *testing.T) {
 		err := beaconDB.db.Update(func(tx *bolt.Tx) error {
 			bkt := tx.Bucket(attestationDataRootsBucket)
 			encIdx := encodeValidatorIndex(types.ValidatorIndex(0))
-			encodedTargetEpoch := encodeTargetEpoch(lowestStoredEpoch, historyLength)
+			encodedTargetEpoch := encodeTargetEpoch(lowestStoredEpoch)
 			key := append(encodedTargetEpoch, encIdx...)
-			fmt.Println("Putting", lowestStoredEpoch, key)
 			return bkt.Put(key, []byte("hi"))
 		})
 		require.NoError(t, err)
@@ -207,7 +206,7 @@ func TestStore_PruneAttestations_OK(t *testing.T) {
 	})
 
 	// Prune in increments until the cursor reaches the pruning limit epoch, and we expect
-	// that all the proposals written are deleted from the database, while those above the
+	// that all the attestations written are deleted from the database, while those above the
 	// pruning limit epoch are kept intact.
 	t.Run("prune_in_full_increments_and_verify_deletions", func(t *testing.T) {
 		hook := logTest.NewGlobal()
@@ -224,56 +223,57 @@ func TestStore_PruneAttestations_OK(t *testing.T) {
 		currentEpoch := types.Epoch(20)
 		pruningLimitEpoch := currentEpoch - historyLength
 
-		// We create proposals from genesis to the current epoch, with 2 proposals
+		// We create attestations from genesis to the current epoch, with 2 attestations
 		// at each slot to ensure the entire pruning logic works correctly.
 		slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
-		proposals := make([]*slashertypes.SignedBlockHeaderWrapper, 0, uint64(currentEpoch)*uint64(slotsPerEpoch)*2)
+		attestations := make([]*slashertypes.IndexedAttestationWrapper, 0, uint64(currentEpoch)*uint64(slotsPerEpoch)*2)
 		for i := types.Epoch(0); i < currentEpoch; i++ {
 			startSlot, err := helpers.StartSlot(i)
 			require.NoError(t, err)
 			endSlot, err := helpers.StartSlot(i + 1)
 			require.NoError(t, err)
 			for j := startSlot; j < endSlot; j++ {
-				prop1 := createProposalWrapper(t, j, 0 /* proposer index */, []byte{0})
-				prop2 := createProposalWrapper(t, j, 2 /* proposer index */, []byte{1})
-				proposals = append(proposals, prop1, prop2)
+				attester1 := uint64(j+10)
+				attester2 := uint64(j+11)
+				target := i
+				var source types.Epoch
+				if i > 0 {
+					source = target-1
+				}
+				att1 := createAttestationWrapper(source, target,[]uint64{attester1}, []byte{0})
+				att2 := createAttestationWrapper(source, target,[]uint64{attester2}, []byte{1})
+				attestations = append(attestations, att1, att2)
 			}
 		}
 
-		require.NoError(t, beaconDB.SaveBlockProposals(ctx, proposals))
+		require.NoError(t, beaconDB.SaveAttestationRecordsForValidators(ctx, attestations))
 
 		// We expect pruning completes without an issue and properly logs progress.
-		err := beaconDB.PruneProposals(ctx, currentEpoch, epochPruningIncrements, historyLength)
+		err := beaconDB.PruneAttestations(ctx, currentEpoch, epochPruningIncrements, historyLength)
 		require.NoError(t, err)
 
 		for i := types.Epoch(0); i < pruningLimitEpoch; i++ {
-			wantedLog := fmt.Sprintf("Pruned %d/%d epochs worth of proposals", i, pruningLimitEpoch-1)
+			wantedLog := fmt.Sprintf("Pruned %d/%d epochs", i, pruningLimitEpoch-1)
 			require.LogsContain(t, hook, wantedLog)
 		}
 
 		// Everything before epoch 10 should be deleted.
 		for i := types.Epoch(0); i < pruningLimitEpoch; i++ {
 			err = beaconDB.db.View(func(tx *bolt.Tx) error {
-				bkt := tx.Bucket(proposalRecordsBucket)
+				bkt := tx.Bucket(attestationDataRootsBucket)
 				startSlot, err := helpers.StartSlot(i)
 				require.NoError(t, err)
 				endSlot, err := helpers.StartSlot(i + 1)
 				for j := startSlot; j < endSlot; j++ {
-					prop1 := createProposalWrapper(t, j, 0 /* proposer index */, []byte{0})
-					prop1Key, err := keyForValidatorProposal(prop1)
-					if err != nil {
-						return err
+					attester1 := types.ValidatorIndex(j+10)
+					attester2 := types.ValidatorIndex(j+11)
+					key1 := append(encodeTargetEpoch(i), encodeValidatorIndex(attester1)...)
+					key2 := append(encodeTargetEpoch(i), encodeValidatorIndex(attester2)...)
+					if bkt.Get(key1) != nil {
+						return fmt.Errorf("still exists for epoch %d, validator %d", i, attester1)
 					}
-					prop2 := createProposalWrapper(t, j, 2 /* proposer index */, []byte{1})
-					prop2Key, err := keyForValidatorProposal(prop2)
-					if err != nil {
-						return err
-					}
-					if bkt.Get(prop1Key) != nil {
-						return fmt.Errorf("proposal still exists for epoch %d, validator 0", j)
-					}
-					if bkt.Get(prop2Key) != nil {
-						return fmt.Errorf("proposal still exists for slot %d, validator 1", j)
+					if bkt.Get(key2) != nil {
+						return fmt.Errorf("still exists for slot %d, validator %d", i, attester2)
 					}
 				}
 				return nil
@@ -281,97 +281,4 @@ func TestStore_PruneAttestations_OK(t *testing.T) {
 			require.NoError(t, err)
 		}
 	})
-}
-
-func TestStore_PruneAttestations(t *testing.T) {
-	ctx := context.Background()
-	tests := []struct {
-		name             string
-		attestationsInDB []*slashertypes.IndexedAttestationWrapper
-		afterPruning     []*slashertypes.IndexedAttestationWrapper
-		epoch            types.Epoch
-		historyLength    types.Epoch
-		wantErr          bool
-	}{
-		{
-			name: "should delete all attestations under epoch 2",
-			attestationsInDB: []*slashertypes.IndexedAttestationWrapper{
-				createAttestationWrapper(0, 0, []uint64{1}, []byte{1}),
-				createAttestationWrapper(0, 1, []uint64{1}, []byte{1}),
-				createAttestationWrapper(0, 2, []uint64{1}, []byte{1}),
-			},
-			afterPruning: []*slashertypes.IndexedAttestationWrapper{
-				createAttestationWrapper(0, 1, []uint64{1}, []byte{1}),
-				createAttestationWrapper(0, 2, []uint64{1}, []byte{1}),
-			},
-			epoch: 5000,
-		},
-		{
-			name: "should delete all attestations under epoch 6 - 2 historyLength",
-			attestationsInDB: []*slashertypes.IndexedAttestationWrapper{
-				createAttestationWrapper(0, 1, []uint64{1}, []byte{1}),
-				createAttestationWrapper(0, 2, []uint64{1}, []byte{1}),
-				createAttestationWrapper(0, 3, []uint64{1}, []byte{1}),
-				createAttestationWrapper(0, 4, []uint64{1}, []byte{1}),
-				createAttestationWrapper(0, 5, []uint64{1}, []byte{1}),
-				createAttestationWrapper(0, 6, []uint64{1}, []byte{1}),
-			},
-			afterPruning: []*slashertypes.IndexedAttestationWrapper{
-				createAttestationWrapper(0, 4, []uint64{1}, []byte{1}),
-				createAttestationWrapper(0, 5, []uint64{1}, []byte{1}),
-				createAttestationWrapper(0, 6, []uint64{1}, []byte{1}),
-			},
-			historyLength: 2,
-			epoch:         4,
-		},
-		{
-			name: "should delete all attestations under epoch 4",
-			attestationsInDB: []*slashertypes.IndexedAttestationWrapper{
-				createAttestationWrapper(0, 1, []uint64{1}, []byte{1}),
-				createAttestationWrapper(0, 2, []uint64{1}, []byte{1}),
-				createAttestationWrapper(0, 3, []uint64{1}, []byte{1}),
-			},
-			afterPruning: []*slashertypes.IndexedAttestationWrapper{},
-			epoch:        4,
-		},
-		{
-			name: "no attestations to delete under epoch 1",
-			attestationsInDB: []*slashertypes.IndexedAttestationWrapper{
-				createAttestationWrapper(0, 1, []uint64{1}, []byte{1}),
-			},
-			afterPruning: []*slashertypes.IndexedAttestationWrapper{
-				createAttestationWrapper(0, 1, []uint64{1}, []byte{1}),
-			},
-			epoch: 5,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			beaconDB := setupDB(t)
-			require.NoError(t, beaconDB.SaveAttestationRecordsForValidators(ctx, tt.attestationsInDB, defaultHistoryLength))
-			pruningEpochIncrements := types.Epoch(100)
-			if err := beaconDB.PruneProposals(ctx, tt.epoch, pruningEpochIncrements, tt.historyLength); (err != nil) != tt.wantErr {
-				t.Errorf("PruneProposals() error = %v, wantErr %v", err, tt.wantErr)
-			}
-
-			// Second time checking same proposals but all with different signing root should
-			// return all double proposals.
-			slashable := make([]*slashertypes.IndexedAttestationWrapper, len(tt.afterPruning))
-			for i := 0; i < len(tt.afterPruning); i++ {
-				slashable[i] = createAttestationWrapper(
-					tt.afterPruning[i].IndexedAttestation.Data.Source.Epoch,
-					tt.afterPruning[i].IndexedAttestation.Data.Target.Epoch,
-					tt.afterPruning[i].IndexedAttestation.AttestingIndices,
-					[]byte{2},
-				)
-			}
-
-			doubleProposals, err := beaconDB.CheckAttesterDoubleVotes(ctx, slashable, defaultHistoryLength)
-			require.NoError(t, err)
-			require.Equal(t, len(tt.afterPruning), len(doubleProposals))
-			for i, existing := range doubleProposals {
-				require.DeepEqual(t, existing.PrevAttestationWrapper.SigningRoot, tt.afterPruning[i].SigningRoot)
-			}
-		})
-	}
 }

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
-	"fmt"
 
 	fssz "github.com/ferranbt/fastssz"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -69,7 +68,7 @@ func (s *Store) PruneProposals(
 				// We check the slot from the current key in the database.
 				// If we have hit a slot that is greater than the end slot of the pruning process,
 				// we then completely exit the process as we are done.
-				if !slotPrefixLessThan(k, encodedEndPruneSlot) {
+				if !uint64PrefixLessThan(k, encodedEndPruneSlot) {
 					epochAtCursor = endEpoch
 					return nil
 				}
@@ -108,7 +107,9 @@ func (s *Store) PruneProposals(
 }
 
 // PruneAttestations prunes all proposal data older than historyLength.
-func (s *Store) PruneAttestations(ctx context.Context, currentEpoch, pruningEpochIncrements, historyLength types.Epoch) error {
+func (s *Store) PruneAttestations(
+	ctx context.Context, currentEpoch, pruningEpochIncrements, historyLength types.Epoch,
+) error {
 	if currentEpoch < historyLength {
 		log.Debugf("Current epoch %d < history length %d, nothing to prune", currentEpoch, historyLength)
 		return nil
@@ -123,13 +124,11 @@ func (s *Store) PruneAttestations(ctx context.Context, currentEpoch, pruningEpoc
 		bkt := tx.Bucket(attestationDataRootsBucket)
 		c := bkt.Cursor()
 		k, _ := c.First()
-		lowestEpoch = types.Epoch(binary.LittleEndian.Uint16(k[:2]))
+		lowestEpoch = types.Epoch(binary.LittleEndian.Uint64(k))
 		return nil
 	}); err != nil {
 		return err
 	}
-
-	fmt.Println(lowestEpoch)
 
 	// If the lowest slot is greater than or equal to the end pruning slot,
 	// there is nothing to prune, so we return early.
@@ -148,16 +147,17 @@ func (s *Store) PruneAttestations(ctx context.Context, currentEpoch, pruningEpoc
 		// the process in a batch-based method using a cursor to proceed to the next batch.
 		log.Debugf("Pruned %d/%d epochs worth of attestations", epochAtCursor, endPruneEpoch-1)
 		if err := s.db.Update(func(tx *bolt.Tx) error {
-			bkt := tx.Bucket(attestationDataRootsBucket)
-			c := bkt.Cursor()
+			rootsBkt := tx.Bucket(attestationDataRootsBucket)
+			attsBkt := tx.Bucket(attestationRecordsBucket)
+			c := rootsBkt.Cursor()
 
 			var lastPrunedEpoch, epochsPruned types.Epoch
 			// We begin a pruning iteration at starting from the first item in the bucket.
-			for k, _ := c.First(); k != nil; k, _ = c.Next() {
+			for k, v := c.First(); k != nil; k, v = c.Next() {
 				// We check the epoch from the current key in the database.
 				// If we have hit an epoch that is greater than the end epoch of the pruning process,
 				// we then completely exit the process as we are done.
-				if !epochPrefixLessThan(k, encodedEndPruneEpoch) {
+				if !uint64PrefixLessThan(k, encodedEndPruneEpoch) {
 					epochAtCursor = endPruneEpoch
 					return nil
 				}
@@ -166,7 +166,7 @@ func (s *Store) PruneAttestations(ctx context.Context, currentEpoch, pruningEpoc
 				if epochsPruned >= pruningEpochIncrements {
 					return nil
 				}
-				epochAtCursor = types.Epoch(binary.LittleEndian.Uint16(k[:2]))
+				epochAtCursor = types.Epoch(binary.LittleEndian.Uint64(k))
 
 				// Attestation in the database look like this:
 				//  (target_epoch ++ _) => encode(attestation)
@@ -174,7 +174,10 @@ func (s *Store) PruneAttestations(ctx context.Context, currentEpoch, pruningEpoc
 				//  (target_epoch = 3 ++ _) => encode(attestation)
 				// so we only mark an epoch as pruned if the epoch of the current object
 				// under the cursor has changed.
-				if err := bkt.Delete(k); err != nil {
+				if err := rootsBkt.Delete(k); err != nil {
+					return err
+				}
+				if err := attsBkt.Delete(v); err != nil {
 					return err
 				}
 				if epochAtCursor == 0 {
@@ -197,12 +200,7 @@ func slotFromProposalKey(key []byte) types.Slot {
 	return types.Slot(binary.LittleEndian.Uint64(key[:8]))
 }
 
-func slotPrefixLessThan(key, lessThan []byte) bool {
-	encSlot := key[:8]
-	return bytes.Compare(encSlot, lessThan) < 0
-}
-
-func epochPrefixLessThan(key, lessThan []byte) bool {
-	encSlot := key[:2]
-	return bytes.Compare(encSlot, lessThan) < 0
+func uint64PrefixLessThan(key, lessThan []byte) bool {
+	enc := key[:8]
+	return bytes.Compare(enc, lessThan) < 0
 }

@@ -17,15 +17,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-const defaultHistoryLength = 4096
-
 func TestStore_AttestationRecordForValidator_SaveRetrieve(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := setupDB(t)
 	valIdx := types.ValidatorIndex(1)
 	target := types.Epoch(5)
 	source := types.Epoch(4)
-	attRecord, err := beaconDB.AttestationRecordForValidator(ctx, valIdx, target, defaultHistoryLength)
+	attRecord, err := beaconDB.AttestationRecordForValidator(ctx, valIdx, target)
 	require.NoError(t, err)
 	require.Equal(t, true, attRecord == nil)
 
@@ -35,10 +33,9 @@ func TestStore_AttestationRecordForValidator_SaveRetrieve(t *testing.T) {
 		[]*slashertypes.IndexedAttestationWrapper{
 			createAttestationWrapper(source, target, []uint64{uint64(valIdx)}, sr[:]),
 		},
-		defaultHistoryLength,
 	)
 	require.NoError(t, err)
-	attRecord, err = beaconDB.AttestationRecordForValidator(ctx, valIdx, target, defaultHistoryLength)
+	attRecord, err = beaconDB.AttestationRecordForValidator(ctx, valIdx, target)
 	require.NoError(t, err)
 	assert.DeepEqual(t, target, attRecord.IndexedAttestation.Data.Target.Epoch)
 	assert.DeepEqual(t, source, attRecord.IndexedAttestation.Data.Source.Epoch)
@@ -77,7 +74,7 @@ func TestStore_CheckAttesterDoubleVotes(t *testing.T) {
 	err := beaconDB.SaveAttestationRecordsForValidators(ctx, []*slashertypes.IndexedAttestationWrapper{
 		createAttestationWrapper(2, 3, []uint64{0, 1}, []byte{1}),
 		createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{1}),
-	}, defaultHistoryLength)
+	})
 	require.NoError(t, err)
 
 	slashableAtts := []*slashertypes.IndexedAttestationWrapper{
@@ -111,7 +108,7 @@ func TestStore_CheckAttesterDoubleVotes(t *testing.T) {
 			AttestationWrapper:     createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{2}),
 		},
 	}
-	doubleVotes, err := beaconDB.CheckAttesterDoubleVotes(ctx, slashableAtts, defaultHistoryLength)
+	doubleVotes, err := beaconDB.CheckAttesterDoubleVotes(ctx, slashableAtts)
 	require.NoError(t, err)
 	require.DeepEqual(t, wanted, doubleVotes)
 }
@@ -396,7 +393,7 @@ func TestStore_HighestAttestations(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			beaconDB := setupDB(t)
-			require.NoError(t, beaconDB.SaveAttestationRecordsForValidators(ctx, tt.attestationsInDB, defaultHistoryLength))
+			require.NoError(t, beaconDB.SaveAttestationRecordsForValidators(ctx, tt.attestationsInDB))
 
 			highestAttestations, err := beaconDB.HighestAttestations(ctx, tt.indices)
 			require.NoError(t, err)
@@ -427,7 +424,7 @@ func BenchmarkHighestAttestations(b *testing.B) {
 
 	ctx := context.Background()
 	beaconDB := setupDB(b)
-	require.NoError(b, beaconDB.SaveAttestationRecordsForValidators(ctx, atts, defaultHistoryLength))
+	require.NoError(b, beaconDB.SaveAttestationRecordsForValidators(ctx, atts))
 
 	allIndices := make([]types.ValidatorIndex, valsPerAtt*count)
 	for i := 0; i < count; i++ {
@@ -549,7 +546,7 @@ func Test_encodeTargetEpoch(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := encodeTargetEpoch(tt.epoch, tt.historyLength)
+			got := encodeTargetEpoch(tt.epoch)
 			decoded := types.Epoch(binary.LittleEndian.Uint16(got[:2]))
 			require.DeepEqual(t, tt.epoch%tt.historyLength, decoded)
 		})
