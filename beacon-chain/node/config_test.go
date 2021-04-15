@@ -59,14 +59,14 @@ func TestConfigureProofOfWork(t *testing.T) {
 	set.Uint64(flags.NetworkID.Name, 0, "")
 	set.String(flags.DepositContractFlag.Name, "", "")
 	require.NoError(t, set.Set(flags.ChainID.Name, strconv.Itoa(100)))
-	require.NoError(t, set.Set(flags.NetworkID.Name, strconv.Itoa(100)))
+	require.NoError(t, set.Set(flags.NetworkID.Name, strconv.Itoa(200)))
 	require.NoError(t, set.Set(flags.DepositContractFlag.Name, "deposit"))
 	cliCtx := cli.NewContext(&app, set, nil)
 
 	configureProofOfWork(cliCtx)
 
 	assert.Equal(t, uint64(100), params.BeaconConfig().DepositChainID)
-	assert.Equal(t, uint64(100), params.BeaconConfig().DepositNetworkID)
+	assert.Equal(t, uint64(200), params.BeaconConfig().DepositNetworkID)
 	assert.Equal(t, "deposit", params.BeaconConfig().DepositContractAddress)
 }
 
