@@ -390,7 +390,7 @@ func (s *Store) HighestAttestations(
 }
 
 func suffixForAttestationRecordsKey(key, encodedValidatorIndex []byte) bool {
-	encIdx := key[2:]
+	encIdx := key[8:]
 	return bytes.Equal(encIdx, encodedValidatorIndex)
 }
 
