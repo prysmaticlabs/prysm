@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
-	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -206,25 +205,6 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 			WalletPath:     walletDir,
 			KeymanagerKind: pb.KeymanagerKind_DERIVED,
 		},
-	}, nil
-}
-
-// GenerateMnemonic creates a new, random bip39 mnemonic phrase.
-func (s *Server) GenerateMnemonic(_ context.Context, _ *empty.Empty) (*pb.GenerateMnemonicResponse, error) {
-	mnemonicRandomness := make([]byte, 32)
-	if _, err := rand.NewGenerator().Read(mnemonicRandomness); err != nil {
-		return nil, status.Errorf(
-			codes.FailedPrecondition,
-			"Could not initialize mnemonic source of randomness: %v",
-			err,
-		)
-	}
-	mnemonic, err := bip39.NewMnemonic(mnemonicRandomness)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not generate wallet seed: %v", err)
-	}
-	return &pb.GenerateMnemonicResponse{
-		Mnemonic: mnemonic,
 	}, nil
 }
 

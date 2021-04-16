@@ -40,9 +40,8 @@ func TestServer_JWTInterceptor_BadToken(t *testing.T) {
 	}
 	interceptor := s.JWTInterceptor()
 
-	authRequiredEndpoint := "/ethereum.validator.accounts.v2.Wallet/CreateWallet"
 	unaryInfo := &grpc.UnaryServerInfo{
-		FullMethod: authRequiredEndpoint,
+		FullMethod: "Proto.CreateWallet",
 	}
 	unaryHandler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return nil, nil

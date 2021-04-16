@@ -25,7 +25,10 @@ import (
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
-const strongPass = "29384283xasjasd32%%&*@*#*"
+const (
+	strongPass   = "29384283xasjasd32%%&*@*#*"
+	testMnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+)
 
 func TestServer_CreateWallet_Imported(t *testing.T) {
 	localWalletDir := setupWalletDir(t)
@@ -109,10 +112,7 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 	_, err = s.RecoverWallet(ctx, req)
 	require.ErrorContains(t, "invalid mnemonic in request", err)
 
-	mnemonicResp, err := s.GenerateMnemonic(ctx, &empty.Empty{})
-	require.NoError(t, err)
-	req.Mnemonic = mnemonicResp.Mnemonic
-
+	req.Mnemonic = testMnemonic
 	req.Mnemonic25ThWord = " "
 	_, err = s.RecoverWallet(ctx, req)
 	require.ErrorContains(t, "mnemonic 25th word cannot be empty", err)
@@ -129,7 +129,7 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 		Keymanager:     pb.KeymanagerKind_DERIVED,
 		WalletPassword: strongPass,
 		NumAccounts:    2,
-		Mnemonic:       mnemonicResp.Mnemonic,
+		Mnemonic:       testMnemonic,
 	}
 	_, err = s.CreateWallet(ctx, reqCreate)
 	require.ErrorContains(t, "create wallet not supported through web", err, "Create wallet for DERIVED or REMOTE types not supported through web, either import keystore or recover")

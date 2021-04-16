@@ -43,7 +43,7 @@ func (s *Server) GetLogsEndpoints(ctx context.Context, _ *empty.Empty) (*pb.Logs
 	return nil, status.Error(codes.Unimplemented, "unimplemented")
 }
 
-// GetVersion --
+// GetVersion for the Prysm beacon and validator client.
 func (s *Server) GetVersion(ctx context.Context, _ *empty.Empty) (*pb.VersionResponse, error) {
 	beacon, err := s.beaconNodeClient.GetVersion(ctx, &ptypes.Empty{})
 	if err != nil {
