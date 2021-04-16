@@ -27,7 +27,7 @@ import (
 
 const (
 	strongPass   = "29384283xasjasd32%%&*@*#*"
-	testMnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+	testMnemonic = "foot cinnamon attitude purchase distance fog boost sample display assault trap gossip item sunny security image cinnamon truck flock situate broom mercy lemon wagon"
 )
 
 func TestServer_CreateWallet_Imported(t *testing.T) {
