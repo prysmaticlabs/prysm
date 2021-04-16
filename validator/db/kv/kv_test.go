@@ -1,10 +1,9 @@
 package kv
 
 import (
+	"context"
 	"io/ioutil"
 	"testing"
-
-	"context"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/sirupsen/logrus"
