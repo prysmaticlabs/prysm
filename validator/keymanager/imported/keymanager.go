@@ -37,7 +37,7 @@ const (
 	AccountsKeystoreFileName = "all-accounts.keystore.json"
 )
 
-// keymanager implementation for imported keystores utilizing EIP-2335.
+// Keymanager implementation for imported keystores utilizing EIP-2335.
 type Keymanager struct {
 	wallet              iface.Wallet
 	accountsStore       *accountStore
