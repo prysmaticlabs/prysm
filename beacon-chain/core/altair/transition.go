@@ -2,17 +2,28 @@ package altair
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
+	coreState "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
+
+// SkipSlotCache exists for the unlikely scenario that is a large gap between the head state and
+// the current slot. If the beacon chain were ever to be stalled for several epochs, it may be
+// difficult or impossible to compute the appropriate beacon state for assignments within a
+// reasonable amount of time.
+var SkipSlotCache = cache.NewSkipSlotCache()
 
 // ProcessBlockNoVerifyAnySig creates a new, modified beacon state by applying block operation
 // transformations as defined in the Ethereum Serenity specification. It does not validate
@@ -110,14 +121,13 @@ func CalculateStateRoot(
 	// Copy state to avoid mutating the state reference.
 	state = state.Copy()
 
-	// TODO(): Enable skip slop cache here.
-	state, err = ProcessSlots(ctx, state, signed.Block.Slot)
+	state, err := ProcessSlots(ctx, state, signed.Block.Slot)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not process slot")
 	}
 
 	// Execute per block transition.
-	state, err := ProcessBlockForStateRoot(ctx, state, signed)
+	state, err = ProcessBlockForStateRoot(ctx, state, signed)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not process block")
 	}
@@ -330,6 +340,106 @@ func ProcessEpoch(ctx context.Context, state iface.BeaconStateAltair) (iface.Bea
 	state, err = ProcessSyncCommitteeUpdates(state)
 	if err != nil {
 		return nil, err
+	}
+
+	return state, nil
+}
+
+// ProcessSlots process through skip slots and apply epoch transition when it's needed.
+//
+// Spec pseudocode definition:
+//  def process_slots(state: BeaconState, slot: Slot) -> None:
+//    assert state.slot < slot
+//    while state.slot < slot:
+//        process_slot(state)
+//        # Process epoch on the start slot of the next epoch
+//        if (state.slot + 1) % SLOTS_PER_EPOCH == 0:
+//            process_epoch(state)
+//        state.slot = Slot(state.slot + 1)
+func ProcessSlots(ctx context.Context, state iface.BeaconState, slot types.Slot) (iface.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "altair.ProcessSlots")
+	defer span.End()
+	if state == nil {
+		return nil, errors.New("nil state")
+	}
+	span.AddAttributes(trace.Int64Attribute("slots", int64(slot)-int64(state.Slot())))
+
+	// The block must have a higher slot than parent state.
+	if state.Slot() >= slot {
+		err := fmt.Errorf("expected state.slot %d < slot %d", state.Slot(), slot)
+		traceutil.AnnotateError(span, err)
+		return nil, err
+	}
+
+	highestSlot := state.Slot()
+	key, err := coreState.CacheKey(ctx, state)
+	if err != nil {
+		return nil, err
+	}
+
+	// Restart from cached value, if one exists.
+	cachedState, err := SkipSlotCache.Get(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+
+	if cachedState != nil && cachedState.Slot() < slot {
+		highestSlot = cachedState.Slot()
+		state = cachedState
+	}
+	if err := SkipSlotCache.MarkInProgress(key); errors.Is(err, cache.ErrAlreadyInProgress) {
+		cachedState, err = SkipSlotCache.Get(ctx, key)
+		if err != nil {
+			return nil, err
+		}
+		if cachedState != nil && cachedState.Slot() < slot {
+			highestSlot = cachedState.Slot()
+			state = cachedState
+		}
+	} else if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err := SkipSlotCache.MarkNotInProgress(key); err != nil {
+			traceutil.AnnotateError(span, err)
+			log.WithError(err).Error("Failed to mark skip slot no longer in progress")
+		}
+	}()
+
+	for state.Slot() < slot {
+		if ctx.Err() != nil {
+			traceutil.AnnotateError(span, ctx.Err())
+			// Cache last best value.
+			if highestSlot < state.Slot() {
+				if err := SkipSlotCache.Put(ctx, key, state); err != nil {
+					log.WithError(err).Error("Failed to put skip slot cache value")
+				}
+			}
+			return nil, ctx.Err()
+		}
+		state, err = coreState.ProcessSlot(ctx, state)
+		if err != nil {
+			traceutil.AnnotateError(span, err)
+			return nil, errors.Wrap(err, "could not process slot")
+		}
+		if coreState.CanProcessEpoch(state) {
+			state, err = ProcessEpoch(ctx, state)
+			if err != nil {
+				traceutil.AnnotateError(span, err)
+				return nil, errors.Wrap(err, "could not process epoch with optimizations")
+			}
+		}
+		if err := state.SetSlot(state.Slot() + 1); err != nil {
+			traceutil.AnnotateError(span, err)
+			return nil, errors.Wrap(err, "failed to increment state slot")
+		}
+	}
+
+	if highestSlot < state.Slot() {
+		if err := SkipSlotCache.Put(ctx, key, state); err != nil {
+			log.WithError(err).Error("Failed to put skip slot cache value")
+			traceutil.AnnotateError(span, err)
+		}
 	}
 
 	return state, nil

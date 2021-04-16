@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	altair2 "github.com/prysmaticlabs/prysm/shared/testutil/altair"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -52,6 +53,50 @@ func TestFuzzProcessEpoch_1000(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		fuzzer.Fuzz(state)
 		s, err := altair.ProcessEpoch(ctx, state)
+		if err != nil && s != nil {
+			t.Fatalf("state should be nil on err. found: %v on error: %v for state: %v", s, err, state)
+		}
+	}
+}
+
+func TestProcessSlots_CanProcess(t *testing.T) {
+	s, _ := altair2.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	slot := types.Slot(100)
+	newState, err := altair.ProcessSlots(context.Background(), s, slot)
+	require.NoError(t, err)
+	require.Equal(t, slot, newState.Slot())
+}
+
+func TestProcessSlots_SameSlotAsParentState(t *testing.T) {
+	slot := types.Slot(2)
+	parentState, err := stateV0.InitializeFromProto(&pb.BeaconState{Slot: slot})
+	require.NoError(t, err)
+
+	_, err = altair.ProcessSlots(context.Background(), parentState, slot)
+	require.ErrorContains(t, "expected state.slot 2 < slot 2", err)
+}
+
+func TestProcessSlots_LowerSlotAsParentState(t *testing.T) {
+	slot := types.Slot(2)
+	parentState, err := stateV0.InitializeFromProto(&pb.BeaconState{Slot: slot})
+	require.NoError(t, err)
+
+	_, err = altair.ProcessSlots(context.Background(), parentState, slot-1)
+	require.ErrorContains(t, "expected state.slot 2 < slot 1", err)
+}
+
+func TestFuzzProcessSlots_1000(t *testing.T) {
+	altair.SkipSlotCache.Disable()
+	defer altair.SkipSlotCache.Enable()
+	ctx := context.Background()
+	state := &statealtair.BeaconState{}
+	slot := types.Slot(0)
+	fuzzer := fuzz.NewWithSeed(0)
+	fuzzer.NilChance(0.1)
+	for i := 0; i < 1000; i++ {
+		fuzzer.Fuzz(state)
+		fuzzer.Fuzz(&slot)
+		s, err := altair.ProcessSlots(ctx, state, slot)
 		if err != nil && s != nil {
 			t.Fatalf("state should be nil on err. found: %v on error: %v for state: %v", s, err, state)
 		}
