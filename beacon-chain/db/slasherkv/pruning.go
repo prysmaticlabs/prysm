@@ -142,7 +142,7 @@ func (s *Store) PruneAttestations(
 	// a long-running bolt transaction which overwhelms CPU and memory.
 	// While we still have epochs to prune based on a cursor, we continue the pruning process.
 	epochAtCursor := lowestEpoch
-	for endPruneEpoch-epochAtCursor > 0 {
+	for epochAtCursor < endPruneEpoch {
 		// Each pruning iteration involves a unique bolt transaction. Given pruning can be
 		// a very expensive process which puts pressure on the database, we perform
 		// the process in a batch-based method using a cursor to proceed to the next batch.
