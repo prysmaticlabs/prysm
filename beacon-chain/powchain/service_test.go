@@ -278,7 +278,11 @@ func TestService_Eth1Synced(t *testing.T) {
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
 	require.NoError(t, err)
+	web3Service.eth1DataFetcher = &goodFetcher{backend: testAcc.Backend}
 
+	currTime := testAcc.Backend.Blockchain().CurrentHeader().Time
+	now := time.Now()
+	assert.NoError(t, testAcc.Backend.AdjustTime(now.Sub(time.Unix(int64(currTime), 0))))
 	testAcc.Backend.Commit()
 
 	synced, err := web3Service.isEth1NodeSynced()
