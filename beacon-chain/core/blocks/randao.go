@@ -42,7 +42,7 @@ func ProcessRandao(
 		return nil, errors.Wrap(err, "could not verify block randao")
 	}
 
-	beaconState, err = ProcessRandaoNoVerify(beaconState, body)
+	beaconState, err = ProcessRandaoNoVerify(beaconState, body.RandaoReveal)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process randao")
 	}
@@ -60,7 +60,7 @@ func ProcessRandao(
 //     )
 func ProcessRandaoNoVerify(
 	beaconState iface.BeaconState,
-	body *ethpb.BeaconBlockBody,
+	randaoReveal []byte,
 ) (iface.BeaconState, error) {
 	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
 	// If block randao passed verification, we XOR the state's latest randao mix with the block's
@@ -70,7 +70,7 @@ func ProcessRandaoNoVerify(
 	if err != nil {
 		return nil, err
 	}
-	blockRandaoReveal := hashutil.Hash(body.RandaoReveal)
+	blockRandaoReveal := hashutil.Hash(randaoReveal)
 	if len(blockRandaoReveal) != len(latestMixSlice) {
 		return nil, errors.New("blockRandaoReveal length doesnt match latestMixSlice length")
 	}
