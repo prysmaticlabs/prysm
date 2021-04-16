@@ -206,6 +206,6 @@ func (s *Server) VoluntaryExit(
 		return nil, status.Errorf(codes.Internal, "Could not perform voluntary exit: %v", err)
 	}
 	return &pb.VoluntaryExitResponse{
-		ExitedKeys:           rawExitedKeys,
+		ExitedKeys: rawExitedKeys,
 	}, nil
 }
