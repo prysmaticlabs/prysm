@@ -30,15 +30,15 @@ service Wallet {
             body: "*"
         };
     }
-<<<<<<< HEAD
     rpc ValidateKeystores(ValidateKeystoresRequest) returns (google.protobuf.Empty) {
         option (google.api.http) = {
             post: "/v2/validator/wallet/keystores/validate",
-=======
+            body: "*"
+        };
+    }
     rpc RecoverWallet(RecoverWalletRequest) returns (CreateWalletResponse) {
         option (google.api.http) = {
             post: "/v2/validator/wallet/recover"
->>>>>>> develop
             body: "*"
         };
     }
