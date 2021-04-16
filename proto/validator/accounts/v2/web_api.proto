@@ -62,6 +62,12 @@ service Accounts {
             body: "*"
         };
     }
+    rpc VoluntaryExit(VoluntaryExitRequest) returns (VoluntaryExitResponse) {
+        option (google.api.http) = {
+            post: "/v2/validator/accounts/voluntary-exit",
+            body: "*"
+        };
+    }
 }
 
 service Beacon {
@@ -365,6 +371,16 @@ message BeaconStatusResponse {
     ethereum.eth.v1alpha1.ChainHead chain_head = 6;
 }
 
+message VoluntaryExitRequest {
+    // List of public keys to voluntarily exit.
+    repeated bytes public_keys = 1;
+}
+
+message VoluntaryExitResponse {
+    // List of keys that successfully exited.
+    repeated bytes exited_keys = 1;
+}
+
 message BackupAccountsRequest {
     // List of public keys to backup.
     repeated bytes public_keys = 1;
@@ -386,6 +402,7 @@ message DeleteAccountsResponse {
     // List of public keys successfully deleted.
     repeated bytes deleted_keys = 1;
 }
+
 message ExportSlashingProtectionResponse {
     // JSON representation of the slash protection
     string file = 1;
