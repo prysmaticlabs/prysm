@@ -194,15 +194,15 @@ func TestServer_DeleteAccounts_FailedPreconditions_DerivedWallet(t *testing.T) {
 	err = dr.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "", numAccounts)
 	require.NoError(t, err)
 
-	_, err = s.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
-		PublicKeysToDelete: nil,
+	_, err = s.DeleteAccounts(ctx, &pb.PublicKeysRequest{
+		PublicKeys: nil,
 	})
 	assert.ErrorContains(t, "No public keys specified to delete", err)
 
 	keys, err := s.keymanager.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
-	_, err = s.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
-		PublicKeysToDelete: bytesutil.FromBytes48Array(keys),
+	_, err = s.DeleteAccounts(ctx, &pb.PublicKeysRequest{
+		PublicKeys: bytesutil.FromBytes48Array(keys),
 	})
 	require.NoError(t, err)
 }
@@ -210,10 +210,10 @@ func TestServer_DeleteAccounts_FailedPreconditions_DerivedWallet(t *testing.T) {
 func TestServer_DeleteAccounts_FailedPreconditions_NoWallet(t *testing.T) {
 	s := &Server{}
 	ctx := context.Background()
-	_, err := s.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{})
+	_, err := s.DeleteAccounts(ctx, &pb.PublicKeysRequest{})
 	assert.ErrorContains(t, "No public keys specified to delete", err)
-	_, err = s.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
-		PublicKeysToDelete: make([][]byte, 1),
+	_, err = s.DeleteAccounts(ctx, &pb.PublicKeysRequest{
+		PublicKeys: make([][]byte, 1),
 	})
 	assert.ErrorContains(t, "No wallet found", err)
 }
@@ -226,8 +226,8 @@ func TestServer_DeleteAccounts_OK_ImportedWallet(t *testing.T) {
 	require.Equal(t, len(pubKeys), len(keys))
 
 	// Next, we attempt to delete one of the keystores.
-	_, err = s.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
-		PublicKeysToDelete: pubKeys[:1], // Delete the 0th public key
+	_, err = s.DeleteAccounts(ctx, &pb.PublicKeysRequest{
+		PublicKeys: pubKeys[:1], // Delete the 0th public key
 	})
 	require.NoError(t, err)
 	s.keymanager, err = s.wallet.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
@@ -307,7 +307,7 @@ func TestServer_VoluntaryExit(t *testing.T) {
 	for i, key := range pubKeys {
 		rawPubKeys[i] = key[:]
 	}
-	res, err := s.VoluntaryExit(ctx, &pb.VoluntaryExitRequest{
+	res, err := s.VoluntaryExit(ctx, &pb.PublicKeysRequest{
 		PublicKeys: rawPubKeys,
 	})
 	require.NoError(t, err)

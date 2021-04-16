@@ -56,7 +56,7 @@ service Accounts {
             body: "*"
         };
     }
-    rpc DeleteAccounts(DeleteAccountsRequest) returns (DeleteAccountsResponse) {
+    rpc DeleteAccounts(PublicKeysRequest) returns (DeleteAccountsResponse) {
         option (google.api.http) = {
             post: "/v2/validator/wallet/accounts/delete",
             body: "*"
@@ -68,7 +68,7 @@ service Accounts {
             body: "*"
         };
     }
-    rpc VoluntaryExit(VoluntaryExitRequest) returns (VoluntaryExitResponse) {
+    rpc VoluntaryExit(PublicKeysRequest) returns (VoluntaryExitResponse) {
         option (google.api.http) = {
             post: "/v2/validator/accounts/voluntary-exit",
             body: "*"
@@ -215,13 +215,6 @@ message CreateWalletRequest {
 
 message CreateWalletResponse {
     WalletResponse wallet = 1;
-}
-
-message EditWalletConfigRequest {
-    string remote_addr = 1;
-    string remote_crt_path = 2;
-    string remote_key_path = 3;
-    string remote_ca_crt_path = 4;
 }
 
 message GenerateMnemonicResponse {
@@ -379,8 +372,8 @@ message BeaconStatusResponse {
     ethereum.eth.v1alpha1.ChainHead chain_head = 6;
 }
 
-message VoluntaryExitRequest {
-    // List of public keys to voluntarily exit.
+message PublicKeysRequest {
+    // List of BLS public keys.
     repeated bytes public_keys = 1;
 }
 
@@ -399,11 +392,6 @@ message BackupAccountsRequest {
 message BackupAccountsResponse {
     // Zip file containing backed up keystores.
     bytes zip_file = 1;
-}
-
-message DeleteAccountsRequest {
-    // List of public keys to delete.
-    repeated bytes public_keys_to_delete = 1;
 }
 
 message DeleteAccountsResponse {

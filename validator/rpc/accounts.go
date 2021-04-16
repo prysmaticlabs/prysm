@@ -152,9 +152,9 @@ func (s *Server) BackupAccounts(
 
 // DeleteAccounts deletes accounts from a user's wallet is an imported or derived wallet.
 func (s *Server) DeleteAccounts(
-	ctx context.Context, req *pb.DeleteAccountsRequest,
+	ctx context.Context, req *pb.PublicKeysRequest,
 ) (*pb.DeleteAccountsResponse, error) {
-	if req.PublicKeysToDelete == nil || len(req.PublicKeysToDelete) < 1 {
+	if len(req.PublicKeys) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "No public keys specified to delete")
 	}
 	if s.wallet == nil || s.keymanager == nil {
@@ -166,18 +166,18 @@ func (s *Server) DeleteAccounts(
 	if err := accounts.DeleteAccount(ctx, &accounts.Config{
 		Wallet:           s.wallet,
 		Keymanager:       s.keymanager,
-		DeletePublicKeys: req.PublicKeysToDelete,
+		DeletePublicKeys: req.PublicKeys,
 	}); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not delete public keys: %v", err)
 	}
 	return &pb.DeleteAccountsResponse{
-		DeletedKeys: req.PublicKeysToDelete,
+		DeletedKeys: req.PublicKeys,
 	}, nil
 }
 
 // VoluntaryExit performs a voluntary exit for the validator keys specified in a request.
 func (s *Server) VoluntaryExit(
-	ctx context.Context, req *pb.VoluntaryExitRequest,
+	ctx context.Context, req *pb.PublicKeysRequest,
 ) (*pb.VoluntaryExitResponse, error) {
 	if len(req.PublicKeys) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "No public keys specified to delete")

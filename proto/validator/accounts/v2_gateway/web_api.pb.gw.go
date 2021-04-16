@@ -278,7 +278,7 @@ func local_request_Accounts_BackupAccounts_0(ctx context.Context, marshaler runt
 }
 
 func request_Accounts_DeleteAccounts_0(ctx context.Context, marshaler runtime.Marshaler, client AccountsClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq DeleteAccountsRequest
+	var protoReq PublicKeysRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -295,7 +295,7 @@ func request_Accounts_DeleteAccounts_0(ctx context.Context, marshaler runtime.Ma
 }
 
 func local_request_Accounts_DeleteAccounts_0(ctx context.Context, marshaler runtime.Marshaler, server AccountsServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq DeleteAccountsRequest
+	var protoReq PublicKeysRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -346,7 +346,7 @@ func local_request_Accounts_ChangePassword_0(ctx context.Context, marshaler runt
 }
 
 func request_Accounts_VoluntaryExit_0(ctx context.Context, marshaler runtime.Marshaler, client AccountsClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq VoluntaryExitRequest
+	var protoReq PublicKeysRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -363,7 +363,7 @@ func request_Accounts_VoluntaryExit_0(ctx context.Context, marshaler runtime.Mar
 }
 
 func local_request_Accounts_VoluntaryExit_0(ctx context.Context, marshaler runtime.Marshaler, server AccountsServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq VoluntaryExitRequest
+	var protoReq PublicKeysRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
