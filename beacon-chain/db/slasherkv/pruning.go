@@ -72,11 +72,6 @@ func (s *Store) PruneProposals(
 					epochAtCursor = endEpoch
 					return nil
 				}
-				// If we have pruned N epochs in this pruning iteration,
-				// we exit from the bolt transaction.
-				if epochsPruned >= pruningEpochIncrements {
-					return nil
-				}
 				epochAtCursor = helpers.SlotToEpoch(slotFromProposalKey(k))
 
 				// Proposals in the database look like this:
@@ -97,6 +92,12 @@ func (s *Store) PruneProposals(
 					lastPrunedEpoch = epochAtCursor
 				}
 				slasherProposalsPrunedTotal.Inc()
+
+				// If we have pruned N epochs in this pruning iteration,
+				// we exit from the bolt transaction.
+				if epochsPruned >= pruningEpochIncrements {
+					return nil
+				}
 			}
 			return nil
 		}); err != nil {
@@ -161,11 +162,7 @@ func (s *Store) PruneAttestations(
 					epochAtCursor = endPruneEpoch
 					return nil
 				}
-				// If we have pruned N epochs in this pruning iteration,
-				// we exit from the bolt transaction.
-				if epochsPruned >= pruningEpochIncrements {
-					return nil
-				}
+
 				epochAtCursor = types.Epoch(binary.LittleEndian.Uint64(k))
 
 				// Attestation in the database look like this:
@@ -187,6 +184,12 @@ func (s *Store) PruneAttestations(
 					lastPrunedEpoch = epochAtCursor
 				}
 				slasherAttestationsPrunedTotal.Inc()
+				
+				// If we have pruned N epochs in this pruning iteration,
+				// we exit from the bolt transaction.
+				if epochsPruned >= pruningEpochIncrements {
+					return nil
+				}
 			}
 			return nil
 		}); err != nil {
