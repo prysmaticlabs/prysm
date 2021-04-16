@@ -58,41 +58,42 @@ type Config struct {
 
 // Server defining a gRPC server for the remote signer API.
 type Server struct {
-	logsStreamer             logutil.Streamer
-	streamLogsBufferSize     int
-	beaconChainClient        ethpb.BeaconChainClient
-	beaconNodeClient         ethpb.NodeClient
-	beaconNodeHealthClient   healthpb.HealthClient
-	valDB                    db.Database
-	ctx                      context.Context
-	cancel                   context.CancelFunc
-	beaconClientEndpoint     string
-	clientMaxCallRecvMsgSize int
-	clientGrpcRetries        uint
-	clientGrpcRetryDelay     time.Duration
-	clientGrpcHeaders        []string
-	clientWithCert           string
-	host                     string
-	port                     string
-	listener                 net.Listener
-	keymanager               keymanager.IKeymanager
-	withCert                 string
-	withKey                  string
-	credentialError          error
-	grpcServer               *grpc.Server
-	jwtKey                   []byte
-	validatorService         *client.ValidatorService
-	syncChecker              client.SyncChecker
-	genesisFetcher           client.GenesisFetcher
-	walletDir                string
-	wallet                   *wallet.Wallet
-	walletInitializedFeed    *event.Feed
-	walletInitialized        bool
-	nodeGatewayEndpoint      string
-	validatorMonitoringHost  string
-	validatorMonitoringPort  int
-	validatorGatewayHost     string
-	validatorGatewayPort     int
+	logsStreamer              logutil.Streamer
+	streamLogsBufferSize      int
+	beaconChainClient         ethpb.BeaconChainClient
+	beaconNodeClient          ethpb.NodeClient
+	beaconNodeValidatorClient ethpb.BeaconNodeValidatorClient
+	beaconNodeHealthClient    healthpb.HealthClient
+	valDB                     db.Database
+	ctx                       context.Context
+	cancel                    context.CancelFunc
+	beaconClientEndpoint      string
+	clientMaxCallRecvMsgSize  int
+	clientGrpcRetries         uint
+	clientGrpcRetryDelay      time.Duration
+	clientGrpcHeaders         []string
+	clientWithCert            string
+	host                      string
+	port                      string
+	listener                  net.Listener
+	keymanager                keymanager.IKeymanager
+	withCert                  string
+	withKey                   string
+	credentialError           error
+	grpcServer                *grpc.Server
+	jwtKey                    []byte
+	validatorService          *client.ValidatorService
+	syncChecker               client.SyncChecker
+	genesisFetcher            client.GenesisFetcher
+	walletDir                 string
+	wallet                    *wallet.Wallet
+	walletInitializedFeed     *event.Feed
+	walletInitialized         bool
+	nodeGatewayEndpoint       string
+	validatorMonitoringHost   string
+	validatorMonitoringPort   int
+	validatorGatewayHost      string
+	validatorGatewayPort      int
 }
 
 // NewServer instantiates a new gRPC server.
