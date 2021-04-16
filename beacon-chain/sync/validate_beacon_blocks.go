@@ -178,7 +178,7 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk *ethpb.SignedBeac
 		return err
 	}
 
-	if err := blocks.VerifyBlockSignature(parentState, blk); err != nil {
+	if err := blocks.VerifyBlockSignature(parentState, blk.Block.ProposerIndex, blk.Signature, blk.Block.HashTreeRoot); err != nil {
 		s.setBadBlock(ctx, blockRoot)
 		return err
 	}
