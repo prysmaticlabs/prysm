@@ -49,6 +49,7 @@ func (s *Server) registerBeaconClient() error {
 	s.beaconChainClient = ethpb.NewBeaconChainClient(conn)
 	s.beaconNodeClient = ethpb.NewNodeClient(conn)
 	s.beaconNodeHealthClient = healthpb.NewHealthClient(conn)
+	s.beaconNodeValidatorClient = ethpb.NewBeaconNodeValidatorClient(conn)
 	return nil
 }
 

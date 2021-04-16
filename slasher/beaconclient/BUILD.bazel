@@ -49,10 +49,10 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "beaconclient_test.go",
         "chain_data_test.go",
         "historical_data_retrieval_test.go",
         "receivers_test.go",
-        "service_test.go",
         "submit_test.go",
         "validator_retrieval_test.go",
     ],
