@@ -7,8 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/dop251/goja/ast"
-	ptypes "github.com/gogo/protobuf/types"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -20,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // ListAccounts allows retrieval of validating keys and their petnames
@@ -181,7 +178,7 @@ func (s *Server) DeleteAccounts(
 // VoluntaryExit performs a voluntary exit for the validator keys specified in a request.
 func (s *Server) VoluntaryExit(
 	ctx context.Context, req *pb.VoluntaryExitRequest,
-) (*emptypb.Empty, error) {
+) (*pb.VoluntaryExitResponse, error) {
 	if len(req.PublicKeys) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "No public keys specified to delete")
 	}
@@ -208,5 +205,7 @@ func (s *Server) VoluntaryExit(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not perform voluntary exit: %v", err)
 	}
-	return
+	return &pb.VoluntaryExitResponse{
+		ExitedKeys:           rawExitedKeys,
+	}, nil
 }
