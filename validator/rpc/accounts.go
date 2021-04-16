@@ -197,7 +197,7 @@ func (s *Server) VoluntaryExit(
 	cfg := accounts.PerformExitCfg{
 		ValidatorClient:  s.beaconNodeValidatorClient,
 		NodeClient:       s.beaconNodeClient,
-		keymanager:       s.keymanager,
+		Keymanager:       s.keymanager,
 		RawPubKeys:       req.PublicKeys,
 		FormattedPubKeys: formattedKeys,
 	}
