@@ -3,7 +3,6 @@ package slasherkv
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -12,16 +11,9 @@ import (
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	bolt "go.etcd.io/bbolt"
 )
-
-func TestMain(m *testing.M) {
-	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetOutput(ioutil.Discard)
-	m.Run()
-}
 
 func TestStore_PruneProposals(t *testing.T) {
 	ctx := context.Background()
@@ -234,15 +226,15 @@ func TestStore_PruneAttestations_OK(t *testing.T) {
 			endSlot, err := helpers.StartSlot(i + 1)
 			require.NoError(t, err)
 			for j := startSlot; j < endSlot; j++ {
-				attester1 := uint64(j+10)
-				attester2 := uint64(j+11)
+				attester1 := uint64(j + 10)
+				attester2 := uint64(j + 11)
 				target := i
 				var source types.Epoch
 				if i > 0 {
-					source = target-1
+					source = target - 1
 				}
-				att1 := createAttestationWrapper(source, target,[]uint64{attester1}, []byte{0})
-				att2 := createAttestationWrapper(source, target,[]uint64{attester2}, []byte{1})
+				att1 := createAttestationWrapper(source, target, []uint64{attester1}, []byte{0})
+				att2 := createAttestationWrapper(source, target, []uint64{attester2}, []byte{1})
 				attestations = append(attestations, att1, att2)
 			}
 		}
@@ -267,8 +259,8 @@ func TestStore_PruneAttestations_OK(t *testing.T) {
 				endSlot, err := helpers.StartSlot(i + 1)
 				require.NoError(t, err)
 				for j := startSlot; j < endSlot; j++ {
-					attester1 := types.ValidatorIndex(j+10)
-					attester2 := types.ValidatorIndex(j+11)
+					attester1 := types.ValidatorIndex(j + 10)
+					attester2 := types.ValidatorIndex(j + 11)
 					key1 := append(encodeTargetEpoch(i), encodeValidatorIndex(attester1)...)
 					key2 := append(encodeTargetEpoch(i), encodeValidatorIndex(attester2)...)
 					if bkt.Get(key1) != nil {

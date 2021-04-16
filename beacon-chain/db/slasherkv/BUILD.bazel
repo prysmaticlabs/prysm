@@ -41,6 +41,7 @@ go_test(
         "kv_test.go",
         "pruning_test.go",
         "slasher_test.go",
+        "slasherkv_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
