@@ -33,7 +33,7 @@ func TestDeleteAccounts_Noninteractive(t *testing.T) {
 	// Only delete keys 0 and 1.
 	deletePublicKeys := strings.Join(generatedPubKeys[0:2], ",")
 
-	// We initialize a wallet with a imported keymanager.
+	// We initialize a wallet with a imported Keymanager.
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		// Wallet configuration flags.
 		walletDir:           walletDir,

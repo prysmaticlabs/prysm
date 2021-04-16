@@ -62,7 +62,7 @@ service Accounts {
             body: "*"
         };
     }
-    rpc VoluntaryExit(VoluntaryExitRequest) returns (google.protobuf.Empty) {
+    rpc VoluntaryExit(VoluntaryExitRequest) returns (VoluntaryExitResponse) {
         option (google.api.http) = {
             post: "/v2/validator/accounts/voluntary-exit",
             body: "*"
@@ -372,7 +372,13 @@ message BeaconStatusResponse {
 }
 
 message VoluntaryExitRequest {
+    // List of public keys to voluntarily exit.
     repeated bytes public_keys = 1;
+}
+
+message VoluntaryExitResponse {
+    // List of keys that successfully exited.
+    repeated bytes exited_keys = 1;
 }
 
 message BackupAccountsRequest {

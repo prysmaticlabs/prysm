@@ -30,7 +30,7 @@ type CreateWalletConfig struct {
 	Mnemonic25thWord     string
 }
 
-// CreateAndSaveWalletCli from user input with a desired keymanager. If a
+// CreateAndSaveWalletCli from user input with a desired Keymanager. If a
 // wallet already exists in the path, it suggests the user alternatives
 // such as how to edit their existing wallet configuration.
 func CreateAndSaveWalletCli(cliCtx *cli.Context) (*wallet.Wallet, error) {
@@ -114,7 +114,7 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 			return nil, errors.Wrap(err, "could not initialize wallet")
 		}
 		log.WithField("--wallet-dir", cfg.WalletCfg.WalletDir).Info(
-			"Successfully created wallet with remote keymanager configuration",
+			"Successfully created wallet with remote Keymanager configuration",
 		)
 	default:
 		return nil, errors.Wrapf(err, errKeymanagerNotSupported, w.KeymanagerKind())
@@ -189,7 +189,7 @@ func extractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind keym
 	if keymanagerKind == keymanager.Remote {
 		opts, err := prompt.InputRemoteKeymanagerConfig(cliCtx)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not input remote keymanager config")
+			return nil, errors.Wrap(err, "could not input remote Keymanager config")
 		}
 		createWalletConfig.RemoteKeymanagerOpts = opts
 	}
@@ -224,7 +224,7 @@ func createDerivedKeymanagerWallet(
 		ListenForChanges: true,
 	})
 	if err != nil {
-		return errors.Wrap(err, "could not initialize HD keymanager")
+		return errors.Wrap(err, "could not initialize HD Keymanager")
 	}
 	mnemonic, err := derived.GenerateAndConfirmMnemonic(skipMnemonicConfirm)
 	if err != nil {
@@ -245,7 +245,7 @@ func createRemoteKeymanagerWallet(ctx context.Context, wallet *wallet.Wallet, op
 		return errors.Wrap(err, "could not save wallet to disk")
 	}
 	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
-		return errors.Wrap(err, "could not write keymanager config to disk")
+		return errors.Wrap(err, "could not write Keymanager config to disk")
 	}
 	return nil
 }

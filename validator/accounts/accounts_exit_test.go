@@ -57,7 +57,7 @@ func TestExitAccountsCli_OK(t *testing.T) {
 	keystore, _ := createKeystore(t, keysDir)
 	time.Sleep(time.Second)
 
-	// We initialize a wallet with a imported keymanager.
+	// We initialize a wallet with a imported Keymanager.
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		// Wallet configuration flags.
 		walletDir:           walletDir,
@@ -92,14 +92,14 @@ func TestExitAccountsCli_OK(t *testing.T) {
 	require.NotNil(t, rawPubKeys)
 	require.NotNil(t, formattedPubKeys)
 
-	cfg := performExitCfg{
+	cfg := PerformExitCfg{
 		mockValidatorClient,
 		mockNodeClient,
 		keymanager,
 		rawPubKeys,
 		formattedPubKeys,
 	}
-	rawExitedKeys, formattedExitedKeys, err := performExit(cliCtx, cfg)
+	rawExitedKeys, formattedExitedKeys, err := PerformVoluntaryExit(cliCtx, cfg)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(rawExitedKeys))
 	assert.DeepEqual(t, rawPubKeys[0], rawExitedKeys[0])
@@ -152,7 +152,7 @@ func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 	keystore2, _ := createKeystore(t, keysDir)
 	time.Sleep(time.Second)
 
-	// We initialize a wallet with a imported keymanager.
+	// We initialize a wallet with a imported Keymanager.
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		// Wallet configuration flags.
 		walletDir:           walletDir,
@@ -187,14 +187,14 @@ func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 	require.NotNil(t, rawPubKeys)
 	require.NotNil(t, formattedPubKeys)
 
-	cfg := performExitCfg{
+	cfg := PerformExitCfg{
 		mockValidatorClient,
 		mockNodeClient,
 		keymanager,
 		rawPubKeys,
 		formattedPubKeys,
 	}
-	rawExitedKeys, formattedExitedKeys, err := performExit(cliCtx, cfg)
+	rawExitedKeys, formattedExitedKeys, err := PerformVoluntaryExit(cliCtx, cfg)
 	require.NoError(t, err)
 	require.Equal(t, 2, len(rawExitedKeys))
 	assert.DeepEqual(t, rawPubKeys, rawExitedKeys)

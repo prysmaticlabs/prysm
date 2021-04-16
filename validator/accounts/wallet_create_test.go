@@ -129,7 +129,7 @@ func TestCreateOrOpenWallet(t *testing.T) {
 			WalletPassword: cfg.WalletCfg.WalletPassword,
 		})
 		if err = createImportedKeymanagerWallet(cliCtx.Context, w); err != nil {
-			return nil, errors.Wrap(err, "could not create keymanager")
+			return nil, errors.Wrap(err, "could not create Keymanager")
 		}
 		log.WithField("wallet-path", cfg.WalletCfg.WalletDir).Info(
 			"Successfully created new wallet",
@@ -261,7 +261,7 @@ func TestCreateWallet_Remote(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	// We read the keymanager config for the newly created wallet.
+	// We read the Keymanager config for the newly created wallet.
 	encoded, err := w.ReadKeymanagerConfigFromDisk(ctx)
 	assert.NoError(t, err)
 	cfg, err := remote.UnmarshalOptionsFile(encoded)

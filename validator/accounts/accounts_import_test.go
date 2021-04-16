@@ -369,7 +369,7 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 	require.NoError(t, err)
 	assert.NoError(t, importPrivateKeyAsAccount(cliCtx, wallet, keymanager))
 
-	// We re-instantiate the keymanager and check we now have 1 public key.
+	// We re-instantiate the Keymanager and check we now have 1 public key.
 	keymanager, err = imported.NewKeymanager(
 		cliCtx.Context,
 		&imported.SetupConfig{

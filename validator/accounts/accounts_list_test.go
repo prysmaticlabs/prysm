@@ -103,7 +103,7 @@ func TestListAccounts_ImportedKeymanager(t *testing.T) {
 	require.NoError(t, err)
 	os.Stdout = writer
 
-	// We call the list imported keymanager accounts function.
+	// We call the list imported Keymanager accounts function.
 	require.NoError(
 		t,
 		listImportedKeymanagerAccounts(
@@ -125,7 +125,7 @@ func TestListAccounts_ImportedKeymanager(t *testing.T) {
 
 	// Expected output example:
 	/*
-		(keymanager kind) imported wallet
+		(Keymanager kind) imported wallet
 
 		Showing 5 validator accounts
 		View the eth1 deposit transaction data for your accounts by running `validator accounts list --show-deposit-data
@@ -175,7 +175,7 @@ func TestListAccounts_ImportedKeymanager(t *testing.T) {
 	lineCount := prologLength + accountLength*numAccounts + epilogLength
 	require.Equal(t, lineCount, len(lines))
 
-	// Assert the keymanager kind is printed on the first line.
+	// Assert the Keymanager kind is printed on the first line.
 	kindString := "imported"
 	kindFound := strings.Contains(lines[0], kindString)
 	assert.Equal(t, true, kindFound, "Keymanager Kind %s not found on the first line", kindString)
@@ -254,7 +254,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	require.NoError(t, err)
 	os.Stdout = writer
 
-	// We call the list imported keymanager accounts function.
+	// We call the list imported Keymanager accounts function.
 	require.NoError(t, listDerivedKeymanagerAccounts(cliCtx.Context, true, keymanager))
 
 	require.NoError(t, writer.Close())
@@ -268,7 +268,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 
 	// Expected output example:
 	/*
-		(keymanager kind) derived, (HD) hierarchical-deterministic
+		(Keymanager kind) derived, (HD) hierarchical-deterministic
 		(derivation format) m / purpose / coin_type / account_index / withdrawal_key / validating_key
 		Showing 2 validator accounts
 
@@ -315,7 +315,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	lineCount := prologLength + accountLength*numAccounts + epilogLength
 	require.Equal(t, lineCount, len(lines))
 
-	// Assert the keymanager kind is printed on the first line.
+	// Assert the Keymanager kind is printed on the first line.
 	kindString := w.KeymanagerKind().String()
 	kindFound := strings.Contains(lines[0], kindString)
 	assert.Equal(t, true, kindFound, "Keymanager Kind %s not found on the first line", kindString)
@@ -398,7 +398,7 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 			RemoteAddr: "localhost:4000",
 		},
 	}
-	// We call the list remote keymanager accounts function.
+	// We call the list remote Keymanager accounts function.
 	require.NoError(t, listRemoteKeymanagerAccounts(context.Background(), w, km, km.opts))
 
 	require.NoError(t, writer.Close())
@@ -412,7 +412,7 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 
 	// Expected output example:
 	/*
-		(keymanager kind) remote signer
+		(Keymanager kind) remote signer
 		(configuration file path) /tmp/79336/wallet/remote/keymanageropts.json
 
 		Configuration options
@@ -447,7 +447,7 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 	lineCount := prologLength + accountLength*numAccounts + epilogLength
 	require.Equal(t, lineCount, len(lines))
 
-	// Assert the keymanager kind is printed on the first line.
+	// Assert the Keymanager kind is printed on the first line.
 	kindString := w.KeymanagerKind().String()
 	kindFound := strings.Contains(lines[0], kindString)
 	assert.Equal(t, true, kindFound, "Keymanager Kind %s not found on the first line", kindString)
