@@ -8,7 +8,6 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -267,85 +266,6 @@ func (e Exporter) RunMigrations(ctx context.Context) error {
 // CleanUpDirtyStates -- passthrough
 func (e Exporter) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint types.Slot) error {
 	return e.db.RunMigrations(ctx)
-}
-
-// LastEpochWrittenForValidator -- passthrough
-func (e Exporter) LastEpochWrittenForValidators(
-	ctx context.Context, validatorIndices []types.ValidatorIndex,
-) ([]*slashertypes.AttestedEpochForValidator, error) {
-	return e.db.LastEpochWrittenForValidators(ctx, validatorIndices)
-}
-
-// AttestationRecordForValidator -- passthrough
-func (e Exporter) AttestationRecordForValidator(
-	ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch, historyLength types.Epoch,
-) (*slashertypes.IndexedAttestationWrapper, error) {
-	return e.db.AttestationRecordForValidator(ctx, validatorIdx, targetEpoch, historyLength)
-}
-
-// CheckAttesterDoubleVotes -- passthrough
-func (e Exporter) CheckAttesterDoubleVotes(
-	ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper, historyLength types.Epoch,
-) ([]*slashertypes.AttesterDoubleVote, error) {
-	return e.db.CheckAttesterDoubleVotes(ctx, attestations, historyLength)
-}
-
-// LoadSlasherChunk -- passthrough
-func (e Exporter) LoadSlasherChunks(
-	ctx context.Context, kind slashertypes.ChunkKind, diskKeys [][]byte,
-) ([][]uint16, []bool, error) {
-	return e.db.LoadSlasherChunks(ctx, kind, diskKeys)
-}
-
-// SaveLastEpochWrittenForValidators -- passthrough
-func (e Exporter) SaveLastEpochWrittenForValidators(
-	ctx context.Context, validatorIndices []types.ValidatorIndex, epoch types.Epoch,
-) error {
-	return e.db.SaveLastEpochWrittenForValidators(ctx, validatorIndices, epoch)
-}
-
-// SaveAttestationRecordForValidator -- passthrough
-func (e Exporter) SaveAttestationRecordsForValidators(
-	ctx context.Context,
-	attestations []*slashertypes.IndexedAttestationWrapper,
-	historyLength types.Epoch,
-) error {
-	return e.db.SaveAttestationRecordsForValidators(ctx, attestations, historyLength)
-}
-
-// CheckDoubleBlockProposals -- passthrough
-func (e Exporter) CheckDoubleBlockProposals(
-	ctx context.Context, proposals []*slashertypes.SignedBlockHeaderWrapper,
-) ([]*eth.ProposerSlashing, error) {
-	return e.db.CheckDoubleBlockProposals(ctx, proposals)
-}
-
-// SaveBlockProposals -- passthrough
-func (e Exporter) SaveBlockProposals(
-	ctx context.Context, proposals []*slashertypes.SignedBlockHeaderWrapper,
-) error {
-	return e.db.SaveBlockProposals(ctx, proposals)
-}
-
-// SaveSlasherChunks -- passthrough
-func (e Exporter) SaveSlasherChunks(
-	ctx context.Context, kind slashertypes.ChunkKind, chunkKeys [][]byte, chunks [][]uint16,
-) error {
-	return e.db.SaveSlasherChunks(ctx, kind, chunkKeys, chunks)
-}
-
-// PruneAttestations -- passthrough
-func (e Exporter) PruneAttestations(
-	ctx context.Context, currentEpoch types.Epoch, historyLength types.Epoch,
-) error {
-	return e.db.PruneAttestations(ctx, currentEpoch, historyLength)
-}
-
-// PruneProposals -- passthrough
-func (e Exporter) PruneProposals(
-	ctx context.Context, currentEpoch types.Epoch, historyLength types.Epoch,
-) error {
-	return e.db.PruneProposals(ctx, currentEpoch, historyLength)
 }
 
 // LoadGenesisFromFile -- passthrough
