@@ -115,7 +115,6 @@ type SlasherDatabase interface {
 	SaveAttestationRecordsForValidators(
 		ctx context.Context,
 		attestations []*slashertypes.IndexedAttestationWrapper,
-		historyLength types.Epoch,
 	) error
 	SaveSlasherChunks(
 		ctx context.Context, kind slashertypes.ChunkKind, chunkKeys [][]byte, chunks [][]uint16,
@@ -127,10 +126,10 @@ type SlasherDatabase interface {
 		ctx context.Context, validatorIndices []types.ValidatorIndex,
 	) ([]*slashertypes.AttestedEpochForValidator, error)
 	AttestationRecordForValidator(
-		ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch, historyLength types.Epoch,
+		ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch,
 	) (*slashertypes.IndexedAttestationWrapper, error)
 	CheckAttesterDoubleVotes(
-		ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper, historyLength types.Epoch,
+		ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper,
 	) ([]*slashertypes.AttesterDoubleVote, error)
 	LoadSlasherChunks(
 		ctx context.Context, kind slashertypes.ChunkKind, diskKeys [][]byte,
@@ -139,10 +138,10 @@ type SlasherDatabase interface {
 		ctx context.Context, proposals []*slashertypes.SignedBlockHeaderWrapper,
 	) ([]*eth.ProposerSlashing, error)
 	PruneAttestations(
-		ctx context.Context, currentEpoch types.Epoch, historyLength types.Epoch,
+		ctx context.Context, currentEpoch, pruningEpochIncrements, historyLength types.Epoch,
 	) error
 	PruneProposals(
-		ctx context.Context, currentEpoch types.Epoch, historyLength types.Epoch,
+		ctx context.Context, currentEpoch, pruningEpochIncrements, historyLength types.Epoch,
 	) error
 	DatabasePath() string
 	ClearDB() error

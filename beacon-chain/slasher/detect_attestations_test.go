@@ -505,7 +505,7 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	att.IndexedAttestation.AttestingIndices = []uint64{uint64(validatorIdx)}
 	err = slasherDB.SaveAttestationRecordsForValidators(
 		ctx,
-		[]*slashertypes.IndexedAttestationWrapper{att}, srv.params.historyLength,
+		[]*slashertypes.IndexedAttestationWrapper{att},
 	)
 	require.NoError(t, err)
 
@@ -565,7 +565,7 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	att.IndexedAttestation.AttestingIndices = []uint64{uint64(validatorIdx)}
 	err = slasherDB.SaveAttestationRecordsForValidators(
 		ctx,
-		[]*slashertypes.IndexedAttestationWrapper{att}, srv.params.historyLength,
+		[]*slashertypes.IndexedAttestationWrapper{att},
 	)
 	require.NoError(t, err)
 
@@ -639,7 +639,7 @@ func Test_checkDoubleVotes_SlashableAttestationsOnDisk(t *testing.T) {
 		},
 		params: DefaultParams(),
 	}
-	err := slasherDB.SaveAttestationRecordsForValidators(ctx, prevAtts, srv.params.historyLength)
+	err := slasherDB.SaveAttestationRecordsForValidators(ctx, prevAtts)
 	require.NoError(t, err)
 
 	prev1 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{1})

@@ -190,7 +190,7 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 	}
 	if targetEpoch > minTarget {
 		existingAttRecord, err := slasherDB.AttestationRecordForValidator(
-			ctx, validatorIdx, minTarget, m.params.historyLength,
+			ctx, validatorIdx, minTarget,
 		)
 		if err != nil {
 			return nil, errors.Wrapf(
@@ -237,7 +237,7 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 	}
 	if targetEpoch < maxTarget {
 		existingAttRecord, err := slasherDB.AttestationRecordForValidator(
-			ctx, validatorIdx, maxTarget, m.params.historyLength,
+			ctx, validatorIdx, maxTarget,
 		)
 		if err != nil {
 			return nil, errors.Wrapf(
