@@ -99,7 +99,7 @@ func TestExitAccountsCli_OK(t *testing.T) {
 		rawPubKeys,
 		formattedPubKeys,
 	}
-	rawExitedKeys, formattedExitedKeys, err := PerformVoluntaryExit(cliCtx, cfg)
+	rawExitedKeys, formattedExitedKeys, err := PerformVoluntaryExit(cliCtx.Context, cfg)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(rawExitedKeys))
 	assert.DeepEqual(t, rawPubKeys[0], rawExitedKeys[0])
@@ -194,7 +194,7 @@ func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 		rawPubKeys,
 		formattedPubKeys,
 	}
-	rawExitedKeys, formattedExitedKeys, err := PerformVoluntaryExit(cliCtx, cfg)
+	rawExitedKeys, formattedExitedKeys, err := PerformVoluntaryExit(cliCtx.Context, cfg)
 	require.NoError(t, err)
 	require.Equal(t, 2, len(rawExitedKeys))
 	assert.DeepEqual(t, rawPubKeys, rawExitedKeys)
