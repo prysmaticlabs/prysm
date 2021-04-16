@@ -52,15 +52,11 @@ func ProcessBlockNoVerifyAnySig(
 
 	blk := signed.Block
 	body := blk.Body
-	bodyRoot, err := body.HashTreeRoot()
+	state, err := ProcessBlockForStateRoot(ctx, state, signed)
 	if err != nil {
 		return nil, nil, err
 	}
-	state, err = b.ProcessBlockHeaderNoVerify(state, blk.Slot, blk.ProposerIndex, blk.ParentRoot, bodyRoot[:])
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return nil, nil, errors.Wrap(err, "could not process block header")
-	}
+
 	bSet, err := b.BlockSignatureSet(state, blk.ProposerIndex, signed.Signature, blk.HashTreeRoot)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
@@ -70,23 +66,6 @@ func ProcessBlockNoVerifyAnySig(
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not retrieve randao signature set")
-	}
-	state, err = b.ProcessRandaoNoVerify(state, body.RandaoReveal)
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return nil, nil, errors.Wrap(err, "could not verify and process randao")
-	}
-
-	state, err = b.ProcessEth1DataInBlock(ctx, state, body.Eth1Data)
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return nil, nil, errors.Wrap(err, "could not process eth1 data")
-	}
-
-	state, err = ProcessOperationsNoVerifyAttsSigs(ctx, state, signed)
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return nil, nil, errors.Wrap(err, "could not process block operation")
 	}
 	aSet, err := b.AttestationSignatureSet(ctx, state, signed.Block.Body.Attestations)
 	if err != nil {

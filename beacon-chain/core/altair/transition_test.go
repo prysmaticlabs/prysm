@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	statealtair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
@@ -110,12 +111,12 @@ func TestProcessBlockNoVerify_PassesProcessingConditions(t *testing.T) {
 	// Test Signature set verifies.
 	verified, err := set.Verify()
 	require.NoError(t, err)
-	assert.Equal(t, true, verified, "Could not verify signature set.")
+	assert.Equal(t, true, verified, "Could not verify signature set")
 }
 
-func createFullBlockWithOperations(t *testing.T) (iface.BeaconState,
+func createFullBlockWithOperations(t *testing.T) (iface.BeaconStateAltair,
 	*ethpb.SignedBeaconBlockAltair, []*ethpb.Attestation, []*ethpb.ProposerSlashing, []*ethpb.SignedVoluntaryExit) {
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
+	beaconState, privKeys := altair2.DeterministicGenesisStateAltair(t, 32)
 	genesisBlock := blocks.NewGenesisBlock([]byte{})
 	bodyRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -133,7 +134,6 @@ func createFullBlockWithOperations(t *testing.T) (iface.BeaconState,
 	copy(mockRoot[:], "hello-world")
 	cp.Root = mockRoot[:]
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cp))
-	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&pb.PendingAttestation{}))
 
 	proposerSlashIdx := types.ValidatorIndex(3)
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
@@ -262,6 +262,31 @@ func createFullBlockWithOperations(t *testing.T) (iface.BeaconState,
 	require.NoError(t, err)
 	proposerIndex, err := helpers.BeaconProposerIndex(copied)
 	require.NoError(t, err)
+
+	syncBits := make([]byte, 1)
+	for i := range syncBits {
+		syncBits[i] = 0xff
+	}
+	indices, err := altair.SyncCommitteeIndices(beaconState, helpers.CurrentEpoch(beaconState))
+	require.NoError(t, err)
+	ps := helpers.PrevSlot(beaconState.Slot())
+	pbr, err := helpers.BlockRootAtSlot(beaconState, ps)
+	require.NoError(t, err)
+	syncSigs := make([]bls.Signature, len(indices))
+	for i, indice := range indices {
+		b := p2pType.SSZBytes(pbr)
+		sb, err := helpers.ComputeDomainAndSign(beaconState, helpers.CurrentEpoch(beaconState), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
+		require.NoError(t, err)
+		sig, err := bls.SignatureFromBytes(sb)
+		require.NoError(t, err)
+		syncSigs[i] = sig
+	}
+	aggregatedSig := bls.AggregateSignatures(syncSigs).Marshal()
+	syncAggregate := &ethpb.SyncAggregate{
+		SyncCommitteeBits:      syncBits,
+		SyncCommitteeSignature: aggregatedSig,
+	}
+
 	block := testutil.HydrateSignedBeaconBlockAltair(&ethpb.SignedBeaconBlockAltair{
 		Block: &ethpb.BeaconBlockAltair{
 			ParentRoot:    parentRoot[:],
@@ -273,10 +298,7 @@ func createFullBlockWithOperations(t *testing.T) (iface.BeaconState,
 				AttesterSlashings: attesterSlashings,
 				Attestations:      []*ethpb.Attestation{blockAtt},
 				VoluntaryExits:    []*ethpb.SignedVoluntaryExit{exit},
-				SyncAggregate: &ethpb.SyncAggregate{
-					SyncCommitteeBits:      make([]byte, 1),
-					SyncCommitteeSignature: make([]byte, 96),
-				},
+				SyncAggregate:     syncAggregate,
 			},
 		},
 	})
