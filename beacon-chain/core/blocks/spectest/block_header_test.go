@@ -10,7 +10,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -33,7 +33,7 @@ func runBlockHeaderTest(t *testing.T, config string) {
 			require.NoError(t, err)
 			preBeaconStateBase := &pb.BeaconState{}
 			require.NoError(t, preBeaconStateBase.UnmarshalSSZ(preBeaconStateFile), "Failed to unmarshal")
-			preBeaconState, err := stateTrie.InitializeFromProto(preBeaconStateBase)
+			preBeaconState, err := stateV0.InitializeFromProto(preBeaconStateBase)
 			require.NoError(t, err)
 
 			// If the post.ssz is not present, it means the test should fail on our end.
@@ -46,7 +46,9 @@ func runBlockHeaderTest(t *testing.T, config string) {
 			}
 
 			// Spectest blocks are not signed, so we'll call NoVerify to skip sig verification.
-			beaconState, err := blocks.ProcessBlockHeaderNoVerify(preBeaconState, block)
+			bodyRoot, err := block.Body.HashTreeRoot()
+			require.NoError(t, err)
+			beaconState, err := blocks.ProcessBlockHeaderNoVerify(preBeaconState, block.Slot, block.ProposerIndex, block.ParentRoot, bodyRoot[:])
 			if postSSZExists {
 				require.NoError(t, err)
 
@@ -55,7 +57,9 @@ func runBlockHeaderTest(t *testing.T, config string) {
 
 				postBeaconState := &pb.BeaconState{}
 				require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateFile), "Failed to unmarshal")
-				if !proto.Equal(beaconState.CloneInnerState(), postBeaconState) {
+				pbState, err := stateV0.ProtobufBeaconState(beaconState.CloneInnerState())
+				require.NoError(t, err)
+				if !proto.Equal(pbState, postBeaconState) {
 					diff, _ := messagediff.PrettyDiff(beaconState.CloneInnerState(), postBeaconState)
 					t.Log(diff)
 					t.Fatal("Post state does not match expected")

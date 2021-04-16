@@ -1,6 +1,10 @@
 version = 1
 
-exclude_patterns = ["tools/analyzers/**"]
+exclude_patterns = [
+  "tools/analyzers/**",
+  "validator/keymanager/remote/keymanager_test.go",
+  "validator/web/site_data.go"
+]
 
 [[analyzers]]
 name = "go"
@@ -15,4 +19,8 @@ enabled = true
 
 [[analyzers]]
 name = "shell"
+enabled = true
+
+[[analyzers]]
+name = "secrets"
 enabled = true

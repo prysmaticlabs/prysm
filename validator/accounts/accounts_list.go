@@ -3,15 +3,17 @@ package accounts
 import (
 	"context"
 	"fmt"
+	"math"
 	"path/filepath"
 	"strings"
 
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/shared/petnames"
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
@@ -27,8 +29,8 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
-	km, err := w.InitializeKeymanager(cliCtx.Context)
-	if err != nil && strings.Contains(err.Error(), keymanager.IncorrectPasswordErrMsg) {
+	km, err := w.InitializeKeymanager(cliCtx.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
+	if err != nil && strings.Contains(err.Error(), "invalid checksum") {
 		return errors.New("wrong wallet password entered")
 	}
 	if err != nil {
@@ -36,6 +38,16 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 	}
 	showDepositData := cliCtx.Bool(flags.ShowDepositDataFlag.Name)
 	showPrivateKeys := cliCtx.Bool(flags.ShowPrivateKeysFlag.Name)
+	listIndices := cliCtx.Bool(flags.ListValidatorIndices.Name)
+
+	if listIndices {
+		client, _, err := prepareClients(cliCtx)
+		if err != nil {
+			return err
+		}
+		return listValidatorIndices(cliCtx.Context, km, *client)
+	}
+
 	switch w.KeymanagerKind() {
 	case keymanager.Imported:
 		km, ok := km.(*imported.Keymanager)
@@ -91,12 +103,7 @@ func listImportedKeymanagerAccounts(
 			"by running `validator accounts list --show-deposit-data`"),
 	)
 
-	pubKeys, err := keymanager.FetchAllValidatingPublicKeys(ctx)
-	disabledPublicKeys := keymanager.DisabledPublicKeys()
-	existingDisabledPk := make(map[[48]byte]bool, len(disabledPublicKeys))
-	for _, dpk := range disabledPublicKeys {
-		existingDisabledPk[bytesutil.ToBytes48(dpk)] = true
-	}
+	pubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating public keys")
 	}
@@ -109,11 +116,7 @@ func listImportedKeymanagerAccounts(
 	}
 	for i := 0; i < len(accountNames); i++ {
 		fmt.Println("")
-		if existingDisabledPk[pubKeys[i]] {
-			fmt.Printf("%s | %s (%s)\n", au.BrightBlue(fmt.Sprintf("Account %d", i)).Bold(), au.BrightRed(accountNames[i]).Bold(), au.BrightRed("disabled").Bold())
-		} else {
-			fmt.Printf("%s | %s\n", au.BrightBlue(fmt.Sprintf("Account %d", i)).Bold(), au.BrightGreen(accountNames[i]).Bold())
-		}
+		fmt.Printf("%s | %s\n", au.BrightBlue(fmt.Sprintf("Account %d", i)).Bold(), au.BrightGreen(accountNames[i]).Bold())
 		fmt.Printf("%s %#x\n", au.BrightMagenta("[validating public key]").Bold(), pubKeys[i])
 		if showPrivateKeys {
 			if len(privateKeys) > i {
@@ -142,7 +145,7 @@ func listDerivedKeymanagerAccounts(
 	au := aurora.NewAurora(true)
 	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("derived, (HD) hierarchical-deterministic").Bold())
 	fmt.Printf("(derivation format) %s\n", au.BrightGreen(derived.DerivationPathFormat).Bold())
-	validatingPubKeys, err := keymanager.FetchAllValidatingPublicKeys(ctx)
+	validatingPubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating public keys")
 	}
@@ -197,7 +200,7 @@ func listRemoteKeymanagerAccounts(
 	fmt.Println(" ")
 	fmt.Printf("%s\n", au.BrightGreen("Configuration options").Bold())
 	fmt.Println(opts)
-	validatingPubKeys, err := keymanager.FetchAllValidatingPublicKeys(ctx)
+	validatingPubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating public keys")
 	}
@@ -217,6 +220,29 @@ func listRemoteKeymanagerAccounts(
 		// Retrieve the validating key account metadata.
 		fmt.Printf("%s %#x\n", au.BrightCyan("[validating public key]").Bold(), validatingPubKeys[i])
 		fmt.Println(" ")
+	}
+	return nil
+}
+
+func listValidatorIndices(ctx context.Context, km keymanager.IKeymanager, client ethpb.BeaconNodeValidatorClient) error {
+	pubKeys, err := km.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not get validating public keys")
+	}
+	var pks [][]byte
+	for i := range pubKeys {
+		pks = append(pks, pubKeys[i][:])
+	}
+	req := &ethpb.MultipleValidatorStatusRequest{PublicKeys: pks}
+	resp, err := client.MultipleValidatorStatus(ctx, req)
+	if err != nil {
+		return errors.Wrap(err, "could not request validator indices")
+	}
+	fmt.Println(au.BrightGreen("Validator indices:").Bold())
+	for i, idx := range resp.Indices {
+		if idx != math.MaxUint64 {
+			fmt.Printf("%#x: %d\n", pubKeys[i][0:4], idx)
+		}
 	}
 	return nil
 }

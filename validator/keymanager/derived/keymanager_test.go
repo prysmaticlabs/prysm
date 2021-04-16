@@ -11,40 +11,46 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	mock "github.com/prysmaticlabs/prysm/validator/accounts/testing"
+	constant "github.com/prysmaticlabs/prysm/validator/testing"
 	"github.com/tyler-smith/go-bip39"
 	util "github.com/wealdtech/go-eth2-util"
+)
+
+const (
+	password = "secretPassw0rd$1999"
 )
 
 // We test that using a '25th word' mnemonic passphrase leads to different
 // public keys derived than not specifying the passphrase.
 func TestDerivedKeymanager_MnemnonicPassphrase_DifferentResults(t *testing.T) {
-	sampleMnemonic := "tumble turn jewel sudden social great water general cabin jacket bounce dry flip monster advance problem social half flee inform century chicken hard reason"
 	ctx := context.Background()
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
 		AccountPasswords: make(map[string]string),
-		WalletPassword:   "secretPassw0rd$1999",
+		WalletPassword:   password,
 	}
 	km, err := NewKeymanager(ctx, &SetupConfig{
-		Wallet: wallet,
+		Wallet:           wallet,
+		ListenForChanges: false,
 	})
 	require.NoError(t, err)
 	numAccounts := 5
-	err = km.RecoverAccountsFromMnemonic(ctx, sampleMnemonic, "mnemonicpass", numAccounts)
+	err = km.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "mnemonicpass", numAccounts)
 	require.NoError(t, err)
 	without25thWord, err := km.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
 	wallet = &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
 		AccountPasswords: make(map[string]string),
-		WalletPassword:   "secretPassw0rd$1999",
+		WalletPassword:   password,
 	}
 	km, err = NewKeymanager(ctx, &SetupConfig{
-		Wallet: wallet,
+		Wallet:           wallet,
+		ListenForChanges: false,
 	})
 	require.NoError(t, err)
 	// No mnemonic passphrase this time.
-	err = km.RecoverAccountsFromMnemonic(ctx, sampleMnemonic, "", numAccounts)
+	err = km.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "", numAccounts)
 	require.NoError(t, err)
 	with25thWord, err := km.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
@@ -70,21 +76,21 @@ func TestDerivedKeymanager_RecoverSeedRoundTrip(t *testing.T) {
 }
 
 func TestDerivedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
-	sampleMnemonic := "tumble turn jewel sudden social great water general cabin jacket bounce dry flip monster advance problem social half flee inform century chicken hard reason"
-	derivedSeed, err := seedFromMnemonic(sampleMnemonic, "")
+	derivedSeed, err := seedFromMnemonic(constant.TestMnemonic, "")
 	require.NoError(t, err)
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
 		AccountPasswords: make(map[string]string),
-		WalletPassword:   "secretPassw0rd$1999",
+		WalletPassword:   password,
 	}
 	ctx := context.Background()
 	dr, err := NewKeymanager(ctx, &SetupConfig{
-		Wallet: wallet,
+		Wallet:           wallet,
+		ListenForChanges: false,
 	})
 	require.NoError(t, err)
 	numAccounts := 5
-	err = dr.RecoverAccountsFromMnemonic(ctx, sampleMnemonic, "", numAccounts)
+	err = dr.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "", numAccounts)
 	require.NoError(t, err)
 
 	// Fetch the public keys.
@@ -109,21 +115,21 @@ func TestDerivedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 }
 
 func TestDerivedKeymanager_FetchValidatingPrivateKeys(t *testing.T) {
-	sampleMnemonic := "tumble turn jewel sudden social great water general cabin jacket bounce dry flip monster advance problem social half flee inform century chicken hard reason"
-	derivedSeed, err := seedFromMnemonic(sampleMnemonic, "")
+	derivedSeed, err := seedFromMnemonic(constant.TestMnemonic, "")
 	require.NoError(t, err)
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
 		AccountPasswords: make(map[string]string),
-		WalletPassword:   "secretPassw0rd$1999",
+		WalletPassword:   password,
 	}
 	ctx := context.Background()
 	dr, err := NewKeymanager(ctx, &SetupConfig{
-		Wallet: wallet,
+		Wallet:           wallet,
+		ListenForChanges: false,
 	})
 	require.NoError(t, err)
 	numAccounts := 5
-	err = dr.RecoverAccountsFromMnemonic(ctx, sampleMnemonic, "", numAccounts)
+	err = dr.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "", numAccounts)
 	require.NoError(t, err)
 
 	// Fetch the private keys.
@@ -148,22 +154,22 @@ func TestDerivedKeymanager_FetchValidatingPrivateKeys(t *testing.T) {
 }
 
 func TestDerivedKeymanager_Sign(t *testing.T) {
-	sampleMnemonic := "tumble turn jewel sudden social great water general cabin jacket bounce dry flip monster advance problem social half flee inform century chicken hard reason"
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
 		AccountPasswords: make(map[string]string),
-		WalletPassword:   "secretPassw0rd$1999",
+		WalletPassword:   password,
 	}
 	ctx := context.Background()
 	dr, err := NewKeymanager(ctx, &SetupConfig{
-		Wallet: wallet,
+		Wallet:           wallet,
+		ListenForChanges: false,
 	})
 	require.NoError(t, err)
 	numAccounts := 5
-	err = dr.RecoverAccountsFromMnemonic(ctx, sampleMnemonic, "", numAccounts)
+	err = dr.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "", numAccounts)
 	require.NoError(t, err)
 
-	pubKeys, err := dr.FetchAllValidatingPublicKeys(ctx)
+	pubKeys, err := dr.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
 	// We prepare naive data to sign.
 	data := []byte("eth2data")

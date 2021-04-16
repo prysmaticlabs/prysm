@@ -8,10 +8,9 @@ import (
 
 	pbtypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -19,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -39,7 +39,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [4
 		log.Debug("Assigned to genesis slot, skipping proposal")
 		return
 	}
-	lock := mputil.NewMultilock(string(rune(roleProposer)), string(pubKey[:]))
+	lock := mputil.NewMultilock(string(rune(iface.RoleProposer)), string(pubKey[:]))
 	lock.Lock()
 	defer lock.Unlock()
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeBlock")
@@ -202,7 +202,7 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch
 	}
 
 	var randaoReveal bls.Signature
-	sszUint := p2ptypes.SSZUint64(epoch)
+	sszUint := types.SSZUint64(epoch)
 	root, err := helpers.ComputeSigningRoot(&sszUint, domain.SignatureDomain)
 	if err != nil {
 		return nil, err
@@ -305,7 +305,18 @@ func (v *validator) getGraffiti(ctx context.Context, pubKey [48]byte) ([]byte, e
 		return []byte(g), nil
 	}
 
-	// When specified, a graffiti from the random list in the file take third priority.
+	// When specified, a graffiti from the ordered list in the file take third priority.
+	if v.graffitiOrderedIndex < uint64(len(v.graffitiStruct.Ordered)) {
+		graffiti := v.graffitiStruct.Ordered[v.graffitiOrderedIndex]
+		v.graffitiOrderedIndex = v.graffitiOrderedIndex + 1
+		err := v.db.SaveGraffitiOrderedIndex(ctx, v.graffitiOrderedIndex)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to update graffiti ordered index")
+		}
+		return []byte(graffiti), nil
+	}
+
+	// When specified, a graffiti from the random list in the file take fourth priority.
 	if len(v.graffitiStruct.Random) != 0 {
 		r := rand.NewGenerator()
 		r.Seed(time.Now().Unix())

@@ -13,6 +13,7 @@ go_library(
         "signing_root.go",
         "slot_epoch.go",
         "validators.go",
+        "weak_subjectivity.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers",
     visibility = [
@@ -32,7 +33,7 @@ go_library(
     ],
     deps = [
         "//beacon-chain/cache:go_default_library",
-        "//beacon-chain/state:go_default_library",
+        "//beacon-chain/state/interface:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
@@ -62,12 +63,14 @@ go_test(
         "signing_root_test.go",
         "slot_epoch_test.go",
         "validators_test.go",
+        "weak_subjectivity_test.go",
     ],
     embed = [":go_default_library"],
     shard_count = 2,
     deps = [
         "//beacon-chain/cache:go_default_library",
-        "//beacon-chain/state:go_default_library",
+        "//beacon-chain/state/interface:go_default_library",
+        "//beacon-chain/state/stateV0:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",

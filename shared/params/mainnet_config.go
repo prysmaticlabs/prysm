@@ -3,7 +3,7 @@ package params
 import (
 	"time"
 
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
@@ -163,8 +163,9 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	BeaconStateFieldCount:     21,
 
 	// Slasher related values.
-	WeakSubjectivityPeriod:    54000,
-	PruneSlasherStoragePeriod: 10,
+	WeakSubjectivityPeriod:          54000,
+	PruneSlasherStoragePeriod:       10,
+	SlashingProtectionPruningEpochs: 512,
 
 	// Weak subjectivity values.
 	SafetyDecay: 10,

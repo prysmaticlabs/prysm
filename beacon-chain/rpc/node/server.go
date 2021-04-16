@@ -10,6 +10,7 @@ import (
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -222,11 +223,13 @@ func (ns *Server) ListPeers(ctx context.Context, _ *ptypes.Empty) (*ethpb.Peers,
 }
 
 // StreamBeaconLogs from the beacon node via a gRPC server-side stream.
-func (ns *Server) StreamBeaconLogs(_ *ptypes.Empty, stream pb.Health_StreamBeaconLogsServer) error {
+func (ns *Server) StreamBeaconLogs(_ *empty.Empty, stream pb.Health_StreamBeaconLogsServer) error {
 	ch := make(chan []byte, ns.StreamLogsBufferSize)
-	defer close(ch)
 	sub := ns.LogsStreamer.LogsFeed().Subscribe(ch)
-	defer sub.Unsubscribe()
+	defer func() {
+		sub.Unsubscribe()
+		close(ch)
+	}()
 
 	recentLogs := ns.LogsStreamer.GetLastFewLogs()
 	logStrings := make([]string, len(recentLogs))
@@ -247,6 +250,8 @@ func (ns *Server) StreamBeaconLogs(_ *ptypes.Empty, stream pb.Health_StreamBeaco
 			if err := stream.Send(resp); err != nil {
 				return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
 			}
+		case err := <-sub.Err():
+			return status.Errorf(codes.Canceled, "Subscriber error, closing: %v", err)
 		case <-stream.Context().Done():
 			return status.Error(codes.Canceled, "Context canceled")
 		}

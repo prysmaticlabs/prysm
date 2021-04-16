@@ -8,9 +8,9 @@ import (
 	"github.com/logrusorgru/aurora"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
-	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"github.com/urfave/cli/v2"
 )
@@ -30,10 +30,6 @@ const (
 	SelectAccountsBackupPromptText = "Select the account(s) you wish to backup"
 	// SelectAccountsVoluntaryExitPromptText --
 	SelectAccountsVoluntaryExitPromptText = "Select the account(s) on which you wish to perform a voluntary exit"
-	// SelectAccountsDisablePromptText --
-	SelectAccountsDisablePromptText = "Select the account(s) you would like to disable"
-	// SelectAccountsEnablePromptText --
-	SelectAccountsEnablePromptText = "Select the account(s) you would like to enable"
 )
 
 var au = aurora.NewAurora(true)

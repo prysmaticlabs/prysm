@@ -16,13 +16,11 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-)
-
-var (
-	testMnemonic = "tumble turn jewel sudden social great water general cabin jacket bounce dry flip monster advance problem social half flee inform century chicken hard reason"
+	constant "github.com/prysmaticlabs/prysm/validator/testing"
 )
 
 func TestBackupAccounts_Noninteractive_Derived(t *testing.T) {
@@ -63,12 +61,12 @@ func TestBackupAccounts_Noninteractive_Derived(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	km, err := w.InitializeKeymanager(cliCtx.Context)
+	km, err := w.InitializeKeymanager(cliCtx.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
 	// Create 2 accounts
 	derivedKM, ok := km.(*derived.Keymanager)
 	require.Equal(t, true, ok)
-	err = derivedKM.RecoverAccountsFromMnemonic(cliCtx.Context, testMnemonic, "", 2)
+	err = derivedKM.RecoverAccountsFromMnemonic(cliCtx.Context, constant.TestMnemonic, "", 2)
 	require.NoError(t, err)
 
 	// Obtain the public keys of the accounts we created

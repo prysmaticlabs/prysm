@@ -14,7 +14,9 @@ import (
 
 func TestStore_migrateSourceTargetEpochsBucketUp(t *testing.T) {
 	numEpochs := uint64(100)
-	numKeys := 50
+	// numKeys should be more than batch size for testing.
+	// See: https://github.com/prysmaticlabs/prysm/issues/8509
+	numKeys := 2*publicKeyMigrationBatchSize + 1
 	pubKeys := make([][48]byte, numKeys)
 	for i := 0; i < numKeys; i++ {
 		var pk [48]byte
@@ -113,7 +115,9 @@ func TestStore_migrateSourceTargetEpochsBucketUp(t *testing.T) {
 }
 
 func TestStore_migrateSourceTargetEpochsBucketDown(t *testing.T) {
-	numKeys := 50
+	// numKeys should be more than batch size for testing.
+	// See: https://github.com/prysmaticlabs/prysm/issues/8509
+	numKeys := 2*publicKeyMigrationBatchSize + 1
 	pubKeys := make([][48]byte, numKeys)
 	for i := 0; i < numKeys; i++ {
 		var pk [48]byte
@@ -226,9 +230,9 @@ func Test_batchPublicKeys(t *testing.T) {
 		},
 		{
 			name:       "> batch size returns proper batches",
-			batchSize:  2,
-			publicKeys: [][]byte{{1}, {2}, {3}},
-			want:       [][][]byte{{{1}, {2}}, {{3}}},
+			batchSize:  5,
+			publicKeys: [][]byte{{1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}},
+			want:       [][][]byte{{{1}, {2}, {3}, {4}, {5}}, {{6}, {7}, {8}}},
 		},
 		{
 			name:       "equal size batches returns proper batches",

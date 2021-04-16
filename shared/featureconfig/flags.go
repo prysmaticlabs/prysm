@@ -17,6 +17,11 @@ var (
 		Name:  "pyrmont",
 		Usage: "This defines the flag through which we can run on the Pyrmont Multiclient Testnet",
 	}
+	// PraterTestnet flag for the multiclient eth2 testnet.
+	PraterTestnet = &cli.BoolFlag{
+		Name:  "prater",
+		Usage: "Run Prysm configured for the Prater test network",
+	}
 	// Mainnet flag for easier tooling, no-op
 	Mainnet = &cli.BoolFlag{
 		Value: true,
@@ -56,10 +61,6 @@ var (
 	forceOptMaxCoverAggregationStategy = &cli.BoolFlag{
 		Name:  "attestation-aggregation-force-opt-maxcover",
 		Usage: "When enabled, forces --attestation-aggregation-strategy=opt_max_cover setting.",
-	}
-	disableBlst = &cli.BoolFlag{
-		Name:  "disable-blst",
-		Usage: "Disables the new BLS library, blst, from Supranational",
 	}
 	disableAccountsV2 = &cli.BoolFlag{
 		Name:  "disable-accounts-v2",
@@ -109,6 +110,14 @@ var (
 		Name:  "update-head-timely",
 		Usage: "Improves update head time by updating head right after state transition",
 	}
+	proposerAttsSelectionUsingMaxCover = &cli.BoolFlag{
+		Name:  "proposer-atts-selection-using-max-cover",
+		Usage: "Rely on max-cover algorithm when selecting attestations for proposer",
+	}
+	enableSlashingProtectionPruning = &cli.BoolFlag{
+		Name:  "enable-slashing-protection-pruning",
+		Usage: "Enables the pruning of the validator client's slashing protectin database",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -117,6 +126,7 @@ var devModeFlags = []cli.Flag{
 	enableNextSlotStateCache,
 	forceOptMaxCoverAggregationStategy,
 	updateHeadTimely,
+	proposerAttsSelectionUsingMaxCover,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -126,11 +136,12 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	disableAttestingHistoryDBCache,
 	ToledoTestnet,
 	PyrmontTestnet,
+	PraterTestnet,
 	Mainnet,
 	disableAccountsV2,
-	disableBlst,
 	dynamicKeyReloadDebounceInterval,
 	attestTimely,
+	enableSlashingProtectionPruning,
 }...)
 
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
@@ -138,6 +149,7 @@ var SlasherFlags = append(deprecatedFlags, []cli.Flag{
 	disableLookbackFlag,
 	ToledoTestnet,
 	PyrmontTestnet,
+	PraterTestnet,
 	Mainnet,
 }...)
 
@@ -153,8 +165,8 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	attestationAggregationStrategy,
 	ToledoTestnet,
 	PyrmontTestnet,
+	PraterTestnet,
 	Mainnet,
-	disableBlst,
 	enablePeerScorer,
 	enableLargerGossipHistory,
 	checkPtInfoCache,
@@ -162,6 +174,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableNextSlotStateCache,
 	forceOptMaxCoverAggregationStategy,
 	updateHeadTimely,
+	proposerAttsSelectionUsingMaxCover,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

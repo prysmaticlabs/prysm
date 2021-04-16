@@ -1,6 +1,7 @@
 package remote
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -8,15 +9,17 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"sort"
 	"strings"
 
-	ptypes "github.com/gogo/protobuf/types"
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
@@ -29,6 +32,12 @@ var (
 	// performing a signing operation was denied by a remote server.
 	ErrSigningDenied = errors.New("signing request was denied by remote server")
 )
+
+// RemoteKeymanager defines the interface for remote Prysm wallets.
+type RemoteKeymanager interface {
+	keymanager.IKeymanager
+	ReloadPublicKeys(ctx context.Context) ([][48]byte, error)
+}
 
 // KeymanagerOpts for a remote keymanager.
 type KeymanagerOpts struct {
@@ -55,9 +64,10 @@ type SetupConfig struct {
 
 // Keymanager implementation using remote signing keys via gRPC.
 type Keymanager struct {
-	opts             *KeymanagerOpts
-	client           validatorpb.RemoteSignerClient
-	accountsByPubkey map[[48]byte]string
+	opts                *KeymanagerOpts
+	client              validatorpb.RemoteSignerClient
+	orderedPubKeys      [][48]byte
+	accountsChangedFeed *event.Feed
 }
 
 // NewKeymanager instantiates a new imported keymanager from configuration options.
@@ -118,9 +128,10 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	}
 	client := validatorpb.NewRemoteSignerClient(conn)
 	k := &Keymanager{
-		opts:             cfg.Opts,
-		client:           client,
-		accountsByPubkey: make(map[[48]byte]string),
+		opts:                cfg.Opts,
+		client:              client,
+		orderedPubKeys:      make([][48]byte, 0),
+		accountsChangedFeed: new(event.Feed),
 	}
 	return k, nil
 }
@@ -196,9 +207,33 @@ func (km *Keymanager) KeymanagerOpts() *KeymanagerOpts {
 	return km.opts
 }
 
+func (km *Keymanager) ReloadPublicKeys(ctx context.Context) ([][48]byte, error) {
+	pubKeys, err := km.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not reload public keys")
+	}
+
+	sort.Slice(pubKeys, func(i, j int) bool { return bytes.Compare(pubKeys[i][:], pubKeys[j][:]) == -1 })
+	if len(km.orderedPubKeys) != len(pubKeys) {
+		log.Info(keymanager.KeysReloaded)
+		km.accountsChangedFeed.Send(pubKeys)
+	} else {
+		for i := range km.orderedPubKeys {
+			if !bytes.Equal(km.orderedPubKeys[i][:], pubKeys[i][:]) {
+				log.Info(keymanager.KeysReloaded)
+				km.accountsChangedFeed.Send(pubKeys)
+				break
+			}
+		}
+	}
+
+	km.orderedPubKeys = pubKeys
+	return km.orderedPubKeys, nil
+}
+
 // FetchValidatingPublicKeys fetches the list of public keys that should be used to validate with.
 func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
-	resp, err := km.client.ListValidatingPublicKeys(ctx, &ptypes.Empty{})
+	resp, err := km.client.ListValidatingPublicKeys(ctx, &empty.Empty{})
 	if err != nil {
 		return nil, errors.Wrap(err, "could not list accounts from remote server")
 	}
@@ -207,11 +242,6 @@ func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 		pubKeys[i] = bytesutil.ToBytes48(resp.ValidatingPublicKeys[i])
 	}
 	return pubKeys, nil
-}
-
-// FetchAllValidatingPublicKeys fetches the list of all public keys, including disabled ones.
-func (km *Keymanager) FetchAllValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
-	return km.FetchValidatingPublicKeys(ctx)
 }
 
 // Sign signs a message for a validator key via a gRPC request.
@@ -229,10 +259,9 @@ func (km *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 	return bls.SignatureFromBytes(resp.Signature)
 }
 
-// SubscribeAccountChanges is currently NOT IMPLEMENTED for the remote keymanager.
-// INVOKING THIS FUNCTION HAS NO EFFECT!
-func (km *Keymanager) SubscribeAccountChanges(_ chan [][48]byte) event.Subscription {
-	return event.NewSubscription(func(i <-chan struct{}) error {
-		return nil
-	})
+// SubscribeAccountChanges creates an event subscription for a channel
+// to listen for public key changes at runtime, such as when new validator accounts
+// are imported into the keymanager while the validator process is running.
+func (km *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][48]byte) event.Subscription {
+	return km.accountsChangedFeed.Subscribe(pubKeysChan)
 }

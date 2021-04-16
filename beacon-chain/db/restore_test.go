@@ -8,6 +8,7 @@ import (
 	"path"
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -22,9 +23,6 @@ func TestRestore(t *testing.T) {
 	ctx := context.Background()
 
 	backupDb, err := kv.NewKVStore(context.Background(), t.TempDir(), &kv.Config{})
-	defer func() {
-		require.NoError(t, backupDb.Close())
-	}()
 	require.NoError(t, err)
 	head := testutil.NewBeaconBlock()
 	head.Block.Slot = 5000
@@ -52,7 +50,7 @@ func TestRestore(t *testing.T) {
 	require.NoError(t, set.Set(cmd.RestoreTargetDirFlag.Name, restoreDir))
 	cliCtx := cli.NewContext(&app, set, nil)
 
-	assert.NoError(t, restore(cliCtx))
+	assert.NoError(t, Restore(cliCtx))
 
 	files, err := ioutil.ReadDir(path.Join(restoreDir, kv.BeaconNodeDbDirName))
 	require.NoError(t, err)
@@ -65,7 +63,7 @@ func TestRestore(t *testing.T) {
 	require.NoError(t, err)
 	headBlock, err := restoredDb.HeadBlock(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(5000), headBlock.Block.Slot, "Restored database has incorrect data")
+	assert.Equal(t, types.Slot(5000), headBlock.Block.Slot, "Restored database has incorrect data")
 	assert.LogsContain(t, logHook, "Restore completed successfully")
 
 }

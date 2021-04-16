@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -14,7 +15,7 @@ func TestStore_Backup(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	pubKey := []byte("hello")
-	require.NoError(t, db.SavePubKey(ctx, uint64(1), pubKey))
+	require.NoError(t, db.SavePubKey(ctx, types.ValidatorIndex(1), pubKey))
 	require.NoError(t, db.Backup(ctx, ""))
 
 	backupsPath := filepath.Join(db.databasePath, backupsDirectoryName)
@@ -33,7 +34,7 @@ func TestStore_Backup(t *testing.T) {
 	t.Cleanup(func() {
 		require.NoError(t, backedDB.Close(), "Failed to close database")
 	})
-	received, err := backedDB.ValidatorPubKey(ctx, uint64(1))
+	received, err := backedDB.ValidatorPubKey(ctx, types.ValidatorIndex(1))
 	require.NoError(t, err)
 	require.DeepEqual(t, pubKey, received)
 }

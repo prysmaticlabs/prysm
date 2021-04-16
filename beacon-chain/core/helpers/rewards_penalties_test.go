@@ -3,8 +3,9 @@ package helpers
 import (
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -12,29 +13,29 @@ import (
 )
 
 func TestTotalBalance_OK(t *testing.T) {
-	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{Validators: []*ethpb.Validator{
+	state, err := stateV0.InitializeFromProto(&pb.BeaconState{Validators: []*ethpb.Validator{
 		{EffectiveBalance: 27 * 1e9}, {EffectiveBalance: 28 * 1e9},
 		{EffectiveBalance: 32 * 1e9}, {EffectiveBalance: 40 * 1e9},
 	}})
 	require.NoError(t, err)
 
-	balance := TotalBalance(state, []uint64{0, 1, 2, 3})
+	balance := TotalBalance(state, []types.ValidatorIndex{0, 1, 2, 3})
 	wanted := state.Validators()[0].EffectiveBalance + state.Validators()[1].EffectiveBalance +
 		state.Validators()[2].EffectiveBalance + state.Validators()[3].EffectiveBalance
 	assert.Equal(t, wanted, balance, "Incorrect TotalBalance")
 }
 
 func TestTotalBalance_ReturnsEffectiveBalanceIncrement(t *testing.T) {
-	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{Validators: []*ethpb.Validator{}})
+	state, err := stateV0.InitializeFromProto(&pb.BeaconState{Validators: []*ethpb.Validator{}})
 	require.NoError(t, err)
 
-	balance := TotalBalance(state, []uint64{})
+	balance := TotalBalance(state, []types.ValidatorIndex{})
 	wanted := params.BeaconConfig().EffectiveBalanceIncrement
 	assert.Equal(t, wanted, balance, "Incorrect TotalBalance")
 }
 
 func TestTotalActiveBalance_OK(t *testing.T) {
-	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{Validators: []*ethpb.Validator{
+	state, err := stateV0.InitializeFromProto(&pb.BeaconState{Validators: []*ethpb.Validator{
 		{
 			EffectiveBalance: 32 * 1e9,
 			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
@@ -73,7 +74,7 @@ func TestGetBalance_OK(t *testing.T) {
 		{i: 2, b: []uint64{0, 0, 0}},
 	}
 	for _, test := range tests {
-		state, err := beaconstate.InitializeFromProto(&pb.BeaconState{Balances: test.b})
+		state, err := stateV0.InitializeFromProto(&pb.BeaconState{Balances: test.b})
 		require.NoError(t, err)
 		assert.Equal(t, test.b[test.i], state.Balances()[test.i], "Incorrect Validator balance")
 	}
@@ -81,7 +82,7 @@ func TestGetBalance_OK(t *testing.T) {
 
 func TestIncreaseBalance_OK(t *testing.T) {
 	tests := []struct {
-		i  uint64
+		i  types.ValidatorIndex
 		b  []uint64
 		nb uint64
 		eb uint64
@@ -91,7 +92,7 @@ func TestIncreaseBalance_OK(t *testing.T) {
 		{i: 2, b: []uint64{27 * 1e9, 28 * 1e9, 32 * 1e9}, nb: 33 * 1e9, eb: 65 * 1e9},
 	}
 	for _, test := range tests {
-		state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+		state, err := stateV0.InitializeFromProto(&pb.BeaconState{
 			Validators: []*ethpb.Validator{
 				{EffectiveBalance: 4}, {EffectiveBalance: 4}, {EffectiveBalance: 4}},
 			Balances: test.b,
@@ -104,7 +105,7 @@ func TestIncreaseBalance_OK(t *testing.T) {
 
 func TestDecreaseBalance_OK(t *testing.T) {
 	tests := []struct {
-		i  uint64
+		i  types.ValidatorIndex
 		b  []uint64
 		nb uint64
 		eb uint64
@@ -115,7 +116,7 @@ func TestDecreaseBalance_OK(t *testing.T) {
 		{i: 3, b: []uint64{27 * 1e9, 28 * 1e9, 1, 28 * 1e9}, nb: 28 * 1e9, eb: 0},
 	}
 	for _, test := range tests {
-		state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+		state, err := stateV0.InitializeFromProto(&pb.BeaconState{
 			Validators: []*ethpb.Validator{
 				{EffectiveBalance: 4}, {EffectiveBalance: 4}, {EffectiveBalance: 4}, {EffectiveBalance: 3}},
 			Balances: test.b,
@@ -123,5 +124,96 @@ func TestDecreaseBalance_OK(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, DecreaseBalance(state, test.i, test.nb))
 		assert.Equal(t, test.eb, state.Balances()[test.i], "Incorrect Validator balance")
+	}
+}
+
+func TestFinalityDelay(t *testing.T) {
+	base := buildState(params.BeaconConfig().SlotsPerEpoch*10, 1)
+	base.FinalizedCheckpoint = &ethpb.Checkpoint{Epoch: 3}
+	beaconState, err := stateV0.InitializeFromProto(base)
+	require.NoError(t, err)
+	prevEpoch := types.Epoch(0)
+	finalizedEpoch := types.Epoch(0)
+	// Set values for each test case
+	setVal := func() {
+		prevEpoch = PrevEpoch(beaconState)
+		finalizedEpoch = beaconState.FinalizedCheckpointEpoch()
+	}
+	setVal()
+	d := FinalityDelay(prevEpoch, finalizedEpoch)
+	w := PrevEpoch(beaconState) - beaconState.FinalizedCheckpointEpoch()
+	assert.Equal(t, w, d, "Did not get wanted finality delay")
+
+	require.NoError(t, beaconState.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: 4}))
+	setVal()
+	d = FinalityDelay(prevEpoch, finalizedEpoch)
+	w = PrevEpoch(beaconState) - beaconState.FinalizedCheckpointEpoch()
+	assert.Equal(t, w, d, "Did not get wanted finality delay")
+
+	require.NoError(t, beaconState.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: 5}))
+	setVal()
+	d = FinalityDelay(prevEpoch, finalizedEpoch)
+	w = PrevEpoch(beaconState) - beaconState.FinalizedCheckpointEpoch()
+	assert.Equal(t, w, d, "Did not get wanted finality delay")
+}
+
+func TestIsInInactivityLeak(t *testing.T) {
+	base := buildState(params.BeaconConfig().SlotsPerEpoch*10, 1)
+	base.FinalizedCheckpoint = &ethpb.Checkpoint{Epoch: 3}
+	beaconState, err := stateV0.InitializeFromProto(base)
+	require.NoError(t, err)
+	prevEpoch := types.Epoch(0)
+	finalizedEpoch := types.Epoch(0)
+	// Set values for each test case
+	setVal := func() {
+		prevEpoch = PrevEpoch(beaconState)
+		finalizedEpoch = beaconState.FinalizedCheckpointEpoch()
+	}
+	setVal()
+	assert.Equal(t, true, IsInInactivityLeak(prevEpoch, finalizedEpoch), "Wanted inactivity leak true")
+	require.NoError(t, beaconState.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: 4}))
+	setVal()
+	assert.Equal(t, true, IsInInactivityLeak(prevEpoch, finalizedEpoch), "Wanted inactivity leak true")
+	require.NoError(t, beaconState.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: 5}))
+	setVal()
+	assert.Equal(t, false, IsInInactivityLeak(prevEpoch, finalizedEpoch), "Wanted inactivity leak false")
+}
+
+func buildState(slot types.Slot, validatorCount uint64) *pb.BeaconState {
+	validators := make([]*ethpb.Validator, validatorCount)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
+		}
+	}
+	validatorBalances := make([]uint64, len(validators))
+	for i := 0; i < len(validatorBalances); i++ {
+		validatorBalances[i] = params.BeaconConfig().MaxEffectiveBalance
+	}
+	latestActiveIndexRoots := make(
+		[][]byte,
+		params.BeaconConfig().EpochsPerHistoricalVector,
+	)
+	for i := 0; i < len(latestActiveIndexRoots); i++ {
+		latestActiveIndexRoots[i] = params.BeaconConfig().ZeroHash[:]
+	}
+	latestRandaoMixes := make(
+		[][]byte,
+		params.BeaconConfig().EpochsPerHistoricalVector,
+	)
+	for i := 0; i < len(latestRandaoMixes); i++ {
+		latestRandaoMixes[i] = params.BeaconConfig().ZeroHash[:]
+	}
+	return &pb.BeaconState{
+		Slot:                        slot,
+		Balances:                    validatorBalances,
+		Validators:                  validators,
+		RandaoMixes:                 make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Slashings:                   make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
+		BlockRoots:                  make([][]byte, params.BeaconConfig().SlotsPerEpoch*10),
+		FinalizedCheckpoint:         &ethpb.Checkpoint{Root: make([]byte, 32)},
+		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
+		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Root: make([]byte, 32)},
 	}
 }

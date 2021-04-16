@@ -3,7 +3,9 @@ package initialsync
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p-core/network"
@@ -13,9 +15,9 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	p2pm "github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -85,17 +87,23 @@ func TestBlocksFetcher_nonSkippedSlotAfter(t *testing.T) {
 	t.Run("test isolated non-skipped slot", func(t *testing.T) {
 		seekSlot := types.Slot(51264)
 		expectedSlot := types.Slot(55000)
-		found := false
+
+		var wg sync.WaitGroup
+		wg.Add(1)
+
 		var i int
-		for i = 0; i < 100; i++ {
-			slot, err := fetcher.nonSkippedSlotAfter(ctx, seekSlot)
-			assert.NoError(t, err)
-			if slot == expectedSlot {
-				found = true
-				break
+		go func() {
+			for {
+				i++
+				slot, err := fetcher.nonSkippedSlotAfter(ctx, seekSlot)
+				assert.NoError(t, err)
+				if slot == expectedSlot {
+					wg.Done()
+					break
+				}
 			}
-		}
-		if !found {
+		}()
+		if testutil.WaitTimeout(&wg, 5*time.Second) {
 			t.Errorf("Isolated non-skipped slot not found in %d iterations: %v", i, expectedSlot)
 		} else {
 			log.Debugf("Isolated non-skipped slot found in %d iterations", i)

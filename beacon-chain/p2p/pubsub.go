@@ -7,12 +7,33 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsub_pb "github.com/libp2p/go-libp2p-pubsub/pb"
-	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+)
+
+const (
+	// overlay parameters
+	gossipSubD   = 8  // topic stable mesh target count
+	gossipSubDlo = 6  // topic stable mesh low watermark
+	gossipSubDhi = 12 // topic stable mesh high watermark
+
+	// gossip parameters
+	gossipSubMcacheLen    = 6   // number of windows to retain full messages in cache for `IWANT` responses
+	gossipSubMcacheGossip = 3   // number of windows to gossip about
+	gossipSubSeenTTL      = 550 // number of heartbeat intervals to retain message IDs
+
+	// fanout ttl
+	gossipSubFanoutTTL = 60000000000 // TTL for fanout maps for topics we are not subscribed to but have published to, in nano seconds
+
+	// heartbeat interval
+	gossipSubHeartbeatInterval = 700 * time.Millisecond // frequency of heartbeat, milliseconds
+
+	// misc
+	randomSubD = 6 // random gossip target
 )
 
 // JoinTopic will join PubSub topic, if not already joined.
@@ -75,13 +96,16 @@ func (s *Service) SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub
 	if err != nil {
 		return nil, err
 	}
-	if featureconfig.Get().EnablePeerScorer {
-		scoringParams := topicScoreParams(topic)
-		if scoringParams != nil {
-			if err := topicHandle.SetScoreParams(scoringParams); err != nil {
-				return nil, err
-			}
+	scoringParams, err := s.topicScoreParams(topic)
+	if err != nil {
+		return nil, err
+	}
+
+	if scoringParams != nil {
+		if err := topicHandle.SetScoreParams(scoringParams); err != nil {
+			return nil, err
 		}
+		logGossipParameters(topic, scoringParams)
 	}
 	return topicHandle.Subscribe(opts...)
 }
@@ -121,13 +145,12 @@ func msgIDFunction(pmsg *pubsub_pb.Message) string {
 }
 
 func setPubSubParameters() {
-	heartBeatInterval := 700 * time.Millisecond
-	pubsub.GossipSubDlo = 6
-	pubsub.GossipSubD = 8
-	pubsub.GossipSubHeartbeatInterval = heartBeatInterval
-	pubsub.GossipSubHistoryLength = 6
-	pubsub.GossipSubHistoryGossip = 3
-	pubsub.TimeCacheDuration = 550 * heartBeatInterval
+	pubsub.GossipSubDlo = gossipSubDlo
+	pubsub.GossipSubD = gossipSubD
+	pubsub.GossipSubHeartbeatInterval = gossipSubHeartbeatInterval
+	pubsub.GossipSubHistoryLength = gossipSubMcacheLen
+	pubsub.GossipSubHistoryGossip = gossipSubMcacheGossip
+	pubsub.TimeCacheDuration = 550 * gossipSubHeartbeatInterval
 
 	// Set a larger gossip history to ensure that slower
 	// messages have a longer time to be propagated. This

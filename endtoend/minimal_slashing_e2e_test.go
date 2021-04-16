@@ -12,11 +12,12 @@ import (
 )
 
 func TestEndToEnd_Slashing_MinimalConfig(t *testing.T) {
+	t.Skip("To be replaced with the new slasher implementation")
 	testutil.ResetCache()
 	params.UseE2EConfig()
 	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
 
-	minimalConfig := &types.E2EConfig{
+	testConfig := &types.E2EConfig{
 		BeaconFlags:    []string{},
 		ValidatorFlags: []string{},
 		EpochsToRun:    4,
@@ -33,5 +34,5 @@ func TestEndToEnd_Slashing_MinimalConfig(t *testing.T) {
 		},
 	}
 
-	runEndToEndTest(t, minimalConfig)
+	newTestRunner(t, testConfig).run()
 }

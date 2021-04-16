@@ -10,10 +10,10 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/tyler-smith/go-bip39"
@@ -129,7 +129,8 @@ func RecoverWallet(ctx context.Context, cfg *RecoverWalletConfig) (*wallet.Walle
 		return nil, errors.Wrap(err, "could not save wallet to disk")
 	}
 	km, err := derived.NewKeymanager(ctx, &derived.SetupConfig{
-		Wallet: w,
+		Wallet:           w,
+		ListenForChanges: false,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "could not make keymanager for given phrase")
@@ -152,7 +153,7 @@ func inputMnemonic(cliCtx *cli.Context) (mnemonicPhrase string, err error) {
 			return "", err
 		}
 		enteredMnemonic := string(data)
-		if err := validateMnemonic(enteredMnemonic); err != nil {
+		if err := ValidateMnemonic(enteredMnemonic); err != nil {
 			return "", errors.Wrap(err, "mnemonic phrase did not pass validation")
 		}
 		return enteredMnemonic, nil
@@ -189,7 +190,7 @@ func inputMnemonic(cliCtx *cli.Context) (mnemonicPhrase string, err error) {
 	mnemonicPhrase, err = promptutil.ValidatePrompt(
 		os.Stdin,
 		"Enter the seed phrase for the wallet you would like to recover",
-		validateMnemonic)
+		ValidateMnemonic)
 	if err != nil {
 		return "", fmt.Errorf("could not get mnemonic phrase: %w", err)
 	}
@@ -218,7 +219,9 @@ func inputNumAccounts(cliCtx *cli.Context) (int64, error) {
 	return int64(numAccountsInt), nil
 }
 
-func validateMnemonic(mnemonic string) error {
+// ValidateMnemonic ensures that it is not empty and that the count of the words are
+// as specified(currently 24).
+func ValidateMnemonic(mnemonic string) error {
 	if strings.Trim(mnemonic, " ") == "" {
 		return errors.New("phrase cannot be empty")
 	}

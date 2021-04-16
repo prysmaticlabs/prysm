@@ -2,7 +2,9 @@ package stateutil
 
 import (
 	"bytes"
+	"encoding/binary"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -31,6 +33,32 @@ func ReturnTrieLayer(elements [][32]byte, length uint64) [][]*[32]byte {
 		}
 	}
 	return refLayers
+}
+
+func merkleizeTrieLeaves(layers [][][32]byte, hashLayer [][32]byte,
+	hasher func([]byte) [32]byte) ([][][32]byte, [][32]byte) {
+	// We keep track of the hash layers of a Merkle trie until we reach
+	// the top layer of length 1, which contains the single root element.
+	//        [Root]      -> Top layer has length 1.
+	//    [E]       [F]   -> This layer has length 2.
+	// [A]  [B]  [C]  [D] -> The bottom layer has length 4 (needs to be a power of two).
+	i := 1
+	chunkBuffer := bytes.NewBuffer([]byte{})
+	chunkBuffer.Grow(64)
+	for len(hashLayer) > 1 && i < len(layers) {
+		layer := make([][32]byte, len(hashLayer)/2)
+		for j := 0; j < len(hashLayer); j += 2 {
+			chunkBuffer.Write(hashLayer[j][:])
+			chunkBuffer.Write(hashLayer[j+1][:])
+			hashedChunk := hasher(chunkBuffer.Bytes())
+			layer[j/2] = hashedChunk
+			chunkBuffer.Reset()
+		}
+		hashLayer = layer
+		layers[i] = hashLayer
+		i++
+	}
+	return layers, hashLayer
 }
 
 // ReturnTrieLayerVariable returns the representation of a merkle trie when
@@ -212,4 +240,75 @@ func recomputeRootFromLayerVariable(idx int, item [32]byte, layers [][]*[32]byte
 		currentIndex = parentIdx
 	}
 	return root, layers, nil
+}
+
+// AddInMixin describes a method from which a lenth mixin is added to the
+// provided root.
+func AddInMixin(root [32]byte, length uint64) ([32]byte, error) {
+	rootBuf := new(bytes.Buffer)
+	if err := binary.Write(rootBuf, binary.LittleEndian, length); err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not marshal eth1data votes length")
+	}
+	// We need to mix in the length of the slice.
+	rootBufRoot := make([]byte, 32)
+	copy(rootBufRoot, rootBuf.Bytes())
+	return htrutils.MixInLength(root, rootBufRoot), nil
+}
+
+// Merkleize 32-byte leaves into a Merkle trie for its adequate depth, returning
+// the resulting layers of the trie based on the appropriate depth. This function
+// pads the leaves to a length of 32.
+func Merkleize(leaves [][]byte) [][][]byte {
+	hashFunc := hashutil.CustomSHA256Hasher()
+	layers := make([][][]byte, htrutils.Depth(uint64(len(leaves)))+1)
+	for len(leaves) != 32 {
+		leaves = append(leaves, make([]byte, 32))
+	}
+	currentLayer := leaves
+	layers[0] = currentLayer
+
+	// We keep track of the hash layers of a Merkle trie until we reach
+	// the top layer of length 1, which contains the single root element.
+	//        [Root]      -> Top layer has length 1.
+	//    [E]       [F]   -> This layer has length 2.
+	// [A]  [B]  [C]  [D] -> The bottom layer has length 4 (needs to be a power of two).
+	i := 1
+	for len(currentLayer) > 1 && i < len(layers) {
+		layer := make([][]byte, 0)
+		for i := 0; i < len(currentLayer); i += 2 {
+			hashedChunk := hashFunc(append(currentLayer[i], currentLayer[i+1]...))
+			layer = append(layer, hashedChunk[:])
+		}
+		currentLayer = layer
+		layers[i] = currentLayer
+		i++
+	}
+	return layers
+}
+
+// MerkleizeTrieLeaves merkleize the trie leaves.
+func MerkleizeTrieLeaves(layers [][][32]byte, hashLayer [][32]byte,
+	hasher func([]byte) [32]byte) ([][][32]byte, [][32]byte) {
+	// We keep track of the hash layers of a Merkle trie until we reach
+	// the top layer of length 1, which contains the single root element.
+	//        [Root]      -> Top layer has length 1.
+	//    [E]       [F]   -> This layer has length 2.
+	// [A]  [B]  [C]  [D] -> The bottom layer has length 4 (needs to be a power of two).
+	i := 1
+	chunkBuffer := bytes.NewBuffer([]byte{})
+	chunkBuffer.Grow(64)
+	for len(hashLayer) > 1 && i < len(layers) {
+		layer := make([][32]byte, len(hashLayer)/2)
+		for j := 0; j < len(hashLayer); j += 2 {
+			chunkBuffer.Write(hashLayer[j][:])
+			chunkBuffer.Write(hashLayer[j+1][:])
+			hashedChunk := hasher(chunkBuffer.Bytes())
+			layer[j/2] = hashedChunk
+			chunkBuffer.Reset()
+		}
+		hashLayer = layer
+		layers[i] = hashLayer
+		i++
+	}
+	return layers, hashLayer
 }

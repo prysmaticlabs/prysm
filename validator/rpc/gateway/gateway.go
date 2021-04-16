@@ -4,8 +4,10 @@ import (
 	"context"
 	"net/http"
 	"strings"
+	"time"
 
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2_gateway"
 	"github.com/prysmaticlabs/prysm/validator/web"
 	"github.com/rs/cors"
@@ -60,6 +62,7 @@ func (g *Gateway) Start() {
 		pb.RegisterHealthHandlerFromEndpoint,
 		pb.RegisterAccountsHandlerFromEndpoint,
 		pb.RegisterBeaconHandlerFromEndpoint,
+		pb.RegisterSlashingProtectionHandlerFromEndpoint,
 	}
 	for _, h := range handlers {
 		if err := h(ctx, gwmux, g.remoteAddr, opts); err != nil {
@@ -100,8 +103,14 @@ func (g *Gateway) Status() error {
 
 // Stop the gateway with a graceful shutdown.
 func (g *Gateway) Stop() error {
-	if err := g.server.Shutdown(g.ctx); err != nil {
-		log.WithError(err).Error("Failed to shut down server")
+	shutdownCtx, shutdownCancel := context.WithTimeout(g.ctx, 2*time.Second)
+	defer shutdownCancel()
+	if err := g.server.Shutdown(shutdownCtx); err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			log.Warn("Existing connections terminated")
+		} else {
+			log.WithError(err).Error("Failed to gracefully shut down server")
+		}
 	}
 
 	if g.cancel != nil {

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
-	ptypes "github.com/gogo/protobuf/types"
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
@@ -85,7 +85,7 @@ func (s *Server) Login(ctx context.Context, req *pb.AuthRequest) (*pb.AuthRespon
 }
 
 // HasUsedWeb checks if the user has authenticated via the web interface.
-func (s *Server) HasUsedWeb(ctx context.Context, _ *ptypes.Empty) (*pb.HasUsedWebResponse, error) {
+func (s *Server) HasUsedWeb(ctx context.Context, _ *empty.Empty) (*pb.HasUsedWebResponse, error) {
 	walletExists, err := wallet.Exists(s.walletDir)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not check if wallet exists")
@@ -98,7 +98,7 @@ func (s *Server) HasUsedWeb(ctx context.Context, _ *ptypes.Empty) (*pb.HasUsedWe
 }
 
 // ChangePassword allows changing the RPC password via the API as an authenticated method.
-func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordRequest) (*ptypes.Empty, error) {
+func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordRequest) (*empty.Empty, error) {
 	if req.CurrentPassword == "" {
 		return nil, status.Error(codes.InvalidArgument, "Current password cannot be empty")
 	}
@@ -123,7 +123,7 @@ func (s *Server) ChangePassword(ctx context.Context, req *pb.ChangePasswordReque
 	if err := s.SaveHashedPassword(req.Password); err != nil {
 		return nil, status.Errorf(codes.Internal, "could not write hashed password to disk: %v", err)
 	}
-	return &ptypes.Empty{}, nil
+	return &empty.Empty{}, nil
 }
 
 // SaveHashedPassword to disk for the validator RPC.

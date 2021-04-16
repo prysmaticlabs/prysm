@@ -14,18 +14,20 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
+	slashingiface "github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -60,8 +62,8 @@ type ValidatorService struct {
 	dataDir               string
 	withCert              string
 	endpoint              string
-	validator             Validator
-	protector             iface.Protector
+	validator             iface.Validator
+	protector             slashingiface.Protector
 	ctx                   context.Context
 	keyManager            keymanager.IKeymanager
 	grpcHeaders           []string
@@ -79,9 +81,9 @@ type Config struct {
 	GrpcRetriesFlag            uint
 	GrpcRetryDelay             time.Duration
 	GrpcMaxCallRecvMsgSizeFlag int
-	Protector                  iface.Protector
+	Protector                  slashingiface.Protector
 	Endpoint                   string
-	Validator                  Validator
+	Validator                  iface.Validator
 	ValDB                      db.Database
 	KeyManager                 keymanager.IKeymanager
 	GraffitiFlag               string
@@ -122,17 +124,11 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 // Start the validator service. Launches the main go routine for the validator
 // client.
 func (v *ValidatorService) Start() {
-	streamInterceptor := grpc.WithStreamInterceptor(middleware.ChainStreamClient(
-		grpc_opentracing.StreamClientInterceptor(),
-		grpc_prometheus.StreamClientInterceptor,
-		grpc_retry.StreamClientInterceptor(),
-	))
 	dialOpts := ConstructDialOptions(
 		v.maxCallRecvMsgSize,
 		v.withCert,
 		v.grpcRetries,
 		v.grpcRetryDelay,
-		streamInterceptor,
 	)
 	if dialOpts == nil {
 		return
@@ -175,6 +171,12 @@ func (v *ValidatorService) Start() {
 		slashablePublicKeys[pubKey] = true
 	}
 
+	graffitiOrderedIndex, err := v.db.GraffitiOrderedIndex(v.ctx, v.graffitiStruct.Hash)
+	if err != nil {
+		log.Errorf("Could not read graffiti ordered index from disk: %v", err)
+		return
+	}
+
 	v.validator = &validator{
 		db:                             v.db,
 		validatorClient:                ethpb.NewBeaconNodeValidatorClient(v.conn),
@@ -195,6 +197,7 @@ func (v *ValidatorService) Start() {
 		walletInitializedFeed:          v.walletInitializedFeed,
 		blockFeed:                      new(event.Feed),
 		graffitiStruct:                 v.graffitiStruct,
+		graffitiOrderedIndex:           graffitiOrderedIndex,
 		eipImportBlacklistedPublicKeys: slashablePublicKeys,
 		logDutyCountDown:               v.logDutyCountDown,
 	}
@@ -229,7 +232,7 @@ func (v *ValidatorService) recheckKeys(ctx context.Context) {
 		cleanup := sub.Unsubscribe
 		defer cleanup()
 		w := <-initializedChan
-		keyManager, err := w.InitializeKeymanager(ctx)
+		keyManager, err := w.InitializeKeymanager(ctx, accountsiface.InitKeymanagerConfig{ListenForChanges: true})
 		if err != nil {
 			// log.Fatalf will prevent defer from being called
 			cleanup()

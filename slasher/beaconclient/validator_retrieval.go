@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"go.opencensus.io/trace"
 )
@@ -12,21 +13,21 @@ import (
 // keys from a beacon node via gRPC.
 func (s *Service) FindOrGetPublicKeys(
 	ctx context.Context,
-	validatorIndices []uint64,
-) (map[uint64][]byte, error) {
+	validatorIndices []types.ValidatorIndex,
+) (map[types.ValidatorIndex][]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconclient.FindOrGetPublicKeys")
 	defer span.End()
 
-	validators := make(map[uint64][]byte, len(validatorIndices))
+	validators := make(map[types.ValidatorIndex][]byte, len(validatorIndices))
 	notFound := 0
-	for _, validatorIdx := range validatorIndices {
-		pub, exists := s.publicKeyCache.Get(validatorIdx)
+	for _, validatorIndex := range validatorIndices {
+		pub, exists := s.publicKeyCache.Get(validatorIndex)
 		if exists {
-			validators[validatorIdx] = pub
+			validators[validatorIndex] = pub
 			continue
 		}
 		// inline removal of cached elements from slice
-		validatorIndices[notFound] = validatorIdx
+		validatorIndices[notFound] = validatorIndex
 		notFound++
 	}
 	// trim the slice to its new size
@@ -42,7 +43,7 @@ func (s *Service) FindOrGetPublicKeys(
 	if notFound == 0 {
 		return validators, nil
 	}
-	vc, err := s.beaconClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
+	vc, err := s.cfg.BeaconClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
 		Indices: validatorIndices,
 	})
 	if err != nil {

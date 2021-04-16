@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/k0kubun/go-ansi"
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/schollz/progressbar/v3"
 )
 

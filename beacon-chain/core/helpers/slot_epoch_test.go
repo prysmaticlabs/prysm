@@ -6,7 +6,7 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -42,7 +42,7 @@ func TestCurrentEpoch_OK(t *testing.T) {
 		{slot: 200, epoch: 6},
 	}
 	for _, tt := range tests {
-		state, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: tt.slot})
+		state, err := stateV0.InitializeFromProto(&pb.BeaconState{Slot: tt.slot})
 		require.NoError(t, err)
 		assert.Equal(t, tt.epoch, CurrentEpoch(state), "ActiveCurrentEpoch(%d)", state.Slot())
 	}
@@ -58,7 +58,7 @@ func TestPrevEpoch_OK(t *testing.T) {
 		{slot: 2 * params.BeaconConfig().SlotsPerEpoch, epoch: 1},
 	}
 	for _, tt := range tests {
-		state, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: tt.slot})
+		state, err := stateV0.InitializeFromProto(&pb.BeaconState{Slot: tt.slot})
 		require.NoError(t, err)
 		assert.Equal(t, tt.epoch, PrevEpoch(state), "ActivePrevEpoch(%d)", state.Slot())
 	}
@@ -76,7 +76,7 @@ func TestNextEpoch_OK(t *testing.T) {
 		{slot: 200, epoch: types.Epoch(200/params.BeaconConfig().SlotsPerEpoch + 1)},
 	}
 	for _, tt := range tests {
-		state, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: tt.slot})
+		state, err := stateV0.InitializeFromProto(&pb.BeaconState{Slot: tt.slot})
 		require.NoError(t, err)
 		assert.Equal(t, tt.epoch, NextEpoch(state), "NextEpoch(%d)", state.Slot())
 	}
@@ -344,27 +344,4 @@ func TestValidateSlotClock_HandlesBadSlot(t *testing.T) {
 	assert.NoError(t, ValidateSlotClock(types.Slot(2*MaxSlotBuffer), uint64(genTime)), "unexpected error validating slot")
 	assert.ErrorContains(t, "which exceeds max allowed value relative to the local clock", ValidateSlotClock(types.Slot(2*MaxSlotBuffer+1), uint64(genTime)), "no error from bad slot")
 	assert.ErrorContains(t, "which exceeds max allowed value relative to the local clock", ValidateSlotClock(1<<63, uint64(genTime)), "no error from bad slot")
-}
-
-func TestWeakSubjectivityCheckptEpoch(t *testing.T) {
-	tests := []struct {
-		valCount uint64
-		want     types.Epoch
-	}{
-		// Verifying these numbers aligned with the reference table defined:
-		// https://github.com/ethereum/eth2.0-specs/blob/weak-subjectivity-guide/specs/phase0/weak-subjectivity.md#calculating-the-weak-subjectivity-period
-		{valCount: params.BeaconConfig().MinGenesisActiveValidatorCount, want: 460},
-		{valCount: params.BeaconConfig().MinGenesisActiveValidatorCount * 2, want: 665},
-		{valCount: params.BeaconConfig().MinGenesisActiveValidatorCount * 4, want: 1075},
-		{valCount: params.BeaconConfig().MinGenesisActiveValidatorCount * 8, want: 1894},
-		{valCount: params.BeaconConfig().MinGenesisActiveValidatorCount * 16, want: 3532},
-		{valCount: params.BeaconConfig().MinGenesisActiveValidatorCount * 32, want: 3532},
-	}
-	for _, tt := range tests {
-		got, err := WeakSubjectivityCheckptEpoch(tt.valCount)
-		require.NoError(t, err)
-		if got != tt.want {
-			t.Errorf("WeakSubjectivityCheckptEpoch() = %v, want %v", got, tt.want)
-		}
-	}
 }

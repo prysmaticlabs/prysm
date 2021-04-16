@@ -14,6 +14,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+const errEpoch = "Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d"
+
 // ListValidatorAssignments retrieves the validator assignments for a given epoch,
 // optional validator indices or public keys may be included to filter validator assignments.
 func (bs *Server) ListValidatorAssignments(
@@ -29,8 +31,8 @@ func (bs *Server) ListValidatorAssignments(
 	}
 
 	var res []*ethpb.ValidatorAssignments_CommitteeAssignment
-	filtered := map[uint64]bool{} // track filtered validators to prevent duplication in the response.
-	filteredIndices := make([]uint64, 0)
+	filtered := map[types.ValidatorIndex]bool{} // track filtered validators to prevent duplication in the response.
+	filteredIndices := make([]types.ValidatorIndex, 0)
 	var requestedEpoch types.Epoch
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListValidatorAssignmentsRequest_Genesis:
@@ -45,7 +47,7 @@ func (bs *Server) ListValidatorAssignments(
 	if requestedEpoch > currentEpoch {
 		return nil, status.Errorf(
 			codes.InvalidArgument,
-			"Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
+			errEpoch,
 			currentEpoch,
 			requestedEpoch,
 		)
@@ -105,7 +107,7 @@ func (bs *Server) ListValidatorAssignments(
 	}
 
 	for _, index := range filteredIndices[start:end] {
-		if index >= uint64(requestedState.NumValidators()) {
+		if uint64(index) >= uint64(requestedState.NumValidators()) {
 			return nil, status.Errorf(codes.OutOfRange, "Validator index %d >= validator count %d",
 				index, requestedState.NumValidators())
 		}

@@ -6,7 +6,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -167,6 +167,28 @@ var (
 		prometheus.CounterOpts{
 			Name: "validator_attestations_rejected_total",
 			Help: "Count the attestations rejected by slashing protection.",
+		},
+		[]string{
+			"pubkey",
+		},
+	)
+	// ValidatorNextAttestationSlotGaugeVec used to track validator statuses by public key.
+	ValidatorNextAttestationSlotGaugeVec = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: "validator",
+			Name:      "next_attestation_slot",
+			Help:      "validator next scheduled attestation slot",
+		},
+		[]string{
+			"pubkey",
+		},
+	)
+	// ValidatorNextProposalSlotGaugeVec used to track validator statuses by public key.
+	ValidatorNextProposalSlotGaugeVec = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: "validator",
+			Name:      "next_proposal_slot",
+			Help:      "validator next scheduled proposal slot",
 		},
 		[]string{
 			"pubkey",

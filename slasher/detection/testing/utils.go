@@ -3,14 +3,14 @@
 package testing
 
 import (
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 )
 
 // SignedBlockHeader given slot, proposer index this function generates signed block header.
 // with random bytes as its signature.
-func SignedBlockHeader(slot types.Slot, proposerIdx uint64) (*ethpb.SignedBeaconBlockHeader, error) {
+func SignedBlockHeader(slot types.Slot, proposerIdx types.ValidatorIndex) (*ethpb.SignedBeaconBlockHeader, error) {
 	sig, err := genRandomByteArray(96)
 	if err != nil {
 		return nil, err
@@ -29,7 +29,7 @@ func SignedBlockHeader(slot types.Slot, proposerIdx uint64) (*ethpb.SignedBeacon
 }
 
 // BlockHeader given slot, proposer index this function generates block header.
-func BlockHeader(slot types.Slot, proposerIdx uint64) (*ethpb.BeaconBlockHeader, error) {
+func BlockHeader(slot types.Slot, proposerIdx types.ValidatorIndex) (*ethpb.BeaconBlockHeader, error) {
 	root := [32]byte{1, 2, 3}
 	return &ethpb.BeaconBlockHeader{
 		ProposerIndex: proposerIdx,

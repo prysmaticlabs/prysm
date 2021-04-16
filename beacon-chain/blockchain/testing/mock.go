@@ -19,8 +19,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -28,7 +30,7 @@ import (
 
 // ChainService defines the mock interface for testing
 type ChainService struct {
-	State                       *stateTrie.BeaconState
+	State                       iface.BeaconState
 	Root                        []byte
 	Block                       *ethpb.SignedBeaconBlock
 	FinalizedCheckPoint         *ethpb.Checkpoint
@@ -149,7 +151,7 @@ func (mon *MockOperationNotifier) OperationFeed() *event.Feed {
 // ReceiveBlockInitialSync mocks ReceiveBlockInitialSync method in chain service.
 func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block *ethpb.SignedBeaconBlock, _ [32]byte) error {
 	if s.State == nil {
-		s.State = &stateTrie.BeaconState{}
+		s.State = &stateV0.BeaconState{}
 	}
 	if !bytes.Equal(s.Root, block.Block.ParentRoot) {
 		return errors.Errorf("wanted %#x but got %#x", s.Root, block.Block.ParentRoot)
@@ -176,7 +178,7 @@ func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block *ethpb
 // ReceiveBlockBatch processes blocks in batches from initial-sync.
 func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBlock, _ [][32]byte) error {
 	if s.State == nil {
-		s.State = &stateTrie.BeaconState{}
+		s.State = &stateV0.BeaconState{}
 	}
 	for _, block := range blks {
 		if !bytes.Equal(s.Root, block.Block.ParentRoot) {
@@ -205,7 +207,7 @@ func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []*ethpb.Sign
 // ReceiveBlock mocks ReceiveBlock method in chain service.
 func (s *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlock, _ [32]byte) error {
 	if s.State == nil {
-		s.State = &stateTrie.BeaconState{}
+		s.State = &stateV0.BeaconState{}
 	}
 	if !bytes.Equal(s.Root, block.Block.ParentRoot) {
 		return errors.Errorf("wanted %#x but got %#x", s.Root, block.Block.ParentRoot)
@@ -251,7 +253,7 @@ func (s *ChainService) HeadBlock(context.Context) (*ethpb.SignedBeaconBlock, err
 }
 
 // HeadState mocks HeadState method in chain service.
-func (s *ChainService) HeadState(context.Context) (*stateTrie.BeaconState, error) {
+func (s *ChainService) HeadState(context.Context) (iface.BeaconState, error) {
 	return s.State, nil
 }
 
@@ -286,14 +288,14 @@ func (s *ChainService) ReceiveAttestationNoPubsub(context.Context, *ethpb.Attest
 }
 
 // AttestationPreState mocks AttestationPreState method in chain service.
-func (s *ChainService) AttestationPreState(_ context.Context, _ *ethpb.Attestation) (*stateTrie.BeaconState, error) {
+func (s *ChainService) AttestationPreState(_ context.Context, _ *ethpb.Attestation) (iface.BeaconState, error) {
 	return s.State, nil
 }
 
 // HeadValidatorsIndices mocks the same method in the chain service.
-func (s *ChainService) HeadValidatorsIndices(_ context.Context, epoch types.Epoch) ([]uint64, error) {
+func (s *ChainService) HeadValidatorsIndices(_ context.Context, epoch types.Epoch) ([]types.ValidatorIndex, error) {
 	if s.State == nil {
-		return []uint64{}, nil
+		return []types.ValidatorIndex{}, nil
 	}
 	return helpers.ActiveValidatorIndices(s.State, epoch)
 }
@@ -380,4 +382,13 @@ func (s *ChainService) VerifyFinalizedConsistency(_ context.Context, r []byte) e
 		return errors.New("Root and finalized store are not consistent")
 	}
 	return nil
+}
+
+// ChainHeads mocks ChainHeads and always return nil.
+func (s *ChainService) ChainHeads() ([][32]byte, []types.Slot) {
+	return [][32]byte{
+			bytesutil.ToBytes32(bytesutil.PadTo([]byte("foo"), 32)),
+			bytesutil.ToBytes32(bytesutil.PadTo([]byte("bar"), 32)),
+		},
+		[]types.Slot{0, 1}
 }

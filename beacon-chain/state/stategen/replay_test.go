@@ -38,7 +38,7 @@ func TestReplayBlocks_AllSkipSlots(t *testing.T) {
 	copy(mockRoot[:], "hello-world")
 	cp.Root = mockRoot[:]
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cp))
-	require.NoError(t, beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{}))
+	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&pb.PendingAttestation{}))
 
 	service := New(beaconDB)
 	targetSlot := params.BeaconConfig().SlotsPerEpoch - 1
@@ -67,7 +67,7 @@ func TestReplayBlocks_SameSlot(t *testing.T) {
 	copy(mockRoot[:], "hello-world")
 	cp.Root = mockRoot[:]
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cp))
-	require.NoError(t, beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{}))
+	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&pb.PendingAttestation{}))
 
 	service := New(beaconDB)
 	targetSlot := beaconState.Slot()
@@ -97,7 +97,7 @@ func TestReplayBlocks_LowerSlotBlock(t *testing.T) {
 	copy(mockRoot[:], "hello-world")
 	cp.Root = mockRoot[:]
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cp))
-	require.NoError(t, beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{}))
+	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&pb.PendingAttestation{}))
 
 	service := New(beaconDB)
 	targetSlot := beaconState.Slot()
@@ -364,7 +364,7 @@ func TestLastSavedState_Genesis(t *testing.T) {
 
 	savedState, err := s.lastSavedState(ctx, 0)
 	require.NoError(t, err)
-	require.DeepEqual(t, gState.InnerStateUnsafe(), savedState.InnerStateUnsafe())
+	require.DeepSSZEqual(t, gState.InnerStateUnsafe(), savedState.InnerStateUnsafe())
 }
 
 func TestLastSavedState_CanGet(t *testing.T) {
@@ -394,9 +394,7 @@ func TestLastSavedState_CanGet(t *testing.T) {
 
 	savedState, err := s.lastSavedState(ctx, s.finalizedInfo.slot+100)
 	require.NoError(t, err)
-	if !proto.Equal(st.InnerStateUnsafe(), savedState.InnerStateUnsafe()) {
-		t.Error("Did not save correct root")
-	}
+	require.DeepSSZEqual(t, st.InnerStateUnsafe(), savedState.InnerStateUnsafe())
 }
 
 func TestLastSavedState_NoSavedBlockState(t *testing.T) {

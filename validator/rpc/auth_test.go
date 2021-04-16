@@ -30,7 +30,6 @@ func TestServer_SignupAndLogin_RoundTrip(t *testing.T) {
 
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
-	strongPass := "29384283xasjasd32%%&*@*#*"
 
 	key, err := createRandomJWTKey()
 	require.NoError(t, err)
@@ -87,7 +86,6 @@ func TestServer_ChangePassword_Preconditions(t *testing.T) {
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
 	ctx := context.Background()
-	strongPass := "29384283xasjasd32%%&*@*#*"
 	ss := &Server{
 		walletDir: defaultWalletPath,
 	}

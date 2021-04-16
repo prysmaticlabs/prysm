@@ -125,16 +125,13 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 	blockSig, err := helpers.ComputeDomainAndSign(state, currentEpoch, &sszBytes, params.BeaconConfig().DomainBeaconProposer, priv)
 	require.NoError(t, err)
 	validators[5896].PublicKey = priv.PublicKey().Marshal()
-	block := &ethpb.SignedBeaconBlock{
+	block := testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			Slot: 1,
-			Body: &ethpb.BeaconBlockBody{
-				RandaoReveal: []byte{'A', 'B', 'C'},
-			},
+			Slot:       1,
 			ParentRoot: lbhsr[:],
 		},
 		Signature: blockSig,
-	}
+	})
 
 	_, err = blocks.ProcessBlockHeader(context.Background(), state, block)
 	want := "is different than block slot"
@@ -321,7 +318,7 @@ func TestBlockSignatureSet_OK(t *testing.T) {
 	validators[proposerIdx].PublicKey = priv.PublicKey().Marshal()
 	err = state.UpdateValidatorAtIndex(proposerIdx, validators[proposerIdx])
 	require.NoError(t, err)
-	set, err := blocks.BlockSignatureSet(state, block)
+	set, err := blocks.BlockSignatureSet(state, block.Block.ProposerIndex, block.Signature, block.Block.HashTreeRoot)
 	require.NoError(t, err)
 
 	verified, err := set.Verify()

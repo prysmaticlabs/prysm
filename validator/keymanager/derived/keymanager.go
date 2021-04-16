@@ -26,7 +26,8 @@ const (
 // SetupConfig includes configuration values for initializing
 // a keymanager, such as passwords, the wallet, and more.
 type SetupConfig struct {
-	Wallet iface.Wallet
+	Wallet           iface.Wallet
+	ListenForChanges bool
 }
 
 // Keymanager implementation for derived, HD keymanager using EIP-2333 and EIP-2334.
@@ -40,7 +41,8 @@ func NewKeymanager(
 	cfg *SetupConfig,
 ) (*Keymanager, error) {
 	importedKM, err := imported.NewKeymanager(ctx, &imported.SetupConfig{
-		Wallet: cfg.Wallet,
+		Wallet:           cfg.Wallet,
+		ListenForChanges: cfg.ListenForChanges,
 	})
 	if err != nil {
 		return nil, err
@@ -97,11 +99,6 @@ func (km *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 // FetchValidatingPublicKeys fetches the list of validating public keys from the keymanager.
 func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
 	return km.importedKM.FetchValidatingPublicKeys(ctx)
-}
-
-// FetchAllValidatingPublicKeys fetches the list of all public keys (including disabled ones) from the keymanager.
-func (km *Keymanager) FetchAllValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
-	return km.importedKM.FetchAllValidatingPublicKeys(ctx)
 }
 
 // FetchValidatingPrivateKeys fetches the list of validating private keys from the keymanager.

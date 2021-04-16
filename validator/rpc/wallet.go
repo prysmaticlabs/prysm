@@ -8,20 +8,24 @@ import (
 	"path/filepath"
 	"strings"
 
-	ptypes "github.com/gogo/protobuf/types"
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/tyler-smith/go-bip39"
+	"github.com/tyler-smith/go-bip39/wordlists"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 const (
@@ -31,7 +35,7 @@ const (
 )
 
 // CreateWallet via an API request, allowing a user to save a new
-// derived, imported, or remote wallet.
+// imported wallet via RPC.
 func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) (*pb.CreateWalletResponse, error) {
 	walletDir := s.walletDir
 	exists, err := wallet.Exists(walletDir)
@@ -59,8 +63,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 			},
 		}, nil
 	}
-	switch req.Keymanager {
-	case pb.KeymanagerKind_IMPORTED:
+	if req.Keymanager == pb.KeymanagerKind_IMPORTED {
 		_, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 			WalletCfg: &wallet.Config{
 				WalletDir:      walletDir,
@@ -88,46 +91,12 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 				KeymanagerKind: pb.KeymanagerKind_IMPORTED,
 			},
 		}, nil
-	case pb.KeymanagerKind_DERIVED:
-		if req.NumAccounts < 1 {
-			return nil, status.Error(codes.InvalidArgument, "Must create at least 1 validator account")
-		}
-		if req.Mnemonic == "" {
-			return nil, status.Error(codes.InvalidArgument, "Must include mnemonic in request")
-		}
-		if _, err := accounts.RecoverWallet(ctx, &accounts.RecoverWalletConfig{
-			WalletDir:      walletDir,
-			WalletPassword: req.WalletPassword,
-			Mnemonic:       req.Mnemonic,
-			NumAccounts:    int(req.NumAccounts),
-		}); err != nil {
-			return nil, err
-		}
-		if err := s.initializeWallet(ctx, &wallet.Config{
-			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Imported,
-			WalletPassword: req.WalletPassword,
-		}); err != nil {
-			return nil, err
-		}
-		if err := writeWalletPasswordToDisk(walletDir, req.WalletPassword); err != nil {
-			return nil, status.Error(codes.Internal, "Could not write wallet password to disk")
-		}
-		return &pb.CreateWalletResponse{
-			Wallet: &pb.WalletResponse{
-				WalletPath:     walletDir,
-				KeymanagerKind: pb.KeymanagerKind_DERIVED,
-			},
-		}, nil
-	case pb.KeymanagerKind_REMOTE:
-		return nil, status.Error(codes.Unimplemented, "Remote keymanager not yet supported")
-	default:
-		return nil, status.Errorf(codes.InvalidArgument, "Keymanager type %T not yet supported", req.Keymanager)
 	}
+	return nil, status.Errorf(codes.InvalidArgument, "Keymanager type %T create wallet not supported through web", req.Keymanager)
 }
 
 // WalletConfig returns the wallet's configuration. If no wallet exists, we return an empty response.
-func (s *Server) WalletConfig(ctx context.Context, _ *ptypes.Empty) (*pb.WalletResponse, error) {
+func (s *Server) WalletConfig(ctx context.Context, _ *empty.Empty) (*pb.WalletResponse, error) {
 	exists, err := wallet.Exists(s.walletDir)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, checkExistsErrMsg)
@@ -166,8 +135,82 @@ func (s *Server) WalletConfig(ctx context.Context, _ *ptypes.Empty) (*pb.WalletR
 	}, nil
 }
 
+// RecoverWallet via an API request, allowing a user to recover a derived.
+// Generate the seed from the mnemonic + language + 25th passphrase(optional).
+// Create N validator keystores from the seed specified by req.NumAccounts.
+// Set the wallet password to req.WalletPassword, then create the wallet from
+// the provided Mnemonic and return CreateWalletResponse.
+func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest) (*pb.CreateWalletResponse, error) {
+	numAccounts := int(req.NumAccounts)
+	if numAccounts == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Must create at least 1 validator account")
+	}
+
+	// Check validate mnemonic with chosen language
+	language := strings.ToLower(req.Language)
+	allowedLanguages := map[string][]string{
+		"english":             wordlists.English,
+		"chinese_simplified":  wordlists.ChineseSimplified,
+		"chinese_traditional": wordlists.ChineseTraditional,
+		"french":              wordlists.French,
+		"italian":             wordlists.Italian,
+		"japanese":            wordlists.Japanese,
+		"korean":              wordlists.Korean,
+		"spanish":             wordlists.Spanish,
+	}
+	if _, ok := allowedLanguages[language]; !ok {
+		return nil, status.Error(codes.InvalidArgument, "input not in the list of supported languages")
+	}
+	bip39.SetWordList(allowedLanguages[language])
+	mnemonic := req.Mnemonic
+	if err := accounts.ValidateMnemonic(mnemonic); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid mnemonic in request")
+	}
+
+	// Check it is not null and not an empty string.
+	if req.Mnemonic25ThWord != "" && strings.TrimSpace(req.Mnemonic25ThWord) == "" {
+		return nil, status.Error(codes.InvalidArgument, "mnemonic 25th word cannot be empty")
+	}
+
+	// Web UI is structured to only write to the default wallet directory
+	// accounts.Recoverwallet checks if wallet already exists.
+	walletDir := s.walletDir
+
+	// Web UI should check the new and confirmed password are equal.
+	walletPassword := req.WalletPassword
+	if err := promptutil.ValidatePasswordInput(walletPassword); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "password did not pass validation")
+	}
+
+	if _, err := accounts.RecoverWallet(ctx, &accounts.RecoverWalletConfig{
+		WalletDir:        walletDir,
+		WalletPassword:   walletPassword,
+		Mnemonic:         mnemonic,
+		NumAccounts:      numAccounts,
+		Mnemonic25thWord: req.Mnemonic25ThWord,
+	}); err != nil {
+		return nil, err
+	}
+	if err := s.initializeWallet(ctx, &wallet.Config{
+		WalletDir:      walletDir,
+		KeymanagerKind: keymanager.Derived,
+		WalletPassword: walletPassword,
+	}); err != nil {
+		return nil, err
+	}
+	if err := writeWalletPasswordToDisk(walletDir, walletPassword); err != nil {
+		return nil, status.Error(codes.Internal, "Could not write wallet password to disk")
+	}
+	return &pb.CreateWalletResponse{
+		Wallet: &pb.WalletResponse{
+			WalletPath:     walletDir,
+			KeymanagerKind: pb.KeymanagerKind_DERIVED,
+		},
+	}, nil
+}
+
 // GenerateMnemonic creates a new, random bip39 mnemonic phrase.
-func (s *Server) GenerateMnemonic(_ context.Context, _ *ptypes.Empty) (*pb.GenerateMnemonicResponse, error) {
+func (s *Server) GenerateMnemonic(_ context.Context, _ *empty.Empty) (*pb.GenerateMnemonicResponse, error) {
 	mnemonicRandomness := make([]byte, 32)
 	if _, err := rand.NewGenerator().Read(mnemonicRandomness); err != nil {
 		return nil, status.Errorf(
@@ -239,7 +282,7 @@ func (s *Server) ImportKeystores(
 // we return an appropriate error.
 func (s *Server) ValidateKeystores(
 	ctx context.Context, req *pb.ValidateKeystoresRequest,
-) (*ptypes.Empty, error) {
+) (*emptypb.Empty, error) {
 	if req.KeystoresPassword == "" {
 		return nil, status.Error(codes.InvalidArgument, "Password required for keystores")
 	}
@@ -269,7 +312,7 @@ func (s *Server) ValidateKeystores(
 		}
 	}
 
-	return &ptypes.Empty{}, nil
+	return &emptypb.Empty{}, nil
 }
 
 // Initialize a wallet and send it over a global feed.
@@ -304,7 +347,7 @@ func (s *Server) initializeWallet(ctx context.Context, cfg *wallet.Config) error
 	}
 
 	s.walletInitialized = true
-	km, err := w.InitializeKeymanager(ctx)
+	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: true})
 	if err != nil {
 		return errors.Wrap(err, accounts.ErrCouldNotInitializeKeymanager)
 	}

@@ -10,6 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
+const merkleizingListLimitError = "merkleizing list that is too large, over limit"
+
 func TestBitlistRoot(t *testing.T) {
 	hasher := hashutil.CustomSHA256Hasher()
 	capacity := uint64(10)
@@ -44,10 +46,9 @@ func TestBitwiseMerkleizeOverLimit(t *testing.T) {
 	}
 	count := uint64(2)
 	limit := uint64(1)
-	expected := "merkleizing list that is too large, over limit"
 
 	_, err := htrutils.BitwiseMerkleize(hasher, chunks, count, limit)
-	assert.ErrorContains(t, expected, err)
+	assert.ErrorContains(t, merkleizingListLimitError, err)
 }
 
 func TestBitwiseMerkleizeArrays(t *testing.T) {
@@ -73,10 +74,9 @@ func TestBitwiseMerkleizeArraysOverLimit(t *testing.T) {
 	}
 	count := uint64(2)
 	limit := uint64(1)
-	expected := "merkleizing list that is too large, over limit"
 
 	_, err := htrutils.BitwiseMerkleizeArrays(hasher, chunks, count, limit)
-	assert.ErrorContains(t, expected, err)
+	assert.ErrorContains(t, merkleizingListLimitError, err)
 }
 
 func TestPack(t *testing.T) {
