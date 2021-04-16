@@ -76,7 +76,7 @@ func TestRecoverDerivedWallet(t *testing.T) {
 	require.NoError(t, err)
 	derivedKM, ok := km.(*derived.Keymanager)
 	if !ok {
-		t.Fatal("not a derived Keymanager")
+		t.Fatal("not a derived keymanager")
 	}
 	names, err := derivedKM.ValidatingAccountNames(ctx)
 	assert.NoError(t, err)

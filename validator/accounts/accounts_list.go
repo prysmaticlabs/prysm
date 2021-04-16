@@ -52,26 +52,26 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 	case keymanager.Imported:
 		km, ok := km.(*imported.Keymanager)
 		if !ok {
-			return errors.New("could not assert Keymanager interface to concrete type")
+			return errors.New("could not assert keymanager interface to concrete type")
 		}
 		if err := listImportedKeymanagerAccounts(cliCtx.Context, showDepositData, showPrivateKeys, km); err != nil {
-			return errors.Wrap(err, "could not list validator accounts with imported Keymanager")
+			return errors.Wrap(err, "could not list validator accounts with imported keymanager")
 		}
 	case keymanager.Derived:
 		km, ok := km.(*derived.Keymanager)
 		if !ok {
-			return errors.New("could not assert Keymanager interface to concrete type")
+			return errors.New("could not assert keymanager interface to concrete type")
 		}
 		if err := listDerivedKeymanagerAccounts(cliCtx.Context, showPrivateKeys, km); err != nil {
-			return errors.Wrap(err, "could not list validator accounts with derived Keymanager")
+			return errors.Wrap(err, "could not list validator accounts with derived keymanager")
 		}
 	case keymanager.Remote:
 		km, ok := km.(*remote.Keymanager)
 		if !ok {
-			return errors.New("could not assert Keymanager interface to concrete type")
+			return errors.New("could not assert keymanager interface to concrete type")
 		}
 		if err := listRemoteKeymanagerAccounts(cliCtx.Context, w, km, km.KeymanagerOpts()); err != nil {
-			return errors.Wrap(err, "could not list validator accounts with remote Keymanager")
+			return errors.Wrap(err, "could not list validator accounts with remote keymanager")
 		}
 	default:
 		return fmt.Errorf(errKeymanagerNotSupported, w.KeymanagerKind().String())
@@ -85,13 +85,13 @@ func listImportedKeymanagerAccounts(
 	showPrivateKeys bool,
 	keymanager *imported.Keymanager,
 ) error {
-	// We initialize the wallet's Keymanager.
+	// We initialize the wallet's keymanager.
 	accountNames, err := keymanager.ValidatingAccountNames()
 	if err != nil {
 		return errors.Wrap(err, "could not fetch account names")
 	}
 	numAccounts := au.BrightYellow(len(accountNames))
-	fmt.Printf("(Keymanager kind) %s\n", au.BrightGreen("imported wallet").Bold())
+	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("imported wallet").Bold())
 	fmt.Println("")
 	if len(accountNames) == 1 {
 		fmt.Printf("Showing %d validator account\n", numAccounts)
@@ -143,7 +143,7 @@ func listDerivedKeymanagerAccounts(
 	keymanager *derived.Keymanager,
 ) error {
 	au := aurora.NewAurora(true)
-	fmt.Printf("(Keymanager kind) %s\n", au.BrightGreen("derived, (HD) hierarchical-deterministic").Bold())
+	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("derived, (HD) hierarchical-deterministic").Bold())
 	fmt.Printf("(derivation format) %s\n", au.BrightGreen(derived.DerivationPathFormat).Bold())
 	validatingPubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
 	if err != nil {
@@ -192,7 +192,7 @@ func listRemoteKeymanagerAccounts(
 	opts *remote.KeymanagerOpts,
 ) error {
 	au := aurora.NewAurora(true)
-	fmt.Printf("(Keymanager kind) %s\n", au.BrightGreen("remote signer").Bold())
+	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("remote signer").Bold())
 	fmt.Printf(
 		"(configuration file path) %s\n",
 		au.BrightGreen(filepath.Join(w.AccountsDir(), wallet.KeymanagerConfigFileName)).Bold(),

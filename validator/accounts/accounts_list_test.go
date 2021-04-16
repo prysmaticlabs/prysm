@@ -103,7 +103,7 @@ func TestListAccounts_ImportedKeymanager(t *testing.T) {
 	require.NoError(t, err)
 	os.Stdout = writer
 
-	// We call the list imported Keymanager accounts function.
+	// We call the list imported keymanager accounts function.
 	require.NoError(
 		t,
 		listImportedKeymanagerAccounts(
@@ -125,7 +125,7 @@ func TestListAccounts_ImportedKeymanager(t *testing.T) {
 
 	// Expected output example:
 	/*
-		(Keymanager kind) imported wallet
+		(keymanager kind) imported wallet
 
 		Showing 5 validator accounts
 		View the eth1 deposit transaction data for your accounts by running `validator accounts list --show-deposit-data
@@ -175,10 +175,10 @@ func TestListAccounts_ImportedKeymanager(t *testing.T) {
 	lineCount := prologLength + accountLength*numAccounts + epilogLength
 	require.Equal(t, lineCount, len(lines))
 
-	// Assert the Keymanager kind is printed on the first line.
+	// Assert the keymanager kind is printed on the first line.
 	kindString := "imported"
 	kindFound := strings.Contains(lines[0], kindString)
-	assert.Equal(t, true, kindFound, "Keymanager Kind %s not found on the first line", kindString)
+	assert.Equal(t, true, kindFound, "keymanager Kind %s not found on the first line", kindString)
 
 	// Get account names and require the correct count
 	accountNames, err := km.ValidatingAccountNames()
@@ -254,7 +254,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	require.NoError(t, err)
 	os.Stdout = writer
 
-	// We call the list imported Keymanager accounts function.
+	// We call the list imported keymanager accounts function.
 	require.NoError(t, listDerivedKeymanagerAccounts(cliCtx.Context, true, keymanager))
 
 	require.NoError(t, writer.Close())
@@ -268,7 +268,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 
 	// Expected output example:
 	/*
-		(Keymanager kind) derived, (HD) hierarchical-deterministic
+		(keymanager kind) derived, (HD) hierarchical-deterministic
 		(derivation format) m / purpose / coin_type / account_index / withdrawal_key / validating_key
 		Showing 2 validator accounts
 
@@ -315,10 +315,10 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	lineCount := prologLength + accountLength*numAccounts + epilogLength
 	require.Equal(t, lineCount, len(lines))
 
-	// Assert the Keymanager kind is printed on the first line.
+	// Assert the keymanager kind is printed on the first line.
 	kindString := w.KeymanagerKind().String()
 	kindFound := strings.Contains(lines[0], kindString)
-	assert.Equal(t, true, kindFound, "Keymanager Kind %s not found on the first line", kindString)
+	assert.Equal(t, true, kindFound, "keymanager Kind %s not found on the first line", kindString)
 
 	// Get account names and require the correct count
 	accountNames, err := keymanager.ValidatingAccountNames(cliCtx.Context)
@@ -398,7 +398,7 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 			RemoteAddr: "localhost:4000",
 		},
 	}
-	// We call the list remote Keymanager accounts function.
+	// We call the list remote keymanager accounts function.
 	require.NoError(t, listRemoteKeymanagerAccounts(context.Background(), w, km, km.opts))
 
 	require.NoError(t, writer.Close())
@@ -412,7 +412,7 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 
 	// Expected output example:
 	/*
-		(Keymanager kind) remote signer
+		(keymanager kind) remote signer
 		(configuration file path) /tmp/79336/wallet/remote/keymanageropts.json
 
 		Configuration options
@@ -447,10 +447,10 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 	lineCount := prologLength + accountLength*numAccounts + epilogLength
 	require.Equal(t, lineCount, len(lines))
 
-	// Assert the Keymanager kind is printed on the first line.
+	// Assert the keymanager kind is printed on the first line.
 	kindString := w.KeymanagerKind().String()
 	kindFound := strings.Contains(lines[0], kindString)
-	assert.Equal(t, true, kindFound, "Keymanager Kind %s not found on the first line", kindString)
+	assert.Equal(t, true, kindFound, "keymanager Kind %s not found on the first line", kindString)
 
 	// Assert that Configuration is printed in the right position
 	configLines := lines[configOffset:(configOffset + configLength)]

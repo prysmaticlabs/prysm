@@ -23,9 +23,9 @@ func EditWalletConfigurationCli(cliCtx *cli.Context) error {
 	}
 	switch w.KeymanagerKind() {
 	case keymanager.Imported:
-		return errors.New("not possible to edit imported Keymanager configuration")
+		return errors.New("not possible to edit imported keymanager configuration")
 	case keymanager.Derived:
-		return errors.New("derived Keymanager is not yet supported")
+		return errors.New("derived keymanager is not yet supported")
 	case keymanager.Remote:
 		enc, err := w.ReadKeymanagerConfigFromDisk(cliCtx.Context)
 		if err != nil {
@@ -40,7 +40,7 @@ func EditWalletConfigurationCli(cliCtx *cli.Context) error {
 		fmt.Println(opts)
 		newCfg, err := prompt.InputRemoteKeymanagerConfig(cliCtx)
 		if err != nil {
-			return errors.Wrap(err, "could not get Keymanager config")
+			return errors.Wrap(err, "could not get keymanager config")
 		}
 		encodedCfg, err := remote.MarshalOptionsFile(cliCtx.Context, newCfg)
 		if err != nil {

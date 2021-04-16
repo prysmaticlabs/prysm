@@ -6,9 +6,9 @@ import (
 )
 
 var (
-	errKeymanagerNotSupported = "Keymanager kind not supported: %s"
-	// MsgCouldNotInitializeKeymanager informs about failed Keymanager initialization
-	ErrCouldNotInitializeKeymanager = "could not initialize Keymanager"
+	errKeymanagerNotSupported = "keymanager kind not supported: %s"
+	// MsgCouldNotInitializeKeymanager informs about failed keymanager initialization
+	ErrCouldNotInitializeKeymanager = "could not initialize keymanager"
 )
 
 // Config specifies parameters for accounts commands.

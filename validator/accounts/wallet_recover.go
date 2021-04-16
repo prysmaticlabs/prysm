@@ -133,7 +133,7 @@ func RecoverWallet(ctx context.Context, cfg *RecoverWalletConfig) (*wallet.Walle
 		ListenForChanges: false,
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "could not make Keymanager for given phrase")
+		return nil, errors.Wrap(err, "could not make keymanager for given phrase")
 	}
 	if err := km.RecoverAccountsFromMnemonic(ctx, cfg.Mnemonic, cfg.Mnemonic25thWord, cfg.NumAccounts); err != nil {
 		return nil, err

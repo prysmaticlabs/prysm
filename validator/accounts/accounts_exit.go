@@ -30,7 +30,7 @@ import (
 type PerformExitCfg struct {
 	ValidatorClient  ethpb.BeaconNodeValidatorClient
 	NodeClient       ethpb.NodeClient
-	Keymanager       keymanager.IKeymanager
+	keymanager       keymanager.IKeymanager
 	RawPubKeys       [][]byte
 	FormattedPubKeys []string
 }
@@ -80,7 +80,7 @@ func PerformVoluntaryExit(
 ) (rawExitedKeys [][]byte, formattedExitedKeys []string, err error) {
 	var rawNotExitedKeys [][]byte
 	for i, key := range cfg.RawPubKeys {
-		if err := client.ProposeExit(ctx, cfg.ValidatorClient, cfg.NodeClient, cfg.Keymanager.Sign, key); err != nil {
+		if err := client.ProposeExit(ctx, cfg.ValidatorClient, cfg.NodeClient, cfg.keymanager.Sign, key); err != nil {
 			rawNotExitedKeys = append(rawNotExitedKeys, key)
 
 			msg := err.Error()

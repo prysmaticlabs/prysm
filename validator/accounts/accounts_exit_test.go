@@ -57,7 +57,7 @@ func TestExitAccountsCli_OK(t *testing.T) {
 	keystore, _ := createKeystore(t, keysDir)
 	time.Sleep(time.Second)
 
-	// We initialize a wallet with a imported Keymanager.
+	// We initialize a wallet with a imported keymanager.
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		// Wallet configuration flags.
 		walletDir:           walletDir,
@@ -152,7 +152,7 @@ func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 	keystore2, _ := createKeystore(t, keysDir)
 	time.Sleep(time.Second)
 
-	// We initialize a wallet with a imported Keymanager.
+	// We initialize a wallet with a imported keymanager.
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		// Wallet configuration flags.
 		walletDir:           walletDir,

@@ -42,7 +42,7 @@ func TestBackupAccounts_Noninteractive_Derived(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// We initialize a wallet with a derived Keymanager.
+	// We initialize a wallet with a derived keymanager.
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		// Wallet configuration flags.
 		walletDir:          walletDir,
@@ -155,7 +155,7 @@ func TestBackupAccounts_Noninteractive_Imported(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// We initialize a wallet with a imported Keymanager.
+	// We initialize a wallet with a imported keymanager.
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		// Wallet configuration flags.
 		walletDir:           walletDir,

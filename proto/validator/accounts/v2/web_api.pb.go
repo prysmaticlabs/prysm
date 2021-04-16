@@ -5357,7 +5357,7 @@ func (m *CreateWalletRequest) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Keymanager", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field keymanager", wireType)
 			}
 			m.Keymanager = 0
 			for shift := uint(0); ; shift += 7 {

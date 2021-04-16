@@ -90,7 +90,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 			},
 		}, nil
 	}
-	return nil, status.Errorf(codes.InvalidArgument, "Keymanager type %T create wallet not supported through web", req.Keymanager)
+	return nil, status.Errorf(codes.InvalidArgument, "keymanager type %T create wallet not supported through web", req.Keymanager)
 }
 
 // WalletConfig returns the wallet's configuration. If no wallet exists, we return an empty response.

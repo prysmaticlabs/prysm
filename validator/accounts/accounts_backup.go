@@ -97,23 +97,23 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 	case keymanager.Imported:
 		km, ok := km.(*imported.Keymanager)
 		if !ok {
-			return errors.New("could not assert Keymanager interface to concrete type")
+			return errors.New("could not assert keymanager interface to concrete type")
 		}
 		keystoresToBackup, err = km.ExtractKeystores(cliCtx.Context, filteredPubKeys, backupsPassword)
 		if err != nil {
-			return errors.Wrap(err, "could not backup accounts for imported Keymanager")
+			return errors.Wrap(err, "could not backup accounts for imported keymanager")
 		}
 	case keymanager.Derived:
 		km, ok := km.(*derived.Keymanager)
 		if !ok {
-			return errors.New("could not assert Keymanager interface to concrete type")
+			return errors.New("could not assert keymanager interface to concrete type")
 		}
 		keystoresToBackup, err = km.ExtractKeystores(cliCtx.Context, filteredPubKeys, backupsPassword)
 		if err != nil {
-			return errors.Wrap(err, "could not backup accounts for derived Keymanager")
+			return errors.Wrap(err, "could not backup accounts for derived keymanager")
 		}
 	case keymanager.Remote:
-		return errors.New("backing up keys is not supported for a remote Keymanager")
+		return errors.New("backing up keys is not supported for a remote keymanager")
 	default:
 		return fmt.Errorf(errKeymanagerNotSupported, w.KeymanagerKind())
 	}

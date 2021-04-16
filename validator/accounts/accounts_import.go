@@ -89,7 +89,7 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 			WalletPassword: cfg.WalletCfg.WalletPassword,
 		})
 		if err = createImportedKeymanagerWallet(cliCtx.Context, w); err != nil {
-			return nil, errors.Wrap(err, "could not create Keymanager")
+			return nil, errors.Wrap(err, "could not create keymanager")
 		}
 		log.WithField("wallet-path", cfg.WalletCfg.WalletDir).Info(
 			"Successfully created new wallet",
