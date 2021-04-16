@@ -105,58 +105,6 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	assert.DeepNotEqual(t, oldMix, mix, "Did not expect new and old randao mix to equal")
 }
 
-func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
-
-	eth1Data := &ethpb.Eth1Data{
-		DepositCount: 100,
-		DepositRoot:  bytesutil.PadTo([]byte{2}, 32),
-		BlockHash:    make([]byte, 32),
-	}
-	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch-1))
-	e := beaconState.Eth1Data()
-	e.DepositCount = 100
-	require.NoError(t, beaconState.SetEth1Data(e))
-	bh := beaconState.LatestBlockHeader()
-	bh.Slot = beaconState.Slot()
-	require.NoError(t, beaconState.SetLatestBlockHeader(bh))
-	require.NoError(t, beaconState.SetEth1DataVotes([]*ethpb.Eth1Data{eth1Data}))
-
-	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
-	epoch := helpers.CurrentEpoch(beaconState)
-	randaoReveal, err := testutil.RandaoReveal(beaconState, epoch, privKeys)
-	require.NoError(t, err)
-	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
-
-	nextSlotState, err := state.ProcessSlots(context.Background(), beaconState.Copy(), beaconState.Slot()+1)
-	require.NoError(t, err)
-	parentRoot, err := nextSlotState.LatestBlockHeader().HashTreeRoot()
-	require.NoError(t, err)
-	proposerIdx, err := helpers.BeaconProposerIndex(nextSlotState)
-	require.NoError(t, err)
-	block := testutil.NewBeaconBlock()
-	block.Block.ProposerIndex = proposerIdx
-	block.Block.Slot = beaconState.Slot() + 1
-	block.Block.ParentRoot = parentRoot[:]
-	block.Block.Body.RandaoReveal = randaoReveal
-	block.Block.Body.Eth1Data = eth1Data
-
-	stateRoot, err := state.CalculateStateRoot(context.Background(), beaconState, block)
-	require.NoError(t, err)
-
-	block.Block.StateRoot = stateRoot[:]
-
-	sig, err := testutil.BlockSignature(beaconState, block.Block, privKeys)
-	require.NoError(t, err)
-	block.Signature = sig.Marshal()
-
-	set, _, err := state.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, block)
-	assert.NoError(t, err)
-	verified, err := set.Verify()
-	assert.NoError(t, err)
-	assert.Equal(t, true, verified, "Could not verify signature set")
-}
-
 func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 
@@ -490,16 +438,6 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	received := v.ExitEpoch
 	wanted := params.BeaconConfig().FarFutureEpoch
 	assert.NotEqual(t, wanted, received, "Expected validator at index %d to be exiting", exit.Exit.ValidatorIndex)
-}
-
-func TestProcessBlockNoVerify_PassesProcessingConditions(t *testing.T) {
-	beaconState, block, _, _, _ := createFullBlockWithOperations(t)
-	set, _, err := state.ProcessBlockNoVerifyAnySig(context.Background(), beaconState, block)
-	require.NoError(t, err)
-	// Test Signature set verifies.
-	verified, err := set.Verify()
-	require.NoError(t, err)
-	assert.Equal(t, true, verified, "Could not verify signature set.")
 }
 
 func TestProcessEpochPrecompute_CanProcess(t *testing.T) {

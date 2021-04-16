@@ -19,9 +19,9 @@ const MaxSlotBuffer = uint64(1 << 7)
 // SlotToEpoch returns the epoch number of the input slot.
 //
 // Spec pseudocode definition:
-//  def compute_epoch_of_slot(slot: Slot) -> Epoch:
+//  def compute_epoch_at_slot(slot: Slot) -> Epoch:
 //    """
-//    Return the epoch number of ``slot``.
+//    Return the epoch number at ``slot``.
 //    """
 //    return Epoch(slot // SLOTS_PER_EPOCH)
 func SlotToEpoch(slot types.Slot) types.Epoch {
@@ -36,7 +36,7 @@ func SlotToEpoch(slot types.Slot) types.Epoch {
 //    """
 //    Return the current epoch.
 //    """
-//    return compute_epoch_of_slot(state.slot)
+//    return compute_epoch_at_slot(state.slot)
 func CurrentEpoch(state iface.ReadOnlyBeaconState) types.Epoch {
 	return SlotToEpoch(state.Slot())
 }

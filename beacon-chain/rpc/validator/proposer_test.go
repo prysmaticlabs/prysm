@@ -344,7 +344,7 @@ func TestProposer_PendingDeposits_Eth1DataVoteOK(t *testing.T) {
 
 	assert.Equal(t, 0, eth1Height.Cmp(height))
 
-	newState, err := b.ProcessEth1DataInBlock(ctx, beaconState, blk)
+	newState, err := b.ProcessEth1DataInBlock(ctx, beaconState, blk.Block.Body.Eth1Data)
 	require.NoError(t, err)
 
 	if proto.Equal(newState.Eth1Data(), vote) {
@@ -358,7 +358,7 @@ func TestProposer_PendingDeposits_Eth1DataVoteOK(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 0, eth1Height.Cmp(newHeight))
 
-	newState, err = b.ProcessEth1DataInBlock(ctx, beaconState, blk)
+	newState, err = b.ProcessEth1DataInBlock(ctx, beaconState, blk.Block.Body.Eth1Data)
 	require.NoError(t, err)
 
 	if !proto.Equal(newState.Eth1Data(), vote) {
