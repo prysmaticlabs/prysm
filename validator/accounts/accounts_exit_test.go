@@ -92,14 +92,14 @@ func TestExitAccountsCli_OK(t *testing.T) {
 	require.NotNil(t, rawPubKeys)
 	require.NotNil(t, formattedPubKeys)
 
-	cfg := performExitCfg{
+	cfg := PerformExitCfg{
 		mockValidatorClient,
 		mockNodeClient,
 		keymanager,
 		rawPubKeys,
 		formattedPubKeys,
 	}
-	rawExitedKeys, formattedExitedKeys, err := performExit(cliCtx, cfg)
+	rawExitedKeys, formattedExitedKeys, err := PerformVoluntaryExit(cliCtx.Context, cfg)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(rawExitedKeys))
 	assert.DeepEqual(t, rawPubKeys[0], rawExitedKeys[0])
@@ -187,14 +187,14 @@ func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 	require.NotNil(t, rawPubKeys)
 	require.NotNil(t, formattedPubKeys)
 
-	cfg := performExitCfg{
+	cfg := PerformExitCfg{
 		mockValidatorClient,
 		mockNodeClient,
 		keymanager,
 		rawPubKeys,
 		formattedPubKeys,
 	}
-	rawExitedKeys, formattedExitedKeys, err := performExit(cliCtx, cfg)
+	rawExitedKeys, formattedExitedKeys, err := PerformVoluntaryExit(cliCtx.Context, cfg)
 	require.NoError(t, err)
 	require.Equal(t, 2, len(rawExitedKeys))
 	assert.DeepEqual(t, rawPubKeys, rawExitedKeys)
