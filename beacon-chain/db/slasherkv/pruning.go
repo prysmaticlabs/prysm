@@ -184,7 +184,7 @@ func (s *Store) PruneAttestations(
 					lastPrunedEpoch = epochAtCursor
 				}
 				slasherAttestationsPrunedTotal.Inc()
-				
+
 				// If we have pruned N epochs in this pruning iteration,
 				// we exit from the bolt transaction.
 				if epochsPruned >= pruningEpochIncrements {
