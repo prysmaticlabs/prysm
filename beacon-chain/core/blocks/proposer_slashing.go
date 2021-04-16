@@ -43,16 +43,11 @@ type slashValidatorFunc func(iface.BeaconState, types.ValidatorIndex) (iface.Bea
 func ProcessProposerSlashings(
 	_ context.Context,
 	beaconState iface.BeaconState,
-	b *ethpb.SignedBeaconBlock,
+	slashings []*ethpb.ProposerSlashing,
 	slashFunc slashValidatorFunc,
 ) (iface.BeaconState, error) {
-	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
-		return nil, err
-	}
-
-	body := b.Block.Body
 	var err error
-	for idx, slashing := range body.ProposerSlashings {
+	for idx, slashing := range slashings {
 		if slashing == nil {
 			return nil, errors.New("nil proposer slashings in block body")
 		}

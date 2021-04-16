@@ -1,6 +1,7 @@
 package stateV0
 
 import (
+	"context"
 	"encoding/binary"
 	"sync"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"go.opencensus.io/trace"
 )
 
 var (
@@ -47,14 +49,17 @@ type stateRootHasher struct {
 
 // computeFieldRoots returns the hash tree root computations of every field in
 // the beacon state as a list of 32 byte roots.
-func computeFieldRoots(state *pb.BeaconState) ([][]byte, error) {
+func computeFieldRoots(ctx context.Context, state *pb.BeaconState) ([][]byte, error) {
 	if featureconfig.Get().EnableSSZCache {
-		return cachedHasher.computeFieldRootsWithHasher(state)
+		return cachedHasher.computeFieldRootsWithHasher(ctx, state)
 	}
-	return nocachedHasher.computeFieldRootsWithHasher(state)
+	return nocachedHasher.computeFieldRootsWithHasher(ctx, state)
 }
 
-func (h *stateRootHasher) computeFieldRootsWithHasher(state *pb.BeaconState) ([][]byte, error) {
+func (h *stateRootHasher) computeFieldRootsWithHasher(ctx context.Context, state *pb.BeaconState) ([][]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "beaconState.computeFieldRootsWithHasher")
+	defer span.End()
+
 	if state == nil {
 		return nil, errors.New("nil state")
 	}

@@ -30,4 +30,4 @@ comment:
 
 ignore:
   - "**/*.pb.go"
-  - "**/*_mock.go"
+  - "**/testing/**/*"
