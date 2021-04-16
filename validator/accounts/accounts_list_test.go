@@ -178,7 +178,7 @@ func TestListAccounts_ImportedKeymanager(t *testing.T) {
 	// Assert the keymanager kind is printed on the first line.
 	kindString := "imported"
 	kindFound := strings.Contains(lines[0], kindString)
-	assert.Equal(t, true, kindFound, "keymanager Kind %s not found on the first line", kindString)
+	assert.Equal(t, true, kindFound, "Keymanager Kind %s not found on the first line", kindString)
 
 	// Get account names and require the correct count
 	accountNames, err := km.ValidatingAccountNames()
@@ -318,7 +318,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	// Assert the keymanager kind is printed on the first line.
 	kindString := w.KeymanagerKind().String()
 	kindFound := strings.Contains(lines[0], kindString)
-	assert.Equal(t, true, kindFound, "keymanager Kind %s not found on the first line", kindString)
+	assert.Equal(t, true, kindFound, "Keymanager Kind %s not found on the first line", kindString)
 
 	// Get account names and require the correct count
 	accountNames, err := keymanager.ValidatingAccountNames(cliCtx.Context)
@@ -450,7 +450,7 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 	// Assert the keymanager kind is printed on the first line.
 	kindString := w.KeymanagerKind().String()
 	kindFound := strings.Contains(lines[0], kindString)
-	assert.Equal(t, true, kindFound, "keymanager Kind %s not found on the first line", kindString)
+	assert.Equal(t, true, kindFound, "Keymanager Kind %s not found on the first line", kindString)
 
 	// Assert that Configuration is printed in the right position
 	configLines := lines[configOffset:(configOffset + configLength)]

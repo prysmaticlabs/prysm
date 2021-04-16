@@ -62,7 +62,7 @@ type SetupConfig struct {
 	MaxMessageSize int
 }
 
-// keymanager implementation using remote signing keys via gRPC.
+// Keymanager implementation using remote signing keys via gRPC.
 type Keymanager struct {
 	opts                *KeymanagerOpts
 	client              validatorpb.RemoteSignerClient

@@ -30,7 +30,7 @@ type SetupConfig struct {
 	ListenForChanges bool
 }
 
-// keymanager implementation for derived, HD keymanager using EIP-2333 and EIP-2334.
+// Keymanager implementation for derived, HD keymanager using EIP-2333 and EIP-2334.
 type Keymanager struct {
 	importedKM *imported.Keymanager
 }
