@@ -48,11 +48,11 @@ go_test(
     srcs = [
         "attester_protection_test.go",
         "backup_test.go",
-        "db_test.go",
         "deprecated_attester_protection_test.go",
         "eip_blacklisted_keys_test.go",
         "genesis_test.go",
         "graffiti_test.go",
+        "kv_test.go",
         "migration_optimal_attester_protection_test.go",
         "migration_source_target_epochs_bucket_test.go",
         "proposer_protection_test.go",
