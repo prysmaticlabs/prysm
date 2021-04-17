@@ -62,7 +62,7 @@ var (
 var (
 	// time to wait before trying to reconnect with the eth1 node.
 	backOffPeriod = 15 * time.Second
-	// Amount of times before we log the status of the eth1 dial attempt.
+	// amount of times before we log the status of the eth1 dial attempt.
 	logThreshold = 8
 	// period to log chainstart related information
 	logPeriod = 1 * time.Minute
