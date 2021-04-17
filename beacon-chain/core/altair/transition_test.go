@@ -2,7 +2,6 @@ package altair_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
@@ -68,6 +67,25 @@ func TestProcessSlots_CanProcess(t *testing.T) {
 	require.Equal(t, slot, newState.Slot())
 }
 
+func TestProcessSlots_CanProcessWithCache(t *testing.T) {
+	s, _ := testutilAltair.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	slot := types.Slot(100)
+	copy := s.Copy()
+	newState, err := altair.ProcessSlots(context.Background(), s, slot)
+	require.NoError(t, err)
+	require.Equal(t, slot, newState.Slot())
+
+	newState, err = altair.ProcessSlots(context.Background(), copy, slot+100)
+	require.NoError(t, err)
+	require.Equal(t, slot+100, newState.Slot())
+
+	// Cancel context.
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	newState, err = altair.ProcessSlots(ctx, copy, slot+200)
+	require.ErrorContains(t, "context canceled", err)
+}
+
 func TestProcessSlots_SameSlotAsParentState(t *testing.T) {
 	slot := types.Slot(2)
 	parentState, err := stateAltair.InitializeFromProto(&pb.BeaconStateAltair{Slot: slot})
@@ -112,85 +130,6 @@ func TestProcessBlockNoVerify_PassesProcessingConditions(t *testing.T) {
 	verified, err := set.Verify()
 	require.NoError(t, err)
 	assert.Equal(t, true, verified, "Could not verify signature set")
-}
-
-func TestProcessBlock_OverMaxProposerSlashings(t *testing.T) {
-	maxSlashings := params.BeaconConfig().MaxProposerSlashings
-	b := &ethpb.SignedBeaconBlockAltair{
-		Block: &ethpb.BeaconBlockAltair{
-			Body: &ethpb.BeaconBlockBodyAltair{
-				ProposerSlashings: make([]*ethpb.ProposerSlashing, maxSlashings+1),
-			},
-		},
-	}
-	want := fmt.Sprintf("number of proposer slashings (%d) in block body exceeds allowed threshold of %d",
-		len(b.Block.Body.ProposerSlashings), params.BeaconConfig().MaxProposerSlashings)
-	_, err := altair.VerifyOperationLengths(&stateAltair.BeaconState{}, b)
-	assert.ErrorContains(t, want, err)
-}
-
-func TestProcessBlock_OverMaxAttesterSlashings(t *testing.T) {
-	maxSlashings := params.BeaconConfig().MaxAttesterSlashings
-	b := &ethpb.SignedBeaconBlockAltair{
-		Block: &ethpb.BeaconBlockAltair{
-			Body: &ethpb.BeaconBlockBodyAltair{
-				AttesterSlashings: make([]*ethpb.AttesterSlashing, maxSlashings+1),
-			},
-		},
-	}
-	want := fmt.Sprintf("number of attester slashings (%d) in block body exceeds allowed threshold of %d",
-		len(b.Block.Body.AttesterSlashings), params.BeaconConfig().MaxAttesterSlashings)
-	_, err := altair.VerifyOperationLengths(&stateAltair.BeaconState{}, b)
-	assert.ErrorContains(t, want, err)
-}
-
-func TestProcessBlock_OverMaxAttestations(t *testing.T) {
-	b := &ethpb.SignedBeaconBlockAltair{
-		Block: &ethpb.BeaconBlockAltair{
-			Body: &ethpb.BeaconBlockBodyAltair{
-				Attestations: make([]*ethpb.Attestation, params.BeaconConfig().MaxAttestations+1),
-			},
-		},
-	}
-	want := fmt.Sprintf("number of attestations (%d) in block body exceeds allowed threshold of %d",
-		len(b.Block.Body.Attestations), params.BeaconConfig().MaxAttestations)
-	_, err := altair.VerifyOperationLengths(&stateAltair.BeaconState{}, b)
-	assert.ErrorContains(t, want, err)
-}
-
-func TestProcessBlock_OverMaxVoluntaryExits(t *testing.T) {
-	maxExits := params.BeaconConfig().MaxVoluntaryExits
-	b := &ethpb.SignedBeaconBlockAltair{
-		Block: &ethpb.BeaconBlockAltair{
-			Body: &ethpb.BeaconBlockBodyAltair{
-				VoluntaryExits: make([]*ethpb.SignedVoluntaryExit, maxExits+1),
-			},
-		},
-	}
-	want := fmt.Sprintf("number of voluntary exits (%d) in block body exceeds allowed threshold of %d",
-		len(b.Block.Body.VoluntaryExits), maxExits)
-	_, err := altair.VerifyOperationLengths(&stateAltair.BeaconState{}, b)
-	assert.ErrorContains(t, want, err)
-}
-
-func TestProcessBlock_IncorrectDeposits(t *testing.T) {
-	base := &pb.BeaconStateAltair{
-		Eth1Data:         &ethpb.Eth1Data{DepositCount: 100},
-		Eth1DepositIndex: 98,
-	}
-	s, err := stateAltair.InitializeFromProto(base)
-	require.NoError(t, err)
-	b := &ethpb.SignedBeaconBlockAltair{
-		Block: &ethpb.BeaconBlockAltair{
-			Body: &ethpb.BeaconBlockBodyAltair{
-				Deposits: []*ethpb.Deposit{{}},
-			},
-		},
-	}
-	want := fmt.Sprintf("incorrect outstanding deposits in block body, wanted: %d, got: %d",
-		s.Eth1Data().DepositCount-s.Eth1DepositIndex(), len(b.Block.Body.Deposits))
-	_, err = altair.VerifyOperationLengths(s, b)
-	assert.ErrorContains(t, want, err)
 }
 
 func createFullBlockWithOperations(t *testing.T) (iface.BeaconStateAltair,
@@ -388,4 +327,53 @@ func createFullBlockWithOperations(t *testing.T) (iface.BeaconStateAltair,
 
 	require.NoError(t, beaconState.SetSlot(block.Block.Slot))
 	return beaconState, block, []*ethpb.Attestation{blockAtt}, proposerSlashings, []*ethpb.SignedVoluntaryExit{exit}
+}
+
+func TestFuzzProcessAttestationsNoVerify_10000(t *testing.T) {
+	fuzzer := fuzz.NewWithSeed(0)
+	state := &pb.BeaconStateAltair{}
+	b := &ethpb.SignedBeaconBlockAltair{}
+	ctx := context.Background()
+	for i := 0; i < 10000; i++ {
+		fuzzer.Fuzz(state)
+		fuzzer.Fuzz(b)
+		s, err := stateAltair.InitializeFromProtoUnsafe(state)
+		require.NoError(t, err)
+		r, err := altair.ProcessAttestationsNoVerifySignature(ctx, s, b)
+		if err != nil && r != nil {
+			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, b)
+		}
+	}
+}
+
+func TestFuzzCalculateStateRoot_1000(t *testing.T) {
+	ctx := context.Background()
+	state := &stateAltair.BeaconState{}
+	sb := &ethpb.SignedBeaconBlockAltair{}
+	fuzzer := fuzz.NewWithSeed(0)
+	fuzzer.NilChance(0.1)
+	for i := 0; i < 1000; i++ {
+		fuzzer.Fuzz(state)
+		fuzzer.Fuzz(sb)
+		stateRoot, err := altair.CalculateStateRoot(ctx, state, sb)
+		if err != nil && stateRoot != [32]byte{} {
+			t.Fatalf("state root should be empty on err. found: %v on error: %v for signed block: %v", stateRoot, err, sb)
+		}
+	}
+}
+
+func TestFuzzprocessOperationsNoVerify_1000(t *testing.T) {
+	ctx := context.Background()
+	state := &stateAltair.BeaconState{}
+	bb := &ethpb.SignedBeaconBlockAltair{}
+	fuzzer := fuzz.NewWithSeed(0)
+	fuzzer.NilChance(0.1)
+	for i := 0; i < 1000; i++ {
+		fuzzer.Fuzz(state)
+		fuzzer.Fuzz(bb)
+		s, err := altair.ProcessOperationsNoVerifyAttsSigs(ctx, state, bb)
+		if err != nil && s != nil {
+			t.Fatalf("state should be nil on err. found: %v on error: %v for block body: %v", s, err, bb)
+		}
+	}
 }

@@ -14,7 +14,6 @@ import (
 	coreState "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -42,7 +41,7 @@ func ProcessBlockNoVerifyAnySig(
 	state iface.BeaconState,
 	signed *ethpb.SignedBeaconBlockAltair,
 ) (*bls.SignatureSet, iface.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "core.state.ProcessBlockNoVerifyAnySig")
+	ctx, span := trace.StartSpan(ctx, "altair.ProcessBlockNoVerifyAnySig")
 	defer span.End()
 
 	// Verify block is not nil.
@@ -59,12 +58,10 @@ func ProcessBlockNoVerifyAnySig(
 
 	bSet, err := b.BlockSignatureSet(state, blk.ProposerIndex, signed.Signature, blk.HashTreeRoot)
 	if err != nil {
-		traceutil.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not retrieve block signature set")
 	}
 	rSet, err := b.RandaoSignatureSet(state, body.RandaoReveal)
 	if err != nil {
-		traceutil.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not retrieve randao signature set")
 	}
 	aSet, err := b.AttestationSignatureSet(ctx, state, signed.Block.Body.Attestations)
@@ -84,10 +81,9 @@ func CalculateStateRoot(
 	state iface.BeaconState,
 	signed *ethpb.SignedBeaconBlockAltair,
 ) ([32]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "core.state.CalculateStateRoot")
+	ctx, span := trace.StartSpan(ctx, "altair.CalculateStateRoot")
 	defer span.End()
 	if ctx.Err() != nil {
-		traceutil.AnnotateError(span, ctx.Err())
 		return [32]byte{}, ctx.Err()
 	}
 	if state == nil {
@@ -121,7 +117,7 @@ func ProcessBlockForStateRoot(
 	state iface.BeaconState,
 	signed *ethpb.SignedBeaconBlockAltair,
 ) (iface.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "core.state.ProcessBlockForStateRoot")
+	ctx, span := trace.StartSpan(ctx, "altair.ProcessBlockForStateRoot")
 	defer span.End()
 	if err := VerifyNilBeaconBlock(signed); err != nil {
 		return nil, err
@@ -135,25 +131,21 @@ func ProcessBlockForStateRoot(
 	}
 	state, err = b.ProcessBlockHeaderNoVerify(state, blk.Slot, blk.ProposerIndex, blk.ParentRoot, bodyRoot[:])
 	if err != nil {
-		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block header")
 	}
 
 	state, err = b.ProcessRandaoNoVerify(state, signed.Block.Body.RandaoReveal)
 	if err != nil {
-		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not verify and process randao")
 	}
 
 	state, err = b.ProcessEth1DataInBlock(ctx, state, signed.Block.Body.Eth1Data)
 	if err != nil {
-		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process eth1 data")
 	}
 
 	state, err = ProcessOperationsNoVerifyAttsSigs(ctx, state, signed)
 	if err != nil {
-		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block operation")
 	}
 
@@ -185,7 +177,7 @@ func ProcessOperationsNoVerifyAttsSigs(
 	ctx context.Context,
 	state iface.BeaconState,
 	signed *ethpb.SignedBeaconBlockAltair) (iface.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "core.state.ProcessOperationsNoVerifyAttsSigs")
+	ctx, span := trace.StartSpan(ctx, "altair.ProcessOperationsNoVerifyAttsSigs")
 	defer span.End()
 
 	if err := VerifyNilBeaconBlock(signed); err != nil {
@@ -346,7 +338,6 @@ func ProcessSlots(ctx context.Context, state iface.BeaconState, slot types.Slot)
 	// The block must have a higher slot than parent state.
 	if state.Slot() >= slot {
 		err := fmt.Errorf("expected state.slot %d < slot %d", state.Slot(), slot)
-		traceutil.AnnotateError(span, err)
 		return nil, err
 	}
 
@@ -380,14 +371,12 @@ func ProcessSlots(ctx context.Context, state iface.BeaconState, slot types.Slot)
 	}
 	defer func() {
 		if err := SkipSlotCache.MarkNotInProgress(key); err != nil {
-			traceutil.AnnotateError(span, err)
 			log.WithError(err).Error("Failed to mark skip slot no longer in progress")
 		}
 	}()
 
 	for state.Slot() < slot {
 		if ctx.Err() != nil {
-			traceutil.AnnotateError(span, ctx.Err())
 			// Cache last best value.
 			if highestSlot < state.Slot() {
 				if err := SkipSlotCache.Put(ctx, key, state); err != nil {
@@ -398,18 +387,15 @@ func ProcessSlots(ctx context.Context, state iface.BeaconState, slot types.Slot)
 		}
 		state, err = coreState.ProcessSlot(ctx, state)
 		if err != nil {
-			traceutil.AnnotateError(span, err)
 			return nil, errors.Wrap(err, "could not process slot")
 		}
 		if coreState.CanProcessEpoch(state) {
 			state, err = ProcessEpoch(ctx, state)
 			if err != nil {
-				traceutil.AnnotateError(span, err)
 				return nil, errors.Wrap(err, "could not process epoch with optimizations")
 			}
 		}
 		if err := state.SetSlot(state.Slot() + 1); err != nil {
-			traceutil.AnnotateError(span, err)
 			return nil, errors.Wrap(err, "failed to increment state slot")
 		}
 	}
@@ -417,7 +403,6 @@ func ProcessSlots(ctx context.Context, state iface.BeaconState, slot types.Slot)
 	if highestSlot < state.Slot() {
 		if err := SkipSlotCache.Put(ctx, key, state); err != nil {
 			log.WithError(err).Error("Failed to put skip slot cache value")
-			traceutil.AnnotateError(span, err)
 		}
 	}
 
