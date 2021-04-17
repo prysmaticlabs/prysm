@@ -5,6 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-bitfield"
 	s "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
@@ -141,7 +142,7 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState iface.BeaconStateA
 		},
 		Graffiti: make([]byte, 32),
 		SyncAggregate: &ethpb.SyncAggregate{
-			SyncCommitteeBits:      make([]byte, 1),
+			SyncCommitteeBits:      make([]byte, len(bitfield.NewBitvector1024())),
 			SyncCommitteeSignature: make([]byte, 96),
 		},
 	}).HashTreeRoot()

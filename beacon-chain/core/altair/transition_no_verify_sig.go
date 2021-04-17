@@ -22,7 +22,8 @@ import (
 //    process_block_header(state, block)
 //    process_randao(state, block.body)
 //    process_eth1_data(state, block.body)
-//    process_operations(state, block.body)
+//    process_operations(state, block.body)  # [Modified in Altair]
+//    process_sync_committee(state, block.body.sync_aggregate)  # [New in Altair]
 func ProcessBlockNoVerifyAnySig(
 	ctx context.Context,
 	state iface.BeaconState,
@@ -39,6 +40,11 @@ func ProcessBlockNoVerifyAnySig(
 	blk := signed.Block
 	body := blk.Body
 	state, err := ProcessBlockForStateRoot(ctx, state, signed)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	state, err = ProcessSyncCommittee(state, signed.Block.Body.SyncAggregate)
 	if err != nil {
 		return nil, nil, err
 	}

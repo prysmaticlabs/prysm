@@ -180,14 +180,13 @@ func createFullBlockWithOperations(t *testing.T) (iface.BeaconStateAltair,
 	proposerIndex, err := helpers.BeaconProposerIndex(copied)
 	require.NoError(t, err)
 
-	syncBits := make([]byte, 1)
+	syncBits := bitfield.NewBitvector1024()
 	for i := range syncBits {
 		syncBits[i] = 0xff
 	}
 	indices, err := altair.SyncCommitteeIndices(beaconState, helpers.CurrentEpoch(beaconState))
 	require.NoError(t, err)
-	ps := helpers.PrevSlot(beaconState.Slot())
-	pbr, err := helpers.BlockRootAtSlot(beaconState, ps)
+	pbr, err := helpers.BlockRootAtSlot(beaconState, 1)
 	require.NoError(t, err)
 	syncSigs := make([]bls.Signature, len(indices))
 	for i, indice := range indices {
@@ -224,6 +223,11 @@ func createFullBlockWithOperations(t *testing.T) (iface.BeaconStateAltair,
 	require.NoError(t, err)
 	block.Signature = sig.Marshal()
 
+	syncCommittee, err := altair.SyncCommittee(beaconState, helpers.CurrentEpoch(beaconState))
+	require.NoError(t, err)
+	require.NoError(t, beaconState.SetCurrentSyncCommittee(syncCommittee))
+
 	require.NoError(t, beaconState.SetSlot(block.Block.Slot))
+
 	return beaconState, block, []*ethpb.Attestation{blockAtt}, proposerSlashings, []*ethpb.SignedVoluntaryExit{exit}
 }
