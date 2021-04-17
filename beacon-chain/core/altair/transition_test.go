@@ -2,6 +2,7 @@ package altair_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
@@ -13,15 +14,14 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	statealtair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	altair2 "github.com/prysmaticlabs/prysm/shared/testutil/altair"
+	testutilAltair "github.com/prysmaticlabs/prysm/shared/testutil/altair"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -39,7 +39,7 @@ func TestProcessEpoch_CanProcess(t *testing.T) {
 		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
 		Validators:                 []*ethpb.Validator{},
 	}
-	s, err := statealtair.InitializeFromProto(base)
+	s, err := stateAltair.InitializeFromProto(base)
 	require.NoError(t, err)
 	newState, err := altair.ProcessEpoch(context.Background(), s)
 	require.NoError(t, err)
@@ -48,7 +48,7 @@ func TestProcessEpoch_CanProcess(t *testing.T) {
 
 func TestFuzzProcessEpoch_1000(t *testing.T) {
 	ctx := context.Background()
-	state := &stateV0.BeaconState{}
+	state := &stateAltair.BeaconState{}
 	fuzzer := fuzz.NewWithSeed(0)
 	fuzzer.NilChance(0.1)
 	for i := 0; i < 1000; i++ {
@@ -61,7 +61,7 @@ func TestFuzzProcessEpoch_1000(t *testing.T) {
 }
 
 func TestProcessSlots_CanProcess(t *testing.T) {
-	s, _ := altair2.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	s, _ := testutilAltair.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	slot := types.Slot(100)
 	newState, err := altair.ProcessSlots(context.Background(), s, slot)
 	require.NoError(t, err)
@@ -70,7 +70,7 @@ func TestProcessSlots_CanProcess(t *testing.T) {
 
 func TestProcessSlots_SameSlotAsParentState(t *testing.T) {
 	slot := types.Slot(2)
-	parentState, err := stateV0.InitializeFromProto(&pb.BeaconState{Slot: slot})
+	parentState, err := stateAltair.InitializeFromProto(&pb.BeaconStateAltair{Slot: slot})
 	require.NoError(t, err)
 
 	_, err = altair.ProcessSlots(context.Background(), parentState, slot)
@@ -79,7 +79,7 @@ func TestProcessSlots_SameSlotAsParentState(t *testing.T) {
 
 func TestProcessSlots_LowerSlotAsParentState(t *testing.T) {
 	slot := types.Slot(2)
-	parentState, err := stateV0.InitializeFromProto(&pb.BeaconState{Slot: slot})
+	parentState, err := stateAltair.InitializeFromProto(&pb.BeaconStateAltair{Slot: slot})
 	require.NoError(t, err)
 
 	_, err = altair.ProcessSlots(context.Background(), parentState, slot-1)
@@ -90,7 +90,7 @@ func TestFuzzProcessSlots_1000(t *testing.T) {
 	altair.SkipSlotCache.Disable()
 	defer altair.SkipSlotCache.Enable()
 	ctx := context.Background()
-	state := &statealtair.BeaconState{}
+	state := &stateAltair.BeaconState{}
 	slot := types.Slot(0)
 	fuzzer := fuzz.NewWithSeed(0)
 	fuzzer.NilChance(0.1)
@@ -114,9 +114,88 @@ func TestProcessBlockNoVerify_PassesProcessingConditions(t *testing.T) {
 	assert.Equal(t, true, verified, "Could not verify signature set")
 }
 
+func TestProcessBlock_OverMaxProposerSlashings(t *testing.T) {
+	maxSlashings := params.BeaconConfig().MaxProposerSlashings
+	b := &ethpb.SignedBeaconBlockAltair{
+		Block: &ethpb.BeaconBlockAltair{
+			Body: &ethpb.BeaconBlockBodyAltair{
+				ProposerSlashings: make([]*ethpb.ProposerSlashing, maxSlashings+1),
+			},
+		},
+	}
+	want := fmt.Sprintf("number of proposer slashings (%d) in block body exceeds allowed threshold of %d",
+		len(b.Block.Body.ProposerSlashings), params.BeaconConfig().MaxProposerSlashings)
+	_, err := altair.VerifyOperationLengths(&stateAltair.BeaconState{}, b)
+	assert.ErrorContains(t, want, err)
+}
+
+func TestProcessBlock_OverMaxAttesterSlashings(t *testing.T) {
+	maxSlashings := params.BeaconConfig().MaxAttesterSlashings
+	b := &ethpb.SignedBeaconBlockAltair{
+		Block: &ethpb.BeaconBlockAltair{
+			Body: &ethpb.BeaconBlockBodyAltair{
+				AttesterSlashings: make([]*ethpb.AttesterSlashing, maxSlashings+1),
+			},
+		},
+	}
+	want := fmt.Sprintf("number of attester slashings (%d) in block body exceeds allowed threshold of %d",
+		len(b.Block.Body.AttesterSlashings), params.BeaconConfig().MaxAttesterSlashings)
+	_, err := altair.VerifyOperationLengths(&stateAltair.BeaconState{}, b)
+	assert.ErrorContains(t, want, err)
+}
+
+func TestProcessBlock_OverMaxAttestations(t *testing.T) {
+	b := &ethpb.SignedBeaconBlockAltair{
+		Block: &ethpb.BeaconBlockAltair{
+			Body: &ethpb.BeaconBlockBodyAltair{
+				Attestations: make([]*ethpb.Attestation, params.BeaconConfig().MaxAttestations+1),
+			},
+		},
+	}
+	want := fmt.Sprintf("number of attestations (%d) in block body exceeds allowed threshold of %d",
+		len(b.Block.Body.Attestations), params.BeaconConfig().MaxAttestations)
+	_, err := altair.VerifyOperationLengths(&stateAltair.BeaconState{}, b)
+	assert.ErrorContains(t, want, err)
+}
+
+func TestProcessBlock_OverMaxVoluntaryExits(t *testing.T) {
+	maxExits := params.BeaconConfig().MaxVoluntaryExits
+	b := &ethpb.SignedBeaconBlockAltair{
+		Block: &ethpb.BeaconBlockAltair{
+			Body: &ethpb.BeaconBlockBodyAltair{
+				VoluntaryExits: make([]*ethpb.SignedVoluntaryExit, maxExits+1),
+			},
+		},
+	}
+	want := fmt.Sprintf("number of voluntary exits (%d) in block body exceeds allowed threshold of %d",
+		len(b.Block.Body.VoluntaryExits), maxExits)
+	_, err := altair.VerifyOperationLengths(&stateAltair.BeaconState{}, b)
+	assert.ErrorContains(t, want, err)
+}
+
+func TestProcessBlock_IncorrectDeposits(t *testing.T) {
+	base := &pb.BeaconStateAltair{
+		Eth1Data:         &ethpb.Eth1Data{DepositCount: 100},
+		Eth1DepositIndex: 98,
+	}
+	s, err := stateAltair.InitializeFromProto(base)
+	require.NoError(t, err)
+	b := &ethpb.SignedBeaconBlockAltair{
+		Block: &ethpb.BeaconBlockAltair{
+			Body: &ethpb.BeaconBlockBodyAltair{
+				Deposits: []*ethpb.Deposit{{}},
+			},
+		},
+	}
+	want := fmt.Sprintf("incorrect outstanding deposits in block body, wanted: %d, got: %d",
+		s.Eth1Data().DepositCount-s.Eth1DepositIndex(), len(b.Block.Body.Deposits))
+	_, err = altair.VerifyOperationLengths(s, b)
+	assert.ErrorContains(t, want, err)
+}
+
 func createFullBlockWithOperations(t *testing.T) (iface.BeaconStateAltair,
 	*ethpb.SignedBeaconBlockAltair, []*ethpb.Attestation, []*ethpb.ProposerSlashing, []*ethpb.SignedVoluntaryExit) {
-	beaconState, privKeys := altair2.DeterministicGenesisStateAltair(t, 32)
+	beaconState, privKeys := testutilAltair.DeterministicGenesisStateAltair(t, 32)
 	genesisBlock := blocks.NewGenesisBlock([]byte{})
 	bodyRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)

@@ -548,5 +548,11 @@ func HydrateBeaconBlockBodyAltair(b *ethpb.BeaconBlockBodyAltair) *ethpb.BeaconB
 			BlockHash:   make([]byte, 32),
 		}
 	}
+	if b.SyncAggregate == nil {
+		b.SyncAggregate = &ethpb.SyncAggregate{
+			SyncCommitteeBits:      make([]byte, 1),
+			SyncCommitteeSignature: make([]byte, 96),
+		}
+	}
 	return b
 }

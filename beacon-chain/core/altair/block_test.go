@@ -88,3 +88,11 @@ func TestProcessSyncCommittee_OK(t *testing.T) {
 	}
 	require.Equal(t, params.BeaconConfig().SyncCommitteeSize, increased)
 }
+
+func TestVerifyNilBeaconBlock(t *testing.T) {
+	require.ErrorContains(t, "signed beacon block can't be nil", altair.VerifyNilBeaconBlock(nil))
+	b := &ethpb.SignedBeaconBlockAltair{}
+	require.ErrorContains(t, "beacon block can't be nil", altair.VerifyNilBeaconBlock(b))
+	b = &ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{}}
+	require.ErrorContains(t, "beacon block body can't be nil", altair.VerifyNilBeaconBlock(b))
+}
