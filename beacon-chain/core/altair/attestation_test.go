@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"testing"
 
+	fuzz "github.com/google/gofuzz"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	altair "github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -300,5 +303,22 @@ func TestValidatorFlag_AddHas(t *testing.T) {
 				require.Equal(t, true, altair.HasValidatorFlag(b, f))
 			}
 		})
+	}
+}
+
+func TestFuzzProcessAttestationsNoVerify_10000(t *testing.T) {
+	fuzzer := fuzz.NewWithSeed(0)
+	state := &pb.BeaconStateAltair{}
+	b := &ethpb.SignedBeaconBlockAltair{}
+	ctx := context.Background()
+	for i := 0; i < 10000; i++ {
+		fuzzer.Fuzz(state)
+		fuzzer.Fuzz(b)
+		s, err := stateAltair.InitializeFromProtoUnsafe(state)
+		require.NoError(t, err)
+		r, err := altair.ProcessAttestationsNoVerifySignature(ctx, s, b)
+		if err != nil && r != nil {
+			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, b)
+		}
 	}
 }
