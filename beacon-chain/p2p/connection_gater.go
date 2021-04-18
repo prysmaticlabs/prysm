@@ -103,7 +103,7 @@ func configureFilter(cfg *Config) (*multiaddr.Filters, error) {
 	case cfg.AllowListCIDR == "public":
 		cfg.DenyListCIDR = append(cfg.DenyListCIDR, privateCIDRList...)
 	case cfg.AllowListCIDR == "private":
-		err := privateCIDRFilter(addrFilter, "accept")
+		err := privateCIDRFilter(addrFilter, multiaddr.ActionAccept)
 		if err != nil {
 			return nil, err
 		}
@@ -119,16 +119,17 @@ func configureFilter(cfg *Config) (*multiaddr.Filters, error) {
 	if len(cfg.DenyListCIDR) > 0 {
 		for _, cidr := range cfg.DenyListCIDR {
 			// If an entry in the deny list is "private", we iterate through the
-			// private addresses and add them to the filter.
-			if cidr == "private" {
-				err := privateCIDRFilter(addrFilter, "deny")
+			// private addresses and add them to the filter. Likewise, if the deny
+			// list is "public", then we add all private address to the accept filter,
+			switch {
+			case cidr == "private":
+				err := privateCIDRFilter(addrFilter, multiaddr.ActionDeny)
 				if err != nil {
 					return nil, err
 				}
 				continue
-			}
-			if cidr == "public" {
-				err := privateCIDRFilter(addrFilter, "accept")
+			case cidr == "public":
+				err := privateCIDRFilter(addrFilter, multiaddr.ActionAccept)
 				if err != nil {
 					return nil, err
 				}
@@ -150,21 +151,20 @@ func configureFilter(cfg *Config) (*multiaddr.Filters, error) {
 
 //helper function to either accept or deny all private addresses
 //if a new rule for a private address is in conflict with a previous one, log a warning
-func privateCIDRFilter(addrFilter *multiaddr.Filters, action string) error {
+func privateCIDRFilter(addrFilter *multiaddr.Filters, action multiaddr.Action) error {
 	for _, privCidr := range privateCIDRList {
 		_, ipnet, err := net.ParseCIDR(privCidr)
-		if err != nil {
+		curAction, _ := addrFilter.ActionForFilter(*ipnet)
+		switch {
+		case err != nil:
 			return err
-		}
-		if action == "accept" {
-			action, _ := addrFilter.ActionForFilter(*ipnet)
-			if action == multiaddr.ActionDeny {
+		case action == multiaddr.ActionAccept:
+			if curAction == multiaddr.ActionDeny {
 				log.Warnf("Address %s is in conflict with previous rule.", ipnet.String())
 			}
 			addrFilter.AddFilter(*ipnet, multiaddr.ActionAccept)
-		} else {
-			action, _ := addrFilter.ActionForFilter(*ipnet)
-			if action == multiaddr.ActionAccept {
+		case action == multiaddr.ActionDeny:
+			if curAction == multiaddr.ActionAccept {
 				log.Warnf("Address %s is in conflict with previous rule.", ipnet.String())
 			}
 			addrFilter.AddFilter(*ipnet, multiaddr.ActionDeny)
