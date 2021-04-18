@@ -668,7 +668,7 @@ func (bs *Server) GetValidatorPerformance(
 	if err != nil {
 		return nil, err
 	}
-	headState, err = precompute.ProcessRewardsAndPenaltiesPrecompute(headState, bp, vp)
+	headState, err = precompute.ProcessRewardsAndPenaltiesPrecompute(headState, bp, vp, precompute.AttestationsDelta, precompute.ProposersDelta)
 	if err != nil {
 		return nil, err
 	}

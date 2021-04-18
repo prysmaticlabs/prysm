@@ -231,8 +231,8 @@ func (bs *Server) StreamBlocks(req *ethpb.StreamBlocksRequest, stream ethpb.Beac
 						log.WithError(err).WithField("blockSlot", data.SignedBlock.Block.Slot).Error("Could not get head state")
 						continue
 					}
-
-					if err := blocks.VerifyBlockSignature(headState, data.SignedBlock); err != nil {
+					signed := data.SignedBlock
+					if err := blocks.VerifyBlockSignature(headState, signed.Block.ProposerIndex, signed.Signature, signed.Block.HashTreeRoot); err != nil {
 						log.WithError(err).WithField("blockSlot", data.SignedBlock.Block.Slot).Error("Could not verify block signature")
 						continue
 					}
@@ -368,7 +368,7 @@ func (bs *Server) GetWeakSubjectivityCheckpoint(ctx context.Context, _ *ptypes.E
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
-	wsEpoch, err := helpers.ComputeWeakSubjectivityPeriod(hs)
+	wsEpoch, err := helpers.LatestWeakSubjectivityEpoch(hs)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get weak subjectivity epoch")
 	}

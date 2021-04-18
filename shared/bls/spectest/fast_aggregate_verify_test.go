@@ -10,21 +10,12 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bls/common"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestFastAggregateVerifyYaml(t *testing.T) {
-	flags := &featureconfig.Flags{}
-	reset := featureconfig.InitWithReset(flags)
-	t.Run("herumi", testFastAggregateVerifyYaml)
-	reset()
-
-	flags.EnableBlst = true
-	reset = featureconfig.InitWithReset(flags)
 	t.Run("blst", testFastAggregateVerifyYaml)
-	reset()
 }
 
 func testFastAggregateVerifyYaml(t *testing.T) {
