@@ -40,7 +40,8 @@ func InitializeFromProto(st *pbp2p.BeaconState) (*BeaconState, error) {
 	return InitializeFromProtoUnsafe(clonedState)
 }
 
-// CloneBeaconState --
+// CloneBeaconState serves as a wrapper for proto.Clone to apply any
+// post-cloning changes needed.
 func CloneBeaconState(st *pbp2p.BeaconState) (*pbp2p.BeaconState, error) {
 	cloned, ok := proto.Clone(st).(*pbp2p.BeaconState)
 	if !ok {
@@ -55,7 +56,7 @@ func CloneBeaconState(st *pbp2p.BeaconState) (*pbp2p.BeaconState, error) {
 	return cloned, nil
 }
 
-// InitializeFromProtoUnsafe direc tly uses the beacon state protobuf pointer
+// InitializeFromProtoUnsafe directly uses the beacon state protobuf pointer
 // and sets it as the inner state of the BeaconState type.
 func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 	if st == nil {
