@@ -1,6 +1,7 @@
 package altair_test
 
 import (
+	"fmt"
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -9,6 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	altairTest "github.com/prysmaticlabs/prysm/shared/testutil/altair"
@@ -87,4 +90,91 @@ func TestProcessSyncCommittee_OK(t *testing.T) {
 		}
 	}
 	require.Equal(t, params.BeaconConfig().SyncCommitteeSize, increased)
+}
+
+func TestVerifyNilBeaconBlock(t *testing.T) {
+	require.ErrorContains(t, "signed beacon block can't be nil", altair.VerifyNilBeaconBlock(nil))
+	b := &ethpb.SignedBeaconBlockAltair{}
+	require.ErrorContains(t, "beacon block can't be nil", altair.VerifyNilBeaconBlock(b))
+	b = &ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{}}
+	require.ErrorContains(t, "beacon block body can't be nil", altair.VerifyNilBeaconBlock(b))
+}
+
+func TestProcessBlock_OverMaxProposerSlashings(t *testing.T) {
+	maxSlashings := params.BeaconConfig().MaxProposerSlashings
+	b := &ethpb.SignedBeaconBlockAltair{
+		Block: &ethpb.BeaconBlockAltair{
+			Body: &ethpb.BeaconBlockBodyAltair{
+				ProposerSlashings: make([]*ethpb.ProposerSlashing, maxSlashings+1),
+			},
+		},
+	}
+	want := fmt.Sprintf("number of proposer slashings (%d) in block body exceeds allowed threshold of %d",
+		len(b.Block.Body.ProposerSlashings), params.BeaconConfig().MaxProposerSlashings)
+	_, err := altair.VerifyOperationLengths(&stateAltair.BeaconState{}, b)
+	require.ErrorContains(t, want, err)
+}
+
+func TestProcessBlock_OverMaxAttesterSlashings(t *testing.T) {
+	maxSlashings := params.BeaconConfig().MaxAttesterSlashings
+	b := &ethpb.SignedBeaconBlockAltair{
+		Block: &ethpb.BeaconBlockAltair{
+			Body: &ethpb.BeaconBlockBodyAltair{
+				AttesterSlashings: make([]*ethpb.AttesterSlashing, maxSlashings+1),
+			},
+		},
+	}
+	want := fmt.Sprintf("number of attester slashings (%d) in block body exceeds allowed threshold of %d",
+		len(b.Block.Body.AttesterSlashings), params.BeaconConfig().MaxAttesterSlashings)
+	_, err := altair.VerifyOperationLengths(&stateAltair.BeaconState{}, b)
+	require.ErrorContains(t, want, err)
+}
+
+func TestProcessBlock_OverMaxAttestations(t *testing.T) {
+	b := &ethpb.SignedBeaconBlockAltair{
+		Block: &ethpb.BeaconBlockAltair{
+			Body: &ethpb.BeaconBlockBodyAltair{
+				Attestations: make([]*ethpb.Attestation, params.BeaconConfig().MaxAttestations+1),
+			},
+		},
+	}
+	want := fmt.Sprintf("number of attestations (%d) in block body exceeds allowed threshold of %d",
+		len(b.Block.Body.Attestations), params.BeaconConfig().MaxAttestations)
+	_, err := altair.VerifyOperationLengths(&stateAltair.BeaconState{}, b)
+	require.ErrorContains(t, want, err)
+}
+
+func TestProcessBlock_OverMaxVoluntaryExits(t *testing.T) {
+	maxExits := params.BeaconConfig().MaxVoluntaryExits
+	b := &ethpb.SignedBeaconBlockAltair{
+		Block: &ethpb.BeaconBlockAltair{
+			Body: &ethpb.BeaconBlockBodyAltair{
+				VoluntaryExits: make([]*ethpb.SignedVoluntaryExit, maxExits+1),
+			},
+		},
+	}
+	want := fmt.Sprintf("number of voluntary exits (%d) in block body exceeds allowed threshold of %d",
+		len(b.Block.Body.VoluntaryExits), maxExits)
+	_, err := altair.VerifyOperationLengths(&stateAltair.BeaconState{}, b)
+	require.ErrorContains(t, want, err)
+}
+
+func TestProcessBlock_IncorrectDeposits(t *testing.T) {
+	base := &pb.BeaconStateAltair{
+		Eth1Data:         &ethpb.Eth1Data{DepositCount: 100},
+		Eth1DepositIndex: 98,
+	}
+	s, err := stateAltair.InitializeFromProto(base)
+	require.NoError(t, err)
+	b := &ethpb.SignedBeaconBlockAltair{
+		Block: &ethpb.BeaconBlockAltair{
+			Body: &ethpb.BeaconBlockBodyAltair{
+				Deposits: []*ethpb.Deposit{{}},
+			},
+		},
+	}
+	want := fmt.Sprintf("incorrect outstanding deposits in block body, wanted: %d, got: %d",
+		s.Eth1Data().DepositCount-s.Eth1DepositIndex(), len(b.Block.Body.Deposits))
+	_, err = altair.VerifyOperationLengths(s, b)
+	require.ErrorContains(t, want, err)
 }

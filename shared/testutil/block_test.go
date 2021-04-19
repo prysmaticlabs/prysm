@@ -197,3 +197,14 @@ func TestHydrateV1SignedBeaconBlock_NoError(t *testing.T) {
 	_, err = b.Block.Body.HashTreeRoot()
 	require.NoError(t, err)
 }
+
+func TestHydrateSignedBeaconBlockAltair_NoError(t *testing.T) {
+	b := &eth.SignedBeaconBlockAltair{}
+	b = HydrateSignedBeaconBlockAltair(b)
+	_, err := b.HashTreeRoot()
+	require.NoError(t, err)
+	_, err = b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	_, err = b.Block.Body.HashTreeRoot()
+	require.NoError(t, err)
+}

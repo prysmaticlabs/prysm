@@ -104,6 +104,27 @@ func ProcessAttestation(
 	return beaconState, blocks.VerifyAttestationSignature(ctx, beaconState, att)
 }
 
+// ProcessAttestationsNoVerifySignature applies processing operations to a block's inner attestation
+// records. The only difference would be that the attestation signature would not be verified.
+func ProcessAttestationsNoVerifySignature(
+	ctx context.Context,
+	beaconState iface.BeaconState,
+	b *ethpb.SignedBeaconBlockAltair,
+) (iface.BeaconState, error) {
+	if err := VerifyNilBeaconBlock(b); err != nil {
+		return nil, err
+	}
+	body := b.Block.Body
+	var err error
+	for idx, attestation := range body.Attestations {
+		beaconState, err = ProcessAttestationNoVerifySignature(ctx, beaconState, attestation)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not verify attestation at index %d in block", idx)
+		}
+	}
+	return beaconState, nil
+}
+
 // ProcessAttestationNoVerifySignature processes the attestation without verifying the attestation signature. This
 // method is used to validate attestations whose signatures have already been verified or will be verified later.
 func ProcessAttestationNoVerifySignature(
