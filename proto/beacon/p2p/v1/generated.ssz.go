@@ -366,7 +366,7 @@ func (b *BeaconState) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the BeaconState object to a target array
 func (b *BeaconState) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := int(2687441)
+	offset := int(2687845)
 
 	// Field (0) 'GenesisTime'
 	dst = ssz.MarshalUint64(dst, b.GenesisTime)
@@ -517,19 +517,13 @@ func (b *BeaconState) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 		return
 	}
 
-	// Field (21) 'ApplicationStateHash'
-	if len(b.ApplicationStateHash) != 32 {
-		err = ssz.ErrBytesLength
+	// Field (21) 'LatestExecutionPayloadHeader'
+	if b.LatestExecutionPayloadHeader == nil {
+		b.LatestExecutionPayloadHeader = new(ExecutionPayloadHeader)
+	}
+	if dst, err = b.LatestExecutionPayloadHeader.MarshalSSZTo(dst); err != nil {
 		return
 	}
-	dst = append(dst, b.ApplicationStateHash...)
-
-	// Field (22) 'ApplicationBlockHash'
-	if len(b.ApplicationBlockHash) != 32 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	dst = append(dst, b.ApplicationBlockHash...)
 
 	// Field (7) 'HistoricalRoots'
 	if len(b.HistoricalRoots) > 16777216 {
@@ -618,7 +612,7 @@ func (b *BeaconState) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 func (b *BeaconState) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
-	if size < 2687441 {
+	if size < 2687845 {
 		return ssz.ErrSize
 	}
 
@@ -757,17 +751,13 @@ func (b *BeaconState) UnmarshalSSZ(buf []byte) error {
 		return err
 	}
 
-	// Field (21) 'ApplicationStateHash'
-	if cap(b.ApplicationStateHash) == 0 {
-		b.ApplicationStateHash = make([]byte, 0, len(buf[2687377:2687409]))
+	// Field (21) 'LatestExecutionPayloadHeader'
+	if b.LatestExecutionPayloadHeader == nil {
+		b.LatestExecutionPayloadHeader = new(ExecutionPayloadHeader)
 	}
-	b.ApplicationStateHash = append(b.ApplicationStateHash, buf[2687377:2687409]...)
-
-	// Field (22) 'ApplicationBlockHash'
-	if cap(b.ApplicationBlockHash) == 0 {
-		b.ApplicationBlockHash = make([]byte, 0, len(buf[2687409:2687441]))
+	if err = b.LatestExecutionPayloadHeader.UnmarshalSSZ(buf[2687377:2687845]); err != nil {
+		return err
 	}
-	b.ApplicationBlockHash = append(b.ApplicationBlockHash, buf[2687409:2687441]...)
 
 	// Field (7) 'HistoricalRoots'
 	{
@@ -882,7 +872,7 @@ func (b *BeaconState) UnmarshalSSZ(buf []byte) error {
 
 // SizeSSZ returns the ssz encoded size in bytes for the BeaconState object
 func (b *BeaconState) SizeSSZ() (size int) {
-	size = 2687441
+	size = 2687845
 
 	// Field (7) 'HistoricalRoots'
 	size += len(b.HistoricalRoots) * 32
@@ -1134,19 +1124,10 @@ func (b *BeaconState) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 		return
 	}
 
-	// Field (21) 'ApplicationStateHash'
-	if len(b.ApplicationStateHash) != 32 {
-		err = ssz.ErrBytesLength
+	// Field (21) 'LatestExecutionPayloadHeader'
+	if err = b.LatestExecutionPayloadHeader.HashTreeRootWith(hh); err != nil {
 		return
 	}
-	hh.PutBytes(b.ApplicationStateHash)
-
-	// Field (22) 'ApplicationBlockHash'
-	if len(b.ApplicationBlockHash) != 32 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	hh.PutBytes(b.ApplicationBlockHash)
 
 	hh.Merkleize(indx)
 	return
@@ -1736,6 +1717,224 @@ func (d *DepositMessage) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 
 	// Field (2) 'Amount'
 	hh.PutUint64(d.Amount)
+
+	hh.Merkleize(indx)
+	return
+}
+
+// MarshalSSZ ssz marshals the ExecutionPayloadHeader object
+func (e *ExecutionPayloadHeader) MarshalSSZ() ([]byte, error) {
+	return ssz.MarshalSSZ(e)
+}
+
+// MarshalSSZTo ssz marshals the ExecutionPayloadHeader object to a target array
+func (e *ExecutionPayloadHeader) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+	dst = buf
+
+	// Field (0) 'BlockHash'
+	if len(e.BlockHash) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	dst = append(dst, e.BlockHash...)
+
+	// Field (1) 'ParentHash'
+	if len(e.ParentHash) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	dst = append(dst, e.ParentHash...)
+
+	// Field (2) 'Coinbase'
+	if len(e.Coinbase) != 20 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	dst = append(dst, e.Coinbase...)
+
+	// Field (3) 'StateRoot'
+	if len(e.StateRoot) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	dst = append(dst, e.StateRoot...)
+
+	// Field (4) 'Number'
+	dst = ssz.MarshalUint64(dst, e.Number)
+
+	// Field (5) 'GasLimit'
+	dst = ssz.MarshalUint64(dst, e.GasLimit)
+
+	// Field (6) 'GasUsed'
+	dst = ssz.MarshalUint64(dst, e.GasUsed)
+
+	// Field (7) 'Timestamp'
+	dst = ssz.MarshalUint64(dst, e.Timestamp)
+
+	// Field (8) 'ReceiptRoot'
+	if len(e.ReceiptRoot) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	dst = append(dst, e.ReceiptRoot...)
+
+	// Field (9) 'LogsBloom'
+	if len(e.LogsBloom) != 256 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	dst = append(dst, e.LogsBloom...)
+
+	// Field (10) 'TransactionsRoot'
+	if len(e.TransactionsRoot) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	dst = append(dst, e.TransactionsRoot...)
+
+	return
+}
+
+// UnmarshalSSZ ssz unmarshals the ExecutionPayloadHeader object
+func (e *ExecutionPayloadHeader) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size != 468 {
+		return ssz.ErrSize
+	}
+
+	// Field (0) 'BlockHash'
+	if cap(e.BlockHash) == 0 {
+		e.BlockHash = make([]byte, 0, len(buf[0:32]))
+	}
+	e.BlockHash = append(e.BlockHash, buf[0:32]...)
+
+	// Field (1) 'ParentHash'
+	if cap(e.ParentHash) == 0 {
+		e.ParentHash = make([]byte, 0, len(buf[32:64]))
+	}
+	e.ParentHash = append(e.ParentHash, buf[32:64]...)
+
+	// Field (2) 'Coinbase'
+	if cap(e.Coinbase) == 0 {
+		e.Coinbase = make([]byte, 0, len(buf[64:84]))
+	}
+	e.Coinbase = append(e.Coinbase, buf[64:84]...)
+
+	// Field (3) 'StateRoot'
+	if cap(e.StateRoot) == 0 {
+		e.StateRoot = make([]byte, 0, len(buf[84:116]))
+	}
+	e.StateRoot = append(e.StateRoot, buf[84:116]...)
+
+	// Field (4) 'Number'
+	e.Number = ssz.UnmarshallUint64(buf[116:124])
+
+	// Field (5) 'GasLimit'
+	e.GasLimit = ssz.UnmarshallUint64(buf[124:132])
+
+	// Field (6) 'GasUsed'
+	e.GasUsed = ssz.UnmarshallUint64(buf[132:140])
+
+	// Field (7) 'Timestamp'
+	e.Timestamp = ssz.UnmarshallUint64(buf[140:148])
+
+	// Field (8) 'ReceiptRoot'
+	if cap(e.ReceiptRoot) == 0 {
+		e.ReceiptRoot = make([]byte, 0, len(buf[148:180]))
+	}
+	e.ReceiptRoot = append(e.ReceiptRoot, buf[148:180]...)
+
+	// Field (9) 'LogsBloom'
+	if cap(e.LogsBloom) == 0 {
+		e.LogsBloom = make([]byte, 0, len(buf[180:436]))
+	}
+	e.LogsBloom = append(e.LogsBloom, buf[180:436]...)
+
+	// Field (10) 'TransactionsRoot'
+	if cap(e.TransactionsRoot) == 0 {
+		e.TransactionsRoot = make([]byte, 0, len(buf[436:468]))
+	}
+	e.TransactionsRoot = append(e.TransactionsRoot, buf[436:468]...)
+
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the ExecutionPayloadHeader object
+func (e *ExecutionPayloadHeader) SizeSSZ() (size int) {
+	size = 468
+	return
+}
+
+// HashTreeRoot ssz hashes the ExecutionPayloadHeader object
+func (e *ExecutionPayloadHeader) HashTreeRoot() ([32]byte, error) {
+	return ssz.HashWithDefaultHasher(e)
+}
+
+// HashTreeRootWith ssz hashes the ExecutionPayloadHeader object with a hasher
+func (e *ExecutionPayloadHeader) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+	indx := hh.Index()
+
+	// Field (0) 'BlockHash'
+	if len(e.BlockHash) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	hh.PutBytes(e.BlockHash)
+
+	// Field (1) 'ParentHash'
+	if len(e.ParentHash) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	hh.PutBytes(e.ParentHash)
+
+	// Field (2) 'Coinbase'
+	if len(e.Coinbase) != 20 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	hh.PutBytes(e.Coinbase)
+
+	// Field (3) 'StateRoot'
+	if len(e.StateRoot) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	hh.PutBytes(e.StateRoot)
+
+	// Field (4) 'Number'
+	hh.PutUint64(e.Number)
+
+	// Field (5) 'GasLimit'
+	hh.PutUint64(e.GasLimit)
+
+	// Field (6) 'GasUsed'
+	hh.PutUint64(e.GasUsed)
+
+	// Field (7) 'Timestamp'
+	hh.PutUint64(e.Timestamp)
+
+	// Field (8) 'ReceiptRoot'
+	if len(e.ReceiptRoot) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	hh.PutBytes(e.ReceiptRoot)
+
+	// Field (9) 'LogsBloom'
+	if len(e.LogsBloom) != 256 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	hh.PutBytes(e.LogsBloom)
+
+	// Field (10) 'TransactionsRoot'
+	if len(e.TransactionsRoot) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	hh.PutBytes(e.TransactionsRoot)
 
 	hh.Merkleize(indx)
 	return

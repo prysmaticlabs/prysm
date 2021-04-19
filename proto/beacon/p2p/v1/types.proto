@@ -45,8 +45,7 @@ message BeaconState {
   ethereum.eth.v1alpha1.Checkpoint current_justified_checkpoint = 8003;
   ethereum.eth.v1alpha1.Checkpoint finalized_checkpoint = 8004;
 
-  bytes application_state_hash = 9001 [(gogoproto.moretags) = "ssz-size:\"32\""];
-  bytes application_block_hash = 9002 [(gogoproto.moretags) = "ssz-size:\"32\""];
+  ExecutionPayloadHeader latest_execution_payload_header = 9001;
 }
 
 message Fork {
@@ -119,4 +118,20 @@ message DepositMessage {
 
   // Deposit amount in gwei.
   uint64 amount = 3;
+}
+
+message ExecutionPayloadHeader {
+  // Hash of the application block.
+  bytes block_hash = 1 [(gogoproto.moretags) = "ssz-size:\"32\""];
+  // Parent hash of the application block.
+  bytes parent_hash = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
+  bytes coinbase = 3 [(gogoproto.moretags) = "ssz-size:\"20\""];
+  bytes state_root = 4 [(gogoproto.moretags) = "ssz-size:\"32\""];
+  uint64 number = 5;
+  uint64 gas_limit = 6;
+  uint64 gas_used = 7;
+  uint64 timestamp = 8;
+  bytes receipt_root = 9 [(gogoproto.moretags) = "ssz-size:\"32\""];
+  bytes logs_bloom = 10 [(gogoproto.moretags) = "ssz-size:\"256\""];
+  bytes transactions_root = 11 [(gogoproto.moretags) = "ssz-size:\"32\""];
 }

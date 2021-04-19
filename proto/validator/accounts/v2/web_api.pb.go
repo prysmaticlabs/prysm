@@ -6,6 +6,10 @@ package ethereum_validator_accounts_v2
 import (
 	context "context"
 	fmt "fmt"
+	io "io"
+	math "math"
+	math_bits "math/bits"
+
 	proto "github.com/gogo/protobuf/proto"
 	empty "github.com/golang/protobuf/ptypes/empty"
 	v1alpha1 "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -14,9 +18,6 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
-	io "io"
-	math "math"
-	math_bits "math/bits"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -5357,7 +5358,7 @@ func (m *CreateWalletRequest) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field keymanager", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Keymanager", wireType)
 			}
 			m.Keymanager = 0
 			for shift := uint(0); ; shift += 7 {
