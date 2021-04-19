@@ -23,6 +23,9 @@ import (
 // reasonable amount of time.
 var SkipSlotCache = cache.NewSkipSlotCache()
 
+// CalculateStateRoot is used for calculating the
+// state root of the state for the block proposer to use.
+// This does not modify state.
 func CalculateStateRoot(
 	ctx context.Context,
 	state iface.BeaconState,

@@ -58,7 +58,7 @@ func TestProcessSlots_CanProcessWithCache(t *testing.T) {
 	// Cancel context.
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	newState, err = altair.ProcessSlots(ctx, copied, slot+200)
+	_, err = altair.ProcessSlots(ctx, copied, slot+200)
 	require.ErrorContains(t, "context canceled", err)
 }
 
