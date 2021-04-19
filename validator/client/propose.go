@@ -136,12 +136,17 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [4
 	)
 
 	blkRoot := fmt.Sprintf("%#x", bytesutil.Trunc(blkResp.BlockRoot))
+	payload := b.Body.ApplicationPayload
 	log.WithFields(logrus.Fields{
-		"slot":            b.Slot,
-		"blockRoot":       blkRoot,
-		"numAttestations": len(b.Body.Attestations),
-		"numDeposits":     len(b.Body.Deposits),
-		"graffiti":        string(b.Body.Graffiti),
+		"slot":               b.Slot,
+		"blockRoot":          blkRoot,
+		"numAttestations":    len(b.Body.Attestations),
+		"numDeposits":        len(b.Body.Deposits),
+		"graffiti":           string(b.Body.Graffiti),
+		"appCoinbase":        fmt.Sprintf("%#x", bytesutil.Trunc(payload.Coinbase)),
+		"appGasUsed":         payload.GasUsed,
+		"appBlockHash":       fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),
+		"appNumTransactions": len(payload.Transactions),
 	}).Info("Submitted new block")
 
 	if v.emitAccountMetrics {

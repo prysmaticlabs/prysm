@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
@@ -66,6 +67,9 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		if err := genesisState.UnmarshalSSZ(data); err != nil {
 			log.Fatalf("Could not unmarshal pre-loaded state: %v", err)
 		}
+		// This is hard coded to my catalyst instance genesis hash.
+		eth1ParentHash := "0x3a3fdfc9ab6e17ff530b57bc21494da3848ebbeaf9343545fded7a18d221ffec"
+		genesisState.ApplicationBlockHash = common.HexToHash(eth1ParentHash).Bytes()
 		genesisTrie, err := stateV0.InitializeFromProto(genesisState)
 		if err != nil {
 			log.Fatalf("Could not get state trie: %v", err)

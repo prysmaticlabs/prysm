@@ -499,6 +499,7 @@ func (s *Service) waitForConnection() {
 		if synced {
 			s.connectedETH1 = true
 			s.runError = nil
+			// This one spams every slot because we can't process pass logs with Catalyst.
 			log.WithFields(logrus.Fields{
 				"endpoint": logutil.MaskCredentialsLogging(s.currHttpEndpoint.Url),
 			}).Info("Connected to eth1 proof-of-work chain")
@@ -764,7 +765,8 @@ func (s *Service) initPOWService() {
 			s.latestEth1Data.BlockTime = header.Time
 
 			if err := s.processPastLogs(ctx); err != nil {
-				log.Errorf("Unable to process past logs %v", err)
+				// Not relevant for merge. Moving to debug temporarily.
+				log.Debugf("Unable to process past logs %v", err)
 				s.retryETH1Node(err)
 				continue
 			}

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/eth"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -18,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -100,15 +103,9 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 		return errors.Wrap(err, "could not execute state transition")
 	}
 
-	// Verify application payload, which the eth1 component of the block.
-	// First get beacon_chain_data using block's randao_reveal. Use beacon_chain_data
-	// along with state's application block hash and block body's application payload.
-	// Call function process_application_payload.
-	// Note, we can't call RPC call here. One way is to send block.application_payload to RPC service via channel and
-	// block until we get a respond.
-	// If pass, set beacon state's application fields
-	//    state.application_state_root = body.application_payload.state_root;
-	//    state.application_block_hash = body.application_payload.block_hash;
+	if err := s.insertAppPayload(ctx, b); err != nil {
+		return err
+	}
 
 	valid, err := set.Verify()
 	if err != nil {
@@ -407,5 +404,42 @@ func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b *ethpb.Si
 	if err := s.insertBlockAndAttestationsToForkChoiceStore(ctx, b.Block, r, st); err != nil {
 		return errors.Wrapf(err, "could not insert block %d to fork choice store", b.Block.Slot)
 	}
+	return nil
+}
+
+// This inserts application payload to the eth1 node.
+func (s *Service) insertAppPayload(ctx context.Context, b *ethpb.BeaconBlock) error {
+	randaoMix, err := helpers.ComputeRandaoMixWithReveal(s.headState(ctx), b.Body.RandaoReveal)
+	if err != nil {
+		return err
+	}
+	parentState, err := s.cfg.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(b.ParentRoot))
+	if err != nil {
+		return err
+	}
+	payload := b.Body.ApplicationPayload
+	ok, err := s.cfg.ApplicationExecutor.InsertApplicationData(ctx, eth.InsertBlockParams{
+		RandaoMix:              common.BytesToHash(randaoMix),
+		Slot:                   uint64(b.Slot),
+		Timestamp:              uint64(time.Now().Unix()),
+		RecentBeaconBlockRoots: []common.Hash{},
+		ApplicationPayload:     helpers.AppPayloadJson(payload, parentState.ApplicationBlockHash()),
+	})
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return errors.New("could not insert application data to eth1 client")
+	}
+
+	log.WithFields(logrus.Fields{
+		"slot":            b.Slot,
+		"coinbase":        fmt.Sprintf("%#x", bytesutil.Trunc(payload.Coinbase)),
+		"gasUsed":         payload.GasUsed,
+		"parentBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(parentState.ApplicationBlockHash())),
+		"blockHash":       fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),
+		"numTransactions": len(payload.Transactions),
+	}).Info("Inserted app payload to eth1 node")
+
 	return nil
 }

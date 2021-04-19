@@ -83,6 +83,7 @@ type Config struct {
 	OpsService              *attestations.Service
 	StateGen                *stategen.State
 	WeakSubjectivityCheckpt *ethpb.Checkpoint
+	ApplicationExecutor     powchain.ApplicationDataExecutor
 }
 
 // NewService instantiates a new block service instance that will
