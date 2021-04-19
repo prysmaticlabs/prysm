@@ -1,10 +1,11 @@
 // +build linux,amd64 linux,arm64 darwin,amd64 windows,amd64
-// +build blst_enabled
+// +build !blst_disabled
 
 package blst
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bls/common"
@@ -61,9 +62,11 @@ func (s *Signature) Verify(pubKey common.PublicKey, msg []byte) bool {
 	return s.s.Verify(false, pubKey.(*PublicKey).p, false, msg, dst)
 }
 
-// AggregateVerify verifies each public key against its respective message.
-// This is vulnerable to rogue public-key attack. Each user must
-// provide a proof-of-knowledge of the public key.
+// AggregateVerify verifies each public key against its respective message. This is vulnerable to
+// rogue public-key attack. Each user must provide a proof-of-knowledge of the public key.
+//
+// Note: The msgs must be distinct. For maximum performance, this method does not ensure distinct
+// messages.
 //
 // In IETF draft BLS specification:
 // AggregateVerify((PK_1, message_1), ..., (PK_n, message_n),
@@ -73,7 +76,9 @@ func (s *Signature) Verify(pubKey common.PublicKey, msg []byte) bool {
 //      outputs INVALID otherwise.
 //
 // In ETH2.0 specification:
-// def AggregateVerify(pairs: Sequence[PK: BLSPubkey, message: Bytes], signature: BLSSignature) -> boo
+// def AggregateVerify(pairs: Sequence[PK: BLSPubkey, message: Bytes], signature: BLSSignature) -> bool
+//
+// Deprecated: Use FastAggregateVerify or use this method in spectests only.
 func (s *Signature) AggregateVerify(pubKeys []common.PublicKey, msgs [][32]byte) bool {
 	if featureconfig.Get().SkipBLSVerify {
 		return true
@@ -191,10 +196,14 @@ func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []common.P
 	}
 	// Secure source of RNG
 	randGen := rand.NewGenerator()
+	randLock := new(sync.Mutex)
 
 	randFunc := func(scalar *blst.Scalar) {
 		var rbytes [scalarBytes]byte
+		randLock.Lock()
+		// Ignore error as the error will always be nil in `read` in math/rand.
 		randGen.Read(rbytes[:])
+		randLock.Unlock()
 		scalar.FromBEndian(rbytes[:])
 	}
 	dummySig := new(blstSignature)
@@ -220,7 +229,7 @@ func (s *Signature) Copy() common.Signature {
 
 // VerifyCompressed verifies that the compressed signature and pubkey
 // are valid from the message provided.
-func VerifyCompressed(signature []byte, pub []byte, msg []byte) bool {
+func VerifyCompressed(signature, pub, msg []byte) bool {
 	// Validate signature and PKs since we will uncompress them here
 	return new(blstSignature).VerifyCompressed(signature, true, pub, true, msg, dst)
 }

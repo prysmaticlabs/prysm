@@ -8,6 +8,9 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	v1 "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -17,6 +20,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"go.opencensus.io/trace"
+)
+
+var (
+	stateCount = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "beacon_state_count",
+		Help: "Count the number of active beacon state objects.",
+	})
 )
 
 // InitializeFromProto the beacon state from a protobuf representation.
@@ -34,7 +44,7 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 	fieldCount := params.BeaconConfig().BeaconStateFieldCount
 	b := &BeaconState{
 		state:                 st,
-		dirtyFields:           make(map[fieldIndex]interface{}, fieldCount),
+		dirtyFields:           make(map[fieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[fieldIndex][]uint64, fieldCount),
 		stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, fieldCount),
 		sharedFieldReferences: make(map[fieldIndex]*stateutil.Reference, 10),
@@ -65,6 +75,7 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 	b.sharedFieldReferences[balances] = stateutil.NewRef(1)
 	b.sharedFieldReferences[historicalRoots] = stateutil.NewRef(1)
 
+	stateCount.Inc()
 	return b, nil
 }
 
@@ -110,7 +121,7 @@ func (b *BeaconState) Copy() iface.BeaconState {
 			ApplicationStateHash:        b.applicationStateHash(),
 			ApplicationBlockHash:        b.applicationBlockHash(),
 		},
-		dirtyFields:           make(map[fieldIndex]interface{}, fieldCount),
+		dirtyFields:           make(map[fieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[fieldIndex][]uint64, fieldCount),
 		rebuildTrie:           make(map[fieldIndex]bool, fieldCount),
 		sharedFieldReferences: make(map[fieldIndex]*stateutil.Reference, 10),
@@ -162,6 +173,7 @@ func (b *BeaconState) Copy() iface.BeaconState {
 		}
 	}
 
+	stateCount.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
 	runtime.SetFinalizer(dst, func(b *BeaconState) {
 		for field, v := range b.sharedFieldReferences {
@@ -169,33 +181,42 @@ func (b *BeaconState) Copy() iface.BeaconState {
 			if b.stateFieldLeaves[field].reference != nil {
 				b.stateFieldLeaves[field].reference.MinusRef()
 			}
-		}
-	})
 
+		}
+		for i := 0; i < fieldCount; i++ {
+			field := fieldIndex(i)
+			delete(b.stateFieldLeaves, field)
+			delete(b.dirtyIndices, field)
+			delete(b.dirtyFields, field)
+			delete(b.sharedFieldReferences, field)
+			delete(b.stateFieldLeaves, field)
+		}
+		stateCount.Sub(1)
+	})
 	return dst
 }
 
 // HashTreeRoot of the beacon state retrieves the Merkle root of the trie
 // representation of the beacon state based on the eth2 Simple Serialize specification.
 func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
-	_, span := trace.StartSpan(ctx, "beaconState.HashTreeRoot")
+	ctx, span := trace.StartSpan(ctx, "beaconState.HashTreeRoot")
 	defer span.End()
 
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	if b.merkleLayers == nil || len(b.merkleLayers) == 0 {
-		fieldRoots, err := computeFieldRoots(b.state)
+		fieldRoots, err := computeFieldRoots(ctx, b.state)
 		if err != nil {
 			return [32]byte{}, err
 		}
 		layers := stateutil.Merkleize(fieldRoots)
 		b.merkleLayers = layers
-		b.dirtyFields = make(map[fieldIndex]interface{}, params.BeaconConfig().BeaconStateFieldCount)
+		b.dirtyFields = make(map[fieldIndex]bool, params.BeaconConfig().BeaconStateFieldCount)
 	}
 
 	for field := range b.dirtyFields {
-		root, err := b.rootSelector(field)
+		root, err := b.rootSelector(ctx, field)
 		if err != nil {
 			return [32]byte{}, err
 		}
@@ -204,6 +225,140 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 		delete(b.dirtyFields, field)
 	}
 	return bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0]), nil
+}
+
+// ToProto returns a protobuf *v1.BeaconState representation of the state.
+func (b *BeaconState) ToProto() (*v1.BeaconState, error) {
+	sourceFork := b.Fork()
+	sourceLatestBlockHeader := b.LatestBlockHeader()
+	sourceEth1Data := b.Eth1Data()
+	sourceEth1DataVotes := b.Eth1DataVotes()
+	sourceValidators := b.Validators()
+	sourcePrevEpochAtts, err := b.PreviousEpochAttestations()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get previous epoch attestations")
+	}
+	sourceCurrEpochAtts, err := b.CurrentEpochAttestations()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get current epoch attestations")
+	}
+	sourcePrevJustifiedCheckpoint := b.PreviousJustifiedCheckpoint()
+	sourceCurrJustifiedCheckpoint := b.CurrentJustifiedCheckpoint()
+	sourceFinalizedCheckpoint := b.FinalizedCheckpoint()
+
+	resultEth1DataVotes := make([]*v1.Eth1Data, len(sourceEth1DataVotes))
+	for i, vote := range sourceEth1DataVotes {
+		resultEth1DataVotes[i] = &v1.Eth1Data{
+			DepositRoot:  vote.DepositRoot,
+			DepositCount: vote.DepositCount,
+			BlockHash:    vote.BlockHash,
+		}
+	}
+	resultValidators := make([]*v1.Validator, len(sourceValidators))
+	for i, validator := range sourceValidators {
+		resultValidators[i] = &v1.Validator{
+			PublicKey:                  validator.PublicKey,
+			WithdrawalCredentials:      validator.WithdrawalCredentials,
+			EffectiveBalance:           validator.EffectiveBalance,
+			Slashed:                    validator.Slashed,
+			ActivationEligibilityEpoch: validator.ActivationEligibilityEpoch,
+			ActivationEpoch:            validator.ActivationEpoch,
+			ExitEpoch:                  validator.ExitEpoch,
+			WithdrawableEpoch:          validator.WithdrawableEpoch,
+		}
+	}
+	resultPrevEpochAtts := make([]*v1.PendingAttestation, len(sourcePrevEpochAtts))
+	for i, att := range sourcePrevEpochAtts {
+		data := att.Data
+		resultPrevEpochAtts[i] = &v1.PendingAttestation{
+			AggregationBits: att.AggregationBits,
+			Data: &v1.AttestationData{
+				Slot:            data.Slot,
+				CommitteeIndex:  data.CommitteeIndex,
+				BeaconBlockRoot: data.BeaconBlockRoot,
+				Source: &v1.Checkpoint{
+					Epoch: data.Source.Epoch,
+					Root:  data.Source.Root,
+				},
+				Target: &v1.Checkpoint{
+					Epoch: data.Target.Epoch,
+					Root:  data.Target.Root,
+				},
+			},
+			InclusionDelay: att.InclusionDelay,
+			ProposerIndex:  att.ProposerIndex,
+		}
+	}
+	resultCurrEpochAtts := make([]*v1.PendingAttestation, len(sourceCurrEpochAtts))
+	for i, att := range sourceCurrEpochAtts {
+		data := att.Data
+		resultCurrEpochAtts[i] = &v1.PendingAttestation{
+			AggregationBits: att.AggregationBits,
+			Data: &v1.AttestationData{
+				Slot:            data.Slot,
+				CommitteeIndex:  data.CommitteeIndex,
+				BeaconBlockRoot: data.BeaconBlockRoot,
+				Source: &v1.Checkpoint{
+					Epoch: data.Source.Epoch,
+					Root:  data.Source.Root,
+				},
+				Target: &v1.Checkpoint{
+					Epoch: data.Target.Epoch,
+					Root:  data.Target.Root,
+				},
+			},
+			InclusionDelay: att.InclusionDelay,
+			ProposerIndex:  att.ProposerIndex,
+		}
+	}
+	result := &v1.BeaconState{
+		GenesisTime:           b.GenesisTime(),
+		GenesisValidatorsRoot: b.GenesisValidatorRoot(),
+		Slot:                  b.Slot(),
+		Fork: &v1.Fork{
+			PreviousVersion: sourceFork.PreviousVersion,
+			CurrentVersion:  sourceFork.CurrentVersion,
+			Epoch:           sourceFork.Epoch,
+		},
+		LatestBlockHeader: &v1.BeaconBlockHeader{
+			Slot:          sourceLatestBlockHeader.Slot,
+			ProposerIndex: sourceLatestBlockHeader.ProposerIndex,
+			ParentRoot:    sourceLatestBlockHeader.ParentRoot,
+			StateRoot:     sourceLatestBlockHeader.StateRoot,
+			BodyRoot:      sourceLatestBlockHeader.BodyRoot,
+		},
+		BlockRoots:      b.BlockRoots(),
+		StateRoots:      b.StateRoots(),
+		HistoricalRoots: b.HistoricalRoots(),
+		Eth1Data: &v1.Eth1Data{
+			DepositRoot:  sourceEth1Data.DepositRoot,
+			DepositCount: sourceEth1Data.DepositCount,
+			BlockHash:    sourceEth1Data.BlockHash,
+		},
+		Eth1DataVotes:             resultEth1DataVotes,
+		Eth1DepositIndex:          b.Eth1DepositIndex(),
+		Validators:                resultValidators,
+		Balances:                  b.Balances(),
+		RandaoMixes:               b.RandaoMixes(),
+		Slashings:                 b.Slashings(),
+		PreviousEpochAttestations: resultPrevEpochAtts,
+		CurrentEpochAttestations:  resultCurrEpochAtts,
+		JustificationBits:         b.JustificationBits(),
+		PreviousJustifiedCheckpoint: &v1.Checkpoint{
+			Epoch: sourcePrevJustifiedCheckpoint.Epoch,
+			Root:  sourcePrevJustifiedCheckpoint.Root,
+		},
+		CurrentJustifiedCheckpoint: &v1.Checkpoint{
+			Epoch: sourceCurrJustifiedCheckpoint.Epoch,
+			Root:  sourceCurrJustifiedCheckpoint.Root,
+		},
+		FinalizedCheckpoint: &v1.Checkpoint{
+			Epoch: sourceFinalizedCheckpoint.Epoch,
+			Root:  sourceFinalizedCheckpoint.Root,
+		},
+	}
+
+	return result, nil
 }
 
 // FieldReferencesCount returns the reference count held by each field. This
@@ -226,7 +381,11 @@ func (b *BeaconState) FieldReferencesCount() map[string]uint64 {
 	return refMap
 }
 
-func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
+func (b *BeaconState) rootSelector(ctx context.Context, field fieldIndex) ([32]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "beaconState.rootSelector")
+	defer span.End()
+	span.AddAttributes(trace.StringAttribute("field", field.String()))
+
 	hasher := hashutil.CustomSHA256Hasher()
 	switch field {
 	case genesisTime:
@@ -269,7 +428,11 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 		return eth1Root(hasher, b.state.Eth1Data)
 	case eth1DataVotes:
 		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.state.Eth1DataVotes, uint64(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod))))
+			err := b.resetFieldTrie(
+				field,
+				b.state.Eth1DataVotes,
+				uint64(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod))),
+			)
 			if err != nil {
 				return [32]byte{}, err
 			}
@@ -306,7 +469,11 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 		return htrutils.SlashingsRoot(b.state.Slashings)
 	case previousEpochAttestations:
 		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.state.PreviousEpochAttestations, uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().MaxAttestations)))
+			err := b.resetFieldTrie(
+				field,
+				b.state.PreviousEpochAttestations,
+				uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().MaxAttestations)),
+			)
 			if err != nil {
 				return [32]byte{}, err
 			}
@@ -317,7 +484,11 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 		return b.recomputeFieldTrie(field, b.state.PreviousEpochAttestations)
 	case currentEpochAttestations:
 		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.state.CurrentEpochAttestations, uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().MaxAttestations)))
+			err := b.resetFieldTrie(
+				field,
+				b.state.CurrentEpochAttestations,
+				uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().MaxAttestations)),
+			)
 			if err != nil {
 				return [32]byte{}, err
 			}

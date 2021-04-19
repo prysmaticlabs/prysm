@@ -64,7 +64,7 @@ func ProcessAttestations(
 //        assert data.source == state.previous_justified_checkpoint
 //        state.previous_epoch_attestations.append(pending_attestation)
 //
-//    # Check signature
+//    # Verify signature
 //    assert is_valid_indexed_attestation(state, get_indexed_attestation(state, attestation))
 func ProcessAttestation(
 	ctx context.Context,
@@ -264,7 +264,12 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState iface.ReadOnlyBea
 	if err := attestationutil.IsValidAttestationIndices(ctx, indexedAtt); err != nil {
 		return err
 	}
-	domain, err := helpers.Domain(beaconState.Fork(), indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
+	domain, err := helpers.Domain(
+		beaconState.Fork(),
+		indexedAtt.Data.Target.Epoch,
+		params.BeaconConfig().DomainBeaconAttester,
+		beaconState.GenesisValidatorRoot(),
+	)
 	if err != nil {
 		return err
 	}

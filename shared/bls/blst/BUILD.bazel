@@ -2,70 +2,70 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@prysm//tools/go:def.bzl", "go_library")
 
-#  Build with --define=blst_enabled=false to exclude blst library.
+#  Build with --define=blst_disabled=true to exclude blst library.
 config_setting(
-    name = "blst_enabled_linux_amd64",
+    name = "linux_amd64",
     constraint_values = [
         "@platforms//os:linux",
         "@platforms//cpu:x86_64",
     ],
     values = {
-        "define": "blst_enabled=true",
+        "define": "blst_disabled=false",
     },
 )
 
 config_setting(
-    name = "blst_enabled_darwin_amd64",
+    name = "darwin_amd64",
     constraint_values = [
         "@platforms//os:osx",
         "@platforms//cpu:x86_64",
     ],
     values = {
-        "define": "blst_enabled=true",
+        "define": "blst_disabled=false",
     },
 )
 
 config_setting(
-    name = "blst_enabled_windows_amd64",
+    name = "windows_amd64",
     constraint_values = [
         "@platforms//os:windows",
         "@platforms//cpu:x86_64",
     ],
     values = {
-        "define": "blst_enabled=true",
+        "define": "blst_disabled=false",
     },
 )
 
 config_setting(
-    name = "blst_enabled_linux_arm64",
+    name = "linux_arm64",
     constraint_values = [
         "@platforms//os:linux",
         "@platforms//cpu:aarch64",
     ],
     values = {
-        "define": "blst_enabled=true",
+        "define": "blst_disabled=false",
     },
 )
 
 config_setting(
-    name = "blst_enabled_android_amd64",
+    name = "android_amd64",
     constraint_values = [
         "@platforms//os:android",
         "@platforms//cpu:x86_64",
     ],
     values = {
-        "define": "blst_enabled=true",
+        "define": "blst_disabled=false",
     },
 )
 
 config_setting(
-    name = "blst_enabled_android_arm64",
+    name = "android_arm64",
     constraint_values = [
         "@platforms//os:android",
         "@platforms//cpu:aarch64",
     ],
     values = {
-        "define": "blst_enabled=true",
+        "define": "blst_disabled=false",
     },
 )
 
@@ -76,12 +76,12 @@ go_library(
     srcs =
         selects.with_or({
             (
-                ":blst_enabled_linux_amd64",
-                ":blst_enabled_linux_arm64",
-                ":blst_enabled_darwin_amd64",
-                ":blst_enabled_windows_amd64",
-                ":blst_enabled_android_amd64",
-                ":blst_enabled_android_arm64",
+                ":linux_amd64",
+                ":linux_arm64",
+                ":darwin_amd64",
+                ":windows_amd64",
+                ":android_amd64",
+                ":android_arm64",
             ): [
                 "aliases.go",
                 "doc.go",
@@ -100,12 +100,12 @@ go_library(
     ],
     deps = selects.with_or({
         (
-            ":blst_enabled_linux_amd64",
-            ":blst_enabled_linux_arm64",
-            ":blst_enabled_darwin_amd64",
-            ":blst_enabled_windows_amd64",
-            ":blst_enabled_android_amd64",
-            ":blst_enabled_android_arm64",
+            ":linux_amd64",
+            ":linux_arm64",
+            ":darwin_amd64",
+            ":windows_amd64",
+            ":android_amd64",
+            ":android_arm64",
         ): [
             "//shared/bls/common:go_default_library",
             "//shared/featureconfig:go_default_library",
@@ -124,12 +124,12 @@ go_test(
     name = "go_default_test",
     srcs = selects.with_or({
         (
-            ":blst_enabled_linux_amd64",
-            ":blst_enabled_linux_arm64",
-            ":blst_enabled_darwin_amd64",
-            ":blst_enabled_windows_amd64",
-            ":blst_enabled_android_amd64",
-            ":blst_enabled_android_arm64",
+            ":linux_amd64",
+            ":linux_arm64",
+            ":darwin_amd64",
+            ":windows_amd64",
+            ":android_amd64",
+            ":android_arm64",
         ): [
             "public_key_test.go",
             "secret_key_test.go",
@@ -138,12 +138,12 @@ go_test(
     }),
     deps = selects.with_or({
         (
-            ":blst_enabled_linux_amd64",
-            ":blst_enabled_linux_arm64",
-            ":blst_enabled_darwin_amd64",
-            ":blst_enabled_windows_amd64",
-            ":blst_enabled_android_amd64",
-            ":blst_enabled_android_arm64",
+            ":linux_amd64",
+            ":linux_arm64",
+            ":darwin_amd64",
+            ":windows_amd64",
+            ":android_amd64",
+            ":android_arm64",
         ): [
             "//shared/bls/blst:go_default_library",
             "//shared/bls/common:go_default_library",
@@ -160,12 +160,12 @@ go_test(
     name = "go_signature_test",
     srcs = selects.with_or({
         (
-            ":blst_enabled_linux_amd64",
-            ":blst_enabled_linux_arm64",
-            ":blst_enabled_darwin_amd64",
-            ":blst_enabled_windows_amd64",
-            ":blst_enabled_android_amd64",
-            ":blst_enabled_android_arm64",
+            ":linux_amd64",
+            ":linux_arm64",
+            ":darwin_amd64",
+            ":windows_amd64",
+            ":android_amd64",
+            ":android_arm64",
         ): [
             "signature_test.go",
         ],
@@ -174,12 +174,12 @@ go_test(
     embed = [":go_default_library"],
     deps = selects.with_or({
         (
-            ":blst_enabled_linux_amd64",
-            ":blst_enabled_linux_arm64",
-            ":blst_enabled_darwin_amd64",
-            ":blst_enabled_windows_amd64",
-            ":blst_enabled_android_amd64",
-            ":blst_enabled_android_arm64",
+            ":linux_amd64",
+            ":linux_arm64",
+            ":darwin_amd64",
+            ":windows_amd64",
+            ":android_amd64",
+            ":android_arm64",
         ): [
             "//shared/bls/common:go_default_library",
             "//shared/bytesutil:go_default_library",
