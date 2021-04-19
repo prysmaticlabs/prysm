@@ -135,3 +135,4 @@ message ExecutionPayloadHeader {
   bytes logs_bloom = 10 [(gogoproto.moretags) = "ssz-size:\"256\""];
   bytes transactions_root = 11 [(gogoproto.moretags) = "ssz-size:\"32\""];
 }
+

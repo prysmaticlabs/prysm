@@ -201,14 +201,12 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(ctx context.Context, state
 	}
 	fieldRoots[20] = finalRoot[:]
 
-	// Application roots.
-	stateHash := [32]byte{}
-	copy(stateHash[:], state.ApplicationStateHash)
-	fieldRoots[21] = stateHash[:]
-
-	blockHash := [32]byte{}
-	copy(blockHash[:], state.ApplicationBlockHash)
-	fieldRoots[22] = blockHash[:]
+	// Execution payload root.
+	executionPayloadRoot, err := state.LatestExecutionPayloadHeader.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	fieldRoots[21] = executionPayloadRoot[:]
 
 	return fieldRoots, nil
 }

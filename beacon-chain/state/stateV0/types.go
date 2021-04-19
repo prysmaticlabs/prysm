@@ -60,8 +60,7 @@ const (
 	previousJustifiedCheckpoint
 	currentJustifiedCheckpoint
 	finalizedCheckpoint
-	applicationBlockHash
-	applicationStateHash
+	latestExecutionPayloadHeader
 )
 
 // List of current data types the state supports.
@@ -137,10 +136,8 @@ func (f fieldIndex) String() string {
 		return "currentJustifiedCheckpoint"
 	case finalizedCheckpoint:
 		return "finalizedCheckpoint"
-	case applicationBlockHash:
-		return "applicationBlockHash"
-	case applicationStateHash:
-		return "applicationStateHash"
+	case latestExecutionPayloadHeader:
+		return "latestExecutionPayloadHeader"
 	default:
 		return ""
 	}
