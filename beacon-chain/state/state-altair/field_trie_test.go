@@ -1,22 +1,23 @@
-package state_altair
+package state_altair_test
 
 import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	statealtair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/altair"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestFieldTrie_NewTrie(t *testing.T) {
-	newState, _ := altair.DeterministicGenesisStateAltair(t, 40)
+	newState, _ := testutil.DeterministicGenesisState(t, 40)
 
 	// 5 represents the enum value of state roots
-	trie, err := NewFieldTrie(5, newState.StateRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
+	trie, err := statealtair.NewFieldTrie(5, newState.StateRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
 	require.NoError(t, err)
 	root, err := stateV0.RootsArrayHashTreeRoot(newState.StateRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "StateRoots")
 	require.NoError(t, err)
@@ -26,9 +27,9 @@ func TestFieldTrie_NewTrie(t *testing.T) {
 }
 
 func TestFieldTrie_RecomputeTrie(t *testing.T) {
-	newState, _ := altair.DeterministicGenesisStateAltair(t, 32)
+	newState, _ := testutil.DeterministicGenesisState(t, 32)
 	// 10 represents the enum value of validators
-	trie, err := NewFieldTrie(11, newState.Validators(), params.BeaconConfig().ValidatorRegistryLimit)
+	trie, err := statealtair.NewFieldTrie(11, newState.Validators(), params.BeaconConfig().ValidatorRegistryLimit)
 	require.NoError(t, err)
 
 	changedIdx := []uint64{2, 29}
@@ -54,7 +55,7 @@ func TestFieldTrie_RecomputeTrie(t *testing.T) {
 }
 
 func TestFieldTrie_CopyTrieImmutable(t *testing.T) {
-	newState, _ := altair.DeterministicGenesisStateAltair(t, 32)
+	newState, _ := testutil.DeterministicGenesisState(t, 32)
 	// 12 represents the enum value of randao mixes.
 	trie, err := stateV0.NewFieldTrie(13, newState.RandaoMixes(), uint64(params.BeaconConfig().EpochsPerHistoricalVector))
 	require.NoError(t, err)
@@ -74,11 +75,4 @@ func TestFieldTrie_CopyTrieImmutable(t *testing.T) {
 	if root == newRoot {
 		t.Errorf("Wanted roots to be different, but they are the same: %#x", root)
 	}
-}
-
-func Test_HandleEth1DataSlice_OutOfRange(t *testing.T) {
-	items := make([]*ethpb.Eth1Data, 1)
-	indices := []uint64{3}
-	_, err := handleEth1DataSlice(items, indices, false)
-	assert.ErrorContains(t, "index 3 greater than number of items in eth1 data slice 1", err)
 }
