@@ -46,19 +46,19 @@ func TestProcessSlots_CanProcess(t *testing.T) {
 func TestProcessSlots_CanProcessWithCache(t *testing.T) {
 	s, _ := testutilAltair.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	slot := types.Slot(100)
-	copy := s.Copy()
+	copied := s.Copy()
 	newState, err := altair.ProcessSlots(context.Background(), s, slot)
 	require.NoError(t, err)
 	require.Equal(t, slot, newState.Slot())
 
-	newState, err = altair.ProcessSlots(context.Background(), copy, slot+100)
+	newState, err = altair.ProcessSlots(context.Background(), copied, slot+100)
 	require.NoError(t, err)
 	require.Equal(t, slot+100, newState.Slot())
 
 	// Cancel context.
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	newState, err = altair.ProcessSlots(ctx, copy, slot+200)
+	newState, err = altair.ProcessSlots(ctx, copied, slot+200)
 	require.ErrorContains(t, "context canceled", err)
 }
 
