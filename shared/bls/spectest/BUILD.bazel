@@ -37,5 +37,6 @@ go_test(
         "//shared/testutil:go_default_library",
         "//shared/testutil/require:go_default_library",
         "@com_github_ghodss_yaml//:go_default_library",
+        "@com_github_golang_snappy//:go_default_library",
     ],
 )
