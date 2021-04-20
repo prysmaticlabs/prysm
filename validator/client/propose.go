@@ -136,7 +136,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [4
 	)
 
 	blkRoot := fmt.Sprintf("%#x", bytesutil.Trunc(blkResp.BlockRoot))
-	payload := b.Body.ApplicationPayload
+	payload := b.Body.ExecutionPayload
 	log.WithFields(logrus.Fields{
 		"slot":               b.Slot,
 		"blockRoot":          blkRoot,
