@@ -149,17 +149,19 @@ func RunEpochOperationTest(
 	testFolderPath string,
 	operationFn epochOperation,
 ) {
-	preBeaconStateFile, err := BazelFileBytes(path.Join(testFolderPath, "pre.ssz"))
+	preBeaconStateFile, err := BazelFileBytes(path.Join(testFolderPath, "pre.ssz_snappy"))
 	require.NoError(t, err)
+	preBeaconStateSSZ, err := snappy.Decode(nil /* dst */, preBeaconStateFile)
+	require.NoError(t, err, "Failed to decompress")
 	preBeaconStateBase := &pb.BeaconState{}
-	if err := preBeaconStateBase.UnmarshalSSZ(preBeaconStateFile); err != nil {
+	if err := preBeaconStateBase.UnmarshalSSZ(preBeaconStateSSZ); err != nil {
 		t.Fatalf("Failed to unmarshal: %v", err)
 	}
 	preBeaconState, err := stateV0.InitializeFromProto(preBeaconStateBase)
 	require.NoError(t, err)
 
 	// If the post.ssz is not present, it means the test should fail on our end.
-	postSSZFilepath, err := bazel.Runfile(path.Join(testFolderPath, "post.ssz"))
+	postSSZFilepath, err := bazel.Runfile(path.Join(testFolderPath, "post.ssz_snappy"))
 	postSSZExists := true
 	if err != nil && strings.Contains(err.Error(), "could not locate file") {
 		postSSZExists = false
@@ -173,8 +175,10 @@ func RunEpochOperationTest(
 
 		postBeaconStateFile, err := ioutil.ReadFile(postSSZFilepath)
 		require.NoError(t, err)
+		postBeaconStateSSZ, err := snappy.Decode(nil /* dst */, postBeaconStateFile)
+		require.NoError(t, err, "Failed to decompress")
 		postBeaconState := &pb.BeaconState{}
-		if err := postBeaconState.UnmarshalSSZ(postBeaconStateFile); err != nil {
+		if err := postBeaconState.UnmarshalSSZ(postBeaconStateSSZ); err != nil {
 			t.Fatalf("Failed to unmarshal: %v", err)
 		}
 
