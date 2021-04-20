@@ -57,7 +57,7 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 		return errors.New("go-ethereum binary not found")
 	}
 
-	eth1Path := path.Join(e2e.TestParams.TestPath, "eth1data/")
+	eth1Path := path.Join(e2e.TestParams.LogPath, "eth1data/")
 	// Clear out ETH1 to prevent issues.
 	if _, err := os.Stat(eth1Path); !os.IsNotExist(err) {
 		if err = os.RemoveAll(eth1Path); err != nil {
@@ -68,14 +68,15 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 	args := []string{
 		fmt.Sprintf("--datadir=%s", eth1Path),
 		fmt.Sprintf("--rpcport=%d", e2e.TestParams.Eth1RPCPort),
-		fmt.Sprintf("--wsport=%d", e2e.TestParams.Eth1RPCPort+1),
+		fmt.Sprintf("--ws.port=%d", e2e.TestParams.Eth1RPCPort+1),
 		"--rpc",
 		"--rpcaddr=127.0.0.1",
 		"--rpccorsdomain=\"*\"",
 		"--rpcvhosts=\"*\"",
+		"--rpc.allow-unprotected-txs",
 		"--ws",
-		"--wsaddr=127.0.0.1",
-		"--wsorigins=\"*\"",
+		"--ws.addr=127.0.0.1",
+		"--ws.origins=\"*\"",
 		"--dev",
 		"--dev.period=2",
 		"--ipcdisable",
