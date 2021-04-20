@@ -28,6 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -114,7 +115,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 
 	payload, err := vs.produceAppPayload(ctx, head, req.Slot)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get app payload %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get execution payload %v", err)
 	}
 
 	blk := &ethpb.BeaconBlock{
@@ -263,7 +264,7 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState iface.Be
 
 func (vs *Server) slotStartTime(slot types.Slot) uint64 {
 	startTime, _ := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
-	return helpers.SlotStartTime(startTime, slot)
+	return helpers.VotingPeriodStartTime(startTime, slot)
 }
 
 func (vs *Server) inRangeVotes(ctx context.Context,
@@ -647,11 +648,10 @@ func (vs *Server) produceAppPayload(ctx context.Context, state iface.ReadOnlyBea
 	if err != nil {
 		return nil, err
 	}
-	timeStamp := helpers.SlotStartTime(state.GenesisTime(), slot)
-
+	timeStamp := slotutil.SlotStartTime(state.GenesisTime(), slot)
 	payload, err := vs.ApplicationExecutor.AssembleExecutionPayload(ctx, catalyst.AssembleBlockParams{
 		ParentHash: common.BytesToHash(header.BlockHash),
-		Timestamp:  timeStamp,
+		Timestamp:  uint64(timeStamp.Unix()),
 	})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not produce execution data %v", err)
