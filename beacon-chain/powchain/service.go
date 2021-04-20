@@ -116,7 +116,7 @@ type Client interface {
 
 // Eth1BlockExecutor --
 type Eth1BlockExecutor interface {
-	NewBlock(ctx context.Context, params catalyst.ExecutableData) (bool, error)
+	NewBlock(ctx context.Context, params catalyst.ExecutableData) (*catalyst.NewBlockResponse, error)
 	AssembleBlock(ctx context.Context, params catalyst.AssembleBlockParams) (*catalyst.ExecutableData, error)
 }
 
@@ -127,7 +127,7 @@ type ExecutionPayloadExecutor interface {
 	) (*catalyst.ExecutableData, error)
 	InsertExecutionPayload(
 		ctx context.Context, data catalyst.ExecutableData,
-	) (bool, error)
+	) (*catalyst.NewBlockResponse, error)
 }
 
 // RPCDataFetcher defines a subset of methods conformed to by ETH1.0 RPC clients for

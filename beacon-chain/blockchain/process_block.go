@@ -408,11 +408,11 @@ func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b *ethpb.Si
 // This inserts execution payload to the pow node.
 func (s *Service) insertExecPayload(ctx context.Context, b *ethpb.BeaconBlock) error {
 	payload := b.Body.ExecutionPayload
-	ok, err := s.cfg.ExecutionPayloadExecutor.InsertExecutionPayload(ctx, helpers.ExecPayloadToJson(payload))
+	resp, err := s.cfg.ExecutionPayloadExecutor.InsertExecutionPayload(ctx, helpers.ExecPayloadToJson(payload))
 	if err != nil {
 		return err
 	}
-	if !ok {
+	if resp != nil && !resp.Valid {
 		return errors.New("could not insert application data to eth1 client")
 	}
 

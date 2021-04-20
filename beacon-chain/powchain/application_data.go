@@ -14,6 +14,6 @@ func (s *Service) AssembleExecutionPayload(
 
 func (s *Service) InsertExecutionPayload(
 	ctx context.Context, data catalyst.ExecutableData,
-) (bool, error) {
+) (*catalyst.NewBlockResponse, error) {
 	return s.applicationExecutor.NewBlock(ctx, data)
 }

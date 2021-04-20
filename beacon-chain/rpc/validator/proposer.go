@@ -650,7 +650,7 @@ func (vs *Server) produceAppPayload(ctx context.Context, state iface.ReadOnlyBea
 	timeStamp := helpers.SlotStartTime(state.GenesisTime(), slot)
 
 	payload, err := vs.ApplicationExecutor.AssembleExecutionPayload(ctx, catalyst.AssembleBlockParams{
-		ParentHash: common.BytesToHash(header.ParentHash),
+		ParentHash: common.BytesToHash(header.BlockHash),
 		Timestamp:  timeStamp,
 	})
 	if err != nil {
