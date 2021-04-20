@@ -247,14 +247,13 @@ http_archive(
 filegroup(
     name = "test_data",
     srcs = glob([
-        "**/*.ssz",
-        "**/*.yaml",
+        "**/*.ssz_snappy",
     ]),
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "170551b441e7d54b73248372ad9ce8cb6c148810b5f1364637117a63f4f1c085",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.0.0/minimal.tar.gz",
+    sha256 = "6e9886af3d2f024e563249d70388129e28e3e92f742f289238ed9b7ec7a7f930",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.1.0-alpha.3/minimal.tar.gz",
 )
 
 http_archive(
