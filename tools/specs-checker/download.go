@@ -76,8 +76,5 @@ func getAndSaveFile(specDocUrl, outFilePath string) error {
 }
 
 func prepareDir(dirPath string) error {
-	if err := os.MkdirAll(dirPath, os.ModePerm); err != nil {
-		return err
-	}
-	return nil
+	return os.MkdirAll(dirPath, os.ModePerm)
 }
