@@ -405,20 +405,20 @@ func (b *BeaconNode) registerBlockchainService() error {
 
 	maxRoutines := b.cliCtx.Int(cmd.MaxGoroutines.Name)
 	blockchainService, err := blockchain.NewService(b.ctx, &blockchain.Config{
-		BeaconDB:                b.db,
-		DepositCache:            b.depositCache,
-		ChainStartFetcher:       web3Service,
-		AttPool:                 b.attestationPool,
-		ExitPool:                b.exitPool,
-		SlashingPool:            b.slashingsPool,
-		P2p:                     b.fetchP2P(),
-		MaxRoutines:             maxRoutines,
-		StateNotifier:           b,
-		ForkChoiceStore:         b.forkChoiceStore,
-		OpsService:              opsService,
-		StateGen:                b.stateGen,
-		WeakSubjectivityCheckpt: wsCheckpt,
-		ApplicationExecutor:     web3Service,
+		BeaconDB:                 b.db,
+		DepositCache:             b.depositCache,
+		ChainStartFetcher:        web3Service,
+		AttPool:                  b.attestationPool,
+		ExitPool:                 b.exitPool,
+		SlashingPool:             b.slashingsPool,
+		P2p:                      b.fetchP2P(),
+		MaxRoutines:              maxRoutines,
+		StateNotifier:            b,
+		ForkChoiceStore:          b.forkChoiceStore,
+		OpsService:               opsService,
+		StateGen:                 b.stateGen,
+		WeakSubjectivityCheckpt:  wsCheckpt,
+		ExecutionPayloadExecutor: web3Service,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")
@@ -533,8 +533,8 @@ func (b *BeaconNode) registerRPCService() error {
 		depositFetcher = b.depositCache
 		chainStartFetcher = web3Service
 	}
-	var applicationExecutor powchain.ApplicationDataExecutor
-	applicationExecutor = web3Service
+	var executionPayloadExecutor powchain.ExecutionPayloadExecutor
+	executionPayloadExecutor = web3Service
 
 	host := b.cliCtx.String(flags.RPCHost.Name)
 	port := b.cliCtx.String(flags.RPCPort.Name)
@@ -582,7 +582,7 @@ func (b *BeaconNode) registerRPCService() error {
 		StateGen:                b.stateGen,
 		EnableDebugRPCEndpoints: enableDebugRPCEndpoints,
 		MaxMsgSize:              maxMsgSize,
-		ApplicationExecutor:     applicationExecutor,
+		ApplicationExecutor:     executionPayloadExecutor,
 	})
 
 	return b.services.RegisterService(rpcService)

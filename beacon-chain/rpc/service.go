@@ -85,7 +85,7 @@ type Config struct {
 	BlockReceiver           blockchain.BlockReceiver
 	POWChainService         powchain.Chain
 	ChainStartFetcher       powchain.ChainStartFetcher
-	ApplicationExecutor     powchain.ApplicationDataExecutor
+	ApplicationExecutor     powchain.ExecutionPayloadExecutor
 	GenesisTimeFetcher      blockchain.TimeFetcher
 	GenesisFetcher          blockchain.GenesisFetcher
 	EnableDebugRPCEndpoints bool

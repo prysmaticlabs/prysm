@@ -186,9 +186,9 @@ func RoundUpToNearestEpoch(slot types.Slot) types.Slot {
 	return slot
 }
 
-// VotingPeriodStartTime returns the current voting period's start time
+// SlotStartTime returns the slot start time
 // depending on the provided genesis and current slot.
-func VotingPeriodStartTime(genesis uint64, slot types.Slot) uint64 {
+func SlotStartTime(genesis uint64, slot types.Slot) uint64 {
 	slots := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod))
 	startTime := uint64((slot - slot.ModSlot(slots)).Mul(params.BeaconConfig().SecondsPerSlot))
 	return genesis + startTime

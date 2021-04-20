@@ -60,7 +60,7 @@ type Server struct {
 	BlockReceiver          blockchain.BlockReceiver
 	MockEth1Votes          bool
 	Eth1BlockFetcher       powchain.POWBlockFetcher
-	ApplicationExecutor    powchain.ApplicationDataExecutor
+	ApplicationExecutor    powchain.ExecutionPayloadExecutor
 	PendingDepositsFetcher depositcache.PendingDepositsFetcher
 	OperationNotifier      opfeed.Notifier
 	StateGen               *stategen.State

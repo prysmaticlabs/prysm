@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/eth"
+	"github.com/ethereum/go-ethereum/eth/catalyst"
 	fastssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -112,7 +112,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 		return nil, status.Errorf(codes.Internal, "Could not calculate proposer index %v", err)
 	}
 
-	payload, err := vs.produceAppPayload(ctx, head, req.Slot, req.RandaoReveal)
+	payload, err := vs.produceAppPayload(ctx, head, req.Slot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get app payload %v", err)
 	}
@@ -131,7 +131,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 			AttesterSlashings: vs.SlashingsPool.PendingAttesterSlashings(ctx, head, false /*noLimit*/),
 			VoluntaryExits:    vs.ExitPool.PendingExits(head, req.Slot, false /*noLimit*/),
 			Graffiti:          graffiti[:],
-			ExecutionPayload:  helpers.ExecutionPayloadProtobuf(payload),
+			ExecutionPayload:  helpers.ExecutionPayloadToProtobuf(payload),
 		},
 	}
 
@@ -263,7 +263,7 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState iface.Be
 
 func (vs *Server) slotStartTime(slot types.Slot) uint64 {
 	startTime, _ := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
-	return helpers.VotingPeriodStartTime(startTime, slot)
+	return helpers.SlotStartTime(startTime, slot)
 }
 
 func (vs *Server) inRangeVotes(ctx context.Context,
@@ -641,25 +641,23 @@ func (vs *Server) packAttestations(ctx context.Context, latestState iface.Beacon
 	return atts, nil
 }
 
-// produceAppPayload calls the eth1 node for application payload and returns it to block producer.
-func (vs *Server) produceAppPayload(ctx context.Context, state iface.ReadOnlyBeaconState, slot types.Slot, reveal []byte) (*eth.ApplicationPayload, error) {
-	randaoMix, err := helpers.ComputeRandaoMixWithReveal(state, reveal)
+// produceAppPayload calls the eth1 node for execution payload and returns it to block producer.
+func (vs *Server) produceAppPayload(ctx context.Context, state iface.ReadOnlyBeaconState, slot types.Slot) (*catalyst.ExecutableData, error) {
+	header, err := state.LatestExecutionPayloadHeader()
 	if err != nil {
 		return nil, err
 	}
+	timeStamp := helpers.SlotStartTime(state.GenesisTime(), slot)
 
-	payload, err := vs.ApplicationExecutor.ProduceApplicationData(ctx, eth.ProduceBlockParams{
-		//ParentHash:             common.BytesToHash(state.ApplicationBlockHash()),
-		RandaoMix:              common.BytesToHash(randaoMix),
-		Slot:                   uint64(slot),
-		Timestamp:              uint64(time.Now().Unix()),
-		RecentBeaconBlockRoots: []common.Hash{},
+	payload, err := vs.ApplicationExecutor.AssembleExecutionPayload(ctx, catalyst.AssembleBlockParams{
+		ParentHash: common.BytesToHash(header.ParentHash),
+		Timestamp:  timeStamp,
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not produce application data %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not produce execution data %v", err)
 	}
 	log.WithFields(logrus.Fields{
-		"coinbase":        fmt.Sprintf("%#x", bytesutil.Trunc(payload.Coinbase.Bytes())),
+		"coinbase":        fmt.Sprintf("%#x", bytesutil.Trunc(payload.Miner.Bytes())),
 		"gasUsed":         payload.GasUsed,
 		"parentBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.ParentHash.Bytes())),
 		"blockHash":       fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash.Bytes())),

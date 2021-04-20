@@ -17,7 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/eth"
+	"github.com/ethereum/go-ethereum/eth/catalyst"
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
@@ -116,17 +116,17 @@ type Client interface {
 
 // Eth1BlockExecutor --
 type Eth1BlockExecutor interface {
-	InsertBlock(ctx context.Context, params eth.InsertBlockParams) (bool, error)
-	ProduceBlock(ctx context.Context, params eth.ProduceBlockParams) (*eth.ApplicationPayload, error)
+	NewBlock(ctx context.Context, params catalyst.ExecutableData) (bool, error)
+	AssembleBlock(ctx context.Context, params catalyst.AssembleBlockParams) (*catalyst.ExecutableData, error)
 }
 
-// ApplicationDataExecutor --
-type ApplicationDataExecutor interface {
-	ProduceApplicationData(
-		ctx context.Context, params eth.ProduceBlockParams,
-	) (*eth.ApplicationPayload, error)
-	InsertApplicationData(
-		ctx context.Context, params eth.InsertBlockParams,
+// ExecutionPayloadExecutor --
+type ExecutionPayloadExecutor interface {
+	AssembleExecutionPayload(
+		ctx context.Context, params catalyst.AssembleBlockParams,
+	) (*catalyst.ExecutableData, error)
+	InsertExecutionPayload(
+		ctx context.Context, data catalyst.ExecutableData,
 	) (bool, error)
 }
 
@@ -900,7 +900,7 @@ func (s *Service) determineEarliestVotingBlock(ctx context.Context, followBlock 
 		}
 		return earliestBlk, nil
 	}
-	votingTime := helpers.VotingPeriodStartTime(genesisTime, currSlot)
+	votingTime := helpers.SlotStartTime(genesisTime, currSlot)
 	followBackDist := 2 * params.BeaconConfig().SecondsPerETH1Block * params.BeaconConfig().Eth1FollowDistance
 	if followBackDist > votingTime {
 		return 0, errors.Errorf("invalid genesis time provided. %d > %d", followBackDist, votingTime)

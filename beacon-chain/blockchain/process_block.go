@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -100,9 +101,9 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 		return errors.Wrap(err, "could not execute state transition")
 	}
 
-	//if err := s.insertAppPayload(ctx, b); err != nil {
-	//	return err
-	//}
+	if err := s.insertExecPayload(ctx, b); err != nil {
+		return err
+	}
 
 	valid, err := set.Verify()
 	if err != nil {
@@ -404,39 +405,25 @@ func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b *ethpb.Si
 	return nil
 }
 
-// This inserts application payload to the eth1 node.
-//func (s *Service) insertAppPayload(ctx context.Context, b *ethpb.BeaconBlock) error {
-//	randaoMix, err := helpers.ComputeRandaoMixWithReveal(s.headState(ctx), b.Body.RandaoReveal)
-//	if err != nil {
-//		return err
-//	}
-//	parentState, err := s.cfg.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(b.ParentRoot))
-//	if err != nil {
-//		return err
-//	}
-//	payload := b.Body.ApplicationPayload
-//	ok, err := s.cfg.ApplicationExecutor.InsertApplicationData(ctx, eth.InsertBlockParams{
-//		RandaoMix:              common.BytesToHash(randaoMix),
-//		Slot:                   uint64(b.Slot),
-//		Timestamp:              uint64(time.Now().Unix()),
-//		RecentBeaconBlockRoots: []common.Hash{},
-//		ApplicationPayload:     helpers.AppPayloadJson(payload, parentState.ApplicationBlockHash()),
-//	})
-//	if err != nil {
-//		return err
-//	}
-//	if !ok {
-//		return errors.New("could not insert application data to eth1 client")
-//	}
-//
-//	log.WithFields(logrus.Fields{
-//		"slot":            b.Slot,
-//		"coinbase":        fmt.Sprintf("%#x", bytesutil.Trunc(payload.Coinbase)),
-//		"gasUsed":         payload.GasUsed,
-//		"parentBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(parentState.ApplicationBlockHash())),
-//		"blockHash":       fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),
-//		"numTransactions": len(payload.Transactions),
-//	}).Info("Inserted app payload to eth1 node")
-//
-//	return nil
-//}
+// This inserts execution payload to the pow node.
+func (s *Service) insertExecPayload(ctx context.Context, b *ethpb.BeaconBlock) error {
+	payload := b.Body.ExecutionPayload
+	ok, err := s.cfg.ExecutionPayloadExecutor.InsertExecutionPayload(ctx, helpers.ExecPayloadToJson(payload))
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return errors.New("could not insert application data to eth1 client")
+	}
+
+	log.WithFields(logrus.Fields{
+		"slot":            b.Slot,
+		"coinbase":        fmt.Sprintf("%#x", bytesutil.Trunc(payload.Coinbase)),
+		"gasUsed":         payload.GasUsed,
+		"parentBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.ParentHash)),
+		"blockHash":       fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),
+		"numTransactions": len(payload.Transactions),
+	}).Info("Inserted app payload to eth1 node")
+
+	return nil
+}
