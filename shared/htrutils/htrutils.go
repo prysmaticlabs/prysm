@@ -92,3 +92,22 @@ func SlashingsRoot(slashings []uint64) ([32]byte, error) {
 	}
 	return BitwiseMerkleize(hashutil.CustomSHA256Hasher(), slashingChunks, uint64(len(slashingChunks)), uint64(len(slashingChunks)))
 }
+
+// TransactionsRoot computes the HashTreeRoot Merkleization of
+// a list of OpaqueTransaction which is defined as ByteList[MAX_BYTES_PER_OPAQUE_TRANSACTION]
+func TransactionsRoot(opaqueTransactions [][]byte) ([32]byte, error) {
+	result, err := BitwiseMerkleize(hashutil.CustomSHA256Hasher(), opaqueTransactions, uint64(len(opaqueTransactions)), params.BeaconConfig().MaxExecutionTransactions)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not compute historical roots merkleization")
+	}
+	historicalRootsBuf := new(bytes.Buffer)
+	if err := binary.Write(historicalRootsBuf, binary.LittleEndian, uint64(len(opaqueTransactions))); err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not marshal historical roots length")
+	}
+
+	// We need to mix in the length of the slice.
+	historicalRootsOutput := make([]byte, 32)
+	copy(historicalRootsOutput, historicalRootsBuf.Bytes())
+	mixedLen := MixInLength(result, historicalRootsOutput)
+	return mixedLen, nil
+}

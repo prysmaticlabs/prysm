@@ -89,6 +89,9 @@ type BeaconChainConfig struct {
 	MaxDeposits          uint64 `yaml:"MAX_DEPOSITS" spec:"true"`           // MaxDeposits defines the maximum number of validator deposits in a block.
 	MaxVoluntaryExits    uint64 `yaml:"MAX_VOLUNTARY_EXITS" spec:"true"`    // MaxVoluntaryExits defines the maximum number of validator exits in a block.
 
+	// Merge related values.
+	MaxExecutionTransactions uint64 `yaml:"MAX_EXECUTION_TRANSACTIONS" spec:"true"` // MaxExecutionTransactions of beacon chain.
+
 	// BLS domain values.
 	DomainBeaconProposer    [4]byte `yaml:"DOMAIN_BEACON_PROPOSER" spec:"true"`     // DomainBeaconProposer defines the BLS signature domain for beacon proposal verification.
 	DomainRandao            [4]byte `yaml:"DOMAIN_RANDAO" spec:"true"`              // DomainRandao defines the BLS signature domain for randao verification.

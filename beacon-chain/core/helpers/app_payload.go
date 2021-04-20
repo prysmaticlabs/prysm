@@ -4,7 +4,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/eth/catalyst"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/htrutils"
 )
 
 // ExecutionPayloadProtobuf converts eth1 execution payload from JSON format
@@ -51,4 +53,31 @@ func ExecPayloadToJson(payload *ethpb.ExecutionPayload) catalyst.ExecutableData 
 		LogsBloom:    payload.LogsBloom,
 		Transactions: txs,
 	}
+}
+
+// ExecPayloadToHeader converts execution payload to header format.
+func ExecPayloadToHeader(payload *ethpb.ExecutionPayload) (*pb.ExecutionPayloadHeader, error) {
+	txs := make([][]byte, len(payload.Transactions))
+	for i := range txs {
+		// Double check this. It may not be right.
+		txs[i] = payload.Transactions[i].Data
+	}
+	txRoot, err := htrutils.TransactionsRoot(txs)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.ExecutionPayloadHeader{
+		BlockHash:        bytesutil.SafeCopyBytes(payload.BlockHash),
+		ParentHash:       bytesutil.SafeCopyBytes(payload.ParentHash),
+		Coinbase:         bytesutil.SafeCopyBytes(payload.Coinbase),
+		StateRoot:        bytesutil.SafeCopyBytes(payload.StateRoot),
+		Number:           payload.Number,
+		GasLimit:         payload.GasLimit,
+		GasUsed:          payload.GasUsed,
+		Timestamp:        payload.Timestamp,
+		ReceiptRoot:      bytesutil.SafeCopyBytes(payload.ReceiptRoot),
+		LogsBloom:        bytesutil.SafeCopyBytes(payload.LogsBloom),
+		TransactionsRoot: txRoot[:],
+	}, nil
 }
