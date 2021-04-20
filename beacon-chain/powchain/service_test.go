@@ -278,7 +278,11 @@ func TestService_Eth1Synced(t *testing.T) {
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
 	require.NoError(t, err)
+	web3Service.eth1DataFetcher = &goodFetcher{backend: testAcc.Backend}
 
+	currTime := testAcc.Backend.Blockchain().CurrentHeader().Time
+	now := time.Now()
+	assert.NoError(t, testAcc.Backend.AdjustTime(now.Sub(time.Unix(int64(currTime), 0))))
 	testAcc.Backend.Commit()
 
 	synced, err := web3Service.isEth1NodeSynced()
@@ -614,4 +618,13 @@ func TestService_EnsureConsistentPowchainData(t *testing.T) {
 
 	assert.NotNil(t, eth1Data)
 	assert.Equal(t, true, eth1Data.ChainstartData.Chainstarted)
+}
+
+func TestTimestampIsChecked(t *testing.T) {
+	timestamp := uint64(time.Now().Unix())
+	assert.Equal(t, false, eth1HeadIsBehind(timestamp))
+
+	// Give an older timestmap beyond threshold.
+	timestamp = uint64(time.Now().Add(-eth1Threshold).Add(-1 * time.Minute).Unix())
+	assert.Equal(t, true, eth1HeadIsBehind(timestamp))
 }
