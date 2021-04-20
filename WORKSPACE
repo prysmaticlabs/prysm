@@ -248,6 +248,7 @@ filegroup(
     name = "test_data",
     srcs = glob([
         "**/*.ssz_snappy",
+        "**/*.yaml",
     ]),
     visibility = ["//visibility:public"],
 )
