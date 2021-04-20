@@ -123,15 +123,15 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 		StateRoot:     stateRoot,
 		ProposerIndex: idx,
 		Body: &ethpb.BeaconBlockBody{
-			Eth1Data:           eth1Data,
-			Deposits:           deposits,
-			Attestations:       atts,
-			RandaoReveal:       req.RandaoReveal,
-			ProposerSlashings:  vs.SlashingsPool.PendingProposerSlashings(ctx, head, false /*noLimit*/),
-			AttesterSlashings:  vs.SlashingsPool.PendingAttesterSlashings(ctx, head, false /*noLimit*/),
-			VoluntaryExits:     vs.ExitPool.PendingExits(head, req.Slot, false /*noLimit*/),
-			Graffiti:           graffiti[:],
-			ApplicationPayload: helpers.AppPayloadProtobuf(payload),
+			Eth1Data:          eth1Data,
+			Deposits:          deposits,
+			Attestations:      atts,
+			RandaoReveal:      req.RandaoReveal,
+			ProposerSlashings: vs.SlashingsPool.PendingProposerSlashings(ctx, head, false /*noLimit*/),
+			AttesterSlashings: vs.SlashingsPool.PendingAttesterSlashings(ctx, head, false /*noLimit*/),
+			VoluntaryExits:    vs.ExitPool.PendingExits(head, req.Slot, false /*noLimit*/),
+			Graffiti:          graffiti[:],
+			ExecutionPayload:  helpers.ExecutionPayloadProtobuf(payload),
 		},
 	}
 
@@ -649,7 +649,7 @@ func (vs *Server) produceAppPayload(ctx context.Context, state iface.ReadOnlyBea
 	}
 
 	payload, err := vs.ApplicationExecutor.ProduceApplicationData(ctx, eth.ProduceBlockParams{
-		ParentHash:             common.BytesToHash(state.ApplicationBlockHash()),
+		//ParentHash:             common.BytesToHash(state.ApplicationBlockHash()),
 		RandaoMix:              common.BytesToHash(randaoMix),
 		Slot:                   uint64(slot),
 		Timestamp:              uint64(time.Now().Unix()),

@@ -46,9 +46,18 @@ func TestAppendBeyondIndicesLimit(t *testing.T) {
 		PreviousEpochAttestations: []*pb.PendingAttestation{{Data: &eth.AttestationData{Slot: 123}}},
 		Validators:                []*eth.Validator{},
 		Eth1Data:                  &eth.Eth1Data{},
-		BlockRoots:                mockblockRoots,
-		StateRoots:                mockstateRoots,
-		RandaoMixes:               mockrandaoMixes,
+		LatestExecutionPayloadHeader: &pb.ExecutionPayloadHeader{
+			BlockHash:        make([]byte, 32),
+			ParentHash:       make([]byte, 32),
+			Coinbase:         make([]byte, 20),
+			StateRoot:        make([]byte, 32),
+			ReceiptRoot:      make([]byte, 32),
+			LogsBloom:        make([]byte, 256),
+			TransactionsRoot: make([]byte, 32),
+		},
+		BlockRoots:  mockblockRoots,
+		StateRoots:  mockstateRoots,
+		RandaoMixes: mockrandaoMixes,
 	})
 	require.NoError(t, err)
 	_, err = st.HashTreeRoot(context.Background())

@@ -22,12 +22,15 @@ func NewGenesisBlock(stateRoot []byte) *ethpb.SignedBeaconBlock {
 					BlockHash:   make([]byte, 32),
 				},
 				Graffiti: make([]byte, 32),
-				ApplicationPayload: &ethpb.ApplicationPayload{
+				ExecutionPayload: &ethpb.ExecutionPayload{
 					BlockHash:   make([]byte, 32),
+					ParentHash:  make([]byte, 32),
 					Coinbase:    make([]byte, 20),
 					StateRoot:   make([]byte, 32),
 					GasLimit:    0,
 					GasUsed:     0,
+					Number:      0,
+					Timestamp:   0,
 					ReceiptRoot: make([]byte, 32),
 					LogsBloom:   make([]byte, 256),
 				},

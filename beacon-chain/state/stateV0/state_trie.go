@@ -504,10 +504,8 @@ func (b *BeaconState) rootSelector(ctx context.Context, field fieldIndex) ([32]b
 		return htrutils.CheckpointRoot(hasher, b.state.CurrentJustifiedCheckpoint)
 	case finalizedCheckpoint:
 		return htrutils.CheckpointRoot(hasher, b.state.FinalizedCheckpoint)
-	case applicationStateHash:
-		return bytesutil.ToBytes32(b.state.ApplicationStateHash), nil
-	case applicationBlockHash:
-		return bytesutil.ToBytes32(b.state.ApplicationBlockHash), nil
+	case latestExecutionPayloadHeader:
+		return b.state.LatestExecutionPayloadHeader.HashTreeRoot()
 	}
 	return [32]byte{}, errors.New("invalid field index provided")
 }

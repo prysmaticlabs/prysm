@@ -13,27 +13,28 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// AppPayloadProtobuf converts eth1 application payload from Geth's JSON format
+// ExecutionPayloadProtobuf converts eth1 execution payload from Geth's JSON format
 // to Prysm's protobuf format.
-func AppPayloadProtobuf(payload *eth.ApplicationPayload) *ethpb.ApplicationPayload {
+func ExecutionPayloadProtobuf(payload *eth.ApplicationPayload) *ethpb.ExecutionPayload {
 	txs := make([]*ethpb.OpaqueTransaction, len(payload.Transactions))
 	for i := range txs {
 		txs[i] = &ethpb.OpaqueTransaction{Data: payload.Transactions[i].Data()}
 	}
-	return &ethpb.ApplicationPayload{
+	return &ethpb.ExecutionPayload{
 		BlockHash:    bytesutil.PadTo(payload.BlockHash.Bytes(), 32),
+		ParentHash:   bytesutil.PadTo(payload.ParentHash.Bytes(), 32),
 		Coinbase:     bytesutil.PadTo(payload.Coinbase.Bytes(), 20),
 		StateRoot:    bytesutil.PadTo(payload.StateRoot.Bytes(), 32),
 		GasLimit:     payload.GasLimit,
 		GasUsed:      payload.GasUsed,
 		ReceiptRoot:  bytesutil.PadTo(payload.ReceiptRoot.Bytes(), 32),
 		LogsBloom:    bytesutil.PadTo(payload.LogsBloom, 256),
-		Transactions: txs,
+		Transactions: []*ethpb.OpaqueTransaction{},
 	}
 }
 
 // AppPayloadJson converts eth1 application payload from Prysm's protobuf format to Geth's JSON format.
-func AppPayloadJson(payload *ethpb.ApplicationPayload, parentHash []byte) eth.ApplicationPayload {
+func AppPayloadJson(payload *ethpb.ExecutionPayload, parentHash []byte) eth.ApplicationPayload {
 	return eth.ApplicationPayload{
 		Coinbase:     common.BytesToAddress(payload.Coinbase),
 		StateRoot:    common.BytesToHash(payload.StateRoot),

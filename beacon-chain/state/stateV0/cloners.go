@@ -100,15 +100,15 @@ func CopyBeaconBlockBody(body *ethpb.BeaconBlockBody) *ethpb.BeaconBlockBody {
 		return nil
 	}
 	return &ethpb.BeaconBlockBody{
-		RandaoReveal:       bytesutil.SafeCopyBytes(body.RandaoReveal),
-		Eth1Data:           CopyETH1Data(body.Eth1Data),
-		Graffiti:           bytesutil.SafeCopyBytes(body.Graffiti),
-		ProposerSlashings:  CopyProposerSlashings(body.ProposerSlashings),
-		AttesterSlashings:  CopyAttesterSlashings(body.AttesterSlashings),
-		Attestations:       CopyAttestations(body.Attestations),
-		Deposits:           CopyDeposits(body.Deposits),
-		VoluntaryExits:     CopySignedVoluntaryExits(body.VoluntaryExits),
-		ApplicationPayload: CopyApplicationPayload(body.ApplicationPayload),
+		RandaoReveal:      bytesutil.SafeCopyBytes(body.RandaoReveal),
+		Eth1Data:          CopyETH1Data(body.Eth1Data),
+		Graffiti:          bytesutil.SafeCopyBytes(body.Graffiti),
+		ProposerSlashings: CopyProposerSlashings(body.ProposerSlashings),
+		AttesterSlashings: CopyAttesterSlashings(body.AttesterSlashings),
+		Attestations:      CopyAttestations(body.Attestations),
+		Deposits:          CopyDeposits(body.Deposits),
+		VoluntaryExits:    CopySignedVoluntaryExits(body.VoluntaryExits),
+		ExecutionPayload:  CopyExecutionPayload(body.ExecutionPayload),
 	}
 }
 
@@ -268,18 +268,21 @@ func CopySignedVoluntaryExit(exit *ethpb.SignedVoluntaryExit) *ethpb.SignedVolun
 	}
 }
 
-// CopyApplicationPayload copies the provided ApplicationPayload.
-func CopyApplicationPayload(payload *ethpb.ApplicationPayload) *ethpb.ApplicationPayload {
+// CopyExecutionPayload copies the provided ApplicationPayload.
+func CopyExecutionPayload(payload *ethpb.ExecutionPayload) *ethpb.ExecutionPayload {
 	if payload == nil {
 		return nil
 	}
 
-	return &ethpb.ApplicationPayload{
+	return &ethpb.ExecutionPayload{
 		BlockHash:    bytesutil.SafeCopyBytes(payload.BlockHash),
+		ParentHash:   bytesutil.SafeCopyBytes(payload.ParentHash),
 		Coinbase:     bytesutil.SafeCopyBytes(payload.Coinbase),
 		StateRoot:    bytesutil.SafeCopyBytes(payload.StateRoot),
 		GasLimit:     payload.GasLimit,
 		GasUsed:      payload.GasUsed,
+		Timestamp:    payload.Timestamp,
+		Number:       payload.Number,
 		ReceiptRoot:  bytesutil.SafeCopyBytes(payload.ReceiptRoot),
 		LogsBloom:    bytesutil.SafeCopyBytes(payload.LogsBloom),
 		Transactions: CopyTransactions(payload.Transactions),

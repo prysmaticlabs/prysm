@@ -161,8 +161,18 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState iface.BeaconState,
 		Eth1DataVotes:    []*ethpb.Eth1Data{},
 		Eth1DepositIndex: preState.Eth1DepositIndex(),
 
-		ApplicationStateHash: make([]byte, 32),
-		ApplicationBlockHash: make([]byte, 32),
+		LatestExecutionPayloadHeader: &pb.ExecutionPayloadHeader{
+			BlockHash:        make([]byte, 32),
+			ParentHash:       make([]byte, 32),
+			Coinbase:         make([]byte, 20),
+			StateRoot:        make([]byte, 32),
+			GasLimit:         0,
+			GasUsed:          0,
+			Timestamp:        0,
+			ReceiptRoot:      make([]byte, 32),
+			LogsBloom:        make([]byte, 256),
+			TransactionsRoot: make([]byte, 32),
+		},
 	}
 
 	bodyRoot, err := (&ethpb.BeaconBlockBody{
@@ -172,12 +182,14 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState iface.BeaconState,
 			BlockHash:   make([]byte, 32),
 		},
 		Graffiti: make([]byte, 32),
-		ApplicationPayload: &ethpb.ApplicationPayload{
+		ExecutionPayload: &ethpb.ExecutionPayload{
 			BlockHash:   make([]byte, 32),
+			ParentHash:  make([]byte, 32),
 			Coinbase:    make([]byte, 20),
 			StateRoot:   make([]byte, 32),
 			GasLimit:    0,
 			GasUsed:     0,
+			Timestamp:   0,
 			ReceiptRoot: make([]byte, 32),
 			LogsBloom:   make([]byte, 256),
 		},
@@ -219,9 +231,20 @@ func EmptyGenesisState() (iface.BeaconState, error) {
 		Eth1DataVotes:    []*ethpb.Eth1Data{},
 		Eth1DepositIndex: 0,
 
-		ApplicationBlockHash: make([]byte, 32),
-		ApplicationStateHash: make([]byte, 32),
+		LatestExecutionPayloadHeader: &pb.ExecutionPayloadHeader{
+			BlockHash:        make([]byte, 32),
+			ParentHash:       make([]byte, 32),
+			Coinbase:         make([]byte, 20),
+			StateRoot:        make([]byte, 32),
+			GasLimit:         0,
+			GasUsed:          0,
+			Timestamp:        0,
+			ReceiptRoot:      make([]byte, 32),
+			LogsBloom:        make([]byte, 256),
+			TransactionsRoot: make([]byte, 32),
+		},
 	}
+
 	return stateV0.InitializeFromProto(state)
 }
 
