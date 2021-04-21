@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -10,26 +11,34 @@ import (
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2_gateway"
 	"github.com/prysmaticlabs/prysm/validator/web"
+	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/rs/cors"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 )
+
+var _ shared.Service = (*Gateway)(nil)
 
 // Gateway is the gRPC gateway to serve HTTP JSON traffic as a
 // proxy and forward it to the gRPC server.
 type Gateway struct {
-	ctx            context.Context
-	cancel         context.CancelFunc
-	gatewayAddr    string
-	remoteAddr     string
-	server         *http.Server
-	mux            *http.ServeMux
-	allowedOrigins []string
-	startFailure   error
+	conn                    *grpc.ClientConn
+	ctx                     context.Context
+	cancel                  context.CancelFunc
+	gatewayAddr             string
+	remoteAddr              string
+	remoteCert              string
+	server                  *http.Server
+	mux                     *http.ServeMux
+	allowedOrigins          []string
+	startFailure            error
+	enableDebugRPCEndpoints bool
+	maxCallRecvMsgSize      uint64
 }
 
 // New returns a new gateway server which translates HTTP into gRPC.
 // Accepts a context and optional http.ServeMux.
-func New(
+func NewValidator(
 	ctx context.Context,
 	remoteAddress,
 	gatewayAddress string,
@@ -98,18 +107,24 @@ func (g *Gateway) Status() error {
 		return g.startFailure
 	}
 
+	if s := g.conn.GetState(); s != connectivity.Ready {
+		return fmt.Errorf("grpc server is %s", s)
+	}
+
 	return nil
 }
 
 // Stop the gateway with a graceful shutdown.
 func (g *Gateway) Stop() error {
-	shutdownCtx, shutdownCancel := context.WithTimeout(g.ctx, 2*time.Second)
-	defer shutdownCancel()
-	if err := g.server.Shutdown(shutdownCtx); err != nil {
-		if errors.Is(err, context.DeadlineExceeded) {
-			log.Warn("Existing connections terminated")
-		} else {
-			log.WithError(err).Error("Failed to gracefully shut down server")
+	if g.server != nil {
+		shutdownCtx, shutdownCancel := context.WithTimeout(g.ctx, 2*time.Second)
+		defer shutdownCancel()
+		if err := g.server.Shutdown(shutdownCtx); err != nil {
+			if errors.Is(err, context.DeadlineExceeded) {
+				log.Warn("Existing connections terminated")
+			} else {
+				log.WithError(err).Error("Failed to gracefully shut down server")
+			}
 		}
 	}
 
@@ -119,6 +134,7 @@ func (g *Gateway) Stop() error {
 
 	return nil
 }
+
 
 func (g *Gateway) corsMiddleware(h http.Handler) http.Handler {
 	c := cors.New(cors.Options{

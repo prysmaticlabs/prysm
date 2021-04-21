@@ -510,7 +510,7 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 	rpcAddr := fmt.Sprintf("%s:%d", rpcHost, rpcPort)
 	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
 	allowedOrigins := strings.Split(cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
-	gatewaySrv := gateway.New(
+	gatewaySrv := gateway.NewValidator(
 		cliCtx.Context,
 		rpcAddr,
 		gatewayAddress,
