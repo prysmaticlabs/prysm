@@ -4,6 +4,6 @@ import (
 	"testing"
 )
 
-func TestDepositMainnetYaml(t *testing.T) {
+func TestDepositMainnet(t *testing.T) {
 	runDepositTest(t, "mainnet")
 }

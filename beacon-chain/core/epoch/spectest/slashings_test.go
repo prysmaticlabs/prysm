@@ -16,7 +16,7 @@ import (
 func runSlashingsTests(t *testing.T, config string) {
 	require.NoError(t, spectest.SetConfig(t, config))
 
-	testFolders, testsFolderPath := testutil.TestFolders(t, config, "epoch_processing/slashings/pyspec_tests")
+	testFolders, testsFolderPath := testutil.TestFolders(t, config, "phase0", "epoch_processing/slashings/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())
