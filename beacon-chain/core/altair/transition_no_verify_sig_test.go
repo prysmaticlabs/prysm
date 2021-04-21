@@ -385,8 +385,8 @@ func createFullBlockWithOperations(t *testing.T) (iface.BeaconStateAltair,
 			},
 		},
 	})
-
-	sig, err := testutil.BlockSignatureAltair(beaconState, block.Block, privKeys)
+	copiedState := beaconState.Copy()
+	sig, err := testutil.BlockSignatureAltair(copiedState, block.Block, privKeys)
 	require.NoError(t, err)
 	block.Signature = sig.Marshal()
 
