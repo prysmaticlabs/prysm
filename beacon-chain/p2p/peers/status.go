@@ -537,30 +537,30 @@ func (p *Status) Prune() {
 		return
 	}
 
-	notBadPeer := func(peerData *peerdata.PeerData) bool {
-		return peerData.BadResponses < p.scorers.BadResponsesScorer().Params().Threshold
+	notBadPeer := func(pid peer.ID) bool {
+		return !p.IsBad(pid)
 	}
 	type peerResp struct {
-		pid     peer.ID
-		badResp int
+		pid   peer.ID
+		score float64
 	}
 	peersToPrune := make([]*peerResp, 0)
 	// Select disconnected peers with a smaller bad response count.
 	for pid, peerData := range p.store.Peers() {
-		if peerData.ConnState == PeerDisconnected && notBadPeer(peerData) {
+		if peerData.ConnState == PeerDisconnected && notBadPeer(pid) {
 			peersToPrune = append(peersToPrune, &peerResp{
-				pid:     pid,
-				badResp: peerData.BadResponses,
+				pid:   pid,
+				score: p.Scorers().Score(pid),
 			})
 		}
 	}
 
-	// Sort peers in ascending order, so the peers with the
-	// least amount of bad responses are pruned first. This
+	// Sort peers in descending order, so the peers with the
+	// highest score are pruned first. This
 	// is to protect the node from malicious/lousy peers so
 	// that their memory is still kept.
 	sort.Slice(peersToPrune, func(i, j int) bool {
-		return peersToPrune[i].badResp < peersToPrune[j].badResp
+		return peersToPrune[i].score > peersToPrune[j].score
 	})
 
 	limitDiff := len(p.store.Peers()) - p.store.Config().MaxPeers
@@ -697,8 +697,8 @@ func (p *Status) PeersToPrune() []peer.ID {
 	defer p.store.Unlock()
 
 	type peerResp struct {
-		pid     peer.ID
-		badResp int
+		pid   peer.ID
+		score float64
 	}
 	peersToPrune := make([]*peerResp, 0)
 	// Select connected and inbound peers to prune.
@@ -706,16 +706,16 @@ func (p *Status) PeersToPrune() []peer.ID {
 		if peerData.ConnState == PeerConnected &&
 			peerData.Direction == network.DirInbound {
 			peersToPrune = append(peersToPrune, &peerResp{
-				pid:     pid,
-				badResp: peerData.BadResponses,
+				pid:   pid,
+				score: p.scorers.Score(pid),
 			})
 		}
 	}
 
-	// Sort in descending order to favour pruning peers with a
-	// higher bad response count.
+	// Sort in ascending order to favour pruning peers with a
+	// lower score.
 	sort.Slice(peersToPrune, func(i, j int) bool {
-		return peersToPrune[i].badResp > peersToPrune[j].badResp
+		return peersToPrune[i].score < peersToPrune[j].score
 	})
 
 	// Determine amount of peers to prune using our
