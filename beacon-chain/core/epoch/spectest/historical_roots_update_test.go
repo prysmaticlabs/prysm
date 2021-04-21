@@ -11,20 +11,20 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func runFinalUpdatesTests(t *testing.T, config string) {
+func runHistoricalRootsUpdateTests(t *testing.T, config string) {
 	require.NoError(t, spectest.SetConfig(t, config))
 
-	testFolders, testsFolderPath := testutil.TestFolders(t, config, "epoch_processing/final_updates/pyspec_tests")
+	testFolders, testsFolderPath := testutil.TestFolders(t, config, "phase0", "epoch_processing/historical_roots_update/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())
-			testutil.RunEpochOperationTest(t, folderPath, processFinalUpdatesWrapper)
+			testutil.RunEpochOperationTest(t, folderPath, processHistoricalRootsUpdateWrapper)
 		})
 	}
 }
 
-func processFinalUpdatesWrapper(t *testing.T, state iface.BeaconState) (iface.BeaconState, error) {
-	state, err := epoch.ProcessFinalUpdates(state)
+func processHistoricalRootsUpdateWrapper(t *testing.T, state iface.BeaconState) (iface.BeaconState, error) {
+	state, err := epoch.ProcessHistoricalRootsUpdate(state)
 	require.NoError(t, err, "Could not process final updates")
 	return state, nil
 }

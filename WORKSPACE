@@ -231,14 +231,14 @@ http_archive(
 filegroup(
     name = "test_data",
     srcs = glob([
-        "**/*.ssz",
+        "**/*.ssz_snappy",
         "**/*.yaml",
     ]),
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "ef5396e4b13995da9776eeb5ae346a2de90970c28da3c4f0dcaa4ab9f0ad1f93",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.0.0/general.tar.gz",
+    sha256 = "deacc076365c727d653ac064894ecf0d1b0a675d86704dc8de271259f6a7314b",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.1.0-alpha.3/general.tar.gz",
 )
 
 http_archive(
@@ -247,14 +247,14 @@ http_archive(
 filegroup(
     name = "test_data",
     srcs = glob([
-        "**/*.ssz",
+        "**/*.ssz_snappy",
         "**/*.yaml",
     ]),
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "170551b441e7d54b73248372ad9ce8cb6c148810b5f1364637117a63f4f1c085",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.0.0/minimal.tar.gz",
+    sha256 = "6e9886af3d2f024e563249d70388129e28e3e92f742f289238ed9b7ec7a7f930",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.1.0-alpha.3/minimal.tar.gz",
 )
 
 http_archive(
@@ -263,14 +263,14 @@ http_archive(
 filegroup(
     name = "test_data",
     srcs = glob([
-        "**/*.ssz",
+        "**/*.ssz_snappy",
         "**/*.yaml",
     ]),
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "b541a9979b4703fa5ee5d2182b0b5313c38efc54ae7eaec2eef793230a52ec83",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.0.0/mainnet.tar.gz",
+    sha256 = "a7b3d0ffc02a567250f424d69b2474fdc9477cd56eada60af7474560b46a8527",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.1.0-alpha.3/mainnet.tar.gz",
 )
 
 http_archive(

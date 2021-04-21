@@ -59,17 +59,20 @@ var (
 	})
 )
 
-// time to wait before trying to reconnect with the eth1 node.
-var backOffPeriod = 15 * time.Second
-
-// Amount of times before we log the status of the eth1 dial attempt.
-var logThreshold = 8
-
-// period to log chainstart related information
-var logPeriod = 1 * time.Minute
-
-// error when eth1 node is not synced.
-var errNotSynced = errors.New("eth1 node is still syncing")
+var (
+	// time to wait before trying to reconnect with the eth1 node.
+	backOffPeriod = 15 * time.Second
+	// amount of times before we log the status of the eth1 dial attempt.
+	logThreshold = 8
+	// period to log chainstart related information
+	logPeriod = 1 * time.Minute
+	// threshold of how old we will accept an eth1 node's head to be.
+	eth1Threshold = 20 * time.Minute
+	// error when eth1 node is not synced.
+	errNotSynced = errors.New("eth1 node is still syncing")
+	// error when eth1 node is too far behind.
+	errFarBehind = errors.Errorf("eth1 head is more than %s behind from current wall clock time", eth1Threshold.String())
+)
 
 // ChainStartFetcher retrieves information pertaining to the chain start event
 // of the beacon chain for usage across various services.
@@ -535,7 +538,14 @@ func (s *Service) isEth1NodeSynced() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return syncProg == nil, nil
+	if syncProg != nil {
+		return false, nil
+	}
+	head, err := s.eth1DataFetcher.HeaderByNumber(s.ctx, nil)
+	if err != nil {
+		return false, err
+	}
+	return !eth1HeadIsBehind(head.Time), nil
 }
 
 // Reconnect to eth1 node in case of any failure.
@@ -777,6 +787,11 @@ func (s *Service) run(done <-chan struct{}) {
 				s.retryETH1Node(err)
 				continue
 			}
+			if eth1HeadIsBehind(head.Time) {
+				log.WithError(errFarBehind).Debug("Could not get an up to date eth1 header")
+				s.retryETH1Node(errFarBehind)
+				continue
+			}
 			s.processBlockHeader(head)
 			s.handleETH1FollowDistance()
 			s.checkDefaultEndpoint()
@@ -971,4 +986,12 @@ func dedupEndpoints(endpoints []string) []string {
 		selectionMap[point] = true
 	}
 	return newEndpoints
+}
+
+// Checks if the provided timestamp is beyond the prescribed bound from
+// the current wall clock time.
+func eth1HeadIsBehind(timestamp uint64) bool {
+	timeout := timeutils.Now().Add(-eth1Threshold)
+	// check that web3 client is syncing
+	return time.Unix(int64(timestamp), 0).Before(timeout)
 }
