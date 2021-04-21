@@ -290,10 +290,10 @@ func CopyExecutionPayload(payload *ethpb.ExecutionPayload) *ethpb.ExecutionPaylo
 }
 
 // CopyTransactions copies the transactions.
-func CopyTransactions(txs []*ethpb.OpaqueTransaction) []*ethpb.OpaqueTransaction {
-	newTxs := make([]*ethpb.OpaqueTransaction, len(txs))
+func CopyTransactions(txs [][]byte) [][]byte {
+	newTxs := make([][]byte, len(txs))
 	for i, tx := range newTxs {
-		newTxs[i] = &ethpb.OpaqueTransaction{Data: bytesutil.SafeCopyBytes(tx.Data)}
+		newTxs[i] = bytesutil.SafeCopyBytes(tx)
 	}
 	return newTxs
 }

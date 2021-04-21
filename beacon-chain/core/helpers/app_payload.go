@@ -12,10 +12,10 @@ import (
 // ExecutionPayloadProtobuf converts eth1 execution payload from JSON format
 // to Prysm's protobuf format.
 func ExecutionPayloadToProtobuf(payload *catalyst.ExecutableData) *ethpb.ExecutionPayload {
-	txs := make([]*ethpb.OpaqueTransaction, len(payload.Transactions))
+	txs := make([][]byte, len(payload.Transactions))
 	for i := range txs {
 		// Double check this. It may not be right.
-		txs[i] = &ethpb.OpaqueTransaction{Data: payload.Transactions[i]}
+		txs[i] = payload.Transactions[i]
 	}
 	return &ethpb.ExecutionPayload{
 		BlockHash:    bytesutil.PadTo(payload.BlockHash.Bytes(), 32),
@@ -37,7 +37,7 @@ func ExecPayloadToJson(payload *ethpb.ExecutionPayload) catalyst.ExecutableData 
 	txs := make([][]byte, len(payload.Transactions))
 	for i := range txs {
 		// Double check this. It may not be right.
-		txs[i] = payload.Transactions[i].Data
+		txs[i] = payload.Transactions[i]
 	}
 
 	return catalyst.ExecutableData{
@@ -60,7 +60,7 @@ func ExecPayloadToHeader(payload *ethpb.ExecutionPayload) (*pb.ExecutionPayloadH
 	txs := make([][]byte, len(payload.Transactions))
 	for i := range txs {
 		// Double check this. It may not be right.
-		txs[i] = payload.Transactions[i].Data
+		txs[i] = payload.Transactions[i]
 	}
 	txRoot, err := htrutils.TransactionsRoot(txs)
 	if err != nil {
