@@ -4,6 +4,6 @@ import (
 	"testing"
 )
 
-func TestBlockProcessingMainnetYaml(t *testing.T) {
+func TestBlockProcessingMainnet(t *testing.T) {
 	runBlockProcessingTest(t, "mainnet")
 }

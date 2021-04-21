@@ -2,11 +2,12 @@ package spectest
 
 import (
 	"context"
+	"encoding/binary"
 	"path"
 	"reflect"
 	"testing"
 
-	"github.com/ghodss/yaml"
+	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
@@ -21,13 +22,31 @@ type Delta struct {
 	Penalties []uint64 `json:"penalties"`
 }
 
-var deltaFiles = []string{"source_deltas.yaml", "target_deltas.yaml", "head_deltas.yaml", "inactivity_penalty_deltas.yaml", "inclusion_delay_deltas.yaml"}
+// unmarshalSSZ deserializes specs data into a simple aggregating container.
+func (d *Delta) unmarshalSSZ(buf []byte) error {
+	offset1 := binary.LittleEndian.Uint32(buf[:4])
+	offset2 := binary.LittleEndian.Uint32(buf[4:8])
+
+	for i := uint32(0); i < offset2-offset1; i += 8 {
+		d.Rewards = append(d.Rewards, binary.LittleEndian.Uint64(buf[offset1+i:offset1+i+8]))
+		d.Penalties = append(d.Penalties, binary.LittleEndian.Uint64(buf[offset2+i:offset2+i+8]))
+	}
+	return nil
+}
+
+var deltaFiles = []string{
+	"source_deltas.ssz_snappy",
+	"target_deltas.ssz_snappy",
+	"head_deltas.ssz_snappy",
+	"inactivity_penalty_deltas.ssz_snappy",
+	"inclusion_delay_deltas.ssz_snappy",
+}
 
 func runPrecomputeRewardsAndPenaltiesTests(t *testing.T, config string) {
 	require.NoError(t, spectest.SetConfig(t, config))
 	testPaths := []string{"rewards/basic/pyspec_tests", "rewards/leak/pyspec_tests", "rewards/random/pyspec_tests"}
 	for _, testPath := range testPaths {
-		testFolders, testsFolderPath := testutil.TestFolders(t, config, testPath)
+		testFolders, testsFolderPath := testutil.TestFolders(t, config, "phase0", testPath)
 		for _, folder := range testFolders {
 			helpers.ClearCache()
 			t.Run(folder.Name(), func(t *testing.T) {
@@ -40,10 +59,12 @@ func runPrecomputeRewardsAndPenaltiesTests(t *testing.T, config string) {
 
 func runPrecomputeRewardsAndPenaltiesTest(t *testing.T, testFolderPath string) {
 	ctx := context.Background()
-	preBeaconStateFile, err := testutil.BazelFileBytes(path.Join(testFolderPath, "pre.ssz"))
+	preBeaconStateFile, err := testutil.BazelFileBytes(path.Join(testFolderPath, "pre.ssz_snappy"))
 	require.NoError(t, err)
+	preBeaconStateSSZ, err := snappy.Decode(nil /* dst */, preBeaconStateFile)
+	require.NoError(t, err, "Failed to decompress")
 	preBeaconStateBase := &pb.BeaconState{}
-	require.NoError(t, preBeaconStateBase.UnmarshalSSZ(preBeaconStateFile), "Failed to unmarshal")
+	require.NoError(t, preBeaconStateBase.UnmarshalSSZ(preBeaconStateSSZ), "Failed to unmarshal")
 	preBeaconState, err := stateV0.InitializeFromProto(preBeaconStateBase)
 	require.NoError(t, err)
 
@@ -69,11 +90,10 @@ func runPrecomputeRewardsAndPenaltiesTest(t *testing.T, testFolderPath string) {
 	for _, dFile := range deltaFiles {
 		sourceFile, err := testutil.BazelFileBytes(path.Join(testFolderPath, dFile))
 		require.NoError(t, err)
+		sourceSSZ, err := snappy.Decode(nil /* dst */, sourceFile)
+		require.NoError(t, err, "Failed to decompress")
 		d := &Delta{}
-		err = yaml.Unmarshal(sourceFile, &d)
-		if err != nil {
-			panic(err)
-		}
+		require.NoError(t, d.unmarshalSSZ(sourceSSZ), "Failed to unmarshal")
 		for i, reward := range d.Rewards {
 			totalSpecTestRewards[i] += reward
 		}

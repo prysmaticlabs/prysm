@@ -11,20 +11,20 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func runRegistryUpdatesTests(t *testing.T, config string) {
+func runEth1DataResetTests(t *testing.T, config string) {
 	require.NoError(t, spectest.SetConfig(t, config))
 
-	testFolders, testsFolderPath := testutil.TestFolders(t, config, "phase0", "epoch_processing/registry_updates/pyspec_tests")
+	testFolders, testsFolderPath := testutil.TestFolders(t, config, "phase0", "epoch_processing/eth1_data_reset/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())
-			testutil.RunEpochOperationTest(t, folderPath, processRegistryUpdatesWrapper)
+			testutil.RunEpochOperationTest(t, folderPath, processEth1DataResetWrapper)
 		})
 	}
 }
 
-func processRegistryUpdatesWrapper(t *testing.T, state iface.BeaconState) (iface.BeaconState, error) {
-	state, err := epoch.ProcessRegistryUpdates(state)
-	require.NoError(t, err, "Could not process registry updates")
+func processEth1DataResetWrapper(t *testing.T, state iface.BeaconState) (iface.BeaconState, error) {
+	state, err := epoch.ProcessEth1DataReset(state)
+	require.NoError(t, err, "Could not process final updates")
 	return state, nil
 }

@@ -57,7 +57,7 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 		return errors.New("go-ethereum binary not found")
 	}
 
-	eth1Path := path.Join(e2e.TestParams.LogPath, "eth1data/")
+	eth1Path := path.Join(e2e.TestParams.TestPath, "eth1data/")
 	// Clear out ETH1 to prevent issues.
 	if _, err := os.Stat(eth1Path); !os.IsNotExist(err) {
 		if err = os.RemoveAll(eth1Path); err != nil {
