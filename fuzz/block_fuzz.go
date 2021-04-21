@@ -99,6 +99,12 @@ func (fakeChecker) Resync() error {
 	return nil
 }
 
+// FuzzBlock wraps BeaconFuzzBlock in a go-fuzz compatible interface
+func FuzzBlock(b []byte) int {
+	BeaconFuzzBlock(b)
+	return 0
+}
+
 // BeaconFuzzBlock runs full processing of beacon block against a given state.
 func BeaconFuzzBlock(b []byte) {
 	params.UseMainnetConfig()

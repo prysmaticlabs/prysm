@@ -21,7 +21,7 @@ func TestSignMessageYaml(t *testing.T) {
 }
 
 func testSignMessageYaml(t *testing.T) {
-	testFolders, testFolderPath := testutil.TestFolders(t, "general", "bls/sign/small")
+	testFolders, testFolderPath := testutil.TestFolders(t, "general", "phase0", "bls/sign/small")
 
 	for i, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {

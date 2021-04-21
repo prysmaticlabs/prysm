@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -22,14 +23,16 @@ func init() {
 func runSlotProcessingTests(t *testing.T, config string) {
 	require.NoError(t, spectest.SetConfig(t, config))
 
-	testFolders, testsFolderPath := testutil.TestFolders(t, config, "sanity/slots/pyspec_tests")
+	testFolders, testsFolderPath := testutil.TestFolders(t, config, "phase0", "sanity/slots/pyspec_tests")
 
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
-			preBeaconStateFile, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "pre.ssz")
+			preBeaconStateFile, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "pre.ssz_snappy")
 			require.NoError(t, err)
+			preBeaconStateSSZ, err := snappy.Decode(nil /* dst */, preBeaconStateFile)
+			require.NoError(t, err, "Failed to decompress")
 			base := &pb.BeaconState{}
-			require.NoError(t, base.UnmarshalSSZ(preBeaconStateFile), "Failed to unmarshal")
+			require.NoError(t, base.UnmarshalSSZ(preBeaconStateSSZ), "Failed to unmarshal")
 			beaconState, err := stateV0.InitializeFromProto(base)
 			require.NoError(t, err)
 
@@ -39,10 +42,12 @@ func runSlotProcessingTests(t *testing.T, config string) {
 			slotsCount, err := strconv.Atoi(fileStr[:len(fileStr)-5])
 			require.NoError(t, err)
 
-			postBeaconStateFile, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "post.ssz")
+			postBeaconStateFile, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "post.ssz_snappy")
 			require.NoError(t, err)
+			postBeaconStateSSZ, err := snappy.Decode(nil /* dst */, postBeaconStateFile)
+			require.NoError(t, err, "Failed to decompress")
 			postBeaconState := &pb.BeaconState{}
-			require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateFile), "Failed to unmarshal")
+			require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateSSZ), "Failed to unmarshal")
 			postState, err := state.ProcessSlots(context.Background(), beaconState, beaconState.Slot().Add(uint64(slotsCount)))
 			require.NoError(t, err)
 
