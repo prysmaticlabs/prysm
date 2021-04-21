@@ -1,7 +1,9 @@
 package altair
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -10,6 +12,51 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"go.opencensus.io/trace"
 )
+
+// ExecuteStateTransitionNoVerifyAnySig defines the procedure for a state transition function.
+// This does not validate any BLS signatures of attestations, block proposer signature, randao signature,
+// it is used for performing a state transition as quickly as possible. This function also returns a signature
+// set of all signatures not verified, so that they can be stored and verified later.
+func ExecuteStateTransitionNoVerifyAnySig(
+	ctx context.Context,
+	state iface.BeaconStateAltair,
+	signed *ethpb.SignedBeaconBlockAltair,
+) (*bls.SignatureSet, iface.BeaconStateAltair, error) {
+	if ctx.Err() != nil {
+		return nil, nil, ctx.Err()
+	}
+	if signed == nil || signed.Block == nil {
+		return nil, nil, errors.New("nil block")
+	}
+
+	ctx, span := trace.StartSpan(ctx, "altair.ExecuteStateTransitionNoVerifyAttSigs")
+	defer span.End()
+	var err error
+
+	// Next slot cache is not enabled here.
+	state, err = ProcessSlots(ctx, state, signed.Block.Slot)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "could not process slot")
+	}
+
+	// Execute per block transition.
+	set, state, err := ProcessBlockNoVerifyAnySig(ctx, state, signed)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "could not process block")
+	}
+
+	// State root validation.
+	postStateRoot, err := state.HashTreeRoot(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	if !bytes.Equal(postStateRoot[:], signed.Block.StateRoot) {
+		return nil, nil, fmt.Errorf("could not validate state root, wanted: %#x, received: %#x",
+			postStateRoot[:], signed.Block.StateRoot)
+	}
+
+	return set, state, nil
+}
 
 // ProcessBlockNoVerifyAnySig creates a new, modified beacon state by applying block operation
 // transformations as defined in the Ethereum Serenity specification. It does not validate

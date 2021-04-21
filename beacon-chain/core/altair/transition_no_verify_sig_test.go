@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -20,6 +21,172 @@ import (
 	testutilAltair "github.com/prysmaticlabs/prysm/shared/testutil/altair"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
+
+func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
+	beaconState, privKeys := testutilAltair.DeterministicGenesisStateAltair(t, 100)
+
+	syncCommittee, err := altair.SyncCommittee(beaconState, helpers.CurrentEpoch(beaconState))
+	require.NoError(t, err)
+	require.NoError(t, beaconState.SetCurrentSyncCommittee(syncCommittee))
+
+	eth1Data := &ethpb.Eth1Data{
+		DepositCount: 100,
+		DepositRoot:  bytesutil.PadTo([]byte{2}, 32),
+		BlockHash:    make([]byte, 32),
+	}
+	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch-1))
+	e := beaconState.Eth1Data()
+	e.DepositCount = 100
+	require.NoError(t, beaconState.SetEth1Data(e))
+	bh := beaconState.LatestBlockHeader()
+	bh.Slot = beaconState.Slot()
+	require.NoError(t, beaconState.SetLatestBlockHeader(bh))
+	require.NoError(t, beaconState.SetEth1DataVotes([]*ethpb.Eth1Data{eth1Data}))
+
+	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
+	epoch := helpers.CurrentEpoch(beaconState)
+	randaoReveal, err := testutil.RandaoReveal(beaconState, epoch, privKeys)
+	require.NoError(t, err)
+	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
+
+	nextSlotState, err := altair.ProcessSlots(context.Background(), beaconState.Copy(), beaconState.Slot()+1)
+	require.NoError(t, err)
+	parentRoot, err := nextSlotState.LatestBlockHeader().HashTreeRoot()
+	require.NoError(t, err)
+	proposerIdx, err := helpers.BeaconProposerIndex(nextSlotState)
+	require.NoError(t, err)
+	block := testutilAltair.NewBeaconBlock()
+	block.Block.ProposerIndex = proposerIdx
+	block.Block.Slot = beaconState.Slot() + 1
+	block.Block.ParentRoot = parentRoot[:]
+	block.Block.Body.RandaoReveal = randaoReveal
+	block.Block.Body.Eth1Data = eth1Data
+
+	syncBits := bitfield.NewBitvector1024()
+	for i := range syncBits {
+		syncBits[i] = 0xff
+	}
+	indices, err := altair.SyncCommitteeIndices(beaconState, helpers.CurrentEpoch(beaconState))
+	require.NoError(t, err)
+	h := stateV0.CopyBeaconBlockHeader(beaconState.LatestBlockHeader())
+	prevStateRoot, err := beaconState.HashTreeRoot(context.Background())
+	require.NoError(t, err)
+	h.StateRoot = prevStateRoot[:]
+	pbr, err := h.HashTreeRoot()
+	require.NoError(t, err)
+	syncSigs := make([]bls.Signature, len(indices))
+	for i, indice := range indices {
+		b := p2pType.SSZBytes(pbr[:])
+		sb, err := helpers.ComputeDomainAndSign(beaconState, helpers.CurrentEpoch(beaconState), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
+		require.NoError(t, err)
+		sig, err := bls.SignatureFromBytes(sb)
+		require.NoError(t, err)
+		syncSigs[i] = sig
+	}
+	aggregatedSig := bls.AggregateSignatures(syncSigs).Marshal()
+	syncAggregate := &ethpb.SyncAggregate{
+		SyncCommitteeBits:      syncBits,
+		SyncCommitteeSignature: aggregatedSig,
+	}
+	block.Block.Body.SyncAggregate = syncAggregate
+
+	stateRoot, err := altair.CalculateStateRoot(context.Background(), beaconState, block)
+	require.NoError(t, err)
+	block.Block.StateRoot = stateRoot[:]
+
+	c := beaconState.Copy()
+	sig, err := testutilAltair.BlockSignature(c, block.Block, privKeys)
+	require.NoError(t, err)
+	block.Signature = sig.Marshal()
+
+	set, _, err := altair.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, block)
+	require.NoError(t, err)
+	verified, err := set.Verify()
+	require.NoError(t, err)
+	require.Equal(t, true, verified, "Could not verify signature set")
+}
+
+func TestExecuteStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t *testing.T) {
+	beaconState, privKeys := testutilAltair.DeterministicGenesisStateAltair(t, 100)
+
+	syncCommittee, err := altair.SyncCommittee(beaconState, helpers.CurrentEpoch(beaconState))
+	require.NoError(t, err)
+	require.NoError(t, beaconState.SetCurrentSyncCommittee(syncCommittee))
+
+	eth1Data := &ethpb.Eth1Data{
+		DepositCount: 100,
+		DepositRoot:  bytesutil.PadTo([]byte{2}, 32),
+		BlockHash:    make([]byte, 32),
+	}
+	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch-1))
+	e := beaconState.Eth1Data()
+	e.DepositCount = 100
+	require.NoError(t, beaconState.SetEth1Data(e))
+	bh := beaconState.LatestBlockHeader()
+	bh.Slot = beaconState.Slot()
+	require.NoError(t, beaconState.SetLatestBlockHeader(bh))
+	require.NoError(t, beaconState.SetEth1DataVotes([]*ethpb.Eth1Data{eth1Data}))
+
+	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
+	epoch := helpers.CurrentEpoch(beaconState)
+	randaoReveal, err := testutil.RandaoReveal(beaconState, epoch, privKeys)
+	require.NoError(t, err)
+	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
+
+	nextSlotState, err := altair.ProcessSlots(context.Background(), beaconState.Copy(), beaconState.Slot()+1)
+	require.NoError(t, err)
+	parentRoot, err := nextSlotState.LatestBlockHeader().HashTreeRoot()
+	require.NoError(t, err)
+	proposerIdx, err := helpers.BeaconProposerIndex(nextSlotState)
+	require.NoError(t, err)
+	block := testutilAltair.NewBeaconBlock()
+	block.Block.ProposerIndex = proposerIdx
+	block.Block.Slot = beaconState.Slot() + 1
+	block.Block.ParentRoot = parentRoot[:]
+	block.Block.Body.RandaoReveal = randaoReveal
+	block.Block.Body.Eth1Data = eth1Data
+
+	syncBits := bitfield.NewBitvector1024()
+	for i := range syncBits {
+		syncBits[i] = 0xff
+	}
+	indices, err := altair.SyncCommitteeIndices(beaconState, helpers.CurrentEpoch(beaconState))
+	require.NoError(t, err)
+	h := stateV0.CopyBeaconBlockHeader(beaconState.LatestBlockHeader())
+	prevStateRoot, err := beaconState.HashTreeRoot(context.Background())
+	require.NoError(t, err)
+	h.StateRoot = prevStateRoot[:]
+	pbr, err := h.HashTreeRoot()
+	require.NoError(t, err)
+	syncSigs := make([]bls.Signature, len(indices))
+	for i, indice := range indices {
+		b := p2pType.SSZBytes(pbr[:])
+		sb, err := helpers.ComputeDomainAndSign(beaconState, helpers.CurrentEpoch(beaconState), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
+		require.NoError(t, err)
+		sig, err := bls.SignatureFromBytes(sb)
+		require.NoError(t, err)
+		syncSigs[i] = sig
+	}
+	aggregatedSig := bls.AggregateSignatures(syncSigs).Marshal()
+	syncAggregate := &ethpb.SyncAggregate{
+		SyncCommitteeBits:      syncBits,
+		SyncCommitteeSignature: aggregatedSig,
+	}
+	block.Block.Body.SyncAggregate = syncAggregate
+
+	stateRoot, err := altair.CalculateStateRoot(context.Background(), beaconState, block)
+	require.NoError(t, err)
+	block.Block.StateRoot = stateRoot[:]
+
+	c := beaconState.Copy()
+	sig, err := testutilAltair.BlockSignature(c, block.Block, privKeys)
+	require.NoError(t, err)
+	block.Signature = sig.Marshal()
+
+	block.Block.StateRoot = bytesutil.PadTo([]byte{'a'}, 32)
+	_, _, err = altair.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, block)
+	require.ErrorContains(t, "could not validate state root", err)
+}
 
 func TestProcessBlockNoVerify_PassesProcessingConditions(t *testing.T) {
 	beaconState, block, _, _, _ := createFullBlockWithOperations(t)
@@ -218,8 +385,8 @@ func createFullBlockWithOperations(t *testing.T) (iface.BeaconStateAltair,
 			},
 		},
 	})
-
-	sig, err := testutil.BlockSignatureAltair(beaconState, block.Block, privKeys)
+	copiedState := beaconState.Copy()
+	sig, err := testutil.BlockSignatureAltair(copiedState, block.Block, privKeys)
 	require.NoError(t, err)
 	block.Signature = sig.Marshal()
 
