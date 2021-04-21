@@ -1,6 +1,4 @@
-// Package spectest includes tests to ensure conformity with the eth2
-// bls cryptography specification.
-package spectest
+package bls
 
 import (
 	"bytes"
@@ -16,11 +14,11 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func TestSignMessageYaml(t *testing.T) {
-	t.Run("blst", testSignMessageYaml)
+func TestSign(t *testing.T) {
+	t.Run("blst", testSign)
 }
 
-func testSignMessageYaml(t *testing.T) {
+func testSign(t *testing.T) {
 	testFolders, testFolderPath := testutil.TestFolders(t, "general", "phase0", "bls/sign/small")
 
 	for i, folder := range testFolders {

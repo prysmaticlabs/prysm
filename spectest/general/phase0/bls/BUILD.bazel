@@ -1,5 +1,5 @@
-load("@prysm//tools/go:def.bzl", "go_library")
 load("@io_bazel_rules_go//go:def.bzl", "go_test")
+load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
@@ -7,11 +7,12 @@ go_library(
     srcs = [
         "aggregate_test.yaml.go",
         "aggregate_verify_test.yaml.go",
+        "doc.go",
         "fast_aggregate_verify_test.yaml.go",
         "sign_test.yaml.go",
         "verify_test.yaml.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/shared/bls/spectest",
+    importpath = "github.com/prysmaticlabs/prysm/spectest/general/phase0/bls",
     visibility = ["//visibility:public"],
 )
 

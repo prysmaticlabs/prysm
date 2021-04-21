@@ -1,4 +1,4 @@
-package spectest
+package bls
 
 import (
 	"encoding/hex"
@@ -13,11 +13,11 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func TestVerifyMessageYaml(t *testing.T) {
-	t.Run("blst", testVerifyMessageYaml)
+func TestVerify(t *testing.T) {
+	t.Run("blst", testVerify)
 }
 
-func testVerifyMessageYaml(t *testing.T) {
+func testVerify(t *testing.T) {
 	testFolders, testFolderPath := testutil.TestFolders(t, "general", "phase0", "bls/verify/small")
 
 	for i, folder := range testFolders {

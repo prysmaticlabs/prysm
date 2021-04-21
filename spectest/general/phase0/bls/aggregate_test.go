@@ -1,4 +1,4 @@
-package spectest
+package bls
 
 import (
 	"encoding/hex"
@@ -13,11 +13,11 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func TestAggregateYaml(t *testing.T) {
-	t.Run("blst", testAggregateYaml)
+func TestAggregate(t *testing.T) {
+	t.Run("blst", testAggregate)
 }
 
-func testAggregateYaml(t *testing.T) {
+func testAggregate(t *testing.T) {
 	testFolders, testFolderPath := testutil.TestFolders(t, "general", "phase0", "bls/aggregate/small")
 
 	for _, folder := range testFolders {

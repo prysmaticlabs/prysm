@@ -1,4 +1,4 @@
-package spectest
+package bls
 
 import (
 	"encoding/hex"
@@ -14,23 +14,23 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func TestFastAggregateVerifyYaml(t *testing.T) {
-	t.Run("blst", testFastAggregateVerifyYaml)
+func TestAggregateVerify(t *testing.T) {
+	t.Run("blst", testAggregateVerify)
 }
 
-func testFastAggregateVerifyYaml(t *testing.T) {
-	testFolders, testFolderPath := testutil.TestFolders(t, "general", "phase0", "bls/fast_aggregate_verify/small")
+func testAggregateVerify(t *testing.T) {
+	testFolders, testFolderPath := testutil.TestFolders(t, "general", "phase0", "bls/aggregate_verify/small")
 
 	for i, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			file, err := testutil.BazelFileBytes(path.Join(testFolderPath, folder.Name(), "data.yaml"))
 			require.NoError(t, err)
-			test := &FastAggregateVerifyTest{}
+			test := &AggregateVerifyTest{}
 			require.NoError(t, yaml.Unmarshal(file, test))
-
-			pubkeys := make([]common.PublicKey, len(test.Input.Pubkeys))
-			for j, raw := range test.Input.Pubkeys {
-				pkBytes, err := hex.DecodeString(raw[2:])
+			pubkeys := make([]common.PublicKey, 0, len(test.Input.Pubkeys))
+			msgs := make([][32]byte, 0, len(test.Input.Messages))
+			for _, pubKey := range test.Input.Pubkeys {
+				pkBytes, err := hex.DecodeString(pubKey[2:])
 				require.NoError(t, err)
 				pk, err := bls.PublicKeyFromBytes(pkBytes)
 				if err != nil {
@@ -39,16 +39,14 @@ func testFastAggregateVerifyYaml(t *testing.T) {
 					}
 					t.Fatalf("cannot unmarshal pubkey: %v", err)
 				}
-				pubkeys[j] = pk
+				pubkeys = append(pubkeys, pk)
 			}
-
-			msg := test.Input.Message
-			// TODO(#7632): Remove when https://github.com/ethereum/eth2.0-spec-tests/issues/22 is resolved.
-			if msg == "" {
-				msg = test.Input.Messages
+			for _, msg := range test.Input.Messages {
+				msgBytes, err := hex.DecodeString(msg[2:])
+				require.NoError(t, err)
+				require.Equal(t, 32, len(msgBytes))
+				msgs = append(msgs, bytesutil.ToBytes32(msgBytes))
 			}
-			msgBytes, err := hex.DecodeString(msg[2:])
-			require.NoError(t, err)
 			sigBytes, err := hex.DecodeString(test.Input.Signature[2:])
 			require.NoError(t, err)
 			sig, err := bls.SignatureFromBytes(sigBytes)
@@ -59,12 +57,11 @@ func testFastAggregateVerifyYaml(t *testing.T) {
 				t.Fatalf("Cannot unmarshal input to signature: %v", err)
 			}
 
-			verified := sig.FastAggregateVerify(pubkeys, bytesutil.ToBytes32(msgBytes))
+			verified := sig.AggregateVerify(pubkeys, msgs)
 			if verified != test.Output {
 				t.Fatalf("Signature does not match the expected verification output. "+
 					"Expected %#v but received %#v for test case %d", test.Output, verified, i)
 			}
-			t.Log("Success")
 		})
 	}
 }
