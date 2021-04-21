@@ -19,7 +19,7 @@ func TestAggregateVerifyYaml(t *testing.T) {
 }
 
 func testAggregateVerifyYaml(t *testing.T) {
-	testFolders, testFolderPath := testutil.TestFolders(t, "general", "bls/aggregate_verify/small")
+	testFolders, testFolderPath := testutil.TestFolders(t, "general", "phase0", "bls/aggregate_verify/small")
 
 	for i, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {

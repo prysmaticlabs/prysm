@@ -18,7 +18,7 @@ func TestAggregateYaml(t *testing.T) {
 }
 
 func testAggregateYaml(t *testing.T) {
-	testFolders, testFolderPath := testutil.TestFolders(t, "general", "bls/aggregate/small")
+	testFolders, testFolderPath := testutil.TestFolders(t, "general", "phase0", "bls/aggregate/small")
 
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {

@@ -4,6 +4,6 @@ import (
 	"testing"
 )
 
-func TestDepositMinimalYaml(t *testing.T) {
+func TestDepositMinimal(t *testing.T) {
 	runDepositTest(t, "minimal")
 }
