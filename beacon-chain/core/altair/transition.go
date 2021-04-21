@@ -57,6 +57,11 @@ func CalculateStateRoot(
 		return [32]byte{}, errors.Wrap(err, "could not process block")
 	}
 
+	state, err = ProcessSyncCommittee(state, signed.Block.Body.SyncAggregate)
+	if err != nil {
+		return [32]byte{}, err
+	}
+
 	return state.HashTreeRoot(ctx)
 }
 
