@@ -187,11 +187,3 @@ func ProcessSyncCommittee(state iface.BeaconStateAltair, sync *ethpb.SyncAggrega
 
 	return state, nil
 }
-
-// This returns the base reward per increment for the beacon state.
-//
-// def get_base_reward_per_increment(state: BeaconState) -> Gwei:
-//    return Gwei(EFFECTIVE_BALANCE_INCREMENT * BASE_REWARD_FACTOR // integer_squareroot(get_total_active_balance(state))
-func baseRewardPerIncrement(activeBalance uint64) uint64 {
-	return params.BeaconConfig().EffectiveBalanceIncrement * params.BeaconConfig().BaseRewardFactor / mathutil.IntegerSquareRoot(activeBalance)
-}

@@ -8,7 +8,6 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
@@ -172,8 +171,8 @@ func ProcessAttestationNoVerifySignature(
 	headFlagIndex := params.BeaconConfig().TimelyHeadFlagIndex
 	sourceFlagIndex := params.BeaconConfig().TimelySourceFlagIndex
 	targetFlagIndex := params.BeaconConfig().TimelyTargetFlagIndex
-	matchingSourceTarget := bool(matchingHead) && bool(matchingTarget)
-	if matchingSourceTarget && beaconState.Slot() == data.Slot+params.BeaconConfig().MinAttestationInclusionDelay {
+	matchingHeadTarget := bool(matchingHead) && bool(matchingTarget)
+	if matchingHeadTarget && beaconState.Slot() == data.Slot+params.BeaconConfig().MinAttestationInclusionDelay {
 		participatedFlags[headFlagIndex] = true
 	}
 	if matchingSource && beaconState.Slot() <= data.Slot.Add(mathutil.IntegerSquareRoot(uint64(params.BeaconConfig().SlotsPerEpoch))) {
@@ -193,7 +192,7 @@ func ProcessAttestationNoVerifySignature(
 	}
 	proposerRewardNumerator := uint64(0)
 	for _, index := range indices {
-		br, err := epoch.BaseReward(beaconState, types.ValidatorIndex(index))
+		br, err := BaseReward(beaconState, types.ValidatorIndex(index))
 		if err != nil {
 			return nil, err
 		}
@@ -254,6 +253,7 @@ func rewardProposer(beaconState iface.BeaconState, proposerRewardNumerator uint6
 	if err != nil {
 		return err
 	}
+
 	return helpers.IncreaseBalance(beaconState, i, proposerReward)
 }
 

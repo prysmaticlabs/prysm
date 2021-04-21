@@ -9,6 +9,7 @@ go_library(
         "deposit.go",
         "epoch_precompute.go",
         "epoch_spec.go",
+        "reward.go",
         "state.go",
         "sync_committee.go",
         "transition.go",
