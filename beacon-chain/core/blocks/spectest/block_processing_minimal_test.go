@@ -4,6 +4,6 @@ import (
 	"testing"
 )
 
-func TestBlockProcessingMinimalYaml(t *testing.T) {
+func TestBlockProcessingMinimal(t *testing.T) {
 	runBlockProcessingTest(t, "minimal")
 }
