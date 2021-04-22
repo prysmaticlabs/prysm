@@ -26,14 +26,14 @@ type SSZRoots struct {
 func RunSSZStaticTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
-	testFolders, _ := testutil.TestFolders(t, config, "phase0", "ssz_static")
+	testFolders, _ := utils.TestFolders(t, config, "phase0", "ssz_static")
 	for _, folder := range testFolders {
 		innerPath := path.Join("ssz_static", folder.Name(), "ssz_random")
-		innerTestFolders, innerTestsFolderPath := testutil.TestFolders(t, config, "phase0", innerPath)
+		innerTestFolders, innerTestsFolderPath := utils.TestFolders(t, config, "phase0", innerPath)
 
 		for _, innerFolder := range innerTestFolders {
 			t.Run(path.Join(folder.Name(), innerFolder.Name()), func(t *testing.T) {
-				serializedBytes, err := testutil.BazelFileBytes(innerTestsFolderPath, innerFolder.Name(), "serialized.ssz_snappy")
+				serializedBytes, err := utils.BazelFileBytes(innerTestsFolderPath, innerFolder.Name(), "serialized.ssz_snappy")
 				require.NoError(t, err)
 				serializedSSZ, err := snappy.Decode(nil /* dst */, serializedBytes)
 				require.NoError(t, err, "Failed to decompress")
@@ -43,7 +43,7 @@ func RunSSZStaticTests(t *testing.T, config string) {
 				rootsYamlFile, err := testutil.BazelFileBytes(innerTestsFolderPath, innerFolder.Name(), "roots.yaml")
 				require.NoError(t, err)
 				rootsYaml := &SSZRoots{}
-				require.NoError(t, testutil.UnmarshalYaml(rootsYamlFile, rootsYaml), "Failed to Unmarshal")
+				require.NoError(t, utils.UnmarshalYaml(rootsYamlFile, rootsYaml), "Failed to Unmarshal")
 
 				// Custom hash tree root for beacon state.
 				var htr func(interface{}) ([32]byte, error)

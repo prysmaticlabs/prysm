@@ -17,7 +17,7 @@ func RunRewardsAndPenaltiesTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
 	testPath := "epoch_processing/rewards_and_penalties/pyspec_tests"
-	testFolders, testsFolderPath := testutil.TestFolders(t, config, "phase0", testPath)
+	testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", testPath)
 	for _, folder := range testFolders {
 		helpers.ClearCache()
 		t.Run(folder.Name(), func(t *testing.T) {

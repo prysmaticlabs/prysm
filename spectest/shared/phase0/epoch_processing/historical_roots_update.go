@@ -14,7 +14,7 @@ import (
 func RunHistoricalRootsUpdateTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
-	testFolders, testsFolderPath := testutil.TestFolders(t, config, "phase0", "epoch_processing/historical_roots_update/pyspec_tests")
+	testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", "epoch_processing/historical_roots_update/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())
