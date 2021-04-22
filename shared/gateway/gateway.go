@@ -97,8 +97,6 @@ func (g *Gateway) Start() {
 	g.cancel = cancel
 
 	if g.callerId == "beacon-rpc" {
-		log.WithField("address", g.gatewayAddr).Info("Starting JSON-HTTP API")
-
 		conn, err := g.dial(ctx, "tcp", g.remoteAddr)
 		if err != nil {
 			log.WithError(err).Error("Failed to connect to gRPC server")
