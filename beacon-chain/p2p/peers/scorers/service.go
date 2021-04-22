@@ -104,7 +104,11 @@ func (s *Service) ActiveScorersCount() int {
 func (s *Service) Score(pid peer.ID) float64 {
 	s.store.RLock()
 	defer s.store.RUnlock()
+	return s.ScoreNoLock(pid)
+}
 
+// ScoreNoLock is a lock-free version of Score.
+func (s *Service) ScoreNoLock(pid peer.ID) float64 {
 	score := float64(0)
 	if _, ok := s.store.PeerData(pid); !ok {
 		return 0
@@ -120,11 +124,11 @@ func (s *Service) Score(pid peer.ID) float64 {
 func (s *Service) IsBadPeer(pid peer.ID) bool {
 	s.store.RLock()
 	defer s.store.RUnlock()
-	return s.isBadPeer(pid)
+	return s.IsBadPeerNoLock(pid)
 }
 
-// isBadPeer is a lock-free version of isBadPeer.
-func (s *Service) isBadPeer(pid peer.ID) bool {
+// IsBadPeerNoLock is a lock-free version of IsBadPeer.
+func (s *Service) IsBadPeerNoLock(pid peer.ID) bool {
 	if s.scorers.badResponsesScorer.isBadPeer(pid) {
 		return true
 	}
@@ -144,7 +148,7 @@ func (s *Service) BadPeers() []peer.ID {
 
 	badPeers := make([]peer.ID, 0)
 	for pid := range s.store.Peers() {
-		if s.isBadPeer(pid) {
+		if s.IsBadPeerNoLock(pid) {
 			badPeers = append(badPeers, pid)
 		}
 	}

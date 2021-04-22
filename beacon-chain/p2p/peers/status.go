@@ -323,7 +323,14 @@ func (p *Status) ChainStateLastUpdated(pid peer.ID) (time.Time, error) {
 // IsBad states if the peer is to be considered bad (by *any* of the registered scorers).
 // If the peer is unknown this will return `false`, which makes using this function easier than returning an error.
 func (p *Status) IsBad(pid peer.ID) bool {
-	return p.isfromBadIP(pid) || p.scorers.IsBadPeer(pid)
+	p.store.RLock()
+	defer p.store.RUnlock()
+	return p.isBad(pid)
+}
+
+// isBad is the lock-free version of IsBad.
+func (p *Status) isBad(pid peer.ID) bool {
+	return p.isfromBadIP(pid) || p.scorers.IsBadPeerNoLock(pid)
 }
 
 // NextValidTime gets the earliest possible time it is to contact/dial
@@ -536,9 +543,8 @@ func (p *Status) Prune() {
 	if len(p.store.Peers()) <= p.store.Config().MaxPeers {
 		return
 	}
-
 	notBadPeer := func(pid peer.ID) bool {
-		return !p.IsBad(pid)
+		return !p.isBad(pid)
 	}
 	type peerResp struct {
 		pid   peer.ID
@@ -550,7 +556,7 @@ func (p *Status) Prune() {
 		if peerData.ConnState == PeerDisconnected && notBadPeer(pid) {
 			peersToPrune = append(peersToPrune, &peerResp{
 				pid:   pid,
-				score: p.Scorers().Score(pid),
+				score: p.Scorers().ScoreNoLock(pid),
 			})
 		}
 	}
@@ -765,10 +771,9 @@ func (p *Status) ConnectedPeerLimit() uint64 {
 	return uint64(maxLim) - maxLimitBuffer
 }
 
+// this method assumes the store lock is acquired before
+// executing the method.
 func (p *Status) isfromBadIP(pid peer.ID) bool {
-	p.store.RLock()
-	defer p.store.RUnlock()
-
 	peerData, ok := p.store.PeerData(pid)
 	if !ok {
 		return false
