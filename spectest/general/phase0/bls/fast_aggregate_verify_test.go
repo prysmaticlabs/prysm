@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/spectest/utils"
 )
 
 func TestFastAggregateVerify(t *testing.T) {
@@ -19,7 +20,7 @@ func TestFastAggregateVerify(t *testing.T) {
 }
 
 func testFastAggregateVerify(t *testing.T) {
-	testFolders, testFolderPath := testutil.TestFolders(t, "general", "phase0", "bls/fast_aggregate_verify/small")
+	testFolders, testFolderPath := utils.TestFolders(t, "general", "phase0", "bls/fast_aggregate_verify/small")
 
 	for i, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {

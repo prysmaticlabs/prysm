@@ -6,7 +6,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/spectest/utils"
 )
@@ -14,11 +13,11 @@ import (
 func RunEffectiveBalanceUpdatesTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
-	testFolders, testsFolderPath := testutil.TestFolders(t, config, "phase0", "epoch_processing/effective_balance_updates/pyspec_tests")
+	testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", "epoch_processing/effective_balance_updates/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())
-			testutil.RunEpochOperationTest(t, folderPath, processEffectiveBalanceUpdatesWrapper)
+			RunEpochOperationTest(t, folderPath, processEffectiveBalanceUpdatesWrapper)
 		})
 	}
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls/common"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/spectest/utils"
 )
 
 func TestVerify(t *testing.T) {
@@ -18,7 +19,7 @@ func TestVerify(t *testing.T) {
 }
 
 func testVerify(t *testing.T) {
-	testFolders, testFolderPath := testutil.TestFolders(t, "general", "phase0", "bls/verify/small")
+	testFolders, testFolderPath := utils.TestFolders(t, "general", "phase0", "bls/verify/small")
 
 	for i, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {

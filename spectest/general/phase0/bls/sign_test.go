@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls/common"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/spectest/utils"
 )
 
 func TestSign(t *testing.T) {
@@ -19,7 +20,7 @@ func TestSign(t *testing.T) {
 }
 
 func testSign(t *testing.T) {
-	testFolders, testFolderPath := testutil.TestFolders(t, "general", "phase0", "bls/sign/small")
+	testFolders, testFolderPath := utils.TestFolders(t, "general", "phase0", "bls/sign/small")
 
 	for i, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
