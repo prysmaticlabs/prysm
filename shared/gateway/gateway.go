@@ -27,7 +27,7 @@ var _ shared.Service = (*Gateway)(nil)
 // Gateway is the gRPC gateway to serve HTTP JSON traffic as a
 // proxy and forward it to the gRPC server.
 type Gateway struct {
-	callerId				string
+	callerId                string
 	conn                    *grpc.ClientConn
 	ctx                     context.Context
 	cancel                  context.CancelFunc
@@ -52,7 +52,7 @@ func NewValidator(
 	allowedOrigins []string,
 ) *Gateway {
 	return &Gateway{
-		callerId: 		callerId,
+		callerId:       callerId,
 		remoteAddr:     remoteAddress,
 		gatewayAddr:    gatewayAddress,
 		ctx:            ctx,
@@ -79,7 +79,7 @@ func NewBeacon(
 	}
 
 	return &Gateway{
-		callerId: 				 callerId,
+		callerId:                callerId,
 		remoteAddr:              remoteAddress,
 		remoteCert:              remoteCert,
 		gatewayAddr:             gatewayAddress,
@@ -96,7 +96,7 @@ func (g *Gateway) Start() {
 	ctx, cancel := context.WithCancel(g.ctx)
 	g.cancel = cancel
 
-	if g.callerId == "beacon-rpc"{
+	if g.callerId == "beacon-rpc" {
 		log.WithField("address", g.gatewayAddr).Info("Starting JSON-HTTP API")
 
 		conn, err := g.dial(ctx, "tcp", g.remoteAddr)
@@ -114,7 +114,7 @@ func (g *Gateway) Start() {
 			&gwruntime.JSONPb{OrigName: false, EmitDefaults: true},
 		),
 	)
-	if g.callerId == "beacon-rpc"{
+	if g.callerId == "beacon-rpc" {
 		handlers := []func(context.Context, *gwruntime.ServeMux, *grpc.ClientConn) error{
 			ethpb.RegisterNodeHandler,
 			ethpb.RegisterBeaconChainHandler,
@@ -138,7 +138,7 @@ func (g *Gateway) Start() {
 			Handler: g.corsMiddleware(g.mux),
 		}
 
-	}else {
+	} else {
 		opts := []grpc.DialOption{grpc.WithInsecure()}
 		handlers := []func(context.Context, *gwruntime.ServeMux, string, []grpc.DialOption) error{
 			pb.RegisterAuthHandlerFromEndpoint,
@@ -166,7 +166,6 @@ func (g *Gateway) Start() {
 			Handler: g.mux,
 		}
 	}
-
 
 	go func() {
 		log.WithField("address", g.gatewayAddr).Info("Starting gRPC gateway")
@@ -222,7 +221,6 @@ func (g *Gateway) corsMiddleware(h http.Handler) http.Handler {
 	})
 	return c.Handler(h)
 }
-
 
 const swaggerDir = "proto/beacon/rpc/v1/"
 
