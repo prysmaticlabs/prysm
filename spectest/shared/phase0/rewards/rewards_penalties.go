@@ -1,4 +1,4 @@
-package spectest
+package rewards
 
 import (
 	"context"
@@ -42,7 +42,7 @@ var deltaFiles = []string{
 	"inclusion_delay_deltas.ssz_snappy",
 }
 
-func runPrecomputeRewardsAndPenaltiesTests(t *testing.T, config string) {
+func RunPrecomputeRewardsAndPenaltiesTests(t *testing.T, config string) {
 	require.NoError(t, spectest.SetConfig(t, config))
 	testPaths := []string{"rewards/basic/pyspec_tests", "rewards/leak/pyspec_tests", "rewards/random/pyspec_tests"}
 	for _, testPath := range testPaths {
