@@ -20,5 +20,5 @@ go_library(
 go_binary(
     name = "server",
     embed = [":go_default_library"],
-    visibility = ["//visibility:public"],
+    visibility = ["//visibility:private"],
 )
