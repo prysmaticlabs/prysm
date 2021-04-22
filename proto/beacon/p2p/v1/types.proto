@@ -45,6 +45,7 @@ message BeaconState {
   ethereum.eth.v1alpha1.Checkpoint current_justified_checkpoint = 8003;
   ethereum.eth.v1alpha1.Checkpoint finalized_checkpoint = 8004;
 
+  // [New in merge]
   ExecutionPayloadHeader latest_execution_payload_header = 9001;
 }
 

@@ -113,7 +113,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 		return nil, status.Errorf(codes.Internal, "Could not calculate proposer index %v", err)
 	}
 
-	payload, err := vs.produceAppPayload(ctx, head, req.Slot)
+	payload, err := vs.produceExecPayload(ctx, head, req.Slot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get execution payload %v", err)
 	}
@@ -642,12 +642,13 @@ func (vs *Server) packAttestations(ctx context.Context, latestState iface.Beacon
 	return atts, nil
 }
 
-// produceAppPayload calls the eth1 node for execution payload and returns it to block producer.
-func (vs *Server) produceAppPayload(ctx context.Context, state iface.ReadOnlyBeaconState, slot types.Slot) (*catalyst.ExecutableData, error) {
+// produceExecPayload calls the eth1 node for execution payload and returns it to block producer.
+func (vs *Server) produceExecPayload(ctx context.Context, state iface.ReadOnlyBeaconState, slot types.Slot) (*catalyst.ExecutableData, error) {
 	header, err := state.LatestExecutionPayloadHeader()
 	if err != nil {
 		return nil, err
 	}
+
 	timeStamp := slotutil.SlotStartTime(state.GenesisTime(), slot)
 	payload, err := vs.ApplicationExecutor.AssembleExecutionPayload(ctx, catalyst.AssembleBlockParams{
 		ParentHash: common.BytesToHash(header.BlockHash),
@@ -656,6 +657,7 @@ func (vs *Server) produceAppPayload(ctx context.Context, state iface.ReadOnlyBea
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not produce execution data %v", err)
 	}
+
 	log.WithFields(logrus.Fields{
 		"coinbase":        fmt.Sprintf("%#x", bytesutil.Trunc(payload.Miner.Bytes())),
 		"gasUsed":         payload.GasUsed,

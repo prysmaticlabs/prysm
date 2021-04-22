@@ -349,8 +349,6 @@ github.com/evanphx/json-patch v4.2.0+incompatible/go.mod h1:50XU6AFN0ol/bzJsmQLi
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/fatih/color v1.9.0 h1:8xPHl4/q1VyqGIPif1F+1V3Y3lSmrq01EabUW3CoW5s=
 github.com/fatih/color v1.9.0/go.mod h1:eQcE1qtQxscV5RaZvpXrrb8Drkc3/DdQ+uUYCNjL+zU=
-github.com/ferranbt/fastssz v0.0.0-20210120143747-11b9eff30ea9 h1:9VDpsWq096+oGMDTT/SgBD/VgZYf4pTF+KTPmZ+OaKM=
-github.com/ferranbt/fastssz v0.0.0-20210120143747-11b9eff30ea9/go.mod h1:DyEu2iuLBnb/T51BlsiO3yLYdJC6UbGMrIkqK1KmQxM=
 github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5 h1:FtmdgXiUlNeRsoNMFlKLDt+S+6hbjVMEW6RGQ7aUf7c=
 github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5/go.mod h1:VvhXpOYNQvB+uIk2RvXzuaQtkQJzzIx6lSBe1xv7hi0=
 github.com/flynn/noise v0.0.0-20180327030543-2492fe189ae6 h1:u/UEqS66A5ckRmS4yNpjmVH56sVtS/RfclBAYocb4as=
@@ -1297,18 +1295,12 @@ github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20210420202235-3a790f2820a9/go
 github.com/prysmaticlabs/eth2-types v0.0.0-20210127031309-22cbe426eba6/go.mod h1:kOmQ/zdobQf7HUohDTifDNFEZfNaSCIY5fkONPL+dWU=
 github.com/prysmaticlabs/eth2-types v0.0.0-20210219172114-1da477c09a06 h1:b4WxLSz1KzkEdF/DPcog9gIKN9d9YAFgbZO1hqjNrW0=
 github.com/prysmaticlabs/eth2-types v0.0.0-20210219172114-1da477c09a06/go.mod h1:kOmQ/zdobQf7HUohDTifDNFEZfNaSCIY5fkONPL+dWU=
-github.com/prysmaticlabs/ethereumapis v0.0.0-20210323030846-26f696aa0cbc h1:NCjPhSSd8rds5yAU57dalN3gzTw/lkmG+bQxIrXCWaQ=
-github.com/prysmaticlabs/ethereumapis v0.0.0-20210323030846-26f696aa0cbc/go.mod h1:r4EB2KhryTi1aogyEgVze1qsRpZGl0d5nmsw7phpcL8=
-github.com/prysmaticlabs/ethereumapis v0.0.0-20210419235213-043d334388c8 h1:3d6sh1IdUlQ4niwgHIUq1G0PFh3ALYQ6JP/21hCF3OU=
-github.com/prysmaticlabs/ethereumapis v0.0.0-20210419235213-043d334388c8/go.mod h1:r4EB2KhryTi1aogyEgVze1qsRpZGl0d5nmsw7phpcL8=
 github.com/prysmaticlabs/ethereumapis v0.0.0-20210421201251-43826c5a1447 h1:HCyLSjSwN8pq2EIObXks5E8NDAVyeLUlQGvlNPbfo6A=
 github.com/prysmaticlabs/ethereumapis v0.0.0-20210421201251-43826c5a1447/go.mod h1:UYf3Fm5XE0DWExxH6UCzueZNkxg+Lppm7mHRxhTc4nk=
 github.com/prysmaticlabs/go-bitfield v0.0.0-20210202205921-7fcea7c45dc8 h1:18+Qqobq3HAUY0hgIhPGSqmLFnaLLocemmU7+Sj2aYQ=
 github.com/prysmaticlabs/go-bitfield v0.0.0-20210202205921-7fcea7c45dc8/go.mod h1:hCwmef+4qXWjv0jLDbQdWnL0Ol7cS7/lCSS26WR+u6s=
 github.com/prysmaticlabs/prombbolt v0.0.0-20210126082820-9b7adba6db7c h1:9PHRCuO/VN0s9k+RmLykho7AjDxblNYI5bYKed16NPU=
 github.com/prysmaticlabs/prombbolt v0.0.0-20210126082820-9b7adba6db7c/go.mod h1:ZRws458tYHS/Zs936OQ6oCrL+Ict5O4Xpwve1UQ6C9M=
-github.com/rauljordan/fastssz v0.0.0-20210421164006-c75bf1644750 h1:s2MZsstiV4zpeyz2ziRkdmDanwfgrt0gIEhU6oy0gzI=
-github.com/rauljordan/fastssz v0.0.0-20210421164006-c75bf1644750/go.mod h1:DyEu2iuLBnb/T51BlsiO3yLYdJC6UbGMrIkqK1KmQxM=
 github.com/rauljordan/fastssz v0.0.0-20210421200750-22c27c78354a h1:+FWEEflOPDJyrBwX+9Aac/7CtcyAW3U77QdQuc/XDn0=
 github.com/rauljordan/fastssz v0.0.0-20210421200750-22c27c78354a/go.mod h1:DyEu2iuLBnb/T51BlsiO3yLYdJC6UbGMrIkqK1KmQxM=
 github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=

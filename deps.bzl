@@ -704,12 +704,6 @@ def prysm_deps():
     )
 
     go_repository(
-        name = "com_github_dvyukov_go_fuzz",
-        importpath = "github.com/dvyukov/go-fuzz",
-        sum = "h1:NgO45/5mBLRVfiXerEFzH6ikcZ7DNRPS639xFg3ENzU=",
-        version = "v0.0.0-20200318091601-be3528f3a813",
-    )
-    go_repository(
         name = "com_github_eapache_go_resiliency",
         importpath = "github.com/eapache/go-resiliency",
         sum = "h1:v7g92e/KSN71Rq7vSThKaWIq68fL4YHvWyiUKorFR1Q=",
@@ -2399,12 +2393,6 @@ def prysm_deps():
     )
 
     go_repository(
-        name = "com_github_naoina_go_stringutil",
-        importpath = "github.com/naoina/go-stringutil",
-        sum = "h1:rCUeRUHjBjGTSHl0VC00jUPLz8/F9dDzYI70Hzifhks=",
-        version = "v0.1.0",
-    )
-    go_repository(
         name = "com_github_naoina_toml",
         importpath = "github.com/naoina/toml",
         sum = "h1:shk/vn9oCoOTmwcouEdwIeOtOGA/ELRUw/GwvxwfT+0=",
@@ -2770,12 +2758,7 @@ def prysm_deps():
         sum = "h1:+88SsELBHx5r+hZ8TCkggzSstaWNbDvThkVK8H6f9ik=",
         version = "v1.7.0",
     )
-    go_repository(
-        name = "com_github_rs_xhandler",
-        importpath = "github.com/rs/xhandler",
-        sum = "h1:3hxavr+IHMsQBrYUPQM5v0CgENFktkkbg1sfpgM3h20=",
-        version = "v0.0.0-20160618193221-ed27b6fd6521",
-    )
+
     go_repository(
         name = "com_github_russross_blackfriday",
         importpath = "github.com/russross/blackfriday",
@@ -2973,18 +2956,6 @@ def prysm_deps():
         importpath = "github.com/status-im/keycard-go",
         sum = "h1:Oo2KZNP70KE0+IUJSidPj/BFS/RXNHmKIJOdckzml2E=",
         version = "v0.0.0-20200402102358-957c09536969",
-    )
-    go_repository(
-        name = "com_github_steakknife_bloomfilter",
-        importpath = "github.com/steakknife/bloomfilter",
-        sum = "h1:gIlAHnH1vJb5vwEjIp5kBj/eu99p/bl0Ay2goiPe5xE=",
-        version = "v0.0.0-20180922174646-6819c0d2a570",
-    )
-    go_repository(
-        name = "com_github_steakknife_hamming",
-        importpath = "github.com/steakknife/hamming",
-        sum = "h1:njlZPzLwU639dk2kqnCPPv+wNjq7Xb6EfUxe/oX0/NM=",
-        version = "v0.0.0-20180906055917-c99c65617cd3",
     )
 
     go_repository(
@@ -3206,12 +3177,6 @@ def prysm_deps():
         importpath = "github.com/willf/bitset",
         sum = "h1:ekJIKh6+YbUIVt9DfNbkR5d6aFcFTLDRyJNAACURBg8=",
         version = "v1.1.3",
-    )
-    go_repository(
-        name = "com_github_wsddn_go_ecdh",
-        importpath = "github.com/wsddn/go-ecdh",
-        sum = "h1:1cngl9mPEoITZG8s8cVcUy5CeIBYhEESkOB7m6Gmkrk=",
-        version = "v0.0.0-20161211032359-48726bab9208",
     )
 
     go_repository(
@@ -3823,10 +3788,4 @@ def prysm_deps():
         importpath = "go.uber.org/zap",
         sum = "h1:uFRZXykJGK9lLY4HtgSw44DnIcAM+kRBP7x5m+NpAOM=",
         version = "v1.16.0",
-    )
-    go_repository(
-        name = "tools_gotest",
-        importpath = "gotest.tools",
-        sum = "h1:VsBPFP1AI068pPrMxtb/S8Zkgf9xEmTLJjfM+P5UIEo=",
-        version = "v2.2.0+incompatible",
     )

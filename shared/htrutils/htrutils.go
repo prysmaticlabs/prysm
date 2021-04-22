@@ -93,21 +93,73 @@ func SlashingsRoot(slashings []uint64) ([32]byte, error) {
 	return BitwiseMerkleize(hashutil.CustomSHA256Hasher(), slashingChunks, uint64(len(slashingChunks)), uint64(len(slashingChunks)))
 }
 
-// TransactionsRoot computes the HashTreeRoot Merkleization of
-// a list of OpaqueTransaction which is defined as ByteList[MAX_BYTES_PER_OPAQUE_TRANSACTION]
-func TransactionsRoot(opaqueTransactions [][]byte) ([32]byte, error) {
-	result, err := BitwiseMerkleize(hashutil.CustomSHA256Hasher(), opaqueTransactions, uint64(len(opaqueTransactions)), params.BeaconConfig().MaxExecutionTransactions)
-	if err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not compute historical roots merkleization")
-	}
-	historicalRootsBuf := new(bytes.Buffer)
-	if err := binary.Write(historicalRootsBuf, binary.LittleEndian, uint64(len(opaqueTransactions))); err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not marshal historical roots length")
+func TransactionsRoot(txs [][]byte) ([32]byte, error) {
+	hasher := hashutil.CustomSHA256Hasher()
+	listMarshaling := make([][]byte, 0)
+	for i := 0; i < len(txs); i++ {
+		rt, err := transactionRoot(txs[i])
+		if err != nil {
+			return [32]byte{}, err
+		}
+		listMarshaling = append(listMarshaling, rt[:])
 	}
 
-	// We need to mix in the length of the slice.
-	historicalRootsOutput := make([]byte, 32)
-	copy(historicalRootsOutput, historicalRootsBuf.Bytes())
-	mixedLen := MixInLength(result, historicalRootsOutput)
-	return mixedLen, nil
+	bytesRoot, err := BitwiseMerkleize(hasher, listMarshaling, uint64(len(listMarshaling)), params.BeaconConfig().MaxExecutionTransactions)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not compute  merkleization")
+	}
+	bytesRootBuf := new(bytes.Buffer)
+	if err := binary.Write(bytesRootBuf, binary.LittleEndian, uint64(len(txs))); err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not marshal length")
+	}
+	bytesRootBufRoot := make([]byte, 32)
+	copy(bytesRootBufRoot, bytesRootBuf.Bytes())
+	return MixInLength(bytesRoot, bytesRootBufRoot), nil
+}
+
+func transactionRoot(tx []byte) ([32]byte, error) {
+	hasher := hashutil.CustomSHA256Hasher()
+	chunkedRoots, err := packChunks(tx)
+	if err != nil {
+		return [32]byte{}, err
+	}
+
+	maxLength := (params.BeaconConfig().MaxBytesPerOpaqueTransaction + 31) / 32
+	bytesRoot, err := BitwiseMerkleize(hasher, chunkedRoots, uint64(len(chunkedRoots)), maxLength)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not compute merkleization")
+	}
+	bytesRootBuf := new(bytes.Buffer)
+	if err := binary.Write(bytesRootBuf, binary.LittleEndian, uint64(len(tx))); err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not marshal length")
+	}
+	bytesRootBufRoot := make([]byte, 32)
+	copy(bytesRootBufRoot, bytesRootBuf.Bytes())
+	return MixInLength(bytesRoot, bytesRootBufRoot), nil
+}
+
+// Pack a given byte array into chunks. It'll pad the last chunk with zero bytes if
+// it does not have length bytes per chunk.
+func packChunks(bytes []byte) ([][]byte, error) {
+	numItems := len(bytes)
+	var chunks [][]byte
+	for i := 0; i < numItems; i += 32 {
+		j := i + 32
+		// We create our upper bound index of the chunk, if it is greater than numItems,
+		// we set it as numItems itself.
+		if j > numItems {
+			j = numItems
+		}
+		// We create chunks from the list of items based on the
+		// indices determined above.
+		chunks = append(chunks, bytes[i:j])
+	}
+	// Right-pad the last chunk with zero bytes if it does not
+	// have length bytes.
+	lastChunk := chunks[len(chunks)-1]
+	for len(lastChunk) < 32 {
+		lastChunk = append(lastChunk, 0)
+	}
+	chunks[len(chunks)-1] = lastChunk
+	return chunks, nil
 }

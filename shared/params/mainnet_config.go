@@ -130,12 +130,13 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	ProportionalSlashingMultiplier: 1,
 
 	// Max operations per block constants.
-	MaxProposerSlashings:     16,
-	MaxAttesterSlashings:     2,
-	MaxAttestations:          128,
-	MaxDeposits:              16,
-	MaxVoluntaryExits:        16,
-	MaxExecutionTransactions: 16384,
+	MaxProposerSlashings:         16,
+	MaxAttesterSlashings:         2,
+	MaxAttestations:              128,
+	MaxDeposits:                  16,
+	MaxVoluntaryExits:            16,
+	MaxExecutionTransactions:     16384,
+	MaxBytesPerOpaqueTransaction: 1048576,
 
 	// BLS domain values.
 	DomainBeaconProposer:    bytesutil.ToBytes4(bytesutil.Bytes4(0)),

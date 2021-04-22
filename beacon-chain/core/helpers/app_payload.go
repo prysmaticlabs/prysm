@@ -57,12 +57,7 @@ func ExecPayloadToJson(payload *ethpb.ExecutionPayload) catalyst.ExecutableData 
 
 // ExecPayloadToHeader converts execution payload to header format.
 func ExecPayloadToHeader(payload *ethpb.ExecutionPayload) (*pb.ExecutionPayloadHeader, error) {
-	txs := make([][]byte, len(payload.Transactions))
-	for i := range txs {
-		// Double check this. It may not be right.
-		txs[i] = payload.Transactions[i]
-	}
-	txRoot, err := htrutils.TransactionsRoot(txs)
+	txRoot, err := htrutils.TransactionsRoot(payload.Transactions)
 	if err != nil {
 		return nil, err
 	}
