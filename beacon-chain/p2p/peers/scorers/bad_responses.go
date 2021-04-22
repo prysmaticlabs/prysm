@@ -68,8 +68,9 @@ func (s *BadResponsesScorer) score(pid peer.ID) float64 {
 	}
 	if peerData.BadResponses > 0 {
 		score = float64(peerData.BadResponses) / float64(s.config.Threshold)
-		// Since score represents a penalty, negate it.
-		score *= -1
+		// Since score represents a penalty, negate it and multiply
+		// it by a factor.
+		score *= -10
 	}
 	return score
 }
