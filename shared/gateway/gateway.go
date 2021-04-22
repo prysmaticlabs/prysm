@@ -45,8 +45,8 @@ type Gateway struct {
 // New returns a new gateway server which translates HTTP into gRPC.
 // Accepts a context and optional http.ServeMux.
 func NewValidator(
-	callerId string,
 	ctx context.Context,
+	callerId string,
 	remoteAddress,
 	gatewayAddress string,
 	allowedOrigins []string,
@@ -64,8 +64,8 @@ func NewValidator(
 // New returns a new gateway server which translates HTTP into gRPC.
 // Accepts a context and optional http.ServeMux.
 func NewBeacon(
-	callerId string,
 	ctx context.Context,
+	callerId string,
 	remoteAddress,
 	remoteCert,
 	gatewayAddress string,

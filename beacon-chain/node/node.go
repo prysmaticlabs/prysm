@@ -633,8 +633,8 @@ func (b *BeaconNode) registerGRPCGateway() error {
 	selfCert := b.cliCtx.String(flags.CertFlag.Name)
 	return b.services.RegisterService(
 		gateway.NewBeacon(
-			"beacon-rpc",
 			b.ctx,
+			"beacon-rpc",
 			selfAddress,
 			selfCert,
 			gatewayAddress,
