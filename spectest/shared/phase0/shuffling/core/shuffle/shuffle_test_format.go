@@ -1,4 +1,4 @@
-package spectest
+package shuffle
 
 import types "github.com/prysmaticlabs/eth2-types"
 

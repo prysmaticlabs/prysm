@@ -1,6 +1,4 @@
-// Package spectest contains all conformity specification tests
-// for validator shuffling logic according to the eth2 beacon spec.
-package spectest
+package shuffle
 
 import (
 	"encoding/hex"
@@ -16,15 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func TestShufflingMinimal(t *testing.T) {
-	runShuffleTests(t, "minimal")
-}
-
-func TestShufflingMainnet(t *testing.T) {
-	runShuffleTests(t, "mainnet")
-}
-
-func runShuffleTests(t *testing.T, config string) {
+func RunShuffleTests(t *testing.T, config string) {
 	require.NoError(t, spectest.SetConfig(t, config))
 
 	testFolders, testsFolderPath := testutil.TestFolders(t, config, "phase0", "shuffling/core/shuffle")
