@@ -1,7 +1,8 @@
-package spectest
+package operations
 
 import (
 	"io/ioutil"
+	"os"
 	"path"
 	"strings"
 	"testing"
@@ -13,16 +14,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
-func runBlockHeaderTest(t *testing.T, config string) {
-	require.NoError(t, spectest.SetConfig(t, config))
-
-	testFolders, testsFolderPath := testutil.TestFolders(t, config, "phase0", "operations/block_header/pyspec_tests")
+func RunBlockHeaderTest(t *testing.T, testFolders []os.FileInfo, testsFolderPath string) {
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			blockFile, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "block.ssz_snappy")

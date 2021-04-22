@@ -1,0 +1,25 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_test")
+
+go_test(
+    name = "go_default_test",
+    size = "medium",
+    srcs = [
+        "attestation_test.go",
+        "attester_slashing_test.go",
+        "block_header_test.go",
+        "deposit_test.go",
+        "proposer_slashing_test.go",
+        "voluntary_exit_test.go",
+    ],
+    data = glob(["*.yaml"]) + [
+        "@eth2_spec_tests_mainnet//:test_data",
+    ],
+    shard_count = 4,
+    tags = ["spectest"],
+    deps = [
+        "//shared/params/spectest:go_default_library",
+        "//shared/testutil:go_default_library",
+        "//shared/testutil/require:go_default_library",
+        "//spectest/shared/phase0/operations:go_default_library",
+    ],
+)
