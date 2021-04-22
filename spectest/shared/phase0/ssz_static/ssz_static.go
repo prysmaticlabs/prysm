@@ -1,4 +1,4 @@
-package testing
+package ssz_static
 
 import (
 	"context"
@@ -23,7 +23,7 @@ type SSZRoots struct {
 	SigningRoot string `json:"signing_root"`
 }
 
-func runSSZStaticTests(t *testing.T, config string) {
+func RunSSZStaticTests(t *testing.T, config string) {
 	require.NoError(t, spectest.SetConfig(t, config))
 
 	testFolders, _ := testutil.TestFolders(t, config, "phase0", "ssz_static")
