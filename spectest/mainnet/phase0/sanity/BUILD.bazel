@@ -1,0 +1,18 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_test")
+
+go_test(
+    name = "go_default_test",
+    size = "medium",
+    srcs = ["blocks_test.go"],
+    data = glob(["*.yaml"]) + [
+        "@eth2_spec_tests_mainnet//:test_data",
+    ],
+    shard_count = 2,
+    tags = ["spectest"],
+    deps = [
+        "//shared/params/spectest:go_default_library",
+        "//shared/testutil:go_default_library",
+        "//shared/testutil/require:go_default_library",
+        "//spectest/shared/phase0/sanity:go_default_library",
+    ],
+)

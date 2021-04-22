@@ -1,4 +1,4 @@
-package spectest
+package sanity
 
 // SanityConfig --
 type SanityConfig struct {

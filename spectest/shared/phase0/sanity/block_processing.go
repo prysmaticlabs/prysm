@@ -1,11 +1,10 @@
-// Package spectest contains all comformity specification tests
-// for block processing according to the eth2 spec.
-package spectest
+package sanity
 
 import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path"
 	"strings"
 	"testing"
@@ -19,7 +18,6 @@ import (
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"gopkg.in/d4l3k/messagediff.v1"
@@ -29,10 +27,7 @@ func init() {
 	state.SkipSlotCache.Disable()
 }
 
-func runBlockProcessingTest(t *testing.T, config string) {
-	require.NoError(t, spectest.SetConfig(t, config))
-
-	testFolders, testsFolderPath := testutil.TestFolders(t, config, "phase0", "sanity/blocks/pyspec_tests")
+func RunBlockProcessingTest(t *testing.T, testFolders []os.FileInfo, testsFolderPath string) {
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			helpers.ClearCache()
