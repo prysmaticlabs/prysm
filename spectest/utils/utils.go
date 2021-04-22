@@ -40,29 +40,3 @@ func TestFolders(t testing.TB, config, forkOrPhase, folderPath string) ([]os.Fil
 
 	return testFolders, testsFolderPath
 }
-
-// BazelDirectoryNonEmpty returns true if directory exists and is not empty.
-func BazelDirectoryNonEmpty(filePath string) (bool, error) {
-	p, err := bazel.Runfile(filePath)
-	if err != nil {
-		return false, err
-	}
-	fs, err := ioutil.ReadDir(p)
-	if err != nil {
-		return false, err
-	}
-	return len(fs) > 0, nil
-}
-
-// BazelFileBytes returns the byte array of the bazel file path given.
-func BazelFileBytes(filePaths ...string) ([]byte, error) {
-	filepath, err := bazel.Runfile(path.Join(filePaths...))
-	if err != nil {
-		return nil, err
-	}
-	fileBytes, err := ioutil.ReadFile(filepath)
-	if err != nil {
-		return nil, err
-	}
-	return fileBytes, nil
-}

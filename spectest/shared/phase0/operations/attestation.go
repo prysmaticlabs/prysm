@@ -26,7 +26,7 @@ func RunAttestationTest(t *testing.T, config string) {
 			require.NoError(t, att.UnmarshalSSZ(attestationSSZ), "Failed to unmarshal")
 
 			body := &ethpb.BeaconBlockBody{Attestations: []*ethpb.Attestation{att}}
-			testutil.RunBlockOperationTest(t, folderPath, body, blocks.ProcessAttestations)
+			RunBlockOperationTest(t, folderPath, body, blocks.ProcessAttestations)
 		})
 	}
 }

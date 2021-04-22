@@ -59,7 +59,7 @@ func RunPrecomputeRewardsAndPenaltiesTests(t *testing.T, config string) {
 
 func runPrecomputeRewardsAndPenaltiesTest(t *testing.T, testFolderPath string) {
 	ctx := context.Background()
-	preBeaconStateFile, err := utils.BazelFileBytes(path.Join(testFolderPath, "pre.ssz_snappy"))
+	preBeaconStateFile, err := testutil.BazelFileBytes(path.Join(testFolderPath, "pre.ssz_snappy"))
 	require.NoError(t, err)
 	preBeaconStateSSZ, err := snappy.Decode(nil /* dst */, preBeaconStateFile)
 	require.NoError(t, err, "Failed to decompress")

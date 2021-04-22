@@ -17,7 +17,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/spectest/utils"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
@@ -32,7 +31,7 @@ func RunBlockOperationTest(
 	body *ethpb.BeaconBlockBody,
 	operationFn blockOperation,
 ) {
-	preBeaconStateFile, err := utils.BazelFileBytes(path.Join(folderPath, "pre.ssz_snappy"))
+	preBeaconStateFile, err := testutil.BazelFileBytes(path.Join(folderPath, "pre.ssz_snappy"))
 	require.NoError(t, err)
 	preBeaconStateSSZ, err := snappy.Decode(nil /* dst */, preBeaconStateFile)
 	require.NoError(t, err, "Failed to decompress")

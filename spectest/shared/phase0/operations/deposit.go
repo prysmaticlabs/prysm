@@ -31,7 +31,7 @@ func RunDepositTest(t *testing.T, config string) {
 			processDepositsFunc := func(ctx context.Context, s iface.BeaconState, b *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
 				return blocks.ProcessDeposits(ctx, s, b.Block.Body.Deposits)
 			}
-			testutil.RunBlockOperationTest(t, folderPath, body, processDepositsFunc)
+			RunBlockOperationTest(t, folderPath, body, processDepositsFunc)
 		})
 	}
 }
