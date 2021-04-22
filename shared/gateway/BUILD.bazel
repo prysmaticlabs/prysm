@@ -7,7 +7,10 @@ go_library(
         "log.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/gateway",
-    visibility = ["//visibility:public"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//validator:__subpackages__",
+    ],
     deps = [
         "//proto/beacon/rpc/v1:go_grpc_gateway_library",
         "//proto/validator/accounts/v2:ethereum_validator_account_gateway_proto",
