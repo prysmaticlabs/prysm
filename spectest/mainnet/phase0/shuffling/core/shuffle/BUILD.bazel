@@ -2,6 +2,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
 go_test(
     name = "go_default_test",
+    size = "small",
     srcs = ["shuffle_test.go"],
     data = glob(["*.yaml"]) + [
         "@eth2_spec_tests_mainnet//:test_data",

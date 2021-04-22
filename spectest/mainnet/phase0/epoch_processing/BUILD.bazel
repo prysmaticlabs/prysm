@@ -2,7 +2,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
 go_test(
     name = "go_default_test",
-    size = "medium",
+    size = "small",
     srcs = [
         "effective_balance_updates_test.go",
         "epoch_processing_test.go",
