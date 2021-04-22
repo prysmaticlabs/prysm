@@ -6,6 +6,7 @@ go_test(
     srcs = [
         "attestation_test.go",
         "attester_slashing_test.go",
+        "block_header_test.go",
     ],
     data = glob(["*.yaml"]) + [
         "@eth2_spec_tests_mainnet//:test_data",

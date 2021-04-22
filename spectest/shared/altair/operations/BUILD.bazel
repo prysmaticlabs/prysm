@@ -6,6 +6,7 @@ go_library(
     srcs = [
         "attestation.go",
         "attester_slashing.go",
+        "block_header.go",
         "helpers.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/spectest/shared/altair/operations",
