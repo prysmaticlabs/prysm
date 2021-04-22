@@ -9,13 +9,13 @@ import (
 	"github.com/go-yaml/yaml"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/spectest/utils"
 )
 
 func RunShuffleTests(t *testing.T, config string) {
-	require.NoError(t, spectest.SetConfig(t, config))
+	require.NoError(t, utils.SetConfig(t, config))
 
 	testFolders, testsFolderPath := testutil.TestFolders(t, config, "phase0", "shuffling/core/shuffle")
 	for _, folder := range testFolders {

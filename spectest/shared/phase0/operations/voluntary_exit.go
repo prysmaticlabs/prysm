@@ -9,13 +9,13 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/spectest/utils"
 )
 
 func RunVoluntaryExitTest(t *testing.T, config string) {
-	require.NoError(t, spectest.SetConfig(t, config))
+	require.NoError(t, utils.SetConfig(t, config))
 	testFolders, testsFolderPath := testutil.TestFolders(t, config, "phase0", "operations/voluntary_exit/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {

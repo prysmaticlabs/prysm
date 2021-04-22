@@ -22,8 +22,8 @@ go_library(
         "//beacon-chain/core/epoch/precompute:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/state/interface:go_default_library",
-        "//shared/params/spectest:go_default_library",
         "//shared/testutil:go_default_library",
         "//shared/testutil/require:go_default_library",
+        "//spectest/utils:go_default_library",
     ],
 )

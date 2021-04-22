@@ -1,4 +1,4 @@
-package spectest
+package utils
 
 import (
 	"testing"
