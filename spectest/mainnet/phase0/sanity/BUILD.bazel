@@ -3,7 +3,10 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 go_test(
     name = "go_default_test",
     size = "medium",
-    srcs = ["blocks_test.go"],
+    srcs = [
+        "blocks_test.go",
+        "slots_test.go",
+    ],
     data = glob(["*.yaml"]) + [
         "@eth2_spec_tests_mainnet//:test_data",
     ],

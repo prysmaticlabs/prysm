@@ -6,6 +6,7 @@ go_library(
     srcs = [
         "block_processing.go",
         "block_processing.yaml.go",
+        "slot_processing.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/spectest/shared/phase0/sanity",
     visibility = ["//spectest:__subpackages__"],
