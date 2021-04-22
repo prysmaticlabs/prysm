@@ -23,9 +23,6 @@ go_test(
     tags = ["spectest"],
     deps = [
         "//shared/params:go_default_library",
-        "//shared/params/spectest:go_default_library",
-        "//shared/testutil:go_default_library",
-        "//shared/testutil/require:go_default_library",
         "//spectest/shared/phase0/epoch_processing:go_default_library",
     ],
 )

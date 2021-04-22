@@ -16,10 +16,5 @@ go_test(
         "minimal",
         "spectest",
     ],
-    deps = [
-        "//shared/params/spectest:go_default_library",
-        "//shared/testutil:go_default_library",
-        "//shared/testutil/require:go_default_library",
-        "//spectest/shared/phase0/sanity:go_default_library",
-    ],
+    deps = ["//spectest/shared/phase0/sanity:go_default_library"],
 )

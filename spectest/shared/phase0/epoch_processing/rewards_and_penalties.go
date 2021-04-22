@@ -2,18 +2,22 @@ package epoch_processing
 
 import (
 	"context"
-	"os"
 	"path"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func RunRewardsAndPenaltiesTests(t *testing.T, testFolders []os.FileInfo, testsFolderPath string) {
+func RunRewardsAndPenaltiesTests(t *testing.T, config string) {
+	require.NoError(t, spectest.SetConfig(t, config))
+
+	testPath := "epoch_processing/rewards_and_penalties/pyspec_tests"
+	testFolders, testsFolderPath := testutil.TestFolders(t, config, "phase0", testPath)
 	for _, folder := range testFolders {
 		helpers.ClearCache()
 		t.Run(folder.Name(), func(t *testing.T) {

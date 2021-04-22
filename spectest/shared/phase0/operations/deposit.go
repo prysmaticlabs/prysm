@@ -2,7 +2,6 @@ package operations
 
 import (
 	"context"
-	"os"
 	"path"
 	"testing"
 
@@ -10,11 +9,14 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func RunDepositTest(t *testing.T, testFolders []os.FileInfo, testsFolderPath string) {
+func RunDepositTest(t *testing.T, config string) {
+	require.NoError(t, spectest.SetConfig(t, config))
+	testFolders, testsFolderPath := testutil.TestFolders(t, config, "phase0", "operations/deposit/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())
