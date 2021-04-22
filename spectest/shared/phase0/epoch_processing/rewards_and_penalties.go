@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/spectest/utils"
 )
@@ -22,7 +21,7 @@ func RunRewardsAndPenaltiesTests(t *testing.T, config string) {
 		helpers.ClearCache()
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())
-			testutil.RunEpochOperationTest(t, folderPath, processRewardsAndPenaltiesPrecomputeWrapper)
+			RunEpochOperationTest(t, folderPath, processRewardsAndPenaltiesPrecomputeWrapper)
 		})
 	}
 }

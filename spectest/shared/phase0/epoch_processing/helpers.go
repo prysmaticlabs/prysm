@@ -1,7 +1,6 @@
-package operations
+package epoch_processing
 
 import (
-	"context"
 	"io/ioutil"
 	"path"
 	"strings"
@@ -10,8 +9,6 @@ import (
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -20,29 +17,28 @@ import (
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
-type blockOperation func(context.Context, iface.BeaconState, *ethpb.SignedBeaconBlock) (iface.BeaconState, error)
+type epochOperation func(*testing.T, iface.BeaconState) (iface.BeaconState, error)
 
-// RunBlockOperationTest takes in the prestate and the beacon block body, processes it through the
-// passed in block operation function and checks the post state with the expected post state.
-func RunBlockOperationTest(
+// RunEpochOperationTest takes in the prestate and processes it through the
+// passed in epoch operation function and checks the post state with the expected post state.
+func RunEpochOperationTest(
 	t *testing.T,
-	folderPath string,
-	body *ethpb.BeaconBlockBody,
-	operationFn blockOperation,
+	testFolderPath string,
+	operationFn epochOperation,
 ) {
-	preBeaconStateFile, err := testutil.BazelFileBytes(path.Join(folderPath, "pre.ssz_snappy"))
+	preBeaconStateFile, err := testutil.BazelFileBytes(path.Join(testFolderPath, "pre.ssz_snappy"))
 	require.NoError(t, err)
 	preBeaconStateSSZ, err := snappy.Decode(nil /* dst */, preBeaconStateFile)
 	require.NoError(t, err, "Failed to decompress")
-	preStateBase := &pb.BeaconState{}
-	if err := preStateBase.UnmarshalSSZ(preBeaconStateSSZ); err != nil {
+	preBeaconStateBase := &pb.BeaconState{}
+	if err := preBeaconStateBase.UnmarshalSSZ(preBeaconStateSSZ); err != nil {
 		t.Fatalf("Failed to unmarshal: %v", err)
 	}
-	preState, err := stateV0.InitializeFromProto(preStateBase)
+	preBeaconState, err := stateV0.InitializeFromProto(preBeaconStateBase)
 	require.NoError(t, err)
 
 	// If the post.ssz is not present, it means the test should fail on our end.
-	postSSZFilepath, err := bazel.Runfile(path.Join(folderPath, "post.ssz_snappy"))
+	postSSZFilepath, err := bazel.Runfile(path.Join(testFolderPath, "post.ssz_snappy"))
 	postSSZExists := true
 	if err != nil && strings.Contains(err.Error(), "could not locate file") {
 		postSSZExists = false
@@ -50,10 +46,7 @@ func RunBlockOperationTest(
 		t.Fatal(err)
 	}
 
-	helpers.ClearCache()
-	b := testutil.NewBeaconBlock()
-	b.Block.Body = body
-	beaconState, err := operationFn(context.Background(), preState, b)
+	beaconState, err := operationFn(t, preBeaconState)
 	if postSSZExists {
 		require.NoError(t, err)
 
@@ -61,11 +54,11 @@ func RunBlockOperationTest(
 		require.NoError(t, err)
 		postBeaconStateSSZ, err := snappy.Decode(nil /* dst */, postBeaconStateFile)
 		require.NoError(t, err, "Failed to decompress")
-
 		postBeaconState := &pb.BeaconState{}
 		if err := postBeaconState.UnmarshalSSZ(postBeaconStateSSZ); err != nil {
 			t.Fatalf("Failed to unmarshal: %v", err)
 		}
+
 		pbState, err := stateV0.ProtobufBeaconState(beaconState.InnerStateUnsafe())
 		require.NoError(t, err)
 		if !proto.Equal(pbState, postBeaconState) {
