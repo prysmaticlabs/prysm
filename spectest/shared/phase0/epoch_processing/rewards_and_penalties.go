@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/spectest/utils"
 )
@@ -17,12 +16,12 @@ func RunRewardsAndPenaltiesTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
 	testPath := "epoch_processing/rewards_and_penalties/pyspec_tests"
-	testFolders, testsFolderPath := testutil.TestFolders(t, config, "phase0", testPath)
+	testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", testPath)
 	for _, folder := range testFolders {
 		helpers.ClearCache()
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())
-			testutil.RunEpochOperationTest(t, folderPath, processRewardsAndPenaltiesPrecomputeWrapper)
+			RunEpochOperationTest(t, folderPath, processRewardsAndPenaltiesPrecomputeWrapper)
 		})
 	}
 }

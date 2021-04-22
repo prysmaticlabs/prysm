@@ -14,7 +14,7 @@ import (
 
 func RunAttestationTest(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
-	testFolders, testsFolderPath := testutil.TestFolders(t, config, "phase0", "operations/attestation/pyspec_tests")
+	testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", "operations/attestation/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())
@@ -26,7 +26,7 @@ func RunAttestationTest(t *testing.T, config string) {
 			require.NoError(t, att.UnmarshalSSZ(attestationSSZ), "Failed to unmarshal")
 
 			body := &ethpb.BeaconBlockBody{Attestations: []*ethpb.Attestation{att}}
-			testutil.RunBlockOperationTest(t, folderPath, body, blocks.ProcessAttestations)
+			RunBlockOperationTest(t, folderPath, body, blocks.ProcessAttestations)
 		})
 	}
 }

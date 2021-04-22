@@ -30,7 +30,7 @@ func init() {
 func RunBlockProcessingTest(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
-	testFolders, testsFolderPath := testutil.TestFolders(t, config, "phase0", "sanity/blocks/pyspec_tests")
+	testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", "sanity/blocks/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			helpers.ClearCache()
@@ -47,7 +47,7 @@ func RunBlockProcessingTest(t *testing.T, config string) {
 			require.NoError(t, err)
 
 			metaYaml := &SanityConfig{}
-			require.NoError(t, testutil.UnmarshalYaml(file, metaYaml), "Failed to Unmarshal")
+			require.NoError(t, utils.UnmarshalYaml(file, metaYaml), "Failed to Unmarshal")
 
 			var transitionError error
 			var processedState iface.BeaconState

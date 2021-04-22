@@ -16,7 +16,7 @@ import (
 
 func RunDepositTest(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
-	testFolders, testsFolderPath := testutil.TestFolders(t, config, "phase0", "operations/deposit/pyspec_tests")
+	testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", "operations/deposit/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())
@@ -31,7 +31,7 @@ func RunDepositTest(t *testing.T, config string) {
 			processDepositsFunc := func(ctx context.Context, s iface.BeaconState, b *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
 				return blocks.ProcessDeposits(ctx, s, b.Block.Body.Deposits)
 			}
-			testutil.RunBlockOperationTest(t, folderPath, body, processDepositsFunc)
+			RunBlockOperationTest(t, folderPath, body, processDepositsFunc)
 		})
 	}
 }

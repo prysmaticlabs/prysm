@@ -7,7 +7,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/spectest/utils"
 )
@@ -16,11 +15,11 @@ func RunJustificationAndFinalizationTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
 	testPath := "epoch_processing/justification_and_finalization/pyspec_tests"
-	testFolders, testsFolderPath := testutil.TestFolders(t, config, "phase0", testPath)
+	testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", testPath)
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())
-			testutil.RunEpochOperationTest(t, folderPath, processJustificationAndFinalizationPrecomputeWrapper)
+			RunEpochOperationTest(t, folderPath, processJustificationAndFinalizationPrecomputeWrapper)
 		})
 	}
 }
