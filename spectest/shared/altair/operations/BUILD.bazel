@@ -5,12 +5,14 @@ go_library(
     testonly = True,
     srcs = [
         "attestation.go",
+        "attester_slashing.go",
         "helpers.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/spectest/shared/altair/operations",
     visibility = ["//spectest:__subpackages__"],
     deps = [
         "//beacon-chain/core/altair:go_default_library",
+        "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/state/interface:go_default_library",
         "//beacon-chain/state/state-altair:go_default_library",
