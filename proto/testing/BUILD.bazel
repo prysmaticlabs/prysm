@@ -35,7 +35,6 @@ go_test(
     name = "go_default_test",
     size = "small",
     srcs = [
-        "ssz_static_test.go",
         "tags_test.go",
     ],
     data = [
@@ -51,71 +50,6 @@ go_test(
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/validator/accounts/v2:go_default_library",
         "//shared/bytesutil:go_default_library",
-        "//shared/params/spectest:go_default_library",
-        "//shared/testutil:go_default_library",
-        "//shared/testutil/assert:go_default_library",
-        "//shared/testutil/require:go_default_library",
-        "@com_github_golang_snappy//:go_default_library",
-        "@com_github_ferranbt_fastssz//:go_default_library",
-        "@com_github_ghodss_yaml//:go_default_library",
-        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
-        "@io_bazel_rules_go//go/tools/bazel:go_default_library",
-    ],
-)
-
-# Requires --define ssz=minimal
-go_test(
-    name = "go_minimal_test",
-    size = "small",
-    srcs = [
-        "ssz_static_minimal_test.go",
-        "ssz_static_test.go",
-    ],
-    data = [
-        "@eth2_spec_tests_minimal//:test_data",
-    ],
-    tags = [
-        "manual",
-        "minimal",
-        "spectest",
-    ],
-    deps = [
-        "//beacon-chain/state/stateV0:go_default_library",
-        "//beacon-chain/state/stateutil:go_default_library",
-        "//proto/beacon/p2p/v1:go_default_library",
-        "//proto/validator/accounts/v2:go_default_library",
-        "//shared/bytesutil:go_default_library",
-        "//shared/params/spectest:go_default_library",
-        "//shared/testutil:go_default_library",
-        "//shared/testutil/assert:go_default_library",
-        "//shared/testutil/require:go_default_library",
-        "@com_github_golang_snappy//:go_default_library",
-        "@com_github_ferranbt_fastssz//:go_default_library",
-        "@com_github_ghodss_yaml//:go_default_library",
-        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
-        "@io_bazel_rules_go//go/tools/bazel:go_default_library",
-    ],
-)
-
-go_test(
-    name = "go_mainnet_test",
-    size = "small",
-    srcs = [
-        "ssz_static_mainnet_test.go",
-        "ssz_static_test.go",
-    ],
-    data = [
-        "@eth2_spec_tests_mainnet//:test_data",
-    ],
-    tags = ["spectest"],
-    deps = [
-        "//beacon-chain/state/stateV0:go_default_library",
-        "//beacon-chain/state/stateutil:go_default_library",
-        "//proto/beacon/p2p/v1:go_default_library",
-        "//proto/validator/accounts/v2:go_default_library",
-        "//shared/bytesutil:go_default_library",
-        "//shared/params:go_default_library",
-        "//shared/params/spectest:go_default_library",
         "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
