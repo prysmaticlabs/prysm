@@ -9,6 +9,7 @@ go_library(
         "block_header.go",
         "deposit.go",
         "helpers.go",
+        "proposer_slashing.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/spectest/shared/altair/operations",
     visibility = ["//spectest:__subpackages__"],
