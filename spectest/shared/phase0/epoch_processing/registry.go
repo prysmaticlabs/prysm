@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/spectest/utils"
 )
 
+// RunRegistryUpdatesTests executes "epoch_processing/registry_updates" tests.
 func RunRegistryUpdatesTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 

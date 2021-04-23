@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/spectest/utils"
 )
 
+// RunHistoricalRootsUpdateTests executes "epoch_processing/historical_roots_update" tests.
 func RunHistoricalRootsUpdateTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 

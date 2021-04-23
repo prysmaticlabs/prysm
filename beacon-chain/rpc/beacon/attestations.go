@@ -27,8 +27,13 @@ import (
 // by slot as the canonical sorting attribute.
 type sortableAttestations []*ethpb.Attestation
 
-func (s sortableAttestations) Len() int      { return len(s) }
+// Len is the number of elements in the collection.
+func (s sortableAttestations) Len() int { return len(s) }
+
+// Swap swaps the elements with indexes i and j.
 func (s sortableAttestations) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+
+// Less reports whether the element with index i must sort before the element with index j.
 func (s sortableAttestations) Less(i, j int) bool {
 	return s[i].Data.Slot < s[j].Data.Slot
 }

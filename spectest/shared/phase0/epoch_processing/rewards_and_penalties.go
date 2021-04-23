@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/spectest/utils"
 )
 
+// RunRewardsAndPenaltiesTests executes "epoch_processing/rewards_and_penalties" tests.
 func RunRewardsAndPenaltiesTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
