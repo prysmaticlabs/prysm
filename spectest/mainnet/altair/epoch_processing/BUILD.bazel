@@ -9,6 +9,7 @@ go_test(
         "eth1_data_reset_test.go",
         "historical_roots_update_test.go",
         "justification_and_finalization_test.go",
+        "randao_mixes_reset_test.go",
     ],
     data = glob(["*.yaml"]) + [
         "@eth2_spec_tests_mainnet//:test_data",
