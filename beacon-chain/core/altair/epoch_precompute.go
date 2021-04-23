@@ -175,7 +175,7 @@ func attestationDelta(bal *precompute.Balance, v *precompute.Validator, prevEpoc
 
 	ebi := params.BeaconConfig().EffectiveBalanceIncrement
 	eb := v.CurrentEpochEffectiveBalance
-	br := eb * params.BeaconConfig().BaseRewardFactor / mathutil.IntegerSquareRoot(bal.ActiveCurrentEpoch)
+	br := (eb / ebi) * (ebi * params.BeaconConfig().BaseRewardFactor / mathutil.IntegerSquareRoot(bal.ActiveCurrentEpoch))
 	activeCurrentEpochIncrements := bal.ActiveCurrentEpoch / ebi
 
 	r, p = uint64(0), uint64(0)
