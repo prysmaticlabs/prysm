@@ -21,7 +21,10 @@ go_library(
         "validator_getters.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//spectest:__subpackages__",
+    ],
     deps = [
         "//beacon-chain/p2p/types:go_default_library",
         "//beacon-chain/state/interface:go_default_library",
