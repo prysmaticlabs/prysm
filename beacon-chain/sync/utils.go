@@ -15,15 +15,18 @@ type sortedObj struct {
 	roots [][32]byte
 }
 
+// Less reports whether the element with index i must sort before the element with index j.
 func (s sortedObj) Less(i, j int) bool {
 	return s.blks[i].Block.Slot < s.blks[j].Block.Slot
 }
 
+// Swap swaps the elements with indexes i and j.
 func (s sortedObj) Swap(i, j int) {
 	s.blks[i], s.blks[j] = s.blks[j], s.blks[i]
 	s.roots[i], s.roots[j] = s.roots[j], s.roots[i]
 }
 
+// Len is the number of elements in the collection.
 func (s sortedObj) Len() int {
 	return len(s.blks)
 }

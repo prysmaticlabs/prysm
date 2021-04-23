@@ -34,7 +34,7 @@ func Uint64FromString(str string) (uint64, error) {
 	return strconv.ParseUint(str, 10, 64)
 }
 
-// Uint64FromString converts a string into Epoch.
+// EpochFromString converts a string into Epoch.
 func EpochFromString(str string) (types.Epoch, error) {
 	e, err := strconv.ParseUint(str, 10, 64)
 	if err != nil {
