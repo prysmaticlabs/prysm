@@ -8,7 +8,6 @@ go_library(
         "boot_node.go",
         "eth1.go",
         "log.go",
-        "slasher.go",
         "validator.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/endtoend/components",
