@@ -5,6 +5,7 @@ go_library(
     testonly = True,
     srcs = [
         "effective_balance_updates.go",
+        "eth1_data_reset.go",
         "helpers.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/spectest/shared/altair/epoch_processing",

@@ -4,7 +4,11 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 go_test(
     name = "go_default_test",
     size = "small",
-    srcs = ["effective_balance_updates_test.go"],
+    srcs = [
+        "effective_balance_updates_test.go",
+        "epoch_processing_test.go",
+        "eth1_data_reset_test.go",
+    ],
     data = glob(["*.yaml"]) + [
         "@eth2_spec_tests_minimal//:test_data",
     ],
@@ -13,5 +17,8 @@ go_test(
         "minimal",
         "spectest",
     ],
-    deps = ["//spectest/shared/altair/epoch_processing:go_default_library"],
+    deps = [
+        "//shared/params:go_default_library",
+        "//spectest/shared/altair/epoch_processing:go_default_library",
+    ],
 )
