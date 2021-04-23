@@ -8,6 +8,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// Graffiti is a graffiti container.
 type Graffiti struct {
 	Hash     [32]byte
 	Default  string                          `yaml:"default,omitempty"`

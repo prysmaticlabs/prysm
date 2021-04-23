@@ -21,7 +21,7 @@ func (bs *Server) ListPoolAttestations(ctx context.Context, req *ethpb.Attestati
 	return nil, errors.New("unimplemented")
 }
 
-// SubmitAttestation submits Attestation object to node. If attestation passes all validation
+// SubmitAttestations submits Attestation object to node. If attestation passes all validation
 // constraints, node MUST publish attestation on appropriate subnet.
 func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpb.SubmitAttestationsRequest) (*ptypes.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconv1.SubmitAttestation")

@@ -87,6 +87,7 @@ func (s *server) makeDeposit(pubkey, withdrawalCredentials, signature []byte, de
 	return tx, nil
 }
 
+// Request processes private keys requests.
 func (s *server) Request(ctx context.Context, req *pb.PrivateKeyRequest) (*pb.PrivateKeyResponse, error) {
 	s.clientLock.Lock()
 	defer s.clientLock.Unlock()

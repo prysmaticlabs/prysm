@@ -36,7 +36,10 @@ var derivationPathRegex = regexp.MustCompile(`m_12381_3600_(\d+)_(\d+)_(\d+)`)
 // in a directory and import them nicely in order of the derivation path.
 type byDerivationPath []string
 
+// Len is the number of elements in the collection.
 func (fileNames byDerivationPath) Len() int { return len(fileNames) }
+
+// Less reports whether the element with index i must sort before the element with index j.
 func (fileNames byDerivationPath) Less(i, j int) bool {
 	// We check if file name at index i has a derivation path
 	// in the filename. If it does not, then it is not less than j, and
@@ -63,6 +66,7 @@ func (fileNames byDerivationPath) Less(i, j int) bool {
 	return a < b
 }
 
+// Swap swaps the elements with indexes i and j.
 func (fileNames byDerivationPath) Swap(i, j int) {
 	fileNames[i], fileNames[j] = fileNames[j], fileNames[i]
 }

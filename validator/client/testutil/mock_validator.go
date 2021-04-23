@@ -172,7 +172,7 @@ func (fv *FakeValidator) SubmitAggregateAndProof(_ context.Context, _ types.Slot
 // LogAttestationsSubmitted for mocking.
 func (fv *FakeValidator) LogAttestationsSubmitted() {}
 
-// LogNextDutyCountDown for mocking.
+// LogNextDutyTimeLeft for mocking.
 func (fv *FakeValidator) LogNextDutyTimeLeft(slot types.Slot) error {
 	return nil
 }

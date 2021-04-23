@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/spectest/utils"
 )
 
+// RunJustificationAndFinalizationTests executes "epoch_processing/justification_and_finalization" tests.
 func RunJustificationAndFinalizationTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
