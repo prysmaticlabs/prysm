@@ -21,7 +21,7 @@ func NewValMapHandler(vals []*ethpb.Validator) *ValidatorMapHandler {
 	}
 }
 
-// Copy the whole map and returns a map handler with the copied map.
+// AddRef copies the whole map and returns a map handler with the copied map.
 func (v *ValidatorMapHandler) AddRef() {
 	v.mapRef.AddRef()
 }
