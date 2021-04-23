@@ -27,6 +27,7 @@ func init() {
 	state.SkipSlotCache.Disable()
 }
 
+// RunBlockProcessingTest executes "sanity/blocks" tests.
 func RunBlockProcessingTest(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 

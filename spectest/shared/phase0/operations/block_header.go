@@ -19,6 +19,7 @@ import (
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
+// RunBlockHeaderTest executes "operations/block_header" tests.
 func RunBlockHeaderTest(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", "operations/block_header/pyspec_tests")

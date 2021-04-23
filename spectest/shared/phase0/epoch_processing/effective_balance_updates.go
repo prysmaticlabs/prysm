@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/spectest/utils"
 )
 
+// RunEffectiveBalanceUpdatesTests executes "epoch_processing/effective_balance_updates" tests.
 func RunEffectiveBalanceUpdatesTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 

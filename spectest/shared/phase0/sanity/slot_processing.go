@@ -20,6 +20,7 @@ func init() {
 	state.SkipSlotCache.Disable()
 }
 
+// RunSlotProcessingTests executes "sanity/slots" tests.
 func RunSlotProcessingTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 

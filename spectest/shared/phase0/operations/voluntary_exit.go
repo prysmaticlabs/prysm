@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/spectest/utils"
 )
 
+// RunVoluntaryExitTest executes "operations/voluntary_exit" tests.
 func RunVoluntaryExitTest(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", "operations/voluntary_exit/pyspec_tests")

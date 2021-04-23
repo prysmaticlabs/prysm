@@ -11,6 +11,7 @@ type MockFetcher struct {
 	BeaconState iface.BeaconState
 }
 
+// State --
 func (m *MockFetcher) State(context.Context, []byte) (iface.BeaconState, error) {
 	return m.BeaconState, nil
 }
