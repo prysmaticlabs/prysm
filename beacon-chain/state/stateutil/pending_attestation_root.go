@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// PendingAttestationRoot describes a method from which the hash tree root
+// PendingAttRootWithHasher describes a method from which the hash tree root
 // of a pending attestation is returned.
 func PendingAttRootWithHasher(hasher htrutils.HashFn, att *pb.PendingAttestation) ([32]byte, error) {
 	var fieldRoots [][32]byte

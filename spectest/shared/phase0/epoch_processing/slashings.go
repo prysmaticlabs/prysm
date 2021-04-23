@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/spectest/utils"
 )
 
+// RunSlashingsTests executes "epoch_processing/slashings" tests.
 func RunSlashingsTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 

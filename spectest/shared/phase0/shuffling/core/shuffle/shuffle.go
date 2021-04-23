@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/spectest/utils"
 )
 
+// RunShuffleTests executes "shuffling/core/shuffle" tests.
 func RunShuffleTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 

@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/spectest/utils"
 )
 
+// Delta contains list of rewards and penalties.
 type Delta struct {
 	Rewards   []uint64 `json:"rewards"`
 	Penalties []uint64 `json:"penalties"`
@@ -42,6 +43,7 @@ var deltaFiles = []string{
 	"inclusion_delay_deltas.ssz_snappy",
 }
 
+// RunPrecomputeRewardsAndPenaltiesTests executes "rewards/{basic, leak, random}" tests.
 func RunPrecomputeRewardsAndPenaltiesTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 	testPaths := []string{"rewards/basic/pyspec_tests", "rewards/leak/pyspec_tests", "rewards/random/pyspec_tests"}
