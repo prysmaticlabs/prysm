@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/spectest/utils"
 )
 
+// RunSlashingsResetTests executes "epoch_processing/slashings_reset" tests.
 func RunSlashingsResetTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 

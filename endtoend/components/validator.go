@@ -95,7 +95,7 @@ func NewValidatorNode(config *e2etypes.E2EConfig, validatorNum, index, offset in
 	}
 }
 
-// StartNewValidatorNode starts a validator client.
+// Start starts a validator client.
 func (v *ValidatorNode) Start(ctx context.Context) error {
 	binaryPath, found := bazel.FindBinary("cmd/validator", "validator")
 	if !found {

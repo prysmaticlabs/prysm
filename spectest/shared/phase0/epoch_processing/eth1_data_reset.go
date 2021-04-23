@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/spectest/utils"
 )
 
+// RunEth1DataResetTests executes "epoch_processing/eth1_data_reset" tests.
 func RunEth1DataResetTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
