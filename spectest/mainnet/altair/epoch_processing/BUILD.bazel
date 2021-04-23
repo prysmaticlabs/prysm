@@ -7,6 +7,7 @@ go_test(
         "effective_balance_updates_test.go",
         "epoch_processing_test.go",
         "eth1_data_reset_test.go",
+        "historical_roots_update_test.go",
     ],
     data = glob(["*.yaml"]) + [
         "@eth2_spec_tests_mainnet//:test_data",
