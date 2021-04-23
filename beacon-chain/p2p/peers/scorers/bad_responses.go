@@ -15,6 +15,9 @@ const (
 	// DefaultBadResponsesDecayInterval defines how often to decay previous statistics.
 	// Every interval bad responses counter will be decremented by 1.
 	DefaultBadResponsesDecayInterval = time.Hour
+	// DefaultBadResponsesPenaltyFactor defines the penalty factor applied to a peer based on their bad
+	// response count.
+	DefaultBadResponsesPenaltyFactor = 10
 )
 
 // BadResponsesScorer represents bad responses scoring service.
@@ -70,7 +73,7 @@ func (s *BadResponsesScorer) score(pid peer.ID) float64 {
 		score = float64(peerData.BadResponses) / float64(s.config.Threshold)
 		// Since score represents a penalty, negate it and multiply
 		// it by a factor.
-		score *= -10
+		score *= -DefaultBadResponsesPenaltyFactor
 	}
 	return score
 }

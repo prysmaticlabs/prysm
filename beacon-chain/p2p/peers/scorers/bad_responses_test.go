@@ -30,12 +30,12 @@ func TestScorers_BadResponses_Score(t *testing.T) {
 
 	assert.Equal(t, 0.0, scorer.Score("peer1"), "Unexpected score for unregistered peer")
 	scorer.Increment("peer1")
-	assert.Equal(t, -0.25, scorer.Score("peer1"))
+	assert.Equal(t, -2.5, scorer.Score("peer1"))
 	scorer.Increment("peer1")
-	assert.Equal(t, -0.5, scorer.Score("peer1"))
+	assert.Equal(t, float64(-5), scorer.Score("peer1"))
 	scorer.Increment("peer1")
 	scorer.Increment("peer1")
-	assert.Equal(t, -1.0, scorer.Score("peer1"))
+	assert.Equal(t, -100.0, scorer.Score("peer1"))
 	assert.Equal(t, true, scorer.IsBadPeer("peer1"))
 }
 

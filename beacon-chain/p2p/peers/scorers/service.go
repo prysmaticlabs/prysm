@@ -16,7 +16,9 @@ var _ Scorer = (*Service)(nil)
 const ScoreRoundingFactor = 10000
 
 // BadPeerScore defines score that is returned for a bad peer (all other metrics are ignored).
-const BadPeerScore = -100.00
+// The bad peer score was decided to be based on our determined gossip threshold, so that
+// all the other scoring services have their relevant penalties on similar scales.
+const BadPeerScore = gossipThreshold
 
 // Scorer defines minimum set of methods every peer scorer must expose.
 type Scorer interface {
