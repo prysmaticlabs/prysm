@@ -132,7 +132,7 @@ func (d *db) DeleteUnallocatedKey(_ context.Context, privateKey []byte) error {
 	})
 }
 
-// PodPK returns an assigned private key to the given pod name, if one exists.
+// PodPKs returns an assigned private key to the given pod name, if one exists.
 func (d *db) PodPKs(_ context.Context, podName string) (*pb.PrivateKeys, error) {
 	pks := &pb.PrivateKeys{}
 	if err := d.db.View(func(tx *bolt.Tx) error {
@@ -173,7 +173,7 @@ func (d *db) AllocateNewPkToPod(
 	})
 }
 
-// RemovePKAssignments from pod and put the private keys into the unassigned
+// RemovePKAssignment from pod and put the private keys into the unassigned
 // bucket.
 func (d *db) RemovePKAssignment(_ context.Context, podName string) error {
 	return d.db.Update(func(tx *bolt.Tx) error {

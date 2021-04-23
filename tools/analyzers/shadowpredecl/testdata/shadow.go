@@ -63,7 +63,7 @@ func error(len int) { // want "Function 'error' shadows a predeclared identifier
 type receiver struct {
 }
 
-// Test receiver function.
+// Receiver is a test receiver function.
 func (s *receiver) Receiver(len int) {
 
 }
