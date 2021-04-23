@@ -125,7 +125,9 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 					traceutil.AnnotateError(span, err)
 					return
 				}
-				indexedAtt, err := attestationutil.ConvertToIndexed(ctx, att, committee)
+				// Using a different context to prevent timeouts as this operation can be expensive
+				// and we want to avoid affecting the critical code path.
+				indexedAtt, err := attestationutil.ConvertToIndexed(context.TODO(), att, committee)
 				if err != nil {
 					log.WithError(err).Error("Could not convert to indexed attestation")
 					traceutil.AnnotateError(span, err)

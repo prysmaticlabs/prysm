@@ -324,7 +324,9 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 			return errors.Wrap(err, "could not load genesis from file")
 		}
 	}
-
+	if err := b.db.EnsureEmbeddedGenesis(b.ctx); err != nil {
+		return err
+	}
 	knownContract, err := b.db.DepositContractAddress(b.ctx)
 	if err != nil {
 		return err
@@ -342,8 +344,7 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 			knownContract, addr.Bytes())
 	}
 	log.Infof("Deposit contract: %#x", addr.Bytes())
-
-	return b.db.EnsureEmbeddedGenesis(b.ctx)
+	return nil
 }
 
 func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {

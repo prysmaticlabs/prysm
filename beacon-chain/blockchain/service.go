@@ -83,8 +83,6 @@ type Config struct {
 	ForkChoiceStore         f.ForkChoicer
 	OpsService              *attestations.Service
 	StateGen                *stategen.State
-	WspBlockRoot            []byte
-	WspEpoch                types.Epoch
 	SlasherAttestationsFeed *event.Feed
 	WeakSubjectivityCheckpt *ethpb.Checkpoint
 }

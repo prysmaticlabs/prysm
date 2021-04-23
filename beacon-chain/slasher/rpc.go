@@ -3,11 +3,10 @@ package slasher
 import (
 	"context"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // IsSlashableBlock checks if an input block header is slashable

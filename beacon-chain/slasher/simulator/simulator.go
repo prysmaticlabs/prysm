@@ -18,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
-	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 )
 
