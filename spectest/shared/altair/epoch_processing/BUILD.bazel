@@ -12,6 +12,8 @@ go_library(
         "randao_mixes_reset.go",
         "registry_updates.go",
         "rewards_and_penalties.go",
+        "slashings.go",
+        "slashings_reset.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/spectest/shared/altair/epoch_processing",
     visibility = ["//spectest:__subpackages__"],
