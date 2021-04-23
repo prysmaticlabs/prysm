@@ -23,6 +23,7 @@ type SSZRoots struct {
 	SigningRoot string `json:"signing_root"`
 }
 
+// RunSSZStaticTests executes "ssz_static" tests.
 func RunSSZStaticTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
@@ -89,6 +90,7 @@ func RunSSZStaticTests(t *testing.T, config string) {
 	}
 }
 
+// UnmarshalledSSZ unmarshalls serialized input.
 func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (interface{}, error) {
 	var obj interface{}
 	switch folderName {

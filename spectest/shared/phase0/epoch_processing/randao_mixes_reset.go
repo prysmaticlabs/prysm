@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/spectest/utils"
 )
 
+// RunRandaoMixesResetTests executes "epoch_processing/randao_mixes_reset" tests.
 func RunRandaoMixesResetTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 

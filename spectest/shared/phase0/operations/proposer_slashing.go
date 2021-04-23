@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/spectest/utils"
 )
 
+// RunProposerSlashingTest executes "operations/proposer_slashing" tests.
 func RunProposerSlashingTest(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", "operations/proposer_slashing/pyspec_tests")

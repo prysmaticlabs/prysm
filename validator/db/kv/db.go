@@ -50,6 +50,7 @@ var blockedBuckets = [][]byte{
 	attestationTargetEpochsBucket,
 }
 
+// Config represents store's config object.
 type Config struct {
 	PubKeys         [][48]byte
 	InitialMMapSize int

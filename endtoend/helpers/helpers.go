@@ -35,6 +35,7 @@ const (
 	maxFileBufferSize   = 1024 * 1024
 )
 
+// Graffiti is a list of sample graffiti strings.
 var Graffiti = []string{"Sushi", "Ramen", "Takoyaki"}
 
 // DeleteAndCreateFile checks if the file path given exists, if it does, it deletes it and creates a new file.
@@ -91,6 +92,7 @@ func WaitForTextInFile(file *os.File, text string) error {
 	}
 }
 
+// GraffitiYamlFile outputs graffiti YAML file into a testing directory.
 func GraffitiYamlFile(testDir string) (string, error) {
 	b := []byte(`default: "Rice"
 random: 
