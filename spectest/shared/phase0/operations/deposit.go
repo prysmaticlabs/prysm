@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/spectest/utils"
 )
 
+// RunDepositTest executes "operations/deposit" tests.
 func RunDepositTest(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", "operations/deposit/pyspec_tests")

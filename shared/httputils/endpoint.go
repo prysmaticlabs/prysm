@@ -19,10 +19,12 @@ type AuthorizationData struct {
 	Value  string
 }
 
+// Equals compares two endpoints for equality.
 func (e Endpoint) Equals(other Endpoint) bool {
 	return e.Url == other.Url && e.Auth.Equals(other.Auth)
 }
 
+// Equals compares two authorization data objects for equality.
 func (d AuthorizationData) Equals(other AuthorizationData) bool {
 	return d.Method == other.Method && d.Value == other.Value
 }
