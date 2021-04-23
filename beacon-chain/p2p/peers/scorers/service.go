@@ -61,7 +61,7 @@ func NewService(ctx context.Context, store *peerdata.Store, config *Config) *Ser
 	s.scorers.peerStatusScorer = newPeerStatusScorer(store, config.PeerStatusScorerConfig)
 	s.setScorerWeight(s.scorers.peerStatusScorer, 0.3)
 	s.scorers.gossipScorer = newGossipScorer(store, config.GossipScorerConfig)
-	s.setScorerWeight(s.scorers.gossipScorer, 0.3)
+	s.setScorerWeight(s.scorers.gossipScorer, 0.4)
 
 	// Start background tasks.
 	go s.loop(ctx)
