@@ -804,7 +804,7 @@ func (p *Status) PeersToPrune() []peer.ID {
 }
 
 // Deprecated: Is used to represent the older method
-// of pruning through bad response counts.
+// of pruning which utilized bad response counts.
 func (p *Status) deprecatedPeersToPrune() []peer.ID {
 	connLimit := p.ConnectedPeerLimit()
 	inBoundLimit := p.InboundLimit()
