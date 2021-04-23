@@ -24,6 +24,7 @@ import (
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/endtoend/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	log "github.com/sirupsen/logrus"
@@ -104,18 +105,6 @@ func (r *testRunner) run() {
 		return validatorNodes.Start(ctx)
 	})
 
-	// Slasher nodes.
-	var slasherNodes e2etypes.ComponentRunner
-	if config.TestSlasher {
-		slasherNodes := components.NewSlasherNodeSet(config)
-		g.Go(func() error {
-			if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{beaconNodes}); err != nil {
-				return fmt.Errorf("slasher nodes require beacon nodes to run: %w", err)
-			}
-			return slasherNodes.Start(ctx)
-		})
-	}
-
 	// Run E2E evaluators and tests.
 	g.Go(func() error {
 		// When everything is done, cancel parent context (will stop all spawned nodes).
@@ -127,9 +116,6 @@ func (r *testRunner) run() {
 		// Wait for all required nodes to start.
 		requiredComponents := []e2etypes.ComponentRunner{
 			eth1Node, bootNode, beaconNodes, validatorNodes,
-		}
-		if config.TestSlasher && slasherNodes != nil {
-			requiredComponents = append(requiredComponents, slasherNodes)
 		}
 		ctxAllNodesReady, cancel := context.WithTimeout(ctx, allNodesStartTimeout)
 		defer cancel()
@@ -209,11 +195,11 @@ func (r *testRunner) waitForChainStart() {
 func (r *testRunner) runEvaluators(conns []*grpc.ClientConn, tickingStartTime time.Time) error {
 	t, config := r.t, r.config
 	secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
-	ticker := helpers.NewEpochTicker(tickingStartTime, secondsPerEpoch)
+	ticker := slotutil.NewEpochTicker(tickingStartTime, secondsPerEpoch)
 	for currentEpoch := range ticker.C() {
 		for _, evaluator := range config.Evaluators {
 			// Only run if the policy says so.
-			if !evaluator.Policy(types.Epoch(currentEpoch)) {
+			if !evaluator.Policy(currentEpoch) {
 				continue
 			}
 			t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
@@ -222,7 +208,7 @@ func (r *testRunner) runEvaluators(conns []*grpc.ClientConn, tickingStartTime ti
 			})
 		}
 
-		if t.Failed() || currentEpoch >= config.EpochsToRun-1 {
+		if t.Failed() || currentEpoch >= types.Epoch(config.EpochsToRun)-1 {
 			ticker.Done()
 			if t.Failed() {
 				return errors.New("test failed")
