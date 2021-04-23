@@ -11,6 +11,7 @@ go_test(
         "historical_roots_update_test.go",
         "justification_and_finalization_test.go",
         "randao_mixes_reset_test.go",
+        "registry_updates_test.go",
     ],
     data = glob(["*.yaml"]) + [
         "@eth2_spec_tests_minimal//:test_data",

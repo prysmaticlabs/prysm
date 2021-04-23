@@ -10,6 +10,7 @@ go_library(
         "historical_roots_update.go",
         "justification_and_finalization.go",
         "randao_mixes_reset.go",
+        "registry_updates.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/spectest/shared/altair/epoch_processing",
     visibility = ["//spectest:__subpackages__"],
