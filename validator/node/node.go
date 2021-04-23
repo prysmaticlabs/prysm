@@ -242,7 +242,7 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 			return err
 		}
 	}
-	if featureconfig.Get().SlasherProtection {
+	if featureconfig.Get().RemoteSlashingProtection {
 		if err := c.registerSlasherService(); err != nil {
 			return err
 		}
@@ -331,7 +331,7 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 			return err
 		}
 	}
-	if featureconfig.Get().SlasherProtection {
+	if featureconfig.Get().RemoteSlashingProtection {
 		if err := c.registerSlasherService(); err != nil {
 			return err
 		}

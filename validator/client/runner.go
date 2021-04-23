@@ -39,7 +39,7 @@ func run(ctx context.Context, v iface.Validator) {
 		cleanup()
 		log.Fatalf("Wallet is not ready: %v", err)
 	}
-	if featureconfig.Get().SlasherProtection {
+	if featureconfig.Get().RemoteSlashingProtection {
 		if err := v.SlasherReady(ctx); err != nil {
 			log.Fatalf("Slasher is not ready: %v", err)
 		}
