@@ -30,7 +30,6 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/abool"
-	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
@@ -51,19 +50,17 @@ var pendingBlockExpTime = time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(
 
 // Config to set up the regular sync service.
 type Config struct {
-	P2P                     p2p.P2P
-	DB                      db.NoHeadAccessDatabase
-	AttPool                 attestations.Pool
-	ExitPool                voluntaryexits.PoolManager
-	SlashingPool            slashings.PoolManager
-	Chain                   blockchainService
-	InitialSync             Checker
-	StateNotifier           statefeed.Notifier
-	BlockNotifier           blockfeed.Notifier
-	AttestationNotifier     operation.Notifier
-	SlasherAttestationsFeed *event.Feed
-	SlasherBlockHeadersFeed *event.Feed
-	StateGen                *stategen.State
+	P2P                 p2p.P2P
+	DB                  db.NoHeadAccessDatabase
+	AttPool             attestations.Pool
+	ExitPool            voluntaryexits.PoolManager
+	SlashingPool        slashings.PoolManager
+	Chain               blockchainService
+	InitialSync         Checker
+	StateNotifier       statefeed.Notifier
+	BlockNotifier       blockfeed.Notifier
+	AttestationNotifier operation.Notifier
+	StateGen            *stategen.State
 }
 
 // This defines the interface for interacting with block chain service

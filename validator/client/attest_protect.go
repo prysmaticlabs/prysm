@@ -81,12 +81,8 @@ func (v *validator) slashableAttestationCheck(
 		return errors.Wrap(err, "could not save attestation history for validator public key")
 	}
 
-	if featureconfig.Get().RemoteSlasherProtection {
-		slashing, err := v.slashingProtectionClient.IsSlashableAttestation(ctx, indexedAtt)
-		if err != nil {
-			return errors.Wrap(err, "could not check if attestation is slashable")
-		}
-		if slashing != nil && slashing.AttesterSlashing != nil {
+	if featureconfig.Get().SlasherProtection && v.protector != nil {
+		if !v.protector.CommitAttestation(ctx, indexedAtt) {
 			if v.emitAccountMetrics {
 				ValidatorAttestFailVecSlasher.WithLabelValues(fmtKey).Inc()
 			}

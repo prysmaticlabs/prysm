@@ -18,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
 
@@ -110,30 +109,6 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 
 	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
 		return err
-	}
-
-	// If slasher is configured, forward the attestations in the block via
-	// an event feed for processing.
-	if featureconfig.Get().EnableSlasher {
-		// Feed the indexed attestation to slasher if enabled. This action
-		// is done in the background to avoid adding more load to this critical code path.
-		go func() {
-			for _, att := range signed.Block.Body.Attestations {
-				committee, err := helpers.BeaconCommitteeFromState(preState, att.Data.Slot, att.Data.CommitteeIndex)
-				if err != nil {
-					log.WithError(err).Error("Could not get attestation committee")
-					traceutil.AnnotateError(span, err)
-					return
-				}
-				indexedAtt, err := attestationutil.ConvertToIndexed(ctx, att, committee)
-				if err != nil {
-					log.WithError(err).Error("Could not convert to indexed attestation")
-					traceutil.AnnotateError(span, err)
-					return
-				}
-				s.cfg.SlasherAttestationsFeed.Send(indexedAtt)
-			}
-		}()
 	}
 
 	// Updating next slot state cache can happen in the background. It shouldn't block rest of the process.

@@ -7,19 +7,19 @@ import (
 	"github.com/golang/mock/gomock"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	slashpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	mockSlasher "github.com/prysmaticlabs/prysm/validator/testing"
 )
 
 func Test_slashableAttestationCheck(t *testing.T) {
 	config := &featureconfig.Flags{
-		RemoteSlasherProtection: true,
+		SlasherProtection: true,
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
-	validator, m, validatorKey, finish := setup(t)
+	validator, _, validatorKey, finish := setup(t)
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
@@ -39,27 +39,18 @@ func Test_slashableAttestationCheck(t *testing.T) {
 			},
 		},
 	}
-
-	m.slasherClient.EXPECT().IsSlashableAttestation(
-		gomock.Any(), // ctx
-		gomock.Any(),
-	).Return(&slashpb.AttesterSlashingResponse{AttesterSlashing: &ethpb.AttesterSlashing{}}, nil /*err*/)
-
+	mockProtector := &mockSlasher.MockProtector{AllowAttestation: false}
+	validator.protector = mockProtector
 	err := validator.slashableAttestationCheck(context.Background(), att, pubKey, [32]byte{1})
 	require.ErrorContains(t, failedPostAttSignExternalErr, err)
-
-	m.slasherClient.EXPECT().IsSlashableAttestation(
-		gomock.Any(), // ctx
-		gomock.Any(),
-	).Return(&slashpb.AttesterSlashingResponse{}, nil /*err*/)
-
+	mockProtector.AllowAttestation = true
 	err = validator.slashableAttestationCheck(context.Background(), att, pubKey, [32]byte{1})
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
 }
 
 func Test_slashableAttestationCheck_UpdatesLowestSignedEpochs(t *testing.T) {
 	config := &featureconfig.Flags{
-		RemoteSlasherProtection: true,
+		SlasherProtection: true,
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
@@ -84,23 +75,18 @@ func Test_slashableAttestationCheck_UpdatesLowestSignedEpochs(t *testing.T) {
 			},
 		},
 	}
-
-	m.slasherClient.EXPECT().IsSlashableAttestation(
-		gomock.Any(), // ctx
-		gomock.Any(),
-	).Return(&slashpb.AttesterSlashingResponse{}, nil /*err*/)
-
+	mockProtector := &mockSlasher.MockProtector{AllowAttestation: false}
+	validator.protector = mockProtector
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		&ethpb.DomainRequest{Epoch: 10, Domain: []byte{1, 0, 0, 0}},
 	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 	_, sr, err := validator.getDomainAndSigningRoot(ctx, att.Data)
 	require.NoError(t, err)
-
+	mockProtector.AllowAttestation = true
 	err = validator.slashableAttestationCheck(context.Background(), att, pubKey, sr)
 	require.NoError(t, err)
 	differentSigningRoot := [32]byte{2}
-
 	err = validator.slashableAttestationCheck(context.Background(), att, pubKey, differentSigningRoot)
 	require.ErrorContains(t, "could not sign attestation", err)
 
@@ -116,7 +102,7 @@ func Test_slashableAttestationCheck_UpdatesLowestSignedEpochs(t *testing.T) {
 
 func Test_slashableAttestationCheck_OK(t *testing.T) {
 	config := &featureconfig.Flags{
-		RemoteSlasherProtection: false,
+		SlasherProtection: false,
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
@@ -147,7 +133,7 @@ func Test_slashableAttestationCheck_OK(t *testing.T) {
 
 func Test_slashableAttestationCheck_GenesisEpoch(t *testing.T) {
 	config := &featureconfig.Flags{
-		RemoteSlasherProtection: false,
+		SlasherProtection: false,
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()

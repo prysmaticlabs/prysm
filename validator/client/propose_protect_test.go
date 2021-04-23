@@ -4,17 +4,15 @@ import (
 	"context"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	slashpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	mockSlasher "github.com/prysmaticlabs/prysm/validator/testing"
 )
 
-func Test_slashableProposalCheck_PreventsLowerThanMinProposal(t *testing.T) {
+func TestPreBlockSignLocalValidation_PreventsLowerThanMinProposal(t *testing.T) {
 	ctx := context.Background()
 	validator, _, validatorKey, finish := setup(t)
 	defer finish()
@@ -29,64 +27,55 @@ func Test_slashableProposalCheck_PreventsLowerThanMinProposal(t *testing.T) {
 
 	// We expect the same block with a slot lower than the lowest
 	// signed slot to fail validation.
-	block := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			Slot:          lowestSignedSlot - 1,
-			ProposerIndex: 0,
-		},
-		Signature: params.BeaconConfig().EmptySignature[:],
+	block := &ethpb.BeaconBlock{
+		Slot:          lowestSignedSlot - 1,
+		ProposerIndex: 0,
 	}
-	err = validator.slashableProposalCheck(context.Background(), pubKeyBytes, block, [32]byte{4})
+	err = validator.preBlockSignValidations(context.Background(), pubKeyBytes, block, [32]byte{4})
 	require.ErrorContains(t, "could not sign block with slot <= lowest signed", err)
 
 	// We expect the same block with a slot equal to the lowest
 	// signed slot to pass validation if signing roots are equal.
-	block = &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			Slot:          lowestSignedSlot,
-			ProposerIndex: 0,
-		},
-		Signature: params.BeaconConfig().EmptySignature[:],
+	block = &ethpb.BeaconBlock{
+		Slot:          lowestSignedSlot,
+		ProposerIndex: 0,
 	}
-	err = validator.slashableProposalCheck(context.Background(), pubKeyBytes, block, [32]byte{1})
+	err = validator.preBlockSignValidations(context.Background(), pubKeyBytes, block, [32]byte{1})
 	require.NoError(t, err)
 
 	// We expect the same block with a slot equal to the lowest
 	// signed slot to fail validation if signing roots are different.
-	err = validator.slashableProposalCheck(context.Background(), pubKeyBytes, block, [32]byte{4})
-	require.ErrorContains(t, failedBlockSignLocalErr, err)
+	block = &ethpb.BeaconBlock{
+		Slot:          lowestSignedSlot,
+		ProposerIndex: 0,
+	}
+	err = validator.preBlockSignValidations(context.Background(), pubKeyBytes, block, [32]byte{4})
+	require.ErrorContains(t, failedPreBlockSignLocalErr, err)
 
 	// We expect the same block with a slot > than the lowest
 	// signed slot to pass validation.
-	block = &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			Slot:          lowestSignedSlot + 1,
-			ProposerIndex: 0,
-		},
-		Signature: params.BeaconConfig().EmptySignature[:],
+	block = &ethpb.BeaconBlock{
+		Slot:          lowestSignedSlot + 1,
+		ProposerIndex: 0,
 	}
-	err = validator.slashableProposalCheck(context.Background(), pubKeyBytes, block, [32]byte{3})
+	err = validator.preBlockSignValidations(context.Background(), pubKeyBytes, block, [32]byte{3})
 	require.NoError(t, err)
 }
 
-func Test_slashableProposalCheck(t *testing.T) {
+func TestPreBlockSignLocalValidation(t *testing.T) {
 	ctx := context.Background()
 	config := &featureconfig.Flags{
-		RemoteSlasherProtection: false,
+		SlasherProtection: false,
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
 	validator, _, validatorKey, finish := setup(t)
 	defer finish()
 
-	block := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			Slot:          10,
-			ProposerIndex: 0,
-		},
-		Signature: params.BeaconConfig().EmptySignature[:],
+	block := &ethpb.BeaconBlock{
+		Slot:          10,
+		ProposerIndex: 0,
 	}
-
 	pubKeyBytes := [48]byte{}
 	copy(pubKeyBytes[:], validatorKey.PublicKey().Marshal())
 
@@ -102,57 +91,70 @@ func Test_slashableProposalCheck(t *testing.T) {
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
 	// We expect the same block sent out with the same root should not be slasahble.
-	err = validator.slashableProposalCheck(context.Background(), pubKey, block, dummySigningRoot)
+	err = validator.preBlockSignValidations(context.Background(), pubKey, block, dummySigningRoot)
 	require.NoError(t, err)
 
 	// We expect the same block sent out with a different signing root should be slasahble.
-	err = validator.slashableProposalCheck(context.Background(), pubKey, block, [32]byte{2})
-	require.ErrorContains(t, failedBlockSignLocalErr, err)
+	err = validator.preBlockSignValidations(context.Background(), pubKey, block, [32]byte{2})
+	require.ErrorContains(t, failedPreBlockSignLocalErr, err)
 
 	// We save a proposal at slot 11 with a nil signing root.
-	block.Block.Slot = 11
-	err = validator.db.SaveProposalHistoryForSlot(ctx, pubKeyBytes, block.Block.Slot, nil)
+	block.Slot = 11
+	err = validator.db.SaveProposalHistoryForSlot(ctx, pubKeyBytes, block.Slot, nil)
 	require.NoError(t, err)
 
 	// We expect the same block sent out should return slashable error even
 	// if we had a nil signing root stored in the database.
-	err = validator.slashableProposalCheck(context.Background(), pubKey, block, [32]byte{2})
-	require.ErrorContains(t, failedBlockSignLocalErr, err)
+	err = validator.preBlockSignValidations(context.Background(), pubKey, block, [32]byte{2})
+	require.ErrorContains(t, failedPreBlockSignLocalErr, err)
 
 	// A block with a different slot for which we do not have a proposing history
 	// should not be failing validation.
-	block.Block.Slot = 9
-	err = validator.slashableProposalCheck(context.Background(), pubKey, block, [32]byte{3})
+	block.Slot = 9
+	err = validator.preBlockSignValidations(context.Background(), pubKey, block, [32]byte{3})
 	require.NoError(t, err, "Expected allowed block not to throw error")
 }
 
-func Test_slashableProposalCheck_RemoteProtection(t *testing.T) {
+func TestPreBlockSignValidation(t *testing.T) {
 	config := &featureconfig.Flags{
-		RemoteSlasherProtection: true,
+		SlasherProtection: true,
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
-	validator, m, validatorKey, finish := setup(t)
+	validator, _, validatorKey, finish := setup(t)
 	defer finish()
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
 	block := testutil.NewBeaconBlock()
 	block.Block.Slot = 10
+	mockProtector := &mockSlasher.MockProtector{AllowBlock: false}
+	validator.protector = mockProtector
+	err := validator.preBlockSignValidations(context.Background(), pubKey, block.Block, [32]byte{2})
+	require.ErrorContains(t, failedPreBlockSignExternalErr, err)
+	mockProtector.AllowBlock = true
+	err = validator.preBlockSignValidations(context.Background(), pubKey, block.Block, [32]byte{2})
+	require.NoError(t, err, "Expected allowed block not to throw error")
+}
 
-	m.slasherClient.EXPECT().IsSlashableBlock(
-		gomock.Any(), // ctx
-		gomock.Any(),
-	).Return(&slashpb.ProposerSlashingResponse{ProposerSlashing: &ethpb.ProposerSlashing{}}, nil /*err*/)
-
-	err := validator.slashableProposalCheck(context.Background(), pubKey, block, [32]byte{2})
-	require.ErrorContains(t, failedBlockSignExternalErr, err)
-
-	m.slasherClient.EXPECT().IsSlashableBlock(
-		gomock.Any(), // ctx
-		gomock.Any(),
-	).Return(&slashpb.ProposerSlashingResponse{}, nil /*err*/)
-
-	err = validator.slashableProposalCheck(context.Background(), pubKey, block, [32]byte{2})
+func TestPostBlockSignUpdate(t *testing.T) {
+	config := &featureconfig.Flags{
+		SlasherProtection: true,
+	}
+	reset := featureconfig.InitWithReset(config)
+	defer reset()
+	validator, _, validatorKey, finish := setup(t)
+	defer finish()
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	emptyBlock := testutil.NewBeaconBlock()
+	emptyBlock.Block.Slot = 10
+	emptyBlock.Block.ProposerIndex = 0
+	mockProtector := &mockSlasher.MockProtector{AllowBlock: false}
+	validator.protector = mockProtector
+	err := validator.postBlockSignUpdate(context.Background(), pubKey, emptyBlock, [32]byte{})
+	require.ErrorContains(t, failedPostBlockSignErr, err, "Expected error when post signature update is detected as slashable")
+	mockProtector.AllowBlock = true
+	err = validator.postBlockSignUpdate(context.Background(), pubKey, emptyBlock, [32]byte{})
 	require.NoError(t, err, "Expected allowed block not to throw error")
 }

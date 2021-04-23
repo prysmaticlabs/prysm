@@ -15,6 +15,7 @@ type E2EConfig struct {
 	ValidatorFlags []string
 	EpochsToRun    uint64
 	TestSync       bool
+	TestSlasher    bool
 	TestDeposits   bool
 	UsePprof       bool
 	Evaluators     []Evaluator

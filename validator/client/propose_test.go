@@ -29,7 +29,6 @@ import (
 type mocks struct {
 	validatorClient *mock.MockBeaconNodeValidatorClient
 	nodeClient      *mock.MockNodeClient
-	slasherClient   *mock.MockSlasherClient
 	signExitFunc    func(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
 }
 
@@ -61,7 +60,6 @@ func setup(t *testing.T) (*validator, *mocks, bls.SecretKey, func()) {
 	m := &mocks{
 		validatorClient: mock.NewMockBeaconNodeValidatorClient(ctrl),
 		nodeClient:      mock.NewMockNodeClient(ctrl),
-		slasherClient:   mock.NewMockSlasherClient(ctrl),
 		signExitFunc: func(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
 			return mockSignature{}, nil
 		},
@@ -79,7 +77,6 @@ func setup(t *testing.T) (*validator, *mocks, bls.SecretKey, func()) {
 		db:                             valDB,
 		keyManager:                     km,
 		validatorClient:                m.validatorClient,
-		slashingProtectionClient:       m.slasherClient,
 		graffiti:                       []byte{},
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
@@ -229,10 +226,10 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 	).Return(&ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil /*error*/)
 
 	validator.ProposeBlock(context.Background(), slot, pubKey)
-	require.LogsDoNotContain(t, hook, failedBlockSignLocalErr)
+	require.LogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 
 	validator.ProposeBlock(context.Background(), slot, pubKey)
-	require.LogsContain(t, hook, failedBlockSignLocalErr)
+	require.LogsContain(t, hook, failedPreBlockSignLocalErr)
 }
 
 func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
@@ -281,10 +278,10 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 	).Return(&ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil /*error*/)
 
 	validator.ProposeBlock(context.Background(), farFuture, pubKey)
-	require.LogsDoNotContain(t, hook, failedBlockSignLocalErr)
+	require.LogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 
 	validator.ProposeBlock(context.Background(), farFuture, pubKey)
-	require.LogsContain(t, hook, failedBlockSignLocalErr)
+	require.LogsContain(t, hook, failedPreBlockSignLocalErr)
 }
 
 func TestProposeBlock_AllowsPastProposals(t *testing.T) {
@@ -322,7 +319,7 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 	).Times(2).Return(&ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil /*error*/)
 
 	validator.ProposeBlock(context.Background(), farAhead, pubKey)
-	require.LogsDoNotContain(t, hook, failedBlockSignLocalErr)
+	require.LogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 
 	past := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().WeakSubjectivityPeriod - 400))
 	blk2 := testutil.NewBeaconBlock()
@@ -332,7 +329,7 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 		gomock.Any(),
 	).Return(blk2.Block, nil /*err*/)
 	validator.ProposeBlock(context.Background(), past, pubKey)
-	require.LogsDoNotContain(t, hook, failedBlockSignLocalErr)
+	require.LogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 }
 
 func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
@@ -370,7 +367,7 @@ func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
 	).Times(2).Return(&ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil /*error*/)
 
 	validator.ProposeBlock(context.Background(), farAhead, pubKey)
-	require.LogsDoNotContain(t, hook, failedBlockSignLocalErr)
+	require.LogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 
 	blk2 := testutil.NewBeaconBlock()
 	blk2.Block.Slot = farAhead - 4
@@ -380,7 +377,7 @@ func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
 	).Return(blk2.Block, nil /*err*/)
 
 	validator.ProposeBlock(context.Background(), farAhead-4, pubKey)
-	require.LogsDoNotContain(t, hook, failedBlockSignLocalErr)
+	require.LogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 }
 
 func TestProposeBlock_BroadcastsBlock(t *testing.T) {

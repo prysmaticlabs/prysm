@@ -13,58 +13,48 @@ import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 // produce a slashable event.
 service Slasher {
     // Returns any found attester slashings if the passed in attestation conflicts with a validators history.
-    rpc IsSlashableAttestation(ethereum.eth.v1alpha1.IndexedAttestation) returns (AttesterSlashingResponse) {
-        option deprecated = true;
-    };
+    rpc IsSlashableAttestation(ethereum.eth.v1alpha1.IndexedAttestation) returns (AttesterSlashingResponse);
 
     // Returns any found proposer slashings if the passed in proposal conflicts with a validators history.
-    rpc IsSlashableBlock(ethereum.eth.v1alpha1.SignedBeaconBlockHeader) returns (ProposerSlashingResponse) {
-        option deprecated = true;
-    };
+    rpc IsSlashableBlock(ethereum.eth.v1alpha1.SignedBeaconBlockHeader) returns (ProposerSlashingResponse);
 
     // Returns if a given indexed attestation could be slashable when compared to the slashers history for the attesters.
     // This function is read-only, and does not need the indexed attestation to be signed.
-    rpc IsSlashableAttestationNoUpdate(ethereum.eth.v1alpha1.IndexedAttestation) returns (Slashable) {
-        option deprecated = true;
-    };
+    rpc IsSlashableAttestationNoUpdate(ethereum.eth.v1alpha1.IndexedAttestation) returns (Slashable);
 
     // Returns if a given beacon block header could be slashable when compared to the slashers history for the proposer.
     // This function is read-only, and does not need the beacon block header to be signed.
-    rpc IsSlashableBlockNoUpdate(ethereum.eth.v1alpha1.BeaconBlockHeader) returns (Slashable) {
-        option deprecated = true;
-    };
+    rpc IsSlashableBlockNoUpdate(ethereum.eth.v1alpha1.BeaconBlockHeader) returns (Slashable);
 
     // Returns the highest source and target attestation for validator indexes that have been observed by the slasher.
-    rpc HighestAttestations(HighestAttestationRequest) returns (HighestAttestationResponse) {
-        option deprecated = true;
-    };
+    rpc HighestAttestations(HighestAttestationRequest) returns (HighestAttestationResponse);
 
 }
 
 message HighestAttestationRequest {
-    repeated uint64 validator_ids = 1 [deprecated = true];
+    repeated uint64 validator_ids = 1;
 }
 
 message HighestAttestationResponse {
-    repeated HighestAttestation attestations = 1 [deprecated = true];
+    repeated HighestAttestation attestations = 1;
 }
 
 message HighestAttestation {
-    uint64 validator_id = 1 [deprecated = true];
-    uint64 highest_source_epoch = 2 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Epoch", deprecated = true];
+    uint64 validator_id = 1;
+    uint64 highest_source_epoch = 2 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Epoch"];
     uint64 highest_target_epoch = 3 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Epoch"];
 }
 
 message ProposerSlashingResponse {
-    repeated ethereum.eth.v1alpha1.ProposerSlashing proposer_slashing = 1 [deprecated = true];
+    repeated ethereum.eth.v1alpha1.ProposerSlashing proposer_slashing = 1;
 }
 
 message Slashable {
-    bool slashable = 1 [deprecated = true];
+    bool slashable = 1;
 }
 
 message AttesterSlashingResponse {
-    repeated ethereum.eth.v1alpha1.AttesterSlashing attester_slashing = 1 [deprecated = true];
+    repeated ethereum.eth.v1alpha1.AttesterSlashing attester_slashing = 1;
 }
 
 // ProposalHistory defines the structure for recording a validator's historical proposals.
@@ -72,8 +62,8 @@ message AttesterSlashingResponse {
 // epoch of the bitlist, we can easily store which epochs a validator has proposed
 // a block for while pruning the older data.
 message ProposalHistory {
-    bytes epoch_bits = 1 [(gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist", deprecated = true];
-    uint64 latest_epoch_written = 2 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Epoch", deprecated = true];
+    bytes epoch_bits = 1 [(gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
+    uint64 latest_epoch_written = 2 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Epoch"];
 }
 
 // AttestationHistory defines the structure for recording a validator's historical attestation.
@@ -82,6 +72,6 @@ message ProposalHistory {
 // Using an uint64 to mark the latest written epoch, we can safely perform a rolling prune whenever
 // the history is updated.
 message AttestationHistory {
-    map<uint64, uint64> target_to_source = 1 [deprecated = true];
-    uint64 latest_epoch_written = 2 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Epoch", deprecated = true];
+    map<uint64, uint64> target_to_source = 1;
+    uint64 latest_epoch_written = 2 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Epoch"];
 }

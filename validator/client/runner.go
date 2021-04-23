@@ -10,6 +10,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	"go.opencensus.io/trace"
@@ -37,6 +38,11 @@ func run(ctx context.Context, v iface.Validator) {
 		// log.Fatalf will prevent defer from being called
 		cleanup()
 		log.Fatalf("Wallet is not ready: %v", err)
+	}
+	if featureconfig.Get().SlasherProtection {
+		if err := v.SlasherReady(ctx); err != nil {
+			log.Fatalf("Slasher is not ready: %v", err)
+		}
 	}
 	ticker := time.NewTicker(backOffPeriod)
 	defer ticker.Stop()

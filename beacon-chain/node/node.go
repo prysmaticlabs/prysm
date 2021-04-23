@@ -21,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/slasherkv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
@@ -33,7 +32,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
-	"github.com/prysmaticlabs/prysm/beacon-chain/slasher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	regularsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
@@ -59,25 +57,22 @@ const testSkipPowFlag = "test-skip-pow"
 // full PoS node. It handles the lifecycle of the entire system and registers
 // services to a service registry.
 type BeaconNode struct {
-	cliCtx                  *cli.Context
-	ctx                     context.Context
-	cancel                  context.CancelFunc
-	services                *shared.ServiceRegistry
-	lock                    sync.RWMutex
-	stop                    chan struct{} // Channel to wait for termination notifications.
-	db                      db.Database
-	slasherDB               db.SlasherDatabase
-	attestationPool         attestations.Pool
-	exitPool                voluntaryexits.PoolManager
-	slashingsPool           slashings.PoolManager
-	depositCache            *depositcache.DepositCache
-	stateFeed               *event.Feed
-	blockFeed               *event.Feed
-	opFeed                  *event.Feed
-	slasherBlockHeadersFeed *event.Feed
-	slasherAttestationsFeed *event.Feed
-	forkChoiceStore         forkchoice.ForkChoicer
-	stateGen                *stategen.State
+	cliCtx          *cli.Context
+	ctx             context.Context
+	cancel          context.CancelFunc
+	services        *shared.ServiceRegistry
+	lock            sync.RWMutex
+	stop            chan struct{} // Channel to wait for termination notifications.
+	db              db.Database
+	attestationPool attestations.Pool
+	exitPool        voluntaryexits.PoolManager
+	slashingsPool   slashings.PoolManager
+	depositCache    *depositcache.DepositCache
+	stateFeed       *event.Feed
+	blockFeed       *event.Feed
+	opFeed          *event.Feed
+	forkChoiceStore forkchoice.ForkChoicer
+	stateGen        *stategen.State
 }
 
 // New creates a new node instance, sets up configuration options, and registers
@@ -100,19 +95,17 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 
 	ctx, cancel := context.WithCancel(cliCtx.Context)
 	beacon := &BeaconNode{
-		cliCtx:                  cliCtx,
-		ctx:                     ctx,
-		cancel:                  cancel,
-		services:                registry,
-		stop:                    make(chan struct{}),
-		stateFeed:               new(event.Feed),
-		blockFeed:               new(event.Feed),
-		opFeed:                  new(event.Feed),
-		slasherBlockHeadersFeed: new(event.Feed),
-		slasherAttestationsFeed: new(event.Feed),
-		attestationPool:         attestations.NewPool(),
-		exitPool:                voluntaryexits.NewPool(),
-		slashingsPool:           slashings.NewPool(),
+		cliCtx:          cliCtx,
+		ctx:             ctx,
+		cancel:          cancel,
+		services:        registry,
+		stop:            make(chan struct{}),
+		stateFeed:       new(event.Feed),
+		blockFeed:       new(event.Feed),
+		opFeed:          new(event.Feed),
+		attestationPool: attestations.NewPool(),
+		exitPool:        voluntaryexits.NewPool(),
+		slashingsPool:   slashings.NewPool(),
 	}
 
 	depositAddress, err := registration.DepositContractAddress()
@@ -121,12 +114,6 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 	}
 	if err := beacon.startDB(cliCtx, depositAddress); err != nil {
 		return nil, err
-	}
-
-	if featureconfig.Get().EnableSlasher {
-		if err := beacon.startSlasherDB(cliCtx); err != nil {
-			return nil, err
-		}
 	}
 
 	beacon.startStateGen()
@@ -159,12 +146,6 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 
 	if err := beacon.registerSyncService(); err != nil {
 		return nil, err
-	}
-
-	if featureconfig.Get().EnableSlasher {
-		if err := beacon.registerSlasherService(); err != nil {
-			return nil, err
-		}
 	}
 
 	if err := beacon.registerRPCService(); err != nil {
@@ -325,6 +306,10 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 		}
 	}
 
+	if err := b.db.EnsureEmbeddedGenesis(b.ctx); err != nil {
+		return err
+	}
+
 	knownContract, err := b.db.DepositContractAddress(b.ctx)
 	if err != nil {
 		return err
@@ -343,50 +328,6 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 	}
 	log.Infof("Deposit contract: %#x", addr.Bytes())
 
-	return b.db.EnsureEmbeddedGenesis(b.ctx)
-}
-
-func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
-	baseDir := cliCtx.String(cmd.DataDirFlag.Name)
-	dbPath := filepath.Join(baseDir, kv.BeaconNodeDbDirName)
-	clearDB := cliCtx.Bool(cmd.ClearDB.Name)
-	forceClearDB := cliCtx.Bool(cmd.ForceClearDB.Name)
-
-	log.WithField("database-path", dbPath).Info("Checking DB")
-
-	d, err := db.NewSlasherDB(b.ctx, dbPath, &slasherkv.Config{
-		InitialMMapSize: cliCtx.Int(cmd.BoltMMapInitialSizeFlag.Name),
-	})
-	if err != nil {
-		return err
-	}
-	clearDBConfirmed := false
-	if clearDB && !forceClearDB {
-		actionText := "This will delete your beacon chain database stored in your data directory. " +
-			"Your database backups will not be removed - do you want to proceed? (Y/N)"
-		deniedText := "Database will not be deleted. No changes have been made."
-		clearDBConfirmed, err = cmd.ConfirmAction(actionText, deniedText)
-		if err != nil {
-			return err
-		}
-	}
-	if clearDBConfirmed || forceClearDB {
-		log.Warning("Removing database")
-		if err := d.Close(); err != nil {
-			return errors.Wrap(err, "could not close db prior to clearing")
-		}
-		if err := d.ClearDB(); err != nil {
-			return errors.Wrap(err, "could not clear database")
-		}
-		d, err = db.NewSlasherDB(b.ctx, dbPath, &slasherkv.Config{
-			InitialMMapSize: cliCtx.Int(cmd.BoltMMapInitialSizeFlag.Name),
-		})
-		if err != nil {
-			return errors.Wrap(err, "could not create new database")
-		}
-	}
-
-	b.slasherDB = d
 	return nil
 }
 
@@ -476,7 +417,6 @@ func (b *BeaconNode) registerBlockchainService() error {
 		ForkChoiceStore:         b.forkChoiceStore,
 		OpsService:              opsService,
 		StateGen:                b.stateGen,
-		SlasherAttestationsFeed: b.slasherAttestationsFeed,
 		WeakSubjectivityCheckpt: wsCheckpt,
 	})
 	if err != nil {
@@ -529,19 +469,17 @@ func (b *BeaconNode) registerSyncService() error {
 	}
 
 	rs := regularsync.NewService(b.ctx, &regularsync.Config{
-		DB:                      b.db,
-		P2P:                     b.fetchP2P(),
-		Chain:                   chainService,
-		InitialSync:             initSync,
-		StateNotifier:           b,
-		BlockNotifier:           b,
-		AttestationNotifier:     b,
-		AttPool:                 b.attestationPool,
-		ExitPool:                b.exitPool,
-		SlashingPool:            b.slashingsPool,
-		StateGen:                b.stateGen,
-		SlasherAttestationsFeed: b.slasherAttestationsFeed,
-		SlasherBlockHeadersFeed: b.slasherBlockHeadersFeed,
+		DB:                  b.db,
+		P2P:                 b.fetchP2P(),
+		Chain:               chainService,
+		InitialSync:         initSync,
+		StateNotifier:       b,
+		BlockNotifier:       b,
+		AttestationNotifier: b,
+		AttPool:             b.attestationPool,
+		ExitPool:            b.exitPool,
+		SlashingPool:        b.slashingsPool,
+		StateGen:            b.stateGen,
 	})
 
 	return b.services.RegisterService(rs)
@@ -563,28 +501,6 @@ func (b *BeaconNode) registerInitialSyncService() error {
 	return b.services.RegisterService(is)
 }
 
-func (b *BeaconNode) registerSlasherService() error {
-	var chainService *blockchain.Service
-	if err := b.services.FetchService(&chainService); err != nil {
-		return err
-	}
-
-	slasherSrv, err := slasher.New(b.ctx, &slasher.ServiceConfig{
-		IndexedAttestationsFeed: b.slasherAttestationsFeed,
-		BeaconBlockHeadersFeed:  b.slasherBlockHeadersFeed,
-		Database:                b.slasherDB,
-		StateNotifier:           b,
-		AttestationStateFetcher: chainService,
-		StateGen:                b.stateGen,
-		SlashingPoolInserter:    b.slashingsPool,
-		HeadStateFetcher:        chainService,
-	})
-	if err != nil {
-		return err
-	}
-	return b.services.RegisterService(slasherSrv)
-}
-
 func (b *BeaconNode) registerRPCService() error {
 	var chainService *blockchain.Service
 	if err := b.services.FetchService(&chainService); err != nil {
@@ -599,13 +515,6 @@ func (b *BeaconNode) registerRPCService() error {
 	var syncService *initialsync.Service
 	if err := b.services.FetchService(&syncService); err != nil {
 		return err
-	}
-
-	var slasherService *slasher.Service
-	if featureconfig.Get().EnableSlasher {
-		if err := b.services.FetchService(&slasherService); err != nil {
-			return err
-		}
 	}
 
 	genesisValidators := b.cliCtx.Uint64(flags.InteropNumValidatorsFlag.Name)
@@ -658,7 +567,6 @@ func (b *BeaconNode) registerRPCService() error {
 		AttestationsPool:        b.attestationPool,
 		ExitPool:                b.exitPool,
 		SlashingsPool:           b.slashingsPool,
-		SlashingChecker:         slasherService,
 		POWChainService:         web3Service,
 		ChainStartFetcher:       chainStartFetcher,
 		MockEth1Votes:           mockEth1DataVotes,

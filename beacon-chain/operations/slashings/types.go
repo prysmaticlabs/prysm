@@ -9,8 +9,11 @@ import (
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 )
 
-// PoolInserter is capable of inserting new slashing objects into the operations pool.
-type PoolInserter interface {
+// PoolManager maintains a pool of pending and recently included attester and proposer slashings.
+// This pool is used by proposers to insert data into new blocks.
+type PoolManager interface {
+	PendingAttesterSlashings(ctx context.Context, state iface.ReadOnlyBeaconState, noLimit bool) []*ethpb.AttesterSlashing
+	PendingProposerSlashings(ctx context.Context, state iface.ReadOnlyBeaconState, noLimit bool) []*ethpb.ProposerSlashing
 	InsertAttesterSlashing(
 		ctx context.Context,
 		state iface.ReadOnlyBeaconState,
@@ -18,17 +21,9 @@ type PoolInserter interface {
 	) error
 	InsertProposerSlashing(
 		ctx context.Context,
-		state iface.ReadOnlyBeaconState,
+		state iface.BeaconState,
 		slashing *ethpb.ProposerSlashing,
 	) error
-}
-
-// PoolManager maintains a pool of pending and recently included attester and proposer slashings.
-// This pool is used by proposers to insert data into new blocks.
-type PoolManager interface {
-	PoolInserter
-	PendingAttesterSlashings(ctx context.Context, state iface.ReadOnlyBeaconState, noLimit bool) []*ethpb.AttesterSlashing
-	PendingProposerSlashings(ctx context.Context, state iface.ReadOnlyBeaconState, noLimit bool) []*ethpb.ProposerSlashing
 	MarkIncludedAttesterSlashing(as *ethpb.AttesterSlashing)
 	MarkIncludedProposerSlashing(ps *ethpb.ProposerSlashing)
 }

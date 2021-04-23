@@ -16,9 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
@@ -86,32 +84,6 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationReject
 	}
 
-	if featureconfig.Get().EnableSlasher {
-		// Feed the indexed attestation to slasher if enabled. This action
-		// is done in the background to avoid adding more load to this critical code path.
-		go func() {
-			preState, err := s.cfg.Chain.AttestationTargetState(ctx, att.Data.Target)
-			if err != nil {
-				log.WithError(err).Error("Could not retrieve pre state")
-				traceutil.AnnotateError(span, err)
-				return
-			}
-			committee, err := helpers.BeaconCommitteeFromState(preState, att.Data.Slot, att.Data.CommitteeIndex)
-			if err != nil {
-				log.WithError(err).Error("Could not get attestation committee")
-				traceutil.AnnotateError(span, err)
-				return
-			}
-			indexedAtt, err := attestationutil.ConvertToIndexed(ctx, att, committee)
-			if err != nil {
-				log.WithError(err).Error("Could not convert to indexed attestation")
-				traceutil.AnnotateError(span, err)
-				return
-			}
-			s.cfg.SlasherAttestationsFeed.Send(indexedAtt)
-		}()
-	}
-
 	// Verify this the first attestation received for the participating validator for the slot.
 	if s.hasSeenCommitteeIndicesSlot(att.Data.Slot, att.Data.CommitteeIndex, att.AggregationBits) {
 		return pubsub.ValidationIgnore
@@ -141,7 +113,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationReject
 	}
 
-	preState, err := s.cfg.Chain.AttestationTargetState(ctx, att.Data.Target)
+	preState, err := s.cfg.Chain.AttestationPreState(ctx, att)
 	if err != nil {
 		log.WithError(err).Error("Could not to retrieve pre state")
 		traceutil.AnnotateError(span, err)

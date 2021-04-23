@@ -36,6 +36,7 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 		EpochsToRun:    uint64(epochsToRun),
 		TestSync:       true,
 		TestDeposits:   true,
+		TestSlasher:    true,
 		UsePprof:       !longRunning,
 		Evaluators: []types.Evaluator{
 			ev.PeersConnect,
