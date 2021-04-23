@@ -65,7 +65,7 @@ func TestPreBlockSignLocalValidation_PreventsLowerThanMinProposal(t *testing.T) 
 func TestPreBlockSignLocalValidation(t *testing.T) {
 	ctx := context.Background()
 	config := &featureconfig.Flags{
-		SlasherProtection: false,
+		RemoteSlasherProtection: false,
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
@@ -117,7 +117,7 @@ func TestPreBlockSignLocalValidation(t *testing.T) {
 
 func TestPreBlockSignValidation(t *testing.T) {
 	config := &featureconfig.Flags{
-		SlasherProtection: true,
+		RemoteSlasherProtection: true,
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
@@ -139,7 +139,7 @@ func TestPreBlockSignValidation(t *testing.T) {
 
 func TestPostBlockSignUpdate(t *testing.T) {
 	config := &featureconfig.Flags{
-		SlasherProtection: true,
+		RemoteSlasherProtection: true,
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()

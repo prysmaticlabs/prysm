@@ -64,7 +64,7 @@ func TestCancelledContext_WaitsForActivation(t *testing.T) {
 func TestCancelledContext_ChecksSlasherReady(t *testing.T) {
 	v := &testutil.FakeValidator{Keymanager: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	cfg := &featureconfig.Flags{
-		SlasherProtection: true,
+		RemoteSlasherProtection: true,
 	}
 	reset := featureconfig.InitWithReset(cfg)
 	defer reset()

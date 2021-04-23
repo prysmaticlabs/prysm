@@ -225,7 +225,7 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 func (v *validator) SlasherReady(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.SlasherReady")
 	defer span.End()
-	if featureconfig.Get().RemoteSlashingProtection {
+	if featureconfig.Get().RemoteSlasherProtection {
 		err := v.protector.Status()
 		if err == nil {
 			return nil

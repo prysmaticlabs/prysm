@@ -58,7 +58,7 @@ func (v *validator) preBlockSignValidations(
 		)
 	}
 
-	if featureconfig.Get().RemoteSlashingProtection && v.protector != nil {
+	if featureconfig.Get().RemoteSlasherProtection && v.protector != nil {
 		blockHdr, err := blockutil.BeaconBlockHeaderFromBlock(block)
 		if err != nil {
 			return errors.Wrap(err, "failed to get block header from block")
@@ -81,7 +81,7 @@ func (v *validator) postBlockSignUpdate(
 	signingRoot [32]byte,
 ) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
-	if featureconfig.Get().RemoteSlashingProtection && v.protector != nil {
+	if featureconfig.Get().RemoteSlasherProtection && v.protector != nil {
 		sbh, err := blockutil.SignedBeaconBlockHeaderFromBlock(block)
 		if err != nil {
 			return errors.Wrap(err, "failed to get block header from block")
