@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
-	log "github.com/sirupsen/logrus"
 )
 
 func (s *Simulator) generateBlockHeadersForSlot(
