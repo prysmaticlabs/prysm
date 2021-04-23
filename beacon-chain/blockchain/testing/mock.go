@@ -288,7 +288,7 @@ func (s *ChainService) ReceiveAttestationNoPubsub(context.Context, *ethpb.Attest
 }
 
 // AttestationPreState mocks AttestationPreState method in chain service.
-func (s *ChainService) AttestationPreState(_ context.Context, _ *ethpb.Attestation) (iface.BeaconState, error) {
+func (s *ChainService) AttestationTargetState(ctx context.Context, attTarget *ethpb.Checkpoint) (iface.BeaconState, error) {
 	return s.State, nil
 }
 
