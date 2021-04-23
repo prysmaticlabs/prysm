@@ -62,6 +62,12 @@ func init() {
 	})
 }
 
+// FuzzP2PRPCStatus wraps BeaconFuzzP2PRPCStatus in a go-fuzz compatible interface
+func FuzzP2PRPCStatus(b []byte) int {
+	BeaconFuzzP2PRPCStatus(b)
+	return 0
+}
+
 // BeaconFuzzP2PRPCStatus implements libfuzzer and beacon fuzz interface.
 func BeaconFuzzP2PRPCStatus(b []byte) {
 	s, err := h.NewStream(context.Background(), p.PeerID(), "/eth2/beacon_chain/req/status/1/ssz_snappy")

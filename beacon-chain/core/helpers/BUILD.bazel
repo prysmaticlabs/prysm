@@ -28,6 +28,7 @@ go_library(
         "//shared/p2putils:__pkg__",
         "//shared/testutil:__pkg__",
         "//slasher:__subpackages__",
+        "//spectest:__subpackages__",
         "//tools:__subpackages__",
         "//validator:__subpackages__",
     ],
