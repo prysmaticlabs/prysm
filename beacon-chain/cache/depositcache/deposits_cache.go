@@ -179,7 +179,7 @@ func (dc *DepositCache) DepositsNumberAndRootAtHeight(ctx context.Context, block
 		return dc.deposits[i].Eth1BlockHeight >= height
 	})
 	if idx < len(dc.depisits) && dc.deposits[idx].Eth1BlockHeight == height {
-		return uint64(dc.deposits[i].Index) + 1, bytesutil.ToBytes32(dc.deposits[i].DepositRoot)
+		return uint64(dc.deposits[idx].Index) + 1, bytesutil.ToBytes32(dc.deposits[idx].DepositRoot)
 	}
 	return 0, params.BeaconConfig().ZeroHash
 }
