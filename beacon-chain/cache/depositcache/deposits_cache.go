@@ -174,10 +174,12 @@ func (dc *DepositCache) AllDeposits(ctx context.Context, untilBlk *big.Int) []*e
 func (dc *DepositCache) DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight *big.Int) (uint64, [32]byte) {
 	dc.depositsLock.RLock()
 	defer dc.depositsLock.RUnlock()
-	for i := len(dc.deposits) - 1; i >= 0; i-- {
-		if dc.deposits[i].Eth1BlockHeight <= blockHeight.Uint64() {
-			return uint64(dc.deposits[i].Index) + 1, bytesutil.ToBytes32(dc.deposits[i].DepositRoot)
-		}
+	height := blockHeight.Uint64()
+	idx := sort.Search(len(dc.deposits), func(i int) bool {
+		return dc.deposits[i].Eth1BlockHeight >= height
+	}
+	if idx < len(dc.depisits) && dc.deposits[idx].Eth1BlockHeight == height {
+		return uint64(dc.deposits[i].Index) + 1, bytesutil.ToBytes32(dc.deposits[i].DepositRoot)
 	}
 	return 0, params.BeaconConfig().ZeroHash
 }
