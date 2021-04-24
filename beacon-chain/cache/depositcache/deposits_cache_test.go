@@ -162,22 +162,22 @@ func TestDepositsNumberAndRootAtHeight(t *testing.T) {
 		dc.deposits = []*dbpb.DepositContainer{
 			{
 				Eth1BlockHeight: 10,
-				Index:           1,
+				Index:           0,
 				Deposit:         &ethpb.Deposit{},
 			},
 			{
 				Eth1BlockHeight: 10,
-				Index:           2,
+				Index:           1,
 				Deposit:         &ethpb.Deposit{},
 			},
 			{
 				Eth1BlockHeight: 11,
-				Index:           3,
+				Index:           2,
 				Deposit:         &ethpb.Deposit{},
 			},
 			{
 				Eth1BlockHeight: 13,
-				Index:           4,
+				Index:           3,
 				Deposit:         &ethpb.Deposit{},
 				DepositRoot:     wantedRoot,
 			},
@@ -193,7 +193,7 @@ func TestDepositsNumberAndRootAtHeight(t *testing.T) {
 		dc.deposits = []*dbpb.DepositContainer{
 			{
 				Eth1BlockHeight: 10,
-				Index:           1,
+				Index:           0,
 				Deposit:         &ethpb.Deposit{},
 				DepositRoot:     wantedRoot,
 			},
@@ -209,18 +209,18 @@ func TestDepositsNumberAndRootAtHeight(t *testing.T) {
 		dc.deposits = []*dbpb.DepositContainer{
 			{
 				Eth1BlockHeight: 8,
-				Index:           1,
+				Index:           0,
 				Deposit:         &ethpb.Deposit{},
 			},
 			{
 				Eth1BlockHeight: 9,
-				Index:           2,
+				Index:           1,
 				Deposit:         &ethpb.Deposit{},
 				DepositRoot:     wantedRoot,
 			},
 			{
 				Eth1BlockHeight: 11,
-				Index:           3,
+				Index:           2,
 				Deposit:         &ethpb.Deposit{},
 			},
 		}
@@ -235,7 +235,7 @@ func TestDepositsNumberAndRootAtHeight(t *testing.T) {
 		dc.deposits = []*dbpb.DepositContainer{
 			{
 				Eth1BlockHeight: 8,
-				Index:           1,
+				Index:           0,
 				Deposit:         &ethpb.Deposit{},
 				DepositRoot:     wantedRoot,
 			},
@@ -251,7 +251,7 @@ func TestDepositsNumberAndRootAtHeight(t *testing.T) {
 		dc.deposits = []*dbpb.DepositContainer{
 			{
 				Eth1BlockHeight: 8,
-				Index:           1,
+				Index:           0,
 				Deposit:         &ethpb.Deposit{},
 				DepositRoot:     wantedRoot,
 			},
@@ -267,28 +267,28 @@ func TestDepositsNumberAndRootAtHeight(t *testing.T) {
 		dc.deposits = []*dbpb.DepositContainer{
 			{
 				Eth1BlockHeight: 8,
-				Index:           1,
+				Index:           0,
 				Deposit:         &ethpb.Deposit{},
 			},
 			{
 				Eth1BlockHeight: 8,
-				Index:           2,
+				Index:           1,
 				Deposit:         &ethpb.Deposit{},
 			},
 			{
 				Eth1BlockHeight: 9,
-				Index:           3,
+				Index:           2,
 				Deposit:         &ethpb.Deposit{},
 				DepositRoot:     wantedRoot,
 			},
 			{
 				Eth1BlockHeight: 10,
-				Index:           4,
+				Index:           3,
 				Deposit:         &ethpb.Deposit{},
 			},
 			{
 				Eth1BlockHeight: 10,
-				Index:           5,
+				Index:           4,
 				Deposit:         &ethpb.Deposit{},
 			},
 		}
