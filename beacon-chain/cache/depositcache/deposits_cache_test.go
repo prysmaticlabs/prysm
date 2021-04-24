@@ -155,30 +155,36 @@ func TestAllDeposits_FiltersDepositUpToAndIncludingBlockNumber(t *testing.T) {
 }
 
 func TestDepositsNumberAndRootAtHeight(t *testing.T) {
+	wantedRoot := bytesutil.PadTo([]byte("root"), 32)
 	t.Run("requesting_last_item_works", func(t *testing.T) {
 		dc, err := New()
 		require.NoError(t, err)
-
 		dc.deposits = []*dbpb.DepositContainer{
 			{
 				Eth1BlockHeight: 10,
+				Index:           1,
 				Deposit:         &ethpb.Deposit{},
 			},
 			{
 				Eth1BlockHeight: 10,
+				Index:           2,
 				Deposit:         &ethpb.Deposit{},
 			},
 			{
 				Eth1BlockHeight: 11,
+				Index:           3,
 				Deposit:         &ethpb.Deposit{},
 			},
 			{
 				Eth1BlockHeight: 13,
+				Index:           4,
 				Deposit:         &ethpb.Deposit{},
+				DepositRoot:     wantedRoot,
 			},
 		}
-		n, _ := dc.DepositsNumberAndRootAtHeight(context.Background(), big.NewInt(13))
+		n, root := dc.DepositsNumberAndRootAtHeight(context.Background(), big.NewInt(13))
 		assert.Equal(t, 4, int(n))
+		require.DeepEqual(t, wantedRoot, root[:])
 	})
 	t.Run("only_one_item", func(t *testing.T) {
 		dc, err := New()
@@ -187,11 +193,14 @@ func TestDepositsNumberAndRootAtHeight(t *testing.T) {
 		dc.deposits = []*dbpb.DepositContainer{
 			{
 				Eth1BlockHeight: 10,
+				Index:           1,
 				Deposit:         &ethpb.Deposit{},
+				DepositRoot:     wantedRoot,
 			},
 		}
-		n, _ := dc.DepositsNumberAndRootAtHeight(context.Background(), big.NewInt(10))
+		n, root := dc.DepositsNumberAndRootAtHeight(context.Background(), big.NewInt(10))
 		assert.Equal(t, 1, int(n))
+		require.DeepEqual(t, wantedRoot, root[:])
 	})
 	t.Run("none_at_height_some_below", func(t *testing.T) {
 		dc, err := New()
@@ -200,19 +209,24 @@ func TestDepositsNumberAndRootAtHeight(t *testing.T) {
 		dc.deposits = []*dbpb.DepositContainer{
 			{
 				Eth1BlockHeight: 8,
+				Index:           1,
 				Deposit:         &ethpb.Deposit{},
 			},
 			{
 				Eth1BlockHeight: 9,
+				Index:           2,
 				Deposit:         &ethpb.Deposit{},
+				DepositRoot:     wantedRoot,
 			},
 			{
 				Eth1BlockHeight: 11,
+				Index:           3,
 				Deposit:         &ethpb.Deposit{},
 			},
 		}
-		n, _ := dc.DepositsNumberAndRootAtHeight(context.Background(), big.NewInt(10))
+		n, root := dc.DepositsNumberAndRootAtHeight(context.Background(), big.NewInt(10))
 		assert.Equal(t, 2, int(n))
+		require.DeepEqual(t, wantedRoot, root[:])
 	})
 	t.Run("none_at_height_none_below", func(t *testing.T) {
 		dc, err := New()
@@ -221,11 +235,14 @@ func TestDepositsNumberAndRootAtHeight(t *testing.T) {
 		dc.deposits = []*dbpb.DepositContainer{
 			{
 				Eth1BlockHeight: 8,
+				Index:           1,
 				Deposit:         &ethpb.Deposit{},
+				DepositRoot:     wantedRoot,
 			},
 		}
-		n, _ := dc.DepositsNumberAndRootAtHeight(context.Background(), big.NewInt(7))
+		n, root := dc.DepositsNumberAndRootAtHeight(context.Background(), big.NewInt(7))
 		assert.Equal(t, 0, int(n))
+		require.DeepEqual(t, params.BeaconConfig().ZeroHash, root)
 	})
 	t.Run("none_at_height_one_below", func(t *testing.T) {
 		dc, err := New()
@@ -234,11 +251,14 @@ func TestDepositsNumberAndRootAtHeight(t *testing.T) {
 		dc.deposits = []*dbpb.DepositContainer{
 			{
 				Eth1BlockHeight: 8,
+				Index:           1,
 				Deposit:         &ethpb.Deposit{},
+				DepositRoot:     wantedRoot,
 			},
 		}
-		n, _ := dc.DepositsNumberAndRootAtHeight(context.Background(), big.NewInt(10))
+		n, root := dc.DepositsNumberAndRootAtHeight(context.Background(), big.NewInt(10))
 		assert.Equal(t, 1, int(n))
+		require.DeepEqual(t, wantedRoot, root[:])
 	})
 	t.Run("some_greater_some_lower", func(t *testing.T) {
 		dc, err := New()
@@ -247,27 +267,34 @@ func TestDepositsNumberAndRootAtHeight(t *testing.T) {
 		dc.deposits = []*dbpb.DepositContainer{
 			{
 				Eth1BlockHeight: 8,
+				Index:           1,
 				Deposit:         &ethpb.Deposit{},
 			},
 			{
 				Eth1BlockHeight: 8,
+				Index:           2,
 				Deposit:         &ethpb.Deposit{},
 			},
 			{
 				Eth1BlockHeight: 9,
+				Index:           3,
+				Deposit:         &ethpb.Deposit{},
+				DepositRoot:     wantedRoot,
+			},
+			{
+				Eth1BlockHeight: 10,
+				Index:           4,
 				Deposit:         &ethpb.Deposit{},
 			},
 			{
 				Eth1BlockHeight: 10,
-				Deposit:         &ethpb.Deposit{},
-			},
-			{
-				Eth1BlockHeight: 10,
+				Index:           5,
 				Deposit:         &ethpb.Deposit{},
 			},
 		}
-		n, _ := dc.DepositsNumberAndRootAtHeight(context.Background(), big.NewInt(9))
+		n, root := dc.DepositsNumberAndRootAtHeight(context.Background(), big.NewInt(9))
 		assert.Equal(t, 3, int(n))
+		require.DeepEqual(t, wantedRoot, root[:])
 	})
 }
 
