@@ -154,121 +154,121 @@ func TestAllDeposits_FiltersDepositUpToAndIncludingBlockNumber(t *testing.T) {
 	assert.Equal(t, 5, len(d))
 }
 
-func TestDepositsNumberAndRootAtHeight_ReturnsAppropriateCountAndRoot(t *testing.T) {
-	dc, err := New()
-	require.NoError(t, err)
+func TestDepositsNumberAndRootAtHeight(t *testing.T) {
+	t.Run("requesting_last_item_works", func(t *testing.T) {
+		dc, err := New()
+		require.NoError(t, err)
 
-	dc.deposits = []*dbpb.DepositContainer{
-		{
-			Eth1BlockHeight: 10,
-			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
-					PublicKey:             make([]byte, 48),
-					WithdrawalCredentials: make([]byte, 32),
-					Signature:             make([]byte, 96),
-				},
+		dc.deposits = []*dbpb.DepositContainer{
+			{
+				Eth1BlockHeight: 10,
+				Deposit:         &ethpb.Deposit{},
 			},
-		},
-		{
-			Eth1BlockHeight: 10,
-			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
-					PublicKey:             make([]byte, 48),
-					WithdrawalCredentials: make([]byte, 32),
-					Signature:             make([]byte, 96),
-				},
+			{
+				Eth1BlockHeight: 10,
+				Deposit:         &ethpb.Deposit{},
 			},
-		},
-		{
-			Eth1BlockHeight: 10,
-			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
-					PublicKey:             make([]byte, 48),
-					WithdrawalCredentials: make([]byte, 32),
-					Signature:             make([]byte, 96),
-				},
+			{
+				Eth1BlockHeight: 11,
+				Deposit:         &ethpb.Deposit{},
 			},
-		},
-		{
-			Eth1BlockHeight: 10,
-			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
-					PublicKey:             make([]byte, 48),
-					WithdrawalCredentials: make([]byte, 32),
-					Signature:             make([]byte, 96),
-				},
+			{
+				Eth1BlockHeight: 13,
+				Deposit:         &ethpb.Deposit{},
 			},
-		},
-		{
-			Eth1BlockHeight: 11,
-			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
-					PublicKey:             make([]byte, 48),
-					WithdrawalCredentials: make([]byte, 32),
-					Signature:             make([]byte, 96),
-				},
-			},
-			DepositRoot: bytesutil.PadTo([]byte("root"), 32),
-		},
-		{
-			Eth1BlockHeight: 12,
-			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
-					PublicKey:             make([]byte, 48),
-					WithdrawalCredentials: make([]byte, 32),
-					Signature:             make([]byte, 96),
-				},
-			},
-		},
-		{
-			Eth1BlockHeight: 12,
-			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
-					PublicKey:             make([]byte, 48),
-					WithdrawalCredentials: make([]byte, 32),
-					Signature:             make([]byte, 96),
-				},
-			},
-		},
-	}
+		}
+		n, _ := dc.DepositsNumberAndRootAtHeight(context.Background(), big.NewInt(13))
+		assert.Equal(t, 4, int(n))
+	})
+	t.Run("only_one_item", func(t *testing.T) {
+		dc, err := New()
+		require.NoError(t, err)
 
-	n, root := dc.DepositsNumberAndRootAtHeight(context.Background(), big.NewInt(11))
-	assert.Equal(t, 5, int(n))
-	assert.Equal(t, bytesutil.ToBytes32([]byte("root")), root)
-}
-
-func TestDepositsNumberAndRootAtHeight_ReturnsEmptyTrieIfBlockHeightLessThanOldestDeposit(t *testing.T) {
-	dc, err := New()
-	require.NoError(t, err)
-
-	dc.deposits = []*dbpb.DepositContainer{
-		{
-			Eth1BlockHeight: 10,
-			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
-					PublicKey:             make([]byte, 48),
-					WithdrawalCredentials: make([]byte, 32),
-					Signature:             make([]byte, 96),
-				},
+		dc.deposits = []*dbpb.DepositContainer{
+			{
+				Eth1BlockHeight: 10,
+				Deposit:         &ethpb.Deposit{},
 			},
-			DepositRoot: bytesutil.PadTo([]byte("root"), 32),
-		},
-		{
-			Eth1BlockHeight: 11,
-			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
-					PublicKey:             make([]byte, 48),
-					WithdrawalCredentials: make([]byte, 32),
-					Signature:             make([]byte, 96),
-				},
-			},
-			DepositRoot: bytesutil.PadTo([]byte("root"), 32),
-		},
-	}
+		}
+		n, _ := dc.DepositsNumberAndRootAtHeight(context.Background(), big.NewInt(10))
+		assert.Equal(t, 1, int(n))
+	})
+	t.Run("none_at_height_some_below", func(t *testing.T) {
+		dc, err := New()
+		require.NoError(t, err)
 
-	n, root := dc.DepositsNumberAndRootAtHeight(context.Background(), big.NewInt(2))
-	assert.Equal(t, 0, int(n))
-	assert.Equal(t, [32]byte{}, root)
+		dc.deposits = []*dbpb.DepositContainer{
+			{
+				Eth1BlockHeight: 8,
+				Deposit:         &ethpb.Deposit{},
+			},
+			{
+				Eth1BlockHeight: 9,
+				Deposit:         &ethpb.Deposit{},
+			},
+			{
+				Eth1BlockHeight: 11,
+				Deposit:         &ethpb.Deposit{},
+			},
+		}
+		n, _ := dc.DepositsNumberAndRootAtHeight(context.Background(), big.NewInt(10))
+		assert.Equal(t, 2, int(n))
+	})
+	t.Run("none_at_height_none_below", func(t *testing.T) {
+		dc, err := New()
+		require.NoError(t, err)
+
+		dc.deposits = []*dbpb.DepositContainer{
+			{
+				Eth1BlockHeight: 8,
+				Deposit:         &ethpb.Deposit{},
+			},
+		}
+		n, _ := dc.DepositsNumberAndRootAtHeight(context.Background(), big.NewInt(7))
+		assert.Equal(t, 0, int(n))
+	})
+	t.Run("none_at_height_one_below", func(t *testing.T) {
+		dc, err := New()
+		require.NoError(t, err)
+
+		dc.deposits = []*dbpb.DepositContainer{
+			{
+				Eth1BlockHeight: 8,
+				Deposit:         &ethpb.Deposit{},
+			},
+		}
+		n, _ := dc.DepositsNumberAndRootAtHeight(context.Background(), big.NewInt(10))
+		assert.Equal(t, 1, int(n))
+	})
+	t.Run("some_greater_some_lower", func(t *testing.T) {
+		dc, err := New()
+		require.NoError(t, err)
+
+		dc.deposits = []*dbpb.DepositContainer{
+			{
+				Eth1BlockHeight: 8,
+				Deposit:         &ethpb.Deposit{},
+			},
+			{
+				Eth1BlockHeight: 8,
+				Deposit:         &ethpb.Deposit{},
+			},
+			{
+				Eth1BlockHeight: 9,
+				Deposit:         &ethpb.Deposit{},
+			},
+			{
+				Eth1BlockHeight: 10,
+				Deposit:         &ethpb.Deposit{},
+			},
+			{
+				Eth1BlockHeight: 10,
+				Deposit:         &ethpb.Deposit{},
+			},
+		}
+		n, _ := dc.DepositsNumberAndRootAtHeight(context.Background(), big.NewInt(9))
+		assert.Equal(t, 3, int(n))
+	})
 }
 
 func TestDepositByPubkey_ReturnsFirstMatchingDeposit(t *testing.T) {
