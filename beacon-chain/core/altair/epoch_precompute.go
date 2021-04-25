@@ -61,6 +61,43 @@ func InitializeEpochValidators(ctx context.Context, state iface.BeaconStateAltai
 	return pValidators, bal, nil
 }
 
+// ProcessInactivityScores of beacon chain. This updates inactivity scores of beacon chain and
+// updates the precompute validator struct for later processing.
+func ProcessInactivityScores(
+	ctx context.Context,
+	state iface.BeaconState,
+	vals []*precompute.Validator,
+) (iface.BeaconState, []*precompute.Validator, error) {
+	inactivityScores, err := state.InactivityScores()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for i, v := range vals {
+		if v.IsPrevEpochTargetAttester && !v.IsSlashed {
+			// Decrease inactivity score when validator gets target correct.
+			if v.InactivityScore > 0 {
+				v.InactivityScore -= 1
+			}
+		} else {
+			prevEpoch := helpers.PrevEpoch(state)
+			finalizedEpoch := state.FinalizedCheckpointEpoch()
+			if helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch) {
+				// Increase validator's inactivity score by bias when validator didn't vote target.
+				v.InactivityScore += params.BeaconConfig().InactivityScoreBias
+
+			}
+		}
+		inactivityScores[i] = v.InactivityScore
+	}
+
+	if err := state.SetInactivityScores(inactivityScores); err != nil {
+		return nil, nil, err
+	}
+
+	return state, vals, nil
+}
+
 // ProcessEpochParticipation processes the epoch participation in state and updates individual validator's pre computes,
 // it also tracks and updates epoch attesting balances.
 func ProcessEpochParticipation(
@@ -150,18 +187,9 @@ func attestationsDelta(state iface.BeaconStateAltair, bal *precompute.Balance, v
 	penalties = make([]uint64, numOfVals)
 	prevEpoch := helpers.PrevEpoch(state)
 	finalizedEpoch := state.FinalizedCheckpointEpoch()
-	inactivityScores, err := state.InactivityScores()
-	if err != nil {
-		return nil, nil, err
-	}
 
 	for i, v := range vals {
 		rewards[i], penalties[i] = attestationDelta(bal, v, prevEpoch, finalizedEpoch)
-		inactivityScores[i] = v.InactivityScore
-	}
-
-	if err := state.SetInactivityScores(inactivityScores); err != nil {
-		return nil, nil, err
 	}
 
 	return rewards, penalties, nil
@@ -203,11 +231,6 @@ func attestationDelta(bal *precompute.Balance, v *precompute.Validator, prevEpoc
 			rewardNumerator := br * params.BeaconConfig().TimelyTargetWeight * (bal.PrevEpochTargetAttested / ebi)
 			r += rewardNumerator / (activeCurrentEpochIncrements * params.BeaconConfig().WeightDenominator)
 		}
-
-		// Decrease inactivity score when validator gets target correct.
-		if v.InactivityScore > 0 {
-			v.InactivityScore -= 1
-		}
 	} else {
 		p += br * params.BeaconConfig().TimelyTargetWeight / params.BeaconConfig().WeightDenominator
 	}
@@ -235,9 +258,6 @@ func attestationDelta(bal *precompute.Balance, v *precompute.Validator, prevEpoc
 
 		// Apply an additional penalty to validators that did not vote on the correct target.
 		if !v.IsPrevEpochTargetAttester {
-			// Increase validator's inactivity score by bias when validator didn't vote target.
-			v.InactivityScore += params.BeaconConfig().InactivityScoreBias
-
 			penaltyNumerator := eb * v.InactivityScore
 			penaltyDenominator := params.BeaconConfig().InactivityScoreBias * params.BeaconConfig().InactivityPenaltyQuotientAltair
 			p += penaltyNumerator / penaltyDenominator

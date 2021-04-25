@@ -200,7 +200,7 @@ func TestProcessRewardsAndPenaltiesPrecompute_InactivityLeak(t *testing.T) {
 	}
 }
 
-func TestProcessRewardsAndPenaltiesPrecompute_UpdateInactivityScores(t *testing.T) {
+func TestProcessInactivityScores_CanProcess(t *testing.T) {
 	s, err := testState()
 	require.NoError(t, err)
 	defaultScore := uint64(5)
@@ -210,7 +210,7 @@ func TestProcessRewardsAndPenaltiesPrecompute_UpdateInactivityScores(t *testing.
 	require.NoError(t, err)
 	validators, balance, err = ProcessEpochParticipation(context.Background(), s, balance, validators)
 	require.NoError(t, err)
-	s, err = ProcessRewardsAndPenaltiesPrecompute(s, balance, validators)
+	s, validators, err = ProcessInactivityScores(context.Background(), s, validators)
 	require.NoError(t, err)
 	inactivityScores, err := s.InactivityScores()
 	require.NoError(t, err)
