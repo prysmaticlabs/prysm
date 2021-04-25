@@ -108,7 +108,7 @@ func ComputeWeakSubjectivityPeriod(st iface.ReadOnlyBeaconState) (types.Epoch, e
 //
 // Reference implementation:
 // https://github.com/ethereum/eth2.0-specs/blob/master/specs/phase0/weak-subjectivity.md#checking-for-stale-weak-subjectivity-checkpoint
-
+//
 // def is_within_weak_subjectivity_period(store: Store, ws_state: BeaconState, ws_checkpoint: Checkpoint) -> bool:
 //    # Clients may choose to validate the input state against the input Weak Subjectivity Checkpoint
 //    assert ws_state.latest_block_header.state_root == ws_checkpoint.root

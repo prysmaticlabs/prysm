@@ -229,28 +229,19 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState iface.Be
 		return vs.ChainStartFetcher.ChainStartEth1Data(), nil
 	}
 
-	inRangeVotes, err := vs.inRangeVotes(ctx, beaconState, lastBlockByEarliestValidTime.Number, lastBlockByLatestValidTime.Number)
-	if err != nil {
-		return nil, err
-	}
-	if len(inRangeVotes) == 0 {
-		if lastBlockDepositCount >= vs.HeadFetcher.HeadETH1Data().DepositCount {
-			hash, err := vs.Eth1BlockFetcher.BlockHashByHeight(ctx, lastBlockByLatestValidTime.Number)
-			if err != nil {
-				log.WithError(err).Error("Could not get hash of last block by latest valid time")
-				return vs.randomETH1DataVote(ctx)
-			}
-			return &ethpb.Eth1Data{
-				BlockHash:    hash.Bytes(),
-				DepositCount: lastBlockDepositCount,
-				DepositRoot:  lastBlockDepositRoot[:],
-			}, nil
+	if lastBlockDepositCount >= vs.HeadFetcher.HeadETH1Data().DepositCount {
+		hash, err := vs.Eth1BlockFetcher.BlockHashByHeight(ctx, lastBlockByLatestValidTime.Number)
+		if err != nil {
+			log.WithError(err).Error("Could not get hash of last block by latest valid time")
+			return vs.randomETH1DataVote(ctx)
 		}
-		return vs.HeadFetcher.HeadETH1Data(), nil
+		return &ethpb.Eth1Data{
+			BlockHash:    hash.Bytes(),
+			DepositCount: lastBlockDepositCount,
+			DepositRoot:  lastBlockDepositRoot[:],
+		}, nil
 	}
-
-	chosenVote := chosenEth1DataMajorityVote(inRangeVotes)
-	return &chosenVote.data.eth1Data, nil
+	return vs.HeadFetcher.HeadETH1Data(), nil
 }
 
 func (vs *Server) slotStartTime(slot types.Slot) uint64 {

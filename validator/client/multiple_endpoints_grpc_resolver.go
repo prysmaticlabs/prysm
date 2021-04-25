@@ -14,6 +14,7 @@ import (
 // grpc.WithDefaultServiceConfig("{\"loadBalancingConfig\":[{\"round_robin\":{}}]}")
 type multipleEndpointsGrpcResolverBuilder struct{}
 
+// Build creates and starts multiple endpoints resolver.
 func (*multipleEndpointsGrpcResolverBuilder) Build(target resolver.Target, cc resolver.ClientConn, _ resolver.BuildOptions) (resolver.Resolver, error) {
 	r := &multipleEndpointsGrpcResolver{
 		target: target,
@@ -23,6 +24,7 @@ func (*multipleEndpointsGrpcResolverBuilder) Build(target resolver.Target, cc re
 	return r, nil
 }
 
+// Scheme returns default scheme.
 func (*multipleEndpointsGrpcResolverBuilder) Scheme() string {
 	return resolver.GetDefaultScheme()
 }
@@ -41,6 +43,8 @@ func (r *multipleEndpointsGrpcResolver) start() {
 	r.cc.UpdateState(resolver.State{Addresses: addrs})
 }
 
+// ResolveNow --
 func (*multipleEndpointsGrpcResolver) ResolveNow(_ resolver.ResolveNowOptions) {}
 
+// Close --
 func (*multipleEndpointsGrpcResolver) Close() {}

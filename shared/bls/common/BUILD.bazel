@@ -8,5 +8,8 @@ go_library(
         "interface.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/bls/common",
-    visibility = ["//shared/bls:__subpackages__"],
+    visibility = [
+        "//shared/bls:__subpackages__",
+        "//spectest:__subpackages__",
+    ],
 )

@@ -470,8 +470,13 @@ type indicesSorter struct {
 	indices []types.ValidatorIndex
 }
 
-func (s indicesSorter) Len() int      { return len(s.indices) }
+// Len is the number of elements in the collection.
+func (s indicesSorter) Len() int { return len(s.indices) }
+
+// Swap swaps the elements with indexes i and j.
 func (s indicesSorter) Swap(i, j int) { s.indices[i], s.indices[j] = s.indices[j], s.indices[i] }
+
+// Less reports whether the element with index i must sort before the element with index j.
 func (s indicesSorter) Less(i, j int) bool {
 	return s.indices[i] < s.indices[j]
 }

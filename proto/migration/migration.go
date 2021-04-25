@@ -25,7 +25,7 @@ func V1Alpha1BlockToV1BlockHeader(block *ethpb_alpha.SignedBeaconBlock) (*ethpb.
 	}, nil
 }
 
-// V1Alpha1BlockToV1Block converts a v1alpha1 SignedBeaconBlock proto to a v1 proto.
+// V1Alpha1ToV1Block converts a v1alpha1 SignedBeaconBlock proto to a v1 proto.
 func V1Alpha1ToV1Block(alphaBlk *ethpb_alpha.SignedBeaconBlock) (*ethpb.SignedBeaconBlock, error) {
 	marshaledBlk, err := alphaBlk.Marshal()
 	if err != nil {
