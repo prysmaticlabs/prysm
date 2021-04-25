@@ -19,6 +19,7 @@ type EnglishMnemonicGenerator struct {
 	skipMnemonicConfirm bool
 }
 
+// GenerateAndConfirmMnemonic requires confirming the generated mnemonics.
 func GenerateAndConfirmMnemonic(
 	skipMnemonicConfirm bool,
 ) (string, error) {

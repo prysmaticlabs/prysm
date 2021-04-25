@@ -74,6 +74,7 @@ type funcSub struct {
 	unsubscribed bool
 }
 
+// Unsubscribe unsubscribes from subscription.
 func (s *funcSub) Unsubscribe() {
 	s.mu.Lock()
 	if s.unsubscribed {
@@ -87,6 +88,7 @@ func (s *funcSub) Unsubscribe() {
 	<-s.err
 }
 
+// Err exposes error channel.
 func (s *funcSub) Err() <-chan error {
 	return s.err
 }
@@ -122,6 +124,7 @@ type resubscribeSub struct {
 	waitTime, backoffMax time.Duration
 }
 
+// Unsubscribe unsubscribes from subscription.
 func (s *resubscribeSub) Unsubscribe() {
 	s.unsubOnce.Do(func() {
 		s.unsub <- struct{}{}
@@ -129,6 +132,7 @@ func (s *resubscribeSub) Unsubscribe() {
 	})
 }
 
+// Err exposes error channel.
 func (s *resubscribeSub) Err() <-chan error {
 	return s.err
 }
@@ -267,6 +271,7 @@ func (sc *SubscriptionScope) Count() int {
 	return len(sc.subs)
 }
 
+// Unsubscribe unsubscribes from subscription.
 func (s *scopeSub) Unsubscribe() {
 	s.s.Unsubscribe()
 	s.sc.mu.Lock()
@@ -274,6 +279,7 @@ func (s *scopeSub) Unsubscribe() {
 	delete(s.sc.subs, s)
 }
 
+// Err exposes error channel.
 func (s *scopeSub) Err() <-chan error {
 	return s.s.Err()
 }

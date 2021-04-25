@@ -268,7 +268,7 @@ func (e Exporter) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint 
 	return e.db.RunMigrations(ctx)
 }
 
-// LoadGenesisFromFile -- passthrough
+// LoadGenesis -- passthrough
 func (e Exporter) LoadGenesis(ctx context.Context, r io.Reader) error {
 	return e.db.LoadGenesis(ctx, r)
 }
