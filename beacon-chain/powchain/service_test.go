@@ -620,6 +620,83 @@ func TestService_EnsureConsistentPowchainData(t *testing.T) {
 	assert.Equal(t, true, eth1Data.ChainstartData.Chainstarted)
 }
 
+func TestService_InitializeCorrectly(t *testing.T) {
+	beaconDB := dbutil.SetupDB(t)
+	cache, err := depositcache.New()
+	require.NoError(t, err)
+
+	s1, err := NewService(context.Background(), &Web3ServiceConfig{
+		BeaconDB:     beaconDB,
+		DepositCache: cache,
+	})
+	require.NoError(t, err)
+	genState, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	assert.NoError(t, genState.SetSlot(1000))
+
+	require.NoError(t, s1.cfg.BeaconDB.SaveGenesisData(context.Background(), genState))
+	require.NoError(t, s1.ensureValidPowchainData(context.Background()))
+
+	eth1Data, err := s1.cfg.BeaconDB.PowchainData(context.Background())
+	assert.NoError(t, err)
+
+	assert.NoError(t, s1.initializeEth1Data(context.Background(), eth1Data))
+	assert.Equal(t, int64(-1), s1.lastReceivedMerkleIndex, "received incorrect last received merkle index")
+}
+
+func TestService_EnsureValidPowchainData(t *testing.T) {
+	beaconDB := dbutil.SetupDB(t)
+	cache, err := depositcache.New()
+	require.NoError(t, err)
+
+	s1, err := NewService(context.Background(), &Web3ServiceConfig{
+		BeaconDB:     beaconDB,
+		DepositCache: cache,
+	})
+	require.NoError(t, err)
+	genState, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	assert.NoError(t, genState.SetSlot(1000))
+
+	require.NoError(t, s1.cfg.BeaconDB.SaveGenesisData(context.Background(), genState))
+
+	err = s1.cfg.BeaconDB.SavePowchainData(context.Background(), &protodb.ETH1ChainData{
+		ChainstartData:    &protodb.ChainStartData{Chainstarted: true},
+		DepositContainers: []*protodb.DepositContainer{{Index: 1}},
+	})
+	require.NoError(t, err)
+	require.NoError(t, s1.ensureValidPowchainData(context.Background()))
+
+	eth1Data, err := s1.cfg.BeaconDB.PowchainData(context.Background())
+	assert.NoError(t, err)
+
+	assert.NotNil(t, eth1Data)
+	assert.Equal(t, 0, len(eth1Data.DepositContainers))
+}
+
+func TestService_ValidateDepositContainers(t *testing.T) {
+	beaconDB := dbutil.SetupDB(t)
+	cache, err := depositcache.New()
+	require.NoError(t, err)
+
+	s1, err := NewService(context.Background(), &Web3ServiceConfig{
+		BeaconDB:     beaconDB,
+		DepositCache: cache,
+	})
+	require.NoError(t, err)
+	ctrs := make([]*protodb.DepositContainer, 0)
+	assert.Equal(t, true, s1.validateDepositContainers(ctrs))
+	for i := 0; i < 10; i++ {
+		ctrs = append(ctrs, &protodb.DepositContainer{Index: int64(i), Eth1BlockHeight: uint64(i + 10)})
+	}
+	assert.Equal(t, true, s1.validateDepositContainers(ctrs))
+	ctrs = make([]*protodb.DepositContainer, 0)
+	for i := 1; i < 10; i++ {
+		ctrs = append(ctrs, &protodb.DepositContainer{Index: int64(i), Eth1BlockHeight: uint64(i + 10)})
+	}
+	assert.Equal(t, false, s1.validateDepositContainers(ctrs))
+}
+
 func TestTimestampIsChecked(t *testing.T) {
 	timestamp := uint64(time.Now().Unix())
 	assert.Equal(t, false, eth1HeadIsBehind(timestamp))
