@@ -925,6 +925,8 @@ func (s *Service) fallbackToNextEndpoint() {
 	log.Infof("Falling back to alternative endpoint: %s", logutil.MaskCredentialsLogging(s.currHttpEndpoint.Url))
 }
 
+// initializes our service from the provided eth1data object by initializing all the relevant
+// fields and data.
 func (s *Service) initializeEth1Data(ctx context.Context, eth1Data *protodb.ETH1ChainData) error {
 	// Exit early if there is no eth1data
 	if eth1Data == nil {
@@ -952,6 +954,8 @@ func (s *Service) initializeEth1Data(ctx context.Context, eth1Data *protodb.ETH1
 	return nil
 }
 
+// validates that all deposit containers are valid and have their relevant indexes
+// in order.
 func (s *Service) validateDepositContainers(ctrs []*protodb.DepositContainer) bool {
 	ctrLen := len(ctrs)
 	// Exit for empty containers.
