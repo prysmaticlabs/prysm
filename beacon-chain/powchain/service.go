@@ -4,6 +4,7 @@
 package powchain
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"math/big"
@@ -220,20 +221,8 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to retrieve eth1 data")
 	}
-	if eth1Data != nil {
-		s.depositTrie = trieutil.CreateTrieFromProto(eth1Data.Trie)
-		s.chainStartData = eth1Data.ChainstartData
-		if !reflect.ValueOf(eth1Data.BeaconState).IsZero() {
-			s.preGenesisState, err = stateV0.InitializeFromProto(eth1Data.BeaconState)
-			if err != nil {
-				return nil, errors.Wrap(err, "Could not initialize state trie")
-			}
-		}
-		s.latestEth1Data = eth1Data.CurrentEth1Data
-		s.lastReceivedMerkleIndex = int64(len(s.depositTrie.Items()) - 1)
-		if err := s.initDepositCaches(ctx, eth1Data.DepositContainers); err != nil {
-			return nil, errors.Wrap(err, "could not initialize caches")
-		}
+	if err := s.initializeEth1Data(ctx, eth1Data); err != nil {
+		return nil, err
 	}
 	return s, nil
 }
@@ -936,6 +925,48 @@ func (s *Service) fallbackToNextEndpoint() {
 	log.Infof("Falling back to alternative endpoint: %s", logutil.MaskCredentialsLogging(s.currHttpEndpoint.Url))
 }
 
+func (s *Service) initializeEth1Data(ctx context.Context, eth1Data *protodb.ETH1ChainData) error {
+	// Exit early if there is no eth1data
+	if eth1Data == nil {
+		return nil
+	}
+	s.depositTrie = trieutil.CreateTrieFromProto(eth1Data.Trie)
+	s.chainStartData = eth1Data.ChainstartData
+	var err error
+	if !reflect.ValueOf(eth1Data.BeaconState).IsZero() {
+		s.preGenesisState, err = stateV0.InitializeFromProto(eth1Data.BeaconState)
+		if err != nil {
+			return errors.Wrap(err, "Could not initialize state trie")
+		}
+	}
+	s.latestEth1Data = eth1Data.CurrentEth1Data
+	items := s.depositTrie.Items()
+	s.lastReceivedMerkleIndex = int64(len(items) - 1)
+	// Account for 0 elements existing in the deposit trie.
+	if len(items) == 1 && bytes.Equal(items[0], params.BeaconConfig().ZeroHash[:]) {
+		s.lastReceivedMerkleIndex = -1
+	}
+	if err := s.initDepositCaches(ctx, eth1Data.DepositContainers); err != nil {
+		return errors.Wrap(err, "could not initialize caches")
+	}
+	return nil
+}
+
+func (s *Service) validateDepositContainers(ctrs []*protodb.DepositContainer) bool {
+	ctrLen := len(ctrs)
+	// Exit for empty containers.
+	if ctrLen == 0 {
+		return true
+	}
+	for _, c := range ctrs {
+		if c.Index == 0 {
+			return true
+		}
+	}
+	log.Infof("Recovering missing deposit containers, node is re-requesting missing deposit data.")
+	return false
+}
+
 // validates the current powchain data saved and makes sure that any
 // embedded genesis state is correctly accounted for.
 func (s *Service) ensureValidPowchainData(ctx context.Context) error {
@@ -951,7 +982,7 @@ func (s *Service) ensureValidPowchainData(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "unable to retrieve eth1 data")
 	}
-	if eth1Data == nil || !eth1Data.ChainstartData.Chainstarted {
+	if eth1Data == nil || !eth1Data.ChainstartData.Chainstarted || !s.validateDepositContainers(eth1Data.DepositContainers) {
 		pbState, err := stateV0.ProtobufBeaconState(s.preGenesisState.InnerStateUnsafe())
 		if err != nil {
 			return err
