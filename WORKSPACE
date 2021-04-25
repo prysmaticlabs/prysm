@@ -76,6 +76,8 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_docker",
+    patch_args = ["-p1"],
+    patches = ["//third_party:rules_docker_bad_checksum.patch"],
     sha256 = "1286175a94c0b1335efe1d75d22ea06e89742557d3fac2a0366f242a6eac6f5a",
     strip_prefix = "rules_docker-ba4310833230294fa69b7d6ea1787ac684631a7d",
     urls = ["https://github.com/bazelbuild/rules_docker/archive/ba4310833230294fa69b7d6ea1787ac684631a7d.tar.gz"],
