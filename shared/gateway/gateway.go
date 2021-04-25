@@ -30,7 +30,6 @@ var _ shared.Service = (*Gateway)(nil)
 // or a validator node and registers the handlers accordingly.
 type CallerId string
 
-
 // Gateway is the gRPC gateway to serve HTTP JSON traffic as a
 // proxy and forward it to the gRPC server.
 type Gateway struct {
