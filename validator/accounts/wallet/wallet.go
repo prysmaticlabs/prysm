@@ -177,7 +177,7 @@ func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context
 	if err != nil {
 		return nil, err
 	}
-	walletPassword, err := inputPassword(
+	walletPassword, err := InputPassword(
 		cliCtx,
 		flags.WalletPasswordFileFlag,
 		PasswordPromptText,
@@ -414,7 +414,9 @@ func readKeymanagerKindFromWalletPath(walletPath string) (keymanager.Kind, error
 	return 0, errors.New("no keymanager folder (imported, remote, derived) found in wallet path")
 }
 
-func inputPassword(
+// InputPassword prompts for a password and optionally for password confirmation.
+// The password is validated according to custom rules.
+func InputPassword(
 	cliCtx *cli.Context,
 	passwordFileFlag *cli.StringFlag,
 	promptText string,
