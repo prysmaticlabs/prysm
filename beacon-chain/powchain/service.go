@@ -927,28 +927,29 @@ func (s *Service) fallbackToNextEndpoint() {
 
 // initializes our service from the provided eth1data object by initializing all the relevant
 // fields and data.
-func (s *Service) initializeEth1Data(ctx context.Context, eth1Data *protodb.ETH1ChainData) error {
-	// Exit early if there is no eth1data
-	if eth1Data == nil {
+func (s *Service) initializeEth1Data(ctx context.Context, eth1DataInDB *protodb.ETH1ChainData) error {
+	// The node has no eth1data persisted on disk, so we exit and instead
+	// request from contract logs.
+	if eth1DataInDB == nil {
 		return nil
 	}
-	s.depositTrie = trieutil.CreateTrieFromProto(eth1Data.Trie)
-	s.chainStartData = eth1Data.ChainstartData
+	s.depositTrie = trieutil.CreateTrieFromProto(eth1DataInDB.Trie)
+	s.chainStartData = eth1DataInDB.ChainstartData
 	var err error
-	if !reflect.ValueOf(eth1Data.BeaconState).IsZero() {
-		s.preGenesisState, err = stateV0.InitializeFromProto(eth1Data.BeaconState)
+	if !reflect.ValueOf(eth1DataInDB.BeaconState).IsZero() {
+		s.preGenesisState, err = stateV0.InitializeFromProto(eth1DataInDB.BeaconState)
 		if err != nil {
 			return errors.Wrap(err, "Could not initialize state trie")
 		}
 	}
-	s.latestEth1Data = eth1Data.CurrentEth1Data
+	s.latestEth1Data = eth1DataInDB.CurrentEth1Data
 	items := s.depositTrie.Items()
 	s.lastReceivedMerkleIndex = int64(len(items) - 1)
 	// Account for 0 elements existing in the deposit trie.
 	if len(items) == 1 && bytes.Equal(items[0], params.BeaconConfig().ZeroHash[:]) {
 		s.lastReceivedMerkleIndex = -1
 	}
-	if err := s.initDepositCaches(ctx, eth1Data.DepositContainers); err != nil {
+	if err := s.initDepositCaches(ctx, eth1DataInDB.DepositContainers); err != nil {
 		return errors.Wrap(err, "could not initialize caches")
 	}
 	return nil
@@ -967,7 +968,7 @@ func (s *Service) validateDepositContainers(ctrs []*protodb.DepositContainer) bo
 			return true
 		}
 	}
-	log.Infof("Recovering missing deposit containers, node is re-requesting missing deposit data.")
+	log.Info("Recovering missing deposit containers, node is re-requesting missing deposit data")
 	return false
 }
 
