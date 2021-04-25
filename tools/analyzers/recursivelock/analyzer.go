@@ -175,7 +175,10 @@ func findCallDeclarationNode(c *callInfo, inspect *inspector.Inspector, tInfo *t
 		(*ast.FuncDecl)(nil),
 	}
 	inspect.Preorder(nodeFilter, func(node ast.Node) {
-		funcDec, _ := node.(*ast.FuncDecl)
+		funcDec, ok := node.(*ast.FuncDecl)
+		if !ok {
+			return
+		}
 		name := tInfo.ObjectOf(funcDec.Name).Id()
 		if c.isMethod() { // are we looking for a method of a specific type?
 			if funcDec.Recv == nil { // if this particular call declaration isn't even a method, we can move on
