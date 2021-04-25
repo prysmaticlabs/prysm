@@ -1,3 +1,5 @@
+// Package gateway defines a gRPC gateway to serve HTTP-JSON
+// traffic as a proxy and forward it to a beacon or validator node's gRPC service.
 package gateway
 
 import (
@@ -24,11 +26,16 @@ import (
 
 var _ shared.Service = (*Gateway)(nil)
 
+// CallerId defines whether the caller node is a beacon
+// or a validator node and registers the handlers accordingly.
+type CallerId string
+
+
 // Gateway is the gRPC gateway to serve HTTP JSON traffic as a
 // proxy and forward it to the gRPC server.
 type Gateway struct {
-	callerId                string
 	conn                    *grpc.ClientConn
+	callerId                CallerId
 	ctx                     context.Context
 	cancel                  context.CancelFunc
 	gatewayAddr             string
@@ -43,10 +50,10 @@ type Gateway struct {
 }
 
 // New returns a new gateway server which translates HTTP into gRPC.
-// Accepts a context and optional http.ServeMux.
+// Accepts a context.
 func NewValidator(
 	ctx context.Context,
-	callerId string,
+	callerId CallerId,
 	remoteAddress,
 	gatewayAddress string,
 	allowedOrigins []string,
@@ -65,7 +72,7 @@ func NewValidator(
 // Accepts a context and optional http.ServeMux.
 func NewBeacon(
 	ctx context.Context,
-	callerId string,
+	callerId CallerId,
 	remoteAddress,
 	remoteCert,
 	gatewayAddress string,
@@ -92,6 +99,8 @@ func NewBeacon(
 }
 
 // Start the gateway service. This serves the HTTP JSON traffic.
+// The beacon node supports TCP and Unix domain socket communications.
+// Beacon and validator have different handlers.
 func (g *Gateway) Start() {
 	ctx, cancel := context.WithCancel(g.ctx)
 	g.cancel = cancel
