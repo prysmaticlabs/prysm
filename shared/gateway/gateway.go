@@ -27,8 +27,13 @@ import (
 var _ shared.Service = (*Gateway)(nil)
 
 // CallerId defines whether the caller node is a beacon
-// or a validator node and registers the handlers accordingly.
+// or a validator node. This helps register the handlers accordingly.
 type CallerId string
+
+const (
+	ValidatorCaller = "validator-rpc"
+	BeaconCaller    = "beacon-rpc"
+)
 
 // Gateway is the gRPC gateway to serve HTTP JSON traffic as a
 // proxy and forward it to the gRPC server.
@@ -104,7 +109,7 @@ func (g *Gateway) Start() {
 	ctx, cancel := context.WithCancel(g.ctx)
 	g.cancel = cancel
 
-	if g.callerId == "beacon-rpc" {
+	if g.callerId == BeaconCaller {
 		conn, err := g.dial(ctx, "tcp", g.remoteAddr)
 		if err != nil {
 			log.WithError(err).Error("Failed to connect to gRPC server")
@@ -120,7 +125,7 @@ func (g *Gateway) Start() {
 			&gwruntime.JSONPb{OrigName: false, EmitDefaults: true},
 		),
 	)
-	if g.callerId == "beacon-rpc" {
+	if g.callerId == BeaconCaller {
 		handlers := []func(context.Context, *gwruntime.ServeMux, *grpc.ClientConn) error{
 			ethpb.RegisterNodeHandler,
 			ethpb.RegisterBeaconChainHandler,

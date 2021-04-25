@@ -634,7 +634,7 @@ func (b *BeaconNode) registerGRPCGateway() error {
 	return b.services.RegisterService(
 		gateway.NewBeacon(
 			b.ctx,
-			"beacon-rpc",
+			gateway.BeaconCaller,
 			selfAddress,
 			selfCert,
 			gatewayAddress,
