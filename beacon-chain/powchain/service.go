@@ -955,7 +955,7 @@ func (s *Service) initializeEth1Data(ctx context.Context, eth1DataInDB *protodb.
 	return nil
 }
 
-// validates that all deposit containers are valid and have their relevant indexes
+// validates that all deposit containers are valid and have their relevant indices
 // in order.
 func (s *Service) validateDepositContainers(ctrs []*protodb.DepositContainer) bool {
 	ctrLen := len(ctrs)
