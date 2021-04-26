@@ -397,10 +397,8 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 
 	inactiveKey := bytesutil.ToBytes48([]byte("inactive"))
 	activeKey := bytesutil.ToBytes48([]byte("active"))
-	km := &remote.MockKeymanager{
-		PublicKeys:           [][48]byte{inactiveKey, activeKey},
-		ReloadPublicKeysChan: make(chan [][48]byte, 1),
-	}
+	km := remote.New()
+	km.PublicKeys = [][48]byte{inactiveKey, activeKey}
 	slot := types.Slot(0)
 
 	t.Run("activated", func(t *testing.T) {
@@ -413,7 +411,7 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 		}
 		v := validator{
 			validatorClient: client,
-			keyManager:      km,
+			keyManager:      &km,
 			ticker:          ticker,
 		}
 		go func() {
@@ -448,7 +446,7 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 		}
 		v := validator{
 			validatorClient: client,
-			keyManager:      km,
+			keyManager:      &km,
 			ticker:          ticker,
 		}
 		go func() {
@@ -462,10 +460,8 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 	t.Run("reloaded", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		hook := logTest.NewGlobal()
-		km := &remote.MockKeymanager{
-			PublicKeys:           [][48]byte{inactiveKey},
-			ReloadPublicKeysChan: make(chan [][48]byte, 1),
-		}
+		remoteKm := remote.New()
+		remoteKm.PublicKeys = [][48]byte{inactiveKey}
 
 		tickerChan := make(chan types.Slot)
 		ticker := &slotutilmock.MockTicker{
@@ -473,13 +469,13 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 		}
 		v := validator{
 			validatorClient: client,
-			keyManager:      km,
+			keyManager:      &remoteKm,
 			ticker:          ticker,
 		}
 		go func() {
 			tickerChan <- slot
 			time.Sleep(time.Second)
-			km.PublicKeys = [][48]byte{inactiveKey, activeKey}
+			remoteKm.PublicKeys = [][48]byte{inactiveKey, activeKey}
 			tickerChan <- slot
 			// Cancel after timeout to avoid waiting on channel forever in case test goes wrong.
 			time.Sleep(time.Second)
@@ -504,7 +500,7 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 			},
 		).Return(resp2, nil /* err */)
 
-		err := v.waitForActivation(ctx, km.ReloadPublicKeysChan /* accountsChangedChan */)
+		err := v.waitForActivation(ctx, remoteKm.ReloadPublicKeysChan /* accountsChangedChan */)
 		require.NoError(t, err)
 		assert.LogsContain(t, hook, "Waiting for deposit to be observed by beacon node")
 		assert.LogsContain(t, hook, "Validator activated")
