@@ -9,7 +9,8 @@ import (
 )
 
 type MockKeymanager struct {
-	PublicKeys [][48]byte
+	PublicKeys           [][48]byte
+	ReloadPublicKeysChan chan [][48]byte
 }
 
 func (m *MockKeymanager) FetchValidatingPublicKeys(context.Context) ([][48]byte, error) {
@@ -25,5 +26,6 @@ func (*MockKeymanager) SubscribeAccountChanges(chan [][48]byte) event.Subscripti
 }
 
 func (m *MockKeymanager) ReloadPublicKeys(context.Context) ([][48]byte, error) {
+	m.ReloadPublicKeysChan <- m.PublicKeys
 	return m.PublicKeys, nil
 }

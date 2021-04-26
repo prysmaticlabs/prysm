@@ -398,7 +398,8 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 	inactiveKey := bytesutil.ToBytes48([]byte("inactive"))
 	activeKey := bytesutil.ToBytes48([]byte("active"))
 	km := &remote.MockKeymanager{
-		PublicKeys: [][48]byte{inactiveKey, activeKey},
+		PublicKeys:           [][48]byte{inactiveKey, activeKey},
+		ReloadPublicKeysChan: make(chan [][48]byte, 1),
 	}
 	slot := types.Slot(0)
 
@@ -457,5 +458,55 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 
 		err := v.waitForActivation(ctx, nil /* accountsChangedChan */)
 		assert.ErrorContains(t, "context canceled, not waiting for activation anymore", err)
+	})
+	t.Run("reloaded", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		hook := logTest.NewGlobal()
+		km := &remote.MockKeymanager{
+			PublicKeys:           [][48]byte{inactiveKey},
+			ReloadPublicKeysChan: make(chan [][48]byte, 1),
+		}
+
+		tickerChan := make(chan types.Slot)
+		ticker := &slotutilmock.MockTicker{
+			Channel: tickerChan,
+		}
+		v := validator{
+			validatorClient: client,
+			keyManager:      km,
+			ticker:          ticker,
+		}
+		go func() {
+			tickerChan <- slot
+			time.Sleep(time.Second)
+			km.PublicKeys = [][48]byte{inactiveKey, activeKey}
+			tickerChan <- slot
+			// Cancel after timeout to avoid waiting on channel forever in case test goes wrong.
+			time.Sleep(time.Second)
+			cancel()
+		}()
+
+		resp := testutil.GenerateMultipleValidatorStatusResponse([][]byte{inactiveKey[:]})
+		resp.Statuses[0].Status = ethpb.ValidatorStatus_UNKNOWN_STATUS
+		client.EXPECT().MultipleValidatorStatus(
+			gomock.Any(),
+			&ethpb.MultipleValidatorStatusRequest{
+				PublicKeys: [][]byte{inactiveKey[:]},
+			},
+		).Return(resp, nil /* err */)
+		resp2 := testutil.GenerateMultipleValidatorStatusResponse([][]byte{inactiveKey[:], activeKey[:]})
+		resp2.Statuses[0].Status = ethpb.ValidatorStatus_UNKNOWN_STATUS
+		resp2.Statuses[1].Status = ethpb.ValidatorStatus_ACTIVE
+		client.EXPECT().MultipleValidatorStatus(
+			gomock.Any(),
+			&ethpb.MultipleValidatorStatusRequest{
+				PublicKeys: [][]byte{inactiveKey[:], activeKey[:]},
+			},
+		).Return(resp2, nil /* err */)
+
+		err := v.waitForActivation(ctx, km.ReloadPublicKeysChan /* accountsChangedChan */)
+		require.NoError(t, err)
+		assert.LogsContain(t, hook, "Waiting for deposit to be observed by beacon node")
+		assert.LogsContain(t, hook, "Validator activated")
 	})
 }
