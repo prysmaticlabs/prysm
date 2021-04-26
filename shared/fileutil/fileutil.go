@@ -136,6 +136,7 @@ func FileExists(filename string) bool {
 // Define non-fatal error to stop the recursive directory walk
 var stopWalk = errors.New("stop walking")
 
+// RecursiveFileFind searches for file in a directory and its subdirectories.
 func RecursiveFileFind(filename, dir string) (bool, string, error) {
 	var found bool
 	var fpath string

@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/spectest/utils"
 )
 
+// RunParticipationRecordUpdatesTests executes "epoch_processing/participation_record_updates" tests.
 func RunParticipationRecordUpdatesTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 

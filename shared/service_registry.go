@@ -19,7 +19,7 @@ type Service interface {
 	// Stop terminates all goroutines belonging to the service,
 	// blocking until they are all terminated.
 	Stop() error
-	// Returns error if the service is not considered healthy.
+	// Status returns error if the service is not considered healthy.
 	Status() error
 }
 
