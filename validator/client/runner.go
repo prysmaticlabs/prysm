@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -134,6 +135,14 @@ func run(ctx context.Context, v iface.Validator) {
 			}
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
+
+			remoteKm, ok := v.GetKeymanager().(remote.RemoteKeymanager)
+			if ok {
+				_, err := remoteKm.ReloadPublicKeys(ctx)
+				if err != nil {
+					log.WithError(err).Error(msgCouldNotFetchKeys)
+				}
+			}
 
 			allExited, err := v.AllValidatorsAreExited(ctx)
 			if err != nil {
