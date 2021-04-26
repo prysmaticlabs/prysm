@@ -16,7 +16,7 @@ type MockKeymanager struct {
 	accountsChangedFeed    *event.Feed
 }
 
-func New() MockKeymanager {
+func NewMock() MockKeymanager {
 	return MockKeymanager{
 		accountsChangedFeed:  new(event.Feed),
 		ReloadPublicKeysChan: make(chan [][48]byte, 1),

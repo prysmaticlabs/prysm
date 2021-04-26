@@ -397,7 +397,7 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 
 	inactiveKey := bytesutil.ToBytes48([]byte("inactive"))
 	activeKey := bytesutil.ToBytes48([]byte("active"))
-	km := remote.New()
+	km := remote.NewMock()
 	km.PublicKeys = [][48]byte{inactiveKey, activeKey}
 	slot := types.Slot(0)
 
@@ -460,7 +460,7 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 	t.Run("reloaded", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		hook := logTest.NewGlobal()
-		remoteKm := remote.New()
+		remoteKm := remote.NewMock()
 		remoteKm.PublicKeys = [][48]byte{inactiveKey}
 
 		tickerChan := make(chan types.Slot)
