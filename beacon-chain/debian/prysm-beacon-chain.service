@@ -1,0 +1,15 @@
+[Unit]
+Description=Prysm Eth2 Beacon Chain
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=prysm-beacon
+Group=prysm-beacon
+Type=simple
+Restart=always
+RestartSec=5
+ExecStart=/usr/bin/beacon-chain --config-file /etc/prysm/beacon-chain.yaml --accept-terms-of-use
+
+[Install]
+WantedBy=multi-user.target

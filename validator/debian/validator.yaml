@@ -1,0 +1,2 @@
+datadir: /var/lib/prysm/validator
+wallet-dir: /var/lib/prysm/validator
