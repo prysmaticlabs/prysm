@@ -155,7 +155,7 @@ func ProcessRewardsAndPenaltiesPrecompute(
 		return state, errors.New("validator registries not the same length as state's validator registries")
 	}
 
-	attsRewards, attsPenalties, err := attestationsDelta(state, bal, vals)
+	attsRewards, attsPenalties, err := AttestationsDelta(state, bal, vals)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get attestation delta")
 	}
@@ -179,9 +179,9 @@ func ProcessRewardsAndPenaltiesPrecompute(
 	return state, nil
 }
 
-// attestationsDelta computes and returns the rewards and penalties differences for individual validators based on the
+// AttestationsDelta computes and returns the rewards and penalties differences for individual validators based on the
 // voting records.
-func attestationsDelta(state iface.BeaconStateAltair, bal *precompute.Balance, vals []*precompute.Validator) (rewards, penalties []uint64, err error) {
+func AttestationsDelta(state iface.BeaconStateAltair, bal *precompute.Balance, vals []*precompute.Validator) (rewards, penalties []uint64, err error) {
 	numOfVals := state.NumValidators()
 	rewards = make([]uint64, numOfVals)
 	penalties = make([]uint64, numOfVals)
