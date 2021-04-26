@@ -35,6 +35,7 @@ func (*MockKeymanager) Sign(context.Context, *validatorpb.SignRequest) (bls.Sign
 
 // SubscribeAccountChanges --
 func (m *MockKeymanager) SubscribeAccountChanges(chan [][48]byte) event.Subscription {
+	return m.accountsChangedFeed.Subscribe(m.ReloadPublicKeysChan)
 }
 
 // ReloadPublicKeys --
