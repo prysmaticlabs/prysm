@@ -83,6 +83,38 @@ type ImportAccountsConfig struct {
 // values necessary to run the function.
 func ImportAccountsCli(cliCtx *cli.Context) error {
 	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
+		walletDir, err := prompt.InputDirectory(cliCtx, prompt.WalletDirPromptText, flags.WalletDirFlag)
+		if err != nil {
+			return nil, err
+		}
+		exists, err := wallet.Exists(walletDir)
+		if err != nil {
+			return nil, errors.Wrap(err, wallet.CheckExistsErrMsg)
+		}
+		if exists {
+			isValid, err := wallet.IsValid(walletDir)
+			if err != nil {
+				return nil, errors.Wrap(err, wallet.CheckValidityErrMsg)
+			}
+			if !isValid {
+				return nil, errors.New(wallet.InvalidWalletErrMsg)
+			}
+			walletPassword, err := wallet.InputPassword(
+				cliCtx,
+				flags.WalletPasswordFileFlag,
+				wallet.PasswordPromptText,
+				false, /* Do not confirm password */
+				wallet.ValidateExistingPass,
+			)
+			if err != nil {
+				return nil, err
+			}
+			return wallet.OpenWallet(cliCtx.Context, &wallet.Config{
+				WalletDir:      walletDir,
+				WalletPassword: walletPassword,
+			})
+		}
+
 		cfg, err := extractWalletCreationConfigFromCli(cliCtx, keymanager.Imported)
 		if err != nil {
 			return nil, err
