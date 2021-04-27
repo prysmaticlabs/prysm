@@ -3,6 +3,7 @@ package rewards
 import (
 	"context"
 	"encoding/binary"
+	"fmt"
 	"path"
 	"reflect"
 	"testing"
@@ -45,12 +46,12 @@ var deltaFiles = []string{
 // RunPrecomputeRewardsAndPenaltiesTests executes "rewards/{basic, leak, random}" tests.
 func RunPrecomputeRewardsAndPenaltiesTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
-	testPaths := []string{"rewards/basic/pyspec_tests", "rewards/leak/pyspec_tests", "rewards/random/pyspec_tests"}
+	testPaths := []string{"basic", "leak", "random"}
 	for _, testPath := range testPaths {
-		testFolders, testsFolderPath := utils.TestFolders(t, config, "altair", testPath)
+		testFolders, testsFolderPath := utils.TestFolders(t, config, "altair", path.Join("rewards", testPath, "pyspec_tests"))
 		for _, folder := range testFolders {
 			helpers.ClearCache()
-			t.Run(folder.Name(), func(t *testing.T) {
+			t.Run(fmt.Sprintf("%v/%v", testPath, folder.Name()), func(t *testing.T) {
 				folderPath := path.Join(testsFolderPath, folder.Name())
 				runPrecomputeRewardsAndPenaltiesTest(t, folderPath)
 			})
@@ -68,7 +69,6 @@ func runPrecomputeRewardsAndPenaltiesTest(t *testing.T, testFolderPath string) {
 	require.NoError(t, preBeaconStateBase.UnmarshalSSZ(preBeaconStateSSZ), "Failed to unmarshal")
 	preBeaconState, err := stateAltair.InitializeFromProto(preBeaconStateBase)
 	require.NoError(t, err)
-
 
 	vp, bp, err := altair.InitializeEpochValidators(ctx, preBeaconState)
 	require.NoError(t, err)
