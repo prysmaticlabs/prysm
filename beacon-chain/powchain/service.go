@@ -126,7 +126,6 @@ type RPCClient interface {
 // Validator Registration Contract on the ETH1.0 chain to kick off the beacon
 // chain's validator registration process.
 type Service struct {
-	requestingOldLogs       bool
 	connectedETH1           bool
 	isRunning               bool
 	processingLock          sync.RWMutex
