@@ -37,6 +37,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedAttestingTimely = &cli.BoolFlag{
+		Name:   "attest-timely",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -46,4 +51,5 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisablePruningDepositProofs,
 	deprecatedDisableEth1DataMajorityVote,
 	deprecatedDisableBlst,
+	deprecatedAttestingTimely,
 }
