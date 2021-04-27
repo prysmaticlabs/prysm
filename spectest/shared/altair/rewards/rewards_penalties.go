@@ -46,12 +46,12 @@ var deltaFiles = []string{
 // RunPrecomputeRewardsAndPenaltiesTests executes "rewards/{basic, leak, random}" tests.
 func RunPrecomputeRewardsAndPenaltiesTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
-	testPaths := []string{"basic", "leak", "random"}
-	for _, testPath := range testPaths {
-		testFolders, testsFolderPath := utils.TestFolders(t, config, "altair", path.Join("rewards", testPath, "pyspec_tests"))
+	testTypes := []string{"basic", "leak", "random"}
+	for _, testType := range testTypes {
+		testFolders, testsFolderPath := utils.TestFolders(t, config, "altair", fmt.Sprintf("rewards/%s/pyspec_tests", testType))
 		for _, folder := range testFolders {
 			helpers.ClearCache()
-			t.Run(fmt.Sprintf("%v/%v", testPath, folder.Name()), func(t *testing.T) {
+			t.Run(fmt.Sprintf("%v/%v", testType, folder.Name()), func(t *testing.T) {
 				folderPath := path.Join(testsFolderPath, folder.Name())
 				runPrecomputeRewardsAndPenaltiesTest(t, folderPath)
 			})
