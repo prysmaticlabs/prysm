@@ -46,16 +46,20 @@ var deltaFiles = []string{
 
 // RunPrecomputeRewardsAndPenaltiesTests executes "rewards/{basic, leak, random}" tests.
 func RunPrecomputeRewardsAndPenaltiesTests(t *testing.T, config string) {
-	testPaths := []string{"basic", "leak", "random"}
-	for _, testPath := range testPaths {
-		testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", path.Join("rewards", testPath, "pyspec_tests"))
-		for _, folder := range testFolders {
-			helpers.ClearCache()
-			t.Run(fmt.Sprintf("%v/%v", testPath, folder.Name()), func(t *testing.T) {
-				folderPath := path.Join(testsFolderPath, folder.Name())
-				runPrecomputeRewardsAndPenaltiesTest(t, folderPath)
-			})
-		}
+	require.NoError(t, utils.SetConfig(t, config))
+	testTypes := []string{"basic", "leak", "random"}
+	for _, testType := range testTypes {
+		testPath := fmt.Sprintf("rewards/%s/pyspec_tests", testType)
+		testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", testPath)
+		t.Run(testType, func(t *testing.T) {
+			for _, folder := range testFolders {
+				helpers.ClearCache()
+				t.Run(folder.Name(), func(t *testing.T) {
+					folderPath := path.Join(testsFolderPath, folder.Name())
+					runPrecomputeRewardsAndPenaltiesTest(t, folderPath)
+				})
+			}
+		})
 	}
 }
 
