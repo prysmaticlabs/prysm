@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/clientstats"
 	"math/big"
 	"strings"
 	"sync"
@@ -129,6 +130,7 @@ func TestStart_OK(t *testing.T) {
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
 	})
+	web3Service.bsUpdater = &mockBSUpdater{}
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.rpcClient = &mockPOW.RPCClient{Backend: testAcc.Backend}
@@ -535,6 +537,16 @@ func TestNewService_Eth1HeaderRequLimit(t *testing.T) {
 	assert.Equal(t, uint64(150), s2.cfg.Eth1HeaderReqLimit, "unable to set eth1HeaderRequestLimit")
 }
 
+type mockBSUpdater struct {
+	lastBS clientstats.BeaconNodeStats
+}
+
+func (mbs *mockBSUpdater) Update(bs clientstats.BeaconNodeStats) {
+	mbs.lastBS = bs
+}
+
+var _ BeaconnodeStatsUpdater = &mockBSUpdater{}
+
 func TestServiceFallbackCorrectly(t *testing.T) {
 	firstEndpoint := "A"
 	secondEndpoint := "B"
@@ -548,17 +560,21 @@ func TestServiceFallbackCorrectly(t *testing.T) {
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
 	})
+	mbs := &mockBSUpdater{}
+	s1.bsUpdater = mbs
 	require.NoError(t, err)
 
 	assert.Equal(t, firstEndpoint, s1.currHttpEndpoint.Url, "Unexpected http endpoint")
 	// Stay at the first endpoint.
 	s1.fallbackToNextEndpoint()
 	assert.Equal(t, firstEndpoint, s1.currHttpEndpoint.Url, "Unexpected http endpoint")
+	assert.Equal(t, false, mbs.lastBS.SyncEth1FallbackConfigured, "SyncEth1FallbackConfigured in clientstats update should be false when only 1 endpoint is configured")
 
 	s1.httpEndpoints = append(s1.httpEndpoints, httputils.Endpoint{Url: secondEndpoint})
 
 	s1.fallbackToNextEndpoint()
 	assert.Equal(t, secondEndpoint, s1.currHttpEndpoint.Url, "Unexpected http endpoint")
+	assert.Equal(t, true, mbs.lastBS.SyncEth1FallbackConfigured, "SyncEth1FallbackConfigured in clientstats update should be true when > 1 endpoint is configured")
 
 	thirdEndpoint := "C"
 	fourthEndpoint := "D"

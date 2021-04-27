@@ -7,7 +7,10 @@ import (
 
 var prysmInfo = promauto.NewGauge(prometheus.GaugeOpts{
 	Name:        "prysm_version",
-	ConstLabels: prometheus.Labels{"version": gitTag, "commit": gitCommit},
+	ConstLabels: prometheus.Labels{
+		"version": gitTag,
+		"commit": gitCommit,
+		"buildDate": buildDateUnix},
 })
 
 func init() {
