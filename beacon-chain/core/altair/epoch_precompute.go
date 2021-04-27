@@ -256,8 +256,8 @@ func attestationDelta(bal *precompute.Balance, v *precompute.Validator, prevEpoc
 		p += br * params.BeaconConfig().TimelyTargetWeight / params.BeaconConfig().WeightDenominator
 		p += br * params.BeaconConfig().TimelyHeadWeight / params.BeaconConfig().WeightDenominator
 
-		// Apply an additional penalty to validators that did not vote on the correct target.
-		if !v.IsPrevEpochTargetAttester {
+		// Apply an additional penalty to validators that did not vote on the correct target or slashed.
+		if !v.IsPrevEpochTargetAttester || v.IsSlashed {
 			penaltyNumerator := eb * v.InactivityScore
 			penaltyDenominator := params.BeaconConfig().InactivityScoreBias * params.BeaconConfig().InactivityPenaltyQuotientAltair
 			p += penaltyNumerator / penaltyDenominator
