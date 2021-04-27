@@ -125,7 +125,7 @@ func TestAttestationsDelta(t *testing.T) {
 	require.NoError(t, err)
 	validators, balance, err = ProcessEpochParticipation(context.Background(), s, balance, validators)
 	require.NoError(t, err)
-	rewards, penalties, err := attestationsDelta(s, balance, validators)
+	rewards, penalties, err := AttestationsDelta(s, balance, validators)
 	require.NoError(t, err)
 
 	// Reward amount should increase as validator index increases due to setup.
@@ -161,7 +161,7 @@ func TestProcessRewardsAndPenaltiesPrecompute_Ok(t *testing.T) {
 	}
 
 	wanted := make([]uint64, s.NumValidators())
-	rewards, penalties, err := attestationsDelta(s, balance, validators)
+	rewards, penalties, err := AttestationsDelta(s, balance, validators)
 	require.NoError(t, err)
 	for i := range rewards {
 		wanted[i] += rewards[i]
