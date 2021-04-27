@@ -292,9 +292,15 @@ func (g *Gateway) dialUnix(ctx context.Context, addr string) (*grpc.ClientConn, 
 	d := func(addr string, timeout time.Duration) (net.Conn, error) {
 		return net.DialTimeout("unix", addr, timeout)
 	}
+	f := func(ctx context.Context, addr string) (net.Conn, error) {
+		if deadline, ok := ctx.Deadline(); ok {
+			return d(addr, time.Until(deadline))
+		}
+		return d(addr, 0)
+	}
 	opts := []grpc.DialOption{
 		grpc.WithInsecure(),
-		grpc.WithDialer(d),
+		grpc.WithContextDialer(f),
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(int(g.maxCallRecvMsgSize))),
 	}
 	return grpc.DialContext(ctx, addr, opts...)
