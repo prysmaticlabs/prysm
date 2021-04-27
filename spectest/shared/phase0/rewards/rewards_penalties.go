@@ -49,8 +49,7 @@ func RunPrecomputeRewardsAndPenaltiesTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 	testTypes := []string{"basic", "leak", "random"}
 	for _, testType := range testTypes {
-		testPath := fmt.Sprintf("rewards/%s/pyspec_tests", testType)
-		testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", testPath)
+		testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", fmt.Sprintf("rewards/%s/pyspec_tests", testType))
 		t.Run(testType, func(t *testing.T) {
 			for _, folder := range testFolders {
 				helpers.ClearCache()
