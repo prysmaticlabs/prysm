@@ -30,7 +30,6 @@ var (
 	depositEventSignature = hashutil.HashKeccak256([]byte("DepositEvent(bytes,bytes,bytes,bytes,bytes)"))
 )
 
-const eth1LookBackPeriod = 100
 const eth1DataSavingInterval = 100
 const maxTolerableDifference = 50
 const defaultEth1HeaderReqLimit = uint64(1000)
@@ -117,13 +116,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 
 	if index != s.lastReceivedMerkleIndex+1 {
 		missedDepositLogsCount.Inc()
-		if s.requestingOldLogs {
-			return errors.New("received incorrect merkle index")
-		}
-		if err := s.requestMissingLogs(ctx, depositLog.BlockNumber, index-1); err != nil {
-			return errors.Wrap(err, "could not get correct merkle index")
-		}
-
+		return errors.Errorf("received incorrect merkle index: wanted %d but got %d", s.lastReceivedMerkleIndex+1, index)
 	}
 	s.lastReceivedMerkleIndex = index
 
@@ -408,50 +401,6 @@ func (s *Service) requestBatchedHeadersAndLogs(ctx context.Context) error {
 		s.latestEth1Data.LastRequestedBlock = i
 	}
 
-	return nil
-}
-
-// requestMissingLogs requests any logs that were missed by requesting from previous blocks
-// until the current block(exclusive).
-func (s *Service) requestMissingLogs(ctx context.Context, blkNumber uint64, wantedIndex int64) error {
-	// Prevent this method from being called recursively
-	s.requestingOldLogs = true
-	defer func() {
-		s.requestingOldLogs = false
-	}()
-	// We request from the last requested block till the current block(exclusive)
-	beforeCurrentBlk := big.NewInt(int64(blkNumber) - 1)
-	startBlock := s.latestEth1Data.LastRequestedBlock + 1
-	for {
-		err := s.processBlksInRange(ctx, startBlock, beforeCurrentBlk.Uint64())
-		if err != nil {
-			return err
-		}
-
-		if s.lastReceivedMerkleIndex == wantedIndex {
-			break
-		}
-
-		// If the required logs still do not exist after the lookback period, then we return an error.
-		if startBlock < s.latestEth1Data.LastRequestedBlock-eth1LookBackPeriod {
-			return fmt.Errorf(
-				"latest index observed is not accurate, wanted %d, but received  %d",
-				wantedIndex,
-				s.lastReceivedMerkleIndex,
-			)
-		}
-		startBlock--
-	}
-	return nil
-}
-
-func (s *Service) processBlksInRange(ctx context.Context, startBlk, endBlk uint64) error {
-	for i := startBlk; i <= endBlk; i++ {
-		err := s.ProcessETH1Block(ctx, big.NewInt(int64(i)))
-		if err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
