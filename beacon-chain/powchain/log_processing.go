@@ -30,7 +30,6 @@ var (
 	depositEventSignature = hashutil.HashKeccak256([]byte("DepositEvent(bytes,bytes,bytes,bytes,bytes)"))
 )
 
-const eth1LookBackPeriod = 100
 const eth1DataSavingInterval = 100
 const maxTolerableDifference = 50
 const defaultEth1HeaderReqLimit = uint64(1000)
