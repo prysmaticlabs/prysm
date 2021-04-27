@@ -50,15 +50,13 @@ func RunPrecomputeRewardsAndPenaltiesTests(t *testing.T, config string) {
 	testTypes := []string{"basic", "leak", "random"}
 	for _, testType := range testTypes {
 		testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", fmt.Sprintf("rewards/%s/pyspec_tests", testType))
-		t.Run(testType, func(t *testing.T) {
-			for _, folder := range testFolders {
-				helpers.ClearCache()
-				t.Run(folder.Name(), func(t *testing.T) {
-					folderPath := path.Join(testsFolderPath, folder.Name())
-					runPrecomputeRewardsAndPenaltiesTest(t, folderPath)
-				})
-			}
-		})
+		for _, folder := range testFolders {
+			helpers.ClearCache()
+			t.Run(fmt.Sprintf("%v/%v", testType, folder.Name()), func(t *testing.T) {
+				folderPath := path.Join(testsFolderPath, folder.Name())
+				runPrecomputeRewardsAndPenaltiesTest(t, folderPath)
+			})
+		}
 	}
 }
 
