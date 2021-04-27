@@ -45,4 +45,6 @@ pkg_deb(
     package = "prysm-validator",
     version_file = "//shared:version_file",
     visibility = ["//validator:__pkg__"],
+    preinst = "preinst.sh",
+    postinst = "postinst.sh",
 )

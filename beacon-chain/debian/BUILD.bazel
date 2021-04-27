@@ -45,4 +45,6 @@ pkg_deb(
     package = "prysm-beacon-chain",
     version_file = "//shared:version_file",
     visibility = ["//beacon-chain:__pkg__"],
+    preinst = "preinst.sh",
+    postinst = "postinst.sh",
 )
