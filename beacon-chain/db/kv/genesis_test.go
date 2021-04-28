@@ -76,7 +76,7 @@ func TestLoadGenesisFromFile(t *testing.T) {
 }
 
 func TestGenesisBeaconStateMerge_OK(t *testing.T) {
-	fp := "testdata/merge.genesis.ssz"
+	fp := "testdata/mainnet.merge.genesis.ssz"
 	rfp, err := bazel.Runfile(fp)
 	if err == nil {
 		fp = rfp
