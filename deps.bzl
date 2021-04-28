@@ -804,7 +804,7 @@ def prysm_deps():
     go_repository(
         name = "com_github_ferranbt_fastssz",
         importpath = "github.com/ferranbt/fastssz",  # keep
-        commit = "22c27c78354a0ba27cc1acb5e5d133a8a491ce02",  # keep
+        commit = "6a43aceedddf7c626f7ca4dcbf964438480c00d1",  # keep
         remote = "https://github.com/rauljordan/fastssz",  # keep
         nofuzz = True,
         replace = None,  # keep
@@ -2692,8 +2692,8 @@ def prysm_deps():
         name = "com_github_prysmaticlabs_ethereumapis",
         build_file_generation = "off",
         importpath = "github.com/prysmaticlabs/ethereumapis",
-        sum = "h1:UfKQMTmj/Mmeia2OnF0F2ORZnyV+Ak8V0H8onfs6SZk=",
-        version = "v0.0.0-20210428182713-6e98f0ed8c92",
+        sum = "h1:Zfc1COZLUOVVuZSoAwqAk69ctE8tILjNMAT8GzhhV0k=",
+        version = "v0.0.0-20210428231008-f838c483a0ac",
     )
     go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",
