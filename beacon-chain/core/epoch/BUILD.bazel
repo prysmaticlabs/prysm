@@ -5,7 +5,10 @@ go_library(
     name = "go_default_library",
     srcs = ["epoch_processing.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//spectest:__subpackages__",
+    ],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/validators:go_default_library",

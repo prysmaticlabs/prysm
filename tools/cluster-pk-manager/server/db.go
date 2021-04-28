@@ -118,6 +118,7 @@ func (d *db) UnallocatedPKs(_ context.Context, numKeys uint64) (*pb.PrivateKeys,
 	return pks, nil
 }
 
+// DeleteUnallocatedKey removes provided private key.
 func (d *db) DeleteUnallocatedKey(_ context.Context, privateKey []byte) error {
 	return d.db.Update(func(tx *bolt.Tx) error {
 		if err := tx.Bucket(unassignedPkBucket).Delete(privateKey); err != nil {
@@ -132,7 +133,7 @@ func (d *db) DeleteUnallocatedKey(_ context.Context, privateKey []byte) error {
 	})
 }
 
-// PodPK returns an assigned private key to the given pod name, if one exists.
+// PodPKs returns an assigned private key to the given pod name, if one exists.
 func (d *db) PodPKs(_ context.Context, podName string) (*pb.PrivateKeys, error) {
 	pks := &pb.PrivateKeys{}
 	if err := d.db.View(func(tx *bolt.Tx) error {
@@ -173,7 +174,7 @@ func (d *db) AllocateNewPkToPod(
 	})
 }
 
-// RemovePKAssignments from pod and put the private keys into the unassigned
+// RemovePKAssignment from pod and put the private keys into the unassigned
 // bucket.
 func (d *db) RemovePKAssignment(_ context.Context, podName string) error {
 	return d.db.Update(func(tx *bolt.Tx) error {
@@ -245,6 +246,7 @@ func (d *db) AllocatedPodNames(_ context.Context) ([]string, error) {
 	return podNames, nil
 }
 
+// Allocations builds and returns key allocations.
 func (d *db) Allocations() (map[string][][]byte, error) {
 	m := make(map[string][][]byte)
 	if err := d.db.View(func(tx *bolt.Tx) error {
@@ -274,6 +276,7 @@ func (d *db) Allocations() (map[string][][]byte, error) {
 	return m, nil
 }
 
+// KeyMap builds and returns key map.
 func (d *db) KeyMap() ([][]byte, map[[48]byte]keyMap, error) {
 	m := make(map[[48]byte]keyMap)
 	pubkeys := make([][]byte, 0)

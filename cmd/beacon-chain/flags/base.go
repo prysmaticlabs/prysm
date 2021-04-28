@@ -14,6 +14,7 @@ var (
 		Usage: "A mainchain web3 provider string http endpoint. Can contain auth header as well in the format --http-web3provider=\"https://goerli.infura.io/v3/xxxx,Basic xxx\" for project secret (base64 encoded) and --http-web3provider=\"https://goerli.infura.io/v3/xxxx,Bearer xxx\" for jwt use",
 		Value: "",
 	}
+	// FallbackWeb3ProviderFlag provides a fallback endpoint to an ETH 1.0 RPC.
 	FallbackWeb3ProviderFlag = &cli.StringSliceFlag{
 		Name:  "fallback-web3provider",
 		Usage: "A mainchain web3 provider string http endpoint. This is our fallback web3 provider, this flag may be used multiple times.",
@@ -135,6 +136,7 @@ var (
 		Name:  "enable-debug-rpc-endpoints",
 		Usage: "Enables the debug rpc service, containing utility endpoints such as /eth/v1alpha1/beacon/state.",
 	}
+	// SubscribeToAllSubnets defines a flag to specify whether to subscribe to all possible attestation subnets or not.
 	SubscribeToAllSubnets = &cli.BoolFlag{
 		Name:  "subscribe-all-subnets",
 		Usage: "Subscribe to all possible attestation subnets.",

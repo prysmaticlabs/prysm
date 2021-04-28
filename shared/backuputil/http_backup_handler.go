@@ -8,6 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// BackupExporter defines a backup exporter methods.
 type BackupExporter interface {
 	Backup(ctx context.Context, outputPath string) error
 }

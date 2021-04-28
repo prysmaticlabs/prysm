@@ -13,4 +13,4 @@ curl https://deepsource.io/cli | sh
 ./bin/deepsource report --analyzer test-coverage --key go --value-file /tmp/cover.out
 
 # Upload to codecov (requires CODECOV_TOKEN environment variable)
-bash <(curl -s https://codecov.io/bash) -s "$(./bazel.sh info bazel-testlogs)" -f '**/coverage.dat'
+./codecov.sh -s "$(./bazel.sh info bazel-testlogs)" -f '**/coverage.dat'
