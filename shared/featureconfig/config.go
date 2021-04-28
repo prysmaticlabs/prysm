@@ -193,9 +193,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.WithField(enableSlasherFlag.Name, enableSlasherFlag.Usage).Warn(enabledFeatureFlag)
 		cfg.EnableSlasher = true
 	}
-	if ctx.Bool(proposerAttsSelectionUsingMaxCover.Name) {
-		log.WithField(proposerAttsSelectionUsingMaxCover.Name, proposerAttsSelectionUsingMaxCover.Usage).Warn(enabledFeatureFlag)
-		cfg.ProposerAttsSelectionUsingMaxCover = true
+	cfg.ProposerAttsSelectionUsingMaxCover = true
+	if ctx.Bool(disableProposerAttsSelectionUsingMaxCover.Name) {
+		log.WithField(disableProposerAttsSelectionUsingMaxCover.Name, disableProposerAttsSelectionUsingMaxCover.Usage).Warn(enabledFeatureFlag)
+		cfg.ProposerAttsSelectionUsingMaxCover = false
 	}
 	Init(cfg)
 }
