@@ -141,7 +141,7 @@ func (s *Signature) Eth2FastAggregateVerify(pubKeys []common.PublicKey, msg [32]
 	if featureconfig.Get().SkipBLSVerify {
 		return true
 	}
-	g2PointAtInfinity := make([]byte, 96)
+	g2PointAtInfinity := append([]byte{0xC0}, make([]byte, 95)...)
 	if len(pubKeys) == 0 && bytes.Equal(s.Marshal(), g2PointAtInfinity) {
 		return true
 	}
