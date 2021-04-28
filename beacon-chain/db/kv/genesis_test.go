@@ -2,14 +2,19 @@ package kv
 
 import (
 	"context"
+	"io/ioutil"
 	"os"
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
+	state "github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestStore_SaveGenesisData(t *testing.T) {
@@ -68,6 +73,43 @@ func TestLoadGenesisFromFile(t *testing.T) {
 	_, err = r.Seek(0, 0)
 	assert.NoError(t, err)
 	assert.NoError(t, db.LoadGenesis(context.Background(), r))
+}
+
+func TestGenesisBeaconStateMerge_OK(t *testing.T) {
+	fp := "testdata/mainnet.merge.genesis.ssz"
+	rfp, err := bazel.Runfile(fp)
+	if err == nil {
+		fp = rfp
+	}
+
+	r, err := os.Open(fp)
+	assert.NoError(t, err)
+	defer func() {
+		assert.NoError(t, r.Close())
+	}()
+
+	b, err := ioutil.ReadAll(r)
+	require.NoError(t, err)
+	st := &pbp2p.BeaconState{}
+	require.NoError(t, st.UnmarshalSSZ(b))
+	gs, err := state.InitializeFromProtoUnsafe(st)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	stateRoot, err := gs.HashTreeRoot(ctx)
+	require.NoError(t, err)
+
+	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
+	genesisBlkRoot, err := genesisBlk.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	header := gs.LatestBlockHeader()
+	header.StateRoot = stateRoot[:]
+
+	headerRoot, err := header.HashTreeRoot()
+	require.NoError(t, err)
+
+	require.Equal(t, genesisBlkRoot, headerRoot, "header roots shall be equal")
 }
 
 func TestLoadGenesisFromFile_mismatchedForkVersion(t *testing.T) {
