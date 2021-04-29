@@ -12,6 +12,7 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -74,7 +75,7 @@ func New() (*DepositCache, error) {
 
 // InsertDeposit into the database. If deposit or block number are nil
 // then this method does nothing.
-func (dc *DepositCache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blockNum uint64, index int64, depositRoot [32]byte) {
+func (dc *DepositCache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blockNum uint64, index int64, depositRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "DepositsCache.InsertDeposit")
 	defer span.End()
 	if d == nil {
@@ -84,10 +85,14 @@ func (dc *DepositCache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blo
 			"index":        index,
 			"deposit root": hex.EncodeToString(depositRoot[:]),
 		}).Warn("Ignoring nil deposit insertion")
-		return
+		return errors.New("nil deposit inserted into the cache")
 	}
 	dc.depositsLock.Lock()
 	defer dc.depositsLock.Unlock()
+
+	if int(index) != len(dc.deposits) {
+		return errors.Errorf("wanted deposit with index %d to be inserted but received %d", len(dc.deposits), index)
+	}
 	// Keep the slice sorted on insertion in order to avoid costly sorting on retrieval.
 	heightIdx := sort.Search(len(dc.deposits), func(i int) bool { return dc.deposits[i].Index >= index })
 	newDeposits := append(
@@ -95,6 +100,7 @@ func (dc *DepositCache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blo
 		dc.deposits[heightIdx:]...)
 	dc.deposits = append(dc.deposits[:heightIdx], newDeposits...)
 	historicalDepositsCount.Inc()
+	return nil
 }
 
 // InsertDepositContainers inserts a set of deposit containers into our deposit cache.
