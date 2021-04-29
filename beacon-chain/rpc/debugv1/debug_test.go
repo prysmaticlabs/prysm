@@ -4,8 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"google.golang.org/protobuf/types/known/emptypb"
-
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	blockchainmock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -14,6 +12,7 @@ import (
 	sharedtestutil "github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestGetBeaconState(t *testing.T) {

@@ -286,11 +286,11 @@ load("@com_github_bazelbuild_buildtools//buildifier:deps.bzl", "buildifier_depen
 
 buildifier_dependencies()
 
-http_archive(
+git_repository(
     name = "com_google_protobuf",
-    sha256 = "65e020a42bdab44a66664d34421995829e9e79c60e5adaa08282fd14ca552f57",
-    strip_prefix = "protobuf-3.15.6",
-    urls = ["https://github.com/protocolbuffers/protobuf/archive/v3.15.6.tar.gz"],
+    commit = "436bd7880e458532901c58f4d9d1ea23fa7edd52",
+    remote = "https://github.com/protocolbuffers/protobuf",
+    shallow_since = "1617835118 -0700",
 )
 
 load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")

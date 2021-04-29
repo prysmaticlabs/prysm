@@ -469,7 +469,6 @@ def prysm_deps():
         sum = "h1:13EK9RTujF7lVkvHQ5Hbu6bM+Yfrq8L0MkJNnjHSd4Q=",
         version = "v1.4.2",
     )
-
     go_repository(
         name = "com_github_coreos_etcd",
         importpath = "github.com/coreos/etcd",
@@ -928,7 +927,6 @@ def prysm_deps():
         sum = "h1:MSdYClljsF3PbENUUEx85nkWfJSGfzYI9yEBZOJz6CY=",
         version = "v0.8.0",
     )
-
     go_repository(
         name = "com_github_gogo_googleapis",
         importpath = "github.com/gogo/googleapis",
@@ -1100,7 +1098,6 @@ def prysm_deps():
         sum = "h1:vc7Dmrk4JwS0ZPS6WZvWlwDflgDTA26jItmbSj83nug=",
         version = "v0.0.0-20200309095847-7953dde2c7bf",
     )
-
     go_repository(
         name = "com_github_gorilla_context",
         importpath = "github.com/gorilla/context",
@@ -1159,7 +1156,6 @@ def prysm_deps():
         sum = "h1:roLNAyHR6c9yx1F+shJbbDvi/YopEreddO2Pmga20Lo=",
         version = "v2.3.1-0.20210330221950-3beba9ed0e19",
     )
-
     go_repository(
         name = "com_github_gxed_hashland_keccakpg",
         importpath = "github.com/gxed/hashland/keccakpg",
@@ -1539,7 +1535,6 @@ def prysm_deps():
         sum = "h1:z7Ciiz3Bz37zSd485fbiTW8ABafIasyOWZI0N9EUUdo=",
         version = "v1.8.1",
     )
-
     go_repository(
         name = "com_github_jmespath_go_jmespath",
         importpath = "github.com/jmespath/go-jmespath",
@@ -2656,7 +2651,6 @@ def prysm_deps():
         sum = "h1:CLw+xkm22H0MzV3Rx16uGuszCSg75XJIhWud22uIL/A=",
         version = "v0.0.0-20210407211545-ae968d924584",
     )
-
     go_repository(
         name = "com_github_puerkitobio_purell",
         importpath = "github.com/PuerkitoBio/purell",
@@ -2949,7 +2943,6 @@ def prysm_deps():
         sum = "h1:nwc3DEeHmmLAfoZucVR881uASk0Mfjw8xYJ99tb5CcY=",
         version = "v1.7.0",
     )
-
     http_archive(
         name = "com_github_supranational_blst",
         urls = [
@@ -3010,7 +3003,6 @@ def prysm_deps():
         sum = "h1:3fNSDoSPyq+fTrifIvGue9XM/tptzuhiGY83rxPVNUg=",
         version = "v7.1.0+incompatible",
     )
-
     go_repository(
         name = "com_github_tyler_smith_go_bip39",
         importpath = "github.com/tyler-smith/go-bip39",
@@ -3233,7 +3225,6 @@ def prysm_deps():
         sum = "h1:/May9ojXjRkPBNVrq+oWLqmWCkr4OU5uRY29bu0mRyQ=",
         version = "v1.1.0",
     )
-
     go_repository(
         name = "com_google_cloud_go_pubsub",
         importpath = "cloud.google.com/go/pubsub",
@@ -3333,7 +3324,6 @@ def prysm_deps():
         sum = "h1:73M5CoZyi3ZLMOyDlQh031Cx6N9NDJ2Vvfl76EDAgDc=",
         version = "v0.9.1",
     )
-
     go_repository(
         name = "in_gopkg_jcmturner_aescts_v1",
         importpath = "gopkg.in/jcmturner/aescts.v1",
@@ -3592,7 +3582,6 @@ def prysm_deps():
         sum = "h1:lQ+dE99pFsb8osbJB3oRfE5eW4Hx6a/lZQr8Jh+eoT4=",
         version = "v1.0.0",
     )
-
     go_repository(
         name = "org_golang_google_protobuf",
         importpath = "google.golang.org/protobuf",

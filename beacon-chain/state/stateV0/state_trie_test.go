@@ -104,9 +104,71 @@ func TestInitializeFromProtoUnsafe(t *testing.T) {
 	}
 }
 
-func TestBeaconState_HashTreeRoot(t *testing.T) {
+func TestCloneBeaconState(t *testing.T) {
 	testState, _ := testutil.DeterministicGenesisState(t, 64)
 
+	type test struct {
+		name        string
+		stateModify func(beaconState iface.BeaconState) (iface.BeaconState, error)
+		error       string
+	}
+	initTests := []test{
+		{
+			name: "unchanged state",
+			stateModify: func(beaconState iface.BeaconState) (iface.BeaconState, error) {
+				return beaconState, nil
+			},
+			error: "",
+		},
+		{
+			name: "different slot",
+			stateModify: func(beaconState iface.BeaconState) (iface.BeaconState, error) {
+				if err := beaconState.SetSlot(5); err != nil {
+					return nil, err
+				}
+				return beaconState, nil
+			},
+			error: "",
+		},
+		{
+			name: "different validator balance",
+			stateModify: func(beaconState iface.BeaconState) (iface.BeaconState, error) {
+				val, err := beaconState.ValidatorAtIndex(5)
+				if err != nil {
+					return nil, err
+				}
+				val.EffectiveBalance = params.BeaconConfig().MaxEffectiveBalance - params.BeaconConfig().EffectiveBalanceIncrement
+				if err := beaconState.UpdateValidatorAtIndex(5, val); err != nil {
+					return nil, err
+				}
+				return beaconState, nil
+			},
+			error: "",
+		},
+	}
+
+	var err error
+	for _, tt := range initTests {
+		t.Run(tt.name, func(t *testing.T) {
+			testState, err = tt.stateModify(testState)
+			assert.NoError(t, err)
+			root, err := testState.HashTreeRoot(context.Background())
+			if err == nil && tt.error != "" {
+				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
+			}
+			clonedState, err := stateV0.CloneBeaconState(testState.InnerStateUnsafe().(*pbp2p.BeaconState))
+			assert.NoError(t, err)
+			genericHTR, err := clonedState.HashTreeRoot()
+			if err == nil && tt.error != "" {
+				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
+			}
+			assert.DeepNotEqual(t, []byte{}, root[:], "Received empty hash tree root")
+			assert.DeepEqual(t, genericHTR[:], root[:], "Expected hash tree root to match generic")
+		})
+	}
+}
+func TestBeaconState_HashTreeRoot(t *testing.T) {
+	testState, _ := testutil.DeterministicGenesisState(t, 64)
 	type test struct {
 		name        string
 		stateModify func(beaconState iface.BeaconState) (iface.BeaconState, error)

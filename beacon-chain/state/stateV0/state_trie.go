@@ -6,12 +6,11 @@ import (
 	"sort"
 	"sync"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	v1 "github.com/prysmaticlabs/ethereumapis/eth/v1"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -41,8 +40,12 @@ func InitializeFromProto(st *pbp2p.BeaconState) (*BeaconState, error) {
 }
 
 // CloneBeaconState serves as a wrapper for proto.Clone to apply any
-// post-cloning changes needed.
+// post-cloning changes needed. This was added due to a change in protobuf v2
+// which encodes empty slices as nil.
 func CloneBeaconState(st *pbp2p.BeaconState) (*pbp2p.BeaconState, error) {
+	if st == nil {
+		return nil, errors.New("received nil state")
+	}
 	cloned, ok := proto.Clone(st).(*pbp2p.BeaconState)
 	if !ok {
 		return nil, errors.New("not a beacon state")
