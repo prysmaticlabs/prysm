@@ -26,7 +26,7 @@ func TestInsertDeposit_LogsOnNilDepositInsertion(t *testing.T) {
 	dc, err := New()
 	require.NoError(t, err)
 
-	dc.InsertDeposit(context.Background(), nil, 1, 0, [32]byte{})
+	assert.NoError(t, dc.InsertDeposit(context.Background(), nil, 1, 0, [32]byte{}))
 
 	require.Equal(t, 0, len(dc.deposits), "Number of deposits changed")
 	assert.Equal(t, nilDepositErr, hook.LastEntry().Message)
@@ -64,7 +64,7 @@ func TestInsertDeposit_MaintainsSortedOrderByIndex(t *testing.T) {
 	}
 
 	for _, ins := range insertions {
-		dc.InsertDeposit(context.Background(), ins.deposit, ins.blkNum, ins.index, [32]byte{})
+		assert.NoError(t, dc.InsertDeposit(context.Background(), ins.deposit, ins.blkNum, ins.index, [32]byte{}))
 	}
 
 	expectedIndices := []int64{0, 1, 3, 4}
@@ -633,7 +633,7 @@ func TestPruneProofs_Ok(t *testing.T) {
 	}
 
 	for _, ins := range deposits {
-		dc.InsertDeposit(context.Background(), ins.deposit, ins.blkNum, ins.index, [32]byte{})
+		assert.NoError(t, dc.InsertDeposit(context.Background(), ins.deposit, ins.blkNum, ins.index, [32]byte{}))
 	}
 
 	require.NoError(t, dc.PruneProofs(context.Background(), 1))
@@ -676,7 +676,7 @@ func TestPruneProofs_SomeAlreadyPruned(t *testing.T) {
 	}
 
 	for _, ins := range deposits {
-		dc.InsertDeposit(context.Background(), ins.deposit, ins.blkNum, ins.index, [32]byte{})
+		assert.NoError(t, dc.InsertDeposit(context.Background(), ins.deposit, ins.blkNum, ins.index, [32]byte{}))
 	}
 
 	require.NoError(t, dc.PruneProofs(context.Background(), 2))
@@ -716,7 +716,7 @@ func TestPruneProofs_PruneAllWhenDepositIndexTooBig(t *testing.T) {
 	}
 
 	for _, ins := range deposits {
-		dc.InsertDeposit(context.Background(), ins.deposit, ins.blkNum, ins.index, [32]byte{})
+		assert.NoError(t, dc.InsertDeposit(context.Background(), ins.deposit, ins.blkNum, ins.index, [32]byte{}))
 	}
 
 	require.NoError(t, dc.PruneProofs(context.Background(), 99))
@@ -759,7 +759,7 @@ func TestPruneProofs_CorrectlyHandleLastIndex(t *testing.T) {
 	}
 
 	for _, ins := range deposits {
-		dc.InsertDeposit(context.Background(), ins.deposit, ins.blkNum, ins.index, [32]byte{})
+		assert.NoError(t, dc.InsertDeposit(context.Background(), ins.deposit, ins.blkNum, ins.index, [32]byte{}))
 	}
 
 	require.NoError(t, dc.PruneProofs(context.Background(), 4))
