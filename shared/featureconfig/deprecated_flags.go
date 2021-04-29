@@ -39,9 +39,9 @@ var (
 	}
 	deprecatedEnableNextSlotCache = &cli.BoolFlag{
 		Name:   "enable-next-slot-state-cache",
-    Usage:  deprecatedUsage,
+		Usage:  deprecatedUsage,
 		Hidden: true,
-  }
+	}
 	deprecatedProposerAttsSelectionUsingMaxCover = &cli.BoolFlag{
 		Name:   "proposer-atts-selection-using-max-cover",
 		Usage:  deprecatedUsage,
