@@ -134,6 +134,10 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 		return errors.Wrap(err, "Unable to determine hashed value of deposit")
 	}
 
+	// Defensive check to validate incoming index.
+	if s.depositTrie.NumOfItems() != int(index) {
+		return errors.Errorf("invalid deposit index received: wanted %d but got %d", s.depositTrie.NumOfItems(), index)
+	}
 	s.depositTrie.Insert(depositHash[:], int(index))
 
 	proof, err := s.depositTrie.MerkleProof(int(index))
@@ -147,7 +151,10 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 	}
 
 	// We always store all historical deposits in the DB.
-	s.cfg.DepositCache.InsertDeposit(ctx, deposit, depositLog.BlockNumber, index, s.depositTrie.Root())
+	err = s.cfg.DepositCache.InsertDeposit(ctx, deposit, depositLog.BlockNumber, index, s.depositTrie.Root())
+	if err != nil {
+		return errors.Wrap(err, "unable to insert deposit into cache")
+	}
 	validData := true
 	if !s.chainStartData.Chainstarted {
 		s.chainStartData.ChainstartDeposits = append(s.chainStartData.ChainstartDeposits, deposit)
