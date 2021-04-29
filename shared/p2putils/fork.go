@@ -32,6 +32,11 @@ func CreateForkDigest(
 		return [4]byte{}, err
 	}
 
+	// Zero genesis validator root if the chain hasn't started.
+	if genesisTime.Unix() > time.Now().Unix() {
+		genesisValidatorsRoot = params.BeaconConfig().ZeroHash[:]
+	}
+
 	digest, err := helpers.ComputeForkDigest(forkData.CurrentVersion, genesisValidatorsRoot)
 	if err != nil {
 		return [4]byte{}, err
