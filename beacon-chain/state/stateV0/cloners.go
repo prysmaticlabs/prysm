@@ -292,8 +292,8 @@ func CopyExecutionPayload(payload *ethpb.ExecutionPayload) *ethpb.ExecutionPaylo
 // CopyTransactions copies the transactions.
 func CopyTransactions(txs [][]byte) [][]byte {
 	newTxs := make([][]byte, len(txs))
-	for i, tx := range newTxs {
-		newTxs[i] = bytesutil.SafeCopyBytes(tx)
+	for i := range newTxs {
+		newTxs[i] = bytesutil.SafeCopyBytes(txs[i])
 	}
 	return newTxs
 }
