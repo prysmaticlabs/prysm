@@ -11,6 +11,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/proto/beacon/db"
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -85,7 +86,6 @@ type NoHeadAccessDatabase interface {
 	SaveDepositContractAddress(ctx context.Context, addr common.Address) error
 	// Powchain operations.
 	SavePowchainData(ctx context.Context, data *db.ETH1ChainData) error
-
 	// Run any required database migrations.
 	RunMigrations(ctx context.Context) error
 
@@ -104,6 +104,47 @@ type HeadAccessDatabase interface {
 	LoadGenesis(ctx context.Context, r io.Reader) error
 	SaveGenesisData(ctx context.Context, state iface.BeaconState) error
 	EnsureEmbeddedGenesis(ctx context.Context) error
+}
+
+// SlasherDatabase interface for persisting data related to detecting slashable offenses on eth2.
+type SlasherDatabase interface {
+	io.Closer
+	SaveLastEpochWrittenForValidators(
+		ctx context.Context, validatorIndices []types.ValidatorIndex, epoch types.Epoch,
+	) error
+	SaveAttestationRecordsForValidators(
+		ctx context.Context,
+		attestations []*slashertypes.IndexedAttestationWrapper,
+	) error
+	SaveSlasherChunks(
+		ctx context.Context, kind slashertypes.ChunkKind, chunkKeys [][]byte, chunks [][]uint16,
+	) error
+	SaveBlockProposals(
+		ctx context.Context, proposal []*slashertypes.SignedBlockHeaderWrapper,
+	) error
+	LastEpochWrittenForValidators(
+		ctx context.Context, validatorIndices []types.ValidatorIndex,
+	) ([]*slashertypes.AttestedEpochForValidator, error)
+	AttestationRecordForValidator(
+		ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch,
+	) (*slashertypes.IndexedAttestationWrapper, error)
+	CheckAttesterDoubleVotes(
+		ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper,
+	) ([]*slashertypes.AttesterDoubleVote, error)
+	LoadSlasherChunks(
+		ctx context.Context, kind slashertypes.ChunkKind, diskKeys [][]byte,
+	) ([][]uint16, []bool, error)
+	CheckDoubleBlockProposals(
+		ctx context.Context, proposals []*slashertypes.SignedBlockHeaderWrapper,
+	) ([]*eth.ProposerSlashing, error)
+	PruneAttestations(
+		ctx context.Context, currentEpoch, pruningEpochIncrements, historyLength types.Epoch,
+	) error
+	PruneProposals(
+		ctx context.Context, currentEpoch, pruningEpochIncrements, historyLength types.Epoch,
+	) error
+	DatabasePath() string
+	ClearDB() error
 }
 
 // Database interface with full access.

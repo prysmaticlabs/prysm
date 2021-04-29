@@ -13,6 +13,7 @@ func headState(ctx context.Context) {
 	return
 }
 
+// StartSpan --
 func StartSpan(ctx context.Context, name string) (context.Context, int) {
 	return ctx, 42
 }

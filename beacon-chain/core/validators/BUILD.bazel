@@ -5,7 +5,10 @@ go_library(
     name = "go_default_library",
     srcs = ["validator.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/validators",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//spectest:__subpackages__",
+    ],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/state/interface:go_default_library",

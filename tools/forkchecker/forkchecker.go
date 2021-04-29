@@ -32,6 +32,7 @@ func (e *endpoint) String() string {
 	return "gRPC endpoints"
 }
 
+// Set adds endpoint value to list.
 func (e *endpoint) Set(value string) error {
 	*e = append(*e, value)
 	return nil
