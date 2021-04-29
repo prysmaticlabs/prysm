@@ -154,6 +154,11 @@ func packChunks(bytes []byte) ([][]byte, error) {
 		// indices determined above.
 		chunks = append(chunks, bytes[i:j])
 	}
+
+	if len(chunks) == 0 {
+		return chunks, nil
+	}
+
 	// Right-pad the last chunk with zero bytes if it does not
 	// have length bytes.
 	lastChunk := chunks[len(chunks)-1]
