@@ -684,17 +684,60 @@ func TestService_ValidateDepositContainers(t *testing.T) {
 		DepositCache: cache,
 	})
 	require.NoError(t, err)
-	ctrs := make([]*protodb.DepositContainer, 0)
-	assert.Equal(t, true, s1.validateDepositContainers(ctrs))
-	for i := 0; i < 10; i++ {
-		ctrs = append(ctrs, &protodb.DepositContainer{Index: int64(i), Eth1BlockHeight: uint64(i + 10)})
+
+	var tt = []struct {
+		name        string
+		ctrsFunc    func() []*protodb.DepositContainer
+		expectedRes bool
+	}{
+		{
+			name: "zero containers",
+			ctrsFunc: func() []*protodb.DepositContainer {
+				return make([]*protodb.DepositContainer, 0)
+			},
+			expectedRes: true,
+		},
+		{
+			name: "ordered containers",
+			ctrsFunc: func() []*protodb.DepositContainer {
+				ctrs := make([]*protodb.DepositContainer, 0)
+				for i := 0; i < 10; i++ {
+					ctrs = append(ctrs, &protodb.DepositContainer{Index: int64(i), Eth1BlockHeight: uint64(i + 10)})
+				}
+				return ctrs
+			},
+			expectedRes: true,
+		},
+		{
+			name: "0th container missing",
+			ctrsFunc: func() []*protodb.DepositContainer {
+				ctrs := make([]*protodb.DepositContainer, 0)
+				for i := 1; i < 10; i++ {
+					ctrs = append(ctrs, &protodb.DepositContainer{Index: int64(i), Eth1BlockHeight: uint64(i + 10)})
+				}
+				return ctrs
+			},
+			expectedRes: false,
+		},
+		{
+			name: "skipped containers",
+			ctrsFunc: func() []*protodb.DepositContainer {
+				ctrs := make([]*protodb.DepositContainer, 0)
+				for i := 0; i < 10; i++ {
+					if i == 5 || i == 7 {
+						continue
+					}
+					ctrs = append(ctrs, &protodb.DepositContainer{Index: int64(i), Eth1BlockHeight: uint64(i + 10)})
+				}
+				return ctrs
+			},
+			expectedRes: false,
+		},
 	}
-	assert.Equal(t, true, s1.validateDepositContainers(ctrs))
-	ctrs = make([]*protodb.DepositContainer, 0)
-	for i := 1; i < 10; i++ {
-		ctrs = append(ctrs, &protodb.DepositContainer{Index: int64(i), Eth1BlockHeight: uint64(i + 10)})
+
+	for _, test := range tt {
+		assert.Equal(t, test.expectedRes, s1.validateDepositContainers(test.ctrsFunc()))
 	}
-	assert.Equal(t, false, s1.validateDepositContainers(ctrs))
 }
 
 func TestTimestampIsChecked(t *testing.T) {
