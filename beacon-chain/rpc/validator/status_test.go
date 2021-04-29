@@ -560,7 +560,7 @@ func TestActivationStatus_OK(t *testing.T) {
 
 	dep = deposits[2]
 	depositTrie.Insert(dep.Data.Signature, 15)
-	assert.NoError(t, depositCache.InsertDeposit(context.Background(), dep, 0, 0, depositTrie.Root()))
+	assert.NoError(t, depositCache.InsertDeposit(context.Background(), dep, 0, 1, depositTrie.Root()))
 
 	vs := &Server{
 		BeaconDB:           db,
@@ -685,7 +685,7 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 		deposit := &ethpb.Deposit{
 			Data: depData,
 		}
-		assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root()))
+		assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, int64(i), depositTrie.Root()))
 
 	}
 
@@ -771,7 +771,7 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 	assert.NoError(t, depositCache.InsertDeposit(ctx, dep, 10 /*blockNum*/, 0, depositTrie.Root()))
 	dep = deposits[2]
 	depositTrie.Insert(dep.Data.Signature, 15)
-	assert.NoError(t, depositCache.InsertDeposit(context.Background(), dep, 0, 0, depositTrie.Root()))
+	assert.NoError(t, depositCache.InsertDeposit(context.Background(), dep, 0, 1, depositTrie.Root()))
 
 	vs := &Server{
 		BeaconDB:           db,

@@ -26,7 +26,7 @@ func TestInsertDeposit_LogsOnNilDepositInsertion(t *testing.T) {
 	dc, err := New()
 	require.NoError(t, err)
 
-	assert.NoError(t, dc.InsertDeposit(context.Background(), nil, 1, 0, [32]byte{}))
+	assert.ErrorContains(t, "nil deposit inserted into the cache", dc.InsertDeposit(context.Background(), nil, 1, 0, [32]byte{}))
 
 	require.Equal(t, 0, len(dc.deposits), "Number of deposits changed")
 	assert.Equal(t, nilDepositErr, hook.LastEntry().Message)
@@ -37,37 +37,52 @@ func TestInsertDeposit_MaintainsSortedOrderByIndex(t *testing.T) {
 	require.NoError(t, err)
 
 	insertions := []struct {
-		blkNum  uint64
-		deposit *ethpb.Deposit
-		index   int64
+		blkNum      uint64
+		deposit     *ethpb.Deposit
+		index       int64
+		expectedErr string
 	}{
 		{
-			blkNum:  0,
-			deposit: &ethpb.Deposit{},
-			index:   0,
+			blkNum:      0,
+			deposit:     &ethpb.Deposit{},
+			index:       0,
+			expectedErr: "",
 		},
 		{
-			blkNum:  0,
-			deposit: &ethpb.Deposit{},
-			index:   3,
+			blkNum:      0,
+			deposit:     &ethpb.Deposit{},
+			index:       3,
+			expectedErr: "wanted deposit with index 1 to be inserted but received 3",
 		},
 		{
-			blkNum:  0,
-			deposit: &ethpb.Deposit{},
-			index:   1,
+			blkNum:      0,
+			deposit:     &ethpb.Deposit{},
+			index:       1,
+			expectedErr: "",
 		},
 		{
-			blkNum:  0,
-			deposit: &ethpb.Deposit{},
-			index:   4,
+			blkNum:      0,
+			deposit:     &ethpb.Deposit{},
+			index:       4,
+			expectedErr: "wanted deposit with index 2 to be inserted but received 4",
+		},
+		{
+			blkNum:      0,
+			deposit:     &ethpb.Deposit{},
+			index:       2,
+			expectedErr: "",
 		},
 	}
 
 	for _, ins := range insertions {
-		assert.NoError(t, dc.InsertDeposit(context.Background(), ins.deposit, ins.blkNum, ins.index, [32]byte{}))
+		if ins.expectedErr != "" {
+			assert.ErrorContains(t, ins.expectedErr, dc.InsertDeposit(context.Background(), ins.deposit, ins.blkNum, ins.index, [32]byte{}))
+		} else {
+			assert.NoError(t, dc.InsertDeposit(context.Background(), ins.deposit, ins.blkNum, ins.index, [32]byte{}))
+		}
 	}
 
-	expectedIndices := []int64{0, 1, 3, 4}
+	expectedIndices := []int64{0, 1, 2}
 	for i, ei := range expectedIndices {
 		assert.Equal(t, ei, dc.deposits[i].Index,
 			fmt.Sprintf("dc.deposits[%d].Index = %d, wanted %d", i, dc.deposits[i].Index, ei))
