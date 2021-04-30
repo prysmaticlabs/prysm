@@ -68,7 +68,6 @@ go_test(
         "transition_test.go",
     ],
     data = [
-        "//beacon-chain/core/state/regression_files:regression_data",
         "//shared/benchutil/benchmark_files:benchmark_data",
     ],
     embed = [":go_default_library"],

@@ -36,6 +36,7 @@ import (
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/clientstats"
 	"github.com/prysmaticlabs/prysm/shared/httputils"
 	"github.com/prysmaticlabs/prysm/shared/httputils/authorizationmethod"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
@@ -146,17 +147,19 @@ type Service struct {
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	runError                error
 	preGenesisState         iface.BeaconState
+	bsUpdater               BeaconNodeStatsUpdater
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
 type Web3ServiceConfig struct {
-	HttpEndpoints      []string
-	DepositContract    common.Address
-	BeaconDB           db.HeadAccessDatabase
-	DepositCache       *depositcache.DepositCache
-	StateNotifier      statefeed.Notifier
-	StateGen           *stategen.State
-	Eth1HeaderReqLimit uint64
+	HttpEndpoints          []string
+	DepositContract        common.Address
+	BeaconDB               db.HeadAccessDatabase
+	DepositCache           *depositcache.DepositCache
+	StateNotifier          statefeed.Notifier
+	StateGen               *stategen.State
+	Eth1HeaderReqLimit     uint64
+	BeaconNodeStatsUpdater BeaconNodeStatsUpdater
 }
 
 // NewService sets up a new instance with an ethclient when
@@ -210,6 +213,12 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		lastReceivedMerkleIndex: -1,
 		preGenesisState:         genState,
 		headTicker:              time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerETH1Block) * time.Second),
+		// use the nop updater by default, rely on upstream set up to pass in an appropriate impl
+		bsUpdater: config.BeaconNodeStatsUpdater,
+	}
+
+	if config.BeaconNodeStatsUpdater == nil {
+		s.bsUpdater = &NopBeaconNodeStatsUpdater{}
 	}
 
 	if err := s.ensureValidPowchainData(ctx); err != nil {
@@ -223,6 +232,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 	if err := s.initializeEth1Data(ctx, eth1Data); err != nil {
 		return nil, err
 	}
+
 	return s, nil
 }
 
@@ -300,6 +310,31 @@ func (s *Service) Status() error {
 		return s.runError
 	}
 	return nil
+}
+
+func (s *Service) updateBeaconnodeStats() {
+	bs := clientstats.BeaconNodeStats{}
+	if len(s.httpEndpoints) > 1 {
+		bs.SyncEth1FallbackConfigured = true
+	}
+	if s.IsConnectedToETH1() {
+		if s.primaryConnected() {
+			bs.SyncEth1Connected = true
+		} else {
+			bs.SyncEth1FallbackConnected = true
+		}
+	}
+	s.bsUpdater.Update(bs)
+}
+
+func (s *Service) updateCurrHttpEndpoint(endpoint httputils.Endpoint) {
+	s.currHttpEndpoint = endpoint
+	s.updateBeaconnodeStats()
+}
+
+func (s *Service) updateConnectedETH1(state bool) {
+	s.connectedETH1 = state
+	s.updateBeaconnodeStats()
 }
 
 // IsConnectedToETH1 checks if the beacon node is connected to a ETH1 Node.
@@ -455,7 +490,7 @@ func (s *Service) waitForConnection() {
 		synced, errSynced := s.isEth1NodeSynced()
 		// Resume if eth1 node is synced.
 		if synced {
-			s.connectedETH1 = true
+			s.updateConnectedETH1(true)
 			s.runError = nil
 			log.WithFields(logrus.Fields{
 				"endpoint": logutil.MaskCredentialsLogging(s.currHttpEndpoint.Url),
@@ -503,7 +538,7 @@ func (s *Service) waitForConnection() {
 				continue
 			}
 			if synced {
-				s.connectedETH1 = true
+				s.updateConnectedETH1(true)
 				s.runError = nil
 				log.WithFields(logrus.Fields{
 					"endpoint": logutil.MaskCredentialsLogging(s.currHttpEndpoint.Url),
@@ -539,7 +574,7 @@ func (s *Service) isEth1NodeSynced() (bool, error) {
 // Reconnect to eth1 node in case of any failure.
 func (s *Service) retryETH1Node(err error) {
 	s.runError = err
-	s.connectedETH1 = false
+	s.updateConnectedETH1(false)
 	// Back off for a while before
 	// resuming dialing the eth1 node.
 	time.Sleep(backOffPeriod)
@@ -765,7 +800,7 @@ func (s *Service) run(done <-chan struct{}) {
 		case <-done:
 			s.isRunning = false
 			s.runError = nil
-			s.connectedETH1 = false
+			s.updateConnectedETH1(false)
 			log.Debug("Context closed, exiting goroutine")
 			return
 		case <-s.headTicker.C:
@@ -895,7 +930,7 @@ func (s *Service) checkDefaultEndpoint() {
 
 	// Switch back to primary endpoint and try connecting
 	// to it again.
-	s.currHttpEndpoint = primaryEndpoint
+	s.updateCurrHttpEndpoint(primaryEndpoint)
 	s.retryETH1Node(nil)
 }
 
@@ -916,12 +951,10 @@ func (s *Service) fallbackToNextEndpoint() {
 	if nextIndex >= totalEndpoints {
 		nextIndex = 0
 	}
-	// Exit early if we have the same index.
-	if nextIndex == currIndex {
-		return
+	if nextIndex != currIndex {
+		log.Infof("Falling back to alternative endpoint: %s", logutil.MaskCredentialsLogging(s.currHttpEndpoint.Url))
 	}
-	s.currHttpEndpoint = s.httpEndpoints[nextIndex]
-	log.Infof("Falling back to alternative endpoint: %s", logutil.MaskCredentialsLogging(s.currHttpEndpoint.Url))
+	s.updateCurrHttpEndpoint(s.httpEndpoints[nextIndex])
 }
 
 // initializes our service from the provided eth1data object by initializing all the relevant
@@ -1031,4 +1064,8 @@ func eth1HeadIsBehind(timestamp uint64) bool {
 	timeout := timeutils.Now().Add(-eth1Threshold)
 	// check that web3 client is syncing
 	return time.Unix(int64(timestamp), 0).Before(timeout)
+}
+
+func (s *Service) primaryConnected() bool {
+	return s.currHttpEndpoint.Equals(s.httpEndpoints[0])
 }

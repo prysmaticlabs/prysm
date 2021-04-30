@@ -173,7 +173,7 @@ func (dc *DepositCache) AllDeposits(ctx context.Context, untilBlk *big.Int) []*e
 	return deposits
 }
 
-// DepositsNumberAndRootAtHeight returns number of deposits made prior to blockheight and the
+// DepositsNumberAndRootAtHeight returns number of deposits made up to blockheight and the
 // root that corresponds to the latest deposit at that blockheight.
 func (dc *DepositCache) DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight *big.Int) (uint64, [32]byte) {
 	ctx, span := trace.StartSpan(ctx, "DepositsCache.DepositsNumberAndRootAtHeight")
