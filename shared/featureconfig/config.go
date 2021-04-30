@@ -178,17 +178,19 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.WithField(disableBroadcastSlashingFlag.Name, disableBroadcastSlashingFlag.Usage).Warn(enabledFeatureFlag)
 		cfg.DisableBroadcastSlashings = true
 	}
-	if ctx.Bool(enableNextSlotStateCache.Name) {
-		log.WithField(enableNextSlotStateCache.Name, enableNextSlotStateCache.Usage).Warn(enabledFeatureFlag)
-		cfg.EnableNextSlotStateCache = true
+	cfg.EnableNextSlotStateCache = true
+	if ctx.Bool(disableNextSlotStateCache.Name) {
+		log.WithField(disableNextSlotStateCache.Name, disableNextSlotStateCache.Usage).Warn(enabledFeatureFlag)
+		cfg.EnableNextSlotStateCache = false
 	}
 	if ctx.Bool(updateHeadTimely.Name) {
 		log.WithField(updateHeadTimely.Name, updateHeadTimely.Usage).Warn(enabledFeatureFlag)
 		cfg.UpdateHeadTimely = true
 	}
-	if ctx.Bool(proposerAttsSelectionUsingMaxCover.Name) {
-		log.WithField(proposerAttsSelectionUsingMaxCover.Name, proposerAttsSelectionUsingMaxCover.Usage).Warn(enabledFeatureFlag)
-		cfg.ProposerAttsSelectionUsingMaxCover = true
+	cfg.ProposerAttsSelectionUsingMaxCover = true
+	if ctx.Bool(disableProposerAttsSelectionUsingMaxCover.Name) {
+		log.WithField(disableProposerAttsSelectionUsingMaxCover.Name, disableProposerAttsSelectionUsingMaxCover.Usage).Warn(enabledFeatureFlag)
+		cfg.ProposerAttsSelectionUsingMaxCover = false
 	}
 	Init(cfg)
 }
