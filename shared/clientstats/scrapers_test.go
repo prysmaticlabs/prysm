@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
@@ -60,6 +61,7 @@ func TestFalseEth2Synced(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unexpected error calling beaconNodeScraper.Scrape=%s", err)
 	}
+
 	bs := &BeaconNodeStats{}
 	err = json.NewDecoder(r).Decode(bs)
 	if err != nil {
@@ -68,17 +70,18 @@ func TestFalseEth2Synced(t *testing.T) {
 
 	assert.Equal(t, false, bs.SyncEth2Synced)
 }
+
 func TestValidatorScraper(t *testing.T) {
 	vScraper := validatorScraper{}
 	vScraper.tripper = &mockRT{body: prometheusTestBody}
 	r, err := vScraper.Scrape()
 	if err != nil {
-		t.Errorf("Unexpected error calling beaconNodeScraper.Scrape=%s", err)
+		t.Errorf("Unexpected error calling validatorScraper.Scrape=%s", err)
 	}
 	vs := &ValidatorStats{}
 	err = json.NewDecoder(r).Decode(vs)
 	if err != nil {
-		t.Errorf("Unexpected error decoding result of beaconNodeScraper.Scrape=%s", err)
+		t.Errorf("Unexpected error decoding result of validatorScraper.Scrape=%s", err)
 	}
 	// CommonStats
 	assert.Equal(t, int64(225), vs.CPUProcessSecondsTotal)
@@ -86,6 +89,54 @@ func TestValidatorScraper(t *testing.T) {
 	assert.Equal(t, int64(1619586241), vs.ClientBuild)
 	assert.Equal(t, "v1.3.8-hotfix+6c0942", vs.ClientVersion)
 	assert.Equal(t, "prysm", vs.ClientName)
+}
+
+func mockNowFunc(fixedTime time.Time) func() time.Time {
+	return func() time.Time {
+		return fixedTime
+	}
+}
+
+func TestValidatorAPIMessageDefaults(t *testing.T) {
+	now = mockNowFunc(time.Unix(1619811114, 123456789))
+	// 1+e6 ns per ms, so 123456789 ns rounded down should be 123 ms
+	nowMillis := int64(1619811114123)
+	vScraper := validatorScraper{}
+	vScraper.tripper = &mockRT{body: prometheusTestBody}
+	r, err := vScraper.Scrape()
+	assert.NoError(t, err, "unexpected error from validatorScraper.Scrape()")
+
+	vs := &ValidatorStats{}
+	err = json.NewDecoder(r).Decode(vs)
+	if err != nil {
+		t.Errorf("Unexpected error decoding result of validatorScraper.Scrape=%s", err)
+	}
+
+	// CommonStats
+	assert.Equal(t, nowMillis, vs.Timestamp, "Unexpected 'timestamp' in client-stats APIMessage struct")
+	assert.Equal(t, APIVersion, vs.APIVersion, "Unexpected 'version' in client-stats APIMessage struct")
+	assert.Equal(t, ValidatorProcessName, vs.ProcessName, "Unexpected value for 'process' in client-stats APIMessage struct")
+}
+
+func TestBeaconNodeAPIMessageDefaults(t *testing.T) {
+	now = mockNowFunc(time.Unix(1619811114, 123456789))
+	// 1+e6 ns per ms, so 123456789 ns rounded down should be 123 ms
+	nowMillis := int64(1619811114123)
+	bScraper := beaconNodeScraper{}
+	bScraper.tripper = &mockRT{body: prometheusTestBody}
+	r, err := bScraper.Scrape()
+	assert.NoError(t, err, "unexpected error from beaconNodeScraper.Scrape()")
+
+	vs := &BeaconNodeStats{}
+	err = json.NewDecoder(r).Decode(vs)
+	if err != nil {
+		t.Errorf("Unexpected error decoding result of beaconNodeScraper.Scrape=%s", err)
+	}
+
+	// CommonStats
+	assert.Equal(t, nowMillis, vs.Timestamp, "Unexpected 'timestamp' in client-stats APIMessage struct")
+	assert.Equal(t, APIVersion, vs.APIVersion, "Unexpected 'version' in client-stats APIMessage struct")
+	assert.Equal(t, BeaconNodeProcessName, vs.ProcessName, "Unexpected value for 'process' in client-stats APIMessage struct")
 }
 
 func TestBadInput(t *testing.T) {

@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"time"
 
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/prom2json"
@@ -55,15 +56,10 @@ func (vc *validatorScraper) Scrape() (io.Reader, error) {
 		return nil, nil
 	}
 
-	cs, err := populateCommonStats(pf)
-	if err != nil {
-		return nil, err
-	}
 	vs, err := populateValidatorStats(pf)
 	if err != nil {
 		return nil, err
 	}
-	vs.CommonStats = cs
 
 	b, err := json.Marshal(vs)
 	return bytes.NewBuffer(b), err
@@ -126,9 +122,20 @@ func (mm metricMap) getFamily(name string) (*dto.MetricFamily, error) {
 	return f, nil
 }
 
+var now = time.Now // var hook for tests to overwrite
+var nanosPerMilli = (int64(time.Millisecond) / int64(time.Nanosecond))
+
+func populateAPIMessage(processName string) APIMessage {
+	return APIMessage{
+		Timestamp:   now().UnixNano() / nanosPerMilli,
+		APIVersion:  APIVersion,
+		ProcessName: processName,
+	}
+}
+
 func populateCommonStats(pf metricMap) (CommonStats, error) {
 	cs := CommonStats{}
-	cs.ClientName = "prysm"
+	cs.ClientName = ClientName
 	var f *dto.MetricFamily
 	var m *dto.Metric
 	var err error
@@ -176,6 +183,7 @@ func populateBeaconNodeStats(pf metricMap) (BeaconNodeStats, error) {
 	if err != nil {
 		return bs, err
 	}
+	bs.APIMessage = populateAPIMessage(BeaconNodeProcessName)
 
 	var f *dto.MetricFamily
 	var m *dto.Metric
@@ -221,6 +229,12 @@ func populateBeaconNodeStats(pf metricMap) (BeaconNodeStats, error) {
 }
 
 func populateValidatorStats(pf map[string]*dto.MetricFamily) (ValidatorStats, error) {
+	var err error
 	vs := ValidatorStats{}
+	vs.CommonStats, err = populateCommonStats(pf)
+	if err != nil {
+		return vs, err
+	}
+	vs.APIMessage = populateAPIMessage(ValidatorProcessName)
 	return vs, nil
 }
