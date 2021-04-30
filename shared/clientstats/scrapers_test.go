@@ -31,14 +31,10 @@ func TestBeaconNodeScraper(t *testing.T) {
 	bnScraper := beaconNodeScraper{}
 	bnScraper.tripper = &mockRT{body: prometheusTestBody}
 	r, err := bnScraper.Scrape()
-	if err != nil {
-		t.Errorf("Unexpected error calling beaconNodeScraper.Scrape=%s", err)
-	}
+	assert.NoError(t, err, "Unexpected error calling beaconNodeScraper.Scrape")
 	bs := &BeaconNodeStats{}
 	err = json.NewDecoder(r).Decode(bs)
-	if err != nil {
-		t.Errorf("Unexpected error decoding result of beaconNodeScraper.Scrape=%s", err)
-	}
+	assert.NoError(t, err, "Unexpected error decoding result of beaconNodeScraper.Scrape")
 	// CommonStats
 	assert.Equal(t, int64(225), bs.CPUProcessSecondsTotal)
 	assert.Equal(t, int64(1166630912), bs.MemoryProcessBytes)
@@ -58,15 +54,11 @@ func TestFalseEth2Synced(t *testing.T) {
 	eth2NotSynced := strings.Replace(prometheusTestBody, "beacon_head_slot 256552", "beacon_head_slot 256559", 1)
 	bnScraper.tripper = &mockRT{body: eth2NotSynced}
 	r, err := bnScraper.Scrape()
-	if err != nil {
-		t.Errorf("Unexpected error calling beaconNodeScraper.Scrape=%s", err)
-	}
+	assert.NoError(t, err, "Unexpected error calling beaconNodeScraper.Scrape")
 
 	bs := &BeaconNodeStats{}
 	err = json.NewDecoder(r).Decode(bs)
-	if err != nil {
-		t.Errorf("Unexpected error decoding result of beaconNodeScraper.Scrape=%s", err)
-	}
+	assert.NoError(t, err, "Unexpected error decoding result of beaconNodeScraper.Scrape")
 
 	assert.Equal(t, false, bs.SyncEth2Synced)
 }
@@ -75,14 +67,10 @@ func TestValidatorScraper(t *testing.T) {
 	vScraper := validatorScraper{}
 	vScraper.tripper = &mockRT{body: prometheusTestBody}
 	r, err := vScraper.Scrape()
-	if err != nil {
-		t.Errorf("Unexpected error calling validatorScraper.Scrape=%s", err)
-	}
+	assert.NoError(t, err, "Unexpected error calling validatorScraper.Scrape")
 	vs := &ValidatorStats{}
 	err = json.NewDecoder(r).Decode(vs)
-	if err != nil {
-		t.Errorf("Unexpected error decoding result of validatorScraper.Scrape=%s", err)
-	}
+	assert.NoError(t, err, "Unexpected error decoding result of validatorScraper.Scrape")
 	// CommonStats
 	assert.Equal(t, int64(225), vs.CPUProcessSecondsTotal)
 	assert.Equal(t, int64(1166630912), vs.MemoryProcessBytes)
@@ -108,9 +96,7 @@ func TestValidatorAPIMessageDefaults(t *testing.T) {
 
 	vs := &ValidatorStats{}
 	err = json.NewDecoder(r).Decode(vs)
-	if err != nil {
-		t.Errorf("Unexpected error decoding result of validatorScraper.Scrape=%s", err)
-	}
+	assert.NoError(t, err, "Unexpected error decoding result of validatorScraper.Scrape")
 
 	// CommonStats
 	assert.Equal(t, nowMillis, vs.Timestamp, "Unexpected 'timestamp' in client-stats APIMessage struct")
@@ -129,9 +115,7 @@ func TestBeaconNodeAPIMessageDefaults(t *testing.T) {
 
 	vs := &BeaconNodeStats{}
 	err = json.NewDecoder(r).Decode(vs)
-	if err != nil {
-		t.Errorf("Unexpected error decoding result of beaconNodeScraper.Scrape=%s", err)
-	}
+	assert.NoError(t, err, "Unexpected error decoding result of beaconNodeScraper.Scrape")
 
 	// CommonStats
 	assert.Equal(t, nowMillis, vs.Timestamp, "Unexpected 'timestamp' in client-stats APIMessage struct")
