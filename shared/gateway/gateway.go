@@ -31,8 +31,8 @@ var _ shared.Service = (*Gateway)(nil)
 type CallerId uint8
 
 const (
-	Validator = 1
-	Beacon    = 2
+	Beacon    = 1
+	Validator = 2
 )
 
 // Gateway is the gRPC gateway to serve HTTP JSON traffic as a
