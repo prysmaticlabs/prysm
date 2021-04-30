@@ -4,12 +4,12 @@
 package powchain
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"math/big"
 	"reflect"
 	"runtime/debug"
+	"sort"
 	"sync"
 	"time"
 
@@ -942,12 +942,8 @@ func (s *Service) initializeEth1Data(ctx context.Context, eth1DataInDB *protodb.
 		}
 	}
 	s.latestEth1Data = eth1DataInDB.CurrentEth1Data
-	items := s.depositTrie.Items()
-	s.lastReceivedMerkleIndex = int64(len(items) - 1)
-	// Account for 0 elements existing in the deposit trie.
-	if len(items) == 1 && bytes.Equal(items[0], params.BeaconConfig().ZeroHash[:]) {
-		s.lastReceivedMerkleIndex = -1
-	}
+	numOfItems := s.depositTrie.NumOfItems()
+	s.lastReceivedMerkleIndex = int64(numOfItems - 1)
 	if err := s.initDepositCaches(ctx, eth1DataInDB.DepositContainers); err != nil {
 		return errors.Wrap(err, "could not initialize caches")
 	}
@@ -962,13 +958,19 @@ func (s *Service) validateDepositContainers(ctrs []*protodb.DepositContainer) bo
 	if ctrLen == 0 {
 		return true
 	}
+	// Sort deposits in ascending order.
+	sort.Slice(ctrs, func(i, j int) bool {
+		return ctrs[i].Index < ctrs[j].Index
+	})
+	startIndex := int64(0)
 	for _, c := range ctrs {
-		if c.Index == 0 {
-			return true
+		if c.Index != startIndex {
+			log.Info("Recovering missing deposit containers, node is re-requesting missing deposit data")
+			return false
 		}
+		startIndex++
 	}
-	log.Info("Recovering missing deposit containers, node is re-requesting missing deposit data")
-	return false
+	return true
 }
 
 // validates the current powchain data saved and makes sure that any
