@@ -31,7 +31,6 @@ func TestBeaconGateway_StartStop(t *testing.T) {
 
 	beaconGateway := NewBeacon(
 		ctx.Context,
-		BeaconCaller,
 		selfAddress,
 		selfCert,
 		gatewayAddress,
@@ -69,7 +68,6 @@ func TestValidatorGateway_StartStop(t *testing.T) {
 
 	validatorGateway := NewValidator(
 		ctx.Context,
-		ValidatorCaller,
 		rpcAddr,
 		gatewayAddress,
 		allowedOrigins,

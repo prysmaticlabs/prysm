@@ -26,44 +26,43 @@ import (
 
 var _ shared.Service = (*Gateway)(nil)
 
-// CallerId defines whether the caller node is a beacon
-// or a validator node. This helps register the handlers accordingly.
-type CallerId string
+// CallerId defines whether the caller node is a beacon(1)
+// or a validator node(2). This helps register the handlers accordingly.
+type CallerId uint8
 
 const (
-	ValidatorCaller = "validator-rpc"
-	BeaconCaller    = "beacon-rpc"
+	Validator = 1
+	Beacon    = 2
 )
 
 // Gateway is the gRPC gateway to serve HTTP JSON traffic as a
 // proxy and forward it to the gRPC server.
 type Gateway struct {
 	conn                    *grpc.ClientConn
-	callerId                CallerId
-	ctx                     context.Context
-	cancel                  context.CancelFunc
-	gatewayAddr             string
-	remoteAddr              string
-	remoteCert              string
-	server                  *http.Server
-	mux                     *http.ServeMux
-	allowedOrigins          []string
-	startFailure            error
 	enableDebugRPCEndpoints bool
+	callerId                CallerId
 	maxCallRecvMsgSize      uint64
+	mux                     *http.ServeMux
+	server                  *http.Server
+	cancel                  context.CancelFunc
+	remoteCert              string
+	gatewayAddr             string
+	ctx                     context.Context
+	startFailure            error
+	remoteAddr              string
+	allowedOrigins          []string
 }
 
 // New returns a new gateway server which translates HTTP into gRPC.
 // Accepts a context.
 func NewValidator(
 	ctx context.Context,
-	callerId CallerId,
 	remoteAddress,
 	gatewayAddress string,
 	allowedOrigins []string,
 ) *Gateway {
 	return &Gateway{
-		callerId:       callerId,
+		callerId:       Validator,
 		remoteAddr:     remoteAddress,
 		gatewayAddr:    gatewayAddress,
 		ctx:            ctx,
@@ -76,7 +75,6 @@ func NewValidator(
 // Accepts a context and optional http.ServeMux.
 func NewBeacon(
 	ctx context.Context,
-	callerId CallerId,
 	remoteAddress,
 	remoteCert,
 	gatewayAddress string,
@@ -90,7 +88,7 @@ func NewBeacon(
 	}
 
 	return &Gateway{
-		callerId:                callerId,
+		callerId:                Beacon,
 		remoteAddr:              remoteAddress,
 		remoteCert:              remoteCert,
 		gatewayAddr:             gatewayAddress,
@@ -109,7 +107,7 @@ func (g *Gateway) Start() {
 	ctx, cancel := context.WithCancel(g.ctx)
 	g.cancel = cancel
 
-	if g.callerId == BeaconCaller {
+	if g.callerId == Beacon {
 		conn, err := g.dial(ctx, "tcp", g.remoteAddr)
 		if err != nil {
 			log.WithError(err).Error("Failed to connect to gRPC server")
@@ -125,7 +123,7 @@ func (g *Gateway) Start() {
 			&gwruntime.JSONPb{OrigName: false, EmitDefaults: true},
 		),
 	)
-	if g.callerId == BeaconCaller {
+	if g.callerId == Beacon {
 		handlers := []func(context.Context, *gwruntime.ServeMux, *grpc.ClientConn) error{
 			ethpb.RegisterNodeHandler,
 			ethpb.RegisterBeaconChainHandler,

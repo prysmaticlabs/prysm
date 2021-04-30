@@ -512,7 +512,6 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 	allowedOrigins := strings.Split(cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
 	gatewaySrv := gateway.NewValidator(
 		cliCtx.Context,
-		gateway.ValidatorCaller,
 		rpcAddr,
 		gatewayAddress,
 		allowedOrigins,

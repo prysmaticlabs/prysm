@@ -38,7 +38,6 @@ func main() {
 	mux := http.NewServeMux()
 	gw := gateway.NewBeacon(
 		context.Background(),
-		gateway.BeaconCaller,
 		*beaconRPC,
 		"", // remoteCert
 		fmt.Sprintf("%s:%d", *host, *port),
