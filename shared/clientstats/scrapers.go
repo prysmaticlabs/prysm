@@ -95,10 +95,10 @@ func scrapeProm(url string, tripper http.RoundTripper) (map[string]*dto.MetricFa
 	// unless there is an error.
 	for {
 		select {
-		case fam, o := <-mfChan:
+		case fam, chanOpen := <-mfChan:
 			// FetchMetricFamiles will close the channel when done
-			// when the channel is closed, 'o' will be false
-			if fam == nil && o == false {
+			// at which point we want to stop the goroutine
+			if fam == nil && !chanOpen {
 				return result, nil
 			}
 			ptr := fam
@@ -167,7 +167,7 @@ func populateCommonStats(pf metricMap) (CommonStats, error) {
 		case "buildDate":
 			buildDate, err := strconv.Atoi(l.GetValue())
 			if err != nil {
-				return cs, fmt.Errorf("Error when retrieving buildDate label from the prysm_version metric: %s", err)
+				return cs, fmt.Errorf("error when retrieving buildDate label from the prysm_version metric: %s", err)
 			}
 			cs.ClientBuild = int64(buildDate)
 		}
