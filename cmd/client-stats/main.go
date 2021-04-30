@@ -1,4 +1,3 @@
-// Package beacon-chain defines the entire runtime of an eth2 beacon node.
 package main
 
 import (
