@@ -102,9 +102,9 @@ var (
 		Name:  "attest-timely",
 		Usage: "Fixes validator can attest timely after current block processes. See #8185 for more details",
 	}
-	enableNextSlotStateCache = &cli.BoolFlag{
-		Name:  "enable-next-slot-state-cache",
-		Usage: "Improves attesting and proposing efficiency by caching the next slot state at the end of the current slot",
+	disableNextSlotStateCache = &cli.BoolFlag{
+		Name:  "disable-next-slot-state-cache",
+		Usage: "Disable caching of the next slot state at the end of the current slot",
 	}
 	updateHeadTimely = &cli.BoolFlag{
 		Name:  "update-head-timely",
@@ -123,7 +123,6 @@ var (
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
 	enableLargerGossipHistory,
-	enableNextSlotStateCache,
 	forceOptMaxCoverAggregationStategy,
 	updateHeadTimely,
 }
@@ -170,7 +169,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableLargerGossipHistory,
 	checkPtInfoCache,
 	disableBroadcastSlashingFlag,
-	enableNextSlotStateCache,
+	disableNextSlotStateCache,
 	forceOptMaxCoverAggregationStategy,
 	updateHeadTimely,
 	disableProposerAttsSelectionUsingMaxCover,

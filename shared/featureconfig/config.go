@@ -178,9 +178,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.WithField(disableBroadcastSlashingFlag.Name, disableBroadcastSlashingFlag.Usage).Warn(enabledFeatureFlag)
 		cfg.DisableBroadcastSlashings = true
 	}
-	if ctx.Bool(enableNextSlotStateCache.Name) {
-		log.WithField(enableNextSlotStateCache.Name, enableNextSlotStateCache.Usage).Warn(enabledFeatureFlag)
-		cfg.EnableNextSlotStateCache = true
+	cfg.EnableNextSlotStateCache = true
+	if ctx.Bool(disableNextSlotStateCache.Name) {
+		log.WithField(disableNextSlotStateCache.Name, disableNextSlotStateCache.Usage).Warn(enabledFeatureFlag)
+		cfg.EnableNextSlotStateCache = false
 	}
 	if ctx.Bool(updateHeadTimely.Name) {
 		log.WithField(updateHeadTimely.Name, updateHeadTimely.Usage).Warn(enabledFeatureFlag)
