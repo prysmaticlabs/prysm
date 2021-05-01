@@ -118,6 +118,10 @@ var (
 		Name:  "enable-slashing-protection-pruning",
 		Usage: "Enables the pruning of the validator client's slashing protectin database",
 	}
+	enableOptimizedBalanceUpdate = &cli.BoolFlag{
+		Name:  "enable-optimized-balance-update",
+		Usage: "Enables the optimized method of updating validator balances.",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -125,6 +129,7 @@ var devModeFlags = []cli.Flag{
 	enableLargerGossipHistory,
 	forceOptMaxCoverAggregationStategy,
 	updateHeadTimely,
+	enableOptimizedBalanceUpdate,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -173,6 +178,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	forceOptMaxCoverAggregationStategy,
 	updateHeadTimely,
 	disableProposerAttsSelectionUsingMaxCover,
+	enableOptimizedBalanceUpdate,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
