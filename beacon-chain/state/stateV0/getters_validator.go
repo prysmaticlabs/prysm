@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"sort"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -124,15 +123,15 @@ func (b *BeaconState) ValidatorIndexByPubkey(key [48]byte) (types.ValidatorIndex
 	defer b.lock.RUnlock()
 
 	numOfVals := len(b.state.Validators)
-	foundIndex := sort.Search(numOfVals, func(i int) bool {
-		return bytesutil.ToBytes48(b.state.Validators[i].PublicKey) == key
-	})
-	// If the retrieved index is the number of validators it means
-	// the binary search was unsuccesful.
-	if foundIndex == numOfVals {
-		return types.ValidatorIndex(0), false
+
+	// Search backwards, starting from the latest added
+	// validator.
+	for i := numOfVals - 1; i >= 0; i++ {
+		if bytesutil.ToBytes48(b.state.Validators[i].PublicKey) == key {
+			return types.ValidatorIndex(i), true
+		}
 	}
-	return types.ValidatorIndex(foundIndex), true
+	return types.ValidatorIndex(0), false
 }
 
 // PubkeyAtIndex returns the pubkey at the given
