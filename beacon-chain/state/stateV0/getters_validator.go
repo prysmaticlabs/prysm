@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"sort"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -116,13 +117,19 @@ func (b *BeaconState) ValidatorAtIndexReadOnly(idx types.ValidatorIndex) (iface.
 
 // ValidatorIndexByPubkey returns a given validator by its 48-byte public key.
 func (b *BeaconState) ValidatorIndexByPubkey(key [48]byte) (types.ValidatorIndex, bool) {
-	if b == nil || b.valMapHandler == nil || b.valMapHandler.IsNil() {
+	if b == nil || b.state.Validators == nil {
 		return 0, false
 	}
 	b.lock.RLock()
 	defer b.lock.RUnlock()
-	idx, ok := b.valMapHandler.Get(key)
-	return idx, ok
+
+	foundIndex := sort.Search(len(b.state.Validators), func(i int) bool {
+		return bytesutil.ToBytes48(b.state.Validators[i].PublicKey) == key
+	})
+	if foundIndex == len(b.state.Validators) {
+		return types.ValidatorIndex(0), false
+	}
+	return types.ValidatorIndex(foundIndex), true
 }
 
 // PubkeyAtIndex returns the pubkey at the given

@@ -5,7 +5,6 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 // SetValidators for the beacon state. Updates the entire
@@ -22,7 +21,6 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 	b.sharedFieldReferences[validators] = stateutil.NewRef(1)
 	b.markFieldAsDirty(validators)
 	b.rebuildTrie[validators] = true
-	b.valMapHandler = stateutil.NewValMapHandler(b.state.Validators)
 	return nil
 }
 
@@ -194,14 +192,6 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 	// append validator to slice
 	b.state.Validators = append(vals, val)
 	valIdx := types.ValidatorIndex(len(b.state.Validators) - 1)
-
-	// Copy if this is a shared validator map
-	if ref := b.valMapHandler.MapRef(); ref.Refs() > 1 {
-		valMap := b.valMapHandler.Copy()
-		ref.MinusRef()
-		b.valMapHandler = valMap
-	}
-	b.valMapHandler.Set(bytesutil.ToBytes48(val.PublicKey), valIdx)
 
 	b.markFieldAsDirty(validators)
 	b.addDirtyIndices(validators, []uint64{uint64(valIdx)})

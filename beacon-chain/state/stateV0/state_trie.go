@@ -49,7 +49,6 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 		stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, fieldCount),
 		sharedFieldReferences: make(map[fieldIndex]*stateutil.Reference, 10),
 		rebuildTrie:           make(map[fieldIndex]bool, fieldCount),
-		valMapHandler:         stateutil.NewValMapHandler(st.Validators),
 	}
 
 	for i := 0; i < fieldCount; i++ {
@@ -124,18 +123,12 @@ func (b *BeaconState) Copy() iface.BeaconState {
 		rebuildTrie:           make(map[fieldIndex]bool, fieldCount),
 		sharedFieldReferences: make(map[fieldIndex]*stateutil.Reference, 10),
 		stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, fieldCount),
-
-		// Copy on write validator index map.
-		valMapHandler: b.valMapHandler,
 	}
 
 	for field, ref := range b.sharedFieldReferences {
 		ref.AddRef()
 		dst.sharedFieldReferences[field] = ref
 	}
-
-	// Increment ref for validator map
-	b.valMapHandler.AddRef()
 
 	for i := range b.dirtyFields {
 		dst.dirtyFields[i] = true
