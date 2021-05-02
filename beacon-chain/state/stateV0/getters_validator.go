@@ -126,7 +126,7 @@ func (b *BeaconState) ValidatorIndexByPubkey(key [48]byte) (types.ValidatorIndex
 
 	// Search backwards, starting from the latest added
 	// validator.
-	for i := numOfVals - 1; i >= 0; i++ {
+	for i := numOfVals - 1; i >= 0; i-- {
 		if bytesutil.ToBytes48(b.state.Validators[i].PublicKey) == key {
 			return types.ValidatorIndex(i), true
 		}
