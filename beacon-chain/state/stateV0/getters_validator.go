@@ -117,16 +117,19 @@ func (b *BeaconState) ValidatorAtIndexReadOnly(idx types.ValidatorIndex) (iface.
 
 // ValidatorIndexByPubkey returns a given validator by its 48-byte public key.
 func (b *BeaconState) ValidatorIndexByPubkey(key [48]byte) (types.ValidatorIndex, bool) {
-	if b == nil || b.state.Validators == nil {
+	if b.hasInnerState() || b.state.Validators == nil {
 		return 0, false
 	}
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	foundIndex := sort.Search(len(b.state.Validators), func(i int) bool {
+	numOfVals := len(b.state.Validators)
+	foundIndex := sort.Search(numOfVals, func(i int) bool {
 		return bytesutil.ToBytes48(b.state.Validators[i].PublicKey) == key
 	})
-	if foundIndex == len(b.state.Validators) {
+	// If the retrieved index is the number of validators it means
+	// the binary search was unsuccesful.
+	if foundIndex == numOfVals {
 		return types.ValidatorIndex(0), false
 	}
 	return types.ValidatorIndex(foundIndex), true
