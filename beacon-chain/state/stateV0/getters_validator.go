@@ -123,7 +123,11 @@ func (b *BeaconState) ValidatorIndexByPubkey(key [48]byte) (types.ValidatorIndex
 	defer b.lock.RUnlock()
 
 	numOfVals := len(b.state.Validators)
+	// Exit early if there are no validators.
+	if numOfVals == 0 {
+		return types.ValidatorIndex(0), false
 
+	}
 	// Search backwards, starting from the latest added
 	// validator.
 	for i := numOfVals - 1; i >= 0; i-- {
