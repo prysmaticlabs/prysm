@@ -6,7 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 )
 
-// syncCommitteeRoot  computes the HashTreeRoot Merkleization of
+// syncCommitteeRoot computes the HashTreeRoot Merkleization of a commitee root.
 // a SyncCommitteeRoot struct according to the eth2
 // Simple Serialize specification.
 func syncCommitteeRoot(committee *pb.SyncCommittee) ([32]byte, error) {
