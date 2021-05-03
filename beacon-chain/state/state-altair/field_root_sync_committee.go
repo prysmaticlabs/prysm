@@ -6,10 +6,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 )
 
-// SyncCommitteeRoot computes the HashTreeRoot Merkleization of
+// syncCommitteeRoot  computes the HashTreeRoot Merkleization of
 // a SyncCommitteeRoot struct according to the eth2
 // Simple Serialize specification.
-func SyncCommitteeRoot(committee *pb.SyncCommittee) ([32]byte, error) {
+func syncCommitteeRoot(committee *pb.SyncCommittee) ([32]byte, error) {
 	hasher := hashutil.CustomSHA256Hasher()
 	var fieldRoots [][32]byte
 	if committee == nil {
