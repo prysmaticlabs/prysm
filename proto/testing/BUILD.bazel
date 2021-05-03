@@ -38,7 +38,6 @@ go_test(
         "tags_test.go",
     ],
     data = [
-        "data/beacon_block_151906.ssz",
         "@eth2_spec_tests_mainnet//:test_data",
         "@eth2_spec_tests_minimal//:test_data",
     ],

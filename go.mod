@@ -82,7 +82,9 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prestonvanloon/go-recaptcha v0.0.0-20190217191114-0834cef6e8bd
 	github.com/prometheus/client_golang v1.9.0
+	github.com/prometheus/client_model v0.2.0
 	github.com/prometheus/procfs v0.3.0 // indirect
+	github.com/prometheus/prom2json v1.3.0
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/prysmaticlabs/eth2-types v0.0.0-20210219172114-1da477c09a06
 	github.com/prysmaticlabs/ethereumapis v0.0.0-20210311175904-cf9f64632dd4
