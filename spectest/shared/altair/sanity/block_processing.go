@@ -25,7 +25,7 @@ import (
 )
 
 func init() {
-	state.SkipSlotCache.Disable()
+	altair.SkipSlotCache.Disable()
 }
 
 // RunBlockProcessingTest executes "sanity/blocks" tests.
