@@ -312,7 +312,7 @@ func (s *Service) Status() error {
 	return nil
 }
 
-func (s *Service) updateBeaconnodeStats() {
+func (s *Service) updateBeaconNodeStats() {
 	bs := clientstats.BeaconNodeStats{}
 	if len(s.httpEndpoints) > 1 {
 		bs.SyncEth1FallbackConfigured = true
@@ -329,12 +329,12 @@ func (s *Service) updateBeaconnodeStats() {
 
 func (s *Service) updateCurrHttpEndpoint(endpoint httputils.Endpoint) {
 	s.currHttpEndpoint = endpoint
-	s.updateBeaconnodeStats()
+	s.updateBeaconNodeStats()
 }
 
 func (s *Service) updateConnectedETH1(state bool) {
 	s.connectedETH1 = state
-	s.updateBeaconnodeStats()
+	s.updateBeaconNodeStats()
 }
 
 // IsConnectedToETH1 checks if the beacon node is connected to a ETH1 Node.
