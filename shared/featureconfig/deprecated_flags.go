@@ -32,6 +32,16 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedSlasherRPCProvider = &cli.StringFlag{
+		Name:   "slasher-rpc-provider",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedSlasherCert = &cli.StringFlag{
+		Name:   "slasher-tls-cert",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedDisableBlst = &cli.BoolFlag{
 		Name:   "disable-blst",
 		Usage:  deprecatedUsage,
@@ -50,6 +60,8 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisableSyncBacktracking,
 	deprecatedDisablePruningDepositProofs,
 	deprecatedDisableEth1DataMajorityVote,
+	deprecatedSlasherCert,
+	deprecatedSlasherRPCProvider,
 	deprecatedDisableBlst,
 	deprecatedProposerAttsSelectionUsingMaxCover,
 }

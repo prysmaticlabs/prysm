@@ -32,6 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
@@ -82,6 +83,7 @@ type Config struct {
 	ForkChoiceStore         f.ForkChoicer
 	OpsService              *attestations.Service
 	StateGen                *stategen.State
+	SlasherAttestationsFeed *event.Feed
 	WeakSubjectivityCheckpt *ethpb.Checkpoint
 }
 

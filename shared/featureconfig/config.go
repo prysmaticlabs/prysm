@@ -39,9 +39,11 @@ type Flags struct {
 	PyrmontTestnet bool // PyrmontTestnet defines the flag through which we can enable the node to run on the Pyrmont testnet.
 
 	// Feature related flags.
-	WriteSSZStateTransitions           bool // WriteSSZStateTransitions to tmp directory.
-	SkipBLSVerify                      bool // Skips BLS verification across the runtime.
-	SlasherProtection                  bool // SlasherProtection protects validator fron sending over a slashable offense over the network using external slasher.
+	WriteSSZStateTransitions bool // WriteSSZStateTransitions to tmp directory.
+	SkipBLSVerify            bool // Skips BLS verification across the runtime.
+	EnableBlst               bool // Enables new BLS library from supranational.
+	RemoteSlasherProtection  bool // RemoteSlasherProtection protects validator fron sending over a slashable offense over the network using external slasher.
+
 	EnablePeerScorer                   bool // EnablePeerScorer enables experimental peer scoring in p2p.
 	EnableLargerGossipHistory          bool // EnableLargerGossipHistory increases the gossip history we store in our caches.
 	WriteWalletPasswordOnWebOnboarding bool // WriteWalletPasswordOnWebOnboarding writes the password to disk after Prysm web signup.
@@ -71,6 +73,7 @@ type Flags struct {
 	// changed on disk. This feature is for advanced use cases only.
 	KeystoreImportDebounceInterval time.Duration
 
+	EnableSlasher bool // Enable slasher in the beacon node runtime.
 	// EnableSlashingProtectionPruning for the validator client.
 	EnableSlashingProtectionPruning bool
 }
@@ -187,6 +190,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.WithField(updateHeadTimely.Name, updateHeadTimely.Usage).Warn(enabledFeatureFlag)
 		cfg.UpdateHeadTimely = true
 	}
+	if ctx.Bool(enableSlasherFlag.Name) {
+		log.WithField(enableSlasherFlag.Name, enableSlasherFlag.Usage).Warn(enabledFeatureFlag)
+		cfg.EnableSlasher = true
+	}
 	cfg.ProposerAttsSelectionUsingMaxCover = true
 	if ctx.Bool(disableProposerAttsSelectionUsingMaxCover.Name) {
 		log.WithField(disableProposerAttsSelectionUsingMaxCover.Name, disableProposerAttsSelectionUsingMaxCover.Usage).Warn(enabledFeatureFlag)
@@ -221,7 +228,7 @@ func ConfigureValidator(ctx *cli.Context) {
 	configureTestnet(ctx, cfg)
 	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
 		log.WithField(enableExternalSlasherProtectionFlag.Name, enableExternalSlasherProtectionFlag.Usage).Warn(enabledFeatureFlag)
-		cfg.SlasherProtection = true
+		cfg.RemoteSlasherProtection = true
 	}
 	if ctx.Bool(writeWalletPasswordOnWebOnboarding.Name) {
 		log.WithField(writeWalletPasswordOnWebOnboarding.Name, writeWalletPasswordOnWebOnboarding.Usage).Warn(enabledFeatureFlag)

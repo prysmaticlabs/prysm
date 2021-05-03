@@ -110,6 +110,10 @@ var (
 		Name:  "update-head-timely",
 		Usage: "Improves update head time by updating head right after state transition",
 	}
+	enableSlasherFlag = &cli.BoolFlag{
+		Name:  "slasher",
+		Usage: "Enables a slasher in the beacon node for detecting slashable offenses on eth2",
+	}
 	disableProposerAttsSelectionUsingMaxCover = &cli.BoolFlag{
 		Name:  "disable-proposer-atts-selection-using-max-cover",
 		Usage: "Disable max-cover algorithm when selecting attestations for proposer",
@@ -178,6 +182,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableNextSlotStateCache,
 	forceOptMaxCoverAggregationStategy,
 	updateHeadTimely,
+	enableSlasherFlag,
 	disableProposerAttsSelectionUsingMaxCover,
 	enableOptimizedBalanceUpdate,
 }...)
