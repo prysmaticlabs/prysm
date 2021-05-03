@@ -55,7 +55,7 @@ func ExecuteStateTransitionNoVerifyAnySig(
 	defer span.End()
 	var err error
 
-	interop.WriteBlockToDisk(signed, false)
+	interop.WriteBlockToDisk(signed, false /* Has the block failed */)
 	interop.WriteStateToDisk(state)
 
 	if featureconfig.Get().EnableNextSlotStateCache {
