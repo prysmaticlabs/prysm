@@ -48,6 +48,7 @@ type Flags struct {
 	DisableAttestingHistoryDBCache     bool // DisableAttestingHistoryDBCache for the validator client increases disk reads/writes.
 	UpdateHeadTimely                   bool // UpdateHeadTimely updates head right after state transition.
 	ProposerAttsSelectionUsingMaxCover bool // ProposerAttsSelectionUsingMaxCover enables max-cover algorithm when selecting attestations for proposing.
+	EnableOptimizedBalanceUpdate       bool // EnableOptimizedBalanceUpdate uses an updated method of performing balance updates.
 
 	// Logging related toggles.
 	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
@@ -178,10 +179,9 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.WithField(disableBroadcastSlashingFlag.Name, disableBroadcastSlashingFlag.Usage).Warn(enabledFeatureFlag)
 		cfg.DisableBroadcastSlashings = true
 	}
-	cfg.EnableNextSlotStateCache = true
-	if ctx.Bool(disableNextSlotStateCache.Name) {
-		log.WithField(disableNextSlotStateCache.Name, disableNextSlotStateCache.Usage).Warn(enabledFeatureFlag)
-		cfg.EnableNextSlotStateCache = false
+	if ctx.Bool(enableNextSlotStateCache.Name) {
+		log.WithField(enableNextSlotStateCache.Name, enableNextSlotStateCache.Usage).Warn(enabledFeatureFlag)
+		cfg.EnableNextSlotStateCache = true
 	}
 	if ctx.Bool(updateHeadTimely.Name) {
 		log.WithField(updateHeadTimely.Name, updateHeadTimely.Usage).Warn(enabledFeatureFlag)
@@ -191,6 +191,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(disableProposerAttsSelectionUsingMaxCover.Name) {
 		log.WithField(disableProposerAttsSelectionUsingMaxCover.Name, disableProposerAttsSelectionUsingMaxCover.Usage).Warn(enabledFeatureFlag)
 		cfg.ProposerAttsSelectionUsingMaxCover = false
+	}
+	if ctx.Bool(enableOptimizedBalanceUpdate.Name) {
+		log.WithField(enableOptimizedBalanceUpdate.Name, enableOptimizedBalanceUpdate.Usage).Warn(enabledFeatureFlag)
+		cfg.EnableOptimizedBalanceUpdate = true
 	}
 	Init(cfg)
 }

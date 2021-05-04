@@ -102,9 +102,9 @@ var (
 		Name:  "attest-timely",
 		Usage: "Fixes validator can attest timely after current block processes. See #8185 for more details",
 	}
-	disableNextSlotStateCache = &cli.BoolFlag{
-		Name:  "disable-next-slot-state-cache",
-		Usage: "Disable caching of the next slot state at the end of the current slot",
+	enableNextSlotStateCache = &cli.BoolFlag{
+		Name:  "enable-next-slot-state-cache",
+		Usage: "Improves attesting and proposing efficiency by caching the next slot state at the end of the current slot",
 	}
 	updateHeadTimely = &cli.BoolFlag{
 		Name:  "update-head-timely",
@@ -118,13 +118,19 @@ var (
 		Name:  "enable-slashing-protection-pruning",
 		Usage: "Enables the pruning of the validator client's slashing protectin database",
 	}
+	enableOptimizedBalanceUpdate = &cli.BoolFlag{
+		Name:  "enable-optimized-balance-update",
+		Usage: "Enables the optimized method of updating validator balances.",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
 	enableLargerGossipHistory,
+	enableNextSlotStateCache,
 	forceOptMaxCoverAggregationStategy,
 	updateHeadTimely,
+	enableOptimizedBalanceUpdate,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -169,10 +175,11 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableLargerGossipHistory,
 	checkPtInfoCache,
 	disableBroadcastSlashingFlag,
-	disableNextSlotStateCache,
+	enableNextSlotStateCache,
 	forceOptMaxCoverAggregationStategy,
 	updateHeadTimely,
 	disableProposerAttsSelectionUsingMaxCover,
+	enableOptimizedBalanceUpdate,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

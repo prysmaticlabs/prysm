@@ -73,6 +73,7 @@ type BeaconNode struct {
 	opFeed          *event.Feed
 	forkChoiceStore forkchoice.ForkChoicer
 	stateGen        *stategen.State
+	collector       *bcnodeCollector
 }
 
 // New creates a new node instance, sets up configuration options, and registers
@@ -162,6 +163,15 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 		}
 	}
 
+	// db.DatabasePath is the path to the containing directory
+	// db.NewDBFilename expands that to the canonical full path using
+	// the same constuction as NewDB()
+	c, err := newBeaconNodePromCollector(db.NewDBFilename(beacon.db.DatabasePath()))
+	if err != nil {
+		return nil, err
+	}
+	beacon.collector = c
+
 	return beacon, nil
 }
 
@@ -224,6 +234,7 @@ func (b *BeaconNode) Close() {
 	if err := b.db.Close(); err != nil {
 		log.Errorf("Failed to close database: %v", err)
 	}
+	b.collector.unregister()
 	b.cancel()
 	close(b.stop)
 }
@@ -435,15 +446,22 @@ func (b *BeaconNode) registerPOWChainService() error {
 		return err
 	}
 
-	cfg := &powchain.Web3ServiceConfig{
-		HttpEndpoints:      endpoints,
-		DepositContract:    common.HexToAddress(depAddress),
-		BeaconDB:           b.db,
-		DepositCache:       b.depositCache,
-		StateNotifier:      b,
-		StateGen:           b.stateGen,
-		Eth1HeaderReqLimit: b.cliCtx.Uint64(flags.Eth1HeaderReqLimit.Name),
+	bs, err := powchain.NewPowchainCollector(b.ctx)
+	if err != nil {
+		return err
 	}
+
+	cfg := &powchain.Web3ServiceConfig{
+		HttpEndpoints:          endpoints,
+		DepositContract:        common.HexToAddress(depAddress),
+		BeaconDB:               b.db,
+		DepositCache:           b.depositCache,
+		StateNotifier:          b,
+		StateGen:               b.stateGen,
+		Eth1HeaderReqLimit:     b.cliCtx.Uint64(flags.Eth1HeaderReqLimit.Name),
+		BeaconNodeStatsUpdater: bs,
+	}
+
 	web3Service, err := powchain.NewService(b.ctx, cfg)
 	if err != nil {
 		return errors.Wrap(err, "could not register proof-of-work chain web3Service")
