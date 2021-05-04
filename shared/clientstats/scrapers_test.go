@@ -65,7 +65,7 @@ func TestFalseEth2Synced(t *testing.T) {
 
 func TestValidatorScraper(t *testing.T) {
 	vScraper := validatorScraper{}
-	vScraper.tripper = &mockRT{body: prometheusTestBody}
+	vScraper.tripper = &mockRT{body: statusFixtureOneOfEach + prometheusTestBody}
 	r, err := vScraper.Scrape()
 	assert.NoError(t, err, "Unexpected error calling validatorScraper.Scrape")
 	vs := &ValidatorStats{}
@@ -77,6 +77,34 @@ func TestValidatorScraper(t *testing.T) {
 	assert.Equal(t, int64(1619586241), vs.ClientBuild)
 	assert.Equal(t, "v1.3.8-hotfix+6c0942", vs.ClientVersion)
 	assert.Equal(t, "prysm", vs.ClientName)
+	assert.Equal(t, int64(7), vs.ValidatorTotal)
+	assert.Equal(t, int64(1), vs.ValidatorActive)
+}
+
+func TestValidatorScraperAllActive(t *testing.T) {
+	vScraper := validatorScraper{}
+	vScraper.tripper = &mockRT{body: statusFixtureAllActive + prometheusTestBody}
+	r, err := vScraper.Scrape()
+	assert.NoError(t, err, "Unexpected error calling validatorScraper.Scrape")
+	vs := &ValidatorStats{}
+	err = json.NewDecoder(r).Decode(vs)
+	assert.NoError(t, err, "Unexpected error decoding result of validatorScraper.Scrape")
+	// CommonStats
+	assert.Equal(t, int64(4), vs.ValidatorTotal)
+	assert.Equal(t, int64(4), vs.ValidatorActive)
+}
+
+func TestValidatorScraperNoneActive(t *testing.T) {
+	vScraper := validatorScraper{}
+	vScraper.tripper = &mockRT{body: statusFixtureNoneActive + prometheusTestBody}
+	r, err := vScraper.Scrape()
+	assert.NoError(t, err, "Unexpected error calling validatorScraper.Scrape")
+	vs := &ValidatorStats{}
+	err = json.NewDecoder(r).Decode(vs)
+	assert.NoError(t, err, "Unexpected error decoding result of validatorScraper.Scrape")
+	// CommonStats
+	assert.Equal(t, int64(6), vs.ValidatorTotal)
+	assert.Equal(t, int64(0), vs.ValidatorActive)
 }
 
 func mockNowFunc(fixedTime time.Time) func() time.Time {
@@ -90,7 +118,7 @@ func TestValidatorAPIMessageDefaults(t *testing.T) {
 	// 1+e6 ns per ms, so 123456789 ns rounded down should be 123 ms
 	nowMillis := int64(1619811114123)
 	vScraper := validatorScraper{}
-	vScraper.tripper = &mockRT{body: prometheusTestBody}
+	vScraper.tripper = &mockRT{body: statusFixtureOneOfEach + prometheusTestBody}
 	r, err := vScraper.Scrape()
 	assert.NoError(t, err, "unexpected error from validatorScraper.Scrape()")
 
@@ -164,4 +192,33 @@ p2p_peer_count{state="Connected"} 37
 p2p_peer_count{state="Connecting"} 0
 p2p_peer_count{state="Disconnected"} 62
 p2p_peer_count{state="Disconnecting"} 0
+`
+
+var statusFixtureOneOfEach = `# HELP validator_statuses validator statuses: 0 UNKNOWN, 1 DEPOSITED, 2 PENDING, 3 ACTIVE, 4 EXITING, 5 SLASHING, 6 EXITED
+# TYPE validator_statuses gauge
+validator_statuses{pubkey="pk0"} 0
+validator_statuses{pubkey="pk1"} 1
+validator_statuses{pubkey="pk2"} 2
+validator_statuses{pubkey="pk3"} 3
+validator_statuses{pubkey="pk4"} 4
+validator_statuses{pubkey="pk5"} 5
+validator_statuses{pubkey="pk6"} 6
+`
+
+var statusFixtureAllActive = `# HELP validator_statuses validator statuses: 0 UNKNOWN, 1 DEPOSITED, 2 PENDING, 3 ACTIVE, 4 EXITING, 5 SLASHING, 6 EXITED
+# TYPE validator_statuses gauge
+validator_statuses{pubkey="pk0"} 3
+validator_statuses{pubkey="pk1"} 3
+validator_statuses{pubkey="pk2"} 3
+validator_statuses{pubkey="pk3"} 3
+`
+
+var statusFixtureNoneActive = `# HELP validator_statuses validator statuses: 0 UNKNOWN, 1 DEPOSITED, 2 PENDING, 3 ACTIVE, 4 EXITING, 5 SLASHING, 6 EXITED
+# TYPE validator_statuses gauge
+validator_statuses{pubkey="pk0"} 0
+validator_statuses{pubkey="pk1"} 1
+validator_statuses{pubkey="pk2"} 2
+validator_statuses{pubkey="pk3"} 4
+validator_statuses{pubkey="pk4"} 5
+validator_statuses{pubkey="pk5"} 6
 `

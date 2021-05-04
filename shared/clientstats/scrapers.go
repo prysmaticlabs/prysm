@@ -11,6 +11,7 @@ import (
 
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/prom2json"
+	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -228,7 +229,12 @@ func populateBeaconNodeStats(pf metricMap) (BeaconNodeStats, error) {
 	return bs, nil
 }
 
-func populateValidatorStats(pf map[string]*dto.MetricFamily) (ValidatorStats, error) {
+func statusIsActive(statusCode int64) bool {
+	s := eth.ValidatorStatus(statusCode)
+	return s.String() == "ACTIVE"
+}
+
+func populateValidatorStats(pf metricMap) (ValidatorStats, error) {
 	var err error
 	vs := ValidatorStats{}
 	vs.CommonStats, err = populateCommonStats(pf)
@@ -236,5 +242,17 @@ func populateValidatorStats(pf map[string]*dto.MetricFamily) (ValidatorStats, er
 		return vs, err
 	}
 	vs.APIMessage = populateAPIMessage(ValidatorProcessName)
+
+	f, err := pf.getFamily("validator_statuses")
+	if err != nil {
+		return vs, err
+	}
+	for _, m := range f.Metric {
+		if statusIsActive(int64(m.Gauge.GetValue())) {
+			vs.ValidatorActive += 1
+		}
+		vs.ValidatorTotal += 1
+	}
+
 	return vs, nil
 }
