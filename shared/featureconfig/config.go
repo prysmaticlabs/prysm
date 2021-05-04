@@ -42,7 +42,7 @@ type Flags struct {
 	WriteSSZStateTransitions   bool // WriteSSZStateTransitions to tmp directory.
 	SkipBLSVerify              bool // Skips BLS verification across the runtime.
 	EnableBlst                 bool // Enables new BLS library from supranational.
-	RemoteSlasherProtection    bool // RemoteSlasherProtection protects validator from sending over a slashable offense over the network using external slasher (will be deprecated).
+	OldRemoteSlasherProtection bool // OldRemoteSlasherProtection protects validator from sending over a slashable offense over the network using external slasher (will be deprecated).
 	NewRemoteSlasherProtection bool // NewRemoteSlasherProtection utilizes a beacon node with --slasher mode for validator slashing protection.
 
 	EnablePeerScorer                   bool // EnablePeerScorer enables experimental peer scoring in p2p.
@@ -229,7 +229,7 @@ func ConfigureValidator(ctx *cli.Context) {
 	configureTestnet(ctx, cfg)
 	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
 		log.WithField(enableExternalSlasherProtectionFlag.Name, enableExternalSlasherProtectionFlag.Usage).Warn(enabledFeatureFlag)
-		cfg.RemoteSlasherProtection = true
+		cfg.OldRemoteSlasherProtection = true
 	}
 	if ctx.Bool(enableNewExternalSlasherProtectionFlag.Name) {
 		log.WithField(enableNewExternalSlasherProtectionFlag.Name, enableNewExternalSlasherProtectionFlag.Usage).Warn(enabledFeatureFlag)

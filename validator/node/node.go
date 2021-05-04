@@ -242,7 +242,7 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 			return err
 		}
 	}
-	if featureconfig.Get().RemoteSlasherProtection {
+	if featureconfig.Get().OldRemoteSlasherProtection {
 		if err := c.registerSlasherService(); err != nil {
 			return err
 		}
@@ -331,7 +331,7 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 			return err
 		}
 	}
-	if featureconfig.Get().RemoteSlasherProtection {
+	if featureconfig.Get().OldRemoteSlasherProtection {
 		if err := c.registerSlasherService(); err != nil {
 			return err
 		}
@@ -387,7 +387,7 @@ func (c *ValidatorClient) registerValidatorService(
 	grpcRetries := c.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
 	grpcRetryDelay := c.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
 	var sp *slashingprotection.Service
-	var protector iface.Protector
+	var protector iface.OldRemoteSlasher
 	if err := c.services.FetchService(&sp); err == nil {
 		protector = sp
 	}
@@ -414,7 +414,7 @@ func (c *ValidatorClient) registerValidatorService(
 		GrpcRetriesFlag:            grpcRetries,
 		GrpcRetryDelay:             grpcRetryDelay,
 		GrpcHeadersFlag:            c.cliCtx.String(flags.GrpcHeadersFlag.Name),
-		Protector:                  protector,
+		OldRemoteSlasher:           protector,
 		ValDB:                      c.db,
 		UseWeb:                     c.cliCtx.Bool(flags.EnableWebFlag.Name),
 		WalletInitializedFeed:      c.walletInitialized,

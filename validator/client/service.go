@@ -63,7 +63,7 @@ type ValidatorService struct {
 	withCert              string
 	endpoint              string
 	validator             iface.Validator
-	protector             slashingiface.Protector
+	oldRemoteSlasher      slashingiface.OldRemoteSlasher
 	ctx                   context.Context
 	keyManager            keymanager.IKeymanager
 	grpcHeaders           []string
@@ -81,7 +81,7 @@ type Config struct {
 	GrpcRetriesFlag            uint
 	GrpcRetryDelay             time.Duration
 	GrpcMaxCallRecvMsgSizeFlag int
-	Protector                  slashingiface.Protector
+	OldRemoteSlasher           slashingiface.OldRemoteSlasher
 	Endpoint                   string
 	Validator                  iface.Validator
 	ValDB                      db.Database
@@ -111,7 +111,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		grpcRetries:           cfg.GrpcRetriesFlag,
 		grpcRetryDelay:        cfg.GrpcRetryDelay,
 		grpcHeaders:           strings.Split(cfg.GrpcHeadersFlag, ","),
-		protector:             cfg.Protector,
+		oldRemoteSlasher:      cfg.OldRemoteSlasher,
 		validator:             cfg.Validator,
 		db:                    cfg.ValDB,
 		walletInitializedFeed: cfg.WalletInitializedFeed,
@@ -191,7 +191,7 @@ func (v *ValidatorService) Start() {
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		domainDataCache:                cache,
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
-		protector:                      v.protector,
+		oldRemoteSlasher:               v.oldRemoteSlasher,
 		voteStats:                      voteStats{startEpoch: types.Epoch(^uint64(0))},
 		useWeb:                         v.useWeb,
 		walletInitializedFeed:          v.walletInitializedFeed,
