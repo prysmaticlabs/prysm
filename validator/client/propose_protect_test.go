@@ -72,20 +72,20 @@ func Test_slashableProposalCheck_PreventsLowerThanMinProposal(t *testing.T) {
 func Test_slashableProposalCheck(t *testing.T) {
 	ctx := context.Background()
 	config := &featureconfig.Flags{
-		RemoteSlasherProtection: false,
+		NewRemoteSlasherProtection: true,
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
-	validator, _, validatorKey, finish := setup(t)
+	validator, mocks, validatorKey, finish := setup(t)
 	defer finish()
 
-	block := &ethpb.SignedBeaconBlock{
+	block := testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			Slot:          10,
 			ProposerIndex: 0,
 		},
 		Signature: params.BeaconConfig().EmptySignature[:],
-	}
+	})
 
 	pubKeyBytes := [48]byte{}
 	copy(pubKeyBytes[:], validatorKey.PublicKey().Marshal())
@@ -100,6 +100,11 @@ func Test_slashableProposalCheck(t *testing.T) {
 	require.NoError(t, err)
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+
+	mocks.slasherClient.EXPECT().IsSlashableBlock(
+		gomock.Any(), // ctx
+		gomock.Any(),
+	).Times(2).Return(&slashpb.ProposerSlashingResponse{}, nil /*err*/)
 
 	// We expect the same block sent out with the same root should not be slasahble.
 	err = validator.slashableProposalCheck(context.Background(), pubKey, block, dummySigningRoot)
@@ -128,7 +133,7 @@ func Test_slashableProposalCheck(t *testing.T) {
 
 func Test_slashableProposalCheck_RemoteProtection(t *testing.T) {
 	config := &featureconfig.Flags{
-		RemoteSlasherProtection: true,
+		NewRemoteSlasherProtection: true,
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
