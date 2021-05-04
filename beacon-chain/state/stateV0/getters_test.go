@@ -122,3 +122,105 @@ func TestBeaconState_MarshalSSZ_NilState(t *testing.T) {
 	_, err = s.MarshalSSZ()
 	require.ErrorContains(t, "nil beacon state", err)
 }
+
+func TestBeaconState_ValidatorByPubkey(t *testing.T) {
+	keyCreator := func(input []byte) [48]byte {
+		nKey := [48]byte{}
+		copy(nKey[:1], input)
+		return nKey
+	}
+
+	tests := []struct {
+		name            string
+		modifyFunc      func(b *BeaconState, k [48]byte)
+		exists          bool
+		expectedIdx     types.ValidatorIndex
+		largestIdxInSet types.ValidatorIndex
+	}{
+		{
+			name: "retrieve validator",
+			modifyFunc: func(b *BeaconState, key [48]byte) {
+				assert.NoError(t, b.AppendValidator(&eth.Validator{PublicKey: key[:]}))
+			},
+			exists:      true,
+			expectedIdx: 0,
+		},
+		{
+			name: "retrieve validator with multiple validators from the start",
+			modifyFunc: func(b *BeaconState, key [48]byte) {
+				key1 := keyCreator([]byte{'C'})
+				key2 := keyCreator([]byte{'D'})
+				assert.NoError(t, b.AppendValidator(&eth.Validator{PublicKey: key[:]}))
+				assert.NoError(t, b.AppendValidator(&eth.Validator{PublicKey: key1[:]}))
+				assert.NoError(t, b.AppendValidator(&eth.Validator{PublicKey: key2[:]}))
+			},
+			exists:      true,
+			expectedIdx: 0,
+		},
+		{
+			name: "retrieve validator with multiple validators",
+			modifyFunc: func(b *BeaconState, key [48]byte) {
+				key1 := keyCreator([]byte{'C'})
+				key2 := keyCreator([]byte{'D'})
+				assert.NoError(t, b.AppendValidator(&eth.Validator{PublicKey: key1[:]}))
+				assert.NoError(t, b.AppendValidator(&eth.Validator{PublicKey: key2[:]}))
+				assert.NoError(t, b.AppendValidator(&eth.Validator{PublicKey: key[:]}))
+			},
+			exists:      true,
+			expectedIdx: 2,
+		},
+		{
+			name: "retrieve validator with multiple validators from the start with shared state",
+			modifyFunc: func(b *BeaconState, key [48]byte) {
+				key1 := keyCreator([]byte{'C'})
+				key2 := keyCreator([]byte{'D'})
+				assert.NoError(t, b.AppendValidator(&eth.Validator{PublicKey: key[:]}))
+				_ = b.Copy()
+				assert.NoError(t, b.AppendValidator(&eth.Validator{PublicKey: key1[:]}))
+				assert.NoError(t, b.AppendValidator(&eth.Validator{PublicKey: key2[:]}))
+			},
+			exists:      true,
+			expectedIdx: 0,
+		},
+		{
+			name: "retrieve validator with multiple validators with shared state",
+			modifyFunc: func(b *BeaconState, key [48]byte) {
+				key1 := keyCreator([]byte{'C'})
+				key2 := keyCreator([]byte{'D'})
+				assert.NoError(t, b.AppendValidator(&eth.Validator{PublicKey: key1[:]}))
+				assert.NoError(t, b.AppendValidator(&eth.Validator{PublicKey: key2[:]}))
+				n := b.Copy()
+				// Append to another state
+				assert.NoError(t, n.AppendValidator(&eth.Validator{PublicKey: key[:]}))
+
+			},
+			exists:      false,
+			expectedIdx: 0,
+		},
+		{
+			name: "retrieve validator with multiple validators with shared state at boundary",
+			modifyFunc: func(b *BeaconState, key [48]byte) {
+				key1 := keyCreator([]byte{'C'})
+				assert.NoError(t, b.AppendValidator(&eth.Validator{PublicKey: key1[:]}))
+				n := b.Copy()
+				// Append to another state
+				assert.NoError(t, n.AppendValidator(&eth.Validator{PublicKey: key[:]}))
+
+			},
+			exists:      false,
+			expectedIdx: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s, err := InitializeFromProto(&pb.BeaconState{})
+			require.NoError(t, err)
+			nKey := keyCreator([]byte{'A'})
+			tt.modifyFunc(s, nKey)
+			idx, ok := s.ValidatorIndexByPubkey(nKey)
+			assert.Equal(t, tt.exists, ok)
+			assert.Equal(t, tt.expectedIdx, idx)
+		})
+	}
+}
