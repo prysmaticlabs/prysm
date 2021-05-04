@@ -23,7 +23,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
-	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
 	interopcoldstart "github.com/prysmaticlabs/prysm/beacon-chain/interop-cold-start"
 	"github.com/prysmaticlabs/prysm/beacon-chain/node/registration"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
@@ -42,6 +41,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/gateway"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prereq"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
@@ -650,7 +650,7 @@ func (b *BeaconNode) registerGRPCGateway() error {
 	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
 	selfCert := b.cliCtx.String(flags.CertFlag.Name)
 	return b.services.RegisterService(
-		gateway.New(
+		gateway.NewBeacon(
 			b.ctx,
 			selfAddress,
 			selfCert,
