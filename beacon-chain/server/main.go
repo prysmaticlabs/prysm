@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	joonix "github.com/joonix/log"
-	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
+	"github.com/prysmaticlabs/prysm/shared/gateway"
 	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
 	"github.com/sirupsen/logrus"
 )
@@ -36,7 +36,7 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	gw := gateway.New(
+	gw := gateway.NewBeacon(
 		context.Background(),
 		*beaconRPC,
 		"", // remoteCert
