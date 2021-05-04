@@ -26,13 +26,13 @@ import (
 
 var _ shared.Service = (*Gateway)(nil)
 
-// CallerId defines whether the caller node is a beacon(1)
-// or a validator node(2). This helps register the handlers accordingly.
+// CallerId defines whether the caller node is a beacon
+// or a validator node. This helps register the handlers accordingly.
 type CallerId uint8
 
 const (
-	Beacon    = 1
-	Validator = 2
+	Beacon CallerId = iota
+	Validator
 )
 
 // Gateway is the gRPC gateway to serve HTTP JSON traffic as a
