@@ -1,5 +1,23 @@
 package clientstats
 
+const (
+	ClientName            = "prysm"
+	BeaconNodeProcessName = "beaconnode"
+	ValidatorProcessName  = "validator"
+	APIVersion            = 1
+)
+
+// APIMessage are common to all requests to the client-stats API
+// Note that there is a "system" type that we do not currently
+// support -- if we did APIMessage would be present on the system
+// messages as well as validator and beaconnode, whereas
+// CommonStats would only be part of beaconnode and validator.
+type APIMessage struct {
+	APIVersion  int    `json:"version"`
+	Timestamp   int64  `json:"timestamp"` // unix timestamp in milliseconds
+	ProcessName string `json:"process"`   // validator, beaconnode, system
+}
+
 // CommonStats represent generic metrics that are expected on both
 // beaconnode and validator metric types. This type is used for
 // marshaling metrics to the POST body sent to the metrics collcetor.
@@ -19,6 +37,7 @@ type CommonStats struct {
 	// This is different from a "fallback" configuration where
 	// the second address is treated as a failover.
 	SyncEth2FallbackConnected bool `json:"sync_eth2_fallback_connected"`
+	APIMessage                `json:",inline"`
 }
 
 // BeaconNodeStats embeds CommonStats and represents metrics specific to
