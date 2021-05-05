@@ -476,6 +476,8 @@ github.com/huin/goupnp v1.0.0/go.mod h1:n9v9KO1tAxYH82qOn+UTIFQDmx5n1Zxd/ClZDMX7
 github.com/huin/goupnp v1.0.1-0.20210310174557-0ca763054c88 h1:bcAj8KroPf552TScjFPIakjH2/tdIrIH8F+cc4v4SRo=
 github.com/huin/goupnp v1.0.1-0.20210310174557-0ca763054c88/go.mod h1:nNs7wvRfN1eKaMknBydLNQU6146XQim8t4h+q90biWo=
 github.com/huin/goutil v0.0.0-20170803182201-1ca381bf3150/go.mod h1:PpLOETDnJ0o3iZrZfqZzyLl6l7F3c6L1oWn7OICBi6o=
+github.com/iancoleman/strcase v0.1.3 h1:dJBk1m2/qjL1twPLf68JND55vvivMupZ4wIzE8CTdBw=
+github.com/iancoleman/strcase v0.1.3/go.mod h1:SK73tn/9oHe+/Y0h39VT4UCxmurVJkR5NA7kMEAOgSE=
 github.com/ianlancetaylor/cgosymbolizer v0.0.0-20200424224625-be1b05b0b279 h1:IpTHAzWv1pKDDWeJDY5VOHvqc2T9d3C8cPKEf2VPqHE=
 github.com/ianlancetaylor/cgosymbolizer v0.0.0-20200424224625-be1b05b0b279/go.mod h1:a5aratAVTWyz+nJMmDsN8O4XTfaLfdAsB1ysCmZX5Bw=
 github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6/go.mod h1:aSSvb/t6k1mPoxDqO4vJh6VOCGPwU4O0C2/Eqndh1Sc=
@@ -1066,12 +1068,17 @@ github.com/prysmaticlabs/ethereumapis v0.0.0-20210415180552-398a82292a20 h1:15AQ
 github.com/prysmaticlabs/ethereumapis v0.0.0-20210415180552-398a82292a20/go.mod h1:a0kvrMazsvz/yGbrGIdx/Xtm5rhf/bfELx81A9pbuG0=
 github.com/prysmaticlabs/ethereumapis v0.0.0-20210429071740-816517af2c5f h1:itc40TjB72Z3zEB8CZiSIgVi4wMY0Bkf2pU5Way7lzI=
 github.com/prysmaticlabs/ethereumapis v0.0.0-20210429071740-816517af2c5f/go.mod h1:a0kvrMazsvz/yGbrGIdx/Xtm5rhf/bfELx81A9pbuG0=
+github.com/prysmaticlabs/ethereumapis v0.0.0-20210505155145-9631de86d524 h1:ccvZtZuIQFb60p3yeJYYBN1WBMwSZLnm4OG7gF9qiMA=
+github.com/prysmaticlabs/ethereumapis v0.0.0-20210505155145-9631de86d524/go.mod h1:cezEB5bL0E0ZRWTqXuyM4HunsLjlAZeX3FHXBEsvBcE=
+github.com/prysmaticlabs/go-bitfield v0.0.0-20210108222456-8e92c3709aa0/go.mod h1:hCwmef+4qXWjv0jLDbQdWnL0Ol7cS7/lCSS26WR+u6s=
 github.com/prysmaticlabs/go-bitfield v0.0.0-20210202205921-7fcea7c45dc8 h1:18+Qqobq3HAUY0hgIhPGSqmLFnaLLocemmU7+Sj2aYQ=
 github.com/prysmaticlabs/go-bitfield v0.0.0-20210202205921-7fcea7c45dc8/go.mod h1:hCwmef+4qXWjv0jLDbQdWnL0Ol7cS7/lCSS26WR+u6s=
 github.com/prysmaticlabs/grpc-gateway/v2 v2.3.1-0.20210330221950-3beba9ed0e19 h1:roLNAyHR6c9yx1F+shJbbDvi/YopEreddO2Pmga20Lo=
 github.com/prysmaticlabs/grpc-gateway/v2 v2.3.1-0.20210330221950-3beba9ed0e19/go.mod h1:DoejD8QM1DgDOzcUMsLuxA66Ttp8I0Y70I7hcB0RyG8=
 github.com/prysmaticlabs/prombbolt v0.0.0-20210126082820-9b7adba6db7c h1:9PHRCuO/VN0s9k+RmLykho7AjDxblNYI5bYKed16NPU=
 github.com/prysmaticlabs/prombbolt v0.0.0-20210126082820-9b7adba6db7c/go.mod h1:ZRws458tYHS/Zs936OQ6oCrL+Ict5O4Xpwve1UQ6C9M=
+github.com/prysmaticlabs/protoc-gen-go-cast v0.0.0-20210504233148-1e141af6a0a1 h1:k7CCMwN7VooQ7GhfySnaVyI4/9+QbhJTdasoC6VOZOI=
+github.com/prysmaticlabs/protoc-gen-go-cast v0.0.0-20210504233148-1e141af6a0a1/go.mod h1:au9l1XcWNEKixIlSRzEe54fYGhyELWgJJIxKu8W75Mc=
 github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
 github.com/rcrowley/go-metrics v0.0.0-20190826022208-cac0b30c2563/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
 github.com/retailnext/hllpp v1.0.1-0.20180308014038-101a6d2f8b52/go.mod h1:RDpi1RftBQPUCDRw6SmxeaREsAaRKnOclghuzp/WRzc=
