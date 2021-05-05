@@ -31,6 +31,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
+	powt "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 )
 
 const topic = p2p.BlockSubnetTopicFormat
@@ -133,7 +134,7 @@ func BeaconFuzzBlock(b []byte) {
 	}
 
 	chain, err := blockchain.NewService(context.Background(), &blockchain.Config{
-		ChainStartFetcher: nil,
+		ChainStartFetcher: powt.NewPOWChain(),
 		BeaconDB:          db1,
 		DepositCache:      nil,
 		AttPool:           ap,
