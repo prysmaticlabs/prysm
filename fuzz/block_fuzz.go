@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	powt "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
@@ -133,7 +134,7 @@ func BeaconFuzzBlock(b []byte) {
 	}
 
 	chain, err := blockchain.NewService(context.Background(), &blockchain.Config{
-		ChainStartFetcher: nil,
+		ChainStartFetcher: powt.NewPOWChain(),
 		BeaconDB:          db1,
 		DepositCache:      nil,
 		AttPool:           ap,
