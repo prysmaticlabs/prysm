@@ -3047,8 +3047,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_tyler_smith_go_bip39",
         importpath = "github.com/tyler-smith/go-bip39",
-        sum = "h1:+t3w+KwLXO6154GNJY+qUtIxLTmFjfUmpguQT1OlOT8=",
-        version = "v1.0.2",
+        sum = "h1:5eUemwrMargf3BSLRRCalXT93Ns6pQJIjYQN2nyfOP8=",
+        version = "v1.1.0",
     )
 
     go_repository(
