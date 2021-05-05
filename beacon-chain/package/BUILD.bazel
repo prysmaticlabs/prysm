@@ -1,24 +1,24 @@
 load("@rules_pkg//:pkg.bzl", "pkg_tar", "pkg_deb")
 
 pkg_tar(
-    name = "validator-bin",
+    name = "beacon-chain-bin",
     srcs = [
-        "//cmd/validator:validator"
+        "//cmd/beacon-chain:beacon-chain"
     ],
     mode = "0755",
     package_dir = "/usr/bin",
 )
 
 pkg_tar(
-    name = "validator-config",
-    srcs = glob(["validator.yaml"]),
+    name = "beacon-chain-config",
+    srcs = glob(["beacon-chain.yaml"]),
     mode = "0640",
     package_dir = "/etc/prysm"
 )
 
 pkg_tar(
-    name = "validator-service",
-    srcs = glob(["prysm-validator.service"]),
+    name = "beacon-chain-service",
+    srcs = glob(["prysm-beacon-chain.service"]),
     package_dir = "/usr/lib/systemd/system"
 )
 
@@ -26,25 +26,25 @@ pkg_tar(
     name = "debian-data",
     extension = "tar.gz",
     deps = [
-        ":validator-bin",
-        ":validator-config",
-        ":validator-service"
+        ":beacon-chain-bin",
+        ":beacon-chain-config",
+        ":beacon-chain-service"
     ],
 )
 
 pkg_deb(
-    name = "validator-debian",
+    name = "deb",
     architecture = "amd64",
     conffiles = [
-        "etc/prysm/validator.yaml",
+        "etc/prysm/beacon-chain.yaml",
     ],
     data = ":debian-data",
-    description = "Prysm Validator Client - Ethereum 2.0 block consensus",
+    description = "Prysm Beacon Chain - Ethereum 2.0 network communications",
     homepage = "https://prysmaticlabs.com/",
     maintainer = "Prysmatic Labs <contact@prysmaticlabs.com>",
-    package = "prysm-validator",
+    package = "prysm-beacon-chain",
     version_file = "//shared:version_file",
-    visibility = ["//validator:__pkg__"],
+    visibility = ["//beacon-chain:__pkg__"],
     preinst = "preinst.sh",
     postinst = "postinst.sh",
 )

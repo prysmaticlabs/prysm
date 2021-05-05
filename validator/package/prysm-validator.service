@@ -1,15 +1,14 @@
 [Unit]
-Description=Prysm Eth2 Beacon Chain
+Description=Prysm Eth2 Validator Client
 Wants=network-online.target
 After=network-online.target
+Requires=prysm-beacon-chain.service
 
 [Service]
-User=prysm-beacon
-Group=prysm-beacon
+User=prysm-validator
+Group=prysm-validator
 Type=simple
-Restart=always
-RestartSec=5
-ExecStart=/usr/bin/beacon-chain --config-file /etc/prysm/beacon-chain.yaml --accept-terms-of-use
+ExecStart=/usr/bin/validator --config-file /etc/prysm/validator.yaml --accept-terms-of-use
 
 NoNewPrivileges=yes
 CapabilityBoundingSet=
@@ -21,6 +20,7 @@ PrivateUsers=yes
 PrivateTmp=yes
 
 ProtectSystem=strict
+ReadWritePaths=/var/lib/prysm/validator
 ProtectClock=yes
 ProtectHome=true
 ProtectKernelLogs=yes
