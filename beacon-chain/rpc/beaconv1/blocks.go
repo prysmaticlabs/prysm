@@ -70,11 +70,11 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpb.BlockHeadersR
 			return nil, status.Errorf(codes.Internal, "Could not retrieve blocks: %v", err)
 		}
 	} else {
-		_, blks, err = bs.BeaconDB.BlocksBySlot(ctx, req.Slot)
+		_, blks, err = bs.BeaconDB.BlocksBySlot(ctx, *req.Slot)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for slot %d: %v", req.Slot, err)
 		}
-		_, blkRoots, err = bs.BeaconDB.BlockRootsBySlot(ctx, req.Slot)
+		_, blkRoots, err = bs.BeaconDB.BlockRootsBySlot(ctx, *req.Slot)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve block roots for slot %d: %v", req.Slot, err)
 		}

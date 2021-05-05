@@ -195,12 +195,6 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 	b.state.Validators = append(vals, val)
 	valIdx := types.ValidatorIndex(len(b.state.Validators) - 1)
 
-	// Copy if this is a shared validator map
-	if ref := b.valMapHandler.MapRef(); ref.Refs() > 1 {
-		valMap := b.valMapHandler.Copy()
-		ref.MinusRef()
-		b.valMapHandler = valMap
-	}
 	b.valMapHandler.Set(bytesutil.ToBytes48(val.PublicKey), valIdx)
 
 	b.markFieldAsDirty(validators)

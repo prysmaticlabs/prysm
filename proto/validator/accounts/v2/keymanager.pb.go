@@ -8,7 +8,17 @@ package ethereum_validator_accounts_v2
 
 import (
 	context "context"
+<<<<<<< HEAD
 	proto "github.com/golang/protobuf/proto"
+=======
+	fmt "fmt"
+	io "io"
+	math "math"
+	math_bits "math/bits"
+
+	_ "github.com/gogo/protobuf/gogoproto"
+	proto "github.com/gogo/protobuf/proto"
+>>>>>>> 60c6cf7438b1b7a212ec695190bd26e7aae3680a
 	empty "github.com/golang/protobuf/ptypes/empty"
 	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/eth2-types"
 	_ "github.com/prysmaticlabs/ethereumapis/eth/ext"
@@ -17,10 +27,13 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+<<<<<<< HEAD
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
+=======
+>>>>>>> 60c6cf7438b1b7a212ec695190bd26e7aae3680a
 )
 
 const (
