@@ -87,7 +87,7 @@ require (
 	github.com/prometheus/prom2json v1.3.0
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/prysmaticlabs/eth2-types v0.0.0-20210219172114-1da477c09a06
-	github.com/prysmaticlabs/ethereumapis v0.0.0-20210428231008-f838c483a0ac
+	github.com/prysmaticlabs/ethereumapis v0.0.0-20210505030121-3eedfdc0d01d
 	github.com/prysmaticlabs/go-bitfield v0.0.0-20210202205921-7fcea7c45dc8
 	github.com/prysmaticlabs/prombbolt v0.0.0-20210126082820-9b7adba6db7c
 	github.com/rs/cors v1.7.0
@@ -132,4 +132,4 @@ replace github.com/ethereum/go-ethereum => github.com/prysmaticlabs/bazel-go-eth
 
 replace github.com/json-iterator/go => github.com/prestonvanloon/go v1.1.7-0.20190722034630-4f2e55fcf87b
 
-replace github.com/ferranbt/fastssz => github.com/rauljordan/fastssz befa755eeb42f2f23a4a060a3904ebcc9a680bfa
+replace github.com/ferranbt/fastssz => github.com/rauljordan/fastssz v0.0.0-20210504221047-befa755eeb42

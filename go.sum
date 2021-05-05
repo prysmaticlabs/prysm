@@ -1332,6 +1332,8 @@ github.com/prysmaticlabs/eth2-types v0.0.0-20210219172114-1da477c09a06 h1:b4WxLS
 github.com/prysmaticlabs/eth2-types v0.0.0-20210219172114-1da477c09a06/go.mod h1:kOmQ/zdobQf7HUohDTifDNFEZfNaSCIY5fkONPL+dWU=
 github.com/prysmaticlabs/ethereumapis v0.0.0-20210428231008-f838c483a0ac h1:Zfc1COZLUOVVuZSoAwqAk69ctE8tILjNMAT8GzhhV0k=
 github.com/prysmaticlabs/ethereumapis v0.0.0-20210428231008-f838c483a0ac/go.mod h1:FQGaMEj/Jv+IagrRHTS6fIHt/ot05bgGiqiceeH9QPQ=
+github.com/prysmaticlabs/ethereumapis v0.0.0-20210505030121-3eedfdc0d01d h1:dF29TclJ1YYKiE6TyqG5uq6S4SjAC/HbMkzM9J/6/XU=
+github.com/prysmaticlabs/ethereumapis v0.0.0-20210505030121-3eedfdc0d01d/go.mod h1:bkDQzYG7upGPvl36dqnXU/zBPbsm1TnpNne+yszxxB4=
 github.com/prysmaticlabs/go-bitfield v0.0.0-20210202205921-7fcea7c45dc8 h1:18+Qqobq3HAUY0hgIhPGSqmLFnaLLocemmU7+Sj2aYQ=
 github.com/prysmaticlabs/go-bitfield v0.0.0-20210202205921-7fcea7c45dc8/go.mod h1:hCwmef+4qXWjv0jLDbQdWnL0Ol7cS7/lCSS26WR+u6s=
 github.com/prysmaticlabs/prombbolt v0.0.0-20210126082820-9b7adba6db7c h1:9PHRCuO/VN0s9k+RmLykho7AjDxblNYI5bYKed16NPU=
@@ -1340,6 +1342,8 @@ github.com/rauljordan/fastssz v0.0.0-20210428230234-6a43aceedddf h1:Qr/GFm9W7Ozj
 github.com/rauljordan/fastssz v0.0.0-20210428230234-6a43aceedddf/go.mod h1:DyEu2iuLBnb/T51BlsiO3yLYdJC6UbGMrIkqK1KmQxM=
 github.com/rauljordan/fastssz v0.0.0-20210504214435-cc0e8d961964 h1:SyENUM5RrmSdpmcnWg+ZYxMO5cja3kvhwWF2QkdmNJM=
 github.com/rauljordan/fastssz v0.0.0-20210504214435-cc0e8d961964/go.mod h1:DyEu2iuLBnb/T51BlsiO3yLYdJC6UbGMrIkqK1KmQxM=
+github.com/rauljordan/fastssz v0.0.0-20210504221047-befa755eeb42 h1:csBsmcuM7kqGBeJpHNorR3wjMm0XyMK8IfwHGE6IVkA=
+github.com/rauljordan/fastssz v0.0.0-20210504221047-befa755eeb42/go.mod h1:DyEu2iuLBnb/T51BlsiO3yLYdJC6UbGMrIkqK1KmQxM=
 github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
 github.com/rcrowley/go-metrics v0.0.0-20190826022208-cac0b30c2563 h1:dY6ETXrvDG7Sa4vE8ZQG4yqWg6UnOcbqTAahkV813vQ=
 github.com/rcrowley/go-metrics v0.0.0-20190826022208-cac0b30c2563/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
