@@ -126,7 +126,7 @@ func TestEIP3076SpecTests(t *testing.T) {
 					if sb.ShouldSucceed {
 						require.NoError(t, err)
 					} else {
-						require.NotEqual(t, nil, err, "validation should have failed for block")
+						require.NotEqual(t, nil, err, "pre validation should have failed for block")
 					}
 				}
 

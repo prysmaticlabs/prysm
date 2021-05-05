@@ -39,10 +39,11 @@ type Flags struct {
 	PyrmontTestnet bool // PyrmontTestnet defines the flag through which we can enable the node to run on the Pyrmont testnet.
 
 	// Feature related flags.
-	WriteSSZStateTransitions bool // WriteSSZStateTransitions to tmp directory.
-	SkipBLSVerify            bool // Skips BLS verification across the runtime.
-	EnableBlst               bool // Enables new BLS library from supranational.
-	RemoteSlasherProtection  bool // RemoteSlasherProtection protects validator fron sending over a slashable offense over the network using external slasher.
+	WriteSSZStateTransitions   bool // WriteSSZStateTransitions to tmp directory.
+	SkipBLSVerify              bool // Skips BLS verification across the runtime.
+	EnableBlst                 bool // Enables new BLS library from supranational.
+	OldRemoteSlasherProtection bool // OldRemoteSlasherProtection protects validator from sending over a slashable offense over the network using external slasher (will be deprecated).
+	NewRemoteSlasherProtection bool // NewRemoteSlasherProtection utilizes a beacon node with --slasher mode for validator slashing protection.
 
 	EnablePeerScorer                   bool // EnablePeerScorer enables experimental peer scoring in p2p.
 	EnableLargerGossipHistory          bool // EnableLargerGossipHistory increases the gossip history we store in our caches.
@@ -228,7 +229,11 @@ func ConfigureValidator(ctx *cli.Context) {
 	configureTestnet(ctx, cfg)
 	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
 		log.WithField(enableExternalSlasherProtectionFlag.Name, enableExternalSlasherProtectionFlag.Usage).Warn(enabledFeatureFlag)
-		cfg.RemoteSlasherProtection = true
+		cfg.OldRemoteSlasherProtection = true
+	}
+	if ctx.Bool(enableNewExternalSlasherProtectionFlag.Name) {
+		log.WithField(enableNewExternalSlasherProtectionFlag.Name, enableNewExternalSlasherProtectionFlag.Usage).Warn(enabledFeatureFlag)
+		cfg.NewRemoteSlasherProtection = true
 	}
 	if ctx.Bool(writeWalletPasswordOnWebOnboarding.Name) {
 		log.WithField(writeWalletPasswordOnWebOnboarding.Name, writeWalletPasswordOnWebOnboarding.Usage).Warn(enabledFeatureFlag)

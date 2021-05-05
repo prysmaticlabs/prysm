@@ -66,6 +66,8 @@ var appFlags = []cli.Flag{
 	cmd.MonitoringHostFlag,
 	flags.MonitoringPortFlag,
 	cmd.DisableMonitoringFlag,
+	flags.SlasherRPCProviderFlag,
+	flags.SlasherCertFlag,
 	flags.WalletPasswordFileFlag,
 	flags.WalletDirFlag,
 	flags.EnableWebFlag,

@@ -15,7 +15,7 @@ import (
 
 func Test_slashableAttestationCheck(t *testing.T) {
 	config := &featureconfig.Flags{
-		RemoteSlasherProtection: true,
+		NewRemoteSlasherProtection: true,
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
@@ -59,7 +59,7 @@ func Test_slashableAttestationCheck(t *testing.T) {
 
 func Test_slashableAttestationCheck_UpdatesLowestSignedEpochs(t *testing.T) {
 	config := &featureconfig.Flags{
-		RemoteSlasherProtection: true,
+		NewRemoteSlasherProtection: true,
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
@@ -116,12 +116,12 @@ func Test_slashableAttestationCheck_UpdatesLowestSignedEpochs(t *testing.T) {
 
 func Test_slashableAttestationCheck_OK(t *testing.T) {
 	config := &featureconfig.Flags{
-		RemoteSlasherProtection: false,
+		NewRemoteSlasherProtection: true,
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
 	ctx := context.Background()
-	validator, _, _, finish := setup(t)
+	validator, mocks, _, finish := setup(t)
 	defer finish()
 	att := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 2},
@@ -141,18 +141,24 @@ func Test_slashableAttestationCheck_OK(t *testing.T) {
 	}
 	sr := [32]byte{1}
 	fakePubkey := bytesutil.ToBytes48([]byte("test"))
+
+	mocks.slasherClient.EXPECT().IsSlashableAttestation(
+		gomock.Any(), // ctx
+		gomock.Any(),
+	).Return(&slashpb.AttesterSlashingResponse{}, nil /*err*/)
+
 	err := validator.slashableAttestationCheck(ctx, att, fakePubkey, sr)
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
 }
 
 func Test_slashableAttestationCheck_GenesisEpoch(t *testing.T) {
 	config := &featureconfig.Flags{
-		RemoteSlasherProtection: false,
+		NewRemoteSlasherProtection: true,
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
 	ctx := context.Background()
-	validator, _, _, finish := setup(t)
+	validator, mocks, _, finish := setup(t)
 	defer finish()
 	att := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 2},
@@ -170,6 +176,12 @@ func Test_slashableAttestationCheck_GenesisEpoch(t *testing.T) {
 			},
 		},
 	}
+
+	mocks.slasherClient.EXPECT().IsSlashableAttestation(
+		gomock.Any(), // ctx
+		gomock.Any(),
+	).Return(&slashpb.AttesterSlashingResponse{}, nil /*err*/)
+
 	fakePubkey := bytesutil.ToBytes48([]byte("test"))
 	err := validator.slashableAttestationCheck(ctx, att, fakePubkey, [32]byte{})
 	require.NoError(t, err, "Expected allowed attestation not to throw error")
