@@ -122,6 +122,13 @@ var (
 		Name:  "enable-optimized-balance-update",
 		Usage: "Enables the optimized method of updating validator balances.",
 	}
+	// EnableDuplicateValidatorDetection enables on-chain check for duplicate validator attestations,
+	// by default it is on.
+	enableDuplicateValidatorDetection = &cli.BoolFlag{
+		Name:  "enable-duplicate-validator-attestation-detection",
+		Usage: "Enables on-chain check for duplicate validator attestations",
+		Value: true,
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
