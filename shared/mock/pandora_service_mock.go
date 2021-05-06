@@ -6,11 +6,12 @@ package mock
 
 import (
 	context "context"
+	reflect "reflect"
+
 	common "github.com/ethereum/go-ethereum/common"
 	types "github.com/ethereum/go-ethereum/core/types"
 	gomock "github.com/golang/mock/gomock"
 	pandora "github.com/prysmaticlabs/prysm/validator/pandora"
-	reflect "reflect"
 )
 
 // MockPandoraService is a mock of PandoraService interface
@@ -109,4 +110,3 @@ func (mr *MockRPCClientMockRecorder) Call(result, method interface{}, args ...in
 	varargs := append([]interface{}{result, method}, args...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Call", reflect.TypeOf((*MockRPCClient)(nil).Call), varargs...)
 }
-

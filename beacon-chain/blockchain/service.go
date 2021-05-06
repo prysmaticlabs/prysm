@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -60,6 +61,7 @@ type Service struct {
 	head                  *head
 	headLock              sync.RWMutex
 	stateNotifier         statefeed.Notifier
+	blockNotifier         blockfeed.Notifier
 	genesisRoot           [32]byte
 	forkChoiceStore       f.ForkChoicer
 	justifiedCheckpt      *ethpb.Checkpoint
@@ -79,6 +81,9 @@ type Service struct {
 	wsEpoch               types.Epoch
 	wsRoot                []byte
 	wsVerified            bool
+
+	// Vanguard: unconfirmed blocks need to store in cache for waiting final confirmation from orchestrator
+	pendingBlockCache *cache.PendingBlocksCache
 }
 
 // Config options for the service.
@@ -93,6 +98,7 @@ type Config struct {
 	P2p               p2p.Broadcaster
 	MaxRoutines       int
 	StateNotifier     statefeed.Notifier
+	BlockNotifier     blockfeed.Notifier
 	ForkChoiceStore   f.ForkChoicer
 	OpsService        *attestations.Service
 	StateGen          *stategen.State
@@ -116,6 +122,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		p2p:                  cfg.P2p,
 		maxRoutines:          cfg.MaxRoutines,
 		stateNotifier:        cfg.StateNotifier,
+		blockNotifier:        cfg.BlockNotifier,
 		forkChoiceStore:      cfg.ForkChoiceStore,
 		boundaryRoots:        [][32]byte{},
 		checkpointStateCache: cache.NewCheckpointStateCache(),
@@ -125,6 +132,8 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		justifiedBalances:    make([]uint64, 0),
 		wsEpoch:              cfg.WspEpoch,
 		wsRoot:               cfg.WspBlockRoot,
+
+		pendingBlockCache: cache.NewPendingBlocksCache(), // Vanguard: Initialize pending block cache
 	}, nil
 }
 

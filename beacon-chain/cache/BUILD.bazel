@@ -1,7 +1,8 @@
-load("@prysm//tools/go:def.bzl", "go_library", "go_test")
+load("@prysm//tools/go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
-# gazelle:exclude committee_disabled.go
-# gazelle:exclude proposer_indices_disabled.go
+# gazelle:ignore committee_disabled.go
+# gazelle:ignore proposer_indices_disabled.go
 go_library(
     name = "go_default_library",
     srcs = [
@@ -10,13 +11,14 @@ go_library(
         "committees.go",
         "common.go",
         "doc.go",
-        "proposer_indices_type.go",
         "skip_slot_cache.go",
         "subnet_ids.go",
+        "proposer_indices_type.go",
+        "van_pending_blocks.go",
     ] + select({
         "//fuzz:fuzzing_enabled": [
             "committee_disabled.go",
-            "proposer_indices_disabled.go",
+            "proposer_indices_disabled.go"
         ],
         "//conditions:default": [
             "committee.go",
@@ -30,9 +32,9 @@ go_library(
         "//tools:__subpackages__",
     ],
     deps = [
-        "//beacon-chain/state/interface:go_default_library",
-        "//proto/eth/v1alpha1:go_default_library",
-        "//shared/copyutil:go_default_library",
+        "//beacon-chain/state:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/featureconfig:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/sliceutil:go_default_library",
@@ -41,8 +43,10 @@ go_library(
         "@com_github_prometheus_client_golang//prometheus:go_default_library",
         "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@io_k8s_client_go//tools/cache:go_default_library",
         "@io_opencensus_go//trace:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
     ],
 )
 
@@ -51,26 +55,27 @@ go_test(
     size = "small",
     srcs = [
         "attestation_data_test.go",
-        "cache_test.go",
         "checkpoint_state_test.go",
         "committee_fuzz_test.go",
         "committee_test.go",
-        "proposer_indices_test.go",
+        "cache_test.go",
         "skip_slot_cache_test.go",
         "subnet_ids_test.go",
+        "proposer_indices_test.go",
+        "van_pending_blocks_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
-        "//beacon-chain/state/interface:go_default_library",
-        "//beacon-chain/state/v1:go_default_library",
+        "//beacon-chain/state:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
-        "//proto/eth/v1alpha1:go_default_library",
         "//shared/bytesutil:go_default_library",
+        "//shared/featureconfig:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
+        "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_google_gofuzz//:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
-        "@org_golang_google_protobuf//proto:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
     ],
 )

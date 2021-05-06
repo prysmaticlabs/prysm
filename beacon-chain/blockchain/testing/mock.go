@@ -10,6 +10,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
@@ -18,12 +19,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/interfaces"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -31,13 +28,13 @@ import (
 
 // ChainService defines the mock interface for testing
 type ChainService struct {
-	State                       iface.BeaconState
+	State                       *stateTrie.BeaconState
 	Root                        []byte
-	Block                       interfaces.SignedBeaconBlock
+	Block                       *ethpb.SignedBeaconBlock
 	FinalizedCheckPoint         *ethpb.Checkpoint
 	CurrentJustifiedCheckPoint  *ethpb.Checkpoint
 	PreviousJustifiedCheckPoint *ethpb.Checkpoint
-	BlocksReceived              []interfaces.SignedBeaconBlock
+	BlocksReceived              []*ethpb.SignedBeaconBlock
 	Balance                     *precompute.Balance
 	Genesis                     time.Time
 	ValidatorsRoot              [32]byte
@@ -150,18 +147,18 @@ func (mon *MockOperationNotifier) OperationFeed() *event.Feed {
 }
 
 // ReceiveBlockInitialSync mocks ReceiveBlockInitialSync method in chain service.
-func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block interfaces.SignedBeaconBlock, _ [32]byte) error {
+func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block *ethpb.SignedBeaconBlock, _ [32]byte) error {
 	if s.State == nil {
-		s.State = &v1.BeaconState{}
+		s.State = &stateTrie.BeaconState{}
 	}
-	if !bytes.Equal(s.Root, block.Block().ParentRoot()) {
-		return errors.Errorf("wanted %#x but got %#x", s.Root, block.Block().ParentRoot())
+	if !bytes.Equal(s.Root, block.Block.ParentRoot) {
+		return errors.Errorf("wanted %#x but got %#x", s.Root, block.Block.ParentRoot)
 	}
-	if err := s.State.SetSlot(block.Block().Slot()); err != nil {
+	if err := s.State.SetSlot(block.Block.Slot); err != nil {
 		return err
 	}
 	s.BlocksReceived = append(s.BlocksReceived, block)
-	signingRoot, err := block.Block().HashTreeRoot()
+	signingRoot, err := block.Block.HashTreeRoot()
 	if err != nil {
 		return err
 	}
@@ -169,7 +166,7 @@ func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block interf
 		if err := s.DB.SaveBlock(ctx, block); err != nil {
 			return err
 		}
-		logrus.Infof("Saved block with root: %#x at slot %d", signingRoot, block.Block().Slot())
+		logrus.Infof("Saved block with root: %#x at slot %d", signingRoot, block.Block.Slot)
 	}
 	s.Root = signingRoot[:]
 	s.Block = block
@@ -177,19 +174,19 @@ func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block interf
 }
 
 // ReceiveBlockBatch processes blocks in batches from initial-sync.
-func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []interfaces.SignedBeaconBlock, _ [][32]byte) error {
+func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBlock, _ [][32]byte) error {
 	if s.State == nil {
-		s.State = &v1.BeaconState{}
+		s.State = &stateTrie.BeaconState{}
 	}
 	for _, block := range blks {
-		if !bytes.Equal(s.Root, block.Block().ParentRoot()) {
-			return errors.Errorf("wanted %#x but got %#x", s.Root, block.Block().ParentRoot())
+		if !bytes.Equal(s.Root, block.Block.ParentRoot) {
+			return errors.Errorf("wanted %#x but got %#x", s.Root, block.Block.ParentRoot)
 		}
-		if err := s.State.SetSlot(block.Block().Slot()); err != nil {
+		if err := s.State.SetSlot(block.Block.Slot); err != nil {
 			return err
 		}
 		s.BlocksReceived = append(s.BlocksReceived, block)
-		signingRoot, err := block.Block().HashTreeRoot()
+		signingRoot, err := block.Block.HashTreeRoot()
 		if err != nil {
 			return err
 		}
@@ -197,7 +194,7 @@ func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []interfaces.
 			if err := s.DB.SaveBlock(ctx, block); err != nil {
 				return err
 			}
-			logrus.Infof("Saved block with root: %#x at slot %d", signingRoot, block.Block().Slot())
+			logrus.Infof("Saved block with root: %#x at slot %d", signingRoot, block.Block.Slot)
 		}
 		s.Root = signingRoot[:]
 		s.Block = block
@@ -206,18 +203,18 @@ func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []interfaces.
 }
 
 // ReceiveBlock mocks ReceiveBlock method in chain service.
-func (s *ChainService) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaconBlock, _ [32]byte) error {
+func (s *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlock, _ [32]byte) error {
 	if s.State == nil {
-		s.State = &v1.BeaconState{}
+		s.State = &stateTrie.BeaconState{}
 	}
-	if !bytes.Equal(s.Root, block.Block().ParentRoot()) {
-		return errors.Errorf("wanted %#x but got %#x", s.Root, block.Block().ParentRoot())
+	if !bytes.Equal(s.Root, block.Block.ParentRoot) {
+		return errors.Errorf("wanted %#x but got %#x", s.Root, block.Block.ParentRoot)
 	}
-	if err := s.State.SetSlot(block.Block().Slot()); err != nil {
+	if err := s.State.SetSlot(block.Block.Slot); err != nil {
 		return err
 	}
 	s.BlocksReceived = append(s.BlocksReceived, block)
-	signingRoot, err := block.Block().HashTreeRoot()
+	signingRoot, err := block.Block.HashTreeRoot()
 	if err != nil {
 		return err
 	}
@@ -225,7 +222,7 @@ func (s *ChainService) ReceiveBlock(ctx context.Context, block interfaces.Signed
 		if err := s.DB.SaveBlock(ctx, block); err != nil {
 			return err
 		}
-		logrus.Infof("Saved block with root: %#x at slot %d", signingRoot, block.Block().Slot())
+		logrus.Infof("Saved block with root: %#x at slot %d", signingRoot, block.Block.Slot)
 	}
 	s.Root = signingRoot[:]
 	s.Block = block
@@ -249,12 +246,12 @@ func (s *ChainService) HeadRoot(_ context.Context) ([]byte, error) {
 }
 
 // HeadBlock mocks HeadBlock method in chain service.
-func (s *ChainService) HeadBlock(context.Context) (interfaces.SignedBeaconBlock, error) {
+func (s *ChainService) HeadBlock(context.Context) (*ethpb.SignedBeaconBlock, error) {
 	return s.Block, nil
 }
 
 // HeadState mocks HeadState method in chain service.
-func (s *ChainService) HeadState(context.Context) (iface.BeaconState, error) {
+func (s *ChainService) HeadState(context.Context) (*stateTrie.BeaconState, error) {
 	return s.State, nil
 }
 
@@ -289,7 +286,7 @@ func (s *ChainService) ReceiveAttestationNoPubsub(context.Context, *ethpb.Attest
 }
 
 // AttestationPreState mocks AttestationPreState method in chain service.
-func (s *ChainService) AttestationPreState(_ context.Context, _ *ethpb.Attestation) (iface.BeaconState, error) {
+func (s *ChainService) AttestationPreState(_ context.Context, _ *ethpb.Attestation) (*stateTrie.BeaconState, error) {
 	return s.State, nil
 }
 
@@ -385,11 +382,7 @@ func (s *ChainService) VerifyFinalizedConsistency(_ context.Context, r []byte) e
 	return nil
 }
 
-// ChainHeads mocks ChainHeads and always return nil.
-func (s *ChainService) ChainHeads() ([][32]byte, []types.Slot) {
-	return [][32]byte{
-			bytesutil.ToBytes32(bytesutil.PadTo([]byte("foo"), 32)),
-			bytesutil.ToBytes32(bytesutil.PadTo([]byte("bar"), 32)),
-		},
-		[]types.Slot{0, 1}
+// Vanguard: UnConfirmedBlocksFromCache mocks UnConfirmedBlocksFromCache method and send it nil
+func (s *ChainService) UnConfirmedBlocksFromCache() ([]*ethpb.BeaconBlock, error) {
+	return nil, nil
 }

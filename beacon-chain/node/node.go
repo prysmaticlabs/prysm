@@ -468,6 +468,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 		P2p:               b.fetchP2P(),
 		MaxRoutines:       maxRoutines,
 		StateNotifier:     b,
+		BlockNotifier:     b,
 		ForkChoiceStore:   b.forkChoiceStore,
 		OpsService:        opsService,
 		StateGen:          b.stateGen,
@@ -660,6 +661,9 @@ func (b *BeaconNode) registerRPCService() error {
 		StateGen:                b.stateGen,
 		EnableDebugRPCEndpoints: enableDebugRPCEndpoints,
 		MaxMsgSize:              maxMsgSize,
+
+		// Vanguard: un-confirmed cached block fetcher
+		UnconfirmedBlockFetcher: chainService,
 	})
 
 	return b.services.RegisterService(rpcService)

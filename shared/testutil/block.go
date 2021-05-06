@@ -11,10 +11,10 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	v1 "github.com/prysmaticlabs/ethereumapis/eth/v1"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -70,7 +70,7 @@ func NewBeaconBlock() *ethpb.SignedBeaconBlock {
 // GenerateFullBlock generates a fully valid block with the requested parameters.
 // Use BlockGenConfig to declare the conditions you would like the block generated under.
 func GenerateFullBlock(
-	bState iface.BeaconState,
+	bState *stateTrie.BeaconState,
 	privs []bls.SecretKey,
 	conf *BlockGenConfig,
 	slot types.Slot,
@@ -192,7 +192,7 @@ func GenerateFullBlock(
 
 // GenerateProposerSlashingForValidator for a specific validator index.
 func GenerateProposerSlashingForValidator(
-	bState iface.BeaconState,
+	bState *stateTrie.BeaconState,
 	priv bls.SecretKey,
 	idx types.ValidatorIndex,
 ) (*ethpb.ProposerSlashing, error) {
@@ -231,7 +231,7 @@ func GenerateProposerSlashingForValidator(
 }
 
 func generateProposerSlashings(
-	bState iface.BeaconState,
+	bState *stateTrie.BeaconState,
 	privs []bls.SecretKey,
 	numSlashings uint64,
 ) ([]*ethpb.ProposerSlashing, error) {
@@ -252,7 +252,7 @@ func generateProposerSlashings(
 
 // GenerateAttesterSlashingForValidator for a specific validator index.
 func GenerateAttesterSlashingForValidator(
-	bState iface.BeaconState,
+	bState *stateTrie.BeaconState,
 	priv bls.SecretKey,
 	idx types.ValidatorIndex,
 ) (*ethpb.AttesterSlashing, error) {
@@ -308,7 +308,7 @@ func GenerateAttesterSlashingForValidator(
 }
 
 func generateAttesterSlashings(
-	bState iface.BeaconState,
+	bState *stateTrie.BeaconState,
 	privs []bls.SecretKey,
 	numSlashings uint64,
 ) ([]*ethpb.AttesterSlashing, error) {
@@ -332,7 +332,7 @@ func generateAttesterSlashings(
 }
 
 func generateDepositsAndEth1Data(
-	bState iface.BeaconState,
+	bState *stateTrie.BeaconState,
 	numDeposits uint64,
 ) (
 	[]*ethpb.Deposit,
@@ -352,7 +352,7 @@ func generateDepositsAndEth1Data(
 }
 
 func generateVoluntaryExits(
-	bState iface.BeaconState,
+	bState *stateTrie.BeaconState,
 	privs []bls.SecretKey,
 	numExits uint64,
 ) ([]*ethpb.SignedVoluntaryExit, error) {
@@ -379,7 +379,7 @@ func generateVoluntaryExits(
 	return voluntaryExits, nil
 }
 
-func randValIndex(bState iface.BeaconState) (types.ValidatorIndex, error) {
+func randValIndex(bState *stateTrie.BeaconState) (types.ValidatorIndex, error) {
 	activeCount, err := helpers.ActiveValidatorCount(bState, helpers.CurrentEpoch(bState))
 	if err != nil {
 		return 0, err
@@ -518,11 +518,9 @@ func NewPandoraBlock(slot types.Slot, proposerIndex uint64) (*gethTypes.Header, 
 		ProposerIndex: proposerIndex,
 	}
 	extraDataByte, err := rlp.EncodeToBytes(extraData)
-
-	if nil != err {
-		panic(err.Error())
+	if err != nil {
+		return nil, gethTypes.EmptyRootHash, nil
 	}
-
 	block := gethTypes.NewBlock(&gethTypes.Header{
 		ParentHash:  gethTypes.EmptyRootHash,
 		UncleHash:   gethTypes.EmptyUncleHash,

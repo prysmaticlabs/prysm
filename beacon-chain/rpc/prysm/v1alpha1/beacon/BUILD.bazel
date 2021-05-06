@@ -13,6 +13,7 @@ go_library(
         "slashings.go",
         "validators.go",
         "validators_stream.go",
+        "van_pending_blocks.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/beacon",
     visibility = ["//beacon-chain:__subpackages__"],
@@ -75,6 +76,7 @@ go_test(
         "slashings_test.go",
         "validators_stream_test.go",
         "validators_test.go",
+        "van_pending_blocks_test.go"
     ],
     embed = [":go_default_library"],
     shard_count = 4,
