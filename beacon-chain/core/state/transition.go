@@ -16,7 +16,6 @@ import (
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
@@ -63,6 +62,9 @@ var processingPipeline = []processFunc{
 
 // ExecuteStateTransition defines the procedure for a state transition function.
 //
+// Note: This method differs from the spec pseudocode as it uses a batch signature verification.
+// See: ExecuteStateTransitionNoVerifyAnySig
+//
 // Spec pseudocode definition:
 //  def state_transition(state: BeaconState, signed_block: SignedBeaconBlock, validate_result: bool=True) -> None:
 //    block = signed_block.message
@@ -91,30 +93,20 @@ func ExecuteStateTransition(
 	ctx, span := trace.StartSpan(ctx, "core.state.ExecuteStateTransition")
 	defer span.End()
 	var err error
-	// Execute per slots transition.
-	state, err = ProcessSlots(ctx, state, signed.Block.Slot)
+
+	set, postState, err := ExecuteStateTransitionNoVerifyAnySig(ctx, state, signed)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not process slot")
+		return nil, errors.Wrap(err, "could not execute state transition")
+	}
+	valid, err := set.Verify()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not batch verify signature")
+	}
+	if !valid {
+		return nil, errors.New("signature in block failed to verify")
 	}
 
-	// Execute per block transition.
-	state, err = ProcessBlock(ctx, state, signed)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not process block in slot %d", signed.Block.Slot)
-	}
-
-	interop.WriteBlockToDisk(signed, false)
-	interop.WriteStateToDisk(state)
-
-	postStateRoot, err := state.HashTreeRoot(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if !bytes.Equal(postStateRoot[:], signed.Block.StateRoot) {
-		return state, fmt.Errorf("validate state root failed, wanted: %#x, received: %#x",
-			postStateRoot[:], signed.Block.StateRoot)
-	}
-	return state, nil
+	return postState, nil
 }
 
 // ProcessSlot happens every slot and focuses on the slot counter and block roots record updates.
