@@ -499,7 +499,7 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1Data *ethpb.Eth1
 		insertIndex++
 	}
 	valid, err := vs.validateDepositTrie(depositTrie, canonicalEth1Data)
-	// Log a warning here, as the cached trie is invalid is invalid.
+	// Log a warning here, as the cached trie is invalid.
 	if !valid {
 		log.Warnf("Cached deposit trie is invalid, rebuilding it now: %v", err)
 		return vs.rebuildDepositTrie(ctx, canonicalEth1Data, canonicalEth1DataHeight)
