@@ -132,4 +132,4 @@ replace github.com/ethereum/go-ethereum => github.com/prysmaticlabs/bazel-go-eth
 
 replace github.com/json-iterator/go => github.com/prestonvanloon/go v1.1.7-0.20190722034630-4f2e55fcf87b
 
-replace github.com/ferranbt/fastssz => github.com/rauljordan/fastssz c930e5e537a4733062d622f07e71529afd2fa6b2
+replace github.com/ferranbt/fastssz => github.com/rauljordan/fastssz v0.0.0-20210507191932-c930e5e537a4
