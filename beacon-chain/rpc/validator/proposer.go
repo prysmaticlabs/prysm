@@ -529,7 +529,7 @@ func (vs *Server) rebuildDepositTrie(ctx context.Context, canonicalEth1Data *eth
 	}
 
 	valid, err := vs.validateDepositTrie(depositTrie, canonicalEth1Data)
-	// Log a warning here, as even with rebuilding the trie, it is still invalid.
+	// Log an error here, as even with rebuilding the trie, it is still invalid.
 	if !valid {
 		log.Errorf("Rebuilt deposit trie is invalid: %v", err)
 	}
