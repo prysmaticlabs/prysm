@@ -170,3 +170,11 @@ message SyncCommittee {
   repeated bytes pubkeys = 1  [(gogoproto.moretags) = "ssz-size:\"1024,48\""];
   repeated bytes pubkey_aggregates = 2  [(gogoproto.moretags) = "ssz-size:\"16,48\""];
 }
+
+// SyncCommitteeSigningData to be used for hash tree root then sign by sync committee participants.
+message SyncCommitteeSigningData{
+  // Slot of this signing data.
+  uint64 slot = 1;
+  // Sub committee index of this signing data.
+  uint64 subcommittee_index = 2;
+}
