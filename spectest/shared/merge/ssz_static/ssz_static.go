@@ -33,9 +33,6 @@ func RunSSZStaticTests(t *testing.T, config string) {
 		innerTestFolders, innerTestsFolderPath := utils.TestFolders(t, config, "merge", innerPath)
 		for _, innerFolder := range innerTestFolders {
 			t.Run(path.Join(folder.Name(), innerFolder.Name()), func(t *testing.T) {
-				//if folder.Name() == "BeaconBlock" || folder.Name() == "BeaconBlockBody" {
-				//	t.Skip()
-				//}
 				serializedBytes, err := testutil.BazelFileBytes(innerTestsFolderPath, innerFolder.Name(), "serialized.ssz_snappy")
 				require.NoError(t, err)
 				serializedSSZ, err := snappy.Decode(nil /* dst */, serializedBytes)
@@ -122,9 +119,6 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 		obj = &ethpb.Deposit_Data{}
 	case "Eth1Data":
 		obj = &ethpb.Eth1Data{}
-	case "Eth1Block":
-		t.Skip("Unused type")
-		return nil, nil
 	case "Fork":
 		obj = &pb.Fork{}
 	case "ForkData":
@@ -155,8 +149,8 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 		obj = &ethpb.ExecutionPayload{}
 	case "ExecutionPayloadHeader":
 		obj = &pb.ExecutionPayloadHeader{}
-	case "ContributionAndProof":
-		t.Skip("Unused type")
+	case "PowBlock":
+		t.Skip("Not implemented")
 		return nil, nil
 	default:
 		return nil, errors.New("type not found")
