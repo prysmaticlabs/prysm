@@ -1344,6 +1344,14 @@ github.com/rauljordan/fastssz v0.0.0-20210504214435-cc0e8d961964 h1:SyENUM5RrmSd
 github.com/rauljordan/fastssz v0.0.0-20210504214435-cc0e8d961964/go.mod h1:DyEu2iuLBnb/T51BlsiO3yLYdJC6UbGMrIkqK1KmQxM=
 github.com/rauljordan/fastssz v0.0.0-20210504221047-befa755eeb42 h1:csBsmcuM7kqGBeJpHNorR3wjMm0XyMK8IfwHGE6IVkA=
 github.com/rauljordan/fastssz v0.0.0-20210504221047-befa755eeb42/go.mod h1:DyEu2iuLBnb/T51BlsiO3yLYdJC6UbGMrIkqK1KmQxM=
+github.com/rauljordan/fastssz v0.0.0-20210507180714-ebdd190794fe h1:ftoPCNTQaorcjCyf+9WS/6tbNUXZNiqe0PIV1PhD1e0=
+github.com/rauljordan/fastssz v0.0.0-20210507180714-ebdd190794fe/go.mod h1:DyEu2iuLBnb/T51BlsiO3yLYdJC6UbGMrIkqK1KmQxM=
+github.com/rauljordan/fastssz v0.0.0-20210507181157-bee083b267a8 h1:KTVlu/V5xbVKjKRs7s7OqkD7xlQk+Du+0VuTNQvzzMM=
+github.com/rauljordan/fastssz v0.0.0-20210507181157-bee083b267a8/go.mod h1:DyEu2iuLBnb/T51BlsiO3yLYdJC6UbGMrIkqK1KmQxM=
+github.com/rauljordan/fastssz v0.0.0-20210507182640-c1fad7ab21eb h1:Z1LQswFPpMxEWFmWCt+0Iio/CuvGlSDXrPXjAJqzt78=
+github.com/rauljordan/fastssz v0.0.0-20210507182640-c1fad7ab21eb/go.mod h1:DyEu2iuLBnb/T51BlsiO3yLYdJC6UbGMrIkqK1KmQxM=
+github.com/rauljordan/fastssz v0.0.0-20210507191932-c930e5e537a4 h1:BdH7aCXg7Ez+9WwRAxQ9EHSQjTga4IswJpcOEds2KvE=
+github.com/rauljordan/fastssz v0.0.0-20210507191932-c930e5e537a4/go.mod h1:DyEu2iuLBnb/T51BlsiO3yLYdJC6UbGMrIkqK1KmQxM=
 github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
 github.com/rcrowley/go-metrics v0.0.0-20190826022208-cac0b30c2563 h1:dY6ETXrvDG7Sa4vE8ZQG4yqWg6UnOcbqTAahkV813vQ=
 github.com/rcrowley/go-metrics v0.0.0-20190826022208-cac0b30c2563/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=

@@ -66,12 +66,6 @@ func RunSSZStaticTests(t *testing.T, config string) {
 					}
 				}
 
-				if _, ok := object.(*ethpb.ExecutionPayload); ok {
-					htr = func(s interface{}) ([32]byte, error) {
-						return HashTreeRootExecutionPayload(s.(*ethpb.ExecutionPayload))
-					}
-				}
-
 				root, err := htr(object)
 				require.NoError(t, err)
 				rootBytes, err := hex.DecodeString(rootsYaml.Root[2:])
@@ -174,98 +168,4 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 		err = errors.New("could not unmarshal object, not a fastssz compatible object")
 	}
 	return obj, err
-}
-
-func HashTreeRootExecutionPayload(e *ethpb.ExecutionPayload) ([32]byte, error) {
-	hh := fssz.DefaultHasherPool.Get()
-	if err := HashTreeRootWithExecutionPayload(hh, e); err != nil {
-		fssz.DefaultHasherPool.Put(hh)
-		return [32]byte{}, err
-	}
-	root, err := hh.HashRoot()
-	fssz.DefaultHasherPool.Put(hh)
-	return root, err
-}
-
-func HashTreeRootWithExecutionPayload(hh *fssz.Hasher, e *ethpb.ExecutionPayload) (err error) {
-	indx := hh.Index()
-
-	// Field (0) 'BlockHash'
-	if len(e.BlockHash) != 32 {
-		err = fssz.ErrBytesLength
-		return
-	}
-	hh.PutBytes(e.BlockHash)
-
-	// Field (1) 'ParentHash'
-	if len(e.ParentHash) != 32 {
-		err = fssz.ErrBytesLength
-		return
-	}
-	hh.PutBytes(e.ParentHash)
-
-	// Field (2) 'Coinbase'
-	if len(e.Coinbase) != 20 {
-		err = fssz.ErrBytesLength
-		return
-	}
-	hh.PutBytes(e.Coinbase)
-
-	// Field (3) 'StateRoot'
-	if len(e.StateRoot) != 32 {
-		err = fssz.ErrBytesLength
-		return
-	}
-	hh.PutBytes(e.StateRoot)
-
-	// Field (4) 'Number'
-	hh.PutUint64(e.Number)
-
-	// Field (5) 'GasLimit'
-	hh.PutUint64(e.GasLimit)
-
-	// Field (6) 'GasUsed'
-	hh.PutUint64(e.GasUsed)
-
-	// Field (7) 'Timestamp'
-	hh.PutUint64(e.Timestamp)
-
-	// Field (8) 'ReceiptRoot'
-	if len(e.ReceiptRoot) != 32 {
-		err = fssz.ErrBytesLength
-		return
-	}
-	hh.PutBytes(e.ReceiptRoot)
-
-	// Field (9) 'LogsBloom'
-	if len(e.LogsBloom) != 256 {
-		err = fssz.ErrBytesLength
-		return
-	}
-	hh.PutBytes(e.LogsBloom)
-
-	// Field (10) 'Transactions'
-	{
-		subIndx := hh.Index()
-		num := uint64(len(e.Transactions))
-		if num > 16384 {
-			err = fssz.ErrIncorrectListSize
-			return
-		}
-		for i := uint64(0); i < num; i++ {
-			txSubIndx := hh.Index()
-			hh.PutBytes(e.Transactions[i])
-			numItems := uint64(len(e.Transactions[i]))
-			hh.MerkleizeWithMixin(txSubIndx, numItems, fssz.CalculateLimit(1048576, numItems, 8))
-		}
-		hh.MerkleizeWithMixin(subIndx, num, 16384)
-	}
-	//txRoot, err := htrutils.TransactionsRoot(e.Transactions)
-	//if err != nil {
-	//	return
-	//}
-	//hh.PutBytes(txRoot[:])
-
-	hh.Merkleize(indx)
-	return
 }
