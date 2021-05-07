@@ -153,7 +153,7 @@ func ProcessSyncCommittee(state iface.BeaconStateAltair, sync *ethpb.SyncAggrega
 	if err != nil {
 		return nil, err
 	}
-	if !sig.FastAggregateVerify(votedKeys, r) {
+	if !sig.Eth2FastAggregateVerify(votedKeys, r) {
 		return nil, errors.New("could not verify sync committee signature")
 	}
 

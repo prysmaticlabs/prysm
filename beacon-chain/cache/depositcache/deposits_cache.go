@@ -12,6 +12,7 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -74,7 +75,7 @@ func New() (*DepositCache, error) {
 
 // InsertDeposit into the database. If deposit or block number are nil
 // then this method does nothing.
-func (dc *DepositCache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blockNum uint64, index int64, depositRoot [32]byte) {
+func (dc *DepositCache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blockNum uint64, index int64, depositRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "DepositsCache.InsertDeposit")
 	defer span.End()
 	if d == nil {
@@ -84,10 +85,14 @@ func (dc *DepositCache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blo
 			"index":        index,
 			"deposit root": hex.EncodeToString(depositRoot[:]),
 		}).Warn("Ignoring nil deposit insertion")
-		return
+		return errors.New("nil deposit inserted into the cache")
 	}
 	dc.depositsLock.Lock()
 	defer dc.depositsLock.Unlock()
+
+	if int(index) != len(dc.deposits) {
+		return errors.Errorf("wanted deposit with index %d to be inserted but received %d", len(dc.deposits), index)
+	}
 	// Keep the slice sorted on insertion in order to avoid costly sorting on retrieval.
 	heightIdx := sort.Search(len(dc.deposits), func(i int) bool { return dc.deposits[i].Index >= index })
 	newDeposits := append(
@@ -95,6 +100,7 @@ func (dc *DepositCache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blo
 		dc.deposits[heightIdx:]...)
 	dc.deposits = append(dc.deposits[:heightIdx], newDeposits...)
 	historicalDepositsCount.Inc()
+	return nil
 }
 
 // InsertDepositContainers inserts a set of deposit containers into our deposit cache.
@@ -167,19 +173,20 @@ func (dc *DepositCache) AllDeposits(ctx context.Context, untilBlk *big.Int) []*e
 	return deposits
 }
 
-// DepositsNumberAndRootAtHeight returns the number of deposits that exist at a specified
-// block height. If no deposits are found at that block height, we return the number of deposits
-// at the first block height we find right beneath it. If nothing is found at all, we return 0 and
-// the empty root.
+// DepositsNumberAndRootAtHeight returns number of deposits made up to blockheight and the
+// root that corresponds to the latest deposit at that blockheight.
 func (dc *DepositCache) DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight *big.Int) (uint64, [32]byte) {
+	ctx, span := trace.StartSpan(ctx, "DepositsCache.DepositsNumberAndRootAtHeight")
+	defer span.End()
 	dc.depositsLock.RLock()
 	defer dc.depositsLock.RUnlock()
-	for i := len(dc.deposits) - 1; i >= 0; i-- {
-		if dc.deposits[i].Eth1BlockHeight <= blockHeight.Uint64() {
-			return uint64(dc.deposits[i].Index) + 1, bytesutil.ToBytes32(dc.deposits[i].DepositRoot)
-		}
+	heightIdx := sort.Search(len(dc.deposits), func(i int) bool { return dc.deposits[i].Eth1BlockHeight > blockHeight.Uint64() })
+	// send the deposit root of the empty trie, if eth1follow distance is greater than the time of the earliest
+	// deposit.
+	if heightIdx == 0 {
+		return 0, [32]byte{}
 	}
-	return 0, params.BeaconConfig().ZeroHash
+	return uint64(heightIdx), bytesutil.ToBytes32(dc.deposits[heightIdx-1].DepositRoot)
 }
 
 // DepositByPubkey looks through historical deposits and finds one which contains

@@ -8,6 +8,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -46,6 +47,11 @@ func TestProcessSyncCommitteeUpdates_CanRotate(t *testing.T) {
 	require.NotEqual(t, current, c)
 	require.NotEqual(t, next, n)
 	require.DeepEqual(t, next, c)
+
+	// Test boundary condition.
+	boundaryCommittee, err := altair.SyncCommittee(s, helpers.CurrentEpoch(s)+params.BeaconConfig().EpochsPerSyncCommitteePeriod)
+	require.NoError(t, err)
+	require.DeepNotEqual(t, boundaryCommittee, n)
 }
 
 func TestProcessParticipationFlagUpdates_CanRotate(t *testing.T) {

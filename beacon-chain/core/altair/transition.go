@@ -1,6 +1,7 @@
 package altair
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
@@ -107,6 +108,67 @@ func ProcessBlockForStateRoot(
 	return state, nil
 }
 
+// ExecuteStateTransition defines the procedure for a state transition function.
+//
+// Spec pseudocode definition:
+//  def state_transition(state: BeaconState, signed_block: SignedBeaconBlock, validate_result: bool=True) -> None:
+//    block = signed_block.message
+//    # Process slots (including those with no blocks) since block
+//    process_slots(state, block.slot)
+//    # Verify signature
+//    if validate_result:
+//        assert verify_block_signature(state, signed_block)
+//    # Process block
+//    process_block(state, block)
+//    # Verify state root
+//    if validate_result:
+//        assert block.state_root == hash_tree_root(state)
+func ExecuteStateTransition(
+	ctx context.Context,
+	state iface.BeaconState,
+	signed *ethpb.SignedBeaconBlockAltair,
+) (iface.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "altair.ExecuteStateTransition")
+	defer span.End()
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	if state == nil {
+		return nil, errors.New("nil state")
+	}
+	if err := VerifyNilBeaconBlock(signed); err != nil {
+		return nil, err
+	}
+
+	var err error
+	// Execute per slots transition.
+	state, err = ProcessSlots(ctx, state, signed.Block.Slot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process slot")
+	}
+
+	// Execute per block transition.
+	state, err = ProcessBlockForStateRoot(ctx, state, signed)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not process block in slot %d", signed.Block.Slot)
+	}
+
+	state, err = ProcessSyncCommittee(state, signed.Block.Body.SyncAggregate)
+	if err != nil {
+		return nil, err
+	}
+
+	postStateRoot, err := state.HashTreeRoot(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !bytes.Equal(postStateRoot[:], signed.Block.StateRoot) {
+		return state, fmt.Errorf("validate state root failed, wanted: %#x, received: %#x",
+			postStateRoot[:], signed.Block.StateRoot)
+	}
+	return state, nil
+}
+
 // ProcessEpoch describes the per epoch operations that are performed on the beacon state.
 // It's optimized by pre computing validator attested info and epoch total/attested balances upfront.
 //
@@ -148,7 +210,12 @@ func ProcessEpoch(ctx context.Context, state iface.BeaconStateAltair) (iface.Bea
 	}
 
 	// New in Altair.
-	// process_inactivity_updates is embedded in the below.
+	state, vp, err = ProcessInactivityScores(ctx, state, vp)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process inactivity updates")
+	}
+
+	// New in Altair.
 	state, err = ProcessRewardsAndPenaltiesPrecompute(state, bp, vp)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process rewards and penalties")

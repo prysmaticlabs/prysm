@@ -26,7 +26,6 @@ go_library(
         "//spectest:__subpackages__",
     ],
     deps = [
-        "//beacon-chain/p2p/types:go_default_library",
         "//beacon-chain/state/interface:go_default_library",
         "//beacon-chain/state/stateV0:go_default_library",
         "//beacon-chain/state/stateutil:go_default_library",

@@ -1,9 +1,0 @@
-filegroup(
-    name = "regression_data",
-    srcs = glob([
-        "*.ssz",
-    ]),
-    visibility = [
-        "//beacon-chain/core/state:__pkg__",
-    ],
-)

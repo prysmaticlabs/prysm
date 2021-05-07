@@ -28,7 +28,7 @@ func ProcessSyncCommitteeUpdates(beaconState iface.BeaconStateAltair) (iface.Bea
 		if err := beaconState.SetCurrentSyncCommittee(currentSyncCommittee); err != nil {
 			return nil, err
 		}
-		nextCommittee, err := SyncCommittee(beaconState, helpers.CurrentEpoch(beaconState)+params.BeaconConfig().EpochsPerSyncCommitteePeriod)
+		nextCommittee, err := SyncCommittee(beaconState, nextEpoch+params.BeaconConfig().EpochsPerSyncCommitteePeriod)
 		if err != nil {
 			return nil, err
 		}
