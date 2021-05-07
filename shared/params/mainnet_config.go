@@ -97,7 +97,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MinEpochsToInactivityPenalty:     4,
 	Eth1FollowDistance:               2048,
 	SafeSlotsToUpdateJustified:       8,
-	DuplicateValidatorEpochCheck:	  2,
+	DuplicateValidatorEpochsCheck:    2,
 
 	// Ethereum PoW parameters.
 	DepositChainID:         1, // Chain ID of eth1 mainnet.

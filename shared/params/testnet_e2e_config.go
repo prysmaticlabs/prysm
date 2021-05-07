@@ -29,7 +29,7 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.EpochsPerEth1VotingPeriod = 2
 	e2eConfig.ShardCommitteePeriod = 4
 	e2eConfig.MaxSeedLookahead = 1
-	e2eConfig.DuplicateValidatorEpochCheck = 2
+	e2eConfig.DuplicateValidatorEpochsCheck = 2
 
 	// PoW parameters.
 	e2eConfig.DepositChainID = 1337   // Chain ID of eth1 dev net.
