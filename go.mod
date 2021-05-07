@@ -97,7 +97,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/supranational/blst v0.3.4
 	github.com/trailofbits/go-mutexasserts v0.0.0-20200708152505-19999e7d3cef
-	github.com/tyler-smith/go-bip39 v1.0.2
+	github.com/tyler-smith/go-bip39 v1.1.0
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/wealdtech/go-eth2-util v1.6.3
 	github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.1.3
