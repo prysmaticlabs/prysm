@@ -1,9 +1,9 @@
-load("@rules_pkg//:pkg.bzl", "pkg_tar", "pkg_deb")
+load("@rules_pkg//:pkg.bzl", "pkg_deb", "pkg_tar")
 
 pkg_tar(
     name = "beacon-chain-bin",
     srcs = [
-        "//cmd/beacon-chain:beacon-chain"
+        "//cmd/beacon-chain",
     ],
     mode = "0755",
     package_dir = "/usr/bin",
@@ -13,14 +13,14 @@ pkg_tar(
     name = "beacon-chain-config",
     srcs = glob(["beacon-chain.yaml"]),
     mode = "0640",
-    package_dir = "/etc/prysm"
+    package_dir = "/etc/prysm",
 )
 
 pkg_tar(
     name = "beacon-chain-service",
     srcs = glob(["prysm-beacon-chain.service"]),
     mode = "0640",
-    package_dir = "/usr/lib/systemd/system"
+    package_dir = "/usr/lib/systemd/system",
 )
 
 pkg_tar(
@@ -29,7 +29,7 @@ pkg_tar(
     deps = [
         ":beacon-chain-bin",
         ":beacon-chain-config",
-        ":beacon-chain-service"
+        ":beacon-chain-service",
     ],
 )
 
@@ -44,8 +44,8 @@ pkg_deb(
     homepage = "https://prysmaticlabs.com/",
     maintainer = "Prysmatic Labs <contact@prysmaticlabs.com>",
     package = "prysm-beacon-chain",
+    postinst = "postinst.sh",
+    preinst = "preinst.sh",
     version_file = "//shared:version_file",
     visibility = ["//beacon-chain:__pkg__"],
-    preinst = "preinst.sh",
-    postinst = "postinst.sh",
 )

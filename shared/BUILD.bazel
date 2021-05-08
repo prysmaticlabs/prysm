@@ -22,9 +22,9 @@ go_test(
 
 genrule(
     name = "version_file",
-    cmd = "cat bazel-out/stable-status.txt | grep STABLE_GIT_TAG | cut -d' ' -f2 | tr -d v > $@",
     srcs = [],
     outs = ["version.txt"],
+    cmd = "cat bazel-out/stable-status.txt | grep STABLE_GIT_TAG | cut -d' ' -f2 | tr -d v > $@",
     stamp = True,
     visibility = ["//visibility:public"],
 )

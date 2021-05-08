@@ -1,9 +1,9 @@
-load("@rules_pkg//:pkg.bzl", "pkg_tar", "pkg_deb")
+load("@rules_pkg//:pkg.bzl", "pkg_deb", "pkg_tar")
 
 pkg_tar(
     name = "validator-bin",
     srcs = [
-        "//cmd/validator:validator"
+        "//cmd/validator",
     ],
     mode = "0755",
     package_dir = "/usr/bin",
@@ -13,14 +13,14 @@ pkg_tar(
     name = "validator-config",
     srcs = glob(["validator.yaml"]),
     mode = "0640",
-    package_dir = "/etc/prysm"
+    package_dir = "/etc/prysm",
 )
 
 pkg_tar(
     name = "validator-service",
     srcs = glob(["prysm-validator.service"]),
     mode = "0640",
-    package_dir = "/usr/lib/systemd/system"
+    package_dir = "/usr/lib/systemd/system",
 )
 
 pkg_tar(
@@ -29,7 +29,7 @@ pkg_tar(
     deps = [
         ":validator-bin",
         ":validator-config",
-        ":validator-service"
+        ":validator-service",
     ],
 )
 
@@ -44,8 +44,8 @@ pkg_deb(
     homepage = "https://prysmaticlabs.com/",
     maintainer = "Prysmatic Labs <contact@prysmaticlabs.com>",
     package = "prysm-validator",
+    postinst = "postinst.sh",
+    preinst = "preinst.sh",
     version_file = "//shared:version_file",
     visibility = ["//validator:__pkg__"],
-    preinst = "preinst.sh",
-    postinst = "postinst.sh",
 )
