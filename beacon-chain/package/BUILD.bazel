@@ -19,6 +19,7 @@ pkg_tar(
 pkg_tar(
     name = "beacon-chain-service",
     srcs = glob(["prysm-beacon-chain.service"]),
+    mode = "0640",
     package_dir = "/usr/lib/systemd/system"
 )
 

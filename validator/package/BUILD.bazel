@@ -19,6 +19,7 @@ pkg_tar(
 pkg_tar(
     name = "validator-service",
     srcs = glob(["prysm-validator.service"]),
+    mode = "0640",
     package_dir = "/usr/lib/systemd/system"
 )
 
