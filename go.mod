@@ -82,7 +82,9 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prestonvanloon/go-recaptcha v0.0.0-20190217191114-0834cef6e8bd
 	github.com/prometheus/client_golang v1.9.0
+	github.com/prometheus/client_model v0.2.0
 	github.com/prometheus/procfs v0.3.0 // indirect
+	github.com/prometheus/prom2json v1.3.0
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/prysmaticlabs/eth2-types v0.0.0-20210219172114-1da477c09a06
 	github.com/prysmaticlabs/ethereumapis v0.0.0-20210311175904-cf9f64632dd4
@@ -95,7 +97,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/supranational/blst v0.3.4
 	github.com/trailofbits/go-mutexasserts v0.0.0-20200708152505-19999e7d3cef
-	github.com/tyler-smith/go-bip39 v1.0.2
+	github.com/tyler-smith/go-bip39 v1.1.0
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/wealdtech/go-eth2-util v1.6.3
 	github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.1.3

@@ -15,9 +15,9 @@ http_archive(
 
 http_archive(
     name = "com_grail_bazel_toolchain",
-    sha256 = "b924b102adc0c3368d38a19bd971cb4fa75362a27bc363d0084b90ca6877d3f0",
-    strip_prefix = "bazel-toolchain-0.5.7",
-    urls = ["https://github.com/grailbio/bazel-toolchain/archive/0.5.7.tar.gz"],
+    sha256 = "040b9d00b8a03e8a28e38159ad0f2d0e0de625d93f453a9f226971a8c47e757b",
+    strip_prefix = "bazel-toolchain-5f82830f9d6a1941c3eb29683c1864ccf2862454",
+    urls = ["https://github.com/grailbio/bazel-toolchain/archive/5f82830f9d6a1941c3eb29683c1864ccf2862454.tar.gz"],
 )
 
 load("@com_grail_bazel_toolchain//toolchain:deps.bzl", "bazel_toolchain_dependencies")
@@ -76,11 +76,9 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_docker",
-    patch_args = ["-p1"],
-    patches = ["//third_party:rules_docker_bad_checksum.patch"],
-    sha256 = "1286175a94c0b1335efe1d75d22ea06e89742557d3fac2a0366f242a6eac6f5a",
-    strip_prefix = "rules_docker-ba4310833230294fa69b7d6ea1787ac684631a7d",
-    urls = ["https://github.com/bazelbuild/rules_docker/archive/ba4310833230294fa69b7d6ea1787ac684631a7d.tar.gz"],
+    sha256 = "59d5b42ac315e7eadffa944e86e90c2990110a1c8075f1cd145f487e999d22b3",
+    strip_prefix = "rules_docker-0.17.0",
+    urls = ["https://github.com/bazelbuild/rules_docker/releases/download/v0.17.0/rules_docker-v0.17.0.tar.gz"],
 )
 
 http_archive(
@@ -158,7 +156,7 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_depe
 go_rules_dependencies()
 
 go_register_toolchains(
-    go_version = "1.16",
+    go_version = "1.16.4",
     nogo = "@//:nogo",
 )
 
