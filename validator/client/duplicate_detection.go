@@ -1,6 +1,6 @@
 // The aim is to check for duplicate attestations at Validator Launch for the same keystore
-// If it is detected , a doppleganger exists, so alert the user and exit.
-// This is is done for two epochs. That is better than starting and causing slashing.
+// If it is detected , a doppelganger exists, so alert the user and exit.
+// This is is done for two epochs. That is better than starting a duplicate validator and causing slashing.
 package client
 
 import (
@@ -10,21 +10,34 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/sirupsen/logrus"
 )
 
 type DuplicateDetection struct {
-	slotClock uint64
-	index     types.ValidatorIndex
+	slot            uint64
+	index           types.ValidatorIndex
+	remainingEpochs types.Epoch
 }
+
+var EpochsToCheck = params.BeaconConfig().DuplicateValidatorEpochsCheck
 
 // Starts the Doppelganger detection
 func (v *validator) startDoppelgangerService(ctx context.Context) error {
-	log.Info("Doppleganger Service started")
+	log.Info("Doppelganger Service started")
 
-	//currentEpoch := types.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
-	//genesisEpoch := types.Epoch(v.genesisTime / uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)))
+	//get the currentEpoch and genesisEpoch
+	slot := <-v.NextSlot()
+	currentEpoch := helpers.SlotToEpoch(slot)
+	genesisEpoch := types.Epoch(v.genesisTime / uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)))
+
+	// Ensure currentEpoch > genesisEpoch
+	// If the current is equal to the genesis or prior to genesis then no duplicate check is performed.
+	if genesisEpoch >= currentEpoch{
+		return nil
+	}
 
 	// Either a proposal or attestation duplicate is detected at one of the slots in a 2 epoch period which results
 	// in a forced validator stop, or none is found and flow continues in the validator runner.
@@ -34,8 +47,17 @@ func (v *validator) startDoppelgangerService(ctx context.Context) error {
 	// 3. If found exit
 	// 4. repeat for 2 epochs, Go to 1.
 	for {
-		//get the current_epoch and genesis_epoch
-		slot := <-v.NextSlot()
+
+		// Check if current slot is the end of the epoch. If so subtract from epochs to check counter.
+		if helpers.IsEpochEnd(slot) {
+			EpochsToCheck -= 1
+			log.WithField("EpochsToCheck", fmt.Sprintf("Doppelganger Service - end of current Epoch," +
+				" 1 less Epoch to check %d Epochs", EpochsToCheck))
+		}
+		if EpochsToCheck ==0 {
+			log.Info("Doppelganger Service - finished the epoch checks for duplicates ")
+			return nil
+		}
 
 		// return time between now and start of next slot
 		// sleep until the next slot
@@ -62,6 +84,8 @@ func (v *validator) startDoppelgangerService(ctx context.Context) error {
 				"timeRemaining": timeRemaining,
 			}).Info("Sleeping until the next slot - Doppelganger detection")
 			time.Sleep(timeRemaining)
+			// Get next slot
+			slot = <-v.NextSlot()
 			continue
 		} else {
 			// this should not happen. Slot in the future? Clock is off?
