@@ -45,7 +45,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.Eth1FollowDistance = 16
 	minimalConfig.SafeSlotsToUpdateJustified = 2
 	minimalConfig.SecondsPerETH1Block = 14
-	minimalConfig.DuplicateValidatorEpochsCheck = 2
+	minimalConfig.DuplicateValidatorEpochsCheck = 1
 
 	// State vector lengths
 	minimalConfig.EpochsPerHistoricalVector = 64

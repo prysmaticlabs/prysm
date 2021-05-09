@@ -31,11 +31,12 @@ func (v *validator) startDoppelgangerService(ctx context.Context) error {
 	//get the currentEpoch and genesisEpoch
 	slot := <-v.NextSlot()
 	currentEpoch := helpers.SlotToEpoch(slot)
-	genesisEpoch := types.Epoch(v.genesisTime / uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)))
+	genesisEpoch := params.BeaconConfig().GenesisEpoch
+		//types.Epoch(v.genesisTime / uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)))
 
 	// Ensure currentEpoch > genesisEpoch
 	// If the current is equal to the genesis or prior to genesis then no duplicate check is performed.
-	if genesisEpoch >= currentEpoch{
+	if genesisEpoch >= currentEpoch {
 		return nil
 	}
 
@@ -51,10 +52,10 @@ func (v *validator) startDoppelgangerService(ctx context.Context) error {
 		// Check if current slot is the end of the epoch. If so subtract from epochs to check counter.
 		if helpers.IsEpochEnd(slot) {
 			EpochsToCheck -= 1
-			log.WithField("EpochsToCheck", fmt.Sprintf("Doppelganger Service - end of current Epoch," +
+			log.WithField("EpochsToCheck", fmt.Sprintf("Doppelganger Service - end of current Epoch,"+
 				" 1 less Epoch to check %d Epochs", EpochsToCheck))
 		}
-		if EpochsToCheck ==0 {
+		if EpochsToCheck == 0 {
 			log.Info("Doppelganger Service - finished the epoch checks for duplicates ")
 			return nil
 		}
@@ -104,7 +105,7 @@ func (v *validator) startDoppelgangerService(ctx context.Context) error {
 func (v *validator) detectDoppelganger(slot types.Slot) (bool, [][48]byte, error) {
 	result := make([][48]byte, 1)
 
-	// Get all this validator 's attestation in the current epoch so far requiring a duplicate detection check
+	// Get all this validator 's attestation in the current slot so far requiring a duplicate detection check
 
 	// Check if any match this validator
 	return false, result, nil
