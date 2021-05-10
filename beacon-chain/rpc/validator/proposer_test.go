@@ -981,7 +981,6 @@ func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 		depositTrie.Insert(depositHash[:], int(dp.Index))
 		assert.NoError(t, depositCache.InsertDeposit(ctx, dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.Root()))
 	}
-	depositCache.InsertFinalizedDeposits(ctx, 2)
 	for _, dp := range recentDeposits {
 		depositCache.InsertPendingDeposit(ctx, dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.Root())
 	}
@@ -996,12 +995,209 @@ func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 		HeadFetcher:            &mock.ChainService{State: beaconState, Root: blkRoot[:]},
 	}
 
-	trie, err := bs.depositTrie(ctx, big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)))
+	trie, err := bs.depositTrie(ctx, &ethpb.Eth1Data{}, big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)))
 	require.NoError(t, err)
 
 	actualRoot := trie.HashTreeRoot()
 	expectedRoot := depositTrie.HashTreeRoot()
 	assert.Equal(t, expectedRoot, actualRoot, "Incorrect deposit trie root")
+}
+
+func TestProposer_DepositTrie_RebuildTrie(t *testing.T) {
+	ctx := context.Background()
+
+	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
+	p := &mockPOW.POWChain{
+		LatestBlockNumber: height,
+		HashesByHeight: map[int][]byte{
+			int(height.Int64()): []byte("0x0"),
+		},
+	}
+
+	beaconState, err := stateV0.InitializeFromProto(&pbp2p.BeaconState{
+		Eth1Data: &ethpb.Eth1Data{
+			BlockHash:    bytesutil.PadTo([]byte("0x0"), 32),
+			DepositRoot:  make([]byte, 32),
+			DepositCount: 4,
+		},
+		Eth1DepositIndex: 1,
+	})
+	require.NoError(t, err)
+	blk := testutil.NewBeaconBlock()
+	blk.Block.Slot = beaconState.Slot()
+
+	blkRoot, err := blk.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	var mockSig [96]byte
+	var mockCreds [32]byte
+
+	// Using the merkleTreeIndex as the block number for this test...
+	finalizedDeposits := []*dbpb.DepositContainer{
+		{
+			Index:           0,
+			Eth1BlockHeight: 10,
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             bytesutil.PadTo([]byte("a"), 48),
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
+		},
+		{
+			Index:           1,
+			Eth1BlockHeight: 10,
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             bytesutil.PadTo([]byte("b"), 48),
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
+		},
+	}
+
+	recentDeposits := []*dbpb.DepositContainer{
+		{
+			Index:           2,
+			Eth1BlockHeight: 11,
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             bytesutil.PadTo([]byte("c"), 48),
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
+		},
+		{
+			Index:           3,
+			Eth1BlockHeight: 11,
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             bytesutil.PadTo([]byte("d"), 48),
+					Signature:             mockSig[:],
+					WithdrawalCredentials: mockCreds[:],
+				}},
+		},
+	}
+
+	depositCache, err := depositcache.New()
+	require.NoError(t, err)
+
+	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	require.NoError(t, err, "Could not setup deposit trie")
+	for _, dp := range append(finalizedDeposits, recentDeposits...) {
+		depositHash, err := dp.Deposit.Data.HashTreeRoot()
+		require.NoError(t, err, "Unable to determine hashed value of deposit")
+
+		depositTrie.Insert(depositHash[:], int(dp.Index))
+		assert.NoError(t, depositCache.InsertDeposit(ctx, dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.Root()))
+	}
+	for _, dp := range recentDeposits {
+		depositCache.InsertPendingDeposit(ctx, dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.Root())
+	}
+	d := depositCache.AllDepositContainers(ctx)
+	origDeposit, ok := proto.Clone(d[0].Deposit).(*ethpb.Deposit)
+	assert.Equal(t, true, ok)
+	junkCreds := mockCreds
+	copy(junkCreds[:1], []byte{'A'})
+	// Mutate it since its a pointer
+	d[0].Deposit.Data.WithdrawalCredentials = junkCreds[:]
+	// Insert junk to corrupt trie.
+	depositCache.InsertFinalizedDeposits(ctx, 2)
+
+	// Add original back
+	d[0].Deposit = origDeposit
+
+	bs := &Server{
+		ChainStartFetcher:      p,
+		Eth1InfoFetcher:        p,
+		Eth1BlockFetcher:       p,
+		DepositFetcher:         depositCache,
+		PendingDepositsFetcher: depositCache,
+		BlockReceiver:          &mock.ChainService{State: beaconState, Root: blkRoot[:]},
+		HeadFetcher:            &mock.ChainService{State: beaconState, Root: blkRoot[:]},
+	}
+
+	trie, err := bs.depositTrie(ctx, &ethpb.Eth1Data{}, big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)))
+	require.NoError(t, err)
+
+	expectedRoot := depositTrie.HashTreeRoot()
+	actualRoot := trie.HashTreeRoot()
+	assert.Equal(t, expectedRoot, actualRoot, "Incorrect deposit trie root")
+
+}
+
+func TestProposer_ValidateDepositTrie(t *testing.T) {
+	tt := []struct {
+		name            string
+		eth1dataCreator func() *ethpb.Eth1Data
+		trieCreator     func() *trieutil.SparseMerkleTrie
+		success         bool
+	}{
+		{
+			name: "invalid trie items",
+			eth1dataCreator: func() *ethpb.Eth1Data {
+				return &ethpb.Eth1Data{DepositRoot: []byte{}, DepositCount: 10, BlockHash: []byte{}}
+			},
+			trieCreator: func() *trieutil.SparseMerkleTrie {
+				trie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+				assert.NoError(t, err)
+				return trie
+			},
+			success: false,
+		},
+		{
+			name: "invalid deposit root",
+			eth1dataCreator: func() *ethpb.Eth1Data {
+				trie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+				assert.NoError(t, err)
+				trie.Insert([]byte{'a'}, 0)
+				trie.Insert([]byte{'b'}, 1)
+				trie.Insert([]byte{'c'}, 2)
+				return &ethpb.Eth1Data{DepositRoot: []byte{'B'}, DepositCount: 3, BlockHash: []byte{}}
+			},
+			trieCreator: func() *trieutil.SparseMerkleTrie {
+				trie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+				assert.NoError(t, err)
+				trie.Insert([]byte{'a'}, 0)
+				trie.Insert([]byte{'b'}, 1)
+				trie.Insert([]byte{'c'}, 2)
+				return trie
+			},
+			success: false,
+		},
+		{
+			name: "valid deposit trie",
+			eth1dataCreator: func() *ethpb.Eth1Data {
+				trie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+				assert.NoError(t, err)
+				trie.Insert([]byte{'a'}, 0)
+				trie.Insert([]byte{'b'}, 1)
+				trie.Insert([]byte{'c'}, 2)
+				rt := trie.HashTreeRoot()
+				return &ethpb.Eth1Data{DepositRoot: rt[:], DepositCount: 3, BlockHash: []byte{}}
+			},
+			trieCreator: func() *trieutil.SparseMerkleTrie {
+				trie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+				assert.NoError(t, err)
+				trie.Insert([]byte{'a'}, 0)
+				trie.Insert([]byte{'b'}, 1)
+				trie.Insert([]byte{'c'}, 2)
+				return trie
+			},
+			success: true,
+		},
+	}
+
+	for _, test := range tt {
+		t.Run(test.name, func(t *testing.T) {
+			server := &Server{}
+			valid, err := server.validateDepositTrie(test.trieCreator(), test.eth1dataCreator())
+			assert.Equal(t, test.success, valid)
+			if valid {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }
 
 func TestProposer_Eth1Data_NoBlockExists(t *testing.T) {
