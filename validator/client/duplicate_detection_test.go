@@ -31,7 +31,7 @@ func TestSleeping_TwoEpochs(t *testing.T) {
 
 	// Set current config to minimal config
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
-	slot := types.Slot(55)
+	slot := types.Slot(300)
 	currentEpoch := helpers.SlotToEpoch(slot)
 	genesisTime := uint64(timeutils.Now().Unix()) - uint64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 

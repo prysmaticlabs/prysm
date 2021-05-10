@@ -12,7 +12,6 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -60,10 +59,6 @@ func (v *validator) startDoppelgangerService(ctx context.Context) error {
 			return nil
 		}
 
-		// return time between now and start of next slot
-		// sleep until the next slot
-		currentTime := timeutils.Now()
-		nextSlotTime := v.SlotDeadline(slot)
 		// Detect a doppelganger
 		foundDuplicate, pubKey, err := v.detectDoppelganger(slot)
 		if err != nil {
@@ -78,13 +73,16 @@ func (v *validator) startDoppelgangerService(ctx context.Context) error {
 			return errors.New("Doppelganger detected")
 		}
 
-		timeRemaining := nextSlotTime.Sub(currentTime)
+		// Sleep time between now and start of next slot.
+		nextSlotTime := v.SlotDeadline(slot)
+		timeRemaining := time.Until(nextSlotTime)
 		// Still time till next slot? sleep through and loop again
 		if timeRemaining > 0 {
 			log.WithFields(logrus.Fields{
 				"timeRemaining": timeRemaining,
 			}).Info("Sleeping until the next slot - Doppelganger detection")
 			time.Sleep(timeRemaining)
+
 			// Get next slot
 			slot = <-v.NextSlot()
 			continue
