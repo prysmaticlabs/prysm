@@ -84,7 +84,7 @@ func Uint64ListRootWithRegistryLimit(balances []uint64) ([32]byte, error) {
 		return [32]byte{}, errors.Wrap(err, "could not compute balances merkleization")
 	}
 
-	balancesLengthRoot := make([]byte, 8)
+	balancesLengthRoot := make([]byte, 32)
 	binary.LittleEndian.PutUint64(balancesLengthRoot, uint64(len(balances)))
 	return htrutils.MixInLength(balancesRootsRoot, balancesLengthRoot), nil
 }
