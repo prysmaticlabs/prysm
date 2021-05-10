@@ -13,8 +13,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 
+	slotutil "github.com/prysmaticlabs/prysm/shared/slotutil"
 	//"github.com/prysmaticlabs/prysm/validator/client/iface"
-	slotutilmock "github.com/prysmaticlabs/prysm/shared/slotutil/testing"
+	//slotutilmock "github.com/prysmaticlabs/prysm/shared/slotutil/testing"
 	dbTest "github.com/prysmaticlabs/prysm/validator/db/testing"
 
 	//"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -22,8 +23,8 @@ import (
 	//"github.com/prysmaticlabs/prysm/validator/client/testutil"
 )
 
-func TestSleeping_TwoEpochs(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+func TestSleeping_ForTwoEpochs(t *testing.T) {
+	ctx := context.Background()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
@@ -35,10 +36,11 @@ func TestSleeping_TwoEpochs(t *testing.T) {
 	currentEpoch := helpers.SlotToEpoch(slot)
 	genesisTime := uint64(timeutils.Now().Unix()) - uint64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 
-	tickerChan := make(chan types.Slot)
-	ticker := &slotutilmock.MockTicker{
-		Channel: tickerChan,
-	}
+	ticker := slotutil.NewSlotTickerWithOffset(time.Unix(int64(genesisTime), 0),
+		time.Duration(slot.Mul( params.BeaconConfig().SecondsPerSlot)) ,
+		params.BeaconConfig().SecondsPerSlot)
+
+	defer ticker.Done()
 	v := validator{
 		validatorClient: client,
 		db:              db,
@@ -46,18 +48,9 @@ func TestSleeping_TwoEpochs(t *testing.T) {
 		genesisTime:     genesisTime,
 	}
 
-	go func() {
-		tickerChan <- slot
-		// Cancel after 2 epochs to avoid waiting on channel forever.
-		time.Sleep(time.Duration(params.BeaconConfig().SecondsPerSlot *
-			uint64(params.BeaconConfig().SlotsPerEpoch.Mul(
-				uint64(params.BeaconConfig().DuplicateValidatorEpochsCheck)).Add(1))))
-		cancel()
-
-	}()
 	err := v.startDoppelgangerService(ctx)
 	twoEpochs := helpers.SlotToEpoch(<-v.NextSlot())
 	require.NoError(t, err)
-	require.Equal(t, currentEpoch.Add(2), twoEpochs, "Initial Epoch (%d) vs After 2 "+
+	require.Equal(t, currentEpoch.Add(1), twoEpochs, "Initial Epoch (%d) vs After 1 "+
 		"epochs (%d)", currentEpoch, twoEpochs)
 }

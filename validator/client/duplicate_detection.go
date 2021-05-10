@@ -21,7 +21,7 @@ type DuplicateDetection struct {
 	remainingEpochs types.Epoch
 }
 
-var EpochsToCheck = params.BeaconConfig().DuplicateValidatorEpochsCheck
+var EpochsToCheck = 1 //params.BeaconConfig().DuplicateValidatorEpochsCheck // Set to 1 for testing purposes only
 
 // Starts the Doppelganger detection
 func (v *validator) startDoppelgangerService(ctx context.Context) error {
@@ -99,7 +99,7 @@ func (v *validator) startDoppelgangerService(ctx context.Context) error {
 
 }
 
-// Starts the Doppelganger detection
+// Doppelganger detection
 func (v *validator) detectDoppelganger(slot types.Slot) (bool, [][48]byte, error) {
 	result := make([][48]byte, 1)
 
