@@ -49,8 +49,8 @@ func TestSleeping_ForTwoEpochs(t *testing.T) {
 	}
 
 	err := v.startDoppelgangerService(ctx)
-	twoEpochs := helpers.SlotToEpoch(<-v.NextSlot())
+	oneEpochs := helpers.SlotToEpoch(<-v.NextSlot())
 	require.NoError(t, err)
-	require.Equal(t, currentEpoch.Add(1), twoEpochs, "Initial Epoch (%d) vs After 1 "+
-		"epochs (%d)", currentEpoch, twoEpochs)
+	require.Equal(t, currentEpoch.Add(1), oneEpochs, "Initial Epoch (%d) vs After 1 "+
+		"epochs (%d)", currentEpoch, oneEpochs)
 }

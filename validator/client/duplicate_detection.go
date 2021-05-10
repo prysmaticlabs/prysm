@@ -21,11 +21,11 @@ type DuplicateDetection struct {
 	remainingEpochs types.Epoch
 }
 
-var EpochsToCheck = 1 //params.BeaconConfig().DuplicateValidatorEpochsCheck // Set to 1 for testing purposes only
-
 // Starts the Doppelganger detection
 func (v *validator) startDoppelgangerService(ctx context.Context) error {
 	log.Info("Doppelganger Service started")
+
+	EpochsToCheck := params.BeaconConfig().DuplicateValidatorEpochsCheck
 
 	//get the currentEpoch and genesisEpoch
 	slot := <-v.NextSlot()
