@@ -78,9 +78,9 @@ func (ns *Server) GetPeer(ctx context.Context, req *ethpb.PeerRequest) (*ethpb.P
 	defer span.End()
 
 	peerStatus := ns.PeersFetcher.Peers()
-	id, err := peer.IDFromString(req.PeerId)
+	id, err := peer.Decode(req.PeerId)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "Invalid peer ID: "+req.PeerId)
+		return nil, status.Errorf(codes.Internal, "Could not decode peer ID: %v", err)
 	}
 	enr, err := peerStatus.ENR(id)
 	if err != nil {
