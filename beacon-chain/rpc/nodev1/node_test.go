@@ -219,7 +219,7 @@ func TestListPeers(t *testing.T) {
 
 	for i, id := range ids {
 		// Make last peer undiscovered
-		if i == len(ids) {
+		if i == len(ids)-1 {
 			peerStatus.Add(nil, id, nil, network.DirUnknown)
 		} else {
 			enrRecord := &enr.Record{}
