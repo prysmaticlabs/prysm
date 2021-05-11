@@ -77,7 +77,7 @@ func (v *validator) startDoppelgangerService(ctx context.Context) error {
 		nextSlotTime := v.SlotDeadline(slot)
 		timeRemaining := time.Until(nextSlotTime)
 		// Still time till next slot? sleep through and loop again
-		if timeRemaining > 0 {
+		if timeRemaining >= 0 {
 			log.WithFields(logrus.Fields{
 				"timeRemaining": timeRemaining,
 			}).Info("Sleeping until the next slot - Doppelganger detection")
@@ -87,12 +87,11 @@ func (v *validator) startDoppelgangerService(ctx context.Context) error {
 			slot = <-v.NextSlot()
 			continue
 		} else {
-			// this should not happen. Slot in the future? Clock is off?
+			// this should not happen. Clock is off?
 			log.WithFields(logrus.Fields{
 				"timeRemaining": timeRemaining,
-			}).Fatal("Time remaining till next slot is negative!")
-			return errors.New(fmt.Sprintf("Time remaining till next slot is negative %d milliseconds!",
-				int64(timeRemaining.Truncate(time.Millisecond))))
+			}).Info("Time remaining till next slot is negative! - Doppelganger detection")
+			time.Sleep(time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot))
 		}
 
 	}
