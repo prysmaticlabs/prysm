@@ -9,20 +9,21 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-// errNonExistingSyncCommitteeKey will be returned when key does not exists.
 var errNonExistingSyncCommitteeKey = errors.New("does not exist sync committee key")
+var errNotSyncCommitteeIndexPosition = errors.New("obj is not syncCommitteeIndexPosition struct")
+var maxSyncCommitteeSize = uint64(3)
 
 type SyncCommitteeCache struct {
 	cache *cache.FIFO
 	lock sync.RWMutex
 }
 
-type syncCommitteeItem struct {
+type syncCommitteeIndexPosition struct {
 	currentSyncCommitteeRoot [32]byte
-	assignment map[[48]byte]*indexPositionInCommittee
+	vIndexToPositionMap map[[48]byte]*positionInCommittee
 }
 
-type indexPositionInCommittee struct {
+type positionInCommittee struct {
 	currentEpoch []uint64
 	nextEpoch []uint64
 }
@@ -34,9 +35,9 @@ func NewSyncCommittee() *SyncCommitteeCache {
 }
 
 func keyFn(obj interface{}) (string, error) {
-	info, ok := obj.(*syncCommitteeItem)
+	info, ok := obj.(*syncCommitteeIndexPosition)
 	if !ok {
-		return "", errors.New("obj is not syncCommitteeItem")
+		return "", errNotSyncCommitteeIndexPosition
 	}
 
 	return string(info.currentSyncCommitteeRoot[:]), nil
@@ -71,7 +72,7 @@ func (s *SyncCommitteeCache) NextEpochIndexPosition(root [32]byte, pubKey [48]by
 	return pos.nextEpoch, nil
 }
 
-func (s *SyncCommitteeCache) idxPositionInCommittee(root [32]byte, pubKey [48]byte) (*indexPositionInCommittee, error) {
+func (s *SyncCommitteeCache) idxPositionInCommittee(root [32]byte, pubKey [48]byte) (*positionInCommittee, error) {
 	obj, exists, err := s.cache.GetByKey(key(root))
 	if err != nil {
 		return nil, err
@@ -79,18 +80,18 @@ func (s *SyncCommitteeCache) idxPositionInCommittee(root [32]byte, pubKey [48]by
 	if !exists {
 		return nil, errNonExistingSyncCommitteeKey
 	}
-	item, ok := obj.(*syncCommitteeItem)
+	item, ok := obj.(*syncCommitteeIndexPosition)
 	if !ok {
-		return nil, errors.New("obj is not syncCommitteeItem")
+		return nil, errNotSyncCommitteeIndexPosition
 	}
-	idxInCommittee, ok := item.assignment[pubKey]
+	idxInCommittee, ok := item.vIndexToPositionMap[pubKey]
 	if !ok {
 		return nil, nil
 	}
 	return idxInCommittee, nil
 }
 
-func (s *SyncCommitteeCache) UpdateEpochAssignment(state *statealtair.BeaconState) error {
+func (s *SyncCommitteeCache) UpdatePositionsInCommittee(state *statealtair.BeaconState) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -98,14 +99,14 @@ func (s *SyncCommitteeCache) UpdateEpochAssignment(state *statealtair.BeaconStat
 	if err != nil {
 		return err
 	}
-	newAssignment := make(map[[48]byte]*indexPositionInCommittee)
+	positionsMap := make(map[[48]byte]*positionInCommittee)
 	for i, pubkey := range csc.Pubkeys {
 		p := bytesutil.ToBytes48(pubkey)
-		if _, ok := newAssignment[p]; !ok {
-			m := &indexPositionInCommittee{currentEpoch: []uint64{uint64(i)}}
-			newAssignment[p] = m
+		if _, ok := positionsMap[p]; !ok {
+			m := &positionInCommittee{currentEpoch: []uint64{uint64(i)}, nextEpoch: []uint64{}}
+			positionsMap[p] = m
 		} else {
-			newAssignment[p].currentEpoch = append(newAssignment[p].currentEpoch, uint64(i))
+			positionsMap[p].currentEpoch = append(positionsMap[p].currentEpoch, uint64(i))
 		}
 	}
 
@@ -115,11 +116,24 @@ func (s *SyncCommitteeCache) UpdateEpochAssignment(state *statealtair.BeaconStat
 	}
 	for i, pubkey := range nsc.Pubkeys {
 		p := bytesutil.ToBytes48(pubkey)
-		if _, ok := newAssignment[p]; !ok {
-			m := &indexPositionInCommittee{currentEpoch: []uint64{uint64(i)}}
-			newAssignment[p] = m
+		if _, ok := positionsMap[p]; !ok {
+			m := &positionInCommittee{nextEpoch: []uint64{uint64(i)}, currentEpoch: []uint64{}}
+			positionsMap[p] = m
 		} else {
-			newAssignment[p].currentEpoch = append(newAssignment[p].currentEpoch, uint64(i))
+			positionsMap[p].nextEpoch = append(positionsMap[p].nextEpoch, uint64(i))
 		}
 	}
+
+	r, err := csc.HashTreeRoot()
+	if err != nil {
+		return err
+	}
+
+	s.cache.Add(&syncCommitteeIndexPosition{
+		currentSyncCommitteeRoot: r,
+		vIndexToPositionMap: positionsMap,
+	})
+	trim(s.cache, maxSyncCommitteeSize)
+
+	return nil
 }
