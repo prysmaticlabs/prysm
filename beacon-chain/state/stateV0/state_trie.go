@@ -51,7 +51,7 @@ func CloneBeaconState(st *pbp2p.BeaconState) (*pbp2p.BeaconState, error) {
 		return nil, errors.New("not a beacon state")
 	}
 	if cloned == nil {
-		return cloned, nil
+		return nil, errors.New("beacon state clone is empty")
 	}
 	if cloned.Validators == nil {
 		cloned.Validators = []*ethpb.Validator{}
