@@ -212,41 +212,46 @@ func TestGetPeer(t *testing.T) {
 }
 
 func TestListPeers(t *testing.T) {
-	ids := libp2ptest.GeneratePeerIDs(8)
+	ids := libp2ptest.GeneratePeerIDs(9)
 	peerFetcher := &mockp2p.MockPeersProvider{}
 	peerFetcher.ClearPeers()
 	peerStatus := peerFetcher.Peers()
 
 	for i, id := range ids {
-		enrRecord := &enr.Record{}
-		err := enrRecord.SetSig(dummyIdentity{1}, []byte{42})
-		require.NoError(t, err)
-		enrRecord.Set(enr.IPv4{127, 0, 0, byte(i)})
-		err = enrRecord.SetSig(dummyIdentity{}, []byte{})
-		require.NoError(t, err)
-		var p2pAddr = "/ip4/127.0.0." + strconv.Itoa(i) + "/udp/30303/p2p/QmYyQSo1c1Ym7orWxLYvCrM2EmxFTANf8wXmmE7DWjhx5N"
-		p2pMultiAddr, err := ma.NewMultiaddr(p2pAddr)
-		require.NoError(t, err)
-
-		var direction network.Direction
-		if i%2 == 0 {
-			direction = network.DirInbound
+		// Make last peer undiscovered
+		if i == len(ids)-1 {
+			peerStatus.Add(nil, id, nil, network.DirUnknown)
 		} else {
-			direction = network.DirOutbound
-		}
-		peerStatus.Add(enrRecord, id, p2pMultiAddr, direction)
+			enrRecord := &enr.Record{}
+			err := enrRecord.SetSig(dummyIdentity{1}, []byte{42})
+			require.NoError(t, err)
+			enrRecord.Set(enr.IPv4{127, 0, 0, byte(i)})
+			err = enrRecord.SetSig(dummyIdentity{}, []byte{})
+			require.NoError(t, err)
+			var p2pAddr = "/ip4/127.0.0." + strconv.Itoa(i) + "/udp/30303/p2p/QmYyQSo1c1Ym7orWxLYvCrM2EmxFTANf8wXmmE7DWjhx5N"
+			p2pMultiAddr, err := ma.NewMultiaddr(p2pAddr)
+			require.NoError(t, err)
 
-		switch i {
-		case 0, 1:
-			peerStatus.SetConnectionState(id, peers.PeerConnecting)
-		case 2, 3:
-			peerStatus.SetConnectionState(id, peers.PeerConnected)
-		case 4, 5:
-			peerStatus.SetConnectionState(id, peers.PeerDisconnecting)
-		case 6, 7:
-			peerStatus.SetConnectionState(id, peers.PeerDisconnected)
-		default:
-			t.Fatalf("Failed to set connection state for peer")
+			var direction network.Direction
+			if i%2 == 0 {
+				direction = network.DirInbound
+			} else {
+				direction = network.DirOutbound
+			}
+			peerStatus.Add(enrRecord, id, p2pMultiAddr, direction)
+
+			switch i {
+			case 0, 1:
+				peerStatus.SetConnectionState(id, peers.PeerConnecting)
+			case 2, 3:
+				peerStatus.SetConnectionState(id, peers.PeerConnected)
+			case 4, 5:
+				peerStatus.SetConnectionState(id, peers.PeerDisconnecting)
+			case 6, 7:
+				peerStatus.SetConnectionState(id, peers.PeerDisconnected)
+			default:
+				t.Fatalf("Failed to set connection state for peer")
+			}
 		}
 	}
 

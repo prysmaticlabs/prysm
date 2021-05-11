@@ -300,9 +300,12 @@ func peerInfo(peerStatus *peers.Status, id peer.ID) (*ethpb.Peer, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not obtain ENR")
 	}
-	serializedEnr, err := p2p.SerializeENR(enr)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not serialize ENR")
+	var serializedEnr string
+	if enr != nil {
+		serializedEnr, err = p2p.SerializeENR(enr)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not serialize ENR")
+		}
 	}
 	address, err := peerStatus.Address(id)
 	if err != nil {
@@ -318,10 +321,14 @@ func peerInfo(peerStatus *peers.Status, id peer.ID) (*ethpb.Peer, error) {
 	}
 	p := ethpb.Peer{
 		PeerId:    id.Pretty(),
-		Enr:       "enr:" + serializedEnr,
-		Address:   address.String(),
 		State:     ethpb.ConnectionState(connectionState),
 		Direction: ethpb.PeerDirection(direction),
+	}
+	if address != nil {
+		p.Address = address.String()
+	}
+	if serializedEnr != "" {
+		p.Enr = "enr:" + serializedEnr
 	}
 
 	return &p, nil
