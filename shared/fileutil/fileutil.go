@@ -37,7 +37,7 @@ func ExpandPath(p string) (string, error) {
 // to overwrite any existing permissions. Finally, creates the directory accordingly
 // with standardized, Prysm project permissions. This is the static-analysis enforced
 // method for creating a directory programmatically in Prysm.
-func MkdirAll(dirPath string) error {
+func MkdirAll(dirPath string, permissionOverride bool) error {
 	expanded, err := ExpandPath(dirPath)
 	if err != nil {
 		return err
@@ -52,7 +52,13 @@ func MkdirAll(dirPath string) error {
 			return err
 		}
 		if info.Mode().Perm() != params.BeaconIoConfig().ReadWriteExecutePermissions {
-			return errors.New("dir already exists without proper 0700 permissions")
+			if permissionOverride {
+				if err := os.Chmod(expanded, params.BeaconIoConfig().ReadWriteExecutePermissions); err != nil {
+					return err
+				}
+			} else {
+				return errors.New("dir already exists without proper 0700 permissions")
+			}
 		}
 	}
 	return os.MkdirAll(expanded, params.BeaconIoConfig().ReadWriteExecutePermissions)
@@ -202,7 +208,7 @@ func CopyDir(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	if err := MkdirAll(dst); err != nil {
+	if err := MkdirAll(dst, false); err != nil {
 		return errors.Wrapf(err, "error creating directory: %s", dst)
 	}
 	for _, fd := range fds {

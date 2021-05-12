@@ -69,7 +69,7 @@ func saveTosAccepted(ctx *cli.Context) {
 		log.WithError(err).Warnf("error checking directory: %s", dataDir)
 	}
 	if !dataDirExists {
-		if err := fileutil.MkdirAll(dataDir); err != nil {
+		if err := fileutil.MkdirAll(dataDir, false); err != nil {
 			log.WithError(err).Warnf("error creating directory: %s", dataDir)
 		}
 	}

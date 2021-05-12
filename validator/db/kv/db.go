@@ -112,7 +112,7 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 		return nil, err
 	}
 	if !hasDir {
-		if err := fileutil.MkdirAll(dirPath); err != nil {
+		if err := fileutil.MkdirAll(dirPath, false); err != nil {
 			return nil, err
 		}
 	}

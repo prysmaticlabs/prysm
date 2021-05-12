@@ -46,7 +46,7 @@ func main() {
 		}
 	}
 
-	if err := fileutil.MkdirAll(*outputDir); err != nil {
+	if err := fileutil.MkdirAll(*outputDir, false); err != nil {
 		log.Fatal(err)
 	}
 

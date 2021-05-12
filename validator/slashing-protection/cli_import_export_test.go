@@ -39,7 +39,7 @@ func setupCliCtx(
 func TestImportExportSlashingProtectionCli_RoundTrip(t *testing.T) {
 	numValidators := 10
 	outputPath := filepath.Join(os.TempDir(), "slashing-exports")
-	err := fileutil.MkdirAll(outputPath)
+	err := fileutil.MkdirAll(outputPath, false)
 	require.NoError(t, err)
 	protectionFileName := "slashing_history_import.json"
 
@@ -112,7 +112,7 @@ func TestImportExportSlashingProtectionCli_RoundTrip(t *testing.T) {
 func TestImportExportSlashingProtectionCli_EmptyData(t *testing.T) {
 	numValidators := 10
 	outputPath := filepath.Join(os.TempDir(), "slashing-exports")
-	err := fileutil.MkdirAll(outputPath)
+	err := fileutil.MkdirAll(outputPath, false)
 	require.NoError(t, err)
 	protectionFileName := "slashing_history_import.json"
 

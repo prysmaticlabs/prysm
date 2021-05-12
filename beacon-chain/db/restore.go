@@ -34,7 +34,7 @@ func Restore(cliCtx *cli.Context) error {
 			return nil
 		}
 	}
-	if err := fileutil.MkdirAll(restoreDir); err != nil {
+	if err := fileutil.MkdirAll(restoreDir, false); err != nil {
 		return err
 	}
 	if err := fileutil.CopyFile(sourceFile, path.Join(restoreDir, kv.DatabaseFileName)); err != nil {

@@ -201,7 +201,7 @@ func zipKeystoresToOutputDir(keystoresToBackup []*keymanager.Keystore, outputDir
 	if len(keystoresToBackup) == 0 {
 		return errors.New("nothing to backup")
 	}
-	if err := fileutil.MkdirAll(outputDir); err != nil {
+	if err := fileutil.MkdirAll(outputDir, false); err != nil {
 		return errors.Wrapf(err, "could not create directory at path: %s", outputDir)
 	}
 	// Marshal and zip all keystore files together and write the zip file

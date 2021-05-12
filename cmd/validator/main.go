@@ -75,6 +75,7 @@ var appFlags = []cli.Flag{
 	flags.EnableDutyCountDown,
 	cmd.BackupWebhookOutputDir,
 	cmd.EnableBackupWebhookFlag,
+	cmd.BackupWebhookOutputDirPermissionOverride,
 	cmd.MinimalConfigFlag,
 	cmd.E2EConfigFlag,
 	cmd.VerbosityFlag,
