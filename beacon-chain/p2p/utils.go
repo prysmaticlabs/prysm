@@ -31,6 +31,9 @@ const dialTimeout = 1 * time.Second
 
 // SerializeENR takes the enr record in its key-value form and serializes it.
 func SerializeENR(record *enr.Record) (string, error) {
+	if record == nil {
+		return "", errors.New("could not serialize nil record")
+	}
 	buf := bytes.NewBuffer([]byte{})
 	if err := record.EncodeRLP(buf); err != nil {
 		return "", errors.Wrap(err, "could not encode ENR record to bytes")
