@@ -898,9 +898,12 @@ func (s *Service) cacheHeadersForEth1DataVote(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	start, err := s.determineEarliestVotingBlock(ctx, end)
-	if err != nil {
-		return err
+	start := uint64(0)
+	if end != 0 {
+		start, err = s.determineEarliestVotingBlock(ctx, end)
+		if err != nil {
+			return err
+		}
 	}
 	// We call batchRequestHeaders for its header caching side-effect, so we don't need the return value.
 	_, err = s.batchRequestHeaders(start, end)
