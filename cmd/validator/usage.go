@@ -52,6 +52,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.ForceClearDB,
 			cmd.EnableBackupWebhookFlag,
 			cmd.BackupWebhookOutputDir,
+			cmd.BackupWebhookOutputDirPermissionOverride,
 			cmd.EnableTracingFlag,
 			cmd.TracingProcessNameFlag,
 			cmd.TracingEndpointFlag,
