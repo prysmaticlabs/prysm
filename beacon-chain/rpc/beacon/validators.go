@@ -2,7 +2,6 @@ package beacon
 
 import (
 	"context"
-	"errors"
 	"sort"
 	"strconv"
 	"time"
@@ -870,10 +869,20 @@ func (bs *Server) isSlotCanonical(ctx context.Context, slot types.Slot) (bool, e
 	if !hasBlockRoots {
 		return false, nil
 	}
-	if len(roots) != 1 {
-		return false, errors.New("more than one block existed in slot")
+
+	// Loop through all roots in slot, and
+	// check which one is canonical.
+	for _, rt := range roots {
+		canonical, err := bs.CanonicalFetcher.IsCanonical(ctx, rt)
+		if err != nil {
+			return false, err
+		}
+		if canonical {
+			return true, nil
+		}
+
 	}
-	return bs.CanonicalFetcher.IsCanonical(ctx, roots[0])
+	return false, nil
 }
 
 // Determines whether a validator has already exited.
