@@ -56,6 +56,15 @@ func CloneBeaconState(st *pbp2p.BeaconState) (*pbp2p.BeaconState, error) {
 	if cloned.Validators == nil {
 		cloned.Validators = []*ethpb.Validator{}
 	}
+	if cloned.Eth1DataVotes == nil {
+		cloned.Eth1DataVotes = []*ethpb.Eth1Data{}
+	}
+	if cloned.PreviousEpochAttestations == nil {
+		cloned.PreviousEpochAttestations = []*pbp2p.PendingAttestation{}
+	}
+	if cloned.CurrentEpochAttestations == nil {
+		cloned.CurrentEpochAttestations = []*pbp2p.PendingAttestation{}
+	}
 	return cloned, nil
 }
 
