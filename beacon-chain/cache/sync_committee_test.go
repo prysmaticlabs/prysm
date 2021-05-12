@@ -13,16 +13,16 @@ import (
 
 func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 	tests := []struct {
-		name    string
+		name                 string
 		currentSyncCommittee *pb.SyncCommittee
-		nextSyncCommittee *pb.SyncCommittee
-		currentSyncMap map[[48]byte][]uint64
-		nextSyncMap map[[48]byte][]uint64
+		nextSyncCommittee    *pb.SyncCommittee
+		currentSyncMap       map[[48]byte][]uint64
+		nextSyncMap          map[[48]byte][]uint64
 	}{
 		{
 			name:                 "only current epoch",
-			currentSyncCommittee: convertToCommittee([][]byte{{1},{2},{3},{2},{2}}),
-			nextSyncCommittee: convertToCommittee([][]byte{}),
+			currentSyncCommittee: convertToCommittee([][]byte{{1}, {2}, {3}, {2}, {2}}),
+			nextSyncCommittee:    convertToCommittee([][]byte{}),
 			currentSyncMap: map[[48]byte][]uint64{
 				[48]byte{1}: {0},
 				[48]byte{2}: {1, 3, 4},
@@ -37,7 +37,7 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 		{
 			name:                 "only next epoch",
 			currentSyncCommittee: convertToCommittee([][]byte{}),
-			nextSyncCommittee:    convertToCommittee([][]byte{{1},{2},{3},{2},{2}}),
+			nextSyncCommittee:    convertToCommittee([][]byte{{1}, {2}, {3}, {2}, {2}}),
 			currentSyncMap: map[[48]byte][]uint64{
 				[48]byte{1}: {},
 				[48]byte{2}: {},
@@ -51,15 +51,15 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 		},
 		{
 			name:                 "some current epoch and some next epoch",
-			currentSyncCommittee: convertToCommittee([][]byte{{1},{2},{3},{2},{2}}),
-			nextSyncCommittee:    convertToCommittee([][]byte{{7},{6},{5},{4},{7}}),
+			currentSyncCommittee: convertToCommittee([][]byte{{1}, {2}, {3}, {2}, {2}}),
+			nextSyncCommittee:    convertToCommittee([][]byte{{7}, {6}, {5}, {4}, {7}}),
 			currentSyncMap: map[[48]byte][]uint64{
 				[48]byte{1}: {0},
 				[48]byte{2}: {1, 3, 4},
 				[48]byte{3}: {2},
 			},
 			nextSyncMap: map[[48]byte][]uint64{
-				[48]byte{7}: {0,4},
+				[48]byte{7}: {0, 4},
 				[48]byte{6}: {1},
 				[48]byte{5}: {2},
 				[48]byte{4}: {3},
@@ -67,34 +67,34 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 		},
 		{
 			name:                 "some current epoch and some next epoch duplicated across",
-			currentSyncCommittee: convertToCommittee([][]byte{{1},{2},{3},{2},{2}}),
-			nextSyncCommittee:    convertToCommittee([][]byte{{2},{1},{3},{2},{1}}),
+			currentSyncCommittee: convertToCommittee([][]byte{{1}, {2}, {3}, {2}, {2}}),
+			nextSyncCommittee:    convertToCommittee([][]byte{{2}, {1}, {3}, {2}, {1}}),
 			currentSyncMap: map[[48]byte][]uint64{
 				[48]byte{1}: {0},
 				[48]byte{2}: {1, 3, 4},
 				[48]byte{3}: {2},
 			},
 			nextSyncMap: map[[48]byte][]uint64{
-				[48]byte{1}: {1,4},
-				[48]byte{2}: {0,3},
+				[48]byte{1}: {1, 4},
+				[48]byte{2}: {0, 3},
 				[48]byte{3}: {2},
 			},
 		},
 		{
 			name:                 "all duplicated",
-			currentSyncCommittee: convertToCommittee([][]byte{{100},{100},{100},{100}}),
-			nextSyncCommittee:    convertToCommittee([][]byte{{100},{100},{100},{100}}),
+			currentSyncCommittee: convertToCommittee([][]byte{{100}, {100}, {100}, {100}}),
+			nextSyncCommittee:    convertToCommittee([][]byte{{100}, {100}, {100}, {100}}),
 			currentSyncMap: map[[48]byte][]uint64{
-				[48]byte{100}: {0,1,2,3},
+				[48]byte{100}: {0, 1, 2, 3},
 			},
 			nextSyncMap: map[[48]byte][]uint64{
-				[48]byte{100}: {0,1,2,3},
+				[48]byte{100}: {0, 1, 2, 3},
 			},
 		},
 		{
 			name:                 "unknown keys",
-			currentSyncCommittee: convertToCommittee([][]byte{{100},{100},{100},{100}}),
-			nextSyncCommittee:    convertToCommittee([][]byte{{100},{100},{100},{100}}),
+			currentSyncCommittee: convertToCommittee([][]byte{{100}, {100}, {100}, {100}}),
+			nextSyncCommittee:    convertToCommittee([][]byte{{100}, {100}, {100}, {100}}),
 			currentSyncMap: map[[48]byte][]uint64{
 				[48]byte{1}: {},
 			},
@@ -177,7 +177,7 @@ func convertToCommittee(inputKeys [][]byte) *pb.SyncCommittee {
 		aggregatedKeys = append(aggregatedKeys, bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength))
 	}
 	return &pb.SyncCommittee{
-		Pubkeys: pubKeys,
+		Pubkeys:          pubKeys,
 		PubkeyAggregates: aggregatedKeys,
 	}
 }

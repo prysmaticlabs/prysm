@@ -17,20 +17,20 @@ var maxSyncCommitteeSize = uint64(3) // Allows 3 forks to happen around `EPOCHS_
 // It is thread safe with concurrent read write.
 type SyncCommitteeCache struct {
 	cache *cache.FIFO
-	lock sync.RWMutex
+	lock  sync.RWMutex
 }
 
 // Index position of all validators in sync committee where `currentSyncCommitteeRoot` is the key and `vIndexToPositionMap` is value.
 // Inside `vIndexToPositionMap`, validator positions are cached where key is the 48byte public key and the value is the `positionInCommittee` struct.
 type syncCommitteeIndexPosition struct {
 	currentSyncCommitteeRoot [32]byte
-	vIndexToPositionMap map[[48]byte]*positionInCommittee
+	vIndexToPositionMap      map[[48]byte]*positionInCommittee
 }
 
 // Index position of individual validator of current epoch and previous epoch sync committee.
 type positionInCommittee struct {
 	currentEpoch []uint64
-	nextEpoch []uint64
+	nextEpoch    []uint64
 }
 
 // NewSyncCommittee initializes and returns a new SyncCommitteeCache.
@@ -139,7 +139,7 @@ func (s *SyncCommitteeCache) UpdatePositionsInCommittee(state iface.BeaconStateA
 
 	s.cache.Add(&syncCommitteeIndexPosition{
 		currentSyncCommitteeRoot: r,
-		vIndexToPositionMap: positionsMap,
+		vIndexToPositionMap:      positionsMap,
 	})
 	trim(s.cache, maxSyncCommitteeSize)
 
