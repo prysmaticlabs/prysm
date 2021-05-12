@@ -137,10 +137,12 @@ func (s *SyncCommitteeCache) UpdatePositionsInCommittee(state iface.BeaconStateA
 		return err
 	}
 
-	s.cache.Add(&syncCommitteeIndexPosition{
+	if err := s.cache.Add(&syncCommitteeIndexPosition{
 		currentSyncCommitteeRoot: r,
 		vIndexToPositionMap:      positionsMap,
-	})
+	}); err != nil {
+		return err
+	}
 	trim(s.cache, maxSyncCommitteeSize)
 
 	return nil
