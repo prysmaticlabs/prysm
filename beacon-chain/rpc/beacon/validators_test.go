@@ -2204,6 +2204,47 @@ func TestServer_isSlotCanonical(t *testing.T) {
 	}
 }
 
+func TestServer_isSlotCanonical_MultipleBlocks(t *testing.T) {
+	beaconDB := dbTest.SetupDB(t)
+	ctx := context.Background()
+	var roots [][32]byte
+	cRoots := map[[32]byte]bool{}
+	for i := 1; i < 100; i++ {
+		b := testutil.NewBeaconBlock()
+		b.Block.Slot = types.Slot(i)
+		require.NoError(t, beaconDB.SaveBlock(ctx, b))
+		br, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		if i%2 == 0 {
+			cRoots[br] = true
+			// Save a block in the same slot
+			b = testutil.NewBeaconBlock()
+			b.Block.Slot = types.Slot(i)
+			b.Block.ProposerIndex = 100
+			require.NoError(t, beaconDB.SaveBlock(ctx, b))
+		}
+		roots = append(roots, br)
+	}
+
+	bs := &Server{
+		BeaconDB: beaconDB,
+		CanonicalFetcher: &mock.ChainService{
+			CanonicalRoots: cRoots,
+		},
+	}
+
+	for i := range roots {
+		slot := types.Slot(i + 1)
+		c, err := bs.isSlotCanonical(ctx, slot)
+		require.NoError(t, err)
+		if slot%2 == 0 {
+			require.Equal(t, true, c)
+		} else {
+			require.Equal(t, false, c)
+		}
+	}
+}
+
 func TestServer_isSlotCanonicalForSlot0(t *testing.T) {
 	ctx := context.Background()
 	bs := &Server{}
