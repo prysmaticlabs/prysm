@@ -10,7 +10,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	v1 "github.com/prysmaticlabs/ethereumapis/eth/v1"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -32,40 +31,7 @@ var (
 
 // InitializeFromProto the beacon state from a protobuf representation.
 func InitializeFromProto(st *pbp2p.BeaconState) (*BeaconState, error) {
-	clonedState, err := CloneBeaconState(st)
-	if err != nil {
-		return nil, err
-	}
-	return InitializeFromProtoUnsafe(clonedState)
-}
-
-// CloneBeaconState serves as a wrapper for proto.Clone to apply any
-// post-cloning changes needed. This was added due to a change in protobuf v2
-// which encodes empty slices as nil.
-func CloneBeaconState(st *pbp2p.BeaconState) (*pbp2p.BeaconState, error) {
-	if st == nil {
-		return nil, errors.New("received nil state")
-	}
-	cloned, ok := proto.Clone(st).(*pbp2p.BeaconState)
-	if !ok {
-		return nil, errors.New("not a beacon state")
-	}
-	if cloned == nil {
-		return nil, errors.New("beacon state clone is empty")
-	}
-	if cloned.Validators == nil {
-		cloned.Validators = []*ethpb.Validator{}
-	}
-	if cloned.Eth1DataVotes == nil {
-		cloned.Eth1DataVotes = []*ethpb.Eth1Data{}
-	}
-	if cloned.PreviousEpochAttestations == nil {
-		cloned.PreviousEpochAttestations = []*pbp2p.PendingAttestation{}
-	}
-	if cloned.CurrentEpochAttestations == nil {
-		cloned.CurrentEpochAttestations = []*pbp2p.PendingAttestation{}
-	}
-	return cloned, nil
+	return InitializeFromProtoUnsafe(proto.Clone(st).(*pbp2p.BeaconState))
 }
 
 // InitializeFromProtoUnsafe directly uses the beacon state protobuf pointer
