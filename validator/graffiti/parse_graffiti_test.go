@@ -11,6 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
+// TODO: don't forget tests fucko
+
 func TestParseGraffitiFile_Default(t *testing.T) {
 	input := []byte(`default: "Mr T was here"`)
 
