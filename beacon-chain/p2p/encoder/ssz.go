@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	fastssz "github.com/ferranbt/fastssz"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/params"

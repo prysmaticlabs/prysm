@@ -8,7 +8,7 @@ import (
 	"math"
 	"testing"
 
-	gogo "github.com/gogo/protobuf/proto"
+	protoV1 "github.com/golang/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -186,7 +186,7 @@ func newBadSnappyStream() *badSnappyStream {
 	payload[3] = 0
 
 	return &badSnappyStream{
-		varint:  gogo.EncodeVarint(1000),
+		varint:  protoV1.EncodeVarint(1000),
 		header:  header,
 		repeat:  payload,
 		i:       0,
