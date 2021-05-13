@@ -1,10 +1,10 @@
 package encoder
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/golang/protobuf/proto"
-
 	"github.com/pkg/errors"
 )
 
@@ -41,7 +41,7 @@ func readVarint(r io.Reader) (uint64, error) {
 
 	vi, n := proto.DecodeVarint(b)
 	if n != len(b) {
-		return 0, errors.New("varint did not decode entire byte slice")
+		return 0, fmt.Errorf("varint did not decode entire byte slice: %d vs. %d", n, len(b))
 	}
 	return vi, nil
 }
