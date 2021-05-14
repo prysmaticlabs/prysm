@@ -200,7 +200,7 @@ func TestSyncCommittee_CanGet(t *testing.T) {
 }
 
 func TestAssignedToSyncCommittee(t *testing.T) {
-	s, _ := testAltair.DeterministicGenesisStateAltair(t, 64)
+	s, _ := testAltair.DeterministicGenesisStateAltair(t, 5*params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee, err := altair.SyncCommittee(s, helpers.CurrentEpoch(s))
 	require.NoError(t, err)
 	require.NoError(t, s.SetCurrentSyncCommittee(syncCommittee))
@@ -236,7 +236,7 @@ func TestAssignedToSyncCommittee(t *testing.T) {
 		{
 			name:   "does not exist while asking current sync committee",
 			epoch:  0,
-			check:  1,
+			check:  0,
 			exists: false,
 		},
 		{
@@ -249,7 +249,7 @@ func TestAssignedToSyncCommittee(t *testing.T) {
 			name:   "exists in next sync committee",
 			epoch:  256,
 			check:  types.ValidatorIndex(nextSyncCommitteeIndex),
-			exists: false,
+			exists: true,
 		},
 	}
 	for _, tt := range tests {
