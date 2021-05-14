@@ -125,7 +125,7 @@ ordered:
   - "Mr F was here"
 
 specific:
-  1234: Yolo
+  1234: "hex:796f6c6f"
   555: "What's up"
   703727: Meow`)
 
@@ -158,4 +158,55 @@ specific:
 		},
 	}
 	require.DeepEqual(t, wanted, got)
+}
+
+func TestParseHexGraffiti(t *testing.T) {
+	tests := []struct {
+		name  string
+		want  string
+		input string
+	}{
+		{
+			name:  "standard",
+			want:  "hola mundo!",
+			input: "hola mundo!",
+		},
+		{
+			name:  "hex",
+			want:  "hola mundo!",
+			input: "hex:686f6c61206d756e646f21",
+		},
+		{
+			name:  "HEX",
+			want:  "hola mundo!",
+			input: "HEX:686f6c61206d756e646f21",
+		},
+		{
+			name:  "irregular hex 1",
+			want:  "hex:",
+			input: "hex:",
+		},
+		{
+			name:  "irregular hex 1",
+			want:  "hex:hola mundo!",
+			input: "hex:hola mundo!",
+		},
+		{
+			name:  "unsupported hex 1",
+			want:  "0x686f6c61206d756e646f21",
+			input: "0x686f6c61206d756e646f21",
+		},
+		{
+			name:  "unsupported hex 2",
+			want:  "hex:0x686f6c61206d756e646f21",
+			input: "hex:0x686f6c61206d756e646f21",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			out := ParseHexGraffiti(tt.input)
+			require.Equal(t, out, tt.want)
+		})
+	}
 }

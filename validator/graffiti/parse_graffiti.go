@@ -21,6 +21,14 @@ type Graffiti struct {
 
 // ParseGraffitiFile parses the graffiti file and returns the graffiti struct.
 func ParseGraffitiFile(f string) (*Graffiti, error) {
+	parseGraffitiStrings := func(input []string) []string {
+		output := make([]string, len(input))
+		for _, i := range input {
+			output = append(output, ParseHexGraffiti(i))
+		}
+		return output
+	}
+
 	yamlFile, err := ioutil.ReadFile(f)
 	if err != nil {
 		return nil, err
@@ -36,24 +44,16 @@ func ParseGraffitiFile(f string) (*Graffiti, error) {
 	}
 	g.Specific = specific
 	g.Default = ParseHexGraffiti(g.Default)
-	g.Ordered = ParseGraffitiStrings(g.Ordered)
-	g.Random = ParseGraffitiStrings(g.Random)
+	g.Ordered = parseGraffitiStrings(g.Ordered)
+	g.Random = parseGraffitiStrings(g.Random)
 	g.Hash = hashutil.Hash(yamlFile)
 	return g, nil
-}
-
-func ParseGraffitiStrings(input []string) []string {
-	output := make([]string, len(input))
-	for _, i := range input {
-		output = append(output, ParseHexGraffiti(i))
-	}
-	return output
 }
 
 // ParseHexGraffiti checks if a graffiti input is being represented in hex and converts it to ASCII if so
 func ParseHexGraffiti(rawGraffiti string) string {
 	splitGraffiti := strings.SplitN(rawGraffiti, ":", 2)
-	if "hex" == splitGraffiti[0] {
+	if strings.ToLower(splitGraffiti[0]) == "hex" {
 		if splitGraffiti[1] == "" {
 			log.Debug("Blank hex tag to be interpreted as itself")
 			return rawGraffiti
@@ -62,6 +62,7 @@ func ParseHexGraffiti(rawGraffiti string) string {
 		graffiti, err := hex.DecodeString(splitGraffiti[1])
 		if err != nil {
 			log.WithError(err).Debug("Error while decoding hex string")
+			return rawGraffiti
 		}
 		return string(graffiti)
 	}
