@@ -34,21 +34,21 @@ func TestTopicDeconstructor(t *testing.T) {
 		},
 		{
 			name:          "valid status topic",
-			topic:         protocolPrefix + statusMessageName + schemaVersionV1,
+			topic:         protocolPrefix + statusMessageName + SchemaVersionV1,
 			expectedError: "",
-			output:        []string{protocolPrefix, statusMessageName, schemaVersionV1},
+			output:        []string{protocolPrefix, statusMessageName, SchemaVersionV1},
 		},
 		{
 			name:          "malformed status topic",
-			topic:         protocolPrefix + "/statis" + schemaVersionV1,
+			topic:         protocolPrefix + "/statis" + SchemaVersionV1,
 			expectedError: "unable to find a valid message for /eth2/beacon_chain/req/statis/1",
 			output:        []string{""},
 		},
 		{
 			name:          "valid beacon block by range topic",
-			topic:         protocolPrefix + beaconBlocksByRangeMessageName + schemaVersionV1 + "/ssz_snappy",
+			topic:         protocolPrefix + beaconBlocksByRangeMessageName + SchemaVersionV1 + "/ssz_snappy",
 			expectedError: "",
-			output:        []string{protocolPrefix, beaconBlocksByRangeMessageName, schemaVersionV1},
+			output:        []string{protocolPrefix, beaconBlocksByRangeMessageName, SchemaVersionV1},
 		},
 		{
 			name:          "beacon block by range topic with malformed version",

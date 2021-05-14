@@ -9,8 +9,8 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-// Current schema version for our rpc protocol ID.
-const schemaVersionV1 = "/1"
+// SchemaVersionV1 specifies the schema version for our rpc protocol ID.
+const SchemaVersionV1 = "/1"
 
 // Specifies the protocol prefix for all our Req/Resp topics.
 const protocolPrefix = "/eth2/beacon_chain/req"
@@ -36,17 +36,17 @@ const metadataMessageName = "/metadata"
 const (
 	// V1 RPC Topics
 	// RPCStatusTopicV1 defines the v1 topic for the status rpc method.
-	RPCStatusTopicV1 = protocolPrefix + statusMessageName + schemaVersionV1
+	RPCStatusTopicV1 = protocolPrefix + statusMessageName + SchemaVersionV1
 	// RPCGoodByeTopicV1 defines the v1 topic for the goodbye rpc method.
-	RPCGoodByeTopicV1 = protocolPrefix + goodbyeMessageName + schemaVersionV1
+	RPCGoodByeTopicV1 = protocolPrefix + goodbyeMessageName + SchemaVersionV1
 	// RPCBlocksByRangeTopicV1 defines v1 the topic for the blocks by range rpc method.
-	RPCBlocksByRangeTopicV1 = protocolPrefix + beaconBlocksByRangeMessageName + schemaVersionV1
+	RPCBlocksByRangeTopicV1 = protocolPrefix + beaconBlocksByRangeMessageName + SchemaVersionV1
 	// RPCBlocksByRootTopicV1 defines the v1 topic for the blocks by root rpc method.
-	RPCBlocksByRootTopicV1 = protocolPrefix + beaconBlocksByRootsMessageName + schemaVersionV1
+	RPCBlocksByRootTopicV1 = protocolPrefix + beaconBlocksByRootsMessageName + SchemaVersionV1
 	// RPCPingTopicV1 defines the v1 topic for the ping rpc method.
-	RPCPingTopicV1 = protocolPrefix + pingMessageName + schemaVersionV1
+	RPCPingTopicV1 = protocolPrefix + pingMessageName + SchemaVersionV1
 	// RPCMetaDataTopicV1 defines the v1 topic for the metadata rpc method.
-	RPCMetaDataTopicV1 = protocolPrefix + metadataMessageName + schemaVersionV1
+	RPCMetaDataTopicV1 = protocolPrefix + metadataMessageName + SchemaVersionV1
 )
 
 // RPCTopicMappings map the base message type to the rpc request.
@@ -76,7 +76,7 @@ var messageMapping = map[string]bool{
 }
 
 var versionMapping = map[string]bool{
-	schemaVersionV1: true,
+	SchemaVersionV1: true,
 }
 
 // VerifyTopicMapping verifies that the topic and its accompanying
