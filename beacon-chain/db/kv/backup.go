@@ -61,14 +61,14 @@ func (s *Store) Backup(ctx context.Context, outputDir string) error {
 	}()
 	// Prefetch all keys of buckets, and inner keys in a
 	// bucket to use less memory usage when backing up.
-	bucketKeys := [][]byte{}
+	var bucketKeys [][]byte
 	bucketMap := make(map[string][][]byte)
 	err = s.db.View(func(tx *bolt.Tx) error {
 		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
 			newName := make([]byte, len(name))
 			copy(newName, name)
 			bucketKeys = append(bucketKeys, newName)
-			innerKeys := [][]byte{}
+			var innerKeys [][]byte
 			err := b.ForEach(func(k, v []byte) error {
 				if k == nil {
 					return nil
