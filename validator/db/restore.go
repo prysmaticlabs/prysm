@@ -33,7 +33,7 @@ func Restore(cliCtx *cli.Context) error {
 			return nil
 		}
 	}
-	if err := fileutil.MkdirAll(targetDir, false); err != nil {
+	if err := fileutil.MkdirAll(targetDir); err != nil {
 		return err
 	}
 	if err := fileutil.CopyFile(sourceFile, path.Join(targetDir, kv.ProtectionDbFileName)); err != nil {

@@ -162,7 +162,7 @@ func storeNewRandomKey(ks keyStore, password string) error {
 func writeKeyFile(file string, content []byte) error {
 	// Create the keystore directory with appropriate permissions
 	// in case it is not present yet.
-	if err := fileutil.MkdirAll(filepath.Dir(file), false); err != nil {
+	if err := fileutil.MkdirAll(filepath.Dir(file)); err != nil {
 		return err
 	}
 	// Atomic write: create a temporary hidden file first

@@ -38,7 +38,7 @@ func (s *Store) Backup(ctx context.Context, outputDir string, permissionOverride
 		return errors.New("no head block")
 	}
 	// Ensure the backups directory exists.
-	if err := fileutil.MkdirAll(backupsDir, permissionOverride); err != nil {
+	if err := fileutil.HandleBackupDir(backupsDir, permissionOverride); err != nil {
 		return err
 	}
 	backupPath := path.Join(backupsDir, fmt.Sprintf("prysm_beacondb_at_slot_%07d.backup", head.Block.Slot))

@@ -231,7 +231,7 @@ func OpenWallet(_ context.Context, cfg *Config) (*Wallet, error) {
 
 // SaveWallet persists the wallet's directories to disk.
 func (w *Wallet) SaveWallet() error {
-	if err := fileutil.MkdirAll(w.accountsPath, false); err != nil {
+	if err := fileutil.MkdirAll(w.accountsPath); err != nil {
 		return errors.Wrap(err, "could not create wallet directory")
 	}
 	return nil
@@ -304,7 +304,7 @@ func (w *Wallet) WriteFileAtPath(_ context.Context, filePath, fileName string, d
 		return err
 	}
 	if !hasDir {
-		if err := fileutil.MkdirAll(accountPath, false); err != nil {
+		if err := fileutil.MkdirAll(accountPath); err != nil {
 			return errors.Wrapf(err, "could not create path: %s", accountPath)
 		}
 	}
@@ -327,7 +327,7 @@ func (w *Wallet) ReadFileAtPath(_ context.Context, filePath, fileName string) ([
 		return nil, err
 	}
 	if !hasDir {
-		if err := fileutil.MkdirAll(accountPath, false); err != nil {
+		if err := fileutil.MkdirAll(accountPath); err != nil {
 			return nil, errors.Wrapf(err, "could not create path: %s", accountPath)
 		}
 	}
@@ -350,7 +350,7 @@ func (w *Wallet) ReadFileAtPath(_ context.Context, filePath, fileName string) ([
 // with a regex pattern.
 func (w *Wallet) FileNameAtPath(_ context.Context, filePath, fileName string) (string, error) {
 	accountPath := filepath.Join(w.accountsPath, filePath)
-	if err := fileutil.MkdirAll(accountPath, false); err != nil {
+	if err := fileutil.MkdirAll(accountPath); err != nil {
 		return "", errors.Wrapf(err, "could not create path: %s", accountPath)
 	}
 	fullPath := filepath.Join(accountPath, fileName)

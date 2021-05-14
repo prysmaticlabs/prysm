@@ -76,7 +76,7 @@ func ExportSlashingProtectionJSONCli(cliCtx *cli.Context) error {
 		return errors.Wrapf(err, "could not check if output directory %s already exists", outputDir)
 	}
 	if !exists {
-		if err := fileutil.MkdirAll(outputDir, false); err != nil {
+		if err := fileutil.MkdirAll(outputDir); err != nil {
 			return errors.Wrapf(err, "could not create output directory %s", outputDir)
 		}
 	}

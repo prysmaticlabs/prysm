@@ -31,7 +31,7 @@ func (s *Store) Backup(ctx context.Context, outputDir string, overridePermission
 		backupsDir = path.Join(s.databasePath, backupsDirectoryName)
 	}
 	// Ensure the backups directory exists.
-	if err := fileutil.MkdirAll(backupsDir, overridePermission); err != nil {
+	if err := fileutil.HandleBackupDir(backupsDir, overridePermission); err != nil {
 		return err
 	}
 	backupPath := path.Join(backupsDir, fmt.Sprintf("prysm_slasherdb_%d.backup", time.Now().Unix()))
