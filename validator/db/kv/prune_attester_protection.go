@@ -17,7 +17,7 @@ import (
 func (s *Store) PruneAttestations(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.PruneAttestations")
 	defer span.End()
-	pubkeys := [][]byte{}
+	var pubkeys [][]byte
 	err := s.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(pubKeysBucket)
 		return bucket.ForEach(func(pubKey []byte, _ []byte) error {
