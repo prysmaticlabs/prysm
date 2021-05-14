@@ -157,3 +157,33 @@ func TopicDeconstructor(topic string) (string, string, string, error) {
 
 	return protPrefix, message, version, nil
 }
+
+// RPCTopic is a type used to denote and represent a req/resp topic.
+type RPCTopic string
+
+// ProtocolPrefix returns the protocol prefix of the rpc topic.
+func (r RPCTopic) ProtocolPrefix() string {
+	prefix, _, _, err := TopicDeconstructor(string(r))
+	if err != nil {
+		return ""
+	}
+	return prefix
+}
+
+// MessageType returns the message type of the rpc topic.
+func (r RPCTopic) MessageType() string {
+	_, message, _, err := TopicDeconstructor(string(r))
+	if err != nil {
+		return ""
+	}
+	return message
+}
+
+// Version returns the schema version of the rpc topic.
+func (r RPCTopic) Version() string {
+	_, _, version, err := TopicDeconstructor(string(r))
+	if err != nil {
+		return ""
+	}
+	return version
+}
