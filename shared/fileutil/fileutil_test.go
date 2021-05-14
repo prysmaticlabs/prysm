@@ -56,13 +56,6 @@ func TestMkdirAll_AlreadyExists_WrongPermissions(t *testing.T) {
 	assert.ErrorContains(t, "already exists without proper 0700 permissions", err)
 }
 
-func TestMkdirAll_AlreadyExists_OverridePermissions(t *testing.T) {
-	dirName := t.TempDir() + "somedir"
-	err := os.MkdirAll(dirName, os.ModePerm)
-	require.NoError(t, err)
-	assert.NoError(t, fileutil.MkdirAll(dirName))
-}
-
 func TestMkdirAll_AlreadyExists_OK(t *testing.T) {
 	dirName := t.TempDir() + "somedir"
 	err := os.MkdirAll(dirName, params.BeaconIoConfig().ReadWriteExecutePermissions)
