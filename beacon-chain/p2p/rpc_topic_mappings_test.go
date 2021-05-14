@@ -3,11 +3,10 @@ package p2p
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestVerifyRPCMappings(t *testing.T) {
