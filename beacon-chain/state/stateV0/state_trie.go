@@ -29,7 +29,7 @@ var (
 	})
 )
 
-// InitializeFromProto the beacon state from a protobuf representation.
+// InitializeFromProto initialize the beacon state from a protobuf representation.
 func InitializeFromProto(st *pbp2p.BeaconState) (*BeaconState, error) {
 	return InitializeFromProtoUnsafe(proto.Clone(st).(*pbp2p.BeaconState))
 }
