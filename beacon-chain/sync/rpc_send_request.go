@@ -26,7 +26,7 @@ func SendBeaconBlocksByRangeRequest(
 	ctx context.Context, p2pProvider p2p.P2P, pid peer.ID,
 	req *pb.BeaconBlocksByRangeRequest, blockProcessor BeaconBlockProcessor,
 ) ([]*ethpb.SignedBeaconBlock, error) {
-	stream, err := p2pProvider.Send(ctx, req, p2p.RPCBlocksByRangeTopic, pid)
+	stream, err := p2pProvider.Send(ctx, req, p2p.RPCBlocksByRangeTopicV1, pid)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +84,7 @@ func SendBeaconBlocksByRootRequest(
 	ctx context.Context, p2pProvider p2p.P2P, pid peer.ID,
 	req *p2ptypes.BeaconBlockByRootsReq, blockProcessor BeaconBlockProcessor,
 ) ([]*ethpb.SignedBeaconBlock, error) {
-	stream, err := p2pProvider.Send(ctx, req, p2p.RPCBlocksByRootTopic, pid)
+	stream, err := p2pProvider.Send(ctx, req, p2p.RPCBlocksByRootTopicV1, pid)
 	if err != nil {
 		return nil, err
 	}

@@ -62,11 +62,11 @@ func TestAppendBeyondIndicesLimit(t *testing.T) {
 		assert.NoError(t, st.AppendValidator(&eth.Validator{}))
 	}
 	assert.Equal(t, false, st.rebuildTrie[validators])
-	assert.NotEqual(t, len(st.dirtyIndices[validators]), int(0))
+	assert.NotEqual(t, len(st.dirtyIndices[validators]), 0)
 
 	for i := 0; i < indicesLimit; i++ {
 		assert.NoError(t, st.AppendValidator(&eth.Validator{}))
 	}
 	assert.Equal(t, true, st.rebuildTrie[validators])
-	assert.Equal(t, len(st.dirtyIndices[validators]), int(0))
+	assert.Equal(t, len(st.dirtyIndices[validators]), 0)
 }
