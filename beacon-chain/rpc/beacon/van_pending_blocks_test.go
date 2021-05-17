@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/shared/van_mock"
+	vmock "github.com/prysmaticlabs/prysm/shared/van_mock"
 	"testing"
 )
 
@@ -33,7 +33,7 @@ func TestServer_StreamNewPendingBlocks_ContextCanceled(t *testing.T) {
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockStream := mock.NewMockBeaconChain_StreamNewPendingBlocksServer(ctrl)
+	mockStream := vmock.NewMockBeaconChain_StreamNewPendingBlocksServer(ctrl)
 	mockStream.EXPECT().Context().Return(ctx)
 	go func(tt *testing.T) {
 		assert.ErrorContains(tt, "Context canceled", server.StreamNewPendingBlocks(&ptypes.Empty{}, mockStream))
@@ -59,7 +59,7 @@ func TestServer_StreamNewPendingBlocks_OnNewBlock(t *testing.T) {
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockStream := mock.NewMockBeaconChain_StreamNewPendingBlocksServer(ctrl)
+	mockStream := vmock.NewMockBeaconChain_StreamNewPendingBlocksServer(ctrl)
 	mockStream.EXPECT().Send(b.Block).Do(func(arg0 interface{}) {
 		exitRoutine <- true
 	})

@@ -438,7 +438,7 @@ func ProposerAssignments(
 	}
 	proposerIndexToSlots := make(map[types.ValidatorIndex][]types.Slot, sliceRange)
 
-	rangeSlot := startSlot+params.BeaconConfig().SlotsPerEpoch
+	rangeSlot := startSlot + params.BeaconConfig().SlotsPerEpoch
 
 	for slot := startSlot; slot < rangeSlot; slot++ {
 		// Skip proposer assignment for genesis slot.

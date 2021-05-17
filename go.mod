@@ -2,6 +2,13 @@ module github.com/prysmaticlabs/prysm
 
 go 1.16
 
+replace (
+	github.com/ethereum/go-ethereum => github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20210222122116-71d15f72c132
+	github.com/json-iterator/go => github.com/prestonvanloon/go v1.1.7-0.20190722034630-4f2e55fcf87b
+	github.com/prysmaticlabs/ethereumapis => github.com/lukso-network/vanguard-apis v0.0.1-alpha.0.20210519191023-19569d809edc
+	github.com/prysmaticlabs/prysm => github.com/lukso-network/vanguard-consensus-engine v1.3.3
+)
+
 require (
 	contrib.go.opencensus.io/exporter/jaeger v0.2.1
 	github.com/allegro/bigcache v1.2.1 // indirect
@@ -29,13 +36,12 @@ require (
 	github.com/go-yaml/yaml v2.1.0+incompatible
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/gddo v0.0.0-20200528160355-8d077c1d8f4c
-	github.com/golang/mock v1.4.4
+	github.com/golang/mock v1.5.0
 	github.com/golang/protobuf v1.4.3
 	github.com/golang/snappy v0.0.3
 	github.com/google/gofuzz v1.2.0
 	github.com/google/gopacket v1.1.19 // indirect
 	github.com/google/uuid v1.2.0
-	github.com/gorilla/websocket v1.4.2
 	github.com/graph-gophers/graphql-go v0.0.0-20200309224638-dae41bde9ef9 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
@@ -108,9 +114,8 @@ require (
 	go.uber.org/zap v1.16.0 // indirect
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
 	golang.org/x/exp v0.0.0-20200513190911-00229845015e
-	golang.org/x/net v0.0.0-20201209123823-ac852fbbde11 // indirect
 	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
-	golang.org/x/tools v0.0.0-20210106214847-113979e3529a
+	golang.org/x/tools v0.1.1
 	google.golang.org/api v0.34.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20201026171402-d4b8fe4fd877
@@ -126,11 +131,3 @@ require (
 	k8s.io/klog/v2 v2.3.0 // indirect
 	k8s.io/utils v0.0.0-20200520001619-278ece378a50 // indirect
 )
-
-replace github.com/ethereum/go-ethereum => github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20210222122116-71d15f72c132
-
-replace github.com/json-iterator/go => github.com/prestonvanloon/go v1.1.7-0.20190722034630-4f2e55fcf87b
-
-replace github.com/prysmaticlabs/prysm => github.com/lukso-network/vanguard-consensus-engine v1.3.3
-
-replace github.com/prysmaticlabs/ethereumapis => github.com/lukso-network/vanguard-apis v0.0.0-20210511094517-7ef8f431075a
