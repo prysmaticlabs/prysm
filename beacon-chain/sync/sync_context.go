@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 )
 
+// writes peer's current context for the expected payload to the stream.
 func writeContextToStream(stream network.Stream, chain blockchain.ChainInfoFetcher) error {
 	rpcCtx, err := rpcContext(stream, chain)
 	if err != nil {
@@ -21,6 +22,7 @@ func writeContextToStream(stream network.Stream, chain blockchain.ChainInfoFetch
 	return err
 }
 
+// reads any attached context-bytes to the payload.
 func readContextFromStream(stream network.Stream, chain blockchain.ChainInfoFetcher) ([]byte, error) {
 	rpcCtx, err := rpcContext(stream, chain)
 	if err != nil {
@@ -37,6 +39,7 @@ func readContextFromStream(stream network.Stream, chain blockchain.ChainInfoFetc
 	return b, nil
 }
 
+// retrieve expected context depending on rpc topic schema version.
 func rpcContext(stream network.Stream, chain blockchain.ChainInfoFetcher) ([]byte, error) {
 	_, _, version, err := p2p.TopicDeconstructor(string(stream.Protocol()))
 	if err != nil {

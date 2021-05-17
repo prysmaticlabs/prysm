@@ -13,14 +13,14 @@ import (
 
 // chunkWriter writes the given message as a chunked response to the given network
 // stream.
-// response_chunk ::= | <result> | <encoding-dependent-header> | <encoded-payload>
+// response_chunk  ::= <result> | <context-bytes> | <encoding-dependent-header> | <encoded-payload>
 func (s *Service) chunkWriter(stream libp2pcore.Stream, msg interface{}) error {
 	SetStreamWriteDeadline(stream, defaultWriteDuration)
 	return WriteChunk(stream, s.cfg.Chain, s.cfg.P2P.Encoding(), msg)
 }
 
 // WriteChunk object to stream.
-// response_chunk ::= | <result> | <encoding-dependent-header> | <encoded-payload>
+// response_chunk  ::= <result> | <context-bytes> | <encoding-dependent-header> | <encoded-payload>
 func WriteChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, encoding encoder.NetworkEncoding, msg interface{}) error {
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
