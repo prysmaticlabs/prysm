@@ -102,9 +102,6 @@ func (s *SyncCommitteeCache) idxPositionInCommittee(root [32]byte, pubKey [48]by
 // current epoch and next epoch. This should be called when `current_sync_committee` and `next_sync_committee`
 // change and that happens every `EPOCHS_PER_SYNC_COMMITTEE_PERIOD`.
 func (s *SyncCommitteeCache) UpdatePositionsInCommittee(state iface.BeaconStateAltair) error {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
 	csc, err := state.CurrentSyncCommittee()
 	if err != nil {
 		return err
@@ -138,6 +135,9 @@ func (s *SyncCommitteeCache) UpdatePositionsInCommittee(state iface.BeaconStateA
 	if err != nil {
 		return err
 	}
+
+	s.lock.Lock()
+	defer s.lock.Unlock()
 
 	if err := s.cache.Add(&syncCommitteeIndexPosition{
 		currentSyncCommitteeRoot: r,
