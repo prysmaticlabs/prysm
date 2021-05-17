@@ -178,7 +178,6 @@ func AssignedToSyncCommittee(
 		return false, err
 	}
 	return hasKey(c, vPubKey)
-
 }
 
 // SubnetsForSyncCommittee returns subnet number of what validator `i` belongs to.
