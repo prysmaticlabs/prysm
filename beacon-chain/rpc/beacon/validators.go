@@ -2,12 +2,10 @@ package beacon
 
 import (
 	"context"
-	"errors"
 	"sort"
 	"strconv"
 	"time"
 
-	ptypes "github.com/gogo/protobuf/types"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
@@ -21,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // BalancesTimeout for gRPC requests to ListValidatorBalances.
@@ -552,7 +551,7 @@ func (bs *Server) GetValidatorParticipation(
 
 // GetValidatorQueue retrieves the current validator queue information.
 func (bs *Server) GetValidatorQueue(
-	ctx context.Context, _ *ptypes.Empty,
+	ctx context.Context, _ *emptypb.Empty,
 ) (*ethpb.ValidatorQueue, error) {
 	headState, err := bs.HeadFetcher.HeadState(ctx)
 	if err != nil {
@@ -870,10 +869,20 @@ func (bs *Server) isSlotCanonical(ctx context.Context, slot types.Slot) (bool, e
 	if !hasBlockRoots {
 		return false, nil
 	}
-	if len(roots) != 1 {
-		return false, errors.New("more than one block existed in slot")
+
+	// Loop through all roots in slot, and
+	// check which one is canonical.
+	for _, rt := range roots {
+		canonical, err := bs.CanonicalFetcher.IsCanonical(ctx, rt)
+		if err != nil {
+			return false, err
+		}
+		if canonical {
+			return true, nil
+		}
+
 	}
-	return bs.CanonicalFetcher.IsCanonical(ctx, roots[0])
+	return false, nil
 }
 
 // Determines whether a validator has already exited.

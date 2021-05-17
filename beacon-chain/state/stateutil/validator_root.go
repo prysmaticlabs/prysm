@@ -1,7 +1,6 @@
 package stateutil
 
 import (
-	"bytes"
 	"encoding/binary"
 	"fmt"
 
@@ -84,13 +83,10 @@ func Uint64ListRootWithRegistryLimit(balances []uint64) ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute balances merkleization")
 	}
-	balancesRootsBuf := new(bytes.Buffer)
-	if err := binary.Write(balancesRootsBuf, binary.LittleEndian, uint64(len(balances))); err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not marshal balances length")
-	}
-	balancesRootsBufRoot := make([]byte, 32)
-	copy(balancesRootsBufRoot, balancesRootsBuf.Bytes())
-	return htrutils.MixInLength(balancesRootsRoot, balancesRootsBufRoot), nil
+
+	balancesLengthRoot := make([]byte, 32)
+	binary.LittleEndian.PutUint64(balancesLengthRoot, uint64(len(balances)))
+	return htrutils.MixInLength(balancesRootsRoot, balancesLengthRoot), nil
 }
 
 // ValidatorEncKey returns the encoded key in bytes of input `validator`,

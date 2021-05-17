@@ -11,7 +11,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/gogo/protobuf/proto"
 	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
@@ -34,6 +33,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+	"google.golang.org/protobuf/proto"
 )
 
 var _ shared.Service = (*Service)(nil)

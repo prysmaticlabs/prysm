@@ -76,11 +76,9 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_docker",
-    patch_args = ["-p1"],
-    patches = ["//third_party:rules_docker_bad_checksum.patch"],
-    sha256 = "1286175a94c0b1335efe1d75d22ea06e89742557d3fac2a0366f242a6eac6f5a",
-    strip_prefix = "rules_docker-ba4310833230294fa69b7d6ea1787ac684631a7d",
-    urls = ["https://github.com/bazelbuild/rules_docker/archive/ba4310833230294fa69b7d6ea1787ac684631a7d.tar.gz"],
+    sha256 = "59d5b42ac315e7eadffa944e86e90c2990110a1c8075f1cd145f487e999d22b3",
+    strip_prefix = "rules_docker-0.17.0",
+    urls = ["https://github.com/bazelbuild/rules_docker/releases/download/v0.17.0/rules_docker-v0.17.0.tar.gz"],
 )
 
 http_archive(
@@ -158,7 +156,7 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_depe
 go_rules_dependencies()
 
 go_register_toolchains(
-    go_version = "1.16",
+    go_version = "1.16.4",
     nogo = "@//:nogo",
 )
 
@@ -288,9 +286,9 @@ buildifier_dependencies()
 
 git_repository(
     name = "com_google_protobuf",
-    commit = "fde7cf7358ec7cd69e8db9be4f1fa6a5c431386a",  # v3.13.0
+    commit = "436bd7880e458532901c58f4d9d1ea23fa7edd52",
     remote = "https://github.com/protocolbuffers/protobuf",
-    shallow_since = "1597443653 -0700",
+    shallow_since = "1617835118 -0700",
 )
 
 load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")

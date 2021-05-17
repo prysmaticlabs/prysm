@@ -9,8 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
-	ptypes "github.com/gogo/protobuf/types"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -31,6 +29,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 const (
@@ -680,7 +680,7 @@ func TestServer_ListValidators_NoPagination(t *testing.T) {
 
 	received, err := bs.ListValidators(context.Background(), &ethpb.ListValidatorsRequest{})
 	require.NoError(t, err)
-	assert.DeepEqual(t, want, received.ValidatorList, "Incorrect respond of validators")
+	assert.DeepSSZEqual(t, want, received.ValidatorList, "Incorrect respond of validators")
 }
 
 func TestServer_ListValidators_StategenNotUsed(t *testing.T) {
@@ -1304,7 +1304,7 @@ func TestServer_GetValidatorQueue_PendingActivation(t *testing.T) {
 			State: headState,
 		},
 	}
-	res, err := bs.GetValidatorQueue(context.Background(), &ptypes.Empty{})
+	res, err := bs.GetValidatorQueue(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	// We verify the keys are properly sorted by the validators' activation eligibility epoch.
 	wanted := [][]byte{
@@ -1349,7 +1349,7 @@ func TestServer_GetValidatorQueue_ExitedValidatorLeavesQueue(t *testing.T) {
 	}
 
 	// First we check if validator with index 1 is in the exit queue.
-	res, err := bs.GetValidatorQueue(context.Background(), &ptypes.Empty{})
+	res, err := bs.GetValidatorQueue(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	wanted := [][]byte{
 		bytesutil.PadTo([]byte("2"), 48),
@@ -1366,7 +1366,7 @@ func TestServer_GetValidatorQueue_ExitedValidatorLeavesQueue(t *testing.T) {
 	// Now, we move the state.slot past the exit epoch of the validator, and now
 	// the validator should no longer exist in the queue.
 	require.NoError(t, headState.SetSlot(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(validators[1].ExitEpoch+1))))
-	res, err = bs.GetValidatorQueue(context.Background(), &ptypes.Empty{})
+	res, err = bs.GetValidatorQueue(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(res.ExitPublicKeys))
 }
@@ -1406,7 +1406,7 @@ func TestServer_GetValidatorQueue_PendingExit(t *testing.T) {
 			State: headState,
 		},
 	}
-	res, err := bs.GetValidatorQueue(context.Background(), &ptypes.Empty{})
+	res, err := bs.GetValidatorQueue(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	// We verify the keys are properly sorted by the validators' withdrawable epoch.
 	wanted := [][]byte{
@@ -2181,6 +2181,47 @@ func TestServer_isSlotCanonical(t *testing.T) {
 		require.NoError(t, err)
 		if i%2 == 0 {
 			cRoots[br] = true
+		}
+		roots = append(roots, br)
+	}
+
+	bs := &Server{
+		BeaconDB: beaconDB,
+		CanonicalFetcher: &mock.ChainService{
+			CanonicalRoots: cRoots,
+		},
+	}
+
+	for i := range roots {
+		slot := types.Slot(i + 1)
+		c, err := bs.isSlotCanonical(ctx, slot)
+		require.NoError(t, err)
+		if slot%2 == 0 {
+			require.Equal(t, true, c)
+		} else {
+			require.Equal(t, false, c)
+		}
+	}
+}
+
+func TestServer_isSlotCanonical_MultipleBlocks(t *testing.T) {
+	beaconDB := dbTest.SetupDB(t)
+	ctx := context.Background()
+	var roots [][32]byte
+	cRoots := map[[32]byte]bool{}
+	for i := 1; i < 100; i++ {
+		b := testutil.NewBeaconBlock()
+		b.Block.Slot = types.Slot(i)
+		require.NoError(t, beaconDB.SaveBlock(ctx, b))
+		br, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		if i%2 == 0 {
+			cRoots[br] = true
+			// Save a block in the same slot
+			b = testutil.NewBeaconBlock()
+			b.Block.Slot = types.Slot(i)
+			b.Block.ProposerIndex = 100
+			require.NoError(t, beaconDB.SaveBlock(ctx, b))
 		}
 		roots = append(roots, br)
 	}

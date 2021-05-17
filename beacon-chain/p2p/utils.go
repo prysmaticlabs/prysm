@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/protobuf/proto"
 )
 
 const keyPath = "network-keys"
@@ -31,6 +32,9 @@ const dialTimeout = 1 * time.Second
 
 // SerializeENR takes the enr record in its key-value form and serializes it.
 func SerializeENR(record *enr.Record) (string, error) {
+	if record == nil {
+		return "", errors.New("could not serialize nil record")
+	}
 	buf := bytes.NewBuffer([]byte{})
 	if err := record.EncodeRLP(buf); err != nil {
 		return "", errors.Wrap(err, "could not encode ENR record to bytes")
@@ -116,7 +120,7 @@ func metaDataFromConfig(cfg *Config) (*pbp2p.MetaData, error) {
 			SeqNumber: 0,
 			Attnets:   bitfield.NewBitvector64(),
 		}
-		dst, err := metaData.Marshal()
+		dst, err := proto.Marshal(metaData)
 		if err != nil {
 			return nil, err
 		}
@@ -134,7 +138,7 @@ func metaDataFromConfig(cfg *Config) (*pbp2p.MetaData, error) {
 		return nil, err
 	}
 	metaData := &pbp2p.MetaData{}
-	if err := metaData.Unmarshal(src); err != nil {
+	if err := proto.Unmarshal(src, metaData); err != nil {
 		return nil, err
 	}
 	return metaData, nil
