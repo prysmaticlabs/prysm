@@ -6,7 +6,6 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
@@ -17,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"go.opencensus.io/trace"
+	"google.golang.org/protobuf/proto"
 )
 
 // InitializeFromProto the beacon state from a protobuf representation.

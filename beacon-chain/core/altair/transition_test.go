@@ -26,10 +26,10 @@ func TestProcessEpoch_CanProcess(t *testing.T) {
 		FinalizedCheckpoint:        &ethpb.Checkpoint{Root: make([]byte, 32)},
 		JustificationBits:          bitfield.Bitvector4{0x00},
 		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
-		Validators:                 []*ethpb.Validator{},
 	}
 	s, err := stateAltair.InitializeFromProto(base)
 	require.NoError(t, err)
+	require.NoError(t, s.SetValidators([]*ethpb.Validator{}))
 	newState, err := altair.ProcessEpoch(context.Background(), s)
 	require.NoError(t, err)
 	require.Equal(t, uint64(0), newState.Slashings()[2], "Unexpected slashed balance")
