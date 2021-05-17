@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	ptypes "github.com/gogo/protobuf/types"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -23,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestGetGenesis(t *testing.T) {
@@ -43,7 +43,7 @@ func TestGetGenesis(t *testing.T) {
 			GenesisTimeFetcher: chainService,
 			ChainInfoFetcher:   chainService,
 		}
-		resp, err := s.GetGenesis(ctx, &ptypes.Empty{})
+		resp, err := s.GetGenesis(ctx, &emptypb.Empty{})
 		require.NoError(t, err)
 		assert.Equal(t, genesis.Unix(), resp.Data.GenesisTime.Seconds)
 		assert.Equal(t, int32(0), resp.Data.GenesisTime.Nanos)
@@ -60,7 +60,7 @@ func TestGetGenesis(t *testing.T) {
 			GenesisTimeFetcher: chainService,
 			ChainInfoFetcher:   chainService,
 		}
-		_, err := s.GetGenesis(ctx, &ptypes.Empty{})
+		_, err := s.GetGenesis(ctx, &emptypb.Empty{})
 		assert.ErrorContains(t, "Chain genesis info is not yet known", err)
 	})
 
@@ -73,7 +73,7 @@ func TestGetGenesis(t *testing.T) {
 			GenesisTimeFetcher: chainService,
 			ChainInfoFetcher:   chainService,
 		}
-		_, err := s.GetGenesis(ctx, &ptypes.Empty{})
+		_, err := s.GetGenesis(ctx, &emptypb.Empty{})
 		assert.ErrorContains(t, "Chain genesis info is not yet known", err)
 	})
 }

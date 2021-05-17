@@ -200,7 +200,7 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 	}{
 		{
 			name: "slot",
-			slot: 30,
+			slot: types.Slot(30),
 			want: []*ethpb_alpha.SignedBeaconBlock{
 				blkContainers[30].Block,
 				b2,
@@ -221,7 +221,7 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			headers, err := bs.ListBlockHeaders(ctx, &ethpb.BlockHeadersRequest{
-				Slot:       tt.slot,
+				Slot:       &tt.slot,
 				ParentRoot: tt.parentRoot,
 			})
 			require.NoError(t, err)

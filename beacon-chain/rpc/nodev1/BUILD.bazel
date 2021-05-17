@@ -17,7 +17,6 @@ go_library(
         "//beacon-chain/p2p/peers/peerdata:go_default_library",
         "//beacon-chain/sync:go_default_library",
         "//shared/version:go_default_library",
-        "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_libp2p_go_libp2p_core//peer:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1:go_default_library",
@@ -25,6 +24,7 @@ go_library(
         "@org_golang_google_grpc//:go_default_library",
         "@org_golang_google_grpc//codes:go_default_library",
         "@org_golang_google_grpc//status:go_default_library",
+        "@org_golang_google_protobuf//types/known/emptypb:go_default_library",
     ],
 )
 
@@ -48,7 +48,6 @@ go_test(
         "//shared/version:go_default_library",
         "@com_github_ethereum_go_ethereum//p2p/enode:go_default_library",
         "@com_github_ethereum_go_ethereum//p2p/enr:go_default_library",
-        "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_libp2p_go_libp2p_core//network:go_default_library",
         "@com_github_libp2p_go_libp2p_core//peer:go_default_library",
         "@com_github_libp2p_go_libp2p_peerstore//test:go_default_library",
@@ -56,5 +55,6 @@ go_test(
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+        "@org_golang_google_protobuf//types/known/emptypb:go_default_library",
     ],
 )

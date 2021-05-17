@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	ptypes "github.com/gogo/protobuf/types"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -21,6 +20,7 @@ import (
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // GetAttestationData requests that the beacon node produce an attestation data object,
@@ -195,7 +195,7 @@ func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation
 }
 
 // SubscribeCommitteeSubnets subscribes to the committee ID subnet given subscribe request.
-func (vs *Server) SubscribeCommitteeSubnets(ctx context.Context, req *ethpb.CommitteeSubnetsSubscribeRequest) (*ptypes.Empty, error) {
+func (vs *Server) SubscribeCommitteeSubnets(ctx context.Context, req *ethpb.CommitteeSubnetsSubscribeRequest) (*emptypb.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "AttesterServer.SubscribeCommitteeSubnets")
 	defer span.End()
 
@@ -239,5 +239,5 @@ func (vs *Server) SubscribeCommitteeSubnets(ctx context.Context, req *ethpb.Comm
 		}
 	}
 
-	return &ptypes.Empty{}, nil
+	return &emptypb.Empty{}, nil
 }
