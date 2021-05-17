@@ -4,6 +4,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "context.go",
         "deadlines.go",
         "decode_pubsub.go",
         "doc.go",
@@ -106,6 +107,7 @@ go_test(
     name = "go_default_test",
     size = "small",
     srcs = [
+        "context_test.go",
         "decode_pubsub_test.go",
         "error_test.go",
         "pending_attestations_queue_test.go",
