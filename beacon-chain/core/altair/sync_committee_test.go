@@ -1,15 +1,18 @@
-package altair
+package altair_test
 
 import (
+	"bytes"
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	testAltair "github.com/prysmaticlabs/prysm/shared/testutil/altair"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -198,5 +201,108 @@ func TestSyncCommittee_CanGet(t *testing.T) {
 				require.Equal(t, params.BeaconConfig().BLSPubkeyLength, len(got.AggregatePubkey))
 			}
 		})
+	}
+}
+
+func TestAssignedToSyncCommittee(t *testing.T) {
+	s, _ := testAltair.DeterministicGenesisStateAltair(t, 5*params.BeaconConfig().SyncCommitteeSize)
+	syncCommittee, err := altair.SyncCommittee(s, helpers.CurrentEpoch(s))
+	require.NoError(t, err)
+	require.NoError(t, s.SetCurrentSyncCommittee(syncCommittee))
+	syncCommittee, err = altair.SyncCommittee(s, helpers.CurrentEpoch(s)+2*params.BeaconConfig().EpochsPerSyncCommitteePeriod)
+	require.NoError(t, err)
+	require.NoError(t, s.SetNextSyncCommittee(syncCommittee))
+
+	csc, err := s.CurrentSyncCommittee()
+	require.NoError(t, err)
+	nsc, err := s.NextSyncCommittee()
+	require.NoError(t, err)
+
+	currentSyncCommitteeIndex := 0
+	vals := s.Validators()
+	for i, val := range vals {
+		if bytes.Equal(val.PublicKey, csc.Pubkeys[0]) {
+			currentSyncCommitteeIndex = i
+		}
+	}
+	nextSyncCommitteeIndex := 0
+	for i, val := range vals {
+		if bytes.Equal(val.PublicKey, nsc.Pubkeys[0]) {
+			nextSyncCommitteeIndex = i
+		}
+	}
+
+	tests := []struct {
+		name   string
+		epoch  types.Epoch
+		check  types.ValidatorIndex
+		exists bool
+	}{
+		{
+			name:   "does not exist while asking current sync committee",
+			epoch:  0,
+			check:  0,
+			exists: false,
+		},
+		{
+			name:   "exists in current sync committee",
+			epoch:  0,
+			check:  types.ValidatorIndex(currentSyncCommitteeIndex),
+			exists: true,
+		},
+		{
+			name:   "exists in next sync committee",
+			epoch:  256,
+			check:  types.ValidatorIndex(nextSyncCommitteeIndex),
+			exists: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			exists, err := altair.AssignedToSyncCommittee(s, tt.epoch, tt.check)
+			require.NoError(t, err)
+			require.Equal(t, tt.exists, exists)
+		})
+	}
+}
+
+func TestAssignedToSyncCommittee_IncorrectEpoch(t *testing.T) {
+	s, _ := testAltair.DeterministicGenesisStateAltair(t, 64)
+	_, err := altair.AssignedToSyncCommittee(s, params.BeaconConfig().EpochsPerSyncCommitteePeriod*2, 0)
+	require.ErrorContains(t, "epoch period 2 is not current period 0 or next period 1 in state", err)
+}
+
+func TestSubnetsForSyncCommittee(t *testing.T) {
+	s, _ := testAltair.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
+	syncCommittee, err := altair.SyncCommittee(s, helpers.CurrentEpoch(s))
+	require.NoError(t, err)
+	require.NoError(t, s.SetCurrentSyncCommittee(syncCommittee))
+	syncCommittee, err = altair.SyncCommittee(s, helpers.CurrentEpoch(s)+2*params.BeaconConfig().EpochsPerSyncCommitteePeriod)
+	require.NoError(t, err)
+	require.NoError(t, s.SetNextSyncCommittee(syncCommittee))
+
+	positions, err := altair.SubnetsForSyncCommittee(s, 0)
+	require.NoError(t, err)
+	require.DeepEqual(t, []uint64{4}, positions)
+	positions, err = altair.SubnetsForSyncCommittee(s, 1)
+	require.NoError(t, err)
+	require.DeepEqual(t, []uint64{2}, positions)
+	positions, err = altair.SubnetsForSyncCommittee(s, 2)
+	require.NoError(t, err)
+	require.DeepEqual(t, []uint64{7}, positions)
+}
+
+func TestSyncCommitteePeriod(t *testing.T) {
+	tests := []struct {
+		epoch  types.Epoch
+		wanted uint64
+	}{
+		{epoch: 0, wanted: 0},
+		{epoch: 0, wanted: 0 / uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod)},
+		{epoch: 1, wanted: 1 / uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod)},
+		{epoch: 1000, wanted: 1000 / uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod)},
+	}
+	for _, test := range tests {
+		require.Equal(t, test.wanted, altair.SyncCommitteePeriod(test.epoch))
 	}
 }

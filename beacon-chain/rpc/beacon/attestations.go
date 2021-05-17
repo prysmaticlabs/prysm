@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
@@ -21,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // sortableAttestations implements the Sort interface to sort attestations
@@ -201,7 +201,7 @@ func (bs *Server) ListIndexedAttestations(
 // aggregated attestations currently in the pool at the start of a slot and sends
 // them over a gRPC stream.
 func (bs *Server) StreamAttestations(
-	_ *ptypes.Empty, stream ethpb.BeaconChain_StreamAttestationsServer,
+	_ *emptypb.Empty, stream ethpb.BeaconChain_StreamAttestationsServer,
 ) error {
 	attestationsChannel := make(chan *feed.Event, 1)
 	attSub := bs.AttestationNotifier.OperationFeed().Subscribe(attestationsChannel)
@@ -235,7 +235,7 @@ func (bs *Server) StreamAttestations(
 // aggregated attestations currently in the pool, converts them into indexed form, and
 // sends them over a gRPC stream.
 func (bs *Server) StreamIndexedAttestations(
-	_ *ptypes.Empty, stream ethpb.BeaconChain_StreamIndexedAttestationsServer,
+	_ *emptypb.Empty, stream ethpb.BeaconChain_StreamIndexedAttestationsServer,
 ) error {
 	attestationsChannel := make(chan *feed.Event, 1)
 	attSub := bs.AttestationNotifier.OperationFeed().Subscribe(attestationsChannel)

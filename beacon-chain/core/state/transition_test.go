@@ -454,14 +454,15 @@ func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
 		FinalizedCheckpoint:        &ethpb.Checkpoint{Root: make([]byte, 32)},
 		JustificationBits:          bitfield.Bitvector4{0x00},
 		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
-		Validators:                 []*ethpb.Validator{},
 	}
 	s, err := stateV0.InitializeFromProto(base)
 	require.NoError(t, err)
+	require.NoError(t, s.SetValidators([]*ethpb.Validator{}))
 	newState, err := state.ProcessEpochPrecompute(context.Background(), s)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(0), newState.Slashings()[2], "Unexpected slashed balance")
 }
+
 func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	logrus.SetLevel(logrus.PanicLevel)
 

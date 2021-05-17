@@ -6,7 +6,6 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -20,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"go.opencensus.io/trace"
+	"google.golang.org/protobuf/proto"
 )
 
 var (
