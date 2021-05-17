@@ -14,12 +14,12 @@ import (
 // response_chunk ::= | <result> | <encoding-dependent-header> | <encoded-payload>
 func (s *Service) chunkWriter(stream libp2pcore.Stream, msg interface{}) error {
 	SetStreamWriteDeadline(stream, defaultWriteDuration)
-	return WriteChunk(stream, s.cfg.P2P.Encoding(), msg)
+	return s.WriteChunk(stream, s.cfg.P2P.Encoding(), msg)
 }
 
 // WriteChunk object to stream.
 // response_chunk ::= | <result> | <encoding-dependent-header> | <encoded-payload>
-func WriteChunk(stream libp2pcore.Stream, encoding encoder.NetworkEncoding, msg interface{}) error {
+func (s *Service) WriteChunk(stream libp2pcore.Stream, encoding encoder.NetworkEncoding, msg interface{}) error {
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
 	}
