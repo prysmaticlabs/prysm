@@ -3,9 +3,8 @@ package sync
 import (
 	"errors"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-
 	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 )
 

@@ -37,10 +37,10 @@ func WriteChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, enc
 func ReadChunkedBlock(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, p2p p2p.P2P, isFirstChunk bool) (*eth.SignedBeaconBlock, error) {
 	// Handle deadlines differently for first chunk
 	if isFirstChunk {
-		return readFirstChunkedBlock(stream, p2p)
+		return readFirstChunkedBlock(stream, chain, p2p)
 	}
 	blk := &eth.SignedBeaconBlock{}
-	if err := readResponseChunk(stream, p2p, blk); err != nil {
+	if err := readResponseChunk(stream, chain, p2p, blk); err != nil {
 		return nil, err
 	}
 	return blk, nil
@@ -48,7 +48,7 @@ func ReadChunkedBlock(stream libp2pcore.Stream, chain blockchain.ChainInfoFetche
 
 // readFirstChunkedBlock reads the first chunked block and applies the appropriate deadlines to
 // it.
-func readFirstChunkedBlock(stream libp2pcore.Stream, p2p p2p.P2P) (*eth.SignedBeaconBlock, error) {
+func readFirstChunkedBlock(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, p2p p2p.P2P) (*eth.SignedBeaconBlock, error) {
 	blk := &eth.SignedBeaconBlock{}
 	code, errMsg, err := ReadStatusCode(stream, p2p.Encoding())
 	if err != nil {
@@ -57,13 +57,18 @@ func readFirstChunkedBlock(stream libp2pcore.Stream, p2p p2p.P2P) (*eth.SignedBe
 	if code != 0 {
 		return nil, errors.New(errMsg)
 	}
+	// No-op for now with the rpc context.
+	_, err = readContextFromStream(stream, chain)
+	if err != nil {
+		return nil, err
+	}
 	err = p2p.Encoding().DecodeWithMaxLength(stream, blk)
 	return blk, err
 }
 
 // readResponseChunk reads the response from the stream and decodes it into the
 // provided message type.
-func readResponseChunk(stream libp2pcore.Stream, p2p p2p.P2P, to interface{}) error {
+func readResponseChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, p2p p2p.P2P, to interface{}) error {
 	SetStreamReadDeadline(stream, respTimeout)
 	code, errMsg, err := readStatusCodeNoDeadline(stream, p2p.Encoding())
 	if err != nil {
@@ -71,6 +76,11 @@ func readResponseChunk(stream libp2pcore.Stream, p2p p2p.P2P, to interface{}) er
 	}
 	if code != 0 {
 		return errors.New(errMsg)
+	}
+	// No-op for now with the rpc context.
+	_, err = readContextFromStream(stream, chain)
+	if err != nil {
+		return err
 	}
 	return p2p.Encoding().DecodeWithMaxLength(stream, to)
 }
