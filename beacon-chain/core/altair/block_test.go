@@ -21,7 +21,7 @@ import (
 func TestProcessSyncCommittee_OK(t *testing.T) {
 	beaconState, privKeys := altairTest.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	require.NoError(t, beaconState.SetSlot(1))
-	committee, err := altair.SyncCommittee(beaconState, helpers.CurrentEpoch(beaconState))
+	committee, err := altair.NextSyncCommittee(beaconState)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetCurrentSyncCommittee(committee))
 
@@ -29,7 +29,7 @@ func TestProcessSyncCommittee_OK(t *testing.T) {
 	for i := range syncBits {
 		syncBits[i] = 0xff
 	}
-	indices, err := altair.SyncCommitteeIndices(beaconState, helpers.CurrentEpoch(beaconState))
+	indices, err := altair.NextSyncCommitteeIndices(beaconState)
 	require.NoError(t, err)
 	ps := helpers.PrevSlot(beaconState.Slot())
 	pbr, err := helpers.BlockRootAtSlot(beaconState, ps)

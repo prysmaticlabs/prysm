@@ -79,7 +79,6 @@ func TestGetSpec(t *testing.T) {
 	config.TargetAggregatorsPerSyncSubcommittee = 61
 	config.SyncCommitteeSubnetCount = 62
 	config.SyncCommitteeSize = 63
-	config.SyncPubkeysPerAggregate = 64
 	config.InactivityScoreBias = 65
 	config.EpochsPerSyncCommitteePeriod = 66
 	config.InactivityPenaltyQuotientAltair = 67

@@ -76,7 +76,7 @@ func TestSyncCommitteeIndices_CanGet(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			helpers.ClearCache()
-			got, err := SyncCommitteeIndices(tt.args.state, tt.args.epoch)
+			got, err := NextSyncCommitteeIndices(tt.args.state)
 			if tt.wantErr {
 				require.ErrorContains(t, tt.errString, err)
 			} else {
@@ -105,15 +105,19 @@ func TestSyncCommitteeIndices_DifferentPeriods(t *testing.T) {
 		return state
 	}
 
-	got1, err := SyncCommitteeIndices(getState(t, params.BeaconConfig().MaxValidatorsPerCommittee), 0)
+	state := getState(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	got1, err := NextSyncCommitteeIndices(state)
 	require.NoError(t, err)
-	got2, err := SyncCommitteeIndices(getState(t, params.BeaconConfig().MaxValidatorsPerCommittee), 1)
+	require.NoError(t, state.SetSlot(params.BeaconConfig().SlotsPerEpoch))
+	got2, err := NextSyncCommitteeIndices(state)
 	require.NoError(t, err)
 	require.DeepEqual(t, got1, got2)
-	got2, err = SyncCommitteeIndices(getState(t, params.BeaconConfig().MaxValidatorsPerCommittee), params.BeaconConfig().EpochsPerSyncCommitteePeriod)
+	require.NoError(t, state.SetSlot(params.BeaconConfig().SlotsPerEpoch*types.Slot(params.BeaconConfig().EpochsPerSyncCommitteePeriod)))
+	got2, err = NextSyncCommitteeIndices(state)
 	require.NoError(t, err)
 	require.DeepEqual(t, got1, got2)
-	got2, err = SyncCommitteeIndices(getState(t, params.BeaconConfig().MaxValidatorsPerCommittee), 2*params.BeaconConfig().EpochsPerSyncCommitteePeriod)
+	require.NoError(t, state.SetSlot(params.BeaconConfig().SlotsPerEpoch*types.Slot(2*params.BeaconConfig().EpochsPerSyncCommitteePeriod)))
+	got2, err = NextSyncCommitteeIndices(state)
 	require.NoError(t, err)
 	require.DeepNotEqual(t, got1, got2)
 }
@@ -184,13 +188,14 @@ func TestSyncCommittee_CanGet(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			helpers.ClearCache()
-			got, err := SyncCommittee(tt.args.state, tt.args.epoch)
+			require.NoError(t, tt.args.state.SetSlot(types.Slot(tt.args.epoch)*params.BeaconConfig().SlotsPerEpoch))
+			got, err := NextSyncCommittee(tt.args.state)
 			if tt.wantErr {
 				require.ErrorContains(t, tt.errString, err)
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, int(params.BeaconConfig().SyncCommitteeSize), len(got.Pubkeys))
-				require.Equal(t, int(params.BeaconConfig().SyncCommitteeSize/params.BeaconConfig().SyncPubkeysPerAggregate), len(got.PubkeyAggregates))
+				require.Equal(t, params.BeaconConfig().BLSPubkeyLength, len(got.AggregatePubkey))
 			}
 		})
 	}

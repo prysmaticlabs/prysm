@@ -25,7 +25,7 @@ import (
 func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
 	beaconState, privKeys := testutilAltair.DeterministicGenesisStateAltair(t, 100)
 
-	syncCommittee, err := altair.SyncCommittee(beaconState, helpers.CurrentEpoch(beaconState))
+	syncCommittee, err := altair.NextSyncCommittee(beaconState)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetCurrentSyncCommittee(syncCommittee))
 
@@ -66,7 +66,7 @@ func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
 	for i := range syncBits {
 		syncBits[i] = 0xff
 	}
-	indices, err := altair.SyncCommitteeIndices(beaconState, helpers.CurrentEpoch(beaconState))
+	indices, err := altair.NextSyncCommitteeIndices(beaconState)
 	require.NoError(t, err)
 	h := stateV0.CopyBeaconBlockHeader(beaconState.LatestBlockHeader())
 	prevStateRoot, err := beaconState.HashTreeRoot(context.Background())
@@ -109,7 +109,7 @@ func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
 func TestExecuteStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t *testing.T) {
 	beaconState, privKeys := testutilAltair.DeterministicGenesisStateAltair(t, 100)
 
-	syncCommittee, err := altair.SyncCommittee(beaconState, helpers.CurrentEpoch(beaconState))
+	syncCommittee, err := altair.NextSyncCommittee(beaconState)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetCurrentSyncCommittee(syncCommittee))
 
@@ -150,7 +150,7 @@ func TestExecuteStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t *test
 	for i := range syncBits {
 		syncBits[i] = 0xff
 	}
-	indices, err := altair.SyncCommitteeIndices(beaconState, helpers.CurrentEpoch(beaconState))
+	indices, err := altair.NextSyncCommitteeIndices(beaconState)
 	require.NoError(t, err)
 	h := stateV0.CopyBeaconBlockHeader(beaconState.LatestBlockHeader())
 	prevStateRoot, err := beaconState.HashTreeRoot(context.Background())
@@ -351,7 +351,7 @@ func createFullBlockWithOperations(t *testing.T) (iface.BeaconStateAltair,
 	for i := range syncBits {
 		syncBits[i] = 0xff
 	}
-	indices, err := altair.SyncCommitteeIndices(beaconState, helpers.CurrentEpoch(beaconState))
+	indices, err := altair.NextSyncCommitteeIndices(beaconState)
 	require.NoError(t, err)
 	pbr, err := helpers.BlockRootAtSlot(beaconState, 1)
 	require.NoError(t, err)
@@ -390,7 +390,7 @@ func createFullBlockWithOperations(t *testing.T) (iface.BeaconStateAltair,
 	require.NoError(t, err)
 	block.Signature = sig.Marshal()
 
-	syncCommittee, err := altair.SyncCommittee(beaconState, helpers.CurrentEpoch(beaconState))
+	syncCommittee, err := altair.NextSyncCommittee(beaconState)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetCurrentSyncCommittee(syncCommittee))
 

@@ -168,7 +168,7 @@ message DepositMessage {
 // SyncCommittee serves as committees to facilitate light client syncing to beacon chain.
 message SyncCommittee {
   repeated bytes pubkeys = 1  [(gogoproto.moretags) = "ssz-size:\"1024,48\""];
-  repeated bytes pubkey_aggregates = 2  [(gogoproto.moretags) = "ssz-size:\"16,48\""];
+  bytes aggregate_pubkey = 2 [(gogoproto.moretags) = "ssz-size:\"48\""];
 }
 
 // SyncCommitteeSigningData to be used for hash tree root then sign by sync committee participants.

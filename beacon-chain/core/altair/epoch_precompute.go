@@ -68,6 +68,10 @@ func ProcessInactivityScores(
 	state iface.BeaconState,
 	vals []*precompute.Validator,
 ) (iface.BeaconState, []*precompute.Validator, error) {
+	if helpers.CurrentEpoch(state) == params.BeaconConfig().GenesisEpoch {
+		return state, vals, nil
+	}
+
 	inactivityScores, err := state.InactivityScores()
 	if err != nil {
 		return nil, nil, err
@@ -77,16 +81,22 @@ func ProcessInactivityScores(
 		if v.IsPrevEpochTargetAttester && !v.IsSlashed {
 			// Decrease inactivity score when validator gets target correct.
 			if v.InactivityScore > 0 {
-				v.InactivityScore -= 1
+				score := uint64(1)
+				if score > v.InactivityScore {
+					score = v.InactivityScore
+				}
+				v.InactivityScore -= score
 			}
 		} else {
-			prevEpoch := helpers.PrevEpoch(state)
-			finalizedEpoch := state.FinalizedCheckpointEpoch()
-			if helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch) {
-				// Increase validator's inactivity score by bias when validator didn't vote target.
-				v.InactivityScore += params.BeaconConfig().InactivityScoreBias
-
+			v.InactivityScore += params.BeaconConfig().InactivityScoreBias
+		}
+		if !helpers.IsInInactivityLeak(helpers.PrevEpoch(state), state.FinalizedCheckpointEpoch()) {
+			score := params.BeaconConfig().InactivityScoreRecoveryRate
+			if score > v.InactivityScore {
+				score = v.InactivityScore
 			}
+			v.InactivityScore -= score
+
 		}
 		inactivityScores[i] = v.InactivityScore
 	}
@@ -209,11 +219,7 @@ func attestationDelta(bal *precompute.Balance, v *precompute.Validator, prevEpoc
 	r, p = uint64(0), uint64(0)
 	// Process source reward / penalty
 	if v.IsPrevEpochAttester && !v.IsSlashed {
-		if helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch) {
-			// Since full base reward will be canceled out by inactivity penalty deltas,
-			// optimal participation receives full base reward compensation here.
-			r += br * params.BeaconConfig().TimelySourceWeight / params.BeaconConfig().WeightDenominator
-		} else {
+		if !helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch) {
 			rewardNumerator := br * params.BeaconConfig().TimelySourceWeight * (bal.PrevEpochAttested / ebi)
 			r += rewardNumerator / (activeCurrentEpochIncrements * params.BeaconConfig().WeightDenominator)
 		}
@@ -223,11 +229,7 @@ func attestationDelta(bal *precompute.Balance, v *precompute.Validator, prevEpoc
 
 	// Process target reward / penalty
 	if v.IsPrevEpochTargetAttester && !v.IsSlashed {
-		if helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch) {
-			// Since full base reward will be canceled out by inactivity penalty deltas,
-			// optimal participation receives full base reward compensation here.
-			r += br * params.BeaconConfig().TimelyTargetWeight / params.BeaconConfig().WeightDenominator
-		} else {
+		if !helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch) {
 			rewardNumerator := br * params.BeaconConfig().TimelyTargetWeight * (bal.PrevEpochTargetAttested / ebi)
 			r += rewardNumerator / (activeCurrentEpochIncrements * params.BeaconConfig().WeightDenominator)
 		}
@@ -237,31 +239,19 @@ func attestationDelta(bal *precompute.Balance, v *precompute.Validator, prevEpoc
 
 	// Process head reward / penalty
 	if v.IsPrevEpochHeadAttester && !v.IsSlashed {
-		if helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch) {
-			// Since full base reward will be canceled out by inactivity penalty deltas,
-			// optimal participation receives full base reward compensation here.
-			r += br * params.BeaconConfig().TimelyHeadWeight / params.BeaconConfig().WeightDenominator
-		} else {
+		if !helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch) {
 			rewardNumerator := br * params.BeaconConfig().TimelyHeadWeight * (bal.PrevEpochHeadAttested / ebi)
 			r += rewardNumerator / (activeCurrentEpochIncrements * params.BeaconConfig().WeightDenominator)
 		}
-	} else {
-		p += br * params.BeaconConfig().TimelyHeadWeight / params.BeaconConfig().WeightDenominator
 	}
 
 	// Process finality delay penalty
-	if helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch) {
-		// If validator is performing optimally, this cancels all rewards for a neutral balance.
-		p += br * params.BeaconConfig().TimelySourceWeight / params.BeaconConfig().WeightDenominator
-		p += br * params.BeaconConfig().TimelyTargetWeight / params.BeaconConfig().WeightDenominator
-		p += br * params.BeaconConfig().TimelyHeadWeight / params.BeaconConfig().WeightDenominator
-
-		// Apply an additional penalty to validators that did not vote on the correct target or slashed.
-		if !v.IsPrevEpochTargetAttester || v.IsSlashed {
-			penaltyNumerator := eb * v.InactivityScore
-			penaltyDenominator := params.BeaconConfig().InactivityScoreBias * params.BeaconConfig().InactivityPenaltyQuotientAltair
-			p += penaltyNumerator / penaltyDenominator
-		}
+	// Apply an additional penalty to validators that did not vote on the correct target or slashed.
+	if !v.IsPrevEpochTargetAttester || v.IsSlashed {
+		penaltyNumerator := eb * v.InactivityScore
+		penaltyDenominator := params.BeaconConfig().InactivityScoreBias * params.BeaconConfig().InactivityPenaltyQuotientAltair
+		p += penaltyNumerator / penaltyDenominator
 	}
+
 	return r, p
 }

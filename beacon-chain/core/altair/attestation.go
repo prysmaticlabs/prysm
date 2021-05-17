@@ -171,12 +171,12 @@ func ProcessAttestationNoVerifySignature(
 	headFlagIndex := params.BeaconConfig().TimelyHeadFlagIndex
 	sourceFlagIndex := params.BeaconConfig().TimelySourceFlagIndex
 	targetFlagIndex := params.BeaconConfig().TimelyTargetFlagIndex
+	if matchingSource && beaconState.Slot() <= data.Slot.Add(mathutil.IntegerSquareRoot(uint64(params.BeaconConfig().SlotsPerEpoch))) {
+		participatedFlags[sourceFlagIndex] = true
+	}
 	matchingHeadTarget := bool(matchingHead) && bool(matchingTarget)
 	if matchingHeadTarget && beaconState.Slot() == data.Slot+params.BeaconConfig().MinAttestationInclusionDelay {
 		participatedFlags[headFlagIndex] = true
-	}
-	if matchingSource && beaconState.Slot() <= data.Slot.Add(mathutil.IntegerSquareRoot(uint64(params.BeaconConfig().SlotsPerEpoch))) {
-		participatedFlags[sourceFlagIndex] = true
 	}
 	if matchingTarget && beaconState.Slot() <= data.Slot+params.BeaconConfig().SlotsPerEpoch {
 		participatedFlags[targetFlagIndex] = true
@@ -196,10 +196,6 @@ func ProcessAttestationNoVerifySignature(
 		if err != nil {
 			return nil, err
 		}
-		if participatedFlags[headFlagIndex] && !HasValidatorFlag(epochParticipation[index], headFlagIndex) {
-			epochParticipation[index] = AddValidatorFlag(epochParticipation[index], headFlagIndex)
-			proposerRewardNumerator += br * params.BeaconConfig().TimelyHeadWeight
-		}
 		if participatedFlags[sourceFlagIndex] && !HasValidatorFlag(epochParticipation[index], sourceFlagIndex) {
 			epochParticipation[index] = AddValidatorFlag(epochParticipation[index], sourceFlagIndex)
 			proposerRewardNumerator += br * params.BeaconConfig().TimelySourceWeight
@@ -207,6 +203,10 @@ func ProcessAttestationNoVerifySignature(
 		if participatedFlags[targetFlagIndex] && !HasValidatorFlag(epochParticipation[index], targetFlagIndex) {
 			epochParticipation[index] = AddValidatorFlag(epochParticipation[index], targetFlagIndex)
 			proposerRewardNumerator += br * params.BeaconConfig().TimelyTargetWeight
+		}
+		if participatedFlags[headFlagIndex] && !HasValidatorFlag(epochParticipation[index], headFlagIndex) {
+			epochParticipation[index] = AddValidatorFlag(epochParticipation[index], headFlagIndex)
+			proposerRewardNumerator += br * params.BeaconConfig().TimelyHeadWeight
 		}
 	}
 

@@ -1120,7 +1120,7 @@ func (b *BeaconStateAltair) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the BeaconStateAltair object to a target array
 func (b *BeaconStateAltair) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := int(2787221)
+	offset := int(2785781)
 
 	// Field (0) 'GenesisTime'
 	dst = ssz.MarshalUint64(dst, b.GenesisTime)
@@ -1359,7 +1359,7 @@ func (b *BeaconStateAltair) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 func (b *BeaconStateAltair) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
-	if size < 2787221 {
+	if size < 2785781 {
 		return ssz.ErrSize
 	}
 
@@ -1507,7 +1507,7 @@ func (b *BeaconStateAltair) UnmarshalSSZ(buf []byte) error {
 	if b.CurrentSyncCommittee == nil {
 		b.CurrentSyncCommittee = new(SyncCommittee)
 	}
-	if err = b.CurrentSyncCommittee.UnmarshalSSZ(buf[2687381:2737301]); err != nil {
+	if err = b.CurrentSyncCommittee.UnmarshalSSZ(buf[2687381:2736581]); err != nil {
 		return err
 	}
 
@@ -1515,7 +1515,7 @@ func (b *BeaconStateAltair) UnmarshalSSZ(buf []byte) error {
 	if b.NextSyncCommittee == nil {
 		b.NextSyncCommittee = new(SyncCommittee)
 	}
-	if err = b.NextSyncCommittee.UnmarshalSSZ(buf[2737301:2787221]); err != nil {
+	if err = b.NextSyncCommittee.UnmarshalSSZ(buf[2736581:2785781]); err != nil {
 		return err
 	}
 
@@ -1625,7 +1625,7 @@ func (b *BeaconStateAltair) UnmarshalSSZ(buf []byte) error {
 
 // SizeSSZ returns the ssz encoded size in bytes for the BeaconStateAltair object
 func (b *BeaconStateAltair) SizeSSZ() (size int) {
-	size = 2787221
+	size = 2785781
 
 	// Field (7) 'HistoricalRoots'
 	size += len(b.HistoricalRoots) * 32
@@ -2496,18 +2496,12 @@ func (s *SyncCommittee) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 		dst = append(dst, s.Pubkeys[ii]...)
 	}
 
-	// Field (1) 'PubkeyAggregates'
-	if len(s.PubkeyAggregates) != 16 {
-		err = ssz.ErrVectorLength
+	// Field (1) 'AggregatePubkey'
+	if len(s.AggregatePubkey) != 48 {
+		err = ssz.ErrBytesLength
 		return
 	}
-	for ii := 0; ii < 16; ii++ {
-		if len(s.PubkeyAggregates[ii]) != 48 {
-			err = ssz.ErrBytesLength
-			return
-		}
-		dst = append(dst, s.PubkeyAggregates[ii]...)
-	}
+	dst = append(dst, s.AggregatePubkey...)
 
 	return
 }
@@ -2516,7 +2510,7 @@ func (s *SyncCommittee) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 func (s *SyncCommittee) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
-	if size != 49920 {
+	if size != 49200 {
 		return ssz.ErrSize
 	}
 
@@ -2529,21 +2523,18 @@ func (s *SyncCommittee) UnmarshalSSZ(buf []byte) error {
 		s.Pubkeys[ii] = append(s.Pubkeys[ii], buf[0:49152][ii*48:(ii+1)*48]...)
 	}
 
-	// Field (1) 'PubkeyAggregates'
-	s.PubkeyAggregates = make([][]byte, 16)
-	for ii := 0; ii < 16; ii++ {
-		if cap(s.PubkeyAggregates[ii]) == 0 {
-			s.PubkeyAggregates[ii] = make([]byte, 0, len(buf[49152:49920][ii*48:(ii+1)*48]))
-		}
-		s.PubkeyAggregates[ii] = append(s.PubkeyAggregates[ii], buf[49152:49920][ii*48:(ii+1)*48]...)
+	// Field (1) 'AggregatePubkey'
+	if cap(s.AggregatePubkey) == 0 {
+		s.AggregatePubkey = make([]byte, 0, len(buf[49152:49200]))
 	}
+	s.AggregatePubkey = append(s.AggregatePubkey, buf[49152:49200]...)
 
 	return err
 }
 
 // SizeSSZ returns the ssz encoded size in bytes for the SyncCommittee object
 func (s *SyncCommittee) SizeSSZ() (size int) {
-	size = 49920
+	size = 49200
 	return
 }
 
@@ -2573,22 +2564,72 @@ func (s *SyncCommittee) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 		hh.Merkleize(subIndx)
 	}
 
-	// Field (1) 'PubkeyAggregates'
-	{
-		if len(s.PubkeyAggregates) != 16 {
-			err = ssz.ErrVectorLength
-			return
-		}
-		subIndx := hh.Index()
-		for _, i := range s.PubkeyAggregates {
-			if len(i) != 48 {
-				err = ssz.ErrBytesLength
-				return
-			}
-			hh.Append(i)
-		}
-		hh.Merkleize(subIndx)
+	// Field (1) 'AggregatePubkey'
+	if len(s.AggregatePubkey) != 48 {
+		err = ssz.ErrBytesLength
+		return
 	}
+	hh.PutBytes(s.AggregatePubkey)
+
+	hh.Merkleize(indx)
+	return
+}
+
+// MarshalSSZ ssz marshals the SyncCommitteeSigningData object
+func (s *SyncCommitteeSigningData) MarshalSSZ() ([]byte, error) {
+	return ssz.MarshalSSZ(s)
+}
+
+// MarshalSSZTo ssz marshals the SyncCommitteeSigningData object to a target array
+func (s *SyncCommitteeSigningData) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+	dst = buf
+
+	// Field (0) 'Slot'
+	dst = ssz.MarshalUint64(dst, s.Slot)
+
+	// Field (1) 'SubcommitteeIndex'
+	dst = ssz.MarshalUint64(dst, s.SubcommitteeIndex)
+
+	return
+}
+
+// UnmarshalSSZ ssz unmarshals the SyncCommitteeSigningData object
+func (s *SyncCommitteeSigningData) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size != 16 {
+		return ssz.ErrSize
+	}
+
+	// Field (0) 'Slot'
+	s.Slot = ssz.UnmarshallUint64(buf[0:8])
+
+	// Field (1) 'SubcommitteeIndex'
+	s.SubcommitteeIndex = ssz.UnmarshallUint64(buf[8:16])
+
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the SyncCommitteeSigningData object
+func (s *SyncCommitteeSigningData) SizeSSZ() (size int) {
+	size = 16
+	return
+}
+
+// HashTreeRoot ssz hashes the SyncCommitteeSigningData object
+func (s *SyncCommitteeSigningData) HashTreeRoot() ([32]byte, error) {
+	return ssz.HashWithDefaultHasher(s)
+}
+
+// HashTreeRootWith ssz hashes the SyncCommitteeSigningData object with a hasher
+func (s *SyncCommitteeSigningData) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+	indx := hh.Index()
+
+	// Field (0) 'Slot'
+	hh.PutUint64(s.Slot)
+
+	// Field (1) 'SubcommitteeIndex'
+	hh.PutUint64(s.SubcommitteeIndex)
 
 	hh.Merkleize(indx)
 	return

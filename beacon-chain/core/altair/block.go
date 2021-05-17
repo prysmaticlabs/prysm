@@ -10,6 +10,7 @@ import (
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -105,25 +106,29 @@ func VerifyOperationLengths(state iface.BeaconState, b *ethpb.SignedBeaconBlockA
 //    proposer_reward = Gwei(participant_reward * PROPOSER_WEIGHT // (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT))
 //
 //    # Apply participant and proposer rewards
-//    committee_indices = get_sync_committee_indices(state, get_current_epoch(state))
+//    all_pubkeys = [v.pubkey for v in state.validators]
+//    committee_indices = [ValidatorIndex(all_pubkeys.index(pubkey)) for pubkey in state.current_sync_committee.pubkeys]
 //    participant_indices = [index for index, bit in zip(committee_indices, aggregate.sync_committee_bits) if bit]
 //    for participant_index in participant_indices:
 //        increase_balance(state, participant_index, participant_reward)
 //        increase_balance(state, get_beacon_proposer_index(state), proposer_reward)
 func ProcessSyncCommittee(state iface.BeaconStateAltair, sync *ethpb.SyncAggregate) (iface.BeaconStateAltair, error) {
-	committeeIndices, err := SyncCommitteeIndices(state, helpers.CurrentEpoch(state))
-	if err != nil {
-		return nil, err
+	keyToIndexMap := make(map[[48]byte]types.ValidatorIndex)
+	for i := 0; i < state.NumValidators(); i++ {
+		keyToIndexMap[state.PubkeyAtIndex(types.ValidatorIndex(i))] = types.ValidatorIndex(i)
 	}
-
 	currentSyncCommittee, err := state.CurrentSyncCommittee()
 	if err != nil {
 		return nil, err
 	}
 	committeeKeys := currentSyncCommittee.Pubkeys
+	committeeIndices := make([]types.ValidatorIndex, params.BeaconConfig().SyncCommitteeSize)
+	for i := 0; i < len(committeeIndices); i++ {
+		committeeIndices[i] = keyToIndexMap[bytesutil.ToBytes48(committeeKeys[i])]
+	}
+
 	votedKeys := make([]bls.PublicKey, 0, len(committeeKeys))
 	votedIndices := make([]types.ValidatorIndex, 0, len(committeeKeys))
-
 	// Verify sync committee signature.
 	for i := uint64(0); i < sync.SyncCommitteeBits.Len(); i++ {
 		if sync.SyncCommitteeBits.BitAt(i) {

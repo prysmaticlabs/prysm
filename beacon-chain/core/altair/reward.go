@@ -14,6 +14,13 @@ import (
 //
 // Spec code:
 //  def get_base_reward(state: BeaconState, index: ValidatorIndex) -> Gwei:
+//    """
+//    Return the base reward for the validator defined by ``index`` with respect to the current ``state``.
+//
+//    Note: A validator can optimally earn one base reward per epoch over a long time horizon.
+//    This takes into account both per-epoch (e.g. attestation) and intermittent duties (e.g. block proposal
+//    and sync committees).
+//    """
 //    increments = state.validators[index].effective_balance // EFFECTIVE_BALANCE_INCREMENT
 //    return Gwei(increments * get_base_reward_per_increment(state))
 func BaseReward(state iface.ReadOnlyBeaconState, index types.ValidatorIndex) (uint64, error) {

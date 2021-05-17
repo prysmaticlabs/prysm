@@ -136,14 +136,14 @@ type BeaconChainConfig struct {
 
 	// New values introduced in Altair hard fork 1.
 	// Participation flag indices.
-	TimelyHeadFlagIndex   uint8 `yaml:"TIMELY_HEAD_FLAG_INDEX" spec:"true"`   // TimelyHeadFlagIndex for participation bits.
 	TimelySourceFlagIndex uint8 `yaml:"TIMELY_SOURCE_FLAG_INDEX" spec:"true"` // TimelySourceFlagIndex for participation bits.
 	TimelyTargetFlagIndex uint8 `yaml:"TIMELY_TARGET_FLAG_INDEX" spec:"true"` // TimelyTargetFlagIndex for participation bits.
+	TimelyHeadFlagIndex   uint8 `yaml:"TIMELY_HEAD_FLAG_INDEX" spec:"true"`   // TimelyHeadFlagIndex for participation bits.
 
 	// Incentivization weights.
-	TimelyHeadWeight   uint64 `yaml:"TIMELY_HEAD_WEIGHT" spec:"true"`   // TimelyHeadWeight for rewards and penalties.
 	TimelySourceWeight uint64 `yaml:"TIMELY_SOURCE_WEIGHT" spec:"true"` // TimelySourceWeight for rewards and penalties.
 	TimelyTargetWeight uint64 `yaml:"TIMELY_TARGET_WEIGHT" spec:"true"` // TimelyTargetWeight for rewards and penalties.
+	TimelyHeadWeight   uint64 `yaml:"TIMELY_HEAD_WEIGHT" spec:"true"`   // TimelyHeadWeight for rewards and penalties.
 	SyncRewardWeight   uint64 `yaml:"SYNC_REWARD_WEIGHT" spec:"true"`   // SyncRewardWeight for rewards and penalties.
 	WeightDenominator  uint64 `yaml:"WEIGHT_DENOMINATOR" spec:"true"`   // WeightDenominator for rewards and penalties.
 	ProposerWeight     uint64 `yaml:"PROPOSER_WEIGHT" spec:"true"`      // ProposerWeight for rewards and penalties.
@@ -154,8 +154,8 @@ type BeaconChainConfig struct {
 
 	// Misc.
 	SyncCommitteeSize            uint64      `yaml:"SYNC_COMMITTEE_SIZE" spec:"true"`              // SyncCommitteeSize for light client.
-	SyncPubkeysPerAggregate      uint64      `yaml:"SYNC_PUBKEYS_PER_AGGREGATE" spec:"true"`       // SyncPubkeysPerAggregate for light client.
 	InactivityScoreBias          uint64      `yaml:"INACTIVITY_SCORE_BIAS" spec:"true"`            // InactivityScoreBias for penalties during inactivity
+	InactivityScoreRecoveryRate  uint64      `yaml:"INACTIVITY_SCORE_RECOVERY_RATE" spec:"true"`   // InactivityScoreRecoveryRate for penalties during inactivity.
 	EpochsPerSyncCommitteePeriod types.Epoch `yaml:"EPOCHS_PER_SYNC_COMMITTEE_PERIOD" spec:"true"` // EpochsPerSyncCommitteePeriod for light client.
 
 	// Updated penalty values. This moves penalty parameters toward their final, maximum security values.
