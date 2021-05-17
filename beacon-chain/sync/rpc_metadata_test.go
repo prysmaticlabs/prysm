@@ -99,7 +99,7 @@ func TestMetadataRPCHandler_SendsMetadata(t *testing.T) {
 	}
 
 	// Setup streams
-	pcl := protocol.ID(p2p.RPCMetaDataTopic + r.cfg.P2P.Encoding().ProtocolSuffix())
+	pcl := protocol.ID(p2p.RPCMetaDataTopicV1 + r.cfg.P2P.Encoding().ProtocolSuffix())
 	topic := string(pcl)
 	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)
 	r2.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)

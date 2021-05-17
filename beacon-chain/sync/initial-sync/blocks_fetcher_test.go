@@ -531,7 +531,7 @@ func TestBlocksFetcher_RequestBlocksRateLimitingLocks(t *testing.T) {
 		Count:     64,
 	}
 
-	topic := p2pm.RPCBlocksByRangeTopic
+	topic := p2pm.RPCBlocksByRangeTopicV1
 	protocol := core.ProtocolID(topic + p2.Encoding().ProtocolSuffix())
 	streamHandlerFn := func(stream network.Stream) {
 		assert.NoError(t, stream.Close())
@@ -798,7 +798,7 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 		},
 	}
 
-	topic := p2pm.RPCBlocksByRangeTopic
+	topic := p2pm.RPCBlocksByRangeTopicV1
 	protocol := core.ProtocolID(topic + p1.Encoding().ProtocolSuffix())
 
 	ctx, cancel := context.WithCancel(context.Background())
