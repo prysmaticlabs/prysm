@@ -28,7 +28,7 @@ const (
 	KeymanagerConfigFileName = "keymanageropts.json"
 	// NewWalletPasswordPromptText for wallet creation.
 	NewWalletPasswordPromptText = "New wallet password"
-	// WalletPasswordPromptText for wallet unlocking.
+	// PasswordPromptText for wallet unlocking.
 	PasswordPromptText = "Wallet password"
 	// ConfirmPasswordPromptText for confirming a wallet password.
 	ConfirmPasswordPromptText = "Confirm password"

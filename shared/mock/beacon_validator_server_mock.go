@@ -8,10 +8,10 @@ import (
 	context "context"
 	reflect "reflect"
 
-	types "github.com/gogo/protobuf/types"
 	gomock "github.com/golang/mock/gomock"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	metadata "google.golang.org/grpc/metadata"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // MockBeaconNodeValidatorServer is a mock of BeaconNodeValidatorServer interface
@@ -202,10 +202,10 @@ func (mr *MockBeaconNodeValidatorServerMockRecorder) SubmitSignedAggregateSelect
 }
 
 // SubscribeCommitteeSubnets mocks base method
-func (m *MockBeaconNodeValidatorServer) SubscribeCommitteeSubnets(arg0 context.Context, arg1 *eth.CommitteeSubnetsSubscribeRequest) (*types.Empty, error) {
+func (m *MockBeaconNodeValidatorServer) SubscribeCommitteeSubnets(arg0 context.Context, arg1 *eth.CommitteeSubnetsSubscribeRequest) (*emptypb.Empty, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SubscribeCommitteeSubnets", arg0, arg1)
-	ret0, _ := ret[0].(*types.Empty)
+	ret0, _ := ret[0].(*emptypb.Empty)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -261,7 +261,7 @@ func (mr *MockBeaconNodeValidatorServerMockRecorder) WaitForActivation(arg0, arg
 }
 
 // WaitForChainStart mocks base method
-func (m *MockBeaconNodeValidatorServer) WaitForChainStart(arg0 *types.Empty, arg1 eth.BeaconNodeValidator_WaitForChainStartServer) error {
+func (m *MockBeaconNodeValidatorServer) WaitForChainStart(arg0 *emptypb.Empty, arg1 eth.BeaconNodeValidator_WaitForChainStartServer) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WaitForChainStart", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -272,6 +272,18 @@ func (m *MockBeaconNodeValidatorServer) WaitForChainStart(arg0 *types.Empty, arg
 func (mr *MockBeaconNodeValidatorServerMockRecorder) WaitForChainStart(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForChainStart", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).WaitForChainStart), arg0, arg1)
+}
+
+// mustEmbedUnimplementedBeaconNodeValidatorServer mocks base method
+func (m *MockBeaconNodeValidatorServer) mustEmbedUnimplementedBeaconNodeValidatorServer() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "mustEmbedUnimplementedBeaconNodeValidatorServer")
+}
+
+// mustEmbedUnimplementedBeaconNodeValidatorServer indicates an expected call of mustEmbedUnimplementedBeaconNodeValidatorServer
+func (mr *MockBeaconNodeValidatorServerMockRecorder) mustEmbedUnimplementedBeaconNodeValidatorServer() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "mustEmbedUnimplementedBeaconNodeValidatorServer", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).mustEmbedUnimplementedBeaconNodeValidatorServer))
 }
 
 // MockBeaconNodeValidator_WaitForActivationServer is a mock of BeaconNodeValidator_WaitForActivationServer interface

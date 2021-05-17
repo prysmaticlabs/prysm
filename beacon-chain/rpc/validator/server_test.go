@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -28,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestValidatorIndex_OK(t *testing.T) {
@@ -305,7 +305,7 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 	mockStream := mock.NewMockBeaconNodeValidator_WaitForChainStartServer(ctrl)
 	mockStream.EXPECT().Context().Return(ctx)
 	go func(tt *testing.T) {
-		err := Server.WaitForChainStart(&ptypes.Empty{}, mockStream)
+		err := Server.WaitForChainStart(&emptypb.Empty{}, mockStream)
 		assert.ErrorContains(tt, "Context canceled", err)
 		<-exitRoutine
 	}(t)
@@ -346,7 +346,7 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 		},
 	).Return(nil)
 	mockStream.EXPECT().Context().Return(context.Background())
-	assert.NoError(t, Server.WaitForChainStart(&ptypes.Empty{}, mockStream), "Could not call RPC method")
+	assert.NoError(t, Server.WaitForChainStart(&emptypb.Empty{}, mockStream), "Could not call RPC method")
 }
 
 func TestWaitForChainStart_HeadStateDoesNotExist(t *testing.T) {
@@ -373,7 +373,7 @@ func TestWaitForChainStart_HeadStateDoesNotExist(t *testing.T) {
 	wg := new(sync.WaitGroup)
 	wg.Add(1)
 	go func() {
-		assert.NoError(t, Server.WaitForChainStart(&ptypes.Empty{}, mockStream), "Could not call RPC method")
+		assert.NoError(t, Server.WaitForChainStart(&emptypb.Empty{}, mockStream), "Could not call RPC method")
 		wg.Done()
 	}()
 	// Simulate a late state initialization event, so that
@@ -416,7 +416,7 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 	).Return(nil)
 	mockStream.EXPECT().Context().Return(context.Background())
 	go func(tt *testing.T) {
-		assert.NoError(tt, Server.WaitForChainStart(&ptypes.Empty{}, mockStream))
+		assert.NoError(tt, Server.WaitForChainStart(&emptypb.Empty{}, mockStream))
 		<-exitRoutine
 	}(t)
 

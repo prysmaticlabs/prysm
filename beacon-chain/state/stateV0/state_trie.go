@@ -6,7 +6,6 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -20,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"go.opencensus.io/trace"
+	"google.golang.org/protobuf/proto"
 )
 
 var (
@@ -29,7 +29,7 @@ var (
 	})
 )
 
-// InitializeFromProto the beacon state from a protobuf representation.
+// InitializeFromProtog the beacon state from a protobuf representation.
 func InitializeFromProto(st *pbp2p.BeaconState) (*BeaconState, error) {
 	return InitializeFromProtoUnsafe(proto.Clone(st).(*pbp2p.BeaconState))
 }

@@ -2,11 +2,11 @@ syntax = "proto3";
 
 package ethereum.beacon.rpc.v1;
 
+import "eth/ext/options.proto";
 import "eth/v1alpha1/beacon_block.proto";
 
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
-import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
 // Slasher service API
 //
@@ -53,6 +53,6 @@ message HighestAttestationResponse {
 
 message HighestAttestation {
   uint64 validator_index = 1;
-  uint64 highest_source_epoch = 2 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Epoch"];
-  uint64 highest_target_epoch = 3 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+  uint64 highest_source_epoch = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+  uint64 highest_target_epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
 }

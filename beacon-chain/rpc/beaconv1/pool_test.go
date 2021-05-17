@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/gogo/protobuf/types"
 	eth2types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -24,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestListPoolAttesterSlashings(t *testing.T) {
@@ -107,7 +107,7 @@ func TestListPoolAttesterSlashings(t *testing.T) {
 		SlashingsPool:    &slashings.PoolMock{PendingAttSlashings: []*eth.AttesterSlashing{slashing1, slashing2}},
 	}
 
-	resp, err := s.ListPoolAttesterSlashings(context.Background(), &types.Empty{})
+	resp, err := s.ListPoolAttesterSlashings(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	require.Equal(t, 2, len(resp.Data))
 	assert.DeepEqual(t, migration.V1Alpha1AttSlashingToV1(slashing1), resp.Data[0])
@@ -167,7 +167,7 @@ func TestListPoolProposerSlashings(t *testing.T) {
 		SlashingsPool:    &slashings.PoolMock{PendingPropSlashings: []*eth.ProposerSlashing{slashing1, slashing2}},
 	}
 
-	resp, err := s.ListPoolProposerSlashings(context.Background(), &types.Empty{})
+	resp, err := s.ListPoolProposerSlashings(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	require.Equal(t, 2, len(resp.Data))
 	assert.DeepEqual(t, migration.V1Alpha1ProposerSlashingToV1(slashing1), resp.Data[0])
@@ -197,7 +197,7 @@ func TestListPoolVoluntaryExits(t *testing.T) {
 		VoluntaryExitsPool: &voluntaryexits.PoolMock{Exits: []*eth.SignedVoluntaryExit{exit1, exit2}},
 	}
 
-	resp, err := s.ListPoolVoluntaryExits(context.Background(), &types.Empty{})
+	resp, err := s.ListPoolVoluntaryExits(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	require.Equal(t, 2, len(resp.Data))
 	assert.DeepEqual(t, migration.V1Alpha1ExitToV1(exit1), resp.Data[0])
