@@ -2,7 +2,7 @@ package altair
 
 import (
 	"bytes"
-	"errors"
+	"fmt"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -147,7 +147,7 @@ func AssignedToSyncCommittee(
 	nextEpoch := currentPeriod + 1
 
 	if p != currentPeriod && p != nextEpoch {
-		return false, errors.New("epoch period is not current period or next period in state")
+		return false, fmt.Errorf("epoch period %d is not current period %d or next period %d in state", p, currentEpoch, nextEpoch)
 	}
 
 	v, err := state.ValidatorAtIndexReadOnly(i)
