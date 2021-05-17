@@ -4,6 +4,8 @@ import (
 	"context"
 	"io"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -23,7 +25,7 @@ type BeaconBlockProcessor func(block *ethpb.SignedBeaconBlock) error
 
 // SendBeaconBlocksByRangeRequest sends BeaconBlocksByRange and returns fetched blocks, if any.
 func SendBeaconBlocksByRangeRequest(
-	ctx context.Context, p2pProvider p2p.P2P, pid peer.ID,
+	ctx context.Context, chain blockchain.ChainInfoFetcher, p2pProvider p2p.P2P, pid peer.ID,
 	req *pb.BeaconBlocksByRangeRequest, blockProcessor BeaconBlockProcessor,
 ) ([]*ethpb.SignedBeaconBlock, error) {
 	stream, err := p2pProvider.Send(ctx, req, p2p.RPCBlocksByRangeTopicV1, pid)
@@ -44,7 +46,7 @@ func SendBeaconBlocksByRangeRequest(
 	var prevSlot types.Slot
 	for i := uint64(0); ; i++ {
 		isFirstChunk := i == 0
-		blk, err := ReadChunkedBlock(stream, p2pProvider, isFirstChunk)
+		blk, err := ReadChunkedBlock(stream, chain, p2pProvider, isFirstChunk)
 		if errors.Is(err, io.EOF) {
 			break
 		}
@@ -81,7 +83,7 @@ func SendBeaconBlocksByRangeRequest(
 
 // SendBeaconBlocksByRootRequest sends BeaconBlocksByRoot and returns fetched blocks, if any.
 func SendBeaconBlocksByRootRequest(
-	ctx context.Context, p2pProvider p2p.P2P, pid peer.ID,
+	ctx context.Context, chain blockchain.ChainInfoFetcher, p2pProvider p2p.P2P, pid peer.ID,
 	req *p2ptypes.BeaconBlockByRootsReq, blockProcessor BeaconBlockProcessor,
 ) ([]*ethpb.SignedBeaconBlock, error) {
 	stream, err := p2pProvider.Send(ctx, req, p2p.RPCBlocksByRootTopicV1, pid)
@@ -105,7 +107,7 @@ func SendBeaconBlocksByRootRequest(
 			break
 		}
 		isFirstChunk := i == 0
-		blk, err := ReadChunkedBlock(stream, p2pProvider, isFirstChunk)
+		blk, err := ReadChunkedBlock(stream, chain, p2pProvider, isFirstChunk)
 		if errors.Is(err, io.EOF) {
 			break
 		}

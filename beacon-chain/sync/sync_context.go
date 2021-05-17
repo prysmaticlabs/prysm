@@ -3,11 +3,13 @@ package sync
 import (
 	"errors"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 )
 
-func writeContextToStream(stream network.Stream, chain blockchainService) error {
+func writeContextToStream(stream network.Stream, chain blockchain.ChainInfoFetcher) error {
 	rpcCtx, err := rpcContext(stream, chain)
 	if err != nil {
 		return err
@@ -20,7 +22,7 @@ func writeContextToStream(stream network.Stream, chain blockchainService) error 
 	return err
 }
 
-func readContextFromStream(stream network.Stream, chain blockchainService) ([]byte, error) {
+func readContextFromStream(stream network.Stream, chain blockchain.ChainInfoFetcher) ([]byte, error) {
 	rpcCtx, err := rpcContext(stream, chain)
 	if err != nil {
 		return nil, err
@@ -36,7 +38,7 @@ func readContextFromStream(stream network.Stream, chain blockchainService) ([]by
 	return b, nil
 }
 
-func rpcContext(stream network.Stream, chain blockchainService) ([]byte, error) {
+func rpcContext(stream network.Stream, chain blockchain.ChainInfoFetcher) ([]byte, error) {
 	_, _, version, err := p2p.TopicDeconstructor(string(stream.Protocol()))
 	if err != nil {
 		return nil, err

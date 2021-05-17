@@ -3,6 +3,8 @@ package sync
 import (
 	"errors"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -19,7 +21,7 @@ func (s *Service) chunkWriter(stream libp2pcore.Stream, msg interface{}) error {
 
 // WriteChunk object to stream.
 // response_chunk ::= | <result> | <encoding-dependent-header> | <encoded-payload>
-func WriteChunk(stream libp2pcore.Stream, chain blockchainService, encoding encoder.NetworkEncoding, msg interface{}) error {
+func WriteChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, encoding encoder.NetworkEncoding, msg interface{}) error {
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
 	}
@@ -32,7 +34,7 @@ func WriteChunk(stream libp2pcore.Stream, chain blockchainService, encoding enco
 
 // ReadChunkedBlock handles each response chunk that is sent by the
 // peer and converts it into a beacon block.
-func ReadChunkedBlock(stream libp2pcore.Stream, p2p p2p.P2P, isFirstChunk bool) (*eth.SignedBeaconBlock, error) {
+func ReadChunkedBlock(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, p2p p2p.P2P, isFirstChunk bool) (*eth.SignedBeaconBlock, error) {
 	// Handle deadlines differently for first chunk
 	if isFirstChunk {
 		return readFirstChunkedBlock(stream, p2p)
