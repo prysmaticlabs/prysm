@@ -62,7 +62,7 @@ func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
 	block.Block.Body.RandaoReveal = randaoReveal
 	block.Block.Body.Eth1Data = eth1Data
 
-	syncBits := bitfield.NewBitvector1024()
+	syncBits := bitfield.NewBitvector512()
 	for i := range syncBits {
 		syncBits[i] = 0xff
 	}
@@ -146,7 +146,7 @@ func TestExecuteStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t *test
 	block.Block.Body.RandaoReveal = randaoReveal
 	block.Block.Body.Eth1Data = eth1Data
 
-	syncBits := bitfield.NewBitvector1024()
+	syncBits := bitfield.NewBitvector512()
 	for i := range syncBits {
 		syncBits[i] = 0xff
 	}
@@ -347,7 +347,7 @@ func createFullBlockWithOperations(t *testing.T) (iface.BeaconStateAltair,
 	proposerIndex, err := helpers.BeaconProposerIndex(copied)
 	require.NoError(t, err)
 
-	syncBits := bitfield.NewBitvector1024()
+	syncBits := bitfield.NewBitvector512()
 	for i := range syncBits {
 		syncBits[i] = 0xff
 	}

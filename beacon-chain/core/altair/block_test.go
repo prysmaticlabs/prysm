@@ -25,7 +25,7 @@ func TestProcessSyncCommittee_OK(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetCurrentSyncCommittee(committee))
 
-	syncBits := bitfield.NewBitvector1024()
+	syncBits := bitfield.NewBitvector512()
 	for i := range syncBits {
 		syncBits[i] = 0xff
 	}
