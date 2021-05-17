@@ -8,10 +8,9 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
-
-// TODO: don't forget tests fucko
 
 func TestParseGraffitiFile_Default(t *testing.T) {
 	input := []byte(`default: "Mr T was here"`)
@@ -172,41 +171,51 @@ func TestParseHexGraffiti(t *testing.T) {
 			input: "hola mundo!",
 		},
 		{
-			name:  "hex",
+			name:  "standard with hex tag",
 			want:  "hola mundo!",
 			input: "hex:686f6c61206d756e646f21",
 		},
 		{
-			name:  "HEX",
+			name:  "irregularly cased hex tag",
 			want:  "hola mundo!",
 			input: "HEX:686f6c61206d756e646f21",
 		},
 		{
-			name:  "irregular hex 1",
+			name:  "hex tag without accompanying data",
 			want:  "hex:",
 			input: "hex:",
 		},
 		{
-			name:  "irregular hex 1",
+			name:  "Passing non-hex data with hex tag",
 			want:  "hex:hola mundo!",
 			input: "hex:hola mundo!",
 		},
 		{
-			name:  "unsupported hex 1",
+			name:  "unmarked hex input",
 			want:  "0x686f6c61206d756e646f21",
 			input: "0x686f6c61206d756e646f21",
 		},
 		{
-			name:  "unsupported hex 2",
-			want:  "hex:0x686f6c61206d756e646f21",
+			name:  "Properly tagged hex data with 0x prefix",
+			want:  "hola mundo!",
 			input: "hex:0x686f6c61206d756e646f21",
+		},
+		{
+			name:  "hex tag with 0x prefix and no other data",
+			want:  "hex:0x",
+			input: "hex:0x",
+		},
+		{
+			name:  "hex tag with 0x prefix and invalid hex data",
+			want:  "hex:0xhola mundo",
+			input: "hex:0xhola mundo",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			out := ParseHexGraffiti(tt.input)
-			require.Equal(t, out, tt.want)
+			assert.Equal(t, out, tt.want)
 		})
 	}
 }

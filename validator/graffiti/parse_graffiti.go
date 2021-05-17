@@ -21,6 +21,7 @@ type Graffiti struct {
 
 // ParseGraffitiFile parses the graffiti file and returns the graffiti struct.
 func ParseGraffitiFile(f string) (*Graffiti, error) {
+	// helper function to avoid coding this twice while parsing the Ordered and Random fields of the graffiti struct
 	parseGraffitiStrings := func(input []string) []string {
 		output := make([]string, len(input))
 		for _, i := range input {
@@ -42,6 +43,7 @@ func ParseGraffitiFile(f string) (*Graffiti, error) {
 	for i, o := range g.Specific {
 		specific[types.ValidatorIndex(i)] = ParseHexGraffiti(o)
 	}
+
 	g.Specific = specific
 	g.Default = ParseHexGraffiti(g.Default)
 	g.Ordered = parseGraffitiStrings(g.Ordered)
@@ -54,12 +56,24 @@ func ParseGraffitiFile(f string) (*Graffiti, error) {
 func ParseHexGraffiti(rawGraffiti string) string {
 	splitGraffiti := strings.SplitN(rawGraffiti, ":", 2)
 	if strings.ToLower(splitGraffiti[0]) == "hex" {
-		if splitGraffiti[1] == "" {
+		target := splitGraffiti[1]
+		if target == "" {
 			log.Debug("Blank hex tag to be interpreted as itself")
 			return rawGraffiti
 		}
 
-		graffiti, err := hex.DecodeString(splitGraffiti[1])
+		if len(target) > 3 {
+			if target[:2] == "0x" {
+				target = target[2:]
+			}
+		}
+
+		if target == "" {
+			log.Debug("Nothing after 0x prefix, hex tag to be interpreted as itself")
+			return rawGraffiti
+		}
+
+		graffiti, err := hex.DecodeString(target)
 		if err != nil {
 			log.WithError(err).Debug("Error while decoding hex string")
 			return rawGraffiti
