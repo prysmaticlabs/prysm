@@ -162,11 +162,11 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState iface.BeaconStateA
 	}
 	state.CurrentSyncCommittee = &pb.SyncCommittee{
 		Pubkeys:         pubKeys,
-		AggregatePubkey: make([]byte, params.BeaconConfig().BLSPubkeyLength),
+		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
 	state.NextSyncCommittee = &pb.SyncCommittee{
 		Pubkeys:         bytesutil.Copy2dBytes(pubKeys),
-		AggregatePubkey: make([]byte, params.BeaconConfig().BLSPubkeyLength),
+		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
 
 	return stateAltair.InitializeFromProto(state)

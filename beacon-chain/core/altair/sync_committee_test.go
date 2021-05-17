@@ -79,7 +79,7 @@ func TestSyncCommitteeIndices_CanGet(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			helpers.ClearCache()
-			got, err := NextSyncCommitteeIndices(tt.args.state)
+			got, err := altair.NextSyncCommitteeIndices(tt.args.state)
 			if tt.wantErr {
 				require.ErrorContains(t, tt.errString, err)
 			} else {
@@ -109,18 +109,18 @@ func TestSyncCommitteeIndices_DifferentPeriods(t *testing.T) {
 	}
 
 	state := getState(t, params.BeaconConfig().MaxValidatorsPerCommittee)
-	got1, err := NextSyncCommitteeIndices(state)
+	got1, err := altair.NextSyncCommitteeIndices(state)
 	require.NoError(t, err)
 	require.NoError(t, state.SetSlot(params.BeaconConfig().SlotsPerEpoch))
-	got2, err := NextSyncCommitteeIndices(state)
+	got2, err := altair.NextSyncCommitteeIndices(state)
 	require.NoError(t, err)
-	require.DeepEqual(t, got1, got2)
+	require.DeepNotEqual(t, got1, got2)
 	require.NoError(t, state.SetSlot(params.BeaconConfig().SlotsPerEpoch*types.Slot(params.BeaconConfig().EpochsPerSyncCommitteePeriod)))
-	got2, err = NextSyncCommitteeIndices(state)
+	got2, err = altair.NextSyncCommitteeIndices(state)
 	require.NoError(t, err)
-	require.DeepEqual(t, got1, got2)
+	require.DeepNotEqual(t, got1, got2)
 	require.NoError(t, state.SetSlot(params.BeaconConfig().SlotsPerEpoch*types.Slot(2*params.BeaconConfig().EpochsPerSyncCommitteePeriod)))
-	got2, err = NextSyncCommitteeIndices(state)
+	got2, err = altair.NextSyncCommitteeIndices(state)
 	require.NoError(t, err)
 	require.DeepNotEqual(t, got1, got2)
 }
@@ -191,8 +191,10 @@ func TestSyncCommittee_CanGet(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			helpers.ClearCache()
-			require.NoError(t, tt.args.state.SetSlot(types.Slot(tt.args.epoch)*params.BeaconConfig().SlotsPerEpoch))
-			got, err := NextSyncCommittee(tt.args.state)
+			if !tt.wantErr {
+				require.NoError(t, tt.args.state.SetSlot(types.Slot(tt.args.epoch)*params.BeaconConfig().SlotsPerEpoch))
+			}
+			got, err := altair.NextSyncCommittee(tt.args.state)
 			if tt.wantErr {
 				require.ErrorContains(t, tt.errString, err)
 			} else {
@@ -206,12 +208,15 @@ func TestSyncCommittee_CanGet(t *testing.T) {
 
 func TestAssignedToSyncCommittee(t *testing.T) {
 	s, _ := testAltair.DeterministicGenesisStateAltair(t, 5*params.BeaconConfig().SyncCommitteeSize)
-	syncCommittee, err := altair.SyncCommittee(s, helpers.CurrentEpoch(s))
+	syncCommittee, err := altair.NextSyncCommittee(s)
 	require.NoError(t, err)
 	require.NoError(t, s.SetCurrentSyncCommittee(syncCommittee))
-	syncCommittee, err = altair.SyncCommittee(s, helpers.CurrentEpoch(s)+2*params.BeaconConfig().EpochsPerSyncCommitteePeriod)
+	slot := helpers.CurrentEpoch(s) + 2*params.BeaconConfig().EpochsPerSyncCommitteePeriod
+	require.NoError(t, s.SetSlot(types.Slot(slot)))
+	syncCommittee, err = altair.NextSyncCommittee(s)
 	require.NoError(t, err)
 	require.NoError(t, s.SetNextSyncCommittee(syncCommittee))
+	require.NoError(t, s.SetSlot(0))
 
 	csc, err := s.CurrentSyncCommittee()
 	require.NoError(t, err)
@@ -274,22 +279,19 @@ func TestAssignedToSyncCommittee_IncorrectEpoch(t *testing.T) {
 
 func TestSubnetsForSyncCommittee(t *testing.T) {
 	s, _ := testAltair.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
-	syncCommittee, err := altair.SyncCommittee(s, helpers.CurrentEpoch(s))
+	syncCommittee, err := altair.NextSyncCommittee(s)
 	require.NoError(t, err)
 	require.NoError(t, s.SetCurrentSyncCommittee(syncCommittee))
-	syncCommittee, err = altair.SyncCommittee(s, helpers.CurrentEpoch(s)+2*params.BeaconConfig().EpochsPerSyncCommitteePeriod)
-	require.NoError(t, err)
-	require.NoError(t, s.SetNextSyncCommittee(syncCommittee))
 
 	positions, err := altair.SubnetsForSyncCommittee(s, 0)
 	require.NoError(t, err)
-	require.DeepEqual(t, []uint64{4}, positions)
+	require.DeepEqual(t, []uint64{3}, positions)
 	positions, err = altair.SubnetsForSyncCommittee(s, 1)
 	require.NoError(t, err)
-	require.DeepEqual(t, []uint64{2}, positions)
+	require.DeepEqual(t, []uint64{1}, positions)
 	positions, err = altair.SubnetsForSyncCommittee(s, 2)
 	require.NoError(t, err)
-	require.DeepEqual(t, []uint64{7}, positions)
+	require.DeepEqual(t, []uint64{2}, positions)
 }
 
 func TestSyncCommitteePeriod(t *testing.T) {

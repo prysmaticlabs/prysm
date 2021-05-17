@@ -172,12 +172,9 @@ func convertToCommittee(inputKeys [][]byte) *pb.SyncCommittee {
 			pubKeys = append(pubKeys, bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength))
 		}
 	}
-	var aggregatedKeys [][]byte
-	for i := uint64(0); i < (params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncPubkeysPerAggregate); i++ {
-		aggregatedKeys = append(aggregatedKeys, bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength))
-	}
+
 	return &pb.SyncCommittee{
-		Pubkeys:          pubKeys,
-		PubkeyAggregates: aggregatedKeys,
+		Pubkeys:         pubKeys,
+		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
 }
