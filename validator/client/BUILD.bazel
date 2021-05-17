@@ -49,8 +49,6 @@ go_library(
         "//validator/keymanager/remote:go_default_library",
         "//validator/slashing-protection/iface:go_default_library",
         "@com_github_dgraph_io_ristretto//:go_default_library",
-        "@com_github_gogo_protobuf//proto:go_default_library",
-        "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//retry:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//tracing/opentracing:go_default_library",
@@ -70,6 +68,8 @@ go_library(
         "@org_golang_google_grpc//credentials:go_default_library",
         "@org_golang_google_grpc//resolver:go_default_library",
         "@org_golang_google_grpc//status:go_default_library",
+        "@org_golang_google_protobuf//proto:go_default_library",
+        "@org_golang_google_protobuf//types/known/emptypb:go_default_library",
     ],
 )
 
@@ -122,7 +122,6 @@ go_test(
         "//validator/keymanager/remote:go_default_library",
         "//validator/slashing-protection/local/standard-protection-format:go_default_library",
         "//validator/testing:go_default_library",
-        "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_golang_mock//gomock:go_default_library",
         "@com_github_hashicorp_golang_lru//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
@@ -136,5 +135,7 @@ go_test(
         "@in_gopkg_d4l3k_messagediff_v1//:go_default_library",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
         "@org_golang_google_grpc//metadata:go_default_library",
+        "@org_golang_google_protobuf//types/known/emptypb:go_default_library",
+        "@org_golang_google_protobuf//types/known/timestamppb:go_default_library",
     ],
 )

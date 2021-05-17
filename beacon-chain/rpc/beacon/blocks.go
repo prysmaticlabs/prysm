@@ -4,7 +4,6 @@ import (
 	"context"
 	"strconv"
 
-	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -19,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // ListBlocks retrieves blocks by root, slot, or epoch.
@@ -187,7 +187,7 @@ func (bs *Server) ListBlocks(
 //
 // This includes the head block slot and root as well as information about
 // the most recent finalized and justified slots.
-func (bs *Server) GetChainHead(ctx context.Context, _ *ptypes.Empty) (*ethpb.ChainHead, error) {
+func (bs *Server) GetChainHead(ctx context.Context, _ *emptypb.Empty) (*ethpb.ChainHead, error) {
 	return bs.chainHeadRetrieval(ctx)
 }
 
@@ -252,7 +252,7 @@ func (bs *Server) StreamBlocks(req *ethpb.StreamBlocksRequest, stream ethpb.Beac
 }
 
 // StreamChainHead to clients every single time the head block and state of the chain change.
-func (bs *Server) StreamChainHead(_ *ptypes.Empty, stream ethpb.BeaconChain_StreamChainHeadServer) error {
+func (bs *Server) StreamChainHead(_ *emptypb.Empty, stream ethpb.BeaconChain_StreamChainHeadServer) error {
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := bs.StateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
@@ -363,7 +363,7 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 }
 
 // GetWeakSubjectivityCheckpoint retrieves weak subjectivity state root, block root, and epoch.
-func (bs *Server) GetWeakSubjectivityCheckpoint(ctx context.Context, _ *ptypes.Empty) (*ethpb.WeakSubjectivityCheckpoint, error) {
+func (bs *Server) GetWeakSubjectivityCheckpoint(ctx context.Context, _ *emptypb.Empty) (*ethpb.WeakSubjectivityCheckpoint, error) {
 	hs, err := bs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")

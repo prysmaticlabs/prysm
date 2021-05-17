@@ -6,7 +6,6 @@ import (
 	"runtime"
 	"strings"
 
-	ptypes "github.com/gogo/protobuf/types"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
@@ -17,6 +16,7 @@ import (
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 var (
@@ -29,7 +29,7 @@ var (
 )
 
 // GetIdentity retrieves data about the node's network presence.
-func (ns *Server) GetIdentity(ctx context.Context, _ *ptypes.Empty) (*ethpb.IdentityResponse, error) {
+func (ns *Server) GetIdentity(ctx context.Context, _ *emptypb.Empty) (*ethpb.IdentityResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "nodeV1.GetIdentity")
 	defer span.End()
 
@@ -207,7 +207,7 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 }
 
 // PeerCount retrieves retrieves number of known peers.
-func (ns *Server) PeerCount(ctx context.Context, _ *ptypes.Empty) (*ethpb.PeerCountResponse, error) {
+func (ns *Server) PeerCount(ctx context.Context, _ *emptypb.Empty) (*ethpb.PeerCountResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "nodev1.PeerCount")
 	defer span.End()
 
@@ -225,7 +225,7 @@ func (ns *Server) PeerCount(ctx context.Context, _ *ptypes.Empty) (*ethpb.PeerCo
 
 // GetVersion requests that the beacon node identify information about its implementation in a
 // format similar to a HTTP User-Agent field.
-func (ns *Server) GetVersion(ctx context.Context, _ *ptypes.Empty) (*ethpb.VersionResponse, error) {
+func (ns *Server) GetVersion(ctx context.Context, _ *emptypb.Empty) (*ethpb.VersionResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "nodev1.Version")
 	defer span.End()
 
@@ -239,7 +239,7 @@ func (ns *Server) GetVersion(ctx context.Context, _ *ptypes.Empty) (*ethpb.Versi
 
 // GetSyncStatus requests the beacon node to describe if it's currently syncing or not, and
 // if it is, what block it is up to.
-func (ns *Server) GetSyncStatus(ctx context.Context, _ *ptypes.Empty) (*ethpb.SyncingResponse, error) {
+func (ns *Server) GetSyncStatus(ctx context.Context, _ *emptypb.Empty) (*ethpb.SyncingResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "nodev1.GetSyncStatus")
 	defer span.End()
 
@@ -260,14 +260,14 @@ func (ns *Server) GetSyncStatus(ctx context.Context, _ *ptypes.Empty) (*ethpb.Sy
 //      description: Node is syncing but can serve incomplete data
 //    "503":
 //      description: Node not initialized or having issues
-func (ns *Server) GetHealth(ctx context.Context, _ *ptypes.Empty) (*ptypes.Empty, error) {
+func (ns *Server) GetHealth(ctx context.Context, _ *emptypb.Empty) (*emptypb.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "nodev1.GetHealth")
 	defer span.End()
 
 	if ns.SyncChecker.Syncing() || ns.SyncChecker.Initialized() {
-		return &ptypes.Empty{}, nil
+		return &emptypb.Empty{}, nil
 	}
-	return &ptypes.Empty{}, status.Error(codes.Internal, "Node not initialized or having issues")
+	return &emptypb.Empty{}, status.Error(codes.Internal, "Node not initialized or having issues")
 }
 
 func (ns *Server) handleEmptyFilters(req *ethpb.PeersRequest, peerStatus *peers.Status) (emptyState, emptyDirection bool) {

@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/connmgr"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
@@ -15,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"google.golang.org/protobuf/proto"
 )
 
 // P2P represents the full p2p interface composed of all of the sub-interfaces.
