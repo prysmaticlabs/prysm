@@ -40,7 +40,7 @@ var eth1DataNotification bool
 const eth1dataTimeout = 2 * time.Second
 
 type eth1DataSingleVote struct {
-	eth1Data    ethpb.Eth1Data
+	eth1Data    *ethpb.Eth1Data
 	blockHeight *big.Int
 }
 
@@ -270,7 +270,7 @@ func (vs *Server) inRangeVotes(ctx context.Context,
 		// lastValidBlockNumber.Cmp(height) > -1 filters out all blocks after lastValidBlockNumber
 		// These filters result in the range [firstValidBlockNumber, lastValidBlockNumber]
 		if exists && firstValidBlockNumber.Cmp(height) < 1 && lastValidBlockNumber.Cmp(height) > -1 {
-			inRangeVotes = append(inRangeVotes, eth1DataSingleVote{eth1Data: *eth1Data, blockHeight: height})
+			inRangeVotes = append(inRangeVotes, eth1DataSingleVote{eth1Data: eth1Data, blockHeight: height})
 		}
 	}
 

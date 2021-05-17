@@ -77,7 +77,7 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	defer cancel()
 
 	metadataSeq := types.SSZUint64(s.cfg.P2P.MetadataSeq())
-	stream, err := s.cfg.P2P.Send(ctx, &metadataSeq, p2p.RPCPingTopic, id)
+	stream, err := s.cfg.P2P.Send(ctx, &metadataSeq, p2p.RPCPingTopicV1, id)
 	if err != nil {
 		return err
 	}

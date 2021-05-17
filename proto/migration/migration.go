@@ -1,10 +1,10 @@
 package migration
 
 import (
-	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	ethpb_alpha "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"google.golang.org/protobuf/proto"
 )
 
 // V1Alpha1BlockToV1BlockHeader converts a v1alpha1 SignedBeaconBlock proto to a v1 SignedBeaconBlockHeader proto.
@@ -27,7 +27,7 @@ func V1Alpha1BlockToV1BlockHeader(block *ethpb_alpha.SignedBeaconBlock) (*ethpb.
 
 // V1Alpha1ToV1Block converts a v1alpha1 SignedBeaconBlock proto to a v1 proto.
 func V1Alpha1ToV1Block(alphaBlk *ethpb_alpha.SignedBeaconBlock) (*ethpb.SignedBeaconBlock, error) {
-	marshaledBlk, err := alphaBlk.Marshal()
+	marshaledBlk, err := proto.Marshal(alphaBlk)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not marshal block")
 	}
@@ -40,7 +40,7 @@ func V1Alpha1ToV1Block(alphaBlk *ethpb_alpha.SignedBeaconBlock) (*ethpb.SignedBe
 
 // V1ToV1Alpha1Block converts a v1 SignedBeaconBlock proto to a v1alpha1 proto.
 func V1ToV1Alpha1Block(alphaBlk *ethpb.SignedBeaconBlock) (*ethpb_alpha.SignedBeaconBlock, error) {
-	marshaledBlk, err := alphaBlk.Marshal()
+	marshaledBlk, err := proto.Marshal(alphaBlk)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not marshal block")
 	}

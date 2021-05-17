@@ -6,8 +6,6 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
-	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -27,6 +25,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestServer_ListBlocks_NoResults(t *testing.T) {
@@ -444,7 +444,7 @@ func TestServer_StreamChainHead_ContextCanceled(t *testing.T) {
 	mockStream := mock.NewMockBeaconChain_StreamChainHeadServer(ctrl)
 	mockStream.EXPECT().Context().Return(ctx)
 	go func(tt *testing.T) {
-		assert.ErrorContains(tt, "Context canceled", server.StreamChainHead(&ptypes.Empty{}, mockStream))
+		assert.ErrorContains(tt, "Context canceled", server.StreamChainHead(&emptypb.Empty{}, mockStream))
 		<-exitRoutine
 	}(t)
 	cancel()
@@ -534,7 +534,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
 
 	go func(tt *testing.T) {
-		assert.NoError(tt, server.StreamChainHead(&ptypes.Empty{}, mockStream), "Could not call RPC method")
+		assert.NoError(tt, server.StreamChainHead(&emptypb.Empty{}, mockStream), "Could not call RPC method")
 	}(t)
 
 	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
@@ -735,7 +735,7 @@ func TestServer_GetWeakSubjectivityCheckpoint(t *testing.T) {
 	wsEpoch, err := helpers.ComputeWeakSubjectivityPeriod(beaconState)
 	require.NoError(t, err)
 
-	c, err := server.GetWeakSubjectivityCheckpoint(ctx, &ptypes.Empty{})
+	c, err := server.GetWeakSubjectivityCheckpoint(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
 	e := finalizedEpoch - (finalizedEpoch % wsEpoch)
 	require.Equal(t, e, c.Epoch)

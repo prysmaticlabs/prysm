@@ -11,17 +11,18 @@ import (
 	"strings"
 	"time"
 
-	gwruntime "github.com/grpc-ecosystem/grpc-gateway/runtime"
+	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1_gateway"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1_gateway"
-	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2_gateway"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/validator/web"
 	"github.com/rs/cors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 var _ shared.Service = (*Gateway)(nil)
@@ -53,7 +54,7 @@ type Gateway struct {
 	allowedOrigins          []string
 }
 
-// New returns a new gateway server which translates HTTP into gRPC.
+// NewValidator returns a new gateway server which translates HTTP into gRPC.
 // Accepts a context.
 func NewValidator(
 	ctx context.Context,
@@ -71,7 +72,7 @@ func NewValidator(
 	}
 }
 
-// New returns a new gateway server which translates HTTP into gRPC.
+// NewBeacon returns a new gateway server which translates HTTP into gRPC.
 // Accepts a context and optional http.ServeMux.
 func NewBeacon(
 	ctx context.Context,
@@ -118,10 +119,17 @@ func (g *Gateway) Start() {
 		g.conn = conn
 	}
 	gwmux := gwruntime.NewServeMux(
-		gwruntime.WithMarshalerOption(
-			gwruntime.MIMEWildcard,
-			&gwruntime.JSONPb{OrigName: false, EmitDefaults: true},
-		),
+		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
+			Marshaler: &gwruntime.JSONPb{
+				MarshalOptions: protojson.MarshalOptions{
+					UseProtoNames:   true,
+					EmitUnpopulated: true,
+				},
+				UnmarshalOptions: protojson.UnmarshalOptions{
+					DiscardUnknown: true,
+				},
+			},
+		}),
 	)
 	if g.callerId == Beacon {
 		handlers := []func(context.Context, *gwruntime.ServeMux, *grpc.ClientConn) error{
