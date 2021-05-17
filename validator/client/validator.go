@@ -15,8 +15,6 @@ import (
 	"time"
 
 	"github.com/dgraph-io/ristretto"
-	"github.com/gogo/protobuf/proto"
-	ptypes "github.com/gogo/protobuf/types"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -37,6 +35,8 @@ import (
 	slashingiface "github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // reconnectPeriod is the frequency that we try to restart our
@@ -136,7 +136,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForChainStart")
 	defer span.End()
 	// First, check if the beacon chain has started.
-	stream, err := v.validatorClient.WaitForChainStart(ctx, &ptypes.Empty{})
+	stream, err := v.validatorClient.WaitForChainStart(ctx, &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(
 			iface.ErrConnectionIssue,
@@ -194,7 +194,7 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForSync")
 	defer span.End()
 
-	s, err := v.node.GetSyncStatus(ctx, &ptypes.Empty{})
+	s, err := v.node.GetSyncStatus(ctx, &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(iface.ErrConnectionIssue, errors.Wrap(err, "could not get sync status").Error())
 	}
@@ -206,7 +206,7 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 		select {
 		// Poll every half slot.
 		case <-time.After(slotutil.DivideSlotBy(2 /* twice per slot */)):
-			s, err := v.node.GetSyncStatus(ctx, &ptypes.Empty{})
+			s, err := v.node.GetSyncStatus(ctx, &emptypb.Empty{})
 			if err != nil {
 				return errors.Wrap(iface.ErrConnectionIssue, errors.Wrap(err, "could not get sync status").Error())
 			}
@@ -351,7 +351,7 @@ func logActiveValidatorStatus(statuses []*validatorStatus) {
 func (v *validator) CanonicalHeadSlot(ctx context.Context) (types.Slot, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.CanonicalHeadSlot")
 	defer span.End()
-	head, err := v.beaconClient.GetChainHead(ctx, &ptypes.Empty{})
+	head, err := v.beaconClient.GetChainHead(ctx, &emptypb.Empty{})
 	if err != nil {
 		return 0, errors.Wrap(iface.ErrConnectionIssue, err.Error())
 	}

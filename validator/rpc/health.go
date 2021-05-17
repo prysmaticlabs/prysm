@@ -4,18 +4,17 @@ import (
 	"context"
 	"time"
 
-	ptypes "github.com/gogo/protobuf/types"
-	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // GetBeaconNodeConnection retrieves the current beacon node connection
 // information, as well as its sync status.
-func (s *Server) GetBeaconNodeConnection(ctx context.Context, _ *empty.Empty) (*pb.NodeConnectionResponse, error) {
+func (s *Server) GetBeaconNodeConnection(ctx context.Context, _ *emptypb.Empty) (*pb.NodeConnectionResponse, error) {
 	syncStatus, err := s.syncChecker.Syncing(ctx)
 	if err != nil || s.validatorService.Status() != nil {
 		return &pb.NodeConnectionResponse{
@@ -39,13 +38,13 @@ func (s *Server) GetBeaconNodeConnection(ctx context.Context, _ *empty.Empty) (*
 }
 
 // GetLogsEndpoints for the beacon and validator client.
-func (s *Server) GetLogsEndpoints(ctx context.Context, _ *empty.Empty) (*pb.LogsEndpointResponse, error) {
+func (s *Server) GetLogsEndpoints(ctx context.Context, _ *emptypb.Empty) (*pb.LogsEndpointResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "unimplemented")
 }
 
 // GetVersion --
-func (s *Server) GetVersion(ctx context.Context, _ *empty.Empty) (*pb.VersionResponse, error) {
-	beacon, err := s.beaconNodeClient.GetVersion(ctx, &ptypes.Empty{})
+func (s *Server) GetVersion(ctx context.Context, _ *emptypb.Empty) (*pb.VersionResponse, error) {
+	beacon, err := s.beaconNodeClient.GetVersion(ctx, &emptypb.Empty{})
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +56,7 @@ func (s *Server) GetVersion(ctx context.Context, _ *empty.Empty) (*pb.VersionRes
 }
 
 // StreamBeaconLogs from the beacon node via a gRPC server-side stream.
-func (s *Server) StreamBeaconLogs(req *empty.Empty, stream pb.Health_StreamBeaconLogsServer) error {
+func (s *Server) StreamBeaconLogs(req *emptypb.Empty, stream pb.Health_StreamBeaconLogsServer) error {
 	// Wrap service context with a cancel in order to propagate the exiting of
 	// this method properly to the beacon node server.
 	ctx, cancel := context.WithCancel(s.ctx)
@@ -88,7 +87,7 @@ func (s *Server) StreamBeaconLogs(req *empty.Empty, stream pb.Health_StreamBeaco
 }
 
 // StreamValidatorLogs from the validator client via a gRPC server-side stream.
-func (s *Server) StreamValidatorLogs(_ *empty.Empty, stream pb.Health_StreamValidatorLogsServer) error {
+func (s *Server) StreamValidatorLogs(_ *emptypb.Empty, stream pb.Health_StreamValidatorLogsServer) error {
 	ch := make(chan []byte, s.streamLogsBufferSize)
 	sub := s.logsStreamer.LogsFeed().Subscribe(ch)
 	defer func() {
