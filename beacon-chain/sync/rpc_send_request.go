@@ -5,7 +5,6 @@ import (
 	"io"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
