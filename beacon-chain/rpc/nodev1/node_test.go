@@ -10,7 +10,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	ptypes "github.com/gogo/protobuf/types"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	libp2ptest "github.com/libp2p/go-libp2p-peerstore/test"
@@ -28,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/version"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type dummyIdentity enode.ID
@@ -39,7 +39,7 @@ func TestGetVersion(t *testing.T) {
 	semVer := version.SemanticVersion()
 	os := runtime.GOOS
 	arch := runtime.GOARCH
-	res, err := (&Server{}).GetVersion(context.Background(), &ptypes.Empty{})
+	res, err := (&Server{}).GetVersion(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	v := res.Data.Version
 	assert.Equal(t, true, strings.Contains(v, semVer))
@@ -54,10 +54,10 @@ func TestGetHealth(t *testing.T) {
 		SyncChecker: checker,
 	}
 
-	_, err := s.GetHealth(ctx, &ptypes.Empty{})
+	_, err := s.GetHealth(ctx, &emptypb.Empty{})
 	require.ErrorContains(t, "Node not initialized or having issues", err)
 	checker.IsInitialized = true
-	_, err = s.GetHealth(ctx, &ptypes.Empty{})
+	_, err = s.GetHealth(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
 	checker.IsInitialized = false
 	checker.IsSyncing = true
@@ -94,7 +94,7 @@ func TestGetIdentity(t *testing.T) {
 			MetadataProvider: metadataProvider,
 		}
 
-		resp, err := s.GetIdentity(ctx, &ptypes.Empty{})
+		resp, err := s.GetIdentity(ctx, &emptypb.Empty{})
 		require.NoError(t, err)
 		expectedID := peer.ID("foo").Pretty()
 		assert.Equal(t, expectedID, resp.Data.PeerId)
@@ -130,7 +130,7 @@ func TestGetIdentity(t *testing.T) {
 			MetadataProvider: metadataProvider,
 		}
 
-		_, err = s.GetIdentity(ctx, &ptypes.Empty{})
+		_, err = s.GetIdentity(ctx, &emptypb.Empty{})
 		assert.ErrorContains(t, "could not obtain enr", err)
 	})
 
@@ -147,7 +147,7 @@ func TestGetIdentity(t *testing.T) {
 			MetadataProvider: metadataProvider,
 		}
 
-		_, err = s.GetIdentity(ctx, &ptypes.Empty{})
+		_, err = s.GetIdentity(ctx, &emptypb.Empty{})
 		assert.ErrorContains(t, "could not obtain discovery address", err)
 	})
 }
@@ -165,7 +165,7 @@ func TestSyncStatus(t *testing.T) {
 		HeadFetcher:        chainService,
 		GenesisTimeFetcher: chainService,
 	}
-	resp, err := s.GetSyncStatus(context.Background(), &ptypes.Empty{})
+	resp, err := s.GetSyncStatus(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.Equal(t, types.Slot(100), resp.Data.HeadSlot)
 	assert.Equal(t, types.Slot(10), resp.Data.SyncDistance)
@@ -401,7 +401,7 @@ func TestPeerCount(t *testing.T) {
 	}
 
 	s := Server{PeersFetcher: peerFetcher}
-	resp, err := s.PeerCount(context.Background(), &ptypes.Empty{})
+	resp, err := s.PeerCount(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.Equal(t, uint64(1), resp.Data.Connecting, "Wrong number of connecting peers")
 	assert.Equal(t, uint64(2), resp.Data.Connected, "Wrong number of connected peers")

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"runtime/debug"
 
-	"github.com/gogo/protobuf/proto"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -18,7 +18,7 @@ var log = logrus.WithField("prefix", "message-handler")
 
 // SafelyHandleMessage will recover and log any panic that occurs from the
 // function argument.
-func SafelyHandleMessage(ctx context.Context, fn func(ctx context.Context, message proto.Message) error, msg proto.Message) {
+func SafelyHandleMessage(ctx context.Context, fn func(ctx context.Context, message *pubsub.Message) error, msg *pubsub.Message) {
 	defer HandlePanic(ctx, msg)
 
 	// Fingers crossed that it doesn't panic...
@@ -35,11 +35,11 @@ func SafelyHandleMessage(ctx context.Context, fn func(ctx context.Context, messa
 
 // HandlePanic returns a panic handler function that is used to
 // capture a panic.
-func HandlePanic(ctx context.Context, msg proto.Message) {
+func HandlePanic(ctx context.Context, msg *pubsub.Message) {
 	if r := recover(); r != nil {
 		printedMsg := noMsgData
 		if msg != nil {
-			printedMsg = proto.MarshalTextString(msg)
+			printedMsg = msg.String()
 		}
 		log.WithFields(logrus.Fields{
 			"r":   r,

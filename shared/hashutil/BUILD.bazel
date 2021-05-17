@@ -9,9 +9,9 @@ go_library(
     deps = [
         "//shared/bytesutil:go_default_library",
         "@com_github_ferranbt_fastssz//:go_default_library",
-        "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_minio_highwayhash//:go_default_library",
         "@com_github_minio_sha256_simd//:go_default_library",
+        "@org_golang_google_protobuf//proto:go_default_library",
         "@org_golang_x_crypto//sha3:go_default_library",
     ],
 )

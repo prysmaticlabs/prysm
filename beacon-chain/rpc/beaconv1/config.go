@@ -9,17 +9,17 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	ptypes "github.com/gogo/protobuf/types"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // GetForkSchedule retrieve all scheduled upcoming forks this node is aware of.
-func (bs *Server) GetForkSchedule(ctx context.Context, _ *ptypes.Empty) (*ethpb.ForkScheduleResponse, error) {
+func (bs *Server) GetForkSchedule(ctx context.Context, _ *emptypb.Empty) (*ethpb.ForkScheduleResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconv1.GetForkSchedule")
 	defer span.End()
 
@@ -56,7 +56,7 @@ func (bs *Server) GetForkSchedule(ctx context.Context, _ *ptypes.Empty) (*ethpb.
 // Values are returned with following format:
 // - any value starting with 0x in the spec is returned as a hex string.
 // - all other values are returned as number.
-func (bs *Server) GetSpec(ctx context.Context, _ *ptypes.Empty) (*ethpb.SpecResponse, error) {
+func (bs *Server) GetSpec(ctx context.Context, _ *emptypb.Empty) (*ethpb.SpecResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconV1.GetSpec")
 	defer span.End()
 
@@ -68,7 +68,7 @@ func (bs *Server) GetSpec(ctx context.Context, _ *ptypes.Empty) (*ethpb.SpecResp
 }
 
 // GetDepositContract retrieves deposit contract address and genesis fork version.
-func (bs *Server) GetDepositContract(ctx context.Context, _ *ptypes.Empty) (*ethpb.DepositContractResponse, error) {
+func (bs *Server) GetDepositContract(ctx context.Context, _ *emptypb.Empty) (*ethpb.DepositContractResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconv1.GetDepositContract")
 	defer span.End()
 
