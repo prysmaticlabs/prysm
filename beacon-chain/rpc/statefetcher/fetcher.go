@@ -67,11 +67,7 @@ func (p *StateProvider) State(ctx context.Context, stateId []byte) (iface.Beacon
 			return nil, errors.Wrap(err, "could not get justified state")
 		}
 	default:
-		ok, matchErr := bytesutil.IsBytes32Hex(stateId)
-		if matchErr != nil {
-			return nil, errors.Wrap(err, "could not parse ID")
-		}
-		if ok {
+		if len(stateId) == 32 {
 			s, err = p.stateByHex(ctx, stateId)
 		} else {
 			slotNumber, parseErr := strconv.ParseUint(stateIdString, 10, 64)
