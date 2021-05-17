@@ -3,9 +3,9 @@ package sync
 import (
 	"errors"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 )
