@@ -25,7 +25,7 @@ func (bs *Server) GetValidator(ctx context.Context, req *ethpb.StateValidatorReq
 	}
 	valContainer, err := valContainerById(state, req.ValidatorId)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get validator container: %v", err)
 	}
 	return &ethpb.StateValidatorResponse{Data: valContainer}, nil
 }
@@ -42,7 +42,7 @@ func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidators
 	for i := 0; i < len(req.Id); i++ {
 		valContainer, err := valContainerById(state, req.Id[i])
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not get validator container: %v", err)
 		}
 		valContainers[i] = valContainer
 	}
@@ -64,7 +64,7 @@ func (bs *Server) ListValidatorBalances(ctx context.Context, req *ethpb.Validato
 		}
 		bal, err := state.BalanceAtIndex(valIndex)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not get balance at index %d: %v", valIndex, err)
 		}
 		valBalances[i] = &ethpb.ValidatorBalance{
 			Index:   valIndex,
