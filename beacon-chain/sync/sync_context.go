@@ -7,7 +7,36 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 )
 
-func (s *Service) rpcContext(stream network.Stream) ([]byte, error) {
+func writeContextToStream(stream network.Stream, chain blockchainService) error {
+	rpcCtx, err := rpcContext(stream, chain)
+	if err != nil {
+		return err
+	}
+	// Exit early if there is an empty context.
+	if len(rpcCtx) == 0 {
+		return nil
+	}
+	_, err = stream.Write(rpcCtx)
+	return err
+}
+
+func readContextFromStream(stream network.Stream, chain blockchainService) ([]byte, error) {
+	rpcCtx, err := rpcContext(stream, chain)
+	if err != nil {
+		return nil, err
+	}
+	if len(rpcCtx) == 0 {
+		return []byte{}, nil
+	}
+	// Read context (fork-digest) from stream
+	b := make([]byte, 4)
+	if _, err := stream.Read(b); err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+func rpcContext(stream network.Stream, chain blockchainService) ([]byte, error) {
 	_, _, version, err := p2p.TopicDeconstructor(string(stream.Protocol()))
 	if err != nil {
 		return nil, err

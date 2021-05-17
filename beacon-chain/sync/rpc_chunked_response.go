@@ -14,13 +14,16 @@ import (
 // response_chunk ::= | <result> | <encoding-dependent-header> | <encoded-payload>
 func (s *Service) chunkWriter(stream libp2pcore.Stream, msg interface{}) error {
 	SetStreamWriteDeadline(stream, defaultWriteDuration)
-	return s.WriteChunk(stream, s.cfg.P2P.Encoding(), msg)
+	return WriteChunk(stream, s.cfg.Chain, s.cfg.P2P.Encoding(), msg)
 }
 
 // WriteChunk object to stream.
 // response_chunk ::= | <result> | <encoding-dependent-header> | <encoded-payload>
-func (s *Service) WriteChunk(stream libp2pcore.Stream, encoding encoder.NetworkEncoding, msg interface{}) error {
+func WriteChunk(stream libp2pcore.Stream, chain blockchainService, encoding encoder.NetworkEncoding, msg interface{}) error {
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
+		return err
+	}
+	if err := writeContextToStream(stream, chain); err != nil {
 		return err
 	}
 	_, err := encoding.EncodeWithMaxLength(stream, msg)
@@ -64,7 +67,6 @@ func readResponseChunk(stream libp2pcore.Stream, p2p p2p.P2P, to interface{}) er
 	if err != nil {
 		return err
 	}
-
 	if code != 0 {
 		return errors.New(errMsg)
 	}

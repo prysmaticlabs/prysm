@@ -78,8 +78,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 				if uint64(i) >= uint64(len(knownBlocks)) {
 					break
 				}
-				s := &Service{}
-				err = s.WriteChunk(stream, p2pProvider.Encoding(), knownBlocks[i])
+				err = WriteChunk(stream, nil, p2pProvider.Encoding(), knownBlocks[i])
 				if err != nil && err.Error() != mux.ErrReset.Error() {
 					require.NoError(t, err)
 				}
@@ -226,8 +225,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 				if uint64(i) >= uint64(len(knownBlocks)) {
 					break
 				}
-				s := &Service{}
-				err = s.WriteChunk(stream, p2.Encoding(), knownBlocks[i])
+				err = WriteChunk(stream, nil, p2.Encoding(), knownBlocks[i])
 				if err != nil && err.Error() != mux.ErrReset.Error() {
 					require.NoError(t, err)
 				}
@@ -268,8 +266,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 				if uint64(i) >= uint64(len(knownBlocks)) {
 					break
 				}
-				s := &Service{}
-				err = s.WriteChunk(stream, p2.Encoding(), knownBlocks[i])
+				err = WriteChunk(stream, nil, p2.Encoding(), knownBlocks[i])
 				if err != nil && err.Error() != mux.ErrReset.Error() {
 					require.NoError(t, err)
 				}

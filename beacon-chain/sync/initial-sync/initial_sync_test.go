@@ -216,8 +216,7 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 		}
 
 		for i := 0; i < len(ret); i++ {
-			s := &beaconsync.Service{}
-			assert.NoError(t, s.WriteChunk(stream, p.Encoding(), ret[i]))
+			assert.NoError(t, beaconsync.WriteChunk(stream, nil, p.Encoding(), ret[i]))
 		}
 	})
 
@@ -286,8 +285,7 @@ func connectPeerHavingBlocks(
 			if uint64(i) >= uint64(len(blocks)) {
 				break
 			}
-			s := &beaconsync.Service{}
-			require.NoError(t, s.WriteChunk(stream, p.Encoding(), blocks[i]))
+			require.NoError(t, beaconsync.WriteChunk(stream, nil, p.Encoding(), blocks[i]))
 		}
 	})
 

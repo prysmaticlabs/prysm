@@ -608,8 +608,7 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 					for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += types.Slot(req.Step) {
 						blk := testutil.NewBeaconBlock()
 						blk.Block.Slot = i
-						s := &beaconsync.Service{}
-						assert.NoError(t, s.WriteChunk(stream, p1.Encoding(), blk))
+						assert.NoError(t, beaconsync.WriteChunk(stream, nil, p1.Encoding(), blk))
 					}
 					assert.NoError(t, stream.Close())
 				}
@@ -630,8 +629,7 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 					for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step+1); i += types.Slot(req.Step) {
 						blk := testutil.NewBeaconBlock()
 						blk.Block.Slot = i
-						s := &beaconsync.Service{}
-						assert.NoError(t, s.WriteChunk(stream, p1.Encoding(), blk))
+						assert.NoError(t, beaconsync.WriteChunk(stream, nil, p1.Encoding(), blk))
 					}
 					assert.NoError(t, stream.Close())
 				}
@@ -652,12 +650,11 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 				return func(stream network.Stream) {
 					blk := testutil.NewBeaconBlock()
 					blk.Block.Slot = 163
-					s := &beaconsync.Service{}
-					assert.NoError(t, s.WriteChunk(stream, p1.Encoding(), blk))
+					assert.NoError(t, beaconsync.WriteChunk(stream, nil, p1.Encoding(), blk))
 
 					blk = testutil.NewBeaconBlock()
 					blk.Block.Slot = 162
-					assert.NoError(t, s.WriteChunk(stream, p1.Encoding(), blk))
+					assert.NoError(t, beaconsync.WriteChunk(stream, nil, p1.Encoding(), blk))
 					assert.NoError(t, stream.Close())
 				}
 			},
@@ -677,12 +674,11 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 				return func(stream network.Stream) {
 					blk := testutil.NewBeaconBlock()
 					blk.Block.Slot = 160
-					s := &beaconsync.Service{}
-					assert.NoError(t, s.WriteChunk(stream, p1.Encoding(), blk))
+					assert.NoError(t, beaconsync.WriteChunk(stream, nil, p1.Encoding(), blk))
 
 					blk = testutil.NewBeaconBlock()
 					blk.Block.Slot = 160
-					assert.NoError(t, s.WriteChunk(stream, p1.Encoding(), blk))
+					assert.NoError(t, beaconsync.WriteChunk(stream, nil, p1.Encoding(), blk))
 					assert.NoError(t, stream.Close())
 				}
 			},
@@ -708,13 +704,11 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 						// Patch mid block, with invalid slot number.
 						if i == req.StartSlot.Add(req.Count*req.Step/2) {
 							blk.Block.Slot = req.StartSlot - 1
-							s := &beaconsync.Service{}
-							assert.NoError(t, s.WriteChunk(stream, p1.Encoding(), blk))
+							assert.NoError(t, beaconsync.WriteChunk(stream, nil, p1.Encoding(), blk))
 							break
 						} else {
 							blk.Block.Slot = i
-							s := &beaconsync.Service{}
-							assert.NoError(t, s.WriteChunk(stream, p1.Encoding(), blk))
+							assert.NoError(t, beaconsync.WriteChunk(stream, nil, p1.Encoding(), blk))
 						}
 					}
 				}
@@ -741,13 +735,11 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 						// Patch mid block, with invalid slot number.
 						if i == req.StartSlot.Add(req.Count*req.Step/2) {
 							blk.Block.Slot = req.StartSlot.Add(req.Count * req.Step)
-							s := &beaconsync.Service{}
-							assert.NoError(t, s.WriteChunk(stream, p1.Encoding(), blk))
+							assert.NoError(t, beaconsync.WriteChunk(stream, nil, p1.Encoding(), blk))
 							break
 						} else {
 							blk.Block.Slot = i
-							s := &beaconsync.Service{}
-							assert.NoError(t, s.WriteChunk(stream, p1.Encoding(), blk))
+							assert.NoError(t, beaconsync.WriteChunk(stream, nil, p1.Encoding(), blk))
 						}
 					}
 				}
@@ -768,12 +760,11 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 				return func(stream network.Stream) {
 					blk := testutil.NewBeaconBlock()
 					blk.Block.Slot = 100
-					s := &beaconsync.Service{}
-					assert.NoError(t, s.WriteChunk(stream, p1.Encoding(), blk))
+					assert.NoError(t, beaconsync.WriteChunk(stream, nil, p1.Encoding(), blk))
 
 					blk = testutil.NewBeaconBlock()
 					blk.Block.Slot = 105
-					assert.NoError(t, s.WriteChunk(stream, p1.Encoding(), blk))
+					assert.NoError(t, beaconsync.WriteChunk(stream, nil, p1.Encoding(), blk))
 					assert.NoError(t, stream.Close())
 				}
 			},
@@ -792,12 +783,11 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 				return func(stream network.Stream) {
 					blk := testutil.NewBeaconBlock()
 					blk.Block.Slot = 100
-					s := &beaconsync.Service{}
-					assert.NoError(t, s.WriteChunk(stream, p1.Encoding(), blk))
+					assert.NoError(t, beaconsync.WriteChunk(stream, nil, p1.Encoding(), blk))
 
 					blk = testutil.NewBeaconBlock()
 					blk.Block.Slot = 103
-					assert.NoError(t, s.WriteChunk(stream, p1.Encoding(), blk))
+					assert.NoError(t, beaconsync.WriteChunk(stream, nil, p1.Encoding(), blk))
 					assert.NoError(t, stream.Close())
 				}
 			},
