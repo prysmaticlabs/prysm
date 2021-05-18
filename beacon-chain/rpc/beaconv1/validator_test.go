@@ -221,11 +221,8 @@ func TestListCommittees(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.Equal(t, int(params.BeaconConfig().SlotsPerEpoch)*2, len(resp.Data))
-		slot := resp.Data[0].Slot
 		for _, datum := range resp.Data {
-			assert.Equal(t, slot, datum.Slot)
 			assert.Equal(t, true, datum.Index == types.CommitteeIndex(0) || datum.Index == types.CommitteeIndex(1))
-			slot++
 		}
 	})
 
