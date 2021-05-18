@@ -191,12 +191,7 @@ func interact(
 			}
 		}
 	} else {
-		rawPubKeys = make([][]byte, len(validatingPublicKeys))
-		formattedPubKeys = make([]string, len(validatingPublicKeys))
-		for i, pk := range validatingPublicKeys {
-			rawPubKeys[i] = pk[:]
-			formattedPubKeys[i] = fmt.Sprintf("%#x", bytesutil.Trunc(pk[:]))
-		}
+		rawPubKeys, formattedPubKeys = prepareAllKeys(validatingPublicKeys)
 		fmt.Printf("About to perform a voluntary exit of %d accounts\n", len(rawPubKeys))
 	}
 
@@ -219,6 +214,17 @@ func interact(
 	}
 
 	return rawPubKeys, formattedPubKeys, nil
+}
+
+func prepareAllKeys(validatingKeys [][48]byte) (raw [][]byte, formatted []string) {
+	raw = make([][]byte, len(validatingKeys))
+	formatted = make([]string, len(validatingKeys))
+	for i, pk := range validatingKeys {
+		raw[i] = make([]byte, len(pk))
+		copy(raw[i], pk[:])
+		formatted[i] = fmt.Sprintf("%#x", bytesutil.Trunc(pk[:]))
+	}
+	return
 }
 
 func prepareClients(cliCtx *cli.Context) (*ethpb.BeaconNodeValidatorClient, *ethpb.NodeClient, error) {
