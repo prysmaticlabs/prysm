@@ -15,6 +15,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 	butil "github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/wealdtech/go-bytesutil"
@@ -175,7 +176,13 @@ func (m *ApiProxyMiddleware) Run() error {
 
 func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint string, info endpointInfo) {
 	m.router.HandleFunc(endpoint, func(writer http.ResponseWriter, request *http.Request) {
-		data := prepareData(info)
+		data, err := prepareData(info)
+		if err != nil {
+			e := fmt.Errorf("could not prepare request data: %w", err)
+			writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
+			return
+		}
+
 		if request.Method == "POST" {
 			if err := wrapAttestationsArray(data, request); err != nil {
 				e := fmt.Errorf("could not decode request body: %w", err)
@@ -184,7 +191,7 @@ func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint string, info endpointInf
 			}
 
 			// Deserialize the body.
-			if err := json.NewDecoder(request.Body).Decode(&data.postRequest); err != nil {
+			if err := json.NewDecoder(request.Body).Decode(data.postRequest); err != nil {
 				e := fmt.Errorf("could not decode request body: %w", err)
 				writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
 				return
@@ -326,8 +333,8 @@ func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint string, info endpointInf
 
 // prepareData constructs an empty struct whose contents are populated from endpoint information.
 // The returned struct is meant to be used during a single request.
-func prepareData(info endpointInfo) endpointData {
-	data := endpointData{}
+func prepareData(info endpointInfo) (*endpointData, error) {
+	data := &endpointData{}
 	if info.postRequestType != nil {
 		data.postRequest = reflect.New(info.postRequestType).Interface()
 	}
@@ -335,13 +342,17 @@ func prepareData(info endpointInfo) endpointData {
 		data.getResponse = reflect.New(info.getResponseType).Interface()
 	}
 	if info.errorType != nil {
-		data.err = reflect.New(info.errorType).Interface().(ErrorJson)
+		errJson, ok := reflect.New(info.errorType).Interface().(ErrorJson)
+		if !ok {
+			return nil, errors.New("could not prepare error data")
+		}
+		data.err = errJson
 	}
-	return data
+	return data, nil
 }
 
 // Posted graffiti needs to have length of 32 bytes, but client is allowed to send data of any length.
-func prepareGraffiti(data endpointData) {
+func prepareGraffiti(data *endpointData) {
 	if block, ok := data.postRequest.(*BeaconBlockContainerJson); ok {
 		b := bytesutil.ToBytes32([]byte(block.Message.Body.Graffiti))
 		block.Message.Body.Graffiti = hexutil.Encode(b[:])
@@ -350,7 +361,7 @@ func prepareGraffiti(data endpointData) {
 
 // https://ethereum.github.io/eth2.0-APIs/#/Beacon/submitPoolAttestations expects posting a top-level array.
 // We make it more proto-friendly by wrapping it in a struct with a 'data' field.
-func wrapAttestationsArray(data endpointData, req *http.Request) error {
+func wrapAttestationsArray(data *endpointData, req *http.Request) error {
 	if _, ok := data.postRequest.(*SubmitAttestationRequestJson); ok {
 		atts := make([]*AttestationJson, 0)
 		if err := json.NewDecoder(req.Body).Decode(&atts); err != nil {
