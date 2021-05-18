@@ -2,7 +2,6 @@ package beaconv1
 
 import (
 	"context"
-	"errors"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	ethpb_alpha "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -18,7 +17,35 @@ import (
 // ListPoolAttestations retrieves attestations known by the node but
 // not necessarily incorporated into any block.
 func (bs *Server) ListPoolAttestations(ctx context.Context, req *ethpb.AttestationsPoolRequest) (*ethpb.AttestationsPoolResponse, error) {
-	return nil, errors.New("unimplemented")
+	ctx, span := trace.StartSpan(ctx, "beaconv1.ListPoolAttestations")
+	defer span.End()
+
+	attestations := bs.AttestationsPool.AggregatedAttestations()
+	unaggAtts, err := bs.AttestationsPool.UnaggregatedAttestations()
+	if err != nil {
+		return nil, err
+	}
+	attestations = append(attestations, unaggAtts...)
+	if req.Slot == nil && req.CommitteeIndex == nil {
+		allAtts := make([]*ethpb.Attestation, len(attestations))
+		for i, att := range attestations {
+			allAtts[i] = migration.V1Alpha1AttestationToV1(att)
+		}
+		return &ethpb.AttestationsPoolResponse{Data: allAtts}, nil
+	}
+	filteredAtts := make([]*ethpb.Attestation, 0, len(attestations))
+	for _, att := range attestations {
+		if req.Slot != nil && req.CommitteeIndex != nil {
+			if att.Data.CommitteeIndex != *req.CommitteeIndex || att.Data.Slot != *req.Slot {
+				continue
+			}
+			filteredAtts = append(filteredAtts, migration.V1Alpha1AttestationToV1(att))
+		} else if req.Slot != nil && att.Data.Slot == *req.Slot ||
+			req.CommitteeIndex != nil && att.Data.CommitteeIndex == *req.CommitteeIndex {
+			filteredAtts = append(filteredAtts, migration.V1Alpha1AttestationToV1(att))
+		}
+	}
+	return &ethpb.AttestationsPoolResponse{Data: filteredAtts}, nil
 }
 
 // SubmitAttestations submits Attestation object to node. If attestation passes all validation
