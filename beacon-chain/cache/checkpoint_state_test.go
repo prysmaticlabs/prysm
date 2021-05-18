@@ -3,7 +3,6 @@ package cache
 import (
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
@@ -13,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"google.golang.org/protobuf/proto"
 )
 
 func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {

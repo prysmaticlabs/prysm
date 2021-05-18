@@ -256,7 +256,7 @@ func TestKV_Aggregated_AggregatedAttestations(t *testing.T) {
 	sort.Slice(returned, func(i, j int) bool {
 		return returned[i].Data.Slot < returned[j].Data.Slot
 	})
-	assert.DeepEqual(t, atts, returned)
+	assert.DeepSSZEqual(t, atts, returned)
 }
 
 func TestKV_Aggregated_DeleteAggregatedAttestation(t *testing.T) {

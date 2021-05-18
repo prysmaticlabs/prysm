@@ -3,11 +3,11 @@ package debugv1
 import (
 	"context"
 
-	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // GetBeaconState returns the full beacon state for a given state id.
@@ -28,7 +28,7 @@ func (ds *Server) GetBeaconState(ctx context.Context, req *ethpb.StateRequest) (
 }
 
 // ListForkChoiceHeads retrieves the fork choice leaves for the current head.
-func (ds *Server) ListForkChoiceHeads(ctx context.Context, _ *ptypes.Empty) (*ethpb.ForkChoiceHeadsResponse, error) {
+func (ds *Server) ListForkChoiceHeads(ctx context.Context, _ *emptypb.Empty) (*ethpb.ForkChoiceHeadsResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "debugv1.ListForkChoiceHeads")
 	defer span.End()
 
