@@ -33,6 +33,7 @@ func (bs *Server) ListPoolAttestations(ctx context.Context, req *ethpb.Attestati
 		}
 		return &ethpb.AttestationsPoolResponse{Data: allAtts}, nil
 	}
+
 	filteredAtts := make([]*ethpb.Attestation, 0, len(attestations))
 	for _, att := range attestations {
 		if req.Slot != nil && req.CommitteeIndex != nil {
