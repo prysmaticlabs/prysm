@@ -177,22 +177,21 @@ func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint string, info endpointInf
 	m.router.HandleFunc(endpoint, func(writer http.ResponseWriter, request *http.Request) {
 		data := prepareData(info)
 		if request.Method == "POST" {
-			// https://ethereum.github.io/eth2.0-APIs/#/Beacon/submitPoolAttestations expects posting a top-level array.
-			// We make it more proto-friendly by wrapping it in a struct with a 'data' field.
 			if err := wrapAttestationsArray(data, request); err != nil {
 				e := fmt.Errorf("could not decode request body: %w", err)
 				writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
 				return
 			}
 
-			// Deserialize the body into the 'm' struct, and post it to grpc-gateway.
+			// Deserialize the body.
 			if err := json.NewDecoder(request.Body).Decode(&data.postRequest); err != nil {
 				e := fmt.Errorf("could not decode request body: %w", err)
 				writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
 				return
 			}
-			// Posted graffiti needs to have length of 32 bytes, but client is allowed to send data of any length.
+
 			prepareGraffiti(data)
+
 			// Apply processing functions to fields with specific tags.
 			if err := processField(data.postRequest, []fieldProcessor{
 				{
@@ -217,41 +216,13 @@ func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint string, info endpointInf
 			request.ContentLength = int64(len(j))
 		}
 
+		// Prepare request values for proxying.
 		request.URL.Scheme = "http"
 		request.URL.Host = m.GatewayAddress
 		request.RequestURI = ""
+		handleUrlParameters(endpoint, request, writer)
 
-		// Handle hex in URL parameters.
-		segments := strings.Split(endpoint, "/")
-		for i, s := range segments {
-			// We only care about segments which are parameterized.
-			if len(s) > 0 && s[0] == '{' && s[len(s)-1] == '}' {
-				bRouteVar := []byte(mux.Vars(request)[s[1:len(s)-1]])
-				var routeVar string
-				isHex, err := butil.IsBytes32Hex(bRouteVar)
-				if err != nil {
-					e := fmt.Errorf("could not process URL parameter: %w", err)
-					writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
-					return
-				}
-				if isHex {
-					b, err := bytesutil.FromHexString(string(bRouteVar))
-					if err != nil {
-						e := fmt.Errorf("could not process URL parameter: %w", err)
-						writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
-						return
-					}
-					routeVar = base64.URLEncoding.EncodeToString(b)
-				} else {
-					routeVar = base64.StdEncoding.EncodeToString(bRouteVar)
-				}
-				splitPath := strings.Split(request.URL.Path, "/")
-				splitPath[i] = routeVar
-				request.URL.Path = strings.Join(splitPath, "/")
-				break
-			}
-		}
-
+		// Proxy the request to grpc-gateway.
 		grpcResp, err := http.DefaultClient.Do(request)
 		if err != nil {
 			e := fmt.Errorf("could not proxy request: %w", err)
@@ -275,6 +246,7 @@ func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint string, info endpointInf
 			writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
 			return
 		}
+
 		var j []byte
 		if data.err.Msg() != "" {
 			// Something went wrong, but the request completed, meaning we can write headers and the error message.
@@ -325,7 +297,7 @@ func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint string, info endpointInf
 			}
 		}
 
-		// Write the response (headers + content) and PROFIT!
+		// Write the response (headers + body) and PROFIT!
 		for h, vs := range grpcResp.Header {
 			for _, v := range vs {
 				writer.Header().Set(h, v)
@@ -343,6 +315,7 @@ func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint string, info endpointInf
 			writer.WriteHeader(grpcResp.StatusCode)
 		}
 
+		// Final cleanup.
 		if err := grpcResp.Body.Close(); err != nil {
 			e := fmt.Errorf("could not close response body: %w", err)
 			writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
@@ -352,6 +325,7 @@ func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint string, info endpointInf
 }
 
 // prepareData constructs an empty struct whose contents are populated from endpoint information.
+// The returned struct is meant to be used during a single request.
 func prepareData(info endpointInfo) endpointData {
 	data := endpointData{}
 	if info.postRequestType != nil {
@@ -366,6 +340,7 @@ func prepareData(info endpointInfo) endpointData {
 	return data
 }
 
+// Posted graffiti needs to have length of 32 bytes, but client is allowed to send data of any length.
 func prepareGraffiti(data endpointData) {
 	if block, ok := data.postRequest.(*BeaconBlockContainerJson); ok {
 		b := bytesutil.ToBytes32([]byte(block.Message.Body.Graffiti))
@@ -373,6 +348,8 @@ func prepareGraffiti(data endpointData) {
 	}
 }
 
+// https://ethereum.github.io/eth2.0-APIs/#/Beacon/submitPoolAttestations expects posting a top-level array.
+// We make it more proto-friendly by wrapping it in a struct with a 'data' field.
 func wrapAttestationsArray(data endpointData, req *http.Request) error {
 	if _, ok := data.postRequest.(*SubmitAttestationRequestJson); ok {
 		atts := make([]*AttestationJson, 0)
@@ -387,6 +364,41 @@ func wrapAttestationsArray(data endpointData, req *http.Request) error {
 		req.Body = ioutil.NopCloser(bytes.NewReader(b))
 	}
 	return nil
+}
+
+// handleUrlParameters processes URL parameters, allowing parameterized URLs to be safely and correctly proxied to grpc-gateway.
+func handleUrlParameters(endpoint string, request *http.Request, writer http.ResponseWriter) {
+	segments := strings.Split(endpoint, "/")
+	for i, s := range segments {
+		// We only care about segments which are parameterized.
+		if len(s) > 0 && s[0] == '{' && s[len(s)-1] == '}' {
+			bRouteVar := []byte(mux.Vars(request)[s[1:len(s)-1]])
+			var routeVar string
+			isHex, err := butil.IsBytes32Hex(bRouteVar)
+			if err != nil {
+				e := fmt.Errorf("could not process URL parameter: %w", err)
+				writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
+				return
+			}
+			if isHex {
+				b, err := bytesutil.FromHexString(string(bRouteVar))
+				if err != nil {
+					e := fmt.Errorf("could not process URL parameter: %w", err)
+					writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
+					return
+				}
+				// Converting hex to base64 may result in a value which malforms the URL.
+				// We use URLEncoding to safely escape such values.
+				routeVar = base64.URLEncoding.EncodeToString(b)
+			} else {
+				routeVar = base64.StdEncoding.EncodeToString(bRouteVar)
+			}
+			// Merge segments back into the full URL.
+			splitPath := strings.Split(request.URL.Path, "/")
+			splitPath[i] = routeVar
+			request.URL.Path = strings.Join(splitPath, "/")
+		}
+	}
 }
 
 func writeError(writer http.ResponseWriter, e ErrorJson, responseHeader http.Header) {
