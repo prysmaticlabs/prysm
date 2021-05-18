@@ -2,7 +2,6 @@ package detection
 
 import (
 	"context"
-	"reflect"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -10,6 +9,7 @@ import (
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/slashutil"
+	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
@@ -707,16 +707,20 @@ func TestServer_MapResultsToAtts(t *testing.T) {
 
 	resultsToAtts, err := ds.mapResultsToAtts(ctx, results)
 	require.NoError(t, err)
-	if !reflect.DeepEqual(expectedResultsToAtts, resultsToAtts) {
-		t.Error("Expected map:")
-		for key, value := range resultsToAtts {
-			t.Errorf("Key %#x: %d atts", key, len(value))
-			t.Errorf("%+v", value)
-		}
-		t.Error("To equal:")
-		for key, value := range expectedResultsToAtts {
-			t.Errorf("Key %#x: %d atts", key, len(value))
-			t.Errorf("%+v", value)
+	for k := range expectedResultsToAtts {
+		exp := expectedResultsToAtts[k]
+		recv := resultsToAtts[k]
+		if !sszutil.DeepEqual(exp, recv) {
+			t.Error("Expected map:")
+			for key, value := range resultsToAtts {
+				t.Errorf("Key %#x: %d atts", key, len(value))
+				t.Errorf("%+v", value)
+			}
+			t.Error("To equal:")
+			for key, value := range expectedResultsToAtts {
+				t.Errorf("Key %#x: %d atts", key, len(value))
+				t.Errorf("%+v", value)
+			}
 		}
 	}
 }

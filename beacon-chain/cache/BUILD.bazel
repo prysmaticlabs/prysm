@@ -69,9 +69,9 @@ go_test(
         "//shared/params:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
-        "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_google_gofuzz//:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "@org_golang_google_protobuf//proto:go_default_library",
     ],
 )

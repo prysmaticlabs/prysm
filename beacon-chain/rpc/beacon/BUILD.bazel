@@ -49,7 +49,6 @@ go_library(
         "//shared/params:go_default_library",
         "//shared/sliceutil:go_default_library",
         "//shared/slotutil:go_default_library",
-        "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_patrickmn_go_cache//:go_default_library",
         "@com_github_prometheus_client_golang//prometheus:go_default_library",
         "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
@@ -58,6 +57,7 @@ go_library(
         "@com_github_sirupsen_logrus//:go_default_library",
         "@org_golang_google_grpc//codes:go_default_library",
         "@org_golang_google_grpc//status:go_default_library",
+        "@org_golang_google_protobuf//types/known/emptypb:go_default_library",
     ],
 )
 
@@ -107,12 +107,12 @@ go_test(
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
         "//shared/timeutils:go_default_library",
-        "@com_github_gogo_protobuf//proto:go_default_library",
-        "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_golang_mock//gomock:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@in_gopkg_d4l3k_messagediff_v1//:go_default_library",
+        "@org_golang_google_protobuf//proto:go_default_library",
+        "@org_golang_google_protobuf//types/known/emptypb:go_default_library",
     ],
 )

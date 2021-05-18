@@ -4,7 +4,6 @@ import (
 	"context"
 	"reflect"
 	"strconv"
-	"strings"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -20,7 +19,9 @@ func TestState_FieldCount(t *testing.T) {
 	typ := reflect.TypeOf(pb.BeaconState{})
 	numFields := 0
 	for i := 0; i < typ.NumField(); i++ {
-		if strings.HasPrefix(typ.Field(i).Name, "XXX_") {
+		if typ.Field(i).Name == "state" ||
+			typ.Field(i).Name == "sizeCache" ||
+			typ.Field(i).Name == "unknownFields" {
 			continue
 		}
 		numFields++
