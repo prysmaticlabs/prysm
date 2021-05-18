@@ -3,7 +3,6 @@ package altair
 import (
 	"bytes"
 	"context"
-	"fmt"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -209,12 +208,9 @@ func ProcessAttestationNoVerifySignature(
 	}
 
 	// Reward proposer.
-	fmt.Println(beaconState.Balances())
-	fmt.Println(proposerRewardNumerator)
 	if err := rewardProposer(beaconState, proposerRewardNumerator); err != nil {
 		return nil, err
 	}
-	fmt.Println(beaconState.Balances())
 	return beaconState, nil
 }
 
