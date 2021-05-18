@@ -15,8 +15,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/beaconv1"
 	butil "github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/wealdtech/go-bytesutil"
 )
 
@@ -404,7 +404,7 @@ func handleUrlParameters(endpoint string, request *http.Request, writer http.Res
 func writeError(writer http.ResponseWriter, e ErrorJson, responseHeader http.Header) {
 	// Include custom error in the error JSON.
 	if responseHeader != nil {
-		customError, ok := responseHeader["Grpc-Metadata-"+beaconv1.CustomErrorMetadataKey]
+		customError, ok := responseHeader["Grpc-Metadata-"+grpcutils.CustomErrorMetadataKey]
 		if ok {
 			// Assume header has only one value and read the 0 index.
 			if err := json.Unmarshal([]byte(customError[0]), e); err != nil {

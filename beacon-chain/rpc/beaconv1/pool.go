@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -18,13 +19,13 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-// AttestationsVerificationFailure represents failures when verifying submitted attestations.
-type AttestationsVerificationFailure struct {
-	Failures []*SingleAttestationVerificationFailure `json:"failures"`
+// attestationsVerificationFailure represents failures when verifying submitted attestations.
+type attestationsVerificationFailure struct {
+	Failures []*singleAttestationVerificationFailure `json:"failures"`
 }
 
-// SingleAttestationVerificationFailure represents an issue when verifying a single submitted attestation.
-type SingleAttestationVerificationFailure struct {
+// singleAttestationVerificationFailure represents an issue when verifying a single submitted attestation.
+type singleAttestationVerificationFailure struct {
 	Index   int    `json:"index"`
 	Message string `json:"message"`
 }
@@ -47,12 +48,12 @@ func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpb.SubmitAttes
 	}
 
 	var validAttestations []*ethpb_alpha.Attestation
-	var attFailures []*SingleAttestationVerificationFailure
+	var attFailures []*singleAttestationVerificationFailure
 	for i, sourceAtt := range req.Data {
 		att := migration.V1AttToV1Alpha1(sourceAtt)
 		err = blocks.VerifyAttestationNoVerifySignature(ctx, headState, att)
 		if err != nil {
-			attFailures = append(attFailures, &SingleAttestationVerificationFailure{
+			attFailures = append(attFailures, &singleAttestationVerificationFailure{
 				Index:   i,
 				Message: err.Error(),
 			})
@@ -60,7 +61,7 @@ func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpb.SubmitAttes
 		}
 		err = blocks.VerifyAttestationSignature(ctx, headState, att)
 		if err != nil {
-			attFailures = append(attFailures, &SingleAttestationVerificationFailure{
+			attFailures = append(attFailures, &singleAttestationVerificationFailure{
 				Index:   i,
 				Message: err.Error(),
 			})
@@ -86,12 +87,12 @@ func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpb.SubmitAttes
 	}
 
 	if len(attFailures) > 0 {
-		failuresContainer := &AttestationsVerificationFailure{Failures: attFailures}
+		failuresContainer := &attestationsVerificationFailure{Failures: attFailures}
 		jsonFailures, err := json.Marshal(failuresContainer)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not prepare attestation failure information: %v", err)
 		}
-		if err := grpc.SetHeader(ctx, metadata.Pairs(CustomErrorMetadataKey, string(jsonFailures))); err != nil {
+		if err := grpc.SetHeader(ctx, metadata.Pairs(grpcutils.CustomErrorMetadataKey, string(jsonFailures))); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not prepare attestation failure information: %v", err)
 		}
 		return nil, status.Errorf(codes.Internal, "One or more attestations failed validation")

@@ -1,7 +1,5 @@
 package gateway
 
-import "github.com/prysmaticlabs/prysm/beacon-chain/rpc/beaconv1"
-
 // GenesisResponseJson is used in /beacon/genesis API endpoint.
 type GenesisResponseJson struct {
 	Data *GenesisResponse_GenesisJson `json:"data"`
@@ -390,7 +388,13 @@ type DefaultErrorJson struct {
 // SubmitAttestationsErrorJson is a JSON representation of the error returned when submitting attestations.
 type SubmitAttestationsErrorJson struct {
 	DefaultErrorJson
-	Failures []*beaconv1.SingleAttestationVerificationFailure `json:"failures"`
+	Failures []*SingleAttestationVerificationFailureJson `json:"failures"`
+}
+
+// SingleAttestationVerificationFailureJson is a JSON representation of a failure when verifying a single submitted attestation.
+type SingleAttestationVerificationFailureJson struct {
+	Index   int    `json:"index"`
+	Message string `json:"message"`
 }
 
 // StatusCode returns the error's underlying error code.
