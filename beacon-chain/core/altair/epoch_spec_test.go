@@ -49,7 +49,9 @@ func TestProcessSyncCommitteeUpdates_CanRotate(t *testing.T) {
 	require.DeepEqual(t, next, c)
 
 	// Test boundary condition.
-	boundaryCommittee, err := altair.SyncCommittee(s, helpers.CurrentEpoch(s)+params.BeaconConfig().EpochsPerSyncCommitteePeriod)
+	slot := params.BeaconConfig().SlotsPerEpoch * types.Slot(helpers.CurrentEpoch(s)+params.BeaconConfig().EpochsPerSyncCommitteePeriod)
+	require.NoError(t, s.SetSlot(slot))
+	boundaryCommittee, err := altair.NextSyncCommittee(s)
 	require.NoError(t, err)
 	require.DeepNotEqual(t, boundaryCommittee, n)
 }

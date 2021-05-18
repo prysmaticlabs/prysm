@@ -81,7 +81,6 @@ func MinimalSpecConfig() *BeaconChainConfig {
 
 	// New Altair params
 	minimalConfig.SyncCommitteeSize = 32
-	minimalConfig.SyncPubkeysPerAggregate = 16
 	minimalConfig.InactivityScoreBias = 4
 	minimalConfig.EpochsPerSyncCommitteePeriod = 8
 

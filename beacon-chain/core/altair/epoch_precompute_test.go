@@ -135,7 +135,7 @@ func TestAttestationsDelta(t *testing.T) {
 
 	// Penalty amount should decrease as validator index increases due to setup.
 	for i := 1; i < len(penalties); i++ {
-		require.Equal(t, true, penalties[i] < penalties[i-1])
+		require.Equal(t, true, penalties[i] <= penalties[i-1])
 	}
 
 	// First index should have 0 reward.
@@ -259,7 +259,7 @@ func testState() (iface.BeaconState, error) {
 		return b
 	}
 	return stateAltair.InitializeFromProto(&pb.BeaconStateAltair{
-		Slot: params.BeaconConfig().SlotsPerEpoch,
+		Slot: 2 * params.BeaconConfig().SlotsPerEpoch,
 		Validators: []*ethpb.Validator{
 			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance, ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance, ExitEpoch: params.BeaconConfig().FarFutureEpoch},

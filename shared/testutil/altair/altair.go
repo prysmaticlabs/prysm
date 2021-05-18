@@ -52,7 +52,7 @@ func NewBeaconBlock() *ethpb.SignedBeaconBlockAltair {
 				ProposerSlashings: []*ethpb.ProposerSlashing{},
 				VoluntaryExits:    []*ethpb.SignedVoluntaryExit{},
 				SyncAggregate: &ethpb.SyncAggregate{
-					SyncCommitteeBits:      make([]byte, len(bitfield.NewBitvector1024())),
+					SyncCommitteeBits:      make([]byte, len(bitfield.NewBitvector512())),
 					SyncCommitteeSignature: make([]byte, 96),
 				},
 			},

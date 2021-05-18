@@ -79,12 +79,12 @@ func TestGetSpec(t *testing.T) {
 	config.TargetAggregatorsPerSyncSubcommittee = 61
 	config.SyncCommitteeSubnetCount = 62
 	config.SyncCommitteeSize = 63
-	config.SyncPubkeysPerAggregate = 64
 	config.InactivityScoreBias = 65
 	config.EpochsPerSyncCommitteePeriod = 66
 	config.InactivityPenaltyQuotientAltair = 67
 	config.MinSlashingPenaltyQuotientAltair = 68
 	config.ProportionalSlashingMultiplierAltair = 69
+	config.InactivityScoreRecoveryRate = 70
 
 	var dbp [4]byte
 	copy(dbp[:], []byte{'0', '0', '0', '1'})
@@ -263,6 +263,8 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "68", v)
 		case "proportional_slashing_multiplier_altair":
 			assert.Equal(t, "69", v)
+		case "inactivity_score_recovery_rate":
+			assert.Equal(t, "70", v)
 		case "proposer_weight":
 			assert.Equal(t, "8", v)
 		case "domain_beacon_proposer":

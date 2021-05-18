@@ -142,7 +142,7 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState iface.BeaconStateA
 		},
 		Graffiti: make([]byte, 32),
 		SyncAggregate: &ethpb.SyncAggregate{
-			SyncCommitteeBits:      make([]byte, len(bitfield.NewBitvector1024())),
+			SyncCommitteeBits:      make([]byte, len(bitfield.NewBitvector512())),
 			SyncCommitteeSignature: make([]byte, 96),
 		},
 	}).HashTreeRoot()
@@ -160,17 +160,13 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState iface.BeaconStateA
 	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSize; i++ {
 		pubKeys = append(pubKeys, bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength))
 	}
-	var aggregatedKeys [][]byte
-	for i := uint64(0); i < (params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncPubkeysPerAggregate); i++ {
-		aggregatedKeys = append(aggregatedKeys, bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength))
-	}
 	state.CurrentSyncCommittee = &pb.SyncCommittee{
-		Pubkeys:          pubKeys,
-		PubkeyAggregates: aggregatedKeys,
+		Pubkeys:         pubKeys,
+		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
 	state.NextSyncCommittee = &pb.SyncCommittee{
-		Pubkeys:          bytesutil.Copy2dBytes(pubKeys),
-		PubkeyAggregates: bytesutil.Copy2dBytes(aggregatedKeys),
+		Pubkeys:         bytesutil.Copy2dBytes(pubKeys),
+		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
 
 	return stateAltair.InitializeFromProto(state)

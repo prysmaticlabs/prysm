@@ -184,12 +184,12 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 
 	// New values introduced in Altair hard fork 1.
 	// Participation flag indices.
-	TimelyHeadFlagIndex:   0,
-	TimelySourceFlagIndex: 1,
-	TimelyTargetFlagIndex: 2,
+	TimelySourceFlagIndex: 0,
+	TimelyTargetFlagIndex: 1,
+	TimelyHeadFlagIndex:   2,
 
 	// Incentivization weight values.
-	TimelyHeadWeight:   12,
+	TimelyHeadWeight:   2,
 	TimelySourceWeight: 12,
 	TimelyTargetWeight: 24,
 	SyncRewardWeight:   8,
@@ -198,13 +198,13 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 
 	// Validator related values.
 	TargetAggregatorsPerSyncSubcommittee: 4,
-	SyncCommitteeSubnetCount:             8,
+	SyncCommitteeSubnetCount:             4,
 
 	// Misc values.
-	SyncCommitteeSize:            1024,
-	SyncPubkeysPerAggregate:      64,
+	SyncCommitteeSize:            512,
 	InactivityScoreBias:          4,
-	EpochsPerSyncCommitteePeriod: 256,
+	InactivityScoreRecoveryRate:  16,
+	EpochsPerSyncCommitteePeriod: 512,
 
 	// Updated penalty values.
 	InactivityPenaltyQuotientAltair:      3 * 1 << 24, //50331648
