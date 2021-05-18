@@ -95,16 +95,9 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 		return err
 	}
 
-	set, postState, err := state.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, signed)
+	postState, err := state.ExecuteStateTransition(ctx, preState, signed)
 	if err != nil {
-		return errors.Wrap(err, "could not execute state transition")
-	}
-	valid, err := set.Verify()
-	if err != nil {
-		return errors.Wrap(err, "could not batch verify signature")
-	}
-	if !valid {
-		return errors.New("signature in block failed to verify")
+		return err
 	}
 
 	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {

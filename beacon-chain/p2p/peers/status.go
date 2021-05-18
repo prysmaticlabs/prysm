@@ -29,7 +29,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
@@ -43,6 +42,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"google.golang.org/protobuf/proto"
 )
 
 const (

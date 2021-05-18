@@ -7,7 +7,6 @@ import (
 	"context"
 	"time"
 
-	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -31,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // Server defines a server implementation of the gRPC Validator service,
@@ -137,7 +137,7 @@ func (vs *Server) DomainData(_ context.Context, request *ethpb.DomainRequest) (*
 
 // CanonicalHead of the current beacon chain. This method is requested on-demand
 // by a validator when it is their time to propose or attest.
-func (vs *Server) CanonicalHead(ctx context.Context, _ *ptypes.Empty) (*ethpb.SignedBeaconBlock, error) {
+func (vs *Server) CanonicalHead(ctx context.Context, _ *emptypb.Empty) (*ethpb.SignedBeaconBlock, error) {
 	headBlk, err := vs.HeadFetcher.HeadBlock(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head block: %v", err)
@@ -149,7 +149,7 @@ func (vs *Server) CanonicalHead(ctx context.Context, _ *ptypes.Empty) (*ethpb.Si
 // has started its runtime and validators begin their responsibilities. If it has not, it then
 // subscribes to an event stream triggered by the powchain service whenever the ChainStart log does
 // occur in the Deposit Contract on ETH 1.0.
-func (vs *Server) WaitForChainStart(_ *ptypes.Empty, stream ethpb.BeaconNodeValidator_WaitForChainStartServer) error {
+func (vs *Server) WaitForChainStart(_ *emptypb.Empty, stream ethpb.BeaconNodeValidator_WaitForChainStartServer) error {
 	head, err := vs.HeadFetcher.HeadState(stream.Context())
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)
