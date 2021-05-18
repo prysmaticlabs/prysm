@@ -17,6 +17,9 @@ func RunAttestationTest(t *testing.T, config string) {
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "altair", "operations/attestation/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
+			if folder.Name() != "correct_min_inclusion_delay" {
+				t.Skip()
+			}
 			folderPath := path.Join(testsFolderPath, folder.Name())
 			attestationFile, err := testutil.BazelFileBytes(folderPath, "attestation.ssz_snappy")
 			require.NoError(t, err)

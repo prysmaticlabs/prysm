@@ -3,6 +3,7 @@ package altair
 import (
 	"bytes"
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -54,35 +55,21 @@ func ProcessAttestations(
 //    committee = get_beacon_committee(state, data.slot, data.index)
 //    assert len(attestation.aggregation_bits) == len(committee)
 //
-//    if data.target.epoch == get_current_epoch(state):
-//        epoch_participation = state.current_epoch_participation
-//        justified_checkpoint = state.current_justified_checkpoint
-//    else:
-//        epoch_participation = state.previous_epoch_participation
-//        justified_checkpoint = state.previous_justified_checkpoint
-//
-//    # Matching roots
-//    is_matching_head = data.beacon_block_root == get_block_root_at_slot(state, data.slot)
-//    is_matching_source = data.source == justified_checkpoint
-//    is_matching_target = data.target.root == get_block_root(state, data.target.epoch)
-//    assert is_matching_source
+//    # Participation flag indices
+//    participation_flag_indices = get_attestation_participation_flag_indices(state, data, state.slot - data.slot)
 //
 //    # Verify signature
 //    assert is_valid_indexed_attestation(state, get_indexed_attestation(state, attestation))
 //
-//    # Participation flag indices
-//    participation_flag_indices = []
-//    if is_matching_head and is_matching_target and state.slot == data.slot + MIN_ATTESTATION_INCLUSION_DELAY:
-//        participation_flag_indices.append(TIMELY_HEAD_FLAG_INDEX)
-//    if is_matching_source and state.slot <= data.slot + integer_squareroot(SLOTS_PER_EPOCH):
-//        participation_flag_indices.append(TIMELY_SOURCE_FLAG_INDEX)
-//    if is_matching_target and state.slot <= data.slot + SLOTS_PER_EPOCH:
-//        participation_flag_indices.append(TIMELY_TARGET_FLAG_INDEX)
-//
 //    # Update epoch participation flags
+//    if data.target.epoch == get_current_epoch(state):
+//        epoch_participation = state.current_epoch_participation
+//    else:
+//        epoch_participation = state.previous_epoch_participation
+//
 //    proposer_reward_numerator = 0
 //    for index in get_attesting_indices(state, data, attestation.aggregation_bits):
-//        for flag_index, weight in get_flag_indices_and_weights():
+//        for flag_index, weight in enumerate(PARTICIPATION_FLAG_WEIGHTS):
 //            if flag_index in participation_flag_indices and not has_flag(epoch_participation[index], flag_index):
 //                epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
 //                proposer_reward_numerator += get_base_reward(state, index) * weight
@@ -131,7 +118,7 @@ func ProcessAttestationNoVerifySignature(
 	beaconState iface.BeaconStateAltair,
 	att *ethpb.Attestation,
 ) (iface.BeaconStateAltair, error) {
-	ctx, span := trace.StartSpan(ctx, "core.ProcessAttestationNoVerifySignature")
+	ctx, span := trace.StartSpan(ctx, "altair.ProcessAttestationNoVerifySignature")
 	defer span.End()
 
 	if err := blocks.VerifyAttestationNoVerifySignature(ctx, beaconState, att); err != nil {
@@ -168,18 +155,19 @@ func ProcessAttestationNoVerifySignature(
 
 	// Process matched participation flags.
 	participatedFlags := make(map[uint8]bool)
-	headFlagIndex := params.BeaconConfig().TimelyHeadFlagIndex
 	sourceFlagIndex := params.BeaconConfig().TimelySourceFlagIndex
 	targetFlagIndex := params.BeaconConfig().TimelyTargetFlagIndex
-	if matchingSource && beaconState.Slot() <= data.Slot.Add(mathutil.IntegerSquareRoot(uint64(params.BeaconConfig().SlotsPerEpoch))) {
+	headFlagIndex := params.BeaconConfig().TimelyHeadFlagIndex
+	inclusionDelay := beaconState.Slot() - data.Slot
+	if matchingSource && inclusionDelay <= types.Slot(mathutil.IntegerSquareRoot(uint64(params.BeaconConfig().SlotsPerEpoch))) {
 		participatedFlags[sourceFlagIndex] = true
 	}
-	matchingHeadTarget := bool(matchingHead) && bool(matchingTarget)
-	if matchingHeadTarget && beaconState.Slot() == data.Slot+params.BeaconConfig().MinAttestationInclusionDelay {
-		participatedFlags[headFlagIndex] = true
-	}
-	if matchingTarget && beaconState.Slot() <= data.Slot+params.BeaconConfig().SlotsPerEpoch {
+	if matchingTarget && inclusionDelay <= params.BeaconConfig().SlotsPerEpoch {
 		participatedFlags[targetFlagIndex] = true
+	}
+	matchingHeadTarget := bool(matchingHead) && bool(matchingTarget)
+	if matchingHeadTarget && inclusionDelay == params.BeaconConfig().MinAttestationInclusionDelay {
+		participatedFlags[headFlagIndex] = true
 	}
 
 	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
@@ -221,9 +209,12 @@ func ProcessAttestationNoVerifySignature(
 	}
 
 	// Reward proposer.
+	fmt.Println(beaconState.Balances())
+	fmt.Println(proposerRewardNumerator)
 	if err := rewardProposer(beaconState, proposerRewardNumerator); err != nil {
 		return nil, err
 	}
+	fmt.Println(beaconState.Balances())
 	return beaconState, nil
 }
 
