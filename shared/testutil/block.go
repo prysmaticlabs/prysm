@@ -550,7 +550,7 @@ func HydrateBeaconBlockBodyAltair(b *ethpb.BeaconBlockBodyAltair) *ethpb.BeaconB
 	}
 	if b.SyncAggregate == nil {
 		b.SyncAggregate = &ethpb.SyncAggregate{
-			SyncCommitteeBits:      make([]byte, 128),
+			SyncCommitteeBits:      make([]byte, 64),
 			SyncCommitteeSignature: make([]byte, 96),
 		}
 	}
