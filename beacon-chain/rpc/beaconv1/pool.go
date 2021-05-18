@@ -15,7 +15,7 @@ import (
 )
 
 // ListPoolAttestations retrieves attestations known by the node but
-// not necessarily incorporated into any block.
+// not necessarily incorporated into any block. Allows filtering by committee index or slot.
 func (bs *Server) ListPoolAttestations(ctx context.Context, req *ethpb.AttestationsPoolRequest) (*ethpb.AttestationsPoolResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconv1.ListPoolAttestations")
 	defer span.End()
