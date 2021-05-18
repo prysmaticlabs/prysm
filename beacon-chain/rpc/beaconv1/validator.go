@@ -23,7 +23,7 @@ func (bs *Server) GetValidator(ctx context.Context, req *ethpb.StateValidatorReq
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
-	valContainer, err := valContainerById(state, req.ValidatorId)
+	valContainer, err := valContainerByRequestId(state, req.ValidatorId)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get validator container: %v", err)
 	}
@@ -31,7 +31,7 @@ func (bs *Server) GetValidator(ctx context.Context, req *ethpb.StateValidatorReq
 }
 
 // ListValidators returns filterable list of validators with their balance, status and index.
-// NOTE: missing status support.
+// TODO(#8901): missing status support.
 func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidatorsRequest) (*ethpb.StateValidatorsResponse, error) {
 	state, err := bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
@@ -40,7 +40,7 @@ func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidators
 
 	valContainers := make([]*ethpb.ValidatorContainer, len(req.Id))
 	for i := 0; i < len(req.Id); i++ {
-		valContainer, err := valContainerById(state, req.Id[i])
+		valContainer, err := valContainerByRequestId(state, req.Id[i])
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get validator container: %v", err)
 		}
@@ -58,7 +58,7 @@ func (bs *Server) ListValidatorBalances(ctx context.Context, req *ethpb.Validato
 
 	valBalances := make([]*ethpb.ValidatorBalance, len(req.Id))
 	for i := 0; i < len(req.Id); i++ {
-		_, valIndex, err := validatorById(state, req.Id[i])
+		_, valIndex, err := validatorByRequestId(state, req.Id[i])
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get validator: %v", err)
 		}
@@ -124,8 +124,8 @@ func (bs *Server) ListCommittees(ctx context.Context, req *ethpb.StateCommittees
 	return &ethpb.StateCommitteesResponse{Data: committees}, nil
 }
 
-func valContainerById(state iface.BeaconState, validatorId []byte) (*ethpb.ValidatorContainer, error) {
-	val, valIndex, err := validatorById(state, validatorId)
+func valContainerByRequestId(state iface.BeaconState, validatorId []byte) (*ethpb.ValidatorContainer, error) {
+	val, valIndex, err := validatorByRequestId(state, validatorId)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get validator: %v", err)
 	}
@@ -143,7 +143,9 @@ func valContainerById(state iface.BeaconState, validatorId []byte) (*ethpb.Valid
 	return valContainer, nil
 }
 
-func validatorById(state iface.BeaconState, validatorId []byte) (*ethpb.Validator, types.ValidatorIndex, error) {
+// This function returns the validator object based on the passed in ID. The validator ID could be its public key,
+// or its index and is usually retrieved from the API request query.
+func validatorByRequestId(state iface.BeaconState, validatorId []byte) (*ethpb.Validator, types.ValidatorIndex, error) {
 	var valIndex types.ValidatorIndex
 	if len(validatorId) == params.BeaconConfig().BLSPubkeyLength {
 		var ok bool
