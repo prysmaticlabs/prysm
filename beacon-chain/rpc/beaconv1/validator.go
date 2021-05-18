@@ -95,10 +95,10 @@ func (bs *Server) ListCommittees(ctx context.Context, req *ethpb.StateCommittees
 	committeesPerSlot := helpers.SlotCommitteeCount(activeCount)
 	committees := make([]*ethpb.Committee, 0)
 	for slot := startSlot; slot <= endSlot; slot++ {
+		if req.Slot != nil && slot != *req.Slot {
+			continue
+		}
 		for index := types.CommitteeIndex(0); index < types.CommitteeIndex(committeesPerSlot); index++ {
-			if req.Slot != nil && slot != *req.Slot {
-				continue
-			}
 			if req.Index != nil && index != *req.Index {
 				continue
 			}
