@@ -20,9 +20,9 @@ const (
 	RoleUnknown ValidatorRole = iota
 	// RoleAttester means that the validator should submit an attestation.
 	RoleAttester
-	// RoleAttester means that the validator should propose a block.
+	// RoleProposer means that the validator should propose a block.
 	RoleProposer
-	// RoleAttester means that the validator should submit an aggregation and proof.
+	// RoleAggregator means that the validator should submit an aggregation and proof.
 	RoleAggregator
 )
 

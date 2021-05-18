@@ -260,6 +260,7 @@ func (s *Service) Start() {
 		BlockNotifier:       s.cfg.BlockNotifier,
 		AttestationNotifier: s.cfg.OperationNotifier,
 		Broadcaster:         s.cfg.Broadcaster,
+		BlockReceiver:       s.cfg.BlockReceiver,
 		StateGenService:     s.cfg.StateGen,
 		SyncChecker:         s.cfg.SyncService,
 		StateFetcher: statefetcher.StateProvider{
@@ -268,6 +269,7 @@ func (s *Service) Start() {
 			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 			StateGenService:    s.cfg.StateGen,
 		},
+		VoluntaryExitsPool: s.cfg.ExitPool,
 	}
 
 	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)

@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
@@ -19,10 +18,12 @@ import (
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // GetGenesis retrieves details of the chain's genesis which can be used to identify chain.
-func (bs *Server) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.GenesisResponse, error) {
+func (bs *Server) GetGenesis(ctx context.Context, _ *emptypb.Empty) (*ethpb.GenesisResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconv1.GetGenesis")
 	defer span.End()
 
@@ -38,7 +39,7 @@ func (bs *Server) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.Genes
 
 	return &ethpb.GenesisResponse{
 		Data: &ethpb.GenesisResponse_Genesis{
-			GenesisTime: &ptypes.Timestamp{
+			GenesisTime: &timestamppb.Timestamp{
 				Seconds: genesisTime.Unix(),
 				Nanos:   0,
 			},
@@ -137,11 +138,7 @@ func (bs *Server) stateRoot(ctx context.Context, stateId []byte) ([]byte, error)
 	case "justified":
 		root, err = bs.justifiedStateRoot(ctx)
 	default:
-		ok, matchErr := bytesutil.IsBytes32Hex(stateId)
-		if matchErr != nil {
-			return nil, errors.Wrap(err, "could not parse ID")
-		}
-		if ok {
+		if len(stateId) == 32 {
 			root, err = bs.stateRootByHex(ctx, stateId)
 		} else {
 			slotNumber, parseErr := strconv.ParseUint(stateIdString, 10, 64)

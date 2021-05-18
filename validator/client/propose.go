@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	pbtypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -21,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type signingFunc func(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
@@ -39,7 +39,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [4
 		log.Debug("Assigned to genesis slot, skipping proposal")
 		return
 	}
-	lock := mputil.NewMultilock(string(rune(iface.RoleProposer)), string(pubKey[:]))
+	lock := mputil.NewMultilock(string(iface.RoleProposer), string(pubKey[:]))
 	lock.Lock()
 	defer lock.Unlock()
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeBlock")
@@ -158,7 +158,7 @@ func ProposeExit(
 	if err != nil {
 		return errors.Wrap(err, "gRPC call to get validator index failed")
 	}
-	genesisResponse, err := nodeClient.GetGenesis(ctx, &pbtypes.Empty{})
+	genesisResponse, err := nodeClient.GetGenesis(ctx, &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "gRPC call to get genesis time failed")
 	}

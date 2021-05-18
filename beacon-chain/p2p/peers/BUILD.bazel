@@ -15,13 +15,13 @@ go_library(
         "//shared/rand:go_default_library",
         "//shared/timeutils:go_default_library",
         "@com_github_ethereum_go_ethereum//p2p/enr:go_default_library",
-        "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_libp2p_go_libp2p_core//network:go_default_library",
         "@com_github_libp2p_go_libp2p_core//peer:go_default_library",
         "@com_github_multiformats_go_multiaddr//:go_default_library",
         "@com_github_multiformats_go_multiaddr//net:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+        "@org_golang_google_protobuf//proto:go_default_library",
     ],
 )
 
