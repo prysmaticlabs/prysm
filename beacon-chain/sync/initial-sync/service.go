@@ -29,8 +29,7 @@ var _ shared.Service = (*Service)(nil)
 // blockchainService defines the interface for interaction with block chain service.
 type blockchainService interface {
 	blockchain.BlockReceiver
-	blockchain.HeadFetcher
-	blockchain.FinalizationFetcher
+	blockchain.ChainInfoFetcher
 }
 
 // Config to set up the initial sync service.
