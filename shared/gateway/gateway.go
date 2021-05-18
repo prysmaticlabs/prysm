@@ -13,6 +13,7 @@ import (
 
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
+	ethpbv1 "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
@@ -132,24 +133,52 @@ func (g *Gateway) Start() {
 		}),
 	)
 	if g.callerId == Beacon {
+		gwmuxV1 := gwruntime.NewServeMux(
+			gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
+				Marshaler: &gwruntime.JSONPb{
+					MarshalOptions: protojson.MarshalOptions{
+						UseProtoNames:   true,
+						EmitUnpopulated: true,
+					},
+					UnmarshalOptions: protojson.UnmarshalOptions{
+						DiscardUnknown: true,
+					},
+				},
+			}),
+		)
+
 		handlers := []func(context.Context, *gwruntime.ServeMux, *grpc.ClientConn) error{
 			ethpb.RegisterNodeHandler,
 			ethpb.RegisterBeaconChainHandler,
 			ethpb.RegisterBeaconNodeValidatorHandler,
 			pbrpc.RegisterHealthHandler,
 		}
+		handlersV1 := []func(context.Context, *gwruntime.ServeMux, *grpc.ClientConn) error{
+			ethpbv1.RegisterBeaconNodeHandler,
+			ethpbv1.RegisterBeaconChainHandler,
+			ethpbv1.RegisterBeaconValidatorHandler,
+		}
 		if g.enableDebugRPCEndpoints {
 			handlers = append(handlers, pbrpc.RegisterDebugHandler)
+			handlersV1 = append(handlersV1, ethpbv1.RegisterBeaconDebugHandler)
 		}
 		for _, f := range handlers {
 			if err := f(ctx, gwmux, g.conn); err != nil {
-				log.WithError(err).Error("Failed to start gateway")
+				log.WithError(err).Error("Failed to start v1alpha1 gateway")
+				g.startFailure = err
+				return
+			}
+		}
+		for _, f := range handlersV1 {
+			if err := f(ctx, gwmuxV1, g.conn); err != nil {
+				log.WithError(err).Error("Failed to start v1 gateway")
 				g.startFailure = err
 				return
 			}
 		}
 
-		g.mux.Handle("/", gwmux)
+		g.mux.Handle("/eth/v1alpha1/", gwmux)
+		g.mux.Handle("/eth/v1", gwmuxV1)
 		g.server = &http.Server{
 			Addr:    g.gatewayAddr,
 			Handler: g.corsMiddleware(g.mux),
@@ -188,6 +217,18 @@ func (g *Gateway) Start() {
 		log.WithField("address", g.gatewayAddr).Info("Starting gRPC gateway")
 		if err := g.server.ListenAndServe(); err != http.ErrServerClosed {
 			log.WithError(err).Error("Failed to listen and serve")
+			g.startFailure = err
+			return
+		}
+	}()
+
+	go func() {
+		proxy := &ApiProxyMiddleware{
+			GatewayAddress: g.gatewayAddr,
+			ProxyAddress:   ":4500",
+		}
+		if err := proxy.Run(); err != http.ErrServerClosed {
+			log.WithError(err).Error("Failed to start API middleware")
 			g.startFailure = err
 			return
 		}

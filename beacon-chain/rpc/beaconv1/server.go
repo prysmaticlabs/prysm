@@ -24,6 +24,10 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
+// CustomErrorMetadataKey is the name of the metadata key storing additional error information.
+// Metadata value is expected to be a byte-encoded JSON object.
+const CustomErrorMetadataKey = "Custom-Error"
+
 // Server defines a server implementation of the gRPC Beacon Chain service,
 // providing RPC endpoints to access data relevant to the Ethereum 2.0 phase 0
 // beacon chain.

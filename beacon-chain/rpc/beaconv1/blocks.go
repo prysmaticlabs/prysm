@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -276,7 +277,7 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpb.BlockReq
 func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (*ethpb_alpha.SignedBeaconBlock, error) {
 	var err error
 	var blk *ethpb_alpha.SignedBeaconBlock
-	switch string(blockId) {
+	switch strings.ToLower(string(blockId)) {
 	case "head":
 		blk, err = bs.ChainInfoFetcher.HeadBlock(ctx)
 		if err != nil {

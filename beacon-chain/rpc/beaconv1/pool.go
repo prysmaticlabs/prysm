@@ -2,6 +2,7 @@ package beaconv1
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
@@ -10,10 +11,23 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"go.opencensus.io/trace"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
+
+// AttestationsVerificationFailure represents failures when verifying submitted attestations.
+type AttestationsVerificationFailure struct {
+	Failures []*SingleAttestationVerificationFailure `json:"failures"`
+}
+
+// SingleAttestationVerificationFailure represents an issue when verifying a single submitted attestation.
+type SingleAttestationVerificationFailure struct {
+	Index   int    `json:"index"`
+	Message string `json:"message"`
+}
 
 // ListPoolAttestations retrieves attestations known by the node but
 // not necessarily incorporated into any block.
@@ -33,16 +47,26 @@ func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpb.SubmitAttes
 	}
 
 	var validAttestations []*ethpb_alpha.Attestation
-	for _, sourceAtt := range req.Data {
+	var attFailures []*SingleAttestationVerificationFailure
+	for i, sourceAtt := range req.Data {
 		att := migration.V1AttToV1Alpha1(sourceAtt)
 		err = blocks.VerifyAttestationNoVerifySignature(ctx, headState, att)
 		if err != nil {
+			attFailures = append(attFailures, &SingleAttestationVerificationFailure{
+				Index:   i,
+				Message: err.Error(),
+			})
 			continue
 		}
 		err = blocks.VerifyAttestationSignature(ctx, headState, att)
-		if err == nil {
-			validAttestations = append(validAttestations, att)
+		if err != nil {
+			attFailures = append(attFailures, &SingleAttestationVerificationFailure{
+				Index:   i,
+				Message: err.Error(),
+			})
+			continue
 		}
+		validAttestations = append(validAttestations, att)
 	}
 
 	err = bs.AttestationsPool.SaveAggregatedAttestations(validAttestations)
@@ -60,6 +84,19 @@ func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpb.SubmitAttes
 			codes.Internal,
 			"Could not publish one or more attestations. Some attestations could be published successfully.")
 	}
+
+	if len(attFailures) > 0 {
+		failuresContainer := &AttestationsVerificationFailure{Failures: attFailures}
+		jsonFailures, err := json.Marshal(failuresContainer)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare attestation failure information: %v", err)
+		}
+		if err := grpc.SetHeader(ctx, metadata.Pairs(CustomErrorMetadataKey, string(jsonFailures))); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare attestation failure information: %v", err)
+		}
+		return nil, status.Errorf(codes.Internal, "One or more attestations failed validation")
+	}
+
 	return &emptypb.Empty{}, nil
 }
 
