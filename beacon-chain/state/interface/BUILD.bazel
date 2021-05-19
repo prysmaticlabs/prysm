@@ -16,6 +16,7 @@ go_library(
         "//spectest:__subpackages__",
         "//tools/benchmark-files-gen:__pkg__",
         "//tools/pcli:__pkg__",
+        "//validator/client:__pkg__",
     ],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",

@@ -95,6 +95,13 @@ func run(ctx context.Context, v iface.Validator) {
 		break
 	}
 
+	// if flag is enabled, check for doppelganger
+	if err := v.StartDoppelgangerService(ctx);err!=nil{
+		log.Warnf("Doppelganger service - return to runner - error: %v",err)
+		cleanup()
+		return // Exit
+	}
+
 	connectionErrorChannel := make(chan error, 1)
 	go v.ReceiveBlocks(ctx, connectionErrorChannel)
 	if err := v.UpdateDuties(ctx, headSlot); err != nil {
