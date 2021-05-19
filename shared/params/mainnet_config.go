@@ -181,6 +181,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	ForkVersionSchedule: map[types.Epoch][]byte{
 		// Any further forks must be specified here by their epoch number.
 	},
+	AltairForkVersion: []byte{1, 0, 0, 0},
 
 	// New values introduced in Altair hard fork 1.
 	// Participation flag indices.
