@@ -64,6 +64,7 @@ func fieldConverters(field fieldIndex, indices []uint64, elements interface{}, c
 	}
 }
 
+// HandleEth1DataSlice processes a list of eth1data and indices into the appropriate roots.
 func HandleEth1DataSlice(val []*ethpb.Eth1Data, indices []uint64, convertAll bool) ([][32]byte, error) {
 	length := len(indices)
 	if convertAll {
