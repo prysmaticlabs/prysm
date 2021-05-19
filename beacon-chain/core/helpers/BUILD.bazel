@@ -27,6 +27,7 @@ go_library(
         "//shared/keystore:__pkg__",
         "//shared/p2putils:__pkg__",
         "//shared/testutil:__pkg__",
+        "//shared/testutil/altair:__pkg__",
         "//slasher:__subpackages__",
         "//spectest:__subpackages__",
         "//tools:__subpackages__",
