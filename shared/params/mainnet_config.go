@@ -176,6 +176,8 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 
 	// Fork related values.
 	GenesisForkVersion:  []byte{0, 0, 0, 0},
+	AltairForkVersion:   []byte{1, 0, 0, 0},
+	AltairForkEpoch:     1<<64 - 1,          // Currently undecided.
 	NextForkVersion:     []byte{0, 0, 0, 0}, // Set to GenesisForkVersion unless there is a scheduled fork
 	NextForkEpoch:       1<<64 - 1,          // Set to FarFutureEpoch unless there is a scheduled fork.
 	ForkVersionSchedule: map[types.Epoch][]byte{
