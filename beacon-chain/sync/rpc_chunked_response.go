@@ -2,6 +2,13 @@ package sync
 
 import (
 	"errors"
+	"reflect"
+
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -33,7 +40,7 @@ func WriteChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, enc
 
 // ReadChunkedBlock handles each response chunk that is sent by the
 // peer and converts it into a beacon block.
-func ReadChunkedBlock(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, p2p p2p.P2P, isFirstChunk bool) (*eth.SignedBeaconBlock, error) {
+func ReadChunkedBlock(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, p2p p2p.P2P, isFirstChunk bool) (interface{}, error) {
 	// Handle deadlines differently for first chunk
 	if isFirstChunk {
 		return readFirstChunkedBlock(stream, chain, p2p)
@@ -47,8 +54,7 @@ func ReadChunkedBlock(stream libp2pcore.Stream, chain blockchain.ChainInfoFetche
 
 // readFirstChunkedBlock reads the first chunked block and applies the appropriate deadlines to
 // it.
-func readFirstChunkedBlock(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, p2p p2p.P2P) (*eth.SignedBeaconBlock, error) {
-	blk := &eth.SignedBeaconBlock{}
+func readFirstChunkedBlock(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, p2p p2p.P2P) (interface{}, error) {
 	code, errMsg, err := ReadStatusCode(stream, p2p.Encoding())
 	if err != nil {
 		return nil, err
@@ -56,8 +62,11 @@ func readFirstChunkedBlock(stream libp2pcore.Stream, chain blockchain.ChainInfoF
 	if code != 0 {
 		return nil, errors.New(errMsg)
 	}
-	// No-op for now with the rpc context.
-	_, err = readContextFromStream(stream, chain)
+	rpcCtx, err := readContextFromStream(stream, chain)
+	if err != nil {
+		return nil, err
+	}
+	blk, err := extractBlockDataType(bytesutil.ToBytes4(rpcCtx), chain)
 	if err != nil {
 		return nil, err
 	}
@@ -82,4 +91,23 @@ func readResponseChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetch
 		return err
 	}
 	return p2p.Encoding().DecodeWithMaxLength(stream, to)
+}
+
+func extractBlockDataType(digest [4]byte, chain blockchain.ChainInfoFetcher) (interface{}, error) {
+	vRoot := chain.GenesisValidatorRoot()
+	for k, t := range types.BlockMap {
+		rDigest, err := helpers.ComputeForkDigest(k[:], vRoot[:])
+		if err != nil {
+			return nil, err
+		}
+		if rDigest == digest {
+			typ := reflect.TypeOf(t)
+			if typ.Kind() == reflect.Ptr {
+				return reflect.New(typ.Elem()), nil
+			}
+			return reflect.New(typ), nil
+		}
+
+	}
+	return nil, errors.New("no valid digest matched")
 }
