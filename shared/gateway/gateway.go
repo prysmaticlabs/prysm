@@ -178,7 +178,7 @@ func (g *Gateway) Start() {
 		}
 
 		g.mux.Handle("/eth/v1alpha1/", gwmux)
-		g.mux.Handle("/eth/v1", gwmuxV1)
+		g.mux.Handle("/eth/v1/", gwmuxV1)
 		g.server = &http.Server{
 			Addr:    g.gatewayAddr,
 			Handler: g.corsMiddleware(g.mux),
