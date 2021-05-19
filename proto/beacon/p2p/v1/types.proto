@@ -171,8 +171,8 @@ message SyncCommittee {
   bytes aggregate_pubkey = 2 [(ethereum.eth.ext.ssz_size) = "48"];
 }
 
-// SyncCommitteeSigningData to be used for hash tree root then sign by sync committee participants.
-message SyncCommitteeSigningData{
+// SyncAggregatorSelectionData is used to sign over and then check whether the aggregator is selected within a subcommittee.
+message SyncAggregatorSelectionData {
   // Slot of this signing data.
   uint64 slot = 1;
   // Subcommittee index of this signing data.

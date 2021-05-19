@@ -2575,13 +2575,13 @@ func (s *SyncCommittee) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	return
 }
 
-// MarshalSSZ ssz marshals the SyncCommitteeSigningData object
-func (s *SyncCommitteeSigningData) MarshalSSZ() ([]byte, error) {
+// MarshalSSZ ssz marshals the SyncAggregatorSelectionData object
+func (s *SyncAggregatorSelectionData) MarshalSSZ() ([]byte, error) {
 	return ssz.MarshalSSZ(s)
 }
 
-// MarshalSSZTo ssz marshals the SyncCommitteeSigningData object to a target array
-func (s *SyncCommitteeSigningData) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+// MarshalSSZTo ssz marshals the SyncAggregatorSelectionData object to a target array
+func (s *SyncAggregatorSelectionData) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
 
 	// Field (0) 'Slot'
@@ -2593,8 +2593,8 @@ func (s *SyncCommitteeSigningData) MarshalSSZTo(buf []byte) (dst []byte, err err
 	return
 }
 
-// UnmarshalSSZ ssz unmarshals the SyncCommitteeSigningData object
-func (s *SyncCommitteeSigningData) UnmarshalSSZ(buf []byte) error {
+// UnmarshalSSZ ssz unmarshals the SyncAggregatorSelectionData object
+func (s *SyncAggregatorSelectionData) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
 	if size != 16 {
@@ -2610,19 +2610,19 @@ func (s *SyncCommitteeSigningData) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the SyncCommitteeSigningData object
-func (s *SyncCommitteeSigningData) SizeSSZ() (size int) {
+// SizeSSZ returns the ssz encoded size in bytes for the SyncAggregatorSelectionData object
+func (s *SyncAggregatorSelectionData) SizeSSZ() (size int) {
 	size = 16
 	return
 }
 
-// HashTreeRoot ssz hashes the SyncCommitteeSigningData object
-func (s *SyncCommitteeSigningData) HashTreeRoot() ([32]byte, error) {
+// HashTreeRoot ssz hashes the SyncAggregatorSelectionData object
+func (s *SyncAggregatorSelectionData) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(s)
 }
 
-// HashTreeRootWith ssz hashes the SyncCommitteeSigningData object with a hasher
-func (s *SyncCommitteeSigningData) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+// HashTreeRootWith ssz hashes the SyncAggregatorSelectionData object with a hasher
+func (s *SyncAggregatorSelectionData) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
 	// Field (0) 'Slot'

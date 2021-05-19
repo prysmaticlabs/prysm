@@ -46,7 +46,7 @@ ssz_gen_marshal(
         "BeaconStateAltair",
         "SigningData",
         "SyncCommittee",
-        "SyncCommitteeSigningData",
+        "SyncAggregatorSelectionData",
     ],
 )
 
