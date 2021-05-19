@@ -10,6 +10,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -265,4 +266,16 @@ func TestDisplayExitInfo_NoKeys(t *testing.T) {
 	logHook := test.NewGlobal()
 	displayExitInfo([][]byte{}, []string{})
 	assert.LogsContain(t, logHook, "No successful voluntary exits")
+}
+
+func TestPrepareAllKeys(t *testing.T) {
+	key1 := bytesutil.ToBytes48([]byte("key1"))
+	key2 := bytesutil.ToBytes48([]byte("key2"))
+	raw, formatted := prepareAllKeys([][48]byte{key1, key2})
+	require.Equal(t, 2, len(raw))
+	require.Equal(t, 2, len(formatted))
+	assert.DeepEqual(t, bytesutil.ToBytes48([]byte{107, 101, 121, 49}), bytesutil.ToBytes48(raw[0]))
+	assert.DeepEqual(t, bytesutil.ToBytes48([]byte{107, 101, 121, 50}), bytesutil.ToBytes48(raw[1]))
+	assert.Equal(t, "0x6b6579310000", formatted[0])
+	assert.Equal(t, "0x6b6579320000", formatted[1])
 }
