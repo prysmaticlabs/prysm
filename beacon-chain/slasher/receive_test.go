@@ -9,6 +9,7 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -43,6 +44,78 @@ func TestSlasher_receiveAttestations_OK(t *testing.T) {
 		att2,
 	}
 	require.DeepEqual(t, wanted, s.attsQueue.dequeue())
+}
+
+func TestService_pruneSlasherDataWithinSlidingWindow_AttestationsPruned(t *testing.T) {
+	ctx := context.Background()
+	params := DefaultParams()
+	params.historyLength = 4 // 4 epochs worth of history.
+	slasherDB := dbtest.SetupSlasherDB(t)
+	s := &Service{
+		serviceCfg: &ServiceConfig{
+			Database: slasherDB,
+		},
+		params: params,
+	}
+
+	// Setup attestations for 2 validators at each epoch for epochs 0, 1, 2, 3.
+	err := slasherDB.SaveAttestationRecordsForValidators(ctx, []*slashertypes.IndexedAttestationWrapper{
+		createAttestationWrapper(t, 0, 0, []uint64{0}, bytesutil.PadTo([]byte("0a"), 32)),
+		createAttestationWrapper(t, 0, 0, []uint64{1}, bytesutil.PadTo([]byte("0b"), 32)),
+		createAttestationWrapper(t, 0, 1, []uint64{0}, bytesutil.PadTo([]byte("1a"), 32)),
+		createAttestationWrapper(t, 0, 1, []uint64{1}, bytesutil.PadTo([]byte("1b"), 32)),
+		createAttestationWrapper(t, 0, 2, []uint64{0}, bytesutil.PadTo([]byte("2a"), 32)),
+		createAttestationWrapper(t, 0, 2, []uint64{1}, bytesutil.PadTo([]byte("2b"), 32)),
+		createAttestationWrapper(t, 0, 3, []uint64{0}, bytesutil.PadTo([]byte("3a"), 32)),
+		createAttestationWrapper(t, 0, 3, []uint64{1}, bytesutil.PadTo([]byte("3b"), 32)),
+	})
+	require.NoError(t, err)
+
+	// Attempt to prune and discover that all data is still intact.
+	currentEpoch := types.Epoch(3)
+	err = s.pruneSlasherDataWithinSlidingWindow(ctx, currentEpoch)
+	require.NoError(t, err)
+
+	epochs := []types.Epoch{0, 1, 2, 3}
+	for _, epoch := range epochs {
+		att, err := slasherDB.AttestationRecordForValidator(ctx, types.ValidatorIndex(0), epoch)
+		require.NoError(t, err)
+		require.NotNil(t, att)
+		att, err = slasherDB.AttestationRecordForValidator(ctx, types.ValidatorIndex(1), epoch)
+		require.NoError(t, err)
+		require.NotNil(t, att)
+	}
+
+	// Setup attestations for 2 validators at epoch 4.
+	err = slasherDB.SaveAttestationRecordsForValidators(ctx, []*slashertypes.IndexedAttestationWrapper{
+		createAttestationWrapper(t, 0, 4, []uint64{0}, bytesutil.PadTo([]byte("4a"), 32)),
+		createAttestationWrapper(t, 0, 4, []uint64{1}, bytesutil.PadTo([]byte("4b"), 32)),
+	})
+	require.NoError(t, err)
+
+	// Attempt to prune again by setting current epoch to 4.
+	currentEpoch = types.Epoch(4)
+	err = s.pruneSlasherDataWithinSlidingWindow(ctx, currentEpoch)
+	require.NoError(t, err)
+
+	// We should now only have data for epochs 1, 2, 3, 4. We should
+	// have pruned data from epoch 0.
+	att, err := slasherDB.AttestationRecordForValidator(ctx, types.ValidatorIndex(0), 0)
+	require.NoError(t, err)
+	require.Equal(t, true, att == nil)
+	att, err = slasherDB.AttestationRecordForValidator(ctx, types.ValidatorIndex(1), 0)
+	require.NoError(t, err)
+	require.Equal(t, true, att == nil)
+
+	epochs = []types.Epoch{1, 2, 3, 4}
+	for _, epoch := range epochs {
+		att, err := slasherDB.AttestationRecordForValidator(ctx, types.ValidatorIndex(0), epoch)
+		require.NoError(t, err)
+		require.NotNil(t, att)
+		att, err = slasherDB.AttestationRecordForValidator(ctx, types.ValidatorIndex(1), epoch)
+		require.NoError(t, err)
+		require.NotNil(t, att)
+	}
 }
 
 func TestSlasher_receiveAttestations_OnlyValidAttestations(t *testing.T) {
