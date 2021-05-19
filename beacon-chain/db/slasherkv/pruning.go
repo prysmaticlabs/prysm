@@ -33,8 +33,8 @@ func (s *Store) PruneAttestationsAtEpoch(
 
 	// If the lowest epoch is greater than or equal to the end pruning epoch,
 	// there is nothing to prune, so we return early.
-	if lowestEpoch >= minEpoch {
-		log.Debugf("Lowest epoch %d is >= pruning epoch %d, nothing to prune", lowestEpoch, minEpoch)
+	if lowestEpoch > minEpoch {
+		log.Debugf("Lowest epoch %d is > pruning epoch %d, nothing to prune", lowestEpoch, minEpoch)
 		return nil
 	}
 
@@ -48,7 +48,7 @@ func (s *Store) PruneAttestationsAtEpoch(
 			// We check the epoch from the current key in the database.
 			// If we have hit an epoch that is greater than the end epoch of the pruning process,
 			// we then completely exit the process as we are done.
-			if !uint64PrefixLessThan(k, encodedEndPruneEpoch) {
+			if !uint64PrefixLessThanOrEqual(k, encodedEndPruneEpoch) {
 				return nil
 			}
 
@@ -95,8 +95,8 @@ func (s *Store) PruneProposalsAtEpoch(
 
 	// If the lowest slot is greater than or equal to the end pruning slot,
 	// there is nothing to prune, so we return early.
-	if lowestSlot >= endPruneSlot {
-		log.Debugf("Lowest slot %d is >= pruning slot %d, nothing to prune", lowestSlot, endPruneSlot)
+	if lowestSlot > endPruneSlot {
+		log.Debugf("Lowest slot %d is > pruning slot %d, nothing to prune", lowestSlot, endPruneSlot)
 		return nil
 	}
 
@@ -109,7 +109,7 @@ func (s *Store) PruneProposalsAtEpoch(
 			// We check the slot from the current key in the database.
 			// If we have hit a slot that is greater than the end slot of the pruning process,
 			// we then completely exit the process as we are done.
-			if !uint64PrefixLessThan(k, encodedEndPruneSlot) {
+			if !uint64PrefixLessThanOrEqual(k, encodedEndPruneSlot) {
 				return nil
 			}
 			// Proposals in the database look like this:
@@ -133,7 +133,7 @@ func slotFromProposalKey(key []byte) types.Slot {
 	return types.Slot(binary.LittleEndian.Uint64(key[:8]))
 }
 
-func uint64PrefixLessThan(key, lessThan []byte) bool {
+func uint64PrefixLessThanOrEqual(key, lessThan []byte) bool {
 	enc := key[:8]
-	return bytes.Compare(enc, lessThan) < 0
+	return bytes.Compare(enc, lessThan) <= 0
 }

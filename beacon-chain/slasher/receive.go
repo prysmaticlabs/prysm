@@ -190,8 +190,12 @@ func (s *Service) pruneSlasherData(ctx context.Context, slotTicker <-chan types.
 // we care about is 1, 2, 3, 4, so we can delete data for epoch 0.
 func (s *Service) pruneSlasherDataWithinSlidingWindow(ctx context.Context, currentEpoch types.Epoch) error {
 	var minEpoch types.Epoch
-	if currentEpoch > s.params.historyLength {
+	if currentEpoch >= s.params.historyLength {
 		minEpoch = currentEpoch - s.params.historyLength
+	} else {
+		// If the current epoch is less than the history length, we should not
+		// attempt to prune at all.
+		return nil
 	}
 	if err := s.serviceCfg.Database.PruneAttestationsAtEpoch(
 		ctx, minEpoch,
