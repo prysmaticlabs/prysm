@@ -282,7 +282,10 @@ func (s *Store) CheckDoubleBlockProposals(
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(proposalRecordsBucket)
 		for _, proposal := range proposals {
-			key, err := keyForValidatorProposal(proposal)
+			key, err := keyForValidatorProposal(
+				proposal.SignedBeaconBlockHeader.Header.Slot,
+				proposal.SignedBeaconBlockHeader.Header.ProposerIndex,
+			)
 			if err != nil {
 				return err
 			}
@@ -307,6 +310,34 @@ func (s *Store) CheckDoubleBlockProposals(
 	return proposerSlashings, err
 }
 
+// BlockProposalForValidator given a validator index and a slot
+// retrieves an existing proposal record we have stored in the database.
+func (s *Store) BlockProposalForValidator(
+	ctx context.Context, validatorIdx types.ValidatorIndex, slot types.Slot,
+) (*slashertypes.SignedBlockHeaderWrapper, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.ProposalRecordForValidator")
+	defer span.End()
+	var record *slashertypes.SignedBlockHeaderWrapper
+	key, err := keyForValidatorProposal(slot, validatorIdx)
+	if err != nil {
+		return nil, err
+	}
+	err = s.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(proposalRecordsBucket)
+		encProposal := bkt.Get(key)
+		if encProposal == nil {
+			return nil
+		}
+		decoded, err := decodeProposalRecord(encProposal)
+		if err != nil {
+			return err
+		}
+		record = decoded
+		return nil
+	})
+	return record, err
+}
+
 // SaveBlockProposals takes in a list of block proposals and saves them to our
 // proposal records bucket in the database.
 func (s *Store) SaveBlockProposals(
@@ -317,7 +348,10 @@ func (s *Store) SaveBlockProposals(
 	encodedKeys := make([][]byte, len(proposals))
 	encodedProposals := make([][]byte, len(proposals))
 	for i, proposal := range proposals {
-		key, err := keyForValidatorProposal(proposal)
+		key, err := keyForValidatorProposal(
+			proposal.SignedBeaconBlockHeader.Header.Slot,
+			proposal.SignedBeaconBlockHeader.Header.ProposerIndex,
+		)
 		if err != nil {
 			return err
 		}
@@ -395,12 +429,12 @@ func suffixForAttestationRecordsKey(key, encodedValidatorIndex []byte) bool {
 }
 
 // Disk key for a validator proposal, including a slot+validatorIndex as a byte slice.
-func keyForValidatorProposal(proposal *slashertypes.SignedBlockHeaderWrapper) ([]byte, error) {
-	encSlot, err := proposal.SignedBeaconBlockHeader.Header.Slot.MarshalSSZ()
+func keyForValidatorProposal(slot types.Slot, proposerIndex types.ValidatorIndex) ([]byte, error) {
+	encSlot, err := slot.MarshalSSZ()
 	if err != nil {
 		return nil, err
 	}
-	encValidatorIdx := encodeValidatorIndex(proposal.SignedBeaconBlockHeader.Header.ProposerIndex)
+	encValidatorIdx := encodeValidatorIndex(proposerIndex)
 	return append(encSlot, encValidatorIdx...), nil
 }
 

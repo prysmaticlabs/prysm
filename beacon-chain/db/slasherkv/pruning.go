@@ -21,14 +21,24 @@ func (s *Store) PruneAttestationsAtEpoch(
 
 	// We retrieve the lowest stored epoch in the proposals bucket.
 	var lowestEpoch types.Epoch
+	var hasData bool
 	if err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationDataRootsBucket)
 		c := bkt.Cursor()
 		k, _ := c.First()
+		if k == nil {
+			return nil
+		}
+		hasData = true
 		lowestEpoch = types.Epoch(binary.LittleEndian.Uint64(k))
 		return nil
 	}); err != nil {
 		return err
+	}
+
+	// If there is no data stored, just exit early.
+	if !hasData {
+		return nil
 	}
 
 	// If the lowest epoch is greater than or equal to the end pruning epoch,
@@ -83,14 +93,24 @@ func (s *Store) PruneProposalsAtEpoch(
 
 	// We retrieve the lowest stored slot in the proposals bucket.
 	var lowestSlot types.Slot
+	var hasData bool
 	if err = s.db.View(func(tx *bolt.Tx) error {
 		proposalBkt := tx.Bucket(proposalRecordsBucket)
 		c := proposalBkt.Cursor()
 		k, _ := c.First()
+		if k == nil {
+			return nil
+		}
+		hasData = true
 		lowestSlot = slotFromProposalKey(k)
 		return nil
 	}); err != nil {
 		return err
+	}
+
+	// If there is no data stored, just exit early.
+	if !hasData {
+		return nil
 	}
 
 	// If the lowest slot is greater than or equal to the end pruning slot,

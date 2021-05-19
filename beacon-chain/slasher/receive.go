@@ -202,10 +202,10 @@ func (s *Service) pruneSlasherDataWithinSlidingWindow(ctx context.Context, curre
 	); err != nil {
 		return errors.Wrap(err, "Could not prune attestations")
 	}
-	//if err := s.serviceCfg.Database.PruneProposalsAtEpoch(
-	//	ctx, minEpoch,
-	//); err != nil {
-	//	return errors.Wrap(err, "Could not prune proposals")
-	//}
+	if err := s.serviceCfg.Database.PruneProposalsAtEpoch(
+		ctx, minEpoch,
+	); err != nil {
+		return errors.Wrap(err, "Could not prune proposals")
+	}
 	return nil
 }

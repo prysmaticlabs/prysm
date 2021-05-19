@@ -11,6 +11,7 @@ import (
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	params2 "github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -115,6 +116,86 @@ func TestService_pruneSlasherDataWithinSlidingWindow_AttestationsPruned(t *testi
 		att, err = slasherDB.AttestationRecordForValidator(ctx, types.ValidatorIndex(1), epoch)
 		require.NoError(t, err)
 		require.NotNil(t, att)
+	}
+}
+
+func TestService_pruneSlasherDataWithinSlidingWindow_ProposalsPruned(t *testing.T) {
+	ctx := context.Background()
+
+	// Override beacon config to 1 slot per epoch for easier testing.
+	config := params2.BeaconConfig()
+	configCopy := config.Copy()
+	configCopy.SlotsPerEpoch = 1
+	params2.OverrideBeaconConfig(configCopy)
+	defer params2.OverrideBeaconConfig(config)
+
+	params := DefaultParams()
+	params.historyLength = 4 // 4 epochs worth of history.
+	slasherDB := dbtest.SetupSlasherDB(t)
+	s := &Service{
+		serviceCfg: &ServiceConfig{
+			Database: slasherDB,
+		},
+		params: params,
+	}
+
+	// Setup block proposals for 2 validators at each epoch for epochs 0, 1, 2, 3.
+	err := slasherDB.SaveBlockProposals(ctx, []*slashertypes.SignedBlockHeaderWrapper{
+		createProposalWrapper(t, 0, 0, bytesutil.PadTo([]byte("0a"), 32)),
+		createProposalWrapper(t, 0, 1, bytesutil.PadTo([]byte("0b"), 32)),
+		createProposalWrapper(t, 1, 0, bytesutil.PadTo([]byte("1a"), 32)),
+		createProposalWrapper(t, 1, 1, bytesutil.PadTo([]byte("1b"), 32)),
+		createProposalWrapper(t, 2, 0, bytesutil.PadTo([]byte("2a"), 32)),
+		createProposalWrapper(t, 2, 1, bytesutil.PadTo([]byte("2b"), 32)),
+		createProposalWrapper(t, 3, 0, bytesutil.PadTo([]byte("3a"), 32)),
+		createProposalWrapper(t, 3, 1, bytesutil.PadTo([]byte("3b"), 32)),
+	})
+	require.NoError(t, err)
+
+	// Attempt to prune and discover that all data is still intact.
+	currentEpoch := types.Epoch(3)
+	err = s.pruneSlasherDataWithinSlidingWindow(ctx, currentEpoch)
+	require.NoError(t, err)
+
+	slots := []types.Slot{0, 1, 2, 3}
+	for _, slot := range slots {
+		blk, err := slasherDB.BlockProposalForValidator(ctx, types.ValidatorIndex(0), slot)
+		require.NoError(t, err)
+		require.NotNil(t, blk)
+		blk, err = slasherDB.BlockProposalForValidator(ctx, types.ValidatorIndex(1), slot)
+		require.NoError(t, err)
+		require.NotNil(t, blk)
+	}
+
+	// Setup block proposals for 2 validators at epoch 4.
+	err = slasherDB.SaveBlockProposals(ctx, []*slashertypes.SignedBlockHeaderWrapper{
+		createProposalWrapper(t, 4, 0, bytesutil.PadTo([]byte("4a"), 32)),
+		createProposalWrapper(t, 4, 1, bytesutil.PadTo([]byte("4b"), 32)),
+	})
+	require.NoError(t, err)
+
+	// Attempt to prune again by setting current epoch to 4.
+	currentEpoch = types.Epoch(4)
+	err = s.pruneSlasherDataWithinSlidingWindow(ctx, currentEpoch)
+	require.NoError(t, err)
+
+	// We should now only have data for epochs 1, 2, 3, 4. We should
+	// have pruned data from epoch 0.
+	blk, err := slasherDB.BlockProposalForValidator(ctx, types.ValidatorIndex(0), 0)
+	require.NoError(t, err)
+	require.Equal(t, true, blk == nil)
+	blk, err = slasherDB.BlockProposalForValidator(ctx, types.ValidatorIndex(1), 0)
+	require.NoError(t, err)
+	require.Equal(t, true, blk == nil)
+
+	slots = []types.Slot{1, 2, 3, 4}
+	for _, slot := range slots {
+		blk, err := slasherDB.BlockProposalForValidator(ctx, types.ValidatorIndex(0), slot)
+		require.NoError(t, err)
+		require.NotNil(t, blk)
+		blk, err = slasherDB.BlockProposalForValidator(ctx, types.ValidatorIndex(1), slot)
+		require.NoError(t, err)
+		require.NotNil(t, blk)
 	}
 }
 
