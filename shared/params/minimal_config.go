@@ -80,6 +80,8 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.FarFutureSlot = 1<<64 - 1
 
 	// New Altair params
+	minimalConfig.AltairForkVersion = []byte{1, 0, 0, 1} // Highest byte set to 0x01 to avoid collisions with mainnet versioning
+	minimalConfig.AltairForkEpoch = 1<<64 - 1
 	minimalConfig.SyncCommitteeSize = 32
 	minimalConfig.InactivityScoreBias = 4
 	minimalConfig.EpochsPerSyncCommitteePeriod = 8
