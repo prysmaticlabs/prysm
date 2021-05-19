@@ -197,6 +197,10 @@ func (s *Service) pruneSlasherDataWithinSlidingWindow(ctx context.Context, curre
 		// attempt to prune at all.
 		return nil
 	}
+	log.WithFields(logrus.Fields{
+		"currentEpoch":          currentEpoch,
+		"pruningAllBeforeEpoch": minEpoch,
+	}).Debug("Pruning old attestations and proposals for slasher")
 	if err := s.serviceCfg.Database.PruneAttestationsAtEpoch(
 		ctx, minEpoch,
 	); err != nil {
