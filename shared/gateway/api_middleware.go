@@ -272,18 +272,17 @@ func handleUrlParameters(endpoint string, request *http.Request, writer http.Res
 				return
 			}
 			if isHex {
-				b, err := bytesutil.FromHexString(string(bRouteVar))
+				bRouteVar, err = bytesutil.FromHexString(string(bRouteVar))
 				if err != nil {
 					e := fmt.Errorf("could not process URL parameter: %w", err)
 					writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
 					return
 				}
-				// Converting hex to base64 may result in a value which malforms the URL.
-				// We use URLEncoding to safely escape such values.
-				routeVar = base64.URLEncoding.EncodeToString(b)
-			} else {
-				routeVar = base64.StdEncoding.EncodeToString(bRouteVar)
 			}
+			// Converting hex to base64 may result in a value which malforms the URL.
+			// We use URLEncoding to safely escape such values.
+			routeVar = base64.URLEncoding.EncodeToString(bRouteVar)
+
 			// Merge segments back into the full URL.
 			splitPath := strings.Split(request.URL.Path, "/")
 			splitPath[i] = routeVar
