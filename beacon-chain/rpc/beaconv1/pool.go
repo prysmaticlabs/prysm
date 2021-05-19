@@ -2,6 +2,7 @@ package beaconv1
 
 import (
 	"context"
+	"fmt"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	ethpb_alpha "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -23,10 +24,12 @@ func (bs *Server) ListPoolAttestations(ctx context.Context, req *ethpb.Attestati
 	attestations := bs.AttestationsPool.AggregatedAttestations()
 	unaggAtts, err := bs.AttestationsPool.UnaggregatedAttestations()
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "Could not get unaggregated attestations: %v", err)
 	}
 	attestations = append(attestations, unaggAtts...)
-	if req.Slot == nil && req.CommitteeIndex == nil {
+	isEmptyReq := req.Slot == nil && req.CommitteeIndex == nil
+	if isEmptyReq {
+		fmt.Println("return all")
 		allAtts := make([]*ethpb.Attestation, len(attestations))
 		for i, att := range attestations {
 			allAtts[i] = migration.V1Alpha1AttestationToV1(att)
@@ -36,13 +39,13 @@ func (bs *Server) ListPoolAttestations(ctx context.Context, req *ethpb.Attestati
 
 	filteredAtts := make([]*ethpb.Attestation, 0, len(attestations))
 	for _, att := range attestations {
-		if req.Slot != nil && req.CommitteeIndex != nil {
-			if att.Data.CommitteeIndex != *req.CommitteeIndex || att.Data.Slot != *req.Slot {
-				continue
-			}
+		bothDefined := req.Slot != nil && req.CommitteeIndex != nil
+		committeeIndexMatch := req.CommitteeIndex != nil && att.Data.CommitteeIndex == *req.CommitteeIndex
+		slotMatch := req.Slot != nil && att.Data.Slot == *req.Slot
+
+		if bothDefined && committeeIndexMatch && slotMatch {
 			filteredAtts = append(filteredAtts, migration.V1Alpha1AttestationToV1(att))
-		} else if req.Slot != nil && att.Data.Slot == *req.Slot ||
-			req.CommitteeIndex != nil && att.Data.CommitteeIndex == *req.CommitteeIndex {
+		} else if !bothDefined && (committeeIndexMatch || slotMatch) {
 			filteredAtts = append(filteredAtts, migration.V1Alpha1AttestationToV1(att))
 		}
 	}
