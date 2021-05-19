@@ -175,6 +175,6 @@ message SyncCommittee {
 message SyncCommitteeSigningData{
   // Slot of this signing data.
   uint64 slot = 1;
-  // Sub committee index of this signing data.
+  // Subcommittee index of this signing data.
   uint64 subcommittee_index = 2;
 }
