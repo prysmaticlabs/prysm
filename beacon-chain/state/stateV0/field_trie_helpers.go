@@ -44,7 +44,7 @@ func fieldConverters(field fieldIndex, indices []uint64, elements interface{}, c
 			return nil, errors.Errorf("Wanted type of %v but got %v",
 				reflect.TypeOf([]*ethpb.Eth1Data{}).Name(), reflect.TypeOf(elements).Name())
 		}
-		return handleEth1DataSlice(val, indices, convertAll)
+		return HandleEth1DataSlice(val, indices, convertAll)
 	case validators:
 		val, ok := elements.([]*ethpb.Validator)
 		if !ok {
@@ -64,7 +64,8 @@ func fieldConverters(field fieldIndex, indices []uint64, elements interface{}, c
 	}
 }
 
-func handleEth1DataSlice(val []*ethpb.Eth1Data, indices []uint64, convertAll bool) ([][32]byte, error) {
+// HandleEth1DataSlice processes a list of eth1data and indices into the appropriate roots.
+func HandleEth1DataSlice(val []*ethpb.Eth1Data, indices []uint64, convertAll bool) ([][32]byte, error) {
 	length := len(indices)
 	if convertAll {
 		length = len(val)
