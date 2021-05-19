@@ -37,6 +37,7 @@ type endpointData struct {
 	err         ErrorJson
 }
 
+// fieldProcessor applies the processing function f to a value when the tag is present on the field.
 type fieldProcessor struct {
 	tag string
 	f   func(value reflect.Value) error
