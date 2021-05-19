@@ -31,12 +31,6 @@ type ApiProxyMiddleware struct {
 	router         *mux.Router
 }
 
-type endpointInfo struct {
-	postRequestType reflect.Type
-	getResponseType reflect.Type
-	errorType       reflect.Type
-}
-
 type endpointData struct {
 	postRequest interface{}
 	getResponse interface{}
@@ -52,139 +46,45 @@ type fieldProcessor struct {
 func (m *ApiProxyMiddleware) Run() error {
 	m.router = mux.NewRouter()
 
-	m.handleApiEndpoint("/eth/v1/beacon/genesis",
-		endpointInfo{
-			getResponseType: reflect.TypeOf(GenesisResponseJson{}),
-			errorType:       reflect.TypeOf(DefaultErrorJson{}),
-		})
-	m.handleApiEndpoint("/eth/v1/beacon/states/{state_id}/root",
-		endpointInfo{
-			getResponseType: reflect.TypeOf(StateRootResponseJson{}),
-			errorType:       reflect.TypeOf(DefaultErrorJson{}),
-		})
-	m.handleApiEndpoint("/eth/v1/beacon/states/{state_id}/fork",
-		endpointInfo{
-			getResponseType: reflect.TypeOf(StateForkResponseJson{}),
-			errorType:       reflect.TypeOf(DefaultErrorJson{}),
-		})
-	m.handleApiEndpoint("/eth/v1/beacon/states/{state_id}/finality_checkpoints",
-		endpointInfo{
-			getResponseType: reflect.TypeOf(StateFinalityCheckpointResponseJson{}),
-			errorType:       reflect.TypeOf(DefaultErrorJson{}),
-		})
-	m.handleApiEndpoint("/eth/v1/beacon/headers/{block_id}",
-		endpointInfo{
-			getResponseType: reflect.TypeOf(BlockHeaderResponseJson{}),
-			errorType:       reflect.TypeOf(DefaultErrorJson{})},
-	)
-	m.handleApiEndpoint("/eth/v1/beacon/blocks",
-		endpointInfo{postRequestType: reflect.TypeOf(BeaconBlockContainerJson{}),
-			errorType: reflect.TypeOf(DefaultErrorJson{}),
-		})
-	m.handleApiEndpoint("/eth/v1/beacon/blocks/{block_id}",
-		endpointInfo{
-			getResponseType: reflect.TypeOf(BlockResponseJson{}),
-			errorType:       reflect.TypeOf(DefaultErrorJson{}),
-		})
-	m.handleApiEndpoint("/eth/v1/beacon/blocks/{block_id}/root",
-		endpointInfo{
-			getResponseType: reflect.TypeOf(BlockRootResponseJson{}),
-			errorType:       reflect.TypeOf(DefaultErrorJson{}),
-		})
-	m.handleApiEndpoint("/eth/v1/beacon/blocks/{block_id}/attestations",
-		endpointInfo{
-			getResponseType: reflect.TypeOf(BlockAttestationsResponseJson{}),
-			errorType:       reflect.TypeOf(DefaultErrorJson{}),
-		})
-	m.handleApiEndpoint("/eth/v1/beacon/pool/attestations",
-		endpointInfo{
-			postRequestType: reflect.TypeOf(SubmitAttestationRequestJson{}),
-			getResponseType: reflect.TypeOf(BlockAttestationsResponseJson{}),
-			errorType:       reflect.TypeOf(SubmitAttestationsErrorJson{}),
-		})
-	m.handleApiEndpoint("/eth/v1/beacon/pool/attester_slashings",
-		endpointInfo{
-			postRequestType: reflect.TypeOf(AttesterSlashingJson{}),
-			getResponseType: reflect.TypeOf(AttesterSlashingsPoolResponseJson{}),
-			errorType:       reflect.TypeOf(DefaultErrorJson{}),
-		})
-	m.handleApiEndpoint("/eth/v1/beacon/pool/proposer_slashings",
-		endpointInfo{
-			postRequestType: reflect.TypeOf(ProposerSlashingJson{}),
-			getResponseType: reflect.TypeOf(ProposerSlashingsPoolResponseJson{}),
-			errorType:       reflect.TypeOf(DefaultErrorJson{}),
-		})
-	m.handleApiEndpoint("/eth/v1/beacon/pool/voluntary_exits",
-		endpointInfo{
-			postRequestType: reflect.TypeOf(SignedVoluntaryExitJson{}),
-			getResponseType: reflect.TypeOf(VoluntaryExitsPoolResponseJson{}),
-			errorType:       reflect.TypeOf(DefaultErrorJson{}),
-		})
-	m.handleApiEndpoint("/eth/v1/node/identity",
-		endpointInfo{
-			getResponseType: reflect.TypeOf(IdentityResponseJson{}),
-			errorType:       reflect.TypeOf(DefaultErrorJson{}),
-		})
-	m.handleApiEndpoint("/eth/v1/node/peers",
-		endpointInfo{
-			getResponseType: reflect.TypeOf(PeersResponseJson{}),
-			errorType:       reflect.TypeOf(DefaultErrorJson{}),
-		})
-	m.handleApiEndpoint("/eth/v1/node/peers/{peer_id}",
-		endpointInfo{getResponseType: reflect.TypeOf(PeerResponseJson{}),
-			errorType: reflect.TypeOf(DefaultErrorJson{}),
-		})
-	m.handleApiEndpoint("/eth/v1/node/peer_count",
-		endpointInfo{
-			getResponseType: reflect.TypeOf(PeerCountResponseJson{}),
-			errorType:       reflect.TypeOf(DefaultErrorJson{}),
-		})
-	m.handleApiEndpoint("/eth/v1/node/version",
-		endpointInfo{
-			getResponseType: reflect.TypeOf(VersionResponseJson{}),
-			errorType:       reflect.TypeOf(DefaultErrorJson{}),
-		})
-	m.handleApiEndpoint("/eth/v1/node/health", endpointInfo{errorType: reflect.TypeOf(DefaultErrorJson{})})
-	m.handleApiEndpoint("/eth/v1/debug/beacon/states/{state_id}",
-		endpointInfo{
-			getResponseType: reflect.TypeOf(BeaconStateResponseJson{}),
-			errorType:       reflect.TypeOf(DefaultErrorJson{}),
-		})
-	m.handleApiEndpoint("/eth/v1/debug/beacon/heads",
-		endpointInfo{
-			getResponseType: reflect.TypeOf(ForkChoiceHeadsResponseJson{}),
-			errorType:       reflect.TypeOf(DefaultErrorJson{}),
-		})
-	m.handleApiEndpoint("/eth/v1/config/fork_schedule",
-		endpointInfo{
-			getResponseType: reflect.TypeOf(ForkScheduleResponseJson{}),
-			errorType:       reflect.TypeOf(DefaultErrorJson{}),
-		})
-	m.handleApiEndpoint("/eth/v1/config/deposit_contract",
-		endpointInfo{
-			getResponseType: reflect.TypeOf(DepositContractResponseJson{}),
-			errorType:       reflect.TypeOf(DefaultErrorJson{}),
-		})
-	m.handleApiEndpoint("/eth/v1/config/spec",
-		endpointInfo{
-			getResponseType: reflect.TypeOf(SpecResponseJson{}),
-			errorType:       reflect.TypeOf(DefaultErrorJson{}),
-		})
+	m.handleApiEndpoint("/eth/v1/beacon/genesis")
+	m.handleApiEndpoint("/eth/v1/beacon/states/{state_id}/root")
+	m.handleApiEndpoint("/eth/v1/beacon/states/{state_id}/fork")
+	m.handleApiEndpoint("/eth/v1/beacon/states/{state_id}/finality_checkpoints")
+	m.handleApiEndpoint("/eth/v1/beacon/headers/{block_id}")
+	m.handleApiEndpoint("/eth/v1/beacon/blocks")
+	m.handleApiEndpoint("/eth/v1/beacon/blocks/{block_id}")
+	m.handleApiEndpoint("/eth/v1/beacon/blocks/{block_id}/root")
+	m.handleApiEndpoint("/eth/v1/beacon/blocks/{block_id}/attestations")
+	m.handleApiEndpoint("/eth/v1/beacon/pool/attestations")
+	m.handleApiEndpoint("/eth/v1/beacon/pool/attester_slashings")
+	m.handleApiEndpoint("/eth/v1/beacon/pool/proposer_slashings")
+	m.handleApiEndpoint("/eth/v1/beacon/pool/voluntary_exits")
+	m.handleApiEndpoint("/eth/v1/node/identity")
+	m.handleApiEndpoint("/eth/v1/node/peers")
+	m.handleApiEndpoint("/eth/v1/node/peers/{peer_id}")
+	m.handleApiEndpoint("/eth/v1/node/peer_count")
+	m.handleApiEndpoint("/eth/v1/node/version")
+	m.handleApiEndpoint("/eth/v1/node/health")
+	m.handleApiEndpoint("/eth/v1/debug/beacon/states/{state_id}")
+	m.handleApiEndpoint("/eth/v1/debug/beacon/heads")
+	m.handleApiEndpoint("/eth/v1/config/fork_schedule")
+	m.handleApiEndpoint("/eth/v1/config/deposit_contract")
+	m.handleApiEndpoint("/eth/v1/config/spec")
 
 	return http.ListenAndServe(m.ProxyAddress, m.router)
 }
 
-func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint string, info endpointInfo) {
+func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint string) {
 	m.router.HandleFunc(endpoint, func(writer http.ResponseWriter, request *http.Request) {
-		data, err := prepareData(info)
+		data, err := getEndpointData(endpoint)
 		if err != nil {
-			e := fmt.Errorf("could not prepare request data: %w", err)
+			e := fmt.Errorf("could not prepare endpoint data: %w", err)
 			writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
 			return
 		}
 
 		if request.Method == "POST" {
-			if err := wrapAttestationsArray(data, request); err != nil {
+			if err := wrapAttestationsArray(&data, request); err != nil {
 				e := fmt.Errorf("could not decode request body: %w", err)
 				writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
 				return
@@ -197,7 +97,7 @@ func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint string, info endpointInf
 				return
 			}
 
-			prepareGraffiti(data)
+			prepareGraffiti(&data)
 
 			// Apply processing functions to fields with specific tags.
 			if err := processField(data.postRequest, []fieldProcessor{
@@ -329,26 +229,6 @@ func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint string, info endpointInf
 			return
 		}
 	})
-}
-
-// prepareData constructs an empty struct whose contents are populated from endpoint information.
-// The returned struct is meant to be used during a single request.
-func prepareData(info endpointInfo) (*endpointData, error) {
-	data := &endpointData{}
-	if info.postRequestType != nil {
-		data.postRequest = reflect.New(info.postRequestType).Interface()
-	}
-	if info.getResponseType != nil {
-		data.getResponse = reflect.New(info.getResponseType).Interface()
-	}
-	if info.errorType != nil {
-		errJson, ok := reflect.New(info.errorType).Interface().(ErrorJson)
-		if !ok {
-			return nil, errors.New("could not prepare error data")
-		}
-		data.err = errJson
-	}
-	return data, nil
 }
 
 // Posted graffiti needs to have length of 32 bytes, but client is allowed to send data of any length.
@@ -523,4 +403,61 @@ func timeToUnixProcessor(v reflect.Value) error {
 	}
 	v.SetString(strconv.FormatUint(uint64(t.Unix()), 10))
 	return nil
+}
+
+// getEndpointData constructs and returns a struct containing necessary information to process a request based on the provided endpoint.
+// The returned struct is meant to be used during a single request.
+func getEndpointData(endpoint string) (endpointData, error) {
+	switch endpoint {
+	case "/eth/v1/beacon/genesis":
+		return endpointData{getResponse: &GenesisResponseJson{}, err: &DefaultErrorJson{}}, nil
+	case "/eth/v1/beacon/states/{state_id}/root":
+		return endpointData{getResponse: &StateRootResponseJson{}, err: &DefaultErrorJson{}}, nil
+	case "/eth/v1/beacon/states/{state_id}/fork":
+		return endpointData{getResponse: &StateForkResponseJson{}, err: &DefaultErrorJson{}}, nil
+	case "/eth/v1/beacon/states/{state_id}/finality_checkpoints":
+		return endpointData{getResponse: &StateFinalityCheckpointResponseJson{}, err: &DefaultErrorJson{}}, nil
+	case "/eth/v1/beacon/headers/{block_id}":
+		return endpointData{getResponse: &BlockHeaderResponseJson{}, err: &DefaultErrorJson{}}, nil
+	case "/eth/v1/beacon/blocks":
+		return endpointData{postRequest: &BeaconBlockContainerJson{}, err: &DefaultErrorJson{}}, nil
+	case "/eth/v1/beacon/blocks/{block_id}":
+		return endpointData{getResponse: &BlockResponseJson{}, err: &DefaultErrorJson{}}, nil
+	case "/eth/v1/beacon/blocks/{block_id}/root":
+		return endpointData{getResponse: &BlockRootResponseJson{}, err: &DefaultErrorJson{}}, nil
+	case "/eth/v1/beacon/blocks/{block_id}/attestations":
+		return endpointData{getResponse: &BlockAttestationsResponseJson{}, err: &DefaultErrorJson{}}, nil
+	case "/eth/v1/beacon/pool/attestations":
+		return endpointData{postRequest: &SubmitAttestationRequestJson{}, getResponse: &BlockAttestationsResponseJson{}, err: &SubmitAttestationsErrorJson{}}, nil
+	case "/eth/v1/beacon/pool/attester_slashings":
+		return endpointData{postRequest: &AttesterSlashingJson{}, getResponse: &AttesterSlashingsPoolResponseJson{}, err: &DefaultErrorJson{}}, nil
+	case "/eth/v1/beacon/pool/proposer_slashings":
+		return endpointData{postRequest: &ProposerSlashingJson{}, getResponse: &ProposerSlashingsPoolResponseJson{}, err: &DefaultErrorJson{}}, nil
+	case "/eth/v1/beacon/pool/voluntary_exits":
+		return endpointData{postRequest: &SignedVoluntaryExitJson{}, getResponse: &VoluntaryExitsPoolResponseJson{}, err: &DefaultErrorJson{}}, nil
+	case "/eth/v1/node/identity":
+		return endpointData{getResponse: &IdentityResponseJson{}, err: &DefaultErrorJson{}}, nil
+	case "/eth/v1/node/peers":
+		return endpointData{getResponse: &PeersResponseJson{}, err: &DefaultErrorJson{}}, nil
+	case "/eth/v1/node/peers/{peer_id}":
+		return endpointData{getResponse: &PeerResponseJson{}, err: &DefaultErrorJson{}}, nil
+	case "/eth/v1/node/peer_count":
+		return endpointData{getResponse: &PeerCountResponseJson{}, err: &DefaultErrorJson{}}, nil
+	case "/eth/v1/node/version":
+		return endpointData{getResponse: &VersionResponseJson{}, err: &DefaultErrorJson{}}, nil
+	case "/eth/v1/node/health":
+		return endpointData{err: &DefaultErrorJson{}}, nil
+	case "/eth/v1/debug/beacon/states/{state_id}":
+		return endpointData{getResponse: &BeaconStateResponseJson{}, err: &DefaultErrorJson{}}, nil
+	case "/eth/v1/debug/beacon/heads":
+		return endpointData{getResponse: &ForkChoiceHeadsResponseJson{}, err: &DefaultErrorJson{}}, nil
+	case "/eth/v1/config/fork_schedule":
+		return endpointData{getResponse: &ForkScheduleResponseJson{}, err: &DefaultErrorJson{}}, nil
+	case "/eth/v1/config/deposit_contract":
+		return endpointData{getResponse: &DepositContractResponseJson{}, err: &DefaultErrorJson{}}, nil
+	case "/eth/v1/config/spec":
+		return endpointData{getResponse: &SpecResponseJson{}, err: &DefaultErrorJson{}}, nil
+	default:
+		return endpointData{}, errors.New("invalid endpoint")
+	}
 }

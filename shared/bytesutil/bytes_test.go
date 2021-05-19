@@ -3,7 +3,6 @@ package bytesutil_test
 import (
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -378,8 +377,8 @@ func TestUint64ToBytes_RoundTrip(t *testing.T) {
 }
 
 func TestIsBytes32Hex(t *testing.T) {
-	pass, err := hexutil.Decode("0x1234567890abcDEF1234567890abcDEF1234567890abcDEF1234567890abcDEF")
-	require.NoError(t, err)
+	pass := []byte("0x1234567890abcDEF1234567890abcDEF1234567890abcDEF1234567890abcDEF")
+	noPrefix := []byte("1234567890abcDEF1234567890abcDEF1234567890abcDEF1234567890abcDEF")
 
 	tests := []struct {
 		a []byte
@@ -391,6 +390,7 @@ func TestIsBytes32Hex(t *testing.T) {
 		{[]byte("XYZ4567890abcDEF1234567890abcDEF1234567890abcDEF1234567890abcDEF"), false},
 		{[]byte("foo1234567890abcDEF1234567890abcDEF1234567890abcDEF1234567890abcDEFbar"), false},
 		{pass, true},
+		{noPrefix, true},
 	}
 	for _, tt := range tests {
 		isHex, err := bytesutil.IsBytes32Hex(tt.a)
