@@ -63,6 +63,18 @@ func V1Alpha1IndexedAttToV1(v1alpha1Att *ethpb_alpha.IndexedAttestation) *ethpb.
 	}
 }
 
+// V1Alpha1AttestationToV1 converts a v1alpha1 attestation to v1.
+func V1Alpha1AttestationToV1(v1alpha1Att *ethpb_alpha.Attestation) *ethpb.Attestation {
+	if v1alpha1Att == nil {
+		return &ethpb.Attestation{}
+	}
+	return &ethpb.Attestation{
+		AggregationBits: v1alpha1Att.AggregationBits,
+		Data:            V1Alpha1AttDataToV1(v1alpha1Att.Data),
+		Signature:       v1alpha1Att.Signature,
+	}
+}
+
 // V1Alpha1AttDataToV1 converts a v1alpha1 attestation data to v1.
 func V1Alpha1AttDataToV1(v1alpha1AttData *ethpb_alpha.AttestationData) *ethpb.AttestationData {
 	if v1alpha1AttData == nil || v1alpha1AttData.Source == nil || v1alpha1AttData.Target == nil {

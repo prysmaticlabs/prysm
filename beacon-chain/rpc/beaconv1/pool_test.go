@@ -26,6 +26,178 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+func TestListPoolAttestations(t *testing.T) {
+	state, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	att1 := &eth.Attestation{
+		AggregationBits: []byte{1, 10},
+		Data: &eth.AttestationData{
+			Slot:            1,
+			CommitteeIndex:  1,
+			BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot1"), 32),
+			Source: &eth.Checkpoint{
+				Epoch: 1,
+				Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
+			},
+			Target: &eth.Checkpoint{
+				Epoch: 10,
+				Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
+			},
+		},
+		Signature: bytesutil.PadTo([]byte("signature1"), 96),
+	}
+	att2 := &eth.Attestation{
+		AggregationBits: []byte{4, 40},
+		Data: &eth.AttestationData{
+			Slot:            4,
+			CommitteeIndex:  4,
+			BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot4"), 32),
+			Source: &eth.Checkpoint{
+				Epoch: 4,
+				Root:  bytesutil.PadTo([]byte("sourceroot4"), 32),
+			},
+			Target: &eth.Checkpoint{
+				Epoch: 40,
+				Root:  bytesutil.PadTo([]byte("targetroot4"), 32),
+			},
+		},
+		Signature: bytesutil.PadTo([]byte("signature4"), 96),
+	}
+	att3 := &eth.Attestation{
+		AggregationBits: []byte{2, 20},
+		Data: &eth.AttestationData{
+			Slot:            2,
+			CommitteeIndex:  2,
+			BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot2"), 32),
+			Source: &eth.Checkpoint{
+				Epoch: 2,
+				Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
+			},
+			Target: &eth.Checkpoint{
+				Epoch: 20,
+				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
+			},
+		},
+		Signature: bytesutil.PadTo([]byte("signature2"), 96),
+	}
+	att4 := &eth.Attestation{
+		AggregationBits: []byte{2, 20},
+		Data: &eth.AttestationData{
+			Slot:            4,
+			CommitteeIndex:  4,
+			BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot2"), 32),
+			Source: &eth.Checkpoint{
+				Epoch: 2,
+				Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
+			},
+			Target: &eth.Checkpoint{
+				Epoch: 20,
+				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
+			},
+		},
+		Signature: bytesutil.PadTo([]byte("signature2"), 96),
+	}
+	att5 := &eth.Attestation{
+		AggregationBits: []byte{1, 10},
+		Data: &eth.AttestationData{
+			Slot:            2,
+			CommitteeIndex:  4,
+			BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot1"), 32),
+			Source: &eth.Checkpoint{
+				Epoch: 2,
+				Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
+			},
+			Target: &eth.Checkpoint{
+				Epoch: 20,
+				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
+			},
+		},
+		Signature: bytesutil.PadTo([]byte("signature1"), 96),
+	}
+	att6 := &eth.Attestation{
+		AggregationBits: []byte{2, 20},
+		Data: &eth.AttestationData{
+			Slot:            2,
+			CommitteeIndex:  4,
+			BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot2"), 32),
+			Source: &eth.Checkpoint{
+				Epoch: 2,
+				Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
+			},
+			Target: &eth.Checkpoint{
+				Epoch: 20,
+				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
+			},
+		},
+		Signature: bytesutil.PadTo([]byte("signature2"), 96),
+	}
+	s := &Server{
+		ChainInfoFetcher: &chainMock.ChainService{State: state},
+		AttestationsPool: attestations.NewPool(),
+	}
+	require.NoError(t, s.AttestationsPool.SaveAggregatedAttestations([]*eth.Attestation{att1, att2, att3, att4, att5, att6}))
+
+	t.Run("empty request", func(t *testing.T) {
+		req := &ethpb.AttestationsPoolRequest{}
+		resp, err := s.ListPoolAttestations(context.Background(), req)
+		require.NoError(t, err)
+		require.Equal(t, 6, len(resp.Data))
+		assert.DeepSSZEqual(t, migration.V1Alpha1AttestationToV1(att1), resp.Data[0])
+		assert.DeepSSZEqual(t, migration.V1Alpha1AttestationToV1(att2), resp.Data[1])
+		assert.DeepSSZEqual(t, migration.V1Alpha1AttestationToV1(att3), resp.Data[2])
+		assert.DeepSSZEqual(t, migration.V1Alpha1AttestationToV1(att4), resp.Data[3])
+		assert.DeepSSZEqual(t, migration.V1Alpha1AttestationToV1(att5), resp.Data[4])
+		assert.DeepSSZEqual(t, migration.V1Alpha1AttestationToV1(att6), resp.Data[5])
+	})
+
+	t.Run("slot request", func(t *testing.T) {
+		slot := eth2types.Slot(2)
+		req := &ethpb.AttestationsPoolRequest{
+			Slot: &slot,
+		}
+		resp, err := s.ListPoolAttestations(context.Background(), req)
+		require.NoError(t, err)
+		require.Equal(t, 3, len(resp.Data))
+		assert.DeepSSZEqual(t, migration.V1Alpha1AttestationToV1(att3), resp.Data[0])
+		assert.DeepSSZEqual(t, migration.V1Alpha1AttestationToV1(att5), resp.Data[1])
+		assert.DeepSSZEqual(t, migration.V1Alpha1AttestationToV1(att6), resp.Data[2])
+		assert.DeepEqual(t, att3.Data.Slot, slot)
+	})
+
+	t.Run("index request", func(t *testing.T) {
+		index := eth2types.CommitteeIndex(4)
+		req := &ethpb.AttestationsPoolRequest{
+			CommitteeIndex: &index,
+		}
+		resp, err := s.ListPoolAttestations(context.Background(), req)
+		require.NoError(t, err)
+		require.Equal(t, 4, len(resp.Data))
+		assert.DeepSSZEqual(t, migration.V1Alpha1AttestationToV1(att2), resp.Data[0])
+		assert.DeepSSZEqual(t, migration.V1Alpha1AttestationToV1(att4), resp.Data[1])
+		assert.DeepSSZEqual(t, migration.V1Alpha1AttestationToV1(att5), resp.Data[2])
+		assert.DeepSSZEqual(t, migration.V1Alpha1AttestationToV1(att6), resp.Data[3])
+		assert.DeepEqual(t, att2.Data.CommitteeIndex, index)
+	})
+
+	t.Run("both slot + index request", func(t *testing.T) {
+		slot := eth2types.Slot(2)
+		index := eth2types.CommitteeIndex(4)
+		req := &ethpb.AttestationsPoolRequest{
+			Slot:           &slot,
+			CommitteeIndex: &index,
+		}
+		resp, err := s.ListPoolAttestations(context.Background(), req)
+		require.NoError(t, err)
+		require.Equal(t, 2, len(resp.Data))
+		assert.DeepSSZEqual(t, migration.V1Alpha1AttestationToV1(att5), resp.Data[0])
+		assert.DeepSSZEqual(t, migration.V1Alpha1AttestationToV1(att6), resp.Data[1])
+		assert.DeepEqual(t, att5.Data.CommitteeIndex, index)
+		assert.DeepEqual(t, att6.Data.CommitteeIndex, index)
+		assert.DeepEqual(t, att5.Data.Slot, slot)
+		assert.DeepEqual(t, att6.Data.Slot, slot)
+	})
+}
+
 func TestListPoolAttesterSlashings(t *testing.T) {
 	state, err := testutil.NewBeaconState()
 	require.NoError(t, err)
