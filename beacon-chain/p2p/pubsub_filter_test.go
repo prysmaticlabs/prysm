@@ -14,7 +14,6 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/stretchr/testify/require"
 )
@@ -351,13 +350,4 @@ func TestService_MonitorsStateForkUpdates(t *testing.T) {
 
 	require.True(t, s.isInitialized())
 	require.NotEmpty(t, s.currentForkDigest)
-}
-
-func TestService_doesntSupportForksYet(t *testing.T) {
-	// Part of phase 1 will include a state transition which updates the state's fork. In phase 0,
-	// there are no forks or fork schedule planned. As such, we'll work on supporting fork upgrades
-	// in phase 1 changes.
-	if len(params.BeaconConfig().ForkVersionSchedule) > 0 {
-		t.Fatal("pubsub subscription filters do not support fork schedule (yet)")
-	}
 }
