@@ -244,3 +244,19 @@ func V1ProposerSlashingToV1Alpha1(v1Slashing *ethpb.ProposerSlashing) *ethpb_alp
 		Header_2: V1SignedHeaderToV1Alpha1(v1Slashing.Header_2),
 	}
 }
+
+func V1Alpha1ValidatorToV1(v1Validator *ethpb_alpha.Validator) *ethpb.Validator {
+	if v1Validator == nil {
+		return &ethpb.Validator{}
+	}
+	return &ethpb.Validator{
+		PublicKey:                  v1Validator.PublicKey,
+		WithdrawalCredentials:      v1Validator.WithdrawalCredentials,
+		EffectiveBalance:           v1Validator.EffectiveBalance,
+		Slashed:                    v1Validator.Slashed,
+		ActivationEligibilityEpoch: v1Validator.ActivationEligibilityEpoch,
+		ActivationEpoch:            v1Validator.ActivationEpoch,
+		ExitEpoch:                  v1Validator.ExitEpoch,
+		WithdrawableEpoch:          v1Validator.WithdrawableEpoch,
+	}
+}
