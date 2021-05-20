@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
@@ -168,29 +169,47 @@ func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan typ
 	}
 }
 
+// Prunes slasher data on each slot tick to prevent unnecessary build-up of disk space usage.
 func (s *Service) pruneSlasherData(ctx context.Context, slotTicker <-chan types.Slot) {
 	for {
 		select {
 		case currentSlot := <-slotTicker:
-			if !helpers.IsEpochStart(currentSlot) {
-				continue
-			}
-			currentEpoch := helpers.SlotToEpoch(currentSlot)
-			if err := s.serviceCfg.Database.PruneAttestations(
-				ctx, currentEpoch, s.params.pruningEpochIncrements, s.params.historyLength,
-			); err != nil {
-				log.WithError(err).Error("Could not prune attestations")
-				continue
-			}
-
-			if err := s.serviceCfg.Database.PruneProposals(
-				ctx, currentEpoch, s.params.pruningEpochIncrements, s.params.historyLength,
-			); err != nil {
-				log.WithError(err).Error("Could not prune proposals")
+			if err := s.pruneSlasherDataWithinSlidingWindow(ctx, helpers.SlotToEpoch(currentSlot)); err != nil {
+				log.WithError(err).Error("Could not prune slasher data")
 				continue
 			}
 		case <-ctx.Done():
 			return
 		}
 	}
+}
+
+// Prunes slasher data by using a sliding window of [current_epoch - HISTORY_LENGTH, current_epoch].
+// All data before that window is unnecessary for slasher, so can be periodically deleted.
+// Say HISTORY_LENGTH is 4 and we have data for epochs 0, 1, 2, 3. Once we hit epoch 4, the sliding window
+// we care about is 1, 2, 3, 4, so we can delete data for epoch 0.
+func (s *Service) pruneSlasherDataWithinSlidingWindow(ctx context.Context, currentEpoch types.Epoch) error {
+	var maxPruningEpoch types.Epoch
+	if currentEpoch >= s.params.historyLength {
+		maxPruningEpoch = currentEpoch - s.params.historyLength
+	} else {
+		// If the current epoch is less than the history length, we should not
+		// attempt to prune at all.
+		return nil
+	}
+	log.WithFields(logrus.Fields{
+		"currentEpoch":          currentEpoch,
+		"pruningAllBeforeEpoch": maxPruningEpoch,
+	}).Debug("Pruning old attestations and proposals for slasher")
+	if err := s.serviceCfg.Database.PruneAttestationsAtEpoch(
+		ctx, maxPruningEpoch,
+	); err != nil {
+		return errors.Wrap(err, "Could not prune attestations")
+	}
+	if err := s.serviceCfg.Database.PruneProposalsAtEpoch(
+		ctx, maxPruningEpoch,
+	); err != nil {
+		return errors.Wrap(err, "Could not prune proposals")
+	}
+	return nil
 }
