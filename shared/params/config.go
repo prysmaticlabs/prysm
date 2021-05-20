@@ -132,7 +132,6 @@ type BeaconChainConfig struct {
 	NextForkVersion     []byte                 `yaml:"NEXT_FORK_VERSION"`                // NextForkVersion is used to track the upcoming fork version, if any.
 	NextForkEpoch       types.Epoch            `yaml:"NEXT_FORK_EPOCH"`                  // NextForkEpoch is used to track the epoch of the next fork, if any.
 	ForkVersionSchedule map[types.Epoch][]byte // Schedule of fork versions by epoch number.
-	AltairForkVersion   []byte                 `yaml:"ALTAIR_FORK_VERSION"` // AltairForkVersion of beacon chain.
 
 	// Weak subjectivity values.
 	SafetyDecay uint64 // SafetyDecay is defined as the loss in the 1/3 consensus safety margin of the casper FFG mechanism.
