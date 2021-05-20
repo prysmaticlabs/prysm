@@ -121,7 +121,7 @@ func (s *Store) PruneProposalsAtEpoch(
 	}
 
 	return s.db.Update(func(tx *bolt.Tx) error {
-		// We begin a pruning iteration at starting from the first item in the bucket.
+		// We begin a pruning iteration starting from the first item in the bucket.
 		proposalBkt := tx.Bucket(proposalRecordsBucket)
 		c := proposalBkt.Cursor()
 		// We begin a pruning iteration starting from the first item in the bucket.
