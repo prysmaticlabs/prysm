@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	eth2types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -23,6 +24,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -639,7 +642,9 @@ func TestServer_SubmitAttestations_Ok(t *testing.T) {
 }
 
 func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
-	ctx := context.Background()
+	ctx := metadata.NewOutgoingContext(
+		grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{}), make(map[string][]string))
+
 	params.SetupTestConfigCleanup(t)
 	c := params.BeaconConfig()
 	// Required for correct committee size calculation.
@@ -743,7 +748,7 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 	_, err = s.SubmitAttestations(ctx, &ethpb.SubmitAttestationsRequest{
 		Data: []*ethpb.Attestation{attValid, attInvalidTarget, attInvalidSignature},
 	})
-	require.NoError(t, err)
+	require.ErrorContains(t, "One or more attestations failed validation", err)
 	savedAtts := s.AttestationsPool.AggregatedAttestations()
 	require.Equal(t, 1, len(savedAtts))
 	expectedAtt, err := attValid.HashTreeRoot()
