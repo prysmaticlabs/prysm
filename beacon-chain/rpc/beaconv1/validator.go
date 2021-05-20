@@ -24,7 +24,7 @@ func (bs *Server) GetValidator(ctx context.Context, req *ethpb.StateValidatorReq
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
 	if len(req.ValidatorId) == 0 {
-		return nil, status.Errorf(codes.Internal, "Must request a validator id: %v", err)
+		return nil, status.Error(codes.Internal, "Must request a validator id")
 	}
 	valContainer, err := valContainersByRequestIds(state, [][]byte{req.ValidatorId})
 	if err != nil {
