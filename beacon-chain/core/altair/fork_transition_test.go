@@ -20,7 +20,8 @@ import (
 
 func TestTranslateParticipation(t *testing.T) {
 	s, _ := testutilAltair.DeterministicGenesisStateAltair(t, 64)
-	state := s.(*stateAltair.BeaconState)
+	state, ok := s.(*stateAltair.BeaconState)
+	require.Equal(t, true, ok)
 	require.NoError(t, state.SetSlot(state.Slot()+params.BeaconConfig().MinAttestationInclusionDelay))
 
 	var err error
