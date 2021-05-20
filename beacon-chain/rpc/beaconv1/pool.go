@@ -2,7 +2,6 @@ package beaconv1
 
 import (
 	"context"
-	"fmt"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	ethpb_alpha "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -29,7 +28,6 @@ func (bs *Server) ListPoolAttestations(ctx context.Context, req *ethpb.Attestati
 	attestations = append(attestations, unaggAtts...)
 	isEmptyReq := req.Slot == nil && req.CommitteeIndex == nil
 	if isEmptyReq {
-		fmt.Println("return all")
 		allAtts := make([]*ethpb.Attestation, len(attestations))
 		for i, att := range attestations {
 			allAtts[i] = migration.V1Alpha1AttestationToV1(att)
