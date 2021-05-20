@@ -23,6 +23,9 @@ func (bs *Server) GetValidator(ctx context.Context, req *ethpb.StateValidatorReq
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
+	if len(req.ValidatorId) == 0 {
+		return nil, status.Errorf(codes.Internal, "Must request a validator id: %v", err)
+	}
 	valContainer, err := valContainersByRequestIds(state, [][]byte{req.ValidatorId})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get validator container: %v", err)
@@ -118,7 +121,7 @@ func (bs *Server) ListCommittees(ctx context.Context, req *ethpb.StateCommittees
 }
 
 // This function returns the validator object based on the passed in ID. The validator ID could be its public key,
-// or its index and is usually retrieved from the API request query.
+// or its index.
 func valContainersByRequestIds(state iface.BeaconState, validatorIds [][]byte) ([]*ethpb.ValidatorContainer, error) {
 	allValidators := state.Validators()
 	allBalances := state.Balances()
