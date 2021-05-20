@@ -167,41 +167,39 @@ func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint string) {
 			data.err.SetCode(grpcResp.StatusCode)
 			writeError(writer, data.err, grpcResp.Header)
 			return
-		} else {
 			// Don't do anything if the response is only a status code.
-			if request.Method == "GET" && data.getResponse != nil {
-				// Deserialize the output of grpc-gateway.
-				if err := json.Unmarshal(body, &data.getResponse); err != nil {
-					e := fmt.Errorf("could not unmarshal response: %w", err)
-					writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
-					return
-				}
-				// Apply processing functions to fields with specific tags.
-				if err := processField(data.getResponse, []fieldProcessor{
-					{
-						tag: "hex",
-						f:   base64ToHexProcessor,
-					},
-					{
-						tag: "enum",
-						f:   enumToLowercaseProcessor,
-					},
-					{
-						tag: "time",
-						f:   timeToUnixProcessor,
-					},
-				}); err != nil {
-					e := fmt.Errorf("could not process response hex data: %w", err)
-					writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
-					return
-				}
-				// Serialize the return value into JSON.
-				j, err = json.Marshal(data.getResponse)
-				if err != nil {
-					e := fmt.Errorf("could not marshal response: %w", err)
-					writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
-					return
-				}
+		} else if request.Method == "GET" && data.getResponse != nil {
+			// Deserialize the output of grpc-gateway.
+			if err := json.Unmarshal(body, &data.getResponse); err != nil {
+				e := fmt.Errorf("could not unmarshal response: %w", err)
+				writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
+				return
+			}
+			// Apply processing functions to fields with specific tags.
+			if err := processField(data.getResponse, []fieldProcessor{
+				{
+					tag: "hex",
+					f:   base64ToHexProcessor,
+				},
+				{
+					tag: "enum",
+					f:   enumToLowercaseProcessor,
+				},
+				{
+					tag: "time",
+					f:   timeToUnixProcessor,
+				},
+			}); err != nil {
+				e := fmt.Errorf("could not process response hex data: %w", err)
+				writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
+				return
+			}
+			// Serialize the return value into JSON.
+			j, err = json.Marshal(data.getResponse)
+			if err != nil {
+				e := fmt.Errorf("could not marshal response: %w", err)
+				writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
+				return
 			}
 		}
 
