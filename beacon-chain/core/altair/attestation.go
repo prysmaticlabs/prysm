@@ -124,10 +124,14 @@ func ProcessAttestationNoVerifySignature(
 		return nil, err
 	}
 
+	delay, err := beaconState.Slot().SafeSubSlot(att.Data.Slot)
+	if err != nil {
+		return nil, err
+	}
 	participatedFlags, err := attestationParticipationFlagIndices(
 		beaconState,
 		att.Data,
-		beaconState.Slot()-att.Data.Slot)
+		delay)
 	if err != nil {
 		return nil, err
 	}
