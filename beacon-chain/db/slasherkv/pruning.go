@@ -41,7 +41,7 @@ func (s *Store) PruneAttestationsAtEpoch(
 		return nil
 	}
 
-	// If the lowest epoch is greater than or equal to the end pruning epoch,
+	// If the lowest epoch is greater than the end pruning epoch,
 	// there is nothing to prune, so we return early.
 	if lowestEpoch > minEpoch {
 		log.Debugf("Lowest epoch %d is > pruning epoch %d, nothing to prune", lowestEpoch, minEpoch)
