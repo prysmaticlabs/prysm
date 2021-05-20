@@ -167,6 +167,7 @@ func parseMsg(defaultMsg string, msg ...interface{}) string {
 
 func isDeepEqual(expected, actual interface{}) bool {
 	_, isProto := expected.(proto.Message)
+	fmt.Println("This is: ", isProto)
 	if isProto {
 		return proto.Equal(expected.(proto.Message), actual.(proto.Message))
 	}
