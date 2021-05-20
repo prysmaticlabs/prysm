@@ -111,7 +111,7 @@ func (s *Store) PruneProposalsAtEpoch(
 		return nil
 	}
 
-	// If the lowest slot is greater than or equal to the end pruning slot,
+	// If the lowest slot is greater than the end pruning slot,
 	// there is nothing to prune, so we return early.
 	if lowestSlot > endPruneSlot {
 		log.Debugf("Lowest slot %d is > pruning slot %d, nothing to prune", lowestSlot, endPruneSlot)
