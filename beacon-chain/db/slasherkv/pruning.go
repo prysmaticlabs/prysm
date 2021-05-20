@@ -53,7 +53,7 @@ func (s *Store) PruneAttestationsAtEpoch(
 		attsBkt := tx.Bucket(attestationRecordsBucket)
 		c := rootsBkt.Cursor()
 
-		// We begin a pruning iteration at starting from the first item in the bucket.
+		// We begin a pruning iteration starting from the first item in the bucket.
 		for k, v := c.First(); k != nil; k, v = c.Next() {
 			// We check the epoch from the current key in the database.
 			// If we have hit an epoch that is greater than the end epoch of the pruning process,
