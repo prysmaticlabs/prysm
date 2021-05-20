@@ -189,9 +189,9 @@ func (s *Service) pruneSlasherData(ctx context.Context, slotTicker <-chan types.
 // Say HISTORY_LENGTH is 4 and we have data for epochs 0, 1, 2, 3. Once we hit epoch 4, the sliding window
 // we care about is 1, 2, 3, 4, so we can delete data for epoch 0.
 func (s *Service) pruneSlasherDataWithinSlidingWindow(ctx context.Context, currentEpoch types.Epoch) error {
-	var minEpoch types.Epoch
+	var maxPruningEpoch types.Epoch
 	if currentEpoch >= s.params.historyLength {
-		minEpoch = currentEpoch - s.params.historyLength
+		maxPruningEpoch = currentEpoch - s.params.historyLength
 	} else {
 		// If the current epoch is less than the history length, we should not
 		// attempt to prune at all.
@@ -199,15 +199,15 @@ func (s *Service) pruneSlasherDataWithinSlidingWindow(ctx context.Context, curre
 	}
 	log.WithFields(logrus.Fields{
 		"currentEpoch":          currentEpoch,
-		"pruningAllBeforeEpoch": minEpoch,
+		"pruningAllBeforeEpoch": maxPruningEpoch,
 	}).Debug("Pruning old attestations and proposals for slasher")
 	if err := s.serviceCfg.Database.PruneAttestationsAtEpoch(
-		ctx, minEpoch,
+		ctx, maxPruningEpoch,
 	); err != nil {
 		return errors.Wrap(err, "Could not prune attestations")
 	}
 	if err := s.serviceCfg.Database.PruneProposalsAtEpoch(
-		ctx, minEpoch,
+		ctx, maxPruningEpoch,
 	); err != nil {
 		return errors.Wrap(err, "Could not prune proposals")
 	}

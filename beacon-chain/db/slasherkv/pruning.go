@@ -14,10 +14,10 @@ import (
 // PruneAttestationsAtEpoch deletes all attestations from the slasher DB with target epoch
 // less than or equal to the specified epoch.
 func (s *Store) PruneAttestationsAtEpoch(
-	ctx context.Context, minEpoch types.Epoch,
+	ctx context.Context, maxEpoch types.Epoch,
 ) error {
 	// We can prune everything less than the current epoch - history length.
-	encodedEndPruneEpoch := fssz.MarshalUint64([]byte{}, uint64(minEpoch))
+	encodedEndPruneEpoch := fssz.MarshalUint64([]byte{}, uint64(maxEpoch))
 
 	// We retrieve the lowest stored epoch in the attestations bucket.
 	var lowestEpoch types.Epoch
@@ -43,8 +43,8 @@ func (s *Store) PruneAttestationsAtEpoch(
 
 	// If the lowest epoch is greater than the end pruning epoch,
 	// there is nothing to prune, so we return early.
-	if lowestEpoch > minEpoch {
-		log.Debugf("Lowest epoch %d is > pruning epoch %d, nothing to prune", lowestEpoch, minEpoch)
+	if lowestEpoch > maxEpoch {
+		log.Debugf("Lowest epoch %d is > pruning epoch %d, nothing to prune", lowestEpoch, maxEpoch)
 		return nil
 	}
 
@@ -66,8 +66,6 @@ func (s *Store) PruneAttestationsAtEpoch(
 			//  (target_epoch ++ _) => encode(attestation)
 			// so it is possible we have a few adjacent objects that have the same slot, such as
 			//  (target_epoch = 3 ++ _) => encode(attestation)
-			// so we only mark an epoch as pruned if the epoch of the current object
-			// under the cursor has changed.
 			if err := rootsBkt.Delete(k); err != nil {
 				return err
 			}
@@ -83,9 +81,9 @@ func (s *Store) PruneAttestationsAtEpoch(
 // PruneProposalsAtEpoch deletes all proposals from the slasher DB with epoch
 // less than or equal to the specified epoch.
 func (s *Store) PruneProposalsAtEpoch(
-	ctx context.Context, minEpoch types.Epoch,
+	ctx context.Context, maxEpoch types.Epoch,
 ) error {
-	endPruneSlot, err := helpers.StartSlot(minEpoch)
+	endPruneSlot, err := helpers.StartSlot(maxEpoch)
 	if err != nil {
 		return err
 	}
@@ -121,7 +119,6 @@ func (s *Store) PruneProposalsAtEpoch(
 	}
 
 	return s.db.Update(func(tx *bolt.Tx) error {
-		// We begin a pruning iteration at starting from the first item in the bucket.
 		proposalBkt := tx.Bucket(proposalRecordsBucket)
 		c := proposalBkt.Cursor()
 		// We begin a pruning iteration starting from the first item in the bucket.
@@ -138,8 +135,6 @@ func (s *Store) PruneProposalsAtEpoch(
 			//  (slot = 3 ++ validatorIndex = 0) => ...
 			//  (slot = 3 ++ validatorIndex = 1) => ...
 			//  (slot = 3 ++ validatorIndex = 2) => ...
-			// so we only mark an epoch as pruned if the epoch of the current object
-			// under the cursor has changed.
 			if err := proposalBkt.Delete(k); err != nil {
 				return err
 			}

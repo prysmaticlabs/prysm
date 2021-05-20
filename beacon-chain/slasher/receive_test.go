@@ -123,11 +123,10 @@ func TestService_pruneSlasherDataWithinSlidingWindow_ProposalsPruned(t *testing.
 	ctx := context.Background()
 
 	// Override beacon config to 1 slot per epoch for easier testing.
+	params2.SetupTestConfigCleanup(t)
 	config := params2.BeaconConfig()
-	configCopy := config.Copy()
-	configCopy.SlotsPerEpoch = 1
-	params2.OverrideBeaconConfig(configCopy)
-	defer params2.OverrideBeaconConfig(config)
+	config.SlotsPerEpoch = 1
+	params2.OverrideBeaconConfig(config)
 
 	params := DefaultParams()
 	params.historyLength = 4 // 4 epochs worth of history.
