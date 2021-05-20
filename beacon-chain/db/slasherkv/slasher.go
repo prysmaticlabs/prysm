@@ -315,7 +315,7 @@ func (s *Store) CheckDoubleBlockProposals(
 func (s *Store) BlockProposalForValidator(
 	ctx context.Context, validatorIdx types.ValidatorIndex, slot types.Slot,
 ) (*slashertypes.SignedBlockHeaderWrapper, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.ProposalRecordForValidator")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlockProposalForValidator")
 	defer span.End()
 	var record *slashertypes.SignedBlockHeaderWrapper
 	key, err := keyForValidatorProposal(slot, validatorIdx)
