@@ -323,6 +323,23 @@ func TestListCommittees(t *testing.T) {
 		}
 	})
 
+	t.Run("Head All Committees of Epoch 10", func(t *testing.T) {
+		s := Server{
+			StateFetcher: statefetcher.StateProvider{
+				ChainInfoFetcher: &chainMock.ChainService{State: state},
+			},
+		}
+		epoch := types.Epoch(10)
+		resp, err := s.ListCommittees(ctx, &ethpb.StateCommitteesRequest{
+			StateId: []byte("head"),
+			Epoch:   &epoch,
+		})
+		require.NoError(t, err)
+		for _, datum := range resp.Data {
+			assert.Equal(t, true, datum.Slot >= 320 && datum.Slot <= 351)
+		}
+	})
+
 	t.Run("Head All Committees of Slot 4", func(t *testing.T) {
 		s := Server{
 			StateFetcher: statefetcher.StateProvider{
