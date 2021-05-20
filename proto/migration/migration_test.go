@@ -240,6 +240,33 @@ func Test_V1ProposerSlashingToV1Alpha1(t *testing.T) {
 	assert.DeepEqual(t, alphaRoot, v1Root)
 }
 
+func Test_V1Alpha1AttToV1(t *testing.T) {
+	alphaAtt := &ethpb_alpha.Attestation{
+		AggregationBits: aggregationBits,
+		Data: &ethpb_alpha.AttestationData{
+			Slot:            slot,
+			CommitteeIndex:  committeeIndex,
+			BeaconBlockRoot: beaconBlockRoot,
+			Source: &ethpb_alpha.Checkpoint{
+				Epoch: epoch,
+				Root:  sourceRoot,
+			},
+			Target: &ethpb_alpha.Checkpoint{
+				Epoch: epoch,
+				Root:  targetRoot,
+			},
+		},
+		Signature: signature,
+	}
+
+	v1Att := V1Alpha1AttestationToV1(alphaAtt)
+	v1Root, err := v1Att.HashTreeRoot()
+	require.NoError(t, err)
+	alphaRoot, err := alphaAtt.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, v1Root, alphaRoot)
+}
+
 func Test_V1AttToV1Alpha1(t *testing.T) {
 	v1Att := &ethpb.Attestation{
 		AggregationBits: aggregationBits,
