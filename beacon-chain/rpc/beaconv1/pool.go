@@ -2,7 +2,6 @@ package beaconv1
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
@@ -12,9 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"go.opencensus.io/trace"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -119,11 +116,8 @@ func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpb.SubmitAttes
 
 	if len(attFailures) > 0 {
 		failuresContainer := &attestationsVerificationFailure{Failures: attFailures}
-		jsonFailures, err := json.Marshal(failuresContainer)
+		err = grpcutils.AppendCustomErrorHeader(ctx, failuresContainer)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not prepare attestation failure information: %v", err)
-		}
-		if err := grpc.SetHeader(ctx, metadata.Pairs(grpcutils.CustomErrorMetadataKey, string(jsonFailures))); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not prepare attestation failure information: %v", err)
 		}
 		return nil, status.Errorf(codes.Internal, "One or more attestations failed validation")

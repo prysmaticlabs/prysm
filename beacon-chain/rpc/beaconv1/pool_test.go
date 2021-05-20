@@ -25,7 +25,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -814,8 +813,7 @@ func TestServer_SubmitAttestations_Ok(t *testing.T) {
 }
 
 func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
-	ctx := metadata.NewOutgoingContext(
-		grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{}), make(map[string][]string))
+	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
 
 	params.SetupTestConfigCleanup(t)
 	c := params.BeaconConfig()
