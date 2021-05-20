@@ -58,7 +58,7 @@ func (s *Store) PruneAttestationsAtEpoch(
 			// We check the epoch from the current key in the database.
 			// If we have hit an epoch that is greater than the end epoch of the pruning process,
 			// we then completely exit the process as we are done.
-			if !uint64PrefixLessThanOrEqual(k, encodedEndPruneEpoch) {
+			if uint64PrefixGreaterThan(k, encodedEndPruneEpoch) {
 				return nil
 			}
 
@@ -126,7 +126,7 @@ func (s *Store) PruneProposalsAtEpoch(
 			// We check the slot from the current key in the database.
 			// If we have hit a slot that is greater than the end slot of the pruning process,
 			// we then completely exit the process as we are done.
-			if !uint64PrefixLessThanOrEqual(k, encodedEndPruneSlot) {
+			if uint64PrefixGreaterThan(k, encodedEndPruneSlot) {
 				return nil
 			}
 			// Proposals in the database look like this:
@@ -148,7 +148,7 @@ func slotFromProposalKey(key []byte) types.Slot {
 	return types.Slot(binary.LittleEndian.Uint64(key[:8]))
 }
 
-func uint64PrefixLessThanOrEqual(key, lessThan []byte) bool {
+func uint64PrefixGreaterThan(key, lessThan []byte) bool {
 	enc := key[:8]
-	return bytes.Compare(enc, lessThan) <= 0
+	return bytes.Compare(enc, lessThan) > 0
 }
