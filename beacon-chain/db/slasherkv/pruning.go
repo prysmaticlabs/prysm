@@ -19,7 +19,7 @@ func (s *Store) PruneAttestationsAtEpoch(
 	// We can prune everything less than the current epoch - history length.
 	encodedEndPruneEpoch := fssz.MarshalUint64([]byte{}, uint64(minEpoch))
 
-	// We retrieve the lowest stored epoch in the proposals bucket.
+	// We retrieve the lowest stored epoch in the attestations bucket.
 	var lowestEpoch types.Epoch
 	var hasData bool
 	if err := s.db.View(func(tx *bolt.Tx) error {
