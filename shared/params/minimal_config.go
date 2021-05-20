@@ -1,6 +1,11 @@
 package params
 
-import "github.com/prysmaticlabs/prysm/shared/bytesutil"
+import (
+	"math"
+
+	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+)
 
 // UseMinimalConfig for beacon chain services.
 func UseMinimalConfig() {
@@ -80,6 +85,13 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.FarFutureSlot = 1<<64 - 1
 
 	// New Altair params
+	minimalConfig.AltairForkVersion = []byte{1, 0, 0, 1} // Highest byte set to 0x01 to avoid collisions with mainnet versioning
+	minimalConfig.AltairForkEpoch = math.MaxUint64
+	// Manually set fork version schedule here.
+	minimalConfig.ForkVersionSchedule = map[types.Epoch][]byte{
+		0:              {0, 0, 0, 0},
+		math.MaxUint64: {1, 0, 0, 1},
+	}
 	minimalConfig.SyncCommitteeSize = 32
 	minimalConfig.InactivityScoreBias = 4
 	minimalConfig.EpochsPerSyncCommitteePeriod = 8

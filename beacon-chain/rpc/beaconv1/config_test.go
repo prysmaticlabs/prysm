@@ -2,6 +2,7 @@ package beaconv1
 
 import (
 	"context"
+	"encoding/hex"
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -41,6 +42,8 @@ func TestGetSpec(t *testing.T) {
 	config.EjectionBalance = 22
 	config.EffectiveBalanceIncrement = 23
 	config.GenesisForkVersion = []byte("GenesisForkVersion")
+	config.AltairForkVersion = []byte("AltairForkVersion")
+	config.AltairForkEpoch = 100
 	config.BLSWithdrawalPrefixByte = byte('b')
 	config.GenesisDelay = 24
 	config.SecondsPerSlot = 25
@@ -114,7 +117,7 @@ func TestGetSpec(t *testing.T) {
 	resp, err := server.GetSpec(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 
-	assert.Equal(t, 81, len(resp.Data))
+	assert.Equal(t, 83, len(resp.Data))
 	for k, v := range resp.Data {
 		switch k {
 		case "config_name":
@@ -168,7 +171,11 @@ func TestGetSpec(t *testing.T) {
 		case "effective_balance_increment":
 			assert.Equal(t, "23", v)
 		case "genesis_fork_version":
-			assert.Equal(t, "0x47656e65736973466f726b56657273696f6e", v)
+			assert.Equal(t, "0x"+hex.EncodeToString([]byte("GenesisForkVersion")), v)
+		case "altair_fork_version":
+			assert.Equal(t, "0x"+hex.EncodeToString([]byte("AltairForkVersion")), v)
+		case "altair_fork_epoch":
+			assert.Equal(t, "100", v)
 		case "bls_withdrawal_prefix":
 			assert.Equal(t, "0x62", v)
 		case "genesis_delay":
@@ -344,9 +351,10 @@ func TestForkSchedule_Ok(t *testing.T) {
 	assert.Equal(t, thirdForkEpoch, fork.Epoch)
 }
 
-func TestForkSchedule_NoForks(t *testing.T) {
+func TestForkSchedule_CorrectNumberOfForks(t *testing.T) {
 	s := &Server{}
 	resp, err := s.GetForkSchedule(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
-	assert.Equal(t, 0, len(resp.Data))
+	// Genesis and Altair.
+	assert.Equal(t, 2, len(resp.Data))
 }
