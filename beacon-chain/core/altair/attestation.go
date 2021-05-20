@@ -124,49 +124,16 @@ func ProcessAttestationNoVerifySignature(
 		return nil, err
 	}
 
-	currEpoch := helpers.CurrentEpoch(beaconState)
-	data := att.Data
-	var justifiedCheckpt *ethpb.Checkpoint
-	var epochParticipation []byte
-	var err error
-	if data.Target.Epoch == currEpoch {
-		justifiedCheckpt = beaconState.CurrentJustifiedCheckpoint()
-		epochParticipation, err = beaconState.CurrentEpochParticipation()
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		justifiedCheckpt = beaconState.PreviousJustifiedCheckpoint()
-		epochParticipation, err = beaconState.PreviousEpochParticipation()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// Get matching participation flags.
-	matchingSource, matchingTarget, matchingHead, err := matchingStatus(beaconState, data, justifiedCheckpt)
+	delay, err := beaconState.Slot().SafeSubSlot(att.Data.Slot)
 	if err != nil {
 		return nil, err
 	}
-	if !matchingSource {
-		return nil, errors.New("source epoch does not match")
-	}
-
-	// Process matched participation flags.
-	participatedFlags := make(map[uint8]bool)
-	sourceFlagIndex := params.BeaconConfig().TimelySourceFlagIndex
-	targetFlagIndex := params.BeaconConfig().TimelyTargetFlagIndex
-	headFlagIndex := params.BeaconConfig().TimelyHeadFlagIndex
-	inclusionDelay := beaconState.Slot() - data.Slot
-	if matchingSource && inclusionDelay <= types.Slot(mathutil.IntegerSquareRoot(uint64(params.BeaconConfig().SlotsPerEpoch))) {
-		participatedFlags[sourceFlagIndex] = true
-	}
-	if matchingTarget && inclusionDelay <= params.BeaconConfig().SlotsPerEpoch {
-		participatedFlags[targetFlagIndex] = true
-	}
-	matchingHeadTarget := bool(matchingHead) && bool(matchingTarget)
-	if matchingHeadTarget && inclusionDelay == params.BeaconConfig().MinAttestationInclusionDelay {
-		participatedFlags[headFlagIndex] = true
+	participatedFlags, err := attestationParticipationFlagIndices(
+		beaconState,
+		att.Data,
+		delay)
+	if err != nil {
+		return nil, err
 	}
 
 	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
@@ -177,6 +144,25 @@ func ProcessAttestationNoVerifySignature(
 	if err != nil {
 		return nil, err
 	}
+
+	var epochParticipation []byte
+	currentEpoch := helpers.CurrentEpoch(beaconState)
+	targetEpoch := att.Data.Target.Epoch
+	if targetEpoch == currentEpoch {
+		epochParticipation, err = beaconState.CurrentEpochParticipation()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		epochParticipation, err = beaconState.PreviousEpochParticipation()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	sourceFlagIndex := params.BeaconConfig().TimelySourceFlagIndex
+	targetFlagIndex := params.BeaconConfig().TimelyTargetFlagIndex
+	headFlagIndex := params.BeaconConfig().TimelyHeadFlagIndex
 	proposerRewardNumerator := uint64(0)
 	for _, index := range indices {
 		br, err := BaseReward(beaconState, types.ValidatorIndex(index))
@@ -197,7 +183,7 @@ func ProcessAttestationNoVerifySignature(
 		}
 	}
 
-	if data.Target.Epoch == currEpoch {
+	if targetEpoch == currentEpoch {
 		if err := beaconState.SetCurrentParticipationBits(epochParticipation); err != nil {
 			return nil, err
 		}
@@ -252,4 +238,42 @@ func HasValidatorFlag(flag, flagPosition uint8) bool {
 // AddValidatorFlag adds new validator flag to existing one.
 func AddValidatorFlag(flag, flagPosition uint8) uint8 {
 	return flag | (1 << flagPosition)
+}
+
+// This retrieves a map of attestation scoring based on Altair's participation flag indices.
+// This is used to facilitate process attestation during state transition.
+func attestationParticipationFlagIndices(beaconState iface.BeaconStateAltair, data *ethpb.AttestationData, delay types.Slot) (map[uint8]bool, error) {
+	currEpoch := helpers.CurrentEpoch(beaconState)
+	var justifiedCheckpt *ethpb.Checkpoint
+	if data.Target.Epoch == currEpoch {
+		justifiedCheckpt = beaconState.CurrentJustifiedCheckpoint()
+	} else {
+		justifiedCheckpt = beaconState.PreviousJustifiedCheckpoint()
+	}
+
+	// Get matching participation flags.
+	matchingSource, matchingTarget, matchingHead, err := matchingStatus(beaconState, data, justifiedCheckpt)
+	if err != nil {
+		return nil, err
+	}
+	if !matchingSource {
+		return nil, errors.New("source epoch does not match")
+	}
+
+	// Process matched participation flags.
+	participatedFlags := make(map[uint8]bool)
+	sourceFlagIndex := params.BeaconConfig().TimelySourceFlagIndex
+	targetFlagIndex := params.BeaconConfig().TimelyTargetFlagIndex
+	headFlagIndex := params.BeaconConfig().TimelyHeadFlagIndex
+	if matchingSource && delay <= types.Slot(mathutil.IntegerSquareRoot(uint64(params.BeaconConfig().SlotsPerEpoch))) {
+		participatedFlags[sourceFlagIndex] = true
+	}
+	if matchingTarget && delay <= params.BeaconConfig().SlotsPerEpoch {
+		participatedFlags[targetFlagIndex] = true
+	}
+	matchingHeadTarget := bool(matchingHead) && bool(matchingTarget)
+	if matchingHeadTarget && delay == params.BeaconConfig().MinAttestationInclusionDelay {
+		participatedFlags[headFlagIndex] = true
+	}
+	return participatedFlags, nil
 }
