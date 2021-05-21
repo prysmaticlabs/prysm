@@ -192,7 +192,7 @@ func (s *Service) logSyncStatus(genesis time.Time, blk interfaces.BeaconBlock, b
 		}).Infof(
 			"Processing block %s %d/%d - estimated time remaining %s",
 			fmt.Sprintf("0x%s...", hex.EncodeToString(blkRoot[:])[:8]),
-			blk.Slot, helpers.SlotsSince(genesis), timeRemaining,
+			blk.Slot(), helpers.SlotsSince(genesis), timeRemaining,
 		)
 	}
 }
@@ -212,7 +212,7 @@ func (s *Service) logBatchSyncStatus(genesis time.Time, blks []interfaces.Signed
 	}).Infof(
 		"Processing block batch of size %d starting from  %s %d/%d - estimated time remaining %s",
 		len(blks), fmt.Sprintf("0x%s...", hex.EncodeToString(blkRoot[:])[:8]),
-		firstBlk.Block().Slot, helpers.SlotsSince(genesis), timeRemaining,
+		firstBlk.Block().Slot(), helpers.SlotsSince(genesis), timeRemaining,
 	)
 }
 
