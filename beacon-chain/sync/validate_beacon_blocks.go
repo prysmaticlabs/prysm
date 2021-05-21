@@ -145,7 +145,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	}
 	// Record attribute of valid block.
 	span.AddAttributes(trace.Int64Attribute("slotInEpoch", int64(blk.Block().Slot()%params.BeaconConfig().SlotsPerEpoch)))
-	msg.ValidatorData = blk // Used in downstream subscriber
+	msg.ValidatorData = rblk // Used in downstream subscriber
 
 	// Log the arrival time of the accepted block
 	startTime, err := helpers.SlotToTime(genesisTime, blk.Block().Slot())
