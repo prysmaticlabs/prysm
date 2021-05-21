@@ -318,7 +318,7 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 	if blk == nil {
 		return p2ptypes.ErrGeneric
 	}
-	if helpers.SlotToEpoch(blk.Block.Slot) == msg.FinalizedEpoch {
+	if helpers.SlotToEpoch(blk.Block().Slot()) == msg.FinalizedEpoch {
 		return nil
 	}
 
@@ -326,7 +326,7 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 	if err != nil {
 		return p2ptypes.ErrGeneric
 	}
-	if startSlot > blk.Block.Slot {
+	if startSlot > blk.Block().Slot() {
 		childBlock, err := s.cfg.DB.FinalizedChildBlock(ctx, bytesutil.ToBytes32(msg.FinalizedRoot))
 		if err != nil {
 			return p2ptypes.ErrGeneric
@@ -338,7 +338,7 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 		}
 		// If child finalized block also has a smaller or
 		// equal slot number we return an error.
-		if startSlot >= childBlock.Block.Slot {
+		if startSlot >= childBlock.Block().Slot() {
 			return p2ptypes.ErrInvalidEpoch
 		}
 		return nil

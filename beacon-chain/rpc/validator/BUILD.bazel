@@ -47,6 +47,7 @@ go_library(
         "//shared/depositutil:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/hashutil:go_default_library",
+        "//shared/interfaces:go_default_library",
         "//shared/params:go_default_library",
         "//shared/rand:go_default_library",
         "//shared/slotutil:go_default_library",

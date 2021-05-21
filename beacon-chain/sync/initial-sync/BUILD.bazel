@@ -33,6 +33,7 @@ go_library(
         "//shared:go_default_library",
         "//shared/abool:go_default_library",
         "//shared/bytesutil:go_default_library",
+        "//shared/interfaces:go_default_library",
         "//shared/mathutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/rand:go_default_library",

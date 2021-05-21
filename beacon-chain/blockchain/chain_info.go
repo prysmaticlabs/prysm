@@ -42,7 +42,7 @@ type GenesisFetcher interface {
 type HeadFetcher interface {
 	HeadSlot() types.Slot
 	HeadRoot(ctx context.Context) ([]byte, error)
-	HeadBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error)
+	HeadBlock(ctx context.Context) (interfaces.SignedBeaconBlock, error)
 	HeadState(ctx context.Context) (iface.BeaconState, error)
 	HeadValidatorsIndices(ctx context.Context, epoch types.Epoch) ([]types.ValidatorIndex, error)
 	HeadSeed(ctx context.Context, epoch types.Epoch) ([32]byte, error)

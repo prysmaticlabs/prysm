@@ -39,6 +39,10 @@ func (w WrappedSignedBeaconBlock) Proto() proto.Message {
 	return w.b
 }
 
+func (w WrappedSignedBeaconBlock) RawPhase0Block() (*ethpb.SignedBeaconBlock, error) {
+	return w.b, nil
+}
+
 type WrappedBeaconBlock struct {
 	b *ethpb.BeaconBlock
 }

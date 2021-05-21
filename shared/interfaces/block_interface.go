@@ -13,6 +13,7 @@ type SignedBeaconBlock interface {
 	Copy() WrappedSignedBeaconBlock
 	MarshalSSZ() ([]byte, error)
 	Proto() proto.Message
+	RawPhase0Block() (*ethpb.SignedBeaconBlock, error)
 }
 
 type BeaconBlock interface {
