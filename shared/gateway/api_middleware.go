@@ -317,7 +317,7 @@ func writeError(writer http.ResponseWriter, e ErrorJson, responseHeader http.Hea
 	}
 }
 
-// processField calls 'processor' on any field that has the 'hex' tag set.
+// processField calls each processor function on any field that has the matching tag set.
 // It is a recursive function.
 func processField(s interface{}, processors []fieldProcessor) error {
 	t := reflect.TypeOf(s).Elem()
