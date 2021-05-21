@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/interfaces"
+
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -26,7 +28,7 @@ func (s *Service) CurrentSlot() types.Slot {
 // getBlockPreState returns the pre state of an incoming block. It uses the parent root of the block
 // to retrieve the state in DB. It verifies the pre state's validity and the incoming block
 // is in the correct time window.
-func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (iface.BeaconState, error) {
+func (s *Service) getBlockPreState(ctx context.Context, b interfaces.BeaconBlock) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.getBlockPreState")
 	defer span.End()
 
@@ -35,16 +37,16 @@ func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (i
 		return nil, err
 	}
 
-	preState, err := s.cfg.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(b.ParentRoot))
+	preState, err := s.cfg.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(b.ParentRoot()))
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
+		return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot())
 	}
 	if preState == nil {
-		return nil, errors.Wrapf(err, "nil pre state for slot %d", b.Slot)
+		return nil, errors.Wrapf(err, "nil pre state for slot %d", b.Slot())
 	}
 
 	// Verify block slot time is not from the future.
-	if err := helpers.VerifySlotTime(preState.GenesisTime(), b.Slot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+	if err := helpers.VerifySlotTime(preState.GenesisTime(), b.Slot(), params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 		return nil, err
 	}
 
@@ -57,11 +59,11 @@ func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (i
 }
 
 // verifyBlkPreState validates input block has a valid pre-state.
-func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) error {
+func (s *Service) verifyBlkPreState(ctx context.Context, b interfaces.BeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.verifyBlkPreState")
 	defer span.End()
 
-	parentRoot := bytesutil.ToBytes32(b.ParentRoot)
+	parentRoot := bytesutil.ToBytes32(b.ParentRoot())
 	// Loosen the check to HasBlock because state summary gets saved in batches
 	// during initial syncing. There's no risk given a state summary object is just a
 	// a subset of the block object.
@@ -69,7 +71,7 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) e
 		return errors.New("could not reconstruct parent state")
 	}
 
-	if err := s.VerifyBlkDescendant(ctx, bytesutil.ToBytes32(b.ParentRoot)); err != nil {
+	if err := s.VerifyBlkDescendant(ctx, bytesutil.ToBytes32(b.ParentRoot())); err != nil {
 		return err
 	}
 
@@ -120,13 +122,13 @@ func (s *Service) VerifyBlkDescendant(ctx context.Context, root [32]byte) error 
 
 // verifyBlkFinalizedSlot validates input block is not less than or equal
 // to current finalized slot.
-func (s *Service) verifyBlkFinalizedSlot(b *ethpb.BeaconBlock) error {
+func (s *Service) verifyBlkFinalizedSlot(b interfaces.BeaconBlock) error {
 	finalizedSlot, err := helpers.StartSlot(s.finalizedCheckpt.Epoch)
 	if err != nil {
 		return err
 	}
-	if finalizedSlot >= b.Slot {
-		return fmt.Errorf("block is equal or earlier than finalized block, slot %d < slot %d", b.Slot, finalizedSlot)
+	if finalizedSlot >= b.Slot() {
+		return fmt.Errorf("block is equal or earlier than finalized block, slot %d < slot %d", b.Slot(), finalizedSlot)
 	}
 	return nil
 }
