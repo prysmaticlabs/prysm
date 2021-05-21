@@ -83,7 +83,7 @@ func TestListPoolAttestations(t *testing.T) {
 		Signature: bytesutil.PadTo([]byte("signature2"), 96),
 	}
 	att4 := &eth.Attestation{
-		AggregationBits: []byte{2, 20},
+		AggregationBits: bitfield.NewBitlist(8),
 		Data: &eth.AttestationData{
 			Slot:            4,
 			CommitteeIndex:  4,
@@ -100,7 +100,7 @@ func TestListPoolAttestations(t *testing.T) {
 		Signature: bytesutil.PadTo([]byte("signature2"), 96),
 	}
 	att5 := &eth.Attestation{
-		AggregationBits: []byte{1, 10},
+		AggregationBits: bitfield.NewBitlist(8),
 		Data: &eth.AttestationData{
 			Slot:            2,
 			CommitteeIndex:  4,
@@ -117,7 +117,7 @@ func TestListPoolAttestations(t *testing.T) {
 		Signature: bytesutil.PadTo([]byte("signature1"), 96),
 	}
 	att6 := &eth.Attestation{
-		AggregationBits: []byte{2, 20},
+		AggregationBits: bitfield.NewBitlist(8),
 		Data: &eth.AttestationData{
 			Slot:            2,
 			CommitteeIndex:  4,
@@ -137,19 +137,14 @@ func TestListPoolAttestations(t *testing.T) {
 		ChainInfoFetcher: &chainMock.ChainService{State: state},
 		AttestationsPool: attestations.NewPool(),
 	}
-	require.NoError(t, s.AttestationsPool.SaveAggregatedAttestations([]*eth.Attestation{att1, att2, att3, att4, att5, att6}))
+	require.NoError(t, s.AttestationsPool.SaveAggregatedAttestations([]*eth.Attestation{att1, att2, att3}))
+	require.NoError(t, s.AttestationsPool.SaveUnaggregatedAttestations([]*eth.Attestation{att4, att5, att6}))
 
 	t.Run("empty request", func(t *testing.T) {
 		req := &ethpb.AttestationsPoolRequest{}
 		resp, err := s.ListPoolAttestations(context.Background(), req)
 		require.NoError(t, err)
 		require.Equal(t, 6, len(resp.Data))
-		assert.DeepSSZEqual(t, migration.V1Alpha1AttestationToV1(att1), resp.Data[0])
-		assert.DeepSSZEqual(t, migration.V1Alpha1AttestationToV1(att2), resp.Data[1])
-		assert.DeepSSZEqual(t, migration.V1Alpha1AttestationToV1(att3), resp.Data[2])
-		assert.DeepSSZEqual(t, migration.V1Alpha1AttestationToV1(att4), resp.Data[3])
-		assert.DeepSSZEqual(t, migration.V1Alpha1AttestationToV1(att5), resp.Data[4])
-		assert.DeepSSZEqual(t, migration.V1Alpha1AttestationToV1(att6), resp.Data[5])
 	})
 
 	t.Run("slot request", func(t *testing.T) {
@@ -160,10 +155,9 @@ func TestListPoolAttestations(t *testing.T) {
 		resp, err := s.ListPoolAttestations(context.Background(), req)
 		require.NoError(t, err)
 		require.Equal(t, 3, len(resp.Data))
-		assert.DeepSSZEqual(t, migration.V1Alpha1AttestationToV1(att3), resp.Data[0])
-		assert.DeepSSZEqual(t, migration.V1Alpha1AttestationToV1(att5), resp.Data[1])
-		assert.DeepSSZEqual(t, migration.V1Alpha1AttestationToV1(att6), resp.Data[2])
-		assert.DeepEqual(t, att3.Data.Slot, slot)
+		for _, datum := range resp.Data {
+			assert.DeepEqual(t, datum.Data.Slot, slot)
+		}
 	})
 
 	t.Run("index request", func(t *testing.T) {
@@ -174,11 +168,9 @@ func TestListPoolAttestations(t *testing.T) {
 		resp, err := s.ListPoolAttestations(context.Background(), req)
 		require.NoError(t, err)
 		require.Equal(t, 4, len(resp.Data))
-		assert.DeepSSZEqual(t, migration.V1Alpha1AttestationToV1(att2), resp.Data[0])
-		assert.DeepSSZEqual(t, migration.V1Alpha1AttestationToV1(att4), resp.Data[1])
-		assert.DeepSSZEqual(t, migration.V1Alpha1AttestationToV1(att5), resp.Data[2])
-		assert.DeepSSZEqual(t, migration.V1Alpha1AttestationToV1(att6), resp.Data[3])
-		assert.DeepEqual(t, att2.Data.CommitteeIndex, index)
+		for _, datum := range resp.Data {
+			assert.DeepEqual(t, datum.Data.CommitteeIndex, index)
+		}
 	})
 
 	t.Run("both slot + index request", func(t *testing.T) {
@@ -191,12 +183,10 @@ func TestListPoolAttestations(t *testing.T) {
 		resp, err := s.ListPoolAttestations(context.Background(), req)
 		require.NoError(t, err)
 		require.Equal(t, 2, len(resp.Data))
-		assert.DeepSSZEqual(t, migration.V1Alpha1AttestationToV1(att5), resp.Data[0])
-		assert.DeepSSZEqual(t, migration.V1Alpha1AttestationToV1(att6), resp.Data[1])
-		assert.DeepEqual(t, att5.Data.CommitteeIndex, index)
-		assert.DeepEqual(t, att6.Data.CommitteeIndex, index)
-		assert.DeepEqual(t, att5.Data.Slot, slot)
-		assert.DeepEqual(t, att6.Data.Slot, slot)
+		for _, datum := range resp.Data {
+			assert.DeepEqual(t, datum.Data.CommitteeIndex, index)
+			assert.DeepEqual(t, datum.Data.Slot, slot)
+		}
 	})
 }
 

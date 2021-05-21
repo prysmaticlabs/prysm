@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -22,6 +23,9 @@ import (
 
 // GetBlockHeader retrieves block header for given block id.
 func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BlockHeaderResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBlockHeader")
+	defer span.End()
+
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
@@ -62,6 +66,9 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpb.BlockRequest) (
 
 // ListBlockHeaders retrieves block headers matching given query. By default it will fetch current head slot blocks.
 func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpb.BlockHeadersRequest) (*ethpb.BlockHeadersResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beaconv1.ListBlockHeaders")
+	defer span.End()
+
 	var err error
 	var blks []*ethpb_alpha.SignedBeaconBlock
 	var blkRoots [][32]byte
@@ -121,8 +128,10 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpb.BlockHeadersR
 // new block into its state, and therefore validate the block internally, however blocks which fail the validation are
 // still broadcast but a different status code is returned (202).
 func (bs *Server) SubmitBlock(ctx context.Context, req *ethpb.BeaconBlockContainer) (*emptypb.Empty, error) {
-	blk := req.Message
+	ctx, span := trace.StartSpan(ctx, "beaconv1.SubmitBlock")
+	defer span.End()
 
+	blk := req.Message
 	v1alpha1Block, err := migration.V1ToV1Alpha1Block(&ethpb.SignedBeaconBlock{Block: blk, Signature: req.Signature})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not convert block to v1")
@@ -157,6 +166,9 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpb.BeaconBlockContain
 
 // GetBlock retrieves block details for given block id.
 func (bs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BlockResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBlock")
+	defer span.End()
+
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
@@ -180,6 +192,9 @@ func (bs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 
 // GetBlockRoot retrieves hashTreeRoot of BeaconBlock/BeaconBlockHeader.
 func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BlockRootResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBlockRoot")
+	defer span.End()
+
 	var root []byte
 	var err error
 	switch string(req.BlockId) {
@@ -257,6 +272,9 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpb.BlockRequest) (*e
 
 // ListBlockAttestations retrieves attestation included in requested block.
 func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BlockAttestationsResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beaconv1.ListBlockAttestations")
+	defer span.End()
+
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
