@@ -107,7 +107,7 @@ func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint string) {
 					f:   hexToBase64Processor,
 				},
 			}); err != nil {
-				e := fmt.Errorf("could not process request hex data: %w", err)
+				e := fmt.Errorf("could not process request data: %w", err)
 				writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
 				return
 			}
@@ -190,7 +190,7 @@ func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint string) {
 					f:   timeToUnixProcessor,
 				},
 			}); err != nil {
-				e := fmt.Errorf("could not process response hex data: %w", err)
+				e := fmt.Errorf("could not process response data: %w", err)
 				writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
 				return
 			}
