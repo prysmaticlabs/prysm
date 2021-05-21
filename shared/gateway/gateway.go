@@ -49,6 +49,7 @@ type Gateway struct {
 	cancel                  context.CancelFunc
 	remoteCert              string
 	gatewayAddr             string
+	apiMiddlewareAddr       string
 	ctx                     context.Context
 	startFailure            error
 	remoteAddr              string
@@ -80,6 +81,7 @@ func NewBeacon(
 	remoteAddress,
 	remoteCert,
 	gatewayAddress string,
+	apiMiddlewareAddress string,
 	mux *http.ServeMux,
 	allowedOrigins []string,
 	enableDebugRPCEndpoints bool,
@@ -94,6 +96,7 @@ func NewBeacon(
 		remoteAddr:              remoteAddress,
 		remoteCert:              remoteCert,
 		gatewayAddr:             gatewayAddress,
+		apiMiddlewareAddr:       apiMiddlewareAddress,
 		ctx:                     ctx,
 		mux:                     mux,
 		allowedOrigins:          allowedOrigins,
@@ -216,7 +219,7 @@ func (g *Gateway) Start() {
 	go func() {
 		log.WithField("address", g.gatewayAddr).Info("Starting gRPC gateway")
 		if err := g.server.ListenAndServe(); err != http.ErrServerClosed {
-			log.WithError(err).Error("Failed to listen and serve")
+			log.WithError(err).Error("Failed to start gRPC gateway")
 			g.startFailure = err
 			return
 		}
@@ -225,8 +228,9 @@ func (g *Gateway) Start() {
 	go func() {
 		proxy := &ApiProxyMiddleware{
 			GatewayAddress: g.gatewayAddr,
-			ProxyAddress:   ":3501",
+			ProxyAddress:   g.apiMiddlewareAddr,
 		}
+		log.WithField("API middleware address", g.apiMiddlewareAddr).Info("Starting API middleware")
 		if err := proxy.Run(); err != http.ErrServerClosed {
 			log.WithError(err).Error("Failed to start API middleware")
 			g.startFailure = err

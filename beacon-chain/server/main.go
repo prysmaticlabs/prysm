@@ -18,6 +18,7 @@ import (
 var (
 	beaconRPC               = flag.String("beacon-rpc", "localhost:4000", "Beacon chain gRPC endpoint")
 	port                    = flag.Int("port", 8000, "Port to serve on")
+	apiMiddlewarePort       = flag.Int("port", 8001, "Port to serve API middleware on")
 	host                    = flag.String("host", "127.0.0.1", "Host to serve on")
 	debug                   = flag.Bool("debug", false, "Enable debug logging")
 	allowedOrigins          = flag.String("corsdomain", "localhost:4242", "A comma separated list of CORS domains to allow")
@@ -41,6 +42,7 @@ func main() {
 		*beaconRPC,
 		"", // remoteCert
 		fmt.Sprintf("%s:%d", *host, *port),
+		fmt.Sprintf("%s:%d", *host, *apiMiddlewarePort),
 		mux,
 		strings.Split(*allowedOrigins, ","),
 		*enableDebugRPCEndpoints,
