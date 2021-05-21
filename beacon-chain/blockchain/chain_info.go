@@ -4,15 +4,15 @@ import (
 	"context"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
-
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -128,7 +128,7 @@ func (s *Service) HeadRoot(ctx context.Context) ([]byte, error) {
 		return params.BeaconConfig().ZeroHash[:], nil
 	}
 
-	r, err := b.Block.HashTreeRoot()
+	r, err := b.Block().HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +139,7 @@ func (s *Service) HeadRoot(ctx context.Context) ([]byte, error) {
 // HeadBlock returns the head block of the chain.
 // If the head is nil from service struct,
 // it will attempt to get the head block from DB.
-func (s *Service) HeadBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error) {
+func (s *Service) HeadBlock(ctx context.Context) (interfaces.SignedBeaconBlock, error) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 

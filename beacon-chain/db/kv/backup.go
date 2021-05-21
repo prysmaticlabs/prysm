@@ -41,7 +41,7 @@ func (s *Store) Backup(ctx context.Context, outputDir string) error {
 	if err := fileutil.MkdirAll(backupsDir); err != nil {
 		return err
 	}
-	backupPath := path.Join(backupsDir, fmt.Sprintf("prysm_beacondb_at_slot_%07d.backup", head.Block.Slot))
+	backupPath := path.Join(backupsDir, fmt.Sprintf("prysm_beacondb_at_slot_%07d.backup", head.Block().Slot()))
 	log.WithField("backup", backupPath).Info("Writing backup database.")
 
 	copyDB, err := bolt.Open(

@@ -7,6 +7,8 @@ import (
 	"io"
 	"io/ioutil"
 
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	dbIface "github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
@@ -27,7 +29,7 @@ func (s *Store) SaveGenesisData(ctx context.Context, genesisState iface.BeaconSt
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block root")
 	}
-	if err := s.SaveBlock(ctx, genesisBlk); err != nil {
+	if err := s.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(genesisBlk)); err != nil {
 		return errors.Wrap(err, "could not save genesis block")
 	}
 	if err := s.SaveState(ctx, genesisState, genesisBlkRoot); err != nil {

@@ -205,7 +205,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 		return nil, nil, err
 	}
 	if preState == nil {
-		return nil, nil, fmt.Errorf("nil pre state for slot %d", b.Slot)
+		return nil, nil, fmt.Errorf("nil pre state for slot %d", b.Slot())
 	}
 
 	jCheckpoints := make([]*ethpb.Checkpoint, len(blks))

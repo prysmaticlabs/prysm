@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
+
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -244,7 +246,7 @@ func slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []byte) (types.
 		if err != nil {
 			return 0, err
 		}
-		if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+		if err := helpers.VerifyNilBeaconBlock(interfaces.NewWrappedSignedBeaconBlock(b)); err != nil {
 			return 0, err
 		}
 		return b.Block.Slot, nil

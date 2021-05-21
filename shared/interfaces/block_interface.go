@@ -3,6 +3,7 @@ package interfaces
 import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"google.golang.org/protobuf/proto"
 )
 
 type SignedBeaconBlock interface {
@@ -11,6 +12,7 @@ type SignedBeaconBlock interface {
 	IsNil() bool
 	Copy() WrappedSignedBeaconBlock
 	MarshalSSZ() ([]byte, error)
+	Proto() proto.Message
 }
 
 type BeaconBlock interface {
@@ -22,6 +24,7 @@ type BeaconBlock interface {
 	IsNil() bool
 	HashTreeRoot() ([32]byte, error)
 	MarshalSSZ() ([]byte, error)
+	Proto() proto.Message
 }
 type BeaconBlockBody interface {
 	RandaoReveal() []byte
@@ -34,4 +37,5 @@ type BeaconBlockBody interface {
 	VoluntaryExits() []*ethpb.SignedVoluntaryExit
 	IsNil() bool
 	HashTreeRoot() ([32]byte, error)
+	Proto() proto.Message
 }

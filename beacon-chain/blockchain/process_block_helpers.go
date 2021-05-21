@@ -111,7 +111,7 @@ func (s *Service) VerifyBlkDescendant(ctx context.Context, root [32]byte) error 
 
 	if !bytes.Equal(bFinalizedRoot, fRoot[:]) {
 		err := fmt.Errorf("block %#x is not a descendent of the current finalized block slot %d, %#x != %#x",
-			bytesutil.Trunc(root[:]), finalizedBlk.Slot, bytesutil.Trunc(bFinalizedRoot),
+			bytesutil.Trunc(root[:]), finalizedBlk.Slot(), bytesutil.Trunc(bFinalizedRoot),
 			bytesutil.Trunc(fRoot[:]))
 		traceutil.AnnotateError(span, err)
 		return err
@@ -174,7 +174,7 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 		}
 	}
 
-	if justifiedBlockSigned == nil || justifiedBlockSigned.Block == nil {
+	if justifiedBlockSigned.IsNil() || justifiedBlockSigned.Block().IsNil() {
 		return false, errors.New("nil justified block")
 	}
 	justifiedBlock := justifiedBlockSigned.Block()

@@ -4,6 +4,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/blockutil"
+	"google.golang.org/protobuf/proto"
 )
 
 type WrappedSignedBeaconBlock struct {
@@ -32,6 +33,10 @@ func (w WrappedSignedBeaconBlock) Copy() WrappedSignedBeaconBlock {
 
 func (w WrappedSignedBeaconBlock) MarshalSSZ() ([]byte, error) {
 	return w.b.MarshalSSZ()
+}
+
+func (w WrappedSignedBeaconBlock) Proto() proto.Message {
+	return w.b
 }
 
 type WrappedBeaconBlock struct {
@@ -72,6 +77,10 @@ func (w WrappedBeaconBlock) HashTreeRoot() ([32]byte, error) {
 
 func (w WrappedBeaconBlock) MarshalSSZ() ([]byte, error) {
 	return w.b.MarshalSSZ()
+}
+
+func (w WrappedBeaconBlock) Proto() proto.Message {
+	return w.b
 }
 
 type WrappedBeaconBlockBody struct {
@@ -120,4 +129,8 @@ func (w WrappedBeaconBlockBody) IsNil() bool {
 
 func (w WrappedBeaconBlockBody) HashTreeRoot() ([32]byte, error) {
 	return w.b.HashTreeRoot()
+}
+
+func (w WrappedBeaconBlockBody) Proto() proto.Message {
+	return w.b
 }
