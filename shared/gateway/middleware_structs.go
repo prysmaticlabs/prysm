@@ -44,6 +44,11 @@ type StateValidatorsResponseJson struct {
 	Data []*ValidatorContainerJson `json:"data"`
 }
 
+// StateValidatorResponseJson is used in /beacon/states/{state_id}/validators/{validator_id} API endpoint.
+type StateValidatorResponseJson struct {
+	Data *ValidatorContainerJson `json:"data"`
+}
+
 // BlockHeaderResponseJson is used in /beacon/headers/{block_id} API endpoint.
 type BlockHeaderResponseJson struct {
 	Data *BlockHeaderContainerJson `json:"data"`
