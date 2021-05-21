@@ -2,6 +2,8 @@ package grpcutils
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
@@ -78,4 +80,17 @@ func AppendHeaders(parent context.Context, headers []string) context.Context {
 		}
 	}
 	return parent
+}
+
+// AppendCustomErrorHeader sets a CustomErrorMetadataKey gRPC header on the passed in context,
+// using the passed in error data as the header's value. The data is serialized as JSON.
+func AppendCustomErrorHeader(ctx context.Context, errorData interface{}) error {
+	j, err := json.Marshal(errorData)
+	if err != nil {
+		return fmt.Errorf("could not marshal error data into JSON: %w", err)
+	}
+	if err := grpc.SetHeader(ctx, metadata.Pairs(CustomErrorMetadataKey, string(j))); err != nil {
+		return fmt.Errorf("could not set custom error header: %w", err)
+	}
+	return nil
 }
