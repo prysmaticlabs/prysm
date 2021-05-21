@@ -10,6 +10,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/interfaces"
+
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -28,7 +32,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -60,7 +63,7 @@ type Service struct {
 	nextEpochBoundarySlot types.Slot
 	boundaryRoots         [][32]byte
 	checkpointStateCache  *cache.CheckpointStateCache
-	initSyncBlocks        map[[32]byte]*ethpb.SignedBeaconBlock
+	initSyncBlocks        map[[32]byte]interfaces.SignedBeaconBlock
 	initSyncBlocksLock    sync.RWMutex
 	justifiedBalances     []uint64
 	justifiedBalancesLock sync.RWMutex
@@ -95,7 +98,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		cancel:               cancel,
 		boundaryRoots:        [][32]byte{},
 		checkpointStateCache: cache.NewCheckpointStateCache(),
-		initSyncBlocks:       make(map[[32]byte]*ethpb.SignedBeaconBlock),
+		initSyncBlocks:       make(map[[32]byte]interfaces.SignedBeaconBlock),
 		justifiedBalances:    make([]uint64, 0),
 	}, nil
 }
@@ -164,14 +167,14 @@ func (s *Service) Start() {
 		}
 
 		// Resume fork choice.
-		s.justifiedCheckpt = stateV0.CopyCheckpoint(justifiedCheckpoint)
+		s.justifiedCheckpt = blockutil.CopyCheckpoint(justifiedCheckpoint)
 		if err := s.cacheJustifiedStateBalances(s.ctx, s.ensureRootNotZeros(bytesutil.ToBytes32(s.justifiedCheckpt.Root))); err != nil {
 			log.Fatalf("Could not cache justified state balances: %v", err)
 		}
-		s.prevJustifiedCheckpt = stateV0.CopyCheckpoint(justifiedCheckpoint)
-		s.bestJustifiedCheckpt = stateV0.CopyCheckpoint(justifiedCheckpoint)
-		s.finalizedCheckpt = stateV0.CopyCheckpoint(finalizedCheckpoint)
-		s.prevFinalizedCheckpt = stateV0.CopyCheckpoint(finalizedCheckpoint)
+		s.prevJustifiedCheckpt = blockutil.CopyCheckpoint(justifiedCheckpoint)
+		s.bestJustifiedCheckpt = blockutil.CopyCheckpoint(justifiedCheckpoint)
+		s.finalizedCheckpt = blockutil.CopyCheckpoint(finalizedCheckpoint)
+		s.prevFinalizedCheckpt = blockutil.CopyCheckpoint(finalizedCheckpoint)
 		s.resumeForkChoice(justifiedCheckpoint, finalizedCheckpoint)
 
 		ss, err := helpers.StartSlot(s.finalizedCheckpt.Epoch)
@@ -351,14 +354,14 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState iface.Beacon
 	// Finalized checkpoint at genesis is a zero hash.
 	genesisCheckpoint := genesisState.FinalizedCheckpoint()
 
-	s.justifiedCheckpt = stateV0.CopyCheckpoint(genesisCheckpoint)
+	s.justifiedCheckpt = blockutil.CopyCheckpoint(genesisCheckpoint)
 	if err := s.cacheJustifiedStateBalances(ctx, genesisBlkRoot); err != nil {
 		return err
 	}
-	s.prevJustifiedCheckpt = stateV0.CopyCheckpoint(genesisCheckpoint)
-	s.bestJustifiedCheckpt = stateV0.CopyCheckpoint(genesisCheckpoint)
-	s.finalizedCheckpt = stateV0.CopyCheckpoint(genesisCheckpoint)
-	s.prevFinalizedCheckpt = stateV0.CopyCheckpoint(genesisCheckpoint)
+	s.prevJustifiedCheckpt = blockutil.CopyCheckpoint(genesisCheckpoint)
+	s.bestJustifiedCheckpt = blockutil.CopyCheckpoint(genesisCheckpoint)
+	s.finalizedCheckpt = blockutil.CopyCheckpoint(genesisCheckpoint)
+	s.prevFinalizedCheckpt = blockutil.CopyCheckpoint(genesisCheckpoint)
 
 	if err := s.cfg.ForkChoiceStore.ProcessBlock(ctx,
 		genesisBlk.Block.Slot,
@@ -411,7 +414,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "could not retrieve head block")
 		}
-		headEpoch := helpers.SlotToEpoch(headBlock.Block.Slot)
+		headEpoch := helpers.SlotToEpoch(headBlock.Block().Slot())
 		var epochsSinceFinality types.Epoch
 		if headEpoch > finalized.Epoch {
 			epochsSinceFinality = headEpoch - finalized.Epoch
@@ -419,7 +422,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		// Head sync when node is far enough beyond known finalized epoch,
 		// this becomes really useful during long period of non-finality.
 		if epochsSinceFinality >= headSyncMinEpochsAfterCheckpoint {
-			headRoot, err := headBlock.Block.HashTreeRoot()
+			headRoot, err := headBlock.Block().HashTreeRoot()
 			if err != nil {
 				return errors.Wrap(err, "could not hash head block")
 			}

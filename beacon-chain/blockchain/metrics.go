@@ -3,6 +3,8 @@ package blockchain
 import (
 	"context"
 
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -227,8 +229,8 @@ func reportEpochMetrics(ctx context.Context, postState, headState iface.BeaconSt
 	return nil
 }
 
-func reportAttestationInclusion(blk *ethpb.BeaconBlock) {
-	for _, att := range blk.Body.Attestations {
-		attestationInclusionDelay.Observe(float64(blk.Slot - att.Data.Slot))
+func reportAttestationInclusion(blk interfaces.BeaconBlock) {
+	for _, att := range blk.Body().Attestations() {
+		attestationInclusionDelay.Observe(float64(blk.Slot() - att.Data.Slot))
 	}
 }

@@ -5,8 +5,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/interfaces"
-
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -15,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -98,11 +97,11 @@ func (s *Service) VerifyBlkDescendant(ctx context.Context, root [32]byte) error 
 	if err != nil {
 		return err
 	}
-	if finalizedBlkSigned == nil || finalizedBlkSigned.Block == nil {
+	if finalizedBlkSigned.IsNil() || finalizedBlkSigned.Block().IsNil() {
 		return errors.New("nil finalized block")
 	}
-	finalizedBlk := finalizedBlkSigned.Block
-	bFinalizedRoot, err := s.ancestor(ctx, root[:], finalizedBlk.Slot)
+	finalizedBlk := finalizedBlkSigned.Block()
+	bFinalizedRoot, err := s.ancestor(ctx, root[:], finalizedBlk.Slot())
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized block root")
 	}
@@ -141,7 +140,7 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 	if helpers.SlotsSinceEpochStarts(s.CurrentSlot()) < params.BeaconConfig().SafeSlotsToUpdateJustified {
 		return true, nil
 	}
-	var newJustifiedBlockSigned *ethpb.SignedBeaconBlock
+	var newJustifiedBlockSigned interfaces.SignedBeaconBlock
 	justifiedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(newJustifiedCheckpt.Root))
 	var err error
 	if s.hasInitSyncBlock(justifiedRoot) {
@@ -152,19 +151,19 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 			return false, err
 		}
 	}
-	if newJustifiedBlockSigned == nil || newJustifiedBlockSigned.Block == nil {
+	if newJustifiedBlockSigned.IsNil() || newJustifiedBlockSigned.Block().IsNil() {
 		return false, errors.New("nil new justified block")
 	}
 
-	newJustifiedBlock := newJustifiedBlockSigned.Block
+	newJustifiedBlock := newJustifiedBlockSigned.Block()
 	jSlot, err := helpers.StartSlot(s.justifiedCheckpt.Epoch)
 	if err != nil {
 		return false, err
 	}
-	if newJustifiedBlock.Slot <= jSlot {
+	if newJustifiedBlock.Slot() <= jSlot {
 		return false, nil
 	}
-	var justifiedBlockSigned *ethpb.SignedBeaconBlock
+	var justifiedBlockSigned interfaces.SignedBeaconBlock
 	cachedJustifiedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(s.justifiedCheckpt.Root))
 	if s.hasInitSyncBlock(cachedJustifiedRoot) {
 		justifiedBlockSigned = s.getInitSyncBlock(cachedJustifiedRoot)
@@ -178,8 +177,8 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 	if justifiedBlockSigned == nil || justifiedBlockSigned.Block == nil {
 		return false, errors.New("nil justified block")
 	}
-	justifiedBlock := justifiedBlockSigned.Block
-	b, err := s.ancestor(ctx, justifiedRoot[:], justifiedBlock.Slot)
+	justifiedBlock := justifiedBlockSigned.Block()
+	b, err := s.ancestor(ctx, justifiedRoot[:], justifiedBlock.Slot())
 	if err != nil {
 		return false, err
 	}
@@ -309,15 +308,15 @@ func (s *Service) ancestorByDB(ctx context.Context, r [32]byte, slot types.Slot)
 		signed = s.getInitSyncBlock(r)
 	}
 
-	if signed == nil || signed.Block == nil {
+	if signed.IsNil() || signed.Block().IsNil() {
 		return nil, errors.New("nil block")
 	}
-	b := signed.Block
-	if b.Slot == slot || b.Slot < slot {
+	b := signed.Block()
+	if b.Slot() == slot || b.Slot() < slot {
 		return r[:], nil
 	}
 
-	return s.ancestorByDB(ctx, bytesutil.ToBytes32(b.ParentRoot), slot)
+	return s.ancestorByDB(ctx, bytesutil.ToBytes32(b.ParentRoot()), slot)
 }
 
 // This updates justified check point in store, if the new justified is later than stored justified or
@@ -365,13 +364,13 @@ func (s *Service) finalizedImpliesNewJustified(ctx context.Context, state iface.
 
 // This retrieves missing blocks from DB (ie. the blocks that couldn't be received over sync) and inserts them to fork choice store.
 // This is useful for block tree visualizer and additional vote accounting.
-func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.BeaconBlock,
+func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfaces.BeaconBlock,
 	fCheckpoint, jCheckpoint *ethpb.Checkpoint) error {
-	pendingNodes := make([]*ethpb.BeaconBlock, 0)
+	pendingNodes := make([]interfaces.BeaconBlock, 0)
 	pendingRoots := make([][32]byte, 0)
 
-	parentRoot := bytesutil.ToBytes32(blk.ParentRoot)
-	slot := blk.Slot
+	parentRoot := bytesutil.ToBytes32(blk.ParentRoot())
+	slot := blk.Slot()
 	// Fork choice only matters from last finalized slot.
 	fSlot, err := helpers.StartSlot(s.finalizedCheckpt.Epoch)
 	if err != nil {
@@ -385,11 +384,11 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.
 			return err
 		}
 
-		pendingNodes = append(pendingNodes, b.Block)
+		pendingNodes = append(pendingNodes, b.Block())
 		copiedRoot := parentRoot
 		pendingRoots = append(pendingRoots, copiedRoot)
-		parentRoot = bytesutil.ToBytes32(b.Block.ParentRoot)
-		slot = b.Block.Slot
+		parentRoot = bytesutil.ToBytes32(b.Block().ParentRoot())
+		slot = b.Block().Slot()
 		higherThanFinalized = slot > fSlot
 	}
 
@@ -399,7 +398,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.
 		b := pendingNodes[i]
 		r := pendingRoots[i]
 		if err := s.cfg.ForkChoiceStore.ProcessBlock(ctx,
-			b.Slot, r, bytesutil.ToBytes32(b.ParentRoot), bytesutil.ToBytes32(b.Body.Graffiti),
+			b.Slot(), r, bytesutil.ToBytes32(b.ParentRoot()), bytesutil.ToBytes32(b.Body().Graffiti()),
 			jCheckpoint.Epoch,
 			fCheckpoint.Epoch); err != nil {
 			return errors.Wrap(err, "could not process block for proto array fork choice")

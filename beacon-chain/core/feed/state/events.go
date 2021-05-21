@@ -6,8 +6,9 @@ package state
 import (
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
+
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
 
 const (
@@ -31,7 +32,7 @@ type BlockProcessedData struct {
 	// BlockRoot of the processed block.
 	BlockRoot [32]byte
 	// SignedBlock is the physical processed block.
-	SignedBlock *ethpb.SignedBeaconBlock
+	SignedBlock interfaces.SignedBeaconBlock
 	// Verified is true if the block's BLS contents have been verified.
 	Verified bool
 }

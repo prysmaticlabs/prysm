@@ -3,6 +3,7 @@ package interfaces
 import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 )
 
 type WrappedSignedBeaconBlock struct {
@@ -23,6 +24,10 @@ func (w WrappedSignedBeaconBlock) Block() BeaconBlock {
 
 func (w WrappedSignedBeaconBlock) IsNil() bool {
 	return w.b == nil
+}
+
+func (w WrappedSignedBeaconBlock) Copy() WrappedSignedBeaconBlock {
+	return NewWrappedSignedBeaconBlock(blockutil.CopySignedBeaconBlock(w.b))
 }
 
 type WrappedBeaconBlock struct {
@@ -55,6 +60,10 @@ func (w WrappedBeaconBlock) Body() BeaconBlockBody {
 
 func (w WrappedBeaconBlock) IsNil() bool {
 	return w.b == nil
+}
+
+func (w WrappedBeaconBlock) HashTreeRoot() ([32]byte, error) {
+	return w.b.HashTreeRoot()
 }
 
 type WrappedBeaconBlockBody struct {
@@ -99,4 +108,8 @@ func (w WrappedBeaconBlockBody) VoluntaryExits() []*ethpb.SignedVoluntaryExit {
 
 func (w WrappedBeaconBlockBody) IsNil() bool {
 	return w.b == nil
+}
+
+func (w WrappedBeaconBlockBody) HashTreeRoot() ([32]byte, error) {
+	return w.b.HashTreeRoot()
 }

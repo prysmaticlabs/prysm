@@ -9,6 +9,7 @@ type SignedBeaconBlock interface {
 	Block() BeaconBlock
 	Signature() []byte
 	IsNil() bool
+	Copy() WrappedSignedBeaconBlock
 }
 
 type BeaconBlock interface {
@@ -18,6 +19,7 @@ type BeaconBlock interface {
 	StateRoot() []byte
 	Body() BeaconBlockBody
 	IsNil() bool
+	HashTreeRoot() ([32]byte, error)
 }
 type BeaconBlockBody interface {
 	RandaoReveal() []byte
@@ -29,4 +31,5 @@ type BeaconBlockBody interface {
 	Deposits() []*ethpb.Deposit
 	VoluntaryExits() []*ethpb.SignedVoluntaryExit
 	IsNil() bool
+	HashTreeRoot() ([32]byte, error)
 }
