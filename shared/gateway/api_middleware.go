@@ -332,7 +332,7 @@ func processField(s interface{}, processors []fieldProcessor) error {
 			if kind == reflect.Ptr && sliceElem.Elem().Kind() == reflect.Struct {
 				for j := 0; j < v.Field(i).Len(); j++ {
 					if err := processField(v.Field(i).Index(j).Interface(), processors); err != nil {
-						return fmt.Errorf("could not process field: %w", err)
+						return fmt.Errorf("could not process field '%s': %w", t.Field(i).Name, err)
 					}
 				}
 			}
@@ -343,7 +343,7 @@ func processField(s interface{}, processors []fieldProcessor) error {
 					if hasTag {
 						for j := 0; j < v.Field(i).Len(); j++ {
 							if err := proc.f(v.Field(i).Index(j)); err != nil {
-								return fmt.Errorf("could not process field: %w", err)
+								return fmt.Errorf("could not process field '%s': %w", t.Field(i).Name, err)
 							}
 						}
 					}
@@ -354,7 +354,7 @@ func processField(s interface{}, processors []fieldProcessor) error {
 		case reflect.Ptr:
 			if v.Field(i).Elem().Kind() == reflect.Struct {
 				if err := processField(v.Field(i).Interface(), processors); err != nil {
-					return fmt.Errorf("could not process field: %w", err)
+					return fmt.Errorf("could not process field '%s': %w", t.Field(i).Name, err)
 				}
 			}
 		default:
@@ -362,7 +362,7 @@ func processField(s interface{}, processors []fieldProcessor) error {
 			for _, proc := range processors {
 				if _, hasTag := field.Tag.Lookup(proc.tag); hasTag {
 					if err := proc.f(v.Field(i)); err != nil {
-						return fmt.Errorf("could not process field: %w", err)
+						return fmt.Errorf("could not process field '%s': %w", t.Field(i).Name, err)
 					}
 				}
 			}
