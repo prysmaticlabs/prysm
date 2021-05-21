@@ -39,6 +39,11 @@ type StateFinalityCheckpointResponse_StateFinalityCheckpointJson struct {
 	Finalized         *CheckpointJson `json:"finalized"`
 }
 
+// StateValidatorsResponseJson is used in /beacon/states/{state_id}/validators API endpoint.
+type StateValidatorsResponseJson struct {
+	Data []*ValidatorContainerJson `json:"data"`
+}
+
 // BlockHeaderResponseJson is used in /beacon/headers/{block_id} API endpoint.
 type BlockHeaderResponseJson struct {
 	Data *BlockHeaderContainerJson `json:"data"`
@@ -334,6 +339,14 @@ type ForkJson struct {
 	PreviousVersion string `json:"previous_version" hex:"true"`
 	CurrentVersion  string `json:"current_version" hex:"true"`
 	Epoch           string `json:"epoch"`
+}
+
+// ValidatorContainerJson is a JSON representation of a validator container.
+type ValidatorContainerJson struct {
+	Index     string         `json:"index"`
+	Balance   string         `json:"balance"`
+	Status    string         `json:"status"`
+	Validator *ValidatorJson `json:"validator"`
 }
 
 // ValidatorJson is a JSON representation of a validator.
