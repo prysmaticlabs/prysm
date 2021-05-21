@@ -1414,6 +1414,7 @@ def prysm_deps():
     go_repository(
         name = "com_github_iancoleman_strcase",
         importpath = "github.com/iancoleman/strcase",
+        nofuzz = True,
         sum = "h1:dJBk1m2/qjL1twPLf68JND55vvivMupZ4wIzE8CTdBw=",
         version = "v0.1.3",
     )
