@@ -30,6 +30,10 @@ func (w WrappedSignedBeaconBlock) Copy() WrappedSignedBeaconBlock {
 	return NewWrappedSignedBeaconBlock(blockutil.CopySignedBeaconBlock(w.b))
 }
 
+func (w WrappedSignedBeaconBlock) MarshalSSZ() ([]byte, error) {
+	return w.b.MarshalSSZ()
+}
+
 type WrappedBeaconBlock struct {
 	b *ethpb.BeaconBlock
 }
@@ -64,6 +68,10 @@ func (w WrappedBeaconBlock) IsNil() bool {
 
 func (w WrappedBeaconBlock) HashTreeRoot() ([32]byte, error) {
 	return w.b.HashTreeRoot()
+}
+
+func (w WrappedBeaconBlock) MarshalSSZ() ([]byte, error) {
+	return w.b.MarshalSSZ()
 }
 
 type WrappedBeaconBlockBody struct {

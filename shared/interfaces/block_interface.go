@@ -10,6 +10,7 @@ type SignedBeaconBlock interface {
 	Signature() []byte
 	IsNil() bool
 	Copy() WrappedSignedBeaconBlock
+	MarshalSSZ() ([]byte, error)
 }
 
 type BeaconBlock interface {
@@ -20,6 +21,7 @@ type BeaconBlock interface {
 	Body() BeaconBlockBody
 	IsNil() bool
 	HashTreeRoot() ([32]byte, error)
+	MarshalSSZ() ([]byte, error)
 }
 type BeaconBlockBody interface {
 	RandaoReveal() []byte

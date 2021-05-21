@@ -10,10 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
-
-	"github.com/prysmaticlabs/prysm/beacon-chain/interfaces"
-
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -34,7 +30,9 @@ import (
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
@@ -123,7 +121,7 @@ func (s *Service) Start() {
 			log.Fatalf("Could not fetch finalized cp: %v", err)
 		}
 		if genesisBlock != nil {
-			r, err = genesisBlock.Block.HashTreeRoot()
+			r, err = genesisBlock.Block().HashTreeRoot()
 			if err != nil {
 				log.Fatalf("Could not tree hash genesis block: %v", err)
 			}
@@ -181,11 +179,11 @@ func (s *Service) Start() {
 		if err != nil {
 			log.Fatalf("Could not get start slot of finalized epoch: %v", err)
 		}
-		h := s.headBlock().Block
-		if h.Slot > ss {
+		h := s.headBlock().Block()
+		if h.Slot() > ss {
 			log.WithFields(logrus.Fields{
 				"startSlot": ss,
-				"endSlot":   h.Slot,
+				"endSlot":   h.Slot(),
 			}).Info("Loading blocks to fork choice store, this may take a while.")
 			if err := s.fillInForkChoiceMissingBlocks(s.ctx, h, s.finalizedCheckpt, s.justifiedCheckpt); err != nil {
 				log.Fatalf("Could not fill in fork choice store missing blocks: %v", err)
@@ -343,7 +341,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState iface.Beacon
 	if err != nil || genesisBlk == nil {
 		return fmt.Errorf("could not load genesis block: %v", err)
 	}
-	genesisBlkRoot, err := genesisBlk.Block.HashTreeRoot()
+	genesisBlkRoot, err := genesisBlk.Block().HashTreeRoot()
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block root")
 	}
@@ -364,7 +362,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState iface.Beacon
 	s.prevFinalizedCheckpt = blockutil.CopyCheckpoint(genesisCheckpoint)
 
 	if err := s.cfg.ForkChoiceStore.ProcessBlock(ctx,
-		genesisBlk.Block.Slot,
+		genesisBlk.Block().Slot(),
 		genesisBlkRoot,
 		params.BeaconConfig().ZeroHash,
 		[32]byte{},
@@ -386,7 +384,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	if genesisBlock == nil {
 		return errors.New("no genesis block in db")
 	}
-	genesisBlkRoot, err := genesisBlock.Block.HashTreeRoot()
+	genesisBlkRoot, err := genesisBlock.Block().HashTreeRoot()
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root of genesis block")
 	}
@@ -431,7 +429,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 				return errors.Wrap(err, "could not get finalized state from db")
 			}
 			log.Infof("Regenerating state from the last checkpoint at slot %d to current head slot of %d."+
-				"This process may take a while, please wait.", finalizedState.Slot(), headBlock.Block.Slot)
+				"This process may take a while, please wait.", finalizedState.Slot(), headBlock.Block().Slot())
 			headState, err := s.cfg.StateGen.StateByRoot(ctx, headRoot)
 			if err != nil {
 				return errors.Wrap(err, "could not retrieve head state")

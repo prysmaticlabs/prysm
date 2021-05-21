@@ -35,6 +35,7 @@ go_library(
         "//shared/bytesutil:go_default_library",
         "//shared/depositutil:go_default_library",
         "//shared/hashutil:go_default_library",
+        "//shared/interfaces:go_default_library",
         "//shared/mathutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/slashutil:go_default_library",
