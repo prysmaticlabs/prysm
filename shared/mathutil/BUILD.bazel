@@ -6,6 +6,7 @@ go_library(
     srcs = ["math_helper.go"],
     importpath = "github.com/prysmaticlabs/prysm/shared/mathutil",
     visibility = ["//visibility:public"],
+    deps = ["@com_github_thomaso_mirodin_intmath//u64:go_default_library"],
 )
 
 go_test(
