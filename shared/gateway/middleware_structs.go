@@ -306,7 +306,7 @@ type VersionJson struct {
 
 // BeaconStateJson is a JSON representation of the beacon state.
 type BeaconStateJson struct {
-	GenesisTime                 string                    `json:"genesis_time" time:"true"`
+	GenesisTime                 string                    `json:"genesis_time"`
 	GenesisValidatorsRoot       string                    `json:"genesis_validators_root" hex:"true"`
 	Slot                        string                    `json:"slot"`
 	Fork                        *ForkJson                 `json:"fork"`
@@ -321,8 +321,8 @@ type BeaconStateJson struct {
 	Balances                    []string                  `json:"balances"`
 	RandaoMixes                 []string                  `json:"randao_mixes" hex:"true"`
 	Slashings                   []string                  `json:"slashings"`
-	PreviousEpochAttestations   *[]PendingAttestationJson `json:"previous_epoch_attestations"`
-	CurrentEpochAttestations    *[]PendingAttestationJson `json:"current_epoch_attestations"`
+	PreviousEpochAttestations   []*PendingAttestationJson `json:"previous_epoch_attestations"`
+	CurrentEpochAttestations    []*PendingAttestationJson `json:"current_epoch_attestations"`
 	JustificationBits           string                    `json:"justification_bits" hex:"true"`
 	PreviousJustifiedCheckpoint *CheckpointJson           `json:"previous_justified_checkpoint"`
 	CurrentJustifiedCheckpoint  *CheckpointJson           `json:"current_justified_checkpoint"`
