@@ -57,6 +57,7 @@ type ValidatorService struct {
 	grpcRetries           uint
 	maxCallRecvMsgSize    int
 	walletInitializedFeed *event.Feed
+	duplicateFeed         *event.Feed
 	cancel                context.CancelFunc
 	db                    db.Database
 	dataDir               string
@@ -78,6 +79,7 @@ type Config struct {
 	EmitAccountMetrics         bool
 	LogDutyCountDown           bool
 	WalletInitializedFeed      *event.Feed
+	DuplicateFeed              *event.Feed
 	GrpcRetriesFlag            uint
 	GrpcRetryDelay             time.Duration
 	GrpcMaxCallRecvMsgSizeFlag int
@@ -115,6 +117,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		validator:             cfg.Validator,
 		db:                    cfg.ValDB,
 		walletInitializedFeed: cfg.WalletInitializedFeed,
+		duplicateFeed:         cfg.DuplicateFeed,
 		useWeb:                cfg.UseWeb,
 		graffitiStruct:        cfg.GraffitiStruct,
 		logDutyCountDown:      cfg.LogDutyCountDown,
@@ -195,6 +198,7 @@ func (v *ValidatorService) Start() {
 		voteStats:                      voteStats{startEpoch: types.Epoch(^uint64(0))},
 		useWeb:                         v.useWeb,
 		walletInitializedFeed:          v.walletInitializedFeed,
+		duplicateFeed:                  v.duplicateFeed,
 		blockFeed:                      new(event.Feed),
 		graffitiStruct:                 v.graffitiStruct,
 		graffitiOrderedIndex:           graffitiOrderedIndex,

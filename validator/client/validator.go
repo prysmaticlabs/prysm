@@ -63,6 +63,7 @@ type validator struct {
 	prevBalanceLock                    sync.RWMutex
 	slashableKeysLock                  sync.RWMutex
 	walletInitializedFeed              *event.Feed
+	duplicateFeed                      *event.Feed
 	blockFeed                          *event.Feed
 	genesisTime                        uint64
 	highestValidSlot                   types.Slot

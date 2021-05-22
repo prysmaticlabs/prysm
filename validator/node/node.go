@@ -53,6 +53,7 @@ type ValidatorClient struct {
 	lock              sync.RWMutex
 	wallet            *wallet.Wallet
 	walletInitialized *event.Feed
+	duplicateFeed     *event.Feed
 	stop              chan struct{} // Channel to wait for termination notifications.
 }
 
@@ -86,6 +87,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		cancel:            cancel,
 		services:          registry,
 		walletInitialized: new(event.Feed),
+		duplicateFeed:     new(event.Feed),
 		stop:              make(chan struct{}),
 	}
 
@@ -147,6 +149,17 @@ func (c *ValidatorClient) Start() {
 			}
 		}
 		panic("Panic closing the validator client")
+	}()
+
+	go func() {
+		stopValidatorSig := make(chan *client.DuplicateDetection, 1)
+		sub := c.duplicateFeed.Subscribe(stopValidatorSig)
+		defer sub.Unsubscribe()
+		retDuplicate := <-stopValidatorSig
+		log.Infof("Duplicate Detected...Shutting down; Key 0x%x at slot %d", retDuplicate.DuplicateKey, retDuplicate.Slot)
+		debug.Exit(c.cliCtx) // Ensure trace and CPU profile data are flushed.
+		go c.Close()
+		panic("Panic closing the validator client due to duplicate usage")
 	}()
 
 	// Wait for stop channel to be closed.
@@ -418,6 +431,7 @@ func (c *ValidatorClient) registerValidatorService(
 		ValDB:                      c.db,
 		UseWeb:                     c.cliCtx.Bool(flags.EnableWebFlag.Name),
 		WalletInitializedFeed:      c.walletInitialized,
+		DuplicateFeed:              c.duplicateFeed,
 		GraffitiStruct:             gStruct,
 		LogDutyCountDown:           c.cliCtx.Bool(flags.EnableDutyCountDown.Name),
 	})

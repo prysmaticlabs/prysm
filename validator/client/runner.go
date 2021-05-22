@@ -97,9 +97,9 @@ func run(ctx context.Context, v iface.Validator) {
 
 	// if flag is enabled, check for doppelganger
 	if err := v.StartDoppelgangerService(ctx);err!=nil{
-		log.Warnf("Doppelganger service - return to runner - error: %v",err)
 		cleanup()
-		return // Exit
+		log.Fatalf("Doppelganger service - return to runner - error: %v",err)
+		//return // Exit
 	}
 
 	connectionErrorChannel := make(chan error, 1)
