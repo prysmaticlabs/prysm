@@ -161,3 +161,60 @@ func valContainersByRequestIds(state iface.BeaconState, validatorIds [][]byte) (
 	}
 	return valContainers, nil
 }
+
+func validatorStatus(validator *ethpb.Validator, epoch types.Epoch) ethpb.ValidatorStatus {
+	switch validatorSubStatus(validator, epoch) {
+	case ethpb.ValidatorStatus_PENDING_INITIALIZED, ethpb.ValidatorStatus_PENDING_QUEUED:
+		return ethpb.ValidatorStatus_PENDING
+	case ethpb.ValidatorStatus_ACTIVE_ONGOING, ethpb.ValidatorStatus_ACTIVE_SLASHED, ethpb.ValidatorStatus_ACTIVE_EXITING:
+		return ethpb.ValidatorStatus_ACTIVE
+	case ethpb.ValidatorStatus_EXITED_UNSLASHED, ethpb.ValidatorStatus_EXITED_SLASHED:
+		return ethpb.ValidatorStatus_EXITED
+	case ethpb.ValidatorStatus_WITHDRAWAL_POSSIBLE, ethpb.ValidatorStatus_WITHDRAWAL_DONE:
+		return ethpb.ValidatorStatus_WITHDRAWAL
+	}
+	return 0
+}
+
+func validatorSubStatus(validator *ethpb.Validator, epoch types.Epoch) ethpb.ValidatorStatus {
+	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
+
+	// Pending.
+	if validator.ActivationEpoch > epoch {
+		if validator.ActivationEligibilityEpoch == farFutureEpoch {
+			return ethpb.ValidatorStatus_PENDING_INITIALIZED
+		} else if validator.ActivationEligibilityEpoch < farFutureEpoch && validator.ActivationEpoch > epoch {
+			return ethpb.ValidatorStatus_PENDING_QUEUED
+		}
+	}
+
+	// Active.
+	if validator.ActivationEpoch <= epoch && epoch < validator.ExitEpoch {
+		if validator.ExitEpoch == farFutureEpoch {
+			return ethpb.ValidatorStatus_ACTIVE_ONGOING
+		} else if validator.ExitEpoch < farFutureEpoch {
+			if validator.Slashed {
+				return ethpb.ValidatorStatus_ACTIVE_SLASHED
+			}
+			return ethpb.ValidatorStatus_ACTIVE_EXITING
+		}
+	}
+
+	// Exited.
+	if validator.ExitEpoch <= epoch && epoch < validator.WithdrawableEpoch {
+		if validator.Slashed {
+			return ethpb.ValidatorStatus_EXITED_SLASHED
+		}
+		return ethpb.ValidatorStatus_EXITED_UNSLASHED
+	}
+
+	if validator.WithdrawableEpoch <= epoch {
+		if validator.EffectiveBalance != 0 {
+			return ethpb.ValidatorStatus_WITHDRAWAL_POSSIBLE
+		} else {
+			return ethpb.ValidatorStatus_WITHDRAWAL_DONE
+		}
+	}
+
+	return 0
+}
