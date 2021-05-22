@@ -108,11 +108,11 @@ func (ns *Server) GetPeer(ctx context.Context, req *ethpb.PeerRequest) (*ethpb.P
 
 	return &ethpb.PeerResponse{
 		Data: &ethpb.Peer{
-			PeerId:    req.PeerId,
-			Enr:       "enr:" + serializedEnr,
-			Address:   p2pAddress.String(),
-			State:     ethpb.ConnectionState(state),
-			Direction: ethpb.PeerDirection(direction),
+			PeerId:             req.PeerId,
+			Enr:                "enr:" + serializedEnr,
+			LastSeenP2PAddress: p2pAddress.String(),
+			State:              ethpb.ConnectionState(state),
+			Direction:          ethpb.PeerDirection(direction),
 		},
 	}, nil
 }
@@ -325,7 +325,7 @@ func peerInfo(peerStatus *peers.Status, id peer.ID) (*ethpb.Peer, error) {
 		Direction: ethpb.PeerDirection(direction),
 	}
 	if address != nil {
-		p.Address = address.String()
+		p.LastSeenP2PAddress = address.String()
 	}
 	if serializedEnr != "" {
 		p.Enr = "enr:" + serializedEnr
