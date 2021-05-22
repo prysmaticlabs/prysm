@@ -121,7 +121,7 @@ func CalculateStateRoot(
 		traceutil.AnnotateError(span, ctx.Err())
 		return [32]byte{}, ctx.Err()
 	}
-	if state == nil {
+	if state == nil || state.IsNil() {
 		return [32]byte{}, errors.New("nil state")
 	}
 	if signed == nil || signed.Block == nil {

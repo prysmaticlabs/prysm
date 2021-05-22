@@ -84,6 +84,12 @@
       ".*_test\\.go": "Only tests"
     }
   },
+  "interfacechecker": {
+    "exclude_files": {
+      "external/.*": "Third party code",
+      "rules_go_work-.*": "Third party code"
+    }
+  },
   "cryptorand": {
     "only_files": {
       "beacon-chain/.*": "",

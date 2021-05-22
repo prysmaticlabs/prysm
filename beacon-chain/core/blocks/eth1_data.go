@@ -21,7 +21,7 @@ import (
 //    if state.eth1_data_votes.count(body.eth1_data) * 2 > EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH:
 //        state.eth1_data = body.eth1_data
 func ProcessEth1DataInBlock(_ context.Context, beaconState iface.BeaconState, eth1Data *ethpb.Eth1Data) (iface.BeaconState, error) {
-	if beaconState == nil {
+	if beaconState == nil || beaconState.IsNil() {
 		return nil, errors.New("nil state")
 	}
 	if err := beaconState.AppendEth1DataVotes(eth1Data); err != nil {
