@@ -996,17 +996,18 @@ def prysm_deps():
     )
 
     go_repository(
-        name = "com_github_gofrs_uuid",
-        importpath = "github.com/gofrs/uuid",
-        sum = "h1:8K4tyRfvU1CYPgJsveYFQMhpFd/wXNM7iK6rR7UHz84=",
-        version = "v3.3.0+incompatible",
-    )
-    go_repository(
         name = "com_github_gofrs_flock",
         importpath = "github.com/gofrs/flock",
         sum = "h1:MSdYClljsF3PbENUUEx85nkWfJSGfzYI9yEBZOJz6CY=",
         version = "v0.8.0",
     )
+    go_repository(
+        name = "com_github_gofrs_uuid",
+        importpath = "github.com/gofrs/uuid",
+        sum = "h1:1SD/1F5pU8p29ybwgQSwpQk+mwdRrXCYuPhW6m+TnJw=",
+        version = "v4.0.0+incompatible",
+    )
+
     go_repository(
         name = "com_github_gogo_googleapis",
         importpath = "github.com/gogo/googleapis",
@@ -1227,15 +1228,15 @@ def prysm_deps():
     go_repository(
         name = "com_github_grpc_ecosystem_grpc_gateway",
         importpath = "github.com/grpc-ecosystem/grpc-gateway",
-        sum = "h1:gmcG1KaJ57LophUzW0Hy8NmPhnMZb4M0+kPpLofRdBo=",
-        version = "v1.16.0",
+        sum = "h1:UImYN5qQ8tuGpGE16ZmjvcTtTw24zw1QAp/SlnNrZhI=",
+        version = "v1.9.5",
     )
     go_repository(
         name = "com_github_grpc_ecosystem_grpc_gateway_v2",
         importpath = "github.com/grpc-ecosystem/grpc-gateway/v2",
         replace = "github.com/prysmaticlabs/grpc-gateway/v2",
-        sum = "h1:p8RXjbUOOEGWnleirv5ctE/KBQe0BY/ME2iea1sD0RY=",
-        version = "v2.3.1-0.20210429070457-714fa3339bc9",
+        sum = "h1:roLNAyHR6c9yx1F+shJbbDvi/YopEreddO2Pmga20Lo=",
+        version = "v2.3.1-0.20210330221950-3beba9ed0e19",
     )
     go_repository(
         name = "com_github_gxed_hashland_keccakpg",
@@ -2743,14 +2744,14 @@ def prysm_deps():
         name = "com_github_prysmaticlabs_ethereumapis",
         build_file_generation = "off",
         importpath = "github.com/prysmaticlabs/ethereumapis",
-        sum = "h1:U5zOAU9BMuY/i4OZ/82fbgDEUmSDoqTM6rwwiAnDPC4=",
-        version = "v0.0.0-20210511185220-89fcd65925ac",
+        sum = "h1:vEJlRGvXYCdMTic/Ak8knF1ht0YbbJnDRFwUA9W5k2w=",
+        version = "v0.0.0-20210520130538-2cf083a48639",
     )
     go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",
         importpath = "github.com/prysmaticlabs/go-bitfield",
-        sum = "h1:18+Qqobq3HAUY0hgIhPGSqmLFnaLLocemmU7+Sj2aYQ=",
-        version = "v0.0.0-20210202205921-7fcea7c45dc8",
+        sum = "h1:n1fCZPIMlcNQ3iCN5w4vxmFFNWhEdEz3ICTerxjUFvA=",
+        version = "v0.0.0-20210515192923-def021850363",
     )
 
     go_repository(
@@ -2762,8 +2763,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_prysmaticlabs_protoc_gen_go_cast",
         importpath = "github.com/prysmaticlabs/protoc-gen-go-cast",
-        sum = "h1:o79JO4UMwfc1hYbRO0fGkYD9mpLvN9pif7ez8jMLZiM=",
-        version = "v0.0.0-20210505221644-3b823fdaca7f",
+        sum = "h1:k7CCMwN7VooQ7GhfySnaVyI4/9+QbhJTdasoC6VOZOI=",
+        version = "v0.0.0-20210504233148-1e141af6a0a1",
     )
     go_repository(
         name = "com_github_puerkitobio_purell",
