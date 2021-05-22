@@ -32,9 +32,10 @@ type ApiProxyMiddleware struct {
 }
 
 type endpointData struct {
-	postRequest interface{}
-	getResponse interface{}
-	err         ErrorJson
+	postRequest             interface{}
+	getRequestQueryLiterals []string // Names of query parameters that should not be base64-encoded.
+	getResponse             interface{}
+	err                     ErrorJson
 }
 
 // fieldProcessor applies the processing function f to a value when the tag is present on the field.
@@ -133,7 +134,7 @@ func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint string) {
 		request.URL.Host = m.GatewayAddress
 		request.RequestURI = ""
 		handleUrlParameters(endpoint, request, writer)
-		handleQueryParameters(request, writer)
+		handleQueryParameters(request, writer, data.getRequestQueryLiterals)
 
 		// Proxy the request to grpc-gateway.
 		grpcResp, err := http.DefaultClient.Do(request)
@@ -296,9 +297,18 @@ func handleUrlParameters(endpoint string, request *http.Request, writer http.Res
 }
 
 // handleQueryParameters processes query parameters, allowing them to be safely and correctly proxied to grpc-gateway.
-func handleQueryParameters(request *http.Request, writer http.ResponseWriter) {
+// Base-64 encoding of passed in literals is skipped.
+func handleQueryParameters(request *http.Request, writer http.ResponseWriter, literals []string) {
 	queryParams := request.URL.Query()
+
+paramLoop:
 	for key, vals := range queryParams {
+		for _, l := range literals {
+			if key == l {
+				break paramLoop
+			}
+		}
+
 		queryParams.Del(key)
 		for _, v := range vals {
 			b := []byte(v)
@@ -454,7 +464,11 @@ func getEndpointData(endpoint string) (endpointData, error) {
 	case "/eth/v1/beacon/states/{state_id}/validator_balances":
 		return endpointData{getResponse: &ValidatorBalancesResponseJson{}, err: &DefaultErrorJson{}}, nil
 	case "/eth/v1/beacon/states/{state_id}/committees":
-		return endpointData{getResponse: &StateCommitteesResponseJson{}, err: &DefaultErrorJson{}}, nil
+		return endpointData{
+			getRequestQueryLiterals: []string{"epoch", "index", "slot"},
+			getResponse:             &StateCommitteesResponseJson{},
+			err:                     &DefaultErrorJson{},
+		}, nil
 	case "/eth/v1/beacon/headers/{block_id}":
 		return endpointData{getResponse: &BlockHeaderResponseJson{}, err: &DefaultErrorJson{}}, nil
 	case "/eth/v1/beacon/blocks":
