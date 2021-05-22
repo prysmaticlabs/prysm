@@ -1414,6 +1414,7 @@ def prysm_deps():
     go_repository(
         name = "com_github_iancoleman_strcase",
         importpath = "github.com/iancoleman/strcase",
+        nofuzz = True,
         sum = "h1:dJBk1m2/qjL1twPLf68JND55vvivMupZ4wIzE8CTdBw=",
         version = "v0.1.3",
     )
@@ -3075,6 +3076,12 @@ def prysm_deps():
         importpath = "github.com/templexxx/xor",
         sum = "h1:fj5tQ8acgNUr6O8LEplsxDhUIe2573iLkJc+PqnzZTI=",
         version = "v0.0.0-20191217153810-f85b25db303b",
+    )
+    go_repository(
+        name = "com_github_thomaso_mirodin_intmath",
+        importpath = "github.com/thomaso-mirodin/intmath",
+        sum = "h1:cR8/SYRgyQCt5cNCMniB/ZScMkhI9nk8U5C7SbISXjo=",
+        version = "v0.0.0-20160323211736-5dc6d854e46e",
     )
 
     go_repository(
