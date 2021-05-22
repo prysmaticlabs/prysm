@@ -53,6 +53,7 @@ func (m *ApiProxyMiddleware) Run() error {
 	m.handleApiEndpoint("/eth/v1/beacon/states/{state_id}/finality_checkpoints")
 	m.handleApiEndpoint("/eth/v1/beacon/states/{state_id}/validators")
 	m.handleApiEndpoint("/eth/v1/beacon/states/{state_id}/validators/{validator_id}")
+	m.handleApiEndpoint("/eth/v1/beacon/states/{state_id}/validator_balances")
 	m.handleApiEndpoint("/eth/v1/beacon/headers/{block_id}")
 	m.handleApiEndpoint("/eth/v1/beacon/blocks")
 	m.handleApiEndpoint("/eth/v1/beacon/blocks/{block_id}")
@@ -449,6 +450,8 @@ func getEndpointData(endpoint string) (endpointData, error) {
 		return endpointData{getResponse: &StateValidatorsResponseJson{}, err: &DefaultErrorJson{}}, nil
 	case "/eth/v1/beacon/states/{state_id}/validators/{validator_id}":
 		return endpointData{getResponse: &StateValidatorResponseJson{}, err: &DefaultErrorJson{}}, nil
+	case "/eth/v1/beacon/states/{state_id}/validator_balances":
+		return endpointData{getResponse: &ValidatorBalancesResponseJson{}, err: &DefaultErrorJson{}}, nil
 	case "/eth/v1/beacon/headers/{block_id}":
 		return endpointData{getResponse: &BlockHeaderResponseJson{}, err: &DefaultErrorJson{}}, nil
 	case "/eth/v1/beacon/blocks":

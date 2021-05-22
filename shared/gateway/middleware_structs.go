@@ -49,6 +49,11 @@ type StateValidatorResponseJson struct {
 	Data *ValidatorContainerJson `json:"data"`
 }
 
+// ValidatorBalancesResponseJson is used in /beacon/states/{state_id}/validator_balances API endpoint.
+type ValidatorBalancesResponseJson struct {
+	Data []*ValidatorBalanceJson `json:"data"`
+}
+
 // BlockHeaderResponseJson is used in /beacon/headers/{block_id} API endpoint.
 type BlockHeaderResponseJson struct {
 	Data *BlockHeaderContainerJson `json:"data"`
@@ -364,6 +369,12 @@ type ValidatorJson struct {
 	ActivationEpoch            string `json:"activation_epoch"`
 	ExitEpoch                  string `json:"exit_epoch"`
 	WithdrawableEpoch          string `json:"withdrawable_epoch"`
+}
+
+// ValidatorBalanceJson is a JSON representation of a validator's balance.
+type ValidatorBalanceJson struct {
+	Index   string `json:"index"`
+	Balance string `json:"balance"`
 }
 
 // PendingAttestationJson is a JSON representation of a pending attestation.
