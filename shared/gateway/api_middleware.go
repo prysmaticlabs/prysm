@@ -305,7 +305,7 @@ paramLoop:
 	for key, vals := range queryParams {
 		for _, l := range literals {
 			if key == l {
-				break paramLoop
+				continue paramLoop
 			}
 		}
 
