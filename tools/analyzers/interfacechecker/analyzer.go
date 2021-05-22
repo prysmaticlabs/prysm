@@ -4,7 +4,6 @@ package interfacechecker
 import (
 	"errors"
 	"go/ast"
-	"go/token"
 	"go/types"
 	"strings"
 
@@ -22,6 +21,14 @@ var Analyzer = &analysis.Analyzer{
 	Doc:      Doc,
 	Requires: []*analysis.Analyzer{inspect.Analyzer},
 	Run:      run,
+}
+
+// These are the selected interfaces that we want to parse through and check nilness for.
+var selectedInterfaces = []string{
+	"interfaces.SignedBeaconBlock",
+	"interface.BeaconState",
+	"interface.ReadOnlyBeaconState",
+	"interface.WriteOnlyBeaconState",
 }
 
 func run(pass *analysis.Pass) (interface{}, error) {
@@ -43,60 +50,47 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		if !ok {
 			return
 		}
-		id, ok := exp.X.(*ast.Ident)
-		if !ok {
-			return
-		}
-		if _, ok := pass.TypesInfo.Types[id].Type.(*types.Slice); ok {
-			return
-		}
-		if strings.Contains(pass.TypesInfo.Types[id].Type.String(), "interfaces.SignedBeaconBlock") {
-			nval, ok := exp.Y.(*ast.Ident)
-			if ok && pass.TypesInfo.Types[nval].IsNil() {
-				pass.Reportf(id.Pos(), pass.TypesInfo.Types[id].Type.String())
-			}
-		}
-		if strings.Contains(pass.TypesInfo.Types[id].Type.String(), "interface.BeaconState") {
-			nval, ok := exp.Y.(*ast.Ident)
-			if ok && pass.TypesInfo.Types[nval].IsNil() {
-				pass.Reportf(id.Pos(), pass.TypesInfo.Types[id].Type.String())
-			}
-		}
-		if strings.Contains(pass.TypesInfo.Types[id].Type.String(), "interface.ReadOnlyBeaconState") {
-			nval, ok := exp.Y.(*ast.Ident)
-			if ok && pass.TypesInfo.Types[nval].IsNil() {
-				pass.Reportf(id.Pos(), pass.TypesInfo.Types[id].Type.String())
-			}
-		}
-		if strings.Contains(pass.TypesInfo.Types[id].Type.String(), "interface.WriteOnlyBeaconState") {
-			nval, ok := exp.Y.(*ast.Ident)
-			if ok && pass.TypesInfo.Types[nval].IsNil() {
-				pass.Reportf(id.Pos(), pass.TypesInfo.Types[id].Type.String())
-			}
-		}
-
+		handleConditionalExpression(exp, pass)
 	})
 
 	return nil, nil
 }
 
-func reportForbiddenUsage(pass *analysis.Pass, pos token.Pos) {
-	pass.Reportf(pos, "Use of featureconfig.Init is forbidden in test code. Please use "+
-		"featureconfig.InitWithReset and call reset in the same test function.")
-}
-
-func reportUnhandledReset(pass *analysis.Pass, pos token.Pos) {
-	pass.Reportf(pos, "Unhandled reset featureconfig not found in test "+
-		"method. Be sure to call the returned reset function from featureconfig.InitWithReset "+
-		"within this test method.")
-}
-
-func isPkgDot(expr ast.Expr, pkg, name string) bool {
-	sel, ok := expr.(*ast.SelectorExpr)
-	return ok && isIdent(sel.X, pkg) && isIdent(sel.Sel, name)
-}
-
-func isIdent(expr ast.Expr, ident string) bool {
-	id, ok := expr.(*ast.Ident)
-	return ok && id.Name == ident
+func handleConditionalExpression(exp *ast.BinaryExpr, pass *analysis.Pass) {
+	identX, ok := exp.X.(*ast.Ident)
+	if !ok {
+		return
+	}
+	identY, ok := exp.Y.(*ast.Ident)
+	if !ok {
+		return
+	}
+	typeMap := pass.TypesInfo.Types
+	if _, ok := typeMap[identX].Type.(*types.Slice); ok {
+		return
+	}
+	if _, ok := typeMap[identY].Type.(*types.Slice); ok {
+		return
+	}
+	for _, iface := range selectedInterfaces {
+		xIsIface := strings.Contains(typeMap[identX].Type.String(), iface)
+		xIsNil := typeMap[identX].IsNil()
+		yisIface := strings.Contains(typeMap[identY].Type.String(), iface)
+		yIsNil := typeMap[identY].IsNil()
+		// Exit early if neither are of the desired interface
+		if !xIsIface && !yisIface {
+			continue
+		}
+		if xIsIface && yIsNil {
+			pass.Reportf(identX.Pos(), "A nilness check is being performed on an interface"+
+				", this check needs another accompanying check on the underlying object for the interface")
+		}
+		if yisIface && xIsNil {
+			pass.Reportf(identY.Pos(), "A nilness check is being performed on an interface"+
+				", this check needs another accompanying check on the underlying object for the interface")
+		}
+		if xIsIface && yisIface {
+			pass.Reportf(identX.Pos(), "An equality check is being performed on an interface.")
+		}
+	}
 }
