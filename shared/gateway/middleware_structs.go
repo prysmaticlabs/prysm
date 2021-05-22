@@ -54,6 +54,11 @@ type ValidatorBalancesResponseJson struct {
 	Data []*ValidatorBalanceJson `json:"data"`
 }
 
+// StateCommitteesResponseJson is used in /beacon/states/{state_id}/committees API endpoint.
+type StateCommitteesResponseJson struct {
+	Data []*CommitteeJson `json:"data"`
+}
+
 // BlockHeaderResponseJson is used in /beacon/headers/{block_id} API endpoint.
 type BlockHeaderResponseJson struct {
 	Data *BlockHeaderContainerJson `json:"data"`
@@ -375,6 +380,13 @@ type ValidatorJson struct {
 type ValidatorBalanceJson struct {
 	Index   string `json:"index"`
 	Balance string `json:"balance"`
+}
+
+// CommitteeJson is a JSON representation of a committee
+type CommitteeJson struct {
+	Index      string   `json:"index"`
+	Slot       string   `json:"slot"`
+	Validators []string `json:"validators"`
 }
 
 // PendingAttestationJson is a JSON representation of a pending attestation.
