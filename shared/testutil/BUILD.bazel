@@ -24,6 +24,7 @@ go_library(
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/hashutil:go_default_library",
+        "//shared/interfaces:go_default_library",
         "//shared/interop:go_default_library",
         "//shared/params:go_default_library",
         "//shared/rand:go_default_library",

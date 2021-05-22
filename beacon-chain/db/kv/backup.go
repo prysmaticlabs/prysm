@@ -34,7 +34,7 @@ func (s *Store) Backup(ctx context.Context, outputDir string) error {
 	if err != nil {
 		return err
 	}
-	if head == nil {
+	if head.IsNil() {
 		return errors.New("no head block")
 	}
 	// Ensure the backups directory exists.

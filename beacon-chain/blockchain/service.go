@@ -120,7 +120,7 @@ func (s *Service) Start() {
 		if err != nil {
 			log.Fatalf("Could not fetch finalized cp: %v", err)
 		}
-		if genesisBlock != nil {
+		if !genesisBlock.IsNil() {
 			r, err = genesisBlock.Block().HashTreeRoot()
 			if err != nil {
 				log.Fatalf("Could not tree hash genesis block: %v", err)
@@ -381,7 +381,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block from db")
 	}
-	if genesisBlock == nil {
+	if genesisBlock.IsNil() {
 		return errors.New("no genesis block in db")
 	}
 	genesisBlkRoot, err := genesisBlock.Block().HashTreeRoot()

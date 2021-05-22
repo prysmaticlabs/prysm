@@ -88,7 +88,7 @@ func (bs *Server) ListBlocks(
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve block: %v", err)
 		}
-		if blk == nil {
+		if blk.IsNil() {
 			return &ethpb.ListBlocksResponse{
 				BlockContainers: make([]*ethpb.BeaconBlockContainer, 0),
 				TotalSize:       0,
@@ -168,7 +168,7 @@ func (bs *Server) ListBlocks(
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for genesis slot: %v", err)
 		}
-		if genBlk == nil {
+		if genBlk.IsNil() {
 			return nil, status.Error(codes.Internal, "Could not find genesis block")
 		}
 		root, err := genBlk.Block().HashTreeRoot()
