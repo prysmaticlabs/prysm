@@ -89,8 +89,5 @@ func handleConditionalExpression(exp *ast.BinaryExpr, pass *analysis.Pass) {
 			pass.Reportf(identY.Pos(), "A nilness check is being performed on an interface"+
 				", this check needs another accompanying check on the underlying object for the interface")
 		}
-		if xIsIface && yisIface {
-			pass.Reportf(identX.Pos(), "An equality check is being performed on an interface.")
-		}
 	}
 }
