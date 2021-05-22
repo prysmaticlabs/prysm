@@ -74,12 +74,17 @@ type BlockRootResponseJson struct {
 	Data *BlockRootContainerJson `json:"data"`
 }
 
-// BlockAttestationsResponseJson is used in /beacon/blocks/{block_id}/attestations GET API endpoint.
+// BlockAttestationsResponseJson is used in /beacon/blocks/{block_id}/attestations API endpoint.
 type BlockAttestationsResponseJson struct {
 	Data []*AttestationJson `json:"data"`
 }
 
-// SubmitAttestationRequestJson is used in /beacon/blocks/{block_id}/attestations POST API endpoint.
+// AttestationsPoolResponseJson is used in /beacon/pool/attestations GET API endpoint.
+type AttestationsPoolResponseJson struct {
+	Data []*AttestationJson `json:"data"`
+}
+
+// SubmitAttestationRequestJson is used in /beacon/pool/attestations POST API endpoint.
 type SubmitAttestationRequestJson struct {
 	Data []*AttestationJson `json:"data"`
 }

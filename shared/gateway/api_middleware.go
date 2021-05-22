@@ -480,7 +480,11 @@ func getEndpointData(endpoint string) (endpointData, error) {
 	case "/eth/v1/beacon/blocks/{block_id}/attestations":
 		return endpointData{getResponse: &BlockAttestationsResponseJson{}, err: &DefaultErrorJson{}}, nil
 	case "/eth/v1/beacon/pool/attestations":
-		return endpointData{postRequest: &SubmitAttestationRequestJson{}, getResponse: &BlockAttestationsResponseJson{}, err: &SubmitAttestationsErrorJson{}}, nil
+		return endpointData{
+			getRequestQueryLiterals: []string{"slot", "committee_index"},
+			getResponse:             &AttestationsPoolResponseJson{},
+			postRequest:             &SubmitAttestationRequestJson{},
+			err:                     &SubmitAttestationsErrorJson{}}, nil
 	case "/eth/v1/beacon/pool/attester_slashings":
 		return endpointData{postRequest: &AttesterSlashingJson{}, getResponse: &AttesterSlashingsPoolResponseJson{}, err: &DefaultErrorJson{}}, nil
 	case "/eth/v1/beacon/pool/proposer_slashings":
