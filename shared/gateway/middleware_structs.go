@@ -117,6 +117,11 @@ type BeaconStateResponseJson struct {
 	Data *BeaconStateJson `json:"data"`
 }
 
+// BeaconStateResponseJson is used in /debug/beacon/states/{state_id} API endpoint.
+type BeaconStateSszResponseJson struct {
+	Data string `json:"data"`
+}
+
 // ForkChoiceHeadsResponseJson is used in /debug/beacon/heads API endpoint.
 type ForkChoiceHeadsResponseJson struct {
 	Data []*ForkChoiceHeadJson `json:"data"`
