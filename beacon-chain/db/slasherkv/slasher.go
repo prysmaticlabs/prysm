@@ -5,7 +5,9 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"golang.org/x/sync/errgroup"
 	"sort"
+	"sync"
 
 	ssz "github.com/ferranbt/fastssz"
 	"github.com/golang/snappy"
@@ -92,35 +94,55 @@ func (s *Store) CheckAttesterDoubleVotes(
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.CheckAttesterDoubleVotes")
 	defer span.End()
 	doubleVotes := make([]*slashertypes.AttesterDoubleVote, 0)
-	err := s.db.View(func(tx *bolt.Tx) error {
-		signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
-		for _, att := range attestations {
-			encEpoch := encodeTargetEpoch(att.IndexedAttestation.Data.Target.Epoch)
-			for _, valIdx := range att.IndexedAttestation.AttestingIndices {
-				encIdx := encodeValidatorIndex(types.ValidatorIndex(valIdx))
-				validatorEpochKey := append(encEpoch, encIdx...)
-				encExistingAttRecord := signingRootsBkt.Get(validatorEpochKey)
-				if encExistingAttRecord == nil {
-					continue
-				}
-				existingSigningRoot := bytesutil.ToBytes32(encExistingAttRecord[:signingRootSize])
-				if existingSigningRoot != att.SigningRoot {
-					existingAttRecord, err := decodeAttestationRecord(encExistingAttRecord[signingRootSize:])
-					if err != nil {
-						return err
+	doubleVotesMu := sync.Mutex{}
+	eg, egctx := errgroup.WithContext(ctx)
+	for _, att := range attestations {
+		attToProcess := att  // https://golang.org/doc/faq#closures_and_goroutines
+		eg.Go(func() error { // process every attestation parallely
+			err := s.db.View(func(tx *bolt.Tx) error {
+				signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
+				encEpoch := encodeTargetEpoch(attToProcess.IndexedAttestation.Data.Target.Epoch)
+				localDoubleVotes := make([]*slashertypes.AttesterDoubleVote, 0)
+				for _, valIdx := range attToProcess.IndexedAttestation.AttestingIndices {
+					encIdx := encodeValidatorIndex(types.ValidatorIndex(valIdx))
+					validatorEpochKey := append(encEpoch, encIdx...)
+					encExistingAttRecord := signingRootsBkt.Get(validatorEpochKey)
+					if encExistingAttRecord == nil {
+						continue
 					}
-					doubleVotes = append(doubleVotes, &slashertypes.AttesterDoubleVote{
-						ValidatorIndex:         types.ValidatorIndex(valIdx),
-						Target:                 att.IndexedAttestation.Data.Target.Epoch,
-						PrevAttestationWrapper: existingAttRecord,
-						AttestationWrapper:     att,
-					})
+					existingSigningRoot := bytesutil.ToBytes32(encExistingAttRecord[:signingRootSize])
+					if existingSigningRoot != attToProcess.SigningRoot {
+						existingAttRecord, err := decodeAttestationRecord(encExistingAttRecord[signingRootSize:])
+						if err != nil {
+							return err
+						}
+						slashAtt := &slashertypes.AttesterDoubleVote{
+							ValidatorIndex:         types.ValidatorIndex(valIdx),
+							Target:                 attToProcess.IndexedAttestation.Data.Target.Epoch,
+							PrevAttestationWrapper: existingAttRecord,
+							AttestationWrapper:     attToProcess,
+						}
+						localDoubleVotes = append(localDoubleVotes, slashAtt)
+					}
 				}
-			}
-		}
-		return nil
-	})
-	return doubleVotes, err
+				// if any routine is cancelled, then cancel this routine too
+				select {
+				case <-egctx.Done():
+					return egctx.Err()
+				default:
+				}
+				// if there are any doible votes in this attestation, add it to the global double votes
+				if len(localDoubleVotes) > 0 {
+					doubleVotesMu.Lock()
+					defer doubleVotesMu.Unlock()
+					doubleVotes = append(doubleVotes, localDoubleVotes...)
+				}
+				return nil
+			})
+			return err
+		})
+	}
+	return doubleVotes, eg.Wait()
 }
 
 // AttestationRecordForValidator given a validator index and a target epoch,
@@ -192,6 +214,8 @@ func (s *Store) SaveAttestationRecordsForValidators(
 			for _, valIdx := range att.IndexedAttestation.AttestingIndices {
 				encIdx := encodeValidatorIndex(types.ValidatorIndex(valIdx))
 				key := append(encodedTargetEpoch[i], encIdx...)
+				// signature is prefixed so that double votest can be checked without decoding attestations
+				// and save some cpu cycles
 				value := append(att.SigningRoot[:], encodedRecords[i]...)
 				if err := signingRootsBkt.Put(key, value); err != nil {
 					return err
