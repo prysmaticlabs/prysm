@@ -12,6 +12,9 @@ import (
 
 // GetBeaconState returns the full beacon state for a given state id.
 func (ds *Server) GetBeaconState(ctx context.Context, req *ethpb.StateRequest) (*ethpb.BeaconStateResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBeaconState")
+	defer span.End()
+
 	state, err := ds.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not get state: %v", err)
