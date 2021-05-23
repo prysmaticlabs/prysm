@@ -18,12 +18,6 @@ func init() {
 	})
 }
 
-// FuzzState wraps BeaconStateFuzz in a go-fuzz compatible interface
-func FuzzState(b []byte) int {
-	BeaconStateFuzz(b)
-	return 0
-}
-
 // BeaconStateFuzz --
 func BeaconStateFuzz(input []byte) {
 	params.UseMainnetConfig()
