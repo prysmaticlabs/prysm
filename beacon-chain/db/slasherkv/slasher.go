@@ -94,26 +94,18 @@ func (s *Store) CheckAttesterDoubleVotes(
 	doubleVotes := make([]*slashertypes.AttesterDoubleVote, 0)
 	err := s.db.View(func(tx *bolt.Tx) error {
 		signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
-		attRecordsBkt := tx.Bucket(attestationRecordsBucket)
 		for _, att := range attestations {
 			encEpoch := encodeTargetEpoch(att.IndexedAttestation.Data.Target.Epoch)
 			for _, valIdx := range att.IndexedAttestation.AttestingIndices {
 				encIdx := encodeValidatorIndex(types.ValidatorIndex(valIdx))
 				validatorEpochKey := append(encEpoch, encIdx...)
-				attRecordsKey := signingRootsBkt.Get(validatorEpochKey)
-
-				// An attestation record key is comprised of a signing root (32 bytes)
-				// and a fast sum hash of the attesting indices (8 bytes).
-				if len(attRecordsKey) < attestationRecordKeySize {
-					continue
-				}
-				encExistingAttRecord := attRecordsBkt.Get(attRecordsKey)
+				encExistingAttRecord := signingRootsBkt.Get(validatorEpochKey)
 				if encExistingAttRecord == nil {
 					continue
 				}
-				existingSigningRoot := bytesutil.ToBytes32(attRecordsKey[:signingRootSize])
+				existingSigningRoot := bytesutil.ToBytes32(encExistingAttRecord[:signingRootSize])
 				if existingSigningRoot != att.SigningRoot {
-					existingAttRecord, err := decodeAttestationRecord(encExistingAttRecord)
+					existingAttRecord, err := decodeAttestationRecord(encExistingAttRecord[signingRootSize:])
 					if err != nil {
 						return err
 					}
@@ -144,16 +136,11 @@ func (s *Store) AttestationRecordForValidator(
 	key := append(encEpoch, encIdx...)
 	err := s.db.View(func(tx *bolt.Tx) error {
 		signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
-		attRecordKey := signingRootsBkt.Get(key)
-		if attRecordKey == nil {
-			return nil
-		}
-		attRecordsBkt := tx.Bucket(attestationRecordsBucket)
-		indexedAttBytes := attRecordsBkt.Get(attRecordKey)
+		indexedAttBytes := signingRootsBkt.Get(key)
 		if indexedAttBytes == nil {
 			return nil
 		}
-		decoded, err := decodeAttestationRecord(indexedAttBytes)
+		decoded, err := decodeAttestationRecord(indexedAttBytes[signingRootSize:])
 		if err != nil {
 			return err
 		}
@@ -205,7 +192,8 @@ func (s *Store) SaveAttestationRecordsForValidators(
 			for _, valIdx := range att.IndexedAttestation.AttestingIndices {
 				encIdx := encodeValidatorIndex(types.ValidatorIndex(valIdx))
 				key := append(encodedTargetEpoch[i], encIdx...)
-				if err := signingRootsBkt.Put(key, attRecordKey); err != nil {
+				value := append(att.SigningRoot[:], encodedRecords[i]...)
+				if err := signingRootsBkt.Put(key, value); err != nil {
 					return err
 				}
 			}
@@ -361,18 +349,17 @@ func (s *Store) HighestAttestations(
 	history := make([]*slashpb.HighestAttestation, 0, len(encodedIndices))
 	err = s.db.View(func(tx *bolt.Tx) error {
 		signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
-		attRecordsBkt := tx.Bucket(attestationRecordsBucket)
 		for i := 0; i < len(encodedIndices); i++ {
 			c := signingRootsBkt.Cursor()
 			for k, v := c.Last(); k != nil; k, v = c.Prev() {
 				if suffixForAttestationRecordsKey(k, encodedIndices[i]) {
-					encodedAttRecord := attRecordsBkt.Get(v)
+					encodedAttRecord := v[signingRootSize:]
 					if encodedAttRecord == nil {
 						continue
 					}
-					attWrapper, err := decodeAttestationRecord(encodedAttRecord)
-					if err != nil {
-						return err
+					attWrapper, err1 := decodeAttestationRecord(encodedAttRecord)
+					if err1 != nil {
+						return err1
 					}
 					highestAtt := &slashpb.HighestAttestation{
 						ValidatorIndex:     uint64(indices[i]),
