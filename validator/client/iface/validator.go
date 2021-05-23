@@ -51,4 +51,5 @@ type Validator interface {
 	ReceiveBlocks(ctx context.Context, connectionErrorChannel chan<- error)
 	HandleKeyReload(ctx context.Context, newKeys [][48]byte) (bool, error)
 	StartDoppelgangerService(ctx context.Context) error
+	GetDuplicateCheckFlag() bool
 }

@@ -303,6 +303,11 @@ var (
 		Usage: "Enables more verbose logging for counting down to duty",
 		Value: false,
 	}
+	// EnableDuplicateValidatorDetection enables on-chain check for duplicate validator attestations
+	EnableDuplicateValidatorDetection = &cli.BoolFlag{
+		Name:  "enable-duplicate-validator-detection",
+		Usage: "Enables on-chain check for duplicate validator attestations",
+	}
 )
 
 // DefaultValidatorDir returns OS-specific default validator directory.

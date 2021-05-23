@@ -45,16 +45,17 @@ import (
 // ValidatorClient defines an instance of an eth2 validator that manages
 // the entire lifecycle of services attached to it participating in eth2.
 type ValidatorClient struct {
-	cliCtx            *cli.Context
-	ctx               context.Context
-	cancel            context.CancelFunc
-	db                *kv.Store
-	services          *shared.ServiceRegistry // Lifecycle and service store.
-	lock              sync.RWMutex
-	wallet            *wallet.Wallet
-	walletInitialized *event.Feed
-	duplicateFeed     *event.Feed
-	stop              chan struct{} // Channel to wait for termination notifications.
+	cliCtx             *cli.Context
+	ctx                context.Context
+	cancel             context.CancelFunc
+	db                 *kv.Store
+	services           *shared.ServiceRegistry // Lifecycle and service store.
+	lock               sync.RWMutex
+	wallet             *wallet.Wallet
+	walletInitialized  *event.Feed
+	duplicateFeed      *event.Feed
+	duplicateCheckFlag bool
+	stop               chan struct{} // Channel to wait for termination notifications.
 }
 
 // NewValidatorClient creates a new instance of the Prysm validator client.
@@ -79,16 +80,23 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	// Warn if user's platform is not supported
 	prereq.WarnIfPlatformNotSupported(cliCtx.Context)
 
+	// Determine whether to run the duplicate check
+	duplicateCheckFlag := false
+	if cliCtx.IsSet(flags.EnableDuplicateValidatorDetection.Name) {
+		duplicateCheckFlag = true
+	}
+
 	registry := shared.NewServiceRegistry()
 	ctx, cancel := context.WithCancel(cliCtx.Context)
 	validatorClient := &ValidatorClient{
-		cliCtx:            cliCtx,
-		ctx:               ctx,
-		cancel:            cancel,
-		services:          registry,
-		walletInitialized: new(event.Feed),
-		duplicateFeed:     new(event.Feed),
-		stop:              make(chan struct{}),
+		cliCtx:             cliCtx,
+		ctx:                ctx,
+		cancel:             cancel,
+		services:           registry,
+		walletInitialized:  new(event.Feed),
+		duplicateFeed:      new(event.Feed),
+		duplicateCheckFlag: duplicateCheckFlag,
+		stop:               make(chan struct{}),
 	}
 
 	featureconfig.ConfigureValidator(cliCtx)
@@ -151,16 +159,20 @@ func (c *ValidatorClient) Start() {
 		panic("Panic closing the validator client")
 	}()
 
-	go func() {
-		stopValidatorSig := make(chan *client.DuplicateDetection, 1)
-		sub := c.duplicateFeed.Subscribe(stopValidatorSig)
-		defer sub.Unsubscribe()
-		retDuplicate := <-stopValidatorSig
-		log.Infof("Duplicate Detected...Shutting down; Key 0x%x at slot %d", retDuplicate.DuplicateKey, retDuplicate.Slot)
-		debug.Exit(c.cliCtx) // Ensure trace and CPU profile data are flushed.
-		go c.Close()
-		panic("Panic closing the validator client due to duplicate usage")
-	}()
+	// If the --web flag is enabled to administer the validator
+	// client via a web portal, we start the validator client in a different way.
+	if c.duplicateCheckFlag {
+		go func() {
+			stopValidatorSig := make(chan *client.DuplicateDetection, 1)
+			sub := c.duplicateFeed.Subscribe(stopValidatorSig)
+			defer sub.Unsubscribe()
+			retDuplicate := <-stopValidatorSig
+			log.Infof("Duplicate Detected...Shutting down; Key 0x%x at slot %d", retDuplicate.DuplicateKey, retDuplicate.Slot)
+			debug.Exit(c.cliCtx) // Ensure trace and CPU profile data are flushed.
+			go c.Close()
+			panic("Panic closing the validator client due to duplicate usage")
+		}()
+	}
 
 	// Wait for stop channel to be closed.
 	<-stop
@@ -432,6 +444,7 @@ func (c *ValidatorClient) registerValidatorService(
 		UseWeb:                     c.cliCtx.Bool(flags.EnableWebFlag.Name),
 		WalletInitializedFeed:      c.walletInitialized,
 		DuplicateFeed:              c.duplicateFeed,
+		DuplicateCheckFlag:         c.duplicateCheckFlag,
 		GraffitiStruct:             gStruct,
 		LogDutyCountDown:           c.cliCtx.Bool(flags.EnableDutyCountDown.Name),
 	})

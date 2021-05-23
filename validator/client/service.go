@@ -52,6 +52,7 @@ type ValidatorService struct {
 	emitAccountMetrics    bool
 	logValidatorBalances  bool
 	logDutyCountDown      bool
+	duplicateCheckFlag    bool
 	conn                  *grpc.ClientConn
 	grpcRetryDelay        time.Duration
 	grpcRetries           uint
@@ -78,6 +79,7 @@ type Config struct {
 	LogValidatorBalances       bool
 	EmitAccountMetrics         bool
 	LogDutyCountDown           bool
+	DuplicateCheckFlag         bool
 	WalletInitializedFeed      *event.Feed
 	DuplicateFeed              *event.Feed
 	GrpcRetriesFlag            uint
@@ -118,6 +120,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		db:                    cfg.ValDB,
 		walletInitializedFeed: cfg.WalletInitializedFeed,
 		duplicateFeed:         cfg.DuplicateFeed,
+		duplicateCheckFlag:    cfg.DuplicateCheckFlag,
 		useWeb:                cfg.UseWeb,
 		graffitiStruct:        cfg.GraffitiStruct,
 		logDutyCountDown:      cfg.LogDutyCountDown,
@@ -199,6 +202,7 @@ func (v *ValidatorService) Start() {
 		useWeb:                         v.useWeb,
 		walletInitializedFeed:          v.walletInitializedFeed,
 		duplicateFeed:                  v.duplicateFeed,
+		duplicateCheckFlag:             v.duplicateCheckFlag,
 		blockFeed:                      new(event.Feed),
 		graffitiStruct:                 v.graffitiStruct,
 		graffitiOrderedIndex:           graffitiOrderedIndex,

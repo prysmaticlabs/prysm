@@ -57,6 +57,8 @@ type validator struct {
 	useWeb                             bool
 	emitAccountMetrics                 bool
 	logDutyCountDown                   bool
+	duplicateCheckFlag                 bool
+	graffitiStruct                     *graffiti.Graffiti
 	domainDataLock                     sync.Mutex
 	attLogsLock                        sync.Mutex
 	aggregatedSlotCommitteeIDCacheLock sync.Mutex
@@ -66,6 +68,7 @@ type validator struct {
 	duplicateFeed                      *event.Feed
 	blockFeed                          *event.Feed
 	genesisTime                        uint64
+	graffitiOrderedIndex               uint64
 	highestValidSlot                   types.Slot
 	domainDataCache                    *ristretto.Cache
 	aggregatedSlotCommitteeIDCache     *lru.Cache
@@ -82,8 +85,6 @@ type validator struct {
 	db                                 vdb.Database
 	graffiti                           []byte
 	voteStats                          voteStats
-	graffitiStruct                     *graffiti.Graffiti
-	graffitiOrderedIndex               uint64
 	eipImportBlacklistedPublicKeys     map[[48]byte]bool
 }
 
@@ -582,6 +583,11 @@ func (v *validator) UpdateDomainDataCaches(ctx context.Context, slot types.Slot)
 			log.WithError(err).Errorf("Failed to update domain data for domain %v", d)
 		}
 	}
+}
+
+// Returns the duplicateCheckFlag for the runner to determine whether to check or not
+func (v *validator) GetDuplicateCheckFlag() bool {
+	return v.duplicateCheckFlag
 }
 
 // AllValidatorsAreExited informs whether all validators have already exited.

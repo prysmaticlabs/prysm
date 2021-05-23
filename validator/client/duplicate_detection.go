@@ -22,8 +22,8 @@ import (
 )
 
 type DuplicateDetection struct {
-	Slot            types.Slot
-	DuplicateKey	[]byte
+	Slot         types.Slot
+	DuplicateKey []byte
 }
 
 // The Public Keys and Indices of this Validator. Retrieve once.
@@ -40,11 +40,7 @@ func (v *validator) StartDoppelgangerService(ctx context.Context) error {
 	// N epochs to check
 	NoEpochsToCheck = params.BeaconConfig().DuplicateValidatorEpochsCheck
 
-	//duplicateChan := make(chan *DuplicateDetection)
-	//sub := v.duplicateFeed.Subscribe(duplicateChan)
-	//defer sub.Unsubscribe()
-
-	// The Public Keys of this Validator. Retrieve once.
+	// Public Keys of this Validator. Retrieve once.
 	var err error
 	valIndices, validatingPublicKeys, err = v.retrieveValidatingPublicKeys(ctx)
 	if err != nil {
@@ -55,18 +51,9 @@ func (v *validator) StartDoppelgangerService(ctx context.Context) error {
 	slot := <-v.NextSlot()
 	currentEpoch := helpers.SlotToEpoch(slot)
 	genesisEpoch := params.BeaconConfig().GenesisEpoch
-	//types.Epoch(v.genesisTime / uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)))
-
-	// Returns number of slots since the start of the epoch.
-	/*sinceStart,err := slot.SafeModSlot(params.BeaconConfig().SlotsPerEpoch)
-	if err != nil {
-		log.Info("Doppelganger service - arthimetic error during mod ")
-		return errors.Wrap(err,"Doppelganger service - arthimetic error during mod ")
-	}*/
 
 	// Counting N epochs from the starting Slot(substract 1 since we alwasy check slot-1 at the start).
 	endingSlot := slot.Add(uint64(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(NoEpochsToCheck)))).Sub(1)
-	//endingSlot += sinceStart
 
 	// Ensure currentEpoch > genesisEpoch
 	// If the current is equal to the genesis or prior to genesis then no duplicate check is performed.
@@ -83,27 +70,28 @@ func (v *validator) StartDoppelgangerService(ctx context.Context) error {
 	// 4. repeat for 2 epochs, Go to 1.
 	for {
 		// Are we done?
-		if slot >= endingSlot {
+		if slot >= endingSlot.Sub(1) {
 			log.Info("Doppelganger service - finished the epoch checks for duplicates ")
 			return nil
 		}
 
 		log.Infof("Doppelganger service - starts the check at previous slot %d", slot-1)
 		// Detect a doppelganger in the previous Slot
-		foundDuplicate, dupIndex, err := v.detectDoppelganger(ctx, slot-1)
+		dupIndex, err := v.detectDoppelganger(ctx, slot-1)
 		if err != nil {
 			return err
 		}
-		if foundDuplicate {
+		if dupIndex != nil {
 			log.Infof("Doppelganger detected! Validator key 0x%x seems to be running elsewhere."+
 				"This process will exit, avoiding a proposer or attester slashing event."+
 				"Please ensure you are not running your validator in two places simultaneously.", dupIndex)
 
+			// Broadcast the findings at the slot. The Node process will listen and shutdown.
 			ret := &DuplicateDetection{}
 			ret.DuplicateKey = dupIndex
 			ret.Slot = slot
 			v.duplicateFeed.Send(ret)
-			return nil//errors.New("Doppelganger detected")
+			return nil
 		}
 
 		// Sleep time between now and start of next slot.
@@ -116,14 +104,9 @@ func (v *validator) StartDoppelgangerService(ctx context.Context) error {
 			}).Info("Sleeping until the next slot - Doppelganger service")
 			time.Sleep(timeRemaining)
 			continue
-		} /*else {
-			// This should not happen. Clock is off? Or maybe Detection process at previous slot took too long
-			// Sleep for 1 slot
-			log.WithFields(logrus.Fields{
-				"timeRemaining": timeRemaining,
-			}).Info("Time remaining till next slot is negative! Sleep a slot - Doppelganger service")
-			time.Sleep(time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot))
-		}*/
+		} // else condition should not happen.Clock is off?
+		// Or maybe Detection process at previous slot took too long
+
 		// Get next slot
 		slot = <-v.NextSlot()
 		log.Infof("Doppelganger service - new Slot %d", slot)
@@ -134,48 +117,47 @@ func (v *validator) StartDoppelgangerService(ctx context.Context) error {
 // Doppelganger detection
 // Retrieve all the beacon-chain blocks at the given slot
 // and check for blocks with the same pubKey as this validator
-func (v *validator) detectDoppelganger(ctx context.Context, slot types.Slot) (bool, []byte, error) {
-	result := make([]byte, 1)
+func (v *validator) detectDoppelganger(ctx context.Context, slot types.Slot) ([]byte, error) {
 
 	log.Infof("Doppelganger service - iterating through blocks ")
-	// Get all this validator 's attestation in the current slot so far requiring a duplicate detection check
+	// Get all this validator's attestation in the current slot so far requiring a duplicate detection check
 	req := &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Slot{Slot: slot}}
 	blks, err := v.beaconClient.ListBlocks(ctx, req)
 	if err != nil {
-		return false, result, errors.Wrap(err, "Doppelganger service - failed to get blocks from beacon-chain")
+		return nil, errors.Wrap(err, "Doppelganger service - failed to get blocks from beacon-chain")
 	}
 
 	log.Infof("Doppelganger service - interating through signed Blocks at slot  %d", slot)
 	for _, blk := range blks.BlockContainers {
 
-		log.WithField("blk.BlockRoot", fmt.Sprintf("Doppelganger service - check Block for a duplicate proposer" +
-			" at root %#x" ,  blk.BlockRoot))
+		log.WithField("blk.BlockRoot", fmt.Sprintf("Doppelganger service - check Block for a duplicate proposer"+
+			" at root %#x", blk.BlockRoot))
 		dupProposalKey, err := v.checkBlockProposer(ctx, blk)
 		if err != nil {
-			log.Infof("Doppelganger service - failed on return from possible " +
-				"proposer check at root %#x" ,  blk.BlockRoot)
-			return false, nil, errors.Wrapf(err,
+			log.Infof("Doppelganger service - failed on return from possible "+
+				"proposer check at root %#x", blk.BlockRoot)
+			return nil, errors.Wrapf(err,
 				"Doppelganger service - failed on return from Prosposer check at root %#x", blk.BlockRoot)
 		}
 		if dupProposalKey != nil {
 			log.Info("Doppelganger service - found a proposer duplicate")
-			return true, dupProposalKey, nil
+			return dupProposalKey, nil
 		}
 
-		log.WithField("blk.BlockRoot", fmt.Sprintf("Doppelganger service - check Block for a duplicate attestor" +
-			" at root %#x" ,  blk.BlockRoot))
-		dupAttestorKey, err := v.checkBlockAttestors(ctx,blk)
+		log.WithField("blk.BlockRoot", fmt.Sprintf("Doppelganger service - check Block for a duplicate attestor"+
+			" at root %#x", blk.BlockRoot))
+		dupAttestorKey, err := v.checkBlockAttestors(ctx, blk)
 		if err != nil {
-			log.Infof("Doppelganger service - failed on return from possible " +
-						"attestor check at root %#x" ,  blk.BlockRoot)
-			return false,nil, err
+			log.Infof("Doppelganger service - failed on return from possible "+
+				"attestor check at root %#x", blk.BlockRoot)
+			return nil, err
 		}
 		if dupAttestorKey != nil {
 			log.Info("Doppelganger service - found an attestor duplicate")
-			return true,dupAttestorKey ,nil
+			return dupAttestorKey, nil
 		}
 	}
-	return false, nil, nil
+	return nil, nil
 }
 
 // Given a SignedBlock determine if the proposer's idx is that of one this validator's pubKeys
