@@ -272,7 +272,7 @@ func (b *BeaconState) ToProto() (*v1.BeaconState, error) {
 			AggregationBits: att.AggregationBits,
 			Data: &v1.AttestationData{
 				Slot:            data.Slot,
-				CommitteeIndex:  data.CommitteeIndex,
+				Index:           data.CommitteeIndex,
 				BeaconBlockRoot: data.BeaconBlockRoot,
 				Source: &v1.Checkpoint{
 					Epoch: data.Source.Epoch,
@@ -294,7 +294,7 @@ func (b *BeaconState) ToProto() (*v1.BeaconState, error) {
 			AggregationBits: att.AggregationBits,
 			Data: &v1.AttestationData{
 				Slot:            data.Slot,
-				CommitteeIndex:  data.CommitteeIndex,
+				Index:           data.CommitteeIndex,
 				BeaconBlockRoot: data.BeaconBlockRoot,
 				Source: &v1.Checkpoint{
 					Epoch: data.Source.Epoch,
