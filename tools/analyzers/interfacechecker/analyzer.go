@@ -4,6 +4,7 @@ package interfacechecker
 import (
 	"errors"
 	"go/ast"
+	"go/token"
 	"go/types"
 	"strings"
 
@@ -82,12 +83,15 @@ func handleConditionalExpression(exp *ast.BinaryExpr, pass *analysis.Pass) {
 			continue
 		}
 		if xIsIface && yIsNil {
-			pass.Reportf(identX.Pos(), "A nilness check is being performed on an interface"+
-				", this check needs another accompanying check on the underlying object for the interface")
+			reportFailure(identX.Pos(), pass)
 		}
 		if yisIface && xIsNil {
-			pass.Reportf(identY.Pos(), "A nilness check is being performed on an interface"+
-				", this check needs another accompanying check on the underlying object for the interface")
+			reportFailure(identY.Pos(), pass)
 		}
 	}
+}
+
+func reportFailure(pos token.Pos, pass *analysis.Pass) {
+	pass.Reportf(pos, "A single nilness check is being performed on an interface"+
+		", this check needs another accompanying nilness check on the underlying object for the interface.")
 }
