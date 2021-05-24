@@ -171,7 +171,7 @@ func (c *ValidatorClient) Start() {
 			if retDuplicate.DuplicateKey == nil {
 				log.Info("No Duplicate Detected")
 				close(stopValidatorSig) //close channel
-			}else {
+			} else {
 				log.Infof("Duplicate Detected...Shutting down; Key 0x%x at slot %d", retDuplicate.DuplicateKey, retDuplicate.Slot)
 				close(stopValidatorSig) //close channel
 				debug.Exit(c.cliCtx)    // Ensure trace and CPU profile data are flushed.
