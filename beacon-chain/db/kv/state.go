@@ -204,7 +204,16 @@ func (s *Store) stateBytes(ctx context.Context, blockRoot [32]byte) ([]byte, err
 	var dst []byte
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(stateBucket)
-		dst = bkt.Get(blockRoot[:])
+		stBytes := bkt.Get(blockRoot[:])
+		if len(stBytes) == 0 {
+			return nil
+		}
+		// Due to https://github.com/boltdb/bolt/issues/204, we need to
+		// allocate a byte slice separately in the transaction or there
+		// is the possibility of a panic when accessing that particular
+		// area of memory.
+		dst = make([]byte, len(stBytes))
+		copy(dst, stBytes)
 		return nil
 	})
 	return dst, err
