@@ -250,7 +250,7 @@ func V1Alpha1ValidatorToV1(v1Validator *ethpb_alpha.Validator) *ethpb.Validator 
 		return &ethpb.Validator{}
 	}
 	return &ethpb.Validator{
-		PublicKey:                  v1Validator.PublicKey,
+		Pubkey:                     v1Validator.PublicKey,
 		WithdrawalCredentials:      v1Validator.WithdrawalCredentials,
 		EffectiveBalance:           v1Validator.EffectiveBalance,
 		Slashed:                    v1Validator.Slashed,
