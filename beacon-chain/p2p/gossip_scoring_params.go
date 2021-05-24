@@ -113,7 +113,7 @@ func (s *Service) retrieveActiveValidators() (uint64, error) {
 		if err != nil {
 			return 0, err
 		}
-		if genState == nil {
+		if genState == nil || genState.IsNil() {
 			return 0, errors.New("no genesis state exists")
 		}
 		activeVals, err := helpers.ActiveValidatorCount(genState, helpers.CurrentEpoch(genState))
@@ -128,7 +128,7 @@ func (s *Service) retrieveActiveValidators() (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	if bState == nil {
+	if bState == nil || bState.IsNil() {
 		return 0, errors.Errorf("no state with root %#x exists", rt)
 	}
 	activeVals, err := helpers.ActiveValidatorCount(bState, helpers.CurrentEpoch(bState))

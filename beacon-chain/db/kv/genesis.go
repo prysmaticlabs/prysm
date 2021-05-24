@@ -72,7 +72,7 @@ func (s *Store) LoadGenesis(ctx context.Context, r io.Reader) error {
 	}
 	// If some different genesis state existed already, return an error. The same genesis state is
 	// considered a no-op.
-	if existing != nil {
+	if existing != nil && !existing.IsNil() {
 		a, err := existing.HashTreeRoot(ctx)
 		if err != nil {
 			return err
@@ -110,7 +110,7 @@ func (s *Store) EnsureEmbeddedGenesis(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if gs != nil {
+	if gs != nil && !gs.IsNil() {
 		return s.SaveGenesisData(ctx, gs)
 	}
 	return nil

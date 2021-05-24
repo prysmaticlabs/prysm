@@ -204,7 +204,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 	if err != nil {
 		return nil, nil, err
 	}
-	if preState == nil {
+	if preState == nil || preState.IsNil() {
 		return nil, nil, fmt.Errorf("nil pre state for slot %d", b.Slot())
 	}
 

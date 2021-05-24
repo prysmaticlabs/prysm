@@ -29,7 +29,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (ifac
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get cached checkpoint state")
 	}
-	if cachedState != nil {
+	if cachedState != nil && !cachedState.IsNil() {
 		return cachedState, nil
 	}
 

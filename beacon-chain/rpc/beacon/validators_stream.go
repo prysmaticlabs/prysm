@@ -99,7 +99,7 @@ func (bs *Server) StreamValidatorsInfo(stream ethpb.BeaconChain_StreamValidators
 	if err != nil {
 		return status.Error(codes.Internal, "Could not access head state")
 	}
-	if headState == nil {
+	if headState == nil || headState.IsNil() {
 		return status.Error(codes.Internal, "Not ready to serve information")
 	}
 
@@ -260,7 +260,7 @@ func (is *infostream) generateValidatorsInfo(pubKeys [][]byte) ([]*ethpb.Validat
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not access head state")
 	}
-	if headState == nil {
+	if headState == nil || headState.IsNil() {
 		return nil, status.Error(codes.Internal, "Not ready to serve information")
 	}
 	epoch := types.Epoch(headState.Slot() / params.BeaconConfig().SlotsPerEpoch)
@@ -450,7 +450,7 @@ func (is *infostream) handleBlockProcessed() {
 		log.Warn("Could not access head state for infostream")
 		return
 	}
-	if headState == nil {
+	if headState == nil || headState.IsNil() {
 		// We aren't ready to serve information
 		return
 	}

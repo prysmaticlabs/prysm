@@ -40,7 +40,7 @@ func (s *Service) getBlockPreState(ctx context.Context, b interfaces.BeaconBlock
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot())
 	}
-	if preState == nil {
+	if preState == nil || preState.IsNil() {
 		return nil, errors.Wrapf(err, "nil pre state for slot %d", b.Slot())
 	}
 
