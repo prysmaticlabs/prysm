@@ -159,18 +159,25 @@ func (c *ValidatorClient) Start() {
 		panic("Panic closing the validator client")
 	}()
 
-	// If the --web flag is enabled to administer the validator
-	// client via a web portal, we start the validator client in a different way.
+	// If --enable-duplicate-validator-detection flag is set be ready for an event feed.
 	if c.duplicateCheckFlag {
 		go func() {
 			stopValidatorSig := make(chan *client.DuplicateDetection, 1)
 			sub := c.duplicateFeed.Subscribe(stopValidatorSig)
 			defer sub.Unsubscribe()
 			retDuplicate := <-stopValidatorSig
-			log.Infof("Duplicate Detected...Shutting down; Key 0x%x at slot %d", retDuplicate.DuplicateKey, retDuplicate.Slot)
-			debug.Exit(c.cliCtx) // Ensure trace and CPU profile data are flushed.
-			go c.Close()
-			panic("Panic closing the validator client due to duplicate usage")
+			// Either a duplicate was found and in such a case, the node is shut similar to an os.signal interrupt,
+			// Or no duplicate and only channel is closed.
+			if retDuplicate.DuplicateKey == nil {
+				log.Info("No Duplicate Detected")
+				close(stopValidatorSig) //close channel
+			}else {
+				log.Infof("Duplicate Detected...Shutting down; Key 0x%x at slot %d", retDuplicate.DuplicateKey, retDuplicate.Slot)
+				close(stopValidatorSig) //close channel
+				debug.Exit(c.cliCtx)    // Ensure trace and CPU profile data are flushed.
+				go c.Close()
+				panic("Panic closing the validator client due to duplicate usage")
+			}
 		}()
 	}
 

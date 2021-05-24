@@ -72,6 +72,10 @@ func (v *validator) StartDoppelgangerService(ctx context.Context) error {
 		// Are we done?
 		if slot >= endingSlot.Sub(1) {
 			log.Info("Doppelganger service - finished the epoch checks for duplicates ")
+			// not found. Return nil struct to signal for the Duplicate Check goroutine in node to shut down only.
+			ret := &DuplicateDetection{}
+			ret.DuplicateKey = nil
+			v.duplicateFeed.Send(ret)
 			return nil
 		}
 

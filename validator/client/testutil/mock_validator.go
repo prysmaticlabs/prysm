@@ -7,6 +7,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
@@ -30,6 +31,7 @@ type FakeValidator struct {
 	DeleteProtectionCalled            bool
 	SlotDeadlineCalled                bool
 	HandleKeyReloadCalled             bool
+	DuplicateCheckFlag                bool
 	WaitForChainStartCalled           int
 	WaitForSyncCalled                 int
 	WaitForActivationCalled           int
@@ -230,4 +232,29 @@ func (fv *FakeValidator) HandleKeyReload(_ context.Context, newKeys [][48]byte) 
 		}
 	}
 	return false, nil
+}
+
+// Returns the duplicateCheckFlag for the runner to determine whether to check or not
+func (fv *FakeValidator) GetDuplicateCheckFlag() bool {
+	return fv.DuplicateCheckFlag
+}
+
+// Starts the Doppelganger detection
+func (fv *FakeValidator) StartDoppelgangerService(ctx context.Context) error {
+	if fv.DuplicateCheckFlag {
+		slot := <-fv.NextSlot()
+		// Counting N epochs from the starting Slot(substract 1 since we alwasy check slot-1 at the start).
+		endingSlot := slot.Add(uint64(params.BeaconConfig().SlotsPerEpoch.Mul(1))).Sub(1)
+
+		// Fake loop for N epochs
+		for {
+			// Are we done?
+			if slot >= endingSlot.Sub(1) {
+				return nil
+			}
+			slot = <-fv.NextSlot()
+		}
+	} else {
+		return nil
+	}
 }
