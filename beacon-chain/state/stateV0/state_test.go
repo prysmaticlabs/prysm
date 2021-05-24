@@ -94,3 +94,14 @@ func TestBeaconState_NoDeadlock(t *testing.T) {
 	// Test will not terminate in the event of a deadlock.
 	wg.Wait()
 }
+
+func TestStateTrie_IsNil(t *testing.T) {
+	var emptyState *BeaconState
+	assert.Equal(t, true, emptyState.IsNil())
+
+	emptyProto := &BeaconState{state: nil}
+	assert.Equal(t, true, emptyProto.IsNil())
+
+	nonNilState := &BeaconState{state: &pb.BeaconState{}}
+	assert.Equal(t, false, nonNilState.IsNil())
+}
