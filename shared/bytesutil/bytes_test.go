@@ -376,24 +376,22 @@ func TestUint64ToBytes_RoundTrip(t *testing.T) {
 	}
 }
 
-func TestIsBytes32Hex(t *testing.T) {
-	pass := []byte("0x1234567890abcDEF1234567890abcDEF1234567890abcDEF1234567890abcDEF")
-	noPrefix := []byte("1234567890abcDEF1234567890abcDEF1234567890abcDEF1234567890abcDEF")
-
+func TestIsHex(t *testing.T) {
 	tests := []struct {
 		a []byte
 		b bool
 	}{
 		{nil, false},
+		{[]byte(""), false},
+		{[]byte("0x"), false},
+		{[]byte("0x0"), true},
 		{[]byte("foo"), false},
-		{[]byte("1234567890abcDEF"), false},
 		{[]byte("XYZ4567890abcDEF1234567890abcDEF1234567890abcDEF1234567890abcDEF"), false},
-		{[]byte("foo1234567890abcDEF1234567890abcDEF1234567890abcDEF1234567890abcDEFbar"), false},
-		{pass, true},
-		{noPrefix, true},
+		{[]byte("0x1234567890abcDEF1234567890abcDEF1234567890abcDEF1234567890abcDEF"), true},
+		{[]byte("1234567890abcDEF1234567890abcDEF1234567890abcDEF1234567890abcDEF"), false},
 	}
 	for _, tt := range tests {
-		isHex, err := bytesutil.IsBytes32Hex(tt.a)
+		isHex, err := bytesutil.IsHex(tt.a)
 		require.NoError(t, err)
 		assert.Equal(t, tt.b, isHex)
 	}

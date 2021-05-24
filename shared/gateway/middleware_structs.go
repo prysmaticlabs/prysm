@@ -39,6 +39,26 @@ type StateFinalityCheckpointResponse_StateFinalityCheckpointJson struct {
 	Finalized         *CheckpointJson `json:"finalized"`
 }
 
+// StateValidatorsResponseJson is used in /beacon/states/{state_id}/validators API endpoint.
+type StateValidatorsResponseJson struct {
+	Data []*ValidatorContainerJson `json:"data"`
+}
+
+// StateValidatorResponseJson is used in /beacon/states/{state_id}/validators/{validator_id} API endpoint.
+type StateValidatorResponseJson struct {
+	Data *ValidatorContainerJson `json:"data"`
+}
+
+// ValidatorBalancesResponseJson is used in /beacon/states/{state_id}/validator_balances API endpoint.
+type ValidatorBalancesResponseJson struct {
+	Data []*ValidatorBalanceJson `json:"data"`
+}
+
+// StateCommitteesResponseJson is used in /beacon/states/{state_id}/committees API endpoint.
+type StateCommitteesResponseJson struct {
+	Data []*CommitteeJson `json:"data"`
+}
+
 // BlockHeaderResponseJson is used in /beacon/headers/{block_id} API endpoint.
 type BlockHeaderResponseJson struct {
 	Data *BlockHeaderContainerJson `json:"data"`
@@ -54,12 +74,17 @@ type BlockRootResponseJson struct {
 	Data *BlockRootContainerJson `json:"data"`
 }
 
-// BlockAttestationsResponseJson is used in /beacon/blocks/{block_id}/attestations GET API endpoint.
+// BlockAttestationsResponseJson is used in /beacon/blocks/{block_id}/attestations API endpoint.
 type BlockAttestationsResponseJson struct {
 	Data []*AttestationJson `json:"data"`
 }
 
-// SubmitAttestationRequestJson is used in /beacon/blocks/{block_id}/attestations POST API endpoint.
+// AttestationsPoolResponseJson is used in /beacon/pool/attestations GET API endpoint.
+type AttestationsPoolResponseJson struct {
+	Data []*AttestationJson `json:"data"`
+}
+
+// SubmitAttestationRequestJson is used in /beacon/pool/attestations POST API endpoint.
 type SubmitAttestationRequestJson struct {
 	Data []*AttestationJson `json:"data"`
 }
@@ -336,6 +361,14 @@ type ForkJson struct {
 	Epoch           string `json:"epoch"`
 }
 
+// ValidatorContainerJson is a JSON representation of a validator container.
+type ValidatorContainerJson struct {
+	Index     string         `json:"index"`
+	Balance   string         `json:"balance"`
+	Status    string         `json:"status"`
+	Validator *ValidatorJson `json:"validator"`
+}
+
 // ValidatorJson is a JSON representation of a validator.
 type ValidatorJson struct {
 	PublicKey                  string `json:"public_key" hex:"true"`
@@ -346,6 +379,19 @@ type ValidatorJson struct {
 	ActivationEpoch            string `json:"activation_epoch"`
 	ExitEpoch                  string `json:"exit_epoch"`
 	WithdrawableEpoch          string `json:"withdrawable_epoch"`
+}
+
+// ValidatorBalanceJson is a JSON representation of a validator's balance.
+type ValidatorBalanceJson struct {
+	Index   string `json:"index"`
+	Balance string `json:"balance"`
+}
+
+// CommitteeJson is a JSON representation of a committee
+type CommitteeJson struct {
+	Index      string   `json:"index"`
+	Slot       string   `json:"slot"`
+	Validators []string `json:"validators"`
 }
 
 // PendingAttestationJson is a JSON representation of a pending attestation.
