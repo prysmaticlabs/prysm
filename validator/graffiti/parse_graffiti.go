@@ -64,7 +64,7 @@ func ParseHexGraffiti(rawGraffiti string) string {
 		target := splitGraffiti[1]
 		if target == "" {
 			log.WithFields(logrus.Fields{
-				"input": rawGraffiti
+				"input": rawGraffiti,
 			}).Debug("Blank hex tag to be interpreted as itself")
 			return rawGraffiti
 		}
@@ -75,7 +75,7 @@ func ParseHexGraffiti(rawGraffiti string) string {
 
 		if target == "" {
 			log.WithFields(logrus.Fields{
-				"input": rawGraffiti
+				"input": rawGraffiti,
 			}).Debug("Nothing after 0x prefix, hex tag to be interpreted as itself")
 			return rawGraffiti
 		}
