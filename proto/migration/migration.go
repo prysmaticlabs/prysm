@@ -1,10 +1,10 @@
 package migration
 
 import (
-	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	ethpb_alpha "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"google.golang.org/protobuf/proto"
 )
 
 // V1Alpha1BlockToV1BlockHeader converts a v1alpha1 SignedBeaconBlock proto to a v1 SignedBeaconBlockHeader proto.
@@ -27,7 +27,7 @@ func V1Alpha1BlockToV1BlockHeader(block *ethpb_alpha.SignedBeaconBlock) (*ethpb.
 
 // V1Alpha1ToV1Block converts a v1alpha1 SignedBeaconBlock proto to a v1 proto.
 func V1Alpha1ToV1Block(alphaBlk *ethpb_alpha.SignedBeaconBlock) (*ethpb.SignedBeaconBlock, error) {
-	marshaledBlk, err := alphaBlk.Marshal()
+	marshaledBlk, err := proto.Marshal(alphaBlk)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not marshal block")
 	}
@@ -40,7 +40,7 @@ func V1Alpha1ToV1Block(alphaBlk *ethpb_alpha.SignedBeaconBlock) (*ethpb.SignedBe
 
 // V1ToV1Alpha1Block converts a v1 SignedBeaconBlock proto to a v1alpha1 proto.
 func V1ToV1Alpha1Block(alphaBlk *ethpb.SignedBeaconBlock) (*ethpb_alpha.SignedBeaconBlock, error) {
-	marshaledBlk, err := alphaBlk.Marshal()
+	marshaledBlk, err := proto.Marshal(alphaBlk)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not marshal block")
 	}
@@ -60,6 +60,18 @@ func V1Alpha1IndexedAttToV1(v1alpha1Att *ethpb_alpha.IndexedAttestation) *ethpb.
 		AttestingIndices: v1alpha1Att.AttestingIndices,
 		Data:             V1Alpha1AttDataToV1(v1alpha1Att.Data),
 		Signature:        v1alpha1Att.Signature,
+	}
+}
+
+// V1Alpha1AttestationToV1 converts a v1alpha1 attestation to v1.
+func V1Alpha1AttestationToV1(v1alpha1Att *ethpb_alpha.Attestation) *ethpb.Attestation {
+	if v1alpha1Att == nil {
+		return &ethpb.Attestation{}
+	}
+	return &ethpb.Attestation{
+		AggregationBits: v1alpha1Att.AggregationBits,
+		Data:            V1Alpha1AttDataToV1(v1alpha1Att.Data),
+		Signature:       v1alpha1Att.Signature,
 	}
 }
 
@@ -230,5 +242,21 @@ func V1ProposerSlashingToV1Alpha1(v1Slashing *ethpb.ProposerSlashing) *ethpb_alp
 	return &ethpb_alpha.ProposerSlashing{
 		Header_1: V1SignedHeaderToV1Alpha1(v1Slashing.Header_1),
 		Header_2: V1SignedHeaderToV1Alpha1(v1Slashing.Header_2),
+	}
+}
+
+func V1Alpha1ValidatorToV1(v1Validator *ethpb_alpha.Validator) *ethpb.Validator {
+	if v1Validator == nil {
+		return &ethpb.Validator{}
+	}
+	return &ethpb.Validator{
+		PublicKey:                  v1Validator.PublicKey,
+		WithdrawalCredentials:      v1Validator.WithdrawalCredentials,
+		EffectiveBalance:           v1Validator.EffectiveBalance,
+		Slashed:                    v1Validator.Slashed,
+		ActivationEligibilityEpoch: v1Validator.ActivationEligibilityEpoch,
+		ActivationEpoch:            v1Validator.ActivationEpoch,
+		ExitEpoch:                  v1Validator.ExitEpoch,
+		WithdrawableEpoch:          v1Validator.WithdrawableEpoch,
 	}
 }

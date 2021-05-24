@@ -156,7 +156,7 @@ func executeStateTransitionStateGen(
 func processSlotsStateGen(ctx context.Context, state iface.BeaconState, slot types.Slot) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stategen.ProcessSlotsStateGen")
 	defer span.End()
-	if state == nil {
+	if state == nil || state.IsNil() {
 		return nil, errUnknownState
 	}
 

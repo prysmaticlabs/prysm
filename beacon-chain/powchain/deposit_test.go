@@ -183,6 +183,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 	})
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
+	require.NoError(t, web3Service.preGenesisState.SetValidators([]*ethpb.Validator{}))
 
 	deposit := &ethpb.Deposit{
 		Data: &ethpb.Deposit_Data{

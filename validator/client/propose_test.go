@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	lru "github.com/hashicorp/golang-lru"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -24,6 +23,7 @@ import (
 	testing2 "github.com/prysmaticlabs/prysm/validator/db/testing"
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type mocks struct {
@@ -502,7 +502,7 @@ func TestProposeExit_DomainDataFailed(t *testing.T) {
 		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
 
 	// Any time in the past will suffice
-	genesisTime := &ptypes.Timestamp{
+	genesisTime := &timestamppb.Timestamp{
 		Seconds: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
 	}
 
@@ -536,7 +536,7 @@ func TestProposeExit_DomainDataIsNil(t *testing.T) {
 		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
 
 	// Any time in the past will suffice
-	genesisTime := &ptypes.Timestamp{
+	genesisTime := &timestamppb.Timestamp{
 		Seconds: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
 	}
 
@@ -569,7 +569,7 @@ func TestProposeBlock_ProposeExitFailed(t *testing.T) {
 		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
 
 	// Any time in the past will suffice
-	genesisTime := &ptypes.Timestamp{
+	genesisTime := &timestamppb.Timestamp{
 		Seconds: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
 	}
 
@@ -606,7 +606,7 @@ func TestProposeExit_BroadcastsBlock(t *testing.T) {
 		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
 
 	// Any time in the past will suffice
-	genesisTime := &ptypes.Timestamp{
+	genesisTime := &timestamppb.Timestamp{
 		Seconds: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
 	}
 
