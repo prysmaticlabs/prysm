@@ -7,6 +7,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
 
