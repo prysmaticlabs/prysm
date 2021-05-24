@@ -294,7 +294,7 @@ func (s *Store) HighestSlotStatesBelow(ctx context.Context, slot types.Slot) ([]
 			return nil, err
 		}
 	}
-	if st == nil {
+	if st == nil || st.IsNil() {
 		st, err = s.GenesisState(ctx)
 		if err != nil {
 			return nil, err

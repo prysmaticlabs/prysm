@@ -379,6 +379,12 @@ func (b *BeaconState) FieldReferencesCount() map[string]uint64 {
 	return refMap
 }
 
+// IsNil checks if the state and the underlying proto
+// object are nil.
+func (b *BeaconState) IsNil() bool {
+	return b == nil || b.state == nil
+}
+
 func (b *BeaconState) rootSelector(ctx context.Context, field fieldIndex) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconState.rootSelector")
 	defer span.End()

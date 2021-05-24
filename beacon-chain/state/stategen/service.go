@@ -101,7 +101,7 @@ func (s *State) Resume(ctx context.Context) (iface.BeaconState, error) {
 	if err != nil {
 		return nil, err
 	}
-	if fState == nil {
+	if fState == nil || fState.IsNil() {
 		return nil, errors.New("finalized state not found in disk")
 	}
 

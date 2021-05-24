@@ -78,7 +78,7 @@ func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get ancestor state")
 	}
-	if startState == nil {
+	if startState == nil || startState.IsNil() {
 		return nil, errUnknownState
 	}
 	summary, err := s.stateSummary(ctx, blockRoot)
@@ -149,7 +149,7 @@ func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (iface.
 
 	// First, it checks if the state exists in hot state cache.
 	cachedState := s.hotStateCache.get(blockRoot)
-	if cachedState != nil {
+	if cachedState != nil && !cachedState.IsNil() {
 		return cachedState, nil
 	}
 
@@ -179,7 +179,7 @@ func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (iface.
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get ancestor state")
 	}
-	if startState == nil {
+	if startState == nil || startState.IsNil() {
 		return nil, errUnknownBoundaryState
 	}
 

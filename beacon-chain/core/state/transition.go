@@ -179,7 +179,7 @@ func ProcessSlotsUsingNextSlotCache(
 	}
 	// If the next slot state is not nil (i.e. cache hit).
 	// We replace next slot state with parent state.
-	if nextSlotState != nil {
+	if nextSlotState != nil && !nextSlotState.IsNil() {
 		parentState = nextSlotState
 	}
 
@@ -208,7 +208,7 @@ func ProcessSlotsUsingNextSlotCache(
 func ProcessSlots(ctx context.Context, state iface.BeaconState, slot types.Slot) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessSlots")
 	defer span.End()
-	if state == nil {
+	if state == nil || state.IsNil() {
 		return nil, errors.New("nil state")
 	}
 	span.AddAttributes(trace.Int64Attribute("slots", int64(slot)-int64(state.Slot())))
@@ -399,7 +399,7 @@ func ProcessEpochPrecompute(ctx context.Context, state iface.BeaconState) (iface
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("epoch", int64(helpers.CurrentEpoch(state))))
 
-	if state == nil {
+	if state == nil || state.IsNil() {
 		return nil, errors.New("nil state")
 	}
 	vp, bp, err := precompute.New(ctx, state)
