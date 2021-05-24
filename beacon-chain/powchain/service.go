@@ -247,7 +247,7 @@ func (s *Service) Start() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		if genState == nil {
+		if genState == nil || genState.IsNil() {
 			log.Fatal("cannot create genesis state: no eth1 http endpoint defined")
 		}
 	}
@@ -611,7 +611,7 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.Deposit
 		if err != nil {
 			return errors.Wrap(err, "could not get finalized state")
 		}
-		if fState == nil {
+		if fState == nil || fState.IsNil() {
 			return errors.Errorf("finalized state with root %#x does not exist in the db", rt)
 		}
 		// Set deposit index to the one in the current archived state.
@@ -1014,7 +1014,7 @@ func (s *Service) ensureValidPowchainData(ctx context.Context) error {
 		return err
 	}
 	// Exit early if no genesis state is saved.
-	if genState == nil {
+	if genState == nil || genState.IsNil() {
 		return nil
 	}
 	eth1Data, err := s.cfg.BeaconDB.PowchainData(ctx)
