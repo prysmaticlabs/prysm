@@ -96,8 +96,11 @@ func (s *Store) CheckAttesterDoubleVotes(
 	doubleVotesMu := sync.Mutex{}
 	eg, egctx := errgroup.WithContext(ctx)
 	for _, att := range attestations {
-		attToProcess := att  // https://golang.org/doc/faq#closures_and_goroutines
-		eg.Go(func() error { // process every attestation parallely
+		// Copy the iteration instance to a local variable to give each go-routine its own copy to play with.
+		// See https://golang.org/doc/faq#closures_and_goroutines for more details.
+		attToProcess := att
+		// process every attestation parallelly.
+		eg.Go(func() error {
 			err := s.db.View(func(tx *bolt.Tx) error {
 				signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
 				encEpoch := encodeTargetEpoch(attToProcess.IndexedAttestation.Data.Target.Epoch)
@@ -369,9 +372,9 @@ func (s *Store) HighestAttestations(
 					if encodedAttRecord == nil {
 						continue
 					}
-					attWrapper, err1 := decodeAttestationRecord(encodedAttRecord)
-					if err1 != nil {
-						return err1
+					attWrapper, decodeErr := decodeAttestationRecord(encodedAttRecord)
+					if decodeErr != nil {
+						return decodeErr
 					}
 					highestAtt := &slashpb.HighestAttestation{
 						ValidatorIndex:     uint64(indices[i]),
