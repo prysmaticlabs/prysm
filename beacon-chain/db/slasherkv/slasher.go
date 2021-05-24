@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	"golang.org/x/sync/errgroup"
 	"sort"
 	"sync"
 
@@ -17,9 +16,9 @@ import (
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	slashpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -198,19 +197,8 @@ func (s *Store) SaveAttestationRecordsForValidators(
 		encodedRecords[i] = value
 	}
 	return s.db.Update(func(tx *bolt.Tx) error {
-		attRecordsBkt := tx.Bucket(attestationRecordsBucket)
 		signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
 		for i, att := range attestations {
-			// An attestation record key is comprised of the signing root (32 bytes)
-			// and a fastsum64 of the attesting indices (8 bytes). This is used
-			// to have a more optimal schema
-			attIndicesHash := hashutil.FastSum64(encodedIndices[i])
-			attRecordKey := append(
-				att.SigningRoot[:], ssz.MarshalUint64(make([]byte, 0), attIndicesHash)...,
-			)
-			if err := attRecordsBkt.Put(attRecordKey, encodedRecords[i]); err != nil {
-				return err
-			}
 			for _, valIdx := range att.IndexedAttestation.AttestingIndices {
 				encIdx := encodeValidatorIndex(types.ValidatorIndex(valIdx))
 				key := append(encodedTargetEpoch[i], encIdx...)
