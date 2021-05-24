@@ -32,9 +32,10 @@ type ApiProxyMiddleware struct {
 }
 
 type endpointData struct {
-	postRequest interface{}
-	getResponse interface{}
-	err         ErrorJson
+	postRequest             interface{}
+	getRequestQueryLiterals []string // Names of query parameters that should not be base64-encoded.
+	getResponse             interface{}
+	err                     ErrorJson
 }
 
 // fieldProcessor applies the processing function f to a value when the tag is present on the field.
@@ -51,6 +52,10 @@ func (m *ApiProxyMiddleware) Run() error {
 	m.handleApiEndpoint("/eth/v1/beacon/states/{state_id}/root")
 	m.handleApiEndpoint("/eth/v1/beacon/states/{state_id}/fork")
 	m.handleApiEndpoint("/eth/v1/beacon/states/{state_id}/finality_checkpoints")
+	m.handleApiEndpoint("/eth/v1/beacon/states/{state_id}/validators")
+	m.handleApiEndpoint("/eth/v1/beacon/states/{state_id}/validators/{validator_id}")
+	m.handleApiEndpoint("/eth/v1/beacon/states/{state_id}/validator_balances")
+	m.handleApiEndpoint("/eth/v1/beacon/states/{state_id}/committees")
 	m.handleApiEndpoint("/eth/v1/beacon/headers/{block_id}")
 	m.handleApiEndpoint("/eth/v1/beacon/blocks")
 	m.handleApiEndpoint("/eth/v1/beacon/blocks/{block_id}")
@@ -134,6 +139,7 @@ func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint string) {
 		request.URL.Host = m.GatewayAddress
 		request.RequestURI = ""
 		handleUrlParameters(endpoint, request, writer)
+		handleQueryParameters(request, writer, data.getRequestQueryLiterals)
 
 		// Proxy the request to grpc-gateway.
 		grpcResp, err := http.DefaultClient.Do(request)
@@ -361,7 +367,7 @@ func handleUrlParameters(endpoint string, request *http.Request, writer http.Res
 		if len(s) > 0 && s[0] == '{' && s[len(s)-1] == '}' {
 			bRouteVar := []byte(mux.Vars(request)[s[1:len(s)-1]])
 			var routeVar string
-			isHex, err := butil.IsBytes32Hex(bRouteVar)
+			isHex, err := butil.IsHex(bRouteVar)
 			if err != nil {
 				e := fmt.Errorf("could not process URL parameter: %w", err)
 				writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
@@ -385,6 +391,42 @@ func handleUrlParameters(endpoint string, request *http.Request, writer http.Res
 			request.URL.Path = strings.Join(splitPath, "/")
 		}
 	}
+}
+
+// handleQueryParameters processes query parameters, allowing them to be safely and correctly proxied to grpc-gateway.
+// Base-64 encoding of passed in literals is skipped.
+func handleQueryParameters(request *http.Request, writer http.ResponseWriter, literals []string) {
+	queryParams := request.URL.Query()
+
+paramLoop:
+	for key, vals := range queryParams {
+		for _, l := range literals {
+			if key == l {
+				continue paramLoop
+			}
+		}
+
+		queryParams.Del(key)
+		for _, v := range vals {
+			b := []byte(v)
+			isHex, err := butil.IsHex(b)
+			if err != nil {
+				e := fmt.Errorf("could not process query parameter: %w", err)
+				writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
+				return
+			}
+			if isHex {
+				b, err = bytesutil.FromHexString(v)
+				if err != nil {
+					e := fmt.Errorf("could not process query parameter: %w", err)
+					writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
+					return
+				}
+			}
+			queryParams.Add(key, base64.URLEncoding.EncodeToString(b))
+		}
+	}
+	request.URL.RawQuery = queryParams.Encode()
 }
 
 func writeError(writer http.ResponseWriter, e ErrorJson, responseHeader http.Header) {
@@ -512,6 +554,18 @@ func getEndpointData(endpoint string) (endpointData, error) {
 		return endpointData{getResponse: &StateForkResponseJson{}, err: &DefaultErrorJson{}}, nil
 	case "/eth/v1/beacon/states/{state_id}/finality_checkpoints":
 		return endpointData{getResponse: &StateFinalityCheckpointResponseJson{}, err: &DefaultErrorJson{}}, nil
+	case "/eth/v1/beacon/states/{state_id}/validators":
+		return endpointData{getResponse: &StateValidatorsResponseJson{}, err: &DefaultErrorJson{}}, nil
+	case "/eth/v1/beacon/states/{state_id}/validators/{validator_id}":
+		return endpointData{getResponse: &StateValidatorResponseJson{}, err: &DefaultErrorJson{}}, nil
+	case "/eth/v1/beacon/states/{state_id}/validator_balances":
+		return endpointData{getResponse: &ValidatorBalancesResponseJson{}, err: &DefaultErrorJson{}}, nil
+	case "/eth/v1/beacon/states/{state_id}/committees":
+		return endpointData{
+			getRequestQueryLiterals: []string{"epoch", "index", "slot"},
+			getResponse:             &StateCommitteesResponseJson{},
+			err:                     &DefaultErrorJson{},
+		}, nil
 	case "/eth/v1/beacon/headers/{block_id}":
 		return endpointData{getResponse: &BlockHeaderResponseJson{}, err: &DefaultErrorJson{}}, nil
 	case "/eth/v1/beacon/blocks":
@@ -523,7 +577,11 @@ func getEndpointData(endpoint string) (endpointData, error) {
 	case "/eth/v1/beacon/blocks/{block_id}/attestations":
 		return endpointData{getResponse: &BlockAttestationsResponseJson{}, err: &DefaultErrorJson{}}, nil
 	case "/eth/v1/beacon/pool/attestations":
-		return endpointData{postRequest: &SubmitAttestationRequestJson{}, getResponse: &BlockAttestationsResponseJson{}, err: &SubmitAttestationsErrorJson{}}, nil
+		return endpointData{
+			getRequestQueryLiterals: []string{"slot", "committee_index"},
+			getResponse:             &AttestationsPoolResponseJson{},
+			postRequest:             &SubmitAttestationRequestJson{},
+			err:                     &SubmitAttestationsErrorJson{}}, nil
 	case "/eth/v1/beacon/pool/attester_slashings":
 		return endpointData{postRequest: &AttesterSlashingJson{}, getResponse: &AttesterSlashingsPoolResponseJson{}, err: &DefaultErrorJson{}}, nil
 	case "/eth/v1/beacon/pool/proposer_slashings":
