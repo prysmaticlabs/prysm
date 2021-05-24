@@ -338,7 +338,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState iface.Beacon
 		return errors.Wrap(err, "could not save genesis data")
 	}
 	genesisBlk, err := s.cfg.BeaconDB.GenesisBlock(ctx)
-	if err != nil || genesisBlk == nil {
+	if err != nil || genesisBlk == nil || genesisBlk.IsNil() {
 		return fmt.Errorf("could not load genesis block: %v", err)
 	}
 	genesisBlkRoot, err := genesisBlk.Block().HashTreeRoot()
@@ -448,7 +448,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		return errors.Wrap(err, "could not get finalized block from db")
 	}
 
-	if finalizedState == nil || finalizedBlock == nil {
+	if finalizedState == nil || finalizedState.IsNil() || finalizedBlock == nil || finalizedBlock.IsNil() {
 		return errors.New("finalized state and block can't be nil")
 	}
 	s.setHead(finalizedRoot, finalizedBlock, finalizedState)
