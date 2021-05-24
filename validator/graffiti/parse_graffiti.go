@@ -62,10 +62,8 @@ func ParseHexGraffiti(rawGraffiti string) string {
 			return rawGraffiti
 		}
 
-		if len(target) > 3 {
-			if target[:2] == "0x" {
-				target = target[2:]
-			}
+		if len(target) > 3 && target[:2] == "0x" {
+			target = target[2:]
 		}
 
 		if target == "" {
