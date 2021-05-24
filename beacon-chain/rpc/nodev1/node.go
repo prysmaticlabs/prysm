@@ -6,6 +6,10 @@ import (
 	"runtime"
 	"strings"
 
+	ethpb_alpha "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+
+	"github.com/prysmaticlabs/prysm/proto/migration"
+
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
@@ -105,14 +109,15 @@ func (ns *Server) GetPeer(ctx context.Context, req *ethpb.PeerRequest) (*ethpb.P
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not obtain direction: %v", err)
 	}
-
+	v1ConnState := migration.V1Alpha1ConnectionStateToV1(ethpb_alpha.ConnectionState(state))
+	v1PeerDirection := migration.V1Alpha1PeerDirectionToV1(ethpb_alpha.PeerDirection(direction))
 	return &ethpb.PeerResponse{
 		Data: &ethpb.Peer{
 			PeerId:             req.PeerId,
 			Enr:                "enr:" + serializedEnr,
 			LastSeenP2PAddress: p2pAddress.String(),
-			State:              ethpb.ConnectionState(state),
-			Direction:          ethpb.PeerDirection(direction),
+			State:              v1ConnState,
+			Direction:          v1PeerDirection,
 		},
 	}, nil
 }
@@ -319,10 +324,12 @@ func peerInfo(peerStatus *peers.Status, id peer.ID) (*ethpb.Peer, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not obtain direction")
 	}
+	v1ConnState := migration.V1Alpha1ConnectionStateToV1(ethpb_alpha.ConnectionState(connectionState))
+	v1PeerDirection := migration.V1Alpha1PeerDirectionToV1(ethpb_alpha.PeerDirection(direction))
 	p := ethpb.Peer{
 		PeerId:    id.Pretty(),
-		State:     ethpb.ConnectionState(connectionState),
-		Direction: ethpb.PeerDirection(direction),
+		State:     v1ConnState,
+		Direction: v1PeerDirection,
 	}
 	if address != nil {
 		p.LastSeenP2PAddress = address.String()
