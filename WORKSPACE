@@ -284,7 +284,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    #sha256 = "4d012f2c056e4818f3323c8a83117796beb15dff34c295957a4d543019c1e128",
+    sha256 = "55d8a4038d809498819a1b5a72bfbe5bb16c6c4f4e0796d1baa2ab45bc91392e",
     url = "https://github.com/ethereum/eth2.0-specs/archive/refs/tags/v1.1.0-alpha.6.tar.gz",
 )
 
