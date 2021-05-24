@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"time"
 
-	ptypes "github.com/gogo/protobuf/types"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
@@ -20,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // BalancesTimeout for gRPC requests to ListValidatorBalances.
@@ -551,7 +551,7 @@ func (bs *Server) GetValidatorParticipation(
 
 // GetValidatorQueue retrieves the current validator queue information.
 func (bs *Server) GetValidatorQueue(
-	ctx context.Context, _ *ptypes.Empty,
+	ctx context.Context, _ *emptypb.Empty,
 ) (*ethpb.ValidatorQueue, error) {
 	headState, err := bs.HeadFetcher.HeadState(ctx)
 	if err != nil {

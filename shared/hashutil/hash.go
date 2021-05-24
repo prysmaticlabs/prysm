@@ -8,11 +8,11 @@ import (
 	"sync"
 
 	fastssz "github.com/ferranbt/fastssz"
-	"github.com/gogo/protobuf/proto"
 	"github.com/minio/highwayhash"
 	"github.com/minio/sha256-simd"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"golang.org/x/crypto/sha3"
+	"google.golang.org/protobuf/proto"
 )
 
 // ErrNilProto can occur when attempting to hash a protobuf message that is nil

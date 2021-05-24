@@ -8,11 +8,11 @@ import (
 	context "context"
 	reflect "reflect"
 
-	types "github.com/gogo/protobuf/types"
 	gomock "github.com/golang/mock/gomock"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	grpc "google.golang.org/grpc"
 	metadata "google.golang.org/grpc/metadata"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // MockBeaconChainClient is a mock of BeaconChainClient interface
@@ -59,7 +59,7 @@ func (mr *MockBeaconChainClientMockRecorder) AttestationPool(arg0, arg1 interfac
 }
 
 // GetBeaconConfig mocks base method
-func (m *MockBeaconChainClient) GetBeaconConfig(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (*eth.BeaconConfig, error) {
+func (m *MockBeaconChainClient) GetBeaconConfig(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (*eth.BeaconConfig, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -79,7 +79,7 @@ func (mr *MockBeaconChainClientMockRecorder) GetBeaconConfig(arg0, arg1 interfac
 }
 
 // GetChainHead mocks base method
-func (m *MockBeaconChainClient) GetChainHead(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (*eth.ChainHead, error) {
+func (m *MockBeaconChainClient) GetChainHead(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (*eth.ChainHead, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -199,7 +199,7 @@ func (mr *MockBeaconChainClientMockRecorder) GetValidatorPerformance(arg0, arg1 
 }
 
 // GetValidatorQueue mocks base method
-func (m *MockBeaconChainClient) GetValidatorQueue(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (*eth.ValidatorQueue, error) {
+func (m *MockBeaconChainClient) GetValidatorQueue(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (*eth.ValidatorQueue, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -219,7 +219,7 @@ func (mr *MockBeaconChainClientMockRecorder) GetValidatorQueue(arg0, arg1 interf
 }
 
 // GetWeakSubjectivityCheckpoint mocks base method
-func (m *MockBeaconChainClient) GetWeakSubjectivityCheckpoint(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (*eth.WeakSubjectivityCheckpoint, error) {
+func (m *MockBeaconChainClient) GetWeakSubjectivityCheckpoint(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (*eth.WeakSubjectivityCheckpoint, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -379,7 +379,7 @@ func (mr *MockBeaconChainClientMockRecorder) ListValidators(arg0, arg1 interface
 }
 
 // StreamAttestations mocks base method
-func (m *MockBeaconChainClient) StreamAttestations(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (eth.BeaconChain_StreamAttestationsClient, error) {
+func (m *MockBeaconChainClient) StreamAttestations(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (eth.BeaconChain_StreamAttestationsClient, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -419,7 +419,7 @@ func (mr *MockBeaconChainClientMockRecorder) StreamBlocks(arg0, arg1 interface{}
 }
 
 // StreamChainHead mocks base method
-func (m *MockBeaconChainClient) StreamChainHead(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (eth.BeaconChain_StreamChainHeadClient, error) {
+func (m *MockBeaconChainClient) StreamChainHead(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (eth.BeaconChain_StreamChainHeadClient, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -439,7 +439,7 @@ func (mr *MockBeaconChainClientMockRecorder) StreamChainHead(arg0, arg1 interfac
 }
 
 // StreamIndexedAttestations mocks base method
-func (m *MockBeaconChainClient) StreamIndexedAttestations(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (eth.BeaconChain_StreamIndexedAttestationsClient, error) {
+func (m *MockBeaconChainClient) StreamIndexedAttestations(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (eth.BeaconChain_StreamIndexedAttestationsClient, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {

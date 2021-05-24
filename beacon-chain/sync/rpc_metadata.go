@@ -47,6 +47,11 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (*pb.Meta
 		s.cfg.P2P.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		return nil, errors.New(errMsg)
 	}
+	// No-op for now with the rpc context.
+	_, err = readContextFromStream(stream, s.cfg.Chain)
+	if err != nil {
+		return nil, err
+	}
 	msg := new(pb.MetaData)
 	if err := s.cfg.P2P.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
 		return nil, err

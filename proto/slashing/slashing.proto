@@ -2,8 +2,8 @@ syntax = "proto3";
 
 package ethereum.slashing;
 
+import "eth/ext/options.proto";
 import "eth/v1alpha1/beacon_block.proto";
-import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
 // Slasher service API
 //
@@ -51,8 +51,8 @@ message HighestAttestationResponse {
 
 message HighestAttestation {
     uint64 validator_id = 1 [deprecated = true];
-    uint64 highest_source_epoch = 2 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Epoch", deprecated = true];
-    uint64 highest_target_epoch = 3 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+    uint64 highest_source_epoch = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch", deprecated = true];
+    uint64 highest_target_epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
 }
 
 message ProposerSlashingResponse {
@@ -72,8 +72,8 @@ message AttesterSlashingResponse {
 // epoch of the bitlist, we can easily store which epochs a validator has proposed
 // a block for while pruning the older data.
 message ProposalHistory {
-    bytes epoch_bits = 1 [(gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist", deprecated = true];
-    uint64 latest_epoch_written = 2 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Epoch", deprecated = true];
+    bytes epoch_bits = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/go-bitfield.Bitlist", deprecated = true];
+    uint64 latest_epoch_written = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch", deprecated = true];
 }
 
 // AttestationHistory defines the structure for recording a validator's historical attestation.
@@ -83,5 +83,5 @@ message ProposalHistory {
 // the history is updated.
 message AttestationHistory {
     map<uint64, uint64> target_to_source = 1 [deprecated = true];
-    uint64 latest_epoch_written = 2 [(gogoproto.casttype) = "github.com/prysmaticlabs/eth2-types.Epoch", deprecated = true];
+    uint64 latest_epoch_written = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch", deprecated = true];
 }
