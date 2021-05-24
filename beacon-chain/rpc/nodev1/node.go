@@ -110,7 +110,10 @@ func (ns *Server) GetPeer(ctx context.Context, req *ethpb.PeerRequest) (*ethpb.P
 		return nil, status.Errorf(codes.Internal, "Could not obtain direction: %v", err)
 	}
 	v1ConnState := migration.V1Alpha1ConnectionStateToV1(ethpb_alpha.ConnectionState(state))
-	v1PeerDirection := migration.V1Alpha1PeerDirectionToV1(ethpb_alpha.PeerDirection(direction))
+	v1PeerDirection, err := migration.V1Alpha1PeerDirectionToV1(ethpb_alpha.PeerDirection(direction))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not handle peer direction: %v", err)
+	}
 	return &ethpb.PeerResponse{
 		Data: &ethpb.Peer{
 			PeerId:             req.PeerId,
@@ -325,7 +328,10 @@ func peerInfo(peerStatus *peers.Status, id peer.ID) (*ethpb.Peer, error) {
 		return nil, errors.Wrap(err, "could not obtain direction")
 	}
 	v1ConnState := migration.V1Alpha1ConnectionStateToV1(ethpb_alpha.ConnectionState(connectionState))
-	v1PeerDirection := migration.V1Alpha1PeerDirectionToV1(ethpb_alpha.PeerDirection(direction))
+	v1PeerDirection, err := migration.V1Alpha1PeerDirectionToV1(ethpb_alpha.PeerDirection(direction))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not handle peer direction: %v", err)
+	}
 	p := ethpb.Peer{
 		PeerId:    id.Pretty(),
 		State:     v1ConnState,
