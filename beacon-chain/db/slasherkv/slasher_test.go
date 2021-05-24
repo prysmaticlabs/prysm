@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"math/rand"
 	"reflect"
+	"sort"
 	"testing"
 	"time"
 
@@ -112,6 +113,10 @@ func TestStore_CheckAttesterDoubleVotes(t *testing.T) {
 	}
 	doubleVotes, err := beaconDB.CheckAttesterDoubleVotes(ctx, slashableAtts)
 	require.NoError(t, err)
+
+	sort.SliceStable(doubleVotes, func(i, j int) bool {
+		return uint64(doubleVotes[i].ValidatorIndex) < uint64(doubleVotes[j].ValidatorIndex)
+	})
 	require.DeepEqual(t, wanted, doubleVotes)
 }
 
