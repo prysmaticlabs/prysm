@@ -274,6 +274,21 @@ filegroup(
 )
 
 http_archive(
+    name = "eth2_spec",
+    build_file_content = """
+filegroup(
+    name = "spec_data",
+    srcs = glob([
+        "**/*.yaml",
+    ]),
+    visibility = ["//visibility:public"],
+)
+    """,
+    #sha256 = "4d012f2c056e4818f3323c8a83117796beb15dff34c295957a4d543019c1e128",
+    url = "https://github.com/ethereum/eth2.0-specs/archive/refs/tags/v1.1.0-alpha.6.tar.gz",
+)
+
+http_archive(
     name = "com_github_bazelbuild_buildtools",
     sha256 = "b5d7dbc6832f11b6468328a376de05959a1a9e4e9f5622499d3bab509c26b46a",
     strip_prefix = "buildtools-bf564b4925ab5876a3f64d8b90fab7f769013d42",
