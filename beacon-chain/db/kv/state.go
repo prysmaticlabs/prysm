@@ -128,11 +128,20 @@ func (s *Store) SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconSta
 func (s *Store) HasState(ctx context.Context, blockRoot [32]byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasState")
 	defer span.End()
-	enc, err := s.stateBytes(ctx, blockRoot)
+	hasState := false
+	err := s.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(stateBucket)
+		stBytes := bkt.Get(blockRoot[:])
+		if len(stBytes) == 0 {
+			return nil
+		}
+		hasState = true
+		return nil
+	})
 	if err != nil {
 		panic(err)
 	}
-	return len(enc) > 0
+	return hasState
 }
 
 // DeleteState by block root.
