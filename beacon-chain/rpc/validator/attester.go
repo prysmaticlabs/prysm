@@ -90,7 +90,7 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 			return nil, status.Errorf(codes.Internal, "Could not get historical head state: %v", err)
 		}
 	}
-	if headState == nil {
+	if headState == nil || headState.IsNil() {
 		return nil, status.Error(codes.Internal, "Could not lookup parent state from head.")
 	}
 
