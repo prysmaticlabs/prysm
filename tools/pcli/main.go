@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	log "github.com/sirupsen/logrus"
@@ -175,7 +176,7 @@ func main() {
 					blkRoot,
 					preStateRoot,
 				)
-				postState, err := state.ExecuteStateTransition(context.Background(), stateObj, block)
+				postState, err := state.ExecuteStateTransition(context.Background(), stateObj, interfaces.NewWrappedSignedBeaconBlock(block))
 				if err != nil {
 					log.Fatal(err)
 				}
