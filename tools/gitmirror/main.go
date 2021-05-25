@@ -28,9 +28,9 @@ func main() {
 		payload, err := hook.Parse(r, ReleaseEvent, PullRequestEvent)
 		if err != nil {
 			if err == ErrEventNotFound {
-				log.Fatal("Event not found")
+				log.Error("Github event not found in subscribed items, please check configuration")
 			}
-			log.Fatal(err)
+			log.WithError(err).Error("Could not parse Github webhook event")
 		}
 		release, ok := payload.(PullRequestPayload)
 		if !ok {
