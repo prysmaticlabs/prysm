@@ -54,7 +54,7 @@ func TestGetValidator(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.Equal(t, types.ValidatorIndex(20), resp.Data.Index)
-		assert.Equal(t, true, bytes.Equal(pubKey[:], resp.Data.Validator.PublicKey))
+		assert.Equal(t, true, bytes.Equal(pubKey[:], resp.Data.Validator.Pubkey))
 	})
 
 	t.Run("Hex root not found", func(t *testing.T) {
@@ -152,7 +152,7 @@ func TestListValidators(t *testing.T) {
 		require.NoError(t, err)
 		for i, val := range resp.Data {
 			assert.Equal(t, idNums[i], val.Index)
-			assert.Equal(t, true, bytes.Equal(pubKeys[i], val.Validator.PublicKey))
+			assert.Equal(t, true, bytes.Equal(pubKeys[i], val.Validator.Pubkey))
 		}
 	})
 
@@ -177,7 +177,7 @@ func TestListValidators(t *testing.T) {
 		require.NoError(t, err)
 		for i, val := range resp.Data {
 			assert.Equal(t, idNums[i], val.Index)
-			assert.Equal(t, true, bytes.Equal(pubkeys[i], val.Validator.PublicKey))
+			assert.Equal(t, true, bytes.Equal(pubkeys[i], val.Validator.Pubkey))
 		}
 	})
 

@@ -154,7 +154,7 @@ func (vs *Server) WaitForChainStart(_ *emptypb.Empty, stream ethpb.BeaconNodeVal
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)
 	}
-	if head != nil {
+	if head != nil && !head.IsNil() {
 		res := &ethpb.ChainStartResponse{
 			Started:               true,
 			GenesisTime:           head.GenesisTime(),
