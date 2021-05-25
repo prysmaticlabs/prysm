@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -20,7 +21,7 @@ func TestStore_Backup(t *testing.T) {
 	head := testutil.NewBeaconBlock()
 	head.Block.Slot = 5000
 
-	require.NoError(t, db.SaveBlock(ctx, head))
+	require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(head)))
 	root, err := head.Block.HashTreeRoot()
 	require.NoError(t, err)
 	st, err := testutil.NewBeaconState()
@@ -60,7 +61,7 @@ func TestStore_BackupMultipleBuckets(t *testing.T) {
 	for i := startSlot; i < 5200; i++ {
 		head := testutil.NewBeaconBlock()
 		head.Block.Slot = i
-		require.NoError(t, db.SaveBlock(ctx, head))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(head)))
 		root, err := head.Block.HashTreeRoot()
 		require.NoError(t, err)
 		st, err := testutil.NewBeaconState()
@@ -97,7 +98,7 @@ func TestStore_BackupMultipleBuckets(t *testing.T) {
 		nBlock, err := backedDB.Block(ctx, root)
 		require.NoError(t, err)
 		require.NotNil(t, nBlock)
-		require.Equal(t, nBlock.Block.Slot, i)
+		require.Equal(t, nBlock.Block().Slot(), i)
 		nState, err := backedDB.State(ctx, root)
 		require.NoError(t, err)
 		require.NotNil(t, nState)

@@ -111,6 +111,7 @@ go_test(
         "//shared/bytesutil:go_default_library",
         "//shared/event:go_default_library",
         "//shared/featureconfig:go_default_library",
+        "//shared/interfaces:go_default_library",
         "//shared/mock:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
