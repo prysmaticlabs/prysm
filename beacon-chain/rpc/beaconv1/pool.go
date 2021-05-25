@@ -230,7 +230,7 @@ func (bs *Server) SubmitVoluntaryExit(ctx context.Context, req *ethpb.SignedVolu
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 
-	validator, err := headState.ValidatorAtIndexReadOnly(req.Exit.ValidatorIndex)
+	validator, err := headState.ValidatorAtIndexReadOnly(req.Message.ValidatorIndex)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get exiting validator: %v", err)
 	}
