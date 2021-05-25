@@ -8,6 +8,7 @@ go_library(
         "eth1_data_reset.go",
         "helpers.go",
         "historical_roots_update.go",
+        "inactivity_updates.go",
         "justification_and_finalization.go",
         "randao_mixes_reset.go",
         "registry_updates.go",
