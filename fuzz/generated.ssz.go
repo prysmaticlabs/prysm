@@ -60,17 +60,20 @@ func (i *InputBlockWithPrestate) UnmarshalSSZ(buf []byte) error {
 	if o0 = ssz.ReadOffset(buf[0:4]); o0 > size {
 		return ssz.ErrOffset
 	}
+	if o0 < 8 {
+		return ssz.ErrInvalidVariableOffset
+	}
 
 	// Offset (1) 'Block'
 	if o1 = ssz.ReadOffset(buf[4:8]); o1 > size || o0 > o1 {
 		return ssz.ErrOffset
 	}
+	if o1 < o0 {
+		return ssz.ErrInvalidVariableOffset
+	}
 
 	// Field (0) 'State'
 	{
-		if o0 < 8 {
-			return ssz.ErrInvalidVariableOffset
-		}
 		buf = tail[o0:o1]
 		if i.State == nil {
 			i.State = new(pb.BeaconState)
