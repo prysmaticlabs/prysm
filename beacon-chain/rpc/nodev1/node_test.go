@@ -291,7 +291,7 @@ func TestListPeers(t *testing.T) {
 			name:       "No filters - return all peers",
 			states:     []string{},
 			directions: []string{},
-			wantIds:    ids,
+			wantIds:    ids[:len(ids)-1], // Excluding last peer as it is not connected.
 		},
 		{
 			name:       "State filter empty - return peers for all states",
@@ -327,7 +327,7 @@ func TestListPeers(t *testing.T) {
 			name:       "Only unknown filters - return all peers",
 			states:     []string{"foo"},
 			directions: []string{"bar"},
-			wantIds:    ids,
+			wantIds:    ids[:len(ids)-1], // Excluding last peer as it is not connected.
 		},
 		{
 			name:       "Letter case does not matter",

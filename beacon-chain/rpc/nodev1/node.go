@@ -107,6 +107,10 @@ func (ns *Server) GetPeer(ctx context.Context, req *ethpb.PeerRequest) (*ethpb.P
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not obtain direction: %v", err)
 	}
+	if ethpb_alpha.PeerDirection(direction) == ethpb_alpha.PeerDirection_UNKNOWN {
+		return nil, status.Error(codes.NotFound, "Peer not found")
+	}
+
 	v1ConnState := migration.V1Alpha1ConnectionStateToV1(ethpb_alpha.ConnectionState(state))
 	v1PeerDirection, err := migration.V1Alpha1PeerDirectionToV1(ethpb_alpha.PeerDirection(direction))
 	if err != nil {
@@ -138,6 +142,9 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 			p, err := peerInfo(peerStatus, id)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not get peer info: %v", err)
+			}
+			if p == nil {
+				continue
 			}
 			allPeers = append(allPeers, p)
 		}
@@ -207,7 +214,13 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get peer info: %v", err)
 		}
+		if p == nil {
+			continue
+		}
 		filteredPeers = append(filteredPeers, p)
+	}
+	if len(filteredPeers) == 0 {
+		return nil, status.Error(codes.NotFound, "Peers not found")
 	}
 	return &ethpb.PeersResponse{Data: filteredPeers}, nil
 }
@@ -324,6 +337,9 @@ func peerInfo(peerStatus *peers.Status, id peer.ID) (*ethpb.Peer, error) {
 	direction, err := peerStatus.Direction(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not obtain direction")
+	}
+	if ethpb_alpha.PeerDirection(direction) == ethpb_alpha.PeerDirection_UNKNOWN {
+		return nil, nil
 	}
 	v1ConnState := migration.V1Alpha1ConnectionStateToV1(ethpb_alpha.ConnectionState(connectionState))
 	v1PeerDirection, err := migration.V1Alpha1PeerDirectionToV1(ethpb_alpha.PeerDirection(direction))
