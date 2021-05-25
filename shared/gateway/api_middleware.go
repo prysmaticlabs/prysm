@@ -212,7 +212,7 @@ func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint string) {
 		// Write the response (headers + body) and PROFIT!
 		var statusCodeHeader string
 		for h, vs := range grpcResp.Header {
-			// We don't want to expose any gRPC metadata in the HTTP response.
+			// We don't want to expose any gRPC metadata in the HTTP response, so we skip forwarding metadata headers.
 			if strings.HasPrefix(h, "Grpc-Metadata") {
 				if h == "Grpc-Metadata-"+grpcutils.HttpCodeMetadataKey {
 					statusCodeHeader = vs[0]
