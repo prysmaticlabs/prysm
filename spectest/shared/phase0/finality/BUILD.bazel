@@ -2,8 +2,8 @@ load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["runner.go"],
     testonly = True,
+    srcs = ["runner.go"],
     importpath = "github.com/prysmaticlabs/prysm/spectest/shared/phase0/finality",
     visibility = ["//visibility:public"],
     deps = [
