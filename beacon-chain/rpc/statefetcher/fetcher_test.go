@@ -182,3 +182,8 @@ func TestGetStateRoot(t *testing.T) {
 		require.ErrorContains(t, "invalid state ID: foo", err)
 	})
 }
+
+func TestNewStateNotFoundError(t *testing.T) {
+	e := NewStateNotFoundError(100)
+	assert.Equal(t, "state not found in the last 100 state roots in head state", e.message)
+}

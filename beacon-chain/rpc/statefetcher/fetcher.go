@@ -16,6 +16,26 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
+// ErrInvalidStateId represents an error scenario where a state ID is invalid.
+var ErrInvalidStateId = errors.New("invalid state ID")
+
+// StateNotFoundError represents an error scenario where a state could not be found.
+type StateNotFoundError struct {
+	message string
+}
+
+// NewStateNotFoundError creates a new error instance.
+func NewStateNotFoundError(stateRootsSize int) StateNotFoundError {
+	return StateNotFoundError{
+		message: fmt.Sprintf("state not found in the last %d state roots in head state", stateRootsSize),
+	}
+}
+
+// Error returns the underlying error message.
+func (e *StateNotFoundError) Error() string {
+	return e.message
+}
+
 // Fetcher is responsible for retrieving the BeaconState.
 type Fetcher interface {
 	State(ctx context.Context, stateId []byte) (iface.BeaconState, error)
@@ -73,7 +93,7 @@ func (p *StateProvider) State(ctx context.Context, stateId []byte) (iface.Beacon
 			slotNumber, parseErr := strconv.ParseUint(stateIdString, 10, 64)
 			if parseErr != nil {
 				// ID format does not match any valid options.
-				return nil, errors.New("invalid state ID: " + stateIdString)
+				return nil, ErrInvalidStateId
 			}
 			s, err = p.stateBySlot(ctx, types.Slot(slotNumber))
 		}
@@ -93,7 +113,9 @@ func (p *StateProvider) stateByHex(ctx context.Context, stateId []byte) (iface.B
 			return p.StateGenService.StateByRoot(ctx, bytesutil.ToBytes32(blockRoot))
 		}
 	}
-	return nil, fmt.Errorf("state not found in the last %d state roots in head state", len(headState.StateRoots()))
+
+	stateNotFoundErr := NewStateNotFoundError(len(headState.StateRoots()))
+	return nil, &stateNotFoundErr
 }
 
 func (p *StateProvider) stateBySlot(ctx context.Context, slot types.Slot) (iface.BeaconState, error) {
