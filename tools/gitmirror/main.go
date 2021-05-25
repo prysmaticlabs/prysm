@@ -1,7 +1,7 @@
 package main
 
 import (
-	//"fmt"
+	"fmt"
 	"net/http"
 	"os"
 
@@ -19,26 +19,26 @@ func main() {
 	if githubSecret == "" {
 		log.Fatal("Expected GITHUB_WEBHOOK_SECRET env variable")
 	}
-	//hook, err := New(Options.Secret(githubSecret))
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
+	hook, err := New(Options.Secret(githubSecret))
+	if err != nil {
+		log.Fatal(err)
+	}
 	http.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		log.Info("Received request")
-		//payload, err := hook.Parse(r, ReleaseEvent, PullRequestEvent)
-		//if err != nil {
-		//	if err == ErrEventNotFound {
-		//		log.Fatal("Event not found")
-		//	}
-		//	log.Fatal(err)
-		//}
-		//release, ok := payload.(PullRequestPayload)
-		//if !ok {
-		//	return
-		//}
-		//fmt.Printf("%+v", release)
+		log.Info("Received github event")
+		payload, err := hook.Parse(r, ReleaseEvent, PullRequestEvent)
+		if err != nil {
+			if err == ErrEventNotFound {
+				log.Fatal("Event not found")
+			}
+			log.Fatal(err)
+		}
+		release, ok := payload.(PullRequestPayload)
+		if !ok {
+			return
+		}
+		fmt.Printf("%+v", release)
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("hi"))
+		fmt.Fprintf(w, "%+v", release)
 	})
 	log.Fatal(http.ListenAndServe(":3000", nil))
 }
