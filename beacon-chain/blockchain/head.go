@@ -113,7 +113,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve head state in DB")
 	}
-	if newHeadState == nil {
+	if newHeadState == nil || newHeadState.IsNil() {
 		return errors.New("cannot save nil head state")
 	}
 
@@ -262,7 +262,7 @@ func (s *Service) cacheJustifiedStateBalances(ctx context.Context, justifiedRoot
 			return err
 		}
 	}
-	if justifiedState == nil {
+	if justifiedState == nil || justifiedState.IsNil() {
 		return errors.New("justified state can't be nil")
 	}
 

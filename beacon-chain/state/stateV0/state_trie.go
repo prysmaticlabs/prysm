@@ -255,7 +255,7 @@ func (b *BeaconState) ToProto() (*v1.BeaconState, error) {
 	resultValidators := make([]*v1.Validator, len(sourceValidators))
 	for i, validator := range sourceValidators {
 		resultValidators[i] = &v1.Validator{
-			PublicKey:                  validator.PublicKey,
+			Pubkey:                     validator.PublicKey,
 			WithdrawalCredentials:      validator.WithdrawalCredentials,
 			EffectiveBalance:           validator.EffectiveBalance,
 			Slashed:                    validator.Slashed,
@@ -377,6 +377,12 @@ func (b *BeaconState) FieldReferencesCount() map[string]uint64 {
 		f.RUnlock()
 	}
 	return refMap
+}
+
+// IsNil checks if the state and the underlying proto
+// object are nil.
+func (b *BeaconState) IsNil() bool {
+	return b == nil || b.state == nil
 }
 
 func (b *BeaconState) rootSelector(ctx context.Context, field fieldIndex) ([32]byte, error) {

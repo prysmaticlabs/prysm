@@ -388,7 +388,7 @@ func TestBeaconState_ToProto(t *testing.T) {
 	require.Equal(t, 1, len(result.Validators))
 	resultValidator := result.Validators[0]
 	require.NotNil(t, resultValidator)
-	assert.DeepEqual(t, bytesutil.PadTo([]byte("publickey"), 48), resultValidator.PublicKey)
+	assert.DeepEqual(t, bytesutil.PadTo([]byte("publickey"), 48), resultValidator.Pubkey)
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("withdrawalcredentials"), 32), resultValidator.WithdrawalCredentials)
 	assert.Equal(t, uint64(9), resultValidator.EffectiveBalance)
 	assert.Equal(t, true, resultValidator.Slashed)
@@ -406,7 +406,7 @@ func TestBeaconState_ToProto(t *testing.T) {
 	resultPrevEpochAttData := resultPrevEpochAtt.Data
 	require.NotNil(t, resultPrevEpochAttData)
 	assert.Equal(t, types.Slot(17), resultPrevEpochAttData.Slot)
-	assert.Equal(t, types.CommitteeIndex(18), resultPrevEpochAttData.CommitteeIndex)
+	assert.Equal(t, types.CommitteeIndex(18), resultPrevEpochAttData.Index)
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("peabeaconblockroot"), 32), resultPrevEpochAttData.BeaconBlockRoot)
 	resultPrevEpochAttSource := resultPrevEpochAttData.Source
 	require.NotNil(t, resultPrevEpochAttSource)
@@ -424,7 +424,7 @@ func TestBeaconState_ToProto(t *testing.T) {
 	resultCurrEpochAttData := resultCurrEpochAtt.Data
 	require.NotNil(t, resultCurrEpochAttData)
 	assert.Equal(t, types.Slot(24), resultCurrEpochAttData.Slot)
-	assert.Equal(t, types.CommitteeIndex(25), resultCurrEpochAttData.CommitteeIndex)
+	assert.Equal(t, types.CommitteeIndex(25), resultCurrEpochAttData.Index)
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("ceabeaconblockroot"), 32), resultCurrEpochAttData.BeaconBlockRoot)
 	resultCurrEpochAttSource := resultCurrEpochAttData.Source
 	require.NotNil(t, resultCurrEpochAttSource)

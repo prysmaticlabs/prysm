@@ -54,7 +54,7 @@ func TestGetValidator(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.Equal(t, types.ValidatorIndex(20), resp.Data.Index)
-		assert.Equal(t, true, bytes.Equal(pubKey[:], resp.Data.Validator.PublicKey))
+		assert.Equal(t, true, bytes.Equal(pubKey[:], resp.Data.Validator.Pubkey))
 	})
 
 	t.Run("Hex root not found", func(t *testing.T) {
@@ -152,7 +152,7 @@ func TestListValidators(t *testing.T) {
 		require.NoError(t, err)
 		for i, val := range resp.Data {
 			assert.Equal(t, idNums[i], val.Index)
-			assert.Equal(t, true, bytes.Equal(pubKeys[i], val.Validator.PublicKey))
+			assert.Equal(t, true, bytes.Equal(pubKeys[i], val.Validator.Pubkey))
 		}
 	})
 
@@ -177,7 +177,7 @@ func TestListValidators(t *testing.T) {
 		require.NoError(t, err)
 		for i, val := range resp.Data {
 			assert.Equal(t, idNums[i], val.Index)
-			assert.Equal(t, true, bytes.Equal(pubkeys[i], val.Validator.PublicKey))
+			assert.Equal(t, true, bytes.Equal(pubkeys[i], val.Validator.Pubkey))
 		}
 	})
 
@@ -453,6 +453,128 @@ func Test_validatorStatus(t *testing.T) {
 				},
 				epoch: types.Epoch(5),
 			},
+			want: ethpb.ValidatorStatus_PENDING,
+		},
+		{
+			name: "active ongoing",
+			args: args{
+				validator: &ethpb.Validator{
+					ActivationEpoch: 3,
+					ExitEpoch:       farFutureEpoch,
+				},
+				epoch: types.Epoch(5),
+			},
+			want: ethpb.ValidatorStatus_ACTIVE,
+		},
+		{
+			name: "active slashed",
+			args: args{
+				validator: &ethpb.Validator{
+					ActivationEpoch: 3,
+					ExitEpoch:       30,
+					Slashed:         true,
+				},
+				epoch: types.Epoch(5),
+			},
+			want: ethpb.ValidatorStatus_ACTIVE,
+		},
+		{
+			name: "active exiting",
+			args: args{
+				validator: &ethpb.Validator{
+					ActivationEpoch: 3,
+					ExitEpoch:       30,
+					Slashed:         false,
+				},
+				epoch: types.Epoch(5),
+			},
+			want: ethpb.ValidatorStatus_ACTIVE_EXITING,
+		},
+		{
+			name: "exited slashed",
+			args: args{
+				validator: &ethpb.Validator{
+					ActivationEpoch:   3,
+					ExitEpoch:         30,
+					WithdrawableEpoch: 40,
+					Slashed:           true,
+				},
+				epoch: types.Epoch(35),
+			},
+			want: ethpb.ValidatorStatus_EXITED,
+		},
+		{
+			name: "exited unslashed",
+			args: args{
+				validator: &ethpb.Validator{
+					ActivationEpoch:   3,
+					ExitEpoch:         30,
+					WithdrawableEpoch: 40,
+					Slashed:           false,
+				},
+				epoch: types.Epoch(35),
+			},
+			want: ethpb.ValidatorStatus_EXITED,
+		},
+		{
+			name: "withdrawal possible",
+			args: args{
+				validator: &ethpb.Validator{
+					ActivationEpoch:   3,
+					ExitEpoch:         30,
+					WithdrawableEpoch: 40,
+					EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
+					Slashed:           false,
+				},
+				epoch: types.Epoch(45),
+			},
+			want: ethpb.ValidatorStatus_WITHDRAWAL,
+		},
+		{
+			name: "withdrawal done",
+			args: args{
+				validator: &ethpb.Validator{
+					ActivationEpoch:   3,
+					ExitEpoch:         30,
+					WithdrawableEpoch: 40,
+					EffectiveBalance:  0,
+					Slashed:           false,
+				},
+				epoch: types.Epoch(45),
+			},
+			want: ethpb.ValidatorStatus_WITHDRAWAL,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := validatorStatus(tt.args.validator, tt.args.epoch); got != tt.want {
+				t.Errorf("validatorStatus() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_validatorSubStatus(t *testing.T) {
+	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
+
+	type args struct {
+		validator *ethpb.Validator
+		epoch     types.Epoch
+	}
+	tests := []struct {
+		name string
+		args args
+		want ethpb.ValidatorStatus
+	}{
+		{
+			name: "pending initialized",
+			args: args{
+				validator: &ethpb.Validator{
+					ActivationEpoch:            farFutureEpoch,
+					ActivationEligibilityEpoch: farFutureEpoch,
+				},
+				epoch: types.Epoch(5),
+			},
 			want: ethpb.ValidatorStatus_PENDING_INITIALIZED,
 		},
 		{
@@ -547,8 +669,8 @@ func Test_validatorStatus(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := validatorStatus(tt.args.validator, tt.args.epoch); got != tt.want {
-				t.Errorf("validatorStatus() = %v, want %v", got, tt.want)
+			if got := validatorSubStatus(tt.args.validator, tt.args.epoch); got != tt.want {
+				t.Errorf("validatorSubStatus() = %v, want %v", got, tt.want)
 			}
 		})
 	}

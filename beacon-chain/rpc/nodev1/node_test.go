@@ -193,7 +193,7 @@ func TestGetPeer(t *testing.T) {
 		resp, err := s.GetPeer(ctx, &ethpb.PeerRequest{PeerId: rawId})
 		require.NoError(t, err)
 		assert.Equal(t, rawId, resp.Data.PeerId)
-		assert.Equal(t, p2pAddr, resp.Data.Address)
+		assert.Equal(t, p2pAddr, resp.Data.LastSeenP2PAddress)
 		assert.Equal(t, "enr:yoABgmlwhAcHBwc=", resp.Data.Enr)
 		assert.Equal(t, ethpb.ConnectionState_DISCONNECTED, resp.Data.State)
 		assert.Equal(t, ethpb.PeerDirection_INBOUND, resp.Data.Direction)
@@ -276,7 +276,7 @@ func TestListPeers(t *testing.T) {
 		assert.Equal(t, "enr:"+serializedEnr, returnedPeer.Enr)
 		expectedP2PAddr, err := peerStatus.Address(expectedId)
 		require.NoError(t, err)
-		assert.Equal(t, expectedP2PAddr.String(), returnedPeer.Address)
+		assert.Equal(t, expectedP2PAddr.String(), returnedPeer.LastSeenP2PAddress)
 		assert.Equal(t, ethpb.ConnectionState_CONNECTING, returnedPeer.State)
 		assert.Equal(t, ethpb.PeerDirection_INBOUND, returnedPeer.Direction)
 	})
@@ -291,7 +291,7 @@ func TestListPeers(t *testing.T) {
 			name:       "No filters - return all peers",
 			states:     []string{},
 			directions: []string{},
-			wantIds:    ids,
+			wantIds:    ids[:len(ids)-1], // Excluding last peer as it is not connected.
 		},
 		{
 			name:       "State filter empty - return peers for all states",
@@ -327,7 +327,7 @@ func TestListPeers(t *testing.T) {
 			name:       "Only unknown filters - return all peers",
 			states:     []string{"foo"},
 			directions: []string{"bar"},
-			wantIds:    ids,
+			wantIds:    ids[:len(ids)-1], // Excluding last peer as it is not connected.
 		},
 		{
 			name:       "Letter case does not matter",
