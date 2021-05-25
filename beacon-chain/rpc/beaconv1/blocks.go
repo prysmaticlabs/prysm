@@ -56,7 +56,7 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpb.BlockRequest) (
 			Root:      root[:],
 			Canonical: canonical,
 			Header: &ethpb.BeaconBlockHeaderContainer{
-				Message:   v1BlockHdr.Header,
+				Message:   v1BlockHdr.Message,
 				Signature: v1BlockHdr.Signature,
 			},
 		},
@@ -104,7 +104,7 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpb.BlockHeadersR
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not determine if block root is canonical: %v", err)
 		}
-		root, err := blkHdr.Header.HashTreeRoot()
+		root, err := blkHdr.Message.HashTreeRoot()
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not hash block header: %v", err)
 		}
@@ -112,7 +112,7 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpb.BlockHeadersR
 			Root:      root[:],
 			Canonical: canonical,
 			Header: &ethpb.BeaconBlockHeaderContainer{
-				Message:   blkHdr.Header,
+				Message:   blkHdr.Message,
 				Signature: blkHdr.Signature,
 			},
 		}
