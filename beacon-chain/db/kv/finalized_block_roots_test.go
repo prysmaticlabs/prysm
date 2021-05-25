@@ -7,6 +7,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -25,7 +26,7 @@ func TestStore_IsFinalizedBlock(t *testing.T) {
 	blks := makeBlocks(t, 0, slotsPerEpoch*3, genesisBlockRoot)
 	require.NoError(t, db.SaveBlocks(ctx, blks))
 
-	root, err := blks[slotsPerEpoch].Block.HashTreeRoot()
+	root, err := blks[slotsPerEpoch].Block().HashTreeRoot()
 	require.NoError(t, err)
 
 	cp := &ethpb.Checkpoint{
@@ -41,12 +42,12 @@ func TestStore_IsFinalizedBlock(t *testing.T) {
 
 	// All blocks up to slotsPerEpoch*2 should be in the finalized index.
 	for i := uint64(0); i < slotsPerEpoch*2; i++ {
-		root, err := blks[i].Block.HashTreeRoot()
+		root, err := blks[i].Block().HashTreeRoot()
 		require.NoError(t, err)
 		assert.Equal(t, true, db.IsFinalizedBlock(ctx, root), "Block at index %d was not considered finalized in the index", i)
 	}
 	for i := slotsPerEpoch * 3; i < uint64(len(blks)); i++ {
-		root, err := blks[i].Block.HashTreeRoot()
+		root, err := blks[i].Block().HashTreeRoot()
 		require.NoError(t, err)
 		assert.Equal(t, false, db.IsFinalizedBlock(ctx, root), "Block at index %d was considered finalized in the index, but should not have", i)
 	}
@@ -60,7 +61,7 @@ func TestStore_IsFinalizedBlockGenesis(t *testing.T) {
 	blk.Block.Slot = 0
 	root, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, blk))
+	require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(blk)))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 	assert.Equal(t, true, db.IsFinalizedBlock(ctx, root), "Finalized genesis block doesn't exist in db")
 }
@@ -141,7 +142,7 @@ func TestStore_IsFinalizedChildBlock(t *testing.T) {
 	blks := makeBlocks(t, 0, slotsPerEpoch*3, genesisBlockRoot)
 
 	require.NoError(t, db.SaveBlocks(ctx, blks))
-	root, err := blks[slotsPerEpoch].Block.HashTreeRoot()
+	root, err := blks[slotsPerEpoch].Block().HashTreeRoot()
 	require.NoError(t, err)
 
 	cp := &ethpb.Checkpoint{
@@ -157,7 +158,7 @@ func TestStore_IsFinalizedChildBlock(t *testing.T) {
 
 	// All blocks up to slotsPerEpoch should have a finalized child block.
 	for i := uint64(0); i < slotsPerEpoch; i++ {
-		root, err := blks[i].Block.HashTreeRoot()
+		root, err := blks[i].Block().HashTreeRoot()
 		require.NoError(t, err)
 		assert.Equal(t, true, db.IsFinalizedBlock(ctx, root), "Block at index %d was not considered finalized in the index", i)
 		blk, err := db.FinalizedChildBlock(ctx, root)
@@ -168,14 +169,15 @@ func TestStore_IsFinalizedChildBlock(t *testing.T) {
 	}
 }
 
-func sszRootOrDie(t *testing.T, block *ethpb.SignedBeaconBlock) []byte {
-	root, err := block.Block.HashTreeRoot()
+func sszRootOrDie(t *testing.T, block interfaces.SignedBeaconBlock) []byte {
+	root, err := block.Block().HashTreeRoot()
 	require.NoError(t, err)
 	return root[:]
 }
 
-func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []*ethpb.SignedBeaconBlock {
+func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []interfaces.SignedBeaconBlock {
 	blocks := make([]*ethpb.SignedBeaconBlock, n)
+	ifaceBlocks := make([]interfaces.SignedBeaconBlock, n)
 	for j := i; j < n+i; j++ {
 		parentRoot := make([]byte, 32)
 		copy(parentRoot, previousRoot[:])
@@ -185,6 +187,7 @@ func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []*ethpb.Signe
 		var err error
 		previousRoot, err = blocks[j-i].Block.HashTreeRoot()
 		require.NoError(t, err)
+		ifaceBlocks[j-i] = interfaces.NewWrappedSignedBeaconBlock(blocks[j-i])
 	}
-	return blocks
+	return ifaceBlocks
 }
