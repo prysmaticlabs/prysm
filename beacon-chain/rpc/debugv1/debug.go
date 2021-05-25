@@ -19,8 +19,7 @@ func (ds *Server) GetBeaconState(ctx context.Context, req *ethpb.StateRequest) (
 
 	state, err := ds.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
-		stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError)
-		if ok {
+		if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {
 			return nil, status.Errorf(codes.NotFound, "could not get state: %v", stateNotFoundErr)
 		} else if errors.Is(err, statefetcher.ErrInvalidStateId) {
 			return nil, status.Errorf(codes.InvalidArgument, "could not get state: %v", err)

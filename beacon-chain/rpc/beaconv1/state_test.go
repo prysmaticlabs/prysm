@@ -197,7 +197,7 @@ func TestGetStateRoot(t *testing.T) {
 		_, err = s.GetStateRoot(ctx, &ethpb.StateRequest{
 			StateId: stateId,
 		})
-		assert.ErrorContains(t, fmt.Sprintf("state not found in the last %d state roots in head state", len(state.StateRoots())), err)
+		assert.ErrorContains(t, fmt.Sprintf("state not found in the last %d state roots", len(state.StateRoots())), err)
 	})
 
 	t.Run("Slot", func(t *testing.T) {

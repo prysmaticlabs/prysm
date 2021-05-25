@@ -273,7 +273,9 @@ func (ns *Server) GetHealth(ctx context.Context, _ *emptypb.Empty) (*emptypb.Emp
 		return &emptypb.Empty{}, nil
 	}
 	if ns.SyncChecker.Syncing() || ns.SyncChecker.Initialized() {
-		_ = grpc.SetHeader(ctx, metadata.Pairs(grpcutils.HttpCodeMetadataKey, strconv.Itoa(http.StatusPartialContent)))
+		if err := grpc.SetHeader(ctx, metadata.Pairs(grpcutils.HttpCodeMetadataKey, strconv.Itoa(http.StatusPartialContent))); err != nil {
+			return &emptypb.Empty{}, nil
+		}
 		return &emptypb.Empty{}, nil
 	}
 	return &emptypb.Empty{}, status.Error(codes.Internal, "Node not initialized or having issues")

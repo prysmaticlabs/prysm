@@ -27,7 +27,7 @@ type StateNotFoundError struct {
 // NewStateNotFoundError creates a new error instance.
 func NewStateNotFoundError(stateRootsSize int) StateNotFoundError {
 	return StateNotFoundError{
-		message: fmt.Sprintf("state not found in the last %d state roots in head state", stateRootsSize),
+		message: fmt.Sprintf("state not found in the last %d state roots", stateRootsSize),
 	}
 }
 
