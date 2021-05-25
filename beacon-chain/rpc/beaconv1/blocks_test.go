@@ -150,7 +150,7 @@ func TestServer_GetBlockHeader(t *testing.T) {
 			blkHdr, err := migration.V1Alpha1BlockToV1BlockHeader(tt.want)
 			require.NoError(t, err)
 
-			if !reflect.DeepEqual(header.Data.Header.Message, blkHdr.Header) {
+			if !reflect.DeepEqual(header.Data.Header.Message, blkHdr.Message) {
 				t.Error("Expected blocks to equal")
 			}
 		})
@@ -230,7 +230,7 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 				signedHdr, err := migration.V1Alpha1BlockToV1BlockHeader(blk)
 				require.NoError(t, err)
 
-				if !reflect.DeepEqual(headers.Data[i].Header.Message, signedHdr.Header) {
+				if !reflect.DeepEqual(headers.Data[i].Header.Message, signedHdr.Message) {
 					t.Error("Expected blocks to equal")
 				}
 			}
