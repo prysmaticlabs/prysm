@@ -342,7 +342,7 @@ func (bld *builder) swtch(stmt ast.Stmt, cases []ast.Stmt) {
 			}
 		}
 
-		parents := []*block{}
+		var parents []*block
 		if c.List != nil {
 			parents = append(parents, list)
 		}

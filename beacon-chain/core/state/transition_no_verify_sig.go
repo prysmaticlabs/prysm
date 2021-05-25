@@ -9,6 +9,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -53,6 +54,9 @@ func ExecuteStateTransitionNoVerifyAnySig(
 	ctx, span := trace.StartSpan(ctx, "core.state.ExecuteStateTransitionNoVerifyAttSigs")
 	defer span.End()
 	var err error
+
+	interop.WriteBlockToDisk(signed, false /* Has the block failed */)
+	interop.WriteStateToDisk(state)
 
 	if featureconfig.Get().EnableNextSlotStateCache {
 		state, err = ProcessSlotsUsingNextSlotCache(ctx, state, signed.Block.ParentRoot, signed.Block.Slot)
@@ -117,7 +121,7 @@ func CalculateStateRoot(
 		traceutil.AnnotateError(span, ctx.Err())
 		return [32]byte{}, ctx.Err()
 	}
-	if state == nil {
+	if state == nil || state.IsNil() {
 		return [32]byte{}, errors.New("nil state")
 	}
 	if signed == nil || signed.Block == nil {

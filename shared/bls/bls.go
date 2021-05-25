@@ -30,10 +30,8 @@ func SecretKeyFromBigNum(s string) (SecretKey, error) {
 		return nil, errors.New("could not set big int from string")
 	}
 	bts := num.Bytes()
-	// Pad key at the start with zero bytes to make it into a 32 byte key.
-	if len(bts) < 32 {
-		emptyBytes := make([]byte, 32-len(bts))
-		bts = append(emptyBytes, bts...)
+	if len(bts) != 32 {
+		return nil, errors.Errorf("provided big number string sets to a key unequal to 32 bytes: %d != 32", len(bts))
 	}
 	return SecretKeyFromBytes(bts)
 }

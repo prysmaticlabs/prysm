@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	ptypes "github.com/gogo/protobuf/types"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -23,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestGetGenesis(t *testing.T) {
@@ -43,7 +43,7 @@ func TestGetGenesis(t *testing.T) {
 			GenesisTimeFetcher: chainService,
 			ChainInfoFetcher:   chainService,
 		}
-		resp, err := s.GetGenesis(ctx, &ptypes.Empty{})
+		resp, err := s.GetGenesis(ctx, &emptypb.Empty{})
 		require.NoError(t, err)
 		assert.Equal(t, genesis.Unix(), resp.Data.GenesisTime.Seconds)
 		assert.Equal(t, int32(0), resp.Data.GenesisTime.Nanos)
@@ -60,7 +60,7 @@ func TestGetGenesis(t *testing.T) {
 			GenesisTimeFetcher: chainService,
 			ChainInfoFetcher:   chainService,
 		}
-		_, err := s.GetGenesis(ctx, &ptypes.Empty{})
+		_, err := s.GetGenesis(ctx, &emptypb.Empty{})
 		assert.ErrorContains(t, "Chain genesis info is not yet known", err)
 	})
 
@@ -73,7 +73,7 @@ func TestGetGenesis(t *testing.T) {
 			GenesisTimeFetcher: chainService,
 			ChainInfoFetcher:   chainService,
 		}
-		_, err := s.GetGenesis(ctx, &ptypes.Empty{})
+		_, err := s.GetGenesis(ctx, &emptypb.Empty{})
 		assert.ErrorContains(t, "Chain genesis info is not yet known", err)
 	})
 }
@@ -93,7 +93,7 @@ func TestGetStateRoot(t *testing.T) {
 			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
-		assert.DeepEqual(t, bytesutil.PadTo([]byte("head"), 32), resp.Data.StateRoot)
+		assert.DeepEqual(t, bytesutil.PadTo([]byte("head"), 32), resp.Data.Root)
 	})
 
 	t.Run("Genesis", func(t *testing.T) {
@@ -112,7 +112,7 @@ func TestGetStateRoot(t *testing.T) {
 			StateId: []byte("genesis"),
 		})
 		require.NoError(t, err)
-		assert.DeepEqual(t, bytesutil.PadTo([]byte("genesis"), 32), resp.Data.StateRoot)
+		assert.DeepEqual(t, bytesutil.PadTo([]byte("genesis"), 32), resp.Data.Root)
 	})
 
 	t.Run("Finalized", func(t *testing.T) {
@@ -137,7 +137,7 @@ func TestGetStateRoot(t *testing.T) {
 			StateId: []byte("finalized"),
 		})
 		require.NoError(t, err)
-		assert.DeepEqual(t, bytesutil.PadTo([]byte("finalized"), 32), resp.Data.StateRoot)
+		assert.DeepEqual(t, bytesutil.PadTo([]byte("finalized"), 32), resp.Data.Root)
 	})
 
 	t.Run("Justified", func(t *testing.T) {
@@ -162,7 +162,7 @@ func TestGetStateRoot(t *testing.T) {
 			StateId: []byte("justified"),
 		})
 		require.NoError(t, err)
-		assert.DeepEqual(t, bytesutil.PadTo([]byte("justified"), 32), resp.Data.StateRoot)
+		assert.DeepEqual(t, bytesutil.PadTo([]byte("justified"), 32), resp.Data.Root)
 	})
 
 	t.Run("Hex root", func(t *testing.T) {
@@ -180,7 +180,7 @@ func TestGetStateRoot(t *testing.T) {
 			StateId: stateId,
 		})
 		require.NoError(t, err)
-		assert.DeepEqual(t, stateId, resp.Data.StateRoot)
+		assert.DeepEqual(t, stateId, resp.Data.Root)
 	})
 
 	t.Run("Hex root not found", func(t *testing.T) {
@@ -214,7 +214,7 @@ func TestGetStateRoot(t *testing.T) {
 			StateId: []byte("100"),
 		})
 		require.NoError(t, err)
-		assert.DeepEqual(t, bytesutil.PadTo([]byte("slot"), 32), resp.Data.StateRoot)
+		assert.DeepEqual(t, bytesutil.PadTo([]byte("slot"), 32), resp.Data.Root)
 	})
 
 	t.Run("Multiple slots", func(t *testing.T) {

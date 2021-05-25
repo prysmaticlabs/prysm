@@ -10,7 +10,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	ptypes "github.com/gogo/protobuf/types"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	libp2ptest "github.com/libp2p/go-libp2p-peerstore/test"
@@ -28,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/version"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type dummyIdentity enode.ID
@@ -39,7 +39,7 @@ func TestGetVersion(t *testing.T) {
 	semVer := version.SemanticVersion()
 	os := runtime.GOOS
 	arch := runtime.GOARCH
-	res, err := (&Server{}).GetVersion(context.Background(), &ptypes.Empty{})
+	res, err := (&Server{}).GetVersion(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	v := res.Data.Version
 	assert.Equal(t, true, strings.Contains(v, semVer))
@@ -54,10 +54,10 @@ func TestGetHealth(t *testing.T) {
 		SyncChecker: checker,
 	}
 
-	_, err := s.GetHealth(ctx, &ptypes.Empty{})
+	_, err := s.GetHealth(ctx, &emptypb.Empty{})
 	require.ErrorContains(t, "Node not initialized or having issues", err)
 	checker.IsInitialized = true
-	_, err = s.GetHealth(ctx, &ptypes.Empty{})
+	_, err = s.GetHealth(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
 	checker.IsInitialized = false
 	checker.IsSyncing = true
@@ -94,7 +94,7 @@ func TestGetIdentity(t *testing.T) {
 			MetadataProvider: metadataProvider,
 		}
 
-		resp, err := s.GetIdentity(ctx, &ptypes.Empty{})
+		resp, err := s.GetIdentity(ctx, &emptypb.Empty{})
 		require.NoError(t, err)
 		expectedID := peer.ID("foo").Pretty()
 		assert.Equal(t, expectedID, resp.Data.PeerId)
@@ -130,7 +130,7 @@ func TestGetIdentity(t *testing.T) {
 			MetadataProvider: metadataProvider,
 		}
 
-		_, err = s.GetIdentity(ctx, &ptypes.Empty{})
+		_, err = s.GetIdentity(ctx, &emptypb.Empty{})
 		assert.ErrorContains(t, "could not obtain enr", err)
 	})
 
@@ -147,7 +147,7 @@ func TestGetIdentity(t *testing.T) {
 			MetadataProvider: metadataProvider,
 		}
 
-		_, err = s.GetIdentity(ctx, &ptypes.Empty{})
+		_, err = s.GetIdentity(ctx, &emptypb.Empty{})
 		assert.ErrorContains(t, "could not obtain discovery address", err)
 	})
 }
@@ -165,17 +165,17 @@ func TestSyncStatus(t *testing.T) {
 		HeadFetcher:        chainService,
 		GenesisTimeFetcher: chainService,
 	}
-	resp, err := s.GetSyncStatus(context.Background(), &ptypes.Empty{})
+	resp, err := s.GetSyncStatus(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.Equal(t, types.Slot(100), resp.Data.HeadSlot)
 	assert.Equal(t, types.Slot(10), resp.Data.SyncDistance)
 }
 
 func TestGetPeer(t *testing.T) {
+	const rawId = "16Uiu2HAkvyYtoQXZNTsthjgLHjEnv7kvwzEmjvsJjWXpbhtqpSUN"
 	ctx := context.Background()
-	decodedId, err := peer.Decode("16Uiu2HAkvyYtoQXZNTsthjgLHjEnv7kvwzEmjvsJjWXpbhtqpSUN")
+	decodedId, err := peer.Decode(rawId)
 	require.NoError(t, err)
-	peerId := string(decodedId)
 	enrRecord := &enr.Record{}
 	err = enrRecord.SetSig(dummyIdentity{1}, []byte{42})
 	require.NoError(t, err)
@@ -190,10 +190,10 @@ func TestGetPeer(t *testing.T) {
 	peerFetcher.Peers().Add(enrRecord, decodedId, p2pMultiAddr, network.DirInbound)
 
 	t.Run("OK", func(t *testing.T) {
-		resp, err := s.GetPeer(ctx, &ethpb.PeerRequest{PeerId: peerId})
+		resp, err := s.GetPeer(ctx, &ethpb.PeerRequest{PeerId: rawId})
 		require.NoError(t, err)
-		assert.Equal(t, peerId, resp.Data.PeerId)
-		assert.Equal(t, p2pAddr, resp.Data.Address)
+		assert.Equal(t, rawId, resp.Data.PeerId)
+		assert.Equal(t, p2pAddr, resp.Data.LastSeenP2PAddress)
 		assert.Equal(t, "enr:yoABgmlwhAcHBwc=", resp.Data.Enr)
 		assert.Equal(t, ethpb.ConnectionState_DISCONNECTED, resp.Data.State)
 		assert.Equal(t, ethpb.PeerDirection_INBOUND, resp.Data.Direction)
@@ -201,52 +201,57 @@ func TestGetPeer(t *testing.T) {
 
 	t.Run("Invalid ID", func(t *testing.T) {
 		_, err = s.GetPeer(ctx, &ethpb.PeerRequest{PeerId: "foo"})
-		assert.ErrorContains(t, "Invalid peer ID: foo", err)
+		assert.ErrorContains(t, "Could not decode peer ID", err)
 	})
 
 	t.Run("Peer not found", func(t *testing.T) {
-		generatedId := string(libp2ptest.GeneratePeerIDs(1)[0])
+		generatedId := "16Uiu2HAmQqFdEcHbSmQTQuLoAhnMUrgoWoraKK4cUJT6FuuqHqTU"
 		_, err = s.GetPeer(ctx, &ethpb.PeerRequest{PeerId: generatedId})
 		assert.ErrorContains(t, "Peer not found", err)
 	})
 }
 
 func TestListPeers(t *testing.T) {
-	ids := libp2ptest.GeneratePeerIDs(8)
+	ids := libp2ptest.GeneratePeerIDs(9)
 	peerFetcher := &mockp2p.MockPeersProvider{}
 	peerFetcher.ClearPeers()
 	peerStatus := peerFetcher.Peers()
 
 	for i, id := range ids {
-		enrRecord := &enr.Record{}
-		err := enrRecord.SetSig(dummyIdentity{1}, []byte{42})
-		require.NoError(t, err)
-		enrRecord.Set(enr.IPv4{127, 0, 0, byte(i)})
-		err = enrRecord.SetSig(dummyIdentity{}, []byte{})
-		require.NoError(t, err)
-		var p2pAddr = "/ip4/127.0.0." + strconv.Itoa(i) + "/udp/30303/p2p/QmYyQSo1c1Ym7orWxLYvCrM2EmxFTANf8wXmmE7DWjhx5N"
-		p2pMultiAddr, err := ma.NewMultiaddr(p2pAddr)
-		require.NoError(t, err)
-
-		var direction network.Direction
-		if i%2 == 0 {
-			direction = network.DirInbound
+		// Make last peer undiscovered
+		if i == len(ids)-1 {
+			peerStatus.Add(nil, id, nil, network.DirUnknown)
 		} else {
-			direction = network.DirOutbound
-		}
-		peerStatus.Add(enrRecord, id, p2pMultiAddr, direction)
+			enrRecord := &enr.Record{}
+			err := enrRecord.SetSig(dummyIdentity{1}, []byte{42})
+			require.NoError(t, err)
+			enrRecord.Set(enr.IPv4{127, 0, 0, byte(i)})
+			err = enrRecord.SetSig(dummyIdentity{}, []byte{})
+			require.NoError(t, err)
+			var p2pAddr = "/ip4/127.0.0." + strconv.Itoa(i) + "/udp/30303/p2p/QmYyQSo1c1Ym7orWxLYvCrM2EmxFTANf8wXmmE7DWjhx5N"
+			p2pMultiAddr, err := ma.NewMultiaddr(p2pAddr)
+			require.NoError(t, err)
 
-		switch i {
-		case 0, 1:
-			peerStatus.SetConnectionState(id, peers.PeerConnecting)
-		case 2, 3:
-			peerStatus.SetConnectionState(id, peers.PeerConnected)
-		case 4, 5:
-			peerStatus.SetConnectionState(id, peers.PeerDisconnecting)
-		case 6, 7:
-			peerStatus.SetConnectionState(id, peers.PeerDisconnected)
-		default:
-			t.Fatalf("Failed to set connection state for peer")
+			var direction network.Direction
+			if i%2 == 0 {
+				direction = network.DirInbound
+			} else {
+				direction = network.DirOutbound
+			}
+			peerStatus.Add(enrRecord, id, p2pMultiAddr, direction)
+
+			switch i {
+			case 0, 1:
+				peerStatus.SetConnectionState(id, peers.PeerConnecting)
+			case 2, 3:
+				peerStatus.SetConnectionState(id, peers.PeerConnected)
+			case 4, 5:
+				peerStatus.SetConnectionState(id, peers.PeerDisconnecting)
+			case 6, 7:
+				peerStatus.SetConnectionState(id, peers.PeerDisconnected)
+			default:
+				t.Fatalf("Failed to set connection state for peer")
+			}
 		}
 	}
 
@@ -271,7 +276,7 @@ func TestListPeers(t *testing.T) {
 		assert.Equal(t, "enr:"+serializedEnr, returnedPeer.Enr)
 		expectedP2PAddr, err := peerStatus.Address(expectedId)
 		require.NoError(t, err)
-		assert.Equal(t, expectedP2PAddr.String(), returnedPeer.Address)
+		assert.Equal(t, expectedP2PAddr.String(), returnedPeer.LastSeenP2PAddress)
 		assert.Equal(t, ethpb.ConnectionState_CONNECTING, returnedPeer.State)
 		assert.Equal(t, ethpb.PeerDirection_INBOUND, returnedPeer.Direction)
 	})
@@ -286,7 +291,7 @@ func TestListPeers(t *testing.T) {
 			name:       "No filters - return all peers",
 			states:     []string{},
 			directions: []string{},
-			wantIds:    ids,
+			wantIds:    ids[:len(ids)-1], // Excluding last peer as it is not connected.
 		},
 		{
 			name:       "State filter empty - return peers for all states",
@@ -322,7 +327,7 @@ func TestListPeers(t *testing.T) {
 			name:       "Only unknown filters - return all peers",
 			states:     []string{"foo"},
 			directions: []string{"bar"},
-			wantIds:    ids,
+			wantIds:    ids[:len(ids)-1], // Excluding last peer as it is not connected.
 		},
 		{
 			name:       "Letter case does not matter",
@@ -396,7 +401,7 @@ func TestPeerCount(t *testing.T) {
 	}
 
 	s := Server{PeersFetcher: peerFetcher}
-	resp, err := s.PeerCount(context.Background(), &ptypes.Empty{})
+	resp, err := s.PeerCount(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.Equal(t, uint64(1), resp.Data.Connecting, "Wrong number of connecting peers")
 	assert.Equal(t, uint64(2), resp.Data.Connected, "Wrong number of connected peers")

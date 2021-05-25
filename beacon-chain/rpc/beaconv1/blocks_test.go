@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -151,7 +150,7 @@ func TestServer_GetBlockHeader(t *testing.T) {
 			blkHdr, err := migration.V1Alpha1BlockToV1BlockHeader(tt.want)
 			require.NoError(t, err)
 
-			if !reflect.DeepEqual(header.Data.Header.Message, blkHdr.Header) {
+			if !reflect.DeepEqual(header.Data.Header.Message, blkHdr.Message) {
 				t.Error("Expected blocks to equal")
 			}
 		})
@@ -200,7 +199,7 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 	}{
 		{
 			name: "slot",
-			slot: 30,
+			slot: types.Slot(30),
 			want: []*ethpb_alpha.SignedBeaconBlock{
 				blkContainers[30].Block,
 				b2,
@@ -221,7 +220,7 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			headers, err := bs.ListBlockHeaders(ctx, &ethpb.BlockHeadersRequest{
-				Slot:       tt.slot,
+				Slot:       &tt.slot,
 				ParentRoot: tt.parentRoot,
 			})
 			require.NoError(t, err)
@@ -231,7 +230,7 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 				signedHdr, err := migration.V1Alpha1BlockToV1BlockHeader(blk)
 				require.NoError(t, err)
 
-				if !reflect.DeepEqual(headers.Data[i].Header.Message, signedHdr.Header) {
+				if !reflect.DeepEqual(headers.Data[i].Header.Message, signedHdr.Message) {
 					t.Error("Expected blocks to equal")
 				}
 			}
@@ -258,12 +257,11 @@ func TestServer_ProposeBlock_OK(t *testing.T) {
 
 	c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
 	beaconChainServer := &Server{
-		BeaconDB:          beaconDB,
-		ChainStartFetcher: &mockPOW.POWChain{},
-		BlockReceiver:     c,
-		ChainInfoFetcher:  c,
-		BlockNotifier:     c.BlockNotifier(),
-		Broadcaster:       mockp2p.NewTestP2P(t),
+		BeaconDB:         beaconDB,
+		BlockReceiver:    c,
+		ChainInfoFetcher: c,
+		BlockNotifier:    c.BlockNotifier(),
+		Broadcaster:      mockp2p.NewTestP2P(t),
 	}
 	req := testutil.NewBeaconBlock()
 	req.Block.Slot = 5

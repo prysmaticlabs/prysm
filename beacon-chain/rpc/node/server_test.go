@@ -8,11 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
-	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
-
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -23,6 +19,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/version"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
+	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func TestNodeServer_GetSyncStatus(t *testing.T) {
@@ -30,11 +30,11 @@ func TestNodeServer_GetSyncStatus(t *testing.T) {
 	ns := &Server{
 		SyncChecker: mSync,
 	}
-	res, err := ns.GetSyncStatus(context.Background(), &ptypes.Empty{})
+	res, err := ns.GetSyncStatus(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.Equal(t, false, res.Syncing)
 	ns.SyncChecker = &mockSync.Sync{IsSyncing: true}
-	res, err = ns.GetSyncStatus(context.Background(), &ptypes.Empty{})
+	res, err = ns.GetSyncStatus(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.Equal(t, true, res.Syncing)
 }
@@ -55,26 +55,24 @@ func TestNodeServer_GetGenesis(t *testing.T) {
 			ValidatorsRoot: genValRoot,
 		},
 	}
-	res, err := ns.GetGenesis(context.Background(), &ptypes.Empty{})
+	res, err := ns.GetGenesis(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.DeepEqual(t, addr.Bytes(), res.DepositContractAddress)
-	pUnix, err := ptypes.TimestampProto(time.Unix(0, 0))
-	require.NoError(t, err)
-	assert.Equal(t, true, res.GenesisTime.Equal(pUnix))
+	pUnix := timestamppb.New(time.Unix(0, 0))
+	assert.Equal(t, res.GenesisTime.Seconds, pUnix.Seconds)
 	assert.DeepEqual(t, genValRoot[:], res.GenesisValidatorsRoot)
 
 	ns.GenesisTimeFetcher = &mock.ChainService{Genesis: time.Unix(10, 0)}
-	res, err = ns.GetGenesis(context.Background(), &ptypes.Empty{})
+	res, err = ns.GetGenesis(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
-	pUnix, err = ptypes.TimestampProto(time.Unix(10, 0))
-	require.NoError(t, err)
-	assert.Equal(t, true, res.GenesisTime.Equal(pUnix))
+	pUnix = timestamppb.New(time.Unix(10, 0))
+	assert.Equal(t, res.GenesisTime.Seconds, pUnix.Seconds)
 }
 
 func TestNodeServer_GetVersion(t *testing.T) {
 	v := version.Version()
 	ns := &Server{}
-	res, err := ns.GetVersion(context.Background(), &ptypes.Empty{})
+	res, err := ns.GetVersion(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.Equal(t, v, res.Version)
 }
@@ -87,7 +85,7 @@ func TestNodeServer_GetImplementedServices(t *testing.T) {
 	ethpb.RegisterNodeServer(server, ns)
 	reflection.Register(server)
 
-	res, err := ns.ListImplementedServices(context.Background(), &ptypes.Empty{})
+	res, err := ns.ListImplementedServices(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	// We verify the services include the node service + the registered reflection service.
 	assert.Equal(t, 2, len(res.Services))
@@ -111,7 +109,7 @@ func TestNodeServer_GetHost(t *testing.T) {
 	}
 	ethpb.RegisterNodeServer(server, ns)
 	reflection.Register(server)
-	h, err := ns.GetHost(context.Background(), &ptypes.Empty{})
+	h, err := ns.GetHost(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.Equal(t, mP2P.PeerID().String(), h.PeerId)
 	assert.Equal(t, stringENR, h.Enr)
@@ -143,7 +141,7 @@ func TestNodeServer_ListPeers(t *testing.T) {
 	ethpb.RegisterNodeServer(server, ns)
 	reflection.Register(server)
 
-	res, err := ns.ListPeers(context.Background(), &ptypes.Empty{})
+	res, err := ns.ListPeers(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(res.Peers))
 	assert.Equal(t, int(ethpb.PeerDirection_INBOUND), int(res.Peers[0].Direction))

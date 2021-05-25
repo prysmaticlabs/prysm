@@ -77,7 +77,7 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	defer cancel()
 
 	metadataSeq := types.SSZUint64(s.cfg.P2P.MetadataSeq())
-	stream, err := s.cfg.P2P.Send(ctx, &metadataSeq, p2p.RPCPingTopic, id)
+	stream, err := s.cfg.P2P.Send(ctx, &metadataSeq, p2p.RPCPingTopicV1, id)
 	if err != nil {
 		return err
 	}
@@ -94,6 +94,11 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	if code != 0 {
 		s.cfg.P2P.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		return errors.New(errMsg)
+	}
+	// No-op for now with the rpc context.
+	_, err = readContextFromStream(stream, s.cfg.Chain)
+	if err != nil {
+		return err
 	}
 	msg := new(types.SSZUint64)
 	if err := s.cfg.P2P.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
