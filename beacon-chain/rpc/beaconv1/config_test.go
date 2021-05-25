@@ -68,6 +68,7 @@ func TestGetSpec(t *testing.T) {
 	config.MaxAttestations = 47
 	config.MaxDeposits = 48
 	config.MaxVoluntaryExits = 49
+	config.DuplicateValidatorEpochsCheck = 2
 
 	var dbp [4]byte
 	copy(dbp[:], []byte{'0', '0', '0', '1'})
@@ -97,7 +98,7 @@ func TestGetSpec(t *testing.T) {
 	resp, err := server.GetSpec(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 
-	assert.Equal(t, 60, len(resp.Data))
+	assert.Equal(t, 61, len(resp.Data))
 	for k, v := range resp.Data {
 		switch k {
 		case "config_name":
@@ -220,6 +221,8 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "0x30303036", v)
 		case "domain_aggregate_and_proof":
 			assert.Equal(t, "0x30303037", v)
+		case "number_of_epochs_to_check_for_doppleganger_validator":
+			assert.Equal(t, "2", v)
 		default:
 			t.Errorf("Incorrect key: %s", k)
 		}

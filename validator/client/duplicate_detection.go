@@ -31,7 +31,7 @@ var validatingPublicKeys [][48]byte
 var valIndices []types.ValidatorIndex
 
 // N epochs to check
-var NoEpochsToCheck uint8
+var NoEpochsToCheck uint64
 
 // Starts the Doppelganger detection
 func (v *validator) StartDoppelgangerService(ctx context.Context) error {

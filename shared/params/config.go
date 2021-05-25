@@ -58,7 +58,7 @@ type BeaconChainConfig struct {
 	Eth1FollowDistance               uint64      `yaml:"ETH1_FOLLOW_DISTANCE" spec:"true"`                                  // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
 	SafeSlotsToUpdateJustified       types.Slot  `yaml:"SAFE_SLOTS_TO_UPDATE_JUSTIFIED" spec:"true"`                        // SafeSlotsToUpdateJustified is the minimal slots needed to update justified check point.
 	SecondsPerETH1Block              uint64      `yaml:"SECONDS_PER_ETH1_BLOCK" spec:"true"`                                // SecondsPerETH1Block is the approximate time for a single eth1 block to be produced.
-	DuplicateValidatorEpochsCheck    uint8       `yaml:"NUMBER_OF_EPOCHS_TO_CHECK_FOR_DOPPLEGANGER_VALIDATOR" spec:"false"` // DuplicateValidatorEpochsCheck is N=2 number of epochs to check for duplicate validator before starting.
+	DuplicateValidatorEpochsCheck    uint64      `yaml:"NUMBER_OF_EPOCHS_TO_CHECK_FOR_DOPPLEGANGER_VALIDATOR" spec:"false"` // DuplicateValidatorEpochsCheck is N=2 number of epochs to check for duplicate validator before starting.
 
 	// Ethereum PoW parameters.
 	DepositChainID         uint64 `yaml:"DEPOSIT_CHAIN_ID" spec:"true"`         // DepositChainID of the eth1 network. This used for replay protection.
