@@ -3,6 +3,7 @@ package nodev1
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"runtime"
 	"strconv"
 	"strings"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
+	grpcruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	libp2ptest "github.com/libp2p/go-libp2p-peerstore/test"
@@ -23,10 +25,12 @@ import (
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	syncmock "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/version"
+	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -48,7 +52,7 @@ func TestGetVersion(t *testing.T) {
 }
 
 func TestGetHealth(t *testing.T) {
-	ctx := context.Background()
+	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &grpcruntime.ServerTransportStream{})
 	checker := &syncmock.Sync{}
 	s := &Server{
 		SyncChecker: checker,
@@ -62,6 +66,11 @@ func TestGetHealth(t *testing.T) {
 	checker.IsInitialized = false
 	checker.IsSyncing = true
 	require.NoError(t, err)
+	checker.IsSynced = true
+	require.NoError(t, err)
+	stream, ok := grpc.ServerTransportStreamFromContext(ctx).(*grpcruntime.ServerTransportStream)
+	require.Equal(t, true, ok, "type assertion failed")
+	assert.Equal(t, stream.Header()[grpcutils.HttpCodeMetadataKey][0], strconv.Itoa(http.StatusPartialContent))
 }
 
 func TestGetIdentity(t *testing.T) {
