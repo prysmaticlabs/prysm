@@ -66,7 +66,7 @@ func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*e
 
 	return &ethpb.StateRootResponse{
 		Data: &ethpb.StateRootResponse_StateRoot{
-			StateRoot: root,
+			Root: root,
 		},
 	}, nil
 }
