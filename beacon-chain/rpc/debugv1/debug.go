@@ -37,6 +37,24 @@ func (ds *Server) GetBeaconState(ctx context.Context, req *ethpb.StateRequest) (
 	}, nil
 }
 
+// GetBeaconStateSsz returns the SSZ-serialized version of the full beacon state object for given stateId.
+func (ds *Server) GetBeaconStateSsz(ctx context.Context, req *ethpb.StateRequest) (*ethpb.BeaconStateSszResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBeaconStateSsz")
+	defer span.End()
+
+	state, err := ds.StateFetcher.State(ctx, req.StateId)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not get state: %v", err)
+	}
+
+	sszState, err := state.MarshalSSZ()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not marshal state into SSZ: %v", err)
+	}
+
+	return &ethpb.BeaconStateSszResponse{Data: sszState}, nil
+}
+
 // ListForkChoiceHeads retrieves the fork choice leaves for the current head.
 func (ds *Server) ListForkChoiceHeads(ctx context.Context, _ *emptypb.Empty) (*ethpb.ForkChoiceHeadsResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "debugv1.ListForkChoiceHeads")
