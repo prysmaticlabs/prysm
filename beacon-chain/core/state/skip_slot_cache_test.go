@@ -5,6 +5,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
@@ -30,11 +32,11 @@ func TestSkipSlotCache_OK(t *testing.T) {
 	// with the state
 	blk, err := testutil.GenerateFullBlock(bState, privs, blkCfg, originalState.Slot()+10)
 	require.NoError(t, err)
-	executedState, err := state.ExecuteStateTransition(context.Background(), originalState, blk)
+	executedState, err := state.ExecuteStateTransition(context.Background(), originalState, interfaces.NewWrappedSignedBeaconBlock(blk))
 	require.NoError(t, err, "Could not run state transition")
 	originalState, ok := executedState.(*stateV0.BeaconState)
 	require.Equal(t, true, ok)
-	bState, err = state.ExecuteStateTransition(context.Background(), bState, blk)
+	bState, err = state.ExecuteStateTransition(context.Background(), bState, interfaces.NewWrappedSignedBeaconBlock(blk))
 	require.NoError(t, err, "Could not process state transition")
 
 	assert.DeepEqual(t, originalState.CloneInnerState(), bState.CloneInnerState(), "Skipped slots cache leads to different states")
@@ -56,7 +58,7 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 	// with the state
 	blk, err := testutil.GenerateFullBlock(bState, privs, blkCfg, originalState.Slot()+10)
 	require.NoError(t, err)
-	executedState, err := state.ExecuteStateTransition(context.Background(), originalState, blk)
+	executedState, err := state.ExecuteStateTransition(context.Background(), originalState, interfaces.NewWrappedSignedBeaconBlock(blk))
 	require.NoError(t, err, "Could not run state transition")
 	originalState, ok := executedState.(*stateV0.BeaconState)
 	require.Equal(t, true, ok)
@@ -70,7 +72,7 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 		signature, err := testutil.BlockSignature(originalState, blk.Block, privs)
 		require.NoError(t, err)
 		blk.Signature = signature.Marshal()
-		state1, err = state.ExecuteStateTransition(context.Background(), originalState.Copy(), blk)
+		state1, err = state.ExecuteStateTransition(context.Background(), originalState.Copy(), interfaces.NewWrappedSignedBeaconBlock(blk))
 		require.NoError(t, err, "Could not run state transition")
 	}
 
@@ -81,7 +83,7 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 		signature, err := testutil.BlockSignature(originalState, blk.Block, privs)
 		require.NoError(t, err)
 		blk.Signature = signature.Marshal()
-		state2, err = state.ExecuteStateTransition(context.Background(), originalState.Copy(), blk)
+		state2, err = state.ExecuteStateTransition(context.Background(), originalState.Copy(), interfaces.NewWrappedSignedBeaconBlock(blk))
 		require.NoError(t, err, "Could not run state transition")
 	}
 
