@@ -127,6 +127,7 @@ go_test(
         "//shared/event:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/hashutil:go_default_library",
+        "//shared/interfaces:go_default_library",
         "//shared/params:go_default_library",
         "//shared/sliceutil:go_default_library",
         "//shared/testutil:go_default_library",
