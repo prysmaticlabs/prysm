@@ -30,6 +30,9 @@ func (bs *Server) GetValidator(ctx context.Context, req *ethpb.StateValidatorReq
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get validator container: %v", err)
 	}
+	if len(valContainer) == 0 {
+		return nil, status.Error(codes.NotFound, "Could not find validator")
+	}
 	return &ethpb.StateValidatorResponse{Data: valContainer[0]}, nil
 }
 
