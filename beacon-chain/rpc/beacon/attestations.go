@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -62,7 +63,7 @@ func (bs *Server) ListAttestations(
 		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
 			req.PageSize, cmd.Get().MaxRPCPageSize)
 	}
-	var blocks []*ethpb.SignedBeaconBlock
+	var blocks []interfaces.SignedBeaconBlock
 	var err error
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListAttestationsRequest_GenesisEpoch:
@@ -80,7 +81,7 @@ func (bs *Server) ListAttestations(
 	}
 	atts := make([]*ethpb.Attestation, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks)))
 	for _, block := range blocks {
-		atts = append(atts, block.Block.Body.Attestations...)
+		atts = append(atts, block.Block().Body().Attestations()...)
 	}
 	// We sort attestations according to the Sortable interface.
 	sort.Sort(sortableAttestations(atts))
@@ -116,7 +117,7 @@ func (bs *Server) ListAttestations(
 func (bs *Server) ListIndexedAttestations(
 	ctx context.Context, req *ethpb.ListIndexedAttestationsRequest,
 ) (*ethpb.ListIndexedAttestationsResponse, error) {
-	var blocks []*ethpb.SignedBeaconBlock
+	var blocks []interfaces.SignedBeaconBlock
 	var err error
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListIndexedAttestationsRequest_GenesisEpoch:
@@ -135,7 +136,7 @@ func (bs *Server) ListIndexedAttestations(
 
 	attsArray := make([]*ethpb.Attestation, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks)))
 	for _, block := range blocks {
-		attsArray = append(attsArray, block.Block.Body.Attestations...)
+		attsArray = append(attsArray, block.Block().Body().Attestations()...)
 	}
 	// We sort attestations according to the Sortable interface.
 	sort.Sort(sortableAttestations(attsArray))

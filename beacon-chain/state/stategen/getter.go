@@ -78,7 +78,7 @@ func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get ancestor state")
 	}
-	if startState == nil {
+	if startState == nil || startState.IsNil() {
 		return nil, errUnknownState
 	}
 	summary, err := s.stateSummary(ctx, blockRoot)
@@ -133,7 +133,7 @@ func (s *State) RecoverStateSummary(ctx context.Context, blockRoot [32]byte) (*p
 		if err != nil {
 			return nil, err
 		}
-		summary := &pb.StateSummary{Slot: b.Block.Slot, Root: blockRoot[:]}
+		summary := &pb.StateSummary{Slot: b.Block().Slot(), Root: blockRoot[:]}
 		if err := s.beaconDB.SaveStateSummary(ctx, summary); err != nil {
 			return nil, err
 		}
@@ -149,7 +149,7 @@ func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (iface.
 
 	// First, it checks if the state exists in hot state cache.
 	cachedState := s.hotStateCache.get(blockRoot)
-	if cachedState != nil {
+	if cachedState != nil && !cachedState.IsNil() {
 		return cachedState, nil
 	}
 
@@ -179,7 +179,7 @@ func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (iface.
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get ancestor state")
 	}
-	if startState == nil {
+	if startState == nil || startState.IsNil() {
 		return nil, errUnknownBoundaryState
 	}
 
@@ -248,7 +248,7 @@ func (s *State) lastAncestorState(ctx context.Context, root [32]byte) (iface.Bea
 	if err != nil {
 		return nil, err
 	}
-	if b == nil {
+	if b == nil || b.IsNil() {
 		return nil, errUnknownBlock
 	}
 
@@ -257,7 +257,7 @@ func (s *State) lastAncestorState(ctx context.Context, root [32]byte) (iface.Bea
 			return nil, ctx.Err()
 		}
 		// Is the state a genesis state.
-		parentRoot := bytesutil.ToBytes32(b.Block.ParentRoot)
+		parentRoot := bytesutil.ToBytes32(b.Block().ParentRoot())
 		if parentRoot == params.BeaconConfig().ZeroHash {
 			return s.beaconDB.GenesisState(ctx)
 		}
@@ -289,7 +289,7 @@ func (s *State) lastAncestorState(ctx context.Context, root [32]byte) (iface.Bea
 		if err != nil {
 			return nil, err
 		}
-		if b == nil {
+		if b == nil || b.IsNil() {
 			return nil, errUnknownBlock
 		}
 	}

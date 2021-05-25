@@ -1,4 +1,4 @@
-package stateV0
+package copyutil
 
 import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
