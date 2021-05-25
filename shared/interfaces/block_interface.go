@@ -6,6 +6,8 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+// SignedBeaconBlock is an interface describing the method set of
+// a signed block.
 type SignedBeaconBlock interface {
 	Block() BeaconBlock
 	Signature() []byte
@@ -16,6 +18,8 @@ type SignedBeaconBlock interface {
 	RawPhase0Block() (*ethpb.SignedBeaconBlock, error)
 }
 
+// BeaconBlock describes an interface which states the methods
+// employed by an object that is a Beacon Block.
 type BeaconBlock interface {
 	Slot() types.Slot
 	ProposerIndex() types.ValidatorIndex
@@ -27,6 +31,9 @@ type BeaconBlock interface {
 	MarshalSSZ() ([]byte, error)
 	Proto() proto.Message
 }
+
+// BeaconBlockBody describes the method set employed by an object
+// that is a beacon block body.
 type BeaconBlockBody interface {
 	RandaoReveal() []byte
 	Eth1Data() *ethpb.Eth1Data
