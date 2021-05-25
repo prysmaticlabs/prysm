@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	ethpb_alpha "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
@@ -112,6 +114,9 @@ func TestListValidators(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.Equal(t, len(resp.Data), 8192)
+		for _, val := range resp.Data {
+			assert.Equal(t, ethpb.ValidatorStatus_ACTIVE_ONGOING, val.Status)
+		}
 	})
 
 	t.Run("Head List Validators by index", func(t *testing.T) {
@@ -130,6 +135,7 @@ func TestListValidators(t *testing.T) {
 		require.NoError(t, err)
 		for i, val := range resp.Data {
 			assert.Equal(t, idNums[i], val.Index)
+			assert.Equal(t, ethpb.ValidatorStatus_ACTIVE_ONGOING, val.Status)
 		}
 	})
 
@@ -153,6 +159,7 @@ func TestListValidators(t *testing.T) {
 		for i, val := range resp.Data {
 			assert.Equal(t, idNums[i], val.Index)
 			assert.Equal(t, true, bytes.Equal(pubKeys[i], val.Validator.Pubkey))
+			assert.Equal(t, ethpb.ValidatorStatus_ACTIVE_ONGOING, val.Status)
 		}
 	})
 
@@ -178,6 +185,7 @@ func TestListValidators(t *testing.T) {
 		for i, val := range resp.Data {
 			assert.Equal(t, idNums[i], val.Index)
 			assert.Equal(t, true, bytes.Equal(pubkeys[i], val.Validator.Pubkey))
+			assert.Equal(t, ethpb.ValidatorStatus_ACTIVE_ONGOING, val.Status)
 		}
 	})
 
@@ -204,6 +212,208 @@ func TestListValidators(t *testing.T) {
 	})
 }
 
+func TestListValidators_Status(t *testing.T) {
+	ctx := context.Background()
+
+	var state iface.BeaconState
+	state, _ = testutil.DeterministicGenesisState(t, 8192)
+
+	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
+	validators := []*ethpb_alpha.Validator{
+		{
+			ActivationEpoch:            farFutureEpoch,
+			ActivationEligibilityEpoch: farFutureEpoch,
+		},
+		{
+			ActivationEpoch: 0,
+			ExitEpoch:       farFutureEpoch,
+		},
+		{
+			ActivationEpoch: 0,
+			ExitEpoch:       30,
+			Slashed:         true,
+		},
+		{
+			ActivationEpoch: 3,
+			ExitEpoch:       30,
+			Slashed:         false,
+		},
+		{
+			ActivationEpoch:   3,
+			ExitEpoch:         30,
+			WithdrawableEpoch: 40,
+			Slashed:           true,
+		},
+		{
+			ActivationEpoch:   3,
+			ExitEpoch:         30,
+			WithdrawableEpoch: 40,
+			Slashed:           false,
+		},
+		{
+			ActivationEpoch:   3,
+			ExitEpoch:         30,
+			WithdrawableEpoch: 40,
+			EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
+			Slashed:           false,
+		},
+		{
+			ActivationEpoch:   3,
+			ExitEpoch:         30,
+			WithdrawableEpoch: 40,
+			EffectiveBalance:  0,
+			Slashed:           false,
+		},
+	}
+	for _, validator := range validators {
+		require.NoError(t, state.AppendValidator(validator))
+		require.NoError(t, state.AppendBalance(params.BeaconConfig().MaxEffectiveBalance))
+	}
+
+	t.Run("Head List All ACTIVE Validators", func(t *testing.T) {
+		s := Server{
+			StateFetcher: statefetcher.StateProvider{
+				ChainInfoFetcher: &chainMock.ChainService{State: state},
+			},
+		}
+
+		resp, err := s.ListValidators(ctx, &ethpb.StateValidatorsRequest{
+			StateId: []byte("head"),
+			Status:  []ethpb.ValidatorStatus{ethpb.ValidatorStatus_ACTIVE},
+		})
+		require.NoError(t, err)
+		assert.Equal(t, len(resp.Data), 8192+2 /* 2 active */)
+		for _, datum := range resp.Data {
+			status := validatorStatus(datum.Validator, 0)
+			require.Equal(
+				t,
+				true,
+				status == ethpb.ValidatorStatus_ACTIVE,
+			)
+			require.Equal(
+				t,
+				true,
+				datum.Status == ethpb.ValidatorStatus_ACTIVE_ONGOING ||
+					datum.Status == ethpb.ValidatorStatus_ACTIVE_EXITING ||
+					datum.Status == ethpb.ValidatorStatus_ACTIVE_SLASHED,
+			)
+		}
+	})
+
+	t.Run("Head List All ACTIVE_ONGOING Validators", func(t *testing.T) {
+		s := Server{
+			StateFetcher: statefetcher.StateProvider{
+				ChainInfoFetcher: &chainMock.ChainService{State: state},
+			},
+		}
+
+		resp, err := s.ListValidators(ctx, &ethpb.StateValidatorsRequest{
+			StateId: []byte("head"),
+			Status:  []ethpb.ValidatorStatus{ethpb.ValidatorStatus_ACTIVE_ONGOING},
+		})
+		require.NoError(t, err)
+		assert.Equal(t, len(resp.Data), 8192+1 /* 1 active_ongoing */)
+		for _, datum := range resp.Data {
+			status := validatorSubStatus(datum.Validator, 0)
+			require.Equal(
+				t,
+				true,
+				status == ethpb.ValidatorStatus_ACTIVE_ONGOING,
+			)
+			require.Equal(
+				t,
+				true,
+				datum.Status == ethpb.ValidatorStatus_ACTIVE_ONGOING,
+			)
+		}
+	})
+
+	require.NoError(t, state.SetSlot(params.BeaconConfig().SlotsPerEpoch*35))
+	t.Run("Head List All EXITED Validators", func(t *testing.T) {
+		s := Server{
+			StateFetcher: statefetcher.StateProvider{
+				ChainInfoFetcher: &chainMock.ChainService{State: state},
+			},
+		}
+
+		resp, err := s.ListValidators(ctx, &ethpb.StateValidatorsRequest{
+			StateId: []byte("head"),
+			Status:  []ethpb.ValidatorStatus{ethpb.ValidatorStatus_EXITED},
+		})
+		require.NoError(t, err)
+		assert.Equal(t, 4 /* 4 exited */, len(resp.Data))
+		for _, datum := range resp.Data {
+			status := validatorStatus(datum.Validator, 35)
+			require.Equal(
+				t,
+				true,
+				status == ethpb.ValidatorStatus_EXITED,
+			)
+			require.Equal(
+				t,
+				true,
+				datum.Status == ethpb.ValidatorStatus_EXITED_UNSLASHED || datum.Status == ethpb.ValidatorStatus_EXITED_SLASHED,
+			)
+		}
+	})
+
+	t.Run("Head List All PENDING_INITIALIZED and EXITED_UNSLASHED Validators", func(t *testing.T) {
+		s := Server{
+			StateFetcher: statefetcher.StateProvider{
+				ChainInfoFetcher: &chainMock.ChainService{State: state},
+			},
+		}
+
+		resp, err := s.ListValidators(ctx, &ethpb.StateValidatorsRequest{
+			StateId: []byte("head"),
+			Status:  []ethpb.ValidatorStatus{ethpb.ValidatorStatus_PENDING_INITIALIZED, ethpb.ValidatorStatus_EXITED_UNSLASHED},
+		})
+		require.NoError(t, err)
+		assert.Equal(t, 4 /* 4 exited */, len(resp.Data))
+		for _, datum := range resp.Data {
+			status := validatorSubStatus(datum.Validator, 35)
+			require.Equal(
+				t,
+				true,
+				status == ethpb.ValidatorStatus_PENDING_INITIALIZED || status == ethpb.ValidatorStatus_EXITED_UNSLASHED,
+			)
+			require.Equal(
+				t,
+				true,
+				datum.Status == ethpb.ValidatorStatus_PENDING_INITIALIZED || datum.Status == ethpb.ValidatorStatus_EXITED_UNSLASHED,
+			)
+		}
+	})
+
+	t.Run("Head List All PENDING and EXITED Validators", func(t *testing.T) {
+		s := Server{
+			StateFetcher: statefetcher.StateProvider{
+				ChainInfoFetcher: &chainMock.ChainService{State: state},
+			},
+		}
+
+		resp, err := s.ListValidators(ctx, &ethpb.StateValidatorsRequest{
+			StateId: []byte("head"),
+			Status:  []ethpb.ValidatorStatus{ethpb.ValidatorStatus_PENDING, ethpb.ValidatorStatus_EXITED_SLASHED},
+		})
+		require.NoError(t, err)
+		assert.Equal(t, 2 /* 1 pending, 1 exited */, len(resp.Data))
+		for _, datum := range resp.Data {
+			status := validatorStatus(datum.Validator, 35)
+			subStatus := validatorSubStatus(datum.Validator, 35)
+			require.Equal(
+				t,
+				true,
+				status == ethpb.ValidatorStatus_PENDING || subStatus == ethpb.ValidatorStatus_EXITED_SLASHED,
+			)
+			require.Equal(
+				t,
+				true,
+				datum.Status == ethpb.ValidatorStatus_PENDING_INITIALIZED || datum.Status == ethpb.ValidatorStatus_EXITED_SLASHED,
+			)
+		}
+	})
+}
 func TestListValidatorBalances(t *testing.T) {
 	ctx := context.Background()
 
@@ -488,7 +698,7 @@ func Test_validatorStatus(t *testing.T) {
 				},
 				epoch: types.Epoch(5),
 			},
-			want: ethpb.ValidatorStatus_ACTIVE_EXITING,
+			want: ethpb.ValidatorStatus_ACTIVE,
 		},
 		{
 			name: "exited slashed",

@@ -34,7 +34,6 @@ func (bs *Server) GetValidator(ctx context.Context, req *ethpb.StateValidatorReq
 }
 
 // ListValidators returns filterable list of validators with their balance, status and index.
-// TODO(#8901): missing status support.
 func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidatorsRequest) (*ethpb.StateValidatorsResponse, error) {
 	state, err := bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
@@ -46,7 +45,24 @@ func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidators
 		return nil, status.Errorf(codes.Internal, "Could not get validator container: %v", err)
 	}
 
-	return &ethpb.StateValidatorsResponse{Data: valContainers}, nil
+	if len(req.Status) == 0 {
+		return &ethpb.StateValidatorsResponse{Data: valContainers}, nil
+	}
+
+	filterStatus := make(map[ethpb.ValidatorStatus]bool, len(req.Status))
+	for _, ss := range req.Status {
+		filterStatus[ss] = true
+	}
+	epoch := helpers.SlotToEpoch(state.Slot())
+	filteredVals := make([]*ethpb.ValidatorContainer, 0, len(valContainers))
+	for _, vc := range valContainers {
+		valStatus := validatorStatus(vc.Validator, epoch)
+		valSubStatus := validatorSubStatus(vc.Validator, epoch)
+		if filterStatus[valStatus] || filterStatus[valSubStatus] {
+			filteredVals = append(filteredVals, vc)
+		}
+	}
+	return &ethpb.StateValidatorsResponse{Data: filteredVals}, nil
 }
 
 // ListValidatorBalances returns a filterable list of validator balances.
@@ -123,16 +139,19 @@ func (bs *Server) ListCommittees(ctx context.Context, req *ethpb.StateCommittees
 // This function returns the validator object based on the passed in ID. The validator ID could be its public key,
 // or its index.
 func valContainersByRequestIds(state iface.BeaconState, validatorIds [][]byte) ([]*ethpb.ValidatorContainer, error) {
+	epoch := helpers.SlotToEpoch(state.Slot())
 	allValidators := state.Validators()
 	allBalances := state.Balances()
 	var valContainers []*ethpb.ValidatorContainer
 	if len(validatorIds) == 0 {
 		valContainers = make([]*ethpb.ValidatorContainer, len(allValidators))
 		for i, validator := range allValidators {
+			v1Validator := migration.V1Alpha1ValidatorToV1(validator)
 			valContainers[i] = &ethpb.ValidatorContainer{
 				Index:     types.ValidatorIndex(i),
 				Balance:   allBalances[i],
-				Validator: migration.V1Alpha1ValidatorToV1(validator),
+				Status:    validatorSubStatus(v1Validator, epoch),
+				Validator: v1Validator,
 			}
 		}
 	} else {
@@ -152,10 +171,12 @@ func valContainersByRequestIds(state iface.BeaconState, validatorIds [][]byte) (
 				}
 				valIndex = types.ValidatorIndex(index)
 			}
+			v1Validator := migration.V1Alpha1ValidatorToV1(allValidators[valIndex])
 			valContainers[i] = &ethpb.ValidatorContainer{
 				Index:     valIndex,
 				Balance:   allBalances[valIndex],
-				Validator: migration.V1Alpha1ValidatorToV1(allValidators[valIndex]),
+				Status:    validatorSubStatus(v1Validator, epoch),
+				Validator: v1Validator,
 			}
 		}
 	}
