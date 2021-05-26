@@ -41,16 +41,19 @@ func main() {
 	}
 
 	// Initialize the configuration and git CLI.
+	log.Infof("Loading server configuration")
 	config, err := loadConfig(*configPathFlag)
 	if err != nil {
 		log.Fatal(err)
 	}
 	manager := newGitCLI(config.CloneBasePath)
 
+	log.Infof("Initializing git configuration")
 	if err := initializeGitConfig(githubMirrorPush); err != nil {
 		log.Fatal(err)
 	}
 
+	log.Infof("Cloning specified repositories in config")
 	// Clone repositories specified in the config. No-op if the repositories
 	// have already been cloned before.
 	if err := cloneRepos(config, manager); err != nil {
@@ -78,6 +81,7 @@ func main() {
 		}
 		w.WriteHeader(http.StatusOK)
 	})
+	log.Info("Listening on port 3000")
 	log.Fatal(http.ListenAndServe(":3000", nil))
 }
 
