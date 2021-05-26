@@ -37,7 +37,7 @@ func CalculateStateRoot(
 	if ctx.Err() != nil {
 		return [32]byte{}, ctx.Err()
 	}
-	if state == nil {
+	if state == nil || state.IsNil() {
 		return [32]byte{}, errors.New("nil state")
 	}
 	if err := VerifyNilBeaconBlock(signed); err != nil {
@@ -133,7 +133,7 @@ func ExecuteStateTransition(
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
-	if state == nil {
+	if state == nil || state.IsNil() {
 		return nil, errors.New("nil state")
 	}
 	if err := VerifyNilBeaconBlock(signed); err != nil {
@@ -190,7 +190,7 @@ func ProcessEpoch(ctx context.Context, state iface.BeaconStateAltair) (iface.Bea
 	ctx, span := trace.StartSpan(ctx, "altair.ProcessEpoch")
 	defer span.End()
 
-	if state == nil {
+	if state == nil || state.IsNil() {
 		return nil, errors.New("nil state")
 	}
 	vp, bp, err := InitializeEpochValidators(ctx, state)
@@ -282,7 +282,7 @@ func ProcessEpoch(ctx context.Context, state iface.BeaconStateAltair) (iface.Bea
 func ProcessSlots(ctx context.Context, state iface.BeaconState, slot types.Slot) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "altair.ProcessSlots")
 	defer span.End()
-	if state == nil {
+	if state == nil || state.IsNil() {
 		return nil, errors.New("nil state")
 	}
 	span.AddAttributes(trace.Int64Attribute("slots", int64(slot)-int64(state.Slot())))

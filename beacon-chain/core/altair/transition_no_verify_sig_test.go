@@ -12,10 +12,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	testutilAltair "github.com/prysmaticlabs/prysm/shared/testutil/altair"
@@ -68,7 +68,7 @@ func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
 	}
 	indices, err := altair.NextSyncCommitteeIndices(beaconState)
 	require.NoError(t, err)
-	h := stateV0.CopyBeaconBlockHeader(beaconState.LatestBlockHeader())
+	h := copyutil.CopyBeaconBlockHeader(beaconState.LatestBlockHeader())
 	prevStateRoot, err := beaconState.HashTreeRoot(context.Background())
 	require.NoError(t, err)
 	h.StateRoot = prevStateRoot[:]
@@ -152,7 +152,7 @@ func TestExecuteStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t *test
 	}
 	indices, err := altair.NextSyncCommitteeIndices(beaconState)
 	require.NoError(t, err)
-	h := stateV0.CopyBeaconBlockHeader(beaconState.LatestBlockHeader())
+	h := copyutil.CopyBeaconBlockHeader(beaconState.LatestBlockHeader())
 	prevStateRoot, err := beaconState.HashTreeRoot(context.Background())
 	require.NoError(t, err)
 	h.StateRoot = prevStateRoot[:]

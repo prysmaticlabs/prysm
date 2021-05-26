@@ -9,8 +9,8 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"google.golang.org/protobuf/proto"
 )
@@ -93,7 +93,7 @@ func (b *BeaconState) SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.LatestBlockHeader = blockutil.CopyBeaconBlockHeader(val)
+	b.state.LatestBlockHeader = copyutil.CopyBeaconBlockHeader(val)
 	b.markFieldAsDirty(latestBlockHeader)
 	return nil
 }
