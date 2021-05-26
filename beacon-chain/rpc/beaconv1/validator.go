@@ -215,7 +215,7 @@ func validatorStatus(validator *ethpb.Validator, epoch types.Epoch) (ethpb.Valid
 	case ethpb.ValidatorStatus_WITHDRAWAL_POSSIBLE, ethpb.ValidatorStatus_WITHDRAWAL_DONE:
 		return ethpb.ValidatorStatus_WITHDRAWAL, nil
 	}
-	return 0, errors.New("no valid status found")
+	return 0, errors.New("invalid validator state")
 }
 
 func validatorSubStatus(validator *ethpb.Validator, epoch types.Epoch) (ethpb.ValidatorStatus, error) {
@@ -261,5 +261,5 @@ func validatorSubStatus(validator *ethpb.Validator, epoch types.Epoch) (ethpb.Va
 		}
 	}
 
-	return 0, errors.New("no valid sub status found")
+	return 0, errors.New("invalid validator state")
 }
