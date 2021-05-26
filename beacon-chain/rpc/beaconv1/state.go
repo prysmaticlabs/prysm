@@ -217,7 +217,7 @@ func (bs *Server) stateRootByHex(ctx context.Context, stateId []byte) ([]byte, e
 			return stateRoot[:], nil
 		}
 	}
-	return nil, fmt.Errorf("state not found in the last %d state roots in head state", len(headState.StateRoots()))
+	return nil, fmt.Errorf("state not found in the last %d state roots", len(headState.StateRoots()))
 }
 
 func (bs *Server) stateRootBySlot(ctx context.Context, slot types.Slot) ([]byte, error) {

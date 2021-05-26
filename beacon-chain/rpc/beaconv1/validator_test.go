@@ -68,7 +68,7 @@ func TestGetValidator(t *testing.T) {
 		_, err = s.GetValidator(ctx, &ethpb.StateValidatorRequest{
 			StateId: stateId,
 		})
-		require.ErrorContains(t, "state not found in the last 8192 state roots in head state", err)
+		require.ErrorContains(t, "state not found in the last 8192 state roots", err)
 	})
 
 	t.Run("Invalid state ID", func(t *testing.T) {
@@ -78,7 +78,7 @@ func TestGetValidator(t *testing.T) {
 			StateId:     []byte("foo"),
 			ValidatorId: pubKey[:],
 		})
-		require.ErrorContains(t, "invalid state ID: foo", err)
+		require.ErrorContains(t, "invalid state ID", err)
 	})
 
 	t.Run("Validator ID required", func(t *testing.T) {
@@ -192,7 +192,7 @@ func TestListValidators(t *testing.T) {
 		_, err = s.ListValidators(ctx, &ethpb.StateValidatorsRequest{
 			StateId: stateId,
 		})
-		require.ErrorContains(t, "state not found in the last 8192 state roots in head state", err)
+		require.ErrorContains(t, "state not found in the last 8192 state roots", err)
 	})
 
 	t.Run("Invalid state ID", func(t *testing.T) {
@@ -200,7 +200,7 @@ func TestListValidators(t *testing.T) {
 		_, err := s.ListValidators(ctx, &ethpb.StateValidatorsRequest{
 			StateId: []byte("foo"),
 		})
-		require.ErrorContains(t, "invalid state ID: foo", err)
+		require.ErrorContains(t, "invalid state ID", err)
 	})
 }
 
@@ -286,7 +286,7 @@ func TestListValidatorBalances(t *testing.T) {
 		_, err = s.ListValidatorBalances(ctx, &ethpb.ValidatorBalancesRequest{
 			StateId: stateId,
 		})
-		require.ErrorContains(t, "state not found in the last 8192 state roots in head state", err)
+		require.ErrorContains(t, "state not found in the last 8192 state roots", err)
 	})
 
 	t.Run("Invalid state ID", func(t *testing.T) {
@@ -294,7 +294,7 @@ func TestListValidatorBalances(t *testing.T) {
 		_, err := s.ListValidatorBalances(ctx, &ethpb.ValidatorBalancesRequest{
 			StateId: []byte("foo"),
 		})
-		require.ErrorContains(t, "invalid state ID: foo", err)
+		require.ErrorContains(t, "invalid state ID", err)
 	})
 }
 
@@ -420,7 +420,7 @@ func TestListCommittees(t *testing.T) {
 		_, err = s.ListCommittees(ctx, &ethpb.StateCommitteesRequest{
 			StateId: stateId,
 		})
-		require.ErrorContains(t, "state not found in the last 8192 state roots in head state", err)
+		require.ErrorContains(t, "state not found in the last 8192 state roots", err)
 	})
 
 	t.Run("Invalid state ID", func(t *testing.T) {
@@ -428,6 +428,6 @@ func TestListCommittees(t *testing.T) {
 		_, err := s.ListCommittees(ctx, &ethpb.StateCommitteesRequest{
 			StateId: []byte("foo"),
 		})
-		require.ErrorContains(t, "invalid state ID: foo", err)
+		require.ErrorContains(t, "invalid state ID", err)
 	})
 }
