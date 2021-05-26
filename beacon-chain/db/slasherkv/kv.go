@@ -76,7 +76,6 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 			tx,
 			// Slasher buckets.
 			attestedEpochsByValidator,
-			attestationRecordsBucket,
 			attestationDataRootsBucket,
 			proposalRecordsBucket,
 			slasherChunksBucket,

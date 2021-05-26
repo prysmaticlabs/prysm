@@ -9,9 +9,11 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
+	ethpb_alpha "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
+	"github.com/prysmaticlabs/prysm/proto/migration"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -105,14 +107,22 @@ func (ns *Server) GetPeer(ctx context.Context, req *ethpb.PeerRequest) (*ethpb.P
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not obtain direction: %v", err)
 	}
+	if ethpb_alpha.PeerDirection(direction) == ethpb_alpha.PeerDirection_UNKNOWN {
+		return nil, status.Error(codes.NotFound, "Peer not found")
+	}
 
+	v1ConnState := migration.V1Alpha1ConnectionStateToV1(ethpb_alpha.ConnectionState(state))
+	v1PeerDirection, err := migration.V1Alpha1PeerDirectionToV1(ethpb_alpha.PeerDirection(direction))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not handle peer direction: %v", err)
+	}
 	return &ethpb.PeerResponse{
 		Data: &ethpb.Peer{
-			PeerId:    req.PeerId,
-			Enr:       "enr:" + serializedEnr,
-			Address:   p2pAddress.String(),
-			State:     ethpb.ConnectionState(state),
-			Direction: ethpb.PeerDirection(direction),
+			PeerId:             req.PeerId,
+			Enr:                "enr:" + serializedEnr,
+			LastSeenP2PAddress: p2pAddress.String(),
+			State:              v1ConnState,
+			Direction:          v1PeerDirection,
 		},
 	}, nil
 }
@@ -132,6 +142,9 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 			p, err := peerInfo(peerStatus, id)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not get peer info: %v", err)
+			}
+			if p == nil {
+				continue
 			}
 			allPeers = append(allPeers, p)
 		}
@@ -201,7 +214,13 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get peer info: %v", err)
 		}
+		if p == nil {
+			continue
+		}
 		filteredPeers = append(filteredPeers, p)
+	}
+	if len(filteredPeers) == 0 {
+		return nil, status.Error(codes.NotFound, "Peers not found")
 	}
 	return &ethpb.PeersResponse{Data: filteredPeers}, nil
 }
@@ -319,13 +338,21 @@ func peerInfo(peerStatus *peers.Status, id peer.ID) (*ethpb.Peer, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not obtain direction")
 	}
+	if ethpb_alpha.PeerDirection(direction) == ethpb_alpha.PeerDirection_UNKNOWN {
+		return nil, nil
+	}
+	v1ConnState := migration.V1Alpha1ConnectionStateToV1(ethpb_alpha.ConnectionState(connectionState))
+	v1PeerDirection, err := migration.V1Alpha1PeerDirectionToV1(ethpb_alpha.PeerDirection(direction))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not handle peer direction: %v", err)
+	}
 	p := ethpb.Peer{
 		PeerId:    id.Pretty(),
-		State:     ethpb.ConnectionState(connectionState),
-		Direction: ethpb.PeerDirection(direction),
+		State:     v1ConnState,
+		Direction: v1PeerDirection,
 	}
 	if address != nil {
-		p.Address = address.String()
+		p.LastSeenP2PAddress = address.String()
 	}
 	if serializedEnr != "" {
 		p.Enr = "enr:" + serializedEnr
