@@ -33,6 +33,14 @@ func main() {
 	if githubMirrorPush == "" {
 		log.Fatal("Expected GITHUB_MIRROR_PUSH_SECRET env variable")
 	}
+	githubUser := os.Getenv("GITHUB_USER")
+	if githubUser == "" {
+		log.Fatal("Expected GITHUB_USER env variable")
+	}
+	githubEmail := os.Getenv("GITHUB_EMAIL")
+	if githubEmail == "" {
+		log.Fatal("Expected GITHUB_EMAIL env variable")
+	}
 
 	// Setup a github webhook handler.
 	hook, err := NewWebhookClient(Options.Secret(githubSecret))
@@ -49,7 +57,7 @@ func main() {
 	manager := newGitCLI(config.CloneBasePath)
 
 	log.Infof("Initializing git configuration")
-	if err := initializeGitConfig(githubMirrorPush); err != nil {
+	if err := initializeGitConfig(githubMirrorPush, githubUser, githubEmail); err != nil {
 		log.Fatal(err)
 	}
 
@@ -85,8 +93,20 @@ func main() {
 	log.Fatal(http.ListenAndServe(":3000", nil))
 }
 
-func initializeGitConfig(accessToken string) error {
+func initializeGitConfig(accessToken, user, email string) error {
 	cmdStrings := [][]string{
+		{
+			"config",
+			"--global",
+			"user.email",
+			email,
+		},
+		{
+			"config",
+			"--global",
+			"user.name",
+			user,
+		},
 		{
 			"config",
 			"--global",
