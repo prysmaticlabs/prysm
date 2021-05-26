@@ -228,7 +228,7 @@ func validatorSubStatus(validator *ethpb.Validator, epoch types.Epoch) (ethpb.Va
 	if validator.ActivationEpoch > epoch {
 		if validator.ActivationEligibilityEpoch == farFutureEpoch {
 			return ethpb.ValidatorStatus_PENDING_INITIALIZED, nil
-		} else if validator.ActivationEligibilityEpoch < farFutureEpoch && validator.ActivationEpoch > epoch {
+		} else if validator.ActivationEligibilityEpoch < farFutureEpoch {
 			return ethpb.ValidatorStatus_PENDING_QUEUED, nil
 		}
 	}

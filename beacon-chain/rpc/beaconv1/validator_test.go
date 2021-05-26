@@ -225,7 +225,12 @@ func TestListValidators_Status(t *testing.T) {
 			ActivationEpoch:            farFutureEpoch,
 			ActivationEligibilityEpoch: farFutureEpoch,
 		},
-		// active ongoing.
+		// Pending queued.
+		{
+			ActivationEpoch:            10,
+			ActivationEligibilityEpoch: 4,
+		},
+		// Active ongoing.
 		{
 			ActivationEpoch: 0,
 			ExitEpoch:       farFutureEpoch,
@@ -242,14 +247,14 @@ func TestListValidators_Status(t *testing.T) {
 			ExitEpoch:       30,
 			Slashed:         false,
 		},
-		// exit slashed (at epoch 35).
+		// Exit slashed (at epoch 35).
 		{
 			ActivationEpoch:   3,
 			ExitEpoch:         30,
 			WithdrawableEpoch: 40,
 			Slashed:           true,
 		},
-		// exit unslashed (at epoch 35).
+		// Exit unslashed (at epoch 35).
 		{
 			ActivationEpoch:   3,
 			ExitEpoch:         30,
@@ -292,7 +297,7 @@ func TestListValidators_Status(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, len(resp.Data), 8192+2 /* 2 active */)
 		for _, datum := range resp.Data {
-			status, err := validatorSubStatus(datum.Validator, 0)
+			status, err := validatorStatus(datum.Validator, 0)
 			require.NoError(t, err)
 			require.Equal(
 				t,
@@ -780,22 +785,11 @@ func Test_validatorStatus(t *testing.T) {
 			},
 			want: ethpb.ValidatorStatus_WITHDRAWAL,
 		},
-		{
-			name: "nil validator",
-			args: args{
-				validator: nil,
-				epoch:     types.Epoch(30),
-			},
-			wantErr: true,
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := validatorStatus(tt.args.validator, tt.args.epoch)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("validatorStatus() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			require.NoError(t, err)
 			if got != tt.want {
 				t.Errorf("validatorStatus() got = %v, want %v", got, tt.want)
 			}
@@ -927,22 +921,11 @@ func Test_validatorSubStatus(t *testing.T) {
 			},
 			want: ethpb.ValidatorStatus_WITHDRAWAL_DONE,
 		},
-		{
-			name: "nil validator",
-			args: args{
-				validator: nil,
-				epoch:     types.Epoch(30),
-			},
-			wantErr: true,
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := validatorSubStatus(tt.args.validator, tt.args.epoch)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("validatorSubStatus() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			require.NoError(t, err)
 			if got != tt.want {
 				t.Errorf("validatorSubStatus() got = %v, want %v", got, tt.want)
 			}
