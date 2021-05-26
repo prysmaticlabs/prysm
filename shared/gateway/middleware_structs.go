@@ -371,11 +371,17 @@ type ForkJson struct {
 	Epoch           string `json:"epoch"`
 }
 
+type StateValidatorsRequestJson struct {
+	StateId string   `json:"state_id" hex:"true"`
+	Id      []string `json:"id" hex:"true"`
+	Status  []string `json:"status" enum:"true"`
+}
+
 // ValidatorContainerJson is a JSON representation of a validator container.
 type ValidatorContainerJson struct {
 	Index     string         `json:"index"`
 	Balance   string         `json:"balance"`
-	Status    string         `json:"status"`
+	Status    string         `json:"status" enum:"true"`
 	Validator *ValidatorJson `json:"validator"`
 }
 

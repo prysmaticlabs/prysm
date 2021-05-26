@@ -118,6 +118,10 @@ func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint string) {
 					tag: "hex",
 					f:   hexToBase64Processor,
 				},
+				{
+					tag: "enum",
+					f:   lowercaseToEnumProcessor,
+				},
 			}); err != nil {
 				e := fmt.Errorf("could not process request data: %w", err)
 				writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
@@ -554,6 +558,11 @@ func base64ToHexProcessor(v reflect.Value) error {
 		return err
 	}
 	v.SetString(hexutil.Encode(b))
+	return nil
+}
+
+func lowercaseToEnumProcessor(v reflect.Value) error {
+	v.SetString(strings.ToUpper(v.String()))
 	return nil
 }
 
