@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 )
 
 // chunkWriter writes the given message as a chunked response to the given network
@@ -33,7 +34,7 @@ func WriteChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, enc
 
 // ReadChunkedBlock handles each response chunk that is sent by the
 // peer and converts it into a beacon block.
-func ReadChunkedBlock(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, p2p p2p.P2P, isFirstChunk bool) (*eth.SignedBeaconBlock, error) {
+func ReadChunkedBlock(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, p2p p2p.P2P, isFirstChunk bool) (interfaces.SignedBeaconBlock, error) {
 	// Handle deadlines differently for first chunk
 	if isFirstChunk {
 		return readFirstChunkedBlock(stream, chain, p2p)
@@ -42,12 +43,12 @@ func ReadChunkedBlock(stream libp2pcore.Stream, chain blockchain.ChainInfoFetche
 	if err := readResponseChunk(stream, chain, p2p, blk); err != nil {
 		return nil, err
 	}
-	return blk, nil
+	return interfaces.NewWrappedSignedBeaconBlock(blk), nil
 }
 
 // readFirstChunkedBlock reads the first chunked block and applies the appropriate deadlines to
 // it.
-func readFirstChunkedBlock(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, p2p p2p.P2P) (*eth.SignedBeaconBlock, error) {
+func readFirstChunkedBlock(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, p2p p2p.P2P) (interfaces.SignedBeaconBlock, error) {
 	blk := &eth.SignedBeaconBlock{}
 	code, errMsg, err := ReadStatusCode(stream, p2p.Encoding())
 	if err != nil {
@@ -62,7 +63,7 @@ func readFirstChunkedBlock(stream libp2pcore.Stream, chain blockchain.ChainInfoF
 		return nil, err
 	}
 	err = p2p.Encoding().DecodeWithMaxLength(stream, blk)
-	return blk, err
+	return interfaces.NewWrappedSignedBeaconBlock(blk), err
 }
 
 // readResponseChunk reads the response from the stream and decodes it into the

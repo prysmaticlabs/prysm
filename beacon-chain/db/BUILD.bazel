@@ -60,6 +60,7 @@ go_test(
     deps = [
         "//beacon-chain/db/kv:go_default_library",
         "//shared/cmd:go_default_library",
+        "//shared/interfaces:go_default_library",
         "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",

@@ -59,7 +59,7 @@ func (bs *Server) ListBlocks(
 		returnedBlks := blks[start:end]
 		containers := make([]*ethpb.BeaconBlockContainer, len(returnedBlks))
 		for i, b := range returnedBlks {
-			root, err := b.Block.HashTreeRoot()
+			root, err := b.Block().HashTreeRoot()
 			if err != nil {
 				return nil, err
 			}
@@ -67,8 +67,12 @@ func (bs *Server) ListBlocks(
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not determine if block is canonical: %v", err)
 			}
+			phBlk, err := b.PbPhase0Block()
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not get phase 0 block: %v", err)
+			}
 			containers[i] = &ethpb.BeaconBlockContainer{
-				Block:     b,
+				Block:     phBlk,
 				BlockRoot: root[:],
 				Canonical: canonical,
 			}
@@ -84,14 +88,14 @@ func (bs *Server) ListBlocks(
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve block: %v", err)
 		}
-		if blk == nil {
+		if blk == nil || blk.IsNil() {
 			return &ethpb.ListBlocksResponse{
 				BlockContainers: make([]*ethpb.BeaconBlockContainer, 0),
 				TotalSize:       0,
 				NextPageToken:   strconv.Itoa(0),
 			}, nil
 		}
-		root, err := blk.Block.HashTreeRoot()
+		root, err := blk.Block().HashTreeRoot()
 		if err != nil {
 			return nil, err
 		}
@@ -99,10 +103,13 @@ func (bs *Server) ListBlocks(
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not determine if block is canonical: %v", err)
 		}
-
+		phBlk, err := blk.PbPhase0Block()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not determine if block is phase 0 block: %v", err)
+		}
 		return &ethpb.ListBlocksResponse{
 			BlockContainers: []*ethpb.BeaconBlockContainer{{
-				Block:     blk,
+				Block:     phBlk,
 				BlockRoot: root[:],
 				Canonical: canonical},
 			},
@@ -132,7 +139,7 @@ func (bs *Server) ListBlocks(
 		returnedBlks := blks[start:end]
 		containers := make([]*ethpb.BeaconBlockContainer, len(returnedBlks))
 		for i, b := range returnedBlks {
-			root, err := b.Block.HashTreeRoot()
+			root, err := b.Block().HashTreeRoot()
 			if err != nil {
 				return nil, err
 			}
@@ -140,8 +147,12 @@ func (bs *Server) ListBlocks(
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not determine if block is canonical: %v", err)
 			}
+			phBlk, err := b.PbPhase0Block()
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not determine if block is phase 0 block: %v", err)
+			}
 			containers[i] = &ethpb.BeaconBlockContainer{
-				Block:     b,
+				Block:     phBlk,
 				BlockRoot: root[:],
 				Canonical: canonical,
 			}
@@ -157,16 +168,20 @@ func (bs *Server) ListBlocks(
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for genesis slot: %v", err)
 		}
-		if genBlk == nil {
+		if genBlk.IsNil() {
 			return nil, status.Error(codes.Internal, "Could not find genesis block")
 		}
-		root, err := genBlk.Block.HashTreeRoot()
+		root, err := genBlk.Block().HashTreeRoot()
 		if err != nil {
 			return nil, err
 		}
+		phBlk, err := genBlk.PbPhase0Block()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not determine if block is phase 0 block: %v", err)
+		}
 		containers := []*ethpb.BeaconBlockContainer{
 			{
-				Block:     genBlk,
+				Block:     phBlk,
 				BlockRoot: root[:],
 				Canonical: true,
 			},
@@ -211,7 +226,12 @@ func (bs *Server) StreamBlocks(req *ethpb.StreamBlocksRequest, stream ethpb.Beac
 					if !ok || data == nil {
 						continue
 					}
-					if err := stream.Send(data.SignedBlock); err != nil {
+					phBlk, err := data.SignedBlock.PbPhase0Block()
+					if err != nil {
+						log.Error(err)
+						continue
+					}
+					if err := stream.Send(phBlk); err != nil {
 						return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
 					}
 				}
@@ -228,15 +248,20 @@ func (bs *Server) StreamBlocks(req *ethpb.StreamBlocksRequest, stream ethpb.Beac
 					}
 					headState, err := bs.HeadFetcher.HeadState(bs.Ctx)
 					if err != nil {
-						log.WithError(err).WithField("blockSlot", data.SignedBlock.Block.Slot).Error("Could not get head state")
+						log.WithError(err).WithField("blockSlot", data.SignedBlock.Block().Slot()).Error("Could not get head state")
 						continue
 					}
 					signed := data.SignedBlock
-					if err := blocks.VerifyBlockSignature(headState, signed.Block.ProposerIndex, signed.Signature, signed.Block.HashTreeRoot); err != nil {
-						log.WithError(err).WithField("blockSlot", data.SignedBlock.Block.Slot).Error("Could not verify block signature")
+					if err := blocks.VerifyBlockSignature(headState, signed.Block().ProposerIndex(), signed.Signature(), signed.Block().HashTreeRoot); err != nil {
+						log.WithError(err).WithField("blockSlot", data.SignedBlock.Block().Slot()).Error("Could not verify block signature")
 						continue
 					}
-					if err := stream.Send(data.SignedBlock); err != nil {
+					phBlk, err := signed.PbPhase0Block()
+					if err != nil {
+						log.Error(err)
+						continue
+					}
+					if err := stream.Send(phBlk); err != nil {
 						return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
 					}
 				}
@@ -284,10 +309,10 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head block")
 	}
-	if headBlock == nil || headBlock.Block == nil {
+	if headBlock == nil || headBlock.IsNil() || headBlock.Block().IsNil() {
 		return nil, status.Error(codes.Internal, "Head block of chain was nil")
 	}
-	headBlockRoot, err := headBlock.Block.HashTreeRoot()
+	headBlockRoot, err := headBlock.Block().HashTreeRoot()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head block root: %v", err)
 	}
@@ -297,7 +322,7 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 	}
 	// Retrieve genesis block in the event we have genesis checkpoints.
 	genBlock, err := bs.BeaconDB.GenesisBlock(ctx)
-	if err != nil || genBlock == nil || genBlock.Block == nil {
+	if err != nil || genBlock == nil || genBlock.IsNil() || genBlock.Block().IsNil() {
 		return nil, status.Error(codes.Internal, "Could not get genesis block")
 	}
 
@@ -347,8 +372,8 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 		return nil, err
 	}
 	return &ethpb.ChainHead{
-		HeadSlot:                   headBlock.Block.Slot,
-		HeadEpoch:                  helpers.SlotToEpoch(headBlock.Block.Slot),
+		HeadSlot:                   headBlock.Block().Slot(),
+		HeadEpoch:                  helpers.SlotToEpoch(headBlock.Block().Slot()),
 		HeadBlockRoot:              headBlockRoot[:],
 		FinalizedSlot:              fSlot,
 		FinalizedEpoch:             finalizedCheckpoint.Epoch,

@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	aggtesting "github.com/prysmaticlabs/prysm/shared/aggregation/testing"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -48,7 +49,7 @@ func BenchmarkProposerAtts_sortByProfitability(b *testing.B) {
 	runner := func(atts []*ethpb.Attestation) {
 		attsCopy := make(proposerAtts, len(atts))
 		for i, att := range atts {
-			attsCopy[i] = stateV0.CopyAttestation(att)
+			attsCopy[i] = blockutil.CopyAttestation(att)
 		}
 		attsCopy.sortByProfitability()
 	}

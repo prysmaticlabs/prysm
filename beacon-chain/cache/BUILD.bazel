@@ -32,7 +32,7 @@ go_library(
     ],
     deps = [
         "//beacon-chain/state/interface:go_default_library",
-        "//beacon-chain/state/stateV0:go_default_library",
+        "//shared/blockutil:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/sliceutil:go_default_library",
