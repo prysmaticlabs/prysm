@@ -55,7 +55,7 @@ func TestSaveHead_Different(t *testing.T) {
 	cachedRoot, err := service.HeadRoot(context.Background())
 	require.NoError(t, err)
 	assert.DeepEqual(t, cachedRoot, newRoot[:], "Head did not change")
-	assert.DeepEqual(t, newHeadSignedBlock, service.headBlock(), "Head did not change")
+	assert.DeepEqual(t, newHeadSignedBlock, service.headBlock().Proto(), "Head did not change")
 	assert.DeepSSZEqual(t, headState.CloneInnerState(), service.headState(ctx).CloneInnerState(), "Head did not change")
 }
 
