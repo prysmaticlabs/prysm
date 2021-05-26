@@ -7,7 +7,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
+	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -58,7 +58,7 @@ func AreEth1DataEqual(a, b *ethpb.Eth1Data) bool {
 // votes to see if they match the eth1data.
 func Eth1DataHasEnoughSupport(beaconState iface.ReadOnlyBeaconState, data *ethpb.Eth1Data) (bool, error) {
 	voteCount := uint64(0)
-	data = blockutil.CopyETH1Data(data)
+	data = copyutil.CopyETH1Data(data)
 
 	for _, vote := range beaconState.Eth1DataVotes() {
 		if AreEth1DataEqual(vote, data) {

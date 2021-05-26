@@ -61,7 +61,7 @@ func RunFinalityTest(t *testing.T, config string) {
 				require.NoError(t, err, "Failed to decompress")
 				block := &ethpb.SignedBeaconBlock{}
 				require.NoError(t, block.UnmarshalSSZ(blockSSZ), "Failed to unmarshal")
-				processedState, err = state.ExecuteStateTransition(context.Background(), beaconState, interfaces.NewWrappedSignedBeaconBlock(block))
+				processedState, err = state.ExecuteStateTransition(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(block))
 				require.NoError(t, err)
 				beaconState, ok = processedState.(*stateV0.BeaconState)
 				require.Equal(t, true, ok)

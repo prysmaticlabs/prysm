@@ -40,7 +40,7 @@ func TestSaveHead_Different(t *testing.T) {
 	newHeadSignedBlock.Block.Slot = 1
 	newHeadBlock := newHeadSignedBlock.Block
 
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), interfaces.NewWrappedSignedBeaconBlock(newHeadSignedBlock)))
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(newHeadSignedBlock)))
 	newRoot, err := newHeadBlock.HashTreeRoot()
 	require.NoError(t, err)
 	headState, err := testutil.NewBeaconState()
@@ -74,7 +74,7 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	newHeadSignedBlock.Block.ParentRoot = reorgChainParent[:]
 	newHeadBlock := newHeadSignedBlock.Block
 
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), interfaces.NewWrappedSignedBeaconBlock(newHeadSignedBlock)))
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(newHeadSignedBlock)))
 	newRoot, err := newHeadBlock.HashTreeRoot()
 	require.NoError(t, err)
 	headState, err := testutil.NewBeaconState()
@@ -113,7 +113,7 @@ func TestUpdateHead_MissingJustifiedRoot(t *testing.T) {
 	service := setupBeaconChain(t, beaconDB)
 
 	b := testutil.NewBeaconBlock()
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), interfaces.NewWrappedSignedBeaconBlock(b)))
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(b)))
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 

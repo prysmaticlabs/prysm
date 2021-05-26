@@ -39,7 +39,7 @@ func (s *Store) Block(ctx context.Context, blockRoot [32]byte) (interfaces.Signe
 		block = &ethpb.SignedBeaconBlock{}
 		return decode(ctx, enc, block)
 	})
-	return interfaces.NewWrappedSignedBeaconBlock(block), err
+	return interfaces.WrappedPhase0SignedBeaconBlock(block), err
 }
 
 // HeadBlock returns the latest canonical block in eth2.
@@ -60,7 +60,7 @@ func (s *Store) HeadBlock(ctx context.Context) (interfaces.SignedBeaconBlock, er
 		headBlock = &ethpb.SignedBeaconBlock{}
 		return decode(ctx, enc, headBlock)
 	})
-	return interfaces.NewWrappedSignedBeaconBlock(headBlock), err
+	return interfaces.WrappedPhase0SignedBeaconBlock(headBlock), err
 }
 
 // Blocks retrieves a list of beacon blocks and its respective roots by filter criteria.
@@ -84,7 +84,7 @@ func (s *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]interface
 			if err := decode(ctx, encoded, block); err != nil {
 				return err
 			}
-			blocks = append(blocks, interfaces.NewWrappedSignedBeaconBlock(block))
+			blocks = append(blocks, interfaces.WrappedPhase0SignedBeaconBlock(block))
 			blockRoots = append(blockRoots, bytesutil.ToBytes32(keys[i]))
 		}
 		return nil
@@ -156,7 +156,7 @@ func (s *Store) BlocksBySlot(ctx context.Context, slot types.Slot) (bool, []inte
 			if err := decode(ctx, encoded, block); err != nil {
 				return err
 			}
-			blocks = append(blocks, interfaces.NewWrappedSignedBeaconBlock(block))
+			blocks = append(blocks, interfaces.WrappedPhase0SignedBeaconBlock(block))
 		}
 		return nil
 	})
@@ -199,7 +199,7 @@ func (s *Store) deleteBlock(ctx context.Context, blockRoot [32]byte) error {
 		if err := decode(ctx, enc, block); err != nil {
 			return err
 		}
-		indicesByBucket := createBlockIndicesFromBlock(ctx, interfaces.NewWrappedBeaconBlock(block.Block))
+		indicesByBucket := createBlockIndicesFromBlock(ctx, interfaces.WrappedPhase0BeaconBlock(block.Block))
 		if err := deleteValueForIndices(ctx, indicesByBucket, blockRoot[:], tx); err != nil {
 			return errors.Wrap(err, "could not delete root for DB indices")
 		}
@@ -224,7 +224,7 @@ func (s *Store) deleteBlocks(ctx context.Context, blockRoots [][32]byte) error {
 			if err := decode(ctx, enc, block); err != nil {
 				return err
 			}
-			indicesByBucket := createBlockIndicesFromBlock(ctx, interfaces.NewWrappedBeaconBlock(block.Block))
+			indicesByBucket := createBlockIndicesFromBlock(ctx, interfaces.WrappedPhase0BeaconBlock(block.Block))
 			if err := deleteValueForIndices(ctx, indicesByBucket, blockRoot[:], tx); err != nil {
 				return errors.Wrap(err, "could not delete root for DB indices")
 			}
@@ -317,7 +317,7 @@ func (s *Store) GenesisBlock(ctx context.Context) (interfaces.SignedBeaconBlock,
 		block = &ethpb.SignedBeaconBlock{}
 		return decode(ctx, enc, block)
 	})
-	return interfaces.NewWrappedSignedBeaconBlock(block), err
+	return interfaces.WrappedPhase0SignedBeaconBlock(block), err
 }
 
 // SaveGenesisBlockRoot to the db.

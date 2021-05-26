@@ -71,7 +71,7 @@ func TestStore_StatesBatchDelete(t *testing.T) {
 	for i := 0; i < len(totalBlocks); i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = types.Slot(i)
-		totalBlocks[i] = interfaces.NewWrappedSignedBeaconBlock(b)
+		totalBlocks[i] = interfaces.WrappedPhase0SignedBeaconBlock(b)
 		r, err := totalBlocks[i].Block().HashTreeRoot()
 		require.NoError(t, err)
 		st, err := testutil.NewBeaconState()
@@ -122,7 +122,7 @@ func TestStore_DeleteFinalizedState(t *testing.T) {
 	blk.Block.ParentRoot = genesis[:]
 	blk.Block.Slot = 100
 
-	require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(blk)))
+	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(blk)))
 
 	finalizedBlockRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -147,7 +147,7 @@ func TestStore_DeleteHeadState(t *testing.T) {
 	blk := testutil.NewBeaconBlock()
 	blk.Block.ParentRoot = genesis[:]
 	blk.Block.Slot = 100
-	require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(blk)))
+	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(blk)))
 
 	headBlockRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -167,7 +167,7 @@ func TestStore_SaveDeleteState_CanGetHighestBelow(t *testing.T) {
 	b.Block.Slot = 1
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(context.Background(), interfaces.NewWrappedSignedBeaconBlock(b)))
+	require.NoError(t, db.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(b)))
 	st, err := testutil.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(1))
@@ -177,7 +177,7 @@ func TestStore_SaveDeleteState_CanGetHighestBelow(t *testing.T) {
 	b.Block.Slot = 100
 	r1, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(context.Background(), interfaces.NewWrappedSignedBeaconBlock(b)))
+	require.NoError(t, db.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(b)))
 	st, err = testutil.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(100))
@@ -187,7 +187,7 @@ func TestStore_SaveDeleteState_CanGetHighestBelow(t *testing.T) {
 	b.Block.Slot = 1000
 	r2, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(context.Background(), interfaces.NewWrappedSignedBeaconBlock(b)))
+	require.NoError(t, db.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(b)))
 	st, err = testutil.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(1000))
@@ -221,7 +221,7 @@ func TestStore_GenesisState_CanGetHighestBelow(t *testing.T) {
 	b.Block.Slot = 1
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(context.Background(), interfaces.NewWrappedSignedBeaconBlock(b)))
+	require.NoError(t, db.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(b)))
 
 	st, err := testutil.NewBeaconState()
 	require.NoError(t, err)
@@ -258,7 +258,7 @@ func TestStore_CleanUpDirtyStates_AboveThreshold(t *testing.T) {
 		b.Block.ParentRoot = prevRoot[:]
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(context.Background(), interfaces.NewWrappedSignedBeaconBlock(b)))
+		require.NoError(t, db.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(b)))
 		bRoots = append(bRoots, r)
 		prevRoot = r
 
@@ -297,7 +297,7 @@ func TestStore_CleanUpDirtyStates_Finalized(t *testing.T) {
 		b.Block.Slot = i
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(context.Background(), interfaces.NewWrappedSignedBeaconBlock(b)))
+		require.NoError(t, db.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(b)))
 
 		st, err := testutil.NewBeaconState()
 		require.NoError(t, err)
@@ -325,7 +325,7 @@ func TestStore_CleanUpDirtyStates_DontDeleteNonFinalized(t *testing.T) {
 		b.Block.Slot = i
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(context.Background(), interfaces.NewWrappedSignedBeaconBlock(b)))
+		require.NoError(t, db.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(b)))
 		unfinalizedRoots = append(unfinalizedRoots, r)
 
 		st, err := testutil.NewBeaconState()

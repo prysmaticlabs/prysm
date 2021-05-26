@@ -262,7 +262,7 @@ func slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []byte) (types.
 		if err != nil {
 			return 0, err
 		}
-		if err := helpers.VerifyNilBeaconBlock(interfaces.NewWrappedSignedBeaconBlock(b)); err != nil {
+		if err := helpers.VerifyNilBeaconBlock(interfaces.WrappedPhase0SignedBeaconBlock(b)); err != nil {
 			return 0, err
 		}
 		return b.Block.Slot, nil

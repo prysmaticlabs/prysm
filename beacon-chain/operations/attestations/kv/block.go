@@ -3,7 +3,7 @@ package kv
 import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
+	"github.com/prysmaticlabs/prysm/shared/copyutil"
 )
 
 // SaveBlockAttestation saves an block attestation in cache.
@@ -30,7 +30,7 @@ func (c *AttCaches) SaveBlockAttestation(att *ethpb.Attestation) error {
 		}
 	}
 
-	c.blockAtt[r] = append(atts, blockutil.CopyAttestation(att))
+	c.blockAtt[r] = append(atts, copyutil.CopyAttestation(att))
 
 	return nil
 }

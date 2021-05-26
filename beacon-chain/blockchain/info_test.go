@@ -38,7 +38,7 @@ func TestService_TreeHandler(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, s.cfg.ForkChoiceStore.ProcessBlock(ctx, 0, [32]byte{'a'}, [32]byte{'g'}, [32]byte{'c'}, 0, 0))
 	require.NoError(t, s.cfg.ForkChoiceStore.ProcessBlock(ctx, 1, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'c'}, 0, 0))
-	s.setHead([32]byte{'a'}, interfaces.NewWrappedSignedBeaconBlock(testutil.NewBeaconBlock()), headState)
+	s.setHead([32]byte{'a'}, interfaces.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()), headState)
 
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(s.TreeHandler)

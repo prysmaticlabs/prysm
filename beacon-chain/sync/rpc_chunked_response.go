@@ -43,7 +43,7 @@ func ReadChunkedBlock(stream libp2pcore.Stream, chain blockchain.ChainInfoFetche
 	if err := readResponseChunk(stream, chain, p2p, blk); err != nil {
 		return nil, err
 	}
-	return interfaces.NewWrappedSignedBeaconBlock(blk), nil
+	return interfaces.WrappedPhase0SignedBeaconBlock(blk), nil
 }
 
 // readFirstChunkedBlock reads the first chunked block and applies the appropriate deadlines to
@@ -63,7 +63,7 @@ func readFirstChunkedBlock(stream libp2pcore.Stream, chain blockchain.ChainInfoF
 		return nil, err
 	}
 	err = p2p.Encoding().DecodeWithMaxLength(stream, blk)
-	return interfaces.NewWrappedSignedBeaconBlock(blk), err
+	return interfaces.WrappedPhase0SignedBeaconBlock(blk), err
 }
 
 // readResponseChunk reads the response from the stream and decodes it into the

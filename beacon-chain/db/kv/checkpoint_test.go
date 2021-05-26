@@ -53,7 +53,7 @@ func TestStore_FinalizedCheckpoint_CanSaveRetrieve(t *testing.T) {
 	}
 
 	// a valid chain is required to save finalized checkpoint.
-	require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(blk)))
+	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(blk)))
 	st, err := testutil.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(1))

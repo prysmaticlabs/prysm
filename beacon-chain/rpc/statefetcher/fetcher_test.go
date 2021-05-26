@@ -56,7 +56,7 @@ func TestGetStateRoot(t *testing.T) {
 		db := testDB.SetupDB(t)
 		b := testutil.NewBeaconBlock()
 		b.Block.StateRoot = bytesutil.PadTo([]byte("foo"), 32)
-		require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(b)))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(b)))
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 
