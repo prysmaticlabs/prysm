@@ -7,7 +7,7 @@ import (
 )
 
 // SignedBeaconBlock is an interface describing the method set of
-// a signed block.
+// a signed beacon block.
 type SignedBeaconBlock interface {
 	Block() BeaconBlock
 	Signature() []byte
