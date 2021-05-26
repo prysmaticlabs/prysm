@@ -28,7 +28,7 @@ func (s *Store) SaveGenesisData(ctx context.Context, genesisState iface.BeaconSt
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block root")
 	}
-	if err := s.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(genesisBlk)); err != nil {
+	if err := s.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(genesisBlk)); err != nil {
 		return errors.Wrap(err, "could not save genesis block")
 	}
 	if err := s.SaveState(ctx, genesisState, genesisBlkRoot); err != nil {

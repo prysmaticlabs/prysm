@@ -92,7 +92,7 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 	signedBlock.Block.Body.Attestations = []*ethpb.Attestation{att}
 	root, err := signedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(signedBlock)))
+	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(signedBlock)))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 	wanted := &ethpb.ListAttestationsResponse{
 		Attestations:  []*ethpb.Attestation{att},
@@ -129,7 +129,7 @@ func TestServer_ListAttestations_NoPagination(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0b11},
 			},
 		}
-		require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(blockExample)))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(blockExample)))
 		atts = append(atts, blockExample.Block.Body.Attestations...)
 	}
 
@@ -157,7 +157,7 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 	targetEpoch := types.Epoch(7)
 
 	blocks := []interfaces.SignedBeaconBlock{
-		interfaces.NewWrappedSignedBeaconBlock(
+		interfaces.WrappedPhase0SignedBeaconBlock(
 			testutil.HydrateSignedBeaconBlock(
 				&ethpb.SignedBeaconBlock{
 					Block: &ethpb.BeaconBlock{
@@ -184,7 +184,7 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 						},
 					},
 				})),
-		interfaces.NewWrappedSignedBeaconBlock(
+		interfaces.WrappedPhase0SignedBeaconBlock(
 			testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 				Block: &ethpb.BeaconBlock{
 					Slot: 5 + params.BeaconConfig().SlotsPerEpoch,
@@ -210,7 +210,7 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 					},
 				},
 			})),
-		interfaces.NewWrappedSignedBeaconBlock(
+		interfaces.WrappedPhase0SignedBeaconBlock(
 			testutil.HydrateSignedBeaconBlock(
 				&ethpb.SignedBeaconBlock{
 					Block: &ethpb.BeaconBlock{
@@ -276,7 +276,7 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 					AggregationBits: bitfield.Bitlist{0b11},
 				}),
 			}
-			require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(blockExample)))
+			require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(blockExample)))
 			atts = append(atts, blockExample.Block.Body.Attestations...)
 		}
 	}
@@ -385,7 +385,7 @@ func TestServer_ListAttestations_Pagination_OutOfRange(t *testing.T) {
 				},
 			},
 		})
-		require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(blockExample)))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(blockExample)))
 		atts = append(atts, blockExample.Block.Body.Attestations...)
 	}
 
@@ -436,7 +436,7 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0b11},
 			},
 		}
-		require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(blockExample)))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(blockExample)))
 		atts = append(atts, blockExample.Block.Body.Attestations...)
 	}
 
@@ -525,7 +525,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 				AggregationBits: bitfield.NewBitlist(128 / uint64(params.BeaconConfig().SlotsPerEpoch)),
 			},
 		}
-		require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(blockExample)))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(blockExample)))
 		if i%2 == 0 {
 			atts = append(atts, blockExample.Block.Body.Attestations...)
 		} else {
@@ -630,7 +630,7 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 				},
 			},
 		}
-		require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(blockExample)))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(blockExample)))
 		atts = append(atts, blockExample.Block.Body.Attestations...)
 	}
 
@@ -854,7 +854,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 	numValidators := 64
 	headState, privKeys := testutil.DeterministicGenesisState(t, uint64(numValidators))
 	b := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(b)))
+	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(b)))
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))

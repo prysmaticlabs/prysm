@@ -1,4 +1,4 @@
-package blockutil
+package copyutil
 
 import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"

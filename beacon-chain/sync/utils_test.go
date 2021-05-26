@@ -22,7 +22,7 @@ func TestSortedObj_SortBlocksRoots(t *testing.T) {
 
 	for i := 0; i < 10; i++ {
 		slot := types.Slot(randFunc())
-		newBlk := interfaces.NewWrappedSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: slot}})
+		newBlk := interfaces.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: slot}})
 		blks = append(blks, newBlk)
 		root := bytesutil.ToBytes32(bytesutil.Bytes32(uint64(slot)))
 		roots = append(roots, root)
@@ -57,7 +57,7 @@ func TestSortedObj_NoDuplicates(t *testing.T) {
 		slot := types.Slot(randFunc())
 		newBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: slot}}
 		// append twice
-		blks = append(blks, interfaces.NewWrappedSignedBeaconBlock(newBlk), interfaces.NewWrappedSignedBeaconBlock(newBlk))
+		blks = append(blks, interfaces.WrappedPhase0SignedBeaconBlock(newBlk), interfaces.WrappedPhase0SignedBeaconBlock(newBlk))
 
 		// append twice
 		root := bytesutil.ToBytes32(bytesutil.Bytes32(uint64(slot)))

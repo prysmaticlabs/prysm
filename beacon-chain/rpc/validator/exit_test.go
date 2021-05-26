@@ -35,7 +35,7 @@ func TestProposeExit_Notification(t *testing.T) {
 	epoch := types.Epoch(2048)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch))))
 	block := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(block)), "Could not save genesis block")
+	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(block)), "Could not save genesis block")
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
@@ -106,7 +106,7 @@ func TestProposeExit_NoPanic(t *testing.T) {
 	epoch := types.Epoch(2048)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch))))
 	block := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(block)), "Could not save genesis block")
+	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(block)), "Could not save genesis block")
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 

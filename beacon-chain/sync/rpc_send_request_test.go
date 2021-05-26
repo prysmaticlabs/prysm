@@ -63,7 +63,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 
 			for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += types.Slot(req.Step) {
 				if processor != nil {
-					if processorErr := processor(interfaces.NewWrappedSignedBeaconBlock(knownBlocks[i])); processorErr != nil {
+					if processorErr := processor(interfaces.WrappedPhase0SignedBeaconBlock(knownBlocks[i])); processorErr != nil {
 						if errors.Is(processorErr, io.EOF) {
 							// Close stream, w/o any errors written.
 							return
@@ -326,7 +326,7 @@ func TestSendRequest_SendBeaconBlocksByRootRequest(t *testing.T) {
 			for _, root := range *req {
 				if blk, ok := knownBlocks[root]; ok {
 					if processor != nil {
-						if processorErr := processor(interfaces.NewWrappedSignedBeaconBlock(blk)); processorErr != nil {
+						if processorErr := processor(interfaces.WrappedPhase0SignedBeaconBlock(blk)); processorErr != nil {
 							if errors.Is(processorErr, io.EOF) {
 								// Close stream, w/o any errors written.
 								return

@@ -3,7 +3,7 @@ package kv
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
+	"github.com/prysmaticlabs/prysm/shared/copyutil"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -33,7 +33,7 @@ func (c *AttCaches) SaveUnaggregatedAttestation(att *ethpb.Attestation) error {
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
-	att = blockutil.CopyAttestation(att) // Copied.
+	att = copyutil.CopyAttestation(att) // Copied.
 	c.unAggregateAttLock.Lock()
 	defer c.unAggregateAttLock.Unlock()
 	c.unAggregatedAtt[r] = att
@@ -64,7 +64,7 @@ func (c *AttCaches) UnaggregatedAttestations() ([]*ethpb.Attestation, error) {
 			return nil, err
 		}
 		if !seen {
-			atts = append(atts, blockutil.CopyAttestation(att) /* Copied */)
+			atts = append(atts, copyutil.CopyAttestation(att) /* Copied */)
 		}
 	}
 	return atts, nil

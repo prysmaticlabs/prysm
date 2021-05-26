@@ -16,7 +16,7 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 	if !ok {
 		return errors.New("message is not type *ethpb.SignedBeaconBlock")
 	}
-	signed := interfaces.NewWrappedSignedBeaconBlock(rBlock)
+	signed := interfaces.WrappedPhase0SignedBeaconBlock(rBlock)
 
 	if signed.IsNil() || signed.Block().IsNil() {
 		return errors.New("nil block")

@@ -51,7 +51,7 @@ func TestServer_ListAssignments_NoResults(t *testing.T) {
 	require.NoError(t, err)
 
 	b := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(b)))
+	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(b)))
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))

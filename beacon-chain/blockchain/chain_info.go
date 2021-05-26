@@ -10,8 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
@@ -77,7 +77,7 @@ func (s *Service) FinalizedCheckpt() *ethpb.Checkpoint {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
-	return blockutil.CopyCheckpoint(s.finalizedCheckpt)
+	return copyutil.CopyCheckpoint(s.finalizedCheckpt)
 }
 
 // CurrentJustifiedCheckpt returns the current justified checkpoint from head state.
@@ -86,7 +86,7 @@ func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
-	return blockutil.CopyCheckpoint(s.justifiedCheckpt)
+	return copyutil.CopyCheckpoint(s.justifiedCheckpt)
 }
 
 // PreviousJustifiedCheckpt returns the previous justified checkpoint from head state.
@@ -95,7 +95,7 @@ func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
-	return blockutil.CopyCheckpoint(s.prevJustifiedCheckpt)
+	return copyutil.CopyCheckpoint(s.prevJustifiedCheckpt)
 }
 
 // HeadSlot returns the slot of the head of the chain.

@@ -22,7 +22,7 @@ func TestFuzzExecuteStateTransition_1000(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(sb)
-		s, err := ExecuteStateTransition(ctx, state, interfaces.NewWrappedSignedBeaconBlock(sb))
+		s, err := ExecuteStateTransition(ctx, state, interfaces.WrappedPhase0SignedBeaconBlock(sb))
 		if err != nil && s != nil {
 			t.Fatalf("state should be nil on err. found: %v on error: %v for state: %v and signed block: %v", s, err, state, sb)
 		}
@@ -40,7 +40,7 @@ func TestFuzzCalculateStateRoot_1000(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(sb)
-		stateRoot, err := CalculateStateRoot(ctx, state, interfaces.NewWrappedSignedBeaconBlock(sb))
+		stateRoot, err := CalculateStateRoot(ctx, state, interfaces.WrappedPhase0SignedBeaconBlock(sb))
 		if err != nil && stateRoot != [32]byte{} {
 			t.Fatalf("state root should be empty on err. found: %v on error: %v for signed block: %v", stateRoot, err, sb)
 		}
@@ -92,7 +92,7 @@ func TestFuzzProcessBlock_1000(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(sb)
-		s, err := ProcessBlock(ctx, state, interfaces.NewWrappedSignedBeaconBlock(sb))
+		s, err := ProcessBlock(ctx, state, interfaces.WrappedPhase0SignedBeaconBlock(sb))
 		if err != nil && s != nil {
 			t.Fatalf("state should be nil on err. found: %v on error: %v for signed block: %v", s, err, sb)
 		}
@@ -110,7 +110,7 @@ func TestFuzzProcessOperations_1000(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(bb)
-		s, err := ProcessBlock(ctx, state, interfaces.NewWrappedSignedBeaconBlock(bb))
+		s, err := ProcessBlock(ctx, state, interfaces.WrappedPhase0SignedBeaconBlock(bb))
 		if err != nil && s != nil {
 			t.Fatalf("state should be nil on err. found: %v on error: %v for block body: %v", s, err, bb)
 		}
@@ -128,7 +128,7 @@ func TestFuzzprocessOperationsNoVerify_1000(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(bb)
-		s, err := ProcessOperationsNoVerifyAttsSigs(ctx, state, interfaces.NewWrappedSignedBeaconBlock(bb))
+		s, err := ProcessOperationsNoVerifyAttsSigs(ctx, state, interfaces.WrappedPhase0SignedBeaconBlock(bb))
 		if err != nil && s != nil {
 			t.Fatalf("state should be nil on err. found: %v on error: %v for block body: %v", s, err, bb)
 		}
@@ -145,7 +145,7 @@ func TestFuzzverifyOperationLengths_10000(t *testing.T) {
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(bb)
-		_, err := VerifyOperationLengths(context.Background(), state, interfaces.NewWrappedSignedBeaconBlock(bb))
+		_, err := VerifyOperationLengths(context.Background(), state, interfaces.WrappedPhase0SignedBeaconBlock(bb))
 		_ = err
 	}
 }
@@ -189,7 +189,7 @@ func TestFuzzProcessBlockForStateRoot_1000(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(sb)
-		s, err := ProcessBlockForStateRoot(ctx, state, interfaces.NewWrappedSignedBeaconBlock(sb))
+		s, err := ProcessBlockForStateRoot(ctx, state, interfaces.WrappedPhase0SignedBeaconBlock(sb))
 		if err != nil && s != nil {
 			t.Fatalf("state should be nil on err. found: %v on error: %v for signed block: %v", s, err, sb)
 		}

@@ -47,7 +47,7 @@ func TestProcessAttestations_InclusionDelayFailure(t *testing.T) {
 		params.BeaconConfig().MinAttestationInclusionDelay,
 		beaconState.Slot(),
 	)
-	_, err := blocks.ProcessAttestations(context.Background(), beaconState, interfaces.NewWrappedSignedBeaconBlock(b))
+	_, err := blocks.ProcessAttestations(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(b))
 	assert.ErrorContains(t, want, err)
 }
 
@@ -77,7 +77,7 @@ func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 		helpers.PrevEpoch(beaconState),
 		helpers.CurrentEpoch(beaconState),
 	)
-	_, err = blocks.ProcessAttestations(context.Background(), beaconState, interfaces.NewWrappedSignedBeaconBlock(b))
+	_, err = blocks.ProcessAttestations(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(b))
 	assert.ErrorContains(t, want, err)
 }
 
@@ -105,11 +105,11 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&pb.PendingAttestation{}))
 
 	want := "source check point not equal to current justified checkpoint"
-	_, err := blocks.ProcessAttestations(context.Background(), beaconState, interfaces.NewWrappedSignedBeaconBlock(b))
+	_, err := blocks.ProcessAttestations(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(b))
 	assert.ErrorContains(t, want, err)
 	b.Block.Body.Attestations[0].Data.Source.Epoch = helpers.CurrentEpoch(beaconState)
 	b.Block.Body.Attestations[0].Data.Source.Root = []byte{}
-	_, err = blocks.ProcessAttestations(context.Background(), beaconState, interfaces.NewWrappedSignedBeaconBlock(b))
+	_, err = blocks.ProcessAttestations(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(b))
 	assert.ErrorContains(t, want, err)
 }
 
@@ -143,12 +143,12 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	require.NoError(t, beaconState.AppendPreviousEpochAttestations(&pb.PendingAttestation{}))
 
 	want := "source check point not equal to previous justified checkpoint"
-	_, err = blocks.ProcessAttestations(context.Background(), beaconState, interfaces.NewWrappedSignedBeaconBlock(b))
+	_, err = blocks.ProcessAttestations(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(b))
 	assert.ErrorContains(t, want, err)
 	b.Block.Body.Attestations[0].Data.Source.Epoch = helpers.PrevEpoch(beaconState)
 	b.Block.Body.Attestations[0].Data.Target.Epoch = helpers.PrevEpoch(beaconState)
 	b.Block.Body.Attestations[0].Data.Source.Root = []byte{}
-	_, err = blocks.ProcessAttestations(context.Background(), beaconState, interfaces.NewWrappedSignedBeaconBlock(b))
+	_, err = blocks.ProcessAttestations(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(b))
 	assert.ErrorContains(t, want, err)
 }
 
@@ -179,7 +179,7 @@ func TestProcessAttestations_InvalidAggregationBitsLength(t *testing.T) {
 	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&pb.PendingAttestation{}))
 
 	expected := "failed to verify aggregation bitfield: wanted participants bitfield length 3, got: 4"
-	_, err = blocks.ProcessAttestations(context.Background(), beaconState, interfaces.NewWrappedSignedBeaconBlock(b))
+	_, err = blocks.ProcessAttestations(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(b))
 	assert.ErrorContains(t, expected, err)
 }
 
@@ -222,7 +222,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 
 	err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
 	require.NoError(t, err)
-	_, err = blocks.ProcessAttestations(context.Background(), beaconState, interfaces.NewWrappedSignedBeaconBlock(block))
+	_, err = blocks.ProcessAttestations(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(block))
 	assert.NoError(t, err)
 }
 
@@ -353,7 +353,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
 	require.NoError(t, err)
 
-	_, err = blocks.ProcessAttestations(context.Background(), beaconState, interfaces.NewWrappedSignedBeaconBlock(block))
+	_, err = blocks.ProcessAttestations(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(block))
 	assert.NoError(t, err)
 }
 

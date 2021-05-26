@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
+	"github.com/prysmaticlabs/prysm/shared/copyutil"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -50,7 +50,7 @@ func (b *BeaconState) validators() []*ethpb.Validator {
 		if val == nil {
 			continue
 		}
-		res[i] = blockutil.CopyValidator(val)
+		res[i] = copyutil.CopyValidator(val)
 	}
 	return res
 }
@@ -94,7 +94,7 @@ func (b *BeaconState) ValidatorAtIndex(idx types.ValidatorIndex) (*ethpb.Validat
 	defer b.lock.RUnlock()
 
 	val := b.state.Validators[idx]
-	return blockutil.CopyValidator(val), nil
+	return copyutil.CopyValidator(val), nil
 }
 
 // ValidatorAtIndexReadOnly is the validator at the provided index. This method

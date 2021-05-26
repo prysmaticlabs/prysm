@@ -209,5 +209,5 @@ func (s *Store) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (in
 		return decode(ctx, enc, blk)
 	})
 	traceutil.AnnotateError(span, err)
-	return interfaces.NewWrappedSignedBeaconBlock(blk), err
+	return interfaces.WrappedPhase0SignedBeaconBlock(blk), err
 }

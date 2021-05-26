@@ -25,7 +25,7 @@ func TestServer_GetBlock(t *testing.T) {
 
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 100
-	require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(b)))
+	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(b)))
 	blockRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	bs := &Server{
@@ -77,7 +77,7 @@ func TestServer_GetAttestationInclusionSlot(t *testing.T) {
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 2
 	b.Block.Body.Attestations = []*ethpb.Attestation{a}
-	require.NoError(t, bs.BeaconDB.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(b)))
+	require.NoError(t, bs.BeaconDB.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(b)))
 	res, err := bs.GetInclusionSlot(ctx, &pbrpc.InclusionSlotRequest{Slot: 1, Id: uint64(c[0])})
 	require.NoError(t, err)
 	require.Equal(t, b.Block.Slot, res.Slot)

@@ -65,7 +65,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	})
 	require.NoError(t, err)
 	block := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(block)), "Could not save genesis block")
+	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(block)), "Could not save genesis block")
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 

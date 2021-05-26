@@ -143,7 +143,7 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpb.BeaconBlockContain
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not convert block to v1")
 	}
-	v1alpha1Block := interfaces.NewWrappedSignedBeaconBlock(rBlock)
+	v1alpha1Block := interfaces.WrappedPhase0SignedBeaconBlock(rBlock)
 
 	root, err := blk.HashTreeRoot()
 	if err != nil {

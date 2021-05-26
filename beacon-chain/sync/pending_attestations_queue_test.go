@@ -64,7 +64,7 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
 	sb := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(context.Background(), interfaces.NewWrappedSignedBeaconBlock(sb)))
+	require.NoError(t, db.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(sb)))
 	root, err := sb.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -128,7 +128,7 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 	sb = testutil.NewBeaconBlock()
 	r32, err := sb.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, r.cfg.DB.SaveBlock(context.Background(), interfaces.NewWrappedSignedBeaconBlock(sb)))
+	require.NoError(t, r.cfg.DB.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(sb)))
 	s, err := testutil.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, r.cfg.DB.SaveState(context.Background(), s, r32))
@@ -173,7 +173,7 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 	b := testutil.NewBeaconBlock()
 	r32, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, r.cfg.DB.SaveBlock(context.Background(), interfaces.NewWrappedSignedBeaconBlock(b)))
+	require.NoError(t, r.cfg.DB.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(b)))
 	require.NoError(t, r.cfg.DB.SaveState(context.Background(), s, r32))
 
 	r.blkRootToPendingAtts[r32] = []*ethpb.SignedAggregateAttestationAndProof{{Message: a, Signature: make([]byte, 96)}}
@@ -257,7 +257,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
 	sb := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(context.Background(), interfaces.NewWrappedSignedBeaconBlock(sb)))
+	require.NoError(t, db.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(sb)))
 	root, err := sb.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -325,7 +325,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	sb = testutil.NewBeaconBlock()
 	r32, err := sb.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, r.cfg.DB.SaveBlock(context.Background(), interfaces.NewWrappedSignedBeaconBlock(sb)))
+	require.NoError(t, r.cfg.DB.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(sb)))
 	s, err := testutil.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, r.cfg.DB.SaveState(context.Background(), s, r32))

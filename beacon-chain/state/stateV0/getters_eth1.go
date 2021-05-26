@@ -4,7 +4,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
+	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 )
@@ -34,7 +34,7 @@ func (b *BeaconState) eth1Data() *ethpb.Eth1Data {
 		return nil
 	}
 
-	return blockutil.CopyETH1Data(b.state.Eth1Data)
+	return copyutil.CopyETH1Data(b.state.Eth1Data)
 }
 
 // Eth1DataVotes corresponds to votes from eth2 on the canonical proof-of-work chain
@@ -66,7 +66,7 @@ func (b *BeaconState) eth1DataVotes() []*ethpb.Eth1Data {
 
 	res := make([]*ethpb.Eth1Data, len(b.state.Eth1DataVotes))
 	for i := 0; i < len(res); i++ {
-		res[i] = blockutil.CopyETH1Data(b.state.Eth1DataVotes[i])
+		res[i] = copyutil.CopyETH1Data(b.state.Eth1DataVotes[i])
 	}
 	return res
 }

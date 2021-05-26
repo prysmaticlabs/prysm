@@ -83,7 +83,7 @@ func initializeTestServices(t *testing.T, slots []types.Slot, peers []*peerData)
 	genesisRoot := cache.rootCache[0]
 	cache.RUnlock()
 
-	err := beaconDB.SaveBlock(context.Background(), interfaces.NewWrappedSignedBeaconBlock(testutil.NewBeaconBlock()))
+	err := beaconDB.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()))
 	require.NoError(t, err)
 
 	st, err := testutil.NewBeaconState()
