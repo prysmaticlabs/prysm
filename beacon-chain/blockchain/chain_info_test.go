@@ -144,7 +144,7 @@ func TestHeadBlock_CanRetrieve(t *testing.T) {
 
 	recevied, err := c.HeadBlock(context.Background())
 	require.NoError(t, err)
-	assert.DeepEqual(t, b, recevied, "Incorrect head block received")
+	assert.DeepEqual(t, b, recevied.Proto(), "Incorrect head block received")
 }
 
 func TestHeadState_CanRetrieve(t *testing.T) {

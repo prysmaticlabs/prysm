@@ -99,7 +99,7 @@ func TestEnsureEmbeddedGenesis(t *testing.T) {
 
 	gb, err := db.GenesisBlock(ctx)
 	assert.NoError(t, err)
-	if gb != nil {
+	if gb != nil && !gb.IsNil() {
 		t.Fatal("Genesis block exists already")
 	}
 
