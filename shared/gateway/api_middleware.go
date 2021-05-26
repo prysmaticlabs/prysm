@@ -593,7 +593,7 @@ func getEndpointData(endpoint string) (endpointData, error) {
 	case "/eth/v1/beacon/states/{state_id}/finality_checkpoints":
 		return endpointData{getResponse: &StateFinalityCheckpointResponseJson{}, err: &DefaultErrorJson{}}, nil
 	case "/eth/v1/beacon/states/{state_id}/validators":
-		return endpointData{getResponse: &StateValidatorsResponseJson{}, err: &DefaultErrorJson{}}, nil
+		return endpointData{postRequest: &StateValidatorsRequestJson{}, getResponse: &StateValidatorsResponseJson{}, err: &DefaultErrorJson{}}, nil
 	case "/eth/v1/beacon/states/{state_id}/validators/{validator_id}":
 		return endpointData{getResponse: &StateValidatorResponseJson{}, err: &DefaultErrorJson{}}, nil
 	case "/eth/v1/beacon/states/{state_id}/validator_balances":
