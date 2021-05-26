@@ -70,6 +70,7 @@ func (m *ApiProxyMiddleware) Run() error {
 	m.handleApiEndpoint("/eth/v1/node/peers/{peer_id}")
 	m.handleApiEndpoint("/eth/v1/node/peer_count")
 	m.handleApiEndpoint("/eth/v1/node/version")
+	m.handleApiEndpoint("/eth/v1/node/syncing")
 	m.handleApiEndpoint("/eth/v1/node/health")
 	m.handleApiEndpoint("/eth/v1/debug/beacon/states/{state_id}")
 	m.handleApiEndpoint("/eth/v1/debug/beacon/heads")
@@ -598,6 +599,8 @@ func getEndpointData(endpoint string) (endpointData, error) {
 		return endpointData{getResponse: &PeerCountResponseJson{}, err: &DefaultErrorJson{}}, nil
 	case "/eth/v1/node/version":
 		return endpointData{getResponse: &VersionResponseJson{}, err: &DefaultErrorJson{}}, nil
+	case "/eth/v1/node/syncing":
+		return endpointData{getResponse: &SyncingResponseJson{}, err: &DefaultErrorJson{}}, nil
 	case "/eth/v1/node/health":
 		return endpointData{err: &DefaultErrorJson{}}, nil
 	case "/eth/v1/debug/beacon/states/{state_id}":
