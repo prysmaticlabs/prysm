@@ -19,7 +19,7 @@ type StateRootResponseJson struct {
 
 // StateRootResponse_StateRootJson is used in /beacon/states/{state_id}/root API endpoint.
 type StateRootResponse_StateRootJson struct {
-	StateRoot string `json:"state_root" hex:"true"`
+	StateRoot string `json:"root" hex:"true"`
 }
 
 // StateForkResponseJson is used in /beacon/states/{state_id}/fork API endpoint.
@@ -224,7 +224,7 @@ type BeaconBlockHeaderContainerJson struct {
 
 // SignedBeaconBlockHeaderJson is a JSON representation of a signed beacon block header.
 type SignedBeaconBlockHeaderJson struct {
-	Header    *BeaconBlockHeaderJson `json:"header"`
+	Header    *BeaconBlockHeaderJson `json:"message"`
 	Signature string                 `json:"signature" hex:"true"`
 }
 
@@ -246,8 +246,8 @@ type Eth1DataJson struct {
 
 // ProposerSlashingJson is a JSON representation of a proposer slashing.
 type ProposerSlashingJson struct {
-	Header_1 *SignedBeaconBlockHeaderJson `json:"header_1"`
-	Header_2 *SignedBeaconBlockHeaderJson `json:"header_2"`
+	Header_1 *SignedBeaconBlockHeaderJson `json:"signed_header_1"`
+	Header_2 *SignedBeaconBlockHeaderJson `json:"signed_header_2"`
 }
 
 // AttesterSlashingJson is a JSON representation of an attester slashing.
@@ -273,7 +273,7 @@ type AttestationJson struct {
 // AttestationDataJson is a JSON representation of attestation data.
 type AttestationDataJson struct {
 	Slot            string          `json:"slot"`
-	CommitteeIndex  string          `json:"committee_index"`
+	CommitteeIndex  string          `json:"index"`
 	BeaconBlockRoot string          `json:"beacon_block_root" hex:"true"`
 	Source          *CheckpointJson `json:"source"`
 	Target          *CheckpointJson `json:"target"`
@@ -287,7 +287,7 @@ type DepositJson struct {
 
 // Deposit_DataJson is a JSON representation of deposit data.
 type Deposit_DataJson struct {
-	PublicKey             string `json:"public_key" hex:"true"`
+	PublicKey             string `json:"pubkey" hex:"true"`
 	WithdrawalCredentials string `json:"withdrawal_credentials" hex:"true"`
 	Amount                string `json:"amount"`
 	Signature             string `json:"signature" hex:"true"`
@@ -295,7 +295,7 @@ type Deposit_DataJson struct {
 
 // SignedVoluntaryExitJson is a JSON representation of a signed voluntary exit.
 type SignedVoluntaryExitJson struct {
-	Exit      *VoluntaryExitJson `json:"exit"`
+	Exit      *VoluntaryExitJson `json:"message"`
 	Signature string             `json:"signature" hex:"true"`
 }
 
@@ -324,7 +324,7 @@ type MetadataJson struct {
 type PeerJson struct {
 	PeerId    string `json:"peer_id"`
 	Enr       string `json:"enr"`
-	Address   string `json:"address"`
+	Address   string `json:"last_seen_p2p_address"`
 	State     string `json:"state" enum:"true"`
 	Direction string `json:"direction" enum:"true"`
 }
@@ -376,7 +376,7 @@ type ValidatorContainerJson struct {
 
 // ValidatorJson is a JSON representation of a validator.
 type ValidatorJson struct {
-	PublicKey                  string `json:"public_key" hex:"true"`
+	PublicKey                  string `json:"pubkey" hex:"true"`
 	WithdrawalCredentials      string `json:"withdrawal_credentials" hex:"true"`
 	EffectiveBalance           string `json:"effective_balance"`
 	Slashed                    bool   `json:"slashed"`
