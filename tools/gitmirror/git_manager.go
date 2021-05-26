@@ -41,7 +41,7 @@ func (g *gitCLI) Clone(remoteName, remoteUrl string) error {
 	if err != nil {
 		return err
 	}
-	stdoutStr := fmt.Sprintf("%s", data)
+	stdoutStr := fmt.Sprintf("Got error from clone %s\n", data)
 	var alreadyExists bool
 	if strings.Contains(stdoutStr, "already exists") {
 		alreadyExists = true
