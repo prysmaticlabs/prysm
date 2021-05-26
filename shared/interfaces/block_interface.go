@@ -19,7 +19,7 @@ type SignedBeaconBlock interface {
 }
 
 // BeaconBlock describes an interface which states the methods
-// employed by an object that is a Beacon Block.
+// employed by an object that is a beacon block.
 type BeaconBlock interface {
 	Slot() types.Slot
 	ProposerIndex() types.ValidatorIndex
