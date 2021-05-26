@@ -271,6 +271,7 @@ func (s *Service) markForChainStart() {
 type Checker interface {
 	Initialized() bool
 	Syncing() bool
+	Synced() bool
 	Status() error
 	Resync() error
 }

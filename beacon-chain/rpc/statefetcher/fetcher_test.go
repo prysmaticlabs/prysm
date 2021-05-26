@@ -148,7 +148,7 @@ func TestGetStateRoot(t *testing.T) {
 		stateId, err := hexutil.Decode("0x" + strings.Repeat("f", 64))
 		require.NoError(t, err)
 		_, err = p.State(ctx, stateId)
-		require.ErrorContains(t, "state not found in the last 8192 state roots in head state", err)
+		require.ErrorContains(t, "state not found in the last 8192 state roots", err)
 	})
 
 	t.Run("Slot", func(t *testing.T) {
@@ -180,6 +180,11 @@ func TestGetStateRoot(t *testing.T) {
 	t.Run("Invalid state", func(t *testing.T) {
 		p := StateProvider{}
 		_, err := p.State(ctx, []byte("foo"))
-		require.ErrorContains(t, "invalid state ID: foo", err)
+		require.ErrorContains(t, "invalid state ID", err)
 	})
+}
+
+func TestNewStateNotFoundError(t *testing.T) {
+	e := NewStateNotFoundError(100)
+	assert.Equal(t, "state not found in the last 100 state roots", e.message)
 }
