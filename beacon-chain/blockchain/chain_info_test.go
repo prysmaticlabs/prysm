@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -125,7 +126,7 @@ func TestHeadRoot_UseDB(t *testing.T) {
 	b := testutil.NewBeaconBlock()
 	br, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(context.Background(), b))
+	require.NoError(t, beaconDB.SaveBlock(context.Background(), interfaces.NewWrappedSignedBeaconBlock(b)))
 	require.NoError(t, beaconDB.SaveStateSummary(context.Background(), &pb.StateSummary{Root: br[:]}))
 	require.NoError(t, beaconDB.SaveHeadBlockRoot(context.Background(), br))
 	r, err := c.HeadRoot(context.Background())
@@ -139,11 +140,11 @@ func TestHeadBlock_CanRetrieve(t *testing.T) {
 	s, err := stateV0.InitializeFromProto(&pb.BeaconState{})
 	require.NoError(t, err)
 	c := &Service{}
-	c.head = &head{block: b, state: s}
+	c.head = &head{block: interfaces.NewWrappedSignedBeaconBlock(b), state: s}
 
 	recevied, err := c.HeadBlock(context.Background())
 	require.NoError(t, err)
-	assert.DeepEqual(t, b, recevied, "Incorrect head block received")
+	assert.DeepEqual(t, b, recevied.Proto(), "Incorrect head block received")
 }
 
 func TestHeadState_CanRetrieve(t *testing.T) {
@@ -221,7 +222,7 @@ func TestIsCanonical_Ok(t *testing.T) {
 	blk.Block.Slot = 0
 	root, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, blk))
+	require.NoError(t, beaconDB.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(blk)))
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
 	can, err := c.IsCanonical(ctx, root)
 	require.NoError(t, err)

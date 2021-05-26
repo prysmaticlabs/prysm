@@ -16,6 +16,7 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -172,7 +173,7 @@ func TestValidatorStatus_Pending(t *testing.T) {
 
 	pubKey := pubKey(1)
 	block := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(ctx, block), "Could not save genesis block")
+	require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(block)), "Could not save genesis block")
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	// Pending active because activation epoch is still defaulted at far future slot.
@@ -259,7 +260,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	activeEpoch := helpers.ActivationExitEpoch(0)
 
 	block := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(ctx, block), "Could not save genesis block")
+	require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(block)), "Could not save genesis block")
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
@@ -316,7 +317,7 @@ func TestValidatorStatus_Exiting(t *testing.T) {
 	exitEpoch := helpers.ActivationExitEpoch(epoch)
 	withdrawableEpoch := exitEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
 	block := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(ctx, block), "Could not save genesis block")
+	require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(block)), "Could not save genesis block")
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
@@ -377,7 +378,7 @@ func TestValidatorStatus_Slashing(t *testing.T) {
 	slot := types.Slot(10000)
 	epoch := helpers.SlotToEpoch(slot)
 	block := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(ctx, block), "Could not save genesis block")
+	require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(block)), "Could not save genesis block")
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
@@ -437,7 +438,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	slot := types.Slot(10000)
 	epoch := helpers.SlotToEpoch(slot)
 	block := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(ctx, block), "Could not save genesis block")
+	require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(block)), "Could not save genesis block")
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	params.SetupTestConfigCleanup(t)
@@ -614,7 +615,7 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 
 	pbKey := pubKey(5)
 	block := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(ctx, block), "Could not save genesis block")
+	require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(block)), "Could not save genesis block")
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	currentSlot := types.Slot(5000)

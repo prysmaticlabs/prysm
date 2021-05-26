@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -188,7 +189,7 @@ func TestProcessEth1Data_SetsCorrectly(t *testing.T) {
 	if len(newETH1DataVotes) <= 1 {
 		t.Error("Expected new ETH1 data votes to have length > 1")
 	}
-	if !proto.Equal(beaconState.Eth1Data(), stateV0.CopyETH1Data(b.Block.Body.Eth1Data)) {
+	if !proto.Equal(beaconState.Eth1Data(), blockutil.CopyETH1Data(b.Block.Body.Eth1Data)) {
 		t.Errorf(
 			"Expected latest eth1 data to have been set to %v, received %v",
 			b.Block.Body.Eth1Data,

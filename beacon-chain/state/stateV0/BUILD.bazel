@@ -4,7 +4,6 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
-        "cloners.go",
         "doc.go",
         "field_roots.go",
         "field_trie.go",
@@ -48,6 +47,7 @@ go_library(
         "//beacon-chain/state/interface:go_default_library",
         "//beacon-chain/state/stateutil:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/blockutil:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/hashutil:go_default_library",
@@ -85,6 +85,7 @@ go_test(
         "//beacon-chain/state/interface:go_default_library",
         "//beacon-chain/state/stateutil:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/blockutil:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/interop:go_default_library",
         "//shared/params:go_default_library",

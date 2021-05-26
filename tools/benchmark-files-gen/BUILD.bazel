@@ -15,6 +15,7 @@ go_library(
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/benchutil:go_default_library",
         "//shared/fileutil:go_default_library",
+        "//shared/interfaces:go_default_library",
         "//shared/interop:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",

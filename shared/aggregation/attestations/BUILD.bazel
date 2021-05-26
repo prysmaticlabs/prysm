@@ -11,8 +11,8 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/shared/aggregation/attestations",
     visibility = ["//visibility:public"],
     deps = [
-        "//beacon-chain/state/stateV0:go_default_library",
         "//shared/aggregation:go_default_library",
+        "//shared/blockutil:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/featureconfig:go_default_library",
         "@com_github_pkg_errors//:go_default_library",

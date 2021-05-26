@@ -10,6 +10,7 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -41,7 +42,7 @@ func TestFuzzProcessBlockHeader_10000(t *testing.T) {
 
 		s, err := stateV0.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
-		_, err = ProcessBlockHeader(context.Background(), s, block)
+		_, err = ProcessBlockHeader(context.Background(), s, interfaces.NewWrappedSignedBeaconBlock(block))
 		_ = err
 	}
 }
@@ -139,7 +140,7 @@ func TestFuzzProcessRandao_10000(t *testing.T) {
 		fuzzer.Fuzz(b)
 		s, err := stateV0.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
-		r, err := ProcessRandao(context.Background(), s, b)
+		r, err := ProcessRandao(context.Background(), s, interfaces.NewWrappedSignedBeaconBlock(b))
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, b)
 		}
@@ -258,7 +259,7 @@ func TestFuzzProcessAttestations_10000(t *testing.T) {
 		fuzzer.Fuzz(b)
 		s, err := stateV0.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
-		r, err := ProcessAttestations(ctx, s, b)
+		r, err := ProcessAttestations(ctx, s, interfaces.NewWrappedSignedBeaconBlock(b))
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, b)
 		}
@@ -275,7 +276,7 @@ func TestFuzzProcessAttestationsNoVerify_10000(t *testing.T) {
 		fuzzer.Fuzz(b)
 		s, err := stateV0.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
-		r, err := ProcessAttestationsNoVerifySignature(ctx, s, b)
+		r, err := ProcessAttestationsNoVerifySignature(ctx, s, interfaces.NewWrappedSignedBeaconBlock(b))
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, b)
 		}
