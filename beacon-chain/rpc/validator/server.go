@@ -142,7 +142,7 @@ func (vs *Server) CanonicalHead(ctx context.Context, _ *emptypb.Empty) (*ethpb.S
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head block: %v", err)
 	}
-	b, err := headBlk.RawPhase0Block()
+	b, err := headBlk.ProtobufPhase0Block()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head block: %v", err)
 	}

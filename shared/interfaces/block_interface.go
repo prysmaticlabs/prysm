@@ -15,7 +15,7 @@ type SignedBeaconBlock interface {
 	Copy() WrappedSignedBeaconBlock
 	MarshalSSZ() ([]byte, error)
 	Proto() proto.Message
-	RawPhase0Block() (*ethpb.SignedBeaconBlock, error)
+	ProtobufPhase0Block() (*ethpb.SignedBeaconBlock, error)
 }
 
 // BeaconBlock describes an interface which states the methods
