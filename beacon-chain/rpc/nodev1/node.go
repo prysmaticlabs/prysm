@@ -3,7 +3,9 @@ package nodev1
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -14,9 +16,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	"github.com/prysmaticlabs/prysm/proto/migration"
+	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"go.opencensus.io/trace"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -82,7 +87,7 @@ func (ns *Server) GetPeer(ctx context.Context, req *ethpb.PeerRequest) (*ethpb.P
 	peerStatus := ns.PeersFetcher.Peers()
 	id, err := peer.Decode(req.PeerId)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not decode peer ID: %v", err)
+		return nil, status.Errorf(codes.InvalidArgument, "Could not decode peer ID: %v", err)
 	}
 	enr, err := peerStatus.ENR(id)
 	if err != nil {
@@ -133,7 +138,7 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 	defer span.End()
 
 	peerStatus := ns.PeersFetcher.Peers()
-	emptyStateFilter, emptyDirectionFilter := ns.handleEmptyFilters(req, peerStatus)
+	emptyStateFilter, emptyDirectionFilter := ns.handleEmptyFilters(req)
 
 	if emptyStateFilter && emptyDirectionFilter {
 		allIds := peerStatus.All()
@@ -284,13 +289,20 @@ func (ns *Server) GetHealth(ctx context.Context, _ *emptypb.Empty) (*emptypb.Emp
 	ctx, span := trace.StartSpan(ctx, "nodev1.GetHealth")
 	defer span.End()
 
+	if ns.SyncChecker.Synced() {
+		return &emptypb.Empty{}, nil
+	}
 	if ns.SyncChecker.Syncing() || ns.SyncChecker.Initialized() {
+		if err := grpc.SetHeader(ctx, metadata.Pairs(grpcutils.HttpCodeMetadataKey, strconv.Itoa(http.StatusPartialContent))); err != nil {
+			// We return a positive result because failing to set a non-gRPC related header should not cause the gRPC call to fail.
+			return &emptypb.Empty{}, nil
+		}
 		return &emptypb.Empty{}, nil
 	}
 	return &emptypb.Empty{}, status.Error(codes.Internal, "Node not initialized or having issues")
 }
 
-func (ns *Server) handleEmptyFilters(req *ethpb.PeersRequest, peerStatus *peers.Status) (emptyState, emptyDirection bool) {
+func (ns *Server) handleEmptyFilters(req *ethpb.PeersRequest) (emptyState, emptyDirection bool) {
 	emptyState = true
 	for _, stateFilter := range req.State {
 		normalized := strings.ToUpper(stateFilter)

@@ -3,7 +3,9 @@ package debugv1
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -17,6 +19,11 @@ func (ds *Server) GetBeaconState(ctx context.Context, req *ethpb.StateRequest) (
 
 	state, err := ds.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
+		if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {
+			return nil, status.Errorf(codes.NotFound, "could not get state: %v", stateNotFoundErr)
+		} else if errors.Is(err, statefetcher.ErrInvalidStateId) {
+			return nil, status.Errorf(codes.InvalidArgument, "could not get state: %v", err)
+		}
 		return nil, status.Errorf(codes.Internal, "could not get state: %v", err)
 	}
 

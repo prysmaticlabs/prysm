@@ -217,14 +217,32 @@ func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint string) {
 		}
 
 		// Write the response (headers + body) and PROFIT!
+		var statusCodeHeader string
 		for h, vs := range grpcResp.Header {
-			for _, v := range vs {
-				writer.Header().Set(h, v)
+			// We don't want to expose any gRPC metadata in the HTTP response, so we skip forwarding metadata headers.
+			if strings.HasPrefix(h, "Grpc-Metadata") {
+				if h == "Grpc-Metadata-"+grpcutils.HttpCodeMetadataKey {
+					statusCodeHeader = vs[0]
+				}
+			} else {
+				for _, v := range vs {
+					writer.Header().Set(h, v)
+				}
 			}
 		}
 		if request.Method == "GET" {
 			writer.Header().Set("Content-Length", strconv.Itoa(len(j)))
-			writer.WriteHeader(grpcResp.StatusCode)
+			if statusCodeHeader != "" {
+				code, err := strconv.Atoi(statusCodeHeader)
+				if err != nil {
+					e := fmt.Errorf("could not parse status code: %w", err)
+					writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
+					return
+				}
+				writer.WriteHeader(code)
+			} else {
+				writer.WriteHeader(grpcResp.StatusCode)
+			}
 			if _, err := io.Copy(writer, ioutil.NopCloser(bytes.NewReader(j))); err != nil {
 				e := fmt.Errorf("could not write response message: %w", err)
 				writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
