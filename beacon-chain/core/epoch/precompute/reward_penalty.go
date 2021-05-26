@@ -83,7 +83,7 @@ func attestationDelta(pBal *Balance, sqrtActiveCurrentEpoch uint64, v *Validator
 	baseRewardsPerEpoch := params.BeaconConfig().BaseRewardsPerEpoch
 	effectiveBalanceIncrement := params.BeaconConfig().EffectiveBalanceIncrement
 	vb := v.CurrentEpochEffectiveBalance
-	br := vb * params.BeaconConfig().BaseRewardFactor / sqrtActiveCurrentEpoch / params.BeaconConfig().BaseRewardsPerEpoch
+	br := vb * params.BeaconConfig().BaseRewardFactor / sqrtActiveCurrentEpoch / baseRewardsPerEpoch
 	r, p := uint64(0), uint64(0)
 	currentEpochBalance := pBal.ActiveCurrentEpoch / effectiveBalanceIncrement
 
