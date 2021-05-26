@@ -24,6 +24,7 @@ func (g *gitCLI) CopyDir(sourceRepo, targetRepo, dir string) error {
 	if err := fileutil.MkdirAll(targetPath); err != nil {
 		return err
 	}
+	log.Info("Copying folders...")
 	cmd := exec.Command("cp", "-R", dirPath, targetPath)
 	fmt.Println(cmd.String())
 	stdout, err := cmd.StderrPipe()
