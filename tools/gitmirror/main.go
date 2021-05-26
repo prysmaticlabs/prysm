@@ -81,22 +81,28 @@ func main() {
 }
 
 func initializeGitConfig(accessToken string) error {
-	cmdStrings := []string{
-		fmt.Sprintf(
-			"git config --global url.\"https://api:%s@github.com/\".insteadOf \"https://github.com/\"",
-			accessToken,
-		),
-		fmt.Sprintf(
-			"git config --global url.\"https://ssh:%s@github.com/\".insteadOf \"ssh://git@github.com/\"",
-			accessToken,
-		),
-		fmt.Sprintf(
-			"git config --global url.\"https://git:%s@github.com/\".insteadOf \"git@github.com:\"",
-			accessToken,
-		),
+	cmdStrings := [][]string{
+		{
+			"config",
+			"--global",
+			fmt.Sprintf(`url."https://api:%s@github.com".insteadOf"`, accessToken),
+			"https://github.com/",
+		},
+		{
+			"config",
+			"--global",
+			fmt.Sprintf(`url."https://ssh:%s@github.com/".insteadOf`, accessToken),
+			"ssh://git@github.com/",
+		},
+		{
+			"config",
+			"--global",
+			fmt.Sprintf(`url."https://git:%s@github.com/".insteadOf`, accessToken),
+			"git@github.com/",
+		},
 	}
 	for _, str := range cmdStrings {
-		cmd := exec.Command(str)
+		cmd := exec.Command("git", str...)
 		if err := cmd.Start(); err != nil {
 			return err
 		}
