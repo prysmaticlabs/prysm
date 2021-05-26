@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -53,7 +54,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 				if hs := s.head.state.Slot(); hs != 2 {
 					t.Errorf("Unexpected state slot. Got %d but wanted %d", hs, 2)
 				}
-				if bs := s.head.block.Block.Slot; bs != 2 {
+				if bs := s.head.block.Block().Slot(); bs != 2 {
 					t.Errorf("Unexpected head block slot. Got %d but wanted %d", bs, 2)
 				}
 			},
@@ -139,12 +140,12 @@ func TestService_ReceiveBlock(t *testing.T) {
 			require.NoError(t, s.saveGenesisData(ctx, genesis))
 			gBlk, err := s.cfg.BeaconDB.GenesisBlock(ctx)
 			require.NoError(t, err)
-			gRoot, err := gBlk.Block.HashTreeRoot()
+			gRoot, err := gBlk.Block().HashTreeRoot()
 			require.NoError(t, err)
 			s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
 			root, err := tt.args.block.Block.HashTreeRoot()
 			require.NoError(t, err)
-			err = s.ReceiveBlock(ctx, tt.args.block, root)
+			err = s.ReceiveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(tt.args.block), root)
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {
@@ -180,7 +181,7 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 	require.NoError(t, s.saveGenesisData(ctx, genesis))
 	gBlk, err := s.cfg.BeaconDB.GenesisBlock(ctx)
 	require.NoError(t, err)
-	gRoot, err := gBlk.Block.HashTreeRoot()
+	gRoot, err := gBlk.Block().HashTreeRoot()
 	require.NoError(t, err)
 	s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
 	root, err := b.Block.HashTreeRoot()
@@ -188,7 +189,7 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		require.NoError(t, s.ReceiveBlock(ctx, b, root))
+		require.NoError(t, s.ReceiveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(b), root))
 		wg.Done()
 	}()
 	wg.Wait()
@@ -225,7 +226,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 			},
 			check: func(t *testing.T, s *Service) {
 				assert.Equal(t, types.Slot(2), s.head.state.Slot(), "Incorrect head state slot")
-				assert.Equal(t, types.Slot(2), s.head.block.Block.Slot, "Incorrect head block slot")
+				assert.Equal(t, types.Slot(2), s.head.block.Block().Slot(), "Incorrect head block slot")
 			},
 		},
 		{
@@ -263,12 +264,12 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 			gBlk, err := s.cfg.BeaconDB.GenesisBlock(ctx)
 			require.NoError(t, err)
 
-			gRoot, err := gBlk.Block.HashTreeRoot()
+			gRoot, err := gBlk.Block().HashTreeRoot()
 			require.NoError(t, err)
 			s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
 			root, err := tt.args.block.Block.HashTreeRoot()
 			require.NoError(t, err)
-			blks := []*ethpb.SignedBeaconBlock{tt.args.block}
+			blks := []interfaces.SignedBeaconBlock{interfaces.NewWrappedSignedBeaconBlock(tt.args.block)}
 			roots := [][32]byte{root}
 			err = s.ReceiveBlockBatch(ctx, blks, roots)
 			if tt.wantedErr != "" {
@@ -288,7 +289,7 @@ func TestService_HasInitSyncBlock(t *testing.T) {
 	if s.HasInitSyncBlock(r) {
 		t.Error("Should not have block")
 	}
-	s.saveInitSyncBlock(r, testutil.NewBeaconBlock())
+	s.saveInitSyncBlock(r, interfaces.NewWrappedSignedBeaconBlock(testutil.NewBeaconBlock()))
 	if !s.HasInitSyncBlock(r) {
 		t.Error("Should have block")
 	}

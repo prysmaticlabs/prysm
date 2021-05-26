@@ -374,7 +374,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if fState != nil && fState.Eth1DepositIndex() > 0 {
+	if fState != nil && !fState.IsNil() && fState.Eth1DepositIndex() > 0 {
 		s.cfg.DepositCache.PrunePendingDeposits(ctx, int64(fState.Eth1DepositIndex()))
 	}
 	return nil

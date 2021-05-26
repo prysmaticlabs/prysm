@@ -3,10 +3,15 @@ load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["block_utils.go"],
+    srcs = [
+        "block_utils.go",
+        "cloners.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/shared/blockutil",
     visibility = ["//visibility:public"],
     deps = [
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/bytesutil:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
     ],

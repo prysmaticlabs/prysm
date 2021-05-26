@@ -14,9 +14,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -258,7 +258,7 @@ func ProcessEffectiveBalanceUpdates(state iface.BeaconState) (iface.BeaconState,
 		balance := bals[idx]
 
 		if balance+downwardThreshold < val.EffectiveBalance || val.EffectiveBalance+upwardThreshold < balance {
-			newVal := stateV0.CopyValidator(val)
+			newVal := blockutil.CopyValidator(val)
 			newVal.EffectiveBalance = maxEffBalance
 			if newVal.EffectiveBalance > balance-balance%effBalanceInc {
 				newVal.EffectiveBalance = balance - balance%effBalanceInc
@@ -284,7 +284,7 @@ func ProcessEffectiveBalanceUpdates(state iface.BeaconState) (iface.BeaconState,
 					effectiveBal = balance - balance%effBalanceInc
 				}
 				if effectiveBal != val.EffectiveBalance {
-					newVal := stateV0.CopyValidator(val)
+					newVal := blockutil.CopyValidator(val)
 					newVal.EffectiveBalance = effectiveBal
 					return true, newVal, nil
 				}

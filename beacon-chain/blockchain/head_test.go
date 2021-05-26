@@ -9,6 +9,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -39,7 +40,7 @@ func TestSaveHead_Different(t *testing.T) {
 	newHeadSignedBlock.Block.Slot = 1
 	newHeadBlock := newHeadSignedBlock.Block
 
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), newHeadSignedBlock))
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), interfaces.NewWrappedSignedBeaconBlock(newHeadSignedBlock)))
 	newRoot, err := newHeadBlock.HashTreeRoot()
 	require.NoError(t, err)
 	headState, err := testutil.NewBeaconState()
@@ -54,7 +55,7 @@ func TestSaveHead_Different(t *testing.T) {
 	cachedRoot, err := service.HeadRoot(context.Background())
 	require.NoError(t, err)
 	assert.DeepEqual(t, cachedRoot, newRoot[:], "Head did not change")
-	assert.DeepEqual(t, newHeadSignedBlock, service.headBlock(), "Head did not change")
+	assert.DeepEqual(t, newHeadSignedBlock, service.headBlock().Proto(), "Head did not change")
 	assert.DeepSSZEqual(t, headState.CloneInnerState(), service.headState(ctx).CloneInnerState(), "Head did not change")
 }
 
@@ -73,7 +74,7 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	newHeadSignedBlock.Block.ParentRoot = reorgChainParent[:]
 	newHeadBlock := newHeadSignedBlock.Block
 
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), newHeadSignedBlock))
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), interfaces.NewWrappedSignedBeaconBlock(newHeadSignedBlock)))
 	newRoot, err := newHeadBlock.HashTreeRoot()
 	require.NoError(t, err)
 	headState, err := testutil.NewBeaconState()
@@ -90,7 +91,7 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	if !bytes.Equal(cachedRoot, newRoot[:]) {
 		t.Error("Head did not change")
 	}
-	assert.DeepEqual(t, newHeadSignedBlock, service.headBlock(), "Head did not change")
+	assert.DeepEqual(t, newHeadSignedBlock, service.headBlock().Proto(), "Head did not change")
 	assert.DeepSSZEqual(t, headState.CloneInnerState(), service.headState(ctx).CloneInnerState(), "Head did not change")
 	require.LogsContain(t, hook, "Chain reorg occurred")
 }
@@ -112,7 +113,7 @@ func TestUpdateHead_MissingJustifiedRoot(t *testing.T) {
 	service := setupBeaconChain(t, beaconDB)
 
 	b := testutil.NewBeaconBlock()
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), b))
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), interfaces.NewWrappedSignedBeaconBlock(b)))
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 

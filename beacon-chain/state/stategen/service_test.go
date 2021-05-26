@@ -6,6 +6,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -18,7 +19,7 @@ func TestResume(t *testing.T) {
 
 	service := New(beaconDB)
 	b := testutil.NewBeaconBlock()
-	require.NoError(t, service.beaconDB.SaveBlock(ctx, b))
+	require.NoError(t, service.beaconDB.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(b)))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
