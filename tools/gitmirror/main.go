@@ -90,18 +90,6 @@ func initializeGitConfig(accessToken string) error {
 		{
 			"config",
 			"--global",
-			fmt.Sprintf(`url."https://api:%s@github.com".insteadOf"`, accessToken),
-			"https://github.com/",
-		},
-		{
-			"config",
-			"--global",
-			fmt.Sprintf(`url."https://ssh:%s@github.com/".insteadOf`, accessToken),
-			"ssh://git@github.com/",
-		},
-		{
-			"config",
-			"--global",
 			fmt.Sprintf(`url."https://git:%s@github.com/".insteadOf`, accessToken),
 			"git@github.com/",
 		},
@@ -112,14 +100,14 @@ func initializeGitConfig(accessToken string) error {
 		if err != nil {
 			log.Fatal(err)
 		}
+		if err := cmd.Start(); err != nil {
+			return err
+		}
 		data, err := io.ReadAll(stdout)
 		if err != nil {
 			return err
 		}
 		log.Errorf("%s", data)
-		if err := cmd.Start(); err != nil {
-			return err
-		}
 		if err := cmd.Wait(); err != nil {
 			return err
 		}
