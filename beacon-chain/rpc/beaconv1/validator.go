@@ -30,11 +30,13 @@ func (bs *Server) GetValidator(ctx context.Context, req *ethpb.StateValidatorReq
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get validator container: %v", err)
 	}
+	if len(valContainer) == 0 {
+		return nil, status.Error(codes.NotFound, "Could not find validator")
+	}
 	return &ethpb.StateValidatorResponse{Data: valContainer[0]}, nil
 }
 
 // ListValidators returns filterable list of validators with their balance, status and index.
-// TODO(#8901): missing status support.
 func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidatorsRequest) (*ethpb.StateValidatorsResponse, error) {
 	state, err := bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
@@ -46,7 +48,24 @@ func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidators
 		return nil, status.Errorf(codes.Internal, "Could not get validator container: %v", err)
 	}
 
-	return &ethpb.StateValidatorsResponse{Data: valContainers}, nil
+	if len(req.Status) == 0 {
+		return &ethpb.StateValidatorsResponse{Data: valContainers}, nil
+	}
+
+	filterStatus := make(map[ethpb.ValidatorStatus]bool, len(req.Status))
+	for _, ss := range req.Status {
+		filterStatus[ss] = true
+	}
+	epoch := helpers.SlotToEpoch(state.Slot())
+	filteredVals := make([]*ethpb.ValidatorContainer, 0, len(valContainers))
+	for _, vc := range valContainers {
+		valStatus := validatorStatus(vc.Validator, epoch)
+		valSubStatus := validatorSubStatus(vc.Validator, epoch)
+		if filterStatus[valStatus] || filterStatus[valSubStatus] {
+			filteredVals = append(filteredVals, vc)
+		}
+	}
+	return &ethpb.StateValidatorsResponse{Data: filteredVals}, nil
 }
 
 // ListValidatorBalances returns a filterable list of validator balances.
@@ -123,16 +142,19 @@ func (bs *Server) ListCommittees(ctx context.Context, req *ethpb.StateCommittees
 // This function returns the validator object based on the passed in ID. The validator ID could be its public key,
 // or its index.
 func valContainersByRequestIds(state iface.BeaconState, validatorIds [][]byte) ([]*ethpb.ValidatorContainer, error) {
+	epoch := helpers.SlotToEpoch(state.Slot())
 	allValidators := state.Validators()
 	allBalances := state.Balances()
 	var valContainers []*ethpb.ValidatorContainer
 	if len(validatorIds) == 0 {
 		valContainers = make([]*ethpb.ValidatorContainer, len(allValidators))
 		for i, validator := range allValidators {
+			v1Validator := migration.V1Alpha1ValidatorToV1(validator)
 			valContainers[i] = &ethpb.ValidatorContainer{
 				Index:     types.ValidatorIndex(i),
 				Balance:   allBalances[i],
-				Validator: migration.V1Alpha1ValidatorToV1(validator),
+				Status:    validatorSubStatus(v1Validator, epoch),
+				Validator: v1Validator,
 			}
 		}
 	} else {
@@ -152,12 +174,71 @@ func valContainersByRequestIds(state iface.BeaconState, validatorIds [][]byte) (
 				}
 				valIndex = types.ValidatorIndex(index)
 			}
+			v1Validator := migration.V1Alpha1ValidatorToV1(allValidators[valIndex])
 			valContainers[i] = &ethpb.ValidatorContainer{
 				Index:     valIndex,
 				Balance:   allBalances[valIndex],
-				Validator: migration.V1Alpha1ValidatorToV1(allValidators[valIndex]),
+				Status:    validatorSubStatus(v1Validator, epoch),
+				Validator: v1Validator,
 			}
 		}
 	}
 	return valContainers, nil
+}
+
+func validatorStatus(validator *ethpb.Validator, epoch types.Epoch) ethpb.ValidatorStatus {
+	switch validatorSubStatus(validator, epoch) {
+	case ethpb.ValidatorStatus_PENDING_INITIALIZED, ethpb.ValidatorStatus_PENDING_QUEUED:
+		return ethpb.ValidatorStatus_PENDING
+	case ethpb.ValidatorStatus_ACTIVE_ONGOING, ethpb.ValidatorStatus_ACTIVE_SLASHED, ethpb.ValidatorStatus_ACTIVE_EXITING:
+		return ethpb.ValidatorStatus_ACTIVE
+	case ethpb.ValidatorStatus_EXITED_UNSLASHED, ethpb.ValidatorStatus_EXITED_SLASHED:
+		return ethpb.ValidatorStatus_EXITED
+	case ethpb.ValidatorStatus_WITHDRAWAL_POSSIBLE, ethpb.ValidatorStatus_WITHDRAWAL_DONE:
+		return ethpb.ValidatorStatus_WITHDRAWAL
+	}
+	return 0
+}
+
+func validatorSubStatus(validator *ethpb.Validator, epoch types.Epoch) ethpb.ValidatorStatus {
+	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
+
+	// Pending.
+	if validator.ActivationEpoch > epoch {
+		if validator.ActivationEligibilityEpoch == farFutureEpoch {
+			return ethpb.ValidatorStatus_PENDING_INITIALIZED
+		} else if validator.ActivationEligibilityEpoch < farFutureEpoch && validator.ActivationEpoch > epoch {
+			return ethpb.ValidatorStatus_PENDING_QUEUED
+		}
+	}
+
+	// Active.
+	if validator.ActivationEpoch <= epoch && epoch < validator.ExitEpoch {
+		if validator.ExitEpoch == farFutureEpoch {
+			return ethpb.ValidatorStatus_ACTIVE_ONGOING
+		} else if validator.ExitEpoch < farFutureEpoch {
+			if validator.Slashed {
+				return ethpb.ValidatorStatus_ACTIVE_SLASHED
+			}
+			return ethpb.ValidatorStatus_ACTIVE_EXITING
+		}
+	}
+
+	// Exited.
+	if validator.ExitEpoch <= epoch && epoch < validator.WithdrawableEpoch {
+		if validator.Slashed {
+			return ethpb.ValidatorStatus_EXITED_SLASHED
+		}
+		return ethpb.ValidatorStatus_EXITED_UNSLASHED
+	}
+
+	if validator.WithdrawableEpoch <= epoch {
+		if validator.EffectiveBalance != 0 {
+			return ethpb.ValidatorStatus_WITHDRAWAL_POSSIBLE
+		} else {
+			return ethpb.ValidatorStatus_WITHDRAWAL_DONE
+		}
+	}
+
+	return 0
 }
