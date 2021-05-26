@@ -272,6 +272,7 @@ func (ns *Server) GetSyncStatus(ctx context.Context, _ *emptypb.Empty) (*ethpb.S
 		Data: &ethpb.SyncInfo{
 			HeadSlot:     headSlot,
 			SyncDistance: ns.GenesisTimeFetcher.CurrentSlot() - headSlot,
+			IsSyncing:    ns.SyncChecker.Syncing(),
 		},
 	}, nil
 }
