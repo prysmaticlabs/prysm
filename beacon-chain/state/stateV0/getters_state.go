@@ -3,7 +3,7 @@ package stateV0
 import (
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
+	"github.com/prysmaticlabs/prysm/shared/copyutil"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -160,7 +160,7 @@ func (b *BeaconState) safeCopyPendingAttestationSlice(input []*pbp2p.PendingAtte
 
 	res := make([]*pbp2p.PendingAttestation, len(input))
 	for i := 0; i < len(res); i++ {
-		res[i] = blockutil.CopyPendingAttestation(input[i])
+		res[i] = copyutil.CopyPendingAttestation(input[i])
 	}
 	return res
 }
@@ -170,5 +170,5 @@ func (b *BeaconState) safeCopyCheckpoint(input *ethpb.Checkpoint) *ethpb.Checkpo
 		return nil
 	}
 
-	return blockutil.CopyCheckpoint(input)
+	return copyutil.CopyCheckpoint(input)
 }

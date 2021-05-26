@@ -130,9 +130,9 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	}
 
 	// Compute state root with the newly constructed block.
-	stateRoot, err = vs.computeStateRoot(ctx, interfaces.NewWrappedSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: blk, Signature: make([]byte, 96)}))
+	stateRoot, err = vs.computeStateRoot(ctx, interfaces.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: blk, Signature: make([]byte, 96)}))
 	if err != nil {
-		interop.WriteBlockToDisk(interfaces.NewWrappedSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: blk}), true /*failed*/)
+		interop.WriteBlockToDisk(interfaces.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: blk}), true /*failed*/)
 		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
 	}
 	blk.StateRoot = stateRoot
@@ -143,7 +143,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 // ProposeBlock is called by a proposer during its assigned slot to create a block in an attempt
 // to get it processed by the beacon node as the canonical head.
 func (vs *Server) ProposeBlock(ctx context.Context, rBlk *ethpb.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
-	blk := interfaces.NewWrappedSignedBeaconBlock(rBlk)
+	blk := interfaces.WrappedPhase0SignedBeaconBlock(rBlk)
 	root, err := blk.Block().HashTreeRoot()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not tree hash block: %v", err)

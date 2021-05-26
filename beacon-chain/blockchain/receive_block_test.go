@@ -145,7 +145,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 			s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
 			root, err := tt.args.block.Block.HashTreeRoot()
 			require.NoError(t, err)
-			err = s.ReceiveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(tt.args.block), root)
+			err = s.ReceiveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(tt.args.block), root)
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {
@@ -189,7 +189,7 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		require.NoError(t, s.ReceiveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(b), root))
+		require.NoError(t, s.ReceiveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(b), root))
 		wg.Done()
 	}()
 	wg.Wait()
@@ -269,7 +269,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 			s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
 			root, err := tt.args.block.Block.HashTreeRoot()
 			require.NoError(t, err)
-			blks := []interfaces.SignedBeaconBlock{interfaces.NewWrappedSignedBeaconBlock(tt.args.block)}
+			blks := []interfaces.SignedBeaconBlock{interfaces.WrappedPhase0SignedBeaconBlock(tt.args.block)}
 			roots := [][32]byte{root}
 			err = s.ReceiveBlockBatch(ctx, blks, roots)
 			if tt.wantedErr != "" {
@@ -289,7 +289,7 @@ func TestService_HasInitSyncBlock(t *testing.T) {
 	if s.HasInitSyncBlock(r) {
 		t.Error("Should not have block")
 	}
-	s.saveInitSyncBlock(r, interfaces.NewWrappedSignedBeaconBlock(testutil.NewBeaconBlock()))
+	s.saveInitSyncBlock(r, interfaces.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()))
 	if !s.HasInitSyncBlock(r) {
 		t.Error("Should have block")
 	}

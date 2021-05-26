@@ -39,7 +39,7 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	}
 
 	want := "block randao: signature did not verify"
-	_, err = blocks.ProcessRandao(context.Background(), beaconState, interfaces.NewWrappedSignedBeaconBlock(b))
+	_, err = blocks.ProcessRandao(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(b))
 	assert.ErrorContains(t, want, err)
 }
 
@@ -60,7 +60,7 @@ func TestProcessRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T)
 	newState, err := blocks.ProcessRandao(
 		context.Background(),
 		beaconState,
-		interfaces.NewWrappedSignedBeaconBlock(b),
+		interfaces.WrappedPhase0SignedBeaconBlock(b),
 	)
 	require.NoError(t, err, "Unexpected error processing block randao")
 	currentEpoch := helpers.CurrentEpoch(beaconState)

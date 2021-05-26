@@ -87,7 +87,7 @@ func TestGetStateRoot(t *testing.T) {
 		b := testutil.NewBeaconBlock()
 		b.Block.StateRoot = bytesutil.PadTo([]byte("head"), 32)
 		s := Server{
-			ChainInfoFetcher: &chainMock.ChainService{Block: interfaces.NewWrappedSignedBeaconBlock(b)},
+			ChainInfoFetcher: &chainMock.ChainService{Block: interfaces.WrappedPhase0SignedBeaconBlock(b)},
 		}
 
 		resp, err := s.GetStateRoot(ctx, &ethpb.StateRequest{
@@ -100,7 +100,7 @@ func TestGetStateRoot(t *testing.T) {
 	t.Run("Genesis", func(t *testing.T) {
 		b := testutil.NewBeaconBlock()
 		b.Block.StateRoot = bytesutil.PadTo([]byte("genesis"), 32)
-		require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(b)))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(b)))
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		require.NoError(t, db.SaveStateSummary(ctx, &pb.StateSummary{Root: r[:]}))
@@ -120,12 +120,12 @@ func TestGetStateRoot(t *testing.T) {
 		parent := testutil.NewBeaconBlock()
 		parentR, err := parent.Block.HashTreeRoot()
 		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(parent)))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(parent)))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, parentR))
 		b := testutil.NewBeaconBlock()
 		b.Block.ParentRoot = parentR[:]
 		b.Block.StateRoot = bytesutil.PadTo([]byte("finalized"), 32)
-		require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(b)))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(b)))
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		require.NoError(t, db.SaveStateSummary(ctx, &pb.StateSummary{Root: r[:]}))
@@ -145,12 +145,12 @@ func TestGetStateRoot(t *testing.T) {
 		parent := testutil.NewBeaconBlock()
 		parentR, err := parent.Block.HashTreeRoot()
 		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(parent)))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(parent)))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, parentR))
 		b := testutil.NewBeaconBlock()
 		b.Block.ParentRoot = parentR[:]
 		b.Block.StateRoot = bytesutil.PadTo([]byte("justified"), 32)
-		require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(b)))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(b)))
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		require.NoError(t, db.SaveStateSummary(ctx, &pb.StateSummary{Root: r[:]}))
@@ -205,7 +205,7 @@ func TestGetStateRoot(t *testing.T) {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = 100
 		b.Block.StateRoot = bytesutil.PadTo([]byte("slot"), 32)
-		require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(b)))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(b)))
 		s := Server{
 			BeaconDB:           db,
 			GenesisTimeFetcher: &chainMock.ChainService{},
@@ -222,11 +222,11 @@ func TestGetStateRoot(t *testing.T) {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = 100
 		b.Block.StateRoot = bytesutil.PadTo([]byte("slot"), 32)
-		require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(b)))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(b)))
 		b = testutil.NewBeaconBlock()
 		b.Block.Slot = 100
 		b.Block.StateRoot = bytesutil.PadTo([]byte("sLot"), 32)
-		require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(b)))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(b)))
 		s := Server{
 			BeaconDB:           db,
 			GenesisTimeFetcher: &chainMock.ChainService{},
@@ -300,7 +300,7 @@ func TestGetStateFork(t *testing.T) {
 		db := testDB.SetupDB(t)
 		b := testutil.NewBeaconBlock()
 		b.Block.StateRoot = bytesutil.PadTo([]byte("genesis"), 32)
-		require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(b)))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(b)))
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		require.NoError(t, db.SaveStateSummary(ctx, &pb.StateSummary{Root: r[:]}))
@@ -509,7 +509,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 		db := testDB.SetupDB(t)
 		b := testutil.NewBeaconBlock()
 		b.Block.StateRoot = bytesutil.PadTo([]byte("genesis"), 32)
-		require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(b)))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(b)))
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		require.NoError(t, db.SaveStateSummary(ctx, &pb.StateSummary{Root: r[:]}))

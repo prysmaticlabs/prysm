@@ -39,7 +39,7 @@ func BlockSignature(
 	privKeys []bls.SecretKey,
 ) (bls.Signature, error) {
 	var err error
-	s, err := state.CalculateStateRoot(context.Background(), bState, interfaces.NewWrappedSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: block}))
+	s, err := state.CalculateStateRoot(context.Background(), bState, interfaces.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: block}))
 	if err != nil {
 		return nil, err
 	}

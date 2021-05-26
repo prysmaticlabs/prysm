@@ -103,7 +103,7 @@ func generateMarshalledFullStateAndBlock() error {
 	if err != nil {
 		return err
 	}
-	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, interfaces.NewWrappedSignedBeaconBlock(block))
+	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(block))
 	if err != nil {
 		return err
 	}
@@ -127,7 +127,7 @@ func generateMarshalledFullStateAndBlock() error {
 	}
 	block.Block.Body.Attestations = append(atts, block.Block.Body.Attestations...)
 
-	s, err := state.CalculateStateRoot(context.Background(), beaconState, interfaces.NewWrappedSignedBeaconBlock(block))
+	s, err := state.CalculateStateRoot(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(block))
 	if err != nil {
 		return errors.Wrap(err, "could not calculate state root")
 	}
@@ -158,7 +158,7 @@ func generateMarshalledFullStateAndBlock() error {
 	}
 
 	// Running a single state transition to make sure the generated files aren't broken.
-	_, err = state.ExecuteStateTransition(context.Background(), beaconState, interfaces.NewWrappedSignedBeaconBlock(block))
+	_, err = state.ExecuteStateTransition(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(block))
 	if err != nil {
 		return err
 	}
@@ -192,7 +192,7 @@ func generate2FullEpochState() error {
 		if err != nil {
 			return err
 		}
-		beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, interfaces.NewWrappedSignedBeaconBlock(block))
+		beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(block))
 		if err != nil {
 			return err
 		}

@@ -62,7 +62,7 @@ func RunBlockProcessingTest(t *testing.T, config string) {
 				require.NoError(t, err, "Failed to decompress")
 				block := &ethpb.SignedBeaconBlock{}
 				require.NoError(t, block.UnmarshalSSZ(blockSSZ), "Failed to unmarshal")
-				processedState, transitionError = state.ExecuteStateTransition(context.Background(), beaconState, interfaces.NewWrappedSignedBeaconBlock(block))
+				processedState, transitionError = state.ExecuteStateTransition(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(block))
 				if transitionError != nil {
 					break
 				}

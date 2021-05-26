@@ -39,7 +39,7 @@ func TestHeadBlock_DataRace(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	s := &Service{
 		cfg:  &Config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)},
-		head: &head{block: interfaces.NewWrappedSignedBeaconBlock(&ethpb.SignedBeaconBlock{})},
+		head: &head{block: interfaces.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{})},
 	}
 	go func() {
 		require.NoError(t, s.saveHead(context.Background(), [32]byte{}))
