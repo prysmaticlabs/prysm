@@ -281,7 +281,7 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	require.NoError(t, c.initializeChainInfo(ctx))
 	headBlk, err := c.HeadBlock(ctx)
 	require.NoError(t, err)
-	assert.DeepEqual(t, headBlock, headBlk, "Head block incorrect")
+	assert.DeepEqual(t, headBlock, headBlk.Proto(), "Head block incorrect")
 	s, err := c.HeadState(ctx)
 	require.NoError(t, err)
 	assert.DeepSSZEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
@@ -323,7 +323,7 @@ func TestChainService_InitializeChainInfo_SetHeadAtGenesis(t *testing.T) {
 	require.NoError(t, err)
 	assert.DeepSSZEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
 	assert.Equal(t, genesisRoot, c.genesisRoot, "Genesis block root incorrect")
-	assert.DeepEqual(t, genesis, c.head.block)
+	assert.DeepEqual(t, genesis, c.head.block.Proto())
 }
 
 func TestChainService_InitializeChainInfo_HeadSync(t *testing.T) {
@@ -382,7 +382,7 @@ func TestChainService_InitializeChainInfo_HeadSync(t *testing.T) {
 	assert.DeepSSZEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
 	assert.Equal(t, genesisRoot, c.genesisRoot, "Genesis block root incorrect")
 	// Since head sync is not triggered, chain is initialized to the last finalization checkpoint.
-	assert.DeepEqual(t, finalizedBlock, c.head.block)
+	assert.DeepEqual(t, finalizedBlock, c.head.block.Proto())
 	assert.LogsContain(t, hook, "resetting head from the checkpoint ('--head-sync' flag is ignored)")
 	assert.LogsDoNotContain(t, hook, "Regenerating state from the last checkpoint at slot")
 
@@ -403,7 +403,7 @@ func TestChainService_InitializeChainInfo_HeadSync(t *testing.T) {
 	assert.DeepSSZEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
 	assert.Equal(t, genesisRoot, c.genesisRoot, "Genesis block root incorrect")
 	// Head slot is far beyond the latest finalized checkpoint, head sync is triggered.
-	assert.DeepEqual(t, headBlock, c.head.block)
+	assert.DeepEqual(t, headBlock, c.head.block.Proto())
 	assert.LogsContain(t, hook, "Regenerating state from the last checkpoint at slot 225")
 	assert.LogsDoNotContain(t, hook, "resetting head from the checkpoint ('--head-sync' flag is ignored)")
 }
