@@ -8,14 +8,14 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// AltairSignedBeaconBlock is a convenience wrapper around a phase 0 beacon block
+// AltairSignedBeaconBlock is a convenience wrapper around a altair beacon block
 // object. This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across prysm without issues.
 type AltairSignedBeaconBlock struct {
 	b *ethpb.SignedBeaconBlockAltair
 }
 
-// WrappedAltairSignedBeaconBlock is constructor which wraps a protobuf phase 0 block
+// WrappedAltairSignedBeaconBlock is constructor which wraps a protobuf altair block
 // with the block wrapper.
 func WrappedAltairSignedBeaconBlock(b *ethpb.SignedBeaconBlockAltair) AltairSignedBeaconBlock {
 	return AltairSignedBeaconBlock{b: b}
