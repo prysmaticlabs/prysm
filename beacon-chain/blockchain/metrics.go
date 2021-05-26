@@ -3,8 +3,6 @@ package blockchain
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -12,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 

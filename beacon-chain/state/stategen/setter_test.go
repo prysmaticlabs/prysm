@@ -4,9 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
-
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"

@@ -2,7 +2,6 @@ package validator
 
 import (
 	"context"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"math/big"
 	"testing"
 

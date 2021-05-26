@@ -7,14 +7,13 @@ import (
 	"io"
 	"io/ioutil"
 
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	dbIface "github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	state "github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 

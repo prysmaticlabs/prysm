@@ -6,9 +6,8 @@ package state
 import (
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
-
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 )
 
 const (

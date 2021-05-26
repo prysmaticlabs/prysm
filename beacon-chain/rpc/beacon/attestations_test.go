@@ -3,7 +3,6 @@ package beacon
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"sort"
 	"strconv"
 	"testing"
@@ -26,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
