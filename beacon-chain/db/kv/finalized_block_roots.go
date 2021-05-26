@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
-
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
