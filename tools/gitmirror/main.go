@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/exec"
@@ -106,6 +107,15 @@ func initializeGitConfig(accessToken string) error {
 		if err := cmd.Start(); err != nil {
 			return err
 		}
+		stdout, err := cmd.StderrPipe()
+		if err != nil {
+			log.Fatal(err)
+		}
+		data, err := io.ReadAll(stdout)
+		if err != nil {
+			return err
+		}
+		log.Errorf("%s", data)
 		if err := cmd.Wait(); err != nil {
 			return err
 		}
