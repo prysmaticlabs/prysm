@@ -69,7 +69,7 @@ func (bs *Server) ListBlocks(
 			}
 			phBlk, err := b.PbPhase0Block()
 			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not determine if block is phase 0 block: %v", err)
+				return nil, status.Errorf(codes.Internal, "Could not get phase 0 block: %v", err)
 			}
 			containers[i] = &ethpb.BeaconBlockContainer{
 				Block:     phBlk,
