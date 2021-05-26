@@ -16,7 +16,7 @@ var hook *Webhook
 
 func TestMain(m *testing.M) {
 	var err error
-	hook, err = New(Options.Secret("Foobar!"))
+	hook, err = NewWebhookClient(Options.Secret("Foobar!"))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -110,16 +110,6 @@ func TestWebhooks(t *testing.T) {
 		filename string
 		headers  http.Header
 	}{
-		{
-			name:     "PullRequestEvent",
-			event:    PullRequestEvent,
-			typ:      PullRequestPayload{},
-			filename: "../testdata/github/pull-request.json",
-			headers: http.Header{
-				"X-Github-Event":  []string{"pull_request"},
-				"X-Hub-Signature": []string{"sha1=88972f972db301178aa13dafaf112d26416a15e6"},
-			},
-		},
 		{
 			name:     "ReleaseEvent",
 			event:    ReleaseEvent,

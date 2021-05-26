@@ -1,3 +1,4 @@
+// Source: copied from https://github.com/go-playground/webhooks.
 package main
 
 import (
@@ -28,58 +29,10 @@ type Event string
 
 // GitHub hook types
 const (
-	CheckRunEvent                            Event = "check_run"
-	CheckSuiteEvent                          Event = "check_suite"
-	CommitCommentEvent                       Event = "commit_comment"
-	CreateEvent                              Event = "create"
-	DeleteEvent                              Event = "delete"
-	DeploymentEvent                          Event = "deployment"
-	DeploymentStatusEvent                    Event = "deployment_status"
-	ForkEvent                                Event = "fork"
-	GollumEvent                              Event = "gollum"
-	InstallationEvent                        Event = "installation"
-	InstallationRepositoriesEvent            Event = "installation_repositories"
-	IntegrationInstallationEvent             Event = "integration_installation"
-	IntegrationInstallationRepositoriesEvent Event = "integration_installation_repositories"
-	IssueCommentEvent                        Event = "issue_comment"
-	IssuesEvent                              Event = "issues"
-	LabelEvent                               Event = "label"
-	MemberEvent                              Event = "member"
-	MembershipEvent                          Event = "membership"
-	MilestoneEvent                           Event = "milestone"
-	MetaEvent                                Event = "meta"
-	OrganizationEvent                        Event = "organization"
-	OrgBlockEvent                            Event = "org_block"
-	PageBuildEvent                           Event = "page_build"
-	PingEvent                                Event = "ping"
-	ProjectCardEvent                         Event = "project_card"
-	ProjectColumnEvent                       Event = "project_column"
-	ProjectEvent                             Event = "project"
-	PublicEvent                              Event = "public"
-	PullRequestEvent                         Event = "pull_request"
-	PullRequestReviewEvent                   Event = "pull_request_review"
-	PullRequestReviewCommentEvent            Event = "pull_request_review_comment"
-	PushEvent                                Event = "push"
-	ReleaseEvent                             Event = "release"
-	RepositoryEvent                          Event = "repository"
-	RepositoryVulnerabilityAlertEvent        Event = "repository_vulnerability_alert"
-	SecurityAdvisoryEvent                    Event = "security_advisory"
-	StatusEvent                              Event = "status"
-	TeamEvent                                Event = "team"
-	TeamAddEvent                             Event = "team_add"
-	WatchEvent                               Event = "watch"
-)
-
-// EventSubtype defines a GitHub Hook Event subtype
-type EventSubtype string
-
-// GitHub hook event subtypes
-const (
-	NoSubtype     EventSubtype = ""
-	BranchSubtype EventSubtype = "branch"
-	TagSubtype    EventSubtype = "tag"
-	PullSubtype   EventSubtype = "pull"
-	IssueSubtype  EventSubtype = "issues"
+	CommitCommentEvent Event = "commit_comment"
+	CreateEvent        Event = "create"
+	PullRequestEvent   Event = "pull_request"
+	ReleaseEvent       Event = "release"
 )
 
 // Option is a configuration option for the webhook
@@ -104,8 +57,8 @@ type Webhook struct {
 	secret string
 }
 
-// New creates and returns a WebHook instance denoted by the Provider type
-func New(options ...Option) (*Webhook, error) {
+// NewWebhookClient creates and returns a WebHook instance denoted by the Provider type
+func NewWebhookClient(options ...Option) (*Webhook, error) {
 	hook := new(Webhook)
 	for _, opt := range options {
 		if err := opt(hook); err != nil {
@@ -168,10 +121,6 @@ func (hook Webhook) Parse(r *http.Request, events ...Event) (interface{}, error)
 	}
 
 	switch gitHubEvent {
-	case PullRequestEvent:
-		var pl PullRequestPayload
-		err = json.Unmarshal([]byte(payload), &pl)
-		return pl, err
 	case ReleaseEvent:
 		var pl ReleasePayload
 		err = json.Unmarshal([]byte(payload), &pl)

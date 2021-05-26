@@ -1,13 +1,18 @@
 package main
 
-import "github.com/spf13/viper"
+import (
+	"github.com/pkg/errors"
+	"github.com/spf13/viper"
+)
 
+// Config for the tool.
 type Config struct {
-	CloneBasePath string `mapstructure:"cloneBasePath"`
-	Repositories  []Repo `mapstructure:"repositories"`
+	CloneBasePath string       `mapstructure:"cloneBasePath"`
+	Repositories  []ConfigRepo `mapstructure:"repositories"`
 }
 
-type Repo struct {
+// ConfigRepo for git repo info.
+type ConfigRepo struct {
 	RemoteUrl         string   `mapstructure:"remoteUrl"`
 	RemoteName        string   `mapstructure:"remoteName"`
 	MirrorUrl         string   `mapstructure:"mirrorUrl"`
@@ -15,9 +20,12 @@ type Repo struct {
 	MirrorDirectories []string `mapstructure:"mirrorDirectories"`
 }
 
-func loadConfig(content string) (*Config, error) {
+func loadConfig(configPath string) (*Config, error) {
+	if configPath == "" {
+		return nil, errors.New("wanted path to config, received none")
+	}
 	config := &Config{}
-	viper.SetConfigFile(content)
+	viper.SetConfigFile(configPath)
 	if err := viper.ReadInConfig(); err != nil {
 		return nil, err
 	}
