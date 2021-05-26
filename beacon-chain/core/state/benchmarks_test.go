@@ -28,7 +28,7 @@ func BenchmarkExecuteStateTransition_FullBlock(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := coreState.ExecuteStateTransition(context.Background(), cleanStates[i], interfaces.NewWrappedSignedBeaconBlock(block))
+		_, err := coreState.ExecuteStateTransition(context.Background(), cleanStates[i], interfaces.WrappedPhase0SignedBeaconBlock(block))
 		require.NoError(b, err)
 	}
 }
@@ -49,12 +49,12 @@ func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
 	require.NoError(b, helpers.UpdateCommitteeCache(beaconState, helpers.CurrentEpoch(beaconState)))
 	require.NoError(b, beaconState.SetSlot(currentSlot))
 	// Run the state transition once to populate the cache.
-	_, err = coreState.ExecuteStateTransition(context.Background(), beaconState, interfaces.NewWrappedSignedBeaconBlock(block))
+	_, err = coreState.ExecuteStateTransition(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(block))
 	require.NoError(b, err, "Failed to process block, benchmarks will fail")
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := coreState.ExecuteStateTransition(context.Background(), cleanStates[i], interfaces.NewWrappedSignedBeaconBlock(block))
+		_, err := coreState.ExecuteStateTransition(context.Background(), cleanStates[i], interfaces.WrappedPhase0SignedBeaconBlock(block))
 		require.NoError(b, err, "Failed to process block, benchmarks will fail")
 	}
 }

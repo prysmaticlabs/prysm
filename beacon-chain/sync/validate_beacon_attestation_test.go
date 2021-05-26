@@ -58,7 +58,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 
 	blk := testutil.NewBeaconBlock()
 	blk.Block.Slot = 1
-	require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(blk)))
+	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(blk)))
 
 	validBlockRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)

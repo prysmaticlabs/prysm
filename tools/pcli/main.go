@@ -176,7 +176,7 @@ func main() {
 					blkRoot,
 					preStateRoot,
 				)
-				postState, err := state.ExecuteStateTransition(context.Background(), stateObj, interfaces.NewWrappedSignedBeaconBlock(block))
+				postState, err := state.ExecuteStateTransition(context.Background(), stateObj, interfaces.WrappedPhase0SignedBeaconBlock(block))
 				if err != nil {
 					log.Fatal(err)
 				}

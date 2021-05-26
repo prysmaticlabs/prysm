@@ -267,7 +267,7 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 			genesisRoot := cache.rootCache[0]
 			cache.RUnlock()
 
-			err := beaconDB.SaveBlock(context.Background(), interfaces.NewWrappedSignedBeaconBlock(testutil.NewBeaconBlock()))
+			err := beaconDB.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()))
 			require.NoError(t, err)
 
 			st, err := testutil.NewBeaconState()

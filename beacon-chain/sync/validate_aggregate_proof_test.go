@@ -152,7 +152,7 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, validators)
 
 	b := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(context.Background(), interfaces.NewWrappedSignedBeaconBlock(b)))
+	require.NoError(t, db.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(b)))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s, err := testutil.NewBeaconState()
@@ -240,7 +240,7 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, validators)
 
 	b := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(context.Background(), interfaces.NewWrappedSignedBeaconBlock(b)))
+	require.NoError(t, db.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(b)))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -308,7 +308,7 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
 	b := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(context.Background(), interfaces.NewWrappedSignedBeaconBlock(b)))
+	require.NoError(t, db.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(b)))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s, err := testutil.NewBeaconState()
@@ -401,7 +401,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
 	b := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(context.Background(), interfaces.NewWrappedSignedBeaconBlock(b)))
+	require.NoError(t, db.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(b)))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s, err := testutil.NewBeaconState()
@@ -604,7 +604,7 @@ func TestValidateAggregateAndProof_RejectWhenAttEpochDoesntEqualTargetEpoch(t *t
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
 	b := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(context.Background(), interfaces.NewWrappedSignedBeaconBlock(b)))
+	require.NoError(t, db.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(b)))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s, err := testutil.NewBeaconState()
