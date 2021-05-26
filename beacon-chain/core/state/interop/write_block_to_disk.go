@@ -6,7 +6,6 @@ import (
 	"path"
 
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
-
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 )

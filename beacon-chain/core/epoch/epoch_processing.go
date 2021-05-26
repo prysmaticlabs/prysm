@@ -9,7 +9,6 @@ import (
 	"sort"
 
 	"github.com/prysmaticlabs/prysm/shared/blockutil"
-
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
