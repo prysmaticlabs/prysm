@@ -54,8 +54,8 @@ func (w WrappedSignedBeaconBlock) Proto() proto.Message {
 	return w.b
 }
 
-// ProtobufPhase0Block returns the underlying protobuf object.
-func (w WrappedSignedBeaconBlock) ProtobufPhase0Block() (*ethpb.SignedBeaconBlock, error) {
+// PbPhase0Block returns the underlying protobuf object.
+func (w WrappedSignedBeaconBlock) PbPhase0Block() (*ethpb.SignedBeaconBlock, error) {
 	return w.b, nil
 }
 

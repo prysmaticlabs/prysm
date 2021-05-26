@@ -32,7 +32,7 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpb.BlockRequest) (
 	if rBlk == nil || rBlk.IsNil() {
 		return nil, status.Errorf(codes.NotFound, "Could not find requested block header")
 	}
-	blk, err := rBlk.ProtobufPhase0Block()
+	blk, err := rBlk.PbPhase0Block()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get raw block: %v", err)
 	}
@@ -100,7 +100,7 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpb.BlockHeadersR
 
 	blkHdrs := make([]*ethpb.BlockHeaderContainer, len(blks))
 	for i, bl := range blks {
-		blk, err := bl.ProtobufPhase0Block()
+		blk, err := bl.PbPhase0Block()
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get raw block: %v", err)
 		}
@@ -184,7 +184,7 @@ func (bs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	if rBlk == nil || rBlk.IsNil() {
 		return nil, status.Errorf(codes.NotFound, "Could not find requested block")
 	}
-	blk, err := rBlk.ProtobufPhase0Block()
+	blk, err := rBlk.PbPhase0Block()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get raw block: %v", err)
 	}
@@ -295,7 +295,7 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpb.BlockReq
 		return nil, status.Errorf(codes.NotFound, "Could not find requested block")
 	}
 
-	blk, err := rBlk.ProtobufPhase0Block()
+	blk, err := rBlk.PbPhase0Block()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get raw block: %v", err)
 	}

@@ -67,7 +67,7 @@ func (bs *Server) ListBlocks(
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not determine if block is canonical: %v", err)
 			}
-			phBlk, err := b.ProtobufPhase0Block()
+			phBlk, err := b.PbPhase0Block()
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not determine if block is phase 0 block: %v", err)
 			}
@@ -103,7 +103,7 @@ func (bs *Server) ListBlocks(
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not determine if block is canonical: %v", err)
 		}
-		phBlk, err := blk.ProtobufPhase0Block()
+		phBlk, err := blk.PbPhase0Block()
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not determine if block is phase 0 block: %v", err)
 		}
@@ -147,7 +147,7 @@ func (bs *Server) ListBlocks(
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not determine if block is canonical: %v", err)
 			}
-			phBlk, err := b.ProtobufPhase0Block()
+			phBlk, err := b.PbPhase0Block()
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not determine if block is phase 0 block: %v", err)
 			}
@@ -175,7 +175,7 @@ func (bs *Server) ListBlocks(
 		if err != nil {
 			return nil, err
 		}
-		phBlk, err := genBlk.ProtobufPhase0Block()
+		phBlk, err := genBlk.PbPhase0Block()
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not determine if block is phase 0 block: %v", err)
 		}
@@ -226,7 +226,7 @@ func (bs *Server) StreamBlocks(req *ethpb.StreamBlocksRequest, stream ethpb.Beac
 					if !ok || data == nil {
 						continue
 					}
-					phBlk, err := data.SignedBlock.ProtobufPhase0Block()
+					phBlk, err := data.SignedBlock.PbPhase0Block()
 					if err != nil {
 						log.Error(err)
 						continue
@@ -256,7 +256,7 @@ func (bs *Server) StreamBlocks(req *ethpb.StreamBlocksRequest, stream ethpb.Beac
 						log.WithError(err).WithField("blockSlot", data.SignedBlock.Block().Slot()).Error("Could not verify block signature")
 						continue
 					}
-					phBlk, err := signed.ProtobufPhase0Block()
+					phBlk, err := signed.PbPhase0Block()
 					if err != nil {
 						log.Error(err)
 						continue

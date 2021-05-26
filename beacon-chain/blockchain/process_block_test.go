@@ -171,7 +171,7 @@ func TestStore_OnBlockBatch(t *testing.T) {
 		blkRoots = append(blkRoots, root)
 	}
 
-	rBlock, err := blks[0].ProtobufPhase0Block()
+	rBlock, err := blks[0].PbPhase0Block()
 	assert.NoError(t, err)
 	rBlock.Block.ParentRoot = gRoot[:]
 	require.NoError(t, beaconDB.SaveBlock(context.Background(), blks[0]))
