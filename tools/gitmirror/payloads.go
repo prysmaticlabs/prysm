@@ -2,6 +2,21 @@ package main
 
 import "time"
 
+type ReleasePayloadMinimal struct {
+	Action     string             `json:"action"`
+	Release    *ReleaseMinimal    `json:"release"`
+	Repository *RepositoryMinimal `json:"repository"`
+}
+
+type ReleaseMinimal struct {
+	TagName string `json:"tag_name"`
+	Name    string `json:"name"`
+}
+
+type RepositoryMinimal struct {
+	Name string `json:"name"`
+}
+
 // ReleasePayload contains the information for GitHub's release hook event
 type ReleasePayload struct {
 	Action  string `json:"action"`
