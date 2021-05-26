@@ -21,9 +21,9 @@ func (g *gitCLI) CopyDir(sourceRepo, targetRepo, dir string) error {
 		return nil
 	}
 	log.Infof("Making target path %s in mirror %s", targetPath, targetRepo)
-	if err := fileutil.MkdirAll(targetPath); err != nil {
-		return err
-	}
+	//if err := fileutil.MkdirAll(targetPath); err != nil {
+	//	return err
+	//}
 	log.Info("Copying folders...")
 	cmd := exec.Command("cp", "-R", dirPath, targetPath)
 	fmt.Println(cmd.String())
