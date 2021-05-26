@@ -160,7 +160,7 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 		return err
 	}
 	for _, b := range blks {
-		if b.IsNil() || b.Block().IsNil() {
+		if b == nil || b.IsNil() || b.Block().IsNil() {
 			continue
 		}
 		if chunkErr := s.chunkWriter(stream, b.Proto()); chunkErr != nil {

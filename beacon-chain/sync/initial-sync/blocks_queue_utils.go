@@ -18,7 +18,7 @@ func (q *blocksQueue) resetFromFork(ctx context.Context, fork *forkData) error {
 		return errors.New("no blocks to reset from")
 	}
 	firstBlock := fork.blocks[0].Block()
-	if firstBlock.IsNil() {
+	if firstBlock == nil || firstBlock.IsNil() {
 		return errors.New("invalid first block in fork data")
 	}
 

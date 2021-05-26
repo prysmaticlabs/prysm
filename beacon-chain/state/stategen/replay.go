@@ -125,7 +125,7 @@ func executeStateTransitionStateGen(
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
-	if signed.IsNil() || signed.Block().IsNil() {
+	if signed == nil || signed.IsNil() || signed.Block().IsNil() {
 		return nil, errUnknownBlock
 	}
 
@@ -215,7 +215,7 @@ func (s *State) lastSavedBlock(ctx context.Context, slot types.Slot) ([32]byte, 
 	if len(lastSaved) != 1 {
 		return [32]byte{}, 0, fmt.Errorf("highest saved block does not equal to 1, it equals to %d", len(lastSaved))
 	}
-	if lastSaved[0].IsNil() || lastSaved[0].Block().IsNil() {
+	if lastSaved[0] == nil || lastSaved[0].IsNil() || lastSaved[0].Block().IsNil() {
 		return [32]byte{}, 0, nil
 	}
 	r, err := lastSaved[0].Block().HashTreeRoot()

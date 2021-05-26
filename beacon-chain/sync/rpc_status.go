@@ -315,7 +315,7 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 	if err != nil {
 		return p2ptypes.ErrGeneric
 	}
-	if blk.IsNil() {
+	if blk == nil || blk.IsNil() {
 		return p2ptypes.ErrGeneric
 	}
 	if helpers.SlotToEpoch(blk.Block().Slot()) == msg.FinalizedEpoch {
@@ -333,7 +333,7 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 		}
 		// Is a valid finalized block if no
 		// other child blocks exist yet.
-		if childBlock.IsNil() {
+		if childBlock == nil || childBlock.IsNil() {
 			return nil
 		}
 		// If child finalized block also has a smaller or

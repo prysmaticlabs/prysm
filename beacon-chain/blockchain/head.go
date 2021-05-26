@@ -103,7 +103,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	if err != nil {
 		return err
 	}
-	if newHeadBlock.IsNil() || newHeadBlock.Block().IsNil() {
+	if newHeadBlock == nil || newHeadBlock.IsNil() || newHeadBlock.Block().IsNil() {
 		return errors.New("cannot save nil head block")
 	}
 

@@ -78,7 +78,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 
 		// Loop through the pending queue and mark the potential parent blocks as seen.
 		for _, b := range bs {
-			if b.IsNil() || b.Block().IsNil() {
+			if b == nil || b.IsNil() || b.Block().IsNil() {
 				span.End()
 				continue
 			}

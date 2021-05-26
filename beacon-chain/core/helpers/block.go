@@ -15,7 +15,7 @@ import (
 // Access to these nil fields will result in run time panic,
 // it is recommended to run these checks as first line of defense.
 func VerifyNilBeaconBlock(b interfaces.SignedBeaconBlock) error {
-	if b.IsNil() {
+	if b == nil || b.IsNil() {
 		return errors.New("signed beacon block can't be nil")
 	}
 	if b.Block().IsNil() {

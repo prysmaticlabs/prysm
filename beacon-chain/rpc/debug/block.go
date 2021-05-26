@@ -26,7 +26,7 @@ func (ds *Server) GetBlock(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve block by root: %v", err)
 	}
-	if signedBlock.IsNil() {
+	if signedBlock == nil || signedBlock.IsNil() {
 		return &pbrpc.SSZResponse{Encoded: make([]byte, 0)}, nil
 	}
 	encoded, err := signedBlock.MarshalSSZ()

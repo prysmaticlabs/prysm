@@ -85,7 +85,7 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 			traceutil.AnnotateError(span, err)
 			return err
 		}
-		if signedBlock.IsNil() || signedBlock.Block().IsNil() {
+		if signedBlock == nil || signedBlock.IsNil() || signedBlock.Block().IsNil() {
 			err := fmt.Errorf("missing block in database: block root=%#x", root)
 			traceutil.AnnotateError(span, err)
 			return err

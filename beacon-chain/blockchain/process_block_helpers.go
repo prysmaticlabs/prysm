@@ -97,7 +97,7 @@ func (s *Service) VerifyBlkDescendant(ctx context.Context, root [32]byte) error 
 	if err != nil {
 		return err
 	}
-	if finalizedBlkSigned.IsNil() || finalizedBlkSigned.Block().IsNil() {
+	if finalizedBlkSigned == nil || finalizedBlkSigned.IsNil() || finalizedBlkSigned.Block().IsNil() {
 		return errors.New("nil finalized block")
 	}
 	finalizedBlk := finalizedBlkSigned.Block()
@@ -151,7 +151,7 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 			return false, err
 		}
 	}
-	if newJustifiedBlockSigned.IsNil() || newJustifiedBlockSigned.Block().IsNil() {
+	if newJustifiedBlockSigned == nil || newJustifiedBlockSigned.IsNil() || newJustifiedBlockSigned.Block().IsNil() {
 		return false, errors.New("nil new justified block")
 	}
 
@@ -174,7 +174,7 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 		}
 	}
 
-	if justifiedBlockSigned.IsNil() || justifiedBlockSigned.Block().IsNil() {
+	if justifiedBlockSigned == nil || justifiedBlockSigned.IsNil() || justifiedBlockSigned.Block().IsNil() {
 		return false, errors.New("nil justified block")
 	}
 	justifiedBlock := justifiedBlockSigned.Block()
@@ -308,7 +308,7 @@ func (s *Service) ancestorByDB(ctx context.Context, r [32]byte, slot types.Slot)
 		signed = s.getInitSyncBlock(r)
 	}
 
-	if signed.IsNil() || signed.Block().IsNil() {
+	if signed == nil || signed.IsNil() || signed.Block().IsNil() {
 		return nil, errors.New("nil block")
 	}
 	b := signed.Block()

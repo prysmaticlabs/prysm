@@ -30,7 +30,7 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpb.BlockRequest) (
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
 	}
-	if rBlk.IsNil() {
+	if rBlk == nil || rBlk.IsNil() {
 		return nil, status.Errorf(codes.NotFound, "Could not find requested block header")
 	}
 	blk, err := rBlk.RawPhase0Block()
@@ -182,7 +182,7 @@ func (bs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
 	}
-	if rBlk.IsNil() {
+	if rBlk == nil || rBlk.IsNil() {
 		return nil, status.Errorf(codes.NotFound, "Could not find requested block")
 	}
 	blk, err := rBlk.RawPhase0Block()
@@ -227,7 +227,7 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpb.BlockRequest) (*e
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for genesis slot: %v", err)
 		}
-		if blk.IsNil() {
+		if blk == nil || blk.IsNil() {
 			return nil, status.Error(codes.NotFound, "Could not find genesis block")
 		}
 		blkRoot, err := blk.Block().HashTreeRoot()
@@ -241,7 +241,7 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpb.BlockRequest) (*e
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not retrieve block for block root %#x: %v", req.BlockId, err)
 			}
-			if block.IsNil() {
+			if block == nil || block.IsNil() {
 				return nil, status.Error(codes.NotFound, "Could not find any blocks with given root")
 			}
 
@@ -292,7 +292,7 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpb.BlockReq
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
 	}
-	if rBlk.IsNil() {
+	if rBlk == nil || rBlk.IsNil() {
 		return nil, status.Errorf(codes.NotFound, "Could not find requested block")
 	}
 

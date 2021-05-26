@@ -87,7 +87,7 @@ func ExecuteStateTransition(
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
-	if signed.IsNil() || signed.Block().IsNil() {
+	if signed == nil || signed.IsNil() || signed.Block().IsNil() {
 		return nil, errors.New("nil block")
 	}
 

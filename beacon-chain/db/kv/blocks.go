@@ -367,7 +367,7 @@ func (s *Store) HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) ([]
 			return nil, err
 		}
 	}
-	if blk.IsNil() {
+	if blk == nil || blk.IsNil() {
 		blk, err = s.GenesisBlock(ctx)
 		if err != nil {
 			return nil, err

@@ -48,7 +48,7 @@ func ExecuteStateTransitionNoVerifyAnySig(
 	if ctx.Err() != nil {
 		return nil, nil, ctx.Err()
 	}
-	if signed.IsNil() || signed.Block().IsNil() {
+	if signed == nil || signed.IsNil() || signed.Block().IsNil() {
 		return nil, nil, errors.New("nil block")
 	}
 
@@ -125,7 +125,7 @@ func CalculateStateRoot(
 	if state == nil || state.IsNil() {
 		return [32]byte{}, errors.New("nil state")
 	}
-	if signed.IsNil() || signed.Block().IsNil() {
+	if signed == nil || signed.IsNil() || signed.Block().IsNil() {
 		return [32]byte{}, errors.New("nil block")
 	}
 

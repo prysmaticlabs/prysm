@@ -99,7 +99,7 @@ func (s *Service) verifyBeaconBlock(ctx context.Context, data *ethpb.Attestation
 	}
 	// If the block does not exist in db, check again if block exists in initial sync block cache.
 	// This could happen as the node first syncs to head.
-	if b.IsNil() && s.hasInitSyncBlock(r) {
+	if (b == nil || b.IsNil()) && s.hasInitSyncBlock(r) {
 		b = s.getInitSyncBlock(r)
 	}
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {

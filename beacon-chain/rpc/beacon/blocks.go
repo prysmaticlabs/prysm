@@ -88,7 +88,7 @@ func (bs *Server) ListBlocks(
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve block: %v", err)
 		}
-		if blk.IsNil() {
+		if blk == nil || blk.IsNil() {
 			return &ethpb.ListBlocksResponse{
 				BlockContainers: make([]*ethpb.BeaconBlockContainer, 0),
 				TotalSize:       0,
@@ -309,7 +309,7 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head block")
 	}
-	if headBlock.IsNil() || headBlock.Block().IsNil() {
+	if headBlock == nil || headBlock.IsNil() || headBlock.Block().IsNil() {
 		return nil, status.Error(codes.Internal, "Head block of chain was nil")
 	}
 	headBlockRoot, err := headBlock.Block().HashTreeRoot()
@@ -322,7 +322,7 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 	}
 	// Retrieve genesis block in the event we have genesis checkpoints.
 	genBlock, err := bs.BeaconDB.GenesisBlock(ctx)
-	if err != nil || genBlock.IsNil() || genBlock.Block().IsNil() {
+	if err != nil || genBlock == nil || genBlock.IsNil() || genBlock.Block().IsNil() {
 		return nil, status.Error(codes.Internal, "Could not get genesis block")
 	}
 

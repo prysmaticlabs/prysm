@@ -235,7 +235,7 @@ func (bs *Server) stateRootBySlot(ctx context.Context, slot types.Slot) ([]byte,
 	if len(blks) != 1 {
 		return nil, errors.New("multiple blocks exist in same slot")
 	}
-	if blks[0].IsNil() || blks[0].Block().IsNil() {
+	if blks[0] == nil || blks[0].IsNil() || blks[0].Block().IsNil() {
 		return nil, errors.New("nil block")
 	}
 	return blks[0].Block().StateRoot(), nil

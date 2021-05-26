@@ -248,7 +248,7 @@ func (s *State) lastAncestorState(ctx context.Context, root [32]byte) (iface.Bea
 	if err != nil {
 		return nil, err
 	}
-	if b.IsNil() {
+	if b == nil || b.IsNil() {
 		return nil, errUnknownBlock
 	}
 
@@ -289,7 +289,7 @@ func (s *State) lastAncestorState(ctx context.Context, root [32]byte) (iface.Bea
 		if err != nil {
 			return nil, err
 		}
-		if b.IsNil() {
+		if b == nil || b.IsNil() {
 			return nil, errUnknownBlock
 		}
 	}

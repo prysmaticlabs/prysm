@@ -86,7 +86,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	ctx, span := trace.StartSpan(ctx, "blockChain.onBlock")
 	defer span.End()
 
-	if signed.IsNil() || signed.Block().IsNil() {
+	if signed == nil || signed.IsNil() || signed.Block().IsNil() {
 		return errors.New("nil block")
 	}
 	b := signed.Block()
@@ -191,7 +191,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 	if len(blks) == 0 || len(blockRoots) == 0 {
 		return nil, nil, errors.New("no blocks provided")
 	}
-	if blks[0].IsNil() || blks[0].Block().IsNil() {
+	if blks[0] == nil || blks[0].IsNil() || blks[0].Block().IsNil() {
 		return nil, nil, errors.New("nil block")
 	}
 	b := blks[0].Block()

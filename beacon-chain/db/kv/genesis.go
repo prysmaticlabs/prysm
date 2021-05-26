@@ -103,7 +103,7 @@ func (s *Store) EnsureEmbeddedGenesis(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if !gb.IsNil() {
+	if gb != nil && !gb.IsNil() {
 		return nil
 	}
 	gs, err := s.GenesisState(ctx)

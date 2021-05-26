@@ -61,7 +61,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	}
 	blk := interfaces.NewWrappedSignedBeaconBlock(rblk)
 
-	if blk.Block().IsNil() {
+	if blk.IsNil() || blk.Block().IsNil() {
 		log.WithError(errors.New("block.Block is nil")).Debug("Rejected block")
 		return pubsub.ValidationReject
 	}
