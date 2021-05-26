@@ -47,6 +47,9 @@ func (g *gitCLI) CopyDir(sourceRepo, targetRepo, dir string) error {
 // - Git add all, git commit, and git push to master branch of the mirror repo
 func mirrorChanges(config *Config, manager GitManager, payload ReleasePayload) error {
 	repoName := payload.Repository.Name
+	if err := manager.Fetch(repoName); err != nil {
+		return err
+	}
 	if err := manager.Checkout(repoName, payload.Release.TagName); err != nil {
 		return err
 	}
@@ -57,6 +60,9 @@ func mirrorChanges(config *Config, manager GitManager, payload ReleasePayload) e
 		}
 	}
 	for _, dir := range repo.MirrorDirectories {
+		if err := manager.Fetch(repo.MirrorName); err != nil {
+			return err
+		}
 		if err := manager.CopyDir(repoName, repo.MirrorName, dir); err != nil {
 			return err
 		}

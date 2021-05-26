@@ -10,6 +10,7 @@ import (
 
 // GitManager defines a struct which can deal with git repositories' common actions.
 type GitManager interface {
+	Fetch(name string) error
 	Add(name string) error
 	Commit(name, msg string) error
 	Checkout(name, branch string) error
@@ -51,6 +52,29 @@ func (g *gitCLI) Clone(remoteName, remoteUrl string) error {
 		return err
 	}
 	return nil
+}
+
+// Fetch from github repository.
+func (g *gitCLI) Fetch(remoteName string) error {
+	repoPath := filepath.Join(g.reposBasePath, remoteName)
+	cmd := exec.Command("git", "fetch")
+	cmd.Dir = repoPath
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		log.Fatal(err)
+	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	slurp, _ := io.ReadAll(stdout)
+	fmt.Printf("%s\n", slurp)
+	slurp2, _ := io.ReadAll(stderr)
+	fmt.Printf("%s\n", slurp2)
+	return cmd.Wait()
 }
 
 // Add files to a github repository.
