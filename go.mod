@@ -22,7 +22,7 @@ require (
 	github.com/emicklei/dot v0.11.0
 	github.com/ethereum/go-ethereum v1.9.25
 	github.com/fatih/color v1.9.0 // indirect
-	github.com/ferranbt/fastssz v0.0.0-20210120143747-11b9eff30ea9
+	github.com/ferranbt/fastssz v0.0.0-20210526181520-7df50c8568f8
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/gballet/go-libpcsclite v0.0.0-20191108122812-4678299bea08 // indirect
@@ -52,6 +52,7 @@ require (
 	github.com/k0kubun/go-ansi v0.0.0-20180517002512-3bf9e2903213
 	github.com/karalabe/usb v0.0.0-20191104083709-911d15fe12a9 // indirect
 	github.com/kevinms/leakybucket-go v0.0.0-20200115003610-082473db97ca
+	github.com/klauspost/cpuid/v2 v2.0.6 // indirect
 	github.com/koron/go-ssdp v0.0.2 // indirect
 	github.com/kr/pretty v0.2.1
 	github.com/kr/text v0.2.0 // indirect
@@ -71,7 +72,7 @@ require (
 	github.com/lunixbochs/vtclean v1.0.0 // indirect
 	github.com/manifoldco/promptui v0.7.0
 	github.com/minio/highwayhash v1.0.1
-	github.com/minio/sha256-simd v0.1.1
+	github.com/minio/sha256-simd v1.0.0
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/multiformats/go-multiaddr v0.3.1
 	github.com/nbutton23/zxcvbn-go v0.0.0-20180912185939-ae427f1e4c1d
