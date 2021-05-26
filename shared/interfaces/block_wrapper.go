@@ -14,7 +14,7 @@ type WrappedSignedBeaconBlock struct {
 	b *ethpb.SignedBeaconBlock
 }
 
-// NewWrappedSignedBeaconBlock is constructor which wraps a protobuf phase 0 object
+// NewWrappedSignedBeaconBlock is constructor which wraps a protobuf phase 0 block
 // with the block wrapper.
 func NewWrappedSignedBeaconBlock(b *ethpb.SignedBeaconBlock) WrappedSignedBeaconBlock {
 	return WrappedSignedBeaconBlock{b: b}
