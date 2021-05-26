@@ -249,7 +249,7 @@ func (m *ApiProxyMiddleware) handleGetBeaconStateSsz(endpoint string, writer htt
 	request.URL.Host = m.GatewayAddress
 	request.RequestURI = ""
 	request.URL.Path = "/eth/v1/debug/beacon/states/{state_id}/ssz"
-	handleUrlParameters(endpoint, request, writer)
+	handleUrlParameters(endpoint, request, writer, []string{})
 
 	// Proxy the request to grpc-gateway.
 	grpcResp, err := http.DefaultClient.Do(request)
