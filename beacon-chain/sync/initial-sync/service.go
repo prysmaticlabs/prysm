@@ -140,7 +140,7 @@ func (s *Service) Initialized() bool {
 // behind the current network head.
 func (s *Service) Resync() error {
 	headState, err := s.cfg.Chain.HeadState(s.ctx)
-	if err != nil || headState == nil {
+	if err != nil || headState == nil || headState.IsNil() {
 		return errors.Errorf("could not retrieve head state: %v", err)
 	}
 

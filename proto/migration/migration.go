@@ -14,7 +14,7 @@ func V1Alpha1BlockToV1BlockHeader(block *ethpb_alpha.SignedBeaconBlock) (*ethpb.
 		return nil, errors.Wrap(err, "failed to get body root of block")
 	}
 	return &ethpb.SignedBeaconBlockHeader{
-		Header: &ethpb.BeaconBlockHeader{
+		Message: &ethpb.BeaconBlockHeader{
 			Slot:          block.Block.Slot,
 			ProposerIndex: block.Block.ProposerIndex,
 			ParentRoot:    block.Block.ParentRoot,
@@ -82,7 +82,7 @@ func V1Alpha1AttDataToV1(v1alpha1AttData *ethpb_alpha.AttestationData) *ethpb.At
 	}
 	return &ethpb.AttestationData{
 		Slot:            v1alpha1AttData.Slot,
-		CommitteeIndex:  v1alpha1AttData.CommitteeIndex,
+		Index:           v1alpha1AttData.CommitteeIndex,
 		BeaconBlockRoot: v1alpha1AttData.BeaconBlockRoot,
 		Source: &ethpb.Checkpoint{
 			Root:  v1alpha1AttData.Source.Root,
@@ -112,7 +112,7 @@ func V1Alpha1SignedHeaderToV1(v1alpha1Hdr *ethpb_alpha.SignedBeaconBlockHeader) 
 		return &ethpb.SignedBeaconBlockHeader{}
 	}
 	return &ethpb.SignedBeaconBlockHeader{
-		Header: &ethpb.BeaconBlockHeader{
+		Message: &ethpb.BeaconBlockHeader{
 			Slot:          v1alpha1Hdr.Header.Slot,
 			ProposerIndex: v1alpha1Hdr.Header.ProposerIndex,
 			ParentRoot:    v1alpha1Hdr.Header.ParentRoot,
@@ -125,16 +125,16 @@ func V1Alpha1SignedHeaderToV1(v1alpha1Hdr *ethpb_alpha.SignedBeaconBlockHeader) 
 
 // V1SignedHeaderToV1Alpha1 converts a v1 signed beacon block header to v1alpha1.
 func V1SignedHeaderToV1Alpha1(v1Header *ethpb.SignedBeaconBlockHeader) *ethpb_alpha.SignedBeaconBlockHeader {
-	if v1Header == nil || v1Header.Header == nil {
+	if v1Header == nil || v1Header.Message == nil {
 		return &ethpb_alpha.SignedBeaconBlockHeader{}
 	}
 	return &ethpb_alpha.SignedBeaconBlockHeader{
 		Header: &ethpb_alpha.BeaconBlockHeader{
-			Slot:          v1Header.Header.Slot,
-			ProposerIndex: v1Header.Header.ProposerIndex,
-			ParentRoot:    v1Header.Header.ParentRoot,
-			StateRoot:     v1Header.Header.StateRoot,
-			BodyRoot:      v1Header.Header.BodyRoot,
+			Slot:          v1Header.Message.Slot,
+			ProposerIndex: v1Header.Message.ProposerIndex,
+			ParentRoot:    v1Header.Message.ParentRoot,
+			StateRoot:     v1Header.Message.StateRoot,
+			BodyRoot:      v1Header.Message.BodyRoot,
 		},
 		Signature: v1Header.Signature,
 	}
@@ -146,8 +146,8 @@ func V1Alpha1ProposerSlashingToV1(v1alpha1Slashing *ethpb_alpha.ProposerSlashing
 		return &ethpb.ProposerSlashing{}
 	}
 	return &ethpb.ProposerSlashing{
-		Header_1: V1Alpha1SignedHeaderToV1(v1alpha1Slashing.Header_1),
-		Header_2: V1Alpha1SignedHeaderToV1(v1alpha1Slashing.Header_2),
+		SignedHeader_1: V1Alpha1SignedHeaderToV1(v1alpha1Slashing.Header_1),
+		SignedHeader_2: V1Alpha1SignedHeaderToV1(v1alpha1Slashing.Header_2),
 	}
 }
 
@@ -157,7 +157,7 @@ func V1Alpha1ExitToV1(v1alpha1Exit *ethpb_alpha.SignedVoluntaryExit) *ethpb.Sign
 		return &ethpb.SignedVoluntaryExit{}
 	}
 	return &ethpb.SignedVoluntaryExit{
-		Exit: &ethpb.VoluntaryExit{
+		Message: &ethpb.VoluntaryExit{
 			Epoch:          v1alpha1Exit.Exit.Epoch,
 			ValidatorIndex: v1alpha1Exit.Exit.ValidatorIndex,
 		},
@@ -167,13 +167,13 @@ func V1Alpha1ExitToV1(v1alpha1Exit *ethpb_alpha.SignedVoluntaryExit) *ethpb.Sign
 
 // V1ExitToV1Alpha1 converts a v1 SignedVoluntaryExit to v1alpha1.
 func V1ExitToV1Alpha1(v1Exit *ethpb.SignedVoluntaryExit) *ethpb_alpha.SignedVoluntaryExit {
-	if v1Exit == nil || v1Exit.Exit == nil {
+	if v1Exit == nil || v1Exit.Message == nil {
 		return &ethpb_alpha.SignedVoluntaryExit{}
 	}
 	return &ethpb_alpha.SignedVoluntaryExit{
 		Exit: &ethpb_alpha.VoluntaryExit{
-			Epoch:          v1Exit.Exit.Epoch,
-			ValidatorIndex: v1Exit.Exit.ValidatorIndex,
+			Epoch:          v1Exit.Message.Epoch,
+			ValidatorIndex: v1Exit.Message.ValidatorIndex,
 		},
 		Signature: v1Exit.Signature,
 	}
@@ -210,7 +210,7 @@ func V1AttDataToV1Alpha1(v1AttData *ethpb.AttestationData) *ethpb_alpha.Attestat
 	}
 	return &ethpb_alpha.AttestationData{
 		Slot:            v1AttData.Slot,
-		CommitteeIndex:  v1AttData.CommitteeIndex,
+		CommitteeIndex:  v1AttData.Index,
 		BeaconBlockRoot: v1AttData.BeaconBlockRoot,
 		Source: &ethpb_alpha.Checkpoint{
 			Root:  v1AttData.Source.Root,
@@ -240,8 +240,8 @@ func V1ProposerSlashingToV1Alpha1(v1Slashing *ethpb.ProposerSlashing) *ethpb_alp
 		return &ethpb_alpha.ProposerSlashing{}
 	}
 	return &ethpb_alpha.ProposerSlashing{
-		Header_1: V1SignedHeaderToV1Alpha1(v1Slashing.Header_1),
-		Header_2: V1SignedHeaderToV1Alpha1(v1Slashing.Header_2),
+		Header_1: V1SignedHeaderToV1Alpha1(v1Slashing.SignedHeader_1),
+		Header_2: V1SignedHeaderToV1Alpha1(v1Slashing.SignedHeader_2),
 	}
 }
 
@@ -250,7 +250,7 @@ func V1Alpha1ValidatorToV1(v1Validator *ethpb_alpha.Validator) *ethpb.Validator 
 		return &ethpb.Validator{}
 	}
 	return &ethpb.Validator{
-		PublicKey:                  v1Validator.PublicKey,
+		Pubkey:                     v1Validator.PublicKey,
 		WithdrawalCredentials:      v1Validator.WithdrawalCredentials,
 		EffectiveBalance:           v1Validator.EffectiveBalance,
 		Slashed:                    v1Validator.Slashed,
