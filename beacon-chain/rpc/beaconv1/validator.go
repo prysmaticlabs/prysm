@@ -219,9 +219,6 @@ func validatorStatus(validator *ethpb.Validator, epoch types.Epoch) (ethpb.Valid
 }
 
 func validatorSubStatus(validator *ethpb.Validator, epoch types.Epoch) (ethpb.ValidatorStatus, error) {
-	if validator == nil {
-		return 0, errors.New("validator is nil")
-	}
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
 
 	// Pending.
