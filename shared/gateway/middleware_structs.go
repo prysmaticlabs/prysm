@@ -137,6 +137,11 @@ type VersionResponseJson struct {
 	Data *VersionJson `json:"data"`
 }
 
+// SyncingResponseJson is used in /node/syncing API endpoint.
+type SyncingResponseJson struct {
+	Data *SyncInfoJson `json:"data"`
+}
+
 // BeaconStateResponseJson is used in /debug/beacon/states/{state_id} API endpoint.
 type BeaconStateResponseJson struct {
 	Data *BeaconStateJson `json:"data"`
@@ -417,6 +422,13 @@ type ForkChoiceHeadJson struct {
 type DepositContractJson struct {
 	ChainId string `json:"chain_id"`
 	Address string `json:"address"`
+}
+
+// SyncInfoJson is a JSON representation of the sync info.
+type SyncInfoJson struct {
+	HeadSlot     string `json:"head_slot"`
+	SyncDistance string `json:"sync_distance"`
+	IsSyncing    bool   `json:"is_syncing"`
 }
 
 // ---------------
