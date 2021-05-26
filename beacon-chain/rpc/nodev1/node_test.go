@@ -63,14 +63,12 @@ func TestGetHealth(t *testing.T) {
 	checker.IsInitialized = true
 	_, err = s.GetHealth(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
-	checker.IsInitialized = false
-	checker.IsSyncing = true
-	require.NoError(t, err)
-	checker.IsSynced = true
-	require.NoError(t, err)
 	stream, ok := grpc.ServerTransportStreamFromContext(ctx).(*grpcruntime.ServerTransportStream)
 	require.Equal(t, true, ok, "type assertion failed")
-	assert.Equal(t, stream.Header()[grpcutils.HttpCodeMetadataKey][0], strconv.Itoa(http.StatusPartialContent))
+	assert.Equal(t, stream.Header()[strings.ToLower(grpcutils.HttpCodeMetadataKey)][0], strconv.Itoa(http.StatusPartialContent))
+	checker.IsSynced = true
+	_, err = s.GetHealth(ctx, &emptypb.Empty{})
+	require.NoError(t, err)
 }
 
 func TestGetIdentity(t *testing.T) {
