@@ -45,11 +45,11 @@ func Test_V1Alpha1BlockToV1BlockHeader(t *testing.T) {
 	require.NoError(t, err)
 	bodyRoot, err := alphaBlock.Block.Body.HashTreeRoot()
 	require.NoError(t, err)
-	assert.DeepEqual(t, bodyRoot[:], v1Header.Header.BodyRoot)
-	assert.Equal(t, slot, v1Header.Header.Slot)
-	assert.Equal(t, validatorIndex, v1Header.Header.ProposerIndex)
-	assert.DeepEqual(t, parentRoot, v1Header.Header.ParentRoot)
-	assert.DeepEqual(t, stateRoot, v1Header.Header.StateRoot)
+	assert.DeepEqual(t, bodyRoot[:], v1Header.Message.BodyRoot)
+	assert.Equal(t, slot, v1Header.Message.Slot)
+	assert.Equal(t, validatorIndex, v1Header.Message.ProposerIndex)
+	assert.DeepEqual(t, parentRoot, v1Header.Message.ParentRoot)
+	assert.DeepEqual(t, stateRoot, v1Header.Message.StateRoot)
 	assert.DeepEqual(t, signature, v1Header.Signature)
 }
 
@@ -170,7 +170,7 @@ func Test_V1Alpha1ExitToV1(t *testing.T) {
 
 func Test_V1ExitToV1Alpha1(t *testing.T) {
 	v1Exit := &ethpb.SignedVoluntaryExit{
-		Exit: &ethpb.VoluntaryExit{
+		Message: &ethpb.VoluntaryExit{
 			Epoch:          epoch,
 			ValidatorIndex: validatorIndex,
 		},
@@ -190,7 +190,7 @@ func Test_V1AttSlashingToV1Alpha1(t *testing.T) {
 		AttestingIndices: attestingIndices,
 		Data: &ethpb.AttestationData{
 			Slot:            slot,
-			CommitteeIndex:  committeeIndex,
+			Index:           committeeIndex,
 			BeaconBlockRoot: beaconBlockRoot,
 			Source: &ethpb.Checkpoint{
 				Epoch: epoch,
@@ -218,7 +218,7 @@ func Test_V1AttSlashingToV1Alpha1(t *testing.T) {
 
 func Test_V1ProposerSlashingToV1Alpha1(t *testing.T) {
 	v1Header := &ethpb.SignedBeaconBlockHeader{
-		Header: &ethpb.BeaconBlockHeader{
+		Message: &ethpb.BeaconBlockHeader{
 			Slot:          slot,
 			ProposerIndex: validatorIndex,
 			ParentRoot:    parentRoot,
@@ -228,8 +228,8 @@ func Test_V1ProposerSlashingToV1Alpha1(t *testing.T) {
 		Signature: signature,
 	}
 	v1Slashing := &ethpb.ProposerSlashing{
-		Header_1: v1Header,
-		Header_2: v1Header,
+		SignedHeader_1: v1Header,
+		SignedHeader_2: v1Header,
 	}
 
 	alphaSlashing := V1ProposerSlashingToV1Alpha1(v1Slashing)
@@ -272,7 +272,7 @@ func Test_V1AttToV1Alpha1(t *testing.T) {
 		AggregationBits: aggregationBits,
 		Data: &ethpb.AttestationData{
 			Slot:            slot,
-			CommitteeIndex:  committeeIndex,
+			Index:           committeeIndex,
 			BeaconBlockRoot: beaconBlockRoot,
 			Source: &ethpb.Checkpoint{
 				Epoch: epoch,
