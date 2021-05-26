@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared/abool"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -371,7 +372,7 @@ func TestService_Resync(t *testing.T) {
 	}, p.Peers())
 	cache.initializeRootCache(makeSequence(1, 160), t)
 	beaconDB := dbtest.SetupDB(t)
-	err := beaconDB.SaveBlock(context.Background(), testutil.NewBeaconBlock())
+	err := beaconDB.SaveBlock(context.Background(), interfaces.NewWrappedSignedBeaconBlock(testutil.NewBeaconBlock()))
 	require.NoError(t, err)
 	cache.RLock()
 	genesisRoot := cache.rootCache[0]

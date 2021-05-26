@@ -17,6 +17,7 @@ import (
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -34,7 +35,7 @@ func TestProposeExit_Notification(t *testing.T) {
 	epoch := types.Epoch(2048)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch))))
 	block := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(ctx, block), "Could not save genesis block")
+	require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(block)), "Could not save genesis block")
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
@@ -105,7 +106,7 @@ func TestProposeExit_NoPanic(t *testing.T) {
 	epoch := types.Epoch(2048)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch))))
 	block := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(ctx, block), "Could not save genesis block")
+	require.NoError(t, db.SaveBlock(ctx, interfaces.NewWrappedSignedBeaconBlock(block)), "Could not save genesis block")
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 

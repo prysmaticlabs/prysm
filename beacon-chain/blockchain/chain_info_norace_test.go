@@ -7,6 +7,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -38,7 +39,7 @@ func TestHeadBlock_DataRace(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	s := &Service{
 		cfg:  &Config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)},
-		head: &head{block: &ethpb.SignedBeaconBlock{}},
+		head: &head{block: interfaces.NewWrappedSignedBeaconBlock(&ethpb.SignedBeaconBlock{})},
 	}
 	go func() {
 		require.NoError(t, s.saveHead(context.Background(), [32]byte{}))

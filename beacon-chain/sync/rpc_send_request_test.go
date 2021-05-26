@@ -15,6 +15,7 @@ import (
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	p2pTypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -62,7 +63,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 
 			for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += types.Slot(req.Step) {
 				if processor != nil {
-					if processorErr := processor(knownBlocks[i]); processorErr != nil {
+					if processorErr := processor(interfaces.NewWrappedSignedBeaconBlock(knownBlocks[i])); processorErr != nil {
 						if errors.Is(processorErr, io.EOF) {
 							// Close stream, w/o any errors written.
 							return
@@ -114,8 +115,8 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 			Count:     128,
 			Step:      1,
 		}
-		blocksFromProcessor := make([]*eth.SignedBeaconBlock, 0)
-		blocks, err := SendBeaconBlocksByRangeRequest(ctx, nil, p1, p2.PeerID(), req, func(block *eth.SignedBeaconBlock) error {
+		blocksFromProcessor := make([]interfaces.SignedBeaconBlock, 0)
+		blocks, err := SendBeaconBlocksByRangeRequest(ctx, nil, p1, p2.PeerID(), req, func(block interfaces.SignedBeaconBlock) error {
 			blocksFromProcessor = append(blocksFromProcessor, block)
 			return nil
 		})
@@ -137,7 +138,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 			Step:      1,
 		}
 		errFromProcessor := errors.New("processor error")
-		_, err := SendBeaconBlocksByRangeRequest(ctx, nil, p1, p2.PeerID(), req, func(block *eth.SignedBeaconBlock) error {
+		_, err := SendBeaconBlocksByRangeRequest(ctx, nil, p1, p2.PeerID(), req, func(block interfaces.SignedBeaconBlock) error {
 			return errFromProcessor
 		})
 		assert.ErrorContains(t, errFromProcessor.Error(), err)
@@ -166,7 +167,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 			cfg.MaxRequestBlocks = maxRequestBlocks
 			params.OverrideBeaconNetworkConfig(cfg)
 		}()
-		blocks, err = SendBeaconBlocksByRangeRequest(ctx, nil, p1, p2.PeerID(), req, func(block *eth.SignedBeaconBlock) error {
+		blocks, err = SendBeaconBlocksByRangeRequest(ctx, nil, p1, p2.PeerID(), req, func(block interfaces.SignedBeaconBlock) error {
 			// Since ssz checks the boundaries, and doesn't normally allow to send requests bigger than
 			// the max request size, we are updating max request size dynamically. Even when updated dynamically,
 			// no more than max request size of blocks is expected on return.
@@ -184,7 +185,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 		p1.Connect(p2)
 		blocksProcessed := 0
 		expectedErr := errors.New("some error")
-		p2.SetStreamHandler(pcl, knownBlocksProvider(p2, func(block *eth.SignedBeaconBlock) error {
+		p2.SetStreamHandler(pcl, knownBlocksProvider(p2, func(block interfaces.SignedBeaconBlock) error {
 			if blocksProcessed > 2 {
 				return expectedErr
 			}
@@ -325,7 +326,7 @@ func TestSendRequest_SendBeaconBlocksByRootRequest(t *testing.T) {
 			for _, root := range *req {
 				if blk, ok := knownBlocks[root]; ok {
 					if processor != nil {
-						if processorErr := processor(blk); processorErr != nil {
+						if processorErr := processor(interfaces.NewWrappedSignedBeaconBlock(blk)); processorErr != nil {
 							if errors.Is(processorErr, io.EOF) {
 								// Close stream, w/o any errors written.
 								return
@@ -367,8 +368,8 @@ func TestSendRequest_SendBeaconBlocksByRootRequest(t *testing.T) {
 
 		// No error from block processor.
 		req := &p2pTypes.BeaconBlockByRootsReq{knownRoots[0], knownRoots[1]}
-		blocksFromProcessor := make([]*eth.SignedBeaconBlock, 0)
-		blocks, err := SendBeaconBlocksByRootRequest(ctx, nil, p1, p2.PeerID(), req, func(block *eth.SignedBeaconBlock) error {
+		blocksFromProcessor := make([]interfaces.SignedBeaconBlock, 0)
+		blocks, err := SendBeaconBlocksByRootRequest(ctx, nil, p1, p2.PeerID(), req, func(block interfaces.SignedBeaconBlock) error {
 			blocksFromProcessor = append(blocksFromProcessor, block)
 			return nil
 		})
@@ -386,7 +387,7 @@ func TestSendRequest_SendBeaconBlocksByRootRequest(t *testing.T) {
 		// Send error from block processor.
 		req := &p2pTypes.BeaconBlockByRootsReq{knownRoots[0], knownRoots[1]}
 		errFromProcessor := errors.New("processor error")
-		_, err := SendBeaconBlocksByRootRequest(ctx, nil, p1, p2.PeerID(), req, func(block *eth.SignedBeaconBlock) error {
+		_, err := SendBeaconBlocksByRootRequest(ctx, nil, p1, p2.PeerID(), req, func(block interfaces.SignedBeaconBlock) error {
 			return errFromProcessor
 		})
 		assert.ErrorContains(t, errFromProcessor.Error(), err)
@@ -411,7 +412,7 @@ func TestSendRequest_SendBeaconBlocksByRootRequest(t *testing.T) {
 			cfg.MaxRequestBlocks = maxRequestBlocks
 			params.OverrideBeaconNetworkConfig(cfg)
 		}()
-		blocks, err = SendBeaconBlocksByRootRequest(ctx, nil, p1, p2.PeerID(), req, func(block *eth.SignedBeaconBlock) error {
+		blocks, err = SendBeaconBlocksByRootRequest(ctx, nil, p1, p2.PeerID(), req, func(block interfaces.SignedBeaconBlock) error {
 			// Since ssz checks the boundaries, and doesn't normally allow to send requests bigger than
 			// the max request size, we are updating max request size dynamically. Even when updated dynamically,
 			// no more than max request size of blocks is expected on return.
@@ -429,7 +430,7 @@ func TestSendRequest_SendBeaconBlocksByRootRequest(t *testing.T) {
 		p1.Connect(p2)
 		blocksProcessed := 0
 		expectedErr := errors.New("some error")
-		p2.SetStreamHandler(pcl, knownBlocksProvider(p2, func(block *eth.SignedBeaconBlock) error {
+		p2.SetStreamHandler(pcl, knownBlocksProvider(p2, func(block interfaces.SignedBeaconBlock) error {
 			if blocksProcessed > 2 {
 				return expectedErr
 			}
@@ -449,7 +450,7 @@ func TestSendRequest_SendBeaconBlocksByRootRequest(t *testing.T) {
 		p1.Connect(p2)
 		blocksProcessed := 0
 		expectedErr := io.EOF
-		p2.SetStreamHandler(pcl, knownBlocksProvider(p2, func(block *eth.SignedBeaconBlock) error {
+		p2.SetStreamHandler(pcl, knownBlocksProvider(p2, func(block interfaces.SignedBeaconBlock) error {
 			if blocksProcessed > 2 {
 				return expectedErr
 			}

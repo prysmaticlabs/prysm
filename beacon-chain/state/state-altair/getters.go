@@ -10,8 +10,8 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -415,7 +415,7 @@ func (b *BeaconState) eth1Data() *ethpb.Eth1Data {
 		return nil
 	}
 
-	return stateV0.CopyETH1Data(b.state.Eth1Data)
+	return blockutil.CopyETH1Data(b.state.Eth1Data)
 }
 
 // Eth1DataVotes corresponds to votes from eth2 on the canonical proof-of-work chain
@@ -447,7 +447,7 @@ func (b *BeaconState) eth1DataVotes() []*ethpb.Eth1Data {
 
 	res := make([]*ethpb.Eth1Data, len(b.state.Eth1DataVotes))
 	for i := 0; i < len(res); i++ {
-		res[i] = stateV0.CopyETH1Data(b.state.Eth1DataVotes[i])
+		res[i] = blockutil.CopyETH1Data(b.state.Eth1DataVotes[i])
 	}
 	return res
 }
@@ -507,7 +507,7 @@ func (b *BeaconState) validators() []*ethpb.Validator {
 		if val == nil {
 			continue
 		}
-		res[i] = stateV0.CopyValidator(val)
+		res[i] = blockutil.CopyValidator(val)
 	}
 	return res
 }
@@ -551,7 +551,7 @@ func (b *BeaconState) ValidatorAtIndex(idx types.ValidatorIndex) (*ethpb.Validat
 	defer b.lock.RUnlock()
 
 	val := b.state.Validators[idx]
-	return stateV0.CopyValidator(val), nil
+	return blockutil.CopyValidator(val), nil
 }
 
 // ValidatorAtIndexReadOnly is the validator at the provided index. This method
@@ -1138,7 +1138,7 @@ func (b *BeaconState) safeCopyCheckpoint(input *ethpb.Checkpoint) *ethpb.Checkpo
 		return nil
 	}
 
-	return stateV0.CopyCheckpoint(input)
+	return blockutil.CopyCheckpoint(input)
 }
 
 // MarshalSSZ marshals the underlying beacon state to bytes.

@@ -7,22 +7,24 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"google.golang.org/protobuf/proto"
 )
 
 func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) error {
-	signed, ok := msg.(*ethpb.SignedBeaconBlock)
+	rBlock, ok := msg.(*ethpb.SignedBeaconBlock)
 	if !ok {
 		return errors.New("message is not type *ethpb.SignedBeaconBlock")
 	}
+	signed := interfaces.NewWrappedSignedBeaconBlock(rBlock)
 
-	if signed == nil || signed.Block == nil {
+	if signed.IsNil() || signed.Block().IsNil() {
 		return errors.New("nil block")
 	}
 
-	s.setSeenBlockIndexSlot(signed.Block.Slot, signed.Block.ProposerIndex)
+	s.setSeenBlockIndexSlot(signed.Block().Slot(), signed.Block().ProposerIndex())
 
-	block := signed.Block
+	block := signed.Block()
 
 	root, err := block.HashTreeRoot()
 	if err != nil {
@@ -36,7 +38,7 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 	}
 
 	// Delete attestations from the block in the pool to avoid inclusion in future block.
-	if err := s.deleteAttsInPool(block.Body.Attestations); err != nil {
+	if err := s.deleteAttsInPool(block.Body().Attestations()); err != nil {
 		log.Debugf("Could not delete attestations in pool: %v", err)
 		return nil
 	}

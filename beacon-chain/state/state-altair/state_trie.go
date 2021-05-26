@@ -229,6 +229,12 @@ func (b *BeaconState) FieldReferencesCount() map[string]uint64 {
 	return refMap
 }
 
+// IsNil checks if the state and the underlying proto
+// object are nil.
+func (b *BeaconState) IsNil() bool {
+	return b == nil || b.state == nil
+}
+
 func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 	hasher := hashutil.CustomSHA256Hasher()
 	switch field {

@@ -11,6 +11,7 @@ import (
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 )
 
 // DatabasePath -- passthrough.
@@ -29,17 +30,17 @@ func (e Exporter) Backup(ctx context.Context, outputDir string) error {
 }
 
 // Block -- passthrough.
-func (e Exporter) Block(ctx context.Context, blockRoot [32]byte) (*eth.SignedBeaconBlock, error) {
+func (e Exporter) Block(ctx context.Context, blockRoot [32]byte) (interfaces.SignedBeaconBlock, error) {
 	return e.db.Block(ctx, blockRoot)
 }
 
 // HeadBlock -- passthrough.
-func (e Exporter) HeadBlock(ctx context.Context) (*eth.SignedBeaconBlock, error) {
+func (e Exporter) HeadBlock(ctx context.Context) (interfaces.SignedBeaconBlock, error) {
 	return e.db.HeadBlock(ctx)
 }
 
 // Blocks -- passthrough.
-func (e Exporter) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*eth.SignedBeaconBlock, [][32]byte, error) {
+func (e Exporter) Blocks(ctx context.Context, f *filters.QueryFilter) ([]interfaces.SignedBeaconBlock, [][32]byte, error) {
 	return e.db.Blocks(ctx, f)
 }
 
@@ -49,7 +50,7 @@ func (e Exporter) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32
 }
 
 // BlocksBySlot -- passthrough.
-func (e Exporter) BlocksBySlot(ctx context.Context, slot types.Slot) (bool, []*eth.SignedBeaconBlock, error) {
+func (e Exporter) BlocksBySlot(ctx context.Context, slot types.Slot) (bool, []interfaces.SignedBeaconBlock, error) {
 	return e.db.BlocksBySlot(ctx, slot)
 }
 
@@ -129,7 +130,7 @@ func (e Exporter) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) err
 }
 
 // GenesisBlock -- passthrough.
-func (e Exporter) GenesisBlock(ctx context.Context) (*eth.SignedBeaconBlock, error) {
+func (e Exporter) GenesisBlock(ctx context.Context) (interfaces.SignedBeaconBlock, error) {
 	return e.db.GenesisBlock(ctx)
 }
 
@@ -214,7 +215,7 @@ func (e Exporter) IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool
 }
 
 // FinalizedChildBlock -- passthrough.
-func (e Exporter) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (*eth.SignedBeaconBlock, error) {
+func (e Exporter) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (interfaces.SignedBeaconBlock, error) {
 	return e.db.FinalizedChildBlock(ctx, blockRoot)
 }
 
@@ -244,7 +245,7 @@ func (e Exporter) LastArchivedRoot(ctx context.Context) [32]byte {
 }
 
 // HighestSlotBlocksBelow -- passthrough
-func (e Exporter) HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) ([]*eth.SignedBeaconBlock, error) {
+func (e Exporter) HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) ([]interfaces.SignedBeaconBlock, error) {
 	return e.db.HighestSlotBlocksBelow(ctx, slot)
 }
 

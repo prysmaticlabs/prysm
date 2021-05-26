@@ -1,4 +1,4 @@
-package stateV0
+package blockutil
 
 import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
