@@ -104,9 +104,6 @@ func initializeGitConfig(accessToken string) error {
 	}
 	for _, str := range cmdStrings {
 		cmd := exec.Command("git", str...)
-		if err := cmd.Start(); err != nil {
-			return err
-		}
 		stdout, err := cmd.StderrPipe()
 		if err != nil {
 			log.Fatal(err)
@@ -116,6 +113,9 @@ func initializeGitConfig(accessToken string) error {
 			return err
 		}
 		log.Errorf("%s", data)
+		if err := cmd.Start(); err != nil {
+			return err
+		}
 		if err := cmd.Wait(); err != nil {
 			return err
 		}
