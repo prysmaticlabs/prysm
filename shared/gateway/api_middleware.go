@@ -33,6 +33,7 @@ type ApiProxyMiddleware struct {
 
 type endpointData struct {
 	postRequest             interface{}
+	getRequestUrlLiterals   []string // Names of URL parameters that should not be base64-encoded.
 	getRequestQueryLiterals []string // Names of query parameters that should not be base64-encoded.
 	getResponse             interface{}
 	err                     ErrorJson
@@ -139,7 +140,7 @@ func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint string) {
 		request.URL.Scheme = "http"
 		request.URL.Host = m.GatewayAddress
 		request.RequestURI = ""
-		handleUrlParameters(endpoint, request, writer)
+		handleUrlParameters(endpoint, request, writer, data.getRequestUrlLiterals)
 		handleQueryParameters(request, writer, data.getRequestQueryLiterals)
 
 		// Proxy the request to grpc-gateway.
@@ -266,7 +267,7 @@ func (m *ApiProxyMiddleware) handleGetBeaconStateSsz(endpoint string, writer htt
 	request.URL.Host = m.GatewayAddress
 	request.RequestURI = ""
 	request.URL.Path = "/eth/v1/debug/beacon/states/{state_id}/ssz"
-	handleUrlParameters(endpoint, request, writer)
+	handleUrlParameters(endpoint, request, writer, []string{})
 
 	// Proxy the request to grpc-gateway.
 	grpcResp, err := http.DefaultClient.Do(request)
@@ -379,13 +380,22 @@ func wrapAttestationsArray(data *endpointData, req *http.Request) error {
 }
 
 // handleUrlParameters processes URL parameters, allowing parameterized URLs to be safely and correctly proxied to grpc-gateway.
-func handleUrlParameters(endpoint string, request *http.Request, writer http.ResponseWriter) {
+func handleUrlParameters(endpoint string, request *http.Request, writer http.ResponseWriter, literals []string) {
 	segments := strings.Split(endpoint, "/")
+
+segmentsLoop:
 	for i, s := range segments {
 		// We only care about segments which are parameterized.
 		if len(s) > 0 && s[0] == '{' && s[len(s)-1] == '}' {
-			bRouteVar := []byte(mux.Vars(request)[s[1:len(s)-1]])
-			var routeVar string
+			// Don't do anything with parameters which should be forwarded literally.
+			for _, l := range literals {
+				if s == "{"+l+"}" {
+					continue segmentsLoop
+				}
+			}
+
+			routeVar := mux.Vars(request)[s[1:len(s)-1]]
+			bRouteVar := []byte(routeVar)
 			isHex, err := butil.IsHex(bRouteVar)
 			if err != nil {
 				e := fmt.Errorf("could not process URL parameter: %w", err)
@@ -402,11 +412,11 @@ func handleUrlParameters(endpoint string, request *http.Request, writer http.Res
 			}
 			// Converting hex to base64 may result in a value which malforms the URL.
 			// We use URLEncoding to safely escape such values.
-			routeVar = base64.URLEncoding.EncodeToString(bRouteVar)
+			base64RouteVar := base64.URLEncoding.EncodeToString(bRouteVar)
 
 			// Merge segments back into the full URL.
 			splitPath := strings.Split(request.URL.Path, "/")
-			splitPath[i] = routeVar
+			splitPath[i] = base64RouteVar
 			request.URL.Path = strings.Join(splitPath, "/")
 		}
 	}
@@ -600,7 +610,8 @@ func getEndpointData(endpoint string) (endpointData, error) {
 			getRequestQueryLiterals: []string{"slot", "committee_index"},
 			getResponse:             &AttestationsPoolResponseJson{},
 			postRequest:             &SubmitAttestationRequestJson{},
-			err:                     &SubmitAttestationsErrorJson{}}, nil
+			err:                     &SubmitAttestationsErrorJson{},
+		}, nil
 	case "/eth/v1/beacon/pool/attester_slashings":
 		return endpointData{postRequest: &AttesterSlashingJson{}, getResponse: &AttesterSlashingsPoolResponseJson{}, err: &DefaultErrorJson{}}, nil
 	case "/eth/v1/beacon/pool/proposer_slashings":
@@ -612,7 +623,11 @@ func getEndpointData(endpoint string) (endpointData, error) {
 	case "/eth/v1/node/peers":
 		return endpointData{getResponse: &PeersResponseJson{}, err: &DefaultErrorJson{}}, nil
 	case "/eth/v1/node/peers/{peer_id}":
-		return endpointData{getResponse: &PeerResponseJson{}, err: &DefaultErrorJson{}}, nil
+		return endpointData{
+			getRequestUrlLiterals: []string{"peer_id"},
+			getResponse:           &PeerResponseJson{},
+			err:                   &DefaultErrorJson{},
+		}, nil
 	case "/eth/v1/node/peer_count":
 		return endpointData{getResponse: &PeerCountResponseJson{}, err: &DefaultErrorJson{}}, nil
 	case "/eth/v1/node/version":
