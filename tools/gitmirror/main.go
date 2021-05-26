@@ -2,8 +2,10 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"net/http"
 	"os"
+	"os/exec"
 
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/sirupsen/logrus"
@@ -26,7 +28,7 @@ func main() {
 	if githubSecret == "" {
 		log.Fatal("Expected GITHUB_WEBHOOK_SECRET env variable")
 	}
-	githubMirrorPush := os.Getenv("GITHUB_MIRROR_PUSH_SECRET")
+	githubMirrorPush := os.Getenv("GITHUB_PUSH_ACCESS_TOKEN")
 	if githubMirrorPush == "" {
 		log.Fatal("Expected GITHUB_MIRROR_PUSH_SECRET env variable")
 	}
@@ -43,6 +45,10 @@ func main() {
 		log.Fatal(err)
 	}
 	manager := newGitCLI(config.CloneBasePath)
+
+	if err := initializeGitConfig(githubMirrorPush); err != nil {
+		log.Fatal(err)
+	}
 
 	// Clone repositories specified in the config. No-op if the repositories
 	// have already been cloned before.
@@ -72,6 +78,33 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 	})
 	log.Fatal(http.ListenAndServe(":3000", nil))
+}
+
+func initializeGitConfig(accessToken string) error {
+	cmdStrings := []string{
+		fmt.Sprintf(
+			"git config --global url.\"https://api:%s@github.com/\".insteadOf \"https://github.com/\"",
+			accessToken,
+		),
+		fmt.Sprintf(
+			"git config --global url.\"https://ssh:%s@github.com/\".insteadOf \"ssh://git@github.com/\"",
+			accessToken,
+		),
+		fmt.Sprintf(
+			"git config --global url.\"https://git:%s@github.com/\".insteadOf \"git@github.com:\"",
+			accessToken,
+		),
+	}
+	for _, str := range cmdStrings {
+		cmd := exec.Command(str)
+		if err := cmd.Start(); err != nil {
+			return err
+		}
+		if err := cmd.Wait(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func cloneRepos(config *Config, manager *gitCLI) error {

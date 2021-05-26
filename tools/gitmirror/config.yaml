@@ -1,8 +1,0 @@
-cloneBasePath: fakerepos
-repositories:
-  - remoteUrl: git@github.com:rauljordan/testingrepo.git
-    remoteName: testingrepo
-    mirrorUrl: git@github.com:rauljordan/testingmirror.git
-    mirrorName: testingmirror
-    mirrorDirectories:
-      - proto/eth
