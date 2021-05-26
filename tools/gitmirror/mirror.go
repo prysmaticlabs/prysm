@@ -20,6 +20,7 @@ func (g *gitCLI) CopyDir(sourceRepo, targetRepo, dir string) error {
 	if !ok {
 		return nil
 	}
+	log.Infof("Making target path %s in mirror %s", targetPath, targetRepo)
 	if err := fileutil.MkdirAll(targetPath); err != nil {
 		return err
 	}
@@ -36,7 +37,7 @@ func (g *gitCLI) CopyDir(sourceRepo, targetRepo, dir string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%s\n", data)
+	fmt.Printf("Result from copy command %s\n", data)
 	return cmd.Wait()
 }
 
