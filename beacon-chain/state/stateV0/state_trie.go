@@ -255,7 +255,7 @@ func (b *BeaconState) ToProto() (*v1.BeaconState, error) {
 	resultValidators := make([]*v1.Validator, len(sourceValidators))
 	for i, validator := range sourceValidators {
 		resultValidators[i] = &v1.Validator{
-			PublicKey:                  validator.PublicKey,
+			Pubkey:                     validator.PublicKey,
 			WithdrawalCredentials:      validator.WithdrawalCredentials,
 			EffectiveBalance:           validator.EffectiveBalance,
 			Slashed:                    validator.Slashed,
@@ -272,7 +272,7 @@ func (b *BeaconState) ToProto() (*v1.BeaconState, error) {
 			AggregationBits: att.AggregationBits,
 			Data: &v1.AttestationData{
 				Slot:            data.Slot,
-				CommitteeIndex:  data.CommitteeIndex,
+				Index:           data.CommitteeIndex,
 				BeaconBlockRoot: data.BeaconBlockRoot,
 				Source: &v1.Checkpoint{
 					Epoch: data.Source.Epoch,
@@ -294,7 +294,7 @@ func (b *BeaconState) ToProto() (*v1.BeaconState, error) {
 			AggregationBits: att.AggregationBits,
 			Data: &v1.AttestationData{
 				Slot:            data.Slot,
-				CommitteeIndex:  data.CommitteeIndex,
+				Index:           data.CommitteeIndex,
 				BeaconBlockRoot: data.BeaconBlockRoot,
 				Source: &v1.Checkpoint{
 					Epoch: data.Source.Epoch,

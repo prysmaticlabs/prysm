@@ -9,6 +9,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -40,22 +41,22 @@ import (
 func ProcessBlockHeader(
 	_ context.Context,
 	beaconState iface.BeaconState,
-	block *ethpb.SignedBeaconBlock,
+	block interfaces.SignedBeaconBlock,
 ) (iface.BeaconState, error) {
 	if err := helpers.VerifyNilBeaconBlock(block); err != nil {
 		return nil, err
 	}
-	bodyRoot, err := block.Block.Body.HashTreeRoot()
+	bodyRoot, err := block.Block().Body().HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}
-	beaconState, err = ProcessBlockHeaderNoVerify(beaconState, block.Block.Slot, block.Block.ProposerIndex, block.Block.ParentRoot, bodyRoot[:])
+	beaconState, err = ProcessBlockHeaderNoVerify(beaconState, block.Block().Slot(), block.Block().ProposerIndex(), block.Block().ParentRoot(), bodyRoot[:])
 	if err != nil {
 		return nil, err
 	}
 
 	// Verify proposer signature.
-	if err := VerifyBlockSignature(beaconState, block.Block.ProposerIndex, block.Signature, block.Block.HashTreeRoot); err != nil {
+	if err := VerifyBlockSignature(beaconState, block.Block().ProposerIndex(), block.Signature(), block.Block().HashTreeRoot); err != nil {
 		return nil, err
 	}
 
