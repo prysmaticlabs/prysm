@@ -9,6 +9,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -21,7 +22,12 @@ import (
 func (bs *Server) GetValidator(ctx context.Context, req *ethpb.StateValidatorRequest) (*ethpb.StateValidatorResponse, error) {
 	state, err := bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
+		if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {
+			return nil, status.Errorf(codes.NotFound, "could not get state: %v", stateNotFoundErr)
+		} else if errors.Is(err, statefetcher.ErrInvalidStateId) {
+			return nil, status.Errorf(codes.InvalidArgument, "could not get state: %v", err)
+		}
+		return nil, status.Errorf(codes.Internal, "could not get state: %v", err)
 	}
 	if len(req.ValidatorId) == 0 {
 		return nil, status.Error(codes.Internal, "Must request a validator id")
@@ -38,7 +44,12 @@ func (bs *Server) GetValidator(ctx context.Context, req *ethpb.StateValidatorReq
 func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidatorsRequest) (*ethpb.StateValidatorsResponse, error) {
 	state, err := bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
+		if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {
+			return nil, status.Errorf(codes.NotFound, "could not get state: %v", stateNotFoundErr)
+		} else if errors.Is(err, statefetcher.ErrInvalidStateId) {
+			return nil, status.Errorf(codes.InvalidArgument, "could not get state: %v", err)
+		}
+		return nil, status.Errorf(codes.Internal, "could not get state: %v", err)
 	}
 
 	valContainers, err := valContainersByRequestIds(state, req.Id)
@@ -53,7 +64,12 @@ func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidators
 func (bs *Server) ListValidatorBalances(ctx context.Context, req *ethpb.ValidatorBalancesRequest) (*ethpb.ValidatorBalancesResponse, error) {
 	state, err := bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
+		if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {
+			return nil, status.Errorf(codes.NotFound, "could not get state: %v", stateNotFoundErr)
+		} else if errors.Is(err, statefetcher.ErrInvalidStateId) {
+			return nil, status.Errorf(codes.InvalidArgument, "could not get state: %v", err)
+		}
+		return nil, status.Errorf(codes.Internal, "could not get state: %v", err)
 	}
 
 	valContainers, err := valContainersByRequestIds(state, req.Id)
@@ -75,7 +91,12 @@ func (bs *Server) ListValidatorBalances(ctx context.Context, req *ethpb.Validato
 func (bs *Server) ListCommittees(ctx context.Context, req *ethpb.StateCommitteesRequest) (*ethpb.StateCommitteesResponse, error) {
 	state, err := bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
+		if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {
+			return nil, status.Errorf(codes.NotFound, "could not get state: %v", stateNotFoundErr)
+		} else if errors.Is(err, statefetcher.ErrInvalidStateId) {
+			return nil, status.Errorf(codes.InvalidArgument, "could not get state: %v", err)
+		}
+		return nil, status.Errorf(codes.Internal, "could not get state: %v", err)
 	}
 
 	epoch := helpers.SlotToEpoch(state.Slot())
