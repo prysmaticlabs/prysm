@@ -38,7 +38,7 @@ func (w Phase0SignedBeaconBlock) IsNil() bool {
 
 // Copy performs a deep copy of the signed beacon block
 // object.
-func (w Phase0SignedBeaconBlock) Copy() Phase0SignedBeaconBlock {
+func (w Phase0SignedBeaconBlock) Copy() SignedBeaconBlock {
 	return WrappedPhase0SignedBeaconBlock(copyutil.CopySignedBeaconBlock(w.b))
 }
 
