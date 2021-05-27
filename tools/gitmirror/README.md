@@ -1,0 +1,3 @@
+# Gitmirror Tool
+
+This tool provides a Go server which listens for Github webhook events for **new releases** on Github repositories and mirrors specified directories to a separate, mirror repository. This is a useful internal tool for us to mirror certain directories in the Prysm monorepo into mirror repositories with more permissive licensing purposes, such as our API schemas and certain helper packages. 
