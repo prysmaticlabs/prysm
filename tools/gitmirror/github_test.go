@@ -26,7 +26,7 @@ func TestMain(m *testing.M) {
 
 func newServer(handler http.HandlerFunc) *httptest.Server {
 	mux := http.NewServeMux()
-	mux.HandleFunc(path, handler)
+	mux.HandleFunc("/", handler)
 	return httptest.NewServer(mux)
 }
 
@@ -90,7 +90,7 @@ func TestBadRequests(t *testing.T) {
 				_, parseError = hook.Parse(r, tc.event)
 			})
 			defer server.Close()
-			req, err := http.NewRequest(http.MethodPost, server.URL+path, tc.payload)
+			req, err := http.NewRequest(http.MethodPost, server.URL, tc.payload)
 			require.NoError(t, err)
 			req.Header = tc.headers
 			req.Header.Set("Content-Type", "application/json")
