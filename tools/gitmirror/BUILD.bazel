@@ -38,7 +38,11 @@ go_test(
     ],
     data = glob(["testdata/**"]),
     embed = [":go_default_library"],
-    deps = ["//shared/testutil/require:go_default_library"],
+    deps = [
+        "//shared/testutil/require:go_default_library",
+        "@com_github_sirupsen_logrus//hooks/test:go_default_library",
+        "@io_bazel_rules_go//go/tools/bazel:go_default_library",
+    ],
 )
 
 container_bundle(

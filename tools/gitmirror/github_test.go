@@ -135,9 +135,6 @@ func TestWebhooks(t *testing.T) {
 			}
 			payload, err := os.Open(fileName)
 			require.NoError(t, err)
-			defer func() {
-				_ = payload.Close()
-			}()
 
 			var parseError error
 			var results interface{}

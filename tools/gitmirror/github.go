@@ -70,8 +70,13 @@ func NewWebhookClient(options ...Option) (*Webhook, error) {
 // Parse verifies and parses the events specified and returns the payload object or an error
 func (hook Webhook) Parse(r *http.Request, events ...Event) (interface{}, error) {
 	defer func() {
-		_, _ = io.Copy(ioutil.Discard, r.Body)
-		_ = r.Body.Close()
+		_, err := io.Copy(ioutil.Discard, r.Body)
+		if err != nil {
+			log.Error(err)
+		}
+		if err = r.Body.Close(); err != nil {
+			log.Error(err)
+		}
 	}()
 
 	if len(events) == 0 {
@@ -111,11 +116,11 @@ func (hook Webhook) Parse(r *http.Request, events ...Event) (interface{}, error)
 			return nil, ErrMissingHubSignatureHeader
 		}
 		mac := hmac.New(sha1.New, []byte(hook.secret))
-		_, _ = mac.Write(payload)
+		_, err = mac.Write(payload)
+		if err != nil {
+			return nil, err
+		}
 		expectedMAC := hex.EncodeToString(mac.Sum(nil))
-		fmt.Printf("%x\n", []byte(expectedMAC))
-		fmt.Printf("%x\n", []byte(signature[5:]))
-
 		sigBytes, err := hex.DecodeString(signature[5:])
 		if err != nil {
 			return nil, err
