@@ -32,14 +32,30 @@ func mirrorChanges(config *Config, manager GitManager, payload ReleasePayload) e
 	if !found {
 		return fmt.Errorf("could not find repository %s from release event in config", repoName)
 	}
-	for _, dir := range repo.MirrorDirectories {
+	if len(repo.MirrorDirectories) == 0 {
+		log.Info("Mirroring entire repository")
 		log.Infof("Fetching latest changes from mirror repository %s", repo.MirrorName)
 		if err := manager.Fetch(repo.MirrorName); err != nil {
 			return errors.Wrapf(err, "could not fetch repository %s", repo.MirrorName)
 		}
-		log.Infof("Copying directory %s from source %s to mirror repo %s", dir, repoName, repo.MirrorName)
-		if err := manager.CopyDir(repoName, repo.MirrorName, dir); err != nil {
-			return errors.Wrapf(err, "could not copy directory %s from source %s to mirror repository %s", dir, repoName, repo.MirrorName)
+		if err := manager.CopyDir(repoName, repo.MirrorName, "."); err != nil {
+			return errors.Wrapf(
+				err,
+				"could not copy source %s to mirror repository %s",
+				repoName,
+				repo.MirrorName,
+			)
+		}
+	} else {
+		for _, dir := range repo.MirrorDirectories {
+			log.Infof("Fetching latest changes from mirror repository %s", repo.MirrorName)
+			if err := manager.Fetch(repo.MirrorName); err != nil {
+				return errors.Wrapf(err, "could not fetch repository %s", repo.MirrorName)
+			}
+			log.Infof("Copying directory %s from source %s to mirror repo %s", dir, repoName, repo.MirrorName)
+			if err := manager.CopyDir(repoName, repo.MirrorName, dir); err != nil {
+				return errors.Wrapf(err, "could not copy directory %s from source %s to mirror repository %s", dir, repoName, repo.MirrorName)
+			}
 		}
 	}
 	log.Infof("Staging all changes in mirror %s", repo.MirrorName)
