@@ -33,21 +33,19 @@ func (g *gitCLI) Clone(remoteName, remoteUrl string) error {
 	repoPath := filepath.Join(g.reposBasePath, remoteName)
 	cmd := exec.Command("git", "clone", remoteUrl, repoPath)
 	fmt.Println(cmd.String())
-	stdout, err := cmd.StderrPipe()
+	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if err := cmd.Start(); err != nil {
 		return err
 	}
-	data, err := io.ReadAll(stdout)
+	stderrData, err := io.ReadAll(stderr)
 	if err != nil {
 		return err
 	}
-	stdoutStr := fmt.Sprintf("Got error from clone %s\n", data)
-	fmt.Println(stdoutStr)
 	var alreadyExists bool
-	if strings.Contains(stdoutStr, "already exists") {
+	if strings.Contains(fmt.Sprintf("%s", stderrData), "already exists") {
 		alreadyExists = true
 	}
 	if err := cmd.Wait(); err != nil && !alreadyExists {

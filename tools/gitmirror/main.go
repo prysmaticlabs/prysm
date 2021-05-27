@@ -27,7 +27,7 @@ func main() {
 	}
 	githubMirrorPush := os.Getenv("GITHUB_PUSH_ACCESS_TOKEN")
 	if githubMirrorPush == "" {
-		log.Fatal("Expected GITHUB_MIRROR_PUSH_SECRET env variable")
+		log.Fatal("Expected GITHUB_PUSH_ACCESS_TOKEN env variable")
 	}
 	githubUser := os.Getenv("GITHUB_USER")
 	if githubUser == "" {
