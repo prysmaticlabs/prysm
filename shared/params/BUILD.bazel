@@ -17,6 +17,7 @@ go_library(
         "testnet_toledo_config.go",
         "testutils.go",
         "values.go",
+        "van_types.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/params",
     visibility = ["//visibility:public"],

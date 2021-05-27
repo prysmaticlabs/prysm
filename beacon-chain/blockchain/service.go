@@ -83,7 +83,10 @@ type Service struct {
 	wsVerified            bool
 
 	// Vanguard: unconfirmed blocks need to store in cache for waiting final confirmation from orchestrator
-	pendingBlockCache *cache.PendingBlocksCache
+	enableVanguardNode bool
+	pendingBlockCache  *cache.PendingBlocksCache
+	confirmedBlockCh   chan *ethpb.SignedBeaconBlock
+	orcRPCClient       OrcClient
 }
 
 // Config options for the service.
@@ -104,13 +107,18 @@ type Config struct {
 	StateGen          *stategen.State
 	WspBlockRoot      []byte
 	WspEpoch          types.Epoch
+
+	// Vanguard: orchestrator client reference to get confirmation status
+	// TODO: This will be from orcClient package
+	OrcRPCClient       OrcClient
+	EnableVanguardNode bool
 }
 
 // NewService instantiates a new block service instance that will
 // be registered into a running beacon node.
 func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	return &Service{
+	s := &Service{
 		ctx:                  ctx,
 		cancel:               cancel,
 		beaconDB:             cfg.BeaconDB,
@@ -133,8 +141,17 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		wsEpoch:              cfg.WspEpoch,
 		wsRoot:               cfg.WspBlockRoot,
 
-		pendingBlockCache: cache.NewPendingBlocksCache(), // Vanguard: Initialize pending block cache
-	}, nil
+		pendingBlockCache:  cache.NewPendingBlocksCache(), // Vanguard: Initialize pending block cache
+		confirmedBlockCh:   make(chan *ethpb.SignedBeaconBlock),
+		orcRPCClient:       cfg.OrcRPCClient,
+		enableVanguardNode: cfg.EnableVanguardNode,
+	}
+
+	// vanguard: loop for getting confirmation from orchestrator node
+	if s.enableVanguardNode {
+		go s.processOrcConfirmationLoop(ctx)
+	}
+	return s, nil
 }
 
 // Start a blockchain service's main event loop.

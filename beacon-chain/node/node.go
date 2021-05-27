@@ -454,21 +454,22 @@ func (b *BeaconNode) registerBlockchainService() error {
 
 	maxRoutines := b.cliCtx.Int(cmd.MaxGoroutines.Name)
 	blockchainService, err := blockchain.NewService(b.ctx, &blockchain.Config{
-		BeaconDB:          b.db,
-		DepositCache:      b.depositCache,
-		ChainStartFetcher: web3Service,
-		AttPool:           b.attestationPool,
-		ExitPool:          b.exitPool,
-		SlashingPool:      b.slashingsPool,
-		P2p:               b.fetchP2P(),
-		MaxRoutines:       maxRoutines,
-		StateNotifier:     b,
-		BlockNotifier:     b,
-		ForkChoiceStore:   b.forkChoiceStore,
-		OpsService:        opsService,
-		StateGen:          b.stateGen,
-		WspBlockRoot:      bRoot,
-		WspEpoch:          epoch,
+		BeaconDB:           b.db,
+		DepositCache:       b.depositCache,
+		ChainStartFetcher:  web3Service,
+		AttPool:            b.attestationPool,
+		ExitPool:           b.exitPool,
+		SlashingPool:       b.slashingsPool,
+		P2p:                b.fetchP2P(),
+		MaxRoutines:        maxRoutines,
+		StateNotifier:      b,
+		BlockNotifier:      b,
+		ForkChoiceStore:    b.forkChoiceStore,
+		OpsService:         opsService,
+		StateGen:           b.stateGen,
+		WspBlockRoot:       bRoot,
+		WspEpoch:           epoch,
+		EnableVanguardNode: b.cliCtx.Bool(flags.Network.Name),
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")

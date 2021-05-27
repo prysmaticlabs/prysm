@@ -19,7 +19,7 @@ func (bs *Server) StreamNewPendingBlocks(empty *ptypes.Empty, stream ethpb.Beaco
 	defer unConfirmedblockSub.Unsubscribe()
 
 	// Getting un-confirmed blocks from cache and sends those blocks to orchestrator
-	unconfirmedBlocks, err := bs.UnconfirmedBlockFetcher.UnConfirmedBlocksFromCache()
+	unconfirmedBlocks, err := bs.UnconfirmedBlockFetcher.SortedUnConfirmedBlocksFromCache()
 	if err != nil {
 		return status.Errorf(codes.Unavailable, "Could not send cached un-confirmed blocks over stream: %v", err)
 	}

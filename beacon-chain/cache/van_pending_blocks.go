@@ -48,7 +48,7 @@ func (c *PendingBlocksCache) AddPendingBlock(blk *ethpb.BeaconBlock) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	if err := c.PendingBlocksCache.AddIfNotPresent(blk); err != nil {
+	if err := c.PendingBlocksCache.Add(blk); err != nil {
 		return err
 	}
 	trim(c.PendingBlocksCache, maxPendingBlocksCacheSize)
@@ -101,6 +101,27 @@ func (c *PendingBlocksCache) PendingBlocks() ([]*ethpb.BeaconBlock, error) {
 	}
 
 	return pendingBlocks, nil
+}
+
+// DeleteConfirmedBlock deletes the confirmed block from cache
+func (c *PendingBlocksCache) DeleteConfirmedBlock(slot types.Slot) error {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	obj, exists, err := c.PendingBlocksCache.GetByKey(slotToString(slot))
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return nil
+	}
+
+	item, ok := obj.(*ethpb.BeaconBlock)
+	if !ok {
+		return ErrNotBeaconBlock
+	}
+
+	return c.PendingBlocksCache.Delete(item)
 }
 
 // Converts input uint64 to string. To be used as key for slot to get root.
