@@ -4,7 +4,7 @@ This tool provides a Go server which listens for Github webhook events for **new
 
 ## Usage
 
-### Faucet Server
+### Server
 
 With Bazel
 ```bash
