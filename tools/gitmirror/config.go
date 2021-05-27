@@ -73,7 +73,6 @@ func initializeGitConfig(accessToken, user, email string) error {
 		if err != nil {
 			return err
 		}
-		log.Errorf("%s", data)
 		if err := cmd.Wait(); err != nil {
 			return err
 		}
