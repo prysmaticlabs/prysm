@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -114,10 +115,10 @@ func TestWebhooks(t *testing.T) {
 			name:     "ReleaseEvent",
 			event:    ReleaseEvent,
 			typ:      ReleasePayload{},
-			filename: "../testdata/github/release.json",
+			filename: "testdata/release.json",
 			headers: http.Header{
 				"X-Github-Event":  []string{"release"},
-				"X-Hub-Signature": []string{"sha1=e62bb4c51bc7dde195b9525971c2e3aecb394390"},
+				"X-Hub-Signature": []string{"sha1=31303962316639666236626530313266663266373361643737383933366666323764373266323235"},
 			},
 		},
 	}
@@ -127,7 +128,12 @@ func TestWebhooks(t *testing.T) {
 		client := &http.Client{}
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			payload, err := os.Open(tc.filename)
+			fileName := tc.filename
+			bazelFileName, err := bazel.Runfile(fileName)
+			if err == nil {
+				fileName = bazelFileName
+			}
+			payload, err := os.Open(fileName)
 			require.NoError(t, err)
 			defer func() {
 				_ = payload.Close()

@@ -31,7 +31,6 @@ type Event string
 const (
 	CommitCommentEvent Event = "commit_comment"
 	CreateEvent        Event = "create"
-	PullRequestEvent   Event = "pull_request"
 	ReleaseEvent       Event = "release"
 )
 
@@ -62,7 +61,7 @@ func NewWebhookClient(options ...Option) (*Webhook, error) {
 	hook := new(Webhook)
 	for _, opt := range options {
 		if err := opt(hook); err != nil {
-			return nil, errors.New("Error applying Option")
+			return nil, errors.New("error applying Option")
 		}
 	}
 	return hook, nil
@@ -114,8 +113,14 @@ func (hook Webhook) Parse(r *http.Request, events ...Event) (interface{}, error)
 		mac := hmac.New(sha1.New, []byte(hook.secret))
 		_, _ = mac.Write(payload)
 		expectedMAC := hex.EncodeToString(mac.Sum(nil))
+		fmt.Printf("%x\n", []byte(expectedMAC))
+		fmt.Printf("%x\n", []byte(signature[5:]))
 
-		if !hmac.Equal([]byte(signature[5:]), []byte(expectedMAC)) {
+		sigBytes, err := hex.DecodeString(signature[5:])
+		if err != nil {
+			return nil, err
+		}
+		if !hmac.Equal(sigBytes, []byte(expectedMAC)) {
 			return nil, ErrHMACVerificationFailed
 		}
 	}
@@ -123,7 +128,7 @@ func (hook Webhook) Parse(r *http.Request, events ...Event) (interface{}, error)
 	switch gitHubEvent {
 	case ReleaseEvent:
 		var pl ReleasePayload
-		err = json.Unmarshal([]byte(payload), &pl)
+		err = json.Unmarshal(payload, &pl)
 		return pl, err
 	default:
 		return nil, fmt.Errorf("unknown event %s", gitHubEvent)

@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"net/http"
 	"os"
 
@@ -10,12 +11,14 @@ import (
 )
 
 const (
-	path = "/webhooks"
+	path = "/webhooks" // path for receiving Github webhook events.
 )
 
 var (
 	log            = logrus.WithField("prefix", "gitmirror")
 	configPathFlag = flag.String("config", "", "path to config yaml file")
+	portFlag       = flag.Int("port", 3000, "server port (default 3000)")
+	hostFlag       = flag.String("host", "127.0.0.1", "server host (default localhost)")
 )
 
 func main() {
@@ -81,13 +84,15 @@ func main() {
 		}
 		log.Info("Received github release event via webhooks")
 		if err := mirrorChanges(config, manager, release); err != nil {
+			log.WithError(err).Error("Could not mirror changes")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
 	})
 	log.Info("Listening on port 3000")
-	log.Fatal(http.ListenAndServe(":3000", nil))
+	address := fmt.Sprintf("%s:%d", *hostFlag, *portFlag)
+	log.Fatal(http.ListenAndServe(address, nil))
 }
 
 func cloneRepos(config *Config, manager *gitCLI) error {

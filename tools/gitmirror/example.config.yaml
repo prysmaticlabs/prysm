@@ -1,0 +1,8 @@
+cloneBasePath: tmp
+repositories:
+  - remoteUrl: git@github.com:prysmaticlabs/prysm.git
+    remoteName: prysm
+    mirrorUrl: git@github.com:prysmaticlabs/ethereumapis.git
+    mirrorName: ethereumapis
+    mirrorDirectories:
+      - proto/eth
