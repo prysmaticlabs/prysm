@@ -211,7 +211,6 @@ func (s *Service) Start() {
 		GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 		PeersFetcher:       s.cfg.PeersFetcher,
 		PeerManager:        s.cfg.PeerManager,
-		GenesisFetcher:     s.cfg.GenesisFetcher,
 		MetadataProvider:   s.cfg.MetadataProvider,
 		HeadFetcher:        s.cfg.HeadFetcher,
 	}
@@ -239,23 +238,15 @@ func (s *Service) Start() {
 		CollectedAttestationsBuffer: make(chan []*ethpb.Attestation, attestationBufferSize),
 	}
 	beaconChainServerV1 := &beaconv1.Server{
-		Ctx:                 s.ctx,
-		BeaconDB:            s.cfg.BeaconDB,
-		AttestationsPool:    s.cfg.AttestationsPool,
-		SlashingsPool:       s.cfg.SlashingsPool,
-		ChainInfoFetcher:    s.cfg.ChainInfoFetcher,
-		ChainStartFetcher:   s.cfg.ChainStartFetcher,
-		DepositFetcher:      s.cfg.DepositFetcher,
-		BlockFetcher:        s.cfg.POWChainService,
-		CanonicalStateChan:  s.canonicalStateChan,
-		GenesisTimeFetcher:  s.cfg.GenesisTimeFetcher,
-		StateNotifier:       s.cfg.StateNotifier,
-		BlockNotifier:       s.cfg.BlockNotifier,
-		AttestationNotifier: s.cfg.OperationNotifier,
-		Broadcaster:         s.cfg.Broadcaster,
-		BlockReceiver:       s.cfg.BlockReceiver,
-		StateGenService:     s.cfg.StateGen,
-		SyncChecker:         s.cfg.SyncService,
+		BeaconDB:           s.cfg.BeaconDB,
+		AttestationsPool:   s.cfg.AttestationsPool,
+		SlashingsPool:      s.cfg.SlashingsPool,
+		ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
+		GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
+		BlockNotifier:      s.cfg.BlockNotifier,
+		Broadcaster:        s.cfg.Broadcaster,
+		BlockReceiver:      s.cfg.BlockReceiver,
+		StateGenService:    s.cfg.StateGen,
 		StateFetcher: statefetcher.StateProvider{
 			BeaconDB:           s.cfg.BeaconDB,
 			ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
@@ -280,7 +271,6 @@ func (s *Service) Start() {
 			PeersFetcher:       s.cfg.PeersFetcher,
 		}
 		debugServerV1 := &debugv1.Server{
-			Ctx:         s.ctx,
 			BeaconDB:    s.cfg.BeaconDB,
 			HeadFetcher: s.cfg.HeadFetcher,
 			StateFetcher: &statefetcher.StateProvider{

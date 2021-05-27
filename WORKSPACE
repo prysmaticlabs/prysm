@@ -237,8 +237,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "8e9f461cf67060ec9f10204b90f1292f351191d0b15f6712f8e80364a684e99e",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.1.0-alpha.4/general.tar.gz",
+    sha256 = "5521e91c9caad824b99f2f84d9a8a7b93ec4cd6aad97afa3b6558c852df8589f",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.1.0-alpha.6/general.tar.gz",
 )
 
 http_archive(
@@ -253,8 +253,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "abf85074d2cf65c3f0789acb116df3099698288c9e73a414e9be29718dff9a69",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.1.0-alpha.4/minimal.tar.gz",
+    sha256 = "b34fa33dbd2e5430294a9efe3dc817c490f137690ea02f06afb98e8d63d9d7d5",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.1.0-alpha.6/minimal.tar.gz",
 )
 
 http_archive(
@@ -269,8 +269,23 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "b7487ad45907c421c875b5f39117d69f0b97a001b72d7bb9e10a87d267c1161e",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.1.0-alpha.4/mainnet.tar.gz",
+    sha256 = "4d012f2c056e4818f3323c8a83117796beb15dff34c295957a4d543019c1e128",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.1.0-alpha.6/mainnet.tar.gz",
+)
+
+http_archive(
+    name = "eth2_spec",
+    build_file_content = """
+filegroup(
+    name = "spec_data",
+    srcs = glob([
+        "**/*.yaml",
+    ]),
+    visibility = ["//visibility:public"],
+)
+    """,
+    sha256 = "55d8a4038d809498819a1b5a72bfbe5bb16c6c4f4e0796d1baa2ab45bc91392e",
+    url = "https://github.com/ethereum/eth2.0-specs/archive/refs/tags/v1.1.0-alpha.6.tar.gz",
 )
 
 http_archive(
@@ -330,33 +345,6 @@ http_archive(
 )
 
 # External dependencies
-
-http_archive(
-    name = "sszgen",  # Hack because we don't want to build this binary with libfuzzer, but need it to build.
-    build_file_content = """
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_binary")
-
-go_library(
-    name = "go_default_library",
-    srcs = [
-        "sszgen/main.go",
-        "sszgen/marshal.go",
-        "sszgen/size.go",
-        "sszgen/unmarshal.go",
-    ],
-    importpath = "github.com/ferranbt/fastssz/sszgen",
-    visibility = ["//visibility:private"],
-)
-
-go_binary(
-    name = "sszgen",
-    embed = [":go_default_library"],
-    visibility = ["//visibility:public"],
-)
-    """,
-    strip_prefix = "fastssz-06015a5d84f9e4eefe2c21377ca678fa8f1a1b09",
-    urls = ["https://github.com/ferranbt/fastssz/archive/06015a5d84f9e4eefe2c21377ca678fa8f1a1b09.tar.gz"],
-)
 
 http_archive(
     name = "prysm_web_ui",

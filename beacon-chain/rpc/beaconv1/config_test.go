@@ -171,7 +171,7 @@ func TestGetSpec(t *testing.T) {
 		case "effective_balance_increment":
 			assert.Equal(t, "23", v)
 		case "genesis_fork_version":
-			assert.Equal(t, "0x47656e65736973466f726b56657273696f6e", v)
+			assert.Equal(t, "0x"+hex.EncodeToString([]byte("GenesisForkVersion")), v)
 		case "altair_fork_version":
 			assert.Equal(t, "0x"+hex.EncodeToString([]byte("AltairForkVersion")), v)
 		case "altair_fork_epoch":
@@ -351,7 +351,7 @@ func TestForkSchedule_Ok(t *testing.T) {
 	assert.Equal(t, thirdForkEpoch, fork.Epoch)
 }
 
-func TestForkSchedule_NoForks(t *testing.T) {
+func TestForkSchedule_CorrectNumberOfForks(t *testing.T) {
 	s := &Server{}
 	resp, err := s.GetForkSchedule(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
