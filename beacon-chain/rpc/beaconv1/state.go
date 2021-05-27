@@ -161,7 +161,7 @@ func (bs *Server) headStateRoot(ctx context.Context) ([]byte, error) {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err
 	}
-	return b.Block.StateRoot, nil
+	return b.Block().StateRoot(), nil
 }
 
 func (bs *Server) genesisStateRoot(ctx context.Context) ([]byte, error) {
@@ -172,7 +172,7 @@ func (bs *Server) genesisStateRoot(ctx context.Context) ([]byte, error) {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err
 	}
-	return b.Block.StateRoot, nil
+	return b.Block().StateRoot(), nil
 }
 
 func (bs *Server) finalizedStateRoot(ctx context.Context) ([]byte, error) {
@@ -187,7 +187,7 @@ func (bs *Server) finalizedStateRoot(ctx context.Context) ([]byte, error) {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err
 	}
-	return b.Block.StateRoot, nil
+	return b.Block().StateRoot(), nil
 }
 
 func (bs *Server) justifiedStateRoot(ctx context.Context) ([]byte, error) {
@@ -202,7 +202,7 @@ func (bs *Server) justifiedStateRoot(ctx context.Context) ([]byte, error) {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err
 	}
-	return b.Block.StateRoot, nil
+	return b.Block().StateRoot(), nil
 }
 
 func (bs *Server) stateRootByHex(ctx context.Context, stateId []byte) ([]byte, error) {
@@ -235,10 +235,10 @@ func (bs *Server) stateRootBySlot(ctx context.Context, slot types.Slot) ([]byte,
 	if len(blks) != 1 {
 		return nil, errors.New("multiple blocks exist in same slot")
 	}
-	if blks[0] == nil || blks[0].Block == nil {
+	if blks[0] == nil || blks[0].IsNil() || blks[0].Block().IsNil() {
 		return nil, errors.New("nil block")
 	}
-	return blks[0].Block.StateRoot, nil
+	return blks[0].Block().StateRoot(), nil
 }
 
 func checkpoint(sourceCheckpoint *eth.Checkpoint) *ethpb.Checkpoint {

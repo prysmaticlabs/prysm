@@ -6,6 +6,8 @@ import (
 	"runtime/debug"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/copyutil"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
@@ -252,7 +254,7 @@ func TestStateReferenceCopy_NoUnexpectedAttestationsMutation(t *testing.T) {
 		copy(atts, state.CurrentEpochAttestations)
 		state.CurrentEpochAttestations = atts
 		for i := range state.GetCurrentEpochAttestations() {
-			att := CopyPendingAttestation(state.CurrentEpochAttestations[i])
+			att := copyutil.CopyPendingAttestation(state.CurrentEpochAttestations[i])
 			att.AggregationBits = bitfield.NewBitlist(3)
 			state.CurrentEpochAttestations[i] = att
 		}
@@ -261,7 +263,7 @@ func TestStateReferenceCopy_NoUnexpectedAttestationsMutation(t *testing.T) {
 		copy(atts, state.PreviousEpochAttestations)
 		state.PreviousEpochAttestations = atts
 		for i := range state.GetPreviousEpochAttestations() {
-			att := CopyPendingAttestation(state.PreviousEpochAttestations[i])
+			att := copyutil.CopyPendingAttestation(state.PreviousEpochAttestations[i])
 			att.AggregationBits = bitfield.NewBitlist(3)
 			state.PreviousEpochAttestations[i] = att
 		}

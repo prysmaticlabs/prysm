@@ -10,7 +10,6 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
@@ -18,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -25,25 +25,25 @@ import (
 )
 
 // processFunc is a function that processes a block with a given state. State is mutated.
-type processFunc func(context.Context, iface.BeaconState, *ethpb.SignedBeaconBlock) (iface.BeaconState, error)
+type processFunc func(context.Context, iface.BeaconState, interfaces.SignedBeaconBlock) (iface.BeaconState, error)
 
-var processDepositsFunc = func(ctx context.Context, s iface.BeaconState, blk *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
-	return b.ProcessDeposits(ctx, s, blk.Block.Body.Deposits)
+var processDepositsFunc = func(ctx context.Context, s iface.BeaconState, blk interfaces.SignedBeaconBlock) (iface.BeaconState, error) {
+	return b.ProcessDeposits(ctx, s, blk.Block().Body().Deposits())
 }
-var processProposerSlashingFunc = func(ctx context.Context, s iface.BeaconState, blk *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
-	return b.ProcessProposerSlashings(ctx, s, blk.Block.Body.ProposerSlashings, v.SlashValidator)
-}
-
-var processAttesterSlashingFunc = func(ctx context.Context, s iface.BeaconState, blk *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
-	return b.ProcessAttesterSlashings(ctx, s, blk.Block.Body.AttesterSlashings, v.SlashValidator)
+var processProposerSlashingFunc = func(ctx context.Context, s iface.BeaconState, blk interfaces.SignedBeaconBlock) (iface.BeaconState, error) {
+	return b.ProcessProposerSlashings(ctx, s, blk.Block().Body().ProposerSlashings(), v.SlashValidator)
 }
 
-var processEth1DataFunc = func(ctx context.Context, s iface.BeaconState, blk *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
-	return b.ProcessEth1DataInBlock(ctx, s, blk.Block.Body.Eth1Data)
+var processAttesterSlashingFunc = func(ctx context.Context, s iface.BeaconState, blk interfaces.SignedBeaconBlock) (iface.BeaconState, error) {
+	return b.ProcessAttesterSlashings(ctx, s, blk.Block().Body().AttesterSlashings(), v.SlashValidator)
 }
 
-var processExitFunc = func(ctx context.Context, s iface.BeaconState, blk *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
-	return b.ProcessVoluntaryExits(ctx, s, blk.Block.Body.VoluntaryExits)
+var processEth1DataFunc = func(ctx context.Context, s iface.BeaconState, blk interfaces.SignedBeaconBlock) (iface.BeaconState, error) {
+	return b.ProcessEth1DataInBlock(ctx, s, blk.Block().Body().Eth1Data())
+}
+
+var processExitFunc = func(ctx context.Context, s iface.BeaconState, blk interfaces.SignedBeaconBlock) (iface.BeaconState, error) {
+	return b.ProcessVoluntaryExits(ctx, s, blk.Block().Body().VoluntaryExits())
 }
 
 // This defines the processing block routine as outlined in eth2 spec:
@@ -81,12 +81,12 @@ var processingPipeline = []processFunc{
 func ExecuteStateTransition(
 	ctx context.Context,
 	state iface.BeaconState,
-	signed *ethpb.SignedBeaconBlock,
+	signed interfaces.SignedBeaconBlock,
 ) (iface.BeaconState, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
-	if signed == nil || signed.Block == nil {
+	if signed == nil || signed.IsNil() || signed.Block().IsNil() {
 		return nil, errors.New("nil block")
 	}
 
@@ -232,7 +232,7 @@ func ProcessSlots(ctx context.Context, state iface.BeaconState, slot types.Slot)
 		return nil, err
 	}
 
-	if cachedState != nil && cachedState.Slot() < slot {
+	if cachedState != nil && !cachedState.IsNil() && cachedState.Slot() < slot {
 		highestSlot = cachedState.Slot()
 		state = cachedState
 	}
@@ -241,7 +241,7 @@ func ProcessSlots(ctx context.Context, state iface.BeaconState, slot types.Slot)
 		if err != nil {
 			return nil, err
 		}
-		if cachedState != nil && cachedState.Slot() < slot {
+		if cachedState != nil && !cachedState.IsNil() && cachedState.Slot() < slot {
 			highestSlot = cachedState.Slot()
 			state = cachedState
 		}
@@ -308,7 +308,7 @@ func ProcessSlots(ctx context.Context, state iface.BeaconState, slot types.Slot)
 func ProcessBlock(
 	ctx context.Context,
 	state iface.BeaconState,
-	signed *ethpb.SignedBeaconBlock,
+	signed interfaces.SignedBeaconBlock,
 ) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessBlock")
 	defer span.End()
@@ -329,40 +329,40 @@ func ProcessBlock(
 }
 
 // VerifyOperationLengths verifies that block operation lengths are valid.
-func VerifyOperationLengths(_ context.Context, state iface.BeaconState, b *ethpb.SignedBeaconBlock) (iface.BeaconState, error) {
+func VerifyOperationLengths(_ context.Context, state iface.BeaconState, b interfaces.SignedBeaconBlock) (iface.BeaconState, error) {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err
 	}
-	body := b.Block.Body
+	body := b.Block().Body()
 
-	if uint64(len(body.ProposerSlashings)) > params.BeaconConfig().MaxProposerSlashings {
+	if uint64(len(body.ProposerSlashings())) > params.BeaconConfig().MaxProposerSlashings {
 		return nil, fmt.Errorf(
 			"number of proposer slashings (%d) in block body exceeds allowed threshold of %d",
-			len(body.ProposerSlashings),
+			len(body.ProposerSlashings()),
 			params.BeaconConfig().MaxProposerSlashings,
 		)
 	}
 
-	if uint64(len(body.AttesterSlashings)) > params.BeaconConfig().MaxAttesterSlashings {
+	if uint64(len(body.AttesterSlashings())) > params.BeaconConfig().MaxAttesterSlashings {
 		return nil, fmt.Errorf(
 			"number of attester slashings (%d) in block body exceeds allowed threshold of %d",
-			len(body.AttesterSlashings),
+			len(body.AttesterSlashings()),
 			params.BeaconConfig().MaxAttesterSlashings,
 		)
 	}
 
-	if uint64(len(body.Attestations)) > params.BeaconConfig().MaxAttestations {
+	if uint64(len(body.Attestations())) > params.BeaconConfig().MaxAttestations {
 		return nil, fmt.Errorf(
 			"number of attestations (%d) in block body exceeds allowed threshold of %d",
-			len(body.Attestations),
+			len(body.Attestations()),
 			params.BeaconConfig().MaxAttestations,
 		)
 	}
 
-	if uint64(len(body.VoluntaryExits)) > params.BeaconConfig().MaxVoluntaryExits {
+	if uint64(len(body.VoluntaryExits())) > params.BeaconConfig().MaxVoluntaryExits {
 		return nil, fmt.Errorf(
 			"number of voluntary exits (%d) in block body exceeds allowed threshold of %d",
-			len(body.VoluntaryExits),
+			len(body.VoluntaryExits()),
 			params.BeaconConfig().MaxVoluntaryExits,
 		)
 	}
@@ -375,9 +375,9 @@ func VerifyOperationLengths(_ context.Context, state iface.BeaconState, b *ethpb
 	}
 	maxDeposits := mathutil.Min(params.BeaconConfig().MaxDeposits, eth1Data.DepositCount-state.Eth1DepositIndex())
 	// Verify outstanding deposits are processed up to max number of deposits
-	if uint64(len(body.Deposits)) != maxDeposits {
+	if uint64(len(body.Deposits())) != maxDeposits {
 		return nil, fmt.Errorf("incorrect outstanding deposits in block body, wanted: %d, got: %d",
-			maxDeposits, len(body.Deposits))
+			maxDeposits, len(body.Deposits()))
 	}
 
 	return state, nil
