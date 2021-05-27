@@ -10,10 +10,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const (
-	path = "/webhooks" // path for receiving Github webhook events.
-)
-
 var (
 	log            = logrus.WithField("prefix", "gitmirror")
 	configPathFlag = flag.String("config", "", "path to config yaml file")
@@ -70,7 +66,7 @@ func main() {
 
 	// Setup HTTP handler for webhook events which then mirrors required changes
 	// to specified directories via configuration.
-	http.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		payload, err := hook.Parse(r, ReleaseEvent)
 		if err != nil {
 			if err == ErrEventNotFound {
