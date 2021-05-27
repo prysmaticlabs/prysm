@@ -33,7 +33,7 @@ func (w Phase0SignedBeaconBlock) Block() BeaconBlock {
 // IsNil checks if the underlying beacon block is
 // nil.
 func (w Phase0SignedBeaconBlock) IsNil() bool {
-	return w.b == nil
+	return w.b == nil || w.Block().IsNil()
 }
 
 // Copy performs a deep copy of the signed beacon block
@@ -97,7 +97,7 @@ func (w Phase0BeaconBlock) Body() BeaconBlockBody {
 
 // IsNil checks if the beacon block is nil.
 func (w Phase0BeaconBlock) IsNil() bool {
-	return w.b == nil
+	return w.b == nil || w.Body().IsNil()
 }
 
 // HashTreeRoot returns the ssz root of the block.
