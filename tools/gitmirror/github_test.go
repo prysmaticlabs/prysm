@@ -142,7 +142,7 @@ func TestWebhooks(t *testing.T) {
 				results, parseError = hook.Parse(r, tc.event)
 			})
 			defer server.Close()
-			req, err := http.NewRequest(http.MethodPost, server.URL+path, payload)
+			req, err := http.NewRequest(http.MethodPost, server.URL, payload)
 			require.NoError(t, err)
 			req.Header = tc.headers
 			req.Header.Set("Content-Type", "application/json")
