@@ -62,16 +62,19 @@ func initializeGitConfig(accessToken, user, email string) error {
 	}
 	for _, str := range cmdStrings {
 		cmd := exec.Command("git", str...)
-		stdout, err := cmd.StderrPipe()
+		stderr, err := cmd.StderrPipe()
 		if err != nil {
 			log.Fatal(err)
 		}
 		if err := cmd.Start(); err != nil {
 			return err
 		}
-		data, err := io.ReadAll(stdout)
+		data, err := io.ReadAll(stderr)
 		if err != nil {
 			return err
+		}
+		if len(data) > 0 {
+			fmt.Printf("%s\n", data)
 		}
 		if err := cmd.Wait(); err != nil {
 			return err
