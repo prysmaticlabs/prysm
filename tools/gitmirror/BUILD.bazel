@@ -1,5 +1,8 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_test")
 load("@prysm//tools/go:def.bzl", "go_library")
+load("@io_bazel_rules_docker//go:image.bzl", "go_image")
+load("@io_bazel_rules_docker//container:container.bzl", "container_bundle")
+load("@io_bazel_rules_docker//contrib:push-all.bzl", "docker_push")
 
 go_library(
     name = "go_default_library",
@@ -29,7 +32,25 @@ go_binary(
 
 go_test(
     name = "go_default_test",
-    srcs = ["github_test.go"],
+    srcs = [
+        "github_test.go",
+        "mirror_test.go",
+    ],
     embed = [":go_default_library"],
     deps = ["//shared/testutil/require:go_default_library"],
+)
+
+container_bundle(
+    name = "image_bundle",
+    images = {
+        "gcr.io/prysmaticlabs/prysm/gitmirror:latest": ":image",
+        "gcr.io/prysmaticlabs/prysm/gitmirror:{DOCKER_TAG}": ":image",
+    },
+    tags = ["manual"],
+)
+
+docker_push(
+    name = "push_images",
+    bundle = ":image_bundle",
+    tags = ["manual"],
 )

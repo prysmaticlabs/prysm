@@ -2,11 +2,8 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"io"
 	"net/http"
 	"os"
-	"os/exec"
 
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/sirupsen/logrus"
@@ -91,48 +88,6 @@ func main() {
 	})
 	log.Info("Listening on port 3000")
 	log.Fatal(http.ListenAndServe(":3000", nil))
-}
-
-func initializeGitConfig(accessToken, user, email string) error {
-	cmdStrings := [][]string{
-		{
-			"config",
-			"--global",
-			"user.email",
-			email,
-		},
-		{
-			"config",
-			"--global",
-			"user.name",
-			user,
-		},
-		{
-			"config",
-			"--global",
-			fmt.Sprintf(`url."https://git:%s@github.com/".insteadOf`, accessToken),
-			"git@github.com/",
-		},
-	}
-	for _, str := range cmdStrings {
-		cmd := exec.Command("git", str...)
-		stdout, err := cmd.StderrPipe()
-		if err != nil {
-			log.Fatal(err)
-		}
-		if err := cmd.Start(); err != nil {
-			return err
-		}
-		data, err := io.ReadAll(stdout)
-		if err != nil {
-			return err
-		}
-		log.Errorf("%s", data)
-		if err := cmd.Wait(); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func cloneRepos(config *Config, manager *gitCLI) error {
