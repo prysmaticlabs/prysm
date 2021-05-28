@@ -192,7 +192,7 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpb.BeaconBlockContain
 	return &emptypb.Empty{}, nil
 }
 
-// GetBlock retrieves block details for given block id.
+// GetBlock retrieves block details for given block ID.
 func (bs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BlockResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBlock")
 	defer span.End()
