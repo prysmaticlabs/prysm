@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"sort"
+	"sync"
 
 	ssz "github.com/ferranbt/fastssz"
 	"github.com/golang/snappy"
@@ -15,9 +16,9 @@ import (
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	slashpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -92,43 +93,58 @@ func (s *Store) CheckAttesterDoubleVotes(
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.CheckAttesterDoubleVotes")
 	defer span.End()
 	doubleVotes := make([]*slashertypes.AttesterDoubleVote, 0)
-	err := s.db.View(func(tx *bolt.Tx) error {
-		signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
-		attRecordsBkt := tx.Bucket(attestationRecordsBucket)
-		for _, att := range attestations {
-			encEpoch := encodeTargetEpoch(att.IndexedAttestation.Data.Target.Epoch)
-			for _, valIdx := range att.IndexedAttestation.AttestingIndices {
-				encIdx := encodeValidatorIndex(types.ValidatorIndex(valIdx))
-				validatorEpochKey := append(encEpoch, encIdx...)
-				attRecordsKey := signingRootsBkt.Get(validatorEpochKey)
-
-				// An attestation record key is comprised of a signing root (32 bytes)
-				// and a fast sum hash of the attesting indices (8 bytes).
-				if len(attRecordsKey) < attestationRecordKeySize {
-					continue
-				}
-				encExistingAttRecord := attRecordsBkt.Get(attRecordsKey)
-				if encExistingAttRecord == nil {
-					continue
-				}
-				existingSigningRoot := bytesutil.ToBytes32(attRecordsKey[:signingRootSize])
-				if existingSigningRoot != att.SigningRoot {
-					existingAttRecord, err := decodeAttestationRecord(encExistingAttRecord)
-					if err != nil {
-						return err
+	doubleVotesMu := sync.Mutex{}
+	eg, egctx := errgroup.WithContext(ctx)
+	for _, att := range attestations {
+		// Copy the iteration instance to a local variable to give each go-routine its own copy to play with.
+		// See https://golang.org/doc/faq#closures_and_goroutines for more details.
+		attToProcess := att
+		// process every attestation parallelly.
+		eg.Go(func() error {
+			err := s.db.View(func(tx *bolt.Tx) error {
+				signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
+				encEpoch := encodeTargetEpoch(attToProcess.IndexedAttestation.Data.Target.Epoch)
+				localDoubleVotes := make([]*slashertypes.AttesterDoubleVote, 0)
+				for _, valIdx := range attToProcess.IndexedAttestation.AttestingIndices {
+					encIdx := encodeValidatorIndex(types.ValidatorIndex(valIdx))
+					validatorEpochKey := append(encEpoch, encIdx...)
+					encExistingAttRecord := signingRootsBkt.Get(validatorEpochKey)
+					if encExistingAttRecord == nil {
+						continue
 					}
-					doubleVotes = append(doubleVotes, &slashertypes.AttesterDoubleVote{
-						ValidatorIndex:         types.ValidatorIndex(valIdx),
-						Target:                 att.IndexedAttestation.Data.Target.Epoch,
-						PrevAttestationWrapper: existingAttRecord,
-						AttestationWrapper:     att,
-					})
+					existingSigningRoot := bytesutil.ToBytes32(encExistingAttRecord[:signingRootSize])
+					if existingSigningRoot != attToProcess.SigningRoot {
+						existingAttRecord, err := decodeAttestationRecord(encExistingAttRecord[signingRootSize:])
+						if err != nil {
+							return err
+						}
+						slashAtt := &slashertypes.AttesterDoubleVote{
+							ValidatorIndex:         types.ValidatorIndex(valIdx),
+							Target:                 attToProcess.IndexedAttestation.Data.Target.Epoch,
+							PrevAttestationWrapper: existingAttRecord,
+							AttestationWrapper:     attToProcess,
+						}
+						localDoubleVotes = append(localDoubleVotes, slashAtt)
+					}
 				}
-			}
-		}
-		return nil
-	})
-	return doubleVotes, err
+				// if any routine is cancelled, then cancel this routine too
+				select {
+				case <-egctx.Done():
+					return egctx.Err()
+				default:
+				}
+				// if there are any doible votes in this attestation, add it to the global double votes
+				if len(localDoubleVotes) > 0 {
+					doubleVotesMu.Lock()
+					defer doubleVotesMu.Unlock()
+					doubleVotes = append(doubleVotes, localDoubleVotes...)
+				}
+				return nil
+			})
+			return err
+		})
+	}
+	return doubleVotes, eg.Wait()
 }
 
 // AttestationRecordForValidator given a validator index and a target epoch,
@@ -144,16 +160,11 @@ func (s *Store) AttestationRecordForValidator(
 	key := append(encEpoch, encIdx...)
 	err := s.db.View(func(tx *bolt.Tx) error {
 		signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
-		attRecordKey := signingRootsBkt.Get(key)
-		if attRecordKey == nil {
-			return nil
-		}
-		attRecordsBkt := tx.Bucket(attestationRecordsBucket)
-		indexedAttBytes := attRecordsBkt.Get(attRecordKey)
+		indexedAttBytes := signingRootsBkt.Get(key)
 		if indexedAttBytes == nil {
 			return nil
 		}
-		decoded, err := decodeAttestationRecord(indexedAttBytes)
+		decoded, err := decodeAttestationRecord(indexedAttBytes[signingRootSize:])
 		if err != nil {
 			return err
 		}
@@ -189,23 +200,15 @@ func (s *Store) SaveAttestationRecordsForValidators(
 		encodedRecords[i] = value
 	}
 	return s.db.Update(func(tx *bolt.Tx) error {
-		attRecordsBkt := tx.Bucket(attestationRecordsBucket)
 		signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
 		for i, att := range attestations {
-			// An attestation record key is comprised of the signing root (32 bytes)
-			// and a fastsum64 of the attesting indices (8 bytes). This is used
-			// to have a more optimal schema
-			attIndicesHash := hashutil.FastSum64(encodedIndices[i])
-			attRecordKey := append(
-				att.SigningRoot[:], ssz.MarshalUint64(make([]byte, 0), attIndicesHash)...,
-			)
-			if err := attRecordsBkt.Put(attRecordKey, encodedRecords[i]); err != nil {
-				return err
-			}
 			for _, valIdx := range att.IndexedAttestation.AttestingIndices {
 				encIdx := encodeValidatorIndex(types.ValidatorIndex(valIdx))
 				key := append(encodedTargetEpoch[i], encIdx...)
-				if err := signingRootsBkt.Put(key, attRecordKey); err != nil {
+				// signature is prefixed so that double votest can be checked without decoding attestations
+				// and save some cpu cycles
+				value := append(att.SigningRoot[:], encodedRecords[i]...)
+				if err := signingRootsBkt.Put(key, value); err != nil {
 					return err
 				}
 			}
@@ -361,18 +364,17 @@ func (s *Store) HighestAttestations(
 	history := make([]*slashpb.HighestAttestation, 0, len(encodedIndices))
 	err = s.db.View(func(tx *bolt.Tx) error {
 		signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
-		attRecordsBkt := tx.Bucket(attestationRecordsBucket)
 		for i := 0; i < len(encodedIndices); i++ {
 			c := signingRootsBkt.Cursor()
 			for k, v := c.Last(); k != nil; k, v = c.Prev() {
 				if suffixForAttestationRecordsKey(k, encodedIndices[i]) {
-					encodedAttRecord := attRecordsBkt.Get(v)
+					encodedAttRecord := v[signingRootSize:]
 					if encodedAttRecord == nil {
 						continue
 					}
-					attWrapper, err := decodeAttestationRecord(encodedAttRecord)
-					if err != nil {
-						return err
+					attWrapper, decodeErr := decodeAttestationRecord(encodedAttRecord)
+					if decodeErr != nil {
+						return decodeErr
 					}
 					highestAtt := &slashpb.HighestAttestation{
 						ValidatorIndex:     uint64(indices[i]),

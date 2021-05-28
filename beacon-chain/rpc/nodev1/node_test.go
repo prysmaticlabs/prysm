@@ -172,10 +172,10 @@ func TestSyncStatus(t *testing.T) {
 }
 
 func TestGetPeer(t *testing.T) {
+	const rawId = "16Uiu2HAkvyYtoQXZNTsthjgLHjEnv7kvwzEmjvsJjWXpbhtqpSUN"
 	ctx := context.Background()
-	decodedId, err := peer.Decode("16Uiu2HAkvyYtoQXZNTsthjgLHjEnv7kvwzEmjvsJjWXpbhtqpSUN")
+	decodedId, err := peer.Decode(rawId)
 	require.NoError(t, err)
-	peerId := string(decodedId)
 	enrRecord := &enr.Record{}
 	err = enrRecord.SetSig(dummyIdentity{1}, []byte{42})
 	require.NoError(t, err)
@@ -190,10 +190,10 @@ func TestGetPeer(t *testing.T) {
 	peerFetcher.Peers().Add(enrRecord, decodedId, p2pMultiAddr, network.DirInbound)
 
 	t.Run("OK", func(t *testing.T) {
-		resp, err := s.GetPeer(ctx, &ethpb.PeerRequest{PeerId: peerId})
+		resp, err := s.GetPeer(ctx, &ethpb.PeerRequest{PeerId: rawId})
 		require.NoError(t, err)
-		assert.Equal(t, peerId, resp.Data.PeerId)
-		assert.Equal(t, p2pAddr, resp.Data.Address)
+		assert.Equal(t, rawId, resp.Data.PeerId)
+		assert.Equal(t, p2pAddr, resp.Data.LastSeenP2PAddress)
 		assert.Equal(t, "enr:yoABgmlwhAcHBwc=", resp.Data.Enr)
 		assert.Equal(t, ethpb.ConnectionState_DISCONNECTED, resp.Data.State)
 		assert.Equal(t, ethpb.PeerDirection_INBOUND, resp.Data.Direction)
@@ -201,11 +201,11 @@ func TestGetPeer(t *testing.T) {
 
 	t.Run("Invalid ID", func(t *testing.T) {
 		_, err = s.GetPeer(ctx, &ethpb.PeerRequest{PeerId: "foo"})
-		assert.ErrorContains(t, "Invalid peer ID: foo", err)
+		assert.ErrorContains(t, "Could not decode peer ID", err)
 	})
 
 	t.Run("Peer not found", func(t *testing.T) {
-		generatedId := string(libp2ptest.GeneratePeerIDs(1)[0])
+		generatedId := "16Uiu2HAmQqFdEcHbSmQTQuLoAhnMUrgoWoraKK4cUJT6FuuqHqTU"
 		_, err = s.GetPeer(ctx, &ethpb.PeerRequest{PeerId: generatedId})
 		assert.ErrorContains(t, "Peer not found", err)
 	})
@@ -276,7 +276,7 @@ func TestListPeers(t *testing.T) {
 		assert.Equal(t, "enr:"+serializedEnr, returnedPeer.Enr)
 		expectedP2PAddr, err := peerStatus.Address(expectedId)
 		require.NoError(t, err)
-		assert.Equal(t, expectedP2PAddr.String(), returnedPeer.Address)
+		assert.Equal(t, expectedP2PAddr.String(), returnedPeer.LastSeenP2PAddress)
 		assert.Equal(t, ethpb.ConnectionState_CONNECTING, returnedPeer.State)
 		assert.Equal(t, ethpb.PeerDirection_INBOUND, returnedPeer.Direction)
 	})
@@ -291,7 +291,7 @@ func TestListPeers(t *testing.T) {
 			name:       "No filters - return all peers",
 			states:     []string{},
 			directions: []string{},
-			wantIds:    ids,
+			wantIds:    ids[:len(ids)-1], // Excluding last peer as it is not connected.
 		},
 		{
 			name:       "State filter empty - return peers for all states",
@@ -327,7 +327,7 @@ func TestListPeers(t *testing.T) {
 			name:       "Only unknown filters - return all peers",
 			states:     []string{"foo"},
 			directions: []string{"bar"},
-			wantIds:    ids,
+			wantIds:    ids[:len(ids)-1], // Excluding last peer as it is not connected.
 		},
 		{
 			name:       "Letter case does not matter",

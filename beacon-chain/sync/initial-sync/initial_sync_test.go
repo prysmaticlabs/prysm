@@ -26,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -82,7 +83,7 @@ func initializeTestServices(t *testing.T, slots []types.Slot, peers []*peerData)
 	genesisRoot := cache.rootCache[0]
 	cache.RUnlock()
 
-	err := beaconDB.SaveBlock(context.Background(), testutil.NewBeaconBlock())
+	err := beaconDB.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()))
 	require.NoError(t, err)
 
 	st, err := testutil.NewBeaconState()
@@ -216,7 +217,7 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 		}
 
 		for i := 0; i < len(ret); i++ {
-			assert.NoError(t, beaconsync.WriteChunk(stream, p.Encoding(), ret[i]))
+			assert.NoError(t, beaconsync.WriteChunk(stream, nil, p.Encoding(), ret[i]))
 		}
 	})
 
@@ -285,7 +286,7 @@ func connectPeerHavingBlocks(
 			if uint64(i) >= uint64(len(blocks)) {
 				break
 			}
-			require.NoError(t, beaconsync.WriteChunk(stream, p.Encoding(), blocks[i]))
+			require.NoError(t, beaconsync.WriteChunk(stream, nil, p.Encoding(), blocks[i]))
 		}
 	})
 

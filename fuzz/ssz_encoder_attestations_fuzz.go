@@ -10,13 +10,6 @@ import (
 
 var buf = new(bytes.Buffer)
 
-// FuzzSszEncoderAttestation wraps SszEncoderAttestationFuzz in a
-// go-fuzz compatible interface
-func FuzzSszEncoderAttestation(b []byte) int {
-	SszEncoderAttestationFuzz(b)
-	return 0
-}
-
 // SszEncoderAttestationFuzz runs network encode/decode for attestations.
 func SszEncoderAttestationFuzz(b []byte) {
 	params.UseMainnetConfig()

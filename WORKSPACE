@@ -332,33 +332,6 @@ http_archive(
 # External dependencies
 
 http_archive(
-    name = "sszgen",  # Hack because we don't want to build this binary with libfuzzer, but need it to build.
-    build_file_content = """
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_binary")
-
-go_library(
-    name = "go_default_library",
-    srcs = [
-        "sszgen/main.go",
-        "sszgen/marshal.go",
-        "sszgen/size.go",
-        "sszgen/unmarshal.go",
-    ],
-    importpath = "github.com/ferranbt/fastssz/sszgen",
-    visibility = ["//visibility:private"],
-)
-
-go_binary(
-    name = "sszgen",
-    embed = [":go_default_library"],
-    visibility = ["//visibility:public"],
-)
-    """,
-    strip_prefix = "fastssz-06015a5d84f9e4eefe2c21377ca678fa8f1a1b09",
-    urls = ["https://github.com/ferranbt/fastssz/archive/06015a5d84f9e4eefe2c21377ca678fa8f1a1b09.tar.gz"],
-)
-
-http_archive(
     name = "prysm_web_ui",
     build_file_content = """
 filegroup(
