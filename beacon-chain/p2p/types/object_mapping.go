@@ -4,6 +4,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/protobuf/proto"
 )
@@ -14,9 +15,11 @@ import (
 
 // BlockMap maps the fork-version to the underlying data type for that
 // particular fork period.
-var BlockMap = map[[4]byte]proto.Message{
-	bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): &ethpb.BeaconBlock{},
-	bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion):  &ethpb.BeaconBlockAltair{},
+var BlockMap = map[[4]byte]func() interfaces.SignedBeaconBlock{
+	bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): func() interfaces.SignedBeaconBlock {
+		return interfaces.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{})
+	},
+	bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion): &ethpb.BeaconBlockAltair{},
 }
 
 // StateMap maps the fork-version to the underlying data type for that

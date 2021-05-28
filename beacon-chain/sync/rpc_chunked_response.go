@@ -2,16 +2,15 @@ package sync
 
 import (
 	"errors"
-	"reflect"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
 )
 
@@ -52,7 +51,7 @@ func ReadChunkedBlock(stream libp2pcore.Stream, chain blockchain.ChainInfoFetche
 
 // readFirstChunkedBlock reads the first chunked block and applies the appropriate deadlines to
 // it.
-func readFirstChunkedBlock(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, p2p p2p.P2P) (interface{}, error) {
+func readFirstChunkedBlock(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, p2p p2p.P2P) (interfaces.SignedBeaconBlock, error) {
 	code, errMsg, err := ReadStatusCode(stream, p2p.Encoding())
 	if err != nil {
 		return nil, err
@@ -91,7 +90,7 @@ func readResponseChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetch
 	return p2p.Encoding().DecodeWithMaxLength(stream, to)
 }
 
-func extractBlockDataType(digest [4]byte, chain blockchain.ChainInfoFetcher) (interface{}, error) {
+func extractBlockDataType(digest [4]byte, chain blockchain.ChainInfoFetcher) (interfaces.SignedBeaconBlock, error) {
 	vRoot := chain.GenesisValidatorRoot()
 	for k, t := range types.BlockMap {
 		rDigest, err := helpers.ComputeForkDigest(k[:], vRoot[:])
@@ -99,11 +98,7 @@ func extractBlockDataType(digest [4]byte, chain blockchain.ChainInfoFetcher) (in
 			return nil, err
 		}
 		if rDigest == digest {
-			typ := reflect.TypeOf(t)
-			if typ.Kind() == reflect.Ptr {
-				return reflect.New(typ.Elem()), nil
-			}
-			return reflect.New(typ), nil
+
 		}
 
 	}
