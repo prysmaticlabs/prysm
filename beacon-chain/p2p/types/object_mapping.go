@@ -19,7 +19,9 @@ var BlockMap = map[[4]byte]func() interfaces.SignedBeaconBlock{
 	bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): func() interfaces.SignedBeaconBlock {
 		return interfaces.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{})
 	},
-	bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion): &ethpb.BeaconBlockAltair{},
+	bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion): func() interfaces.SignedBeaconBlock {
+		return interfaces.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{})
+	},
 }
 
 // StateMap maps the fork-version to the underlying data type for that

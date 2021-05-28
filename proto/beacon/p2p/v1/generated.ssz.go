@@ -358,6 +358,97 @@ func (m *MetaData) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	return
 }
 
+// MarshalSSZ ssz marshals the MetaDataV2 object
+func (m *MetaDataV2) MarshalSSZ() ([]byte, error) {
+	return ssz.MarshalSSZ(m)
+}
+
+// MarshalSSZTo ssz marshals the MetaDataV2 object to a target array
+func (m *MetaDataV2) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+	dst = buf
+
+	// Field (0) 'SeqNumber'
+	dst = ssz.MarshalUint64(dst, m.SeqNumber)
+
+	// Field (1) 'Attnets'
+	if len(m.Attnets) != 8 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	dst = append(dst, m.Attnets...)
+
+	// Field (2) 'Syncnets'
+	if len(m.Syncnets) != 64 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	dst = append(dst, m.Syncnets...)
+
+	return
+}
+
+// UnmarshalSSZ ssz unmarshals the MetaDataV2 object
+func (m *MetaDataV2) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size != 80 {
+		return ssz.ErrSize
+	}
+
+	// Field (0) 'SeqNumber'
+	m.SeqNumber = ssz.UnmarshallUint64(buf[0:8])
+
+	// Field (1) 'Attnets'
+	if cap(m.Attnets) == 0 {
+		m.Attnets = make([]byte, 0, len(buf[8:16]))
+	}
+	m.Attnets = append(m.Attnets, buf[8:16]...)
+
+	// Field (2) 'Syncnets'
+	if cap(m.Syncnets) == 0 {
+		m.Syncnets = make([]byte, 0, len(buf[16:80]))
+	}
+	m.Syncnets = append(m.Syncnets, buf[16:80]...)
+
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the MetaDataV2 object
+func (m *MetaDataV2) SizeSSZ() (size int) {
+	size = 80
+	return
+}
+
+// HashTreeRoot ssz hashes the MetaDataV2 object
+func (m *MetaDataV2) HashTreeRoot() ([32]byte, error) {
+	return ssz.HashWithDefaultHasher(m)
+}
+
+// HashTreeRootWith ssz hashes the MetaDataV2 object with a hasher
+func (m *MetaDataV2) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+	indx := hh.Index()
+
+	// Field (0) 'SeqNumber'
+	hh.PutUint64(m.SeqNumber)
+
+	// Field (1) 'Attnets'
+	if len(m.Attnets) != 8 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	hh.PutBytes(m.Attnets)
+
+	// Field (2) 'Syncnets'
+	if len(m.Syncnets) != 64 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	hh.PutBytes(m.Syncnets)
+
+	hh.Merkleize(indx)
+	return
+}
+
 // MarshalSSZ ssz marshals the BeaconState object
 func (b *BeaconState) MarshalSSZ() ([]byte, error) {
 	return ssz.MarshalSSZ(b)
