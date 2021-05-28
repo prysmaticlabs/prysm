@@ -63,7 +63,7 @@ func TestGetValidator(t *testing.T) {
 		_, err := s.GetValidator(ctx, &ethpb.StateValidatorRequest{
 			StateId: []byte("head"),
 		})
-		require.ErrorContains(t, "Must request a validator id", err)
+		require.ErrorContains(t, "Validator ID is required", err)
 	})
 }
 
