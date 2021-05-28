@@ -849,6 +849,8 @@ func Test_validatorSubStatus(t *testing.T) {
 // Having a test like this allows us to use e.g. `if value < 10` for validity checks.
 func TestNumberOfStatuses(t *testing.T) {
 	lastValidEnumValue := 12
-	x := ethpb.ValidatorStatus(lastValidEnumValue + 1)
+	x := ethpb.ValidatorStatus(lastValidEnumValue)
+	assert.NotEqual(t, strconv.Itoa(lastValidEnumValue), x.String())
+	x = ethpb.ValidatorStatus(lastValidEnumValue + 1)
 	assert.Equal(t, strconv.Itoa(lastValidEnumValue+1), x.String())
 }
