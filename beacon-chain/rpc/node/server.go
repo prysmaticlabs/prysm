@@ -9,7 +9,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/libp2p/go-libp2p-core/network"
@@ -25,6 +24,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Server defines a server implementation of the gRPC Node service,
@@ -62,12 +62,9 @@ func (ns *Server) GetGenesis(ctx context.Context, _ *empty.Empty) (*ethpb.Genesi
 	var defaultGenesisTime time.Time
 	var gt *timestamp.Timestamp
 	if genesisTime == defaultGenesisTime {
-		gt, err = ptypes.TimestampProto(time.Unix(0, 0))
+		gt = timestamppb.New(time.Unix(0, 0))
 	} else {
-		gt, err = ptypes.TimestampProto(genesisTime)
-	}
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not convert genesis time to proto: %v", err)
+		gt = timestamppb.New(genesisTime)
 	}
 
 	genValRoot := ns.GenesisFetcher.GenesisValidatorRoot()

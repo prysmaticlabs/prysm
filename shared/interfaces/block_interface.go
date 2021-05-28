@@ -12,7 +12,7 @@ type SignedBeaconBlock interface {
 	Block() BeaconBlock
 	Signature() []byte
 	IsNil() bool
-	Copy() Phase0SignedBeaconBlock
+	Copy() SignedBeaconBlock
 	MarshalSSZ() ([]byte, error)
 	Proto() proto.Message
 	PbPhase0Block() (*ethpb.SignedBeaconBlock, error)
