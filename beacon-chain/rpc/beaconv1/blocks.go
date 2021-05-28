@@ -161,13 +161,13 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpb.BeaconBlockContain
 	blk := req.Message
 	rBlock, err := migration.V1ToV1Alpha1Block(&ethpb.SignedBeaconBlock{Block: blk, Signature: req.Signature})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not convert block to v1")
+		return nil, status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
 	}
 	v1alpha1Block := interfaces.WrappedPhase0SignedBeaconBlock(rBlock)
 
 	root, err := blk.HashTreeRoot()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not tree hash block: %v", err)
+		return nil, status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
 	}
 
 	// Do not block proposal critical path with debug logging or block feed updates.
@@ -214,7 +214,7 @@ func (bs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 
 	v1Block, err := migration.V1Alpha1ToV1Block(blk)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not convert block to v1")
+		return nil, status.Errorf(codes.Internal, "Could not convert block to v1 block")
 	}
 
 	return &ethpb.BlockResponse{
@@ -271,7 +271,7 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpb.BlockRequest) (*e
 		} else {
 			slot, err := strconv.ParseUint(string(req.BlockId), 10, 64)
 			if err != nil {
-				return nil, status.Errorf(codes.Internal, "could not decode block id: %v", err)
+				return nil, status.Errorf(codes.InvalidArgument, "Could not parse block ID: %v", err)
 			}
 			hasRoots, roots, err := bs.BeaconDB.BlockRootsBySlot(ctx, types.Slot(slot))
 			if err != nil {
@@ -328,7 +328,7 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpb.BlockReq
 
 	v1Block, err := migration.V1Alpha1ToV1Block(blk)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not convert block to v1")
+		return nil, status.Errorf(codes.Internal, "Could not convert block to v1 block")
 	}
 	return &ethpb.BlockAttestationsResponse{
 		Data: v1Block.Block.Body.Attestations,
