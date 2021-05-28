@@ -124,7 +124,7 @@ ordered:
   - "Mr F was here"
 
 specific:
-  1234: "hex:796f6c6f"
+  1234: "Yolo"
   555: "What's up"
   703727: Meow`)
 
