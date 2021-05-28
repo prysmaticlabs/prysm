@@ -333,6 +333,7 @@ func TestGetStateRoot(t *testing.T) {
 		blk.Block.ParentRoot = genesis[:]
 		blk.Block.Slot = 40
 		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(blk)))
 		st, err := testutil.NewBeaconState()
 		require.NoError(t, err)
