@@ -142,7 +142,11 @@ func (vs *Server) CanonicalHead(ctx context.Context, _ *emptypb.Empty) (*ethpb.S
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head block: %v", err)
 	}
-	return headBlk, nil
+	b, err := headBlk.PbPhase0Block()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head block: %v", err)
+	}
+	return b, nil
 }
 
 // WaitForChainStart queries the logs of the Deposit Contract in order to verify the beacon chain

@@ -196,7 +196,7 @@ func (p *StateProvider) headStateRoot(ctx context.Context) ([]byte, error) {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err
 	}
-	return b.Block.StateRoot, nil
+	return b.Block().StateRoot(), nil
 }
 
 func (p *StateProvider) genesisStateRoot(ctx context.Context) ([]byte, error) {
@@ -207,7 +207,7 @@ func (p *StateProvider) genesisStateRoot(ctx context.Context) ([]byte, error) {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err
 	}
-	return b.Block.StateRoot, nil
+	return b.Block().StateRoot(), nil
 }
 
 func (p *StateProvider) finalizedStateRoot(ctx context.Context) ([]byte, error) {
@@ -222,7 +222,7 @@ func (p *StateProvider) finalizedStateRoot(ctx context.Context) ([]byte, error) 
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err
 	}
-	return b.Block.StateRoot, nil
+	return b.Block().StateRoot(), nil
 }
 
 func (p *StateProvider) justifiedStateRoot(ctx context.Context) ([]byte, error) {
@@ -237,7 +237,7 @@ func (p *StateProvider) justifiedStateRoot(ctx context.Context) ([]byte, error) 
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err
 	}
-	return b.Block.StateRoot, nil
+	return b.Block().StateRoot(), nil
 }
 
 func (p *StateProvider) stateRootByHex(ctx context.Context, stateId []byte) ([]byte, error) {
@@ -275,5 +275,5 @@ func (p *StateProvider) stateRootBySlot(ctx context.Context, slot types.Slot) ([
 	if blks[0] == nil || blks[0].Block == nil {
 		return nil, errors.New("nil block")
 	}
-	return blks[0].Block.StateRoot, nil
+	return blks[0].Block().StateRoot(), nil
 }

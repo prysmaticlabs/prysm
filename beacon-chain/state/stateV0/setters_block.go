@@ -3,6 +3,8 @@ package stateV0
 import (
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/shared/copyutil"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 )
@@ -15,7 +17,7 @@ func (b *BeaconState) SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.LatestBlockHeader = CopyBeaconBlockHeader(val)
+	b.state.LatestBlockHeader = copyutil.CopyBeaconBlockHeader(val)
 	b.markFieldAsDirty(latestBlockHeader)
 	return nil
 }
