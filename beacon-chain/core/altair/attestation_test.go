@@ -14,6 +14,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	altairTest "github.com/prysmaticlabs/prysm/shared/testutil/altair"
@@ -29,9 +30,9 @@ func TestProcessAttestations_InclusionDelayFailure(t *testing.T) {
 			},
 		}),
 	}
-	b := testutil.NewBeaconBlock()
-	b.Block = &ethpb.BeaconBlock{
-		Body: &ethpb.BeaconBlockBody{
+	b := testutil.NewBeaconBlockAltair()
+	b.Block = &ethpb.BeaconBlockAltair{
+		Body: &ethpb.BeaconBlockBodyAltair{
 			Attestations: attestations,
 		},
 	}
@@ -43,7 +44,7 @@ func TestProcessAttestations_InclusionDelayFailure(t *testing.T) {
 		params.BeaconConfig().MinAttestationInclusionDelay,
 		beaconState.Slot(),
 	)
-	_, err := altair.ProcessAttestations(context.Background(), beaconState, b)
+	_, err := altair.ProcessAttestations(context.Background(), beaconState, interfaces.WrappedAltairSignedBeaconBlock(b))
 	require.ErrorContains(t, want, err)
 }
 
@@ -53,9 +54,9 @@ func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 			Target: &ethpb.Checkpoint{Epoch: 0}}})
 
-	b := testutil.NewBeaconBlock()
-	b.Block = &ethpb.BeaconBlock{
-		Body: &ethpb.BeaconBlockBody{
+	b := testutil.NewBeaconBlockAltair()
+	b.Block = &ethpb.BeaconBlockAltair{
+		Body: &ethpb.BeaconBlockBodyAltair{
 			Attestations: []*ethpb.Attestation{att},
 		},
 	}
@@ -72,7 +73,7 @@ func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 		helpers.PrevEpoch(beaconState),
 		helpers.CurrentEpoch(beaconState),
 	)
-	_, err = altair.ProcessAttestations(context.Background(), beaconState, b)
+	_, err = altair.ProcessAttestations(context.Background(), beaconState, interfaces.WrappedAltairSignedBeaconBlock(b))
 	require.ErrorContains(t, want, err)
 }
 
@@ -86,9 +87,9 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 			AggregationBits: bitfield.Bitlist{0x09},
 		},
 	}
-	b := testutil.NewBeaconBlock()
-	b.Block = &ethpb.BeaconBlock{
-		Body: &ethpb.BeaconBlockBody{
+	b := testutil.NewBeaconBlockAltair()
+	b.Block = &ethpb.BeaconBlockAltair{
+		Body: &ethpb.BeaconBlockBodyAltair{
 			Attestations: attestations,
 		},
 	}
@@ -99,11 +100,11 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cfc))
 
 	want := "source check point not equal to current justified checkpoint"
-	_, err := altair.ProcessAttestations(context.Background(), beaconState, b)
+	_, err := altair.ProcessAttestations(context.Background(), beaconState, interfaces.WrappedAltairSignedBeaconBlock(b))
 	require.ErrorContains(t, want, err)
 	b.Block.Body.Attestations[0].Data.Source.Epoch = helpers.CurrentEpoch(beaconState)
 	b.Block.Body.Attestations[0].Data.Source.Root = []byte{}
-	_, err = altair.ProcessAttestations(context.Background(), beaconState, b)
+	_, err = altair.ProcessAttestations(context.Background(), beaconState, interfaces.WrappedAltairSignedBeaconBlock(b))
 	require.ErrorContains(t, want, err)
 }
 
@@ -122,9 +123,9 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 			AggregationBits: aggBits,
 		},
 	}
-	b := testutil.NewBeaconBlock()
-	b.Block = &ethpb.BeaconBlock{
-		Body: &ethpb.BeaconBlockBody{
+	b := testutil.NewBeaconBlockAltair()
+	b.Block = &ethpb.BeaconBlockAltair{
+		Body: &ethpb.BeaconBlockBodyAltair{
 			Attestations: attestations,
 		},
 	}
@@ -136,12 +137,12 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	require.NoError(t, beaconState.SetPreviousJustifiedCheckpoint(pfc))
 
 	want := "source check point not equal to previous justified checkpoint"
-	_, err = altair.ProcessAttestations(context.Background(), beaconState, b)
+	_, err = altair.ProcessAttestations(context.Background(), beaconState, interfaces.WrappedAltairSignedBeaconBlock(b))
 	require.ErrorContains(t, want, err)
 	b.Block.Body.Attestations[0].Data.Source.Epoch = helpers.PrevEpoch(beaconState)
 	b.Block.Body.Attestations[0].Data.Target.Epoch = helpers.PrevEpoch(beaconState)
 	b.Block.Body.Attestations[0].Data.Source.Root = []byte{}
-	_, err = altair.ProcessAttestations(context.Background(), beaconState, b)
+	_, err = altair.ProcessAttestations(context.Background(), beaconState, interfaces.WrappedAltairSignedBeaconBlock(b))
 	require.ErrorContains(t, want, err)
 }
 
@@ -156,9 +157,9 @@ func TestProcessAttestations_InvalidAggregationBitsLength(t *testing.T) {
 		AggregationBits: aggBits,
 	}
 
-	b := testutil.NewBeaconBlock()
-	b.Block = &ethpb.BeaconBlock{
-		Body: &ethpb.BeaconBlockBody{
+	b := testutil.NewBeaconBlockAltair()
+	b.Block = &ethpb.BeaconBlockAltair{
+		Body: &ethpb.BeaconBlockBodyAltair{
 			Attestations: []*ethpb.Attestation{att},
 		},
 	}
@@ -171,7 +172,7 @@ func TestProcessAttestations_InvalidAggregationBitsLength(t *testing.T) {
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cfc))
 
 	expected := "failed to verify aggregation bitfield: wanted participants bitfield length 3, got: 4"
-	_, err = altair.ProcessAttestations(context.Background(), beaconState, b)
+	_, err = altair.ProcessAttestations(context.Background(), beaconState, interfaces.WrappedAltairSignedBeaconBlock(b))
 	require.ErrorContains(t, expected, err)
 }
 
@@ -208,12 +209,12 @@ func TestProcessAttestations_OK(t *testing.T) {
 	}
 	att.Signature = bls.AggregateSignatures(sigs).Marshal()
 
-	block := testutil.NewBeaconBlock()
+	block := testutil.NewBeaconBlockAltair()
 	block.Block.Body.Attestations = []*ethpb.Attestation{att}
 
 	err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
 	require.NoError(t, err)
-	_, err = altair.ProcessAttestations(context.Background(), beaconState, block)
+	_, err = altair.ProcessAttestations(context.Background(), beaconState, interfaces.WrappedAltairSignedBeaconBlock(block))
 	require.NoError(t, err)
 }
 
