@@ -44,7 +44,7 @@ func (ns *Server) GetIdentity(ctx context.Context, _ *emptypb.Empty) (*ethpb.Ide
 
 	serializedEnr, err := p2p.SerializeENR(ns.PeerManager.ENR())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not obtain enr: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not obtain enr: %v", err)
 	}
 	enr := "enr:" + serializedEnr
 
@@ -56,7 +56,7 @@ func (ns *Server) GetIdentity(ctx context.Context, _ *emptypb.Empty) (*ethpb.Ide
 
 	sourceDisc, err := ns.PeerManager.DiscoveryAddresses()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not obtain discovery address: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not obtain discovery address: %v", err)
 	}
 	discoveryAddresses := make([]string, len(sourceDisc))
 	for i := range sourceDisc {
@@ -87,7 +87,7 @@ func (ns *Server) GetPeer(ctx context.Context, req *ethpb.PeerRequest) (*ethpb.P
 	peerStatus := ns.PeersFetcher.Peers()
 	id, err := peer.Decode(req.PeerId)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Could not decode peer ID: %v", err)
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid peer ID: %v", err)
 	}
 	enr, err := peerStatus.ENR(id)
 	if err != nil {
@@ -357,7 +357,7 @@ func peerInfo(peerStatus *peers.Status, id peer.ID) (*ethpb.Peer, error) {
 	v1ConnState := migration.V1Alpha1ConnectionStateToV1(ethpb_alpha.ConnectionState(connectionState))
 	v1PeerDirection, err := migration.V1Alpha1PeerDirectionToV1(ethpb_alpha.PeerDirection(direction))
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not handle peer direction: %v", err)
+		return nil, fmt.Errorf("could not handle peer direction: %w", err)
 	}
 	p := ethpb.Peer{
 		PeerId:    id.Pretty(),

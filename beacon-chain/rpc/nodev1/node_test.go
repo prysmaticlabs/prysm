@@ -138,7 +138,7 @@ func TestGetIdentity(t *testing.T) {
 		}
 
 		_, err = s.GetIdentity(ctx, &emptypb.Empty{})
-		assert.ErrorContains(t, "could not obtain enr", err)
+		assert.ErrorContains(t, "Could not obtain enr", err)
 	})
 
 	t.Run("Discovery addresses failure", func(t *testing.T) {
@@ -155,7 +155,7 @@ func TestGetIdentity(t *testing.T) {
 		}
 
 		_, err = s.GetIdentity(ctx, &emptypb.Empty{})
-		assert.ErrorContains(t, "could not obtain discovery address", err)
+		assert.ErrorContains(t, "Could not obtain discovery address", err)
 	})
 }
 
@@ -212,7 +212,7 @@ func TestGetPeer(t *testing.T) {
 
 	t.Run("Invalid ID", func(t *testing.T) {
 		_, err = s.GetPeer(ctx, &ethpb.PeerRequest{PeerId: "foo"})
-		assert.ErrorContains(t, "Could not decode peer ID", err)
+		assert.ErrorContains(t, "Invalid peer ID", err)
 	})
 
 	t.Run("Peer not found", func(t *testing.T) {
