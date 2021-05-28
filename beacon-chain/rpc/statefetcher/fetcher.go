@@ -288,7 +288,7 @@ func (p *StateProvider) stateRootBySlot(ctx context.Context, slot types.Slot) ([
 	if len(blks) != 1 {
 		return nil, errors.New("multiple blocks exist in same slot")
 	}
-	if blks[0] == nil || blks[0].Block == nil {
+	if blks[0] == nil || blks[0].Block() == nil {
 		return nil, errors.New("nil block")
 	}
 	return blks[0].Block().StateRoot(), nil
