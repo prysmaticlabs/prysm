@@ -118,7 +118,7 @@ func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpb.SubmitAttes
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not prepare attestation failure information: %v", err)
 		}
-		return nil, status.Errorf(codes.Internal, "One or more attestations failed validation")
+		return nil, status.Errorf(codes.InvalidArgument, "One or more attestations failed validation")
 	}
 
 	return &emptypb.Empty{}, nil
@@ -160,7 +160,7 @@ func (bs *Server) SubmitAttesterSlashing(ctx context.Context, req *ethpb.Atteste
 	alphaSlashing := migration.V1AttSlashingToV1Alpha1(req)
 	err = blocks.VerifyAttesterSlashing(ctx, headState, alphaSlashing)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Invalid attester slashing: %v", err)
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid attester slashing: %v", err)
 	}
 
 	err = bs.SlashingsPool.InsertAttesterSlashing(ctx, headState, alphaSlashing)
@@ -212,7 +212,7 @@ func (bs *Server) SubmitProposerSlashing(ctx context.Context, req *ethpb.Propose
 	alphaSlashing := migration.V1ProposerSlashingToV1Alpha1(req)
 	err = blocks.VerifyProposerSlashing(headState, alphaSlashing)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Invalid proposer slashing: %v", err)
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid proposer slashing: %v", err)
 	}
 
 	err = bs.SlashingsPool.InsertProposerSlashing(ctx, headState, alphaSlashing)
@@ -269,7 +269,7 @@ func (bs *Server) SubmitVoluntaryExit(ctx context.Context, req *ethpb.SignedVolu
 	alphaExit := migration.V1ExitToV1Alpha1(req)
 	err = blocks.VerifyExitAndSignature(validator, headState.Slot(), headState.Fork(), alphaExit, headState.GenesisValidatorRoot())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Invalid voluntary exit: %v", err)
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid voluntary exit: %v", err)
 	}
 
 	bs.VoluntaryExitsPool.InsertVoluntaryExit(ctx, headState, alphaExit)
