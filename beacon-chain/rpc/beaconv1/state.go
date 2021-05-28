@@ -57,11 +57,11 @@ func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*e
 	root, err = bs.StateFetcher.StateRoot(ctx, req.StateId)
 	if err != nil {
 		if rootNotFoundErr, ok := err.(*statefetcher.StateRootNotFoundError); ok {
-			return nil, status.Errorf(codes.NotFound, "could not get state root: %v", rootNotFoundErr)
+			return nil, status.Errorf(codes.NotFound, "State root not found: %v", rootNotFoundErr)
 		} else if errors.Is(err, statefetcher.ErrInvalidStateId) {
-			return nil, status.Errorf(codes.InvalidArgument, "could not get state root: %v", err)
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", err)
 		}
-		return nil, status.Errorf(codes.Internal, "could not get state root: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get state root: %v", err)
 	}
 
 	return &ethpb.StateRootResponse{
@@ -84,11 +84,11 @@ func (bs *Server) GetStateFork(ctx context.Context, req *ethpb.StateRequest) (*e
 	state, err = bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
 		if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {
-			return nil, status.Errorf(codes.NotFound, "could not get state: %v", stateNotFoundErr)
+			return nil, status.Errorf(codes.NotFound, "State not found: %v", stateNotFoundErr)
 		} else if errors.Is(err, statefetcher.ErrInvalidStateId) {
-			return nil, status.Errorf(codes.InvalidArgument, "could not get state: %v", err)
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", err)
 		}
-		return nil, status.Errorf(codes.Internal, "could not get state: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
 
 	fork := state.Fork()
@@ -115,11 +115,11 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 	state, err = bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
 		if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {
-			return nil, status.Errorf(codes.NotFound, "could not get state: %v", stateNotFoundErr)
+			return nil, status.Errorf(codes.NotFound, "State not found: %v", stateNotFoundErr)
 		} else if errors.Is(err, statefetcher.ErrInvalidStateId) {
-			return nil, status.Errorf(codes.InvalidArgument, "could not get state: %v", err)
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", err)
 		}
-		return nil, status.Errorf(codes.Internal, "could not get state: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
 
 	return &ethpb.StateFinalityCheckpointResponse{
