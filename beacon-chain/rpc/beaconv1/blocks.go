@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
