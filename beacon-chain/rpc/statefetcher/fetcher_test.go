@@ -180,7 +180,7 @@ func TestGetState(t *testing.T) {
 	t.Run("Invalid state", func(t *testing.T) {
 		p := StateProvider{}
 		_, err := p.State(ctx, []byte("foo"))
-		require.ErrorContains(t, "invalid state ID", err)
+		require.ErrorContains(t, "could not parse state ID", err)
 	})
 }
 
@@ -203,7 +203,7 @@ func TestGetStateRoot(t *testing.T) {
 		p := StateProvider{
 			ChainInfoFetcher: &chainMock.ChainService{
 				State: state,
-				Block: b,
+				Block: interfaces.WrappedPhase0SignedBeaconBlock(b),
 			},
 		}
 
@@ -215,7 +215,7 @@ func TestGetStateRoot(t *testing.T) {
 	t.Run("Genesis", func(t *testing.T) {
 		db := testDB.SetupDB(t)
 		b := testutil.NewBeaconBlock()
-		require.NoError(t, db.SaveBlock(ctx, b))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(b)))
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 
@@ -237,7 +237,7 @@ func TestGetStateRoot(t *testing.T) {
 		require.NoError(t, err)
 		genesisBlock, err := db.GenesisBlock(ctx)
 		require.NoError(t, err)
-		assert.DeepEqual(t, genesisBlock.Block.StateRoot, s)
+		assert.DeepEqual(t, genesisBlock.Block().StateRoot(), s)
 	})
 
 	t.Run("Finalized", func(t *testing.T) {
@@ -254,7 +254,7 @@ func TestGetStateRoot(t *testing.T) {
 			Root:  root[:],
 		}
 		// a valid chain is required to save finalized checkpoint.
-		require.NoError(t, db.SaveBlock(ctx, blk))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(blk)))
 		st, err := testutil.NewBeaconState()
 		require.NoError(t, err)
 		require.NoError(t, st.SetSlot(1))
@@ -285,7 +285,7 @@ func TestGetStateRoot(t *testing.T) {
 			Root:  root[:],
 		}
 		// a valid chain is required to save finalized checkpoint.
-		require.NoError(t, db.SaveBlock(ctx, blk))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(blk)))
 		st, err := testutil.NewBeaconState()
 		require.NoError(t, err)
 		require.NoError(t, st.SetSlot(1))
@@ -333,7 +333,7 @@ func TestGetStateRoot(t *testing.T) {
 		blk.Block.ParentRoot = genesis[:]
 		blk.Block.Slot = 40
 		root, err := blk.Block.HashTreeRoot()
-		require.NoError(t, db.SaveBlock(ctx, blk))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(blk)))
 		st, err := testutil.NewBeaconState()
 		require.NoError(t, err)
 		require.NoError(t, st.SetSlot(1))
@@ -364,7 +364,7 @@ func TestGetStateRoot(t *testing.T) {
 	t.Run("Invalid state", func(t *testing.T) {
 		p := StateProvider{}
 		_, err := p.StateRoot(ctx, []byte("foo"))
-		require.ErrorContains(t, "invalid state ID", err)
+		require.ErrorContains(t, "could not parse state ID", err)
 	})
 }
 
