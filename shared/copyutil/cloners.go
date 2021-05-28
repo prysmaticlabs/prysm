@@ -111,6 +111,48 @@ func CopyBeaconBlockBody(body *ethpb.BeaconBlockBody) *ethpb.BeaconBlockBody {
 	}
 }
 
+// CopySignedBeaconBlockAltair copies the provided SignedBeaconBlock.
+func CopySignedBeaconBlockAltair(sigBlock *ethpb.SignedBeaconBlockAltair) *ethpb.SignedBeaconBlockAltair {
+	if sigBlock == nil {
+		return nil
+	}
+	return &ethpb.SignedBeaconBlockAltair{
+		Block:     CopyBeaconBlockAltair(sigBlock.Block),
+		Signature: bytesutil.SafeCopyBytes(sigBlock.Signature),
+	}
+}
+
+// CopyBeaconBlockAltair copies the provided BeaconBlock.
+func CopyBeaconBlockAltair(block *ethpb.BeaconBlockAltair) *ethpb.BeaconBlockAltair {
+	if block == nil {
+		return nil
+	}
+	return &ethpb.BeaconBlockAltair{
+		Slot:          block.Slot,
+		ProposerIndex: block.ProposerIndex,
+		ParentRoot:    bytesutil.SafeCopyBytes(block.ParentRoot),
+		StateRoot:     bytesutil.SafeCopyBytes(block.StateRoot),
+		Body:          CopyBeaconBlockBodyAltair(block.Body),
+	}
+}
+
+// CopyBeaconBlockBodyAltair copies the provided BeaconBlockBody.
+func CopyBeaconBlockBodyAltair(body *ethpb.BeaconBlockBodyAltair) *ethpb.BeaconBlockBodyAltair {
+	if body == nil {
+		return nil
+	}
+	return &ethpb.BeaconBlockBodyAltair{
+		RandaoReveal:      bytesutil.SafeCopyBytes(body.RandaoReveal),
+		Eth1Data:          CopyETH1Data(body.Eth1Data),
+		Graffiti:          bytesutil.SafeCopyBytes(body.Graffiti),
+		ProposerSlashings: CopyProposerSlashings(body.ProposerSlashings),
+		AttesterSlashings: CopyAttesterSlashings(body.AttesterSlashings),
+		Attestations:      CopyAttestations(body.Attestations),
+		Deposits:          CopyDeposits(body.Deposits),
+		VoluntaryExits:    CopySignedVoluntaryExits(body.VoluntaryExits),
+	}
+}
+
 // CopyProposerSlashings copies the provided ProposerSlashing array.
 func CopyProposerSlashings(slashings []*ethpb.ProposerSlashing) []*ethpb.ProposerSlashing {
 	if slashings == nil {

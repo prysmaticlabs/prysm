@@ -14,20 +14,21 @@ import (
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"google.golang.org/protobuf/proto"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
-type blockOperation func(context.Context, iface.BeaconState, *ethpb.SignedBeaconBlock) (iface.BeaconState, error)
+type blockOperation func(context.Context, iface.BeaconState, interfaces.SignedBeaconBlock) (iface.BeaconState, error)
 
 // RunBlockOperationTest takes in the prestate and the beacon block body, processes it through the
 // passed in block operation function and checks the post state with the expected post state.
 func RunBlockOperationTest(
 	t *testing.T,
 	folderPath string,
-	body *ethpb.BeaconBlockBody,
+	body *ethpb.BeaconBlockBodyAltair,
 	operationFn blockOperation,
 ) {
 	preBeaconStateFile, err := testutil.BazelFileBytes(path.Join(folderPath, "pre.ssz_snappy"))
@@ -51,9 +52,9 @@ func RunBlockOperationTest(
 	}
 
 	helpers.ClearCache()
-	b := testutil.NewBeaconBlock()
+	b := testutil.NewBeaconBlockAltair()
 	b.Block.Body = body
-	beaconState, err := operationFn(context.Background(), preState, b)
+	beaconState, err := operationFn(context.Background(), preState, interfaces.WrappedAltairSignedBeaconBlock(b))
 	if postSSZExists {
 		require.NoError(t, err)
 

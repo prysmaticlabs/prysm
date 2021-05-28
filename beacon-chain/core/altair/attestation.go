@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
@@ -25,14 +26,14 @@ type matchingHead bool
 func ProcessAttestations(
 	ctx context.Context,
 	beaconState iface.BeaconState,
-	b *ethpb.SignedBeaconBlock,
+	b interfaces.SignedBeaconBlock,
 ) (iface.BeaconState, error) {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err
 	}
 
 	var err error
-	for idx, attestation := range b.Block.Body.Attestations {
+	for idx, attestation := range b.Block().Body().Attestations() {
 		beaconState, err = ProcessAttestation(ctx, beaconState, attestation)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not verify attestation at index %d in block", idx)
