@@ -3,7 +3,6 @@ package beaconv1
 import (
 	"bytes"
 	"context"
-	"errors"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -58,8 +57,8 @@ func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*e
 	if err != nil {
 		if rootNotFoundErr, ok := err.(*statefetcher.StateRootNotFoundError); ok {
 			return nil, status.Errorf(codes.NotFound, "State root not found: %v", rootNotFoundErr)
-		} else if errors.Is(err, statefetcher.ErrInvalidStateId) {
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", err)
+		} else if parseErr, ok := err.(*statefetcher.StateIdParseError); ok {
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", parseErr)
 		}
 		return nil, status.Errorf(codes.Internal, "Could not get state root: %v", err)
 	}
@@ -85,8 +84,8 @@ func (bs *Server) GetStateFork(ctx context.Context, req *ethpb.StateRequest) (*e
 	if err != nil {
 		if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {
 			return nil, status.Errorf(codes.NotFound, "State not found: %v", stateNotFoundErr)
-		} else if errors.Is(err, statefetcher.ErrInvalidStateId) {
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", err)
+		} else if parseErr, ok := err.(*statefetcher.StateIdParseError); ok {
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", parseErr)
 		}
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
@@ -116,8 +115,8 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 	if err != nil {
 		if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {
 			return nil, status.Errorf(codes.NotFound, "State not found: %v", stateNotFoundErr)
-		} else if errors.Is(err, statefetcher.ErrInvalidStateId) {
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", err)
+		} else if parseErr, ok := err.(*statefetcher.StateIdParseError); ok {
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", parseErr)
 		}
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}

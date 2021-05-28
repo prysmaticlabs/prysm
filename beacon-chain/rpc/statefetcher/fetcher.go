@@ -17,8 +17,22 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
-// ErrInvalidStateId represents an error scenario where a state ID is invalid.
-var ErrInvalidStateId = errors.New("invalid state ID")
+// StateIdParseError represents an error scenario where a state ID could not be parsed.
+type StateIdParseError struct {
+	message string
+}
+
+// NewStateIdParseError creates a new error instance.
+func NewStateIdParseError(reason error) StateIdParseError {
+	return StateIdParseError{
+		message: fmt.Sprintf("could not parse state ID: %v", reason),
+	}
+}
+
+// Error returns the underlying error message.
+func (e *StateIdParseError) Error() string {
+	return e.message
+}
 
 // StateNotFoundError represents an error scenario where a state could not be found.
 type StateNotFoundError struct {
@@ -112,7 +126,8 @@ func (p *StateProvider) State(ctx context.Context, stateId []byte) (iface.Beacon
 			slotNumber, parseErr := strconv.ParseUint(stateIdString, 10, 64)
 			if parseErr != nil {
 				// ID format does not match any valid options.
-				return nil, ErrInvalidStateId
+				e := NewStateIdParseError(parseErr)
+				return nil, &e
 			}
 			s, err = p.stateBySlot(ctx, types.Slot(slotNumber))
 		}
@@ -150,8 +165,9 @@ func (p *StateProvider) StateRoot(ctx context.Context, stateId []byte) ([]byte, 
 		} else {
 			slotNumber, parseErr := strconv.ParseUint(stateIdString, 10, 64)
 			if parseErr != nil {
+				e := NewStateIdParseError(parseErr)
 				// ID format does not match any valid options.
-				return nil, ErrInvalidStateId
+				return nil, &e
 			}
 			root, err = p.stateRootBySlot(ctx, types.Slot(slotNumber))
 		}

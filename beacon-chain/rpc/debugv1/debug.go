@@ -3,7 +3,6 @@ package debugv1
 import (
 	"context"
 
-	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 	"go.opencensus.io/trace"
@@ -21,8 +20,8 @@ func (ds *Server) GetBeaconState(ctx context.Context, req *ethpb.StateRequest) (
 	if err != nil {
 		if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {
 			return nil, status.Errorf(codes.NotFound, "State not found: %v", stateNotFoundErr)
-		} else if errors.Is(err, statefetcher.ErrInvalidStateId) {
-			return nil, status.Errorf(codes.InvalidArgument, "could not get state: %v", err)
+		} else if parseErr, ok := err.(*statefetcher.StateIdParseError); ok {
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", parseErr)
 		}
 		return nil, status.Errorf(codes.Internal, "Invalid state ID: %v", err)
 	}
@@ -46,8 +45,8 @@ func (ds *Server) GetBeaconStateSsz(ctx context.Context, req *ethpb.StateRequest
 	if err != nil {
 		if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {
 			return nil, status.Errorf(codes.NotFound, "State not found: %v", stateNotFoundErr)
-		} else if errors.Is(err, statefetcher.ErrInvalidStateId) {
-			return nil, status.Errorf(codes.InvalidArgument, "could not get state: %v", err)
+		} else if parseErr, ok := err.(*statefetcher.StateIdParseError); ok {
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", parseErr)
 		}
 		return nil, status.Errorf(codes.Internal, "Invalid state ID: %v", err)
 	}

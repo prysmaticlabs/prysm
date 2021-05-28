@@ -20,12 +20,32 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+// blockIdParseError represents an error scenario where a block ID could not be parsed.
+type blockIdParseError struct {
+	message string
+}
+
+// newBlockIdParseError creates a new error instance.
+func newBlockIdParseError(reason error) blockIdParseError {
+	return blockIdParseError{
+		message: fmt.Sprintf("could not parse block ID: %v", reason),
+	}
+}
+
+// Error returns the underlying error message.
+func (e *blockIdParseError) Error() string {
+	return e.message
+}
+
 // GetBlockHeader retrieves block header for given block id.
 func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BlockHeaderResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBlockHeader")
 	defer span.End()
 
 	rBlk, err := bs.blockFromBlockID(ctx, req.BlockId)
+	if stateNotFoundErr, ok := err.(*blockIdParseError); ok {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid block ID: %v", stateNotFoundErr)
+	}
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
 	}
@@ -178,6 +198,9 @@ func (bs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	defer span.End()
 
 	rBlk, err := bs.blockFromBlockID(ctx, req.BlockId)
+	if stateNotFoundErr, ok := err.(*blockIdParseError); ok {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid block ID: %v", stateNotFoundErr)
+	}
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
 	}
@@ -288,6 +311,9 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpb.BlockReq
 	defer span.End()
 
 	rBlk, err := bs.blockFromBlockID(ctx, req.BlockId)
+	if stateNotFoundErr, ok := err.(*blockIdParseError); ok {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid block ID: %v", stateNotFoundErr)
+	}
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
 	}
@@ -339,7 +365,8 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (interfa
 		} else {
 			slot, err := strconv.ParseUint(string(blockId), 10, 64)
 			if err != nil {
-				return nil, errors.Wrap(err, "could not decode block id")
+				e := newBlockIdParseError(err)
+				return nil, &e
 			}
 			_, blks, err := bs.BeaconDB.BlocksBySlot(ctx, types.Slot(slot))
 			if err != nil {

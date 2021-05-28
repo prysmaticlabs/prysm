@@ -59,8 +59,8 @@ func (bs *Server) GetValidator(ctx context.Context, req *ethpb.StateValidatorReq
 	if err != nil {
 		if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {
 			return nil, status.Errorf(codes.NotFound, "could not get state: %v", stateNotFoundErr)
-		} else if errors.Is(err, statefetcher.ErrInvalidStateId) {
-			return nil, status.Errorf(codes.InvalidArgument, "could not get state: %v", err)
+		} else if parseErr, ok := err.(*statefetcher.StateIdParseError); ok {
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", parseErr)
 		}
 		return nil, status.Errorf(codes.Internal, "State not found: %v", err)
 	}
@@ -83,8 +83,8 @@ func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidators
 	if err != nil {
 		if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {
 			return nil, status.Errorf(codes.NotFound, "State not found: %v", stateNotFoundErr)
-		} else if errors.Is(err, statefetcher.ErrInvalidStateId) {
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", err)
+		} else if parseErr, ok := err.(*statefetcher.StateIdParseError); ok {
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", parseErr)
 		}
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
@@ -130,8 +130,8 @@ func (bs *Server) ListValidatorBalances(ctx context.Context, req *ethpb.Validato
 	if err != nil {
 		if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {
 			return nil, status.Errorf(codes.NotFound, "State not found: %v", stateNotFoundErr)
-		} else if errors.Is(err, statefetcher.ErrInvalidStateId) {
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", err)
+		} else if parseErr, ok := err.(*statefetcher.StateIdParseError); ok {
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", parseErr)
 		}
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
@@ -157,8 +157,8 @@ func (bs *Server) ListCommittees(ctx context.Context, req *ethpb.StateCommittees
 	if err != nil {
 		if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {
 			return nil, status.Errorf(codes.NotFound, "State not found: %v", stateNotFoundErr)
-		} else if errors.Is(err, statefetcher.ErrInvalidStateId) {
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", err)
+		} else if parseErr, ok := err.(*statefetcher.StateIdParseError); ok {
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", parseErr)
 		}
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
