@@ -26,7 +26,7 @@ func (ds *Server) GetBlock(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve block by root: %v", err)
 	}
-	if signedBlock == nil {
+	if signedBlock == nil || signedBlock.IsNil() {
 		return &pbrpc.SSZResponse{Encoded: make([]byte, 0)}, nil
 	}
 	encoded, err := signedBlock.MarshalSSZ()
@@ -64,7 +64,7 @@ func (ds *Server) GetInclusionSlot(ctx context.Context, req *pbrpc.InclusionSlot
 	inclusionSlot := types.Slot(1<<64 - 1)
 	targetStates := make(map[[32]byte]iface.ReadOnlyBeaconState)
 	for _, blk := range blks {
-		for _, a := range blk.Block.Body.Attestations {
+		for _, a := range blk.Block().Body().Attestations() {
 			tr := bytesutil.ToBytes32(a.Data.Target.Root)
 			s, ok := targetStates[tr]
 			if !ok {
@@ -84,7 +84,7 @@ func (ds *Server) GetInclusionSlot(ctx context.Context, req *pbrpc.InclusionSlot
 			}
 			for _, i := range indices {
 				if req.Id == i && req.Slot == a.Data.Slot {
-					inclusionSlot = blk.Block.Slot
+					inclusionSlot = blk.Block().Slot()
 					break
 				}
 			}

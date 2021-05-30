@@ -2,9 +2,7 @@
 // during the runtime of a beacon node.
 package block
 
-import (
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-)
+import "github.com/prysmaticlabs/prysm/shared/interfaces"
 
 const (
 	// ReceivedBlock is sent after a block has been received by the beacon node via p2p or RPC.
@@ -13,5 +11,5 @@ const (
 
 // ReceivedBlockData is the data sent with ReceivedBlock events.
 type ReceivedBlockData struct {
-	SignedBlock *ethpb.SignedBeaconBlock
+	SignedBlock interfaces.SignedBeaconBlock
 }
