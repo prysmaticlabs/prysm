@@ -53,38 +53,39 @@ func Test_DuplicateDetectionEpochsByBalance(t *testing.T) {
 	require.Equal(t, currentEpoch.Add(uint64(params.BeaconConfig().DuplicateValidatorEpochsCheck)),
 		oneEpochs, "Initial Epoch (%d) vs After 1 epochs (%d)", currentEpoch, oneEpochs)
 	/*
-	beaconDB := dbTest.SetupDB(t)
+		beaconDB := dbTest.SetupDB(t)
 
-	validators, _, headState := setupValidators(t, beaconDB, 100)
-	want := make([]*ethpb.Validators_ValidatorContainer, len(validators))
-	for i := 0; i < len(validators); i++ {
-		want[i] = &ethpb.Validators_ValidatorContainer{
-			Index:     types.ValidatorIndex(i),
-			Validator: validators[i],
+		validators, _, headState := setupValidators(t, beaconDB, 100)
+		want := make([]*ethpb.Validators_ValidatorContainer, len(validators))
+		for i := 0; i < len(validators); i++ {
+			want[i] = &ethpb.Validators_ValidatorContainer{
+				Index:     types.ValidatorIndex(i),
+				Validator: validators[i],
+			}
 		}
-	}
 
-	bs := &Server{
-		HeadFetcher: &mock.ChainService{
-			State: headState,
-		},
-		GenesisTimeFetcher: &mock.ChainService{
-			// We are in epoch 0.
-			Genesis: time.Now(),
-		},
-		FinalizationFetcher: &mock.ChainService{
-			FinalizedCheckPoint: &ethpb.Checkpoint{
-				Epoch: 0,
+		bs := &Server{
+			HeadFetcher: &mock.ChainService{
+				State: headState,
 			},
-		},
-		StateGen: stategen.New(beaconDB),
-	}
+			GenesisTimeFetcher: &mock.ChainService{
+				// We are in epoch 0.
+				Genesis: time.Now(),
+			},
+			FinalizationFetcher: &mock.ChainService{
+				FinalizedCheckPoint: &ethpb.Checkpoint{
+					Epoch: 0,
+				},
+			},
+			StateGen: stategen.New(beaconDB),
+		}
 
-	received, err := bs.ListValidators(context.Background(), &ethpb.ListValidatorsRequest{})
-	require.NoError(t, err)
-	assert.DeepSSZEqual(t, want, received.ValidatorList, "Incorrect respond of validators")
+		received, err := bs.ListValidators(context.Background(), &ethpb.ListValidatorsRequest{})
+		require.NoError(t, err)
+		assert.DeepSSZEqual(t, want, received.ValidatorList, "Incorrect respond of validators")
 	*/
 }
+
 /*
 func TestSleeping_ForDuplicateDetectionEpochs(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -123,4 +124,3 @@ func TestSleeping_ForDuplicateDetectionEpochs(t *testing.T) {
 		oneEpochs, "Initial Epoch (%d) vs After 1 epochs (%d)", currentEpoch, oneEpochs)
 }
 */
-
