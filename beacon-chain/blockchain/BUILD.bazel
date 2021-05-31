@@ -67,6 +67,7 @@ go_library(
         "@io_opencensus_go//trace:go_default_library",
         "//beacon-chain/core/feed/block:go_default_library",
         "//shared/event:go_default_library",
+        "//beacon-chain/orchestrator:go_default_library",
     ],
 )
 

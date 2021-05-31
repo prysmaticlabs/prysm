@@ -86,9 +86,9 @@ func TestService_SortedUnConfirmedBlocksFromCache(t *testing.T) {
 // TestService_fetchOrcConfirmations checks fetchOrcConfirmations
 func TestService_fetchOrcConfirmations(t *testing.T) {
 	ctx := context.Background()
-	var mockedOrcClient *van_mock.MockOrcClient
+	var mockedOrcClient *van_mock.MockClient
 	ctrl := gomock.NewController(t)
-	mockedOrcClient = van_mock.NewMockOrcClient(ctrl)
+	mockedOrcClient = van_mock.NewMockClient(ctrl)
 	cfg := &Config{
 		BlockNotifier:      &blockchainTesting.MockBlockNotifier{RecordEvents: true},
 		OrcRPCClient:       mockedOrcClient,
@@ -197,9 +197,9 @@ func TestService_waitForConfirmationBlock(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			var mockedOrcClient *van_mock.MockOrcClient
+			var mockedOrcClient *van_mock.MockClient
 			ctrl := gomock.NewController(t)
-			mockedOrcClient = van_mock.NewMockOrcClient(ctrl)
+			mockedOrcClient = van_mock.NewMockClient(ctrl)
 
 			cfg := &Config{
 				BlockNotifier:      &blockchainTesting.MockBlockNotifier{},
@@ -299,9 +299,9 @@ func TestService_waitForConfirmationBlockBatch(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			var mockedOrcClient *van_mock.MockOrcClient
+			var mockedOrcClient *van_mock.MockClient
 			ctrl := gomock.NewController(t)
-			mockedOrcClient = van_mock.NewMockOrcClient(ctrl)
+			mockedOrcClient = van_mock.NewMockClient(ctrl)
 
 			cfg := &Config{
 				BlockNotifier:      &blockchainTesting.MockBlockNotifier{},

@@ -6,6 +6,7 @@ package blockchain
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/orchestrator"
 	"runtime"
 	"sync"
 	"time"
@@ -86,7 +87,7 @@ type Service struct {
 	enableVanguardNode bool
 	pendingBlockCache  *cache.PendingBlocksCache
 	confirmedBlockCh   chan *ethpb.SignedBeaconBlock
-	orcRPCClient       OrcClient
+	orcRPCClient       orchestrator.Client
 }
 
 // Config options for the service.
@@ -109,8 +110,7 @@ type Config struct {
 	WspEpoch          types.Epoch
 
 	// Vanguard: orchestrator client reference to get confirmation status
-	// TODO: This will be from orcClient package
-	OrcRPCClient       OrcClient
+	OrcRPCClient       orchestrator.Client
 	EnableVanguardNode bool
 }
 

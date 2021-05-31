@@ -14,10 +14,6 @@ import (
 	"time"
 )
 
-type OrcClient interface {
-	ConfirmVanBlockHashes(ctx context.Context, request []*vanTypes.ConfirmationReqData) (response []*vanTypes.ConfirmationResData, err error)
-}
-
 var (
 	// Getting confirmation status from orchestrator after each confirmationStatusFetchingInverval
 	confirmationStatusFetchingInverval = 1 * time.Second
@@ -28,14 +24,15 @@ var (
 	errEmptyBlocksBatch           = errors.New("empty length of the batch of incoming blocks")
 	errPendingBlockTryLimitExceed = errors.New("maximum wait is exceeded and orchestrator can not verify the block")
 	errUnknownStatus              = errors.New("invalid status from orchestrator")
+	errInvalidRPCClient           = errors.New("invalid orchestrator rpc client or no client initiated")
 )
-
-type blockRoot [32]byte
 
 // PendingBlocksFetcher retrieves the cached un-confirmed beacon blocks from cache
 type PendingBlocksFetcher interface {
 	SortedUnConfirmedBlocksFromCache() ([]*ethpb.BeaconBlock, error)
 }
+
+type blockRoot [32]byte
 
 // publishAndStorePendingBlock method publishes and stores the pending block for final confirmation check
 func (s *Service) publishAndStorePendingBlock(ctx context.Context, pendingBlk *ethpb.BeaconBlock) error {
@@ -136,6 +133,7 @@ func (s *Service) fetchConfirmations(ctx context.Context) error {
 	}
 
 	if s.orcRPCClient == nil {
+		log.WithError(errInvalidRPCClient).Error("orchestrator rpc client is nil")
 		return nil
 	}
 

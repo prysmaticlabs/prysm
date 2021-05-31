@@ -1,12 +1,12 @@
-load("@prysm//tools/go:def.bzl", "go_library", "go_test")
+load("@prysm//tools/go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
 go_library(
     name = "go_default_library",
     srcs = [
-        "config.go",
+        "helper.go",
         "log.go",
         "node.go",
-        "prometheus.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/node",
     visibility = [
@@ -16,21 +16,18 @@ go_library(
     deps = [
         "//beacon-chain/blockchain:go_default_library",
         "//beacon-chain/cache/depositcache:go_default_library",
-        "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/db/kv:go_default_library",
         "//beacon-chain/forkchoice:go_default_library",
         "//beacon-chain/forkchoice/protoarray:go_default_library",
         "//beacon-chain/gateway:go_default_library",
         "//beacon-chain/interop-cold-start:go_default_library",
-        "//beacon-chain/node/registration:go_default_library",
         "//beacon-chain/operations/attestations:go_default_library",
         "//beacon-chain/operations/slashings:go_default_library",
         "//beacon-chain/operations/voluntaryexits:go_default_library",
         "//beacon-chain/p2p:go_default_library",
         "//beacon-chain/powchain:go_default_library",
         "//beacon-chain/rpc:go_default_library",
-        "//beacon-chain/rpc/apimiddleware:go_default_library",
         "//beacon-chain/state/stategen:go_default_library",
         "//beacon-chain/sync:go_default_library",
         "//beacon-chain/sync/initial-sync:go_default_library",
@@ -42,7 +39,6 @@ go_library(
         "//shared/debug:go_default_library",
         "//shared/event:go_default_library",
         "//shared/featureconfig:go_default_library",
-        "//shared/gateway:go_default_library",
         "//shared/params:go_default_library",
         "//shared/prereq:go_default_library",
         "//shared/prometheus:go_default_library",
@@ -51,10 +47,11 @@ go_library(
         "//shared/version:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
-        "@com_github_prometheus_client_golang//prometheus:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_sirupsen_logrus//:go_default_library",
         "@com_github_urfave_cli_v2//:go_default_library",
+        "@in_gopkg_yaml_v2//:go_default_library",
+         "//beacon-chain/orchestrator:go_default_library",
     ],
 )
 
@@ -62,15 +59,13 @@ go_test(
     name = "go_default_test",
     size = "small",
     srcs = [
-        "config_test.go",
+        "helper_test.go",
         "node_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/core/feed/state:go_default_library",
-        "//cmd/beacon-chain/flags:go_default_library",
         "//shared/cmd:go_default_library",
-        "//shared/params:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",

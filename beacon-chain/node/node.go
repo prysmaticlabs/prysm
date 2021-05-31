@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/orchestrator"
 
 	"io/ioutil"
 	"os"
@@ -452,6 +453,20 @@ func (b *BeaconNode) registerBlockchainService() error {
 		return err
 	}
 
+	var orcClient *orchestrator.RPCClient
+	if b.cliCtx.Bool(flags.Network.Name) {
+		endpoint := b.cliCtx.String(flags.OrcRpcProviderFlag.Name)
+		if endpoint == "" {
+			log.Error("No orchestrator node specified to run with the vanguard node. Please consider running your own orchestrator node for final consensus.")
+		}
+
+		orcClient, err = orchestrator.Dial(endpoint)
+		if err != nil {
+			log.WithError(err).Error("Failed to create orchestrator rpc client")
+			return err
+		}
+	}
+
 	maxRoutines := b.cliCtx.Int(cmd.MaxGoroutines.Name)
 	blockchainService, err := blockchain.NewService(b.ctx, &blockchain.Config{
 		BeaconDB:           b.db,
@@ -470,6 +485,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 		WspBlockRoot:       bRoot,
 		WspEpoch:           epoch,
 		EnableVanguardNode: b.cliCtx.Bool(flags.Network.Name),
+		OrcRPCClient:       orcClient,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")
