@@ -20,7 +20,7 @@ type DuplicateDetection struct {
 }
 
 // The Public Keys and Indices of this Validator. Retrieve once.
-var validatingPublicKeys [][48]byte
+//var validatingPublicKeys [][48]byte
 var valIndices []types.ValidatorIndex
 
 // N epochs to check
