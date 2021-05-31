@@ -3,7 +3,6 @@ package blocks_test
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -18,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
