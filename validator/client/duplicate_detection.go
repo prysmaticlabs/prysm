@@ -4,20 +4,13 @@
 package client
 
 import (
-	"bytes"
 	"context"
-	"fmt"
-	"time"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/sirupsen/logrus"
 	//"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
@@ -33,6 +26,38 @@ var valIndices []types.ValidatorIndex
 // N epochs to check
 var NoEpochsToCheck uint64
 
+// Starts the Doppelganger detection
+func (v *validator) StartDoppelgangerService(ctx context.Context) error {
+	valIndices, _, err := v.retrieveValidatingPublicKeys(ctx)
+	if err != nil {
+		return errors.Wrap(err, "Doppelganger detection - failed to retrieve validator keys and indices")
+	}
+	slot := <-v.NextSlot()
+	currentEpoch := helpers.SlotToEpoch(slot)
+
+	// rpc call to retrieve balances for this validator indices
+	req := &ethpb.ListValidatorBalancesRequest{Indices: valIndices,
+		QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{Epoch: currentEpoch}}
+
+	res, err := v.beaconClient.ListValidatorBalances(ctx, req)
+	if err != nil {
+		return errors.Wrap(err, "Doppelganger detection - failed to beacon-rpc list balances")
+	}
+	for _, bals := range res.Balances {
+		pubKey := bytesutil.ToBytes48(bals.PublicKey)
+		balanceChange := int64(bals.Balance - v.prevBalance[pubKey])
+		if balanceChange != 0 { //change to rpc call to retrieve 2*base_reward
+			log.Fatalf("Doppelganger detected! Validator key 0x%x seems to be running elsewhere."+
+				"This process will exit, avoiding a proposer or attester slashing event."+
+				"Please ensure you are not running your validator in two places simultaneously.", bals.PublicKey)
+			return errors.New("Doppelganger service - Validator Duplicate! ")
+		}
+	}
+
+	return nil
+}
+
+/*
 // Starts the Doppelganger detection
 func (v *validator) StartDoppelgangerService(ctx context.Context) error {
 	log.Info("Doppelganger service started")
@@ -225,7 +250,7 @@ func (v *validator) checkBlockAttestors(ctx context.Context, blk *ethpb.BeaconBl
 
 	return nil, nil
 }
-
+*/
 // Load the PublicKeys and the corresponding Indices of the Validator. Do it once.
 func (v *validator) retrieveValidatingPublicKeys(ctx context.Context) ([]types.ValidatorIndex, [][48]byte, error) {
 	validatingPublicKeys, err := v.keyManager.FetchValidatingPublicKeys(ctx)
