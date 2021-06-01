@@ -1,10 +1,9 @@
-load("@prysm//tools/go:def.bzl", "go_library")
-
 ##############################################################################
 # Common
 ##############################################################################
 
 load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@rules_java//java:defs.bzl", "java_proto_library")
 
 proto_library(
     name = "proto",
@@ -28,6 +27,10 @@ proto_library(
     ],
 )
 
+##############################################################################
+# Go
+##############################################################################
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
 load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
 load("//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
 
@@ -111,25 +114,27 @@ go_library(
     srcs = [
         ":ssz_generated_files",  # keep
     ],
-    embed = [":go_proto"],
+    embed = [
+        ":go_grpc_gateway_library",
+    ],
     importpath = "github.com/prysmaticlabs/ethereumapis/eth/v1",
     visibility = ["//visibility:public"],
     deps = SSZ_DEPS + [
         "//proto/eth/ext:go_default_library",
-        "@com_github_golang_protobuf//proto:go_default_library",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//runtime:go_default_library",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//utilities:go_default_library",
-        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",  # keep
-        "@go_googleapis//google/api:annotations_go_proto",
-        "@io_bazel_rules_go//proto/wkt:descriptor_go_proto",
         "@io_bazel_rules_go//proto/wkt:empty_go_proto",
-        "@io_bazel_rules_go//proto/wkt:struct_go_proto",
-        "@io_bazel_rules_go//proto/wkt:timestamp_go_proto",
         "@org_golang_google_grpc//:go_default_library",
         "@org_golang_google_grpc//codes:go_default_library",
         "@org_golang_google_grpc//grpclog:go_default_library",
         "@org_golang_google_grpc//metadata:go_default_library",
         "@org_golang_google_grpc//status:go_default_library",
+        "@io_bazel_rules_go//proto/wkt:descriptor_go_proto",
+        "@com_github_golang_protobuf//proto:go_default_library",
+        "@io_bazel_rules_go//proto/wkt:struct_go_proto",
+        "@io_bazel_rules_go//proto/wkt:timestamp_go_proto",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",  # keep
+        "@go_googleapis//google/api:annotations_go_proto",
         "@org_golang_google_protobuf//reflect/protoreflect:go_default_library",
         "@org_golang_google_protobuf//runtime/protoimpl:go_default_library",
     ],  # keep
