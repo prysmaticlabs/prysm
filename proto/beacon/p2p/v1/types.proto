@@ -1,10 +1,10 @@
 syntax = "proto3";
 package ethereum.beacon.p2p.v1;
 
-import "eth/v1alpha1/attestation.proto";
-import "eth/v1alpha1/beacon_block.proto";
-import "eth/v1alpha1/validator.proto";
-import "eth/ext/options.proto";
+import "proto/eth/v1alpha1/attestation.proto";
+import "proto/eth/v1alpha1/beacon_block.proto";
+import "proto/eth/v1alpha1/validator.proto";
+import "proto/eth/ext/options.proto";
 
 message BeaconState {
   // Versioning [1001-2000]

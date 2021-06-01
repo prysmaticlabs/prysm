@@ -89,6 +89,6 @@ go_test(
         "//shared/htrutils:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_protolambda_zssz//merkle:go_default_library",
-        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "//proto/eth/v1alpha1:go_default_library",
     ],
 )
