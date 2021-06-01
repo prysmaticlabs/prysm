@@ -114,7 +114,7 @@ func TestMetadataRPCHandler_SendsMetadata(t *testing.T) {
 	metadata, err := r.sendMetaDataRequest(context.Background(), p2.BHost.ID())
 	assert.NoError(t, err)
 
-	if !sszutil.DeepEqual(metadata, p2.LocalMetadata.InnerObject()) {
+	if !sszutil.DeepEqual(metadata.InnerObject(), p2.LocalMetadata.InnerObject()) {
 		t.Fatalf("Metadata unequal, received %v but wanted %v", metadata, p2.LocalMetadata)
 	}
 
