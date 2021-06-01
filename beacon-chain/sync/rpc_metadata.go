@@ -22,6 +22,9 @@ func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
 	}
+	if s.cfg.P2P.Metadata() == nil || s.cfg.P2P.Metadata().IsNil() {
+		return errors.New("nil metadata stored for host.")
+	}
 	_, err := s.cfg.P2P.Encoding().EncodeWithMaxLength(stream, s.cfg.P2P.Metadata().InnerObject())
 	if err != nil {
 		return err
