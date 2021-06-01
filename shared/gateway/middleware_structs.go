@@ -375,7 +375,7 @@ type ForkJson struct {
 type ValidatorContainerJson struct {
 	Index     string         `json:"index"`
 	Balance   string         `json:"balance"`
-	Status    string         `json:"status"`
+	Status    string         `json:"status" enum:"true"`
 	Validator *ValidatorJson `json:"validator"`
 }
 

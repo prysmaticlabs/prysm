@@ -19,29 +19,12 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// validatorNotFoundError represents an error scenario where a validator could not be found.
-type validatorNotFoundError struct {
-	message string
-}
-
-// newValidatorNotFoundError creates a new error instance.
-func newValidatorNotFoundError(validatorId []byte) validatorNotFoundError {
-	return validatorNotFoundError{
-		message: fmt.Sprintf("could not find validator with public key '%#x'", validatorId),
-	}
-}
-
-// Error returns the underlying error message.
-func (e *validatorNotFoundError) Error() string {
-	return e.message
-}
-
 // invalidValidatorIdError represents an error scenario where a validator's ID is invalid.
 type invalidValidatorIdError struct {
 	message string
 }
 
-// newValidatorNotFoundError creates a new error instance.
+// newInvalidValidatorIdError creates a new error instance.
 func newInvalidValidatorIdError(validatorId []byte, reason error) invalidValidatorIdError {
 	return invalidValidatorIdError{
 		message: fmt.Errorf("could not decode validator id '%s': %w", string(validatorId), reason).Error(),
@@ -94,7 +77,8 @@ func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidators
 		return nil, handleValContainerErr(err)
 	}
 
-	if len(req.Status) == 0 {
+	// Exit early if no matching validators we found or we don't want to further filter validators by status.
+	if len(valContainers) == 0 || len(req.Status) == 0 {
 		return &ethpb.StateValidatorsResponse{Data: valContainers}, nil
 	}
 
@@ -228,15 +212,15 @@ func valContainersByRequestIds(state iface.BeaconState, validatorIds [][]byte) (
 			}
 		}
 	} else {
-		valContainers = make([]*ethpb.ValidatorContainer, len(validatorIds))
-		for i, validatorId := range validatorIds {
+		valContainers = make([]*ethpb.ValidatorContainer, 0)
+		for _, validatorId := range validatorIds {
 			var valIndex types.ValidatorIndex
 			if len(validatorId) == params.BeaconConfig().BLSPubkeyLength {
 				var ok bool
 				valIndex, ok = state.ValidatorIndexByPubkey(bytesutil.ToBytes48(validatorId))
 				if !ok {
-					e := newValidatorNotFoundError(validatorId)
-					return nil, &e
+					// Ignore well-formed yet unknown public keys.
+					continue
 				}
 			} else {
 				index, err := strconv.ParseUint(string(validatorId), 10, 64)
@@ -247,8 +231,9 @@ func valContainersByRequestIds(state iface.BeaconState, validatorIds [][]byte) (
 				valIndex = types.ValidatorIndex(index)
 			}
 			validator, err := state.ValidatorAtIndex(valIndex)
-			if outOfRangeErr, ok := err.(*stateV0.IndexOutOfRangeError); ok {
-				return nil, outOfRangeErr
+			if _, ok := err.(*stateV0.IndexOutOfRangeError); ok {
+				// Ignore well-formed yet unknown indexes.
+				continue
 			}
 			if err != nil {
 				return nil, fmt.Errorf("could not get validator: %w", err)
@@ -258,12 +243,12 @@ func valContainersByRequestIds(state iface.BeaconState, validatorIds [][]byte) (
 			if err != nil {
 				return nil, fmt.Errorf("could not get validator sub status: %v", err)
 			}
-			valContainers[i] = &ethpb.ValidatorContainer{
+			valContainers = append(valContainers, &ethpb.ValidatorContainer{
 				Index:     valIndex,
 				Balance:   v1Validator.EffectiveBalance,
 				Status:    subStatus,
 				Validator: v1Validator,
-			}
+			})
 		}
 	}
 
@@ -337,9 +322,6 @@ func handleValContainerErr(err error) error {
 	}
 	if invalidIdErr, ok := err.(*invalidValidatorIdError); ok {
 		return status.Errorf(codes.InvalidArgument, "Invalid validator ID: %v", invalidIdErr)
-	}
-	if notFoundErr, ok := err.(*validatorNotFoundError); ok {
-		return status.Errorf(codes.NotFound, "Validator not found: %v", notFoundErr)
 	}
 	return status.Errorf(codes.Internal, "Could not get validator container: %v", err)
 }

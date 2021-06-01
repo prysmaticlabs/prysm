@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"strconv"
+	"strings"
 	"testing"
 
 	ethpb_alpha "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -163,6 +164,41 @@ func TestListValidators(t *testing.T) {
 			assert.Equal(t, true, bytes.Equal(pubkeys[i], val.Validator.Pubkey))
 			assert.Equal(t, ethpb.ValidatorStatus_ACTIVE_ONGOING, val.Status)
 		}
+	})
+
+	t.Run("Unknown public key is ignored", func(t *testing.T) {
+		s := Server{
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: state,
+			},
+		}
+
+		existingKey := state.PubkeyAtIndex(types.ValidatorIndex(1))
+		pubkeys := [][]byte{existingKey[:], []byte(strings.Repeat("f", 48))}
+		resp, err := s.ListValidators(ctx, &ethpb.StateValidatorsRequest{
+			StateId: []byte("head"),
+			Id:      pubkeys,
+		})
+		require.NoError(t, err)
+		require.Equal(t, 1, len(resp.Data))
+		assert.Equal(t, types.ValidatorIndex(1), resp.Data[0].Index)
+	})
+
+	t.Run("Unknown index is ignored", func(t *testing.T) {
+		s := Server{
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: state,
+			},
+		}
+
+		ids := [][]byte{[]byte("1"), []byte("99999")}
+		resp, err := s.ListValidators(ctx, &ethpb.StateValidatorsRequest{
+			StateId: []byte("head"),
+			Id:      ids,
+		})
+		require.NoError(t, err)
+		require.Equal(t, 1, len(resp.Data))
+		assert.Equal(t, types.ValidatorIndex(1), resp.Data[0].Index)
 	})
 }
 
