@@ -3,20 +3,20 @@ package beaconv1
 import (
 	"bytes"
 	"context"
-	"strings"
+	"strconv"
 	"testing"
 
 	ethpb_alpha "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
-	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
+	sharedtestutil "github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -25,12 +25,12 @@ func TestGetValidator(t *testing.T) {
 	ctx := context.Background()
 
 	var state iface.BeaconState
-	state, _ = testutil.DeterministicGenesisState(t, 8192)
+	state, _ = sharedtestutil.DeterministicGenesisState(t, 8192)
 
 	t.Run("Head Get Validator by index", func(t *testing.T) {
 		s := Server{
-			StateFetcher: statefetcher.StateProvider{
-				ChainInfoFetcher: &chainMock.ChainService{State: state},
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: state,
 			},
 		}
 
@@ -44,8 +44,8 @@ func TestGetValidator(t *testing.T) {
 
 	t.Run("Head Get Validator by pubkey", func(t *testing.T) {
 		s := Server{
-			StateFetcher: statefetcher.StateProvider{
-				ChainInfoFetcher: &chainMock.ChainService{State: state},
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: state,
 			},
 		}
 
@@ -59,40 +59,16 @@ func TestGetValidator(t *testing.T) {
 		assert.Equal(t, true, bytes.Equal(pubKey[:], resp.Data.Validator.Pubkey))
 	})
 
-	t.Run("Hex root not found", func(t *testing.T) {
-		s := Server{
-			StateFetcher: statefetcher.StateProvider{
-				ChainInfoFetcher: &chainMock.ChainService{State: state},
-			},
-		}
-		stateId, err := hexutil.Decode("0x" + strings.Repeat("f", 64))
-		require.NoError(t, err)
-		_, err = s.GetValidator(ctx, &ethpb.StateValidatorRequest{
-			StateId: stateId,
-		})
-		require.ErrorContains(t, "state not found in the last 8192 state roots", err)
-	})
-
-	t.Run("Invalid state ID", func(t *testing.T) {
-		s := Server{}
-		pubKey := state.PubkeyAtIndex(types.ValidatorIndex(20))
-		_, err := s.GetValidator(ctx, &ethpb.StateValidatorRequest{
-			StateId:     []byte("foo"),
-			ValidatorId: pubKey[:],
-		})
-		require.ErrorContains(t, "invalid state ID", err)
-	})
-
 	t.Run("Validator ID required", func(t *testing.T) {
 		s := Server{
-			StateFetcher: statefetcher.StateProvider{
-				ChainInfoFetcher: &chainMock.ChainService{State: state},
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: state,
 			},
 		}
 		_, err := s.GetValidator(ctx, &ethpb.StateValidatorRequest{
 			StateId: []byte("head"),
 		})
-		require.ErrorContains(t, "Must request a validator id", err)
+		require.ErrorContains(t, "Validator ID is required", err)
 	})
 }
 
@@ -100,12 +76,12 @@ func TestListValidators(t *testing.T) {
 	ctx := context.Background()
 
 	var state iface.BeaconState
-	state, _ = testutil.DeterministicGenesisState(t, 8192)
+	state, _ = sharedtestutil.DeterministicGenesisState(t, 8192)
 
 	t.Run("Head List All Validators", func(t *testing.T) {
 		s := Server{
-			StateFetcher: statefetcher.StateProvider{
-				ChainInfoFetcher: &chainMock.ChainService{State: state},
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: state,
 			},
 		}
 
@@ -121,8 +97,8 @@ func TestListValidators(t *testing.T) {
 
 	t.Run("Head List Validators by index", func(t *testing.T) {
 		s := Server{
-			StateFetcher: statefetcher.StateProvider{
-				ChainInfoFetcher: &chainMock.ChainService{State: state},
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: state,
 			},
 		}
 
@@ -141,8 +117,8 @@ func TestListValidators(t *testing.T) {
 
 	t.Run("Head List Validators by pubkey", func(t *testing.T) {
 		s := Server{
-			StateFetcher: statefetcher.StateProvider{
-				ChainInfoFetcher: &chainMock.ChainService{State: state},
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: state,
 			},
 		}
 		idNums := []types.ValidatorIndex{20, 66, 90, 100}
@@ -165,8 +141,8 @@ func TestListValidators(t *testing.T) {
 
 	t.Run("Head List Validators by both index and pubkey", func(t *testing.T) {
 		s := Server{
-			StateFetcher: statefetcher.StateProvider{
-				ChainInfoFetcher: &chainMock.ChainService{State: state},
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: state,
 			},
 		}
 
@@ -188,35 +164,13 @@ func TestListValidators(t *testing.T) {
 			assert.Equal(t, ethpb.ValidatorStatus_ACTIVE_ONGOING, val.Status)
 		}
 	})
-
-	t.Run("Hex root not found", func(t *testing.T) {
-		s := Server{
-			StateFetcher: statefetcher.StateProvider{
-				ChainInfoFetcher: &chainMock.ChainService{State: state},
-			},
-		}
-		stateId, err := hexutil.Decode("0x" + strings.Repeat("f", 64))
-		require.NoError(t, err)
-		_, err = s.ListValidators(ctx, &ethpb.StateValidatorsRequest{
-			StateId: stateId,
-		})
-		require.ErrorContains(t, "state not found in the last 8192 state roots", err)
-	})
-
-	t.Run("Invalid state ID", func(t *testing.T) {
-		s := Server{}
-		_, err := s.ListValidators(ctx, &ethpb.StateValidatorsRequest{
-			StateId: []byte("foo"),
-		})
-		require.ErrorContains(t, "invalid state ID", err)
-	})
 }
 
 func TestListValidators_Status(t *testing.T) {
 	ctx := context.Background()
 
 	var state iface.BeaconState
-	state, _ = testutil.DeterministicGenesisState(t, 8192)
+	state, _ = sharedtestutil.DeterministicGenesisState(t, 8192)
 
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
 	validators := []*ethpb_alpha.Validator{
@@ -285,7 +239,7 @@ func TestListValidators_Status(t *testing.T) {
 
 	t.Run("Head List All ACTIVE Validators", func(t *testing.T) {
 		s := Server{
-			StateFetcher: statefetcher.StateProvider{
+			StateFetcher: &statefetcher.StateProvider{
 				ChainInfoFetcher: &chainMock.ChainService{State: state},
 			},
 		}
@@ -316,7 +270,7 @@ func TestListValidators_Status(t *testing.T) {
 
 	t.Run("Head List All ACTIVE_ONGOING Validators", func(t *testing.T) {
 		s := Server{
-			StateFetcher: statefetcher.StateProvider{
+			StateFetcher: &statefetcher.StateProvider{
 				ChainInfoFetcher: &chainMock.ChainService{State: state},
 			},
 		}
@@ -346,7 +300,7 @@ func TestListValidators_Status(t *testing.T) {
 	require.NoError(t, state.SetSlot(params.BeaconConfig().SlotsPerEpoch*35))
 	t.Run("Head List All EXITED Validators", func(t *testing.T) {
 		s := Server{
-			StateFetcher: statefetcher.StateProvider{
+			StateFetcher: &statefetcher.StateProvider{
 				ChainInfoFetcher: &chainMock.ChainService{State: state},
 			},
 		}
@@ -375,7 +329,7 @@ func TestListValidators_Status(t *testing.T) {
 
 	t.Run("Head List All PENDING_INITIALIZED and EXITED_UNSLASHED Validators", func(t *testing.T) {
 		s := Server{
-			StateFetcher: statefetcher.StateProvider{
+			StateFetcher: &statefetcher.StateProvider{
 				ChainInfoFetcher: &chainMock.ChainService{State: state},
 			},
 		}
@@ -404,7 +358,7 @@ func TestListValidators_Status(t *testing.T) {
 
 	t.Run("Head List All PENDING and EXITED Validators", func(t *testing.T) {
 		s := Server{
-			StateFetcher: statefetcher.StateProvider{
+			StateFetcher: &statefetcher.StateProvider{
 				ChainInfoFetcher: &chainMock.ChainService{State: state},
 			},
 		}
@@ -437,12 +391,12 @@ func TestListValidatorBalances(t *testing.T) {
 	ctx := context.Background()
 
 	var state iface.BeaconState
-	state, _ = testutil.DeterministicGenesisState(t, 8192)
+	state, _ = sharedtestutil.DeterministicGenesisState(t, 8192)
 
 	t.Run("Head List Validators Balance by index", func(t *testing.T) {
 		s := Server{
-			StateFetcher: statefetcher.StateProvider{
-				ChainInfoFetcher: &chainMock.ChainService{State: state},
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: state,
 			},
 		}
 
@@ -461,8 +415,8 @@ func TestListValidatorBalances(t *testing.T) {
 
 	t.Run("Head List Validators Balance by pubkey", func(t *testing.T) {
 		s := Server{
-			StateFetcher: statefetcher.StateProvider{
-				ChainInfoFetcher: &chainMock.ChainService{State: state},
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: state,
 			},
 		}
 		idNums := []types.ValidatorIndex{20, 66, 90, 100}
@@ -484,8 +438,8 @@ func TestListValidatorBalances(t *testing.T) {
 
 	t.Run("Head List Validators Balance by both index and pubkey", func(t *testing.T) {
 		s := Server{
-			StateFetcher: statefetcher.StateProvider{
-				ChainInfoFetcher: &chainMock.ChainService{State: state},
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: state,
 			},
 		}
 
@@ -503,41 +457,19 @@ func TestListValidatorBalances(t *testing.T) {
 			assert.Equal(t, params.BeaconConfig().MaxEffectiveBalance, val.Balance)
 		}
 	})
-
-	t.Run("Hex root not found", func(t *testing.T) {
-		s := Server{
-			StateFetcher: statefetcher.StateProvider{
-				ChainInfoFetcher: &chainMock.ChainService{State: state},
-			},
-		}
-		stateId, err := hexutil.Decode("0x" + strings.Repeat("f", 64))
-		require.NoError(t, err)
-		_, err = s.ListValidatorBalances(ctx, &ethpb.ValidatorBalancesRequest{
-			StateId: stateId,
-		})
-		require.ErrorContains(t, "state not found in the last 8192 state roots", err)
-	})
-
-	t.Run("Invalid state ID", func(t *testing.T) {
-		s := Server{}
-		_, err := s.ListValidatorBalances(ctx, &ethpb.ValidatorBalancesRequest{
-			StateId: []byte("foo"),
-		})
-		require.ErrorContains(t, "invalid state ID", err)
-	})
 }
 
 func TestListCommittees(t *testing.T) {
 	ctx := context.Background()
 
 	var state iface.BeaconState
-	state, _ = testutil.DeterministicGenesisState(t, 8192)
+	state, _ = sharedtestutil.DeterministicGenesisState(t, 8192)
 	epoch := helpers.SlotToEpoch(state.Slot())
 
 	t.Run("Head All Committees", func(t *testing.T) {
 		s := Server{
-			StateFetcher: statefetcher.StateProvider{
-				ChainInfoFetcher: &chainMock.ChainService{State: state},
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: state,
 			},
 		}
 
@@ -554,8 +486,8 @@ func TestListCommittees(t *testing.T) {
 
 	t.Run("Head All Committees of Epoch 10", func(t *testing.T) {
 		s := Server{
-			StateFetcher: statefetcher.StateProvider{
-				ChainInfoFetcher: &chainMock.ChainService{State: state},
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: state,
 			},
 		}
 		epoch := types.Epoch(10)
@@ -571,8 +503,8 @@ func TestListCommittees(t *testing.T) {
 
 	t.Run("Head All Committees of Slot 4", func(t *testing.T) {
 		s := Server{
-			StateFetcher: statefetcher.StateProvider{
-				ChainInfoFetcher: &chainMock.ChainService{State: state},
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: state,
 			},
 		}
 
@@ -594,8 +526,8 @@ func TestListCommittees(t *testing.T) {
 
 	t.Run("Head All Committees of Index 1", func(t *testing.T) {
 		s := Server{
-			StateFetcher: statefetcher.StateProvider{
-				ChainInfoFetcher: &chainMock.ChainService{State: state},
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: state,
 			},
 		}
 
@@ -617,8 +549,8 @@ func TestListCommittees(t *testing.T) {
 
 	t.Run("Head All Committees of Slot 2, Index 1", func(t *testing.T) {
 		s := Server{
-			StateFetcher: statefetcher.StateProvider{
-				ChainInfoFetcher: &chainMock.ChainService{State: state},
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: state,
 			},
 		}
 
@@ -636,28 +568,6 @@ func TestListCommittees(t *testing.T) {
 			assert.Equal(t, slot, datum.Slot)
 			assert.Equal(t, index, datum.Index)
 		}
-	})
-
-	t.Run("Hex root not found", func(t *testing.T) {
-		s := Server{
-			StateFetcher: statefetcher.StateProvider{
-				ChainInfoFetcher: &chainMock.ChainService{State: state},
-			},
-		}
-		stateId, err := hexutil.Decode("0x" + strings.Repeat("f", 64))
-		require.NoError(t, err)
-		_, err = s.ListCommittees(ctx, &ethpb.StateCommitteesRequest{
-			StateId: stateId,
-		})
-		require.ErrorContains(t, "state not found in the last 8192 state roots", err)
-	})
-
-	t.Run("Invalid state ID", func(t *testing.T) {
-		s := Server{}
-		_, err := s.ListCommittees(ctx, &ethpb.StateCommitteesRequest{
-			StateId: []byte("foo"),
-		})
-		require.ErrorContains(t, "invalid state ID", err)
 	})
 }
 
@@ -931,4 +841,16 @@ func Test_validatorSubStatus(t *testing.T) {
 			}
 		})
 	}
+}
+
+// This test verifies how many validator statuses have meaningful values.
+// The first expected non-meaningful value will have x.String() equal to its numeric representation.
+// This test assumes we start numbering from 0 and do not skip any values.
+// Having a test like this allows us to use e.g. `if value < 10` for validity checks.
+func TestNumberOfStatuses(t *testing.T) {
+	lastValidEnumValue := 12
+	x := ethpb.ValidatorStatus(lastValidEnumValue)
+	assert.NotEqual(t, strconv.Itoa(lastValidEnumValue), x.String())
+	x = ethpb.ValidatorStatus(lastValidEnumValue + 1)
+	assert.Equal(t, strconv.Itoa(lastValidEnumValue+1), x.String())
 }
