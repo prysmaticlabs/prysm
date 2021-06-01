@@ -6,8 +6,13 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"google.golang.org/protobuf/proto"
 )
 
 // metaDataHandler reads the incoming metadata rpc request from the peer.
@@ -48,13 +53,30 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (*pb.Meta
 		return nil, errors.New(errMsg)
 	}
 	// No-op for now with the rpc context.
-	_, err = readContextFromStream(stream, s.cfg.Chain)
+	rpcCtx, err := readContextFromStream(stream, s.cfg.Chain)
 	if err != nil {
 		return nil, err
 	}
-	msg := new(pb.MetaData)
+	msg, err := extractMetaDataType(bytesutil.ToBytes4(rpcCtx), s.cfg.Chain)
+	if err != nil {
+		return nil, err
+	}
 	if err := s.cfg.P2P.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
 		return nil, err
 	}
 	return msg, nil
+}
+
+func extractMetaDataType(digest [4]byte, chain blockchain.ChainInfoFetcher) (proto.Message, error) {
+	vRoot := chain.GenesisValidatorRoot()
+	for k, mdFunc := range types.MetaDataMap {
+		rDigest, err := helpers.ComputeForkDigest(k[:], vRoot[:])
+		if err != nil {
+			return nil, err
+		}
+		if rDigest == digest {
+			return mdFunc(), nil
+		}
+	}
+	return nil, errors.New("no valid digest matched")
 }
