@@ -59,6 +59,11 @@ type StateCommitteesResponseJson struct {
 	Data []*CommitteeJson `json:"data"`
 }
 
+// BlockHeadersResponseJson is used in /beacon/headers API endpoint.
+type BlockHeadersResponseJson struct {
+	Data []*BlockHeaderContainerJson `json:"data"`
+}
+
 // BlockHeaderResponseJson is used in /beacon/headers/{block_id} API endpoint.
 type BlockHeaderResponseJson struct {
 	Data *BlockHeaderContainerJson `json:"data"`
