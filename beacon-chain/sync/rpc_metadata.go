@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 )
 
 // metaDataHandler reads the incoming metadata rpc request from the peer.
@@ -23,7 +24,7 @@ func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2
 		return err
 	}
 	if s.cfg.P2P.Metadata() == nil || s.cfg.P2P.Metadata().IsNil() {
-		return errors.New("nil metadata stored for host.")
+		return errors.New("nil metadata stored for host")
 	}
 	_, err := s.cfg.P2P.Encoding().EncodeWithMaxLength(stream, s.cfg.P2P.Metadata().InnerObject())
 	if err != nil {
@@ -33,7 +34,7 @@ func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2
 	return nil
 }
 
-func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (*pb.MetaData, error) {
+func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (interfaces.Metadata, error) {
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
@@ -59,5 +60,5 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (*pb.Meta
 	if err := s.cfg.P2P.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
 		return nil, err
 	}
-	return msg, nil
+	return interfaces.WrappedMetadataV1(msg), nil
 }
