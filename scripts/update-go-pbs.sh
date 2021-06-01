@@ -13,6 +13,7 @@ done < <($findutil -L "$(bazel info bazel-bin)"/proto -type f -regextype sed -re
 
 arraylength=${#file_list[@]}
 searchstring="prysmaticlabs/prysm/"
+echo arraylength
 
 # Copy pb.go files from bazel-bin to original folder where .proto is.
 for ((i = 0; i < arraylength; i++)); do
