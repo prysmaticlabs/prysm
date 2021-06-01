@@ -38,7 +38,7 @@ go_test(
         "//beacon-chain/p2p/peers/scorers:go_default_library",
         "//cmd/beacon-chain/flags:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
-        "//proto/eth/v1:go_grpc_gateway_library",
+        "//proto/eth/v1:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil/assert:go_default_library",

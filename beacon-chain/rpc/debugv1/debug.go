@@ -30,6 +30,10 @@ func (ds *Server) GetBeaconState(ctx context.Context, req *ethpb.StateRequest) (
 	}, nil
 }
 
+func (ds *Server) GetBeaconStateSsz(ctx context.Context, req *ethpb.StateRequest) (*ethpb.BeaconStateSszResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "Unimplemented")
+}
+
 // ListForkChoiceHeads retrieves the fork choice leaves for the current head.
 func (ds *Server) ListForkChoiceHeads(ctx context.Context, _ *emptypb.Empty) (*ethpb.ForkChoiceHeadsResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "debugv1.ListForkChoiceHeads")
