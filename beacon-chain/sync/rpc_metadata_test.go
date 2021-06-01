@@ -7,13 +7,13 @@ import (
 	"time"
 
 	"github.com/kevinms/leakybucket-go"
-
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -26,10 +26,10 @@ func TestMetaDataRPCHandler_ReceivesMetadata(t *testing.T) {
 	p1.Connect(p2)
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 	bitfield := [8]byte{'A', 'B'}
-	p1.LocalMetadata = &pb.MetaData{
+	p1.LocalMetadata = interfaces.WrappedMetadataV1(&pb.MetaData{
 		SeqNumber: 2,
 		Attnets:   bitfield[:],
-	}
+	})
 
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
@@ -50,7 +50,7 @@ func TestMetaDataRPCHandler_ReceivesMetadata(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		expectSuccess(t, stream)
-		out := new(pb.MetaData)
+		out := interfaces.WrappedMetadataV1(new(pb.MetaData))
 		assert.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(stream, out))
 		assert.DeepEqual(t, p1.LocalMetadata, out, "Metadata unequal")
 	})
@@ -75,10 +75,10 @@ func TestMetadataRPCHandler_SendsMetadata(t *testing.T) {
 	p1.Connect(p2)
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 	bitfield := [8]byte{'A', 'B'}
-	p2.LocalMetadata = &pb.MetaData{
+	p2.LocalMetadata = interfaces.WrappedMetadataV1(&pb.MetaData{
 		SeqNumber: 2,
 		Attnets:   bitfield[:],
-	}
+	})
 
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)

@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
@@ -106,7 +107,8 @@ func privKeyFromFile(path string) (*ecdsa.PrivateKey, error) {
 
 // Retrieves node p2p metadata from a set of configuration values
 // from the p2p service.
-func metaDataFromConfig(cfg *Config) (*pbp2p.MetaData, error) {
+// TODO: Figure out how to do a v1/v2 check.
+func metaDataFromConfig(cfg *Config) (interfaces.Metadata, error) {
 	defaultKeyPath := path.Join(cfg.DataDir, metaDataPath)
 	metaDataPath := cfg.MetaDataDir
 
@@ -127,7 +129,7 @@ func metaDataFromConfig(cfg *Config) (*pbp2p.MetaData, error) {
 		if err := fileutil.WriteFile(defaultKeyPath, dst); err != nil {
 			return nil, err
 		}
-		return metaData, nil
+		return interfaces.WrappedMetadataV1(metaData), nil
 	}
 	if defaultMetadataExist && metaDataPath == "" {
 		metaDataPath = defaultKeyPath
@@ -141,7 +143,7 @@ func metaDataFromConfig(cfg *Config) (*pbp2p.MetaData, error) {
 	if err := proto.Unmarshal(src, metaData); err != nil {
 		return nil, err
 	}
-	return metaData, nil
+	return interfaces.WrappedMetadataV1(metaData), nil
 }
 
 // Retrieves an external ipv4 address and converts into a libp2p formatted value.
