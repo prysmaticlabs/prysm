@@ -3,7 +3,6 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
-        "altair_block_wrapper.go",
         "block_interface.go",
         "phase0_block_wrapper.go",
     ],

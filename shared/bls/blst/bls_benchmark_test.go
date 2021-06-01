@@ -41,7 +41,7 @@ func BenchmarkSignature_AggregateVerify(b *testing.B) {
 		sigs = append(sigs, sig)
 		msgs = append(msgs, msg)
 	}
-	aggregated := blst.Aggregate(sigs)
+	aggregated := blst.AggregateSignatures(sigs)
 
 	b.ResetTimer()
 	b.ReportAllocs()

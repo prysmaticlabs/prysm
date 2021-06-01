@@ -41,6 +41,7 @@ func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			Slot: 4,
+			Body: &ethpb.BeaconBlockBody{},
 		},
 	}
 	want := "expected state.slot"
