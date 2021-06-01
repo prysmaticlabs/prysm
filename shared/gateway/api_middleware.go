@@ -63,6 +63,7 @@ func (m *ApiProxyMiddleware) Run() error {
 	m.handleApiEndpoint("/eth/v1/beacon/states/{state_id}/validators/{validator_id}")
 	m.handleApiEndpoint("/eth/v1/beacon/states/{state_id}/validator_balances")
 	m.handleApiEndpoint("/eth/v1/beacon/states/{state_id}/committees")
+	m.handleApiEndpoint("/eth/v1/beacon/headers")
 	m.handleApiEndpoint("/eth/v1/beacon/headers/{block_id}")
 	m.handleApiEndpoint("/eth/v1/beacon/blocks")
 	m.handleApiEndpoint("/eth/v1/beacon/blocks/{block_id}")
@@ -612,6 +613,12 @@ func getEndpointData(endpoint string) (endpointData, error) {
 		return endpointData{
 			getRequestQueryParams: []queryParam{{name: "epoch"}, {name: "index"}, {name: "slot"}},
 			getResponse:           &StateCommitteesResponseJson{},
+			err:                   &DefaultErrorJson{},
+		}, nil
+	case "/eth/v1/beacon/headers":
+		return endpointData{
+			getRequestQueryParams: []queryParam{{name: "slot"}, {name: "parent_root", hex: true}},
+			getResponse:           &BlockHeadersResponseJson{},
 			err:                   &DefaultErrorJson{},
 		}, nil
 	case "/eth/v1/beacon/headers/{block_id}":
