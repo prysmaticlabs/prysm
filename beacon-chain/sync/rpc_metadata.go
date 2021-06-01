@@ -22,7 +22,7 @@ func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
 	}
-	_, err := s.cfg.P2P.Encoding().EncodeWithMaxLength(stream, s.cfg.P2P.Metadata())
+	_, err := s.cfg.P2P.Encoding().EncodeWithMaxLength(stream, s.cfg.P2P.Metadata().InnerObject())
 	if err != nil {
 		return err
 	}

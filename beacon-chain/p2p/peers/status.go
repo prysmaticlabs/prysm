@@ -245,6 +245,9 @@ func (p *Status) Metadata(pid peer.ID) (interfaces.Metadata, error) {
 	defer p.store.RUnlock()
 
 	if peerData, ok := p.store.PeerData(pid); ok {
+		if peerData.MetaData == nil || peerData.MetaData.IsNil() {
+			return nil, nil
+		}
 		return peerData.MetaData.Copy(), nil
 	}
 	return nil, peerdata.ErrPeerUnknown

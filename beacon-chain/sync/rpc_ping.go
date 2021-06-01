@@ -11,6 +11,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
@@ -66,7 +67,7 @@ func (s *Service) pingHandler(_ context.Context, msg interface{}, stream libp2pc
 			return
 		}
 		// update metadata if there is no error
-		s.cfg.P2P.Peers().SetMetadata(stream.Conn().RemotePeer(), md)
+		s.cfg.P2P.Peers().SetMetadata(stream.Conn().RemotePeer(), interfaces.WrappedMetadataV1(md))
 	}()
 
 	return nil
@@ -121,7 +122,7 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 		// already done in the request method.
 		return err
 	}
-	s.cfg.P2P.Peers().SetMetadata(stream.Conn().RemotePeer(), md)
+	s.cfg.P2P.Peers().SetMetadata(stream.Conn().RemotePeer(), interfaces.WrappedMetadataV1(md))
 	return nil
 }
 
@@ -131,12 +132,12 @@ func (s *Service) validateSequenceNum(seq types.SSZUint64, id peer.ID) (bool, er
 	if err != nil {
 		return false, err
 	}
-	if md == nil {
+	if md == nil || md.IsNil() {
 		return false, nil
 	}
 	// Return error on invalid sequence number.
-	if md.SeqNumber > uint64(seq) {
+	if md.SequenceNumber() > uint64(seq) {
 		return false, p2ptypes.ErrInvalidSequenceNum
 	}
-	return md.SeqNumber == uint64(seq), nil
+	return md.SequenceNumber() == uint64(seq), nil
 }
