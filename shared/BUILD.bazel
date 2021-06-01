@@ -27,4 +27,5 @@ genrule(
     cmd = "cat bazel-out/stable-status.txt | grep STABLE_GIT_TAG | cut -d' ' -f2 | tr -d v > $@",
     stamp = True,
     visibility = ["//visibility:public"],
+    tags = ["local"],
 )
