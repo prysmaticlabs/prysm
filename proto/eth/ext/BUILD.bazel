@@ -23,7 +23,7 @@ go_proto_library(
     compilers = [
         "@com_github_prysmaticlabs_protoc_gen_go_cast//:go_cast",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/proto/eth/ext",
+    importpath = "github.com/prysmaticlabs/ethereumapis/eth/ext",
     proto = ":proto",
     visibility = ["//visibility:public"],
     deps = [
