@@ -784,3 +784,64 @@ func TestRetrieveAttestationSignatureSet_VerifiesMultipleAttestations(t *testing
 	require.NoError(t, err)
 	assert.Equal(t, true, verified, "Multiple signatures were unable to be verified.")
 }
+
+func TestRetrieveAttestationSignatureSet_AcrossFork(t *testing.T) {
+	ctx := context.Background()
+	numOfValidators := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(4))
+	validators := make([]*ethpb.Validator, numOfValidators)
+	_, keys, err := testutil.DeterministicDepositsAndKeys(numOfValidators)
+	require.NoError(t, err)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+			PublicKey:             keys[i].PublicKey().Marshal(),
+			WithdrawalCredentials: make([]byte, 32),
+		}
+	}
+
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, st.SetSlot(5))
+	require.NoError(t, st.SetValidators(validators))
+	require.NoError(t, st.SetFork(&pb.Fork{Epoch: 1, CurrentVersion: []byte{0, 1, 2, 3}, PreviousVersion: []byte{0, 1, 1, 1}}))
+
+	comm1, err := helpers.BeaconCommitteeFromState(st, 1 /*slot*/, 0 /*committeeIndex*/)
+	require.NoError(t, err)
+	att1 := testutil.HydrateAttestation(&ethpb.Attestation{
+		AggregationBits: bitfield.NewBitlist(uint64(len(comm1))),
+		Data: &ethpb.AttestationData{
+			Slot: 1,
+		},
+	})
+	domain, err := helpers.Domain(st.Fork(), st.Fork().Epoch, params.BeaconConfig().DomainBeaconAttester, st.GenesisValidatorRoot())
+	require.NoError(t, err)
+	root, err := helpers.ComputeSigningRoot(att1.Data, domain)
+	require.NoError(t, err)
+	var sigs []bls.Signature
+	for i, u := range comm1 {
+		att1.AggregationBits.SetBitAt(uint64(i), true)
+		sigs = append(sigs, keys[u].Sign(root[:]))
+	}
+	att1.Signature = bls.AggregateSignatures(sigs).Marshal()
+
+	comm2, err := helpers.BeaconCommitteeFromState(st, 1 /*slot*/, 1 /*committeeIndex*/)
+	require.NoError(t, err)
+	att2 := testutil.HydrateAttestation(&ethpb.Attestation{
+		AggregationBits: bitfield.NewBitlist(uint64(len(comm2))),
+		Data: &ethpb.AttestationData{
+			Slot:           1,
+			CommitteeIndex: 1,
+		},
+	})
+	root, err = helpers.ComputeSigningRoot(att2.Data, domain)
+	require.NoError(t, err)
+	sigs = nil
+	for i, u := range comm2 {
+		att2.AggregationBits.SetBitAt(uint64(i), true)
+		sigs = append(sigs, keys[u].Sign(root[:]))
+	}
+	att2.Signature = bls.AggregateSignatures(sigs).Marshal()
+
+	_, err = blocks.AttestationSignatureSet(ctx, st, []*ethpb.Attestation{att1, att2})
+	require.NoError(t, err)
+}
