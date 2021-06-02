@@ -24,7 +24,7 @@ import "proto/eth/v1/beacon_state.proto";
 import "proto/eth/v1/beacon_chain_service.proto";
 
 option csharp_namespace = "Ethereum.Eth.v1";
-option go_package = "github.com/prysmaticlabs/ethereumapis/eth/v1";
+option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v1";
 option java_multiple_files = true;
 option java_outer_classname = "BeaconDebugProto";
 option java_package = "org.ethereum.eth.v1";

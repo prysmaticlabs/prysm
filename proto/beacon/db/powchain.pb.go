@@ -8,8 +8,8 @@ package db
 
 import (
 	proto "github.com/golang/protobuf/proto"
-	v1alpha1 "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	v1alpha1 "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"

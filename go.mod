@@ -2,11 +2,11 @@ module github.com/prysmaticlabs/prysm
 
 go 1.16
 
-replace github.com/prysmaticlabs/ethereumapis/eth/v1alpha1/ => ./proto/eth/v1alpha1
+replace github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/ => ./proto/eth/v1alpha1
 
-replace github.com/prysmaticlabs/ethereumapis/eth/ext/ => ./proto/eth/ext
+replace github.com/prysmaticlabs/prysm/proto/eth/ext/ => ./proto/eth/ext
 
-replace github.com/prysmaticlabs/ethereumapis/eth/v1/ => ./proto/eth/v1
+replace github.com/prysmaticlabs/prysm/proto/eth/v1/ => ./proto/eth/v1
 
 require (
 	contrib.go.opencensus.io/exporter/jaeger v0.2.1
@@ -93,7 +93,6 @@ require (
 	github.com/prometheus/prom2json v1.3.0
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/prysmaticlabs/eth2-types v0.0.0-20210303084904-c9735a06829d
-	github.com/prysmaticlabs/ethereumapis v0.0.0-20210602054239-e2080ffa6e22
 	github.com/prysmaticlabs/go-bitfield v0.0.0-20210515192923-def021850363
 	github.com/prysmaticlabs/prombbolt v0.0.0-20210126082820-9b7adba6db7c
 	github.com/rs/cors v1.7.0
