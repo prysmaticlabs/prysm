@@ -38,3 +38,10 @@ func EpochsSinceGenesis(genesis time.Time) types.Epoch {
 func DivideSlotBy(timesPerSlot int64) time.Duration {
 	return time.Duration(int64(params.BeaconConfig().SecondsPerSlot*1000)/timesPerSlot) * time.Millisecond
 }
+
+// MultiplySlotBy multiplies the SECONDS_PER_SLOT configuration
+// parameter by a specified number. It returns a value of time.Duration
+// in milliseconds.
+func MultiplySlotBy(times int64) time.Duration {
+	return time.Duration(int64(params.BeaconConfig().SecondsPerSlot*1000)*times) * time.Millisecond
+}
