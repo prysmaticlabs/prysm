@@ -1,9 +1,8 @@
 package sync
 
 import (
-	"errors"
-
 	libp2pcore "github.com/libp2p/go-libp2p-core"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -11,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // chunkWriter writes the given message as a chunked response to the given network
@@ -58,7 +58,7 @@ func readFirstChunkedBlock(stream libp2pcore.Stream, chain blockchain.ChainInfoF
 	if err != nil {
 		return nil, err
 	}
-	blk, err := extractBlockDataType(bytesutil.ToBytes4(rpcCtx), chain)
+	blk, err := extractBlockDataType(rpcCtx, chain)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +83,7 @@ func readResponseChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetch
 	if err != nil {
 		return nil, err
 	}
-	blk, err := extractBlockDataType(bytesutil.ToBytes4(rpcCtx), chain)
+	blk, err := extractBlockDataType(rpcCtx, chain)
 	if err != nil {
 		return nil, err
 	}
@@ -92,14 +92,21 @@ func readResponseChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetch
 	return blk, err
 }
 
-func extractBlockDataType(digest [4]byte, chain blockchain.ChainInfoFetcher) (interfaces.SignedBeaconBlock, error) {
+func extractBlockDataType(digest []byte, chain blockchain.ChainInfoFetcher) (interfaces.SignedBeaconBlock, error) {
+	if len(digest) == 0 {
+		bFunc := types.BlockMap[bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)]
+		return bFunc(), nil
+	}
+	if len(digest) != contextLength {
+		return nil, errors.Errorf("invalid digest returned, wanted a length of %d but received %d", contextLength, len(digest))
+	}
 	vRoot := chain.GenesisValidatorRoot()
 	for k, blkFunc := range types.BlockMap {
 		rDigest, err := helpers.ComputeForkDigest(k[:], vRoot[:])
 		if err != nil {
 			return nil, err
 		}
-		if rDigest == digest {
+		if rDigest == bytesutil.ToBytes4(digest) {
 			return blkFunc(), nil
 		}
 	}

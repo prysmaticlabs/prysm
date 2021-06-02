@@ -9,6 +9,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 )
 
+// Specifies the fixed size context length.
+const contextLength = 4
+
 // writes peer's current context for the expected payload to the stream.
 func writeContextToStream(stream network.Stream, chain blockchain.ChainInfoFetcher) error {
 	rpcCtx, err := rpcContext(stream, chain)
@@ -33,7 +36,7 @@ func readContextFromStream(stream network.Stream, chain blockchain.ChainInfoFetc
 		return []byte{}, nil
 	}
 	// Read context (fork-digest) from stream
-	b := make([]byte, 4)
+	b := make([]byte, contextLength)
 	if _, err := stream.Read(b); err != nil {
 		return nil, err
 	}

@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // metaDataHandler reads the incoming metadata rpc request from the peer.
@@ -62,7 +63,7 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (interfac
 	if err != nil {
 		return nil, err
 	}
-	msg, err := extractMetaDataType(bytesutil.ToBytes4(rpcCtx), s.cfg.Chain)
+	msg, err := extractMetaDataType(rpcCtx, s.cfg.Chain)
 	if err != nil {
 		return nil, err
 	}
@@ -72,14 +73,21 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (interfac
 	return msg, nil
 }
 
-func extractMetaDataType(digest [4]byte, chain blockchain.ChainInfoFetcher) (interfaces.Metadata, error) {
+func extractMetaDataType(digest []byte, chain blockchain.ChainInfoFetcher) (interfaces.Metadata, error) {
+	if len(digest) == 0 {
+		mdFunc := types.MetaDataMap[bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)]
+		return mdFunc(), nil
+	}
+	if len(digest) != contextLength {
+		return nil, errors.Errorf("invalid digest returned, wanted a length of %d but received %d", contextLength, len(digest))
+	}
 	vRoot := chain.GenesisValidatorRoot()
 	for k, mdFunc := range types.MetaDataMap {
 		rDigest, err := helpers.ComputeForkDigest(k[:], vRoot[:])
 		if err != nil {
 			return nil, err
 		}
-		if rDigest == digest {
+		if rDigest == bytesutil.ToBytes4(digest) {
 			return mdFunc(), nil
 		}
 	}
