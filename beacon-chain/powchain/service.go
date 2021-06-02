@@ -511,7 +511,7 @@ func (s *Service) waitForConnection() {
 	logCounter := 0
 	errorLogger := func(err error, msg string) {
 		if logCounter > logThreshold {
-			log.WithError(err).Error(msg)
+			log.Errorf("%s: %v", msg, err)
 			logCounter = 0
 		}
 		logCounter++
