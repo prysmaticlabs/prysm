@@ -12,6 +12,6 @@ type Metadata interface {
 	InnerObject() interface{}
 	IsNil() bool
 	Copy() Metadata
-	MetadataObj() *pb.MetaData
-	MetadataObjV2() *pb.MetaDataV2
+	MetadataObj() *pb.MetaDataV0
+	MetadataObjV2() *pb.MetaDataV1
 }

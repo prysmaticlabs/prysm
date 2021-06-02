@@ -118,7 +118,7 @@ func metaDataFromConfig(cfg *Config) (interfaces.Metadata, error) {
 		return nil, err
 	}
 	if metaDataPath == "" && !defaultMetadataExist {
-		metaData := &pbp2p.MetaData{
+		metaData := &pbp2p.MetaDataV0{
 			SeqNumber: 0,
 			Attnets:   bitfield.NewBitvector64(),
 		}
@@ -139,7 +139,7 @@ func metaDataFromConfig(cfg *Config) (interfaces.Metadata, error) {
 		log.WithError(err).Error("Error reading metadata from file")
 		return nil, err
 	}
-	metaData := &pbp2p.MetaData{}
+	metaData := &pbp2p.MetaDataV0{}
 	if err := proto.Unmarshal(src, metaData); err != nil {
 		return nil, err
 	}

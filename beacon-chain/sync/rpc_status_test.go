@@ -250,12 +250,12 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 	db := testingDB.SetupDB(t)
 
-	p1.LocalMetadata = interfaces.WrappedMetadataV1(&pb.MetaData{
+	p1.LocalMetadata = interfaces.WrappedMetadataV1(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   bytesutil.PadTo([]byte{'A', 'B'}, 8),
 	})
 
-	p2.LocalMetadata = interfaces.WrappedMetadataV1(&pb.MetaData{
+	p2.LocalMetadata = interfaces.WrappedMetadataV1(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   bytesutil.PadTo([]byte{'C', 'D'}, 8),
 	})

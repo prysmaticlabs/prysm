@@ -26,12 +26,12 @@ func TestPingRPCHandler_ReceivesPing(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
-	p1.LocalMetadata = interfaces.WrappedMetadataV1(&pb.MetaData{
+	p1.LocalMetadata = interfaces.WrappedMetadataV1(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   []byte{'A', 'B'},
 	})
 
-	p2.LocalMetadata = interfaces.WrappedMetadataV1(&pb.MetaData{
+	p2.LocalMetadata = interfaces.WrappedMetadataV1(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   []byte{'C', 'D'},
 	})
@@ -83,12 +83,12 @@ func TestPingRPCHandler_SendsPing(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
-	p1.LocalMetadata = interfaces.WrappedMetadataV1(&pb.MetaData{
+	p1.LocalMetadata = interfaces.WrappedMetadataV1(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   []byte{'A', 'B'},
 	})
 
-	p2.LocalMetadata = interfaces.WrappedMetadataV1(&pb.MetaData{
+	p2.LocalMetadata = interfaces.WrappedMetadataV1(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   []byte{'C', 'D'},
 	})
@@ -148,12 +148,12 @@ func TestPingRPCHandler_BadSequenceNumber(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
-	p1.LocalMetadata = interfaces.WrappedMetadataV1(&pb.MetaData{
+	p1.LocalMetadata = interfaces.WrappedMetadataV1(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   []byte{'A', 'B'},
 	})
 
-	p2.LocalMetadata = interfaces.WrappedMetadataV1(&pb.MetaData{
+	p2.LocalMetadata = interfaces.WrappedMetadataV1(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   []byte{'C', 'D'},
 	})
@@ -168,7 +168,7 @@ func TestPingRPCHandler_BadSequenceNumber(t *testing.T) {
 		rateLimiter: newRateLimiter(p1),
 	}
 
-	badMetadata := &pb.MetaData{
+	badMetadata := &pb.MetaDataV0{
 		SeqNumber: 3,
 		Attnets:   []byte{'E', 'F'},
 	}

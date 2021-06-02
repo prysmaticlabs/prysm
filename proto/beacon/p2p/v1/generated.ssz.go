@@ -287,13 +287,13 @@ func (e *ENRForkID) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	return
 }
 
-// MarshalSSZ ssz marshals the MetaData object
-func (m *MetaData) MarshalSSZ() ([]byte, error) {
+// MarshalSSZ ssz marshals the MetaDataV0 object
+func (m *MetaDataV0) MarshalSSZ() ([]byte, error) {
 	return ssz.MarshalSSZ(m)
 }
 
-// MarshalSSZTo ssz marshals the MetaData object to a target array
-func (m *MetaData) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+// MarshalSSZTo ssz marshals the MetaDataV0 object to a target array
+func (m *MetaDataV0) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
 
 	// Field (0) 'SeqNumber'
@@ -309,8 +309,8 @@ func (m *MetaData) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	return
 }
 
-// UnmarshalSSZ ssz unmarshals the MetaData object
-func (m *MetaData) UnmarshalSSZ(buf []byte) error {
+// UnmarshalSSZ ssz unmarshals the MetaDataV0 object
+func (m *MetaDataV0) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
 	if size != 16 {
@@ -329,19 +329,19 @@ func (m *MetaData) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the MetaData object
-func (m *MetaData) SizeSSZ() (size int) {
+// SizeSSZ returns the ssz encoded size in bytes for the MetaDataV0 object
+func (m *MetaDataV0) SizeSSZ() (size int) {
 	size = 16
 	return
 }
 
-// HashTreeRoot ssz hashes the MetaData object
-func (m *MetaData) HashTreeRoot() ([32]byte, error) {
+// HashTreeRoot ssz hashes the MetaDataV0 object
+func (m *MetaDataV0) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(m)
 }
 
-// HashTreeRootWith ssz hashes the MetaData object with a hasher
-func (m *MetaData) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+// HashTreeRootWith ssz hashes the MetaDataV0 object with a hasher
+func (m *MetaDataV0) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
 	// Field (0) 'SeqNumber'
@@ -358,13 +358,13 @@ func (m *MetaData) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	return
 }
 
-// MarshalSSZ ssz marshals the MetaDataV2 object
-func (m *MetaDataV2) MarshalSSZ() ([]byte, error) {
+// MarshalSSZ ssz marshals the MetaDataV1 object
+func (m *MetaDataV1) MarshalSSZ() ([]byte, error) {
 	return ssz.MarshalSSZ(m)
 }
 
-// MarshalSSZTo ssz marshals the MetaDataV2 object to a target array
-func (m *MetaDataV2) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+// MarshalSSZTo ssz marshals the MetaDataV1 object to a target array
+func (m *MetaDataV1) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
 
 	// Field (0) 'SeqNumber'
@@ -387,8 +387,8 @@ func (m *MetaDataV2) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	return
 }
 
-// UnmarshalSSZ ssz unmarshals the MetaDataV2 object
-func (m *MetaDataV2) UnmarshalSSZ(buf []byte) error {
+// UnmarshalSSZ ssz unmarshals the MetaDataV1 object
+func (m *MetaDataV1) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
 	if size != 80 {
@@ -413,19 +413,19 @@ func (m *MetaDataV2) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the MetaDataV2 object
-func (m *MetaDataV2) SizeSSZ() (size int) {
+// SizeSSZ returns the ssz encoded size in bytes for the MetaDataV1 object
+func (m *MetaDataV1) SizeSSZ() (size int) {
 	size = 80
 	return
 }
 
-// HashTreeRoot ssz hashes the MetaDataV2 object
-func (m *MetaDataV2) HashTreeRoot() ([32]byte, error) {
+// HashTreeRoot ssz hashes the MetaDataV1 object
+func (m *MetaDataV1) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(m)
 }
 
-// HashTreeRootWith ssz hashes the MetaDataV2 object with a hasher
-func (m *MetaDataV2) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+// HashTreeRootWith ssz hashes the MetaDataV1 object with a hasher
+func (m *MetaDataV1) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
 	// Field (0) 'SeqNumber'

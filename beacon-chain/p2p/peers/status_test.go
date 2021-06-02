@@ -188,7 +188,7 @@ func TestPeerCommitteeIndices(t *testing.T) {
 			bitV.SetBitAt(uint64(i), true)
 		}
 	}
-	p.SetMetadata(id, interfaces.WrappedMetadataV1(&pb.MetaData{
+	p.SetMetadata(id, interfaces.WrappedMetadataV1(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   bitV,
 	}))
@@ -223,7 +223,7 @@ func TestPeerSubscribedToSubnet(t *testing.T) {
 			bitV.SetBitAt(uint64(i), true)
 		}
 	}
-	p.SetMetadata(expectedPeer, interfaces.WrappedMetadataV1(&pb.MetaData{
+	p.SetMetadata(expectedPeer, interfaces.WrappedMetadataV1(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   bitV,
 	}))
@@ -370,7 +370,7 @@ func TestAddMetaData(t *testing.T) {
 	}
 	newPeer := p.All()[2]
 
-	newMetaData := &pb.MetaData{
+	newMetaData := &pb.MetaDataV0{
 		SeqNumber: 8,
 		Attnets:   bitfield.NewBitvector64(),
 	}
@@ -1002,7 +1002,7 @@ func addPeer(t *testing.T, p *peers.Status, state peerdata.PeerConnectionState) 
 	require.NoError(t, err)
 	p.Add(new(enr.Record), id, nil, network.DirUnknown)
 	p.SetConnectionState(id, state)
-	p.SetMetadata(id, interfaces.WrappedMetadataV1(&pb.MetaData{
+	p.SetMetadata(id, interfaces.WrappedMetadataV1(&pb.MetaDataV0{
 		SeqNumber: 0,
 		Attnets:   bitfield.NewBitvector64(),
 	}))

@@ -137,8 +137,8 @@ message DebugPeerResponse {
     message PeerInfo {
         // Metadata of the peer, containing their bitfield
         // and sequence number.
-        ethereum.beacon.p2p.v1.MetaData metadata = 1;
-        ethereum.beacon.p2p.v1.MetaDataV2 metadataV2 = 2;
+        ethereum.beacon.p2p.v1.MetaDataV0 metadataV0 = 1;
+        ethereum.beacon.p2p.v1.MetaDataV1 metadataV1 = 2;
         // List of protocols the peer supports.
         repeated string protocols = 3;
         // Number of times peer has been penalised.
