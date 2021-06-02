@@ -153,7 +153,11 @@ func CalculateStateRoot(
 		return [32]byte{}, errors.Wrap(err, "could not process block")
 	}
 	if signed.Version() == version.Altair {
-		state, err = altair.ProcessSyncCommittee(state, signed.Block().Body().SyncAggregate())
+		sa, err := signed.Block().Body().SyncAggregate()
+		if err != nil {
+			return [32]byte{}, err
+		}
+		state, err = altair.ProcessSyncCommittee(state, sa)
 		if err != nil {
 			return [32]byte{}, err
 		}
@@ -191,7 +195,11 @@ func ProcessBlockNoVerifyAnySig(
 		return nil, nil, err
 	}
 	if signed.Version() == version.Altair {
-		state, err = altair.ProcessSyncCommittee(state, signed.Block().Body().SyncAggregate())
+		sa, err := signed.Block().Body().SyncAggregate()
+		if err != nil {
+			return nil, nil, err
+		}
+		state, err = altair.ProcessSyncCommittee(state, sa)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -255,40 +263,19 @@ func ProcessOperationsNoVerifyAttsSigs(
 	}
 
 	var err error
-	if signedBeaconBlock.Version() == version.Altair {
-		state, err = b.ProcessProposerSlashings(ctx, state, signedBeaconBlock.Block().Body().ProposerSlashings(), altair.SlashValidator)
+	switch signedBeaconBlock.Version() {
+	case version.Phase0:
+		state, err = phase0Operations(ctx, state, signedBeaconBlock)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not process block proposer slashings")
+			return nil, err
 		}
-		state, err = b.ProcessAttesterSlashings(ctx, state, signedBeaconBlock.Block().Body().AttesterSlashings(), altair.SlashValidator)
+	case version.Altair:
+		state, err = altairOperations(ctx, state, signedBeaconBlock)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not process block attester slashings")
+			return nil, err
 		}
-		state, err = altair.ProcessAttestationsNoVerifySignature(ctx, state, signedBeaconBlock)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not process block attestations")
-		}
-		state, err = altair.ProcessDeposits(ctx, state, signedBeaconBlock.Block().Body().Deposits())
-		if err != nil {
-			return nil, errors.Wrap(err, "could not process block validator deposits")
-		}
-	} else {
-		state, err = b.ProcessProposerSlashings(ctx, state, signedBeaconBlock.Block().Body().ProposerSlashings(), v.SlashValidator)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not process block proposer slashings")
-		}
-		state, err = b.ProcessAttesterSlashings(ctx, state, signedBeaconBlock.Block().Body().AttesterSlashings(), v.SlashValidator)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not process block attester slashings")
-		}
-		state, err = b.ProcessAttestationsNoVerifySignature(ctx, state, signedBeaconBlock)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not process block attestations")
-		}
-		state, err = b.ProcessDeposits(ctx, state, signedBeaconBlock.Block().Body().Deposits())
-		if err != nil {
-			return nil, errors.Wrap(err, "could not process block validator deposits")
-		}
+	default:
+		return nil, errors.New("block does not have correct version")
 	}
 
 	state, err = b.ProcessVoluntaryExits(ctx, state, signedBeaconBlock.Block().Body().VoluntaryExits())
@@ -343,4 +330,44 @@ func ProcessBlockForStateRoot(
 	}
 
 	return state, nil
+}
+
+// This calls altair specific block operations.
+func altairOperations(
+	ctx context.Context,
+	state iface.BeaconState,
+	signedBeaconBlock interfaces.SignedBeaconBlock) (iface.BeaconState, error) {
+	state, err := b.ProcessProposerSlashings(ctx, state, signedBeaconBlock.Block().Body().ProposerSlashings(), altair.SlashValidator)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process block proposer slashings")
+	}
+	state, err = b.ProcessAttesterSlashings(ctx, state, signedBeaconBlock.Block().Body().AttesterSlashings(), altair.SlashValidator)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process block attester slashings")
+	}
+	state, err = altair.ProcessAttestationsNoVerifySignature(ctx, state, signedBeaconBlock)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process block attestations")
+	}
+	return altair.ProcessDeposits(ctx, state, signedBeaconBlock.Block().Body().Deposits())
+}
+
+// This calls phase 0 specific block operations.
+func phase0Operations(
+	ctx context.Context,
+	state iface.BeaconStateAltair,
+	signedBeaconBlock interfaces.SignedBeaconBlock) (iface.BeaconState, error) {
+	state, err := b.ProcessProposerSlashings(ctx, state, signedBeaconBlock.Block().Body().ProposerSlashings(), v.SlashValidator)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process block proposer slashings")
+	}
+	state, err = b.ProcessAttesterSlashings(ctx, state, signedBeaconBlock.Block().Body().AttesterSlashings(), v.SlashValidator)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process block attester slashings")
+	}
+	state, err = b.ProcessAttestationsNoVerifySignature(ctx, state, signedBeaconBlock)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process block attestations")
+	}
+	return b.ProcessDeposits(ctx, state, signedBeaconBlock.Block().Body().Deposits())
 }

@@ -181,8 +181,8 @@ func (w AltairBeaconBlockBody) VoluntaryExits() []*ethpb.SignedVoluntaryExit {
 }
 
 // SyncAggregate returns the sync aggregate in the block.
-func (w AltairBeaconBlockBody) SyncAggregate() *ethpb.SyncAggregate {
-	return w.b.SyncAggregate
+func (w AltairBeaconBlockBody) SyncAggregate() (*ethpb.SyncAggregate, error) {
+	return w.b.SyncAggregate, nil
 }
 
 // IsNil checks if the block body is nil.

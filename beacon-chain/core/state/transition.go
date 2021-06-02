@@ -278,7 +278,7 @@ func ProcessSlots(ctx context.Context, state iface.BeaconState, slot types.Slot)
 				state, err = altair.ProcessEpoch(ctx, state)
 				if err != nil {
 					traceutil.AnnotateError(span, err)
-					return nil, errors.Wrap(err, "could not process epoch with optimizations")
+					return nil, errors.Wrap(err, "could not process epoch")
 				}
 			} else {
 				state, err = ProcessEpochPrecompute(ctx, state)

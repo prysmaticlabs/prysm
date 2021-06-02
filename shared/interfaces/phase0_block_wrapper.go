@@ -1,6 +1,7 @@
 package interfaces
 
 import (
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
@@ -175,8 +176,8 @@ func (w Phase0BeaconBlockBody) VoluntaryExits() []*ethpb.SignedVoluntaryExit {
 }
 
 // SyncAggregate returns the sync aggregate in the block.
-func (w Phase0BeaconBlockBody) SyncAggregate() *ethpb.SyncAggregate {
-	return nil
+func (w Phase0BeaconBlockBody) SyncAggregate() (*ethpb.SyncAggregate, error) {
+	return nil, errors.New("Sync aggregate is not supported in phase 0 block")
 }
 
 // IsNil checks if the block body is nil.

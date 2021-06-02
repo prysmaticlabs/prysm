@@ -44,7 +44,7 @@ type BeaconBlockBody interface {
 	Attestations() []*ethpb.Attestation
 	Deposits() []*ethpb.Deposit
 	VoluntaryExits() []*ethpb.SignedVoluntaryExit
-	SyncAggregate() *ethpb.SyncAggregate
+	SyncAggregate() (*ethpb.SyncAggregate, error)
 	IsNil() bool
 	HashTreeRoot() ([32]byte, error)
 	Proto() proto.Message
