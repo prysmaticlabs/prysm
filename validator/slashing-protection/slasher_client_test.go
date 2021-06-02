@@ -17,7 +17,7 @@ func TestGrpcHeaders(t *testing.T) {
 	}
 	s.startSlasherClient()
 	md, _ := metadata.FromOutgoingContext(s.ctx)
-	require.Equal(t, 2, md.Len(), "Metadata contains wrong number of values")
+	require.Equal(t, 2, md.Len(), "MetadataV0 contains wrong number of values")
 	assert.Equal(t, "value1", md.Get("first")[0])
 	assert.Equal(t, "value2", md.Get("second")[0])
 }
