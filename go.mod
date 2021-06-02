@@ -2,6 +2,12 @@ module github.com/prysmaticlabs/prysm
 
 go 1.16
 
+replace github.com/prysmaticlabs/ethereumapis/eth/v1alpha1/ => ./proto/eth/v1alpha1
+
+replace github.com/prysmaticlabs/ethereumapis/eth/ext/ => ./proto/eth/ext
+
+replace github.com/prysmaticlabs/ethereumapis/eth/v1/ => ./proto/eth/v1
+
 require (
 	contrib.go.opencensus.io/exporter/jaeger v0.2.1
 	github.com/StackExchange/wmi v0.0.0-20210224194228-fe8f1750fd46 // indirect
@@ -52,7 +58,6 @@ require (
 	github.com/k0kubun/go-ansi v0.0.0-20180517002512-3bf9e2903213
 	github.com/karalabe/usb v0.0.0-20191104083709-911d15fe12a9 // indirect
 	github.com/kevinms/leakybucket-go v0.0.0-20200115003610-082473db97ca
-	github.com/klauspost/cpuid/v2 v2.0.6 // indirect
 	github.com/koron/go-ssdp v0.0.2 // indirect
 	github.com/kr/pretty v0.2.1
 	github.com/kr/text v0.2.0 // indirect
@@ -88,7 +93,7 @@ require (
 	github.com/prometheus/prom2json v1.3.0
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/prysmaticlabs/eth2-types v0.0.0-20210303084904-c9735a06829d
-	github.com/prysmaticlabs/ethereumapis v0.0.0-20210523153729-7bb446ee5dbb
+	github.com/prysmaticlabs/ethereumapis v0.0.0-20210602054239-e2080ffa6e22
 	github.com/prysmaticlabs/go-bitfield v0.0.0-20210515192923-def021850363
 	github.com/prysmaticlabs/prombbolt v0.0.0-20210126082820-9b7adba6db7c
 	github.com/rs/cors v1.7.0
@@ -128,15 +133,9 @@ require (
 	k8s.io/utils v0.0.0-20200520001619-278ece378a50 // indirect
 )
 
-replace github.com/prysmaticlabs/ethereumapis/eth/v1alpha1 => ./proto/eth/v1alpha1
-
-replace github.com/prysmaticlabs/ethereumapis/eth/ext => ./proto/eth/ext
-
-replace github.com/prysmaticlabs/ethereumapis/eth/v1/ => ./proto/eth/v1
-
 replace github.com/ethereum/go-ethereum => github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20210420143944-f4dfc9744288
 
 replace github.com/json-iterator/go => github.com/prestonvanloon/go v1.1.7-0.20190722034630-4f2e55fcf87b
 
 // See https://github.com/prysmaticlabs/grpc-gateway/issues/2
-replace github.com/grpc-ecosystem/grpc-gateway/v2 => github.com/prysmaticlabs/grpc-gateway/v2 v2.3.1-0.20210524084005-787489c53c84
+replace github.com/grpc-ecosystem/grpc-gateway/v2 => github.com/prysmaticlabs/grpc-gateway/v2 v2.3.1-0.20210525022610-1ac10182f2b3
