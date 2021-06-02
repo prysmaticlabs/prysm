@@ -33,11 +33,11 @@ var StateMap = map[[4]byte]proto.Message{
 
 // MetaDataMap maps the fork-version to the underlying data type for that
 // particular fork period.
-var MetaDataMap = map[[4]byte]func() proto.Message{
-	bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): func() proto.Message {
-		return &pbp2p.MetaData{}
+var MetaDataMap = map[[4]byte]func() interfaces.Metadata{
+	bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): func() interfaces.Metadata {
+		return interfaces.WrappedMetadataV0(&pbp2p.MetaDataV0{})
 	},
-	bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion): func() proto.Message {
-		return &pbp2p.MetaDataV2{}
+	bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion): func() interfaces.Metadata {
+		return interfaces.WrappedMetadataV1(&pbp2p.MetaDataV1{})
 	},
 }

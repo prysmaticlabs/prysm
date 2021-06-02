@@ -10,9 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"google.golang.org/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
 )
 
@@ -26,6 +24,9 @@ func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2
 	s.rateLimiter.add(stream, 1)
 
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
+		return err
+	}
+	if err := writeContextToStream(stream, s.cfg.Chain); err != nil {
 		return err
 	}
 	if s.cfg.P2P.Metadata() == nil || s.cfg.P2P.Metadata().IsNil() {
@@ -65,14 +66,13 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (interfac
 	if err != nil {
 		return nil, err
 	}
-	msg := new(pb.MetaDataV0)
-	if err := s.cfg.P2P.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
+	if err := s.cfg.P2P.Encoding().DecodeWithMaxLength(stream, msg.InnerObject()); err != nil {
 		return nil, err
 	}
-	return interfaces.WrappedMetadataV0(msg), nil
+	return msg, nil
 }
 
-func extractMetaDataType(digest [4]byte, chain blockchain.ChainInfoFetcher) (proto.Message, error) {
+func extractMetaDataType(digest [4]byte, chain blockchain.ChainInfoFetcher) (interfaces.Metadata, error) {
 	vRoot := chain.GenesisValidatorRoot()
 	for k, mdFunc := range types.MetaDataMap {
 		rDigest, err := helpers.ComputeForkDigest(k[:], vRoot[:])
