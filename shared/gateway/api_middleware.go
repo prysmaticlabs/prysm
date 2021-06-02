@@ -15,7 +15,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
-	"github.com/pkg/errors"
 	butil "github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/wealdtech/go-bytesutil"
@@ -28,21 +27,25 @@ import (
 type ApiProxyMiddleware struct {
 	GatewayAddress string
 	ProxyAddress   string
+	Endpoints      []Endpoint
 	router         *mux.Router
 }
 
-type endpointData struct {
-	postRequest           interface{}
-	getRequestUrlLiterals []string // Names of URL parameters that should not be base64-encoded.
-	getRequestQueryParams []queryParam
-	getResponse           interface{}
-	err                   ErrorJson
+// TODO: documentation
+type Endpoint struct {
+	Url                   string
+	PostRequest           interface{}
+	GetRequestUrlLiterals []string // Names of URL parameters that should not be base64-encoded.
+	GetRequestQueryParams []QueryParam
+	GetResponse           interface{}
+	Err                   ErrorJson
 }
 
-type queryParam struct {
-	name string
-	hex  bool
-	enum bool
+// TODO: Documentation
+type QueryParam struct {
+	Name string
+	Hex  bool
+	Enum bool
 }
 
 // fieldProcessor applies the processing function f to a value when the tag is present on the field.
@@ -55,72 +58,38 @@ type fieldProcessor struct {
 func (m *ApiProxyMiddleware) Run() error {
 	m.router = mux.NewRouter()
 
-	m.handleApiEndpoint("/eth/v1/beacon/genesis")
-	m.handleApiEndpoint("/eth/v1/beacon/states/{state_id}/root")
-	m.handleApiEndpoint("/eth/v1/beacon/states/{state_id}/fork")
-	m.handleApiEndpoint("/eth/v1/beacon/states/{state_id}/finality_checkpoints")
-	m.handleApiEndpoint("/eth/v1/beacon/states/{state_id}/validators")
-	m.handleApiEndpoint("/eth/v1/beacon/states/{state_id}/validators/{validator_id}")
-	m.handleApiEndpoint("/eth/v1/beacon/states/{state_id}/validator_balances")
-	m.handleApiEndpoint("/eth/v1/beacon/states/{state_id}/committees")
-	m.handleApiEndpoint("/eth/v1/beacon/headers")
-	m.handleApiEndpoint("/eth/v1/beacon/headers/{block_id}")
-	m.handleApiEndpoint("/eth/v1/beacon/blocks")
-	m.handleApiEndpoint("/eth/v1/beacon/blocks/{block_id}")
-	m.handleApiEndpoint("/eth/v1/beacon/blocks/{block_id}/root")
-	m.handleApiEndpoint("/eth/v1/beacon/blocks/{block_id}/attestations")
-	m.handleApiEndpoint("/eth/v1/beacon/pool/attestations")
-	m.handleApiEndpoint("/eth/v1/beacon/pool/attester_slashings")
-	m.handleApiEndpoint("/eth/v1/beacon/pool/proposer_slashings")
-	m.handleApiEndpoint("/eth/v1/beacon/pool/voluntary_exits")
-	m.handleApiEndpoint("/eth/v1/node/identity")
-	m.handleApiEndpoint("/eth/v1/node/peers")
-	m.handleApiEndpoint("/eth/v1/node/peers/{peer_id}")
-	m.handleApiEndpoint("/eth/v1/node/peer_count")
-	m.handleApiEndpoint("/eth/v1/node/version")
-	m.handleApiEndpoint("/eth/v1/node/syncing")
-	m.handleApiEndpoint("/eth/v1/node/health")
-	m.handleApiEndpoint("/eth/v1/debug/beacon/states/{state_id}")
-	m.handleApiEndpoint("/eth/v1/debug/beacon/heads")
-	m.handleApiEndpoint("/eth/v1/config/fork_schedule")
-	m.handleApiEndpoint("/eth/v1/config/deposit_contract")
-	m.handleApiEndpoint("/eth/v1/config/spec")
+	for _, endpoint := range m.Endpoints {
+		m.handleApiEndpoint(endpoint)
+	}
 
 	return http.ListenAndServe(m.ProxyAddress, m.router)
 }
 
-func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint string) {
-	m.router.HandleFunc(endpoint, func(writer http.ResponseWriter, request *http.Request) {
-		if beaconStateSszRequested(endpoint, request) {
+func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint Endpoint) {
+	m.router.HandleFunc(endpoint.Url, func(writer http.ResponseWriter, request *http.Request) {
+		/*if beaconStateSszRequested(endpoint.Url, request) {
 			m.handleGetBeaconStateSsz(endpoint, writer, request)
 			return
-		}
-
-		data, err := getEndpointData(endpoint)
-		if err != nil {
-			e := fmt.Errorf("could not prepare endpoint data: %w", err)
-			writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
-			return
-		}
+		}*/
 
 		if request.Method == "POST" {
-			if err := wrapAttestationsArray(&data, request); err != nil {
+			/*if err := wrapAttestationsArray(endpoint.PostRequest, request); err != nil {
 				e := fmt.Errorf("could not decode request body: %w", err)
 				writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
 				return
-			}
+			}*/
 
 			// Deserialize the body.
-			if err := json.NewDecoder(request.Body).Decode(data.postRequest); err != nil {
+			if err := json.NewDecoder(request.Body).Decode(&endpoint.PostRequest); err != nil {
 				e := fmt.Errorf("could not decode request body: %w", err)
 				writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
 				return
 			}
 
-			prepareGraffiti(&data)
+			// prepareGraffiti(endpoint.PostRequest)
 
 			// Apply processing functions to fields with specific tags.
-			if err := processField(data.postRequest, []fieldProcessor{
+			if err := processField(endpoint.PostRequest, []fieldProcessor{
 				{
 					tag: "hex",
 					f:   hexToBase64Processor,
@@ -131,7 +100,7 @@ func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint string) {
 				return
 			}
 			// Serialize the struct, which now includes a base64-encoded value, into JSON.
-			j, err := json.Marshal(data.postRequest)
+			j, err := json.Marshal(endpoint.PostRequest)
 			if err != nil {
 				e := fmt.Errorf("could not marshal request: %w", err)
 				writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
@@ -147,8 +116,8 @@ func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint string) {
 		request.URL.Scheme = "http"
 		request.URL.Host = m.GatewayAddress
 		request.RequestURI = ""
-		handleUrlParameters(endpoint, request, writer, data.getRequestUrlLiterals)
-		handleQueryParameters(request, writer, data.getRequestQueryParams)
+		handleUrlParameters(endpoint.Url, request, writer, endpoint.GetRequestUrlLiterals)
+		handleQueryParameters(request, writer, endpoint.GetRequestQueryParams)
 
 		// Proxy the request to grpc-gateway.
 		grpcResp, err := http.DefaultClient.Do(request)
@@ -169,14 +138,14 @@ func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint string) {
 			writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
 			return
 		}
-		if err := json.Unmarshal(body, data.err); err != nil {
+		if err := json.Unmarshal(body, endpoint.Err); err != nil {
 			e := fmt.Errorf("could not unmarshal error: %w", err)
 			writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
 			return
 		}
 
 		var j []byte
-		if data.err.Msg() != "" {
+		if endpoint.Err.Msg() != "" {
 			// Something went wrong, but the request completed, meaning we can write headers and the error message.
 			for h, vs := range grpcResp.Header {
 				for _, v := range vs {
@@ -184,19 +153,19 @@ func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint string) {
 				}
 			}
 			// Set code to HTTP code because unmarshalled body contained gRPC code.
-			data.err.SetCode(grpcResp.StatusCode)
-			writeError(writer, data.err, grpcResp.Header)
+			endpoint.Err.SetCode(grpcResp.StatusCode)
+			writeError(writer, endpoint.Err, grpcResp.Header)
 			return
 			// Don't do anything if the response is only a status code.
-		} else if request.Method == "GET" && data.getResponse != nil {
+		} else if request.Method == "GET" && endpoint.GetResponse != nil {
 			// Deserialize the output of grpc-gateway.
-			if err := json.Unmarshal(body, &data.getResponse); err != nil {
+			if err := json.Unmarshal(body, &endpoint.GetResponse); err != nil {
 				e := fmt.Errorf("could not unmarshal response: %w", err)
 				writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
 				return
 			}
 			// Apply processing functions to fields with specific tags.
-			if err := processField(data.getResponse, []fieldProcessor{
+			if err := processField(endpoint.GetResponse, []fieldProcessor{
 				{
 					tag: "hex",
 					f:   base64ToHexProcessor,
@@ -215,7 +184,7 @@ func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint string) {
 				return
 			}
 			// Serialize the return value into JSON.
-			j, err = json.Marshal(data.getResponse)
+			j, err = json.Marshal(endpoint.GetResponse)
 			if err != nil {
 				e := fmt.Errorf("could not marshal response: %w", err)
 				writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
@@ -268,13 +237,13 @@ func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint string) {
 	})
 }
 
-func (m *ApiProxyMiddleware) handleGetBeaconStateSsz(endpoint string, writer http.ResponseWriter, request *http.Request) {
+/*func (m *ApiProxyMiddleware) handleGetBeaconStateSsz(endpoint Endpoint, writer http.ResponseWriter, request *http.Request) {
 	// Prepare request values for proxying.
 	request.URL.Scheme = "http"
 	request.URL.Host = m.GatewayAddress
 	request.RequestURI = ""
 	request.URL.Path = "/eth/v1/debug/beacon/states/{state_id}/ssz"
-	handleUrlParameters(endpoint, request, writer, []string{})
+	handleUrlParameters(endpoint.Url, request, writer, []string{})
 
 	// Proxy the request to grpc-gateway.
 	grpcResp, err := http.DefaultClient.Do(request)
@@ -356,13 +325,13 @@ func (m *ApiProxyMiddleware) handleGetBeaconStateSsz(endpoint string, writer htt
 	}
 }
 
-func beaconStateSszRequested(endpoint string, request *http.Request) bool {
-	return endpoint == "/eth/v1/debug/beacon/states/{state_id}" && request.Header["Accept"][0] == "application/octet-stream"
+func beaconStateSszRequested(url string, request *http.Request) bool {
+	return url == "/eth/v1/debug/beacon/states/{state_id}" && request.Header["Accept"][0] == "application/octet-stream"
 }
 
 // Posted graffiti needs to have length of 32 bytes, but client is allowed to send data of any length.
-func prepareGraffiti(data *endpointData) {
-	if block, ok := data.postRequest.(*BeaconBlockContainerJson); ok {
+func prepareGraffiti(postRequest interface{}) {
+	if block, ok := postRequest.(*BeaconBlockContainerJson); ok {
 		b := bytesutil.ToBytes32([]byte(block.Message.Body.Graffiti))
 		block.Message.Body.Graffiti = hexutil.Encode(b[:])
 	}
@@ -370,8 +339,8 @@ func prepareGraffiti(data *endpointData) {
 
 // https://ethereum.github.io/eth2.0-APIs/#/Beacon/submitPoolAttestations expects posting a top-level array.
 // We make it more proto-friendly by wrapping it in a struct with a 'data' field.
-func wrapAttestationsArray(data *endpointData, req *http.Request) error {
-	if _, ok := data.postRequest.(*SubmitAttestationRequestJson); ok {
+func wrapAttestationsArray(postRequest interface{}, req *http.Request) error {
+	if _, ok := postRequest.(*SubmitAttestationRequestJson); ok {
 		atts := make([]*AttestationJson, 0)
 		if err := json.NewDecoder(req.Body).Decode(&atts); err != nil {
 			return fmt.Errorf("could not decode attestations array: %w", err)
@@ -384,11 +353,11 @@ func wrapAttestationsArray(data *endpointData, req *http.Request) error {
 		req.Body = ioutil.NopCloser(bytes.NewReader(b))
 	}
 	return nil
-}
+}*/
 
 // handleUrlParameters processes URL parameters, allowing parameterized URLs to be safely and correctly proxied to grpc-gateway.
-func handleUrlParameters(endpoint string, request *http.Request, writer http.ResponseWriter, literals []string) {
-	segments := strings.Split(endpoint, "/")
+func handleUrlParameters(url string, request *http.Request, writer http.ResponseWriter, literals []string) {
+	segments := strings.Split(url, "/")
 
 segmentsLoop:
 	for i, s := range segments {
@@ -430,13 +399,13 @@ segmentsLoop:
 }
 
 // handleQueryParameters processes query parameters, allowing them to be safely and correctly proxied to grpc-gateway.
-func handleQueryParameters(request *http.Request, writer http.ResponseWriter, params []queryParam) {
+func handleQueryParameters(request *http.Request, writer http.ResponseWriter, params []QueryParam) {
 	queryParams := request.URL.Query()
 
 	for key, vals := range queryParams {
 		for _, p := range params {
-			if key == p.name {
-				if p.hex {
+			if key == p.Name {
+				if p.Hex {
 					queryParams.Del(key)
 					for _, v := range vals {
 						b := []byte(v)
@@ -457,7 +426,7 @@ func handleQueryParameters(request *http.Request, writer http.ResponseWriter, pa
 						queryParams.Add(key, base64.URLEncoding.EncodeToString(b))
 					}
 				}
-				if p.enum {
+				if p.Enum {
 					queryParams.Del(key)
 					for _, v := range vals {
 						// gRPC expectes uppercase enum values.
@@ -581,98 +550,4 @@ func timeToUnixProcessor(v reflect.Value) error {
 	}
 	v.SetString(strconv.FormatUint(uint64(t.Unix()), 10))
 	return nil
-}
-
-// getEndpointData constructs and returns a struct containing necessary information to process a request based on the provided endpoint.
-// The returned struct is meant to be used during a single request.
-func getEndpointData(endpoint string) (endpointData, error) {
-	switch endpoint {
-	case "/eth/v1/beacon/genesis":
-		return endpointData{getResponse: &GenesisResponseJson{}, err: &DefaultErrorJson{}}, nil
-	case "/eth/v1/beacon/states/{state_id}/root":
-		return endpointData{getResponse: &StateRootResponseJson{}, err: &DefaultErrorJson{}}, nil
-	case "/eth/v1/beacon/states/{state_id}/fork":
-		return endpointData{getResponse: &StateForkResponseJson{}, err: &DefaultErrorJson{}}, nil
-	case "/eth/v1/beacon/states/{state_id}/finality_checkpoints":
-		return endpointData{getResponse: &StateFinalityCheckpointResponseJson{}, err: &DefaultErrorJson{}}, nil
-	case "/eth/v1/beacon/states/{state_id}/validators":
-		return endpointData{
-			getRequestQueryParams: []queryParam{{name: "id", hex: true}, {name: "status", enum: true}},
-			getResponse:           &StateValidatorsResponseJson{},
-			err:                   &DefaultErrorJson{},
-		}, nil
-	case "/eth/v1/beacon/states/{state_id}/validators/{validator_id}":
-		return endpointData{getResponse: &StateValidatorResponseJson{}, err: &DefaultErrorJson{}}, nil
-	case "/eth/v1/beacon/states/{state_id}/validator_balances":
-		return endpointData{
-			getRequestQueryParams: []queryParam{{name: "id", hex: true}},
-			getResponse:           &ValidatorBalancesResponseJson{},
-			err:                   &DefaultErrorJson{},
-		}, nil
-	case "/eth/v1/beacon/states/{state_id}/committees":
-		return endpointData{
-			getRequestQueryParams: []queryParam{{name: "epoch"}, {name: "index"}, {name: "slot"}},
-			getResponse:           &StateCommitteesResponseJson{},
-			err:                   &DefaultErrorJson{},
-		}, nil
-	case "/eth/v1/beacon/headers":
-		return endpointData{
-			getRequestQueryParams: []queryParam{{name: "slot"}, {name: "parent_root", hex: true}},
-			getResponse:           &BlockHeadersResponseJson{},
-			err:                   &DefaultErrorJson{},
-		}, nil
-	case "/eth/v1/beacon/headers/{block_id}":
-		return endpointData{getResponse: &BlockHeaderResponseJson{}, err: &DefaultErrorJson{}}, nil
-	case "/eth/v1/beacon/blocks":
-		return endpointData{postRequest: &BeaconBlockContainerJson{}, err: &DefaultErrorJson{}}, nil
-	case "/eth/v1/beacon/blocks/{block_id}":
-		return endpointData{getResponse: &BlockResponseJson{}, err: &DefaultErrorJson{}}, nil
-	case "/eth/v1/beacon/blocks/{block_id}/root":
-		return endpointData{getResponse: &BlockRootResponseJson{}, err: &DefaultErrorJson{}}, nil
-	case "/eth/v1/beacon/blocks/{block_id}/attestations":
-		return endpointData{getResponse: &BlockAttestationsResponseJson{}, err: &DefaultErrorJson{}}, nil
-	case "/eth/v1/beacon/pool/attestations":
-		return endpointData{
-			getRequestQueryParams: []queryParam{{name: "slot"}, {name: "committee_index"}},
-			getResponse:           &AttestationsPoolResponseJson{},
-			postRequest:           &SubmitAttestationRequestJson{},
-			err:                   &SubmitAttestationsErrorJson{},
-		}, nil
-	case "/eth/v1/beacon/pool/attester_slashings":
-		return endpointData{postRequest: &AttesterSlashingJson{}, getResponse: &AttesterSlashingsPoolResponseJson{}, err: &DefaultErrorJson{}}, nil
-	case "/eth/v1/beacon/pool/proposer_slashings":
-		return endpointData{postRequest: &ProposerSlashingJson{}, getResponse: &ProposerSlashingsPoolResponseJson{}, err: &DefaultErrorJson{}}, nil
-	case "/eth/v1/beacon/pool/voluntary_exits":
-		return endpointData{postRequest: &SignedVoluntaryExitJson{}, getResponse: &VoluntaryExitsPoolResponseJson{}, err: &DefaultErrorJson{}}, nil
-	case "/eth/v1/node/identity":
-		return endpointData{getResponse: &IdentityResponseJson{}, err: &DefaultErrorJson{}}, nil
-	case "/eth/v1/node/peers":
-		return endpointData{getResponse: &PeersResponseJson{}, err: &DefaultErrorJson{}}, nil
-	case "/eth/v1/node/peers/{peer_id}":
-		return endpointData{
-			getRequestUrlLiterals: []string{"peer_id"},
-			getResponse:           &PeerResponseJson{},
-			err:                   &DefaultErrorJson{},
-		}, nil
-	case "/eth/v1/node/peer_count":
-		return endpointData{getResponse: &PeerCountResponseJson{}, err: &DefaultErrorJson{}}, nil
-	case "/eth/v1/node/version":
-		return endpointData{getResponse: &VersionResponseJson{}, err: &DefaultErrorJson{}}, nil
-	case "/eth/v1/node/syncing":
-		return endpointData{getResponse: &SyncingResponseJson{}, err: &DefaultErrorJson{}}, nil
-	case "/eth/v1/node/health":
-		return endpointData{err: &DefaultErrorJson{}}, nil
-	case "/eth/v1/debug/beacon/states/{state_id}":
-		return endpointData{getResponse: &BeaconStateResponseJson{}, err: &DefaultErrorJson{}}, nil
-	case "/eth/v1/debug/beacon/heads":
-		return endpointData{getResponse: &ForkChoiceHeadsResponseJson{}, err: &DefaultErrorJson{}}, nil
-	case "/eth/v1/config/fork_schedule":
-		return endpointData{getResponse: &ForkScheduleResponseJson{}, err: &DefaultErrorJson{}}, nil
-	case "/eth/v1/config/deposit_contract":
-		return endpointData{getResponse: &DepositContractResponseJson{}, err: &DefaultErrorJson{}}, nil
-	case "/eth/v1/config/spec":
-		return endpointData{getResponse: &SpecResponseJson{}, err: &DefaultErrorJson{}}, nil
-	default:
-		return endpointData{}, errors.New("invalid endpoint")
-	}
 }

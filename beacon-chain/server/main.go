@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	joonix "github.com/joonix/log"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/shared/gateway"
 	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
 	"github.com/sirupsen/logrus"
@@ -43,6 +44,7 @@ func main() {
 		"", // remoteCert
 		fmt.Sprintf("%s:%d", *host, *port),
 		fmt.Sprintf("%s:%d", *host, *apiMiddlewarePort),
+		apimiddleware.RegisterMiddlewareEndpoints(),
 		mux,
 		strings.Split(*allowedOrigins, ","),
 		*enableDebugRPCEndpoints,
