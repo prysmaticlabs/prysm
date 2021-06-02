@@ -11,6 +11,7 @@ go_library(
         "//beacon-chain/p2p/peers/peerdata:go_default_library",
         "//beacon-chain/p2p/peers/scorers:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/interfaces:go_default_library",
         "//shared/params:go_default_library",
         "//shared/rand:go_default_library",
         "//shared/timeutils:go_default_library",
@@ -21,7 +22,6 @@ go_library(
         "@com_github_multiformats_go_multiaddr//net:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
-        "@org_golang_google_protobuf//proto:go_default_library",
     ],
 )
 
@@ -39,6 +39,7 @@ go_test(
         "//cmd/beacon-chain/flags:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/featureconfig:go_default_library",
+        "//shared/interfaces:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
