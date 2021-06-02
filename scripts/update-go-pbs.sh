@@ -22,20 +22,6 @@ for ((i = 0; i < arraylength; i++)); do
     cp -R -L "${file_list[i]}" "$destination"
 done
 
-file_list=()
-while IFS= read -d $'\0' -r file; do
-    file_list=("${file_list[@]}" "$file")
-done < <($findutil -L "$(bazel info bazel-bin)"/proto/eth -type f -regextype sed -regex ".*pb\.\(gw\.\)\?go$" -print0)
-
-arraylength=${#file_list[@]}
-ethereumapis="prysmaticlabs/ethereumapis/"
-for ((i = 0; i < arraylength; i++)); do
-    color "34" "$destination"
-    destination=${file_list[i]#*$ethereumapis}
-    chmod 755 "$destination"
-    cp -R -L "${file_list[i]}" "proto/$destination"
-done
-
 # Run goimports on newly generated protos
 # formats imports properly.
 # https://github.com/gogo/protobuf/issues/554
