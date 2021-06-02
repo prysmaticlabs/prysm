@@ -89,8 +89,9 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 	configureChainConfig(cliCtx)
 	configureHistoricalSlasher(cliCtx)
 	configureSlotsPerArchivedPoint(cliCtx)
-	configureProofOfWork(cliCtx)
+	configureEth1Config(cliCtx)
 	configureNetwork(cliCtx)
+	configureInteropConfig(cliCtx)
 
 	registry := shared.NewServiceRegistry()
 
