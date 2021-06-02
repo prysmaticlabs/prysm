@@ -18,7 +18,7 @@ searchstring="prysmaticlabs/prysm/"
 for ((i = 0; i < arraylength; i++)); do
     color "34" "$destination"
     destination=${file_list[i]#*$searchstring}
-#    chmod 755 "$destination"
+    chmod 755 "$destination"
     cp -R -L "${file_list[i]}" "$destination"
 done
 
@@ -32,7 +32,7 @@ ethereumapis="prysmaticlabs/ethereumapis/"
 for ((i = 0; i < arraylength; i++)); do
     color "34" "$destination"
     destination=${file_list[i]#*$ethereumapis}
-#    chmod 755 "$destination"
+    chmod 755 "$destination"
     cp -R -L "${file_list[i]}" "proto/$destination"
 done
 
