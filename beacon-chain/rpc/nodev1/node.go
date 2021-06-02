@@ -161,7 +161,7 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 		stateIds = peerStatus.All()
 	} else {
 		for _, stateFilter := range req.State {
-			normalized := strings.ToUpper(stateFilter)
+			normalized := strings.ToUpper(stateFilter.String())
 			if normalized == stateConnecting {
 				ids := peerStatus.Connecting()
 				stateIds = append(stateIds, ids...)
@@ -190,7 +190,7 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 		directionIds = peerStatus.All()
 	} else {
 		for _, directionFilter := range req.Direction {
-			normalized := strings.ToUpper(directionFilter)
+			normalized := strings.ToUpper(directionFilter.String())
 			if normalized == directionInbound {
 				ids := peerStatus.Inbound()
 				directionIds = append(directionIds, ids...)
@@ -305,7 +305,7 @@ func (ns *Server) GetHealth(ctx context.Context, _ *emptypb.Empty) (*emptypb.Emp
 func (ns *Server) handleEmptyFilters(req *ethpb.PeersRequest) (emptyState, emptyDirection bool) {
 	emptyState = true
 	for _, stateFilter := range req.State {
-		normalized := strings.ToUpper(stateFilter)
+		normalized := strings.ToUpper(stateFilter.String())
 		filterValid := normalized == stateConnecting || normalized == stateConnected ||
 			normalized == stateDisconnecting || normalized == stateDisconnected
 		if filterValid {
@@ -316,7 +316,7 @@ func (ns *Server) handleEmptyFilters(req *ethpb.PeersRequest) (emptyState, empty
 
 	emptyDirection = true
 	for _, directionFilter := range req.Direction {
-		normalized := strings.ToUpper(directionFilter)
+		normalized := strings.ToUpper(directionFilter.String())
 		filterValid := normalized == directionInbound || normalized == directionOutbound
 		if filterValid {
 			emptyDirection = false

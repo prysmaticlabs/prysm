@@ -95,6 +95,10 @@ func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint string) {
 			m.handleGetBeaconStateSsz(endpoint, writer, request)
 			return
 		}
+		if beaconBlockSszRequested(endpoint, request) {
+			m.handleGetBeaconBlockSsz(endpoint, writer, request)
+			return
+		}
 
 		data, err := getEndpointData(endpoint)
 		if err != nil {
@@ -356,8 +360,100 @@ func (m *ApiProxyMiddleware) handleGetBeaconStateSsz(endpoint string, writer htt
 	}
 }
 
+func (m *ApiProxyMiddleware) handleGetBeaconBlockSsz(endpoint string, writer http.ResponseWriter, request *http.Request) {
+	// Prepare request values for proxying.
+	request.URL.Scheme = "http"
+	request.URL.Host = m.GatewayAddress
+	request.RequestURI = ""
+	request.URL.Path = "/eth/v1/beacon/blocks/{block_id}/ssz"
+	handleUrlParameters(endpoint, request, writer, []string{})
+
+	// Proxy the request to grpc-gateway.
+	grpcResp, err := http.DefaultClient.Do(request)
+	if err != nil {
+		e := fmt.Errorf("could not proxy request: %w", err)
+		writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
+		return
+	}
+	if grpcResp == nil {
+		writeError(writer, &DefaultErrorJson{Message: "nil response from gRPC-gateway", Code: http.StatusInternalServerError}, nil)
+		return
+	}
+
+	// Read the body.
+	body, err := ioutil.ReadAll(grpcResp.Body)
+	if err != nil {
+		e := fmt.Errorf("could not read response body: %w", err)
+		writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
+		return
+	}
+
+	// Deserialize the output of grpc-gateway into the error struct.
+	errorJson := &DefaultErrorJson{}
+	if err := json.Unmarshal(body, errorJson); err != nil {
+		e := fmt.Errorf("could not unmarshal error: %w", err)
+		writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
+		return
+	}
+	if errorJson.Msg() != "" {
+		// Something went wrong, but the request completed, meaning we can write headers and the error message.
+		for h, vs := range grpcResp.Header {
+			for _, v := range vs {
+				writer.Header().Set(h, v)
+			}
+		}
+		// Set code to HTTP code because unmarshalled body contained gRPC code.
+		errorJson.SetCode(grpcResp.StatusCode)
+		writeError(writer, errorJson, grpcResp.Header)
+		return
+		// Don't do anything if the response is only a status code.
+	}
+
+	// Deserialize the output of grpc-gateway.
+	responseJson := &BeaconStateSszResponseJson{}
+	if err := json.Unmarshal(body, responseJson); err != nil {
+		e := fmt.Errorf("could not unmarshal response: %w", err)
+		writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
+		return
+	}
+	// Serialize the SSZ part of the deserialized value.
+	b, err := base64.StdEncoding.DecodeString(responseJson.Data)
+	if err != nil {
+		e := fmt.Errorf("could not decode response body into base64: %w", err)
+		writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
+		return
+	}
+
+	// Write the response (headers + body) and PROFIT!
+	for h, vs := range grpcResp.Header {
+		for _, v := range vs {
+			writer.Header().Set(h, v)
+		}
+	}
+	writer.Header().Set("Content-Length", strconv.Itoa(len(b)))
+	writer.Header().Set("Content-Type", "application/octet-stream")
+	writer.Header().Set("Content-Disposition", "attachment; filename=beacon_state_ssz")
+	writer.WriteHeader(grpcResp.StatusCode)
+	if _, err := io.Copy(writer, ioutil.NopCloser(bytes.NewReader(b))); err != nil {
+		e := fmt.Errorf("could not write response message: %w", err)
+		writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
+		return
+	}
+
+	// Final cleanup.
+	if err := grpcResp.Body.Close(); err != nil {
+		e := fmt.Errorf("could not close response body: %w", err)
+		writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
+		return
+	}
+}
+
 func beaconStateSszRequested(endpoint string, request *http.Request) bool {
 	return endpoint == "/eth/v1/debug/beacon/states/{state_id}" && request.Header["Accept"][0] == "application/octet-stream"
+}
+
+func beaconBlockSszRequested(endpoint string, request *http.Request) bool {
+	return endpoint == "/eth/v1/beacon/blocks/{block_id}" && request.Header["Accept"][0] == "application/octet-stream"
 }
 
 // Posted graffiti needs to have length of 32 bytes, but client is allowed to send data of any length.
@@ -647,7 +743,11 @@ func getEndpointData(endpoint string) (endpointData, error) {
 	case "/eth/v1/node/identity":
 		return endpointData{getResponse: &IdentityResponseJson{}, err: &DefaultErrorJson{}}, nil
 	case "/eth/v1/node/peers":
-		return endpointData{getResponse: &PeersResponseJson{}, err: &DefaultErrorJson{}}, nil
+		return endpointData{
+			getRequestQueryParams: []queryParam{{name: "state", enum: true}, {name: "direction", enum: true}},
+			getResponse:           &PeersResponseJson{},
+			err:                   &DefaultErrorJson{},
+		}, nil
 	case "/eth/v1/node/peers/{peer_id}":
 		return endpointData{
 			getRequestUrlLiterals: []string{"peer_id"},
