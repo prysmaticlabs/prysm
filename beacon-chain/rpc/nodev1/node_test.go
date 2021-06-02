@@ -23,6 +23,7 @@ import (
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	syncmock "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -80,7 +81,7 @@ func TestGetIdentity(t *testing.T) {
 	require.NoError(t, err)
 	attnets := bitfield.NewBitvector64()
 	attnets.SetBitAt(1, true)
-	metadataProvider := &mockp2p.MockMetadataProvider{Data: &pb.MetaData{SeqNumber: 1, Attnets: attnets}}
+	metadataProvider := &mockp2p.MockMetadataProvider{Data: interfaces.WrappedMetadataV0(&pb.MetaDataV0{SeqNumber: 1, Attnets: attnets})}
 
 	t.Run("OK", func(t *testing.T) {
 		peerManager := &mockp2p.MockPeerManager{

@@ -274,24 +274,29 @@ func ProcessSlots(ctx context.Context, state iface.BeaconState, slot types.Slot)
 			return nil, errors.Wrap(err, "could not process slot")
 		}
 		if CanProcessEpoch(state) {
-			if state.Version() == version.Altair {
-				state, err = altair.ProcessEpoch(ctx, state)
-				if err != nil {
-					traceutil.AnnotateError(span, err)
-					return nil, errors.Wrap(err, "could not process epoch")
-				}
-			} else {
+			switch state.Version() {
+			case version.Phase0:
 				state, err = ProcessEpochPrecompute(ctx, state)
 				if err != nil {
 					traceutil.AnnotateError(span, err)
 					return nil, errors.Wrap(err, "could not process epoch with optimizations")
 				}
+			case version.Altair:
+				state, err = altair.ProcessEpoch(ctx, state)
+				if err != nil {
+					traceutil.AnnotateError(span, err)
+					return nil, errors.Wrap(err, "could not process epoch")
+				}
+			default:
+				return nil, errors.New("beacon state should have a version")
 			}
 		}
 		if err := state.SetSlot(state.Slot() + 1); err != nil {
 			traceutil.AnnotateError(span, err)
 			return nil, errors.Wrap(err, "failed to increment state slot")
 		}
+
+		// Transition to Altair state.
 		if helpers.IsEpochStart(state.Slot()) && helpers.SlotToEpoch(state.Slot()) == params.BeaconConfig().AltairForkEpoch {
 			state, err = altair.UpgradeToAltair(state)
 			if err != nil {

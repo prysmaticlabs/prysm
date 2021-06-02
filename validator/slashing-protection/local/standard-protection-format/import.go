@@ -36,7 +36,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 		return nil
 	}
 
-	// We validate the `Metadata` field of the slashing protection JSON file.
+	// We validate the `MetadataV0` field of the slashing protection JSON file.
 	if err := validateMetadata(ctx, validatorDB, interchangeJSON); err != nil {
 		return errors.Wrap(err, "slashing protection JSON metadata was incorrect")
 	}

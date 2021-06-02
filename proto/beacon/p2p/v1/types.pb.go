@@ -1019,7 +1019,7 @@ func (x *SyncCommittee) GetAggregatePubkey() []byte {
 	return nil
 }
 
-type SyncCommitteeSigningData struct {
+type SyncAggregatorSelectionData struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -1028,8 +1028,8 @@ type SyncCommitteeSigningData struct {
 	SubcommitteeIndex uint64 `protobuf:"varint,2,opt,name=subcommittee_index,json=subcommitteeIndex,proto3" json:"subcommittee_index,omitempty"`
 }
 
-func (x *SyncCommitteeSigningData) Reset() {
-	*x = SyncCommitteeSigningData{}
+func (x *SyncAggregatorSelectionData) Reset() {
+	*x = SyncAggregatorSelectionData{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_proto_beacon_p2p_v1_types_proto_msgTypes[11]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1037,13 +1037,13 @@ func (x *SyncCommitteeSigningData) Reset() {
 	}
 }
 
-func (x *SyncCommitteeSigningData) String() string {
+func (x *SyncAggregatorSelectionData) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SyncCommitteeSigningData) ProtoMessage() {}
+func (*SyncAggregatorSelectionData) ProtoMessage() {}
 
-func (x *SyncCommitteeSigningData) ProtoReflect() protoreflect.Message {
+func (x *SyncAggregatorSelectionData) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_beacon_p2p_v1_types_proto_msgTypes[11]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1055,19 +1055,19 @@ func (x *SyncCommitteeSigningData) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SyncCommitteeSigningData.ProtoReflect.Descriptor instead.
-func (*SyncCommitteeSigningData) Descriptor() ([]byte, []int) {
+// Deprecated: Use SyncAggregatorSelectionData.ProtoReflect.Descriptor instead.
+func (*SyncAggregatorSelectionData) Descriptor() ([]byte, []int) {
 	return file_proto_beacon_p2p_v1_types_proto_rawDescGZIP(), []int{11}
 }
 
-func (x *SyncCommitteeSigningData) GetSlot() uint64 {
+func (x *SyncAggregatorSelectionData) GetSlot() uint64 {
 	if x != nil {
 		return x.Slot
 	}
 	return 0
 }
 
-func (x *SyncCommitteeSigningData) GetSubcommitteeIndex() uint64 {
+func (x *SyncAggregatorSelectionData) GetSubcommitteeIndex() uint64 {
 	if x != nil {
 		return x.SubcommitteeIndex
 	}
@@ -1380,13 +1380,14 @@ var file_proto_beacon_p2p_v1_types_proto_rawDesc = []byte{
 	0x75, 0x62, 0x6b, 0x65, 0x79, 0x73, 0x12, 0x31, 0x0a, 0x10, 0x61, 0x67, 0x67, 0x72, 0x65, 0x67,
 	0x61, 0x74, 0x65, 0x5f, 0x70, 0x75, 0x62, 0x6b, 0x65, 0x79, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c,
 	0x42, 0x06, 0x8a, 0xb5, 0x18, 0x02, 0x34, 0x38, 0x52, 0x0f, 0x61, 0x67, 0x67, 0x72, 0x65, 0x67,
-	0x61, 0x74, 0x65, 0x50, 0x75, 0x62, 0x6b, 0x65, 0x79, 0x22, 0x5d, 0x0a, 0x18, 0x53, 0x79, 0x6e,
-	0x63, 0x43, 0x6f, 0x6d, 0x6d, 0x69, 0x74, 0x74, 0x65, 0x65, 0x53, 0x69, 0x67, 0x6e, 0x69, 0x6e,
-	0x67, 0x44, 0x61, 0x74, 0x61, 0x12, 0x12, 0x0a, 0x04, 0x73, 0x6c, 0x6f, 0x74, 0x18, 0x01, 0x20,
-	0x01, 0x28, 0x04, 0x52, 0x04, 0x73, 0x6c, 0x6f, 0x74, 0x12, 0x2d, 0x0a, 0x12, 0x73, 0x75, 0x62,
-	0x63, 0x6f, 0x6d, 0x6d, 0x69, 0x74, 0x74, 0x65, 0x65, 0x5f, 0x69, 0x6e, 0x64, 0x65, 0x78, 0x18,
-	0x02, 0x20, 0x01, 0x28, 0x04, 0x52, 0x11, 0x73, 0x75, 0x62, 0x63, 0x6f, 0x6d, 0x6d, 0x69, 0x74,
-	0x74, 0x65, 0x65, 0x49, 0x6e, 0x64, 0x65, 0x78, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x61, 0x74, 0x65, 0x50, 0x75, 0x62, 0x6b, 0x65, 0x79, 0x22, 0x60, 0x0a, 0x1b, 0x53, 0x79, 0x6e,
+	0x63, 0x41, 0x67, 0x67, 0x72, 0x65, 0x67, 0x61, 0x74, 0x6f, 0x72, 0x53, 0x65, 0x6c, 0x65, 0x63,
+	0x74, 0x69, 0x6f, 0x6e, 0x44, 0x61, 0x74, 0x61, 0x12, 0x12, 0x0a, 0x04, 0x73, 0x6c, 0x6f, 0x74,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x04, 0x52, 0x04, 0x73, 0x6c, 0x6f, 0x74, 0x12, 0x2d, 0x0a, 0x12,
+	0x73, 0x75, 0x62, 0x63, 0x6f, 0x6d, 0x6d, 0x69, 0x74, 0x74, 0x65, 0x65, 0x5f, 0x69, 0x6e, 0x64,
+	0x65, 0x78, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04, 0x52, 0x11, 0x73, 0x75, 0x62, 0x63, 0x6f, 0x6d,
+	0x6d, 0x69, 0x74, 0x74, 0x65, 0x65, 0x49, 0x6e, 0x64, 0x65, 0x78, 0x62, 0x06, 0x70, 0x72, 0x6f,
+	0x74, 0x6f, 0x33,
 }
 
 var (
@@ -1403,23 +1404,23 @@ func file_proto_beacon_p2p_v1_types_proto_rawDescGZIP() []byte {
 
 var file_proto_beacon_p2p_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_proto_beacon_p2p_v1_types_proto_goTypes = []interface{}{
-	(*BeaconState)(nil),                // 0: ethereum.beacon.p2p.v1.BeaconState
-	(*BeaconStateAltair)(nil),          // 1: ethereum.beacon.p2p.v1.BeaconStateAltair
-	(*Fork)(nil),                       // 2: ethereum.beacon.p2p.v1.Fork
-	(*PendingAttestation)(nil),         // 3: ethereum.beacon.p2p.v1.PendingAttestation
-	(*HistoricalBatch)(nil),            // 4: ethereum.beacon.p2p.v1.HistoricalBatch
-	(*StateSummary)(nil),               // 5: ethereum.beacon.p2p.v1.StateSummary
-	(*SigningData)(nil),                // 6: ethereum.beacon.p2p.v1.SigningData
-	(*ForkData)(nil),                   // 7: ethereum.beacon.p2p.v1.ForkData
-	(*CheckPtInfo)(nil),                // 8: ethereum.beacon.p2p.v1.CheckPtInfo
-	(*DepositMessage)(nil),             // 9: ethereum.beacon.p2p.v1.DepositMessage
-	(*SyncCommittee)(nil),              // 10: ethereum.beacon.p2p.v1.SyncCommittee
-	(*SyncCommitteeSigningData)(nil),   // 11: ethereum.beacon.p2p.v1.SyncCommitteeSigningData
-	(*v1alpha1.BeaconBlockHeader)(nil), // 12: ethereum.eth.v1alpha1.BeaconBlockHeader
-	(*v1alpha1.Eth1Data)(nil),          // 13: ethereum.eth.v1alpha1.Eth1Data
-	(*v1alpha1.Validator)(nil),         // 14: ethereum.eth.v1alpha1.Validator
-	(*v1alpha1.Checkpoint)(nil),        // 15: ethereum.eth.v1alpha1.Checkpoint
-	(*v1alpha1.AttestationData)(nil),   // 16: ethereum.eth.v1alpha1.AttestationData
+	(*BeaconState)(nil),                 // 0: ethereum.beacon.p2p.v1.BeaconState
+	(*BeaconStateAltair)(nil),           // 1: ethereum.beacon.p2p.v1.BeaconStateAltair
+	(*Fork)(nil),                        // 2: ethereum.beacon.p2p.v1.Fork
+	(*PendingAttestation)(nil),          // 3: ethereum.beacon.p2p.v1.PendingAttestation
+	(*HistoricalBatch)(nil),             // 4: ethereum.beacon.p2p.v1.HistoricalBatch
+	(*StateSummary)(nil),                // 5: ethereum.beacon.p2p.v1.StateSummary
+	(*SigningData)(nil),                 // 6: ethereum.beacon.p2p.v1.SigningData
+	(*ForkData)(nil),                    // 7: ethereum.beacon.p2p.v1.ForkData
+	(*CheckPtInfo)(nil),                 // 8: ethereum.beacon.p2p.v1.CheckPtInfo
+	(*DepositMessage)(nil),              // 9: ethereum.beacon.p2p.v1.DepositMessage
+	(*SyncCommittee)(nil),               // 10: ethereum.beacon.p2p.v1.SyncCommittee
+	(*SyncAggregatorSelectionData)(nil), // 11: ethereum.beacon.p2p.v1.SyncAggregatorSelectionData
+	(*v1alpha1.BeaconBlockHeader)(nil),  // 12: ethereum.eth.v1alpha1.BeaconBlockHeader
+	(*v1alpha1.Eth1Data)(nil),           // 13: ethereum.eth.v1alpha1.Eth1Data
+	(*v1alpha1.Validator)(nil),          // 14: ethereum.eth.v1alpha1.Validator
+	(*v1alpha1.Checkpoint)(nil),         // 15: ethereum.eth.v1alpha1.Checkpoint
+	(*v1alpha1.AttestationData)(nil),    // 16: ethereum.eth.v1alpha1.AttestationData
 }
 var file_proto_beacon_p2p_v1_types_proto_depIdxs = []int32{
 	2,  // 0: ethereum.beacon.p2p.v1.BeaconState.fork:type_name -> ethereum.beacon.p2p.v1.Fork
@@ -1590,7 +1591,7 @@ func file_proto_beacon_p2p_v1_types_proto_init() {
 			}
 		}
 		file_proto_beacon_p2p_v1_types_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SyncCommitteeSigningData); i {
+			switch v := v.(*SyncAggregatorSelectionData); i {
 			case 0:
 				return &v.state
 			case 1:

@@ -31,6 +31,7 @@ import (
 	testp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -333,9 +334,9 @@ func addPeer(t *testing.T, p *peers.Status, state peerdata.PeerConnectionState) 
 	require.NoError(t, err)
 	p.Add(new(enr.Record), id, nil, network.DirInbound)
 	p.SetConnectionState(id, state)
-	p.SetMetadata(id, &pb.MetaData{
+	p.SetMetadata(id, interfaces.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: 0,
 		Attnets:   bitfield.NewBitvector64(),
-	})
+	}))
 	return id
 }
