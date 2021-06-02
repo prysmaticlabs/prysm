@@ -22,6 +22,7 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (proto.Message, error
 	if err != nil {
 		return nil, err
 	}
+	//t
 	base, ok := p2p.GossipTopicMappings[topic]
 	if !ok {
 		return nil, p2p.ErrMessageNotMapped
