@@ -26,14 +26,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
-	"google.golang.org/protobuf/proto"
 )
 
 var _ shared.Service = (*Service)(nil)
@@ -65,7 +64,7 @@ type Service struct {
 	addrFilter            *multiaddr.Filters
 	ipLimiter             *leakybucket.Collector
 	privKey               *ecdsa.PrivateKey
-	metaData              *pb.MetaData
+	metaData              interfaces.Metadata
 	pubsub                *pubsub.PubSub
 	joinedTopics          map[string]*pubsub.Topic
 	joinedTopicsLock      sync.Mutex
@@ -342,13 +341,13 @@ func (s *Service) DiscoveryAddresses() ([]multiaddr.Multiaddr, error) {
 }
 
 // Metadata returns a copy of the peer's metadata.
-func (s *Service) Metadata() *pb.MetaData {
-	return proto.Clone(s.metaData).(*pb.MetaData)
+func (s *Service) Metadata() interfaces.Metadata {
+	return s.metaData.Copy()
 }
 
 // MetadataSeq returns the metadata sequence number.
 func (s *Service) MetadataSeq() uint64 {
-	return s.metaData.SeqNumber
+	return s.metaData.SequenceNumber()
 }
 
 // AddPingMethod adds the metadata ping rpc method to the p2p service, so that it can

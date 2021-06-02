@@ -131,12 +131,12 @@ func (s *Service) validateSequenceNum(seq types.SSZUint64, id peer.ID) (bool, er
 	if err != nil {
 		return false, err
 	}
-	if md == nil {
+	if md == nil || md.IsNil() {
 		return false, nil
 	}
 	// Return error on invalid sequence number.
-	if md.SeqNumber > uint64(seq) {
+	if md.SequenceNumber() > uint64(seq) {
 		return false, p2ptypes.ErrInvalidSequenceNum
 	}
-	return md.SeqNumber == uint64(seq), nil
+	return md.SequenceNumber() == uint64(seq), nil
 }
