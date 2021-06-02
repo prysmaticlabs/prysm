@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -187,10 +188,10 @@ func TestPeerCommitteeIndices(t *testing.T) {
 			bitV.SetBitAt(uint64(i), true)
 		}
 	}
-	p.SetMetadata(id, &pb.MetaData{
+	p.SetMetadata(id, interfaces.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   bitV,
-	})
+	}))
 
 	wantedIndices := []uint64{2, 8, 9}
 
@@ -222,10 +223,10 @@ func TestPeerSubscribedToSubnet(t *testing.T) {
 			bitV.SetBitAt(uint64(i), true)
 		}
 	}
-	p.SetMetadata(expectedPeer, &pb.MetaData{
+	p.SetMetadata(expectedPeer, interfaces.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   bitV,
-	})
+	}))
 	numPeers = 3
 	for i := 0; i < numPeers; i++ {
 		addPeer(t, p, peers.PeerDisconnected)
@@ -369,15 +370,15 @@ func TestAddMetaData(t *testing.T) {
 	}
 	newPeer := p.All()[2]
 
-	newMetaData := &pb.MetaData{
+	newMetaData := &pb.MetaDataV0{
 		SeqNumber: 8,
 		Attnets:   bitfield.NewBitvector64(),
 	}
-	p.SetMetadata(newPeer, newMetaData)
+	p.SetMetadata(newPeer, interfaces.WrappedMetadataV0(newMetaData))
 
 	md, err := p.Metadata(newPeer)
 	require.NoError(t, err)
-	assert.Equal(t, newMetaData.SeqNumber, md.SeqNumber, "Unexpected sequence number")
+	assert.Equal(t, newMetaData.SeqNumber, md.SequenceNumber(), "Unexpected sequence number")
 }
 
 func TestPeerConnectionStatuses(t *testing.T) {
@@ -1001,10 +1002,10 @@ func addPeer(t *testing.T, p *peers.Status, state peerdata.PeerConnectionState) 
 	require.NoError(t, err)
 	p.Add(new(enr.Record), id, nil, network.DirUnknown)
 	p.SetConnectionState(id, state)
-	p.SetMetadata(id, &pb.MetaData{
+	p.SetMetadata(id, interfaces.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: 0,
 		Attnets:   bitfield.NewBitvector64(),
-	})
+	}))
 	return id
 }
 

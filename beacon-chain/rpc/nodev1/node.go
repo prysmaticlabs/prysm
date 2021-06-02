@@ -60,7 +60,7 @@ func (ns *Server) GetIdentity(ctx context.Context, _ *emptypb.Empty) (*ethpb.Ide
 
 	metadata := &ethpb.Metadata{
 		SeqNumber: ns.MetadataProvider.MetadataSeq(),
-		Attnets:   ns.MetadataProvider.Metadata().Attnets,
+		Attnets:   ns.MetadataProvider.Metadata().AttnetsBitfield(),
 	}
 
 	return &ethpb.IdentityResponse{

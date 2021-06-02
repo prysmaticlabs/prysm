@@ -93,12 +93,19 @@ func (ds *Server) getPeer(pid peer.ID) (*pbrpc.DebugPeerResponse, error) {
 		aVersion = ""
 	}
 	peerInfo := &pbrpc.DebugPeerResponse_PeerInfo{
-		Metadata:        metadata,
 		Protocols:       protocols,
 		FaultCount:      uint64(resp),
 		ProtocolVersion: pVersion,
 		AgentVersion:    aVersion,
 		PeerLatency:     uint64(peerStore.LatencyEWMA(pid).Milliseconds()),
+	}
+	if metadata != nil && !metadata.IsNil() {
+		switch {
+		case metadata.MetadataObjV0() != nil:
+			peerInfo.MetadataV0 = metadata.MetadataObjV0()
+		case metadata.MetadataObjV1() != nil:
+			peerInfo.MetadataV1 = metadata.MetadataObjV1()
+		}
 	}
 	addresses := peerStore.Addrs(pid)
 	var stringAddrs []string
