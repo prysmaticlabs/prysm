@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
@@ -14,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	"github.com/prysmaticlabs/prysm/shared/interfaces/version"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
@@ -150,6 +152,12 @@ func CalculateStateRoot(
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not process block")
 	}
+	if signed.Version() == version.Altair {
+		state, err = altair.ProcessSyncCommittee(state, signed.Block().Body().SyncAggregate())
+		if err != nil {
+			return [32]byte{}, err
+		}
+	}
 
 	return state.HashTreeRoot(ctx)
 }
@@ -181,6 +189,12 @@ func ProcessBlockNoVerifyAnySig(
 	state, err := ProcessBlockForStateRoot(ctx, state, signed)
 	if err != nil {
 		return nil, nil, err
+	}
+	if signed.Version() == version.Altair {
+		state, err = altair.ProcessSyncCommittee(state, signed.Block().Body().SyncAggregate())
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
 	bSet, err := b.BlockSignatureSet(state, blk.ProposerIndex(), signed.Signature(), blk.HashTreeRoot)
@@ -240,22 +254,43 @@ func ProcessOperationsNoVerifyAttsSigs(
 		return nil, errors.Wrap(err, "could not verify operation lengths")
 	}
 
-	state, err := b.ProcessProposerSlashings(ctx, state, signedBeaconBlock.Block().Body().ProposerSlashings(), v.SlashValidator)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process block proposer slashings")
+	var err error
+	if signedBeaconBlock.Version() == version.Altair {
+		state, err = b.ProcessProposerSlashings(ctx, state, signedBeaconBlock.Block().Body().ProposerSlashings(), altair.SlashValidator)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not process block proposer slashings")
+		}
+		state, err = b.ProcessAttesterSlashings(ctx, state, signedBeaconBlock.Block().Body().AttesterSlashings(), altair.SlashValidator)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not process block attester slashings")
+		}
+		state, err = altair.ProcessAttestationsNoVerifySignature(ctx, state, signedBeaconBlock)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not process block attestations")
+		}
+		state, err = altair.ProcessDeposits(ctx, state, signedBeaconBlock.Block().Body().Deposits())
+		if err != nil {
+			return nil, errors.Wrap(err, "could not process block validator deposits")
+		}
+	} else {
+		state, err = b.ProcessProposerSlashings(ctx, state, signedBeaconBlock.Block().Body().ProposerSlashings(), v.SlashValidator)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not process block proposer slashings")
+		}
+		state, err = b.ProcessAttesterSlashings(ctx, state, signedBeaconBlock.Block().Body().AttesterSlashings(), v.SlashValidator)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not process block attester slashings")
+		}
+		state, err = b.ProcessAttestationsNoVerifySignature(ctx, state, signedBeaconBlock)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not process block attestations")
+		}
+		state, err = b.ProcessDeposits(ctx, state, signedBeaconBlock.Block().Body().Deposits())
+		if err != nil {
+			return nil, errors.Wrap(err, "could not process block validator deposits")
+		}
 	}
-	state, err = b.ProcessAttesterSlashings(ctx, state, signedBeaconBlock.Block().Body().AttesterSlashings(), v.SlashValidator)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process block attester slashings")
-	}
-	state, err = b.ProcessAttestationsNoVerifySignature(ctx, state, signedBeaconBlock)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process block attestations")
-	}
-	state, err = b.ProcessDeposits(ctx, state, signedBeaconBlock.Block().Body().Deposits())
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process block validator deposits")
-	}
+
 	state, err = b.ProcessVoluntaryExits(ctx, state, signedBeaconBlock.Block().Body().VoluntaryExits())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process validator exits")

@@ -16,6 +16,7 @@ type SignedBeaconBlock interface {
 	MarshalSSZ() ([]byte, error)
 	Proto() proto.Message
 	PbPhase0Block() (*ethpb.SignedBeaconBlock, error)
+	Version() int
 }
 
 // BeaconBlock describes an interface which states the methods
@@ -43,6 +44,7 @@ type BeaconBlockBody interface {
 	Attestations() []*ethpb.Attestation
 	Deposits() []*ethpb.Deposit
 	VoluntaryExits() []*ethpb.SignedVoluntaryExit
+	SyncAggregate() *ethpb.SyncAggregate
 	IsNil() bool
 	HashTreeRoot() ([32]byte, error)
 	Proto() proto.Message

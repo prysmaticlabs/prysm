@@ -11,6 +11,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//shared/copyutil:go_default_library",
+        "//shared/interfaces/version:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",

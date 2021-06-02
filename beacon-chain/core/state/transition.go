@@ -19,6 +19,7 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	"github.com/prysmaticlabs/prysm/shared/interfaces/version"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -273,10 +274,18 @@ func ProcessSlots(ctx context.Context, state iface.BeaconState, slot types.Slot)
 			return nil, errors.Wrap(err, "could not process slot")
 		}
 		if CanProcessEpoch(state) {
-			state, err = ProcessEpochPrecompute(ctx, state)
-			if err != nil {
-				traceutil.AnnotateError(span, err)
-				return nil, errors.Wrap(err, "could not process epoch with optimizations")
+			if state.Version() == version.Altair {
+				state, err = altair.ProcessEpoch(ctx, state)
+				if err != nil {
+					traceutil.AnnotateError(span, err)
+					return nil, errors.Wrap(err, "could not process epoch with optimizations")
+				}
+			} else {
+				state, err = ProcessEpochPrecompute(ctx, state)
+				if err != nil {
+					traceutil.AnnotateError(span, err)
+					return nil, errors.Wrap(err, "could not process epoch with optimizations")
+				}
 			}
 		}
 		if err := state.SetSlot(state.Slot() + 1); err != nil {

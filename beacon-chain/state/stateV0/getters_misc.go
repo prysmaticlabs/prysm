@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
+	"github.com/prysmaticlabs/prysm/shared/interfaces/version"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -293,4 +294,9 @@ func (h *stateRootHasher) merkleizeWithCache(leaves [][32]byte, length uint64,
 		layersCache[fieldName] = layers
 	}
 	return root
+}
+
+// Version of the beacon state.
+func (b *BeaconState) Version() int {
+	return version.Phase0
 }

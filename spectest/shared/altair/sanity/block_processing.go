@@ -11,11 +11,12 @@ import (
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/golang/snappy"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/spectest/utils"
@@ -24,7 +25,7 @@ import (
 )
 
 func init() {
-	altair.SkipSlotCache.Disable()
+	state.SkipSlotCache.Disable()
 }
 
 // RunBlockProcessingTest executes "sanity/blocks" tests.
@@ -61,7 +62,7 @@ func RunBlockProcessingTest(t *testing.T, config string) {
 				require.NoError(t, err, "Failed to decompress")
 				block := &ethpb.SignedBeaconBlockAltair{}
 				require.NoError(t, block.UnmarshalSSZ(blockSSZ), "Failed to unmarshal")
-				processedState, transitionError = altair.ExecuteStateTransition(context.Background(), beaconState, block)
+				processedState, transitionError = state.ExecuteStateTransition(context.Background(), beaconState, interfaces.WrappedAltairSignedBeaconBlock(block))
 				if transitionError != nil {
 					break
 				}
