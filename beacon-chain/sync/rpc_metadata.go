@@ -60,5 +60,5 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (interfac
 	if err := s.cfg.P2P.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
 		return nil, err
 	}
-	return interfaces.WrappedMetadataV1(msg), nil
+	return interfaces.WrappedMetadataV0(msg), nil
 }

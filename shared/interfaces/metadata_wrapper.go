@@ -6,13 +6,60 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// MetadataV1 is a convenience wrapper around our metadata protobuf object.
-type MetadataV1 struct {
+// MetadataV0 is a convenience wrapper around our metadata protobuf object.
+type MetadataV0 struct {
 	md *pb.MetaDataV0
 }
 
+// WrappedMetadataV0 wrappers around the provided protobuf object.
+func WrappedMetadataV0(md *pb.MetaDataV0) MetadataV0 {
+	return MetadataV0{md: md}
+}
+
+// SequenceNumber returns the sequence number from the metadata.
+func (m MetadataV0) SequenceNumber() uint64 {
+	return m.md.SeqNumber
+}
+
+// AttnetsBitfield retruns the bitfield stored in the metadata.
+func (m MetadataV0) AttnetsBitfield() bitfield.Bitvector64 {
+	return m.md.Attnets
+}
+
+// InnerObject returns the underlying metadata protobuf structure.
+func (m MetadataV0) InnerObject() interface{} {
+	return m.md
+}
+
+// IsNil checks for the nilness of the underlying object.
+func (m MetadataV0) IsNil() bool {
+	return m.md == nil
+}
+
+// Copy performs a full copy of the underlying metadata object.
+func (m MetadataV0) Copy() Metadata {
+	return WrappedMetadataV0(proto.Clone(m.md).(*pb.MetaDataV0))
+}
+
+// MetadataObjV0 returns the inner metadata object in its type
+// specified form. If it doesn't exist then we return nothing.
+func (m MetadataV0) MetadataObjV0() *pb.MetaDataV0 {
+	return m.md
+}
+
+// MetadataObjV1 returns the inner metatdata object in its type
+// specified form. If it doesn't exist then we return nothing.
+func (m MetadataV0) MetadataObjV1() *pb.MetaDataV1 {
+	return nil
+}
+
+// MetadataV1 is a convenience wrapper around our metadata v2 protobuf object.
+type MetadataV1 struct {
+	md *pb.MetaDataV1
+}
+
 // WrappedMetadataV1 wrappers around the provided protobuf object.
-func WrappedMetadataV1(md *pb.MetaDataV0) MetadataV1 {
+func WrappedMetadataV1(md *pb.MetaDataV1) MetadataV1 {
 	return MetadataV1{md: md}
 }
 
@@ -38,64 +85,17 @@ func (m MetadataV1) IsNil() bool {
 
 // Copy performs a full copy of the underlying metadata object.
 func (m MetadataV1) Copy() Metadata {
-	return WrappedMetadataV1(proto.Clone(m.md).(*pb.MetaDataV0))
+	return WrappedMetadataV1(proto.Clone(m.md).(*pb.MetaDataV1))
 }
 
-// MetadataObj returns the inner metadata object in its type
+// MetadataObjV0 returns the inner metadata object in its type
 // specified form. If it doesn't exist then we return nothing.
-func (m MetadataV1) MetadataObj() *pb.MetaDataV0 {
-	return m.md
-}
-
-// MetadataObjV2 returns the inner metatdata object in its type
-// specified form. If it doesn't exist then we return nothing.
-func (m MetadataV1) MetadataObjV2() *pb.MetaDataV1 {
+func (m MetadataV1) MetadataObjV0() *pb.MetaDataV0 {
 	return nil
 }
 
-// MetadataV2 is a convenience wrapper around our metadata v2 protobuf object.
-type MetadataV2 struct {
-	md *pb.MetaDataV1
-}
-
-// WrappedMetadataV2 wrappers around the provided protobuf object.
-func WrappedMetadataV2(md *pb.MetaDataV1) MetadataV2 {
-	return MetadataV2{md: md}
-}
-
-// SequenceNumber returns the sequence number from the metadata.
-func (m MetadataV2) SequenceNumber() uint64 {
-	return m.md.SeqNumber
-}
-
-// AttnetsBitfield retruns the bitfield stored in the metadata.
-func (m MetadataV2) AttnetsBitfield() bitfield.Bitvector64 {
-	return m.md.Attnets
-}
-
-// InnerObject returns the underlying metadata protobuf structure.
-func (m MetadataV2) InnerObject() interface{} {
-	return m.md
-}
-
-// IsNil checks for the nilness of the underlying object.
-func (m MetadataV2) IsNil() bool {
-	return m.md == nil
-}
-
-// Copy performs a full copy of the underlying metadata object.
-func (m MetadataV2) Copy() Metadata {
-	return WrappedMetadataV2(proto.Clone(m.md).(*pb.MetaDataV1))
-}
-
-// MetadataObj returns the inner metadata object in its type
+// MetadataObjV1 returns the inner metatdata object in its type
 // specified form. If it doesn't exist then we return nothing.
-func (m MetadataV2) MetadataObj() *pb.MetaDataV0 {
-	return nil
-}
-
-// MetadataObjV2 returns the inner metatdata object in its type
-// specified form. If it doesn't exist then we return nothing.
-func (m MetadataV2) MetadataObjV2() *pb.MetaDataV1 {
+func (m MetadataV1) MetadataObjV1() *pb.MetaDataV1 {
 	return m.md
 }

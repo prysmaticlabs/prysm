@@ -334,7 +334,7 @@ func addPeer(t *testing.T, p *peers.Status, state peerdata.PeerConnectionState) 
 	require.NoError(t, err)
 	p.Add(new(enr.Record), id, nil, network.DirInbound)
 	p.SetConnectionState(id, state)
-	p.SetMetadata(id, interfaces.WrappedMetadataV1(&pb.MetaDataV0{
+	p.SetMetadata(id, interfaces.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: 0,
 		Attnets:   bitfield.NewBitvector64(),
 	}))

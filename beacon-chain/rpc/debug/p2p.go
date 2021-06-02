@@ -101,10 +101,10 @@ func (ds *Server) getPeer(pid peer.ID) (*pbrpc.DebugPeerResponse, error) {
 	}
 	if metadata != nil && !metadata.IsNil() {
 		switch {
-		case metadata.MetadataObj() != nil:
-			peerInfo.MetadataV0 = metadata.MetadataObj()
-		case metadata.MetadataObjV2() != nil:
-			peerInfo.MetadataV1 = metadata.MetadataObjV2()
+		case metadata.MetadataObjV0() != nil:
+			peerInfo.MetadataV0 = metadata.MetadataObjV0()
+		case metadata.MetadataObjV1() != nil:
+			peerInfo.MetadataV1 = metadata.MetadataObjV1()
 		}
 	}
 	addresses := peerStore.Addrs(pid)

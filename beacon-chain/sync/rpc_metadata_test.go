@@ -26,7 +26,7 @@ func TestMetaDataRPCHandler_ReceivesMetadata(t *testing.T) {
 	p1.Connect(p2)
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 	bitfield := [8]byte{'A', 'B'}
-	p1.LocalMetadata = interfaces.WrappedMetadataV1(&pb.MetaDataV0{
+	p1.LocalMetadata = interfaces.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   bitfield[:],
 	})
@@ -75,7 +75,7 @@ func TestMetadataRPCHandler_SendsMetadata(t *testing.T) {
 	p1.Connect(p2)
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 	bitfield := [8]byte{'A', 'B'}
-	p2.LocalMetadata = interfaces.WrappedMetadataV1(&pb.MetaDataV0{
+	p2.LocalMetadata = interfaces.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   bitfield[:],
 	})

@@ -120,7 +120,7 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	// Update ENR of a peer.
 	testService := &Service{
 		dv5Listener: listeners[0],
-		metaData: interfaces.WrappedMetadataV1(&pb.MetaDataV0{
+		metaData: interfaces.WrappedMetadataV0(&pb.MetaDataV0{
 			Attnets: bitfield.NewBitvector64(),
 		}),
 	}

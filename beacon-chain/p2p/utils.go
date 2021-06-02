@@ -129,7 +129,7 @@ func metaDataFromConfig(cfg *Config) (interfaces.Metadata, error) {
 		if err := fileutil.WriteFile(defaultKeyPath, dst); err != nil {
 			return nil, err
 		}
-		return interfaces.WrappedMetadataV1(metaData), nil
+		return interfaces.WrappedMetadataV0(metaData), nil
 	}
 	if defaultMetadataExist && metaDataPath == "" {
 		metaDataPath = defaultKeyPath
@@ -143,7 +143,7 @@ func metaDataFromConfig(cfg *Config) (interfaces.Metadata, error) {
 	if err := proto.Unmarshal(src, metaData); err != nil {
 		return nil, err
 	}
-	return interfaces.WrappedMetadataV1(metaData), nil
+	return interfaces.WrappedMetadataV0(metaData), nil
 }
 
 // Retrieves an external ipv4 address and converts into a libp2p formatted value.

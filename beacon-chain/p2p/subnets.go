@@ -103,7 +103,7 @@ func (s *Service) hasPeerWithSubnet(topic string) bool {
 func (s *Service) updateSubnetRecordWithMetadata(bitV bitfield.Bitvector64) {
 	entry := enr.WithEntry(attSubnetEnrKey, &bitV)
 	s.dv5Listener.LocalNode().Set(entry)
-	s.metaData = interfaces.WrappedMetadataV1(&pb.MetaDataV0{
+	s.metaData = interfaces.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: s.metaData.SequenceNumber() + 1,
 		Attnets:   bitV,
 	})
