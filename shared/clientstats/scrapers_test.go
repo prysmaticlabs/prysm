@@ -9,7 +9,13 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/sirupsen/logrus"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
+
+func init() {
+	logrus.SetLevel(logrus.DebugLevel)
+}
 
 type mockRT struct {
 	body       string
@@ -152,10 +158,12 @@ func TestBeaconNodeAPIMessageDefaults(t *testing.T) {
 }
 
 func TestBadInput(t *testing.T) {
+	hook := logTest.NewGlobal()
 	bnScraper := beaconNodeScraper{}
 	bnScraper.tripper = &mockRT{body: ""}
 	_, err := bnScraper.Scrape()
-	assert.ErrorContains(t, "did not find metric family", err, "Expected errors for missing metric families on empty input.")
+	assert.NoError(t, err)
+	assert.LogsContain(t, hook, "Failed to get prysm_version")
 }
 
 var prometheusTestBody = `
