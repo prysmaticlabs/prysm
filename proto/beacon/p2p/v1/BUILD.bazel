@@ -43,7 +43,10 @@ ssz_gen_marshal(
         "HistoricalBatch",
         "Status",
         "BeaconState",
+        "BeaconStateAltair",
         "SigningData",
+        "SyncCommittee",
+        "SyncAggregatorSelectionData",
     ],
 )
 
