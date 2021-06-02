@@ -206,7 +206,7 @@ func AttestationSignatureSet(ctx context.Context, beaconState iface.ReadOnlyBeac
 	set := bls.NewSet()
 
 	// Check attestations from before the fork.
-	if fork.Epoch > 0 { // Check to prevent underflow.
+	if fork.Epoch > 0 && len(preForkAtts) > 0 { // Check to prevent underflow and there is valid attestations to create sig set.
 		prevDomain, err := helpers.Domain(fork, fork.Epoch-1, dt, gvr)
 		if err != nil {
 			return nil, err
@@ -215,22 +215,30 @@ func AttestationSignatureSet(ctx context.Context, beaconState iface.ReadOnlyBeac
 		if err != nil {
 			return nil, err
 		}
-		set.Join(aSet)
+		if aSet != nil {
+			set.Join(aSet)
+		}
 	} else if len(preForkAtts) > 0 {
 		// This is a sanity check that preForkAtts were not ignored when fork.Epoch == 0. This
 		// condition is not possible, but it doesn't hurt to check anyway.
 		return nil, errors.New("some attestations were not verified from previous fork before genesis")
 	}
 
-	// Then check attestations from after the fork.
-	currDomain, err := helpers.Domain(fork, fork.Epoch, dt, gvr)
-	if err != nil {
-		return nil, err
+	if len(postForkAtts) > 0 {
+		// Then check attestations from after the fork.
+		currDomain, err := helpers.Domain(fork, fork.Epoch, dt, gvr)
+		if err != nil {
+			return nil, err
+		}
+
+		aSet, err := createAttestationSignatureSet(ctx, beaconState, postForkAtts, currDomain)
+		if err != nil {
+			return nil, err
+		}
+		if aSet != nil {
+			return set.Join(aSet), nil
+		}
 	}
 
-	aSet, err := createAttestationSignatureSet(ctx, beaconState, postForkAtts, currDomain)
-	if err != nil {
-		return nil, err
-	}
-	return set.Join(aSet), nil
+	return set, nil
 }
