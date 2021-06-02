@@ -41,7 +41,7 @@ func newRateLimiter(p2pProvider p2p.P2P) *limiter {
 	// Goodbye Message
 	topicMap[addEncoding(p2p.RPCGoodByeTopicV1)] = leakybucket.NewCollector(1, 1, false /* deleteEmptyBuckets */)
 	topicMap[addEncoding(p2p.RPCGoodByeTopicV2)] = leakybucket.NewCollector(1, 1, false /* deleteEmptyBuckets */)
-	// Metadata Message
+	// MetadataV0 Message
 	topicMap[addEncoding(p2p.RPCMetaDataTopicV1)] = leakybucket.NewCollector(1, defaultBurstLimit, false /* deleteEmptyBuckets */)
 	topicMap[addEncoding(p2p.RPCMetaDataTopicV2)] = leakybucket.NewCollector(1, defaultBurstLimit, false /* deleteEmptyBuckets */)
 	// Ping Message

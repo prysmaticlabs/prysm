@@ -36,7 +36,7 @@ func TestAggregateVerify(t *testing.T) {
 		sigs = append(sigs, sig)
 		msgs = append(msgs, msg)
 	}
-	aggSig := Aggregate(sigs)
+	aggSig := AggregateSignatures(sigs)
 	assert.Equal(t, true, aggSig.AggregateVerify(pubkeys, msgs), "Signature did not verify")
 }
 

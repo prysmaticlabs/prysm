@@ -10,6 +10,7 @@ go_library(
         "deposit.go",
         "helpers.go",
         "proposer_slashing.go",
+        "sync_committee.go",
         "voluntary_exit.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/spectest/shared/altair/operations",
