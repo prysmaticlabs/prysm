@@ -137,17 +137,18 @@ message DebugPeerResponse {
     message PeerInfo {
         // Metadata of the peer, containing their bitfield
         // and sequence number.
-        ethereum.beacon.p2p.v1.MetaData metadata = 1;
+        ethereum.beacon.p2p.v1.MetaDataV0 metadataV0 = 1;
+        ethereum.beacon.p2p.v1.MetaDataV1 metadataV1 = 2;
         // List of protocols the peer supports.
-        repeated string protocols = 2;
+        repeated string protocols = 3;
         // Number of times peer has been penalised.
-        uint64 fault_count = 3;
+        uint64 fault_count = 4;
         // Protocol Version peer is running.
-        string protocol_version = 4;
+        string protocol_version = 5;
         // Agent Version peer is running.
-        string agent_version = 5;
+        string agent_version = 6;
         // Latency of responses from peer(in ms).
-        uint64 peer_latency = 6;
+        uint64 peer_latency = 7;
     }
     // Listening addresses know of the peer.
     repeated string listening_addresses = 1;

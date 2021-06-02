@@ -52,7 +52,7 @@ func configureSlotsPerArchivedPoint(cliCtx *cli.Context) {
 	}
 }
 
-func configureProofOfWork(cliCtx *cli.Context) {
+func configureEth1Config(cliCtx *cli.Context) {
 	if cliCtx.IsSet(flags.ChainID.Name) {
 		c := params.BeaconConfig()
 		c.DepositChainID = cliCtx.Uint64(flags.ChainID.Name)
@@ -80,5 +80,18 @@ func configureNetwork(cliCtx *cli.Context) {
 		networkCfg := params.BeaconNetworkConfig()
 		networkCfg.ContractDeploymentBlock = uint64(cliCtx.Int(flags.ContractDeploymentBlock.Name))
 		params.OverrideBeaconNetworkConfig(networkCfg)
+	}
+}
+
+func configureInteropConfig(cliCtx *cli.Context) {
+	genStateIsSet := cliCtx.IsSet(flags.InteropGenesisStateFlag.Name)
+	genTimeIsSet := cliCtx.IsSet(flags.InteropGenesisTimeFlag.Name)
+	numValsIsSet := cliCtx.IsSet(flags.InteropNumValidatorsFlag.Name)
+	votesIsSet := cliCtx.IsSet(flags.InteropMockEth1DataVotesFlag.Name)
+
+	if genStateIsSet || genTimeIsSet || numValsIsSet || votesIsSet {
+		bCfg := params.BeaconConfig()
+		bCfg.ConfigName = "interop"
+		params.OverrideBeaconConfig(bCfg)
 	}
 }

@@ -63,7 +63,7 @@ func TestConfigureProofOfWork(t *testing.T) {
 	require.NoError(t, set.Set(flags.DepositContractFlag.Name, "deposit"))
 	cliCtx := cli.NewContext(&app, set, nil)
 
-	configureProofOfWork(cliCtx)
+	configureEth1Config(cliCtx)
 
 	assert.Equal(t, uint64(100), params.BeaconConfig().DepositChainID)
 	assert.Equal(t, uint64(200), params.BeaconConfig().DepositNetworkID)
@@ -87,4 +87,75 @@ func TestConfigureNetwork(t *testing.T) {
 
 	assert.DeepEqual(t, []string{"node1", "node2"}, params.BeaconNetworkConfig().BootstrapNodes)
 	assert.Equal(t, uint64(100), params.BeaconNetworkConfig().ContractDeploymentBlock)
+}
+
+func TestConfigureInterop(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+
+	tests := []struct {
+		name       string
+		flagSetter func() *cli.Context
+		configName string
+	}{
+		{
+			"nothing set",
+			func() *cli.Context {
+				app := cli.App{}
+				set := flag.NewFlagSet("test", 0)
+				return cli.NewContext(&app, set, nil)
+			},
+			"mainnet",
+		},
+		{
+			"mock votes set",
+			func() *cli.Context {
+				app := cli.App{}
+				set := flag.NewFlagSet("test", 0)
+				set.Bool(flags.InteropMockEth1DataVotesFlag.Name, false, "")
+				assert.NoError(t, set.Set(flags.InteropMockEth1DataVotesFlag.Name, "true"))
+				return cli.NewContext(&app, set, nil)
+			},
+			"interop",
+		},
+		{
+			"validators set",
+			func() *cli.Context {
+				app := cli.App{}
+				set := flag.NewFlagSet("test", 0)
+				set.Uint64(flags.InteropNumValidatorsFlag.Name, 0, "")
+				assert.NoError(t, set.Set(flags.InteropNumValidatorsFlag.Name, "20"))
+				return cli.NewContext(&app, set, nil)
+			},
+			"interop",
+		},
+		{
+			"genesis time set",
+			func() *cli.Context {
+				app := cli.App{}
+				set := flag.NewFlagSet("test", 0)
+				set.Uint64(flags.InteropGenesisTimeFlag.Name, 0, "")
+				assert.NoError(t, set.Set(flags.InteropGenesisTimeFlag.Name, "200"))
+				return cli.NewContext(&app, set, nil)
+			},
+			"interop",
+		},
+		{
+			"genesis state set",
+			func() *cli.Context {
+				app := cli.App{}
+				set := flag.NewFlagSet("test", 0)
+				set.String(flags.InteropGenesisStateFlag.Name, "", "")
+				assert.NoError(t, set.Set(flags.InteropGenesisStateFlag.Name, "/path/"))
+				return cli.NewContext(&app, set, nil)
+			},
+			"interop",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			configureInteropConfig(tt.flagSetter())
+			assert.DeepEqual(t, tt.configName, params.BeaconConfig().ConfigName)
+		})
+	}
 }
