@@ -1,9 +1,11 @@
 package interfaces
 
 import (
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces/version"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -57,6 +59,11 @@ func (w Phase0SignedBeaconBlock) Proto() proto.Message {
 // PbPhase0Block returns the underlying protobuf object.
 func (w Phase0SignedBeaconBlock) PbPhase0Block() (*ethpb.SignedBeaconBlock, error) {
 	return w.b, nil
+}
+
+// Version of the underlying protobuf object.
+func (w Phase0SignedBeaconBlock) Version() int {
+	return version.Phase0
 }
 
 // Phase0BeaconBlock is the wrapper for the actual block.
@@ -166,6 +173,11 @@ func (w Phase0BeaconBlockBody) Deposits() []*ethpb.Deposit {
 // VoluntaryExits returns the voluntary exits in the block.
 func (w Phase0BeaconBlockBody) VoluntaryExits() []*ethpb.SignedVoluntaryExit {
 	return w.b.VoluntaryExits
+}
+
+// SyncAggregate returns the sync aggregate in the block.
+func (w Phase0BeaconBlockBody) SyncAggregate() (*ethpb.SyncAggregate, error) {
+	return nil, errors.New("Sync aggregate is not supported in phase 0 block")
 }
 
 // IsNil checks if the block body is nil.

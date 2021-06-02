@@ -1,4 +1,4 @@
-package altair_test
+package state_test
 
 import (
 	"context"
@@ -10,19 +10,21 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	testutilAltair "github.com/prysmaticlabs/prysm/shared/testutil/altair"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
+func TestExecuteAltairStateTransitionNoVerify_FullProcess(t *testing.T) {
 	beaconState, privKeys := testutilAltair.DeterministicGenesisStateAltair(t, 100)
 
 	syncCommittee, err := altair.NextSyncCommittee(beaconState)
@@ -49,7 +51,7 @@ func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 
-	nextSlotState, err := altair.ProcessSlots(context.Background(), beaconState.Copy(), beaconState.Slot()+1)
+	nextSlotState, err := state.ProcessSlots(context.Background(), beaconState.Copy(), beaconState.Slot()+1)
 	require.NoError(t, err)
 	parentRoot, err := nextSlotState.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
@@ -90,7 +92,7 @@ func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
 	}
 	block.Block.Body.SyncAggregate = syncAggregate
 
-	stateRoot, err := altair.CalculateStateRoot(context.Background(), beaconState, block)
+	stateRoot, err := state.CalculateStateRoot(context.Background(), beaconState, interfaces.WrappedAltairSignedBeaconBlock(block))
 	require.NoError(t, err)
 	block.Block.StateRoot = stateRoot[:]
 
@@ -99,14 +101,14 @@ func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	block.Signature = sig.Marshal()
 
-	set, _, err := altair.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, block)
+	set, _, err := state.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, interfaces.WrappedAltairSignedBeaconBlock(block))
 	require.NoError(t, err)
 	verified, err := set.Verify()
 	require.NoError(t, err)
 	require.Equal(t, true, verified, "Could not verify signature set")
 }
 
-func TestExecuteStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t *testing.T) {
+func TestExecuteAltairStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t *testing.T) {
 	beaconState, privKeys := testutilAltair.DeterministicGenesisStateAltair(t, 100)
 
 	syncCommittee, err := altair.NextSyncCommittee(beaconState)
@@ -133,7 +135,7 @@ func TestExecuteStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t *test
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 
-	nextSlotState, err := altair.ProcessSlots(context.Background(), beaconState.Copy(), beaconState.Slot()+1)
+	nextSlotState, err := state.ProcessSlots(context.Background(), beaconState.Copy(), beaconState.Slot()+1)
 	require.NoError(t, err)
 	parentRoot, err := nextSlotState.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
@@ -174,7 +176,7 @@ func TestExecuteStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t *test
 	}
 	block.Block.Body.SyncAggregate = syncAggregate
 
-	stateRoot, err := altair.CalculateStateRoot(context.Background(), beaconState, block)
+	stateRoot, err := state.CalculateStateRoot(context.Background(), beaconState, interfaces.WrappedAltairSignedBeaconBlock(block))
 	require.NoError(t, err)
 	block.Block.StateRoot = stateRoot[:]
 
@@ -184,13 +186,13 @@ func TestExecuteStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t *test
 	block.Signature = sig.Marshal()
 
 	block.Block.StateRoot = bytesutil.PadTo([]byte{'a'}, 32)
-	_, _, err = altair.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, block)
+	_, _, err = state.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, interfaces.WrappedAltairSignedBeaconBlock(block))
 	require.ErrorContains(t, "could not validate state root", err)
 }
 
-func TestProcessBlockNoVerify_PassesProcessingConditions(t *testing.T) {
-	beaconState, block, _, _, _ := createFullBlockWithOperations(t)
-	set, _, err := altair.ProcessBlockNoVerifyAnySig(context.Background(), beaconState, block)
+func TestProcessAltairBlockNoVerify_PassesProcessingConditions(t *testing.T) {
+	beaconState, block, _, _, _ := createFullAltairBlockWithOperations(t)
+	set, _, err := state.ProcessBlockNoVerifyAnySig(context.Background(), beaconState, interfaces.WrappedAltairSignedBeaconBlock(block))
 	require.NoError(t, err)
 	// Test Signature set verifies.
 	verified, err := set.Verify()
@@ -198,7 +200,7 @@ func TestProcessBlockNoVerify_PassesProcessingConditions(t *testing.T) {
 	require.Equal(t, true, verified, "Could not verify signature set")
 }
 
-func createFullBlockWithOperations(t *testing.T) (iface.BeaconStateAltair,
+func createFullAltairBlockWithOperations(t *testing.T) (iface.BeaconStateAltair,
 	*ethpb.SignedBeaconBlockAltair, []*ethpb.Attestation, []*ethpb.ProposerSlashing, []*ethpb.SignedVoluntaryExit) {
 	beaconState, privKeys := testutilAltair.DeterministicGenesisStateAltair(t, 32)
 	genesisBlock := blocks.NewGenesisBlock([]byte{})

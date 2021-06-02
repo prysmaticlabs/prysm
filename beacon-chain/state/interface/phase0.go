@@ -20,6 +20,7 @@ type BeaconState interface {
 	Copy() BeaconState
 	HashTreeRoot(ctx context.Context) ([32]byte, error)
 	ToProto() (*v1.BeaconState, error)
+	Version() int
 	FutureForkStub
 }
 

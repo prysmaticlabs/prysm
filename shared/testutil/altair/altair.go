@@ -9,8 +9,10 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -69,7 +71,7 @@ func BlockSignature(
 ) (bls.Signature, error) {
 	var err error
 
-	s, err := altair.CalculateStateRoot(context.Background(), bState, &ethpb.SignedBeaconBlockAltair{Block: block})
+	s, err := state.CalculateStateRoot(context.Background(), bState, interfaces.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: block}))
 	if err != nil {
 		return nil, err
 	}
