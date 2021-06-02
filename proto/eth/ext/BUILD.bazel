@@ -6,6 +6,7 @@ load("@prysm//tools/go:def.bzl", "go_library")
 
 load("@rules_proto//proto:defs.bzl", "proto_library")
 
+# gazelle:ignore
 proto_library(
     name = "proto",
     srcs = [
