@@ -2,12 +2,6 @@ module github.com/prysmaticlabs/prysm
 
 go 1.16
 
-replace github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/ => ./proto/eth/v1alpha1
-
-replace github.com/prysmaticlabs/prysm/proto/eth/ext/ => ./proto/eth/ext
-
-replace github.com/prysmaticlabs/prysm/proto/eth/v1/ => ./proto/eth/v1
-
 require (
 	contrib.go.opencensus.io/exporter/jaeger v0.2.1
 	github.com/StackExchange/wmi v0.0.0-20210224194228-fe8f1750fd46 // indirect
