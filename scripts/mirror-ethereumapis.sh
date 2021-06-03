@@ -5,18 +5,17 @@
 # * owner
 # * repo
 # * tag
-# * filename
 # * github_api_token
 #
 # Script to upload a release asset using the GitHub API v3.
 #
 # Example:
 #
-# mirror-ethereumapis.sh github_api_token=TOKEN owner=prysmaticlabs repo=playground tag=v1.3.9
+# mirror-ethereumapis.sh github_api_token=TOKEN tag=v1.3.0
 #
+set -e
 
 # Check dependencies.
-set -e
 # skipcq: SH-2034
 export xargs=$(which gxargs || which xargs)
 
@@ -31,36 +30,42 @@ done
 
 # Define variables.
 GH_API="https://api.github.com"
-GH_REPO="$GH_API/repos/$owner/$repo"
-GH_TAGS="$GH_REPO/releases/tags/$tag"
+GH_REPO="$GH_API/repos/prysmaticlabs/ethereumapis"
+
 AUTH="Authorization: token $github_api_token"
 # skipcq: SH-2034
 export WGET_ARGS="--content-disposition --auth-no-challenge --no-cookie"
 # skipcq: SH-2034
 export CURL_ARGS="-LJO#"
 
-if [[ "$tag" == 'LATEST' ]]; then
-  GH_TAGS="$GH_REPO/releases/latest"
-fi
-
 # Validate token.
 curl -o /dev/null -sH "$AUTH" "$GH_REPO" || { echo "Error: Invalid repo, token or network issue!";  exit 1; }
 
-# Read asset tags.
-response=$(curl -sH "$AUTH" "$GH_TAGS")
+git config --global user.email contact@prysmaticlabs.com
+git config --global user.name prylabsbot
+git config --global url."https://git:'$github_api_token'@github.com/".insteadOf "git@github.com/"
 
-echo "$response"
+# Clone ethereumapis and prysm
+git clone git@github.com:prysmaticlabs/prysm /tmp/prysm/
+git clone git@github.com:prysmaticlabs/ethereumapis /tmp/ethereumapis/
 
-# Get ID of the asset based on given filename.
-#eval "$(echo "$response" | grep -m 1 "id.:" | grep -w id | tr : = | tr -cd '[[:alnum:]]=')"
-#[ "$id" ] || { echo "Error: Failed to get release id for tag: $tag"; echo "$response" | awk 'length($0)<100' >&2; exit 1; }
-#
-## Upload asset
-#echo "Uploading asset... "
-#
-## Construct url
-#GH_ASSET="https://uploads.github.com/repos/$owner/$repo/releases/$id/assets?name=$(basename "$filename")"
-#
-#echo "$GH_ASSET"
-#
-#curl "$GITHUB_OAUTH_BASIC" --data-binary @"$filename" -H "Authorization: token $github_api_token" -H "Content-Type: application/octet-stream" "$GH_ASSET"
+# Checkout the release tag in prysm and copy over protos
+cd /tmp/prysm && git checkout "$tag"
+cp -Rf /tmp/prysm/proto/eth /tmp/ethereumapis
+cd /tmp/ethereumapis || exit
+
+# Replace imports in go files and proto files as needed
+find ./eth -name '*.go' -print0 |
+    while IFS= read -r -d '' line; do
+        sed -i 's/prysm\/proto\/eth/ethereumapis\/eth/g' "$line"
+    done
+
+find ./eth -name '*.proto' -print0 |
+    while IFS= read -r -d '' line; do
+        sed -i 's/"proto\/eth/"eth/g' "$line"
+    done
+
+# Push to the mirror repository
+git add --all
+git commit -am "'$tag'"
+git push origin master
