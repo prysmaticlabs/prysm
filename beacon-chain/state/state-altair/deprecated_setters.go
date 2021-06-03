@@ -2,8 +2,8 @@ package state_altair
 
 import (
 	"github.com/pkg/errors"
-	v1 "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 )
 
 // SetPreviousEpochAttestations is not supported for HF1 beacon state.
