@@ -44,13 +44,12 @@ const seenAttSize = 10000
 const seenExitSize = 100
 const seenProposerSlashingSize = 100
 const badBlockSize = 1000
-
 const syncMetricsInterval = 10 * time.Second
 
 var (
 	pendingBlockExpTime                 = time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)) * time.Second // Seconds in one epoch.
-	earlyBlockProcessingTolerance       = slotutil.MultiplySlotBy(2)      // seconds to allow processing early blocks
-	earlyAttestationProcessingTolerance = slotutil.MultiplySlotBy(2)     // seconds to allow processing early attestations
+	earlyBlockProcessingTolerance       = slotutil.MultiplySlotBy(2)                                                                                 // seconds to allow processing early blocks
+	earlyAttestationProcessingTolerance = slotutil.MultiplySlotBy(2)                                                                                 // seconds to allow processing early attestations
 )
 
 // Config to set up the regular sync service.
