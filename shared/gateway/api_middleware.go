@@ -39,6 +39,7 @@ type Endpoint struct {
 	GetRequestQueryParams []QueryParam
 	GetResponse           interface{}
 	Err                   ErrorJson
+	Hooks                 HookCollection
 }
 
 // TODO: Documentation
@@ -46,6 +47,15 @@ type QueryParam struct {
 	Name string
 	Hex  bool
 	Enum bool
+}
+
+// TODO: Documentation
+type Hook = func(endpoint Endpoint, writer http.ResponseWriter, request *http.Request) ErrorJson
+
+// TODO: Documentation
+type HookCollection struct {
+	OnPostStart                                []Hook
+	OnPostDeserializedRequestBodyIntoContainer []Hook
 }
 
 // fieldProcessor applies the processing function f to a value when the tag is present on the field.
@@ -73,19 +83,24 @@ func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint Endpoint) {
 		}*/
 
 		if request.Method == "POST" {
-			/*if err := wrapAttestationsArray(endpoint.PostRequest, request); err != nil {
-				e := fmt.Errorf("could not decode request body: %w", err)
-				writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
-				return
-			}*/
+			for _, hook := range endpoint.Hooks.OnPostStart {
+				if err := hook(endpoint, writer, request); err != nil {
+					writeError(writer, err, nil)
+					return
+				}
+			}
 
 			if err := deserializeRequestBodyIntoContainer(request.Body, endpoint.PostRequest); err != nil {
 				writeError(writer, err, nil)
 				return
 			}
 
-			// TODO: Remove after implementing callbacks
-			// prepareGraffiti(endpoint.PostRequest)
+			for _, hook := range endpoint.Hooks.OnPostDeserializedRequestBodyIntoContainer {
+				if err := hook(endpoint, writer, request); err != nil {
+					writeError(writer, err, nil)
+					return
+				}
+			}
 
 			if err := processRequestContainerFields(endpoint.PostRequest); err != nil {
 				writeError(writer, err, nil)
@@ -236,32 +251,6 @@ func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint Endpoint) {
 
 func beaconStateSszRequested(url string, request *http.Request) bool {
 	return url == "/eth/v1/debug/beacon/states/{state_id}" && request.Header["Accept"][0] == "application/octet-stream"
-}
-
-// Posted graffiti needs to have length of 32 bytes, but client is allowed to send data of any length.
-func prepareGraffiti(postRequest interface{}) {
-	if block, ok := postRequest.(*BeaconBlockContainerJson); ok {
-		b := bytesutil.ToBytes32([]byte(block.Message.Body.Graffiti))
-		block.Message.Body.Graffiti = hexutil.Encode(b[:])
-	}
-}
-
-// https://ethereum.github.io/eth2.0-APIs/#/Beacon/submitPoolAttestations expects posting a top-level array.
-// We make it more proto-friendly by wrapping it in a struct with a 'data' field.
-func wrapAttestationsArray(postRequest interface{}, req *http.Request) error {
-	if _, ok := postRequest.(*SubmitAttestationRequestJson); ok {
-		atts := make([]*AttestationJson, 0)
-		if err := json.NewDecoder(req.Body).Decode(&atts); err != nil {
-			return fmt.Errorf("could not decode attestations array: %w", err)
-		}
-		j := &SubmitAttestationRequestJson{Data: atts}
-		b, err := json.Marshal(j)
-		if err != nil {
-			return fmt.Errorf("could not marshal wrapped attestations array: %w", err)
-		}
-		req.Body = ioutil.NopCloser(bytes.NewReader(b))
-	}
-	return nil
 }*/
 
 // TODO: Wszystkie funkcje powinny kończyć cały request, jeżeli wystąpił błąd. W tej chwili return tylko wychodzi z danej funkcji.

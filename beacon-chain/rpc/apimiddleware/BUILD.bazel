@@ -8,5 +8,9 @@ go_library(
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/apimiddleware",
     visibility = ["//visibility:public"],
-    deps = ["//shared/gateway:go_default_library"],
+    deps = [
+        "//shared/bytesutil:go_default_library",
+        "//shared/gateway:go_default_library",
+        "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
+    ],
 )

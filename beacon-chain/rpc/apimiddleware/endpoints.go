@@ -1,6 +1,16 @@
 package apimiddleware
 
-import "github.com/prysmaticlabs/prysm/shared/gateway"
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/gateway"
+)
 
 // TODO: Documentation
 func RegisterMiddlewareEndpoints() []gateway.Endpoint {
@@ -60,8 +70,12 @@ func RegisterMiddlewareEndpoints() []gateway.Endpoint {
 			Err:         &gateway.DefaultErrorJson{}},
 		{
 			Url:         "/eth/v1/beacon/blocks",
-			GetResponse: &beaconBlockContainerJson{},
-			Err:         &gateway.DefaultErrorJson{}},
+			PostRequest: &beaconBlockContainerJson{},
+			Err:         &gateway.DefaultErrorJson{},
+			Hooks: gateway.HookCollection{
+				OnPostDeserializedRequestBodyIntoContainer: []gateway.Hook{prepareGraffiti},
+			},
+		},
 		{
 			Url:         "/eth/v1/beacon/blocks/{block_id}",
 			GetResponse: &blockResponseJson{},
@@ -80,6 +94,9 @@ func RegisterMiddlewareEndpoints() []gateway.Endpoint {
 			GetResponse:           &attestationsPoolResponseJson{},
 			PostRequest:           &submitAttestationRequestJson{},
 			Err:                   &submitAttestationsErrorJson{},
+			Hooks: gateway.HookCollection{
+				OnPostStart: []gateway.Hook{wrapAttestationsArray},
+			},
 		},
 		{
 			Url:         "/eth/v1/beacon/pool/attester_slashings",
@@ -146,4 +163,33 @@ func RegisterMiddlewareEndpoints() []gateway.Endpoint {
 			GetResponse: &specResponseJson{},
 			Err:         &gateway.DefaultErrorJson{}},
 	}
+}
+
+// https://ethereum.github.io/eth2.0-APIs/#/Beacon/submitPoolAttestations expects posting a top-level array.
+// We make it more proto-friendly by wrapping it in a struct with a 'data' field.
+func wrapAttestationsArray(endpoint gateway.Endpoint, _ http.ResponseWriter, req *http.Request) gateway.ErrorJson {
+	if _, ok := endpoint.PostRequest.(*submitAttestationRequestJson); ok {
+		atts := make([]*attestationJson, 0)
+		if err := json.NewDecoder(req.Body).Decode(&atts); err != nil {
+			e := fmt.Errorf("could not decode attestations array: %w", err)
+			return &gateway.DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+		}
+		j := &submitAttestationRequestJson{Data: atts}
+		b, err := json.Marshal(j)
+		if err != nil {
+			e := fmt.Errorf("could not marshal wrapped attestations array: %w", err)
+			return &gateway.DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+		}
+		req.Body = ioutil.NopCloser(bytes.NewReader(b))
+	}
+	return nil
+}
+
+// Posted graffiti needs to have length of 32 bytes, but client is allowed to send data of any length.
+func prepareGraffiti(endpoint gateway.Endpoint, _ http.ResponseWriter, _ *http.Request) gateway.ErrorJson {
+	if block, ok := endpoint.PostRequest.(*beaconBlockContainerJson); ok {
+		b := bytesutil.ToBytes32([]byte(block.Message.Body.Graffiti))
+		block.Message.Body.Graffiti = hexutil.Encode(b[:])
+	}
+	return nil
 }
