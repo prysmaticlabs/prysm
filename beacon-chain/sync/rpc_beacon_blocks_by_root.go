@@ -72,7 +72,7 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 		if blk == nil || blk.IsNil() {
 			continue
 		}
-		if err := s.chunkWriter(stream, blk.Proto()); err != nil {
+		if err := s.chunkWriter(stream, blk); err != nil {
 			return err
 		}
 	}

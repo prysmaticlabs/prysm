@@ -1,6 +1,7 @@
 package sync
 
 import (
+	ssz "github.com/ferranbt/fastssz"
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -16,14 +17,14 @@ import (
 // chunkWriter writes the given message as a chunked response to the given network
 // stream.
 // response_chunk  ::= <result> | <context-bytes> | <encoding-dependent-header> | <encoded-payload>
-func (s *Service) chunkWriter(stream libp2pcore.Stream, msg interface{}) error {
+func (s *Service) chunkWriter(stream libp2pcore.Stream, msg ssz.Marshaler) error {
 	SetStreamWriteDeadline(stream, defaultWriteDuration)
 	return WriteChunk(stream, s.cfg.Chain, s.cfg.P2P.Encoding(), msg)
 }
 
 // WriteChunk object to stream.
 // response_chunk  ::= <result> | <context-bytes> | <encoding-dependent-header> | <encoded-payload>
-func WriteChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, encoding encoder.NetworkEncoding, msg interface{}) error {
+func WriteChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, encoding encoder.NetworkEncoding, msg ssz.Marshaler) error {
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
 	}
@@ -63,7 +64,7 @@ func readFirstChunkedBlock(stream libp2pcore.Stream, chain blockchain.ChainInfoF
 		return nil, err
 	}
 	// This may not work, double check tests.
-	err = p2p.Encoding().DecodeWithMaxLength(stream, blk.Proto())
+	err = p2p.Encoding().DecodeWithMaxLength(stream, blk)
 	return blk, err
 }
 
@@ -88,7 +89,7 @@ func readResponseChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetch
 		return nil, err
 	}
 	// This may not work, double check tests.
-	err = p2p.Encoding().DecodeWithMaxLength(stream, blk.Proto())
+	err = p2p.Encoding().DecodeWithMaxLength(stream, blk)
 	return blk, err
 }
 

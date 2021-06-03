@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"time"
 
+	ssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -41,7 +42,11 @@ func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 		traceutil.AnnotateError(span, ErrMessageNotMapped)
 		return ErrMessageNotMapped
 	}
-	return s.broadcastObject(ctx, msg, fmt.Sprintf(topic, forkDigest))
+	castMsg, ok := msg.(ssz.Marshaler)
+	if !ok {
+		return errors.Errorf("message of %T does not support marshaller interface", msg)
+	}
+	return s.broadcastObject(ctx, castMsg, fmt.Sprintf(topic, forkDigest))
 }
 
 // BroadcastAttestation broadcasts an attestation to the p2p network.
@@ -108,7 +113,7 @@ func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *
 }
 
 // method to broadcast messages to other peers in our gossip mesh.
-func (s *Service) broadcastObject(ctx context.Context, obj interface{}, topic string) error {
+func (s *Service) broadcastObject(ctx context.Context, obj ssz.Marshaler, topic string) error {
 	_, span := trace.StartSpan(ctx, "p2p.broadcastObject")
 	defer span.End()
 

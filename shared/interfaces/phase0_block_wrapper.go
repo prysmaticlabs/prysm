@@ -48,6 +48,23 @@ func (w Phase0SignedBeaconBlock) MarshalSSZ() ([]byte, error) {
 	return w.b.MarshalSSZ()
 }
 
+// MarshalSSZTo marshals the signed beacon block to its relevant ssz
+// form to the provided byte buffer.
+func (w Phase0SignedBeaconBlock) MarshalSSZTo(dst []byte) ([]byte, error) {
+	return w.b.MarshalSSZTo(dst)
+}
+
+// SizeSSZ returns the size of serialized signed block
+func (w Phase0SignedBeaconBlock) SizeSSZ() int {
+	return w.b.SizeSSZ()
+}
+
+// UnmarshalSSZ unmarshalls the signed beacon block from its relevant ssz
+// form.
+func (w Phase0SignedBeaconBlock) UnmarshalSSZ(buf []byte) error {
+	return w.b.UnmarshalSSZ(buf)
+}
+
 // Proto returns the block in its underlying protobuf
 // interface.
 func (w Phase0SignedBeaconBlock) Proto() proto.Message {
@@ -109,6 +126,23 @@ func (w Phase0BeaconBlock) HashTreeRoot() ([32]byte, error) {
 // ssz form.
 func (w Phase0BeaconBlock) MarshalSSZ() ([]byte, error) {
 	return w.b.MarshalSSZ()
+}
+
+// MarshalSSZTo marshals the beacon block to its relevant ssz
+// form to the provided byte buffer.
+func (w Phase0BeaconBlock) MarshalSSZTo(dst []byte) ([]byte, error) {
+	return w.b.MarshalSSZTo(dst)
+}
+
+// SizeSSZ returns the size of serialized block.
+func (w Phase0BeaconBlock) SizeSSZ() int {
+	return w.b.SizeSSZ()
+}
+
+// UnmarshalSSZ unmarshalls the beacon block from its relevant ssz
+// form.
+func (w Phase0BeaconBlock) UnmarshalSSZ(buf []byte) error {
+	return w.b.UnmarshalSSZ(buf)
 }
 
 // Proto returns the underlying block object in its
