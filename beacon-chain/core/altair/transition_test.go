@@ -11,7 +11,6 @@ import (
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	testutilAltair "github.com/prysmaticlabs/prysm/shared/testutil/altair"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -33,49 +32,4 @@ func TestProcessEpoch_CanProcess(t *testing.T) {
 	newState, err := altair.ProcessEpoch(context.Background(), s)
 	require.NoError(t, err)
 	require.Equal(t, uint64(0), newState.Slashings()[2], "Unexpected slashed balance")
-}
-
-func TestProcessSlots_CanProcess(t *testing.T) {
-	s, _ := testutilAltair.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
-	slot := types.Slot(100)
-	newState, err := altair.ProcessSlots(context.Background(), s, slot)
-	require.NoError(t, err)
-	require.Equal(t, slot, newState.Slot())
-}
-
-func TestProcessSlots_CanProcessWithCache(t *testing.T) {
-	s, _ := testutilAltair.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
-	slot := types.Slot(100)
-	copied := s.Copy()
-	newState, err := altair.ProcessSlots(context.Background(), s, slot)
-	require.NoError(t, err)
-	require.Equal(t, slot, newState.Slot())
-
-	newState, err = altair.ProcessSlots(context.Background(), copied, slot+100)
-	require.NoError(t, err)
-	require.Equal(t, slot+100, newState.Slot())
-
-	// Cancel context.
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
-	_, err = altair.ProcessSlots(ctx, copied, slot+200)
-	require.ErrorContains(t, "context canceled", err)
-}
-
-func TestProcessSlots_SameSlotAsParentState(t *testing.T) {
-	slot := types.Slot(2)
-	parentState, err := stateAltair.InitializeFromProto(&pb.BeaconStateAltair{Slot: slot})
-	require.NoError(t, err)
-
-	_, err = altair.ProcessSlots(context.Background(), parentState, slot)
-	require.ErrorContains(t, "expected state.slot 2 < slot 2", err)
-}
-
-func TestProcessSlots_LowerSlotAsParentState(t *testing.T) {
-	slot := types.Slot(2)
-	parentState, err := stateAltair.InitializeFromProto(&pb.BeaconStateAltair{Slot: slot})
-	require.NoError(t, err)
-
-	_, err = altair.ProcessSlots(context.Background(), parentState, slot-1)
-	require.ErrorContains(t, "expected state.slot 2 < slot 1", err)
 }

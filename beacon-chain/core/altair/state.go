@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	s "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
@@ -23,7 +23,7 @@ func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisT
 	}
 
 	// Process initial deposits.
-	state, err = s.UpdateGenesisEth1Data(state, deposits, eth1Data)
+	state, err = helpers.UpdateGenesisEth1Data(state, deposits, eth1Data)
 	if err != nil {
 		return nil, err
 	}

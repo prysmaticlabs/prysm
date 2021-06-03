@@ -95,14 +95,14 @@ func ProcessAttestation(
 func ProcessAttestationsNoVerifySignature(
 	ctx context.Context,
 	beaconState iface.BeaconState,
-	b *ethpb.SignedBeaconBlockAltair,
+	b interfaces.SignedBeaconBlock,
 ) (iface.BeaconState, error) {
-	if err := VerifyNilBeaconBlock(b); err != nil {
+	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err
 	}
-	body := b.Block.Body
+	body := b.Block().Body()
 	var err error
-	for idx, attestation := range body.Attestations {
+	for idx, attestation := range body.Attestations() {
 		beaconState, err = ProcessAttestationNoVerifySignature(ctx, beaconState, attestation)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not verify attestation at index %d in block", idx)

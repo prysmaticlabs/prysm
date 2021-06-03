@@ -11,11 +11,12 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/spectest/shared/altair/sanity",
     visibility = ["//spectest:__subpackages__"],
     deps = [
-        "//beacon-chain/core/altair:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
+        "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/state/interface:go_default_library",
         "//beacon-chain/state/state-altair:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/interfaces:go_default_library",
         "//shared/testutil:go_default_library",
         "//shared/testutil/require:go_default_library",
         "//spectest/utils:go_default_library",

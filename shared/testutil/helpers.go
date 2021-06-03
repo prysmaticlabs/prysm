@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
@@ -77,11 +76,11 @@ func BlockSignatureAltair(
 ) (bls.Signature, error) {
 	var err error
 
-	bState, err = altair.ProcessSlots(context.Background(), bState, block.Slot)
+	bState, err = state.ProcessSlots(context.Background(), bState, block.Slot)
 	if err != nil {
 		return nil, err
 	}
-	bState, err = altair.ProcessBlockForStateRoot(context.Background(), bState, &ethpb.SignedBeaconBlockAltair{Block: block})
+	bState, err = state.ProcessBlockForStateRoot(context.Background(), bState, interfaces.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: block}))
 	if err != nil {
 		return nil, err
 	}

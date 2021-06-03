@@ -2,7 +2,6 @@ package altair
 
 import (
 	"errors"
-	"fmt"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -11,80 +10,8 @@ import (
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
-
-// VerifyNilBeaconBlock checks if any composite field of input signed beacon block is nil.
-// Access to these nil fields will result in run time panic,
-// it is recommended to run these checks as first line of defense.
-func VerifyNilBeaconBlock(b *ethpb.SignedBeaconBlockAltair) error {
-	if b == nil {
-		return errors.New("signed beacon block can't be nil")
-	}
-	if b.Block == nil {
-		return errors.New("beacon block can't be nil")
-	}
-	if b.Block.Body == nil {
-		return errors.New("beacon block body can't be nil")
-	}
-	return nil
-}
-
-// VerifyOperationLengths verifies that block operation lengths are valid.
-func VerifyOperationLengths(state iface.BeaconState, b *ethpb.SignedBeaconBlockAltair) (iface.BeaconState, error) {
-	if err := VerifyNilBeaconBlock(b); err != nil {
-		return nil, err
-	}
-	body := b.Block.Body
-
-	if uint64(len(body.ProposerSlashings)) > params.BeaconConfig().MaxProposerSlashings {
-		return nil, fmt.Errorf(
-			"number of proposer slashings (%d) in block body exceeds allowed threshold of %d",
-			len(body.ProposerSlashings),
-			params.BeaconConfig().MaxProposerSlashings,
-		)
-	}
-
-	if uint64(len(body.AttesterSlashings)) > params.BeaconConfig().MaxAttesterSlashings {
-		return nil, fmt.Errorf(
-			"number of attester slashings (%d) in block body exceeds allowed threshold of %d",
-			len(body.AttesterSlashings),
-			params.BeaconConfig().MaxAttesterSlashings,
-		)
-	}
-
-	if uint64(len(body.Attestations)) > params.BeaconConfig().MaxAttestations {
-		return nil, fmt.Errorf(
-			"number of attestations (%d) in block body exceeds allowed threshold of %d",
-			len(body.Attestations),
-			params.BeaconConfig().MaxAttestations,
-		)
-	}
-
-	if uint64(len(body.VoluntaryExits)) > params.BeaconConfig().MaxVoluntaryExits {
-		return nil, fmt.Errorf(
-			"number of voluntary exits (%d) in block body exceeds allowed threshold of %d",
-			len(body.VoluntaryExits),
-			params.BeaconConfig().MaxVoluntaryExits,
-		)
-	}
-	eth1Data := state.Eth1Data()
-	if eth1Data == nil {
-		return nil, errors.New("nil eth1data in state")
-	}
-	if state.Eth1DepositIndex() > eth1Data.DepositCount {
-		return nil, fmt.Errorf("expected state.deposit_index %d <= eth1data.deposit_count %d", state.Eth1DepositIndex(), eth1Data.DepositCount)
-	}
-	maxDeposits := mathutil.Min(params.BeaconConfig().MaxDeposits, eth1Data.DepositCount-state.Eth1DepositIndex())
-	// Verify outstanding deposits are processed up to max number of deposits
-	if uint64(len(body.Deposits)) != maxDeposits {
-		return nil, fmt.Errorf("incorrect outstanding deposits in block body, wanted: %d, got: %d",
-			maxDeposits, len(body.Deposits))
-	}
-
-	return state, nil
-}
 
 // ProcessSyncCommittee verifies sync committee aggregate signature signing over the previous slot block root.
 //

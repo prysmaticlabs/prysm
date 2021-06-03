@@ -317,7 +317,7 @@ func TestFuzzProcessAttestationsNoVerify_10000(t *testing.T) {
 		fuzzer.Fuzz(b)
 		s, err := stateAltair.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
-		r, err := altair.ProcessAttestationsNoVerifySignature(ctx, s, b)
+		r, err := altair.ProcessAttestationsNoVerifySignature(ctx, s, interfaces.WrappedAltairSignedBeaconBlock(b))
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, b)
 		}

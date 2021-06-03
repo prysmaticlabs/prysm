@@ -13,6 +13,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces/version"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -1157,4 +1158,9 @@ func ProtobufBeaconState(s interface{}) (*pbp2p.BeaconStateAltair, error) {
 		return nil, errors.New("input is not type pb.BeaconStateAltair")
 	}
 	return pbState, nil
+}
+
+// Version of the beacon state.
+func (b *BeaconState) Version() int {
+	return version.Altair
 }
