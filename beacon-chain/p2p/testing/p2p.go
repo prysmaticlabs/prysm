@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
+	ssz "github.com/ferranbt/fastssz"
 	bhost "github.com/libp2p/go-libp2p-blankhost"
 	core "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/control"
@@ -99,7 +100,11 @@ func (p *TestP2P) ReceiveRPC(topic string, msg proto.Message) {
 		}
 	}()
 
-	n, err := p.Encoding().EncodeWithMaxLength(s, msg)
+	castedMsg, ok := msg.(ssz.Marshaler)
+	if !ok {
+		p.t.Fatalf("%T doesnt support ssz marshaler", msg)
+	}
+	n, err := p.Encoding().EncodeWithMaxLength(s, castedMsg)
 	if err != nil {
 		_err := s.Reset()
 		_ = _err
@@ -127,8 +132,12 @@ func (p *TestP2P) ReceivePubSub(topic string, msg proto.Message) {
 	// pick up the newly connected peer.
 	time.Sleep(time.Millisecond * 100)
 
+	castedMsg, ok := msg.(ssz.Marshaler)
+	if !ok {
+		p.t.Fatalf("%T doesnt support ssz marshaler", msg)
+	}
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().EncodeGossip(buf, msg); err != nil {
+	if _, err := p.Encoding().EncodeGossip(buf, castedMsg); err != nil {
 		p.t.Fatalf("Failed to encode message: %v", err)
 	}
 	digest, err := p.ForkDigest()
@@ -293,7 +302,11 @@ func (p *TestP2P) Send(ctx context.Context, msg interface{}, topic string, pid p
 	}
 
 	if topic != "/eth2/beacon_chain/req/metadata/1" {
-		if _, err := p.Encoding().EncodeWithMaxLength(stream, msg); err != nil {
+		castedMsg, ok := msg.(ssz.Marshaler)
+		if !ok {
+			p.t.Fatalf("%T doesnt support ssz marshaler", msg)
+		}
+		if _, err := p.Encoding().EncodeWithMaxLength(stream, castedMsg); err != nil {
 			_err := stream.Reset()
 			_ = _err
 			return nil, err
