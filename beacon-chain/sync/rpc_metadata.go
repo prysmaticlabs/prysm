@@ -81,8 +81,8 @@ func extractMetaDataType(digest []byte, chain blockchain.ChainInfoFetcher) (inte
 		}
 		return mdFunc(), nil
 	}
-	if len(digest) != contextLength {
-		return nil, errors.Errorf("invalid digest returned, wanted a length of %d but received %d", contextLength, len(digest))
+	if len(digest) != digestLength {
+		return nil, errors.Errorf("invalid digest returned, wanted a length of %d but received %d", digestLength, len(digest))
 	}
 	vRoot := chain.GenesisValidatorRoot()
 	for k, mdFunc := range types.MetaDataMap {

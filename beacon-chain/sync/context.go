@@ -10,7 +10,7 @@ import (
 )
 
 // Specifies the fixed size context length.
-const contextLength = 4
+const digestLength = 4
 
 // writes peer's current context for the expected payload to the stream.
 func writeContextToStream(stream network.Stream, chain blockchain.ChainInfoFetcher) error {
@@ -36,7 +36,7 @@ func readContextFromStream(stream network.Stream, chain blockchain.ChainInfoFetc
 		return []byte{}, nil
 	}
 	// Read context (fork-digest) from stream
-	b := make([]byte, contextLength)
+	b := make([]byte, digestLength)
 	if _, err := stream.Read(b); err != nil {
 		return nil, err
 	}
