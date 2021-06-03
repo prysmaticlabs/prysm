@@ -75,7 +75,10 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (interfac
 
 func extractMetaDataType(digest []byte, chain blockchain.ChainInfoFetcher) (interfaces.Metadata, error) {
 	if len(digest) == 0 {
-		mdFunc := types.MetaDataMap[bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)]
+		mdFunc, ok := types.MetaDataMap[bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)]
+		if !ok {
+			return nil, errors.New("no metadata type exists for the genesis fork version.")
+		}
 		return mdFunc(), nil
 	}
 	if len(digest) != contextLength {
