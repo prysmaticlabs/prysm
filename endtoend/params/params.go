@@ -59,14 +59,15 @@ func Init(beaconNodeCount int) error {
 		return errors.New("expected TEST_UNDECLARED_OUTPUTS_DIR to be defined")
 	}
 	testIndexStr, ok := os.LookupEnv("TEST_SHARD_INDEX")
-	if !ok {
-		testIndexStr = "0"
+	var testIndex int
+	if ok {
+		var err error
+		testIndex, err = strconv.Atoi(testIndexStr)
+		if err != nil {
+			return err
+		}
+		testPath = filepath.Join(testPath, fmt.Sprintf("shard-%d", testIndex))
 	}
-	testIndex, err := strconv.Atoi(testIndexStr)
-	if err != nil {
-		return err
-	}
-	testPath = filepath.Join(testPath, fmt.Sprintf("shard-%d", testIndex))
 
 	TestParams = &params{
 		TestPath:              testPath,

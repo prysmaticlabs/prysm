@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"math/big"
 	"os/exec"
+	"path"
 	"strings"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
@@ -15,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
@@ -115,7 +117,7 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 	}
 	gFile, err := helpers.GraffitiYamlFile(e2e.TestParams.TestPath)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to create graffiti file")
 	}
 	args := []string{
 		fmt.Sprintf("--datadir=%s/eth2-val-%d", e2e.TestParams.TestPath, index),
@@ -126,17 +128,19 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--monitoring-port=%d", e2e.TestParams.ValidatorMetricsPort+index),
 		fmt.Sprintf("--grpc-gateway-port=%d", e2e.TestParams.ValidatorGatewayPort+index),
 		fmt.Sprintf("--beacon-rpc-provider=localhost:%d", beaconRPCPort),
+		fmt.Sprintf("--wallet-dir=%s", path.Join(e2e.TestParams.TestPath, flags.WalletDefaultDirName)),
 		"--grpc-headers=dummy=value,foo=bar", // Sending random headers shouldn't break anything.
 		"--force-clear-db",
 		"--e2e-config",
 		"--accept-terms-of-use",
 		"--verbosity=debug",
+		"--web",
 	}
 	args = append(args, featureconfig.E2EValidatorFlags...)
 	args = append(args, config.ValidatorFlags...)
 
 	cmd := exec.CommandContext(ctx, binaryPath, args...)
-	log.Infof("Starting validator client %d with flags: %s", index, strings.Join(args[2:], " "))
+	log.Infof("Starting validator client %d with flags: %s", index, strings.Join(args, " "))
 	if err = cmd.Start(); err != nil {
 		return err
 	}

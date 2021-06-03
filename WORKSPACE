@@ -346,6 +346,14 @@ filegroup(
     ],
 )
 
+http_archive(
+    name = "io_bazel_rules_webtesting",
+    sha256 = "9bb461d5ef08e850025480bab185fd269242d4e533bca75bfb748001ceb343c3",
+    urls = [
+        "https://github.com/bazelbuild/rules_webtesting/releases/download/0.3.3/rules_webtesting.tar.gz",
+    ],
+)
+
 load("//:deps.bzl", "prysm_deps")
 
 # gazelle:repository_macro deps.bzl%prysm_deps
@@ -358,5 +366,17 @@ bls_dependencies()
 load("@com_github_ethereum_go_ethereum//:deps.bzl", "geth_dependencies")
 
 geth_dependencies()
+
+load("@io_bazel_rules_webtesting//web:repositories.bzl", "web_test_repositories")
+
+web_test_repositories()
+
+load("@io_bazel_rules_webtesting//web:go_repositories.bzl", "go_repositories")
+
+go_repositories()
+
+load("@io_bazel_rules_webtesting//web/versioned:browsers-0.3.2.bzl", "browser_repositories")
+
+browser_repositories(chromium = True)
 
 # Do NOT add new go dependencies here! Refer to DEPENDENCIES.md!
