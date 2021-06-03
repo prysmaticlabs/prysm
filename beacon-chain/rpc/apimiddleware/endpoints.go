@@ -282,10 +282,7 @@ func prepareRequestForProxying(m *gateway.ApiProxyMiddleware, endpoint gateway.E
 	request.URL.Host = m.GatewayAddress
 	request.RequestURI = ""
 	request.URL.Path = "/eth/v1/debug/beacon/states/{state_id}/ssz"
-	if errJson := gateway.HandleUrlParameters(endpoint.Url, request, []string{}); errJson != nil {
-		return errJson
-	}
-	return nil
+	return gateway.HandleUrlParameters(endpoint.Url, request, []string{})
 }
 
 func serializeMiddlewareResponseIntoSsz(data string) (sszResponse []byte, errJson gateway.ErrorJson) {
