@@ -8,11 +8,11 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
-	ethpb_alpha "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	ethpb_alpha "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"go.opencensus.io/trace"
@@ -156,7 +156,7 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 		stateIds = peerStatus.All()
 	} else {
 		for _, stateFilter := range req.State {
-			normalized := strings.ToUpper(stateFilter)
+			normalized := strings.ToUpper(stateFilter.String())
 			if normalized == stateConnecting {
 				ids := peerStatus.Connecting()
 				stateIds = append(stateIds, ids...)
@@ -185,7 +185,7 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 		directionIds = peerStatus.All()
 	} else {
 		for _, directionFilter := range req.Direction {
-			normalized := strings.ToUpper(directionFilter)
+			normalized := strings.ToUpper(directionFilter.String())
 			if normalized == directionInbound {
 				ids := peerStatus.Inbound()
 				directionIds = append(directionIds, ids...)
@@ -292,7 +292,7 @@ func (ns *Server) GetHealth(ctx context.Context, _ *emptypb.Empty) (*emptypb.Emp
 func (ns *Server) handleEmptyFilters(req *ethpb.PeersRequest, peerStatus *peers.Status) (emptyState, emptyDirection bool) {
 	emptyState = true
 	for _, stateFilter := range req.State {
-		normalized := strings.ToUpper(stateFilter)
+		normalized := strings.ToUpper(stateFilter.String())
 		filterValid := normalized == stateConnecting || normalized == stateConnected ||
 			normalized == stateDisconnecting || normalized == stateDisconnected
 		if filterValid {
@@ -303,7 +303,7 @@ func (ns *Server) handleEmptyFilters(req *ethpb.PeersRequest, peerStatus *peers.
 
 	emptyDirection = true
 	for _, directionFilter := range req.Direction {
-		normalized := strings.ToUpper(directionFilter)
+		normalized := strings.ToUpper(directionFilter.String())
 		filterValid := normalized == directionInbound || normalized == directionOutbound
 		if filterValid {
 			emptyDirection = false
