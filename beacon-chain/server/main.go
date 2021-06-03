@@ -44,7 +44,7 @@ func main() {
 		"", // remoteCert
 		fmt.Sprintf("%s:%d", *host, *port),
 		fmt.Sprintf("%s:%d", *host, *apiMiddlewarePort),
-		apimiddleware.RegisterMiddlewareEndpoints(),
+		apimiddleware.MiddlewareEndpointsRegistry(),
 		mux,
 		strings.Split(*allowedOrigins, ","),
 		*enableDebugRPCEndpoints,
