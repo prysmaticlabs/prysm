@@ -73,5 +73,6 @@ go_web_test_suite(
         "manual",
         "selenium",
         "native",
+        "minimal",
     ],
 )
