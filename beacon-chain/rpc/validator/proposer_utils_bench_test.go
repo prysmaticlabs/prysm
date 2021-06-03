@@ -6,8 +6,8 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	aggtesting "github.com/prysmaticlabs/prysm/shared/aggregation/testing"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"

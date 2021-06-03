@@ -6,10 +6,10 @@ import (
 
 	fuzz "github.com/google/gofuzz"
 	types "github.com/prysmaticlabs/eth2-types"
-	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
