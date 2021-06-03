@@ -2,12 +2,10 @@
 #
 # This script accepts the following parameters:
 #
-# * owner
-# * repo
 # * tag
 # * github_api_token
 #
-# Script to upload a release asset using the GitHub API v3.
+# Script to mirror a tag from Prysm into EthereumAPIs protocol buffers
 #
 # Example:
 #
