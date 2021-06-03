@@ -20,9 +20,9 @@ import (
 	"github.com/wealdtech/go-bytesutil"
 )
 
-// ApiProxyMiddleware is a proxy between an Eth2 API HTTP client and gRPC-gateway.
+// ApiProxyMiddleware is a proxy between an Eth2 API HTTP client and grpc-gateway.
 // The purpose of the proxy is to handle HTTP requests and gRPC responses in such a way that:
-//   - Eth2 API requests can be handled by gRPC-gateway correctly
+//   - Eth2 API requests can be handled by grpc-gateway correctly
 //   - gRPC responses can be returned as spec-compliant Eth2 API responses
 type ApiProxyMiddleware struct {
 	GatewayAddress string
@@ -79,161 +79,31 @@ func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint Endpoint) {
 				return
 			}*/
 
-			// Deserialize the body.
-			if err := json.NewDecoder(request.Body).Decode(&endpoint.PostRequest); err != nil {
-				e := fmt.Errorf("could not decode request body: %w", err)
-				writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
-				return
-			}
+			deserializeRequestBodyIntoContainer(request.Body, endpoint.PostRequest, writer)
 
+			// TODO: Remove after implementing callbacks
 			// prepareGraffiti(endpoint.PostRequest)
 
-			// Apply processing functions to fields with specific tags.
-			if err := processField(endpoint.PostRequest, []fieldProcessor{
-				{
-					tag: "hex",
-					f:   hexToBase64Processor,
-				},
-			}); err != nil {
-				e := fmt.Errorf("could not process request data: %w", err)
-				writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
-				return
-			}
-			// Serialize the struct, which now includes a base64-encoded value, into JSON.
-			j, err := json.Marshal(endpoint.PostRequest)
-			if err != nil {
-				e := fmt.Errorf("could not marshal request: %w", err)
-				writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
-				return
-			}
-			// Set the body to the new JSON.
-			request.Body = ioutil.NopCloser(bytes.NewReader(j))
-			request.Header.Set("Content-Length", strconv.Itoa(len(j)))
-			request.ContentLength = int64(len(j))
+			processRequestContainerFields(endpoint.PostRequest, writer)
+			setRequestBodyToRequestContainer(endpoint.PostRequest, request, writer)
 		}
 
-		// Prepare request values for proxying.
-		request.URL.Scheme = "http"
-		request.URL.Host = m.GatewayAddress
-		request.RequestURI = ""
-		handleUrlParameters(endpoint.Url, request, writer, endpoint.GetRequestUrlLiterals)
-		handleQueryParameters(request, writer, endpoint.GetRequestQueryParams)
+		m.prepareRequestForProxying(endpoint, request, writer)
+		grpcResponse := proxyRequest(request, writer)
+		grpcResponseBody := readGrpcResponseBody(grpcResponse.Body, writer)
+		deserializeGrpcResponseBodyIntoErrorJson(endpoint.Err, grpcResponseBody, writer)
 
-		// Proxy the request to grpc-gateway.
-		grpcResp, err := http.DefaultClient.Do(request)
-		if err != nil {
-			e := fmt.Errorf("could not proxy request: %w", err)
-			writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
-			return
-		}
-		if grpcResp == nil {
-			writeError(writer, &DefaultErrorJson{Message: "nil response from gRPC-gateway", Code: http.StatusInternalServerError}, nil)
-			return
-		}
-
-		// Deserialize the output of grpc-gateway into the error struct.
-		body, err := ioutil.ReadAll(grpcResp.Body)
-		if err != nil {
-			e := fmt.Errorf("could not read response body: %w", err)
-			writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
-			return
-		}
-		if err := json.Unmarshal(body, endpoint.Err); err != nil {
-			e := fmt.Errorf("could not unmarshal error: %w", err)
-			writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
-			return
-		}
-
-		var j []byte
+		var responseJson []byte
 		if endpoint.Err.Msg() != "" {
-			// Something went wrong, but the request completed, meaning we can write headers and the error message.
-			for h, vs := range grpcResp.Header {
-				for _, v := range vs {
-					writer.Header().Set(h, v)
-				}
-			}
-			// Set code to HTTP code because unmarshalled body contained gRPC code.
-			endpoint.Err.SetCode(grpcResp.StatusCode)
-			writeError(writer, endpoint.Err, grpcResp.Header)
-			return
-			// Don't do anything if the response is only a status code.
-		} else if request.Method == "GET" && endpoint.GetResponse != nil {
-			// Deserialize the output of grpc-gateway.
-			if err := json.Unmarshal(body, &endpoint.GetResponse); err != nil {
-				e := fmt.Errorf("could not unmarshal response: %w", err)
-				writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
-				return
-			}
-			// Apply processing functions to fields with specific tags.
-			if err := processField(endpoint.GetResponse, []fieldProcessor{
-				{
-					tag: "hex",
-					f:   base64ToHexProcessor,
-				},
-				{
-					tag: "enum",
-					f:   enumToLowercaseProcessor,
-				},
-				{
-					tag: "time",
-					f:   timeToUnixProcessor,
-				},
-			}); err != nil {
-				e := fmt.Errorf("could not process response data: %w", err)
-				writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
-				return
-			}
-			// Serialize the return value into JSON.
-			j, err = json.Marshal(endpoint.GetResponse)
-			if err != nil {
-				e := fmt.Errorf("could not marshal response: %w", err)
-				writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
-				return
-			}
+			handleGrpcResponseError(endpoint.Err, grpcResponse, writer)
+		} else if !grpcResponseIsStatusCodeOnly(request, endpoint.GetResponse) {
+			deserializeGrpcResponseBodyIntoContainer(grpcResponseBody, endpoint.GetResponse, writer)
+			processMiddlewareResponseFields(endpoint.GetResponse, writer)
+			responseJson = serializeMiddlewareResponseIntoJson(endpoint.GetResponse, writer)
 		}
 
-		// Write the response (headers + body) and PROFIT!
-		var statusCodeHeader string
-		for h, vs := range grpcResp.Header {
-			// We don't want to expose any gRPC metadata in the HTTP response, so we skip forwarding metadata headers.
-			if strings.HasPrefix(h, "Grpc-Metadata") {
-				if h == "Grpc-Metadata-"+grpcutils.HttpCodeMetadataKey {
-					statusCodeHeader = vs[0]
-				}
-			} else {
-				for _, v := range vs {
-					writer.Header().Set(h, v)
-				}
-			}
-		}
-		if request.Method == "GET" {
-			writer.Header().Set("Content-Length", strconv.Itoa(len(j)))
-			if statusCodeHeader != "" {
-				code, err := strconv.Atoi(statusCodeHeader)
-				if err != nil {
-					e := fmt.Errorf("could not parse status code: %w", err)
-					writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
-					return
-				}
-				writer.WriteHeader(code)
-			} else {
-				writer.WriteHeader(grpcResp.StatusCode)
-			}
-			if _, err := io.Copy(writer, ioutil.NopCloser(bytes.NewReader(j))); err != nil {
-				e := fmt.Errorf("could not write response message: %w", err)
-				writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
-				return
-			}
-		} else if request.Method == "POST" {
-			writer.WriteHeader(grpcResp.StatusCode)
-		}
-
-		// Final cleanup.
-		if err := grpcResp.Body.Close(); err != nil {
-			e := fmt.Errorf("could not close response body: %w", err)
-			writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
-			return
-		}
+		writeMiddlewareResponseHeadersAndBody(request, grpcResponse, responseJson, writer)
+		cleanup(grpcResponse.Body, writer)
 	})
 }
 
@@ -355,6 +225,50 @@ func wrapAttestationsArray(postRequest interface{}, req *http.Request) error {
 	return nil
 }*/
 
+// TODO: Wszystkie funkcje powinny kończyć cały request, jeżeli wystąpił błąd. W tej chwili return tylko wychodzi z danej funkcji.
+func deserializeRequestBodyIntoContainer(body io.ReadCloser, requestContainer interface{}, writer http.ResponseWriter) {
+	if err := json.NewDecoder(body).Decode(&requestContainer); err != nil {
+		e := fmt.Errorf("could not decode request body: %w", err)
+		writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
+		return
+	}
+}
+
+func processRequestContainerFields(requestContainer interface{}, writer http.ResponseWriter) {
+	if err := processField(requestContainer, []fieldProcessor{
+		{
+			tag: "hex",
+			f:   hexToBase64Processor,
+		},
+	}); err != nil {
+		e := fmt.Errorf("could not process request data: %w", err)
+		writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
+		return
+	}
+}
+
+func setRequestBodyToRequestContainer(requestContainer interface{}, request *http.Request, writer http.ResponseWriter) {
+	// Serialize the struct, which now includes a base64-encoded value, into JSON.
+	j, err := json.Marshal(requestContainer)
+	if err != nil {
+		e := fmt.Errorf("could not marshal request: %w", err)
+		writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
+		return
+	}
+	// Set the body to the new JSON.
+	request.Body = ioutil.NopCloser(bytes.NewReader(j))
+	request.Header.Set("Content-Length", strconv.Itoa(len(j)))
+	request.ContentLength = int64(len(j))
+}
+
+func (m *ApiProxyMiddleware) prepareRequestForProxying(endpoint Endpoint, request *http.Request, writer http.ResponseWriter) {
+	request.URL.Scheme = "http"
+	request.URL.Host = m.GatewayAddress
+	request.RequestURI = ""
+	handleUrlParameters(endpoint.Url, request, writer, endpoint.GetRequestUrlLiterals)
+	handleQueryParameters(request, writer, endpoint.GetRequestQueryParams)
+}
+
 // handleUrlParameters processes URL parameters, allowing parameterized URLs to be safely and correctly proxied to grpc-gateway.
 func handleUrlParameters(url string, request *http.Request, writer http.ResponseWriter, literals []string) {
 	segments := strings.Split(url, "/")
@@ -362,8 +276,8 @@ func handleUrlParameters(url string, request *http.Request, writer http.Response
 segmentsLoop:
 	for i, s := range segments {
 		// We only care about segments which are parameterized.
-		if len(s) > 0 && s[0] == '{' && s[len(s)-1] == '}' {
-			// Don't do anything with parameters which should be forwarded literally.
+		if isRequestParam(s) {
+			// Don't do anything with parameters which should be forwarded literally to gRPC.
 			for _, l := range literals {
 				if s == "{"+l+"}" {
 					continue segmentsLoop
@@ -437,6 +351,127 @@ func handleQueryParameters(request *http.Request, writer http.ResponseWriter, pa
 		}
 	}
 	request.URL.RawQuery = queryParams.Encode()
+}
+
+func proxyRequest(request *http.Request, writer http.ResponseWriter) *http.Response {
+	grpcResp, err := http.DefaultClient.Do(request)
+	if err != nil {
+		e := fmt.Errorf("could not proxy request: %w", err)
+		writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
+	}
+	if grpcResp == nil {
+		writeError(writer, &DefaultErrorJson{Message: "nil response from gRPC-gateway", Code: http.StatusInternalServerError}, nil)
+	}
+	return grpcResp
+}
+
+func readGrpcResponseBody(reader io.Reader, writer http.ResponseWriter) []byte {
+	body, err := ioutil.ReadAll(reader)
+	if err != nil {
+		e := fmt.Errorf("could not read response body: %w", err)
+		writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
+	}
+	return body
+}
+
+func deserializeGrpcResponseBodyIntoErrorJson(errJson ErrorJson, body []byte, writer http.ResponseWriter) {
+	if err := json.Unmarshal(body, errJson); err != nil {
+		e := fmt.Errorf("could not unmarshal error: %w", err)
+		writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
+		return
+	}
+}
+
+func handleGrpcResponseError(errJson ErrorJson, response *http.Response, writer http.ResponseWriter) {
+	// Something went wrong, but the request completed, meaning we can write headers and the error message.
+	for h, vs := range response.Header {
+		for _, v := range vs {
+			writer.Header().Set(h, v)
+		}
+	}
+	// Set code to HTTP code because unmarshalled body contained gRPC code.
+	errJson.SetCode(response.StatusCode)
+	writeError(writer, errJson, response.Header)
+	return
+}
+
+func grpcResponseIsStatusCodeOnly(request *http.Request, responseContainer interface{}) bool {
+	return request.Method == "GET" && responseContainer == nil
+}
+
+func deserializeGrpcResponseBodyIntoContainer(body []byte, responseContainer interface{}, writer http.ResponseWriter) {
+	if err := json.Unmarshal(body, &responseContainer); err != nil {
+		e := fmt.Errorf("could not unmarshal response: %w", err)
+		writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
+		return
+	}
+}
+
+func processMiddlewareResponseFields(responseContainer interface{}, writer http.ResponseWriter) {
+	if err := processField(responseContainer, []fieldProcessor{
+		{
+			tag: "hex",
+			f:   base64ToHexProcessor,
+		},
+		{
+			tag: "enum",
+			f:   enumToLowercaseProcessor,
+		},
+		{
+			tag: "time",
+			f:   timeToUnixProcessor,
+		},
+	}); err != nil {
+		e := fmt.Errorf("could not process response data: %w", err)
+		writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
+		return
+	}
+}
+
+func serializeMiddlewareResponseIntoJson(responseContainer interface{}, writer http.ResponseWriter) (jsonResponse []byte) {
+	j, err := json.Marshal(responseContainer)
+	if err != nil {
+		e := fmt.Errorf("could not marshal response: %w", err)
+		writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
+	}
+	return j
+}
+
+func writeMiddlewareResponseHeadersAndBody(request *http.Request, grpcResponse *http.Response, responseJson []byte, writer http.ResponseWriter) {
+	var statusCodeHeader string
+	for h, vs := range grpcResponse.Header {
+		// We don't want to expose any gRPC metadata in the HTTP response, so we skip forwarding metadata headers.
+		if strings.HasPrefix(h, "Grpc-Metadata") {
+			if h == "Grpc-Metadata-"+grpcutils.HttpCodeMetadataKey {
+				statusCodeHeader = vs[0]
+			}
+		} else {
+			for _, v := range vs {
+				writer.Header().Set(h, v)
+			}
+		}
+	}
+	if request.Method == "GET" {
+		writer.Header().Set("Content-Length", strconv.Itoa(len(responseJson)))
+		if statusCodeHeader != "" {
+			code, err := strconv.Atoi(statusCodeHeader)
+			if err != nil {
+				e := fmt.Errorf("could not parse status code: %w", err)
+				writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
+				return
+			}
+			writer.WriteHeader(code)
+		} else {
+			writer.WriteHeader(grpcResponse.StatusCode)
+		}
+		if _, err := io.Copy(writer, ioutil.NopCloser(bytes.NewReader(responseJson))); err != nil {
+			e := fmt.Errorf("could not write response message: %w", err)
+			writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
+			return
+		}
+	} else if request.Method == "POST" {
+		writer.WriteHeader(grpcResponse.StatusCode)
+	}
 }
 
 func writeError(writer http.ResponseWriter, e ErrorJson, responseHeader http.Header) {
@@ -550,4 +585,18 @@ func timeToUnixProcessor(v reflect.Value) error {
 	}
 	v.SetString(strconv.FormatUint(uint64(t.Unix()), 10))
 	return nil
+}
+
+// isRequestParam verifies whether the passed string is a request parameter.
+// Request parameters are enclosed in { and }.
+func isRequestParam(s string) bool {
+	return len(s) > 0 && s[0] == '{' && s[len(s)-1] == '}'
+}
+
+func cleanup(grpcResponseBody io.ReadCloser, writer http.ResponseWriter) {
+	if err := grpcResponseBody.Close(); err != nil {
+		e := fmt.Errorf("could not close response body: %w", err)
+		writeError(writer, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}, nil)
+		return
+	}
 }
