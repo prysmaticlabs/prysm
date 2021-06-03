@@ -62,8 +62,8 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 
 	randGen := rand.NewGenerator()
 	for _, slot := range slots {
-		// process the blocks during their respective slots,
-		// otherwise wait for the right time.
+		// process the blocks during their respective slot.
+		// otherwise wait for the right slot to process the block.
 		if slot > s.cfg.Chain.CurrentSlot() {
 			continue
 		}

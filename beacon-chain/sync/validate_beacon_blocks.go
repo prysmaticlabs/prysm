@@ -18,15 +18,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
-)
-
-var (
-	futureBlockProcessingTolerance = slotutil.MultiplySlotBy(2 /* times */)
 )
 
 // validateBeaconBlockPubSub checks that the incoming block has a valid BLS signature.
@@ -125,10 +120,10 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationIgnore
 	}
 
-	// Be lenient in handling early blocks. Instead of discarding blocks arriving earlier than
+	// Be lenient in handling early blocks. Instead of discarding blocks arriving later than
 	// MaximumGossipClockDisparity (500ms) in future, we tolerate blocks arriving at max two slots
 	// earlier (12*2 seconds). Queue such blocks and process them at the right slot.
-	if err := helpers.VerifySlotTime(genesisTime, blk.Block().Slot(), futureBlockProcessingTolerance); err != nil {
+	if err := helpers.VerifySlotTime(genesisTime, blk.Block().Slot(), earlyBlockProcessingTolerance); err != nil {
 		log.WithError(err).WithField("blockSlot", blk.Block().Slot()).Debug("Ignored block")
 		return pubsub.ValidationIgnore
 	}
@@ -156,7 +151,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 			return pubsub.ValidationIgnore
 		}
 		s.pendingQueueLock.Unlock()
-		log.WithError(errors.New("block belongs to future slot")).WithField("currentSlot", currentSlot).WithField("blockSlot", blk.Block().Slot()).Debug("Ignored block")
+		log.WithError(errors.New("early block")).WithField("currentSlot", currentSlot).WithField("blockSlot", blk.Block().Slot()).Debug("Ignored block")
 		return pubsub.ValidationIgnore
 	}
 

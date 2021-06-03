@@ -32,6 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/abool"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 )
 
@@ -46,7 +47,11 @@ const badBlockSize = 1000
 
 const syncMetricsInterval = 10 * time.Second
 
-var pendingBlockExpTime = time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)) * time.Second // Seconds in one epoch.
+var (
+	pendingBlockExpTime                 = time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)) * time.Second // Seconds in one epoch.
+	earlyBlockProcessingTolerance       = slotutil.MultiplySlotBy(2)      // seconds to allow processing early blocks
+	earlyAttestationProcessingTolerance = slotutil.MultiplySlotBy(2)     // seconds to allow processing early attestations
+)
 
 // Config to set up the regular sync service.
 type Config struct {

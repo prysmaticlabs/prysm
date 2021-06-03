@@ -38,7 +38,8 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 
-	if err := helpers.ValidateAttestationTime(req.Slot, vs.TimeFetcher.GenesisTime()); err != nil {
+	if err := helpers.ValidateAttestationTime(req.Slot, vs.TimeFetcher.GenesisTime(),
+		params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("invalid request: %v", err))
 	}
 
