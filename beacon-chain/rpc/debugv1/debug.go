@@ -3,7 +3,7 @@ package debugv1
 import (
 	"context"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -28,6 +28,10 @@ func (ds *Server) GetBeaconState(ctx context.Context, req *ethpb.StateRequest) (
 	return &ethpb.BeaconStateResponse{
 		Data: protoState,
 	}, nil
+}
+
+func (ds *Server) GetBeaconStateSsz(ctx context.Context, req *ethpb.StateRequest) (*ethpb.BeaconStateSszResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "Unimplemented")
 }
 
 // ListForkChoiceHeads retrieves the fork choice leaves for the current head.

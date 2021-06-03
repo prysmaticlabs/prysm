@@ -6,8 +6,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
 
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 // InnerStateUnsafe returns the pointer value of the underlying
