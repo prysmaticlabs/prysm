@@ -67,4 +67,11 @@ go_web_test_suite(
         "@com_github_tebeka_selenium//:go_default_library",
         "@io_bazel_rules_webtesting//go/webtest:go_default_library",
     ],
+    tags = [
+        "block-network",
+        "e2e",
+        "manual",
+        "selenium",
+        "native",
+    ],
 )
