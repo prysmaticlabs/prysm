@@ -79,7 +79,7 @@ service BeaconValidator {
   rpc SubmitAggregateAndProofs(AggregateAndProofsSubmit) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       post: "/eth/v1/validator/aggregate_and_proofs"
-      body: "*"
+      body: "data"
     };
   }
 
@@ -100,7 +100,7 @@ service BeaconValidator {
   rpc SubmitBeaconCommitteeSubscription(BeaconCommitteeSubscribeSubmit) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       post: "/eth/v1/validator/beacon_committee_subscriptions"
-      body: "*"
+      body: "data"
     };
   }
 }
