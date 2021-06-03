@@ -815,8 +815,8 @@ def prysm_deps():
         name = "com_github_ferranbt_fastssz",
         importpath = "github.com/ferranbt/fastssz",
         nofuzz = True,
-        sum = "h1:zhTRgKvm7CQxlGwJ7KfqT1AYDr2Q/caS6qrC7fwEtxU=",
-        version = "v0.0.0-20210526181520-7df50c8568f8",
+        sum = "h1:9VDpsWq096+oGMDTT/SgBD/VgZYf4pTF+KTPmZ+OaKM=",
+        version = "v0.0.0-20210120143747-11b9eff30ea9",
     )
 
     go_repository(
@@ -1785,12 +1785,6 @@ def prysm_deps():
         sum = "h1:CCtW0xUnWGVINKvE/WWOYKdsPV6mawAtvQuSl8guwQs=",
         version = "v1.2.3",
     )
-    go_repository(
-        name = "com_github_klauspost_cpuid_v2",
-        importpath = "github.com/klauspost/cpuid/v2",
-        sum = "h1:dQ5ueTiftKxp0gyjKSx5+8BtPWkyQbd95m8Gys/RarI=",
-        version = "v2.0.6",
-    )
 
     go_repository(
         name = "com_github_klauspost_crc32",
@@ -2279,8 +2273,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_minio_sha256_simd",
         importpath = "github.com/minio/sha256-simd",
-        sum = "h1:v1ta+49hkWZyvaKwrQB8elexRqm6Y0aMLjCNsrYxo6g=",
-        version = "v1.0.0",
+        sum = "h1:5QHSlgo3nt5yKOJrC7W8w7X+NFl8cMPZm96iu8kKUJU=",
+        version = "v0.1.1",
     )
     go_repository(
         name = "com_github_mitchellh_cli",
