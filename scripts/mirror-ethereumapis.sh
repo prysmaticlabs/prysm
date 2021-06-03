@@ -44,8 +44,8 @@ git config --global user.name prylabsbot
 git config --global url."https://git:'$github_api_token'@github.com/".insteadOf "git@github.com/"
 
 # Clone ethereumapis and prysm
-git clone git@github.com:prysmaticlabs/prysm /tmp/prysm/
-git clone git@github.com:prysmaticlabs/ethereumapis /tmp/ethereumapis/
+git clone https://github.com/prysmaticlabs/prysm /tmp/prysm/
+git clone https://github.com/prysmaticlabs/ethereumapis /tmp/ethereumapis/
 
 # Checkout the release tag in prysm and copy over protos
 cd /tmp/prysm && git checkout "$tag"
