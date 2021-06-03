@@ -3,7 +3,7 @@ syntax = "proto3";
 package ethereum.beacon.p2p.v1;
 
 import "google/protobuf/descriptor.proto";
-import "eth/ext/options.proto";
+import "proto/eth/ext/options.proto";
 
 message Status {
   bytes fork_digest = 1 [(ethereum.eth.ext.ssz_size) = "4"];

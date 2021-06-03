@@ -3,9 +3,9 @@ package beaconv1
 import (
 	"context"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
-	ethpb_alpha "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	ethpb_alpha "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"go.opencensus.io/trace"
