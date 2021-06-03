@@ -88,7 +88,7 @@ require (
 	github.com/prometheus/prom2json v1.3.0
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/prysmaticlabs/eth2-types v0.0.0-20210303084904-c9735a06829d
-	github.com/prysmaticlabs/ethereumapis v0.0.0-20210523153729-7bb446ee5dbb
+	github.com/prysmaticlabs/ethereumapis v0.0.0-20210525214230-657fd113470e
 	github.com/prysmaticlabs/go-bitfield v0.0.0-20210515192923-def021850363
 	github.com/prysmaticlabs/prombbolt v0.0.0-20210126082820-9b7adba6db7c
 	github.com/rs/cors v1.7.0

@@ -326,3 +326,30 @@ func CopyValidator(val *ethpb.Validator) *ethpb.Validator {
 		WithdrawableEpoch:          val.WithdrawableEpoch,
 	}
 }
+
+// CopySyncCommitteeSignature copies the provided sync committee signature object.
+func CopySyncCommitteeSignature(s *ethpb.SyncCommitteeSignature) *ethpb.SyncCommitteeSignature {
+	if s == nil {
+		return nil
+	}
+	return &ethpb.SyncCommitteeSignature{
+		Slot:           s.Slot,
+		BlockRoot:      bytesutil.SafeCopyBytes(s.BlockRoot),
+		ValidatorIndex: s.ValidatorIndex,
+		Signature:      bytesutil.SafeCopyBytes(s.Signature),
+	}
+}
+
+// CopySyncCommitteeContribution copies the provided sync committee contribution object.
+func CopySyncCommitteeContribution(c *ethpb.SyncCommitteeContribution) *ethpb.SyncCommitteeContribution {
+	if c == nil {
+		return nil
+	}
+	return &ethpb.SyncCommitteeContribution{
+		Slot:              c.Slot,
+		BlockRoot:         bytesutil.SafeCopyBytes(c.BlockRoot),
+		SubcommitteeIndex: c.SubcommitteeIndex,
+		AggregationBits:   bytesutil.SafeCopyBytes(c.AggregationBits),
+		Signature:         bytesutil.SafeCopyBytes(c.Signature),
+	}
+}

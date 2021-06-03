@@ -815,8 +815,8 @@ def prysm_deps():
         name = "com_github_ferranbt_fastssz",
         importpath = "github.com/ferranbt/fastssz",
         nofuzz = True,
-        sum = "h1:9VDpsWq096+oGMDTT/SgBD/VgZYf4pTF+KTPmZ+OaKM=",
-        version = "v0.0.0-20210120143747-11b9eff30ea9",
+        sum = "h1:zhTRgKvm7CQxlGwJ7KfqT1AYDr2Q/caS6qrC7fwEtxU=",
+        version = "v0.0.0-20210526181520-7df50c8568f8",
     )
 
     go_repository(
@@ -1411,13 +1411,6 @@ def prysm_deps():
         sum = "h1:vlNjIqmUZ9CMAWsbURYl3a6wZbw7q5RHVvlXTNS/Bs8=",
         version = "v0.0.0-20170803182201-1ca381bf3150",
     )
-    go_repository(
-        name = "com_github_iancoleman_strcase",
-        importpath = "github.com/iancoleman/strcase",
-        nofuzz = True,
-        sum = "h1:dJBk1m2/qjL1twPLf68JND55vvivMupZ4wIzE8CTdBw=",
-        version = "v0.1.3",
-    )
 
     go_repository(
         name = "com_github_ianlancetaylor_cgosymbolizer",
@@ -1784,6 +1777,12 @@ def prysm_deps():
         importpath = "github.com/klauspost/cpuid",
         sum = "h1:CCtW0xUnWGVINKvE/WWOYKdsPV6mawAtvQuSl8guwQs=",
         version = "v1.2.3",
+    )
+    go_repository(
+        name = "com_github_klauspost_cpuid_v2",
+        importpath = "github.com/klauspost/cpuid/v2",
+        sum = "h1:dQ5ueTiftKxp0gyjKSx5+8BtPWkyQbd95m8Gys/RarI=",
+        version = "v2.0.6",
     )
 
     go_repository(
@@ -2273,8 +2272,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_minio_sha256_simd",
         importpath = "github.com/minio/sha256-simd",
-        sum = "h1:5QHSlgo3nt5yKOJrC7W8w7X+NFl8cMPZm96iu8kKUJU=",
-        version = "v0.1.1",
+        sum = "h1:v1ta+49hkWZyvaKwrQB8elexRqm6Y0aMLjCNsrYxo6g=",
+        version = "v1.0.0",
     )
     go_repository(
         name = "com_github_mitchellh_cli",
@@ -2745,8 +2744,8 @@ def prysm_deps():
         name = "com_github_prysmaticlabs_ethereumapis",
         build_file_generation = "off",
         importpath = "github.com/prysmaticlabs/ethereumapis",
-        sum = "h1:WawW3Bwrgj96kQ15Bfrhy8Yb3Frc54K8wpaoFDBh7fw=",
-        version = "v0.0.0-20210523153729-7bb446ee5dbb",
+        sum = "h1:mu1Z/7T8hWSIa2WhTkK4FXVDGiLHUj8SMn8TTakZ2CM=",
+        version = "v0.0.0-20210525214230-657fd113470e",
     )
     go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",
@@ -2761,12 +2760,7 @@ def prysm_deps():
         sum = "h1:9PHRCuO/VN0s9k+RmLykho7AjDxblNYI5bYKed16NPU=",
         version = "v0.0.0-20210126082820-9b7adba6db7c",
     )
-    go_repository(
-        name = "com_github_prysmaticlabs_protoc_gen_go_cast",
-        importpath = "github.com/prysmaticlabs/protoc-gen-go-cast",
-        sum = "h1:k7CCMwN7VooQ7GhfySnaVyI4/9+QbhJTdasoC6VOZOI=",
-        version = "v0.0.0-20210504233148-1e141af6a0a1",
-    )
+
     go_repository(
         name = "com_github_puerkitobio_purell",
         importpath = "github.com/PuerkitoBio/purell",
