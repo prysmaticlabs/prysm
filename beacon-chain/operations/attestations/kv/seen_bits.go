@@ -3,8 +3,8 @@ package kv
 import (
 	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 func (c *AttCaches) insertSeenBit(att *ethpb.Attestation) error {

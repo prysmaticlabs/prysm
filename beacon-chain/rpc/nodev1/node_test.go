@@ -15,7 +15,6 @@ import (
 	libp2ptest "github.com/libp2p/go-libp2p-peerstore/test"
 	ma "github.com/multiformats/go-multiaddr"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -23,6 +22,7 @@ import (
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	syncmock "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -263,8 +263,8 @@ func TestListPeers(t *testing.T) {
 		expectedId := ids[0]
 
 		resp, err := s.ListPeers(context.Background(), &ethpb.PeersRequest{
-			State:     []string{ethpb.ConnectionState_CONNECTING.String()},
-			Direction: []string{ethpb.PeerDirection_INBOUND.String()},
+			State:     []ethpb.ConnectionState{ethpb.ConnectionState_CONNECTING},
+			Direction: []ethpb.PeerDirection{ethpb.PeerDirection_INBOUND},
 		})
 		require.NoError(t, err)
 		require.Equal(t, 1, len(resp.Data))
@@ -284,57 +284,39 @@ func TestListPeers(t *testing.T) {
 
 	filterTests := []struct {
 		name       string
-		states     []string
-		directions []string
+		states     []ethpb.ConnectionState
+		directions []ethpb.PeerDirection
 		wantIds    []peer.ID
 	}{
 		{
 			name:       "No filters - return all peers",
-			states:     []string{},
-			directions: []string{},
+			states:     []ethpb.ConnectionState{},
+			directions: []ethpb.PeerDirection{},
 			wantIds:    ids[:len(ids)-1], // Excluding last peer as it is not connected.
 		},
 		{
 			name:       "State filter empty - return peers for all states",
-			states:     []string{},
-			directions: []string{ethpb.PeerDirection_INBOUND.String()},
+			states:     []ethpb.ConnectionState{},
+			directions: []ethpb.PeerDirection{ethpb.PeerDirection_INBOUND},
 			wantIds:    []peer.ID{ids[0], ids[2], ids[4], ids[6]},
 		},
 		{
 			name:       "Direction filter empty - return peers for all directions",
-			states:     []string{ethpb.ConnectionState_CONNECTED.String()},
-			directions: []string{},
+			states:     []ethpb.ConnectionState{ethpb.ConnectionState_CONNECTED},
+			directions: []ethpb.PeerDirection{},
 			wantIds:    []peer.ID{ids[2], ids[3]},
 		},
 		{
 			name:       "One state and direction",
-			states:     []string{ethpb.ConnectionState_DISCONNECTED.String()},
-			directions: []string{ethpb.PeerDirection_INBOUND.String()},
+			states:     []ethpb.ConnectionState{ethpb.ConnectionState_DISCONNECTED},
+			directions: []ethpb.PeerDirection{ethpb.PeerDirection_INBOUND},
 			wantIds:    []peer.ID{ids[6]},
 		},
 		{
 			name:       "Multiple states and directions",
-			states:     []string{ethpb.ConnectionState_CONNECTING.String(), ethpb.ConnectionState_DISCONNECTING.String()},
-			directions: []string{ethpb.PeerDirection_INBOUND.String(), ethpb.PeerDirection_OUTBOUND.String()},
+			states:     []ethpb.ConnectionState{ethpb.ConnectionState_CONNECTING, ethpb.ConnectionState_DISCONNECTING},
+			directions: []ethpb.PeerDirection{ethpb.PeerDirection_INBOUND, ethpb.PeerDirection_OUTBOUND},
 			wantIds:    []peer.ID{ids[0], ids[1], ids[4], ids[5]},
-		},
-		{
-			name:       "Unknown filter is ignored",
-			states:     []string{ethpb.ConnectionState_CONNECTED.String(), "foo"},
-			directions: []string{ethpb.PeerDirection_OUTBOUND.String(), "bar"},
-			wantIds:    []peer.ID{ids[3]},
-		},
-		{
-			name:       "Only unknown filters - return all peers",
-			states:     []string{"foo"},
-			directions: []string{"bar"},
-			wantIds:    ids[:len(ids)-1], // Excluding last peer as it is not connected.
-		},
-		{
-			name:       "Letter case does not matter",
-			states:     []string{strings.ToLower(ethpb.ConnectionState_DISCONNECTED.String())},
-			directions: []string{strings.ToLower(ethpb.PeerDirection_OUTBOUND.String())},
-			wantIds:    []peer.ID{ids[7]},
 		},
 	}
 	for _, tt := range filterTests {
@@ -433,8 +415,8 @@ func BenchmarkListPeers(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := s.ListPeers(context.Background(), &ethpb.PeersRequest{
-			State:     []string{},
-			Direction: []string{},
+			State:     []ethpb.ConnectionState{},
+			Direction: []ethpb.PeerDirection{},
 		})
 		require.NoError(b, err)
 	}
