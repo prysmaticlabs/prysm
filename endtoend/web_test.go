@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -17,6 +18,16 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/tebeka/selenium"
 )
+
+var (
+	host = "127.0.0.1"
+)
+
+func init() {
+	if hIP, ok := os.LookupEnv("E2E_HOST_IP"); ok {
+		host = hIP
+	}
+}
 
 func TestValidatorUI(t *testing.T) {
 	ctx := context.Background()
@@ -46,7 +57,7 @@ func TestValidatorUI(t *testing.T) {
 	time.Sleep(5 * time.Second) // Wait 5 seconds for validator to start services.
 
 	ensureValidator(t, wd)
-	url, err := url.Parse(fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.ValidatorGatewayPort))
+	url, err := url.Parse(fmt.Sprintf("http://%s:%d", host, e2e.TestParams.ValidatorGatewayPort))
 	require.NoError(t, err)
 	require.NoError(t, wd.Get(url.String()))
 
@@ -83,7 +94,7 @@ func ensureWebdriver(t *testing.T, wd selenium.WebDriver) {
 }
 
 func ensureValidator(t *testing.T, wd selenium.WebDriver) {
-	address, err := url.Parse(fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.ValidatorMetricsPort))
+	address, err := url.Parse(fmt.Sprintf("http://%s:%d", host, e2e.TestParams.ValidatorMetricsPort))
 	require.NoError(t, err)
 	address = address.ResolveReference(&url.URL{Path: "/metrics"}) // TODO: Validator should have /healthz
 	require.NoError(t, wd.Get(address.String()))

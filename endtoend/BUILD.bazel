@@ -4,10 +4,35 @@ load("@io_bazel_rules_webtesting//web:go.bzl", "go_web_test_suite")
 # gazelle:exclude geth_deps.go
 # gazelle:exclude web_test.go
 
+test_suite(
+    name = "ci",
+    tags = [
+        "e2e",
+        "manual",
+        "minimal",
+    ],
+    tests = [
+        ":go_default_test",
+        ":ui_test_chrome-external",  # Requires EXTERNAL_WEBDRIVER_SERVER_ADDRESS to be set.
+    ],
+)
+
+test_suite(
+    name = "local",
+    tags = [
+        "e2e",
+        "manual",
+        "minimal",
+    ],
+    tests = [
+        ":go_default_test",
+        ":ui_test_chromium-local",
+    ],
+)
+
 go_test(
     name = "go_default_test",
     size = "large",
-    testonly = True,
     srcs = [
         "endtoend_test.go",
         "minimal_e2e_test.go",
@@ -25,7 +50,7 @@ go_test(
     tags = [
         "block-network",
         "e2e",
-        "manual",
+        "exclusive",
         "minimal",
     ],
     deps = [
@@ -53,11 +78,21 @@ go_web_test_suite(
     srcs = ["web_test.go"],
     browsers = [
         "@io_bazel_rules_webtesting//browsers:chromium-local",
+        "@io_bazel_rules_webtesting//browsers:chrome-external",
     ],
     data = [
         "//cmd/validator",
     ],
     local = True,
+    tags = [
+        "e2e",
+        "exclusive",
+        "external",
+        "manual",
+        "minimal",
+        "native",
+        "requires-network",
+    ],
     deps = [
         "//endtoend/components:go_default_library",
         "//endtoend/helpers:go_default_library",
@@ -66,13 +101,5 @@ go_web_test_suite(
         "//shared/testutil/require:go_default_library",
         "@com_github_tebeka_selenium//:go_default_library",
         "@io_bazel_rules_webtesting//go/webtest:go_default_library",
-    ],
-    tags = [
-        "block-network",
-        "e2e",
-        "manual",
-        "selenium",
-        "native",
-        "minimal",
     ],
 )
