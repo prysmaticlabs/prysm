@@ -27,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/node/registration"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -409,6 +410,11 @@ func (b *BeaconNode) registerBlockchainService() error {
 		return err
 	}
 
+	var syncCommitteeStore *synccommittee.Service
+	if err := b.services.FetchService(&syncCommitteeStore); err != nil {
+		return err
+	}
+
 	wsp := b.cliCtx.String(flags.WeakSubjectivityCheckpt.Name)
 	wsCheckpt, err := helpers.ParseWeakSubjectivityInputString(wsp)
 	if err != nil {
@@ -428,6 +434,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 		StateNotifier:           b,
 		ForkChoiceStore:         b.forkChoiceStore,
 		OpsService:              opsService,
+		SyncCommitteeStore:      syncCommitteeStore,
 		StateGen:                b.stateGen,
 		WeakSubjectivityCheckpt: wsCheckpt,
 	})

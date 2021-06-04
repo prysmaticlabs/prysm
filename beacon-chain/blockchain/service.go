@@ -23,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -84,6 +85,7 @@ type Config struct {
 	OpsService              *attestations.Service
 	StateGen                *stategen.State
 	WeakSubjectivityCheckpt *ethpb.Checkpoint
+	SyncCommitteeStore      *synccommittee.Service
 }
 
 // NewService instantiates a new block service instance that will
@@ -140,6 +142,7 @@ func (s *Service) Start() {
 		log.Info("Blockchain data already exists in DB, initializing...")
 		s.genesisTime = time.Unix(int64(beaconState.GenesisTime()), 0)
 		s.cfg.OpsService.SetGenesisTime(beaconState.GenesisTime())
+		s.cfg.SyncCommitteeStore.SetGenesisTime(beaconState.GenesisTime())
 		if err := s.initializeChainInfo(s.ctx); err != nil {
 			log.Fatalf("Could not set up chain info: %v", err)
 		}
@@ -302,7 +305,7 @@ func (s *Service) initializeBeaconChain(
 	}
 
 	s.cfg.OpsService.SetGenesisTime(genesisState.GenesisTime())
-
+	s.cfg.SyncCommitteeStore.SetGenesisTime(genesisState.GenesisTime())
 	return genesisState, nil
 }
 
