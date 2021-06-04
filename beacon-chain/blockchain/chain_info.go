@@ -24,6 +24,7 @@ type ChainInfoFetcher interface {
 	FinalizationFetcher
 	GenesisFetcher
 	CanonicalFetcher
+	ForkFetcher
 }
 
 // TimeFetcher retrieves the Eth2 data that's related to time.

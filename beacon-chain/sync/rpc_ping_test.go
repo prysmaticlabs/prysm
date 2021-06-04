@@ -12,6 +12,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/protocol"
 	types "github.com/prysmaticlabs/eth2-types"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -50,7 +51,7 @@ func TestPingRPCHandler_ReceivesPing(t *testing.T) {
 	p1.Peers().SetMetadata(p2.BHost.ID(), p2.LocalMetadata)
 
 	// Setup streams
-	pcl := protocol.ID("/testing")
+	pcl := protocol.ID(p2p.RPCPingTopicV1)
 	topic := string(pcl)
 	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)
 	var wg sync.WaitGroup

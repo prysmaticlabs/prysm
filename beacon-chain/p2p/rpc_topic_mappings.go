@@ -12,6 +12,9 @@ import (
 // SchemaVersionV1 specifies the schema version for our rpc protocol ID.
 const SchemaVersionV1 = "/1"
 
+// SchemaVersionV2 specifies the next schema version for our rpc protocol ID.
+const SchemaVersionV2 = "/2"
+
 // Specifies the protocol prefix for all our Req/Resp topics.
 const protocolPrefix = "/eth2/beacon_chain/req"
 
@@ -47,16 +50,42 @@ const (
 	RPCPingTopicV1 = protocolPrefix + pingMessageName + SchemaVersionV1
 	// RPCMetaDataTopicV1 defines the v1 topic for the metadata rpc method.
 	RPCMetaDataTopicV1 = protocolPrefix + metadataMessageName + SchemaVersionV1
+
+	// V2 RPC Topics
+	// RPCStatusTopicV2 defines the v2 topic for the status rpc method.
+	RPCStatusTopicV2 = protocolPrefix + statusMessageName + SchemaVersionV2
+	// RPCGoodByeTopicV2 defines the v2 topic for the goodbye rpc method.
+	RPCGoodByeTopicV2 = protocolPrefix + goodbyeMessageName + SchemaVersionV2
+	// RPCBlocksByRangeTopicV2 defines v2 the topic for the blocks by range rpc method.
+	RPCBlocksByRangeTopicV2 = protocolPrefix + beaconBlocksByRangeMessageName + SchemaVersionV2
+	// RPCBlocksByRootTopicV2 defines the v2 topic for the blocks by root rpc method.
+	RPCBlocksByRootTopicV2 = protocolPrefix + beaconBlocksByRootsMessageName + SchemaVersionV2
+	// RPCPingTopicV2 defines the v2 topic for the ping rpc method.
+	RPCPingTopicV2 = protocolPrefix + pingMessageName + SchemaVersionV2
+	// RPCMetaDataTopicV2 defines the v2 topic for the metadata rpc method.
+	RPCMetaDataTopicV2 = protocolPrefix + metadataMessageName + SchemaVersionV2
 )
 
 // RPCTopicMappings map the base message type to the rpc request.
 var RPCTopicMappings = map[string]interface{}{
-	RPCStatusTopicV1:        new(pb.Status),
-	RPCGoodByeTopicV1:       new(types.SSZUint64),
+	// RPC Status Message
+	RPCStatusTopicV1: new(pb.Status),
+	RPCStatusTopicV2: new(pb.Status),
+	// RPC Goodbye Message
+	RPCGoodByeTopicV1: new(types.SSZUint64),
+	RPCGoodByeTopicV2: new(types.SSZUint64),
+	// RPC Block By Range Message
 	RPCBlocksByRangeTopicV1: new(pb.BeaconBlocksByRangeRequest),
-	RPCBlocksByRootTopicV1:  new(p2ptypes.BeaconBlockByRootsReq),
-	RPCPingTopicV1:          new(types.SSZUint64),
-	RPCMetaDataTopicV1:      new(interface{}),
+	RPCBlocksByRangeTopicV2: new(pb.BeaconBlocksByRangeRequest),
+	// RPC Block By Root Message
+	RPCBlocksByRootTopicV1: new(p2ptypes.BeaconBlockByRootsReq),
+	RPCBlocksByRootTopicV2: new(p2ptypes.BeaconBlockByRootsReq),
+	// RPC Ping Message
+	RPCPingTopicV1: new(types.SSZUint64),
+	RPCPingTopicV2: new(types.SSZUint64),
+	// RPC Metadata Message
+	RPCMetaDataTopicV1: new(interface{}),
+	RPCMetaDataTopicV2: new(interface{}),
 }
 
 // Maps all registered protocol prefixes.

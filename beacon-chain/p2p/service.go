@@ -26,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -163,6 +164,9 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 			},
 		},
 	})
+
+	// Initialize Data maps.
+	types.InitializeDataMaps()
 
 	return s, nil
 }

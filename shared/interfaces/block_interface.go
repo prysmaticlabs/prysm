@@ -1,6 +1,7 @@
 package interfaces
 
 import (
+	ssz "github.com/ferranbt/fastssz"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"google.golang.org/protobuf/proto"
@@ -13,9 +14,10 @@ type SignedBeaconBlock interface {
 	Signature() []byte
 	IsNil() bool
 	Copy() SignedBeaconBlock
-	MarshalSSZ() ([]byte, error)
 	Proto() proto.Message
 	PbPhase0Block() (*ethpb.SignedBeaconBlock, error)
+	ssz.Marshaler
+	ssz.Unmarshaler
 	Version() int
 }
 
@@ -29,8 +31,9 @@ type BeaconBlock interface {
 	Body() BeaconBlockBody
 	IsNil() bool
 	HashTreeRoot() ([32]byte, error)
-	MarshalSSZ() ([]byte, error)
 	Proto() proto.Message
+	ssz.Marshaler
+	ssz.Unmarshaler
 }
 
 // BeaconBlockBody describes the method set employed by an object
