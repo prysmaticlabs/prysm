@@ -9,7 +9,6 @@ package slasherkv
 var (
 	// Slasher buckets.
 	attestedEpochsByValidator  = []byte("attested-epochs-by-validator")
-	attestationRecordsBucket   = []byte("attestation-records")
 	attestationDataRootsBucket = []byte("attestation-data-roots")
 	proposalRecordsBucket      = []byte("proposal-records")
 	slasherChunksBucket        = []byte("slasher-chunks")

@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -90,7 +90,7 @@ func TestStore_SaveAttesterSlashings(t *testing.T) {
 		return attesterSlashings[i].Attestation_1.Signature[0] < attesterSlashings[j].Attestation_1.Signature[0]
 	})
 	require.NotNil(t, attesterSlashings)
-	require.DeepEqual(t, as, attesterSlashings, "Slashing: %v should be part of slashings response: %v", as, attesterSlashings)
+	require.DeepSSZEqual(t, as, attesterSlashings, "Slashing: %v should be part of slashings response: %v", as, attesterSlashings)
 }
 
 func TestStore_UpdateAttesterSlashingStatus(t *testing.T) {

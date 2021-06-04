@@ -4,11 +4,10 @@ import (
 	"context"
 	"reflect"
 	"strconv"
-	"strings"
 	"testing"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -20,7 +19,9 @@ func TestState_FieldCount(t *testing.T) {
 	typ := reflect.TypeOf(pb.BeaconState{})
 	numFields := 0
 	for i := 0; i < typ.NumField(); i++ {
-		if strings.HasPrefix(typ.Field(i).Name, "XXX_") {
+		if typ.Field(i).Name == "state" ||
+			typ.Field(i).Name == "sizeCache" ||
+			typ.Field(i).Name == "unknownFields" {
 			continue
 		}
 		numFields++

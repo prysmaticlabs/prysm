@@ -5,15 +5,15 @@ import (
 	"errors"
 	"fmt"
 
-	ptypes "github.com/gogo/protobuf/types"
+	"github.com/prysmaticlabs/prysm/shared/copyutil"
+
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -21,6 +21,7 @@ import (
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // GetAttestationData requests that the beacon node produce an attestation data object,
@@ -90,7 +91,7 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 			return nil, status.Errorf(codes.Internal, "Could not get historical head state: %v", err)
 		}
 	}
-	if headState == nil {
+	if headState == nil || headState.IsNil() {
 		return nil, status.Error(codes.Internal, "Could not lookup parent state from head.")
 	}
 
@@ -182,7 +183,7 @@ func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation
 
 	go func() {
 		ctx = trace.NewContext(context.Background(), trace.FromContext(ctx))
-		attCopy := stateV0.CopyAttestation(att)
+		attCopy := copyutil.CopyAttestation(att)
 		if err := vs.AttPool.SaveUnaggregatedAttestation(attCopy); err != nil {
 			log.WithError(err).Error("Could not handle attestation in operations service")
 			return
@@ -195,7 +196,7 @@ func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation
 }
 
 // SubscribeCommitteeSubnets subscribes to the committee ID subnet given subscribe request.
-func (vs *Server) SubscribeCommitteeSubnets(ctx context.Context, req *ethpb.CommitteeSubnetsSubscribeRequest) (*ptypes.Empty, error) {
+func (vs *Server) SubscribeCommitteeSubnets(ctx context.Context, req *ethpb.CommitteeSubnetsSubscribeRequest) (*emptypb.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "AttesterServer.SubscribeCommitteeSubnets")
 	defer span.End()
 
@@ -239,5 +240,5 @@ func (vs *Server) SubscribeCommitteeSubnets(ctx context.Context, req *ethpb.Comm
 		}
 	}
 
-	return &ptypes.Empty{}, nil
+	return &emptypb.Empty{}, nil
 }

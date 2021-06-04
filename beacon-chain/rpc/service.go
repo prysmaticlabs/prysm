@@ -13,8 +13,6 @@ import (
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	ethpbv1 "github.com/prysmaticlabs/ethereumapis/eth/v1"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
@@ -39,6 +37,8 @@ import (
 	chainSync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -211,7 +211,6 @@ func (s *Service) Start() {
 		GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 		PeersFetcher:       s.cfg.PeersFetcher,
 		PeerManager:        s.cfg.PeerManager,
-		GenesisFetcher:     s.cfg.GenesisFetcher,
 		MetadataProvider:   s.cfg.MetadataProvider,
 		HeadFetcher:        s.cfg.HeadFetcher,
 	}
@@ -239,23 +238,15 @@ func (s *Service) Start() {
 		CollectedAttestationsBuffer: make(chan []*ethpb.Attestation, attestationBufferSize),
 	}
 	beaconChainServerV1 := &beaconv1.Server{
-		Ctx:                 s.ctx,
-		BeaconDB:            s.cfg.BeaconDB,
-		AttestationsPool:    s.cfg.AttestationsPool,
-		SlashingsPool:       s.cfg.SlashingsPool,
-		ChainInfoFetcher:    s.cfg.ChainInfoFetcher,
-		ChainStartFetcher:   s.cfg.ChainStartFetcher,
-		DepositFetcher:      s.cfg.DepositFetcher,
-		BlockFetcher:        s.cfg.POWChainService,
-		CanonicalStateChan:  s.canonicalStateChan,
-		GenesisTimeFetcher:  s.cfg.GenesisTimeFetcher,
-		StateNotifier:       s.cfg.StateNotifier,
-		BlockNotifier:       s.cfg.BlockNotifier,
-		AttestationNotifier: s.cfg.OperationNotifier,
-		Broadcaster:         s.cfg.Broadcaster,
-		BlockReceiver:       s.cfg.BlockReceiver,
-		StateGenService:     s.cfg.StateGen,
-		SyncChecker:         s.cfg.SyncService,
+		BeaconDB:           s.cfg.BeaconDB,
+		AttestationsPool:   s.cfg.AttestationsPool,
+		SlashingsPool:      s.cfg.SlashingsPool,
+		ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
+		GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
+		BlockNotifier:      s.cfg.BlockNotifier,
+		Broadcaster:        s.cfg.Broadcaster,
+		BlockReceiver:      s.cfg.BlockReceiver,
+		StateGenService:    s.cfg.StateGen,
 		StateFetcher: statefetcher.StateProvider{
 			BeaconDB:           s.cfg.BeaconDB,
 			ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
@@ -280,7 +271,6 @@ func (s *Service) Start() {
 			PeersFetcher:       s.cfg.PeersFetcher,
 		}
 		debugServerV1 := &debugv1.Server{
-			Ctx:         s.ctx,
 			BeaconDB:    s.cfg.BeaconDB,
 			HeadFetcher: s.cfg.HeadFetcher,
 			StateFetcher: &statefetcher.StateProvider{

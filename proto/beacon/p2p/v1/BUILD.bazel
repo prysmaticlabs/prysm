@@ -4,18 +4,25 @@ load("@rules_proto//proto:defs.bzl", "proto_library")
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
 load("//proto:ssz_proto_library.bzl", "ssz_proto_files")
-load("@com_github_prysmaticlabs_ethereumapis//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
+load("//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
 
 go_proto_library(
     name = "v1_go_proto",
-    compiler = "//:proto_compiler",
+    compiler = "@prysm//:cast_proto_compiler",
     importpath = "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1",
     proto = ":v1_proto",
     visibility = ["//visibility:public"],
     deps = [
+        "@com_github_golang_protobuf//proto:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
-        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "//proto/eth/v1alpha1:go_default_library",
+        "//proto/eth/ext:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+        "@io_bazel_rules_go//proto/wkt:descriptor_go_proto",
+        "@io_bazel_rules_go//proto/wkt:struct_go_proto",
+        "@org_golang_google_protobuf//reflect/protoreflect:go_default_library",
+        "@org_golang_google_protobuf//runtime/protoimpl:go_default_library",
+        "@org_golang_google_protobuf//types/descriptorpb:go_default_library",
     ],
 )
 
@@ -24,19 +31,23 @@ ssz_gen_marshal(
     go_proto = ":v1_go_proto",
     includes = [
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
-        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "//proto/eth/v1alpha1:go_default_library",
     ],
     objs = [
         "BeaconBlocksByRangeRequest",
         "DepositMessage",
         "ENRForkID",
-        "MetaData",
+        "MetaDataV0",
+        "MetaDataV1",
         "Fork",
         "ForkData",
         "HistoricalBatch",
         "Status",
         "BeaconState",
+        "BeaconStateAltair",
         "SigningData",
+        "SyncCommittee",
+        "SyncAggregatorSelectionData",
     ],
 )
 
@@ -66,8 +77,9 @@ proto_library(
     srcs = [":ssz_proto_files"],
     visibility = ["//visibility:public"],
     deps = [
-        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:proto",
+        "//proto/eth/v1alpha1:proto",
+        "//proto/eth/ext:proto",
+        "@com_google_protobuf//:descriptor_proto",
         "@com_google_protobuf//:timestamp_proto",
-        "@gogo_special_proto//github.com/gogo/protobuf/gogoproto",
     ],
 )

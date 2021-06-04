@@ -4,15 +4,16 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	coreState "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/benchutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"google.golang.org/protobuf/proto"
 )
 
 var runAmount = 25
@@ -27,7 +28,7 @@ func BenchmarkExecuteStateTransition_FullBlock(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := coreState.ExecuteStateTransition(context.Background(), cleanStates[i], block)
+		_, err := coreState.ExecuteStateTransition(context.Background(), cleanStates[i], interfaces.WrappedPhase0SignedBeaconBlock(block))
 		require.NoError(b, err)
 	}
 }
@@ -48,12 +49,12 @@ func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
 	require.NoError(b, helpers.UpdateCommitteeCache(beaconState, helpers.CurrentEpoch(beaconState)))
 	require.NoError(b, beaconState.SetSlot(currentSlot))
 	// Run the state transition once to populate the cache.
-	_, err = coreState.ExecuteStateTransition(context.Background(), beaconState, block)
+	_, err = coreState.ExecuteStateTransition(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(block))
 	require.NoError(b, err, "Failed to process block, benchmarks will fail")
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := coreState.ExecuteStateTransition(context.Background(), cleanStates[i], block)
+		_, err := coreState.ExecuteStateTransition(context.Background(), cleanStates[i], interfaces.WrappedPhase0SignedBeaconBlock(block))
 		require.NoError(b, err, "Failed to process block, benchmarks will fail")
 	}
 }

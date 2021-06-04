@@ -28,6 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -70,7 +71,7 @@ func setupDB() {
 		panic(err)
 	}
 	b := testutil.NewBeaconBlock()
-	if err := db1.SaveBlock(ctx, b); err != nil {
+	if err := db1.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(b)); err != nil {
 		panic(err)
 	}
 	br, err := b.HashTreeRoot()
@@ -191,11 +192,11 @@ func BeaconFuzzBlock(b []byte) {
 		return
 	}
 
-	if err := s.FuzzBeaconBlockSubscriber(ctx, msg); err != nil {
+	if err := s.FuzzBeaconBlockSubscriber(ctx, input.Block); err != nil {
 		_ = err
 	}
 
-	if _, err := state.ProcessBlock(ctx, st, input.Block); err != nil {
+	if _, err := state.ProcessBlock(ctx, st, interfaces.WrappedPhase0SignedBeaconBlock(input.Block)); err != nil {
 		_ = err
 	}
 }

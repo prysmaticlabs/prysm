@@ -5,10 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/gogo/protobuf/types"
 	eth2types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
-	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -17,6 +14,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	p2pMock "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -24,7 +23,170 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
+
+func TestListPoolAttestations(t *testing.T) {
+	state, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	att1 := &eth.Attestation{
+		AggregationBits: []byte{1, 10},
+		Data: &eth.AttestationData{
+			Slot:            1,
+			CommitteeIndex:  1,
+			BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot1"), 32),
+			Source: &eth.Checkpoint{
+				Epoch: 1,
+				Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
+			},
+			Target: &eth.Checkpoint{
+				Epoch: 10,
+				Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
+			},
+		},
+		Signature: bytesutil.PadTo([]byte("signature1"), 96),
+	}
+	att2 := &eth.Attestation{
+		AggregationBits: []byte{4, 40},
+		Data: &eth.AttestationData{
+			Slot:            4,
+			CommitteeIndex:  4,
+			BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot4"), 32),
+			Source: &eth.Checkpoint{
+				Epoch: 4,
+				Root:  bytesutil.PadTo([]byte("sourceroot4"), 32),
+			},
+			Target: &eth.Checkpoint{
+				Epoch: 40,
+				Root:  bytesutil.PadTo([]byte("targetroot4"), 32),
+			},
+		},
+		Signature: bytesutil.PadTo([]byte("signature4"), 96),
+	}
+	att3 := &eth.Attestation{
+		AggregationBits: []byte{2, 20},
+		Data: &eth.AttestationData{
+			Slot:            2,
+			CommitteeIndex:  2,
+			BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot2"), 32),
+			Source: &eth.Checkpoint{
+				Epoch: 2,
+				Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
+			},
+			Target: &eth.Checkpoint{
+				Epoch: 20,
+				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
+			},
+		},
+		Signature: bytesutil.PadTo([]byte("signature2"), 96),
+	}
+	att4 := &eth.Attestation{
+		AggregationBits: bitfield.NewBitlist(8),
+		Data: &eth.AttestationData{
+			Slot:            4,
+			CommitteeIndex:  4,
+			BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot2"), 32),
+			Source: &eth.Checkpoint{
+				Epoch: 2,
+				Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
+			},
+			Target: &eth.Checkpoint{
+				Epoch: 20,
+				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
+			},
+		},
+		Signature: bytesutil.PadTo([]byte("signature2"), 96),
+	}
+	att5 := &eth.Attestation{
+		AggregationBits: bitfield.NewBitlist(8),
+		Data: &eth.AttestationData{
+			Slot:            2,
+			CommitteeIndex:  4,
+			BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot1"), 32),
+			Source: &eth.Checkpoint{
+				Epoch: 2,
+				Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
+			},
+			Target: &eth.Checkpoint{
+				Epoch: 20,
+				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
+			},
+		},
+		Signature: bytesutil.PadTo([]byte("signature1"), 96),
+	}
+	att6 := &eth.Attestation{
+		AggregationBits: bitfield.NewBitlist(8),
+		Data: &eth.AttestationData{
+			Slot:            2,
+			CommitteeIndex:  4,
+			BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot2"), 32),
+			Source: &eth.Checkpoint{
+				Epoch: 2,
+				Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
+			},
+			Target: &eth.Checkpoint{
+				Epoch: 20,
+				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
+			},
+		},
+		Signature: bytesutil.PadTo([]byte("signature2"), 96),
+	}
+	s := &Server{
+		ChainInfoFetcher: &chainMock.ChainService{State: state},
+		AttestationsPool: attestations.NewPool(),
+	}
+	require.NoError(t, s.AttestationsPool.SaveAggregatedAttestations([]*eth.Attestation{att1, att2, att3}))
+	require.NoError(t, s.AttestationsPool.SaveUnaggregatedAttestations([]*eth.Attestation{att4, att5, att6}))
+
+	t.Run("empty request", func(t *testing.T) {
+		req := &ethpb.AttestationsPoolRequest{}
+		resp, err := s.ListPoolAttestations(context.Background(), req)
+		require.NoError(t, err)
+		require.Equal(t, 6, len(resp.Data))
+	})
+
+	t.Run("slot request", func(t *testing.T) {
+		slot := eth2types.Slot(2)
+		req := &ethpb.AttestationsPoolRequest{
+			Slot: &slot,
+		}
+		resp, err := s.ListPoolAttestations(context.Background(), req)
+		require.NoError(t, err)
+		require.Equal(t, 3, len(resp.Data))
+		for _, datum := range resp.Data {
+			assert.DeepEqual(t, datum.Data.Slot, slot)
+		}
+	})
+
+	t.Run("index request", func(t *testing.T) {
+		index := eth2types.CommitteeIndex(4)
+		req := &ethpb.AttestationsPoolRequest{
+			CommitteeIndex: &index,
+		}
+		resp, err := s.ListPoolAttestations(context.Background(), req)
+		require.NoError(t, err)
+		require.Equal(t, 4, len(resp.Data))
+		for _, datum := range resp.Data {
+			assert.DeepEqual(t, datum.Data.Index, index)
+		}
+	})
+
+	t.Run("both slot + index request", func(t *testing.T) {
+		slot := eth2types.Slot(2)
+		index := eth2types.CommitteeIndex(4)
+		req := &ethpb.AttestationsPoolRequest{
+			Slot:           &slot,
+			CommitteeIndex: &index,
+		}
+		resp, err := s.ListPoolAttestations(context.Background(), req)
+		require.NoError(t, err)
+		require.Equal(t, 2, len(resp.Data))
+		for _, datum := range resp.Data {
+			assert.DeepEqual(t, datum.Data.Index, index)
+			assert.DeepEqual(t, datum.Data.Slot, slot)
+		}
+	})
+}
 
 func TestListPoolAttesterSlashings(t *testing.T) {
 	state, err := testutil.NewBeaconState()
@@ -107,7 +269,7 @@ func TestListPoolAttesterSlashings(t *testing.T) {
 		SlashingsPool:    &slashings.PoolMock{PendingAttSlashings: []*eth.AttesterSlashing{slashing1, slashing2}},
 	}
 
-	resp, err := s.ListPoolAttesterSlashings(context.Background(), &types.Empty{})
+	resp, err := s.ListPoolAttesterSlashings(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	require.Equal(t, 2, len(resp.Data))
 	assert.DeepEqual(t, migration.V1Alpha1AttSlashingToV1(slashing1), resp.Data[0])
@@ -167,7 +329,7 @@ func TestListPoolProposerSlashings(t *testing.T) {
 		SlashingsPool:    &slashings.PoolMock{PendingPropSlashings: []*eth.ProposerSlashing{slashing1, slashing2}},
 	}
 
-	resp, err := s.ListPoolProposerSlashings(context.Background(), &types.Empty{})
+	resp, err := s.ListPoolProposerSlashings(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	require.Equal(t, 2, len(resp.Data))
 	assert.DeepEqual(t, migration.V1Alpha1ProposerSlashingToV1(slashing1), resp.Data[0])
@@ -197,7 +359,7 @@ func TestListPoolVoluntaryExits(t *testing.T) {
 		VoluntaryExitsPool: &voluntaryexits.PoolMock{Exits: []*eth.SignedVoluntaryExit{exit1, exit2}},
 	}
 
-	resp, err := s.ListPoolVoluntaryExits(context.Background(), &types.Empty{})
+	resp, err := s.ListPoolVoluntaryExits(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	require.Equal(t, 2, len(resp.Data))
 	assert.DeepEqual(t, migration.V1Alpha1ExitToV1(exit1), resp.Data[0])
@@ -223,7 +385,7 @@ func TestSubmitAttesterSlashing_Ok(t *testing.T) {
 			AttestingIndices: []uint64{0},
 			Data: &ethpb.AttestationData{
 				Slot:            1,
-				CommitteeIndex:  1,
+				Index:           1,
 				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot1"), 32),
 				Source: &ethpb.Checkpoint{
 					Epoch: 1,
@@ -240,7 +402,7 @@ func TestSubmitAttesterSlashing_Ok(t *testing.T) {
 			AttestingIndices: []uint64{0},
 			Data: &ethpb.AttestationData{
 				Slot:            1,
-				CommitteeIndex:  1,
+				Index:           1,
 				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot2"), 32),
 				Source: &ethpb.Checkpoint{
 					Epoch: 1,
@@ -287,7 +449,7 @@ func TestSubmitAttesterSlashing_InvalidSlashing(t *testing.T) {
 		AttestingIndices: []uint64{0},
 		Data: &ethpb.AttestationData{
 			Slot:            1,
-			CommitteeIndex:  1,
+			Index:           1,
 			BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot1"), 32),
 			Source: &ethpb.Checkpoint{
 				Epoch: 1,
@@ -334,8 +496,8 @@ func TestSubmitProposerSlashing_Ok(t *testing.T) {
 	require.NoError(t, err)
 
 	slashing := &ethpb.ProposerSlashing{
-		Header_1: &ethpb.SignedBeaconBlockHeader{
-			Header: &ethpb.BeaconBlockHeader{
+		SignedHeader_1: &ethpb.SignedBeaconBlockHeader{
+			Message: &ethpb.BeaconBlockHeader{
 				Slot:          1,
 				ProposerIndex: 0,
 				ParentRoot:    bytesutil.PadTo([]byte("parentroot1"), 32),
@@ -344,8 +506,8 @@ func TestSubmitProposerSlashing_Ok(t *testing.T) {
 			},
 			Signature: make([]byte, 96),
 		},
-		Header_2: &ethpb.SignedBeaconBlockHeader{
-			Header: &ethpb.BeaconBlockHeader{
+		SignedHeader_2: &ethpb.SignedBeaconBlockHeader{
+			Message: &ethpb.BeaconBlockHeader{
 				Slot:          1,
 				ProposerIndex: 0,
 				ParentRoot:    bytesutil.PadTo([]byte("parentroot2"), 32),
@@ -356,11 +518,11 @@ func TestSubmitProposerSlashing_Ok(t *testing.T) {
 		},
 	}
 
-	for _, h := range []*ethpb.SignedBeaconBlockHeader{slashing.Header_1, slashing.Header_2} {
+	for _, h := range []*ethpb.SignedBeaconBlockHeader{slashing.SignedHeader_1, slashing.SignedHeader_2} {
 		sb, err := helpers.ComputeDomainAndSign(
 			state,
-			helpers.SlotToEpoch(h.Header.Slot),
-			h.Header,
+			helpers.SlotToEpoch(h.Message.Slot),
+			h.Message,
 			params.BeaconConfig().DomainBeaconProposer,
 			keys[0],
 		)
@@ -391,7 +553,7 @@ func TestSubmitProposerSlashing_InvalidSlashing(t *testing.T) {
 	require.NoError(t, err)
 
 	header := &ethpb.SignedBeaconBlockHeader{
-		Header: &ethpb.BeaconBlockHeader{
+		Message: &ethpb.BeaconBlockHeader{
 			Slot:          1,
 			ProposerIndex: 0,
 			ParentRoot:    bytesutil.PadTo([]byte("parentroot1"), 32),
@@ -402,8 +564,8 @@ func TestSubmitProposerSlashing_InvalidSlashing(t *testing.T) {
 	}
 
 	slashing := &ethpb.ProposerSlashing{
-		Header_1: header,
-		Header_2: header,
+		SignedHeader_1: header,
+		SignedHeader_2: header,
 	}
 
 	broadcaster := &p2pMock.MockBroadcaster{}
@@ -436,14 +598,14 @@ func TestSubmitVoluntaryExit_Ok(t *testing.T) {
 	require.NoError(t, err)
 
 	exit := &ethpb.SignedVoluntaryExit{
-		Exit: &ethpb.VoluntaryExit{
+		Message: &ethpb.VoluntaryExit{
 			Epoch:          0,
 			ValidatorIndex: 0,
 		},
 		Signature: make([]byte, 96),
 	}
 
-	sb, err := helpers.ComputeDomainAndSign(state, exit.Exit.Epoch, exit.Exit, params.BeaconConfig().DomainVoluntaryExit, keys[0])
+	sb, err := helpers.ComputeDomainAndSign(state, exit.Message.Epoch, exit.Message, params.BeaconConfig().DomainVoluntaryExit, keys[0])
 	require.NoError(t, err)
 	sig, err := bls.SignatureFromBytes(sb)
 	require.NoError(t, err)
@@ -480,7 +642,7 @@ func TestSubmitVoluntaryExit_InvalidValidatorIndex(t *testing.T) {
 	require.NoError(t, err)
 
 	exit := &ethpb.SignedVoluntaryExit{
-		Exit: &ethpb.VoluntaryExit{
+		Message: &ethpb.VoluntaryExit{
 			Epoch:          0,
 			ValidatorIndex: 99,
 		},
@@ -515,7 +677,7 @@ func TestSubmitVoluntaryExit_InvalidExit(t *testing.T) {
 	require.NoError(t, err)
 
 	exit := &ethpb.SignedVoluntaryExit{
-		Exit: &ethpb.VoluntaryExit{
+		Message: &ethpb.VoluntaryExit{
 			Epoch:          0,
 			ValidatorIndex: 0,
 		},
@@ -571,7 +733,7 @@ func TestServer_SubmitAttestations_Ok(t *testing.T) {
 		AggregationBits: b,
 		Data: &ethpb.AttestationData{
 			Slot:            0,
-			CommitteeIndex:  0,
+			Index:           0,
 			BeaconBlockRoot: bytesutil.PadTo([]byte("beaconblockroot1"), 32),
 			Source:          sourceCheckpoint,
 			Target: &ethpb.Checkpoint{
@@ -585,7 +747,7 @@ func TestServer_SubmitAttestations_Ok(t *testing.T) {
 		AggregationBits: b,
 		Data: &ethpb.AttestationData{
 			Slot:            0,
-			CommitteeIndex:  0,
+			Index:           0,
 			BeaconBlockRoot: bytesutil.PadTo([]byte("beaconblockroot2"), 32),
 			Source:          sourceCheckpoint,
 			Target: &ethpb.Checkpoint{
@@ -676,7 +838,7 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 		AggregationBits: b,
 		Data: &ethpb.AttestationData{
 			Slot:            0,
-			CommitteeIndex:  0,
+			Index:           0,
 			BeaconBlockRoot: bytesutil.PadTo([]byte("beaconblockroot1"), 32),
 			Source:          sourceCheckpoint,
 			Target: &ethpb.Checkpoint{
@@ -690,7 +852,7 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 		AggregationBits: b,
 		Data: &ethpb.AttestationData{
 			Slot:            0,
-			CommitteeIndex:  0,
+			Index:           0,
 			BeaconBlockRoot: bytesutil.PadTo([]byte("beaconblockroot2"), 32),
 			Source: &ethpb.Checkpoint{
 				Epoch: 0,
@@ -707,7 +869,7 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 		AggregationBits: b,
 		Data: &ethpb.AttestationData{
 			Slot:            0,
-			CommitteeIndex:  0,
+			Index:           0,
 			BeaconBlockRoot: bytesutil.PadTo([]byte("beaconblockroot2"), 32),
 			Source:          sourceCheckpoint,
 			Target: &ethpb.Checkpoint{

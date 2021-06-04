@@ -5,6 +5,8 @@ import (
 	"errors"
 	"math"
 	"math/bits"
+
+	"github.com/thomaso-mirodin/intmath/u64"
 )
 
 // Common square root values.
@@ -27,6 +29,12 @@ var squareRootTable = map[uint64]uint64{
 func IntegerSquareRoot(n uint64) uint64 {
 	if v, ok := squareRootTable[n]; ok {
 		return v
+	}
+
+	// Golang floating point precision may be lost above 52 bits, so we use a
+	// non floating point method. u64.Sqrt is about x2.5 slower than math.Sqrt.
+	if n >= 1<<52 {
+		return u64.Sqrt(n)
 	}
 
 	return uint64(math.Sqrt(float64(n)))

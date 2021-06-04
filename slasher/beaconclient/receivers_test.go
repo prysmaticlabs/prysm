@@ -5,14 +5,14 @@ import (
 	"testing"
 	"time"
 
-	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestService_ReceiveBlocks(t *testing.T) {
@@ -60,7 +60,7 @@ func TestService_ReceiveAttestations(t *testing.T) {
 	}
 	client.EXPECT().StreamIndexedAttestations(
 		gomock.Any(),
-		&ptypes.Empty{},
+		&emptypb.Empty{},
 	).Return(stream, nil)
 	stream.EXPECT().Context().Return(ctx).AnyTimes()
 	stream.EXPECT().Recv().Return(
@@ -101,7 +101,7 @@ func TestService_ReceiveAttestations_Batched(t *testing.T) {
 	}
 	client.EXPECT().StreamIndexedAttestations(
 		gomock.Any(),
-		&ptypes.Empty{},
+		&emptypb.Empty{},
 	).Return(stream, nil)
 	stream.EXPECT().Context().Return(ctx).AnyTimes()
 	stream.EXPECT().Recv().Return(

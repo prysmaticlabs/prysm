@@ -286,9 +286,9 @@ buildifier_dependencies()
 
 git_repository(
     name = "com_google_protobuf",
-    commit = "fde7cf7358ec7cd69e8db9be4f1fa6a5c431386a",  # v3.13.0
+    commit = "436bd7880e458532901c58f4d9d1ea23fa7edd52",
     remote = "https://github.com/protocolbuffers/protobuf",
-    shallow_since = "1597443653 -0700",
+    shallow_since = "1617835118 -0700",
 )
 
 load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
@@ -330,33 +330,6 @@ http_archive(
 )
 
 # External dependencies
-
-http_archive(
-    name = "sszgen",  # Hack because we don't want to build this binary with libfuzzer, but need it to build.
-    build_file_content = """
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_binary")
-
-go_library(
-    name = "go_default_library",
-    srcs = [
-        "sszgen/main.go",
-        "sszgen/marshal.go",
-        "sszgen/size.go",
-        "sszgen/unmarshal.go",
-    ],
-    importpath = "github.com/ferranbt/fastssz/sszgen",
-    visibility = ["//visibility:private"],
-)
-
-go_binary(
-    name = "sszgen",
-    embed = [":go_default_library"],
-    visibility = ["//visibility:public"],
-)
-    """,
-    strip_prefix = "fastssz-06015a5d84f9e4eefe2c21377ca678fa8f1a1b09",
-    urls = ["https://github.com/ferranbt/fastssz/archive/06015a5d84f9e4eefe2c21377ca678fa8f1a1b09.tar.gz"],
-)
 
 http_archive(
     name = "prysm_web_ui",

@@ -5,9 +5,9 @@ import (
 	"context"
 	"errors"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -21,7 +21,7 @@ import (
 //    if state.eth1_data_votes.count(body.eth1_data) * 2 > EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH:
 //        state.eth1_data = body.eth1_data
 func ProcessEth1DataInBlock(_ context.Context, beaconState iface.BeaconState, eth1Data *ethpb.Eth1Data) (iface.BeaconState, error) {
-	if beaconState == nil {
+	if beaconState == nil || beaconState.IsNil() {
 		return nil, errors.New("nil state")
 	}
 	if err := beaconState.AppendEth1DataVotes(eth1Data); err != nil {
@@ -58,7 +58,7 @@ func AreEth1DataEqual(a, b *ethpb.Eth1Data) bool {
 // votes to see if they match the eth1data.
 func Eth1DataHasEnoughSupport(beaconState iface.ReadOnlyBeaconState, data *ethpb.Eth1Data) (bool, error) {
 	voteCount := uint64(0)
-	data = stateV0.CopyETH1Data(data)
+	data = copyutil.CopyETH1Data(data)
 
 	for _, vote := range beaconState.Eth1DataVotes() {
 		if AreEth1DataEqual(vote, data) {

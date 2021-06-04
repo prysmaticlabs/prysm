@@ -6,17 +6,19 @@ import (
 	"runtime"
 	"strings"
 
-	ptypes "github.com/gogo/protobuf/types"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	ethpb_alpha "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/migration"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 var (
@@ -29,7 +31,7 @@ var (
 )
 
 // GetIdentity retrieves data about the node's network presence.
-func (ns *Server) GetIdentity(ctx context.Context, _ *ptypes.Empty) (*ethpb.IdentityResponse, error) {
+func (ns *Server) GetIdentity(ctx context.Context, _ *emptypb.Empty) (*ethpb.IdentityResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "nodeV1.GetIdentity")
 	defer span.End()
 
@@ -58,7 +60,7 @@ func (ns *Server) GetIdentity(ctx context.Context, _ *ptypes.Empty) (*ethpb.Iden
 
 	metadata := &ethpb.Metadata{
 		SeqNumber: ns.MetadataProvider.MetadataSeq(),
-		Attnets:   ns.MetadataProvider.Metadata().Attnets,
+		Attnets:   ns.MetadataProvider.Metadata().AttnetsBitfield(),
 	}
 
 	return &ethpb.IdentityResponse{
@@ -78,9 +80,9 @@ func (ns *Server) GetPeer(ctx context.Context, req *ethpb.PeerRequest) (*ethpb.P
 	defer span.End()
 
 	peerStatus := ns.PeersFetcher.Peers()
-	id, err := peer.IDFromString(req.PeerId)
+	id, err := peer.Decode(req.PeerId)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "Invalid peer ID: "+req.PeerId)
+		return nil, status.Errorf(codes.Internal, "Could not decode peer ID: %v", err)
 	}
 	enr, err := peerStatus.ENR(id)
 	if err != nil {
@@ -105,14 +107,22 @@ func (ns *Server) GetPeer(ctx context.Context, req *ethpb.PeerRequest) (*ethpb.P
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not obtain direction: %v", err)
 	}
+	if ethpb_alpha.PeerDirection(direction) == ethpb_alpha.PeerDirection_UNKNOWN {
+		return nil, status.Error(codes.NotFound, "Peer not found")
+	}
 
+	v1ConnState := migration.V1Alpha1ConnectionStateToV1(ethpb_alpha.ConnectionState(state))
+	v1PeerDirection, err := migration.V1Alpha1PeerDirectionToV1(ethpb_alpha.PeerDirection(direction))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not handle peer direction: %v", err)
+	}
 	return &ethpb.PeerResponse{
 		Data: &ethpb.Peer{
-			PeerId:    req.PeerId,
-			Enr:       "enr:" + serializedEnr,
-			Address:   p2pAddress.String(),
-			State:     ethpb.ConnectionState(state),
-			Direction: ethpb.PeerDirection(direction),
+			PeerId:             req.PeerId,
+			Enr:                "enr:" + serializedEnr,
+			LastSeenP2PAddress: p2pAddress.String(),
+			State:              v1ConnState,
+			Direction:          v1PeerDirection,
 		},
 	}, nil
 }
@@ -133,6 +143,9 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not get peer info: %v", err)
 			}
+			if p == nil {
+				continue
+			}
 			allPeers = append(allPeers, p)
 		}
 		return &ethpb.PeersResponse{Data: allPeers}, nil
@@ -143,7 +156,7 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 		stateIds = peerStatus.All()
 	} else {
 		for _, stateFilter := range req.State {
-			normalized := strings.ToUpper(stateFilter)
+			normalized := strings.ToUpper(stateFilter.String())
 			if normalized == stateConnecting {
 				ids := peerStatus.Connecting()
 				stateIds = append(stateIds, ids...)
@@ -172,7 +185,7 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 		directionIds = peerStatus.All()
 	} else {
 		for _, directionFilter := range req.Direction {
-			normalized := strings.ToUpper(directionFilter)
+			normalized := strings.ToUpper(directionFilter.String())
 			if normalized == directionInbound {
 				ids := peerStatus.Inbound()
 				directionIds = append(directionIds, ids...)
@@ -201,13 +214,19 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get peer info: %v", err)
 		}
+		if p == nil {
+			continue
+		}
 		filteredPeers = append(filteredPeers, p)
+	}
+	if len(filteredPeers) == 0 {
+		return nil, status.Error(codes.NotFound, "Peers not found")
 	}
 	return &ethpb.PeersResponse{Data: filteredPeers}, nil
 }
 
 // PeerCount retrieves retrieves number of known peers.
-func (ns *Server) PeerCount(ctx context.Context, _ *ptypes.Empty) (*ethpb.PeerCountResponse, error) {
+func (ns *Server) PeerCount(ctx context.Context, _ *emptypb.Empty) (*ethpb.PeerCountResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "nodev1.PeerCount")
 	defer span.End()
 
@@ -225,7 +244,7 @@ func (ns *Server) PeerCount(ctx context.Context, _ *ptypes.Empty) (*ethpb.PeerCo
 
 // GetVersion requests that the beacon node identify information about its implementation in a
 // format similar to a HTTP User-Agent field.
-func (ns *Server) GetVersion(ctx context.Context, _ *ptypes.Empty) (*ethpb.VersionResponse, error) {
+func (ns *Server) GetVersion(ctx context.Context, _ *emptypb.Empty) (*ethpb.VersionResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "nodev1.Version")
 	defer span.End()
 
@@ -239,7 +258,7 @@ func (ns *Server) GetVersion(ctx context.Context, _ *ptypes.Empty) (*ethpb.Versi
 
 // GetSyncStatus requests the beacon node to describe if it's currently syncing or not, and
 // if it is, what block it is up to.
-func (ns *Server) GetSyncStatus(ctx context.Context, _ *ptypes.Empty) (*ethpb.SyncingResponse, error) {
+func (ns *Server) GetSyncStatus(ctx context.Context, _ *emptypb.Empty) (*ethpb.SyncingResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "nodev1.GetSyncStatus")
 	defer span.End()
 
@@ -260,20 +279,20 @@ func (ns *Server) GetSyncStatus(ctx context.Context, _ *ptypes.Empty) (*ethpb.Sy
 //      description: Node is syncing but can serve incomplete data
 //    "503":
 //      description: Node not initialized or having issues
-func (ns *Server) GetHealth(ctx context.Context, _ *ptypes.Empty) (*ptypes.Empty, error) {
+func (ns *Server) GetHealth(ctx context.Context, _ *emptypb.Empty) (*emptypb.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "nodev1.GetHealth")
 	defer span.End()
 
 	if ns.SyncChecker.Syncing() || ns.SyncChecker.Initialized() {
-		return &ptypes.Empty{}, nil
+		return &emptypb.Empty{}, nil
 	}
-	return &ptypes.Empty{}, status.Error(codes.Internal, "Node not initialized or having issues")
+	return &emptypb.Empty{}, status.Error(codes.Internal, "Node not initialized or having issues")
 }
 
 func (ns *Server) handleEmptyFilters(req *ethpb.PeersRequest, peerStatus *peers.Status) (emptyState, emptyDirection bool) {
 	emptyState = true
 	for _, stateFilter := range req.State {
-		normalized := strings.ToUpper(stateFilter)
+		normalized := strings.ToUpper(stateFilter.String())
 		filterValid := normalized == stateConnecting || normalized == stateConnected ||
 			normalized == stateDisconnecting || normalized == stateDisconnected
 		if filterValid {
@@ -284,7 +303,7 @@ func (ns *Server) handleEmptyFilters(req *ethpb.PeersRequest, peerStatus *peers.
 
 	emptyDirection = true
 	for _, directionFilter := range req.Direction {
-		normalized := strings.ToUpper(directionFilter)
+		normalized := strings.ToUpper(directionFilter.String())
 		filterValid := normalized == directionInbound || normalized == directionOutbound
 		if filterValid {
 			emptyDirection = false
@@ -319,13 +338,21 @@ func peerInfo(peerStatus *peers.Status, id peer.ID) (*ethpb.Peer, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not obtain direction")
 	}
+	if ethpb_alpha.PeerDirection(direction) == ethpb_alpha.PeerDirection_UNKNOWN {
+		return nil, nil
+	}
+	v1ConnState := migration.V1Alpha1ConnectionStateToV1(ethpb_alpha.ConnectionState(connectionState))
+	v1PeerDirection, err := migration.V1Alpha1PeerDirectionToV1(ethpb_alpha.PeerDirection(direction))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not handle peer direction: %v", err)
+	}
 	p := ethpb.Peer{
 		PeerId:    id.Pretty(),
-		State:     ethpb.ConnectionState(connectionState),
-		Direction: ethpb.PeerDirection(direction),
+		State:     v1ConnState,
+		Direction: v1PeerDirection,
 	}
 	if address != nil {
-		p.Address = address.String()
+		p.LastSeenP2PAddress = address.String()
 	}
 	if serializedEnr != "" {
 		p.Enr = "enr:" + serializedEnr
