@@ -117,6 +117,7 @@ go_test(
         "rate_limiter_test.go",
         "rpc_beacon_blocks_by_range_test.go",
         "rpc_beacon_blocks_by_root_test.go",
+        "rpc_chunked_response_test.go",
         "rpc_goodbye_test.go",
         "rpc_metadata_test.go",
         "rpc_ping_test.go",
@@ -139,6 +140,7 @@ go_test(
     embed = [":go_default_library"],
     shard_count = 4,
     deps = [
+        "//beacon-chain/blockchain:go_default_library",
         "//beacon-chain/blockchain/testing:go_default_library",
         "//beacon-chain/cache:go_default_library",
         "//beacon-chain/core/feed:go_default_library",
