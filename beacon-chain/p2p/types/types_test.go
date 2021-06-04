@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -26,17 +25,6 @@ func TestBeaconBlockByRootsReq_Limit(t *testing.T) {
 	}
 	req2 := BeaconBlockByRootsReq(nil)
 	require.ErrorContains(t, "expected buffer with length of upto", req2.UnmarshalSSZ(buf))
-}
-
-func TestRandom(t *testing.T) {
-	for i := 0; i < 20; i++ {
-		go func() {
-			_, ok := MetaDataMap[bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)]
-			if !ok {
-				t.Error("fails")
-			}
-		}()
-	}
 }
 
 func TestErrorResponse_Limit(t *testing.T) {
