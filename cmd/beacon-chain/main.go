@@ -63,7 +63,6 @@ var appFlags = []cli.Flag{
 	flags.GenesisStatePath,
 	cmd.EnableBackupWebhookFlag,
 	cmd.BackupWebhookOutputDir,
-	cmd.BackupWebhookOutputDirPermissionOverride,
 	cmd.MinimalConfigFlag,
 	cmd.E2EConfigFlag,
 	cmd.RPCMaxPageSizeFlag,

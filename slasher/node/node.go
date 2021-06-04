@@ -165,7 +165,7 @@ func (n *SlasherNode) registerPrometheusService(cliCtx *cli.Context) error {
 			additionalHandlers,
 			prometheus.Handler{
 				Path:    "/db/backup",
-				Handler: backuputil.BackupHandler(n.db, cliCtx.String(cmd.BackupWebhookOutputDir.Name), cliCtx.IsSet(cmd.BackupWebhookOutputDirPermissionOverride.Name)),
+				Handler: backuputil.BackupHandler(n.db, cliCtx.String(cmd.BackupWebhookOutputDir.Name)),
 			},
 		)
 	}

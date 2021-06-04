@@ -46,11 +46,6 @@ var (
 		Name:  "db-backup-output-dir",
 		Usage: "Output directory for db backups",
 	}
-	// BackupWebhookOutputDirPermissionOverride to override permissions of db backup directory to 700
-	BackupWebhookOutputDirPermissionOverride = &cli.BoolFlag{
-		Name:  "db-backup-directory-permission-override",
-		Usage: "Sets permissions of directory passed in db-backup-output-dir to 700",
-	}
 	// EnableTracingFlag defines a flag to enable p2p message tracing.
 	EnableTracingFlag = &cli.BoolFlag{
 		Name:  "enable-tracing",

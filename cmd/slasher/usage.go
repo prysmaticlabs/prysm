@@ -56,7 +56,6 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.MonitoringHostFlag,
 			cmd.EnableBackupWebhookFlag,
 			cmd.BackupWebhookOutputDir,
-			cmd.BackupWebhookOutputDirPermissionOverride,
 			flags.MonitoringPortFlag,
 			cmd.DisableMonitoringFlag,
 			cmd.LogFormat,

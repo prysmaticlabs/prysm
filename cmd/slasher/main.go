@@ -59,7 +59,6 @@ var appFlags = []cli.Flag{
 	cmd.DisableMonitoringFlag,
 	cmd.EnableBackupWebhookFlag,
 	cmd.BackupWebhookOutputDir,
-	cmd.BackupWebhookOutputDirPermissionOverride,
 	cmd.LogFileName,
 	cmd.LogFormat,
 	cmd.ClearDB,
