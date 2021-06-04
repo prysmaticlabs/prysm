@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"reflect"
 	"runtime/debug"
@@ -10,10 +11,12 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	pb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/messagehandler"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -443,4 +446,27 @@ func (s *Service) addDigestAndIndexToTopic(topic string, idx uint64) string {
 func (s *Service) forkDigest() ([4]byte, error) {
 	genRoot := s.cfg.Chain.GenesisValidatorRoot()
 	return p2putils.CreateForkDigest(s.cfg.Chain.GenesisTime(), genRoot[:])
+}
+
+func extractDigest(topic string) ([4]byte, error) {
+	splitParts := strings.Split(topic, "/")
+	parts := []string{}
+	for _, p := range splitParts {
+		if p == "" {
+			continue
+		}
+		parts = append(parts, p)
+	}
+	if len(parts) < 2 {
+		return [4]byte{}, errors.Errorf("topic does not have digest, it only has %d parts: %v", len(parts), parts)
+	}
+	strDigest := parts[1]
+	digest, err := hex.DecodeString(strDigest)
+	if err != nil {
+		return [4]byte{}, err
+	}
+	if len(digest) != digestLength {
+		return [4]byte{}, errors.Errorf("invalid digest length wanted %d but got %d", digestLength, len(digest))
+	}
+	return bytesutil.ToBytes4(digest), nil
 }
