@@ -24,9 +24,15 @@ func NewService(ctx context.Context, s *Store) *Service {
 	}
 }
 
-// Start an attestation store service's main event loop.
+// Start the sync committee store service's main event loop.
 func (s *Service) Start() {
 	go s.pruneSyncCommitteeStore()
+}
+
+// Stop the sync committee store service.
+func (s *Service) Stop() error {
+	defer s.cancel()
+	return nil
 }
 
 // Status returns the current service err if there's any.

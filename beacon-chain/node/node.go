@@ -58,23 +58,24 @@ const testSkipPowFlag = "test-skip-pow"
 // full PoS node. It handles the lifecycle of the entire system and registers
 // services to a service registry.
 type BeaconNode struct {
-	cliCtx          *cli.Context
-	ctx             context.Context
-	cancel          context.CancelFunc
-	services        *shared.ServiceRegistry
-	lock            sync.RWMutex
-	stop            chan struct{} // Channel to wait for termination notifications.
-	db              db.Database
-	attestationPool attestations.Pool
-	exitPool        voluntaryexits.PoolManager
-	slashingsPool   slashings.PoolManager
-	depositCache    *depositcache.DepositCache
-	stateFeed       *event.Feed
-	blockFeed       *event.Feed
-	opFeed          *event.Feed
-	forkChoiceStore forkchoice.ForkChoicer
-	stateGen        *stategen.State
-	collector       *bcnodeCollector
+	cliCtx             *cli.Context
+	ctx                context.Context
+	cancel             context.CancelFunc
+	services           *shared.ServiceRegistry
+	lock               sync.RWMutex
+	stop               chan struct{} // Channel to wait for termination notifications.
+	db                 db.Database
+	attestationPool    attestations.Pool
+	exitPool           voluntaryexits.PoolManager
+	slashingsPool      slashings.PoolManager
+	syncCommitteeStore *synccommittee.Store
+	depositCache       *depositcache.DepositCache
+	stateFeed          *event.Feed
+	blockFeed          *event.Feed
+	opFeed             *event.Feed
+	forkChoiceStore    forkchoice.ForkChoicer
+	stateGen           *stategen.State
+	collector          *bcnodeCollector
 }
 
 // New creates a new node instance, sets up configuration options, and registers
@@ -98,17 +99,18 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 
 	ctx, cancel := context.WithCancel(cliCtx.Context)
 	beacon := &BeaconNode{
-		cliCtx:          cliCtx,
-		ctx:             ctx,
-		cancel:          cancel,
-		services:        registry,
-		stop:            make(chan struct{}),
-		stateFeed:       new(event.Feed),
-		blockFeed:       new(event.Feed),
-		opFeed:          new(event.Feed),
-		attestationPool: attestations.NewPool(),
-		exitPool:        voluntaryexits.NewPool(),
-		slashingsPool:   slashings.NewPool(),
+		cliCtx:             cliCtx,
+		ctx:                ctx,
+		cancel:             cancel,
+		services:           registry,
+		stop:               make(chan struct{}),
+		stateFeed:          new(event.Feed),
+		blockFeed:          new(event.Feed),
+		opFeed:             new(event.Feed),
+		attestationPool:    attestations.NewPool(),
+		exitPool:           voluntaryexits.NewPool(),
+		slashingsPool:      slashings.NewPool(),
+		syncCommitteeStore: synccommittee.NewStore(),
 	}
 
 	depositAddress, err := registration.DepositContractAddress()
@@ -130,6 +132,10 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 	}
 
 	if err := beacon.registerAttestationPool(); err != nil {
+		return nil, err
+	}
+
+	if err := beacon.registerSyncCommitteeStoreService(); err != nil {
 		return nil, err
 	}
 
@@ -396,6 +402,11 @@ func (b *BeaconNode) registerAttestationPool() error {
 	if err != nil {
 		return errors.Wrap(err, "could not register atts pool service")
 	}
+	return b.services.RegisterService(s)
+}
+
+func (b *BeaconNode) registerSyncCommitteeStoreService() error {
+	s := synccommittee.NewService(b.ctx, b.syncCommitteeStore)
 	return b.services.RegisterService(s)
 }
 
