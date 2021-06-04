@@ -1,4 +1,4 @@
-package fork
+package fork_helper
 
 import (
 	"testing"
