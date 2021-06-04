@@ -40,22 +40,35 @@ import (
 // tests in this package.
 
 func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
-	ctx := context.Background()
 	db := dbtest.SetupDB(t)
-	msg := testutil.NewBeaconBlock()
-	msg.Block.Slot = 1
-	msg.Block.ParentRoot = testutil.Random32Bytes(t)
-	msg.Signature = bytesutil.PadTo([]byte("fake"), 96)
-
 	p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
+	parentBlock := testutil.NewBeaconBlock()
+	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(parentBlock)))
+	bRoot, err := parentBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
+	require.NoError(t, db.SaveStateSummary(ctx, &pb.StateSummary{Root: bRoot[:]}))
+	copied := beaconState.Copy()
+	require.NoError(t, copied.SetSlot(1))
+	proposerIdx, err := helpers.BeaconProposerIndex(copied)
+	require.NoError(t, err)
+	msg := testutil.NewBeaconBlock()
+	msg.Block.ParentRoot = bRoot[:]
+	msg.Block.Slot = 1
+	msg.Block.ProposerIndex = proposerIdx
+	msg.Signature = bytesutil.PadTo([]byte("fake"), 96)
 
 	c, err := lru.New(10)
 	require.NoError(t, err)
 	c2, err := lru.New(10)
 	require.NoError(t, err)
-	chainService := &mock.ChainService{Genesis: time.Now(),
+	stateGen := stategen.New(db)
+	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		FinalizedCheckPoint: &ethpb.Checkpoint{
 			Epoch: 0,
+			Root:  make([]byte, 32),
 		}}
 	r := &Service{
 		cfg: &Config{
@@ -64,6 +77,7 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 			InitialSync:   &mockSync.Sync{IsSyncing: false},
 			Chain:         chainService,
 			BlockNotifier: chainService.BlockNotifier(),
+			StateGen:      stateGen,
 		},
 		seenBlockCache: c,
 		badBlockCache:  c2,
@@ -79,8 +93,8 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	result := r.validateBeaconBlockPubSub(ctx, "", m) == pubsub.ValidationAccept
-	assert.Equal(t, false, result)
+	result := r.validateBeaconBlockPubSub(ctx, "", m) == pubsub.ValidationReject
+	assert.Equal(t, true, result)
 }
 
 func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {

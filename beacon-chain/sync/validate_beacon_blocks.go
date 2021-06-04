@@ -109,6 +109,14 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationIgnore
 	}
 
+	// Be lenient in handling early blocks. Instead of discarding blocks arriving later than
+	// MaximumGossipClockDisparity (500ms) in future, we tolerate blocks arriving at max two slots
+	// earlier (12*2 seconds). Queue such blocks and process them at the right slot.
+	if err := helpers.VerifySlotTime(genesisTime, blk.Block().Slot(), earlyBlockProcessingTolerance); err != nil {
+		log.WithError(err).WithField("blockSlot", blk.Block().Slot()).Debug("Ignored block")
+		return pubsub.ValidationIgnore
+	}
+
 	startSlot, err := helpers.StartSlot(s.cfg.Chain.FinalizedCheckpt().Epoch)
 	if err != nil {
 		log.WithError(err).WithField("blockSlot", blk.Block().Slot()).Debug("Ignored block")
@@ -117,14 +125,6 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	if startSlot >= blk.Block().Slot() {
 		e := fmt.Errorf("finalized slot %d greater or equal to block slot %d", startSlot, blk.Block().Slot())
 		log.WithError(e).WithField("blockSlot", blk.Block().Slot()).Debug("Ignored block")
-		return pubsub.ValidationIgnore
-	}
-
-	// Be lenient in handling early blocks. Instead of discarding blocks arriving later than
-	// MaximumGossipClockDisparity (500ms) in future, we tolerate blocks arriving at max two slots
-	// earlier (12*2 seconds). Queue such blocks and process them at the right slot.
-	if err := helpers.VerifySlotTime(genesisTime, blk.Block().Slot(), earlyBlockProcessingTolerance); err != nil {
-		log.WithError(err).WithField("blockSlot", blk.Block().Slot()).Debug("Ignored block")
 		return pubsub.ValidationIgnore
 	}
 
