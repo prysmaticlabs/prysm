@@ -1,8 +1,8 @@
 package types
 
 import (
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -36,10 +36,10 @@ func InitializeDataMaps() {
 	// Reset our block map.
 	BlockMap = map[[4]byte]func() interfaces.SignedBeaconBlock{
 		bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): func() interfaces.SignedBeaconBlock {
-			return interfaces.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{})
+			return interfaces.WrappedPhase0SignedBeaconBlock(&eth.SignedBeaconBlock{})
 		},
 		bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion): func() interfaces.SignedBeaconBlock {
-			return interfaces.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{})
+			return interfaces.WrappedAltairSignedBeaconBlock(&eth.SignedBeaconBlockAltair{})
 		},
 	}
 
