@@ -25,7 +25,9 @@ type params struct {
 	BeaconNodeRPCPort     int
 	BeaconNodeMetricsPort int
 	ValidatorMetricsPort  int
+	ValidatorMetricsHost  string
 	ValidatorGatewayPort  int
+	ValidatorGatewayHost  string
 	SlasherRPCPort        int
 	SlasherMetricsPort    int
 }
@@ -84,4 +86,10 @@ func Init(beaconNodeCount int) error {
 		SlasherMetricsPort:    8100 + testIndex*100,
 	}
 	return nil
+}
+
+// SetHost address for validator and beacon chain
+func (tp *params) SetHost(h string) {
+	tp.ValidatorMetricsHost = h
+	tp.ValidatorGatewayHost = h
 }

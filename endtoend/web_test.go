@@ -42,6 +42,7 @@ func TestValidatorUI(t *testing.T) {
 	ensureWebdriver(t, wd)
 
 	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
+	e2eParams.TestParams.SetHost(host)
 
 	v := components.NewValidatorNode(&e2etypes.E2EConfig{}, 0, 0, 0)
 

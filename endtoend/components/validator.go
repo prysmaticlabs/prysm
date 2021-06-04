@@ -126,7 +126,9 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--interop-num-validators=%d", validatorNum),
 		fmt.Sprintf("--interop-start-index=%d", offset),
 		fmt.Sprintf("--monitoring-port=%d", e2e.TestParams.ValidatorMetricsPort+index),
+		fmt.Sprintf("--monitoring-host=%s", e2e.TestParams.ValidatorMetricsHost),
 		fmt.Sprintf("--grpc-gateway-port=%d", e2e.TestParams.ValidatorGatewayPort+index),
+		fmt.Sprintf("--grpc-gateway-host=%s", e2e.TestParams.ValidatorGatewayHost),
 		fmt.Sprintf("--beacon-rpc-provider=localhost:%d", beaconRPCPort),
 		fmt.Sprintf("--wallet-dir=%s", path.Join(e2e.TestParams.TestPath, flags.WalletDefaultDirName)),
 		"--grpc-headers=dummy=value,foo=bar", // Sending random headers shouldn't break anything.
