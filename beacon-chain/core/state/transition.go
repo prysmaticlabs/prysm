@@ -295,6 +295,14 @@ func ProcessSlots(ctx context.Context, state iface.BeaconState, slot types.Slot)
 			traceutil.AnnotateError(span, err)
 			return nil, errors.Wrap(err, "failed to increment state slot")
 		}
+
+		// Transition to Altair state.
+		if helpers.IsEpochStart(state.Slot()) && helpers.SlotToEpoch(state.Slot()) == params.BeaconConfig().AltairForkEpoch {
+			state, err = altair.UpgradeToAltair(state)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	if highestSlot < state.Slot() {
