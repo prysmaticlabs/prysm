@@ -6,9 +6,10 @@ go_library(
     name = "go_default_library",
     srcs = [
         "api_middleware.go",
+        "api_middleware_processing.go",
+        "api_middleware_structs.go",
         "gateway.go",
         "log.go",
-        "middleware_structs.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/gateway",
     visibility = [

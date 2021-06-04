@@ -50,6 +50,7 @@ type Gateway struct {
 	remoteCert              string
 	gatewayAddr             string
 	apiMiddlewareAddr       string
+	apiMiddlewareEndpoints  []Endpoint
 	ctx                     context.Context
 	startFailure            error
 	remoteAddr              string
@@ -82,6 +83,7 @@ func NewBeacon(
 	remoteCert,
 	gatewayAddress string,
 	apiMiddlewareAddress string,
+	apiMiddlewareEndpoints []Endpoint,
 	mux *http.ServeMux,
 	allowedOrigins []string,
 	enableDebugRPCEndpoints bool,
@@ -97,6 +99,7 @@ func NewBeacon(
 		remoteCert:              remoteCert,
 		gatewayAddr:             gatewayAddress,
 		apiMiddlewareAddr:       apiMiddlewareAddress,
+		apiMiddlewareEndpoints:  apiMiddlewareEndpoints,
 		ctx:                     ctx,
 		mux:                     mux,
 		allowedOrigins:          allowedOrigins,
@@ -225,18 +228,7 @@ func (g *Gateway) Start() {
 		}
 	}()
 
-	go func() {
-		proxy := &ApiProxyMiddleware{
-			GatewayAddress: g.gatewayAddr,
-			ProxyAddress:   g.apiMiddlewareAddr,
-		}
-		log.WithField("API middleware address", g.apiMiddlewareAddr).Info("Starting API middleware")
-		if err := proxy.Run(); err != http.ErrServerClosed {
-			log.WithError(err).Error("Failed to start API middleware")
-			g.startFailure = err
-			return
-		}
-	}()
+	go g.registerApiMiddleware()
 }
 
 // Status of grpc gateway. Returns an error if this service is unhealthy.
@@ -355,4 +347,18 @@ func (g *Gateway) dialUnix(ctx context.Context, addr string) (*grpc.ClientConn, 
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(int(g.maxCallRecvMsgSize))),
 	}
 	return grpc.DialContext(ctx, addr, opts...)
+}
+
+func (g *Gateway) registerApiMiddleware() {
+	proxy := &ApiProxyMiddleware{
+		GatewayAddress: g.gatewayAddr,
+		ProxyAddress:   g.apiMiddlewareAddr,
+		Endpoints:      g.apiMiddlewareEndpoints,
+	}
+	log.WithField("API middleware address", g.apiMiddlewareAddr).Info("Starting API middleware")
+	if err := proxy.Run(); err != http.ErrServerClosed {
+		log.WithError(err).Error("Failed to start API middleware")
+		g.startFailure = err
+		return
+	}
 }
