@@ -51,10 +51,10 @@ func Fork(
 	previousForkVersion := params.BeaconConfig().GenesisForkVersion
 	scheduledForks := params.BeaconConfig().ForkVersionSchedule
 	forkEpoch := types.Epoch(0)
-	for epoch, forkVersion := range scheduledForks {
+	for forkVersion, epoch := range scheduledForks {
 		if epoch <= targetEpoch {
 			previousForkVersion = retrievedForkVersion
-			retrievedForkVersion = forkVersion
+			retrievedForkVersion = forkVersion[:]
 			forkEpoch = epoch
 		}
 	}

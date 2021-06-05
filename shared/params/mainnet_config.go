@@ -31,6 +31,7 @@ var mainnetNetworkConfig = &NetworkConfig{
 	MessageDomainValidSnappy:        [4]byte{01, 00, 00, 00},
 	ETH2Key:                         "eth2",
 	AttSubnetKey:                    "attnets",
+	SyncCommsSubnetKey:              "syncnets",
 	MinimumPeersInSubnet:            4,
 	MinimumPeersInSubnetSearch:      20,
 	ContractDeploymentBlock:         11184524, // Note: contract was deployed in block 11052984 but no transactions were sent until 11184524.
@@ -181,9 +182,9 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	AltairForkEpoch:    math.MaxUint64,     // Set to Max Uint64 for now.
 	NextForkVersion:    []byte{0, 0, 0, 0}, // Set to GenesisForkVersion unless there is a scheduled fork
 	NextForkEpoch:      1<<64 - 1,          // Set to FarFutureEpoch unless there is a scheduled fork.
-	ForkVersionSchedule: map[types.Epoch][]byte{
-		0:              {0, 0, 0, 0},
-		math.MaxUint64: {1, 0, 0, 0},
+	ForkVersionSchedule: map[[4]byte]types.Epoch{
+		[4]byte{0, 0, 0, 0}: 0,
+		[4]byte{1, 0, 0, 0}: math.MaxUint64,
 		// Any further forks must be specified here by their epoch number.
 	},
 

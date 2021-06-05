@@ -16,6 +16,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // Listener defines the discovery V5 network interface that is used
@@ -36,20 +38,28 @@ type Listener interface {
 // to be dynamically discoverable by others given our tracked committee ids.
 func (s *Service) RefreshENR() {
 	// return early if discv5 isnt running
-	if s.dv5Listener == nil {
+	if s.dv5Listener == nil || !s.isInitialized() {
 		return
 	}
 	bitV := bitfield.NewBitvector64()
+	bitS := bitfield.Bitvector4{byte(0x00)}
 	committees := cache.SubnetIDs.GetAllSubnets()
 	for _, idx := range committees {
 		bitV.SetBitAt(idx, true)
 	}
-	currentBitV, err := bitvector(s.dv5Listener.Self().Record())
+	currEpoch := helpers.SlotToEpoch(helpers.CurrentSlot(uint64(s.genesisTime.Unix())))
+	currentBitV, err := attBitvector(s.dv5Listener.Self().Record())
 	if err != nil {
-		log.Errorf("Could not retrieve bitfield: %v", err)
+		log.Errorf("Could not retrieve att bitfield: %v", err)
 		return
 	}
-	if bytes.Equal(bitV, currentBitV) {
+	params.BeaconConfig().ForkVersionSchedule
+	currentBitS, err := syncBitvector(s.dv5Listener.Self().Record())
+	if err != nil {
+		log.Errorf("Could not retrieve sync bitfield: %v", err)
+		return
+	}
+	if bytes.Equal(bitV, currentBitV) && bytes.Equal(bitS, currentBitS) {
 		// return early if bitfield hasn't changed
 		return
 	}
@@ -206,7 +216,8 @@ func (s *Service) createLocalNode(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not add eth2 fork version entry to enr")
 	}
-	return intializeAttSubnets(localNode), nil
+	localNode = intializeAttSubnets(localNode)
+	return initializeSyncCommSubnets(localNode), nil
 }
 
 func (s *Service) startDiscoveryV5(

@@ -378,7 +378,7 @@ func (m *MetaDataV1) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = append(dst, m.Attnets...)
 
 	// Field (2) 'Syncnets'
-	if len(m.Syncnets) != 64 {
+	if len(m.Syncnets) != 1 {
 		err = ssz.ErrBytesLength
 		return
 	}
@@ -391,7 +391,7 @@ func (m *MetaDataV1) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 func (m *MetaDataV1) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
-	if size != 80 {
+	if size != 17 {
 		return ssz.ErrSize
 	}
 
@@ -406,16 +406,16 @@ func (m *MetaDataV1) UnmarshalSSZ(buf []byte) error {
 
 	// Field (2) 'Syncnets'
 	if cap(m.Syncnets) == 0 {
-		m.Syncnets = make([]byte, 0, len(buf[16:80]))
+		m.Syncnets = make([]byte, 0, len(buf[16:17]))
 	}
-	m.Syncnets = append(m.Syncnets, buf[16:80]...)
+	m.Syncnets = append(m.Syncnets, buf[16:17]...)
 
 	return err
 }
 
 // SizeSSZ returns the ssz encoded size in bytes for the MetaDataV1 object
 func (m *MetaDataV1) SizeSSZ() (size int) {
-	size = 80
+	size = 17
 	return
 }
 
@@ -439,7 +439,7 @@ func (m *MetaDataV1) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	hh.PutBytes(m.Attnets)
 
 	// Field (2) 'Syncnets'
-	if len(m.Syncnets) != 64 {
+	if len(m.Syncnets) != 1 {
 		err = ssz.ErrBytesLength
 		return
 	}

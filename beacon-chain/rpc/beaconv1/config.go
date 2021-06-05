@@ -30,20 +30,20 @@ func (bs *Server) GetForkSchedule(ctx context.Context, _ *emptypb.Empty) (*ethpb
 		}, nil
 	}
 
-	epochs := sortedEpochs(schedule)
+	versions := sortedForkVersions(schedule)
 	forks := make([]*ethpb.Fork, len(schedule))
 	var previous, current []byte
-	for i, e := range epochs {
+	for i, v := range versions {
 		if i == 0 {
 			previous = params.BeaconConfig().GenesisForkVersion
 		} else {
 			previous = current
 		}
-		current = schedule[e]
+		current = v[:]
 		forks[i] = &ethpb.Fork{
 			PreviousVersion: previous,
 			CurrentVersion:  current,
-			Epoch:           e,
+			Epoch:           schedule[v],
 		}
 	}
 
@@ -80,15 +80,17 @@ func (bs *Server) GetDepositContract(ctx context.Context, _ *emptypb.Empty) (*et
 	}, nil
 }
 
-func sortedEpochs(forkSchedule map[types.Epoch][]byte) []types.Epoch {
-	sortedEpochs := make([]types.Epoch, len(forkSchedule))
+func sortedForkVersions(forkSchedule map[[4]byte]types.Epoch) [][4]byte {
+	sortedVersions := make([][4]byte, len(forkSchedule))
 	i := 0
 	for k := range forkSchedule {
-		sortedEpochs[i] = k
+		sortedVersions[i] = k
 		i++
 	}
-	sort.Slice(sortedEpochs, func(a, b int) bool { return sortedEpochs[a] < sortedEpochs[b] })
-	return sortedEpochs
+	sort.Slice(sortedVersions, func(a, b int) bool {
+		return forkSchedule[sortedVersions[a]] < forkSchedule[sortedVersions[b]]
+	})
+	return sortedVersions
 }
 
 func prepareConfigSpec() (map[string]string, error) {

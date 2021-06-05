@@ -88,9 +88,9 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.AltairForkVersion = []byte{1, 0, 0, 1} // Highest byte set to 0x01 to avoid collisions with mainnet versioning
 	minimalConfig.AltairForkEpoch = math.MaxUint64
 	// Manually set fork version schedule here.
-	minimalConfig.ForkVersionSchedule = map[types.Epoch][]byte{
-		0:              {0, 0, 0, 0},
-		math.MaxUint64: {1, 0, 0, 1},
+	minimalConfig.ForkVersionSchedule = map[[4]byte]types.Epoch{
+		[4]byte{0, 0, 0, 0}: 0,
+		[4]byte{1, 0, 0, 1}: math.MaxUint64,
 	}
 	minimalConfig.SyncCommitteeSize = 32
 	minimalConfig.InactivityScoreBias = 4

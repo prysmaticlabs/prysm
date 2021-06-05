@@ -15,8 +15,10 @@ import (
 )
 
 var attestationSubnetCount = params.BeaconNetworkConfig().AttestationSubnetCount
+var syncCommsSubnetCount = params.BeaconConfig().SyncCommitteeSubnetCount
 
 var attSubnetEnrKey = params.BeaconNetworkConfig().AttSubnetKey
+var syncCommsSubnetEnrKey = params.BeaconNetworkConfig().AttSubnetKey
 
 // FindPeersWithSubnet performs a network search for peers
 // subscribed to a particular subnet. Then we try to connect
@@ -109,6 +111,22 @@ func (s *Service) updateSubnetRecordWithMetadata(bitV bitfield.Bitvector64) {
 	})
 }
 
+// Updates the service's discv5 listener record's attestation subnet
+// with a new value for a bitfield of subnets tracked. It also record's
+// the sync committee subnet in the enr. It also updates the node's
+// metadata by increasing the sequence number and the subnets tracked by the node.
+func (s *Service) updateSubnetRecordWithMetadataV2(bitV bitfield.Bitvector64, bitS bitfield.Bitvector4) {
+	entry := enr.WithEntry(attSubnetEnrKey, &bitV)
+	subEntry := enr.WithEntry(syncCommsSubnetEnrKey, &bitS)
+	s.dv5Listener.LocalNode().Set(entry)
+	s.dv5Listener.LocalNode().Set(subEntry)
+	s.metaData = interfaces.WrappedMetadataV1(&pb.MetaDataV1{
+		SeqNumber: s.metaData.SequenceNumber() + 1,
+		Attnets:   bitV,
+		Syncnets:  bitS,
+	})
+}
+
 // Initializes a bitvector of attestation subnets beacon nodes is subscribed to
 // and creates a new ENR entry with its default value.
 func intializeAttSubnets(node *enode.LocalNode) *enode.LocalNode {
@@ -118,10 +136,19 @@ func intializeAttSubnets(node *enode.LocalNode) *enode.LocalNode {
 	return node
 }
 
+// Initializes a bitvector of sync committees subnets beacon nodes is subscribed to
+// and creates a new ENR entry with its default value.
+func initializeSyncCommSubnets(node *enode.LocalNode) *enode.LocalNode {
+	bitV := bitfield.Bitvector4{byte(0x00)}
+	entry := enr.WithEntry(syncCommsSubnetEnrKey, bitV.Bytes())
+	node.Set(entry)
+	return node
+}
+
 // Reads the attestation subnets entry from a node's ENR and determines
 // the committee indices of the attestation subnets the node is subscribed to.
 func attSubnets(record *enr.Record) ([]uint64, error) {
-	bitV, err := bitvector(record)
+	bitV, err := attBitvector(record)
 	if err != nil {
 		return nil, err
 	}
@@ -134,11 +161,39 @@ func attSubnets(record *enr.Record) ([]uint64, error) {
 	return committeeIdxs, nil
 }
 
+// Reads the sync subnets entry from a node's ENR and determines
+// the committee indices of the sync subnets the node is subscribed to.
+func syncSubnets(record *enr.Record) ([]uint64, error) {
+	bitV, err := syncBitvector(record)
+	if err != nil {
+		return nil, err
+	}
+	var committeeIdxs []uint64
+	for i := uint64(0); i < syncCommsSubnetCount; i++ {
+		if bitV.BitAt(i) {
+			committeeIdxs = append(committeeIdxs, i)
+		}
+	}
+	return committeeIdxs, nil
+}
+
 // Parses the attestation subnets ENR entry in a node and extracts its value
 // as a bitvector for further manipulation.
-func bitvector(record *enr.Record) (bitfield.Bitvector64, error) {
+func attBitvector(record *enr.Record) (bitfield.Bitvector64, error) {
 	bitV := bitfield.NewBitvector64()
 	entry := enr.WithEntry(attSubnetEnrKey, &bitV)
+	err := record.Load(entry)
+	if err != nil {
+		return nil, err
+	}
+	return bitV, nil
+}
+
+// Parses the attestation subnets ENR entry in a node and extracts its value
+// as a bitvector for further manipulation.
+func syncBitvector(record *enr.Record) (bitfield.Bitvector4, error) {
+	bitV := bitfield.Bitvector4{byte(0x00)}
+	entry := enr.WithEntry(syncCommsSubnetEnrKey, &bitV)
 	err := record.Load(entry)
 	if err != nil {
 		return nil, err
