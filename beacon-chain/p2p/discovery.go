@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -42,28 +43,46 @@ func (s *Service) RefreshENR() {
 		return
 	}
 	bitV := bitfield.NewBitvector64()
-	bitS := bitfield.Bitvector4{byte(0x00)}
 	committees := cache.SubnetIDs.GetAllSubnets()
 	for _, idx := range committees {
 		bitV.SetBitAt(idx, true)
 	}
-	currEpoch := helpers.SlotToEpoch(helpers.CurrentSlot(uint64(s.genesisTime.Unix())))
 	currentBitV, err := attBitvector(s.dv5Listener.Self().Record())
 	if err != nil {
 		log.Errorf("Could not retrieve att bitfield: %v", err)
 		return
 	}
-	params.BeaconConfig().ForkVersionSchedule
-	currentBitS, err := syncBitvector(s.dv5Listener.Self().Record())
-	if err != nil {
-		log.Errorf("Could not retrieve sync bitfield: %v", err)
-		return
+	// Compare current epoch with our fork epochs
+	currEpoch := helpers.SlotToEpoch(helpers.CurrentSlot(uint64(s.genesisTime.Unix())))
+	altairForkEpoch := params.BeaconConfig().ForkVersionSchedule[bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion)]
+	switch {
+	// Altair Behaviour
+	case currEpoch >= altairForkEpoch:
+		// Retrieve sync subnets from application level
+		// cache.
+		bitS := bitfield.Bitvector4{byte(0x00)}
+		committees = cache.SyncSubnetIDs.GetAllSubnets()
+		for _, idx := range committees {
+			bitS.SetBitAt(idx, true)
+		}
+		currentBitS, err := syncBitvector(s.dv5Listener.Self().Record())
+		if err != nil {
+			log.Errorf("Could not retrieve sync bitfield: %v", err)
+			return
+		}
+		if bytes.Equal(bitV, currentBitV) && bytes.Equal(bitS, currentBitS) {
+			// return early if bitfields haven't changed
+			return
+		}
+		s.updateSubnetRecordWithMetadataV2(bitV, bitS)
+	default:
+		// Phase 0 behaviour.
+		if bytes.Equal(bitV, currentBitV) {
+			// return early if bitfield hasn't changed
+			return
+		}
+		s.updateSubnetRecordWithMetadata(bitV)
 	}
-	if bytes.Equal(bitV, currentBitV) && bytes.Equal(bitS, currentBitS) {
-		// return early if bitfield hasn't changed
-		return
-	}
-	s.updateSubnetRecordWithMetadata(bitV)
 	// ping all peers to inform them of new metadata
 	s.pingPeers()
 }

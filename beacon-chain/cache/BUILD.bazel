@@ -63,6 +63,7 @@ go_test(
         "skip_slot_cache_test.go",
         "subnet_ids_test.go",
         "sync_committee_test.go",
+        "sync_subnet_ids_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
