@@ -4,13 +4,12 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -30,7 +29,7 @@ func (bs *Server) GetForkSchedule(ctx context.Context, _ *emptypb.Empty) (*ethpb
 		}, nil
 	}
 
-	versions := sortedForkVersions(schedule)
+	versions := p2putils.SortedForkVersions(schedule)
 	forks := make([]*ethpb.Fork, len(schedule))
 	var previous, current []byte
 	for i, v := range versions {
@@ -78,19 +77,6 @@ func (bs *Server) GetDepositContract(ctx context.Context, _ *emptypb.Empty) (*et
 			Address: params.BeaconConfig().DepositContractAddress,
 		},
 	}, nil
-}
-
-func sortedForkVersions(forkSchedule map[[4]byte]types.Epoch) [][4]byte {
-	sortedVersions := make([][4]byte, len(forkSchedule))
-	i := 0
-	for k := range forkSchedule {
-		sortedVersions[i] = k
-		i++
-	}
-	sort.Slice(sortedVersions, func(a, b int) bool {
-		return forkSchedule[sortedVersions[a]] < forkSchedule[sortedVersions[b]]
-	})
-	return sortedVersions
 }
 
 func prepareConfigSpec() (map[string]string, error) {

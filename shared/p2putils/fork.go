@@ -2,6 +2,7 @@
 package p2putils
 
 import (
+	"sort"
 	"time"
 
 	"github.com/pkg/errors"
@@ -49,9 +50,11 @@ func Fork(
 	// fork version based on the requested epoch.
 	retrievedForkVersion := params.BeaconConfig().GenesisForkVersion
 	previousForkVersion := params.BeaconConfig().GenesisForkVersion
-	scheduledForks := params.BeaconConfig().ForkVersionSchedule
+	fSchedule := params.BeaconConfig().ForkVersionSchedule
+	scheduledForks := SortedForkVersions(fSchedule)
 	forkEpoch := types.Epoch(0)
-	for forkVersion, epoch := range scheduledForks {
+	for _, forkVersion := range scheduledForks {
+		epoch := fSchedule[forkVersion]
 		if epoch <= targetEpoch {
 			previousForkVersion = retrievedForkVersion
 			retrievedForkVersion = forkVersion[:]
@@ -63,4 +66,19 @@ func Fork(
 		CurrentVersion:  retrievedForkVersion,
 		Epoch:           forkEpoch,
 	}, nil
+}
+
+// SortedForkVersions sorts the provided fork schedule in ascending order
+// by epoch.
+func SortedForkVersions(forkSchedule map[[4]byte]types.Epoch) [][4]byte {
+	sortedVersions := make([][4]byte, len(forkSchedule))
+	i := 0
+	for k := range forkSchedule {
+		sortedVersions[i] = k
+		i++
+	}
+	sort.Slice(sortedVersions, func(a, b int) bool {
+		return forkSchedule[sortedVersions[a]] < forkSchedule[sortedVersions[b]]
+	})
+	return sortedVersions
 }
