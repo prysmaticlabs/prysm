@@ -1,8 +1,12 @@
 package p2p
 
 const (
+	// GossipAttestationMessage is the name for the attestation message type. It is
+	// specially extracted so as to determine the correct message type from an attestation
+	// subnet.
+	GossipAttestationMessage = "beacon_attestation"
 	// AttestationSubnetTopicFormat is the topic format for the attestation subnet.
-	AttestationSubnetTopicFormat = "/eth2/%x/beacon_attestation_%d"
+	AttestationSubnetTopicFormat = "/eth2/%x/" + GossipAttestationMessage + "_%d"
 	// BlockSubnetTopicFormat is the topic format for the block subnet.
 	BlockSubnetTopicFormat = "/eth2/%x/beacon_block"
 	// ExitSubnetTopicFormat is the topic format for the voluntary exit subnet.

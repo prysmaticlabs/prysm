@@ -43,19 +43,12 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationReject
 	}
 
-	// Override topic for decoding.
-	originalTopic := msg.Topic
-	format := p2p.GossipTypeMapping[reflect.TypeOf(&eth.Attestation{})]
-	msg.Topic = &format
-
 	m, err := s.decodePubsubMessage(msg)
 	if err != nil {
 		log.WithError(err).Debug("Could not decode message")
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
-	// Restore topic.
-	msg.Topic = originalTopic
 
 	att, ok := m.(*eth.Attestation)
 	if !ok {
@@ -120,7 +113,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationIgnore
 	}
 
-	validationRes := s.validateUnaggregatedAttTopic(ctx, att, preState, *originalTopic)
+	validationRes := s.validateUnaggregatedAttTopic(ctx, att, preState, *msg.Topic)
 	if validationRes != pubsub.ValidationAccept {
 		return validationRes
 	}

@@ -1,12 +1,14 @@
 package sync
 
 import (
+	"reflect"
 	"strings"
 
 	ssz "github.com/ferranbt/fastssz"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -18,10 +20,18 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (ssz.Unmarshaler, err
 		return nil, errNilPubsubMessage
 	}
 	topic := *msg.Topic
+	fDigest, err := extractDigest(topic)
+	if err != nil {
+		return nil, errors.Wrapf(err, "extraction failed for topic: %s", topic)
+	}
 	topic = strings.TrimSuffix(topic, s.cfg.P2P.Encoding().ProtocolSuffix())
-	topic, err := s.replaceForkDigest(topic)
+	topic, err = s.replaceForkDigest(topic)
 	if err != nil {
 		return nil, err
+	}
+	// Specially handle subnet messages.
+	if strings.Contains(topic, p2p.GossipAttestationMessage) {
+		topic = p2p.GossipTypeMapping[reflect.TypeOf(&eth.Attestation{})]
 	}
 	base, ok := p2p.GossipTopicMappings[topic]
 	if !ok {
@@ -30,6 +40,14 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (ssz.Unmarshaler, err
 	m, ok := proto.Clone(base).(ssz.Unmarshaler)
 	if !ok {
 		return nil, errors.Errorf("message of %T does not support marshaller interface", base)
+	}
+	// Handle different message types across forks.
+	switch topic {
+	case p2p.BlockSubnetTopicFormat:
+		m, err = extractBlockDataType(fDigest[:], s.cfg.Chain)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if err := s.cfg.P2P.Encoding().DecodeGossip(msg.Data, m); err != nil {
 		return nil, err
