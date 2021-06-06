@@ -122,7 +122,6 @@ func (g *Gateway) Start() {
 		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
 			Marshaler: &gwruntime.JSONPb{
 				MarshalOptions: protojson.MarshalOptions{
-					UseProtoNames:   true,
 					EmitUnpopulated: true,
 				},
 				UnmarshalOptions: protojson.UnmarshalOptions{
