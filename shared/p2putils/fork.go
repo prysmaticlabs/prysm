@@ -9,6 +9,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -48,8 +49,8 @@ func Fork(
 	// We retrieve a list of scheduled forks by epoch.
 	// We loop through the keys in this map to determine the current
 	// fork version based on the requested epoch.
-	retrievedForkVersion := params.BeaconConfig().GenesisForkVersion
-	previousForkVersion := params.BeaconConfig().GenesisForkVersion
+	retrievedForkVersion := bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)
+	previousForkVersion := bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)
 	fSchedule := params.BeaconConfig().ForkVersionSchedule
 	scheduledForks := SortedForkVersions(fSchedule)
 	forkEpoch := types.Epoch(0)
@@ -57,13 +58,13 @@ func Fork(
 		epoch := fSchedule[forkVersion]
 		if epoch <= targetEpoch {
 			previousForkVersion = retrievedForkVersion
-			retrievedForkVersion = forkVersion[:]
+			retrievedForkVersion = forkVersion
 			forkEpoch = epoch
 		}
 	}
 	return &pb.Fork{
-		PreviousVersion: previousForkVersion,
-		CurrentVersion:  retrievedForkVersion,
+		PreviousVersion: previousForkVersion[:],
+		CurrentVersion:  retrievedForkVersion[:],
 		Epoch:           forkEpoch,
 	}, nil
 }
