@@ -1,0 +1,17 @@
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "events.go",
+        "server.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eventsv1",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//proto/eth/v1:go_default_library",
+        "@com_github_grpc_ecosystem_grpc_gateway_v2//proto/gateway:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
+        "@org_golang_google_protobuf//types/known/anypb:go_default_library",
+    ],
+)

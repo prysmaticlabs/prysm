@@ -5,12 +5,12 @@ import (
 
 	gwpb "github.com/grpc-ecosystem/grpc-gateway/v2/proto/gateway"
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/proto/eth/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
 func (s *Server) StreamEvents(
-	req *ethpb.StreamEventsRequest, stream ethpb.Events_EventsServer,
+	req *ethpb.StreamEventsRequest, stream ethpb.Events_StreamEventsServer,
 ) error {
 	ticker := time.NewTicker(time.Millisecond * 500)
 	defer ticker.Stop()
