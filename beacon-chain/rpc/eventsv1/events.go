@@ -52,7 +52,7 @@ func (s *Server) StreamEvents(
 	defer opsSub.Unsubscribe()
 	defer stateSub.Unsubscribe()
 
-	// Handle each event received and context cancelations.
+	// Handle each event received and context cancelation.
 	for {
 		select {
 		case event := <-blockChan:
