@@ -52,4 +52,7 @@ var (
 
 	// Migrations
 	migrationsBucket = []byte("migrations")
+
+	// Altair
+	altairKey = []byte("altair")
 )

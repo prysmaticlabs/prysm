@@ -20,6 +20,7 @@ import "google/protobuf/empty.proto";
 
 import "proto/eth/ext/options.proto";
 import "proto/eth/v1alpha1/beacon_block.proto";
+import "proto/eth/v1alpha1/beacon_block_altair.proto";
 import "proto/eth/v1alpha1/attestation.proto";
 
 option csharp_namespace = "Ethereum.Eth.v1alpha1";
@@ -145,6 +146,12 @@ service BeaconNodeValidator {
         };
     }
 
+    rpc GetBlockV2(BlockRequest) returns (BeaconBlockAltair) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/validator/blockV2"
+        };
+    }
+
     // Sends the newly signed beacon block to beacon node.
     //
     // The validator sends the newly signed beacon block to the beacon node so the beacon block can
@@ -153,6 +160,13 @@ service BeaconNodeValidator {
     rpc ProposeBlock(SignedBeaconBlock) returns (ProposeResponse) {
         option (google.api.http) = {
             post: "/eth/v1alpha1/validator/block"
+            body: "*"
+        };
+    }
+
+    rpc ProposeBlockV2(SignedBeaconBlockAltair) returns (ProposeResponse) {
+        option (google.api.http) = {
+            post: "/eth/v1alpha1/validator/blockV2"
             body: "*"
         };
     }

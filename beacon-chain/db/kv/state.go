@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/golang/snappy"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/genesis"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -25,7 +27,6 @@ import (
 func (s *Store) State(ctx context.Context, blockRoot [32]byte) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.State")
 	defer span.End()
-	var st *pb.BeaconState
 	enc, err := s.stateBytes(ctx, blockRoot)
 	if err != nil {
 		return nil, err
@@ -35,11 +36,7 @@ func (s *Store) State(ctx context.Context, blockRoot [32]byte) (iface.BeaconStat
 		return nil, nil
 	}
 
-	st, err = createState(ctx, enc)
-	if err != nil {
-		return nil, err
-	}
-	return stateV0.InitializeFromProtoUnsafe(st)
+	return createState(ctx, enc)
 }
 
 // GenesisState returns the genesis state in beacon chain.
@@ -57,7 +54,7 @@ func (s *Store) GenesisState(ctx context.Context) (iface.BeaconState, error) {
 		return cached, nil
 	}
 
-	var st *pb.BeaconState
+	var st iface.BeaconState
 	err = s.db.View(func(tx *bolt.Tx) error {
 		// Retrieve genesis block's signing root from blocks bucket,
 		// to look up what the genesis state is.
@@ -77,10 +74,10 @@ func (s *Store) GenesisState(ctx context.Context) (iface.BeaconState, error) {
 	if err != nil {
 		return nil, err
 	}
-	if st == nil {
+	if st == nil || st.IsNil() {
 		return nil, nil
 	}
-	return stateV0.InitializeFromProtoUnsafe(st)
+	return st, nil
 }
 
 // SaveState stores a state to the db using block's signing root which was used to generate the state.
@@ -100,14 +97,11 @@ func (s *Store) SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconSta
 	}
 	multipleEncs := make([][]byte, len(states))
 	for i, st := range states {
-		pbState, err := stateV0.ProtobufBeaconState(st.InnerStateUnsafe())
+		pbState, err := encodeState(ctx, st)
 		if err != nil {
 			return err
 		}
-		multipleEncs[i], err = encode(ctx, pbState)
-		if err != nil {
-			return err
-		}
+		multipleEncs[i] = pbState
 	}
 
 	return s.db.Update(func(tx *bolt.Tx) error {
@@ -198,12 +192,49 @@ func (s *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 }
 
 // creates state from marshaled proto state bytes.
-func createState(ctx context.Context, enc []byte) (*pb.BeaconState, error) {
+func createState(ctx context.Context, enc []byte) (iface.BeaconState, error) {
+	var err error
+	enc, err = snappy.Decode(nil, enc)
+	if err != nil {
+		return nil, err
+	}
+	if len(enc) >= len(altairKey) && bytes.Equal(enc[:len(altairKey)], altairKey) {
+		protoState := &pb.BeaconStateAltair{}
+		if err := protoState.UnmarshalSSZ(enc[len(altairKey):]); err != nil {
+			return nil, errors.Wrap(err, "failed to unmarshal encoding for altair")
+		}
+		return stateAltair.InitializeFromProtoUnsafe(protoState)
+	}
 	protoState := &pb.BeaconState{}
-	if err := decode(ctx, enc, protoState); err != nil {
+	if err := protoState.UnmarshalSSZ(enc); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal encoding")
 	}
-	return protoState, nil
+	return stateV0.InitializeFromProtoUnsafe(protoState)
+}
+
+func encodeState(ctx context.Context, st iface.ReadOnlyBeaconState) ([]byte, error) {
+	switch st.InnerStateUnsafe().(type) {
+	case *pb.BeaconState:
+		rState, ok := st.InnerStateUnsafe().(*pb.BeaconState)
+		if !ok {
+			return nil, errors.New("non valid inner state")
+		}
+		return encode(ctx, rState)
+	case *pb.BeaconStateAltair:
+		rState, ok := st.InnerStateUnsafe().(*pb.BeaconStateAltair)
+		if !ok {
+			return nil, errors.New("non valid inner state")
+		}
+		if rState == nil {
+			return nil, errors.New("nil state")
+		}
+		rawObj, err := rState.MarshalSSZ()
+		if err != nil {
+			return nil, err
+		}
+		return snappy.Encode(nil, append(altairKey, rawObj...)), nil
+	}
+	return nil, errors.New("invalid inner state")
 }
 
 // HasState checks if a state by root exists in the db.
@@ -252,10 +283,10 @@ func slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []byte) (types.
 			if err != nil {
 				return 0, err
 			}
-			if s == nil {
+			if s == nil || s.IsNil() {
 				return 0, errors.New("state can't be nil")
 			}
-			return s.Slot, nil
+			return s.Slot(), nil
 		}
 		b := &ethpb.SignedBeaconBlock{}
 		err := decode(ctx, enc, b)
