@@ -44,11 +44,7 @@ func (s *Service) noopValidator(_ context.Context, _ peer.ID, msg *pubsub.Messag
 }
 
 // Register PubSub subscribers
-func (s *Service) registerSubscribers() {
-	digest, err := s.currentForkDigest()
-	if err != nil {
-		log.WithError(err).Error("Could not retrieve current fork digest")
-	}
+func (s *Service) registerSubscribers(epoch types.Epoch, digest [4]byte) {
 	s.subscribe(
 		p2p.BlockSubnetTopicFormat,
 		s.validateBeaconBlockPubSub,
@@ -93,6 +89,11 @@ func (s *Service) registerSubscribers() {
 			s.committeeIndexBeaconAttestationSubscriber, /* message handler */
 			digest,
 		)
+	}
+	altairFork := params.BeaconConfig().ForkVersionSchedule[bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion)]
+	// Altair Fork Version
+	if epoch >= altairFork {
+		// TODO: Register Sync Subscribers.
 	}
 }
 

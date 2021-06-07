@@ -8,6 +8,7 @@ import (
 	ssz "github.com/ferranbt/fastssz"
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -31,6 +32,12 @@ type rpcHandler func(context.Context, interface{}, libp2pcore.Stream) error
 
 // registerRPCHandlers for p2p RPC.
 func (s *Service) registerRPCHandlers() {
+	currEpoch := helpers.SlotToEpoch(s.cfg.Chain.CurrentSlot())
+	// Register V2 handlers if we are past altair fork epoch.
+	if currEpoch >= params.BeaconConfig().AltairForkEpoch {
+		s.registerRPCHandlersV2()
+		return
+	}
 	s.registerRPC(
 		p2p.RPCStatusTopicV1,
 		s.statusRPCHandler,
@@ -53,6 +60,34 @@ func (s *Service) registerRPCHandlers() {
 	)
 	s.registerRPC(
 		p2p.RPCMetaDataTopicV1,
+		s.metaDataHandler,
+	)
+}
+
+// registerRPCHandlers for p2p RPC V2.
+func (s *Service) registerRPCHandlersV2() {
+	s.registerRPC(
+		p2p.RPCStatusTopicV2,
+		s.statusRPCHandler,
+	)
+	s.registerRPC(
+		p2p.RPCGoodByeTopicV2,
+		s.goodbyeRPCHandler,
+	)
+	s.registerRPC(
+		p2p.RPCBlocksByRangeTopicV2,
+		s.beaconBlocksByRangeRPCHandler,
+	)
+	s.registerRPC(
+		p2p.RPCBlocksByRootTopicV2,
+		s.beaconBlocksRootRPCHandler,
+	)
+	s.registerRPC(
+		p2p.RPCPingTopicV2,
+		s.pingHandler,
+	)
+	s.registerRPC(
+		p2p.RPCMetaDataTopicV2,
 		s.metaDataHandler,
 	)
 }
