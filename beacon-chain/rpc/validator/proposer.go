@@ -12,6 +12,7 @@ import (
 	fastssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
@@ -200,6 +201,7 @@ func (vs *Server) GetBlockV2(ctx context.Context, req *ethpb.BlockRequest) (*eth
 		return nil, status.Errorf(codes.Internal, "Could not calculate proposer index %v", err)
 	}
 
+	zeroSig := [96]byte{}
 	blk := &ethpb.BeaconBlockAltair{
 		Slot:          req.Slot,
 		ParentRoot:    parentRoot,
@@ -214,6 +216,7 @@ func (vs *Server) GetBlockV2(ctx context.Context, req *ethpb.BlockRequest) (*eth
 			AttesterSlashings: vs.SlashingsPool.PendingAttesterSlashings(ctx, head, false /*noLimit*/),
 			VoluntaryExits:    vs.ExitPool.PendingExits(head, req.Slot, false /*noLimit*/),
 			Graffiti:          graffiti[:],
+			SyncAggregate:     &ethpb.SyncAggregate{SyncCommitteeBits: bitfield.NewBitvector512(), SyncCommitteeSignature: zeroSig[:]},
 		},
 	}
 
