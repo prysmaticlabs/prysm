@@ -31,11 +31,16 @@ var casesHandled = map[string]bool{
 func (s *Server) StreamEvents(
 	req *ethpb.StreamEventsRequest, stream ethpb.Events_StreamEventsServer,
 ) error {
+	if req == nil || len(req.Topics) == 0 {
+		return status.Error(codes.InvalidArgument, "no topics specified to subscribe to")
+	}
 	// Check if the topics in the request are valid.
+	requestedTopics := make(map[string]bool)
 	for _, topic := range req.Topics {
 		if _, ok := casesHandled[topic]; !ok {
 			return status.Errorf(codes.InvalidArgument, "topic %s not allowed for event subscriptions", topic)
 		}
+		requestedTopics[topic] = true
 	}
 
 	// Subscribe to event feeds from information received in the beacon node runtime.
@@ -56,11 +61,11 @@ func (s *Server) StreamEvents(
 	for {
 		select {
 		case event := <-blockChan:
-			return s.handleBlockEvents(stream, event)
+			return s.handleBlockEvents(stream, requestedTopics, event)
 		case event := <-opsChan:
-			return s.handleBlockOperationEvents(stream, event)
+			return s.handleBlockOperationEvents(stream, requestedTopics, event)
 		case event := <-stateChan:
-			return s.handleStateEvents(stream, event)
+			return s.handleStateEvents(stream, requestedTopics, event)
 		case <-s.Ctx.Done():
 			return errors.New("context canceled")
 		case <-stream.Context().Done():
@@ -69,10 +74,15 @@ func (s *Server) StreamEvents(
 	}
 }
 
-func (s *Server) handleBlockEvents(stream ethpb.Events_StreamEventsServer, event *feed.Event) error {
+func (s *Server) handleBlockEvents(
+	stream ethpb.Events_StreamEventsServer, requestedTopics map[string]bool, event *feed.Event,
+) error {
 	switch event.Type {
-	// TODO: Handle new head.
+	// TODO(Raul): Handle new head event.
 	case blockfeed.ReceivedBlock:
+		if _, ok := requestedTopics["block"]; !ok {
+			return nil
+		}
 		blkData, ok := event.Data.(*blockfeed.ReceivedBlockData)
 		if !ok {
 			return nil
@@ -87,9 +97,14 @@ func (s *Server) handleBlockEvents(stream ethpb.Events_StreamEventsServer, event
 	}
 }
 
-func (s *Server) handleBlockOperationEvents(stream ethpb.Events_StreamEventsServer, event *feed.Event) error {
+func (s *Server) handleBlockOperationEvents(
+	stream ethpb.Events_StreamEventsServer, requestedTopics map[string]bool, event *feed.Event,
+) error {
 	switch event.Type {
 	case operation.AggregatedAttReceived:
+		if _, ok := requestedTopics["attestation"]; !ok {
+			return nil
+		}
 		attData, ok := event.Data.(*operation.AggregatedAttReceivedData)
 		if !ok {
 			return nil
@@ -97,6 +112,9 @@ func (s *Server) handleBlockOperationEvents(stream ethpb.Events_StreamEventsServ
 		v1Data := migration.V1Alpha1AggregateAttAndProofToV1(attData.Attestation)
 		return s.streamData(stream, "attestation", v1Data)
 	case operation.UnaggregatedAttReceived:
+		if _, ok := requestedTopics["attestation"]; !ok {
+			return nil
+		}
 		attData, ok := event.Data.(*operation.UnAggregatedAttReceivedData)
 		if !ok {
 			return nil
@@ -104,6 +122,9 @@ func (s *Server) handleBlockOperationEvents(stream ethpb.Events_StreamEventsServ
 		v1Data := migration.V1Alpha1AttestationToV1(attData.Attestation)
 		return s.streamData(stream, "attestation", v1Data)
 	case operation.ExitReceived:
+		if _, ok := requestedTopics["voluntary_exit"]; !ok {
+			return nil
+		}
 		exitData, ok := event.Data.(*operation.ExitReceivedData)
 		if !ok {
 			return nil
@@ -114,10 +135,15 @@ func (s *Server) handleBlockOperationEvents(stream ethpb.Events_StreamEventsServ
 	}
 }
 
-func (s *Server) handleStateEvents(stream ethpb.Events_StreamEventsServer, event *feed.Event) error {
+func (s *Server) handleStateEvents(
+	stream ethpb.Events_StreamEventsServer, requestedTopics map[string]bool, event *feed.Event,
+) error {
 	switch event.Type {
-	// TODO: Handle reorg.
 	case statefeed.Reorg:
+		if _, ok := requestedTopics["chain_reorg"]; !ok {
+			return nil
+		}
+		// TODO(Raul): Handle reorg events.
 		return nil
 	default:
 		return nil
