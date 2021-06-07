@@ -3864,4 +3864,3 @@ def prysm_deps():
         sum = "h1:g0I61F2K2DjRHz1cnxlkNSBIaePVoJIjjnHui8QHbiw=",
         version = "v2.0.4",
     )
-
