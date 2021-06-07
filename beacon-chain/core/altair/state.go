@@ -4,13 +4,13 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	s "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -23,7 +23,7 @@ func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisT
 	}
 
 	// Process initial deposits.
-	state, err = s.UpdateGenesisEth1Data(state, deposits, eth1Data)
+	state, err = helpers.UpdateGenesisEth1Data(state, deposits, eth1Data)
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +142,7 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState iface.BeaconStateA
 		},
 		Graffiti: make([]byte, 32),
 		SyncAggregate: &ethpb.SyncAggregate{
-			SyncCommitteeBits:      make([]byte, len(bitfield.NewBitvector1024())),
+			SyncCommitteeBits:      make([]byte, len(bitfield.NewBitvector512())),
 			SyncCommitteeSignature: make([]byte, 96),
 		},
 	}).HashTreeRoot()
@@ -160,17 +160,13 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState iface.BeaconStateA
 	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSize; i++ {
 		pubKeys = append(pubKeys, bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength))
 	}
-	var aggregatedKeys [][]byte
-	for i := uint64(0); i < (params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncPubkeysPerAggregate); i++ {
-		aggregatedKeys = append(aggregatedKeys, bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength))
-	}
 	state.CurrentSyncCommittee = &pb.SyncCommittee{
-		Pubkeys:          pubKeys,
-		PubkeyAggregates: aggregatedKeys,
+		Pubkeys:         pubKeys,
+		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
 	state.NextSyncCommittee = &pb.SyncCommittee{
-		Pubkeys:          bytesutil.Copy2dBytes(pubKeys),
-		PubkeyAggregates: bytesutil.Copy2dBytes(aggregatedKeys),
+		Pubkeys:         bytesutil.Copy2dBytes(pubKeys),
+		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
 
 	return stateAltair.InitializeFromProto(state)

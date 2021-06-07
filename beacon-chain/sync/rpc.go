@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strings"
 
+	ssz "github.com/ferranbt/fastssz"
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -31,27 +32,27 @@ type rpcHandler func(context.Context, interface{}, libp2pcore.Stream) error
 // registerRPCHandlers for p2p RPC.
 func (s *Service) registerRPCHandlers() {
 	s.registerRPC(
-		p2p.RPCStatusTopic,
+		p2p.RPCStatusTopicV1,
 		s.statusRPCHandler,
 	)
 	s.registerRPC(
-		p2p.RPCGoodByeTopic,
+		p2p.RPCGoodByeTopicV1,
 		s.goodbyeRPCHandler,
 	)
 	s.registerRPC(
-		p2p.RPCBlocksByRangeTopic,
+		p2p.RPCBlocksByRangeTopicV1,
 		s.beaconBlocksByRangeRPCHandler,
 	)
 	s.registerRPC(
-		p2p.RPCBlocksByRootTopic,
+		p2p.RPCBlocksByRootTopicV1,
 		s.beaconBlocksRootRPCHandler,
 	)
 	s.registerRPC(
-		p2p.RPCPingTopic,
+		p2p.RPCPingTopicV1,
 		s.pingHandler,
 	)
 	s.registerRPC(
-		p2p.RPCMetaDataTopic,
+		p2p.RPCMetaDataTopicV1,
 		s.metaDataHandler,
 	)
 }
@@ -113,7 +114,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 
 		// since metadata requests do not have any data in the payload, we
 		// do not decode anything.
-		if baseTopic == p2p.RPCMetaDataTopic {
+		if baseTopic == p2p.RPCMetaDataTopicV1 {
 			if err := handle(ctx, base, stream); err != nil {
 				messageFailedProcessingCounter.WithLabelValues(topic).Inc()
 				if err != p2ptypes.ErrWrongForkDigestVersion {
@@ -128,10 +129,14 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 		// a way to check for its reflect.Kind and based on the result, we can decode
 		// accordingly.
 		if t.Kind() == reflect.Ptr {
-			msg := reflect.New(t.Elem())
-			if err := s.cfg.P2P.Encoding().DecodeWithMaxLength(stream, msg.Interface()); err != nil {
+			msg, ok := reflect.New(t.Elem()).Interface().(ssz.Unmarshaler)
+			if !ok {
+				log.Errorf("message of %T does not support marshaller interface", msg)
+				return
+			}
+			if err := s.cfg.P2P.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
 				// Debug logs for goodbye/status errors
-				if strings.Contains(topic, p2p.RPCGoodByeTopic) || strings.Contains(topic, p2p.RPCStatusTopic) {
+				if strings.Contains(topic, p2p.RPCGoodByeTopicV1) || strings.Contains(topic, p2p.RPCStatusTopicV1) {
 					log.WithError(err).Debug("Could not decode goodbye stream message")
 					traceutil.AnnotateError(span, err)
 					return
@@ -140,7 +145,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 				traceutil.AnnotateError(span, err)
 				return
 			}
-			if err := handle(ctx, msg.Interface(), stream); err != nil {
+			if err := handle(ctx, msg, stream); err != nil {
 				messageFailedProcessingCounter.WithLabelValues(topic).Inc()
 				if err != p2ptypes.ErrWrongForkDigestVersion {
 					log.WithError(err).Debug("Could not handle p2p RPC")
@@ -148,13 +153,18 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 				traceutil.AnnotateError(span, err)
 			}
 		} else {
-			msg := reflect.New(t)
-			if err := s.cfg.P2P.Encoding().DecodeWithMaxLength(stream, msg.Interface()); err != nil {
+			nTyp := reflect.New(t)
+			msg, ok := nTyp.Interface().(ssz.Unmarshaler)
+			if !ok {
+				log.Errorf("message of %T does not support marshaller interface", msg)
+				return
+			}
+			if err := s.cfg.P2P.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
 				log.WithError(err).Debug("Could not decode stream message")
 				traceutil.AnnotateError(span, err)
 				return
 			}
-			if err := handle(ctx, msg.Elem().Interface(), stream); err != nil {
+			if err := handle(ctx, nTyp.Elem().Interface(), stream); err != nil {
 				messageFailedProcessingCounter.WithLabelValues(topic).Inc()
 				if err != p2ptypes.ErrWrongForkDigestVersion {
 					log.WithError(err).Debug("Could not handle p2p RPC")

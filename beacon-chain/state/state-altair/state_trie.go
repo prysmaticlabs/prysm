@@ -6,7 +6,6 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
@@ -17,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"go.opencensus.io/trace"
+	"google.golang.org/protobuf/proto"
 )
 
 // InitializeFromProto the beacon state from a protobuf representation.
@@ -227,6 +227,12 @@ func (b *BeaconState) FieldReferencesCount() map[string]uint64 {
 		f.RUnlock()
 	}
 	return refMap
+}
+
+// IsNil checks if the state and the underlying proto
+// object are nil.
+func (b *BeaconState) IsNil() bool {
+	return b == nil || b.state == nil
 }
 
 func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {

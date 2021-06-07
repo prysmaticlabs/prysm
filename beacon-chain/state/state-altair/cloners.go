@@ -11,7 +11,7 @@ func CopySyncCommittee(data *pbp2p.SyncCommittee) *pbp2p.SyncCommittee {
 		return nil
 	}
 	return &pbp2p.SyncCommittee{
-		Pubkeys:          bytesutil.Copy2dBytes(data.Pubkeys),
-		PubkeyAggregates: bytesutil.Copy2dBytes(data.PubkeyAggregates),
+		Pubkeys:         bytesutil.Copy2dBytes(data.Pubkeys),
+		AggregatePubkey: bytesutil.SafeCopyBytes(data.AggregatePubkey),
 	}
 }

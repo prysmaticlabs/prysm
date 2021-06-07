@@ -14,7 +14,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -23,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -99,7 +99,7 @@ func (bs *Server) StreamValidatorsInfo(stream ethpb.BeaconChain_StreamValidators
 	if err != nil {
 		return status.Error(codes.Internal, "Could not access head state")
 	}
-	if headState == nil {
+	if headState == nil || headState.IsNil() {
 		return status.Error(codes.Internal, "Not ready to serve information")
 	}
 
@@ -260,7 +260,7 @@ func (is *infostream) generateValidatorsInfo(pubKeys [][]byte) ([]*ethpb.Validat
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not access head state")
 	}
-	if headState == nil {
+	if headState == nil || headState.IsNil() {
 		return nil, status.Error(codes.Internal, "Not ready to serve information")
 	}
 	epoch := types.Epoch(headState.Slot() / params.BeaconConfig().SlotsPerEpoch)
@@ -450,7 +450,7 @@ func (is *infostream) handleBlockProcessed() {
 		log.Warn("Could not access head state for infostream")
 		return
 	}
-	if headState == nil {
+	if headState == nil || headState.IsNil() {
 		// We aren't ready to serve information
 		return
 	}

@@ -14,6 +14,13 @@ import (
 //
 // Spec code:
 //  def get_base_reward(state: BeaconState, index: ValidatorIndex) -> Gwei:
+//    """
+//    Return the base reward for the validator defined by ``index`` with respect to the current ``state``.
+//
+//    Note: An optimally performing validator can earn one base reward per epoch over a long time horizon.
+//    This takes into account both per-epoch (e.g. attestation) and intermittent duties (e.g. block proposal
+//    and sync committees).
+//    """
 //    increments = state.validators[index].effective_balance // EFFECTIVE_BALANCE_INCREMENT
 //    return Gwei(increments * get_base_reward_per_increment(state))
 func BaseReward(state iface.ReadOnlyBeaconState, index types.ValidatorIndex) (uint64, error) {
@@ -27,7 +34,7 @@ func BaseReward(state iface.ReadOnlyBeaconState, index types.ValidatorIndex) (ui
 	}
 
 	increments := val.EffectiveBalance() / params.BeaconConfig().EffectiveBalanceIncrement
-	return baseRewardPerIncrement(totalBalance) * increments, nil
+	return increments * baseRewardPerIncrement(totalBalance), nil
 }
 
 // baseRewardPerIncrement of the beacon state
@@ -35,10 +42,6 @@ func BaseReward(state iface.ReadOnlyBeaconState, index types.ValidatorIndex) (ui
 // Spec code:
 // def get_base_reward_per_increment(state: BeaconState) -> Gwei:
 //    return Gwei(EFFECTIVE_BALANCE_INCREMENT * BASE_REWARD_FACTOR // integer_squareroot(get_total_active_balance(state)))
-// This returns the base reward per increment for the beacon state.
-//
-// def get_base_reward_per_increment(state: BeaconState) -> Gwei:
-//    return Gwei(EFFECTIVE_BALANCE_INCREMENT * BASE_REWARD_FACTOR // integer_squareroot(get_total_active_balance(state))
 func baseRewardPerIncrement(activeBalance uint64) uint64 {
 	return params.BeaconConfig().EffectiveBalanceIncrement * params.BeaconConfig().BaseRewardFactor / mathutil.IntegerSquareRoot(activeBalance)
 }

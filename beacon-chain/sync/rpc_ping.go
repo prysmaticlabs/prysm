@@ -38,6 +38,9 @@ func (s *Service) pingHandler(_ context.Context, msg interface{}, stream libp2pc
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
 	}
+	if err := writeContextToStream(stream, s.cfg.Chain); err != nil {
+		return err
+	}
 	sq := types.SSZUint64(s.cfg.P2P.MetadataSeq())
 	if _, err := s.cfg.P2P.Encoding().EncodeWithMaxLength(stream, &sq); err != nil {
 		return err
@@ -77,7 +80,7 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	defer cancel()
 
 	metadataSeq := types.SSZUint64(s.cfg.P2P.MetadataSeq())
-	stream, err := s.cfg.P2P.Send(ctx, &metadataSeq, p2p.RPCPingTopic, id)
+	stream, err := s.cfg.P2P.Send(ctx, &metadataSeq, p2p.RPCPingTopicV1, id)
 	if err != nil {
 		return err
 	}
@@ -94,6 +97,11 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	if code != 0 {
 		s.cfg.P2P.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		return errors.New(errMsg)
+	}
+	// No-op for now with the rpc context.
+	_, err = readContextFromStream(stream, s.cfg.Chain)
+	if err != nil {
+		return err
 	}
 	msg := new(types.SSZUint64)
 	if err := s.cfg.P2P.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
@@ -126,12 +134,12 @@ func (s *Service) validateSequenceNum(seq types.SSZUint64, id peer.ID) (bool, er
 	if err != nil {
 		return false, err
 	}
-	if md == nil {
+	if md == nil || md.IsNil() {
 		return false, nil
 	}
 	// Return error on invalid sequence number.
-	if md.SeqNumber > uint64(seq) {
+	if md.SequenceNumber() > uint64(seq) {
 		return false, p2ptypes.ErrInvalidSequenceNum
 	}
-	return md.SeqNumber == uint64(seq), nil
+	return md.SequenceNumber() == uint64(seq), nil
 }

@@ -30,16 +30,8 @@ func syncCommitteeRoot(committee *pb.SyncCommittee) ([32]byte, error) {
 		return [32]byte{}, err
 	}
 
-	// Field 2: Vector[BLSPubkey, SYNC_COMMITTEE_SIZE // SYNC_PUBKEYS_PER_AGGREGATE]
-	aggregateKeyRoots := make([][32]byte, 0)
-	for _, pubkey := range committee.PubkeyAggregates {
-		r, err := merkleizePubkey(hasher, pubkey)
-		if err != nil {
-			return [32]byte{}, err
-		}
-		aggregateKeyRoots = append(aggregateKeyRoots, r)
-	}
-	aggregateKeyRoot, err := htrutils.BitwiseMerkleizeArrays(hasher, aggregateKeyRoots, uint64(len(aggregateKeyRoots)), uint64(len(aggregateKeyRoots)))
+	// Field 2: BLSPubkey
+	aggregateKeyRoot, err := merkleizePubkey(hasher, committee.AggregatePubkey)
 	if err != nil {
 		return [32]byte{}, err
 	}

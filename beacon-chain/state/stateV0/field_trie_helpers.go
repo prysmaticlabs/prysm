@@ -5,9 +5,9 @@ import (
 	"reflect"
 
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
@@ -64,6 +64,7 @@ func fieldConverters(field fieldIndex, indices []uint64, elements interface{}, c
 	}
 }
 
+// HandleEth1DataSlice processes a list of eth1data and indices into the appropriate roots.
 func HandleEth1DataSlice(val []*ethpb.Eth1Data, indices []uint64, convertAll bool) ([][32]byte, error) {
 	length := len(indices)
 	if convertAll {

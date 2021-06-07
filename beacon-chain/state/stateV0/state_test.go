@@ -5,9 +5,9 @@ import (
 	"sync"
 	"testing"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -93,4 +93,15 @@ func TestBeaconState_NoDeadlock(t *testing.T) {
 	}
 	// Test will not terminate in the event of a deadlock.
 	wg.Wait()
+}
+
+func TestStateTrie_IsNil(t *testing.T) {
+	var emptyState *BeaconState
+	assert.Equal(t, true, emptyState.IsNil())
+
+	emptyProto := &BeaconState{state: nil}
+	assert.Equal(t, true, emptyProto.IsNil())
+
+	nonNilState := &BeaconState{state: &pb.BeaconState{}}
+	assert.Equal(t, false, nonNilState.IsNil())
 }

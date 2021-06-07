@@ -1,7 +1,10 @@
 package altair
 
 import (
-	"github.com/prysmaticlabs/eth2-types"
+	"bytes"
+	"fmt"
+
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -11,20 +14,30 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// SyncCommittee returns the sync committee for a given state and epoch.
+// NextSyncCommittee returns the next sync committee for a given state.
 //
 // Spec code:
-// def get_sync_committee(state: BeaconState, epoch: Epoch) -> SyncCommittee:
+// def get_next_sync_committee(state: BeaconState) -> SyncCommittee:
 //    """
-//    Return the sync committee for a given state and epoch.
+//    Return the *next* sync committee for a given ``state``.
+//
+//    ``SyncCommittee`` contains an aggregate pubkey that enables
+//    resource-constrained clients to save some computation when verifying
+//    the sync committee's signature.
+//
+//    ``SyncCommittee`` can also contain duplicate pubkeys, when ``get_next_sync_committee_indices``
+//    returns duplicate indices. Implementations must take care when handling
+//    optimizations relating to aggregation and verification in the presence of duplicates.
+//
+//    Note: This function should only be called at sync committee period boundaries by ``process_sync_committee_updates``
+//    as ``get_next_sync_committee_indices`` is not stable within a given period.
 //    """
-//    indices = get_sync_committee_indices(state, epoch)
+//    indices = get_next_sync_committee_indices(state)
 //    pubkeys = [state.validators[index].pubkey for index in indices]
-//    partition = [pubkeys[i:i + SYNC_PUBKEYS_PER_AGGREGATE] for i in range(0, len(pubkeys), SYNC_PUBKEYS_PER_AGGREGATE)]
-//    pubkey_aggregates = [bls.AggregatePKs(preaggregate) for preaggregate in partition]
-//    return SyncCommittee(pubkeys=pubkeys, pubkey_aggregates=pubkey_aggregates)
-func SyncCommittee(state iface.BeaconStateAltair, epoch types.Epoch) (*pb.SyncCommittee, error) {
-	indices, err := SyncCommitteeIndices(state, epoch)
+//    aggregate_pubkey = bls.AggregatePKs(pubkeys)
+//    return SyncCommittee(pubkeys=pubkeys, aggregate_pubkey=aggregate_pubkey)
+func NextSyncCommittee(state iface.BeaconStateAltair) (*pb.SyncCommittee, error) {
+	indices, err := NextSyncCommitteeIndices(state)
 	if err != nil {
 		return nil, err
 	}
@@ -33,32 +46,32 @@ func SyncCommittee(state iface.BeaconStateAltair, epoch types.Epoch) (*pb.SyncCo
 		p := state.PubkeyAtIndex(index) // Using ReadOnlyValidators interface. No copy here.
 		pubkeys[i] = p[:]
 	}
-	aggregates := make([][]byte, 0, params.BeaconConfig().SyncPubkeysPerAggregate)
-	for i := uint64(0); i < uint64(len(pubkeys)); i += params.BeaconConfig().SyncPubkeysPerAggregate {
-		a, err := bls.AggregatePublicKeys(pubkeys[i : i+params.BeaconConfig().SyncPubkeysPerAggregate])
-		if err != nil {
-			return nil, err
-		}
-		aggregates = append(aggregates, a.Marshal())
+	aggregated, err := bls.AggregatePublicKeys(pubkeys)
+	if err != nil {
+		return nil, err
 	}
 	return &pb.SyncCommittee{
-		Pubkeys:          pubkeys,
-		PubkeyAggregates: aggregates,
+		Pubkeys:         pubkeys,
+		AggregatePubkey: aggregated.Marshal(),
 	}, nil
 }
 
-// SyncCommitteeIndices returns the sync committee indices for a given state and epoch.
+// NextSyncCommitteeIndices returns the next sync committee indices for a given state.
 //
 // Spec code:
-// def get_sync_committee_indices(state: BeaconState, epoch: Epoch) -> Sequence[ValidatorIndex]:
+// def get_next_sync_committee_indices(state: BeaconState) -> Sequence[ValidatorIndex]:
 //    """
-//    Return the sequence of sync committee indices (which may include duplicate indices) for a given state and epoch.
+//    Return the sequence of sync committee indices (which may include duplicate indices)
+//    for the next sync committee, given a ``state`` at a sync committee period boundary.
+//
+//    Note: Committee can contain duplicate indices for small validator sets (< SYNC_COMMITTEE_SIZE + 128)
 //    """
+//    epoch = Epoch(get_current_epoch(state) + 1)
+//
 //    MAX_RANDOM_BYTE = 2**8 - 1
-//    base_epoch = Epoch((max(epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD, 1) - 1) * EPOCHS_PER_SYNC_COMMITTEE_PERIOD)
-//    active_validator_indices = get_active_validator_indices(state, base_epoch)
+//    active_validator_indices = get_active_validator_indices(state, epoch)
 //    active_validator_count = uint64(len(active_validator_indices))
-//    seed = get_seed(state, base_epoch, DOMAIN_SYNC_COMMITTEE)
+//    seed = get_seed(state, epoch, DOMAIN_SYNC_COMMITTEE)
 //    i = 0
 //    sync_committee_indices: List[ValidatorIndex] = []
 //    while len(sync_committee_indices) < SYNC_COMMITTEE_SIZE:
@@ -66,26 +79,18 @@ func SyncCommittee(state iface.BeaconStateAltair, epoch types.Epoch) (*pb.SyncCo
 //        candidate_index = active_validator_indices[shuffled_index]
 //        random_byte = hash(seed + uint_to_bytes(uint64(i // 32)))[i % 32]
 //        effective_balance = state.validators[candidate_index].effective_balance
-//        if effective_balance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * random_byte:  # Sample with replacement
+//        if effective_balance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * random_byte:
 //            sync_committee_indices.append(candidate_index)
 //        i += 1
 //    return sync_committee_indices
-func SyncCommitteeIndices(state iface.BeaconStateAltair, epoch types.Epoch) ([]types.ValidatorIndex, error) {
-	e := types.Epoch(1)
-	p := params.BeaconConfig().EpochsPerSyncCommitteePeriod
-	syncPeriod := epoch / p
-	if syncPeriod > 1 {
-		e = syncPeriod
-	}
-
-	baseEpoch := e.Sub(1) * p
-
-	indices, err := helpers.ActiveValidatorIndices(state, baseEpoch)
+func NextSyncCommitteeIndices(state iface.BeaconStateAltair) ([]types.ValidatorIndex, error) {
+	epoch := helpers.NextEpoch(state)
+	indices, err := helpers.ActiveValidatorIndices(state, epoch)
 	if err != nil {
 		return nil, err
 	}
 	count := uint64(len(indices))
-	seed, err := helpers.Seed(state, baseEpoch, params.BeaconConfig().DomainSyncCommittee)
+	seed, err := helpers.Seed(state, epoch, params.BeaconConfig().DomainSyncCommittee)
 	if err != nil {
 		return nil, err
 	}
@@ -114,4 +119,119 @@ func SyncCommitteeIndices(state iface.BeaconStateAltair, epoch types.Epoch) ([]t
 		i++
 	}
 	return cIndices, nil
+}
+
+// AssignedToSyncCommittee returns true if input validator `i` is assigned to a sync committee at epoch `e`.
+//
+// Spec code:
+// def is_assigned_to_sync_committee(state: BeaconState,
+//                                  epoch: Epoch,
+//                                  validator_index: ValidatorIndex) -> bool:
+//    sync_committee_period = compute_sync_committee_period(epoch)
+//    current_epoch = get_current_epoch(state)
+//    current_sync_committee_period = compute_sync_committee_period(current_epoch)
+//    next_sync_committee_period = current_sync_committee_period + 1
+//    assert sync_committee_period in (current_sync_committee_period, next_sync_committee_period)
+//
+//    pubkey = state.validators[validator_index].pubkey
+//    if sync_committee_period == current_sync_committee_period:
+//        return pubkey in state.current_sync_committee.pubkeys
+//    else:  # sync_committee_period == next_sync_committee_period
+//        return pubkey in state.next_sync_committee.pubkeys
+func AssignedToSyncCommittee(
+	state iface.BeaconStateAltair,
+	epoch types.Epoch,
+	i types.ValidatorIndex,
+) (bool, error) {
+	p := SyncCommitteePeriod(epoch)
+	currentEpoch := helpers.CurrentEpoch(state)
+	currentPeriod := SyncCommitteePeriod(currentEpoch)
+	nextEpoch := currentPeriod + 1
+
+	if p != currentPeriod && p != nextEpoch {
+		return false, fmt.Errorf("epoch period %d is not current period %d or next period %d in state", p, currentEpoch, nextEpoch)
+	}
+
+	v, err := state.ValidatorAtIndexReadOnly(i)
+	if err != nil {
+		return false, err
+	}
+	vPubKey := v.PublicKey()
+
+	hasKey := func(c *pb.SyncCommittee, k [48]byte) (bool, error) {
+		for _, p := range c.Pubkeys {
+			if bytes.Equal(vPubKey[:], p) {
+				return true, nil
+			}
+		}
+		return false, nil
+	}
+
+	if p == currentPeriod {
+		c, err := state.CurrentSyncCommittee()
+		if err != nil {
+			return false, err
+		}
+		return hasKey(c, vPubKey)
+	}
+
+	c, err := state.NextSyncCommittee()
+	if err != nil {
+		return false, err
+	}
+	return hasKey(c, vPubKey)
+}
+
+// SubnetsForSyncCommittee returns subnet number of what validator `i` belongs to.
+//
+// Spec code:
+// def compute_subnets_for_sync_committee(state: BeaconState, validator_index: ValidatorIndex) -> Sequence[uint64]:
+//    next_slot_epoch = compute_epoch_at_slot(Slot(state.slot + 1))
+//    if compute_sync_committee_period(get_current_epoch(state)) == compute_sync_committee_period(next_slot_epoch):
+//        sync_committee = state.current_sync_committee
+//    else:
+//        sync_committee = state.next_sync_committee
+//
+//    target_pubkey = state.validators[validator_index].pubkey
+//    sync_committee_indices = [index for index, pubkey in enumerate(sync_committee.pubkeys) if pubkey == target_pubkey]
+//    return [
+//        uint64(index // (SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT))
+//        for index in sync_committee_indices
+//    ]
+func SubnetsForSyncCommittee(state iface.BeaconStateAltair, i types.ValidatorIndex) ([]uint64, error) {
+	committee, err := state.NextSyncCommittee()
+	if err != nil {
+		return nil, err
+	}
+
+	nextSlotEpoch := helpers.SlotToEpoch(state.Slot() + 1)
+	if SyncCommitteePeriod(nextSlotEpoch) == SyncCommitteePeriod(helpers.CurrentEpoch(state)) {
+		committee, err = state.CurrentSyncCommittee()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	v, err := state.ValidatorAtIndexReadOnly(i)
+	if err != nil {
+		return nil, err
+	}
+	vPubKey := v.PublicKey()
+
+	positions := make([]uint64, 0)
+	for i, pkey := range committee.Pubkeys {
+		if bytes.Equal(vPubKey[:], pkey) {
+			positions = append(positions, uint64(i)/(params.BeaconConfig().SyncCommitteeSize/params.BeaconConfig().SyncCommitteeSubnetCount))
+		}
+	}
+	return positions, nil
+}
+
+// SyncCommitteePeriod returns the sync committee period of input epoch `e`.
+//
+// Spec code:
+// def compute_sync_committee_period(epoch: Epoch) -> uint64:
+//    return epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD
+func SyncCommitteePeriod(epoch types.Epoch) uint64 {
+	return uint64(epoch / params.BeaconConfig().EpochsPerSyncCommitteePeriod)
 }

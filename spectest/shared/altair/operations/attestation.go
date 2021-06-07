@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/golang/snappy"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/spectest/utils"
@@ -25,7 +25,7 @@ func RunAttestationTest(t *testing.T, config string) {
 			att := &ethpb.Attestation{}
 			require.NoError(t, att.UnmarshalSSZ(attestationSSZ), "Failed to unmarshal")
 
-			body := &ethpb.BeaconBlockBody{Attestations: []*ethpb.Attestation{att}}
+			body := &ethpb.BeaconBlockBodyAltair{Attestations: []*ethpb.Attestation{att}}
 			RunBlockOperationTest(t, folderPath, body, altair.ProcessAttestations)
 		})
 	}

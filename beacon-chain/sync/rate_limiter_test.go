@@ -18,7 +18,7 @@ import (
 
 func TestNewRateLimiter(t *testing.T) {
 	rlimiter := newRateLimiter(mockp2p.NewTestP2P(t))
-	assert.Equal(t, len(rlimiter.limiterMap), 7, "correct number of topics not registered")
+	assert.Equal(t, len(rlimiter.limiterMap), 13, "correct number of topics not registered")
 }
 
 func TestNewRateLimiter_FreeCorrectly(t *testing.T) {
@@ -35,7 +35,7 @@ func TestRateLimiter_ExceedCapacity(t *testing.T) {
 	rlimiter := newRateLimiter(p1)
 
 	// BlockByRange
-	topic := p2p.RPCBlocksByRangeTopic + p1.Encoding().ProtocolSuffix()
+	topic := p2p.RPCBlocksByRangeTopicV1 + p1.Encoding().ProtocolSuffix()
 
 	wg := sync.WaitGroup{}
 	p2.BHost.SetStreamHandler(protocol.ID(topic), func(stream network.Stream) {
@@ -72,7 +72,7 @@ func TestRateLimiter_ExceedRawCapacity(t *testing.T) {
 	rlimiter := newRateLimiter(p1)
 
 	// BlockByRange
-	topic := p2p.RPCBlocksByRangeTopic + p1.Encoding().ProtocolSuffix()
+	topic := p2p.RPCBlocksByRangeTopicV1 + p1.Encoding().ProtocolSuffix()
 
 	wg := sync.WaitGroup{}
 	p2.BHost.SetStreamHandler(protocol.ID(topic), func(stream network.Stream) {

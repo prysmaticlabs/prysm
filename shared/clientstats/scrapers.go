@@ -11,7 +11,7 @@ import (
 
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/prom2json"
-	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -118,13 +118,13 @@ type metricMap map[string]*dto.MetricFamily
 func (mm metricMap) getFamily(name string) (*dto.MetricFamily, error) {
 	f, ok := mm[name]
 	if !ok {
-		return nil, fmt.Errorf("Scraper did not find metric family %s", name)
+		return nil, fmt.Errorf("scraper did not find metric family %s", name)
 	}
 	return f, nil
 }
 
 var now = time.Now // var hook for tests to overwrite
-var nanosPerMilli = (int64(time.Millisecond) / int64(time.Nanosecond))
+var nanosPerMilli = int64(time.Millisecond) / int64(time.Nanosecond)
 
 func populateAPIMessage(processName string) APIMessage {
 	return APIMessage{

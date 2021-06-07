@@ -2,13 +2,14 @@ package beaconv1
 
 import (
 	"context"
+	"encoding/hex"
 	"testing"
 
-	pbtypes "github.com/gogo/protobuf/types"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestGetSpec(t *testing.T) {
@@ -41,6 +42,8 @@ func TestGetSpec(t *testing.T) {
 	config.EjectionBalance = 22
 	config.EffectiveBalanceIncrement = 23
 	config.GenesisForkVersion = []byte("GenesisForkVersion")
+	config.AltairForkVersion = []byte("AltairForkVersion")
+	config.AltairForkEpoch = 100
 	config.BLSWithdrawalPrefixByte = byte('b')
 	config.GenesisDelay = 24
 	config.SecondsPerSlot = 25
@@ -79,12 +82,12 @@ func TestGetSpec(t *testing.T) {
 	config.TargetAggregatorsPerSyncSubcommittee = 61
 	config.SyncCommitteeSubnetCount = 62
 	config.SyncCommitteeSize = 63
-	config.SyncPubkeysPerAggregate = 64
 	config.InactivityScoreBias = 65
 	config.EpochsPerSyncCommitteePeriod = 66
 	config.InactivityPenaltyQuotientAltair = 67
 	config.MinSlashingPenaltyQuotientAltair = 68
 	config.ProportionalSlashingMultiplierAltair = 69
+	config.InactivityScoreRecoveryRate = 70
 
 	var dbp [4]byte
 	copy(dbp[:], []byte{'0', '0', '0', '1'})
@@ -111,10 +114,10 @@ func TestGetSpec(t *testing.T) {
 	params.OverrideBeaconConfig(config)
 
 	server := &Server{}
-	resp, err := server.GetSpec(context.Background(), &pbtypes.Empty{})
+	resp, err := server.GetSpec(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 
-	assert.Equal(t, 81, len(resp.Data))
+	assert.Equal(t, 83, len(resp.Data))
 	for k, v := range resp.Data {
 		switch k {
 		case "config_name":
@@ -168,7 +171,11 @@ func TestGetSpec(t *testing.T) {
 		case "effective_balance_increment":
 			assert.Equal(t, "23", v)
 		case "genesis_fork_version":
-			assert.Equal(t, "0x47656e65736973466f726b56657273696f6e", v)
+			assert.Equal(t, "0x"+hex.EncodeToString([]byte("GenesisForkVersion")), v)
+		case "altair_fork_version":
+			assert.Equal(t, "0x"+hex.EncodeToString([]byte("AltairForkVersion")), v)
+		case "altair_fork_epoch":
+			assert.Equal(t, "100", v)
 		case "bls_withdrawal_prefix":
 			assert.Equal(t, "0x62", v)
 		case "genesis_delay":
@@ -263,6 +270,8 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "68", v)
 		case "proportional_slashing_multiplier_altair":
 			assert.Equal(t, "69", v)
+		case "inactivity_score_recovery_rate":
+			assert.Equal(t, "70", v)
 		case "proposer_weight":
 			assert.Equal(t, "8", v)
 		case "domain_beacon_proposer":
@@ -301,7 +310,7 @@ func TestGetDepositContract(t *testing.T) {
 	params.OverrideBeaconConfig(config)
 
 	s := Server{}
-	resp, err := s.GetDepositContract(context.Background(), &pbtypes.Empty{})
+	resp, err := s.GetDepositContract(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.Equal(t, uint64(chainId), resp.Data.ChainId)
 	assert.Equal(t, address, resp.Data.Address)
@@ -325,7 +334,7 @@ func TestForkSchedule_Ok(t *testing.T) {
 	params.OverrideBeaconConfig(config)
 
 	s := &Server{}
-	resp, err := s.GetForkSchedule(context.Background(), &pbtypes.Empty{})
+	resp, err := s.GetForkSchedule(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	require.Equal(t, 3, len(resp.Data))
 	fork := resp.Data[0]
@@ -342,9 +351,10 @@ func TestForkSchedule_Ok(t *testing.T) {
 	assert.Equal(t, thirdForkEpoch, fork.Epoch)
 }
 
-func TestForkSchedule_NoForks(t *testing.T) {
+func TestForkSchedule_CorrectNumberOfForks(t *testing.T) {
 	s := &Server{}
-	resp, err := s.GetForkSchedule(context.Background(), &pbtypes.Empty{})
+	resp, err := s.GetForkSchedule(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
-	assert.Equal(t, 0, len(resp.Data))
+	// Genesis and Altair.
+	assert.Equal(t, 2, len(resp.Data))
 }

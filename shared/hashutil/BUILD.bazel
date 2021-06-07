@@ -9,9 +9,9 @@ go_library(
     deps = [
         "//shared/bytesutil:go_default_library",
         "@com_github_ferranbt_fastssz//:go_default_library",
-        "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_minio_highwayhash//:go_default_library",
         "@com_github_minio_sha256_simd//:go_default_library",
+        "@org_golang_google_protobuf//proto:go_default_library",
         "@org_golang_x_crypto//sha3:go_default_library",
     ],
 )
@@ -22,12 +22,12 @@ go_test(
     srcs = ["hash_test.go"],
     deps = [
         ":go_default_library",
+        "//proto/eth/v1alpha1:go_default_library",
         "//proto/testing:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
         "@com_github_google_gofuzz//:go_default_library",
-        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
     ],
 )

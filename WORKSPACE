@@ -76,11 +76,9 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_docker",
-    patch_args = ["-p1"],
-    patches = ["//third_party:rules_docker_bad_checksum.patch"],
-    sha256 = "1286175a94c0b1335efe1d75d22ea06e89742557d3fac2a0366f242a6eac6f5a",
-    strip_prefix = "rules_docker-ba4310833230294fa69b7d6ea1787ac684631a7d",
-    urls = ["https://github.com/bazelbuild/rules_docker/archive/ba4310833230294fa69b7d6ea1787ac684631a7d.tar.gz"],
+    sha256 = "59d5b42ac315e7eadffa944e86e90c2990110a1c8075f1cd145f487e999d22b3",
+    strip_prefix = "rules_docker-0.17.0",
+    urls = ["https://github.com/bazelbuild/rules_docker/releases/download/v0.17.0/rules_docker-v0.17.0.tar.gz"],
 )
 
 http_archive(
@@ -239,8 +237,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "deacc076365c727d653ac064894ecf0d1b0a675d86704dc8de271259f6a7314b",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.1.0-alpha.3/general.tar.gz",
+    sha256 = "bf968f27253bdc14aa9a424817ae4cd4ac066eb21342f87b691eb4f924615f06",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.1.0-alpha.6/general.tar.gz",
 )
 
 http_archive(
@@ -255,8 +253,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "6e9886af3d2f024e563249d70388129e28e3e92f742f289238ed9b7ec7a7f930",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.1.0-alpha.3/minimal.tar.gz",
+    sha256 = "7972dacefbe5f8a73aef2cb40b659d937bd743971bb435575c245489209e33ed",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.1.0-alpha.6/minimal.tar.gz",
 )
 
 http_archive(
@@ -271,8 +269,23 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "a7b3d0ffc02a567250f424d69b2474fdc9477cd56eada60af7474560b46a8527",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.1.0-alpha.3/mainnet.tar.gz",
+    sha256 = "a17d96dd452dd2b1ef43c8d1305d7253f14c9acb0ad74f619b9c62cf5d08f914",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.1.0-alpha.6/mainnet.tar.gz",
+)
+
+http_archive(
+    name = "eth2_spec",
+    build_file_content = """
+filegroup(
+    name = "spec_data",
+    srcs = glob([
+        "**/*.yaml",
+    ]),
+    visibility = ["//visibility:public"],
+)
+    """,
+    sha256 = "55d8a4038d809498819a1b5a72bfbe5bb16c6c4f4e0796d1baa2ab45bc91392e",
+    url = "https://github.com/ethereum/eth2.0-specs/archive/refs/tags/v1.1.0-alpha.6.tar.gz",
 )
 
 http_archive(
@@ -288,9 +301,9 @@ buildifier_dependencies()
 
 git_repository(
     name = "com_google_protobuf",
-    commit = "fde7cf7358ec7cd69e8db9be4f1fa6a5c431386a",  # v3.13.0
+    commit = "436bd7880e458532901c58f4d9d1ea23fa7edd52",
     remote = "https://github.com/protocolbuffers/protobuf",
-    shallow_since = "1597443653 -0700",
+    shallow_since = "1617835118 -0700",
 )
 
 load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
@@ -332,33 +345,6 @@ http_archive(
 )
 
 # External dependencies
-
-http_archive(
-    name = "sszgen",  # Hack because we don't want to build this binary with libfuzzer, but need it to build.
-    build_file_content = """
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_binary")
-
-go_library(
-    name = "go_default_library",
-    srcs = [
-        "sszgen/main.go",
-        "sszgen/marshal.go",
-        "sszgen/size.go",
-        "sszgen/unmarshal.go",
-    ],
-    importpath = "github.com/ferranbt/fastssz/sszgen",
-    visibility = ["//visibility:private"],
-)
-
-go_binary(
-    name = "sszgen",
-    embed = [":go_default_library"],
-    visibility = ["//visibility:public"],
-)
-    """,
-    strip_prefix = "fastssz-06015a5d84f9e4eefe2c21377ca678fa8f1a1b09",
-    urls = ["https://github.com/ferranbt/fastssz/archive/06015a5d84f9e4eefe2c21377ca678fa8f1a1b09.tar.gz"],
-)
 
 http_archive(
     name = "prysm_web_ui",

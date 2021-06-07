@@ -6,10 +6,10 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	v1 "github.com/prysmaticlabs/ethereumapis/eth/v1"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -45,6 +45,30 @@ func NewBeaconBlock() *ethpb.SignedBeaconBlock {
 			ParentRoot: make([]byte, 32),
 			StateRoot:  make([]byte, 32),
 			Body: &ethpb.BeaconBlockBody{
+				RandaoReveal: make([]byte, 96),
+				Eth1Data: &ethpb.Eth1Data{
+					DepositRoot: make([]byte, 32),
+					BlockHash:   make([]byte, 32),
+				},
+				Graffiti:          make([]byte, 32),
+				Attestations:      []*ethpb.Attestation{},
+				AttesterSlashings: []*ethpb.AttesterSlashing{},
+				Deposits:          []*ethpb.Deposit{},
+				ProposerSlashings: []*ethpb.ProposerSlashing{},
+				VoluntaryExits:    []*ethpb.SignedVoluntaryExit{},
+			},
+		},
+		Signature: make([]byte, 96),
+	}
+}
+
+// NewBeaconBlockAltair creates a beacon block with minimum marshalable fields.
+func NewBeaconBlockAltair() *ethpb.SignedBeaconBlockAltair {
+	return &ethpb.SignedBeaconBlockAltair{
+		Block: &ethpb.BeaconBlockAltair{
+			ParentRoot: make([]byte, 32),
+			StateRoot:  make([]byte, 32),
+			Body: &ethpb.BeaconBlockBodyAltair{
 				RandaoReveal: make([]byte, 96),
 				Eth1Data: &ethpb.Eth1Data{
 					DepositRoot: make([]byte, 32),
@@ -550,7 +574,7 @@ func HydrateBeaconBlockBodyAltair(b *ethpb.BeaconBlockBodyAltair) *ethpb.BeaconB
 	}
 	if b.SyncAggregate == nil {
 		b.SyncAggregate = &ethpb.SyncAggregate{
-			SyncCommitteeBits:      make([]byte, 128),
+			SyncCommitteeBits:      make([]byte, 64),
 			SyncCommitteeSignature: make([]byte, 96),
 		}
 	}

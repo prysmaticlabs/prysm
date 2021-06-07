@@ -7,14 +7,14 @@ import (
 	"io"
 	"time"
 
-	ptypes "github.com/gogo/protobuf/types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // reconnectPeriod is the frequency that we try to restart our
@@ -93,7 +93,7 @@ func (s *Service) ReceiveBlocks(ctx context.Context) {
 func (s *Service) ReceiveAttestations(ctx context.Context) {
 	ctx, span := trace.StartSpan(ctx, "beaconclient.ReceiveAttestations")
 	defer span.End()
-	stream, err := s.cfg.BeaconClient.StreamIndexedAttestations(ctx, &ptypes.Empty{})
+	stream, err := s.cfg.BeaconClient.StreamIndexedAttestations(ctx, &emptypb.Empty{})
 	if err != nil {
 		log.WithError(err).Error("Failed to retrieve attestations stream")
 		return
@@ -122,7 +122,7 @@ func (s *Service) ReceiveAttestations(ctx context.Context) {
 						log.WithError(err).Error("Could not restart beacon connection")
 						return
 					}
-					stream, err = s.cfg.BeaconClient.StreamIndexedAttestations(ctx, &ptypes.Empty{})
+					stream, err = s.cfg.BeaconClient.StreamIndexedAttestations(ctx, &emptypb.Empty{})
 					if err != nil {
 						log.WithError(err).Error("Could not restart attestation stream")
 						return
@@ -197,7 +197,7 @@ func (s *Service) restartBeaconConnection(ctx context.Context) error {
 				log.Info("Beacon node is still down")
 				continue
 			}
-			s, err := s.cfg.NodeClient.GetSyncStatus(ctx, &ptypes.Empty{})
+			s, err := s.cfg.NodeClient.GetSyncStatus(ctx, &emptypb.Empty{})
 			if err != nil {
 				log.WithError(err).Error("Could not fetch sync status")
 				continue

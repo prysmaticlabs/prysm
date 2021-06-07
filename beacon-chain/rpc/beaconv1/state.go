@@ -7,22 +7,23 @@ import (
 	"strconv"
 	"strings"
 
-	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
-	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // GetGenesis retrieves details of the chain's genesis which can be used to identify chain.
-func (bs *Server) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.GenesisResponse, error) {
+func (bs *Server) GetGenesis(ctx context.Context, _ *emptypb.Empty) (*ethpb.GenesisResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconv1.GetGenesis")
 	defer span.End()
 
@@ -38,7 +39,7 @@ func (bs *Server) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.Genes
 
 	return &ethpb.GenesisResponse{
 		Data: &ethpb.GenesisResponse_Genesis{
-			GenesisTime: &ptypes.Timestamp{
+			GenesisTime: &timestamppb.Timestamp{
 				Seconds: genesisTime.Unix(),
 				Nanos:   0,
 			},
@@ -65,7 +66,7 @@ func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*e
 
 	return &ethpb.StateRootResponse{
 		Data: &ethpb.StateRootResponse_StateRoot{
-			StateRoot: root,
+			Root: root,
 		},
 	}, nil
 }
@@ -137,11 +138,7 @@ func (bs *Server) stateRoot(ctx context.Context, stateId []byte) ([]byte, error)
 	case "justified":
 		root, err = bs.justifiedStateRoot(ctx)
 	default:
-		ok, matchErr := bytesutil.IsBytes32Hex(stateId)
-		if matchErr != nil {
-			return nil, errors.Wrap(err, "could not parse ID")
-		}
-		if ok {
+		if len(stateId) == 32 {
 			root, err = bs.stateRootByHex(ctx, stateId)
 		} else {
 			slotNumber, parseErr := strconv.ParseUint(stateIdString, 10, 64)
@@ -164,7 +161,7 @@ func (bs *Server) headStateRoot(ctx context.Context) ([]byte, error) {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err
 	}
-	return b.Block.StateRoot, nil
+	return b.Block().StateRoot(), nil
 }
 
 func (bs *Server) genesisStateRoot(ctx context.Context) ([]byte, error) {
@@ -175,7 +172,7 @@ func (bs *Server) genesisStateRoot(ctx context.Context) ([]byte, error) {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err
 	}
-	return b.Block.StateRoot, nil
+	return b.Block().StateRoot(), nil
 }
 
 func (bs *Server) finalizedStateRoot(ctx context.Context) ([]byte, error) {
@@ -190,7 +187,7 @@ func (bs *Server) finalizedStateRoot(ctx context.Context) ([]byte, error) {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err
 	}
-	return b.Block.StateRoot, nil
+	return b.Block().StateRoot(), nil
 }
 
 func (bs *Server) justifiedStateRoot(ctx context.Context) ([]byte, error) {
@@ -205,7 +202,7 @@ func (bs *Server) justifiedStateRoot(ctx context.Context) ([]byte, error) {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err
 	}
-	return b.Block.StateRoot, nil
+	return b.Block().StateRoot(), nil
 }
 
 func (bs *Server) stateRootByHex(ctx context.Context, stateId []byte) ([]byte, error) {
@@ -238,10 +235,10 @@ func (bs *Server) stateRootBySlot(ctx context.Context, slot types.Slot) ([]byte,
 	if len(blks) != 1 {
 		return nil, errors.New("multiple blocks exist in same slot")
 	}
-	if blks[0] == nil || blks[0].Block == nil {
+	if blks[0] == nil || blks[0].IsNil() || blks[0].Block().IsNil() {
 		return nil, errors.New("nil block")
 	}
-	return blks[0].Block.StateRoot, nil
+	return blks[0].Block().StateRoot(), nil
 }
 
 func checkpoint(sourceCheckpoint *eth.Checkpoint) *ethpb.Checkpoint {

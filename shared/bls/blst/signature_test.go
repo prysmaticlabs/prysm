@@ -36,7 +36,7 @@ func TestAggregateVerify(t *testing.T) {
 		sigs = append(sigs, sig)
 		msgs = append(msgs, msg)
 	}
-	aggSig := Aggregate(sigs)
+	aggSig := AggregateSignatures(sigs)
 	assert.Equal(t, true, aggSig.AggregateVerify(pubkeys, msgs), "Signature did not verify")
 }
 
@@ -98,7 +98,6 @@ func TestFastAggregateVerify_ReturnsTrueOnG2PointAtInfinity(t *testing.T) {
 	var pubkeys []common.PublicKey
 	msg := [32]byte{'h', 'e', 'l', 'l', 'o'}
 
-	aggSig := NewAggregateSignature()
 	g2PointAtInfinity := append([]byte{0xC0}, make([]byte, 95)...)
 	aggSig, err := SignatureFromBytes(g2PointAtInfinity)
 	require.NoError(t, err)

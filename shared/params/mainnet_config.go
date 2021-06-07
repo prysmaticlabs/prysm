@@ -1,6 +1,7 @@
 package params
 
 import (
+	"math"
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -175,18 +176,22 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	SafetyDecay: 10,
 
 	// Fork related values.
-	GenesisForkVersion:  []byte{0, 0, 0, 0},
-	NextForkVersion:     []byte{0, 0, 0, 0}, // Set to GenesisForkVersion unless there is a scheduled fork
-	NextForkEpoch:       1<<64 - 1,          // Set to FarFutureEpoch unless there is a scheduled fork.
+	GenesisForkVersion: []byte{0, 0, 0, 0},
+	AltairForkVersion:  []byte{1, 0, 0, 0},
+	AltairForkEpoch:    math.MaxUint64,     // Set to Max Uint64 for now.
+	NextForkVersion:    []byte{0, 0, 0, 0}, // Set to GenesisForkVersion unless there is a scheduled fork
+	NextForkEpoch:      1<<64 - 1,          // Set to FarFutureEpoch unless there is a scheduled fork.
 	ForkVersionSchedule: map[types.Epoch][]byte{
+		0:              {0, 0, 0, 0},
+		math.MaxUint64: {1, 0, 0, 0},
 		// Any further forks must be specified here by their epoch number.
 	},
 
 	// New values introduced in Altair hard fork 1.
 	// Participation flag indices.
-	TimelyHeadFlagIndex:   0,
-	TimelySourceFlagIndex: 1,
-	TimelyTargetFlagIndex: 2,
+	TimelySourceFlagIndex: 0,
+	TimelyTargetFlagIndex: 1,
+	TimelyHeadFlagIndex:   2,
 
 	// Incentivization weight values.
 	TimelyHeadWeight:   12,
@@ -198,13 +203,13 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 
 	// Validator related values.
 	TargetAggregatorsPerSyncSubcommittee: 4,
-	SyncCommitteeSubnetCount:             8,
+	SyncCommitteeSubnetCount:             4,
 
 	// Misc values.
-	SyncCommitteeSize:            1024,
-	SyncPubkeysPerAggregate:      64,
+	SyncCommitteeSize:            512,
 	InactivityScoreBias:          4,
-	EpochsPerSyncCommitteePeriod: 256,
+	InactivityScoreRecoveryRate:  16,
+	EpochsPerSyncCommitteePeriod: 512,
 
 	// Updated penalty values.
 	InactivityPenaltyQuotientAltair:      3 * 1 << 24, //50331648
