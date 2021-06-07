@@ -183,7 +183,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	NextForkEpoch:      3,                  // Set to FarFutureEpoch unless there is a scheduled fork.
 	ForkVersionSchedule: map[[4]byte]types.Epoch{
 		[4]byte{0, 0, 0, 0}: 0,
-		[4]byte{1, 0, 0, 0}: 5,
+		[4]byte{1, 0, 0, 0}: 3,
 		// Any further forks must be specified here by their epoch number.
 	},
 
