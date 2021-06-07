@@ -67,7 +67,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		slot := b.Block.Slot
+		slot := b.Block().Slot()
 		// If the state is not available, roll back
 		for state == nil {
 			slot--
@@ -83,11 +83,11 @@ func main() {
 
 		// Construct label of each node.
 		rStr := hex.EncodeToString(r[:2])
-		label := "slot: " + strconv.Itoa(int(b.Block.Slot)) + "\n root: " + rStr
+		label := "slot: " + strconv.Itoa(int(b.Block().Slot())) + "\n root: " + rStr
 
 		dotN := graph.Node(rStr).Box().Attr("label", label)
 		n := &node{
-			parentRoot: bytesutil.ToBytes32(b.Block.ParentRoot),
+			parentRoot: bytesutil.ToBytes32(b.Block().ParentRoot()),
 			dothNode:   &dotN,
 		}
 		m[r] = n

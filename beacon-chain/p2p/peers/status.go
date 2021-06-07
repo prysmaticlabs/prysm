@@ -39,10 +39,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
-	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -230,7 +230,7 @@ func (p *Status) InboundLimit() int {
 }
 
 // SetMetadata sets the metadata of the given remote peer.
-func (p *Status) SetMetadata(pid peer.ID, metaData *pb.MetaData) {
+func (p *Status) SetMetadata(pid peer.ID, metaData interfaces.Metadata) {
 	p.store.Lock()
 	defer p.store.Unlock()
 
@@ -240,12 +240,15 @@ func (p *Status) SetMetadata(pid peer.ID, metaData *pb.MetaData) {
 
 // Metadata returns a copy of the metadata corresponding to the provided
 // peer id.
-func (p *Status) Metadata(pid peer.ID) (*pb.MetaData, error) {
+func (p *Status) Metadata(pid peer.ID) (interfaces.Metadata, error) {
 	p.store.RLock()
 	defer p.store.RUnlock()
 
 	if peerData, ok := p.store.PeerData(pid); ok {
-		return proto.Clone(peerData.MetaData).(*pb.MetaData), nil
+		if peerData.MetaData == nil || peerData.MetaData.IsNil() {
+			return nil, nil
+		}
+		return peerData.MetaData.Copy(), nil
 	}
 	return nil, peerdata.ErrPeerUnknown
 }
@@ -256,10 +259,10 @@ func (p *Status) CommitteeIndices(pid peer.ID) ([]uint64, error) {
 	defer p.store.RUnlock()
 
 	if peerData, ok := p.store.PeerData(pid); ok {
-		if peerData.Enr == nil || peerData.MetaData == nil {
+		if peerData.Enr == nil || peerData.MetaData == nil || peerData.MetaData.IsNil() {
 			return []uint64{}, nil
 		}
-		return indicesFromBitfield(peerData.MetaData.Attnets), nil
+		return indicesFromBitfield(peerData.MetaData.AttnetsBitfield()), nil
 	}
 	return nil, peerdata.ErrPeerUnknown
 }
@@ -274,8 +277,8 @@ func (p *Status) SubscribedToSubnet(index uint64) []peer.ID {
 	for pid, peerData := range p.store.Peers() {
 		// look at active peers
 		connectedStatus := peerData.ConnState == PeerConnecting || peerData.ConnState == PeerConnected
-		if connectedStatus && peerData.MetaData != nil && peerData.MetaData.Attnets != nil {
-			indices := indicesFromBitfield(peerData.MetaData.Attnets)
+		if connectedStatus && peerData.MetaData != nil && !peerData.MetaData.IsNil() && peerData.MetaData.AttnetsBitfield() != nil {
+			indices := indicesFromBitfield(peerData.MetaData.AttnetsBitfield())
 			for _, idx := range indices {
 				if idx == index {
 					peers = append(peers, pid)

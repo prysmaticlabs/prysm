@@ -4,11 +4,11 @@ import (
 	"sort"
 
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/aggregation"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/copyutil"
 )
 
 // MaxCoverAttestationAggregation relies on Maximum Coverage greedy algorithm for aggregation.
@@ -176,7 +176,7 @@ func (al attList) aggregate(coverage bitfield.Bitlist) (*ethpb.Attestation, erro
 	}
 	return &ethpb.Attestation{
 		AggregationBits: coverage,
-		Data:            stateV0.CopyAttestationData(al[0].Data),
+		Data:            copyutil.CopyAttestationData(al[0].Data),
 		Signature:       aggregateSignatures(signs).Marshal(),
 	}, nil
 }
@@ -208,7 +208,7 @@ func aggregateAttestations(atts []*ethpb.Attestation, keys []int, coverage *bitf
 		}
 		signs = append(signs, sig)
 		if i == 0 {
-			data = stateV0.CopyAttestationData(atts[idx].Data)
+			data = copyutil.CopyAttestationData(atts[idx].Data)
 			targetIdx = idx
 		}
 	}

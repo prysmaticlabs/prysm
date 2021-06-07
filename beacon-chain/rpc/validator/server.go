@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
@@ -26,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
@@ -142,7 +142,11 @@ func (vs *Server) CanonicalHead(ctx context.Context, _ *emptypb.Empty) (*ethpb.S
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head block: %v", err)
 	}
-	return headBlk, nil
+	b, err := headBlk.PbPhase0Block()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head block: %v", err)
+	}
+	return b, nil
 }
 
 // WaitForChainStart queries the logs of the Deposit Contract in order to verify the beacon chain
