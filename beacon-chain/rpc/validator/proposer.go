@@ -201,7 +201,7 @@ func (vs *Server) GetBlockV2(ctx context.Context, req *ethpb.BlockRequest) (*eth
 		return nil, status.Errorf(codes.Internal, "Could not calculate proposer index %v", err)
 	}
 
-	zeroSig := [96]byte{}
+	zeroSig := [96]byte{0xC0}
 	blk := &ethpb.BeaconBlockAltair{
 		Slot:          req.Slot,
 		ParentRoot:    parentRoot,
