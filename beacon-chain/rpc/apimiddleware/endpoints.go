@@ -274,7 +274,8 @@ func handleGetBeaconStateSsz(m *gateway.ApiProxyMiddleware, endpoint gateway.End
 }
 
 func beaconStateSszRequested(request *http.Request) bool {
-	return request.Header["Accept"][0] == "application/octet-stream"
+	accept, ok := request.Header["Accept"]
+	return ok && accept[0] == "application/octet-stream"
 }
 
 func prepareRequestForProxying(m *gateway.ApiProxyMiddleware, endpoint gateway.Endpoint, request *http.Request) gateway.ErrorJson {

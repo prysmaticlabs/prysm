@@ -20,10 +20,8 @@ import (
 	"github.com/wealdtech/go-bytesutil"
 )
 
-// TODO: Documentation
-
 // DeserializeRequestBodyIntoContainer deserializes the request's body into an endpoint-specific struct.
-func DeserializeRequestBodyIntoContainer(body io.ReadCloser, requestContainer interface{}) ErrorJson {
+func DeserializeRequestBodyIntoContainer(body io.Reader, requestContainer interface{}) ErrorJson {
 	if err := json.NewDecoder(body).Decode(&requestContainer); err != nil {
 		e := fmt.Errorf("could not decode request body: %w", err)
 		return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
@@ -142,7 +140,7 @@ func HandleQueryParameters(request *http.Request, params []QueryParam) ErrorJson
 				if p.Enum {
 					queryParams.Del(key)
 					for _, v := range vals {
-						// gRPC expectes uppercase enum values.
+						// gRPC expects uppercase enum values.
 						queryParams.Add(key, strings.ToUpper(v))
 					}
 				}
@@ -322,12 +320,17 @@ func Cleanup(grpcResponseBody io.ReadCloser) ErrorJson {
 // isRequestParam verifies whether the passed string is a request parameter.
 // Request parameters are enclosed in { and }.
 func isRequestParam(s string) bool {
-	return len(s) > 0 && s[0] == '{' && s[len(s)-1] == '}'
+	return len(s) > 2 && s[0] == '{' && s[len(s)-1] == '}'
 }
 
 // processField calls each processor function on any field that has the matching tag set.
 // It is a recursive function.
 func processField(s interface{}, processors []fieldProcessor) error {
+	kind := reflect.TypeOf(s).Kind()
+	if kind != reflect.Ptr && kind != reflect.Slice && kind != reflect.Array {
+		return fmt.Errorf("processing fields of kind '%v' is unsupported", kind)
+	}
+
 	t := reflect.TypeOf(s).Elem()
 	v := reflect.Indirect(reflect.ValueOf(s))
 
