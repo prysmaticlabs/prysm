@@ -33,8 +33,8 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (ssz.Unmarshaler, err
 	if strings.Contains(topic, p2p.GossipAttestationMessage) {
 		topic = p2p.GossipTypeMapping[reflect.TypeOf(&eth.Attestation{})]
 	}
-	base, ok := p2p.GossipTopicMappings[topic]
-	if !ok {
+	base := p2p.GossipTopicMappings(topic, 0)
+	if base == nil {
 		return nil, p2p.ErrMessageNotMapped
 	}
 	m, ok := proto.Clone(base).(ssz.Unmarshaler)

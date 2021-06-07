@@ -146,7 +146,6 @@ func (s *Service) Start() {
 
 	// Update sync metrics.
 	runutil.RunEvery(s.ctx, syncMetricsInterval, s.updateMetrics)
-	go s.forkWatcher()
 }
 
 // Stop the regular sync service.
@@ -255,6 +254,7 @@ func (s *Service) registerHandlers() {
 				}
 				currentEpoch := helpers.SlotToEpoch(helpers.CurrentSlot(uint64(s.cfg.Chain.GenesisTime().Unix())))
 				s.registerSubscribers(currentEpoch, digest)
+				go s.forkWatcher()
 				return
 			}
 		case <-s.ctx.Done():

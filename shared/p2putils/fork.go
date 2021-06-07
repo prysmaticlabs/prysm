@@ -102,6 +102,20 @@ func Fork(
 	}, nil
 }
 
+func RetrieveForkDataFromDigest(digest [4]byte, genesisValidatorsRoot []byte) ([4]byte, types.Epoch, error) {
+	fSchedule := params.BeaconConfig().ForkVersionSchedule
+	for v, e := range fSchedule {
+		rDigest, err := helpers.ComputeForkDigest(v[:], genesisValidatorsRoot)
+		if err != nil {
+			return [4]byte{}, 0, err
+		}
+		if rDigest == digest {
+			return v, e, nil
+		}
+	}
+	return [4]byte{}, 0, errors.Errorf("no fork exists for a digest of %#x", digest)
+}
+
 // SortedForkVersions sorts the provided fork schedule in ascending order
 // by epoch.
 func SortedForkVersions(forkSchedule map[[4]byte]types.Epoch) [][4]byte {

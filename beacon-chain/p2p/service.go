@@ -94,7 +94,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		cancel:        cancel,
 		cfg:           cfg,
 		isPreGenesis:  true,
-		joinedTopics:  make(map[string]*pubsub.Topic, len(GossipTopicMappings)),
+		joinedTopics:  make(map[string]*pubsub.Topic, len(gossipTopicMappings)),
 		subnetsLock:   make(map[uint64]*sync.RWMutex),
 	}
 
@@ -253,6 +253,7 @@ func (s *Service) Start() {
 	if p2pHostDNS != "" {
 		logExternalDNSAddr(s.host.ID(), p2pHostDNS, p2pTCPPort)
 	}
+	go s.forkWatcher()
 }
 
 // Stop the p2p service and terminate all peer connections.

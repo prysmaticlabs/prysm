@@ -100,7 +100,12 @@ func (s *Service) registerSubscribers(epoch types.Epoch, digest [4]byte) {
 // subscribe to a given topic with a given validator and subscription handler.
 // The base protobuf message is used to initialize new messages for decoding.
 func (s *Service) subscribe(topic string, validator pubsub.ValidatorEx, handle subHandler, digest [4]byte) *pubsub.Subscription {
-	base := p2p.GossipTopicMappings[topic]
+	genRoot := s.cfg.Chain.GenesisValidatorRoot()
+	_, e, err := p2putils.RetrieveForkDataFromDigest(digest, genRoot[:])
+	if err != nil {
+		panic(err)
+	}
+	base := p2p.GossipTopicMappings(topic, e)
 	if base == nil {
 		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topic))
 	}
@@ -213,7 +218,12 @@ func (s *Service) wrapAndReportValidation(topic string, v pubsub.ValidatorEx) (s
 // subscribe to a static subnet  with the given topic and index.A given validator and subscription handler is
 // used to handle messages from the subnet. The base protobuf message is used to initialize new messages for decoding.
 func (s *Service) subscribeStaticWithSubnets(topic string, validator pubsub.ValidatorEx, handle subHandler, digest [4]byte) {
-	base := p2p.GossipTopicMappings[topic]
+	genRoot := s.cfg.Chain.GenesisValidatorRoot()
+	_, e, err := p2putils.RetrieveForkDataFromDigest(digest, genRoot[:])
+	if err != nil {
+		panic(err)
+	}
+	base := p2p.GossipTopicMappings(topic, e)
 	if base == nil {
 		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topic))
 	}
@@ -264,9 +274,14 @@ func (s *Service) subscribeDynamicWithSubnets(
 	handle subHandler,
 	digest [4]byte,
 ) {
-	base := p2p.GossipTopicMappings[topicFormat]
+	genRoot := s.cfg.Chain.GenesisValidatorRoot()
+	_, e, err := p2putils.RetrieveForkDataFromDigest(digest, genRoot[:])
+	if err != nil {
+		panic(err)
+	}
+	base := p2p.GossipTopicMappings(topicFormat, e)
 	if base == nil {
-		log.Fatalf("%s is not mapped to any message in GossipTopicMappings", topicFormat)
+		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topicFormat))
 	}
 	subscriptions := make(map[uint64]*pubsub.Subscription, params.BeaconConfig().MaxCommitteesPerSlot)
 	genesis := s.cfg.Chain.GenesisTime()
