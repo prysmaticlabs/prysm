@@ -21,7 +21,8 @@ import (
 // GossipTypeMapping.
 var ErrMessageNotMapped = errors.New("message type is not mapped to a PubSub topic")
 
-// Broadcast a message to the p2p network.
+// Broadcasts a message to the p2p network, the message is assumed to be
+// broadcasted to the current fork.
 func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 	ctx, span := trace.StartSpan(ctx, "p2p.Broadcast")
 	defer span.End()
@@ -30,7 +31,7 @@ func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 	ctx, cancel := context.WithTimeout(ctx, twoSlots)
 	defer cancel()
 
-	forkDigest, err := s.forkDigest()
+	forkDigest, err := s.currentForkDigest()
 	if err != nil {
 		err := errors.Wrap(err, "could not retrieve fork digest")
 		traceutil.AnnotateError(span, err)
@@ -49,11 +50,12 @@ func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 	return s.broadcastObject(ctx, castMsg, fmt.Sprintf(topic, forkDigest))
 }
 
-// BroadcastAttestation broadcasts an attestation to the p2p network.
+// BroadcastAttestation broadcasts an attestation to the p2p network, the message is assumed to be
+// broadcasted to the current fork.
 func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att *eth.Attestation) error {
 	ctx, span := trace.StartSpan(ctx, "p2p.BroadcastAttestation")
 	defer span.End()
-	forkDigest, err := s.forkDigest()
+	forkDigest, err := s.currentForkDigest()
 	if err != nil {
 		err := errors.Wrap(err, "could not retrieve fork digest")
 		traceutil.AnnotateError(span, err)

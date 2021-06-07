@@ -48,7 +48,7 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 		chainStarted: abool.New(),
 	}
 	var err error
-	p2pService.Digest, err = r.forkDigest()
+	p2pService.Digest, err = r.currentForkDigest()
 	require.NoError(t, err)
 	topic := "/eth2/%x/voluntary_exit"
 	var wg sync.WaitGroup
@@ -113,7 +113,7 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	require.NoError(t, err, "Error generating attester slashing")
 	err = r.cfg.DB.SaveState(ctx, beaconState, bytesutil.ToBytes32(attesterSlashing.Attestation_1.Data.BeaconBlockRoot))
 	require.NoError(t, err)
-	p2pService.Digest, err = r.forkDigest()
+	p2pService.Digest, err = r.currentForkDigest()
 	require.NoError(t, err)
 	p2pService.ReceivePubSub(topic, attesterSlashing)
 
@@ -165,7 +165,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 		1, /* validator index */
 	)
 	require.NoError(t, err, "Error generating proposer slashing")
-	p2pService.Digest, err = r.forkDigest()
+	p2pService.Digest, err = r.currentForkDigest()
 	require.NoError(t, err)
 	p2pService.ReceivePubSub(topic, proposerSlashing)
 
@@ -190,7 +190,7 @@ func TestSubscribe_HandlesPanic(t *testing.T) {
 		chainStarted: abool.New(),
 	}
 	var err error
-	p.Digest, err = r.forkDigest()
+	p.Digest, err = r.currentForkDigest()
 	require.NoError(t, err)
 
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.SignedVoluntaryExit{})]
@@ -223,7 +223,7 @@ func TestRevalidateSubscription_CorrectlyFormatsTopic(t *testing.T) {
 		},
 		chainStarted: abool.New(),
 	}
-	digest, err := r.forkDigest()
+	digest, err := r.currentForkDigest()
 	require.NoError(t, err)
 	subscriptions := make(map[uint64]*pubsub.Subscription, params.BeaconConfig().MaxCommitteesPerSlot)
 

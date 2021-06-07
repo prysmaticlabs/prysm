@@ -8,6 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
@@ -20,16 +21,18 @@ import (
 var eth2ENRKey = params.BeaconNetworkConfig().ETH2Key
 
 // ForkDigest returns the current fork digest of
-// the node.
-func (s *Service) forkDigest() ([4]byte, error) {
-	if s.currentForkDigest != [4]byte{} {
-		return s.currentForkDigest, nil
+// the node according to the local clock.
+func (s *Service) currentForkDigest() ([4]byte, error) {
+	if !s.isInitialized() {
+		return [4]byte{}, errors.New("state is not initialized")
 	}
-	fd, err := p2putils.CreateForkDigest(s.genesisTime, s.genesisValidatorsRoot)
-	if err != nil {
-		s.currentForkDigest = fd
-	}
-	return fd, err
+	return p2putils.CreateForkDigest(s.genesisTime, s.genesisValidatorsRoot)
+}
+
+// This method retrieves the fork digest 1 epoch ahead. This is
+// to allow any respective services to subscribe early.
+func (s *Service) optimisticForkDigest() ([4]byte, error) {
+	return p2putils.CreateForkDigest(s.genesisTime, s.genesisValidatorsRoot)
 }
 
 // Compares fork ENRs between an incoming peer's record and our node's

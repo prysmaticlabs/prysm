@@ -64,7 +64,7 @@ func (s *Service) updateMetrics() {
 		return
 	}
 	// We update the dynamic subnet topics.
-	digest, err := s.forkDigest()
+	digest, err := s.currentForkDigest()
 	if err != nil {
 		log.WithError(err).Debugf("Could not compute fork digest")
 	}

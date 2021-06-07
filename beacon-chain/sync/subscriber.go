@@ -45,54 +45,65 @@ func (s *Service) noopValidator(_ context.Context, _ peer.ID, msg *pubsub.Messag
 
 // Register PubSub subscribers
 func (s *Service) registerSubscribers() {
+	digest, err := s.currentForkDigest()
+	if err != nil {
+		log.WithError(err).Error("Could not retrieve current fork digest")
+	}
 	s.subscribe(
 		p2p.BlockSubnetTopicFormat,
 		s.validateBeaconBlockPubSub,
 		s.beaconBlockSubscriber,
+		digest,
 	)
 	s.subscribe(
 		p2p.AggregateAndProofSubnetTopicFormat,
 		s.validateAggregateAndProof,
 		s.beaconAggregateProofSubscriber,
+		digest,
 	)
 	s.subscribe(
 		p2p.ExitSubnetTopicFormat,
 		s.validateVoluntaryExit,
 		s.voluntaryExitSubscriber,
+		digest,
 	)
 	s.subscribe(
 		p2p.ProposerSlashingSubnetTopicFormat,
 		s.validateProposerSlashing,
 		s.proposerSlashingSubscriber,
+		digest,
 	)
 	s.subscribe(
 		p2p.AttesterSlashingSubnetTopicFormat,
 		s.validateAttesterSlashing,
 		s.attesterSlashingSubscriber,
+		digest,
 	)
 	if flags.Get().SubscribeToAllSubnets {
 		s.subscribeStaticWithSubnets(
 			"/eth2/%x/beacon_attestation_%d",
 			s.validateCommitteeIndexBeaconAttestation,   /* validator */
 			s.committeeIndexBeaconAttestationSubscriber, /* message handler */
+			digest,
 		)
 	} else {
 		s.subscribeDynamicWithSubnets(
 			"/eth2/%x/beacon_attestation_%d",
 			s.validateCommitteeIndexBeaconAttestation,   /* validator */
 			s.committeeIndexBeaconAttestationSubscriber, /* message handler */
+			digest,
 		)
 	}
 }
 
 // subscribe to a given topic with a given validator and subscription handler.
 // The base protobuf message is used to initialize new messages for decoding.
-func (s *Service) subscribe(topic string, validator pubsub.ValidatorEx, handle subHandler) *pubsub.Subscription {
+func (s *Service) subscribe(topic string, validator pubsub.ValidatorEx, handle subHandler, digest [4]byte) *pubsub.Subscription {
 	base := p2p.GossipTopicMappings[topic]
 	if base == nil {
 		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topic))
 	}
-	return s.subscribeWithBase(s.addDigestToTopic(topic), validator, handle)
+	return s.subscribeWithBase(s.addDigestToTopic(topic, digest), validator, handle)
 }
 
 func (s *Service) subscribeWithBase(topic string, validator pubsub.ValidatorEx, handle subHandler) *pubsub.Subscription {
@@ -200,13 +211,13 @@ func (s *Service) wrapAndReportValidation(topic string, v pubsub.ValidatorEx) (s
 
 // subscribe to a static subnet  with the given topic and index.A given validator and subscription handler is
 // used to handle messages from the subnet. The base protobuf message is used to initialize new messages for decoding.
-func (s *Service) subscribeStaticWithSubnets(topic string, validator pubsub.ValidatorEx, handle subHandler) {
+func (s *Service) subscribeStaticWithSubnets(topic string, validator pubsub.ValidatorEx, handle subHandler, digest [4]byte) {
 	base := p2p.GossipTopicMappings[topic]
 	if base == nil {
 		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topic))
 	}
 	for i := uint64(0); i < params.BeaconNetworkConfig().AttestationSubnetCount; i++ {
-		s.subscribeWithBase(s.addDigestAndIndexToTopic(topic, i), validator, handle)
+		s.subscribeWithBase(s.addDigestAndIndexToTopic(topic, digest, i), validator, handle)
 	}
 	genesis := s.cfg.Chain.GenesisTime()
 	ticker := slotutil.NewSlotTicker(genesis, params.BeaconConfig().SecondsPerSlot)
@@ -223,12 +234,12 @@ func (s *Service) subscribeStaticWithSubnets(topic string, validator pubsub.Vali
 				}
 				// Check every slot that there are enough peers
 				for i := uint64(0); i < params.BeaconNetworkConfig().AttestationSubnetCount; i++ {
-					if !s.validPeersExist(s.addDigestAndIndexToTopic(topic, i)) {
+					if !s.validPeersExist(s.addDigestAndIndexToTopic(topic, digest, i)) {
 						log.Debugf("No peers found subscribed to attestation gossip subnet with "+
 							"committee index %d. Searching network for peers subscribed to the subnet.", i)
 						_, err := s.cfg.P2P.FindPeersWithSubnet(
 							s.ctx,
-							s.addDigestAndIndexToTopic(topic, i),
+							s.addDigestAndIndexToTopic(topic, digest, i),
 							i,
 							params.BeaconNetworkConfig().MinimumPeersInSubnet,
 						)
@@ -250,14 +261,11 @@ func (s *Service) subscribeDynamicWithSubnets(
 	topicFormat string,
 	validate pubsub.ValidatorEx,
 	handle subHandler,
+	digest [4]byte,
 ) {
 	base := p2p.GossipTopicMappings[topicFormat]
 	if base == nil {
 		log.Fatalf("%s is not mapped to any message in GossipTopicMappings", topicFormat)
-	}
-	digest, err := s.forkDigest()
-	if err != nil {
-		log.WithError(err).Fatal("Could not compute fork digest")
 	}
 	subscriptions := make(map[uint64]*pubsub.Subscription, params.BeaconConfig().MaxCommitteesPerSlot)
 	genesis := s.cfg.Chain.GenesisTime()
@@ -377,7 +385,7 @@ func (s *Service) filterNeededPeers(pids []peer.ID) []peer.ID {
 	if len(pids) == 0 {
 		return pids
 	}
-	digest, err := s.forkDigest()
+	digest, err := s.currentForkDigest()
 	if err != nil {
 		log.WithError(err).Error("Could not compute fork digest")
 		return pids
@@ -420,30 +428,22 @@ func (s *Service) filterNeededPeers(pids []peer.ID) []peer.ID {
 }
 
 // Add fork digest to topic.
-func (s *Service) addDigestToTopic(topic string) string {
+func (s *Service) addDigestToTopic(topic string, digest [4]byte) string {
 	if !strings.Contains(topic, "%x") {
 		log.Fatal("Topic does not have appropriate formatter for digest")
-	}
-	digest, err := s.forkDigest()
-	if err != nil {
-		log.WithError(err).Fatal("Could not compute fork digest")
 	}
 	return fmt.Sprintf(topic, digest)
 }
 
 // Add the digest and index to subnet topic.
-func (s *Service) addDigestAndIndexToTopic(topic string, idx uint64) string {
+func (s *Service) addDigestAndIndexToTopic(topic string, digest [4]byte, idx uint64) string {
 	if !strings.Contains(topic, "%x") {
 		log.Fatal("Topic does not have appropriate formatter for digest")
-	}
-	digest, err := s.forkDigest()
-	if err != nil {
-		log.WithError(err).Fatal("Could not compute fork digest")
 	}
 	return fmt.Sprintf(topic, digest, idx)
 }
 
-func (s *Service) forkDigest() ([4]byte, error) {
+func (s *Service) currentForkDigest() ([4]byte, error) {
 	genRoot := s.cfg.Chain.GenesisValidatorRoot()
 	return p2putils.CreateForkDigest(s.cfg.Chain.GenesisTime(), genRoot[:])
 }

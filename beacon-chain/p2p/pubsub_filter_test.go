@@ -98,7 +98,6 @@ func TestService_CanSubscribe(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Service{
-				currentForkDigest:     currentFork,
 				genesisValidatorsRoot: make([]byte, 32),
 				genesisTime:           time.Now(),
 			}
@@ -304,7 +303,6 @@ func TestService_FilterIncomingSubscriptions(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Service{
-				currentForkDigest:     currentFork,
 				genesisValidatorsRoot: make([]byte, 32),
 				genesisTime:           time.Now(),
 			}
@@ -349,5 +347,4 @@ func TestService_MonitorsStateForkUpdates(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 
 	require.True(t, s.isInitialized())
-	require.NotEmpty(t, s.currentForkDigest)
 }

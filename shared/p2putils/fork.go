@@ -13,6 +13,39 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+func IsForkNextEpoch(genesisTime time.Time, genesisValidatorsRoot []byte) (bool, error) {
+	if genesisTime.IsZero() {
+		return false, errors.New("genesis time is not set")
+	}
+	if len(genesisValidatorsRoot) == 0 {
+		return false, errors.New("genesis validators root is not set")
+	}
+	currentSlot := helpers.SlotsSince(genesisTime)
+	currentEpoch := helpers.SlotToEpoch(currentSlot)
+	fSchedule := params.BeaconConfig().ForkVersionSchedule
+	scheduledForks := SortedForkVersions(fSchedule)
+	isForkEpoch := false
+	for _, forkVersion := range scheduledForks {
+		epoch := fSchedule[forkVersion]
+		if currentEpoch+1 == epoch {
+			isForkEpoch = true
+			break
+		}
+	}
+	return isForkEpoch, nil
+}
+
+func ForkDigestFromEpoch(currentEpoch types.Epoch, genesisValidatorsRoot []byte) ([4]byte, error) {
+	if len(genesisValidatorsRoot) == 0 {
+		return [4]byte{}, errors.New("genesis validators root is not set")
+	}
+	forkData, err := Fork(currentEpoch)
+	if err != nil {
+		return [4]byte{}, err
+	}
+	return helpers.ComputeForkDigest(forkData.CurrentVersion, genesisValidatorsRoot)
+}
+
 // CreateForkDigest creates a fork digest from a genesis time and genesis
 // validators root, utilizing the current slot to determine
 // the active fork version in the node.
