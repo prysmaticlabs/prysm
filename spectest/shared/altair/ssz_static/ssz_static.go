@@ -152,20 +152,17 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "SyncCommitteeSignature":
 		obj = &ethpb.SyncCommitteeSignature{}
 	case "SyncCommitteeContribution":
-		t.Skip("incorrect bitvector")
-		return nil, nil
+		obj = &ethpb.SyncCommitteeContribution{}
 	case "ContributionAndProof":
-		t.Skip("incorrect bitvector")
-		return nil, nil
+		obj = &ethpb.ContributionAndProof{}
 	case "SignedContributionAndProof":
-		t.Skip("incorrect bitvector")
-		return nil, nil
+		obj = &ethpb.SignedContributionAndProof{}
 	case "SyncAggregate":
 		obj = &ethpb.SyncAggregate{}
 	case "SyncAggregatorSelectionData":
 		obj = &pb.SyncAggregatorSelectionData{}
 	case "SyncCommittee":
-		t.Skip("fssz bug, using custom HTR so state works")
+		t.Skip("TODO(8638): fssz bug, using custom HTR so state works")
 		return nil, nil
 	case "LightClientSnapshot":
 		t.Skip("not a beacon node type, this is a light node type")

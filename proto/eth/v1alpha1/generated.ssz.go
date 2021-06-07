@@ -3111,7 +3111,7 @@ func (s *SyncCommitteeContribution) MarshalSSZTo(buf []byte) (dst []byte, err er
 	dst = ssz.MarshalUint64(dst, s.SubcommitteeIndex)
 
 	// Field (3) 'AggregationBits'
-	if len(s.AggregationBits) != 32 {
+	if len(s.AggregationBits) != 16 {
 		err = ssz.ErrBytesLength
 		return
 	}
@@ -3131,7 +3131,7 @@ func (s *SyncCommitteeContribution) MarshalSSZTo(buf []byte) (dst []byte, err er
 func (s *SyncCommitteeContribution) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
-	if size != 176 {
+	if size != 160 {
 		return ssz.ErrSize
 	}
 
@@ -3149,22 +3149,22 @@ func (s *SyncCommitteeContribution) UnmarshalSSZ(buf []byte) error {
 
 	// Field (3) 'AggregationBits'
 	if cap(s.AggregationBits) == 0 {
-		s.AggregationBits = make([]byte, 0, len(buf[48:80]))
+		s.AggregationBits = make([]byte, 0, len(buf[48:64]))
 	}
-	s.AggregationBits = append(s.AggregationBits, buf[48:80]...)
+	s.AggregationBits = append(s.AggregationBits, buf[48:64]...)
 
 	// Field (4) 'Signature'
 	if cap(s.Signature) == 0 {
-		s.Signature = make([]byte, 0, len(buf[80:176]))
+		s.Signature = make([]byte, 0, len(buf[64:160]))
 	}
-	s.Signature = append(s.Signature, buf[80:176]...)
+	s.Signature = append(s.Signature, buf[64:160]...)
 
 	return err
 }
 
 // SizeSSZ returns the ssz encoded size in bytes for the SyncCommitteeContribution object
 func (s *SyncCommitteeContribution) SizeSSZ() (size int) {
-	size = 176
+	size = 160
 	return
 }
 
@@ -3191,7 +3191,7 @@ func (s *SyncCommitteeContribution) HashTreeRootWith(hh *ssz.Hasher) (err error)
 	hh.PutUint64(s.SubcommitteeIndex)
 
 	// Field (3) 'AggregationBits'
-	if len(s.AggregationBits) != 32 {
+	if len(s.AggregationBits) != 16 {
 		err = ssz.ErrBytesLength
 		return
 	}
@@ -3242,7 +3242,7 @@ func (c *ContributionAndProof) MarshalSSZTo(buf []byte) (dst []byte, err error) 
 func (c *ContributionAndProof) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
-	if size != 280 {
+	if size != 264 {
 		return ssz.ErrSize
 	}
 
@@ -3253,22 +3253,22 @@ func (c *ContributionAndProof) UnmarshalSSZ(buf []byte) error {
 	if c.Contribution == nil {
 		c.Contribution = new(SyncCommitteeContribution)
 	}
-	if err = c.Contribution.UnmarshalSSZ(buf[8:184]); err != nil {
+	if err = c.Contribution.UnmarshalSSZ(buf[8:168]); err != nil {
 		return err
 	}
 
 	// Field (2) 'SelectionProof'
 	if cap(c.SelectionProof) == 0 {
-		c.SelectionProof = make([]byte, 0, len(buf[184:280]))
+		c.SelectionProof = make([]byte, 0, len(buf[168:264]))
 	}
-	c.SelectionProof = append(c.SelectionProof, buf[184:280]...)
+	c.SelectionProof = append(c.SelectionProof, buf[168:264]...)
 
 	return err
 }
 
 // SizeSSZ returns the ssz encoded size in bytes for the ContributionAndProof object
 func (c *ContributionAndProof) SizeSSZ() (size int) {
-	size = 280
+	size = 264
 	return
 }
 
@@ -3331,7 +3331,7 @@ func (s *SignedContributionAndProof) MarshalSSZTo(buf []byte) (dst []byte, err e
 func (s *SignedContributionAndProof) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
-	if size != 376 {
+	if size != 360 {
 		return ssz.ErrSize
 	}
 
@@ -3339,22 +3339,22 @@ func (s *SignedContributionAndProof) UnmarshalSSZ(buf []byte) error {
 	if s.Message == nil {
 		s.Message = new(ContributionAndProof)
 	}
-	if err = s.Message.UnmarshalSSZ(buf[0:280]); err != nil {
+	if err = s.Message.UnmarshalSSZ(buf[0:264]); err != nil {
 		return err
 	}
 
 	// Field (1) 'Signature'
 	if cap(s.Signature) == 0 {
-		s.Signature = make([]byte, 0, len(buf[280:376]))
+		s.Signature = make([]byte, 0, len(buf[264:360]))
 	}
-	s.Signature = append(s.Signature, buf[280:376]...)
+	s.Signature = append(s.Signature, buf[264:360]...)
 
 	return err
 }
 
 // SizeSSZ returns the ssz encoded size in bytes for the SignedContributionAndProof object
 func (s *SignedContributionAndProof) SizeSSZ() (size int) {
-	size = 376
+	size = 360
 	return
 }
 
