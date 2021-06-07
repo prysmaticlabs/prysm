@@ -261,7 +261,9 @@ func (s *Service) Start() {
 	pbrpc.RegisterHealthServer(s.grpcServer, nodeServer)
 	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
 	ethpbv1.RegisterBeaconChainServer(s.grpcServer, beaconChainServerV1)
-	ethpbv1.RegisterEventsServer(s.grpcServer, &eventsv1.Server{})
+	ethpbv1.RegisterEventsServer(s.grpcServer, &eventsv1.Server{
+		Ctx: s.ctx,
+	})
 	if s.cfg.EnableDebugRPCEndpoints {
 		log.Info("Enabled debug gRPC endpoints")
 		debugServer := &debug.Server{

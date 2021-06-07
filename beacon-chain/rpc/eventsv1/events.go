@@ -6,6 +6,7 @@ import (
 	gwpb "github.com/grpc-ecosystem/grpc-gateway/v2/proto/gateway"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	log "github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
@@ -17,8 +18,10 @@ func (s *Server) StreamEvents(
 	for {
 		select {
 		case <-ticker.C:
+			log.Info("Request: ", req)
 			data, err := anypb.New(req)
 			if err != nil {
+				log.WithError(err).Error("Could not parse request from pb")
 				return err
 			}
 			if err := stream.Send(&gwpb.EventSource{
