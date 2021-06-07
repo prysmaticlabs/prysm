@@ -150,6 +150,7 @@ func CopyBeaconBlockBodyAltair(body *ethpb.BeaconBlockBodyAltair) *ethpb.BeaconB
 		Attestations:      CopyAttestations(body.Attestations),
 		Deposits:          CopyDeposits(body.Deposits),
 		VoluntaryExits:    CopySignedVoluntaryExits(body.VoluntaryExits),
+		SyncAggregate:     CopySyncAggregate(body.SyncAggregate),
 	}
 }
 
@@ -324,6 +325,16 @@ func CopyValidator(val *ethpb.Validator) *ethpb.Validator {
 		ActivationEpoch:            val.ActivationEpoch,
 		ExitEpoch:                  val.ExitEpoch,
 		WithdrawableEpoch:          val.WithdrawableEpoch,
+	}
+}
+
+func CopySyncAggregate(a *ethpb.SyncAggregate) *ethpb.SyncAggregate {
+	if a == nil {
+		return nil
+	}
+	return &ethpb.SyncAggregate{
+		SyncCommitteeBits:      bytesutil.SafeCopyBytes(a.SyncCommitteeBits),
+		SyncCommitteeSignature: bytesutil.SafeCopyBytes(a.SyncCommitteeSignature),
 	}
 }
 
