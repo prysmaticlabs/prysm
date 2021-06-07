@@ -129,6 +129,9 @@ func (g *Gateway) Start() {
 				},
 			},
 		}),
+		gwruntime.WithMarshalerOption(
+			"text/event-stream", &gwruntime.EventSourceJSONPb{},
+		),
 	)
 	if g.callerId == Beacon {
 		handlers := []func(context.Context, *gwruntime.ServeMux, *grpc.ClientConn) error{
