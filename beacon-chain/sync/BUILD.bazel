@@ -9,6 +9,7 @@ go_library(
         "decode_pubsub.go",
         "doc.go",
         "error.go",
+        "fork_watcher.go",
         "fuzz_exports.go",  # keep
         "log.go",
         "metrics.go",
