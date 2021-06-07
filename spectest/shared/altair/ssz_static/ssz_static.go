@@ -9,9 +9,9 @@ import (
 
 	fssz "github.com/ferranbt/fastssz"
 	"github.com/golang/snappy"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/spectest/utils"
@@ -149,8 +149,29 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 		obj = &ethpb.Validator{}
 	case "VoluntaryExit":
 		obj = &ethpb.VoluntaryExit{}
+	case "SyncCommitteeSignature":
+		obj = &ethpb.SyncCommitteeSignature{}
+	case "SyncCommitteeContribution":
+		t.Skip("incorrect bitvector")
+		return nil, nil
 	case "ContributionAndProof":
-		t.Skip("Unused type")
+		t.Skip("incorrect bitvector")
+		return nil, nil
+	case "SignedContributionAndProof":
+		t.Skip("incorrect bitvector")
+		return nil, nil
+	case "SyncAggregate":
+		obj = &ethpb.SyncAggregate{}
+	case "SyncAggregatorSelectionData":
+		obj = &pb.SyncAggregatorSelectionData{}
+	case "SyncCommittee":
+		t.Skip("fssz bug, using custom HTR so state works")
+		return nil, nil
+	case "LightClientSnapshot":
+		t.Skip("not a beacon node type, this is a light node type")
+		return nil, nil
+	case "LightClientUpdate":
+		t.Skip("not a beacon node type, this is a light node type")
 		return nil, nil
 	default:
 		return nil, errors.New("type not found")
