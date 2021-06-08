@@ -1412,11 +1412,11 @@ def prysm_deps():
         version = "v0.0.0-20170803182201-1ca381bf3150",
     )
     go_repository(
-            name = "com_github_iancoleman_strcase",
-            importpath = "github.com/iancoleman/strcase",
-            nofuzz = True,
-            sum = "h1:dJBk1m2/qjL1twPLf68JND55vvivMupZ4wIzE8CTdBw=",
-            version = "v0.1.3",
+        name = "com_github_iancoleman_strcase",
+        importpath = "github.com/iancoleman/strcase",
+        nofuzz = True,
+        sum = "h1:dJBk1m2/qjL1twPLf68JND55vvivMupZ4wIzE8CTdBw=",
+        version = "v0.1.3",
         )
 
     go_repository(
@@ -2768,10 +2768,10 @@ def prysm_deps():
         version = "v0.0.0-20210126082820-9b7adba6db7c",
     )
     go_repository(
-            name = "com_github_prysmaticlabs_protoc_gen_go_cast",
-            importpath = "github.com/prysmaticlabs/protoc-gen-go-cast",
-            sum = "h1:k7CCMwN7VooQ7GhfySnaVyI4/9+QbhJTdasoC6VOZOI=",
-            version = "v0.0.0-20210504233148-1e141af6a0a1",
+        name = "com_github_prysmaticlabs_protoc_gen_go_cast",
+        importpath = "github.com/prysmaticlabs/protoc-gen-go-cast",
+        sum = "h1:k7CCMwN7VooQ7GhfySnaVyI4/9+QbhJTdasoC6VOZOI=",
+        version = "v0.0.0-20210504233148-1e141af6a0a1",
         )
 
     go_repository(
