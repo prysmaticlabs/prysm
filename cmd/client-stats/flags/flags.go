@@ -3,6 +3,8 @@
 package flags
 
 import (
+	"time"
+
 	"github.com/urfave/cli/v2"
 )
 
@@ -25,6 +27,7 @@ var (
 	// ScrapeIntervalFlag defines a flag for the frequency of scraping.
 	ScrapeIntervalFlag = &cli.DurationFlag{
 		Name:  "scrape-interval",
-		Usage: "Frequency of scraping expressed as a duration, eg 2m or 1m5s. Default is 60s.",
+		Usage: "Frequency of scraping expressed as a duration, eg 2m or 1m5s.",
+		Value: 60 * time.Second,
 	}
 )

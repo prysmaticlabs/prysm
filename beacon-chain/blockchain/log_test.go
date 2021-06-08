@@ -3,7 +3,8 @@ package blockchain
 import (
 	"testing"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -56,7 +57,7 @@ func Test_logStateTransitionData(t *testing.T) {
 	for _, tt := range tests {
 		hook := logTest.NewGlobal()
 		t.Run(tt.name, func(t *testing.T) {
-			logStateTransitionData(tt.b)
+			logStateTransitionData(interfaces.WrappedPhase0BeaconBlock(tt.b))
 			require.LogsContain(t, hook, tt.want)
 		})
 	}

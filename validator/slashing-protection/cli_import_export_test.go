@@ -84,7 +84,7 @@ func TestImportExportSlashingProtectionCli_RoundTrip(t *testing.T) {
 	// We verify the parsed JSON file matches. Given there is no guarantee of order,
 	// we will have to carefully compare and sort values as needed.
 	//
-	// First, we compare basic data such as the Metadata value in the JSON file.
+	// First, we compare basic data such as the MetadataV0 value in the JSON file.
 	require.DeepEqual(t, mockJSON.Metadata, receivedJSON.Metadata)
 	wantedHistoryByPublicKey := make(map[string]*format.ProtectionData)
 	for _, item := range mockJSON.Data {
@@ -160,7 +160,7 @@ func TestImportExportSlashingProtectionCli_EmptyData(t *testing.T) {
 	// We verify the parsed JSON file matches. Given there is no guarantee of order,
 	// we will have to carefully compare and sort values as needed.
 	//
-	// First, we compare basic data such as the Metadata value in the JSON file.
+	// First, we compare basic data such as the MetadataV0 value in the JSON file.
 	require.DeepEqual(t, mockJSON.Metadata, receivedJSON.Metadata)
 	wantedHistoryByPublicKey := make(map[string]*format.ProtectionData)
 	for _, item := range mockJSON.Data {
