@@ -197,32 +197,48 @@ func (bs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBlock")
 	defer span.End()
 
-	rBlk, err := bs.blockFromBlockID(ctx, req.BlockId)
+	block, err := bs.blockFromBlockID(ctx, req.BlockId)
 	if invalidBlockIdErr, ok := err.(*blockIdParseError); ok {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid block ID: %v", invalidBlockIdErr)
 	}
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
 	}
-	if rBlk == nil || rBlk.IsNil() {
-		return nil, status.Errorf(codes.NotFound, "Could not find requested block")
-	}
-	blk, err := rBlk.PbPhase0Block()
+	signedBeaconBlock, err := bs.signedBeaconBlock(ctx, block)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get raw block: %v", err)
-	}
-
-	v1Block, err := migration.V1Alpha1ToV1Block(blk)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not convert block to v1 block")
+		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 
 	return &ethpb.BlockResponse{
 		Data: &ethpb.BeaconBlockContainer{
-			Message:   v1Block.Block,
-			Signature: blk.Signature,
+			Message:   signedBeaconBlock.Block,
+			Signature: signedBeaconBlock.Signature,
 		},
 	}, nil
+}
+
+// GetBlockSsz returns the SSZ-serialized version of the becaon block for given block ID.
+func (bs *Server) GetBlockSsz(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BlockSszResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBlockSsz")
+	defer span.End()
+
+	block, err := bs.blockFromBlockID(ctx, req.BlockId)
+	if invalidBlockIdErr, ok := err.(*blockIdParseError); ok {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid block ID: %v", invalidBlockIdErr)
+	}
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
+	}
+	signedBeaconBlock, err := bs.signedBeaconBlock(ctx, block)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+	}
+	sszBlock, err := signedBeaconBlock.MarshalSSZ()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ: %v", err)
+	}
+
+	return &ethpb.BlockSszResponse{Data: sszBlock}, nil
 }
 
 // GetBlockRoot retrieves hashTreeRoot of BeaconBlock/BeaconBlockHeader.
@@ -333,6 +349,23 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpb.BlockReq
 	return &ethpb.BlockAttestationsResponse{
 		Data: v1Block.Block.Body.Attestations,
 	}, nil
+}
+
+func (bs *Server) signedBeaconBlock(ctx context.Context, block interfaces.SignedBeaconBlock) (*ethpb.SignedBeaconBlock, error) {
+	if block == nil || block.IsNil() {
+		return nil, status.Errorf(codes.NotFound, "Could not find requested block")
+	}
+	blk, err := block.PbPhase0Block()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get raw block: %v", err)
+	}
+
+	v1Block, err := migration.V1Alpha1ToV1Block(blk)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not convert block to v1 block")
+	}
+
+	return v1Block, nil
 }
 
 func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (interfaces.SignedBeaconBlock, error) {

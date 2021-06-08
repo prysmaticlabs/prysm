@@ -329,6 +329,18 @@ func TestListPeers(t *testing.T) {
 			directions: []ethpb.PeerDirection{ethpb.PeerDirection_INBOUND, ethpb.PeerDirection_OUTBOUND},
 			wantIds:    []peer.ID{ids[0], ids[1], ids[4], ids[5]},
 		},
+		{
+			name:       "Unknown filter is ignored",
+			states:     []ethpb.ConnectionState{ethpb.ConnectionState_CONNECTED, 99},
+			directions: []ethpb.PeerDirection{ethpb.PeerDirection_OUTBOUND, 99},
+			wantIds:    []peer.ID{ids[3]},
+		},
+		{
+			name:       "Only unknown filters - return all peers",
+			states:     []ethpb.ConnectionState{99},
+			directions: []ethpb.PeerDirection{99},
+			wantIds:    ids[:len(ids)-1], // Excluding last peer as it is not connected.
+		},
 	}
 	for _, tt := range filterTests {
 		t.Run(tt.name, func(t *testing.T) {

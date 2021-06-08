@@ -12,6 +12,7 @@ go_library(
     deps = [
         "//shared/bytesutil:go_default_library",
         "//shared/gateway:go_default_library",
+        "//shared/grpcutils:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
     ],
 )
@@ -23,6 +24,7 @@ go_test(
     deps = [
         "//shared/bytesutil:go_default_library",
         "//shared/gateway:go_default_library",
+        "//shared/grpcutils:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
     ],

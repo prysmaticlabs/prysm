@@ -1785,6 +1785,12 @@ def prysm_deps():
         sum = "h1:CCtW0xUnWGVINKvE/WWOYKdsPV6mawAtvQuSl8guwQs=",
         version = "v1.2.3",
     )
+    go_repository(
+        name = "com_github_klauspost_cpuid_v2",
+        importpath = "github.com/klauspost/cpuid/v2",
+        sum = "h1:dQ5ueTiftKxp0gyjKSx5+8BtPWkyQbd95m8Gys/RarI=",
+        version = "v2.0.6",
+    )
 
     go_repository(
         name = "com_github_klauspost_crc32",
@@ -2756,9 +2762,10 @@ def prysm_deps():
     go_repository(
         name = "com_github_prysmaticlabs_protoc_gen_go_cast",
         importpath = "github.com/prysmaticlabs/protoc-gen-go-cast",
-        sum = "h1:k7CCMwN7VooQ7GhfySnaVyI4/9+QbhJTdasoC6VOZOI=",
-        version = "v0.0.0-20210504233148-1e141af6a0a1",
+        sum = "h1:o79JO4UMwfc1hYbRO0fGkYD9mpLvN9pif7ez8jMLZiM=",
+        version = "v0.0.0-20210505221644-3b823fdaca7f",
     )
+
     go_repository(
         name = "com_github_puerkitobio_purell",
         importpath = "github.com/PuerkitoBio/purell",
@@ -3857,10 +3864,4 @@ def prysm_deps():
         importpath = "go.uber.org/zap",
         sum = "h1:uFRZXykJGK9lLY4HtgSw44DnIcAM+kRBP7x5m+NpAOM=",
         version = "v1.16.0",
-    )
-    go_repository(
-        name = "com_github_klauspost_cpuid_v2",
-        importpath = "github.com/klauspost/cpuid/v2",
-        sum = "h1:g0I61F2K2DjRHz1cnxlkNSBIaePVoJIjjnHui8QHbiw=",
-        version = "v2.0.4",
     )
