@@ -221,7 +221,7 @@ func (r RPCTopic) Version() string {
 
 func TopicFromMessage(msg string, epoch types.Epoch) (string, error) {
 	if !messageMapping[msg] {
-		return "", errors.Errorf("message type %s doesn't have a registered mapping")
+		return "", errors.Errorf("message type %s doesn't have a registered mapping", msg)
 	}
 	version := SchemaVersionV1
 	isAltair := epoch >= params.BeaconConfig().AltairForkEpoch
