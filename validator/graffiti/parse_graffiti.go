@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	hexGraffitiPrefixKey = "hex"
-	hex0xPrefix          = "0x"
+	hexGraffitiPrefix = "hex"
+	hex0xPrefix       = "0x"
 )
 
 // Graffiti is a graffiti container.
@@ -61,32 +61,31 @@ func ParseGraffitiFile(f string) (*Graffiti, error) {
 // ParseHexGraffiti checks if a graffiti input is being represented in hex and converts it to ASCII if so
 func ParseHexGraffiti(rawGraffiti string) string {
 	splitGraffiti := strings.SplitN(rawGraffiti, ":", 2)
-	if strings.ToLower(splitGraffiti[0]) == hexGraffitiPrefixKey {
-		target := splitGraffiti[1]
-		if target == "" {
-			log.WithFields(logrus.Fields{
-				"input": rawGraffiti,
-			}).Debug("Blank hex tag to be interpreted as itself")
-			return rawGraffiti
-		}
-
-		if len(target) > 3 && target[:2] == hex0xPrefix {
-			target = target[2:]
-		}
-
-		if target == "" {
-			log.WithFields(logrus.Fields{
-				"input": rawGraffiti,
-			}).Debug("Nothing after 0x prefix, hex tag to be interpreted as itself")
-			return rawGraffiti
-		}
-
-		graffiti, err := hex.DecodeString(target)
-		if err != nil {
-			log.WithError(err).Debug("Error while decoding hex string")
-			return rawGraffiti
-		}
-		return string(graffiti)
+	if strings.ToLower(splitGraffiti[0]) != hexGraffitiPrefixKey {
+		return rawGraffiti
 	}
-	return rawGraffiti
+
+	target := splitGraffiti[1]
+	if target == "" {
+		log.WithFields("graffiti", rawGraffiti).Debug("Blank hex tag to be interpreted as itself")
+		return rawGraffiti
+	}
+
+	if len(target) > 3 && target[:2] == hex0xPrefix {
+		target = target[2:]
+	}
+
+	if target == "" {
+		log.WithFields(logrus.Fields{
+			"input": rawGraffiti,
+		}).Debug("Nothing after 0x prefix, hex tag to be interpreted as itself")
+		return rawGraffiti
+	}
+
+	graffiti, err := hex.DecodeString(target)
+	if err != nil {
+		log.WithError(err).Debug("Error while decoding hex string")
+		return rawGraffiti
+	}
+	return string(graffiti)
 }
