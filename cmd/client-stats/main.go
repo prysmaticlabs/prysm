@@ -28,7 +28,6 @@ var appFlags = []cli.Flag{
 	flags.ClientStatsAPIURLFlag,
 	flags.ScrapeIntervalFlag,
 }
-var scrapeInterval = 60 * time.Second
 
 func main() {
 	app := cli.App{}
@@ -101,10 +100,6 @@ func main() {
 }
 
 func run(ctx *cli.Context) error {
-	if ctx.IsSet(flags.ScrapeIntervalFlag.Name) {
-		scrapeInterval = ctx.Duration(flags.ScrapeIntervalFlag.Name)
-	}
-
 	var upd clientstats.Updater
 	if ctx.IsSet(flags.ClientStatsAPIURLFlag.Name) {
 		u := ctx.String(flags.ClientStatsAPIURLFlag.Name)
@@ -124,7 +119,7 @@ func run(ctx *cli.Context) error {
 		scrapers = append(scrapers, clientstats.NewValidatorScraper(u))
 	}
 
-	ticker := time.NewTicker(scrapeInterval)
+	ticker := time.NewTicker(ctx.Duration(flags.ScrapeIntervalFlag.Name))
 	for {
 		select {
 		case <-ticker.C:
