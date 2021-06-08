@@ -7,7 +7,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
+        "//proto/eth/v1alpha1:go_default_library",
         "//shared/bytesutil:go_default_library",
-        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
     ],
 )
