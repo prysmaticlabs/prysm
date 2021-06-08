@@ -1417,7 +1417,7 @@ def prysm_deps():
         nofuzz = True,
         sum = "h1:dJBk1m2/qjL1twPLf68JND55vvivMupZ4wIzE8CTdBw=",
         version = "v0.1.3",
-        )
+    )
 
     go_repository(
         name = "com_github_ianlancetaylor_cgosymbolizer",
