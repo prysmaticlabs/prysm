@@ -67,7 +67,7 @@ func ParseHexGraffiti(rawGraffiti string) string {
 
 	target := splitGraffiti[1]
 	if target == "" {
-		log.WithFields("graffiti", rawGraffiti).Debug("Blank hex tag to be interpreted as itself")
+		log.WithField("graffiti", rawGraffiti).Debug("Blank hex tag to be interpreted as itself")
 		return rawGraffiti
 	}
 
