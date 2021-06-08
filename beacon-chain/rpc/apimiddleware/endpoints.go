@@ -225,11 +225,11 @@ func prepareGraffiti(endpoint gateway.Endpoint, _ http.ResponseWriter, _ *http.R
 }
 
 func handleGetBeaconStateSsz(m *gateway.ApiProxyMiddleware, endpoint gateway.Endpoint, writer http.ResponseWriter, request *http.Request) (handled bool) {
-	if !beaconStateSszRequested(request) {
+	if !sszRequested(request) {
 		return false
 	}
 
-	if errJson := prepareRequestForProxying(m, endpoint, request); errJson != nil {
+	if errJson := prepareSszRequestForProxying(m, endpoint, request, "/eth/v1/debug/beacon/states/{state_id}/ssz"); errJson != nil {
 		gateway.WriteError(writer, errJson, nil)
 		return
 	}
@@ -261,7 +261,7 @@ func handleGetBeaconStateSsz(m *gateway.ApiProxyMiddleware, endpoint gateway.End
 		gateway.WriteError(writer, errJson, nil)
 		return
 	}
-	if errJson := writeMiddlewareResponseHeaderAndBody(grpcResponse, responseSsz, writer); errJson != nil {
+	if errJson := writeSszResponseHeaderAndBody(grpcResponse, writer, responseSsz, "beacon_state.ssz"); errJson != nil {
 		gateway.WriteError(writer, errJson, nil)
 		return
 	}
@@ -273,16 +273,24 @@ func handleGetBeaconStateSsz(m *gateway.ApiProxyMiddleware, endpoint gateway.End
 	return true
 }
 
-func beaconStateSszRequested(request *http.Request) bool {
+func sszRequested(request *http.Request) bool {
 	accept, ok := request.Header["Accept"]
-	return ok && accept[0] == "application/octet-stream"
+	if !ok {
+		return false
+	}
+	for _, v := range accept {
+		if v == "application/octet-stream" {
+			return true
+		}
+	}
+	return false
 }
 
-func prepareRequestForProxying(m *gateway.ApiProxyMiddleware, endpoint gateway.Endpoint, request *http.Request) gateway.ErrorJson {
+func prepareSszRequestForProxying(m *gateway.ApiProxyMiddleware, endpoint gateway.Endpoint, request *http.Request, sszPath string) gateway.ErrorJson {
 	request.URL.Scheme = "http"
 	request.URL.Host = m.GatewayAddress
 	request.RequestURI = ""
-	request.URL.Path = "/eth/v1/debug/beacon/states/{state_id}/ssz"
+	request.URL.Path = sszPath
 	return gateway.HandleUrlParameters(endpoint.Url, request, []string{})
 }
 
@@ -296,7 +304,7 @@ func serializeMiddlewareResponseIntoSsz(data string) (sszResponse []byte, errJso
 	return b, nil
 }
 
-func writeMiddlewareResponseHeaderAndBody(grpcResponse *http.Response, responseSsz []byte, writer http.ResponseWriter) gateway.ErrorJson {
+func writeSszResponseHeaderAndBody(grpcResponse *http.Response, writer http.ResponseWriter, responseSsz []byte, fileName string) gateway.ErrorJson {
 	for h, vs := range grpcResponse.Header {
 		for _, v := range vs {
 			writer.Header().Set(h, v)
@@ -304,7 +312,7 @@ func writeMiddlewareResponseHeaderAndBody(grpcResponse *http.Response, responseS
 	}
 	writer.Header().Set("Content-Length", strconv.Itoa(len(responseSsz)))
 	writer.Header().Set("Content-Type", "application/octet-stream")
-	writer.Header().Set("Content-Disposition", "attachment; filename=beacon_state_ssz")
+	writer.Header().Set("Content-Disposition", "attachment; filename="+fileName)
 	writer.WriteHeader(grpcResponse.StatusCode)
 	if _, err := io.Copy(writer, ioutil.NopCloser(bytes.NewReader(responseSsz))); err != nil {
 		e := fmt.Errorf("could not write response message: %w", err)

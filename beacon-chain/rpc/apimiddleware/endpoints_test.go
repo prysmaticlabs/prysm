@@ -95,23 +95,36 @@ func TestPrepareGraffiti(t *testing.T) {
 	})
 }
 
-func TestBeaconStateSszRequested(t *testing.T) {
+func TestSszRequested(t *testing.T) {
 	t.Run("SSZ requested", func(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example", nil)
 		request.Header["Accept"] = []string{"application/octet-stream"}
-		result := beaconStateSszRequested(request)
+		result := sszRequested(request)
 		assert.Equal(t, true, result)
+	})
+
+	t.Run("multiple content types", func(t *testing.T) {
+		request := httptest.NewRequest("GET", "http://foo.example", nil)
+		request.Header["Accept"] = []string{"application/json", "application/octet-stream"}
+		result := sszRequested(request)
+		assert.Equal(t, true, result)
+	})
+
+	t.Run("no header", func(t *testing.T) {
+		request := httptest.NewRequest("GET", "http://foo.example", nil)
+		result := sszRequested(request)
+		assert.Equal(t, false, result)
 	})
 
 	t.Run("other content type", func(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example", nil)
 		request.Header["Accept"] = []string{"application/json"}
-		result := beaconStateSszRequested(request)
+		result := sszRequested(request)
 		assert.Equal(t, false, result)
 	})
 }
 
-func TestPrepareRequestForProxying(t *testing.T) {
+func TestPrepareSszRequestForProxying(t *testing.T) {
 	middleware := &gateway.ApiProxyMiddleware{
 		GatewayAddress: "http://gateway.example",
 	}
@@ -119,11 +132,11 @@ func TestPrepareRequestForProxying(t *testing.T) {
 		Url: "http://foo.example",
 	}
 	var body bytes.Buffer
-	request := httptest.NewRequest("GET", "http://foo.example?query_param=bar", &body)
+	request := httptest.NewRequest("GET", "http://foo.example", &body)
 
-	errJson := prepareRequestForProxying(middleware, endpoint, request)
+	errJson := prepareSszRequestForProxying(middleware, endpoint, request, "/ssz")
 	require.Equal(t, true, errJson == nil)
-	assert.Equal(t, "/eth/v1/debug/beacon/states/{state_id}/ssz", request.URL.Path)
+	assert.Equal(t, "/ssz", request.URL.Path)
 }
 
 func TestSerializeMiddlewareResponseIntoSsz(t *testing.T) {
@@ -141,7 +154,7 @@ func TestSerializeMiddlewareResponseIntoSsz(t *testing.T) {
 	})
 }
 
-func TestWriteMiddlewareResponseHeaderAndBody(t *testing.T) {
+func TestWriteSszResponseHeaderAndBody(t *testing.T) {
 	response := &http.Response{
 		Header: http.Header{
 			"Foo": []string{"foo"},
@@ -152,7 +165,7 @@ func TestWriteMiddlewareResponseHeaderAndBody(t *testing.T) {
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
 
-	errJson := writeMiddlewareResponseHeaderAndBody(response, responseSsz, writer)
+	errJson := writeSszResponseHeaderAndBody(response, writer, responseSsz, "test.ssz")
 	require.Equal(t, true, errJson == nil)
 	v, ok := writer.Header()["Foo"]
 	require.Equal(t, true, ok, "header not found")
@@ -169,6 +182,6 @@ func TestWriteMiddlewareResponseHeaderAndBody(t *testing.T) {
 	v, ok = writer.Header()["Content-Disposition"]
 	require.Equal(t, true, ok, "header not found")
 	require.Equal(t, 1, len(v), "wrong number of header values")
-	assert.Equal(t, "attachment; filename=beacon_state_ssz", v[0])
+	assert.Equal(t, "attachment; filename=test.ssz", v[0])
 	assert.Equal(t, 204, writer.Code)
 }
