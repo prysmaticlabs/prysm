@@ -13,5 +13,5 @@ go_test(
         "minimal",
         "spectest",
     ],
-    deps = ["//spectest/shared/phase0/ssz_static:go_default_library"],
+    deps = ["//spectest/shared/altair/ssz_static:go_default_library"],
 )
