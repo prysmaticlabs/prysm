@@ -1085,8 +1085,8 @@ github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20210420143944-f4dfc9744288 h1
 github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20210420143944-f4dfc9744288/go.mod h1:YmSRTZNqAvVUg3BIG8uhT/BOkFk9+R2iCbxw5zOlnWY=
 github.com/prysmaticlabs/eth2-types v0.0.0-20210303084904-c9735a06829d h1:1dN7YAqMN3oAJ0LceWcyv/U4jHLh+5urnSnr4br6zg4=
 github.com/prysmaticlabs/eth2-types v0.0.0-20210303084904-c9735a06829d/go.mod h1:kOmQ/zdobQf7HUohDTifDNFEZfNaSCIY5fkONPL+dWU=
-github.com/prysmaticlabs/go-bitfield v0.0.0-20210515192923-def021850363 h1:n1fCZPIMlcNQ3iCN5w4vxmFFNWhEdEz3ICTerxjUFvA=
-github.com/prysmaticlabs/go-bitfield v0.0.0-20210515192923-def021850363/go.mod h1:hCwmef+4qXWjv0jLDbQdWnL0Ol7cS7/lCSS26WR+u6s=
+github.com/prysmaticlabs/go-bitfield v0.0.0-20210607200045-4da71aaf6c2d h1:46gKr69IlRpv/ENdlzG0SWo5nMLKJxS3tI5NOSdZndQ=
+github.com/prysmaticlabs/go-bitfield v0.0.0-20210607200045-4da71aaf6c2d/go.mod h1:hCwmef+4qXWjv0jLDbQdWnL0Ol7cS7/lCSS26WR+u6s=
 github.com/prysmaticlabs/grpc-gateway/v2 v2.3.1-0.20210524084005-787489c53c84 h1:0v/JSzw2zi7K/vPQ2MImHEeAVSJlHBgZWgZhqX8XNIg=
 github.com/prysmaticlabs/grpc-gateway/v2 v2.3.1-0.20210524084005-787489c53c84/go.mod h1:IOyTYjcIO0rkmnGBfJTL0NJ11exy/Tc2QEuv7hCXp24=
 github.com/prysmaticlabs/prombbolt v0.0.0-20210126082820-9b7adba6db7c h1:9PHRCuO/VN0s9k+RmLykho7AjDxblNYI5bYKed16NPU=

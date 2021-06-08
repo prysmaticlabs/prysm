@@ -4,15 +4,14 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 go_test(
     name = "go_default_test",
     size = "small",
-    srcs = ["upgrade_to_altair_test.go"],
+    srcs = ["ssz_static_test.go"],
     data = glob(["*.yaml"]) + [
         "@eth2_spec_tests_minimal//:test_data",
     ],
-    shard_count = 4,
     tags = [
         "manual",
         "minimal",
         "spectest",
     ],
-    deps = ["//spectest/shared/altair/fork:go_default_library"],
+    deps = ["//spectest/shared/altair/ssz_static:go_default_library"],
 )
