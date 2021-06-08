@@ -34,9 +34,9 @@ func TestTopicDeconstructor(t *testing.T) {
 		},
 		{
 			name:          "valid status topic",
-			topic:         protocolPrefix + statusMessageName + SchemaVersionV1,
+			topic:         protocolPrefix + StatusMessageName + SchemaVersionV1,
 			expectedError: "",
-			output:        []string{protocolPrefix, statusMessageName, SchemaVersionV1},
+			output:        []string{protocolPrefix, StatusMessageName, SchemaVersionV1},
 		},
 		{
 			name:          "malformed status topic",
@@ -46,13 +46,13 @@ func TestTopicDeconstructor(t *testing.T) {
 		},
 		{
 			name:          "valid beacon block by range topic",
-			topic:         protocolPrefix + beaconBlocksByRangeMessageName + SchemaVersionV1 + "/ssz_snappy",
+			topic:         protocolPrefix + BeaconBlocksByRangeMessageName + SchemaVersionV1 + "/ssz_snappy",
 			expectedError: "",
-			output:        []string{protocolPrefix, beaconBlocksByRangeMessageName, SchemaVersionV1},
+			output:        []string{protocolPrefix, BeaconBlocksByRangeMessageName, SchemaVersionV1},
 		},
 		{
 			name:          "beacon block by range topic with malformed version",
-			topic:         protocolPrefix + beaconBlocksByRangeMessageName + "/v" + "/ssz_snappy",
+			topic:         protocolPrefix + BeaconBlocksByRangeMessageName + "/v" + "/ssz_snappy",
 			expectedError: "unable to find a valid schema version for /eth2/beacon_chain/req/beacon_blocks_by_range/v/ssz_snappy",
 			output:        []string{""},
 		},

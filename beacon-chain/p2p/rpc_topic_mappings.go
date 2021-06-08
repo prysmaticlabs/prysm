@@ -7,6 +7,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // SchemaVersionV1 specifies the schema version for our rpc protocol ID.
@@ -18,52 +19,52 @@ const SchemaVersionV2 = "/2"
 // Specifies the protocol prefix for all our Req/Resp topics.
 const protocolPrefix = "/eth2/beacon_chain/req"
 
-// Specifies the name for the status message topic.
-const statusMessageName = "/status"
+// StatusMessageName specifies the name for the status message topic.
+const StatusMessageName = "/status"
 
-// Specifies the name for the goodbye message topic.
-const goodbyeMessageName = "/goodbye"
+// GoodbyeMessageName specifies the name for the goodbye message topic.
+const GoodbyeMessageName = "/goodbye"
 
-// Specifies the name for the beacon blocks by range message topic.
-const beaconBlocksByRangeMessageName = "/beacon_blocks_by_range"
+// BeaconBlocksByRangeMessageName specifies the name for the beacon blocks by range message topic.
+const BeaconBlocksByRangeMessageName = "/beacon_blocks_by_range"
 
-// Specifies the name for the beacon blocks by root message topic.
-const beaconBlocksByRootsMessageName = "/beacon_blocks_by_root"
+// BeaconBlocksByRootsMessageName specifies the name for the beacon blocks by root message topic.
+const BeaconBlocksByRootsMessageName = "/beacon_blocks_by_root"
 
-// Specifies the name for the ping message topic.
-const pingMessageName = "/ping"
+// PingMessageName Specifies the name for the ping message topic.
+const PingMessageName = "/ping"
 
-// Specifies the name for the metadata message topic.
-const metadataMessageName = "/metadata"
+// MetadataMessageName specifies the name for the metadata message topic.
+const MetadataMessageName = "/metadata"
 
 const (
 	// V1 RPC Topics
 	// RPCStatusTopicV1 defines the v1 topic for the status rpc method.
-	RPCStatusTopicV1 = protocolPrefix + statusMessageName + SchemaVersionV1
+	RPCStatusTopicV1 = protocolPrefix + StatusMessageName + SchemaVersionV1
 	// RPCGoodByeTopicV1 defines the v1 topic for the goodbye rpc method.
-	RPCGoodByeTopicV1 = protocolPrefix + goodbyeMessageName + SchemaVersionV1
+	RPCGoodByeTopicV1 = protocolPrefix + GoodbyeMessageName + SchemaVersionV1
 	// RPCBlocksByRangeTopicV1 defines v1 the topic for the blocks by range rpc method.
-	RPCBlocksByRangeTopicV1 = protocolPrefix + beaconBlocksByRangeMessageName + SchemaVersionV1
+	RPCBlocksByRangeTopicV1 = protocolPrefix + BeaconBlocksByRangeMessageName + SchemaVersionV1
 	// RPCBlocksByRootTopicV1 defines the v1 topic for the blocks by root rpc method.
-	RPCBlocksByRootTopicV1 = protocolPrefix + beaconBlocksByRootsMessageName + SchemaVersionV1
+	RPCBlocksByRootTopicV1 = protocolPrefix + BeaconBlocksByRootsMessageName + SchemaVersionV1
 	// RPCPingTopicV1 defines the v1 topic for the ping rpc method.
-	RPCPingTopicV1 = protocolPrefix + pingMessageName + SchemaVersionV1
+	RPCPingTopicV1 = protocolPrefix + PingMessageName + SchemaVersionV1
 	// RPCMetaDataTopicV1 defines the v1 topic for the metadata rpc method.
-	RPCMetaDataTopicV1 = protocolPrefix + metadataMessageName + SchemaVersionV1
+	RPCMetaDataTopicV1 = protocolPrefix + MetadataMessageName + SchemaVersionV1
 
 	// V2 RPC Topics
 	// RPCStatusTopicV2 defines the v2 topic for the status rpc method.
-	RPCStatusTopicV2 = protocolPrefix + statusMessageName + SchemaVersionV2
+	RPCStatusTopicV2 = protocolPrefix + StatusMessageName + SchemaVersionV2
 	// RPCGoodByeTopicV2 defines the v2 topic for the goodbye rpc method.
-	RPCGoodByeTopicV2 = protocolPrefix + goodbyeMessageName + SchemaVersionV2
+	RPCGoodByeTopicV2 = protocolPrefix + GoodbyeMessageName + SchemaVersionV2
 	// RPCBlocksByRangeTopicV2 defines v2 the topic for the blocks by range rpc method.
-	RPCBlocksByRangeTopicV2 = protocolPrefix + beaconBlocksByRangeMessageName + SchemaVersionV2
+	RPCBlocksByRangeTopicV2 = protocolPrefix + BeaconBlocksByRangeMessageName + SchemaVersionV2
 	// RPCBlocksByRootTopicV2 defines the v2 topic for the blocks by root rpc method.
-	RPCBlocksByRootTopicV2 = protocolPrefix + beaconBlocksByRootsMessageName + SchemaVersionV2
+	RPCBlocksByRootTopicV2 = protocolPrefix + BeaconBlocksByRootsMessageName + SchemaVersionV2
 	// RPCPingTopicV2 defines the v2 topic for the ping rpc method.
-	RPCPingTopicV2 = protocolPrefix + pingMessageName + SchemaVersionV2
+	RPCPingTopicV2 = protocolPrefix + PingMessageName + SchemaVersionV2
 	// RPCMetaDataTopicV2 defines the v2 topic for the metadata rpc method.
-	RPCMetaDataTopicV2 = protocolPrefix + metadataMessageName + SchemaVersionV2
+	RPCMetaDataTopicV2 = protocolPrefix + MetadataMessageName + SchemaVersionV2
 )
 
 // RPCTopicMappings map the base message type to the rpc request.
@@ -96,16 +97,17 @@ var protocolMapping = map[string]bool{
 // Maps all the protocol message names for the different rpc
 // topics.
 var messageMapping = map[string]bool{
-	statusMessageName:              true,
-	goodbyeMessageName:             true,
-	beaconBlocksByRangeMessageName: true,
-	beaconBlocksByRootsMessageName: true,
-	pingMessageName:                true,
-	metadataMessageName:            true,
+	StatusMessageName:              true,
+	GoodbyeMessageName:             true,
+	BeaconBlocksByRangeMessageName: true,
+	BeaconBlocksByRootsMessageName: true,
+	PingMessageName:                true,
+	MetadataMessageName:            true,
 }
 
 var versionMapping = map[string]bool{
 	SchemaVersionV1: true,
+	SchemaVersionV2: true,
 }
 
 // VerifyTopicMapping verifies that the topic and its accompanying
@@ -215,4 +217,16 @@ func (r RPCTopic) Version() string {
 		return ""
 	}
 	return version
+}
+
+func TopicFromMessage(msg string, epoch types.Epoch) (string, error) {
+	if !messageMapping[msg] {
+		return "", errors.Errorf("message type %s doesn't have a registered mapping")
+	}
+	version := SchemaVersionV1
+	isAltair := epoch >= params.BeaconConfig().AltairForkEpoch
+	if isAltair {
+		version = SchemaVersionV2
+	}
+	return protocolPrefix + msg + version, nil
 }

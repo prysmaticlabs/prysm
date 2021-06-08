@@ -45,7 +45,11 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (interfac
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
-	stream, err := s.cfg.P2P.Send(ctx, new(interface{}), p2p.RPCMetaDataTopicV1, id)
+	topic, err := p2p.TopicFromMessage(p2p.MetadataMessageName, helpers.SlotToEpoch(s.cfg.Chain.CurrentSlot()))
+	if err != nil {
+		return nil, err
+	}
+	stream, err := s.cfg.P2P.Send(ctx, new(interface{}), topic, id)
 	if err != nil {
 		return nil, err
 	}
