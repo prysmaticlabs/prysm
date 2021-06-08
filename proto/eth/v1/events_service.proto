@@ -31,14 +31,52 @@ option php_namespace = "Ethereum\\Eth\\v1";
 //
 // This service is defined in the upstream eth2.0-apis repository (eth2.0-APIs/apis/debug).
 service Events {
-  // StreamEvents --
-  rpc StreamEvents(StreamEventsRequest) returns (stream gateway.EventSource) {
-    option (google.api.http) = {
-      get: "/eth/v1/events"
-    };
-  }
+    // StreamEvents --
+    rpc StreamEvents(StreamEventsRequest) returns (stream gateway.EventSource) {
+      option (google.api.http) = {
+        get: "/eth/v1/events"
+      };
+    }
 }
 
 message StreamEventsRequest {
-  repeated string topics = 1;
+    repeated string topics = 1;
+}
+
+message EventHead {
+    uint64 slot = 1;
+    bytes block = 2;
+    bytes state = 3;
+    bool epoch_transition = 4;
+    bytes previous_duty_dependent_root = 5;
+    bytes current_duty_dependent_root = 6;
+}
+
+message EventBlock {
+  uint64 slot = 1;
+  bytes block = 2;
+}
+
+message EventChainReorg {
+    uint64 slot = 1;
+    uint64 depth = 2;
+    bytes old_head_block = 3;
+    bytes new_head_block = 4;
+    bytes old_head_state = 5;
+    bytes new_head_state = 6;
+    uint64 epoch = 7;
+}
+
+message EventFinalizedCheckpoint {
+  // A checkpoint is every epoch's first slot. The goal of Casper FFG
+  // is to link the check points together for justification and finalization.
+  bytes block = 1;
+
+  bytes state = 2;
+
+  // Epoch the checkpoint references.
+  uint64 epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+
+  // Block root of the checkpoint references.
+//  bytes root = 2 [(ethereum.eth.ext.ssz_size) = "32"];
 }
