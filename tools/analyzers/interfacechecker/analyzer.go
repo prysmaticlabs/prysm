@@ -27,6 +27,7 @@ var Analyzer = &analysis.Analyzer{
 // These are the selected interfaces that we want to parse through and check nilness for.
 var selectedInterfaces = []string{
 	"interfaces.SignedBeaconBlock",
+	"interfaces.MetadataV0",
 	"interface.BeaconState",
 	"interface.ReadOnlyBeaconState",
 	"interface.WriteOnlyBeaconState",

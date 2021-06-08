@@ -6,9 +6,9 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -93,12 +93,19 @@ func (ds *Server) getPeer(pid peer.ID) (*pbrpc.DebugPeerResponse, error) {
 		aVersion = ""
 	}
 	peerInfo := &pbrpc.DebugPeerResponse_PeerInfo{
-		Metadata:        metadata,
 		Protocols:       protocols,
 		FaultCount:      uint64(resp),
 		ProtocolVersion: pVersion,
 		AgentVersion:    aVersion,
 		PeerLatency:     uint64(peerStore.LatencyEWMA(pid).Milliseconds()),
+	}
+	if metadata != nil && !metadata.IsNil() {
+		switch {
+		case metadata.MetadataObjV0() != nil:
+			peerInfo.MetadataV0 = metadata.MetadataObjV0()
+		case metadata.MetadataObjV1() != nil:
+			peerInfo.MetadataV1 = metadata.MetadataObjV1()
+		}
 	}
 	addresses := peerStore.Addrs(pid)
 	var stringAddrs []string
