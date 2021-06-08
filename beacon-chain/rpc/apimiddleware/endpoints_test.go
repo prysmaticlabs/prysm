@@ -10,6 +10,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/gateway"
+	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -155,33 +156,66 @@ func TestSerializeMiddlewareResponseIntoSsz(t *testing.T) {
 }
 
 func TestWriteSszResponseHeaderAndBody(t *testing.T) {
-	response := &http.Response{
-		Header: http.Header{
-			"Foo": []string{"foo"},
-		},
-		StatusCode: 204,
-	}
-	responseSsz := []byte("ssz")
-	writer := httptest.NewRecorder()
-	writer.Body = &bytes.Buffer{}
+	t.Run("Ok", func(t *testing.T) {
+		response := &http.Response{
+			Header: http.Header{
+				"Foo": []string{"foo"},
+				"Grpc-Metadata-" + grpcutils.HttpCodeMetadataKey: []string{"204"},
+			},
+		}
+		responseSsz := []byte("ssz")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
 
-	errJson := writeSszResponseHeaderAndBody(response, writer, responseSsz, "test.ssz")
-	require.Equal(t, true, errJson == nil)
-	v, ok := writer.Header()["Foo"]
-	require.Equal(t, true, ok, "header not found")
-	require.Equal(t, 1, len(v), "wrong number of header values")
-	assert.Equal(t, "foo", v[0])
-	v, ok = writer.Header()["Content-Length"]
-	require.Equal(t, true, ok, "header not found")
-	require.Equal(t, 1, len(v), "wrong number of header values")
-	assert.Equal(t, "3", v[0])
-	v, ok = writer.Header()["Content-Type"]
-	require.Equal(t, true, ok, "header not found")
-	require.Equal(t, 1, len(v), "wrong number of header values")
-	assert.Equal(t, "application/octet-stream", v[0])
-	v, ok = writer.Header()["Content-Disposition"]
-	require.Equal(t, true, ok, "header not found")
-	require.Equal(t, 1, len(v), "wrong number of header values")
-	assert.Equal(t, "attachment; filename=test.ssz", v[0])
-	assert.Equal(t, 204, writer.Code)
+		errJson := writeSszResponseHeaderAndBody(response, writer, responseSsz, "test.ssz")
+		require.Equal(t, true, errJson == nil)
+		v, ok := writer.Header()["Foo"]
+		require.Equal(t, true, ok, "header not found")
+		require.Equal(t, 1, len(v), "wrong number of header values")
+		assert.Equal(t, "foo", v[0])
+		v, ok = writer.Header()["Content-Length"]
+		require.Equal(t, true, ok, "header not found")
+		require.Equal(t, 1, len(v), "wrong number of header values")
+		assert.Equal(t, "3", v[0])
+		v, ok = writer.Header()["Content-Type"]
+		require.Equal(t, true, ok, "header not found")
+		require.Equal(t, 1, len(v), "wrong number of header values")
+		assert.Equal(t, "application/octet-stream", v[0])
+		v, ok = writer.Header()["Content-Disposition"]
+		require.Equal(t, true, ok, "header not found")
+		require.Equal(t, 1, len(v), "wrong number of header values")
+		assert.Equal(t, "attachment; filename=test.ssz", v[0])
+		assert.Equal(t, 204, writer.Code)
+	})
+
+	t.Run("no gRPC status code header", func(t *testing.T) {
+		response := &http.Response{
+			Header:     http.Header{},
+			StatusCode: 204,
+		}
+		responseSsz := []byte("ssz")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		errJson := writeSszResponseHeaderAndBody(response, writer, responseSsz, "test.ssz")
+		require.Equal(t, true, errJson == nil)
+		assert.Equal(t, 204, writer.Code)
+	})
+
+	t.Run("invalid status code", func(t *testing.T) {
+		response := &http.Response{
+			Header: http.Header{
+				"Foo": []string{"foo"},
+				"Grpc-Metadata-" + grpcutils.HttpCodeMetadataKey: []string{"invalid"},
+			},
+		}
+		responseSsz := []byte("ssz")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		errJson := writeSszResponseHeaderAndBody(response, writer, responseSsz, "test.ssz")
+		require.Equal(t, false, errJson == nil)
+		assert.Equal(t, true, strings.Contains(errJson.Msg(), "could not parse status code"))
+		assert.Equal(t, http.StatusInternalServerError, errJson.StatusCode())
+	})
 }

@@ -9,11 +9,19 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/gateway"
+	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 )
+
+type sszConfig struct {
+	sszPath      string
+	fileName     string
+	responseJson sszResponseJson
+}
 
 // MiddlewareEndpointsRegistry is a registry of all endpoints that should be proxied by the API Middleware between an HTTP client and the grpc-gateway.
 //
@@ -90,6 +98,9 @@ func MiddlewareEndpointsRegistry() []gateway.Endpoint {
 			Url:         "/eth/v1/beacon/blocks/{block_id}",
 			GetResponse: &blockResponseJson{},
 			Err:         &gateway.DefaultErrorJson{},
+			Hooks: gateway.HookCollection{
+				CustomHandlers: []gateway.CustomHandler{handleGetBlockSsz},
+			},
 		},
 		{
 			Url:         "/eth/v1/beacon/blocks/{block_id}/root",
@@ -225,49 +236,72 @@ func prepareGraffiti(endpoint gateway.Endpoint, _ http.ResponseWriter, _ *http.R
 }
 
 func handleGetBeaconStateSsz(m *gateway.ApiProxyMiddleware, endpoint gateway.Endpoint, writer http.ResponseWriter, request *http.Request) (handled bool) {
+	config := sszConfig{
+		sszPath:      "/eth/v1/debug/beacon/states/{state_id}/ssz",
+		fileName:     "beacon_state.ssz",
+		responseJson: &beaconStateSszResponseJson{},
+	}
+	return handleGetSsz(m, endpoint, writer, request, config)
+}
+
+func handleGetBlockSsz(m *gateway.ApiProxyMiddleware, endpoint gateway.Endpoint, writer http.ResponseWriter, request *http.Request) (handled bool) {
+	config := sszConfig{
+		sszPath:      "/eth/v1/beacon/blocks/{block_id}/ssz",
+		fileName:     "beacon_block.ssz",
+		responseJson: &blockSszResponseJson{},
+	}
+	return handleGetSsz(m, endpoint, writer, request, config)
+}
+
+func handleGetSsz(
+	m *gateway.ApiProxyMiddleware,
+	endpoint gateway.Endpoint,
+	writer http.ResponseWriter,
+	request *http.Request,
+	config sszConfig,
+) (handled bool) {
 	if !sszRequested(request) {
 		return false
 	}
 
-	if errJson := prepareSszRequestForProxying(m, endpoint, request, "/eth/v1/debug/beacon/states/{state_id}/ssz"); errJson != nil {
+	if errJson := prepareSszRequestForProxying(m, endpoint, request, config.sszPath); errJson != nil {
 		gateway.WriteError(writer, errJson, nil)
-		return
+		return true
 	}
 	grpcResponse, errJson := gateway.ProxyRequest(request)
 	if errJson != nil {
 		gateway.WriteError(writer, errJson, nil)
-		return
+		return true
 	}
 	grpcResponseBody, errJson := gateway.ReadGrpcResponseBody(grpcResponse.Body)
 	if errJson != nil {
 		gateway.WriteError(writer, errJson, nil)
-		return
+		return true
 	}
 	if errJson := gateway.DeserializeGrpcResponseBodyIntoErrorJson(endpoint.Err, grpcResponseBody); errJson != nil {
 		gateway.WriteError(writer, errJson, nil)
-		return
+		return true
 	}
 	if endpoint.Err.Msg() != "" {
 		gateway.HandleGrpcResponseError(endpoint.Err, grpcResponse, writer)
-		return
+		return true
 	}
-	responseJson := &beaconStateSszResponseJson{}
-	if errJson := gateway.DeserializeGrpcResponseBodyIntoContainer(grpcResponseBody, responseJson); errJson != nil {
+	if errJson := gateway.DeserializeGrpcResponseBodyIntoContainer(grpcResponseBody, config.responseJson); errJson != nil {
 		gateway.WriteError(writer, errJson, nil)
-		return
+		return true
 	}
-	responseSsz, errJson := serializeMiddlewareResponseIntoSsz(responseJson.Data)
+	responseSsz, errJson := serializeMiddlewareResponseIntoSsz(config.responseJson.SszData())
 	if errJson != nil {
 		gateway.WriteError(writer, errJson, nil)
-		return
+		return true
 	}
-	if errJson := writeSszResponseHeaderAndBody(grpcResponse, writer, responseSsz, "beacon_state.ssz"); errJson != nil {
+	if errJson := writeSszResponseHeaderAndBody(grpcResponse, writer, responseSsz, config.fileName); errJson != nil {
 		gateway.WriteError(writer, errJson, nil)
-		return
+		return true
 	}
 	if errJson := gateway.Cleanup(grpcResponse.Body); errJson != nil {
 		gateway.WriteError(writer, errJson, nil)
-		return
+		return true
 	}
 
 	return true
@@ -305,10 +339,28 @@ func serializeMiddlewareResponseIntoSsz(data string) (sszResponse []byte, errJso
 }
 
 func writeSszResponseHeaderAndBody(grpcResponse *http.Response, writer http.ResponseWriter, responseSsz []byte, fileName string) gateway.ErrorJson {
+	var statusCodeHeader string
 	for h, vs := range grpcResponse.Header {
-		for _, v := range vs {
-			writer.Header().Set(h, v)
+		// We don't want to expose any gRPC metadata in the HTTP response, so we skip forwarding metadata headers.
+		if strings.HasPrefix(h, "Grpc-Metadata") {
+			if h == "Grpc-Metadata-"+grpcutils.HttpCodeMetadataKey {
+				statusCodeHeader = vs[0]
+			}
+		} else {
+			for _, v := range vs {
+				writer.Header().Set(h, v)
+			}
 		}
+	}
+	if statusCodeHeader != "" {
+		code, err := strconv.Atoi(statusCodeHeader)
+		if err != nil {
+			e := fmt.Errorf("could not parse status code: %w", err)
+			return &gateway.DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+		}
+		writer.WriteHeader(code)
+	} else {
+		writer.WriteHeader(grpcResponse.StatusCode)
 	}
 	writer.Header().Set("Content-Length", strconv.Itoa(len(responseSsz)))
 	writer.Header().Set("Content-Type", "application/octet-stream")

@@ -154,11 +154,6 @@ type beaconStateResponseJson struct {
 	Data *beaconStateJson `json:"data"`
 }
 
-// beaconStateResponseJson is used in /debug/beacon/states/{state_id} API endpoint.
-type beaconStateSszResponseJson struct {
-	Data string `json:"data"`
-}
-
 // forkChoiceHeadsResponseJson is used in /debug/beacon/heads API endpoint.
 type forkChoiceHeadsResponseJson struct {
 	Data []*forkChoiceHeadJson `json:"data"`
@@ -436,6 +431,33 @@ type syncInfoJson struct {
 	HeadSlot     string `json:"head_slot"`
 	SyncDistance string `json:"sync_distance"`
 	IsSyncing    bool   `json:"is_syncing"`
+}
+
+//----------------
+// SSZ
+// ---------------
+
+// sszResponseJson is a common abstraction over all SSZ responses.
+type sszResponseJson interface {
+	SszData() string
+}
+
+// blockSszResponseJson is used in /beacon/blocks/{block_id} API endpoint.
+type blockSszResponseJson struct {
+	Data string `json:"data"`
+}
+
+func (ssz *blockSszResponseJson) SszData() string {
+	return ssz.Data
+}
+
+// beaconStateResponseJson is used in /debug/beacon/states/{state_id} API endpoint.
+type beaconStateSszResponseJson struct {
+	Data string `json:"data"`
+}
+
+func (ssz *beaconStateSszResponseJson) SszData() string {
+	return ssz.Data
 }
 
 // ---------------
