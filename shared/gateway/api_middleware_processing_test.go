@@ -65,7 +65,7 @@ func (e *testErrorJson) SetCode(code int) {
 }
 
 func TestDeserializeRequestBodyIntoContainer(t *testing.T) {
-	t.Run("Ok", func(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
 		var bodyJson bytes.Buffer
 		err := json.NewEncoder(&bodyJson).Encode(defaultRequestContainer())
 		require.NoError(t, err)
@@ -87,7 +87,7 @@ func TestDeserializeRequestBodyIntoContainer(t *testing.T) {
 }
 
 func TestProcessRequestContainerFields(t *testing.T) {
-	t.Run("Ok", func(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
 		container := defaultRequestContainer()
 
 		errJson := ProcessRequestContainerFields(container)
@@ -142,7 +142,7 @@ func TestPrepareRequestForProxying(t *testing.T) {
 func TestHandleUrlParameters(t *testing.T) {
 	var body bytes.Buffer
 
-	t.Run("no params", func(t *testing.T) {
+	t.Run("no_params", func(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example/bar", &body)
 
 		errJson := HandleUrlParameters("/not_param", request, []string{})
@@ -150,7 +150,7 @@ func TestHandleUrlParameters(t *testing.T) {
 		assert.Equal(t, "/bar", request.URL.Path)
 	})
 
-	t.Run("with params", func(t *testing.T) {
+	t.Run("with_params", func(t *testing.T) {
 		muxVars := make(map[string]string)
 		muxVars["bar_param"] = "bar"
 		muxVars["quux_param"] = "quux"
@@ -162,7 +162,7 @@ func TestHandleUrlParameters(t *testing.T) {
 		assert.Equal(t, "/YmFy/baz/cXV1eA==", request.URL.Path)
 	})
 
-	t.Run("with literal", func(t *testing.T) {
+	t.Run("with_literal", func(t *testing.T) {
 		muxVars := make(map[string]string)
 		muxVars["bar_param"] = "bar"
 		request := httptest.NewRequest("GET", "http://foo.example/bar/baz", &body)
@@ -173,7 +173,7 @@ func TestHandleUrlParameters(t *testing.T) {
 		assert.Equal(t, "/bar/baz", request.URL.Path)
 	})
 
-	t.Run("with hex", func(t *testing.T) {
+	t.Run("with_hex", func(t *testing.T) {
 		muxVars := make(map[string]string)
 		muxVars["hex_param"] = "0x626172"
 		request := httptest.NewRequest("GET", "http://foo.example/0x626172/baz", &body)
@@ -188,7 +188,7 @@ func TestHandleUrlParameters(t *testing.T) {
 func TestHandleQueryParameters(t *testing.T) {
 	var body bytes.Buffer
 
-	t.Run("regular params", func(t *testing.T) {
+	t.Run("regular_params", func(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example?bar=bar&baz=baz", &body)
 
 		errJson := HandleQueryParameters(request, []QueryParam{{Name: "bar"}, {Name: "baz"}})
@@ -204,7 +204,7 @@ func TestHandleQueryParameters(t *testing.T) {
 		assert.Equal(t, "baz", v[0])
 	})
 
-	t.Run("hex and enum params", func(t *testing.T) {
+	t.Run("hex_and_enum_params", func(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example?hex=0x626172&baz=baz", &body)
 
 		errJson := HandleQueryParameters(request, []QueryParam{{Name: "hex", Hex: true}, {Name: "baz", Enum: true}})
@@ -231,7 +231,7 @@ func TestReadGrpcResponseBody(t *testing.T) {
 }
 
 func TestDeserializeGrpcResponseBodyIntoErrorJson(t *testing.T) {
-	t.Run("Ok", func(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
 		e := &testErrorJson{
 			Message: "foo",
 			Code:    500,
@@ -282,19 +282,19 @@ func TestHandleGrpcResponseError(t *testing.T) {
 func TestGrpcResponseIsStatusCodeOnly(t *testing.T) {
 	var body bytes.Buffer
 
-	t.Run("status code only", func(t *testing.T) {
+	t.Run("status_code_only", func(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example", &body)
 		result := GrpcResponseIsStatusCodeOnly(request, nil)
 		assert.Equal(t, true, result)
 	})
 
-	t.Run("different method", func(t *testing.T) {
+	t.Run("different_method", func(t *testing.T) {
 		request := httptest.NewRequest("POST", "http://foo.example", &body)
 		result := GrpcResponseIsStatusCodeOnly(request, nil)
 		assert.Equal(t, false, result)
 	})
 
-	t.Run("non-empty response", func(t *testing.T) {
+	t.Run("non_empty_response", func(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example", &body)
 		result := GrpcResponseIsStatusCodeOnly(request, &testRequestContainer{})
 		assert.Equal(t, false, result)
@@ -302,7 +302,7 @@ func TestGrpcResponseIsStatusCodeOnly(t *testing.T) {
 }
 
 func TestDeserializeGrpcResponseBodyIntoContainer(t *testing.T) {
-	t.Run("Ok", func(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
 		body, err := json.Marshal(defaultRequestContainer())
 		require.NoError(t, err)
 
@@ -381,7 +381,7 @@ func TestWriteMiddlewareResponseHeadersAndBody(t *testing.T) {
 		assert.DeepEqual(t, responseJson, writer.Body.Bytes())
 	})
 
-	t.Run("GET - no gRPC status code header", func(t *testing.T) {
+	t.Run("GET_no_grpc_status_code_header", func(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example", &body)
 		response := &http.Response{
 			Header:     http.Header{},
@@ -397,7 +397,7 @@ func TestWriteMiddlewareResponseHeadersAndBody(t *testing.T) {
 		assert.Equal(t, 204, writer.Code)
 	})
 
-	t.Run("GET - invalid status code", func(t *testing.T) {
+	t.Run("GET_invalid_status_code", func(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example", &body)
 		response := &http.Response{
 			Header: http.Header{},
@@ -435,7 +435,7 @@ func TestWriteMiddlewareResponseHeadersAndBody(t *testing.T) {
 }
 
 func TestWriteError(t *testing.T) {
-	t.Run("Ok", func(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
 		responseHeader := http.Header{
 			"Grpc-Metadata-" + grpcutils.CustomErrorMetadataKey: []string{"{\"CustomField\":\"bar\"}"},
 		}
@@ -463,7 +463,7 @@ func TestWriteError(t *testing.T) {
 		assert.Equal(t, "bar", eDeserialize.CustomField)
 	})
 
-	t.Run("invalid custom error header", func(t *testing.T) {
+	t.Run("invalid_custom_error_header", func(t *testing.T) {
 		logHook := test.NewGlobal()
 
 		responseHeader := http.Header{

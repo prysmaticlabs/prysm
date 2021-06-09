@@ -15,7 +15,7 @@ import (
 )
 
 func TestWrapAttestationArray(t *testing.T) {
-	t.Run("Ok", func(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
 		endpoint := gateway.Endpoint{
 			PostRequest: &submitAttestationRequestJson{},
 		}
@@ -36,7 +36,7 @@ func TestWrapAttestationArray(t *testing.T) {
 		assert.Equal(t, "1010", wrappedAtts.Data[0].AggregationBits)
 	})
 
-	t.Run("invalid body", func(t *testing.T) {
+	t.Run("invalid_body", func(t *testing.T) {
 		endpoint := gateway.Endpoint{
 			PostRequest: &submitAttestationRequestJson{},
 		}
@@ -61,7 +61,7 @@ func TestPrepareGraffiti(t *testing.T) {
 		},
 	}
 
-	t.Run("32 bytes", func(t *testing.T) {
+	t.Run("32_bytes", func(t *testing.T) {
 		endpoint.PostRequest.(*beaconBlockContainerJson).Message.Body.Graffiti = string(bytesutil.PadTo([]byte("foo"), 32))
 
 		prepareGraffiti(endpoint, nil, nil)
@@ -72,7 +72,7 @@ func TestPrepareGraffiti(t *testing.T) {
 		)
 	})
 
-	t.Run("less than 32 bytes", func(t *testing.T) {
+	t.Run("less_than_32_bytes", func(t *testing.T) {
 		endpoint.PostRequest.(*beaconBlockContainerJson).Message.Body.Graffiti = "foo"
 
 		prepareGraffiti(endpoint, nil, nil)
@@ -83,7 +83,7 @@ func TestPrepareGraffiti(t *testing.T) {
 		)
 	})
 
-	t.Run("more than 32 bytes", func(t *testing.T) {
+	t.Run("more_than_32_bytes", func(t *testing.T) {
 		endpoint.PostRequest.(*beaconBlockContainerJson).Message.Body.Graffiti = string(bytesutil.PadTo([]byte("foo"), 33))
 
 		prepareGraffiti(endpoint, nil, nil)

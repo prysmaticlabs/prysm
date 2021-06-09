@@ -14,27 +14,27 @@ import (
 )
 
 func TestSszRequested(t *testing.T) {
-	t.Run("SSZ requested", func(t *testing.T) {
+	t.Run("ssz_requested", func(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example", nil)
 		request.Header["Accept"] = []string{"application/octet-stream"}
 		result := sszRequested(request)
 		assert.Equal(t, true, result)
 	})
 
-	t.Run("multiple content types", func(t *testing.T) {
+	t.Run("multiple_content_types", func(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example", nil)
 		request.Header["Accept"] = []string{"application/json", "application/octet-stream"}
 		result := sszRequested(request)
 		assert.Equal(t, true, result)
 	})
 
-	t.Run("no header", func(t *testing.T) {
+	t.Run("no_header", func(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example", nil)
 		result := sszRequested(request)
 		assert.Equal(t, false, result)
 	})
 
-	t.Run("other content type", func(t *testing.T) {
+	t.Run("other_content_type", func(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example", nil)
 		request.Header["Accept"] = []string{"application/json"}
 		result := sszRequested(request)
@@ -58,13 +58,13 @@ func TestPrepareSszRequestForProxying(t *testing.T) {
 }
 
 func TestSerializeMiddlewareResponseIntoSsz(t *testing.T) {
-	t.Run("Ok", func(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
 		ssz, errJson := serializeMiddlewareResponseIntoSsz("Zm9v")
 		require.Equal(t, true, errJson == nil)
 		assert.DeepEqual(t, []byte("foo"), ssz)
 	})
 
-	t.Run("invalid data", func(t *testing.T) {
+	t.Run("invalid_data", func(t *testing.T) {
 		_, errJson := serializeMiddlewareResponseIntoSsz("invalid")
 		require.Equal(t, false, errJson == nil)
 		assert.Equal(t, true, strings.Contains(errJson.Msg(), "could not decode response body into base64"))
@@ -73,7 +73,7 @@ func TestSerializeMiddlewareResponseIntoSsz(t *testing.T) {
 }
 
 func TestWriteSszResponseHeaderAndBody(t *testing.T) {
-	t.Run("Ok", func(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
 		response := &http.Response{
 			Header: http.Header{
 				"Foo": []string{"foo"},
@@ -105,7 +105,7 @@ func TestWriteSszResponseHeaderAndBody(t *testing.T) {
 		assert.Equal(t, 204, writer.Code)
 	})
 
-	t.Run("no gRPC status code header", func(t *testing.T) {
+	t.Run("no_grpc_status_code_header", func(t *testing.T) {
 		response := &http.Response{
 			Header:     http.Header{},
 			StatusCode: 204,
@@ -119,7 +119,7 @@ func TestWriteSszResponseHeaderAndBody(t *testing.T) {
 		assert.Equal(t, 204, writer.Code)
 	})
 
-	t.Run("invalid status code", func(t *testing.T) {
+	t.Run("invalid_status_code", func(t *testing.T) {
 		response := &http.Response{
 			Header: http.Header{
 				"Foo": []string{"foo"},

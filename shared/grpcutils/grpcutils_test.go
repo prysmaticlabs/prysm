@@ -19,7 +19,7 @@ type customErrorData struct {
 }
 
 func TestAppendHeaders(t *testing.T) {
-	t.Run("One header", func(t *testing.T) {
+	t.Run("one_header", func(t *testing.T) {
 		ctx := AppendHeaders(context.Background(), []string{"first=value1"})
 		md, ok := metadata.FromOutgoingContext(ctx)
 		require.Equal(t, true, ok, "Failed to read context metadata")
@@ -27,7 +27,7 @@ func TestAppendHeaders(t *testing.T) {
 		assert.Equal(t, "value1", md.Get("first")[0])
 	})
 
-	t.Run("Multiple headers", func(t *testing.T) {
+	t.Run("multiple_headers", func(t *testing.T) {
 		ctx := AppendHeaders(context.Background(), []string{"first=value1", "second=value2"})
 		md, ok := metadata.FromOutgoingContext(ctx)
 		require.Equal(t, true, ok, "Failed to read context metadata")
@@ -36,7 +36,7 @@ func TestAppendHeaders(t *testing.T) {
 		assert.Equal(t, "value2", md.Get("second")[0])
 	})
 
-	t.Run("One empty header", func(t *testing.T) {
+	t.Run("one_empty_header", func(t *testing.T) {
 		ctx := AppendHeaders(context.Background(), []string{"first=value1", ""})
 		md, ok := metadata.FromOutgoingContext(ctx)
 		require.Equal(t, true, ok, "Failed to read context metadata")
@@ -44,7 +44,7 @@ func TestAppendHeaders(t *testing.T) {
 		assert.Equal(t, "value1", md.Get("first")[0])
 	})
 
-	t.Run("Incorrect header", func(t *testing.T) {
+	t.Run("incorrect_header", func(t *testing.T) {
 		logHook := logTest.NewGlobal()
 		ctx := AppendHeaders(context.Background(), []string{"first=value1", "second"})
 		md, ok := metadata.FromOutgoingContext(ctx)
@@ -54,7 +54,7 @@ func TestAppendHeaders(t *testing.T) {
 		assert.LogsContain(t, logHook, "Skipping second")
 	})
 
-	t.Run("Header value with equal sign", func(t *testing.T) {
+	t.Run("header_value_with_equal_sign", func(t *testing.T) {
 		ctx := AppendHeaders(context.Background(), []string{"first=value=1"})
 		md, ok := metadata.FromOutgoingContext(ctx)
 		require.Equal(t, true, ok, "Failed to read context metadata")

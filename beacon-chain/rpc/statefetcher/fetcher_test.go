@@ -35,7 +35,7 @@ func TestGetState(t *testing.T) {
 	stateRoot, err := state.HashTreeRoot(ctx)
 	require.NoError(t, err)
 
-	t.Run("Head", func(t *testing.T) {
+	t.Run("head", func(t *testing.T) {
 		p := StateProvider{
 			ChainInfoFetcher: &chainMock.ChainService{State: state},
 		}
@@ -47,7 +47,7 @@ func TestGetState(t *testing.T) {
 		assert.DeepEqual(t, stateRoot, sRoot)
 	})
 
-	t.Run("Genesis", func(t *testing.T) {
+	t.Run("genesis", func(t *testing.T) {
 		params.SetupTestConfigCleanup(t)
 		cfg := params.BeaconConfig()
 		cfg.ConfigName = "test"
@@ -83,7 +83,7 @@ func TestGetState(t *testing.T) {
 		assert.DeepEqual(t, stateRoot, sRoot)
 	})
 
-	t.Run("Finalized", func(t *testing.T) {
+	t.Run("finalized", func(t *testing.T) {
 		stateGen := stategen.NewMockService()
 		stateGen.StatesByRoot[stateRoot] = state
 
@@ -103,7 +103,7 @@ func TestGetState(t *testing.T) {
 		assert.Equal(t, stateRoot, sRoot)
 	})
 
-	t.Run("Justified", func(t *testing.T) {
+	t.Run("justified", func(t *testing.T) {
 		stateGen := stategen.NewMockService()
 		stateGen.StatesByRoot[stateRoot] = state
 
@@ -123,7 +123,7 @@ func TestGetState(t *testing.T) {
 		assert.DeepEqual(t, stateRoot, sRoot)
 	})
 
-	t.Run("Hex root", func(t *testing.T) {
+	t.Run("hex_root", func(t *testing.T) {
 		stateId, err := hexutil.Decode("0x" + strings.Repeat("0", 63) + "1")
 		require.NoError(t, err)
 		stateGen := stategen.NewMockService()
@@ -141,7 +141,7 @@ func TestGetState(t *testing.T) {
 		assert.DeepEqual(t, stateRoot, sRoot)
 	})
 
-	t.Run("Hex root not found", func(t *testing.T) {
+	t.Run("hex_root_not_found", func(t *testing.T) {
 		p := StateProvider{
 			ChainInfoFetcher: &chainMock.ChainService{State: state},
 		}
@@ -151,7 +151,7 @@ func TestGetState(t *testing.T) {
 		require.ErrorContains(t, "state not found in the last 8192 state roots", err)
 	})
 
-	t.Run("Slot", func(t *testing.T) {
+	t.Run("slot", func(t *testing.T) {
 		stateGen := stategen.NewMockService()
 		stateGen.StatesBySlot[headSlot] = state
 
@@ -167,7 +167,7 @@ func TestGetState(t *testing.T) {
 		assert.Equal(t, stateRoot, sRoot)
 	})
 
-	t.Run("Slot too big", func(t *testing.T) {
+	t.Run("slot_too_big", func(t *testing.T) {
 		p := StateProvider{
 			GenesisTimeFetcher: &chainMock.ChainService{
 				Genesis: time.Now(),
@@ -177,7 +177,7 @@ func TestGetState(t *testing.T) {
 		assert.ErrorContains(t, "slot cannot be in the future", err)
 	})
 
-	t.Run("Invalid state", func(t *testing.T) {
+	t.Run("invalid_state", func(t *testing.T) {
 		p := StateProvider{}
 		_, err := p.State(ctx, []byte("foo"))
 		require.ErrorContains(t, "could not parse state ID", err)
@@ -197,7 +197,7 @@ func TestGetStateRoot(t *testing.T) {
 	stateRoot, err := state.HashTreeRoot(ctx)
 	require.NoError(t, err)
 
-	t.Run("Head", func(t *testing.T) {
+	t.Run("head", func(t *testing.T) {
 		b := testutil.NewBeaconBlock()
 		b.Block.StateRoot = stateRoot[:]
 		p := StateProvider{
@@ -212,7 +212,7 @@ func TestGetStateRoot(t *testing.T) {
 		assert.DeepEqual(t, stateRoot[:], s)
 	})
 
-	t.Run("Genesis", func(t *testing.T) {
+	t.Run("genesis", func(t *testing.T) {
 		db := testDB.SetupDB(t)
 		b := testutil.NewBeaconBlock()
 		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(b)))
@@ -240,7 +240,7 @@ func TestGetStateRoot(t *testing.T) {
 		assert.DeepEqual(t, genesisBlock.Block().StateRoot(), s)
 	})
 
-	t.Run("Finalized", func(t *testing.T) {
+	t.Run("finalized", func(t *testing.T) {
 		db := testDB.SetupDB(t)
 		genesis := bytesutil.ToBytes32([]byte("genesis"))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesis))
@@ -271,7 +271,7 @@ func TestGetStateRoot(t *testing.T) {
 		assert.DeepEqual(t, blk.Block.StateRoot, s)
 	})
 
-	t.Run("Justified", func(t *testing.T) {
+	t.Run("justified", func(t *testing.T) {
 		db := testDB.SetupDB(t)
 		genesis := bytesutil.ToBytes32([]byte("genesis"))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesis))
@@ -302,7 +302,7 @@ func TestGetStateRoot(t *testing.T) {
 		assert.DeepEqual(t, blk.Block.StateRoot, s)
 	})
 
-	t.Run("Hex root", func(t *testing.T) {
+	t.Run("hex_root", func(t *testing.T) {
 		stateId, err := hexutil.Decode("0x" + strings.Repeat("0", 63) + "1")
 		require.NoError(t, err)
 
@@ -315,7 +315,7 @@ func TestGetStateRoot(t *testing.T) {
 		assert.DeepEqual(t, stateId, s)
 	})
 
-	t.Run("Hex root not found", func(t *testing.T) {
+	t.Run("hex_root_not_found", func(t *testing.T) {
 		p := StateProvider{
 			ChainInfoFetcher: &chainMock.ChainService{State: state},
 		}
@@ -325,7 +325,7 @@ func TestGetStateRoot(t *testing.T) {
 		require.ErrorContains(t, "state root not found in the last 8192 state roots", err)
 	})
 
-	t.Run("Slot", func(t *testing.T) {
+	t.Run("slot", func(t *testing.T) {
 		db := testDB.SetupDB(t)
 		genesis := bytesutil.ToBytes32([]byte("genesis"))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesis))
@@ -352,7 +352,7 @@ func TestGetStateRoot(t *testing.T) {
 		assert.DeepEqual(t, blk.Block.StateRoot, s)
 	})
 
-	t.Run("Slot too big", func(t *testing.T) {
+	t.Run("slot_too_big", func(t *testing.T) {
 		p := StateProvider{
 			GenesisTimeFetcher: &chainMock.ChainService{
 				Genesis: time.Now(),
@@ -362,7 +362,7 @@ func TestGetStateRoot(t *testing.T) {
 		assert.ErrorContains(t, "slot cannot be in the future", err)
 	})
 
-	t.Run("Invalid state", func(t *testing.T) {
+	t.Run("invalid_state", func(t *testing.T) {
 		p := StateProvider{}
 		_, err := p.StateRoot(ctx, []byte("foo"))
 		require.ErrorContains(t, "could not parse state ID", err)
