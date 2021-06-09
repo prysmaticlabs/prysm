@@ -7,5 +7,5 @@ func hasAltairKey(enc []byte) bool {
 	if len(altairKey) >= len(enc) {
 		return false
 	}
-	return bytes.Equal(enc[:len(altairKey)], altairKey) 
+	return bytes.Equal(enc[:len(altairKey)], altairKey)
 }
