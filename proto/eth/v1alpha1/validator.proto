@@ -220,6 +220,38 @@ service BeaconNodeValidator {
             body: "*"  
         };
     }
+
+    // Finds a duplicate validator given following request arguments :
+    // 1. N (2 past) Epochs to check for duplicate
+    // 2. Array of pubKeys and Target Epochs
+    // The rpc endpoint then does this logic
+    // loop through pubKeys_Targets  if Head - Target < 2 ,  skip this pubKey, next
+    // Else if the  balance_@Head - balance_@Head-1 > -2*base_reward (done for @head-1 > @head-2 also) then return True (a duplicate) otherwise false.
+    rpc DetectDoppelganger(DetectDoppelgangerRequest) returns (DetectDoppelgangerResponse) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/validator/detectdoppelganger"
+        };
+    }
+}
+
+
+message PubKeyTarget {
+    //bytes pub_keys = 1;
+    bytes pub_key = 1 [(ethereum.eth.ext.ssz_size) = "48"];
+    uint64 target_epoch = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+}
+
+message DetectDoppelgangerRequest{
+    // PubKeys and corresponding  Last recorded Target
+    repeated PubKeyTarget pub_keys_targets= 2;
+}
+
+message DetectDoppelgangerResponse{
+    // Bool of whether a duplicate was found
+    // False could mean that the Target vs Head conditions were not met
+    // Or that the balance decreased due to inactivity
+    bool duplicate_found = 1;
+    bytes public_key = 2;
 }
 
 message DomainRequest {

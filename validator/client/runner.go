@@ -97,9 +97,15 @@ func run(ctx context.Context, v iface.Validator) {
 
 	// if flag is set, check for doppelganger
 	if v.GetDuplicateCheckFlag() {
-		//if err := v.StartDoppelgangerService(ctx); err != nil {
-		log.Warnf("Doppelganger service - return to runner - error: ") //%v", err)
-		//}
+		key, err := v.DoppelgangerService(ctx)
+		if err != nil {
+			log.Warnf("Doppelganger service - return to runner - error: %v", err)
+		}
+		if key != nil {
+			log.Fatalf("Doppelganger detected! Validator key 0x%x seemsto be running elsewhere"+
+				"this process will exit, avoiding a proposer or attester slashing event."+
+				"Pelase ensure you are not running your validator elsewhere ", key)
+		}
 	}
 
 	connectionErrorChannel := make(chan error, 1)

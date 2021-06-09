@@ -8,7 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	//ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	//"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	//"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -18,50 +18,33 @@ type DuplicateDetection struct {
 	DuplicateKey []byte
 }
 
-type PubKeyTarget struct {
-	TargetEpoch types.Epoch
-	pubKey      [48]byte
-}
-
-// The Public Keys and Indices of this Validator. Retrieve once.
-//var validatingPublicKeys [][48]byte
-var valIndices []types.ValidatorIndex
-
-//var  pKTargets    []PubKeyTarget
-
-// N epochs to check
-var NoEpochsToCheck uint64
-
 // Starts the Doppelganger detection
-func (v *validator) StartDoppelgangerService(ctx context.Context) ([48]byte, bool, error) {
+func (v *validator) DoppelgangerService(ctx context.Context) ([]byte, error) {
 	pKTargets, _, err := v.retrieveValidatingPublicKeysTargets(ctx)
 	if err != nil {
-		return pKTargets[1].pubKey, false, errors.Wrap(err, "Doppelganger detection - failed to retrieve validator keys and indices")
+		return nil, errors.Wrap(err, "Doppelganger detection - failed to retrieve validator keys and indices")
 	}
 
-	/*NoEpochsToCheck = params.BeaconConfig().DuplicateValidatorEpochsCheck
+	/*NoEpochsToCheck = params.BeaconConfig().DuplicateValidatorEpochsCheck */
 	// rpc call to retrieve balances for this validator indices
-	req := &ethpb..DetectDoppelgangerRequest{PubKeyTarget:pKTargets,
-		NEpochDuplicateCheck: NoEpochsToCheck}
+	req := &ethpb.DetectDoppelgangerRequest{PubKeysTargets: pKTargets}
 
-	//res, err := v.beaconClient.ListValidatorBalances(ctx, req)
+	res, err := v.validatorClient.DetectDoppelganger(ctx, req)
 	if err != nil {
-		return nil, false, errors.Wrap(err, "Doppelganger detection - failed to beacon-rpc list balances")
+		return nil, errors.Wrap(err, "Doppelganger detection - failed to beacon-rpc list balances")
 	}
-	return nil, false, nil
-	*/
-	//return res.duplicateFound, res.pubKey, nil
-	return pKTargets[1].pubKey, false, nil
+	return res.PublicKey, nil
+
 }
 
 // Load the PublicKeys and the corresponding Indices of the Validator. Do it once.
-func (v *validator) retrieveValidatingPublicKeysTargets(ctx context.Context) ([]PubKeyTarget, [][48]byte, error) {
+func (v *validator) retrieveValidatingPublicKeysTargets(ctx context.Context) ([]*ethpb.PubKeyTarget, [][48]byte, error) {
 	validatingPublicKeys, err := v.keyManager.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	pKTargets := make([]PubKeyTarget, len(validatingPublicKeys))
+	pKsTargets := make([]*ethpb.PubKeyTarget, len(validatingPublicKeys))
 
 	// Convert the ValidatingKeys to an array of Indices to be used by Committee retrieval.
 	for _, key := range validatingPublicKeys {
@@ -69,11 +52,12 @@ func (v *validator) retrieveValidatingPublicKeysTargets(ctx context.Context) ([]
 		if err != nil {
 			return nil, nil, err
 		}
-		pKT := PubKeyTarget{pubKey: key, TargetEpoch: lowestTargetEpoch}
+		// if validator db has no target, key is not bothered with
 		if exists {
-			pKTargets = append(pKTargets, pKT)
+			pKT := &ethpb.PubKeyTarget{PubKey: key[:], TargetEpoch: lowestTargetEpoch}
+			pKsTargets = append(pKsTargets, pKT)
 		}
 	}
-	return pKTargets, validatingPublicKeys, nil
+	return pKsTargets, validatingPublicKeys, nil
 
 }

@@ -50,5 +50,6 @@ type Validator interface {
 	GetKeymanager() keymanager.IKeymanager
 	ReceiveBlocks(ctx context.Context, connectionErrorChannel chan<- error)
 	HandleKeyReload(ctx context.Context, newKeys [][48]byte) (bool, error)
+	DoppelgangerService(ctx context.Context) ([]byte, error)
 	GetDuplicateCheckFlag() bool
 }

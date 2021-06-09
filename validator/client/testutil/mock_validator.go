@@ -240,7 +240,7 @@ func (fv *FakeValidator) GetDuplicateCheckFlag() bool {
 }
 
 // Starts the Doppelganger detection
-func (fv *FakeValidator) StartDoppelgangerService(ctx context.Context) error {
+func (fv *FakeValidator) DoppelgangerService(ctx context.Context) ([]byte, error) {
 	if fv.DuplicateCheckFlag {
 		slot := <-fv.NextSlot()
 		// Counting N epochs from the starting Slot(substract 1 since we alwasy check slot-1 at the start).
@@ -250,11 +250,11 @@ func (fv *FakeValidator) StartDoppelgangerService(ctx context.Context) error {
 		for {
 			// Are we done?
 			if slot >= endingSlot.Sub(1) {
-				return nil
+				return nil, nil
 			}
 			slot = <-fv.NextSlot()
 		}
 	} else {
-		return nil
+		return nil, nil
 	}
 }
