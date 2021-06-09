@@ -46,7 +46,7 @@ require (
 	github.com/herumi/bls-eth-go-binary v0.0.0-20210130185500-57372fb27371
 	github.com/ianlancetaylor/cgosymbolizer v0.0.0-20200424224625-be1b05b0b279
 	github.com/ipfs/go-ipfs-addr v0.0.1
-	github.com/ipfs/go-log/v2 v2.1.1
+	github.com/ipfs/go-log/v2 v2.1.3
 	github.com/joonix/log v0.0.0-20200409080653-9c1d2ceb5f1d
 	github.com/json-iterator/go v1.1.10
 	github.com/k0kubun/go-ansi v0.0.0-20180517002512-3bf9e2903213
@@ -55,17 +55,14 @@ require (
 	github.com/koron/go-ssdp v0.0.2 // indirect
 	github.com/kr/pretty v0.2.1
 	github.com/kr/text v0.2.0 // indirect
-	github.com/libp2p/go-libp2p v0.12.1-0.20201208224947-3155ff3089c0
+	github.com/libp2p/go-libp2p v0.14.1
 	github.com/libp2p/go-libp2p-blankhost v0.2.0
-	github.com/libp2p/go-libp2p-core v0.7.0
-	github.com/libp2p/go-libp2p-noise v0.1.2
-	github.com/libp2p/go-libp2p-peerstore v0.2.6
+	github.com/libp2p/go-libp2p-core v0.8.5
+	github.com/libp2p/go-libp2p-noise v0.2.0
+	github.com/libp2p/go-libp2p-peerstore v0.2.7
 	github.com/libp2p/go-libp2p-pubsub v0.4.0
-	github.com/libp2p/go-libp2p-swarm v0.3.1
+	github.com/libp2p/go-libp2p-swarm v0.5.0
 	github.com/libp2p/go-libp2p-tls v0.1.4-0.20200421131144-8a8ad624a291 // indirect
-	github.com/libp2p/go-libp2p-yamux v0.4.1 // indirect
-	github.com/libp2p/go-netroute v0.1.4 // indirect
-	github.com/libp2p/go-sockaddr v0.1.0 // indirect
 	github.com/libp2p/go-tcp-transport v0.2.1
 	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/lunixbochs/vtclean v1.0.0 // indirect
@@ -104,9 +101,9 @@ require (
 	github.com/wercker/journalhook v0.0.0-20180428041537-5d0a5ae867b3
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	go.etcd.io/bbolt v1.3.5
-	go.opencensus.io v0.22.6
+	go.opencensus.io v0.23.0
 	go.uber.org/automaxprocs v1.3.0
-	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
+	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2
 	golang.org/x/exp v0.0.0-20200513190911-00229845015e
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/tools v0.1.1
