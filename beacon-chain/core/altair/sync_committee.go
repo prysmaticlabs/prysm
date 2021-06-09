@@ -19,18 +19,7 @@ import (
 // Spec code:
 // def get_next_sync_committee(state: BeaconState) -> SyncCommittee:
 //    """
-//    Return the *next* sync committee for a given ``state``.
-//
-//    ``SyncCommittee`` contains an aggregate pubkey that enables
-//    resource-constrained clients to save some computation when verifying
-//    the sync committee's signature.
-//
-//    ``SyncCommittee`` can also contain duplicate pubkeys, when ``get_next_sync_committee_indices``
-//    returns duplicate indices. Implementations must take care when handling
-//    optimizations relating to aggregation and verification in the presence of duplicates.
-//
-//    Note: This function should only be called at sync committee period boundaries by ``process_sync_committee_updates``
-//    as ``get_next_sync_committee_indices`` is not stable within a given period.
+//    Return the next sync committee, with possible pubkey duplicates.
 //    """
 //    indices = get_next_sync_committee_indices(state)
 //    pubkeys = [state.validators[index].pubkey for index in indices]
@@ -61,10 +50,7 @@ func NextSyncCommittee(state iface.BeaconStateAltair) (*pb.SyncCommittee, error)
 // Spec code:
 // def get_next_sync_committee_indices(state: BeaconState) -> Sequence[ValidatorIndex]:
 //    """
-//    Return the sequence of sync committee indices (which may include duplicate indices)
-//    for the next sync committee, given a ``state`` at a sync committee period boundary.
-//
-//    Note: Committee can contain duplicate indices for small validator sets (< SYNC_COMMITTEE_SIZE + 128)
+//    Return the sync committee indices, with possible duplicates, for the next sync committee.
 //    """
 //    epoch = Epoch(get_current_epoch(state) + 1)
 //

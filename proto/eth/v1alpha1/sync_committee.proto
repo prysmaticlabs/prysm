@@ -25,7 +25,7 @@ option java_package = "org.ethereum.eth.v1alpha1";
 option php_namespace = "Ethereum\\Eth\\v1alpha1";
 
 // Sync committee object to support light client.
-message SyncCommitteeSignature {
+message SyncCommitteeMessage {
   // Slot to which this contribution pertains.
   uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
 
@@ -52,7 +52,7 @@ message SyncCommitteeContribution {
 
   // A bit is set if a signature from the validator at the corresponding
   // index in the subcommittee is present in the aggregate `signature`.
-  bytes aggregation_bits = 4  [(ethereum.eth.ext.ssz_size) = "32"];
+  bytes aggregation_bits = 4  [(ethereum.eth.ext.ssz_size) = "16", (ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/go-bitfield.Bitvector128"];
 
   // Signature by the validator(s) over the block root of `slot`.
   bytes signature = 5 [(ethereum.eth.ext.ssz_size) = "96"];

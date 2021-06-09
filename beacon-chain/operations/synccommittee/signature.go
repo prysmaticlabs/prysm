@@ -8,7 +8,7 @@ import (
 
 // SaveSyncCommitteeSignature saves a sync committee signature in cache.
 // The cache does not filter out duplicate signature, it will be up to the caller.
-func (s *Store) SaveSyncCommitteeSignature(sig *ethpb.SyncCommitteeSignature) error {
+func (s *Store) SaveSyncCommitteeSignature(sig *ethpb.SyncCommitteeMessage) error {
 	if sig == nil {
 		return nilSignatureErr
 	}
@@ -20,7 +20,7 @@ func (s *Store) SaveSyncCommitteeSignature(sig *ethpb.SyncCommitteeSignature) er
 
 	sigs, ok := s.signatureCache[slot]
 	if !ok {
-		s.signatureCache[slot] = []*ethpb.SyncCommitteeSignature{copied}
+		s.signatureCache[slot] = []*ethpb.SyncCommitteeMessage{copied}
 		return nil
 	}
 
@@ -30,7 +30,7 @@ func (s *Store) SaveSyncCommitteeSignature(sig *ethpb.SyncCommitteeSignature) er
 }
 
 // SyncCommitteeSignatures returns sync committee signatures in cache by slot.
-func (s *Store) SyncCommitteeSignatures(slot types.Slot) []*ethpb.SyncCommitteeSignature {
+func (s *Store) SyncCommitteeSignatures(slot types.Slot) []*ethpb.SyncCommitteeMessage {
 	s.signatureLock.RLock()
 	defer s.signatureLock.RUnlock()
 

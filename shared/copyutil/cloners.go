@@ -339,11 +339,11 @@ func CopySyncAggregate(a *ethpb.SyncAggregate) *ethpb.SyncAggregate {
 }
 
 // CopySyncCommitteeSignature copies the provided sync committee signature object.
-func CopySyncCommitteeSignature(s *ethpb.SyncCommitteeSignature) *ethpb.SyncCommitteeSignature {
+func CopySyncCommitteeSignature(s *ethpb.SyncCommitteeMessage) *ethpb.SyncCommitteeMessage {
 	if s == nil {
 		return nil
 	}
-	return &ethpb.SyncCommitteeSignature{
+	return &ethpb.SyncCommitteeMessage{
 		Slot:           s.Slot,
 		BlockRoot:      bytesutil.SafeCopyBytes(s.BlockRoot),
 		ValidatorIndex: s.ValidatorIndex,
@@ -362,5 +362,16 @@ func CopySyncCommitteeContribution(c *ethpb.SyncCommitteeContribution) *ethpb.Sy
 		SubcommitteeIndex: c.SubcommitteeIndex,
 		AggregationBits:   bytesutil.SafeCopyBytes(c.AggregationBits),
 		Signature:         bytesutil.SafeCopyBytes(c.Signature),
+	}
+}
+
+// CopySyncAggregate copies the provided sync aggregate object.
+func CopySyncAggregate(a *ethpb.SyncAggregate) *ethpb.SyncAggregate {
+	if a == nil {
+		return nil
+	}
+	return &ethpb.SyncAggregate{
+		SyncCommitteeBits:      bytesutil.SafeCopyBytes(a.SyncCommitteeBits),
+		SyncCommitteeSignature: bytesutil.SafeCopyBytes(a.SyncCommitteeSignature),
 	}
 }

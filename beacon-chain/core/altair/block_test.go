@@ -46,7 +46,7 @@ func TestProcessSyncCommittee_OK(t *testing.T) {
 		SyncCommitteeSignature: aggregatedSig,
 	}
 
-	beaconState, err = altair.ProcessSyncCommittee(beaconState, syncAggregate)
+	beaconState, err = altair.ProcessSyncAggregate(beaconState, syncAggregate)
 	require.NoError(t, err)
 
 	// Use a non-sync committee index to compare profitability.

@@ -4,6 +4,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "altair.go",
         "archived_point.go",
         "backup.go",
         "blocks.go",
@@ -102,6 +103,7 @@ go_test(
         "//shared/interfaces:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
+        "//shared/testutil/altair:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
