@@ -75,6 +75,6 @@ fi
 
 # Push to the mirror repository
 git add --all
-GIT_AUTHOR_EMAIL=contact@prysmaticlabs.com GIT_AUTHOR_NAME=prysm-bot git commit -am "Mirrored from github.com/prysmaticlabs/prysm@$BUILDKITE_COMMIT"
+GIT_AUTHOR_EMAIL=contact@prysmaticlabs.com GIT_AUTHOR_NAME=prysm-bot GIT_COMMITTER_NAME=prysm-bot GIT_COMMITTER_EMAIL=contact@prysmaticlabs.com git commit -am "Mirrored from github.com/prysmaticlabs/prysm@$BUILDKITE_COMMIT"
 git remote set-url origin https://prylabs:"$GITHUB_SECRET_ACCESS_TOKEN"@github.com/prysmaticlabs/ethereumapis.git
 git push origin master
