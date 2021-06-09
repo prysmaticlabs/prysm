@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -118,16 +119,29 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 
 	// A chain re-org occurred, so we fire an event notifying the rest of the services.
 	headSlot := s.HeadSlot()
+	newHeadSlot := newHeadBlock.Block().Slot()
+	oldHeadRoot := s.headRoot()
+	oldStateRoot := s.headBlock().Block().StateRoot()
+	newStateRoot := newHeadBlock.Block().StateRoot()
 	if bytesutil.ToBytes32(newHeadBlock.Block().ParentRoot()) != bytesutil.ToBytes32(r) {
 		log.WithFields(logrus.Fields{
-			"newSlot": fmt.Sprintf("%d", newHeadBlock.Block().Slot()),
+			"newSlot": fmt.Sprintf("%d", newHeadSlot),
 			"oldSlot": fmt.Sprintf("%d", headSlot),
 		}).Debug("Chain reorg occurred")
+		reorgDepth, err := newHeadSlot.SafeSub(uint64(headSlot))
+		if err != nil {
+			return errors.Wrap(err, "could not determine reorg depth")
+		}
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Reorg,
-			Data: &statefeed.ReorgData{
-				NewSlot: newHeadBlock.Block().Slot(),
-				OldSlot: headSlot,
+			Data: &ethpbv1.EventChainReorg{
+				Slot:         newHeadSlot,
+				Depth:        uint64(reorgDepth),
+				OldHeadBlock: oldHeadRoot[:],
+				NewHeadBlock: headRoot[:],
+				OldHeadState: oldStateRoot,
+				NewHeadState: newStateRoot,
+				Epoch:        helpers.SlotToEpoch(newHeadSlot),
 			},
 		})
 
@@ -141,6 +155,50 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	if err := s.cfg.BeaconDB.SaveHeadBlockRoot(ctx, headRoot); err != nil {
 		return errors.Wrap(err, "could not save head root in DB")
 	}
+
+	// Forward an event capturing a new chain head over a common event feed
+	// done in a goroutine to avoid blocking the critical runtime main routine.
+	go func() {
+		dutyEpoch, err := helpers.SlotToEpoch(newHeadSlot).SafeSub(1)
+		if err != nil {
+			log.WithError(err).Error("Could not get duty dependent epoch")
+			return
+		}
+		var previousDutyDependentRoot []byte
+		var currentDutyDependentRoot []byte
+		dutySlot, err := helpers.StartSlot(dutyEpoch)
+		if err != nil {
+			log.WithError(err).Error("Could not get duty slot")
+			return
+		}
+		// In the case where there would be an underflow, we use the genesis state root.
+		if dutySlot == 0 {
+			previousDutyDependentRoot = s.genesisRoot[:]
+			currentDutyDependentRoot = s.genesisRoot[:]
+		} else {
+			previousDutyDependentRoot, err = helpers.BlockRootAtSlot(newHeadState, dutySlot-1)
+			if err != nil {
+				log.WithError(err).Error("Could not get previous duty dependent root")
+				return
+			}
+			currentDutyDependentRoot, err = helpers.BlockRootAtSlot(newHeadState, dutySlot)
+			if err != nil {
+				log.WithError(err).Error("Could not get current duty dependent epoch")
+			}
+		}
+
+		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.NewHead,
+			Data: &ethpbv1.EventHead{
+				Slot:                      newHeadSlot,
+				Block:                     headRoot[:],
+				State:                     newStateRoot,
+				EpochTransition:           helpers.IsEpochEnd(newHeadSlot),
+				PreviousDutyDependentRoot: previousDutyDependentRoot,
+				CurrentDutyDependentRoot:  currentDutyDependentRoot,
+			},
+		})
+	}()
 
 	return nil
 }

@@ -34,7 +34,18 @@ func TestSaveHead_Different(t *testing.T) {
 	service := setupBeaconChain(t, beaconDB)
 
 	oldRoot := [32]byte{'A'}
-	service.head = &head{slot: 0, root: oldRoot}
+	service.head = &head{
+		slot: 0,
+		root: oldRoot,
+		block: interfaces.WrappedPhase0SignedBeaconBlock(
+			&ethpb.SignedBeaconBlock{
+				Block: &ethpb.BeaconBlock{
+					Slot:      0,
+					StateRoot: make([]byte, 32),
+				},
+			},
+		),
+	}
 
 	newHeadSignedBlock := testutil.NewBeaconBlock()
 	newHeadSignedBlock.Block.Slot = 1
@@ -66,7 +77,18 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	service := setupBeaconChain(t, beaconDB)
 
 	oldRoot := [32]byte{'A'}
-	service.head = &head{slot: 0, root: oldRoot}
+	service.head = &head{
+		slot: 0,
+		root: oldRoot,
+		block: interfaces.WrappedPhase0SignedBeaconBlock(
+			&ethpb.SignedBeaconBlock{
+				Block: &ethpb.BeaconBlock{
+					Slot:      0,
+					StateRoot: make([]byte, 32),
+				},
+			},
+		),
+	}
 
 	reorgChainParent := [32]byte{'B'}
 	newHeadSignedBlock := testutil.NewBeaconBlock()

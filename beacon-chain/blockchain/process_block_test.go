@@ -10,6 +10,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -930,6 +931,7 @@ func TestOnBlock_CanFinalize(t *testing.T) {
 		StateGen:        stategen.New(beaconDB),
 		ForkChoiceStore: protoarray.New(0, 0, [32]byte{}),
 		DepositCache:    depositCache,
+		StateNotifier:   &mock.MockStateNotifier{},
 	}
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
