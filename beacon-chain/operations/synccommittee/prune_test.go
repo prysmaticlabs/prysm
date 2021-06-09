@@ -13,6 +13,9 @@ import (
 func TestPruneExpiredSyncCommitteeSignatures(t *testing.T) {
 	service := NewService(context.Background(), NewStore())
 	sigs := []*eth.SyncCommitteeMessage{
+		{Signature: []byte{'1'}},
+		{Signature: []byte{'2'}},
+		{Signature: []byte{'3'}},
 		{Slot: 1, ValidatorIndex: 0, Signature: []byte{'a'}},
 		{Slot: 1, ValidatorIndex: 1, Signature: []byte{'b'}},
 		{Slot: 1, ValidatorIndex: 2, Signature: []byte{'c'}},
@@ -25,9 +28,27 @@ func TestPruneExpiredSyncCommitteeSignatures(t *testing.T) {
 		require.NoError(t, service.store.SaveSyncCommitteeSignature(sig))
 	}
 
+	// Set 1 slot into the future.
+	currentTime := time.Now().Add(time.Duration(-1*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
+	service.SetGenesisTime(uint64(currentTime.Unix()))
+	service.pruneExpiredSyncCommitteeSignatures()
+	// Nothing should get pruned.
+	sigs = service.store.SyncCommitteeSignatures(0)
+	require.DeepSSZEqual(t, []*eth.SyncCommitteeMessage{
+		{Signature: []byte{'1'}},
+		{Signature: []byte{'2'}},
+		{Signature: []byte{'3'}},
+	}, sigs)
+	sigs = service.store.SyncCommitteeSignatures(1)
+	require.DeepSSZEqual(t, []*eth.SyncCommitteeMessage{
+		{Slot: 1, ValidatorIndex: 0, Signature: []byte{'a'}},
+		{Slot: 1, ValidatorIndex: 1, Signature: []byte{'b'}},
+		{Slot: 1, ValidatorIndex: 2, Signature: []byte{'c'}},
+	}, sigs)
+
 	// Set 3 slots into the future.
-	time := time.Now().Add(time.Duration(-3*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
-	service.SetGenesisTime(uint64(time.Unix()))
+	currentTime = time.Now().Add(time.Duration(-3*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
+	service.SetGenesisTime(uint64(currentTime.Unix()))
 	service.pruneExpiredSyncCommitteeSignatures()
 
 	sigs = service.store.SyncCommitteeSignatures(1)
@@ -49,6 +70,9 @@ func TestPruneExpiredSyncCommitteeSignatures(t *testing.T) {
 func TestPruneExpiredSyncCommitteeContributions(t *testing.T) {
 	service := NewService(context.Background(), NewStore())
 	sigs := []*eth.SyncCommitteeContribution{
+		{Signature: []byte{'1'}},
+		{Signature: []byte{'2'}},
+		{Signature: []byte{'3'}},
 		{Slot: 1, SubcommitteeIndex: 0, Signature: []byte{'a'}},
 		{Slot: 1, SubcommitteeIndex: 1, Signature: []byte{'b'}},
 		{Slot: 1, SubcommitteeIndex: 2, Signature: []byte{'c'}},
@@ -61,9 +85,27 @@ func TestPruneExpiredSyncCommitteeContributions(t *testing.T) {
 		require.NoError(t, service.store.SaveSyncCommitteeContribution(sig))
 	}
 
+	// Set 1 slot into the future.
+	currentTime := time.Now().Add(time.Duration(-1*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
+	service.SetGenesisTime(uint64(currentTime.Unix()))
+	service.pruneExpiredSyncCommitteeSignatures()
+	// Nothing should get pruned.
+	sigs = service.store.SyncCommitteeContributions(0)
+	require.DeepSSZEqual(t, []*eth.SyncCommitteeContribution{
+		{Signature: []byte{'1'}},
+		{Signature: []byte{'2'}},
+		{Signature: []byte{'3'}},
+	}, sigs)
+	sigs = service.store.SyncCommitteeContributions(1)
+	require.DeepSSZEqual(t, []*eth.SyncCommitteeContribution{
+		{Slot: 1, SubcommitteeIndex: 0, Signature: []byte{'a'}},
+		{Slot: 1, SubcommitteeIndex: 1, Signature: []byte{'b'}},
+		{Slot: 1, SubcommitteeIndex: 2, Signature: []byte{'c'}},
+	}, sigs)
+
 	// Set 3 slots into the future.
-	time := time.Now().Add(time.Duration(-3*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
-	service.SetGenesisTime(uint64(time.Unix()))
+	currentTime = time.Now().Add(time.Duration(-3*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
+	service.SetGenesisTime(uint64(currentTime.Unix()))
 	service.pruneExpiredSyncCommitteeContributions()
 
 	sigs = service.store.SyncCommitteeContributions(1)
