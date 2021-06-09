@@ -4,7 +4,9 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
-        "endpoints.go",
+        "custom_handlers.go",
+        "custom_hooks.go",
+        "endpoint_registry.go",
         "structs.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/apimiddleware",
@@ -19,7 +21,11 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["endpoints_test.go"],
+    srcs = [
+        "custom_handlers_test.go",
+        "custom_hooks_test.go",
+        "endpoint_registry_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//shared/bytesutil:go_default_library",

@@ -20,7 +20,7 @@ type ApiProxyMiddleware struct {
 
 // Endpoint is a representation of an API HTTP endpoint that should be proxied by the middleware.
 type Endpoint struct {
-	Url                   string         // The URL of the HTTP endpoint.
+	Path                  string         // The path of the HTTP endpoint.
 	PostRequest           interface{}    // The struct corresponding to the JSON structure used in a POST request.
 	GetRequestUrlLiterals []string       // Names of URL parameters that should not be base64-encoded.
 	GetRequestQueryParams []QueryParam   // Query parameters of the GET request.
@@ -45,9 +45,9 @@ type CustomHandler = func(m *ApiProxyMiddleware, endpoint Endpoint, writer http.
 
 // HookCollection contains handlers/hooks that can be used to amend the default request/response cycle with custom logic for a specific endpoint.
 type HookCollection struct {
-	CustomHandlers                             []CustomHandler
-	OnPostStart                                []Hook
-	OnPostDeserializedRequestBodyIntoContainer []Hook
+	CustomHandlers                            []CustomHandler
+	OnPostStart                               []Hook
+	OnPostDeserializeRequestBodyIntoContainer []Hook
 }
 
 // fieldProcessor applies the processing function f to a value when the tag is present on the field.
@@ -68,7 +68,7 @@ func (m *ApiProxyMiddleware) Run() error {
 }
 
 func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint Endpoint) {
-	m.router.HandleFunc(endpoint.Url, func(writer http.ResponseWriter, request *http.Request) {
+	m.router.HandleFunc(endpoint.Path, func(writer http.ResponseWriter, request *http.Request) {
 		for _, handler := range endpoint.Hooks.CustomHandlers {
 			if handler(m, endpoint, writer, request) {
 				return
@@ -87,8 +87,7 @@ func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint Endpoint) {
 				WriteError(writer, errJson, nil)
 				return
 			}
-
-			for _, hook := range endpoint.Hooks.OnPostDeserializedRequestBodyIntoContainer {
+			for _, hook := range endpoint.Hooks.OnPostDeserializeRequestBodyIntoContainer {
 				if errJson := hook(endpoint, writer, request); errJson != nil {
 					WriteError(writer, errJson, nil)
 					return

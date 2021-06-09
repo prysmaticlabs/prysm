@@ -660,7 +660,7 @@ func (b *BeaconNode) registerGRPCGateway() error {
 			selfCert,
 			gatewayAddress,
 			apiMiddlewareAddress,
-			apimiddleware.MiddlewareEndpointsRegistry(),
+			apimiddleware.MiddlewareEndpointRegistry(),
 			nil, /*optional mux*/
 			allowedOrigins,
 			enableDebugRPCEndpoints,
