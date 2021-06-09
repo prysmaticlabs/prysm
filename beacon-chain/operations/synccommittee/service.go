@@ -2,6 +2,8 @@ package synccommittee
 
 import (
 	"context"
+
+	"github.com/pkg/errors"
 )
 
 // Service of sync committee object store operations.
@@ -37,6 +39,9 @@ func (s *Service) Stop() error {
 
 // Status returns the current service err if there's any.
 func (s *Service) Status() error {
+	if s.genesisTime == 0 {
+		return errors.New("genesis time is not set, service is idle")
+	}
 	if s.err != nil {
 		return s.err
 	}

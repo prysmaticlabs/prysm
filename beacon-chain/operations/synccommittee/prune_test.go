@@ -12,7 +12,7 @@ import (
 
 func TestPruneExpiredSyncCommitteeSignatures(t *testing.T) {
 	service := NewService(context.Background(), NewStore())
-	sigs := []*eth.SyncCommitteeSignature{
+	sigs := []*eth.SyncCommitteeMessage{
 		{Slot: 1, ValidatorIndex: 0, Signature: []byte{'a'}},
 		{Slot: 1, ValidatorIndex: 1, Signature: []byte{'b'}},
 		{Slot: 1, ValidatorIndex: 2, Signature: []byte{'c'}},
@@ -31,16 +31,16 @@ func TestPruneExpiredSyncCommitteeSignatures(t *testing.T) {
 	service.pruneExpiredSyncCommitteeSignatures()
 
 	sigs = service.store.SyncCommitteeSignatures(1)
-	require.DeepSSZEqual(t, []*eth.SyncCommitteeSignature{}, sigs)
+	require.DeepSSZEqual(t, []*eth.SyncCommitteeMessage{}, sigs)
 
 	sigs = service.store.SyncCommitteeSignatures(2)
-	require.DeepSSZEqual(t, []*eth.SyncCommitteeSignature{
+	require.DeepSSZEqual(t, []*eth.SyncCommitteeMessage{
 		{Slot: 2, ValidatorIndex: 0, Signature: []byte{'d'}},
 		{Slot: 2, ValidatorIndex: 1, Signature: []byte{'e'}},
 	}, sigs)
 
 	sigs = service.store.SyncCommitteeSignatures(3)
-	require.DeepSSZEqual(t, []*eth.SyncCommitteeSignature{
+	require.DeepSSZEqual(t, []*eth.SyncCommitteeMessage{
 		{Slot: 3, ValidatorIndex: 0, Signature: []byte{'f'}},
 		{Slot: 3, ValidatorIndex: 1, Signature: []byte{'g'}},
 	}, sigs)

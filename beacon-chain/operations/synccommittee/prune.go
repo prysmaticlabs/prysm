@@ -3,6 +3,7 @@ package synccommittee
 import (
 	"time"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	log "github.com/sirupsen/logrus"
@@ -38,7 +39,11 @@ func (s *Service) pruneExpiredSyncCommitteeSignatures() {
 	// Delete the sync committee signatures from 2 slots back.
 	// Doesn't matter when in current slot the deletion happen,
 	// and this is the simplest and safest approach.
-	expiredSlot := currentSlot - 2
+	expiredSlot := types.Slot(0)
+	// Prevent underflow when slot is lesser than two.
+	if currentSlot > 2 {
+		expiredSlot = currentSlot - 2
+	}
 	delete(s.store.signatureCache, expiredSlot)
 }
 
@@ -52,6 +57,10 @@ func (s *Service) pruneExpiredSyncCommitteeContributions() {
 	// Delete the sync committee signatures from 2 slots back.
 	// Doesn't matter when in current slot the deletion happen,
 	// and this is the simplest and safest approach.
-	expiredSlot := currentSlot - 2
+	expiredSlot := types.Slot(0)
+	// Prevent underflow when slot is lesser than two.
+	if currentSlot > 2 {
+		expiredSlot = currentSlot - 2
+	}
 	delete(s.store.contributionCache, expiredSlot)
 }
