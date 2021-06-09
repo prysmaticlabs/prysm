@@ -56,7 +56,7 @@ func TestStore_BlocksCRUD(t *testing.T) {
 	require.NoError(t, err)
 	retrievedBlock, err := db.Block(ctx, blockRoot)
 	require.NoError(t, err)
-	assert.DeepEqual(t, (*ethpb.SignedBeaconBlock)(nil), retrievedBlock.Proto(), "Expected nil block")
+	assert.DeepEqual(t, nil, retrievedBlock, "Expected nil block")
 	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(block)))
 	assert.Equal(t, true, db.HasBlock(ctx, blockRoot), "Expected block to exist in the db")
 	retrievedBlock, err = db.Block(ctx, blockRoot)
