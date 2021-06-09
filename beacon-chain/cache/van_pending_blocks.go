@@ -103,8 +103,8 @@ func (c *PendingBlocksCache) PendingBlocks() ([]*ethpb.BeaconBlock, error) {
 	return pendingBlocks, nil
 }
 
-// DeleteConfirmedBlock deletes the confirmed block from cache
-func (c *PendingBlocksCache) DeleteConfirmedBlock(slot types.Slot) error {
+// Delete deletes the confirmed block from cache
+func (c *PendingBlocksCache) Delete(slot types.Slot) error {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 

@@ -454,7 +454,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 	}
 
 	var orcClient *orchestrator.RPCClient
-	if b.cliCtx.Bool(flags.Network.Name) {
+	if b.cliCtx.Bool(cmd.VanguardNetwork.Name) {
 		endpoint := b.cliCtx.String(flags.OrcRpcProviderFlag.Name)
 		if endpoint == "" {
 			log.Error("No orchestrator node specified to run with the vanguard node. Please consider running your own orchestrator node for final consensus.")
@@ -469,22 +469,24 @@ func (b *BeaconNode) registerBlockchainService() error {
 
 	maxRoutines := b.cliCtx.Int(cmd.MaxGoroutines.Name)
 	blockchainService, err := blockchain.NewService(b.ctx, &blockchain.Config{
-		BeaconDB:           b.db,
-		DepositCache:       b.depositCache,
-		ChainStartFetcher:  web3Service,
-		AttPool:            b.attestationPool,
-		ExitPool:           b.exitPool,
-		SlashingPool:       b.slashingsPool,
-		P2p:                b.fetchP2P(),
-		MaxRoutines:        maxRoutines,
-		StateNotifier:      b,
-		BlockNotifier:      b,
-		ForkChoiceStore:    b.forkChoiceStore,
-		OpsService:         opsService,
-		StateGen:           b.stateGen,
-		WspBlockRoot:       bRoot,
-		WspEpoch:           epoch,
-		EnableVanguardNode: b.cliCtx.Bool(flags.Network.Name),
+		BeaconDB:          b.db,
+		DepositCache:      b.depositCache,
+		ChainStartFetcher: web3Service,
+		AttPool:           b.attestationPool,
+		ExitPool:          b.exitPool,
+		SlashingPool:      b.slashingsPool,
+		P2p:               b.fetchP2P(),
+		MaxRoutines:       maxRoutines,
+		StateNotifier:     b,
+		BlockNotifier:     b,
+		ForkChoiceStore:   b.forkChoiceStore,
+		OpsService:        opsService,
+		StateGen:          b.stateGen,
+		WspBlockRoot:      bRoot,
+		WspEpoch:          epoch,
+
+		// vanguard: EnableVanguardNode and OrcRPCClient is used for vanguard chain
+		EnableVanguardNode: b.cliCtx.Bool(cmd.VanguardNetwork.Name),
 		OrcRPCClient:       orcClient,
 	})
 	if err != nil {
@@ -674,7 +676,8 @@ func (b *BeaconNode) registerRPCService() error {
 		EnableDebugRPCEndpoints: enableDebugRPCEndpoints,
 		MaxMsgSize:              maxMsgSize,
 
-		// Vanguard: un-confirmed cached block fetcher
+		// vanguard: EnableVanguardNode and UnconfirmedBlockFetcher is used for vanguard chain
+		EnableVanguardNode:      b.cliCtx.Bool(cmd.VanguardNetwork.Name),
 		UnconfirmedBlockFetcher: chainService,
 	})
 

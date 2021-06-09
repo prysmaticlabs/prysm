@@ -78,7 +78,7 @@ func TestPendingBlocksCache_DeleteConfirmedBlock(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	require.NoError(t, cache.DeleteConfirmedBlock(types.Slot(20)))
+	require.NoError(t, cache.Delete(types.Slot(20)))
 	blk, err := cache.PendingBlock(types.Slot(20))
 	require.NoError(t, err)
 	var expected *ethpb.BeaconBlock

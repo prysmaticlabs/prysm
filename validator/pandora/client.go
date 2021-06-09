@@ -66,9 +66,16 @@ func (oc *PandoraClient) Close() error {
 //  - result[1], 32 bytes hex encoded receipt hash for transaction proof
 //  - result[2], hex encoded rlp block header
 //  - result[3], hex encoded block number
-func (oc *PandoraClient) GetShardBlockHeader(ctx context.Context) (*ShardBlockHeaderResponse, error) {
+func (oc *PandoraClient) GetShardBlockHeader(
+	ctx context.Context,
+	parentHash common.Hash,
+	nextBlockNumber uint64,
+) (*ShardBlockHeaderResponse, error) {
+
+	log.WithField("parentHash", parentHash.Hex()).WithField(
+		"nextBlockNumber", nextBlockNumber).Debug("calling pandora chain for new sharding info")
 	var response []string
-	if err := oc.c.CallContext(ctx, &response, "eth_getWork"); err != nil {
+	if err := oc.c.CallContext(ctx, &response, "eth_getShardingWork", parentHash, nextBlockNumber); err != nil {
 		return nil, errors.Wrap(err, "Got error when calls to eth_getWork api")
 	}
 

@@ -7,13 +7,17 @@ go_library(
     srcs = [
         "van_beacon_chain_service_mock.go",
         "orc_clinet_service_mock.go",
+        "pandora_client_sevice_mock.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/van_mock",
     visibility = ["//visibility:public"],
     deps = [
        "//shared/params:go_default_library",
+       "//validator/pandora:go_default_library",
        "@com_github_golang_mock//gomock:go_default_library",
        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
        "@org_golang_google_grpc//metadata:go_default_library",
+       "@com_github_ethereum_go_ethereum//common:go_default_library",
+       "@com_github_ethereum_go_ethereum//core/types:go_default_library",
     ],
 )

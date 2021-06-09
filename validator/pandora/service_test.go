@@ -2,6 +2,7 @@ package pandora
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"reflect"
@@ -49,7 +50,8 @@ func Test_WaitForConnection_ConnErr(t *testing.T) {
 	pandoraService, err := NewService(context.Background(), HttpEndpoint, DialInProcRPCClient)
 	require.NoError(t, err, "Error in preparing pandora mock service")
 
-	status, _ := pandoraService.isPandoraNodeSynced()
+	status, err := pandoraService.isPandoraNodeSynced()
+	require.NoError(t, err)
 	require.Equal(t, true, status, "Should connect to pandora chain")
 }
 
@@ -68,7 +70,7 @@ func TestService_GetShardBlockHeader_Success(t *testing.T) {
 	pandoraService.connected = true
 	pandoraService.isRunning = true
 
-	actualHeader, actualHash, actualExtraData, err := pandoraService.GetShardBlockHeader(context.Background())
+	actualHeader, actualHash, actualExtraData, err := pandoraService.GetShardBlockHeader(context.Background(), types.EmptyRootHash, 1000)
 	require.NoError(t, err, "Should not get error when calling GetWork method")
 
 	expectedExtraData, _, err := getDummyEncodedExtraData()

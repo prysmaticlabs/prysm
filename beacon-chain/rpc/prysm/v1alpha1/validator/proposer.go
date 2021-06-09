@@ -62,6 +62,15 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 
+	// vanguard: If vanguard chain flag is enabled then we need to check the length of pending queue size. if
+	// pending queue is not empty that means syncing and verification process does not complete yet so skipped the
+	// slot
+	if vs.EnableVanguardNode {
+		if err := vs.PendingQueueFetcher.CanPropose(); err != nil {
+			return nil, status.Errorf(codes.Unavailable, "Pending queue is not fully processed yet")
+		}
+	}
+
 	// Retrieve the parent block as the current head of the canonical chain.
 	parentRoot, err := vs.HeadFetcher.HeadRoot(ctx)
 	if err != nil {

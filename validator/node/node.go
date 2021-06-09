@@ -411,7 +411,7 @@ func (c *ValidatorClient) registerValidatorService(
 			log.WithError(err).Warn("Could not parse graffiti file")
 		}
 	}
-
+	// Vanguard: pandora chain service is needed for vanguard chain
 	var pandoraService *pandora.Service
 	if err := c.services.FetchService(&pandoraService); err != nil {
 		return err
@@ -434,7 +434,9 @@ func (c *ValidatorClient) registerValidatorService(
 		WalletInitializedFeed:      c.walletInitialized,
 		GraffitiStruct:             gStruct,
 		LogDutyCountDown:           c.cliCtx.Bool(flags.EnableDutyCountDown.Name),
-		PandoraService:             pandoraService,
+		// Vanguard: pandora service and vanguard node flag are needed for vanguard chain
+		PandoraService:     pandoraService,
+		EnableVanguardNode: c.cliCtx.Bool(cmd.VanguardNetwork.Name),
 	})
 
 	if err != nil {

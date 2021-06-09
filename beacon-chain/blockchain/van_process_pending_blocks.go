@@ -25,6 +25,7 @@ var (
 	errPendingBlockTryLimitExceed = errors.New("maximum wait is exceeded and orchestrator can not verify the block")
 	errUnknownStatus              = errors.New("invalid status from orchestrator")
 	errInvalidRPCClient           = errors.New("invalid orchestrator rpc client or no client initiated")
+	errPendingQueueUnprocessed    = errors.New("pending queue is un-processed")
 )
 
 // PendingBlocksFetcher retrieves the cached un-confirmed beacon blocks from cache
@@ -32,7 +33,38 @@ type PendingBlocksFetcher interface {
 	SortedUnConfirmedBlocksFromCache() ([]*ethpb.BeaconBlock, error)
 }
 
-type blockRoot [32]byte
+// BlockProposal interface use when validator calls GetBlock api for proposing new beancon block
+type PendingQueueFetcher interface {
+	CanPropose() error
+}
+
+// CanPropose
+func (s *Service) CanPropose() error {
+	blks, err := s.pendingBlockCache.PendingBlocks()
+	if err != nil {
+		return errors.Wrap(err, "Could not retrieve cached unconfirmed blocks from cache")
+	}
+
+	if len(blks) > 0 {
+		log.WithField("unprocessedBlockLen", len(blks)).WithError(err).Error("Pending queue is not nil")
+		return errPendingQueueUnprocessed
+	}
+	return nil
+}
+
+// UnConfirmedBlocksFromCache retrieves all the cached blocks from cache and send it back to event api
+func (s *Service) SortedUnConfirmedBlocksFromCache() ([]*ethpb.BeaconBlock, error) {
+	blks, err := s.pendingBlockCache.PendingBlocks()
+	if err != nil {
+		return nil, errors.Wrap(err, "Could not retrieve cached unconfirmed blocks from cache")
+	}
+
+	sort.Slice(blks, func(i, j int) bool {
+		return blks[i].Slot < blks[j].Slot
+	})
+
+	return blks, nil
+}
 
 // publishAndStorePendingBlock method publishes and stores the pending block for final confirmation check
 func (s *Service) publishAndStorePendingBlock(ctx context.Context, pendingBlk *ethpb.BeaconBlock) error {
@@ -75,20 +107,6 @@ func (s *Service) publishAndStorePendingBlockBatch(ctx context.Context, pendingB
 	}
 
 	return nil
-}
-
-// UnConfirmedBlocksFromCache retrieves all the cached blocks from cache and send it back to event api
-func (s *Service) SortedUnConfirmedBlocksFromCache() ([]*ethpb.BeaconBlock, error) {
-	blks, err := s.pendingBlockCache.PendingBlocks()
-	if err != nil {
-		return nil, errors.Wrap(err, "Could not retrieve cached unconfirmed blocks from cache")
-	}
-
-	sort.Slice(blks, func(i, j int) bool {
-		return blks[i].Slot < blks[j].Slot
-	})
-
-	return blks, nil
 }
 
 // processOrcConfirmation runs every certain interval and fetch confirmation from orchestrator periodically and
@@ -194,7 +212,7 @@ func (s *Service) waitForConfirmationBlock(ctx context.Context, b *ethpb.SignedB
 						log.WithField("slot", data.Slot).WithField(
 							"blockHash", data.BlockRootHash).Debug(
 							"got verified status from orchestrator")
-						if err := s.pendingBlockCache.DeleteConfirmedBlock(b.Block.Slot); err != nil {
+						if err := s.pendingBlockCache.Delete(b.Block.Slot); err != nil {
 							log.WithError(err).Error("couldn't delete the verified blocks from cache")
 							return err
 						}
@@ -202,12 +220,17 @@ func (s *Service) waitForConfirmationBlock(ctx context.Context, b *ethpb.SignedB
 					case vanTypes.Pending:
 						log.WithField("slot", data.Slot).WithField(
 							"blockHash", data.BlockRootHash).Debug(
-							"got pending status from orchestrator, exiting goroutine")
+							"got pending status from orchestrator")
 
 						pendingBlockTryLimit = pendingBlockTryLimit - 1
 						if pendingBlockTryLimit == 0 {
-							log.WithError(errPendingBlockTryLimitExceed).Error(
-								"orchestrator sends pending status for this block so many times")
+							log.WithField("slot", data.Slot).WithError(errPendingBlockTryLimitExceed).Error(
+								"orchestrator sends pending status for this block so many times, deleting the invalid block from cache")
+
+							if err := s.pendingBlockCache.Delete(data.Slot); err != nil {
+								log.WithError(err).Error("couldn't delete the pending block from cache")
+								return err
+							}
 							return errPendingBlockTryLimitExceed
 						}
 						continue
@@ -215,6 +238,11 @@ func (s *Service) waitForConfirmationBlock(ctx context.Context, b *ethpb.SignedB
 						log.WithField("slot", data.Slot).WithField(
 							"blockHash", data.BlockRootHash).Debug(
 							"got invalid status from orchestrator, exiting goroutine")
+
+						if err := s.pendingBlockCache.Delete(data.Slot); err != nil {
+							log.WithError(err).Error("couldn't delete the invalid block from cache")
+							return err
+						}
 						return errInvalidBlock
 					default:
 						log.WithError(errUnknownStatus).Error(
@@ -281,7 +309,7 @@ func (s *Service) waitForConfirmationsBlockBatch(ctx context.Context, blocks []*
 						curVerifiedSlot = data.Slot
 						if curVerifiedSlot == lastSlot {
 							for _, b := range blocks {
-								if err := s.pendingBlockCache.DeleteConfirmedBlock(b.Block.Slot); err != nil {
+								if err := s.pendingBlockCache.Delete(b.Block.Slot); err != nil {
 									log.WithError(err).Error("couldn't delete the verified blocks from cache")
 									return err
 								}
@@ -296,15 +324,25 @@ func (s *Service) waitForConfirmationsBlockBatch(ctx context.Context, blocks []*
 					case vanTypes.Invalid:
 						log.WithField("slot", data.Slot).WithField(
 							"blockHash", data.BlockRootHash).Debug(
-							"invalid by orchestrator, exiting goroutine")
+							"invalid by orchestrator, deleting the invalid block from cache")
+
+						if err := s.pendingBlockCache.Delete(data.Slot); err != nil {
+							log.WithError(err).Error("couldn't delete the invalid block from cache")
+							return err
+						}
 						return errInvalidBlock
 					case vanTypes.Pending:
 						log.WithField("slot", data.Slot).WithField(
 							"blockHash", data.BlockRootHash).Debug("got pending status from orchestrator")
 						pendingBlockTryLimit = pendingBlockTryLimit - 1
 						if pendingBlockTryLimit == 0 {
-							log.WithError(errPendingBlockTryLimitExceed).Error(
-								"orchestrator sends pending status for this block so many times")
+							log.WithField("slot", data.Slot).WithError(errPendingBlockTryLimitExceed).Error(
+								"orchestrator sends pending status for this block so many times, deleting the invalid block from cache")
+
+							if err := s.pendingBlockCache.Delete(data.Slot); err != nil {
+								log.WithError(err).Error("couldn't delete the pending block from cache")
+								return err
+							}
 							return errPendingBlockTryLimitExceed
 						}
 						continue

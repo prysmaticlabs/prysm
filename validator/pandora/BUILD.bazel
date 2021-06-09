@@ -26,10 +26,15 @@ go_library(
 
 go_test(
     name = "go_default_test",
+    size = "small",
     srcs = [
         "client_test.go",
         "service_test.go",
     ],
-    embed = [":pandora"],
-    deps = ["@com_github_sirupsen_logrus//hooks/test:go_default_library"],
+    embed = [":go_default_library"],
+    deps = [
+         "//shared/testutil/require:go_default_library",
+         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
+         "@com_github_ethereum_go_ethereum//core/types:go_default_library",
+    ],
 )

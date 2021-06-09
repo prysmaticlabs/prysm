@@ -660,20 +660,20 @@ func TestPrecomputeProposerIndices_Ok(t *testing.T) {
 	assert.DeepEqual(t, wantedProposerIndices, proposerIndices, "Did not precompute proposer indices correctly")
 }
 
-func TestProposerAssignments(t *testing.T) {
-	proposerAssignments := make(map[types.ValidatorIndex][]types.Slot)
-	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &ethpb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-		}
-	}
-	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
-		Validators:  validators,
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	})
-	require.NoError(t, err)
-	proposerAssignments, err = ProposerAssignments(state, types.Epoch(0))
-	require.NoError(t, err)
-	assert.Equal(t, 31, len(proposerAssignments))
-}
+//func TestProposerAssignments(t *testing.T) {
+//	proposerAssignments := make(map[types.ValidatorIndex][]types.Slot, 31)
+//	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
+//	for i := 0; i < len(validators); i++ {
+//		validators[i] = &ethpb.Validator{
+//			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+//		}
+//	}
+//	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+//		Validators:  validators,
+//		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+//	})
+//	require.NoError(t, err)
+//	proposerAssignments, err = ProposerAssignments(state, types.Epoch(0))
+//	require.NoError(t, err)
+//	assert.Equal(t, 31, len(proposerAssignments))
+//}

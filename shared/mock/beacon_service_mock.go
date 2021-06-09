@@ -78,6 +78,26 @@ func (mr *MockBeaconChainClientMockRecorder) GetBeaconConfig(arg0, arg1 interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBeaconConfig", reflect.TypeOf((*MockBeaconChainClient)(nil).GetBeaconConfig), varargs...)
 }
 
+// GetCanonicalBlock mocks base method
+func (m *MockBeaconChainClient) GetCanonicalBlock(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (*eth.SignedBeaconBlock, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetCanonicalBlock", varargs...)
+	ret0, _ := ret[0].(*eth.SignedBeaconBlock)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCanonicalBlock indicates an expected call of GetCanonicalBlock
+func (mr *MockBeaconChainClientMockRecorder) GetCanonicalBlock(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCanonicalBlock", reflect.TypeOf((*MockBeaconChainClient)(nil).GetCanonicalBlock), varargs...)
+}
+
 // GetChainHead mocks base method
 func (m *MockBeaconChainClient) GetChainHead(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (*v1alpha1.ChainHead, error) {
 	m.ctrl.T.Helper()
@@ -456,6 +476,46 @@ func (mr *MockBeaconChainClientMockRecorder) StreamIndexedAttestations(arg0, arg
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamIndexedAttestations", reflect.TypeOf((*MockBeaconChainClient)(nil).StreamIndexedAttestations), varargs...)
+}
+
+// StreamMinimalConsensusInfo mocks base method
+func (m *MockBeaconChainClient) StreamMinimalConsensusInfo(arg0 context.Context, arg1 *eth.MinimalConsensusInfoRequest, arg2 ...grpc.CallOption) (eth.BeaconChain_StreamMinimalConsensusInfoClient, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "StreamMinimalConsensusInfo", varargs...)
+	ret0, _ := ret[0].(eth.BeaconChain_StreamMinimalConsensusInfoClient)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StreamMinimalConsensusInfo indicates an expected call of StreamMinimalConsensusInfo
+func (mr *MockBeaconChainClientMockRecorder) StreamMinimalConsensusInfo(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamMinimalConsensusInfo", reflect.TypeOf((*MockBeaconChainClient)(nil).StreamMinimalConsensusInfo), varargs...)
+}
+
+// StreamNewPendingBlocks mocks base method
+func (m *MockBeaconChainClient) StreamNewPendingBlocks(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (eth.BeaconChain_StreamNewPendingBlocksClient, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "StreamNewPendingBlocks", varargs...)
+	ret0, _ := ret[0].(eth.BeaconChain_StreamNewPendingBlocksClient)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StreamNewPendingBlocks indicates an expected call of StreamNewPendingBlocks
+func (mr *MockBeaconChainClientMockRecorder) StreamNewPendingBlocks(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamNewPendingBlocks", reflect.TypeOf((*MockBeaconChainClient)(nil).StreamNewPendingBlocks), varargs...)
 }
 
 // StreamValidatorsInfo mocks base method

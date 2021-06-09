@@ -103,6 +103,7 @@ var appFlags = []cli.Flag{
 	cmd.AcceptTosFlag,
 	pandora.PandoraRpcIpcProviderFlag,
 	pandora.PandoraRpcHttpProviderFlag,
+	cmd.VanguardNetwork,
 }
 
 func init() {

@@ -92,7 +92,7 @@ func getDummyBlock() *types.Block {
 //   result[1] - 32 bytes hex encoded seed hash used for DAG
 //   result[2] - 32 bytes hex encoded boundary condition ("target"), 2^256/difficulty
 //   result[3] - hex encoded block number
-func (api *mockPandoraService) GetWork() ([4]string, error) {
+func (api *mockPandoraService) GetShardingWork(parentHash common.Hash, blockNumber uint64) ([4]string, error) {
 	block := getDummyBlock()
 	var response [4]string
 	rlpHeader, _ := rlp.EncodeToBytes(block.Header())

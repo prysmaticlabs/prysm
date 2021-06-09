@@ -69,6 +69,7 @@ type Service struct {
 	chainStartFetcher       powchain.ChainStartFetcher
 	mockEth1Votes           bool
 	enableDebugRPCEndpoints bool
+	enableVanguardNode      bool // vanguard: vanguard chain enable flag
 	attestationsPool        attestations.Pool
 	exitPool                voluntaryexits.PoolManager
 	slashingsPool           slashings.PoolManager
@@ -98,8 +99,9 @@ type Service struct {
 	clientConnectionLock    sync.Mutex
 	maxMsgSize              int
 
-	// Vanguard un-confirmed cached block fetcher
+	// Vanguard: vanguard chain related attributes
 	unconfirmedBlockFetcher blockchain.PendingBlocksFetcher
+	pendingQueueFetcher     blockchain.PendingQueueFetcher
 }
 
 // Config options for the beacon node RPC server.
@@ -124,6 +126,7 @@ type Config struct {
 	GenesisFetcher          blockchain.GenesisFetcher
 	EnableDebugRPCEndpoints bool
 	MockEth1Votes           bool
+	EnableVanguardNode      bool // vanguard: vanguard chain enable flag
 	AttestationsPool        attestations.Pool
 	ExitPool                voluntaryexits.PoolManager
 	SlashingsPool           slashings.PoolManager
@@ -142,6 +145,7 @@ type Config struct {
 
 	// Vanguard un-confirmed cached block fetcher
 	UnconfirmedBlockFetcher blockchain.PendingBlocksFetcher
+	PendingQueueFetcher     blockchain.PendingQueueFetcher
 }
 
 // NewService instantiates a new RPC service instance that will
@@ -191,7 +195,9 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		maxMsgSize:              cfg.MaxMsgSize,
 
 		// Vanguard: un-confirmed cached block fetcher
+		enableVanguardNode:      cfg.EnableVanguardNode,
 		unconfirmedBlockFetcher: cfg.UnconfirmedBlockFetcher,
+		pendingQueueFetcher:     cfg.PendingQueueFetcher,
 	}
 }
 
@@ -265,6 +271,10 @@ func (s *Service) Start() {
 		PendingDepositsFetcher: s.pendingDepositFetcher,
 		SlashingsPool:          s.slashingsPool,
 		StateGen:               s.stateGen,
+
+		// vanguard: initiate pending queue fetcher
+		EnableVanguardNode:  s.enableVanguardNode,
+		PendingQueueFetcher: s.pendingQueueFetcher,
 	}
 	nodeServer := &node.Server{
 		LogsStreamer:         logutil.NewStreamServer(),

@@ -17,6 +17,7 @@ go_library(
         "service.go",
         "validator.go",
         "wait_for_activation.go",
+        "pan_propose.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/client",
     visibility = ["//validator:__subpackages__"],
@@ -92,6 +93,7 @@ go_test(
         "slashing_protection_interchange_test.go",
         "validator_test.go",
         "wait_for_activation_test.go",
+        "pan_propose_test.go",
     ],
     data = [
         "@eip3076_spec_tests//:test_data",
@@ -108,6 +110,7 @@ go_test(
         "//shared/featureconfig:go_default_library",
         "//shared/fileutil:go_default_library",
         "//shared/mock:go_default_library",
+        "//shared/van_mock:go_default_library",
         "//shared/params:go_default_library",
         "//shared/slotutil:go_default_library",
         "//shared/testutil:go_default_library",

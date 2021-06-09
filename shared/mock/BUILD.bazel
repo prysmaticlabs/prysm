@@ -11,7 +11,6 @@ go_library(
         "beacon_validator_server_mock.go",
         "keymanager_mock.go",
         "node_service_mock.go",
-        "pandora_service_mock.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/mock",
     visibility = ["//visibility:public"],
@@ -22,8 +21,5 @@ go_library(
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
         "@org_golang_google_grpc//metadata:go_default_library",
-        "@com_github_ethereum_go_ethereum//common:go_default_library",
-        "@com_github_ethereum_go_ethereum//core/types:go_default_library",
-        "//validator/pandora:go_default_library",
     ],
 )

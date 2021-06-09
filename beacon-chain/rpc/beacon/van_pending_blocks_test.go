@@ -4,10 +4,12 @@ import (
 	"context"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -77,4 +79,43 @@ func TestServer_StreamNewPendingBlocks_OnNewBlock(t *testing.T) {
 		})
 	}
 	<-exitRoutine
+}
+
+// TestServer_GetCanonicalBlock_NoFinalizedBlock
+func TestServer_GetCanonicalBlock_NoFinalizedBlock(t *testing.T) {
+	db := dbTest.SetupDB(t)
+
+	s, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, s.SetSlot(1))
+	require.NoError(t, s.SetPreviousJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: 3, Root: bytesutil.PadTo([]byte{'A'}, 32)}))
+	require.NoError(t, s.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: 2, Root: bytesutil.PadTo([]byte{'B'}, 32)}))
+	require.NoError(t, s.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'C'}, 32)}))
+
+	genBlock := testutil.NewBeaconBlock()
+	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, 32)
+	require.NoError(t, db.SaveBlock(context.Background(), genBlock))
+	gRoot, err := genBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), gRoot))
+
+	bs := &Server{
+		BeaconDB:    db,
+		HeadFetcher: &chainMock.ChainService{Block: genBlock, State: s},
+		FinalizationFetcher: &chainMock.ChainService{
+			FinalizedCheckPoint:         s.FinalizedCheckpoint(),
+			CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint(),
+			PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint()},
+	}
+
+	_, err = bs.GetCanonicalBlock(context.Background(), nil)
+	require.ErrorContains(t, "Could not get finalized block", err)
+}
+
+func TestServer_GetCanonicalBlock_NoHeadBlock(t *testing.T) {
+	bs := &Server{
+		HeadFetcher: &chainMock.ChainService{Block: nil},
+	}
+	_, err := bs.GetChainHead(context.Background(), nil)
+	assert.ErrorContains(t, "Head block of chain was nil", err)
 }
