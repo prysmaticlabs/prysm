@@ -27,7 +27,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/node/registration"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -58,24 +57,23 @@ const testSkipPowFlag = "test-skip-pow"
 // full PoS node. It handles the lifecycle of the entire system and registers
 // services to a service registry.
 type BeaconNode struct {
-	cliCtx             *cli.Context
-	ctx                context.Context
-	cancel             context.CancelFunc
-	services           *shared.ServiceRegistry
-	lock               sync.RWMutex
-	stop               chan struct{} // Channel to wait for termination notifications.
-	db                 db.Database
-	attestationPool    attestations.Pool
-	exitPool           voluntaryexits.PoolManager
-	slashingsPool      slashings.PoolManager
-	syncCommitteeStore *synccommittee.Store
-	depositCache       *depositcache.DepositCache
-	stateFeed          *event.Feed
-	blockFeed          *event.Feed
-	opFeed             *event.Feed
-	forkChoiceStore    forkchoice.ForkChoicer
-	stateGen           *stategen.State
-	collector          *bcnodeCollector
+	cliCtx          *cli.Context
+	ctx             context.Context
+	cancel          context.CancelFunc
+	services        *shared.ServiceRegistry
+	lock            sync.RWMutex
+	stop            chan struct{} // Channel to wait for termination notifications.
+	db              db.Database
+	attestationPool attestations.Pool
+	exitPool        voluntaryexits.PoolManager
+	slashingsPool   slashings.PoolManager
+	depositCache    *depositcache.DepositCache
+	stateFeed       *event.Feed
+	blockFeed       *event.Feed
+	opFeed          *event.Feed
+	forkChoiceStore forkchoice.ForkChoicer
+	stateGen        *stategen.State
+	collector       *bcnodeCollector
 }
 
 // New creates a new node instance, sets up configuration options, and registers
@@ -99,18 +97,17 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 
 	ctx, cancel := context.WithCancel(cliCtx.Context)
 	beacon := &BeaconNode{
-		cliCtx:             cliCtx,
-		ctx:                ctx,
-		cancel:             cancel,
-		services:           registry,
-		stop:               make(chan struct{}),
-		stateFeed:          new(event.Feed),
-		blockFeed:          new(event.Feed),
-		opFeed:             new(event.Feed),
-		attestationPool:    attestations.NewPool(),
-		exitPool:           voluntaryexits.NewPool(),
-		slashingsPool:      slashings.NewPool(),
-		syncCommitteeStore: synccommittee.NewStore(),
+		cliCtx:          cliCtx,
+		ctx:             ctx,
+		cancel:          cancel,
+		services:        registry,
+		stop:            make(chan struct{}),
+		stateFeed:       new(event.Feed),
+		blockFeed:       new(event.Feed),
+		opFeed:          new(event.Feed),
+		attestationPool: attestations.NewPool(),
+		exitPool:        voluntaryexits.NewPool(),
+		slashingsPool:   slashings.NewPool(),
 	}
 
 	depositAddress, err := registration.DepositContractAddress()
@@ -132,10 +129,6 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 	}
 
 	if err := beacon.registerAttestationPool(); err != nil {
-		return nil, err
-	}
-
-	if err := beacon.registerSyncCommitteeStoreService(); err != nil {
 		return nil, err
 	}
 
@@ -405,11 +398,6 @@ func (b *BeaconNode) registerAttestationPool() error {
 	return b.services.RegisterService(s)
 }
 
-func (b *BeaconNode) registerSyncCommitteeStoreService() error {
-	s := synccommittee.NewService(b.ctx, b.syncCommitteeStore)
-	return b.services.RegisterService(s)
-}
-
 func (b *BeaconNode) registerBlockchainService() error {
 	var web3Service *powchain.Service
 	if err := b.services.FetchService(&web3Service); err != nil {
@@ -418,11 +406,6 @@ func (b *BeaconNode) registerBlockchainService() error {
 
 	var opsService *attestations.Service
 	if err := b.services.FetchService(&opsService); err != nil {
-		return err
-	}
-
-	var syncCommitteeStore *synccommittee.Service
-	if err := b.services.FetchService(&syncCommitteeStore); err != nil {
 		return err
 	}
 
@@ -445,7 +428,6 @@ func (b *BeaconNode) registerBlockchainService() error {
 		StateNotifier:           b,
 		ForkChoiceStore:         b.forkChoiceStore,
 		OpsService:              opsService,
-		SyncCommitteeStore:      syncCommitteeStore,
 		StateGen:                b.stateGen,
 		WeakSubjectivityCheckpt: wsCheckpt,
 	})

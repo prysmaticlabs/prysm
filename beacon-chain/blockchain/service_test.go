@@ -18,7 +18,6 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
@@ -104,17 +103,16 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	require.NoError(t, err)
 
 	cfg := &Config{
-		BeaconBlockBuf:     0,
-		BeaconDB:           beaconDB,
-		DepositCache:       depositCache,
-		ChainStartFetcher:  web3Service,
-		P2p:                &mockBroadcaster{},
-		StateNotifier:      &mockBeaconNode{},
-		AttPool:            attestations.NewPool(),
-		SyncCommitteeStore: synccommittee.NewService(ctx, synccommittee.NewStore()),
-		StateGen:           stategen.New(beaconDB),
-		ForkChoiceStore:    protoarray.New(0, 0, params.BeaconConfig().ZeroHash),
-		OpsService:         opsService,
+		BeaconBlockBuf:    0,
+		BeaconDB:          beaconDB,
+		DepositCache:      depositCache,
+		ChainStartFetcher: web3Service,
+		P2p:               &mockBroadcaster{},
+		StateNotifier:     &mockBeaconNode{},
+		AttPool:           attestations.NewPool(),
+		StateGen:          stategen.New(beaconDB),
+		ForkChoiceStore:   protoarray.New(0, 0, params.BeaconConfig().ZeroHash),
+		OpsService:        opsService,
 	}
 
 	// Safe a state in stategen to purposes of testing a service stop / shutdown.
