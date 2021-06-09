@@ -78,7 +78,6 @@ func (s *Server) handleBlockEvents(
 	stream ethpb.Events_StreamEventsServer, requestedTopics map[string]bool, event *feed.Event,
 ) error {
 	switch event.Type {
-	// TODO(Raul): Handle new head event.
 	case blockfeed.ReceivedBlock:
 		if _, ok := requestedTopics["block"]; !ok {
 			return nil
@@ -139,12 +138,33 @@ func (s *Server) handleStateEvents(
 	stream ethpb.Events_StreamEventsServer, requestedTopics map[string]bool, event *feed.Event,
 ) error {
 	switch event.Type {
+	case statefeed.NewHead:
+		if _, ok := requestedTopics["head"]; !ok {
+			return nil
+		}
+		head, ok := event.Data.(*ethpb.EventHead)
+		if !ok {
+			return nil
+		}
+		return s.streamData(stream, "head", head)
+	case statefeed.FinalizedCheckpoint:
+		if _, ok := requestedTopics["finalized_checkpoint"]; !ok {
+			return nil
+		}
+		finalizedCheckpoint, ok := event.Data.(*ethpb.EventFinalizedCheckpoint)
+		if !ok {
+			return nil
+		}
+		return s.streamData(stream, "finalized_checkpoint", finalizedCheckpoint)
 	case statefeed.Reorg:
 		if _, ok := requestedTopics["chain_reorg"]; !ok {
 			return nil
 		}
-		// TODO(Raul): Handle reorg events.
-		return nil
+		reorg, ok := event.Data.(*ethpb.EventChainReorg)
+		if !ok {
+			return nil
+		}
+		return s.streamData(stream, "chain_reorg", reorg)
 	default:
 		return nil
 	}
