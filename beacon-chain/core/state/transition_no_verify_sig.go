@@ -157,7 +157,7 @@ func CalculateStateRoot(
 		if err != nil {
 			return [32]byte{}, err
 		}
-		state, err = altair.ProcessSyncCommittee(state, sa)
+		state, err = altair.ProcessSyncAggregate(state, sa)
 		if err != nil {
 			return [32]byte{}, err
 		}
@@ -199,7 +199,7 @@ func ProcessBlockNoVerifyAnySig(
 		if err != nil {
 			return nil, nil, err
 		}
-		state, err = altair.ProcessSyncCommittee(state, sa)
+		state, err = altair.ProcessSyncAggregate(state, sa)
 		if err != nil {
 			return nil, nil, err
 		}

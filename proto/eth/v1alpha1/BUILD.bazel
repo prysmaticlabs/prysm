@@ -72,7 +72,7 @@ ssz_gen_marshal(
         "SignedVoluntaryExit",
         "Validator",
         "VoluntaryExit",
-        "SyncCommitteeSignature",
+        "SyncCommitteeMessage",
         "SyncCommitteeContribution",
         "ContributionAndProof",
         "SignedContributionAndProof",
