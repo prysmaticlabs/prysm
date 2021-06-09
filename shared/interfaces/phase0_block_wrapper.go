@@ -158,6 +158,11 @@ func (w Phase0BeaconBlock) Proto() proto.Message {
 	return w.b
 }
 
+// Version of the underlying protobuf object.
+func (w Phase0BeaconBlock) Version() int {
+	return version.Altair
+}
+
 // Phase0BeaconBlockBody is a wrapper of a beacon block body.
 type Phase0BeaconBlockBody struct {
 	b *ethpb.BeaconBlockBody
