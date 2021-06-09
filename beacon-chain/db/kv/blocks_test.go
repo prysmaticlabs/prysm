@@ -7,7 +7,6 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -172,7 +171,7 @@ func TestStore_BlocksCRUD_NoCache(t *testing.T) {
 	require.NoError(t, err)
 	retrievedBlock, err := db.Block(ctx, blockRoot)
 	require.NoError(t, err)
-	require.DeepEqual(t, (*ethpb.SignedBeaconBlock)(nil), retrievedBlock.Proto(), "Expected nil block")
+	require.DeepEqual(t, nil, retrievedBlock, "Expected nil block")
 	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(block)))
 	db.blockCache.Del(string(blockRoot[:]))
 	assert.Equal(t, true, db.HasBlock(ctx, blockRoot), "Expected block to exist in the db")
