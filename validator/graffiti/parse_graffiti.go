@@ -7,7 +7,6 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
 
@@ -27,15 +26,6 @@ type Graffiti struct {
 
 // ParseGraffitiFile parses the graffiti file and returns the graffiti struct.
 func ParseGraffitiFile(f string) (*Graffiti, error) {
-	// helper function to avoid coding this twice while parsing the Ordered and Random fields of the graffiti struct
-	parseGraffitiStrings := func(input []string) []string {
-		output := make([]string, len(input))
-		for _, i := range input {
-			output = append(output, ParseHexGraffiti(i))
-		}
-		return output
-	}
-
 	yamlFile, err := ioutil.ReadFile(f)
 	if err != nil {
 		return nil, err
@@ -45,16 +35,21 @@ func ParseGraffitiFile(f string) (*Graffiti, error) {
 		return nil, err
 	}
 
-	specific := make(map[types.ValidatorIndex]string, len(g.Specific))
 	for i, o := range g.Specific {
-		specific[types.ValidatorIndex(i)] = ParseHexGraffiti(o)
+		g.Specific[types.ValidatorIndex(i)] = ParseHexGraffiti(o)
 	}
 
-	g.Specific = specific
+	for i, v := range g.Ordered {
+		g.Ordered[i] = ParseHexGraffiti(v)
+	}
+
+	for i, v := range g.Random {
+		g.Random[i] = ParseHexGraffiti(v)
+	}
+
 	g.Default = ParseHexGraffiti(g.Default)
-	g.Ordered = parseGraffitiStrings(g.Ordered)
-	g.Random = parseGraffitiStrings(g.Random)
 	g.Hash = hashutil.Hash(yamlFile)
+
 	return g, nil
 }
 
@@ -64,18 +59,14 @@ func ParseHexGraffiti(rawGraffiti string) string {
 	if strings.ToLower(splitGraffiti[0]) == hexGraffitiPrefix {
 		target := splitGraffiti[1]
 		if target == "" {
-			log.WithFields(logrus.Fields{
-				"input": rawGraffiti,
-			}).Debug("Blank hex tag to be interpreted as itself")
+			log.WithField("graffiti", rawGraffiti).Debug("Blank hex tag to be interpreted as itself")
 			return rawGraffiti
 		}
 		if len(target) > 3 && target[:2] == hex0xPrefix {
 			target = target[2:]
 		}
 		if target == "" {
-			log.WithFields(logrus.Fields{
-				"input": rawGraffiti,
-			}).Debug("Nothing after 0x prefix, hex tag to be interpreted as itself")
+			log.WithField("graffiti", rawGraffiti).Debug("Nothing after 0x prefix, hex tag to be interpreted as itself")
 			return rawGraffiti
 		}
 		graffiti, err := hex.DecodeString(target)
