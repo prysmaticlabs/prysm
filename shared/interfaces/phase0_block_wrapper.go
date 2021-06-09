@@ -160,7 +160,7 @@ func (w Phase0BeaconBlock) Proto() proto.Message {
 
 // Version of the underlying protobuf object.
 func (w Phase0BeaconBlock) Version() int {
-	return version.Altair
+	return version.Phase0
 }
 
 // Phase0BeaconBlockBody is a wrapper of a beacon block body.
