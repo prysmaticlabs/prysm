@@ -155,7 +155,11 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 
 	// Forward an event capturing a new chain head over a common event feed
 	// done in a goroutine to avoid blocking the critical runtime main routine.
-	go s.notifyNewHeadEvent(newHeadSlot, newHeadState, newStateRoot, headRoot[:])
+	go func() {
+		if err := s.notifyNewHeadEvent(newHeadSlot, newHeadState, newStateRoot, headRoot[:]); err != nil {
+			log.WithError(err).Error("Could not notify event feed of new chain head")
+		}
+	}()
 
 	return nil
 }
@@ -255,14 +259,6 @@ func (s *Service) hasHeadState() bool {
 	return s.head != nil && s.head.state != nil
 }
 
-// Absolute value difference between two slots.
-func absoluteValueSlotDifference(x, y types.Slot) uint64 {
-	if x > y {
-		return uint64(x.SubSlot(y))
-	}
-	return uint64(y.SubSlot(x))
-}
-
 // This caches justified state balances to be used for fork choice.
 func (s *Service) cacheJustifiedStateBalances(ctx context.Context, justifiedRoot [32]byte) error {
 	if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
@@ -320,51 +316,54 @@ func (s *Service) notifyNewHeadEvent(
 	newHeadSlot types.Slot,
 	newHeadState iface.BeaconState,
 	newHeadStateRoot,
-	oldHeadRoot []byte,
-) {
+	newHeadRoot []byte,
+) error {
+	previousDutyDependentRoot := s.genesisRoot[:]
+	currentDutyDependentRoot := s.genesisRoot[:]
+
+	var previousDutyEpoch types.Epoch
 	currentDutyEpoch := helpers.SlotToEpoch(newHeadSlot)
-	previousDutyEpoch, err := helpers.SlotToEpoch(newHeadSlot).SafeSub(1)
-	if err != nil {
-		log.WithError(err).Error("Could not get duty dependent epoch")
-		return
+	if currentDutyEpoch > 0 {
+		previousDutyEpoch = currentDutyEpoch.Sub(1)
 	}
-	var previousDutyDependentRoot []byte
-	var currentDutyDependentRoot []byte
 	currentDutySlot, err := helpers.StartSlot(currentDutyEpoch)
 	if err != nil {
-		log.WithError(err).Error("Could not get duty slot")
-		return
+		return errors.Wrap(err, "could not get duty slot")
 	}
 	previousDutySlot, err := helpers.StartSlot(previousDutyEpoch)
 	if err != nil {
-		log.WithError(err).Error("Could not get duty slot")
-		return
+		return errors.Wrap(err, "could not get duty slot")
 	}
-	// In the case where there would be an underflow, we use the genesis state root.
-	if currentDutyEpoch == 0 {
-		previousDutyDependentRoot = s.genesisRoot[:]
-		currentDutyDependentRoot = s.genesisRoot[:]
-	} else {
+	if currentDutySlot > 0 {
 		currentDutyDependentRoot, err = helpers.BlockRootAtSlot(newHeadState, currentDutySlot-1)
 		if err != nil {
-			log.WithError(err).Error("Could not get current duty dependent epoch")
-		}
-		previousDutyDependentRoot, err = helpers.BlockRootAtSlot(newHeadState, previousDutySlot-1)
-		if err != nil {
-			log.WithError(err).Error("Could not get previous duty dependent root")
-			return
+			return errors.Wrap(err, "could not get duty dependent root")
 		}
 	}
-
+	if previousDutySlot > 0 {
+		previousDutyDependentRoot, err = helpers.BlockRootAtSlot(newHeadState, previousDutySlot-1)
+		if err != nil {
+			return errors.Wrap(err, "could not get duty dependent root")
+		}
+	}
 	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.NewHead,
 		Data: &ethpbv1.EventHead{
 			Slot:                      newHeadSlot,
-			Block:                     oldHeadRoot,
+			Block:                     newHeadRoot,
 			State:                     newHeadStateRoot,
 			EpochTransition:           helpers.IsEpochEnd(newHeadSlot),
 			PreviousDutyDependentRoot: previousDutyDependentRoot,
 			CurrentDutyDependentRoot:  currentDutyDependentRoot,
 		},
 	})
+	return nil
+}
+
+// Absolute value difference between two slots.
+func absoluteValueSlotDifference(x, y types.Slot) uint64 {
+	if x > y {
+		return uint64(x.SubSlot(y))
+	}
+	return uint64(y.SubSlot(x))
 }

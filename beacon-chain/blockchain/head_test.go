@@ -6,8 +6,11 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -144,6 +147,72 @@ func TestUpdateHead_MissingJustifiedRoot(t *testing.T) {
 	service.bestJustifiedCheckpt = &ethpb.Checkpoint{}
 
 	require.NoError(t, service.updateHead(context.Background(), []uint64{}))
+}
+
+func Test_notifyNewHeadEvent(t *testing.T) {
+	t.Run("genesis_state_root", func(t *testing.T) {
+		bState, _ := testutil.DeterministicGenesisState(t, 10)
+		notifier := &mock.MockStateNotifier{RecordEvents: true}
+		srv := &Service{
+			cfg: &Config{
+				StateNotifier: notifier,
+			},
+			genesisRoot: [32]byte{1},
+		}
+		newHeadStateRoot := [32]byte{2}
+		newHeadRoot := [32]byte{3}
+		err := srv.notifyNewHeadEvent(1, bState, newHeadStateRoot[:], newHeadRoot[:])
+		require.NoError(t, err)
+		events := notifier.ReceivedEvents()
+		require.Equal(t, 1, len(events))
+
+		eventHead, ok := events[0].Data.(*ethpbv1.EventHead)
+		require.Equal(t, true, ok)
+		wanted := &ethpbv1.EventHead{
+			Slot:                      1,
+			Block:                     newHeadRoot[:],
+			State:                     newHeadStateRoot[:],
+			EpochTransition:           false,
+			PreviousDutyDependentRoot: srv.genesisRoot[:],
+			CurrentDutyDependentRoot:  srv.genesisRoot[:],
+		}
+		require.DeepSSZEqual(t, wanted, eventHead)
+	})
+	t.Run("non_genesis_values", func(t *testing.T) {
+		bState, _ := testutil.DeterministicGenesisState(t, 10)
+		notifier := &mock.MockStateNotifier{RecordEvents: true}
+		genesisRoot := [32]byte{1}
+		srv := &Service{
+			cfg: &Config{
+				StateNotifier: notifier,
+			},
+			genesisRoot: genesisRoot,
+		}
+		epoch1Start, err := helpers.StartSlot(1)
+		require.NoError(t, err)
+		epoch2Start, err := helpers.StartSlot(1)
+		require.NoError(t, err)
+		require.NoError(t, bState.SetSlot(epoch1Start))
+
+		newHeadStateRoot := [32]byte{2}
+		newHeadRoot := [32]byte{3}
+		err = srv.notifyNewHeadEvent(epoch2Start, bState, newHeadStateRoot[:], newHeadRoot[:])
+		require.NoError(t, err)
+		events := notifier.ReceivedEvents()
+		require.Equal(t, 1, len(events))
+
+		eventHead, ok := events[0].Data.(*ethpbv1.EventHead)
+		require.Equal(t, true, ok)
+		wanted := &ethpbv1.EventHead{
+			Slot:                      epoch2Start,
+			Block:                     newHeadRoot[:],
+			State:                     newHeadStateRoot[:],
+			EpochTransition:           false,
+			PreviousDutyDependentRoot: genesisRoot[:],
+			CurrentDutyDependentRoot:  make([]byte, 32),
+		}
+		require.DeepSSZEqual(t, wanted, eventHead)
+	})
 }
 
 func Test_absoluteValueSlotDifference(t *testing.T) {
