@@ -194,10 +194,10 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	TimelyHeadFlagIndex:   2,
 
 	// Incentivization weight values.
-	TimelyHeadWeight:   12,
-	TimelySourceWeight: 12,
-	TimelyTargetWeight: 24,
-	SyncRewardWeight:   8,
+	TimelySourceWeight: 14,
+	TimelyTargetWeight: 26,
+	TimelyHeadWeight:   14,
+	SyncRewardWeight:   2,
 	ProposerWeight:     8,
 	WeightDenominator:  64,
 
@@ -209,7 +209,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	SyncCommitteeSize:            512,
 	InactivityScoreBias:          4,
 	InactivityScoreRecoveryRate:  16,
-	EpochsPerSyncCommitteePeriod: 512,
+	EpochsPerSyncCommitteePeriod: 256,
 
 	// Updated penalty values.
 	InactivityPenaltyQuotientAltair:      3 * 1 << 24, //50331648

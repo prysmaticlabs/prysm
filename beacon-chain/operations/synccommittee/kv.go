@@ -14,7 +14,7 @@ var hashFn = hashutil.HashProto
 // such as signature(un-aggregated) and contribution(aggregated).
 type Store struct {
 	signatureLock     sync.RWMutex
-	signatureCache    map[types.Slot][]*ethpb.SyncCommitteeSignature
+	signatureCache    map[types.Slot][]*ethpb.SyncCommitteeMessage
 	contributionLock  sync.RWMutex
 	contributionCache map[types.Slot][]*ethpb.SyncCommitteeContribution
 }
@@ -22,7 +22,7 @@ type Store struct {
 // NewStore initializes a new sync committee store.
 func NewStore() *Store {
 	return &Store{
-		signatureCache:    make(map[types.Slot][]*ethpb.SyncCommitteeSignature),
+		signatureCache:    make(map[types.Slot][]*ethpb.SyncCommitteeMessage),
 		contributionCache: make(map[types.Slot][]*ethpb.SyncCommitteeContribution),
 	}
 }

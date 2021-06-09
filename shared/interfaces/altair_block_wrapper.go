@@ -50,6 +50,23 @@ func (w AltairSignedBeaconBlock) MarshalSSZ() ([]byte, error) {
 	return w.b.MarshalSSZ()
 }
 
+// MarshalSSZTo marshals the signed beacon block to its relevant ssz
+// form to the provided byte buffer.
+func (w AltairSignedBeaconBlock) MarshalSSZTo(dst []byte) ([]byte, error) {
+	return w.b.MarshalSSZTo(dst)
+}
+
+// SizeSSZ returns the size of serialized signed block
+func (w AltairSignedBeaconBlock) SizeSSZ() int {
+	return w.b.SizeSSZ()
+}
+
+// UnmarshalSSZ unmarshalls the signed beacon block from its relevant ssz
+// form.
+func (w AltairSignedBeaconBlock) UnmarshalSSZ(buf []byte) error {
+	return w.b.UnmarshalSSZ(buf)
+}
+
 // Proto returns the block in its underlying protobuf
 // interface.
 func (w AltairSignedBeaconBlock) Proto() proto.Message {
@@ -121,6 +138,23 @@ func (w AltairBeaconBlock) HashTreeRoot() ([32]byte, error) {
 // ssz form.
 func (w AltairBeaconBlock) MarshalSSZ() ([]byte, error) {
 	return w.b.MarshalSSZ()
+}
+
+// MarshalSSZTo marshals the beacon block to its relevant ssz
+// form to the provided byte buffer.
+func (w AltairBeaconBlock) MarshalSSZTo(dst []byte) ([]byte, error) {
+	return w.b.MarshalSSZTo(dst)
+}
+
+// SizeSSZ returns the size of serialized block.
+func (w AltairBeaconBlock) SizeSSZ() int {
+	return w.b.SizeSSZ()
+}
+
+// UnmarshalSSZ unmarshalls the beacon block from its relevant ssz
+// form.
+func (w AltairBeaconBlock) UnmarshalSSZ(buf []byte) error {
+	return w.b.UnmarshalSSZ(buf)
 }
 
 // Proto returns the underlying block object in its

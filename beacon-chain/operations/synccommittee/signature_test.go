@@ -15,7 +15,7 @@ func TestSyncCommitteeSignatureCache_Nil(t *testing.T) {
 func TestSyncCommitteeSignatureCache_RoundTrip(t *testing.T) {
 	store := NewStore()
 
-	sigs := []*eth.SyncCommitteeSignature{
+	sigs := []*eth.SyncCommitteeMessage{
 		{Slot: 1, ValidatorIndex: 0, Signature: []byte{'a'}},
 		{Slot: 1, ValidatorIndex: 1, Signature: []byte{'b'}},
 		{Slot: 1, ValidatorIndex: 2, Signature: []byte{'c'}},
@@ -28,29 +28,29 @@ func TestSyncCommitteeSignatureCache_RoundTrip(t *testing.T) {
 	}
 
 	sigs = store.SyncCommitteeSignatures(1)
-	require.DeepSSZEqual(t, []*eth.SyncCommitteeSignature{
+	require.DeepSSZEqual(t, []*eth.SyncCommitteeMessage{
 		{Slot: 1, ValidatorIndex: 0, Signature: []byte{'a'}},
 		{Slot: 1, ValidatorIndex: 1, Signature: []byte{'b'}},
 		{Slot: 1, ValidatorIndex: 2, Signature: []byte{'c'}},
 	}, sigs)
 
 	sigs = store.SyncCommitteeSignatures(2)
-	require.DeepSSZEqual(t, []*eth.SyncCommitteeSignature{
+	require.DeepSSZEqual(t, []*eth.SyncCommitteeMessage{
 		{Slot: 2, ValidatorIndex: 0, Signature: []byte{'d'}},
 		{Slot: 2, ValidatorIndex: 1, Signature: []byte{'e'}},
 	}, sigs)
 
 	store.DeleteSyncCommitteeSignatures(1)
 	sigs = store.SyncCommitteeSignatures(1)
-	require.DeepSSZEqual(t, []*eth.SyncCommitteeSignature{}, sigs)
+	require.DeepSSZEqual(t, []*eth.SyncCommitteeMessage{}, sigs)
 
 	sigs = store.SyncCommitteeSignatures(2)
-	require.DeepSSZEqual(t, []*eth.SyncCommitteeSignature{
+	require.DeepSSZEqual(t, []*eth.SyncCommitteeMessage{
 		{Slot: 2, ValidatorIndex: 0, Signature: []byte{'d'}},
 		{Slot: 2, ValidatorIndex: 1, Signature: []byte{'e'}},
 	}, sigs)
 
 	store.DeleteSyncCommitteeSignatures(2)
 	sigs = store.SyncCommitteeSignatures(2)
-	require.DeepSSZEqual(t, []*eth.SyncCommitteeSignature{}, sigs)
+	require.DeepSSZEqual(t, []*eth.SyncCommitteeMessage{}, sigs)
 }

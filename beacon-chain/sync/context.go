@@ -5,8 +5,12 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 )
+
+// Specifies the fixed size context length.
+const digestLength = 4
 
 // writes peer's current context for the expected payload to the stream.
 func writeContextToStream(stream network.Stream, chain blockchain.ChainInfoFetcher) error {
@@ -32,7 +36,7 @@ func readContextFromStream(stream network.Stream, chain blockchain.ChainInfoFetc
 		return []byte{}, nil
 	}
 	// Read context (fork-digest) from stream
-	b := make([]byte, 4)
+	b := make([]byte, digestLength)
 	if _, err := stream.Read(b); err != nil {
 		return nil, err
 	}
@@ -49,6 +53,14 @@ func rpcContext(stream network.Stream, chain blockchain.ChainInfoFetcher) ([]byt
 	case p2p.SchemaVersionV1:
 		// Return empty context for a v1 method.
 		return []byte{}, nil
+	case p2p.SchemaVersionV2:
+		currFork := chain.CurrentFork()
+		genVersion := chain.GenesisValidatorRoot()
+		digest, err := helpers.ComputeForkDigest(currFork.CurrentVersion, genVersion[:])
+		if err != nil {
+			return nil, err
+		}
+		return digest[:], nil
 	default:
 		return nil, errors.New("invalid version of %s registered for topic: %s")
 	}

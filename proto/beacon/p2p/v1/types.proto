@@ -167,7 +167,7 @@ message DepositMessage {
 
 // SyncCommittee serves as committees to facilitate light client syncing to beacon chain.
 message SyncCommittee {
-  repeated bytes pubkeys = 1  [(ethereum.eth.ext.ssz_size) = "512,48"];
+  repeated bytes pubkeys = 1  [(ethereum.eth.ext.ssz_size) = "sync_committee_bits.size,48"];
   bytes aggregate_pubkey = 2 [(ethereum.eth.ext.ssz_size) = "48"];
 }
 

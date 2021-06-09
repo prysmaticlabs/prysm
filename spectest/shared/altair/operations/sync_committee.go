@@ -17,7 +17,7 @@ import (
 
 func RunSyncCommitteeTest(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
-	testFolders, testsFolderPath := utils.TestFolders(t, config, "altair", "operations/sync_committee/pyspec_tests")
+	testFolders, testsFolderPath := utils.TestFolders(t, config, "altair", "operations/sync_aggregate/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())
@@ -30,7 +30,7 @@ func RunSyncCommitteeTest(t *testing.T, config string) {
 
 			body := &ethpb.BeaconBlockBodyAltair{SyncAggregate: sc}
 			RunBlockOperationTest(t, folderPath, body, func(ctx context.Context, s iface.BeaconState, b interfaces.SignedBeaconBlock) (iface.BeaconState, error) {
-				return altair.ProcessSyncCommittee(s, body.SyncAggregate)
+				return altair.ProcessSyncAggregate(s, body.SyncAggregate)
 			})
 		})
 	}
