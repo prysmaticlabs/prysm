@@ -61,7 +61,7 @@ func ParseGraffitiFile(f string) (*Graffiti, error) {
 // ParseHexGraffiti checks if a graffiti input is being represented in hex and converts it to ASCII if so
 func ParseHexGraffiti(rawGraffiti string) string {
 	splitGraffiti := strings.SplitN(rawGraffiti, ":", 2)
-	if strings.ToLower(splitGraffiti[0]) != hexGraffitiPrefixKey {
+	if strings.ToLower(splitGraffiti[0]) != hexGraffitiPrefix {
 		return rawGraffiti
 	}
 
