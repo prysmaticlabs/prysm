@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/altair"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	testing2 "github.com/prysmaticlabs/prysm/validator/db/testing"
@@ -665,6 +666,34 @@ func TestSignBlock(t *testing.T) {
 		"faa9a09a88beaff697404ca028b1c7052b0de37dbcff985dfa500459783370312bdd"+
 		"36d6e0f224", hex.EncodeToString(sig))
 	// proposer domain
+	require.DeepEqual(t, proposerDomain, domain.SignatureDomain)
+}
+
+func TestSignAltairBlock(t *testing.T) {
+	validator, m, _, finish := setup(t)
+	defer finish()
+
+	secretKey, err := bls.SecretKeyFromBytes(bytesutil.PadTo([]byte{1}, 32))
+	require.NoError(t, err, "Failed to generate key from bytes")
+	publicKey := secretKey.PublicKey()
+	proposerDomain := make([]byte, 32)
+	m.validatorClient.EXPECT().
+		DomainData(gomock.Any(), gomock.Any()).
+		Return(&ethpb.DomainResponse{SignatureDomain: proposerDomain}, nil)
+	ctx := context.Background()
+	blk := altair.NewBeaconBlock()
+	blk.Block.Slot = 1
+	blk.Block.ProposerIndex = 100
+	var pubKey [48]byte
+	copy(pubKey[:], publicKey.Marshal())
+	km := &mockKeymanager{
+		keysMap: map[[48]byte]bls.SecretKey{
+			pubKey: secretKey,
+		},
+	}
+	validator.keyManager = km
+	sig, domain, err := validator.signBlock(ctx, pubKey, 0, interfaces.WrappedAltairBeaconBlock(blk.Block))
+	require.NoError(t, err, "%x,%x,%v", sig, domain.SignatureDomain, err)
 	require.DeepEqual(t, proposerDomain, domain.SignatureDomain)
 }
 
