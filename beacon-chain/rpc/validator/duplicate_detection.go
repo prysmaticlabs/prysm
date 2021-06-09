@@ -58,7 +58,7 @@ func (vs *Server) DetectDoppelganger(ctx context.Context, req *ethpb.DetectDoppe
 			}
 			totalBalance, err := helpers.TotalActiveBalance(prevState)
 			if err != nil {
-				return  &ethpb.DetectDoppelgangerResponse{PublicKey: nil,
+				return &ethpb.DetectDoppelgangerResponse{PublicKey: nil,
 					DuplicateFound: false}, status.Errorf(codes.Internal, "Doppelganger rpc service - Could not get calculate balance: %v", err)
 			}
 			if totalBalance == 0 {
@@ -68,17 +68,17 @@ func (vs *Server) DetectDoppelganger(ctx context.Context, req *ethpb.DetectDoppe
 
 			valIdx, err := vs.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pkt.PubKey})
 			if err != nil {
-				return  &ethpb.DetectDoppelgangerResponse{PublicKey: nil,
+				return &ethpb.DetectDoppelgangerResponse{PublicKey: nil,
 					DuplicateFound: false}, status.Errorf(codes.Internal, "Doppelganger rpc service - : %v", err)
 			}
 			valPrevBalance, err := prevState.BalanceAtIndex(valIdx.Index)
 			if err != nil {
-				return  &ethpb.DetectDoppelgangerResponse{PublicKey: nil,
+				return &ethpb.DetectDoppelgangerResponse{PublicKey: nil,
 					DuplicateFound: false}, status.Errorf(codes.Internal, "Doppelganger rpc service - could not get balance: %v", err)
 			}
 			valHeadBalance, err := headState.BalanceAtIndex(valIdx.Index)
 			if err != nil {
-				return  &ethpb.DetectDoppelgangerResponse{PublicKey: nil,
+				return &ethpb.DetectDoppelgangerResponse{PublicKey: nil,
 					DuplicateFound: false}, status.Errorf(codes.Internal, "Doppelganger rpc service - could not get balance: %v", err)
 			}
 			base_reward := valPrevBalance * baseRewardFactor / balanceSqrt / baseRewardsPerEpoch
