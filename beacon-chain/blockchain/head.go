@@ -159,25 +159,29 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	// Forward an event capturing a new chain head over a common event feed
 	// done in a goroutine to avoid blocking the critical runtime main routine.
 	go func() {
-		dutyEpoch, err := helpers.StartSlot(helpers.SlotToEpoch(newHeadSlot).Sub(1))
+		dutyEpoch, err := helpers.SlotToEpoch(newHeadSlot).SafeSub(1)
 		if err != nil {
-			log.WithError(err).Error("Could not get previous duty dependent epoch")
+			log.WithError(err).Error("Could not get duty dependent epoch")
 			return
 		}
 		var previousDutyDependentRoot []byte
 		var currentDutyDependentRoot []byte
-
+		dutySlot, err := helpers.StartSlot(dutyEpoch)
+		if err != nil {
+			log.WithError(err).Error("Could not get duty slot")
+			return
+		}
 		// In the case where there would be an underflow, we use the genesis state root.
-		if dutyEpoch == 0 {
+		if dutySlot == 0 {
 			previousDutyDependentRoot = s.genesisRoot[:]
 			currentDutyDependentRoot = s.genesisRoot[:]
 		} else {
-			previousDutyDependentRoot, err = helpers.BlockRootAtSlot(newHeadState, dutyEpoch-1)
+			previousDutyDependentRoot, err = helpers.BlockRootAtSlot(newHeadState, dutySlot-1)
 			if err != nil {
 				log.WithError(err).Error("Could not get previous duty dependent root")
 				return
 			}
-			currentDutyDependentRoot, err = helpers.BlockRootAtSlot(newHeadState, dutyEpoch)
+			currentDutyDependentRoot, err = helpers.BlockRootAtSlot(newHeadState, dutySlot)
 			if err != nil {
 				log.WithError(err).Error("Could not get current duty dependent epoch")
 			}
