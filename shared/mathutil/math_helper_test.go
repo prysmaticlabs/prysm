@@ -69,6 +69,14 @@ func TestIntegerSquareRoot(t *testing.T) {
 			number: 16,
 			root:   4,
 		},
+		{
+			number: 5508423000000000,
+			root:   74218750,
+		},
+		{
+			number: 4503599761588224,
+			root:   67108864,
+		},
 	}
 
 	for _, testVals := range tt {
@@ -76,17 +84,24 @@ func TestIntegerSquareRoot(t *testing.T) {
 	}
 }
 
-func BenchmarkIntegerSquareRoot(b *testing.B) {
+func BenchmarkIntegerSquareRootBelow52Bits(b *testing.B) {
+	val := uint64(1 << 33)
+	for i := 0; i < b.N; i++ {
+		require.Equal(b, uint64(92681), mathutil.IntegerSquareRoot(val))
+	}
+}
+
+func BenchmarkIntegerSquareRootAbove52Bits(b *testing.B) {
 	val := uint64(1 << 62)
 	for i := 0; i < b.N; i++ {
-		require.Equal(b, 1<<31, mathutil.IntegerSquareRoot(val))
+		require.Equal(b, uint64(1<<31), mathutil.IntegerSquareRoot(val))
 	}
 }
 
 func BenchmarkIntegerSquareRoot_WithDatatable(b *testing.B) {
 	val := uint64(1024)
 	for i := 0; i < b.N; i++ {
-		require.Equal(b, 32, mathutil.IntegerSquareRoot(val))
+		require.Equal(b, uint64(32), mathutil.IntegerSquareRoot(val))
 	}
 }
 
@@ -177,33 +192,6 @@ func TestPowerOf2(t *testing.T) {
 	}
 	for _, tt := range tests {
 		require.Equal(t, tt.b, mathutil.PowerOf2(tt.a))
-	}
-}
-
-func TestClosestPowerOf2(t *testing.T) {
-	tests := []struct {
-		a uint64
-		b uint64
-	}{
-		{
-			a: 10,
-			b: 8,
-		},
-		{
-			a: 300,
-			b: 256,
-		},
-		{
-			a: 1200,
-			b: 1024,
-		},
-		{
-			a: 4500,
-			b: 4096,
-		},
-	}
-	for _, tt := range tests {
-		require.Equal(t, tt.b, mathutil.ClosestPowerOf2(tt.a))
 	}
 }
 

@@ -8,11 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
-	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -23,15 +20,19 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestServer_ListAttestations_NoResults(t *testing.T) {
@@ -91,7 +92,7 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 	signedBlock.Block.Body.Attestations = []*ethpb.Attestation{att}
 	root, err := signedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, signedBlock))
+	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(signedBlock)))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 	wanted := &ethpb.ListAttestationsResponse{
 		Attestations:  []*ethpb.Attestation{att},
@@ -128,7 +129,7 @@ func TestServer_ListAttestations_NoPagination(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0b11},
 			},
 		}
-		require.NoError(t, db.SaveBlock(ctx, blockExample))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(blockExample)))
 		atts = append(atts, blockExample.Block.Body.Attestations...)
 	}
 
@@ -155,82 +156,87 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 	targetRoot := [32]byte{7, 8, 9}
 	targetEpoch := types.Epoch(7)
 
-	blocks := []*ethpb.SignedBeaconBlock{
-		testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
-			Block: &ethpb.BeaconBlock{
-				Slot: 4,
-				Body: &ethpb.BeaconBlockBody{
-					Attestations: []*ethpb.Attestation{
-						{
-							Data: &ethpb.AttestationData{
-								BeaconBlockRoot: someRoot[:],
-								Source: &ethpb.Checkpoint{
-									Root:  sourceRoot[:],
-									Epoch: sourceEpoch,
+	blocks := []interfaces.SignedBeaconBlock{
+		interfaces.WrappedPhase0SignedBeaconBlock(
+			testutil.HydrateSignedBeaconBlock(
+				&ethpb.SignedBeaconBlock{
+					Block: &ethpb.BeaconBlock{
+						Slot: 4,
+						Body: &ethpb.BeaconBlockBody{
+							Attestations: []*ethpb.Attestation{
+								{
+									Data: &ethpb.AttestationData{
+										BeaconBlockRoot: someRoot[:],
+										Source: &ethpb.Checkpoint{
+											Root:  sourceRoot[:],
+											Epoch: sourceEpoch,
+										},
+										Target: &ethpb.Checkpoint{
+											Root:  targetRoot[:],
+											Epoch: targetEpoch,
+										},
+										Slot: 3,
+									},
+									AggregationBits: bitfield.Bitlist{0b11},
+									Signature:       bytesutil.PadTo([]byte("sig"), 96),
 								},
-								Target: &ethpb.Checkpoint{
-									Root:  targetRoot[:],
-									Epoch: targetEpoch,
-								},
-								Slot: 3,
 							},
-							AggregationBits: bitfield.Bitlist{0b11},
-							Signature:       bytesutil.PadTo([]byte("sig"), 96),
+						},
+					},
+				})),
+		interfaces.WrappedPhase0SignedBeaconBlock(
+			testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
+				Block: &ethpb.BeaconBlock{
+					Slot: 5 + params.BeaconConfig().SlotsPerEpoch,
+					Body: &ethpb.BeaconBlockBody{
+						Attestations: []*ethpb.Attestation{
+							{
+								Data: &ethpb.AttestationData{
+									BeaconBlockRoot: someRoot[:],
+									Source: &ethpb.Checkpoint{
+										Root:  sourceRoot[:],
+										Epoch: sourceEpoch,
+									},
+									Target: &ethpb.Checkpoint{
+										Root:  targetRoot[:],
+										Epoch: targetEpoch,
+									},
+									Slot: 4 + params.BeaconConfig().SlotsPerEpoch,
+								},
+								AggregationBits: bitfield.Bitlist{0b11},
+								Signature:       bytesutil.PadTo([]byte("sig"), 96),
+							},
 						},
 					},
 				},
-			},
-		}),
-		testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
-			Block: &ethpb.BeaconBlock{
-				Slot: 5 + params.BeaconConfig().SlotsPerEpoch,
-				Body: &ethpb.BeaconBlockBody{
-					Attestations: []*ethpb.Attestation{
-						{
-							Data: &ethpb.AttestationData{
-								BeaconBlockRoot: someRoot[:],
-								Source: &ethpb.Checkpoint{
-									Root:  sourceRoot[:],
-									Epoch: sourceEpoch,
+			})),
+		interfaces.WrappedPhase0SignedBeaconBlock(
+			testutil.HydrateSignedBeaconBlock(
+				&ethpb.SignedBeaconBlock{
+					Block: &ethpb.BeaconBlock{
+						Slot: 5,
+						Body: &ethpb.BeaconBlockBody{
+							Attestations: []*ethpb.Attestation{
+								{
+									Data: &ethpb.AttestationData{
+										BeaconBlockRoot: someRoot[:],
+										Source: &ethpb.Checkpoint{
+											Root:  sourceRoot[:],
+											Epoch: sourceEpoch,
+										},
+										Target: &ethpb.Checkpoint{
+											Root:  targetRoot[:],
+											Epoch: targetEpoch,
+										},
+										Slot: 4,
+									},
+									AggregationBits: bitfield.Bitlist{0b11},
+									Signature:       bytesutil.PadTo([]byte("sig"), 96),
 								},
-								Target: &ethpb.Checkpoint{
-									Root:  targetRoot[:],
-									Epoch: targetEpoch,
-								},
-								Slot: 4 + params.BeaconConfig().SlotsPerEpoch,
 							},
-							AggregationBits: bitfield.Bitlist{0b11},
-							Signature:       bytesutil.PadTo([]byte("sig"), 96),
 						},
 					},
-				},
-			},
-		}),
-		testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
-			Block: &ethpb.BeaconBlock{
-				Slot: 5,
-				Body: &ethpb.BeaconBlockBody{
-					Attestations: []*ethpb.Attestation{
-						{
-							Data: &ethpb.AttestationData{
-								BeaconBlockRoot: someRoot[:],
-								Source: &ethpb.Checkpoint{
-									Root:  sourceRoot[:],
-									Epoch: sourceEpoch,
-								},
-								Target: &ethpb.Checkpoint{
-									Root:  targetRoot[:],
-									Epoch: targetEpoch,
-								},
-								Slot: 4,
-							},
-							AggregationBits: bitfield.Bitlist{0b11},
-							Signature:       bytesutil.PadTo([]byte("sig"), 96),
-						},
-					},
-				},
-			},
-		}),
+				})),
 	}
 
 	require.NoError(t, db.SaveBlocks(ctx, blocks))
@@ -270,7 +276,7 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 					AggregationBits: bitfield.Bitlist{0b11},
 				}),
 			}
-			require.NoError(t, db.SaveBlock(ctx, blockExample))
+			require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(blockExample)))
 			atts = append(atts, blockExample.Block.Body.Attestations...)
 		}
 	}
@@ -379,7 +385,7 @@ func TestServer_ListAttestations_Pagination_OutOfRange(t *testing.T) {
 				},
 			},
 		})
-		require.NoError(t, db.SaveBlock(ctx, blockExample))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(blockExample)))
 		atts = append(atts, blockExample.Block.Body.Attestations...)
 	}
 
@@ -430,7 +436,7 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0b11},
 			},
 		}
-		require.NoError(t, db.SaveBlock(ctx, blockExample))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(blockExample)))
 		atts = append(atts, blockExample.Block.Body.Attestations...)
 	}
 
@@ -519,7 +525,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 				AggregationBits: bitfield.NewBitlist(128 / uint64(params.BeaconConfig().SlotsPerEpoch)),
 			},
 		}
-		require.NoError(t, db.SaveBlock(ctx, blockExample))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(blockExample)))
 		if i%2 == 0 {
 			atts = append(atts, blockExample.Block.Body.Attestations...)
 		} else {
@@ -624,7 +630,7 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 				},
 			},
 		}
-		require.NoError(t, db.SaveBlock(ctx, blockExample))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(blockExample)))
 		atts = append(atts, blockExample.Block.Body.Attestations...)
 	}
 
@@ -828,7 +834,7 @@ func TestServer_StreamIndexedAttestations_ContextCanceled(t *testing.T) {
 	mockStream := mock.NewMockBeaconChain_StreamIndexedAttestationsServer(ctrl)
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
 	go func(tt *testing.T) {
-		err := server.StreamIndexedAttestations(&ptypes.Empty{}, mockStream)
+		err := server.StreamIndexedAttestations(&emptypb.Empty{}, mockStream)
 		assert.ErrorContains(t, "Context canceled", err)
 		<-exitRoutine
 	}(t)
@@ -848,7 +854,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 	numValidators := 64
 	headState, privKeys := testutil.DeterministicGenesisState(t, uint64(numValidators))
 	b := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(ctx, b))
+	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(b)))
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
@@ -972,7 +978,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
 
 	go func(tt *testing.T) {
-		assert.NoError(tt, server.StreamIndexedAttestations(&ptypes.Empty{}, mockStream), "Could not call RPC method")
+		assert.NoError(tt, server.StreamIndexedAttestations(&emptypb.Empty{}, mockStream), "Could not call RPC method")
 	}(t)
 
 	server.CollectedAttestationsBuffer <- allAtts
@@ -996,7 +1002,7 @@ func TestServer_StreamAttestations_ContextCanceled(t *testing.T) {
 	mockStream.EXPECT().Context().Return(ctx)
 	go func(tt *testing.T) {
 		err := server.StreamAttestations(
-			&ptypes.Empty{},
+			&emptypb.Empty{},
 			mockStream,
 		)
 		assert.ErrorContains(tt, "Context canceled", err)
@@ -1032,7 +1038,7 @@ func TestServer_StreamAttestations_OnSlotTick(t *testing.T) {
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
 
 	go func(tt *testing.T) {
-		assert.NoError(tt, server.StreamAttestations(&ptypes.Empty{}, mockStream), "Could not call RPC method")
+		assert.NoError(tt, server.StreamAttestations(&emptypb.Empty{}, mockStream), "Could not call RPC method")
 	}(t)
 	for i := 0; i < len(atts); i++ {
 		// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).

@@ -17,8 +17,8 @@ func (q *blocksQueue) resetFromFork(ctx context.Context, fork *forkData) error {
 	if len(fork.blocks) == 0 {
 		return errors.New("no blocks to reset from")
 	}
-	firstBlock := fork.blocks[0].Block
-	if firstBlock == nil {
+	firstBlock := fork.blocks[0].Block()
+	if firstBlock == nil || firstBlock.IsNil() {
 		return errors.New("invalid first block in fork data")
 	}
 
@@ -26,13 +26,13 @@ func (q *blocksQueue) resetFromFork(ctx context.Context, fork *forkData) error {
 	if err := q.smm.removeAllStateMachines(); err != nil {
 		return err
 	}
-	fsm := q.smm.addStateMachine(firstBlock.Slot)
+	fsm := q.smm.addStateMachine(firstBlock.Slot())
 	fsm.pid = fork.peer
 	fsm.blocks = fork.blocks
 	fsm.state = stateDataParsed
 
 	// The rest of machines are in skipped state.
-	startSlot := firstBlock.Slot.Add(uint64(len(fork.blocks)))
+	startSlot := firstBlock.Slot().Add(uint64(len(fork.blocks)))
 	for i := startSlot; i < startSlot.Add(blocksPerRequest*(lookaheadSteps-1)); i += types.Slot(blocksPerRequest) {
 		fsm := q.smm.addStateMachine(i)
 		fsm.state = stateSkipped

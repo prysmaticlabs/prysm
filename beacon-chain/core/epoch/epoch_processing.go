@@ -10,13 +10,14 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
+	"github.com/prysmaticlabs/prysm/shared/copyutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -257,18 +258,40 @@ func ProcessEffectiveBalanceUpdates(state iface.BeaconState) (iface.BeaconState,
 		balance := bals[idx]
 
 		if balance+downwardThreshold < val.EffectiveBalance || val.EffectiveBalance+upwardThreshold < balance {
-			effectiveBal := maxEffBalance
-			if effectiveBal > balance-balance%effBalanceInc {
-				effectiveBal = balance - balance%effBalanceInc
+			newVal := copyutil.CopyValidator(val)
+			newVal.EffectiveBalance = maxEffBalance
+			if newVal.EffectiveBalance > balance-balance%effBalanceInc {
+				newVal.EffectiveBalance = balance - balance%effBalanceInc
 			}
-			if effectiveBal != val.EffectiveBalance {
-				newVal := stateV0.CopyValidator(val)
-				newVal.EffectiveBalance = effectiveBal
-				return true, newVal, nil
+			return true, newVal, nil
+		}
+		return false, val, nil
+	}
+
+	if featureconfig.Get().EnableOptimizedBalanceUpdate {
+		validatorFunc = func(idx int, val *ethpb.Validator) (bool, *ethpb.Validator, error) {
+			if val == nil {
+				return false, nil, fmt.Errorf("validator %d is nil in state", idx)
+			}
+			if idx >= len(bals) {
+				return false, nil, fmt.Errorf("validator index exceeds validator length in state %d >= %d", idx, len(state.Balances()))
+			}
+			balance := bals[idx]
+
+			if balance+downwardThreshold < val.EffectiveBalance || val.EffectiveBalance+upwardThreshold < balance {
+				effectiveBal := maxEffBalance
+				if effectiveBal > balance-balance%effBalanceInc {
+					effectiveBal = balance - balance%effBalanceInc
+				}
+				if effectiveBal != val.EffectiveBalance {
+					newVal := copyutil.CopyValidator(val)
+					newVal.EffectiveBalance = effectiveBal
+					return true, newVal, nil
+				}
+				return false, val, nil
 			}
 			return false, val, nil
 		}
-		return false, val, nil
 	}
 
 	if err := state.ApplyToEveryValidator(validatorFunc); err != nil {

@@ -13,8 +13,7 @@ proto_library(
     visibility = ["//visibility:public"],
     deps = [
         "//proto/beacon/p2p/v1:v1_proto",
-        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:proto",
-        "@gogo_special_proto//github.com/gogo/protobuf/gogoproto",
+        "//proto/eth/v1alpha1:proto",
     ],
 )
 
@@ -26,8 +25,11 @@ go_proto_library(
     visibility = ["//visibility:public"],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
-        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "//proto/eth/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+        "@com_github_golang_protobuf//proto:go_default_library",
+        "@org_golang_google_protobuf//reflect/protoreflect:go_default_library",
+        "@org_golang_google_protobuf//runtime/protoimpl:go_default_library",
     ],
 )
 
@@ -37,6 +39,6 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/proto/beacon/db",
     visibility = ["//visibility:public"],
     deps = [
-        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "//proto/eth/v1alpha1:go_default_library",
     ],
 )

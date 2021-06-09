@@ -159,13 +159,14 @@ func inputMnemonic(cliCtx *cli.Context) (mnemonicPhrase string, err error) {
 		return enteredMnemonic, nil
 	}
 	allowedLanguages := map[string][]string{
-		"english":             wordlists.English,
 		"chinese_simplified":  wordlists.ChineseSimplified,
 		"chinese_traditional": wordlists.ChineseTraditional,
+		"czech":               wordlists.Czech,
+		"english":             wordlists.English,
 		"french":              wordlists.French,
-		"italian":             wordlists.Italian,
 		"japanese":            wordlists.Japanese,
 		"korean":              wordlists.Korean,
+		"italian":             wordlists.Italian,
 		"spanish":             wordlists.Spanish,
 	}
 	languages := make([]string, 0)

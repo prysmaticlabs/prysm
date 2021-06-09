@@ -6,20 +6,20 @@ import (
 	"fmt"
 	"math"
 
-	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	corehelpers "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 	"github.com/prysmaticlabs/prysm/endtoend/policies"
 	e2etypes "github.com/prysmaticlabs/prysm/endtoend/types"
+	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"golang.org/x/exp/rand"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // exitedIndex holds the exited index from ProposeVoluntaryExit in memory so other functions don't confuse it
@@ -93,7 +93,7 @@ func processesDepositsInBlocks(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := eth.NewBeaconChainClient(conn)
 
-	chainHead, err := client.GetChainHead(context.Background(), &ptypes.Empty{})
+	chainHead, err := client.GetChainHead(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "failed to get chain head")
 	}
@@ -123,7 +123,7 @@ func verifyGraffitiInBlocks(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := eth.NewBeaconChainClient(conn)
 
-	chainHead, err := client.GetChainHead(context.Background(), &ptypes.Empty{})
+	chainHead, err := client.GetChainHead(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "failed to get chain head")
 	}
@@ -153,7 +153,7 @@ func activatesDepositedValidators(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := eth.NewBeaconChainClient(conn)
 
-	chainHead, err := client.GetChainHead(context.Background(), &ptypes.Empty{})
+	chainHead, err := client.GetChainHead(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "failed to get chain head")
 	}
@@ -226,7 +226,7 @@ func depositedValidatorsAreActive(conns ...*grpc.ClientConn) error {
 		return fmt.Errorf("expected validator count to be %d, recevied %d", expectedCount, receivedCount)
 	}
 
-	chainHead, err := client.GetChainHead(context.Background(), &ptypes.Empty{})
+	chainHead, err := client.GetChainHead(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "failed to get chain head")
 	}
@@ -264,7 +264,7 @@ func proposeVoluntaryExit(conns ...*grpc.ClientConn) error {
 	beaconClient := eth.NewBeaconChainClient(conn)
 
 	ctx := context.Background()
-	chainHead, err := beaconClient.GetChainHead(ctx, &ptypes.Empty{})
+	chainHead, err := beaconClient.GetChainHead(ctx, &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "could not get chain head")
 	}
@@ -327,7 +327,7 @@ func validatorsVoteWithTheMajority(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := eth.NewBeaconChainClient(conn)
 
-	chainHead, err := client.GetChainHead(context.Background(), &ptypes.Empty{})
+	chainHead, err := client.GetChainHead(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "failed to get chain head")
 	}

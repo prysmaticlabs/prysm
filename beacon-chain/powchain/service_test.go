@@ -15,12 +15,13 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/clientstats"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/httputils"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -535,6 +536,16 @@ func TestNewService_Eth1HeaderRequLimit(t *testing.T) {
 	assert.Equal(t, uint64(150), s2.cfg.Eth1HeaderReqLimit, "unable to set eth1HeaderRequestLimit")
 }
 
+type mockBSUpdater struct {
+	lastBS clientstats.BeaconNodeStats
+}
+
+func (mbs *mockBSUpdater) Update(bs clientstats.BeaconNodeStats) {
+	mbs.lastBS = bs
+}
+
+var _ BeaconNodeStatsUpdater = &mockBSUpdater{}
+
 func TestServiceFallbackCorrectly(t *testing.T) {
 	firstEndpoint := "A"
 	secondEndpoint := "B"
@@ -543,22 +554,27 @@ func TestServiceFallbackCorrectly(t *testing.T) {
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
 
+	mbs := &mockBSUpdater{}
 	s1, err := NewService(context.Background(), &Web3ServiceConfig{
-		HttpEndpoints:   []string{firstEndpoint},
-		DepositContract: testAcc.ContractAddr,
-		BeaconDB:        beaconDB,
+		HttpEndpoints:          []string{firstEndpoint},
+		DepositContract:        testAcc.ContractAddr,
+		BeaconDB:               beaconDB,
+		BeaconNodeStatsUpdater: mbs,
 	})
+	s1.bsUpdater = mbs
 	require.NoError(t, err)
 
 	assert.Equal(t, firstEndpoint, s1.currHttpEndpoint.Url, "Unexpected http endpoint")
 	// Stay at the first endpoint.
 	s1.fallbackToNextEndpoint()
 	assert.Equal(t, firstEndpoint, s1.currHttpEndpoint.Url, "Unexpected http endpoint")
+	assert.Equal(t, false, mbs.lastBS.SyncEth1FallbackConfigured, "SyncEth1FallbackConfigured in clientstats update should be false when only 1 endpoint is configured")
 
 	s1.httpEndpoints = append(s1.httpEndpoints, httputils.Endpoint{Url: secondEndpoint})
 
 	s1.fallbackToNextEndpoint()
 	assert.Equal(t, secondEndpoint, s1.currHttpEndpoint.Url, "Unexpected http endpoint")
+	assert.Equal(t, true, mbs.lastBS.SyncEth1FallbackConfigured, "SyncEth1FallbackConfigured in clientstats update should be true when > 1 endpoint is configured")
 
 	thirdEndpoint := "C"
 	fourthEndpoint := "D"
@@ -684,17 +700,60 @@ func TestService_ValidateDepositContainers(t *testing.T) {
 		DepositCache: cache,
 	})
 	require.NoError(t, err)
-	ctrs := make([]*protodb.DepositContainer, 0)
-	assert.Equal(t, true, s1.validateDepositContainers(ctrs))
-	for i := 0; i < 10; i++ {
-		ctrs = append(ctrs, &protodb.DepositContainer{Index: int64(i), Eth1BlockHeight: uint64(i + 10)})
+
+	var tt = []struct {
+		name        string
+		ctrsFunc    func() []*protodb.DepositContainer
+		expectedRes bool
+	}{
+		{
+			name: "zero containers",
+			ctrsFunc: func() []*protodb.DepositContainer {
+				return make([]*protodb.DepositContainer, 0)
+			},
+			expectedRes: true,
+		},
+		{
+			name: "ordered containers",
+			ctrsFunc: func() []*protodb.DepositContainer {
+				ctrs := make([]*protodb.DepositContainer, 0)
+				for i := 0; i < 10; i++ {
+					ctrs = append(ctrs, &protodb.DepositContainer{Index: int64(i), Eth1BlockHeight: uint64(i + 10)})
+				}
+				return ctrs
+			},
+			expectedRes: true,
+		},
+		{
+			name: "0th container missing",
+			ctrsFunc: func() []*protodb.DepositContainer {
+				ctrs := make([]*protodb.DepositContainer, 0)
+				for i := 1; i < 10; i++ {
+					ctrs = append(ctrs, &protodb.DepositContainer{Index: int64(i), Eth1BlockHeight: uint64(i + 10)})
+				}
+				return ctrs
+			},
+			expectedRes: false,
+		},
+		{
+			name: "skipped containers",
+			ctrsFunc: func() []*protodb.DepositContainer {
+				ctrs := make([]*protodb.DepositContainer, 0)
+				for i := 0; i < 10; i++ {
+					if i == 5 || i == 7 {
+						continue
+					}
+					ctrs = append(ctrs, &protodb.DepositContainer{Index: int64(i), Eth1BlockHeight: uint64(i + 10)})
+				}
+				return ctrs
+			},
+			expectedRes: false,
+		},
 	}
-	assert.Equal(t, true, s1.validateDepositContainers(ctrs))
-	ctrs = make([]*protodb.DepositContainer, 0)
-	for i := 1; i < 10; i++ {
-		ctrs = append(ctrs, &protodb.DepositContainer{Index: int64(i), Eth1BlockHeight: uint64(i + 10)})
+
+	for _, test := range tt {
+		assert.Equal(t, test.expectedRes, s1.validateDepositContainers(test.ctrsFunc()))
 	}
-	assert.Equal(t, false, s1.validateDepositContainers(ctrs))
 }
 
 func TestTimestampIsChecked(t *testing.T) {

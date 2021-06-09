@@ -9,20 +9,21 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	ptypes "github.com/gogo/protobuf/types"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
-	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestGetGenesis(t *testing.T) {
@@ -43,7 +44,7 @@ func TestGetGenesis(t *testing.T) {
 			GenesisTimeFetcher: chainService,
 			ChainInfoFetcher:   chainService,
 		}
-		resp, err := s.GetGenesis(ctx, &ptypes.Empty{})
+		resp, err := s.GetGenesis(ctx, &emptypb.Empty{})
 		require.NoError(t, err)
 		assert.Equal(t, genesis.Unix(), resp.Data.GenesisTime.Seconds)
 		assert.Equal(t, int32(0), resp.Data.GenesisTime.Nanos)
@@ -60,7 +61,7 @@ func TestGetGenesis(t *testing.T) {
 			GenesisTimeFetcher: chainService,
 			ChainInfoFetcher:   chainService,
 		}
-		_, err := s.GetGenesis(ctx, &ptypes.Empty{})
+		_, err := s.GetGenesis(ctx, &emptypb.Empty{})
 		assert.ErrorContains(t, "Chain genesis info is not yet known", err)
 	})
 
@@ -73,7 +74,7 @@ func TestGetGenesis(t *testing.T) {
 			GenesisTimeFetcher: chainService,
 			ChainInfoFetcher:   chainService,
 		}
-		_, err := s.GetGenesis(ctx, &ptypes.Empty{})
+		_, err := s.GetGenesis(ctx, &emptypb.Empty{})
 		assert.ErrorContains(t, "Chain genesis info is not yet known", err)
 	})
 }
@@ -86,20 +87,20 @@ func TestGetStateRoot(t *testing.T) {
 		b := testutil.NewBeaconBlock()
 		b.Block.StateRoot = bytesutil.PadTo([]byte("head"), 32)
 		s := Server{
-			ChainInfoFetcher: &chainMock.ChainService{Block: b},
+			ChainInfoFetcher: &chainMock.ChainService{Block: interfaces.WrappedPhase0SignedBeaconBlock(b)},
 		}
 
 		resp, err := s.GetStateRoot(ctx, &ethpb.StateRequest{
 			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
-		assert.DeepEqual(t, bytesutil.PadTo([]byte("head"), 32), resp.Data.StateRoot)
+		assert.DeepEqual(t, bytesutil.PadTo([]byte("head"), 32), resp.Data.Root)
 	})
 
 	t.Run("Genesis", func(t *testing.T) {
 		b := testutil.NewBeaconBlock()
 		b.Block.StateRoot = bytesutil.PadTo([]byte("genesis"), 32)
-		require.NoError(t, db.SaveBlock(ctx, b))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(b)))
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		require.NoError(t, db.SaveStateSummary(ctx, &pb.StateSummary{Root: r[:]}))
@@ -112,19 +113,19 @@ func TestGetStateRoot(t *testing.T) {
 			StateId: []byte("genesis"),
 		})
 		require.NoError(t, err)
-		assert.DeepEqual(t, bytesutil.PadTo([]byte("genesis"), 32), resp.Data.StateRoot)
+		assert.DeepEqual(t, bytesutil.PadTo([]byte("genesis"), 32), resp.Data.Root)
 	})
 
 	t.Run("Finalized", func(t *testing.T) {
 		parent := testutil.NewBeaconBlock()
 		parentR, err := parent.Block.HashTreeRoot()
 		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(ctx, parent))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(parent)))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, parentR))
 		b := testutil.NewBeaconBlock()
 		b.Block.ParentRoot = parentR[:]
 		b.Block.StateRoot = bytesutil.PadTo([]byte("finalized"), 32)
-		require.NoError(t, db.SaveBlock(ctx, b))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(b)))
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		require.NoError(t, db.SaveStateSummary(ctx, &pb.StateSummary{Root: r[:]}))
@@ -137,19 +138,19 @@ func TestGetStateRoot(t *testing.T) {
 			StateId: []byte("finalized"),
 		})
 		require.NoError(t, err)
-		assert.DeepEqual(t, bytesutil.PadTo([]byte("finalized"), 32), resp.Data.StateRoot)
+		assert.DeepEqual(t, bytesutil.PadTo([]byte("finalized"), 32), resp.Data.Root)
 	})
 
 	t.Run("Justified", func(t *testing.T) {
 		parent := testutil.NewBeaconBlock()
 		parentR, err := parent.Block.HashTreeRoot()
 		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(ctx, parent))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(parent)))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, parentR))
 		b := testutil.NewBeaconBlock()
 		b.Block.ParentRoot = parentR[:]
 		b.Block.StateRoot = bytesutil.PadTo([]byte("justified"), 32)
-		require.NoError(t, db.SaveBlock(ctx, b))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(b)))
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		require.NoError(t, db.SaveStateSummary(ctx, &pb.StateSummary{Root: r[:]}))
@@ -162,7 +163,7 @@ func TestGetStateRoot(t *testing.T) {
 			StateId: []byte("justified"),
 		})
 		require.NoError(t, err)
-		assert.DeepEqual(t, bytesutil.PadTo([]byte("justified"), 32), resp.Data.StateRoot)
+		assert.DeepEqual(t, bytesutil.PadTo([]byte("justified"), 32), resp.Data.Root)
 	})
 
 	t.Run("Hex root", func(t *testing.T) {
@@ -180,7 +181,7 @@ func TestGetStateRoot(t *testing.T) {
 			StateId: stateId,
 		})
 		require.NoError(t, err)
-		assert.DeepEqual(t, stateId, resp.Data.StateRoot)
+		assert.DeepEqual(t, stateId, resp.Data.Root)
 	})
 
 	t.Run("Hex root not found", func(t *testing.T) {
@@ -204,7 +205,7 @@ func TestGetStateRoot(t *testing.T) {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = 100
 		b.Block.StateRoot = bytesutil.PadTo([]byte("slot"), 32)
-		require.NoError(t, db.SaveBlock(ctx, b))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(b)))
 		s := Server{
 			BeaconDB:           db,
 			GenesisTimeFetcher: &chainMock.ChainService{},
@@ -214,18 +215,18 @@ func TestGetStateRoot(t *testing.T) {
 			StateId: []byte("100"),
 		})
 		require.NoError(t, err)
-		assert.DeepEqual(t, bytesutil.PadTo([]byte("slot"), 32), resp.Data.StateRoot)
+		assert.DeepEqual(t, bytesutil.PadTo([]byte("slot"), 32), resp.Data.Root)
 	})
 
 	t.Run("Multiple slots", func(t *testing.T) {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = 100
 		b.Block.StateRoot = bytesutil.PadTo([]byte("slot"), 32)
-		require.NoError(t, db.SaveBlock(ctx, b))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(b)))
 		b = testutil.NewBeaconBlock()
 		b.Block.Slot = 100
 		b.Block.StateRoot = bytesutil.PadTo([]byte("sLot"), 32)
-		require.NoError(t, db.SaveBlock(ctx, b))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(b)))
 		s := Server{
 			BeaconDB:           db,
 			GenesisTimeFetcher: &chainMock.ChainService{},
@@ -299,7 +300,7 @@ func TestGetStateFork(t *testing.T) {
 		db := testDB.SetupDB(t)
 		b := testutil.NewBeaconBlock()
 		b.Block.StateRoot = bytesutil.PadTo([]byte("genesis"), 32)
-		require.NoError(t, db.SaveBlock(ctx, b))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(b)))
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		require.NoError(t, db.SaveStateSummary(ctx, &pb.StateSummary{Root: r[:]}))
@@ -508,7 +509,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 		db := testDB.SetupDB(t)
 		b := testutil.NewBeaconBlock()
 		b.Block.StateRoot = bytesutil.PadTo([]byte("genesis"), 32)
-		require.NoError(t, db.SaveBlock(ctx, b))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(b)))
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		require.NoError(t, db.SaveStateSummary(ctx, &pb.StateSummary{Root: r[:]}))

@@ -7,7 +7,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -81,7 +81,7 @@ func TestService_RequestHistoricalAttestations(t *testing.T) {
 	// We request attestations for epoch 0.
 	res, err := bs.RequestHistoricalAttestations(context.Background(), 0)
 	require.NoError(t, err)
-	assert.DeepEqual(t, wanted, res)
+	assert.DeepSSZEqual(t, wanted, res)
 	require.LogsContain(t, hook, "Retrieved 100/1000 indexed attestations for epoch 0")
 	require.LogsContain(t, hook, "Retrieved 500/1000 indexed attestations for epoch 0")
 	require.LogsContain(t, hook, "Retrieved 1000/1000 indexed attestations for epoch 0")

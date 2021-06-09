@@ -6,11 +6,11 @@ import (
 	"reflect"
 
 	fastssz "github.com/ferranbt/fastssz"
-	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"go.opencensus.io/trace"
+	"google.golang.org/protobuf/proto"
 )
 
 func decode(ctx context.Context, data []byte, dst proto.Message) error {

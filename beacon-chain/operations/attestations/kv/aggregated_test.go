@@ -8,8 +8,8 @@ import (
 	fssz "github.com/ferranbt/fastssz"
 	c "github.com/patrickmn/go-cache"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -256,7 +256,7 @@ func TestKV_Aggregated_AggregatedAttestations(t *testing.T) {
 	sort.Slice(returned, func(i, j int) bool {
 		return returned[i].Data.Slot < returned[j].Data.Slot
 	})
-	assert.DeepEqual(t, atts, returned)
+	assert.DeepSSZEqual(t, atts, returned)
 }
 
 func TestKV_Aggregated_DeleteAggregatedAttestation(t *testing.T) {

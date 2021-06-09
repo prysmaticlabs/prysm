@@ -6,21 +6,22 @@ import (
 	"strconv"
 	"strings"
 
-	ptypes "github.com/gogo/protobuf/types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // sortableAttestations implements the Sort interface to sort attestations
@@ -62,7 +63,7 @@ func (bs *Server) ListAttestations(
 		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
 			req.PageSize, cmd.Get().MaxRPCPageSize)
 	}
-	var blocks []*ethpb.SignedBeaconBlock
+	var blocks []interfaces.SignedBeaconBlock
 	var err error
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListAttestationsRequest_GenesisEpoch:
@@ -80,7 +81,7 @@ func (bs *Server) ListAttestations(
 	}
 	atts := make([]*ethpb.Attestation, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks)))
 	for _, block := range blocks {
-		atts = append(atts, block.Block.Body.Attestations...)
+		atts = append(atts, block.Block().Body().Attestations()...)
 	}
 	// We sort attestations according to the Sortable interface.
 	sort.Sort(sortableAttestations(atts))
@@ -116,7 +117,7 @@ func (bs *Server) ListAttestations(
 func (bs *Server) ListIndexedAttestations(
 	ctx context.Context, req *ethpb.ListIndexedAttestationsRequest,
 ) (*ethpb.ListIndexedAttestationsResponse, error) {
-	var blocks []*ethpb.SignedBeaconBlock
+	var blocks []interfaces.SignedBeaconBlock
 	var err error
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListIndexedAttestationsRequest_GenesisEpoch:
@@ -135,7 +136,7 @@ func (bs *Server) ListIndexedAttestations(
 
 	attsArray := make([]*ethpb.Attestation, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks)))
 	for _, block := range blocks {
-		attsArray = append(attsArray, block.Block.Body.Attestations...)
+		attsArray = append(attsArray, block.Block().Body().Attestations()...)
 	}
 	// We sort attestations according to the Sortable interface.
 	sort.Sort(sortableAttestations(attsArray))
@@ -201,7 +202,7 @@ func (bs *Server) ListIndexedAttestations(
 // aggregated attestations currently in the pool at the start of a slot and sends
 // them over a gRPC stream.
 func (bs *Server) StreamAttestations(
-	_ *ptypes.Empty, stream ethpb.BeaconChain_StreamAttestationsServer,
+	_ *emptypb.Empty, stream ethpb.BeaconChain_StreamAttestationsServer,
 ) error {
 	attestationsChannel := make(chan *feed.Event, 1)
 	attSub := bs.AttestationNotifier.OperationFeed().Subscribe(attestationsChannel)
@@ -235,7 +236,7 @@ func (bs *Server) StreamAttestations(
 // aggregated attestations currently in the pool, converts them into indexed form, and
 // sends them over a gRPC stream.
 func (bs *Server) StreamIndexedAttestations(
-	_ *ptypes.Empty, stream ethpb.BeaconChain_StreamIndexedAttestationsServer,
+	_ *emptypb.Empty, stream ethpb.BeaconChain_StreamIndexedAttestationsServer,
 ) error {
 	attestationsChannel := make(chan *feed.Event, 1)
 	attSub := bs.AttestationNotifier.OperationFeed().Subscribe(attestationsChannel)

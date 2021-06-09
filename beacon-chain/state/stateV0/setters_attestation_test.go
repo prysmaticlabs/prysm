@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -62,11 +62,11 @@ func TestAppendBeyondIndicesLimit(t *testing.T) {
 		assert.NoError(t, st.AppendValidator(&eth.Validator{}))
 	}
 	assert.Equal(t, false, st.rebuildTrie[validators])
-	assert.NotEqual(t, len(st.dirtyIndices[validators]), int(0))
+	assert.NotEqual(t, len(st.dirtyIndices[validators]), 0)
 
 	for i := 0; i < indicesLimit; i++ {
 		assert.NoError(t, st.AppendValidator(&eth.Validator{}))
 	}
 	assert.Equal(t, true, st.rebuildTrie[validators])
-	assert.Equal(t, len(st.dirtyIndices[validators]), int(0))
+	assert.Equal(t, len(st.dirtyIndices[validators]), 0)
 }

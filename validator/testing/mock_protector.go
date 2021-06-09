@@ -3,7 +3,7 @@ package testing
 import (
 	"context"
 
-	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 // MockProtector mocks the protector.

@@ -34,14 +34,14 @@ func (s *Store) Backup(ctx context.Context, outputDir string) error {
 	if err != nil {
 		return err
 	}
-	if head == nil {
+	if head == nil || head.IsNil() {
 		return errors.New("no head block")
 	}
 	// Ensure the backups directory exists.
 	if err := fileutil.MkdirAll(backupsDir); err != nil {
 		return err
 	}
-	backupPath := path.Join(backupsDir, fmt.Sprintf("prysm_beacondb_at_slot_%07d.backup", head.Block.Slot))
+	backupPath := path.Join(backupsDir, fmt.Sprintf("prysm_beacondb_at_slot_%07d.backup", head.Block().Slot()))
 	log.WithField("backup", backupPath).Info("Writing backup database.")
 
 	copyDB, err := bolt.Open(
@@ -61,14 +61,14 @@ func (s *Store) Backup(ctx context.Context, outputDir string) error {
 	}()
 	// Prefetch all keys of buckets, and inner keys in a
 	// bucket to use less memory usage when backing up.
-	bucketKeys := [][]byte{}
+	var bucketKeys [][]byte
 	bucketMap := make(map[string][][]byte)
 	err = s.db.View(func(tx *bolt.Tx) error {
 		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
 			newName := make([]byte, len(name))
 			copy(newName, name)
 			bucketKeys = append(bucketKeys, newName)
-			innerKeys := [][]byte{}
+			var innerKeys [][]byte
 			err := b.ForEach(func(k, v []byte) error {
 				if k == nil {
 					return nil

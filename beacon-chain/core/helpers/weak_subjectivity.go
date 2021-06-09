@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -121,7 +121,7 @@ func ComputeWeakSubjectivityPeriod(st iface.ReadOnlyBeaconState) (types.Epoch, e
 func IsWithinWeakSubjectivityPeriod(
 	currentEpoch types.Epoch, wsState iface.ReadOnlyBeaconState, wsCheckpoint *eth.WeakSubjectivityCheckpoint) (bool, error) {
 	// Make sure that incoming objects are not nil.
-	if wsState == nil || wsState.LatestBlockHeader() == nil || wsCheckpoint == nil {
+	if wsState == nil || wsState.IsNil() || wsState.LatestBlockHeader() == nil || wsCheckpoint == nil {
 		return false, errors.New("invalid weak subjectivity state or checkpoint")
 	}
 

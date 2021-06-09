@@ -345,3 +345,39 @@ func TestValidateSlotClock_HandlesBadSlot(t *testing.T) {
 	assert.ErrorContains(t, "which exceeds max allowed value relative to the local clock", ValidateSlotClock(types.Slot(2*MaxSlotBuffer+1), uint64(genTime)), "no error from bad slot")
 	assert.ErrorContains(t, "which exceeds max allowed value relative to the local clock", ValidateSlotClock(1<<63, uint64(genTime)), "no error from bad slot")
 }
+
+func TestPrevSlot(t *testing.T) {
+	tests := []struct {
+		name string
+		slot types.Slot
+		want types.Slot
+	}{
+		{
+			name: "no underflow",
+			slot: 0,
+			want: 0,
+		},
+		{
+			name: "slot 1",
+			slot: 1,
+			want: 0,
+		},
+		{
+			name: "slot 2",
+			slot: 2,
+			want: 1,
+		},
+		{
+			name: "max",
+			slot: 1<<64 - 1,
+			want: 1<<64 - 1 - 1,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := PrevSlot(tt.slot); got != tt.want {
+				t.Errorf("PrevSlot() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

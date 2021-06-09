@@ -6,11 +6,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
-	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
@@ -20,13 +17,17 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestServer_ListBlocks_NoResults(t *testing.T) {
@@ -92,7 +93,7 @@ func TestServer_ListBlocks_Genesis(t *testing.T) {
 	blk.Block.ParentRoot = parentRoot[:]
 	root, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, blk))
+	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(blk)))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 	wanted := &ethpb.ListBlocksResponse{
 		BlockContainers: []*ethpb.BeaconBlockContainer{
@@ -129,16 +130,16 @@ func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
 	blk.Block.ParentRoot = parentRoot[:]
 	root, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, blk))
+	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(blk)))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
 	count := types.Slot(100)
-	blks := make([]*ethpb.SignedBeaconBlock, count)
+	blks := make([]interfaces.SignedBeaconBlock, count)
 	for i := types.Slot(0); i < count; i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = i
 		require.NoError(t, err)
-		blks[i] = b
+		blks[i] = interfaces.WrappedPhase0SignedBeaconBlock(b)
 	}
 	require.NoError(t, db.SaveBlocks(ctx, blks))
 
@@ -162,7 +163,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 	ctx := context.Background()
 
 	count := types.Slot(100)
-	blks := make([]*ethpb.SignedBeaconBlock, count)
+	blks := make([]interfaces.SignedBeaconBlock, count)
 	blkContainers := make([]*ethpb.BeaconBlockContainer, count)
 	for i := types.Slot(0); i < count; i++ {
 		b := testutil.NewBeaconBlock()
@@ -170,7 +171,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		chain.CanonicalRoots[root] = true
-		blks[i] = b
+		blks[i] = interfaces.WrappedPhase0SignedBeaconBlock(b)
 		blkContainers[i] = &ethpb.BeaconBlockContainer{Block: b, BlockRoot: root[:], Canonical: true}
 	}
 	require.NoError(t, db.SaveBlocks(ctx, blks))
@@ -179,14 +180,14 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 	orphanedBlk.Block.Slot = 300
 	orphanedBlkRoot, err := orphanedBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, orphanedBlk))
+	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(orphanedBlk)))
 
 	bs := &Server{
 		BeaconDB:         db,
 		CanonicalFetcher: chain,
 	}
 
-	root6, err := blks[6].Block.HashTreeRoot()
+	root6, err := blks[6].Block().HashTreeRoot()
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -333,14 +334,14 @@ func TestServer_GetChainHead_NoFinalizedBlock(t *testing.T) {
 
 	genBlock := testutil.NewBeaconBlock()
 	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, 32)
-	require.NoError(t, db.SaveBlock(context.Background(), genBlock))
+	require.NoError(t, db.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(genBlock)))
 	gRoot, err := genBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), gRoot))
 
 	bs := &Server{
 		BeaconDB:    db,
-		HeadFetcher: &chainMock.ChainService{Block: genBlock, State: s},
+		HeadFetcher: &chainMock.ChainService{Block: interfaces.WrappedPhase0SignedBeaconBlock(genBlock), State: s},
 		FinalizationFetcher: &chainMock.ChainService{
 			FinalizedCheckPoint:         s.FinalizedCheckpoint(),
 			CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint(),
@@ -366,7 +367,7 @@ func TestServer_GetChainHead(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	genBlock := testutil.NewBeaconBlock()
 	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, 32)
-	require.NoError(t, db.SaveBlock(context.Background(), genBlock))
+	require.NoError(t, db.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(genBlock)))
 	gRoot, err := genBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), gRoot))
@@ -374,21 +375,21 @@ func TestServer_GetChainHead(t *testing.T) {
 	finalizedBlock := testutil.NewBeaconBlock()
 	finalizedBlock.Block.Slot = 1
 	finalizedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'A'}, 32)
-	require.NoError(t, db.SaveBlock(context.Background(), finalizedBlock))
+	require.NoError(t, db.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(finalizedBlock)))
 	fRoot, err := finalizedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	justifiedBlock := testutil.NewBeaconBlock()
 	justifiedBlock.Block.Slot = 2
 	justifiedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'B'}, 32)
-	require.NoError(t, db.SaveBlock(context.Background(), justifiedBlock))
+	require.NoError(t, db.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(justifiedBlock)))
 	jRoot, err := justifiedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	prevJustifiedBlock := testutil.NewBeaconBlock()
 	prevJustifiedBlock.Block.Slot = 3
 	prevJustifiedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'C'}, 32)
-	require.NoError(t, db.SaveBlock(context.Background(), prevJustifiedBlock))
+	require.NoError(t, db.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(prevJustifiedBlock)))
 	pjRoot, err := prevJustifiedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -406,7 +407,7 @@ func TestServer_GetChainHead(t *testing.T) {
 	b.Block.Slot++
 	bs := &Server{
 		BeaconDB:    db,
-		HeadFetcher: &chainMock.ChainService{Block: b, State: s},
+		HeadFetcher: &chainMock.ChainService{Block: interfaces.WrappedPhase0SignedBeaconBlock(b), State: s},
 		FinalizationFetcher: &chainMock.ChainService{
 			FinalizedCheckPoint:         s.FinalizedCheckpoint(),
 			CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint(),
@@ -444,7 +445,7 @@ func TestServer_StreamChainHead_ContextCanceled(t *testing.T) {
 	mockStream := mock.NewMockBeaconChain_StreamChainHeadServer(ctrl)
 	mockStream.EXPECT().Context().Return(ctx)
 	go func(tt *testing.T) {
-		assert.ErrorContains(tt, "Context canceled", server.StreamChainHead(&ptypes.Empty{}, mockStream))
+		assert.ErrorContains(tt, "Context canceled", server.StreamChainHead(&emptypb.Empty{}, mockStream))
 		<-exitRoutine
 	}(t)
 	cancel()
@@ -456,7 +457,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	params.UseMainnetConfig()
 	genBlock := testutil.NewBeaconBlock()
 	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, 32)
-	require.NoError(t, db.SaveBlock(context.Background(), genBlock))
+	require.NoError(t, db.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(genBlock)))
 	gRoot, err := genBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), gRoot))
@@ -464,21 +465,21 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	finalizedBlock := testutil.NewBeaconBlock()
 	finalizedBlock.Block.Slot = 32
 	finalizedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'A'}, 32)
-	require.NoError(t, db.SaveBlock(context.Background(), finalizedBlock))
+	require.NoError(t, db.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(finalizedBlock)))
 	fRoot, err := finalizedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	justifiedBlock := testutil.NewBeaconBlock()
 	justifiedBlock.Block.Slot = 64
 	justifiedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'B'}, 32)
-	require.NoError(t, db.SaveBlock(context.Background(), justifiedBlock))
+	require.NoError(t, db.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(justifiedBlock)))
 	jRoot, err := justifiedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	prevJustifiedBlock := testutil.NewBeaconBlock()
 	prevJustifiedBlock.Block.Slot = 96
 	prevJustifiedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'C'}, 32)
-	require.NoError(t, db.SaveBlock(context.Background(), prevJustifiedBlock))
+	require.NoError(t, db.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(prevJustifiedBlock)))
 	pjRoot, err := prevJustifiedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -501,7 +502,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	ctx := context.Background()
 	server := &Server{
 		Ctx:           ctx,
-		HeadFetcher:   &chainMock.ChainService{Block: b, State: s},
+		HeadFetcher:   &chainMock.ChainService{Block: interfaces.WrappedPhase0SignedBeaconBlock(b), State: s},
 		BeaconDB:      db,
 		StateNotifier: chainService.StateNotifier(),
 		FinalizationFetcher: &chainMock.ChainService{
@@ -534,7 +535,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
 
 	go func(tt *testing.T) {
-		assert.NoError(tt, server.StreamChainHead(&ptypes.Empty{}, mockStream), "Could not call RPC method")
+		assert.NoError(tt, server.StreamChainHead(&emptypb.Empty{}, mockStream), "Could not call RPC method")
 	}(t)
 
 	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
@@ -629,7 +630,7 @@ func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
 	for sent := 0; sent == 0; {
 		sent = server.BlockNotifier.BlockFeed().Send(&feed.Event{
 			Type: blockfeed.ReceivedBlock,
-			Data: &blockfeed.ReceivedBlockData{SignedBlock: b},
+			Data: &blockfeed.ReceivedBlockData{SignedBlock: interfaces.WrappedPhase0SignedBeaconBlock(b)},
 		})
 	}
 	<-exitRoutine
@@ -643,7 +644,7 @@ func TestServer_StreamBlocksVerified_OnHeadUpdated(t *testing.T) {
 	require.NoError(t, err)
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, b))
+	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(b)))
 	chainService := &chainMock.ChainService{State: beaconState}
 	server := &Server{
 		Ctx:           ctx,
@@ -670,7 +671,7 @@ func TestServer_StreamBlocksVerified_OnHeadUpdated(t *testing.T) {
 	for sent := 0; sent == 0; {
 		sent = server.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.BlockProcessed,
-			Data: &statefeed.BlockProcessedData{Slot: b.Block.Slot, BlockRoot: r, SignedBlock: b},
+			Data: &statefeed.BlockProcessedData{Slot: b.Block.Slot, BlockRoot: r, SignedBlock: interfaces.WrappedPhase0SignedBeaconBlock(b)},
 		})
 	}
 	<-exitRoutine
@@ -707,7 +708,7 @@ func TestServer_GetWeakSubjectivityCheckpoint(t *testing.T) {
 	genesisBlock := testutil.NewBeaconBlock()
 	genesisBlockRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, genesisBlock))
+	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(genesisBlock)))
 	require.NoError(t, db.SaveState(ctx, beaconState, genesisBlockRoot))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesisBlockRoot))
 
@@ -735,7 +736,7 @@ func TestServer_GetWeakSubjectivityCheckpoint(t *testing.T) {
 	wsEpoch, err := helpers.ComputeWeakSubjectivityPeriod(beaconState)
 	require.NoError(t, err)
 
-	c, err := server.GetWeakSubjectivityCheckpoint(ctx, &ptypes.Empty{})
+	c, err := server.GetWeakSubjectivityCheckpoint(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
 	e := finalizedEpoch - (finalizedEpoch % wsEpoch)
 	require.Equal(t, e, c.Epoch)

@@ -98,9 +98,9 @@ var (
 		Name:  "disable-broadcast-slashings",
 		Usage: "Disables broadcasting slashings submitted to the beacon node.",
 	}
-	attestTimely = &cli.BoolFlag{
-		Name:  "attest-timely",
-		Usage: "Fixes validator can attest timely after current block processes. See #8185 for more details",
+	disableAttestTimely = &cli.BoolFlag{
+		Name:  "disable-attest-timely",
+		Usage: "Disable attest timely, a fix where validator can attest timely after current block processes. See #8185 for more details",
 	}
 	enableNextSlotStateCache = &cli.BoolFlag{
 		Name:  "enable-next-slot-state-cache",
@@ -110,13 +110,17 @@ var (
 		Name:  "update-head-timely",
 		Usage: "Improves update head time by updating head right after state transition",
 	}
-	proposerAttsSelectionUsingMaxCover = &cli.BoolFlag{
-		Name:  "proposer-atts-selection-using-max-cover",
-		Usage: "Rely on max-cover algorithm when selecting attestations for proposer",
+	disableProposerAttsSelectionUsingMaxCover = &cli.BoolFlag{
+		Name:  "disable-proposer-atts-selection-using-max-cover",
+		Usage: "Disable max-cover algorithm when selecting attestations for proposer",
 	}
 	enableSlashingProtectionPruning = &cli.BoolFlag{
 		Name:  "enable-slashing-protection-pruning",
 		Usage: "Enables the pruning of the validator client's slashing protectin database",
+	}
+	enableOptimizedBalanceUpdate = &cli.BoolFlag{
+		Name:  "enable-optimized-balance-update",
+		Usage: "Enables the optimized method of updating validator balances.",
 	}
 )
 
@@ -126,7 +130,7 @@ var devModeFlags = []cli.Flag{
 	enableNextSlotStateCache,
 	forceOptMaxCoverAggregationStategy,
 	updateHeadTimely,
-	proposerAttsSelectionUsingMaxCover,
+	enableOptimizedBalanceUpdate,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -140,7 +144,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	Mainnet,
 	disableAccountsV2,
 	dynamicKeyReloadDebounceInterval,
-	attestTimely,
+	disableAttestTimely,
 	enableSlashingProtectionPruning,
 }...)
 
@@ -174,7 +178,8 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableNextSlotStateCache,
 	forceOptMaxCoverAggregationStategy,
 	updateHeadTimely,
-	proposerAttsSelectionUsingMaxCover,
+	disableProposerAttsSelectionUsingMaxCover,
+	enableOptimizedBalanceUpdate,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

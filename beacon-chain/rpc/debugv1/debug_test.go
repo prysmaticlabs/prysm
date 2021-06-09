@@ -4,15 +4,15 @@ import (
 	"context"
 	"testing"
 
-	protoTypes "github.com/gogo/protobuf/types"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
 	blockchainmock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	sharedtestutil "github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestGetBeaconState(t *testing.T) {
@@ -47,7 +47,7 @@ func TestListForkChoiceHeads(t *testing.T) {
 	server := &Server{
 		HeadFetcher: &blockchainmock.ChainService{},
 	}
-	resp, err := server.ListForkChoiceHeads(ctx, &protoTypes.Empty{})
+	resp, err := server.ListForkChoiceHeads(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(resp.Data))
 	for _, sr := range expectedSlotsAndRoots {
