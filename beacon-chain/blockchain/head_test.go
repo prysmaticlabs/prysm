@@ -145,3 +145,47 @@ func TestUpdateHead_MissingJustifiedRoot(t *testing.T) {
 
 	require.NoError(t, service.updateHead(context.Background(), []uint64{}))
 }
+
+func Test_absoluteValueSlotDifference(t *testing.T) {
+	type args struct {
+		x types.Slot
+		y types.Slot
+	}
+	tests := []struct {
+		name string
+		args args
+		want uint64
+	}{
+		{
+			name: "x_<_y",
+			args: args{
+				x: types.Slot(3),
+				y: types.Slot(4),
+			},
+			want: 1,
+		},
+		{
+			name: "x_>_y",
+			args: args{
+				x: types.Slot(100),
+				y: types.Slot(4),
+			},
+			want: 96,
+		},
+		{
+			name: "x_==_y",
+			args: args{
+				x: types.Slot(100),
+				y: types.Slot(100),
+			},
+			want: 0,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := absoluteValueSlotDifference(tt.args.x, tt.args.y); got != tt.want {
+				t.Errorf("absoluteValueSlotDifference() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

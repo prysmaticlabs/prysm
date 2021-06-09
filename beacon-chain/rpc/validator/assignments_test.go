@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mock"
@@ -345,7 +346,7 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 	for sent := 0; sent == 0; {
 		sent = vs.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Reorg,
-			Data: &statefeed.ReorgData{OldSlot: 0, NewSlot: 0},
+			Data: &ethpbv1.EventChainReorg{Depth: 0, Slot: 0},
 		})
 	}
 	// Fire a reorg event across epoch boundaries. This needs to trigger
@@ -353,7 +354,7 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 	for sent := 0; sent == 0; {
 		sent = vs.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Reorg,
-			Data: &statefeed.ReorgData{OldSlot: params.BeaconConfig().SlotsPerEpoch, NewSlot: 0},
+			Data: &ethpbv1.EventChainReorg{Depth: uint64(params.BeaconConfig().SlotsPerEpoch), Slot: 0},
 		})
 	}
 	<-exitRoutine

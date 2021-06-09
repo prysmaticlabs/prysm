@@ -128,15 +128,12 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 			"newSlot": fmt.Sprintf("%d", newHeadSlot),
 			"oldSlot": fmt.Sprintf("%d", headSlot),
 		}).Debug("Chain reorg occurred")
-		reorgDepth, err := newHeadSlot.SafeSub(uint64(headSlot))
-		if err != nil {
-			return errors.Wrap(err, "could not determine reorg depth")
-		}
+		absoluteSlotDifference := absoluteValueSlotDifference(newHeadSlot, headSlot)
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Reorg,
 			Data: &ethpbv1.EventChainReorg{
 				Slot:         newHeadSlot,
-				Depth:        uint64(reorgDepth),
+				Depth:        absoluteSlotDifference,
 				OldHeadBlock: oldHeadRoot[:],
 				NewHeadBlock: headRoot[:],
 				OldHeadState: oldStateRoot,
@@ -158,47 +155,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 
 	// Forward an event capturing a new chain head over a common event feed
 	// done in a goroutine to avoid blocking the critical runtime main routine.
-	go func() {
-		dutyEpoch, err := helpers.SlotToEpoch(newHeadSlot).SafeSub(1)
-		if err != nil {
-			log.WithError(err).Error("Could not get duty dependent epoch")
-			return
-		}
-		var previousDutyDependentRoot []byte
-		var currentDutyDependentRoot []byte
-		dutySlot, err := helpers.StartSlot(dutyEpoch)
-		if err != nil {
-			log.WithError(err).Error("Could not get duty slot")
-			return
-		}
-		// In the case where there would be an underflow, we use the genesis state root.
-		if dutySlot == 0 {
-			previousDutyDependentRoot = s.genesisRoot[:]
-			currentDutyDependentRoot = s.genesisRoot[:]
-		} else {
-			previousDutyDependentRoot, err = helpers.BlockRootAtSlot(newHeadState, dutySlot-1)
-			if err != nil {
-				log.WithError(err).Error("Could not get previous duty dependent root")
-				return
-			}
-			currentDutyDependentRoot, err = helpers.BlockRootAtSlot(newHeadState, dutySlot)
-			if err != nil {
-				log.WithError(err).Error("Could not get current duty dependent epoch")
-			}
-		}
-
-		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.NewHead,
-			Data: &ethpbv1.EventHead{
-				Slot:                      newHeadSlot,
-				Block:                     headRoot[:],
-				State:                     newStateRoot,
-				EpochTransition:           helpers.IsEpochEnd(newHeadSlot),
-				PreviousDutyDependentRoot: previousDutyDependentRoot,
-				CurrentDutyDependentRoot:  currentDutyDependentRoot,
-			},
-		})
-	}()
+	go s.notifyNewHeadEvent(newHeadSlot, newHeadState, newStateRoot, headRoot[:])
 
 	return nil
 }
@@ -298,6 +255,14 @@ func (s *Service) hasHeadState() bool {
 	return s.head != nil && s.head.state != nil
 }
 
+// Absolute value difference between two slots.
+func absoluteValueSlotDifference(x, y types.Slot) uint64 {
+	if x > y {
+		return uint64(x.SubSlot(y))
+	}
+	return uint64(y.SubSlot(x))
+}
+
 // This caches justified state balances to be used for fork choice.
 func (s *Service) cacheJustifiedStateBalances(ctx context.Context, justifiedRoot [32]byte) error {
 	if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
@@ -347,4 +312,59 @@ func (s *Service) getJustifiedBalances() []uint64 {
 	s.justifiedBalancesLock.RLock()
 	defer s.justifiedBalancesLock.RUnlock()
 	return s.justifiedBalances
+}
+
+// Notifies a common event feed of a new chain head event. Called right after a new
+// chain head is determined, set, and saved to disk.
+func (s *Service) notifyNewHeadEvent(
+	newHeadSlot types.Slot,
+	newHeadState iface.BeaconState,
+	newHeadStateRoot,
+	oldHeadRoot []byte,
+) {
+	currentDutyEpoch := helpers.SlotToEpoch(newHeadSlot)
+	previousDutyEpoch, err := helpers.SlotToEpoch(newHeadSlot).SafeSub(1)
+	if err != nil {
+		log.WithError(err).Error("Could not get duty dependent epoch")
+		return
+	}
+	var previousDutyDependentRoot []byte
+	var currentDutyDependentRoot []byte
+	currentDutySlot, err := helpers.StartSlot(currentDutyEpoch)
+	if err != nil {
+		log.WithError(err).Error("Could not get duty slot")
+		return
+	}
+	previousDutySlot, err := helpers.StartSlot(previousDutyEpoch)
+	if err != nil {
+		log.WithError(err).Error("Could not get duty slot")
+		return
+	}
+	// In the case where there would be an underflow, we use the genesis state root.
+	if currentDutyEpoch == 0 {
+		previousDutyDependentRoot = s.genesisRoot[:]
+		currentDutyDependentRoot = s.genesisRoot[:]
+	} else {
+		currentDutyDependentRoot, err = helpers.BlockRootAtSlot(newHeadState, currentDutySlot-1)
+		if err != nil {
+			log.WithError(err).Error("Could not get current duty dependent epoch")
+		}
+		previousDutyDependentRoot, err = helpers.BlockRootAtSlot(newHeadState, previousDutySlot-1)
+		if err != nil {
+			log.WithError(err).Error("Could not get previous duty dependent root")
+			return
+		}
+	}
+
+	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.NewHead,
+		Data: &ethpbv1.EventHead{
+			Slot:                      newHeadSlot,
+			Block:                     oldHeadRoot,
+			State:                     newHeadStateRoot,
+			EpochTransition:           helpers.IsEpochEnd(newHeadSlot),
+			PreviousDutyDependentRoot: previousDutyDependentRoot,
+			CurrentDutyDependentRoot:  currentDutyDependentRoot,
+		},
+	})
 }
