@@ -149,8 +149,8 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 		obj = &ethpb.Validator{}
 	case "VoluntaryExit":
 		obj = &ethpb.VoluntaryExit{}
-	case "SyncCommitteeSignature":
-		obj = &ethpb.SyncCommitteeSignature{}
+	case "SyncCommitteeMessage":
+		obj = &ethpb.SyncCommitteeMessage{}
 	case "SyncCommitteeContribution":
 		obj = &ethpb.SyncCommitteeContribution{}
 	case "ContributionAndProof":
