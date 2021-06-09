@@ -27,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/node/registration"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -67,6 +68,7 @@ type BeaconNode struct {
 	attestationPool attestations.Pool
 	exitPool        voluntaryexits.PoolManager
 	slashingsPool   slashings.PoolManager
+	syncPool        synccommittee.Pool
 	depositCache    *depositcache.DepositCache
 	stateFeed       *event.Feed
 	blockFeed       *event.Feed
@@ -108,6 +110,7 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 		attestationPool: attestations.NewPool(),
 		exitPool:        voluntaryexits.NewPool(),
 		slashingsPool:   slashings.NewPool(),
+		syncPool:        synccommittee.NewPool(),
 	}
 
 	depositAddress, err := registration.DepositContractAddress()
@@ -498,6 +501,7 @@ func (b *BeaconNode) registerSyncService() error {
 		AttPool:             b.attestationPool,
 		ExitPool:            b.exitPool,
 		SlashingPool:        b.slashingsPool,
+		SyncCommsPool:       b.syncPool,
 		StateGen:            b.stateGen,
 	})
 

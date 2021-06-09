@@ -7,6 +7,7 @@ go_library(
         "contribution.go",
         "error.go",
         "kv.go",
+        "pool.go",
         "signature.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee",

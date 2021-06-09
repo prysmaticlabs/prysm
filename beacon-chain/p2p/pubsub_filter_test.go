@@ -80,7 +80,7 @@ func TestService_CanSubscribe(t *testing.T) {
 	}
 
 	// Ensure all gossip topic mappings pass validation.
-	for topic := range GossipTopicMappings {
+	for _, topic := range AllTopics() {
 		formatting := []interface{}{currentFork}
 
 		// Special case for attestation subnets which have a second formatting placeholder.
@@ -187,7 +187,7 @@ func Test_scanfcheck(t *testing.T) {
 func TestGossipTopicMapping_scanfcheck_GossipTopicFormattingSanityCheck(t *testing.T) {
 	// scanfcheck only supports integer based substitutions at the moment. Any others will
 	// inaccurately fail validation.
-	for topic := range GossipTopicMappings {
+	for _, topic := range AllTopics() {
 		t.Run(topic, func(t *testing.T) {
 			for i, c := range topic {
 				if string(c) == "%" {

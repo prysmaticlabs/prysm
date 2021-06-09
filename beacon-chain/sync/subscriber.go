@@ -94,6 +94,12 @@ func (s *Service) registerSubscribers(epoch types.Epoch, digest [4]byte) {
 	// Altair Fork Version
 	if epoch >= altairFork {
 		// TODO: Register Sync Subscribers.
+		s.subscribe(
+			p2p.SyncContributionAndProofSubnetTopicFormat,
+			s.validateAttesterSlashing,
+			s.attesterSlashingSubscriber,
+			digest,
+		)
 	}
 }
 
