@@ -134,11 +134,15 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 			"newSlot": fmt.Sprintf("%d", newHeadSlot),
 			"oldSlot": fmt.Sprintf("%d", headSlot),
 		}).Debug("Chain reorg occurred")
+		reorgDepth, err := newHeadSlot.SafeSub(uint64(headSlot))
+		if err != nil {
+			return errors.Wrap(err, "could not determine reorg depth")
+		}
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Reorg,
 			Data: &ethpbv1.EventChainReorg{
 				Slot:         newHeadSlot,
-				Depth:        uint64(newHeadSlot - headSlot),
+				Depth:        uint64(reorgDepth),
 				OldHeadBlock: oldHeadRoot[:],
 				NewHeadBlock: headRoot[:],
 				OldHeadState: oldStateRoot[:],
@@ -161,19 +165,28 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	// Forward an event capturing a new chain head over a common event feed
 	// done in a goroutine to avoid blocking the critical runtime main routine.
 	go func() {
-		dutyEpoch, err := helpers.StartSlot(helpers.SlotToEpoch(newHeadSlot) - 1)
+		dutyEpoch, err := helpers.StartSlot(helpers.SlotToEpoch(newHeadSlot).Sub(1))
 		if err != nil {
 			log.WithError(err).Error("Could not get previous duty dependent epoch")
 			return
 		}
-		previousDutyDependentRoot, err := helpers.BlockRootAtSlot(newHeadState, dutyEpoch-1)
-		if err != nil {
-			log.WithError(err).Error("Could not get previous duty dependent root")
-			return
-		}
-		currentDutyDependentRoot, err := helpers.BlockRootAtSlot(newHeadState, dutyEpoch)
-		if err != nil {
-			log.WithError(err).Error("Could not get current duty dependent epoch")
+		var previousDutyDependentRoot []byte
+		var currentDutyDependentRoot []byte
+
+		// In the case where there would be an underflow, we use the genesis state root.
+		if dutyEpoch == 0 {
+			previousDutyDependentRoot = s.genesisRoot[:]
+			currentDutyDependentRoot = s.genesisRoot[:]
+		} else {
+			previousDutyDependentRoot, err = helpers.BlockRootAtSlot(newHeadState, dutyEpoch-1)
+			if err != nil {
+				log.WithError(err).Error("Could not get previous duty dependent root")
+				return
+			}
+			currentDutyDependentRoot, err = helpers.BlockRootAtSlot(newHeadState, dutyEpoch)
+			if err != nil {
+				log.WithError(err).Error("Could not get current duty dependent epoch")
+			}
 		}
 
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
