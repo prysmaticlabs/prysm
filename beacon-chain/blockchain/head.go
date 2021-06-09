@@ -139,8 +139,8 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 				Depth:        uint64(reorgDepth),
 				OldHeadBlock: oldHeadRoot[:],
 				NewHeadBlock: headRoot[:],
-				OldHeadState: oldStateRoot[:],
-				NewHeadState: newStateRoot[:],
+				OldHeadState: oldStateRoot,
+				NewHeadState: newStateRoot,
 				Epoch:        helpers.SlotToEpoch(newHeadSlot),
 			},
 		})
@@ -188,7 +188,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 			Data: &ethpbv1.EventHead{
 				Slot:                      newHeadSlot,
 				Block:                     headRoot[:],
-				State:                     newStateRoot[:],
+				State:                     newStateRoot,
 				EpochTransition:           helpers.IsEpochEnd(newHeadSlot),
 				PreviousDutyDependentRoot: previousDutyDependentRoot,
 				CurrentDutyDependentRoot:  currentDutyDependentRoot,
