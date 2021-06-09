@@ -6,7 +6,7 @@ go_library(
     srcs = [
         "custom_handlers.go",
         "custom_hooks.go",
-        "endpoint_registry.go",
+        "endpoint_factory.go",
         "structs.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/apimiddleware",
@@ -16,6 +16,7 @@ go_library(
         "//shared/gateway:go_default_library",
         "//shared/grpcutils:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
     ],
 )
 
@@ -24,7 +25,6 @@ go_test(
     srcs = [
         "custom_handlers_test.go",
         "custom_hooks_test.go",
-        "endpoint_registry_test.go",
     ],
     embed = [":go_default_library"],
     deps = [

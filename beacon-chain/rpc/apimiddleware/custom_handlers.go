@@ -14,6 +14,12 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 )
 
+type sszConfig struct {
+	sszPath      string
+	fileName     string
+	responseJson sszResponseJson
+}
+
 func handleGetBeaconStateSsz(m *gateway.ApiProxyMiddleware, endpoint gateway.Endpoint, writer http.ResponseWriter, request *http.Request) (handled bool) {
 	config := sszConfig{
 		sszPath:      "/eth/v1/debug/beacon/states/{state_id}/ssz",
