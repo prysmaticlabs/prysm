@@ -150,6 +150,7 @@ func CopyBeaconBlockBodyAltair(body *ethpb.BeaconBlockBodyAltair) *ethpb.BeaconB
 		Attestations:      CopyAttestations(body.Attestations),
 		Deposits:          CopyDeposits(body.Deposits),
 		VoluntaryExits:    CopySignedVoluntaryExits(body.VoluntaryExits),
+		SyncAggregate:     CopySyncAggregate(body.SyncAggregate),
 	}
 }
 
@@ -351,5 +352,16 @@ func CopySyncCommitteeContribution(c *ethpb.SyncCommitteeContribution) *ethpb.Sy
 		SubcommitteeIndex: c.SubcommitteeIndex,
 		AggregationBits:   bytesutil.SafeCopyBytes(c.AggregationBits),
 		Signature:         bytesutil.SafeCopyBytes(c.Signature),
+	}
+}
+
+// CopySyncAggregate copies the provided sync aggregate object.
+func CopySyncAggregate(a *ethpb.SyncAggregate) *ethpb.SyncAggregate {
+	if a == nil {
+		return nil
+	}
+	return &ethpb.SyncAggregate{
+		SyncCommitteeBits:      bytesutil.SafeCopyBytes(a.SyncCommitteeBits),
+		SyncCommitteeSignature: bytesutil.SafeCopyBytes(a.SyncCommitteeSignature),
 	}
 }
