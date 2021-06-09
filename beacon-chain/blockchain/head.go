@@ -121,14 +121,8 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	headSlot := s.HeadSlot()
 	newHeadSlot := newHeadBlock.Block().Slot()
 	oldHeadRoot := s.headRoot()
-	oldStateRoot, err := s.headState(ctx).HashTreeRoot(ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not retrieve old head state")
-	}
-	newStateRoot, err := s.headState(ctx).HashTreeRoot(ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not retrieve old head state")
-	}
+	oldStateRoot := s.headBlock().Block().StateRoot()
+	newStateRoot := newHeadBlock.Block().StateRoot()
 	if bytesutil.ToBytes32(newHeadBlock.Block().ParentRoot()) != bytesutil.ToBytes32(r) {
 		log.WithFields(logrus.Fields{
 			"newSlot": fmt.Sprintf("%d", newHeadSlot),

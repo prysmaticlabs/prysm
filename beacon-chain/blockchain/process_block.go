@@ -169,16 +169,12 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 		}
 		go func() {
 			// Send an event regarding the new finalized checkpoint over a common event feed.
-			stateRoot, err := postState.HashTreeRoot(ctx)
-			if err != nil {
-				log.WithError(err).Error("Could not hash tree root state")
-			}
 			s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 				Type: statefeed.FinalizedCheckpoint,
 				Data: &ethpbv1.EventFinalizedCheckpoint{
 					Epoch: postState.FinalizedCheckpoint().Epoch,
 					Block: postState.FinalizedCheckpoint().Root,
-					State: stateRoot[:],
+					State: signed.Block().StateRoot(),
 				},
 			})
 
