@@ -308,3 +308,52 @@ func TestSyncCommitteePeriod(t *testing.T) {
 		require.Equal(t, test.wanted, altair.SyncCommitteePeriod(test.epoch))
 	}
 }
+
+func TestValidateNilSyncContribution(t *testing.T) {
+	tests := []struct {
+		name    string
+		s       *ethpb.SignedContributionAndProof
+		wantErr bool
+	}{
+		{
+			name:    "nil object",
+			s:       nil,
+			wantErr: true,
+		},
+		{
+			name:    "nil message",
+			s:       &ethpb.SignedContributionAndProof{},
+			wantErr: true,
+		},
+		{
+			name:    "nil contribution",
+			s:       &ethpb.SignedContributionAndProof{Message: &ethpb.ContributionAndProof{}},
+			wantErr: true,
+		},
+		{
+			name: "nil bitfield",
+			s: &ethpb.SignedContributionAndProof{
+				Message: &ethpb.ContributionAndProof{
+					Contribution: &ethpb.SyncCommitteeContribution{},
+				}},
+			wantErr: true,
+		},
+		{
+			name: "non nil sync contribution",
+			s: &ethpb.SignedContributionAndProof{
+				Message: &ethpb.ContributionAndProof{
+					Contribution: &ethpb.SyncCommitteeContribution{
+						AggregationBits: []byte{},
+					},
+				}},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := altair.ValidateNilSyncContribution(tt.s); (err != nil) != tt.wantErr {
+				t.Errorf("ValidateNilSyncContribution() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}

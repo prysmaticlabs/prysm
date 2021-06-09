@@ -18,6 +18,10 @@ const (
 
 	// ExitReceived is sent after an voluntary exit object has been received from the outside world (eg in RPC or sync)
 	ExitReceived
+
+	// SyncContributionReceived is sent after a sync contribution object has been received
+	// from the outside world. (eg. in sync)
+	SyncContributionReceived
 )
 
 // UnAggregatedAttReceivedData is the data sent with UnaggregatedAttReceived events.
@@ -36,4 +40,9 @@ type AggregatedAttReceivedData struct {
 type ExitReceivedData struct {
 	// Exit is the voluntary exit object.
 	Exit *ethpb.SignedVoluntaryExit
+}
+
+// SyncContributionReceivedData is the data sent with SyncContributionReceived events.
+type SyncContributionReceivedData struct {
+	Contribution *ethpb.ContributionAndProof
 }
