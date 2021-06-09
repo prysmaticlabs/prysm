@@ -169,15 +169,14 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 		}
 		go func() {
 			// Send an event regarding the new finalized checkpoint over a common event feed.
-			ev := &feed.Event{
+			s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 				Type: statefeed.FinalizedCheckpoint,
 				Data: &ethpbv1.EventFinalizedCheckpoint{
 					Epoch: postState.FinalizedCheckpoint().Epoch,
 					Block: postState.FinalizedCheckpoint().Root,
 					State: signed.Block().StateRoot(),
 				},
-			}
-			s.cfg.StateNotifier.StateFeed().Send(ev)
+			})
 
 			// Use a custom deadline here, since this method runs asynchronously.
 			// We ignore the parent method's context and instead create a new one
