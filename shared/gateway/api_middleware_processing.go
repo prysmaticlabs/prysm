@@ -63,7 +63,7 @@ func (m *ApiProxyMiddleware) PrepareRequestForProxying(endpoint Endpoint, reques
 	request.URL.Scheme = "http"
 	request.URL.Host = m.GatewayAddress
 	request.RequestURI = ""
-	if errJson := HandleUrlParameters(endpoint.Url, request, endpoint.GetRequestUrlLiterals); errJson != nil {
+	if errJson := HandleUrlParameters(endpoint.Path, request, endpoint.GetRequestUrlLiterals); errJson != nil {
 		return errJson
 	}
 	return HandleQueryParameters(request, endpoint.GetRequestQueryParams)

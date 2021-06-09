@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"fmt"
 	"net/http"
 	"reflect"
 
@@ -12,15 +13,21 @@ import (
 //   - Eth2 API requests can be handled by grpc-gateway correctly
 //   - gRPC responses can be returned as spec-compliant Eth2 API responses
 type ApiProxyMiddleware struct {
-	GatewayAddress string
-	ProxyAddress   string
-	Endpoints      []Endpoint
-	router         *mux.Router
+	GatewayAddress  string
+	ProxyAddress    string
+	EndpointCreator EndpointFactory
+	router          *mux.Router
+}
+
+// EndpointFactory is responsible for creating new instances of Endpoint values.
+type EndpointFactory interface {
+	Create(path string) (*Endpoint, error)
+	Paths() []string
 }
 
 // Endpoint is a representation of an API HTTP endpoint that should be proxied by the middleware.
 type Endpoint struct {
-	Url                   string         // The URL of the HTTP endpoint.
+	Path                  string         // The path of the HTTP endpoint.
 	PostRequest           interface{}    // The struct corresponding to the JSON structure used in a POST request.
 	GetRequestUrlLiterals []string       // Names of URL parameters that should not be base64-encoded.
 	GetRequestQueryParams []QueryParam   // Query parameters of the GET request.
@@ -45,9 +52,9 @@ type CustomHandler = func(m *ApiProxyMiddleware, endpoint Endpoint, writer http.
 
 // HookCollection contains handlers/hooks that can be used to amend the default request/response cycle with custom logic for a specific endpoint.
 type HookCollection struct {
-	CustomHandlers                             []CustomHandler
-	OnPostStart                                []Hook
-	OnPostDeserializedRequestBodyIntoContainer []Hook
+	CustomHandlers                            []CustomHandler
+	OnPostStart                               []Hook
+	OnPostDeserializeRequestBodyIntoContainer []Hook
 }
 
 // fieldProcessor applies the processing function f to a value when the tag is present on the field.
@@ -60,24 +67,32 @@ type fieldProcessor struct {
 func (m *ApiProxyMiddleware) Run() error {
 	m.router = mux.NewRouter()
 
-	for _, endpoint := range m.Endpoints {
-		m.handleApiEndpoint(endpoint)
+	for _, path := range m.EndpointCreator.Paths() {
+		m.handleApiPath(path, m.EndpointCreator)
 	}
 
 	return http.ListenAndServe(m.ProxyAddress, m.router)
 }
 
-func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint Endpoint) {
-	m.router.HandleFunc(endpoint.Url, func(writer http.ResponseWriter, request *http.Request) {
+func (m *ApiProxyMiddleware) handleApiPath(path string, endpointFactory EndpointFactory) {
+	m.router.HandleFunc(path, func(writer http.ResponseWriter, request *http.Request) {
+		endpoint, err := endpointFactory.Create(path)
+		if err != nil {
+			WriteError(writer, &DefaultErrorJson{
+				Message: fmt.Errorf("could not create endpoint: %w", err).Error(),
+				Code:    http.StatusInternalServerError,
+			}, nil)
+		}
+
 		for _, handler := range endpoint.Hooks.CustomHandlers {
-			if handler(m, endpoint, writer, request) {
+			if handler(m, *endpoint, writer, request) {
 				return
 			}
 		}
 
 		if request.Method == "POST" {
 			for _, hook := range endpoint.Hooks.OnPostStart {
-				if errJson := hook(endpoint, writer, request); errJson != nil {
+				if errJson := hook(*endpoint, writer, request); errJson != nil {
 					WriteError(writer, errJson, nil)
 					return
 				}
@@ -87,9 +102,8 @@ func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint Endpoint) {
 				WriteError(writer, errJson, nil)
 				return
 			}
-
-			for _, hook := range endpoint.Hooks.OnPostDeserializedRequestBodyIntoContainer {
-				if errJson := hook(endpoint, writer, request); errJson != nil {
+			for _, hook := range endpoint.Hooks.OnPostDeserializeRequestBodyIntoContainer {
+				if errJson := hook(*endpoint, writer, request); errJson != nil {
 					WriteError(writer, errJson, nil)
 					return
 				}
@@ -105,7 +119,7 @@ func (m *ApiProxyMiddleware) handleApiEndpoint(endpoint Endpoint) {
 			}
 		}
 
-		if errJson := m.PrepareRequestForProxying(endpoint, request); errJson != nil {
+		if errJson := m.PrepareRequestForProxying(*endpoint, request); errJson != nil {
 			WriteError(writer, errJson, nil)
 			return
 		}

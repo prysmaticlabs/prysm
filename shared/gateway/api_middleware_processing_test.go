@@ -125,7 +125,7 @@ func TestPrepareRequestForProxying(t *testing.T) {
 	}
 	// We will set some params to make the request more interesting.
 	endpoint := Endpoint{
-		Url:                   "http://{url_param}.example",
+		Path:                  "/{url_param}",
 		GetRequestUrlLiterals: []string{"url_param"},
 		GetRequestQueryParams: []QueryParam{{Name: "query_param"}},
 	}

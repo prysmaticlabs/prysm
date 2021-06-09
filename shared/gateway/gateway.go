@@ -40,21 +40,21 @@ const (
 // Gateway is the gRPC gateway to serve HTTP JSON traffic as a
 // proxy and forward it to the gRPC server.
 type Gateway struct {
-	conn                    *grpc.ClientConn
-	enableDebugRPCEndpoints bool
-	callerId                CallerId
-	maxCallRecvMsgSize      uint64
-	mux                     *http.ServeMux
-	server                  *http.Server
-	cancel                  context.CancelFunc
-	remoteCert              string
-	gatewayAddr             string
-	apiMiddlewareAddr       string
-	apiMiddlewareEndpoints  []Endpoint
-	ctx                     context.Context
-	startFailure            error
-	remoteAddr              string
-	allowedOrigins          []string
+	conn                         *grpc.ClientConn
+	enableDebugRPCEndpoints      bool
+	callerId                     CallerId
+	maxCallRecvMsgSize           uint64
+	mux                          *http.ServeMux
+	server                       *http.Server
+	cancel                       context.CancelFunc
+	remoteCert                   string
+	gatewayAddr                  string
+	apiMiddlewareAddr            string
+	apiMiddlewareEndpointFactory EndpointFactory
+	ctx                          context.Context
+	startFailure                 error
+	remoteAddr                   string
+	allowedOrigins               []string
 }
 
 // NewValidator returns a new gateway server which translates HTTP into gRPC.
@@ -83,7 +83,7 @@ func NewBeacon(
 	remoteCert,
 	gatewayAddress string,
 	apiMiddlewareAddress string,
-	apiMiddlewareEndpoints []Endpoint,
+	apiMiddlewareEndpointFactory EndpointFactory,
 	mux *http.ServeMux,
 	allowedOrigins []string,
 	enableDebugRPCEndpoints bool,
@@ -94,17 +94,17 @@ func NewBeacon(
 	}
 
 	return &Gateway{
-		callerId:                Beacon,
-		remoteAddr:              remoteAddress,
-		remoteCert:              remoteCert,
-		gatewayAddr:             gatewayAddress,
-		apiMiddlewareAddr:       apiMiddlewareAddress,
-		apiMiddlewareEndpoints:  apiMiddlewareEndpoints,
-		ctx:                     ctx,
-		mux:                     mux,
-		allowedOrigins:          allowedOrigins,
-		enableDebugRPCEndpoints: enableDebugRPCEndpoints,
-		maxCallRecvMsgSize:      maxCallRecvMsgSize,
+		callerId:                     Beacon,
+		remoteAddr:                   remoteAddress,
+		remoteCert:                   remoteCert,
+		gatewayAddr:                  gatewayAddress,
+		apiMiddlewareAddr:            apiMiddlewareAddress,
+		apiMiddlewareEndpointFactory: apiMiddlewareEndpointFactory,
+		ctx:                          ctx,
+		mux:                          mux,
+		allowedOrigins:               allowedOrigins,
+		enableDebugRPCEndpoints:      enableDebugRPCEndpoints,
+		maxCallRecvMsgSize:           maxCallRecvMsgSize,
 	}
 }
 
@@ -350,9 +350,9 @@ func (g *Gateway) dialUnix(ctx context.Context, addr string) (*grpc.ClientConn, 
 
 func (g *Gateway) registerApiMiddleware() {
 	proxy := &ApiProxyMiddleware{
-		GatewayAddress: g.gatewayAddr,
-		ProxyAddress:   g.apiMiddlewareAddr,
-		Endpoints:      g.apiMiddlewareEndpoints,
+		GatewayAddress:  g.gatewayAddr,
+		ProxyAddress:    g.apiMiddlewareAddr,
+		EndpointCreator: g.apiMiddlewareEndpointFactory,
 	}
 	log.WithField("API middleware address", g.apiMiddlewareAddr).Info("Starting API middleware")
 	if err := proxy.Run(); err != http.ErrServerClosed {

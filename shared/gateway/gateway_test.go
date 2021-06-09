@@ -37,7 +37,7 @@ func TestBeaconGateway_StartStop(t *testing.T) {
 		selfCert,
 		gatewayAddress,
 		apiMiddlewareAddress,
-		[]Endpoint{},
+		nil,
 		nil, /*optional mux*/
 		allowedOrigins,
 		enableDebugRPCEndpoints,
