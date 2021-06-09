@@ -12,12 +12,14 @@ import (
 // gossipTopicMappings represent the protocol ID to protobuf message type map for easy
 // lookup.
 var gossipTopicMappings = map[string]proto.Message{
-	BlockSubnetTopicFormat:             &pb.SignedBeaconBlock{},
-	AttestationSubnetTopicFormat:       &pb.Attestation{},
-	ExitSubnetTopicFormat:              &pb.SignedVoluntaryExit{},
-	ProposerSlashingSubnetTopicFormat:  &pb.ProposerSlashing{},
-	AttesterSlashingSubnetTopicFormat:  &pb.AttesterSlashing{},
-	AggregateAndProofSubnetTopicFormat: &pb.SignedAggregateAttestationAndProof{},
+	BlockSubnetTopicFormat:                    &pb.SignedBeaconBlock{},
+	AttestationSubnetTopicFormat:              &pb.Attestation{},
+	SyncCommitteeSubnetTopicFormat:            &pb.SyncCommitteeSignature{},
+	ExitSubnetTopicFormat:                     &pb.SignedVoluntaryExit{},
+	ProposerSlashingSubnetTopicFormat:         &pb.ProposerSlashing{},
+	AttesterSlashingSubnetTopicFormat:         &pb.AttesterSlashing{},
+	AggregateAndProofSubnetTopicFormat:        &pb.SignedAggregateAttestationAndProof{},
+	SyncContributionAndProofSubnetTopicFormat: &pb.SignedContributionAndProof{},
 }
 
 func GossipTopicMappings(topic string, epoch types.Epoch) proto.Message {

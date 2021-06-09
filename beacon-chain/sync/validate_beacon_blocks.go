@@ -57,6 +57,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		log.WithError(errors.New("msg is not ethpb.SignedBeaconBlock")).Debug("Rejected block")
 		return pubsub.ValidationReject
 	}
+	blk.MarshalSSZ()
 
 	if blk.IsNil() || blk.Block().IsNil() {
 		log.WithError(errors.New("block.Block is nil")).Debug("Rejected block")
