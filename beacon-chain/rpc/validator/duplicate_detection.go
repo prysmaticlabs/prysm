@@ -3,14 +3,13 @@ package validator
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"go.opencensus.io/trace"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -19,101 +18,81 @@ import (
 var NoEpochsToChech uint64
 
 // ADD COMMENTS
-func (vs *Server) DetectDoppelganger(ctx context.Context, req *ethpb.DetectDoppelgangerRequest)(*ethpb.DetectDoppelgangerResponse, error) {
+func (vs *Server) DetectDoppelganger(ctx context.Context, req *ethpb.DetectDoppelgangerRequest) (*ethpb.DetectDoppelgangerResponse, error) {
 	log.Info("Doppelganger rpc service started")
+	// Head state
+	head, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Doppelganger rpc service - Could not get head state: %v", err)
+	}
+	// Head epoch
+	headEpoch := types.Epoch(head.Slot() / params.BeaconConfig().SlotsPerEpoch)
+	ctx, span := trace.StartSpan(ctx, "Doppelganger rpc")
+	defer span.End()
 
 	NoEpochsToChech = params.BeaconConfig().DuplicateValidatorEpochsCheck
 
-
-	// see reward_penalty.go precompute
 	baseRewardFactor := params.BeaconConfig().BaseRewardFactor
 	baseRewardsPerEpoch := params.BeaconConfig().BaseRewardsPerEpoch
-	proposerRewardQuotient := params.BeaconConfig().ProposerRewardQuotient
 
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetBlock")
-	defer span.End()
-	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
-
-	if vs.SyncChecker.Syncing() {
-		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
-	}
-
-	// Retrieve the parent block as the current head of the canonical chain.
-	parentRoot, err := vs.HeadFetcher.HeadRoot(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not retrieve head root: %v", err)
-	}
-
-	head, err := vs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head state %v", err)
-	}
-
-	if featureconfig.Get().EnableNextSlotStateCache {
-		head, err = state.ProcessSlotsUsingNextSlotCache(ctx, head, parentRoot, req.Slot)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not advance slots to calculate proposer index: %v", err)
+	for _, pkt := range req.PubKeysTargets {
+		if headEpoch-pkt.TargetEpoch < 2 {
+			continue
 		}
-	} else {
-		head, err = state.ProcessSlots(ctx, head, req.Slot)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not advance slot to calculate proposer index: %v", err)
+
+		// Ensure the balance has been increasing due to non-activity
+		ok := true
+		headState := head
+		for i := NoEpochsToChech; i > 0 && ok; i++ {
+			// Calculate base_reward at head-i
+			// Get balance at head-i+1 and head-i
+			prevStateRoot, err := headState.HashTreeRoot(ctx)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Doppelganger rpc service - Could not get previous "+
+					"state: %v", err)
+			}
+			prevState, err := vs.StateGen.StateByRoot(ctx, prevStateRoot)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Doppelganger rpc service - Could not get "+
+					"previous heat state: %v", err)
+			}
+			totalBalance, err := helpers.TotalActiveBalance(prevState)
+			if err != nil {
+				return  &ethpb.DetectDoppelgangerResponse{PublicKey: nil,
+					DuplicateFound: false}, status.Errorf(codes.Internal, "Doppelganger rpc service - Could not get calculate balance: %v", err)
+			}
+			if totalBalance == 0 {
+				totalBalance = 1
+			}
+			balanceSqrt := mathutil.IntegerSquareRoot(totalBalance)
+
+			valIdx, err := vs.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pkt.PubKey})
+			if err != nil {
+				return  &ethpb.DetectDoppelgangerResponse{PublicKey: nil,
+					DuplicateFound: false}, status.Errorf(codes.Internal, "Doppelganger rpc service - : %v", err)
+			}
+			valPrevBalance, err := prevState.BalanceAtIndex(valIdx.Index)
+			if err != nil {
+				return  &ethpb.DetectDoppelgangerResponse{PublicKey: nil,
+					DuplicateFound: false}, status.Errorf(codes.Internal, "Doppelganger rpc service - could not get balance: %v", err)
+			}
+			valHeadBalance, err := headState.BalanceAtIndex(valIdx.Index)
+			if err != nil {
+				return  &ethpb.DetectDoppelgangerResponse{PublicKey: nil,
+					DuplicateFound: false}, status.Errorf(codes.Internal, "Doppelganger rpc service - could not get balance: %v", err)
+			}
+			base_reward := valPrevBalance * baseRewardFactor / balanceSqrt / baseRewardsPerEpoch
+
+			if valHeadBalance-valPrevBalance > 2*base_reward {
+				return &ethpb.DetectDoppelgangerResponse{PublicKey: pkt.PubKey,
+					DuplicateFound: true}, nil
+			}
+			headState = prevState
 		}
+
 	}
-
-	eth1Data, err := vs.eth1DataMajorityVote(ctx, head)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get ETH1 data: %v", err)
-	}
-
-	// Pack ETH1 deposits which have not been included in the beacon chain.
-	deposits, err := vs.deposits(ctx, head, eth1Data)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get ETH1 deposits: %v", err)
-	}
-
-	// Pack aggregated attestations which have not been included in the beacon chain.
-	atts, err := vs.packAttestations(ctx, head)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get attestations to pack into block: %v", err)
-	}
-
-	// Use zero hash as stub for state root to compute later.
-	stateRoot := params.BeaconConfig().ZeroHash[:]
-
-	graffiti := bytesutil.ToBytes32(req.Graffiti)
-
-	// Calculate new proposer index.
-	idx, err := helpers.BeaconProposerIndex(head)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not calculate proposer index %v", err)
-	}
-
-	blk := &ethpb.BeaconBlock{
-		Slot:          req.Slot,
-		ParentRoot:    parentRoot,
-		StateRoot:     stateRoot,
-		ProposerIndex: idx,
-		Body: &ethpb.BeaconBlockBody{
-			Eth1Data:          eth1Data,
-			Deposits:          deposits,
-			Attestations:      atts,
-			RandaoReveal:      req.RandaoReveal,
-			ProposerSlashings: vs.SlashingsPool.PendingProposerSlashings(ctx, head, false /*noLimit*/),
-			AttesterSlashings: vs.SlashingsPool.PendingAttesterSlashings(ctx, head, false /*noLimit*/),
-			VoluntaryExits:    vs.ExitPool.PendingExits(head, req.Slot, false /*noLimit*/),
-			Graffiti:          graffiti[:],
-		},
-	}
-
-	// Compute state root with the newly constructed block.
-	stateRoot, err = vs.computeStateRoot(ctx, interfaces.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: blk, Signature: make([]byte, 96)}))
-	if err != nil {
-		interop.WriteBlockToDisk(interfaces.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: blk}), true /*failed*/)
-		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
-	}
-	blk.StateRoot = stateRoot
-
-	return nil, nil
+	// see reward_penalty.go precompute
+	// see attestor.go
+	return &ethpb.DetectDoppelgangerResponse{PublicKey: nil,
+		DuplicateFound: false}, nil
 }
-
