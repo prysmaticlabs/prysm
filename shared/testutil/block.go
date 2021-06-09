@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
@@ -80,6 +81,10 @@ func NewBeaconBlockAltair() *ethpb.SignedBeaconBlockAltair {
 				Deposits:          []*ethpb.Deposit{},
 				ProposerSlashings: []*ethpb.ProposerSlashing{},
 				VoluntaryExits:    []*ethpb.SignedVoluntaryExit{},
+				SyncAggregate: &ethpb.SyncAggregate{
+					SyncCommitteeBits:      bitfield.NewBitvector512(),
+					SyncCommitteeSignature: make([]byte, 96),
+				},
 			},
 		},
 		Signature: make([]byte, 96),
