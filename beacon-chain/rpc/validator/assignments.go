@@ -10,6 +10,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -80,15 +81,18 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 			// and send another response over the server stream right away.
 			currentEpoch = slotutil.EpochsSinceGenesis(vs.TimeFetcher.GenesisTime())
 			if ev.Type == statefeed.Reorg {
-				data, ok := ev.Data.(*statefeed.ReorgData)
+				data, ok := ev.Data.(*ethpbv1.EventChainReorg)
 				if !ok {
 					return status.Errorf(codes.Internal, "Received incorrect data type over reorg feed: %v", data)
 				}
-				newSlotEpoch := helpers.SlotToEpoch(data.NewSlot)
-				oldSlotEpoch := helpers.SlotToEpoch(data.OldSlot)
+				oldSlot, err := data.Slot.SafeSub(data.Depth)
+				if err != nil {
+					return status.Errorf(codes.Internal, "Could not compute old reorg slot: %v", err)
+				}
+				oldEpoch := helpers.SlotToEpoch(oldSlot)
 				// We only send out new duties if a reorg across epochs occurred, otherwise
 				// validator shufflings would not have changed as a result of a reorg.
-				if newSlotEpoch >= oldSlotEpoch {
+				if data.Epoch >= oldEpoch {
 					continue
 				}
 				req.Epoch = currentEpoch

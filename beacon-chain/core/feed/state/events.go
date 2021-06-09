@@ -22,6 +22,10 @@ const (
 	// Reorg is an event sent when the new head state's slot after a block
 	// transition is lower than its previous head state slot value.
 	Reorg
+	// FinalizedCheckpoint event.
+	FinalizedCheckpoint
+	// NewHead of the chain event.
+	NewHead
 )
 
 // BlockProcessedData is the data sent with BlockProcessed events.
@@ -54,12 +58,4 @@ type InitializedData struct {
 	StartTime time.Time
 	// GenesisValidatorsRoot represents state.validators.HashTreeRoot().
 	GenesisValidatorsRoot []byte
-}
-
-// ReorgData is the data alongside a reorg event.
-type ReorgData struct {
-	// NewSlot is the slot of new state after the reorg.
-	NewSlot types.Slot
-	// OldSlot is the slot of the head state before the reorg.
-	OldSlot types.Slot
 }
