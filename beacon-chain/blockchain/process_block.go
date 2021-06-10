@@ -113,7 +113,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 		// Feed the indexed attestation to slasher if enabled. This action
 		// is done in the background to avoid adding more load to this critical code path.
 		go func() {
-			for _, att := range signed.Block.Body.Attestations {
+			for _, att := range signed.Block().Body().Attestations() {
 				committee, err := helpers.BeaconCommitteeFromState(preState, att.Data.Slot, att.Data.CommitteeIndex)
 				if err != nil {
 					log.WithError(err).Error("Could not get attestation committee")

@@ -9,8 +9,8 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	ethereum_beacon_rpc_v1 "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	grpc "google.golang.org/grpc"
 )
 
