@@ -1,49 +1,68 @@
 package synccommittee
 
 import (
+	"strconv"
+
+	"github.com/hashicorp/vault/sdk/queue"
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
 )
 
-// SaveSyncCommitteeContribution saves a sync committee contribution in cache.
-// The cache does not filter out duplicate contribution, it will be up to the caller.
+const syncCommitteeMaxQueueSize = 5
+
+// SaveSyncCommitteeContribution saves a sync committee contribution in to a priority queue.
+// The priority queue capped at  5 contributions.
 func (s *Store) SaveSyncCommitteeContribution(sig *ethpb.SyncCommitteeContribution) error {
 	if sig == nil {
 		return nilContributionErr
 	}
 
 	copied := copyutil.CopySyncCommitteeContribution(sig)
-	slot := copied.Slot
 	s.contributionLock.Lock()
 	defer s.contributionLock.Unlock()
 
-	sigs, ok := s.contributionCache[slot]
-	if !ok {
-		s.contributionCache[slot] = []*ethpb.SyncCommitteeContribution{copied}
-		return nil
+	// Handle case where key exists.
+
+	item := &queue.Item{
+		Key:      syncCommitteeKey(sig.Slot),
+		Value:    []*ethpb.SyncCommitteeContribution{copied},
+		Priority: int64(sig.Slot),
 	}
 
-	s.contributionCache[slot] = append(sigs, copied)
+	s.contributionCache.Push(item)
+
+	if s.contributionCache.Len() > 5 {
+		if _, err := s.contributionCache.Pop(); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
 
-// SyncCommitteeContributions returns sync committee contributions in cache by slot.
-func (s *Store) SyncCommitteeContributions(slot types.Slot) []*ethpb.SyncCommitteeContribution {
+// SyncCommitteeContributions returns sync committee contributions in cache by slot from the priority queue.
+func (s *Store) SyncCommitteeContributions(slot types.Slot) ([]*ethpb.SyncCommitteeContribution, error) {
 	s.contributionLock.RLock()
 	defer s.contributionLock.RUnlock()
 
-	sigs, ok := s.contributionCache[slot]
-	if !ok {
-		return nil
+	item, err := s.contributionCache.PopByKey(syncCommitteeKey(slot))
+	if err != nil {
+		return nil, err
 	}
-	return sigs
+	if item == nil {
+		return nil, nil
+	}
+
+	contribution, ok := item.Value.([]*ethpb.SyncCommitteeContribution)
+	if !ok {
+		return nil, errors.New("not typed []ethpb.SyncCommitteeContribution")
+	}
+
+	return contribution, nil
 }
 
-// DeleteSyncCommitteeContributions deletes sync committee contributions in cache by slot.
-func (s *Store) DeleteSyncCommitteeContributions(slot types.Slot) {
-	s.contributionLock.Lock()
-	defer s.contributionLock.Unlock()
-	delete(s.contributionCache, slot)
+func syncCommitteeKey(slot types.Slot) string {
+	return strconv.FormatUint(uint64(slot), 10)
 }

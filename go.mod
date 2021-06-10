@@ -43,6 +43,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.0.1
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d
+	github.com/hashicorp/vault/sdk v0.2.0
 	github.com/herumi/bls-eth-go-binary v0.0.0-20210130185500-57372fb27371
 	github.com/ianlancetaylor/cgosymbolizer v0.0.0-20200424224625-be1b05b0b279
 	github.com/ipfs/go-ipfs-addr v0.0.1
@@ -54,7 +55,6 @@ require (
 	github.com/kevinms/leakybucket-go v0.0.0-20200115003610-082473db97ca
 	github.com/koron/go-ssdp v0.0.2 // indirect
 	github.com/kr/pretty v0.2.1
-	github.com/kr/text v0.2.0 // indirect
 	github.com/libp2p/go-libp2p v0.12.1-0.20201208224947-3155ff3089c0
 	github.com/libp2p/go-libp2p-blankhost v0.2.0
 	github.com/libp2p/go-libp2p-core v0.7.0
