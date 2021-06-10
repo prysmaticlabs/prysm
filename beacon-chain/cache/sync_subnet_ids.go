@@ -14,7 +14,7 @@ type syncSubnetIDs struct {
 	sCommiteeLock sync.RWMutex
 }
 
-// SyncSubnetIDs for attester and aggregator.
+// SyncSubnetIDs for sync committee participant.
 var SyncSubnetIDs = newSyncSubnetIDs()
 
 func newSyncSubnetIDs() *syncSubnetIDs {
