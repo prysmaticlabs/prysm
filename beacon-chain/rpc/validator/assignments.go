@@ -85,16 +85,6 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 				if !ok {
 					return status.Errorf(codes.Internal, "Received incorrect data type over reorg feed: %v", data)
 				}
-				oldSlot, err := data.Slot.SafeSub(data.Depth)
-				if err != nil {
-					return status.Errorf(codes.Internal, "Could not compute old reorg slot: %v", err)
-				}
-				oldEpoch := helpers.SlotToEpoch(oldSlot)
-				// We only send out new duties if a reorg across epochs occurred, otherwise
-				// validator shufflings would not have changed as a result of a reorg.
-				if data.Epoch >= oldEpoch {
-					continue
-				}
 				req.Epoch = currentEpoch
 				res, err := vs.duties(stream.Context(), req)
 				if err != nil {
