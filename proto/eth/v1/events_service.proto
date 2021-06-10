@@ -31,14 +31,77 @@ option php_namespace = "Ethereum\\Eth\\v1";
 //
 // This service is defined in the upstream eth2.0-apis repository (eth2.0-APIs/apis/debug).
 service Events {
-  // StreamEvents --
-  rpc StreamEvents(StreamEventsRequest) returns (stream gateway.EventSource) {
-    option (google.api.http) = {
-      get: "/eth/v1/events"
-    };
-  }
+    rpc StreamEvents(StreamEventsRequest) returns (stream gateway.EventSource) {
+        option (google.api.http) = {
+            get: "/eth/v1/events"
+        };
+    }
 }
 
 message StreamEventsRequest {
-  repeated string topics = 1;
+    // List of topics to request for event streaming items. Allowed request topics are
+    // head, attestation, block, voluntary_exit, finalized_checkpoint, chain_reorg.
+    repeated string topics = 1;
+}
+
+message EventHead {
+    // Slot of the new chain head.
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+
+    // Block root of the new chain head.
+    bytes block = 2 [(ethereum.eth.ext.ssz_size) = "32"];
+
+    // State root of the new chain head.
+    bytes state = 3 [(ethereum.eth.ext.ssz_size) = "32"];
+
+    // Whether or not the new chain head is at an epoch transition.
+    bool epoch_transition = 4;
+
+    // The previous dependent root.
+    bytes previous_duty_dependent_root = 5 [(ethereum.eth.ext.ssz_size) = "32"];
+
+    // The current dependent root.
+    bytes current_duty_dependent_root = 6 [(ethereum.eth.ext.ssz_size) = "32"];
+}
+
+message EventBlock {
+    // The slot of the observed block.
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+
+    // The root of the observed block.
+    bytes block = 2 [(ethereum.eth.ext.ssz_size) = "32"];
+}
+
+message EventChainReorg {
+    // The slot of the observed reorg.
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+
+    // Depth of the reorg in slots.
+    uint64 depth = 2;
+
+    // Block root of the old head.
+    bytes old_head_block = 3 [(ethereum.eth.ext.ssz_size) = "32"];
+
+    // Block root of the new head.
+    bytes new_head_block = 4 [(ethereum.eth.ext.ssz_size) = "32"];
+
+    // State root of the old state.
+    bytes old_head_state = 5 [(ethereum.eth.ext.ssz_size) = "32"];
+
+    // State root of the new state.
+    bytes new_head_state = 6 [(ethereum.eth.ext.ssz_size) = "32"];
+
+    // Epoch of the observed reorg.
+    uint64 epoch = 7 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+}
+
+message EventFinalizedCheckpoint {
+    // Block root of the finalized checkpoint.
+    bytes block = 1 [(ethereum.eth.ext.ssz_size) = "32"];
+
+    // State root of the finalized checkpoint.
+    bytes state = 2 [(ethereum.eth.ext.ssz_size) = "32"];
+
+    // Epoch the checkpoint references.
+    uint64 epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
 }
