@@ -80,10 +80,12 @@ func (s *Server) handleBlockEvents(
 	switch event.Type {
 	case blockfeed.ReceivedBlock:
 		if _, ok := requestedTopics["block"]; !ok {
+			log.Error("Not block")
 			return nil
 		}
 		blkData, ok := event.Data.(*blockfeed.ReceivedBlockData)
 		if !ok {
+			log.Error("Not block ok")
 			return nil
 		}
 		v1Data, err := migration.BlockIfaceToV1Blockheader(blkData.SignedBlock)
@@ -176,6 +178,7 @@ func (s *Server) streamData(stream ethpb.Events_StreamEventsServer, name string,
 		log.WithError(err).Error("Could not parse request from pb")
 		return err
 	}
+	log.Info("Sending event source of stream kind")
 	return stream.Send(&gwpb.EventSource{
 		Event: name,
 		Data:  returnData,
