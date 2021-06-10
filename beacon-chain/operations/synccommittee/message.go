@@ -59,8 +59,8 @@ func (s *Store) SaveSyncCommitteeMessage(msg *ethpb.SyncCommitteeMessage) error 
 // SyncCommitteeMessages returns sync committee messages by slot from the priority queue.
 // Upon retrieval, the message is removed from the queue.
 func (s *Store) SyncCommitteeMessages(slot types.Slot) ([]*ethpb.SyncCommitteeMessage, error) {
-	s.messageLock.RLock()
-	defer s.messageLock.RUnlock()
+	s.messageLock.Lock()
+	defer s.messageLock.Unlock()
 
 	item, err := s.messageCache.PopByKey(syncCommitteeKey(slot))
 	if err != nil {

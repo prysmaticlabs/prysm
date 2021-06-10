@@ -65,8 +65,8 @@ func (s *Store) SaveSyncCommitteeContribution(cont *ethpb.SyncCommitteeContribut
 // SyncCommitteeContributions returns sync committee contributions by slot from the priority queue.
 // Upon retrieval, the contribution is removed from the queue.
 func (s *Store) SyncCommitteeContributions(slot types.Slot) ([]*ethpb.SyncCommitteeContribution, error) {
-	s.contributionLock.RLock()
-	defer s.contributionLock.RUnlock()
+	s.contributionLock.Lock()
+	defer s.contributionLock.Unlock()
 
 	item, err := s.contributionCache.PopByKey(syncCommitteeKey(slot))
 	if err != nil {

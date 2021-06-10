@@ -3870,3 +3870,17 @@ def prysm_deps():
         sum = "h1:uFRZXykJGK9lLY4HtgSw44DnIcAM+kRBP7x5m+NpAOM=",
         version = "v1.16.0",
     )
+    go_repository(
+        name = "com_github_mitchellh_copystructure",
+        importpath = "github.com/mitchellh/copystructure",
+        sum = "h1:vpKXTN4ewci03Vljg/q9QvCGUDttBOGBIa15WveJJGw=",
+        version = "v1.2.0",
+    )
+
+    go_repository(
+        name = "com_github_mitchellh_reflectwalk",
+        importpath = "github.com/mitchellh/reflectwalk",
+        sum = "h1:G2LzWKi524PWgd3mLHV8Y5k7s6XUvT0Gef6zxSIeXaQ=",
+        version = "v1.0.2",
+    )
+    
