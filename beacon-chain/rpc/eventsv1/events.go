@@ -61,11 +61,17 @@ func (s *Server) StreamEvents(
 	for {
 		select {
 		case event := <-blockChan:
-			return s.handleBlockEvents(stream, requestedTopics, event)
+			if err := s.handleBlockEvents(stream, requestedTopics, event); err != nil {
+				return err
+			}
 		case event := <-opsChan:
-			return s.handleBlockOperationEvents(stream, requestedTopics, event)
+			if err := s.handleBlockOperationEvents(stream, requestedTopics, event); err != nil {
+				return err
+			}
 		case event := <-stateChan:
-			return s.handleStateEvents(stream, requestedTopics, event)
+			if err := s.handleStateEvents(stream, requestedTopics, event); err != nil {
+				return err
+			}
 		case <-s.Ctx.Done():
 			return errors.New("context canceled")
 		case <-stream.Context().Done():
@@ -80,12 +86,10 @@ func (s *Server) handleBlockEvents(
 	switch event.Type {
 	case blockfeed.ReceivedBlock:
 		if _, ok := requestedTopics["block"]; !ok {
-			log.Error("Not block")
 			return nil
 		}
 		blkData, ok := event.Data.(*blockfeed.ReceivedBlockData)
 		if !ok {
-			log.Error("Not block ok")
 			return nil
 		}
 		v1Data, err := migration.BlockIfaceToV1Blockheader(blkData.SignedBlock)
@@ -178,7 +182,6 @@ func (s *Server) streamData(stream ethpb.Events_StreamEventsServer, name string,
 		log.WithError(err).Error("Could not parse request from pb")
 		return err
 	}
-	log.Info("Sending event source of stream kind")
 	return stream.Send(&gwpb.EventSource{
 		Event: name,
 		Data:  returnData,
