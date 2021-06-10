@@ -43,7 +43,6 @@ require (
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.0.1
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d
-	github.com/hashicorp/vault/sdk v0.2.0
 	github.com/herumi/bls-eth-go-binary v0.0.0-20210130185500-57372fb27371
 	github.com/ianlancetaylor/cgosymbolizer v0.0.0-20200424224625-be1b05b0b279
 	github.com/ipfs/go-ipfs-addr v0.0.1
@@ -72,6 +71,7 @@ require (
 	github.com/manifoldco/promptui v0.7.0
 	github.com/minio/highwayhash v1.0.1
 	github.com/minio/sha256-simd v1.0.0
+	github.com/mitchellh/copystructure v1.2.0
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/multiformats/go-multiaddr v0.3.1
 	github.com/nbutton23/zxcvbn-go v0.0.0-20180912185939-ae427f1e4c1d

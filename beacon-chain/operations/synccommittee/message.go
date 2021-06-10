@@ -1,11 +1,11 @@
 package synccommittee
 
 import (
-	"github.com/hashicorp/vault/sdk/queue"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
+	"github.com/prysmaticlabs/prysm/shared/queue"
 )
 
 // SaveSyncCommitteeMessage saves a sync committee message in to a priority queue.

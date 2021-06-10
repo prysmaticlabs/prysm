@@ -3,11 +3,11 @@ package synccommittee
 import (
 	"strconv"
 
-	"github.com/hashicorp/vault/sdk/queue"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
+	"github.com/prysmaticlabs/prysm/shared/queue"
 )
 
 // To give two slots tolerance for objects that arrive earlier.

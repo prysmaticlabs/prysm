@@ -3,8 +3,8 @@ package synccommittee
 import (
 	"sync"
 
-	"github.com/hashicorp/vault/sdk/queue"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/queue"
 )
 
 var hashFn = hashutil.HashProto
