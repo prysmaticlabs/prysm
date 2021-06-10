@@ -73,7 +73,7 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 		return pubsub.ValidationReject
 	}
 
-	if s.hasSeenSyncContributionIndexEpoch(m.Message.Contribution.Slot, m.Message.AggregatorIndex, types.CommitteeIndex(m.Message.Contribution.SubcommitteeIndex)) {
+	if s.hasSeenSyncContributionIndexSlot(m.Message.Contribution.Slot, m.Message.AggregatorIndex, types.CommitteeIndex(m.Message.Contribution.SubcommitteeIndex)) {
 		return pubsub.ValidationIgnore
 	}
 	if !altair.IsSyncCommitteeAggregator(m.Message.SelectionProof) {
@@ -148,13 +148,15 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 		return pubsub.ValidationReject
 	}
 
+	s.setSyncContributionIndexSlotSeen(m.Message.Contribution.Slot, m.Message.AggregatorIndex, types.CommitteeIndex(m.Message.Contribution.SubcommitteeIndex))
+
 	msg.ValidatorData = m
 
 	return pubsub.ValidationAccept
 }
 
-// Returns true if the node has received sync contribution for the aggregator with index and epoch.
-func (s *Service) hasSeenSyncContributionIndexEpoch(slot types.Slot, aggregatorIndex types.ValidatorIndex, subComIdx types.CommitteeIndex) bool {
+// Returns true if the node has received sync contribution for the aggregator with index,slot and subcommittee index.
+func (s *Service) hasSeenSyncContributionIndexSlot(slot types.Slot, aggregatorIndex types.ValidatorIndex, subComIdx types.CommitteeIndex) bool {
 	s.seenSyncContributionLock.RLock()
 	defer s.seenSyncContributionLock.RUnlock()
 
@@ -164,8 +166,8 @@ func (s *Service) hasSeenSyncContributionIndexEpoch(slot types.Slot, aggregatorI
 	return seen
 }
 
-// Set sync contributor's aggregate index epoch as seen.
-func (s *Service) setSyncContributionIndexEpochSeen(slot types.Slot, aggregatorIndex types.ValidatorIndex, subComIdx types.CommitteeIndex) {
+// Set sync contributor's aggregate index, slot and subcommittee index as seen.
+func (s *Service) setSyncContributionIndexSlotSeen(slot types.Slot, aggregatorIndex types.ValidatorIndex, subComIdx types.CommitteeIndex) {
 	s.seenSyncContributionLock.Lock()
 	defer s.seenSyncContributionLock.Unlock()
 	b := append(bytesutil.Bytes32(uint64(aggregatorIndex)), bytesutil.Bytes32(uint64(slot))...)
