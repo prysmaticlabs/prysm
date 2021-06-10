@@ -367,7 +367,7 @@ func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
 
 	log.WithField("database-path", dbPath).Info("Checking DB")
 
-	d, err := db.NewSlasherDB(b.ctx, dbPath, &slasherkv.Config{
+	d, err := slasherkv.NewKVStore(b.ctx, dbPath, &slasherkv.Config{
 		InitialMMapSize: cliCtx.Int(cmd.BoltMMapInitialSizeFlag.Name),
 	})
 	if err != nil {
@@ -391,7 +391,7 @@ func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
 		if err := d.ClearDB(); err != nil {
 			return errors.Wrap(err, "could not clear database")
 		}
-		d, err = db.NewSlasherDB(b.ctx, dbPath, &slasherkv.Config{
+		d, err = slasherkv.NewKVStore(b.ctx, dbPath, &slasherkv.Config{
 			InitialMMapSize: cliCtx.Int(cmd.BoltMMapInitialSizeFlag.Name),
 		})
 		if err != nil {
