@@ -951,6 +951,107 @@ func TestValidateBeaconBlockPubSub_RejectEvilBlocksFromFuture(t *testing.T) {
 	assert.Equal(t, false, result)
 }
 
+func TestValidateBeaconBlockPubSub_ErrorInsertingInToPendingQueue(t *testing.T) {
+	db := dbtest.SetupDB(t)
+	p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
+	parentBlock := testutil.NewBeaconBlock()
+	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(parentBlock)))
+	bRoot, err := parentBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
+	require.NoError(t, db.SaveStateSummary(ctx, &pb.StateSummary{Root: bRoot[:]}))
+
+	copied := beaconState.Copy()
+	// The next block is at least 2 epochs ahead to induce shuffling and a new seed.
+	blkSlot := params.BeaconConfig().SlotsPerEpoch * 2
+	copied, err = state.ProcessSlots(context.Background(), copied, blkSlot)
+	require.NoError(t, err)
+	proposerIdx, err := helpers.BeaconProposerIndex(copied)
+	require.NoError(t, err)
+
+	msg1 := testutil.NewBeaconBlock()
+	msg1.Block.ProposerIndex = proposerIdx
+	msg1.Block.Slot = 2
+	msg1.Block.ParentRoot = bRoot[:]
+	msg1.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, msg1.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	require.NoError(t, err)
+
+	//genesisTime := time.Now()
+	c, err := lru.New(10)
+	require.NoError(t, err)
+	c2, err := lru.New(10)
+	require.NoError(t, err)
+
+	stateGen := stategen.New(db)
+	chainService := &mock.ChainService{
+		Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
+		FinalizedCheckPoint: &ethpb.Checkpoint{
+			Epoch: 0,
+		},
+	}
+	r := &Service{
+		cfg: &Config{
+			DB:            db,
+			P2P:           p,
+			InitialSync:   &mockSync.Sync{IsSyncing: false},
+			Chain:         chainService,
+			BlockNotifier: chainService.BlockNotifier(),
+			StateGen:      stateGen,
+		},
+		seenBlockCache:      c,
+		badBlockCache:       c2,
+		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
+		seenPendingBlocks:   make(map[[32]byte]bool),
+	}
+
+	buf := new(bytes.Buffer)
+	_, err = p.Encoding().EncodeGossip(buf, msg1)
+	require.NoError(t, err)
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg1)]
+	m := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data:  buf.Bytes(),
+			Topic: &topic,
+		},
+	}
+
+	// insert three blocks for the same slot
+	b1 := testutil.NewBeaconBlock()
+	b1.Block.Slot = 2
+	b1.Block.ProposerIndex = proposerIdx + 1
+	b1.Block.ParentRoot = bRoot[:]
+	b1Root, err := b1.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, r.insertBlockToPendingQueue(b1.Block.Slot, interfaces.WrappedPhase0SignedBeaconBlock(b1), b1Root))
+	assert.Equal(t, true, len(r.pendingBlocksInCache(b1.Block.Slot)) == 1)
+
+	b2 := testutil.NewBeaconBlock()
+	b2.Block.Slot = 2
+	b2.Block.ProposerIndex = proposerIdx + 2
+	b2.Block.ParentRoot = bRoot[:]
+	b2Root, err := b2.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, r.insertBlockToPendingQueue(b2.Block.Slot, interfaces.WrappedPhase0SignedBeaconBlock(b2), b2Root))
+	assert.Equal(t, true, len(r.pendingBlocksInCache(b2.Block.Slot)) == 2)
+
+	b3 := testutil.NewBeaconBlock()
+	b3.Block.Slot = 2
+	b3.Block.ProposerIndex = proposerIdx + 3
+	b3.Block.ParentRoot = bRoot[:]
+	b3Root, err := b3.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, r.insertBlockToPendingQueue(b3.Block.Slot, interfaces.WrappedPhase0SignedBeaconBlock(b3), b3Root))
+	assert.Equal(t, true, len(r.pendingBlocksInCache(b3.Block.Slot)) == 3)
+
+	// send in the fourth block. This should not be queued as it exceeds maxBlocksPerSlot.
+	result := r.validateBeaconBlockPubSub(ctx, "", m) == pubsub.ValidationIgnore
+	assert.Equal(t, true, result)
+	assert.Equal(t, true, len(r.pendingBlocksInCache(msg1.Block.Slot)) == 3)
+}
+
 func TestService_setBadBlock_DoesntSetWithContextErr(t *testing.T) {
 	s := Service{}
 	require.NoError(t, s.initCaches())
