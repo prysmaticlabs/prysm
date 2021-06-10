@@ -7,37 +7,28 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	//"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	//"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-type DuplicateDetection struct {
-	Slot         types.Slot
-	DuplicateKey []byte
-}
-
-// Starts the Doppelganger detection
+// The Doppelganger detection calls beacon to calculate if the balance of a duplicate validator has been
+// strictly increasing for the previous N epochs straight.
 func (v *validator) DoppelgangerService(ctx context.Context) ([]byte, error) {
 	pKTargets, _, err := v.retrieveValidatingPublicKeysTargets(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "Doppelganger detection - failed to retrieve validator keys and indices")
 	}
 
-	/*NoEpochsToCheck = params.BeaconConfig().DuplicateValidatorEpochsCheck */
 	// rpc call to retrieve balances for this validator indices
 	req := &ethpb.DetectDoppelgangerRequest{PubKeysTargets: pKTargets}
-
 	res, err := v.validatorClient.DetectDoppelganger(ctx, req)
 	if err != nil {
-		return nil, errors.Wrap(err, "Doppelganger detection - failed to beacon-rpc list balances")
+		return nil, errors.Wrap(err, "Doppelganger detection - failed in beacon-rpc call")
 	}
 	return res.PublicKey, nil
 
 }
 
-// Load the PublicKeys and the corresponding Indices of the Validator. Do it once.
+// Load the PublicKeys and the corresponding Targets.
 func (v *validator) retrieveValidatingPublicKeysTargets(ctx context.Context) ([]*ethpb.PubKeyTarget, [][48]byte, error) {
 	validatingPublicKeys, err := v.keyManager.FetchValidatingPublicKeys(ctx)
 	if err != nil {
@@ -46,13 +37,13 @@ func (v *validator) retrieveValidatingPublicKeysTargets(ctx context.Context) ([]
 
 	pKsTargets := make([]*ethpb.PubKeyTarget, len(validatingPublicKeys))
 
-	// Convert the ValidatingKeys to an array of Indices to be used by Committee retrieval.
+	// Find the lowest signed Target for each Key and append to return struct
 	for _, key := range validatingPublicKeys {
 		lowestTargetEpoch, exists, err := v.db.LowestSignedTargetEpoch(ctx, key)
 		if err != nil {
 			return nil, nil, err
 		}
-		// if validator db has no target, key is not bothered with
+		// if validator db has no target, key is not appended
 		if exists {
 			pKT := &ethpb.PubKeyTarget{PubKey: key[:], TargetEpoch: lowestTargetEpoch}
 			pKsTargets = append(pKsTargets, pKT)

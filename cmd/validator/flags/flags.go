@@ -305,7 +305,7 @@ var (
 	}
 	// EnableDuplicateValidatorDetection enables on-chain check for duplicate validator attestations
 	EnableDuplicateValidatorDetection = &cli.BoolFlag{
-		Name:  "enable-duplicate-validator-detection",
+		Name:  "enable-duplicate-detection",
 		Usage: "Enables on-chain check for duplicate validator attestations",
 	}
 )

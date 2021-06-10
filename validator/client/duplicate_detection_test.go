@@ -1,54 +1,88 @@
-// The aim is to check for duplicate attestations at Validator Launch for the same keystore
-// If it is detected , a doppelganger exists, so alert the user and exit.
-// This is is done for N(two) epochs. That is better than starting a duplicate validator and getting slashed.
 package client
 
 import (
 	"context"
+	"testing"
 
-	"github.com/pkg/errors"
+	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+
+	"github.com/prysmaticlabs/prysm/shared/mock"
+	dbTest "github.com/prysmaticlabs/prysm/validator/db/testing"
 )
 
-// The Doppelganger detection calls beacon to calculate if the balance of a duplicate validator has been
-// strictly increasing for the previous N epochs straight.
-func (v *validator) DoppelgangerService(ctx context.Context) ([]byte, error) {
-	pKTargets, _, err := v.retrieveValidatingPublicKeysTargets(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "Doppelganger detection - failed to retrieve validator keys and indices")
+func TestSleeping_DuplicateDetection_NoKeys(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	ctx := context.Background()
+	defer ctrl.Finish()
+
+	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	db := dbTest.SetupDB(t, [][48]byte{})
+
+	client.EXPECT().DetectDoppelganger(
+		gomock.Any(), // ctx
+		gomock.Any(), // keys, targets
+	).Return(&ethpb.DetectDoppelgangerResponse{PublicKey: make([]byte, 0)}, nil /*err*/)
+
+	km := &mockKeymanager{
+		fetchNoKeys: true,
 	}
 
-	// rpc call to retrieve balances for this validator indices
-	req := &ethpb.DetectDoppelgangerRequest{PubKeysTargets: pKTargets}
-	res, err := v.validatorClient.DetectDoppelganger(ctx, req)
-	if err != nil {
-		return nil, errors.Wrap(err, "Doppelganger detection - failed in beacon-rpc call")
+	v := validator{
+		validatorClient: client,
+		db:              db,
+		keyManager:      km,
 	}
-	return res.PublicKey, nil
 
+	// Fetch keys from the mock KM does not error. So just an aesthetic check of zero length.
+	key, err := v.DoppelgangerService(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 0, len(key))
 }
 
-// Load the PublicKeys and the corresponding Targets.
-func (v *validator) retrieveValidatingPublicKeysTargets(ctx context.Context) ([]*ethpb.PubKeyTarget, [][48]byte, error) {
-	validatingPublicKeys, err := v.keyManager.FetchValidatingPublicKeys(ctx)
-	if err != nil {
-		return nil, nil, err
+/*
+func TestSleeping_DuplicateDetection(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	ctx := context.Background()
+	defer ctrl.Finish()
+
+	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	db := dbTest.SetupDB(t, [][48]byte{})
+
+	client.EXPECT().DetectDoppelganger(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(&ethpb.DetectDoppelgangerResponse{PublicKey: make([]byte, 0)}, nil )
+
+	// Set random Keys
+	//validatorKey, err := bls.RandKey()
+	//pubKey := [48]byte{}
+	//require.NoError(t, err)
+	//copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	km := &mockKeymanager{
+		fetchNoKeys: true,
 	}
 
-	pKsTargets := make([]*ethpb.PubKeyTarget, len(validatingPublicKeys))
+	//v := &testutil.FakeValidator{
+	//	NextSlotRet:        ticker.C(),
+	//	DuplicateCheckFlag: true,
+	//	Keymanager:         km,
+	//}
 
-	// Find the lowest signed Target for each Key and append to return struct
-	for _, key := range validatingPublicKeys {
-		lowestTargetEpoch, exists, err := v.db.LowestSignedTargetEpoch(ctx, key)
-		if err != nil {
-			return nil, nil, err
-		}
-		// if validator db has no target, key is not appended
-		if exists {
-			pKT := &ethpb.PubKeyTarget{PubKey: key[:], TargetEpoch: lowestTargetEpoch}
-			pKsTargets = append(pKsTargets, pKT)
-		}
+	v := validator{
+		validatorClient: client,
+		db:              db,
+		keyManager:      km,
 	}
-	return pKsTargets, validatingPublicKeys, nil
 
+	key, err := v.DoppelgangerService(ctx)
+	//oneEpochs := helpers.SlotToEpoch(<-v.NextSlot())
+	require.NoError(t, err)
+	require.Equal(t, 0, len(key))
+	//
+	//require.Equal(t, currentEpoch.Add(uint64(params.BeaconConfig().DuplicateValidatorEpochsCheck)),
+	//oneEpochs, "Initial Epoch (%d) vs After 1 epochs (%d)", currentEpoch, oneEpochs)
+	//assert.ErrorContains(t, "Doppelganger detection - failed to retrieve validator keys and indices", err)
 }
+*/

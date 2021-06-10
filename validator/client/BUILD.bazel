@@ -81,6 +81,7 @@ go_test(
         "aggregate_test.go",
         "attest_protect_test.go",
         "attest_test.go",
+        "duplicate_detection_test.go",
         "key_reload_test.go",
         "log_test.go",
         "metrics_test.go",

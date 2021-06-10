@@ -53,7 +53,6 @@ type ValidatorClient struct {
 	lock               sync.RWMutex
 	wallet             *wallet.Wallet
 	walletInitialized  *event.Feed
-	duplicateFeed      *event.Feed
 	duplicateCheckFlag bool
 	stop               chan struct{} // Channel to wait for termination notifications.
 }
@@ -94,7 +93,6 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		cancel:             cancel,
 		services:           registry,
 		walletInitialized:  new(event.Feed),
-		duplicateFeed:      new(event.Feed),
 		duplicateCheckFlag: duplicateCheckFlag,
 		stop:               make(chan struct{}),
 	}
@@ -428,7 +426,6 @@ func (c *ValidatorClient) registerValidatorService(
 		ValDB:                      c.db,
 		UseWeb:                     c.cliCtx.Bool(flags.EnableWebFlag.Name),
 		WalletInitializedFeed:      c.walletInitialized,
-		DuplicateFeed:              c.duplicateFeed,
 		DuplicateCheckFlag:         c.duplicateCheckFlag,
 		GraffitiStruct:             gStruct,
 		LogDutyCountDown:           c.cliCtx.Bool(flags.EnableDutyCountDown.Name),
