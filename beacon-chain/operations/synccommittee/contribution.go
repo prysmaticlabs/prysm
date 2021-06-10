@@ -10,30 +10,44 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
 )
 
-const syncCommitteeMaxQueueSize = 5
+const syncCommitteeMaxQueueSize = 4
 
 // SaveSyncCommitteeContribution saves a sync committee contribution in to a priority queue.
 // The priority queue capped at  5 contributions.
-func (s *Store) SaveSyncCommitteeContribution(sig *ethpb.SyncCommitteeContribution) error {
-	if sig == nil {
+func (s *Store) SaveSyncCommitteeContribution(cont *ethpb.SyncCommitteeContribution) error {
+	if cont == nil {
 		return nilContributionErr
 	}
 
-	copied := copyutil.CopySyncCommitteeContribution(sig)
-	s.contributionLock.Lock()
-	defer s.contributionLock.Unlock()
-
-	// Handle case where key exists.
-
-	item := &queue.Item{
-		Key:      syncCommitteeKey(sig.Slot),
-		Value:    []*ethpb.SyncCommitteeContribution{copied},
-		Priority: int64(sig.Slot),
+	contributions, err := s.SyncCommitteeContributions(cont.Slot)
+	if err != nil {
+		return err
 	}
 
-	s.contributionCache.Push(item)
+	s.contributionLock.Lock()
+	defer s.contributionLock.Unlock()
+	copied := copyutil.CopySyncCommitteeContribution(cont)
 
-	if s.contributionCache.Len() > 5 {
+	// Case where key exists.
+	if contributions != nil {
+		contributions = append(contributions, copied)
+		s.contributionCache.Push(&queue.Item{
+			Key:      syncCommitteeKey(cont.Slot),
+			Value:    contributions,
+			Priority: int64(cont.Slot),
+		})
+
+		return nil
+	}
+
+	s.contributionCache.Push(&queue.Item{
+		Key:      syncCommitteeKey(cont.Slot),
+		Value:    []*ethpb.SyncCommitteeContribution{copied},
+		Priority: int64(cont.Slot),
+	})
+
+	// Trim contributions in queue down to 4 items if exceeds.
+	if s.contributionCache.Len() > syncCommitteeMaxQueueSize {
 		if _, err := s.contributionCache.Pop(); err != nil {
 			return err
 		}
@@ -42,7 +56,8 @@ func (s *Store) SaveSyncCommitteeContribution(sig *ethpb.SyncCommitteeContributi
 	return nil
 }
 
-// SyncCommitteeContributions returns sync committee contributions in cache by slot from the priority queue.
+// SyncCommitteeContributions returns sync committee contributions by slot from the priority queue.
+// Upon retrieval, the contribution is removed from the queue.
 func (s *Store) SyncCommitteeContributions(slot types.Slot) ([]*ethpb.SyncCommitteeContribution, error) {
 	s.contributionLock.RLock()
 	defer s.contributionLock.RUnlock()
