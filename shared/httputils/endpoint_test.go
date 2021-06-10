@@ -73,7 +73,7 @@ func TestMethod(t *testing.T) {
 
 func TestEndpointEquals(t *testing.T) {
 	e := Endpoint{
-		Url: "Path",
+		Url: "Url",
 		Auth: AuthorizationData{
 			Method: authorizationmethod.Basic,
 			Value:  "Basic username:password",
@@ -82,7 +82,7 @@ func TestEndpointEquals(t *testing.T) {
 
 	t.Run("equal", func(t *testing.T) {
 		other := Endpoint{
-			Url: "Path",
+			Url: "Url",
 			Auth: AuthorizationData{
 				Method: authorizationmethod.Basic,
 				Value:  "Basic username:password",
@@ -102,7 +102,7 @@ func TestEndpointEquals(t *testing.T) {
 	})
 	t.Run("different auth data", func(t *testing.T) {
 		other := Endpoint{
-			Url: "Path",
+			Url: "Url",
 			Auth: AuthorizationData{
 				Method: authorizationmethod.Bearer,
 				Value:  "Bearer token",
