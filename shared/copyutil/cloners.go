@@ -328,8 +328,8 @@ func CopyValidator(val *ethpb.Validator) *ethpb.Validator {
 	}
 }
 
-// CopySyncCommitteeSignature copies the provided sync committee signature object.
-func CopySyncCommitteeSignature(s *ethpb.SyncCommitteeMessage) *ethpb.SyncCommitteeMessage {
+// CopySyncCommitteeMessage copies the provided sync committee message object.
+func CopySyncCommitteeMessage(s *ethpb.SyncCommitteeMessage) *ethpb.SyncCommitteeMessage {
 	if s == nil {
 		return nil
 	}

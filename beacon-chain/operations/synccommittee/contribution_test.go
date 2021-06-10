@@ -15,42 +15,44 @@ func TestSyncCommitteeContributionCache_Nil(t *testing.T) {
 func TestSyncCommitteeContributionCache_RoundTrip(t *testing.T) {
 	store := NewStore()
 
-	sigs := []*eth.SyncCommitteeContribution{
+	conts := []*eth.SyncCommitteeContribution{
 		{Slot: 1, SubcommitteeIndex: 0, Signature: []byte{'a'}},
 		{Slot: 1, SubcommitteeIndex: 1, Signature: []byte{'b'}},
-		{Slot: 1, SubcommitteeIndex: 2, Signature: []byte{'c'}},
-		{Slot: 2, SubcommitteeIndex: 0, Signature: []byte{'d'}},
-		{Slot: 2, SubcommitteeIndex: 1, Signature: []byte{'e'}},
+		{Slot: 2, SubcommitteeIndex: 0, Signature: []byte{'c'}},
+		{Slot: 2, SubcommitteeIndex: 1, Signature: []byte{'d'}},
+		{Slot: 3, SubcommitteeIndex: 0, Signature: []byte{'e'}},
+		{Slot: 3, SubcommitteeIndex: 1, Signature: []byte{'f'}},
+		{Slot: 4, SubcommitteeIndex: 0, Signature: []byte{'g'}},
+		{Slot: 4, SubcommitteeIndex: 1, Signature: []byte{'h'}},
+		{Slot: 5, SubcommitteeIndex: 0, Signature: []byte{'i'}},
+		{Slot: 5, SubcommitteeIndex: 1, Signature: []byte{'j'}},
+		{Slot: 6, SubcommitteeIndex: 0, Signature: []byte{'k'}},
+		{Slot: 6, SubcommitteeIndex: 1, Signature: []byte{'l'}},
 	}
 
-	for _, sig := range sigs {
+	for _, sig := range conts {
 		require.NoError(t, store.SaveSyncCommitteeContribution(sig))
 	}
 
-	sigs = store.SyncCommitteeContributions(1)
+	conts, err := store.SyncCommitteeContributions(1)
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, []*eth.SyncCommitteeContribution(nil), conts)
+
+	conts, err = store.SyncCommitteeContributions(2)
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, []*eth.SyncCommitteeContribution(nil), conts)
+
+	conts, err = store.SyncCommitteeContributions(3)
+	require.NoError(t, err)
 	require.DeepSSZEqual(t, []*eth.SyncCommitteeContribution{
-		{Slot: 1, SubcommitteeIndex: 0, Signature: []byte{'a'}},
-		{Slot: 1, SubcommitteeIndex: 1, Signature: []byte{'b'}},
-		{Slot: 1, SubcommitteeIndex: 2, Signature: []byte{'c'}},
-	}, sigs)
+		{Slot: 3, SubcommitteeIndex: 0, Signature: []byte{'e'}},
+		{Slot: 3, SubcommitteeIndex: 1, Signature: []byte{'f'}},
+	}, conts)
 
-	sigs = store.SyncCommitteeContributions(2)
+	conts, err = store.SyncCommitteeContributions(6)
+	require.NoError(t, err)
 	require.DeepSSZEqual(t, []*eth.SyncCommitteeContribution{
-		{Slot: 2, SubcommitteeIndex: 0, Signature: []byte{'d'}},
-		{Slot: 2, SubcommitteeIndex: 1, Signature: []byte{'e'}},
-	}, sigs)
-
-	store.DeleteSyncCommitteeContributions(1)
-	sigs = store.SyncCommitteeContributions(1)
-	require.DeepSSZEqual(t, []*eth.SyncCommitteeContribution{}, sigs)
-
-	sigs = store.SyncCommitteeContributions(2)
-	require.DeepSSZEqual(t, []*eth.SyncCommitteeContribution{
-		{Slot: 2, SubcommitteeIndex: 0, Signature: []byte{'d'}},
-		{Slot: 2, SubcommitteeIndex: 1, Signature: []byte{'e'}},
-	}, sigs)
-
-	store.DeleteSyncCommitteeContributions(2)
-	sigs = store.SyncCommitteeContributions(2)
-	require.DeepSSZEqual(t, []*eth.SyncCommitteeContribution{}, sigs)
+		{Slot: 6, SubcommitteeIndex: 0, Signature: []byte{'k'}},
+		{Slot: 6, SubcommitteeIndex: 1, Signature: []byte{'l'}},
+	}, conts)
 }
