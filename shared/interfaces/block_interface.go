@@ -34,6 +34,7 @@ type BeaconBlock interface {
 	Proto() proto.Message
 	ssz.Marshaler
 	ssz.Unmarshaler
+	Version() int
 }
 
 // BeaconBlockBody describes the method set employed by an object

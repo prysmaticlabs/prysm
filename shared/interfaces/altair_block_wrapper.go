@@ -163,6 +163,11 @@ func (w AltairBeaconBlock) Proto() proto.Message {
 	return w.b
 }
 
+// Version of the underlying protobuf object.
+func (w AltairBeaconBlock) Version() int {
+	return version.Altair
+}
+
 // AltairBeaconBlockBody is a wrapper of a beacon block body.
 type AltairBeaconBlockBody struct {
 	b *ethpb.BeaconBlockBodyAltair
