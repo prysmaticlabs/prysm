@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -128,7 +129,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 			"newSlot": fmt.Sprintf("%d", newHeadSlot),
 			"oldSlot": fmt.Sprintf("%d", headSlot),
 		}).Debug("Chain reorg occurred")
-		absoluteSlotDifference := absoluteValueSlotDifference(newHeadSlot, headSlot)
+		absoluteSlotDifference := slotutil.AbsoluteValueSlotDifference(newHeadSlot, headSlot)
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Reorg,
 			Data: &ethpbv1.EventChainReorg{
@@ -358,12 +359,4 @@ func (s *Service) notifyNewHeadEvent(
 		},
 	})
 	return nil
-}
-
-// Absolute value difference between two slots.
-func absoluteValueSlotDifference(x, y types.Slot) uint64 {
-	if x > y {
-		return uint64(x.SubSlot(y))
-	}
-	return uint64(y.SubSlot(x))
 }

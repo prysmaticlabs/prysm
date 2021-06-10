@@ -341,15 +341,7 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 	go func(tt *testing.T) {
 		assert.ErrorContains(t, "context canceled", vs.StreamDuties(req, mockStream))
 	}(t)
-	// Fire a reorg event within the same epoch. This should NOT
-	// trigger a recomputation not resending of duties over the stream.
-	for sent := 0; sent == 0; {
-		sent = vs.StateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.Reorg,
-			Data: &ethpbv1.EventChainReorg{Depth: 0, Slot: 0},
-		})
-	}
-	// Fire a reorg event across epoch boundaries. This needs to trigger
+	// Fire a reorg event. This needs to trigger
 	// a recomputation and resending of duties over the stream.
 	for sent := 0; sent == 0; {
 		sent = vs.StateNotifier.StateFeed().Send(&feed.Event{
