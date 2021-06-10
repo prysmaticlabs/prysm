@@ -495,6 +495,7 @@ func TestService_ProcessPendingBlockOnCorrectSlot(t *testing.T) {
 	b1.Block.ParentRoot = bRoot[:]
 	b1.Block.Slot = 1
 	b1Root, err := b1.Block.HashTreeRoot()
+	require.NoError(t, err)
 	b1.Block.ProposerIndex = proposerIdx
 	b1.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, b1.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
