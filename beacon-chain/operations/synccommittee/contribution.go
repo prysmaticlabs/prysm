@@ -33,20 +33,24 @@ func (s *Store) SaveSyncCommitteeContribution(cont *ethpb.SyncCommitteeContribut
 	// Contributions exist in the queue. Append instead of insert new.
 	if contributions != nil {
 		contributions = append(contributions, copied)
-		s.contributionCache.Push(&queue.Item{
+		if err := s.contributionCache.Push(&queue.Item{
 			Key:      syncCommitteeKey(cont.Slot),
 			Value:    contributions,
 			Priority: int64(cont.Slot),
-		})
+		}); err != nil {
+			return err
+		}
 		return nil
 	}
 
 	// Contribution does not exist. Insert new.
-	s.contributionCache.Push(&queue.Item{
+	if err := s.contributionCache.Push(&queue.Item{
 		Key:      syncCommitteeKey(cont.Slot),
 		Value:    []*ethpb.SyncCommitteeContribution{copied},
 		Priority: int64(cont.Slot),
-	})
+	}); err != nil {
+		return err
+	}
 
 	// Trim contributions in queue down to syncCommitteeMaxQueueSize.
 	if s.contributionCache.Len() > syncCommitteeMaxQueueSize {
