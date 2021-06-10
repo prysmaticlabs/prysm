@@ -103,9 +103,9 @@ var (
 		Name:  "disable-broadcast-slashings",
 		Usage: "Disables broadcasting slashings submitted to the beacon node.",
 	}
-	attestTimely = &cli.BoolFlag{
-		Name:  "attest-timely",
-		Usage: "Fixes validator can attest timely after current block processes. See #8185 for more details",
+	disableAttestTimely = &cli.BoolFlag{
+		Name:  "disable-attest-timely",
+		Usage: "Disable attest timely, a fix where validator can attest timely after current block processes. See #8185 for more details",
 	}
 	enableNextSlotStateCache = &cli.BoolFlag{
 		Name:  "enable-next-slot-state-cache",
@@ -153,7 +153,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	Mainnet,
 	disableAccountsV2,
 	dynamicKeyReloadDebounceInterval,
-	attestTimely,
+	disableAttestTimely,
 	enableSlashingProtectionPruning,
 }...)
 

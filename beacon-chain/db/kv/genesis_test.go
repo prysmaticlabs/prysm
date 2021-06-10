@@ -31,7 +31,7 @@ func testGenesisDataSaved(t *testing.T, db iface.Database) {
 	assert.NoError(t, err)
 	assert.NotNil(t, gb)
 
-	gbHTR, err := gb.Block.HashTreeRoot()
+	gbHTR, err := gb.Block().HashTreeRoot()
 	assert.NoError(t, err)
 
 	gss, err := db.StateSummary(ctx, gbHTR)
@@ -42,7 +42,7 @@ func testGenesisDataSaved(t *testing.T, db iface.Database) {
 	assert.NoError(t, err)
 	assert.NotNil(t, head)
 
-	headHTR, err := head.Block.HashTreeRoot()
+	headHTR, err := head.Block().HashTreeRoot()
 	assert.NoError(t, err)
 	assert.Equal(t, gbHTR, headHTR, "head block does not match genesis block")
 }
@@ -99,7 +99,7 @@ func TestEnsureEmbeddedGenesis(t *testing.T) {
 
 	gb, err := db.GenesisBlock(ctx)
 	assert.NoError(t, err)
-	if gb != nil {
+	if gb != nil && !gb.IsNil() {
 		t.Fatal("Genesis block exists already")
 	}
 

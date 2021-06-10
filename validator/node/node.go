@@ -409,7 +409,7 @@ func (c *ValidatorClient) registerValidatorService(
 		LogValidatorBalances:       logValidatorBalances,
 		EmitAccountMetrics:         emitAccountMetrics,
 		CertFlag:                   cert,
-		GraffitiFlag:               graffiti,
+		GraffitiFlag:               g.ParseHexGraffiti(graffiti),
 		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
 		GrpcRetriesFlag:            grpcRetries,
 		GrpcRetryDelay:             grpcRetryDelay,
@@ -421,10 +421,10 @@ func (c *ValidatorClient) registerValidatorService(
 		GraffitiStruct:             gStruct,
 		LogDutyCountDown:           c.cliCtx.Bool(flags.EnableDutyCountDown.Name),
 	})
-
 	if err != nil {
 		return errors.Wrap(err, "could not initialize validator service")
 	}
+
 	return c.services.RegisterService(v)
 }
 func (c *ValidatorClient) registerSlasherService() error {

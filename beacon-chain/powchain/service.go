@@ -23,7 +23,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -35,6 +34,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/clientstats"
 	"github.com/prysmaticlabs/prysm/shared/httputils"
@@ -247,7 +247,7 @@ func (s *Service) Start() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		if genState == nil {
+		if genState == nil || genState.IsNil() {
 			log.Fatal("cannot create genesis state: no eth1 http endpoint defined")
 		}
 	}
@@ -511,7 +511,7 @@ func (s *Service) waitForConnection() {
 	logCounter := 0
 	errorLogger := func(err error, msg string) {
 		if logCounter > logThreshold {
-			log.WithError(err).Error(msg)
+			log.Errorf("%s: %v", msg, err)
 			logCounter = 0
 		}
 		logCounter++
@@ -611,7 +611,7 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.Deposit
 		if err != nil {
 			return errors.Wrap(err, "could not get finalized state")
 		}
-		if fState == nil {
+		if fState == nil || fState.IsNil() {
 			return errors.Errorf("finalized state with root %#x does not exist in the db", rt)
 		}
 		// Set deposit index to the one in the current archived state.
@@ -1014,7 +1014,7 @@ func (s *Service) ensureValidPowchainData(ctx context.Context) error {
 		return err
 	}
 	// Exit early if no genesis state is saved.
-	if genState == nil {
+	if genState == nil || genState.IsNil() {
 		return nil
 	}
 	eth1Data, err := s.cfg.BeaconDB.PowchainData(ctx)

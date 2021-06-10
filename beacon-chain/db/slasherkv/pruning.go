@@ -50,11 +50,10 @@ func (s *Store) PruneAttestationsAtEpoch(
 
 	return s.db.Update(func(tx *bolt.Tx) error {
 		rootsBkt := tx.Bucket(attestationDataRootsBucket)
-		attsBkt := tx.Bucket(attestationRecordsBucket)
 		c := rootsBkt.Cursor()
 
 		// We begin a pruning iteration starting from the first item in the bucket.
-		for k, v := c.First(); k != nil; k, v = c.Next() {
+		for k, _ := c.First(); k != nil; k, _ = c.Next() {
 			// We check the epoch from the current key in the database.
 			// If we have hit an epoch that is greater than the end epoch of the pruning process,
 			// we then completely exit the process as we are done.
@@ -67,9 +66,6 @@ func (s *Store) PruneAttestationsAtEpoch(
 			// so it is possible we have a few adjacent objects that have the same slot, such as
 			//  (target_epoch = 3 ++ _) => encode(attestation)
 			if err := rootsBkt.Delete(k); err != nil {
-				return err
-			}
-			if err := attsBkt.Delete(v); err != nil {
 				return err
 			}
 			slasherAttestationsPrunedTotal.Inc()

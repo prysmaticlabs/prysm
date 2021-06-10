@@ -3,9 +3,9 @@ package beaconv1
 import (
 	"context"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1"
-	ethpb_alpha "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	ethpb_alpha "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"go.opencensus.io/trace"
@@ -230,7 +230,7 @@ func (bs *Server) SubmitVoluntaryExit(ctx context.Context, req *ethpb.SignedVolu
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 
-	validator, err := headState.ValidatorAtIndexReadOnly(req.Exit.ValidatorIndex)
+	validator, err := headState.ValidatorAtIndexReadOnly(req.Message.ValidatorIndex)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get exiting validator: %v", err)
 	}
