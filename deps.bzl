@@ -840,6 +840,13 @@ def prysm_deps():
         version = "v1.2.1-0.20190220221249-0403632d5b90",
     )
     go_repository(
+        name = "com_github_form3tech_oss_jwt_go",
+        importpath = "github.com/form3tech-oss/jwt-go",
+        sum = "h1:xdtqez379uWVJ9P3qQMX8W+F/nqsTdUvyMZB36tnacA=",
+        version = "v3.2.1+incompatible",
+    )
+
+    go_repository(
         name = "com_github_fortytw2_leaktest",
         importpath = "github.com/fortytw2/leaktest",
         sum = "h1:u8491cBMTQ8ft8aeV+adlcytMZylmA5nnwwkRZjI8vw=",
@@ -1411,13 +1418,6 @@ def prysm_deps():
         sum = "h1:vlNjIqmUZ9CMAWsbURYl3a6wZbw7q5RHVvlXTNS/Bs8=",
         version = "v0.0.0-20170803182201-1ca381bf3150",
     )
-    go_repository(
-        name = "com_github_iancoleman_strcase",
-        importpath = "github.com/iancoleman/strcase",
-        nofuzz = True,
-        sum = "h1:dJBk1m2/qjL1twPLf68JND55vvivMupZ4wIzE8CTdBw=",
-        version = "v0.1.3",
-    )
 
     go_repository(
         name = "com_github_ianlancetaylor_cgosymbolizer",
@@ -1786,6 +1786,12 @@ def prysm_deps():
         version = "v1.2.3",
     )
 
+    go_repository(
+        name = "com_github_klauspost_cpuid_v2",
+        importpath = "github.com/klauspost/cpuid/v2",
+        sum = "h1:g0I61F2K2DjRHz1cnxlkNSBIaePVoJIjjnHui8QHbiw=",
+        version = "v2.0.4",
+    )
     go_repository(
         name = "com_github_klauspost_crc32",
         importpath = "github.com/klauspost/crc32",
@@ -2753,12 +2759,7 @@ def prysm_deps():
         sum = "h1:9PHRCuO/VN0s9k+RmLykho7AjDxblNYI5bYKed16NPU=",
         version = "v0.0.0-20210126082820-9b7adba6db7c",
     )
-    go_repository(
-        name = "com_github_prysmaticlabs_protoc_gen_go_cast",
-        importpath = "github.com/prysmaticlabs/protoc-gen-go-cast",
-        sum = "h1:k7CCMwN7VooQ7GhfySnaVyI4/9+QbhJTdasoC6VOZOI=",
-        version = "v0.0.0-20210504233148-1e141af6a0a1",
-    )
+
     go_repository(
         name = "com_github_puerkitobio_purell",
         importpath = "github.com/PuerkitoBio/purell",
@@ -3857,10 +3858,4 @@ def prysm_deps():
         importpath = "go.uber.org/zap",
         sum = "h1:uFRZXykJGK9lLY4HtgSw44DnIcAM+kRBP7x5m+NpAOM=",
         version = "v1.16.0",
-    )
-    go_repository(
-        name = "com_github_klauspost_cpuid_v2",
-        importpath = "github.com/klauspost/cpuid/v2",
-        sum = "h1:g0I61F2K2DjRHz1cnxlkNSBIaePVoJIjjnHui8QHbiw=",
-        version = "v2.0.4",
     )
