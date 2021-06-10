@@ -3,6 +3,6 @@ package synccommittee
 import "github.com/pkg/errors"
 
 var (
-	nilSignatureErr    = errors.New("sync committee signature is nil")
+	nilMessageErr      = errors.New("sync committee message is nil")
 	nilContributionErr = errors.New("sync committee contribution is nil")
 )

@@ -10,10 +10,12 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
 )
 
+// To give two slots tolerance for objects that arrive earlier.
+// This account for previous slot, current slot, two future slots.
 const syncCommitteeMaxQueueSize = 4
 
 // SaveSyncCommitteeContribution saves a sync committee contribution in to a priority queue.
-// The priority queue capped at  5 contributions.
+// The priority queue is capped at syncCommitteeMaxQueueSize contributions.
 func (s *Store) SaveSyncCommitteeContribution(cont *ethpb.SyncCommitteeContribution) error {
 	if cont == nil {
 		return nilContributionErr
@@ -28,7 +30,7 @@ func (s *Store) SaveSyncCommitteeContribution(cont *ethpb.SyncCommitteeContribut
 	defer s.contributionLock.Unlock()
 	copied := copyutil.CopySyncCommitteeContribution(cont)
 
-	// Case where key exists.
+	// Contributions exist in the queue. Append instead of insert new.
 	if contributions != nil {
 		contributions = append(contributions, copied)
 		s.contributionCache.Push(&queue.Item{
@@ -36,17 +38,17 @@ func (s *Store) SaveSyncCommitteeContribution(cont *ethpb.SyncCommitteeContribut
 			Value:    contributions,
 			Priority: int64(cont.Slot),
 		})
-
 		return nil
 	}
 
+	// Contribution does not exist. Insert new.
 	s.contributionCache.Push(&queue.Item{
 		Key:      syncCommitteeKey(cont.Slot),
 		Value:    []*ethpb.SyncCommitteeContribution{copied},
 		Priority: int64(cont.Slot),
 	})
 
-	// Trim contributions in queue down to 4 items if exceeds.
+	// Trim contributions in queue down to syncCommitteeMaxQueueSize.
 	if s.contributionCache.Len() > syncCommitteeMaxQueueSize {
 		if _, err := s.contributionCache.Pop(); err != nil {
 			return err
@@ -70,12 +72,12 @@ func (s *Store) SyncCommitteeContributions(slot types.Slot) ([]*ethpb.SyncCommit
 		return nil, nil
 	}
 
-	contribution, ok := item.Value.([]*ethpb.SyncCommitteeContribution)
+	contributions, ok := item.Value.([]*ethpb.SyncCommitteeContribution)
 	if !ok {
 		return nil, errors.New("not typed []ethpb.SyncCommitteeContribution")
 	}
 
-	return contribution, nil
+	return contributions, nil
 }
 
 func syncCommitteeKey(slot types.Slot) string {

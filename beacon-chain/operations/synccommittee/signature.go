@@ -1,49 +1,75 @@
 package synccommittee
 
 import (
+	"github.com/hashicorp/vault/sdk/queue"
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
 )
 
-// SaveSyncCommitteeSignature saves a sync committee signature in cache.
-// The cache does not filter out duplicate signature, it will be up to the caller.
-func (s *Store) SaveSyncCommitteeSignature(sig *ethpb.SyncCommitteeMessage) error {
-	if sig == nil {
-		return nilSignatureErr
+// SaveSyncCommitteeMessage saves a sync committee message in to a priority queue.
+// The priority queue capped at syncCommitteeMaxQueueSize contributions.
+func (s *Store) SaveSyncCommitteeMessage(msg *ethpb.SyncCommitteeMessage) error {
+	if msg == nil {
+		return nilMessageErr
 	}
 
-	copied := copyutil.CopySyncCommitteeSignature(sig)
-	slot := copied.Slot
-	s.signatureLock.Lock()
-	defer s.signatureLock.Unlock()
+	messages, err := s.SyncCommitteeMessages(msg.Slot)
+	if err != nil {
+		return err
+	}
 
-	sigs, ok := s.signatureCache[slot]
-	if !ok {
-		s.signatureCache[slot] = []*ethpb.SyncCommitteeMessage{copied}
+	s.messageLock.Lock()
+	defer s.messageLock.Unlock()
+	copied := copyutil.CopySyncCommitteeMessage(msg)
+
+	// Messages exist in the queue. Append instead of insert new.
+	if messages != nil {
+		messages = append(messages, copied)
+		s.messageCache.Push(&queue.Item{
+			Key:      syncCommitteeKey(msg.Slot),
+			Value:    messages,
+			Priority: int64(msg.Slot),
+		})
 		return nil
 	}
 
-	s.signatureCache[slot] = append(sigs, copied)
+	// Message does not exist. Insert new.
+	s.messageCache.Push(&queue.Item{
+		Key:      syncCommitteeKey(msg.Slot),
+		Value:    []*ethpb.SyncCommitteeMessage{copied},
+		Priority: int64(msg.Slot),
+	})
+
+	// Trim messages in queue down to syncCommitteeMaxQueueSize.
+	if s.messageCache.Len() > syncCommitteeMaxQueueSize {
+		if _, err := s.messageCache.Pop(); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
 
-// SyncCommitteeSignatures returns sync committee signatures in cache by slot.
-func (s *Store) SyncCommitteeSignatures(slot types.Slot) []*ethpb.SyncCommitteeMessage {
-	s.signatureLock.RLock()
-	defer s.signatureLock.RUnlock()
+// SyncCommitteeMessages returns sync committee messages by slot from the priority queue.
+// Upon retrieval, the message is removed from the queue.
+func (s *Store) SyncCommitteeMessages(slot types.Slot) ([]*ethpb.SyncCommitteeMessage, error) {
+	s.messageLock.RLock()
+	defer s.messageLock.RUnlock()
 
-	sigs, ok := s.signatureCache[slot]
-	if !ok {
-		return nil
+	item, err := s.messageCache.PopByKey(syncCommitteeKey(slot))
+	if err != nil {
+		return nil, err
 	}
-	return sigs
-}
+	if item == nil {
+		return nil, nil
+	}
 
-// DeleteSyncCommitteeSignatures deletes sync committee signatures in cache by slot.
-func (s *Store) DeleteSyncCommitteeSignatures(slot types.Slot) {
-	s.signatureLock.Lock()
-	defer s.signatureLock.Unlock()
-	delete(s.signatureCache, slot)
+	messages, ok := item.Value.([]*ethpb.SyncCommitteeMessage)
+	if !ok {
+		return nil, errors.New("not typed []ethpb.SyncCommitteeMessage")
+	}
+
+	return messages, nil
 }

@@ -10,10 +10,10 @@ import (
 var hashFn = hashutil.HashProto
 
 // Store defines the caches for various sync committee objects
-// such as signature(un-aggregated) and contribution(aggregated).
+// such as message(un-aggregated) and contribution(aggregated).
 type Store struct {
-	signatureLock     sync.RWMutex
-	signatureCache    *queue.PriorityQueue
+	messageLock       sync.RWMutex
+	messageCache      *queue.PriorityQueue
 	contributionLock  sync.RWMutex
 	contributionCache *queue.PriorityQueue
 }
@@ -21,7 +21,7 @@ type Store struct {
 // NewStore initializes a new sync committee store.
 func NewStore() *Store {
 	return &Store{
-		signatureCache:    queue.New(),
+		messageCache:      queue.New(),
 		contributionCache: queue.New(),
 	}
 }

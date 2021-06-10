@@ -9,48 +9,50 @@ import (
 
 func TestSyncCommitteeSignatureCache_Nil(t *testing.T) {
 	store := NewStore()
-	require.Equal(t, nilSignatureErr, store.SaveSyncCommitteeSignature(nil))
+	require.Equal(t, nilMessageErr, store.SaveSyncCommitteeMessage(nil))
 }
 
 func TestSyncCommitteeSignatureCache_RoundTrip(t *testing.T) {
 	store := NewStore()
 
-	sigs := []*eth.SyncCommitteeMessage{
+	msgs := []*eth.SyncCommitteeMessage{
 		{Slot: 1, ValidatorIndex: 0, Signature: []byte{'a'}},
 		{Slot: 1, ValidatorIndex: 1, Signature: []byte{'b'}},
-		{Slot: 1, ValidatorIndex: 2, Signature: []byte{'c'}},
-		{Slot: 2, ValidatorIndex: 0, Signature: []byte{'d'}},
-		{Slot: 2, ValidatorIndex: 1, Signature: []byte{'e'}},
+		{Slot: 2, ValidatorIndex: 0, Signature: []byte{'c'}},
+		{Slot: 2, ValidatorIndex: 1, Signature: []byte{'d'}},
+		{Slot: 3, ValidatorIndex: 0, Signature: []byte{'e'}},
+		{Slot: 3, ValidatorIndex: 1, Signature: []byte{'f'}},
+		{Slot: 4, ValidatorIndex: 0, Signature: []byte{'g'}},
+		{Slot: 4, ValidatorIndex: 1, Signature: []byte{'h'}},
+		{Slot: 5, ValidatorIndex: 0, Signature: []byte{'i'}},
+		{Slot: 5, ValidatorIndex: 1, Signature: []byte{'j'}},
+		{Slot: 6, ValidatorIndex: 0, Signature: []byte{'k'}},
+		{Slot: 6, ValidatorIndex: 1, Signature: []byte{'l'}},
 	}
 
-	for _, sig := range sigs {
-		require.NoError(t, store.SaveSyncCommitteeSignature(sig))
+	for _, msg := range msgs {
+		require.NoError(t, store.SaveSyncCommitteeMessage(msg))
 	}
 
-	sigs = store.SyncCommitteeSignatures(1)
+	msgs, err := store.SyncCommitteeMessages(1)
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, []*eth.SyncCommitteeMessage(nil), msgs)
+
+	msgs, err = store.SyncCommitteeMessages(2)
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, []*eth.SyncCommitteeMessage(nil), msgs)
+
+	msgs, err = store.SyncCommitteeMessages(3)
+	require.NoError(t, err)
 	require.DeepSSZEqual(t, []*eth.SyncCommitteeMessage{
-		{Slot: 1, ValidatorIndex: 0, Signature: []byte{'a'}},
-		{Slot: 1, ValidatorIndex: 1, Signature: []byte{'b'}},
-		{Slot: 1, ValidatorIndex: 2, Signature: []byte{'c'}},
-	}, sigs)
+		{Slot: 3, ValidatorIndex: 0, Signature: []byte{'e'}},
+		{Slot: 3, ValidatorIndex: 1, Signature: []byte{'f'}},
+	}, msgs)
 
-	sigs = store.SyncCommitteeSignatures(2)
+	msgs, err = store.SyncCommitteeMessages(6)
+	require.NoError(t, err)
 	require.DeepSSZEqual(t, []*eth.SyncCommitteeMessage{
-		{Slot: 2, ValidatorIndex: 0, Signature: []byte{'d'}},
-		{Slot: 2, ValidatorIndex: 1, Signature: []byte{'e'}},
-	}, sigs)
-
-	store.DeleteSyncCommitteeSignatures(1)
-	sigs = store.SyncCommitteeSignatures(1)
-	require.DeepSSZEqual(t, []*eth.SyncCommitteeMessage{}, sigs)
-
-	sigs = store.SyncCommitteeSignatures(2)
-	require.DeepSSZEqual(t, []*eth.SyncCommitteeMessage{
-		{Slot: 2, ValidatorIndex: 0, Signature: []byte{'d'}},
-		{Slot: 2, ValidatorIndex: 1, Signature: []byte{'e'}},
-	}, sigs)
-
-	store.DeleteSyncCommitteeSignatures(2)
-	sigs = store.SyncCommitteeSignatures(2)
-	require.DeepSSZEqual(t, []*eth.SyncCommitteeMessage{}, sigs)
+		{Slot: 6, ValidatorIndex: 0, Signature: []byte{'k'}},
+		{Slot: 6, ValidatorIndex: 1, Signature: []byte{'l'}},
+	}, msgs)
 }
