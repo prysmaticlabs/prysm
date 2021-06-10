@@ -24,13 +24,10 @@ func (bc *beaconNodeScraper) Scrape() (io.Reader, error) {
 	log.Infof("Scraping beacon-node at %s", bc.url)
 	pf, err := scrapeProm(bc.url, bc.tripper)
 	if err != nil {
-		return nil, nil
-	}
-
-	bs, err := populateBeaconNodeStats(pf)
-	if err != nil {
 		return nil, err
 	}
+
+	bs := populateBeaconNodeStats(pf)
 
 	b, err := json.Marshal(bs)
 	return bytes.NewBuffer(b), err
@@ -54,13 +51,10 @@ func (vc *validatorScraper) Scrape() (io.Reader, error) {
 	log.Infof("Scraping validator at %s", vc.url)
 	pf, err := scrapeProm(vc.url, vc.tripper)
 	if err != nil {
-		return nil, nil
-	}
-
-	vs, err := populateValidatorStats(pf)
-	if err != nil {
 		return nil, err
 	}
+
+	vs := populateValidatorStats(pf)
 
 	b, err := json.Marshal(vs)
 	return bytes.NewBuffer(b), err
@@ -134,7 +128,7 @@ func populateAPIMessage(processName string) APIMessage {
 	}
 }
 
-func populateCommonStats(pf metricMap) (CommonStats, error) {
+func populateCommonStats(pf metricMap) CommonStats {
 	cs := CommonStats{}
 	cs.ClientName = ClientName
 	var f *dto.MetricFamily
@@ -143,47 +137,48 @@ func populateCommonStats(pf metricMap) (CommonStats, error) {
 
 	f, err = pf.getFamily("process_cpu_seconds_total")
 	if err != nil {
-		return cs, err
+		log.WithError(err).Debug("Failed to get process_cpu_seconds_total")
+	} else {
+		m = f.Metric[0]
+		// float64->int64: truncates fractional seconds
+		cs.CPUProcessSecondsTotal = int64(m.Counter.GetValue())
 	}
-	m = f.Metric[0]
-	// float64->int64: truncates fractional seconds
-	cs.CPUProcessSecondsTotal = int64(m.Counter.GetValue())
 
 	f, err = pf.getFamily("process_resident_memory_bytes")
 	if err != nil {
-		return cs, err
+		log.WithError(err).Debug("Failed to get process_resident_memory_bytes")
+	} else {
+		m = f.Metric[0]
+		cs.MemoryProcessBytes = int64(m.Gauge.GetValue())
 	}
-	m = f.Metric[0]
-	cs.MemoryProcessBytes = int64(m.Gauge.GetValue())
 
 	f, err = pf.getFamily("prysm_version")
 	if err != nil {
-		return cs, err
-	}
-	m = f.Metric[0]
-	for _, l := range m.GetLabel() {
-		switch l.GetName() {
-		case "version":
-			cs.ClientVersion = l.GetValue()
-		case "buildDate":
-			buildDate, err := strconv.Atoi(l.GetValue())
-			if err != nil {
-				return cs, fmt.Errorf("error when retrieving buildDate label from the prysm_version metric: %s", err)
+		log.WithError(err).Debug("Failed to get prysm_version")
+	} else {
+		m = f.Metric[0]
+		for _, l := range m.GetLabel() {
+			switch l.GetName() {
+			case "version":
+				cs.ClientVersion = l.GetValue()
+			case "buildDate":
+				buildDate, err := strconv.Atoi(l.GetValue())
+				if err != nil {
+					log.WithError(err).Debug("Failed to retrieve buildDate label from the prysm_version metric")
+					continue
+				}
+				cs.ClientBuild = int64(buildDate)
 			}
-			cs.ClientBuild = int64(buildDate)
 		}
 	}
 
-	return cs, nil
+	return cs
 }
 
-func populateBeaconNodeStats(pf metricMap) (BeaconNodeStats, error) {
+func populateBeaconNodeStats(pf metricMap) BeaconNodeStats {
 	var err error
 	bs := BeaconNodeStats{}
-	bs.CommonStats, err = populateCommonStats(pf)
-	if err != nil {
-		return bs, err
-	}
+	bs.CommonStats = populateCommonStats(pf)
 	bs.APIMessage = populateAPIMessage(BeaconNodeProcessName)
 
 	var f *dto.MetricFamily
@@ -191,42 +186,46 @@ func populateBeaconNodeStats(pf metricMap) (BeaconNodeStats, error) {
 
 	f, err = pf.getFamily("beacon_head_slot")
 	if err != nil {
-		return bs, err
+		log.WithError(err).Debug("Failed to get beacon_head_slot")
+	} else {
+		m = f.Metric[0]
+		bs.SyncBeaconHeadSlot = int64(m.Gauge.GetValue())
 	}
-	m = f.Metric[0]
-	bs.SyncBeaconHeadSlot = int64(m.Gauge.GetValue())
 
 	f, err = pf.getFamily("beacon_clock_time_slot")
 	if err != nil {
-		return bs, err
-	}
-	m = f.Metric[0]
-	if int64(m.Gauge.GetValue()) == bs.SyncBeaconHeadSlot {
-		bs.SyncEth2Synced = true
+		log.WithError(err).Debug("Failed to get beacon_clock_time_slot")
+	} else {
+		m = f.Metric[0]
+		if int64(m.Gauge.GetValue()) == bs.SyncBeaconHeadSlot {
+			bs.SyncEth2Synced = true
+		}
 	}
 
 	f, err = pf.getFamily("bcnode_disk_beaconchain_bytes_total")
 	if err != nil {
-		return bs, err
+		log.WithError(err).Debug("Failed to get bcnode_disk_beaconchain_bytes_total")
+	} else {
+		m = f.Metric[0]
+		bs.DiskBeaconchainBytesTotal = int64(m.Gauge.GetValue())
 	}
-	m = f.Metric[0]
-	bs.DiskBeaconchainBytesTotal = int64(m.Gauge.GetValue())
 
 	f, err = pf.getFamily("p2p_peer_count")
 	if err != nil {
-		return bs, err
-	}
-	for _, m := range f.Metric {
-		for _, l := range m.GetLabel() {
-			if l.GetName() == "state" {
-				if l.GetValue() == "Connected" {
-					bs.NetworkPeersConnected = int64(m.Gauge.GetValue())
+		log.WithError(err).Debug("Failed to get p2p_peer_count")
+	} else {
+		for _, m := range f.Metric {
+			for _, l := range m.GetLabel() {
+				if l.GetName() == "state" {
+					if l.GetValue() == "Connected" {
+						bs.NetworkPeersConnected = int64(m.Gauge.GetValue())
+					}
 				}
 			}
 		}
 	}
 
-	return bs, nil
+	return bs
 }
 
 func statusIsActive(statusCode int64) bool {
@@ -234,25 +233,23 @@ func statusIsActive(statusCode int64) bool {
 	return s.String() == "ACTIVE"
 }
 
-func populateValidatorStats(pf metricMap) (ValidatorStats, error) {
+func populateValidatorStats(pf metricMap) ValidatorStats {
 	var err error
 	vs := ValidatorStats{}
-	vs.CommonStats, err = populateCommonStats(pf)
-	if err != nil {
-		return vs, err
-	}
+	vs.CommonStats = populateCommonStats(pf)
 	vs.APIMessage = populateAPIMessage(ValidatorProcessName)
 
 	f, err := pf.getFamily("validator_statuses")
 	if err != nil {
-		return vs, err
-	}
-	for _, m := range f.Metric {
-		if statusIsActive(int64(m.Gauge.GetValue())) {
-			vs.ValidatorActive += 1
+		log.WithError(err).Debug("Failed to get validator_statuses")
+	} else {
+		for _, m := range f.Metric {
+			if statusIsActive(int64(m.Gauge.GetValue())) {
+				vs.ValidatorActive += 1
+			}
+			vs.ValidatorTotal += 1
 		}
-		vs.ValidatorTotal += 1
 	}
 
-	return vs, nil
+	return vs
 }
