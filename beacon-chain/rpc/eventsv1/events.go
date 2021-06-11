@@ -2,27 +2,34 @@ package eventsv1
 
 import (
 	gwpb "github.com/grpc-ecosystem/grpc-gateway/v2/proto/gateway"
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
-	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
+const (
+	headTopic                = "head"
+	blockTopic               = "block"
+	attestationTopic         = "attestation"
+	voluntaryExitTopic       = "voluntary_exit"
+	finalizedCheckpointTopic = "finalized_checkpoint"
+	chainReorgTopic          = "chain_reorg"
+)
+
 var casesHandled = map[string]bool{
-	"head":                 true,
-	"block":                true,
-	"attestation":          true,
-	"voluntary_exit":       true,
-	"finalized_checkpoint": true,
-	"chain_reorg":          true,
+	headTopic:                true,
+	blockTopic:               true,
+	attestationTopic:         true,
+	voluntaryExitTopic:       true,
+	finalizedCheckpointTopic: true,
+	chainReorgTopic:          true,
 }
 
 // StreamEvents allows requesting all events from a set of topics defined in the eth2.0-apis standard.
@@ -62,20 +69,20 @@ func (s *Server) StreamEvents(
 		select {
 		case event := <-blockChan:
 			if err := s.handleBlockEvents(stream, requestedTopics, event); err != nil {
-				return err
+				return status.Errorf(codes.Internal, "could not handle block event: %v", err)
 			}
 		case event := <-opsChan:
 			if err := s.handleBlockOperationEvents(stream, requestedTopics, event); err != nil {
-				return err
+				return status.Errorf(codes.Internal, "could not handle block operations event: %v", err)
 			}
 		case event := <-stateChan:
 			if err := s.handleStateEvents(stream, requestedTopics, event); err != nil {
-				return err
+				return status.Errorf(codes.Internal, "could not handle state event: %v", err)
 			}
 		case <-s.Ctx.Done():
-			return errors.New("context canceled")
+			return status.Errorf(codes.Canceled, "context canceled")
 		case <-stream.Context().Done():
-			return errors.New("context canceled")
+			return status.Errorf(codes.Canceled, "context canceled")
 		}
 	}
 }
@@ -85,7 +92,7 @@ func (s *Server) handleBlockEvents(
 ) error {
 	switch event.Type {
 	case blockfeed.ReceivedBlock:
-		if _, ok := requestedTopics["block"]; !ok {
+		if _, ok := requestedTopics[blockTopic]; !ok {
 			return nil
 		}
 		blkData, ok := event.Data.(*blockfeed.ReceivedBlockData)
@@ -94,7 +101,7 @@ func (s *Server) handleBlockEvents(
 		}
 		v1Data, err := migration.BlockIfaceToV1Blockheader(blkData.SignedBlock)
 		if err != nil {
-			return err
+			return status.Errorf(codes.Internal, "could not create data required: %v", err)
 		}
 		item, err := v1Data.HashTreeRoot()
 		if err != nil {
@@ -104,7 +111,7 @@ func (s *Server) handleBlockEvents(
 			Slot:  v1Data.Message.Slot,
 			Block: item[:],
 		}
-		return s.streamData(stream, "block", eventBlock)
+		return s.streamData(stream, blockTopic, eventBlock)
 	default:
 		return nil
 	}
@@ -115,7 +122,7 @@ func (s *Server) handleBlockOperationEvents(
 ) error {
 	switch event.Type {
 	case operation.AggregatedAttReceived:
-		if _, ok := requestedTopics["attestation"]; !ok {
+		if _, ok := requestedTopics[attestationTopic]; !ok {
 			return nil
 		}
 		attData, ok := event.Data.(*operation.AggregatedAttReceivedData)
@@ -123,9 +130,9 @@ func (s *Server) handleBlockOperationEvents(
 			return nil
 		}
 		v1Data := migration.V1Alpha1AggregateAttAndProofToV1(attData.Attestation)
-		return s.streamData(stream, "attestation", v1Data)
+		return s.streamData(stream, attestationTopic, v1Data)
 	case operation.UnaggregatedAttReceived:
-		if _, ok := requestedTopics["attestation"]; !ok {
+		if _, ok := requestedTopics[attestationTopic]; !ok {
 			return nil
 		}
 		attData, ok := event.Data.(*operation.UnAggregatedAttReceivedData)
@@ -133,9 +140,9 @@ func (s *Server) handleBlockOperationEvents(
 			return nil
 		}
 		v1Data := migration.V1Alpha1AttestationToV1(attData.Attestation)
-		return s.streamData(stream, "attestation", v1Data)
+		return s.streamData(stream, attestationTopic, v1Data)
 	case operation.ExitReceived:
-		if _, ok := requestedTopics["voluntary_exit"]; !ok {
+		if _, ok := requestedTopics[voluntaryExitTopic]; !ok {
 			return nil
 		}
 		exitData, ok := event.Data.(*operation.ExitReceivedData)
@@ -143,7 +150,7 @@ func (s *Server) handleBlockOperationEvents(
 			return nil
 		}
 		v1Data := migration.V1Alpha1ExitToV1(exitData.Exit)
-		return s.streamData(stream, "voluntary_exit", v1Data)
+		return s.streamData(stream, voluntaryExitTopic, v1Data)
 	default:
 		return nil
 	}
@@ -154,32 +161,32 @@ func (s *Server) handleStateEvents(
 ) error {
 	switch event.Type {
 	case statefeed.NewHead:
-		if _, ok := requestedTopics["head"]; !ok {
+		if _, ok := requestedTopics[headTopic]; !ok {
 			return nil
 		}
 		head, ok := event.Data.(*ethpb.EventHead)
 		if !ok {
 			return nil
 		}
-		return s.streamData(stream, "head", head)
+		return s.streamData(stream, headTopic, head)
 	case statefeed.FinalizedCheckpoint:
-		if _, ok := requestedTopics["finalized_checkpoint"]; !ok {
+		if _, ok := requestedTopics[finalizedCheckpointTopic]; !ok {
 			return nil
 		}
 		finalizedCheckpoint, ok := event.Data.(*ethpb.EventFinalizedCheckpoint)
 		if !ok {
 			return nil
 		}
-		return s.streamData(stream, "finalized_checkpoint", finalizedCheckpoint)
+		return s.streamData(stream, finalizedCheckpointTopic, finalizedCheckpoint)
 	case statefeed.Reorg:
-		if _, ok := requestedTopics["chain_reorg"]; !ok {
+		if _, ok := requestedTopics[chainReorgTopic]; !ok {
 			return nil
 		}
 		reorg, ok := event.Data.(*ethpb.EventChainReorg)
 		if !ok {
 			return nil
 		}
-		return s.streamData(stream, "chain_reorg", reorg)
+		return s.streamData(stream, chainReorgTopic, reorg)
 	default:
 		return nil
 	}
@@ -188,8 +195,7 @@ func (s *Server) handleStateEvents(
 func (s *Server) streamData(stream ethpb.Events_StreamEventsServer, name string, data proto.Message) error {
 	returnData, err := anypb.New(data)
 	if err != nil {
-		log.WithError(err).Error("Could not parse request from pb")
-		return err
+		return status.Errorf(codes.Internal, "could not prepare return data: %v", err)
 	}
 	return stream.Send(&gwpb.EventSource{
 		Event: name,

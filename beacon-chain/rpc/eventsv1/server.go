@@ -1,6 +1,6 @@
-// Package debugv1 defines a gRPC beacon service implementation,
+// Package eventsv1 defines a gRPC events service implementation,
 // following the official API standards https://ethereum.github.io/eth2.0-APIs/#/.
-// This package includes the beacon and config endpoints.
+// This package includes the events endpoint.
 package eventsv1
 
 import (
@@ -11,9 +11,8 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 )
 
-// Server defines a server implementation of the gRPC Beacon Chain service,
-// providing RPC endpoints to access data relevant to the Ethereum 2.0 phase 0
-// beacon chain.
+// Server defines a server implementation of the gRPC events service,
+// providing RPC endpoints to subscribe to events from the beacon node.
 type Server struct {
 	Ctx               context.Context
 	StateNotifier     statefeed.Notifier
