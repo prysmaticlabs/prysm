@@ -64,6 +64,22 @@ type MockEvents_StreamEventsClient struct {
 	recorder *MockEvents_StreamEventsClientMockRecorder
 }
 
+func (m *MockEvents_StreamEventsClient) Send(source *gateway.EventSource) error {
+	panic("implement me")
+}
+
+func (m *MockEvents_StreamEventsClient) SetHeader(md metadata.MD) error {
+	panic("implement me")
+}
+
+func (m *MockEvents_StreamEventsClient) SendHeader(md metadata.MD) error {
+	panic("implement me")
+}
+
+func (m *MockEvents_StreamEventsClient) SetTrailer(md metadata.MD) {
+	panic("implement me")
+}
+
 // MockEvents_StreamEventsClientMockRecorder is the mock recorder for MockEvents_StreamEventsClient.
 type MockEvents_StreamEventsClientMockRecorder struct {
 	mock *MockEvents_StreamEventsClient
