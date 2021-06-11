@@ -68,7 +68,7 @@ func (bs *Server) ListValidatorBalances(
 	}
 	requestedState, err := bs.StateGen.StateBySlot(ctx, startSlot)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get state")
+		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
 
 	vals := requestedState.Validators()
