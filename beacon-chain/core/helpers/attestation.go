@@ -151,9 +151,9 @@ func ValidateAttestationTime(attSlot types.Slot, genesisTime time.Time, clockDis
 	currentSlot := SlotsSince(genesisTime)
 
 	// When receiving an attestation, it can be from the future.
-	// so the upper bounds is set to now + clockDisparity (24seconds / 2 slots).
+	// so the upper bounds is set to now + clockDisparity(SECONDS_PER_SLOT * 2).
 	// But when sending an attestation, it should not be in future slot.
-	// so the upper bounds is set to now + clockDisparity (500ms).
+	// so the upper bounds is set to now + clockDisparity(MAXIMUM_GOSSIP_CLOCK_DISPARITY).
 	upperBounds := timeutils.Now().Add(clockDisparity)
 
 	// An attestation cannot be older than the current slot - attestation propagation slot range

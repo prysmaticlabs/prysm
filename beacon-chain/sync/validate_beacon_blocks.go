@@ -110,8 +110,8 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	}
 
 	// Be lenient in handling early blocks. Instead of discarding blocks arriving later than
-	// MaximumGossipClockDisparity (500ms) in future, we tolerate blocks arriving at max two slots
-	// earlier (12*2 seconds). Queue such blocks and process them at the right slot.
+	// MAXIMUM_GOSSIP_CLOCK_DISPARITY in future, we tolerate blocks arriving at max two slots
+	// earlier (SECONDS_PER_SLOT * 2 seconds). Queue such blocks and process them at the right slot.
 	if err := helpers.VerifySlotTime(genesisTime, blk.Block().Slot(), earlyBlockProcessingTolerance); err != nil {
 		log.WithError(err).WithField("blockSlot", blk.Block().Slot()).Debug("Ignored block")
 		return pubsub.ValidationIgnore
@@ -128,19 +128,6 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationIgnore
 	}
 
-	// Handle block when the parent is unknown.
-	if !s.cfg.DB.HasBlock(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot())) {
-		s.pendingQueueLock.Lock()
-		if err := s.insertBlockToPendingQueue(blk.Block().Slot(), blk, blockRoot); err != nil {
-			s.pendingQueueLock.Unlock()
-			log.WithError(err).WithField("blockSlot", blk.Block().Slot()).Debug("Ignored block")
-			return pubsub.ValidationIgnore
-		}
-		s.pendingQueueLock.Unlock()
-		log.WithError(errors.New("unknown parent")).WithField("blockSlot", blk.Block().Slot()).Debug("Ignored block")
-		return pubsub.ValidationIgnore
-	}
-
 	// if the block slot does not belong to current slot, then queue the block for future processing.
 	currentSlot := s.cfg.Chain.CurrentSlot()
 	if blk.Block().Slot() > currentSlot {
@@ -152,6 +139,19 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		}
 		s.pendingQueueLock.Unlock()
 		log.WithError(errors.New("early block")).WithField("currentSlot", currentSlot).WithField("blockSlot", blk.Block().Slot()).Debug("Ignored block")
+		return pubsub.ValidationIgnore
+	}
+
+	// Handle block when the parent is unknown.
+	if !s.cfg.DB.HasBlock(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot())) {
+		s.pendingQueueLock.Lock()
+		if err := s.insertBlockToPendingQueue(blk.Block().Slot(), blk, blockRoot); err != nil {
+			s.pendingQueueLock.Unlock()
+			log.WithError(err).WithField("blockSlot", blk.Block().Slot()).Debug("Ignored block")
+			return pubsub.ValidationIgnore
+		}
+		s.pendingQueueLock.Unlock()
+		log.WithError(errors.New("unknown parent")).WithField("blockSlot", blk.Block().Slot()).Debug("Ignored block")
 		return pubsub.ValidationIgnore
 	}
 
