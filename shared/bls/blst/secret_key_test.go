@@ -90,10 +90,10 @@ func TestSerialize(t *testing.T) {
 func TestZeroKey(t *testing.T) {
 	// Is Zero
 	zKey := [32]byte{}
-	assert.Equal(t, uint8(1), blst.IsZero(zKey[:]))
+	assert.Equal(t, true, blst.IsZero(zKey[:]))
 
 	// Is Not Zero
 	_, err := rand.Read(zKey[:])
 	assert.NoError(t, err)
-	assert.Equal(t, uint8(0), blst.IsZero(zKey[:]))
+	assert.Equal(t, false, blst.IsZero(zKey[:]))
 }

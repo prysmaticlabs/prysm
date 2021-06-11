@@ -29,7 +29,7 @@ func RandKey() (common.SecretKey, error) {
 	}
 	// Defensive check, that we have not generated a secret key,
 	secKey := &bls12SecretKey{blst.KeyGen(ikm[:])}
-	if IsZero(secKey.Marshal()) == 1 {
+	if IsZero(secKey.Marshal()) {
 		return nil, common.ErrZeroKey
 	}
 	return secKey, nil
@@ -45,7 +45,7 @@ func SecretKeyFromBytes(privKey []byte) (common.SecretKey, error) {
 		return nil, common.ErrSecretUnmarshal
 	}
 	wrappedKey := &bls12SecretKey{p: secKey}
-	if IsZero(privKey) == 1 {
+	if IsZero(privKey) {
 		return nil, common.ErrZeroKey
 	}
 	return wrappedKey, nil
@@ -56,14 +56,13 @@ func (s *bls12SecretKey) PublicKey() common.PublicKey {
 	return &PublicKey{p: new(blstPublicKey).From(s.p)}
 }
 
-// IsZero checks if the secret key is a zero key. This returns
-// an uint8 which can either be 0 or 1.
-func IsZero(sKey []byte) uint8 {
+// IsZero checks if the secret key is a zero key.
+func IsZero(sKey []byte) bool {
 	b := byte(0)
 	for _, s := range sKey {
 		b |= s
 	}
-	return uint8(subtle.ConstantTimeByteEq(b, 0))
+	return subtle.ConstantTimeByteEq(b, 0) == 1
 }
 
 // Sign a message using a secret key - in a beacon/validator client.
