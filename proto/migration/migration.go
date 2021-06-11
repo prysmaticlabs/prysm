@@ -8,7 +8,8 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func BlockIfaceToV1Blockheader(block interfaces.SignedBeaconBlock) (*ethpb.SignedBeaconBlockHeader, error) {
+// BlockIfaceToV1BlockHeader converts a signed beacon block interface into a signed beacon block header.
+func BlockIfaceToV1BlockHeader(block interfaces.SignedBeaconBlock) (*ethpb.SignedBeaconBlockHeader, error) {
 	bodyRoot, err := block.Block().Body().HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get body root of block")

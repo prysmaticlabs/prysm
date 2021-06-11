@@ -99,7 +99,7 @@ func (s *Server) handleBlockEvents(
 		if !ok {
 			return nil
 		}
-		v1Data, err := migration.BlockIfaceToV1Blockheader(blkData.SignedBlock)
+		v1Data, err := migration.BlockIfaceToV1BlockHeader(blkData.SignedBlock)
 		if err != nil {
 			return status.Errorf(codes.Internal, "could not create data required: %v", err)
 		}
