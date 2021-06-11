@@ -28,15 +28,15 @@ func ProcessPreGenesisDeposits(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process deposit")
 	}
-	beaconState, err = activateValidatorWithEffectiveBalance(beaconState, deposits)
+	beaconState, err = ActivateValidatorWithEffectiveBalance(beaconState, deposits)
 	if err != nil {
 		return nil, err
 	}
 	return beaconState, nil
 }
 
-// This updates validator's effective balance, and if it's above MaxEffectiveBalance, validator becomes active in genesis.
-func activateValidatorWithEffectiveBalance(beaconState iface.BeaconState, deposits []*ethpb.Deposit) (iface.BeaconState, error) {
+// ActivateValidatorWithEffectiveBalance updates validator's effective balance, and if it's above MaxEffectiveBalance, validator becomes active in genesis.
+func ActivateValidatorWithEffectiveBalance(beaconState iface.BeaconState, deposits []*ethpb.Deposit) (iface.BeaconState, error) {
 	for _, deposit := range deposits {
 		pubkey := deposit.Data.PublicKey
 		index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubkey))
@@ -80,7 +80,7 @@ func ProcessDeposits(
 ) (iface.BeaconState, error) {
 	// Attempt to verify all deposit signatures at once, if this fails then fall back to processing
 	// individual deposits with signature verification enabled.
-	batchVerified, err := batchVerifyDepositsSignatures(ctx, deposits)
+	batchVerified, err := BatchVerifyDepositsSignatures(ctx, deposits)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,8 @@ func ProcessDeposits(
 	return beaconState, nil
 }
 
-func batchVerifyDepositsSignatures(ctx context.Context, deposits []*ethpb.Deposit) (bool, error) {
+// BatchVerifyDepositsSignatures batch verifies deposit signatures.
+func BatchVerifyDepositsSignatures(ctx context.Context, deposits []*ethpb.Deposit) (bool, error) {
 	var err error
 	domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
 	if err != nil {
