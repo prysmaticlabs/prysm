@@ -5,9 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -87,14 +85,4 @@ func TestNilState_NoPanic(t *testing.T) {
 	_ = err
 	_, err = st.NextSyncCommittee()
 	_ = err
-}
-
-func TestReadOnlyValidator_NoPanic(t *testing.T) {
-	v := &ReadOnlyValidator{}
-	assert.Equal(t, false, v.Slashed(), "Expected not slashed")
-}
-
-func TestReadOnlyValidator_ActivationEligibilityEpochNoPanic(t *testing.T) {
-	v := &ReadOnlyValidator{}
-	assert.Equal(t, types.Epoch(0), v.ActivationEligibilityEpoch(), "Expected 0 and not panic")
 }
