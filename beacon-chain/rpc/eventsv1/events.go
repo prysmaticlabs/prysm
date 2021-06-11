@@ -142,7 +142,8 @@ func (s *Server) handleBlockOperationEvents(
 		if !ok {
 			return nil
 		}
-		return s.streamData(stream, "voluntary_exit", exitData.Exit)
+		v1Data := migration.V1Alpha1ExitToV1(exitData.Exit)
+		return s.streamData(stream, "voluntary_exit", v1Data)
 	default:
 		return nil
 	}
