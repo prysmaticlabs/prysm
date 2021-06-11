@@ -9,7 +9,7 @@ mocks=(
       "$mock_path/beacon_chain_service_mock.go BeaconChain_StreamChainHeadServer,BeaconChain_StreamAttestationsServer,BeaconChain_StreamBlocksServer,BeaconChain_StreamValidatorsInfoServer,BeaconChain_StreamIndexedAttestationsServer"
       "$mock_path/beacon_validator_server_mock.go BeaconNodeValidatorServer,BeaconNodeValidator_WaitForActivationServer,BeaconNodeValidator_WaitForChainStartServer,BeaconNodeValidator_StreamDutiesServer"
       "$mock_path/beacon_validator_client_mock.go BeaconNodeValidatorClient,BeaconNodeValidator_WaitForChainStartClient,BeaconNodeValidator_WaitForActivationClient,BeaconNodeValidator_StreamDutiesClient"
-      "$mock_path/event_service_mock.go EventsClient,Events_StreamEventsClient"
+      "$mock_path/event_service_mock.go EventsClient,Events_StreamEventsClient,Events_StreamEventsServer"
       "$mock_path/node_service_mock.go NodeClient"
       "$mock_path/keymanager_mock.go RemoteSignerClient"
 )
@@ -24,5 +24,3 @@ done
 
 goimports -w "$mock_path/."
 gofmt -s -w "$mock_path/."
-
-GO11MODULE=on mockgen -package=mock -destination="proto/eth/v1/event_service_mock.go" github.com/prysmaticlabs/prysm/proto/eth/v1 EventsClient,Events_StreamEventsClient,Events_StreamEventsServer
