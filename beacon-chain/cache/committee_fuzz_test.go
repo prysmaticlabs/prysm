@@ -32,7 +32,7 @@ func TestCommitteeCache_FuzzCommitteesByEpoch(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	assert.Equal(t, maxCommitteesCacheSize, uint64(len(cache.CommitteeCache.ListKeys())), "Incorrect key size")
+	assert.Equal(t, maxCommitteesCacheSize, uint64(len(cache.CommitteeCache.Keys())), "Incorrect key size")
 }
 
 func TestCommitteeCache_FuzzActiveIndices(t *testing.T) {
@@ -49,5 +49,5 @@ func TestCommitteeCache_FuzzActiveIndices(t *testing.T) {
 		assert.DeepEqual(t, c.SortedIndices, indices)
 	}
 
-	assert.Equal(t, maxCommitteesCacheSize, uint64(len(cache.CommitteeCache.ListKeys())), "Incorrect key size")
+	assert.Equal(t, maxCommitteesCacheSize, uint64(len(cache.CommitteeCache.Keys())), "Incorrect key size")
 }

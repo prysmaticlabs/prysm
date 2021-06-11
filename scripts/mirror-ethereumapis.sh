@@ -68,7 +68,7 @@ find ./eth -name '*.proto' -print0 |
 
 if git diff-index --quiet HEAD --; then
    echo "nothing to push, exiting early"
-   exit
+   exit 0
 else
    echo "changes detected, commiting and pushing to ethereumapis"
 fi
