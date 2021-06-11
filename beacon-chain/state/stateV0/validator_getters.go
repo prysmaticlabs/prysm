@@ -11,7 +11,6 @@ type ReadOnlyValidator struct {
 	validator *ethpb.Validator
 }
 
-
 // NewValidator initializes the read only wrapper for validator.
 func NewValidator(v *ethpb.Validator) *ReadOnlyValidator {
 	return &ReadOnlyValidator{
