@@ -25,4 +25,4 @@ done
 goimports -w "$mock_path/."
 gofmt -s -w "$mock_path/."
 
-GO11MODULE=on mockgen -package=mock -destination="proto/eth/v1/event_service_mock.go" github.com/prysmaticlabs/prysm/proto/eth/v1 EventsClient,Events_StreamEventsClient
+GO11MODULE=on mockgen -package=mock -destination="proto/eth/v1/event_service_mock.go" github.com/prysmaticlabs/prysm/proto/eth/v1 EventsClient,Events_StreamEventsClient,Events_StreamEventsServer

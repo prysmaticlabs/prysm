@@ -96,7 +96,15 @@ func (s *Server) handleBlockEvents(
 		if err != nil {
 			return err
 		}
-		return s.streamData(stream, "block", v1Data)
+		item, err := v1Data.HashTreeRoot()
+		if err != nil {
+			return status.Errorf(codes.Internal, "could not hash tree root block %v", err)
+		}
+		eventBlock := &ethpb.EventBlock{
+			Slot:  v1Data.Message.Slot,
+			Block: item[:],
+		}
+		return s.streamData(stream, "block", eventBlock)
 	default:
 		return nil
 	}
