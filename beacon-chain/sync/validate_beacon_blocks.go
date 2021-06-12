@@ -102,17 +102,18 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	}
 	s.pendingQueueLock.RUnlock()
 
-	// Add metrics for block arrival time subtracts slot start time.
+	// Be lenient in handling early blocks. Instead of discarding blocks arriving later than
+	// MAXIMUM_GOSSIP_CLOCK_DISPARITY in future, we tolerate blocks arriving at max two slots
+	// earlier (SECONDS_PER_SLOT * 2 seconds). Queue such blocks and process them at the right slot.
 	genesisTime := uint64(s.cfg.Chain.GenesisTime().Unix())
-	if err := captureArrivalTimeMetric(genesisTime, blk.Block().Slot()); err != nil {
+	fmt.Println("genesisTime = ", s.cfg.Chain.GenesisTime().String())
+	if err := helpers.VerifySlotTime(genesisTime, blk.Block().Slot(), earlyBlockProcessingTolerance); err != nil {
 		log.WithError(err).WithField("blockSlot", blk.Block().Slot()).Debug("Ignored block")
 		return pubsub.ValidationIgnore
 	}
 
-	// Be lenient in handling early blocks. Instead of discarding blocks arriving later than
-	// MAXIMUM_GOSSIP_CLOCK_DISPARITY in future, we tolerate blocks arriving at max two slots
-	// earlier (SECONDS_PER_SLOT * 2 seconds). Queue such blocks and process them at the right slot.
-	if err := helpers.VerifySlotTime(genesisTime, blk.Block().Slot(), earlyBlockProcessingTolerance); err != nil {
+	// Add metrics for block arrival time subtracts slot start time.
+	if err := captureArrivalTimeMetric(genesisTime, blk.Block().Slot()); err != nil {
 		log.WithError(err).WithField("blockSlot", blk.Block().Slot()).Debug("Ignored block")
 		return pubsub.ValidationIgnore
 	}
@@ -128,9 +129,11 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationIgnore
 	}
 
-	// if the block slot does not belong to current slot, then queue the block for future processing.
+	// Process the block if the clock jitter is less than MAXIMUM_GOSSIP_CLOCK_DISPARITY.
+	// Otherwise queue it for processing in the right slot.
 	currentSlot := s.cfg.Chain.CurrentSlot()
-	if blk.Block().Slot() > currentSlot {
+	if err := helpers.VerifySlotTime(genesisTime, blk.Block().Slot(),
+		params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 		s.pendingQueueLock.Lock()
 		if err := s.insertBlockToPendingQueue(blk.Block().Slot(), blk, blockRoot); err != nil {
 			s.pendingQueueLock.Unlock()
