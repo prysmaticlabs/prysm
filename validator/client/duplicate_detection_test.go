@@ -36,7 +36,7 @@ func TestSleeping_DuplicateDetection_NoKeys(t *testing.T) {
 		keyManager:      km,
 	}
 
-	// Fetch keys from the mock KM does not error. So just an aesthetic check of zero length.
+	// Fetch keys from the mock KM does not error on empty keys. So just an aesthetic check of zero length.
 	key, err := v.DoppelgangerService(ctx)
 	require.NoError(t, err)
 	require.Equal(t, 0, len(key))
@@ -50,7 +50,7 @@ func TestSleeping_DuplicateDetection_WithKeys(t *testing.T) {
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 	db := dbTest.SetupDB(t, [][48]byte{})
 
-	// Set random Keys
+	// Set some random Keys
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
 	pubKey := [48]byte{}
@@ -73,7 +73,6 @@ func TestSleeping_DuplicateDetection_WithKeys(t *testing.T) {
 	}
 
 	key, err := v.DoppelgangerService(ctx)
-	//oneEpochs := helpers.SlotToEpoch(<-v.NextSlot())
 	require.NoError(t, err)
 	require.Equal(t, len(pubKey), len(key))
 }
