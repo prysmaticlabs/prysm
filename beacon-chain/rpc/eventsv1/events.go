@@ -101,7 +101,7 @@ func (s *Server) handleBlockEvents(
 		}
 		v1Data, err := migration.BlockIfaceToV1BlockHeader(blkData.SignedBlock)
 		if err != nil {
-			return status.Errorf(codes.Internal, "could not create data required: %v", err)
+			return err
 		}
 		item, err := v1Data.HashTreeRoot()
 		if err != nil {
