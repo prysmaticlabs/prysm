@@ -12,7 +12,6 @@ go_library(
     deps = [
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/bytesutil:go_default_library",
-        "//shared/params:go_default_library",
         "//shared/timeutils:go_default_library",
         "//validator/client/iface:go_default_library",
         "//validator/keymanager:go_default_library",
