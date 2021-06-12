@@ -195,7 +195,7 @@ func (s *Server) handleStateEvents(
 func (s *Server) streamData(stream ethpb.Events_StreamEventsServer, name string, data proto.Message) error {
 	returnData, err := anypb.New(data)
 	if err != nil {
-		return status.Errorf(codes.Internal, "could not prepare return data: %v", err)
+		return err
 	}
 	return stream.Send(&gwpb.EventSource{
 		Event: name,
