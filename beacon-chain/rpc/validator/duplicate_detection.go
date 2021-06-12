@@ -22,7 +22,7 @@ func (vs *Server) DetectDoppelganger(ctx context.Context, req *ethpb.DetectDoppe
 	log.Info("Doppelganger rpc service started")
 	// Head state
 	head, err := vs.HeadFetcher.HeadState(ctx)
-	if err != nil {
+	if err != nil || head == nil {
 		return nil, status.Errorf(codes.Internal, "Doppelganger rpc service - Could not get head state: %v", err)
 	}
 	// Head epoch
@@ -49,7 +49,7 @@ func (vs *Server) DetectDoppelganger(ctx context.Context, req *ethpb.DetectDoppe
 			prevStateRoot, err := headState.HashTreeRoot(ctx)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Doppelganger rpc service - Could not get previous "+
-					"state: %v", err)
+					"state root: %v", err)
 			}
 			prevState, err := vs.StateGen.StateByRoot(ctx, prevStateRoot)
 			if err != nil {
