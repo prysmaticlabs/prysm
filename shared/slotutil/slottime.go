@@ -43,7 +43,7 @@ func DivideSlotBy(timesPerSlot int64) time.Duration {
 // parameter by a specified number. It returns a value of time.Duration
 // in millisecond-based durations.
 func MultiplySlotBy(times int64) time.Duration {
-	return time.Duration(int64(params.BeaconConfig().SecondsPerSlot) * times) * time.Second
+	return time.Duration(int64(params.BeaconConfig().SecondsPerSlot)*times) * time.Second
 }
 
 // AbsoluteValueSlotDifference between two slots.
