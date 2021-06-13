@@ -120,7 +120,6 @@ go_test(
         "//shared/interfaces:go_default_library",
         "//shared/mock:go_default_library",
         "//shared/params:go_default_library",
-        "//shared/slotutil:go_default_library",
         "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
