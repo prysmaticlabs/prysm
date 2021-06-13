@@ -66,7 +66,7 @@ func Test_DetectDoppelganger_TargetHeadClose(t *testing.T) {
 	block := testutil.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err)
-	// Set head state to nil
+
 	trie, err := stateV0.InitializeFromProtoUnsafe(beaconState)
 	require.NoError(t, err)
 	vs := &Server{
@@ -81,13 +81,14 @@ func Test_DetectDoppelganger_TargetHeadClose(t *testing.T) {
 
 	pKT := make([]*ethpb.PubKeyTarget, 0)
 
-	// Use the same slot so that Head - Target is less than N(=2) Epochs aparts.
+	// Use the same slot so that Head - Target is less than N(=2) Epochs apart.
 	pKT = append(pKT, &ethpb.PubKeyTarget{PubKey: pubKey1,
 		TargetEpoch: types.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)})
 	req := &ethpb.DetectDoppelgangerRequest{
 		PubKeysTargets: pKT}
-	_, err = vs.DetectDoppelganger(ctx, req)
+	res, err := vs.DetectDoppelganger(ctx, req)
 	assert.NoError(t, err)
+	assert.DeepEqual(t, []byte(nil), res.PublicKey)
 	//assert.ErrorContains(t,"Doppelganger rpc service - Could not get previous state root",err)
 }
 
@@ -115,7 +116,7 @@ func Test_DetectDoppelganger_NoPrevState(t *testing.T) {
 	block := testutil.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err)
-	// Set head state to nil
+
 	trie, err := stateV0.InitializeFromProtoUnsafe(beaconState)
 	require.NoError(t, err)
 	vs := &Server{
@@ -130,11 +131,11 @@ func Test_DetectDoppelganger_NoPrevState(t *testing.T) {
 
 	pKT := make([]*ethpb.PubKeyTarget, 0)
 
-	// Use the same slot so that Head - Target is less than N(=2) Epochs aparts.
 	pKT = append(pKT, &ethpb.PubKeyTarget{PubKey: pubKey1,
 		TargetEpoch: types.Epoch(slot.Sub(20) / params.BeaconConfig().SlotsPerEpoch)})
 	req := &ethpb.DetectDoppelgangerRequest{
 		PubKeysTargets: pKT}
 	_, err = vs.DetectDoppelganger(ctx, req)
+	// No Previous state is available
 	assert.ErrorContains(t, "Doppelganger rpc service - Could not get previous state root", err)
 }

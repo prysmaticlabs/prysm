@@ -58,9 +58,8 @@ func (vs *Server) DetectDoppelganger(ctx context.Context, req *ethpb.DetectDoppe
 			}
 			totalBalance, err := helpers.TotalActiveBalance(prevState)
 			if err != nil {
-				return &ethpb.DetectDoppelgangerResponse{PublicKey: nil,
-						DuplicateFound: false}, status.Errorf(codes.Internal, "Doppelganger rpc service - "+
-						"Could not get calculate balance: %v", err)
+				return &ethpb.DetectDoppelgangerResponse{PublicKey: nil}, status.Errorf(codes.Internal, "Doppelganger rpc service - "+
+					"Could not get calculate balance: %v", err)
 			}
 			if totalBalance == 0 {
 				totalBalance = 1
@@ -69,25 +68,21 @@ func (vs *Server) DetectDoppelganger(ctx context.Context, req *ethpb.DetectDoppe
 
 			valIdx, err := vs.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pkt.PubKey})
 			if err != nil {
-				return &ethpb.DetectDoppelgangerResponse{PublicKey: nil,
-					DuplicateFound: false}, status.Errorf(codes.Internal, "Doppelganger rpc service - : %v", err)
+				return &ethpb.DetectDoppelgangerResponse{PublicKey: nil}, status.Errorf(codes.Internal, "Doppelganger rpc service - : %v", err)
 			}
 			valPrevBalance, err := prevState.BalanceAtIndex(valIdx.Index)
 			if err != nil {
-				return &ethpb.DetectDoppelgangerResponse{PublicKey: nil,
-					DuplicateFound: false}, status.Errorf(codes.Internal, "Doppelganger rpc service - could not get balance: %v", err)
+				return &ethpb.DetectDoppelgangerResponse{PublicKey: nil}, status.Errorf(codes.Internal, "Doppelganger rpc service - could not get balance: %v", err)
 			}
 			valHeadBalance, err := headState.BalanceAtIndex(valIdx.Index)
 			if err != nil {
-				return &ethpb.DetectDoppelgangerResponse{PublicKey: nil,
-					DuplicateFound: false}, status.Errorf(codes.Internal, "Doppelganger rpc service - could not get balance: %v", err)
+				return &ethpb.DetectDoppelgangerResponse{PublicKey: nil}, status.Errorf(codes.Internal, "Doppelganger rpc service - could not get balance: %v", err)
 			}
 			baseReward := valPrevBalance * baseRewardFactor / balanceSqrt / baseRewardsPerEpoch
 
 			if int64(valHeadBalance)-int64(valPrevBalance) > -2*int64(baseReward) {
 				if i == 1 && ok {
-					return &ethpb.DetectDoppelgangerResponse{PublicKey: pkt.PubKey,
-						DuplicateFound: true}, nil
+					return &ethpb.DetectDoppelgangerResponse{PublicKey: pkt.PubKey}, nil
 				}
 			} else { //has to be strictly increasing across heads roots
 				ok = false
@@ -98,6 +93,5 @@ func (vs *Server) DetectDoppelganger(ctx context.Context, req *ethpb.DetectDoppe
 	}
 	// see reward_penalty.go precompute
 	// see attestor.go
-	return &ethpb.DetectDoppelgangerResponse{PublicKey: nil,
-		DuplicateFound: false}, nil
+	return &ethpb.DetectDoppelgangerResponse{PublicKey: nil}, nil
 }

@@ -247,11 +247,9 @@ message DetectDoppelgangerRequest{
 }
 
 message DetectDoppelgangerResponse{
-    // Bool of whether a duplicate was found
-    // False could mean that the Target vs Head conditions were not met
+    // Nil means the Target vs Head conditions were not met
     // Or that the balance decreased due to inactivity
-    bool duplicate_found = 1;
-    bytes public_key = 2;
+    bytes public_key = 1;
 }
 
 message DomainRequest {

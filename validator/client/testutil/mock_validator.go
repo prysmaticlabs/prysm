@@ -52,14 +52,6 @@ type FakeValidator struct {
 	Keymanager                        keymanager.IKeymanager
 }
 
-func (fv *FakeValidator) DoppelgangerService(ctx context.Context) ([]byte, error) {
-	panic("implement me")
-}
-
-func (fv *FakeValidator) GetDuplicateCheckFlag() bool {
-	panic("implement me")
-}
-
 type ctxKey string
 
 // AllValidatorsAreExitedCtxKey represents the metadata context key used for exits.
@@ -239,4 +231,13 @@ func (fv *FakeValidator) HandleKeyReload(_ context.Context, newKeys [][48]byte) 
 		}
 	}
 	return false, nil
+}
+
+// Not used, just a placeholder
+func (fv *FakeValidator) DoppelgangerService(ctx context.Context) ([]byte, error) {
+	return nil, nil
+}
+
+func (fv *FakeValidator) GetDuplicateCheckFlag() bool {
+	return fv.DuplicateCheckFlag
 }
