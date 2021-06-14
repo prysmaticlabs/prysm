@@ -204,7 +204,7 @@ func (bs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
 	}
-	signedBeaconBlock, err := bs.signedBeaconBlock(ctx, block)
+	signedBeaconBlock, err := migration.SignedBeaconBlock(block)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
@@ -229,7 +229,7 @@ func (bs *Server) GetBlockSsz(ctx context.Context, req *ethpb.BlockRequest) (*et
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
 	}
-	signedBeaconBlock, err := bs.signedBeaconBlock(ctx, block)
+	signedBeaconBlock, err := migration.SignedBeaconBlock(block)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
@@ -349,23 +349,6 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpb.BlockReq
 	return &ethpb.BlockAttestationsResponse{
 		Data: v1Block.Block.Body.Attestations,
 	}, nil
-}
-
-func (bs *Server) signedBeaconBlock(ctx context.Context, block interfaces.SignedBeaconBlock) (*ethpb.SignedBeaconBlock, error) {
-	if block == nil || block.IsNil() {
-		return nil, status.Errorf(codes.NotFound, "Could not find requested block")
-	}
-	blk, err := block.PbPhase0Block()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get raw block: %v", err)
-	}
-
-	v1Block, err := migration.V1Alpha1ToV1Block(blk)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not convert block to v1 block")
-	}
-
-	return v1Block, nil
 }
 
 func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (interfaces.SignedBeaconBlock, error) {
