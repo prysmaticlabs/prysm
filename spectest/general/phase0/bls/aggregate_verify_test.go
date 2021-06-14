@@ -27,7 +27,7 @@ func testAggregateVerify(t *testing.T) {
 			file, err := testutil.BazelFileBytes(path.Join(testFolderPath, folder.Name(), "data.yaml"))
 			require.NoError(t, err)
 			test := &AggregateVerifyTest{}
-			require.NoError(t, yaml.Unmarshal(file, test))
+			require.NoError(t, yaml.UnmarshalStrict(file, test))
 			pubkeys := make([]common.PublicKey, 0, len(test.Input.Pubkeys))
 			msgs := make([][32]byte, 0, len(test.Input.Messages))
 			for _, pubKey := range test.Input.Pubkeys {

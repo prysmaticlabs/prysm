@@ -26,7 +26,7 @@ func testAggregate(t *testing.T) {
 			file, err := testutil.BazelFileBytes(path.Join(testFolderPath, folder.Name(), "data.yaml"))
 			require.NoError(t, err)
 			test := &AggregateTest{}
-			require.NoError(t, yaml.Unmarshal(file, test))
+			require.NoError(t, yaml.UnmarshalStrict(file, test))
 			var sigs []common.Signature
 			for _, s := range test.Input {
 				sigBytes, err := hex.DecodeString(s[2:])

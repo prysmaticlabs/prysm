@@ -47,7 +47,7 @@ func readbootNodes(fileName string) ([]string, error) {
 		return nil, err
 	}
 	listNodes := make([]string, 0)
-	err = yaml.Unmarshal(fileContent, &listNodes)
+	err = yaml.UnmarshalStrict(fileContent, &listNodes)
 	if err != nil {
 		return nil, err
 	}

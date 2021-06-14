@@ -30,7 +30,7 @@ func LoadChainConfigFile(chainConfigFileName string) {
 	}
 	yamlFile = []byte(strings.Join(lines, "\n"))
 	conf := MainnetConfig()
-	if err := yaml.Unmarshal(yamlFile, conf); err != nil {
+	if err := yaml.UnmarshalStrict(yamlFile, conf); err != nil {
 		log.WithError(err).Fatal("Failed to parse chain config yaml file.")
 	}
 	log.Debugf("Config file values: %+v", conf)

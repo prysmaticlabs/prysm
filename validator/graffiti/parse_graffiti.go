@@ -31,7 +31,7 @@ func ParseGraffitiFile(f string) (*Graffiti, error) {
 		return nil, err
 	}
 	g := &Graffiti{}
-	if err := yaml.Unmarshal(yamlFile, g); err != nil {
+	if err := yaml.UnmarshalStrict(yamlFile, g); err != nil {
 		return nil, err
 	}
 
