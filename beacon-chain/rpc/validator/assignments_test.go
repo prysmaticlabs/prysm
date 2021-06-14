@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -107,11 +108,14 @@ func TestGetDuties_OK(t *testing.T) {
 
 func TestGetAltairDuties_SyncCommitteeOK(t *testing.T) {
 	params.UseMainnetConfig()
+	defer params.UseMinimalConfig()
+
 	bc := params.BeaconConfig()
 	bc.AltairForkEpoch = types.Epoch(0)
 	params.OverrideBeaconConfig(bc)
-
 	db := dbutil.SetupDB(t)
+	testutil.ResetCache()
+
 	genesis := testutil.NewBeaconBlock()
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().SyncCommitteeSize)
 	require.NoError(t, err)
@@ -142,10 +146,11 @@ func TestGetAltairDuties_SyncCommitteeOK(t *testing.T) {
 		State: bs, Root: genesisRoot[:], Genesis: time.Now(),
 	}
 	vs := &Server{
-		BeaconDB:    db,
-		HeadFetcher: chain,
-		TimeFetcher: chain,
-		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		BeaconDB:        db,
+		HeadFetcher:     chain,
+		TimeFetcher:     chain,
+		Eth1InfoFetcher: &mockPOW.POWChain{},
+		SyncChecker:     &mockSync.Sync{IsSyncing: false},
 	}
 
 	// Test the first validator in registry.
@@ -202,6 +207,7 @@ func TestGetDuties_SlotOutOfUpperBound(t *testing.T) {
 
 func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	db := dbutil.SetupDB(t)
+	testutil.ResetCache()
 
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
