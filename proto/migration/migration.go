@@ -4,8 +4,27 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb_alpha "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"google.golang.org/protobuf/proto"
 )
+
+// BlockIfaceToV1BlockHeader converts a signed beacon block interface into a signed beacon block header.
+func BlockIfaceToV1BlockHeader(block interfaces.SignedBeaconBlock) (*ethpb.SignedBeaconBlockHeader, error) {
+	bodyRoot, err := block.Block().Body().HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get body root of block")
+	}
+	return &ethpb.SignedBeaconBlockHeader{
+		Message: &ethpb.BeaconBlockHeader{
+			Slot:          block.Block().Slot(),
+			ProposerIndex: block.Block().ProposerIndex(),
+			ParentRoot:    block.Block().ParentRoot(),
+			StateRoot:     block.Block().StateRoot(),
+			BodyRoot:      bodyRoot[:],
+		},
+		Signature: block.Signature(),
+	}, nil
+}
 
 // V1Alpha1BlockToV1BlockHeader converts a v1alpha1 SignedBeaconBlock proto to a v1 SignedBeaconBlockHeader proto.
 func V1Alpha1BlockToV1BlockHeader(block *ethpb_alpha.SignedBeaconBlock) (*ethpb.SignedBeaconBlockHeader, error) {
@@ -49,6 +68,18 @@ func V1ToV1Alpha1Block(alphaBlk *ethpb.SignedBeaconBlock) (*ethpb_alpha.SignedBe
 		return nil, errors.Wrap(err, "could not unmarshal block")
 	}
 	return v1alpha1Block, nil
+}
+
+// V1Alpha1AggregateAttAndProofToV1 converts a v1alpha1 aggregate attestation and proof to v1.
+func V1Alpha1AggregateAttAndProofToV1(v1alpha1Att *ethpb_alpha.AggregateAttestationAndProof) *ethpb.AggregateAttestationAndProof {
+	if v1alpha1Att == nil {
+		return &ethpb.AggregateAttestationAndProof{}
+	}
+	return &ethpb.AggregateAttestationAndProof{
+		AggregatorIndex: v1alpha1Att.AggregatorIndex,
+		Aggregate:       V1Alpha1AttestationToV1(v1alpha1Att.Aggregate),
+		SelectionProof:  v1alpha1Att.SelectionProof,
+	}
 }
 
 // V1Alpha1IndexedAttToV1 converts a v1alpha1 indexed attestation to v1.
