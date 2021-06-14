@@ -386,6 +386,7 @@ func TestIsHex(t *testing.T) {
 		{[]byte("0x"), false},
 		{[]byte("0x0"), true},
 		{[]byte("foo"), false},
+		{[]byte("1234567890abcDEF"), false},
 		{[]byte("XYZ4567890abcDEF1234567890abcDEF1234567890abcDEF1234567890abcDEF"), false},
 		{[]byte("0x1234567890abcDEF1234567890abcDEF1234567890abcDEF1234567890abcDEF"), true},
 		{[]byte("1234567890abcDEF1234567890abcDEF1234567890abcDEF1234567890abcDEF"), false},
