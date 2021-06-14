@@ -530,6 +530,11 @@ func (v *validator) RolesAt(ctx context.Context, slot types.Slot) (map[[48]byte]
 			}
 
 		}
+
+		if duty.IsSyncCommittee {
+			roles = append(roles, iface.RoleSyncCommittee)
+		}
+
 		if len(roles) == 0 {
 			roles = append(roles, iface.RoleUnknown)
 		}

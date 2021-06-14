@@ -635,9 +635,10 @@ func TestRolesAt_OK(t *testing.T) {
 	v.duties = &ethpb.DutiesResponse{
 		Duties: []*ethpb.DutiesResponse_Duty{
 			{
-				CommitteeIndex: 1,
-				AttesterSlot:   1,
-				PublicKey:      validatorKey.PublicKey().Marshal(),
+				CommitteeIndex:  1,
+				AttesterSlot:    1,
+				PublicKey:       validatorKey.PublicKey().Marshal(),
+				IsSyncCommittee: true,
 			},
 		},
 	}
@@ -651,6 +652,8 @@ func TestRolesAt_OK(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, iface.RoleAttester, roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][0])
+	assert.Equal(t, iface.RoleAggregator, roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][1])
+	assert.Equal(t, iface.RoleSyncCommittee, roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][2])
 }
 
 func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
