@@ -27,14 +27,11 @@ func (s *Store) SaveSyncCommitteeMessage(msg *ethpb.SyncCommitteeMessage) error 
 	// Messages exist in the queue. Append instead of insert new.
 	if messages != nil {
 		messages = append(messages, copied)
-		if err := s.messageCache.Push(&queue.Item{
+		return s.messageCache.Push(&queue.Item{
 			Key:      syncCommitteeKey(msg.Slot),
 			Value:    messages,
 			Priority: int64(msg.Slot),
-		}); err != nil {
-			return err
-		}
-		return nil
+		})
 	}
 
 	// Message does not exist. Insert new.

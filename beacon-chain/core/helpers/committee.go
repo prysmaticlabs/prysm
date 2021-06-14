@@ -21,6 +21,7 @@ import (
 
 var committeeCache = cache.NewCommitteesCache()
 var proposerIndicesCache = cache.NewProposerIndicesCache()
+var syncCommitteeCache = cache.NewSyncCommittee()
 
 // SlotCommitteeCount returns the number of crosslink committees of a slot. The
 // active validator count is provided as an argument rather than a imported implementation
@@ -383,10 +384,34 @@ func UpdateProposerIndicesInCache(state iface.ReadOnlyBeaconState) error {
 	})
 }
 
-// ClearCache clears the committee cache
+// ClearCache clears the beacon committee cache and sync committee cache.
 func ClearCache() {
 	committeeCache = cache.NewCommitteesCache()
 	proposerIndicesCache = cache.NewProposerIndicesCache()
+	syncCommitteeCache = cache.NewSyncCommittee()
+}
+
+// IsCurrentEpochSyncCommittee returns true if the input public key belongs in the current epoch sync committee along with the sync committee root.
+func IsCurrentEpochSyncCommittee(root [32]byte, pubKey [48]byte) (bool, error) {
+	indices, err := syncCommitteeCache.CurrentEpochIndexPosition(root, pubKey)
+	if err != nil {
+		return false, err
+	}
+	return len(indices) > 0, nil
+}
+
+// IsNextEpochSyncCommittee returns true if the input public key belongs in the next epoch sync committee along with the sync committee root.
+func IsNextEpochSyncCommittee(root [32]byte, pubKey [48]byte) (bool, error) {
+	indices, err := syncCommitteeCache.NextEpochIndexPosition(root, pubKey)
+	if err != nil {
+		return false, err
+	}
+	return len(indices) > 0, nil
+}
+
+// UpdateSyncCommitteeCache updates sync committee cache.
+func UpdateSyncCommitteeCache(state iface.BeaconStateAltair) error {
+	return syncCommitteeCache.UpdatePositionsInCommittee(state)
 }
 
 // This computes proposer indices of the current epoch and returns a list of proposer indices,

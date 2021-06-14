@@ -13,6 +13,7 @@ import (
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces/version"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -136,6 +137,21 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 		return nil, status.Errorf(codes.Internal, "Could not compute next committee assignments: %v", err)
 	}
 
+	// Post Altair transition when the beacon state is Altair compatible, and requested epoch is
+	// post fork boundary.
+	postAltairTransition := s.Version() == version.Altair && req.Epoch >= params.BeaconConfig().AltairForkEpoch
+	var cscRoot [32]byte
+	if postAltairTransition {
+		csc, err := s.CurrentSyncCommittee()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get current sync committee: %v", err)
+		}
+		cscRoot, err = csc.HashTreeRoot()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get current sync committee root: %v", err)
+		}
+	}
+
 	validatorAssignments := make([]*ethpb.DutiesResponse_Duty, 0, len(req.PublicKeys))
 	nextValidatorAssignments := make([]*ethpb.DutiesResponse_Duty, 0, len(req.PublicKeys))
 	for _, pubKey := range req.PublicKeys {
@@ -178,6 +194,19 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 			vStatus, _ := vs.validatorStatus(ctx, s, pubKey)
 			assignment.Status = vStatus.Status
 		}
+
+		// Are the validators in current or next epoch sync committee.
+		if postAltairTransition {
+			assignment.IsSyncCommittee, err = helpers.IsCurrentEpochSyncCommittee(cscRoot, bytesutil.ToBytes48(pubKey))
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not determine current epoch sync committee: %v", err)
+			}
+			nextAssignment.IsSyncCommittee, err = helpers.IsNextEpochSyncCommittee(cscRoot, bytesutil.ToBytes48(pubKey))
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not determine next epoch sync committee: %v", err)
+			}
+		}
+
 		validatorAssignments = append(validatorAssignments, assignment)
 		nextValidatorAssignments = append(nextValidatorAssignments, nextAssignment)
 		// Assign relevant validator to subnet.

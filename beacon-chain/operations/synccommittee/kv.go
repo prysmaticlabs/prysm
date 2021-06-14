@@ -3,11 +3,8 @@ package synccommittee
 import (
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/queue"
 )
-
-var hashFn = hashutil.HashProto
 
 // Store defines the caches for various sync committee objects
 // such as message(un-aggregated) and contribution(aggregated).
