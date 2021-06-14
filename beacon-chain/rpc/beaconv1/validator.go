@@ -231,7 +231,7 @@ func valContainersByRequestIds(state iface.BeaconState, validatorIds [][]byte) (
 				valIndex = types.ValidatorIndex(index)
 			}
 			validator, err := state.ValidatorAtIndex(valIndex)
-			if _, ok := err.(*stateV0.IndexOutOfRangeError); ok {
+			if _, ok := err.(*stateV0.ValidatorIndexOutOfRangeError); ok {
 				// Ignore well-formed yet unknown indexes.
 				continue
 			}
@@ -317,7 +317,7 @@ func validatorSubStatus(validator *ethpb.Validator, epoch types.Epoch) (ethpb.Va
 }
 
 func handleValContainerErr(err error) error {
-	if outOfRangeErr, ok := err.(*stateV0.IndexOutOfRangeError); ok {
+	if outOfRangeErr, ok := err.(*stateV0.ValidatorIndexOutOfRangeError); ok {
 		return status.Errorf(codes.InvalidArgument, "Invalid validator ID: %v", outOfRangeErr)
 	}
 	if invalidIdErr, ok := err.(*invalidValidatorIdError); ok {

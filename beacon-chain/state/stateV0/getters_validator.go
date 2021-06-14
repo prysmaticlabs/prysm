@@ -19,21 +19,21 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// IndexOutOfRangeError represents an error scenario where a validator does not exist
+// ValidatorIndexOutOfRangeError represents an error scenario where a validator does not exist
 // at a given index in the validator's array.
-type IndexOutOfRangeError struct {
+type ValidatorIndexOutOfRangeError struct {
 	message string
 }
 
 // NewStateNotFoundError creates a new error instance.
-func NewIndexOutOfRangeError(index types.ValidatorIndex) IndexOutOfRangeError {
-	return IndexOutOfRangeError{
+func NewValidatorIndexOutOfRangeError(index types.ValidatorIndex) ValidatorIndexOutOfRangeError {
+	return ValidatorIndexOutOfRangeError{
 		message: fmt.Sprintf("index %d out of range", index),
 	}
 }
 
 // Error returns the underlying error message.
-func (e *IndexOutOfRangeError) Error() string {
+func (e *ValidatorIndexOutOfRangeError) Error() string {
 	return e.message
 }
 
@@ -105,7 +105,7 @@ func (b *BeaconState) ValidatorAtIndex(idx types.ValidatorIndex) (*ethpb.Validat
 		return &ethpb.Validator{}, nil
 	}
 	if uint64(len(b.state.Validators)) <= uint64(idx) {
-		e := NewIndexOutOfRangeError(idx)
+		e := NewValidatorIndexOutOfRangeError(idx)
 		return nil, &e
 	}
 
@@ -126,7 +126,7 @@ func (b *BeaconState) ValidatorAtIndexReadOnly(idx types.ValidatorIndex) (iface.
 		return ReadOnlyValidator{}, nil
 	}
 	if uint64(len(b.state.Validators)) <= uint64(idx) {
-		e := NewIndexOutOfRangeError(idx)
+		e := NewValidatorIndexOutOfRangeError(idx)
 		return ReadOnlyValidator{}, &e
 	}
 
