@@ -13,14 +13,12 @@ var _ = Pool(&Store{})
 // sync aggregators.
 type Pool interface {
 	// Methods for Sync Contributions.
-	SaveSyncCommitteeContribution(sig *ethpb.SyncCommitteeContribution) error
-	DeleteSyncCommitteeContributions(slot types.Slot)
-	SyncCommitteeContributions(slot types.Slot) []*ethpb.SyncCommitteeContribution
+	SaveSyncCommitteeContribution(contr *ethpb.SyncCommitteeContribution) error
+	SyncCommitteeContributions(slot types.Slot) ([]*ethpb.SyncCommitteeContribution, error)
 
 	// Methods for Sync Committee Messages.
-	SaveSyncCommitteeSignature(sig *ethpb.SyncCommitteeMessage) error
-	DeleteSyncCommitteeSignatures(slot types.Slot)
-	SyncCommitteeSignatures(slot types.Slot) []*ethpb.SyncCommitteeMessage
+	SaveSyncCommitteeMessage(sig *ethpb.SyncCommitteeMessage) error
+	SyncCommitteeMessages(slot types.Slot) ([]*ethpb.SyncCommitteeMessage, error)
 }
 
 // NewPool returns the sync committee store fulfilling the pool interface.
