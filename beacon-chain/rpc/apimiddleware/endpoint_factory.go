@@ -109,7 +109,7 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 			GetResponse: &blockResponseJson{},
 			Err:         &gateway.DefaultErrorJson{},
 			Hooks: gateway.HookCollection{
-				CustomHandlers: []gateway.CustomHandler{handleGetBlockSsz},
+				CustomHandlers: []gateway.CustomHandler{handleGetBlockSSZ},
 			},
 		}
 	case "/eth/v1/beacon/blocks/{block_id}/root":
@@ -191,7 +191,7 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 			GetResponse: &beaconStateResponseJson{},
 			Err:         &gateway.DefaultErrorJson{},
 			Hooks: gateway.HookCollection{
-				CustomHandlers: []gateway.CustomHandler{handleGetBeaconStateSsz},
+				CustomHandlers: []gateway.CustomHandler{handleGetBeaconStateSSZ},
 			},
 		}
 	case "/eth/v1/debug/beacon/heads":

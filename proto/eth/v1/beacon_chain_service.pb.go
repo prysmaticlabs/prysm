@@ -8,9 +8,6 @@ package v1
 
 import (
 	context "context"
-	reflect "reflect"
-	sync "sync"
-
 	proto "github.com/golang/protobuf/proto"
 	_ "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	empty "github.com/golang/protobuf/ptypes/empty"
@@ -23,6 +20,8 @@ import (
 	status "google.golang.org/grpc/status"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	reflect "reflect"
+	sync "sync"
 )
 
 const (
@@ -1260,7 +1259,7 @@ func (x *BlockResponse) GetData() *BeaconBlockContainer {
 	return nil
 }
 
-type BlockSszResponse struct {
+type BlockSSZResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -1268,8 +1267,8 @@ type BlockSszResponse struct {
 	Data []byte `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
 }
 
-func (x *BlockSszResponse) Reset() {
-	*x = BlockSszResponse{}
+func (x *BlockSSZResponse) Reset() {
+	*x = BlockSSZResponse{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_proto_eth_v1_beacon_chain_service_proto_msgTypes[24]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1277,13 +1276,13 @@ func (x *BlockSszResponse) Reset() {
 	}
 }
 
-func (x *BlockSszResponse) String() string {
+func (x *BlockSSZResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*BlockSszResponse) ProtoMessage() {}
+func (*BlockSSZResponse) ProtoMessage() {}
 
-func (x *BlockSszResponse) ProtoReflect() protoreflect.Message {
+func (x *BlockSSZResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_eth_v1_beacon_chain_service_proto_msgTypes[24]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1295,12 +1294,12 @@ func (x *BlockSszResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use BlockSszResponse.ProtoReflect.Descriptor instead.
-func (*BlockSszResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use BlockSSZResponse.ProtoReflect.Descriptor instead.
+func (*BlockSSZResponse) Descriptor() ([]byte, []int) {
 	return file_proto_eth_v1_beacon_chain_service_proto_rawDescGZIP(), []int{24}
 }
 
-func (x *BlockSszResponse) GetData() []byte {
+func (x *BlockSSZResponse) GetData() []byte {
 	if x != nil {
 		return x.Data
 	}
@@ -2225,7 +2224,7 @@ var file_proto_eth_v1_beacon_chain_service_proto_rawDesc = []byte{
 	0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x2e, 0x42, 0x65, 0x61,
 	0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x43, 0x6f, 0x6e, 0x74, 0x61, 0x69, 0x6e, 0x65,
 	0x72, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x22, 0x26, 0x0a, 0x10, 0x42, 0x6c, 0x6f, 0x63, 0x6b,
-	0x53, 0x73, 0x7a, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x64,
+	0x53, 0x53, 0x5a, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x64,
 	0x61, 0x74, 0x61, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x22,
 	0x74, 0x0a, 0x14, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x43, 0x6f,
 	0x6e, 0x74, 0x61, 0x69, 0x6e, 0x65, 0x72, 0x12, 0x36, 0x0a, 0x07, 0x6d, 0x65, 0x73, 0x73, 0x61,
@@ -2411,11 +2410,11 @@ var file_proto_eth_v1_beacon_chain_service_proto_rawDesc = []byte{
 	0x73, 0x65, 0x22, 0x2d, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x27, 0x12, 0x25, 0x2f, 0x65, 0x74, 0x68,
 	0x2f, 0x76, 0x31, 0x2f, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x2f, 0x62, 0x6c, 0x6f, 0x63, 0x6b,
 	0x73, 0x2f, 0x7b, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x5f, 0x69, 0x64, 0x7d, 0x2f, 0x72, 0x6f, 0x6f,
-	0x74, 0x12, 0x7d, 0x0a, 0x0b, 0x47, 0x65, 0x74, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x53, 0x73, 0x7a,
+	0x74, 0x12, 0x7d, 0x0a, 0x0b, 0x47, 0x65, 0x74, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x53, 0x53, 0x5a,
 	0x12, 0x1d, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e,
 	0x76, 0x31, 0x2e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a,
 	0x21, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76,
-	0x31, 0x2e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x53, 0x73, 0x7a, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x31, 0x2e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x53, 0x53, 0x5a, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
 	0x73, 0x65, 0x22, 0x2c, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x26, 0x12, 0x24, 0x2f, 0x65, 0x74, 0x68,
 	0x2f, 0x76, 0x31, 0x2f, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x2f, 0x62, 0x6c, 0x6f, 0x63, 0x6b,
 	0x73, 0x2f, 0x7b, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x5f, 0x69, 0x64, 0x7d, 0x2f, 0x73, 0x73, 0x7a,
@@ -2570,7 +2569,7 @@ var file_proto_eth_v1_beacon_chain_service_proto_goTypes = []interface{}{
 	(*BlockHeaderContainer)(nil),                                    // 21: ethereum.eth.v1.BlockHeaderContainer
 	(*BeaconBlockHeaderContainer)(nil),                              // 22: ethereum.eth.v1.BeaconBlockHeaderContainer
 	(*BlockResponse)(nil),                                           // 23: ethereum.eth.v1.BlockResponse
-	(*BlockSszResponse)(nil),                                        // 24: ethereum.eth.v1.BlockSszResponse
+	(*BlockSSZResponse)(nil),                                        // 24: ethereum.eth.v1.BlockSSZResponse
 	(*BeaconBlockContainer)(nil),                                    // 25: ethereum.eth.v1.BeaconBlockContainer
 	(*AttestationsPoolRequest)(nil),                                 // 26: ethereum.eth.v1.AttestationsPoolRequest
 	(*SubmitAttestationsRequest)(nil),                               // 27: ethereum.eth.v1.SubmitAttestationsRequest
@@ -2643,7 +2642,7 @@ var file_proto_eth_v1_beacon_chain_service_proto_depIdxs = []int32{
 	25, // 39: ethereum.eth.v1.BeaconChain.SubmitBlock:input_type -> ethereum.eth.v1.BeaconBlockContainer
 	19, // 40: ethereum.eth.v1.BeaconChain.GetBlock:input_type -> ethereum.eth.v1.BlockRequest
 	19, // 41: ethereum.eth.v1.BeaconChain.GetBlockRoot:input_type -> ethereum.eth.v1.BlockRequest
-	19, // 42: ethereum.eth.v1.BeaconChain.GetBlockSsz:input_type -> ethereum.eth.v1.BlockRequest
+	19, // 42: ethereum.eth.v1.BeaconChain.GetBlockSSZ:input_type -> ethereum.eth.v1.BlockRequest
 	19, // 43: ethereum.eth.v1.BeaconChain.ListBlockAttestations:input_type -> ethereum.eth.v1.BlockRequest
 	26, // 44: ethereum.eth.v1.BeaconChain.ListPoolAttestations:input_type -> ethereum.eth.v1.AttestationsPoolRequest
 	27, // 45: ethereum.eth.v1.BeaconChain.SubmitAttestations:input_type -> ethereum.eth.v1.SubmitAttestationsRequest
@@ -2669,7 +2668,7 @@ var file_proto_eth_v1_beacon_chain_service_proto_depIdxs = []int32{
 	52, // 65: ethereum.eth.v1.BeaconChain.SubmitBlock:output_type -> google.protobuf.Empty
 	23, // 66: ethereum.eth.v1.BeaconChain.GetBlock:output_type -> ethereum.eth.v1.BlockResponse
 	16, // 67: ethereum.eth.v1.BeaconChain.GetBlockRoot:output_type -> ethereum.eth.v1.BlockRootResponse
-	24, // 68: ethereum.eth.v1.BeaconChain.GetBlockSsz:output_type -> ethereum.eth.v1.BlockSszResponse
+	24, // 68: ethereum.eth.v1.BeaconChain.GetBlockSSZ:output_type -> ethereum.eth.v1.BlockSSZResponse
 	14, // 69: ethereum.eth.v1.BeaconChain.ListBlockAttestations:output_type -> ethereum.eth.v1.BlockAttestationsResponse
 	28, // 70: ethereum.eth.v1.BeaconChain.ListPoolAttestations:output_type -> ethereum.eth.v1.AttestationsPoolResponse
 	52, // 71: ethereum.eth.v1.BeaconChain.SubmitAttestations:output_type -> google.protobuf.Empty
@@ -2988,7 +2987,7 @@ func file_proto_eth_v1_beacon_chain_service_proto_init() {
 			}
 		}
 		file_proto_eth_v1_beacon_chain_service_proto_msgTypes[24].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*BlockSszResponse); i {
+			switch v := v.(*BlockSSZResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3216,7 +3215,7 @@ type BeaconChainClient interface {
 	SubmitBlock(ctx context.Context, in *BeaconBlockContainer, opts ...grpc.CallOption) (*empty.Empty, error)
 	GetBlock(ctx context.Context, in *BlockRequest, opts ...grpc.CallOption) (*BlockResponse, error)
 	GetBlockRoot(ctx context.Context, in *BlockRequest, opts ...grpc.CallOption) (*BlockRootResponse, error)
-	GetBlockSsz(ctx context.Context, in *BlockRequest, opts ...grpc.CallOption) (*BlockSszResponse, error)
+	GetBlockSSZ(ctx context.Context, in *BlockRequest, opts ...grpc.CallOption) (*BlockSSZResponse, error)
 	ListBlockAttestations(ctx context.Context, in *BlockRequest, opts ...grpc.CallOption) (*BlockAttestationsResponse, error)
 	ListPoolAttestations(ctx context.Context, in *AttestationsPoolRequest, opts ...grpc.CallOption) (*AttestationsPoolResponse, error)
 	SubmitAttestations(ctx context.Context, in *SubmitAttestationsRequest, opts ...grpc.CallOption) (*empty.Empty, error)
@@ -3356,9 +3355,9 @@ func (c *beaconChainClient) GetBlockRoot(ctx context.Context, in *BlockRequest, 
 	return out, nil
 }
 
-func (c *beaconChainClient) GetBlockSsz(ctx context.Context, in *BlockRequest, opts ...grpc.CallOption) (*BlockSszResponse, error) {
-	out := new(BlockSszResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.eth.v1.BeaconChain/GetBlockSsz", in, out, opts...)
+func (c *beaconChainClient) GetBlockSSZ(ctx context.Context, in *BlockRequest, opts ...grpc.CallOption) (*BlockSSZResponse, error) {
+	out := new(BlockSSZResponse)
+	err := c.cc.Invoke(ctx, "/ethereum.eth.v1.BeaconChain/GetBlockSSZ", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -3488,7 +3487,7 @@ type BeaconChainServer interface {
 	SubmitBlock(context.Context, *BeaconBlockContainer) (*empty.Empty, error)
 	GetBlock(context.Context, *BlockRequest) (*BlockResponse, error)
 	GetBlockRoot(context.Context, *BlockRequest) (*BlockRootResponse, error)
-	GetBlockSsz(context.Context, *BlockRequest) (*BlockSszResponse, error)
+	GetBlockSSZ(context.Context, *BlockRequest) (*BlockSSZResponse, error)
 	ListBlockAttestations(context.Context, *BlockRequest) (*BlockAttestationsResponse, error)
 	ListPoolAttestations(context.Context, *AttestationsPoolRequest) (*AttestationsPoolResponse, error)
 	SubmitAttestations(context.Context, *SubmitAttestationsRequest) (*empty.Empty, error)
@@ -3546,8 +3545,8 @@ func (*UnimplementedBeaconChainServer) GetBlock(context.Context, *BlockRequest) 
 func (*UnimplementedBeaconChainServer) GetBlockRoot(context.Context, *BlockRequest) (*BlockRootResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBlockRoot not implemented")
 }
-func (*UnimplementedBeaconChainServer) GetBlockSsz(context.Context, *BlockRequest) (*BlockSszResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetBlockSsz not implemented")
+func (*UnimplementedBeaconChainServer) GetBlockSSZ(context.Context, *BlockRequest) (*BlockSSZResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBlockSSZ not implemented")
 }
 func (*UnimplementedBeaconChainServer) ListBlockAttestations(context.Context, *BlockRequest) (*BlockAttestationsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListBlockAttestations not implemented")
@@ -3824,20 +3823,20 @@ func _BeaconChain_GetBlockRoot_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
-func _BeaconChain_GetBlockSsz_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _BeaconChain_GetBlockSSZ_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(BlockRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BeaconChainServer).GetBlockSsz(ctx, in)
+		return srv.(BeaconChainServer).GetBlockSSZ(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/ethereum.eth.v1.BeaconChain/GetBlockSsz",
+		FullMethod: "/ethereum.eth.v1.BeaconChain/GetBlockSSZ",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconChainServer).GetBlockSsz(ctx, req.(*BlockRequest))
+		return srv.(BeaconChainServer).GetBlockSSZ(ctx, req.(*BlockRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -4115,8 +4114,8 @@ var _BeaconChain_serviceDesc = grpc.ServiceDesc{
 			Handler:    _BeaconChain_GetBlockRoot_Handler,
 		},
 		{
-			MethodName: "GetBlockSsz",
-			Handler:    _BeaconChain_GetBlockSsz_Handler,
+			MethodName: "GetBlockSSZ",
+			Handler:    _BeaconChain_GetBlockSSZ_Handler,
 		},
 		{
 			MethodName: "ListBlockAttestations",

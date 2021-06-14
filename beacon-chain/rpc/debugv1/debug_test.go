@@ -30,7 +30,7 @@ func TestGetBeaconState(t *testing.T) {
 	assert.NotNil(t, resp)
 }
 
-func TestGetBeaconStateSsz(t *testing.T) {
+func TestGetBeaconStateSSZ(t *testing.T) {
 	fakeState, err := sharedtestutil.NewBeaconState()
 	require.NoError(t, err)
 	sszState, err := fakeState.MarshalSSZ()
@@ -41,7 +41,7 @@ func TestGetBeaconStateSsz(t *testing.T) {
 			BeaconState: fakeState,
 		},
 	}
-	resp, err := server.GetBeaconStateSsz(context.Background(), &ethpb.StateRequest{
+	resp, err := server.GetBeaconStateSSZ(context.Background(), &ethpb.StateRequest{
 		StateId: make([]byte, 0),
 	})
 	require.NoError(t, err)

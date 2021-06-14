@@ -391,7 +391,7 @@ func TestServer_GetBlock(t *testing.T) {
 	}
 }
 
-func TestServer_GetBlockSsz(t *testing.T) {
+func TestServer_GetBlockSSZ(t *testing.T) {
 	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
 
@@ -419,7 +419,7 @@ func TestServer_GetBlockSsz(t *testing.T) {
 	sszBlock, err := blocks[0].MarshalSSZ()
 	require.NoError(t, err)
 
-	resp, err := bs.GetBlockSsz(ctx, &ethpb.BlockRequest{BlockId: []byte("30")})
+	resp, err := bs.GetBlockSSZ(ctx, &ethpb.BlockRequest{BlockId: []byte("30")})
 	require.NoError(t, err)
 	assert.NotNil(t, resp)
 	assert.DeepEqual(t, sszBlock, resp.Data)

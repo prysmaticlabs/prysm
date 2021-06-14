@@ -217,9 +217,9 @@ func (bs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	}, nil
 }
 
-// GetBlockSsz returns the SSZ-serialized version of the becaon block for given block ID.
-func (bs *Server) GetBlockSsz(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BlockSszResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBlockSsz")
+// GetBlockSSZ returns the SSZ-serialized version of the becaon block for given block ID.
+func (bs *Server) GetBlockSSZ(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BlockSSZResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBlockSSZ")
 	defer span.End()
 
 	block, err := bs.blockFromBlockID(ctx, req.BlockId)
@@ -238,7 +238,7 @@ func (bs *Server) GetBlockSsz(ctx context.Context, req *ethpb.BlockRequest) (*et
 		return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ: %v", err)
 	}
 
-	return &ethpb.BlockSszResponse{Data: sszBlock}, nil
+	return &ethpb.BlockSSZResponse{Data: sszBlock}, nil
 }
 
 // GetBlockRoot retrieves hashTreeRoot of BeaconBlock/BeaconBlockHeader.

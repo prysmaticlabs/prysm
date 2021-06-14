@@ -20,25 +20,25 @@ type sszConfig struct {
 	responseJson sszResponseJson
 }
 
-func handleGetBeaconStateSsz(m *gateway.ApiProxyMiddleware, endpoint gateway.Endpoint, writer http.ResponseWriter, request *http.Request) (handled bool) {
+func handleGetBeaconStateSSZ(m *gateway.ApiProxyMiddleware, endpoint gateway.Endpoint, writer http.ResponseWriter, request *http.Request) (handled bool) {
 	config := sszConfig{
 		sszPath:      "/eth/v1/debug/beacon/states/{state_id}/ssz",
 		fileName:     "beacon_state.ssz",
-		responseJson: &beaconStateSszResponseJson{},
+		responseJson: &beaconStateSSZResponseJson{},
 	}
-	return handleGetSsz(m, endpoint, writer, request, config)
+	return handleGetSSZ(m, endpoint, writer, request, config)
 }
 
-func handleGetBlockSsz(m *gateway.ApiProxyMiddleware, endpoint gateway.Endpoint, writer http.ResponseWriter, request *http.Request) (handled bool) {
+func handleGetBlockSSZ(m *gateway.ApiProxyMiddleware, endpoint gateway.Endpoint, writer http.ResponseWriter, request *http.Request) (handled bool) {
 	config := sszConfig{
 		sszPath:      "/eth/v1/beacon/blocks/{block_id}/ssz",
 		fileName:     "beacon_block.ssz",
-		responseJson: &blockSszResponseJson{},
+		responseJson: &blockSSZResponseJson{},
 	}
-	return handleGetSsz(m, endpoint, writer, request, config)
+	return handleGetSSZ(m, endpoint, writer, request, config)
 }
 
-func handleGetSsz(
+func handleGetSSZ(
 	m *gateway.ApiProxyMiddleware,
 	endpoint gateway.Endpoint,
 	writer http.ResponseWriter,
@@ -49,7 +49,7 @@ func handleGetSsz(
 		return false
 	}
 
-	if errJson := prepareSszRequestForProxying(m, endpoint, request, config.sszPath); errJson != nil {
+	if errJson := prepareSSZRequestForProxying(m, endpoint, request, config.sszPath); errJson != nil {
 		gateway.WriteError(writer, errJson, nil)
 		return true
 	}
@@ -75,12 +75,12 @@ func handleGetSsz(
 		gateway.WriteError(writer, errJson, nil)
 		return true
 	}
-	responseSsz, errJson := serializeMiddlewareResponseIntoSsz(config.responseJson.SszData())
+	responseSsz, errJson := serializeMiddlewareResponseIntoSSZ(config.responseJson.SSZData())
 	if errJson != nil {
 		gateway.WriteError(writer, errJson, nil)
 		return true
 	}
-	if errJson := writeSszResponseHeaderAndBody(grpcResponse, writer, responseSsz, config.fileName); errJson != nil {
+	if errJson := writeSSZResponseHeaderAndBody(grpcResponse, writer, responseSsz, config.fileName); errJson != nil {
 		gateway.WriteError(writer, errJson, nil)
 		return true
 	}
@@ -105,7 +105,7 @@ func sszRequested(request *http.Request) bool {
 	return false
 }
 
-func prepareSszRequestForProxying(m *gateway.ApiProxyMiddleware, endpoint gateway.Endpoint, request *http.Request, sszPath string) gateway.ErrorJson {
+func prepareSSZRequestForProxying(m *gateway.ApiProxyMiddleware, endpoint gateway.Endpoint, request *http.Request, sszPath string) gateway.ErrorJson {
 	request.URL.Scheme = "http"
 	request.URL.Host = m.GatewayAddress
 	request.RequestURI = ""
@@ -113,7 +113,7 @@ func prepareSszRequestForProxying(m *gateway.ApiProxyMiddleware, endpoint gatewa
 	return gateway.HandleUrlParameters(endpoint.Path, request, []string{})
 }
 
-func serializeMiddlewareResponseIntoSsz(data string) (sszResponse []byte, errJson gateway.ErrorJson) {
+func serializeMiddlewareResponseIntoSSZ(data string) (sszResponse []byte, errJson gateway.ErrorJson) {
 	// Serialize the SSZ part of the deserialized value.
 	b, err := base64.StdEncoding.DecodeString(data)
 	if err != nil {
@@ -123,7 +123,7 @@ func serializeMiddlewareResponseIntoSsz(data string) (sszResponse []byte, errJso
 	return b, nil
 }
 
-func writeSszResponseHeaderAndBody(grpcResponse *http.Response, writer http.ResponseWriter, responseSsz []byte, fileName string) gateway.ErrorJson {
+func writeSSZResponseHeaderAndBody(grpcResponse *http.Response, writer http.ResponseWriter, responseSsz []byte, fileName string) gateway.ErrorJson {
 	var statusCodeHeader string
 	for h, vs := range grpcResponse.Header {
 		// We don't want to expose any gRPC metadata in the HTTP response, so we skip forwarding metadata headers.

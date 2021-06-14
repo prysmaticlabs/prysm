@@ -43,8 +43,8 @@ service BeaconDebug {
     };
   }
 
-  // GetBeaconStateSsz returns the SSZ-serialized version of the full BeaconState object for given stateId.
-  rpc GetBeaconStateSsz(StateRequest) returns (BeaconStateSszResponse) {
+  // GetBeaconStateSSZ returns the SSZ-serialized version of the full BeaconState object for given stateId.
+  rpc GetBeaconStateSSZ(StateRequest) returns (BeaconStateSSZResponse) {
     option (google.api.http) = {
       get: "/eth/v1/debug/beacon/states/{state_id}/ssz"
     };
@@ -71,6 +71,6 @@ message BeaconStateResponse {
   BeaconState data = 1;
 }
 
-message BeaconStateSszResponse {
+message BeaconStateSSZResponse {
   bytes data = 1;
 }

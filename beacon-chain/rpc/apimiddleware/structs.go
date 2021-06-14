@@ -434,24 +434,24 @@ type syncInfoJson struct {
 
 // sszResponseJson is a common abstraction over all SSZ responses.
 type sszResponseJson interface {
-	SszData() string
+	SSZData() string
 }
 
-// blockSszResponseJson is used in /beacon/blocks/{block_id} API endpoint.
-type blockSszResponseJson struct {
+// blockSSZResponseJson is used in /beacon/blocks/{block_id} API endpoint.
+type blockSSZResponseJson struct {
 	Data string `json:"data"`
 }
 
-func (ssz *blockSszResponseJson) SszData() string {
+func (ssz *blockSSZResponseJson) SSZData() string {
 	return ssz.Data
 }
 
-// beaconStateResponseJson is used in /debug/beacon/states/{state_id} API endpoint.
-type beaconStateSszResponseJson struct {
+// beaconStateSSZResponseJson is used in /debug/beacon/states/{state_id} API endpoint.
+type beaconStateSSZResponseJson struct {
 	Data string `json:"data"`
 }
 
-func (ssz *beaconStateSszResponseJson) SszData() string {
+func (ssz *beaconStateSSZResponseJson) SSZData() string {
 	return ssz.Data
 }
 
