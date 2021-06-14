@@ -45,7 +45,7 @@ func ProcessRequestContainerFields(requestContainer interface{}) ErrorJson {
 }
 
 // SetRequestBodyToRequestContainer makes the endpoint-specific container the new body of the request.
-func SetRequestBodyToRequestContainer(requestContainer interface{}, request *http.Request) ErrorJson {
+func SetRequestBodyToRequestContainer(requestContainer interface{}, req *http.Request) ErrorJson {
 	// Serialize the struct, which now includes a base64-encoded value, into JSON.
 	j, err := json.Marshal(requestContainer)
 	if err != nil {
@@ -53,25 +53,25 @@ func SetRequestBodyToRequestContainer(requestContainer interface{}, request *htt
 		return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
 	}
 	// Set the body to the new JSON.
-	request.Body = ioutil.NopCloser(bytes.NewReader(j))
-	request.Header.Set("Content-Length", strconv.Itoa(len(j)))
-	request.ContentLength = int64(len(j))
+	req.Body = ioutil.NopCloser(bytes.NewReader(j))
+	req.Header.Set("Content-Length", strconv.Itoa(len(j)))
+	req.ContentLength = int64(len(j))
 	return nil
 }
 
 // PrepareRequestForProxying applies additional logic to the request so that it can be correctly proxied to grpc-gateway.
-func (m *ApiProxyMiddleware) PrepareRequestForProxying(endpoint Endpoint, request *http.Request) ErrorJson {
-	request.URL.Scheme = "http"
-	request.URL.Host = m.GatewayAddress
-	request.RequestURI = ""
-	if errJson := HandleURLParameters(endpoint.Path, request, endpoint.GetRequestURLLiterals); errJson != nil {
+func (m *ApiProxyMiddleware) PrepareRequestForProxying(endpoint Endpoint, req *http.Request) ErrorJson {
+	req.URL.Scheme = "http"
+	req.URL.Host = m.GatewayAddress
+	req.RequestURI = ""
+	if errJson := HandleURLParameters(endpoint.Path, req, endpoint.GetRequestURLLiterals); errJson != nil {
 		return errJson
 	}
-	return HandleQueryParameters(request, endpoint.GetRequestQueryParams)
+	return HandleQueryParameters(req, endpoint.GetRequestQueryParams)
 }
 
 // HandleURLParameters processes URL parameters, allowing parameterized URLs to be safely and correctly proxied to grpc-gateway.
-func HandleURLParameters(url string, request *http.Request, literals []string) ErrorJson {
+func HandleURLParameters(url string, req *http.Request, literals []string) ErrorJson {
 	segments := strings.Split(url, "/")
 
 segmentsLoop:
@@ -85,7 +85,7 @@ segmentsLoop:
 				}
 			}
 
-			routeVar := mux.Vars(request)[s[1:len(s)-1]]
+			routeVar := mux.Vars(req)[s[1:len(s)-1]]
 			bRouteVar := []byte(routeVar)
 			isHex, err := butil.IsHex(bRouteVar)
 			if err != nil {
@@ -104,17 +104,17 @@ segmentsLoop:
 			base64RouteVar := base64.URLEncoding.EncodeToString(bRouteVar)
 
 			// Merge segments back into the full URL.
-			splitPath := strings.Split(request.URL.Path, "/")
+			splitPath := strings.Split(req.URL.Path, "/")
 			splitPath[i] = base64RouteVar
-			request.URL.Path = strings.Join(splitPath, "/")
+			req.URL.Path = strings.Join(splitPath, "/")
 		}
 	}
 	return nil
 }
 
 // HandleQueryParameters processes query parameters, allowing them to be safely and correctly proxied to grpc-gateway.
-func HandleQueryParameters(request *http.Request, params []QueryParam) ErrorJson {
-	queryParams := request.URL.Query()
+func HandleQueryParameters(req *http.Request, params []QueryParam) ErrorJson {
+	queryParams := req.URL.Query()
 
 	for key, vals := range queryParams {
 		for _, p := range params {
@@ -148,13 +148,13 @@ func HandleQueryParameters(request *http.Request, params []QueryParam) ErrorJson
 			}
 		}
 	}
-	request.URL.RawQuery = queryParams.Encode()
+	req.URL.RawQuery = queryParams.Encode()
 	return nil
 }
 
 // ProxyRequest proxies the request to grpc-gateway.
-func ProxyRequest(request *http.Request) (*http.Response, ErrorJson) {
-	grpcResp, err := http.DefaultClient.Do(request)
+func ProxyRequest(req *http.Request) (*http.Response, ErrorJson) {
+	grpcResp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		e := errors.Wrapf(err, "could not proxy request")
 		return nil, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
@@ -166,8 +166,8 @@ func ProxyRequest(request *http.Request) (*http.Response, ErrorJson) {
 }
 
 // ReadGrpcResponseBody reads the body from the grpc-gateway's response.
-func ReadGrpcResponseBody(reader io.Reader) ([]byte, ErrorJson) {
-	body, err := ioutil.ReadAll(reader)
+func ReadGrpcResponseBody(r io.Reader) ([]byte, ErrorJson) {
+	body, err := ioutil.ReadAll(r)
 	if err != nil {
 		e := errors.Wrapf(err, "could not read response body")
 		return nil, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
@@ -186,21 +186,21 @@ func DeserializeGrpcResponseBodyIntoErrorJson(errJson ErrorJson, body []byte) Er
 }
 
 // HandleGrpcResponseError acts on an error that resulted from a grpc-gateway's response.
-func HandleGrpcResponseError(errJson ErrorJson, response *http.Response, writer http.ResponseWriter) {
+func HandleGrpcResponseError(errJson ErrorJson, resp *http.Response, w http.ResponseWriter) {
 	// Something went wrong, but the request completed, meaning we can write headers and the error message.
-	for h, vs := range response.Header {
+	for h, vs := range resp.Header {
 		for _, v := range vs {
-			writer.Header().Set(h, v)
+			w.Header().Set(h, v)
 		}
 	}
 	// Set code to HTTP code because unmarshalled body contained gRPC code.
-	errJson.SetCode(response.StatusCode)
-	WriteError(writer, errJson, response.Header)
+	errJson.SetCode(resp.StatusCode)
+	WriteError(w, errJson, resp.Header)
 }
 
 // GrpcResponseIsStatusCodeOnly checks whether a grpc-gateway's response contained no body.
-func GrpcResponseIsStatusCodeOnly(request *http.Request, responseContainer interface{}) bool {
-	return request.Method == "GET" && responseContainer == nil
+func GrpcResponseIsStatusCodeOnly(req *http.Request, responseContainer interface{}) bool {
+	return req.Method == "GET" && responseContainer == nil
 }
 
 // DeserializeGrpcResponseBodyIntoContainer deserializes the grpc-gateway's response body into an endpoint-specific struct.
@@ -245,9 +245,9 @@ func SerializeMiddlewareResponseIntoJson(responseContainer interface{}) (jsonRes
 }
 
 // WriteMiddlewareResponseHeadersAndBody populates headers and the body of the final response.
-func WriteMiddlewareResponseHeadersAndBody(request *http.Request, grpcResponse *http.Response, responseJson []byte, writer http.ResponseWriter) ErrorJson {
+func WriteMiddlewareResponseHeadersAndBody(req *http.Request, grpcResp *http.Response, responseJson []byte, w http.ResponseWriter) ErrorJson {
 	var statusCodeHeader string
-	for h, vs := range grpcResponse.Header {
+	for h, vs := range grpcResp.Header {
 		// We don't want to expose any gRPC metadata in the HTTP response, so we skip forwarding metadata headers.
 		if strings.HasPrefix(h, "Grpc-Metadata") {
 			if h == "Grpc-Metadata-"+grpcutils.HttpCodeMetadataKey {
@@ -255,34 +255,34 @@ func WriteMiddlewareResponseHeadersAndBody(request *http.Request, grpcResponse *
 			}
 		} else {
 			for _, v := range vs {
-				writer.Header().Set(h, v)
+				w.Header().Set(h, v)
 			}
 		}
 	}
-	if request.Method == "GET" {
-		writer.Header().Set("Content-Length", strconv.Itoa(len(responseJson)))
+	if req.Method == "GET" {
+		w.Header().Set("Content-Length", strconv.Itoa(len(responseJson)))
 		if statusCodeHeader != "" {
 			code, err := strconv.Atoi(statusCodeHeader)
 			if err != nil {
 				e := errors.Wrapf(err, "could not parse status code")
 				return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
 			}
-			writer.WriteHeader(code)
+			w.WriteHeader(code)
 		} else {
-			writer.WriteHeader(grpcResponse.StatusCode)
+			w.WriteHeader(grpcResp.StatusCode)
 		}
-		if _, err := io.Copy(writer, ioutil.NopCloser(bytes.NewReader(responseJson))); err != nil {
+		if _, err := io.Copy(w, ioutil.NopCloser(bytes.NewReader(responseJson))); err != nil {
 			e := errors.Wrapf(err, "could not write response message")
 			return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
 		}
-	} else if request.Method == "POST" {
-		writer.WriteHeader(grpcResponse.StatusCode)
+	} else if req.Method == "POST" {
+		w.WriteHeader(grpcResp.StatusCode)
 	}
 	return nil
 }
 
 // WriteError writes the error by manipulating headers and the body of the final response.
-func WriteError(writer http.ResponseWriter, errJson ErrorJson, responseHeader http.Header) {
+func WriteError(w http.ResponseWriter, errJson ErrorJson, responseHeader http.Header) {
 	// Include custom error in the error JSON.
 	if responseHeader != nil {
 		customError, ok := responseHeader["Grpc-Metadata-"+grpcutils.CustomErrorMetadataKey]
@@ -301,10 +301,10 @@ func WriteError(writer http.ResponseWriter, errJson ErrorJson, responseHeader ht
 		return
 	}
 
-	writer.Header().Set("Content-Length", strconv.Itoa(len(j)))
-	writer.Header().Set("Content-Type", "application/json")
-	writer.WriteHeader(errJson.StatusCode())
-	if _, err := io.Copy(writer, ioutil.NopCloser(bytes.NewReader(j))); err != nil {
+	w.Header().Set("Content-Length", strconv.Itoa(len(j)))
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(errJson.StatusCode())
+	if _, err := io.Copy(w, ioutil.NopCloser(bytes.NewReader(j))); err != nil {
 		log.WithError(err).Error("Could not write error message")
 	}
 }
