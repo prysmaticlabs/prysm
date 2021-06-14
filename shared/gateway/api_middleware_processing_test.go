@@ -126,7 +126,7 @@ func TestPrepareRequestForProxying(t *testing.T) {
 	// We will set some params to make the request more interesting.
 	endpoint := Endpoint{
 		Path:                  "/{url_param}",
-		GetRequestUrlLiterals: []string{"url_param"},
+		GetRequestURLLiterals: []string{"url_param"},
 		GetRequestQueryParams: []QueryParam{{Name: "query_param"}},
 	}
 	var body bytes.Buffer
@@ -139,13 +139,13 @@ func TestPrepareRequestForProxying(t *testing.T) {
 	assert.Equal(t, "", request.RequestURI)
 }
 
-func TestHandleUrlParameters(t *testing.T) {
+func TestHandleURLParameters(t *testing.T) {
 	var body bytes.Buffer
 
 	t.Run("no_params", func(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example/bar", &body)
 
-		errJson := HandleUrlParameters("/not_param", request, []string{})
+		errJson := HandleURLParameters("/not_param", request, []string{})
 		require.Equal(t, true, errJson == nil)
 		assert.Equal(t, "/bar", request.URL.Path)
 	})
@@ -157,7 +157,7 @@ func TestHandleUrlParameters(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example/bar/baz/quux", &body)
 		request = mux.SetURLVars(request, muxVars)
 
-		errJson := HandleUrlParameters("/{bar_param}/not_param/{quux_param}", request, []string{})
+		errJson := HandleURLParameters("/{bar_param}/not_param/{quux_param}", request, []string{})
 		require.Equal(t, true, errJson == nil)
 		assert.Equal(t, "/YmFy/baz/cXV1eA==", request.URL.Path)
 	})
@@ -168,7 +168,7 @@ func TestHandleUrlParameters(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example/bar/baz", &body)
 		request = mux.SetURLVars(request, muxVars)
 
-		errJson := HandleUrlParameters("/{bar_param}/not_param/", request, []string{"bar_param"})
+		errJson := HandleURLParameters("/{bar_param}/not_param/", request, []string{"bar_param"})
 		require.Equal(t, true, errJson == nil)
 		assert.Equal(t, "/bar/baz", request.URL.Path)
 	})
@@ -179,7 +179,7 @@ func TestHandleUrlParameters(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example/0x626172/baz", &body)
 		request = mux.SetURLVars(request, muxVars)
 
-		errJson := HandleUrlParameters("/{hex_param}/not_param/", request, []string{})
+		errJson := HandleURLParameters("/{hex_param}/not_param/", request, []string{})
 		require.Equal(t, true, errJson == nil)
 		assert.Equal(t, "/YmFy/baz", request.URL.Path)
 	})

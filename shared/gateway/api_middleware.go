@@ -29,7 +29,7 @@ type EndpointFactory interface {
 type Endpoint struct {
 	Path                  string         // The path of the HTTP endpoint.
 	PostRequest           interface{}    // The struct corresponding to the JSON structure used in a POST request.
-	GetRequestUrlLiterals []string       // Names of URL parameters that should not be base64-encoded.
+	GetRequestURLLiterals []string       // Names of URL parameters that should not be base64-encoded.
 	GetRequestQueryParams []QueryParam   // Query parameters of the GET request.
 	GetResponse           interface{}    // The struct corresponding to the JSON structure used in a GET response.
 	Err                   ErrorJson      // The struct corresponding to the error that should be returned in case of a request failure.

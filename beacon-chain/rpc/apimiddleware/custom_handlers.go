@@ -110,7 +110,7 @@ func prepareSSZRequestForProxying(m *gateway.ApiProxyMiddleware, endpoint gatewa
 	request.URL.Host = m.GatewayAddress
 	request.RequestURI = ""
 	request.URL.Path = sszPath
-	return gateway.HandleUrlParameters(endpoint.Path, request, []string{})
+	return gateway.HandleURLParameters(endpoint.Path, request, []string{})
 }
 
 func serializeMiddlewareResponseIntoSSZ(data string) (sszResponse []byte, errJson gateway.ErrorJson) {

@@ -162,7 +162,7 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 		}
 	case "/eth/v1/node/peers/{peer_id}":
 		endpoint = gateway.Endpoint{
-			GetRequestUrlLiterals: []string{"peer_id"},
+			GetRequestURLLiterals: []string{"peer_id"},
 			GetResponse:           &peerResponseJson{},
 			Err:                   &gateway.DefaultErrorJson{},
 		}

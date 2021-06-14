@@ -64,14 +64,14 @@ func (m *ApiProxyMiddleware) PrepareRequestForProxying(endpoint Endpoint, reques
 	request.URL.Scheme = "http"
 	request.URL.Host = m.GatewayAddress
 	request.RequestURI = ""
-	if errJson := HandleUrlParameters(endpoint.Path, request, endpoint.GetRequestUrlLiterals); errJson != nil {
+	if errJson := HandleURLParameters(endpoint.Path, request, endpoint.GetRequestURLLiterals); errJson != nil {
 		return errJson
 	}
 	return HandleQueryParameters(request, endpoint.GetRequestQueryParams)
 }
 
-// HandleUrlParameters processes URL parameters, allowing parameterized URLs to be safely and correctly proxied to grpc-gateway.
-func HandleUrlParameters(url string, request *http.Request, literals []string) ErrorJson {
+// HandleURLParameters processes URL parameters, allowing parameterized URLs to be safely and correctly proxied to grpc-gateway.
+func HandleURLParameters(url string, request *http.Request, literals []string) ErrorJson {
 	segments := strings.Split(url, "/")
 
 segmentsLoop:
