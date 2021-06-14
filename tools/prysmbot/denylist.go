@@ -46,7 +46,7 @@ func updateDenyList(fp string) {
 	}
 	s := string(content)
 	for _, row := range strings.Split(s, "\n") {
-		if len(row) == 0 {
+		if row == "" {
 			continue
 		}
 		re, err := regexp.Compile("(?i)" + row) // Prefix (?i) to make case insenstive.
@@ -99,12 +99,12 @@ func handleDenyListMessage(s *discordgo.Session, m *discordgo.MessageCreate, re 
 		m.Author.Username,
 		age)
 
-	if m, err := s.ChannelMessageSend(prysmInternal, message); err != nil {
+	if _, err := s.ChannelMessageSend(prysmInternal, message); err != nil {
 		log.WithError(err).Error("Failed to notify prysm internal channel of denied message.")
-	} else {
-		if err := s.MessageReactionAdd(m.ChannelID, m.ID, "🔨"); err != nil {
-			log.WithError(err).Error("Failed to react to message")
-		}
+		return
+	}
+	if err := s.MessageReactionAdd(m.ChannelID, m.ID, "🔨"); err != nil {
+		log.WithError(err).Error("Failed to react to message")
 	}
 }
 
@@ -126,7 +126,7 @@ func handleDenyListMessageReaction(s *discordgo.Session, m *discordgo.MessageRea
 		return
 	}
 
-	re := regexp.MustCompile("\\(ID:(\\d*)\\)")
+	re := regexp.MustCompile(`\(ID:(\\d*)\)`)
 	matches := re.FindStringSubmatch(om.Content)
 	if len(matches) < 2 {
 		log.Errorf("Could not extract user ID from message: %s", om.Content)

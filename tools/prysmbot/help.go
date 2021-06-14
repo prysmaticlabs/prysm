@@ -37,7 +37,7 @@ func specificHelpEmbed(requestedGroup *botCommandGroup) *discordgo.MessageEmbed 
 
 	var fields []*discordgo.MessageEmbedField
 	for _, botCommand := range requestedGroup.commands {
-		field := &discordgo.MessageEmbedField{}
+		var field *discordgo.MessageEmbedField
 		if botCommand.group == randomCommandGroup.name {
 			field = &discordgo.MessageEmbedField{
 				Name:   fmt.Sprintf("!%s", botCommand.command),
