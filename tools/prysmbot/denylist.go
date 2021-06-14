@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"regexp"
@@ -13,7 +14,7 @@ import (
 
 var denylist []*regexp.Regexp
 
-func monitorDenylistFile(fp string) {
+func monitorDenylistFile(ctx context.Context, fp string) {
 	log.WithField("filepath", fp).Info("Monitoring denylist for file changes")
 	updateDenyList(fp)
 
@@ -30,6 +31,8 @@ func monitorDenylistFile(fp string) {
 		select {
 		case <-w.Events:
 			updateDenyList(fp)
+		case <-ctx.Done():
+			return
 		}
 	}
 }
@@ -134,7 +137,9 @@ func handleDenyListMessageReaction(s *discordgo.Session, m *discordgo.MessageRea
 	log.WithField("userID", userID).Debug("Banning user")
 	if err := s.GuildBanCreateWithReason(m.GuildID, userID, "Posting forbidden content", 0 /*days*/); err != nil {
 		log.WithError(err).Error("Failed to ban user")
-	} else {
-		s.ChannelMessageSend(prysmInternal, fmt.Sprintf("Banned user %s", userID))
+		return
+	}
+	if _, err := s.ChannelMessageSend(prysmInternal, fmt.Sprintf("Banned user %s", userID)); err != nil {
+		log.WithError(err).Error("Failed to send message")
 	}
 }

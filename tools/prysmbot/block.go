@@ -48,5 +48,4 @@ func getBlockCommandResult(command string, parameters []string) string {
 	default:
 		return ""
 	}
-	return ""
 }

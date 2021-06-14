@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -49,6 +50,7 @@ func init() {
 }
 
 func main() {
+	ctx, cancel := context.WithCancel(context.Background())
 	// Create a new Discord session using the provided bot token.
 	dg, err := discordgo.New("Bot " + Token)
 	if err != nil {
@@ -58,12 +60,16 @@ func main() {
 
 	conn, err = grpc.Dial(APIUrl, grpc.WithInsecure())
 	if err != nil {
-		log.Error("Failed to dial: %v", err)
+		log.Errorf("Failed to dial: %v", err)
 		return
 	}
 	beaconClient = eth.NewBeaconChainClient(conn)
 	nodeClient = eth.NewNodeClient(conn)
-	defer conn.Close()
+	defer func() {
+		if err := conn.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
 
 	if err := initWallet(); err != nil {
 		log.Error(err)
@@ -75,7 +81,7 @@ func main() {
 	dg.AddHandler(messageReaction)
 
 	// Monitor denylist changes
-	go monitorDenylistFile(DenylistPath)
+	go monitorDenylistFile(ctx, DenylistPath)
 
 	// Open a websocket connection to Discord and begin listening.
 	err = dg.Open()
@@ -83,15 +89,17 @@ func main() {
 		fmt.Println("error opening connection,", err)
 		return
 	}
+	defer func() {
+		if err := dg.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
 
 	// Wait here until CTRL-C or other term signal is received.
 	fmt.Println("Bot is now running.  Press CTRL-C to exit.")
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
-
-	// Cleanly close down the Discord session.
-	dg.Close()
 }
 
 // This function will be called (due to AddHandler above) every time a new
