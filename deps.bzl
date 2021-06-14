@@ -3871,3 +3871,9 @@ def prysm_deps():
         sum = "h1:uFRZXykJGK9lLY4HtgSw44DnIcAM+kRBP7x5m+NpAOM=",
         version = "v1.16.0",
     )
+    go_repository(
+        name = "com_github_bwmarrin_discordgo",
+        importpath = "github.com/bwmarrin/discordgo",
+        sum = "h1:BzrtTktixGHIu9Tt7dEE6diysEF9HWnXeHuoJEt2fH4=",
+        version = "v0.23.2",
+    )
