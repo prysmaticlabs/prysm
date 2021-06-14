@@ -29,7 +29,7 @@ func handleGetBeaconStateSSZ(m *gateway.ApiProxyMiddleware, endpoint gateway.End
 	return handleGetSSZ(m, endpoint, writer, request, config)
 }
 
-func handleGetBlockSSZ(m *gateway.ApiProxyMiddleware, endpoint gateway.Endpoint, writer http.ResponseWriter, request *http.Request) (handled bool) {
+func handleGetBeaconBlockSSZ(m *gateway.ApiProxyMiddleware, endpoint gateway.Endpoint, writer http.ResponseWriter, request *http.Request) (handled bool) {
 	config := sszConfig{
 		sszPath:      "/eth/v1/beacon/blocks/{block_id}/ssz",
 		fileName:     "beacon_block.ssz",

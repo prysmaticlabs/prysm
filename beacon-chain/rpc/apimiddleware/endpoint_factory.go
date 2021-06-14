@@ -109,7 +109,7 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 			GetResponse: &blockResponseJson{},
 			Err:         &gateway.DefaultErrorJson{},
 			Hooks: gateway.HookCollection{
-				CustomHandlers: []gateway.CustomHandler{handleGetBlockSSZ},
+				CustomHandlers: []gateway.CustomHandler{handleGetBeaconBlockSSZ},
 			},
 		}
 	case "/eth/v1/beacon/blocks/{block_id}/root":
