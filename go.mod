@@ -10,7 +10,7 @@ require (
 	github.com/bazelbuild/buildtools v0.0.0-20200528175155-f4e8394f069d
 	github.com/bazelbuild/rules_go v0.23.2
 	github.com/btcsuite/btcd v0.21.0-beta // indirect
-	github.com/bwmarrin/discordgo v0.23.2 // indirect
+	github.com/bwmarrin/discordgo v0.23.2
 	github.com/cespare/cp v1.1.1 // indirect
 	github.com/confluentinc/confluent-kafka-go v1.4.2 // indirect
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
@@ -101,6 +101,7 @@ require (
 	github.com/trailofbits/go-mutexasserts v0.0.0-20200708152505-19999e7d3cef
 	github.com/tyler-smith/go-bip39 v1.1.0
 	github.com/urfave/cli/v2 v2.3.0
+	github.com/wealdtech/go-bytesutil v1.1.1
 	github.com/wealdtech/go-eth2-util v1.6.3
 	github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.1.3
 	github.com/wercker/journalhook v0.0.0-20180428041537-5d0a5ae867b3
