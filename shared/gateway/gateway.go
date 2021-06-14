@@ -136,6 +136,9 @@ func (g *Gateway) Start() {
 				},
 			},
 		}),
+		gwruntime.WithMarshalerOption(
+			"text/event-stream", &gwruntime.EventSourceJSONPb{},
+		),
 	)
 	if g.callerId == Beacon {
 		gwmuxV1 := gwruntime.NewServeMux(
@@ -156,6 +159,7 @@ func (g *Gateway) Start() {
 			ethpb.RegisterNodeHandler,
 			ethpb.RegisterBeaconChainHandler,
 			ethpb.RegisterBeaconNodeValidatorHandler,
+			ethpbv1.RegisterEventsHandler,
 			pbrpc.RegisterHealthHandler,
 		}
 		handlersV1 := []func(context.Context, *gwruntime.ServeMux, *grpc.ClientConn) error{
