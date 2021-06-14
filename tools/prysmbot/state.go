@@ -6,14 +6,15 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gogo/protobuf/types"
+	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func getStateCommandResult(command string, parameters []string) string {
 	switch command {
 	case genesisTime.command, genesisTime.shorthand:
-		genesis, err := nodeClient.GetGenesis(context.Background(), &types.Empty{})
+		genesis, err := nodeClient.GetGenesis(context.Background(), &emptypb.Empty{})
 		if err != nil {
 			log.WithError(err).Error(err, "failed to get chain head")
 			return ""
@@ -40,7 +41,7 @@ func getStateCommandResult(command string, parameters []string) string {
 			log.WithError(err).Error(err, "failed to convert")
 			return ""
 		}
-		var resultCommittee []uint64
+		var resultCommittee []types.ValidatorIndex
 		for slot, committeesForSlot := range committees.Committees {
 			if slot == uint64(reqSlot) {
 				resultCommittee = committeesForSlot.Committees[reqIndex].ValidatorIndices

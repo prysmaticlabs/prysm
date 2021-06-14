@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/wealdtech/go-bytesutil"
 )
@@ -21,7 +22,7 @@ func getBlockCommandResult(command string, parameters []string) string {
 	}
 	req := &eth.ListBlocksRequest{
 		QueryFilter: &eth.ListBlocksRequest_Slot{
-			Slot: uint64(reqSlot),
+			Slot: types.Slot(reqSlot),
 		},
 	}
 	blocks, err := beaconClient.ListBlocks(context.Background(), req)

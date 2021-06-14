@@ -79,7 +79,7 @@ func SendGoeth(parameters []string) (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "could not send")
 	}
-	return fmt.Sprintf("Sent %d ETH! https://goerli.etherscan.io/tx/%s", ethToSend,signedTx.Hash().String()), nil
+	return fmt.Sprintf("Sent %d ETH! https://goerli.etherscan.io/tx/%s", ethToSend, signedTx.Hash().String()), nil
 }
 
 func initWallet() error {

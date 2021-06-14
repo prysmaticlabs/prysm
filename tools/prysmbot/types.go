@@ -9,9 +9,9 @@ type botCommandGroup struct {
 }
 
 type botCommand struct {
-	group string
-	command string
-	shorthand string
-	helpText string
+	group        string
+	command      string
+	shorthand    string
+	helpText     string
 	responseText string
 }

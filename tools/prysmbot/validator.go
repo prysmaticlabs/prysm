@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -14,27 +15,29 @@ func getValidatorCommandResult(command string, parameters []string) string {
 		log.Error("Expected 1 parameter for validator command")
 		return ""
 	}
-	reqIndex, err := strconv.Atoi(parameters[0])
+	reqIndexInt, err := strconv.Atoi(parameters[0])
 	if err != nil {
 		log.WithError(err).Error(err, "failed to convert")
 		return ""
 	}
+	reqIndex := types.ValidatorIndex(reqIndexInt)
+
 	req := &eth.GetValidatorRequest{
 		QueryFilter: &eth.GetValidatorRequest_Index{
-			Index: uint64(reqIndex),
+			Index: reqIndex,
 		},
 	}
 	switch command {
 	case validatorBalance.command, validatorBalance.shorthand:
 		balReq := &eth.ListValidatorBalancesRequest{
-			Indices: []uint64{uint64(reqIndex)},
+			Indices: []types.ValidatorIndex{reqIndex},
 		}
 		balances, err := beaconClient.ListValidatorBalances(context.Background(), balReq)
 		if err != nil {
 			log.WithError(err).Error(err, "failed to get balances")
 			return ""
 		}
-		if len(balances.Balances) > 0 && balances.Balances[0].Index == uint64(reqIndex) {
+		if len(balances.Balances) > 0 && balances.Balances[0].Index == reqIndex {
 			inEther := float64(balances.Balances[0].Balance) / float64(params.BeaconConfig().GweiPerEth)
 			return fmt.Sprintf(validatorBalance.responseText, reqIndex, inEther)
 		}
