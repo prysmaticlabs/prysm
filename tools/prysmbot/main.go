@@ -157,7 +157,9 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		if splitCommand[0] == "send" && goerliOkayChannel(m.ChannelID) {
 			if err := validateUser(m); err != nil {
 				log.WithError(err).Error("Failed to validate user")
-				s.ChannelMessageSend(m.ChannelID, err.Error())
+				if _, err2 := s.ChannelMessageSend(m.ChannelID, err.Error()); err2 != nil {
+					log.WithError(err2).Error("Could not send message")
+				}
 				return
 			}
 			resp, err := SendGoeth(splitCommand[1:])
