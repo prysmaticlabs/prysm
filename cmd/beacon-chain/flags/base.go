@@ -71,6 +71,7 @@ var (
 		Value: 3500,
 	}
 	// ApiMiddlewarePort specifies the port for an HTTP proxy server which acts as a middleware between Eth2 API clients and Prysm's gRPC gateway.
+	// The middleware serves JSON values conforming to the specification: https://ethereum.github.io/eth2.0-APIs/
 	ApiMiddlewarePort = &cli.IntFlag{
 		Name:  "api-middleware-port",
 		Usage: "The port on which the API middleware runs on",

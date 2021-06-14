@@ -168,7 +168,6 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 		}
 	case "/eth/v1/node/peer_count":
 		endpoint = gateway.Endpoint{
-			Path:        "/eth/v1/node/peer_count",
 			GetResponse: &peerCountResponseJson{},
 			Err:         &gateway.DefaultErrorJson{},
 		}
