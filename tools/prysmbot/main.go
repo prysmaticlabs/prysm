@@ -51,6 +51,7 @@ func init() {
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	// Create a new Discord session using the provided bot token.
 	dg, err := discordgo.New("Bot " + Token)
 	if err != nil {
