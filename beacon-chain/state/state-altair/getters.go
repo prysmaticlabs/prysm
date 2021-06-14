@@ -9,6 +9,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -559,19 +560,19 @@ func (b *BeaconState) ValidatorAtIndex(idx types.ValidatorIndex) (*ethpb.Validat
 // doesn't clone the validator.
 func (b *BeaconState) ValidatorAtIndexReadOnly(idx types.ValidatorIndex) (iface.ReadOnlyValidator, error) {
 	if !b.hasInnerState() {
-		return ReadOnlyValidator{}, ErrNilInnerState
+		return stateV0.ReadOnlyValidator{}, ErrNilInnerState
 	}
 	if b.state.Validators == nil {
-		return ReadOnlyValidator{}, nil
+		return stateV0.ReadOnlyValidator{}, nil
 	}
 	if uint64(len(b.state.Validators)) <= uint64(idx) {
-		return ReadOnlyValidator{}, fmt.Errorf("index %d out of range", idx)
+		return stateV0.ReadOnlyValidator{}, fmt.Errorf("index %d out of range", idx)
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return ReadOnlyValidator{b.state.Validators[idx]}, nil
+	return stateV0.NewValidator(b.state.Validators[idx]), nil
 }
 
 // ValidatorIndexByPubkey returns a given validator by its 48-byte public key.
@@ -628,7 +629,7 @@ func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val iface.ReadOnlyV
 	b.lock.RUnlock()
 
 	for i, v := range validators {
-		err := f(i, ReadOnlyValidator{validator: v})
+		err := f(i, stateV0.NewValidator(v))
 		if err != nil {
 			return err
 		}

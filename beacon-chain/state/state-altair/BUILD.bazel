@@ -18,7 +18,6 @@ go_library(
         "setters.go",
         "state_trie.go",
         "types.go",
-        "validator_getters.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair",
     visibility = [

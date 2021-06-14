@@ -16,24 +16,24 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
+func TestStore_SaveAltairBlock_NoDuplicates(t *testing.T) {
 	BlockCacheSize = 1
 	db := setupDB(t)
 	slot := types.Slot(20)
 	ctx := context.Background()
 	// First we save a previous block to ensure the cache max size is reached.
-	prevBlock := testutil.NewBeaconBlock()
+	prevBlock := testutil.NewBeaconBlockAltair()
 	prevBlock.Block.Slot = slot - 1
 	prevBlock.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
-	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(prevBlock)))
+	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedAltairSignedBeaconBlock(prevBlock)))
 
-	block := testutil.NewBeaconBlock()
+	block := testutil.NewBeaconBlockAltair()
 	block.Block.Slot = slot
 	block.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
 	// Even with a full cache, saving new blocks should not cause
 	// duplicated blocks in the DB.
 	for i := 0; i < 100; i++ {
-		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(block)))
+		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedAltairSignedBeaconBlock(block)))
 	}
 	f := filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot)
 	retrieved, _, err := db.Blocks(ctx, f)
@@ -43,11 +43,11 @@ func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
 	BlockCacheSize = 256
 }
 
-func TestStore_BlocksCRUD(t *testing.T) {
+func TestStore_AltairBlocksCRUD(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	block := testutil.NewBeaconBlock()
+	block := testutil.NewBeaconBlockAltair()
 	block.Block.Slot = 20
 	block.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
 
@@ -56,7 +56,7 @@ func TestStore_BlocksCRUD(t *testing.T) {
 	retrievedBlock, err := db.Block(ctx, blockRoot)
 	require.NoError(t, err)
 	assert.DeepEqual(t, nil, retrievedBlock, "Expected nil block")
-	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(block)))
+	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedAltairSignedBeaconBlock(block)))
 	assert.Equal(t, true, db.HasBlock(ctx, blockRoot), "Expected block to exist in the db")
 	retrievedBlock, err = db.Block(ctx, blockRoot)
 	require.NoError(t, err)
@@ -65,7 +65,7 @@ func TestStore_BlocksCRUD(t *testing.T) {
 	assert.Equal(t, false, db.HasBlock(ctx, blockRoot), "Expected block to have been deleted from the db")
 }
 
-func TestStore_BlocksBatchDelete(t *testing.T) {
+func TestStore_AltairBlocksBatchDelete(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	numBlocks := 10
@@ -73,10 +73,10 @@ func TestStore_BlocksBatchDelete(t *testing.T) {
 	blockRoots := make([][32]byte, 0)
 	oddBlocks := make([]interfaces.SignedBeaconBlock, 0)
 	for i := 0; i < len(totalBlocks); i++ {
-		b := testutil.NewBeaconBlock()
+		b := testutil.NewBeaconBlockAltair()
 		b.Block.Slot = types.Slot(i)
 		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
-		totalBlocks[i] = interfaces.WrappedPhase0SignedBeaconBlock(b)
+		totalBlocks[i] = interfaces.WrappedAltairSignedBeaconBlock(b)
 		if i%2 == 0 {
 			r, err := totalBlocks[i].Block().HashTreeRoot()
 			require.NoError(t, err)
@@ -102,16 +102,16 @@ func TestStore_BlocksBatchDelete(t *testing.T) {
 	}
 }
 
-func TestStore_BlocksHandleZeroCase(t *testing.T) {
+func TestStore_AltairBlocksHandleZeroCase(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	numBlocks := 10
 	totalBlocks := make([]interfaces.SignedBeaconBlock, numBlocks)
 	for i := 0; i < len(totalBlocks); i++ {
-		b := testutil.NewBeaconBlock()
+		b := testutil.NewBeaconBlockAltair()
 		b.Block.Slot = types.Slot(i)
 		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
-		totalBlocks[i] = interfaces.WrappedPhase0SignedBeaconBlock(b)
+		totalBlocks[i] = interfaces.WrappedAltairSignedBeaconBlock(b)
 		_, err := totalBlocks[i].Block().HashTreeRoot()
 		require.NoError(t, err)
 	}
@@ -122,17 +122,17 @@ func TestStore_BlocksHandleZeroCase(t *testing.T) {
 	assert.Equal(t, 1, len(retrieved), "Unexpected number of blocks received, expected one")
 }
 
-func TestStore_BlocksHandleInvalidEndSlot(t *testing.T) {
+func TestStore_AltairBlocksHandleInvalidEndSlot(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	numBlocks := 10
 	totalBlocks := make([]interfaces.SignedBeaconBlock, numBlocks)
 	// Save blocks from slot 1 onwards.
 	for i := 0; i < len(totalBlocks); i++ {
-		b := testutil.NewBeaconBlock()
+		b := testutil.NewBeaconBlockAltair()
 		b.Block.Slot = types.Slot(i) + 1
 		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
-		totalBlocks[i] = interfaces.WrappedPhase0SignedBeaconBlock(b)
+		totalBlocks[i] = interfaces.WrappedAltairSignedBeaconBlock(b)
 		_, err := totalBlocks[i].Block().HashTreeRoot()
 		require.NoError(t, err)
 	}
@@ -147,24 +147,10 @@ func TestStore_BlocksHandleInvalidEndSlot(t *testing.T) {
 	assert.Equal(t, 1, len(requested), "Unexpected number of blocks received, only expected two")
 }
 
-func TestStore_GenesisBlock(t *testing.T) {
+func TestStore_AltairBlocksCRUD_NoCache(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
-	genesisBlock := testutil.NewBeaconBlock()
-	genesisBlock.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
-	blockRoot, err := genesisBlock.Block.HashTreeRoot()
-	require.NoError(t, err)
-	require.NoError(t, db.SaveGenesisBlockRoot(ctx, blockRoot))
-	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(genesisBlock)))
-	retrievedBlock, err := db.GenesisBlock(ctx)
-	require.NoError(t, err)
-	assert.Equal(t, true, proto.Equal(genesisBlock, retrievedBlock.Proto()), "Wanted: %v, received: %v", genesisBlock, retrievedBlock)
-}
-
-func TestStore_BlocksCRUD_NoCache(t *testing.T) {
-	db := setupDB(t)
-	ctx := context.Background()
-	block := testutil.NewBeaconBlock()
+	block := testutil.NewBeaconBlockAltair()
 	block.Block.Slot = 20
 	block.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
 	blockRoot, err := block.Block.HashTreeRoot()
@@ -172,7 +158,7 @@ func TestStore_BlocksCRUD_NoCache(t *testing.T) {
 	retrievedBlock, err := db.Block(ctx, blockRoot)
 	require.NoError(t, err)
 	require.DeepEqual(t, nil, retrievedBlock, "Expected nil block")
-	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(block)))
+	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedAltairSignedBeaconBlock(block)))
 	db.blockCache.Del(string(blockRoot[:]))
 	assert.Equal(t, true, db.HasBlock(ctx, blockRoot), "Expected block to exist in the db")
 	retrievedBlock, err = db.Block(ctx, blockRoot)
@@ -182,29 +168,29 @@ func TestStore_BlocksCRUD_NoCache(t *testing.T) {
 	assert.Equal(t, false, db.HasBlock(ctx, blockRoot), "Expected block to have been deleted from the db")
 }
 
-func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
+func TestStore_AltairBlocks_FiltersCorrectly(t *testing.T) {
 	db := setupDB(t)
-	b4 := testutil.NewBeaconBlock()
+	b4 := testutil.NewBeaconBlockAltair()
 	b4.Block.Slot = 4
 	b4.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
-	b5 := testutil.NewBeaconBlock()
+	b5 := testutil.NewBeaconBlockAltair()
 	b5.Block.Slot = 5
 	b5.Block.ParentRoot = bytesutil.PadTo([]byte("parent2"), 32)
-	b6 := testutil.NewBeaconBlock()
+	b6 := testutil.NewBeaconBlockAltair()
 	b6.Block.Slot = 6
 	b6.Block.ParentRoot = bytesutil.PadTo([]byte("parent2"), 32)
-	b7 := testutil.NewBeaconBlock()
+	b7 := testutil.NewBeaconBlockAltair()
 	b7.Block.Slot = 7
 	b7.Block.ParentRoot = bytesutil.PadTo([]byte("parent3"), 32)
-	b8 := testutil.NewBeaconBlock()
+	b8 := testutil.NewBeaconBlockAltair()
 	b8.Block.Slot = 8
 	b8.Block.ParentRoot = bytesutil.PadTo([]byte("parent4"), 32)
 	blocks := []interfaces.SignedBeaconBlock{
-		interfaces.WrappedPhase0SignedBeaconBlock(b4),
-		interfaces.WrappedPhase0SignedBeaconBlock(b5),
-		interfaces.WrappedPhase0SignedBeaconBlock(b6),
-		interfaces.WrappedPhase0SignedBeaconBlock(b7),
-		interfaces.WrappedPhase0SignedBeaconBlock(b8),
+		interfaces.WrappedAltairSignedBeaconBlock(b4),
+		interfaces.WrappedAltairSignedBeaconBlock(b5),
+		interfaces.WrappedAltairSignedBeaconBlock(b6),
+		interfaces.WrappedAltairSignedBeaconBlock(b7),
+		interfaces.WrappedAltairSignedBeaconBlock(b8),
 	}
 	ctx := context.Background()
 	require.NoError(t, db.SaveBlocks(ctx, blocks))
@@ -271,20 +257,20 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 	}
 }
 
-func TestStore_Blocks_VerifyBlockRoots(t *testing.T) {
+func TestStore_AltairBlocks_VerifyBlockRoots(t *testing.T) {
 	ctx := context.Background()
 	db := setupDB(t)
-	b1 := testutil.NewBeaconBlock()
+	b1 := testutil.NewBeaconBlockAltair()
 	b1.Block.Slot = 1
 	r1, err := b1.Block.HashTreeRoot()
 	require.NoError(t, err)
-	b2 := testutil.NewBeaconBlock()
+	b2 := testutil.NewBeaconBlockAltair()
 	b2.Block.Slot = 2
 	r2, err := b2.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(b1)))
-	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(b2)))
+	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedAltairSignedBeaconBlock(b1)))
+	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedAltairSignedBeaconBlock(b2)))
 
 	filter := filters.NewFilter().SetStartSlot(b1.Block.Slot).SetEndSlot(b2.Block.Slot)
 	roots, err := db.BlockRoots(ctx, filter)
@@ -293,14 +279,14 @@ func TestStore_Blocks_VerifyBlockRoots(t *testing.T) {
 	assert.DeepEqual(t, [][32]byte{r1, r2}, roots)
 }
 
-func TestStore_Blocks_Retrieve_SlotRange(t *testing.T) {
+func TestStore_AltairBlocks_Retrieve_SlotRange(t *testing.T) {
 	db := setupDB(t)
 	totalBlocks := make([]interfaces.SignedBeaconBlock, 500)
 	for i := 0; i < 500; i++ {
-		b := testutil.NewBeaconBlock()
+		b := testutil.NewBeaconBlockAltair()
 		b.Block.Slot = types.Slot(i)
 		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
-		totalBlocks[i] = interfaces.WrappedPhase0SignedBeaconBlock(b)
+		totalBlocks[i] = interfaces.WrappedAltairSignedBeaconBlock(b)
 	}
 	ctx := context.Background()
 	require.NoError(t, db.SaveBlocks(ctx, totalBlocks))
@@ -309,15 +295,15 @@ func TestStore_Blocks_Retrieve_SlotRange(t *testing.T) {
 	assert.Equal(t, 300, len(retrieved))
 }
 
-func TestStore_Blocks_Retrieve_Epoch(t *testing.T) {
+func TestStore_AltairBlocks_Retrieve_Epoch(t *testing.T) {
 	db := setupDB(t)
 	slots := params.BeaconConfig().SlotsPerEpoch.Mul(7)
 	totalBlocks := make([]interfaces.SignedBeaconBlock, slots)
 	for i := types.Slot(0); i < slots; i++ {
-		b := testutil.NewBeaconBlock()
+		b := testutil.NewBeaconBlockAltair()
 		b.Block.Slot = i
 		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
-		totalBlocks[i] = interfaces.WrappedPhase0SignedBeaconBlock(b)
+		totalBlocks[i] = interfaces.WrappedAltairSignedBeaconBlock(b)
 	}
 	ctx := context.Background()
 	require.NoError(t, db.SaveBlocks(ctx, totalBlocks))
@@ -331,14 +317,14 @@ func TestStore_Blocks_Retrieve_Epoch(t *testing.T) {
 	assert.Equal(t, uint64(want), uint64(len(retrieved)))
 }
 
-func TestStore_Blocks_Retrieve_SlotRangeWithStep(t *testing.T) {
+func TestStore_AltairBlocks_Retrieve_SlotRangeWithStep(t *testing.T) {
 	db := setupDB(t)
 	totalBlocks := make([]interfaces.SignedBeaconBlock, 500)
 	for i := 0; i < 500; i++ {
-		b := testutil.NewBeaconBlock()
+		b := testutil.NewBeaconBlockAltair()
 		b.Block.Slot = types.Slot(i)
 		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
-		totalBlocks[i] = interfaces.WrappedPhase0SignedBeaconBlock(b)
+		totalBlocks[i] = interfaces.WrappedAltairSignedBeaconBlock(b)
 	}
 	const step = 2
 	ctx := context.Background()
@@ -351,19 +337,19 @@ func TestStore_Blocks_Retrieve_SlotRangeWithStep(t *testing.T) {
 	}
 }
 
-func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
+func TestStore_SaveAltairBlock_CanGetHighestAt(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	block1 := testutil.NewBeaconBlock()
+	block1 := testutil.NewBeaconBlockAltair()
 	block1.Block.Slot = 1
-	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(block1)))
-	block2 := testutil.NewBeaconBlock()
+	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedAltairSignedBeaconBlock(block1)))
+	block2 := testutil.NewBeaconBlockAltair()
 	block2.Block.Slot = 10
-	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(block2)))
-	block3 := testutil.NewBeaconBlock()
+	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedAltairSignedBeaconBlock(block2)))
+	block3 := testutil.NewBeaconBlockAltair()
 	block3.Block.Slot = 100
-	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(block3)))
+	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedAltairSignedBeaconBlock(block3)))
 
 	highestAt, err := db.HighestSlotBlocksBelow(ctx, 2)
 	require.NoError(t, err)
@@ -387,18 +373,18 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 	assert.Equal(t, true, proto.Equal(block2, highestAt[0].Proto()), "Wanted: %v, received: %v", block2, highestAt[0])
 }
 
-func TestStore_GenesisBlock_CanGetHighestAt(t *testing.T) {
+func TestStore_GenesisAltairBlock_CanGetHighestAt(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	genesisBlock := testutil.NewBeaconBlock()
+	genesisBlock := testutil.NewBeaconBlockAltair()
 	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesisRoot))
-	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(genesisBlock)))
-	block1 := testutil.NewBeaconBlock()
+	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedAltairSignedBeaconBlock(genesisBlock)))
+	block1 := testutil.NewBeaconBlockAltair()
 	block1.Block.Slot = 1
-	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(block1)))
+	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedAltairSignedBeaconBlock(block1)))
 
 	highestAt, err := db.HighestSlotBlocksBelow(ctx, 2)
 	require.NoError(t, err)
@@ -411,16 +397,16 @@ func TestStore_GenesisBlock_CanGetHighestAt(t *testing.T) {
 	assert.Equal(t, true, proto.Equal(genesisBlock, highestAt[0].Proto()), "Wanted: %v, received: %v", genesisBlock, highestAt[0])
 }
 
-func TestStore_SaveBlocks_HasCachedBlocks(t *testing.T) {
+func TestStore_SaveAltairBlocks_HasCachedBlocks(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
 	b := make([]interfaces.SignedBeaconBlock, 500)
 	for i := 0; i < 500; i++ {
-		blk := testutil.NewBeaconBlock()
+		blk := testutil.NewBeaconBlockAltair()
 		blk.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
 		blk.Block.Slot = types.Slot(i)
-		b[i] = interfaces.WrappedPhase0SignedBeaconBlock(blk)
+		b[i] = interfaces.WrappedAltairSignedBeaconBlock(blk)
 	}
 
 	require.NoError(t, db.SaveBlock(ctx, b[0]))
@@ -432,16 +418,16 @@ func TestStore_SaveBlocks_HasCachedBlocks(t *testing.T) {
 	assert.Equal(t, 500, len(blks), "Did not get wanted blocks")
 }
 
-func TestStore_SaveBlocks_HasRootsMatched(t *testing.T) {
+func TestStore_SaveAltairBlocks_HasRootsMatched(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
 	b := make([]interfaces.SignedBeaconBlock, 500)
 	for i := 0; i < 500; i++ {
-		blk := testutil.NewBeaconBlock()
+		blk := testutil.NewBeaconBlockAltair()
 		blk.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
 		blk.Block.Slot = types.Slot(i)
-		b[i] = interfaces.WrappedPhase0SignedBeaconBlock(blk)
+		b[i] = interfaces.WrappedAltairSignedBeaconBlock(blk)
 	}
 
 	require.NoError(t, db.SaveBlocks(ctx, b))
@@ -458,21 +444,21 @@ func TestStore_SaveBlocks_HasRootsMatched(t *testing.T) {
 	}
 }
 
-func TestStore_BlocksBySlot_BlockRootsBySlot(t *testing.T) {
+func TestStore_AltairBlocksBySlot_BlockRootsBySlot(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	b1 := testutil.NewBeaconBlock()
+	b1 := testutil.NewBeaconBlockAltair()
 	b1.Block.Slot = 20
-	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(b1)))
-	b2 := testutil.NewBeaconBlock()
+	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedAltairSignedBeaconBlock(b1)))
+	b2 := testutil.NewBeaconBlockAltair()
 	b2.Block.Slot = 100
 	b2.Block.ParentRoot = bytesutil.PadTo([]byte("parent1"), 32)
-	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(b2)))
-	b3 := testutil.NewBeaconBlock()
+	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedAltairSignedBeaconBlock(b2)))
+	b3 := testutil.NewBeaconBlockAltair()
 	b3.Block.Slot = 100
 	b3.Block.ParentRoot = bytesutil.PadTo([]byte("parent2"), 32)
-	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(b3)))
+	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedAltairSignedBeaconBlock(b3)))
 
 	r1, err := b1.Block.HashTreeRoot()
 	require.NoError(t, err)

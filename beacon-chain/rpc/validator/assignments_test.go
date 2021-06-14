@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mock"
@@ -340,20 +341,12 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 	go func(tt *testing.T) {
 		assert.ErrorContains(t, "context canceled", vs.StreamDuties(req, mockStream))
 	}(t)
-	// Fire a reorg event within the same epoch. This should NOT
-	// trigger a recomputation not resending of duties over the stream.
-	for sent := 0; sent == 0; {
-		sent = vs.StateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.Reorg,
-			Data: &statefeed.ReorgData{OldSlot: 0, NewSlot: 0},
-		})
-	}
-	// Fire a reorg event across epoch boundaries. This needs to trigger
+	// Fire a reorg event. This needs to trigger
 	// a recomputation and resending of duties over the stream.
 	for sent := 0; sent == 0; {
 		sent = vs.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Reorg,
-			Data: &statefeed.ReorgData{OldSlot: params.BeaconConfig().SlotsPerEpoch, NewSlot: 0},
+			Data: &ethpbv1.EventChainReorg{Depth: uint64(params.BeaconConfig().SlotsPerEpoch), Slot: 0},
 		})
 	}
 	<-exitRoutine

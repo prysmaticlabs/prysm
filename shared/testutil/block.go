@@ -80,6 +80,10 @@ func NewBeaconBlockAltair() *ethpb.SignedBeaconBlockAltair {
 				Deposits:          []*ethpb.Deposit{},
 				ProposerSlashings: []*ethpb.ProposerSlashing{},
 				VoluntaryExits:    []*ethpb.SignedVoluntaryExit{},
+				SyncAggregate: &ethpb.SyncAggregate{
+					SyncCommitteeBits:      make([]byte, 64),
+					SyncCommitteeSignature: make([]byte, 96),
+				},
 			},
 		},
 		Signature: make([]byte, 96),

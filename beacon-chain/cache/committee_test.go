@@ -100,11 +100,11 @@ func TestCommitteeCache_CanRotate(t *testing.T) {
 		require.NoError(t, cache.AddCommitteeShuffledList(item))
 	}
 
-	k := cache.CommitteeCache.ListKeys()
+	k := cache.CommitteeCache.Keys()
 	assert.Equal(t, maxCommitteesCacheSize, uint64(len(k)))
 
 	sort.Slice(k, func(i, j int) bool {
-		return k[i] < k[j]
+		return k[i].(string) < k[j].(string)
 	})
 	wanted := end - int(maxCommitteesCacheSize)
 	s := bytesutil.ToBytes32([]byte(strconv.Itoa(wanted)))
@@ -117,13 +117,15 @@ func TestCommitteeCache_CanRotate(t *testing.T) {
 func TestCommitteeCacheOutOfRange(t *testing.T) {
 	cache := NewCommitteesCache()
 	seed := bytesutil.ToBytes32([]byte("foo"))
-	err := cache.CommitteeCache.Add(&Committees{
+	comms := &Committees{
 		CommitteeCount:  1,
 		Seed:            seed,
 		ShuffledIndices: []types.ValidatorIndex{0},
 		SortedIndices:   []types.ValidatorIndex{},
-	})
-	require.NoError(t, err)
+	}
+	key, err := committeeKeyFn(comms)
+	assert.NoError(t, err)
+	_ = cache.CommitteeCache.Add(key, comms)
 
 	_, err = cache.Committee(0, seed, math.MaxUint64) // Overflow!
 	require.NotNil(t, err, "Did not fail as expected")
