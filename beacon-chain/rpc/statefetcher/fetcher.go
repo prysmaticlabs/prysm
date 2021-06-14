@@ -25,7 +25,7 @@ type StateIdParseError struct {
 // NewStateIdParseError creates a new error instance.
 func NewStateIdParseError(reason error) StateIdParseError {
 	return StateIdParseError{
-		message: fmt.Sprintf("could not parse state ID: %v", reason),
+		message: errors.Wrapf(reason, "could not parse state ID").Error(),
 	}
 }
 

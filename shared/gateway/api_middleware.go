@@ -1,11 +1,11 @@
 package gateway
 
 import (
-	"fmt"
 	"net/http"
 	"reflect"
 
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 )
 
 // ApiProxyMiddleware is a proxy between an Eth2 API HTTP client and grpc-gateway.
@@ -79,7 +79,7 @@ func (m *ApiProxyMiddleware) handleApiPath(path string, endpointFactory Endpoint
 		endpoint, err := endpointFactory.Create(path)
 		if err != nil {
 			WriteError(writer, &DefaultErrorJson{
-				Message: fmt.Errorf("could not create endpoint: %w", err).Error(),
+				Message: errors.Wrapf(err, "could not create endpoint").Error(),
 				Code:    http.StatusInternalServerError,
 			}, nil)
 		}

@@ -15,6 +15,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 	butil "github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/wealdtech/go-bytesutil"
@@ -23,7 +24,7 @@ import (
 // DeserializeRequestBodyIntoContainer deserializes the request's body into an endpoint-specific struct.
 func DeserializeRequestBodyIntoContainer(body io.Reader, requestContainer interface{}) ErrorJson {
 	if err := json.NewDecoder(body).Decode(&requestContainer); err != nil {
-		e := fmt.Errorf("could not decode request body: %w", err)
+		e := errors.Wrap(err, "could not decode request body")
 		return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
 	}
 	return nil
@@ -37,7 +38,7 @@ func ProcessRequestContainerFields(requestContainer interface{}) ErrorJson {
 			f:   hexToBase64Processor,
 		},
 	}); err != nil {
-		e := fmt.Errorf("could not process request data: %w", err)
+		e := errors.Wrapf(err, "could not process request data")
 		return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
 	}
 	return nil
@@ -48,7 +49,7 @@ func SetRequestBodyToRequestContainer(requestContainer interface{}, request *htt
 	// Serialize the struct, which now includes a base64-encoded value, into JSON.
 	j, err := json.Marshal(requestContainer)
 	if err != nil {
-		e := fmt.Errorf("could not marshal request: %w", err)
+		e := errors.Wrapf(err, "could not marshal request")
 		return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
 	}
 	// Set the body to the new JSON.
@@ -88,13 +89,13 @@ segmentsLoop:
 			bRouteVar := []byte(routeVar)
 			isHex, err := butil.IsHex(bRouteVar)
 			if err != nil {
-				e := fmt.Errorf("could not process URL parameter: %w", err)
+				e := errors.Wrapf(err, "could not process URL parameter")
 				return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
 			}
 			if isHex {
 				bRouteVar, err = bytesutil.FromHexString(string(bRouteVar))
 				if err != nil {
-					e := fmt.Errorf("could not process URL parameter: %w", err)
+					e := errors.Wrapf(err, "could not process URL parameter")
 					return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
 				}
 			}
@@ -124,13 +125,13 @@ func HandleQueryParameters(request *http.Request, params []QueryParam) ErrorJson
 						b := []byte(v)
 						isHex, err := butil.IsHex(b)
 						if err != nil {
-							e := fmt.Errorf("could not process query parameter: %w", err)
+							e := errors.Wrapf(err, "could not process query parameter")
 							return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
 						}
 						if isHex {
 							b, err = bytesutil.FromHexString(v)
 							if err != nil {
-								e := fmt.Errorf("could not process query parameter: %w", err)
+								e := errors.Wrapf(err, "could not process query parameter")
 								return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
 							}
 						}
@@ -155,7 +156,7 @@ func HandleQueryParameters(request *http.Request, params []QueryParam) ErrorJson
 func ProxyRequest(request *http.Request) (*http.Response, ErrorJson) {
 	grpcResp, err := http.DefaultClient.Do(request)
 	if err != nil {
-		e := fmt.Errorf("could not proxy request: %w", err)
+		e := errors.Wrapf(err, "could not proxy request")
 		return nil, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
 	}
 	if grpcResp == nil {
@@ -168,7 +169,7 @@ func ProxyRequest(request *http.Request) (*http.Response, ErrorJson) {
 func ReadGrpcResponseBody(reader io.Reader) ([]byte, ErrorJson) {
 	body, err := ioutil.ReadAll(reader)
 	if err != nil {
-		e := fmt.Errorf("could not read response body: %w", err)
+		e := errors.Wrapf(err, "could not read response body")
 		return nil, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
 	}
 	return body, nil
@@ -178,7 +179,7 @@ func ReadGrpcResponseBody(reader io.Reader) ([]byte, ErrorJson) {
 // The struct can be later examined to check if the request resulted in an error.
 func DeserializeGrpcResponseBodyIntoErrorJson(errJson ErrorJson, body []byte) ErrorJson {
 	if err := json.Unmarshal(body, errJson); err != nil {
-		e := fmt.Errorf("could not unmarshal error: %w", err)
+		e := errors.Wrapf(err, "could not unmarshal error")
 		return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
 	}
 	return nil
@@ -205,7 +206,7 @@ func GrpcResponseIsStatusCodeOnly(request *http.Request, responseContainer inter
 // DeserializeGrpcResponseBodyIntoContainer deserializes the grpc-gateway's response body into an endpoint-specific struct.
 func DeserializeGrpcResponseBodyIntoContainer(body []byte, responseContainer interface{}) ErrorJson {
 	if err := json.Unmarshal(body, &responseContainer); err != nil {
-		e := fmt.Errorf("could not unmarshal response: %w", err)
+		e := errors.Wrapf(err, "could not unmarshal response")
 		return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
 	}
 	return nil
@@ -227,7 +228,7 @@ func ProcessMiddlewareResponseFields(responseContainer interface{}) ErrorJson {
 			f:   timeToUnixProcessor,
 		},
 	}); err != nil {
-		e := fmt.Errorf("could not process response data: %w", err)
+		e := errors.Wrapf(err, "could not process response data")
 		return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
 	}
 	return nil
@@ -237,7 +238,7 @@ func ProcessMiddlewareResponseFields(responseContainer interface{}) ErrorJson {
 func SerializeMiddlewareResponseIntoJson(responseContainer interface{}) (jsonResponse []byte, errJson ErrorJson) {
 	j, err := json.Marshal(responseContainer)
 	if err != nil {
-		e := fmt.Errorf("could not marshal response: %w", err)
+		e := errors.Wrapf(err, "could not marshal response")
 		return nil, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
 	}
 	return j, nil
@@ -263,7 +264,7 @@ func WriteMiddlewareResponseHeadersAndBody(request *http.Request, grpcResponse *
 		if statusCodeHeader != "" {
 			code, err := strconv.Atoi(statusCodeHeader)
 			if err != nil {
-				e := fmt.Errorf("could not parse status code: %w", err)
+				e := errors.Wrapf(err, "could not parse status code")
 				return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
 			}
 			writer.WriteHeader(code)
@@ -271,7 +272,7 @@ func WriteMiddlewareResponseHeadersAndBody(request *http.Request, grpcResponse *
 			writer.WriteHeader(grpcResponse.StatusCode)
 		}
 		if _, err := io.Copy(writer, ioutil.NopCloser(bytes.NewReader(responseJson))); err != nil {
-			e := fmt.Errorf("could not write response message: %w", err)
+			e := errors.Wrapf(err, "could not write response message")
 			return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
 		}
 	} else if request.Method == "POST" {
@@ -311,7 +312,7 @@ func WriteError(writer http.ResponseWriter, errJson ErrorJson, responseHeader ht
 // Cleanup performs final cleanup on the initial response from grpc-gateway.
 func Cleanup(grpcResponseBody io.ReadCloser) ErrorJson {
 	if err := grpcResponseBody.Close(); err != nil {
-		e := fmt.Errorf("could not close response body: %w", err)
+		e := errors.Wrapf(err, "could not close response body")
 		return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
 	}
 	return nil
@@ -343,7 +344,7 @@ func processField(s interface{}, processors []fieldProcessor) error {
 			if kind == reflect.Ptr && sliceElem.Elem().Kind() == reflect.Struct {
 				for j := 0; j < v.Field(i).Len(); j++ {
 					if err := processField(v.Field(i).Index(j).Interface(), processors); err != nil {
-						return fmt.Errorf("could not process field '%s': %w", t.Field(i).Name, err)
+						return errors.Wrapf(err, "could not process field '%s'", t.Field(i).Name)
 					}
 				}
 			}
@@ -354,7 +355,7 @@ func processField(s interface{}, processors []fieldProcessor) error {
 					if hasTag {
 						for j := 0; j < v.Field(i).Len(); j++ {
 							if err := proc.f(v.Field(i).Index(j)); err != nil {
-								return fmt.Errorf("could not process field '%s': %w", t.Field(i).Name, err)
+								return errors.Wrapf(err, "could not process field '%s'", t.Field(i).Name)
 							}
 						}
 					}
@@ -365,7 +366,7 @@ func processField(s interface{}, processors []fieldProcessor) error {
 		case reflect.Ptr:
 			if v.Field(i).Elem().Kind() == reflect.Struct {
 				if err := processField(v.Field(i).Interface(), processors); err != nil {
-					return fmt.Errorf("could not process field '%s': %w", t.Field(i).Name, err)
+					return errors.Wrapf(err, "could not process field '%s'", t.Field(i).Name)
 				}
 			}
 		default:
@@ -373,7 +374,7 @@ func processField(s interface{}, processors []fieldProcessor) error {
 			for _, proc := range processors {
 				if _, hasTag := field.Tag.Lookup(proc.tag); hasTag {
 					if err := proc.f(v.Field(i)); err != nil {
-						return fmt.Errorf("could not process field '%s': %w", t.Field(i).Name, err)
+						return errors.Wrapf(err, "could not process field '%s'", t.Field(i).Name)
 					}
 				}
 			}

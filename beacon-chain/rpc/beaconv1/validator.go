@@ -27,7 +27,7 @@ type invalidValidatorIdError struct {
 // newInvalidValidatorIdError creates a new error instance.
 func newInvalidValidatorIdError(validatorId []byte, reason error) invalidValidatorIdError {
 	return invalidValidatorIdError{
-		message: fmt.Errorf("could not decode validator id '%s': %w", string(validatorId), reason).Error(),
+		message: errors.Wrapf(reason, "could not decode validator id '%s'", string(validatorId)).Error(),
 	}
 }
 

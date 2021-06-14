@@ -3,13 +3,13 @@ package apimiddleware
 import (
 	"bytes"
 	"encoding/base64"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/gateway"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 )
@@ -117,7 +117,7 @@ func serializeMiddlewareResponseIntoSsz(data string) (sszResponse []byte, errJso
 	// Serialize the SSZ part of the deserialized value.
 	b, err := base64.StdEncoding.DecodeString(data)
 	if err != nil {
-		e := fmt.Errorf("could not decode response body into base64: %w", err)
+		e := errors.Wrapf(err, "could not decode response body into base64")
 		return nil, &gateway.DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
 	}
 	return b, nil
@@ -140,7 +140,7 @@ func writeSszResponseHeaderAndBody(grpcResponse *http.Response, writer http.Resp
 	if statusCodeHeader != "" {
 		code, err := strconv.Atoi(statusCodeHeader)
 		if err != nil {
-			e := fmt.Errorf("could not parse status code: %w", err)
+			e := errors.Wrapf(err, "could not parse status code")
 			return &gateway.DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
 		}
 		writer.WriteHeader(code)
@@ -152,7 +152,7 @@ func writeSszResponseHeaderAndBody(grpcResponse *http.Response, writer http.Resp
 	writer.Header().Set("Content-Disposition", "attachment; filename="+fileName)
 	writer.WriteHeader(grpcResponse.StatusCode)
 	if _, err := io.Copy(writer, ioutil.NopCloser(bytes.NewReader(responseSsz))); err != nil {
-		e := fmt.Errorf("could not write response message: %w", err)
+		e := errors.Wrapf(err, "could not write response message")
 		return &gateway.DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
 	}
 	return nil

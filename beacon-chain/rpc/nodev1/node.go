@@ -357,7 +357,7 @@ func peerInfo(peerStatus *peers.Status, id peer.ID) (*ethpb.Peer, error) {
 	v1ConnState := migration.V1Alpha1ConnectionStateToV1(ethpb_alpha.ConnectionState(connectionState))
 	v1PeerDirection, err := migration.V1Alpha1PeerDirectionToV1(ethpb_alpha.PeerDirection(direction))
 	if err != nil {
-		return nil, fmt.Errorf("could not handle peer direction: %w", err)
+		return nil, errors.Wrapf(err, "could not handle peer direction")
 	}
 	p := ethpb.Peer{
 		PeerId:    id.Pretty(),

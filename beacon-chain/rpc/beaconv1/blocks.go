@@ -28,7 +28,7 @@ type blockIdParseError struct {
 // newBlockIdParseError creates a new error instance.
 func newBlockIdParseError(reason error) blockIdParseError {
 	return blockIdParseError{
-		message: fmt.Sprintf("could not parse block ID: %v", reason),
+		message: errors.Wrapf(reason, "could not parse block ID").Error(),
 	}
 }
 
