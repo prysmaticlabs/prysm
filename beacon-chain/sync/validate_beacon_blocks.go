@@ -291,14 +291,9 @@ func isBlockQueueable(genesisTime uint64, slot types.Slot, receivedTime time.Tim
 		return false
 	}
 
-	// convert all times to milliseconds
-	currentTime := receivedTime.UnixNano() / int64(time.Millisecond)
-	jitter := int64(params.BeaconNetworkConfig().MaximumGossipClockDisparity / time.Millisecond)
-	slotTimeInMsec := slotTime.UnixNano() / int64(time.Millisecond)
-
-	// check if current_time + MAXIMUM_GOSSIP_CLOCK_DISPARITY >= slot_time
-	if currentTime+jitter >= slotTimeInMsec {
-		return true
+	currentTimeWithDisparity := receivedTime.Add(params.BeaconNetworkConfig().MaximumGossipClockDisparity)
+	if currentTimeWithDisparity.Unix() >= slotTime.Unix() {
+		return false
 	}
-	return false
+	return true
 }

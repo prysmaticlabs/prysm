@@ -963,3 +963,19 @@ func TestService_setBadBlock_DoesntSetWithContextErr(t *testing.T) {
 		t.Error("Set bad root with cancelled context")
 	}
 }
+
+func TestService_isBlockQueueable(t *testing.T) {
+	currentTime := time.Now().Round(time.Second)
+	genesisTime := uint64(currentTime.Unix() - int64(params.BeaconConfig().SecondsPerSlot))
+	blockSlot := types.Slot(1)
+
+	// slot time just above MAXIMUM_GOSSIP_CLOCK_DISPARITY
+	receivedTime := currentTime.Add(-400 * time.Millisecond)
+	result := isBlockQueueable(genesisTime, blockSlot, receivedTime)
+	assert.Equal(t, true, result)
+
+	// slot time within MAXIMUM_GOSSIP_CLOCK_DISPARITY
+	receivedTime = currentTime.Add(-600 * time.Millisecond)
+	result = isBlockQueueable(genesisTime, blockSlot, receivedTime)
+	assert.Equal(t, false, result)
+}
