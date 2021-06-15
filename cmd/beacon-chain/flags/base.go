@@ -64,11 +64,18 @@ var (
 		Usage: "The host on which the gateway server runs on",
 		Value: "127.0.0.1",
 	}
-	// GRPCGatewayPort enables a gRPC gateway to be exposed for Prysm.
+	// GRPCGatewayPort specifies a gRPC gateway port for Prysm.
 	GRPCGatewayPort = &cli.IntFlag{
 		Name:  "grpc-gateway-port",
-		Usage: "Enable gRPC gateway for JSON requests",
+		Usage: "The port on which the gateway server runs on",
 		Value: 3500,
+	}
+	// ApiMiddlewarePort specifies the port for an HTTP proxy server which acts as a middleware between Eth2 API clients and Prysm's gRPC gateway.
+	// The middleware serves JSON values conforming to the specification: https://ethereum.github.io/eth2.0-APIs/
+	ApiMiddlewarePort = &cli.IntFlag{
+		Name:  "api-middleware-port",
+		Usage: "The port on which the API middleware runs on",
+		Value: 3501,
 	}
 	// GPRCGatewayCorsDomain serves preflight requests when serving gRPC JSON gateway.
 	GPRCGatewayCorsDomain = &cli.StringFlag{
