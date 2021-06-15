@@ -143,12 +143,7 @@ func (p *StateProvider) State(ctx context.Context, stateId []byte) (iface.Beacon
 //  - "justified"
 //  - <slot>
 //  - <hex encoded state root with '0x' prefix>
-func (p *StateProvider) StateRoot(ctx context.Context, stateId []byte) ([]byte, error) {
-	var (
-		root []byte
-		err  error
-	)
-
+func (p *StateProvider) StateRoot(ctx context.Context, stateId []byte) (root []byte, err error) {
 	stateIdString := strings.ToLower(string(stateId))
 	switch stateIdString {
 	case "head":

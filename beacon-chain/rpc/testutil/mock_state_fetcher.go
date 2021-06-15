@@ -17,7 +17,7 @@ func (m *MockFetcher) State(context.Context, []byte) (iface.BeaconState, error) 
 	return m.BeaconState, nil
 }
 
-// State --
+// StateRoot --
 func (m *MockFetcher) StateRoot(context.Context, []byte) ([]byte, error) {
 	return m.BeaconStateRoot, nil
 }

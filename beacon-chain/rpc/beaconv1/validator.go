@@ -2,7 +2,6 @@ package beaconv1
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 
 	"github.com/pkg/errors"
@@ -202,7 +201,7 @@ func valContainersByRequestIds(state iface.BeaconState, validatorIds [][]byte) (
 			v1Validator := migration.V1Alpha1ValidatorToV1(validator)
 			subStatus, err := validatorSubStatus(v1Validator, epoch)
 			if err != nil {
-				return nil, fmt.Errorf("could not get validator sub status: %v", err)
+				return nil, errors.Wrap(err, "could not get validator sub status")
 			}
 			valContainers[i] = &ethpb.ValidatorContainer{
 				Index:     types.ValidatorIndex(i),
@@ -212,7 +211,7 @@ func valContainersByRequestIds(state iface.BeaconState, validatorIds [][]byte) (
 			}
 		}
 	} else {
-		valContainers = make([]*ethpb.ValidatorContainer, 0)
+		valContainers = make([]*ethpb.ValidatorContainer, len(validatorIds))
 		for _, validatorId := range validatorIds {
 			var valIndex types.ValidatorIndex
 			if len(validatorId) == params.BeaconConfig().BLSPubkeyLength {
@@ -236,12 +235,12 @@ func valContainersByRequestIds(state iface.BeaconState, validatorIds [][]byte) (
 				continue
 			}
 			if err != nil {
-				return nil, fmt.Errorf("could not get validator: %w", err)
+				return nil, errors.Wrap(err, "could not get validator")
 			}
 			v1Validator := migration.V1Alpha1ValidatorToV1(validator)
 			subStatus, err := validatorSubStatus(v1Validator, epoch)
 			if err != nil {
-				return nil, fmt.Errorf("could not get validator sub status: %v", err)
+				return nil, errors.Wrap(err, "could not get validator sub status")
 			}
 			valContainers = append(valContainers, &ethpb.ValidatorContainer{
 				Index:     valIndex,
