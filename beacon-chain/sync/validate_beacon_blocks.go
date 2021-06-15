@@ -106,7 +106,6 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	// MAXIMUM_GOSSIP_CLOCK_DISPARITY in future, we tolerate blocks arriving at max two slots
 	// earlier (SECONDS_PER_SLOT * 2 seconds). Queue such blocks and process them at the right slot.
 	genesisTime := uint64(s.cfg.Chain.GenesisTime().Unix())
-	fmt.Println("genesisTime = ", s.cfg.Chain.GenesisTime().String())
 	if err := helpers.VerifySlotTime(genesisTime, blk.Block().Slot(), earlyBlockProcessingTolerance); err != nil {
 		log.WithError(err).WithField("blockSlot", blk.Block().Slot()).Debug("Ignored block")
 		return pubsub.ValidationIgnore
@@ -131,9 +130,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 
 	// Process the block if the clock jitter is less than MAXIMUM_GOSSIP_CLOCK_DISPARITY.
 	// Otherwise queue it for processing in the right slot.
-	currentSlot := s.cfg.Chain.CurrentSlot()
-	if err := helpers.VerifySlotTime(genesisTime, blk.Block().Slot(),
-		params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+	if isBlockQueueable(genesisTime, blk.Block().Slot(), receivedTime) {
 		s.pendingQueueLock.Lock()
 		if err := s.insertBlockToPendingQueue(blk.Block().Slot(), blk, blockRoot); err != nil {
 			s.pendingQueueLock.Unlock()
@@ -141,7 +138,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 			return pubsub.ValidationIgnore
 		}
 		s.pendingQueueLock.Unlock()
-		log.WithError(errors.New("early block")).WithField("currentSlot", currentSlot).WithField("blockSlot", blk.Block().Slot()).Debug("Ignored block")
+		log.WithError(errors.New("early block")).WithField("currentSlot", s.cfg.Chain.CurrentSlot()).WithField("blockSlot", blk.Block().Slot()).Debug("Ignored block")
 		return pubsub.ValidationIgnore
 	}
 
@@ -282,4 +279,26 @@ func captureArrivalTimeMetric(genesisTime uint64, currentSlot types.Slot) error 
 	arrivalBlockPropagationHistogram.Observe(float64(ms))
 
 	return nil
+}
+
+// isBlockQueueable checks if the slot_time in the block is greater than
+// current_time +  MAXIMUM_GOSSIP_CLOCK_DISPARITY. in short, this function
+// returns true if the corresponding block should be queued and false if
+// the block should be processed immediately.
+func isBlockQueueable(genesisTime uint64, slot types.Slot, receivedTime time.Time) bool {
+	slotTime, err := helpers.SlotToTime(genesisTime, slot)
+	if err != nil {
+		return false
+	}
+
+	// convert all times to milliseconds
+	currentTime := receivedTime.UnixNano() / int64(time.Millisecond)
+	jitter := int64(params.BeaconNetworkConfig().MaximumGossipClockDisparity / time.Millisecond)
+	slotTimeInMsec := slotTime.UnixNano() / int64(time.Millisecond)
+
+	// check if current_time + MAXIMUM_GOSSIP_CLOCK_DISPARITY >= slot_time
+	if currentTime+jitter >= slotTimeInMsec {
+		return true
+	}
+	return false
 }
