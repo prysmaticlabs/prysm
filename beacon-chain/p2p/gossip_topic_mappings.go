@@ -10,12 +10,13 @@ import (
 // GossipTopicMappings represent the protocol ID to protobuf message type map for easy
 // lookup.
 var GossipTopicMappings = map[string]proto.Message{
-	BlockSubnetTopicFormat:             &pb.SignedBeaconBlock{},
-	AttestationSubnetTopicFormat:       &pb.Attestation{},
-	ExitSubnetTopicFormat:              &pb.SignedVoluntaryExit{},
-	ProposerSlashingSubnetTopicFormat:  &pb.ProposerSlashing{},
-	AttesterSlashingSubnetTopicFormat:  &pb.AttesterSlashing{},
-	AggregateAndProofSubnetTopicFormat: &pb.SignedAggregateAttestationAndProof{},
+	BlockSubnetTopicFormat:                    &pb.SignedBeaconBlock{},
+	AttestationSubnetTopicFormat:              &pb.Attestation{},
+	ExitSubnetTopicFormat:                     &pb.SignedVoluntaryExit{},
+	ProposerSlashingSubnetTopicFormat:         &pb.ProposerSlashing{},
+	AttesterSlashingSubnetTopicFormat:         &pb.AttesterSlashing{},
+	AggregateAndProofSubnetTopicFormat:        &pb.SignedAggregateAttestationAndProof{},
+	SyncContributionAndProofSubnetTopicFormat: &pb.SignedContributionAndProof{},
 }
 
 // GossipTypeMapping is the inverse of GossipTopicMappings so that an arbitrary protobuf message

@@ -11,12 +11,12 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	altairTest "github.com/prysmaticlabs/prysm/shared/testutil/altair"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestProcessSyncCommittee_OK(t *testing.T) {
-	beaconState, privKeys := altairTest.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	beaconState, privKeys := testutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	require.NoError(t, beaconState.SetSlot(1))
 	committee, err := altair.NextSyncCommittee(beaconState)
 	require.NoError(t, err)
