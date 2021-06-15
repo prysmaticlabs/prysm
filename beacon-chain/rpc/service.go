@@ -29,6 +29,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/beaconv1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/debug"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/debugv1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eventsv1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/node"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/nodev1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
@@ -260,6 +261,12 @@ func (s *Service) Start() {
 	pbrpc.RegisterHealthServer(s.grpcServer, nodeServer)
 	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
 	ethpbv1.RegisterBeaconChainServer(s.grpcServer, beaconChainServerV1)
+	ethpbv1.RegisterEventsServer(s.grpcServer, &eventsv1.Server{
+		Ctx:               s.ctx,
+		StateNotifier:     s.cfg.StateNotifier,
+		BlockNotifier:     s.cfg.BlockNotifier,
+		OperationNotifier: s.cfg.OperationNotifier,
+	})
 	if s.cfg.EnableDebugRPCEndpoints {
 		log.Info("Enabled debug gRPC endpoints")
 		debugServer := &debug.Server{
