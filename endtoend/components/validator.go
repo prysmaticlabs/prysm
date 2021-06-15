@@ -162,7 +162,7 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		return err
 	}
 	defer func() {
-		if err:= stdout.Close(); err != nil {
+		if err := stdout.Close(); err != nil {
 			log.WithError(err).Error("Failed to close stdout file")
 		}
 		if err := stderr.Close(); err != nil {
@@ -176,7 +176,6 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 	if err = cmd.Start(); err != nil {
 		return err
 	}
-
 
 	// Mark node as ready.
 	close(v.started)
