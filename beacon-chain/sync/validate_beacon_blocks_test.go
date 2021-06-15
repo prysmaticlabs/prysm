@@ -969,13 +969,13 @@ func TestService_isBlockQueueable(t *testing.T) {
 	genesisTime := uint64(currentTime.Unix() - int64(params.BeaconConfig().SecondsPerSlot))
 	blockSlot := types.Slot(1)
 
-	// slot time just above MAXIMUM_GOSSIP_CLOCK_DISPARITY
+	// slot time within MAXIMUM_GOSSIP_CLOCK_DISPARITY, so dont queue the block.
 	receivedTime := currentTime.Add(-400 * time.Millisecond)
 	result := isBlockQueueable(genesisTime, blockSlot, receivedTime)
-	assert.Equal(t, true, result)
+	assert.Equal(t, false, result)
 
-	// slot time within MAXIMUM_GOSSIP_CLOCK_DISPARITY
+	// slot time just above MAXIMUM_GOSSIP_CLOCK_DISPARITY, so queue the block.
 	receivedTime = currentTime.Add(-600 * time.Millisecond)
 	result = isBlockQueueable(genesisTime, blockSlot, receivedTime)
-	assert.Equal(t, false, result)
+	assert.Equal(t, true, result)
 }
