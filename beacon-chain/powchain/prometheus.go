@@ -134,7 +134,7 @@ func NewPowchainCollector(ctx context.Context) (*PowchainCollector, error) {
 		),
 		SyncEth1Connected: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "", "sync_eth1_connected"),
-			"Boolean indicating whether a fallback eth1 endpoint is currently connected: 0=false, 1=true.",
+			"Boolean indicating whether an eth1 endpoint is currently connected: 0=false, 1=true.",
 			nil,
 			nil,
 		),
