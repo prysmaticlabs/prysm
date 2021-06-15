@@ -3,17 +3,11 @@ package beaconv1
 import (
 	"bytes"
 	"context"
-	"fmt"
-	"strconv"
-	"strings"
 
-	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -59,8 +53,13 @@ func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*e
 		err  error
 	)
 
-	root, err = bs.stateRoot(ctx, req.StateId)
+	root, err = bs.StateFetcher.StateRoot(ctx, req.StateId)
 	if err != nil {
+		if rootNotFoundErr, ok := err.(*statefetcher.StateRootNotFoundError); ok {
+			return nil, status.Errorf(codes.NotFound, "State root not found: %v", rootNotFoundErr)
+		} else if parseErr, ok := err.(*statefetcher.StateIdParseError); ok {
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", parseErr)
+		}
 		return nil, status.Errorf(codes.Internal, "Could not get state root: %v", err)
 	}
 
@@ -83,6 +82,11 @@ func (bs *Server) GetStateFork(ctx context.Context, req *ethpb.StateRequest) (*e
 
 	state, err = bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
+		if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {
+			return nil, status.Errorf(codes.NotFound, "State not found: %v", stateNotFoundErr)
+		} else if parseErr, ok := err.(*statefetcher.StateIdParseError); ok {
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", parseErr)
+		}
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
 
@@ -109,6 +113,11 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 
 	state, err = bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
+		if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {
+			return nil, status.Errorf(codes.NotFound, "State not found: %v", stateNotFoundErr)
+		} else if parseErr, ok := err.(*statefetcher.StateIdParseError); ok {
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", parseErr)
+		}
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
 
@@ -119,126 +128,6 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 			Finalized:         checkpoint(state.FinalizedCheckpoint()),
 		},
 	}, nil
-}
-
-func (bs *Server) stateRoot(ctx context.Context, stateId []byte) ([]byte, error) {
-	var (
-		root []byte
-		err  error
-	)
-
-	stateIdString := strings.ToLower(string(stateId))
-	switch stateIdString {
-	case "head":
-		root, err = bs.headStateRoot(ctx)
-	case "genesis":
-		root, err = bs.genesisStateRoot(ctx)
-	case "finalized":
-		root, err = bs.finalizedStateRoot(ctx)
-	case "justified":
-		root, err = bs.justifiedStateRoot(ctx)
-	default:
-		if len(stateId) == 32 {
-			root, err = bs.stateRootByHex(ctx, stateId)
-		} else {
-			slotNumber, parseErr := strconv.ParseUint(stateIdString, 10, 64)
-			if parseErr != nil {
-				// ID format does not match any valid options.
-				return nil, errors.New("invalid state ID: " + stateIdString)
-			}
-			root, err = bs.stateRootBySlot(ctx, types.Slot(slotNumber))
-		}
-	}
-
-	return root, err
-}
-
-func (bs *Server) headStateRoot(ctx context.Context) ([]byte, error) {
-	b, err := bs.ChainInfoFetcher.HeadBlock(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get head block")
-	}
-	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
-		return nil, err
-	}
-	return b.Block().StateRoot(), nil
-}
-
-func (bs *Server) genesisStateRoot(ctx context.Context) ([]byte, error) {
-	b, err := bs.BeaconDB.GenesisBlock(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get genesis block")
-	}
-	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
-		return nil, err
-	}
-	return b.Block().StateRoot(), nil
-}
-
-func (bs *Server) finalizedStateRoot(ctx context.Context) ([]byte, error) {
-	cp, err := bs.BeaconDB.FinalizedCheckpoint(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get finalized checkpoint")
-	}
-	b, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(cp.Root))
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get finalized block")
-	}
-	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
-		return nil, err
-	}
-	return b.Block().StateRoot(), nil
-}
-
-func (bs *Server) justifiedStateRoot(ctx context.Context) ([]byte, error) {
-	cp, err := bs.BeaconDB.JustifiedCheckpoint(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get justified checkpoint")
-	}
-	b, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(cp.Root))
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get justified block")
-	}
-	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
-		return nil, err
-	}
-	return b.Block().StateRoot(), nil
-}
-
-func (bs *Server) stateRootByHex(ctx context.Context, stateId []byte) ([]byte, error) {
-	var stateRoot [32]byte
-	copy(stateRoot[:], stateId)
-	headState, err := bs.ChainInfoFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get head state")
-	}
-	for _, root := range headState.StateRoots() {
-		if bytes.Equal(root, stateRoot[:]) {
-			return stateRoot[:], nil
-		}
-	}
-	return nil, fmt.Errorf("state not found in the last %d state roots in head state", len(headState.StateRoots()))
-}
-
-func (bs *Server) stateRootBySlot(ctx context.Context, slot types.Slot) ([]byte, error) {
-	currentSlot := bs.GenesisTimeFetcher.CurrentSlot()
-	if slot > currentSlot {
-		return nil, errors.New("slot cannot be in the future")
-	}
-	found, blks, err := bs.BeaconDB.BlocksBySlot(ctx, slot)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get blocks")
-	}
-	if !found {
-		return nil, errors.New("no block exists")
-	}
-	if len(blks) != 1 {
-		return nil, errors.New("multiple blocks exist in same slot")
-	}
-	if blks[0] == nil || blks[0].IsNil() || blks[0].Block().IsNil() {
-		return nil, errors.New("nil block")
-	}
-	return blks[0].Block().StateRoot(), nil
 }
 
 func checkpoint(sourceCheckpoint *eth.Checkpoint) *ethpb.Checkpoint {

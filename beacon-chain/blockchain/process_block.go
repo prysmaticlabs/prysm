@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -167,6 +168,16 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 			}
 		}
 		go func() {
+			// Send an event regarding the new finalized checkpoint over a common event feed.
+			s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+				Type: statefeed.FinalizedCheckpoint,
+				Data: &ethpbv1.EventFinalizedCheckpoint{
+					Epoch: postState.FinalizedCheckpoint().Epoch,
+					Block: postState.FinalizedCheckpoint().Root,
+					State: signed.Block().StateRoot(),
+				},
+			})
+
 			// Use a custom deadline here, since this method runs asynchronously.
 			// We ignore the parent method's context and instead create a new one
 			// with a custom deadline, therefore using the background context instead.
@@ -176,6 +187,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 				log.WithError(err).Error("Could not insert finalized deposits.")
 			}
 		}()
+
 	}
 
 	defer reportAttestationInclusion(b)
