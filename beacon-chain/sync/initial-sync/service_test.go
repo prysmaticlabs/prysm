@@ -451,3 +451,13 @@ func TestService_Initialized(t *testing.T) {
 	s.chainStarted.UnSet()
 	assert.Equal(t, false, s.Initialized())
 }
+
+func TestService_Synced(t *testing.T) {
+	s := NewService(context.Background(), &Config{
+		StateNotifier: &mock.MockStateNotifier{},
+	})
+	s.synced.UnSet()
+	assert.Equal(t, false, s.Synced())
+	s.synced.Set()
+	assert.Equal(t, true, s.Synced())
+}
