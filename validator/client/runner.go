@@ -193,7 +193,6 @@ func run(ctx context.Context, v iface.Validator) {
 						case iface.RoleAggregator:
 							v.SubmitAggregateAndProof(slotCtx, slot, pubKey)
 						case iface.RoleSyncCommittee:
-							log.Infof("Performing in sync committee! %#x", pubKey)
 							// TODO(8638): Implement submit sync committee message.
 						case iface.RoleUnknown:
 							log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).Trace("No active roles, doing nothing")
