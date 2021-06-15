@@ -211,7 +211,7 @@ func valContainersByRequestIds(state iface.BeaconState, validatorIds [][]byte) (
 			}
 		}
 	} else {
-		valContainers = make([]*ethpb.ValidatorContainer, len(validatorIds))
+		valContainers = make([]*ethpb.ValidatorContainer, 0, len(validatorIds))
 		for _, validatorId := range validatorIds {
 			var valIndex types.ValidatorIndex
 			if len(validatorId) == params.BeaconConfig().BLSPubkeyLength {
