@@ -29,5 +29,5 @@ type Server struct {
 	SlashingsPool      slashings.PoolManager
 	VoluntaryExitsPool voluntaryexits.PoolManager
 	StateGenService    stategen.StateManager
-	StateFetcher       statefetcher.StateProvider
+	StateFetcher       statefetcher.Fetcher
 }

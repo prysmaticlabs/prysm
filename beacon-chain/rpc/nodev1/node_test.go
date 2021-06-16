@@ -3,6 +3,7 @@ package nodev1
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"runtime"
 	"strconv"
 	"strings"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
+	grpcruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	libp2ptest "github.com/libp2p/go-libp2p-peerstore/test"
@@ -23,11 +25,13 @@ import (
 	syncmock "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/version"
+	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -49,7 +53,7 @@ func TestGetVersion(t *testing.T) {
 }
 
 func TestGetHealth(t *testing.T) {
-	ctx := context.Background()
+	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &grpcruntime.ServerTransportStream{})
 	checker := &syncmock.Sync{}
 	s := &Server{
 		SyncChecker: checker,
@@ -60,8 +64,11 @@ func TestGetHealth(t *testing.T) {
 	checker.IsInitialized = true
 	_, err = s.GetHealth(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
-	checker.IsInitialized = false
-	checker.IsSyncing = true
+	stream, ok := grpc.ServerTransportStreamFromContext(ctx).(*grpcruntime.ServerTransportStream)
+	require.Equal(t, true, ok, "type assertion failed")
+	assert.Equal(t, stream.Header()[strings.ToLower(grpcutils.HttpCodeMetadataKey)][0], strconv.Itoa(http.StatusPartialContent))
+	checker.IsSynced = true
+	_, err = s.GetHealth(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
 }
 
@@ -132,7 +139,7 @@ func TestGetIdentity(t *testing.T) {
 		}
 
 		_, err = s.GetIdentity(ctx, &emptypb.Empty{})
-		assert.ErrorContains(t, "could not obtain enr", err)
+		assert.ErrorContains(t, "Could not obtain enr", err)
 	})
 
 	t.Run("Discovery addresses failure", func(t *testing.T) {
@@ -149,7 +156,7 @@ func TestGetIdentity(t *testing.T) {
 		}
 
 		_, err = s.GetIdentity(ctx, &emptypb.Empty{})
-		assert.ErrorContains(t, "could not obtain discovery address", err)
+		assert.ErrorContains(t, "Could not obtain discovery address", err)
 	})
 }
 
@@ -161,15 +168,19 @@ func TestSyncStatus(t *testing.T) {
 	err = state.SetSlot(100)
 	require.NoError(t, err)
 	chainService := &mock.ChainService{Slot: currentSlot, State: state}
+	syncChecker := &syncmock.Sync{}
+	syncChecker.IsSyncing = true
 
 	s := &Server{
 		HeadFetcher:        chainService,
 		GenesisTimeFetcher: chainService,
+		SyncChecker:        syncChecker,
 	}
 	resp, err := s.GetSyncStatus(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.Equal(t, types.Slot(100), resp.Data.HeadSlot)
 	assert.Equal(t, types.Slot(10), resp.Data.SyncDistance)
+	assert.Equal(t, true, resp.Data.IsSyncing)
 }
 
 func TestGetPeer(t *testing.T) {
@@ -202,7 +213,7 @@ func TestGetPeer(t *testing.T) {
 
 	t.Run("Invalid ID", func(t *testing.T) {
 		_, err = s.GetPeer(ctx, &ethpb.PeerRequest{PeerId: "foo"})
-		assert.ErrorContains(t, "Could not decode peer ID", err)
+		assert.ErrorContains(t, "Invalid peer ID", err)
 	})
 
 	t.Run("Peer not found", func(t *testing.T) {
@@ -317,6 +328,18 @@ func TestListPeers(t *testing.T) {
 			states:     []ethpb.ConnectionState{ethpb.ConnectionState_CONNECTING, ethpb.ConnectionState_DISCONNECTING},
 			directions: []ethpb.PeerDirection{ethpb.PeerDirection_INBOUND, ethpb.PeerDirection_OUTBOUND},
 			wantIds:    []peer.ID{ids[0], ids[1], ids[4], ids[5]},
+		},
+		{
+			name:       "Unknown filter is ignored",
+			states:     []ethpb.ConnectionState{ethpb.ConnectionState_CONNECTED, 99},
+			directions: []ethpb.PeerDirection{ethpb.PeerDirection_OUTBOUND, 99},
+			wantIds:    []peer.ID{ids[3]},
+		},
+		{
+			name:       "Only unknown filters - return all peers",
+			states:     []ethpb.ConnectionState{99},
+			directions: []ethpb.PeerDirection{99},
+			wantIds:    ids[:len(ids)-1], // Excluding last peer as it is not connected.
 		},
 	}
 	for _, tt := range filterTests {

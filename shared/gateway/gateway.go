@@ -40,19 +40,21 @@ const (
 // Gateway is the gRPC gateway to serve HTTP JSON traffic as a
 // proxy and forward it to the gRPC server.
 type Gateway struct {
-	conn                    *grpc.ClientConn
-	enableDebugRPCEndpoints bool
-	callerId                CallerId
-	maxCallRecvMsgSize      uint64
-	mux                     *http.ServeMux
-	server                  *http.Server
-	cancel                  context.CancelFunc
-	remoteCert              string
-	gatewayAddr             string
-	ctx                     context.Context
-	startFailure            error
-	remoteAddr              string
-	allowedOrigins          []string
+	conn                         *grpc.ClientConn
+	enableDebugRPCEndpoints      bool
+	callerId                     CallerId
+	maxCallRecvMsgSize           uint64
+	mux                          *http.ServeMux
+	server                       *http.Server
+	cancel                       context.CancelFunc
+	remoteCert                   string
+	gatewayAddr                  string
+	apiMiddlewareAddr            string
+	apiMiddlewareEndpointFactory EndpointFactory
+	ctx                          context.Context
+	startFailure                 error
+	remoteAddr                   string
+	allowedOrigins               []string
 }
 
 // NewValidator returns a new gateway server which translates HTTP into gRPC.
@@ -80,6 +82,8 @@ func NewBeacon(
 	remoteAddress,
 	remoteCert,
 	gatewayAddress string,
+	apiMiddlewareAddress string,
+	apiMiddlewareEndpointFactory EndpointFactory,
 	mux *http.ServeMux,
 	allowedOrigins []string,
 	enableDebugRPCEndpoints bool,
@@ -90,15 +94,17 @@ func NewBeacon(
 	}
 
 	return &Gateway{
-		callerId:                Beacon,
-		remoteAddr:              remoteAddress,
-		remoteCert:              remoteCert,
-		gatewayAddr:             gatewayAddress,
-		ctx:                     ctx,
-		mux:                     mux,
-		allowedOrigins:          allowedOrigins,
-		enableDebugRPCEndpoints: enableDebugRPCEndpoints,
-		maxCallRecvMsgSize:      maxCallRecvMsgSize,
+		callerId:                     Beacon,
+		remoteAddr:                   remoteAddress,
+		remoteCert:                   remoteCert,
+		gatewayAddr:                  gatewayAddress,
+		apiMiddlewareAddr:            apiMiddlewareAddress,
+		apiMiddlewareEndpointFactory: apiMiddlewareEndpointFactory,
+		ctx:                          ctx,
+		mux:                          mux,
+		allowedOrigins:               allowedOrigins,
+		enableDebugRPCEndpoints:      enableDebugRPCEndpoints,
+		maxCallRecvMsgSize:           maxCallRecvMsgSize,
 	}
 }
 
@@ -135,6 +141,20 @@ func (g *Gateway) Start() {
 		),
 	)
 	if g.callerId == Beacon {
+		gwmuxV1 := gwruntime.NewServeMux(
+			gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
+				Marshaler: &gwruntime.JSONPb{
+					MarshalOptions: protojson.MarshalOptions{
+						UseProtoNames:   true,
+						EmitUnpopulated: true,
+					},
+					UnmarshalOptions: protojson.UnmarshalOptions{
+						DiscardUnknown: true,
+					},
+				},
+			}),
+		)
+
 		handlers := []func(context.Context, *gwruntime.ServeMux, *grpc.ClientConn) error{
 			ethpb.RegisterNodeHandler,
 			ethpb.RegisterBeaconChainHandler,
@@ -142,18 +162,32 @@ func (g *Gateway) Start() {
 			ethpbv1.RegisterEventsHandler,
 			pbrpc.RegisterHealthHandler,
 		}
+		handlersV1 := []func(context.Context, *gwruntime.ServeMux, *grpc.ClientConn) error{
+			ethpbv1.RegisterBeaconNodeHandler,
+			ethpbv1.RegisterBeaconChainHandler,
+			ethpbv1.RegisterBeaconValidatorHandler,
+		}
 		if g.enableDebugRPCEndpoints {
 			handlers = append(handlers, pbrpc.RegisterDebugHandler)
+			handlersV1 = append(handlersV1, ethpbv1.RegisterBeaconDebugHandler)
 		}
 		for _, f := range handlers {
 			if err := f(ctx, gwmux, g.conn); err != nil {
-				log.WithError(err).Error("Failed to start gateway")
+				log.WithError(err).Error("Failed to start v1alpha1 gateway")
+				g.startFailure = err
+				return
+			}
+		}
+		for _, f := range handlersV1 {
+			if err := f(ctx, gwmuxV1, g.conn); err != nil {
+				log.WithError(err).Error("Failed to start v1 gateway")
 				g.startFailure = err
 				return
 			}
 		}
 
-		g.mux.Handle("/", gwmux)
+		g.mux.Handle("/eth/v1alpha1/", gwmux)
+		g.mux.Handle("/eth/v1/", gwmuxV1)
 		g.server = &http.Server{
 			Addr:    g.gatewayAddr,
 			Handler: g.corsMiddleware(g.mux),
@@ -191,11 +225,13 @@ func (g *Gateway) Start() {
 	go func() {
 		log.WithField("address", g.gatewayAddr).Info("Starting gRPC gateway")
 		if err := g.server.ListenAndServe(); err != http.ErrServerClosed {
-			log.WithError(err).Error("Failed to listen and serve")
+			log.WithError(err).Error("Failed to start gRPC gateway")
 			g.startFailure = err
 			return
 		}
 	}()
+
+	go g.registerApiMiddleware()
 }
 
 // Status of grpc gateway. Returns an error if this service is unhealthy.
@@ -314,4 +350,18 @@ func (g *Gateway) dialUnix(ctx context.Context, addr string) (*grpc.ClientConn, 
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(int(g.maxCallRecvMsgSize))),
 	}
 	return grpc.DialContext(ctx, addr, opts...)
+}
+
+func (g *Gateway) registerApiMiddleware() {
+	proxy := &ApiProxyMiddleware{
+		GatewayAddress:  g.gatewayAddr,
+		ProxyAddress:    g.apiMiddlewareAddr,
+		EndpointCreator: g.apiMiddlewareEndpointFactory,
+	}
+	log.WithField("API middleware address", g.apiMiddlewareAddr).Info("Starting API middleware")
+	if err := proxy.Run(); err != http.ErrServerClosed {
+		log.WithError(err).Error("Failed to start API middleware")
+		g.startFailure = err
+		return
+	}
 }
