@@ -17,6 +17,7 @@ var GossipTopicMappings = map[string]proto.Message{
 	AttesterSlashingSubnetTopicFormat:         &pb.AttesterSlashing{},
 	AggregateAndProofSubnetTopicFormat:        &pb.SignedAggregateAttestationAndProof{},
 	SyncContributionAndProofSubnetTopicFormat: &pb.SignedContributionAndProof{},
+	SyncCommitteeSubnetTopicFormat:            &pb.SyncCommitteeMessage{},
 }
 
 // GossipTypeMapping is the inverse of GossipTopicMappings so that an arbitrary protobuf message
