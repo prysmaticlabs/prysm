@@ -1,16 +1,41 @@
 package gateway
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"net/http"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/urfave/cli/v2"
 )
+
+func TestGateway_Customized(t *testing.T) {
+	mux := http.NewServeMux()
+	cert := "cert"
+	origins := []string{"origin"}
+	size := uint64(100)
+
+	g := New(
+		context.Background(),
+		[]PbHandlerRegistration{},
+		func(handler http.Handler, writer http.ResponseWriter, request *http.Request) {
+
+		},
+		"",
+		"",
+	).WithMux(mux).WithRemoteCert(cert).WithAllowedOrigins(origins).WithMaxCallRecvMsgSize(size)
+
+	assert.Equal(t, mux, g.mux)
+	assert.Equal(t, cert, g.remoteCert)
+	require.Equal(t, 1, len(g.allowedOrigins))
+	assert.Equal(t, origins[0], g.allowedOrigins[0])
+	assert.Equal(t, size, g.maxCallRecvMsgSize)
+}
 
 func TestGateway_StartStop(t *testing.T) {
 	hook := logTest.NewGlobal()
