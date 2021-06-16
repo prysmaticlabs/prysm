@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -144,7 +145,18 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
-	verified := sig.Eth2FastAggregateVerify(activePubkeys, bytesutil.ToBytes32(m.Message.Contribution.BlockRoot))
+	d, err = helpers.Domain(bState.Fork(), helpers.SlotToEpoch(bState.Slot()), params.BeaconConfig().DomainSyncCommittee, bState.GenesisValidatorRoot())
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationIgnore
+	}
+	rawBytes := p2ptypes.SSZBytes(m.Message.Contribution.BlockRoot[:])
+	sigRoot, err := helpers.ComputeSigningRoot(&rawBytes, d)
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationIgnore
+	}
+	verified := sig.Eth2FastAggregateVerify(activePubkeys, sigRoot)
 	if !verified {
 		return pubsub.ValidationReject
 	}

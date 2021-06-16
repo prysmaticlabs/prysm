@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -500,13 +501,97 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 							msg.Message.Contribution.Signature = infiniteSig[:]
 							msg.Message.Contribution.BlockRoot = headRoot[:]
 							msg.Message.Contribution.AggregationBits = bitfield.NewBitvector128()
-
 							d, err := helpers.Domain(hState.Fork(), helpers.SlotToEpoch(helpers.PrevSlot(hState.Slot())), params.BeaconConfig().DomainContributionAndProof, hState.GenesisValidatorRoot())
 							assert.NoError(t, err)
 							sigRoot, err := helpers.ComputeSigningRoot(msg.Message, d)
 							assert.NoError(t, err)
 							contrSig := keys[idx].Sign(sigRoot[:])
 
+							msg.Signature = contrSig.Marshal()
+							break
+						}
+					}
+				}
+				s.cfg.Chain = &mockChain.ChainService{
+					ValidatorsRoot: [32]byte{'A'},
+					Genesis:        time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1)),
+				}
+
+				assert.NoError(t, s.initCaches())
+				return s
+			},
+			args: args{
+				ctx:   context.Background(),
+				pid:   "random",
+				topic: defaultTopic,
+				msg: &ethpb.SignedContributionAndProof{
+					Message: &ethpb.ContributionAndProof{
+						AggregatorIndex: 1,
+						Contribution: &ethpb.SyncCommitteeContribution{
+							Slot:              1,
+							SubcommitteeIndex: 1,
+							BlockRoot:         params.BeaconConfig().ZeroHash[:],
+							AggregationBits:   bitfield.NewBitvector128(),
+							Signature:         emptySig[:],
+						},
+						SelectionProof: emptySig[:],
+					},
+					Signature: emptySig[:],
+				}},
+			want: pubsub.ValidationAccept,
+		},
+		{
+			name: "Valid Signed Sync Contribution And Proof with Multiple Signatures",
+			svc: NewService(context.Background(), &Config{
+				P2P:               mockp2p.NewTestP2P(t),
+				InitialSync:       &mockSync.Sync{IsSyncing: false},
+				Chain:             chainService,
+				StateNotifier:     chainService.StateNotifier(),
+				OperationNotifier: chainService.OperationNotifier(),
+			}),
+			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
+				s.cfg.StateGen = stategen.New(db)
+				msg.Message.Contribution.BlockRoot = headRoot[:]
+				s.cfg.DB = db
+				hState, err := db.State(context.Background(), headRoot)
+				assert.NoError(t, err)
+				for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSubnetCount; i++ {
+					coms, err := altair.SyncSubCommitteePubkeys(hState, types.CommitteeIndex(i))
+					assert.NoError(t, err)
+					for _, p := range coms {
+						idx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(p))
+						assert.Equal(t, true, ok)
+						rt, err := altair.SyncCommitteeSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
+						assert.NoError(t, err)
+						sig := keys[idx].Sign(rt[:])
+						if altair.IsSyncCommitteeAggregator(sig.Marshal()) {
+							infiniteSig := [96]byte{0xC0}
+							msg.Message.AggregatorIndex = idx
+							msg.Message.SelectionProof = sig.Marshal()
+							msg.Message.Contribution.Slot = helpers.PrevSlot(hState.Slot())
+							msg.Message.Contribution.SubcommitteeIndex = i
+							msg.Message.Contribution.Signature = infiniteSig[:]
+							msg.Message.Contribution.BlockRoot = headRoot[:]
+							msg.Message.Contribution.AggregationBits = bitfield.NewBitvector128()
+							d, err := helpers.Domain(hState.Fork(), helpers.SlotToEpoch(hState.Slot()), params.BeaconConfig().DomainSyncCommittee, hState.GenesisValidatorRoot())
+							assert.NoError(t, err)
+							rawBytes := p2ptypes.SSZBytes(headRoot[:])
+							sigRoot, err := helpers.ComputeSigningRoot(&rawBytes, d)
+							assert.NoError(t, err)
+							sigs := []bls.Signature{}
+							for i, p2 := range coms {
+								idx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(p2))
+								assert.Equal(t, true, ok)
+								sig := keys[idx].Sign(rt[:])
+								sigs = append(sigs, sig)
+								msg.Message.Contribution.AggregationBits.SetBitAt(uint64(i), true)
+							}
+							msg.Message.Contribution.AggregationBits = bls.AggregateSignatures(sigs).Marshal()
+							d, err = helpers.Domain(hState.Fork(), helpers.SlotToEpoch(helpers.PrevSlot(hState.Slot())), params.BeaconConfig().DomainContributionAndProof, hState.GenesisValidatorRoot())
+							assert.NoError(t, err)
+							sigRoot, err = helpers.ComputeSigningRoot(msg.Message, d)
+							assert.NoError(t, err)
+							contrSig := keys[idx].Sign(sigRoot[:])
 							msg.Signature = contrSig.Marshal()
 							break
 						}
