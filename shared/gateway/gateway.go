@@ -115,7 +115,7 @@ func (g *Gateway) Start() {
 	}
 	g.conn = conn
 
-	gwmux := gwruntime.NewServeMux(
+	v1Alpha1Mux := gwruntime.NewServeMux(
 		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
 			Marshaler: &gwruntime.JSONPb{
 				MarshalOptions: protojson.MarshalOptions{
@@ -131,7 +131,7 @@ func (g *Gateway) Start() {
 		),
 	)
 
-	gwmuxV1 := gwruntime.NewServeMux(
+	v1Mux := gwruntime.NewServeMux(
 		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
 			Marshaler: &gwruntime.JSONPb{
 				MarshalOptions: protojson.MarshalOptions{
@@ -146,22 +146,22 @@ func (g *Gateway) Start() {
 	)
 
 	for _, h := range g.v1Alpha1PbHandlers {
-		if err := h(ctx, gwmux, g.conn); err != nil {
+		if err := h(ctx, v1Alpha1Mux, g.conn); err != nil {
 			log.WithError(err).Error("Failed to start v1alpha1 gateway")
 			g.startFailure = err
 			return
 		}
 	}
 	for _, h := range g.v1PbHandlers {
-		if err := h(ctx, gwmuxV1, g.conn); err != nil {
+		if err := h(ctx, v1Mux, g.conn); err != nil {
 			log.WithError(err).Error("Failed to start v1 gateway")
 			g.startFailure = err
 			return
 		}
 	}
 
-	g.mux.Handle("/eth/v1alpha1/", gwmux)
-	g.mux.Handle("/eth/v1/", gwmuxV1)
+	g.mux.Handle("/eth/v1alpha1/", v1Alpha1Mux)
+	g.mux.Handle("/eth/v1/", v1Mux)
 	apiHandler := g.corsMiddleware(g.mux)
 
 	g.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
