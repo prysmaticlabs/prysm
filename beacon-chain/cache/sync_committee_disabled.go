@@ -6,8 +6,6 @@ import (
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 )
 
-var ErrNonExistingSyncCommitteeKey = errors.New("does not exist sync committee key")
-
 // FakeSyncCommitteeCache is a fake `SyncCommitteeCache` to satisfy fuzzing.
 type FakeSyncCommitteeCache struct {
 }
