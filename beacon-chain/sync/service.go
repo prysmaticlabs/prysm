@@ -49,10 +49,10 @@ const syncMetricsInterval = 10 * time.Second
 var (
 	// Seconds in one epoch.
 	pendingBlockExpTime = time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)) * time.Second
-	// seconds to allow processing early blocks.
+	// time to allow processing early blocks.
 	earlyBlockProcessingTolerance = slotutil.MultiplySlotBy(2)
-	// seconds to allow processing early attestations.
-	earlyAttestationProcessingTolerance = slotutil.MultiplySlotBy(2)
+	// time to allow processing early attestations.
+	earlyAttestationProcessingTolerance = params.BeaconNetworkConfig().MaximumGossipClockDisparity
 )
 
 // Config to set up the regular sync service.
