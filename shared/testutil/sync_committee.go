@@ -37,7 +37,17 @@ func generateSyncCommittees(bState iface.BeaconState, privs []bls.SecretKey, par
 		}
 	}
 	sigs := make([]bls.Signature, 0, len(syncCommittee.Pubkeys))
-	bVector := bitfield.NewBitvector512()
+	var bVector []byte
+	currSize := new(ethpb.SyncAggregate).SyncCommitteeBits.Len()
+	switch currSize {
+	case 512:
+		bVector = bitfield.NewBitvector512()
+	case 32:
+		bVector = bitfield.NewBitvector32()
+	default:
+		return nil, errors.New("invalid bit vector size")
+	}
+
 	for i, p := range syncCommittee.Pubkeys {
 		idx, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(p))
 		if !ok {
@@ -53,7 +63,12 @@ func generateSyncCommittees(bState iface.BeaconState, privs []bls.SecretKey, par
 			return nil, err
 		}
 		sigs = append(sigs, privs[idx].Sign(r[:]))
-		bVector.SetBitAt(uint64(i), true)
+		if currSize == 512 {
+			bitfield.Bitvector512(bVector).SetBitAt(uint64(i), true)
+		}
+		if currSize == 32 {
+			bitfield.Bitvector32(bVector).SetBitAt(uint64(i), true)
+		}
 	}
 	if len(sigs) == 0 {
 		fakeSig := [96]byte{0xC0}
