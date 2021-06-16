@@ -225,6 +225,39 @@ func populateBeaconNodeStats(pf metricMap) BeaconNodeStats {
 		}
 	}
 
+	f, err = pf.getFamily("powchain_sync_eth1_connected")
+	if err != nil {
+		log.WithError(err).Debug("Failed to get powchain_sync_eth1_connected")
+	} else {
+		m = f.Metric[0]
+		bs.SyncEth1Connected = false
+		if int64(m.Gauge.GetValue()) == 1 {
+			bs.SyncEth1Connected = true
+		}
+	}
+
+	f, err = pf.getFamily("powchain_sync_eth1_fallback_configured")
+	if err != nil {
+		log.WithError(err).Debug("Failed to get powchain_sync_eth1_fallback_configured")
+	} else {
+		m = f.Metric[0]
+		bs.SyncEth1FallbackConfigured = false
+		if int64(m.Gauge.GetValue()) == 1 {
+			bs.SyncEth1FallbackConfigured = true
+		}
+	}
+
+	f, err = pf.getFamily("powchain_sync_eth1_fallback_connected")
+	if err != nil {
+		log.WithError(err).Debug("Failed to get powchain_sync_eth1_fallback_connected")
+	} else {
+		m = f.Metric[0]
+		bs.SyncEth1FallbackConnected = false
+		if int64(m.Gauge.GetValue()) == 1 {
+			bs.SyncEth1FallbackConnected = true
+		}
+	}
+
 	return bs
 }
 

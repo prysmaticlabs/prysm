@@ -33,14 +33,11 @@ func (s *Store) SaveSyncCommitteeContribution(cont *ethpb.SyncCommitteeContribut
 	// Contributions exist in the queue. Append instead of insert new.
 	if contributions != nil {
 		contributions = append(contributions, copied)
-		if err := s.contributionCache.Push(&queue.Item{
+		return s.contributionCache.Push(&queue.Item{
 			Key:      syncCommitteeKey(cont.Slot),
 			Value:    contributions,
 			Priority: int64(cont.Slot),
-		}); err != nil {
-			return err
-		}
-		return nil
+		})
 	}
 
 	// Contribution does not exist. Insert new.

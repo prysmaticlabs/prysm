@@ -8,6 +8,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
+	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -658,4 +659,64 @@ func TestPrecomputeProposerIndices_Ok(t *testing.T) {
 		wantedProposerIndices = append(wantedProposerIndices, index)
 	}
 	assert.DeepEqual(t, wantedProposerIndices, proposerIndices, "Did not precompute proposer indices correctly")
+}
+
+func TestIsCurrentEpochSyncCommittee(t *testing.T) {
+	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
+	syncCommittee := &pb.SyncCommittee{
+		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+	}
+	for i := 0; i < len(validators); i++ {
+		k := make([]byte, 48)
+		copy(k, strconv.Itoa(i))
+		validators[i] = &ethpb.Validator{
+			PublicKey: k,
+		}
+		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
+	}
+
+	state, err := stateAltair.InitializeFromProto(&pb.BeaconStateAltair{
+		Validators: validators,
+	})
+	require.NoError(t, err)
+	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
+	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
+
+	ClearCache()
+	require.NoError(t, err, syncCommitteeCache.UpdatePositionsInCommittee(state))
+	r, err := syncCommittee.HashTreeRoot()
+	require.NoError(t, err)
+	ok, err := IsCurrentEpochSyncCommittee(r, bytesutil.ToBytes48(validators[0].PublicKey))
+	require.NoError(t, err)
+	require.Equal(t, true, ok)
+}
+
+func TestIsNextEpochSyncCommittee(t *testing.T) {
+	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
+	syncCommittee := &pb.SyncCommittee{
+		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+	}
+	for i := 0; i < len(validators); i++ {
+		k := make([]byte, 48)
+		copy(k, strconv.Itoa(i))
+		validators[i] = &ethpb.Validator{
+			PublicKey: k,
+		}
+		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
+	}
+
+	state, err := stateAltair.InitializeFromProto(&pb.BeaconStateAltair{
+		Validators: validators,
+	})
+	require.NoError(t, err)
+	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
+	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
+
+	ClearCache()
+	require.NoError(t, err, syncCommitteeCache.UpdatePositionsInCommittee(state))
+	r, err := syncCommittee.HashTreeRoot()
+	require.NoError(t, err)
+	ok, err := IsNextEpochSyncCommittee(r, bytesutil.ToBytes48(validators[0].PublicKey))
+	require.NoError(t, err)
+	require.Equal(t, true, ok)
 }
