@@ -14,27 +14,47 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+type mockEndpointFactory struct {
+}
+
+func (*mockEndpointFactory) Paths() []string {
+	return []string{}
+}
+
+func (*mockEndpointFactory) Create(_ string) (*Endpoint, error) {
+	return nil, nil
+}
+
 func TestGateway_Customized(t *testing.T) {
 	mux := http.NewServeMux()
 	cert := "cert"
 	origins := []string{"origin"}
 	size := uint64(100)
+	middlewareAddr := "middleware"
+	endpointFactory := &mockEndpointFactory{}
 
 	g := New(
 		context.Background(),
+		[]PbHandlerRegistration{},
 		[]PbHandlerRegistration{},
 		func(handler http.Handler, writer http.ResponseWriter, request *http.Request) {
 
 		},
 		"",
 		"",
-	).WithMux(mux).WithRemoteCert(cert).WithAllowedOrigins(origins).WithMaxCallRecvMsgSize(size)
+	).WithMux(mux).
+		WithRemoteCert(cert).
+		WithAllowedOrigins(origins).
+		WithMaxCallRecvMsgSize(size).
+		WithApiMiddleware(middlewareAddr, endpointFactory)
 
 	assert.Equal(t, mux, g.mux)
 	assert.Equal(t, cert, g.remoteCert)
 	require.Equal(t, 1, len(g.allowedOrigins))
 	assert.Equal(t, origins[0], g.allowedOrigins[0])
 	assert.Equal(t, size, g.maxCallRecvMsgSize)
+	assert.Equal(t, middlewareAddr, g.apiMiddlewareAddr)
+	assert.Equal(t, endpointFactory, g.apiMiddlewareEndpointFactory)
 }
 
 func TestGateway_StartStop(t *testing.T) {
@@ -53,6 +73,7 @@ func TestGateway_StartStop(t *testing.T) {
 	g := New(
 		ctx.Context,
 		[]PbHandlerRegistration{},
+		[]PbHandlerRegistration{},
 		func(handler http.Handler, writer http.ResponseWriter, request *http.Request) {
 
 		},
@@ -63,6 +84,7 @@ func TestGateway_StartStop(t *testing.T) {
 	g.Start()
 	go func() {
 		require.LogsContain(t, hook, "Starting gRPC gateway")
+		require.LogsContain(t, hook, "Starting API middleware")
 	}()
 
 	err := g.Stop()

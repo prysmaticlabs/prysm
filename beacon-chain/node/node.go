@@ -32,6 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	regularsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
@@ -647,24 +648,33 @@ func (b *BeaconNode) registerGRPCGateway() error {
 		return nil
 	}
 	gatewayPort := b.cliCtx.Int(flags.GRPCGatewayPort.Name)
+	apiMiddlewarePort := b.cliCtx.Int(flags.ApiMiddlewarePort.Name)
 	gatewayHost := b.cliCtx.String(flags.GRPCGatewayHost.Name)
 	rpcHost := b.cliCtx.String(flags.RPCHost.Name)
 	selfAddress := fmt.Sprintf("%s:%d", rpcHost, b.cliCtx.Int(flags.RPCPort.Name))
 	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
+	apiMiddlewareAddress := fmt.Sprintf("%s:%d", gatewayHost, apiMiddlewarePort)
 	allowedOrigins := strings.Split(b.cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
 	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
 	selfCert := b.cliCtx.String(flags.CertFlag.Name)
 	maxCallSize := b.cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 
-	pbHandlers := []gateway.PbHandlerRegistration{
+	v1Alpha1PbHandlers := []gateway.PbHandlerRegistration{
 		ethpb.RegisterNodeHandler,
 		ethpb.RegisterBeaconChainHandler,
 		ethpb.RegisterBeaconNodeValidatorHandler,
 		ethpbv1.RegisterEventsHandler,
 		pbrpc.RegisterHealthHandler,
 	}
+	v1PbHandlers := []gateway.PbHandlerRegistration{
+		ethpbv1.RegisterBeaconNodeHandler,
+		ethpbv1.RegisterBeaconChainHandler,
+		ethpbv1.RegisterBeaconValidatorHandler,
+	}
 	if enableDebugRPCEndpoints {
-		pbHandlers = append(pbHandlers, pbrpc.RegisterDebugHandler)
+		v1Alpha1PbHandlers = append(v1Alpha1PbHandlers, pbrpc.RegisterDebugHandler)
+		v1PbHandlers = append(v1PbHandlers, ethpbv1.RegisterBeaconDebugHandler)
+
 	}
 	muxHandler := func(h http.Handler, w http.ResponseWriter, req *http.Request) {
 		h.ServeHTTP(w, req)
@@ -672,11 +682,15 @@ func (b *BeaconNode) registerGRPCGateway() error {
 
 	g := gateway.New(
 		b.ctx,
-		pbHandlers,
+		v1Alpha1PbHandlers,
+		v1PbHandlers,
 		muxHandler,
 		selfAddress,
 		gatewayAddress,
-	).WithAllowedOrigins(allowedOrigins).WithRemoteCert(selfCert).WithMaxCallRecvMsgSize(maxCallSize)
+	).WithAllowedOrigins(allowedOrigins).
+		WithRemoteCert(selfCert).
+		WithMaxCallRecvMsgSize(maxCallSize).
+		WithApiMiddleware(apiMiddlewareAddress, &apimiddleware.BeaconEndpointFactory{})
 
 	return b.services.RegisterService(g)
 }

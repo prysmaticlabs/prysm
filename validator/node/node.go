@@ -515,7 +515,7 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 	allowedOrigins := strings.Split(cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
 	maxCallSize := cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 
-	pbHandlers := []gateway.PbHandlerRegistration{
+	v1Alpha1PbHandlers := []gateway.PbHandlerRegistration{
 		pb.RegisterAuthHandler,
 		pb.RegisterWalletHandler,
 		pb.RegisterHealthHandler,
@@ -534,7 +534,8 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 
 	gw := gateway.New(
 		cliCtx.Context,
-		pbHandlers,
+		v1Alpha1PbHandlers,
+		[]gateway.PbHandlerRegistration{},
 		muxHandler,
 		rpcAddr,
 		gatewayAddress,

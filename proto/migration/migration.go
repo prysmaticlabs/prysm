@@ -276,6 +276,7 @@ func V1ProposerSlashingToV1Alpha1(v1Slashing *ethpb.ProposerSlashing) *ethpb_alp
 	}
 }
 
+// V1Alpha1ValidatorToV1 converts a v1 validator to v1alpha1.
 func V1Alpha1ValidatorToV1(v1Validator *ethpb_alpha.Validator) *ethpb.Validator {
 	if v1Validator == nil {
 		return &ethpb.Validator{}
@@ -290,4 +291,22 @@ func V1Alpha1ValidatorToV1(v1Validator *ethpb_alpha.Validator) *ethpb.Validator 
 		ExitEpoch:                  v1Validator.ExitEpoch,
 		WithdrawableEpoch:          v1Validator.WithdrawableEpoch,
 	}
+}
+
+// SignedBeaconBlock converts a signed beacon block interface to a v1alpha1 block.
+func SignedBeaconBlock(block interfaces.SignedBeaconBlock) (*ethpb.SignedBeaconBlock, error) {
+	if block == nil || block.IsNil() {
+		return nil, errors.New("could not find requested block")
+	}
+	blk, err := block.PbPhase0Block()
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get raw block")
+	}
+
+	v1Block, err := V1Alpha1ToV1Block(blk)
+	if err != nil {
+		return nil, errors.New("could not convert block to v1 block")
+	}
+
+	return v1Block, nil
 }

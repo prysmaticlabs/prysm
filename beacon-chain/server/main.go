@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	joonix "github.com/joonix/log"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/apimiddleware"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -21,6 +22,7 @@ import (
 var (
 	beaconRPC               = flag.String("beacon-rpc", "localhost:4000", "Beacon chain gRPC endpoint")
 	port                    = flag.Int("port", 8000, "Port to serve on")
+	apiMiddlewarePort       = flag.Int("port", 8001, "Port to serve API middleware on")
 	host                    = flag.String("host", "127.0.0.1", "Host to serve on")
 	debug                   = flag.Bool("debug", false, "Enable debug logging")
 	allowedOrigins          = flag.String("corsdomain", "localhost:4242", "A comma separated list of CORS domains to allow")
@@ -38,15 +40,22 @@ func main() {
 		log.SetLevel(logrus.DebugLevel)
 	}
 
-	pbHandlers := []gateway.PbHandlerRegistration{
+	v1Alpha1PbHandlers := []gateway.PbHandlerRegistration{
 		ethpb.RegisterNodeHandler,
 		ethpb.RegisterBeaconChainHandler,
 		ethpb.RegisterBeaconNodeValidatorHandler,
 		ethpbv1.RegisterEventsHandler,
 		pbrpc.RegisterHealthHandler,
 	}
+	v1PbHandlers := []gateway.PbHandlerRegistration{
+		ethpbv1.RegisterBeaconNodeHandler,
+		ethpbv1.RegisterBeaconChainHandler,
+		ethpbv1.RegisterBeaconValidatorHandler,
+	}
 	if *enableDebugRPCEndpoints {
-		pbHandlers = append(pbHandlers, pbrpc.RegisterDebugHandler)
+		v1Alpha1PbHandlers = append(v1Alpha1PbHandlers, pbrpc.RegisterDebugHandler)
+		v1PbHandlers = append(v1PbHandlers, ethpbv1.RegisterBeaconDebugHandler)
+
 	}
 	muxHandler := func(h http.Handler, w http.ResponseWriter, req *http.Request) {
 		h.ServeHTTP(w, req)
@@ -54,11 +63,15 @@ func main() {
 
 	gw := gateway.New(
 		context.Background(),
-		pbHandlers,
+		v1Alpha1PbHandlers,
+		v1PbHandlers,
 		muxHandler,
 		*beaconRPC,
 		fmt.Sprintf("%s:%d", *host, *port),
-	).WithAllowedOrigins(strings.Split(*allowedOrigins, ",")).WithMaxCallRecvMsgSize(uint64(*grpcMaxMsgSize))
+	).WithAllowedOrigins(strings.Split(*allowedOrigins, ",")).
+		WithMaxCallRecvMsgSize(uint64(*grpcMaxMsgSize)).
+		WithApiMiddleware(fmt.Sprintf("%s:%d", *host, *apiMiddlewarePort), &apimiddleware.BeaconEndpointFactory{})
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/swagger/", gateway.SwaggerServer())
 	mux.HandleFunc("/healthz", healthzServer(gw))

@@ -7,7 +7,6 @@ import (
 	"math/bits"
 	"regexp"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	types "github.com/prysmaticlabs/eth2-types"
 )
 
@@ -334,10 +333,10 @@ func BytesToSlotBigEndian(b []byte) types.Slot {
 	return types.Slot(BytesToUint64BigEndian(b))
 }
 
-// IsBytes32Hex checks whether the byte array is a 32-byte long hex number.
-func IsBytes32Hex(b []byte) (bool, error) {
+// IsHex checks whether the byte array is a hex number prefixed with '0x'.
+func IsHex(b []byte) (bool, error) {
 	if b == nil {
 		return false, nil
 	}
-	return regexp.Match("^0x[0-9a-fA-F]{64}$", []byte(hexutil.Encode(b)))
+	return regexp.Match("^(0x)[0-9a-fA-F]+$", b)
 }
