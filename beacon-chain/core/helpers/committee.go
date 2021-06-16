@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -412,6 +413,30 @@ func IsNextEpochSyncCommittee(root [32]byte, pubKey [48]byte) (bool, error) {
 // UpdateSyncCommitteeCache updates sync committee cache.
 func UpdateSyncCommitteeCache(state iface.BeaconStateAltair) error {
 	return syncCommitteeCache.UpdatePositionsInCommittee(state)
+}
+
+// CurrentEpochSyncSubcommitteeIndices returns the subcommittee indices of the sync committee for input validator.
+func CurrentEpochSyncSubcommitteeIndices(committee *pb.SyncCommittee, pubKey [48]byte) ([]uint64, error) {
+	root, err := committee.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	indices, err := syncCommitteeCache.CurrentEpochIndexPosition(root, pubKey)
+	// If committee root does not exist in cache, perform manual lookup of pubkeys in committee to find indices.
+	if err == cache.ErrNonExistingSyncCommitteeKey {
+		var indices []uint64
+		for i, k := range committee.Pubkeys {
+			if bytes.Equal(k, pubKey[:]) {
+				indices = append(indices, uint64(i))
+			}
+		}
+		return indices, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return indices, nil
 }
 
 // This computes proposer indices of the current epoch and returns a list of proposer indices,
