@@ -81,7 +81,7 @@ type Config struct {
 	MaxRoutines             int
 	StateNotifier           statefeed.Notifier
 	ForkChoiceStore         f.ForkChoicer
-	OpsService              *attestations.Service
+	AttService              *attestations.Service
 	StateGen                *stategen.State
 	WeakSubjectivityCheckpt *ethpb.Checkpoint
 }
@@ -139,7 +139,7 @@ func (s *Service) Start() {
 	if beaconState != nil && !beaconState.IsNil() {
 		log.Info("Blockchain data already exists in DB, initializing...")
 		s.genesisTime = time.Unix(int64(beaconState.GenesisTime()), 0)
-		s.cfg.OpsService.SetGenesisTime(beaconState.GenesisTime())
+		s.cfg.AttService.SetGenesisTime(beaconState.GenesisTime())
 		if err := s.initializeChainInfo(s.ctx); err != nil {
 			log.Fatalf("Could not set up chain info: %v", err)
 		}
@@ -301,7 +301,7 @@ func (s *Service) initializeBeaconChain(
 		return nil, err
 	}
 
-	s.cfg.OpsService.SetGenesisTime(genesisState.GenesisTime())
+	s.cfg.AttService.SetGenesisTime(genesisState.GenesisTime())
 
 	return genesisState, nil
 }
