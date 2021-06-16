@@ -6,6 +6,7 @@ package node
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
+	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/backuputil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -38,6 +40,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/rpc"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
+	"github.com/prysmaticlabs/prysm/validator/web"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -510,13 +513,34 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 	rpcAddr := fmt.Sprintf("%s:%d", rpcHost, rpcPort)
 	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
 	allowedOrigins := strings.Split(cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
-	gatewaySrv := gateway.NewValidator(
+	maxCallSize := cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
+
+	pbHandlers := []gateway.PbHandlerRegistration{
+		pb.RegisterAuthHandler,
+		pb.RegisterWalletHandler,
+		pb.RegisterHealthHandler,
+		pb.RegisterAccountsHandler,
+		pb.RegisterBeaconHandler,
+		pb.RegisterSlashingProtectionHandler,
+	}
+
+	muxHandler := func(h http.Handler, w http.ResponseWriter, req *http.Request) {
+		if strings.HasPrefix(req.URL.Path, "/api") {
+			http.StripPrefix("/api", h).ServeHTTP(w, req)
+		} else {
+			web.Handler(w, req)
+		}
+	}
+
+	gw := gateway.New(
 		cliCtx.Context,
+		pbHandlers,
+		muxHandler,
 		rpcAddr,
 		gatewayAddress,
-		allowedOrigins,
-	)
-	return c.services.RegisterService(gatewaySrv)
+	).WithAllowedOrigins(allowedOrigins).WithMaxCallRecvMsgSize(maxCallSize)
+
+	return c.services.RegisterService(gw)
 }
 
 func setWalletPasswordFilePath(cliCtx *cli.Context) error {

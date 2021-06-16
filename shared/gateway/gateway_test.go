@@ -3,7 +3,7 @@ package gateway
 import (
 	"flag"
 	"fmt"
-	"strings"
+	"net/http"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
@@ -12,8 +12,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// Test that beacon gateway Start, Stop.
-func TestBeaconGateway_StartStop(t *testing.T) {
+func TestGateway_StartStop(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	app := cli.App{}
@@ -25,60 +24,22 @@ func TestBeaconGateway_StartStop(t *testing.T) {
 	rpcHost := ctx.String(flags.RPCHost.Name)
 	selfAddress := fmt.Sprintf("%s:%d", rpcHost, ctx.Int(flags.RPCPort.Name))
 	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
-	allowedOrigins := strings.Split(ctx.String(flags.GPRCGatewayCorsDomain.Name), ",")
-	enableDebugRPCEndpoints := ctx.Bool(flags.EnableDebugRPCEndpoints.Name)
-	selfCert := ctx.String(flags.CertFlag.Name)
 
-	beaconGateway := NewBeacon(
+	g := New(
 		ctx.Context,
+		[]PbHandlerRegistration{},
+		func(handler http.Handler, writer http.ResponseWriter, request *http.Request) {
+
+		},
 		selfAddress,
-		selfCert,
 		gatewayAddress,
-		nil, /*optional mux*/
-		allowedOrigins,
-		enableDebugRPCEndpoints,
-		ctx.Uint64("grpc-max-msg-size"),
 	)
 
-	beaconGateway.Start()
+	g.Start()
 	go func() {
 		require.LogsContain(t, hook, "Starting gRPC gateway")
 	}()
 
-	err := beaconGateway.Stop()
+	err := g.Stop()
 	require.NoError(t, err)
-
-}
-
-// Test that validator gateway Start, Stop.
-func TestValidatorGateway_StartStop(t *testing.T) {
-	hook := logTest.NewGlobal()
-
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	ctx := cli.NewContext(&app, set, nil)
-
-	gatewayHost := ctx.String(flags.GRPCGatewayHost.Name)
-	gatewayPort := ctx.Int(flags.GRPCGatewayPort.Name)
-	rpcHost := ctx.String(flags.RPCHost.Name)
-	rpcPort := ctx.Int(flags.RPCPort.Name)
-	rpcAddr := fmt.Sprintf("%s:%d", rpcHost, rpcPort)
-	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
-	allowedOrigins := strings.Split(ctx.String(flags.GPRCGatewayCorsDomain.Name), ",")
-
-	validatorGateway := NewValidator(
-		ctx.Context,
-		rpcAddr,
-		gatewayAddress,
-		allowedOrigins,
-	)
-
-	validatorGateway.Start()
-	go func() {
-		require.LogsContain(t, hook, "Starting gRPC gateway")
-	}()
-
-	err := validatorGateway.Stop()
-	require.NoError(t, err)
-
 }

@@ -10,6 +10,9 @@ import (
 	"strings"
 
 	joonix "github.com/joonix/log"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/gateway"
 	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
 	"github.com/sirupsen/logrus"
@@ -35,19 +38,32 @@ func main() {
 		log.SetLevel(logrus.DebugLevel)
 	}
 
-	mux := http.NewServeMux()
-	gw := gateway.NewBeacon(
+	pbHandlers := []gateway.PbHandlerRegistration{
+		ethpb.RegisterNodeHandler,
+		ethpb.RegisterBeaconChainHandler,
+		ethpb.RegisterBeaconNodeValidatorHandler,
+		ethpbv1.RegisterEventsHandler,
+		pbrpc.RegisterHealthHandler,
+	}
+	if *enableDebugRPCEndpoints {
+		pbHandlers = append(pbHandlers, pbrpc.RegisterDebugHandler)
+	}
+	muxHandler := func(h http.Handler, w http.ResponseWriter, req *http.Request) {
+		h.ServeHTTP(w, req)
+	}
+
+	gw := gateway.New(
 		context.Background(),
+		pbHandlers,
+		muxHandler,
 		*beaconRPC,
-		"", // remoteCert
 		fmt.Sprintf("%s:%d", *host, *port),
-		mux,
-		strings.Split(*allowedOrigins, ","),
-		*enableDebugRPCEndpoints,
-		uint64(*grpcMaxMsgSize),
-	)
+	).WithAllowedOrigins(strings.Split(*allowedOrigins, ",")).WithMaxCallRecvMsgSize(uint64(*grpcMaxMsgSize))
+	mux := http.NewServeMux()
 	mux.HandleFunc("/swagger/", gateway.SwaggerServer())
 	mux.HandleFunc("/healthz", healthzServer(gw))
+	gw = gw.WithMux(mux)
+
 	gw.Start()
 
 	select {}

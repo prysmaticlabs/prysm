@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -35,6 +36,9 @@ import (
 	regularsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/backuputil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -650,18 +654,31 @@ func (b *BeaconNode) registerGRPCGateway() error {
 	allowedOrigins := strings.Split(b.cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
 	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
 	selfCert := b.cliCtx.String(flags.CertFlag.Name)
-	return b.services.RegisterService(
-		gateway.NewBeacon(
-			b.ctx,
-			selfAddress,
-			selfCert,
-			gatewayAddress,
-			nil, /*optional mux*/
-			allowedOrigins,
-			enableDebugRPCEndpoints,
-			b.cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name),
-		),
-	)
+	maxCallSize := b.cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
+
+	pbHandlers := []gateway.PbHandlerRegistration{
+		ethpb.RegisterNodeHandler,
+		ethpb.RegisterBeaconChainHandler,
+		ethpb.RegisterBeaconNodeValidatorHandler,
+		ethpbv1.RegisterEventsHandler,
+		pbrpc.RegisterHealthHandler,
+	}
+	if enableDebugRPCEndpoints {
+		pbHandlers = append(pbHandlers, pbrpc.RegisterDebugHandler)
+	}
+	muxHandler := func(h http.Handler, w http.ResponseWriter, req *http.Request) {
+		h.ServeHTTP(w, req)
+	}
+
+	g := gateway.New(
+		b.ctx,
+		pbHandlers,
+		muxHandler,
+		selfAddress,
+		gatewayAddress,
+	).WithAllowedOrigins(allowedOrigins).WithRemoteCert(selfCert).WithMaxCallRecvMsgSize(maxCallSize)
+
+	return b.services.RegisterService(g)
 }
 
 func (b *BeaconNode) registerInteropServices() error {
