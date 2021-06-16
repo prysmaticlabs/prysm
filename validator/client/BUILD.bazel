@@ -91,6 +91,7 @@ go_test(
         "runner_test.go",
         "service_test.go",
         "slashing_protection_interchange_test.go",
+        "sync_committee_test.go",
         "validator_test.go",
         "wait_for_activation_test.go",
     ],
