@@ -582,11 +582,11 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 							for i, p2 := range coms {
 								idx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(p2))
 								assert.Equal(t, true, ok)
-								sig := keys[idx].Sign(rt[:])
+								sig := keys[idx].Sign(sigRoot[:])
 								sigs = append(sigs, sig)
 								msg.Message.Contribution.AggregationBits.SetBitAt(uint64(i), true)
 							}
-							msg.Message.Contribution.AggregationBits = bls.AggregateSignatures(sigs).Marshal()
+							msg.Message.Contribution.Signature = bls.AggregateSignatures(sigs).Marshal()
 							d, err = helpers.Domain(hState.Fork(), helpers.SlotToEpoch(helpers.PrevSlot(hState.Slot())), params.BeaconConfig().DomainContributionAndProof, hState.GenesisValidatorRoot())
 							assert.NoError(t, err)
 							sigRoot, err = helpers.ComputeSigningRoot(msg.Message, d)
