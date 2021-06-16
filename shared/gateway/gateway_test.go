@@ -21,10 +21,12 @@ func TestBeaconGateway_StartStop(t *testing.T) {
 	ctx := cli.NewContext(&app, set, nil)
 
 	gatewayPort := ctx.Int(flags.GRPCGatewayPort.Name)
+	apiMiddlewarePort := ctx.Int(flags.ApiMiddlewarePort.Name)
 	gatewayHost := ctx.String(flags.GRPCGatewayHost.Name)
 	rpcHost := ctx.String(flags.RPCHost.Name)
 	selfAddress := fmt.Sprintf("%s:%d", rpcHost, ctx.Int(flags.RPCPort.Name))
 	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
+	apiMiddlewareAddress := fmt.Sprintf("%s:%d", gatewayHost, apiMiddlewarePort)
 	allowedOrigins := strings.Split(ctx.String(flags.GPRCGatewayCorsDomain.Name), ",")
 	enableDebugRPCEndpoints := ctx.Bool(flags.EnableDebugRPCEndpoints.Name)
 	selfCert := ctx.String(flags.CertFlag.Name)
@@ -34,6 +36,8 @@ func TestBeaconGateway_StartStop(t *testing.T) {
 		selfAddress,
 		selfCert,
 		gatewayAddress,
+		apiMiddlewareAddress,
+		nil,
 		nil, /*optional mux*/
 		allowedOrigins,
 		enableDebugRPCEndpoints,
@@ -43,6 +47,7 @@ func TestBeaconGateway_StartStop(t *testing.T) {
 	beaconGateway.Start()
 	go func() {
 		require.LogsContain(t, hook, "Starting gRPC gateway")
+		require.LogsContain(t, hook, "Starting API middleware")
 	}()
 
 	err := beaconGateway.Stop()

@@ -30,6 +30,26 @@ func TestGetBeaconState(t *testing.T) {
 	assert.NotNil(t, resp)
 }
 
+func TestGetBeaconStateSSZ(t *testing.T) {
+	fakeState, err := sharedtestutil.NewBeaconState()
+	require.NoError(t, err)
+	sszState, err := fakeState.MarshalSSZ()
+	require.NoError(t, err)
+
+	server := &Server{
+		StateFetcher: &testutil.MockFetcher{
+			BeaconState: fakeState,
+		},
+	}
+	resp, err := server.GetBeaconStateSSZ(context.Background(), &ethpb.StateRequest{
+		StateId: make([]byte, 0),
+	})
+	require.NoError(t, err)
+	assert.NotNil(t, resp)
+
+	assert.DeepEqual(t, sszState, resp.Data)
+}
+
 func TestListForkChoiceHeads(t *testing.T) {
 	ctx := context.Background()
 
