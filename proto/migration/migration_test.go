@@ -332,3 +332,26 @@ func Test_V1AttToV1Alpha1(t *testing.T) {
 	require.NoError(t, err)
 	assert.DeepEqual(t, v1Root, alphaRoot)
 }
+
+func Test_BlockInterfaceToV1Block(t *testing.T) {
+	v1Alpha1Block := testutil.HydrateSignedBeaconBlock(&ethpb_alpha.SignedBeaconBlock{})
+	v1Alpha1Block.Block.Slot = slot
+	v1Alpha1Block.Block.ProposerIndex = validatorIndex
+	v1Alpha1Block.Block.ParentRoot = parentRoot
+	v1Alpha1Block.Block.StateRoot = stateRoot
+	v1Alpha1Block.Block.Body.RandaoReveal = randaoReveal
+	v1Alpha1Block.Block.Body.Eth1Data = &ethpb_alpha.Eth1Data{
+		DepositRoot:  depositRoot,
+		DepositCount: depositCount,
+		BlockHash:    blockHash,
+	}
+	v1Alpha1Block.Signature = signature
+
+	v1Block, err := SignedBeaconBlock(interfaces.WrappedPhase0SignedBeaconBlock(v1Alpha1Block))
+	require.NoError(t, err)
+	v1Root, err := v1Block.HashTreeRoot()
+	require.NoError(t, err)
+	v1Alpha1Root, err := v1Alpha1Block.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, v1Root, v1Alpha1Root)
+}

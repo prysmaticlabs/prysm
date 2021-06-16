@@ -248,7 +248,7 @@ func (s *Service) Start() {
 		Broadcaster:        s.cfg.Broadcaster,
 		BlockReceiver:      s.cfg.BlockReceiver,
 		StateGenService:    s.cfg.StateGen,
-		StateFetcher: statefetcher.StateProvider{
+		StateFetcher: &statefetcher.StateProvider{
 			BeaconDB:           s.cfg.BeaconDB,
 			ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
 			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
