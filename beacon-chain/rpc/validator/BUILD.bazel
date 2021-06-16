@@ -13,6 +13,7 @@ go_library(
         "proposer_utils.go",
         "server.go",
         "status.go",
+        "sync_committee.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/validator",
     visibility = ["//beacon-chain:__subpackages__"],

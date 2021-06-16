@@ -15,6 +15,7 @@ go_library(
         "propose_protect.go",
         "runner.go",
         "service.go",
+        "sync_committee.go",
         "validator.go",
         "wait_for_activation.go",
     ],
@@ -22,6 +23,7 @@ go_library(
     visibility = ["//validator:__subpackages__"],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
         "//proto/validator/accounts/v2:go_default_library",
         "//shared/blockutil:go_default_library",
