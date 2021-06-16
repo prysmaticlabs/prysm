@@ -150,7 +150,7 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
-	rawBytes := p2ptypes.SSZBytes(m.Message.Contribution.BlockRoot[:])
+	rawBytes := p2ptypes.SSZBytes(m.Message.Contribution.BlockRoot)
 	sigRoot, err := helpers.ComputeSigningRoot(&rawBytes, d)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
