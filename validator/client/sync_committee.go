@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // SubmitSyncCommitteeMessage submits the sync committee message to the beacon chain.
@@ -22,7 +21,7 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.S
 
 	v.waitOneThirdOrValidBlock(ctx, slot)
 
-	res, err := v.validatorClient.GetSyncMessageBlockRoot(ctx, &emptypb.Empty{})
+	res, err := v.validatorClient.GetSyncMessageBlockRoot(ctx, &ethpb.SyncMessageBlockRootRequest{Slot: slot})
 	if err != nil {
 		log.WithError(err).Error("Could not request sync message block root to sign")
 		traceutil.AnnotateError(span, err)

@@ -22,14 +22,16 @@ func TestSubmitSyncCommitteeMessage_ValidatorDutiesRequestFailure(t *testing.T) 
 
 	m.validatorClient.EXPECT().GetSyncMessageBlockRoot(
 		gomock.Any(), // ctx
-		&emptypb.Empty{},
+		&eth.SyncMessageBlockRootRequest{
+			Slot: 1,
+		},
 	).Return(&eth.SyncMessageBlockRootResponse{
 		Root: bytesutil.PadTo([]byte{}, 32),
 	}, nil)
 
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	validator.SubmitSyncCommitteeMessage(context.Background(), 30, pubKey)
+	validator.SubmitSyncCommitteeMessage(context.Background(), 1, pubKey)
 	require.LogsContain(t, hook, "Could not fetch validator assignment")
 }
 
@@ -50,7 +52,9 @@ func TestSubmitSyncCommitteeMessage_BadDomainData(t *testing.T) {
 	r := []byte{'a'}
 	m.validatorClient.EXPECT().GetSyncMessageBlockRoot(
 		gomock.Any(), // ctx
-		&emptypb.Empty{},
+		&eth.SyncMessageBlockRootRequest{
+			Slot: 1,
+		},
 	).Return(&eth.SyncMessageBlockRootResponse{
 		Root: bytesutil.PadTo(r, 32),
 	}, nil)
@@ -61,7 +65,7 @@ func TestSubmitSyncCommitteeMessage_BadDomainData(t *testing.T) {
 
 	pubKey := [48]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	validator.SubmitSyncCommitteeMessage(context.Background(), 30, pubKey)
+	validator.SubmitSyncCommitteeMessage(context.Background(), 1, pubKey)
 	require.LogsContain(t, hook, "Could not get sync committee domain data")
 }
 
@@ -82,7 +86,9 @@ func TestSubmitSyncCommitteeMessage_CouldNotSubmit(t *testing.T) {
 	r := []byte{'a'}
 	m.validatorClient.EXPECT().GetSyncMessageBlockRoot(
 		gomock.Any(), // ctx
-		&emptypb.Empty{},
+		&eth.SyncMessageBlockRootRequest{
+			Slot: 1,
+		},
 	).Return(&eth.SyncMessageBlockRootResponse{
 		Root: bytesutil.PadTo(r, 32),
 	}, nil)
@@ -123,7 +129,9 @@ func TestSubmitSyncCommitteeMessage_OK(t *testing.T) {
 	r := []byte{'a'}
 	m.validatorClient.EXPECT().GetSyncMessageBlockRoot(
 		gomock.Any(), // ctx
-		&emptypb.Empty{},
+		&eth.SyncMessageBlockRootRequest{
+			Slot: 1,
+		},
 	).Return(&eth.SyncMessageBlockRootResponse{
 		Root: bytesutil.PadTo(r, 32),
 	}, nil)

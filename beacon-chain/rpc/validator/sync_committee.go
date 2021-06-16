@@ -3,6 +3,8 @@ package validator
 import (
 	"context"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
@@ -11,11 +13,33 @@ import (
 )
 
 // GetSyncMessageBlockRoot retrieves the sync committee block root of the beacon chain.
-func (vs *Server) GetSyncMessageBlockRoot(ctx context.Context, _ *emptypb.Empty) (*ethpb.SyncMessageBlockRootResponse, error) {
-	r, err := vs.HeadFetcher.HeadRoot(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not retrieve head root: %v", err)
+func (vs *Server) GetSyncMessageBlockRoot(ctx context.Context, req *ethpb.SyncMessageBlockRootRequest) (*ethpb.SyncMessageBlockRootResponse, error) {
+	// Short cut, where copying state and processing slots are not required.
+	if req.Slot-1 == vs.HeadFetcher.HeadSlot() {
+		r, err := vs.HeadFetcher.HeadRoot(ctx)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not retrieve head root: %v", err)
+		}
+		return &ethpb.SyncMessageBlockRootResponse{
+			Root: r,
+		}, nil
 	}
+
+	headState, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	}
+	if req.Slot > headState.Slot() {
+		headState, err = state.ProcessSlots(ctx, headState, req.Slot)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not not process slots: %v", err)
+		}
+	}
+	r, err := helpers.BlockRootAtSlot(headState, req.Slot-1)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not calculate block root: %v", err)
+	}
+
 	return &ethpb.SyncMessageBlockRootResponse{
 		Root: r,
 	}, nil
