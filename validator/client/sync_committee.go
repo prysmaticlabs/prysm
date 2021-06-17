@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	emptypb "github.com/golang/protobuf/ptypes/empty"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -21,7 +22,7 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.S
 
 	v.waitOneThirdOrValidBlock(ctx, slot)
 
-	res, err := v.validatorClient.GetSyncMessageBlockRoot(ctx, &ethpb.SyncMessageBlockRootRequest{Slot: slot})
+	res, err := v.validatorClient.GetSyncMessageBlockRoot(ctx, &emptypb.Empty{})
 	if err != nil {
 		log.WithError(err).Error("Could not request sync message block root to sign")
 		traceutil.AnnotateError(span, err)
