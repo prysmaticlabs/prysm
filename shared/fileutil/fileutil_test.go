@@ -69,7 +69,7 @@ func TestHandleBackupDir_AlreadyExists_Override(t *testing.T) {
 	require.NoError(t, err)
 	info, err := os.Stat(dirName)
 	require.NoError(t, err)
-	assert.Equal(t, "drwxrwxr-x", info.Mode().String())
+	assert.Equal(t, "drwxr-xr-x", info.Mode().String())
 	assert.NoError(t, fileutil.HandleBackupDir(dirName, true))
 	info, err = os.Stat(dirName)
 	require.NoError(t, err)
@@ -82,12 +82,12 @@ func TestHandleBackupDir_AlreadyExists_No_Override(t *testing.T) {
 	require.NoError(t, err)
 	info, err := os.Stat(dirName)
 	require.NoError(t, err)
-	assert.Equal(t, "drwxrwxr-x", info.Mode().String())
+	assert.Equal(t, "drwxr-xr-x", info.Mode().String())
 	err = fileutil.HandleBackupDir(dirName, false)
 	assert.ErrorContains(t, "dir already exists without proper 0700 permissions", err)
 	info, err = os.Stat(dirName)
 	require.NoError(t, err)
-	assert.Equal(t, "drwxrwxr-x", info.Mode().String())
+	assert.Equal(t, "drwxr-xr-x", info.Mode().String())
 }
 
 func TestHandleBackupDir_NewDir(t *testing.T) {
