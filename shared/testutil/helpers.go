@@ -68,52 +68,6 @@ func BlockSignature(
 	return privKeys[proposerIdx].Sign(blockRoot[:]), nil
 }
 
-// BlockSignatureAltair calculates the post-state root of the block and returns the signature.
-func BlockSignatureAltair(
-	bState iface.BeaconState,
-	block *ethpb.BeaconBlockAltair,
-	privKeys []bls.SecretKey,
-) (bls.Signature, error) {
-	var err error
-
-	bState, err = state.ProcessSlots(context.Background(), bState, block.Slot)
-	if err != nil {
-		return nil, err
-	}
-	bState, err = state.ProcessBlockForStateRoot(context.Background(), bState, interfaces.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: block}))
-	if err != nil {
-		return nil, err
-	}
-	r, err := bState.HashTreeRoot(context.Background())
-	if err != nil {
-		return nil, err
-	}
-
-	block.StateRoot = r[:]
-	domain, err := helpers.Domain(bState.Fork(), helpers.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer, bState.GenesisValidatorRoot())
-	if err != nil {
-		return nil, err
-	}
-	blockRoot, err := helpers.ComputeSigningRoot(block, domain)
-	if err != nil {
-		return nil, err
-	}
-	// Temporarily increasing the beacon state slot here since BeaconProposerIndex is a
-	// function deterministic on beacon state slot.
-	currentSlot := bState.Slot()
-	if err := bState.SetSlot(block.Slot); err != nil {
-		return nil, err
-	}
-	proposerIdx, err := helpers.BeaconProposerIndex(bState)
-	if err != nil {
-		return nil, err
-	}
-	if err := bState.SetSlot(currentSlot); err != nil {
-		return nil, err
-	}
-	return privKeys[proposerIdx].Sign(blockRoot[:]), nil
-}
-
 // Random32Bytes generates a random 32 byte slice.
 func Random32Bytes(t *testing.T) []byte {
 	b := make([]byte, 32)

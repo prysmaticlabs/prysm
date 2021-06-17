@@ -12,7 +12,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	testAltair "github.com/prysmaticlabs/prysm/shared/testutil/altair"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -207,7 +207,7 @@ func TestSyncCommittee_CanGet(t *testing.T) {
 }
 
 func TestAssignedToSyncCommittee(t *testing.T) {
-	s, _ := testAltair.DeterministicGenesisStateAltair(t, 5*params.BeaconConfig().SyncCommitteeSize)
+	s, _ := testutil.DeterministicGenesisStateAltair(t, 5*params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee, err := altair.NextSyncCommittee(s)
 	require.NoError(t, err)
 	require.NoError(t, s.SetCurrentSyncCommittee(syncCommittee))
@@ -272,13 +272,13 @@ func TestAssignedToSyncCommittee(t *testing.T) {
 }
 
 func TestAssignedToSyncCommittee_IncorrectEpoch(t *testing.T) {
-	s, _ := testAltair.DeterministicGenesisStateAltair(t, 64)
+	s, _ := testutil.DeterministicGenesisStateAltair(t, 64)
 	_, err := altair.AssignedToSyncCommittee(s, params.BeaconConfig().EpochsPerSyncCommitteePeriod*2, 0)
 	require.ErrorContains(t, "epoch period 2 is not current period 0 or next period 1 in state", err)
 }
 
 func TestSubnetsForSyncCommittee(t *testing.T) {
-	s, _ := testAltair.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
+	s, _ := testutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee, err := altair.NextSyncCommittee(s)
 	require.NoError(t, err)
 	require.NoError(t, s.SetCurrentSyncCommittee(syncCommittee))
@@ -306,5 +306,54 @@ func TestSyncCommitteePeriod(t *testing.T) {
 	}
 	for _, test := range tests {
 		require.Equal(t, test.wanted, altair.SyncCommitteePeriod(test.epoch))
+	}
+}
+
+func TestValidateNilSyncContribution(t *testing.T) {
+	tests := []struct {
+		name    string
+		s       *ethpb.SignedContributionAndProof
+		wantErr bool
+	}{
+		{
+			name:    "nil object",
+			s:       nil,
+			wantErr: true,
+		},
+		{
+			name:    "nil message",
+			s:       &ethpb.SignedContributionAndProof{},
+			wantErr: true,
+		},
+		{
+			name:    "nil contribution",
+			s:       &ethpb.SignedContributionAndProof{Message: &ethpb.ContributionAndProof{}},
+			wantErr: true,
+		},
+		{
+			name: "nil bitfield",
+			s: &ethpb.SignedContributionAndProof{
+				Message: &ethpb.ContributionAndProof{
+					Contribution: &ethpb.SyncCommitteeContribution{},
+				}},
+			wantErr: true,
+		},
+		{
+			name: "non nil sync contribution",
+			s: &ethpb.SignedContributionAndProof{
+				Message: &ethpb.ContributionAndProof{
+					Contribution: &ethpb.SyncCommitteeContribution{
+						AggregationBits: []byte{},
+					},
+				}},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := altair.ValidateNilSyncContribution(tt.s); (err != nil) != tt.wantErr {
+				t.Errorf("ValidateNilSyncContribution() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
 	}
 }
