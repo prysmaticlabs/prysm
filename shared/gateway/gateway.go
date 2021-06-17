@@ -17,10 +17,16 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 var _ shared.Service = (*Gateway)(nil)
+
+// TODO: PbHandler
+type PbHandler struct {
+	Registrations []PbHandlerRegistration
+	Patterns      []string
+	Mux           *gwruntime.ServeMux
+}
 
 // PbHandlerRegistration is a function that registers a protobuf handler.
 type PbHandlerRegistration func(context.Context, *gwruntime.ServeMux, *grpc.ClientConn) error
@@ -31,8 +37,7 @@ type MuxHandler func(http.Handler, http.ResponseWriter, *http.Request)
 // Gateway is the gRPC gateway to serve HTTP JSON traffic as a proxy and forward it to the gRPC server.
 type Gateway struct {
 	conn                         *grpc.ClientConn
-	v1Alpha1PbHandlers           []PbHandlerRegistration
-	v1PbHandlers                 []PbHandlerRegistration
+	pbHandlers                   []PbHandler
 	muxHandler                   MuxHandler
 	maxCallRecvMsgSize           uint64
 	mux                          *http.ServeMux
@@ -51,21 +56,19 @@ type Gateway struct {
 // New returns a new instance of the Gateway.
 func New(
 	ctx context.Context,
-	v1Alpha1PbHandlers []PbHandlerRegistration,
-	v1PbHandlers []PbHandlerRegistration,
+	pbHandlers []PbHandler,
 	muxHandler MuxHandler,
 	remoteAddr,
 	gatewayAddress string,
 ) *Gateway {
 	g := &Gateway{
-		v1Alpha1PbHandlers: v1Alpha1PbHandlers,
-		v1PbHandlers:       v1PbHandlers,
-		muxHandler:         muxHandler,
-		mux:                http.NewServeMux(),
-		gatewayAddr:        gatewayAddress,
-		ctx:                ctx,
-		remoteAddr:         remoteAddr,
-		allowedOrigins:     []string{},
+		pbHandlers:     pbHandlers,
+		muxHandler:     muxHandler,
+		mux:            http.NewServeMux(),
+		gatewayAddr:    gatewayAddress,
+		ctx:            ctx,
+		remoteAddr:     remoteAddr,
+		allowedOrigins: []string{},
 	}
 	return g
 }
@@ -114,62 +117,27 @@ func (g *Gateway) Start() {
 	}
 	g.conn = conn
 
-	v1Alpha1Mux := gwruntime.NewServeMux(
-		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
-			Marshaler: &gwruntime.JSONPb{
-				MarshalOptions: protojson.MarshalOptions{
-					EmitUnpopulated: true,
-				},
-				UnmarshalOptions: protojson.UnmarshalOptions{
-					DiscardUnknown: true,
-				},
-			},
-		}),
-		gwruntime.WithMarshalerOption(
-			"text/event-stream", &gwruntime.EventSourceJSONPb{},
-		),
-	)
-
-	v1Mux := gwruntime.NewServeMux(
-		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
-			Marshaler: &gwruntime.JSONPb{
-				MarshalOptions: protojson.MarshalOptions{
-					UseProtoNames:   true,
-					EmitUnpopulated: true,
-				},
-				UnmarshalOptions: protojson.UnmarshalOptions{
-					DiscardUnknown: true,
-				},
-			},
-		}),
-	)
-
-	for _, h := range g.v1Alpha1PbHandlers {
-		if err := h(ctx, v1Alpha1Mux, g.conn); err != nil {
-			log.WithError(err).Error("Failed to start v1alpha1 gateway")
-			g.startFailure = err
-			return
+	for _, h := range g.pbHandlers {
+		for _, r := range h.Registrations {
+			if err := r(ctx, h.Mux, g.conn); err != nil {
+				log.WithError(err).Error("Failed to register handler")
+				g.startFailure = err
+				return
+			}
 		}
-	}
-	for _, h := range g.v1PbHandlers {
-		if err := h(ctx, v1Mux, g.conn); err != nil {
-			log.WithError(err).Error("Failed to start v1 gateway")
-			g.startFailure = err
-			return
+		for _, p := range h.Patterns {
+			g.mux.Handle(p, h.Mux)
 		}
 	}
 
-	g.mux.Handle("/eth/v1alpha1/", v1Alpha1Mux)
-	g.mux.Handle("/eth/v1/", v1Mux)
-	apiHandler := g.corsMiddleware(g.mux)
-
+	corsMux := g.corsMiddleware(g.mux)
 	g.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		g.muxHandler(apiHandler, w, r)
+		g.muxHandler(corsMux, w, r)
 	})
 
 	g.server = &http.Server{
 		Addr:    g.gatewayAddr,
-		Handler: g.mux,
+		Handler: corsMux,
 	}
 
 	go func() {

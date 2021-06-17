@@ -14,6 +14,7 @@ import (
 	"sync"
 	"syscall"
 
+	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
@@ -43,6 +44,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/web"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // ValidatorClient defines an instance of an eth2 validator that manages
@@ -515,7 +517,7 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 	allowedOrigins := strings.Split(cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
 	maxCallSize := cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 
-	v1Alpha1PbHandlers := []gateway.PbHandlerRegistration{
+	registrations := []gateway.PbHandlerRegistration{
 		pb.RegisterAuthHandler,
 		pb.RegisterWalletHandler,
 		pb.RegisterHealthHandler,
@@ -523,7 +525,21 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		pb.RegisterBeaconHandler,
 		pb.RegisterSlashingProtectionHandler,
 	}
-
+	mux := gwruntime.NewServeMux(
+		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
+			Marshaler: &gwruntime.JSONPb{
+				MarshalOptions: protojson.MarshalOptions{
+					EmitUnpopulated: true,
+				},
+				UnmarshalOptions: protojson.UnmarshalOptions{
+					DiscardUnknown: true,
+				},
+			},
+		}),
+		gwruntime.WithMarshalerOption(
+			"text/event-stream", &gwruntime.EventSourceJSONPb{},
+		),
+	)
 	muxHandler := func(h http.Handler, w http.ResponseWriter, req *http.Request) {
 		if strings.HasPrefix(req.URL.Path, "/api") {
 			http.StripPrefix("/api", h).ServeHTTP(w, req)
@@ -532,10 +548,15 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		}
 	}
 
+	pbHandler := gateway.PbHandler{
+		Registrations: registrations,
+		Patterns:      []string{"/accounts/", "/v2/"},
+		Mux:           mux,
+	}
+
 	gw := gateway.New(
 		cliCtx.Context,
-		v1Alpha1PbHandlers,
-		[]gateway.PbHandlerRegistration{},
+		[]gateway.PbHandler{pbHandler},
 		muxHandler,
 		rpcAddr,
 		gatewayAddress,
