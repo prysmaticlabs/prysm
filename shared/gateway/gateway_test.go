@@ -35,8 +35,7 @@ func TestGateway_Customized(t *testing.T) {
 
 	g := New(
 		context.Background(),
-		[]PbHandlerRegistration{},
-		[]PbHandlerRegistration{},
+		[]PbHandler{},
 		func(handler http.Handler, writer http.ResponseWriter, request *http.Request) {
 
 		},
@@ -72,8 +71,7 @@ func TestGateway_StartStop(t *testing.T) {
 
 	g := New(
 		ctx.Context,
-		[]PbHandlerRegistration{},
-		[]PbHandlerRegistration{},
+		[]PbHandler{},
 		func(handler http.Handler, writer http.ResponseWriter, request *http.Request) {
 
 		},
