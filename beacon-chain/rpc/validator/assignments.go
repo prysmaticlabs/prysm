@@ -140,17 +140,6 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 	// Post Altair transition when the beacon state is Altair compatible, and requested epoch is
 	// post fork boundary.
 	postAltairTransition := s.Version() == version.Altair && req.Epoch >= params.BeaconConfig().AltairForkEpoch
-	var cscRoot [32]byte
-	if postAltairTransition {
-		csc, err := s.CurrentSyncCommittee()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get current sync committee: %v", err)
-		}
-		cscRoot, err = csc.HashTreeRoot()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get current sync committee root: %v", err)
-		}
-	}
 
 	validatorAssignments := make([]*ethpb.DutiesResponse_Duty, 0, len(req.PublicKeys))
 	nextValidatorAssignments := make([]*ethpb.DutiesResponse_Duty, 0, len(req.PublicKeys))
@@ -197,11 +186,19 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 
 		// Are the validators in current or next epoch sync committee.
 		if postAltairTransition {
-			assignment.IsSyncCommittee, err = helpers.IsCurrentEpochSyncCommittee(cscRoot, bytesutil.ToBytes48(pubKey))
+			csc, err := s.CurrentSyncCommittee()
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not get current sync committee: %v", err)
+			}
+			assignment.IsSyncCommittee, err = helpers.IsCurrentEpochSyncCommittee(csc, bytesutil.ToBytes48(pubKey))
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not determine current epoch sync committee: %v", err)
 			}
-			nextAssignment.IsSyncCommittee, err = helpers.IsNextEpochSyncCommittee(cscRoot, bytesutil.ToBytes48(pubKey))
+			nsc, err := s.NextSyncCommittee()
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not get next sync committee: %v", err)
+			}
+			nextAssignment.IsSyncCommittee, err = helpers.IsNextEpochSyncCommittee(nsc, bytesutil.ToBytes48(pubKey))
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not determine next epoch sync committee: %v", err)
 			}

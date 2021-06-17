@@ -100,6 +100,9 @@ func (fakeChecker) Status() error {
 func (fakeChecker) Resync() error {
 	return nil
 }
+func (fakeChecker) Synced() bool {
+	return false
+}
 
 // FuzzBlock wraps BeaconFuzzBlock in a go-fuzz compatible interface
 func FuzzBlock(b []byte) int {
