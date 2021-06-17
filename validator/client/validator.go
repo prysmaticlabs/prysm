@@ -546,15 +546,15 @@ func (v *validator) GetKeymanager() keymanager.IKeymanager {
 	return v.keyManager
 }
 
-// isAggregator checks if a validator is an aggregator of a given slot, it uses the selection algorithm outlined in:
-// https://github.com/ethereum/eth2.0-specs/blob/v0.9.3/specs/validator/0_beacon-chain-validator.md#aggregation-selection
+// isAggregator checks if a validator is an aggregator of a given slot and committee,
+// it uses a modulo calculated by validator count in committee and samples randomness around it.
 func (v *validator) isAggregator(ctx context.Context, committee []types.ValidatorIndex, slot types.Slot, pubKey [48]byte) (bool, error) {
 	modulo := uint64(1)
 	if len(committee)/int(params.BeaconConfig().TargetAggregatorsPerCommittee) > 1 {
 		modulo = uint64(len(committee)) / params.BeaconConfig().TargetAggregatorsPerCommittee
 	}
 
-	slotSig, err := v.signSlot(ctx, pubKey, slot)
+	slotSig, err := v.signSlotWithSelectionProof(ctx, pubKey, slot)
 	if err != nil {
 		return false, err
 	}
