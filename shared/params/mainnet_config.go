@@ -1,6 +1,7 @@
 package params
 
 import (
+	"math"
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -16,6 +17,13 @@ func MainnetConfig() *BeaconChainConfig {
 func UseMainnetConfig() {
 	beaconConfig = MainnetConfig()
 }
+
+const (
+	// Genesis Fork Epoch for the mainnet config.
+	genesisForkEpoch = 0
+	// Altair Fork Epoch for mainnet config.
+	altairForkEpoch = math.MaxUint64
+)
 
 var mainnetNetworkConfig = &NetworkConfig{
 	GossipMaxSize:                   1 << 20, // 1 MiB
@@ -178,12 +186,12 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	// Fork related values.
 	GenesisForkVersion: []byte{0, 0, 0, 0},
 	AltairForkVersion:  []byte{1, 0, 0, 0},
-	AltairForkEpoch:    3,                  // Set to Max Uint64 for now.
+	AltairForkEpoch:    altairForkEpoch,    // Set to Max Uint64 for now.
 	NextForkVersion:    []byte{1, 0, 0, 0}, // Set to GenesisForkVersion unless there is a scheduled fork
-	NextForkEpoch:      3,                  // Set to FarFutureEpoch unless there is a scheduled fork.
+	NextForkEpoch:      altairForkEpoch,    // Set to FarFutureEpoch unless there is a scheduled fork.
 	ForkVersionSchedule: map[[4]byte]types.Epoch{
-		[4]byte{0, 0, 0, 0}: 0,
-		[4]byte{1, 0, 0, 0}: 3,
+		[4]byte{0, 0, 0, 0}: genesisForkEpoch,
+		[4]byte{1, 0, 0, 0}: altairForkEpoch,
 		// Any further forks must be specified here by their epoch number.
 	},
 
