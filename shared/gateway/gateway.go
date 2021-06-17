@@ -159,13 +159,13 @@ func (g *Gateway) Start() {
 			ethpb.RegisterNodeHandler,
 			ethpb.RegisterBeaconChainHandler,
 			ethpb.RegisterBeaconNodeValidatorHandler,
-			ethpbv1.RegisterEventsHandler,
 			pbrpc.RegisterHealthHandler,
 		}
 		handlersV1 := []func(context.Context, *gwruntime.ServeMux, *grpc.ClientConn) error{
 			ethpbv1.RegisterBeaconNodeHandler,
 			ethpbv1.RegisterBeaconChainHandler,
 			ethpbv1.RegisterBeaconValidatorHandler,
+			ethpbv1.RegisterEventsHandler,
 		}
 		if g.enableDebugRPCEndpoints {
 			handlers = append(handlers, pbrpc.RegisterDebugHandler)
