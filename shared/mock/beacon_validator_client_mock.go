@@ -138,6 +138,26 @@ func (mr *MockBeaconNodeValidatorClientMockRecorder) GetSyncMessageBlockRoot(arg
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSyncMessageBlockRoot", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).GetSyncMessageBlockRoot), varargs...)
 }
 
+// GetSyncSubcommitteeIndex mocks base method.
+func (m *MockBeaconNodeValidatorClient) GetSyncSubcommitteeIndex(arg0 context.Context, arg1 *eth.SyncSubcommitteeIndexRequest, arg2 ...grpc.CallOption) (*eth.SyncSubcommitteeIndexRespond, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetSyncSubcommitteeIndex", varargs...)
+	ret0, _ := ret[0].(*eth.SyncSubcommitteeIndexRespond)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSyncSubcommitteeIndex indicates an expected call of GetSyncSubcommitteeIndex.
+func (mr *MockBeaconNodeValidatorClientMockRecorder) GetSyncSubcommitteeIndex(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSyncSubcommitteeIndex", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).GetSyncSubcommitteeIndex), varargs...)
+}
+
 // MultipleValidatorStatus mocks base method.
 func (m *MockBeaconNodeValidatorClient) MultipleValidatorStatus(arg0 context.Context, arg1 *eth.MultipleValidatorStatusRequest, arg2 ...grpc.CallOption) (*eth.MultipleValidatorStatusResponse, error) {
 	m.ctrl.T.Helper()
