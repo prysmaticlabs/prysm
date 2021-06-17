@@ -67,7 +67,11 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	if err := helpers.ValidateSlotTargetEpoch(m.Message.Aggregate.Data); err != nil {
 		return pubsub.ValidationReject
 	}
-	if err := helpers.ValidateAttestationTime(m.Message.Aggregate.Data.Slot, s.cfg.Chain.GenesisTime()); err != nil {
+
+	// Attestation's slot is within ATTESTATION_PROPAGATION_SLOT_RANGE and early attestation
+	// processing tolerance.
+	if err := helpers.ValidateAttestationTime(m.Message.Aggregate.Data.Slot, s.cfg.Chain.GenesisTime(),
+		earlyAttestationProcessingTolerance); err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}

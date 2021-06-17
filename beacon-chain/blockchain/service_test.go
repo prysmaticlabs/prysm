@@ -96,7 +96,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	})
 	require.NoError(t, err, "Unable to set up web3 service")
 
-	opsService, err := attestations.NewService(ctx, &attestations.Config{Pool: attestations.NewPool()})
+	attService, err := attestations.NewService(ctx, &attestations.Config{Pool: attestations.NewPool()})
 	require.NoError(t, err)
 
 	depositCache, err := depositcache.New()
@@ -112,7 +112,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 		AttPool:           attestations.NewPool(),
 		StateGen:          stategen.New(beaconDB),
 		ForkChoiceStore:   protoarray.New(0, 0, params.BeaconConfig().ZeroHash),
-		OpsService:        opsService,
+		AttService:        attService,
 	}
 
 	// Safe a state in stategen to purposes of testing a service stop / shutdown.

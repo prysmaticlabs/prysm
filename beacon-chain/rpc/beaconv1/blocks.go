@@ -20,12 +20,32 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+// blockIdParseError represents an error scenario where a block ID could not be parsed.
+type blockIdParseError struct {
+	message string
+}
+
+// newBlockIdParseError creates a new error instance.
+func newBlockIdParseError(reason error) blockIdParseError {
+	return blockIdParseError{
+		message: errors.Wrapf(reason, "could not parse block ID").Error(),
+	}
+}
+
+// Error returns the underlying error message.
+func (e *blockIdParseError) Error() string {
+	return e.message
+}
+
 // GetBlockHeader retrieves block header for given block id.
 func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BlockHeaderResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBlockHeader")
 	defer span.End()
 
 	rBlk, err := bs.blockFromBlockID(ctx, req.BlockId)
+	if invalidBlockIdErr, ok := err.(*blockIdParseError); ok {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid block ID: %v", invalidBlockIdErr)
+	}
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
 	}
@@ -141,13 +161,13 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpb.BeaconBlockContain
 	blk := req.Message
 	rBlock, err := migration.V1ToV1Alpha1Block(&ethpb.SignedBeaconBlock{Block: blk, Signature: req.Signature})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not convert block to v1")
+		return nil, status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
 	}
 	v1alpha1Block := interfaces.WrappedPhase0SignedBeaconBlock(rBlock)
 
 	root, err := blk.HashTreeRoot()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not tree hash block: %v", err)
+		return nil, status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
 	}
 
 	// Do not block proposal critical path with debug logging or block feed updates.
@@ -172,34 +192,53 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpb.BeaconBlockContain
 	return &emptypb.Empty{}, nil
 }
 
-// GetBlock retrieves block details for given block id.
+// GetBlock retrieves block details for given block ID.
 func (bs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BlockResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBlock")
 	defer span.End()
 
-	rBlk, err := bs.blockFromBlockID(ctx, req.BlockId)
+	block, err := bs.blockFromBlockID(ctx, req.BlockId)
+	if invalidBlockIdErr, ok := err.(*blockIdParseError); ok {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid block ID: %v", invalidBlockIdErr)
+	}
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
 	}
-	if rBlk == nil || rBlk.IsNil() {
-		return nil, status.Errorf(codes.NotFound, "Could not find requested block")
-	}
-	blk, err := rBlk.PbPhase0Block()
+	signedBeaconBlock, err := migration.SignedBeaconBlock(block)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get raw block: %v", err)
-	}
-
-	v1Block, err := migration.V1Alpha1ToV1Block(blk)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not convert block to v1")
+		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 
 	return &ethpb.BlockResponse{
 		Data: &ethpb.BeaconBlockContainer{
-			Message:   v1Block.Block,
-			Signature: blk.Signature,
+			Message:   signedBeaconBlock.Block,
+			Signature: signedBeaconBlock.Signature,
 		},
 	}, nil
+}
+
+// GetBlockSSZ returns the SSZ-serialized version of the becaon block for given block ID.
+func (bs *Server) GetBlockSSZ(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BlockSSZResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBlockSSZ")
+	defer span.End()
+
+	block, err := bs.blockFromBlockID(ctx, req.BlockId)
+	if invalidBlockIdErr, ok := err.(*blockIdParseError); ok {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid block ID: %v", invalidBlockIdErr)
+	}
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
+	}
+	signedBeaconBlock, err := migration.SignedBeaconBlock(block)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+	}
+	sszBlock, err := signedBeaconBlock.MarshalSSZ()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ: %v", err)
+	}
+
+	return &ethpb.BlockSSZResponse{Data: sszBlock}, nil
 }
 
 // GetBlockRoot retrieves hashTreeRoot of BeaconBlock/BeaconBlockHeader.
@@ -248,7 +287,7 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpb.BlockRequest) (*e
 		} else {
 			slot, err := strconv.ParseUint(string(req.BlockId), 10, 64)
 			if err != nil {
-				return nil, status.Errorf(codes.Internal, "could not decode block id: %v", err)
+				return nil, status.Errorf(codes.InvalidArgument, "Could not parse block ID: %v", err)
 			}
 			hasRoots, roots, err := bs.BeaconDB.BlockRootsBySlot(ctx, types.Slot(slot))
 			if err != nil {
@@ -288,6 +327,9 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpb.BlockReq
 	defer span.End()
 
 	rBlk, err := bs.blockFromBlockID(ctx, req.BlockId)
+	if invalidBlockIdErr, ok := err.(*blockIdParseError); ok {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid block ID: %v", invalidBlockIdErr)
+	}
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
 	}
@@ -302,7 +344,7 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpb.BlockReq
 
 	v1Block, err := migration.V1Alpha1ToV1Block(blk)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not convert block to v1")
+		return nil, status.Errorf(codes.Internal, "Could not convert block to v1 block")
 	}
 	return &ethpb.BlockAttestationsResponse{
 		Data: v1Block.Block.Body.Attestations,
@@ -339,7 +381,8 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (interfa
 		} else {
 			slot, err := strconv.ParseUint(string(blockId), 10, 64)
 			if err != nil {
-				return nil, errors.Wrap(err, "could not decode block id")
+				e := newBlockIdParseError(err)
+				return nil, &e
 			}
 			_, blks, err := bs.BeaconDB.BlocksBySlot(ctx, types.Slot(slot))
 			if err != nil {

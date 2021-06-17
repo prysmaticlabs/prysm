@@ -8,11 +8,23 @@ import (
 	ethpb_alpha "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
+
+// attestationsVerificationFailure represents failures when verifying submitted attestations.
+type attestationsVerificationFailure struct {
+	Failures []*singleAttestationVerificationFailure `json:"failures"`
+}
+
+// singleAttestationVerificationFailure represents an issue when verifying a single submitted attestation.
+type singleAttestationVerificationFailure struct {
+	Index   int    `json:"index"`
+	Message string `json:"message"`
+}
 
 // ListPoolAttestations retrieves attestations known by the node but
 // not necessarily incorporated into any block. Allows filtering by committee index or slot.
@@ -62,16 +74,26 @@ func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpb.SubmitAttes
 	}
 
 	var validAttestations []*ethpb_alpha.Attestation
-	for _, sourceAtt := range req.Data {
+	var attFailures []*singleAttestationVerificationFailure
+	for i, sourceAtt := range req.Data {
 		att := migration.V1AttToV1Alpha1(sourceAtt)
 		err = blocks.VerifyAttestationNoVerifySignature(ctx, headState, att)
 		if err != nil {
+			attFailures = append(attFailures, &singleAttestationVerificationFailure{
+				Index:   i,
+				Message: err.Error(),
+			})
 			continue
 		}
 		err = blocks.VerifyAttestationSignature(ctx, headState, att)
-		if err == nil {
-			validAttestations = append(validAttestations, att)
+		if err != nil {
+			attFailures = append(attFailures, &singleAttestationVerificationFailure{
+				Index:   i,
+				Message: err.Error(),
+			})
+			continue
 		}
+		validAttestations = append(validAttestations, att)
 	}
 
 	err = bs.AttestationsPool.SaveAggregatedAttestations(validAttestations)
@@ -89,6 +111,16 @@ func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpb.SubmitAttes
 			codes.Internal,
 			"Could not publish one or more attestations. Some attestations could be published successfully.")
 	}
+
+	if len(attFailures) > 0 {
+		failuresContainer := &attestationsVerificationFailure{Failures: attFailures}
+		err = grpcutils.AppendCustomErrorHeader(ctx, failuresContainer)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare attestation failure information: %v", err)
+		}
+		return nil, status.Errorf(codes.InvalidArgument, "One or more attestations failed validation")
+	}
+
 	return &emptypb.Empty{}, nil
 }
 
@@ -128,7 +160,7 @@ func (bs *Server) SubmitAttesterSlashing(ctx context.Context, req *ethpb.Atteste
 	alphaSlashing := migration.V1AttSlashingToV1Alpha1(req)
 	err = blocks.VerifyAttesterSlashing(ctx, headState, alphaSlashing)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Invalid attester slashing: %v", err)
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid attester slashing: %v", err)
 	}
 
 	err = bs.SlashingsPool.InsertAttesterSlashing(ctx, headState, alphaSlashing)
@@ -180,7 +212,7 @@ func (bs *Server) SubmitProposerSlashing(ctx context.Context, req *ethpb.Propose
 	alphaSlashing := migration.V1ProposerSlashingToV1Alpha1(req)
 	err = blocks.VerifyProposerSlashing(headState, alphaSlashing)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Invalid proposer slashing: %v", err)
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid proposer slashing: %v", err)
 	}
 
 	err = bs.SlashingsPool.InsertProposerSlashing(ctx, headState, alphaSlashing)
@@ -237,7 +269,7 @@ func (bs *Server) SubmitVoluntaryExit(ctx context.Context, req *ethpb.SignedVolu
 	alphaExit := migration.V1ExitToV1Alpha1(req)
 	err = blocks.VerifyExitAndSignature(validator, headState.Slot(), headState.Fork(), alphaExit, headState.GenesisValidatorRoot())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Invalid voluntary exit: %v", err)
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid voluntary exit: %v", err)
 	}
 
 	bs.VoluntaryExitsPool.InsertVoluntaryExit(ctx, headState, alphaExit)

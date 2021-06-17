@@ -110,6 +110,7 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--p2p-tcp-port=%d", e2e.TestParams.BeaconNodeRPCPort+index+20),
 		fmt.Sprintf("--monitoring-port=%d", e2e.TestParams.BeaconNodeMetricsPort+index),
 		fmt.Sprintf("--grpc-gateway-port=%d", e2e.TestParams.BeaconNodeRPCPort+index+40),
+		fmt.Sprintf("--api-middleware-port=%d", e2e.TestParams.BeaconNodeRPCPort+index+30),
 		fmt.Sprintf("--contract-deployment-block=%d", 0),
 		fmt.Sprintf("--rpc-max-page-size=%d", params.BeaconConfig().MinGenesisActiveValidatorCount),
 		fmt.Sprintf("--bootstrap-node=%s", enr),

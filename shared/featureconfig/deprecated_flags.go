@@ -37,11 +37,6 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedAttestingTimely = &cli.BoolFlag{
-		Name:   "attest-timely",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
 	deprecatedProposerAttsSelectionUsingMaxCover = &cli.BoolFlag{
 		Name:   "proposer-atts-selection-using-max-cover",
 		Usage:  deprecatedUsage,
@@ -56,6 +51,5 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisablePruningDepositProofs,
 	deprecatedDisableEth1DataMajorityVote,
 	deprecatedDisableBlst,
-	deprecatedAttestingTimely,
 	deprecatedProposerAttsSelectionUsingMaxCover,
 }
