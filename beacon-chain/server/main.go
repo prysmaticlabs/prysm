@@ -90,12 +90,12 @@ func main() {
 	muxHandler := func(h http.Handler, w http.ResponseWriter, req *http.Request) {
 		h.ServeHTTP(w, req)
 	}
-	v1Alpha1PbHandler := gateway.PbHandler{
+	v1Alpha1PbHandler := gateway.PbMux{
 		Registrations: v1Alpha1Registrations,
 		Patterns:      []string{"/eth/v1alpha1/"},
 		Mux:           v1Alpha1Mux,
 	}
-	v1PbHandler := gateway.PbHandler{
+	v1PbHandler := gateway.PbMux{
 		Registrations: v1Registrations,
 		Patterns:      []string{"/eth/v1/"},
 		Mux:           v1Mux,
@@ -103,7 +103,7 @@ func main() {
 
 	gw := gateway.New(
 		context.Background(),
-		[]gateway.PbHandler{v1Alpha1PbHandler, v1PbHandler},
+		[]gateway.PbMux{v1Alpha1PbHandler, v1PbHandler},
 		muxHandler,
 		*beaconRPC,
 		fmt.Sprintf("%s:%d", *host, *port),
