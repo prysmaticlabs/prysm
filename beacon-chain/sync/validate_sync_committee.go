@@ -111,7 +111,7 @@ func (s *Service) validateSyncCommittee(ctx context.Context, pid peer.ID, msg *p
 	}
 
 	isValid := false
-	digest, err := s.forkDigest()
+	digest, err := s.currentForkDigest()
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore

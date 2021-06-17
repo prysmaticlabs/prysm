@@ -9,7 +9,6 @@ go_library(
         "kv.go",
         "message.go",
         "pool.go",
-        "signature.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee",
     visibility = ["//beacon-chain:__subpackages__"],
