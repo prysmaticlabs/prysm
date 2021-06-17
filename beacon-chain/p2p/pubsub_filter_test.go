@@ -84,7 +84,7 @@ func TestService_CanSubscribe(t *testing.T) {
 		formatting := []interface{}{currentFork}
 
 		// Special case for attestation subnets which have a second formatting placeholder.
-		if topic == AttestationSubnetTopicFormat {
+		if topic == AttestationSubnetTopicFormat || topic == SyncCommitteeSubnetTopicFormat {
 			formatting = append(formatting, 0 /* some subnet ID */)
 		}
 

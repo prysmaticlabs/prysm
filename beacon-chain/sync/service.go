@@ -23,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
@@ -41,6 +42,8 @@ var _ shared.Service = (*Service)(nil)
 const rangeLimit = 1024
 const seenBlockSize = 1000
 const seenAttSize = 10000
+const seenSyncMsgSize = 1000
+const seenSyncSize = 300
 const seenExitSize = 100
 const seenProposerSlashingSize = 100
 const badBlockSize = 1000
@@ -57,17 +60,18 @@ var (
 
 // Config to set up the regular sync service.
 type Config struct {
-	P2P                 p2p.P2P
-	DB                  db.NoHeadAccessDatabase
-	AttPool             attestations.Pool
-	ExitPool            voluntaryexits.PoolManager
-	SlashingPool        slashings.PoolManager
-	Chain               blockchainService
-	InitialSync         Checker
-	StateNotifier       statefeed.Notifier
-	BlockNotifier       blockfeed.Notifier
-	AttestationNotifier operation.Notifier
-	StateGen            *stategen.State
+	P2P               p2p.P2P
+	DB                db.NoHeadAccessDatabase
+	AttPool           attestations.Pool
+	ExitPool          voluntaryexits.PoolManager
+	SlashingPool      slashings.PoolManager
+	SyncCommsPool     synccommittee.Pool
+	Chain             blockchainService
+	InitialSync       Checker
+	StateNotifier     statefeed.Notifier
+	BlockNotifier     blockfeed.Notifier
+	OperationNotifier operation.Notifier
+	StateGen          *stategen.State
 }
 
 // This defines the interface for interacting with block chain service
@@ -106,6 +110,10 @@ type Service struct {
 	seenProposerSlashingCache *lru.Cache
 	seenAttesterSlashingLock  sync.RWMutex
 	seenAttesterSlashingCache map[uint64]bool
+	seenSyncContributionLock  sync.RWMutex
+	seenSyncContributionCache *lru.Cache
+	seenSyncMessageLock       sync.RWMutex
+	seenSyncMessageCache      *lru.Cache
 	badBlockCache             *lru.Cache
 	badBlockLock              sync.RWMutex
 }
@@ -198,6 +206,14 @@ func (s *Service) initCaches() error {
 	if err != nil {
 		return err
 	}
+	syncMsgCache, err := lru.New(seenSyncMsgSize)
+	if err != nil {
+		return err
+	}
+	syncContrCache, err := lru.New(seenSyncSize)
+	if err != nil {
+		return err
+	}
 	exitCache, err := lru.New(seenExitSize)
 	if err != nil {
 		return err
@@ -212,6 +228,8 @@ func (s *Service) initCaches() error {
 	}
 	s.seenBlockCache = blkCache
 	s.seenAttestationCache = attCache
+	s.seenSyncContributionCache = syncContrCache
+	s.seenSyncMessageCache = syncMsgCache
 	s.seenExitCache = exitCache
 	s.seenAttesterSlashingCache = make(map[uint64]bool)
 	s.seenProposerSlashingCache = proposerSlashingCache
