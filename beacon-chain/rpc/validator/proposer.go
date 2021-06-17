@@ -12,6 +12,7 @@ import (
 	fastssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
@@ -140,10 +141,143 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	return blk, nil
 }
 
+// GetBlockV2 is called by a proposer during its assigned slot to request a block to sign
+// by passing in the slot and the signed randao reveal of the slot. This is used by a validator
+// after the altair fork epoch has been encountered.
+func (vs *Server) GetBlockV2(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockAltair, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetBlock")
+	defer span.End()
+	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
+
+	if vs.SyncChecker.Syncing() {
+		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
+	}
+
+	// Retrieve the parent block as the current head of the canonical chain.
+	parentRoot, err := vs.HeadFetcher.HeadRoot(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not retrieve head root: %v", err)
+	}
+
+	head, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head state %v", err)
+	}
+
+	if featureconfig.Get().EnableNextSlotStateCache {
+		head, err = state.ProcessSlotsUsingNextSlotCache(ctx, head, parentRoot, req.Slot)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not advance slots to calculate proposer index: %v", err)
+		}
+	} else {
+		head, err = state.ProcessSlots(ctx, head, req.Slot)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not advance slot to calculate proposer index: %v", err)
+		}
+	}
+
+	eth1Data, err := vs.eth1DataMajorityVote(ctx, head)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get ETH1 data: %v", err)
+	}
+
+	// Pack ETH1 deposits which have not been included in the beacon chain.
+	deposits, err := vs.deposits(ctx, head, eth1Data)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get ETH1 deposits: %v", err)
+	}
+
+	// Pack aggregated attestations which have not been included in the beacon chain.
+	atts, err := vs.packAttestations(ctx, head)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get attestations to pack into block: %v", err)
+	}
+
+	// Use zero hash as stub for state root to compute later.
+	stateRoot := params.BeaconConfig().ZeroHash[:]
+
+	graffiti := bytesutil.ToBytes32(req.Graffiti)
+
+	// Calculate new proposer index.
+	idx, err := helpers.BeaconProposerIndex(head)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not calculate proposer index %v", err)
+	}
+
+	infiniteSignature := [96]byte{0xC0}
+	blk := &ethpb.BeaconBlockAltair{
+		Slot:          req.Slot,
+		ParentRoot:    parentRoot,
+		StateRoot:     stateRoot,
+		ProposerIndex: idx,
+		Body: &ethpb.BeaconBlockBodyAltair{
+			Eth1Data:          eth1Data,
+			Deposits:          deposits,
+			Attestations:      atts,
+			RandaoReveal:      req.RandaoReveal,
+			ProposerSlashings: vs.SlashingsPool.PendingProposerSlashings(ctx, head, false /*noLimit*/),
+			AttesterSlashings: vs.SlashingsPool.PendingAttesterSlashings(ctx, head, false /*noLimit*/),
+			VoluntaryExits:    vs.ExitPool.PendingExits(head, req.Slot, false /*noLimit*/),
+			Graffiti:          graffiti[:],
+			// TODO: Add in actual aggregates
+			SyncAggregate: &ethpb.SyncAggregate{
+				SyncCommitteeBits:      bitfield.NewBitvector512(),
+				SyncCommitteeSignature: infiniteSignature[:],
+			},
+		},
+	}
+
+	// Compute state root with the newly constructed block.
+	stateRoot, err = vs.computeStateRoot(ctx, interfaces.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: blk, Signature: make([]byte, 96)}))
+	if err != nil {
+		interop.WriteBlockToDisk(interfaces.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: blk}), true /*failed*/)
+		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
+	}
+	blk.StateRoot = stateRoot
+
+	return blk, nil
+}
+
 // ProposeBlock is called by a proposer during its assigned slot to create a block in an attempt
 // to get it processed by the beacon node as the canonical head.
 func (vs *Server) ProposeBlock(ctx context.Context, rBlk *ethpb.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 	blk := interfaces.WrappedPhase0SignedBeaconBlock(rBlk)
+	root, err := blk.Block().HashTreeRoot()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not tree hash block: %v", err)
+	}
+
+	// Do not block proposal critical path with debug logging or block feed updates.
+	defer func() {
+		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
+			"Block proposal received via RPC")
+		vs.BlockNotifier.BlockFeed().Send(&feed.Event{
+			Type: blockfeed.ReceivedBlock,
+			Data: &blockfeed.ReceivedBlockData{SignedBlock: blk},
+		})
+	}()
+
+	// Broadcast the new block to the network.
+	if err := vs.P2P.Broadcast(ctx, blk.Proto()); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
+	}
+	log.WithFields(logrus.Fields{
+		"blockRoot": hex.EncodeToString(root[:]),
+	}).Debug("Broadcasting block")
+
+	if err := vs.BlockReceiver.ReceiveBlock(ctx, blk, root); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
+	}
+
+	return &ethpb.ProposeResponse{
+		BlockRoot: root[:],
+	}, nil
+}
+
+// ProposeBlockV2 is called by a proposer during its assigned slot to create a block in an attempt
+// to get it processed by the beacon node as the canonical head.
+func (vs *Server) ProposeBlockV2(ctx context.Context, rBlk *ethpb.SignedBeaconBlockAltair) (*ethpb.ProposeResponse, error) {
+	blk := interfaces.WrappedAltairSignedBeaconBlock(rBlk)
 	root, err := blk.Block().HashTreeRoot()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not tree hash block: %v", err)
