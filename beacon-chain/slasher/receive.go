@@ -76,7 +76,8 @@ func (s *Service) receiveBlocks(ctx context.Context) {
 func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-chan types.Slot) {
 	for {
 		select {
-		case currentSlot := <-slotTicker:
+		case <-slotTicker:
+			currentSlot := s.serviceCfg.HeadStateFetcher.HeadSlot()
 			attestations := s.attsQueue.dequeue()
 			currentEpoch := helpers.SlotToEpoch(currentSlot)
 			// We take all the attestations in the queue and filter out
@@ -134,7 +135,8 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan types.Slot) {
 	for {
 		select {
-		case currentSlot := <-slotTicker:
+		case <-slotTicker:
+			currentSlot := s.serviceCfg.HeadStateFetcher.HeadSlot()
 			blocks := s.blksQueue.dequeue()
 			currentEpoch := helpers.SlotToEpoch(currentSlot)
 
@@ -173,8 +175,9 @@ func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan typ
 func (s *Service) pruneSlasherData(ctx context.Context, slotTicker <-chan types.Slot) {
 	for {
 		select {
-		case currentSlot := <-slotTicker:
-			if err := s.pruneSlasherDataWithinSlidingWindow(ctx, helpers.SlotToEpoch(currentSlot)); err != nil {
+		case <-slotTicker:
+			headEpoch := helpers.SlotToEpoch(s.serviceCfg.HeadStateFetcher.HeadSlot())
+			if err := s.pruneSlasherDataWithinSlidingWindow(ctx, headEpoch); err != nil {
 				log.WithError(err).Error("Could not prune slasher data")
 				continue
 			}

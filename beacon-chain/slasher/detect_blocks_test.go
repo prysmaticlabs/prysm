@@ -114,10 +114,21 @@ func Test_processQueuedBlocks_NotSlashable(t *testing.T) {
 	hook := logTest.NewGlobal()
 	slasherDB := dbtest.SetupSlasherDB(t)
 	ctx, cancel := context.WithCancel(context.Background())
+
+	beaconState, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	currentSlot := types.Slot(4)
+	require.NoError(t, beaconState.SetSlot(currentSlot))
+	mockChain := &mock.ChainService{
+		State: beaconState,
+		Slot:  &currentSlot,
+	}
+
 	s := &Service{
 		serviceCfg: &ServiceConfig{
-			Database:      slasherDB,
-			StateNotifier: &mock.MockStateNotifier{},
+			Database:         slasherDB,
+			StateNotifier:    &mock.MockStateNotifier{},
+			HeadStateFetcher: mockChain,
 		},
 		params:    DefaultParams(),
 		blksQueue: newBlocksQueue(),
@@ -132,7 +143,6 @@ func Test_processQueuedBlocks_NotSlashable(t *testing.T) {
 		createProposalWrapper(t, 4, 1, []byte{1}),
 		createProposalWrapper(t, 4, 1, []byte{1}),
 	})
-	currentSlot := types.Slot(4)
 	currentSlotChan <- currentSlot
 	cancel()
 	<-exitChan

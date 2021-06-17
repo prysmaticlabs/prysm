@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	params2 "github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -265,11 +266,22 @@ func TestSlasher_receiveBlocks_OK(t *testing.T) {
 func TestService_processQueuedBlocks(t *testing.T) {
 	hook := logTest.NewGlobal()
 	slasherDB := dbtest.SetupSlasherDB(t)
+
+	beaconState, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	currentSlot := types.Slot(0)
+	require.NoError(t, beaconState.SetSlot(currentSlot))
+	mockChain := &mock.ChainService{
+		State: beaconState,
+		Slot:  &currentSlot,
+	}
+
 	s := &Service{
 		params: DefaultParams(),
 		serviceCfg: &ServiceConfig{
-			Database:      slasherDB,
-			StateNotifier: &mock.MockStateNotifier{},
+			Database:         slasherDB,
+			StateNotifier:    &mock.MockStateNotifier{},
+			HeadStateFetcher: mockChain,
 		},
 		blksQueue: newBlocksQueue(),
 	}

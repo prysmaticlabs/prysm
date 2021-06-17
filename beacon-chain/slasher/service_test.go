@@ -6,12 +6,14 @@ import (
 	"testing"
 	"time"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -30,11 +32,22 @@ func TestMain(m *testing.M) {
 func TestService_StartStop_ChainStartEvent(t *testing.T) {
 	slasherDB := dbtest.SetupSlasherDB(t)
 	hook := logTest.NewGlobal()
+
+	beaconState, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	currentSlot := types.Slot(4)
+	require.NoError(t, beaconState.SetSlot(currentSlot))
+	mockChain := &mock.ChainService{
+		State: beaconState,
+		Slot:  &currentSlot,
+	}
+
 	srv, err := New(context.Background(), &ServiceConfig{
 		IndexedAttestationsFeed: new(event.Feed),
 		BeaconBlockHeadersFeed:  new(event.Feed),
 		StateNotifier:           &mock.MockStateNotifier{},
 		Database:                slasherDB,
+		HeadStateFetcher:        mockChain,
 	})
 	require.NoError(t, err)
 	go srv.Start()
@@ -53,11 +66,20 @@ func TestService_StartStop_ChainStartEvent(t *testing.T) {
 func TestService_StartStop_ChainAlreadyInitialized(t *testing.T) {
 	slasherDB := dbtest.SetupSlasherDB(t)
 	hook := logTest.NewGlobal()
+	beaconState, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	currentSlot := types.Slot(4)
+	require.NoError(t, beaconState.SetSlot(currentSlot))
+	mockChain := &mock.ChainService{
+		State: beaconState,
+		Slot:  &currentSlot,
+	}
 	srv, err := New(context.Background(), &ServiceConfig{
 		IndexedAttestationsFeed: new(event.Feed),
 		BeaconBlockHeadersFeed:  new(event.Feed),
 		StateNotifier:           &mock.MockStateNotifier{},
 		Database:                slasherDB,
+		HeadStateFetcher:        mockChain,
 	})
 	require.NoError(t, err)
 	go srv.Start()

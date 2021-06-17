@@ -188,8 +188,12 @@ func Test_processQueuedAttestations(t *testing.T) {
 
 			beaconState, err := testutil.NewBeaconState()
 			require.NoError(t, err)
+			slot, err := helpers.StartSlot(tt.args.currentEpoch)
+			require.NoError(t, err)
+			require.NoError(t, beaconState.SetSlot(slot))
 			mockChain := &mock.ChainService{
 				State: beaconState,
+				Slot:  &slot,
 			}
 
 			// Initialize validators in the state.
@@ -247,9 +251,8 @@ func Test_processQueuedAttestations(t *testing.T) {
 				exitChan <- struct{}{}
 			}()
 			s.attsQueue.extend(tt.args.attestationQueue)
-			slot, err := helpers.StartSlot(tt.args.currentEpoch)
-			require.NoError(t, err)
 			currentSlotChan <- slot
+			time.Sleep(time.Millisecond * 200)
 			cancel()
 			<-exitChan
 			if tt.shouldNotBeSlashable {
@@ -320,9 +323,12 @@ func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
 		s.attsQueue.push(att)
 		slot, err := helpers.StartSlot(i)
 		require.NoError(t, err)
+		require.NoError(t, mockChain.State.SetSlot(slot))
+		s.serviceCfg.HeadStateFetcher = mockChain
 		currentSlotChan <- slot
 	}
 
+	time.Sleep(time.Millisecond * 200)
 	cancel()
 	<-exitChan
 	require.LogsDoNotContain(t, hook, "Slashable offenses found")
@@ -379,8 +385,11 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 	s.attsQueue.push(att2)
 	slot, err := helpers.StartSlot(att2.IndexedAttestation.Data.Target.Epoch)
 	require.NoError(t, err)
+	mockChain.Slot = &slot
+	s.serviceCfg.HeadStateFetcher = mockChain
 	currentSlotChan <- slot
 
+	time.Sleep(time.Millisecond * 200)
 	cancel()
 	<-exitChan
 	require.LogsDoNotContain(t, hook, "Slashable offenses found")
@@ -750,14 +759,27 @@ func testLoadChunks(t *testing.T, kind slashertypes.ChunkKind) {
 func TestService_processQueuedAttestations(t *testing.T) {
 	hook := logTest.NewGlobal()
 	slasherDB := dbtest.SetupSlasherDB(t)
+
+	beaconState, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	slot, err := helpers.StartSlot(1)
+	require.NoError(t, err)
+	require.NoError(t, beaconState.SetSlot(slot))
+	mockChain := &mock.ChainService{
+		State: beaconState,
+		Slot:  &slot,
+	}
+
 	s := &Service{
 		params: DefaultParams(),
 		serviceCfg: &ServiceConfig{
-			Database:      slasherDB,
-			StateNotifier: &mock.MockStateNotifier{},
+			Database:         slasherDB,
+			StateNotifier:    &mock.MockStateNotifier{},
+			HeadStateFetcher: mockChain,
 		},
 		attsQueue: newAttestationsQueue(),
 	}
+
 	s.attsQueue.extend([]*slashertypes.IndexedAttestationWrapper{
 		createAttestationWrapper(t, 0, 1, []uint64{0, 1} /* indices */, nil /* signingRoot */),
 	})
