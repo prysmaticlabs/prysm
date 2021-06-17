@@ -231,7 +231,7 @@ func (g *Gateway) Start() {
 		}
 	}()
 
-	if g.apiMiddlewareAddr != "" && !g.apiMiddlewareEndpointFactory.IsNil() {
+	if g.apiMiddlewareAddr != "" && g.apiMiddlewareEndpointFactory != nil && !g.apiMiddlewareEndpointFactory.IsNil() {
 		go g.registerApiMiddleware()
 	}
 }
