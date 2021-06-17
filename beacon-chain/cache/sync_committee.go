@@ -3,7 +3,6 @@
 package cache
 
 import (
-	"errors"
 	"sync"
 
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
@@ -11,8 +10,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-var ErrNonExistingSyncCommitteeKey = errors.New("does not exist sync committee key")
-var errNotSyncCommitteeIndexPosition = errors.New("not syncCommitteeIndexPosition struct")
 var maxSyncCommitteeSize = uint64(3) // Allows 3 forks to happen around `EPOCHS_PER_SYNC_COMMITTEE_PERIOD` boundary.
 
 // SyncCommitteeCache utilizes a FIFO cache to sufficiently cache validator position within sync committee.

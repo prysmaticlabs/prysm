@@ -7,7 +7,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/altair"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -105,7 +105,7 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, _ := altair.DeterministicGenesisStateAltair(t, 64)
+			s, _ := testutil.DeterministicGenesisStateAltair(t, 64)
 			require.NoError(t, s.SetCurrentSyncCommittee(tt.currentSyncCommittee))
 			require.NoError(t, s.SetNextSyncCommittee(tt.nextSyncCommittee))
 			cache := cache.NewSyncCommittee()
@@ -136,7 +136,7 @@ func TestSyncCommitteeCache_RootDoesNotExist(t *testing.T) {
 
 func TestSyncCommitteeCache_CanRotate(t *testing.T) {
 	c := cache.NewSyncCommittee()
-	s, _ := altair.DeterministicGenesisStateAltair(t, 64)
+	s, _ := testutil.DeterministicGenesisStateAltair(t, 64)
 	require.NoError(t, s.SetCurrentSyncCommittee(convertToCommittee([][]byte{{1}})))
 	require.NoError(t, c.UpdatePositionsInCommittee(s))
 

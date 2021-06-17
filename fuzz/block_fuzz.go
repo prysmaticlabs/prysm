@@ -100,6 +100,9 @@ func (fakeChecker) Status() error {
 func (fakeChecker) Resync() error {
 	return nil
 }
+func (fakeChecker) Synced() bool {
+	return false
+}
 
 // FuzzBlock wraps BeaconFuzzBlock in a go-fuzz compatible interface
 func FuzzBlock(b []byte) int {
@@ -153,17 +156,17 @@ func BeaconFuzzBlock(b []byte) {
 	chain.Start()
 
 	s := sync.NewRegularSyncFuzz(&sync.Config{
-		DB:                  db1,
-		P2P:                 p2p,
-		Chain:               chain,
-		InitialSync:         fakeChecker{},
-		StateNotifier:       sn,
-		BlockNotifier:       bn,
-		AttestationNotifier: an,
-		AttPool:             ap,
-		ExitPool:            ep,
-		SlashingPool:        sp,
-		StateGen:            sgen,
+		DB:                db1,
+		P2P:               p2p,
+		Chain:             chain,
+		InitialSync:       fakeChecker{},
+		StateNotifier:     sn,
+		BlockNotifier:     bn,
+		OperationNotifier: an,
+		AttPool:           ap,
+		ExitPool:          ep,
+		SlashingPool:      sp,
+		StateGen:          sgen,
 	})
 
 	if err := s.InitCaches(); err != nil {

@@ -3,8 +3,10 @@ package beaconv1
 import (
 	"context"
 	"reflect"
+	"strings"
 	"testing"
 
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	eth2types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -19,10 +21,12 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -801,7 +805,8 @@ func TestServer_SubmitAttestations_Ok(t *testing.T) {
 }
 
 func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
-	ctx := context.Background()
+	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
+
 	params.SetupTestConfigCleanup(t)
 	c := params.BeaconConfig()
 	// Required for correct committee size calculation.
@@ -905,7 +910,7 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 	_, err = s.SubmitAttestations(ctx, &ethpb.SubmitAttestationsRequest{
 		Data: []*ethpb.Attestation{attValid, attInvalidTarget, attInvalidSignature},
 	})
-	require.NoError(t, err)
+	require.ErrorContains(t, "One or more attestations failed validation", err)
 	savedAtts := s.AttestationsPool.AggregatedAttestations()
 	require.Equal(t, 1, len(savedAtts))
 	expectedAtt, err := attValid.HashTreeRoot()
@@ -918,4 +923,88 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 	broadcastRoot, err := broadcaster.BroadcastMessages[0].(*eth.Attestation).HashTreeRoot()
 	require.NoError(t, err)
 	require.DeepEqual(t, expectedAtt, broadcastRoot)
+}
+
+func TestServer_SubmitAttestations_InvalidAttestationHeader(t *testing.T) {
+	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
+
+	params.SetupTestConfigCleanup(t)
+	c := params.BeaconConfig()
+	// Required for correct committee size calculation.
+	c.SlotsPerEpoch = 1
+	params.OverrideBeaconConfig(c)
+
+	_, keys, err := testutil.DeterministicDepositsAndKeys(1)
+	require.NoError(t, err)
+	validators := []*eth.Validator{
+		{
+			PublicKey: keys[0].PublicKey().Marshal(),
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		},
+	}
+	state, err := testutil.NewBeaconState(func(state *pb.BeaconState) error {
+		state.Validators = validators
+		state.Slot = 1
+		state.PreviousJustifiedCheckpoint = &eth.Checkpoint{
+			Epoch: 0,
+			Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
+		}
+		return nil
+	})
+
+	require.NoError(t, err)
+
+	b := bitfield.NewBitlist(1)
+	b.SetBitAt(0, true)
+	att := &ethpb.Attestation{
+		AggregationBits: b,
+		Data: &ethpb.AttestationData{
+			Slot:            0,
+			Index:           0,
+			BeaconBlockRoot: bytesutil.PadTo([]byte("beaconblockroot2"), 32),
+			Source: &ethpb.Checkpoint{
+				Epoch: 0,
+				Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: 99,
+				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
+			},
+		},
+		Signature: make([]byte, 96),
+	}
+
+	sb, err := helpers.ComputeDomainAndSign(
+		state,
+		helpers.SlotToEpoch(att.Data.Slot),
+		att.Data,
+		params.BeaconConfig().DomainBeaconAttester,
+		keys[0],
+	)
+	require.NoError(t, err)
+	sig, err := bls.SignatureFromBytes(sb)
+	require.NoError(t, err)
+	att.Signature = sig.Marshal()
+
+	broadcaster := &p2pMock.MockBroadcaster{}
+	s := &Server{
+		ChainInfoFetcher: &chainMock.ChainService{State: state},
+		AttestationsPool: &attestations.PoolMock{},
+		Broadcaster:      broadcaster,
+	}
+
+	_, err = s.SubmitAttestations(ctx, &ethpb.SubmitAttestationsRequest{
+		Data: []*ethpb.Attestation{att},
+	})
+	require.ErrorContains(t, "One or more attestations failed validation", err)
+	sts, ok := grpc.ServerTransportStreamFromContext(ctx).(*runtime.ServerTransportStream)
+	require.Equal(t, true, ok, "type assertion failed")
+	md := sts.Header()
+	v, ok := md[strings.ToLower(grpcutils.CustomErrorMetadataKey)]
+	require.Equal(t, true, ok, "could not retrieve custom error metadata value")
+	assert.DeepEqual(
+		t,
+		[]string{"{\"failures\":[{\"index\":0,\"message\":\"expected target epoch (99) to be the previous epoch (0) or the current epoch (1)\"}]}"},
+		v,
+	)
 }
