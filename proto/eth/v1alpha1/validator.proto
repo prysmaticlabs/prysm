@@ -20,6 +20,7 @@ import "google/protobuf/empty.proto";
 
 import "proto/eth/ext/options.proto";
 import "proto/eth/v1alpha1/beacon_block.proto";
+import "proto/eth/v1alpha1/beacon_block_altair.proto";
 import "proto/eth/v1alpha1/attestation.proto";
 import "proto/eth/v1alpha1/sync_committee.proto";
 
@@ -146,6 +147,17 @@ service BeaconNodeValidator {
         };
     }
 
+    // Retrieves the latest valid beacon block to be proposed on the beacon chain.
+    //
+    // The server returns a new beacon block, without proposer signature, that can be
+    // proposed on the beacon chain. The block should be filled with all the necessary
+    // data for proposer to sign. This block is versioned from Altair onwards.
+    rpc GetBlockV2(BlockRequest) returns (BeaconBlockAltair) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/validator/blockV2"
+        };
+    }
+
     // Sends the newly signed beacon block to beacon node.
     //
     // The validator sends the newly signed beacon block to the beacon node so the beacon block can
@@ -154,6 +166,18 @@ service BeaconNodeValidator {
     rpc ProposeBlock(SignedBeaconBlock) returns (ProposeResponse) {
         option (google.api.http) = {
             post: "/eth/v1alpha1/validator/block"
+            body: "*"
+        };
+    }
+
+    // Sends the newly signed beacon block to beacon node.
+    //
+    // The validator sends the newly signed beacon block to the beacon node so the beacon block can
+    // be included in the beacon chain. The beacon node is expected to validate and process the
+    // beacon block into its state. This block is versioned from Altair onwards.
+    rpc ProposeBlockV2(SignedBeaconBlockAltair) returns (ProposeResponse) {
+        option (google.api.http) = {
+            post: "/eth/v1alpha1/validator/blockV2"
             body: "*"
         };
     }
