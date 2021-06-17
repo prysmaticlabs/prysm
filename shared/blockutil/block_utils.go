@@ -71,7 +71,7 @@ func BeaconBlockHeaderFromBlock(block *ethpb.BeaconBlock) (*ethpb.BeaconBlockHea
 
 // BeaconBlockHeaderFromBlockInterface function to retrieve block header from block.
 func BeaconBlockHeaderFromBlockInterface(block interfaces.BeaconBlock) (*ethpb.BeaconBlockHeader, error) {
-	if block.Body == nil {
+	if block.Body().IsNil() {
 		return nil, errors.New("nil block body")
 	}
 

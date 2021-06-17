@@ -54,7 +54,7 @@ func (v *validator) preBlockSignValidations(
 		return fmt.Errorf(
 			"could not sign block with slot <= lowest signed slot in db, lowest signed slot: %d >= block slot: %d",
 			lowestSignedProposalSlot,
-			block.Slot,
+			block.Slot(),
 		)
 	}
 

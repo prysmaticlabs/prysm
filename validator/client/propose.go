@@ -40,6 +40,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [4
 	currEpoch := helpers.SlotToEpoch(slot)
 	switch {
 	case currEpoch >= params.BeaconConfig().AltairForkEpoch:
+		v.proposeBlockV2(ctx, slot, pubKey)
 	default:
 		v.proposeBlock(ctx, slot, pubKey)
 	}
