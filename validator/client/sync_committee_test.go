@@ -50,7 +50,7 @@ func TestSubmitSyncCommitteeMessage_BadDomainData(t *testing.T) {
 	r := []byte{'a'}
 	m.validatorClient.EXPECT().GetSyncMessageBlockRoot(
 		gomock.Any(), // ctx
-		emptypb.Empty{},
+		&emptypb.Empty{},
 	).Return(&eth.SyncMessageBlockRootResponse{
 		Root: bytesutil.PadTo(r, 32),
 	}, nil)
@@ -82,7 +82,7 @@ func TestSubmitSyncCommitteeMessage_CouldNotSubmit(t *testing.T) {
 	r := []byte{'a'}
 	m.validatorClient.EXPECT().GetSyncMessageBlockRoot(
 		gomock.Any(), // ctx
-		emptypb.Empty{},
+		&emptypb.Empty{},
 	).Return(&eth.SyncMessageBlockRootResponse{
 		Root: bytesutil.PadTo(r, 32),
 	}, nil)
@@ -123,7 +123,7 @@ func TestSubmitSyncCommitteeMessage_OK(t *testing.T) {
 	r := []byte{'a'}
 	m.validatorClient.EXPECT().GetSyncMessageBlockRoot(
 		gomock.Any(), // ctx
-		emptypb.Empty{},
+		&emptypb.Empty{},
 	).Return(&eth.SyncMessageBlockRootResponse{
 		Root: bytesutil.PadTo(r, 32),
 	}, nil)
