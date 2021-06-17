@@ -133,12 +133,14 @@ func ComputeSubnetFromCommitteeAndSlot(activeValCount uint64, comIdx types.Commi
 //
 // Example:
 //   ATTESTATION_PROPAGATION_SLOT_RANGE = 5
+//   clockDisparity = 24 seconds
 //   current_slot = 100
 //   invalid_attestation_slot = 92
-//   invalid_attestation_slot = 101
+//   invalid_attestation_slot = 103
 //   valid_attestation_slot = 98
-// In the attestation must be within the range of 95 to 100 in the example above.
-func ValidateAttestationTime(attSlot types.Slot, genesisTime time.Time) error {
+//   valid_attestation_slot = 101
+// In the attestation must be within the range of 95 to 102 in the example above.
+func ValidateAttestationTime(attSlot types.Slot, genesisTime time.Time, clockDisparity time.Duration) error {
 	if err := ValidateSlotClock(attSlot, uint64(genesisTime.Unix())); err != nil {
 		return err
 	}
@@ -148,12 +150,10 @@ func ValidateAttestationTime(attSlot types.Slot, genesisTime time.Time) error {
 	}
 	currentSlot := SlotsSince(genesisTime)
 
-	// A clock disparity allows for minor tolerances outside of the expected range. This value is
-	// usually small, less than 1 second.
-	clockDisparity := params.BeaconNetworkConfig().MaximumGossipClockDisparity
-
-	// An attestation cannot be from the future, so the upper bounds is set to now, with a minor
-	// tolerance for peer clock disparity.
+	// When receiving an attestation, it can be from the future.
+	// so the upper bounds is set to now + clockDisparity(SECONDS_PER_SLOT * 2).
+	// But when sending an attestation, it should not be in future slot.
+	// so the upper bounds is set to now + clockDisparity(MAXIMUM_GOSSIP_CLOCK_DISPARITY).
 	upperBounds := timeutils.Now().Add(clockDisparity)
 
 	// An attestation cannot be older than the current slot - attestation propagation slot range

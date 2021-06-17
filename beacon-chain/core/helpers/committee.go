@@ -393,20 +393,52 @@ func ClearCache() {
 }
 
 // IsCurrentEpochSyncCommittee returns true if the input public key belongs in the current epoch sync committee along with the sync committee root.
-func IsCurrentEpochSyncCommittee(root [32]byte, pubKey [48]byte) (bool, error) {
-	indices, err := syncCommitteeCache.CurrentEpochIndexPosition(root, pubKey)
+// 1.) Checks if the public key exists in the sync committee cache
+// 2.) If 1 fails, checks if the public key exists in the input current sync committee object
+func IsCurrentEpochSyncCommittee(committee *pb.SyncCommittee, pubKey [48]byte) (bool, error) {
+	root, err := committee.HashTreeRoot()
 	if err != nil {
 		return false, err
 	}
+	indices, err := syncCommitteeCache.CurrentEpochIndexPosition(root, pubKey)
+	// If committee root does not exist in cache, perform manual lookup of pubkeys in committee to find match.
+	if err == cache.ErrNonExistingSyncCommitteeKey {
+		for _, k := range committee.Pubkeys {
+			if bytes.Equal(k, pubKey[:]) {
+				return true, nil
+			}
+		}
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+
 	return len(indices) > 0, nil
 }
 
 // IsNextEpochSyncCommittee returns true if the input public key belongs in the next epoch sync committee along with the sync committee root.
-func IsNextEpochSyncCommittee(root [32]byte, pubKey [48]byte) (bool, error) {
-	indices, err := syncCommitteeCache.NextEpochIndexPosition(root, pubKey)
+// 1.) Checks if the public key exists in the sync committee cache
+// 2.) If 1 fails, checks if the public key exists in the input next sync committee object
+func IsNextEpochSyncCommittee(committee *pb.SyncCommittee, pubKey [48]byte) (bool, error) {
+	root, err := committee.HashTreeRoot()
 	if err != nil {
 		return false, err
 	}
+	indices, err := syncCommitteeCache.NextEpochIndexPosition(root, pubKey)
+	// If committee root does not exist in cache, perform manual lookup of pubkeys in committee to find match.
+	if err == cache.ErrNonExistingSyncCommitteeKey {
+		for _, k := range committee.Pubkeys {
+			if bytes.Equal(k, pubKey[:]) {
+				return true, nil
+			}
+		}
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+
 	return len(indices) > 0, nil
 }
 

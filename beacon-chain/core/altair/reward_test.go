@@ -5,12 +5,12 @@ import (
 
 	altair "github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	testutilAltair "github.com/prysmaticlabs/prysm/shared/testutil/altair"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestBaseReward(t *testing.T) {
-	s, _ := testutilAltair.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	s, _ := testutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	r0, err := altair.BaseReward(s, 0)
 	require.NoError(t, err)
 	r1, err := altair.BaseReward(s, 1)

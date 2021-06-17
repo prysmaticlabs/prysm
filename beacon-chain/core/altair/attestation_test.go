@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	altairTest "github.com/prysmaticlabs/prysm/shared/testutil/altair"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -36,7 +35,7 @@ func TestProcessAttestations_InclusionDelayFailure(t *testing.T) {
 			Attestations: attestations,
 		},
 	}
-	beaconState, _ := altairTest.DeterministicGenesisStateAltair(t, 100)
+	beaconState, _ := testutil.DeterministicGenesisStateAltair(t, 100)
 
 	want := fmt.Sprintf(
 		"attestation slot %d + inclusion delay %d > state slot %d",
@@ -60,7 +59,7 @@ func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 			Attestations: []*ethpb.Attestation{att},
 		},
 	}
-	beaconState, _ := altairTest.DeterministicGenesisStateAltair(t, 100)
+	beaconState, _ := testutil.DeterministicGenesisStateAltair(t, 100)
 	err := beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().SlotsPerEpoch*4 + params.BeaconConfig().MinAttestationInclusionDelay)
 	require.NoError(t, err)
 	pfc := beaconState.PreviousJustifiedCheckpoint()
@@ -93,7 +92,7 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 			Attestations: attestations,
 		},
 	}
-	beaconState, _ := altairTest.DeterministicGenesisStateAltair(t, 100)
+	beaconState, _ := testutil.DeterministicGenesisStateAltair(t, 100)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+params.BeaconConfig().MinAttestationInclusionDelay))
 	cfc := beaconState.CurrentJustifiedCheckpoint()
 	cfc.Root = []byte("hello-world")
@@ -109,7 +108,7 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 }
 
 func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
-	beaconState, _ := altairTest.DeterministicGenesisStateAltair(t, 100)
+	beaconState, _ := testutil.DeterministicGenesisStateAltair(t, 100)
 
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(0, true)
@@ -147,7 +146,7 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 }
 
 func TestProcessAttestations_InvalidAggregationBitsLength(t *testing.T) {
-	beaconState, _ := altairTest.DeterministicGenesisStateAltair(t, 100)
+	beaconState, _ := testutil.DeterministicGenesisStateAltair(t, 100)
 
 	aggBits := bitfield.NewBitlist(4)
 	att := &ethpb.Attestation{
@@ -177,7 +176,7 @@ func TestProcessAttestations_InvalidAggregationBitsLength(t *testing.T) {
 }
 
 func TestProcessAttestations_OK(t *testing.T) {
-	beaconState, privKeys := altairTest.DeterministicGenesisStateAltair(t, 100)
+	beaconState, privKeys := testutil.DeterministicGenesisStateAltair(t, 100)
 
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(0, true)
@@ -219,7 +218,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 }
 
 func TestProcessAttestationNoVerify_SourceTargetHead(t *testing.T) {
-	beaconState, _ := altairTest.DeterministicGenesisStateAltair(t, 64)
+	beaconState, _ := testutil.DeterministicGenesisStateAltair(t, 64)
 	err := beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
 	require.NoError(t, err)
 

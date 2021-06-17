@@ -205,7 +205,8 @@ func Test_ValidateAttestationTime(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := helpers.ValidateAttestationTime(tt.args.attSlot, tt.args.genesisTime)
+			err := helpers.ValidateAttestationTime(tt.args.attSlot, tt.args.genesisTime,
+				params.BeaconNetworkConfig().MaximumGossipClockDisparity)
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {

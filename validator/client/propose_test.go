@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/altair"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	testing2 "github.com/prysmaticlabs/prysm/validator/db/testing"
@@ -681,7 +680,7 @@ func TestSignAltairBlock(t *testing.T) {
 		DomainData(gomock.Any(), gomock.Any()).
 		Return(&ethpb.DomainResponse{SignatureDomain: proposerDomain}, nil)
 	ctx := context.Background()
-	blk := altair.NewBeaconBlock()
+	blk := testutil.NewBeaconBlockAltair()
 	blk.Block.Slot = 1
 	blk.Block.ProposerIndex = 100
 	var pubKey [48]byte
