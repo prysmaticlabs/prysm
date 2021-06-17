@@ -187,7 +187,7 @@ func TestExecuteAltairStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t
 	require.ErrorContains(t, "could not validate state root", err)
 }
 
-func TestProcessAltairBlockNoVerify_PassesProcessingConditions(t *testing.T) {
+func TestExecuteStateTransitionNoVerifyAnySig_PassesProcessingConditions(t *testing.T) {
 	beaconState, block := createFullAltairBlockWithOperations(t)
 	set, _, err := state.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, interfaces.WrappedAltairSignedBeaconBlock(block))
 	require.NoError(t, err)
