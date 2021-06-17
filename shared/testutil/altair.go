@@ -72,20 +72,11 @@ func BlockSignatureAltair(
 ) (bls.Signature, error) {
 	var err error
 
-	bState, err = state.ProcessSlots(context.Background(), bState, block.Slot)
+	s, err := state.CalculateStateRoot(context.Background(), bState, interfaces.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: block}))
 	if err != nil {
 		return nil, err
 	}
-	bState, err = state.ProcessBlockForStateRoot(context.Background(), bState, interfaces.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: block}))
-	if err != nil {
-		return nil, err
-	}
-	r, err := bState.HashTreeRoot(context.Background())
-	if err != nil {
-		return nil, err
-	}
-
-	block.StateRoot = r[:]
+	block.StateRoot = s[:]
 	domain, err := helpers.Domain(bState.Fork(), helpers.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer, bState.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err
