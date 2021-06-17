@@ -8,6 +8,7 @@ go_library(
         "error.go",
         "kv.go",
         "message.go",
+        "pool.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee",
     visibility = ["//beacon-chain:__subpackages__"],

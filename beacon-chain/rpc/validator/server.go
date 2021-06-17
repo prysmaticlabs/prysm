@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -57,6 +58,7 @@ type Server struct {
 	AttPool                attestations.Pool
 	SlashingsPool          slashings.PoolManager
 	ExitPool               voluntaryexits.PoolManager
+	SyncCommitteePool      synccommittee.Pool
 	BlockReceiver          blockchain.BlockReceiver
 	MockEth1Votes          bool
 	Eth1BlockFetcher       powchain.POWBlockFetcher

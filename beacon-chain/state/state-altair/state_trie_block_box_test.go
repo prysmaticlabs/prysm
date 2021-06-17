@@ -9,14 +9,14 @@ import (
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/altair"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"google.golang.org/protobuf/proto"
 )
 
 func TestInitializeFromProto(t *testing.T) {
-	testState, _ := altair.DeterministicGenesisStateAltair(t, 64)
+	testState, _ := testutil.DeterministicGenesisStateAltair(t, 64)
 	pbState, err := stateAltair.ProtobufBeaconState(testState.InnerStateUnsafe())
 	require.NoError(t, err)
 	type test struct {
@@ -59,7 +59,7 @@ func TestInitializeFromProto(t *testing.T) {
 }
 
 func TestInitializeFromProtoUnsafe(t *testing.T) {
-	testState, _ := altair.DeterministicGenesisStateAltair(t, 64)
+	testState, _ := testutil.DeterministicGenesisStateAltair(t, 64)
 	pbState, err := stateAltair.ProtobufBeaconState(testState.InnerStateUnsafe())
 	require.NoError(t, err)
 	type test struct {
@@ -103,7 +103,7 @@ func TestInitializeFromProtoUnsafe(t *testing.T) {
 
 func TestBeaconState_HashTreeRoot(t *testing.T) {
 	t.Skip("TODO: Fix FSSZ HTR for sync committee and participation roots")
-	testState, _ := altair.DeterministicGenesisStateAltair(t, 64)
+	testState, _ := testutil.DeterministicGenesisStateAltair(t, 64)
 	type test struct {
 		name        string
 		stateModify func(beaconState iface.BeaconStateAltair) (iface.BeaconStateAltair, error)
@@ -172,7 +172,7 @@ func TestBeaconState_HashTreeRoot(t *testing.T) {
 
 func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
 	t.Skip("TODO: Fix FSSZ HTR for sync committee and participation roots")
-	testState, _ := altair.DeterministicGenesisStateAltair(t, 64)
+	testState, _ := testutil.DeterministicGenesisStateAltair(t, 64)
 
 	type test struct {
 		name        string
@@ -242,7 +242,7 @@ func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
 
 func TestBeaconStateAltair_ProtoBeaconStateCompatibility(t *testing.T) {
 	ctx := context.Background()
-	s, _ := altair.DeterministicGenesisStateAltair(t, 6)
+	s, _ := testutil.DeterministicGenesisStateAltair(t, 6)
 	inner := s.InnerStateUnsafe()
 	genesis, err := stateAltair.ProtobufBeaconState(inner)
 	require.NoError(t, err)

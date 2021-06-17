@@ -4,15 +4,36 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+// ValidateNilSyncContribution validates that the signed contribution
+// is not nil.
+func ValidateNilSyncContribution(s *ethpb.SignedContributionAndProof) error {
+	if s == nil {
+		return errors.New("signed message can't be nil")
+	}
+	if s.Message == nil {
+		return errors.New("signed contribution's message can't be nil")
+	}
+	if s.Message.Contribution == nil {
+		return errors.New("inner contribution can't be nil")
+	}
+	if s.Message.Contribution.AggregationBits == nil {
+		return errors.New("contribution's bitfield can't be nil")
+	}
+	return nil
+}
 
 // NextSyncCommittee returns the next sync committee for a given state.
 //
@@ -220,4 +241,86 @@ func SubnetsForSyncCommittee(state iface.BeaconStateAltair, i types.ValidatorInd
 //    return epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD
 func SyncCommitteePeriod(epoch types.Epoch) uint64 {
 	return uint64(epoch / params.BeaconConfig().EpochsPerSyncCommitteePeriod)
+}
+
+// SyncSubCommitteePubkeys returns the pubkeys participating in a sync subcommittee.
+//
+// def get_sync_subcommittee_pubkeys(state: BeaconState, subcommittee_index: uint64) -> Sequence[BLSPubkey]:
+//    # Committees assigned to `slot` sign for `slot - 1`
+//    # This creates the exceptional logic below when transitioning between sync committee periods
+//    next_slot_epoch = compute_epoch_at_slot(Slot(state.slot + 1))
+//    if compute_sync_committee_period(get_current_epoch(state)) == compute_sync_committee_period(next_slot_epoch):
+//        sync_committee = state.current_sync_committee
+//    else:
+//        sync_committee = state.next_sync_committee
+//
+//    # Return pubkeys for the subcommittee index
+//    sync_subcommittee_size = SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT
+//    i = subcommittee_index * sync_subcommittee_size
+//    return sync_committee.pubkeys[i:i + sync_subcommittee_size]
+func SyncSubCommitteePubkeys(st iface.BeaconStateAltair, subComIdx types.CommitteeIndex) ([][]byte, error) {
+	nextSlotEpoch := helpers.SlotToEpoch(st.Slot() + 1)
+	currEpoch := helpers.SlotToEpoch(st.Slot())
+
+	var syncCommittee *pb.SyncCommittee
+	var err error
+	if SyncCommitteePeriod(currEpoch) == SyncCommitteePeriod(nextSlotEpoch) {
+		syncCommittee, err = st.CurrentSyncCommittee()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		syncCommittee, err = st.NextSyncCommittee()
+		if err != nil {
+			return nil, err
+		}
+	}
+	subCommSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
+	i := uint64(subComIdx) + subCommSize
+	endOfSubCom := i + subCommSize
+	pubkeyLen := uint64(len(syncCommittee.Pubkeys))
+	if endOfSubCom > pubkeyLen {
+		return nil, errors.Errorf("end index is larger than array length: %d > %d", endOfSubCom, pubkeyLen)
+	}
+	return syncCommittee.Pubkeys[i:endOfSubCom], nil
+}
+
+// IsSyncCommitteeAggregator checks whether the provided signature is for a valid
+// aggregator.
+// def is_sync_committee_aggregator(signature: BLSSignature) -> bool:
+//    modulo = max(1, SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT // TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE)
+//    return bytes_to_uint64(hash(signature)[0:8]) % modulo == 0
+func IsSyncCommitteeAggregator(sig []byte) bool {
+	modulo := mathutil.Max(1, params.BeaconConfig().SyncCommitteeSize/params.BeaconConfig().SyncCommitteeSubnetCount/params.BeaconConfig().TargetAggregatorsPerSyncSubcommittee)
+	hashedSig := hashutil.Hash(sig)
+	return bytesutil.BytesToUint64BigEndian(hashedSig[:8])%modulo == 0
+}
+
+// SyncCommitteeSigningRoot returns the signing root from the relevant provided data.
+//
+// def get_sync_committee_selection_proof(state: BeaconState,
+//                                       slot: Slot,
+//                                       subcommittee_index: uint64,
+//                                       privkey: int) -> BLSSignature:
+//    domain = get_domain(state, DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF, compute_epoch_at_slot(slot))
+//    signing_data = SyncAggregatorSelectionData(
+//        slot=slot,
+//        subcommittee_index=subcommittee_index,
+//    )
+//    signing_root = compute_signing_root(signing_data, domain)
+//    return bls.Sign(privkey, signing_root)
+func SyncCommitteeSigningRoot(st iface.BeaconState, slot types.Slot, comIdx types.CommitteeIndex) ([32]byte, error) {
+	dom, err := helpers.Domain(st.Fork(), helpers.SlotToEpoch(slot), params.BeaconConfig().DomainSyncCommitteeSelectionProof, st.GenesisValidatorRoot())
+	if err != nil {
+		return [32]byte{}, err
+	}
+	selectionData := &pb.SyncAggregatorSelectionData{Slot: uint64(slot), SubcommitteeIndex: uint64(comIdx)}
+	return helpers.ComputeSigningRoot(selectionData, dom)
+}
+
+// VerifySyncSelectionData verifies that the provided sync contribution has a valid
+// selection proof.
+func VerifySyncSelectionData(st iface.BeaconState, m *ethpb.ContributionAndProof) error {
+	selectionData := &pb.SyncAggregatorSelectionData{Slot: uint64(m.Contribution.Slot), SubcommitteeIndex: uint64(m.Contribution.SubcommitteeIndex)}
+	return helpers.ComputeDomainVerifySigningRoot(st, m.AggregatorIndex, helpers.SlotToEpoch(m.Contribution.Slot), selectionData, params.BeaconConfig().DomainSyncCommitteeSelectionProof, m.SelectionProof)
 }
