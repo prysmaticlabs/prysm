@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -84,16 +85,36 @@ func (vs *Server) GetSyncSubcommitteeIndex(ctx context.Context, req *ethpb.SyncS
 		}
 	}
 
-	committee, err := headState.CurrentSyncCommittee()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get sync committee in head state: %v", err)
-	}
-	indices, err := helpers.CurrentEpochSyncSubcommitteeIndices(committee, bytesutil.ToBytes48(req.PublicKey))
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get sync subcommittee indices: %v", err)
-	}
+	nextSlotEpoch := helpers.SlotToEpoch(headState.Slot() + 1)
+	period := params.BeaconConfig().EpochsPerSyncCommitteePeriod
 
-	return &ethpb.SyncSubcommitteeIndexRespond{
-		Indices: indices,
-	}, nil
+	switch {
+	case nextSlotEpoch/period == helpers.CurrentEpoch(headState)/period:
+		committee, err := headState.CurrentSyncCommittee()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get current sync committee in head state: %v", err)
+		}
+		indices, err := helpers.CurrentEpochSyncSubcommitteeIndices(committee, bytesutil.ToBytes48(req.PublicKey))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get current sync subcommittee indices: %v", err)
+		}
+		return &ethpb.SyncSubcommitteeIndexRespond{
+			Indices: indices,
+		}, nil
+	case nextSlotEpoch/period == helpers.CurrentEpoch(headState)/period+1:
+		committee, err := headState.NextSyncCommittee()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get next sync committee in head state: %v", err)
+		}
+		indices, err := helpers.NextEpochSyncSubcommitteeIndices(committee, bytesutil.ToBytes48(req.PublicKey))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get next sync subcommittee indices: %v", err)
+		}
+		return &ethpb.SyncSubcommitteeIndexRespond{
+			Indices: indices,
+		}, nil
+	default:
+		// Impossible condition.
+		return nil, status.Errorf(codes.InvalidArgument, "Could get calculate sync subcommittee based on the period")
+	}
 }
