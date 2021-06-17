@@ -56,6 +56,13 @@ func TestMkdirAll_AlreadyExists_WrongPermissions(t *testing.T) {
 	assert.ErrorContains(t, "already exists without proper 0700 permissions", err)
 }
 
+func TestMkdirAll_AlreadyExists_Override(t *testing.T) {
+	dirName := t.TempDir() + "somedir"
+	err := os.MkdirAll(dirName, params.BeaconIoConfig().ReadWriteExecutePermissions)
+	require.NoError(t, err)
+	assert.NoError(t, fileutil.MkdirAll(dirName))
+}
+
 func TestHandleBackupDir_AlreadyExists_Override(t *testing.T) {
 	dirName := t.TempDir() + "somedir"
 	err := os.MkdirAll(dirName, os.ModePerm)
@@ -76,7 +83,8 @@ func TestHandleBackupDir_AlreadyExists_No_Override(t *testing.T) {
 	info, err := os.Stat(dirName)
 	require.NoError(t, err)
 	assert.Equal(t, "drwxrwxr-x", info.Mode().String())
-	fileutil.HandleBackupDir(dirName, false)
+	err = fileutil.HandleBackupDir(dirName, false)
+	assert.ErrorContains(t, "dir already exists without proper 0700 permissions", err)
 	info, err = os.Stat(dirName)
 	require.NoError(t, err)
 	assert.Equal(t, "drwxrwxr-x", info.Mode().String())
@@ -88,13 +96,6 @@ func TestHandleBackupDir_NewDir(t *testing.T) {
 	info, err := os.Stat(dirName)
 	require.NoError(t, err)
 	assert.Equal(t, "drwx------", info.Mode().String())
-}
-
-func TestMkdirAll_AlreadyExists_Override(t *testing.T) {
-	dirName := t.TempDir() + "somedir"
-	err := os.MkdirAll(dirName, params.BeaconIoConfig().ReadWriteExecutePermissions)
-	require.NoError(t, err)
-	assert.NoError(t, fileutil.MkdirAll(dirName))
 }
 
 func TestMkdirAll_OK(t *testing.T) {
