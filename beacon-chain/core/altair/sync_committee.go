@@ -322,5 +322,5 @@ func SyncCommitteeSigningRoot(st iface.BeaconState, slot types.Slot, comIdx type
 // selection proof.
 func VerifySyncSelectionData(st iface.BeaconState, m *ethpb.ContributionAndProof) error {
 	selectionData := &pb.SyncAggregatorSelectionData{Slot: uint64(m.Contribution.Slot), SubcommitteeIndex: uint64(m.Contribution.SubcommitteeIndex)}
-	return helpers.ComputeDomainVerifySigningRoot(st, m.AggregatorIndex, helpers.SlotToEpoch(m.Contribution.Slot), selectionData, params.BeaconConfig().DomainSyncCommitteeSelectionProof, st.GenesisValidatorRoot())
+	return helpers.ComputeDomainVerifySigningRoot(st, m.AggregatorIndex, helpers.SlotToEpoch(m.Contribution.Slot), selectionData, params.BeaconConfig().DomainSyncCommitteeSelectionProof, m.SelectionProof)
 }

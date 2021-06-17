@@ -13,6 +13,8 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	"github.com/prysmaticlabs/prysm/shared/interfaces/version"
 	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
@@ -142,7 +144,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [4
 	}
 
 	// Sign returned block from beacon node
-	sig, domain, err := v.signBlock(ctx, pubKey, epoch, b)
+	sig, domain, err := v.signBlock(ctx, pubKey, epoch, interfaces.WrappedPhase0BeaconBlock(b))
 	if err != nil {
 		log.WithError(err).Error("Failed to sign block")
 		if v.emitAccountMetrics {
@@ -279,7 +281,7 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch
 }
 
 // Sign block with proposer domain and private key.
-func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch types.Epoch, b *ethpb.BeaconBlock) ([]byte, *ethpb.DomainResponse, error) {
+func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch types.Epoch, b interfaces.BeaconBlock) ([]byte, *ethpb.DomainResponse, error) {
 	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainBeaconProposer[:])
 	if err != nil {
 		return nil, nil, errors.Wrap(err, domainDataErr)
@@ -289,20 +291,48 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch types.
 	}
 
 	var sig bls.Signature
-	blockRoot, err := helpers.ComputeSigningRoot(b, domain.SignatureDomain)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, signingRootErr)
+	switch b.Version() {
+	case version.Altair:
+		block, ok := b.Proto().(*ethpb.BeaconBlockAltair)
+		if !ok {
+			return nil, nil, errors.New("could not convert obj to beacon block altair")
+		}
+		blockRoot, err := helpers.ComputeSigningRoot(block, domain.SignatureDomain)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, signingRootErr)
+		}
+		sig, err = v.keyManager.Sign(ctx, &validatorpb.SignRequest{
+			PublicKey:       pubKey[:],
+			SigningRoot:     blockRoot[:],
+			SignatureDomain: domain.SignatureDomain,
+			Object:          &validatorpb.SignRequest_BlockV2{BlockV2: block},
+		})
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not sign block proposal")
+		}
+		return sig.Marshal(), domain, nil
+	case version.Phase0:
+		block, ok := b.Proto().(*ethpb.BeaconBlock)
+		if !ok {
+			return nil, nil, errors.New("could not convert obj to beacon block phase 0")
+		}
+		blockRoot, err := helpers.ComputeSigningRoot(block, domain.SignatureDomain)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, signingRootErr)
+		}
+		sig, err = v.keyManager.Sign(ctx, &validatorpb.SignRequest{
+			PublicKey:       pubKey[:],
+			SigningRoot:     blockRoot[:],
+			SignatureDomain: domain.SignatureDomain,
+			Object:          &validatorpb.SignRequest_Block{Block: block},
+		})
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not sign block proposal")
+		}
+		return sig.Marshal(), domain, nil
+	default:
+		return nil, nil, errors.New("unknown block type")
 	}
-	sig, err = v.keyManager.Sign(ctx, &validatorpb.SignRequest{
-		PublicKey:       pubKey[:],
-		SigningRoot:     blockRoot[:],
-		SignatureDomain: domain.SignatureDomain,
-		Object:          &validatorpb.SignRequest_Block{Block: b},
-	})
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not sign block proposal")
-	}
-	return sig.Marshal(), domain, nil
 }
 
 func (v *validator) signBlockV2(ctx context.Context, pubKey [48]byte, epoch types.Epoch, b *ethpb.BeaconBlockAltair) ([]byte, *ethpb.DomainResponse, error) {

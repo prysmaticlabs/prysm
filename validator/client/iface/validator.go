@@ -24,6 +24,8 @@ const (
 	RoleProposer
 	// RoleAggregator means that the validator should submit an aggregation and proof.
 	RoleAggregator
+	// RoleSyncCommittee means that the validator should submit a sync committee message.
+	RoleSyncCommittee
 )
 
 // Validator interface defines the primary methods of a validator client.

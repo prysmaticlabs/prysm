@@ -7,6 +7,7 @@ go_library(
         "contribution.go",
         "error.go",
         "kv.go",
+        "message.go",
         "pool.go",
         "signature.go",
     ],
@@ -15,7 +16,7 @@ go_library(
     deps = [
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/copyutil:go_default_library",
-        "//shared/hashutil:go_default_library",
+        "//shared/queue:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
     ],
@@ -25,7 +26,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "contribution_test.go",
-        "signature_test.go",
+        "message_test.go",
     ],
     embed = [":go_default_library"],
     deps = [

@@ -93,7 +93,7 @@ func prepareConfigSpec() (map[string]string, error) {
 			continue
 		}
 
-		tagValue := strings.ToLower(tField.Tag.Get("yaml"))
+		tagValue := strings.ToUpper(tField.Tag.Get("yaml"))
 		vField := v.Field(i)
 		switch vField.Kind() {
 		case reflect.Int:

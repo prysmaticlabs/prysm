@@ -14,12 +14,12 @@ import (
 var gossipTopicMappings = map[string]proto.Message{
 	BlockSubnetTopicFormat:                    &pb.SignedBeaconBlock{},
 	AttestationSubnetTopicFormat:              &pb.Attestation{},
-	SyncCommitteeSubnetTopicFormat:            &pb.SyncCommitteeMessage{},
 	ExitSubnetTopicFormat:                     &pb.SignedVoluntaryExit{},
 	ProposerSlashingSubnetTopicFormat:         &pb.ProposerSlashing{},
 	AttesterSlashingSubnetTopicFormat:         &pb.AttesterSlashing{},
 	AggregateAndProofSubnetTopicFormat:        &pb.SignedAggregateAttestationAndProof{},
 	SyncContributionAndProofSubnetTopicFormat: &pb.SignedContributionAndProof{},
+	SyncCommitteeSubnetTopicFormat:            &pb.SyncCommitteeMessage{},
 }
 
 func GossipTopicMappings(topic string, epoch types.Epoch) proto.Message {

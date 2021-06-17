@@ -19,5 +19,5 @@ func (s *Service) syncCommitteeSubscriber(_ context.Context, msg proto.Message) 
 		return errors.New("nil sync committee message")
 	}
 
-	return s.cfg.SyncCommsPool.SaveSyncCommitteeSignature(m)
+	return s.cfg.SyncCommsPool.SaveSyncCommitteeMessage(m)
 }

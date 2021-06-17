@@ -10,8 +10,10 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces/version"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -80,16 +82,9 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 			// and send another response over the server stream right away.
 			currentEpoch = slotutil.EpochsSinceGenesis(vs.TimeFetcher.GenesisTime())
 			if ev.Type == statefeed.Reorg {
-				data, ok := ev.Data.(*statefeed.ReorgData)
+				data, ok := ev.Data.(*ethpbv1.EventChainReorg)
 				if !ok {
 					return status.Errorf(codes.Internal, "Received incorrect data type over reorg feed: %v", data)
-				}
-				newSlotEpoch := helpers.SlotToEpoch(data.NewSlot)
-				oldSlotEpoch := helpers.SlotToEpoch(data.OldSlot)
-				// We only send out new duties if a reorg across epochs occurred, otherwise
-				// validator shufflings would not have changed as a result of a reorg.
-				if newSlotEpoch >= oldSlotEpoch {
-					continue
 				}
 				req.Epoch = currentEpoch
 				res, err := vs.duties(stream.Context(), req)
@@ -142,6 +137,10 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 		return nil, status.Errorf(codes.Internal, "Could not compute next committee assignments: %v", err)
 	}
 
+	// Post Altair transition when the beacon state is Altair compatible, and requested epoch is
+	// post fork boundary.
+	postAltairTransition := s.Version() == version.Altair && req.Epoch >= params.BeaconConfig().AltairForkEpoch
+
 	validatorAssignments := make([]*ethpb.DutiesResponse_Duty, 0, len(req.PublicKeys))
 	nextValidatorAssignments := make([]*ethpb.DutiesResponse_Duty, 0, len(req.PublicKeys))
 	for _, pubKey := range req.PublicKeys {
@@ -184,6 +183,27 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 			vStatus, _ := vs.validatorStatus(ctx, s, pubKey)
 			assignment.Status = vStatus.Status
 		}
+
+		// Are the validators in current or next epoch sync committee.
+		if postAltairTransition {
+			csc, err := s.CurrentSyncCommittee()
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not get current sync committee: %v", err)
+			}
+			assignment.IsSyncCommittee, err = helpers.IsCurrentEpochSyncCommittee(csc, bytesutil.ToBytes48(pubKey))
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not determine current epoch sync committee: %v", err)
+			}
+			nsc, err := s.NextSyncCommittee()
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not get next sync committee: %v", err)
+			}
+			nextAssignment.IsSyncCommittee, err = helpers.IsNextEpochSyncCommittee(nsc, bytesutil.ToBytes48(pubKey))
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not determine next epoch sync committee: %v", err)
+			}
+		}
+
 		validatorAssignments = append(validatorAssignments, assignment)
 		nextValidatorAssignments = append(nextValidatorAssignments, nextAssignment)
 		// Assign relevant validator to subnet.

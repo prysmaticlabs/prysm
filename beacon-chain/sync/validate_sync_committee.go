@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -39,12 +40,19 @@ func (s *Service) validateSyncCommittee(ctx context.Context, pid peer.ID, msg *p
 		return pubsub.ValidationReject
 	}
 
+	// Override topic for decoding.
+	originalTopic := msg.Topic
+	format := p2p.GossipTypeMapping[reflect.TypeOf(&eth.SyncCommitteeMessage{})]
+	msg.Topic = &format
+
 	m, err := s.decodePubsubMessage(msg)
 	if err != nil {
 		log.WithError(err).Debug("Could not decode message")
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
+	// Restore topic.
+	msg.Topic = originalTopic
 
 	comMsg, ok := m.(*eth.SyncCommitteeMessage)
 	if !ok {
@@ -90,6 +98,12 @@ func (s *Service) validateSyncCommittee(ctx context.Context, pid peer.ID, msg *p
 		log.Errorf("Sync contribution referencing non-altair state")
 		return pubsub.ValidationReject
 	}
+	// Check for validity of validator index.
+	_, err = bState.ValidatorAtIndexReadOnly(comMsg.ValidatorIndex)
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationReject
+	}
 	subs, err := altair.SubnetsForSyncCommittee(bState, comMsg.ValidatorIndex)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
@@ -97,12 +111,12 @@ func (s *Service) validateSyncCommittee(ctx context.Context, pid peer.ID, msg *p
 	}
 
 	isValid := false
-	format := p2p.GossipTypeMapping[reflect.TypeOf(&eth.SyncCommitteeMessage{})]
-	digest, err := s.currentForkDigest()
+	digest, err := s.forkDigest()
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
+	// Validate that the validator is in the correct committee.
 	for _, idx := range subs {
 		if strings.HasPrefix(*msg.Topic, fmt.Sprintf(format, digest, idx)) {
 			isValid = true
@@ -118,23 +132,30 @@ func (s *Service) validateSyncCommittee(ctx context.Context, pid peer.ID, msg *p
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
+	d, err := helpers.Domain(bState.Fork(), helpers.SlotToEpoch(bState.Slot()), params.BeaconConfig().DomainSyncCommittee, bState.GenesisValidatorRoot())
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationIgnore
+	}
+	rawBytes := p2ptypes.SSZBytes(blockRoot[:])
+	sigRoot, err := helpers.ComputeSigningRoot(&rawBytes, d)
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationIgnore
+	}
+
 	rawKey := val.PublicKey()
+	blsSig, err := bls.SignatureFromBytes(comMsg.Signature)
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationReject
+	}
 	pKey, err := bls.PublicKeyFromBytes(rawKey[:])
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
-	set := &bls.SignatureSet{
-		PublicKeys: []bls.PublicKey{pKey},
-		Messages:   [][32]byte{blockRoot},
-		Signatures: [][]byte{comMsg.Signature},
-	}
-
-	verified, err := set.Verify()
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return pubsub.ValidationIgnore
-	}
+	verified := blsSig.Verify(pKey, sigRoot[:])
 	if !verified {
 		return pubsub.ValidationReject
 	}

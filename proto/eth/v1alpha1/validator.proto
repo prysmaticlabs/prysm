@@ -389,6 +389,9 @@ message DutiesResponse {
 
         // The index of the validator in the beacon state.
         uint64 validator_index = 7  [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
+
+        // Whether the validator belongs in the sync committee and has to perform sync committee duty.
+        bool is_sync_committee = 8;
     }
 }
 

@@ -11,10 +11,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces/version"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -87,7 +89,7 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 		return pubsub.ValidationIgnore
 	}
 	bState, ok := blkState.(iface.BeaconStateAltair)
-	if !ok {
+	if !ok || bState.Version() != version.Altair {
 		log.Errorf("Sync contribution referencing non-altair state")
 		return pubsub.ValidationReject
 	}
@@ -116,34 +118,45 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
-	if err := helpers.VerifySigningRoot(m.Message, aggPubkey[:], m.Signature, params.BeaconConfig().DomainContributionAndProof[:]); err != nil {
+	d, err := helpers.Domain(bState.Fork(), helpers.SlotToEpoch(bState.Slot()), params.BeaconConfig().DomainContributionAndProof, bState.GenesisValidatorRoot())
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationIgnore
+	}
+	if err := helpers.VerifySigningRoot(m.Message, aggPubkey[:], m.Signature, d); err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
-	activePubkeys := [][]byte{}
+	activePubkeys := []bls.PublicKey{}
 	bVector := m.Message.Contribution.AggregationBits
 
 	for i, pk := range syncPubkeys {
 		if bVector.BitAt(uint64(i)) {
-			activePubkeys = append(activePubkeys, pk)
+			pubK, err := bls.PublicKeyFromBytes(pk)
+			if err != nil {
+				traceutil.AnnotateError(span, err)
+				return pubsub.ValidationIgnore
+			}
+			activePubkeys = append(activePubkeys, pubK)
 		}
 	}
-	aggKey, err := bls.AggregatePublicKeys(activePubkeys)
+	sig, err := bls.SignatureFromBytes(m.Message.Contribution.Signature)
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationReject
+	}
+	d, err = helpers.Domain(bState.Fork(), helpers.SlotToEpoch(bState.Slot()), params.BeaconConfig().DomainSyncCommittee, bState.GenesisValidatorRoot())
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
-
-	set := &bls.SignatureSet{
-		PublicKeys: []bls.PublicKey{aggKey},
-		Messages:   [][32]byte{bytesutil.ToBytes32(m.Message.Contribution.BlockRoot)},
-		Signatures: [][]byte{m.Message.Contribution.Signature},
-	}
-	verified, err := set.Verify()
+	rawBytes := p2ptypes.SSZBytes(m.Message.Contribution.BlockRoot)
+	sigRoot, err := helpers.ComputeSigningRoot(&rawBytes, d)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
+	verified := sig.Eth2FastAggregateVerify(activePubkeys, sigRoot)
 	if !verified {
 		return pubsub.ValidationReject
 	}

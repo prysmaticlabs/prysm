@@ -39,7 +39,7 @@ func (s *Store) Block(ctx context.Context, blockRoot [32]byte) (interfaces.Signe
 			return nil
 		}
 		var err error
-		block, err = decodeBlock(ctx, enc)
+		block, err = unmarshalBlock(ctx, enc)
 		return err
 	})
 	return block, err
@@ -61,7 +61,7 @@ func (s *Store) HeadBlock(ctx context.Context) (interfaces.SignedBeaconBlock, er
 			return nil
 		}
 		var err error
-		headBlock, err = decodeBlock(ctx, enc)
+		headBlock, err = unmarshalBlock(ctx, enc)
 		return err
 	})
 	return headBlock, err
@@ -84,7 +84,7 @@ func (s *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]interface
 
 		for i := 0; i < len(keys); i++ {
 			encoded := bkt.Get(keys[i])
-			block, err := decodeBlock(ctx, encoded)
+			block, err := unmarshalBlock(ctx, encoded)
 			if err != nil {
 				return err
 			}
@@ -156,7 +156,7 @@ func (s *Store) BlocksBySlot(ctx context.Context, slot types.Slot) (bool, []inte
 
 		for i := 0; i < len(keys); i++ {
 			encoded := bkt.Get(keys[i])
-			block, err := decodeBlock(ctx, encoded)
+			block, err := unmarshalBlock(ctx, encoded)
 			if err != nil {
 				return err
 			}
@@ -199,7 +199,7 @@ func (s *Store) deleteBlock(ctx context.Context, blockRoot [32]byte) error {
 		if enc == nil {
 			return nil
 		}
-		block, err := decodeBlock(ctx, enc)
+		block, err := unmarshalBlock(ctx, enc)
 		if err != nil {
 			return err
 		}
@@ -224,7 +224,7 @@ func (s *Store) deleteBlocks(ctx context.Context, blockRoots [][32]byte) error {
 			if enc == nil {
 				return nil
 			}
-			block, err := decodeBlock(ctx, enc)
+			block, err := unmarshalBlock(ctx, enc)
 			if err != nil {
 				return err
 			}
@@ -272,7 +272,7 @@ func (s *Store) SaveBlocks(ctx context.Context, blocks []interfaces.SignedBeacon
 			if existingBlock := bkt.Get(blockRoot[:]); existingBlock != nil {
 				continue
 			}
-			enc, err := encodeBlock(ctx, block)
+			enc, err := marshalBlock(ctx, block)
 			if err != nil {
 				return err
 			}
@@ -319,7 +319,7 @@ func (s *Store) GenesisBlock(ctx context.Context) (interfaces.SignedBeaconBlock,
 			return nil
 		}
 		var err error
-		block, err = decodeBlock(ctx, enc)
+		block, err = unmarshalBlock(ctx, enc)
 		return err
 	})
 	return block, err
@@ -584,35 +584,45 @@ func createBlockIndicesFromFilters(ctx context.Context, f *filters.QueryFilter) 
 	return indicesByBucket, nil
 }
 
-func decodeBlock(ctx context.Context, enc []byte) (interfaces.SignedBeaconBlock, error) {
+// unmarshal block from marshaled proto beacon block bytes to versioned beacon block struct type.
+func unmarshalBlock(ctx context.Context, enc []byte) (interfaces.SignedBeaconBlock, error) {
 	var err error
 	enc, err = snappy.Decode(nil, enc)
 	if err != nil {
 		return nil, err
 	}
-	if len(enc) >= len(altairKey) && bytes.Equal(enc[:len(altairKey)], altairKey) {
+	switch {
+	case hasAltairKey(enc):
+		// Marshal block bytes to altair beacon block.
 		rawBlock := &ethpb.SignedBeaconBlockAltair{}
 		err := rawBlock.UnmarshalSSZ(enc[len(altairKey):])
 		if err != nil {
 			return nil, err
 		}
 		return interfaces.WrappedAltairSignedBeaconBlock(rawBlock), nil
+	default:
+		// Marshal block bytes to phase 0 beacon block.
+		rawBlock := &ethpb.SignedBeaconBlock{}
+		err = rawBlock.UnmarshalSSZ(enc)
+		if err != nil {
+			return nil, err
+		}
+		return interfaces.WrappedPhase0SignedBeaconBlock(rawBlock), nil
 	}
-	rawBlock := &ethpb.SignedBeaconBlock{}
-	err = rawBlock.UnmarshalSSZ(enc)
-	if err != nil {
-		return nil, err
-	}
-	return interfaces.WrappedPhase0SignedBeaconBlock(rawBlock), nil
 }
 
-func encodeBlock(ctx context.Context, blk interfaces.SignedBeaconBlock) ([]byte, error) {
+// marshal versioned beacon block from struct type down to bytes.
+func marshalBlock(ctx context.Context, blk interfaces.SignedBeaconBlock) ([]byte, error) {
 	obj, err := blk.MarshalSSZ()
 	if err != nil {
 		return nil, err
 	}
-	if blk.Version() == version.Altair {
+	switch blk.Version() {
+	case version.Altair:
 		return snappy.Encode(nil, append(altairKey, obj...)), nil
+	case version.Phase0:
+		return snappy.Encode(nil, obj), nil
+	default:
+		return nil, errors.New("Unknown block version")
 	}
-	return snappy.Encode(nil, obj), nil
 }

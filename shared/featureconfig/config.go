@@ -231,10 +231,9 @@ func ConfigureValidator(ctx *cli.Context) {
 		log.WithField(disableAttestingHistoryDBCache.Name, disableAttestingHistoryDBCache.Usage).Warn(enabledFeatureFlag)
 		cfg.DisableAttestingHistoryDBCache = true
 	}
-	cfg.AttestTimely = true
-	if ctx.Bool(disableAttestTimely.Name) {
-		log.WithField(disableAttestTimely.Name, disableAttestTimely.Usage).Warn(enabledFeatureFlag)
-		cfg.AttestTimely = false
+	if ctx.Bool(attestTimely.Name) {
+		log.WithField(attestTimely.Name, attestTimely.Usage).Warn(enabledFeatureFlag)
+		cfg.AttestTimely = true
 	}
 	if ctx.Bool(enableSlashingProtectionPruning.Name) {
 		log.WithField(enableSlashingProtectionPruning.Name, enableSlashingProtectionPruning.Usage).Warn(enabledFeatureFlag)

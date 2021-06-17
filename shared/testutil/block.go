@@ -62,30 +62,6 @@ func NewBeaconBlock() *ethpb.SignedBeaconBlock {
 	}
 }
 
-// NewBeaconBlockAltair creates a beacon block with minimum marshalable fields.
-func NewBeaconBlockAltair() *ethpb.SignedBeaconBlockAltair {
-	return &ethpb.SignedBeaconBlockAltair{
-		Block: &ethpb.BeaconBlockAltair{
-			ParentRoot: make([]byte, 32),
-			StateRoot:  make([]byte, 32),
-			Body: &ethpb.BeaconBlockBodyAltair{
-				RandaoReveal: make([]byte, 96),
-				Eth1Data: &ethpb.Eth1Data{
-					DepositRoot: make([]byte, 32),
-					BlockHash:   make([]byte, 32),
-				},
-				Graffiti:          make([]byte, 32),
-				Attestations:      []*ethpb.Attestation{},
-				AttesterSlashings: []*ethpb.AttesterSlashing{},
-				Deposits:          []*ethpb.Deposit{},
-				ProposerSlashings: []*ethpb.ProposerSlashing{},
-				VoluntaryExits:    []*ethpb.SignedVoluntaryExit{},
-			},
-		},
-		Signature: make([]byte, 96),
-	}
-}
-
 // GenerateFullBlock generates a fully valid block with the requested parameters.
 // Use BlockGenConfig to declare the conditions you would like the block generated under.
 func GenerateFullBlock(
