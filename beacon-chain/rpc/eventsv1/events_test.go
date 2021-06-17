@@ -30,7 +30,7 @@ func TestStreamEvents_Preconditions(t *testing.T) {
 		defer ctrl.Finish()
 		mockStream := mock.NewMockEvents_StreamEventsServer(ctrl)
 		err := srv.StreamEvents(&ethpb.StreamEventsRequest{Topics: nil}, mockStream)
-		require.ErrorContains(t, "no topics specified", err)
+		require.ErrorContains(t, "No topics specified", err)
 	})
 	t.Run("topic_not_allowed", func(t *testing.T) {
 		srv := &Server{}
@@ -38,7 +38,7 @@ func TestStreamEvents_Preconditions(t *testing.T) {
 		defer ctrl.Finish()
 		mockStream := mock.NewMockEvents_StreamEventsServer(ctrl)
 		err := srv.StreamEvents(&ethpb.StreamEventsRequest{Topics: []string{"foobar"}}, mockStream)
-		require.ErrorContains(t, "topic foobar not allowed", err)
+		require.ErrorContains(t, "Topic foobar not allowed", err)
 	})
 }
 

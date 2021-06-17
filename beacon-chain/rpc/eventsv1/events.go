@@ -2,6 +2,7 @@ package eventsv1
 
 import (
 	gwpb "github.com/grpc-ecosystem/grpc-gateway/v2/proto/gateway"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
@@ -39,13 +40,13 @@ func (s *Server) StreamEvents(
 	req *ethpb.StreamEventsRequest, stream ethpb.Events_StreamEventsServer,
 ) error {
 	if req == nil || len(req.Topics) == 0 {
-		return status.Error(codes.InvalidArgument, "no topics specified to subscribe to")
+		return status.Error(codes.InvalidArgument, "No topics specified to subscribe to")
 	}
 	// Check if the topics in the request are valid.
 	requestedTopics := make(map[string]bool)
 	for _, topic := range req.Topics {
 		if _, ok := casesHandled[topic]; !ok {
-			return status.Errorf(codes.InvalidArgument, "topic %s not allowed for event subscriptions", topic)
+			return status.Errorf(codes.InvalidArgument, "Topic %s not allowed for event subscriptions", topic)
 		}
 		requestedTopics[topic] = true
 	}
@@ -69,20 +70,20 @@ func (s *Server) StreamEvents(
 		select {
 		case event := <-blockChan:
 			if err := s.handleBlockEvents(stream, requestedTopics, event); err != nil {
-				return status.Errorf(codes.Internal, "could not handle block event: %v", err)
+				return status.Errorf(codes.Internal, "Could not handle block event: %v", err)
 			}
 		case event := <-opsChan:
 			if err := s.handleBlockOperationEvents(stream, requestedTopics, event); err != nil {
-				return status.Errorf(codes.Internal, "could not handle block operations event: %v", err)
+				return status.Errorf(codes.Internal, "Could not handle block operations event: %v", err)
 			}
 		case event := <-stateChan:
 			if err := s.handleStateEvents(stream, requestedTopics, event); err != nil {
-				return status.Errorf(codes.Internal, "could not handle state event: %v", err)
+				return status.Errorf(codes.Internal, "Could not handle state event: %v", err)
 			}
 		case <-s.Ctx.Done():
-			return status.Errorf(codes.Canceled, "context canceled")
+			return status.Errorf(codes.Canceled, "Context canceled")
 		case <-stream.Context().Done():
-			return status.Errorf(codes.Canceled, "context canceled")
+			return status.Errorf(codes.Canceled, "Context canceled")
 		}
 	}
 }
@@ -105,7 +106,7 @@ func (s *Server) handleBlockEvents(
 		}
 		item, err := v1Data.HashTreeRoot()
 		if err != nil {
-			return status.Errorf(codes.Internal, "could not hash tree root block %v", err)
+			return errors.Wrap(err, "could not hash tree root block")
 		}
 		eventBlock := &ethpb.EventBlock{
 			Slot:  v1Data.Message.Slot,
