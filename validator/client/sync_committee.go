@@ -68,7 +68,8 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.S
 	}
 }
 
-func (v *validator) signSelectionData(ctx context.Context, pubKey [48]byte, index uint64, slot types.Slot) ([]byte, error) {
+// Signs input slot with domain sync committee selection proof. This is used to create the signature for sync committee selection.
+func (v *validator) signSyncSelectionData(ctx context.Context, pubKey [48]byte, index uint64, slot types.Slot) ([]byte, error) {
 	domain, err := v.domainData(ctx, helpers.SlotToEpoch(slot), params.BeaconConfig().DomainSyncCommitteeSelectionProof[:])
 	if err != nil {
 		return nil, err

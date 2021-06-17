@@ -72,7 +72,7 @@ func (vs *Server) SubmitSyncMessage(ctx context.Context, msg *ethpb.SyncCommitte
 	return nil, err
 }
 
-// GetSyncSubcommitteeIndex is called by a sync committee participant to get its subcommittee index for aggregation duty.
+// GetSyncSubcommitteeIndex is called by a sync committee participant to get its subcommittee index for sync message aggregation duty.
 func (vs *Server) GetSyncSubcommitteeIndex(ctx context.Context, req *ethpb.SyncSubcommitteeIndexRequest) (*ethpb.SyncSubcommitteeIndexRespond, error) {
 	headState, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
@@ -101,6 +101,7 @@ func (vs *Server) GetSyncSubcommitteeIndex(ctx context.Context, req *ethpb.SyncS
 		return &ethpb.SyncSubcommitteeIndexRespond{
 			Indices: indices,
 		}, nil
+	// At sync committee period boundary, validator should sample the next epoch sync committee.
 	case nextSlotEpoch/period == helpers.CurrentEpoch(headState)/period+1:
 		committee, err := headState.NextSyncCommittee()
 		if err != nil {

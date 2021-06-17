@@ -594,7 +594,7 @@ func (v *validator) isSyncCommitteeAggregator(ctx context.Context, slot types.Sl
 	}
 
 	for _, index := range res.Indices {
-		sig, err := v.signSelectionData(ctx, pubKey, index, slot)
+		sig, err := v.signSyncSelectionData(ctx, pubKey, index, slot)
 		if err != nil {
 			return false, err
 		}
