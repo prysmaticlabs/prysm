@@ -12,13 +12,12 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/altair"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestGetSyncMessageBlockRoot_UseHeadBlockRoot(t *testing.T) {
 	testutil.ResetCache()
-	headState, _ := altair.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	headState, _ := testutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	require.NoError(t, headState.SetSlot(100))
 	r := []byte{'a'}
 	server := &Server{
@@ -38,7 +37,7 @@ func TestGetSyncMessageBlockRoot_UseBlockRootInState(t *testing.T) {
 	testutil.ResetCache()
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	headState, _ := altair.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	headState, _ := testutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	require.NoError(t, headState.SetSlot(100))
 	server := &Server{
 		HeadFetcher: &mock.ChainService{
