@@ -3,6 +3,7 @@ package validator
 import (
 	"context"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -14,8 +15,13 @@ import (
 
 // GetSyncMessageBlockRoot retrieves the sync committee block root of the beacon chain.
 func (vs *Server) GetSyncMessageBlockRoot(ctx context.Context, req *ethpb.SyncMessageBlockRootRequest) (*ethpb.SyncMessageBlockRootResponse, error) {
+	// Prevent underflow from requested slot.
+	slot := types.Slot(0)
+	if req.Slot > 1 {
+		slot = req.Slot - 1
+	}
 	// Short cut, where copying state and processing slots are not required.
-	if req.Slot-1 == vs.HeadFetcher.HeadSlot() {
+	if slot == vs.HeadFetcher.HeadSlot() {
 		r, err := vs.HeadFetcher.HeadRoot(ctx)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve head root: %v", err)
@@ -35,7 +41,7 @@ func (vs *Server) GetSyncMessageBlockRoot(ctx context.Context, req *ethpb.SyncMe
 			return nil, status.Errorf(codes.Internal, "Could not not process slots: %v", err)
 		}
 	}
-	r, err := helpers.BlockRootAtSlot(headState, req.Slot-1)
+	r, err := helpers.BlockRootAtSlot(headState, slot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not calculate block root: %v", err)
 	}

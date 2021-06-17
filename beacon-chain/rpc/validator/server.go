@@ -58,7 +58,7 @@ type Server struct {
 	AttPool                attestations.Pool
 	SlashingsPool          slashings.PoolManager
 	ExitPool               voluntaryexits.PoolManager
-	SyncCommitteePool      *synccommittee.Store
+	SyncCommitteePool      synccommittee.Pool
 	BlockReceiver          blockchain.BlockReceiver
 	MockEth1Votes          bool
 	Eth1BlockFetcher       powchain.POWBlockFetcher

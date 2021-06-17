@@ -94,7 +94,7 @@ type Config struct {
 	AttestationsPool        attestations.Pool
 	ExitPool                voluntaryexits.PoolManager
 	SlashingsPool           slashings.PoolManager
-	SyncCommitteeObjectPool *synccommittee.Store
+	SyncCommitteeObjectPool synccommittee.Pool
 	SyncService             chainSync.Checker
 	Broadcaster             p2p.Broadcaster
 	PeersFetcher            p2p.PeersProvider
