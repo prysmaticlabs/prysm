@@ -62,6 +62,12 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 
 	randGen := rand.NewGenerator()
 	for _, slot := range slots {
+		// process the blocks during their respective slot.
+		// otherwise wait for the right slot to process the block.
+		if slot > s.cfg.Chain.CurrentSlot() {
+			continue
+		}
+
 		ctx, span := trace.StartSpan(ctx, "processPendingBlocks.InnerLoop")
 		span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
 
