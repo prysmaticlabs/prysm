@@ -32,6 +32,34 @@ func ExpandPath(p string) (string, error) {
 	return filepath.Abs(path.Clean(os.ExpandEnv(p)))
 }
 
+// HandleBackupDir takes an input directory path and either alters its permissions to be usable if it already exists, creates it if not
+func HandleBackupDir(dirPath string, permissionOverride bool) error {
+	expanded, err := ExpandPath(dirPath)
+	if err != nil {
+		return err
+	}
+	exists, err := HasDir(expanded)
+	if err != nil {
+		return err
+	}
+	if exists {
+		info, err := os.Stat(expanded)
+		if err != nil {
+			return err
+		}
+		if info.Mode().Perm() != params.BeaconIoConfig().ReadWriteExecutePermissions {
+			if permissionOverride {
+				if err := os.Chmod(expanded, params.BeaconIoConfig().ReadWriteExecutePermissions); err != nil {
+					return err
+				}
+			} else {
+				return errors.New("dir already exists without proper 0700 permissions")
+			}
+		}
+	}
+	return os.MkdirAll(expanded, params.BeaconIoConfig().ReadWriteExecutePermissions)
+}
+
 // MkdirAll takes in a path, expands it if necessary, and looks through the
 // permissions of every directory along the path, ensuring we are not attempting
 // to overwrite any existing permissions. Finally, creates the directory accordingly
