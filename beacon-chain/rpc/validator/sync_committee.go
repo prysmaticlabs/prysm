@@ -3,11 +3,11 @@ package validator
 import (
 	"context"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -59,10 +59,10 @@ func (vs *Server) GetSyncSubcommitteeIndex(ctx context.Context, req *ethpb.SyncS
 	}
 
 	nextSlotEpoch := helpers.SlotToEpoch(headState.Slot() + 1)
-	period := params.BeaconConfig().EpochsPerSyncCommitteePeriod
+	currentEpoch := helpers.CurrentEpoch(headState)
 
 	switch {
-	case nextSlotEpoch/period == helpers.CurrentEpoch(headState)/period:
+	case altair.SyncCommitteePeriod(nextSlotEpoch) == altair.SyncCommitteePeriod(currentEpoch):
 		committee, err := headState.CurrentSyncCommittee()
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get current sync committee in head state: %v", err)
@@ -75,7 +75,7 @@ func (vs *Server) GetSyncSubcommitteeIndex(ctx context.Context, req *ethpb.SyncS
 			Indices: indices,
 		}, nil
 	// At sync committee period boundary, validator should sample the next epoch sync committee.
-	case nextSlotEpoch/period == helpers.CurrentEpoch(headState)/period+1:
+	case altair.SyncCommitteePeriod(nextSlotEpoch) == altair.SyncCommitteePeriod(currentEpoch)+1:
 		committee, err := headState.NextSyncCommittee()
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get next sync committee in head state: %v", err)
