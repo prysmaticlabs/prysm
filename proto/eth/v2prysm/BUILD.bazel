@@ -21,9 +21,10 @@ load("@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-openapiv2:defs.bzl"
 proto_library(
     name = "proto",
     srcs = [
-        "validator.proto",
         "sync_committee.proto",
-        ":ssz_proto_files",
+        "beacon_block.proto",
+        "validator.proto",
+        # ":ssz_proto_files",
     ],
     visibility = ["//visibility:public"],
     deps = [
