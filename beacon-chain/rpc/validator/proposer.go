@@ -123,6 +123,13 @@ func (vs *Server) GetBlockV2(ctx context.Context, req *ethpb.BlockRequest) (*eth
 	// Use zero hash as stub for state root to compute later.
 	stateRoot := params.BeaconConfig().ZeroHash[:]
 
+	mockAgg := &ethpb.SyncAggregate{SyncCommitteeBits: []byte{}}
+	bVector := []byte{}
+	if mockAgg.SyncCommitteeBits.Len() == 512 {
+		bVector = bitfield.NewBitvector512()
+	} else {
+		bVector = bitfield.NewBitvector32()
+	}
 	infiniteSignature := [96]byte{0xC0}
 	blk := &ethpb.BeaconBlockAltair{
 		Slot:          req.Slot,
@@ -140,7 +147,7 @@ func (vs *Server) GetBlockV2(ctx context.Context, req *ethpb.BlockRequest) (*eth
 			Graffiti:          blkData.graffiti[:],
 			// TODO: Add in actual aggregates
 			SyncAggregate: &ethpb.SyncAggregate{
-				SyncCommitteeBits:      bitfield.NewBitvector512(),
+				SyncCommitteeBits:      bVector,
 				SyncCommitteeSignature: infiniteSignature[:],
 			},
 		},
