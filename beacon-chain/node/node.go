@@ -760,6 +760,7 @@ func (b *BeaconNode) registerGRPCGateway() error {
 		ethpb.RegisterBeaconNodeValidatorHandler,
 		ethpbv1.RegisterEventsHandler,
 		pbrpc.RegisterHealthHandler,
+		pbrpc.RegisterSlasherHandler,
 	}
 	v1Registrations := []gateway.PbHandlerRegistration{
 		ethpbv1.RegisterBeaconNodeHandler,
