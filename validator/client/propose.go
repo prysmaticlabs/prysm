@@ -270,6 +270,7 @@ func (v *validator) proposeBlockV2(ctx context.Context, slot types.Slot, pubKey 
 		"numAttestations": len(b.Body.Attestations),
 		"numDeposits":     len(b.Body.Deposits),
 		"graffiti":        string(b.Body.Graffiti),
+		"fork":            "altair",
 	}).Info("Submitted new block")
 
 	if v.emitAccountMetrics {
