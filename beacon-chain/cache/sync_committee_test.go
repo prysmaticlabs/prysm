@@ -24,14 +24,14 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 			currentSyncCommittee: convertToCommittee([][]byte{{1}, {2}, {3}, {2}, {2}}),
 			nextSyncCommittee:    convertToCommittee([][]byte{}),
 			currentSyncMap: map[[48]byte][]uint64{
-				[48]byte{1}: {0},
-				[48]byte{2}: {1, 3, 4},
-				[48]byte{3}: {2},
+				{1}: {0},
+				{2}: {1, 3, 4},
+				{3}: {2},
 			},
 			nextSyncMap: map[[48]byte][]uint64{
-				[48]byte{1}: {},
-				[48]byte{2}: {},
-				[48]byte{3}: {},
+				{1}: {},
+				{2}: {},
+				{3}: {},
 			},
 		},
 		{
@@ -39,14 +39,14 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 			currentSyncCommittee: convertToCommittee([][]byte{}),
 			nextSyncCommittee:    convertToCommittee([][]byte{{1}, {2}, {3}, {2}, {2}}),
 			currentSyncMap: map[[48]byte][]uint64{
-				[48]byte{1}: {},
-				[48]byte{2}: {},
-				[48]byte{3}: {},
+				{1}: {},
+				{2}: {},
+				{3}: {},
 			},
 			nextSyncMap: map[[48]byte][]uint64{
-				[48]byte{1}: {0},
-				[48]byte{2}: {1, 3, 4},
-				[48]byte{3}: {2},
+				{1}: {0},
+				{2}: {1, 3, 4},
+				{3}: {2},
 			},
 		},
 		{
@@ -54,15 +54,15 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 			currentSyncCommittee: convertToCommittee([][]byte{{1}, {2}, {3}, {2}, {2}}),
 			nextSyncCommittee:    convertToCommittee([][]byte{{7}, {6}, {5}, {4}, {7}}),
 			currentSyncMap: map[[48]byte][]uint64{
-				[48]byte{1}: {0},
-				[48]byte{2}: {1, 3, 4},
-				[48]byte{3}: {2},
+				{1}: {0},
+				{2}: {1, 3, 4},
+				{3}: {2},
 			},
 			nextSyncMap: map[[48]byte][]uint64{
-				[48]byte{7}: {0, 4},
-				[48]byte{6}: {1},
-				[48]byte{5}: {2},
-				[48]byte{4}: {3},
+				{7}: {0, 4},
+				{6}: {1},
+				{5}: {2},
+				{4}: {3},
 			},
 		},
 		{
@@ -70,14 +70,14 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 			currentSyncCommittee: convertToCommittee([][]byte{{1}, {2}, {3}, {2}, {2}}),
 			nextSyncCommittee:    convertToCommittee([][]byte{{2}, {1}, {3}, {2}, {1}}),
 			currentSyncMap: map[[48]byte][]uint64{
-				[48]byte{1}: {0},
-				[48]byte{2}: {1, 3, 4},
-				[48]byte{3}: {2},
+				{1}: {0},
+				{2}: {1, 3, 4},
+				{3}: {2},
 			},
 			nextSyncMap: map[[48]byte][]uint64{
-				[48]byte{1}: {1, 4},
-				[48]byte{2}: {0, 3},
-				[48]byte{3}: {2},
+				{1}: {1, 4},
+				{2}: {0, 3},
+				{3}: {2},
 			},
 		},
 		{
@@ -85,10 +85,10 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 			currentSyncCommittee: convertToCommittee([][]byte{{100}, {100}, {100}, {100}}),
 			nextSyncCommittee:    convertToCommittee([][]byte{{100}, {100}, {100}, {100}}),
 			currentSyncMap: map[[48]byte][]uint64{
-				[48]byte{100}: {0, 1, 2, 3},
+				{100}: {0, 1, 2, 3},
 			},
 			nextSyncMap: map[[48]byte][]uint64{
-				[48]byte{100}: {0, 1, 2, 3},
+				{100}: {0, 1, 2, 3},
 			},
 		},
 		{
@@ -96,10 +96,10 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 			currentSyncCommittee: convertToCommittee([][]byte{{100}, {100}, {100}, {100}}),
 			nextSyncCommittee:    convertToCommittee([][]byte{{100}, {100}, {100}, {100}}),
 			currentSyncMap: map[[48]byte][]uint64{
-				[48]byte{1}: {},
+				{1}: {},
 			},
 			nextSyncMap: map[[48]byte][]uint64{
-				[48]byte{1}: {},
+				{1}: {},
 			},
 		},
 	}
