@@ -80,65 +80,6 @@ func (v *validator) proposeBlock(ctx context.Context, slot types.Slot, pubKey [4
 		log.WithError(err).Warn("Could not get graffiti")
 	}
 
-	if helpers.SlotToEpoch(slot) >= params.BeaconConfig().AltairForkEpoch {
-		// Request block from beacon node
-		b, err := v.validatorClient.GetBlockV2(ctx, &ethpb.BlockRequest{
-			Slot:         slot,
-			RandaoReveal: randaoReveal,
-			Graffiti:     g,
-		})
-		if err != nil {
-			log.WithField("blockSlot", slot).WithError(err).Error("Failed to request block from beacon node")
-			if v.emitAccountMetrics {
-				ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
-			}
-			return
-		}
-		// Sign returned block from beacon node
-		sig, _, err := v.signBlockV2(ctx, pubKey, epoch, b)
-		if err != nil {
-			log.WithError(err).Error("Failed to sign block")
-			if v.emitAccountMetrics {
-				ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
-			}
-			return
-		}
-		blk := &ethpb.SignedBeaconBlockAltair{
-			Block:     b,
-			Signature: sig,
-		}
-
-		// Propose and broadcast block via beacon node
-		blkResp, err := v.validatorClient.ProposeBlockV2(ctx, blk)
-		if err != nil {
-			log.WithError(err).Error("Failed to propose block")
-			if v.emitAccountMetrics {
-				ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
-			}
-			return
-		}
-
-		span.AddAttributes(
-			trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", blkResp.BlockRoot)),
-			trace.Int64Attribute("numDeposits", int64(len(b.Body.Deposits))),
-			trace.Int64Attribute("numAttestations", int64(len(b.Body.Attestations))),
-		)
-
-		blkRoot := fmt.Sprintf("%#x", bytesutil.Trunc(blkResp.BlockRoot))
-		log.WithFields(logrus.Fields{
-			"slot":            b.Slot,
-			"blockRoot":       blkRoot,
-			"numAttestations": len(b.Body.Attestations),
-			"numDeposits":     len(b.Body.Deposits),
-			"graffiti":        string(b.Body.Graffiti),
-		}).Info("Submitted new block")
-
-		if v.emitAccountMetrics {
-			ValidatorProposeSuccessVec.WithLabelValues(fmtKey).Inc()
-		}
-		return
-	}
-
 	// Request block from beacon node
 	b, err := v.validatorClient.GetBlock(ctx, &ethpb.BlockRequest{
 		Slot:         slot,
@@ -460,32 +401,6 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch types.
 	default:
 		return nil, nil, errors.New("unknown block type")
 	}
-}
-
-func (v *validator) signBlockV2(ctx context.Context, pubKey [48]byte, epoch types.Epoch, b *ethpb.BeaconBlockAltair) ([]byte, *ethpb.DomainResponse, error) {
-	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainBeaconProposer[:])
-	if err != nil {
-		return nil, nil, errors.Wrap(err, domainDataErr)
-	}
-	if domain == nil {
-		return nil, nil, errors.New(domainDataErr)
-	}
-
-	var sig bls.Signature
-	blockRoot, err := helpers.ComputeSigningRoot(b, domain.SignatureDomain)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, signingRootErr)
-	}
-	sig, err = v.keyManager.Sign(ctx, &validatorpb.SignRequest{
-		PublicKey:       pubKey[:],
-		SigningRoot:     blockRoot[:],
-		SignatureDomain: domain.SignatureDomain,
-		Object:          &validatorpb.SignRequest_BlockV2{BlockV2: b},
-	})
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not sign block proposal")
-	}
-	return sig.Marshal(), domain, nil
 }
 
 // Sign voluntary exit with proposer domain and private key.
