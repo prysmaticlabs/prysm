@@ -1,5 +1,4 @@
-// Package gateway defines a gRPC gateway to serve HTTP-JSON
-// traffic as a proxy and forward it to a beacon or validator node's gRPC service.
+// Package gateway defines a grpc-gateway server that serves HTTP-JSON traffic and acts a proxy between HTTP and gRPC.
 package gateway
 
 import (
@@ -13,36 +12,33 @@ import (
 
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared"
-	"github.com/prysmaticlabs/prysm/validator/web"
 	"github.com/rs/cors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 var _ shared.Service = (*Gateway)(nil)
 
-// CallerId defines whether the caller node is a beacon
-// or a validator node. This helps register the handlers accordingly.
-type CallerId uint8
+// PbMux serves grpc-gateway requests for selected patterns using registered protobuf handlers.
+type PbMux struct {
+	Registrations []PbHandlerRegistration // Protobuf registrations to be registered in Mux.
+	Patterns      []string                // URL patterns that will be handled by Mux.
+	Mux           *gwruntime.ServeMux     // The mux that will be used for grpc-gateway requests.
+}
 
-const (
-	Beacon CallerId = iota
-	Validator
-)
+// PbHandlerRegistration is a function that registers a protobuf handler.
+type PbHandlerRegistration func(context.Context, *gwruntime.ServeMux, *grpc.ClientConn) error
 
-// Gateway is the gRPC gateway to serve HTTP JSON traffic as a
-// proxy and forward it to the gRPC server.
+// MuxHandler is a function that implements the mux handler functionality.
+type MuxHandler func(http.Handler, http.ResponseWriter, *http.Request)
+
+// Gateway is the gRPC gateway to serve HTTP JSON traffic as a proxy and forward it to the gRPC server.
 type Gateway struct {
 	conn                         *grpc.ClientConn
-	enableDebugRPCEndpoints      bool
-	callerId                     CallerId
+	pbHandlers                   []PbMux
+	muxHandler                   MuxHandler
 	maxCallRecvMsgSize           uint64
 	mux                          *http.ServeMux
 	server                       *http.Server
@@ -57,169 +53,91 @@ type Gateway struct {
 	allowedOrigins               []string
 }
 
-// NewValidator returns a new gateway server which translates HTTP into gRPC.
-// Accepts a context.
-func NewValidator(
+// New returns a new instance of the Gateway.
+func New(
 	ctx context.Context,
-	remoteAddress,
+	pbHandlers []PbMux,
+	muxHandler MuxHandler,
+	remoteAddr,
 	gatewayAddress string,
-	allowedOrigins []string,
 ) *Gateway {
-	return &Gateway{
-		callerId:       Validator,
-		remoteAddr:     remoteAddress,
+	g := &Gateway{
+		pbHandlers:     pbHandlers,
+		muxHandler:     muxHandler,
+		mux:            http.NewServeMux(),
 		gatewayAddr:    gatewayAddress,
 		ctx:            ctx,
-		mux:            http.NewServeMux(),
-		allowedOrigins: allowedOrigins,
+		remoteAddr:     remoteAddr,
+		allowedOrigins: []string{},
 	}
+	return g
 }
 
-// NewBeacon returns a new gateway server which translates HTTP into gRPC.
-// Accepts a context and optional http.ServeMux.
-func NewBeacon(
-	ctx context.Context,
-	remoteAddress,
-	remoteCert,
-	gatewayAddress string,
-	apiMiddlewareAddress string,
-	apiMiddlewareEndpointFactory EndpointFactory,
-	mux *http.ServeMux,
-	allowedOrigins []string,
-	enableDebugRPCEndpoints bool,
-	maxCallRecvMsgSize uint64,
-) *Gateway {
-	if mux == nil {
-		mux = http.NewServeMux()
-	}
-
-	return &Gateway{
-		callerId:                     Beacon,
-		remoteAddr:                   remoteAddress,
-		remoteCert:                   remoteCert,
-		gatewayAddr:                  gatewayAddress,
-		apiMiddlewareAddr:            apiMiddlewareAddress,
-		apiMiddlewareEndpointFactory: apiMiddlewareEndpointFactory,
-		ctx:                          ctx,
-		mux:                          mux,
-		allowedOrigins:               allowedOrigins,
-		enableDebugRPCEndpoints:      enableDebugRPCEndpoints,
-		maxCallRecvMsgSize:           maxCallRecvMsgSize,
-	}
+// WithMux allows adding a custom http.ServeMux to the gateway.
+func (g *Gateway) WithMux(m *http.ServeMux) *Gateway {
+	g.mux = m
+	return g
 }
 
-// Start the gateway service. This serves the HTTP JSON traffic.
-// The beacon node supports TCP and Unix domain socket communications.
-// Beacon and validator have different handlers.
+// WithAllowedOrigins allows adding a set of allowed origins to the gateway.
+func (g *Gateway) WithAllowedOrigins(origins []string) *Gateway {
+	g.allowedOrigins = origins
+	return g
+}
+
+// WithRemoteCert allows adding a custom certificate to the gateway,
+func (g *Gateway) WithRemoteCert(cert string) *Gateway {
+	g.remoteCert = cert
+	return g
+}
+
+// WithMaxCallRecvMsgSize allows specifying the maximum allowed gRPC message size.
+func (g *Gateway) WithMaxCallRecvMsgSize(size uint64) *Gateway {
+	g.maxCallRecvMsgSize = size
+	return g
+}
+
+// WithApiMiddleware allows adding API Middleware proxy to the gateway.
+func (g *Gateway) WithApiMiddleware(address string, endpointFactory EndpointFactory) *Gateway {
+	g.apiMiddlewareAddr = address
+	g.apiMiddlewareEndpointFactory = endpointFactory
+	return g
+}
+
+// Start the gateway service.
 func (g *Gateway) Start() {
 	ctx, cancel := context.WithCancel(g.ctx)
 	g.cancel = cancel
 
-	if g.callerId == Beacon {
-		conn, err := g.dial(ctx, "tcp", g.remoteAddr)
-		if err != nil {
-			log.WithError(err).Error("Failed to connect to gRPC server")
-			g.startFailure = err
-			return
-		}
-
-		g.conn = conn
+	conn, err := g.dial(ctx, "tcp", g.remoteAddr)
+	if err != nil {
+		log.WithError(err).Error("Failed to connect to gRPC server")
+		g.startFailure = err
+		return
 	}
-	gwmux := gwruntime.NewServeMux(
-		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
-			Marshaler: &gwruntime.JSONPb{
-				MarshalOptions: protojson.MarshalOptions{
-					EmitUnpopulated: true,
-				},
-				UnmarshalOptions: protojson.UnmarshalOptions{
-					DiscardUnknown: true,
-				},
-			},
-		}),
-		gwruntime.WithMarshalerOption(
-			"text/event-stream", &gwruntime.EventSourceJSONPb{},
-		),
-	)
-	if g.callerId == Beacon {
-		gwmuxV1 := gwruntime.NewServeMux(
-			gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
-				Marshaler: &gwruntime.JSONPb{
-					MarshalOptions: protojson.MarshalOptions{
-						UseProtoNames:   true,
-						EmitUnpopulated: true,
-					},
-					UnmarshalOptions: protojson.UnmarshalOptions{
-						DiscardUnknown: true,
-					},
-				},
-			}),
-		)
+	g.conn = conn
 
-		handlers := []func(context.Context, *gwruntime.ServeMux, *grpc.ClientConn) error{
-			ethpb.RegisterNodeHandler,
-			ethpb.RegisterBeaconChainHandler,
-			ethpb.RegisterBeaconNodeValidatorHandler,
-			ethpbv1.RegisterEventsHandler,
-			pbrpc.RegisterHealthHandler,
-		}
-		handlersV1 := []func(context.Context, *gwruntime.ServeMux, *grpc.ClientConn) error{
-			ethpbv1.RegisterBeaconNodeHandler,
-			ethpbv1.RegisterBeaconChainHandler,
-			ethpbv1.RegisterBeaconValidatorHandler,
-		}
-		if g.enableDebugRPCEndpoints {
-			handlers = append(handlers, pbrpc.RegisterDebugHandler)
-			handlersV1 = append(handlersV1, ethpbv1.RegisterBeaconDebugHandler)
-		}
-		for _, f := range handlers {
-			if err := f(ctx, gwmux, g.conn); err != nil {
-				log.WithError(err).Error("Failed to start v1alpha1 gateway")
+	for _, h := range g.pbHandlers {
+		for _, r := range h.Registrations {
+			if err := r(ctx, h.Mux, g.conn); err != nil {
+				log.WithError(err).Error("Failed to register handler")
 				g.startFailure = err
 				return
 			}
 		}
-		for _, f := range handlersV1 {
-			if err := f(ctx, gwmuxV1, g.conn); err != nil {
-				log.WithError(err).Error("Failed to start v1 gateway")
-				g.startFailure = err
-				return
-			}
+		for _, p := range h.Patterns {
+			g.mux.Handle(p, h.Mux)
 		}
+	}
 
-		g.mux.Handle("/eth/v1alpha1/", gwmux)
-		g.mux.Handle("/eth/v1/", gwmuxV1)
-		g.server = &http.Server{
-			Addr:    g.gatewayAddr,
-			Handler: g.corsMiddleware(g.mux),
-		}
+	corsMux := g.corsMiddleware(g.mux)
+	g.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		g.muxHandler(corsMux, w, r)
+	})
 
-	} else {
-		opts := []grpc.DialOption{grpc.WithInsecure()}
-		handlers := []func(context.Context, *gwruntime.ServeMux, string, []grpc.DialOption) error{
-			pb.RegisterAuthHandlerFromEndpoint,
-			pb.RegisterWalletHandlerFromEndpoint,
-			pb.RegisterHealthHandlerFromEndpoint,
-			pb.RegisterAccountsHandlerFromEndpoint,
-			pb.RegisterBeaconHandlerFromEndpoint,
-			pb.RegisterSlashingProtectionHandlerFromEndpoint,
-		}
-		for _, h := range handlers {
-			if err := h(ctx, gwmux, g.remoteAddr, opts); err != nil {
-				log.Fatalf("Could not register API handler with grpc endpoint: %v", err)
-			}
-		}
-		apiHandler := g.corsMiddleware(gwmux)
-		g.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			if strings.HasPrefix(r.URL.Path, "/api") {
-				http.StripPrefix("/api", apiHandler).ServeHTTP(w, r)
-			} else {
-				web.Handler(w, r)
-			}
-		})
-		g.server = &http.Server{
-			Addr:    g.gatewayAddr,
-			Handler: g.mux,
-		}
+	g.server = &http.Server{
+		Addr:    g.gatewayAddr,
+		Handler: corsMux,
 	}
 
 	go func() {
@@ -327,11 +245,7 @@ func (g *Gateway) dialTCP(ctx context.Context, addr string) (*grpc.ClientConn, e
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(int(g.maxCallRecvMsgSize))),
 	}
 
-	return grpc.DialContext(
-		ctx,
-		addr,
-		opts...,
-	)
+	return grpc.DialContext(ctx, addr, opts...)
 }
 
 // dialUnix creates a client connection via a unix domain socket.
