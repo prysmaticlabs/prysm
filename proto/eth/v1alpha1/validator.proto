@@ -223,6 +223,24 @@ service BeaconNodeValidator {
         };
     }
 
+    // Submit sync committee contribution and proof to the beacon node to aggregate all matching sync committee messages with the same slot and root.
+    // the beacon node responses with an aggregate and proof object back to validator to sign over.
+    rpc SubmitContributionAndProof(ContributionAndProofRequest) returns (ContributionAndProofResponse) {
+        option (google.api.http) = {
+            post: "/eth/v1alpha1/validator/contribution_and_proof"
+            body: "*"
+        };
+    }
+
+    // Submit a signed sync committee contribution and proof object, the beacon node will broadcast the
+    // signed contribution and proof object.
+    rpc SubmitSignedContributionAndProof(SignedContributionAndProof) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            post: "/eth/v1alpha1/validator/signed_contribution_and_proof"
+            body: "*"
+        };
+    }
+
     // Propose to leave the list of active validators.
     //
     // The beacon node is expected to validate the request and make it available for inclusion in
@@ -599,4 +617,19 @@ message ValidatorInfo {
 message SyncMessageBlockRootResponse {
     // The block root of the head block.
     bytes root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
+}
+
+message ContributionAndProofRequest {
+    // Slot for which the aggregation request applies.
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+    // 48 byte public key of the validator.
+    bytes public_key = 2 [(ethereum.eth.ext.ssz_size) = "48", (ethereum.eth.ext.spec_name) = "pubkey"];
+    // 96 byte signature of the validator on the selection proof.
+    repeated bytes signature = 3 [(ethereum.eth.ext.ssz_size) = "96"];
+}
+
+message ContributionAndProofResponse {
+    // The signed contribution and proofs with the signature.
+    // Note there could be more than one proofs with signature if the validator count is low.
+    repeated ContributionAndProof signed_aggregate_and_proof = 1;
 }
