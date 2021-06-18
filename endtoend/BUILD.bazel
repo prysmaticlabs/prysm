@@ -35,7 +35,6 @@ go_test(
         "//endtoend/types:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/params:go_default_library",
-        "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
