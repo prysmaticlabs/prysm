@@ -81,6 +81,7 @@ func TestValidatorGateway_StartStop(t *testing.T) {
 	validatorGateway.Start()
 	go func() {
 		require.LogsContain(t, hook, "Starting gRPC gateway")
+		require.LogsDoNotContain(t, hook, "Starting API middleware")
 	}()
 
 	err := validatorGateway.Stop()
