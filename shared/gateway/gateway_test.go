@@ -25,6 +25,10 @@ func (*mockEndpointFactory) Create(_ string) (*Endpoint, error) {
 	return nil, nil
 }
 
+func (*mockEndpointFactory) IsNil() bool {
+	return false
+}
+
 func TestGateway_Customized(t *testing.T) {
 	mux := http.NewServeMux()
 	cert := "cert"
