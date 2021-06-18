@@ -138,7 +138,7 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 	err = web3Service.processDeposit(context.Background(), eth1Data, deposits[0])
 	require.NoError(t, err)
 
-	require.LogsContain(t, hook, pubKeyErr)
+	require.LogsContain(t, hook, "could not verify deposit data signature: could not convert bytes to signature")
 }
 
 func TestProcessDeposit_UnableToVerify(t *testing.T) {
