@@ -126,7 +126,7 @@ func (vs *Server) GetBlockV2(ctx context.Context, req *ethpb.BlockRequest) (*eth
 	// Ugly hack to allow this to compile both for mainnet
 	// and minimal configs.
 	mockAgg := &ethpb.SyncAggregate{SyncCommitteeBits: []byte{}}
-	bVector := []byte{}
+	var bVector []byte
 	if mockAgg.SyncCommitteeBits.Len() == 512 {
 		bVector = bitfield.NewBitvector512()
 	} else {
