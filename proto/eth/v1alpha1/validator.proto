@@ -247,7 +247,7 @@ service BeaconNodeValidator {
     }
 
     // Retrieves a sync committee message block root to be signed over as part of sync committee duty.
-    rpc GetSyncMessageBlockRoot(SyncMessageBlockRootRequest) returns (SyncMessageBlockRootResponse) {
+    rpc GetSyncMessageBlockRoot(google.protobuf.Empty) returns (SyncMessageBlockRootResponse) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/validator/sync_message_block_root"
         };
@@ -592,13 +592,6 @@ message ValidatorInfo {
     // The validator's current effective balance in GWei.
     // Only valid for states ACTIVE, EXITING, SLASHING.
     uint64 effective_balance = 7;
-}
-
-// SyncMessageBlockRootRequest for beacon chain validator to request block root
-// for slot - 1.
-message SyncMessageBlockRootRequest {
-    // The slot of validator assignment.
-    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
 }
 
 // SyncMessageBlockRootResponse for beacon chain validator to retrieve and

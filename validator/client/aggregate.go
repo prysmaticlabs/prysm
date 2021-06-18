@@ -49,7 +49,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot types.Slot
 	v.aggregatedSlotCommitteeIDCache.Add(k, true)
 	v.aggregatedSlotCommitteeIDCacheLock.Unlock()
 
-	slotSig, err := v.signSlot(ctx, pubKey, slot)
+	slotSig, err := v.signSlotWithSelectionProof(ctx, pubKey, slot)
 	if err != nil {
 		log.Errorf("Could not sign slot: %v", err)
 		if v.emitAccountMetrics {
@@ -115,9 +115,8 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot types.Slot
 
 }
 
-// This implements selection logic outlined in:
-// https://github.com/ethereum/eth2.0-specs/blob/v0.9.3/specs/validator/0_beacon-chain-validator.md#aggregation-selection
-func (v *validator) signSlot(ctx context.Context, pubKey [48]byte, slot types.Slot) ([]byte, error) {
+// Signs input slot with domain selection proof. This is used to create the signature for aggregator selection.
+func (v *validator) signSlotWithSelectionProof(ctx context.Context, pubKey [48]byte, slot types.Slot) (signature []byte, error error) {
 	domain, err := v.domainData(ctx, helpers.SlotToEpoch(slot), params.BeaconConfig().DomainSelectionProof[:])
 	if err != nil {
 		return nil, err

@@ -75,8 +75,10 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		},
 	})
 
-	// Attestation's slot is within ATTESTATION_PROPAGATION_SLOT_RANGE.
-	if err := helpers.ValidateAttestationTime(att.Data.Slot, s.cfg.Chain.GenesisTime()); err != nil {
+	// Attestation's slot is within ATTESTATION_PROPAGATION_SLOT_RANGE and early attestation
+	// processing tolerance.
+	if err := helpers.ValidateAttestationTime(att.Data.Slot, s.cfg.Chain.GenesisTime(),
+		earlyAttestationProcessingTolerance); err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}

@@ -641,6 +641,14 @@ func TestRolesAt_OK(t *testing.T) {
 				IsSyncCommittee: true,
 			},
 		},
+		NextEpochDuties: []*ethpb.DutiesResponse_Duty{
+			{
+				CommitteeIndex:  1,
+				AttesterSlot:    1,
+				PublicKey:       validatorKey.PublicKey().Marshal(),
+				IsSyncCommittee: true,
+			},
+		},
 	}
 
 	m.validatorClient.EXPECT().DomainData(
@@ -654,6 +662,29 @@ func TestRolesAt_OK(t *testing.T) {
 	assert.Equal(t, iface.RoleAttester, roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][0])
 	assert.Equal(t, iface.RoleAggregator, roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][1])
 	assert.Equal(t, iface.RoleSyncCommittee, roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][2])
+
+	// Test sync committee role at epoch boundary.
+	v.duties = &ethpb.DutiesResponse{
+		Duties: []*ethpb.DutiesResponse_Duty{
+			{
+				CommitteeIndex:  1,
+				AttesterSlot:    1,
+				PublicKey:       validatorKey.PublicKey().Marshal(),
+				IsSyncCommittee: false,
+			},
+		},
+		NextEpochDuties: []*ethpb.DutiesResponse_Duty{
+			{
+				CommitteeIndex:  1,
+				AttesterSlot:    1,
+				PublicKey:       validatorKey.PublicKey().Marshal(),
+				IsSyncCommittee: true,
+			},
+		},
+	}
+	roleMap, err = v.RolesAt(context.Background(), params.BeaconConfig().SlotsPerEpoch-1)
+	require.NoError(t, err)
+	assert.Equal(t, iface.RoleSyncCommittee, roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][0])
 }
 
 func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
