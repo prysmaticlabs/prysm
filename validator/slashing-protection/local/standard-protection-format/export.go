@@ -120,7 +120,21 @@ func signedAttestationsByPubKey(ctx context.Context, validatorDB db.Database, pu
 		return nil, nil
 	}
 	signedAttestations := make([]*format.SignedAttestation, 0)
-	for _, att := range history {
+	for i := 0; i < len(history); i++ {
+		att := history[i]
+		// Special edge case due to a bug in Prysm's old slashing
+		// protection schema. The bug manifests itself as the first entry
+		// in attester slashing protection history having a target epoch
+		// greater than the next entry in the list. If this manifests,
+		// we skip it to protect users. This check is the best trade-off
+		// we can make at the moment without creating any false positive
+		// slashable attestation exports.
+		if i == 0 && len(history) > 1 {
+			nextEntryTargetEpoch := history[1].Target
+			if att.Target > nextEntryTargetEpoch {
+				continue
+			}
+		}
 		var root string
 		if !bytes.Equal(att.SigningRoot[:], params.BeaconConfig().ZeroHash[:]) {
 			root, err = rootToHexString(att.SigningRoot[:])
