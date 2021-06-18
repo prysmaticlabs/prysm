@@ -477,7 +477,7 @@ func NextEpochSyncSubcommitteeIndices(committee *pb.SyncCommittee, pubKey [48]by
 func findSubCommitteeIndices(pubKey []byte, pubKeys [][]byte) []uint64 {
 	var indices []uint64
 	for i, k := range pubKeys {
-		if bytes.Equal(k, pubKey[:]) {
+		if bytes.Equal(k, pubKey) {
 			indices = append(indices, uint64(i))
 		}
 	}
