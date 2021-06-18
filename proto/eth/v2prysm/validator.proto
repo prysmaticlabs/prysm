@@ -13,12 +13,10 @@
 // limitations under the License.
 syntax = "proto3";
 
-package ethereum.eth.v1alpha1;
+package ethereum.eth.v2prysm;
 
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
-
-import "proto/eth/v1alpha1/beacon_block.proto";
 
 import "proto/eth/ext/options.proto";
 import "proto/eth/v2prysm/beacon_block.proto";
@@ -65,14 +63,14 @@ service BeaconNodeValidator {
       get: "/eth/v2prysm/validator/sync_message_block_root"
     };
   }
-//
-//  // Submits a sync committee message to be broadcasted over network. This is part of sync committee duty.
-//  rpc SubmitSyncMessage(SyncCommitteeMessage) returns (google.protobuf.Empty) {
-//    option (google.api.http) = {
-//      post: "/eth/v2prysm/validator/sync_message"
-//      body: "*"
-//    };
-//  }
+
+  // Submits a sync committee message to be broadcasted over network. This is part of sync committee duty.
+  rpc SubmitSyncMessage(SyncCommitteeMessage) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/eth/v2prysm/validator/sync_message"
+      body: "*"
+    };
+  }
 }
 
 message BlockRequest {
