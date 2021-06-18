@@ -314,13 +314,13 @@ func SyncCommitteeSigningRoot(st iface.BeaconState, slot types.Slot, comIdx type
 	if err != nil {
 		return [32]byte{}, err
 	}
-	selectionData := &pb.SyncAggregatorSelectionData{Slot: uint64(slot), SubcommitteeIndex: uint64(comIdx)}
+	selectionData := &pb.SyncAggregatorSelectionData{Slot: slot, SubcommitteeIndex: uint64(comIdx)}
 	return helpers.ComputeSigningRoot(selectionData, dom)
 }
 
 // VerifySyncSelectionData verifies that the provided sync contribution has a valid
 // selection proof.
 func VerifySyncSelectionData(st iface.BeaconState, m *ethpb.ContributionAndProof) error {
-	selectionData := &pb.SyncAggregatorSelectionData{Slot: uint64(m.Contribution.Slot), SubcommitteeIndex: uint64(m.Contribution.SubcommitteeIndex)}
+	selectionData := &pb.SyncAggregatorSelectionData{Slot: m.Contribution.Slot, SubcommitteeIndex: uint64(m.Contribution.SubcommitteeIndex)}
 	return helpers.ComputeDomainVerifySigningRoot(st, m.AggregatorIndex, helpers.SlotToEpoch(m.Contribution.Slot), selectionData, params.BeaconConfig().DomainSyncCommitteeSelectionProof, m.SelectionProof)
 }

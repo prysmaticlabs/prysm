@@ -264,6 +264,18 @@ service BeaconNodeValidator {
         };
     }
 
+
+    // Retrieves the sync subcommittee index of a given validator.
+    //
+    // The server returns the sync subcommittee index given the validator public key,
+    // if the validator does not exist in the sync committee then an error would be returned.
+    // The subcommittee index is used for the aggregation of sync committee message.
+    rpc GetSyncSubcommitteeIndex(SyncSubcommitteeIndexRequest) returns (SyncSubcommitteeIndexRespond) {
+      option (google.api.http) = {
+        get: "/eth/v1alpha1/sync_subcommittee_index"
+      };
+    }
+
     // Retrieves a sync committee message block root to be signed over as part of sync committee duty.
     rpc GetSyncMessageBlockRoot(google.protobuf.Empty) returns (SyncMessageBlockRootResponse) {
         option (google.api.http) = {
@@ -610,6 +622,22 @@ message ValidatorInfo {
     // The validator's current effective balance in GWei.
     // Only valid for states ACTIVE, EXITING, SLASHING.
     uint64 effective_balance = 7;
+}
+
+
+// SyncSubcommitteeIndexRequest requests sync subcommittee index given the validator public key.
+message SyncSubcommitteeIndexRequest {
+    // The validator's public key.
+    bytes public_key = 1 [(ethereum.eth.ext.ssz_size) = "48"];
+    // The slot of validator's assignment.
+    uint64 slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+}
+
+// SyncSubcommitteeIndexRespond responds index of the sync subcommittee of a given validator.
+message SyncSubcommitteeIndexRespond {
+      // The subcommittee index itself.
+      // If the total validator count is not sufficient, there could be more than one index.
+    repeated uint64 indices = 1;
 }
 
 // SyncMessageBlockRootResponse for beacon chain validator to retrieve and
