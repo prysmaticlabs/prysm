@@ -408,8 +408,8 @@ func (b *BeaconNode) registerBlockchainService() error {
 		return err
 	}
 
-	var opsService *attestations.Service
-	if err := b.services.FetchService(&opsService); err != nil {
+	var attService *attestations.Service
+	if err := b.services.FetchService(&attService); err != nil {
 		return err
 	}
 
@@ -431,7 +431,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 		MaxRoutines:             maxRoutines,
 		StateNotifier:           b,
 		ForkChoiceStore:         b.forkChoiceStore,
-		OpsService:              opsService,
+		AttService:              attService,
 		StateGen:                b.stateGen,
 		WeakSubjectivityCheckpt: wsCheckpt,
 	})

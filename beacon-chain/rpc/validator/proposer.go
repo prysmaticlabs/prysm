@@ -51,12 +51,124 @@ type eth1DataAggregatedVote struct {
 	votes int
 }
 
+// Data required to create a beacon block.
+type blockData struct {
+	parentRoot        []byte
+	graffiti          [32]byte
+	proposerIdx       types.ValidatorIndex
+	eth1Data          *ethpb.Eth1Data
+	deposits          []*ethpb.Deposit
+	attestations      []*ethpb.Attestation
+	proposerSlashings []*ethpb.ProposerSlashing
+	attesterSlashings []*ethpb.AttesterSlashing
+	voluntaryExits    []*ethpb.SignedVoluntaryExit
+}
+
 // GetBlock is called by a proposer during its assigned slot to request a block to sign
 // by passing in the slot and the signed randao reveal of the slot.
 func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetBlock")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
+
+	blkData, err := vs.buildBlockData(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	// Use zero hash as stub for state root to compute later.
+	stateRoot := params.BeaconConfig().ZeroHash[:]
+
+	blk := &ethpb.BeaconBlock{
+		Slot:          req.Slot,
+		ParentRoot:    blkData.parentRoot,
+		StateRoot:     stateRoot,
+		ProposerIndex: blkData.proposerIdx,
+		Body: &ethpb.BeaconBlockBody{
+			Eth1Data:          blkData.eth1Data,
+			Deposits:          blkData.deposits,
+			Attestations:      blkData.attestations,
+			RandaoReveal:      req.RandaoReveal,
+			ProposerSlashings: blkData.proposerSlashings,
+			AttesterSlashings: blkData.attesterSlashings,
+			VoluntaryExits:    blkData.voluntaryExits,
+			Graffiti:          blkData.graffiti[:],
+		},
+	}
+
+	// Compute state root with the newly constructed block.
+	stateRoot, err = vs.computeStateRoot(ctx, interfaces.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: blk, Signature: make([]byte, 96)}))
+	if err != nil {
+		interop.WriteBlockToDisk(interfaces.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: blk}), true /*failed*/)
+		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
+	}
+	blk.StateRoot = stateRoot
+
+	return blk, nil
+}
+
+// GetBlockV2 is called by a proposer during its assigned slot to request a block to sign
+// by passing in the slot and the signed randao reveal of the slot. This is used by a validator
+// after the altair fork epoch has been encountered.
+func (vs *Server) GetBlockV2(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockAltair, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetBlockV2")
+	defer span.End()
+	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
+
+	blkData, err := vs.buildBlockData(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	// Use zero hash as stub for state root to compute later.
+	stateRoot := params.BeaconConfig().ZeroHash[:]
+
+	// Ugly hack to allow this to compile both for mainnet
+	// and minimal configs.
+	mockAgg := &ethpb.SyncAggregate{SyncCommitteeBits: []byte{}}
+	var bVector []byte
+	if mockAgg.SyncCommitteeBits.Len() == 512 {
+		bVector = bitfield.NewBitvector512()
+	} else {
+		bVector = bitfield.NewBitvector32()
+	}
+	infiniteSignature := [96]byte{0xC0}
+	blk := &ethpb.BeaconBlockAltair{
+		Slot:          req.Slot,
+		ParentRoot:    blkData.parentRoot,
+		StateRoot:     stateRoot,
+		ProposerIndex: blkData.proposerIdx,
+		Body: &ethpb.BeaconBlockBodyAltair{
+			Eth1Data:          blkData.eth1Data,
+			Deposits:          blkData.deposits,
+			Attestations:      blkData.attestations,
+			RandaoReveal:      req.RandaoReveal,
+			ProposerSlashings: blkData.proposerSlashings,
+			AttesterSlashings: blkData.attesterSlashings,
+			VoluntaryExits:    blkData.voluntaryExits,
+			Graffiti:          blkData.graffiti[:],
+			// TODO: Add in actual aggregates
+			SyncAggregate: &ethpb.SyncAggregate{
+				SyncCommitteeBits:      bVector,
+				SyncCommitteeSignature: infiniteSignature[:],
+			},
+		},
+	}
+	// Compute state root with the newly constructed block.
+	stateRoot, err = vs.computeStateRoot(ctx, interfaces.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: blk, Signature: make([]byte, 96)}))
+	if err != nil {
+		interop.WriteBlockToDisk(interfaces.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: blk}), true /*failed*/)
+		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
+	}
+	blk.StateRoot = stateRoot
+
+	return blk, nil
+}
+
+// builds the relevant data for creating a new beacon block, so that this method can be shared across forks.
+func (vs *Server) buildBlockData(ctx context.Context, req *ethpb.BlockRequest) (*blockData, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.buildBlockData")
+	defer span.End()
 
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
@@ -102,9 +214,6 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 		return nil, status.Errorf(codes.Internal, "Could not get attestations to pack into block: %v", err)
 	}
 
-	// Use zero hash as stub for state root to compute later.
-	stateRoot := params.BeaconConfig().ZeroHash[:]
-
 	graffiti := bytesutil.ToBytes32(req.Graffiti)
 
 	// Calculate new proposer index.
@@ -113,32 +222,17 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 		return nil, status.Errorf(codes.Internal, "Could not calculate proposer index %v", err)
 	}
 
-	blk := &ethpb.BeaconBlock{
-		Slot:          req.Slot,
-		ParentRoot:    parentRoot,
-		StateRoot:     stateRoot,
-		ProposerIndex: idx,
-		Body: &ethpb.BeaconBlockBody{
-			Eth1Data:          eth1Data,
-			Deposits:          deposits,
-			Attestations:      atts,
-			RandaoReveal:      req.RandaoReveal,
-			ProposerSlashings: vs.SlashingsPool.PendingProposerSlashings(ctx, head, false /*noLimit*/),
-			AttesterSlashings: vs.SlashingsPool.PendingAttesterSlashings(ctx, head, false /*noLimit*/),
-			VoluntaryExits:    vs.ExitPool.PendingExits(head, req.Slot, false /*noLimit*/),
-			Graffiti:          graffiti[:],
-		},
-	}
-
-	// Compute state root with the newly constructed block.
-	stateRoot, err = vs.computeStateRoot(ctx, interfaces.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: blk, Signature: make([]byte, 96)}))
-	if err != nil {
-		interop.WriteBlockToDisk(interfaces.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: blk}), true /*failed*/)
-		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
-	}
-	blk.StateRoot = stateRoot
-
-	return blk, nil
+	return &blockData{
+		parentRoot:        parentRoot,
+		graffiti:          graffiti,
+		proposerIdx:       idx,
+		eth1Data:          eth1Data,
+		deposits:          deposits,
+		attestations:      atts,
+		proposerSlashings: vs.SlashingsPool.PendingProposerSlashings(ctx, head, false /*noLimit*/),
+		attesterSlashings: vs.SlashingsPool.PendingAttesterSlashings(ctx, head, false /*noLimit*/),
+		voluntaryExits:    vs.ExitPool.PendingExits(head, req.Slot, false /*noLimit*/),
+	}, nil
 }
 
 func (vs *Server) GetBlockV2(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockAltair, error) {
@@ -235,6 +329,21 @@ func (vs *Server) GetBlockV2(ctx context.Context, req *ethpb.BlockRequest) (*eth
 // to get it processed by the beacon node as the canonical head.
 func (vs *Server) ProposeBlock(ctx context.Context, rBlk *ethpb.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 	blk := interfaces.WrappedPhase0SignedBeaconBlock(rBlk)
+	return vs.proposeBlock(ctx, blk)
+}
+
+// ProposeBlockV2 is called by a proposer during its assigned slot to create a block in an attempt
+// to get it processed by the beacon node as the canonical head.
+func (vs *Server) ProposeBlockV2(ctx context.Context, rBlk *ethpb.SignedBeaconBlockAltair) (*ethpb.ProposeResponse, error) {
+	blk := interfaces.WrappedAltairSignedBeaconBlock(rBlk)
+	return vs.proposeBlock(ctx, blk)
+}
+
+// propose block performs the core post-block creation actions once a block proposal is
+// received.
+func (vs *Server) proposeBlock(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.proposeBlock")
+	defer span.End()
 	root, err := blk.Block().HashTreeRoot()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not tree hash block: %v", err)

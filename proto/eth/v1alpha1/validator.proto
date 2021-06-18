@@ -147,6 +147,11 @@ service BeaconNodeValidator {
         };
     }
 
+    // Retrieves the latest valid beacon block to be proposed on the beacon chain.
+    //
+    // The server returns a new beacon block, without proposer signature, that can be
+    // proposed on the beacon chain. The block should be filled with all the necessary
+    // data for proposer to sign. This block is versioned from Altair onwards.
     rpc GetBlockV2(BlockRequest) returns (BeaconBlockAltair) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/validator/blockV2"
@@ -165,6 +170,11 @@ service BeaconNodeValidator {
         };
     }
 
+    // Sends the newly signed beacon block to beacon node.
+    //
+    // The validator sends the newly signed beacon block to the beacon node so the beacon block can
+    // be included in the beacon chain. The beacon node is expected to validate and process the
+    // beacon block into its state. This block is versioned from Altair onwards.
     rpc ProposeBlockV2(SignedBeaconBlockAltair) returns (ProposeResponse) {
         option (google.api.http) = {
             post: "/eth/v1alpha1/validator/blockV2"
@@ -237,7 +247,7 @@ service BeaconNodeValidator {
     }
 
     // Retrieves a sync committee message block root to be signed over as part of sync committee duty.
-    rpc GetSyncMessageBlockRoot(SyncMessageBlockRootRequest) returns (SyncMessageBlockRootResponse) {
+    rpc GetSyncMessageBlockRoot(google.protobuf.Empty) returns (SyncMessageBlockRootResponse) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/validator/sync_message_block_root"
         };
@@ -582,13 +592,6 @@ message ValidatorInfo {
     // The validator's current effective balance in GWei.
     // Only valid for states ACTIVE, EXITING, SLASHING.
     uint64 effective_balance = 7;
-}
-
-// SyncMessageBlockRootRequest for beacon chain validator to request block root
-// for slot - 1.
-message SyncMessageBlockRootRequest {
-    // The slot of validator assignment.
-    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
 }
 
 // SyncMessageBlockRootResponse for beacon chain validator to retrieve and
