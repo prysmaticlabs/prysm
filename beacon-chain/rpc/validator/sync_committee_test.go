@@ -7,6 +7,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
@@ -76,9 +77,10 @@ func TestSubmitSyncMessage_OK(t *testing.T) {
 }
 
 func TestGetSyncSubcommitteeIndex_Ok(t *testing.T) {
-	testutil.ResetCache()
-	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
+	state.SkipSlotCache.Disable()
+	defer state.SkipSlotCache.Enable()
+
 	headState, _ := testutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	require.NoError(t, headState.SetSlot(100))
 

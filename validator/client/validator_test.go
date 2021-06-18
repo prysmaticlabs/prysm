@@ -648,6 +648,14 @@ func TestRolesAt_OK(t *testing.T) {
 		gomock.Any(), // epoch
 	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
+	m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+		gomock.Any(), // ctx
+		&ethpb.SyncSubcommitteeIndexRequest{
+			PublicKey: validatorKey.PublicKey().Marshal(),
+			Slot:      1,
+		},
+	).Return(&ethpb.SyncSubcommitteeIndexRespond{}, nil /*err*/)
+
 	roleMap, err := v.RolesAt(context.Background(), 1)
 	require.NoError(t, err)
 
