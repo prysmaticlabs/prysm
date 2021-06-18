@@ -37,6 +37,16 @@ const signExitErr = "could not sign voluntary exit proposal"
 // the state root computation, and finally signed by the validator before being
 // sent back to the beacon node for broadcasting.
 func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [48]byte) {
+	currEpoch := helpers.SlotToEpoch(slot)
+	switch {
+	case currEpoch >= params.BeaconConfig().AltairForkEpoch:
+		v.proposeBlockV2(ctx, slot, pubKey)
+	default:
+		v.proposeBlock(ctx, slot, pubKey)
+	}
+}
+
+func (v *validator) proposeBlock(ctx context.Context, slot types.Slot, pubKey [48]byte) {
 	if slot == 0 {
 		log.Debug("Assigned to genesis slot, skipping proposal")
 		return
@@ -44,7 +54,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [4
 	lock := mputil.NewMultilock(fmt.Sprint(iface.RoleProposer), string(pubKey[:]))
 	lock.Lock()
 	defer lock.Unlock()
-	ctx, span := trace.StartSpan(ctx, "validator.ProposeBlock")
+	ctx, span := trace.StartSpan(ctx, "validator.proposeBlock")
 	defer span.End()
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 
@@ -107,16 +117,16 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [4
 		return
 	}
 
-	if err := v.preBlockSignValidations(ctx, pubKey, b, signingRoot); err != nil {
+	if err := v.preBlockSignValidations(ctx, pubKey, interfaces.WrappedPhase0BeaconBlock(b), signingRoot); err != nil {
 		log.WithFields(
-			blockLogFields(pubKey, b, nil),
+			blockLogFields(pubKey, interfaces.WrappedPhase0BeaconBlock(b), nil),
 		).WithError(err).Error("Failed block slashing protection check")
 		return
 	}
 
-	if err := v.postBlockSignUpdate(ctx, pubKey, blk, signingRoot); err != nil {
+	if err := v.postBlockSignUpdate(ctx, pubKey, interfaces.WrappedPhase0SignedBeaconBlock(blk), signingRoot); err != nil {
 		log.WithFields(
-			blockLogFields(pubKey, b, sig),
+			blockLogFields(pubKey, interfaces.WrappedPhase0BeaconBlock(b), sig),
 		).WithError(err).Error("Failed block slashing protection check")
 		return
 	}
@@ -144,6 +154,123 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [4
 		"numAttestations": len(b.Body.Attestations),
 		"numDeposits":     len(b.Body.Deposits),
 		"graffiti":        string(b.Body.Graffiti),
+	}).Info("Submitted new block")
+
+	if v.emitAccountMetrics {
+		ValidatorProposeSuccessVec.WithLabelValues(fmtKey).Inc()
+	}
+}
+
+// This is a routine to propose altair compatible beacon blocks.
+func (v *validator) proposeBlockV2(ctx context.Context, slot types.Slot, pubKey [48]byte) {
+	if slot == 0 {
+		log.Debug("Assigned to genesis slot, skipping proposal")
+		return
+	}
+	lock := mputil.NewMultilock(fmt.Sprint(iface.RoleProposer), string(pubKey[:]))
+	lock.Lock()
+	defer lock.Unlock()
+	ctx, span := trace.StartSpan(ctx, "validator.proposeBlockV2")
+	defer span.End()
+	fmtKey := fmt.Sprintf("%#x", pubKey[:])
+
+	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
+	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])))
+
+	// Sign randao reveal, it's used to request block from beacon node
+	epoch := types.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
+	randaoReveal, err := v.signRandaoReveal(ctx, pubKey, epoch)
+	if err != nil {
+		log.WithError(err).Error("Failed to sign randao reveal")
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return
+	}
+
+	g, err := v.getGraffiti(ctx, pubKey)
+	if err != nil {
+		// Graffiti is not a critical enough to fail block production and cause
+		// validator to miss block reward. When failed, validator should continue
+		// to produce the block.
+		log.WithError(err).Warn("Could not get graffiti")
+	}
+
+	// Request block from beacon node
+	b, err := v.validatorClient.GetBlockV2(ctx, &ethpb.BlockRequest{
+		Slot:         slot,
+		RandaoReveal: randaoReveal,
+		Graffiti:     g,
+	})
+	if err != nil {
+		log.WithField("blockSlot", slot).WithError(err).Error("Failed to request block from beacon node")
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return
+	}
+
+	// Sign returned block from beacon node
+	sig, domain, err := v.signBlock(ctx, pubKey, epoch, interfaces.WrappedAltairBeaconBlock(b))
+	if err != nil {
+		log.WithError(err).Error("Failed to sign block")
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return
+	}
+	blk := &ethpb.SignedBeaconBlockAltair{
+		Block:     b,
+		Signature: sig,
+	}
+
+	signingRoot, err := helpers.ComputeSigningRoot(b, domain.SignatureDomain)
+	if err != nil {
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		log.WithError(err).Error("Failed to compute signing root for block")
+		return
+	}
+
+	if err := v.preBlockSignValidations(ctx, pubKey, interfaces.WrappedAltairBeaconBlock(b), signingRoot); err != nil {
+		log.WithFields(
+			blockLogFields(pubKey, interfaces.WrappedAltairBeaconBlock(b), nil),
+		).WithError(err).Error("Failed block slashing protection check")
+		return
+	}
+
+	if err := v.postBlockSignUpdate(ctx, pubKey, interfaces.WrappedAltairSignedBeaconBlock(blk), signingRoot); err != nil {
+		log.WithFields(
+			blockLogFields(pubKey, interfaces.WrappedAltairBeaconBlock(b), sig),
+		).WithError(err).Error("Failed block slashing protection check")
+		return
+	}
+
+	// Propose and broadcast block via beacon node
+	blkResp, err := v.validatorClient.ProposeBlockV2(ctx, blk)
+	if err != nil {
+		log.WithError(err).Error("Failed to propose block")
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return
+	}
+
+	span.AddAttributes(
+		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", blkResp.BlockRoot)),
+		trace.Int64Attribute("numDeposits", int64(len(b.Body.Deposits))),
+		trace.Int64Attribute("numAttestations", int64(len(b.Body.Attestations))),
+	)
+
+	blkRoot := fmt.Sprintf("%#x", bytesutil.Trunc(blkResp.BlockRoot))
+	log.WithFields(logrus.Fields{
+		"slot":            b.Slot,
+		"blockRoot":       blkRoot,
+		"numAttestations": len(b.Body.Attestations),
+		"numDeposits":     len(b.Body.Deposits),
+		"graffiti":        string(b.Body.Graffiti),
+		"fork":            "altair",
 	}).Info("Submitted new block")
 
 	if v.emitAccountMetrics {
