@@ -24,8 +24,10 @@ proto_library(
         "attestation.proto",
         "beacon_block.proto",
         "beacon_chain.proto",
+        "sync_committee.proto",
         "node.proto",
         "validator.proto",
+        ":ssz_proto_files",
 #        ":generated_swagger_proto",
     ],
     visibility = ["//visibility:public"],
@@ -55,6 +57,8 @@ ssz_gen_marshal(
         "AttestationData",
         "AttesterSlashing",
         "BeaconBlock",
+        "BeaconBlockAltair",
+        "BeaconBlockBodyAltair",
         "BeaconBlockHeader",
         "Checkpoint",
         "Deposit",
@@ -63,10 +67,15 @@ ssz_gen_marshal(
         "ProposerSlashing",
         "SignedAggregateAttestationAndProof",
         "SignedBeaconBlock",
+        "SignedBeaconBlockAltair",
         "SignedBeaconBlockHeader",
         "SignedVoluntaryExit",
         "Validator",
         "VoluntaryExit",
+        "SyncCommitteeMessage",
+        "SyncCommitteeContribution",
+        "ContributionAndProof",
+        "SignedContributionAndProof",
     ],
 )
 
@@ -143,6 +152,18 @@ go_library(
         "@org_golang_google_protobuf//runtime/protoimpl:go_default_library",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-openapiv2/options:options_go_proto",
     ],  # keep
+)
+
+ssz_proto_files(
+    name = "ssz_proto_files",
+    srcs = [
+        "beacon_block_altair.proto",
+    ],
+    config = select({
+        "//conditions:default": "mainnet",
+        "//proto:ssz_mainnet": "mainnet",
+        "//proto:ssz_minimal": "minimal",
+    }),
 )
 
 #protoc_gen_openapiv2(
