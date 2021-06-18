@@ -46,6 +46,8 @@ func TestSubmitSyncMessage_OK(t *testing.T) {
 }
 
 func TestGetSyncSubcommitteeIndex_Ok(t *testing.T) {
+	testutil.ResetCache()
+	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	state.SkipSlotCache.Disable()
 	defer state.SkipSlotCache.Enable()

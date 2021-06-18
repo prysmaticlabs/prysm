@@ -690,6 +690,15 @@ func TestRolesAt_OK(t *testing.T) {
 			},
 		},
 	}
+
+	m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+		gomock.Any(), // ctx
+		&ethpb.SyncSubcommitteeIndexRequest{
+			PublicKey: validatorKey.PublicKey().Marshal(),
+			Slot:      31,
+		},
+	).Return(&ethpb.SyncSubcommitteeIndexRespond{}, nil /*err*/)
+
 	roleMap, err = v.RolesAt(context.Background(), params.BeaconConfig().SlotsPerEpoch-1)
 	require.NoError(t, err)
 	assert.Equal(t, iface.RoleSyncCommittee, roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][0])
