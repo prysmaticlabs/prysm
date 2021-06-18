@@ -20,9 +20,7 @@ import "google/protobuf/empty.proto";
 
 import "proto/eth/ext/options.proto";
 import "proto/eth/v1alpha1/beacon_block.proto";
-import "proto/eth/v1alpha1/beacon_block_altair.proto";
 import "proto/eth/v1alpha1/attestation.proto";
-import "proto/eth/v1alpha1/sync_committee.proto";
 
 option csharp_namespace = "Ethereum.Eth.v1alpha1";
 option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1;eth";
@@ -147,17 +145,6 @@ service BeaconNodeValidator {
         };
     }
 
-    // Retrieves the latest valid beacon block to be proposed on the beacon chain.
-    //
-    // The server returns a new beacon block, without proposer signature, that can be
-    // proposed on the beacon chain. The block should be filled with all the necessary
-    // data for proposer to sign. This block is versioned from Altair onwards.
-    rpc GetBlockV2(BlockRequest) returns (BeaconBlockAltair) {
-        option (google.api.http) = {
-            get: "/eth/v1alpha1/validator/blockV2"
-        };
-    }
-
     // Sends the newly signed beacon block to beacon node.
     //
     // The validator sends the newly signed beacon block to the beacon node so the beacon block can
@@ -166,18 +153,6 @@ service BeaconNodeValidator {
     rpc ProposeBlock(SignedBeaconBlock) returns (ProposeResponse) {
         option (google.api.http) = {
             post: "/eth/v1alpha1/validator/block"
-            body: "*"
-        };
-    }
-
-    // Sends the newly signed beacon block to beacon node.
-    //
-    // The validator sends the newly signed beacon block to the beacon node so the beacon block can
-    // be included in the beacon chain. The beacon node is expected to validate and process the
-    // beacon block into its state. This block is versioned from Altair onwards.
-    rpc ProposeBlockV2(SignedBeaconBlockAltair) returns (ProposeResponse) {
-        option (google.api.http) = {
-            post: "/eth/v1alpha1/validator/blockV2"
             body: "*"
         };
     }
@@ -203,7 +178,6 @@ service BeaconNodeValidator {
             body: "*"
         };
     }
-
 
     // Submit selection proof to the beacon node to aggregate all matching wire attestations with the same data root.
     // the beacon node responses with an aggregate and proof object back to validator to sign over.
@@ -243,21 +217,6 @@ service BeaconNodeValidator {
         option (google.api.http) = {
             post: "/eth/v1alpha1/validator/subnet/subscribe"
             body: "*"  
-        };
-    }
-
-    // Retrieves a sync committee message block root to be signed over as part of sync committee duty.
-    rpc GetSyncMessageBlockRoot(google.protobuf.Empty) returns (SyncMessageBlockRootResponse) {
-        option (google.api.http) = {
-            get: "/eth/v1alpha1/validator/sync_message_block_root"
-        };
-    }
-
-    // Submits a sync committee message to be broadcasted over network. This is part of sync committee duty.
-    rpc SubmitSyncMessage(SyncCommitteeMessage) returns (google.protobuf.Empty) {
-        option (google.api.http) = {
-            post: "/eth/v1alpha1/validator/sync_message"
-            body: "*"
         };
     }
 }
@@ -592,11 +551,4 @@ message ValidatorInfo {
     // The validator's current effective balance in GWei.
     // Only valid for states ACTIVE, EXITING, SLASHING.
     uint64 effective_balance = 7;
-}
-
-// SyncMessageBlockRootResponse for beacon chain validator to retrieve and
-// to sign over the block root as part of sync committee duty to facilitate light client.
-message SyncMessageBlockRootResponse {
-    // The block root of the head block.
-    bytes root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
 }

@@ -1,0 +1,99 @@
+// Copyright 2020 Prysmatic Labs.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+syntax = "proto3";
+
+package ethereum.eth.v1alpha1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+import "proto/eth/v1alpha1/beacon_block.proto";
+
+import "proto/eth/ext/options.proto";
+import "proto/eth/v2prysm/beacon_block.proto";
+import "proto/eth/v2prysm/sync_committee.proto";
+
+option csharp_namespace = "Ethereum.Eth.v2prysm";
+option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v2prysm;eth";
+option java_multiple_files = true;
+option java_outer_classname = "ValidatorProto";
+option java_package = "org.ethereum.eth.v2prysm";
+option php_namespace = "Ethereum\\Eth\\v2prysm";
+
+// Beacon node validator API
+//
+// The beacon node validator API enables a validator to connect
+// and perform its obligations on the Ethereum 2.0 phase 0 beacon chain.
+service BeaconNodeValidator {
+  // Retrieves the latest valid beacon block to be proposed on the beacon chain.
+  //
+  // The server returns a new beacon block, without proposer signature, that can be
+  // proposed on the beacon chain. The block should be filled with all the necessary
+  // data for proposer to sign. This block is versioned from Altair onwards.
+  rpc GetBlock(BlockRequest) returns (BeaconBlock) {
+    option (google.api.http) = {
+      get: "/eth/v2prysm/validator/block"
+    };
+  }
+
+  // Sends the newly signed beacon block to beacon node.
+  //
+  // The validator sends the newly signed beacon block to the beacon node so the beacon block can
+  // be included in the beacon chain. The beacon node is expected to validate and process the
+  // beacon block into its state. This block is versioned from Altair onwards.
+  rpc ProposeBlock(SignedBeaconBlock) returns (ProposeResponse) {
+    option (google.api.http) = {
+      post: "/eth/v2prysm/validator/block"
+      body: "*"
+    };
+  }
+
+  // Retrieves a sync committee message block root to be signed over as part of sync committee duty.
+  rpc GetSyncMessageBlockRoot(google.protobuf.Empty) returns (SyncMessageBlockRootResponse) {
+    option (google.api.http) = {
+      get: "/eth/v2prysm/validator/sync_message_block_root"
+    };
+  }
+
+  // Submits a sync committee message to be broadcasted over network. This is part of sync committee duty.
+  rpc SubmitSyncMessage(SyncCommitteeMessage) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/eth/v2prysm/validator/sync_message"
+      body: "*"
+    };
+  }
+}
+
+message BlockRequest {
+  // Slot for which the block should be proposed.
+  uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+
+  // Validator's 32 byte randao reveal secret of the current epoch.
+  bytes randao_reveal = 2 [(ethereum.eth.ext.ssz_size) = "48"];
+
+  // Validator's 32 byte graffiti message for the new block.
+  bytes graffiti = 3 [(ethereum.eth.ext.ssz_size) = "32"];
+}
+
+message ProposeResponse {
+  // The block root of the successfully proposed beacon block.
+  bytes block_root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
+}
+
+// SyncMessageBlockRootResponse for beacon chain validator to retrieve and
+// to sign over the block root as part of sync committee duty to facilitate light client.
+message SyncMessageBlockRootResponse {
+  // The block root of the head block.
+  bytes root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
+}
