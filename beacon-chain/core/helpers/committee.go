@@ -403,12 +403,7 @@ func IsCurrentEpochSyncCommittee(committee *pb.SyncCommittee, pubKey [48]byte) (
 	indices, err := syncCommitteeCache.CurrentEpochIndexPosition(root, pubKey)
 	// If committee root does not exist in cache, perform manual lookup of pubkeys in committee to find match.
 	if err == cache.ErrNonExistingSyncCommitteeKey {
-		for _, k := range committee.Pubkeys {
-			if bytes.Equal(k, pubKey[:]) {
-				return true, nil
-			}
-		}
-		return false, nil
+		return len(findSubCommitteeIndices(pubKey[:], committee.Pubkeys)) > 0, nil
 	}
 	if err != nil {
 		return false, err
@@ -428,12 +423,7 @@ func IsNextEpochSyncCommittee(committee *pb.SyncCommittee, pubKey [48]byte) (boo
 	indices, err := syncCommitteeCache.NextEpochIndexPosition(root, pubKey)
 	// If committee root does not exist in cache, perform manual lookup of pubkeys in committee to find match.
 	if err == cache.ErrNonExistingSyncCommitteeKey {
-		for _, k := range committee.Pubkeys {
-			if bytes.Equal(k, pubKey[:]) {
-				return true, nil
-			}
-		}
-		return false, nil
+		return len(findSubCommitteeIndices(pubKey[:], committee.Pubkeys)) > 0, nil
 	}
 	if err != nil {
 		return false, err
@@ -445,6 +435,53 @@ func IsNextEpochSyncCommittee(committee *pb.SyncCommittee, pubKey [48]byte) (boo
 // UpdateSyncCommitteeCache updates sync committee cache.
 func UpdateSyncCommitteeCache(state iface.BeaconStateAltair) error {
 	return syncCommitteeCache.UpdatePositionsInCommittee(state)
+}
+
+// CurrentEpochSyncSubcommitteeIndices returns the subcommittee indices of the current epoch sync committee for input validator.
+func CurrentEpochSyncSubcommitteeIndices(committee *pb.SyncCommittee, pubKey [48]byte) ([]uint64, error) {
+	root, err := committee.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	indices, err := syncCommitteeCache.CurrentEpochIndexPosition(root, pubKey)
+	// If committee root does not exist in cache, perform manual lookup of pubkeys in committee to find indices.
+	if err == cache.ErrNonExistingSyncCommitteeKey {
+		return findSubCommitteeIndices(pubKey[:], committee.Pubkeys), nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return indices, nil
+}
+
+// NextEpochSyncSubcommitteeIndices returns the subcommittee indices of the next epoch sync committee for input validator.
+func NextEpochSyncSubcommitteeIndices(committee *pb.SyncCommittee, pubKey [48]byte) ([]uint64, error) {
+	root, err := committee.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	indices, err := syncCommitteeCache.NextEpochIndexPosition(root, pubKey)
+	// If committee root does not exist in cache, perform manual lookup of pubkeys in committee to find indices.
+	if err == cache.ErrNonExistingSyncCommitteeKey {
+		return findSubCommitteeIndices(pubKey[:], committee.Pubkeys), nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return indices, nil
+}
+
+// Loop through `pubKeys` for matching `pubKey` and get the indices where it matches.
+func findSubCommitteeIndices(pubKey []byte, pubKeys [][]byte) []uint64 {
+	var indices []uint64
+	for i, k := range pubKeys {
+		if bytes.Equal(k, pubKey) {
+			indices = append(indices, uint64(i))
+		}
+	}
+	return indices
 }
 
 // This computes proposer indices of the current epoch and returns a list of proposer indices,

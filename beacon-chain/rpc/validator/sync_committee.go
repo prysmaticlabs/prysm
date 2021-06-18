@@ -3,7 +3,11 @@ package validator
 import (
 	"context"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -39,4 +43,52 @@ func (vs *Server) SubmitSyncMessage(ctx context.Context, msg *ethpb.SyncCommitte
 	// Wait for p2p broadcast to complete and return the first error (if any)
 	err := errs.Wait()
 	return nil, err
+}
+
+// GetSyncSubcommitteeIndex is called by a sync committee participant to get its subcommittee index for sync message aggregation duty.
+func (vs *Server) GetSyncSubcommitteeIndex(ctx context.Context, req *ethpb.SyncSubcommitteeIndexRequest) (*ethpb.SyncSubcommitteeIndexRespond, error) {
+	headState, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	}
+	if req.Slot > headState.Slot() {
+		headState, err = state.ProcessSlots(ctx, headState, req.Slot)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not process slots: %v", err)
+		}
+	}
+
+	nextSlotEpoch := helpers.SlotToEpoch(headState.Slot() + 1)
+	currentEpoch := helpers.CurrentEpoch(headState)
+
+	switch {
+	case altair.SyncCommitteePeriod(nextSlotEpoch) == altair.SyncCommitteePeriod(currentEpoch):
+		committee, err := headState.CurrentSyncCommittee()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get current sync committee in head state: %v", err)
+		}
+		indices, err := helpers.CurrentEpochSyncSubcommitteeIndices(committee, bytesutil.ToBytes48(req.PublicKey))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get current sync subcommittee indices: %v", err)
+		}
+		return &ethpb.SyncSubcommitteeIndexRespond{
+			Indices: indices,
+		}, nil
+	// At sync committee period boundary, validator should sample the next epoch sync committee.
+	case altair.SyncCommitteePeriod(nextSlotEpoch) == altair.SyncCommitteePeriod(currentEpoch)+1:
+		committee, err := headState.NextSyncCommittee()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get next sync committee in head state: %v", err)
+		}
+		indices, err := helpers.NextEpochSyncSubcommitteeIndices(committee, bytesutil.ToBytes48(req.PublicKey))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get next sync subcommittee indices: %v", err)
+		}
+		return &ethpb.SyncSubcommitteeIndexRespond{
+			Indices: indices,
+		}, nil
+	default:
+		// Impossible condition.
+		return nil, status.Errorf(codes.InvalidArgument, "Could get calculate sync subcommittee based on the period")
+	}
 }

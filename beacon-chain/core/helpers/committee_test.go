@@ -822,3 +822,167 @@ func TestIsNextEpochSyncCommittee_DoesNotExist(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, false, ok)
 }
+
+func TestCurrentEpochSyncSubcommitteeIndices_UsingCache(t *testing.T) {
+	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
+	syncCommittee := &pb.SyncCommittee{
+		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+	}
+	for i := 0; i < len(validators); i++ {
+		k := make([]byte, 48)
+		copy(k, strconv.Itoa(i))
+		validators[i] = &ethpb.Validator{
+			PublicKey: k,
+		}
+		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
+	}
+
+	state, err := stateAltair.InitializeFromProto(&pb.BeaconStateAltair{
+		Validators: validators,
+	})
+	require.NoError(t, err)
+	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
+	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
+
+	ClearCache()
+	require.NoError(t, err, syncCommitteeCache.UpdatePositionsInCommittee(state))
+
+	index, err := CurrentEpochSyncSubcommitteeIndices(syncCommittee, bytesutil.ToBytes48(validators[0].PublicKey))
+	require.NoError(t, err)
+	require.DeepEqual(t, []uint64{0}, index)
+}
+
+func TestCurrentEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
+	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
+	syncCommittee := &pb.SyncCommittee{
+		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+	}
+	for i := 0; i < len(validators); i++ {
+		k := make([]byte, 48)
+		copy(k, strconv.Itoa(i))
+		validators[i] = &ethpb.Validator{
+			PublicKey: k,
+		}
+		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
+	}
+
+	state, err := stateAltair.InitializeFromProto(&pb.BeaconStateAltair{
+		Validators: validators,
+	})
+	require.NoError(t, err)
+	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
+	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
+
+	index, err := CurrentEpochSyncSubcommitteeIndices(syncCommittee, bytesutil.ToBytes48(validators[0].PublicKey))
+	require.NoError(t, err)
+	require.DeepEqual(t, []uint64{0}, index)
+}
+
+func TestCurrentEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
+	ClearCache()
+	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
+	syncCommittee := &pb.SyncCommittee{
+		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+	}
+	for i := 0; i < len(validators); i++ {
+		k := make([]byte, 48)
+		copy(k, strconv.Itoa(i))
+		validators[i] = &ethpb.Validator{
+			PublicKey: k,
+		}
+		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
+	}
+
+	state, err := stateAltair.InitializeFromProto(&pb.BeaconStateAltair{
+		Validators: validators,
+	})
+	require.NoError(t, err)
+	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
+	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
+
+	index, err := CurrentEpochSyncSubcommitteeIndices(syncCommittee, bytesutil.ToBytes48([]byte{}))
+	require.NoError(t, err)
+	require.DeepEqual(t, []uint64(nil), index)
+}
+
+func TestNextEpochSyncSubcommitteeIndices_UsingCache(t *testing.T) {
+	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
+	syncCommittee := &pb.SyncCommittee{
+		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+	}
+	for i := 0; i < len(validators); i++ {
+		k := make([]byte, 48)
+		copy(k, strconv.Itoa(i))
+		validators[i] = &ethpb.Validator{
+			PublicKey: k,
+		}
+		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
+	}
+
+	state, err := stateAltair.InitializeFromProto(&pb.BeaconStateAltair{
+		Validators: validators,
+	})
+	require.NoError(t, err)
+	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
+	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
+
+	ClearCache()
+	require.NoError(t, err, syncCommitteeCache.UpdatePositionsInCommittee(state))
+
+	index, err := NextEpochSyncSubcommitteeIndices(syncCommittee, bytesutil.ToBytes48(validators[0].PublicKey))
+	require.NoError(t, err)
+	require.DeepEqual(t, []uint64{0}, index)
+}
+
+func TestNextEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
+	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
+	syncCommittee := &pb.SyncCommittee{
+		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+	}
+	for i := 0; i < len(validators); i++ {
+		k := make([]byte, 48)
+		copy(k, strconv.Itoa(i))
+		validators[i] = &ethpb.Validator{
+			PublicKey: k,
+		}
+		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
+	}
+
+	state, err := stateAltair.InitializeFromProto(&pb.BeaconStateAltair{
+		Validators: validators,
+	})
+	require.NoError(t, err)
+	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
+	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
+
+	index, err := NextEpochSyncSubcommitteeIndices(syncCommittee, bytesutil.ToBytes48(validators[0].PublicKey))
+	require.NoError(t, err)
+	require.DeepEqual(t, []uint64{0}, index)
+}
+
+func TestNextEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
+	ClearCache()
+	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
+	syncCommittee := &pb.SyncCommittee{
+		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+	}
+	for i := 0; i < len(validators); i++ {
+		k := make([]byte, 48)
+		copy(k, strconv.Itoa(i))
+		validators[i] = &ethpb.Validator{
+			PublicKey: k,
+		}
+		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
+	}
+
+	state, err := stateAltair.InitializeFromProto(&pb.BeaconStateAltair{
+		Validators: validators,
+	})
+	require.NoError(t, err)
+	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
+	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
+
+	index, err := NextEpochSyncSubcommitteeIndices(syncCommittee, bytesutil.ToBytes48([]byte{}))
+	require.NoError(t, err)
+	require.DeepEqual(t, []uint64(nil), index)
+}

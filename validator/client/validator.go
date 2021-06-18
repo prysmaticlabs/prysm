@@ -534,13 +534,25 @@ func (v *validator) RolesAt(ctx context.Context, slot types.Slot) (map[[48]byte]
 		// Being assigned to a sync committee for a given slot means that the validator produces and
 		// broadcasts signatures for `slot - 1` for inclusion in `slot`. At the last slot of the epoch,
 		// the validator checks whether it's in the sync committee of following epoch.
+		inSyncCommittee := false
 		if helpers.IsEpochEnd(slot) {
 			if v.duties.NextEpochDuties[validator].IsSyncCommittee {
 				roles = append(roles, iface.RoleSyncCommittee)
+				inSyncCommittee = true
 			}
 		} else {
 			if duty.IsSyncCommittee {
 				roles = append(roles, iface.RoleSyncCommittee)
+				inSyncCommittee = true
+			}
+		}
+		if inSyncCommittee {
+			aggregator, err := v.isSyncCommitteeAggregator(ctx, slot, bytesutil.ToBytes48(duty.PublicKey))
+			if err != nil {
+				return nil, errors.Wrap(err, "could not check if a validator is a sync committee aggregator")
+			}
+			if aggregator {
+				roles = append(roles, iface.RoleSyncCommitteeAggregator)
 			}
 		}
 
@@ -576,6 +588,42 @@ func (v *validator) isAggregator(ctx context.Context, committee []types.Validato
 	b := hashutil.Hash(slotSig)
 
 	return binary.LittleEndian.Uint64(b[:8])%modulo == 0, nil
+}
+
+// isSyncCommitteeAggregator checks if a validator in an aggregator of a subcommittee for sync committee.
+// it uses a modulo calculated by validator count in committee and samples randomness around it.
+//
+// Spec code:
+// def is_sync_committee_aggregator(signature: BLSSignature) -> bool:
+//    modulo = max(1, SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT // TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE)
+//    return bytes_to_uint64(hash(signature)[0:8]) % modulo == 0
+func (v *validator) isSyncCommitteeAggregator(ctx context.Context, slot types.Slot, pubKey [48]byte) (bool, error) {
+	res, err := v.validatorClient.GetSyncSubcommitteeIndex(ctx, &ethpb.SyncSubcommitteeIndexRequest{
+		PublicKey: pubKey[:],
+		Slot:      slot,
+	})
+	if err != nil {
+		return false, err
+	}
+
+	modulo := uint64(1)
+	count := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount / params.BeaconConfig().TargetAggregatorsPerSyncSubcommittee
+	if count > 1 {
+		modulo = count
+	}
+
+	for _, index := range res.Indices {
+		sig, err := v.signSyncSelectionData(ctx, pubKey, index, slot)
+		if err != nil {
+			return false, err
+		}
+		b := hashutil.Hash(sig)
+		if binary.LittleEndian.Uint64(b[:8])%modulo == 0 {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 // UpdateDomainDataCaches by making calls for all of the possible domain data. These can change when
