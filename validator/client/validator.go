@@ -578,6 +578,12 @@ func (v *validator) isAggregator(ctx context.Context, committee []types.Validato
 }
 
 // isSyncCommitteeAggregator checks if a validator in an aggregator of a subcommittee for sync committee.
+// it uses a modulo calculated by validator count in committee and samples randomness around it.
+//
+// Spec code:
+// def is_sync_committee_aggregator(signature: BLSSignature) -> bool:
+//    modulo = max(1, SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT // TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE)
+//    return bytes_to_uint64(hash(signature)[0:8]) % modulo == 0
 func (v *validator) isSyncCommitteeAggregator(ctx context.Context, slot types.Slot, pubKey [48]byte) (bool, error) {
 	res, err := v.validatorClient.GetSyncSubcommitteeIndex(ctx, &ethpb.SyncSubcommitteeIndexRequest{
 		PublicKey: pubKey[:],
