@@ -22,7 +22,6 @@ import (
 func TestEndToEnd_SlasherSimulator(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
-	testutil.ResetCache()
 
 	// Run for 10 epochs if not in long-running to confirm long-running has no issues.
 	simulatorParams := slashersimulator.DefaultParams()
