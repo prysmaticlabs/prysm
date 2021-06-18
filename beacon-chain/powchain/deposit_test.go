@@ -150,7 +150,6 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 	})
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
-	testutil.ResetCache()
 
 	deposits, keys, err := testutil.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
@@ -245,7 +244,6 @@ func TestProcessDeposit_AllDepositedSuccessfully(t *testing.T) {
 	})
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
-	testutil.ResetCache()
 
 	deposits, keys, err := testutil.DeterministicDepositsAndKeys(10)
 	require.NoError(t, err)

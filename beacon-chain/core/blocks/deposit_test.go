@@ -21,7 +21,7 @@ import (
 
 func TestProcessDeposits_SameValidatorMultipleDepositsSameBlock(t *testing.T) {
 	// Same validator created 3 valid deposits within the same block
-	testutil.ResetCache()
+
 	dep, _, err := testutil.DeterministicDepositsAndKeysSameValidator(3)
 	require.NoError(t, err)
 	eth1Data, err := testutil.DeterministicEth1Data(len(dep))
@@ -275,10 +275,9 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 }
 
 func TestPreGenesisDeposits_SkipInvalidDeposit(t *testing.T) {
-	testutil.ResetCache()
+
 	dep, _, err := testutil.DeterministicDepositsAndKeys(100)
 	require.NoError(t, err)
-	defer testutil.ResetCache()
 	dep[0].Data.Signature = make([]byte, 96)
 	trie, _, err := testutil.DepositTrieFromDeposits(dep)
 	require.NoError(t, err)
