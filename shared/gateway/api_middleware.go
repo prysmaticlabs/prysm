@@ -23,6 +23,7 @@ type ApiProxyMiddleware struct {
 type EndpointFactory interface {
 	Create(path string) (*Endpoint, error)
 	Paths() []string
+	IsNil() bool
 }
 
 // Endpoint is a representation of an API HTTP endpoint that should be proxied by the middleware.

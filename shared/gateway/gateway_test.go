@@ -82,7 +82,7 @@ func TestGateway_StartStop(t *testing.T) {
 	g.Start()
 	go func() {
 		require.LogsContain(t, hook, "Starting gRPC gateway")
-		require.LogsContain(t, hook, "Starting API middleware")
+		require.LogsDoNotContain(t, hook, "Starting API middleware")
 	}()
 
 	err := g.Stop()
