@@ -113,7 +113,7 @@ func (mr *MockBeaconNodeValidatorServerMockRecorder) GetDuties(arg0, arg1 interf
 }
 
 // GetSyncMessageBlockRoot mocks base method
-func (m *MockBeaconNodeValidatorServer) GetSyncMessageBlockRoot(arg0 context.Context, arg1 *v1alpha1.SyncMessageBlockRootRequest) (*v1alpha1.SyncMessageBlockRootResponse, error) {
+func (m *MockBeaconNodeValidatorServer) GetSyncMessageBlockRoot(arg0 context.Context, arg1 *emptypb.Empty) (*v1alpha1.SyncMessageBlockRootResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetSyncMessageBlockRoot", arg0, arg1)
 	ret0, _ := ret[0].(*v1alpha1.SyncMessageBlockRootResponse)
