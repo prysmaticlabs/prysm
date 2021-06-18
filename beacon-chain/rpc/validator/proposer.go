@@ -123,6 +123,8 @@ func (vs *Server) GetBlockV2(ctx context.Context, req *ethpb.BlockRequest) (*eth
 	// Use zero hash as stub for state root to compute later.
 	stateRoot := params.BeaconConfig().ZeroHash[:]
 
+	// Ugly hack to allow this to compile both for mainnet
+	// and minimal configs.
 	mockAgg := &ethpb.SyncAggregate{SyncCommitteeBits: []byte{}}
 	bVector := []byte{}
 	if mockAgg.SyncCommitteeBits.Len() == 512 {
