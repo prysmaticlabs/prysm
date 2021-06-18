@@ -504,7 +504,7 @@ func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesRes
 // validator assignments are unknown. Otherwise returns a valid ValidatorRole map.
 func (v *validator) RolesAt(ctx context.Context, slot types.Slot) (map[[48]byte][]iface.ValidatorRole, error) {
 	rolesAt := make(map[[48]byte][]iface.ValidatorRole)
-	for _, duty := range v.duties.Duties {
+	for validator, duty := range v.duties.Duties {
 		var roles []iface.ValidatorRole
 
 		if duty == nil {
@@ -531,9 +531,22 @@ func (v *validator) RolesAt(ctx context.Context, slot types.Slot) (map[[48]byte]
 
 		}
 
-		if duty.IsSyncCommittee {
-			roles = append(roles, iface.RoleSyncCommittee)
-
+		// Being assigned to a sync committee for a given slot means that the validator produces and
+		// broadcasts signatures for `slot - 1` for inclusion in `slot`. At the last slot of the epoch,
+		// the validator checks whether it's in the sync committee of following epoch.
+		inSyncCommittee := false
+		if helpers.IsEpochEnd(slot) {
+			if v.duties.NextEpochDuties[validator].IsSyncCommittee {
+				roles = append(roles, iface.RoleSyncCommittee)
+				inSyncCommittee = true
+			}
+		} else {
+			if duty.IsSyncCommittee {
+				roles = append(roles, iface.RoleSyncCommittee)
+				inSyncCommittee = true
+			}
+		}
+		if inSyncCommittee {
 			aggregator, err := v.isSyncCommitteeAggregator(ctx, slot, bytesutil.ToBytes48(duty.PublicKey))
 			if err != nil {
 				return nil, errors.Wrap(err, "could not check if a validator is a sync committee aggregator")

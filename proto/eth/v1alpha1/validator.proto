@@ -20,6 +20,7 @@ import "google/protobuf/empty.proto";
 
 import "proto/eth/ext/options.proto";
 import "proto/eth/v1alpha1/beacon_block.proto";
+import "proto/eth/v1alpha1/beacon_block_altair.proto";
 import "proto/eth/v1alpha1/attestation.proto";
 import "proto/eth/v1alpha1/sync_committee.proto";
 
@@ -146,6 +147,17 @@ service BeaconNodeValidator {
         };
     }
 
+    // Retrieves the latest valid beacon block to be proposed on the beacon chain.
+    //
+    // The server returns a new beacon block, without proposer signature, that can be
+    // proposed on the beacon chain. The block should be filled with all the necessary
+    // data for proposer to sign. This block is versioned from Altair onwards.
+    rpc GetBlockV2(BlockRequest) returns (BeaconBlockAltair) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/validator/blockV2"
+        };
+    }
+
     // Sends the newly signed beacon block to beacon node.
     //
     // The validator sends the newly signed beacon block to the beacon node so the beacon block can
@@ -154,6 +166,18 @@ service BeaconNodeValidator {
     rpc ProposeBlock(SignedBeaconBlock) returns (ProposeResponse) {
         option (google.api.http) = {
             post: "/eth/v1alpha1/validator/block"
+            body: "*"
+        };
+    }
+
+    // Sends the newly signed beacon block to beacon node.
+    //
+    // The validator sends the newly signed beacon block to the beacon node so the beacon block can
+    // be included in the beacon chain. The beacon node is expected to validate and process the
+    // beacon block into its state. This block is versioned from Altair onwards.
+    rpc ProposeBlockV2(SignedBeaconBlockAltair) returns (ProposeResponse) {
+        option (google.api.http) = {
+            post: "/eth/v1alpha1/validator/blockV2"
             body: "*"
         };
     }
@@ -235,7 +259,7 @@ service BeaconNodeValidator {
     }
 
     // Retrieves a sync committee message block root to be signed over as part of sync committee duty.
-    rpc GetSyncMessageBlockRoot(SyncMessageBlockRootRequest) returns (SyncMessageBlockRootResponse) {
+    rpc GetSyncMessageBlockRoot(google.protobuf.Empty) returns (SyncMessageBlockRootResponse) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/validator/sync_message_block_root"
         };
@@ -582,6 +606,7 @@ message ValidatorInfo {
     uint64 effective_balance = 7;
 }
 
+
 // SyncSubcommitteeIndexRequest requests sync subcommittee index given the validator public key.
 message SyncSubcommitteeIndexRequest {
     // The validator's public key.
@@ -594,14 +619,7 @@ message SyncSubcommitteeIndexRequest {
 message SyncSubcommitteeIndexRespond {
       // The subcommittee index itself.
       // If the total validator count is not sufficient, there could be more than one index.
-          repeated uint64 indices = 1;
-        }
-
-// SyncMessageBlockRootRequest for beacon chain validator to request block root
-// for slot - 1.
-message SyncMessageBlockRootRequest {
-    // The slot of validator assignment.
-    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+    repeated uint64 indices = 1;
 }
 
 // SyncMessageBlockRootResponse for beacon chain validator to retrieve and

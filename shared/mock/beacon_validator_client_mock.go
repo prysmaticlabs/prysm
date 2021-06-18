@@ -98,6 +98,26 @@ func (mr *MockBeaconNodeValidatorClientMockRecorder) GetBlock(arg0, arg1 interfa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlock", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).GetBlock), varargs...)
 }
 
+// GetBlockV2 mocks base method.
+func (m *MockBeaconNodeValidatorClient) GetBlockV2(arg0 context.Context, arg1 *eth.BlockRequest, arg2 ...grpc.CallOption) (*eth.BeaconBlockAltair, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetBlockV2", varargs...)
+	ret0, _ := ret[0].(*eth.BeaconBlockAltair)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetBlockV2 indicates an expected call of GetBlockV2.
+func (mr *MockBeaconNodeValidatorClientMockRecorder) GetBlockV2(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlockV2", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).GetBlockV2), varargs...)
+}
+
 // GetDuties mocks base method.
 func (m *MockBeaconNodeValidatorClient) GetDuties(arg0 context.Context, arg1 *eth.DutiesRequest, arg2 ...grpc.CallOption) (*eth.DutiesResponse, error) {
 	m.ctrl.T.Helper()
@@ -119,7 +139,7 @@ func (mr *MockBeaconNodeValidatorClientMockRecorder) GetDuties(arg0, arg1 interf
 }
 
 // GetSyncMessageBlockRoot mocks base method.
-func (m *MockBeaconNodeValidatorClient) GetSyncMessageBlockRoot(arg0 context.Context, arg1 *eth.SyncMessageBlockRootRequest, arg2 ...grpc.CallOption) (*eth.SyncMessageBlockRootResponse, error) {
+func (m *MockBeaconNodeValidatorClient) GetSyncMessageBlockRoot(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (*eth.SyncMessageBlockRootResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -216,6 +236,26 @@ func (mr *MockBeaconNodeValidatorClientMockRecorder) ProposeBlock(arg0, arg1 int
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProposeBlock", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).ProposeBlock), varargs...)
+}
+
+// ProposeBlockV2 mocks base method.
+func (m *MockBeaconNodeValidatorClient) ProposeBlockV2(arg0 context.Context, arg1 *eth.SignedBeaconBlockAltair, arg2 ...grpc.CallOption) (*eth.ProposeResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ProposeBlockV2", varargs...)
+	ret0, _ := ret[0].(*eth.ProposeResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ProposeBlockV2 indicates an expected call of ProposeBlockV2.
+func (mr *MockBeaconNodeValidatorClientMockRecorder) ProposeBlockV2(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProposeBlockV2", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).ProposeBlockV2), varargs...)
 }
 
 // ProposeExit mocks base method.
