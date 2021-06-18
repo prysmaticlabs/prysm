@@ -130,7 +130,7 @@ func signedAttestationsByPubKey(ctx context.Context, validatorDB db.Database, pu
 		// More information on the bug can found in https://github.com/prysmaticlabs/prysm/issues/8893.
 		if i == 0 && len(history) > 1 {
 			nextEntryTargetEpoch := history[1].Target
-			if att.Target > nextEntryTargetEpoch {
+			if att.Target > nextEntryTargetEpoch && att.Source == 0 {
 				continue
 			}
 		}
