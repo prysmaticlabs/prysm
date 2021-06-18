@@ -231,7 +231,9 @@ func (g *Gateway) Start() {
 		}
 	}()
 
-	go g.registerApiMiddleware()
+	if g.apiMiddlewareAddr != "" && g.apiMiddlewareEndpointFactory != nil && !g.apiMiddlewareEndpointFactory.IsNil() {
+		go g.registerApiMiddleware()
+	}
 }
 
 // Status of grpc gateway. Returns an error if this service is unhealthy.
