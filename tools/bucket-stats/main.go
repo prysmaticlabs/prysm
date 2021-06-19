@@ -50,12 +50,14 @@ func main() {
 
 	// get a list of all the existing buckets
 	buckets := make(map[string]*bolt.Bucket)
-	err = db.View(func(tx *bolt.Tx) error {
+	if err = db.View(func(tx *bolt.Tx) error {
 		return tx.ForEach(func(name []byte, buc *bolt.Bucket) error {
 			buckets[string(name)] = buc
 			return nil
 		})
-	})
+	}); err != nil {
+		log.Fatalf("could not find buckets, %v", err)
+	}
 
 	showBucketStats(db, buckets)
 }
@@ -69,10 +71,9 @@ func showBucketStats(db *bolt.DB, buckets map[string]*bolt.Bucket) {
 		minKeySize := ^uint64(0)
 		maxKeySize := uint64(0)
 		totalKeySize := uint64(0)
-		db.View(func(tx *bolt.Tx) error {
+		if err := db.View(func(tx *bolt.Tx) error {
 			b := tx.Bucket([]byte(bName))
-			b.ForEach(func(k, v []byte) error {
-				count++
+			if err := b.ForEach(func(k, v []byte) error {
 				valueSize := uint64(len(v))
 				if valueSize < minValueSize {
 					minValueSize = valueSize
@@ -90,10 +91,17 @@ func showBucketStats(db *bolt.DB, buckets map[string]*bolt.Bucket) {
 					maxKeySize = keyize
 				}
 				totalKeySize += uint64(len(k))
+				count++
 				return nil
-			})
+			}); err != nil {
+				log.Errorf("could not process row %d for bucket: %s, %v", count, bName, err)
+				return err
+			}
 			return nil
-		})
+		}); err != nil {
+			log.Errorf("could not get stats for bucket: %s, %v", bName, err)
+			continue
+		}
 		if count != 0 {
 			averageValueSize := totalValueSize / count
 			averageKeySize := totalKeySize / count
