@@ -10,6 +10,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -69,8 +70,73 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.S
 	}
 }
 
+// SubmitSignedContributionAndProof submits the signed sync committee contribution and proof to the beacon chain.
+func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot types.Slot, pubKey [48]byte) {
+	ctx, span := trace.StartSpan(ctx, "validator.SubmitSignedContributionAndProof")
+	defer span.End()
+	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
+
+	duty, err := v.duty(pubKey)
+	if err != nil {
+		log.Errorf("Could not fetch validator assignment: %v", err)
+		return
+	}
+
+	indexRes, err := v.validatorClient.GetSyncSubcommitteeIndex(ctx, &ethpb.SyncSubcommitteeIndexRequest{
+		PublicKey: pubKey[:],
+		Slot:      slot,
+	})
+	if err != nil {
+		log.Errorf("Could not get sync subcommittee index: %v", err)
+		return
+	}
+
+	selectionProofs := make([][]byte, len(indexRes.Indices))
+	for i, index := range indexRes.Indices {
+		selectionProof, err := v.signSyncSelectionData(ctx, pubKey, index, slot)
+		if err != nil {
+			log.Errorf("Could not sign selection data: %v", err)
+			return
+		}
+		selectionProofs[i] = selectionProof
+	}
+
+	v.waitToSlotTwoThirds(ctx, slot)
+
+	for i, subnetID := range indexRes.Indices {
+		contribution, err := v.validatorClient.GetSyncCommitteeContribution(ctx, &ethpb.SyncCommitteeContributionRequest{
+			Slot:      slot,
+			PublicKey: pubKey[:],
+			SubnetId:  subnetID,
+		})
+		if err != nil {
+			log.Errorf("Could not get sync committee contribution: %v", err)
+			return
+		}
+
+		contributionAndProof := &ethpb.ContributionAndProof{
+			AggregatorIndex: duty.ValidatorIndex,
+			Contribution:    contribution,
+			SelectionProof:  selectionProofs[i],
+		}
+		sig, err := v.signContributionAndProof(ctx, pubKey, contributionAndProof)
+		if err != nil {
+			log.Errorf("Could not sign contribution and proof: %v", err)
+			return
+		}
+
+		if _, err := v.validatorClient.SubmitSignedContributionAndProof(ctx, &ethpb.SignedContributionAndProof{
+			Message:   contributionAndProof,
+			Signature: sig,
+		}); err != nil {
+			log.Errorf("Could not submit signed contribution and proof: %v", err)
+			return
+		}
+	}
+}
+
 // Signs input slot with domain sync committee selection proof. This is used to create the signature for sync committee selection.
-func (v *validator) signSyncSelectionData(ctx context.Context, pubKey [48]byte, index uint64, slot types.Slot) ([]byte, error) {
+func (v *validator) signSyncSelectionData(ctx context.Context, pubKey [48]byte, index uint64, slot types.Slot) (signature []byte, err error) {
 	domain, err := v.domainData(ctx, helpers.SlotToEpoch(slot), params.BeaconConfig().DomainSyncCommitteeSelectionProof[:])
 	if err != nil {
 		return nil, err
@@ -88,6 +154,29 @@ func (v *validator) signSyncSelectionData(ctx context.Context, pubKey [48]byte, 
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
 		SignatureDomain: domain.SignatureDomain,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return sig.Marshal(), nil
+}
+
+// This returns the signature of validator signing over sync committee contribution and proof object.
+func (v *validator) signContributionAndProof(ctx context.Context, pubKey [48]byte, c *ethpb.ContributionAndProof) ([]byte, error) {
+	d, err := v.domainData(ctx, helpers.SlotToEpoch(c.Contribution.Slot), params.BeaconConfig().DomainContributionAndProof[:])
+	if err != nil {
+		return nil, err
+	}
+	var sig bls.Signature
+	root, err := helpers.ComputeSigningRoot(c, d.SignatureDomain)
+	if err != nil {
+		return nil, err
+	}
+	sig, err = v.keyManager.Sign(ctx, &validatorpb.SignRequest{
+		PublicKey:       pubKey[:],
+		SigningRoot:     root[:],
+		SignatureDomain: d.SignatureDomain,
 	})
 	if err != nil {
 		return nil, err
