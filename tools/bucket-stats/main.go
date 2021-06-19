@@ -50,20 +50,20 @@ func main() {
 
 	// get a list of all the existing buckets
 	buckets := make(map[string]*bolt.Bucket)
-	if err = db.View(func(tx *bolt.Tx) error {
+	if viewErr := db.View(func(tx *bolt.Tx) error {
 		return tx.ForEach(func(name []byte, buc *bolt.Bucket) error {
 			buckets[string(name)] = buc
 			return nil
 		})
-	}); err != nil {
-		log.Fatalf("could not find buckets, %v", err)
+	}); viewErr != nil {
+		log.Fatalf("could not find buckets, %v", viewErr)
 	}
 
 	showBucketStats(db, buckets)
 }
 
 func showBucketStats(db *bolt.DB, buckets map[string]*bolt.Bucket) {
-	for bName, _ := range buckets {
+	for bName := range buckets {
 		count := uint64(0)
 		minValueSize := ^uint64(0)
 		maxValueSize := uint64(0)
