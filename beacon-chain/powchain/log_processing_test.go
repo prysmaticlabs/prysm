@@ -25,7 +25,7 @@ import (
 
 func TestProcessDepositLog_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-	testutil.ResetCache()
+
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 
@@ -45,7 +45,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	require.NoError(t, err)
 
 	testAcc.Backend.Commit()
-	testutil.ResetCache()
+
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 
@@ -110,7 +110,6 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 
 	testAcc.Backend.Commit()
 
-	testutil.ResetCache()
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
@@ -166,7 +165,6 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 
 	testAcc.Backend.Commit()
 
-	testutil.ResetCache()
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
@@ -224,7 +222,6 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	testAcc.Backend.Commit()
 	require.NoError(t, testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond()))))
 
-	testutil.ResetCache()
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
@@ -294,7 +291,6 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	testAcc.Backend.Commit()
 	require.NoError(t, testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond()))))
 
-	testutil.ResetCache()
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(uint64(depositsReqForChainStart))
 	require.NoError(t, err)
 	_, roots, err := testutil.DeterministicDepositTrie(len(deposits))

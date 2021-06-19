@@ -9,6 +9,10 @@ import (
 type BeaconEndpointFactory struct {
 }
 
+func (f *BeaconEndpointFactory) IsNil() bool {
+	return f == nil
+}
+
 // Paths is a collection of all valid beacon chain API paths.
 func (f *BeaconEndpointFactory) Paths() []string {
 	return []string{
