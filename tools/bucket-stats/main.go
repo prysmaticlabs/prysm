@@ -46,7 +46,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("could not open db, %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		err := db.Close()
+		if err != nil {
+			log.Fatalf("could not close the db properlt, %v", err)
+		}
+	}()
 
 	// get a list of all the existing buckets
 	buckets := make(map[string]*bolt.Bucket)
