@@ -2,6 +2,8 @@ package p2p
 
 import (
 	"context"
+	"errors"
+	"strings"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
@@ -38,7 +40,14 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 
 	topic += s.Encoding().ProtocolSuffix()
 	iterator := s.dv5Listener.RandomNodes()
-	iterator = filterNodes(ctx, iterator, s.filterPeerForSubnet(index))
+	switch {
+	case strings.Contains(topic, GossipAttestationMessage):
+		iterator = filterNodes(ctx, iterator, s.filterPeerForAttSubnet(index))
+	case strings.Contains(topic, GossipSyncCommitteeMessage):
+		iterator = filterNodes(ctx, iterator, s.filterPeerForSyncSubnet(index))
+	default:
+		return false, errors.New("no subnet exists for provided topic")
+	}
 
 	currNum := uint64(len(s.pubsub.ListPeers(topic)))
 	wg := new(sync.WaitGroup)
@@ -71,12 +80,33 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 }
 
 // returns a method with filters peers specifically for a particular attestation subnet.
-func (s *Service) filterPeerForSubnet(index uint64) func(node *enode.Node) bool {
+func (s *Service) filterPeerForAttSubnet(index uint64) func(node *enode.Node) bool {
 	return func(node *enode.Node) bool {
 		if !s.filterPeer(node) {
 			return false
 		}
 		subnets, err := attSubnets(node.Record())
+		if err != nil {
+			return false
+		}
+		indExists := false
+		for _, comIdx := range subnets {
+			if comIdx == index {
+				indExists = true
+				break
+			}
+		}
+		return indExists
+	}
+}
+
+// returns a method with filters peers specifically for a particular attestation subnet.
+func (s *Service) filterPeerForSyncSubnet(index uint64) func(node *enode.Node) bool {
+	return func(node *enode.Node) bool {
+		if !s.filterPeer(node) {
+			return false
+		}
+		subnets, err := syncSubnets(node.Record())
 		if err != nil {
 			return false
 		}

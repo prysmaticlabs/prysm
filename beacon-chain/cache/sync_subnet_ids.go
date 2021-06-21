@@ -26,15 +26,25 @@ func newSyncSubnetIDs() *syncSubnetIDs {
 
 // GetSyncCommitteeSubnets retrieves the sync committee subnet and expiration time of that validator's
 // subscription.
-func (s *syncSubnetIDs) GetSyncCommitteeSubnets(pubkey []byte) ([]uint64, bool, time.Time) {
+func (s *syncSubnetIDs) GetSyncCommitteeSubnets(pubkey []byte) ([]uint64, uint64, bool, time.Time) {
 	s.sCommiteeLock.RLock()
 	defer s.sCommiteeLock.RUnlock()
 
 	id, duration, ok := s.sCommittee.GetWithExpiration(string(pubkey))
 	if !ok {
-		return []uint64{}, ok, time.Time{}
+		return []uint64{}, 0, ok, time.Time{}
 	}
-	return id.([]uint64), ok, duration
+	// Retrieve the slot from the cache.
+	idxs, ok := id.([]uint64)
+	if !ok {
+		return []uint64{}, 0, ok, time.Time{}
+	}
+	// If no committees are saved, we return
+	// nothing.
+	if len(idxs) <= 1 {
+		return []uint64{}, 0, ok, time.Time{}
+	}
+	return idxs[1:], idxs[0], ok, duration
 }
 
 // GetAllSubnets retrieves all the non-expired subscribed subnets of all the validators
@@ -50,18 +60,28 @@ func (s *syncSubnetIDs) GetAllSubnets() []uint64 {
 		if v.Expired() {
 			continue
 		}
-		committees = append(committees, v.Object.([]uint64)...)
+		idxs, ok := v.Object.([]uint64)
+		if !ok {
+			continue
+		}
+		if len(idxs) <= 1 {
+			continue
+		}
+		// Ignore the first index as that represents the
+		// slot of the validator's assignments.
+		committees = append(committees, idxs[1:]...)
 	}
 	return sliceutil.SetUint64(committees)
 }
 
 // AddSyncCommitteeSubnets adds the relevant committee for that particular validator along with its
 // expiration period.
-func (s *syncSubnetIDs) AddSyncCommitteeSubnets(pubkey []byte, comIndex []uint64, duration time.Duration) {
+func (s *syncSubnetIDs) AddSyncCommitteeSubnets(pubkey []byte, slot uint64, comIndex []uint64, duration time.Duration) {
 	s.sCommiteeLock.Lock()
 	defer s.sCommiteeLock.Unlock()
 
-	s.sCommittee.Set(string(pubkey), comIndex, duration)
+	// Append the slot of the subnet into the first index here.
+	s.sCommittee.Set(string(pubkey), append([]uint64{slot}, comIndex...), duration)
 }
 
 // EmptyAllCaches empties out all the related caches and flushes any stored

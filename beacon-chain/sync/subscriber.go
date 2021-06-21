@@ -369,6 +369,106 @@ func (s *Service) subscribeAggregatorSubnet(
 	}
 }
 
+// subscribe to a static subnet  with the given topic and index.A given validator and subscription handler is
+// used to handle messages from the subnet. The base protobuf message is used to initialize new messages for decoding.
+func (s *Service) subscribeStaticWithSyncSubnets(topic string, validator pubsub.ValidatorEx, handle subHandler, digest [4]byte) {
+	genRoot := s.cfg.Chain.GenesisValidatorRoot()
+	_, e, err := p2putils.RetrieveForkDataFromDigest(digest, genRoot[:])
+	if err != nil {
+		panic(err)
+	}
+	base := p2p.GossipTopicMappings(topic, e)
+	if base == nil {
+		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topic))
+	}
+	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSubnetCount; i++ {
+		s.subscribeWithBase(s.addDigestAndIndexToTopic(topic, digest, i), validator, handle)
+	}
+	genesis := s.cfg.Chain.GenesisTime()
+	ticker := slotutil.NewSlotTicker(genesis, params.BeaconConfig().SecondsPerSlot)
+
+	go func() {
+		for {
+			select {
+			case <-s.ctx.Done():
+				ticker.Done()
+				return
+			case <-ticker.C():
+				if s.chainStarted.IsSet() && s.cfg.InitialSync.Syncing() {
+					continue
+				}
+				// Check every slot that there are enough peers
+				for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSubnetCount; i++ {
+					if !s.validPeersExist(s.addDigestAndIndexToTopic(topic, digest, i)) {
+						log.Debugf("No peers found subscribed to sync gossip subnet with "+
+							"committee index %d. Searching network for peers subscribed to the subnet.", i)
+						_, err := s.cfg.P2P.FindPeersWithSubnet(
+							s.ctx,
+							s.addDigestAndIndexToTopic(topic, digest, i),
+							i,
+							params.BeaconNetworkConfig().MinimumPeersInSubnet,
+						)
+						if err != nil {
+							log.WithError(err).Debug("Could not search for peers")
+							return
+						}
+					}
+				}
+			}
+		}
+	}()
+}
+
+// subscribe to a dynamically changing list of subnets. This method expects a fmt compatible
+// string for the topic name and the list of subnets for subscribed topics that should be
+// maintained.
+func (s *Service) subscribeDynamicWithSyncSubnets(
+	topicFormat string,
+	validate pubsub.ValidatorEx,
+	handle subHandler,
+	digest [4]byte,
+) {
+	genRoot := s.cfg.Chain.GenesisValidatorRoot()
+	_, e, err := p2putils.RetrieveForkDataFromDigest(digest, genRoot[:])
+	if err != nil {
+		panic(err)
+	}
+	base := p2p.GossipTopicMappings(topicFormat, e)
+	if base == nil {
+		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topicFormat))
+	}
+	subscriptions := make(map[uint64]*pubsub.Subscription, params.BeaconConfig().SyncCommitteeSubnetCount)
+	genesis := s.cfg.Chain.GenesisTime()
+	ticker := slotutil.NewSlotTicker(genesis, params.BeaconConfig().SecondsPerSlot)
+
+	go func() {
+		for {
+			select {
+			case <-s.ctx.Done():
+				ticker.Done()
+				return
+			case currentSlot := <-ticker.C():
+				if s.chainStarted.IsSet() && s.cfg.InitialSync.Syncing() {
+					continue
+				}
+				wantedSubs := s.retrievePersistentSubs(currentSlot)
+				// Resize as appropriate.
+				s.reValidateSubscriptions(subscriptions, wantedSubs, topicFormat, digest)
+
+				// subscribe desired aggregator subnets.
+				for _, idx := range wantedSubs {
+					s.subscribeAggregatorSubnet(subscriptions, idx, digest, validate, handle)
+				}
+				// find desired subs for attesters
+				attesterSubs := s.attesterSubnetIndices(currentSlot)
+				for _, idx := range attesterSubs {
+					s.lookupAttesterSubnets(digest, idx)
+				}
+			}
+		}
+	}()
+}
+
 // lookup peers for attester specific subnets.
 func (s *Service) lookupAttesterSubnets(digest [4]byte, idx uint64) {
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.Attestation{})]

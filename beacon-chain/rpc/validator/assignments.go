@@ -243,3 +243,29 @@ func assignValidatorToSubnet(pubkey []byte, status ethpb.ValidatorStatus) {
 	totalDuration := epochDuration * time.Duration(assignedDuration)
 	cache.SubnetIDs.AddPersistentCommittee(pubkey, assignedIdxs, totalDuration*time.Second)
 }
+
+// assignValidatorToSyncSubnet checks the status and pubkey of a particular validator
+// to discern whether persistent subnets need to be registered for them.
+func assignValidatorToSyncSubnet(pubkey []byte, status ethpb.ValidatorStatus) {
+	if status != ethpb.ValidatorStatus_ACTIVE && status != ethpb.ValidatorStatus_EXITING {
+		return
+	}
+
+	_, ok, expTime := cache.SubnetIDs.GetPersistentSubnets(pubkey)
+	if ok && expTime.After(timeutils.Now()) {
+		return
+	}
+	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
+	var assignedIdxs []uint64
+	randGen := rand.NewGenerator()
+	for i := uint64(0); i < params.BeaconConfig().RandomSubnetsPerValidator; i++ {
+		assignedIdx := randGen.Intn(int(params.BeaconNetworkConfig().AttestationSubnetCount))
+		assignedIdxs = append(assignedIdxs, uint64(assignedIdx))
+	}
+
+	assignedDuration := uint64(randGen.Intn(int(params.BeaconConfig().EpochsPerRandomSubnetSubscription)))
+	assignedDuration += params.BeaconConfig().EpochsPerRandomSubnetSubscription
+
+	totalDuration := epochDuration * time.Duration(assignedDuration)
+	cache.SubnetIDs.AddPersistentCommittee(pubkey, assignedIdxs, totalDuration*time.Second)
+}

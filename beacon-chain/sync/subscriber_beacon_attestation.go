@@ -40,6 +40,10 @@ func (s *Service) persistentSubnetIndices() []uint64 {
 	return cache.SubnetIDs.GetAllSubnets()
 }
 
+func (s *Service) syncSubnetIndices() []uint64 {
+	return cache.SyncSubnetIDs.GetAllSubnets()
+}
+
 func (s *Service) aggregatorSubnetIndices(currentSlot types.Slot) []uint64 {
 	endEpoch := helpers.SlotToEpoch(currentSlot) + 1
 	endSlot := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(endEpoch))
