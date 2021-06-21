@@ -5,16 +5,15 @@ package state
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/pkg/errors"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
 // GenesisBeaconState gets called when MinGenesisActiveValidatorCount count of
@@ -64,7 +63,7 @@ func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisT
 	}
 
 	// Process initial deposits.
-	state, err = updateGenesisEth1Data(state, deposits, eth1Data)
+	state, err = helpers.UpdateGenesisEth1Data(state, deposits, eth1Data)
 	if err != nil {
 		return nil, err
 	}
@@ -231,43 +230,4 @@ func IsValidGenesisState(chainStartDepositCount, currentTime uint64) bool {
 		return false
 	}
 	return true
-}
-
-func updateGenesisEth1Data(state iface.BeaconState, deposits []*ethpb.Deposit, eth1Data *ethpb.Eth1Data) (iface.BeaconState, error) {
-	if eth1Data == nil {
-		return nil, errors.New("no eth1data provided for genesis state")
-	}
-
-	var leaves [][]byte
-	for _, deposit := range deposits {
-		if deposit == nil || deposit.Data == nil {
-			return nil, fmt.Errorf("nil deposit or deposit with nil data cannot be processed: %v", deposit)
-		}
-		hash, err := deposit.Data.HashTreeRoot()
-		if err != nil {
-			return nil, err
-		}
-		leaves = append(leaves, hash[:])
-	}
-	var trie *trieutil.SparseMerkleTrie
-	var err error
-	if len(leaves) > 0 {
-		trie, err = trieutil.GenerateTrieFromItems(leaves, params.BeaconConfig().DepositContractTreeDepth)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		trie, err = trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	depositRoot := trie.Root()
-	eth1Data.DepositRoot = depositRoot[:]
-	err = state.SetEth1Data(eth1Data)
-	if err != nil {
-		return nil, err
-	}
-	return state, nil
 }

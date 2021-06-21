@@ -41,3 +41,87 @@ func TestSlotsSinceGenesis(t *testing.T) {
 		})
 	}
 }
+
+func TestAbsoluteValueSlotDifference(t *testing.T) {
+	type args struct {
+		x types.Slot
+		y types.Slot
+	}
+	tests := []struct {
+		name string
+		args args
+		want uint64
+	}{
+		{
+			name: "x_<_y",
+			args: args{
+				x: types.Slot(3),
+				y: types.Slot(4),
+			},
+			want: 1,
+		},
+		{
+			name: "x_>_y",
+			args: args{
+				x: types.Slot(100),
+				y: types.Slot(4),
+			},
+			want: 96,
+		},
+		{
+			name: "x_==_y",
+			args: args{
+				x: types.Slot(100),
+				y: types.Slot(100),
+			},
+			want: 0,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := AbsoluteValueSlotDifference(tt.args.x, tt.args.y); got != tt.want {
+				t.Errorf("AbsoluteValueSlotDifference() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestMultiplySlotBy(t *testing.T) {
+	type args struct {
+		times int64
+	}
+	tests := []struct {
+		name string
+		args args
+		want time.Duration
+	}{
+		{
+			name: "multiply by 1",
+			args: args{
+				times: 1,
+			},
+			want: time.Duration(12) * time.Second,
+		},
+		{
+			name: "multiply by 2",
+			args: args{
+				times: 2,
+			},
+			want: time.Duration(24) * time.Second,
+		},
+		{
+			name: "multiply by 10",
+			args: args{
+				times: 10,
+			},
+			want: time.Duration(120) * time.Second,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := MultiplySlotBy(tt.args.times); got != tt.want {
+				t.Errorf("MultiplySlotBy() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

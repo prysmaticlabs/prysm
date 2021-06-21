@@ -2,13 +2,14 @@ package clientstats
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -37,22 +38,76 @@ func TestBeaconNodeScraper(t *testing.T) {
 	bnScraper := beaconNodeScraper{}
 	bnScraper.tripper = &mockRT{body: prometheusTestBody}
 	r, err := bnScraper.Scrape()
-	assert.NoError(t, err, "Unexpected error calling beaconNodeScraper.Scrape")
+	require.NoError(t, err, "Unexpected error calling beaconNodeScraper.Scrape")
 	bs := &BeaconNodeStats{}
 	err = json.NewDecoder(r).Decode(bs)
-	assert.NoError(t, err, "Unexpected error decoding result of beaconNodeScraper.Scrape")
+	require.NoError(t, err, "Unexpected error decoding result of beaconNodeScraper.Scrape")
 	// CommonStats
-	assert.Equal(t, int64(225), bs.CPUProcessSecondsTotal)
-	assert.Equal(t, int64(1166630912), bs.MemoryProcessBytes)
-	assert.Equal(t, int64(1619586241), bs.ClientBuild)
-	assert.Equal(t, "v1.3.8-hotfix+6c0942", bs.ClientVersion)
-	assert.Equal(t, "prysm", bs.ClientName)
+	require.Equal(t, int64(225), bs.CPUProcessSecondsTotal)
+	require.Equal(t, int64(1166630912), bs.MemoryProcessBytes)
+	require.Equal(t, int64(1619586241), bs.ClientBuild)
+	require.Equal(t, "v1.3.8-hotfix+6c0942", bs.ClientVersion)
+	require.Equal(t, "prysm", bs.ClientName)
 
 	// BeaconNodeStats
-	assert.Equal(t, int64(256552), bs.SyncBeaconHeadSlot)
-	assert.Equal(t, true, bs.SyncEth2Synced)
-	assert.Equal(t, int64(7365341184), bs.DiskBeaconchainBytesTotal)
-	assert.Equal(t, int64(37), bs.NetworkPeersConnected)
+	require.Equal(t, int64(256552), bs.SyncBeaconHeadSlot)
+	require.Equal(t, true, bs.SyncEth2Synced)
+	require.Equal(t, int64(7365341184), bs.DiskBeaconchainBytesTotal)
+	require.Equal(t, int64(37), bs.NetworkPeersConnected)
+	require.Equal(t, true, bs.SyncEth1Connected)
+	require.Equal(t, true, bs.SyncEth1FallbackConfigured)
+	require.Equal(t, true, bs.SyncEth1FallbackConnected)
+}
+
+// helper function to wrap up all the scrape logic so tests can focus on data cases and assertions
+func scrapeBeaconNodeStats(body string) (*BeaconNodeStats, error) {
+	if !strings.HasSuffix(body, "\n") {
+		return nil, fmt.Errorf("Bad test fixture -- make sure there is a trailing newline unless you want to waste time debugging tests")
+	}
+	bnScraper := beaconNodeScraper{}
+	bnScraper.tripper = &mockRT{body: body}
+	r, err := bnScraper.Scrape()
+	if err != nil {
+		return nil, err
+	}
+	bs := &BeaconNodeStats{}
+	err = json.NewDecoder(r).Decode(bs)
+	return bs, err
+}
+
+func TestInvertEth1Metrics(t *testing.T) {
+	cases := []struct {
+		key  string
+		body string
+		test func(*BeaconNodeStats) bool
+	}{
+		{
+			key:  "SyncEth1Connected",
+			body: strings.Replace(prometheusTestBody, "powchain_sync_eth1_connected 1", "powchain_sync_eth1_connected 0", 1),
+			test: func(bs *BeaconNodeStats) bool {
+				return bs.SyncEth1Connected == false && bs.SyncEth1FallbackConfigured == true && bs.SyncEth1FallbackConnected == true
+			},
+		},
+		{
+			key:  "SyncEth1FallbackConfigured",
+			body: strings.Replace(prometheusTestBody, "powchain_sync_eth1_fallback_configured 1", "powchain_sync_eth1_fallback_configured 0", 1),
+			test: func(bs *BeaconNodeStats) bool {
+				return bs.SyncEth1Connected == true && bs.SyncEth1FallbackConfigured == false && bs.SyncEth1FallbackConnected == true
+			},
+		},
+		{
+			key:  "SyncEth1FallbackConnected",
+			body: strings.Replace(prometheusTestBody, "powchain_sync_eth1_fallback_connected 1", "powchain_sync_eth1_fallback_connected 0", 1),
+			test: func(bs *BeaconNodeStats) bool {
+				return bs.SyncEth1Connected == true && bs.SyncEth1FallbackConfigured == true && bs.SyncEth1FallbackConnected == false
+			},
+		},
+	}
+	for _, c := range cases {
+		bs, err := scrapeBeaconNodeStats(c.body)
+		require.NoError(t, err)
+		require.Equal(t, true, c.test(bs), "BeaconNodeStats.%s was not false, with prometheus body=%s", c.key, c.body)
+	}
 }
 
 func TestFalseEth2Synced(t *testing.T) {
@@ -60,57 +115,57 @@ func TestFalseEth2Synced(t *testing.T) {
 	eth2NotSynced := strings.Replace(prometheusTestBody, "beacon_head_slot 256552", "beacon_head_slot 256559", 1)
 	bnScraper.tripper = &mockRT{body: eth2NotSynced}
 	r, err := bnScraper.Scrape()
-	assert.NoError(t, err, "Unexpected error calling beaconNodeScraper.Scrape")
+	require.NoError(t, err, "Unexpected error calling beaconNodeScraper.Scrape")
 
 	bs := &BeaconNodeStats{}
 	err = json.NewDecoder(r).Decode(bs)
-	assert.NoError(t, err, "Unexpected error decoding result of beaconNodeScraper.Scrape")
+	require.NoError(t, err, "Unexpected error decoding result of beaconNodeScraper.Scrape")
 
-	assert.Equal(t, false, bs.SyncEth2Synced)
+	require.Equal(t, false, bs.SyncEth2Synced)
 }
 
 func TestValidatorScraper(t *testing.T) {
 	vScraper := validatorScraper{}
 	vScraper.tripper = &mockRT{body: statusFixtureOneOfEach + prometheusTestBody}
 	r, err := vScraper.Scrape()
-	assert.NoError(t, err, "Unexpected error calling validatorScraper.Scrape")
+	require.NoError(t, err, "Unexpected error calling validatorScraper.Scrape")
 	vs := &ValidatorStats{}
 	err = json.NewDecoder(r).Decode(vs)
-	assert.NoError(t, err, "Unexpected error decoding result of validatorScraper.Scrape")
+	require.NoError(t, err, "Unexpected error decoding result of validatorScraper.Scrape")
 	// CommonStats
-	assert.Equal(t, int64(225), vs.CPUProcessSecondsTotal)
-	assert.Equal(t, int64(1166630912), vs.MemoryProcessBytes)
-	assert.Equal(t, int64(1619586241), vs.ClientBuild)
-	assert.Equal(t, "v1.3.8-hotfix+6c0942", vs.ClientVersion)
-	assert.Equal(t, "prysm", vs.ClientName)
-	assert.Equal(t, int64(7), vs.ValidatorTotal)
-	assert.Equal(t, int64(1), vs.ValidatorActive)
+	require.Equal(t, int64(225), vs.CPUProcessSecondsTotal)
+	require.Equal(t, int64(1166630912), vs.MemoryProcessBytes)
+	require.Equal(t, int64(1619586241), vs.ClientBuild)
+	require.Equal(t, "v1.3.8-hotfix+6c0942", vs.ClientVersion)
+	require.Equal(t, "prysm", vs.ClientName)
+	require.Equal(t, int64(7), vs.ValidatorTotal)
+	require.Equal(t, int64(1), vs.ValidatorActive)
 }
 
 func TestValidatorScraperAllActive(t *testing.T) {
 	vScraper := validatorScraper{}
 	vScraper.tripper = &mockRT{body: statusFixtureAllActive + prometheusTestBody}
 	r, err := vScraper.Scrape()
-	assert.NoError(t, err, "Unexpected error calling validatorScraper.Scrape")
+	require.NoError(t, err, "Unexpected error calling validatorScraper.Scrape")
 	vs := &ValidatorStats{}
 	err = json.NewDecoder(r).Decode(vs)
-	assert.NoError(t, err, "Unexpected error decoding result of validatorScraper.Scrape")
+	require.NoError(t, err, "Unexpected error decoding result of validatorScraper.Scrape")
 	// CommonStats
-	assert.Equal(t, int64(4), vs.ValidatorTotal)
-	assert.Equal(t, int64(4), vs.ValidatorActive)
+	require.Equal(t, int64(4), vs.ValidatorTotal)
+	require.Equal(t, int64(4), vs.ValidatorActive)
 }
 
 func TestValidatorScraperNoneActive(t *testing.T) {
 	vScraper := validatorScraper{}
 	vScraper.tripper = &mockRT{body: statusFixtureNoneActive + prometheusTestBody}
 	r, err := vScraper.Scrape()
-	assert.NoError(t, err, "Unexpected error calling validatorScraper.Scrape")
+	require.NoError(t, err, "Unexpected error calling validatorScraper.Scrape")
 	vs := &ValidatorStats{}
 	err = json.NewDecoder(r).Decode(vs)
-	assert.NoError(t, err, "Unexpected error decoding result of validatorScraper.Scrape")
+	require.NoError(t, err, "Unexpected error decoding result of validatorScraper.Scrape")
 	// CommonStats
-	assert.Equal(t, int64(6), vs.ValidatorTotal)
-	assert.Equal(t, int64(0), vs.ValidatorActive)
+	require.Equal(t, int64(6), vs.ValidatorTotal)
+	require.Equal(t, int64(0), vs.ValidatorActive)
 }
 
 func mockNowFunc(fixedTime time.Time) func() time.Time {
@@ -126,16 +181,16 @@ func TestValidatorAPIMessageDefaults(t *testing.T) {
 	vScraper := validatorScraper{}
 	vScraper.tripper = &mockRT{body: statusFixtureOneOfEach + prometheusTestBody}
 	r, err := vScraper.Scrape()
-	assert.NoError(t, err, "unexpected error from validatorScraper.Scrape()")
+	require.NoError(t, err, "unexpected error from validatorScraper.Scrape()")
 
 	vs := &ValidatorStats{}
 	err = json.NewDecoder(r).Decode(vs)
-	assert.NoError(t, err, "Unexpected error decoding result of validatorScraper.Scrape")
+	require.NoError(t, err, "Unexpected error decoding result of validatorScraper.Scrape")
 
 	// CommonStats
-	assert.Equal(t, nowMillis, vs.Timestamp, "Unexpected 'timestamp' in client-stats APIMessage struct")
-	assert.Equal(t, APIVersion, vs.APIVersion, "Unexpected 'version' in client-stats APIMessage struct")
-	assert.Equal(t, ValidatorProcessName, vs.ProcessName, "Unexpected value for 'process' in client-stats APIMessage struct")
+	require.Equal(t, nowMillis, vs.Timestamp, "Unexpected 'timestamp' in client-stats APIMessage struct")
+	require.Equal(t, APIVersion, vs.APIVersion, "Unexpected 'version' in client-stats APIMessage struct")
+	require.Equal(t, ValidatorProcessName, vs.ProcessName, "Unexpected value for 'process' in client-stats APIMessage struct")
 }
 
 func TestBeaconNodeAPIMessageDefaults(t *testing.T) {
@@ -145,16 +200,16 @@ func TestBeaconNodeAPIMessageDefaults(t *testing.T) {
 	bScraper := beaconNodeScraper{}
 	bScraper.tripper = &mockRT{body: prometheusTestBody}
 	r, err := bScraper.Scrape()
-	assert.NoError(t, err, "unexpected error from beaconNodeScraper.Scrape()")
+	require.NoError(t, err, "unexpected error from beaconNodeScraper.Scrape()")
 
 	vs := &BeaconNodeStats{}
 	err = json.NewDecoder(r).Decode(vs)
-	assert.NoError(t, err, "Unexpected error decoding result of beaconNodeScraper.Scrape")
+	require.NoError(t, err, "Unexpected error decoding result of beaconNodeScraper.Scrape")
 
 	// CommonStats
-	assert.Equal(t, nowMillis, vs.Timestamp, "Unexpected 'timestamp' in client-stats APIMessage struct")
-	assert.Equal(t, APIVersion, vs.APIVersion, "Unexpected 'version' in client-stats APIMessage struct")
-	assert.Equal(t, BeaconNodeProcessName, vs.ProcessName, "Unexpected value for 'process' in client-stats APIMessage struct")
+	require.Equal(t, nowMillis, vs.Timestamp, "Unexpected 'timestamp' in client-stats APIMessage struct")
+	require.Equal(t, APIVersion, vs.APIVersion, "Unexpected 'version' in client-stats APIMessage struct")
+	require.Equal(t, BeaconNodeProcessName, vs.ProcessName, "Unexpected value for 'process' in client-stats APIMessage struct")
 }
 
 func TestBadInput(t *testing.T) {
@@ -162,8 +217,8 @@ func TestBadInput(t *testing.T) {
 	bnScraper := beaconNodeScraper{}
 	bnScraper.tripper = &mockRT{body: ""}
 	_, err := bnScraper.Scrape()
-	assert.NoError(t, err)
-	assert.LogsContain(t, hook, "Failed to get prysm_version")
+	require.NoError(t, err)
+	require.LogsContain(t, hook, "Failed to get prysm_version")
 }
 
 var prometheusTestBody = `
@@ -200,6 +255,15 @@ p2p_peer_count{state="Connected"} 37
 p2p_peer_count{state="Connecting"} 0
 p2p_peer_count{state="Disconnected"} 62
 p2p_peer_count{state="Disconnecting"} 0
+# HELP powchain_sync_eth1_connected Boolean indicating whether a fallback eth1 endpoint is currently connected: 0=false, 1=true.
+# TYPE powchain_sync_eth1_connected gauge
+powchain_sync_eth1_connected 1
+# HELP powchain_sync_eth1_fallback_configured Boolean recording whether a fallback eth1 endpoint was configured: 0=false, 1=true.
+# TYPE powchain_sync_eth1_fallback_configured gauge
+powchain_sync_eth1_fallback_configured 1
+# HELP powchain_sync_eth1_fallback_connected Boolean indicating whether a fallback eth1 endpoint is currently connected: 0=false, 1=true.
+# TYPE powchain_sync_eth1_fallback_connected gauge
+powchain_sync_eth1_fallback_connected 1
 `
 
 var statusFixtureOneOfEach = `# HELP validator_statuses validator statuses: 0 UNKNOWN, 1 DEPOSITED, 2 PENDING, 3 ACTIVE, 4 EXITING, 5 SLASHING, 6 EXITED

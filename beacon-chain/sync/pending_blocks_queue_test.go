@@ -7,15 +7,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/copyutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
-
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	gcache "github.com/patrickmn/go-cache"
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
@@ -23,6 +21,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/copyutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -449,4 +450,77 @@ func TestService_AddPeningBlockToQueueOverMax(t *testing.T) {
 	b3.Block.StateRoot = []byte{'c'}
 	require.NoError(t, r.insertBlockToPendingQueue(0, interfaces.WrappedPhase0SignedBeaconBlock(b2), [32]byte{3}))
 	require.Equal(t, maxBlocksPerSlot, len(r.pendingBlocksInCache(0)))
+}
+
+func TestService_ProcessPendingBlockOnCorrectSlot(t *testing.T) {
+	ctx := context.Background()
+	db := dbtest.SetupDB(t)
+
+	p1 := p2ptest.NewTestP2P(t)
+	mockChain := mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
+		FinalizedCheckPoint: &ethpb.Checkpoint{
+			Epoch: 0,
+		}}
+	r := &Service{
+		cfg: &Config{
+			P2P:      p1,
+			DB:       db,
+			Chain:    &mockChain,
+			StateGen: stategen.New(db),
+		},
+		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
+		seenPendingBlocks:   make(map[[32]byte]bool),
+	}
+	err := r.initCaches()
+	require.NoError(t, err)
+
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
+	parentBlock := testutil.NewBeaconBlock()
+	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(parentBlock)))
+	bRoot, err := parentBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
+	require.NoError(t, db.SaveStateSummary(ctx, &pb.StateSummary{Root: bRoot[:]}))
+	copied := beaconState.Copy()
+	require.NoError(t, copied.SetSlot(1))
+	proposerIdx, err := helpers.BeaconProposerIndex(copied)
+	require.NoError(t, err)
+
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	mockChain.Root = bRoot[:]
+	mockChain.State = st
+
+	b1 := testutil.NewBeaconBlock()
+	b1.Block.ParentRoot = bRoot[:]
+	b1.Block.Slot = 1
+	b1Root, err := b1.Block.HashTreeRoot()
+	require.NoError(t, err)
+	b1.Block.ProposerIndex = proposerIdx
+	b1.Signature, err = helpers.ComputeDomainAndSign(beaconState, 0, b1.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	require.NoError(t, err)
+
+	b2 := testutil.NewBeaconBlock()
+	b2.Block.Slot = 2
+	b2.Block.ParentRoot = bRoot[:]
+	b2Root, err := b2.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	b3 := testutil.NewBeaconBlock()
+	b3.Block.Slot = 3
+	b3.Block.ParentRoot = b2Root[:]
+	b3Root, err := b3.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	// Add block1 for slot1
+	require.NoError(t, r.insertBlockToPendingQueue(b1.Block.Slot, interfaces.WrappedPhase0SignedBeaconBlock(b1), b1Root))
+	// Add block2 for slot2
+	require.NoError(t, r.insertBlockToPendingQueue(b2.Block.Slot, interfaces.WrappedPhase0SignedBeaconBlock(b2), b2Root))
+	// Add block3 for slot3
+	require.NoError(t, r.insertBlockToPendingQueue(b3.Block.Slot, interfaces.WrappedPhase0SignedBeaconBlock(b3), b3Root))
+
+	// processPendingBlocks should process only blocks of the current slot. i.e. slot 1.
+	// Then check if the other two blocks are still in the pendingQueue.
+	require.NoError(t, r.processPendingBlocks(context.Background()))
+	assert.Equal(t, 2, len(r.slotToPendingBlocks.Items()), "Incorrect size for slot to pending blocks cache")
 }
