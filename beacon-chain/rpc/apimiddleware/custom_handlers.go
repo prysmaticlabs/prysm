@@ -3,6 +3,7 @@ package apimiddleware
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -10,8 +11,10 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eventsv1"
 	"github.com/prysmaticlabs/prysm/shared/gateway"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
+	"github.com/r3labs/sse"
 )
 
 type sszConfig struct {
@@ -156,4 +159,53 @@ func writeSSZResponseHeaderAndBody(grpcResp *http.Response, w http.ResponseWrite
 		return &gateway.DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
 	}
 	return nil
+}
+
+func handleEvents(m *gateway.ApiProxyMiddleware, _ gateway.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
+	// TODO: Handle errors
+	// TODO: Co jeżeli grpc-gateway nie zwróci 200?
+
+	// TODO: Address
+	sseClient := sse.NewClient("http://" + m.GatewayAddress + req.URL.RequestURI())
+	if err := sseClient.Subscribe(eventsv1.HeadTopic, func(msg *sse.Event) {
+		data := &eventHeadJson{}
+		if err := json.Unmarshal(msg.Data, data); err != nil {
+
+		}
+		errJson := gateway.ProcessMiddlewareResponseFields(data)
+		if errJson != nil {
+
+		}
+		dataJson, errJson := gateway.SerializeMiddlewareResponseIntoJson(data)
+		if errJson != nil {
+
+		}
+
+		// TODO: Extract to func
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(200)
+		//w.Header().Set("Content-Length", strconv.Itoa(len([]byte("event:"))+len(msg.Event)+len("\ndata: ")+len(dataJson)+len("\n\n")))
+		if _, err := w.Write([]byte("event: ")); err != nil {
+
+		}
+		if _, err := w.Write(msg.Event); err != nil {
+
+		}
+		if _, err := w.Write([]byte("\ndata: ")); err != nil {
+
+		}
+		if _, err := w.Write(dataJson); err != nil {
+
+		}
+		if _, err := w.Write([]byte("\n\n")); err != nil {
+
+		}
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+
+		}
+		flusher.Flush()
+	}); err != nil {
+	}
+	return true
 }

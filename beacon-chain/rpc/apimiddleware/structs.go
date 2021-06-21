@@ -455,6 +455,20 @@ func (ssz *beaconStateSSZResponseJson) SSZData() string {
 	return ssz.Data
 }
 
+// TODO: Documentation
+// ---------------
+// Events.
+// ---------------
+
+type eventHeadJson struct {
+	Slot                      string `json:"slot"`
+	Block                     string `json:"block" hex:"true"`
+	State                     string `json:"state" hex:"true"`
+	EpochTransition           bool   `json:"epoch_transition"`
+	PreviousDutyDependentRoot string `json:"previous_duty_dependent_root" hex:"true"`
+	CurrentDutyDependentRoot  string `json:"current_duty_dependent_root" hex:"true"`
+}
+
 // ---------------
 // Error handling.
 // ---------------

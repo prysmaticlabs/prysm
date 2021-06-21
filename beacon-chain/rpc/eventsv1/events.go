@@ -15,22 +15,23 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
+// TODO: documentation
 const (
-	headTopic                = "head"
-	blockTopic               = "block"
-	attestationTopic         = "attestation"
-	voluntaryExitTopic       = "voluntary_exit"
-	finalizedCheckpointTopic = "finalized_checkpoint"
-	chainReorgTopic          = "chain_reorg"
+	HeadTopic                = "head"
+	BlockTopic               = "block"
+	AttestationTopic         = "attestation"
+	VoluntaryExitTopic       = "voluntary_exit"
+	FinalizedCheckpointTopic = "finalized_checkpoint"
+	ChainReorgTopic          = "chain_reorg"
 )
 
 var casesHandled = map[string]bool{
-	headTopic:                true,
-	blockTopic:               true,
-	attestationTopic:         true,
-	voluntaryExitTopic:       true,
-	finalizedCheckpointTopic: true,
-	chainReorgTopic:          true,
+	HeadTopic:                true,
+	BlockTopic:               true,
+	AttestationTopic:         true,
+	VoluntaryExitTopic:       true,
+	FinalizedCheckpointTopic: true,
+	ChainReorgTopic:          true,
 }
 
 // StreamEvents allows requesting all events from a set of topics defined in the eth2.0-apis standard.
@@ -93,7 +94,7 @@ func (s *Server) handleBlockEvents(
 ) error {
 	switch event.Type {
 	case blockfeed.ReceivedBlock:
-		if _, ok := requestedTopics[blockTopic]; !ok {
+		if _, ok := requestedTopics[BlockTopic]; !ok {
 			return nil
 		}
 		blkData, ok := event.Data.(*blockfeed.ReceivedBlockData)
@@ -112,7 +113,7 @@ func (s *Server) handleBlockEvents(
 			Slot:  v1Data.Message.Slot,
 			Block: item[:],
 		}
-		return s.streamData(stream, blockTopic, eventBlock)
+		return s.streamData(stream, BlockTopic, eventBlock)
 	default:
 		return nil
 	}
@@ -123,7 +124,7 @@ func (s *Server) handleBlockOperationEvents(
 ) error {
 	switch event.Type {
 	case operation.AggregatedAttReceived:
-		if _, ok := requestedTopics[attestationTopic]; !ok {
+		if _, ok := requestedTopics[AttestationTopic]; !ok {
 			return nil
 		}
 		attData, ok := event.Data.(*operation.AggregatedAttReceivedData)
@@ -131,9 +132,9 @@ func (s *Server) handleBlockOperationEvents(
 			return nil
 		}
 		v1Data := migration.V1Alpha1AggregateAttAndProofToV1(attData.Attestation)
-		return s.streamData(stream, attestationTopic, v1Data)
+		return s.streamData(stream, AttestationTopic, v1Data)
 	case operation.UnaggregatedAttReceived:
-		if _, ok := requestedTopics[attestationTopic]; !ok {
+		if _, ok := requestedTopics[AttestationTopic]; !ok {
 			return nil
 		}
 		attData, ok := event.Data.(*operation.UnAggregatedAttReceivedData)
@@ -141,9 +142,9 @@ func (s *Server) handleBlockOperationEvents(
 			return nil
 		}
 		v1Data := migration.V1Alpha1AttestationToV1(attData.Attestation)
-		return s.streamData(stream, attestationTopic, v1Data)
+		return s.streamData(stream, AttestationTopic, v1Data)
 	case operation.ExitReceived:
-		if _, ok := requestedTopics[voluntaryExitTopic]; !ok {
+		if _, ok := requestedTopics[VoluntaryExitTopic]; !ok {
 			return nil
 		}
 		exitData, ok := event.Data.(*operation.ExitReceivedData)
@@ -151,7 +152,7 @@ func (s *Server) handleBlockOperationEvents(
 			return nil
 		}
 		v1Data := migration.V1Alpha1ExitToV1(exitData.Exit)
-		return s.streamData(stream, voluntaryExitTopic, v1Data)
+		return s.streamData(stream, VoluntaryExitTopic, v1Data)
 	default:
 		return nil
 	}
@@ -162,32 +163,32 @@ func (s *Server) handleStateEvents(
 ) error {
 	switch event.Type {
 	case statefeed.NewHead:
-		if _, ok := requestedTopics[headTopic]; !ok {
+		if _, ok := requestedTopics[HeadTopic]; !ok {
 			return nil
 		}
 		head, ok := event.Data.(*ethpb.EventHead)
 		if !ok {
 			return nil
 		}
-		return s.streamData(stream, headTopic, head)
+		return s.streamData(stream, HeadTopic, head)
 	case statefeed.FinalizedCheckpoint:
-		if _, ok := requestedTopics[finalizedCheckpointTopic]; !ok {
+		if _, ok := requestedTopics[FinalizedCheckpointTopic]; !ok {
 			return nil
 		}
 		finalizedCheckpoint, ok := event.Data.(*ethpb.EventFinalizedCheckpoint)
 		if !ok {
 			return nil
 		}
-		return s.streamData(stream, finalizedCheckpointTopic, finalizedCheckpoint)
+		return s.streamData(stream, FinalizedCheckpointTopic, finalizedCheckpoint)
 	case statefeed.Reorg:
-		if _, ok := requestedTopics[chainReorgTopic]; !ok {
+		if _, ok := requestedTopics[ChainReorgTopic]; !ok {
 			return nil
 		}
 		reorg, ok := event.Data.(*ethpb.EventChainReorg)
 		if !ok {
 			return nil
 		}
-		return s.streamData(stream, chainReorgTopic, reorg)
+		return s.streamData(stream, ChainReorgTopic, reorg)
 	default:
 		return nil
 	}
