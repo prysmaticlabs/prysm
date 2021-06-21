@@ -32,7 +32,7 @@ const depositDeadline = 20 * time.Second
 // This defines size of the upper bound for initial sync block cache.
 var initialSyncBlockCacheSize = uint64(2 * params.BeaconConfig().SlotsPerEpoch)
 
-// onBlock is called when a gossip block is received. It runs regular state transition on the block.
+// OnBlock is called when a gossip block is received. It runs regular state transition on the block.
 // The block's signing root should be computed before calling this method to avoid redundant
 // computation in this method and methods it calls into.
 //
@@ -83,8 +83,8 @@ var initialSyncBlockCacheSize = uint64(2 * params.BeaconConfig().SlotsPerEpoch)
 //            ancestor_at_finalized_slot = get_ancestor(store, store.justified_checkpoint.root, finalized_slot)
 //            if ancestor_at_finalized_slot != store.finalized_checkpoint.root:
 //                store.justified_checkpoint = state.current_justified_checkpoint
-func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "blockChain.onBlock")
+func (s *Service) OnBlock(ctx context.Context, signed interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "blockChain.OnBlock")
 	defer span.End()
 
 	if signed == nil || signed.IsNil() || signed.Block().IsNil() {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
@@ -80,6 +81,13 @@ func (s *Service) FinalizedCheckpt() *ethpb.Checkpoint {
 	return copyutil.CopyCheckpoint(s.finalizedCheckpt)
 }
 
+func (s *Service) SetFinalizedCheckpt(cpt *ethpb.Checkpoint) error {
+	if cpt.Root == nil {
+		return errors.New("nil root")
+	}
+	s.finalizedCheckpt = cpt
+	return nil
+}
 // CurrentJustifiedCheckpt returns the current justified checkpoint from head state.
 func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
 	if s.justifiedCheckpt == nil {

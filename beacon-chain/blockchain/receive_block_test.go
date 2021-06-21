@@ -137,7 +137,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 			}
 			s, err := NewService(ctx, cfg)
 			require.NoError(t, err)
-			require.NoError(t, s.saveGenesisData(ctx, genesis))
+			require.NoError(t, s.SaveGenesisData(ctx, genesis))
 			gBlk, err := s.cfg.BeaconDB.GenesisBlock(ctx)
 			require.NoError(t, err)
 			gRoot, err := gBlk.Block().HashTreeRoot()
@@ -178,7 +178,7 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 	}
 	s, err := NewService(ctx, cfg)
 	require.NoError(t, err)
-	require.NoError(t, s.saveGenesisData(ctx, genesis))
+	require.NoError(t, s.SaveGenesisData(ctx, genesis))
 	gBlk, err := s.cfg.BeaconDB.GenesisBlock(ctx)
 	require.NoError(t, err)
 	gRoot, err := gBlk.Block().HashTreeRoot()
@@ -259,7 +259,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 			}
 			s, err := NewService(ctx, cfg)
 			require.NoError(t, err)
-			err = s.saveGenesisData(ctx, genesis)
+			err = s.SaveGenesisData(ctx, genesis)
 			require.NoError(t, err)
 			gBlk, err := s.cfg.BeaconDB.GenesisBlock(ctx)
 			require.NoError(t, err)

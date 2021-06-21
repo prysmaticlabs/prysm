@@ -37,7 +37,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaco
 	blockCopy := block.Copy()
 
 	// Apply state transition on the new block.
-	if err := s.onBlock(ctx, blockCopy, blockRoot); err != nil {
+	if err := s.OnBlock(ctx, blockCopy, blockRoot); err != nil {
 		err := errors.Wrap(err, "could not process block")
 		traceutil.AnnotateError(span, err)
 		return err

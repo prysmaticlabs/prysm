@@ -106,7 +106,7 @@ func TestProcessAttestations_Ok(t *testing.T) {
 	require.NoError(t, err)
 	genesisState, pks := testutil.DeterministicGenesisState(t, 64)
 	require.NoError(t, genesisState.SetGenesisTime(uint64(timeutils.Now().Unix())-params.BeaconConfig().SecondsPerSlot))
-	require.NoError(t, service.saveGenesisData(ctx, genesisState))
+	require.NoError(t, service.SaveGenesisData(ctx, genesisState))
 	atts, err := testutil.GenerateAttestations(genesisState, pks, 1, 0, false)
 	require.NoError(t, err)
 	tRoot := bytesutil.ToBytes32(atts[0].Data.Target.Root)

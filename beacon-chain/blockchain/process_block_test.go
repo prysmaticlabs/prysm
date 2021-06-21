@@ -122,7 +122,7 @@ func TestStore_OnBlock(t *testing.T) {
 
 			root, err := tt.blk.Block.HashTreeRoot()
 			assert.NoError(t, err)
-			err = service.onBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(tt.blk), root)
+			err = service.OnBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(tt.blk), root)
 			assert.ErrorContains(t, tt.wantErrString, err)
 		})
 	}
@@ -937,7 +937,7 @@ func TestOnBlock_CanFinalize(t *testing.T) {
 	require.NoError(t, err)
 
 	gs, keys := testutil.DeterministicGenesisState(t, 32)
-	require.NoError(t, service.saveGenesisData(ctx, gs))
+	require.NoError(t, service.SaveGenesisData(ctx, gs))
 	gBlk, err := service.cfg.BeaconDB.GenesisBlock(ctx)
 	require.NoError(t, err)
 	gRoot, err := gBlk.Block().HashTreeRoot()
@@ -950,7 +950,7 @@ func TestOnBlock_CanFinalize(t *testing.T) {
 		require.NoError(t, err)
 		r, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		require.NoError(t, service.onBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(blk), r))
+		require.NoError(t, service.OnBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(blk), r))
 		testState, err = service.cfg.StateGen.StateByRoot(ctx, r)
 		require.NoError(t, err)
 	}
@@ -973,7 +973,7 @@ func TestInsertFinalizedDeposits(t *testing.T) {
 	require.NoError(t, err)
 
 	gs, _ := testutil.DeterministicGenesisState(t, 32)
-	require.NoError(t, service.saveGenesisData(ctx, gs))
+	require.NoError(t, service.SaveGenesisData(ctx, gs))
 	gBlk, err := service.cfg.BeaconDB.GenesisBlock(ctx)
 	require.NoError(t, err)
 	gRoot, err := gBlk.Block().HashTreeRoot()
