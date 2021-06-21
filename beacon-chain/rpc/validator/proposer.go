@@ -12,7 +12,6 @@ import (
 	fastssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
@@ -23,6 +22,7 @@ import (
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -123,16 +123,43 @@ func (vs *Server) GetBlockV2(ctx context.Context, req *ethpb.BlockRequest) (*eth
 	// Use zero hash as stub for state root to compute later.
 	stateRoot := params.BeaconConfig().ZeroHash[:]
 
-	// Ugly hack to allow this to compile both for mainnet
-	// and minimal configs.
-	mockAgg := &ethpb.SyncAggregate{SyncCommitteeBits: []byte{}}
-	var bVector []byte
-	if mockAgg.SyncCommitteeBits.Len() == 512 {
-		bVector = bitfield.NewBitvector512()
-	} else {
-		bVector = bitfield.NewBitvector32()
+	contributions, err := vs.SyncCommitteePool.SyncCommitteeContributions(req.Slot - 1)
+	if err != nil {
+		return nil, err
 	}
-	infiniteSignature := [96]byte{0xC0}
+	headRoot, err := vs.HeadFetcher.HeadRoot(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	bestContributions := map[uint64]*ethpb.SyncCommitteeContribution{}
+	for _, contribution := range contributions {
+		if !bytes.Equal(contribution.BlockRoot, headRoot) {
+			continue
+		}
+		bContribution, ok := bestContributions[contribution.SubcommitteeIndex]
+		if ok {
+			if contribution.AggregationBits.Count() > bContribution.AggregationBits.Count() {
+				bestContributions[contribution.SubcommitteeIndex] = contribution
+			}
+		} else {
+			bestContributions[contribution.SubcommitteeIndex] = contribution
+		}
+	}
+
+	var bVector []byte
+	sigs := make([]bls.Signature, 0, params.BeaconConfig().SyncCommitteeSize/params.BeaconConfig().SyncCommitteeSubnetCount)
+	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSubnetCount; i++ {
+		contribution := bestContributions[i]
+		bVector = append(bVector, contribution.AggregationBits.Bytes()...)
+		sig, err := bls.SignatureFromBytes(contribution.Signature)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get bls signature from bytes: %v", err)
+		}
+		sigs = append(sigs, sig)
+	}
+	aggregatedSig := bls.AggregateSignatures(sigs)
+
 	blk := &ethpb.BeaconBlockAltair{
 		Slot:          req.Slot,
 		ParentRoot:    blkData.parentRoot,
@@ -147,10 +174,9 @@ func (vs *Server) GetBlockV2(ctx context.Context, req *ethpb.BlockRequest) (*eth
 			AttesterSlashings: blkData.attesterSlashings,
 			VoluntaryExits:    blkData.voluntaryExits,
 			Graffiti:          blkData.graffiti[:],
-			// TODO: Add in actual aggregates
 			SyncAggregate: &ethpb.SyncAggregate{
 				SyncCommitteeBits:      bVector,
-				SyncCommitteeSignature: infiniteSignature[:],
+				SyncCommitteeSignature: aggregatedSig.Marshal(),
 			},
 		},
 	}
