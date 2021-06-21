@@ -15,7 +15,7 @@ func TestStore_Backup(t *testing.T) {
 	ctx := context.Background()
 	root := [32]byte{1}
 	require.NoError(t, db.SaveGenesisValidatorsRoot(ctx, root[:]))
-	require.NoError(t, db.Backup(ctx, ""))
+	require.NoError(t, db.Backup(ctx, "", true))
 
 	backupsPath := filepath.Join(db.databasePath, backupsDirectoryName)
 	files, err := ioutil.ReadDir(backupsPath)

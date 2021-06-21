@@ -27,7 +27,7 @@ import (
 func TestProposeExit_Notification(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
-	testutil.ResetCache()
+
 	deposits, keys, err := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
 	require.NoError(t, err)
 	beaconState, err := state.GenesisBeaconState(ctx, deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
@@ -98,7 +98,7 @@ func TestProposeExit_Notification(t *testing.T) {
 func TestProposeExit_NoPanic(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
-	testutil.ResetCache()
+
 	deposits, keys, err := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
 	require.NoError(t, err)
 	beaconState, err := state.GenesisBeaconState(ctx, deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
