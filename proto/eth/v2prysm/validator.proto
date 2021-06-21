@@ -19,6 +19,9 @@ import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
 
 import "proto/eth/ext/options.proto";
+
+import "proto/eth/v1alpha1/validator.proto";
+
 import "proto/eth/v2prysm/beacon_block.proto";
 import "proto/eth/v2prysm/sync_committee.proto";
 
@@ -39,7 +42,7 @@ service BeaconNodeValidator {
   // The server returns a new beacon block, without proposer signature, that can be
   // proposed on the beacon chain. The block should be filled with all the necessary
   // data for proposer to sign. This block is versioned from Altair onwards.
-  rpc GetBlock(BlockRequest) returns (BeaconBlock) {
+  rpc GetBlock(ethereum.eth.v1alpha1.BlockRequest) returns (BeaconBlock) {
     option (google.api.http) = {
       get: "/eth/v2prysm/validator/block"
     };
@@ -50,7 +53,7 @@ service BeaconNodeValidator {
   // The validator sends the newly signed beacon block to the beacon node so the beacon block can
   // be included in the beacon chain. The beacon node is expected to validate and process the
   // beacon block into its state. This block is versioned from Altair onwards.
-  rpc ProposeBlock(SignedBeaconBlock) returns (ProposeResponse) {
+  rpc ProposeBlock(SignedBeaconBlock) returns (ethereum.eth.v1alpha1.ProposeResponse) {
     option (google.api.http) = {
       post: "/eth/v2prysm/validator/block"
       body: "*"
@@ -71,22 +74,6 @@ service BeaconNodeValidator {
       body: "*"
     };
   }
-}
-
-message BlockRequest {
-  // Slot for which the block should be proposed.
-  uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
-
-  // Validator's 32 byte randao reveal secret of the current epoch.
-  bytes randao_reveal = 2 [(ethereum.eth.ext.ssz_size) = "48"];
-
-  // Validator's 32 byte graffiti message for the new block.
-  bytes graffiti = 3 [(ethereum.eth.ext.ssz_size) = "32"];
-}
-
-message ProposeResponse {
-  // The block root of the successfully proposed beacon block.
-  bytes block_root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
 }
 
 // SyncMessageBlockRootResponse for beacon chain validator to retrieve and
