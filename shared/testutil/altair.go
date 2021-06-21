@@ -32,7 +32,7 @@ func DeterministicGenesisStateAltair(t testing.TB, numValidators uint64) (iface.
 	if err != nil {
 		t.Fatal(errors.Wrapf(err, "failed to get genesis beacon state of %d validators", numValidators))
 	}
-	ResetCache()
+	resetCache()
 	return beaconState, privKeys
 }
 

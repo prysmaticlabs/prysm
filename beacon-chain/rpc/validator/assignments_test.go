@@ -114,7 +114,6 @@ func TestGetAltairDuties_SyncCommitteeOK(t *testing.T) {
 	bc.AltairForkEpoch = types.Epoch(0)
 	params.OverrideBeaconConfig(bc)
 	db := dbutil.SetupDB(t)
-	testutil.ResetCache()
 
 	genesis := testutil.NewBeaconBlock()
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().SyncCommitteeSize)
@@ -207,7 +206,6 @@ func TestGetDuties_SlotOutOfUpperBound(t *testing.T) {
 
 func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	testutil.ResetCache()
 
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount

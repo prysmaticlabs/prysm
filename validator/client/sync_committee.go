@@ -90,6 +90,10 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 		log.Errorf("Could not get sync subcommittee index: %v", err)
 		return
 	}
+	if len(indexRes.Indices) == 0 {
+		log.Debug("Empty subcommittee index list, do nothing")
+		return
+	}
 
 	selectionProofs := make([][]byte, len(indexRes.Indices))
 	for i, index := range indexRes.Indices {
