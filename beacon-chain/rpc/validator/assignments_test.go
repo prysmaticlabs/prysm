@@ -165,7 +165,7 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := uint64(64)
-	testutil.ResetCache()
+
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
 	require.NoError(t, err)
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))

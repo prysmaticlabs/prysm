@@ -139,6 +139,13 @@ service BeaconChain {
     };
   }
 
+  // GetBlockSSZ returns the SSZ-serialized version of block details for given block id.
+  rpc GetBlockSSZ(BlockRequest) returns (BlockSSZResponse) {
+    option (google.api.http) = {
+      get: "/eth/v1/beacon/blocks/{block_id}/ssz"
+    };
+  }
+
   // ListBlockAttestations retrieves attestation included in requested block.
   rpc ListBlockAttestations(BlockRequest) returns (BlockAttestationsResponse) {
     option (google.api.http) = {
@@ -416,6 +423,10 @@ message BeaconBlockHeaderContainer {
 
 message BlockResponse {
   BeaconBlockContainer data = 1;
+}
+
+message BlockSSZResponse {
+  bytes data = 1;
 }
 
 message BeaconBlockContainer {
