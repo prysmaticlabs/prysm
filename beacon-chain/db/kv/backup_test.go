@@ -29,7 +29,7 @@ func TestStore_Backup(t *testing.T) {
 	require.NoError(t, db.SaveState(ctx, st, root))
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, root))
 
-	require.NoError(t, db.Backup(ctx, ""))
+	require.NoError(t, db.Backup(ctx, "", false))
 
 	backupsPath := filepath.Join(db.databasePath, backupsDirectoryName)
 	files, err := ioutil.ReadDir(backupsPath)
@@ -71,7 +71,7 @@ func TestStore_BackupMultipleBuckets(t *testing.T) {
 		require.NoError(t, db.SaveHeadBlockRoot(ctx, root))
 	}
 
-	require.NoError(t, db.Backup(ctx, ""))
+	require.NoError(t, db.Backup(ctx, "", false))
 
 	backupsPath := filepath.Join(db.databasePath, backupsDirectoryName)
 	files, err := ioutil.ReadDir(backupsPath)
