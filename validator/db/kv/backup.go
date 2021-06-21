@@ -16,7 +16,7 @@ const backupsDirectoryName = "backups"
 
 // Backup the database to the datadir backup directory.
 // Example for backup: $DATADIR/backups/prysm_validatordb_1029019.backup
-func (s *Store) Backup(ctx context.Context, outputDir string) error {
+func (s *Store) Backup(ctx context.Context, outputDir string, permissionOverride bool) error {
 	ctx, span := trace.StartSpan(ctx, "ValidatorDB.Backup")
 	defer span.End()
 
@@ -31,7 +31,7 @@ func (s *Store) Backup(ctx context.Context, outputDir string) error {
 		backupsDir = path.Join(s.databasePath, backupsDirectoryName)
 	}
 	// Ensure the backups directory exists.
-	if err := fileutil.MkdirAll(backupsDir); err != nil {
+	if err := fileutil.HandleBackupDir(backupsDir, permissionOverride); err != nil {
 		return err
 	}
 	backupPath := path.Join(backupsDir, fmt.Sprintf("prysm_validatordb_%d.backup", time.Now().Unix()))

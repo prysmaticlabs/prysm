@@ -7,13 +7,12 @@ import (
 	e2eParams "github.com/prysmaticlabs/prysm/endtoend/params"
 	"github.com/prysmaticlabs/prysm/endtoend/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestEndToEnd_Slashing_MinimalConfig(t *testing.T) {
 	t.Skip("To be replaced with the new slasher implementation")
-	testutil.ResetCache()
+
 	params.UseE2EConfig()
 	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
 
