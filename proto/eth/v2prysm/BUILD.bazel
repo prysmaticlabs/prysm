@@ -41,6 +41,15 @@ proto_library(
 ##############################################################################
 # Go
 ##############################################################################
+go_library(
+    name = "aliases",
+    srcs = [
+        "aliases.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/proto/eth/v2prysm",
+    visibility = ["//visibility:public"],
+)
+
 ssz_gen_marshal(
     name = "ssz_generated_files",
     go_proto = ":go_proto",
@@ -50,13 +59,13 @@ ssz_gen_marshal(
         "//proto/eth/v1alpha1:go_default_library",
     ],
     objs = [
-        "BeaconBlock",
-        "SyncAggregate",
-        "SyncCommitteeMessage",
-        "SyncCommitteeContribution",
-        "ContributionAndProof",
-        "SignedContributionAndProof",
-        "SignedBeaconBlock",
+        # "BeaconBlockAltair",
+        "SyncAggregateAltair",
+        "BeaconBlockAltair",
+        # "SyncCommitteeContribution",
+        # "ContributionAndProof",
+        # "SignedContributionAndProof",
+        # "SignedBeaconBlockAltair",
     ],
 )
 
@@ -66,6 +75,9 @@ go_proto_library(
         "@com_github_prysmaticlabs_protoc_gen_go_cast//:go_cast_grpc",
     ],
     importpath = "github.com/prysmaticlabs/prysm/proto/eth/v2prysm",
+    embed = [
+        ":aliases"
+    ],
     proto = ":proto",
     visibility = ["//visibility:public"],
     deps = [
@@ -110,7 +122,6 @@ go_library(
     name = "go_default_library",
     srcs = [
         ":ssz_generated_files",  # keep
-        "aliases.go",
     ],
     embed = [
         ":go_grpc_gateway_library",

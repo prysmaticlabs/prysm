@@ -1,3 +1,9 @@
-package v2prysm
+package eth
 
-//type BeaconBlockAltair = BeaconBlock
+type BeaconBlockAltair = BeaconBlock
+type SignedBeaconBlockAltair = SignedBeaconBlock
+type SyncAggregateAltair = SyncAggregate
+type SyncCommitteeMessageAltair = SyncCommitteeMessage
+type SyncCommitteeContributionAltair = SyncCommitteeContribution
+type ContributionAndProofAltair = ContributionAndProof
+type SignedContributionAndProofAltair = SignedContributionAndProof
