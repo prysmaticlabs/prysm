@@ -22,7 +22,7 @@ build:remote-cache --incompatible_strict_action_env=true
 # Import workspace options.
 import %workspace%/.bazelrc
 
-startup --host_jvm_args=-Xmx1000m --host_jvm_args=-Xms1000m
+startup --host_jvm_args=-Xmx2g --host_jvm_args=-Xms2g
 query --repository_cache=/tmp/repositorycache
 query --experimental_repository_cache_hardlinks
 build --repository_cache=/tmp/repositorycache
