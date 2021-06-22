@@ -61,7 +61,7 @@ func (s *Service) RefreshENR() {
 		// Retrieve sync subnets from application level
 		// cache.
 		bitS := bitfield.Bitvector4{byte(0x00)}
-		committees = cache.SyncSubnetIDs.GetAllSubnets()
+		committees = cache.SyncSubnetIDs.GetAllSubnets(currEpoch)
 		for _, idx := range committees {
 			bitS.SetBitAt(idx, true)
 		}

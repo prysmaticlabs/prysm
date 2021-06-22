@@ -13,6 +13,8 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	pb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -77,14 +79,14 @@ func (s *Service) registerSubscribers(epoch types.Epoch, digest [4]byte) {
 	)
 	if flags.Get().SubscribeToAllSubnets {
 		s.subscribeStaticWithSubnets(
-			"/eth2/%x/beacon_attestation_%d",
+			p2p.AttestationSubnetTopicFormat,
 			s.validateCommitteeIndexBeaconAttestation,   /* validator */
 			s.committeeIndexBeaconAttestationSubscriber, /* message handler */
 			digest,
 		)
 	} else {
 		s.subscribeDynamicWithSubnets(
-			"/eth2/%x/beacon_attestation_%d",
+			p2p.AttestationSubnetTopicFormat,
 			s.validateCommitteeIndexBeaconAttestation,   /* validator */
 			s.committeeIndexBeaconAttestationSubscriber, /* message handler */
 			digest,
@@ -93,13 +95,27 @@ func (s *Service) registerSubscribers(epoch types.Epoch, digest [4]byte) {
 	altairFork := params.BeaconConfig().ForkVersionSchedule[bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion)]
 	// Altair Fork Version
 	if epoch >= altairFork {
-		// TODO: Register Sync Subscribers.
 		s.subscribe(
 			p2p.SyncContributionAndProofSubnetTopicFormat,
-			s.validateAttesterSlashing,
-			s.attesterSlashingSubscriber,
+			s.validateSyncContributionAndProof,
+			s.syncContributionAndProofSubscriber,
 			digest,
 		)
+		if flags.Get().SubscribeToAllSubnets {
+			s.subscribeStaticWithSyncSubnets(
+				p2p.SyncCommitteeSubnetTopicFormat,
+				s.validateSyncCommittee,   /* validator */
+				s.syncCommitteeSubscriber, /* message handler */
+				digest,
+			)
+		} else {
+			s.subscribeDynamicWithSyncSubnets(
+				p2p.SyncCommitteeSubnetTopicFormat,
+				s.validateSyncCommittee,   /* validator */
+				s.syncCommitteeSubscriber, /* message handler */
+				digest,
+			)
+		}
 	}
 }
 
@@ -369,6 +385,32 @@ func (s *Service) subscribeAggregatorSubnet(
 	}
 }
 
+// subscribe missing subnets for our sync committee members.
+func (s *Service) subscribeSyncSubnet(
+	subscriptions map[uint64]*pubsub.Subscription,
+	idx uint64,
+	digest [4]byte,
+	validate pubsub.ValidatorEx,
+	handle subHandler,
+) {
+	// do not subscribe if we have no peers in the same
+	// subnet
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.SyncCommitteeMessage{})]
+	subnetTopic := fmt.Sprintf(topic, digest, idx)
+	// check if subscription exists and if not subscribe the relevant subnet.
+	if _, exists := subscriptions[idx]; !exists {
+		subscriptions[idx] = s.subscribeWithBase(subnetTopic, validate, handle)
+	}
+	if !s.validPeersExist(subnetTopic) {
+		log.Debugf("No peers found subscribed to sync gossip subnet with "+
+			"committee index %d. Searching network for peers subscribed to the subnet.", idx)
+		_, err := s.cfg.P2P.FindPeersWithSubnet(s.ctx, subnetTopic, idx, params.BeaconNetworkConfig().MinimumPeersInSubnet)
+		if err != nil {
+			log.WithError(err).Debug("Could not search for peers")
+		}
+	}
+}
+
 // subscribe to a static subnet  with the given topic and index.A given validator and subscription handler is
 // used to handle messages from the subnet. The base protobuf message is used to initialize new messages for decoding.
 func (s *Service) subscribeStaticWithSyncSubnets(topic string, validator pubsub.ValidatorEx, handle subHandler, digest [4]byte) {
@@ -451,18 +493,13 @@ func (s *Service) subscribeDynamicWithSyncSubnets(
 				if s.chainStarted.IsSet() && s.cfg.InitialSync.Syncing() {
 					continue
 				}
-				wantedSubs := s.retrievePersistentSubs(currentSlot)
+				wantedSubs := s.retrieveActiveSyncSubnets(helpers.SlotToEpoch(currentSlot))
 				// Resize as appropriate.
 				s.reValidateSubscriptions(subscriptions, wantedSubs, topicFormat, digest)
 
 				// subscribe desired aggregator subnets.
 				for _, idx := range wantedSubs {
-					s.subscribeAggregatorSubnet(subscriptions, idx, digest, validate, handle)
-				}
-				// find desired subs for attesters
-				attesterSubs := s.attesterSubnetIndices(currentSlot)
-				for _, idx := range attesterSubs {
-					s.lookupAttesterSubnets(digest, idx)
+					s.subscribeSyncSubnet(subscriptions, idx, digest, validate, handle)
 				}
 			}
 		}
@@ -498,6 +535,11 @@ func (s *Service) retrievePersistentSubs(currSlot types.Slot) []uint64 {
 
 	// Combine subscriptions to get all requested subscriptions
 	return sliceutil.SetUint64(append(persistentSubs, wantedSubs...))
+}
+
+func (s *Service) retrieveActiveSyncSubnets(currEpoch types.Epoch) []uint64 {
+	subs := cache.SyncSubnetIDs.GetAllSubnets(currEpoch)
+	return sliceutil.SetUint64(subs)
 }
 
 // filters out required peers for the node to function, not

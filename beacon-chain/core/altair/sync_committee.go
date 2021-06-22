@@ -224,14 +224,18 @@ func SubnetsForSyncCommittee(state iface.BeaconStateAltair, i types.ValidatorInd
 		return nil, err
 	}
 	vPubKey := v.PublicKey()
+	return SubnetsFromCommittee(vPubKey[:], committee), nil
+}
 
+// SubnetsFromCommittee retrieves the relevant subnets for the chosen validator.
+func SubnetsFromCommittee(pubkey []byte, comm *pb.SyncCommittee) []uint64 {
 	positions := make([]uint64, 0)
-	for i, pkey := range committee.Pubkeys {
-		if bytes.Equal(vPubKey[:], pkey) {
+	for i, pkey := range comm.Pubkeys {
+		if bytes.Equal(pubkey, pkey) {
 			positions = append(positions, uint64(i)/(params.BeaconConfig().SyncCommitteeSize/params.BeaconConfig().SyncCommitteeSubnetCount))
 		}
 	}
-	return positions, nil
+	return positions
 }
 
 // SyncCommitteePeriod returns the sync committee period of input epoch `e`.
