@@ -13,47 +13,138 @@ import (
 )
 
 func Test_getSignedAttestationsByPubKey(t *testing.T) {
-	pubKeys := [][48]byte{
-		{1},
-	}
-	ctx := context.Background()
-	validatorDB := dbtest.SetupDB(t, pubKeys)
+	t.Run("OK", func(t *testing.T) {
+		pubKeys := [][48]byte{
+			{1},
+		}
+		ctx := context.Background()
+		validatorDB := dbtest.SetupDB(t, pubKeys)
 
-	// No attestation history stored should return empty.
-	signedAttestations, err := signedAttestationsByPubKey(ctx, validatorDB, pubKeys[0])
-	require.NoError(t, err)
-	assert.Equal(t, 0, len(signedAttestations))
+		// No attestation history stored should return empty.
+		signedAttestations, err := signedAttestationsByPubKey(ctx, validatorDB, pubKeys[0])
+		require.NoError(t, err)
+		assert.Equal(t, 0, len(signedAttestations))
 
-	// We write a real attesting history to disk for the public key.
-	lowestSourceEpoch := types.Epoch(0)
-	lowestTargetEpoch := types.Epoch(4)
+		// We write a real attesting history to disk for the public key.
+		lowestSourceEpoch := types.Epoch(0)
+		lowestTargetEpoch := types.Epoch(4)
 
-	require.NoError(t, validatorDB.SaveAttestationForPubKey(ctx, pubKeys[0], [32]byte{4}, createAttestation(
-		lowestSourceEpoch,
-		lowestTargetEpoch,
-	)))
-	require.NoError(t, validatorDB.SaveAttestationForPubKey(ctx, pubKeys[0], [32]byte{5}, createAttestation(
-		lowestSourceEpoch,
-		lowestTargetEpoch+1,
-	)))
+		require.NoError(t, validatorDB.SaveAttestationForPubKey(ctx, pubKeys[0], [32]byte{4}, createAttestation(
+			lowestSourceEpoch,
+			lowestTargetEpoch,
+		)))
+		require.NoError(t, validatorDB.SaveAttestationForPubKey(ctx, pubKeys[0], [32]byte{5}, createAttestation(
+			lowestSourceEpoch,
+			lowestTargetEpoch+1,
+		)))
 
-	// We then retrieve the signed attestations and expect a correct result.
-	signedAttestations, err = signedAttestationsByPubKey(ctx, validatorDB, pubKeys[0])
-	require.NoError(t, err)
+		// We then retrieve the signed attestations and expect a correct result.
+		signedAttestations, err = signedAttestationsByPubKey(ctx, validatorDB, pubKeys[0])
+		require.NoError(t, err)
 
-	wanted := []*format.SignedAttestation{
-		{
-			SourceEpoch: "0",
-			TargetEpoch: "4",
-			SigningRoot: "0x0400000000000000000000000000000000000000000000000000000000000000",
-		},
-		{
-			SourceEpoch: "0",
-			TargetEpoch: "5",
-			SigningRoot: "0x0500000000000000000000000000000000000000000000000000000000000000",
-		},
-	}
-	assert.DeepEqual(t, wanted, signedAttestations)
+		wanted := []*format.SignedAttestation{
+			{
+				SourceEpoch: "0",
+				TargetEpoch: "4",
+				SigningRoot: "0x0400000000000000000000000000000000000000000000000000000000000000",
+			},
+			{
+				SourceEpoch: "0",
+				TargetEpoch: "5",
+				SigningRoot: "0x0500000000000000000000000000000000000000000000000000000000000000",
+			},
+		}
+		assert.DeepEqual(t, wanted, signedAttestations)
+	})
+	t.Run("old_schema_bug_edge_case_genesis", func(t *testing.T) {
+		pubKeys := [][48]byte{
+			{1},
+		}
+		ctx := context.Background()
+		validatorDB := dbtest.SetupDB(t, pubKeys)
+
+		// No attestation history stored should return empty.
+		signedAttestations, err := signedAttestationsByPubKey(ctx, validatorDB, pubKeys[0])
+		require.NoError(t, err)
+		assert.Equal(t, 0, len(signedAttestations))
+
+		// We write a real attesting history to disk for the public key with
+		// source epoch 0 and target epoch 1000.
+		lowestSourceEpoch := types.Epoch(0)
+		lowestTargetEpoch := types.Epoch(1000)
+
+		// Next up, we simulate a DB affected by the bug where the next entry
+		// has a target epoch less than the previous one.
+		require.NoError(t, validatorDB.SaveAttestationForPubKey(ctx, pubKeys[0], [32]byte{4}, createAttestation(
+			lowestSourceEpoch,
+			lowestTargetEpoch,
+		)))
+		require.NoError(t, validatorDB.SaveAttestationForPubKey(ctx, pubKeys[0], [32]byte{5}, createAttestation(
+			1,
+			2,
+		)))
+
+		// We then retrieve the signed attestations and expect to have
+		// skipped the 0th, corrupted entry.
+		signedAttestations, err = signedAttestationsByPubKey(ctx, validatorDB, pubKeys[0])
+		require.NoError(t, err)
+
+		wanted := []*format.SignedAttestation{
+			{
+				SourceEpoch: "1",
+				TargetEpoch: "2",
+				SigningRoot: "0x0500000000000000000000000000000000000000000000000000000000000000",
+			},
+		}
+		assert.DeepEqual(t, wanted, signedAttestations)
+	})
+	t.Run("old_schema_bug_edge_case_not_genesis", func(t *testing.T) {
+		pubKeys := [][48]byte{
+			{1},
+		}
+		ctx := context.Background()
+		validatorDB := dbtest.SetupDB(t, pubKeys)
+
+		// No attestation history stored should return empty.
+		signedAttestations, err := signedAttestationsByPubKey(ctx, validatorDB, pubKeys[0])
+		require.NoError(t, err)
+		assert.Equal(t, 0, len(signedAttestations))
+
+		// We write a real attesting history to disk for the public key with
+		// source epoch 1 and target epoch 1000.
+		lowestSourceEpoch := types.Epoch(1)
+		lowestTargetEpoch := types.Epoch(1000)
+
+		// Next up, we simulate a DB affected by the bug where the next entry
+		// has a target epoch less than the previous one.
+		require.NoError(t, validatorDB.SaveAttestationForPubKey(ctx, pubKeys[0], [32]byte{4}, createAttestation(
+			lowestSourceEpoch,
+			lowestTargetEpoch,
+		)))
+		require.NoError(t, validatorDB.SaveAttestationForPubKey(ctx, pubKeys[0], [32]byte{5}, createAttestation(
+			1,
+			2,
+		)))
+
+		// We then retrieve the signed attestations and do not expect changes
+		// as the bug only manifests in the genesis epoch.
+		signedAttestations, err = signedAttestationsByPubKey(ctx, validatorDB, pubKeys[0])
+		require.NoError(t, err)
+
+		wanted := []*format.SignedAttestation{
+			{
+				SourceEpoch: "1",
+				TargetEpoch: "1000",
+				SigningRoot: "0x0400000000000000000000000000000000000000000000000000000000000000",
+			},
+			{
+				SourceEpoch: "1",
+				TargetEpoch: "2",
+				SigningRoot: "0x0500000000000000000000000000000000000000000000000000000000000000",
+			},
+		}
+		assert.DeepEqual(t, wanted, signedAttestations)
+	})
 }
 
 func Test_getSignedBlocksByPubKey(t *testing.T) {

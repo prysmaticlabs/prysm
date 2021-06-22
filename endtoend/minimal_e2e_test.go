@@ -10,7 +10,6 @@ import (
 	e2eParams "github.com/prysmaticlabs/prysm/endtoend/params"
 	"github.com/prysmaticlabs/prysm/endtoend/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -24,7 +23,6 @@ func TestEndToEnd_MinimalConfig_ValidatorAtCurrentRelease(t *testing.T) {
 }
 
 func e2eMinimal(t *testing.T, usePrysmSh bool) {
-	testutil.ResetCache()
 	params.UseE2EConfig()
 	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
 

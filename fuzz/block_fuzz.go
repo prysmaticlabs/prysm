@@ -147,7 +147,7 @@ func BeaconFuzzBlock(b []byte) {
 		P2p:               p2p,
 		StateNotifier:     sn,
 		ForkChoiceStore:   protoarray.New(0, 0, [32]byte{}),
-		OpsService:        ops,
+		AttService:        ops,
 		StateGen:          sgen,
 	})
 	if err != nil {

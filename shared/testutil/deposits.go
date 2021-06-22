@@ -32,6 +32,7 @@ var trie *trieutil.SparseMerkleTrie
 // if all secret keys for n validators are required then numDeposits
 // should be n+1.
 func DeterministicDepositsAndKeys(numDeposits uint64) ([]*ethpb.Deposit, []bls.SecretKey, error) {
+	resetCache()
 	lock.Lock()
 	defer lock.Unlock()
 	var err error
@@ -247,6 +248,7 @@ func DeterministicEth1Data(size int) (*ethpb.Eth1Data, error) {
 
 // DeterministicGenesisState returns a genesis state made using the deterministic deposits.
 func DeterministicGenesisState(t testing.TB, numValidators uint64) (iface.BeaconState, []bls.SecretKey) {
+	resetCache()
 	deposits, privKeys, err := DeterministicDepositsAndKeys(numValidators)
 	if err != nil {
 		t.Fatal(errors.Wrapf(err, "failed to get %d deposits", numValidators))
@@ -259,7 +261,7 @@ func DeterministicGenesisState(t testing.TB, numValidators uint64) (iface.Beacon
 	if err != nil {
 		t.Fatal(errors.Wrapf(err, "failed to get genesis beacon state of %d validators", numValidators))
 	}
-	ResetCache()
+
 	return beaconState, privKeys
 }
 
@@ -287,8 +289,8 @@ func DepositTrieFromDeposits(deposits []*ethpb.Deposit) (*trieutil.SparseMerkleT
 	return depositTrie, roots, nil
 }
 
-// ResetCache clears out the old trie, private keys and deposits.
-func ResetCache() {
+// resetCache clears out the old trie, private keys and deposits.
+func resetCache() {
 	trie = nil
 	privKeys = []bls.SecretKey{}
 	cachedDeposits = []*ethpb.Deposit{}
@@ -298,6 +300,7 @@ func ResetCache() {
 // of the same validator. This is for negative test cases such as same deposits from same validators in a block don't
 // result in duplicated validator indices.
 func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*ethpb.Deposit, []bls.SecretKey, error) {
+	resetCache()
 	lock.Lock()
 	defer lock.Unlock()
 	var err error
