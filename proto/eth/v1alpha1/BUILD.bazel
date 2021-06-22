@@ -63,7 +63,6 @@ ssz_gen_marshal(
         "ProposerSlashing",
         "SignedAggregateAttestationAndProof",
         "SignedBeaconBlock",
-        "SignedBeaconBlockAltair",
         "SignedBeaconBlockHeader",
         "SignedVoluntaryExit",
         "Validator",
