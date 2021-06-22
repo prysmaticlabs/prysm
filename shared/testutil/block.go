@@ -506,7 +506,7 @@ func HydrateV1BeaconBlockBody(b *v1.BeaconBlockBody) *v1.BeaconBlockBody {
 
 // HydrateSignedBeaconBlockAltair hydrates a signed beacon block with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
-func HydrateSignedBeaconBlockAltair(b *ethpb.SignedBeaconBlockAltair) *ethpb.SignedBeaconBlockAltair {
+func HydrateSignedBeaconBlockAltair(b *prysmv2.SignedBeaconBlock) *prysmv2.SignedBeaconBlock {
 	if b.Signature == nil {
 		b.Signature = make([]byte, params.BeaconConfig().BLSSignatureLength)
 	}
@@ -516,9 +516,9 @@ func HydrateSignedBeaconBlockAltair(b *ethpb.SignedBeaconBlockAltair) *ethpb.Sig
 
 // HydrateBeaconBlockAltair hydrates a beacon block with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
-func HydrateBeaconBlockAltair(b *ethpb.BeaconBlockAltair) *ethpb.BeaconBlockAltair {
+func HydrateBeaconBlockAltair(b *prysmv2.BeaconBlock) *prysmv2.BeaconBlock {
 	if b == nil {
-		b = &ethpb.BeaconBlockAltair{}
+		b = &prysmv2.BeaconBlock{}
 	}
 	if b.ParentRoot == nil {
 		b.ParentRoot = make([]byte, 32)
@@ -532,9 +532,9 @@ func HydrateBeaconBlockAltair(b *ethpb.BeaconBlockAltair) *ethpb.BeaconBlockAlta
 
 // HydrateBeaconBlockBodyAltair hydrates a beacon block body with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
-func HydrateBeaconBlockBodyAltair(b *ethpb.BeaconBlockBodyAltair) *ethpb.BeaconBlockBodyAltair {
+func HydrateBeaconBlockBodyAltair(b *prysmv2.BeaconBlockBody) *prysmv2.BeaconBlockBody {
 	if b == nil {
-		b = &ethpb.BeaconBlockBodyAltair{}
+		b = &prysmv2.BeaconBlockBody{}
 	}
 	if b.RandaoReveal == nil {
 		b.RandaoReveal = make([]byte, params.BeaconConfig().BLSSignatureLength)

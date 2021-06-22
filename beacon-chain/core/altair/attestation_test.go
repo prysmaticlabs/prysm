@@ -12,6 +12,7 @@ import (
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
@@ -30,8 +31,8 @@ func TestProcessAttestations_InclusionDelayFailure(t *testing.T) {
 		}),
 	}
 	b := testutil.NewBeaconBlockAltair()
-	b.Block = &ethpb.BeaconBlockAltair{
-		Body: &ethpb.BeaconBlockBodyAltair{
+	b.Block = &prysmv2.BeaconBlock{
+		Body: &prysmv2.BeaconBlockBody{
 			Attestations: attestations,
 		},
 	}
@@ -54,8 +55,8 @@ func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 			Target: &ethpb.Checkpoint{Epoch: 0}}})
 
 	b := testutil.NewBeaconBlockAltair()
-	b.Block = &ethpb.BeaconBlockAltair{
-		Body: &ethpb.BeaconBlockBodyAltair{
+	b.Block = &prysmv2.BeaconBlock{
+		Body: &prysmv2.BeaconBlockBody{
 			Attestations: []*ethpb.Attestation{att},
 		},
 	}
@@ -87,8 +88,8 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 		},
 	}
 	b := testutil.NewBeaconBlockAltair()
-	b.Block = &ethpb.BeaconBlockAltair{
-		Body: &ethpb.BeaconBlockBodyAltair{
+	b.Block = &prysmv2.BeaconBlock{
+		Body: &prysmv2.BeaconBlockBody{
 			Attestations: attestations,
 		},
 	}
@@ -123,8 +124,8 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 		},
 	}
 	b := testutil.NewBeaconBlockAltair()
-	b.Block = &ethpb.BeaconBlockAltair{
-		Body: &ethpb.BeaconBlockBodyAltair{
+	b.Block = &prysmv2.BeaconBlock{
+		Body: &prysmv2.BeaconBlockBody{
 			Attestations: attestations,
 		},
 	}
@@ -157,8 +158,8 @@ func TestProcessAttestations_InvalidAggregationBitsLength(t *testing.T) {
 	}
 
 	b := testutil.NewBeaconBlockAltair()
-	b.Block = &ethpb.BeaconBlockAltair{
-		Body: &ethpb.BeaconBlockBodyAltair{
+	b.Block = &prysmv2.BeaconBlock{
+		Body: &prysmv2.BeaconBlockBody{
 			Attestations: []*ethpb.Attestation{att},
 		},
 	}
@@ -309,7 +310,7 @@ func TestValidatorFlag_AddHas(t *testing.T) {
 func TestFuzzProcessAttestationsNoVerify_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	state := &pb.BeaconStateAltair{}
-	b := &ethpb.SignedBeaconBlockAltair{}
+	b := &prysmv2.SignedBeaconBlock{}
 	ctx := context.Background()
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)

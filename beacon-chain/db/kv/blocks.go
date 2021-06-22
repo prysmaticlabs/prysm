@@ -594,7 +594,7 @@ func unmarshalBlock(ctx context.Context, enc []byte) (interfaces.SignedBeaconBlo
 	switch {
 	case hasAltairKey(enc):
 		// Marshal block bytes to altair beacon block.
-		rawBlock := &ethpb.SignedBeaconBlockAltair{}
+		rawBlock := &prysmv2.SignedBeaconBlock{}
 		err := rawBlock.UnmarshalSSZ(enc[len(altairKey):])
 		if err != nil {
 			return nil, err

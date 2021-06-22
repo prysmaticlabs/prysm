@@ -28,7 +28,7 @@ func RunVoluntaryExitTest(t *testing.T, config string) {
 			voluntaryExit := &ethpb.SignedVoluntaryExit{}
 			require.NoError(t, voluntaryExit.UnmarshalSSZ(exitSSZ), "Failed to unmarshal")
 
-			body := &ethpb.BeaconBlockBodyAltair{VoluntaryExits: []*ethpb.SignedVoluntaryExit{voluntaryExit}}
+			body := &prysmv2.BeaconBlockBody{VoluntaryExits: []*ethpb.SignedVoluntaryExit{voluntaryExit}}
 			RunBlockOperationTest(t, folderPath, body, func(ctx context.Context, s iface.BeaconState, b interfaces.SignedBeaconBlock) (iface.BeaconState, error) {
 				return blocks.ProcessVoluntaryExits(ctx, s, b.Block().Body().VoluntaryExits())
 			})

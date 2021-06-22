@@ -29,7 +29,7 @@ func RunProposerSlashingTest(t *testing.T, config string) {
 			proposerSlashing := &ethpb.ProposerSlashing{}
 			require.NoError(t, proposerSlashing.UnmarshalSSZ(proposerSlashingSSZ), "Failed to unmarshal")
 
-			body := &ethpb.BeaconBlockBodyAltair{ProposerSlashings: []*ethpb.ProposerSlashing{proposerSlashing}}
+			body := &prysmv2.BeaconBlockBody{ProposerSlashings: []*ethpb.ProposerSlashing{proposerSlashing}}
 			RunBlockOperationTest(t, folderPath, body, func(ctx context.Context, s iface.BeaconState, b interfaces.SignedBeaconBlock) (iface.BeaconState, error) {
 				return blocks.ProcessProposerSlashings(ctx, s, b.Block().Body().ProposerSlashings(), altair.SlashValidator)
 			})

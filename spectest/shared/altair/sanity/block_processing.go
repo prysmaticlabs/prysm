@@ -60,7 +60,7 @@ func RunBlockProcessingTest(t *testing.T, config string) {
 				require.NoError(t, err)
 				blockSSZ, err := snappy.Decode(nil /* dst */, blockFile)
 				require.NoError(t, err, "Failed to decompress")
-				block := &ethpb.SignedBeaconBlockAltair{}
+				block := &prysmv2.SignedBeaconBlock{}
 				require.NoError(t, block.UnmarshalSSZ(blockSSZ), "Failed to unmarshal")
 				processedState, transitionError = state.ExecuteStateTransition(context.Background(), beaconState, interfaces.WrappedAltairSignedBeaconBlock(block))
 				if transitionError != nil {

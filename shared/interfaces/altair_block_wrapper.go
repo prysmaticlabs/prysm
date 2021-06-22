@@ -13,12 +13,12 @@ import (
 // object. This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across prysm without issues.
 type AltairSignedBeaconBlock struct {
-	b *ethpb.SignedBeaconBlockAltair
+	b *prysmv2.SignedBeaconBlock
 }
 
 // WrappedAltairSignedBeaconBlock is constructor which wraps a protobuf altair block
 // with the block wrapper.
-func WrappedAltairSignedBeaconBlock(b *ethpb.SignedBeaconBlockAltair) AltairSignedBeaconBlock {
+func WrappedAltairSignedBeaconBlock(b *prysmv2.SignedBeaconBlock) AltairSignedBeaconBlock {
 	return AltairSignedBeaconBlock{b: b}
 }
 
@@ -74,7 +74,7 @@ func (w AltairSignedBeaconBlock) Proto() proto.Message {
 }
 
 // PbAltairBlock returns the underlying protobuf object.
-func (w AltairSignedBeaconBlock) PbAltairBlock() (*ethpb.SignedBeaconBlockAltair, error) {
+func (w AltairSignedBeaconBlock) PbAltairBlock() (*prysmv2.SignedBeaconBlock, error) {
 	return w.b, nil
 }
 
@@ -90,12 +90,12 @@ func (w AltairSignedBeaconBlock) Version() int {
 
 // AltairBeaconBlock is the wrapper for the actual block.
 type AltairBeaconBlock struct {
-	b *ethpb.BeaconBlockAltair
+	b *prysmv2.BeaconBlock
 }
 
 // WrappedAltairBeaconBlock is constructor which wraps a protobuf altair object
 // with the block wrapper.
-func WrappedAltairBeaconBlock(b *ethpb.BeaconBlockAltair) AltairBeaconBlock {
+func WrappedAltairBeaconBlock(b *prysmv2.BeaconBlock) AltairBeaconBlock {
 	return AltairBeaconBlock{b: b}
 }
 
@@ -170,12 +170,12 @@ func (w AltairBeaconBlock) Version() int {
 
 // AltairBeaconBlockBody is a wrapper of a beacon block body.
 type AltairBeaconBlockBody struct {
-	b *ethpb.BeaconBlockBodyAltair
+	b *prysmv2.BeaconBlockBody
 }
 
 // WrappedAltairBeaconBlockBody is constructor which wraps a protobuf altair object
 // with the block wrapper.
-func WrappedAltairBeaconBlockBody(b *ethpb.BeaconBlockBodyAltair) AltairBeaconBlockBody {
+func WrappedAltairBeaconBlockBody(b *prysmv2.BeaconBlockBody) AltairBeaconBlockBody {
 	return AltairBeaconBlockBody{b: b}
 }
 

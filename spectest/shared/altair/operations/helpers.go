@@ -28,7 +28,7 @@ type blockOperation func(context.Context, iface.BeaconState, interfaces.SignedBe
 func RunBlockOperationTest(
 	t *testing.T,
 	folderPath string,
-	body *ethpb.BeaconBlockBodyAltair,
+	body *prysmv2.BeaconBlockBody,
 	operationFn blockOperation,
 ) {
 	preBeaconStateFile, err := testutil.BazelFileBytes(path.Join(folderPath, "pre.ssz_snappy"))

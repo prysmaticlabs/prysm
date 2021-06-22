@@ -219,7 +219,7 @@ func (v *validator) proposeBlockV2(ctx context.Context, slot types.Slot, pubKey 
 		}
 		return
 	}
-	blk := &ethpb.SignedBeaconBlockAltair{
+	blk := &prysmv2.SignedBeaconBlock{
 		Block:     b,
 		Signature: sig,
 	}
@@ -361,7 +361,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch types.
 	var sig bls.Signature
 	switch b.Version() {
 	case version.Altair:
-		block, ok := b.Proto().(*ethpb.BeaconBlockAltair)
+		block, ok := b.Proto().(*prysmv2.BeaconBlock)
 		if !ok {
 			return nil, nil, errors.New("could not convert obj to beacon block altair")
 		}

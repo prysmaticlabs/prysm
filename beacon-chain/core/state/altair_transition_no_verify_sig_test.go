@@ -198,7 +198,7 @@ func TestExecuteStateTransitionNoVerifyAnySig_PassesProcessingConditions(t *test
 }
 
 func createFullAltairBlockWithOperations(t *testing.T) (iface.BeaconStateAltair,
-	*ethpb.SignedBeaconBlockAltair) {
+	*prysmv2.SignedBeaconBlock) {
 	beaconState, privKeys := testutil.DeterministicGenesisStateAltair(t, 32)
 	sCom, err := altair.NextSyncCommittee(beaconState)
 	assert.NoError(t, err)

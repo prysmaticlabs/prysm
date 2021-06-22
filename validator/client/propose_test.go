@@ -237,7 +237,7 @@ func TestProposeBlockV2_ProposeBlockFailed(t *testing.T) {
 
 	m.validatorClient.EXPECT().ProposeBlockV2(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlockAltair{}),
+		gomock.AssignableToTypeOf(&prysmv2.SignedBeaconBlock{}),
 	).Return(nil /*response*/, errors.New("uh oh"))
 
 	validator.ProposeBlock(context.Background(), 2*params.BeaconConfig().SlotsPerEpoch, pubKey)
@@ -342,7 +342,7 @@ func TestProposeBlockV2_BlocksDoubleProposal(t *testing.T) {
 
 	m.validatorClient.EXPECT().ProposeBlockV2(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlockAltair{}),
+		gomock.AssignableToTypeOf(&prysmv2.SignedBeaconBlock{}),
 	).Return(&ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil /*error*/)
 
 	validator.ProposeBlock(context.Background(), slot, pubKey)
@@ -597,12 +597,12 @@ func TestProposeBlockV2_BroadcastsBlock_WithGraffiti(t *testing.T) {
 		gomock.Any(), // epoch
 	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-	var sentBlock *ethpb.SignedBeaconBlockAltair
+	var sentBlock *prysmv2.SignedBeaconBlock
 
 	m.validatorClient.EXPECT().ProposeBlockV2(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlockAltair{}),
-	).DoAndReturn(func(ctx context.Context, block *ethpb.SignedBeaconBlockAltair) (*ethpb.ProposeResponse, error) {
+		gomock.AssignableToTypeOf(&prysmv2.SignedBeaconBlock{}),
+	).DoAndReturn(func(ctx context.Context, block *prysmv2.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 		sentBlock = block
 		return &ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil
 	})

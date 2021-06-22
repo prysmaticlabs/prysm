@@ -134,7 +134,7 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState iface.BeaconStateA
 		Eth1DepositIndex: preState.Eth1DepositIndex(),
 	}
 
-	bodyRoot, err := (&ethpb.BeaconBlockBodyAltair{
+	bodyRoot, err := (&prysmv2.BeaconBlockBody{
 		RandaoReveal: make([]byte, 96),
 		Eth1Data: &ethpb.Eth1Data{
 			DepositRoot: make([]byte, 32),

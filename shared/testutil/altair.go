@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -37,12 +38,12 @@ func DeterministicGenesisStateAltair(t testing.TB, numValidators uint64) (iface.
 }
 
 // NewBeaconBlockAltair creates a beacon block with minimum marshalable fields.
-func NewBeaconBlockAltair() *ethpb.SignedBeaconBlockAltair {
-	return &ethpb.SignedBeaconBlockAltair{
-		Block: &ethpb.BeaconBlockAltair{
+func NewBeaconBlockAltair() *prysmv2.SignedBeaconBlock {
+	return &prysmv2.SignedBeaconBlock{
+		Block: &prysmv2.BeaconBlock{
 			ParentRoot: make([]byte, 32),
 			StateRoot:  make([]byte, 32),
-			Body: &ethpb.BeaconBlockBodyAltair{
+			Body: &prysmv2.BeaconBlockBody{
 				RandaoReveal: make([]byte, 96),
 				Eth1Data: &ethpb.Eth1Data{
 					DepositRoot: make([]byte, 32),
@@ -54,7 +55,7 @@ func NewBeaconBlockAltair() *ethpb.SignedBeaconBlockAltair {
 				Deposits:          []*ethpb.Deposit{},
 				ProposerSlashings: []*ethpb.ProposerSlashing{},
 				VoluntaryExits:    []*ethpb.SignedVoluntaryExit{},
-				SyncAggregate: &ethpb.SyncAggregate{
+				SyncAggregate: &prysmv2.SyncAggregate{
 					SyncCommitteeBits:      make([]byte, len(bitfield.NewBitvector512())),
 					SyncCommitteeSignature: make([]byte, 96),
 				},
@@ -67,12 +68,12 @@ func NewBeaconBlockAltair() *ethpb.SignedBeaconBlockAltair {
 // BlockSignatureAltair calculates the post-state root of the block and returns the signature.
 func BlockSignatureAltair(
 	bState iface.BeaconStateAltair,
-	block *ethpb.BeaconBlockAltair,
+	block *prysmv2.BeaconBlock,
 	privKeys []bls.SecretKey,
 ) (bls.Signature, error) {
 	var err error
 
-	s, err := state.CalculateStateRoot(context.Background(), bState, interfaces.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: block}))
+	s, err := state.CalculateStateRoot(context.Background(), bState, interfaces.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlock{Block: block}))
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +109,7 @@ func GenerateFullBlockAltair(
 	privs []bls.SecretKey,
 	conf *BlockGenConfig,
 	slot types.Slot,
-) (*ethpb.SignedBeaconBlockAltair, error) {
+) (*prysmv2.SignedBeaconBlock, error) {
 	ctx := context.Background()
 	currentSlot := bState.Slot()
 	if currentSlot > slot {
@@ -202,11 +203,11 @@ func GenerateFullBlockAltair(
 		return nil, err
 	}
 
-	block := &ethpb.BeaconBlockAltair{
+	block := &prysmv2.BeaconBlock{
 		Slot:          slot,
 		ParentRoot:    parentRoot[:],
 		ProposerIndex: idx,
-		Body: &ethpb.BeaconBlockBodyAltair{
+		Body: &prysmv2.BeaconBlockBody{
 			Eth1Data:          eth1Data,
 			RandaoReveal:      reveal,
 			ProposerSlashings: pSlashings,
@@ -227,5 +228,5 @@ func GenerateFullBlockAltair(
 		return nil, err
 	}
 
-	return &ethpb.SignedBeaconBlockAltair{Block: block, Signature: signature.Marshal()}, nil
+	return &prysmv2.SignedBeaconBlock{Block: block, Signature: signature.Marshal()}, nil
 }
