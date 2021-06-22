@@ -12,8 +12,6 @@ import (
 	"container/heap"
 	"errors"
 	"sync"
-
-	"github.com/mitchellh/copystructure"
 )
 
 // ErrEmpty is returned for queues with no items
@@ -107,7 +105,8 @@ func (pq *PriorityQueue) Pop() (*Item, error) {
 // method that calls heap.Push, so consumers do not need to invoke heap
 // functions directly. Items must have unique Keys, and Items in the queue
 // cannot be updated. To modify an Item, users must first remove it and re-push
-// it after modifications
+// it after modifications. Item does not get copied before pushing on to the queue,
+// it's up to the caller to copy the item.
 func (pq *PriorityQueue) Push(i *Item) error {
 	if i == nil || i.Key == "" {
 		return errors.New("error adding item: Item Key is required")
@@ -119,19 +118,9 @@ func (pq *PriorityQueue) Push(i *Item) error {
 	if _, ok := pq.dataMap[i.Key]; ok {
 		return ErrDuplicateItem
 	}
-	// Copy the item value(s) so that modifications to the source item does not
-	// affect the item on the queue
-	clone, err := copystructure.Copy(i)
-	if err != nil {
-		return err
-	}
 
-	var ok bool
-	pq.dataMap[i.Key], ok = clone.(*Item)
-	if !ok {
-		return errors.New("unknown type")
-	}
-	heap.Push(&pq.data, clone)
+	pq.dataMap[i.Key] = i
+	heap.Push(&pq.data, i)
 	return nil
 }
 

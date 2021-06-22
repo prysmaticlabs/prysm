@@ -15,17 +15,22 @@ func (s *Store) SaveSyncCommitteeMessage(msg *ethpb.SyncCommitteeMessage) error 
 		return nilMessageErr
 	}
 
-	messages, err := s.SyncCommitteeMessages(msg.Slot)
+	s.messageLock.Lock()
+	defer s.messageLock.Unlock()
+
+	item, err := s.messageCache.PopByKey(syncCommitteeKey(msg.Slot))
 	if err != nil {
 		return err
 	}
 
-	s.messageLock.Lock()
-	defer s.messageLock.Unlock()
 	copied := copyutil.CopySyncCommitteeMessage(msg)
-
 	// Messages exist in the queue. Append instead of insert new.
-	if messages != nil {
+	if item != nil {
+		messages, ok := item.Value.([]*ethpb.SyncCommitteeMessage)
+		if !ok {
+			return errors.New("not typed []ethpb.SyncCommitteeMessage")
+		}
+
 		messages = append(messages, copied)
 		return s.messageCache.Push(&queue.Item{
 			Key:      syncCommitteeKey(msg.Slot),
