@@ -3,6 +3,7 @@ package cache_test
 import (
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -16,90 +17,90 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 		name                 string
 		currentSyncCommittee *pb.SyncCommittee
 		nextSyncCommittee    *pb.SyncCommittee
-		currentSyncMap       map[[48]byte][]uint64
-		nextSyncMap          map[[48]byte][]uint64
+		currentSyncMap       map[types.ValidatorIndex][]uint64
+		nextSyncMap          map[types.ValidatorIndex][]uint64
 	}{
 		{
 			name:                 "only current epoch",
 			currentSyncCommittee: convertToCommittee([][]byte{{1}, {2}, {3}, {2}, {2}}),
 			nextSyncCommittee:    convertToCommittee([][]byte{}),
-			currentSyncMap: map[[48]byte][]uint64{
-				[48]byte{1}: {0},
-				[48]byte{2}: {1, 3, 4},
-				[48]byte{3}: {2},
+			currentSyncMap: map[types.ValidatorIndex][]uint64{
+				1: {0},
+				2: {1, 3, 4},
+				3: {2},
 			},
-			nextSyncMap: map[[48]byte][]uint64{
-				[48]byte{1}: {},
-				[48]byte{2}: {},
-				[48]byte{3}: {},
+			nextSyncMap: map[types.ValidatorIndex][]uint64{
+				1: {},
+				2: {},
+				3: {},
 			},
 		},
 		{
 			name:                 "only next epoch",
 			currentSyncCommittee: convertToCommittee([][]byte{}),
 			nextSyncCommittee:    convertToCommittee([][]byte{{1}, {2}, {3}, {2}, {2}}),
-			currentSyncMap: map[[48]byte][]uint64{
-				[48]byte{1}: {},
-				[48]byte{2}: {},
-				[48]byte{3}: {},
+			currentSyncMap: map[types.ValidatorIndex][]uint64{
+				1: {},
+				2: {},
+				3: {},
 			},
-			nextSyncMap: map[[48]byte][]uint64{
-				[48]byte{1}: {0},
-				[48]byte{2}: {1, 3, 4},
-				[48]byte{3}: {2},
+			nextSyncMap: map[types.ValidatorIndex][]uint64{
+				1: {0},
+				2: {1, 3, 4},
+				3: {2},
 			},
 		},
 		{
 			name:                 "some current epoch and some next epoch",
 			currentSyncCommittee: convertToCommittee([][]byte{{1}, {2}, {3}, {2}, {2}}),
 			nextSyncCommittee:    convertToCommittee([][]byte{{7}, {6}, {5}, {4}, {7}}),
-			currentSyncMap: map[[48]byte][]uint64{
-				[48]byte{1}: {0},
-				[48]byte{2}: {1, 3, 4},
-				[48]byte{3}: {2},
+			currentSyncMap: map[types.ValidatorIndex][]uint64{
+				1: {0},
+				2: {1, 3, 4},
+				3: {2},
 			},
-			nextSyncMap: map[[48]byte][]uint64{
-				[48]byte{7}: {0, 4},
-				[48]byte{6}: {1},
-				[48]byte{5}: {2},
-				[48]byte{4}: {3},
+			nextSyncMap: map[types.ValidatorIndex][]uint64{
+				7: {0, 4},
+				6: {1},
+				5: {2},
+				4: {3},
 			},
 		},
 		{
 			name:                 "some current epoch and some next epoch duplicated across",
 			currentSyncCommittee: convertToCommittee([][]byte{{1}, {2}, {3}, {2}, {2}}),
 			nextSyncCommittee:    convertToCommittee([][]byte{{2}, {1}, {3}, {2}, {1}}),
-			currentSyncMap: map[[48]byte][]uint64{
-				[48]byte{1}: {0},
-				[48]byte{2}: {1, 3, 4},
-				[48]byte{3}: {2},
+			currentSyncMap: map[types.ValidatorIndex][]uint64{
+				1: {0},
+				2: {1, 3, 4},
+				3: {2},
 			},
-			nextSyncMap: map[[48]byte][]uint64{
-				[48]byte{1}: {1, 4},
-				[48]byte{2}: {0, 3},
-				[48]byte{3}: {2},
+			nextSyncMap: map[types.ValidatorIndex][]uint64{
+				1: {1, 4},
+				2: {0, 3},
+				3: {2},
 			},
 		},
 		{
 			name:                 "all duplicated",
 			currentSyncCommittee: convertToCommittee([][]byte{{100}, {100}, {100}, {100}}),
 			nextSyncCommittee:    convertToCommittee([][]byte{{100}, {100}, {100}, {100}}),
-			currentSyncMap: map[[48]byte][]uint64{
-				[48]byte{100}: {0, 1, 2, 3},
+			currentSyncMap: map[types.ValidatorIndex][]uint64{
+				100: {0, 1, 2, 3},
 			},
-			nextSyncMap: map[[48]byte][]uint64{
-				[48]byte{100}: {0, 1, 2, 3},
+			nextSyncMap: map[types.ValidatorIndex][]uint64{
+				100: {0, 1, 2, 3},
 			},
 		},
 		{
 			name:                 "unknown keys",
 			currentSyncCommittee: convertToCommittee([][]byte{{100}, {100}, {100}, {100}}),
 			nextSyncCommittee:    convertToCommittee([][]byte{{100}, {100}, {100}, {100}}),
-			currentSyncMap: map[[48]byte][]uint64{
-				[48]byte{1}: {},
+			currentSyncMap: map[types.ValidatorIndex][]uint64{
+				1: {},
 			},
-			nextSyncMap: map[[48]byte][]uint64{
-				[48]byte{1}: {},
+			nextSyncMap: map[types.ValidatorIndex][]uint64{
+				1: {},
 			},
 		},
 	}
@@ -130,7 +131,7 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 
 func TestSyncCommitteeCache_RootDoesNotExist(t *testing.T) {
 	c := cache.NewSyncCommittee()
-	_, err := c.CurrentEpochIndexPosition([32]byte{}, [48]byte{})
+	_, err := c.CurrentEpochIndexPosition([32]byte{}, 0)
 	require.Equal(t, cache.ErrNonExistingSyncCommitteeKey, err)
 }
 
@@ -152,14 +153,14 @@ func TestSyncCommitteeCache_CanRotate(t *testing.T) {
 	require.NoError(t, s.SetCurrentSyncCommittee(convertToCommittee([][]byte{{4}})))
 	require.NoError(t, c.UpdatePositionsInCommittee(s))
 
-	_, err = c.CurrentEpochIndexPosition(r, [48]byte{})
+	_, err = c.CurrentEpochIndexPosition(r, 0)
 	require.Equal(t, cache.ErrNonExistingSyncCommitteeKey, err)
 
 	csc, err = s.CurrentSyncCommittee()
 	require.NoError(t, err)
 	r, err = csc.HashTreeRoot()
 	require.NoError(t, err)
-	_, err = c.CurrentEpochIndexPosition(r, [48]byte{})
+	_, err = c.CurrentEpochIndexPosition(r, 0)
 	require.NoError(t, err)
 }
 
