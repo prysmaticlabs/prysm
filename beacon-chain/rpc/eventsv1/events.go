@@ -15,14 +15,19 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
-// TODO: documentation
 const (
-	HeadTopic                = "head"
-	BlockTopic               = "block"
-	AttestationTopic         = "attestation"
-	VoluntaryExitTopic       = "voluntary_exit"
+	// HeadTopic represents a new chain head event topic.
+	HeadTopic = "head"
+	// BlockTopic represents a new produced block event topic.
+	BlockTopic = "block"
+	// AttestationTopic represents a new submitted attestation event topic.
+	AttestationTopic = "attestation"
+	// VoluntaryExitTopic represents a new performed voluntary exit event topic.
+	VoluntaryExitTopic = "voluntary_exit"
+	// FinalizedCheckpointTopic represents a new finalized checkpoint event topic.
 	FinalizedCheckpointTopic = "finalized_checkpoint"
-	ChainReorgTopic          = "chain_reorg"
+	// ChainReorgTopic represents a chain reorganization event topic.
+	ChainReorgTopic = "chain_reorg"
 )
 
 var casesHandled = map[string]bool{
