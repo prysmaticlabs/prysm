@@ -13,6 +13,12 @@ import (
 )
 
 func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
+	numValidators := 101
+	deterministicState, _ := testutil.DeterministicGenesisStateAltair(t, uint64(numValidators))
+	pubKeys := make([][]byte, deterministicState.NumValidators())
+	for i, val := range deterministicState.Validators() {
+		pubKeys[i] = val.PublicKey
+	}
 	tests := []struct {
 		name                 string
 		currentSyncCommittee *pb.SyncCommittee
@@ -21,9 +27,11 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 		nextSyncMap          map[types.ValidatorIndex][]uint64
 	}{
 		{
-			name:                 "only current epoch",
-			currentSyncCommittee: convertToCommittee([][]byte{{1}, {2}, {3}, {2}, {2}}),
-			nextSyncCommittee:    convertToCommittee([][]byte{}),
+			name: "only current epoch",
+			currentSyncCommittee: convertToCommittee([][]byte{
+				pubKeys[1], pubKeys[2], pubKeys[3], pubKeys[2], pubKeys[2],
+			}),
+			nextSyncCommittee: convertToCommittee([][]byte{}),
 			currentSyncMap: map[types.ValidatorIndex][]uint64{
 				1: {0},
 				2: {1, 3, 4},
@@ -38,7 +46,9 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 		{
 			name:                 "only next epoch",
 			currentSyncCommittee: convertToCommittee([][]byte{}),
-			nextSyncCommittee:    convertToCommittee([][]byte{{1}, {2}, {3}, {2}, {2}}),
+			nextSyncCommittee: convertToCommittee([][]byte{
+				pubKeys[1], pubKeys[2], pubKeys[3], pubKeys[2], pubKeys[2],
+			}),
 			currentSyncMap: map[types.ValidatorIndex][]uint64{
 				1: {},
 				2: {},
@@ -51,9 +61,21 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 			},
 		},
 		{
-			name:                 "some current epoch and some next epoch",
-			currentSyncCommittee: convertToCommittee([][]byte{{1}, {2}, {3}, {2}, {2}}),
-			nextSyncCommittee:    convertToCommittee([][]byte{{7}, {6}, {5}, {4}, {7}}),
+			name: "some current epoch and some next epoch",
+			currentSyncCommittee: convertToCommittee([][]byte{
+				pubKeys[1],
+				pubKeys[2],
+				pubKeys[3],
+				pubKeys[2],
+				pubKeys[2],
+			}),
+			nextSyncCommittee: convertToCommittee([][]byte{
+				pubKeys[7],
+				pubKeys[6],
+				pubKeys[5],
+				pubKeys[4],
+				pubKeys[7],
+			}),
 			currentSyncMap: map[types.ValidatorIndex][]uint64{
 				1: {0},
 				2: {1, 3, 4},
@@ -67,9 +89,21 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 			},
 		},
 		{
-			name:                 "some current epoch and some next epoch duplicated across",
-			currentSyncCommittee: convertToCommittee([][]byte{{1}, {2}, {3}, {2}, {2}}),
-			nextSyncCommittee:    convertToCommittee([][]byte{{2}, {1}, {3}, {2}, {1}}),
+			name: "some current epoch and some next epoch duplicated across",
+			currentSyncCommittee: convertToCommittee([][]byte{
+				pubKeys[1],
+				pubKeys[2],
+				pubKeys[3],
+				pubKeys[2],
+				pubKeys[2],
+			}),
+			nextSyncCommittee: convertToCommittee([][]byte{
+				pubKeys[2],
+				pubKeys[1],
+				pubKeys[3],
+				pubKeys[2],
+				pubKeys[1],
+			}),
 			currentSyncMap: map[types.ValidatorIndex][]uint64{
 				1: {0},
 				2: {1, 3, 4},
@@ -82,9 +116,19 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 			},
 		},
 		{
-			name:                 "all duplicated",
-			currentSyncCommittee: convertToCommittee([][]byte{{100}, {100}, {100}, {100}}),
-			nextSyncCommittee:    convertToCommittee([][]byte{{100}, {100}, {100}, {100}}),
+			name: "all duplicated",
+			currentSyncCommittee: convertToCommittee([][]byte{
+				pubKeys[100],
+				pubKeys[100],
+				pubKeys[100],
+				pubKeys[100],
+			}),
+			nextSyncCommittee: convertToCommittee([][]byte{
+				pubKeys[100],
+				pubKeys[100],
+				pubKeys[100],
+				pubKeys[100],
+			}),
 			currentSyncMap: map[types.ValidatorIndex][]uint64{
 				100: {0, 1, 2, 3},
 			},
@@ -93,9 +137,19 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 			},
 		},
 		{
-			name:                 "unknown keys",
-			currentSyncCommittee: convertToCommittee([][]byte{{100}, {100}, {100}, {100}}),
-			nextSyncCommittee:    convertToCommittee([][]byte{{100}, {100}, {100}, {100}}),
+			name: "unknown keys",
+			currentSyncCommittee: convertToCommittee([][]byte{
+				pubKeys[100],
+				pubKeys[100],
+				pubKeys[100],
+				pubKeys[100],
+			}),
+			nextSyncCommittee: convertToCommittee([][]byte{
+				pubKeys[100],
+				pubKeys[100],
+				pubKeys[100],
+				pubKeys[100],
+			}),
 			currentSyncMap: map[types.ValidatorIndex][]uint64{
 				1: {},
 			},
@@ -106,7 +160,7 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, _ := testutil.DeterministicGenesisStateAltair(t, 64)
+			s, _ := testutil.DeterministicGenesisStateAltair(t, uint64(numValidators))
 			require.NoError(t, s.SetCurrentSyncCommittee(tt.currentSyncCommittee))
 			require.NoError(t, s.SetNextSyncCommittee(tt.nextSyncCommittee))
 			cache := cache.NewSyncCommittee()
