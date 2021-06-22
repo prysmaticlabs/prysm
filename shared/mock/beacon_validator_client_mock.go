@@ -138,6 +138,26 @@ func (mr *MockBeaconNodeValidatorClientMockRecorder) GetDuties(arg0, arg1 interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDuties", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).GetDuties), varargs...)
 }
 
+// GetSyncCommitteeContribution mocks base method.
+func (m *MockBeaconNodeValidatorClient) GetSyncCommitteeContribution(arg0 context.Context, arg1 *eth.SyncCommitteeContributionRequest, arg2 ...grpc.CallOption) (*eth.SyncCommitteeContribution, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetSyncCommitteeContribution", varargs...)
+	ret0, _ := ret[0].(*eth.SyncCommitteeContribution)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSyncCommitteeContribution indicates an expected call of GetSyncCommitteeContribution.
+func (mr *MockBeaconNodeValidatorClientMockRecorder) GetSyncCommitteeContribution(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSyncCommitteeContribution", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).GetSyncCommitteeContribution), varargs...)
+}
+
 // GetSyncMessageBlockRoot mocks base method.
 func (m *MockBeaconNodeValidatorClient) GetSyncMessageBlockRoot(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (*eth.SyncMessageBlockRootResponse, error) {
 	m.ctrl.T.Helper()
@@ -336,6 +356,26 @@ func (mr *MockBeaconNodeValidatorClientMockRecorder) SubmitSignedAggregateSelect
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitSignedAggregateSelectionProof", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).SubmitSignedAggregateSelectionProof), varargs...)
+}
+
+// SubmitSignedContributionAndProof mocks base method.
+func (m *MockBeaconNodeValidatorClient) SubmitSignedContributionAndProof(arg0 context.Context, arg1 *eth.SignedContributionAndProof, arg2 ...grpc.CallOption) (*emptypb.Empty, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "SubmitSignedContributionAndProof", varargs...)
+	ret0, _ := ret[0].(*emptypb.Empty)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SubmitSignedContributionAndProof indicates an expected call of SubmitSignedContributionAndProof.
+func (mr *MockBeaconNodeValidatorClientMockRecorder) SubmitSignedContributionAndProof(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitSignedContributionAndProof", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).SubmitSignedContributionAndProof), varargs...)
 }
 
 // SubmitSyncMessage mocks base method.

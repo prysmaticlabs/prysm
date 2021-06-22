@@ -93,3 +93,23 @@ func TestGetSyncSubcommitteeIndex_Ok(t *testing.T) {
 	require.NoError(t, err)
 	require.DeepEqual(t, []uint64{1}, res.Indices)
 }
+
+func TestSubmitSignedContributionAndProof_OK(t *testing.T) {
+	server := &Server{
+		SyncCommitteePool: synccommittee.NewStore(),
+		P2P:               &mockp2p.MockBroadcaster{},
+	}
+	contribution := &ethpb.SignedContributionAndProof{
+		Message: &ethpb.ContributionAndProof{
+			Contribution: &ethpb.SyncCommitteeContribution{
+				Slot:              1,
+				SubcommitteeIndex: 2,
+			},
+		},
+	}
+	_, err := server.SubmitSignedContributionAndProof(context.Background(), contribution)
+	require.NoError(t, err)
+	savedMsgs, err := server.SyncCommitteePool.SyncCommitteeContributions(1)
+	require.NoError(t, err)
+	require.DeepEqual(t, []*ethpb.SyncCommitteeContribution{contribution.Message.Contribution}, savedMsgs)
+}

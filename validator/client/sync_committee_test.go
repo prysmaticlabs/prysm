@@ -7,6 +7,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/go-bitfield"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -151,4 +152,291 @@ func TestSubmitSyncCommitteeMessage_OK(t *testing.T) {
 	require.Equal(t, types.Slot(1), generatedMsg.Slot)
 	require.Equal(t, validatorIndex, generatedMsg.ValidatorIndex)
 	require.DeepEqual(t, bytesutil.PadTo(r, 32), generatedMsg.BlockRoot)
+}
+
+func TestSubmitSignedContributionAndProof_ValidatorDutiesRequestFailure(t *testing.T) {
+	hook := logTest.NewGlobal()
+	validator, _, validatorKey, finish := setup(t)
+	validator.duties = &eth.DutiesResponse{Duties: []*eth.DutiesResponse_Duty{}}
+	defer finish()
+
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	validator.SubmitSignedContributionAndProof(context.Background(), 1, pubKey)
+	require.LogsContain(t, hook, "Could not fetch validator assignment")
+}
+
+func TestSubmitSignedContributionAndProof_GetSyncSubcommitteeIndexFailure(t *testing.T) {
+	hook := logTest.NewGlobal()
+	validator, m, validatorKey, finish := setup(t)
+	validatorIndex := types.ValidatorIndex(7)
+	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
+	validator.duties = &eth.DutiesResponse{Duties: []*eth.DutiesResponse_Duty{
+		{
+			PublicKey:      validatorKey.PublicKey().Marshal(),
+			Committee:      committee,
+			ValidatorIndex: validatorIndex,
+		},
+	}}
+	defer finish()
+
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+		gomock.Any(), // ctx
+		&eth.SyncSubcommitteeIndexRequest{
+			Slot:      1,
+			PublicKey: pubKey[:],
+		},
+	).Return(&eth.SyncSubcommitteeIndexRespond{}, errors.New("Bad index"))
+
+	validator.SubmitSignedContributionAndProof(context.Background(), 1, pubKey)
+	require.LogsContain(t, hook, "Could not get sync subcommittee index")
+}
+
+func TestSubmitSignedContributionAndProof_NothingToDo(t *testing.T) {
+	hook := logTest.NewGlobal()
+	validator, m, validatorKey, finish := setup(t)
+	validatorIndex := types.ValidatorIndex(7)
+	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
+	validator.duties = &eth.DutiesResponse{Duties: []*eth.DutiesResponse_Duty{
+		{
+			PublicKey:      validatorKey.PublicKey().Marshal(),
+			Committee:      committee,
+			ValidatorIndex: validatorIndex,
+		},
+	}}
+	defer finish()
+
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+		gomock.Any(), // ctx
+		&eth.SyncSubcommitteeIndexRequest{
+			Slot:      1,
+			PublicKey: pubKey[:],
+		},
+	).Return(&eth.SyncSubcommitteeIndexRespond{Indices: []uint64{}}, nil)
+
+	validator.SubmitSignedContributionAndProof(context.Background(), 1, pubKey)
+	require.LogsContain(t, hook, "Empty subcommittee index list, do nothing")
+}
+
+func TestSubmitSignedContributionAndProof_BadDomain(t *testing.T) {
+	hook := logTest.NewGlobal()
+	validator, m, validatorKey, finish := setup(t)
+	validatorIndex := types.ValidatorIndex(7)
+	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
+	validator.duties = &eth.DutiesResponse{Duties: []*eth.DutiesResponse_Duty{
+		{
+			PublicKey:      validatorKey.PublicKey().Marshal(),
+			Committee:      committee,
+			ValidatorIndex: validatorIndex,
+		},
+	}}
+	defer finish()
+
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+		gomock.Any(), // ctx
+		&eth.SyncSubcommitteeIndexRequest{
+			Slot:      1,
+			PublicKey: pubKey[:],
+		},
+	).Return(&eth.SyncSubcommitteeIndexRespond{Indices: []uint64{1}}, nil)
+
+	m.validatorClient.EXPECT().
+		DomainData(gomock.Any(), // ctx
+			gomock.Any()). // epoch
+		Return(&eth.DomainResponse{
+			SignatureDomain: make([]byte, 32),
+		}, errors.New("bad domain response"))
+
+	validator.SubmitSignedContributionAndProof(context.Background(), 1, pubKey)
+	require.LogsContain(t, hook, "Could not sign selection data: bad domain response")
+}
+
+func TestSubmitSignedContributionAndProof_CouldNotGetContribution(t *testing.T) {
+	hook := logTest.NewGlobal()
+	validator, m, validatorKey, finish := setup(t)
+	validatorIndex := types.ValidatorIndex(7)
+	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
+	validator.duties = &eth.DutiesResponse{Duties: []*eth.DutiesResponse_Duty{
+		{
+			PublicKey:      validatorKey.PublicKey().Marshal(),
+			Committee:      committee,
+			ValidatorIndex: validatorIndex,
+		},
+	}}
+	defer finish()
+
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+		gomock.Any(), // ctx
+		&eth.SyncSubcommitteeIndexRequest{
+			Slot:      1,
+			PublicKey: pubKey[:],
+		},
+	).Return(&eth.SyncSubcommitteeIndexRespond{Indices: []uint64{1}}, nil)
+
+	m.validatorClient.EXPECT().
+		DomainData(gomock.Any(), // ctx
+			gomock.Any()). // epoch
+		Return(&eth.DomainResponse{
+			SignatureDomain: make([]byte, 32),
+		}, nil)
+
+	m.validatorClient.EXPECT().GetSyncCommitteeContribution(
+		gomock.Any(), // ctx
+		&eth.SyncCommitteeContributionRequest{
+			Slot:      1,
+			PublicKey: pubKey[:],
+			SubnetId:  1,
+		},
+	).Return(nil, errors.New("Bad contribution"))
+
+	validator.SubmitSignedContributionAndProof(context.Background(), 1, pubKey)
+	require.LogsContain(t, hook, "Could not get sync committee contribution")
+}
+
+func TestSubmitSignedContributionAndProof_CouldNotSubmitContribution(t *testing.T) {
+	hook := logTest.NewGlobal()
+	validator, m, validatorKey, finish := setup(t)
+	validatorIndex := types.ValidatorIndex(7)
+	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
+	validator.duties = &eth.DutiesResponse{Duties: []*eth.DutiesResponse_Duty{
+		{
+			PublicKey:      validatorKey.PublicKey().Marshal(),
+			Committee:      committee,
+			ValidatorIndex: validatorIndex,
+		},
+	}}
+	defer finish()
+
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+		gomock.Any(), // ctx
+		&eth.SyncSubcommitteeIndexRequest{
+			Slot:      1,
+			PublicKey: pubKey[:],
+		},
+	).Return(&eth.SyncSubcommitteeIndexRespond{Indices: []uint64{1}}, nil)
+
+	m.validatorClient.EXPECT().
+		DomainData(gomock.Any(), // ctx
+			gomock.Any()). // epoch
+		Return(&eth.DomainResponse{
+			SignatureDomain: make([]byte, 32),
+		}, nil)
+
+	m.validatorClient.EXPECT().GetSyncCommitteeContribution(
+		gomock.Any(), // ctx
+		&eth.SyncCommitteeContributionRequest{
+			Slot:      1,
+			PublicKey: pubKey[:],
+			SubnetId:  1,
+		},
+	).Return(&eth.SyncCommitteeContribution{
+		BlockRoot:       make([]byte, 32),
+		Signature:       make([]byte, 96),
+		AggregationBits: bitfield.NewBitvector128(),
+	}, nil)
+
+	m.validatorClient.EXPECT().
+		DomainData(gomock.Any(), // ctx
+			gomock.Any()). // epoch
+		Return(&eth.DomainResponse{
+			SignatureDomain: make([]byte, 32),
+		}, nil)
+
+	m.validatorClient.EXPECT().SubmitSignedContributionAndProof(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&eth.SignedContributionAndProof{
+			Message: &eth.ContributionAndProof{
+				AggregatorIndex: 7,
+				Contribution: &eth.SyncCommitteeContribution{
+					BlockRoot:         make([]byte, 32),
+					Signature:         make([]byte, 96),
+					AggregationBits:   bitfield.NewBitvector128(),
+					Slot:              1,
+					SubcommitteeIndex: 1,
+				},
+			},
+		}),
+	).Return(&emptypb.Empty{}, errors.New("Could not submit contribution"))
+
+	validator.SubmitSignedContributionAndProof(context.Background(), 1, pubKey)
+	require.LogsContain(t, hook, "Could not submit signed contribution and proof")
+}
+
+func TestSubmitSignedContributionAndProof_Ok(t *testing.T) {
+	validator, m, validatorKey, finish := setup(t)
+	validatorIndex := types.ValidatorIndex(7)
+	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
+	validator.duties = &eth.DutiesResponse{Duties: []*eth.DutiesResponse_Duty{
+		{
+			PublicKey:      validatorKey.PublicKey().Marshal(),
+			Committee:      committee,
+			ValidatorIndex: validatorIndex,
+		},
+	}}
+	defer finish()
+
+	pubKey := [48]byte{}
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+		gomock.Any(), // ctx
+		&eth.SyncSubcommitteeIndexRequest{
+			Slot:      1,
+			PublicKey: pubKey[:],
+		},
+	).Return(&eth.SyncSubcommitteeIndexRespond{Indices: []uint64{1}}, nil)
+
+	m.validatorClient.EXPECT().
+		DomainData(gomock.Any(), // ctx
+			gomock.Any()). // epoch
+		Return(&eth.DomainResponse{
+			SignatureDomain: make([]byte, 32),
+		}, nil)
+
+	m.validatorClient.EXPECT().GetSyncCommitteeContribution(
+		gomock.Any(), // ctx
+		&eth.SyncCommitteeContributionRequest{
+			Slot:      1,
+			PublicKey: pubKey[:],
+			SubnetId:  1,
+		},
+	).Return(&eth.SyncCommitteeContribution{
+		BlockRoot:       make([]byte, 32),
+		Signature:       make([]byte, 96),
+		AggregationBits: bitfield.NewBitvector128(),
+	}, nil)
+
+	m.validatorClient.EXPECT().
+		DomainData(gomock.Any(), // ctx
+			gomock.Any()). // epoch
+		Return(&eth.DomainResponse{
+			SignatureDomain: make([]byte, 32),
+		}, nil)
+
+	m.validatorClient.EXPECT().SubmitSignedContributionAndProof(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&eth.SignedContributionAndProof{
+			Message: &eth.ContributionAndProof{
+				AggregatorIndex: 7,
+				Contribution: &eth.SyncCommitteeContribution{
+					BlockRoot:         make([]byte, 32),
+					Signature:         make([]byte, 96),
+					AggregationBits:   bitfield.NewBitvector128(),
+					Slot:              1,
+					SubcommitteeIndex: 1,
+				},
+			},
+		}),
+	).Return(&emptypb.Empty{}, nil)
+
+	validator.SubmitSignedContributionAndProof(context.Background(), 1, pubKey)
 }
