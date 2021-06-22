@@ -223,6 +223,24 @@ service BeaconNodeValidator {
         };
     }
 
+    // Retrieve sync committee contribution to the beacon node to aggregate all matching sync committee messages with the same slot and root.
+    // the beacon node responses with a sync committee contribution object for the validator to sign over.
+    rpc GetSyncCommitteeContribution(SyncCommitteeContributionRequest) returns (SyncCommitteeContribution) {
+        option (google.api.http) = {
+            post: "/eth/v1alpha1/validator/contribution_and_proof"
+            body: "*"
+        };
+    }
+
+    // Submit a signed sync committee contribution and proof object, the beacon node will broadcast the
+    // signed contribution and proof object.
+    rpc SubmitSignedContributionAndProof(SignedContributionAndProof) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            post: "/eth/v1alpha1/validator/signed_contribution_and_proof"
+            body: "*"
+        };
+    }
+
     // Propose to leave the list of active validators.
     //
     // The beacon node is expected to validate the request and make it available for inclusion in
@@ -245,7 +263,6 @@ service BeaconNodeValidator {
             body: "*"  
         };
     }
-
 
     // Retrieves the sync subcommittee index of a given validator.
     //
@@ -627,4 +644,13 @@ message SyncSubcommitteeIndexRespond {
 message SyncMessageBlockRootResponse {
     // The block root of the head block.
     bytes root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
+}
+
+message SyncCommitteeContributionRequest {
+    // Slot for which the aggregation request applies.
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+    // 48 byte public key of the validator.
+    bytes public_key = 2 [(ethereum.eth.ext.ssz_size) = "48", (ethereum.eth.ext.spec_name) = "pubkey"];
+    // Subnet ID of where this contribution and proof should be broadcast to.
+    uint64 subnet_id = 3;
 }
