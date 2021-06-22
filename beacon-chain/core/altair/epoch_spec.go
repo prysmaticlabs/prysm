@@ -35,6 +35,9 @@ func ProcessSyncCommitteeUpdates(beaconState iface.BeaconStateAltair) (iface.Bea
 		if err := beaconState.SetNextSyncCommittee(nextCommittee); err != nil {
 			return nil, err
 		}
+		if err := helpers.UpdateSyncCommitteeCache(beaconState); err != nil {
+			return nil, err
+		}
 	}
 	return beaconState, nil
 }
