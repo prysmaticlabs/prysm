@@ -114,7 +114,7 @@ func (s *SyncCommitteeCache) UpdatePositionsInCommittee(state iface.BeaconStateA
 		p := bytesutil.ToBytes48(pubkey)
 		validatorIndex, ok := state.ValidatorIndexByPubkey(p)
 		if !ok {
-			continue // Is this fine?
+			continue
 		}
 		if _, ok := positionsMap[validatorIndex]; !ok {
 			m := &positionInCommittee{currentEpoch: []uint64{uint64(i)}, nextEpoch: []uint64{}}
@@ -132,7 +132,7 @@ func (s *SyncCommitteeCache) UpdatePositionsInCommittee(state iface.BeaconStateA
 		p := bytesutil.ToBytes48(pubkey)
 		validatorIndex, ok := state.ValidatorIndexByPubkey(p)
 		if !ok {
-			continue // Is this fine?
+			continue
 		}
 		if _, ok := positionsMap[validatorIndex]; !ok {
 			m := &positionInCommittee{nextEpoch: []uint64{uint64(i)}, currentEpoch: []uint64{}}
