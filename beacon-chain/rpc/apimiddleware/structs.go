@@ -469,6 +469,11 @@ type eventHeadJson struct {
 	CurrentDutyDependentRoot  string `json:"current_duty_dependent_root" hex:"true"`
 }
 
+type eventErrorJson struct {
+	StatusCode int    `json:"status_code"`
+	Message    string `json:"message"`
+}
+
 // ---------------
 // Error handling.
 // ---------------
