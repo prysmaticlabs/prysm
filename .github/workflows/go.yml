@@ -27,7 +27,7 @@ jobs:
       
       - name: GoImports checker
         id: goimports
-        uses: ./.github/goimports
+        uses: ./.github/actions/goimports
         with:
           path: ./
 
