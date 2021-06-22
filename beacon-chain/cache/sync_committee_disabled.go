@@ -3,7 +3,7 @@
 package cache
 
 import (
-	"github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/eth2-types"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 )
 
