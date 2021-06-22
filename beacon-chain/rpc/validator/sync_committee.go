@@ -3,6 +3,7 @@ package validator
 import (
 	"bytes"
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -78,13 +79,17 @@ func (vs *Server) syncSubcommitteeIndex(ctx context.Context, pubkey [48]byte, sl
 	nextSlotEpoch := helpers.SlotToEpoch(headState.Slot() + 1)
 	currentEpoch := helpers.CurrentEpoch(headState)
 
+	valIdx, ok := headState.ValidatorIndexByPubkey(pubkey)
+	if !ok {
+		return nil, fmt.Errorf("validator with pubkey %#x not found", pubkey)
+	}
 	switch {
 	case altair.SyncCommitteePeriod(nextSlotEpoch) == altair.SyncCommitteePeriod(currentEpoch):
 		committee, err := headState.CurrentSyncCommittee()
 		if err != nil {
 			return nil, err
 		}
-		indices, err := helpers.CurrentEpochSyncSubcommitteeIndices(committee, pubkey)
+		indices, err := helpers.CurrentEpochSyncSubcommitteeIndices(headState, committee, valIdx)
 		if err != nil {
 			return nil, err
 		}
@@ -95,7 +100,7 @@ func (vs *Server) syncSubcommitteeIndex(ctx context.Context, pubkey [48]byte, sl
 		if err != nil {
 			return nil, err
 		}
-		indices, err := helpers.NextEpochSyncSubcommitteeIndices(committee, pubkey)
+		indices, err := helpers.NextEpochSyncSubcommitteeIndices(headState, committee, valIdx)
 		if err != nil {
 			return nil, err
 		}
