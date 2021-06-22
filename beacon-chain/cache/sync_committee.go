@@ -5,6 +5,7 @@ package cache
 import (
 	"sync"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"k8s.io/client-go/tools/cache"
@@ -19,11 +20,12 @@ type SyncCommitteeCache struct {
 	lock  sync.RWMutex
 }
 
-// Index position of all validators in sync committee where `currentSyncCommitteeRoot` is the key and `vIndexToPositionMap` is value.
-// Inside `vIndexToPositionMap`, validator positions are cached where key is the 48byte public key and the value is the `positionInCommittee` struct.
+// Index position of all validators in sync committee where `currentSyncCommitteeRoot` is the
+// key and `vIndexToPositionMap` is value. Inside `vIndexToPositionMap`, validator positions
+// are cached where key is the validator index and the value is the `positionInCommittee` struct.
 type syncCommitteeIndexPosition struct {
 	currentSyncCommitteeRoot [32]byte
-	vIndexToPositionMap      map[[48]byte]*positionInCommittee
+	vIndexToPositionMap      map[types.ValidatorIndex]*positionInCommittee
 }
 
 // Index position of individual validator of current epoch and previous epoch sync committee.
@@ -39,14 +41,15 @@ func NewSyncCommittee() *SyncCommitteeCache {
 	}
 }
 
-// CurrentEpochIndexPosition returns current epoch index position of validator pubKey with respect with sync committee.
-// If the input pubKey has no assignment, an empty list will be returned.
-// If the input root does not exist in cache, ErrNonExistingSyncCommitteeKey is returned. Then performing manual checking of state for index position in state is recommended.
-func (s *SyncCommitteeCache) CurrentEpochIndexPosition(root [32]byte, pubKey [48]byte) ([]uint64, error) {
+// CurrentEpochIndexPosition returns current epoch index position of a validator index with respect with
+// sync committee. If the input validator index has no assignment, an empty list will be returned.
+// If the input root does not exist in cache, ErrNonExistingSyncCommitteeKey is returned.
+// Then performing manual checking of state for index position in state is recommended.
+func (s *SyncCommitteeCache) CurrentEpochIndexPosition(root [32]byte, valIdx types.ValidatorIndex) ([]uint64, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	pos, err := s.idxPositionInCommittee(root, pubKey)
+	pos, err := s.idxPositionInCommittee(root, valIdx)
 	if err != nil {
 		return nil, err
 	}
@@ -57,14 +60,15 @@ func (s *SyncCommitteeCache) CurrentEpochIndexPosition(root [32]byte, pubKey [48
 	return pos.currentEpoch, nil
 }
 
-// NextEpochIndexPosition returns next epoch index position of validator pubKey in respect with sync committee.
-// If the input pubKey has no assignment, an empty list will be returned.
-// If the input root does not exist in cache, ErrNonExistingSyncCommitteeKey is returned. Then performing manual checking of state for index position in state is recommended.
-func (s *SyncCommitteeCache) NextEpochIndexPosition(root [32]byte, pubKey [48]byte) ([]uint64, error) {
+// NextEpochIndexPosition returns next epoch index position of a validator index in respect with sync committee.
+// If the input validator index has no assignment, an empty list will be returned.
+// If the input root does not exist in cache, ErrNonExistingSyncCommitteeKey is returned.
+// Then performing manual checking of state for index position in state is recommended.
+func (s *SyncCommitteeCache) NextEpochIndexPosition(root [32]byte, valIdx types.ValidatorIndex) ([]uint64, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	pos, err := s.idxPositionInCommittee(root, pubKey)
+	pos, err := s.idxPositionInCommittee(root, valIdx)
 	if err != nil {
 		return nil, err
 	}
@@ -75,8 +79,10 @@ func (s *SyncCommitteeCache) NextEpochIndexPosition(root [32]byte, pubKey [48]by
 }
 
 // Helper function for `CurrentEpochIndexPosition` and `NextEpochIndexPosition` to return a mapping
-// of validator pubKey to its index(s) position.
-func (s *SyncCommitteeCache) idxPositionInCommittee(root [32]byte, pubKey [48]byte) (*positionInCommittee, error) {
+// of validator index to its index(s) position in the sync committee.
+func (s *SyncCommitteeCache) idxPositionInCommittee(
+	root [32]byte, valIdx types.ValidatorIndex,
+) (*positionInCommittee, error) {
 	obj, exists, err := s.cache.GetByKey(key(root))
 	if err != nil {
 		return nil, err
@@ -88,7 +94,7 @@ func (s *SyncCommitteeCache) idxPositionInCommittee(root [32]byte, pubKey [48]by
 	if !ok {
 		return nil, errNotSyncCommitteeIndexPosition
 	}
-	idxInCommittee, ok := item.vIndexToPositionMap[pubKey]
+	idxInCommittee, ok := item.vIndexToPositionMap[valIdx]
 	if !ok {
 		return nil, nil
 	}
@@ -103,14 +109,18 @@ func (s *SyncCommitteeCache) UpdatePositionsInCommittee(state iface.BeaconStateA
 	if err != nil {
 		return err
 	}
-	positionsMap := make(map[[48]byte]*positionInCommittee)
+	positionsMap := make(map[types.ValidatorIndex]*positionInCommittee)
 	for i, pubkey := range csc.Pubkeys {
 		p := bytesutil.ToBytes48(pubkey)
-		if _, ok := positionsMap[p]; !ok {
+		validatorIndex, ok := state.ValidatorIndexByPubkey(p)
+		if !ok {
+			continue // Is this fine?
+		}
+		if _, ok := positionsMap[validatorIndex]; !ok {
 			m := &positionInCommittee{currentEpoch: []uint64{uint64(i)}, nextEpoch: []uint64{}}
-			positionsMap[p] = m
+			positionsMap[validatorIndex] = m
 		} else {
-			positionsMap[p].currentEpoch = append(positionsMap[p].currentEpoch, uint64(i))
+			positionsMap[validatorIndex].currentEpoch = append(positionsMap[validatorIndex].currentEpoch, uint64(i))
 		}
 	}
 
@@ -120,11 +130,15 @@ func (s *SyncCommitteeCache) UpdatePositionsInCommittee(state iface.BeaconStateA
 	}
 	for i, pubkey := range nsc.Pubkeys {
 		p := bytesutil.ToBytes48(pubkey)
-		if _, ok := positionsMap[p]; !ok {
+		validatorIndex, ok := state.ValidatorIndexByPubkey(p)
+		if !ok {
+			continue // Is this fine?
+		}
+		if _, ok := positionsMap[validatorIndex]; !ok {
 			m := &positionInCommittee{nextEpoch: []uint64{uint64(i)}, currentEpoch: []uint64{}}
-			positionsMap[p] = m
+			positionsMap[validatorIndex] = m
 		} else {
-			positionsMap[p].nextEpoch = append(positionsMap[p].nextEpoch, uint64(i))
+			positionsMap[validatorIndex].nextEpoch = append(positionsMap[validatorIndex].nextEpoch, uint64(i))
 		}
 	}
 
