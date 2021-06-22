@@ -5,5 +5,4 @@ go_library(
     srcs = ["priority_queue.go"],
     importpath = "github.com/prysmaticlabs/prysm/shared/queue",
     visibility = ["//visibility:public"],
-    deps = ["@com_github_mitchellh_copystructure//:go_default_library"],
 )
