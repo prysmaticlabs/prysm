@@ -7,6 +7,7 @@ import (
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -66,4 +67,31 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.S
 		log.WithError(err).Error("Could not submit sync committee message")
 		return
 	}
+}
+
+// Signs input slot with domain sync committee selection proof. This is used to create the signature for sync committee selection.
+func (v *validator) signSyncSelectionData(ctx context.Context, pubKey [48]byte, index uint64, slot types.Slot) ([]byte, error) {
+	domain, err := v.domainData(ctx, helpers.SlotToEpoch(slot), params.BeaconConfig().DomainSyncCommitteeSelectionProof[:])
+	if err != nil {
+		return nil, err
+	}
+
+	data := &pb.SyncAggregatorSelectionData{
+		Slot:              slot,
+		SubcommitteeIndex: index,
+	}
+	root, err := helpers.ComputeSigningRoot(data, domain.SignatureDomain)
+	if err != nil {
+		return nil, err
+	}
+	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
+		PublicKey:       pubKey[:],
+		SigningRoot:     root[:],
+		SignatureDomain: domain.SignatureDomain,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return sig.Marshal(), nil
 }

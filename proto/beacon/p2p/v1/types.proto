@@ -174,7 +174,7 @@ message SyncCommittee {
 // SyncAggregatorSelectionData is used to sign over and then check whether the aggregator is selected within a subcommittee.
 message SyncAggregatorSelectionData {
   // Slot of this signing data.
-  uint64 slot = 1;
+  uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
   // Subcommittee index of this signing data.
   uint64 subcommittee_index = 2;
 }

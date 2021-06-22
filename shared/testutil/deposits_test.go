@@ -13,7 +13,7 @@ import (
 
 func TestSetupInitialDeposits_1024Entries(t *testing.T) {
 	entries := 1
-	ResetCache()
+	resetCache()
 	deposits, privKeys, err := DeterministicDepositsAndKeys(uint64(entries))
 	require.NoError(t, err)
 	_, depositDataRoots, err := DeterministicDepositTrie(len(deposits))
@@ -51,7 +51,7 @@ func TestSetupInitialDeposits_1024Entries(t *testing.T) {
 	}
 
 	entries = 1024
-	ResetCache()
+	resetCache()
 	deposits, privKeys, err = DeterministicDepositsAndKeys(uint64(entries))
 	require.NoError(t, err)
 	_, depositDataRoots, err = DeterministicDepositTrie(len(deposits))
@@ -101,7 +101,7 @@ func TestSetupInitialDeposits_1024Entries(t *testing.T) {
 
 func TestDepositsWithBalance_MatchesDeterministic(t *testing.T) {
 	entries := 64
-	ResetCache()
+	resetCache()
 	balances := make([]uint64, entries)
 	for i := 0; i < entries; i++ {
 		balances[i] = params.BeaconConfig().MaxEffectiveBalance
@@ -128,7 +128,7 @@ func TestDepositsWithBalance_MatchesDeterministic(t *testing.T) {
 
 func TestDepositsWithBalance_MatchesDeterministic_Cached(t *testing.T) {
 	entries := 32
-	ResetCache()
+	resetCache()
 	// Cache half of the deposit cache.
 	_, _, err := DeterministicDepositsAndKeys(uint64(entries))
 	require.NoError(t, err)
@@ -164,7 +164,7 @@ func TestDepositsWithBalance_MatchesDeterministic_Cached(t *testing.T) {
 
 func TestSetupInitialDeposits_1024Entries_PartialDeposits(t *testing.T) {
 	entries := 1
-	ResetCache()
+	resetCache()
 	balances := make([]uint64, entries)
 	for i := 0; i < entries; i++ {
 		balances[i] = params.BeaconConfig().MaxEffectiveBalance / 2
@@ -202,7 +202,7 @@ func TestSetupInitialDeposits_1024Entries_PartialDeposits(t *testing.T) {
 	}
 
 	entries = 1024
-	ResetCache()
+	resetCache()
 	balances = make([]uint64, entries)
 	for i := 0; i < entries; i++ {
 		balances[i] = params.BeaconConfig().MaxEffectiveBalance / 2
