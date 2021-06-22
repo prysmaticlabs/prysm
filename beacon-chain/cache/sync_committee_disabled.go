@@ -3,6 +3,7 @@
 package cache
 
 import (
+	"github.com/prysmaticlabs/eth2-types"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 )
 
@@ -16,12 +17,12 @@ func NewSyncCommittee() *FakeSyncCommitteeCache {
 }
 
 // CurrentEpochIndexPosition -- fake.
-func (s *FakeSyncCommitteeCache) CurrentEpochIndexPosition(root [32]byte, pubKey [48]byte) ([]uint64, error) {
+func (s *FakeSyncCommitteeCache) CurrentEpochIndexPosition(root [32]byte, valIdx types.ValidatorIndex) ([]uint64, error) {
 	return nil, nil
 }
 
 // NextEpochIndexPosition -- fake.
-func (s *FakeSyncCommitteeCache) NextEpochIndexPosition(root [32]byte, pubKey [48]byte) ([]uint64, error) {
+func (s *FakeSyncCommitteeCache) NextEpochIndexPosition(root [32]byte, valIdx types.ValidatorIndex) ([]uint64, error) {
 	return nil, nil
 }
 
