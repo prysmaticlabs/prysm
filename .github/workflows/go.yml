@@ -24,6 +24,12 @@ jobs:
         uses: ./.github/actions/gofmt
         with:
           path: ./
+      
+      - name: GoImports checker
+        id: goimports
+        uses: ./.github/goimports
+        with:
+          path: ./
 
   build:
     name: Build

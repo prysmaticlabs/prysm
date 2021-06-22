@@ -1,0 +1,12 @@
+name: 'GoImports checker'
+description: 'Checks that all project files have been properly formatted imports.'
+inputs:
+  path:
+    description: 'Path to check'
+    required: true
+    default: './'
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - ${{ inputs.path }}
