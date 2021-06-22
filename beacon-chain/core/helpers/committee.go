@@ -429,7 +429,7 @@ func isEpochSyncCommittee(
 	if err == cache.ErrNonExistingSyncCommitteeKey {
 		val, err := st.ValidatorAtIndex(valIdx)
 		if err != nil {
-			return false, err
+			return false, nil
 		}
 		return len(findSubCommitteeIndices(val.PublicKey, committee.Pubkeys)) > 0, nil
 	}
@@ -474,7 +474,7 @@ func epochSyncSubcommitteeIndices(
 	if err == cache.ErrNonExistingSyncCommitteeKey {
 		val, err := st.ValidatorAtIndex(valIdx)
 		if err != nil {
-			return nil, err
+			return nil, nil
 		}
 		return findSubCommitteeIndices(val.PublicKey, committee.Pubkeys), nil
 	}

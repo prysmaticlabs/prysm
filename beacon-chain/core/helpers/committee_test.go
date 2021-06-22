@@ -900,7 +900,7 @@ func TestCurrentEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
-	index, err := CurrentEpochSyncSubcommitteeIndices(state, syncCommittee, 0)
+	index, err := CurrentEpochSyncSubcommitteeIndices(state, syncCommittee, 129301923)
 	require.NoError(t, err)
 	require.DeepEqual(t, []uint64(nil), index)
 }
@@ -982,7 +982,7 @@ func TestNextEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
-	index, err := NextEpochSyncSubcommitteeIndices(state, syncCommittee, 0)
+	index, err := NextEpochSyncSubcommitteeIndices(state, syncCommittee, 21093019)
 	require.NoError(t, err)
 	require.DeepEqual(t, []uint64(nil), index)
 }
