@@ -186,7 +186,6 @@ if [[ $1 == beacon-chain ]]; then
           echo "404 error, exit"
           exit 1
         fi
-        echo $res
         curl --silent -L "https://prysmaticlabs.com/releases/${file}.sha256" -o "${wrapper_dir}/${file}.sha256"
         curl --silent -L "https://prysmaticlabs.com/releases/${file}.sig" -o "${wrapper_dir}/${file}.sig"
         chmod +x "$BEACON_CHAIN_REAL"
