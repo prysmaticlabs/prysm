@@ -13,31 +13,31 @@
 // limitations under the License.
 syntax = "proto3";
 
-package ethereum.eth.v2prysm;
+package ethereum.prysm.v2;
 
 import "proto/eth/ext/options.proto";
 
 import "proto/eth/v1alpha1/beacon_block.proto";
 import "proto/eth/v1alpha1/attestation.proto";
 
-option csharp_namespace = "Ethereum.Eth.v2prysm";
-option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v2prysm;eth";
+option csharp_namespace = "Ethereum.Prysm.V2";
+option go_package = "github.com/prysmaticlabs/prysm/proto/prysm/v2;v2";
 option java_multiple_files = true;
 option java_outer_classname = "BeaconBlockProto";
-option java_package = "org.ethereum.eth.v2prysm";
-option php_namespace = "Ethereum\\Eth\\v2prysm";
+option java_package = "org.ethereum.prysm.v2";
+option php_namespace = "Ethereum\\Prysm\\v2";
 
 // The signed version of a (HF1) beacon block.
-message SignedBeaconBlock {
+message SignedBeaconBlockAltair {
   // The unsigned beacon block itself.
-  BeaconBlock block = 1;
+  BeaconBlockAltair block = 1;
 
   // 96 byte BLS signature from the validator that produced this block.
   bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
 // The unsigned version of a (HF1) beacon block. The message does not contain a validator signature.
-message BeaconBlock {
+message BeaconBlockAltair {
   // Beacon chain slot that this block represents.
   uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
 
@@ -51,12 +51,12 @@ message BeaconBlock {
   bytes state_root = 4 [(ethereum.eth.ext.ssz_size) = "32"];
 
   // The  beacon block body.
-  BeaconBlockBody body = 5;
+  BeaconBlockBodyAltair body = 5;
 }
 
 // The block body of an (HF1) beacon block.
 // The new addition for  is SyncAggregate for light client support.
-message BeaconBlockBody {
+message BeaconBlockBodyAltair {
   // The validators RANDAO reveal 96 byte value.
   bytes randao_reveal = 1 [(ethereum.eth.ext.ssz_size) = "96"];
 

@@ -816,8 +816,8 @@ def prysm_deps():
         importpath = "github.com/ferranbt/fastssz",
         nofuzz = True,
         replace = "github.com/rauljordan/fastssz",
-        sum = "h1:Qwmp1yApFxZ2Eu8zx92BHJA3sZhYoGzRkheJN0DA5Gg=",
-        version = "v0.0.0-20210622170515-6503939030cb",
+        sum = "h1:CoD/RaM9s8qfHA7jAqntW3jv+z9zPBXaxCaCByrKOmg=",
+        version = "v0.0.0-20210622230010-a131010e198f",
     )
 
     go_repository(
@@ -1792,6 +1792,13 @@ def prysm_deps():
         importpath = "github.com/klauspost/compress",
         sum = "h1:0hzRabrMN4tSTvMfnL3SCv1ZGeAP23ynzodBgaHeMeg=",
         version = "v1.11.7",
+    )
+
+    go_repository(
+        name = "com_github_klauspost_cpuid",
+        importpath = "github.com/klauspost/cpuid",
+        sum = "h1:CCtW0xUnWGVINKvE/WWOYKdsPV6mawAtvQuSl8guwQs=",
+        version = "v1.2.3",
     )
     go_repository(
         name = "com_github_klauspost_cpuid_v2",
@@ -3885,10 +3892,3 @@ def prysm_deps():
         sum = "h1:uFRZXykJGK9lLY4HtgSw44DnIcAM+kRBP7x5m+NpAOM=",
         version = "v1.16.0",
     )
-    go_repository(
-        name = "com_github_klauspost_cpuid",
-        importpath = "github.com/klauspost/cpuid",
-        sum = "h1:CCtW0xUnWGVINKvE/WWOYKdsPV6mawAtvQuSl8guwQs=",
-        version = "v1.2.3",
-    )
-

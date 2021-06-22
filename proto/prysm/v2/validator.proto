@@ -13,7 +13,7 @@
 // limitations under the License.
 syntax = "proto3";
 
-package ethereum.eth.v2prysm;
+package ethereum.prysm.v2;
 
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
@@ -22,27 +22,27 @@ import "proto/eth/ext/options.proto";
 
 import "proto/eth/v1alpha1/validator.proto";
 
-import "proto/eth/v2prysm/beacon_block.proto";
-import "proto/eth/v2prysm/sync_committee.proto";
+import "proto/prysm/v2/beacon_block.proto";
+import "proto/prysm/v2/sync_committee.proto";
 
-option csharp_namespace = "Ethereum.Eth.v2prysm";
-option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v2prysm;eth";
+option csharp_namespace = "Ethereum.Prysm.V2";
+option go_package = "github.com/prysmaticlabs/prysm/proto/prysm/v2;v2";
 option java_multiple_files = true;
 option java_outer_classname = "ValidatorProto";
-option java_package = "org.ethereum.eth.v2prysm";
-option php_namespace = "Ethereum\\Eth\\v2prysm";
+option java_package = "org.ethereum.prysm.v2";
+option php_namespace = "Ethereum\\Prysm\\v2";
 
 // Beacon node validator API
 //
 // The beacon node validator API enables a validator to connect
 // and perform its obligations on the Ethereum 2.0 phase 0 beacon chain.
-service BeaconNodeValidator {
+service BeaconNodeValidatorAltair {
   // Retrieves the latest valid beacon block to be proposed on the beacon chain.
   //
   // The server returns a new beacon block, without proposer signature, that can be
   // proposed on the beacon chain. The block should be filled with all the necessary
   // data for proposer to sign. This block is versioned from Altair onwards.
-  rpc GetBlock(ethereum.eth.v1alpha1.BlockRequest) returns (BeaconBlock) {
+  rpc GetBlock(ethereum.eth.v1alpha1.BlockRequest) returns (BeaconBlockAltair) {
     option (google.api.http) = {
       get: "/eth/v2prysm/validator/block"
     };
@@ -53,9 +53,9 @@ service BeaconNodeValidator {
   // The validator sends the newly signed beacon block to the beacon node so the beacon block can
   // be included in the beacon chain. The beacon node is expected to validate and process the
   // beacon block into its state. This block is versioned from Altair onwards.
-  rpc ProposeBlock(SignedBeaconBlock) returns (ethereum.eth.v1alpha1.ProposeResponse) {
+  rpc ProposeBlock(SignedBeaconBlockAltair) returns (ethereum.eth.v1alpha1.ProposeResponse) {
     option (google.api.http) = {
-      post: "/eth/v2prysm/validator/block"
+      post: "/prysm/v2/validator/block"
       body: "*"
     };
   }
@@ -63,14 +63,14 @@ service BeaconNodeValidator {
   // Retrieves a sync committee message block root to be signed over as part of sync committee duty.
   rpc GetSyncMessageBlockRoot(google.protobuf.Empty) returns (SyncMessageBlockRootResponse) {
     option (google.api.http) = {
-      get: "/eth/v2prysm/validator/sync_message_block_root"
+      get: "/prysm/v2/validator/sync_message_block_root"
     };
   }
 
   // Submits a sync committee message to be broadcasted over network. This is part of sync committee duty.
   rpc SubmitSyncMessage(SyncCommitteeMessage) returns (google.protobuf.Empty) {
     option (google.api.http) = {
-      post: "/eth/v2prysm/validator/sync_message"
+      post: "/prysm/v2/validator/sync_message"
       body: "*"
     };
   }

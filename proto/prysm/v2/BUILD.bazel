@@ -41,15 +41,6 @@ proto_library(
 ##############################################################################
 # Go
 ##############################################################################
-go_library(
-    name = "aliases",
-    srcs = [
-        "aliases.go",
-    ],
-    importpath = "github.com/prysmaticlabs/prysm/proto/eth/v2prysm",
-    visibility = ["//visibility:public"],
-)
-
 ssz_gen_marshal(
     name = "ssz_generated_files",
     go_proto = ":go_proto",
@@ -59,13 +50,14 @@ ssz_gen_marshal(
         "//proto/eth/v1alpha1:go_default_library",
     ],
     objs = [
-        # "BeaconBlockAltair",
-        "SyncAggregateAltair",
         "BeaconBlockAltair",
-        # "SyncCommitteeContribution",
-        # "ContributionAndProof",
-        # "SignedContributionAndProof",
-        # "SignedBeaconBlockAltair",
+        "BeaconBlockBodyAltair",
+        "SignedBeaconBlockAltair",
+        "SyncAggregate",
+        "SyncCommitteeMessage",
+        "SyncCommitteeContribution",
+        "ContributionAndProof",
+        "SignedContributionAndProof",
     ],
 )
 
@@ -74,10 +66,7 @@ go_proto_library(
     compilers = [
         "@com_github_prysmaticlabs_protoc_gen_go_cast//:go_cast_grpc",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/proto/eth/v2prysm",
-    embed = [
-        ":aliases"
-    ],
+    importpath = "github.com/prysmaticlabs/prysm/proto/prysm/v2",
     proto = ":proto",
     visibility = ["//visibility:public"],
     deps = [
@@ -103,7 +92,7 @@ go_proto_library(
         "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-grpc-gateway:go_gen_grpc_gateway",
     ],
     embed = [":go_proto"],
-    importpath = "github.com/prysmaticlabs/prysm/proto/eth/v2prysm",
+    importpath = "github.com/prysmaticlabs/prysm/proto/prysm/v2",
     protos = [":proto"],
     visibility = ["//visibility:private"],
     deps = [
@@ -121,12 +110,13 @@ go_proto_library(
 go_library(
     name = "go_default_library",
     srcs = [
+        "aliases.go",
         ":ssz_generated_files",  # keep
     ],
     embed = [
         ":go_grpc_gateway_library",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/proto/eth/v2prysm",
+    importpath = "github.com/prysmaticlabs/prysm/proto/prysm/v2",
     visibility = ["//visibility:public"],
     deps = SSZ_DEPS + [
         "//proto/eth/ext:go_default_library",
