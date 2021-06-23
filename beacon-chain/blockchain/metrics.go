@@ -3,6 +3,7 @@ package blockchain
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -208,11 +209,14 @@ func reportEpochMetrics(ctx context.Context, postState, headState iface.BeaconSt
 	beaconFinalizedRoot.Set(float64(bytesutil.ToLowInt64(postState.FinalizedCheckpoint().Root)))
 	currentEth1DataDepositCount.Set(float64(postState.Eth1Data().DepositCount))
 
-	var b *precompute.Balance
+	b := new(precompute.Balance)
+	v := []*precompute.Validator{}
+	_ = v
+	var err error
 	switch headState.Version() {
 	case version.Phase0:
 		// Validator participation should be viewed on the canonical chain.
-		v, b, err := precompute.New(ctx, headState)
+		v, b, err = precompute.New(ctx, headState)
 		if err != nil {
 			return err
 		}
@@ -221,7 +225,7 @@ func reportEpochMetrics(ctx context.Context, postState, headState iface.BeaconSt
 			return err
 		}
 	case version.Altair:
-		v, b, err := altair.InitializeEpochValidators(ctx, headState)
+		v, b, err = altair.InitializeEpochValidators(ctx, headState)
 		if err != nil {
 			return err
 		}
@@ -229,6 +233,8 @@ func reportEpochMetrics(ctx context.Context, postState, headState iface.BeaconSt
 		if err != nil {
 			return err
 		}
+	default:
+		return errors.Errorf("invalid state type provided: %T", headState.InnerStateUnsafe())
 	}
 	prevEpochActiveBalances.Set(float64(b.ActivePrevEpoch))
 	prevEpochSourceBalances.Set(float64(b.PrevEpochAttested))
