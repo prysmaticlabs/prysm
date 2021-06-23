@@ -174,7 +174,15 @@ func handleEvents(m *gateway.ApiProxyMiddleware, _ gateway.Endpoint, w http.Resp
 		return
 	}
 
-forLoop:
+	errJson := receiveEvents(eventChan, w)
+	if errJson != nil {
+		sseClient.Unsubscribe(eventChan)
+	}
+
+	return true
+}
+
+func receiveEvents(eventChan <-chan *sse.Event, w http.ResponseWriter) gateway.ErrorJson {
 	for {
 		select {
 		case msg := <-eventChan:
@@ -193,15 +201,11 @@ forLoop:
 				// and assign the attestation back to event data for further processing.
 				eventData := &aggregatedAttReceivedDataJson{}
 				if err := json.Unmarshal(msg.Data, eventData); err != nil {
-					gateway.WriteError(w, &gateway.DefaultErrorJson{Message: err.Error(), Code: http.StatusInternalServerError}, nil)
-					sseClient.Unsubscribe(eventChan)
-					break forLoop
+					return &gateway.DefaultErrorJson{Message: err.Error(), Code: http.StatusInternalServerError}
 				}
 				attData, err := json.Marshal(eventData.Aggregate)
 				if err != nil {
-					gateway.WriteError(w, &gateway.DefaultErrorJson{Message: err.Error(), Code: http.StatusInternalServerError}, nil)
-					sseClient.Unsubscribe(eventChan)
-					break forLoop
+					return &gateway.DefaultErrorJson{Message: err.Error(), Code: http.StatusInternalServerError}
 				}
 				msg.Data = attData
 			case eventsv1.VoluntaryExitTopic:
@@ -214,66 +218,48 @@ forLoop:
 				data = &eventErrorJson{}
 			}
 
-			ok := writeEvent(msg, w, data)
-			if !ok {
-				sseClient.Unsubscribe(eventChan)
-				break forLoop
+			if errJson := writeEvent(msg, w, data); errJson != nil {
+				return errJson
 			}
 
 			flusher, ok := w.(http.Flusher)
 			if !ok {
-				gateway.WriteError(
-					w,
-					&gateway.DefaultErrorJson{Message: fmt.Sprintf("Flush not supported in %T", w), Code: http.StatusInternalServerError},
-					nil,
-				)
-				sseClient.Unsubscribe(eventChan)
-				break forLoop
+				return &gateway.DefaultErrorJson{Message: fmt.Sprintf("Flush not supported in %T", w), Code: http.StatusInternalServerError}
 			}
 			flusher.Flush()
 		}
 	}
-
-	return true
 }
 
-func writeEvent(msg *sse.Event, w http.ResponseWriter, data interface{}) (success bool) {
+func writeEvent(msg *sse.Event, w http.ResponseWriter, data interface{}) gateway.ErrorJson {
 	if err := json.Unmarshal(msg.Data, data); err != nil {
-		gateway.WriteError(w, &gateway.DefaultErrorJson{Message: err.Error(), Code: http.StatusInternalServerError}, nil)
-		return false
+		return &gateway.DefaultErrorJson{Message: err.Error(), Code: http.StatusInternalServerError}
 	}
-	errJson := gateway.ProcessMiddlewareResponseFields(data)
-	if errJson != nil {
-		gateway.WriteError(w, errJson, nil)
-		return false
+	if errJson := gateway.ProcessMiddlewareResponseFields(data); errJson != nil {
+		return errJson
 	}
 	dataJson, errJson := gateway.SerializeMiddlewareResponseIntoJson(data)
 	if errJson != nil {
-		gateway.WriteError(w, errJson, nil)
-		return false
+		return errJson
 	}
 
 	w.Header().Set("Content-Type", "text/event-stream")
+
 	if _, err := w.Write([]byte("event: ")); err != nil {
-		gateway.WriteError(w, &gateway.DefaultErrorJson{Message: err.Error(), Code: http.StatusInternalServerError}, nil)
-		return false
+		return &gateway.DefaultErrorJson{Message: err.Error(), Code: http.StatusInternalServerError}
 	}
 	if _, err := w.Write(msg.Event); err != nil {
-		gateway.WriteError(w, &gateway.DefaultErrorJson{Message: err.Error(), Code: http.StatusInternalServerError}, nil)
-		return false
+		return &gateway.DefaultErrorJson{Message: err.Error(), Code: http.StatusInternalServerError}
 	}
 	if _, err := w.Write([]byte("\ndata: ")); err != nil {
-		gateway.WriteError(w, &gateway.DefaultErrorJson{Message: err.Error(), Code: http.StatusInternalServerError}, nil)
-		return false
+		return &gateway.DefaultErrorJson{Message: err.Error(), Code: http.StatusInternalServerError}
 	}
 	if _, err := w.Write(dataJson); err != nil {
-		gateway.WriteError(w, &gateway.DefaultErrorJson{Message: err.Error(), Code: http.StatusInternalServerError}, nil)
-		return false
+		return &gateway.DefaultErrorJson{Message: err.Error(), Code: http.StatusInternalServerError}
 	}
 	if _, err := w.Write([]byte("\n\n")); err != nil {
-		gateway.WriteError(w, &gateway.DefaultErrorJson{Message: err.Error(), Code: http.StatusInternalServerError}, nil)
-		return false
+		return &gateway.DefaultErrorJson{Message: err.Error(), Code: http.StatusInternalServerError}
 	}
 
-	return true
+	return nil
 }

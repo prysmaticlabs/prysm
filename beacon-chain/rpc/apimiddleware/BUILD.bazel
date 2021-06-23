@@ -35,5 +35,6 @@ go_test(
         "//shared/grpcutils:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
+        "@com_github_r3labs_sse//:go_default_library",
     ],
 )

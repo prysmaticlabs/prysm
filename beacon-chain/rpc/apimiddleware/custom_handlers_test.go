@@ -2,6 +2,7 @@ package apimiddleware
 
 import (
 	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/r3labs/sse"
 )
 
 func TestSSZRequested(t *testing.T) {
@@ -135,4 +137,26 @@ func TestWriteSSZResponseHeaderAndBody(t *testing.T) {
 		assert.Equal(t, true, strings.Contains(errJson.Msg(), "could not parse status code"))
 		assert.Equal(t, http.StatusInternalServerError, errJson.StatusCode())
 	})
+}
+
+func TestWriteEvent(t *testing.T) {
+	base64Val := "Zm9v"
+	data := &eventFinalizedCheckpointJson{
+		Block: base64Val,
+		State: base64Val,
+		Epoch: "1",
+	}
+	bData, err := json.Marshal(data)
+	require.NoError(t, err)
+	msg := &sse.Event{
+		Data:  bData,
+		Event: []byte("test_event"),
+	}
+	w := httptest.NewRecorder()
+	w.Body = &bytes.Buffer{}
+
+	errJson := writeEvent(msg, w, &eventFinalizedCheckpointJson{})
+	require.Equal(t, true, errJson == nil)
+	written := w.Body.String()
+	assert.Equal(t, "event: test_event\ndata: {\"block\":\"0x666f6f\",\"state\":\"0x666f6f\",\"epoch\":\"1\"}\n\n", written)
 }
