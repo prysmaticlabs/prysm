@@ -72,7 +72,6 @@ require (
 	github.com/manifoldco/promptui v0.7.0
 	github.com/minio/highwayhash v1.0.1
 	github.com/minio/sha256-simd v1.0.0
-	github.com/mitchellh/copystructure v1.2.0
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/multiformats/go-multiaddr v0.3.1
 	github.com/nbutton23/zxcvbn-go v0.0.0-20180912185939-ae427f1e4c1d

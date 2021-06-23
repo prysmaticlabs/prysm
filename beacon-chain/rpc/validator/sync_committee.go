@@ -3,13 +3,17 @@ package validator
 import (
 	"bytes"
 	"context"
+	"sync"
 
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -65,20 +69,28 @@ func (vs *Server) GetSyncSubcommitteeIndex(
 	return indices, nil
 }
 
-// syncSubcommitteeIndex returns a list of subcommittee index of a validator and
-// slot for sync message aggregation duty.
+// syncSubcommitteeIndex returns a list of subcommittee index of a validator and slot for sync message aggregation duty.
 func (vs *Server) syncSubcommitteeIndex(
 	ctx context.Context, pubkey [48]byte, slot types.Slot,
 ) (*prysmv2.SyncSubcommitteeIndexResponse, error) {
-	headState, err := vs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if slot > headState.Slot() {
-		headState, err = state.ProcessSlots(ctx, headState, slot)
+	var headState iface.BeaconState
+	var err error
+	// If there's already a head state exists with the request slot, we don't need to process slots.
+	cachedState := syncCommitteeHeadStateCache.get(slot)
+	if cachedState != nil && !cachedState.IsNil() {
+		headState = cachedState
+	} else {
+		headState, err = vs.HeadFetcher.HeadState(ctx)
 		if err != nil {
 			return nil, err
 		}
+		if slot > headState.Slot() {
+			headState, err = state.ProcessSlots(ctx, headState, slot)
+			if err != nil {
+				return nil, err
+			}
+		}
+		syncCommitteeHeadStateCache.add(slot, headState)
 	}
 
 	nextSlotEpoch := helpers.SlotToEpoch(headState.Slot() + 1)
@@ -129,9 +141,25 @@ func (vs *Server) GetSyncCommitteeContribution(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head root: %v", err)
 	}
-	headState, err := vs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+
+	var headState iface.BeaconState
+	slot := req.Slot
+	// If there's already a head state exists with the request slot, we don't need to process slots.
+	cachedState := syncCommitteeHeadStateCache.get(slot)
+	if cachedState != nil && !cachedState.IsNil() {
+		headState = cachedState
+	} else {
+		headState, err = vs.HeadFetcher.HeadState(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if slot > headState.Slot() {
+			headState, err = state.ProcessSlots(ctx, headState, slot)
+			if err != nil {
+				return nil, err
+			}
+		}
+		syncCommitteeHeadStateCache.add(slot, headState)
 	}
 
 	subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
@@ -143,7 +171,7 @@ func (vs *Server) GetSyncCommitteeContribution(
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not get validator at index: %v", err)
 			}
-			idxResp, err := vs.syncSubcommitteeIndex(ctx, v.PublicKey(), req.Slot)
+			idxResp, err := vs.syncSubcommitteeIndex(ctx, v.PublicKey(), slot)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not get sync subcommittee index: %v", err)
 			}
@@ -195,4 +223,42 @@ func (vs *Server) SubmitSignedContributionAndProof(
 	// Wait for p2p broadcast to complete and return the first error (if any)
 	err := errs.Wait()
 	return nil, err
+}
+
+var syncCommitteeHeadStateCache = newSyncCommitteeHeadState()
+
+// syncCommitteeHeadState to caches latest head state requested by the sync committee participant.
+type syncCommitteeHeadState struct {
+	cache *lru.Cache
+	lock  sync.RWMutex
+}
+
+// newSyncCommitteeHeadState initializes the lru cache for `syncCommitteeHeadState` with size of 1.
+func newSyncCommitteeHeadState() *syncCommitteeHeadState {
+	c, err := lru.New(1) // only need size of 1 to avoid redundant state copy, HTR, and process slots.
+	if err != nil {
+		panic(err)
+	}
+	return &syncCommitteeHeadState{cache: c}
+}
+
+// add `slot` as key and `state` as value onto the lru cache.
+func (c *syncCommitteeHeadState) add(slot types.Slot, state iface.BeaconState) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.cache.Add(slot, state)
+}
+
+// get `state` using `slot` as key. Return nil if nothing is found.
+func (c *syncCommitteeHeadState) get(slot types.Slot) iface.BeaconState {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	val, exists := c.cache.Get(slot)
+	if !exists {
+		return nil
+	}
+	if val == nil {
+		return nil
+	}
+	return val.(*stateAltair.BeaconState)
 }

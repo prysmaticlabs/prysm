@@ -113,3 +113,14 @@ func TestSubmitSignedContributionAndProof_OK(t *testing.T) {
 	require.NoError(t, err)
 	require.DeepEqual(t, []*prysmv2.SyncCommitteeContribution{contribution.Message.Contribution}, savedMsgs)
 }
+
+func TestSyncCommitteeHeadStateCache_RoundTrip(t *testing.T) {
+	c := newSyncCommitteeHeadState()
+	beaconState, _ := testutil.DeterministicGenesisStateAltair(t, 100)
+	require.NoError(t, beaconState.SetSlot(100))
+	cachedState := c.get(101)
+	require.Equal(t, nil, cachedState)
+	c.add(101, beaconState)
+	cachedState = c.get(101)
+	require.DeepEqual(t, beaconState, cachedState)
+}
