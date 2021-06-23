@@ -16,9 +16,9 @@ import (
 
 type proposerAtts []*ethpb.Attestation
 
-// filter separates attestation list into two groups: valid and invalid attestations.
+// filter separates attestation list into two groups: valid and invalid Attestations.
 // The first group passes the all the required checks for attestation to be considered for proposing.
-// And attestations from the second group should be deleted.
+// And Attestations from the second group should be deleted.
 func (a proposerAtts) filter(ctx context.Context, state iface.BeaconState) (proposerAtts, proposerAtts) {
 	validAtts := make([]*ethpb.Attestation, 0, len(a))
 	invalidAtts := make([]*ethpb.Attestation, 0, len(a))
@@ -32,7 +32,7 @@ func (a proposerAtts) filter(ctx context.Context, state iface.BeaconState) (prop
 	return validAtts, invalidAtts
 }
 
-// sortByProfitability orders attestations by highest slot and by highest aggregation bit count.
+// sortByProfitability orders Attestations by highest slot and by highest aggregation bit count.
 func (a proposerAtts) sortByProfitability() proposerAtts {
 	if len(a) < 2 {
 		return a
@@ -49,10 +49,10 @@ func (a proposerAtts) sortByProfitability() proposerAtts {
 	return a
 }
 
-// sortByProfitabilityUsingMaxCover orders attestations by highest slot and by highest aggregation bit count.
+// sortByProfitabilityUsingMaxCover orders Attestations by highest slot and by highest aggregation bit count.
 // Duplicate bits are counted only once, using max-cover algorithm.
 func (a proposerAtts) sortByProfitabilityUsingMaxCover() proposerAtts {
-	// Separate attestations by slot, as slot number takes higher precedence when sorting.
+	// Separate Attestations by slot, as slot number takes higher precedence when sorting.
 	var slots []types.Slot
 	attsBySlot := map[types.Slot]proposerAtts{}
 	for _, att := range a {
@@ -73,7 +73,7 @@ func (a proposerAtts) sortByProfitabilityUsingMaxCover() proposerAtts {
 		// Add selected candidates on top, those that are not selected - append at bottom.
 		selectedKeys, _, err := aggregation.MaxCover(candidates, len(candidates), true /* allowOverlaps */)
 		if err == nil {
-			// Pick selected attestations first, leftover attestations will be appended at the end.
+			// Pick selected Attestations first, leftover Attestations will be appended at the end.
 			// Both lists will be sorted by number of bits set.
 			selectedAtts := make(proposerAtts, selectedKeys.Count())
 			leftoverAtts := make(proposerAtts, selectedKeys.Not().Count())
@@ -94,8 +94,8 @@ func (a proposerAtts) sortByProfitabilityUsingMaxCover() proposerAtts {
 		return atts
 	}
 
-	// Select attestations. Slots are sorted from higher to lower at this point. Within slots attestations
-	// are sorted to maximize profitability (greedily selected, with previous attestations' bits
+	// Select Attestations. Slots are sorted from higher to lower at this point. Within slots Attestations
+	// are sorted to maximize profitability (greedily selected, with previous Attestations' bits
 	// evaluated before including any new attestation).
 	var sortedAtts proposerAtts
 	sort.Slice(slots, func(i, j int) bool {
@@ -108,7 +108,7 @@ func (a proposerAtts) sortByProfitabilityUsingMaxCover() proposerAtts {
 	return sortedAtts
 }
 
-// limitToMaxAttestations limits attestations to maximum attestations per block.
+// limitToMaxAttestations limits Attestations to maximum Attestations per block.
 func (a proposerAtts) limitToMaxAttestations() proposerAtts {
 	if uint64(len(a)) > params.BeaconConfig().MaxAttestations {
 		return a[:params.BeaconConfig().MaxAttestations]
@@ -116,7 +116,7 @@ func (a proposerAtts) limitToMaxAttestations() proposerAtts {
 	return a
 }
 
-// dedup removes duplicate attestations (ones with the same bits set on).
+// dedup removes duplicate Attestations (ones with the same bits set on).
 // Important: not only exact duplicates are removed, but proper subsets are removed too
 // (their known bits are redundant and are already contained in their supersets).
 func (a proposerAtts) dedup() proposerAtts {

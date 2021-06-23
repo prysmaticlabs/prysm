@@ -21,27 +21,27 @@ func BenchmarkProposerAtts_sortByProfitability(b *testing.B) {
 		inputs []bitfield.Bitlist
 	}{
 		{
-			name:   "256 attestations with single bit set",
+			name:   "256 Attestations with single bit set",
 			inputs: aggtesting.BitlistsWithSingleBitSet(256, bitlistLen),
 		},
 		{
-			name:   "256 attestations with 64 random bits set",
+			name:   "256 Attestations with 64 random bits set",
 			inputs: aggtesting.BitlistsWithSingleBitSet(256, bitlistLen),
 		},
 		{
-			name:   "512 attestations with single bit set",
+			name:   "512 Attestations with single bit set",
 			inputs: aggtesting.BitlistsWithSingleBitSet(512, bitlistLen),
 		},
 		{
-			name:   "1024 attestations with 64 random bits set",
+			name:   "1024 Attestations with 64 random bits set",
 			inputs: aggtesting.BitlistsWithMultipleBitSet(b, 1024, bitlistLen, 64),
 		},
 		{
-			name:   "1024 attestations with 512 random bits set",
+			name:   "1024 Attestations with 512 random bits set",
 			inputs: aggtesting.BitlistsWithMultipleBitSet(b, 1024, bitlistLen, 512),
 		},
 		{
-			name:   "1024 attestations with 1000 random bits set",
+			name:   "1024 Attestations with 1000 random bits set",
 			inputs: aggtesting.BitlistsWithMultipleBitSet(b, 1024, bitlistLen, 1000),
 		},
 	}
