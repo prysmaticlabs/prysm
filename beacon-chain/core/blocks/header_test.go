@@ -71,7 +71,7 @@ func TestProcessBlockHeader_ImproperBlockSlot(t *testing.T) {
 }
 
 func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
-	testutil.ResetCache()
+
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 	require.NoError(t, beaconState.SetLatestBlockHeader(testutil.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
 		Slot: 9,

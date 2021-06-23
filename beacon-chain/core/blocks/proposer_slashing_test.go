@@ -22,7 +22,7 @@ import (
 )
 
 func TestProcessProposerSlashings_UnmatchedHeaderSlots(t *testing.T) {
-	testutil.ResetCache()
+
 	beaconState, _ := testutil.DeterministicGenesisState(t, 20)
 	currentSlot := types.Slot(0)
 	slashings := []*ethpb.ProposerSlashing{
@@ -55,7 +55,7 @@ func TestProcessProposerSlashings_UnmatchedHeaderSlots(t *testing.T) {
 }
 
 func TestProcessProposerSlashings_SameHeaders(t *testing.T) {
-	testutil.ResetCache()
+
 	beaconState, _ := testutil.DeterministicGenesisState(t, 2)
 	currentSlot := types.Slot(0)
 	slashings := []*ethpb.ProposerSlashing{
@@ -276,7 +276,7 @@ func TestVerifyProposerSlashing(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			testutil.ResetCache()
+
 			sk := sks[tt.args.slashing.Header_1.Header.ProposerIndex]
 			d, err := helpers.Domain(tt.args.beaconState.Fork(), helpers.SlotToEpoch(tt.args.slashing.Header_1.Header.Slot), params.BeaconConfig().DomainBeaconProposer, tt.args.beaconState.GenesisValidatorRoot())
 			require.NoError(t, err)
