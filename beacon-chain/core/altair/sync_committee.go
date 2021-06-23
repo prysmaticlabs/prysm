@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -19,7 +19,7 @@ import (
 
 // ValidateNilSyncContribution validates that the signed contribution
 // is not nil.
-func ValidateNilSyncContribution(s *ethpb.SignedContributionAndProof) error {
+func ValidateNilSyncContribution(s *prysmv2.SignedContributionAndProof) error {
 	if s == nil {
 		return errors.New("signed message can't be nil")
 	}
@@ -320,7 +320,7 @@ func SyncCommitteeSigningRoot(st iface.BeaconState, slot types.Slot, comIdx type
 
 // VerifySyncSelectionData verifies that the provided sync contribution has a valid
 // selection proof.
-func VerifySyncSelectionData(st iface.BeaconState, m *ethpb.ContributionAndProof) error {
+func VerifySyncSelectionData(st iface.BeaconState, m *prysmv2.ContributionAndProof) error {
 	selectionData := &pb.SyncAggregatorSelectionData{Slot: m.Contribution.Slot, SubcommitteeIndex: uint64(m.Contribution.SubcommitteeIndex)}
 	return helpers.ComputeDomainVerifySigningRoot(st, m.AggregatorIndex, helpers.SlotToEpoch(m.Contribution.Slot), selectionData, params.BeaconConfig().DomainSyncCommitteeSelectionProof, m.SelectionProof)
 }

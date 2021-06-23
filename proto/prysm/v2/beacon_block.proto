@@ -13,20 +13,21 @@
 // limitations under the License.
 syntax = "proto3";
 
-package ethereum.eth.v1alpha1;
+package ethereum.prysm.v2;
 
 import "proto/eth/ext/options.proto";
-import "proto/eth/v1alpha1/attestation.proto";
+
 import "proto/eth/v1alpha1/beacon_block.proto";
+import "proto/eth/v1alpha1/attestation.proto";
 
-option csharp_namespace = "Ethereum.Eth.v1alpha1";
-option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1;eth";
+option csharp_namespace = "Ethereum.Prysm.V2";
+option go_package = "github.com/prysmaticlabs/prysm/proto/prysm/v2;v2";
 option java_multiple_files = true;
-option java_outer_classname = "BeaconBlockAltairProto";
-option java_package = "org.ethereum.eth.v1alpha1";
-option php_namespace = "Ethereum\\Eth\\v1alpha1";
+option java_outer_classname = "BeaconBlockProto";
+option java_package = "org.ethereum.prysm.v2";
+option php_namespace = "Ethereum\\Prysm\\v2";
 
-// The signed version of a Altair(HF1) beacon block.
+// The signed version of a (HF1) beacon block.
 message SignedBeaconBlockAltair {
   // The unsigned beacon block itself.
   BeaconBlockAltair block = 1;
@@ -35,7 +36,7 @@ message SignedBeaconBlockAltair {
   bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
-// The unsigned version of a Altair(HF1) beacon block.. The message does not contain a validator signature.
+// The unsigned version of a (HF1) beacon block. The message does not contain a validator signature.
 message BeaconBlockAltair {
   // Beacon chain slot that this block represents.
   uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
@@ -49,18 +50,18 @@ message BeaconBlockAltair {
   // 32 byte root of the resulting state after processing this block.
   bytes state_root = 4 [(ethereum.eth.ext.ssz_size) = "32"];
 
-  // The Altair beacon block body.
+  // The  beacon block body.
   BeaconBlockBodyAltair body = 5;
 }
 
-// The block body of an Altair(HF1) beacon block.
-// The new addition for Altair is SyncAggregate for light client support.
+// The block body of an (HF1) beacon block.
+// The new addition for  is SyncAggregate for light client support.
 message BeaconBlockBodyAltair {
   // The validators RANDAO reveal 96 byte value.
   bytes randao_reveal = 1 [(ethereum.eth.ext.ssz_size) = "96"];
 
   // A reference to the Ethereum 1.x chain.
-  Eth1Data eth1_data = 2;
+  ethereum.eth.v1alpha1.Eth1Data eth1_data = 2;
 
   // 32 byte field of arbitrary data. This field may contain any data and
   // is not used for anything other than a fun message.
@@ -70,21 +71,21 @@ message BeaconBlockBodyAltair {
   // Refer to spec constants at https://github.com/ethereum/eth2.0-specs/blob/dev/specs/core/0_beacon-chain.md#max-operations-per-block
 
   // At most MAX_PROPOSER_SLASHINGS.
-  repeated ProposerSlashing proposer_slashings = 4 [(ethereum.eth.ext.ssz_max) = "16"];
+  repeated ethereum.eth.v1alpha1.ProposerSlashing proposer_slashings = 4 [(ethereum.eth.ext.ssz_max) = "16"];
 
   // At most MAX_ATTESTER_SLASHINGS.
-  repeated AttesterSlashing attester_slashings = 5 [(ethereum.eth.ext.ssz_max) = "2"];
+  repeated ethereum.eth.v1alpha1.AttesterSlashing attester_slashings = 5 [(ethereum.eth.ext.ssz_max) = "2"];
 
   // At most MAX_ATTESTATIONS.
-  repeated Attestation attestations = 6 [(ethereum.eth.ext.ssz_max) = "128"];
+  repeated ethereum.eth.v1alpha1.Attestation attestations = 6 [(ethereum.eth.ext.ssz_max) = "128"];
 
   // At most MAX_DEPOSITS.
-  repeated Deposit deposits = 7 [(ethereum.eth.ext.ssz_max) = "16"];
+  repeated ethereum.eth.v1alpha1.Deposit deposits = 7 [(ethereum.eth.ext.ssz_max) = "16"];
 
   // At most MAX_VOLUNTARY_EXITS.
-  repeated SignedVoluntaryExit voluntary_exits = 8 [(ethereum.eth.ext.ssz_max) = "16"];
+  repeated ethereum.eth.v1alpha1.SignedVoluntaryExit voluntary_exits = 8 [(ethereum.eth.ext.ssz_max) = "16"];
 
-  // Sync aggregate object to track sync committee votes for light client support. [New in Altair]
+  // Sync aggregate object to track sync committee votes for light client support. [New in ]
   SyncAggregate sync_aggregate = 9;
 }
 

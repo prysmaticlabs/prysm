@@ -4,6 +4,7 @@ import (
 	"reflect"
 
 	pb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -16,8 +17,8 @@ var GossipTopicMappings = map[string]proto.Message{
 	ProposerSlashingSubnetTopicFormat:         &pb.ProposerSlashing{},
 	AttesterSlashingSubnetTopicFormat:         &pb.AttesterSlashing{},
 	AggregateAndProofSubnetTopicFormat:        &pb.SignedAggregateAttestationAndProof{},
-	SyncContributionAndProofSubnetTopicFormat: &pb.SignedContributionAndProof{},
-	SyncCommitteeSubnetTopicFormat:            &pb.SyncCommitteeMessage{},
+	SyncContributionAndProofSubnetTopicFormat: &prysmv2.SignedContributionAndProof{},
+	SyncCommitteeSubnetTopicFormat:            &prysmv2.SyncCommitteeMessage{},
 }
 
 // GossipTypeMapping is the inverse of GossipTopicMappings so that an arbitrary protobuf message

@@ -22,6 +22,7 @@ import (
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -110,7 +111,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 // GetBlockV2 is called by a proposer during its assigned slot to request a block to sign
 // by passing in the slot and the signed randao reveal of the slot. This is used by a validator
 // after the altair fork epoch has been encountered.
-func (vs *Server) GetBlockV2(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockAltair, error) {
+func (vs *Server) GetBlockV2(ctx context.Context, req *ethpb.BlockRequest) (*prysmv2.BeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetBlockV2")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
@@ -125,7 +126,7 @@ func (vs *Server) GetBlockV2(ctx context.Context, req *ethpb.BlockRequest) (*eth
 
 	// Ugly hack to allow this to compile both for mainnet
 	// and minimal configs.
-	mockAgg := &ethpb.SyncAggregate{SyncCommitteeBits: []byte{}}
+	mockAgg := &prysmv2.SyncAggregate{SyncCommitteeBits: []byte{}}
 	var bVector []byte
 	if mockAgg.SyncCommitteeBits.Len() == 512 {
 		bVector = bitfield.NewBitvector512()
@@ -133,12 +134,12 @@ func (vs *Server) GetBlockV2(ctx context.Context, req *ethpb.BlockRequest) (*eth
 		bVector = bitfield.NewBitvector32()
 	}
 	infiniteSignature := [96]byte{0xC0}
-	blk := &ethpb.BeaconBlockAltair{
+	blk := &prysmv2.BeaconBlock{
 		Slot:          req.Slot,
 		ParentRoot:    blkData.parentRoot,
 		StateRoot:     stateRoot,
 		ProposerIndex: blkData.proposerIdx,
-		Body: &ethpb.BeaconBlockBodyAltair{
+		Body: &prysmv2.BeaconBlockBody{
 			Eth1Data:          blkData.eth1Data,
 			Deposits:          blkData.deposits,
 			Attestations:      blkData.attestations,
@@ -148,16 +149,16 @@ func (vs *Server) GetBlockV2(ctx context.Context, req *ethpb.BlockRequest) (*eth
 			VoluntaryExits:    blkData.voluntaryExits,
 			Graffiti:          blkData.graffiti[:],
 			// TODO: Add in actual aggregates
-			SyncAggregate: &ethpb.SyncAggregate{
+			SyncAggregate: &prysmv2.SyncAggregate{
 				SyncCommitteeBits:      bVector,
 				SyncCommitteeSignature: infiniteSignature[:],
 			},
 		},
 	}
 	// Compute state root with the newly constructed block.
-	stateRoot, err = vs.computeStateRoot(ctx, interfaces.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: blk, Signature: make([]byte, 96)}))
+	stateRoot, err = vs.computeStateRoot(ctx, interfaces.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlock{Block: blk, Signature: make([]byte, 96)}))
 	if err != nil {
-		interop.WriteBlockToDisk(interfaces.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: blk}), true /*failed*/)
+		interop.WriteBlockToDisk(interfaces.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlock{Block: blk}), true /*failed*/)
 		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
 	}
 	blk.StateRoot = stateRoot
@@ -244,7 +245,7 @@ func (vs *Server) ProposeBlock(ctx context.Context, rBlk *ethpb.SignedBeaconBloc
 
 // ProposeBlockV2 is called by a proposer during its assigned slot to create a block in an attempt
 // to get it processed by the beacon node as the canonical head.
-func (vs *Server) ProposeBlockV2(ctx context.Context, rBlk *ethpb.SignedBeaconBlockAltair) (*ethpb.ProposeResponse, error) {
+func (vs *Server) ProposeBlockV2(ctx context.Context, rBlk *prysmv2.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 	blk := interfaces.WrappedAltairSignedBeaconBlock(rBlk)
 	return vs.proposeBlock(ctx, blk)
 }

@@ -20,6 +20,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -77,6 +78,7 @@ type validator struct {
 	keyManager                         keymanager.IKeymanager
 	beaconClient                       ethpb.BeaconChainClient
 	validatorClient                    ethpb.BeaconNodeValidatorClient
+	validatorClientV2                  prysmv2.BeaconNodeValidatorAltairClient
 	protector                          slashingiface.Protector
 	db                                 vdb.Database
 	graffiti                           []byte
@@ -598,7 +600,7 @@ func (v *validator) isAggregator(ctx context.Context, committee []types.Validato
 //    modulo = max(1, SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT // TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE)
 //    return bytes_to_uint64(hash(signature)[0:8]) % modulo == 0
 func (v *validator) isSyncCommitteeAggregator(ctx context.Context, slot types.Slot, pubKey [48]byte) (bool, error) {
-	res, err := v.validatorClient.GetSyncSubcommitteeIndex(ctx, &ethpb.SyncSubcommitteeIndexRequest{
+	res, err := v.validatorClientV2.GetSyncSubcommitteeIndex(ctx, &prysmv2.SyncSubcommitteeIndexRequest{
 		PublicKey: pubKey[:],
 		Slot:      slot,
 	})

@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/spectest/utils"
@@ -28,7 +28,7 @@ func RunBlockHeaderTest(t *testing.T, config string) {
 			require.NoError(t, err)
 			blockSSZ, err := snappy.Decode(nil /* dst */, blockFile)
 			require.NoError(t, err, "Failed to decompress")
-			block := &ethpb.BeaconBlockAltair{}
+			block := &prysmv2.BeaconBlock{}
 			require.NoError(t, block.UnmarshalSSZ(blockSSZ), "Failed to unmarshal")
 
 			preBeaconStateFile, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "pre.ssz_snappy")

@@ -8,7 +8,7 @@ import (
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -25,10 +25,10 @@ func RunSyncCommitteeTest(t *testing.T, config string) {
 			require.NoError(t, err)
 			syncCommitteeSSZ, err := snappy.Decode(nil /* dst */, syncCommitteeFile)
 			require.NoError(t, err, "Failed to decompress")
-			sc := &ethpb.SyncAggregate{}
+			sc := &prysmv2.SyncAggregate{}
 			require.NoError(t, sc.UnmarshalSSZ(syncCommitteeSSZ), "Failed to unmarshal")
 
-			body := &ethpb.BeaconBlockBodyAltair{SyncAggregate: sc}
+			body := &prysmv2.BeaconBlockBody{SyncAggregate: sc}
 			RunBlockOperationTest(t, folderPath, body, func(ctx context.Context, s iface.BeaconState, b interfaces.SignedBeaconBlock) (iface.BeaconState, error) {
 				return altair.ProcessSyncAggregate(s, body.SyncAggregate)
 			})

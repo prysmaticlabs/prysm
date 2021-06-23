@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/interfaces/version"
@@ -594,7 +595,7 @@ func unmarshalBlock(ctx context.Context, enc []byte) (interfaces.SignedBeaconBlo
 	switch {
 	case hasAltairKey(enc):
 		// Marshal block bytes to altair beacon block.
-		rawBlock := &ethpb.SignedBeaconBlockAltair{}
+		rawBlock := &prysmv2.SignedBeaconBlock{}
 		err := rawBlock.UnmarshalSSZ(enc[len(altairKey):])
 		if err != nil {
 			return nil, err

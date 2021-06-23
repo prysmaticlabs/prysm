@@ -3,6 +3,7 @@ package types
 import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -39,7 +40,7 @@ func InitializeDataMaps() {
 			return interfaces.WrappedPhase0SignedBeaconBlock(&eth.SignedBeaconBlock{})
 		},
 		bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion): func() interfaces.SignedBeaconBlock {
-			return interfaces.WrappedAltairSignedBeaconBlock(&eth.SignedBeaconBlockAltair{})
+			return interfaces.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlock{})
 		},
 	}
 
