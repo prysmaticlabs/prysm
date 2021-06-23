@@ -11,14 +11,27 @@ import (
 
 // LoadChainConfigFile load, convert hex values into valid param yaml format,
 // unmarshal , and apply beacon chain config file.
-func LoadChainConfigFile(chainConfigFileName string) {
-	yamlFile, err := ioutil.ReadFile(chainConfigFileName)
+func LoadChainConfigFiles(files []string) {
+	conf := &BeaconChainConfig{}
+	for _, f := range files {
+		conf = loadChainConfigFromFile(conf, f)
+	}
+	log.Debugf("Config file values: %+v", conf)
+	OverrideBeaconConfig(conf)
+}
+
+func loadChainConfigFromFile(conf *BeaconChainConfig, fileName string) *BeaconChainConfig {
+	yamlFile, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to read chain config file.")
 	}
 	// Convert 0x hex inputs to fixed bytes arrays
 	lines := strings.Split(string(yamlFile), "\n")
 	for i, line := range lines {
+		// Ignore PRESET_BASE
+		if strings.HasPrefix(line, "PRESET_BASE") {
+			lines[i] = ""
+		}
 		// No need to convert the deposit contract address to byte array (as config expects a string).
 		if strings.HasPrefix(line, "DEPOSIT_CONTRACT_ADDRESS") {
 			continue
@@ -29,12 +42,10 @@ func LoadChainConfigFile(chainConfigFileName string) {
 		}
 	}
 	yamlFile = []byte(strings.Join(lines, "\n"))
-	conf := MainnetConfig()
-	if err := yaml.Unmarshal(yamlFile, conf); err != nil {
+	if err := yaml.UnmarshalStrict(yamlFile, conf); err != nil {
 		log.WithError(err).Fatal("Failed to parse chain config yaml file.")
 	}
-	log.Debugf("Config file values: %+v", conf)
-	OverrideBeaconConfig(conf)
+	return conf
 }
 
 func replaceHexStringWithYAMLFormat(line string) []string {

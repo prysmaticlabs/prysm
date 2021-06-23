@@ -84,6 +84,8 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.FarFutureEpoch = 1<<64 - 1
 	minimalConfig.FarFutureSlot = 1<<64 - 1
 
+	minimalConfig.DepositContractAddress = "0x1234567890123456789012345678901234567890"
+
 	// New Altair params
 	minimalConfig.AltairForkVersion = []byte{1, 0, 0, 1} // Highest byte set to 0x01 to avoid collisions with mainnet versioning
 	minimalConfig.AltairForkEpoch = math.MaxUint64
