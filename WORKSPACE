@@ -287,6 +287,7 @@ filegroup(
 )
     """,
     sha256 = "3d1005e09ccbff9857062f498e233287fbb4fd7354b25cc304b9c2d28cc3770c",
+    strip_prefix = "eth2.0-specs-" + eth2_spec_version[1:],
     url = "https://github.com/ethereum/eth2.0-specs/archive/refs/tags/%s.tar.gz" % eth2_spec_version,
 )
 
