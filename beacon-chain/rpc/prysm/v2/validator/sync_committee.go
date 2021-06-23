@@ -52,13 +52,13 @@ func (vs *Server) SubmitSyncMessage(ctx context.Context, msg *prysmv2.SyncCommit
 	if err != nil {
 		return &emptypb.Empty{}, err
 	}
-	idxs, err := vs.syncSubcommitteeIndex(ctx, bytesutil.ToBytes48(val.PublicKey), msg.Slot)
+	idxResp, err := vs.syncSubcommitteeIndex(ctx, bytesutil.ToBytes48(val.PublicKey), msg.Slot)
 	if err != nil {
 		return &emptypb.Empty{}, err
 	}
 	// Broadcasting and saving message into the pool in parallel. As one fail should not affect another.
 	// This broadcasts for all subnets.
-	for _, id := range idxs {
+	for _, id := range idxResp.Indices {
 		errs.Go(func() error {
 			return vs.P2P.BroadcastSyncCommitteeMessage(ctx, id, msg)
 		})
