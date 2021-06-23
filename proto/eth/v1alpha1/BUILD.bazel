@@ -24,7 +24,6 @@ proto_library(
         "attestation.proto",
         "beacon_block.proto",
         "beacon_chain.proto",
-        "sync_committee.proto",
         "node.proto",
         "validator.proto",
         ":ssz_proto_files",
@@ -158,6 +157,7 @@ ssz_proto_files(
     name = "ssz_proto_files",
     srcs = [
         "beacon_block_altair.proto",
+        "sync_committee.proto"
     ],
     config = select({
         "//conditions:default": "mainnet",
