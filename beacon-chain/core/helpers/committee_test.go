@@ -685,7 +685,7 @@ func TestIsCurrentEpochSyncCommittee_UsingCache(t *testing.T) {
 	ClearCache()
 	require.NoError(t, err, syncCommitteeCache.UpdatePositionsInCommittee(state))
 
-	ok, err := IsCurrentEpochSyncCommittee(syncCommittee, bytesutil.ToBytes48(validators[0].PublicKey))
+	ok, err := IsCurrentEpochSyncCommittee(state, syncCommittee, 0)
 	require.NoError(t, err)
 	require.Equal(t, true, ok)
 }
@@ -711,7 +711,7 @@ func TestIsCurrentEpochSyncCommittee_UsingCommittee(t *testing.T) {
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
-	ok, err := IsCurrentEpochSyncCommittee(syncCommittee, bytesutil.ToBytes48(validators[0].PublicKey))
+	ok, err := IsCurrentEpochSyncCommittee(state, syncCommittee, 0)
 	require.NoError(t, err)
 	require.Equal(t, true, ok)
 }
@@ -737,7 +737,7 @@ func TestIsCurrentEpochSyncCommittee_DoesNotExist(t *testing.T) {
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
-	ok, err := IsCurrentEpochSyncCommittee(syncCommittee, bytesutil.ToBytes48([]byte{}))
+	ok, err := IsCurrentEpochSyncCommittee(state, syncCommittee, 12390192)
 	require.NoError(t, err)
 	require.Equal(t, false, ok)
 }
@@ -766,7 +766,7 @@ func TestIsNextEpochSyncCommittee_UsingCache(t *testing.T) {
 	ClearCache()
 	require.NoError(t, err, syncCommitteeCache.UpdatePositionsInCommittee(state))
 
-	ok, err := IsNextEpochSyncCommittee(syncCommittee, bytesutil.ToBytes48(validators[0].PublicKey))
+	ok, err := IsNextEpochSyncCommittee(state, syncCommittee, 0)
 	require.NoError(t, err)
 	require.Equal(t, true, ok)
 }
@@ -792,7 +792,7 @@ func TestIsNextEpochSyncCommittee_UsingCommittee(t *testing.T) {
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
-	ok, err := IsNextEpochSyncCommittee(syncCommittee, bytesutil.ToBytes48(validators[0].PublicKey))
+	ok, err := IsNextEpochSyncCommittee(state, syncCommittee, 0)
 	require.NoError(t, err)
 	require.Equal(t, true, ok)
 }
@@ -818,7 +818,7 @@ func TestIsNextEpochSyncCommittee_DoesNotExist(t *testing.T) {
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
-	ok, err := IsNextEpochSyncCommittee(syncCommittee, bytesutil.ToBytes48([]byte{}))
+	ok, err := IsNextEpochSyncCommittee(state, syncCommittee, 120391029)
 	require.NoError(t, err)
 	require.Equal(t, false, ok)
 }
@@ -847,7 +847,7 @@ func TestCurrentEpochSyncSubcommitteeIndices_UsingCache(t *testing.T) {
 	ClearCache()
 	require.NoError(t, err, syncCommitteeCache.UpdatePositionsInCommittee(state))
 
-	index, err := CurrentEpochSyncSubcommitteeIndices(syncCommittee, bytesutil.ToBytes48(validators[0].PublicKey))
+	index, err := CurrentEpochSyncSubcommitteeIndices(state, syncCommittee, 0)
 	require.NoError(t, err)
 	require.DeepEqual(t, []uint64{0}, index)
 }
@@ -873,7 +873,7 @@ func TestCurrentEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
-	index, err := CurrentEpochSyncSubcommitteeIndices(syncCommittee, bytesutil.ToBytes48(validators[0].PublicKey))
+	index, err := CurrentEpochSyncSubcommitteeIndices(state, syncCommittee, 0)
 	require.NoError(t, err)
 	require.DeepEqual(t, []uint64{0}, index)
 }
@@ -900,7 +900,7 @@ func TestCurrentEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
-	index, err := CurrentEpochSyncSubcommitteeIndices(syncCommittee, bytesutil.ToBytes48([]byte{}))
+	index, err := CurrentEpochSyncSubcommitteeIndices(state, syncCommittee, 129301923)
 	require.NoError(t, err)
 	require.DeepEqual(t, []uint64(nil), index)
 }
@@ -929,7 +929,7 @@ func TestNextEpochSyncSubcommitteeIndices_UsingCache(t *testing.T) {
 	ClearCache()
 	require.NoError(t, err, syncCommitteeCache.UpdatePositionsInCommittee(state))
 
-	index, err := NextEpochSyncSubcommitteeIndices(syncCommittee, bytesutil.ToBytes48(validators[0].PublicKey))
+	index, err := NextEpochSyncSubcommitteeIndices(state, syncCommittee, 0)
 	require.NoError(t, err)
 	require.DeepEqual(t, []uint64{0}, index)
 }
@@ -955,7 +955,7 @@ func TestNextEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
-	index, err := NextEpochSyncSubcommitteeIndices(syncCommittee, bytesutil.ToBytes48(validators[0].PublicKey))
+	index, err := NextEpochSyncSubcommitteeIndices(state, syncCommittee, 0)
 	require.NoError(t, err)
 	require.DeepEqual(t, []uint64{0}, index)
 }
@@ -982,7 +982,7 @@ func TestNextEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
-	index, err := NextEpochSyncSubcommitteeIndices(syncCommittee, bytesutil.ToBytes48([]byte{}))
+	index, err := NextEpochSyncSubcommitteeIndices(state, syncCommittee, 21093019)
 	require.NoError(t, err)
 	require.DeepEqual(t, []uint64(nil), index)
 }
