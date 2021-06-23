@@ -12,7 +12,7 @@ go_library(
         "//beacon-chain/state/interface:go_default_library",
         "//beacon-chain/state/state-altair:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
-        "//proto/eth/v1alpha1:go_default_library",
+        "//proto/prysm/v2:go_default_library",
         "//shared/interfaces:go_default_library",
         "//shared/testutil:go_default_library",
         "//shared/testutil/require:go_default_library",

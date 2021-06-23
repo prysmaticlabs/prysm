@@ -5,6 +5,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	pb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/protobuf/proto"
 )
@@ -18,13 +19,13 @@ var gossipTopicMappings = map[string]proto.Message{
 	ProposerSlashingSubnetTopicFormat:         &pb.ProposerSlashing{},
 	AttesterSlashingSubnetTopicFormat:         &pb.AttesterSlashing{},
 	AggregateAndProofSubnetTopicFormat:        &pb.SignedAggregateAttestationAndProof{},
-	SyncContributionAndProofSubnetTopicFormat: &pb.SignedContributionAndProof{},
-	SyncCommitteeSubnetTopicFormat:            &pb.SyncCommitteeMessage{},
+	SyncContributionAndProofSubnetTopicFormat: &prysmv2.SignedContributionAndProof{},
+	SyncCommitteeSubnetTopicFormat:            &prysmv2.SyncCommitteeMessage{},
 }
 
 func GossipTopicMappings(topic string, epoch types.Epoch) proto.Message {
 	if topic == BlockSubnetTopicFormat && epoch >= params.BeaconConfig().AltairForkEpoch {
-		return &pb.SignedBeaconBlockAltair{}
+		return &prysmv2.SignedBeaconBlock{}
 	}
 	return gossipTopicMappings[topic]
 }
@@ -46,5 +47,5 @@ func init() {
 		GossipTypeMapping[reflect.TypeOf(v)] = k
 	}
 	// Specially handle Altair Objects.
-	GossipTypeMapping[reflect.TypeOf(&pb.SignedBeaconBlockAltair{})] = BlockSubnetTopicFormat
+	GossipTypeMapping[reflect.TypeOf(&prysmv2.SignedBeaconBlock{})] = BlockSubnetTopicFormat
 }

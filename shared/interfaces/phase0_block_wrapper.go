@@ -4,6 +4,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/interfaces/version"
 	"google.golang.org/protobuf/proto"
@@ -215,7 +216,7 @@ func (w Phase0BeaconBlockBody) VoluntaryExits() []*ethpb.SignedVoluntaryExit {
 }
 
 // SyncAggregate returns the sync aggregate in the block.
-func (w Phase0BeaconBlockBody) SyncAggregate() (*ethpb.SyncAggregate, error) {
+func (w Phase0BeaconBlockBody) SyncAggregate() (*prysmv2.SyncAggregate, error) {
 	return nil, errors.New("Sync aggregate is not supported in phase 0 block")
 }
 

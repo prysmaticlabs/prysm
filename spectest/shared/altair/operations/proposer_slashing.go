@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -29,7 +30,7 @@ func RunProposerSlashingTest(t *testing.T, config string) {
 			proposerSlashing := &ethpb.ProposerSlashing{}
 			require.NoError(t, proposerSlashing.UnmarshalSSZ(proposerSlashingSSZ), "Failed to unmarshal")
 
-			body := &ethpb.BeaconBlockBodyAltair{ProposerSlashings: []*ethpb.ProposerSlashing{proposerSlashing}}
+			body := &prysmv2.BeaconBlockBody{ProposerSlashings: []*ethpb.ProposerSlashing{proposerSlashing}}
 			RunBlockOperationTest(t, folderPath, body, func(ctx context.Context, s iface.BeaconState, b interfaces.SignedBeaconBlock) (iface.BeaconState, error) {
 				return blocks.ProcessProposerSlashings(ctx, s, b.Block().Body().ProposerSlashings(), altair.SlashValidator)
 			})
