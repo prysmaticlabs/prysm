@@ -43,6 +43,7 @@ go_library(
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//rlp:go_default_library",
         "@com_github_ethereum_go_ethereum//core/types:go_default_library",
+        "@org_golang_x_crypto//sha3:go_default_library",
     ],
 )
 
@@ -69,5 +70,6 @@ go_test(
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "@org_golang_x_crypto//sha3:go_default_library",
     ],
 )

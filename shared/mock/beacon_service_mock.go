@@ -21,6 +21,14 @@ type MockBeaconChainClient struct {
 	recorder *MockBeaconChainClientMockRecorder
 }
 
+func (m *MockBeaconChainClient) StreamMinimalConsensusInfo(ctx context.Context, in *eth.MinimalConsensusInfoRequest, opts ...grpc.CallOption) (eth.BeaconChain_StreamMinimalConsensusInfoClient, error) {
+	panic("implement me")
+}
+
+func (m *MockBeaconChainClient) StreamNewPendingBlocks(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (eth.BeaconChain_StreamNewPendingBlocksClient, error) {
+	panic("implement me")
+}
+
 // MockBeaconChainClientMockRecorder is the mock recorder for MockBeaconChainClient
 type MockBeaconChainClientMockRecorder struct {
 	mock *MockBeaconChainClient
