@@ -12,6 +12,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -66,6 +67,29 @@ func VerifyBlockSignature(beaconState iface.ReadOnlyBeaconState,
 	rootFunc func() ([32]byte, error)) error {
 	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
 	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
+	if err != nil {
+		return err
+	}
+	proposer, err := beaconState.ValidatorAtIndex(proposerIndex)
+	if err != nil {
+		return err
+	}
+	proposerPubKey := proposer.PublicKey
+	return helpers.VerifyBlockSigningRoot(proposerPubKey, sig, domain, rootFunc)
+}
+
+// VerifyBlockSignature verifies the proposer signature of a beacon block.
+func VerifyBlockSignatureUsingSlot(beaconState iface.ReadOnlyBeaconState,
+	proposerIndex types.ValidatorIndex,
+	wantedSlot types.Slot,
+	sig []byte,
+	rootFunc func() ([32]byte, error)) error {
+	currentEpoch := helpers.SlotToEpoch(wantedSlot)
+	fork, err := p2putils.Fork(currentEpoch)
+	if err != nil {
+		return err
+	}
+	domain, err := helpers.Domain(fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		return err
 	}

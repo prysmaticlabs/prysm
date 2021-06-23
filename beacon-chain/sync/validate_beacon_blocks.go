@@ -154,7 +154,9 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	}
 
 	if err := s.validateBeaconBlock(ctx, blk, blockRoot); err != nil {
-		log.WithError(err).WithField("blockSlot", blk.Block().Slot()).Warn("Rejected block")
+		log.WithError(err).WithFields(logrus.Fields{
+			"blockSlot": blk.Block().Slot(),
+			"blockRoot": fmt.Sprintf("%#x", blockRoot)}).Warn("Rejected block")
 		return pubsub.ValidationReject
 	}
 	// Record attribute of valid block.
@@ -195,7 +197,8 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.Signed
 		return err
 	}
 
-	if err := blocks.VerifyBlockSignature(parentState, blk.Block().ProposerIndex(), blk.Signature(), blk.Block().HashTreeRoot); err != nil {
+	if err := blocks.VerifyBlockSignatureUsingSlot(parentState, blk.Block().ProposerIndex(), blk.Block().Slot(),
+		blk.Signature(), blk.Block().HashTreeRoot); err != nil {
 		s.setBadBlock(ctx, blockRoot)
 		return err
 	}
