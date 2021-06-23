@@ -157,3 +157,9 @@ string_setting(
         "libfuzzer",
     ],
 )
+
+sh_binary(
+    name = "prysm_sh",
+    srcs = ["prysm.sh"],
+    visibility = ["//visibility:public"],
+)
