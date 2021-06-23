@@ -15,6 +15,9 @@ mainnet = {
     "previous_epoch_attestations.max": "4096",  # MAX_ATTESTATIONS * SLOTS_PER_EPOCH
     "current_epoch_attestations.max": "4096",  # MAX_ATTESTATIONS * SLOTS_PER_EPOCH
     "slashings.size": "8192",  # EPOCHS_PER_SLASHINGS_VECTOR
+    "sync_committee_bits.size": "512", #SYNC_COMMITTEE_SIZE
+    "sync_committee_bytes.size": "64",
+    "sync_committee_bits.type": "github.com/prysmaticlabs/go-bitfield.Bitvector512",
 }
 
 minimal = {
@@ -25,6 +28,9 @@ minimal = {
     "previous_epoch_attestations.max": "1024",
     "current_epoch_attestations.max": "1024",
     "slashings.size": "64",
+    "sync_committee_bits.size": "32",
+    "sync_committee_bytes.size": "4",
+    "sync_committee_bits.type": "github.com/prysmaticlabs/go-bitfield.Bitvector32",
 }
 
 ###### Rules definitions #######
