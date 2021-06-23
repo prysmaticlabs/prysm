@@ -3,6 +3,7 @@ package validator
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"sync"
 
 	lru "github.com/hashicorp/golang-lru"
@@ -96,13 +97,17 @@ func (vs *Server) syncSubcommitteeIndex(
 	nextSlotEpoch := helpers.SlotToEpoch(headState.Slot() + 1)
 	currentEpoch := helpers.CurrentEpoch(headState)
 
+	valIdx, ok := headState.ValidatorIndexByPubkey(pubkey)
+	if !ok {
+		return nil, fmt.Errorf("validator with pubkey %#x not found", pubkey)
+	}
 	switch {
 	case altair.SyncCommitteePeriod(nextSlotEpoch) == altair.SyncCommitteePeriod(currentEpoch):
 		committee, err := headState.CurrentSyncCommittee()
 		if err != nil {
 			return nil, err
 		}
-		indices, err := helpers.CurrentEpochSyncSubcommitteeIndices(committee, pubkey)
+		indices, err := helpers.CurrentEpochSyncSubcommitteeIndices(headState, committee, valIdx)
 		if err != nil {
 			return nil, err
 		}
@@ -115,7 +120,7 @@ func (vs *Server) syncSubcommitteeIndex(
 		if err != nil {
 			return nil, err
 		}
-		indices, err := helpers.NextEpochSyncSubcommitteeIndices(committee, pubkey)
+		indices, err := helpers.NextEpochSyncSubcommitteeIndices(headState, committee, valIdx)
 		if err != nil {
 			return nil, err
 		}
