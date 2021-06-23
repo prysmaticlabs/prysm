@@ -10,6 +10,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -197,7 +198,7 @@ func (v *validator) proposeBlockV2(ctx context.Context, slot types.Slot, pubKey 
 	}
 
 	// Request block from beacon node
-	b, err := v.validatorClient.GetBlockV2(ctx, &ethpb.BlockRequest{
+	b, err := v.validatorClientV2.GetBlock(ctx, &ethpb.BlockRequest{
 		Slot:         slot,
 		RandaoReveal: randaoReveal,
 		Graffiti:     g,
@@ -248,7 +249,7 @@ func (v *validator) proposeBlockV2(ctx context.Context, slot types.Slot, pubKey 
 	}
 
 	// Propose and broadcast block via beacon node
-	blkResp, err := v.validatorClient.ProposeBlockV2(ctx, blk)
+	blkResp, err := v.validatorClientV2.ProposeBlock(ctx, blk)
 	if err != nil {
 		log.WithError(err).Error("Failed to propose block")
 		if v.emitAccountMetrics {
