@@ -12,6 +12,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -28,9 +29,10 @@ import (
 )
 
 type mocks struct {
-	validatorClient *mock.MockBeaconNodeValidatorClient
-	nodeClient      *mock.MockNodeClient
-	signExitFunc    func(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
+	validatorClient   *mock.MockBeaconNodeValidatorClient
+	validatorClientV2 *mock.MockBeaconNodeValidatorAltairClient
+	nodeClient        *mock.MockNodeClient
+	signExitFunc      func(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
 }
 
 type mockSignature struct{}
@@ -62,8 +64,9 @@ func setup(t *testing.T) (*validator, *mocks, bls.SecretKey, func()) {
 	valDB := testing2.SetupDB(t, [][48]byte{pubKey})
 	ctrl := gomock.NewController(t)
 	m := &mocks{
-		validatorClient: mock.NewMockBeaconNodeValidatorClient(ctrl),
-		nodeClient:      mock.NewMockNodeClient(ctrl),
+		validatorClient:   mock.NewMockBeaconNodeValidatorClient(ctrl),
+		validatorClientV2: mock.NewMockBeaconNodeValidatorAltairClient(ctrl),
+		nodeClient:        mock.NewMockNodeClient(ctrl),
 		signExitFunc: func(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
 			return mockSignature{}, nil
 		},
@@ -81,6 +84,7 @@ func setup(t *testing.T) (*validator, *mocks, bls.SecretKey, func()) {
 		db:                             valDB,
 		keyManager:                     km,
 		validatorClient:                m.validatorClient,
+		validatorClientV2:              m.validatorClientV2,
 		graffiti:                       []byte{},
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
@@ -169,7 +173,7 @@ func TestProposeBlockV2_RequestBlockFailed(t *testing.T) {
 		gomock.Any(), // epoch
 	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-	m.validatorClient.EXPECT().GetBlockV2(
+	m.validatorClientV2.EXPECT().GetBlock(
 		gomock.Any(), // ctx
 		gomock.Any(), // block request
 	).Return(nil /*response*/, errors.New("uh oh"))
@@ -225,7 +229,7 @@ func TestProposeBlockV2_ProposeBlockFailed(t *testing.T) {
 		gomock.Any(), // epoch
 	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-	m.validatorClient.EXPECT().GetBlockV2(
+	m.validatorClientV2.EXPECT().GetBlock(
 		gomock.Any(), // ctx
 		gomock.Any(),
 	).Return(testutil.NewBeaconBlockAltair().Block, nil /*err*/)
@@ -235,7 +239,7 @@ func TestProposeBlockV2_ProposeBlockFailed(t *testing.T) {
 		gomock.Any(), // epoch
 	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-	m.validatorClient.EXPECT().ProposeBlockV2(
+	m.validatorClientV2.EXPECT().ProposeBlock(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&prysmv2.SignedBeaconBlock{}),
 	).Return(nil /*response*/, errors.New("uh oh"))
@@ -320,7 +324,7 @@ func TestProposeBlockV2_BlocksDoubleProposal(t *testing.T) {
 	testBlock := testutil.NewBeaconBlockAltair()
 	slot := params.BeaconConfig().SlotsPerEpoch*5 + 2
 	testBlock.Block.Slot = slot
-	m.validatorClient.EXPECT().GetBlockV2(
+	m.validatorClientV2.EXPECT().GetBlock(
 		gomock.Any(), // ctx
 		gomock.Any(),
 	).Return(testBlock.Block, nil /*err*/)
@@ -330,7 +334,7 @@ func TestProposeBlockV2_BlocksDoubleProposal(t *testing.T) {
 	graffiti := [32]byte{}
 	copy(graffiti[:], "someothergraffiti")
 	secondTestBlock.Block.Body.Graffiti = graffiti[:]
-	m.validatorClient.EXPECT().GetBlockV2(
+	m.validatorClientV2.EXPECT().GetBlock(
 		gomock.Any(), // ctx
 		gomock.Any(),
 	).Return(secondTestBlock.Block, nil /*err*/)
@@ -340,7 +344,7 @@ func TestProposeBlockV2_BlocksDoubleProposal(t *testing.T) {
 		gomock.Any(), // epoch
 	).Times(3).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-	m.validatorClient.EXPECT().ProposeBlockV2(
+	m.validatorClientV2.EXPECT().ProposeBlock(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&prysmv2.SignedBeaconBlock{}),
 	).Return(&ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil /*error*/)
@@ -587,7 +591,7 @@ func TestProposeBlockV2_BroadcastsBlock_WithGraffiti(t *testing.T) {
 
 	blk := testutil.NewBeaconBlockAltair()
 	blk.Block.Body.Graffiti = validator.graffiti
-	m.validatorClient.EXPECT().GetBlockV2(
+	m.validatorClientV2.EXPECT().GetBlock(
 		gomock.Any(), // ctx
 		gomock.Any(),
 	).Return(blk.Block, nil /*err*/)
@@ -599,7 +603,7 @@ func TestProposeBlockV2_BroadcastsBlock_WithGraffiti(t *testing.T) {
 
 	var sentBlock *prysmv2.SignedBeaconBlock
 
-	m.validatorClient.EXPECT().ProposeBlockV2(
+	m.validatorClientV2.EXPECT().ProposeBlock(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&prysmv2.SignedBeaconBlock{}),
 	).DoAndReturn(func(ctx context.Context, block *prysmv2.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
