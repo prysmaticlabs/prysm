@@ -34,7 +34,7 @@ func TestSubmitSyncMessage_OK(t *testing.T) {
 		SyncCommitteePool: synccommittee.NewStore(),
 		P2P:               &mockp2p.MockBroadcaster{},
 	}
-	msg := &ethpb.SyncCommitteeMessage{
+	msg := &prysmv2.SyncCommitteeMessage{
 		Slot:           1,
 		ValidatorIndex: 2,
 	}
@@ -42,7 +42,7 @@ func TestSubmitSyncMessage_OK(t *testing.T) {
 	require.NoError(t, err)
 	savedMsgs, err := server.SyncCommitteePool.SyncCommitteeMessages(1)
 	require.NoError(t, err)
-	require.DeepEqual(t, []*ethpb.SyncCommitteeMessage{msg}, savedMsgs)
+	require.DeepEqual(t, []*prysmv2.SyncCommitteeMessage{msg}, savedMsgs)
 }
 
 func TestGetSyncSubcommitteeIndex_Ok(t *testing.T) {

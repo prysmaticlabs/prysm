@@ -82,7 +82,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				msg: &ethpb.SignedContributionAndProof{
 					Message: &ethpb.ContributionAndProof{
 						AggregatorIndex: 1,
-						Contribution: &ethpb.SyncCommitteeContribution{
+						Contribution: &prysmv2.SyncCommitteeContribution{
 							Slot:              1,
 							SubcommitteeIndex: 1,
 							BlockRoot:         params.BeaconConfig().ZeroHash[:],
@@ -117,7 +117,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				msg: &ethpb.SignedContributionAndProof{
 					Message: &ethpb.ContributionAndProof{
 						AggregatorIndex: 1,
-						Contribution: &ethpb.SyncCommitteeContribution{
+						Contribution: &prysmv2.SyncCommitteeContribution{
 							Slot:              30,
 							SubcommitteeIndex: 1,
 							BlockRoot:         params.BeaconConfig().ZeroHash[:],
@@ -155,7 +155,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				msg: &ethpb.SignedContributionAndProof{
 					Message: &ethpb.ContributionAndProof{
 						AggregatorIndex: 1,
-						Contribution: &ethpb.SyncCommitteeContribution{
+						Contribution: &prysmv2.SyncCommitteeContribution{
 							Slot:              1,
 							SubcommitteeIndex: 1,
 							BlockRoot:         params.BeaconConfig().ZeroHash[:],
@@ -198,7 +198,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				msg: &ethpb.SignedContributionAndProof{
 					Message: &ethpb.ContributionAndProof{
 						AggregatorIndex: 1,
-						Contribution: &ethpb.SyncCommitteeContribution{
+						Contribution: &prysmv2.SyncCommitteeContribution{
 							Slot:              1,
 							SubcommitteeIndex: 1,
 							BlockRoot:         params.BeaconConfig().ZeroHash[:],
@@ -255,7 +255,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				msg: &ethpb.SignedContributionAndProof{
 					Message: &ethpb.ContributionAndProof{
 						AggregatorIndex: 1,
-						Contribution: &ethpb.SyncCommitteeContribution{
+						Contribution: &prysmv2.SyncCommitteeContribution{
 							Slot:              1,
 							SubcommitteeIndex: 1,
 							BlockRoot:         params.BeaconConfig().ZeroHash[:],
@@ -313,7 +313,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				msg: &ethpb.SignedContributionAndProof{
 					Message: &ethpb.ContributionAndProof{
 						AggregatorIndex: 1,
-						Contribution: &ethpb.SyncCommitteeContribution{
+						Contribution: &prysmv2.SyncCommitteeContribution{
 							Slot:              1,
 							SubcommitteeIndex: 1,
 							BlockRoot:         params.BeaconConfig().ZeroHash[:],
@@ -379,7 +379,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				msg: &ethpb.SignedContributionAndProof{
 					Message: &ethpb.ContributionAndProof{
 						AggregatorIndex: 1,
-						Contribution: &ethpb.SyncCommitteeContribution{
+						Contribution: &prysmv2.SyncCommitteeContribution{
 							Slot:              1,
 							SubcommitteeIndex: 1,
 							BlockRoot:         params.BeaconConfig().ZeroHash[:],
@@ -455,7 +455,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				msg: &ethpb.SignedContributionAndProof{
 					Message: &ethpb.ContributionAndProof{
 						AggregatorIndex: 1,
-						Contribution: &ethpb.SyncCommitteeContribution{
+						Contribution: &prysmv2.SyncCommitteeContribution{
 							Slot:              1,
 							SubcommitteeIndex: 1,
 							BlockRoot:         params.BeaconConfig().ZeroHash[:],
@@ -527,7 +527,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				msg: &ethpb.SignedContributionAndProof{
 					Message: &ethpb.ContributionAndProof{
 						AggregatorIndex: 1,
-						Contribution: &ethpb.SyncCommitteeContribution{
+						Contribution: &prysmv2.SyncCommitteeContribution{
 							Slot:              1,
 							SubcommitteeIndex: 1,
 							BlockRoot:         params.BeaconConfig().ZeroHash[:],
@@ -612,7 +612,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				msg: &ethpb.SignedContributionAndProof{
 					Message: &ethpb.ContributionAndProof{
 						AggregatorIndex: 1,
-						Contribution: &ethpb.SyncCommitteeContribution{
+						Contribution: &prysmv2.SyncCommitteeContribution{
 							Slot:              1,
 							SubcommitteeIndex: 1,
 							BlockRoot:         params.BeaconConfig().ZeroHash[:],

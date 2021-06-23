@@ -57,7 +57,7 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.S
 		return
 	}
 
-	msg := &ethpb.SyncCommitteeMessage{
+	msg := &prysmv2.SyncCommitteeMessage{
 		Slot:           slot,
 		BlockRoot:      res.Root,
 		ValidatorIndex: duty.ValidatorIndex,

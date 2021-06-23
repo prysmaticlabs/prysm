@@ -22,6 +22,7 @@ import (
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -125,7 +126,7 @@ func (vs *Server) GetBlockV2(ctx context.Context, req *ethpb.BlockRequest) (*pry
 
 	// Ugly hack to allow this to compile both for mainnet
 	// and minimal configs.
-	mockAgg := &ethpb.SyncAggregate{SyncCommitteeBits: []byte{}}
+	mockAgg := &prysmv2.SyncAggregate{SyncCommitteeBits: []byte{}}
 	var bVector []byte
 	if mockAgg.SyncCommitteeBits.Len() == 512 {
 		bVector = bitfield.NewBitvector512()
@@ -148,7 +149,7 @@ func (vs *Server) GetBlockV2(ctx context.Context, req *ethpb.BlockRequest) (*pry
 			VoluntaryExits:    blkData.voluntaryExits,
 			Graffiti:          blkData.graffiti[:],
 			// TODO: Add in actual aggregates
-			SyncAggregate: &ethpb.SyncAggregate{
+			SyncAggregate: &prysmv2.SyncAggregate{
 				SyncCommitteeBits:      bVector,
 				SyncCommitteeSignature: infiniteSignature[:],
 			},

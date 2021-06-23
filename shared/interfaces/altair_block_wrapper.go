@@ -4,6 +4,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/interfaces/version"
 	"google.golang.org/protobuf/proto"
@@ -220,7 +221,7 @@ func (w AltairBeaconBlockBody) VoluntaryExits() []*ethpb.SignedVoluntaryExit {
 }
 
 // SyncAggregate returns the sync aggregate in the block.
-func (w AltairBeaconBlockBody) SyncAggregate() (*ethpb.SyncAggregate, error) {
+func (w AltairBeaconBlockBody) SyncAggregate() (*prysmv2.SyncAggregate, error) {
 	return w.b.SyncAggregate, nil
 }
 

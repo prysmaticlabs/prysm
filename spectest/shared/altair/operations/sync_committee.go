@@ -25,7 +25,7 @@ func RunSyncCommitteeTest(t *testing.T, config string) {
 			require.NoError(t, err)
 			syncCommitteeSSZ, err := snappy.Decode(nil /* dst */, syncCommitteeFile)
 			require.NoError(t, err, "Failed to decompress")
-			sc := &ethpb.SyncAggregate{}
+			sc := &prysmv2.SyncAggregate{}
 			require.NoError(t, sc.UnmarshalSSZ(syncCommitteeSSZ), "Failed to unmarshal")
 
 			body := &prysmv2.BeaconBlockBody{SyncAggregate: sc}

@@ -10,6 +10,7 @@ import (
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -312,7 +313,7 @@ func TestSyncCommitteePeriod(t *testing.T) {
 func TestValidateNilSyncContribution(t *testing.T) {
 	tests := []struct {
 		name    string
-		s       *ethpb.SignedContributionAndProof
+		s       *prysmv2.SignedContributionAndProof
 		wantErr bool
 	}{
 		{
@@ -322,27 +323,27 @@ func TestValidateNilSyncContribution(t *testing.T) {
 		},
 		{
 			name:    "nil message",
-			s:       &ethpb.SignedContributionAndProof{},
+			s:       &prysmv2.SignedContributionAndProof{},
 			wantErr: true,
 		},
 		{
 			name:    "nil contribution",
-			s:       &ethpb.SignedContributionAndProof{Message: &ethpb.ContributionAndProof{}},
+			s:       &prysmv2.SignedContributionAndProof{Message: &prysmv2.ContributionAndProof{}},
 			wantErr: true,
 		},
 		{
 			name: "nil bitfield",
-			s: &ethpb.SignedContributionAndProof{
-				Message: &ethpb.ContributionAndProof{
-					Contribution: &ethpb.SyncCommitteeContribution{},
+			s: &prysmv2.SignedContributionAndProof{
+				Message: &prysmv2.ContributionAndProof{
+					Contribution: &prysmv2.SyncCommitteeContribution{},
 				}},
 			wantErr: true,
 		},
 		{
 			name: "non nil sync contribution",
-			s: &ethpb.SignedContributionAndProof{
-				Message: &ethpb.ContributionAndProof{
-					Contribution: &ethpb.SyncCommitteeContribution{
+			s: &prysmv2.SignedContributionAndProof{
+				Message: &prysmv2.ContributionAndProof{
+					Contribution: &prysmv2.SyncCommitteeContribution{
 						AggregationBits: []byte{},
 					},
 				}},

@@ -10,6 +10,7 @@ import (
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -549,7 +550,7 @@ func HydrateBeaconBlockBodyAltair(b *prysmv2.BeaconBlockBody) *prysmv2.BeaconBlo
 		}
 	}
 	if b.SyncAggregate == nil {
-		b.SyncAggregate = &ethpb.SyncAggregate{
+		b.SyncAggregate = &prysmv2.SyncAggregate{
 			SyncCommitteeBits:      make([]byte, 64),
 			SyncCommitteeSignature: make([]byte, 96),
 		}

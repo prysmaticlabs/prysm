@@ -150,15 +150,15 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "VoluntaryExit":
 		obj = &ethpb.VoluntaryExit{}
 	case "SyncCommitteeMessage":
-		obj = &ethpb.SyncCommitteeMessage{}
+		obj = &prysmv2.SyncCommitteeMessage{}
 	case "SyncCommitteeContribution":
-		obj = &ethpb.SyncCommitteeContribution{}
+		obj = &prysmv2.SyncCommitteeContribution{}
 	case "ContributionAndProof":
 		obj = &ethpb.ContributionAndProof{}
 	case "SignedContributionAndProof":
 		obj = &ethpb.SignedContributionAndProof{}
 	case "SyncAggregate":
-		obj = &ethpb.SyncAggregate{}
+		obj = &prysmv2.SyncAggregate{}
 	case "SyncAggregatorSelectionData":
 		obj = &pb.SyncAggregatorSelectionData{}
 	case "SyncCommittee":

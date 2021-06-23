@@ -3,6 +3,7 @@ package copyutil
 import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
@@ -329,11 +330,11 @@ func CopyValidator(val *ethpb.Validator) *ethpb.Validator {
 }
 
 // CopySyncCommitteeMessage copies the provided sync committee message object.
-func CopySyncCommitteeMessage(s *ethpb.SyncCommitteeMessage) *ethpb.SyncCommitteeMessage {
+func CopySyncCommitteeMessage(s *prysmv2.SyncCommitteeMessage) *prysmv2.SyncCommitteeMessage {
 	if s == nil {
 		return nil
 	}
-	return &ethpb.SyncCommitteeMessage{
+	return &prysmv2.SyncCommitteeMessage{
 		Slot:           s.Slot,
 		BlockRoot:      bytesutil.SafeCopyBytes(s.BlockRoot),
 		ValidatorIndex: s.ValidatorIndex,
@@ -342,11 +343,11 @@ func CopySyncCommitteeMessage(s *ethpb.SyncCommitteeMessage) *ethpb.SyncCommitte
 }
 
 // CopySyncCommitteeContribution copies the provided sync committee contribution object.
-func CopySyncCommitteeContribution(c *ethpb.SyncCommitteeContribution) *ethpb.SyncCommitteeContribution {
+func CopySyncCommitteeContribution(c *prysmv2.SyncCommitteeContribution) *prysmv2.SyncCommitteeContribution {
 	if c == nil {
 		return nil
 	}
-	return &ethpb.SyncCommitteeContribution{
+	return &prysmv2.SyncCommitteeContribution{
 		Slot:              c.Slot,
 		BlockRoot:         bytesutil.SafeCopyBytes(c.BlockRoot),
 		SubcommitteeIndex: c.SubcommitteeIndex,
@@ -356,11 +357,11 @@ func CopySyncCommitteeContribution(c *ethpb.SyncCommitteeContribution) *ethpb.Sy
 }
 
 // CopySyncAggregate copies the provided sync aggregate object.
-func CopySyncAggregate(a *ethpb.SyncAggregate) *ethpb.SyncAggregate {
+func CopySyncAggregate(a *prysmv2.SyncAggregate) *prysmv2.SyncAggregate {
 	if a == nil {
 		return nil
 	}
-	return &ethpb.SyncAggregate{
+	return &prysmv2.SyncAggregate{
 		SyncCommitteeBits:      bytesutil.SafeCopyBytes(a.SyncCommitteeBits),
 		SyncCommitteeSignature: bytesutil.SafeCopyBytes(a.SyncCommitteeSignature),
 	}
