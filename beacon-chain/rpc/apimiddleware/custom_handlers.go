@@ -183,6 +183,33 @@ forLoop:
 			switch strings.TrimSpace(string(msg.Event)) {
 			case eventsv1.HeadTopic:
 				data = &eventHeadJson{}
+			case eventsv1.BlockTopic:
+				data = &receivedBlockDataJson{}
+			case eventsv1.AttestationTopic:
+				data = &attestationJson{}
+
+				// Data received in the event does not fit the expected event stream output.
+				// We extract the underlying attestation from event data
+				// and assign the attestation back to event data for further processing.
+				eventData := &aggregatedAttReceivedDataJson{}
+				if err := json.Unmarshal(msg.Data, eventData); err != nil {
+					gateway.WriteError(w, &gateway.DefaultErrorJson{Message: err.Error(), Code: http.StatusInternalServerError}, nil)
+					sseClient.Unsubscribe(eventChan)
+					break forLoop
+				}
+				attData, err := json.Marshal(eventData.Aggregate)
+				if err != nil {
+					gateway.WriteError(w, &gateway.DefaultErrorJson{Message: err.Error(), Code: http.StatusInternalServerError}, nil)
+					sseClient.Unsubscribe(eventChan)
+					break forLoop
+				}
+				msg.Data = attData
+			case eventsv1.VoluntaryExitTopic:
+				data = &signedVoluntaryExitJson{}
+			case eventsv1.FinalizedCheckpointTopic:
+				data = &eventFinalizedCheckpointJson{}
+			case eventsv1.ChainReorgTopic:
+				data = &eventChainReorgJson{}
 			case "error":
 				data = &eventErrorJson{}
 			}
@@ -227,7 +254,6 @@ func writeEvent(msg *sse.Event, w http.ResponseWriter, data interface{}) (succes
 	}
 
 	w.Header().Set("Content-Type", "text/event-stream")
-	w.WriteHeader(200)
 	if _, err := w.Write([]byte("event: ")); err != nil {
 		gateway.WriteError(w, &gateway.DefaultErrorJson{Message: err.Error(), Code: http.StatusInternalServerError}, nil)
 		return false
