@@ -23,7 +23,6 @@ import (
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -112,107 +111,7 @@ func TestProposer_GetBlock_OK(t *testing.T) {
 	assert.Equal(t, req.Slot, block.Slot, "Expected block to have slot of 1")
 	assert.DeepEqual(t, parentRoot[:], block.ParentRoot, "Expected block to have correct parent root")
 	assert.DeepEqual(t, randaoReveal, block.Body.RandaoReveal, "Expected block to have correct randao reveal")
-	assert.DeepEqual(t, req.Graffiti, block.Body.Graffiti, "Expected block to have correct graffiti")
-	assert.Equal(t, params.BeaconConfig().MaxProposerSlashings, uint64(len(block.Body.ProposerSlashings)))
-	assert.DeepEqual(t, proposerSlashings, block.Body.ProposerSlashings)
-	assert.Equal(t, params.BeaconConfig().MaxAttesterSlashings, uint64(len(block.Body.AttesterSlashings)))
-	assert.DeepEqual(t, attSlashings, block.Body.AttesterSlashings)
-}
-
-func TestProposer_GetBlockV2_OK(t *testing.T) {
-	db := dbutil.SetupDB(t)
-	ctx := context.Background()
-
-	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
-	beaconState, privKeys := testutil.DeterministicGenesisStateAltair(t, 64)
-
-	stateRoot, err := beaconState.HashTreeRoot(ctx)
-	require.NoError(t, err, "Could not hash genesis state")
-
-	genesis := b.NewGenesisBlock(stateRoot[:])
-	genAltair := &prysmv2.SignedBeaconBlock{
-		Block: &prysmv2.BeaconBlock{
-			Slot:       genesis.Block.Slot,
-			ParentRoot: genesis.Block.ParentRoot,
-			StateRoot:  genesis.Block.StateRoot,
-			Body: &prysmv2.BeaconBlockBody{
-				RandaoReveal:  genesis.Block.Body.RandaoReveal,
-				Graffiti:      genesis.Block.Body.Graffiti,
-				Eth1Data:      genesis.Block.Body.Eth1Data,
-				SyncAggregate: &prysmv2.SyncAggregate{SyncCommitteeBits: bitfield.NewBitvector512(), SyncCommitteeSignature: make([]byte, 96)},
-			},
-		},
-		Signature: genesis.Signature,
-	}
-	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedAltairSignedBeaconBlock(genAltair)), "Could not save genesis block")
-
-	parentRoot, err := genAltair.Block.HashTreeRoot()
-	require.NoError(t, err, "Could not get signing root")
-	require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
-	require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
-
-	require.NoError(t, err, "Could not get signing root")
-	require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
-	require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
-
-	proposerServer := &Server{
-		BeaconDB:          db,
-		HeadFetcher:       &mock.ChainService{State: beaconState, Root: parentRoot[:]},
-		SyncChecker:       &mockSync.Sync{IsSyncing: false},
-		BlockReceiver:     &mock.ChainService{},
-		ChainStartFetcher: &mockPOW.POWChain{},
-		Eth1InfoFetcher:   &mockPOW.POWChain{},
-		Eth1BlockFetcher:  &mockPOW.POWChain{},
-		MockEth1Votes:     true,
-		AttPool:           attestations.NewPool(),
-		SlashingsPool:     slashings.NewPool(),
-		ExitPool:          voluntaryexits.NewPool(),
-		StateGen:          stategen.New(db),
-	}
-
-	randaoReveal, err := testutil.RandaoReveal(beaconState, 0, privKeys)
-	require.NoError(t, err)
-
-	graffiti := bytesutil.ToBytes32([]byte("eth2"))
-	req := &ethpb.BlockRequest{
-		Slot:         1,
-		RandaoReveal: randaoReveal,
-		Graffiti:     graffiti[:],
-	}
-
-	proposerSlashings := make([]*ethpb.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
-	for i := types.ValidatorIndex(0); uint64(i) < params.BeaconConfig().MaxProposerSlashings; i++ {
-		proposerSlashing, err := testutil.GenerateProposerSlashingForValidator(
-			beaconState,
-			privKeys[i],
-			i, /* validator index */
-		)
-		require.NoError(t, err)
-		proposerSlashings[i] = proposerSlashing
-		err = proposerServer.SlashingsPool.InsertProposerSlashing(context.Background(), beaconState, proposerSlashing)
-		require.NoError(t, err)
-	}
-
-	attSlashings := make([]*ethpb.AttesterSlashing, params.BeaconConfig().MaxAttesterSlashings)
-	for i := uint64(0); i < params.BeaconConfig().MaxAttesterSlashings; i++ {
-		attesterSlashing, err := testutil.GenerateAttesterSlashingForValidator(
-			beaconState,
-			privKeys[i+params.BeaconConfig().MaxProposerSlashings],
-			types.ValidatorIndex(i+params.BeaconConfig().MaxProposerSlashings), /* validator index */
-		)
-		require.NoError(t, err)
-		attSlashings[i] = attesterSlashing
-		err = proposerServer.SlashingsPool.InsertAttesterSlashing(context.Background(), beaconState, attesterSlashing)
-		require.NoError(t, err)
-	}
-	block, err := proposerServer.GetBlock(ctx, req)
-	require.NoError(t, err)
-
-	assert.Equal(t, req.Slot, block.Slot, "Expected block to have slot of 1")
-	assert.DeepEqual(t, parentRoot[:], block.ParentRoot, "Expected block to have correct parent root")
-	assert.DeepEqual(t, randaoReveal, block.Body.RandaoReveal, "Expected block to have correct randao reveal")
-	assert.DeepEqual(t, req.Graffiti, block.Body.Graffiti, "Expected block to have correct graffiti")
+	assert.DeepEqual(t, req.Graffiti, block.Body.Graffiti, "Expected block to have correct Graffiti")
 	assert.Equal(t, params.BeaconConfig().MaxProposerSlashings, uint64(len(block.Body.ProposerSlashings)))
 	assert.DeepEqual(t, proposerSlashings, block.Body.ProposerSlashings)
 	assert.Equal(t, params.BeaconConfig().MaxAttesterSlashings, uint64(len(block.Body.AttesterSlashings)))
@@ -253,7 +152,7 @@ func TestProposer_GetBlock_AddsUnaggregatedAtts(t *testing.T) {
 		StateGen:          stategen.New(db),
 	}
 
-	// Generate a bunch of random attestations at slot. These would be considered double votes, but
+	// Generate a bunch of random Attestations at slot. These would be considered double votes, but
 	// we don't care for the purpose of this test.
 	var atts []*ethpb.Attestation
 	for i := uint64(0); len(atts) < int(params.BeaconConfig().MaxAttestations); i++ {
@@ -261,12 +160,12 @@ func TestProposer_GetBlock_AddsUnaggregatedAtts(t *testing.T) {
 		require.NoError(t, err)
 		atts = append(atts, a...)
 	}
-	// Max attestations minus one so we can almost fill the block and then include 1 unaggregated
+	// Max Attestations minus one so we can almost fill the block and then include 1 unaggregated
 	// att to maximize inclusion.
 	atts = atts[:params.BeaconConfig().MaxAttestations-1]
 	require.NoError(t, proposerServer.AttPool.SaveAggregatedAttestations(atts))
 
-	// Generate some more random attestations with a larger spread so that we can capture at least
+	// Generate some more random Attestations with a larger spread so that we can capture at least
 	// one unaggregated attestation.
 	atts, err = testutil.GenerateAttestations(beaconState, privKeys, 300, 1, true)
 	require.NoError(t, err)
@@ -277,7 +176,7 @@ func TestProposer_GetBlock_AddsUnaggregatedAtts(t *testing.T) {
 			require.NoError(t, proposerServer.AttPool.SaveUnaggregatedAttestation(a))
 		}
 	}
-	require.Equal(t, true, found, "No unaggregated attestations were generated")
+	require.Equal(t, true, found, "No unaggregated Attestations were generated")
 
 	randaoReveal, err := testutil.RandaoReveal(beaconState, 0, privKeys)
 	assert.NoError(t, err)
@@ -294,7 +193,7 @@ func TestProposer_GetBlock_AddsUnaggregatedAtts(t *testing.T) {
 	assert.Equal(t, req.Slot, block.Slot, "Expected block to have slot of 1")
 	assert.DeepEqual(t, parentRoot[:], block.ParentRoot, "Expected block to have correct parent root")
 	assert.DeepEqual(t, randaoReveal, block.Body.RandaoReveal, "Expected block to have correct randao reveal")
-	assert.DeepEqual(t, req.Graffiti, block.Body.Graffiti, "Expected block to have correct graffiti")
+	assert.DeepEqual(t, req.Graffiti, block.Body.Graffiti, "Expected block to have correct Graffiti")
 	assert.Equal(t, params.BeaconConfig().MaxAttestations, uint64(len(block.Body.Attestations)), "Expected block atts to be aggregated down to 1")
 	hasUnaggregatedAtt := false
 	for _, a := range block.Body.Attestations {
@@ -342,42 +241,6 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 	assert.NoError(t, err, "Could not propose block correctly")
 }
 
-func TestProposer_ProposeBlockV2_OK(t *testing.T) {
-	db := dbutil.SetupDB(t)
-	ctx := context.Background()
-	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
-
-	genesis := testutil.NewBeaconBlockAltair()
-	require.NoError(t, db.SaveBlock(context.Background(), interfaces.WrappedAltairSignedBeaconBlock(genesis)), "Could not save genesis block")
-
-	numDeposits := uint64(64)
-	beaconState, _ := testutil.DeterministicGenesisStateAltair(t, numDeposits)
-	bsRoot, err := beaconState.HashTreeRoot(ctx)
-	require.NoError(t, err)
-	genesisRoot, err := genesis.Block.HashTreeRoot()
-	require.NoError(t, err)
-	require.NoError(t, db.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
-
-	c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
-	proposerServer := &Server{
-		BeaconDB:          db,
-		ChainStartFetcher: &mockPOW.POWChain{},
-		Eth1InfoFetcher:   &mockPOW.POWChain{},
-		Eth1BlockFetcher:  &mockPOW.POWChain{},
-		BlockReceiver:     c,
-		HeadFetcher:       c,
-		BlockNotifier:     c.BlockNotifier(),
-		P2P:               mockp2p.NewTestP2P(t),
-	}
-	req := testutil.NewBeaconBlockAltair()
-	req.Block.Slot = 5
-	req.Block.ParentRoot = bsRoot[:]
-	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedAltairSignedBeaconBlock(req)))
-	_, err = proposerServer.ProposeBlockV2(context.Background(), req)
-	assert.NoError(t, err, "Could not propose block correctly")
-}
-
 func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
@@ -419,7 +282,7 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 	req.Signature, err = helpers.ComputeDomainAndSign(beaconState, currentEpoch, req.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
-	_, err = proposerServer.computeStateRoot(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(req))
+	_, err = proposerServer.ComputeStateRoot(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(req))
 	require.NoError(t, err)
 }
 
@@ -474,7 +337,7 @@ func TestProposer_PendingDeposits_Eth1DataVoteOK(t *testing.T) {
 		HeadFetcher:       &mock.ChainService{State: beaconState, Root: blkRoot[:]},
 	}
 
-	// It should also return the recent deposits after their follow window.
+	// It should also return the recent Deposits after their follow window.
 	p.LatestBlockNumber = big.NewInt(0).Add(p.LatestBlockNumber, big.NewInt(10000))
 	_, eth1Height, err := bs.canonicalEth1Data(ctx, beaconState, &ethpb.Eth1Data{})
 	require.NoError(t, err)
@@ -607,14 +470,14 @@ func TestProposer_PendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 
 	deposits, err := bs.deposits(ctx, beaconState, &ethpb.Eth1Data{})
 	require.NoError(t, err)
-	assert.Equal(t, 0, len(deposits), "Received unexpected list of deposits")
+	assert.Equal(t, 0, len(deposits), "Received unexpected list of Deposits")
 
-	// It should not return the recent deposits after their follow window.
-	// as latest block number makes no difference in retrieval of deposits
+	// It should not return the recent Deposits after their follow window.
+	// as latest block number makes no difference in retrieval of Deposits
 	p.LatestBlockNumber = big.NewInt(0).Add(p.LatestBlockNumber, big.NewInt(10000))
 	deposits, err = bs.deposits(ctx, beaconState, &ethpb.Eth1Data{})
 	require.NoError(t, err)
-	assert.Equal(t, 0, len(deposits), "Received unexpected number of pending deposits")
+	assert.Equal(t, 0, len(deposits), "Received unexpected number of pending Deposits")
 }
 
 func TestProposer_PendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
@@ -736,15 +599,15 @@ func TestProposer_PendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 
 	deposits, err := bs.deposits(ctx, beaconState, &ethpb.Eth1Data{})
 	require.NoError(t, err)
-	assert.Equal(t, 0, len(deposits), "Received unexpected list of deposits")
+	assert.Equal(t, 0, len(deposits), "Received unexpected list of Deposits")
 
-	// It should also return the recent deposits after their follow window.
+	// It should also return the recent Deposits after their follow window.
 	p.LatestBlockNumber = big.NewInt(0).Add(p.LatestBlockNumber, big.NewInt(10000))
-	// we should get our pending deposits once this vote pushes the vote tally to include
+	// we should get our pending Deposits once this vote pushes the vote tally to include
 	// the updated eth1 data.
 	deposits, err = bs.deposits(ctx, beaconState, vote)
 	require.NoError(t, err)
-	assert.Equal(t, len(recentDeposits), len(deposits), "Received unexpected number of pending deposits")
+	assert.Equal(t, len(recentDeposits), len(deposits), "Received unexpected number of pending Deposits")
 }
 
 func TestProposer_PendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
@@ -833,13 +696,13 @@ func TestProposer_PendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testin
 		HeadFetcher:            &mock.ChainService{State: beaconState, Root: blkRoot[:]},
 	}
 
-	// It should also return the recent deposits after their follow window.
+	// It should also return the recent Deposits after their follow window.
 	p.LatestBlockNumber = big.NewInt(0).Add(p.LatestBlockNumber, big.NewInt(10000))
 	deposits, err := bs.deposits(ctx, beaconState, &ethpb.Eth1Data{})
 	require.NoError(t, err)
 
 	expectedDeposits := 6
-	assert.Equal(t, expectedDeposits, len(deposits), "Received unexpected number of pending deposits")
+	assert.Equal(t, expectedDeposits, len(deposits), "Received unexpected number of pending Deposits")
 }
 
 func TestProposer_PendingDeposits_CantReturnMoreThanMax(t *testing.T) {
@@ -929,11 +792,11 @@ func TestProposer_PendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 		HeadFetcher:            &mock.ChainService{State: beaconState, Root: blkRoot[:]},
 	}
 
-	// It should also return the recent deposits after their follow window.
+	// It should also return the recent Deposits after their follow window.
 	p.LatestBlockNumber = big.NewInt(0).Add(p.LatestBlockNumber, big.NewInt(10000))
 	deposits, err := bs.deposits(ctx, beaconState, &ethpb.Eth1Data{})
 	require.NoError(t, err)
-	assert.Equal(t, params.BeaconConfig().MaxDeposits, uint64(len(deposits)), "Received unexpected number of pending deposits")
+	assert.Equal(t, params.BeaconConfig().MaxDeposits, uint64(len(deposits)), "Received unexpected number of pending Deposits")
 }
 
 func TestProposer_PendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
@@ -1023,11 +886,11 @@ func TestProposer_PendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 		PendingDepositsFetcher: depositCache,
 	}
 
-	// It should also return the recent deposits after their follow window.
+	// It should also return the recent Deposits after their follow window.
 	p.LatestBlockNumber = big.NewInt(0).Add(p.LatestBlockNumber, big.NewInt(10000))
 	deposits, err := bs.deposits(ctx, beaconState, &ethpb.Eth1Data{})
 	require.NoError(t, err)
-	assert.Equal(t, 3, len(deposits), "Received unexpected number of pending deposits")
+	assert.Equal(t, 3, len(deposits), "Received unexpected number of pending Deposits")
 }
 
 func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
@@ -1740,7 +1603,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		assert.DeepEqual(t, expectedHash, hash)
 	})
 
-	t.Run("no votes and more recent block has less deposits - choose current eth1data", func(t *testing.T) {
+	t.Run("no votes and more recent block has less Deposits - choose current eth1data", func(t *testing.T) {
 		p := mockPOW.NewPOWChain().
 			InsertBlock(50, earliestValidTime, []byte("earliest")).
 			InsertBlock(100, latestValidTime, []byte("latest"))
@@ -1807,7 +1670,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		assert.DeepEqual(t, expectedHash, hash)
 	})
 
-	t.Run("highest count on block with less deposits - choose another block", func(t *testing.T) {
+	t.Run("highest count on block with less Deposits - choose another block", func(t *testing.T) {
 		t.Skip()
 		p := mockPOW.NewPOWChain().
 			InsertBlock(50, earliestValidTime, []byte("earliest")).
@@ -1910,7 +1773,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		assert.DeepEqual(t, expectedHash, hash)
 	})
 
-	t.Run("no deposits - choose chain start eth1data", func(t *testing.T) {
+	t.Run("no Deposits - choose chain start eth1data", func(t *testing.T) {
 		p := mockPOW.NewPOWChain().
 			InsertBlock(50, earliestValidTime, []byte("earliest")).
 			InsertBlock(100, latestValidTime, []byte("latest"))
@@ -1981,7 +1844,7 @@ func TestProposer_FilterAttestation(t *testing.T) {
 		expectedAtts func(inputAtts []*ethpb.Attestation) []*ethpb.Attestation
 	}{
 		{
-			name: "nil attestations",
+			name: "nil Attestations",
 			inputAtts: func() []*ethpb.Attestation {
 				return nil
 			},
@@ -1990,7 +1853,7 @@ func TestProposer_FilterAttestation(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid attestations",
+			name: "invalid Attestations",
 			inputAtts: func() []*ethpb.Attestation {
 				atts := make([]*ethpb.Attestation, 10)
 				for i := 0; i < len(atts); i++ {
@@ -2148,11 +2011,11 @@ func TestProposer_Deposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t
 		PendingDepositsFetcher: depositCache,
 	}
 
-	// It should also return the recent deposits after their follow window.
+	// It should also return the recent Deposits after their follow window.
 	p.LatestBlockNumber = big.NewInt(0).Add(p.LatestBlockNumber, big.NewInt(10000))
 	deposits, err := bs.deposits(ctx, beaconState, &ethpb.Eth1Data{})
 	require.NoError(t, err)
-	assert.Equal(t, 0, len(deposits), "Received unexpected number of pending deposits")
+	assert.Equal(t, 0, len(deposits), "Received unexpected number of pending Deposits")
 }
 
 func TestProposer_DeleteAttsInPool_Aggregated(t *testing.T) {
