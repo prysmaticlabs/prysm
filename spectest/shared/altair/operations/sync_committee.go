@@ -8,7 +8,6 @@ import (
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"

@@ -23,6 +23,7 @@ import (
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -40,7 +41,6 @@ func TestProposer_GetBlock_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
-	testutil.ResetCache()
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
@@ -123,7 +123,6 @@ func TestProposer_GetBlockV2_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
-	testutil.ResetCache()
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	beaconState, privKeys := testutil.DeterministicGenesisStateAltair(t, 64)

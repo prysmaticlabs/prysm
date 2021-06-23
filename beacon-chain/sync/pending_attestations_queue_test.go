@@ -60,7 +60,7 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	p1 := p2ptest.NewTestP2P(t)
 	validators := uint64(256)
-	testutil.ResetCache()
+
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
 	sb := testutil.NewBeaconBlock()
@@ -185,7 +185,7 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 	require.NoError(t, err)
 
 	validators := uint64(256)
-	testutil.ResetCache()
+
 	_, privKeys := testutil.DeterministicGenesisState(t, validators)
 	aggBits := bitfield.NewBitlist(8)
 	aggBits.SetBitAt(1, true)
@@ -253,7 +253,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	p1 := p2ptest.NewTestP2P(t)
 	validators := uint64(256)
-	testutil.ResetCache()
+
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
 	sb := testutil.NewBeaconBlock()

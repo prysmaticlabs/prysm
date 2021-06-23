@@ -160,6 +160,110 @@ func local_request_BeaconNodeValidatorAltair_SubmitSyncMessage_0(ctx context.Con
 
 }
 
+var (
+	filter_BeaconNodeValidatorAltair_GetSyncSubcommitteeIndex_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
+)
+
+func request_BeaconNodeValidatorAltair_GetSyncSubcommitteeIndex_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconNodeValidatorAltairClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq SyncSubcommitteeIndexRequest
+	var metadata runtime.ServerMetadata
+
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BeaconNodeValidatorAltair_GetSyncSubcommitteeIndex_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
+	msg, err := client.GetSyncSubcommitteeIndex(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+
+}
+
+func local_request_BeaconNodeValidatorAltair_GetSyncSubcommitteeIndex_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconNodeValidatorAltairServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq SyncSubcommitteeIndexRequest
+	var metadata runtime.ServerMetadata
+
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BeaconNodeValidatorAltair_GetSyncSubcommitteeIndex_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
+	msg, err := server.GetSyncSubcommitteeIndex(ctx, &protoReq)
+	return msg, metadata, err
+
+}
+
+func request_BeaconNodeValidatorAltair_GetSyncCommitteeContribution_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconNodeValidatorAltairClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq SyncCommitteeContributionRequest
+	var metadata runtime.ServerMetadata
+
+	newReader, berr := utilities.IOReaderFactory(req.Body)
+	if berr != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", berr)
+	}
+	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq); err != nil && err != io.EOF {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
+	msg, err := client.GetSyncCommitteeContribution(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+
+}
+
+func local_request_BeaconNodeValidatorAltair_GetSyncCommitteeContribution_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconNodeValidatorAltairServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq SyncCommitteeContributionRequest
+	var metadata runtime.ServerMetadata
+
+	newReader, berr := utilities.IOReaderFactory(req.Body)
+	if berr != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", berr)
+	}
+	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq); err != nil && err != io.EOF {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
+	msg, err := server.GetSyncCommitteeContribution(ctx, &protoReq)
+	return msg, metadata, err
+
+}
+
+func request_BeaconNodeValidatorAltair_SubmitSignedContributionAndProof_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconNodeValidatorAltairClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq SignedContributionAndProof
+	var metadata runtime.ServerMetadata
+
+	newReader, berr := utilities.IOReaderFactory(req.Body)
+	if berr != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", berr)
+	}
+	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq); err != nil && err != io.EOF {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
+	msg, err := client.SubmitSignedContributionAndProof(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+
+}
+
+func local_request_BeaconNodeValidatorAltair_SubmitSignedContributionAndProof_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconNodeValidatorAltairServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq SignedContributionAndProof
+	var metadata runtime.ServerMetadata
+
+	newReader, berr := utilities.IOReaderFactory(req.Body)
+	if berr != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", berr)
+	}
+	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq); err != nil && err != io.EOF {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
+	msg, err := server.SubmitSignedContributionAndProof(ctx, &protoReq)
+	return msg, metadata, err
+
+}
+
 // RegisterBeaconNodeValidatorAltairHandlerServer registers the http handlers for service BeaconNodeValidatorAltair to "mux".
 // UnaryRPC     :call BeaconNodeValidatorAltairServer directly.
 // StreamingRPC :currently unsupported pending https://github.com/grpc/grpc-go/issues/906.
@@ -255,6 +359,75 @@ func RegisterBeaconNodeValidatorAltairHandlerServer(ctx context.Context, mux *ru
 		}
 
 		forward_BeaconNodeValidatorAltair_SubmitSyncMessage_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
+	mux.Handle("GET", pattern_BeaconNodeValidatorAltair_GetSyncSubcommitteeIndex_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/ethereum.prysm.v2.BeaconNodeValidatorAltair/GetSyncSubcommitteeIndex")
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_BeaconNodeValidatorAltair_GetSyncSubcommitteeIndex_0(rctx, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		ctx = runtime.NewServerMetadataContext(ctx, md)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_BeaconNodeValidatorAltair_GetSyncSubcommitteeIndex_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
+	mux.Handle("POST", pattern_BeaconNodeValidatorAltair_GetSyncCommitteeContribution_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/ethereum.prysm.v2.BeaconNodeValidatorAltair/GetSyncCommitteeContribution")
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_BeaconNodeValidatorAltair_GetSyncCommitteeContribution_0(rctx, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		ctx = runtime.NewServerMetadataContext(ctx, md)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_BeaconNodeValidatorAltair_GetSyncCommitteeContribution_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
+	mux.Handle("POST", pattern_BeaconNodeValidatorAltair_SubmitSignedContributionAndProof_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/ethereum.prysm.v2.BeaconNodeValidatorAltair/SubmitSignedContributionAndProof")
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_BeaconNodeValidatorAltair_SubmitSignedContributionAndProof_0(rctx, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		ctx = runtime.NewServerMetadataContext(ctx, md)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_BeaconNodeValidatorAltair_SubmitSignedContributionAndProof_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -379,6 +552,66 @@ func RegisterBeaconNodeValidatorAltairHandlerClient(ctx context.Context, mux *ru
 
 	})
 
+	mux.Handle("GET", pattern_BeaconNodeValidatorAltair_GetSyncSubcommitteeIndex_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/ethereum.prysm.v2.BeaconNodeValidatorAltair/GetSyncSubcommitteeIndex")
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_BeaconNodeValidatorAltair_GetSyncSubcommitteeIndex_0(rctx, inboundMarshaler, client, req, pathParams)
+		ctx = runtime.NewServerMetadataContext(ctx, md)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_BeaconNodeValidatorAltair_GetSyncSubcommitteeIndex_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
+	mux.Handle("POST", pattern_BeaconNodeValidatorAltair_GetSyncCommitteeContribution_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/ethereum.prysm.v2.BeaconNodeValidatorAltair/GetSyncCommitteeContribution")
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_BeaconNodeValidatorAltair_GetSyncCommitteeContribution_0(rctx, inboundMarshaler, client, req, pathParams)
+		ctx = runtime.NewServerMetadataContext(ctx, md)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_BeaconNodeValidatorAltair_GetSyncCommitteeContribution_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
+	mux.Handle("POST", pattern_BeaconNodeValidatorAltair_SubmitSignedContributionAndProof_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/ethereum.prysm.v2.BeaconNodeValidatorAltair/SubmitSignedContributionAndProof")
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_BeaconNodeValidatorAltair_SubmitSignedContributionAndProof_0(rctx, inboundMarshaler, client, req, pathParams)
+		ctx = runtime.NewServerMetadataContext(ctx, md)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_BeaconNodeValidatorAltair_SubmitSignedContributionAndProof_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
 	return nil
 }
 
@@ -390,6 +623,12 @@ var (
 	pattern_BeaconNodeValidatorAltair_GetSyncMessageBlockRoot_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"prysm", "v2", "validator", "sync_message_block_root"}, ""))
 
 	pattern_BeaconNodeValidatorAltair_SubmitSyncMessage_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"prysm", "v2", "validator", "sync_message"}, ""))
+
+	pattern_BeaconNodeValidatorAltair_GetSyncSubcommitteeIndex_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"prysm", "v2", "sync_subcommittee_index"}, ""))
+
+	pattern_BeaconNodeValidatorAltair_GetSyncCommitteeContribution_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"prysm", "v2", "validator", "contribution_and_proof"}, ""))
+
+	pattern_BeaconNodeValidatorAltair_SubmitSignedContributionAndProof_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"prysm", "v2", "validator", "signed_contribution_and_proof"}, ""))
 )
 
 var (
@@ -400,4 +639,10 @@ var (
 	forward_BeaconNodeValidatorAltair_GetSyncMessageBlockRoot_0 = runtime.ForwardResponseMessage
 
 	forward_BeaconNodeValidatorAltair_SubmitSyncMessage_0 = runtime.ForwardResponseMessage
+
+	forward_BeaconNodeValidatorAltair_GetSyncSubcommitteeIndex_0 = runtime.ForwardResponseMessage
+
+	forward_BeaconNodeValidatorAltair_GetSyncCommitteeContribution_0 = runtime.ForwardResponseMessage
+
+	forward_BeaconNodeValidatorAltair_SubmitSignedContributionAndProof_0 = runtime.ForwardResponseMessage
 )

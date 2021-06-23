@@ -25,8 +25,8 @@ func (e Exporter) ClearDB() error {
 }
 
 // Backup -- passthrough.
-func (e Exporter) Backup(ctx context.Context, outputDir string) error {
-	return e.db.Backup(ctx, outputDir)
+func (e Exporter) Backup(ctx context.Context, outputDir string, overridePermission bool) error {
+	return e.db.Backup(ctx, outputDir, false)
 }
 
 // Block -- passthrough.

@@ -12,6 +12,7 @@ import (
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -46,7 +47,6 @@ func TestSubmitSyncMessage_OK(t *testing.T) {
 }
 
 func TestGetSyncSubcommitteeIndex_Ok(t *testing.T) {
-	testutil.ResetCache()
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	state.SkipSlotCache.Disable()
@@ -93,4 +93,24 @@ func TestGetSyncSubcommitteeIndex_Ok(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.DeepEqual(t, []uint64{1}, res.Indices)
+}
+
+func TestSubmitSignedContributionAndProof_OK(t *testing.T) {
+	server := &Server{
+		SyncCommitteePool: synccommittee.NewStore(),
+		P2P:               &mockp2p.MockBroadcaster{},
+	}
+	contribution := &ethpb.SignedContributionAndProof{
+		Message: &ethpb.ContributionAndProof{
+			Contribution: &ethpb.SyncCommitteeContribution{
+				Slot:              1,
+				SubcommitteeIndex: 2,
+			},
+		},
+	}
+	_, err := server.SubmitSignedContributionAndProof(context.Background(), contribution)
+	require.NoError(t, err)
+	savedMsgs, err := server.SyncCommitteePool.SyncCommitteeContributions(1)
+	require.NoError(t, err)
+	require.DeepEqual(t, []*ethpb.SyncCommitteeContribution{contribution.Message.Contribution}, savedMsgs)
 }

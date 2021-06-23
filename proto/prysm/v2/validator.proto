@@ -74,6 +74,35 @@ service BeaconNodeValidatorAltair {
       body: "*"
     };
   }
+
+  // Retrieves the sync subcommittee index of a given validator.
+  //
+  // The server returns the sync subcommittee index given the validator public key,
+  // if the validator does not exist in the sync committee then an error would be returned.
+  // The subcommittee index is used for the aggregation of sync committee message.
+  rpc GetSyncSubcommitteeIndex(SyncSubcommitteeIndexRequest) returns (SyncSubcommitteeIndexResponse) {
+    option (google.api.http) = {
+      get: "/prysm/v2/sync_subcommittee_index"
+    };
+  }
+
+  // Retrieve sync committee contribution to the beacon node to aggregate all matching sync committee messages with the same slot and root.
+  // the beacon node responses with a sync committee contribution object for the validator to sign over.
+  rpc GetSyncCommitteeContribution(SyncCommitteeContributionRequest) returns (SyncCommitteeContribution) {
+    option (google.api.http) = {
+      post: "/prysm/v2/validator/contribution_and_proof"
+      body: "*"
+    };
+  }
+
+  // Submit a signed sync committee contribution and proof object, the beacon node will broadcast the
+  // signed contribution and proof object.
+  rpc SubmitSignedContributionAndProof(SignedContributionAndProof) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/prysm/v2/validator/signed_contribution_and_proof"
+      body: "*"
+    };
+  }
 }
 
 // SyncMessageBlockRootResponse for beacon chain validator to retrieve and
@@ -81,4 +110,28 @@ service BeaconNodeValidatorAltair {
 message SyncMessageBlockRootResponse {
   // The block root of the head block.
   bytes root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
+}
+
+// SyncSubcommitteeIndexRequest requests sync subcommittee index given the validator public key.
+message SyncSubcommitteeIndexRequest {
+  // The validator's public key.
+  bytes public_key = 1 [(ethereum.eth.ext.ssz_size) = "48"];
+  // The slot of validator's assignment.
+  uint64 slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+}
+
+message SyncCommitteeContributionRequest {
+  // Slot for which the aggregation request applies.
+  uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+  // 48 byte public key of the validator.
+  bytes public_key = 2 [(ethereum.eth.ext.ssz_size) = "48", (ethereum.eth.ext.spec_name) = "pubkey"];
+  // Subnet ID of where this contribution and proof should be broadcast to.
+  uint64 subnet_id = 3;
+}
+
+// SyncSubcommitteeIndexResponse responds index of the sync subcommittee of a given validator.
+message SyncSubcommitteeIndexResponse {
+  // The subcommittee index itself.
+  // If the total validator count is not sufficient, there could be more than one index.
+  repeated uint64 indices = 1;
 }
