@@ -27,6 +27,7 @@ go_library(
     deps = [
         "//beacon-chain/cache:go_default_library",
         "//beacon-chain/cache/depositcache:go_default_library",
+        "//beacon-chain/core/altair:go_default_library",
         "//beacon-chain/core/epoch/precompute:go_default_library",
         "//beacon-chain/core/feed:go_default_library",
         "//beacon-chain/core/feed/state:go_default_library",
@@ -53,6 +54,7 @@ go_library(
         "//shared/copyutil:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/interfaces:go_default_library",
+        "//shared/interfaces/version:go_default_library",
         "//shared/mputil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/slotutil:go_default_library",
