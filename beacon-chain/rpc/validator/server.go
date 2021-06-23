@@ -126,8 +126,12 @@ func (vs *Server) ValidatorIndex(ctx context.Context, req *ethpb.ValidatorIndexR
 
 // DomainData fetches the current domain version information from the beacon state.
 func (vs *Server) DomainData(_ context.Context, request *ethpb.DomainRequest) (*ethpb.DomainResponse, error) {
-	fork := vs.ForkFetcher.CurrentFork()
 	headGenesisValidatorRoot := vs.HeadFetcher.HeadGenesisValidatorRoot()
+	fork := &pbp2p.Fork{
+		Epoch:           params.BeaconConfig().AltairForkEpoch,
+		PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+		CurrentVersion:  params.BeaconConfig().AltairForkVersion,
+	}
 	dv, err := helpers.Domain(fork, request.Epoch, bytesutil.ToBytes4(request.Domain), headGenesisValidatorRoot[:])
 	if err != nil {
 		return nil, err
