@@ -225,6 +225,8 @@ filegroup(
     url = "https://github.com/eth2-clients/slashing-protection-interchange-tests/archive/b8413ca42dc92308019d0d4db52c87e9e125c4e9.tar.gz",
 )
 
+eth2_spec_version = "v1.1.0-alpha.7"
+
 http_archive(
     name = "eth2_spec_tests_general",
     build_file_content = """
@@ -238,7 +240,7 @@ filegroup(
 )
     """,
     sha256 = "e6a351cc30affb9005ca4dc0453f7919f6ad9846d4ff9537323bca86da40b170",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.1.0-alpha.7/general.tar.gz",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/%s/general.tar.gz" % eth2_spec_version,
 )
 
 http_archive(
@@ -254,7 +256,7 @@ filegroup(
 )
     """,
     sha256 = "db5d38edcee5c630cba02d3a98126c9cf6bfcd28bd4aad17b99eb7aedaa81ad7",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.1.0-alpha.7/minimal.tar.gz",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/%s/minimal.tar.gz" % eth2_spec_version,
 )
 
 http_archive(
@@ -270,7 +272,7 @@ filegroup(
 )
     """,
     sha256 = "2b48a5d7ca6d3de5a875027714daa6ce49b5216a84babd21c271a6ab286e923e",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.1.0-alpha.7/mainnet.tar.gz",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/%s/mainnet.tar.gz" % eth2_spec_version,
 )
 
 http_archive(
@@ -284,8 +286,9 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "55d8a4038d809498819a1b5a72bfbe5bb16c6c4f4e0796d1baa2ab45bc91392e",
-    url = "https://github.com/ethereum/eth2.0-specs/archive/refs/tags/v1.1.0-alpha.6.tar.gz",
+    sha256 = "3d1005e09ccbff9857062f498e233287fbb4fd7354b25cc304b9c2d28cc3770c",
+    strip_prefix = "eth2.0-specs-" + eth2_spec_version[1:],
+    url = "https://github.com/ethereum/eth2.0-specs/archive/refs/tags/%s.tar.gz" % eth2_spec_version,
 )
 
 http_archive(
