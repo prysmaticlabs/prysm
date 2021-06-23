@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -200,7 +201,7 @@ func TestHydrateV1SignedBeaconBlock_NoError(t *testing.T) {
 }
 
 func TestHydrateSignedBeaconBlockAltair_NoError(t *testing.T) {
-	b := &eth.SignedBeaconBlockAltair{}
+	b := &prysmv2.SignedBeaconBlock{}
 	b = HydrateSignedBeaconBlockAltair(b)
 	_, err := b.HashTreeRoot()
 	require.NoError(t, err)
