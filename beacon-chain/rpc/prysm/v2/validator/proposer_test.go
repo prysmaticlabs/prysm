@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
+	validatorv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -51,7 +52,7 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 	require.NoError(t, db.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
 
 	c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
-	proposerServer := &Server{
+	V1Server := &validatorv1alpha1.Server{
 		BeaconDB:          db,
 		ChainStartFetcher: &mockPOW.POWChain{},
 		Eth1InfoFetcher:   &mockPOW.POWChain{},
@@ -61,6 +62,9 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 		BlockNotifier:     c.BlockNotifier(),
 		P2P:               mockp2p.NewTestP2P(t),
 	}
+	proposerServer := &Server{
+		V1Server: V1Server,
+	}
 	req := testutil.NewBeaconBlockAltair()
 	req.Block.Slot = 5
 	req.Block.ParentRoot = bsRoot[:]
@@ -69,7 +73,7 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 	assert.NoError(t, err, "Could not propose block correctly")
 }
 
-func TestProposer_GetBlockV2_OK(t *testing.T) {
+func TestProposer_GetBlock_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
@@ -106,7 +110,7 @@ func TestProposer_GetBlockV2_OK(t *testing.T) {
 	require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
-	proposerServer := &Server{
+	V1Server := &validatorv1alpha1.Server{
 		BeaconDB:          db,
 		HeadFetcher:       &mock.ChainService{State: beaconState, Root: parentRoot[:]},
 		SyncChecker:       &mockSync.Sync{IsSyncing: false},
@@ -120,6 +124,7 @@ func TestProposer_GetBlockV2_OK(t *testing.T) {
 		ExitPool:          voluntaryexits.NewPool(),
 		StateGen:          stategen.New(db),
 	}
+	proposerServer := &Server{V1Server: V1Server}
 
 	randaoReveal, err := testutil.RandaoReveal(beaconState, 0, privKeys)
 	require.NoError(t, err)
@@ -140,7 +145,7 @@ func TestProposer_GetBlockV2_OK(t *testing.T) {
 		)
 		require.NoError(t, err)
 		proposerSlashings[i] = proposerSlashing
-		err = proposerServer.SlashingsPool.InsertProposerSlashing(context.Background(), beaconState, proposerSlashing)
+		err = proposerServer.V1Server.SlashingsPool.InsertProposerSlashing(context.Background(), beaconState, proposerSlashing)
 		require.NoError(t, err)
 	}
 
@@ -153,7 +158,7 @@ func TestProposer_GetBlockV2_OK(t *testing.T) {
 		)
 		require.NoError(t, err)
 		attSlashings[i] = attesterSlashing
-		err = proposerServer.SlashingsPool.InsertAttesterSlashing(context.Background(), beaconState, attesterSlashing)
+		err = proposerServer.V1Server.SlashingsPool.InsertAttesterSlashing(context.Background(), beaconState, attesterSlashing)
 		require.NoError(t, err)
 	}
 	block, err := proposerServer.GetBlock(ctx, req)
