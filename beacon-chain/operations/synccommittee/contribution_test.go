@@ -3,7 +3,7 @@ package synccommittee
 import (
 	"testing"
 
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -15,7 +15,7 @@ func TestSyncCommitteeContributionCache_Nil(t *testing.T) {
 func TestSyncCommitteeContributionCache_RoundTrip(t *testing.T) {
 	store := NewStore()
 
-	conts := []*eth.SyncCommitteeContribution{
+	conts := []*prysmv2.SyncCommitteeContribution{
 		{Slot: 1, SubcommitteeIndex: 0, Signature: []byte{'a'}},
 		{Slot: 1, SubcommitteeIndex: 1, Signature: []byte{'b'}},
 		{Slot: 2, SubcommitteeIndex: 0, Signature: []byte{'c'}},
@@ -36,22 +36,22 @@ func TestSyncCommitteeContributionCache_RoundTrip(t *testing.T) {
 
 	conts, err := store.SyncCommitteeContributions(1)
 	require.NoError(t, err)
-	require.DeepSSZEqual(t, []*eth.SyncCommitteeContribution(nil), conts)
+	require.DeepSSZEqual(t, []*prysmv2.SyncCommitteeContribution(nil), conts)
 
 	conts, err = store.SyncCommitteeContributions(2)
 	require.NoError(t, err)
-	require.DeepSSZEqual(t, []*eth.SyncCommitteeContribution(nil), conts)
+	require.DeepSSZEqual(t, []*prysmv2.SyncCommitteeContribution(nil), conts)
 
 	conts, err = store.SyncCommitteeContributions(3)
 	require.NoError(t, err)
-	require.DeepSSZEqual(t, []*eth.SyncCommitteeContribution{
+	require.DeepSSZEqual(t, []*prysmv2.SyncCommitteeContribution{
 		{Slot: 3, SubcommitteeIndex: 0, Signature: []byte{'e'}},
 		{Slot: 3, SubcommitteeIndex: 1, Signature: []byte{'f'}},
 	}, conts)
 
 	conts, err = store.SyncCommitteeContributions(6)
 	require.NoError(t, err)
-	require.DeepSSZEqual(t, []*eth.SyncCommitteeContribution{
+	require.DeepSSZEqual(t, []*prysmv2.SyncCommitteeContribution{
 		{Slot: 6, SubcommitteeIndex: 0, Signature: []byte{'k'}},
 		{Slot: 6, SubcommitteeIndex: 1, Signature: []byte{'l'}},
 	}, conts)

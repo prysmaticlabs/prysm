@@ -2,7 +2,7 @@ package synccommittee
 
 import (
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 )
 
 var _ = Pool(&Store{})
@@ -13,12 +13,12 @@ var _ = Pool(&Store{})
 // sync aggregators.
 type Pool interface {
 	// Methods for Sync Contributions.
-	SaveSyncCommitteeContribution(contr *ethpb.SyncCommitteeContribution) error
-	SyncCommitteeContributions(slot types.Slot) ([]*ethpb.SyncCommitteeContribution, error)
+	SaveSyncCommitteeContribution(contr *prysmv2.SyncCommitteeContribution) error
+	SyncCommitteeContributions(slot types.Slot) ([]*prysmv2.SyncCommitteeContribution, error)
 
 	// Methods for Sync Committee Messages.
-	SaveSyncCommitteeMessage(sig *ethpb.SyncCommitteeMessage) error
-	SyncCommitteeMessages(slot types.Slot) ([]*ethpb.SyncCommitteeMessage, error)
+	SaveSyncCommitteeMessage(sig *prysmv2.SyncCommitteeMessage) error
+	SyncCommitteeMessages(slot types.Slot) ([]*prysmv2.SyncCommitteeMessage, error)
 }
 
 // NewPool returns the sync committee store fulfilling the pool interface.

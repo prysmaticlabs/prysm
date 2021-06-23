@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -42,7 +42,7 @@ func (s *Service) validateSyncCommittee(ctx context.Context, pid peer.ID, msg *p
 
 	// Override topic for decoding.
 	originalTopic := msg.Topic
-	format := p2p.GossipTypeMapping[reflect.TypeOf(&eth.SyncCommitteeMessage{})]
+	format := p2p.GossipTypeMapping[reflect.TypeOf(&prysmv2.SyncCommitteeMessage{})]
 	msg.Topic = &format
 
 	m, err := s.decodePubsubMessage(msg)
@@ -54,7 +54,7 @@ func (s *Service) validateSyncCommittee(ctx context.Context, pid peer.ID, msg *p
 	// Restore topic.
 	msg.Topic = originalTopic
 
-	comMsg, ok := m.(*eth.SyncCommitteeMessage)
+	comMsg, ok := m.(*prysmv2.SyncCommitteeMessage)
 	if !ok {
 		return pubsub.ValidationReject
 	}

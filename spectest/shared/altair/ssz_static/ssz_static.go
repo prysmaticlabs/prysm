@@ -12,6 +12,7 @@ import (
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/spectest/utils"
@@ -103,9 +104,9 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "AggregateAndProof":
 		obj = &ethpb.AggregateAttestationAndProof{}
 	case "BeaconBlock":
-		obj = &ethpb.BeaconBlockAltair{}
+		obj = &prysmv2.BeaconBlock{}
 	case "BeaconBlockBody":
-		obj = &ethpb.BeaconBlockBodyAltair{}
+		obj = &prysmv2.BeaconBlockBody{}
 	case "BeaconBlockHeader":
 		obj = &ethpb.BeaconBlockHeader{}
 	case "BeaconState":
@@ -138,7 +139,7 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "SignedAggregateAndProof":
 		obj = &ethpb.SignedAggregateAttestationAndProof{}
 	case "SignedBeaconBlock":
-		obj = &ethpb.SignedBeaconBlockAltair{}
+		obj = &prysmv2.SignedBeaconBlock{}
 	case "SignedBeaconBlockHeader":
 		obj = &ethpb.SignedBeaconBlockHeader{}
 	case "SignedVoluntaryExit":
@@ -150,15 +151,15 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "VoluntaryExit":
 		obj = &ethpb.VoluntaryExit{}
 	case "SyncCommitteeMessage":
-		obj = &ethpb.SyncCommitteeMessage{}
+		obj = &prysmv2.SyncCommitteeMessage{}
 	case "SyncCommitteeContribution":
-		obj = &ethpb.SyncCommitteeContribution{}
+		obj = &prysmv2.SyncCommitteeContribution{}
 	case "ContributionAndProof":
-		obj = &ethpb.ContributionAndProof{}
+		obj = &prysmv2.ContributionAndProof{}
 	case "SignedContributionAndProof":
-		obj = &ethpb.SignedContributionAndProof{}
+		obj = &prysmv2.SignedContributionAndProof{}
 	case "SyncAggregate":
-		obj = &ethpb.SyncAggregate{}
+		obj = &prysmv2.SyncAggregate{}
 	case "SyncAggregatorSelectionData":
 		obj = &pb.SyncAggregatorSelectionData{}
 	case "SyncCommittee":

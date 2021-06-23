@@ -82,21 +82,6 @@ func (mr *MockBeaconNodeValidatorServerMockRecorder) GetBlock(arg0, arg1 interfa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlock", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).GetBlock), arg0, arg1)
 }
 
-// GetBlockV2 mocks base method
-func (m *MockBeaconNodeValidatorServer) GetBlockV2(arg0 context.Context, arg1 *v1alpha1.BlockRequest) (*v1alpha1.BeaconBlockAltair, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetBlockV2", arg0, arg1)
-	ret0, _ := ret[0].(*v1alpha1.BeaconBlockAltair)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetBlockV2 indicates an expected call of GetBlockV2
-func (mr *MockBeaconNodeValidatorServerMockRecorder) GetBlockV2(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlockV2", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).GetBlockV2), arg0, arg1)
-}
-
 // GetDuties mocks base method
 func (m *MockBeaconNodeValidatorServer) GetDuties(arg0 context.Context, arg1 *v1alpha1.DutiesRequest) (*v1alpha1.DutiesResponse, error) {
 	m.ctrl.T.Helper()
@@ -110,21 +95,6 @@ func (m *MockBeaconNodeValidatorServer) GetDuties(arg0 context.Context, arg1 *v1
 func (mr *MockBeaconNodeValidatorServerMockRecorder) GetDuties(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDuties", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).GetDuties), arg0, arg1)
-}
-
-// GetSyncMessageBlockRoot mocks base method
-func (m *MockBeaconNodeValidatorServer) GetSyncMessageBlockRoot(arg0 context.Context, arg1 *emptypb.Empty) (*v1alpha1.SyncMessageBlockRootResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSyncMessageBlockRoot", arg0, arg1)
-	ret0, _ := ret[0].(*v1alpha1.SyncMessageBlockRootResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetSyncMessageBlockRoot indicates an expected call of GetSyncMessageBlockRoot
-func (mr *MockBeaconNodeValidatorServerMockRecorder) GetSyncMessageBlockRoot(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSyncMessageBlockRoot", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).GetSyncMessageBlockRoot), arg0, arg1)
 }
 
 // MultipleValidatorStatus mocks base method
@@ -170,21 +140,6 @@ func (m *MockBeaconNodeValidatorServer) ProposeBlock(arg0 context.Context, arg1 
 func (mr *MockBeaconNodeValidatorServerMockRecorder) ProposeBlock(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProposeBlock", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).ProposeBlock), arg0, arg1)
-}
-
-// ProposeBlockV2 mocks base method
-func (m *MockBeaconNodeValidatorServer) ProposeBlockV2(arg0 context.Context, arg1 *v1alpha1.SignedBeaconBlockAltair) (*v1alpha1.ProposeResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ProposeBlockV2", arg0, arg1)
-	ret0, _ := ret[0].(*v1alpha1.ProposeResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ProposeBlockV2 indicates an expected call of ProposeBlockV2
-func (mr *MockBeaconNodeValidatorServerMockRecorder) ProposeBlockV2(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProposeBlockV2", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).ProposeBlockV2), arg0, arg1)
 }
 
 // ProposeExit mocks base method
@@ -244,21 +199,6 @@ func (m *MockBeaconNodeValidatorServer) SubmitSignedAggregateSelectionProof(arg0
 func (mr *MockBeaconNodeValidatorServerMockRecorder) SubmitSignedAggregateSelectionProof(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitSignedAggregateSelectionProof", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).SubmitSignedAggregateSelectionProof), arg0, arg1)
-}
-
-// SubmitSyncMessage mocks base method
-func (m *MockBeaconNodeValidatorServer) SubmitSyncMessage(arg0 context.Context, arg1 *v1alpha1.SyncCommitteeMessage) (*emptypb.Empty, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SubmitSyncMessage", arg0, arg1)
-	ret0, _ := ret[0].(*emptypb.Empty)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// SubmitSyncMessage indicates an expected call of SubmitSyncMessage
-func (mr *MockBeaconNodeValidatorServerMockRecorder) SubmitSyncMessage(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitSyncMessage", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).SubmitSyncMessage), arg0, arg1)
 }
 
 // SubscribeCommitteeSubnets mocks base method

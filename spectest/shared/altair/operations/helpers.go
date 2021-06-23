@@ -13,7 +13,7 @@ import (
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -28,7 +28,7 @@ type blockOperation func(context.Context, iface.BeaconState, interfaces.SignedBe
 func RunBlockOperationTest(
 	t *testing.T,
 	folderPath string,
-	body *ethpb.BeaconBlockBodyAltair,
+	body *prysmv2.BeaconBlockBody,
 	operationFn blockOperation,
 ) {
 	preBeaconStateFile, err := testutil.BazelFileBytes(path.Join(folderPath, "pre.ssz_snappy"))

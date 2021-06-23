@@ -3,14 +3,14 @@ package synccommittee
 import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/queue"
 )
 
 // SaveSyncCommitteeMessage saves a sync committee message in to a priority queue.
 // The priority queue capped at syncCommitteeMaxQueueSize contributions.
-func (s *Store) SaveSyncCommitteeMessage(msg *ethpb.SyncCommitteeMessage) error {
+func (s *Store) SaveSyncCommitteeMessage(msg *prysmv2.SyncCommitteeMessage) error {
 	if msg == nil {
 		return nilMessageErr
 	}
@@ -26,7 +26,7 @@ func (s *Store) SaveSyncCommitteeMessage(msg *ethpb.SyncCommitteeMessage) error 
 	copied := copyutil.CopySyncCommitteeMessage(msg)
 	// Messages exist in the queue. Append instead of insert new.
 	if item != nil {
-		messages, ok := item.Value.([]*ethpb.SyncCommitteeMessage)
+		messages, ok := item.Value.([]*prysmv2.SyncCommitteeMessage)
 		if !ok {
 			return errors.New("not typed []ethpb.SyncCommitteeMessage")
 		}
@@ -42,7 +42,7 @@ func (s *Store) SaveSyncCommitteeMessage(msg *ethpb.SyncCommitteeMessage) error 
 	// Message does not exist. Insert new.
 	if err := s.messageCache.Push(&queue.Item{
 		Key:      syncCommitteeKey(msg.Slot),
-		Value:    []*ethpb.SyncCommitteeMessage{copied},
+		Value:    []*prysmv2.SyncCommitteeMessage{copied},
 		Priority: int64(msg.Slot),
 	}); err != nil {
 		return err
@@ -60,7 +60,7 @@ func (s *Store) SaveSyncCommitteeMessage(msg *ethpb.SyncCommitteeMessage) error 
 
 // SyncCommitteeMessages returns sync committee messages by slot from the priority queue.
 // Upon retrieval, the message is removed from the queue.
-func (s *Store) SyncCommitteeMessages(slot types.Slot) ([]*ethpb.SyncCommitteeMessage, error) {
+func (s *Store) SyncCommitteeMessages(slot types.Slot) ([]*prysmv2.SyncCommitteeMessage, error) {
 	s.messageLock.Lock()
 	defer s.messageLock.Unlock()
 
@@ -72,9 +72,9 @@ func (s *Store) SyncCommitteeMessages(slot types.Slot) ([]*ethpb.SyncCommitteeMe
 		return nil, nil
 	}
 
-	messages, ok := item.Value.([]*ethpb.SyncCommitteeMessage)
+	messages, ok := item.Value.([]*prysmv2.SyncCommitteeMessage)
 	if !ok {
-		return nil, errors.New("not typed []ethpb.SyncCommitteeMessage")
+		return nil, errors.New("not typed []prysmv2.SyncCommitteeMessage")
 	}
 
 	return messages, nil

@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -26,20 +26,22 @@ import (
 )
 
 // GetSyncMessageBlockRoot retrieves the sync committee block root of the beacon chain.
-func (vs *Server) GetSyncMessageBlockRoot(ctx context.Context, _ *emptypb.Empty) (*ethpb.SyncMessageBlockRootResponse, error) {
+func (vs *Server) GetSyncMessageBlockRoot(
+	ctx context.Context, _ *emptypb.Empty,
+) (*prysmv2.SyncMessageBlockRootResponse, error) {
 	r, err := vs.HeadFetcher.HeadRoot(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve head root: %v", err)
 	}
 
-	return &ethpb.SyncMessageBlockRootResponse{
+	return &prysmv2.SyncMessageBlockRootResponse{
 		Root: r,
 	}, nil
 }
 
 // SubmitSyncMessage submits the sync committee message to the network.
 // It also saves the sync committee message into the pending pool for block inclusion.
-func (vs *Server) SubmitSyncMessage(ctx context.Context, msg *ethpb.SyncCommitteeMessage) (*emptypb.Empty, error) {
+func (vs *Server) SubmitSyncMessage(ctx context.Context, msg *prysmv2.SyncCommitteeMessage) (*emptypb.Empty, error) {
 	errs, ctx := errgroup.WithContext(ctx)
 
 	// Broadcasting and saving message into the pool in parallel. As one fail should not affect another.
@@ -56,20 +58,22 @@ func (vs *Server) SubmitSyncMessage(ctx context.Context, msg *ethpb.SyncCommitte
 	return nil, err
 }
 
-// GetSyncSubcommitteeIndex is called by a sync committee participant to get its subcommittee index for sync message aggregation duty.
-func (vs *Server) GetSyncSubcommitteeIndex(ctx context.Context, req *ethpb.SyncSubcommitteeIndexRequest) (*ethpb.SyncSubcommitteeIndexRespond, error) {
+// GetSyncSubcommitteeIndex is called by a sync committee participant to get
+// its subcommittee index for sync message aggregation duty.
+func (vs *Server) GetSyncSubcommitteeIndex(
+	ctx context.Context, req *prysmv2.SyncSubcommitteeIndexRequest,
+) (*prysmv2.SyncSubcommitteeIndexResponse, error) {
 	indices, err := vs.syncSubcommitteeIndex(ctx, bytesutil.ToBytes48(req.PublicKey), req.Slot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get sync subcommittee index: %v", err)
 	}
-	return &ethpb.SyncSubcommitteeIndexRespond{
-		Indices: indices,
-	}, nil
+	return indices, nil
 }
 
 // syncSubcommitteeIndex returns a list of subcommittee index of a validator and slot for sync message aggregation duty.
-func (vs *Server) syncSubcommitteeIndex(ctx context.Context, pubkey [48]byte, slot types.Slot) ([]uint64, error) {
-
+func (vs *Server) syncSubcommitteeIndex(
+	ctx context.Context, pubkey [48]byte, slot types.Slot,
+) (*prysmv2.SyncSubcommitteeIndexResponse, error) {
 	var headState iface.BeaconState
 	var err error
 	// If there's already a head state exists with the request slot, we don't need to process slots.
@@ -107,7 +111,9 @@ func (vs *Server) syncSubcommitteeIndex(ctx context.Context, pubkey [48]byte, sl
 		if err != nil {
 			return nil, err
 		}
-		return indices, nil
+		return &prysmv2.SyncSubcommitteeIndexResponse{
+			Indices: indices,
+		}, nil
 	// At sync committee period boundary, validator should sample the next epoch sync committee.
 	case altair.SyncCommitteePeriod(nextSlotEpoch) == altair.SyncCommitteePeriod(currentEpoch)+1:
 		committee, err := headState.NextSyncCommittee()
@@ -118,15 +124,20 @@ func (vs *Server) syncSubcommitteeIndex(ctx context.Context, pubkey [48]byte, sl
 		if err != nil {
 			return nil, err
 		}
-		return indices, nil
+		return &prysmv2.SyncSubcommitteeIndexResponse{
+			Indices: indices,
+		}, nil
 	default:
 		// Impossible condition.
 		return nil, errors.New("could get calculate sync subcommittee based on the period")
 	}
 }
 
-// GetSyncCommitteeContribution is called by a sync committee aggregator to retrieve sync committee contribution object.
-func (vs *Server) GetSyncCommitteeContribution(ctx context.Context, req *ethpb.SyncCommitteeContributionRequest) (*ethpb.SyncCommitteeContribution, error) {
+// GetSyncCommitteeContribution is called by a sync committee aggregator
+// to retrieve sync committee contribution object.
+func (vs *Server) GetSyncCommitteeContribution(
+	ctx context.Context, req *prysmv2.SyncCommitteeContributionRequest,
+) (*prysmv2.SyncCommitteeContribution, error) {
 	msgs, err := vs.SyncCommitteePool.SyncCommitteeMessages(req.Slot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get sync subcommittee messages: %v", err)
@@ -165,17 +176,21 @@ func (vs *Server) GetSyncCommitteeContribution(ctx context.Context, req *ethpb.S
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not get validator at index: %v", err)
 			}
-			indices, err := vs.syncSubcommitteeIndex(ctx, v.PublicKey(), slot)
+			idxResp, err := vs.syncSubcommitteeIndex(ctx, v.PublicKey(), slot)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not get sync subcommittee index: %v", err)
 			}
-			for _, index := range indices {
+			for _, index := range idxResp.Indices {
 				subnetIndex := index / subCommitteeSize
 				if subnetIndex == req.SubnetId {
 					bits.SetBitAt(index%subCommitteeSize, true)
 					sig, err := bls.SignatureFromBytes(msg.Signature)
 					if err != nil {
-						return nil, status.Errorf(codes.Internal, "Could not get bls signature from bytes: %v", err)
+						return nil, status.Errorf(
+							codes.Internal,
+							"Could not get bls signature from bytes: %v",
+							err,
+						)
 					}
 					sigs = append(sigs, sig)
 				}
@@ -183,7 +198,7 @@ func (vs *Server) GetSyncCommitteeContribution(ctx context.Context, req *ethpb.S
 		}
 	}
 	aggregatedSig := bls.AggregateSignatures(sigs)
-	contribution := &ethpb.SyncCommitteeContribution{
+	contribution := &prysmv2.SyncCommitteeContribution{
 		Slot:              headState.Slot(),
 		BlockRoot:         headRoot,
 		SubcommitteeIndex: req.SubnetId,
@@ -194,8 +209,11 @@ func (vs *Server) GetSyncCommitteeContribution(ctx context.Context, req *ethpb.S
 	return contribution, nil
 }
 
-// SubmitSignedContributionAndProof is called by a sync committee aggregator to submit signed contribution and proof object.
-func (vs *Server) SubmitSignedContributionAndProof(ctx context.Context, s *ethpb.SignedContributionAndProof) (*emptypb.Empty, error) {
+// SubmitSignedContributionAndProof is called by a sync committee aggregator
+// to submit signed contribution and proof object.
+func (vs *Server) SubmitSignedContributionAndProof(
+	ctx context.Context, s *prysmv2.SignedContributionAndProof,
+) (*emptypb.Empty, error) {
 	errs, ctx := errgroup.WithContext(ctx)
 
 	// Broadcasting and saving contribution into the pool in parallel. As one fail should not affect another.

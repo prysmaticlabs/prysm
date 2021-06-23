@@ -116,6 +116,21 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 			},
 		},
 		{
+			name:                 "some current epoch and some next epoch duplicated across",
+			currentSyncCommittee: convertToCommittee([][]byte{{1}, {2}, {3}, {2}, {2}}),
+			nextSyncCommittee:    convertToCommittee([][]byte{{2}, {1}, {3}, {2}, {1}}),
+			currentSyncMap: map[types.ValidatorIndex][]uint64{
+				1: {0},
+				2: {1, 3, 4},
+				3: {2},
+			},
+			nextSyncMap: map[types.ValidatorIndex][]uint64{
+				1: {1, 4},
+				2: {0, 3},
+				3: {2},
+			},
+		},
+		{
 			name: "all duplicated",
 			currentSyncCommittee: convertToCommittee([][]byte{
 				pubKeys[100],

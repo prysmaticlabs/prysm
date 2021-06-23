@@ -8,6 +8,7 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -72,7 +73,7 @@ func TestExtractBlockDataType(t *testing.T) {
 				digest: altairDigest[:],
 				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
 			},
-			want:    interfaces.WrappedAltairSignedBeaconBlock(&eth.SignedBeaconBlockAltair{}),
+			want:    interfaces.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlock{}),
 			wantErr: false,
 		},
 	}

@@ -11,6 +11,7 @@ import (
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
@@ -83,7 +84,7 @@ func TestExecuteAltairStateTransitionNoVerify_FullProcess(t *testing.T) {
 		syncSigs[i] = sig
 	}
 	aggregatedSig := bls.AggregateSignatures(syncSigs).Marshal()
-	syncAggregate := &ethpb.SyncAggregate{
+	syncAggregate := &prysmv2.SyncAggregate{
 		SyncCommitteeBits:      syncBits,
 		SyncCommitteeSignature: aggregatedSig,
 	}
@@ -167,7 +168,7 @@ func TestExecuteAltairStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t
 		syncSigs[i] = sig
 	}
 	aggregatedSig := bls.AggregateSignatures(syncSigs).Marshal()
-	syncAggregate := &ethpb.SyncAggregate{
+	syncAggregate := &prysmv2.SyncAggregate{
 		SyncCommitteeBits:      syncBits,
 		SyncCommitteeSignature: aggregatedSig,
 	}
@@ -198,7 +199,7 @@ func TestExecuteStateTransitionNoVerifyAnySig_PassesProcessingConditions(t *test
 }
 
 func createFullAltairBlockWithOperations(t *testing.T) (iface.BeaconStateAltair,
-	*ethpb.SignedBeaconBlockAltair) {
+	*prysmv2.SignedBeaconBlock) {
 	beaconState, privKeys := testutil.DeterministicGenesisStateAltair(t, 32)
 	sCom, err := altair.NextSyncCommittee(beaconState)
 	assert.NoError(t, err)

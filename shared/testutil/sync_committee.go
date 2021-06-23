@@ -8,14 +8,14 @@ import (
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/interfaces/version"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func generateSyncCommittees(bState iface.BeaconState, privs []bls.SecretKey, parentRoot [32]byte) (*ethpb.SyncAggregate, error) {
+func generateSyncCommittees(bState iface.BeaconState, privs []bls.SecretKey, parentRoot [32]byte) (*prysmv2.SyncAggregate, error) {
 	st, ok := bState.(iface.BeaconStateAltair)
 	if !ok || bState.Version() == version.Phase0 {
 		return nil, errors.Errorf("state cannot be asserted to altair state")
@@ -38,7 +38,7 @@ func generateSyncCommittees(bState iface.BeaconState, privs []bls.SecretKey, par
 	}
 	sigs := make([]bls.Signature, 0, len(syncCommittee.Pubkeys))
 	var bVector []byte
-	currSize := new(ethpb.SyncAggregate).SyncCommitteeBits.Len()
+	currSize := new(prysmv2.SyncAggregate).SyncCommitteeBits.Len()
 	switch currSize {
 	case 512:
 		bVector = bitfield.NewBitvector512()
@@ -72,8 +72,8 @@ func generateSyncCommittees(bState iface.BeaconState, privs []bls.SecretKey, par
 	}
 	if len(sigs) == 0 {
 		fakeSig := [96]byte{0xC0}
-		return &ethpb.SyncAggregate{SyncCommitteeSignature: fakeSig[:], SyncCommitteeBits: bVector}, nil
+		return &prysmv2.SyncAggregate{SyncCommitteeSignature: fakeSig[:], SyncCommitteeBits: bVector}, nil
 	}
 	aggSig := bls.AggregateSignatures(sigs)
-	return &ethpb.SyncAggregate{SyncCommitteeSignature: aggSig.Marshal(), SyncCommitteeBits: bVector}, nil
+	return &prysmv2.SyncAggregate{SyncCommitteeSignature: aggSig.Marshal(), SyncCommitteeBits: bVector}, nil
 }

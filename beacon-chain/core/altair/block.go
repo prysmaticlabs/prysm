@@ -7,7 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -41,7 +41,7 @@ import (
 //            increase_balance(state, get_beacon_proposer_index(state), proposer_reward)
 //        else:
 //            decrease_balance(state, participant_index, participant_reward)
-func ProcessSyncAggregate(state iface.BeaconStateAltair, sync *ethpb.SyncAggregate) (iface.BeaconStateAltair, error) {
+func ProcessSyncAggregate(state iface.BeaconStateAltair, sync *prysmv2.SyncAggregate) (iface.BeaconStateAltair, error) {
 	keyToIndexMap := make(map[[48]byte]types.ValidatorIndex)
 	for i := 0; i < state.NumValidators(); i++ {
 		keyToIndexMap[state.PubkeyAtIndex(types.ValidatorIndex(i))] = types.ValidatorIndex(i)

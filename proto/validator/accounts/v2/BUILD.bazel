@@ -13,6 +13,7 @@ proto_library(
     deps = [
         "//proto/beacon/rpc/v1:v1_proto",
         "//proto/eth/v1alpha1:proto",
+        "//proto/prysm/v2:proto",
         "//proto/eth/ext:proto",
         "@com_google_protobuf//:empty_proto",
         "@go_googleapis//google/api:annotations_proto",
@@ -32,6 +33,7 @@ go_proto_library(
         "@com_github_golang_protobuf//proto:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
+        "//proto/prysm/v2:go_default_library",
         "//proto/eth/ext:go_default_library",
         "@go_googleapis//google/api:annotations_go_proto",
         "@io_bazel_rules_go//proto/wkt:empty_go_proto",
@@ -54,6 +56,7 @@ go_proto_library(
         "@com_github_golang_protobuf//proto:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
+        "//proto/prysm/v2:go_default_library",
 	    "//proto/eth/ext:go_default_library",
         "@go_googleapis//google/api:annotations_go_proto",
     ],
