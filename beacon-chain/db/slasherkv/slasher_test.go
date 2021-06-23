@@ -3,6 +3,7 @@ package slasherkv
 import (
 	"context"
 	"encoding/binary"
+	"math/rand"
 	"reflect"
 	"testing"
 
@@ -438,6 +439,38 @@ func BenchmarkHighestAttestations(b *testing.B) {
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := beaconDB.HighestAttestations(ctx, allIndices)
+		require.NoError(b, err)
+	}
+}
+
+func BenchmarkStore_CheckDoubleBlockProposals(b *testing.B) {
+	b.StopTimer()
+	count := 10000
+	valsPerAtt := 100
+	indicesPerAtt := make([][]uint64, count)
+	for i := 0; i < count; i++ {
+		indicesForAtt := make([]uint64, valsPerAtt)
+		for r := i * count; r < valsPerAtt*(i+1); r++ {
+			indicesForAtt[i] = uint64(r)
+		}
+		indicesPerAtt[i] = indicesForAtt
+	}
+	atts := make([]*slashertypes.IndexedAttestationWrapper, count)
+	for i := 0; i < count; i++ {
+		atts[i] = createAttestationWrapper(types.Epoch(i), types.Epoch(i+2), indicesPerAtt[i], []byte{})
+	}
+
+	ctx := context.Background()
+	beaconDB := setupDB(b)
+	require.NoError(b, beaconDB.SaveAttestationRecordsForValidators(ctx, atts))
+
+	// shuffle attestations
+	rand.Shuffle(count, func(i, j int) { atts[i], atts[j] = atts[j], atts[i] })
+
+	b.ReportAllocs()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := beaconDB.CheckAttesterDoubleVotes(ctx, atts)
 		require.NoError(b, err)
 	}
 }
