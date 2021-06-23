@@ -29,7 +29,7 @@ func TestValidatorStatus_DepositedEth1(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
-	require.NoError(t, err, "Could not generate Deposits and keys")
+	require.NoError(t, err, "Could not generate deposits and keys")
 	deposit := deposits[0]
 	pubKey1 := deposit.Data.PublicKey
 	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
@@ -926,7 +926,7 @@ func TestValidatorStatus_Invalid(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
-	require.NoError(t, err, "Could not generate Deposits and keys")
+	require.NoError(t, err, "Could not generate deposits and keys")
 	deposit := deposits[0]
 	pubKey1 := deposit.Data.PublicKey
 	deposit.Data.Signature = deposit.Data.Signature[1:]

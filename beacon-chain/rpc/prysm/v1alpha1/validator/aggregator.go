@@ -60,7 +60,7 @@ func (vs *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 	}
 
 	if err := vs.AttPool.AggregateUnaggregatedAttestationsBySlotIndex(ctx, req.Slot, req.CommitteeIndex); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not aggregate unaggregated Attestations")
+		return nil, status.Errorf(codes.Internal, "Could not aggregate unaggregated attestations")
 	}
 	aggregatedAtts := vs.AttPool.AggregatedAttestationsBySlotIndex(ctx, req.Slot, req.CommitteeIndex)
 

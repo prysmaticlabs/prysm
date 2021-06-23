@@ -169,8 +169,8 @@ func TestProposer_ProposerAtts_sortByProfitabilityUsingMaxCover(t *testing.T) {
 	t.Run("selected and non selected atts sorted by bit count", func(t *testing.T) {
 		// Items at slot 4, must be first split into two lists by max-cover, with
 		// 0b10000011 scoring higher (as it provides more info in addition to already selected
-		// Attestations) than 0b11100001 (despite naive bit count suggesting otherwise). Then,
-		// both selected and non-selected Attestations must be additionally sorted by bit count.
+		// attestations) than 0b11100001 (despite naive bit count suggesting otherwise). Then,
+		// both selected and non-selected attestations must be additionally sorted by bit count.
 		atts := getAtts([]testData{
 			{4, bitfield.Bitlist{0b00000001, 0b1}},
 			{4, bitfield.Bitlist{0b11100001, 0b1}},

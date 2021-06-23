@@ -306,7 +306,7 @@ func TestSubmitAggregateAndProof_PreferOwnAttestation(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
-	// This test creates 3 Attestations. 0 and 2 have the same attestation data and can be
+	// This test creates 3 attestations. 0 and 2 have the same attestation data and can be
 	// aggregated. 1 has the validator's signature making this request and that is the expected
 	// attestation to sign, even though the aggregated 0&2 would have more aggregated bits.
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
@@ -363,7 +363,7 @@ func TestSubmitAggregateAndProof_SelectsMostBitsWhenOwnAttestationNotPresent(t *
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
-	// This test creates two distinct Attestations, neither of which contain the validator's index,
+	// This test creates two distinct attestations, neither of which contain the validator's index,
 	// index 0. This test should choose the most bits attestation, att1.
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
 	att0, err := generateAtt(beaconState, 0, privKeys)
