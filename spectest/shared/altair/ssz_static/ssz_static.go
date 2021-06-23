@@ -12,6 +12,7 @@ import (
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/spectest/utils"
@@ -154,9 +155,9 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "SyncCommitteeContribution":
 		obj = &prysmv2.SyncCommitteeContribution{}
 	case "ContributionAndProof":
-		obj = &ethpb.ContributionAndProof{}
+		obj = &prysmv2.ContributionAndProof{}
 	case "SignedContributionAndProof":
-		obj = &ethpb.SignedContributionAndProof{}
+		obj = &prysmv2.SignedContributionAndProof{}
 	case "SyncAggregate":
 		obj = &prysmv2.SyncAggregate{}
 	case "SyncAggregatorSelectionData":
