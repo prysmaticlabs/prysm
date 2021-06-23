@@ -55,7 +55,6 @@ require (
 	github.com/kevinms/leakybucket-go v0.0.0-20200115003610-082473db97ca
 	github.com/koron/go-ssdp v0.0.2 // indirect
 	github.com/kr/pretty v0.2.1
-	github.com/kr/text v0.2.0 // indirect
 	github.com/libp2p/go-libp2p v0.12.1-0.20201208224947-3155ff3089c0
 	github.com/libp2p/go-libp2p-blankhost v0.2.0
 	github.com/libp2p/go-libp2p-core v0.7.0
@@ -88,7 +87,7 @@ require (
 	github.com/prometheus/prom2json v1.3.0
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/prysmaticlabs/eth2-types v0.0.0-20210303084904-c9735a06829d
-	github.com/prysmaticlabs/go-bitfield v0.0.0-20210515192923-def021850363
+	github.com/prysmaticlabs/go-bitfield v0.0.0-20210607200045-4da71aaf6c2d
 	github.com/prysmaticlabs/prombbolt v0.0.0-20210126082820-9b7adba6db7c
 	github.com/prysmaticlabs/protoc-gen-go-cast v0.0.0-20210504233148-1e141af6a0a1
 	github.com/rs/cors v1.7.0
@@ -135,3 +134,5 @@ replace github.com/json-iterator/go => github.com/prestonvanloon/go v1.1.7-0.201
 
 // See https://github.com/prysmaticlabs/grpc-gateway/issues/2
 replace github.com/grpc-ecosystem/grpc-gateway/v2 => github.com/prysmaticlabs/grpc-gateway/v2 v2.3.1-0.20210604200058-f148bcf3f503
+
+replace github.com/ferranbt/fastssz => github.com/rauljordan/fastssz v0.0.0-20210622230010-a131010e198f
