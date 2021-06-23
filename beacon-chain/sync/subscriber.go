@@ -138,6 +138,16 @@ func (s *Service) subscribeWithBase(topic string, validator pubsub.ValidatorEx, 
 	topic += s.cfg.P2P.Encoding().ProtocolSuffix()
 	log := log.WithField("topic", topic)
 
+	// Do not resubscribe already seen subscriptions.
+	s.subLock.RLock()
+	topSub, ok := s.subTopicMap[topic]
+	if ok {
+		log.Warnf("Provided topic already has an active subscription running: %s", topic)
+		s.subLock.RUnlock()
+		return topSub
+	}
+	s.subLock.RUnlock()
+
 	if err := s.cfg.P2P.PubSub().RegisterTopicValidator(s.wrapAndReportValidation(topic, validator)); err != nil {
 		log.WithError(err).Error("Could not register validator for topic")
 		return nil
@@ -151,6 +161,9 @@ func (s *Service) subscribeWithBase(topic string, validator pubsub.ValidatorEx, 
 		log.WithError(err).Error("Could not subscribe topic")
 		return nil
 	}
+	s.subLock.Lock()
+	s.subTopicMap[sub.Topic()] = sub
+	s.subLock.Unlock()
 
 	// Pipeline decodes the incoming subscription data, runs the validation, and handles the
 	// message.
@@ -354,6 +367,9 @@ func (s *Service) reValidateSubscriptions(subscriptions map[uint64]*pubsub.Subsc
 			if err := s.cfg.P2P.PubSub().UnregisterTopicValidator(fullTopic); err != nil {
 				log.WithError(err).Error("Could not unregister topic validator")
 			}
+			s.subLock.Lock()
+			delete(s.subTopicMap, fullTopic)
+			s.subLock.Unlock()
 			delete(subscriptions, k)
 		}
 	}

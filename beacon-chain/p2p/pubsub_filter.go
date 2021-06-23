@@ -44,7 +44,7 @@ func (s *Service) CanSubscribe(topic string) bool {
 	}
 	if isForkNextEpoch {
 		currEpoch := helpers.SlotToEpoch(helpers.CurrentSlot(uint64(s.genesisTime.Unix())))
-		digest, err := p2putils.ForkDigestFromEpoch(currEpoch, s.genesisValidatorsRoot)
+		digest, err := p2putils.ForkDigestFromEpoch(currEpoch+1, s.genesisValidatorsRoot)
 		if err != nil {
 			log.WithError(err).Error("Could not determine next fork digest")
 			return false
