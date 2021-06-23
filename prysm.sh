@@ -183,7 +183,7 @@ if [[ $1 == beacon-chain ]]; then
         file=beacon-chain-${prysm_version}-${system}-${arch}
         res=$(curl -w '%{http_code}\n' -L "https://prysmaticlabs.com/releases/${file}"  -o "$BEACON_CHAIN_REAL")
         if [[ $res == 404 ]];then
-          echo "404 error, exit"
+          echo "No prysm beacon chain found for ${prysm_version},(${file}) exit"
           exit 1
         fi
         curl --silent -L "https://prysmaticlabs.com/releases/${file}.sha256" -o "${wrapper_dir}/${file}.sha256"
@@ -201,7 +201,7 @@ if [[ $1 == validator ]]; then
         file=validator-${prysm_version}-${system}-${arch}
         res=$(curl -w '%{http_code}\n' -L "https://prysmaticlabs.com/releases/${file}" -o "$VALIDATOR_REAL")
         if [[ $res == 404 ]];then
-          echo "404 error, exit"
+          echo "No prysm validator found for ${prysm_version}, (${file}) exit"
           exit 1
         fi
         curl --silent -L "https://prysmaticlabs.com/releases/${file}.sha256" -o "${wrapper_dir}/${file}.sha256"
@@ -219,7 +219,7 @@ if [[ $1 == client-stats ]]; then
         file=client-stats-${prysm_version}-${system}-${arch}
         res=$(curl -w '%{http_code}\n' -L "https://prysmaticlabs.com/releases/${file}" -o "$CLIENT_STATS_REAL")
         if [[ $res == 404 ]];then
-          echo "404 error, exit"
+          echo "No prysm client stats found for ${prysm_version},(${file}) exit"
           exit 1
         fi
         curl --silent -L "https://prysmaticlabs.com/releases/${file}.sha256" -o "${wrapper_dir}/${file}.sha256"
