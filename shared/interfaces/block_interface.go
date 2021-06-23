@@ -4,6 +4,7 @@ import (
 	ssz "github.com/ferranbt/fastssz"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -48,7 +49,7 @@ type BeaconBlockBody interface {
 	Attestations() []*ethpb.Attestation
 	Deposits() []*ethpb.Deposit
 	VoluntaryExits() []*ethpb.SignedVoluntaryExit
-	SyncAggregate() (*ethpb.SyncAggregate, error)
+	SyncAggregate() (*prysmv2.SyncAggregate, error)
 	IsNil() bool
 	HashTreeRoot() ([32]byte, error)
 	Proto() proto.Message

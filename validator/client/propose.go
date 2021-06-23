@@ -10,6 +10,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -197,7 +198,7 @@ func (v *validator) proposeBlockV2(ctx context.Context, slot types.Slot, pubKey 
 	}
 
 	// Request block from beacon node
-	b, err := v.validatorClient.GetBlockV2(ctx, &ethpb.BlockRequest{
+	b, err := v.validatorClientV2.GetBlock(ctx, &ethpb.BlockRequest{
 		Slot:         slot,
 		RandaoReveal: randaoReveal,
 		Graffiti:     g,
@@ -219,7 +220,7 @@ func (v *validator) proposeBlockV2(ctx context.Context, slot types.Slot, pubKey 
 		}
 		return
 	}
-	blk := &ethpb.SignedBeaconBlockAltair{
+	blk := &prysmv2.SignedBeaconBlock{
 		Block:     b,
 		Signature: sig,
 	}
@@ -248,7 +249,7 @@ func (v *validator) proposeBlockV2(ctx context.Context, slot types.Slot, pubKey 
 	}
 
 	// Propose and broadcast block via beacon node
-	blkResp, err := v.validatorClient.ProposeBlockV2(ctx, blk)
+	blkResp, err := v.validatorClientV2.ProposeBlock(ctx, blk)
 	if err != nil {
 		log.WithError(err).Error("Failed to propose block")
 		if v.emitAccountMetrics {
@@ -361,7 +362,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch types.
 	var sig bls.Signature
 	switch b.Version() {
 	case version.Altair:
-		block, ok := b.Proto().(*ethpb.BeaconBlockAltair)
+		block, ok := b.Proto().(*prysmv2.BeaconBlock)
 		if !ok {
 			return nil, nil, errors.New("could not convert obj to beacon block altair")
 		}

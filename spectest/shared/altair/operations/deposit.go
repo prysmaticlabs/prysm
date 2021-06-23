@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -28,7 +29,7 @@ func RunDepositTest(t *testing.T, config string) {
 			deposit := &ethpb.Deposit{}
 			require.NoError(t, deposit.UnmarshalSSZ(depositSSZ), "Failed to unmarshal")
 
-			body := &ethpb.BeaconBlockBodyAltair{Deposits: []*ethpb.Deposit{deposit}}
+			body := &prysmv2.BeaconBlockBody{Deposits: []*ethpb.Deposit{deposit}}
 			processDepositsFunc := func(ctx context.Context, s iface.BeaconState, b interfaces.SignedBeaconBlock) (iface.BeaconState, error) {
 				return altair.ProcessDeposits(ctx, s, b.Block().Body().Deposits())
 			}

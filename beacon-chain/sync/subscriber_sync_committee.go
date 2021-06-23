@@ -5,12 +5,12 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"google.golang.org/protobuf/proto"
 )
 
 func (s *Service) syncCommitteeSubscriber(_ context.Context, msg proto.Message) error {
-	m, ok := msg.(*eth.SyncCommitteeMessage)
+	m, ok := msg.(*prysmv2.SyncCommitteeMessage)
 	if !ok {
 		return fmt.Errorf("message was not type *eth.SyncCommitteeMessage, type=%T", msg)
 	}

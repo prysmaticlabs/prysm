@@ -5,7 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/queue"
 )
@@ -16,7 +16,7 @@ const syncCommitteeMaxQueueSize = 4
 
 // SaveSyncCommitteeContribution saves a sync committee contribution in to a priority queue.
 // The priority queue is capped at syncCommitteeMaxQueueSize contributions.
-func (s *Store) SaveSyncCommitteeContribution(cont *ethpb.SyncCommitteeContribution) error {
+func (s *Store) SaveSyncCommitteeContribution(cont *prysmv2.SyncCommitteeContribution) error {
 	if cont == nil {
 		return nilContributionErr
 	}
@@ -43,7 +43,7 @@ func (s *Store) SaveSyncCommitteeContribution(cont *ethpb.SyncCommitteeContribut
 	// Contribution does not exist. Insert new.
 	if err := s.contributionCache.Push(&queue.Item{
 		Key:      syncCommitteeKey(cont.Slot),
-		Value:    []*ethpb.SyncCommitteeContribution{copied},
+		Value:    []*prysmv2.SyncCommitteeContribution{copied},
 		Priority: int64(cont.Slot),
 	}); err != nil {
 		return err
@@ -61,7 +61,7 @@ func (s *Store) SaveSyncCommitteeContribution(cont *ethpb.SyncCommitteeContribut
 
 // SyncCommitteeContributions returns sync committee contributions by slot from the priority queue.
 // Upon retrieval, the contribution is removed from the queue.
-func (s *Store) SyncCommitteeContributions(slot types.Slot) ([]*ethpb.SyncCommitteeContribution, error) {
+func (s *Store) SyncCommitteeContributions(slot types.Slot) ([]*prysmv2.SyncCommitteeContribution, error) {
 	s.contributionLock.Lock()
 	defer s.contributionLock.Unlock()
 
@@ -73,9 +73,9 @@ func (s *Store) SyncCommitteeContributions(slot types.Slot) ([]*ethpb.SyncCommit
 		return nil, nil
 	}
 
-	contributions, ok := item.Value.([]*ethpb.SyncCommitteeContribution)
+	contributions, ok := item.Value.([]*prysmv2.SyncCommitteeContribution)
 	if !ok {
-		return nil, errors.New("not typed []ethpb.SyncCommitteeContribution")
+		return nil, errors.New("not typed []prysmv2.SyncCommitteeContribution")
 	}
 
 	return contributions, nil
