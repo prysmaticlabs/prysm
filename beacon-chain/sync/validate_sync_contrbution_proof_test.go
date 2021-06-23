@@ -25,7 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
@@ -49,13 +49,13 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 	type args struct {
 		ctx   context.Context
 		pid   peer.ID
-		msg   *ethpb.SignedContributionAndProof
+		msg   *prysmv2.SignedContributionAndProof
 		topic string
 	}
 	tests := []struct {
 		name     string
 		svc      *Service
-		setupSvc func(s *Service, msg *ethpb.SignedContributionAndProof) *Service
+		setupSvc func(s *Service, msg *prysmv2.SignedContributionAndProof) *Service
 		args     args
 		want     pubsub.ValidationResult
 	}{
@@ -68,7 +68,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				StateNotifier:     chainService.StateNotifier(),
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
-			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
+			setupSvc: func(s *Service, msg *prysmv2.SignedContributionAndProof) *Service {
 				s.cfg.StateGen = stategen.New(db)
 				msg.Message.Contribution.BlockRoot = headRoot[:]
 				s.cfg.DB = db
@@ -79,8 +79,8 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				ctx:   context.Background(),
 				pid:   "random",
 				topic: "junk",
-				msg: &ethpb.SignedContributionAndProof{
-					Message: &ethpb.ContributionAndProof{
+				msg: &prysmv2.SignedContributionAndProof{
+					Message: &prysmv2.ContributionAndProof{
 						AggregatorIndex: 1,
 						Contribution: &prysmv2.SyncCommitteeContribution{
 							Slot:              1,
@@ -104,7 +104,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				StateNotifier:     chainService.StateNotifier(),
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
-			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
+			setupSvc: func(s *Service, msg *prysmv2.SignedContributionAndProof) *Service {
 				s.cfg.StateGen = stategen.New(db)
 				s.cfg.DB = db
 				assert.NoError(t, s.initCaches())
@@ -114,8 +114,8 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				ctx:   context.Background(),
 				pid:   "random",
 				topic: defaultTopic,
-				msg: &ethpb.SignedContributionAndProof{
-					Message: &ethpb.ContributionAndProof{
+				msg: &prysmv2.SignedContributionAndProof{
+					Message: &prysmv2.ContributionAndProof{
 						AggregatorIndex: 1,
 						Contribution: &prysmv2.SyncCommitteeContribution{
 							Slot:              30,
@@ -139,7 +139,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				StateNotifier:     chainService.StateNotifier(),
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
-			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
+			setupSvc: func(s *Service, msg *prysmv2.SignedContributionAndProof) *Service {
 				s.cfg.StateGen = stategen.New(db)
 				s.cfg.DB = db
 				assert.NoError(t, s.initCaches())
@@ -152,8 +152,8 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				ctx:   context.Background(),
 				pid:   "random",
 				topic: defaultTopic,
-				msg: &ethpb.SignedContributionAndProof{
-					Message: &ethpb.ContributionAndProof{
+				msg: &prysmv2.SignedContributionAndProof{
+					Message: &prysmv2.ContributionAndProof{
 						AggregatorIndex: 1,
 						Contribution: &prysmv2.SyncCommitteeContribution{
 							Slot:              1,
@@ -177,7 +177,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				StateNotifier:     chainService.StateNotifier(),
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
-			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
+			setupSvc: func(s *Service, msg *prysmv2.SignedContributionAndProof) *Service {
 				s.cfg.StateGen = stategen.New(db)
 				s.cfg.DB = db
 				assert.NoError(t, s.initCaches())
@@ -195,8 +195,8 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				ctx:   context.Background(),
 				pid:   "random",
 				topic: defaultTopic,
-				msg: &ethpb.SignedContributionAndProof{
-					Message: &ethpb.ContributionAndProof{
+				msg: &prysmv2.SignedContributionAndProof{
+					Message: &prysmv2.ContributionAndProof{
 						AggregatorIndex: 1,
 						Contribution: &prysmv2.SyncCommitteeContribution{
 							Slot:              1,
@@ -220,7 +220,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				StateNotifier:     chainService.StateNotifier(),
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
-			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
+			setupSvc: func(s *Service, msg *prysmv2.SignedContributionAndProof) *Service {
 				s.cfg.StateGen = stategen.New(db)
 				s.cfg.DB = db
 				assert.NoError(t, s.initCaches())
@@ -252,8 +252,8 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				ctx:   context.Background(),
 				pid:   "random",
 				topic: defaultTopic,
-				msg: &ethpb.SignedContributionAndProof{
-					Message: &ethpb.ContributionAndProof{
+				msg: &prysmv2.SignedContributionAndProof{
+					Message: &prysmv2.ContributionAndProof{
 						AggregatorIndex: 1,
 						Contribution: &prysmv2.SyncCommitteeContribution{
 							Slot:              1,
@@ -277,7 +277,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				StateNotifier:     chainService.StateNotifier(),
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
-			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
+			setupSvc: func(s *Service, msg *prysmv2.SignedContributionAndProof) *Service {
 				s.cfg.StateGen = stategen.New(db)
 				s.cfg.DB = db
 				msg.Message.Contribution.BlockRoot = headRoot[:]
@@ -310,8 +310,8 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				ctx:   context.Background(),
 				pid:   "random",
 				topic: defaultTopic,
-				msg: &ethpb.SignedContributionAndProof{
-					Message: &ethpb.ContributionAndProof{
+				msg: &prysmv2.SignedContributionAndProof{
+					Message: &prysmv2.ContributionAndProof{
 						AggregatorIndex: 1,
 						Contribution: &prysmv2.SyncCommitteeContribution{
 							Slot:              1,
@@ -335,7 +335,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				StateNotifier:     chainService.StateNotifier(),
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
-			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
+			setupSvc: func(s *Service, msg *prysmv2.SignedContributionAndProof) *Service {
 				s.cfg.StateGen = stategen.New(db)
 				s.cfg.DB = db
 				msg.Message.Contribution.BlockRoot = headRoot[:]
@@ -376,8 +376,8 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				ctx:   context.Background(),
 				pid:   "random",
 				topic: defaultTopic,
-				msg: &ethpb.SignedContributionAndProof{
-					Message: &ethpb.ContributionAndProof{
+				msg: &prysmv2.SignedContributionAndProof{
+					Message: &prysmv2.ContributionAndProof{
 						AggregatorIndex: 1,
 						Contribution: &prysmv2.SyncCommitteeContribution{
 							Slot:              1,
@@ -401,7 +401,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				StateNotifier:     chainService.StateNotifier(),
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
-			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
+			setupSvc: func(s *Service, msg *prysmv2.SignedContributionAndProof) *Service {
 				s.cfg.StateGen = stategen.New(db)
 				s.cfg.DB = db
 				msg.Message.Contribution.BlockRoot = headRoot[:]
@@ -452,8 +452,8 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				ctx:   context.Background(),
 				pid:   "random",
 				topic: defaultTopic,
-				msg: &ethpb.SignedContributionAndProof{
-					Message: &ethpb.ContributionAndProof{
+				msg: &prysmv2.SignedContributionAndProof{
+					Message: &prysmv2.ContributionAndProof{
 						AggregatorIndex: 1,
 						Contribution: &prysmv2.SyncCommitteeContribution{
 							Slot:              1,
@@ -477,7 +477,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				StateNotifier:     chainService.StateNotifier(),
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
-			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
+			setupSvc: func(s *Service, msg *prysmv2.SignedContributionAndProof) *Service {
 				s.cfg.StateGen = stategen.New(db)
 				msg.Message.Contribution.BlockRoot = headRoot[:]
 				s.cfg.DB = db
@@ -524,8 +524,8 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				ctx:   context.Background(),
 				pid:   "random",
 				topic: defaultTopic,
-				msg: &ethpb.SignedContributionAndProof{
-					Message: &ethpb.ContributionAndProof{
+				msg: &prysmv2.SignedContributionAndProof{
+					Message: &prysmv2.ContributionAndProof{
 						AggregatorIndex: 1,
 						Contribution: &prysmv2.SyncCommitteeContribution{
 							Slot:              1,
@@ -549,7 +549,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				StateNotifier:     chainService.StateNotifier(),
 				OperationNotifier: chainService.OperationNotifier(),
 			}),
-			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
+			setupSvc: func(s *Service, msg *prysmv2.SignedContributionAndProof) *Service {
 				s.cfg.StateGen = stategen.New(db)
 				msg.Message.Contribution.BlockRoot = headRoot[:]
 				s.cfg.DB = db
@@ -609,8 +609,8 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				ctx:   context.Background(),
 				pid:   "random",
 				topic: defaultTopic,
-				msg: &ethpb.SignedContributionAndProof{
-					Message: &ethpb.ContributionAndProof{
+				msg: &prysmv2.SignedContributionAndProof{
+					Message: &prysmv2.ContributionAndProof{
 						AggregatorIndex: 1,
 						Contribution: &prysmv2.SyncCommitteeContribution{
 							Slot:              1,

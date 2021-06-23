@@ -11,7 +11,6 @@ import (
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -80,7 +79,7 @@ func TestGetSyncSubcommitteeIndex_Ok(t *testing.T) {
 	require.NoError(t, err)
 
 	// Request slot 0, should get the index 0 for validator 0.
-	res, err := server.GetSyncSubcommitteeIndex(context.Background(), &ethpb.SyncSubcommitteeIndexRequest{
+	res, err := server.GetSyncSubcommitteeIndex(context.Background(), &prysmv2.SyncSubcommitteeIndexRequest{
 		PublicKey: v.PublicKey, Slot: types.Slot(0),
 	})
 	require.NoError(t, err)
@@ -88,7 +87,7 @@ func TestGetSyncSubcommitteeIndex_Ok(t *testing.T) {
 
 	// Request at period boundary, should get index 1 for validator 0 due to the shuffle.
 	periodBoundary := types.Slot(params.BeaconConfig().EpochsPerSyncCommitteePeriod)*params.BeaconConfig().SlotsPerEpoch - 1
-	res, err = server.GetSyncSubcommitteeIndex(context.Background(), &ethpb.SyncSubcommitteeIndexRequest{
+	res, err = server.GetSyncSubcommitteeIndex(context.Background(), &prysmv2.SyncSubcommitteeIndexRequest{
 		PublicKey: v.PublicKey, Slot: periodBoundary,
 	})
 	require.NoError(t, err)
@@ -100,9 +99,9 @@ func TestSubmitSignedContributionAndProof_OK(t *testing.T) {
 		SyncCommitteePool: synccommittee.NewStore(),
 		P2P:               &mockp2p.MockBroadcaster{},
 	}
-	contribution := &ethpb.SignedContributionAndProof{
-		Message: &ethpb.ContributionAndProof{
-			Contribution: &ethpb.SyncCommitteeContribution{
+	contribution := &prysmv2.SignedContributionAndProof{
+		Message: &prysmv2.ContributionAndProof{
+			Contribution: &prysmv2.SyncCommitteeContribution{
 				Slot:              1,
 				SubcommitteeIndex: 2,
 			},
@@ -112,5 +111,5 @@ func TestSubmitSignedContributionAndProof_OK(t *testing.T) {
 	require.NoError(t, err)
 	savedMsgs, err := server.SyncCommitteePool.SyncCommitteeContributions(1)
 	require.NoError(t, err)
-	require.DeepEqual(t, []*ethpb.SyncCommitteeContribution{contribution.Message.Contribution}, savedMsgs)
+	require.DeepEqual(t, []*prysmv2.SyncCommitteeContribution{contribution.Message.Contribution}, savedMsgs)
 }
