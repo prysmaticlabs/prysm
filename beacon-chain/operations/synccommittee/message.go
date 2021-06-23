@@ -26,7 +26,7 @@ func (s *Store) SaveSyncCommitteeMessage(msg *prysmv2.SyncCommitteeMessage) erro
 	copied := copyutil.CopySyncCommitteeMessage(msg)
 	// Messages exist in the queue. Append instead of insert new.
 	if item != nil {
-		messages, ok := item.Value.([]*ethpb.SyncCommitteeMessage)
+		messages, ok := item.Value.([]*prysmv2.SyncCommitteeMessage)
 		if !ok {
 			return errors.New("not typed []ethpb.SyncCommitteeMessage")
 		}
