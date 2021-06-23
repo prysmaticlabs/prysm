@@ -68,6 +68,24 @@ func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att *
 	return nil
 }
 
+// BroadcastAttestation broadcasts an attestation to the p2p network, the message is assumed to be
+// broadcasted to the current fork.
+func (s *Service) BroadcastSyncCommitteeMessage(ctx context.Context, subnet uint64, sMsg *eth.SyncCommitteeMessage) error {
+	ctx, span := trace.StartSpan(ctx, "p2p.BroadcastSyncCommitteeMessage")
+	defer span.End()
+	forkDigest, err := s.currentForkDigest()
+	if err != nil {
+		err := errors.Wrap(err, "could not retrieve fork digest")
+		traceutil.AnnotateError(span, err)
+		return err
+	}
+
+	// Non-blocking broadcast, with attempts to discover a subnet peer if none available.
+	go s.broadcastSyncCommittee(ctx, subnet, sMsg, forkDigest)
+
+	return nil
+}
+
 func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *eth.Attestation, forkDigest [4]byte) {
 	ctx, span := trace.StartSpan(ctx, "p2p.broadcastAttestation")
 	defer span.End()
@@ -114,6 +132,53 @@ func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *
 	}
 }
 
+func (s *Service) broadcastSyncCommittee(ctx context.Context, subnet uint64, sMsg *eth.SyncCommitteeMessage, forkDigest [4]byte) {
+	ctx, span := trace.StartSpan(ctx, "p2p.broadcastSyncCommittee")
+	defer span.End()
+	ctx = trace.NewContext(context.Background(), span) // clear parent context / deadline.
+
+	oneEpoch := time.Duration(1*params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)) * time.Second
+	ctx, cancel := context.WithTimeout(ctx, oneEpoch)
+	defer cancel()
+
+	// TODO: Change to sync committee subnet locker rather than sharing the same one with attestations.
+	// Ensure we have peers with this subnet.
+	s.subnetLocker(subnet).RLock()
+	hasPeer := s.hasPeerWithSubnet(syncCommitteeToTopic(subnet, forkDigest))
+	s.subnetLocker(subnet).RUnlock()
+
+	span.AddAttributes(
+		trace.BoolAttribute("hasPeer", hasPeer),
+		trace.Int64Attribute("slot", int64(sMsg.Slot)),
+		trace.Int64Attribute("subnet", int64(subnet)),
+	)
+
+	if !hasPeer {
+		syncCommitteeBroadcastAttempts.Inc()
+		if err := func() error {
+			s.subnetLocker(subnet).Lock()
+			defer s.subnetLocker(subnet).Unlock()
+			ok, err := s.FindPeersWithSubnet(ctx, syncCommitteeToTopic(subnet, forkDigest), subnet, 1)
+			if err != nil {
+				return err
+			}
+			if ok {
+				savedSyncCommitteeBroadcasts.Inc()
+				return nil
+			}
+			return errors.New("failed to find peers for subnet")
+		}(); err != nil {
+			log.WithError(err).Error("Failed to find peers")
+			traceutil.AnnotateError(span, err)
+		}
+	}
+
+	if err := s.broadcastObject(ctx, sMsg, syncCommitteeToTopic(subnet, forkDigest)); err != nil {
+		log.WithError(err).Error("Failed to broadcast sync committee message")
+		traceutil.AnnotateError(span, err)
+	}
+}
+
 // method to broadcast messages to other peers in our gossip mesh.
 func (s *Service) broadcastObject(ctx context.Context, obj ssz.Marshaler, topic string) error {
 	_, span := trace.StartSpan(ctx, "p2p.broadcastObject")
@@ -144,4 +209,8 @@ func (s *Service) broadcastObject(ctx context.Context, obj ssz.Marshaler, topic 
 
 func attestationToTopic(subnet uint64, forkDigest [4]byte) string {
 	return fmt.Sprintf(AttestationSubnetTopicFormat, forkDigest, subnet)
+}
+
+func syncCommitteeToTopic(subnet uint64, forkDigest [4]byte) string {
+	return fmt.Sprintf(SyncCommitteeSubnetTopicFormat, forkDigest, subnet)
 }

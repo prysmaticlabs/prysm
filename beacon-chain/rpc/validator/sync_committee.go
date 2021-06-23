@@ -41,18 +41,33 @@ func (vs *Server) GetSyncMessageBlockRoot(ctx context.Context, _ *emptypb.Empty)
 func (vs *Server) SubmitSyncMessage(ctx context.Context, msg *ethpb.SyncCommitteeMessage) (*emptypb.Empty, error) {
 	errs, ctx := errgroup.WithContext(ctx)
 
+	hState, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return &emptypb.Empty{}, err
+	}
+	val, err := hState.ValidatorAtIndex(msg.ValidatorIndex)
+	if err != nil {
+		return &emptypb.Empty{}, err
+	}
+	idxs, err := vs.syncSubcommitteeIndex(ctx, bytesutil.ToBytes48(val.PublicKey), msg.Slot)
+	if err != nil {
+		return &emptypb.Empty{}, err
+	}
 	// Broadcasting and saving message into the pool in parallel. As one fail should not affect another.
-	errs.Go(func() error {
-		return vs.P2P.Broadcast(ctx, msg)
-	})
+	// This broadcasts for all subnets.
+	for _, id := range idxs {
+		errs.Go(func() error {
+			return vs.P2P.BroadcastSyncCommitteeMessage(ctx, id, msg)
+		})
+	}
 
 	if err := vs.SyncCommitteePool.SaveSyncCommitteeMessage(msg); err != nil {
-		return nil, err
+		return &emptypb.Empty{}, err
 	}
 
 	// Wait for p2p broadcast to complete and return the first error (if any)
-	err := errs.Wait()
-	return nil, err
+	err = errs.Wait()
+	return &emptypb.Empty{}, err
 }
 
 // GetSyncSubcommitteeIndex is called by a sync committee participant to get its subcommittee index for sync message aggregation duty.
