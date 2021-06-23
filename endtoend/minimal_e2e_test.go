@@ -14,7 +14,15 @@ import (
 )
 
 func TestEndToEnd_MinimalConfig(t *testing.T) {
+	e2eMinimal(t, false /*usePrysmSh*/)
+}
 
+// Run minimal e2e config with the current release validator against latest beacon node.
+func TestEndToEnd_MinimalConfig_ValidatorAtCurrentRelease(t *testing.T) {
+	e2eMinimal(t, true /*usePrysmSh*/)
+}
+
+func e2eMinimal(t *testing.T, usePrysmSh bool) {
 	params.UseE2EConfig()
 	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
 
@@ -31,12 +39,13 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 		BeaconFlags: []string{
 			fmt.Sprintf("--slots-per-archive-point=%d", params.BeaconConfig().SlotsPerEpoch*16),
 		},
-		ValidatorFlags: []string{},
-		EpochsToRun:    uint64(epochsToRun),
-		TestSync:       true,
-		TestDeposits:   true,
-		TestSlasher:    true,
-		UsePprof:       !longRunning,
+		ValidatorFlags:      []string{},
+		EpochsToRun:         uint64(epochsToRun),
+		TestSync:            true,
+		TestDeposits:        true,
+		TestSlasher:         true,
+		UsePrysmShValidator: usePrysmSh,
+		UsePprof:            !longRunning,
 		Evaluators: []types.Evaluator{
 			ev.PeersConnect,
 			ev.HealthzCheck,
