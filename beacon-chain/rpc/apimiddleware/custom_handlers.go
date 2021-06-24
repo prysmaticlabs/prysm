@@ -171,18 +171,20 @@ func handleEvents(m *gateway.ApiProxyMiddleware, _ gateway.Endpoint, w http.Resp
 	// To handle events properly, we subscribe just once using a placeholder value ('events') and handle all topics inside this subscription.
 	if err := sseClient.SubscribeChan("events", eventChan); err != nil {
 		gateway.WriteError(w, &gateway.DefaultErrorJson{Message: err.Error(), Code: http.StatusInternalServerError}, nil)
+		sseClient.Unsubscribe(eventChan)
 		return
 	}
 
-	errJson := receiveEvents(eventChan, w)
+	errJson := receiveEvents(eventChan, w, req)
 	if errJson != nil {
-		sseClient.Unsubscribe(eventChan)
+		gateway.WriteError(w, errJson, nil)
 	}
 
+	sseClient.Unsubscribe(eventChan)
 	return true
 }
 
-func receiveEvents(eventChan <-chan *sse.Event, w http.ResponseWriter) gateway.ErrorJson {
+func receiveEvents(eventChan <-chan *sse.Event, w http.ResponseWriter, req *http.Request) gateway.ErrorJson {
 	for {
 		select {
 		case msg := <-eventChan:
@@ -216,17 +218,21 @@ func receiveEvents(eventChan <-chan *sse.Event, w http.ResponseWriter) gateway.E
 				data = &eventChainReorgJson{}
 			case "error":
 				data = &eventErrorJson{}
+			default:
+				return &gateway.DefaultErrorJson{
+					Message: fmt.Sprintf("Event type '%s' not supported", strings.TrimSpace(string(msg.Event))),
+					Code:    http.StatusInternalServerError,
+				}
 			}
 
 			if errJson := writeEvent(msg, w, data); errJson != nil {
 				return errJson
 			}
-
-			flusher, ok := w.(http.Flusher)
-			if !ok {
-				return &gateway.DefaultErrorJson{Message: fmt.Sprintf("Flush not supported in %T", w), Code: http.StatusInternalServerError}
+			if errJson := flushEvent(w); errJson != nil {
+				return errJson
 			}
-			flusher.Flush()
+		case <-req.Context().Done():
+			return nil
 		}
 	}
 }
@@ -261,5 +267,14 @@ func writeEvent(msg *sse.Event, w http.ResponseWriter, data interface{}) gateway
 		return &gateway.DefaultErrorJson{Message: err.Error(), Code: http.StatusInternalServerError}
 	}
 
+	return nil
+}
+
+func flushEvent(w http.ResponseWriter) gateway.ErrorJson {
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		return &gateway.DefaultErrorJson{Message: fmt.Sprintf("Flush not supported in %T", w), Code: http.StatusInternalServerError}
+	}
+	flusher.Flush()
 	return nil
 }
