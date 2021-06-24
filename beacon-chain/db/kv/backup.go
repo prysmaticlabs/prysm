@@ -47,7 +47,7 @@ func (s *Store) Backup(ctx context.Context, outputDir string, permissionOverride
 	copyDB, err := bolt.Open(
 		backupPath,
 		params.BeaconIoConfig().ReadWritePermissions,
-		&bolt.Options{NoFreelistSync: true, NoSync: true, Timeout: params.BeaconIoConfig().BoltTimeout, FreelistType: bolt.FreelistMapType},
+		&bolt.Options{NoSync: true, Timeout: params.BeaconIoConfig().BoltTimeout, FreelistType: bolt.FreelistMapType},
 	)
 	if err != nil {
 		return err
@@ -114,6 +114,5 @@ func (s *Store) Backup(ctx context.Context, outputDir string, permissionOverride
 	// Re-enable sync to allow bolt to fsync
 	// again.
 	copyDB.NoSync = false
-	copyDB.NoFreelistSync = false
 	return nil
 }
