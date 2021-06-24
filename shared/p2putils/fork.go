@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+// IsForkNextEpoch checks if an alloted fork is in the following epoch.
 func IsForkNextEpoch(genesisTime time.Time, genesisValidatorsRoot []byte) (bool, error) {
 	if genesisTime.IsZero() {
 		return false, errors.New("genesis time is not set")
@@ -35,6 +36,8 @@ func IsForkNextEpoch(genesisTime time.Time, genesisValidatorsRoot []byte) (bool,
 	return isForkEpoch, nil
 }
 
+// ForkDigestFromEpoch retrieves the fork digest from the current schedule determined
+// by the provided epoch.
 func ForkDigestFromEpoch(currentEpoch types.Epoch, genesisValidatorsRoot []byte) ([4]byte, error) {
 	if len(genesisValidatorsRoot) == 0 {
 		return [4]byte{}, errors.New("genesis validators root is not set")

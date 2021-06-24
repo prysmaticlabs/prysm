@@ -3,6 +3,7 @@ package p2putils
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -182,4 +183,46 @@ func TestRetrieveForkDataFromDigest(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, [4]byte{'A', 'B', 'C', 'Z'}, version)
 	assert.Equal(t, epoch, types.Epoch(100))
+}
+
+func TestIsForkNextEpoch(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig()
+	cfg.GenesisForkVersion = []byte{'A', 'B', 'C', 'D'}
+	cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{
+		[4]byte{'A', 'B', 'C', 'D'}: 0,
+		[4]byte{'A', 'B', 'C', 'F'}: 10,
+		[4]byte{'A', 'B', 'C', 'Z'}: 100,
+	}
+	genTimeCreator := func(epoch types.Epoch) time.Time {
+		return time.Now().Add(-time.Duration(uint64(params.BeaconConfig().SlotsPerEpoch)*uint64(epoch)*params.BeaconConfig().SecondsPerSlot) * time.Second)
+	}
+	// Is at Fork Epoch
+	genesisTime := genTimeCreator(10)
+	genRoot := [32]byte{'A'}
+
+	isFork, err := IsForkNextEpoch(genesisTime, genRoot[:])
+	assert.NoError(t, err)
+	assert.Equal(t, false, isFork)
+
+	// Is right before fork epoch
+	genesisTime = genTimeCreator(9)
+
+	isFork, err = IsForkNextEpoch(genesisTime, genRoot[:])
+	assert.NoError(t, err)
+	assert.Equal(t, true, isFork)
+
+	// Is at fork epoch
+	genesisTime = genTimeCreator(100)
+
+	isFork, err = IsForkNextEpoch(genesisTime, genRoot[:])
+	assert.NoError(t, err)
+	assert.Equal(t, false, isFork)
+
+	genesisTime = genTimeCreator(99)
+
+	// Is right before fork epoch.
+	isFork, err = IsForkNextEpoch(genesisTime, genRoot[:])
+	assert.NoError(t, err)
+	assert.Equal(t, true, isFork)
 }
