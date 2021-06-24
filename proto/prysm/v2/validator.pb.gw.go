@@ -264,6 +264,34 @@ func local_request_BeaconNodeValidatorAltair_SubmitSignedContributionAndProof_0(
 
 }
 
+var (
+	filter_BeaconNodeValidatorAltair_StreamBlocks_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
+)
+
+func request_BeaconNodeValidatorAltair_StreamBlocks_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconNodeValidatorAltairClient, req *http.Request, pathParams map[string]string) (BeaconNodeValidatorAltair_StreamBlocksClient, runtime.ServerMetadata, error) {
+	var protoReq eth.StreamBlocksRequest
+	var metadata runtime.ServerMetadata
+
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BeaconNodeValidatorAltair_StreamBlocks_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
+	stream, err := client.StreamBlocks(ctx, &protoReq)
+	if err != nil {
+		return nil, metadata, err
+	}
+	header, err := stream.Header()
+	if err != nil {
+		return nil, metadata, err
+	}
+	metadata.HeaderMD = header
+	return stream, metadata, nil
+
+}
+
 // RegisterBeaconNodeValidatorAltairHandlerServer registers the http handlers for service BeaconNodeValidatorAltair to "mux".
 // UnaryRPC     :call BeaconNodeValidatorAltairServer directly.
 // StreamingRPC :currently unsupported pending https://github.com/grpc/grpc-go/issues/906.
@@ -429,6 +457,13 @@ func RegisterBeaconNodeValidatorAltairHandlerServer(ctx context.Context, mux *ru
 
 		forward_BeaconNodeValidatorAltair_SubmitSignedContributionAndProof_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
+	})
+
+	mux.Handle("GET", pattern_BeaconNodeValidatorAltair_StreamBlocks_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		err := status.Error(codes.Unimplemented, "streaming calls are not yet supported in the in-process transport")
+		_, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+		return
 	})
 
 	return nil
@@ -612,6 +647,26 @@ func RegisterBeaconNodeValidatorAltairHandlerClient(ctx context.Context, mux *ru
 
 	})
 
+	mux.Handle("GET", pattern_BeaconNodeValidatorAltair_StreamBlocks_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/ethereum.prysm.v2.BeaconNodeValidatorAltair/StreamBlocks")
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_BeaconNodeValidatorAltair_StreamBlocks_0(rctx, inboundMarshaler, client, req, pathParams)
+		ctx = runtime.NewServerMetadataContext(ctx, md)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_BeaconNodeValidatorAltair_StreamBlocks_0(ctx, mux, outboundMarshaler, w, req, func() (proto.Message, error) { return resp.Recv() }, mux.GetForwardResponseOptions()...)
+
+	})
+
 	return nil
 }
 
@@ -629,6 +684,8 @@ var (
 	pattern_BeaconNodeValidatorAltair_GetSyncCommitteeContribution_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"prysm", "v2", "validator", "contribution_and_proof"}, ""))
 
 	pattern_BeaconNodeValidatorAltair_SubmitSignedContributionAndProof_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"prysm", "v2", "validator", "signed_contribution_and_proof"}, ""))
+
+	pattern_BeaconNodeValidatorAltair_StreamBlocks_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"prysm", "v2", "validator", "blocks", "stream"}, ""))
 )
 
 var (
@@ -645,4 +702,6 @@ var (
 	forward_BeaconNodeValidatorAltair_GetSyncCommitteeContribution_0 = runtime.ForwardResponseMessage
 
 	forward_BeaconNodeValidatorAltair_SubmitSignedContributionAndProof_0 = runtime.ForwardResponseMessage
+
+	forward_BeaconNodeValidatorAltair_StreamBlocks_0 = runtime.ForwardResponseStream
 )
