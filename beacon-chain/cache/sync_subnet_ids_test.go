@@ -49,7 +49,6 @@ func TestSyncSubnetIDsCache_ValidateCurrentEpoch(t *testing.T) {
 			t.Errorf("Couldn't find entry in cache for pubkey %#x", pubkey)
 			continue
 		}
-		t.Log(jEpoch)
 		require.Equal(t, true, uint64(jEpoch) >= 100-params.BeaconConfig().SyncCommitteeSubnetCount)
 	}
 
