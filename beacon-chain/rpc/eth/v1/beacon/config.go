@@ -38,7 +38,8 @@ func (bs *Server) GetForkSchedule(ctx context.Context, _ *emptypb.Empty) (*ethpb
 		} else {
 			previous = current
 		}
-		current = v[:]
+		copyV := v
+		current = copyV[:]
 		forks[i] = &ethpb.Fork{
 			PreviousVersion: previous,
 			CurrentVersion:  current,

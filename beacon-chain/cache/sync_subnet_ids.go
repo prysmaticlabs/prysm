@@ -51,7 +51,8 @@ func (s *syncSubnetIDs) GetSyncCommitteeSubnets(pubkey []byte, epoch types.Epoch
 }
 
 // GetAllSubnets retrieves all the non-expired subscribed subnets of all the validators
-// in the cache.
+// in the cache. This method also takes the epoch as an argument to only retrieve
+// assingments for epochs that have happened.
 func (s *syncSubnetIDs) GetAllSubnets(currEpoch types.Epoch) []uint64 {
 	s.sCommiteeLock.RLock()
 	defer s.sCommiteeLock.RUnlock()
@@ -75,14 +76,15 @@ func (s *syncSubnetIDs) GetAllSubnets(currEpoch types.Epoch) []uint64 {
 			continue
 		}
 		// Ignore the first index as that represents the
-		// slot of the validator's assignments.
+		// epoch of the validator's assignments.
 		committees = append(committees, idxs[1:]...)
 	}
 	return sliceutil.SetUint64(committees)
 }
 
 // AddSyncCommitteeSubnets adds the relevant committee for that particular validator along with its
-// expiration period.
+// expiration period. An Epoch argument here denotes the epoch from which the sync committee subnets
+// will be active.
 func (s *syncSubnetIDs) AddSyncCommitteeSubnets(pubkey []byte, epoch types.Epoch, comIndex []uint64, duration time.Duration) {
 	s.sCommiteeLock.Lock()
 	defer s.sCommiteeLock.Unlock()
@@ -96,7 +98,7 @@ func (s *syncSubnetIDs) AddSyncCommitteeSubnets(pubkey []byte, epoch types.Epoch
 		// at 0.
 		joinEpoch = 0
 	}
-	// Append the slot of the subnet into the first index here.
+	// Append the epoch of the subnet into the first index here.
 	s.sCommittee.Set(keyBuilder(pubkey, epoch), append([]uint64{uint64(joinEpoch)}, comIndex...), duration)
 }
 

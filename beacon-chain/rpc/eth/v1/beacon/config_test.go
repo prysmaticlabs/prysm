@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -318,18 +319,18 @@ func TestGetDepositContract(t *testing.T) {
 
 func TestForkSchedule_Ok(t *testing.T) {
 	genesisForkVersion := []byte("Genesis")
-	firstForkVersion, firstForkEpoch := []byte("First"), types.Epoch(100)
-	secondForkVersion, secondForkEpoch := []byte("Second"), types.Epoch(200)
-	thirdForkVersion, thirdForkEpoch := []byte("Third"), types.Epoch(300)
+	firstForkVersion, firstForkEpoch := []byte("Firs"), types.Epoch(100)
+	secondForkVersion, secondForkEpoch := []byte("Seco"), types.Epoch(200)
+	thirdForkVersion, thirdForkEpoch := []byte("Thir"), types.Epoch(300)
 
 	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
 	config.GenesisForkVersion = genesisForkVersion
 	// Create fork schedule adding keys in non-sorted order.
-	schedule := make(map[types.Epoch][]byte, 3)
-	schedule[secondForkEpoch] = secondForkVersion
-	schedule[firstForkEpoch] = firstForkVersion
-	schedule[thirdForkEpoch] = thirdForkVersion
+	schedule := make(map[[4]byte]types.Epoch, 3)
+	schedule[bytesutil.ToBytes4(secondForkVersion)] = secondForkEpoch
+	schedule[bytesutil.ToBytes4(firstForkVersion)] = firstForkEpoch
+	schedule[bytesutil.ToBytes4(thirdForkVersion)] = thirdForkEpoch
 	config.ForkVersionSchedule = schedule
 	params.OverrideBeaconConfig(config)
 
@@ -339,7 +340,7 @@ func TestForkSchedule_Ok(t *testing.T) {
 	require.Equal(t, 3, len(resp.Data))
 	fork := resp.Data[0]
 	assert.DeepEqual(t, genesisForkVersion, fork.PreviousVersion)
-	assert.DeepEqual(t, firstForkVersion, fork.CurrentVersion)
+	assert.DeepEqual(t, string(firstForkVersion), string(fork.CurrentVersion))
 	assert.Equal(t, firstForkEpoch, fork.Epoch)
 	fork = resp.Data[1]
 	assert.DeepEqual(t, firstForkVersion, fork.PreviousVersion)

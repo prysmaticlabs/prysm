@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+// IsForkNextEpoch checks if an alloted fork is in the following epoch.
 func IsForkNextEpoch(genesisTime time.Time, genesisValidatorsRoot []byte) (bool, error) {
 	if genesisTime.IsZero() {
 		return false, errors.New("genesis time is not set")
@@ -35,6 +36,8 @@ func IsForkNextEpoch(genesisTime time.Time, genesisValidatorsRoot []byte) (bool,
 	return isForkEpoch, nil
 }
 
+// ForkDigestFromEpoch retrieves the fork digest from the current schedule determined
+// by the provided epoch.
 func ForkDigestFromEpoch(currentEpoch types.Epoch, genesisValidatorsRoot []byte) ([4]byte, error) {
 	if len(genesisValidatorsRoot) == 0 {
 		return [4]byte{}, errors.New("genesis validators root is not set")
@@ -102,6 +105,8 @@ func Fork(
 	}, nil
 }
 
+// RetrieveForkDataFromDigest performs the inverse, where it tries to determine the fork version
+// and epoch from a provided digest by looping through our current fork schedule.
 func RetrieveForkDataFromDigest(digest [4]byte, genesisValidatorsRoot []byte) ([4]byte, types.Epoch, error) {
 	fSchedule := params.BeaconConfig().ForkVersionSchedule
 	for v, e := range fSchedule {
