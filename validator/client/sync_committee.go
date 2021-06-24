@@ -8,7 +8,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -24,7 +24,7 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.S
 
 	v.waitOneThirdOrValidBlock(ctx, slot)
 
-	res, err := v.validatorClient.GetSyncMessageBlockRoot(ctx, &emptypb.Empty{})
+	res, err := v.validatorClientV2.GetSyncMessageBlockRoot(ctx, &emptypb.Empty{})
 	if err != nil {
 		log.WithError(err).Error("Could not request sync message block root to sign")
 		traceutil.AnnotateError(span, err)
@@ -58,13 +58,13 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.S
 		return
 	}
 
-	msg := &ethpb.SyncCommitteeMessage{
+	msg := &prysmv2.SyncCommitteeMessage{
 		Slot:           slot,
 		BlockRoot:      res.Root,
 		ValidatorIndex: duty.ValidatorIndex,
 		Signature:      sig.Marshal(),
 	}
-	if _, err := v.validatorClient.SubmitSyncMessage(ctx, msg); err != nil {
+	if _, err := v.validatorClientV2.SubmitSyncMessage(ctx, msg); err != nil {
 		log.WithError(err).Error("Could not submit sync committee message")
 		return
 	}
@@ -82,7 +82,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 		return
 	}
 
-	indexRes, err := v.validatorClient.GetSyncSubcommitteeIndex(ctx, &ethpb.SyncSubcommitteeIndexRequest{
+	indexRes, err := v.validatorClientV2.GetSyncSubcommitteeIndex(ctx, &prysmv2.SyncSubcommitteeIndexRequest{
 		PublicKey: pubKey[:],
 		Slot:      slot,
 	})
@@ -108,7 +108,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 	v.waitToSlotTwoThirds(ctx, slot)
 
 	for i, subnetID := range indexRes.Indices {
-		contribution, err := v.validatorClient.GetSyncCommitteeContribution(ctx, &ethpb.SyncCommitteeContributionRequest{
+		contribution, err := v.validatorClientV2.GetSyncCommitteeContribution(ctx, &prysmv2.SyncCommitteeContributionRequest{
 			Slot:      slot,
 			PublicKey: pubKey[:],
 			SubnetId:  subnetID,
@@ -118,7 +118,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 			return
 		}
 
-		contributionAndProof := &ethpb.ContributionAndProof{
+		contributionAndProof := &prysmv2.ContributionAndProof{
 			AggregatorIndex: duty.ValidatorIndex,
 			Contribution:    contribution,
 			SelectionProof:  selectionProofs[i],
@@ -129,7 +129,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 			return
 		}
 
-		if _, err := v.validatorClient.SubmitSignedContributionAndProof(ctx, &ethpb.SignedContributionAndProof{
+		if _, err := v.validatorClientV2.SubmitSignedContributionAndProof(ctx, &prysmv2.SignedContributionAndProof{
 			Message:   contributionAndProof,
 			Signature: sig,
 		}); err != nil {
@@ -167,7 +167,7 @@ func (v *validator) signSyncSelectionData(ctx context.Context, pubKey [48]byte, 
 }
 
 // This returns the signature of validator signing over sync committee contribution and proof object.
-func (v *validator) signContributionAndProof(ctx context.Context, pubKey [48]byte, c *ethpb.ContributionAndProof) ([]byte, error) {
+func (v *validator) signContributionAndProof(ctx context.Context, pubKey [48]byte, c *prysmv2.ContributionAndProof) ([]byte, error) {
 	d, err := v.domainData(ctx, helpers.SlotToEpoch(c.Contribution.Slot), params.BeaconConfig().DomainContributionAndProof[:])
 	if err != nil {
 		return nil, err

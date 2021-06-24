@@ -10,6 +10,7 @@ import (
 	ssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -70,7 +71,7 @@ func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att *
 
 // BroadcastAttestation broadcasts an attestation to the p2p network, the message is assumed to be
 // broadcasted to the current fork.
-func (s *Service) BroadcastSyncCommitteeMessage(ctx context.Context, subnet uint64, sMsg *eth.SyncCommitteeMessage) error {
+func (s *Service) BroadcastSyncCommitteeMessage(ctx context.Context, subnet uint64, sMsg *prysmv2.SyncCommitteeMessage) error {
 	ctx, span := trace.StartSpan(ctx, "p2p.BroadcastSyncCommitteeMessage")
 	defer span.End()
 	forkDigest, err := s.currentForkDigest()
@@ -132,7 +133,7 @@ func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *
 	}
 }
 
-func (s *Service) broadcastSyncCommittee(ctx context.Context, subnet uint64, sMsg *eth.SyncCommitteeMessage, forkDigest [4]byte) {
+func (s *Service) broadcastSyncCommittee(ctx context.Context, subnet uint64, sMsg *prysmv2.SyncCommitteeMessage, forkDigest [4]byte) {
 	ctx, span := trace.StartSpan(ctx, "p2p.broadcastSyncCommittee")
 	defer span.End()
 	ctx = trace.NewContext(context.Background(), span) // clear parent context / deadline.

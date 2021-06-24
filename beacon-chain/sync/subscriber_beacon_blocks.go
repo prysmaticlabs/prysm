@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"google.golang.org/protobuf/proto"
 )
@@ -71,8 +72,8 @@ func blockFromProto(msg proto.Message) (interfaces.SignedBeaconBlock, error) {
 			return nil, errors.Errorf("impossible condition triggered blk is not of *SignedBeaconBlock type.")
 		}
 		return interfaces.WrappedPhase0SignedBeaconBlock(blk), nil
-	case *ethpb.SignedBeaconBlockAltair:
-		blk, ok := msg.(*ethpb.SignedBeaconBlockAltair)
+	case *prysmv2.SignedBeaconBlock:
+		blk, ok := msg.(*prysmv2.SignedBeaconBlock)
 		if !ok {
 			return nil, errors.Errorf("impossible condition triggered blk is not of *SignedBeaconBlockAltair type.")
 		}

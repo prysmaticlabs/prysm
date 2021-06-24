@@ -5,6 +5,7 @@ package operation
 
 import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 )
 
 const (
@@ -48,10 +49,10 @@ type ExitReceivedData struct {
 
 // SyncCommReceivedData is the data sent with SyncCommMessageReceived events.
 type SyncCommReceivedData struct {
-	Message *ethpb.SyncCommitteeMessage
+	Message *prysmv2.SyncCommitteeMessage
 }
 
 // SyncContributionReceivedData is the data sent with SyncContributionReceived events.
 type SyncContributionReceivedData struct {
-	Contribution *ethpb.ContributionAndProof
+	Contribution *prysmv2.ContributionAndProof
 }

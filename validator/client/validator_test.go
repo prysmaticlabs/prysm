@@ -11,6 +11,7 @@ import (
 	"github.com/golang/mock/gomock"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -656,13 +657,13 @@ func TestRolesAt_OK(t *testing.T) {
 		gomock.Any(), // epoch
 	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-	m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+	m.validatorClientV2.EXPECT().GetSyncSubcommitteeIndex(
 		gomock.Any(), // ctx
-		&ethpb.SyncSubcommitteeIndexRequest{
+		&prysmv2.SyncSubcommitteeIndexRequest{
 			PublicKey: validatorKey.PublicKey().Marshal(),
 			Slot:      1,
 		},
-	).Return(&ethpb.SyncSubcommitteeIndexRespond{}, nil /*err*/)
+	).Return(&prysmv2.SyncSubcommitteeIndexResponse{}, nil /*err*/)
 
 	roleMap, err := v.RolesAt(context.Background(), 1)
 	require.NoError(t, err)
@@ -691,13 +692,13 @@ func TestRolesAt_OK(t *testing.T) {
 		},
 	}
 
-	m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
+	m.validatorClientV2.EXPECT().GetSyncSubcommitteeIndex(
 		gomock.Any(), // ctx
-		&ethpb.SyncSubcommitteeIndexRequest{
+		&prysmv2.SyncSubcommitteeIndexRequest{
 			PublicKey: validatorKey.PublicKey().Marshal(),
 			Slot:      31,
 		},
-	).Return(&ethpb.SyncSubcommitteeIndexRespond{}, nil /*err*/)
+	).Return(&prysmv2.SyncSubcommitteeIndexResponse{}, nil /*err*/)
 
 	roleMap, err = v.RolesAt(context.Background(), params.BeaconConfig().SlotsPerEpoch-1)
 	require.NoError(t, err)
