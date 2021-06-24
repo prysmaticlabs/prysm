@@ -597,8 +597,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_creack_pty",
         importpath = "github.com/creack/pty",
-        sum = "h1:uDmaGzcdjhF4i/plgjmEsriH11Y0o7RKapEf/LDaM3w=",
-        version = "v1.1.9",
+        sum = "h1:6pwm8kMQKCmgUg0ZHTm5+/YvRK0s3THD/28+T6/kk4A=",
+        version = "v1.1.7",
     )
     go_repository(
         name = "com_github_d4l3k_messagediff",
@@ -815,8 +815,9 @@ def prysm_deps():
         name = "com_github_ferranbt_fastssz",
         importpath = "github.com/ferranbt/fastssz",
         nofuzz = True,
-        sum = "h1:zhTRgKvm7CQxlGwJ7KfqT1AYDr2Q/caS6qrC7fwEtxU=",
-        version = "v0.0.0-20210526181520-7df50c8568f8",
+        replace = "github.com/rauljordan/fastssz",
+        sum = "h1:CoD/RaM9s8qfHA7jAqntW3jv+z9zPBXaxCaCByrKOmg=",
+        version = "v0.0.0-20210622230010-a131010e198f",
     )
 
     go_repository(
@@ -1373,6 +1374,12 @@ def prysm_deps():
         sum = "h1:YZ7UKsJv+hKjqGVUUbtE3HNj79Eln2oQ75tniF6iPt0=",
         version = "v0.8.2",
     )
+    go_repository(
+        name = "com_github_hashicorp_vault_sdk",
+        importpath = "github.com/hashicorp/vault/sdk",
+        sum = "h1:hvVswvMA9LvXwLBFDJLIoDBXi8hj90Q+gSS7vRYmLvQ=",
+        version = "v0.2.0",
+    )
 
     go_repository(
         name = "com_github_herumi_bls_eth_go_binary",
@@ -1786,6 +1793,13 @@ def prysm_deps():
         sum = "h1:0hzRabrMN4tSTvMfnL3SCv1ZGeAP23ynzodBgaHeMeg=",
         version = "v1.11.7",
     )
+
+    go_repository(
+        name = "com_github_klauspost_cpuid",
+        importpath = "github.com/klauspost/cpuid",
+        sum = "h1:CCtW0xUnWGVINKvE/WWOYKdsPV6mawAtvQuSl8guwQs=",
+        version = "v1.2.3",
+    )
     go_repository(
         name = "com_github_klauspost_cpuid_v2",
         importpath = "github.com/klauspost/cpuid/v2",
@@ -1850,8 +1864,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_kr_text",
         importpath = "github.com/kr/text",
-        sum = "h1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=",
-        version = "v0.2.0",
+        sum = "h1:45sCR5RtlFHMR4UwH9sdQ5TC8v0qDQCHnXt+kaKSTVE=",
+        version = "v0.1.0",
     )
     go_repository(
         name = "com_github_kubuxu_go_os_helper",
@@ -2295,6 +2309,13 @@ def prysm_deps():
         sum = "h1:62I3jR2EmQ4l5rM/4FEfDWcRD+abF5XlKShorW5LRoQ=",
         version = "v0.0.0-20190213212951-d06e56a500db",
     )
+
+    go_repository(
+        name = "com_github_mitchellh_copystructure",
+        importpath = "github.com/mitchellh/copystructure",
+        sum = "h1:vpKXTN4ewci03Vljg/q9QvCGUDttBOGBIa15WveJJGw=",
+        version = "v1.2.0",
+    )
     go_repository(
         name = "com_github_mitchellh_go_homedir",
         importpath = "github.com/mitchellh/go-homedir",
@@ -2327,6 +2348,12 @@ def prysm_deps():
         version = "v1.4.1",
     )
 
+    go_repository(
+        name = "com_github_mitchellh_reflectwalk",
+        importpath = "github.com/mitchellh/reflectwalk",
+        sum = "h1:G2LzWKi524PWgd3mLHV8Y5k7s6XUvT0Gef6zxSIeXaQ=",
+        version = "v1.0.2",
+    )
     go_repository(
         name = "com_github_modern_go_concurrent",
         importpath = "github.com/modern-go/concurrent",
@@ -2750,8 +2777,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",
         importpath = "github.com/prysmaticlabs/go-bitfield",
-        sum = "h1:n1fCZPIMlcNQ3iCN5w4vxmFFNWhEdEz3ICTerxjUFvA=",
-        version = "v0.0.0-20210515192923-def021850363",
+        sum = "h1:46gKr69IlRpv/ENdlzG0SWo5nMLKJxS3tI5NOSdZndQ=",
+        version = "v0.0.0-20210607200045-4da71aaf6c2d",
     )
     go_repository(
         name = "com_github_prysmaticlabs_prombbolt",
@@ -2762,8 +2789,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_prysmaticlabs_protoc_gen_go_cast",
         importpath = "github.com/prysmaticlabs/protoc-gen-go-cast",
-        sum = "h1:o79JO4UMwfc1hYbRO0fGkYD9mpLvN9pif7ez8jMLZiM=",
-        version = "v0.0.0-20210505221644-3b823fdaca7f",
+        sum = "h1:k7CCMwN7VooQ7GhfySnaVyI4/9+QbhJTdasoC6VOZOI=",
+        version = "v0.0.0-20210504233148-1e141af6a0a1",
     )
 
     go_repository(
