@@ -2,9 +2,8 @@
  * Explore DB contents
  *
  * Given a beacon-chain DB, This tool provides many option to
- * inspect and explore it.
- * - For every bucket, print the number of rows, bucket size, min/average/max size of values
- * - For a given bucket, decode and show the values of few rows (first few rows, last few rows)
+ * inspect and explore it. For every non-empty bucket, print
+ * the number of rows, bucket size,min/average/max size of values
  */
 
 package main
@@ -12,10 +11,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/dustin/go-humanize"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/dustin/go-humanize"
 
 	log "github.com/sirupsen/logrus"
 	bolt "go.etcd.io/bbolt"
@@ -23,19 +23,21 @@ import (
 
 var (
 	datadir        = flag.String("datadir", "", "Path to data directory.")
-	bucketStats    = flag.Bool("bucket-stats", true, "Show all the bucket stats")
-	bucketContents = flag.String("bucket-contents", "", "Show contents of a given bucket")
-	bucketName     = flag.String("bucket", "", "contents of the bucket to show")
-)
-
-const (
-	DatabaseFileName = "beaconchain.db"
+	dbName         = flag.String("dbname", "", "database name.")
+	bucketStats    = flag.Bool("bucket-stats", true, "Show all the bucket stats.")
+	bucketContents = flag.String("bucket-contents", "", "Show contents of a given bucket.")
+	bucketName     = flag.String("bucket", "", "contents of the bucket to show.")
 )
 
 func main() {
 	flag.Parse()
+
+	// Check for the mandatory flags.
 	if *datadir == "" {
-		log.Fatal("Please specify --datadir to read beaconchain.db")
+		log.Fatal("Please specify --datadir to read the database")
+	}
+	if *dbName == "" {
+		log.Fatal("Please specify --dbname to specify the database file.")
 	}
 
 	if *bucketStats == false {
@@ -49,7 +51,7 @@ func main() {
 	}
 
 	// check if the database file is present
-	dbName := filepath.Join(*datadir, DatabaseFileName)
+	dbName := filepath.Join(*datadir, *dbName)
 	if _, err := os.Stat(*datadir); os.IsNotExist(err) {
 		log.Fatalf("database file is not present, %v", err)
 	}
