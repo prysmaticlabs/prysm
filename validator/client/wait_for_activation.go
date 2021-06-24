@@ -101,12 +101,10 @@ func (v *validator) waitForActivation(ctx context.Context, accountsChangedChan <
 					return errors.Wrap(ctx.Err(), "context canceled, not waiting for activation anymore")
 				}
 
-				log.Error("Before ReloadPublicKeys")
 				validatingKeys, err = remoteKm.ReloadPublicKeys(ctx)
 				if err != nil {
 					return errors.Wrap(err, msgCouldNotFetchKeys)
 				}
-				log.Error("After ReloadPublicKeys")
 				statusRequestKeys := make([][]byte, len(validatingKeys))
 				for i := range validatingKeys {
 					statusRequestKeys[i] = validatingKeys[i][:]
