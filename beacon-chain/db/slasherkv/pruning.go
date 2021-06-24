@@ -149,11 +149,12 @@ func (s *Store) PruneAttestations(
 		log.Debugf("Pruned %d/%d epochs worth of attestations", epochAtCursor, endPruneEpoch-1)
 		if err := s.db.Update(func(tx *bolt.Tx) error {
 			rootsBkt := tx.Bucket(attestationDataRootsBucket)
+			attsBkt := tx.Bucket(attestationRecordsBucket)
 			c := rootsBkt.Cursor()
 
 			var lastPrunedEpoch, epochsPruned types.Epoch
 			// We begin a pruning iteration at starting from the first item in the bucket.
-			for k, _ := c.First(); k != nil; k, _ = c.Next() {
+			for k, v := c.First(); k != nil; k, v = c.Next() {
 				// We check the epoch from the current key in the database.
 				// If we have hit an epoch that is greater than the end epoch of the pruning process,
 				// we then completely exit the process as we are done.
@@ -171,6 +172,9 @@ func (s *Store) PruneAttestations(
 				// so we only mark an epoch as pruned if the epoch of the current object
 				// under the cursor has changed.
 				if err := rootsBkt.Delete(k); err != nil {
+					return err
+				}
+				if err := attsBkt.Delete(v); err != nil {
 					return err
 				}
 				if epochAtCursor == 0 {
