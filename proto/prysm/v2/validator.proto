@@ -21,6 +21,8 @@ import "google/protobuf/empty.proto";
 import "proto/eth/ext/options.proto";
 
 import "proto/eth/v1alpha1/validator.proto";
+import "proto/eth/v1alpha1/beacon_block.proto";
+import "proto/eth/v1alpha1/beacon_chain.proto";
 
 import "proto/prysm/v2/beacon_block.proto";
 import "proto/prysm/v2/sync_committee.proto";
@@ -103,6 +105,14 @@ service BeaconNodeValidatorAltair {
       body: "*"
     };
   }
+
+  // Server-side stream of all signed blocks as they are received by
+  // the beacon chain node.
+  rpc StreamBlocks(ethereum.eth.v1alpha1.StreamBlocksRequest) returns (stream StreamBlocksResponse) {
+    option (google.api.http) = {
+            get: "/prysm/v2/validator/blocks/stream"
+        };
+  }
 }
 
 // SyncMessageBlockRootResponse for beacon chain validator to retrieve and
@@ -134,4 +144,14 @@ message SyncSubcommitteeIndexResponse {
   // The subcommittee index itself.
   // If the total validator count is not sufficient, there could be more than one index.
   repeated uint64 indices = 1;
+}
+
+message StreamBlocksResponse {
+  oneof block {
+    // Representing a phase 0 block.
+    ethereum.eth.v1alpha1.SignedBeaconBlock phase0_block = 1 ;
+
+    // Representing an altair block.
+    SignedBeaconBlockAltair altair_block = 2;
+  }
 }
