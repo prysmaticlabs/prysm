@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/big"
+	"os"
 	"os/exec"
+	"path"
 	"strings"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
@@ -97,7 +99,15 @@ func NewValidatorNode(config *e2etypes.E2EConfig, validatorNum, index, offset in
 
 // Start starts a validator client.
 func (v *ValidatorNode) Start(ctx context.Context) error {
-	binaryPath, found := bazel.FindBinary("cmd/validator", "validator")
+	var pkg, target string
+	if v.config.UsePrysmShValidator {
+		pkg = ""
+		target = "prysm_sh"
+	} else {
+		pkg = "cmd/validator"
+		target = "validator"
+	}
+	binaryPath, found := bazel.FindBinary(pkg, target)
 	if !found {
 		return errors.New("validator binary not found")
 	}
@@ -135,8 +145,34 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 	args = append(args, featureconfig.E2EValidatorFlags...)
 	args = append(args, config.ValidatorFlags...)
 
+	if v.config.UsePrysmShValidator {
+		args = append([]string{"validator"}, args...)
+		log.Warning("Using latest release validator via prysm.sh")
+	}
+
 	cmd := exec.CommandContext(ctx, binaryPath, args...)
-	log.Infof("Starting validator client %d with flags: %s", index, strings.Join(args[2:], " "))
+
+	// Write stdout and stderr to log files.
+	stdout, err := os.Create(path.Join(e2e.TestParams.LogPath, fmt.Sprintf("validator_%d_stdout.log", index)))
+	if err != nil {
+		return err
+	}
+	stderr, err := os.Create(path.Join(e2e.TestParams.LogPath, fmt.Sprintf("validator_%d_stderr.log", index)))
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := stdout.Close(); err != nil {
+			log.WithError(err).Error("Failed to close stdout file")
+		}
+		if err := stderr.Close(); err != nil {
+			log.WithError(err).Error("Failed to close stderr file")
+		}
+	}()
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+
+	log.Infof("Starting validator client %d with flags: %s %s", index, binaryPath, strings.Join(args, " "))
 	if err = cmd.Start(); err != nil {
 		return err
 	}
