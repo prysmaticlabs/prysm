@@ -45,6 +45,7 @@ func (f *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/config/fork_schedule",
 		"/eth/v1/config/deposit_contract",
 		"/eth/v1/config/spec",
+		"/eth/v1/events",
 	}
 }
 
@@ -216,6 +217,13 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 		endpoint = gateway.Endpoint{
 			GetResponse: &specResponseJson{},
 			Err:         &gateway.DefaultErrorJson{},
+		}
+	case "/eth/v1/events":
+		endpoint = gateway.Endpoint{
+			Err: &gateway.DefaultErrorJson{},
+			Hooks: gateway.HookCollection{
+				CustomHandlers: []gateway.CustomHandler{handleEvents},
+			},
 		}
 	default:
 		return nil, errors.New("invalid path")
