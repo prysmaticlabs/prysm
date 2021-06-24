@@ -209,9 +209,9 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	c := params.BeaconConfig()
-	c.ForkVersionSchedule = map[types.Epoch][]byte{
-		0: params.BeaconConfig().GenesisForkVersion,
-		1: {0, 0, 0, 1},
+	c.ForkVersionSchedule = map[[4]byte]types.Epoch{
+		bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): 0,
+		{0, 0, 0, 1}: 1,
 	}
 	nextForkEpoch := types.Epoch(1)
 	nextForkVersion := []byte{0, 0, 0, 1}
