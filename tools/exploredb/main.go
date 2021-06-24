@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
-
 	log "github.com/sirupsen/logrus"
 	bolt "go.etcd.io/bbolt"
 )
@@ -62,7 +61,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("could not open db, %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		err := db.Close()
+		log.Fatalf("could not close database file, %v", err)
+	}()
 
 	// get a list of all the existing buckets
 	buckets := make(map[string]*bolt.Bucket)
@@ -88,9 +90,9 @@ func showBucketStats(db *bolt.DB, buckets map[string]*bolt.Bucket) {
 		minKeySize := ^uint64(0)
 		maxKeySize := uint64(0)
 		totalKeySize := uint64(0)
-		db.View(func(tx *bolt.Tx) error {
+		if err := db.View(func(tx *bolt.Tx) error {
 			b := tx.Bucket([]byte(bName))
-			b.ForEach(func(k, v []byte) error {
+			if err := b.ForEach(func(k, v []byte) error {
 				count++
 				valueSize := uint64(len(v))
 				if valueSize < minValueSize {
@@ -110,9 +112,15 @@ func showBucketStats(db *bolt.DB, buckets map[string]*bolt.Bucket) {
 				}
 				totalKeySize += uint64(len(k))
 				return nil
-			})
+			}); err != nil {
+				log.Errorf("could not process row %d for bucket: %s, %v", count, bName, err)
+				return err
+			}
 			return nil
-		})
+		}); err != nil {
+			log.Errorf("could not get stats for bucket: %s, %v", bName, err)
+			continue
+		}
 
 		if count != 0 {
 			averageValueSize := totalValueSize / count
@@ -122,7 +130,6 @@ func showBucketStats(db *bolt.DB, buckets map[string]*bolt.Bucket) {
 			fmt.Println("TotalBucketSize  = ", humanize.Bytes(totalValueSize+totalKeySize))
 			fmt.Println("KeySize          = ", humanize.Bytes(totalKeySize), "(min = "+humanize.Bytes(minKeySize)+", avg = "+humanize.Bytes(averageKeySize)+", max = "+humanize.Bytes(maxKeySize)+")")
 			fmt.Println("ValueSize        = ", humanize.Bytes(totalValueSize), "(min = "+humanize.Bytes(minValueSize)+", avg = "+humanize.Bytes(averageValueSize)+", max = "+humanize.Bytes(maxValueSize)+")")
-
 		}
 	}
 }
