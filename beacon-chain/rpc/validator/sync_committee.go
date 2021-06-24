@@ -192,13 +192,17 @@ func (vs *Server) GetSyncCommitteeContribution(ctx context.Context, req *ethpb.S
 			}
 		}
 	}
-	aggregatedSig := bls.AggregateSignatures(sigs)
+	aggregatedSig := make([]byte, 96)
+	aggregatedSig[0] = 0xC0
+	if len(sigs) != 0 {
+		aggregatedSig = bls.AggregateSignatures(sigs).Marshal()
+	}
 	contribution := &ethpb.SyncCommitteeContribution{
 		Slot:              headState.Slot(),
 		BlockRoot:         headRoot,
 		SubcommitteeIndex: req.SubnetId,
 		AggregationBits:   bits,
-		Signature:         aggregatedSig.Marshal(),
+		Signature:         aggregatedSig,
 	}
 
 	return contribution, nil
@@ -219,7 +223,7 @@ func (vs *Server) SubmitSignedContributionAndProof(ctx context.Context, s *ethpb
 
 	// Wait for p2p broadcast to complete and return the first error (if any)
 	err := errs.Wait()
-	return nil, err
+	return &emptypb.Empty{}, err
 }
 
 var syncCommitteeHeadStateCache = newSyncCommitteeHeadState()
