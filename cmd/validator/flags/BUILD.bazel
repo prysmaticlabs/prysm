@@ -10,6 +10,7 @@ go_library(
     visibility = [
         "//cmd/validator:__subpackages__",
         "//validator:__subpackages__",
+        "//endtoend:__subpackages__",
     ],
     deps = [
         "//shared/fileutil:go_default_library",

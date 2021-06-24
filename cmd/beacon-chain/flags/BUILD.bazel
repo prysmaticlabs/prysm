@@ -13,6 +13,7 @@ go_library(
         "//beacon-chain:__subpackages__",
         "//cmd/beacon-chain:__subpackages__",
         "//shared/gateway:__pkg__",
+        "//endtoend:__subpackages__",
     ],
     deps = [
         "//shared/cmd:go_default_library",
