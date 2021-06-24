@@ -18,6 +18,13 @@ func UseMainnetConfig() {
 	beaconConfig = MainnetConfig()
 }
 
+const (
+	// Genesis Fork Epoch for the mainnet config.
+	genesisForkEpoch = 0
+	// Altair Fork Epoch for mainnet config.
+	altairForkEpoch = math.MaxUint64
+)
+
 var mainnetNetworkConfig = &NetworkConfig{
 	GossipMaxSize:                   1 << 20, // 1 MiB
 	MaxChunkSize:                    1 << 20, // 1 MiB
@@ -31,6 +38,7 @@ var mainnetNetworkConfig = &NetworkConfig{
 	MessageDomainValidSnappy:        [4]byte{01, 00, 00, 00},
 	ETH2Key:                         "eth2",
 	AttSubnetKey:                    "attnets",
+	SyncCommsSubnetKey:              "syncnets",
 	MinimumPeersInSubnet:            4,
 	MinimumPeersInSubnetSearch:      20,
 	ContractDeploymentBlock:         11184524, // Note: contract was deployed in block 11052984 but no transactions were sent until 11184524.
@@ -178,12 +186,12 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	// Fork related values.
 	GenesisForkVersion: []byte{0, 0, 0, 0},
 	AltairForkVersion:  []byte{1, 0, 0, 0},
-	AltairForkEpoch:    math.MaxUint64,     // Set to Max Uint64 for now.
-	NextForkVersion:    []byte{0, 0, 0, 0}, // Set to GenesisForkVersion unless there is a scheduled fork
-	NextForkEpoch:      1<<64 - 1,          // Set to FarFutureEpoch unless there is a scheduled fork.
-	ForkVersionSchedule: map[types.Epoch][]byte{
-		0:              {0, 0, 0, 0},
-		math.MaxUint64: {1, 0, 0, 0},
+	AltairForkEpoch:    altairForkEpoch,    // Set to Max Uint64 for now.
+	NextForkVersion:    []byte{1, 0, 0, 0}, // Set to GenesisForkVersion unless there is a scheduled fork
+	NextForkEpoch:      altairForkEpoch,    // Set to FarFutureEpoch unless there is a scheduled fork.
+	ForkVersionSchedule: map[[4]byte]types.Epoch{
+		{0, 0, 0, 0}: genesisForkEpoch,
+		{1, 0, 0, 0}: altairForkEpoch,
 		// Any further forks must be specified here by their epoch number.
 	},
 
