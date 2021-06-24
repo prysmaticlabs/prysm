@@ -319,9 +319,9 @@ func TestGetDepositContract(t *testing.T) {
 
 func TestForkSchedule_Ok(t *testing.T) {
 	genesisForkVersion := []byte("Genesis")
-	firstForkVersion, firstForkEpoch := []byte("First"), types.Epoch(100)
-	secondForkVersion, secondForkEpoch := []byte("Second"), types.Epoch(200)
-	thirdForkVersion, thirdForkEpoch := []byte("Third"), types.Epoch(300)
+	firstForkVersion, firstForkEpoch := []byte("Firs"), types.Epoch(100)
+	secondForkVersion, secondForkEpoch := []byte("Seco"), types.Epoch(200)
+	thirdForkVersion, thirdForkEpoch := []byte("Thir"), types.Epoch(300)
 
 	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
@@ -340,7 +340,7 @@ func TestForkSchedule_Ok(t *testing.T) {
 	require.Equal(t, 3, len(resp.Data))
 	fork := resp.Data[0]
 	assert.DeepEqual(t, genesisForkVersion, fork.PreviousVersion)
-	assert.DeepEqual(t, firstForkVersion, fork.CurrentVersion)
+	assert.DeepEqual(t, string(firstForkVersion), string(fork.CurrentVersion))
 	assert.Equal(t, firstForkEpoch, fork.Epoch)
 	fork = resp.Data[1]
 	assert.DeepEqual(t, firstForkVersion, fork.PreviousVersion)
