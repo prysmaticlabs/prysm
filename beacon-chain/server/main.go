@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	joonix "github.com/joonix/log"
+	gateway2 "github.com/prysmaticlabs/prysm/beacon-chain/gateway"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/apimiddleware"
-	gatewayhelper "github.com/prysmaticlabs/prysm/beacon-chain/shared/gateway"
 	"github.com/prysmaticlabs/prysm/shared/gateway"
 	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
 	"github.com/sirupsen/logrus"
@@ -38,7 +38,7 @@ func main() {
 		log.SetLevel(logrus.DebugLevel)
 	}
 
-	gatewayConfig := gatewayhelper.DefaultConfig(*enableDebugRPCEndpoints)
+	gatewayConfig := gateway2.DefaultConfig(*enableDebugRPCEndpoints)
 
 	gw := gateway.New(
 		context.Background(),
