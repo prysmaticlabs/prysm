@@ -455,6 +455,45 @@ func (ssz *beaconStateSSZResponseJson) SSZData() string {
 	return ssz.Data
 }
 
+// TODO: Documentation
+// ---------------
+// Events.
+// ---------------
+
+type eventHeadJson struct {
+	Slot                      string `json:"slot"`
+	Block                     string `json:"block" hex:"true"`
+	State                     string `json:"state" hex:"true"`
+	EpochTransition           bool   `json:"epoch_transition"`
+	PreviousDutyDependentRoot string `json:"previous_duty_dependent_root" hex:"true"`
+	CurrentDutyDependentRoot  string `json:"current_duty_dependent_root" hex:"true"`
+}
+
+type receivedBlockDataJson struct {
+	Slot  string `json:"slot"`
+	Block string `json:"block" hex:"true"`
+}
+
+type aggregatedAttReceivedDataJson struct {
+	Aggregate *attestationJson `json:"aggregate"`
+}
+
+type eventFinalizedCheckpointJson struct {
+	Block string `json:"block" hex:"true"`
+	State string `json:"state" hex:"true"`
+	Epoch string `json:"epoch"`
+}
+
+type eventChainReorgJson struct {
+	Slot         string `json:"slot"`
+	Depth        string `json:"depth"`
+	OldHeadBlock string `json:"old_head_block" hex:"true"`
+	NewHeadBlock string `json:"old_head_state" hex:"true"`
+	OldHeadState string `json:"new_head_block" hex:"true"`
+	NewHeadState string `json:"new_head_state" hex:"true"`
+	Epoch        string `json:"epoch"`
+}
+
 // ---------------
 // Error handling.
 // ---------------
@@ -469,4 +508,9 @@ type submitAttestationsErrorJson struct {
 type singleAttestationVerificationFailureJson struct {
 	Index   int    `json:"index"`
 	Message string `json:"message"`
+}
+
+type eventErrorJson struct {
+	StatusCode int    `json:"status_code"`
+	Message    string `json:"message"`
 }
