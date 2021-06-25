@@ -46,13 +46,13 @@ func main() {
 		ethpb.RegisterNodeHandler,
 		ethpb.RegisterBeaconChainHandler,
 		ethpb.RegisterBeaconNodeValidatorHandler,
-		ethpbv1.RegisterEventsHandler,
 		pbrpc.RegisterHealthHandler,
 	}
 	v1Registrations := []gateway.PbHandlerRegistration{
 		ethpbv1.RegisterBeaconNodeHandler,
 		ethpbv1.RegisterBeaconChainHandler,
 		ethpbv1.RegisterBeaconValidatorHandler,
+		ethpbv1.RegisterEventsHandler,
 	}
 	if *enableDebugRPCEndpoints {
 		v1Alpha1Registrations = append(v1Alpha1Registrations, pbrpc.RegisterDebugHandler)
