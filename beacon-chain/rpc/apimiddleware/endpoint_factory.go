@@ -75,8 +75,9 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 		}
 	case "/eth/v1/beacon/states/{state_id}/validators":
 		endpoint = gateway.Endpoint{
-			GetResponse: &stateValidatorResponseJson{},
-			Err:         &gateway.DefaultErrorJson{},
+			GetRequestQueryParams: []gateway.QueryParam{{Name: "id", Hex: true}, {Name: "status", Enum: true}},
+			GetResponse:           &stateValidatorResponseJson{},
+			Err:                   &gateway.DefaultErrorJson{},
 		}
 	case "/eth/v1/beacon/states/{state_id}/validator_balances":
 		endpoint = gateway.Endpoint{
@@ -162,8 +163,9 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 		}
 	case "/eth/v1/node/peers":
 		endpoint = gateway.Endpoint{
-			GetResponse: &peersResponseJson{},
-			Err:         &gateway.DefaultErrorJson{},
+			GetRequestQueryParams: []gateway.QueryParam{{Name: "state", Enum: true}, {Name: "direction", Enum: true}},
+			GetResponse:           &peersResponseJson{},
+			Err:                   &gateway.DefaultErrorJson{},
 		}
 	case "/eth/v1/node/peers/{peer_id}":
 		endpoint = gateway.Endpoint{
