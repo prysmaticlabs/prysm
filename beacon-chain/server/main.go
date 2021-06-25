@@ -9,16 +9,12 @@ import (
 	"net/http"
 	"strings"
 
-	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	joonix "github.com/joonix/log"
+	beaconGateway "github.com/prysmaticlabs/prysm/beacon-chain/gateway"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/apimiddleware"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/gateway"
 	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
 	"github.com/sirupsen/logrus"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 var (
@@ -42,69 +38,12 @@ func main() {
 		log.SetLevel(logrus.DebugLevel)
 	}
 
-	v1Alpha1Registrations := []gateway.PbHandlerRegistration{
-		ethpb.RegisterNodeHandler,
-		ethpb.RegisterBeaconChainHandler,
-		ethpb.RegisterBeaconNodeValidatorHandler,
-		pbrpc.RegisterHealthHandler,
-	}
-	v1Registrations := []gateway.PbHandlerRegistration{
-		ethpbv1.RegisterBeaconNodeHandler,
-		ethpbv1.RegisterBeaconChainHandler,
-		ethpbv1.RegisterBeaconValidatorHandler,
-		ethpbv1.RegisterEventsHandler,
-	}
-	if *enableDebugRPCEndpoints {
-		v1Alpha1Registrations = append(v1Alpha1Registrations, pbrpc.RegisterDebugHandler)
-		v1Registrations = append(v1Registrations, ethpbv1.RegisterBeaconDebugHandler)
-
-	}
-	v1Alpha1Mux := gwruntime.NewServeMux(
-		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
-			Marshaler: &gwruntime.JSONPb{
-				MarshalOptions: protojson.MarshalOptions{
-					EmitUnpopulated: true,
-				},
-				UnmarshalOptions: protojson.UnmarshalOptions{
-					DiscardUnknown: true,
-				},
-			},
-		}),
-		gwruntime.WithMarshalerOption(
-			"text/event-stream", &gwruntime.EventSourceJSONPb{},
-		),
-	)
-	v1Mux := gwruntime.NewServeMux(
-		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
-			Marshaler: &gwruntime.JSONPb{
-				MarshalOptions: protojson.MarshalOptions{
-					UseProtoNames:   true,
-					EmitUnpopulated: true,
-				},
-				UnmarshalOptions: protojson.UnmarshalOptions{
-					DiscardUnknown: true,
-				},
-			},
-		}),
-	)
-	muxHandler := func(h http.Handler, w http.ResponseWriter, req *http.Request) {
-		h.ServeHTTP(w, req)
-	}
-	v1Alpha1PbHandler := gateway.PbMux{
-		Registrations: v1Alpha1Registrations,
-		Patterns:      []string{"/eth/v1alpha1/"},
-		Mux:           v1Alpha1Mux,
-	}
-	v1PbHandler := gateway.PbMux{
-		Registrations: v1Registrations,
-		Patterns:      []string{"/eth/v1/"},
-		Mux:           v1Mux,
-	}
+	gatewayConfig := beaconGateway.DefaultConfig(*enableDebugRPCEndpoints)
 
 	gw := gateway.New(
 		context.Background(),
-		[]gateway.PbMux{v1Alpha1PbHandler, v1PbHandler},
-		muxHandler,
+		[]gateway.PbMux{gatewayConfig.V1Alpha1PbMux, gatewayConfig.V1PbMux},
+		gatewayConfig.Handler,
 		*beaconRPC,
 		fmt.Sprintf("%s:%d", *host, *port),
 	).WithAllowedOrigins(strings.Split(*allowedOrigins, ",")).

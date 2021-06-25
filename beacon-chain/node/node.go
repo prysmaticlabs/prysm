@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -16,7 +15,6 @@ import (
 	"syscall"
 
 	"github.com/ethereum/go-ethereum/common"
-	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
@@ -25,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
+	gateway2 "github.com/prysmaticlabs/prysm/beacon-chain/gateway"
 	interopcoldstart "github.com/prysmaticlabs/prysm/beacon-chain/interop-cold-start"
 	"github.com/prysmaticlabs/prysm/beacon-chain/node/registration"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
@@ -38,9 +37,6 @@ import (
 	regularsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/backuputil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -55,7 +51,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 const testSkipPowFlag = "test-skip-pow"
@@ -661,69 +656,12 @@ func (b *BeaconNode) registerGRPCGateway() error {
 	selfCert := b.cliCtx.String(flags.CertFlag.Name)
 	maxCallSize := b.cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 
-	v1Alpha1Registrations := []gateway.PbHandlerRegistration{
-		ethpb.RegisterNodeHandler,
-		ethpb.RegisterBeaconChainHandler,
-		ethpb.RegisterBeaconNodeValidatorHandler,
-		pbrpc.RegisterHealthHandler,
-	}
-	v1Registrations := []gateway.PbHandlerRegistration{
-		ethpbv1.RegisterBeaconNodeHandler,
-		ethpbv1.RegisterBeaconChainHandler,
-		ethpbv1.RegisterBeaconValidatorHandler,
-		ethpbv1.RegisterEventsHandler,
-	}
-	if enableDebugRPCEndpoints {
-		v1Alpha1Registrations = append(v1Alpha1Registrations, pbrpc.RegisterDebugHandler)
-		v1Registrations = append(v1Registrations, ethpbv1.RegisterBeaconDebugHandler)
-
-	}
-	v1Alpha1Mux := gwruntime.NewServeMux(
-		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
-			Marshaler: &gwruntime.JSONPb{
-				MarshalOptions: protojson.MarshalOptions{
-					EmitUnpopulated: true,
-				},
-				UnmarshalOptions: protojson.UnmarshalOptions{
-					DiscardUnknown: true,
-				},
-			},
-		}),
-		gwruntime.WithMarshalerOption(
-			"text/event-stream", &gwruntime.EventSourceJSONPb{},
-		),
-	)
-	v1Mux := gwruntime.NewServeMux(
-		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
-			Marshaler: &gwruntime.JSONPb{
-				MarshalOptions: protojson.MarshalOptions{
-					UseProtoNames:   true,
-					EmitUnpopulated: true,
-				},
-				UnmarshalOptions: protojson.UnmarshalOptions{
-					DiscardUnknown: true,
-				},
-			},
-		}),
-	)
-	muxHandler := func(h http.Handler, w http.ResponseWriter, req *http.Request) {
-		h.ServeHTTP(w, req)
-	}
-	v1Alpha1PbHandler := gateway.PbMux{
-		Registrations: v1Alpha1Registrations,
-		Patterns:      []string{"/eth/v1alpha1/"},
-		Mux:           v1Alpha1Mux,
-	}
-	v1PbHandler := gateway.PbMux{
-		Registrations: v1Registrations,
-		Patterns:      []string{"/eth/v1/"},
-		Mux:           v1Mux,
-	}
+	gatewayConfig := gateway2.DefaultConfig(enableDebugRPCEndpoints)
 
 	g := gateway.New(
 		b.ctx,
-		[]gateway.PbMux{v1Alpha1PbHandler, v1PbHandler},
-		muxHandler,
+		[]gateway.PbMux{gatewayConfig.V1Alpha1PbMux, gatewayConfig.V1PbMux},
+		gatewayConfig.Handler,
 		selfAddress,
 		gatewayAddress,
 	).WithAllowedOrigins(allowedOrigins).
