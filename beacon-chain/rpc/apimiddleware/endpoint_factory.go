@@ -21,6 +21,7 @@ func (f *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/beacon/states/{state_id}/fork",
 		"/eth/v1/beacon/states/{state_id}/finality_checkpoints",
 		"/eth/v1/beacon/states/{state_id}/validators",
+		"/eth/v1/beacon/states/{state_id}/validators/{validator_id}",
 		"/eth/v1/beacon/states/{state_id}/validator_balances",
 		"/eth/v1/beacon/states/{state_id}/committees",
 		"/eth/v1/beacon/headers",
@@ -76,8 +77,13 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 	case "/eth/v1/beacon/states/{state_id}/validators":
 		endpoint = gateway.Endpoint{
 			GetRequestQueryParams: []gateway.QueryParam{{Name: "id", Hex: true}, {Name: "status", Enum: true}},
-			GetResponse:           &stateValidatorResponseJson{},
+			GetResponse:           &stateValidatorsResponseJson{},
 			Err:                   &gateway.DefaultErrorJson{},
+		}
+	case "/eth/v1/beacon/states/{state_id}/validators/{validator_id}":
+		endpoint = gateway.Endpoint{
+			GetResponse: &stateValidatorResponseJson{},
+			Err:         &gateway.DefaultErrorJson{},
 		}
 	case "/eth/v1/beacon/states/{state_id}/validator_balances":
 		endpoint = gateway.Endpoint{
