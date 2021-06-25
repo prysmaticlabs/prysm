@@ -392,6 +392,21 @@ func TestFeed_Send(t *testing.T) {
 			},
 			expectPanic: false,
 		},
+		{
+			name:   "concrete types implementing the same interface",
+			evFeed: new(Feed),
+			testSetup: func(fd *Feed) {
+				testChan := make(chan testFeed, 1)
+				fd.Subscribe(testChan)
+			},
+			obj: testFeed3{
+				a: 0,
+				b: "",
+				c: []byte{'A'},
+				d: []byte{'B'},
+			},
+			expectPanic: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
