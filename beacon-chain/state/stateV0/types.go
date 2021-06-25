@@ -76,7 +76,7 @@ var fieldMap map[fieldIndex]dataType
 // operations can be performed on state.
 var ErrNilInnerState = errors.New("nil inner state")
 
-// BeaconState defines a struct containing utilities for the eth2 chain state, defining
+// BeaconState defines a struct containing utilities for the Ethereum Beacon Chain state, defining
 // getters and setters for its respective values and helpful functions such as HashTreeRoot().
 type BeaconState struct {
 	state                 *pbp2p.BeaconState

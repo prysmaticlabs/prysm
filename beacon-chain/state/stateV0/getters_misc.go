@@ -159,7 +159,7 @@ func (b *BeaconState) balancesLength() int {
 }
 
 // RootsArrayHashTreeRoot computes the Merkle root of arrays of 32-byte hashes, such as [64][32]byte
-// according to the Simple Serialize specification of eth2.
+// according to the Simple Serialize specification of Ethereum.
 func RootsArrayHashTreeRoot(vals [][]byte, length uint64, fieldName string) ([32]byte, error) {
 	if featureconfig.Get().EnableSSZCache {
 		return cachedHasher.arraysRoot(vals, length, fieldName)
