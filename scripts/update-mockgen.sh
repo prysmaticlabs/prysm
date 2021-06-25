@@ -24,5 +24,3 @@ done
 
 goimports -w "$mock_path/."
 gofmt -s -w "$mock_path/."
-
-GO11MODULE=on mockgen -package=mock -destination=shared/mock/beacon_validator_client_v2_mock.go github.com/prysmaticlabs/prysm/proto/prysm/v2 BeaconNodeValidatorAltairClient

@@ -34,7 +34,7 @@ func TestFork(t *testing.T) {
 				cfg := params.BeaconConfig()
 				cfg.GenesisForkVersion = []byte{'A', 'B', 'C', 'D'}
 				cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{
-					[4]byte{'A', 'B', 'C', 'D'}: 0,
+					{'A', 'B', 'C', 'D'}: 0,
 				}
 				params.OverrideBeaconConfig(cfg)
 			},
@@ -53,8 +53,8 @@ func TestFork(t *testing.T) {
 				cfg.GenesisForkVersion = []byte{'A', 'B', 'C', 'D'}
 				cfg.AltairForkVersion = []byte{'A', 'B', 'C', 'F'}
 				cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{
-					[4]byte{'A', 'B', 'C', 'D'}: 0,
-					[4]byte{'A', 'B', 'C', 'F'}: 10,
+					{'A', 'B', 'C', 'D'}: 0,
+					{'A', 'B', 'C', 'F'}: 10,
 				}
 				params.OverrideBeaconConfig(cfg)
 			},
@@ -73,8 +73,8 @@ func TestFork(t *testing.T) {
 				cfg.GenesisForkVersion = []byte{'A', 'B', 'C', 'D'}
 				cfg.AltairForkVersion = []byte{'A', 'B', 'C', 'F'}
 				cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{
-					[4]byte{'A', 'B', 'C', 'D'}: 0,
-					[4]byte{'A', 'B', 'C', 'F'}: 10,
+					{'A', 'B', 'C', 'D'}: 0,
+					{'A', 'B', 'C', 'F'}: 10,
 				}
 				params.OverrideBeaconConfig(cfg)
 			},
@@ -94,8 +94,8 @@ func TestFork(t *testing.T) {
 				cfg.GenesisForkVersion = []byte{'A', 'B', 'C', 'D'}
 				cfg.AltairForkVersion = []byte{'A', 'B', 'C', 'F'}
 				cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{
-					[4]byte{'A', 'B', 'C', 'D'}: 0,
-					[4]byte{'A', 'B', 'C', 'F'}: 10,
+					{'A', 'B', 'C', 'D'}: 0,
+					{'A', 'B', 'C', 'F'}: 10,
 				}
 				params.OverrideBeaconConfig(cfg)
 			},
@@ -114,9 +114,9 @@ func TestFork(t *testing.T) {
 				cfg := params.BeaconConfig()
 				cfg.GenesisForkVersion = []byte{'A', 'B', 'C', 'D'}
 				cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{
-					[4]byte{'A', 'B', 'C', 'D'}: 0,
-					[4]byte{'A', 'B', 'C', 'F'}: 10,
-					[4]byte{'A', 'B', 'C', 'Z'}: 100,
+					{'A', 'B', 'C', 'D'}: 0,
+					{'A', 'B', 'C', 'F'}: 10,
+					{'A', 'B', 'C', 'Z'}: 100,
 				}
 				params.OverrideBeaconConfig(cfg)
 			},
@@ -134,9 +134,9 @@ func TestFork(t *testing.T) {
 				cfg := params.BeaconConfig()
 				cfg.GenesisForkVersion = []byte{'A', 'B', 'C', 'D'}
 				cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{
-					[4]byte{'A', 'B', 'C', 'D'}: 0,
-					[4]byte{'A', 'B', 'C', 'F'}: 10,
-					[4]byte{'A', 'B', 'C', 'Z'}: 100,
+					{'A', 'B', 'C', 'D'}: 0,
+					{'A', 'B', 'C', 'F'}: 10,
+					{'A', 'B', 'C', 'Z'}: 100,
 				}
 				params.OverrideBeaconConfig(cfg)
 			},
@@ -162,9 +162,9 @@ func TestRetrieveForkDataFromDigest(t *testing.T) {
 	cfg := params.BeaconConfig()
 	cfg.GenesisForkVersion = []byte{'A', 'B', 'C', 'D'}
 	cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{
-		[4]byte{'A', 'B', 'C', 'D'}: 0,
-		[4]byte{'A', 'B', 'C', 'F'}: 10,
-		[4]byte{'A', 'B', 'C', 'Z'}: 100,
+		{'A', 'B', 'C', 'D'}: 0,
+		{'A', 'B', 'C', 'F'}: 10,
+		{'A', 'B', 'C', 'Z'}: 100,
 	}
 	params.OverrideBeaconConfig(cfg)
 	genValRoot := [32]byte{'A', 'B', 'C', 'D'}
@@ -190,9 +190,9 @@ func TestIsForkNextEpoch(t *testing.T) {
 	cfg := params.BeaconConfig()
 	cfg.GenesisForkVersion = []byte{'A', 'B', 'C', 'D'}
 	cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{
-		[4]byte{'A', 'B', 'C', 'D'}: 0,
-		[4]byte{'A', 'B', 'C', 'F'}: 10,
-		[4]byte{'A', 'B', 'C', 'Z'}: 100,
+		{'A', 'B', 'C', 'D'}: 0,
+		{'A', 'B', 'C', 'F'}: 10,
+		{'A', 'B', 'C', 'Z'}: 100,
 	}
 	genTimeCreator := func(epoch types.Epoch) time.Time {
 		return time.Now().Add(-time.Duration(uint64(params.BeaconConfig().SlotsPerEpoch)*uint64(epoch)*params.BeaconConfig().SecondsPerSlot) * time.Second)

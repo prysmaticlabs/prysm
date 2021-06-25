@@ -138,6 +138,26 @@ func (mr *MockBeaconNodeValidatorAltairClientMockRecorder) ProposeBlock(arg0, ar
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProposeBlock", reflect.TypeOf((*MockBeaconNodeValidatorAltairClient)(nil).ProposeBlock), varargs...)
 }
 
+// StreamBlocks mocks base method.
+func (m *MockBeaconNodeValidatorAltairClient) StreamBlocks(arg0 context.Context, arg1 *eth.StreamBlocksRequest, arg2 ...grpc.CallOption) (v2.BeaconNodeValidatorAltair_StreamBlocksClient, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "StreamBlocks", varargs...)
+	ret0, _ := ret[0].(v2.BeaconNodeValidatorAltair_StreamBlocksClient)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StreamBlocks indicates an expected call of StreamBlocks.
+func (mr *MockBeaconNodeValidatorAltairClientMockRecorder) StreamBlocks(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamBlocks", reflect.TypeOf((*MockBeaconNodeValidatorAltairClient)(nil).StreamBlocks), varargs...)
+}
+
 // SubmitSignedContributionAndProof mocks base method.
 func (m *MockBeaconNodeValidatorAltairClient) SubmitSignedContributionAndProof(arg0 context.Context, arg1 *v2.SignedContributionAndProof, arg2 ...grpc.CallOption) (*emptypb.Empty, error) {
 	m.ctrl.T.Helper()
