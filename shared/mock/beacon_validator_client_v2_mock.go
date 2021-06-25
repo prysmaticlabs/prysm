@@ -6,12 +6,13 @@ package mock
 
 import (
 	context "context"
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	v2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	grpc "google.golang.org/grpc"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
-	reflect "reflect"
 )
 
 // MockBeaconNodeValidatorAltairClient is a mock of BeaconNodeValidatorAltairClient interface
