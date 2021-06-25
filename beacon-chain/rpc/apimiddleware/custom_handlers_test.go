@@ -161,7 +161,7 @@ func TestReceiveEvents(t *testing.T) {
 		require.NoError(t, err)
 		msg := &sse.Event{
 			Data:  bData,
-			Event: []byte(eventsv1.FinalizedCheckpointTopic),
+			Event: []byte(events.FinalizedCheckpointTopic),
 		}
 		ch <- msg
 		time.Sleep(time.Second)
