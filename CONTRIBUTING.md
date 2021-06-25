@@ -175,7 +175,7 @@ We consider two types of contributions to our repo and categorize them as follow
 
 ### Part-Time Contributors
 
-Anyone can become a part-time contributor and help out on implementing eth2. The responsibilities of a part-time contributor include:
+Anyone can become a part-time contributor and help out on implementing Ethereum consensus. The responsibilities of a part-time contributor include:
 
 -   Engaging in Gitter conversations, asking the questions on how to begin contributing to the project
 -   Opening up github issues to express interest in code to implement

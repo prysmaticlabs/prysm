@@ -46,7 +46,7 @@ var processExitFunc = func(ctx context.Context, s iface.BeaconState, blk interfa
 	return b.ProcessVoluntaryExits(ctx, s, blk.Block().Body().VoluntaryExits())
 }
 
-// This defines the processing block routine as outlined in eth2 spec:
+// This defines the processing block routine as outlined in the Ethereum Beacon Chain spec:
 // https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#block-processing
 var processingPipeline = []processFunc{
 	b.ProcessBlockHeader,

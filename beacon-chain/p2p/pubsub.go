@@ -123,7 +123,7 @@ func (s *Service) peerInspector(peerMap map[peer.ID]*pubsub.PeerScoreSnapshot) {
 
 // Content addressable ID function.
 //
-// ETH2 spec defines the message ID as:
+// Ethereum Beacon Chain spec defines the message ID as:
 //    The `message-id` of a gossipsub message MUST be the following 20 byte value computed from the message data:
 //    If `message.data` has a valid snappy decompression, set `message-id` to the first 20 bytes of the `SHA256` hash of
 //    the concatenation of `MESSAGE_DOMAIN_VALID_SNAPPY` with the snappy decompressed message data,
