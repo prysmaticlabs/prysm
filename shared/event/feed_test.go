@@ -320,14 +320,14 @@ func TestFeed_Send(t *testing.T) {
 	tests := []struct {
 		name        string
 		evFeed      *Feed
-		testSetup   func(fd *Feed)
+		testSetup   func(fd *Feed, t *testing.T, o interface{})
 		obj         interface{}
 		expectPanic bool
 	}{
 		{
 			name:   "normal struct",
 			evFeed: new(Feed),
-			testSetup: func(fd *Feed) {
+			testSetup: func(fd *Feed, t *testing.T, o interface{}) {
 				testChan := make(chan testFeedWithPointer, 1)
 				fd.Subscribe(testChan)
 			},
@@ -340,7 +340,7 @@ func TestFeed_Send(t *testing.T) {
 		{
 			name:   "un-implemented interface",
 			evFeed: new(Feed),
-			testSetup: func(fd *Feed) {
+			testSetup: func(fd *Feed, t *testing.T, o interface{}) {
 				testChan := make(chan testFeedIface, 1)
 				fd.Subscribe(testChan)
 			},
@@ -353,7 +353,7 @@ func TestFeed_Send(t *testing.T) {
 		{
 			name:   "semi-implemented interface",
 			evFeed: new(Feed),
-			testSetup: func(fd *Feed) {
+			testSetup: func(fd *Feed, t *testing.T, o interface{}) {
 				testChan := make(chan testFeedIface, 1)
 				fd.Subscribe(testChan)
 			},
@@ -367,8 +367,16 @@ func TestFeed_Send(t *testing.T) {
 		{
 			name:   "fully-implemented interface",
 			evFeed: new(Feed),
-			testSetup: func(fd *Feed) {
-				testChan := make(chan testFeedIface, 1)
+			testSetup: func(fd *Feed, t *testing.T, o interface{}) {
+				testChan := make(chan testFeedIface)
+				// Make it unbuffered to allow message to
+				// pass through
+				go func() {
+					a := <-testChan
+					if !reflect.DeepEqual(a, o) {
+						t.Errorf("Got = %v, want = %v", a, o)
+					}
+				}()
 				fd.Subscribe(testChan)
 			},
 			obj: testFeed{
@@ -380,8 +388,16 @@ func TestFeed_Send(t *testing.T) {
 		{
 			name:   "fully-implemented interface with additional methods",
 			evFeed: new(Feed),
-			testSetup: func(fd *Feed) {
-				testChan := make(chan testFeedIface, 1)
+			testSetup: func(fd *Feed, t *testing.T, o interface{}) {
+				testChan := make(chan testFeedIface)
+				// Make it unbuffered to allow message to
+				// pass through
+				go func() {
+					a := <-testChan
+					if !reflect.DeepEqual(a, o) {
+						t.Errorf("Got = %v, want = %v", a, o)
+					}
+				}()
 				fd.Subscribe(testChan)
 			},
 			obj: testFeed3{
@@ -395,8 +411,16 @@ func TestFeed_Send(t *testing.T) {
 		{
 			name:   "concrete types implementing the same interface",
 			evFeed: new(Feed),
-			testSetup: func(fd *Feed) {
+			testSetup: func(fd *Feed, t *testing.T, o interface{}) {
 				testChan := make(chan testFeed, 1)
+				// Make it unbuffered to allow message to
+				// pass through
+				go func() {
+					a := <-testChan
+					if !reflect.DeepEqual(a, o) {
+						t.Errorf("Got = %v, want = %v", a, o)
+					}
+				}()
 				fd.Subscribe(testChan)
 			},
 			obj: testFeed3{
@@ -421,7 +445,7 @@ func TestFeed_Send(t *testing.T) {
 					}
 				}
 			}()
-			tt.testSetup(tt.evFeed)
+			tt.testSetup(tt.evFeed, t, tt.obj)
 			if gotNsent := tt.evFeed.Send(tt.obj); gotNsent != 1 {
 				t.Errorf("Send() = %v, want %v", gotNsent, 1)
 			}
