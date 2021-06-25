@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -537,9 +538,11 @@ func TestServer_WaitToSlotOneThird_ReceiveBlockSlot(t *testing.T) {
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		v.blockFeed.Send(&ethpb.SignedBeaconBlock{
-			Block: &ethpb.BeaconBlock{Slot: currentSlot},
-		})
+		time.Sleep(100 * time.Millisecond)
+		v.blockFeed.Send(interfaces.WrappedPhase0SignedBeaconBlock(
+			&ethpb.SignedBeaconBlock{
+				Block: &ethpb.BeaconBlock{Slot: currentSlot},
+			}))
 		wg.Done()
 	}()
 
