@@ -997,13 +997,13 @@ func TestService_ReceiveBlocks_NilBlock(t *testing.T) {
 func TestService_ReceiveBlocks_SetHighest(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mock.NewMockBeaconChainClient(ctrl)
+	client := mock.NewMockBeaconNodeValidatorAltairClient(ctrl)
 
 	v := validator{
-		beaconClient: client,
-		blockFeed:    new(event.Feed),
+		validatorClientV2: client,
+		blockFeed:         new(event.Feed),
 	}
-	stream := mock.NewMockBeaconChain_StreamBlocksClient(ctrl)
+	stream := mock.NewMockBeaconNodeValidatorAltair_StreamBlocksClient(ctrl)
 	ctx, cancel := context.WithCancel(context.Background())
 	client.EXPECT().StreamBlocks(
 		gomock.Any(),
@@ -1012,7 +1012,10 @@ func TestService_ReceiveBlocks_SetHighest(t *testing.T) {
 	stream.EXPECT().Context().Return(ctx).AnyTimes()
 	slot := types.Slot(100)
 	stream.EXPECT().Recv().Return(
-		&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: slot}},
+		&prysmv2.StreamBlocksResponse{
+			Block: &prysmv2.StreamBlocksResponse_Phase0Block{
+				Phase0Block: &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: slot, Body: &ethpb.BeaconBlockBody{}}}},
+		},
 		nil,
 	).Do(func() {
 		cancel()
