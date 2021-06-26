@@ -7,17 +7,17 @@ import (
 )
 
 var (
-	// ToledoTestnet flag for the multiclient eth2 testnet.
+	// ToledoTestnet flag for the multiclient Ethereum consensus testnet.
 	ToledoTestnet = &cli.BoolFlag{
 		Name:  "toledo",
 		Usage: "This defines the flag through which we can run on the Toledo Multiclient Testnet",
 	}
-	// PyrmontTestnet flag for the multiclient eth2 testnet.
+	// PyrmontTestnet flag for the multiclient Ethereum consensus testnet.
 	PyrmontTestnet = &cli.BoolFlag{
 		Name:  "pyrmont",
 		Usage: "This defines the flag through which we can run on the Pyrmont Multiclient Testnet",
 	}
-	// PraterTestnet flag for the multiclient eth2 testnet.
+	// PraterTestnet flag for the multiclient Ethereum consensus testnet.
 	PraterTestnet = &cli.BoolFlag{
 		Name:  "prater",
 		Usage: "Run Prysm configured for the Prater test network",
@@ -26,7 +26,7 @@ var (
 	Mainnet = &cli.BoolFlag{
 		Value: true,
 		Name:  "mainnet",
-		Usage: "Run on Ethereum 2.0 Main Net. This is the default and can be omitted.",
+		Usage: "Run on Ethereum Beacon Chain Main Net. This is the default and can be omitted.",
 	}
 	devModeFlag = &cli.BoolFlag{
 		Name:  "dev",

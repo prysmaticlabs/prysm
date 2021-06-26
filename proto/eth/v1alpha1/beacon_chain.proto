@@ -32,8 +32,7 @@ option php_namespace = "Ethereum\\Eth\\v1alpha1";
 
 // Beacon chain API
 //
-// The beacon chain API can be used to access data relevant to the Ethereum 2.0
-// phase 0 beacon chain.
+// The beacon chain API can be used to access data relevant to the Ethereum Beacon Chain.
 service BeaconChain {
     // TODO(preston): Batch requests?
 
@@ -83,7 +82,7 @@ service BeaconChain {
     // yet processed. Pool attestations eventually expire as the slot
     // advances, so an attestation missing from this request does not imply
     // that it was included in a block. The attestation may have expired.
-    // Refer to the ethereum 2.0 specification for more details on how
+    // Refer to the Ethereum Beacon Chain specification for more details on how
     // attestations are processed and when they are no longer valid.
     // https://github.com/ethereum/eth2.0-specs/blob/dev/specs/core/0_beacon-chain.md#attestations
     rpc AttestationPool(AttestationPoolRequest) returns (AttestationPoolResponse) {
@@ -582,7 +581,7 @@ message GetValidatorRequest {
 message Validators {
     // Epoch which the state was considered to determine the active validator
     // set. This field is not optional. Zero value epoch indicates the validator
-    // set is from the Ethereum 2.0 genesis set.
+    // set is from the Ethereum proof of stake genesis set.
     uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
 
     message ValidatorContainer {

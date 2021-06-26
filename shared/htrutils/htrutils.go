@@ -14,7 +14,7 @@ import (
 )
 
 // Uint64Root computes the HashTreeRoot Merkleization of
-// a simple uint64 value according to the eth2
+// a simple uint64 value according to the Ethereum
 // Simple Serialize specification.
 func Uint64Root(val uint64) [32]byte {
 	buf := make([]byte, 8)
@@ -24,7 +24,7 @@ func Uint64Root(val uint64) [32]byte {
 }
 
 // ForkRoot computes the HashTreeRoot Merkleization of
-// a Fork struct value according to the eth2
+// a Fork struct value according to the Ethereum
 // Simple Serialize specification.
 func ForkRoot(fork *pb.Fork) ([32]byte, error) {
 	fieldRoots := make([][]byte, 3)
@@ -42,7 +42,7 @@ func ForkRoot(fork *pb.Fork) ([32]byte, error) {
 }
 
 // CheckpointRoot computes the HashTreeRoot Merkleization of
-// a InitWithReset struct value according to the eth2
+// a InitWithReset struct value according to the Ethereum
 // Simple Serialize specification.
 func CheckpointRoot(hasher HashFn, checkpoint *ethpb.Checkpoint) ([32]byte, error) {
 	fieldRoots := make([][]byte, 2)
@@ -58,7 +58,7 @@ func CheckpointRoot(hasher HashFn, checkpoint *ethpb.Checkpoint) ([32]byte, erro
 }
 
 // HistoricalRootsRoot computes the HashTreeRoot Merkleization of
-// a list of [32]byte historical block roots according to the eth2
+// a list of [32]byte historical block roots according to the Ethereum
 // Simple Serialize specification.
 func HistoricalRootsRoot(historicalRoots [][]byte) ([32]byte, error) {
 	result, err := BitwiseMerkleize(hashutil.CustomSHA256Hasher(), historicalRoots, uint64(len(historicalRoots)), params.BeaconConfig().HistoricalRootsLimit)
@@ -77,7 +77,7 @@ func HistoricalRootsRoot(historicalRoots [][]byte) ([32]byte, error) {
 }
 
 // SlashingsRoot computes the HashTreeRoot Merkleization of
-// a list of uint64 slashing values according to the eth2
+// a list of uint64 slashing values according to the Ethereum
 // Simple Serialize specification.
 func SlashingsRoot(slashings []uint64) ([32]byte, error) {
 	slashingMarshaling := make([][]byte, params.BeaconConfig().EpochsPerSlashingsVector)

@@ -383,7 +383,7 @@ func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 // yet processed. Pool attestations eventually expire as the slot
 // advances, so an attestation missing from this request does not imply
 // that it was included in a block. The attestation may have expired.
-// Refer to the ethereum 2.0 specification for more details on how
+// Refer to the ethereum consensus specification for more details on how
 // attestations are processed and when they are no longer valid.
 // https://github.com/ethereum/eth2.0-specs/blob/dev/specs/core/0_beacon-chain.md#attestations
 func (bs *Server) AttestationPool(
