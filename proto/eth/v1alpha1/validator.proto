@@ -160,7 +160,7 @@ service BeaconNodeValidator {
     // Retrieves the latest valid attestation data to be attested on the beacon chain.
     //
     // The server returns the latest valid data which represents the correct vote
-    // for the head of the beacon chain,
+    // for the head of the beacon chain.
     rpc GetAttestationData(AttestationDataRequest) returns (AttestationData) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/validator/attestation"
@@ -375,6 +375,9 @@ message DutiesResponse {
 
         // The index of the validator in the beacon state.
         uint64 validator_index = 7  [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
+
+        // Whether the validator belongs in the sync committee and has to perform sync committee duty.
+        bool is_sync_committee = 8;
     }
 }
 
