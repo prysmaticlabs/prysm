@@ -289,6 +289,9 @@ func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel ch
 		case res.GetAltairBlock() != nil:
 			blk = interfaces.WrappedAltairSignedBeaconBlock(res.GetAltairBlock())
 		}
+		if blk == nil || blk.IsNil() {
+			continue
+		}
 		if blk.Block().Slot() > v.highestValidSlot {
 			v.highestValidSlot = blk.Block().Slot()
 		}

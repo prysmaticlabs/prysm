@@ -970,21 +970,21 @@ func TestAllValidatorsAreExited_CorrectRequest(t *testing.T) {
 func TestService_ReceiveBlocks_NilBlock(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mock.NewMockBeaconChainClient(ctrl)
-
+	valClient := mock.NewMockBeaconNodeValidatorAltairClient(ctrl)
 	v := validator{
-		beaconClient: client,
-		blockFeed:    new(event.Feed),
+		blockFeed:         new(event.Feed),
+		validatorClientV2: valClient,
 	}
-	stream := mock.NewMockBeaconChain_StreamBlocksClient(ctrl)
+	stream := mock.NewMockBeaconNodeValidatorAltair_StreamBlocksClient(ctrl)
 	ctx, cancel := context.WithCancel(context.Background())
-	client.EXPECT().StreamBlocks(
+	valClient.EXPECT().StreamBlocks(
 		gomock.Any(),
 		&ethpb.StreamBlocksRequest{VerifiedOnly: true},
 	).Return(stream, nil)
 	stream.EXPECT().Context().Return(ctx).AnyTimes()
 	stream.EXPECT().Recv().Return(
-		&ethpb.SignedBeaconBlock{},
+		&prysmv2.StreamBlocksResponse{Block: &prysmv2.StreamBlocksResponse_Phase0Block{
+			Phase0Block: &ethpb.SignedBeaconBlock{}}},
 		nil,
 	).Do(func() {
 		cancel()
