@@ -57,6 +57,9 @@ func AggregatePublicKeys(pubs [][]byte) (common.PublicKey, error) {
 	if featureconfig.Get().SkipBLSVerify {
 		return &PublicKey{}, nil
 	}
+	if pubs == nil || len(pubs) == 0 {
+		return nil, errors.New("Public keys passed is nil or empty")
+	}
 	agg := new(blstAggregatePublicKey)
 	mulP1 := make([]*blstPublicKey, 0, len(pubs))
 	for _, pubkey := range pubs {

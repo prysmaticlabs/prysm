@@ -76,3 +76,9 @@ func TestPublicKey_Copy(t *testing.T) {
 
 	require.DeepEqual(t, pubkeyA.Marshal(), pubkeyBytes, "Pubkey was mutated after copy")
 }
+
+func TestPublicKeysEmpty(t *testing.T) {
+	pubs := [][]byte{}
+	_, err := blst.AggregatePublicKeys(pubs)
+	require.ErrorContains(t, "Public keys passed is nil or empty", err)
+}
