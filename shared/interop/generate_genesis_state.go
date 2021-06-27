@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	// This is the recommended mock eth1 block hash according to the Eth2 interop guidelines.
+	// This is the recommended mock eth1 block hash according to the Ethereum consensus interop guidelines.
 	// https://github.com/ethereum/eth2.0-pm/blob/a085c9870f3956d6228ed2a40cd37f0c6580ecd7/interop/mocked_start/README.md
 	mockEth1BlockHash = []byte{66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66}
 )
