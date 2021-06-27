@@ -3,7 +3,6 @@
 SetLocal EnableDelayedExpansion & REM All variables are set local to this run & expanded at execution time rather than at parse time (tip: echo !output!)
 
 set PRYLABS_SIGNING_KEY=0AE0051D647BA3C1A917AF4072E33E4DF1A5036E
-set NOT_FOUND="The system cannot find the file specified"
 
 REM Complain if invalid arguments were provided.
 for %%a in (beacon-chain validator client-stats) do (
