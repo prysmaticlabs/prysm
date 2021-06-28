@@ -1,6 +1,6 @@
 # Prysmatic Labs Beacon Chain Implementation
 
-This is the main project folder for the beacon chain implementation of eth2 written in Go by [Prysmatic Labs](https://prysmaticlabs.com).
+This is the main project folder for the beacon chain implementation of Ethereum written in Go by [Prysmatic Labs](https://prysmaticlabs.com).
 
 You can also read our main [README](https://github.com/prysmaticlabs/prysm/blob/master/README.md) and join our active chat room on Discord.
 

@@ -107,7 +107,7 @@ type HeadAccessDatabase interface {
 	EnsureEmbeddedGenesis(ctx context.Context) error
 }
 
-// SlasherDatabase interface for persisting data related to detecting slashable offenses on eth2.
+// SlasherDatabase interface for persisting data related to detecting slashable offenses on Ethereum.
 type SlasherDatabase interface {
 	io.Closer
 	SaveLastEpochWrittenForValidators(
