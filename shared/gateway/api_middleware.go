@@ -5,7 +5,6 @@ import (
 	"reflect"
 
 	"github.com/gorilla/mux"
-	"github.com/pkg/errors"
 )
 
 // ApiProxyMiddleware is a proxy between an Ethereum consensus API HTTP client and grpc-gateway.
@@ -79,10 +78,8 @@ func (m *ApiProxyMiddleware) handleApiPath(path string, endpointFactory Endpoint
 	m.router.HandleFunc(path, func(w http.ResponseWriter, req *http.Request) {
 		endpoint, err := endpointFactory.Create(path)
 		if err != nil {
-			WriteError(w, &DefaultErrorJson{
-				Message: errors.Wrapf(err, "could not create endpoint").Error(),
-				Code:    http.StatusInternalServerError,
-			}, nil)
+			errJson := InternalServerErrorWithMessage(err, "could not create endpoint")
+			WriteError(w, errJson, nil)
 		}
 
 		for _, handler := range endpoint.Hooks.CustomHandlers {
