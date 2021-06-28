@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-	"github.com/pkg/errors"
 	butil "github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/wealdtech/go-bytesutil"
 )
@@ -30,14 +29,12 @@ segmentsLoop:
 			bRouteVar := []byte(routeVar)
 			isHex, err := butil.IsHex(bRouteVar)
 			if err != nil {
-				e := errors.Wrapf(err, "could not process URL parameter")
-				return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+				return InternalServerErrorWithMessage(err, "could not process URL parameter")
 			}
 			if isHex {
 				bRouteVar, err = bytesutil.FromHexString(string(bRouteVar))
 				if err != nil {
-					e := errors.Wrapf(err, "could not process URL parameter")
-					return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+					return InternalServerErrorWithMessage(err, "could not process URL parameter")
 				}
 			}
 			// Converting hex to base64 may result in a value which malforms the URL.
@@ -66,14 +63,12 @@ func HandleQueryParameters(req *http.Request, params []QueryParam) ErrorJson {
 						b := []byte(v)
 						isHex, err := butil.IsHex(b)
 						if err != nil {
-							e := errors.Wrapf(err, "could not process query parameter")
-							return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+							return InternalServerErrorWithMessage(err, "could not process query parameter")
 						}
 						if isHex {
 							b, err = bytesutil.FromHexString(v)
 							if err != nil {
-								e := errors.Wrapf(err, "could not process query parameter")
-								return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+								return InternalServerErrorWithMessage(err, "could not process query parameter")
 							}
 						}
 						queryParams.Add(key, base64.URLEncoding.EncodeToString(b))
