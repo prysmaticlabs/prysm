@@ -18,6 +18,7 @@ require (
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/dgraph-io/ristretto v0.0.4-0.20210318174700-74754f61e018
 	github.com/dlclark/regexp2 v1.4.0 // indirect
+	github.com/dustin/go-humanize v1.0.0
 	github.com/emicklei/dot v0.11.0
 	github.com/ethereum/go-ethereum v1.9.25
 	github.com/fatih/color v1.9.0 // indirect
