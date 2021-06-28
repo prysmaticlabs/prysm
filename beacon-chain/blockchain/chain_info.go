@@ -26,13 +26,13 @@ type ChainInfoFetcher interface {
 	CanonicalFetcher
 }
 
-// TimeFetcher retrieves the Eth2 data that's related to time.
+// TimeFetcher retrieves the Ethereum consensus data that's related to time.
 type TimeFetcher interface {
 	GenesisTime() time.Time
 	CurrentSlot() types.Slot
 }
 
-// GenesisFetcher retrieves the eth2 data related to its genesis.
+// GenesisFetcher retrieves the Ethereum consensus data related to its genesis.
 type GenesisFetcher interface {
 	GenesisValidatorRoot() [32]byte
 }

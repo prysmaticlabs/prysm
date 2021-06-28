@@ -41,6 +41,11 @@ type stateFinalityCheckpointResponse_StateFinalityCheckpointJson struct {
 	Finalized         *checkpointJson `json:"finalized"`
 }
 
+// stateValidatorResponseJson is used in /beacon/states/{state_id}/validators API endpoint.
+type stateValidatorsResponseJson struct {
+	Data []*validatorContainerJson `json:"data"`
+}
+
 // stateValidatorResponseJson is used in /beacon/states/{state_id}/validators/{validator_id} API endpoint.
 type stateValidatorResponseJson struct {
 	Data *validatorContainerJson `json:"data"`

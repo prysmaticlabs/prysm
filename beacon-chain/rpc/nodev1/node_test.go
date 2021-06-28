@@ -367,6 +367,19 @@ func TestListPeers(t *testing.T) {
 	}
 }
 
+func TestListPeers_NoPeersReturnsEmptyArray(t *testing.T) {
+	peerFetcher := &mockp2p.MockPeersProvider{}
+	peerFetcher.ClearPeers()
+	s := Server{PeersFetcher: peerFetcher}
+
+	resp, err := s.ListPeers(context.Background(), &ethpb.PeersRequest{
+		State: []ethpb.ConnectionState{ethpb.ConnectionState_CONNECTED},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp.Data)
+	assert.Equal(t, 0, len(resp.Data))
+}
+
 func TestPeerCount(t *testing.T) {
 	ids := libp2ptest.GeneratePeerIDs(10)
 	peerFetcher := &mockp2p.MockPeersProvider{}

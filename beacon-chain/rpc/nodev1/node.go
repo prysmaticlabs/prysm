@@ -224,9 +224,7 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 		}
 		filteredPeers = append(filteredPeers, p)
 	}
-	if len(filteredPeers) == 0 {
-		return nil, status.Error(codes.NotFound, "Peers not found")
-	}
+
 	return &ethpb.PeersResponse{Data: filteredPeers}, nil
 }
 

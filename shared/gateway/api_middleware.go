@@ -8,10 +8,10 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ApiProxyMiddleware is a proxy between an Eth2 API HTTP client and grpc-gateway.
+// ApiProxyMiddleware is a proxy between an Ethereum consensus API HTTP client and grpc-gateway.
 // The purpose of the proxy is to handle HTTP requests and gRPC responses in such a way that:
-//   - Eth2 API requests can be handled by grpc-gateway correctly
-//   - gRPC responses can be returned as spec-compliant Eth2 API responses
+//   - Ethereum consensus API requests can be handled by grpc-gateway correctly
+//   - gRPC responses can be returned as spec-compliant Ethereum consensus API responses
 type ApiProxyMiddleware struct {
 	GatewayAddress  string
 	ProxyAddress    string
