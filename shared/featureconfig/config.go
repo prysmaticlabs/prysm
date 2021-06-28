@@ -129,7 +129,7 @@ func configureTestnet(ctx *cli.Context, cfg *Flags) {
 		params.UsePraterConfig()
 		params.UsePraterNetworkConfig()
 	} else {
-		log.Warn("Running on ETH2 Mainnet")
+		log.Warn("Running on Ethereum Consensus Mainnet")
 		params.UseMainnetConfig()
 	}
 }

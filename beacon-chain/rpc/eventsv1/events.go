@@ -39,7 +39,7 @@ var casesHandled = map[string]bool{
 	ChainReorgTopic:          true,
 }
 
-// StreamEvents allows requesting all events from a set of topics defined in the eth2.0-apis standard.
+// StreamEvents allows requesting all events from a set of topics defined in the Ethereum consensus API standard.
 // The topics supported include block events, attestations, chain reorgs, voluntary exits,
 // chain finality, and more.
 func (s *Server) StreamEvents(
