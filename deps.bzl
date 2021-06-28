@@ -896,6 +896,7 @@ def prysm_deps():
         importpath = "github.com/ghodss/yaml",
         sum = "h1:wQHKEahhL6wmXdzwWG11gIVCkOv05bNOh+Rxn0yngAk=",
         version = "v1.0.0",
+        nofuzz = True,
     )
 
     go_repository(
