@@ -3,6 +3,7 @@ package gateway
 import (
 	"encoding/base64"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -54,6 +55,8 @@ segmentsLoop:
 func HandleQueryParameters(req *http.Request, params []QueryParam) ErrorJson {
 	queryParams := req.URL.Query()
 
+	normalizeQueryValues(queryParams)
+
 	for key, vals := range queryParams {
 		for _, p := range params {
 			if key == p.Name {
@@ -92,4 +95,15 @@ func HandleQueryParameters(req *http.Request, params []QueryParam) ErrorJson {
 // Request parameters are enclosed in { and }.
 func isRequestParam(s string) bool {
 	return len(s) > 2 && s[0] == '{' && s[len(s)-1] == '}'
+}
+
+func normalizeQueryValues(queryParams url.Values) {
+	// Replace comma-separated values with individual values.
+	for key, vals := range queryParams {
+		splitVals := make([]string, 0)
+		for _, v := range vals {
+			splitVals = append(splitVals, strings.Split(v, ",")...)
+		}
+		queryParams[key] = splitVals
+	}
 }
