@@ -362,7 +362,7 @@ func (h *stateRootHasher) validatorRoot(hasher htrutils.HashFn, validator *ethpb
 }
 
 // ValidatorRegistryRoot computes the HashTreeRoot Merkleization of
-// a list of validator structs according to the eth2
+// a list of validator structs according to the Ethereum
 // Simple Serialize specification.
 func ValidatorRegistryRoot(vals []*ethpb.Validator) ([32]byte, error) {
 	if featureconfig.Get().EnableSSZCache {

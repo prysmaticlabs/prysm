@@ -39,7 +39,7 @@ const (
 
 // BackupAccountsCli allows users to select validator accounts from their wallet
 // and export them as a backup.zip file containing the keys as EIP-2335 compliant
-// keystore.json files, which are compatible with importing in other eth2 clients.
+// keystore.json files, which are compatible with importing in other Ethereum consensus clients.
 func BackupAccountsCli(cliCtx *cli.Context) error {
 	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
 		return nil, wallet.ErrNoWalletFound

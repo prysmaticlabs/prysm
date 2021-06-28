@@ -16,7 +16,7 @@ import (
 
 // ExportSlashingProtection handles the rpc call returning the json slashing history.
 // The format of the export follows the EIP-3076 standard which makes it
-// easy to migrate machines or eth2 clients.
+// easy to migrate machines or Ethereum consensus clients.
 //
 // Steps:
 // 1. Call the function which exports the data from

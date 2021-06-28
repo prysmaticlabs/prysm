@@ -9,6 +9,7 @@ go_library(
         "api_middleware_structs.go",
         "gateway.go",
         "log.go",
+        "param_handling.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/gateway",
     visibility = [
@@ -37,6 +38,7 @@ go_test(
     srcs = [
         "api_middleware_processing_test.go",
         "gateway_test.go",
+        "param_handling_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
