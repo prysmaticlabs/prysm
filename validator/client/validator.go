@@ -25,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
@@ -257,7 +258,7 @@ func (v *validator) SlasherReady(ctx context.Context) error {
 // blocks from the beacon node. Upon receiving a block, the service
 // broadcasts it to a feed for other usages to subscribe to.
 func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel chan<- error) {
-	stream, err := v.beaconClient.StreamBlocks(ctx, &ethpb.StreamBlocksRequest{VerifiedOnly: true})
+	stream, err := v.validatorClientV2.StreamBlocks(ctx, &ethpb.StreamBlocksRequest{VerifiedOnly: true})
 	if err != nil {
 		log.WithError(err).Error("Failed to retrieve blocks stream, " + iface.ErrConnectionIssue.Error())
 		connectionErrorChannel <- errors.Wrap(iface.ErrConnectionIssue, err.Error())
@@ -278,11 +279,23 @@ func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel ch
 		if res == nil || res.Block == nil {
 			continue
 		}
-		if res.Block.Slot > v.highestValidSlot {
-			v.highestValidSlot = res.Block.Slot
+		if res.GetPhase0Block() == nil && res.GetAltairBlock() == nil {
+			continue
 		}
-
-		v.blockFeed.Send(res)
+		var blk interfaces.SignedBeaconBlock
+		switch {
+		case res.GetPhase0Block() != nil:
+			blk = interfaces.WrappedPhase0SignedBeaconBlock(res.GetPhase0Block())
+		case res.GetAltairBlock() != nil:
+			blk = interfaces.WrappedAltairSignedBeaconBlock(res.GetAltairBlock())
+		}
+		if blk == nil || blk.IsNil() {
+			continue
+		}
+		if blk.Block().Slot() > v.highestValidSlot {
+			v.highestValidSlot = blk.Block().Slot()
+		}
+		v.blockFeed.Send(blk)
 	}
 }
 
