@@ -3,6 +3,7 @@ package interfaces
 import (
 	"github.com/prysmaticlabs/go-bitfield"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/interfaces/version"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -76,6 +77,11 @@ func (m MetadataV0) MetadataObjV1() *pb.MetaDataV1 {
 	return nil
 }
 
+// Version returns the fork version of the underlying object.
+func (m MetadataV0) Version() int {
+	return version.Phase0
+}
+
 // MetadataV1 is a convenience wrapper around our metadata v2 protobuf object.
 type MetadataV1 struct {
 	md *pb.MetaDataV1
@@ -144,4 +150,9 @@ func (m MetadataV1) MetadataObjV0() *pb.MetaDataV0 {
 // specified form. If it doesn't exist then we return nothing.
 func (m MetadataV1) MetadataObjV1() *pb.MetaDataV1 {
 	return m.md
+}
+
+// Version returns the fork version of the underlying object.
+func (m MetadataV1) Version() int {
+	return version.Altair
 }

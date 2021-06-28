@@ -216,7 +216,8 @@ func (vs *Server) GetSyncCommitteeContribution(
 	aggregatedSig[0] = 0xC0
 	if len(sigs) != 0 {
 		aggregatedSig = bls.AggregateSignatures(sigs).Marshal()
-	}	contribution := &prysmv2.SyncCommitteeContribution{
+	}
+	contribution := &prysmv2.SyncCommitteeContribution{
 		Slot:              headState.Slot(),
 		BlockRoot:         headRoot,
 		SubcommitteeIndex: req.SubnetId,

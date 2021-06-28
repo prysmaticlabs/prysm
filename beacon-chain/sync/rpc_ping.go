@@ -39,7 +39,7 @@ func (s *Service) pingHandler(_ context.Context, msg interface{}, stream libp2pc
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
 	}
-	if err := writeContextToStream(stream, s.cfg.Chain); err != nil {
+	if err := writeContextToStream(nil, stream, s.cfg.Chain); err != nil {
 		return err
 	}
 	sq := types.SSZUint64(s.cfg.P2P.MetadataSeq())

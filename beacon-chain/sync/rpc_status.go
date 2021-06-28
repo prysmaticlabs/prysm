@@ -277,7 +277,7 @@ func (s *Service) respondWithStatus(ctx context.Context, stream network.Stream) 
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		log.WithError(err).Debug("Could not write to stream")
 	}
-	if err := writeContextToStream(stream, s.cfg.Chain); err != nil {
+	if err := writeContextToStream(nil, stream, s.cfg.Chain); err != nil {
 		return err
 	}
 	_, err = s.cfg.P2P.Encoding().EncodeWithMaxLength(stream, resp)

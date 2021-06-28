@@ -609,7 +609,7 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 					for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += types.Slot(req.Step) {
 						blk := testutil.NewBeaconBlock()
 						blk.Block.Slot = i
-						assert.NoError(t, beaconsync.WriteChunk(stream, nil, p1.Encoding(), blk))
+						assert.NoError(t, beaconsync.WriteBlockChunk(stream, nil, p1.Encoding(), interfaces.WrappedPhase0SignedBeaconBlock(blk)))
 					}
 					assert.NoError(t, stream.Close())
 				}
@@ -630,7 +630,7 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 					for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step+1); i += types.Slot(req.Step) {
 						blk := testutil.NewBeaconBlock()
 						blk.Block.Slot = i
-						assert.NoError(t, beaconsync.WriteChunk(stream, nil, p1.Encoding(), blk))
+						assert.NoError(t, beaconsync.WriteBlockChunk(stream, nil, p1.Encoding(), interfaces.WrappedPhase0SignedBeaconBlock(blk)))
 					}
 					assert.NoError(t, stream.Close())
 				}
@@ -651,11 +651,11 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 				return func(stream network.Stream) {
 					blk := testutil.NewBeaconBlock()
 					blk.Block.Slot = 163
-					assert.NoError(t, beaconsync.WriteChunk(stream, nil, p1.Encoding(), blk))
+					assert.NoError(t, beaconsync.WriteBlockChunk(stream, nil, p1.Encoding(), interfaces.WrappedPhase0SignedBeaconBlock(blk)))
 
 					blk = testutil.NewBeaconBlock()
 					blk.Block.Slot = 162
-					assert.NoError(t, beaconsync.WriteChunk(stream, nil, p1.Encoding(), blk))
+					assert.NoError(t, beaconsync.WriteBlockChunk(stream, nil, p1.Encoding(), interfaces.WrappedPhase0SignedBeaconBlock(blk)))
 					assert.NoError(t, stream.Close())
 				}
 			},
@@ -675,11 +675,11 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 				return func(stream network.Stream) {
 					blk := testutil.NewBeaconBlock()
 					blk.Block.Slot = 160
-					assert.NoError(t, beaconsync.WriteChunk(stream, nil, p1.Encoding(), blk))
+					assert.NoError(t, beaconsync.WriteBlockChunk(stream, nil, p1.Encoding(), interfaces.WrappedPhase0SignedBeaconBlock(blk)))
 
 					blk = testutil.NewBeaconBlock()
 					blk.Block.Slot = 160
-					assert.NoError(t, beaconsync.WriteChunk(stream, nil, p1.Encoding(), blk))
+					assert.NoError(t, beaconsync.WriteBlockChunk(stream, nil, p1.Encoding(), interfaces.WrappedPhase0SignedBeaconBlock(blk)))
 					assert.NoError(t, stream.Close())
 				}
 			},
@@ -705,11 +705,11 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 						// Patch mid block, with invalid slot number.
 						if i == req.StartSlot.Add(req.Count*req.Step/2) {
 							blk.Block.Slot = req.StartSlot - 1
-							assert.NoError(t, beaconsync.WriteChunk(stream, nil, p1.Encoding(), blk))
+							assert.NoError(t, beaconsync.WriteBlockChunk(stream, nil, p1.Encoding(), interfaces.WrappedPhase0SignedBeaconBlock(blk)))
 							break
 						} else {
 							blk.Block.Slot = i
-							assert.NoError(t, beaconsync.WriteChunk(stream, nil, p1.Encoding(), blk))
+							assert.NoError(t, beaconsync.WriteBlockChunk(stream, nil, p1.Encoding(), interfaces.WrappedPhase0SignedBeaconBlock(blk)))
 						}
 					}
 				}
@@ -736,11 +736,11 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 						// Patch mid block, with invalid slot number.
 						if i == req.StartSlot.Add(req.Count*req.Step/2) {
 							blk.Block.Slot = req.StartSlot.Add(req.Count * req.Step)
-							assert.NoError(t, beaconsync.WriteChunk(stream, nil, p1.Encoding(), blk))
+							assert.NoError(t, beaconsync.WriteBlockChunk(stream, nil, p1.Encoding(), interfaces.WrappedPhase0SignedBeaconBlock(blk)))
 							break
 						} else {
 							blk.Block.Slot = i
-							assert.NoError(t, beaconsync.WriteChunk(stream, nil, p1.Encoding(), blk))
+							assert.NoError(t, beaconsync.WriteBlockChunk(stream, nil, p1.Encoding(), interfaces.WrappedPhase0SignedBeaconBlock(blk)))
 						}
 					}
 				}
@@ -761,11 +761,11 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 				return func(stream network.Stream) {
 					blk := testutil.NewBeaconBlock()
 					blk.Block.Slot = 100
-					assert.NoError(t, beaconsync.WriteChunk(stream, nil, p1.Encoding(), blk))
+					assert.NoError(t, beaconsync.WriteBlockChunk(stream, nil, p1.Encoding(), interfaces.WrappedPhase0SignedBeaconBlock(blk)))
 
 					blk = testutil.NewBeaconBlock()
 					blk.Block.Slot = 105
-					assert.NoError(t, beaconsync.WriteChunk(stream, nil, p1.Encoding(), blk))
+					assert.NoError(t, beaconsync.WriteBlockChunk(stream, nil, p1.Encoding(), interfaces.WrappedPhase0SignedBeaconBlock(blk)))
 					assert.NoError(t, stream.Close())
 				}
 			},
@@ -784,11 +784,11 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 				return func(stream network.Stream) {
 					blk := testutil.NewBeaconBlock()
 					blk.Block.Slot = 100
-					assert.NoError(t, beaconsync.WriteChunk(stream, nil, p1.Encoding(), blk))
+					assert.NoError(t, beaconsync.WriteBlockChunk(stream, nil, p1.Encoding(), interfaces.WrappedPhase0SignedBeaconBlock(blk)))
 
 					blk = testutil.NewBeaconBlock()
 					blk.Block.Slot = 103
-					assert.NoError(t, beaconsync.WriteChunk(stream, nil, p1.Encoding(), blk))
+					assert.NoError(t, beaconsync.WriteBlockChunk(stream, nil, p1.Encoding(), interfaces.WrappedPhase0SignedBeaconBlock(blk)))
 					assert.NoError(t, stream.Close())
 				}
 			},
