@@ -16,7 +16,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// ENR key used for eth2-related fork data.
+// ENR key used for Ethereum consensus-related fork data.
 var eth2ENRKey = params.BeaconNetworkConfig().ETH2Key
 
 // ForkDigest returns the current fork digest of
@@ -78,7 +78,7 @@ func (s *Service) compareForkENR(record *enr.Record) error {
 	return nil
 }
 
-// Adds a fork entry as an ENR record under the eth2EnrKey for
+// Adds a fork entry as an ENR record under the Ethereum consensus EnrKey for
 // the local node. The fork entry is an ssz-encoded enrForkID type
 // which takes into account the current fork version from the current
 // epoch to create a fork digest, the next fork version,
@@ -123,7 +123,7 @@ func addForkEntry(
 }
 
 // Retrieves an enrForkID from an ENR record by key lookup
-// under the eth2EnrKey.
+// under the Ethereum consensus EnrKey
 func forkEntry(record *enr.Record) (*pb.ENRForkID, error) {
 	sszEncodedForkEntry := make([]byte, 16)
 	entry := enr.WithEntry(eth2ENRKey, &sszEncodedForkEntry)

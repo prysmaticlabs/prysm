@@ -1,4 +1,4 @@
-// Package trieutil defines utilities for sparse merkle tries for eth2.
+// Package trieutil defines utilities for sparse merkle tries for Ethereum consensus.
 package trieutil
 
 import (
@@ -14,7 +14,7 @@ import (
 )
 
 // SparseMerkleTrie implements a sparse, general purpose Merkle trie to be used
-// across ETH2.0 Phase 0 functionality.
+// across Ethereum consensus functionality.
 type SparseMerkleTrie struct {
 	depth         uint
 	branches      [][][]byte

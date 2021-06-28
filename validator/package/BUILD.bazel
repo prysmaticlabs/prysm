@@ -40,7 +40,7 @@ pkg_deb(
         "etc/prysm/validator.yaml",
     ],
     data = ":debian-data",
-    description = "Prysm Validator Client - Ethereum 2.0 block consensus",
+    description = "Prysm Validator Client - Ethereum consensus",
     homepage = "https://prysmaticlabs.com/",
     maintainer = "Prysmatic Labs <contact@prysmaticlabs.com>",
     package = "prysm-validator",
