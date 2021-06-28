@@ -47,6 +47,7 @@ type Validator interface {
 	ProposeBlock(ctx context.Context, slot types.Slot, pubKey [48]byte)
 	SubmitAggregateAndProof(ctx context.Context, slot types.Slot, pubKey [48]byte)
 	SubmitSyncCommitteeMessage(ctx context.Context, slot types.Slot, pubKey [48]byte)
+	SubmitSignedContributionAndProof(ctx context.Context, slot types.Slot, pubKey [48]byte)
 	LogAttestationsSubmitted()
 	LogNextDutyTimeLeft(slot types.Slot) error
 	UpdateDomainDataCaches(ctx context.Context, slot types.Slot)
