@@ -2778,8 +2778,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",
         importpath = "github.com/prysmaticlabs/go-bitfield",
-        sum = "h1:yALGBNFMp40DeD3qGGRgiC0FWePzy0FIhxWEXoco3ZA=",
-        version = "v0.0.0-20210628171552-0c86d791fc37",
+        sum = "h1:VDCZKogC8kR/wrPJwC4djO9pQPIvm5ACsiJkLzOuqAQ=",
+        version = "v0.0.0-20210628203249-e0739c7824f4",
     )
     go_repository(
         name = "com_github_prysmaticlabs_prombbolt",
