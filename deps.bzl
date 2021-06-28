@@ -3579,6 +3579,7 @@ def prysm_deps():
         importpath = "gopkg.in/yaml.v2",
         sum = "h1:D8xgwECY7CYvx+Y2n4sBz93Jn9JRvxdiyyo8CTfuKaY=",
         version = "v2.4.0",
+        nofuzz = True,
     )
 
     go_repository(
