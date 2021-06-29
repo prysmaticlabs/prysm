@@ -88,7 +88,7 @@ require (
 	github.com/prometheus/prom2json v1.3.0
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/prysmaticlabs/eth2-types v0.0.0-20210303084904-c9735a06829d
-	github.com/prysmaticlabs/go-bitfield v0.0.0-20210607200045-4da71aaf6c2d
+	github.com/prysmaticlabs/go-bitfield v0.0.0-20210628171552-0c86d791fc37
 	github.com/prysmaticlabs/prombbolt v0.0.0-20210126082820-9b7adba6db7c
 	github.com/prysmaticlabs/protoc-gen-go-cast v0.0.0-20210504233148-1e141af6a0a1
 	github.com/r3labs/sse v0.0.0-20210224172625-26fe804710bc
