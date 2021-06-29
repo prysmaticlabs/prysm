@@ -298,6 +298,26 @@ func (mr *MockBeaconNodeValidatorClientMockRecorder) SubscribeCommitteeSubnets(a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubscribeCommitteeSubnets", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).SubscribeCommitteeSubnets), varargs...)
 }
 
+// UpdateStateRoot mocks base method
+func (m *MockBeaconNodeValidatorClient) UpdateStateRoot(arg0 context.Context, arg1 *eth.BeaconBlock, arg2 ...grpc.CallOption) (*eth.BeaconBlock, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdateStateRoot", varargs...)
+	ret0, _ := ret[0].(*eth.BeaconBlock)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateStateRoot indicates an expected call of UpdateStateRoot
+func (mr *MockBeaconNodeValidatorClientMockRecorder) UpdateStateRoot(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStateRoot", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).UpdateStateRoot), varargs...)
+}
+
 // ValidatorIndex mocks base method
 func (m *MockBeaconNodeValidatorClient) ValidatorIndex(arg0 context.Context, arg1 *v1alpha1.ValidatorIndexRequest, arg2 ...grpc.CallOption) (*v1alpha1.ValidatorIndexResponse, error) {
 	m.ctrl.T.Helper()

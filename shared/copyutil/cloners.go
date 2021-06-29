@@ -1,9 +1,8 @@
-package copyutil
+package state
 
 import (
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
@@ -109,6 +108,7 @@ func CopyBeaconBlockBody(body *ethpb.BeaconBlockBody) *ethpb.BeaconBlockBody {
 		Attestations:      CopyAttestations(body.Attestations),
 		Deposits:          CopyDeposits(body.Deposits),
 		VoluntaryExits:    CopySignedVoluntaryExits(body.VoluntaryExits),
+		PandoraShard:      CopyPandoraShard(body.PandoraShard),
 	}
 }
 
@@ -286,16 +286,23 @@ func CopyValidator(val *ethpb.Validator) *ethpb.Validator {
 	}
 }
 
-// CopySyncCommitteeContribution copies the provided sync committee contribution object.
-func CopySyncCommitteeContribution(c *prysmv2.SyncCommitteeContribution) *prysmv2.SyncCommitteeContribution {
-	if c == nil {
+// CopyPandoraShard copies PandoraShard
+func CopyPandoraShard(pShards []*ethpb.PandoraShard) []*ethpb.PandoraShard {
+	if len(pShards) == 0 {
 		return nil
 	}
-	return &prysmv2.SyncCommitteeContribution{
-		Slot:              c.Slot,
-		BlockRoot:         bytesutil.SafeCopyBytes(c.BlockRoot),
-		SubcommitteeIndex: c.SubcommitteeIndex,
-		AggregationBits:   bytesutil.SafeCopyBytes(c.AggregationBits),
-		Signature:         bytesutil.SafeCopyBytes(c.Signature),
+	pandoraShards := make([]*ethpb.PandoraShard, 1)
+	ps := pShards[0]
+	pandoraShard := &ethpb.PandoraShard{
+		BlockNumber: ps.BlockNumber,
+		Hash:        ps.Hash,
+		ParentHash:  ps.ParentHash,
+		StateRoot:   ps.StateRoot,
+		TxHash:      ps.TxHash,
+		ReceiptHash: ps.ReceiptHash,
+		SealHash:    ps.SealHash,
+		Signature:   ps.Signature,
 	}
+	pandoraShards[0] = pandoraShard
+	return pandoraShards
 }

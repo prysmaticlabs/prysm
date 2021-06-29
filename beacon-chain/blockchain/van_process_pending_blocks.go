@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"context"
+	"fmt"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -185,7 +186,7 @@ func (s *Service) waitForConfirmationBlock(ctx context.Context, b *ethpb.SignedB
 					switch status := data.Status; status {
 					case vanTypes.Verified:
 						log.WithField("slot", data.Slot).WithField(
-							"blockHash", data.BlockRootHash).Debug(
+							"blockHash", fmt.Sprintf("%#x", data.BlockRootHash)).Debug(
 							"got verified status from orchestrator")
 						if err := s.pendingBlockCache.Delete(b.Block.Slot); err != nil {
 							log.WithError(err).Error("couldn't delete the verified blocks from cache")
@@ -194,7 +195,7 @@ func (s *Service) waitForConfirmationBlock(ctx context.Context, b *ethpb.SignedB
 						return nil
 					case vanTypes.Pending:
 						log.WithField("slot", data.Slot).WithField(
-							"blockHash", data.BlockRootHash).Debug(
+							"blockHash", fmt.Sprintf("%#x", data.BlockRootHash)).Debug(
 							"got pending status from orchestrator")
 
 						pendingBlockTryLimit = pendingBlockTryLimit - 1
@@ -211,7 +212,7 @@ func (s *Service) waitForConfirmationBlock(ctx context.Context, b *ethpb.SignedB
 						continue
 					case vanTypes.Invalid:
 						log.WithField("slot", data.Slot).WithField(
-							"blockHash", data.BlockRootHash).Debug(
+							"blockHash", fmt.Sprintf("%#x", data.BlockRootHash)).Debug(
 							"got invalid status from orchestrator, exiting goroutine")
 
 						if err := s.pendingBlockCache.Delete(data.Slot); err != nil {

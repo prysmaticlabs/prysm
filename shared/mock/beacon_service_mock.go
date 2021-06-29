@@ -86,26 +86,6 @@ func (mr *MockBeaconChainClientMockRecorder) GetBeaconConfig(arg0, arg1 interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBeaconConfig", reflect.TypeOf((*MockBeaconChainClient)(nil).GetBeaconConfig), varargs...)
 }
 
-// GetCanonicalBlock mocks base method
-func (m *MockBeaconChainClient) GetCanonicalBlock(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (*eth.SignedBeaconBlock, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "GetCanonicalBlock", varargs...)
-	ret0, _ := ret[0].(*eth.SignedBeaconBlock)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetCanonicalBlock indicates an expected call of GetCanonicalBlock
-func (mr *MockBeaconChainClientMockRecorder) GetCanonicalBlock(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCanonicalBlock", reflect.TypeOf((*MockBeaconChainClient)(nil).GetCanonicalBlock), varargs...)
-}
-
 // GetChainHead mocks base method
 func (m *MockBeaconChainClient) GetChainHead(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (*v1alpha1.ChainHead, error) {
 	m.ctrl.T.Helper()

@@ -72,7 +72,7 @@ func (oc *PandoraClient) GetShardBlockHeader(
 	nextBlockNumber uint64,
 ) (*ShardBlockHeaderResponse, error) {
 
-	log.WithField("parentHash", parentHash.Hex()).WithField(
+	log.WithField("latestPandoraHash", parentHash.Hex()).WithField(
 		"nextBlockNumber", nextBlockNumber).Debug("calling pandora chain for new sharding info")
 	var response []string
 	if err := oc.c.CallContext(ctx, &response, "eth_getShardingWork", parentHash, nextBlockNumber); err != nil {

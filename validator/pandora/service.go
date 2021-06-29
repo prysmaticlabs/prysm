@@ -27,6 +27,15 @@ type ExtraData struct {
 	ProposerIndex uint64
 }
 
+const SignatureSize = 96
+
+type BlsSignatureBytes [SignatureSize]byte
+
+type PandoraExtraDataSig struct {
+	ExtraData
+	BlsSignatureBytes *BlsSignatureBytes
+}
+
 // Client defines a subset of methods conformed to by Pandora RPC clients for
 // producing catalyst block and insert pandora block.
 type PandoraService interface {
@@ -190,9 +199,8 @@ func (s *Service) GetShardBlockHeader(
 	if err := rlp.DecodeBytes(header.Extra, &extraData); err != nil {
 		return nil, common.Hash{}, nil, errors.Wrap(err, "Failed to decode extra data fields")
 	}
-	log.WithField("header", header).WithField(
-		"generatedHeaderHash", header.Hash()).WithField(
-		"headerHash", response.HeaderHash).WithField(
+	log.WithField("generatedHeaderHash", header.Hash().Hex()).WithField(
+		"headerHash", response.HeaderHash.Hex()).WithField(
 		"extraData", extraData).Debug("Got header info from pandora")
 	return header, response.HeaderHash, &extraData, nil
 }
@@ -202,8 +210,6 @@ func (s *Service) GetShardBlockHeader(
 func (s *Service) SubmitShardBlockHeader(ctx context.Context, blockNonce uint64,
 	headerHash common.Hash, sig [96]byte) (bool, error) {
 
-	log.WithField("signature", sig).
-		Debug("Sending header signature to pandora")
 	if !s.connected {
 		log.WithError(ConnectionError).Error("Pandora chain is not connected")
 		return false, ConnectionError
