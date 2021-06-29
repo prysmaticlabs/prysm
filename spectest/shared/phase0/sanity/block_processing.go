@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
@@ -42,7 +42,7 @@ func RunBlockProcessingTest(t *testing.T, config string) {
 			require.NoError(t, err, "Failed to decompress")
 			beaconStateBase := &pb.BeaconState{}
 			require.NoError(t, beaconStateBase.UnmarshalSSZ(preBeaconStateSSZ), "Failed to unmarshal")
-			beaconState, err := stateV0.InitializeFromProto(beaconStateBase)
+			beaconState, err := v1.InitializeFromProto(beaconStateBase)
 			require.NoError(t, err)
 
 			file, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "meta.yaml")
@@ -66,7 +66,7 @@ func RunBlockProcessingTest(t *testing.T, config string) {
 				if transitionError != nil {
 					break
 				}
-				beaconState, ok = processedState.(*stateV0.BeaconState)
+				beaconState, ok = processedState.(*v1.BeaconState)
 				require.Equal(t, true, ok)
 			}
 
@@ -91,7 +91,7 @@ func RunBlockProcessingTest(t *testing.T, config string) {
 
 				postBeaconState := &pb.BeaconState{}
 				require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateSSZ), "Failed to unmarshal")
-				pbState, err := stateV0.ProtobufBeaconState(beaconState.InnerStateUnsafe())
+				pbState, err := v1.ProtobufBeaconState(beaconState.InnerStateUnsafe())
 				require.NoError(t, err)
 				if !proto.Equal(pbState, postBeaconState) {
 					diff, _ := messagediff.PrettyDiff(beaconState.InnerStateUnsafe(), postBeaconState)
