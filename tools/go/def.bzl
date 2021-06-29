@@ -1,7 +1,6 @@
 load("@io_bazel_rules_go//go/private/rules:library.bzl", _go_library = "go_library")
 load("@io_bazel_rules_go//go/private/rules:test.bzl", "go_test_kwargs")
 load("@bazel_gazelle//:deps.bzl", _go_repository = "go_repository")
-load("@io_bazel_rules_go//go/private:providers.bzl", "GoLibrary")
 
 def _go_test_transition_impl(settings, attr):
     settings = dict(settings)
