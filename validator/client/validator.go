@@ -369,6 +369,40 @@ func (v *validator) SlotDeadline(slot types.Slot) time.Time {
 	return time.Unix(int64(v.genesisTime), 0 /*ns*/).Add(secs * time.Second)
 }
 
+func (v *validator) CheckDoppelGanger(ctx context.Context) error {
+	pubkeys, err := v.keyManager.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		return err
+	}
+	req := &ethpb.DoppelGangerRequest{ValidatorRequests: []*ethpb.DoppelGangerRequest_ValidatorRequest{}}
+	for _, pkey := range pubkeys {
+		attRec, err := v.db.AttestationHistoryForPubKey(ctx, pkey)
+		if err != nil {
+			return err
+		}
+		if len(attRec) == 0 {
+			continue
+		}
+		r := attRec[len(attRec)-1]
+		req.ValidatorRequests = append(req.ValidatorRequests,
+			&ethpb.DoppelGangerRequest_ValidatorRequest{
+				PublicKey:  r.PubKey[:],
+				Epoch:      r.Target,
+				SignedRoot: r.SigningRoot[:],
+			})
+	}
+	resp, err := v.validatorClient.CheckDoppelGanger(ctx, req)
+	if err != nil {
+		return err
+	}
+	for _, valRes := range resp.Responses {
+		if valRes.DuplicateExists {
+			return errors.Errorf("Duplicate instance exists in the network for validator %#x", valRes.PublicKey)
+		}
+	}
+	return nil
+}
+
 // UpdateDuties checks the slot number to determine if the validator's
 // list of upcoming assignments needs to be updated. For example, at the
 // beginning of a new epoch.
