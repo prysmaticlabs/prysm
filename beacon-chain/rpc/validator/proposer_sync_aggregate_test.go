@@ -340,3 +340,50 @@ func TestProposerSyncContributions_Dedup(t *testing.T) {
 		})
 	}
 }
+
+func TestProposerSyncContributions_MostProfitable(t *testing.T) {
+	tests := []struct {
+		name string
+		cs   proposerSyncContributions
+		want *v2.SyncCommitteeContribution
+	}{
+		{
+			name: "Same item",
+			cs: proposerSyncContributions{
+				&v2.SyncCommitteeContribution{AggregationBits: bitfield.Bitvector128{0b01}},
+				&v2.SyncCommitteeContribution{AggregationBits: bitfield.Bitvector128{0b01}},
+			},
+			want: &v2.SyncCommitteeContribution{AggregationBits: bitfield.Bitvector128{0b01}},
+		},
+		{
+			name: "Same item again",
+			cs: proposerSyncContributions{
+				&v2.SyncCommitteeContribution{AggregationBits: bitfield.Bitvector128{0b01}},
+				&v2.SyncCommitteeContribution{AggregationBits: bitfield.Bitvector128{0b10}},
+			},
+			want: &v2.SyncCommitteeContribution{AggregationBits: bitfield.Bitvector128{0b01}},
+		},
+		{
+			name: "most profitable at the start",
+			cs: proposerSyncContributions{
+				&v2.SyncCommitteeContribution{AggregationBits: bitfield.Bitvector128{0b0101}},
+				&v2.SyncCommitteeContribution{AggregationBits: bitfield.Bitvector128{0b0100}},
+			},
+			want: &v2.SyncCommitteeContribution{AggregationBits: bitfield.Bitvector128{0b0101}},
+		},
+		{
+			name: "most profitable at the end",
+			cs: proposerSyncContributions{
+				&v2.SyncCommitteeContribution{AggregationBits: bitfield.Bitvector128{0b0101}},
+				&v2.SyncCommitteeContribution{AggregationBits: bitfield.Bitvector128{0b0111}},
+			},
+			want: &v2.SyncCommitteeContribution{AggregationBits: bitfield.Bitvector128{0b0111}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cs := tt.cs.mostProfitable()
+			assert.DeepEqual(t, tt.want, cs)
+		})
+	}
+}

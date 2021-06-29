@@ -70,3 +70,18 @@ func (cs proposerSyncContributions) dedup() proposerSyncContributions {
 	}
 	return uniqContributions
 }
+
+// mostProfitable returns the most profitable sync contribution, the one with the most
+// votes (ie. aggregation bits count)
+func (cs proposerSyncContributions) mostProfitable() *eth.SyncCommitteeContribution {
+	if len(cs) == 0 {
+		return nil
+	}
+	mostProfitable := cs[0]
+	for _, c := range cs[1:] {
+		if c.AggregationBits.Count() > mostProfitable.AggregationBits.Count() {
+			mostProfitable = c
+		}
+	}
+	return mostProfitable
+}
