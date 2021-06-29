@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_test")
+load("@prysm//tools/go:def.bzl", "go_test")
 
 go_test(
     name = "go_default_test",
@@ -7,8 +7,8 @@ go_test(
     data = glob(["*.yaml"]) + [
         "@eth2_spec_tests_minimal//:test_data",
     ],
+    eth_network = "minimal",
     tags = [
-        "manual",
         "minimal",
         "spectest",
     ],

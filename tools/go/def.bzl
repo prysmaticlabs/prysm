@@ -1,5 +1,46 @@
-load("@io_bazel_rules_go//go:def.bzl", _go_library = "go_library")
+load("@io_bazel_rules_go//go/private/rules:library.bzl", _go_library = "go_library")
+load("@io_bazel_rules_go//go/private/rules:test.bzl", "go_test_kwargs")
 load("@bazel_gazelle//:deps.bzl", _go_repository = "go_repository")
+
+def _go_test_transition_impl(settings, attr):
+    settings = dict(settings)
+    
+    if attr.eth_network == "minimal":
+        settings["//proto:network"] = "minimal"
+        settings["@io_bazel_rules_go//go/config:tags"].append("minimal")
+    elif attr.eth_network == "mainnet": 
+        settings["//proto:network"] = "mainnet"
+
+    # TODO: Does this overwrite existing attr.gotags?
+
+    return settings
+
+go_test_transition = transition(
+    implementation = _go_test_transition_impl,
+    inputs = [
+        "@io_bazel_rules_go//go/config:tags",
+        "//proto:network",
+    ],
+    outputs = [
+        "@io_bazel_rules_go//go/config:tags",
+        "//proto:network",
+    ],
+)
+
+def _go_test_transition_rule(**kwargs):
+    kwargs = dict(kwargs)
+    attrs = dict(kwargs["attrs"])
+    attrs.update({
+        "eth_network": attr.string(values = ["mainnet", "minimal"]),
+        "_whitelist_function_transition": attr.label(
+            default = "@bazel_tools//tools/whitelists/function_transition_whitelist",
+        ),
+    })
+    kwargs["attrs"] = attrs
+    kwargs["cfg"] = go_test_transition
+    return rule(**kwargs)
+
+go_test = _go_test_transition_rule(**go_test_kwargs)
 
 def go_library(name, **kwargs):
     gc_goopts = []
