@@ -62,3 +62,4 @@ func TestStateSummary_CacheToDB(t *testing.T) {
 		require.Equal(t, true, db.HasStateSummary(context.Background(), bytesutil.ToBytes32(r)))
 	}
 }
+
