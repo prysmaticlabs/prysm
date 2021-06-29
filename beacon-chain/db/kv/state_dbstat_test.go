@@ -44,8 +44,13 @@ type ValidatorEntry struct {
 }
 
 func TestStore_DisplayStates(t *testing.T) {
-	// get all the buckets in the DB
+	// check if the supplied db file name exists, otherwise silently return.
 	dbFileWithPath := filepath.Join(dbDirectory, dbFileName)
+	if _, err := os.Stat(dbFileWithPath); os.IsNotExist(err) {
+		return
+	}
+
+	// get all the buckets in the DB
 	buckets := keysInBucket(t, dbFileWithPath)
 	if _, ok := buckets[string(stateBucket)]; !ok {
 		log.Fatal("state bucket not in database")
@@ -107,8 +112,12 @@ func TestStore_DisplayStates(t *testing.T) {
 }
 
 func TestStore_DisplayValidators(t *testing.T) {
-	// get all the keys of the "state" bucket.
+	// check if the supplied db file name exists, otherwise silently return.
 	dbFileWithPath := filepath.Join(dbDirectory, dbFileName)
+	if _, err := os.Stat(dbFileWithPath); os.IsNotExist(err) {
+		return
+	}
+
 	keys := keysOfBucket(t, dbFileWithPath, string(stateBucket), rowLimit)
 
 	// create a new KV Store.
@@ -179,11 +188,6 @@ func TestStore_DisplayValidators(t *testing.T) {
 }
 
 func keysInBucket(t *testing.T, absoluteDBFileName string) map[string]*bolt.Bucket {
-	// check if the supplied db file name exists.
-	if _, err := os.Stat(absoluteDBFileName); os.IsNotExist(err) {
-		require.NoError(t, err)
-	}
-
 	// open the bolt db file. If we could not open the file in 5 seconds, the probably
 	// another process has opend it already.
 	boltDB, err := bolt.Open(absoluteDBFileName, 0600, &bolt.Options{Timeout: 5 * time.Second})
