@@ -37,7 +37,7 @@ func (b *BeaconState) eth1Data() *ethpb.Eth1Data {
 	return copyutil.CopyETH1Data(b.state.Eth1Data)
 }
 
-// Eth1DataVotes corresponds to votes from eth2 on the canonical proof-of-work chain
+// Eth1DataVotes corresponds to votes from Ethereum on the canonical proof-of-work chain
 // data retrieved from eth1.
 func (b *BeaconState) Eth1DataVotes() []*ethpb.Eth1Data {
 	if !b.hasInnerState() {
@@ -53,7 +53,7 @@ func (b *BeaconState) Eth1DataVotes() []*ethpb.Eth1Data {
 	return b.eth1DataVotes()
 }
 
-// eth1DataVotes corresponds to votes from eth2 on the canonical proof-of-work chain
+// eth1DataVotes corresponds to votes from Ethereum on the canonical proof-of-work chain
 // data retrieved from eth1.
 // This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) eth1DataVotes() []*ethpb.Eth1Data {
@@ -96,7 +96,7 @@ func (b *BeaconState) eth1DepositIndex() uint64 {
 }
 
 // eth1Root computes the HashTreeRoot Merkleization of
-// a BeaconBlockHeader struct according to the eth2
+// a BeaconBlockHeader struct according to the Ethereum
 // Simple Serialize specification.
 func eth1Root(hasher htrutils.HashFn, eth1Data *ethpb.Eth1Data) ([32]byte, error) {
 	if eth1Data == nil {
@@ -122,7 +122,7 @@ func eth1Root(hasher htrutils.HashFn, eth1Data *ethpb.Eth1Data) ([32]byte, error
 }
 
 // eth1DataVotesRoot computes the HashTreeRoot Merkleization of
-// a list of Eth1Data structs according to the eth2
+// a list of Eth1Data structs according to the Ethereum
 // Simple Serialize specification.
 func eth1DataVotesRoot(eth1DataVotes []*ethpb.Eth1Data) ([32]byte, error) {
 	hashKey, err := stateutil.Eth1DatasEncKey(eth1DataVotes)

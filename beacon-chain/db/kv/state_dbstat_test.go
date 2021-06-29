@@ -125,7 +125,7 @@ func TestStore_DisplayValidators(t *testing.T) {
 	registryValidatorMap := make(map[string][]*RegistryValidatorEntry)
 	validatorMap := make(map[string]*ValidatorEntry)
 
-	for key, _ := range keys {
+	for key := range keys {
 		st, stateErr := db.State(ctx, bytesutil.ToBytes32(hexutils.HexToBytes(key)))
 		require.NoError(t, stateErr)
 

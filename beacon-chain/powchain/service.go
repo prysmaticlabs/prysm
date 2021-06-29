@@ -85,7 +85,7 @@ type ChainStartFetcher interface {
 	ClearPreGenesisData()
 }
 
-// ChainInfoFetcher retrieves information about eth1 metadata at the eth2 genesis time.
+// ChainInfoFetcher retrieves information about eth1 metadata at the Ethereum consensus genesis time.
 type ChainInfoFetcher interface {
 	Eth2GenesisPowchainInfo() (uint64, *big.Int)
 	IsConnectedToETH1() bool
