@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/pkg/errors"
@@ -150,10 +149,10 @@ func assertValidator(v *validatorContainerJson) error {
 			actual = v.Validator.EffectiveBalance
 			break
 		}
-		if v.Validator.Slashed != false {
+		if v.Validator.Slashed {
 			field = "Slashed"
 			expected = "32000000000"
-			actual = strconv.FormatBool(v.Validator.Slashed)
+			actual = "true"
 			break
 		}
 		if v.Validator.ActivationEligibilityEpoch != "0" {
@@ -215,10 +214,10 @@ func assertValidator(v *validatorContainerJson) error {
 			actual = v.Validator.EffectiveBalance
 			break
 		}
-		if v.Validator.Slashed != false {
+		if v.Validator.Slashed {
 			field = "Slashed"
 			expected = "32000000000"
-			actual = strconv.FormatBool(v.Validator.Slashed)
+			actual = "true"
 			break
 		}
 		if v.Validator.ActivationEligibilityEpoch != "0" {
