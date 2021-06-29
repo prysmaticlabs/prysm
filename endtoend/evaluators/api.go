@@ -37,7 +37,7 @@ type validatorJson struct {
 	WithdrawableEpoch          string `json:"withdrawable_epoch"`
 }
 
-// ApiVerifyValidators ensures the Ethereum API returns the correct state root.
+// ApiVerifyValidators ensures the Ethereum API returns correct validator data.
 var ApiVerifyValidators = e2etypes.Evaluator{
 	Name:       "api_verify_validators_epoch_%d",
 	Policy:     policies.OnEpoch(1),
