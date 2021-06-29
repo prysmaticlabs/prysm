@@ -3,12 +3,17 @@ package validator
 import (
 	"context"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	"github.com/prysmaticlabs/prysm/shared/aggregation/sync_contribution"
+	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	bytesutil2 "github.com/wealdtech/go-bytesutil"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -30,16 +35,11 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*prysm
 	// Use zero hash as stub for state root to compute later.
 	stateRoot := params.BeaconConfig().ZeroHash[:]
 
-	// Ugly hack to allow this to compile both for mainnet
-	// and minimal configs.
-	mockAgg := &prysmv2.SyncAggregate{SyncCommitteeBits: []byte{}}
-	var bVector []byte
-	if mockAgg.SyncCommitteeBits.Len() == 512 {
-		bVector = bitfield.NewBitvector512()
-	} else {
-		bVector = bitfield.NewBitvector32()
+	syncAggregate, err := vs.getSyncAggregate(ctx, req.Slot-1, bytesutil.ToBytes32(blkData.ParentRoot))
+	if err != nil {
+		return nil, err
 	}
-	infiniteSignature := [96]byte{0xC0}
+
 	blk := &prysmv2.BeaconBlock{
 		Slot:          req.Slot,
 		ParentRoot:    blkData.ParentRoot,
@@ -54,11 +54,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*prysm
 			AttesterSlashings: blkData.AttesterSlashings,
 			VoluntaryExits:    blkData.VoluntaryExits,
 			Graffiti:          blkData.Graffiti[:],
-			// TODO: Add in actual aggregates
-			SyncAggregate: &prysmv2.SyncAggregate{
-				SyncCommitteeBits:      bVector,
-				SyncCommitteeSignature: infiniteSignature[:],
-			},
+			SyncAggregate:     syncAggregate,
 		},
 	}
 	// Compute state root with the newly constructed block.
@@ -86,4 +82,60 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*prysm
 func (vs *Server) ProposeBlock(ctx context.Context, rBlk *prysmv2.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 	blk := interfaces.WrappedAltairSignedBeaconBlock(rBlk)
 	return vs.V1Server.ProposeBlockGeneric(ctx, blk)
+}
+
+// getSyncAggregate retrieves the sync contributions from the pool to construct the sync aggregate object.
+// The contributions are filtered based on matching of the input root and slot then profitability.
+func (vs *Server) getSyncAggregate(ctx context.Context, slot types.Slot, root [32]byte) (*prysmv2.SyncAggregate, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetSyncAggregate")
+	defer span.End()
+
+	// Contributions have to match the input root
+	contributions, err := vs.SyncCommitteePool.SyncCommitteeContributions(slot)
+	if err != nil {
+		return nil, err
+	}
+	proposerContributions := proposerSyncContributions(contributions).filterByBlockRoot(root)
+
+	// Each sync subcommittee is 128 bits and the sync committee is 512 bits
+	bitsHolder := [][]byte{bitfield.NewBitvector128(), bitfield.NewBitvector128(), bitfield.NewBitvector128(), bitfield.NewBitvector128()}
+	sigsHolder := make([]bls.Signature, 0, params.BeaconConfig().SyncCommitteeSize/params.BeaconConfig().SyncCommitteeSubnetCount)
+
+	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSubnetCount; i++ {
+		cs := proposerContributions.filterBySubIndex(i)
+		aggregates, err := sync_contribution.Aggregate(cs)
+		if err != nil {
+			return nil, err
+		}
+
+		// Retrieve the most profitable contribution
+		c := proposerSyncContributions(aggregates).dedup().mostProfitable()
+		if c == nil {
+			continue
+		}
+		bitsHolder[i] = c.AggregationBits
+		sig, err := bls.SignatureFromBytes(c.Signature)
+		if err != nil {
+			return nil, err
+		}
+		sigsHolder = append(sigsHolder, sig)
+	}
+
+	// Aggregate all the contribution bits and signatures.
+	var syncBits []byte
+	for _, b := range bitsHolder {
+		syncBits = append(syncBits, b...)
+	}
+	syncSig := bls.AggregateSignatures(sigsHolder)
+	var syncSigBytes [96]byte
+	if syncSig == nil {
+		syncSigBytes = [96]byte{0xC0} // Infinity signature if itself is nil.
+	} else {
+		syncSigBytes = bytesutil2.ToBytes96(syncSig.Marshal())
+	}
+
+	return &prysmv2.SyncAggregate{
+		SyncCommitteeBits:      syncBits,
+		SyncCommitteeSignature: syncSigBytes[:],
+	}, nil
 }
