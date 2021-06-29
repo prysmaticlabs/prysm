@@ -62,6 +62,7 @@ func e2eMinimal(t *testing.T, usePrysmSh bool) {
 			ev.ValidatorHasExited,
 			ev.ValidatorsVoteWithTheMajority,
 			ev.ColdStateCheckpoint,
+			ev.ApiVerifyValidators,
 		},
 	}
 

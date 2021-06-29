@@ -329,6 +329,7 @@ func CopyValidator(val *ethpb.Validator) *ethpb.Validator {
 	}
 }
 
+<<<<<<< HEAD
 // CopySyncCommitteeMessage copies the provided sync committee message object.
 func CopySyncCommitteeMessage(s *prysmv2.SyncCommitteeMessage) *prysmv2.SyncCommitteeMessage {
 	if s == nil {
@@ -342,6 +343,8 @@ func CopySyncCommitteeMessage(s *prysmv2.SyncCommitteeMessage) *prysmv2.SyncComm
 	}
 }
 
+=======
+>>>>>>> develop
 // CopySyncCommitteeContribution copies the provided sync committee contribution object.
 func CopySyncCommitteeContribution(c *prysmv2.SyncCommitteeContribution) *prysmv2.SyncCommitteeContribution {
 	if c == nil {
@@ -355,6 +358,7 @@ func CopySyncCommitteeContribution(c *prysmv2.SyncCommitteeContribution) *prysmv
 		Signature:         bytesutil.SafeCopyBytes(c.Signature),
 	}
 }
+<<<<<<< HEAD
 
 // CopySyncAggregate copies the provided sync aggregate object.
 func CopySyncAggregate(a *prysmv2.SyncAggregate) *prysmv2.SyncAggregate {
@@ -366,3 +370,5 @@ func CopySyncAggregate(a *prysmv2.SyncAggregate) *prysmv2.SyncAggregate {
 		SyncCommitteeSignature: bytesutil.SafeCopyBytes(a.SyncCommitteeSignature),
 	}
 }
+=======
+>>>>>>> develop
