@@ -1,17 +1,19 @@
 load("@io_bazel_rules_go//go/private/rules:library.bzl", _go_library = "go_library")
 load("@io_bazel_rules_go//go/private/rules:test.bzl", "go_test_kwargs")
 load("@bazel_gazelle//:deps.bzl", _go_repository = "go_repository")
+load("@io_bazel_rules_go//go/private:providers.bzl", "GoLibrary")
 
 def _go_test_transition_impl(settings, attr):
     settings = dict(settings)
-    
+
     if attr.eth_network == "minimal":
         settings["//proto:network"] = "minimal"
-        settings["@io_bazel_rules_go//go/config:tags"].append("minimal")
+        settings["@io_bazel_rules_go//go/config:tags"] += ["minimal"]
     elif attr.eth_network == "mainnet": 
         settings["//proto:network"] = "mainnet"
 
-    # TODO: Does this overwrite existing attr.gotags?
+    if attr.gotags:
+        settings["@io_bazel_rules_go//go/config:tags"] += attr.gotags
 
     return settings
 
