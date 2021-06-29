@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
+	"github.com/prysmaticlabs/prysm/shared/interfaces/version"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -61,6 +62,11 @@ func (b *BeaconState) genesisValidatorRoot() []byte {
 	root := make([]byte, 32)
 	copy(root, b.state.GenesisValidatorsRoot)
 	return root
+}
+
+// Version of the beacon state.
+func (b *BeaconState) Version() int {
+	return version.Phase0
 }
 
 // Slot of the current beacon chain state.
