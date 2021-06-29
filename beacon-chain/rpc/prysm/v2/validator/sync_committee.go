@@ -59,8 +59,10 @@ func (vs *Server) SubmitSyncMessage(ctx context.Context, msg *prysmv2.SyncCommit
 	// Broadcasting and saving message into the pool in parallel. As one fail should not affect another.
 	// This broadcasts for all subnets.
 	for _, id := range idxResp.Indices {
+		subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
+		subnet := id / subCommitteeSize
 		errs.Go(func() error {
-			return vs.P2P.BroadcastSyncCommitteeMessage(ctx, id, msg)
+			return vs.P2P.BroadcastSyncCommitteeMessage(ctx, subnet, msg)
 		})
 	}
 

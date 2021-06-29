@@ -280,7 +280,7 @@ func SyncSubCommitteePubkeys(st iface.BeaconStateAltair, subComIdx types.Committ
 		}
 	}
 	subCommSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
-	i := uint64(subComIdx) + subCommSize
+	i := uint64(subComIdx) * subCommSize
 	endOfSubCom := i + subCommSize
 	pubkeyLen := uint64(len(syncCommittee.Pubkeys))
 	if endOfSubCom > pubkeyLen {
@@ -297,7 +297,7 @@ func SyncSubCommitteePubkeys(st iface.BeaconStateAltair, subComIdx types.Committ
 func IsSyncCommitteeAggregator(sig []byte) bool {
 	modulo := mathutil.Max(1, params.BeaconConfig().SyncCommitteeSize/params.BeaconConfig().SyncCommitteeSubnetCount/params.BeaconConfig().TargetAggregatorsPerSyncSubcommittee)
 	hashedSig := hashutil.Hash(sig)
-	return bytesutil.BytesToUint64BigEndian(hashedSig[:8])%modulo == 0
+	return bytesutil.FromBytes8(hashedSig[:8])%modulo == 0
 }
 
 // SyncCommitteeSigningRoot returns the signing root from the relevant provided data.

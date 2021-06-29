@@ -109,7 +109,6 @@ func SendBeaconBlocksByRootRequest(
 		}
 		return nil
 	}
-	log.Infof("number of roots %d", len(*req))
 	for i := 0; i < len(*req); i++ {
 		// Exit if peer sends more than max request blocks.
 		if uint64(i) >= params.BeaconNetworkConfig().MaxRequestBlocks {

@@ -199,7 +199,6 @@ func (s *Service) broadcastObject(ctx context.Context, obj ssz.Marshaler, topic 
 		messageLen := int64(buf.Len())
 		span.AddMessageSendEvent(int64(id), messageLen /*uncompressed*/, messageLen /*compressed*/)
 	}
-
 	if err := s.PublishToTopic(ctx, topic+s.Encoding().ProtocolSuffix(), buf.Bytes()); err != nil {
 		err := errors.Wrap(err, "could not publish message")
 		traceutil.AnnotateError(span, err)

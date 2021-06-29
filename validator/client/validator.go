@@ -18,6 +18,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
@@ -621,19 +622,14 @@ func (v *validator) isSyncCommitteeAggregator(ctx context.Context, slot types.Sl
 		return false, err
 	}
 
-	modulo := uint64(1)
-	count := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount / params.BeaconConfig().TargetAggregatorsPerSyncSubcommittee
-	if count > 1 {
-		modulo = count
-	}
-
 	for _, index := range res.Indices {
-		sig, err := v.signSyncSelectionData(ctx, pubKey, index, slot)
+		subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
+		subnet := index / subCommitteeSize
+		sig, err := v.signSyncSelectionData(ctx, pubKey, subnet, slot)
 		if err != nil {
 			return false, err
 		}
-		b := hashutil.Hash(sig)
-		if binary.LittleEndian.Uint64(b[:8])%modulo == 0 {
+		if altair.IsSyncCommitteeAggregator(sig) {
 			return true, nil
 		}
 	}

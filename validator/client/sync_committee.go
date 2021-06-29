@@ -6,6 +6,7 @@ import (
 
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
@@ -105,7 +106,9 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 
 	selectionProofs := make([][]byte, len(indexRes.Indices))
 	for i, index := range indexRes.Indices {
-		selectionProof, err := v.signSyncSelectionData(ctx, pubKey, index, slot)
+		subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
+		subnet := index / subCommitteeSize
+		selectionProof, err := v.signSyncSelectionData(ctx, pubKey, subnet, slot)
 		if err != nil {
 			log.Errorf("Could not sign selection data: %v", err)
 			return
@@ -115,11 +118,16 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 
 	v.waitToSlotTwoThirds(ctx, slot)
 
-	for i, subnetID := range indexRes.Indices {
+	for i, comIdx := range indexRes.Indices {
+		if !altair.IsSyncCommitteeAggregator(selectionProofs[i]) {
+			continue
+		}
+		subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
+		subnet := comIdx / subCommitteeSize
 		contribution, err := v.validatorClientV2.GetSyncCommitteeContribution(ctx, &prysmv2.SyncCommitteeContributionRequest{
 			Slot:      slot,
 			PublicKey: pubKey[:],
-			SubnetId:  subnetID,
+			SubnetId:  subnet,
 		})
 		if err != nil {
 			log.Errorf("Could not get sync committee contribution: %v", err)
