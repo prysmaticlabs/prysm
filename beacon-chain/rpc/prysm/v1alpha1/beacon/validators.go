@@ -686,6 +686,10 @@ func (bs *Server) GetValidatorPerformance(
 		if err != nil {
 			return nil, err
 		}
+		headState, vp, err = altair.ProcessInactivityScores(ctx, headState, vp)
+		if err != nil {
+			return nil, err
+		}
 		headState, err = altair.ProcessRewardsAndPenaltiesPrecompute(headState, bp, vp)
 		if err != nil {
 			return nil, err
