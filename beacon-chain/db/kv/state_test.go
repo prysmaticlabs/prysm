@@ -419,7 +419,97 @@ func TestStore_DisplayStates(t *testing.T) {
 	}
 }
 
+type RegistryValidatorEntry struct {
+	StateSlot types.Slot
+	ValidatorIdx int
+	ValidatorEntryIndex uint64
+}
+
+type ValidatorEntry struct {
+	WithdrawalCredentials string
+	EffectiveBalance uint64
+	Slashed bool
+	ActivationEligibilityEpoch types.Epoch
+	ActivationEpoch types.Epoch
+	ExitEpoch types.Epoch
+	WithdrawableEpoch types.Epoch
+}
+
 func TestStore_DisplayValidators(t *testing.T) {
+	dbDirectory := "/Users/jmozah/Desktop"
+	dbFileName := "beaconchain.db"
+	rowLimit := uint64(10)
+
+
+	// get all the keys of the "state" bucket.
+	dbFileWithPath := filepath.Join(dbDirectory, dbFileName)
+	keys := getKeysOfBucket(t, dbFileWithPath, string(stateBucket), rowLimit)
+
+	// create a new KV Store.
+	db, err := NewKVStore(context.Background(), dbDirectory, &Config{})
+	require.NoError(t, err, "Failed to instantiate DB")
+	defer func() {
+		err := db.Close()
+		require.NoError(t, err)
+	}()
+
+	ctx := context.Background()
+	rowCount := uint64(0)
+
+	registryValidatorMap := make(map[string][]*RegistryValidatorEntry)
+	validatorMap := make(map[uint64]*ValidatorEntry)
+
+	validatorEntryIndex := uint64(0)
+	for key, _ := range keys {
+		st, stateErr := db.State(ctx, bytesutil.ToBytes32(hexutils.HexToBytes(key)))
+		require.NoError(t, stateErr)
+		st.ReadFromEveryValidator(func(idx int, val iface.ReadOnlyValidator) error {
+			publicKey := fmt.Sprintf("%#x", val.PublicKey())
+
+			// for now investiage only one public key
+			if publicKey != "0x887465db5979194927d4f237336eeaf8a898dad27c06cc6cbcc255d8fc23dd775778b8005fead70239822ef0b859948c" {
+				return nil
+			}
+
+			entry := &RegistryValidatorEntry{
+				StateSlot: st.Slot(),
+				ValidatorIdx: idx,
+				WithdrawalCredentials: hexutils.BytesToHex(val.WithdrawalCredentials()),
+				EffectiveBalance: val.EffectiveBalance(),
+				Slashed: val.Slashed(),
+				ActivationEligibilityEpoch: val.ActivationEligibilityEpoch(),
+				ActivationEpoch: val.ActivationEpoch(),
+				ExitEpoch: val.ExitEpoch(),
+				WithdrawableEpoch: val.WithdrawableEpoch(),
+			}
+
+			// add the validator entry to its list
+			valList := registryValidatorMap[publicKey]
+			valList = append(valList, entry)
+			registryValidatorMap[publicKey] = valList
+
+			return nil
+		})
+		rowCount++
+	}
+
+	for pubKey, valList := range registryValidatorMap {
+		fmt.Println("publicKey : ", pubKey)
+		fmt.Println("no of Values : ", len(valList))
+		for _, val := range valList {
+			fmt.Printf("---- StateSlot = %d ------\n", val.StateSlot)
+			fmt.Println("Validator Index : ",val.ValidatorIdx)
+			fmt.Println("WithdrawalCredentials : ",  val.WithdrawalCredentials)
+			fmt.Println("EffectiveBalance : ", val.EffectiveBalance)
+			fmt.Println("Slashed : ", val.Slashed)
+			fmt.Println("ActivationEligibilityEpoch : ", val.ActivationEligibilityEpoch)
+			fmt.Println("ActivationEpoch : ", val.ActivationEpoch)
+			fmt.Println("ExitEpoch : ", val.ExitEpoch)
+			fmt.Println("WithdrawableEpoch : ", val.WithdrawableEpoch)
+		}
+		//break
+	}
+
 
 }
 
