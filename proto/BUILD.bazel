@@ -3,6 +3,7 @@ load(
     "string_flag",
 )
 
+# Example flag: --//proto:network=minimal
 string_flag(
     name = "network",
     build_setting_default = "mainnet",
