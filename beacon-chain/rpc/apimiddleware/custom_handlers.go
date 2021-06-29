@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eventsv1"
 	"github.com/prysmaticlabs/prysm/shared/gateway"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
@@ -121,8 +120,7 @@ func serializeMiddlewareResponseIntoSSZ(data string) (sszResponse []byte, errJso
 	// Serialize the SSZ part of the deserialized value.
 	b, err := base64.StdEncoding.DecodeString(data)
 	if err != nil {
-		e := errors.Wrapf(err, "could not decode response body into base64")
-		return nil, &gateway.DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+		return nil, gateway.InternalServerErrorWithMessage(err, "could not decode response body into base64")
 	}
 	return b, nil
 }
@@ -144,8 +142,7 @@ func writeSSZResponseHeaderAndBody(grpcResp *http.Response, w http.ResponseWrite
 	if statusCodeHeader != "" {
 		code, err := strconv.Atoi(statusCodeHeader)
 		if err != nil {
-			e := errors.Wrapf(err, "could not parse status code")
-			return &gateway.DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+			return gateway.InternalServerErrorWithMessage(err, "could not parse status code")
 		}
 		w.WriteHeader(code)
 	} else {
@@ -156,8 +153,7 @@ func writeSSZResponseHeaderAndBody(grpcResp *http.Response, w http.ResponseWrite
 	w.Header().Set("Content-Disposition", "attachment; filename="+fileName)
 	w.WriteHeader(grpcResp.StatusCode)
 	if _, err := io.Copy(w, ioutil.NopCloser(bytes.NewReader(responseSsz))); err != nil {
-		e := errors.Wrapf(err, "could not write response message")
-		return &gateway.DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+		return gateway.InternalServerErrorWithMessage(err, "could not write response message")
 	}
 	return nil
 }
@@ -170,7 +166,7 @@ func handleEvents(m *gateway.ApiProxyMiddleware, _ gateway.Endpoint, w http.Resp
 	// Because of this subscribing to streams doesn't work as intended, resulting in each event being handled by all subscriptions.
 	// To handle events properly, we subscribe just once using a placeholder value ('events') and handle all topics inside this subscription.
 	if err := sseClient.SubscribeChan("events", eventChan); err != nil {
-		gateway.WriteError(w, &gateway.DefaultErrorJson{Message: err.Error(), Code: http.StatusInternalServerError}, nil)
+		gateway.WriteError(w, gateway.InternalServerError(err), nil)
 		sseClient.Unsubscribe(eventChan)
 		return
 	}
@@ -203,11 +199,11 @@ func receiveEvents(eventChan <-chan *sse.Event, w http.ResponseWriter, req *http
 				// and assign the attestation back to event data for further processing.
 				eventData := &aggregatedAttReceivedDataJson{}
 				if err := json.Unmarshal(msg.Data, eventData); err != nil {
-					return &gateway.DefaultErrorJson{Message: err.Error(), Code: http.StatusInternalServerError}
+					return gateway.InternalServerError(err)
 				}
 				attData, err := json.Marshal(eventData.Aggregate)
 				if err != nil {
-					return &gateway.DefaultErrorJson{Message: err.Error(), Code: http.StatusInternalServerError}
+					return gateway.InternalServerError(err)
 				}
 				msg.Data = attData
 			case eventsv1.VoluntaryExitTopic:
@@ -239,7 +235,7 @@ func receiveEvents(eventChan <-chan *sse.Event, w http.ResponseWriter, req *http
 
 func writeEvent(msg *sse.Event, w http.ResponseWriter, data interface{}) gateway.ErrorJson {
 	if err := json.Unmarshal(msg.Data, data); err != nil {
-		return &gateway.DefaultErrorJson{Message: err.Error(), Code: http.StatusInternalServerError}
+		return gateway.InternalServerError(err)
 	}
 	if errJson := gateway.ProcessMiddlewareResponseFields(data); errJson != nil {
 		return errJson
@@ -252,19 +248,19 @@ func writeEvent(msg *sse.Event, w http.ResponseWriter, data interface{}) gateway
 	w.Header().Set("Content-Type", "text/event-stream")
 
 	if _, err := w.Write([]byte("event: ")); err != nil {
-		return &gateway.DefaultErrorJson{Message: err.Error(), Code: http.StatusInternalServerError}
+		return gateway.InternalServerError(err)
 	}
 	if _, err := w.Write(msg.Event); err != nil {
-		return &gateway.DefaultErrorJson{Message: err.Error(), Code: http.StatusInternalServerError}
+		return gateway.InternalServerError(err)
 	}
 	if _, err := w.Write([]byte("\ndata: ")); err != nil {
-		return &gateway.DefaultErrorJson{Message: err.Error(), Code: http.StatusInternalServerError}
+		return gateway.InternalServerError(err)
 	}
 	if _, err := w.Write(dataJson); err != nil {
-		return &gateway.DefaultErrorJson{Message: err.Error(), Code: http.StatusInternalServerError}
+		return gateway.InternalServerError(err)
 	}
 	if _, err := w.Write([]byte("\n\n")); err != nil {
-		return &gateway.DefaultErrorJson{Message: err.Error(), Code: http.StatusInternalServerError}
+		return gateway.InternalServerError(err)
 	}
 
 	return nil

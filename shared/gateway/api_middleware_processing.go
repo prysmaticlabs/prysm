@@ -22,8 +22,7 @@ import (
 // DeserializeRequestBodyIntoContainer deserializes the request's body into an endpoint-specific struct.
 func DeserializeRequestBodyIntoContainer(body io.Reader, requestContainer interface{}) ErrorJson {
 	if err := json.NewDecoder(body).Decode(&requestContainer); err != nil {
-		e := errors.Wrap(err, "could not decode request body")
-		return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+		return InternalServerErrorWithMessage(err, "could not decode request body")
 	}
 	return nil
 }
@@ -36,8 +35,7 @@ func ProcessRequestContainerFields(requestContainer interface{}) ErrorJson {
 			f:   hexToBase64Processor,
 		},
 	}); err != nil {
-		e := errors.Wrapf(err, "could not process request data")
-		return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+		return InternalServerErrorWithMessage(err, "could not process request data")
 	}
 	return nil
 }
@@ -47,8 +45,7 @@ func SetRequestBodyToRequestContainer(requestContainer interface{}, req *http.Re
 	// Serialize the struct, which now includes a base64-encoded value, into JSON.
 	j, err := json.Marshal(requestContainer)
 	if err != nil {
-		e := errors.Wrapf(err, "could not marshal request")
-		return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+		return InternalServerErrorWithMessage(err, "could not marshal request")
 	}
 	// Set the body to the new JSON.
 	req.Body = ioutil.NopCloser(bytes.NewReader(j))
@@ -70,10 +67,11 @@ func (m *ApiProxyMiddleware) PrepareRequestForProxying(endpoint Endpoint, req *h
 
 // ProxyRequest proxies the request to grpc-gateway.
 func ProxyRequest(req *http.Request) (*http.Response, ErrorJson) {
-	grpcResp, err := http.DefaultClient.Do(req)
+	// We do not use http.DefaultClient because it does not have any timeout.
+	netClient := &http.Client{Timeout: time.Minute * 2}
+	grpcResp, err := netClient.Do(req)
 	if err != nil {
-		e := errors.Wrapf(err, "could not proxy request")
-		return nil, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+		return nil, InternalServerErrorWithMessage(err, "could not proxy request")
 	}
 	if grpcResp == nil {
 		return nil, &DefaultErrorJson{Message: "nil response from gRPC-gateway", Code: http.StatusInternalServerError}
@@ -85,8 +83,7 @@ func ProxyRequest(req *http.Request) (*http.Response, ErrorJson) {
 func ReadGrpcResponseBody(r io.Reader) ([]byte, ErrorJson) {
 	body, err := ioutil.ReadAll(r)
 	if err != nil {
-		e := errors.Wrapf(err, "could not read response body")
-		return nil, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+		return nil, InternalServerErrorWithMessage(err, "could not read response body")
 	}
 	return body, nil
 }
@@ -95,8 +92,7 @@ func ReadGrpcResponseBody(r io.Reader) ([]byte, ErrorJson) {
 // The struct can be later examined to check if the request resulted in an error.
 func DeserializeGrpcResponseBodyIntoErrorJson(errJson ErrorJson, body []byte) ErrorJson {
 	if err := json.Unmarshal(body, errJson); err != nil {
-		e := errors.Wrapf(err, "could not unmarshal error")
-		return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+		return InternalServerErrorWithMessage(err, "could not unmarshal error")
 	}
 	return nil
 }
@@ -122,8 +118,7 @@ func GrpcResponseIsStatusCodeOnly(req *http.Request, responseContainer interface
 // DeserializeGrpcResponseBodyIntoContainer deserializes the grpc-gateway's response body into an endpoint-specific struct.
 func DeserializeGrpcResponseBodyIntoContainer(body []byte, responseContainer interface{}) ErrorJson {
 	if err := json.Unmarshal(body, &responseContainer); err != nil {
-		e := errors.Wrapf(err, "could not unmarshal response")
-		return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+		return InternalServerErrorWithMessage(err, "could not unmarshal response")
 	}
 	return nil
 }
@@ -144,8 +139,7 @@ func ProcessMiddlewareResponseFields(responseContainer interface{}) ErrorJson {
 			f:   timeToUnixProcessor,
 		},
 	}); err != nil {
-		e := errors.Wrapf(err, "could not process response data")
-		return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+		return InternalServerErrorWithMessage(err, "could not process response data")
 	}
 	return nil
 }
@@ -154,8 +148,7 @@ func ProcessMiddlewareResponseFields(responseContainer interface{}) ErrorJson {
 func SerializeMiddlewareResponseIntoJson(responseContainer interface{}) (jsonResponse []byte, errJson ErrorJson) {
 	j, err := json.Marshal(responseContainer)
 	if err != nil {
-		e := errors.Wrapf(err, "could not marshal response")
-		return nil, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+		return nil, InternalServerErrorWithMessage(err, "could not marshal response")
 	}
 	return j, nil
 }
@@ -180,16 +173,14 @@ func WriteMiddlewareResponseHeadersAndBody(req *http.Request, grpcResp *http.Res
 		if statusCodeHeader != "" {
 			code, err := strconv.Atoi(statusCodeHeader)
 			if err != nil {
-				e := errors.Wrapf(err, "could not parse status code")
-				return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+				return InternalServerErrorWithMessage(err, "could not parse status code")
 			}
 			w.WriteHeader(code)
 		} else {
 			w.WriteHeader(grpcResp.StatusCode)
 		}
 		if _, err := io.Copy(w, ioutil.NopCloser(bytes.NewReader(responseJson))); err != nil {
-			e := errors.Wrapf(err, "could not write response message")
-			return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+			return InternalServerErrorWithMessage(err, "could not write response message")
 		}
 	} else if req.Method == "POST" {
 		w.WriteHeader(grpcResp.StatusCode)
@@ -228,8 +219,7 @@ func WriteError(w http.ResponseWriter, errJson ErrorJson, responseHeader http.He
 // Cleanup performs final cleanup on the initial response from grpc-gateway.
 func Cleanup(grpcResponseBody io.ReadCloser) ErrorJson {
 	if err := grpcResponseBody.Close(); err != nil {
-		e := errors.Wrapf(err, "could not close response body")
-		return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+		return InternalServerErrorWithMessage(err, "could not close response body")
 	}
 	return nil
 }
