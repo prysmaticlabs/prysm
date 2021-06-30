@@ -88,15 +88,21 @@ func (vs *Server) MultipleValidatorStatus(
 	}, nil
 }
 
+// CheckDoppelGanger checks if the provided keys are currently active in the network.
 func (vs *Server) CheckDoppelGanger(ctx context.Context, req *ethpb.DoppelGangerRequest) (*ethpb.DoppelGangerResponse, error) {
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
+	}
+	if req == nil || req.ValidatorRequests == nil || len(req.ValidatorRequests) == 0 {
+		return &ethpb.DoppelGangerResponse{
+			Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{},
+		}, nil
 	}
 	headState, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
-	// We walk back from the current head state to the state at the beginning of the previous 2 epochs. 
+	// We walk back from the current head state to the state at the beginning of the previous 2 epochs.
 	// Where S_i , i := 0,1,2. i = 0 would signify the current head state in this epoch.
 	currEpoch := helpers.SlotToEpoch(headState.Slot())
 	previousEpoch, err := currEpoch.SafeSub(1)
@@ -123,6 +129,11 @@ func (vs *Server) CheckDoppelGanger(ctx context.Context, req *ethpb.DoppelGanger
 		// less than 2 epoch ago, this method will not
 		// be able to catch duplicates.
 		if v.Epoch+2 >= currEpoch {
+			resp.Responses = append(resp.Responses,
+				&ethpb.DoppelGangerResponse_ValidatorResponse{
+					PublicKey:       v.PublicKey,
+					DuplicateExists: false,
+				})
 			continue
 		}
 		valIndex, ok := olderState.ValidatorIndexByPubkey(bytesutil.ToBytes48(v.PublicKey))
