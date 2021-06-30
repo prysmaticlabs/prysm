@@ -306,7 +306,7 @@ func TestSyncCommitteePeriod(t *testing.T) {
 		{epoch: 1000, wanted: 1000 / uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod)},
 	}
 	for _, test := range tests {
-		require.Equal(t, test.wanted, altair.SyncCommitteePeriod(test.epoch))
+		require.Equal(t, test.wanted, helpers.SyncCommitteePeriod(test.epoch))
 	}
 }
 

@@ -381,3 +381,20 @@ func TestPrevSlot(t *testing.T) {
 		})
 	}
 }
+
+func TestSyncCommitteePeriodStartEpoch(t *testing.T) {
+	tests := []struct {
+		epoch  types.Epoch
+		wanted types.Epoch
+	}{
+		{epoch: 0, wanted: 0},
+		{epoch: params.BeaconConfig().EpochsPerSyncCommitteePeriod + 1, wanted: params.BeaconConfig().EpochsPerSyncCommitteePeriod},
+		{epoch: params.BeaconConfig().EpochsPerSyncCommitteePeriod*2 + 100, wanted: params.BeaconConfig().EpochsPerSyncCommitteePeriod * 2},
+		{epoch: params.BeaconConfig().EpochsPerSyncCommitteePeriod*params.BeaconConfig().EpochsPerSyncCommitteePeriod + 1, wanted: params.BeaconConfig().EpochsPerSyncCommitteePeriod * params.BeaconConfig().EpochsPerSyncCommitteePeriod},
+	}
+	for _, test := range tests {
+		e, err := SyncCommitteePeriodStartEpoch(test.epoch)
+		require.NoError(t, err)
+		require.Equal(t, test.wanted, e)
+	}
+}
