@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"io/ioutil"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -16,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -974,7 +974,10 @@ func TestService_ReceiveBlocks_SetHighest(t *testing.T) {
 func TestValidator_CheckDoppelGanger(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-
+	flgs := featureconfig.Get()
+	flgs.EnableDoppleGanger = true
+	reset := featureconfig.InitWithReset(flgs)
+	defer reset()
 	tests := []struct {
 		name            string
 		validatorSetter func(t *testing.T) *validator
@@ -1105,12 +1108,40 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 			},
 			err: "Duplicate instance exists in the network for validator",
 		},
+		{
+			name: "no history exists",
+			validatorSetter: func(t *testing.T) *validator {
+				client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+				// Use only 1 key for deterministic order.
+				km := genMockKeymanger(1)
+				keys, err := km.FetchValidatingPublicKeys(context.Background())
+				assert.NoError(t, err)
+				db := dbTest.SetupDB(t, keys)
+				resp := &ethpb.DoppelGangerResponse{Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{}}
+				req := &ethpb.DoppelGangerRequest{ValidatorRequests: []*ethpb.DoppelGangerRequest_ValidatorRequest{}}
+				for _, k := range keys {
+					resp.Responses = append(resp.Responses, &ethpb.DoppelGangerResponse_ValidatorResponse{PublicKey: k[:], DuplicateExists: false})
+					req.ValidatorRequests = append(req.ValidatorRequests, &ethpb.DoppelGangerRequest_ValidatorRequest{PublicKey: k[:], SignedRoot: make([]byte, 32), Epoch: 0})
+				}
+				v := &validator{
+					validatorClient: client,
+					keyManager:      km,
+					db:              db,
+				}
+				client.EXPECT().CheckDoppelGanger(
+					gomock.Any(), // ctx
+					req,          // request
+				).Return(resp, nil /*err*/)
+				return v
+			},
+			err: "",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			v := tt.validatorSetter(t)
-			if err := v.CheckDoppelGanger(context.Background()); tt.err != "" && !strings.Contains(err.Error(), tt.err) {
-				t.Errorf("CheckDoppelGanger() error = %v, wantErr %v", err, tt.err)
+			if err := v.CheckDoppelGanger(context.Background()); tt.err != "" {
+				assert.ErrorContains(t, tt.err, err)
 			}
 		})
 	}
