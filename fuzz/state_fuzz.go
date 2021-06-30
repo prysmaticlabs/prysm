@@ -6,7 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateutil "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -25,7 +25,7 @@ func BeaconStateFuzz(input []byte) {
 	if err := st.UnmarshalSSZ(input); err != nil {
 		return
 	}
-	s, err := stateV0.InitializeFromProtoUnsafe(st)
+	s, err := v1.InitializeFromProtoUnsafe(st)
 	if err != nil {
 		panic(err)
 	}
@@ -42,7 +42,7 @@ func BeaconStateFuzz(input []byte) {
 	validateStateHTR(s)
 }
 
-func validateStateHTR(s *stateV0.BeaconState) {
+func validateStateHTR(s *v1.BeaconState) {
 	rawState, ok := s.InnerStateUnsafe().(*pb.BeaconState)
 	if !ok {
 		panic("non valid type assertion")

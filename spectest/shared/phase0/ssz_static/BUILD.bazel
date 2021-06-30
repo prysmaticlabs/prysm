@@ -7,7 +7,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/spectest/shared/phase0/ssz_static",
     visibility = ["//spectest:__subpackages__"],
     deps = [
-        "//beacon-chain/state/stateV0:go_default_library",
+        "//beacon-chain/state/v1:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/testutil:go_default_library",
