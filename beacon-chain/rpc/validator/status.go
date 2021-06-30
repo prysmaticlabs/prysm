@@ -96,8 +96,8 @@ func (vs *Server) CheckDoppelGanger(ctx context.Context, req *ethpb.DoppelGanger
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
-	// We walk back from the current head to the previous 2 states. With S_i , i := 0,1,2. i = 0
-	// would signify the current head state in this epoch.
+	// We walk back from the current head state to the state at the beginning of the previous 2 epochs. 
+	// Where S_i , i := 0,1,2. i = 0 would signify the current head state in this epoch.
 	currEpoch := helpers.SlotToEpoch(headState.Slot())
 	previousEpoch, err := currEpoch.SafeSub(1)
 	if err != nil {
