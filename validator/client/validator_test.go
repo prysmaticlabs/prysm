@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io/ioutil"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -968,4 +969,132 @@ func TestService_ReceiveBlocks_SetHighest(t *testing.T) {
 	connectionErrorChannel := make(chan error)
 	v.ReceiveBlocks(ctx, connectionErrorChannel)
 	require.Equal(t, slot, v.highestValidSlot)
+}
+
+func TestValidator_CheckDoppelGanger(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	tests := []struct {
+		name            string
+		validatorSetter func(t *testing.T) *validator
+		err             string
+	}{
+		{
+			name: "no doppelganger",
+			validatorSetter: func(t *testing.T) *validator {
+				client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+				km := genMockKeymanger(10)
+				keys, err := km.FetchValidatingPublicKeys(context.Background())
+				assert.NoError(t, err)
+				db := dbTest.SetupDB(t, keys)
+				resp := &ethpb.DoppelGangerRequest{ValidatorRequests: []*ethpb.DoppelGangerRequest_ValidatorRequest{}}
+				for _, k := range keys {
+					att := createAttestation(10, 12)
+					rt, err := att.Data.HashTreeRoot()
+					assert.NoError(t, err)
+					assert.NoError(t, db.SaveAttestationForPubKey(context.Background(), k, rt, att))
+					resp.ValidatorRequests = append(resp.ValidatorRequests, &ethpb.DoppelGangerRequest_ValidatorRequest{PublicKey: k[:], Epoch: att.Data.Target.Epoch, SignedRoot: rt[:]})
+				}
+				v := &validator{
+					validatorClient: client,
+					keyManager:      km,
+					db:              db,
+				}
+				client.EXPECT().CheckDoppelGanger(
+					gomock.Any(), // ctx
+					gomock.Any(), // request
+				).Return(nil, nil /*err*/)
+
+				return v
+			},
+		},
+		{
+			name: "multiple doppelganger exists",
+			validatorSetter: func(t *testing.T) *validator {
+				client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+				km := genMockKeymanger(10)
+				keys, err := km.FetchValidatingPublicKeys(context.Background())
+				assert.NoError(t, err)
+				db := dbTest.SetupDB(t, keys)
+				resp := &ethpb.DoppelGangerResponse{Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{}}
+				for i, k := range keys {
+					att := createAttestation(10, 12)
+					rt, err := att.Data.HashTreeRoot()
+					assert.NoError(t, err)
+					assert.NoError(t, db.SaveAttestationForPubKey(context.Background(), k, rt, att))
+					if i%3 == 0 {
+						resp.Responses = append(resp.Responses, &ethpb.DoppelGangerResponse_ValidatorResponse{PublicKey: k[:], DuplicateExists: true})
+					}
+				}
+				v := &validator{
+					validatorClient: client,
+					keyManager:      km,
+					db:              db,
+				}
+				client.EXPECT().CheckDoppelGanger(
+					gomock.Any(), // ctx
+					gomock.Any(), // request
+				).Return(resp, nil /*err*/)
+				return v
+			},
+			err: "Duplicate instance exists in the network for validator",
+		},
+		{
+			name: "single doppelganger exists",
+			validatorSetter: func(t *testing.T) *validator {
+				client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+				km := genMockKeymanger(10)
+				keys, err := km.FetchValidatingPublicKeys(context.Background())
+				assert.NoError(t, err)
+				db := dbTest.SetupDB(t, keys)
+				resp := &ethpb.DoppelGangerResponse{Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{}}
+				for i, k := range keys {
+					att := createAttestation(10, 12)
+					rt, err := att.Data.HashTreeRoot()
+					assert.NoError(t, err)
+					assert.NoError(t, db.SaveAttestationForPubKey(context.Background(), k, rt, att))
+					if i%9 == 0 {
+						resp.Responses = append(resp.Responses, &ethpb.DoppelGangerResponse_ValidatorResponse{PublicKey: k[:], DuplicateExists: true})
+					}
+				}
+				v := &validator{
+					validatorClient: client,
+					keyManager:      km,
+					db:              db,
+				}
+				client.EXPECT().CheckDoppelGanger(
+					gomock.Any(), // ctx
+					gomock.Any(), // request
+				).Return(resp, nil /*err*/)
+				return v
+			},
+			err: "Duplicate instance exists in the network for validator",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := tt.validatorSetter(t)
+			if err := v.CheckDoppelGanger(context.Background()); tt.err != "" && !strings.Contains(err.Error(), tt.err) {
+				t.Errorf("CheckDoppelGanger() error = %v, wantErr %v", err, tt.err)
+			}
+		})
+	}
+}
+
+func createAttestation(source, target types.Epoch) *ethpb.IndexedAttestation {
+	return &ethpb.IndexedAttestation{
+		Data: &ethpb.AttestationData{
+			Source: &ethpb.Checkpoint{
+				Epoch: source,
+				Root:  make([]byte, 32),
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: target,
+				Root:  make([]byte, 32),
+			},
+			BeaconBlockRoot: make([]byte, 32),
+		},
+		Signature: make([]byte, 96),
+	}
 }

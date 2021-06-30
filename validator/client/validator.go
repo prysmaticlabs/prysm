@@ -395,6 +395,10 @@ func (v *validator) CheckDoppelGanger(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	// If nothing is returned by the beacon node, we can exit early.
+	if resp == nil || resp.Responses == nil || len(resp.Responses) == 0 {
+		return nil
+	}
 	for _, valRes := range resp.Responses {
 		if valRes.DuplicateExists {
 			return errors.Errorf("Duplicate instance exists in the network for validator %#x", valRes.PublicKey)
