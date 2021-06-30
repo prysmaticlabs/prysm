@@ -1327,6 +1327,8 @@ github.com/prysmaticlabs/go-bitfield v0.0.0-20210628211147-0d89f726b4c2 h1:nc95N
 github.com/prysmaticlabs/go-bitfield v0.0.0-20210628211147-0d89f726b4c2/go.mod h1:hCwmef+4qXWjv0jLDbQdWnL0Ol7cS7/lCSS26WR+u6s=
 github.com/prysmaticlabs/go-bitfield v0.0.0-20210630210218-f7d0941f2177 h1:Bi6TQNo7++8CMtsqc/128VxXPlsEsA4QQ94M9wjKHME=
 github.com/prysmaticlabs/go-bitfield v0.0.0-20210630210218-f7d0941f2177/go.mod h1:hCwmef+4qXWjv0jLDbQdWnL0Ol7cS7/lCSS26WR+u6s=
+github.com/prysmaticlabs/go-bitfield v0.0.0-20210630213502-e40562dd62c4 h1:6A0JbKs1AxIxDpLXnfF1J8ayKQrSM/50eH/nL1vGVnE=
+github.com/prysmaticlabs/go-bitfield v0.0.0-20210630213502-e40562dd62c4/go.mod h1:hCwmef+4qXWjv0jLDbQdWnL0Ol7cS7/lCSS26WR+u6s=
 github.com/prysmaticlabs/grpc-gateway/v2 v2.3.1-0.20210622145107-ca3041e1b380 h1:KzQOksIZB8poBiMk8h5Txzbp/OoBLFhS3H20ZN06hWg=
 github.com/prysmaticlabs/grpc-gateway/v2 v2.3.1-0.20210622145107-ca3041e1b380/go.mod h1:IOyTYjcIO0rkmnGBfJTL0NJ11exy/Tc2QEuv7hCXp24=
 github.com/prysmaticlabs/prombbolt v0.0.0-20210126082820-9b7adba6db7c h1:9PHRCuO/VN0s9k+RmLykho7AjDxblNYI5bYKed16NPU=
