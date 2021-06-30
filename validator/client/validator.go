@@ -376,6 +376,7 @@ func (v *validator) CheckDoppelGanger(ctx context.Context) error {
 	if !featureconfig.Get().EnableDoppleGanger {
 		return nil
 	}
+	log.Info("Running Doppleganger Check")
 	pubkeys, err := v.keyManager.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return err
@@ -391,6 +392,14 @@ func (v *validator) CheckDoppelGanger(ctx context.Context) error {
 			return err
 		}
 		if len(attRec) == 0 {
+			// If no history exists we simply send in a zero
+			// value for the request type.
+			req.ValidatorRequests = append(req.ValidatorRequests,
+				&ethpb.DoppelGangerRequest_ValidatorRequest{
+					PublicKey:  pkey[:],
+					Epoch:      0,
+					SignedRoot: make([]byte, 32),
+				})
 			continue
 		}
 		r := retrieveLatestRecord(attRec)
