@@ -16,15 +16,14 @@ import (
 	slashpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 	"golang.org/x/sync/errgroup"
 )
 
 const (
-	// Signing root (32 bytes) + fastsum64(attesting_indices) (8 bytes).
-	attestationRecordKeySize = 40
+	// Signing root (32 bytes)
+	attestationRecordKeySize = 32 // Bytes.
 	signingRootSize          = 32 // Bytes.
 )
 
@@ -111,8 +110,7 @@ func (s *Store) CheckAttesterDoubleVotes(
 					encIdx := encodeValidatorIndex(types.ValidatorIndex(valIdx))
 					validatorEpochKey := append(encEpoch, encIdx...)
 					attRecordsKey := signingRootsBkt.Get(validatorEpochKey)
-					// An attestation record key is comprised of a signing root (32 bytes)
-					// and a fast sum hash of the attesting indices (8 bytes).
+					// An attestation record key is comprised of a signing root (32 bytes).
 					if len(attRecordsKey) < attestationRecordKeySize {
 						continue
 					}
@@ -216,20 +214,13 @@ func (s *Store) SaveAttestationRecordsForValidators(
 		attRecordsBkt := tx.Bucket(attestationRecordsBucket)
 		signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
 		for i, att := range attestations {
-			// An attestation record key is comprised of the signing root (32 bytes)
-			// and a fastsum64 of the attesting indices (8 bytes). This is used
-			// to have a more optimal schema with deduplication.
-			attIndicesHash := hashutil.FastSum64(encodedIndices[i])
-			attRecordKey := append(
-				att.SigningRoot[:], ssz.MarshalUint64(make([]byte, 0), attIndicesHash)...,
-			)
-			if err := attRecordsBkt.Put(attRecordKey, encodedRecords[i]); err != nil {
+			if err := attRecordsBkt.Put(att.SigningRoot[:], encodedRecords[i]); err != nil {
 				return err
 			}
 			for _, valIdx := range att.IndexedAttestation.AttestingIndices {
 				encIdx := encodeValidatorIndex(types.ValidatorIndex(valIdx))
 				key := append(encodedTargetEpoch[i], encIdx...)
-				if err := signingRootsBkt.Put(key, attRecordKey); err != nil {
+				if err := signingRootsBkt.Put(key, att.SigningRoot[:]); err != nil {
 					return err
 				}
 			}
