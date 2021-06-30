@@ -7,7 +7,7 @@ import (
 	fuzz "github.com/google/gofuzz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
+	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 

@@ -10,8 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/genesis"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -206,14 +206,14 @@ func unmarshalState(ctx context.Context, enc []byte) (iface.BeaconState, error) 
 		if err := protoState.UnmarshalSSZ(enc[len(altairKey):]); err != nil {
 			return nil, errors.Wrap(err, "failed to unmarshal encoding for altair")
 		}
-		return stateAltair.InitializeFromProtoUnsafe(protoState)
+		return v2.InitializeFromProtoUnsafe(protoState)
 	default:
 		// Marshal state bytes to phase 0 beacon state.
 		protoState := &pb.BeaconState{}
 		if err := protoState.UnmarshalSSZ(enc); err != nil {
 			return nil, errors.Wrap(err, "failed to unmarshal encoding")
 		}
-		return stateV0.InitializeFromProtoUnsafe(protoState)
+		return v1.InitializeFromProtoUnsafe(protoState)
 	}
 }
 

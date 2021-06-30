@@ -17,8 +17,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -1274,7 +1274,7 @@ func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 }
 
 func TestServer_GetValidatorQueue_PendingActivation(t *testing.T) {
-	headState, err := stateV0.InitializeFromProto(&pb.BeaconState{
+	headState, err := v1.InitializeFromProto(&pb.BeaconState{
 		Validators: []*ethpb.Validator{
 			{
 				ActivationEpoch:            helpers.ActivationExitEpoch(0),
@@ -1373,7 +1373,7 @@ func TestServer_GetValidatorQueue_ExitedValidatorLeavesQueue(t *testing.T) {
 }
 
 func TestServer_GetValidatorQueue_PendingExit(t *testing.T) {
-	headState, err := stateV0.InitializeFromProto(&pb.BeaconState{
+	headState, err := v1.InitializeFromProto(&pb.BeaconState{
 		Validators: []*ethpb.Validator{
 			{
 				ActivationEpoch:       0,
@@ -1462,7 +1462,7 @@ func TestServer_GetValidatorParticipation_UnknownState(t *testing.T) {
 	slots := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch))
 	mockStateGen := &stategen.MockStateManager{
 		StatesBySlot: map[types.Slot]iface.BeaconState{
-			0: (*stateV0.BeaconState)(nil),
+			0: (*v1.BeaconState)(nil),
 		},
 	}
 	bs := &Server{

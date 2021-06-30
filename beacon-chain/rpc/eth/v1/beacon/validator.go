@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -230,7 +230,7 @@ func valContainersByRequestIds(state iface.BeaconState, validatorIds [][]byte) (
 				valIndex = types.ValidatorIndex(index)
 			}
 			validator, err := state.ValidatorAtIndex(valIndex)
-			if _, ok := err.(*stateV0.ValidatorIndexOutOfRangeError); ok {
+			if _, ok := err.(*v1.ValidatorIndexOutOfRangeError); ok {
 				// Ignore well-formed yet unknown indexes.
 				continue
 			}
@@ -316,7 +316,7 @@ func validatorSubStatus(validator *ethpb.Validator, epoch types.Epoch) (ethpb.Va
 }
 
 func handleValContainerErr(err error) error {
-	if outOfRangeErr, ok := err.(*stateV0.ValidatorIndexOutOfRangeError); ok {
+	if outOfRangeErr, ok := err.(*v1.ValidatorIndexOutOfRangeError); ok {
 		return status.Errorf(codes.InvalidArgument, "Invalid validator ID: %v", outOfRangeErr)
 	}
 	if invalidIdErr, ok := err.(*invalidValidatorIdError); ok {
