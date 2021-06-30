@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
@@ -36,7 +36,7 @@ func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
 	base := &pb.BeaconState{
 		Slot: 5,
 	}
-	beaconState, err := stateV0.InitializeFromProto(base)
+	beaconState, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
@@ -457,7 +457,7 @@ func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
 		JustificationBits:          bitfield.Bitvector4{0x00},
 		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
 	}
-	s, err := stateV0.InitializeFromProto(base)
+	s, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
 	require.NoError(t, s.SetValidators([]*ethpb.Validator{}))
 	newState, err := state.ProcessEpochPrecompute(context.Background(), s)
@@ -505,7 +505,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 			CurrentVersion:  []byte{0, 0, 0, 0},
 		},
 	}
-	s, err := stateV0.InitializeFromProto(base)
+	s, err := v1.InitializeFromProto(base)
 	require.NoError(b, err)
 
 	// Set up proposer slashing object for block
@@ -731,7 +731,7 @@ func TestCanProcessEpoch_TrueOnEpochs(t *testing.T) {
 
 	for _, tt := range tests {
 		b := &pb.BeaconState{Slot: tt.slot}
-		s, err := stateV0.InitializeFromProto(b)
+		s, err := v1.InitializeFromProto(b)
 		require.NoError(t, err)
 		assert.Equal(t, tt.canProcessEpoch, state.CanProcessEpoch(s), "CanProcessEpoch(%d)", tt.slot)
 	}
@@ -748,7 +748,7 @@ func TestProcessBlock_OverMaxProposerSlashings(t *testing.T) {
 	}
 	want := fmt.Sprintf("number of proposer slashings (%d) in block body exceeds allowed threshold of %d",
 		len(b.Block.Body.ProposerSlashings), params.BeaconConfig().MaxProposerSlashings)
-	_, err := state.VerifyOperationLengths(context.Background(), &stateV0.BeaconState{}, interfaces.WrappedPhase0SignedBeaconBlock(b))
+	_, err := state.VerifyOperationLengths(context.Background(), &v1.BeaconState{}, interfaces.WrappedPhase0SignedBeaconBlock(b))
 	assert.ErrorContains(t, want, err)
 }
 
@@ -763,7 +763,7 @@ func TestProcessBlock_OverMaxAttesterSlashings(t *testing.T) {
 	}
 	want := fmt.Sprintf("number of attester slashings (%d) in block body exceeds allowed threshold of %d",
 		len(b.Block.Body.AttesterSlashings), params.BeaconConfig().MaxAttesterSlashings)
-	_, err := state.VerifyOperationLengths(context.Background(), &stateV0.BeaconState{}, interfaces.WrappedPhase0SignedBeaconBlock(b))
+	_, err := state.VerifyOperationLengths(context.Background(), &v1.BeaconState{}, interfaces.WrappedPhase0SignedBeaconBlock(b))
 	assert.ErrorContains(t, want, err)
 }
 
@@ -777,7 +777,7 @@ func TestProcessBlock_OverMaxAttestations(t *testing.T) {
 	}
 	want := fmt.Sprintf("number of attestations (%d) in block body exceeds allowed threshold of %d",
 		len(b.Block.Body.Attestations), params.BeaconConfig().MaxAttestations)
-	_, err := state.VerifyOperationLengths(context.Background(), &stateV0.BeaconState{}, interfaces.WrappedPhase0SignedBeaconBlock(b))
+	_, err := state.VerifyOperationLengths(context.Background(), &v1.BeaconState{}, interfaces.WrappedPhase0SignedBeaconBlock(b))
 	assert.ErrorContains(t, want, err)
 }
 
@@ -792,7 +792,7 @@ func TestProcessBlock_OverMaxVoluntaryExits(t *testing.T) {
 	}
 	want := fmt.Sprintf("number of voluntary exits (%d) in block body exceeds allowed threshold of %d",
 		len(b.Block.Body.VoluntaryExits), maxExits)
-	_, err := state.VerifyOperationLengths(context.Background(), &stateV0.BeaconState{}, interfaces.WrappedPhase0SignedBeaconBlock(b))
+	_, err := state.VerifyOperationLengths(context.Background(), &v1.BeaconState{}, interfaces.WrappedPhase0SignedBeaconBlock(b))
 	assert.ErrorContains(t, want, err)
 }
 
@@ -801,7 +801,7 @@ func TestProcessBlock_IncorrectDeposits(t *testing.T) {
 		Eth1Data:         &ethpb.Eth1Data{DepositCount: 100},
 		Eth1DepositIndex: 98,
 	}
-	s, err := stateV0.InitializeFromProto(base)
+	s, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
 	b := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
@@ -818,7 +818,7 @@ func TestProcessBlock_IncorrectDeposits(t *testing.T) {
 
 func TestProcessSlots_SameSlotAsParentState(t *testing.T) {
 	slot := types.Slot(2)
-	parentState, err := stateV0.InitializeFromProto(&pb.BeaconState{Slot: slot})
+	parentState, err := v1.InitializeFromProto(&pb.BeaconState{Slot: slot})
 	require.NoError(t, err)
 
 	_, err = state.ProcessSlots(context.Background(), parentState, slot)
@@ -827,7 +827,7 @@ func TestProcessSlots_SameSlotAsParentState(t *testing.T) {
 
 func TestProcessSlots_LowerSlotAsParentState(t *testing.T) {
 	slot := types.Slot(2)
-	parentState, err := stateV0.InitializeFromProto(&pb.BeaconState{Slot: slot})
+	parentState, err := v1.InitializeFromProto(&pb.BeaconState{Slot: slot})
 	require.NoError(t, err)
 
 	_, err = state.ProcessSlots(context.Background(), parentState, slot-1)

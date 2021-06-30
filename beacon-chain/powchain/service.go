@@ -30,8 +30,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -85,7 +85,7 @@ type ChainStartFetcher interface {
 	ClearPreGenesisData()
 }
 
-// ChainInfoFetcher retrieves information about eth1 metadata at the eth2 genesis time.
+// ChainInfoFetcher retrieves information about eth1 metadata at the Ethereum consensus genesis time.
 type ChainInfoFetcher interface {
 	Eth2GenesisPowchainInfo() (uint64, *big.Int)
 	IsConnectedToETH1() bool
@@ -285,7 +285,7 @@ func (s *Service) ChainStartDeposits() []*ethpb.Deposit {
 // ClearPreGenesisData clears out the stored chainstart deposits and beacon state.
 func (s *Service) ClearPreGenesisData() {
 	s.chainStartData.ChainstartDeposits = []*ethpb.Deposit{}
-	s.preGenesisState = &stateV0.BeaconState{}
+	s.preGenesisState = &v1.BeaconState{}
 }
 
 // ChainStartEth1Data returns the eth1 data at chainstart.
@@ -969,7 +969,7 @@ func (s *Service) initializeEth1Data(ctx context.Context, eth1DataInDB *protodb.
 	s.chainStartData = eth1DataInDB.ChainstartData
 	var err error
 	if !reflect.ValueOf(eth1DataInDB.BeaconState).IsZero() {
-		s.preGenesisState, err = stateV0.InitializeFromProto(eth1DataInDB.BeaconState)
+		s.preGenesisState, err = v1.InitializeFromProto(eth1DataInDB.BeaconState)
 		if err != nil {
 			return errors.Wrap(err, "Could not initialize state trie")
 		}
@@ -1022,7 +1022,7 @@ func (s *Service) ensureValidPowchainData(ctx context.Context) error {
 		return errors.Wrap(err, "unable to retrieve eth1 data")
 	}
 	if eth1Data == nil || !eth1Data.ChainstartData.Chainstarted || !s.validateDepositContainers(eth1Data.DepositContainers) {
-		pbState, err := stateV0.ProtobufBeaconState(s.preGenesisState.InnerStateUnsafe())
+		pbState, err := v1.ProtobufBeaconState(s.preGenesisState.InnerStateUnsafe())
 		if err != nil {
 			return err
 		}

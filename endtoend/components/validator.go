@@ -17,11 +17,13 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/endtoend/types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	cmdshared "github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -128,19 +130,19 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		return err
 	}
 	args := []string{
-		fmt.Sprintf("--datadir=%s/eth2-val-%d", e2e.TestParams.TestPath, index),
-		fmt.Sprintf("--log-file=%s", file.Name()),
-		fmt.Sprintf("--graffiti-file=%s", gFile),
-		fmt.Sprintf("--interop-num-validators=%d", validatorNum),
-		fmt.Sprintf("--interop-start-index=%d", offset),
-		fmt.Sprintf("--monitoring-port=%d", e2e.TestParams.ValidatorMetricsPort+index),
-		fmt.Sprintf("--grpc-gateway-port=%d", e2e.TestParams.ValidatorGatewayPort+index),
-		fmt.Sprintf("--beacon-rpc-provider=localhost:%d", beaconRPCPort),
-		"--grpc-headers=dummy=value,foo=bar", // Sending random headers shouldn't break anything.
-		"--force-clear-db",
-		"--e2e-config",
-		"--accept-terms-of-use",
-		"--verbosity=debug",
+		fmt.Sprintf("--%s=%s/eth2-val-%d", cmdshared.DataDirFlag.Name, e2e.TestParams.TestPath, index),
+		fmt.Sprintf("--%s=%s", cmdshared.LogFileName.Name, file.Name()),
+		fmt.Sprintf("--%s=%s", flags.GraffitiFileFlag.Name, gFile),
+		fmt.Sprintf("--%s=%d", flags.InteropNumValidators.Name, validatorNum),
+		fmt.Sprintf("--%s=%d", flags.InteropStartIndex.Name, offset),
+		fmt.Sprintf("--%s=%d", flags.MonitoringPortFlag.Name, e2e.TestParams.ValidatorMetricsPort+index),
+		fmt.Sprintf("--%s=%d", flags.GRPCGatewayPort.Name, e2e.TestParams.ValidatorGatewayPort+index),
+		fmt.Sprintf("--%s=localhost:%d", flags.BeaconRPCProviderFlag.Name, beaconRPCPort),
+		fmt.Sprintf("--%s=%s", flags.GrpcHeadersFlag.Name, "dummy=value,foo=bar"), // Sending random headers shouldn't break anything.
+		fmt.Sprintf("--%s=%s", cmdshared.VerbosityFlag.Name, "debug"),
+		"--" + cmdshared.ForceClearDB.Name,
+		"--" + cmdshared.E2EConfigFlag.Name,
+		"--" + cmdshared.AcceptTosFlag.Name,
 	}
 	args = append(args, featureconfig.E2EValidatorFlags...)
 	args = append(args, config.ValidatorFlags...)

@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -118,7 +118,7 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 		},
 	}
 
-	beaconState, err := stateV0.InitializeFromProto(&pb.BeaconState{
+	beaconState, err := v1.InitializeFromProto(&pb.BeaconState{
 		Validators: registry,
 		Slot:       currentSlot,
 	})

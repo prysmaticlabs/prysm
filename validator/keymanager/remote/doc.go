@@ -9,7 +9,7 @@ list all associated accounts for a user.
 Package remote defines a keymanager implementation which connects to a remote signer
 server via gRPC. The connection is established via TLS using supplied paths to
 certificates and key files and allows for submitting remote signing requests for
-eth2 data structures as well as retrieving the available signing public keys from
+Ethereum data structures as well as retrieving the available signing public keys from
 the remote server.
 
 Remote sign requests are defined by the following protobuf schema:

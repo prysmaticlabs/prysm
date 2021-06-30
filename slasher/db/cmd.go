@@ -10,7 +10,7 @@ import (
 var DatabaseCommands = &cli.Command{
 	Name:     "db",
 	Category: "db",
-	Usage:    "defines commands for interacting with eth2 slasher database",
+	Usage:    "defines commands for interacting with the Prysm slasher database",
 	Subcommands: []*cli.Command{
 		{
 			Name:        "restore",
