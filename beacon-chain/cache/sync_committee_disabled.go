@@ -27,6 +27,6 @@ func (s *FakeSyncCommitteeCache) NextEpochIndexPosition(root [32]byte, valIdx ty
 }
 
 // UpdatePositionsInCommittee -- fake.
-func (s *FakeSyncCommitteeCache) UpdatePositionsInCommittee(state iface.BeaconStateAltair) error {
+func (s *FakeSyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundaryRoot [32]byte, state iface.BeaconStateAltair) error {
 	return nil
 }
