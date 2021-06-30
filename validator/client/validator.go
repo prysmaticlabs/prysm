@@ -373,6 +373,9 @@ func (v *validator) SlotDeadline(slot types.Slot) time.Time {
 // CheckDoppelGanger checks if the current actively provided keys have
 // any duplicates active in the network.
 func (v *validator) CheckDoppelGanger(ctx context.Context) error {
+	if !featureconfig.Get().EnableDoppleGanger {
+		return nil
+	}
 	pubkeys, err := v.keyManager.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return err
