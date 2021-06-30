@@ -3,6 +3,7 @@ package copyutil
 import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
@@ -282,5 +283,19 @@ func CopyValidator(val *ethpb.Validator) *ethpb.Validator {
 		ActivationEpoch:            val.ActivationEpoch,
 		ExitEpoch:                  val.ExitEpoch,
 		WithdrawableEpoch:          val.WithdrawableEpoch,
+	}
+}
+
+// CopySyncCommitteeContribution copies the provided sync committee contribution object.
+func CopySyncCommitteeContribution(c *prysmv2.SyncCommitteeContribution) *prysmv2.SyncCommitteeContribution {
+	if c == nil {
+		return nil
+	}
+	return &prysmv2.SyncCommitteeContribution{
+		Slot:              c.Slot,
+		BlockRoot:         bytesutil.SafeCopyBytes(c.BlockRoot),
+		SubcommitteeIndex: c.SubcommitteeIndex,
+		AggregationBits:   bytesutil.SafeCopyBytes(c.AggregationBits),
+		Signature:         bytesutil.SafeCopyBytes(c.Signature),
 	}
 }
