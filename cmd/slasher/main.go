@@ -132,7 +132,10 @@ func main() {
 		}
 
 		runtime.GOMAXPROCS(runtime.NumCPU())
-		return debug.Setup(ctx)
+		if err := debug.Setup(ctx); err != nil {
+			return err
+		}
+		return cmd.ValidateNoArgs(ctx)
 	}
 
 	app.After = func(ctx *cli.Context) error {
