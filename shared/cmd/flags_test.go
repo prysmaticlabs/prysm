@@ -43,9 +43,7 @@ func TestLoadFlagsFromConfig(t *testing.T) {
 
 func TestValidateNoArgs(t *testing.T) {
 	app := &cli.App{
-		Before: func(c *cli.Context) error {
-			return ValidateNoArgs(c)
-		},
+		Before: ValidateNoArgs,
 		Action: func(c *cli.Context) error {
 			return nil
 		},
