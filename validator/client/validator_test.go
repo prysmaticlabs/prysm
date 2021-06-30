@@ -1071,6 +1071,40 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 			},
 			err: "Duplicate instance exists in the network for validator",
 		},
+		{
+			name: "multiple attestations saved",
+			validatorSetter: func(t *testing.T) *validator {
+				client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+				km := genMockKeymanger(10)
+				keys, err := km.FetchValidatingPublicKeys(context.Background())
+				assert.NoError(t, err)
+				db := dbTest.SetupDB(t, keys)
+				resp := &ethpb.DoppelGangerResponse{Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{}}
+				attLimit := 5
+				for i, k := range keys {
+					for j := 0; j < attLimit; j++ {
+						att := createAttestation(10+types.Epoch(j), 12+types.Epoch(j))
+						rt, err := att.Data.HashTreeRoot()
+						assert.NoError(t, err)
+						assert.NoError(t, db.SaveAttestationForPubKey(context.Background(), k, rt, att))
+					}
+					if i%3 == 0 {
+						resp.Responses = append(resp.Responses, &ethpb.DoppelGangerResponse_ValidatorResponse{PublicKey: k[:], DuplicateExists: true})
+					}
+				}
+				v := &validator{
+					validatorClient: client,
+					keyManager:      km,
+					db:              db,
+				}
+				client.EXPECT().CheckDoppelGanger(
+					gomock.Any(), // ctx
+					gomock.Any(), // request
+				).Return(resp, nil /*err*/)
+				return v
+			},
+			err: "Duplicate instance exists in the network for validator",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1080,6 +1114,39 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestValidatorAttestationsAreOrdered(t *testing.T) {
+	km := genMockKeymanger(10)
+	keys, err := km.FetchValidatingPublicKeys(context.Background())
+	assert.NoError(t, err)
+	db := dbTest.SetupDB(t, keys)
+
+	k := keys[0]
+	att := createAttestation(10, 14)
+	rt, err := att.Data.HashTreeRoot()
+	assert.NoError(t, err)
+	assert.NoError(t, db.SaveAttestationForPubKey(context.Background(), k, rt, att))
+
+	att = createAttestation(6, 8)
+	rt, err = att.Data.HashTreeRoot()
+	assert.NoError(t, err)
+	assert.NoError(t, db.SaveAttestationForPubKey(context.Background(), k, rt, att))
+
+	att = createAttestation(10, 12)
+	rt, err = att.Data.HashTreeRoot()
+	assert.NoError(t, err)
+	assert.NoError(t, db.SaveAttestationForPubKey(context.Background(), k, rt, att))
+
+	att = createAttestation(2, 3)
+	rt, err = att.Data.HashTreeRoot()
+	assert.NoError(t, err)
+	assert.NoError(t, db.SaveAttestationForPubKey(context.Background(), k, rt, att))
+
+	histories, err := db.AttestationHistoryForPubKey(context.Background(), k)
+	assert.NoError(t, err)
+	r := retrieveLatestRecord(histories)
+	assert.Equal(t, r.Target, types.Epoch(14))
 }
 
 func createAttestation(source, target types.Epoch) *ethpb.IndexedAttestation {
