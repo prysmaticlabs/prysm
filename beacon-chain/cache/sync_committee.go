@@ -18,13 +18,13 @@ var (
 
 	// SyncCommitteeCacheMiss tracks the number of committee requests that aren't present in the cache.
 	SyncCommitteeCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "sync_committee_cache_miss",
-		Help: "The number of committee requests that aren't present in the cache.",
+		Name: "sync_committee_index_cache_miss",
+		Help: "The number of committee requests that aren't present in the sync committee index cache.",
 	})
 	// SyncCommitteeCacheHit tracks the number of committee requests that are in the cache.
 	SyncCommitteeCacheHit = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "sync_committee_cache_hit",
-		Help: "The number of committee requests that are present in the cache.",
+		Name: "sync_committee_index_cache_hit",
+		Help: "The number of committee requests that are present in the sync committee index cache.",
 	})
 )
 
