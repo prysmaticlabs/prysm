@@ -122,7 +122,7 @@ func (vs *Server) CheckDoppelGanger(ctx context.Context, req *ethpb.DoppelGanger
 		// If the validator's last recorded epoch was
 		// less than 2 epoch ago, this method will not
 		// be able to catch duplicates.
-		if v.Epoch+2 > currEpoch {
+		if v.Epoch+2 >= currEpoch {
 			continue
 		}
 		valIndex, ok := olderState.ValidatorIndexByPubkey(bytesutil.ToBytes48(v.PublicKey))
