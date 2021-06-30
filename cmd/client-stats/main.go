@@ -84,7 +84,7 @@ func main() {
 				log.WithError(err).Error("Failed to configuring logging to disk.")
 			}
 		}
-		return nil
+		return cmd.ValidateNoArgs(ctx)
 	}
 
 	defer func() {

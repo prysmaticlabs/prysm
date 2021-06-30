@@ -2,6 +2,9 @@
 package cmd
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/urfave/cli/v2"
 	"github.com/urfave/cli/v2/altsrc"
@@ -247,6 +250,16 @@ func LoadFlagsFromConfig(cliCtx *cli.Context, flags []cli.Flag) error {
 		if err := altsrc.InitInputSourceWithContext(flags, altsrc.NewYamlSourceFromFlagFunc(ConfigFileFlag.Name))(cliCtx); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+// ValidateNoArgs insures that the application is not run with erroneous arguments or flags.
+// This function should be used in the app.Before, whenever the application supports a default command.
+func ValidateNoArgs(ctx *cli.Context) error {
+	// Args should not be present at all in the context.
+	if ctx.NArg() > 0 {
+		return fmt.Errorf("unrecognized flags or arguments: %s", strings.Join(ctx.Args().Slice(), ", "))
 	}
 	return nil
 }

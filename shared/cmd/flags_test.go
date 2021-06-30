@@ -40,3 +40,21 @@ func TestLoadFlagsFromConfig(t *testing.T) {
 	require.NoError(t, command.Run(context))
 	require.NoError(t, os.Remove("flags_test.yaml"))
 }
+
+func TestValidateNoArgs(t *testing.T) {
+	app := &cli.App{
+		Action: func(c *cli.Context) error {
+			return ValidateNoArgs(c)
+		},
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name: "foo",
+			},
+		},
+	}
+
+	err := app.Run([]string{"command", "foo"})
+	require.ErrorContains(t, "unrecognized flags or arguments: foo", err)
+	err = app.Run([]string{"command", "--foo=bar"})
+	require.NoError(t, err)
+}
