@@ -22,9 +22,9 @@ import (
 )
 
 const (
-	dbDirectory = "/data1/prysm-data-mainnet/beaconchaindata"
+	dbDirEnvVar = "PRYSM_DB_DIR"
 	dbFileName  = "beaconchain.db"
-	rowLimit    = uint64(1000)
+	rowLimit    = uint64(1000) // should be okay for a normal mainnet DB.
 )
 
 type RegistryValidatorEntry struct {
@@ -44,6 +44,8 @@ type ValidatorEntry struct {
 }
 
 func TestStore_DisplayStates(t *testing.T) {
+	dbDirectory := os.Getenv(dbDirEnvVar)
+
 	// check if the supplied db file name exists, otherwise silently return.
 	dbFileWithPath := filepath.Join(dbDirectory, dbFileName)
 	if _, err := os.Stat(dbFileWithPath); os.IsNotExist(err) {
@@ -88,10 +90,10 @@ func TestStore_DisplayStates(t *testing.T) {
 		size, count = sizeAndCountOfByteList(st.HistoricalRoots())
 		fmt.Println("historical_roots              : size =  ", humanize.Bytes(size), ", count =  ", count)
 		fmt.Println("eth1_data                     : sizeSSZ =  ", humanize.Bytes(uint64(st.Eth1Data().SizeSSZ())))
-		size, count = sizeAndCountOfEth1DataVotes(st.Eth1DataVotes())
+		size, count = sizeAndCountGeneric(st.Eth1DataVotes(), nil)
 		fmt.Println("eth1_data_votes               : sizeSSZ = ", humanize.Bytes(size), ", count =  ", count)
 		fmt.Println("eth1_deposit_index            :", st.Eth1DepositIndex())
-		size, count = sizeAndCountOfValidators(st.Validators())
+		size, count = sizeAndCountGeneric(st.Validators(), nil)
 		fmt.Println("validators                    : sizeSSZ = ", humanize.Bytes(size), ", count =  ", count)
 		size, count = sizeAndCountOfUin64List(st.Balances())
 		fmt.Println("balances                      : size = ", humanize.Bytes(size), ", count =  ", count)
@@ -99,9 +101,9 @@ func TestStore_DisplayStates(t *testing.T) {
 		fmt.Println("randao_mixes                  : size = ", humanize.Bytes(size), ", count =  ", count)
 		size, count = sizeAndCountOfUin64List(st.Slashings())
 		fmt.Println("slashings                     : size =  ", humanize.Bytes(size), ", count =  ", count)
-		size, count = sizeAndCountOfPendingAttestations(st.PreviousEpochAttestations())
+		size, count = sizeAndCountGeneric(st.PreviousEpochAttestations())
 		fmt.Println("previous_epoch_attestations   : sizeSSZ ", humanize.Bytes(size), ", count =  ", count)
-		size, count = sizeAndCountOfPendingAttestations(st.CurrentEpochAttestations())
+		size, count = sizeAndCountGeneric(st.CurrentEpochAttestations())
 		fmt.Println("current_epoch_attestations    : sizeSSZ =  ", humanize.Bytes(size), ", count =  ", count)
 		fmt.Println("justification_bits            : size =  ", humanize.Bytes(st.JustificationBits().Len()), ", count =  ", st.JustificationBits().Count())
 		fmt.Println("previous_justified_checkpoint : sizeSSZ =  ", humanize.Bytes(uint64(st.PreviousJustifiedCheckpoint().SizeSSZ())))
@@ -112,6 +114,8 @@ func TestStore_DisplayStates(t *testing.T) {
 }
 
 func TestStore_DisplayValidators(t *testing.T) {
+	dbDirectory := os.Getenv(dbDirEnvVar)
+
 	// check if the supplied db file name exists, otherwise silently return.
 	dbFileWithPath := filepath.Join(dbDirectory, dbFileName)
 	if _, err := os.Stat(dbFileWithPath); os.IsNotExist(err) {
@@ -268,36 +272,33 @@ func sizeAndCountOfUin64List(list []uint64) (uint64, uint64) {
 	return size, count
 }
 
-func sizeAndCountOfEth1DataVotes(votes []*ethpb.Eth1Data) (uint64, uint64) {
-	size := uint64(0)
-	count := uint64(0)
-	for _, vote := range votes {
-		size += uint64(vote.SizeSSZ())
-		count += 1
-	}
-	return size, count
-}
-
-func sizeAndCountOfValidators(validators []*ethpb.Validator) (uint64, uint64) {
-	size := uint64(0)
-	count := uint64(0)
-	for _, validator := range validators {
-		size += uint64(validator.SizeSSZ())
-		count += 1
-	}
-	return size, count
-}
-
-func sizeAndCountOfPendingAttestations(attestations []*pbp2p.PendingAttestation, err error) (uint64, uint64) {
+func sizeAndCountGeneric(genericItems interface{}, err error) (uint64, uint64) {
 	size := uint64(0)
 	count := uint64(0)
 	if err != nil {
 		return size, count
 	}
-	for _, attestation := range attestations {
-		size += uint64(attestation.SizeSSZ())
-		count += 1
+
+	switch items := genericItems.(type) {
+	case []*ethpb.Eth1Data:
+		for _, item := range items {
+			size += uint64(item.SizeSSZ())
+		}
+		count = uint64(len(items))
+	case []*ethpb.Validator:
+		for _, item := range items {
+			size += uint64(item.SizeSSZ())
+		}
+		count = uint64(len(items))
+	case []*pbp2p.PendingAttestation:
+		for _, item := range items {
+			size += uint64(item.SizeSSZ())
+		}
+		count = uint64(len(items))
+	default:
+		return 0, 0
 	}
+
 	return size, count
 }
 
