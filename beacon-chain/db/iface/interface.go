@@ -143,10 +143,10 @@ type SlasherDatabase interface {
 	) ([]*eth.ProposerSlashing, error)
 	PruneAttestationsAtEpoch(
 		ctx context.Context, minEpoch types.Epoch,
-	) error
+	) (uint, error)
 	PruneProposalsAtEpoch(
 		ctx context.Context, minEpoch types.Epoch,
-	) error
+	) (uint, error)
 	DatabasePath() string
 	ClearDB() error
 }

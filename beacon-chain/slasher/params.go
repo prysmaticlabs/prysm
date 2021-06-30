@@ -17,10 +17,9 @@ import (
 // flat byte slice on disk.
 // (H) historyLength defines how many epochs we keep of min or max spans.
 type Parameters struct {
-	chunkSize              uint64
-	validatorChunkSize     uint64
-	historyLength          types.Epoch
-	pruningEpochIncrements types.Epoch
+	chunkSize          uint64
+	validatorChunkSize uint64
+	historyLength      types.Epoch
 }
 
 // DefaultParams defines default values for slasher's important parameters, defined
@@ -33,10 +32,9 @@ type Parameters struct {
 // We decide to keep 4096 epochs worth of data in each validator's min max spans.
 func DefaultParams() *Parameters {
 	return &Parameters{
-		chunkSize:              16,
-		validatorChunkSize:     256,
-		historyLength:          4096,
-		pruningEpochIncrements: 100,
+		chunkSize:          16,
+		validatorChunkSize: 256,
+		historyLength:      4096,
 	}
 }
 

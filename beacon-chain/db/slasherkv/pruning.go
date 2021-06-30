@@ -15,14 +15,14 @@ import (
 // less than or equal to the specified epoch.
 func (s *Store) PruneAttestationsAtEpoch(
 	ctx context.Context, maxEpoch types.Epoch,
-) error {
+) (numPruned uint, err error) {
 	// We can prune everything less than the current epoch - history length.
 	encodedEndPruneEpoch := fssz.MarshalUint64([]byte{}, uint64(maxEpoch))
 
 	// We retrieve the lowest stored epoch in the attestations bucket.
 	var lowestEpoch types.Epoch
 	var hasData bool
-	if err := s.db.View(func(tx *bolt.Tx) error {
+	if err = s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationDataRootsBucket)
 		c := bkt.Cursor()
 		k, _ := c.First()
@@ -33,22 +33,22 @@ func (s *Store) PruneAttestationsAtEpoch(
 		lowestEpoch = types.Epoch(binary.LittleEndian.Uint64(k))
 		return nil
 	}); err != nil {
-		return err
+		return
 	}
 
 	// If there is no data stored, just exit early.
 	if !hasData {
-		return nil
+		return
 	}
 
 	// If the lowest epoch is greater than the end pruning epoch,
 	// there is nothing to prune, so we return early.
 	if lowestEpoch > maxEpoch {
 		log.Debugf("Lowest epoch %d is > pruning epoch %d, nothing to prune", lowestEpoch, maxEpoch)
-		return nil
+		return
 	}
 
-	return s.db.Update(func(tx *bolt.Tx) error {
+	if err = s.db.Update(func(tx *bolt.Tx) error {
 		signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
 		attRecordsBkt := tx.Bucket(attestationRecordsBucket)
 		c := signingRootsBkt.Cursor()
@@ -73,19 +73,24 @@ func (s *Store) PruneAttestationsAtEpoch(
 				return err
 			}
 			slasherAttestationsPrunedTotal.Inc()
+			numPruned++
 		}
 		return nil
-	})
+	}); err != nil {
+		return
+	}
+	return
 }
 
 // PruneProposalsAtEpoch deletes all proposals from the slasher DB with epoch
 // less than or equal to the specified epoch.
 func (s *Store) PruneProposalsAtEpoch(
 	ctx context.Context, maxEpoch types.Epoch,
-) error {
-	endPruneSlot, err := helpers.StartSlot(maxEpoch)
+) (numPruned uint, err error) {
+	var endPruneSlot types.Slot
+	endPruneSlot, err = helpers.StartSlot(maxEpoch)
 	if err != nil {
-		return err
+		return
 	}
 	encodedEndPruneSlot := fssz.MarshalUint64([]byte{}, uint64(endPruneSlot))
 
@@ -103,22 +108,22 @@ func (s *Store) PruneProposalsAtEpoch(
 		lowestSlot = slotFromProposalKey(k)
 		return nil
 	}); err != nil {
-		return err
+		return
 	}
 
 	// If there is no data stored, just exit early.
 	if !hasData {
-		return nil
+		return
 	}
 
 	// If the lowest slot is greater than the end pruning slot,
 	// there is nothing to prune, so we return early.
 	if lowestSlot > endPruneSlot {
 		log.Debugf("Lowest slot %d is > pruning slot %d, nothing to prune", lowestSlot, endPruneSlot)
-		return nil
+		return
 	}
 
-	return s.db.Update(func(tx *bolt.Tx) error {
+	if err = s.db.Update(func(tx *bolt.Tx) error {
 		proposalBkt := tx.Bucket(proposalRecordsBucket)
 		c := proposalBkt.Cursor()
 		// We begin a pruning iteration starting from the first item in the bucket.
@@ -139,9 +144,13 @@ func (s *Store) PruneProposalsAtEpoch(
 				return err
 			}
 			slasherProposalsPrunedTotal.Inc()
+			numPruned++
 		}
 		return nil
-	})
+	}); err != nil {
+		return
+	}
+	return
 }
 
 func slotFromProposalKey(key []byte) types.Slot {

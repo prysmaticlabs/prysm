@@ -204,15 +204,21 @@ func (s *Service) pruneSlasherDataWithinSlidingWindow(ctx context.Context, curre
 		"currentEpoch":          currentEpoch,
 		"pruningAllBeforeEpoch": maxPruningEpoch,
 	}).Debug("Pruning old attestations and proposals for slasher")
-	if err := s.serviceCfg.Database.PruneAttestationsAtEpoch(
+	numPrunedAtts, err := s.serviceCfg.Database.PruneAttestationsAtEpoch(
 		ctx, maxPruningEpoch,
-	); err != nil {
+	)
+	if err != nil {
 		return errors.Wrap(err, "Could not prune attestations")
 	}
-	if err := s.serviceCfg.Database.PruneProposalsAtEpoch(
+	numPrunedProposals, err := s.serviceCfg.Database.PruneProposalsAtEpoch(
 		ctx, maxPruningEpoch,
-	); err != nil {
+	)
+	if err != nil {
 		return errors.Wrap(err, "Could not prune proposals")
 	}
+	log.WithFields(logrus.Fields{
+		"prunedAttestationRecords": numPrunedAtts,
+		"prunedProposalRecords":    numPrunedProposals,
+	}).Debug("Successfully pruned slasher data")
 	return nil
 }
