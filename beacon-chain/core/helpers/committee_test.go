@@ -675,7 +675,7 @@ func TestIsCurrentEpochSyncCommittee_UsingCache(t *testing.T) {
 		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
 	}
 
-	state, err := stateAltair.InitializeFromProto(&pb.BeaconStateAltair{
+	state, err := v2.InitializeFromProto(&pb.BeaconStateAltair{
 		Validators: validators,
 	})
 	require.NoError(t, err)
@@ -704,7 +704,7 @@ func TestIsCurrentEpochSyncCommittee_UsingCommittee(t *testing.T) {
 		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
 	}
 
-	state, err := stateAltair.InitializeFromProto(&pb.BeaconStateAltair{
+	state, err := v2.InitializeFromProto(&pb.BeaconStateAltair{
 		Validators: validators,
 	})
 	require.NoError(t, err)
@@ -730,7 +730,7 @@ func TestIsCurrentEpochSyncCommittee_DoesNotExist(t *testing.T) {
 		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
 	}
 
-	state, err := stateAltair.InitializeFromProto(&pb.BeaconStateAltair{
+	state, err := v2.InitializeFromProto(&pb.BeaconStateAltair{
 		Validators: validators,
 	})
 	require.NoError(t, err)
@@ -756,7 +756,7 @@ func TestIsNextEpochSyncCommittee_UsingCache(t *testing.T) {
 		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
 	}
 
-	state, err := stateAltair.InitializeFromProto(&pb.BeaconStateAltair{
+	state, err := v2.InitializeFromProto(&pb.BeaconStateAltair{
 		Validators: validators,
 	})
 	require.NoError(t, err)
@@ -785,7 +785,7 @@ func TestIsNextEpochSyncCommittee_UsingCommittee(t *testing.T) {
 		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
 	}
 
-	state, err := stateAltair.InitializeFromProto(&pb.BeaconStateAltair{
+	state, err := v2.InitializeFromProto(&pb.BeaconStateAltair{
 		Validators: validators,
 	})
 	require.NoError(t, err)
@@ -811,7 +811,7 @@ func TestIsNextEpochSyncCommittee_DoesNotExist(t *testing.T) {
 		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
 	}
 
-	state, err := stateAltair.InitializeFromProto(&pb.BeaconStateAltair{
+	state, err := v2.InitializeFromProto(&pb.BeaconStateAltair{
 		Validators: validators,
 	})
 	require.NoError(t, err)
@@ -837,7 +837,7 @@ func TestCurrentEpochSyncSubcommitteeIndices_UsingCache(t *testing.T) {
 		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
 	}
 
-	state, err := stateAltair.InitializeFromProto(&pb.BeaconStateAltair{
+	state, err := v2.InitializeFromProto(&pb.BeaconStateAltair{
 		Validators: validators,
 	})
 	require.NoError(t, err)
@@ -866,7 +866,7 @@ func TestCurrentEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
 		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
 	}
 
-	state, err := stateAltair.InitializeFromProto(&pb.BeaconStateAltair{
+	state, err := v2.InitializeFromProto(&pb.BeaconStateAltair{
 		Validators: validators,
 	})
 	require.NoError(t, err)
@@ -893,7 +893,7 @@ func TestCurrentEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
 		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
 	}
 
-	state, err := stateAltair.InitializeFromProto(&pb.BeaconStateAltair{
+	state, err := v2.InitializeFromProto(&pb.BeaconStateAltair{
 		Validators: validators,
 	})
 	require.NoError(t, err)
@@ -919,7 +919,7 @@ func TestNextEpochSyncSubcommitteeIndices_UsingCache(t *testing.T) {
 		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
 	}
 
-	state, err := stateAltair.InitializeFromProto(&pb.BeaconStateAltair{
+	state, err := v2.InitializeFromProto(&pb.BeaconStateAltair{
 		Validators: validators,
 	})
 	require.NoError(t, err)
@@ -948,7 +948,7 @@ func TestNextEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
 		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
 	}
 
-	state, err := stateAltair.InitializeFromProto(&pb.BeaconStateAltair{
+	state, err := v2.InitializeFromProto(&pb.BeaconStateAltair{
 		Validators: validators,
 	})
 	require.NoError(t, err)
@@ -975,7 +975,7 @@ func TestNextEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
 		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
 	}
 
-	state, err := stateAltair.InitializeFromProto(&pb.BeaconStateAltair{
+	state, err := v2.InitializeFromProto(&pb.BeaconStateAltair{
 		Validators: validators,
 	})
 	require.NoError(t, err)
