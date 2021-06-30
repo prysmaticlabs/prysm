@@ -82,25 +82,22 @@ func CreateForkDigest(
 func Fork(
 	targetEpoch types.Epoch,
 ) (*pb.Fork, error) {
-	// We retrieve a list of scheduled forks by epoch.
-	// We loop through the keys in this map to determine the current
-	// fork version based on the requested epoch.
-	retrievedForkVersion := bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)
+	currentForkVersion := bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)
 	previousForkVersion := bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)
 	fSchedule := params.BeaconConfig().ForkVersionSchedule
-	scheduledForks := SortedForkVersions(fSchedule)
+	sortedForkVersions := SortedForkVersions(fSchedule)
 	forkEpoch := types.Epoch(0)
-	for _, forkVersion := range scheduledForks {
+	for _, forkVersion := range sortedForkVersions {
 		epoch := fSchedule[forkVersion]
-		if epoch <= targetEpoch {
-			previousForkVersion = retrievedForkVersion
-			retrievedForkVersion = forkVersion
+		if targetEpoch >= epoch {
+			previousForkVersion = currentForkVersion
+			currentForkVersion = forkVersion
 			forkEpoch = epoch
 		}
 	}
 	return &pb.Fork{
 		PreviousVersion: previousForkVersion[:],
-		CurrentVersion:  retrievedForkVersion[:],
+		CurrentVersion:  currentForkVersion[:],
 		Epoch:           forkEpoch,
 	}, nil
 }
