@@ -10,11 +10,10 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
+	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -102,12 +101,8 @@ func (vs *Server) syncSubcommitteeIndex(
 		return nil, fmt.Errorf("validator with pubkey %#x not found", pubkey)
 	}
 	switch {
-	case altair.SyncCommitteePeriod(nextSlotEpoch) == altair.SyncCommitteePeriod(currentEpoch):
-		committee, err := headState.CurrentSyncCommittee()
-		if err != nil {
-			return nil, err
-		}
-		indices, err := helpers.CurrentEpochSyncSubcommitteeIndices(headState, committee, valIdx)
+	case helpers.SyncCommitteePeriod(nextSlotEpoch) == helpers.SyncCommitteePeriod(currentEpoch):
+		indices, err := helpers.CurrentEpochSyncSubcommitteeIndices(headState, valIdx)
 		if err != nil {
 			return nil, err
 		}
@@ -115,12 +110,8 @@ func (vs *Server) syncSubcommitteeIndex(
 			Indices: indices,
 		}, nil
 	// At sync committee period boundary, validator should sample the next epoch sync committee.
-	case altair.SyncCommitteePeriod(nextSlotEpoch) == altair.SyncCommitteePeriod(currentEpoch)+1:
-		committee, err := headState.NextSyncCommittee()
-		if err != nil {
-			return nil, err
-		}
-		indices, err := helpers.NextEpochSyncSubcommitteeIndices(headState, committee, valIdx)
+	case helpers.SyncCommitteePeriod(nextSlotEpoch) == helpers.SyncCommitteePeriod(currentEpoch)+1:
+		indices, err := helpers.NextEpochSyncSubcommitteeIndices(headState, valIdx)
 		if err != nil {
 			return nil, err
 		}

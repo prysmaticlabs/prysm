@@ -88,6 +88,8 @@ http_archive(
         # Required until https://github.com/bazelbuild/rules_go/pull/2450 merges otherwise nilness
         # nogo check fails for certain third_party dependencies.
         "//third_party:io_bazel_rules_go.patch",
+        # Expose internals of go_test for custom build transitions.
+        "//third_party:io_bazel_rules_go_test.patch",
     ],
     sha256 = "7c10271940c6bce577d51a075ae77728964db285dac0a46614a7934dc34303e6",
     urls = [
@@ -160,36 +162,6 @@ go_register_toolchains(
     nogo = "@//:nogo",
 )
 
-load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
-
-gazelle_dependencies()
-
-load("@io_bazel_rules_go//extras:embed_data_deps.bzl", "go_embed_data_dependencies")
-
-go_embed_data_dependencies()
-
-load("@com_github_atlassian_bazel_tools//gometalinter:deps.bzl", "gometalinter_dependencies")
-
-gometalinter_dependencies()
-
-load(
-    "@io_bazel_rules_docker//go:image.bzl",
-    _go_image_repos = "repositories",
-)
-
-# Golang images
-# This is using gcr.io/distroless/base
-_go_image_repos()
-
-# CC images
-# This is using gcr.io/distroless/base
-load(
-    "@io_bazel_rules_docker//cc:image.bzl",
-    _cc_image_repos = "repositories",
-)
-
-_cc_image_repos()
-
 http_archive(
     name = "prysm_testnet_site",
     build_file_content = """
@@ -225,7 +197,7 @@ filegroup(
     url = "https://github.com/eth2-clients/slashing-protection-interchange-tests/archive/b8413ca42dc92308019d0d4db52c87e9e125c4e9.tar.gz",
 )
 
-eth2_spec_version = "v1.1.0-alpha.7"
+eth2_spec_version = "v1.1.0-alpha.8"
 
 http_archive(
     name = "eth2_spec_tests_general",
@@ -239,7 +211,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "e6a351cc30affb9005ca4dc0453f7919f6ad9846d4ff9537323bca86da40b170",
+    sha256 = "ce4fc3fbe9829ac3eefd62a82b40fc4959a04c64bf2f0c5515cba44e7797d285",
     url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/%s/general.tar.gz" % eth2_spec_version,
 )
 
@@ -255,7 +227,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "db5d38edcee5c630cba02d3a98126c9cf6bfcd28bd4aad17b99eb7aedaa81ad7",
+    sha256 = "72b7e8ac38fa7f6cf39fb1623f45479aaf756da4809071fb4a1e43541fb4f09b",
     url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/%s/minimal.tar.gz" % eth2_spec_version,
 )
 
@@ -271,7 +243,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "2b48a5d7ca6d3de5a875027714daa6ce49b5216a84babd21c271a6ab286e923e",
+    sha256 = "0fc10e68c9959e049b4f38289331d069efd5017975d4d7988a1812115c4c4a06",
     url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/%s/mainnet.tar.gz" % eth2_spec_version,
 )
 
@@ -286,21 +258,17 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "3d1005e09ccbff9857062f498e233287fbb4fd7354b25cc304b9c2d28cc3770c",
+    sha256 = "2d76cacafffa97be6f22bd41a5ca791d8ac1b97bc5d8768ae7680b82c27f14a9",
     strip_prefix = "eth2.0-specs-" + eth2_spec_version[1:],
     url = "https://github.com/ethereum/eth2.0-specs/archive/refs/tags/%s.tar.gz" % eth2_spec_version,
 )
 
 http_archive(
     name = "com_github_bazelbuild_buildtools",
-    sha256 = "b5d7dbc6832f11b6468328a376de05959a1a9e4e9f5622499d3bab509c26b46a",
-    strip_prefix = "buildtools-bf564b4925ab5876a3f64d8b90fab7f769013d42",
-    url = "https://github.com/bazelbuild/buildtools/archive/bf564b4925ab5876a3f64d8b90fab7f769013d42.zip",
+    sha256 = "7a182df18df1debabd9e36ae07c8edfa1378b8424a04561b674d933b965372b3",
+    strip_prefix = "buildtools-f2aed9ee205d62d45c55cfabbfd26342f8526862",
+    url = "https://github.com/bazelbuild/buildtools/archive/f2aed9ee205d62d45c55cfabbfd26342f8526862.zip",
 )
-
-load("@com_github_bazelbuild_buildtools//buildifier:deps.bzl", "buildifier_dependencies")
-
-buildifier_dependencies()
 
 git_repository(
     name = "com_google_protobuf",
@@ -308,10 +276,6 @@ git_repository(
     remote = "https://github.com/protocolbuffers/protobuf",
     shallow_since = "1617835118 -0700",
 )
-
-load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
-
-protobuf_deps()
 
 # Group the sources of the library so that CMake rule have access to it
 all_content = """filegroup(name = "all", srcs = glob(["**"]), visibility = ["//visibility:public"])"""
@@ -373,8 +337,46 @@ load("@prysm//third_party/herumi:herumi.bzl", "bls_dependencies")
 
 bls_dependencies()
 
+load(
+    "@io_bazel_rules_docker//go:image.bzl",
+    _go_image_repos = "repositories",
+)
+
+# Golang images
+# This is using gcr.io/distroless/base
+_go_image_repos()
+
+# CC images
+# This is using gcr.io/distroless/base
+load(
+    "@io_bazel_rules_docker//cc:image.bzl",
+    _cc_image_repos = "repositories",
+)
+
+_cc_image_repos()
+
 load("@com_github_ethereum_go_ethereum//:deps.bzl", "geth_dependencies")
 
 geth_dependencies()
+
+load("@io_bazel_rules_go//extras:embed_data_deps.bzl", "go_embed_data_dependencies")
+
+go_embed_data_dependencies()
+
+load("@com_github_atlassian_bazel_tools//gometalinter:deps.bzl", "gometalinter_dependencies")
+
+gometalinter_dependencies()
+
+load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
+
+gazelle_dependencies()
+
+load("@com_github_bazelbuild_buildtools//buildifier:deps.bzl", "buildifier_dependencies")
+
+buildifier_dependencies()
+
+load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
+
+protobuf_deps()
 
 # Do NOT add new go dependencies here! Refer to DEPENDENCIES.md!

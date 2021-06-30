@@ -6,7 +6,7 @@ import (
 	ssz "github.com/ferranbt/fastssz"
 )
 
-// NetworkEncoding represents an encoder compatible with Ethereum 2.0 p2p.
+// NetworkEncoding represents an encoder compatible with Ethereum consensus p2p.
 type NetworkEncoding interface {
 	// DecodeGossip to the provided gossip message. The interface must be a pointer to the decoding destination.
 	DecodeGossip([]byte, ssz.Unmarshaler) error

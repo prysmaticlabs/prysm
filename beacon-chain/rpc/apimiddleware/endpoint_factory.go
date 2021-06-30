@@ -21,6 +21,7 @@ func (f *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/beacon/states/{state_id}/fork",
 		"/eth/v1/beacon/states/{state_id}/finality_checkpoints",
 		"/eth/v1/beacon/states/{state_id}/validators",
+		"/eth/v1/beacon/states/{state_id}/validators/{validator_id}",
 		"/eth/v1/beacon/states/{state_id}/validator_balances",
 		"/eth/v1/beacon/states/{state_id}/committees",
 		"/eth/v1/beacon/headers",
@@ -45,6 +46,7 @@ func (f *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/config/fork_schedule",
 		"/eth/v1/config/deposit_contract",
 		"/eth/v1/config/spec",
+		"/eth/v1/events",
 	}
 }
 
@@ -73,6 +75,12 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 			Err:         &gateway.DefaultErrorJson{},
 		}
 	case "/eth/v1/beacon/states/{state_id}/validators":
+		endpoint = gateway.Endpoint{
+			GetRequestQueryParams: []gateway.QueryParam{{Name: "id", Hex: true}, {Name: "status", Enum: true}},
+			GetResponse:           &stateValidatorsResponseJson{},
+			Err:                   &gateway.DefaultErrorJson{},
+		}
+	case "/eth/v1/beacon/states/{state_id}/validators/{validator_id}":
 		endpoint = gateway.Endpoint{
 			GetResponse: &stateValidatorResponseJson{},
 			Err:         &gateway.DefaultErrorJson{},
@@ -161,8 +169,9 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 		}
 	case "/eth/v1/node/peers":
 		endpoint = gateway.Endpoint{
-			GetResponse: &peersResponseJson{},
-			Err:         &gateway.DefaultErrorJson{},
+			GetRequestQueryParams: []gateway.QueryParam{{Name: "state", Enum: true}, {Name: "direction", Enum: true}},
+			GetResponse:           &peersResponseJson{},
+			Err:                   &gateway.DefaultErrorJson{},
 		}
 	case "/eth/v1/node/peers/{peer_id}":
 		endpoint = gateway.Endpoint{
@@ -216,6 +225,13 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 		endpoint = gateway.Endpoint{
 			GetResponse: &specResponseJson{},
 			Err:         &gateway.DefaultErrorJson{},
+		}
+	case "/eth/v1/events":
+		endpoint = gateway.Endpoint{
+			Err: &gateway.DefaultErrorJson{},
+			Hooks: gateway.HookCollection{
+				CustomHandlers: []gateway.CustomHandler{handleEvents},
+			},
 		}
 	default:
 		return nil, errors.New("invalid path")

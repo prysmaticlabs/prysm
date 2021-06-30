@@ -52,7 +52,7 @@ type QueryFilter struct {
 }
 
 // NewFilter instantiates a new QueryFilter type used to build filters for
-// certain eth2 data types by attribute.
+// certain Ethereum data types by attribute.
 func NewFilter() *QueryFilter {
 	return &QueryFilter{
 		queries: make(map[FilterType]interface{}),

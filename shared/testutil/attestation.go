@@ -11,8 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/interfaces/version"
@@ -66,21 +66,21 @@ func GenerateAttestations(
 		var headState iface.BeaconState
 		switch bState.Version() {
 		case version.Phase0:
-			pbState, err := stateV0.ProtobufBeaconState(bState.CloneInnerState())
+			pbState, err := v1.ProtobufBeaconState(bState.CloneInnerState())
 			if err != nil {
 				return nil, err
 			}
-			genState, err := stateV0.InitializeFromProtoUnsafe(pbState)
+			genState, err := v1.InitializeFromProtoUnsafe(pbState)
 			if err != nil {
 				return nil, err
 			}
 			headState = iface.BeaconState(genState)
 		case version.Altair:
-			pbState, err := stateAltair.ProtobufBeaconState(bState.CloneInnerState())
+			pbState, err := v2.ProtobufBeaconState(bState.CloneInnerState())
 			if err != nil {
 				return nil, err
 			}
-			genState, err := stateAltair.InitializeFromProtoUnsafe(pbState)
+			genState, err := v2.InitializeFromProtoUnsafe(pbState)
 			if err != nil {
 				return nil, err
 			}

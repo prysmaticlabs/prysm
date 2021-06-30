@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/gateway"
 )
@@ -18,14 +17,12 @@ func wrapAttestationsArray(endpoint gateway.Endpoint, _ http.ResponseWriter, req
 	if _, ok := endpoint.PostRequest.(*submitAttestationRequestJson); ok {
 		atts := make([]*attestationJson, 0)
 		if err := json.NewDecoder(req.Body).Decode(&atts); err != nil {
-			e := errors.Wrapf(err, "could not decode attestations array")
-			return &gateway.DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+			return gateway.InternalServerErrorWithMessage(err, "could not decode attestations array")
 		}
 		j := &submitAttestationRequestJson{Data: atts}
 		b, err := json.Marshal(j)
 		if err != nil {
-			e := errors.Wrapf(err, "could not marshal wrapped attestations array")
-			return &gateway.DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+			return gateway.InternalServerErrorWithMessage(err, "could not marshal wrapped attestations array")
 		}
 		req.Body = ioutil.NopCloser(bytes.NewReader(b))
 	}

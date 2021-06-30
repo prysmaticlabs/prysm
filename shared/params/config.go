@@ -1,4 +1,4 @@
-// Package params defines important constants that are essential to eth2 services.
+// Package params defines important constants that are essential to Prysm services.
 package params
 
 import (
@@ -19,7 +19,7 @@ type BeaconChainConfig struct {
 	JustificationBitsLength  uint64      `yaml:"JUSTIFICATION_BITS_LENGTH"`   // JustificationBitsLength defines number of epochs to track when implementing k-finality in Casper FFG.
 
 	// Misc constants.
-	ConfigName                     string `yaml:"CONFIG_NAME"`                        // ConfigName for allowing an easy human-readable way of knowing what chain is being used.
+	ConfigName                     string `yaml:"CONFIG_NAME"`                                    // ConfigName for allowing an easy human-readable way of knowing what chain is being used.
 	TargetCommitteeSize            uint64 `yaml:"TARGET_COMMITTEE_SIZE" spec:"true"`              // TargetCommitteeSize is the number of validators in a committee when the chain is healthy.
 	MaxValidatorsPerCommittee      uint64 `yaml:"MAX_VALIDATORS_PER_COMMITTEE" spec:"true"`       // MaxValidatorsPerCommittee defines the upper bound of the size of a committee.
 	MaxCommitteesPerSlot           uint64 `yaml:"MAX_COMMITTEES_PER_SLOT" spec:"true"`            // MaxCommitteesPerSlot defines the max amount of committee in a single slot.
@@ -44,7 +44,7 @@ type BeaconChainConfig struct {
 	ZeroHash                [32]byte // ZeroHash is used to represent a zeroed out 32 byte array.
 
 	// Time parameters constants.
-	GenesisDelay                     uint64      `yaml:"GENESIS_DELAY" spec:"true"`                       // GenesisDelay is the minimum number of seconds to delay starting the ETH2 genesis. Must be at least 1 second.
+	GenesisDelay                     uint64      `yaml:"GENESIS_DELAY" spec:"true"`                       // GenesisDelay is the minimum number of seconds to delay starting the Ethereum Beacon Chain genesis. Must be at least 1 second.
 	MinAttestationInclusionDelay     types.Slot  `yaml:"MIN_ATTESTATION_INCLUSION_DELAY" spec:"true"`     // MinAttestationInclusionDelay defines how many slots validator has to wait to include attestation for beacon block.
 	SecondsPerSlot                   uint64      `yaml:"SECONDS_PER_SLOT" spec:"true"`                    // SecondsPerSlot is how many seconds are in a single slot.
 	SlotsPerEpoch                    types.Slot  `yaml:"SLOTS_PER_EPOCH" spec:"true"`                     // SlotsPerEpoch is the number of slots in an epoch.
@@ -126,16 +126,16 @@ type BeaconChainConfig struct {
 	SlashingProtectionPruningEpochs types.Epoch // SlashingProtectionPruningEpochs defines a period after which all prior epochs are pruned in the validator database.
 
 	// Fork-related values.
-	GenesisForkVersion  []byte                 `yaml:"GENESIS_FORK_VERSION" spec:"true"` // GenesisForkVersion is used to track fork version between state transitions.
-	AltairForkVersion   []byte                 `yaml:"ALTAIR_FORK_VERSION" spec:"true"`  // AltairForkVersion is used to represent the fork version for altair.
-	AltairForkEpoch     types.Epoch            `yaml:"ALTAIR_FORK_EPOCH" spec:"true"`    // AltairForkEpoch is used to represent the assigned fork epoch for altair.
-	NextForkVersion     []byte                 `yaml:"NEXT_FORK_VERSION"`                // NextForkVersion is used to track the upcoming fork version, if any.
-	NextForkEpoch       types.Epoch            `yaml:"NEXT_FORK_EPOCH"`                  // NextForkEpoch is used to track the epoch of the next fork, if any.
-	ForkVersionSchedule map[types.Epoch][]byte // Schedule of fork versions by epoch number.
-	MergeForkVersion    []byte                 `yaml:"MERGE_FORK_VERSION" spec:"true"`    // MergeForkVersion is used to represent the fork version for merge.
-	MergeForkEpoch      types.Epoch            `yaml:"MERGE_FORK_EPOCH" spec:"true"`      // MergeForkEpoch is used to represent the assigned fork epoch for merge.
-	ShardingForkVersion []byte                 `yaml:"SHARDING_FORK_VERSION" spec:"true"` // ShardingForkVersion is used to represent the fork version for sharding.
-	ShardingForkEpoch   types.Epoch            `yaml:"SHARDING_FORK_EPOCH" spec:"true"`   // ShardingForkEpoch is used to represent the assigned fork epoch for sharding.
+	GenesisForkVersion  []byte                  `yaml:"GENESIS_FORK_VERSION" spec:"true"` // GenesisForkVersion is used to track fork version between state transitions.
+	AltairForkVersion   []byte                  `yaml:"ALTAIR_FORK_VERSION" spec:"true"`  // AltairForkVersion is used to represent the fork version for altair.
+	AltairForkEpoch     types.Epoch             `yaml:"ALTAIR_FORK_EPOCH" spec:"true"`    // AltairForkEpoch is used to represent the assigned fork epoch for altair.
+	NextForkVersion     []byte                  `yaml:"NEXT_FORK_VERSION"`                // NextForkVersion is used to track the upcoming fork version, if any.
+	NextForkEpoch       types.Epoch             `yaml:"NEXT_FORK_EPOCH"`                  // NextForkEpoch is used to track the epoch of the next fork, if any.
+	ForkVersionSchedule map[[4]byte]types.Epoch // Schedule of fork versions by epoch number.
+	MergeForkVersion    []byte                  `yaml:"MERGE_FORK_VERSION" spec:"true"`    // MergeForkVersion is used to represent the fork version for merge.
+	MergeForkEpoch      types.Epoch             `yaml:"MERGE_FORK_EPOCH" spec:"true"`      // MergeForkEpoch is used to represent the assigned fork epoch for merge.
+	ShardingForkVersion []byte                  `yaml:"SHARDING_FORK_VERSION" spec:"true"` // ShardingForkVersion is used to represent the fork version for sharding.
+	ShardingForkEpoch   types.Epoch             `yaml:"SHARDING_FORK_EPOCH" spec:"true"`   // ShardingForkEpoch is used to represent the assigned fork epoch for sharding.
 
 	// Merge values.
 	MinAnchorPOWBlockDifficulty uint64 `yaml:"MIN_ANCHOR_POW_BLOCK_DIFFICULTY" spec:"true"` // TBD: Merge transition approach is in active R&D.

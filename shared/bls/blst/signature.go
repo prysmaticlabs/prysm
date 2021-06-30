@@ -53,7 +53,7 @@ func SignatureFromBytes(sig []byte) (common.Signature, error) {
 //      algorithm that outputs VALID if signature is a valid signature of
 //      message under public key PK, and INVALID otherwise.
 //
-// In ETH2.0 specification:
+// In the Ethereum proof of stake specification:
 // def Verify(PK: BLSPubkey, message: Bytes, signature: BLSSignature) -> bool
 func (s *Signature) Verify(pubKey common.PublicKey, msg []byte) bool {
 	if featureconfig.Get().SkipBLSVerify {
@@ -76,7 +76,7 @@ func (s *Signature) Verify(pubKey common.PublicKey, msg []byte) bool {
 //      signature for a collection of public keys and messages, and
 //      outputs INVALID otherwise.
 //
-// In ETH2.0 specification:
+// In the Ethereum proof of stake specification:
 // def AggregateVerify(pairs: Sequence[PK: BLSPubkey, message: Bytes], signature: BLSSignature) -> bool
 //
 // Deprecated: Use FastAggregateVerify or use this method in spectests only.
@@ -109,7 +109,7 @@ func (s *Signature) AggregateVerify(pubKeys []common.PublicKey, msgs [][32]byte)
 //      signatures on the same message.  This function is faster than
 //      AggregateVerify.
 //
-// In ETH2.0 specification:
+// In the Ethereum proof of stake specification:
 // def FastAggregateVerify(PKs: Sequence[BLSPubkey], message: Bytes, signature: BLSSignature) -> bool
 func (s *Signature) FastAggregateVerify(pubKeys []common.PublicKey, msg [32]byte) bool {
 	if featureconfig.Get().SkipBLSVerify {
@@ -186,7 +186,7 @@ func AggregateSignatures(sigs []common.Signature) common.Signature {
 //      aggregation algorithm that compresses a collection of signatures
 //      into a single signature.
 //
-// In ETH2.0 specification:
+// In the Ethereum proof of stake specification:
 // def Aggregate(signatures: Sequence[BLSSignature]) -> BLSSignature
 //
 // Deprecated: Use AggregateSignatures.
@@ -232,6 +232,9 @@ func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []common.P
 		// Ignore error as the error will always be nil in `read` in math/rand.
 		randGen.Read(rbytes[:])
 		randLock.Unlock()
+		// Protect against the generator returning 0. Since the scalar value is
+		// derived from a big endian byte slice, we take the last byte.
+		rbytes[len(rbytes)-1] |= 0x01
 		scalar.FromBEndian(rbytes[:])
 	}
 	dummySig := new(blstSignature)
