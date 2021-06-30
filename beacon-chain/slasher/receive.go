@@ -203,7 +203,7 @@ func (s *Service) pruneSlasherDataWithinSlidingWindow(ctx context.Context, curre
 	log.WithFields(logrus.Fields{
 		"currentEpoch":          currentEpoch,
 		"pruningAllBeforeEpoch": maxPruningEpoch,
-	}).Debug("Pruning old attestations and proposals for slasher")
+	}).Info("Pruning old attestations and proposals for slasher")
 	numPrunedAtts, err := s.serviceCfg.Database.PruneAttestationsAtEpoch(
 		ctx, maxPruningEpoch,
 	)
@@ -219,6 +219,6 @@ func (s *Service) pruneSlasherDataWithinSlidingWindow(ctx context.Context, curre
 	log.WithFields(logrus.Fields{
 		"prunedAttestationRecords": numPrunedAtts,
 		"prunedProposalRecords":    numPrunedProposals,
-	}).Debug("Successfully pruned slasher data")
+	}).Info("Successfully pruned slasher data")
 	return nil
 }
