@@ -177,7 +177,10 @@ func main() {
 			runtimeDebug.SetGCPercent(ctx.Int(flags.SetGCPercent.Name))
 		}
 		runtime.GOMAXPROCS(runtime.NumCPU())
-		return debug.Setup(ctx)
+		if err := debug.Setup(ctx); err != nil {
+			return err
+		}
+		return cmd.ValidateNoArgs(ctx)
 	}
 
 	defer func() {
