@@ -88,6 +88,8 @@ http_archive(
         # Required until https://github.com/bazelbuild/rules_go/pull/2450 merges otherwise nilness
         # nogo check fails for certain third_party dependencies.
         "//third_party:io_bazel_rules_go.patch",
+        # Expose internals of go_test for custom build transitions.
+        "//third_party:io_bazel_rules_go_test.patch",
     ],
     sha256 = "7c10271940c6bce577d51a075ae77728964db285dac0a46614a7934dc34303e6",
     urls = [
