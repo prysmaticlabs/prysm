@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -266,7 +267,7 @@ func (v *validator) waitOneThirdOrValidBlock(ctx context.Context, slot types.Slo
 	t := time.NewTimer(wait)
 	defer t.Stop()
 
-	bChannel := make(chan *ethpb.SignedBeaconBlock, 1)
+	bChannel := make(chan interfaces.SignedBeaconBlock, 1)
 	sub := v.blockFeed.Subscribe(bChannel)
 	defer sub.Unsubscribe()
 
@@ -274,7 +275,7 @@ func (v *validator) waitOneThirdOrValidBlock(ctx context.Context, slot types.Slo
 		select {
 		case b := <-bChannel:
 			if featureconfig.Get().AttestTimely {
-				if slot <= b.Block.Slot {
+				if slot <= b.Block().Slot() {
 					return
 				}
 			}

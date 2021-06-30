@@ -11,8 +11,10 @@ import (
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -68,6 +70,12 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.S
 		log.WithError(err).Error("Could not submit sync committee message")
 		return
 	}
+
+	log.WithFields(logrus.Fields{
+		"slot":           msg.Slot,
+		"blockRoot":      fmt.Sprintf("%#x", bytesutil.Trunc(msg.BlockRoot)),
+		"validatorIndex": msg.ValidatorIndex,
+	}).Info("Submitted new sync message")
 }
 
 // SubmitSignedContributionAndProof submits the signed sync committee contribution and proof to the beacon chain.
@@ -136,6 +144,13 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 			log.Errorf("Could not submit signed contribution and proof: %v", err)
 			return
 		}
+
+		log.WithFields(logrus.Fields{
+			"slot":              contributionAndProof.Contribution.Slot,
+			"blockRoot":         fmt.Sprintf("%#x", bytesutil.Trunc(contributionAndProof.Contribution.BlockRoot)),
+			"subcommitteeIndex": contributionAndProof.Contribution.SubcommitteeIndex,
+			"aggregatorIndex":   contributionAndProof.AggregatorIndex,
+		}).Info("Submitted new sync contribution and proof")
 	}
 }
 

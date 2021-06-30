@@ -34,7 +34,7 @@ option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
     };
     external_docs: {
         url: "https://github.com/ethereum/eth2.0-specs";
-        description: "Ethereum 2.0 Specification on Github";
+        description: "Ethereum Consensus Specification on Github";
     };
     host: "api.prylabs.net",
     schemes: HTTPS;

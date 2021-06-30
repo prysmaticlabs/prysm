@@ -29,7 +29,7 @@ type Config struct {
 }
 
 // Store defines an implementation of the Prysm Database interface
-// using BoltDB as the underlying persistent kv-store for eth2.
+// using BoltDB as the underlying persistent kv-store for Ethereum consensus.
 type Store struct {
 	db           *bolt.DB
 	databasePath string
@@ -76,6 +76,7 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 			tx,
 			// Slasher buckets.
 			attestedEpochsByValidator,
+			attestationRecordsBucket,
 			attestationDataRootsBucket,
 			proposalRecordsBucket,
 			slasherChunksBucket,

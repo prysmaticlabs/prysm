@@ -1,4 +1,4 @@
-// Package helpers contains helper functions outlined in the eth2 beacon chain spec, such as
+// Package helpers contains helper functions outlined in the Ethereum Beacon Chain spec, such as
 // computing committees, randao, rewards/penalties, and more.
 package helpers
 
@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -392,44 +391,26 @@ func ClearCache() {
 	syncCommitteeCache = cache.NewSyncCommittee()
 }
 
-type syncCommitteePositionFunc func(root [32]byte, valIdx types.ValidatorIndex) ([]uint64, error)
-
 // IsCurrentEpochSyncCommittee returns true if the input validator index belongs in the current epoch sync committee
 // along with the sync committee root.
 // 1.) Checks if the public key exists in the sync committee cache
 // 2.) If 1 fails, checks if the public key exists in the input current sync committee object
 func IsCurrentEpochSyncCommittee(
-	st iface.ReadOnlyBeaconState, committee *pb.SyncCommittee, valIdx types.ValidatorIndex,
+	st iface.BeaconStateAltair, valIdx types.ValidatorIndex,
 ) (bool, error) {
-	return isEpochSyncCommittee(st, committee, valIdx, syncCommitteeCache.CurrentEpochIndexPosition)
-}
-
-// IsNextEpochSyncCommittee returns true if the input validator index belongs in the next epoch sync committee
-// along with the sync committee root.
-// 1.) Checks if the public key exists in the sync committee cache
-// 2.) If 1 fails, checks if the public key exists in the input next sync committee object
-func IsNextEpochSyncCommittee(
-	st iface.ReadOnlyBeaconState, committee *pb.SyncCommittee, valIdx types.ValidatorIndex,
-) (bool, error) {
-	return isEpochSyncCommittee(st, committee, valIdx, syncCommitteeCache.NextEpochIndexPosition)
-}
-
-func isEpochSyncCommittee(
-	st iface.ReadOnlyBeaconState,
-	committee *pb.SyncCommittee,
-	valIdx types.ValidatorIndex,
-	positionGetter syncCommitteePositionFunc,
-) (bool, error) {
-	root, err := committee.HashTreeRoot()
+	root, err := syncPeriodBoundaryRoot(st)
 	if err != nil {
 		return false, err
 	}
-	indices, err := positionGetter(root, valIdx)
-	// If committee root does not exist in cache, perform manual lookup of pubkeys in committee to find match.
+	indices, err := syncCommitteeCache.CurrentEpochIndexPosition(bytesutil.ToBytes32(root), valIdx)
 	if err == cache.ErrNonExistingSyncCommitteeKey {
 		val, err := st.ValidatorAtIndex(valIdx)
 		if err != nil {
 			return false, nil
+		}
+		committee, err := st.CurrentSyncCommittee()
+		if err != nil {
+			return false, err
 		}
 		return len(findSubCommitteeIndices(val.PublicKey, committee.Pubkeys)) > 0, nil
 	}
@@ -439,42 +420,53 @@ func isEpochSyncCommittee(
 	return len(indices) > 0, nil
 }
 
-// UpdateSyncCommitteeCache updates sync committee cache.
-func UpdateSyncCommitteeCache(state iface.BeaconStateAltair) error {
-	return syncCommitteeCache.UpdatePositionsInCommittee(state)
+// IsNextEpochSyncCommittee returns true if the input validator index belongs in the next epoch sync committee
+// along with the sync committee root.
+// 1.) Checks if the public key exists in the sync committee cache
+// 2.) If 1 fails, checks if the public key exists in the input next sync committee object
+func IsNextEpochSyncCommittee(
+	st iface.BeaconStateAltair, valIdx types.ValidatorIndex,
+) (bool, error) {
+	root, err := syncPeriodBoundaryRoot(st)
+	if err != nil {
+		return false, err
+	}
+	indices, err := syncCommitteeCache.NextEpochIndexPosition(bytesutil.ToBytes32(root), valIdx)
+	if err == cache.ErrNonExistingSyncCommitteeKey {
+		val, err := st.ValidatorAtIndex(valIdx)
+		if err != nil {
+			return false, nil
+		}
+		committee, err := st.NextSyncCommittee()
+		if err != nil {
+			return false, err
+		}
+		return len(findSubCommitteeIndices(val.PublicKey, committee.Pubkeys)) > 0, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return len(indices) > 0, nil
 }
 
 // CurrentEpochSyncSubcommitteeIndices returns the subcommittee indices of the
 // current epoch sync committee for input validator.
 func CurrentEpochSyncSubcommitteeIndices(
-	st iface.ReadOnlyBeaconState, committee *pb.SyncCommittee, valIdx types.ValidatorIndex,
+	st iface.BeaconStateAltair, valIdx types.ValidatorIndex,
 ) ([]uint64, error) {
-	return epochSyncSubcommitteeIndices(st, committee, valIdx, syncCommitteeCache.CurrentEpochIndexPosition)
-}
-
-// NextEpochSyncSubcommitteeIndices returns the subcommittee indices of the next epoch sync committee for input validator.
-func NextEpochSyncSubcommitteeIndices(
-	st iface.ReadOnlyBeaconState, committee *pb.SyncCommittee, valIdx types.ValidatorIndex,
-) ([]uint64, error) {
-	return epochSyncSubcommitteeIndices(st, committee, valIdx, syncCommitteeCache.NextEpochIndexPosition)
-}
-
-func epochSyncSubcommitteeIndices(
-	st iface.ReadOnlyBeaconState,
-	committee *pb.SyncCommittee,
-	valIdx types.ValidatorIndex,
-	positionGetter syncCommitteePositionFunc,
-) ([]uint64, error) {
-	root, err := committee.HashTreeRoot()
+	root, err := syncPeriodBoundaryRoot(st)
 	if err != nil {
 		return nil, err
 	}
-	indices, err := positionGetter(root, valIdx)
-	// If committee root does not exist in cache, perform manual lookup of pubkeys in committee to find indices.
+	indices, err := syncCommitteeCache.CurrentEpochIndexPosition(bytesutil.ToBytes32(root), valIdx)
 	if err == cache.ErrNonExistingSyncCommitteeKey {
 		val, err := st.ValidatorAtIndex(valIdx)
 		if err != nil {
 			return nil, nil
+		}
+		committee, err := st.CurrentSyncCommittee()
+		if err != nil {
+			return nil, err
 		}
 		return findSubCommitteeIndices(val.PublicKey, committee.Pubkeys), nil
 	}
@@ -482,6 +474,41 @@ func epochSyncSubcommitteeIndices(
 		return nil, err
 	}
 	return indices, nil
+}
+
+// NextEpochSyncSubcommitteeIndices returns the subcommittee indices of the next epoch sync committee for input validator.
+func NextEpochSyncSubcommitteeIndices(
+	st iface.BeaconStateAltair, valIdx types.ValidatorIndex,
+) ([]uint64, error) {
+	root, err := syncPeriodBoundaryRoot(st)
+	if err != nil {
+		return nil, err
+	}
+	indices, err := syncCommitteeCache.NextEpochIndexPosition(bytesutil.ToBytes32(root), valIdx)
+	if err == cache.ErrNonExistingSyncCommitteeKey {
+		val, err := st.ValidatorAtIndex(valIdx)
+		if err != nil {
+			return nil, nil
+		}
+		committee, err := st.NextSyncCommittee()
+		if err != nil {
+			return nil, err
+		}
+		return findSubCommitteeIndices(val.PublicKey, committee.Pubkeys), nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return indices, nil
+}
+
+// UpdateSyncCommitteeCache updates sync committee cache.
+func UpdateSyncCommitteeCache(state iface.BeaconStateAltair) error {
+	r, err := syncPeriodBoundaryRoot(state)
+	if err != nil {
+		return err
+	}
+	return syncCommitteeCache.UpdatePositionsInCommittee(bytesutil.ToBytes32(r), state)
 }
 
 // Loop through `pubKeys` for matching `pubKey` and get the indices where it matches.
@@ -493,6 +520,21 @@ func findSubCommitteeIndices(pubKey []byte, pubKeys [][]byte) []uint64 {
 		}
 	}
 	return indices
+}
+
+// Retrieve the current sync period boundary root by calculating sync period start epoch
+// and calling `BlockRoot`.
+func syncPeriodBoundaryRoot(state iface.ReadOnlyBeaconState) ([]byte, error) {
+	// Can't call `BlockRoot` until the first slot.
+	if state.Slot() == params.BeaconConfig().GenesisSlot {
+		return params.BeaconConfig().ZeroHash[:], nil
+	}
+
+	startEpoch, err := SyncCommitteePeriodStartEpoch(CurrentEpoch(state))
+	if err != nil {
+		return nil, err
+	}
+	return BlockRoot(state, startEpoch)
 }
 
 // This computes proposer indices of the current epoch and returns a list of proposer indices,

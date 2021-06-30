@@ -14,8 +14,8 @@ import (
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -282,7 +282,7 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 
 func TestAttestationDataSlot_handlesInProgressRequest(t *testing.T) {
 	s := &pbp2p.BeaconState{Slot: 100}
-	state, err := stateV0.InitializeFromProto(s)
+	state, err := v1.InitializeFromProto(s)
 	require.NoError(t, err)
 	ctx := context.Background()
 	chainService := &mock.ChainService{
@@ -352,7 +352,7 @@ func TestServer_GetAttestationData_InvalidRequestSlot(t *testing.T) {
 
 func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testing.T) {
 	// There exists a rare scenario where the validator may request an attestation for a slot less
-	// than the head state's slot. The ETH2 spec constraints require that the block root the
+	// than the head state's slot. The Ethereum consensus spec constraints require the block root the
 	// attestation is referencing be less than or equal to the attestation data slot.
 	// See: https://github.com/prysmaticlabs/prysm/issues/5164
 	ctx := context.Background()

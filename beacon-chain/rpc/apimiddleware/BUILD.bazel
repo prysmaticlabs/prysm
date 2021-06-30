@@ -1,5 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_test")
-load("@prysm//tools/go:def.bzl", "go_library")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
@@ -12,11 +11,13 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/apimiddleware",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
+        "//beacon-chain/rpc/eth/v1/events:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/gateway:go_default_library",
         "//shared/grpcutils:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
+        "@com_github_r3labs_sse//:go_default_library",
     ],
 )
 
@@ -28,10 +29,12 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//beacon-chain/rpc/eth/v1/events:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/gateway:go_default_library",
         "//shared/grpcutils:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
+        "@com_github_r3labs_sse//:go_default_library",
     ],
 )

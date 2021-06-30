@@ -19,6 +19,7 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 
 // Run minimal e2e config with the current release validator against latest beacon node.
 func TestEndToEnd_MinimalConfig_ValidatorAtCurrentRelease(t *testing.T) {
+	t.Skip("Skipping for Altair hard fork as there are breaking changes")
 	e2eMinimal(t, true /*usePrysmSh*/)
 }
 
@@ -61,6 +62,7 @@ func e2eMinimal(t *testing.T, usePrysmSh bool) {
 			ev.ValidatorHasExited,
 			ev.ValidatorsVoteWithTheMajority,
 			ev.ColdStateCheckpoint,
+			ev.ApiVerifyValidators,
 		},
 	}
 

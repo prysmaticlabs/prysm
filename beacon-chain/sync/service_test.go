@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/abool"
@@ -23,7 +23,7 @@ import (
 )
 
 func TestService_StatusZeroEpoch(t *testing.T) {
-	bState, err := stateV0.InitializeFromProto(&pb.BeaconState{Slot: 0})
+	bState, err := v1.InitializeFromProto(&pb.BeaconState{Slot: 0})
 	require.NoError(t, err)
 	r := &Service{
 		cfg: &Config{

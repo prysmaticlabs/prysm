@@ -1,5 +1,5 @@
 // Package blocks contains block processing libraries according to
-// the eth2spec.
+// the Ethereum beacon chain spec.
 package blocks
 
 import (

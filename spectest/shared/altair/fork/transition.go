@@ -10,8 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
@@ -86,7 +86,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			require.NoError(t, err, "Failed to decompress")
 			beaconStateBase := &pb.BeaconState{}
 			require.NoError(t, beaconStateBase.UnmarshalSSZ(preBeaconStateSSZ), "Failed to unmarshal")
-			beaconState, err := stateV0.InitializeFromProto(beaconStateBase)
+			beaconState, err := v1.InitializeFromProto(beaconStateBase)
 			require.NoError(t, err)
 
 			bc := params.BeaconConfig()
@@ -98,7 +98,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			for _, b := range preforkBlocks {
 				state, err := state.ExecuteStateTransition(ctx, beaconState, interfaces.WrappedPhase0SignedBeaconBlock(b))
 				require.NoError(t, err)
-				beaconState, ok = state.(*stateV0.BeaconState)
+				beaconState, ok = state.(*v1.BeaconState)
 				require.Equal(t, true, ok)
 			}
 			altairState := iface.BeaconStateAltair(beaconState)

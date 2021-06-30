@@ -30,7 +30,7 @@ func TestStreamEvents_Preconditions(t *testing.T) {
 		defer ctrl.Finish()
 		mockStream := mock.NewMockEvents_StreamEventsServer(ctrl)
 		err := srv.StreamEvents(&ethpb.StreamEventsRequest{Topics: nil}, mockStream)
-		require.ErrorContains(t, "no topics specified", err)
+		require.ErrorContains(t, "No topics specified", err)
 	})
 	t.Run("topic_not_allowed", func(t *testing.T) {
 		srv := &Server{}
@@ -38,12 +38,12 @@ func TestStreamEvents_Preconditions(t *testing.T) {
 		defer ctrl.Finish()
 		mockStream := mock.NewMockEvents_StreamEventsServer(ctrl)
 		err := srv.StreamEvents(&ethpb.StreamEventsRequest{Topics: []string{"foobar"}}, mockStream)
-		require.ErrorContains(t, "topic foobar not allowed", err)
+		require.ErrorContains(t, "Topic foobar not allowed", err)
 	})
 }
 
 func TestStreamEvents_BlockEvents(t *testing.T) {
-	t.Run(blockTopic, func(t *testing.T) {
+	t.Run(BlockTopic, func(t *testing.T) {
 		ctx := context.Background()
 		srv, ctrl, mockStream := setupServer(ctx, t)
 		defer ctrl.Finish()
@@ -61,14 +61,14 @@ func TestStreamEvents_BlockEvents(t *testing.T) {
 		})
 		require.NoError(t, err)
 		wantedMessage := &gateway.EventSource{
-			Event: blockTopic,
+			Event: BlockTopic,
 			Data:  genericResponse,
 		}
 
 		assertFeedSendAndReceive(ctx, &assertFeedArgs{
 			t:             t,
 			srv:           srv,
-			topics:        []string{blockTopic},
+			topics:        []string{BlockTopic},
 			stream:        mockStream,
 			shouldReceive: wantedMessage,
 			itemToSend: &feed.Event{
@@ -98,14 +98,14 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 		require.NoError(t, err)
 
 		wantedMessage := &gateway.EventSource{
-			Event: attestationTopic,
+			Event: AttestationTopic,
 			Data:  genericResponse,
 		}
 
 		assertFeedSendAndReceive(ctx, &assertFeedArgs{
 			t:             t,
 			srv:           srv,
-			topics:        []string{attestationTopic},
+			topics:        []string{AttestationTopic},
 			stream:        mockStream,
 			shouldReceive: wantedMessage,
 			itemToSend: &feed.Event{
@@ -130,14 +130,14 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 		require.NoError(t, err)
 
 		wantedMessage := &gateway.EventSource{
-			Event: attestationTopic,
+			Event: AttestationTopic,
 			Data:  genericResponse,
 		}
 
 		assertFeedSendAndReceive(ctx, &assertFeedArgs{
 			t:             t,
 			srv:           srv,
-			topics:        []string{attestationTopic},
+			topics:        []string{AttestationTopic},
 			stream:        mockStream,
 			shouldReceive: wantedMessage,
 			itemToSend: &feed.Event{
@@ -149,7 +149,7 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 			feed: srv.OperationNotifier.OperationFeed(),
 		})
 	})
-	t.Run(voluntaryExitTopic, func(t *testing.T) {
+	t.Run(VoluntaryExitTopic, func(t *testing.T) {
 		ctx := context.Background()
 		srv, ctrl, mockStream := setupServer(ctx, t)
 		defer ctrl.Finish()
@@ -166,14 +166,14 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 		require.NoError(t, err)
 
 		wantedMessage := &gateway.EventSource{
-			Event: voluntaryExitTopic,
+			Event: VoluntaryExitTopic,
 			Data:  genericResponse,
 		}
 
 		assertFeedSendAndReceive(ctx, &assertFeedArgs{
 			t:             t,
 			srv:           srv,
-			topics:        []string{voluntaryExitTopic},
+			topics:        []string{VoluntaryExitTopic},
 			stream:        mockStream,
 			shouldReceive: wantedMessage,
 			itemToSend: &feed.Event{
@@ -188,7 +188,7 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 }
 
 func TestStreamEvents_StateEvents(t *testing.T) {
-	t.Run(headTopic, func(t *testing.T) {
+	t.Run(HeadTopic, func(t *testing.T) {
 		ctx := context.Background()
 		srv, ctrl, mockStream := setupServer(ctx, t)
 		defer ctrl.Finish()
@@ -204,14 +204,14 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 		genericResponse, err := anypb.New(wantedHead)
 		require.NoError(t, err)
 		wantedMessage := &gateway.EventSource{
-			Event: headTopic,
+			Event: HeadTopic,
 			Data:  genericResponse,
 		}
 
 		assertFeedSendAndReceive(ctx, &assertFeedArgs{
 			t:             t,
 			srv:           srv,
-			topics:        []string{headTopic},
+			topics:        []string{HeadTopic},
 			stream:        mockStream,
 			shouldReceive: wantedMessage,
 			itemToSend: &feed.Event{
@@ -221,7 +221,7 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 			feed: srv.StateNotifier.StateFeed(),
 		})
 	})
-	t.Run(finalizedCheckpointTopic, func(t *testing.T) {
+	t.Run(FinalizedCheckpointTopic, func(t *testing.T) {
 		ctx := context.Background()
 		srv, ctrl, mockStream := setupServer(ctx, t)
 		defer ctrl.Finish()
@@ -234,14 +234,14 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 		genericResponse, err := anypb.New(wantedCheckpoint)
 		require.NoError(t, err)
 		wantedMessage := &gateway.EventSource{
-			Event: finalizedCheckpointTopic,
+			Event: FinalizedCheckpointTopic,
 			Data:  genericResponse,
 		}
 
 		assertFeedSendAndReceive(ctx, &assertFeedArgs{
 			t:             t,
 			srv:           srv,
-			topics:        []string{finalizedCheckpointTopic},
+			topics:        []string{FinalizedCheckpointTopic},
 			stream:        mockStream,
 			shouldReceive: wantedMessage,
 			itemToSend: &feed.Event{
@@ -251,7 +251,7 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 			feed: srv.StateNotifier.StateFeed(),
 		})
 	})
-	t.Run(chainReorgTopic, func(t *testing.T) {
+	t.Run(ChainReorgTopic, func(t *testing.T) {
 		ctx := context.Background()
 		srv, ctrl, mockStream := setupServer(ctx, t)
 		defer ctrl.Finish()
@@ -268,14 +268,14 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 		genericResponse, err := anypb.New(wantedReorg)
 		require.NoError(t, err)
 		wantedMessage := &gateway.EventSource{
-			Event: chainReorgTopic,
+			Event: ChainReorgTopic,
 			Data:  genericResponse,
 		}
 
 		assertFeedSendAndReceive(ctx, &assertFeedArgs{
 			t:             t,
 			srv:           srv,
-			topics:        []string{chainReorgTopic},
+			topics:        []string{ChainReorgTopic},
 			stream:        mockStream,
 			shouldReceive: wantedMessage,
 			itemToSend: &feed.Event{
