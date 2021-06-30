@@ -119,7 +119,7 @@ func (vs *Server) CheckDoppelGanger(ctx context.Context, req *ethpb.DoppelGanger
 	}
 	olderState, err := vs.StateGen.StateBySlot(ctx, params.BeaconConfig().SlotsPerEpoch.Mul(uint64(olderEpoch)))
 	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get previous state")
+		return nil, status.Error(codes.Internal, "Could not get older state")
 	}
 	resp := &ethpb.DoppelGangerResponse{
 		Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{},
