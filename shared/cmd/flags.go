@@ -257,9 +257,13 @@ func LoadFlagsFromConfig(cliCtx *cli.Context, flags []cli.Flag) error {
 // ValidateNoArgs insures that the application is not run with erroneous arguments or flags.
 // This function should be used in the app.Before, whenever the application supports a default command.
 func ValidateNoArgs(ctx *cli.Context) error {
-	// Args should not be present at all in the context.
-	if ctx.NArg() > 0 {
-		return fmt.Errorf("unrecognized flags or arguments: %s", strings.Join(ctx.Args().Slice(), ", "))
+	for _, a := range ctx.Args().Slice() {
+		if strings.HasPrefix(a, "-") {
+			continue
+		}
+		if c := ctx.App.Command(a); c == nil {
+			return fmt.Errorf("unrecognized argument: %s", a)
+		}
 	}
 	return nil
 }
