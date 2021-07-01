@@ -566,17 +566,17 @@ message ValidatorInfo {
 // DoppelGangerRequest represents the request sent by the validator in order to determine
 // if there is any duplicate instance of it running in the network.
 message DoppelGangerRequest {
-   message ValidatorRequest {
-    // The validator's 48 byte BLS public key.
-    bytes public_key = 1 [(ethereum.eth.ext.ssz_size) = "48", (ethereum.eth.ext.spec_name) = "pubkey"];
-    // The validator's last recorded epoch to attest.
-    uint64 epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
-    // The validator's last recorded signed root.
-    bytes signed_root = 2 [(ethereum.eth.ext.ssz_size) = "32"];
-}
+    repeated ValidatorRequest validator_requests = 1;
 
-repeated ValidatorRequest validator_requests = 1;
-
+    // ValidatorRequest data type which represents a request for each validator.
+    message ValidatorRequest {
+        // The validator's 48 byte BLS public key.
+        bytes public_key = 1 [(ethereum.eth.ext.ssz_size) = "48", (ethereum.eth.ext.spec_name) = "pubkey"];
+        // The validator's last recorded epoch to attest.
+        uint64 epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+        // The validator's last recorded signed root.
+        bytes signed_root = 2 [(ethereum.eth.ext.ssz_size) = "32"];
+    }
 }
 
 // DoppelGangerResponse is the response payload sent by the beacon node

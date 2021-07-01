@@ -380,7 +380,7 @@ func (v *validator) CheckDoppelGanger(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	log.WithField("keys", len(pubkeys)).Info("Running doppleganger check")
+	log.WithField("keys", len(pubkeys)).Info("Running doppelganger check")
 	// Exit early if no validating pub keys are found.
 	if len(pubkeys) == 0 {
 		return nil
@@ -414,16 +414,25 @@ func (v *validator) CheckDoppelGanger(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// If nothing is returned by the beacon node, we can exit early.
+	// If nothing is returned by the beacon node, we return an
+	// error as it is unsafe for us to proceed.
 	if resp == nil || resp.Responses == nil || len(resp.Responses) == 0 {
-		return nil
+		return errors.New("beacon node returned 0 responses for doppelganger check")
 	}
-	for _, valRes := range resp.Responses {
+	return buildDuplicateError(resp.Responses)
+}
+
+func buildDuplicateError(respones []*ethpb.DoppelGangerResponse_ValidatorResponse) error {
+	duplicates := make([][]byte, 0)
+	for _, valRes := range respones {
 		if valRes.DuplicateExists {
-			return errors.Errorf("Duplicate instance exists in the network for validator %#x", valRes.PublicKey)
+			duplicates = append(duplicates, valRes.PublicKey)
 		}
 	}
-	return nil
+	if len(duplicates) == 0 {
+		return nil
+	}
+	return errors.Errorf("Duplicate instances exists in the network for validator keys: %#x", duplicates)
 }
 
 // Ensures that the latest attestion history is retrieved.

@@ -993,11 +993,12 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 				db := dbTest.SetupDB(t, keys)
 				resp := &ethpb.DoppelGangerRequest{ValidatorRequests: []*ethpb.DoppelGangerRequest_ValidatorRequest{}}
 				for _, k := range keys {
+					pkey := k
 					att := createAttestation(10, 12)
 					rt, err := att.Data.HashTreeRoot()
 					assert.NoError(t, err)
-					assert.NoError(t, db.SaveAttestationForPubKey(context.Background(), k, rt, att))
-					resp.ValidatorRequests = append(resp.ValidatorRequests, &ethpb.DoppelGangerRequest_ValidatorRequest{PublicKey: k[:], Epoch: att.Data.Target.Epoch, SignedRoot: rt[:]})
+					assert.NoError(t, db.SaveAttestationForPubKey(context.Background(), pkey, rt, att))
+					resp.ValidatorRequests = append(resp.ValidatorRequests, &ethpb.DoppelGangerRequest_ValidatorRequest{PublicKey: pkey[:], Epoch: att.Data.Target.Epoch, SignedRoot: rt[:]})
 				}
 				v := &validator{
 					validatorClient: client,
@@ -1022,12 +1023,13 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 				db := dbTest.SetupDB(t, keys)
 				resp := &ethpb.DoppelGangerResponse{Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{}}
 				for i, k := range keys {
+					pkey := k
 					att := createAttestation(10, 12)
 					rt, err := att.Data.HashTreeRoot()
 					assert.NoError(t, err)
-					assert.NoError(t, db.SaveAttestationForPubKey(context.Background(), k, rt, att))
+					assert.NoError(t, db.SaveAttestationForPubKey(context.Background(), pkey, rt, att))
 					if i%3 == 0 {
-						resp.Responses = append(resp.Responses, &ethpb.DoppelGangerResponse_ValidatorResponse{PublicKey: k[:], DuplicateExists: true})
+						resp.Responses = append(resp.Responses, &ethpb.DoppelGangerResponse_ValidatorResponse{PublicKey: pkey[:], DuplicateExists: true})
 					}
 				}
 				v := &validator{
@@ -1041,7 +1043,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 				).Return(resp, nil /*err*/)
 				return v
 			},
-			err: "Duplicate instance exists in the network for validator",
+			err: "Duplicate instances exists in the network for validator keys",
 		},
 		{
 			name: "single doppelganger exists",
@@ -1053,12 +1055,13 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 				db := dbTest.SetupDB(t, keys)
 				resp := &ethpb.DoppelGangerResponse{Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{}}
 				for i, k := range keys {
+					pkey := k
 					att := createAttestation(10, 12)
 					rt, err := att.Data.HashTreeRoot()
 					assert.NoError(t, err)
-					assert.NoError(t, db.SaveAttestationForPubKey(context.Background(), k, rt, att))
+					assert.NoError(t, db.SaveAttestationForPubKey(context.Background(), pkey, rt, att))
 					if i%9 == 0 {
-						resp.Responses = append(resp.Responses, &ethpb.DoppelGangerResponse_ValidatorResponse{PublicKey: k[:], DuplicateExists: true})
+						resp.Responses = append(resp.Responses, &ethpb.DoppelGangerResponse_ValidatorResponse{PublicKey: pkey[:], DuplicateExists: true})
 					}
 				}
 				v := &validator{
@@ -1072,7 +1075,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 				).Return(resp, nil /*err*/)
 				return v
 			},
-			err: "Duplicate instance exists in the network for validator",
+			err: "Duplicate instances exists in the network for validator keys",
 		},
 		{
 			name: "multiple attestations saved",
@@ -1085,14 +1088,15 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 				resp := &ethpb.DoppelGangerResponse{Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{}}
 				attLimit := 5
 				for i, k := range keys {
+					pkey := k
 					for j := 0; j < attLimit; j++ {
 						att := createAttestation(10+types.Epoch(j), 12+types.Epoch(j))
 						rt, err := att.Data.HashTreeRoot()
 						assert.NoError(t, err)
-						assert.NoError(t, db.SaveAttestationForPubKey(context.Background(), k, rt, att))
+						assert.NoError(t, db.SaveAttestationForPubKey(context.Background(), pkey, rt, att))
 					}
 					if i%3 == 0 {
-						resp.Responses = append(resp.Responses, &ethpb.DoppelGangerResponse_ValidatorResponse{PublicKey: k[:], DuplicateExists: true})
+						resp.Responses = append(resp.Responses, &ethpb.DoppelGangerResponse_ValidatorResponse{PublicKey: pkey[:], DuplicateExists: true})
 					}
 				}
 				v := &validator{
@@ -1106,7 +1110,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 				).Return(resp, nil /*err*/)
 				return v
 			},
-			err: "Duplicate instance exists in the network for validator",
+			err: "Duplicate instances exists in the network for validator keys",
 		},
 		{
 			name: "no history exists",
