@@ -403,6 +403,9 @@ func (v *validator) CheckDoppelGanger(ctx context.Context) error {
 			continue
 		}
 		r := retrieveLatestRecord(attRec)
+		if pkey != r.PubKey {
+			return errors.New("attestation record mismatched public key")
+		}
 		req.ValidatorRequests = append(req.ValidatorRequests,
 			&ethpb.DoppelGangerRequest_ValidatorRequest{
 				PublicKey:  r.PubKey[:],

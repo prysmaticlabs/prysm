@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"sync"
 	"testing"
@@ -37,7 +38,7 @@ var _ iface.Validator = (*validator)(nil)
 
 const cancelledCtx = "context has been canceled"
 
-func genMockKeymanger(numKeys int) *mockKeymanager {
+func genMockKeymanager(numKeys int) *mockKeymanager {
 	km := make(map[[48]byte]bls.SecretKey, numKeys)
 	for i := 0; i < numKeys; i++ {
 		k, err := bls.RandKey()
@@ -818,7 +819,7 @@ func TestAllValidatorsAreExited_AllExited(t *testing.T) {
 		gomock.Any(), // request
 	).Return(&ethpb.MultipleValidatorStatusResponse{Statuses: statuses}, nil /*err*/)
 
-	v := validator{keyManager: genMockKeymanger(2), validatorClient: client}
+	v := validator{keyManager: genMockKeymanager(2), validatorClient: client}
 	exited, err := v.AllValidatorsAreExited(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, true, exited)
@@ -839,7 +840,7 @@ func TestAllValidatorsAreExited_NotAllExited(t *testing.T) {
 		gomock.Any(), // request
 	).Return(&ethpb.MultipleValidatorStatusResponse{Statuses: statuses}, nil /*err*/)
 
-	v := validator{keyManager: genMockKeymanger(2), validatorClient: client}
+	v := validator{keyManager: genMockKeymanager(2), validatorClient: client}
 	exited, err := v.AllValidatorsAreExited(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, false, exited)
@@ -859,7 +860,7 @@ func TestAllValidatorsAreExited_PartialResult(t *testing.T) {
 		gomock.Any(), // request
 	).Return(&ethpb.MultipleValidatorStatusResponse{Statuses: statuses}, nil /*err*/)
 
-	v := validator{keyManager: genMockKeymanger(2), validatorClient: client}
+	v := validator{keyManager: genMockKeymanager(2), validatorClient: client}
 	exited, err := v.AllValidatorsAreExited(context.Background())
 	require.ErrorContains(t, "number of status responses did not match number of requested keys", err)
 	assert.Equal(t, false, exited)
@@ -869,7 +870,7 @@ func TestAllValidatorsAreExited_NoKeys(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
-	v := validator{keyManager: genMockKeymanger(0), validatorClient: client}
+	v := validator{keyManager: genMockKeymanager(0), validatorClient: client}
 	exited, err := v.AllValidatorsAreExited(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, false, exited)
@@ -971,6 +972,24 @@ func TestService_ReceiveBlocks_SetHighest(t *testing.T) {
 	require.Equal(t, slot, v.highestValidSlot)
 }
 
+type doppelGangerRequestMatcher struct {
+	req *ethpb.DoppelGangerRequest
+}
+
+var _ gomock.Matcher = (*doppelGangerRequestMatcher)(nil)
+
+func (m *doppelGangerRequestMatcher) Matches(x interface{}) bool {
+	r, ok := x.(*ethpb.DoppelGangerRequest)
+	if !ok {
+		panic("Invalid match type")
+	}
+	return gomock.InAnyOrder(m.req.ValidatorRequests).Matches(r.ValidatorRequests)
+}
+
+func (m *doppelGangerRequestMatcher) String() string {
+	return fmt.Sprintf("%#v", m.req.ValidatorRequests)
+}
+
 func TestValidator_CheckDoppelGanger(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -987,10 +1006,11 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 			name: "no doppelganger",
 			validatorSetter: func(t *testing.T) *validator {
 				client := mock.NewMockBeaconNodeValidatorClient(ctrl)
-				km := genMockKeymanger(10)
+				km := genMockKeymanager(10)
 				keys, err := km.FetchValidatingPublicKeys(context.Background())
 				assert.NoError(t, err)
 				db := dbTest.SetupDB(t, keys)
+				req := &ethpb.DoppelGangerRequest{ValidatorRequests: []*ethpb.DoppelGangerRequest_ValidatorRequest{}}
 				resp := &ethpb.DoppelGangerRequest{ValidatorRequests: []*ethpb.DoppelGangerRequest_ValidatorRequest{}}
 				for _, k := range keys {
 					pkey := k
@@ -999,6 +1019,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 					assert.NoError(t, err)
 					assert.NoError(t, db.SaveAttestationForPubKey(context.Background(), pkey, rt, att))
 					resp.ValidatorRequests = append(resp.ValidatorRequests, &ethpb.DoppelGangerRequest_ValidatorRequest{PublicKey: pkey[:], Epoch: att.Data.Target.Epoch, SignedRoot: rt[:]})
+					req.ValidatorRequests = append(req.ValidatorRequests, &ethpb.DoppelGangerRequest_ValidatorRequest{PublicKey: pkey[:], Epoch: att.Data.Target.Epoch, SignedRoot: rt[:]})
 				}
 				v := &validator{
 					validatorClient: client,
@@ -1006,8 +1027,8 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 					db:              db,
 				}
 				client.EXPECT().CheckDoppelGanger(
-					gomock.Any(), // ctx
-					gomock.Any(), // request
+					gomock.Any(),                     // ctx
+					&doppelGangerRequestMatcher{req}, // request
 				).Return(nil, nil /*err*/)
 
 				return v
@@ -1017,10 +1038,11 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 			name: "multiple doppelganger exists",
 			validatorSetter: func(t *testing.T) *validator {
 				client := mock.NewMockBeaconNodeValidatorClient(ctrl)
-				km := genMockKeymanger(10)
+				km := genMockKeymanager(10)
 				keys, err := km.FetchValidatingPublicKeys(context.Background())
 				assert.NoError(t, err)
 				db := dbTest.SetupDB(t, keys)
+				req := &ethpb.DoppelGangerRequest{ValidatorRequests: []*ethpb.DoppelGangerRequest_ValidatorRequest{}}
 				resp := &ethpb.DoppelGangerResponse{Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{}}
 				for i, k := range keys {
 					pkey := k
@@ -1031,6 +1053,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 					if i%3 == 0 {
 						resp.Responses = append(resp.Responses, &ethpb.DoppelGangerResponse_ValidatorResponse{PublicKey: pkey[:], DuplicateExists: true})
 					}
+					req.ValidatorRequests = append(req.ValidatorRequests, &ethpb.DoppelGangerRequest_ValidatorRequest{PublicKey: pkey[:], Epoch: att.Data.Target.Epoch, SignedRoot: rt[:]})
 				}
 				v := &validator{
 					validatorClient: client,
@@ -1038,8 +1061,8 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 					db:              db,
 				}
 				client.EXPECT().CheckDoppelGanger(
-					gomock.Any(), // ctx
-					gomock.Any(), // request
+					gomock.Any(),                     // ctx
+					&doppelGangerRequestMatcher{req}, // request
 				).Return(resp, nil /*err*/)
 				return v
 			},
@@ -1049,10 +1072,11 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 			name: "single doppelganger exists",
 			validatorSetter: func(t *testing.T) *validator {
 				client := mock.NewMockBeaconNodeValidatorClient(ctrl)
-				km := genMockKeymanger(10)
+				km := genMockKeymanager(10)
 				keys, err := km.FetchValidatingPublicKeys(context.Background())
 				assert.NoError(t, err)
 				db := dbTest.SetupDB(t, keys)
+				req := &ethpb.DoppelGangerRequest{ValidatorRequests: []*ethpb.DoppelGangerRequest_ValidatorRequest{}}
 				resp := &ethpb.DoppelGangerResponse{Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{}}
 				for i, k := range keys {
 					pkey := k
@@ -1063,6 +1087,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 					if i%9 == 0 {
 						resp.Responses = append(resp.Responses, &ethpb.DoppelGangerResponse_ValidatorResponse{PublicKey: pkey[:], DuplicateExists: true})
 					}
+					req.ValidatorRequests = append(req.ValidatorRequests, &ethpb.DoppelGangerRequest_ValidatorRequest{PublicKey: pkey[:], Epoch: att.Data.Target.Epoch, SignedRoot: rt[:]})
 				}
 				v := &validator{
 					validatorClient: client,
@@ -1070,8 +1095,8 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 					db:              db,
 				}
 				client.EXPECT().CheckDoppelGanger(
-					gomock.Any(), // ctx
-					gomock.Any(), // request
+					gomock.Any(),                     // ctx
+					&doppelGangerRequestMatcher{req}, // request
 				).Return(resp, nil /*err*/)
 				return v
 			},
@@ -1081,10 +1106,11 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 			name: "multiple attestations saved",
 			validatorSetter: func(t *testing.T) *validator {
 				client := mock.NewMockBeaconNodeValidatorClient(ctrl)
-				km := genMockKeymanger(10)
+				km := genMockKeymanager(10)
 				keys, err := km.FetchValidatingPublicKeys(context.Background())
 				assert.NoError(t, err)
 				db := dbTest.SetupDB(t, keys)
+				req := &ethpb.DoppelGangerRequest{ValidatorRequests: []*ethpb.DoppelGangerRequest_ValidatorRequest{}}
 				resp := &ethpb.DoppelGangerResponse{Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{}}
 				attLimit := 5
 				for i, k := range keys {
@@ -1094,6 +1120,9 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 						rt, err := att.Data.HashTreeRoot()
 						assert.NoError(t, err)
 						assert.NoError(t, db.SaveAttestationForPubKey(context.Background(), pkey, rt, att))
+						if j == attLimit-1 {
+							req.ValidatorRequests = append(req.ValidatorRequests, &ethpb.DoppelGangerRequest_ValidatorRequest{PublicKey: pkey[:], Epoch: att.Data.Target.Epoch, SignedRoot: rt[:]})
+						}
 					}
 					if i%3 == 0 {
 						resp.Responses = append(resp.Responses, &ethpb.DoppelGangerResponse_ValidatorResponse{PublicKey: pkey[:], DuplicateExists: true})
@@ -1105,8 +1134,8 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 					db:              db,
 				}
 				client.EXPECT().CheckDoppelGanger(
-					gomock.Any(), // ctx
-					gomock.Any(), // request
+					gomock.Any(),                     // ctx
+					&doppelGangerRequestMatcher{req}, // request
 				).Return(resp, nil /*err*/)
 				return v
 			},
@@ -1117,7 +1146,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 			validatorSetter: func(t *testing.T) *validator {
 				client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 				// Use only 1 key for deterministic order.
-				km := genMockKeymanger(1)
+				km := genMockKeymanager(1)
 				keys, err := km.FetchValidatingPublicKeys(context.Background())
 				assert.NoError(t, err)
 				db := dbTest.SetupDB(t, keys)
@@ -1152,7 +1181,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 }
 
 func TestValidatorAttestationsAreOrdered(t *testing.T) {
-	km := genMockKeymanger(10)
+	km := genMockKeymanager(10)
 	keys, err := km.FetchValidatingPublicKeys(context.Background())
 	assert.NoError(t, err)
 	db := dbTest.SetupDB(t, keys)
