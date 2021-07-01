@@ -894,9 +894,9 @@ def prysm_deps():
     go_repository(
         name = "com_github_ghodss_yaml",
         importpath = "github.com/ghodss/yaml",
+        nofuzz = True,
         sum = "h1:wQHKEahhL6wmXdzwWG11gIVCkOv05bNOh+Rxn0yngAk=",
         version = "v1.0.0",
-        nofuzz = True,
     )
 
     go_repository(
@@ -1244,8 +1244,8 @@ def prysm_deps():
         name = "com_github_grpc_ecosystem_grpc_gateway_v2",
         importpath = "github.com/grpc-ecosystem/grpc-gateway/v2",
         replace = "github.com/prysmaticlabs/grpc-gateway/v2",
-        sum = "h1:QzTDCXA7FV2tIJ7TGHfEsYfa8QaAeMB1F4B5jAsGQNg=",
-        version = "v2.3.1-0.20210604200058-f148bcf3f503",
+        sum = "h1:KzQOksIZB8poBiMk8h5Txzbp/OoBLFhS3H20ZN06hWg=",
+        version = "v2.3.1-0.20210622145107-ca3041e1b380",
     )
     go_repository(
         name = "com_github_gxed_hashland_keccakpg",
@@ -2773,8 +2773,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_prysmaticlabs_eth2_types",
         importpath = "github.com/prysmaticlabs/eth2-types",
-        sum = "h1:1dN7YAqMN3oAJ0LceWcyv/U4jHLh+5urnSnr4br6zg4=",
-        version = "v0.0.0-20210303084904-c9735a06829d",
+        sum = "h1:6gmtASi/9MosKCcqGjAAdVfyekPAOw5JOoi5u2Lh8VU=",
+        version = "v0.0.0-20210701092141-7446b31cf427",
     )
     go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",
@@ -3577,9 +3577,9 @@ def prysm_deps():
     go_repository(
         name = "in_gopkg_yaml_v2",
         importpath = "gopkg.in/yaml.v2",
+        nofuzz = True,
         sum = "h1:D8xgwECY7CYvx+Y2n4sBz93Jn9JRvxdiyyo8CTfuKaY=",
         version = "v2.4.0",
-        nofuzz = True,
     )
 
     go_repository(
