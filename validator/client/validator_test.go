@@ -975,7 +975,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	flgs := featureconfig.Get()
-	flgs.EnableDoppleGanger = true
+	flgs.EnableDoppelGanger = true
 	reset := featureconfig.InitWithReset(flgs)
 	defer reset()
 	tests := []struct {

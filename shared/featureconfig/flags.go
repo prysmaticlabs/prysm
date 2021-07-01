@@ -122,9 +122,9 @@ var (
 		Name:  "enable-optimized-balance-update",
 		Usage: "Enables the optimized method of updating validator balances.",
 	}
-	enableDoppleGangerProtection = &cli.BoolFlag{
-		Name:  "enable-doppleganger",
-		Usage: "Enables the validator to perform a doppleganger check.",
+	enableDoppelGangerProtection = &cli.BoolFlag{
+		Name:  "enable-doppelganger",
+		Usage: "Enables the validator to perform a doppelganger check.",
 	}
 )
 
@@ -150,7 +150,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	dynamicKeyReloadDebounceInterval,
 	attestTimely,
 	enableSlashingProtectionPruning,
-	enableDoppleGangerProtection,
+	enableDoppelGangerProtection,
 }...)
 
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
