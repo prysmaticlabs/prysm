@@ -126,8 +126,12 @@ func (vs *Server) CheckDoppelGanger(ctx context.Context, req *ethpb.DoppelGanger
 	}
 	for _, v := range req.ValidatorRequests {
 		// If the validator's last recorded epoch was
-		// less than 2 epoch ago, this method will not
-		// be able to catch duplicates.
+		// less than or equal to 2 epochs ago, this method will not
+		// be able to catch duplicates. This is due to how attestation
+		// inclusion works, where an attestation for the current epoch
+		// is able to included in the current or next epoch. Depending
+		// on which epoch it is included the balance change will be
+		// reflected in the following epoch.
 		if v.Epoch+2 >= currEpoch {
 			resp.Responses = append(resp.Responses,
 				&ethpb.DoppelGangerResponse_ValidatorResponse{
