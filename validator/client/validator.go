@@ -393,7 +393,7 @@ func (v *validator) CheckDoppelGanger(ctx context.Context) error {
 		}
 		if len(attRec) == 0 {
 			// If no history exists we simply send in a zero
-			// value for the request type.
+			// value for the request epoch and root.
 			req.ValidatorRequests = append(req.ValidatorRequests,
 				&ethpb.DoppelGangerRequest_ValidatorRequest{
 					PublicKey:  pkey[:],
