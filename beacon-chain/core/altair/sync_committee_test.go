@@ -7,7 +7,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-altair"
+	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
@@ -306,7 +306,7 @@ func TestSyncCommitteePeriod(t *testing.T) {
 		{epoch: 1000, wanted: 1000 / uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod)},
 	}
 	for _, test := range tests {
-		require.Equal(t, test.wanted, altair.SyncCommitteePeriod(test.epoch))
+		require.Equal(t, test.wanted, helpers.SyncCommitteePeriod(test.epoch))
 	}
 }
 

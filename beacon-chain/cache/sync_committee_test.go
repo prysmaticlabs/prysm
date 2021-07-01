@@ -164,11 +164,8 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 			require.NoError(t, s.SetCurrentSyncCommittee(tt.currentSyncCommittee))
 			require.NoError(t, s.SetNextSyncCommittee(tt.nextSyncCommittee))
 			cache := cache.NewSyncCommittee()
-			require.NoError(t, cache.UpdatePositionsInCommittee(s))
-			csc, err := s.CurrentSyncCommittee()
-			require.NoError(t, err)
-			r, err := csc.HashTreeRoot()
-			require.NoError(t, err)
+			r := [32]byte{'a'}
+			require.NoError(t, cache.UpdatePositionsInCommittee(r, s))
 			for key, indices := range tt.currentSyncMap {
 				pos, err := cache.CurrentEpochIndexPosition(r, key)
 				require.NoError(t, err)
@@ -193,28 +190,18 @@ func TestSyncCommitteeCache_CanRotate(t *testing.T) {
 	c := cache.NewSyncCommittee()
 	s, _ := testutil.DeterministicGenesisStateAltair(t, 64)
 	require.NoError(t, s.SetCurrentSyncCommittee(convertToCommittee([][]byte{{1}})))
-	require.NoError(t, c.UpdatePositionsInCommittee(s))
-
-	csc, err := s.CurrentSyncCommittee()
-	require.NoError(t, err)
-	r, err := csc.HashTreeRoot()
-	require.NoError(t, err)
-
+	require.NoError(t, c.UpdatePositionsInCommittee([32]byte{'a'}, s))
 	require.NoError(t, s.SetCurrentSyncCommittee(convertToCommittee([][]byte{{2}})))
-	require.NoError(t, c.UpdatePositionsInCommittee(s))
+	require.NoError(t, c.UpdatePositionsInCommittee([32]byte{'b'}, s))
 	require.NoError(t, s.SetCurrentSyncCommittee(convertToCommittee([][]byte{{3}})))
-	require.NoError(t, c.UpdatePositionsInCommittee(s))
+	require.NoError(t, c.UpdatePositionsInCommittee([32]byte{'c'}, s))
 	require.NoError(t, s.SetCurrentSyncCommittee(convertToCommittee([][]byte{{4}})))
-	require.NoError(t, c.UpdatePositionsInCommittee(s))
+	require.NoError(t, c.UpdatePositionsInCommittee([32]byte{'d'}, s))
 
-	_, err = c.CurrentEpochIndexPosition(r, 0)
+	_, err := c.CurrentEpochIndexPosition([32]byte{'a'}, 0)
 	require.Equal(t, cache.ErrNonExistingSyncCommitteeKey, err)
 
-	csc, err = s.CurrentSyncCommittee()
-	require.NoError(t, err)
-	r, err = csc.HashTreeRoot()
-	require.NoError(t, err)
-	_, err = c.CurrentEpochIndexPosition(r, 0)
+	_, err = c.CurrentEpochIndexPosition([32]byte{'c'}, 0)
 	require.NoError(t, err)
 }
 

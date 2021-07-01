@@ -3,7 +3,6 @@ package testutil
 import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
@@ -25,7 +24,7 @@ func generateSyncCommittees(bState iface.BeaconState, privs []bls.SecretKey, par
 
 	var syncCommittee *pb.SyncCommittee
 	var err error
-	if altair.SyncCommitteePeriod(currEpoch) == altair.SyncCommitteePeriod(nextSlotEpoch) {
+	if helpers.SyncCommitteePeriod(currEpoch) == helpers.SyncCommitteePeriod(nextSlotEpoch) {
 		syncCommittee, err = st.CurrentSyncCommittee()
 		if err != nil {
 			return nil, err

@@ -193,7 +193,7 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not get current sync committee: %v", err)
 			}
-			assignment.IsSyncCommittee, err = helpers.IsCurrentEpochSyncCommittee(s, csc, idx)
+			assignment.IsSyncCommittee, err = helpers.IsCurrentEpochSyncCommittee(s, idx)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not determine current epoch sync committee: %v", err)
 			}
@@ -204,7 +204,7 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not get next sync committee: %v", err)
 			}
-			nextAssignment.IsSyncCommittee, err = helpers.IsNextEpochSyncCommittee(s, nsc, idx)
+			nextAssignment.IsSyncCommittee, err = helpers.IsNextEpochSyncCommittee(s, idx)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not determine next epoch sync committee: %v", err)
 			}

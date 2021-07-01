@@ -150,9 +150,9 @@ func AssignedToSyncCommittee(
 	epoch types.Epoch,
 	i types.ValidatorIndex,
 ) (bool, error) {
-	p := SyncCommitteePeriod(epoch)
+	p := helpers.SyncCommitteePeriod(epoch)
 	currentEpoch := helpers.CurrentEpoch(state)
-	currentPeriod := SyncCommitteePeriod(currentEpoch)
+	currentPeriod := helpers.SyncCommitteePeriod(currentEpoch)
 	nextEpoch := currentPeriod + 1
 
 	if p != currentPeriod && p != nextEpoch {
@@ -212,7 +212,7 @@ func SubnetsForSyncCommittee(state iface.BeaconStateAltair, i types.ValidatorInd
 	}
 
 	nextSlotEpoch := helpers.SlotToEpoch(state.Slot() + 1)
-	if SyncCommitteePeriod(nextSlotEpoch) == SyncCommitteePeriod(helpers.CurrentEpoch(state)) {
+	if helpers.SyncCommitteePeriod(nextSlotEpoch) == helpers.SyncCommitteePeriod(helpers.CurrentEpoch(state)) {
 		committee, err = state.CurrentSyncCommittee()
 		if err != nil {
 			return nil, err
@@ -238,15 +238,6 @@ func SubnetsFromCommittee(pubkey []byte, comm *pb.SyncCommittee) []uint64 {
 	return positions
 }
 
-// SyncCommitteePeriod returns the sync committee period of input epoch `e`.
-//
-// Spec code:
-// def compute_sync_committee_period(epoch: Epoch) -> uint64:
-//    return epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD
-func SyncCommitteePeriod(epoch types.Epoch) uint64 {
-	return uint64(epoch / params.BeaconConfig().EpochsPerSyncCommitteePeriod)
-}
-
 // SyncSubCommitteePubkeys returns the pubkeys participating in a sync subcommittee.
 //
 // def get_sync_subcommittee_pubkeys(state: BeaconState, subcommittee_index: uint64) -> Sequence[BLSPubkey]:
@@ -268,7 +259,7 @@ func SyncSubCommitteePubkeys(st iface.BeaconStateAltair, subComIdx types.Committ
 
 	var syncCommittee *pb.SyncCommittee
 	var err error
-	if SyncCommitteePeriod(currEpoch) == SyncCommitteePeriod(nextSlotEpoch) {
+	if helpers.SyncCommitteePeriod(currEpoch) == helpers.SyncCommitteePeriod(nextSlotEpoch) {
 		syncCommittee, err = st.CurrentSyncCommittee()
 		if err != nil {
 			return nil, err

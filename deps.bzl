@@ -894,6 +894,7 @@ def prysm_deps():
     go_repository(
         name = "com_github_ghodss_yaml",
         importpath = "github.com/ghodss/yaml",
+        nofuzz = True,
         sum = "h1:wQHKEahhL6wmXdzwWG11gIVCkOv05bNOh+Rxn0yngAk=",
         version = "v1.0.0",
     )
@@ -2778,8 +2779,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",
         importpath = "github.com/prysmaticlabs/go-bitfield",
-        sum = "h1:46gKr69IlRpv/ENdlzG0SWo5nMLKJxS3tI5NOSdZndQ=",
-        version = "v0.0.0-20210607200045-4da71aaf6c2d",
+        sum = "h1:6A0JbKs1AxIxDpLXnfF1J8ayKQrSM/50eH/nL1vGVnE=",
+        version = "v0.0.0-20210630213502-e40562dd62c4",
     )
     go_repository(
         name = "com_github_prysmaticlabs_prombbolt",
@@ -3576,6 +3577,7 @@ def prysm_deps():
     go_repository(
         name = "in_gopkg_yaml_v2",
         importpath = "gopkg.in/yaml.v2",
+        nofuzz = True,
         sum = "h1:D8xgwECY7CYvx+Y2n4sBz93Jn9JRvxdiyyo8CTfuKaY=",
         version = "v2.4.0",
     )
