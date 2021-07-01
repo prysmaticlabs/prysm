@@ -376,11 +376,11 @@ func (v *validator) CheckDoppelGanger(ctx context.Context) error {
 	if !featureconfig.Get().EnableDoppleGanger {
 		return nil
 	}
-	log.Info("Running Doppleganger Check")
 	pubkeys, err := v.keyManager.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return err
 	}
+	log.WithField("keys", len(pubkeys)).Info("Running doppleganger check")
 	// Exit early if no validating pub keys are found.
 	if len(pubkeys) == 0 {
 		return nil
