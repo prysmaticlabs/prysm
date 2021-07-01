@@ -9,7 +9,6 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
@@ -160,7 +159,7 @@ func (vs *Server) GetSyncCommitteeContribution(
 
 	subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 	sigs := make([]bls.Signature, 0, subCommitteeSize)
-	bits := bitfield.NewBitvector128()
+	bits := prysmv2.NewSyncCommitteeAggregationBits()
 	for _, msg := range msgs {
 		if bytes.Equal(headRoot, msg.BlockRoot) {
 			v, err := headState.ValidatorAtIndexReadOnly(msg.ValidatorIndex)

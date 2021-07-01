@@ -16,8 +16,8 @@ go_test(
     data = glob(["*.yaml"]) + [
         "@eth2_spec_tests_minimal//:test_data",
     ],
+    eth_network = "minimal",
     tags = [
-        "manual",
         "minimal",
         "spectest",
     ],
