@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
@@ -48,7 +49,7 @@ func TestValidatorStatus_DepositedEth1(t *testing.T) {
 			0: uint64(height),
 		},
 	}
-	stateObj, err := stateV0.InitializeFromProtoUnsafe(&pbp2p.BeaconState{})
+	stateObj, err := v1.InitializeFromProtoUnsafe(&pbp2p.BeaconState{})
 	require.NoError(t, err)
 	vs := &Server{
 		BeaconDB:       db,
@@ -93,7 +94,7 @@ func TestValidatorStatus_Deposited(t *testing.T) {
 			0: uint64(height),
 		},
 	}
-	stateObj, err := stateV0.InitializeFromProtoUnsafe(&pbp2p.BeaconState{
+	stateObj, err := v1.InitializeFromProtoUnsafe(&pbp2p.BeaconState{
 		Validators: []*ethpb.Validator{
 			{
 				PublicKey:                  pubKey1,
@@ -145,7 +146,7 @@ func TestValidatorStatus_PartiallyDeposited(t *testing.T) {
 			0: uint64(height),
 		},
 	}
-	stateObj, err := stateV0.InitializeFromProtoUnsafe(&pbp2p.BeaconState{
+	stateObj, err := v1.InitializeFromProtoUnsafe(&pbp2p.BeaconState{
 		Validators: []*ethpb.Validator{
 			{
 				PublicKey:                  pubKey1,
@@ -277,7 +278,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
 			PublicKey:         pubKey},
 		}}
-	stateObj, err := stateV0.InitializeFromProtoUnsafe(state)
+	stateObj, err := v1.InitializeFromProtoUnsafe(state)
 	require.NoError(t, err)
 
 	timestamp := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
@@ -333,7 +334,7 @@ func TestValidatorStatus_Exiting(t *testing.T) {
 			ExitEpoch:         exitEpoch,
 			WithdrawableEpoch: withdrawableEpoch},
 		}}
-	stateObj, err := stateV0.InitializeFromProtoUnsafe(state)
+	stateObj, err := v1.InitializeFromProtoUnsafe(state)
 	require.NoError(t, err)
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
@@ -393,7 +394,7 @@ func TestValidatorStatus_Slashing(t *testing.T) {
 			PublicKey:         pubKey,
 			WithdrawableEpoch: epoch + 1},
 		}}
-	stateObj, err := stateV0.InitializeFromProtoUnsafe(state)
+	stateObj, err := v1.InitializeFromProtoUnsafe(state)
 	require.NoError(t, err)
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
@@ -503,7 +504,7 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	stateObj, err := stateV0.InitializeFromProtoUnsafe(&pbp2p.BeaconState{
+	stateObj, err := v1.InitializeFromProtoUnsafe(&pbp2p.BeaconState{
 		Slot: 0,
 	})
 	require.NoError(t, err)
@@ -530,7 +531,7 @@ func TestActivationStatus_OK(t *testing.T) {
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(4)
 	require.NoError(t, err)
 	pubKeys := [][]byte{deposits[0].Data.PublicKey, deposits[1].Data.PublicKey, deposits[2].Data.PublicKey, deposits[3].Data.PublicKey}
-	stateObj, err := stateV0.InitializeFromProtoUnsafe(&pbp2p.BeaconState{
+	stateObj, err := v1.InitializeFromProtoUnsafe(&pbp2p.BeaconState{
 		Slot: 4000,
 		Validators: []*ethpb.Validator{
 			{
@@ -731,7 +732,7 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 		deposits[4].Data.PublicKey,
 		deposits[5].Data.PublicKey,
 	}
-	stateObj, err := stateV0.InitializeFromProtoUnsafe(&pbp2p.BeaconState{
+	stateObj, err := v1.InitializeFromProtoUnsafe(&pbp2p.BeaconState{
 		Slot: 4000,
 		Validators: []*ethpb.Validator{
 			{
@@ -870,7 +871,7 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 			},
 		},
 	}
-	stateObj, err := stateV0.InitializeFromProtoUnsafe(beaconState)
+	stateObj, err := v1.InitializeFromProtoUnsafe(beaconState)
 	require.NoError(t, err)
 	block := testutil.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
@@ -946,7 +947,7 @@ func TestValidatorStatus_Invalid(t *testing.T) {
 			0: uint64(height),
 		},
 	}
-	stateObj, err := stateV0.InitializeFromProtoUnsafe(&pbp2p.BeaconState{})
+	stateObj, err := v1.InitializeFromProtoUnsafe(&pbp2p.BeaconState{})
 	require.NoError(t, err)
 	vs := &Server{
 		BeaconDB:       db,

@@ -7,7 +7,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -31,7 +31,7 @@ func TestProcessVoluntaryExits_NotActiveLongEnoughToExit(t *testing.T) {
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		},
 	}
-	state, err := stateV0.InitializeFromProto(&pb.BeaconState{
+	state, err := v1.InitializeFromProto(&pb.BeaconState{
 		Validators: registry,
 		Slot:       10,
 	})
@@ -61,7 +61,7 @@ func TestProcessVoluntaryExits_ExitAlreadySubmitted(t *testing.T) {
 			ExitEpoch: 10,
 		},
 	}
-	state, err := stateV0.InitializeFromProto(&pb.BeaconState{
+	state, err := v1.InitializeFromProto(&pb.BeaconState{
 		Validators: registry,
 		Slot:       0,
 	})
@@ -93,7 +93,7 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 			ActivationEpoch: 0,
 		},
 	}
-	state, err := stateV0.InitializeFromProto(&pb.BeaconState{
+	state, err := v1.InitializeFromProto(&pb.BeaconState{
 		Validators: registry,
 		Fork: &pb.Fork{
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
