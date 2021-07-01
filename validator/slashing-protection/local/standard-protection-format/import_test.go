@@ -53,7 +53,7 @@ func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 
 	// First we setup some mock attesting and proposal histories and create a mock
 	// standard slashing protection format JSON struct.
-	attestingHistory, proposalHistory := valtest.MockAttestingAndProposalHistories(numValidators)
+	attestingHistory, proposalHistory := valtest.MockAttestingAndProposalHistories(publicKeys)
 	standardProtectionFormat, err := valtest.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
 	require.NoError(t, err)
 
@@ -111,7 +111,7 @@ func TestStore_ImportInterchangeData_OK(t *testing.T) {
 
 	// First we setup some mock attesting and proposal histories and create a mock
 	// standard slashing protection format JSON struct.
-	attestingHistory, proposalHistory := valtest.MockAttestingAndProposalHistories(numValidators)
+	attestingHistory, proposalHistory := valtest.MockAttestingAndProposalHistories(publicKeys)
 	standardProtectionFormat, err := valtest.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
 	require.NoError(t, err)
 
