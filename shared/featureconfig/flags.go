@@ -124,7 +124,7 @@ var (
 	}
 	enableDoppelGangerProtection = &cli.BoolFlag{
 		Name: "enable-doppelganger",
-		Usage: "Enables the validator to perform a doppelganger check. (Warning): This is not" +
+		Usage: "Enables the validator to perform a doppelganger check. (Warning): This is not " +
 			"a foolproof method to find duplicate instances in the network. Your validator will still be" +
 			" vulnerable if it is being run in unsafe configurations.",
 	}
