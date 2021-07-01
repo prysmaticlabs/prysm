@@ -188,7 +188,7 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 
 		// Are the validators in current or next epoch sync committee.
 		if postAltairTransition {
-			syncCommPeriod := altair.SyncCommitteePeriod(req.Epoch)
+			syncCommPeriod := helpers.SyncCommitteePeriod(req.Epoch)
 			csc, err := s.CurrentSyncCommittee()
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not get current sync committee: %v", err)
@@ -261,7 +261,7 @@ func assignValidatorToSyncSubnet(currEpoch types.Epoch, syncPeriod uint64, pubke
 		return
 	}
 	startEpoch := types.Epoch(syncPeriod) * params.BeaconConfig().EpochsPerSyncCommitteePeriod
-	currPeriod := altair.SyncCommitteePeriod(currEpoch)
+	currPeriod := helpers.SyncCommitteePeriod(currEpoch)
 	endEpoch := startEpoch + params.BeaconConfig().EpochsPerSyncCommitteePeriod
 	_, _, ok, expTime := cache.SyncSubnetIDs.GetSyncCommitteeSubnets(pubkey, startEpoch)
 	if ok && expTime.After(timeutils.Now()) {
