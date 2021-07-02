@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 // Ensure we satisfy the heap.Interface
@@ -129,13 +131,13 @@ func TestPriorityQueue_Pop(t *testing.T) {
 	var items []*Item
 	items = append(items, topItem)
 	// pop the remaining items, compare size of input and output
-	i, _ := pq.Pop()
-	for ; i != nil; i, _ = pq.Pop() {
+	i, err := pq.Pop()
+	require.NoError(t, err)
+	for ; i != nil; i, err = pq.Pop() {
+		require.NoError(t, err)
 		items = append(items, i)
 	}
-	if len(items) != len(tc) {
-		t.Fatalf("expected popped item count to match test cases, got (%d)", len(items))
-	}
+	require.Equal(t, len(tc), len(items))
 }
 
 func TestPriorityQueue_PopByKey(t *testing.T) {
@@ -149,16 +151,14 @@ func TestPriorityQueue_PopByKey(t *testing.T) {
 	}
 
 	// grab the top priority item, to capture it's value for checking later
-	item, _ := pq.Pop()
+	item, err := pq.Pop()
+	require.NoError(t, err)
 	oldPriority := item.Priority
 	oldKey := item.Key
 
 	// push the item back on, so it gets removed with PopByKey and we verify
 	// the top item has changed later
-	err := pq.Push(item)
-	if err != nil {
-		t.Fatalf("error re-pushing top item: %s", err)
-	}
+	require.NoError(t, pq.Push(item))
 
 	popKeys := []int{2, 4, 7, 1, 0}
 	for _, i := range popKeys {
@@ -172,7 +172,8 @@ func TestPriorityQueue_PopByKey(t *testing.T) {
 
 	// grab the top priority item again, to compare with the top item priority
 	// from above
-	item, _ = pq.Pop()
+	item, err = pq.Pop()
+	require.NoError(t, err)
 	newPriority := item.Priority
 	newKey := item.Key
 
@@ -198,8 +199,10 @@ func testValidateInternalData(t *testing.T, pq *PriorityQueue, expectedSize int,
 
 	if drain && pq.Len() > 0 {
 		// pop all the items, verify lengths
-		i, _ := pq.Pop()
-		for ; i != nil; i, _ = pq.Pop() {
+		i, err := pq.Pop()
+		require.NoError(t, err)
+		for ; i != nil; i, err = pq.Pop() {
+			require.NoError(t, err)
 			expectedSize--
 			if len(pq.data) != len(pq.dataMap) || len(pq.data) != expectedSize {
 				t.Fatalf("error in queue/map size, expected data and map to be (%d), got (%d) and (%d)", expectedSize, len(pq.data), len(pq.dataMap))
