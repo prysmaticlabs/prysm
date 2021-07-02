@@ -547,10 +547,15 @@ func (s *Service) waitForConnection() {
 				}).Info("Connected to eth1 proof-of-work chain")
 				return
 			}
-			_, err := s.cfg.BeaconDB.GenesisState(s.ctx)
-			if err != nil {
+			genState, genErr := s.cfg.BeaconDB.GenesisState(s.ctx)
+			if genErr != nil {
+				s.runError = genErr
+				log.WithError(genErr).Error("Could not retrieve genesis state")
+				return
+			}
+			if genState.IsNil() {
 				s.runError = errNotSyncedNoGenesisState
-				log.Debug("Eth1 node is out of sync and genesis state is missing")
+				log.Warning("Eth1 node is out of sync and genesis state is missing")
 				return
 			}
 			s.runError = errNotSynced
