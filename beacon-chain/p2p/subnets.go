@@ -100,7 +100,7 @@ func (s *Service) filterPeerForAttSubnet(index uint64) func(node *enode.Node) bo
 	}
 }
 
-// returns a method with filters peers specifically for a particular attestation subnet.
+// returns a method with filters peers specifically for a particular sync subnet.
 func (s *Service) filterPeerForSyncSubnet(index uint64) func(node *enode.Node) bool {
 	return func(node *enode.Node) bool {
 		if !s.filterPeer(node) {

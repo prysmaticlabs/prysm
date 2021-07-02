@@ -78,7 +78,9 @@ func VerifyBlockSignature(beaconState iface.ReadOnlyBeaconState,
 	return helpers.VerifyBlockSigningRoot(proposerPubKey, sig, domain, rootFunc)
 }
 
-// VerifyBlockSignature verifies the proposer signature of a beacon block.
+// VerifyBlockSignature verifies the proposer signature of a beacon block. This differs
+// from the above method by not using fork data from the state and instead retrieving it
+// via the respective epoch.
 func VerifyBlockSignatureUsingSlot(beaconState iface.ReadOnlyBeaconState,
 	proposerIndex types.ValidatorIndex,
 	wantedSlot types.Slot,

@@ -219,6 +219,8 @@ func (r RPCTopic) Version() string {
 	return version
 }
 
+// TopicFromMessage constructs the rpc topic from the provided message
+// type and epoch.
 func TopicFromMessage(msg string, epoch types.Epoch) (string, error) {
 	if !messageMapping[msg] {
 		return "", errors.Errorf("message type %s doesn't have a registered mapping", msg)

@@ -7,6 +7,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 )
 
+// Is a background routine that observes for new incoming forks. Depending on the epoch
+// it will be in charge of subscribing/unsubscribing the relevant topics at the fork boundaries.
 func (s *Service) forkWatcher() {
 	slotTicker := slotutil.NewSlotTicker(s.cfg.Chain.GenesisTime(), params.BeaconConfig().SecondsPerSlot)
 	for {
@@ -19,6 +21,9 @@ func (s *Service) forkWatcher() {
 				log.WithError(err).Error("Could not retrieve next fork epoch")
 				continue
 			}
+			// In preparation for the upcoming fork
+			// in the following epoch, the node
+			// will subscribe the new topics in advance.
 			if isNextForkEpoch {
 				nextEpoch := currEpoch + 1
 				switch nextEpoch {
