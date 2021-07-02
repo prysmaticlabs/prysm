@@ -23,6 +23,8 @@ var gossipTopicMappings = map[string]proto.Message{
 	SyncCommitteeSubnetTopicFormat:            &prysmv2.SyncCommitteeMessage{},
 }
 
+// GossipTopicMappings is a function to return the assigned data type
+// versioned by epoch.
 func GossipTopicMappings(topic string, epoch types.Epoch) proto.Message {
 	if topic == BlockSubnetTopicFormat && epoch >= params.BeaconConfig().AltairForkEpoch {
 		return &prysmv2.SignedBeaconBlock{}
@@ -30,6 +32,8 @@ func GossipTopicMappings(topic string, epoch types.Epoch) proto.Message {
 	return gossipTopicMappings[topic]
 }
 
+// AllTopics returns all topics stored in our
+// gossip mapping.
 func AllTopics() []string {
 	topics := []string{}
 	for k := range gossipTopicMappings {

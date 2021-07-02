@@ -639,7 +639,7 @@ func extractDigest(topic string) ([4]byte, error) {
 		parts = append(parts, p)
 	}
 	if len(parts) < 2 {
-		return [4]byte{}, errors.Errorf("topic does not have digest, it only has %d parts: %v", len(parts), parts)
+		return [4]byte{}, errors.Wrapf(errInvalidTopic, "it only has %d parts: %v", len(parts), parts)
 	}
 	strDigest := parts[1]
 	digest, err := hex.DecodeString(strDigest)

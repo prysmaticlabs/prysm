@@ -6,6 +6,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 )
 
+// A background routine which listens for new and upcoming forks and
+// updates the node's discovery service to reflect any new fork version
+// changes.
 func (s *Service) forkWatcher() {
 	slotTicker := slotutil.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
 	for {

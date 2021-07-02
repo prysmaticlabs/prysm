@@ -62,7 +62,7 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 		}
 		wg.Done()
 		return nil
-	})
+	}, p2pService.Digest)
 	r.markForChainStart()
 
 	p2pService.ReceivePubSub(topic, &pb.SignedVoluntaryExit{Exit: &pb.VoluntaryExit{Epoch: 55}, Signature: make([]byte, 96)})
@@ -97,11 +97,14 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	wg.Add(1)
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
+	var err error
+	p2pService.Digest, err = r.currentForkDigest()
+	require.NoError(t, err)
 	r.subscribe(topic, r.noopValidator, func(ctx context.Context, msg proto.Message) error {
 		require.NoError(t, r.attesterSlashingSubscriber(ctx, msg))
 		wg.Done()
 		return nil
-	})
+	}, p2pService.Digest)
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
 	chainService.State = beaconState
 	r.markForChainStart()
@@ -112,8 +115,6 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	)
 	require.NoError(t, err, "Error generating attester slashing")
 	err = r.cfg.DB.SaveState(ctx, beaconState, bytesutil.ToBytes32(attesterSlashing.Attestation_1.Data.BeaconBlockRoot))
-	require.NoError(t, err)
-	p2pService.Digest, err = r.currentForkDigest()
 	require.NoError(t, err)
 	p2pService.ReceivePubSub(topic, attesterSlashing)
 
@@ -151,11 +152,13 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	wg.Add(1)
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
+	p2pService.Digest, err = r.currentForkDigest()
+	require.NoError(t, err)
 	r.subscribe(topic, r.noopValidator, func(ctx context.Context, msg proto.Message) error {
 		require.NoError(t, r.proposerSlashingSubscriber(ctx, msg))
 		wg.Done()
 		return nil
-	})
+	}, p2pService.Digest)
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
 	chainService.State = beaconState
 	r.markForChainStart()
@@ -165,8 +168,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 		1, /* validator index */
 	)
 	require.NoError(t, err, "Error generating proposer slashing")
-	p2pService.Digest, err = r.currentForkDigest()
-	require.NoError(t, err)
+
 	p2pService.ReceivePubSub(topic, proposerSlashing)
 
 	if testutil.WaitTimeout(&wg, time.Second) {
@@ -200,7 +202,7 @@ func TestSubscribe_HandlesPanic(t *testing.T) {
 	r.subscribe(topic, r.noopValidator, func(_ context.Context, msg proto.Message) error {
 		defer wg.Done()
 		panic("bad")
-	})
+	}, p.Digest)
 	r.markForChainStart()
 	p.ReceivePubSub(topic, &pb.SignedVoluntaryExit{Exit: &pb.VoluntaryExit{Epoch: 55}, Signature: make([]byte, 96)})
 
@@ -263,7 +265,7 @@ func TestStaticSubnets(t *testing.T) {
 	r.subscribeStaticWithSubnets(defaultTopic, r.noopValidator, func(_ context.Context, msg proto.Message) error {
 		// no-op
 		return nil
-	})
+	}, [4]byte{})
 	topics := r.cfg.P2P.PubSub().GetTopics()
 	if uint64(len(topics)) != params.BeaconNetworkConfig().AttestationSubnetCount {
 		t.Errorf("Wanted the number of subnet topics registered to be %d but got %d", params.BeaconNetworkConfig().AttestationSubnetCount, len(topics))
@@ -391,12 +393,13 @@ func TestFilterSubnetPeers(t *testing.T) {
 	}
 	// Empty cache at the end of the test.
 	defer cache.SubnetIDs.EmptyAllCaches()
-
+	digest, err := r.currentForkDigest()
+	assert.NoError(t, err)
 	defaultTopic := "/eth2/%x/beacon_attestation_%d" + r.cfg.P2P.Encoding().ProtocolSuffix()
-	subnet10 := r.addDigestAndIndexToTopic(defaultTopic, 10)
+	subnet10 := r.addDigestAndIndexToTopic(defaultTopic, digest, 10)
 	cache.SubnetIDs.AddAggregatorSubnetID(currSlot, 10)
 
-	subnet20 := r.addDigestAndIndexToTopic(defaultTopic, 20)
+	subnet20 := r.addDigestAndIndexToTopic(defaultTopic, digest, 20)
 	cache.SubnetIDs.AddAttesterSubnetID(currSlot, 20)
 
 	p1 := createPeer(t, subnet10)

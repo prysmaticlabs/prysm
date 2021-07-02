@@ -7,7 +7,7 @@ import (
 
 func TestMappingHasNoDuplicates(t *testing.T) {
 	m := make(map[reflect.Type]bool)
-	for _, v := range GossipTopicMappings {
+	for _, v := range gossipTopicMappings {
 		if _, ok := m[reflect.TypeOf(v)]; ok {
 			t.Errorf("%T is duplicated in the topic mapping", v)
 		}

@@ -1051,6 +1051,8 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 			Epoch: finalizedEpoch,
 			Root:  []byte(fmt.Sprintf("finalized_root %d", finalizedEpoch)),
 		},
+		Genesis:        time.Now(),
+		ValidatorsRoot: [32]byte{},
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -1250,6 +1252,8 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 			Epoch: finalizedEpoch,
 			Root:  []byte(fmt.Sprintf("finalized_root %d", finalizedEpoch)),
 		},
+		Genesis:        time.Now(),
+		ValidatorsRoot: [32]byte{},
 	}
 
 	// Populate database with blocks with part of the chain, orphaned block will be added on top.

@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"io"
 	"testing"
+	"time"
 
 	"github.com/libp2p/go-libp2p-core/mux"
 	"github.com/libp2p/go-libp2p-core/network"
 	types "github.com/prysmaticlabs/eth2-types"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	p2pTypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
@@ -34,7 +36,8 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 		p1.Connect(bogusPeer)
 
 		req := &pb.BeaconBlocksByRangeRequest{}
-		_, err := SendBeaconBlocksByRangeRequest(ctx, nil, p1, bogusPeer.PeerID(), req, nil)
+		chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
+		_, err := SendBeaconBlocksByRangeRequest(ctx, chain, p1, bogusPeer.PeerID(), req, nil)
 		assert.ErrorContains(t, "protocol not supported", err)
 	})
 
@@ -79,7 +82,8 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 				if uint64(i) >= uint64(len(knownBlocks)) {
 					break
 				}
-				err = WriteBlockChunk(stream, nil, p2pProvider.Encoding(), knownBlocks[i])
+				chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
+				err = WriteBlockChunk(stream, chain, p2pProvider.Encoding(), interfaces.WrappedPhase0SignedBeaconBlock(knownBlocks[i]))
 				if err != nil && err.Error() != mux.ErrReset.Error() {
 					require.NoError(t, err)
 				}
@@ -98,7 +102,8 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 			Count:     128,
 			Step:      1,
 		}
-		blocks, err := SendBeaconBlocksByRangeRequest(ctx, nil, p1, p2.PeerID(), req, nil)
+		chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
+		blocks, err := SendBeaconBlocksByRangeRequest(ctx, chain, p1, p2.PeerID(), req, nil)
 		assert.NoError(t, err)
 		assert.Equal(t, 128, len(blocks))
 	})
@@ -116,7 +121,8 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 			Step:      1,
 		}
 		blocksFromProcessor := make([]interfaces.SignedBeaconBlock, 0)
-		blocks, err := SendBeaconBlocksByRangeRequest(ctx, nil, p1, p2.PeerID(), req, func(block interfaces.SignedBeaconBlock) error {
+		chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
+		blocks, err := SendBeaconBlocksByRangeRequest(ctx, chain, p1, p2.PeerID(), req, func(block interfaces.SignedBeaconBlock) error {
 			blocksFromProcessor = append(blocksFromProcessor, block)
 			return nil
 		})
@@ -138,7 +144,8 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 			Step:      1,
 		}
 		errFromProcessor := errors.New("processor error")
-		_, err := SendBeaconBlocksByRangeRequest(ctx, nil, p1, p2.PeerID(), req, func(block interfaces.SignedBeaconBlock) error {
+		chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
+		_, err := SendBeaconBlocksByRangeRequest(ctx, chain, p1, p2.PeerID(), req, func(block interfaces.SignedBeaconBlock) error {
 			return errFromProcessor
 		})
 		assert.ErrorContains(t, errFromProcessor.Error(), err)
@@ -226,7 +233,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 				if uint64(i) >= uint64(len(knownBlocks)) {
 					break
 				}
-				err = WriteBlockChunk(stream, nil, p2.Encoding(), knownBlocks[i])
+				err = WriteBlockChunk(stream, nil, p2.Encoding(), interfaces.WrappedPhase0SignedBeaconBlock(knownBlocks[i]))
 				if err != nil && err.Error() != mux.ErrReset.Error() {
 					require.NoError(t, err)
 				}
@@ -267,7 +274,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 				if uint64(i) >= uint64(len(knownBlocks)) {
 					break
 				}
-				err = WriteBlockChunk(stream, nil, p2.Encoding(), knownBlocks[i])
+				err = WriteBlockChunk(stream, nil, p2.Encoding(), interfaces.WrappedPhase0SignedBeaconBlock(knownBlocks[i]))
 				if err != nil && err.Error() != mux.ErrReset.Error() {
 					require.NoError(t, err)
 				}
