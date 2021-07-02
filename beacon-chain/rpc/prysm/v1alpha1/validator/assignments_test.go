@@ -18,6 +18,7 @@ import (
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -450,6 +451,28 @@ func TestAssignValidatorToSubnet(t *testing.T) {
 	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	totalTime := time.Duration(params.BeaconConfig().EpochsPerRandomSubnetSubscription) * epochDuration * time.Second
 	receivedTime := time.Until(exp.Round(time.Second))
+	if receivedTime < totalTime {
+		t.Fatalf("Expiration time of %f was less than expected duration of %f ", receivedTime.Seconds(), totalTime.Seconds())
+	}
+}
+
+func TestAssignValidatorToSyncSubnet(t *testing.T) {
+	k := pubKey(3)
+	committee := make([][]byte, 0)
+
+	for i := 0; i < 100; i++ {
+		committee = append(committee, pubKey(uint64(i)))
+	}
+	sCommittee := &ethereum_beacon_p2p_v1.SyncCommittee{
+		Pubkeys: committee,
+	}
+	assignValidatorToSyncSubnet(0, 0, k, sCommittee, ethpb.ValidatorStatus_ACTIVE)
+	coms, _, ok, exp := cache.SyncSubnetIDs.GetSyncCommitteeSubnets(k, 0)
+	require.Equal(t, true, ok, "No cache entry found for validator")
+	assert.Equal(t, uint64(1), uint64(len(coms)))
+	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
+	totalTime := time.Duration(params.BeaconConfig().EpochsPerSyncCommitteePeriod) * epochDuration * time.Second
+	receivedTime := time.Until(exp.Round(time.Second)).Round(time.Second)
 	if receivedTime < totalTime {
 		t.Fatalf("Expiration time of %f was less than expected duration of %f ", receivedTime.Seconds(), totalTime.Seconds())
 	}

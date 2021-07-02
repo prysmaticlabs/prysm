@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/hex"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -10,7 +11,9 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -260,7 +263,13 @@ func TestSubmitSignedContributionAndProof_BadDomain(t *testing.T) {
 
 func TestSubmitSignedContributionAndProof_CouldNotGetContribution(t *testing.T) {
 	hook := logTest.NewGlobal()
-	validator, m, validatorKey, finish := setup(t)
+	// Hardcode secret key in order to have a valid aggregator signature.
+	rawKey, err := hex.DecodeString("659e875e1b062c03f2f2a57332974d475b97df6cfc581d322e79642d39aca8fd")
+	assert.NoError(t, err)
+	validatorKey, err := bls.SecretKeyFromBytes(rawKey)
+	assert.NoError(t, err)
+
+	validator, m, validatorKey, finish := setupWithKey(t, validatorKey)
 	validatorIndex := types.ValidatorIndex(7)
 	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.duties = &eth.DutiesResponse{Duties: []*eth.DutiesResponse_Duty{
@@ -294,7 +303,7 @@ func TestSubmitSignedContributionAndProof_CouldNotGetContribution(t *testing.T) 
 		&prysmv2.SyncCommitteeContributionRequest{
 			Slot:      1,
 			PublicKey: pubKey[:],
-			SubnetId:  1,
+			SubnetId:  0,
 		},
 	).Return(nil, errors.New("Bad contribution"))
 
@@ -304,7 +313,13 @@ func TestSubmitSignedContributionAndProof_CouldNotGetContribution(t *testing.T) 
 
 func TestSubmitSignedContributionAndProof_CouldNotSubmitContribution(t *testing.T) {
 	hook := logTest.NewGlobal()
-	validator, m, validatorKey, finish := setup(t)
+	// Hardcode secret key in order to have a valid aggregator signature.
+	rawKey, err := hex.DecodeString("659e875e1b062c03f2f2a57332974d475b97df6cfc581d322e79642d39aca8fd")
+	assert.NoError(t, err)
+	validatorKey, err := bls.SecretKeyFromBytes(rawKey)
+	assert.NoError(t, err)
+
+	validator, m, validatorKey, finish := setupWithKey(t, validatorKey)
 	validatorIndex := types.ValidatorIndex(7)
 	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.duties = &eth.DutiesResponse{Duties: []*eth.DutiesResponse_Duty{
@@ -338,7 +353,7 @@ func TestSubmitSignedContributionAndProof_CouldNotSubmitContribution(t *testing.
 		&prysmv2.SyncCommitteeContributionRequest{
 			Slot:      1,
 			PublicKey: pubKey[:],
-			SubnetId:  1,
+			SubnetId:  0,
 		},
 	).Return(&prysmv2.SyncCommitteeContribution{
 		BlockRoot:       make([]byte, 32),
@@ -374,7 +389,13 @@ func TestSubmitSignedContributionAndProof_CouldNotSubmitContribution(t *testing.
 }
 
 func TestSubmitSignedContributionAndProof_Ok(t *testing.T) {
-	validator, m, validatorKey, finish := setup(t)
+	// Hardcode secret key in order to have a valid aggregator signature.
+	rawKey, err := hex.DecodeString("659e875e1b062c03f2f2a57332974d475b97df6cfc581d322e79642d39aca8fd")
+	assert.NoError(t, err)
+	validatorKey, err := bls.SecretKeyFromBytes(rawKey)
+	assert.NoError(t, err)
+
+	validator, m, validatorKey, finish := setupWithKey(t, validatorKey)
 	validatorIndex := types.ValidatorIndex(7)
 	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.duties = &eth.DutiesResponse{Duties: []*eth.DutiesResponse_Duty{
@@ -408,7 +429,7 @@ func TestSubmitSignedContributionAndProof_Ok(t *testing.T) {
 		&prysmv2.SyncCommitteeContributionRequest{
 			Slot:      1,
 			PublicKey: pubKey[:],
-			SubnetId:  1,
+			SubnetId:  0,
 		},
 	).Return(&prysmv2.SyncCommitteeContribution{
 		BlockRoot:       make([]byte, 32),
