@@ -88,6 +88,105 @@ func (vs *Server) MultipleValidatorStatus(
 	}, nil
 }
 
+// CheckDoppelGanger checks if the provided keys are currently active in the network.
+func (vs *Server) CheckDoppelGanger(ctx context.Context, req *ethpb.DoppelGangerRequest) (*ethpb.DoppelGangerResponse, error) {
+	if vs.SyncChecker.Syncing() {
+		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
+	}
+	if req == nil || req.ValidatorRequests == nil || len(req.ValidatorRequests) == 0 {
+		return &ethpb.DoppelGangerResponse{
+			Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{},
+		}, nil
+	}
+	headState, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
+	// We walk back from the current head state to the state at the beginning of the previous 2 epochs.
+	// Where S_i , i := 0,1,2. i = 0 would signify the current head state in this epoch.
+	currEpoch := helpers.SlotToEpoch(headState.Slot())
+	previousEpoch, err := currEpoch.SafeSub(1)
+	if err != nil {
+		previousEpoch = currEpoch
+	}
+	olderEpoch, err := previousEpoch.SafeSub(1)
+	if err != nil {
+		olderEpoch = previousEpoch
+	}
+	prevState, err := vs.StateGen.StateBySlot(ctx, params.BeaconConfig().SlotsPerEpoch.Mul(uint64(previousEpoch)))
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get previous state")
+	}
+	olderState, err := vs.StateGen.StateBySlot(ctx, params.BeaconConfig().SlotsPerEpoch.Mul(uint64(olderEpoch)))
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get older state")
+	}
+	resp := &ethpb.DoppelGangerResponse{
+		Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{},
+	}
+	for _, v := range req.ValidatorRequests {
+		// If the validator's last recorded epoch was
+		// less than or equal to 2 epochs ago, this method will not
+		// be able to catch duplicates. This is due to how attestation
+		// inclusion works, where an attestation for the current epoch
+		// is able to included in the current or next epoch. Depending
+		// on which epoch it is included the balance change will be
+		// reflected in the following epoch.
+		if v.Epoch+2 >= currEpoch {
+			resp.Responses = append(resp.Responses,
+				&ethpb.DoppelGangerResponse_ValidatorResponse{
+					PublicKey:       v.PublicKey,
+					DuplicateExists: false,
+				})
+			continue
+		}
+		valIndex, ok := olderState.ValidatorIndexByPubkey(bytesutil.ToBytes48(v.PublicKey))
+		if !ok {
+			// Ignore if validator pubkey doesn't exist.
+			continue
+		}
+		baseBal, err := olderState.BalanceAtIndex(valIndex)
+		if err != nil {
+			return nil, status.Error(codes.Internal, "Could not get validator's balance")
+		}
+		nextBal, err := prevState.BalanceAtIndex(valIndex)
+		if err != nil {
+			return nil, status.Error(codes.Internal, "Could not get validator's balance")
+		}
+		// If the next epoch's balance is higher, we mark it as an existing
+		// duplicate.
+		if nextBal > baseBal {
+			resp.Responses = append(resp.Responses,
+				&ethpb.DoppelGangerResponse_ValidatorResponse{
+					PublicKey:       v.PublicKey,
+					DuplicateExists: true,
+				})
+			continue
+		}
+		currBal, err := headState.BalanceAtIndex(valIndex)
+		if err != nil {
+			return nil, status.Error(codes.Internal, "Could not get validator's balance")
+		}
+		// If the current epoch's balance is higher, we mark it as an existing
+		// duplicate.
+		if currBal > nextBal {
+			resp.Responses = append(resp.Responses,
+				&ethpb.DoppelGangerResponse_ValidatorResponse{
+					PublicKey:       v.PublicKey,
+					DuplicateExists: true,
+				})
+			continue
+		}
+		// Mark the public key as valid.
+		resp.Responses = append(resp.Responses,
+			&ethpb.DoppelGangerResponse_ValidatorResponse{
+				PublicKey:       v.PublicKey,
+				DuplicateExists: false,
+			})
+	}
+	return resp, nil
+}
+
 // activationStatus returns the validator status response for the set of validators
 // requested by their pub keys.
 func (vs *Server) activationStatus(
