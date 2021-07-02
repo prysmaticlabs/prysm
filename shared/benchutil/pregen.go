@@ -7,10 +7,10 @@ import (
 	"io/ioutil"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -41,7 +41,7 @@ func filePath(path string) string {
 }
 
 // PreGenState1Epoch unmarshals the pre-generated beacon state after 1 epoch of block processing and returns it.
-func PreGenState1Epoch() (iface.BeaconState, error) {
+func PreGenState1Epoch() (interfaces.BeaconState, error) {
 	path, err := bazel.Runfile(filePath(BState1EpochFileName))
 	if err != nil {
 		return nil, err
@@ -58,7 +58,7 @@ func PreGenState1Epoch() (iface.BeaconState, error) {
 }
 
 // PreGenState2FullEpochs unmarshals the pre-generated beacon state after 2 epoch of full block processing and returns it.
-func PreGenState2FullEpochs() (iface.BeaconState, error) {
+func PreGenState2FullEpochs() (interfaces.BeaconState, error) {
 	path, err := bazel.Runfile(filePath(BState2EpochFileName))
 	if err != nil {
 		return nil, err

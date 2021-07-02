@@ -8,8 +8,8 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -36,7 +36,7 @@ import (
 //    # Set validator exit epoch and withdrawable epoch
 //    validator.exit_epoch = exit_queue_epoch
 //    validator.withdrawable_epoch = Epoch(validator.exit_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
-func InitiateValidatorExit(state iface.BeaconState, idx types.ValidatorIndex) (iface.BeaconState, error) {
+func InitiateValidatorExit(state interfaces.BeaconState, idx types.ValidatorIndex) (interfaces.BeaconState, error) {
 	validator, err := state.ValidatorAtIndex(idx)
 	if err != nil {
 		return nil, err
@@ -45,7 +45,7 @@ func InitiateValidatorExit(state iface.BeaconState, idx types.ValidatorIndex) (i
 		return state, nil
 	}
 	var exitEpochs []types.Epoch
-	err = state.ReadFromEveryValidator(func(idx int, val iface.ReadOnlyValidator) error {
+	err = state.ReadFromEveryValidator(func(idx int, val interfaces.ReadOnlyValidator) error {
 		if val.ExitEpoch() != params.BeaconConfig().FarFutureEpoch {
 			exitEpochs = append(exitEpochs, val.ExitEpoch())
 		}
@@ -66,7 +66,7 @@ func InitiateValidatorExit(state iface.BeaconState, idx types.ValidatorIndex) (i
 
 	// We use the exit queue churn to determine if we have passed a churn limit.
 	exitQueueChurn := uint64(0)
-	err = state.ReadFromEveryValidator(func(idx int, val iface.ReadOnlyValidator) error {
+	err = state.ReadFromEveryValidator(func(idx int, val interfaces.ReadOnlyValidator) error {
 		if val.ExitEpoch() == exitQueueEpoch {
 			exitQueueChurn++
 		}
@@ -121,7 +121,7 @@ func InitiateValidatorExit(state iface.BeaconState, idx types.ValidatorIndex) (i
 //    proposer_reward = Gwei(whistleblower_reward // PROPOSER_REWARD_QUOTIENT)
 //    increase_balance(state, proposer_index, proposer_reward)
 //    increase_balance(state, whistleblower_index, Gwei(whistleblower_reward - proposer_reward))
-func SlashValidator(state iface.BeaconState, slashedIdx types.ValidatorIndex) (iface.BeaconState, error) {
+func SlashValidator(state interfaces.BeaconState, slashedIdx types.ValidatorIndex) (interfaces.BeaconState, error) {
 	state, err := InitiateValidatorExit(state, slashedIdx)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not initiate validator %d exit", slashedIdx)

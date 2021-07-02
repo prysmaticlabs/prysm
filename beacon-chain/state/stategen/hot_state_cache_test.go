@@ -3,9 +3,9 @@ package stategen
 import (
 	"testing"
 
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -14,7 +14,7 @@ func TestHotStateCache_RoundTrip(t *testing.T) {
 	c := newHotStateCache()
 	root := [32]byte{'A'}
 	state := c.get(root)
-	assert.Equal(t, iface.BeaconState(nil), state)
+	assert.Equal(t, interfaces.BeaconState(nil), state)
 	assert.Equal(t, false, c.has(root), "Empty cache has an object")
 
 	state, err := v1.InitializeFromProto(&pb.BeaconState{

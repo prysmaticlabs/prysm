@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
@@ -41,9 +40,9 @@ import (
 //        assert block.state_root == hash_tree_root(state)
 func ExecuteStateTransitionNoVerifyAnySig(
 	ctx context.Context,
-	state iface.BeaconState,
+	state interfaces.BeaconState,
 	signed interfaces.SignedBeaconBlock,
-) (*bls.SignatureSet, iface.BeaconState, error) {
+) (*bls.SignatureSet, interfaces.BeaconState, error) {
 	if ctx.Err() != nil {
 		return nil, nil, ctx.Err()
 	}
@@ -112,7 +111,7 @@ func ExecuteStateTransitionNoVerifyAnySig(
 //        assert block.state_root == hash_tree_root(state)
 func CalculateStateRoot(
 	ctx context.Context,
-	state iface.BeaconState,
+	state interfaces.BeaconState,
 	signed interfaces.SignedBeaconBlock,
 ) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.CalculateStateRoot")
@@ -168,9 +167,9 @@ func CalculateStateRoot(
 //    process_operations(state, block.body)
 func ProcessBlockNoVerifyAnySig(
 	ctx context.Context,
-	state iface.BeaconState,
+	state interfaces.BeaconState,
 	signed interfaces.SignedBeaconBlock,
-) (*bls.SignatureSet, iface.BeaconState, error) {
+) (*bls.SignatureSet, interfaces.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessBlockNoVerifyAnySig")
 	defer span.End()
 	if err := helpers.VerifyNilBeaconBlock(signed); err != nil {
@@ -228,8 +227,8 @@ func ProcessBlockNoVerifyAnySig(
 //    for_ops(body.voluntary_exits, process_voluntary_exit)
 func ProcessOperationsNoVerifyAttsSigs(
 	ctx context.Context,
-	state iface.BeaconState,
-	signedBeaconBlock interfaces.SignedBeaconBlock) (iface.BeaconState, error) {
+	state interfaces.BeaconState,
+	signedBeaconBlock interfaces.SignedBeaconBlock) (interfaces.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessOperationsNoVerifyAttsSigs")
 	defer span.End()
 	if err := helpers.VerifyNilBeaconBlock(signedBeaconBlock); err != nil {
@@ -268,9 +267,9 @@ func ProcessOperationsNoVerifyAttsSigs(
 // and randao signature verifications.
 func ProcessBlockForStateRoot(
 	ctx context.Context,
-	state iface.BeaconState,
+	state interfaces.BeaconState,
 	signed interfaces.SignedBeaconBlock,
-) (iface.BeaconState, error) {
+) (interfaces.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessBlockForStateRoot")
 	defer span.End()
 	if err := helpers.VerifyNilBeaconBlock(signed); err != nil {

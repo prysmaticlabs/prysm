@@ -7,9 +7,9 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -319,7 +319,7 @@ func TestValidatorReferences_RemainsConsistent(t *testing.T) {
 	}))
 
 	// Ensure reference is properly accounted for.
-	assert.NoError(t, a.ReadFromEveryValidator(func(idx int, val iface.ReadOnlyValidator) error {
+	assert.NoError(t, a.ReadFromEveryValidator(func(idx int, val interfaces.ReadOnlyValidator) error {
 		assert.NotEqual(t, bytesutil.ToBytes48([]byte{'V'}), val.PublicKey())
 		return nil
 	}))

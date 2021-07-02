@@ -5,9 +5,9 @@ import (
 	"errors"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 )
 
 // SkipSlotCache exists for the unlikely scenario that is a large gap between the head state and
@@ -19,7 +19,7 @@ var SkipSlotCache = cache.NewSkipSlotCache()
 // The key for skip slot cache is mixed between state root and state slot.
 // state root is in the mix to defend against different forks with same skip slots
 // to hit the same cache. We don't want beacon states mixed up between different chains.
-func cacheKey(ctx context.Context, state iface.ReadOnlyBeaconState) ([32]byte, error) {
+func cacheKey(ctx context.Context, state interfaces.ReadOnlyBeaconState) ([32]byte, error) {
 	bh := state.LatestBlockHeader()
 	if bh == nil {
 		return [32]byte{}, errors.New("block head in state can't be nil")

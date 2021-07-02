@@ -6,7 +6,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	coreState "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/benchutil"
@@ -160,8 +159,8 @@ func BenchmarkUnmarshalState_FullState(b *testing.B) {
 	})
 }
 
-func clonedStates(beaconState iface.BeaconState) []iface.BeaconState {
-	clonedStates := make([]iface.BeaconState, runAmount)
+func clonedStates(beaconState interfaces.BeaconState) []interfaces.BeaconState {
+	clonedStates := make([]interfaces.BeaconState, runAmount)
 	for i := 0; i < runAmount; i++ {
 		clonedStates[i] = beaconState.Copy()
 	}

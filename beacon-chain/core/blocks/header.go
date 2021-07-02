@@ -7,7 +7,6 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -40,9 +39,9 @@ import (
 //    assert not proposer.slashed
 func ProcessBlockHeader(
 	_ context.Context,
-	beaconState iface.BeaconState,
+	beaconState interfaces.BeaconState,
 	block interfaces.SignedBeaconBlock,
-) (iface.BeaconState, error) {
+) (interfaces.BeaconState, error) {
 	if err := helpers.VerifyNilBeaconBlock(block); err != nil {
 		return nil, err
 	}
@@ -92,10 +91,10 @@ func ProcessBlockHeader(
 //    proposer = state.validators[block.proposer_index]
 //    assert not proposer.slashed
 func ProcessBlockHeaderNoVerify(
-	beaconState iface.BeaconState,
+	beaconState interfaces.BeaconState,
 	slot types.Slot, proposerIndex types.ValidatorIndex,
 	parentRoot, bodyRoot []byte,
-) (iface.BeaconState, error) {
+) (interfaces.BeaconState, error) {
 	if beaconState.Slot() != slot {
 		return nil, fmt.Errorf("state slot: %d is different than block slot: %d", beaconState.Slot(), slot)
 	}

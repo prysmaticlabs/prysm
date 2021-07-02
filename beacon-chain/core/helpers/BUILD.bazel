@@ -35,7 +35,6 @@ go_library(
     ],
     deps = [
         "//beacon-chain/cache:go_default_library",
-        "//beacon-chain/state/interface:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/bls:go_default_library",
@@ -73,13 +72,13 @@ go_test(
     shard_count = 2,
     deps = [
         "//beacon-chain/cache:go_default_library",
-        "//beacon-chain/state/interface:go_default_library",
         "//beacon-chain/state/v1:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/hashutil:go_default_library",
+        "//shared/interfaces:go_default_library",
         "//shared/params:go_default_library",
         "//shared/sliceutil:go_default_library",
         "//shared/testutil:go_default_library",

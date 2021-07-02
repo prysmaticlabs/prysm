@@ -10,7 +10,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	dbIface "github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	state "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
@@ -18,7 +17,7 @@ import (
 )
 
 // SaveGenesisData bootstraps the beaconDB with a given genesis state.
-func (s *Store) SaveGenesisData(ctx context.Context, genesisState iface.BeaconState) error {
+func (s *Store) SaveGenesisData(ctx context.Context, genesisState interfaces.BeaconState) error {
 	stateRoot, err := genesisState.HashTreeRoot(ctx)
 	if err != nil {
 		return err

@@ -4,14 +4,14 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
 // UpdateGenesisEth1Data updates eth1 data for genesis state.
-func UpdateGenesisEth1Data(state iface.BeaconState, deposits []*ethpb.Deposit, eth1Data *ethpb.Eth1Data) (iface.BeaconState, error) {
+func UpdateGenesisEth1Data(state interfaces.BeaconState, deposits []*ethpb.Deposit, eth1Data *ethpb.Eth1Data) (interfaces.BeaconState, error) {
 	if eth1Data == nil {
 		return nil, errors.New("no eth1data provided for genesis state")
 	}

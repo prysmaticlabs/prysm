@@ -7,7 +7,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -65,7 +64,7 @@ func (e Exporter) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 }
 
 // State -- passthrough.
-func (e Exporter) State(ctx context.Context, blockRoot [32]byte) (iface.BeaconState, error) {
+func (e Exporter) State(ctx context.Context, blockRoot [32]byte) (interfaces.BeaconState, error) {
 	return e.db.State(ctx, blockRoot)
 }
 
@@ -75,7 +74,7 @@ func (e Exporter) StateSummary(ctx context.Context, blockRoot [32]byte) (*pb.Sta
 }
 
 // GenesisState -- passthrough.
-func (e Exporter) GenesisState(ctx context.Context) (iface.BeaconState, error) {
+func (e Exporter) GenesisState(ctx context.Context) (interfaces.BeaconState, error) {
 	return e.db.GenesisState(ctx)
 }
 
@@ -140,7 +139,7 @@ func (e Exporter) SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) 
 }
 
 // SaveState -- passthrough.
-func (e Exporter) SaveState(ctx context.Context, st iface.ReadOnlyBeaconState, blockRoot [32]byte) error {
+func (e Exporter) SaveState(ctx context.Context, st interfaces.ReadOnlyBeaconState, blockRoot [32]byte) error {
 	return e.db.SaveState(ctx, st, blockRoot)
 }
 
@@ -155,7 +154,7 @@ func (e Exporter) SaveStateSummaries(ctx context.Context, summaries []*pb.StateS
 }
 
 // SaveStates -- passthrough.
-func (e Exporter) SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconState, blockRoots [][32]byte) error {
+func (e Exporter) SaveStates(ctx context.Context, states []interfaces.ReadOnlyBeaconState, blockRoots [][32]byte) error {
 	return e.db.SaveStates(ctx, states, blockRoots)
 }
 
@@ -250,7 +249,7 @@ func (e Exporter) HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) (
 }
 
 // HighestSlotStatesBelow -- passthrough
-func (e Exporter) HighestSlotStatesBelow(ctx context.Context, slot types.Slot) ([]iface.ReadOnlyBeaconState, error) {
+func (e Exporter) HighestSlotStatesBelow(ctx context.Context, slot types.Slot) ([]interfaces.ReadOnlyBeaconState, error) {
 	return e.db.HighestSlotStatesBelow(ctx, slot)
 }
 
@@ -275,7 +274,7 @@ func (e Exporter) LoadGenesis(ctx context.Context, r io.Reader) error {
 }
 
 // SaveGenesisData -- passthrough
-func (e Exporter) SaveGenesisData(ctx context.Context, state iface.BeaconState) error {
+func (e Exporter) SaveGenesisData(ctx context.Context, state interfaces.BeaconState) error {
 	return e.db.SaveGenesisData(ctx, state)
 }
 

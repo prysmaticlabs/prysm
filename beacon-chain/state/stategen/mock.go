@@ -4,32 +4,31 @@ import (
 	"context"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
 )
 
 // MockStateManager is a fake implementation of StateManager.
 type MockStateManager struct {
-	StatesByRoot map[[32]byte]iface.BeaconState
-	StatesBySlot map[types.Slot]iface.BeaconState
+	StatesByRoot map[[32]byte]interfaces.BeaconState
+	StatesBySlot map[types.Slot]interfaces.BeaconState
 }
 
 // NewMockService --
 func NewMockService() *MockStateManager {
 	return &MockStateManager{
-		StatesByRoot: make(map[[32]byte]iface.BeaconState),
-		StatesBySlot: make(map[types.Slot]iface.BeaconState),
+		StatesByRoot: make(map[[32]byte]interfaces.BeaconState),
+		StatesBySlot: make(map[types.Slot]interfaces.BeaconState),
 	}
 }
 
 // Resume --
-func (m *MockStateManager) Resume(ctx context.Context) (iface.BeaconState, error) {
+func (m *MockStateManager) Resume(ctx context.Context) (interfaces.BeaconState, error) {
 	panic("implement me")
 }
 
 // SaveFinalizedState --
-func (m *MockStateManager) SaveFinalizedState(fSlot types.Slot, fRoot [32]byte, fState iface.BeaconState) {
+func (m *MockStateManager) SaveFinalizedState(fSlot types.Slot, fRoot [32]byte, fState interfaces.BeaconState) {
 	panic("implement me")
 }
 
@@ -41,10 +40,10 @@ func (m *MockStateManager) MigrateToCold(ctx context.Context, fRoot [32]byte) er
 // ReplayBlocks --
 func (m *MockStateManager) ReplayBlocks(
 	ctx context.Context,
-	state iface.BeaconState,
+	state interfaces.BeaconState,
 	signed []interfaces.SignedBeaconBlock,
 	targetSlot types.Slot,
-) (iface.BeaconState, error) {
+) (interfaces.BeaconState, error) {
 	panic("implement me")
 }
 
@@ -68,17 +67,17 @@ func (m *MockStateManager) HasStateInCache(ctx context.Context, blockRoot [32]by
 }
 
 // StateByRoot --
-func (m *MockStateManager) StateByRoot(ctx context.Context, blockRoot [32]byte) (iface.BeaconState, error) {
+func (m *MockStateManager) StateByRoot(ctx context.Context, blockRoot [32]byte) (interfaces.BeaconState, error) {
 	return m.StatesByRoot[blockRoot], nil
 }
 
 // StateByRootInitialSync --
-func (m *MockStateManager) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (iface.BeaconState, error) {
+func (m *MockStateManager) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (interfaces.BeaconState, error) {
 	panic("implement me")
 }
 
 // StateBySlot --
-func (m *MockStateManager) StateBySlot(ctx context.Context, slot types.Slot) (iface.BeaconState, error) {
+func (m *MockStateManager) StateBySlot(ctx context.Context, slot types.Slot) (interfaces.BeaconState, error) {
 	return m.StatesBySlot[slot], nil
 }
 
@@ -91,7 +90,7 @@ func (m *MockStateManager) RecoverStateSummary(
 }
 
 // SaveState --
-func (m *MockStateManager) SaveState(ctx context.Context, root [32]byte, st iface.BeaconState) error {
+func (m *MockStateManager) SaveState(ctx context.Context, root [32]byte, st interfaces.BeaconState) error {
 	panic("implement me")
 }
 
@@ -111,11 +110,11 @@ func (m *MockStateManager) DisableSaveHotStateToDB(ctx context.Context) error {
 }
 
 // AddStateForRoot --
-func (m *MockStateManager) AddStateForRoot(state iface.BeaconState, blockRoot [32]byte) {
+func (m *MockStateManager) AddStateForRoot(state interfaces.BeaconState, blockRoot [32]byte) {
 	m.StatesByRoot[blockRoot] = state
 }
 
 // AddStateForSlot --
-func (m *MockStateManager) AddStateForSlot(state iface.BeaconState, slot types.Slot) {
+func (m *MockStateManager) AddStateForSlot(state interfaces.BeaconState, slot types.Slot) {
 	m.StatesBySlot[slot] = state
 }

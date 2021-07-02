@@ -8,7 +8,6 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/genesis"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -22,7 +21,7 @@ import (
 
 // State returns the saved state using block's signing root,
 // this particular block was used to generate the state.
-func (s *Store) State(ctx context.Context, blockRoot [32]byte) (iface.BeaconState, error) {
+func (s *Store) State(ctx context.Context, blockRoot [32]byte) (interfaces.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.State")
 	defer span.End()
 	var st *pb.BeaconState
@@ -43,7 +42,7 @@ func (s *Store) State(ctx context.Context, blockRoot [32]byte) (iface.BeaconStat
 }
 
 // GenesisState returns the genesis state in beacon chain.
-func (s *Store) GenesisState(ctx context.Context) (iface.BeaconState, error) {
+func (s *Store) GenesisState(ctx context.Context) (interfaces.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.GenesisState")
 	defer span.End()
 
@@ -84,15 +83,15 @@ func (s *Store) GenesisState(ctx context.Context) (iface.BeaconState, error) {
 }
 
 // SaveState stores a state to the db using block's signing root which was used to generate the state.
-func (s *Store) SaveState(ctx context.Context, st iface.ReadOnlyBeaconState, blockRoot [32]byte) error {
+func (s *Store) SaveState(ctx context.Context, st interfaces.ReadOnlyBeaconState, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveState")
 	defer span.End()
 
-	return s.SaveStates(ctx, []iface.ReadOnlyBeaconState{st}, [][32]byte{blockRoot})
+	return s.SaveStates(ctx, []interfaces.ReadOnlyBeaconState{st}, [][32]byte{blockRoot})
 }
 
 // SaveStates stores multiple states to the db using the provided corresponding roots.
-func (s *Store) SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconState, blockRoots [][32]byte) error {
+func (s *Store) SaveStates(ctx context.Context, states []interfaces.ReadOnlyBeaconState, blockRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStates")
 	defer span.End()
 	if states == nil {
@@ -278,7 +277,7 @@ func slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []byte) (types.
 // from the db. Ideally there should just be one state per slot, but given validator
 // can double propose, a single slot could have multiple block roots and
 // results states. This returns a list of states.
-func (s *Store) HighestSlotStatesBelow(ctx context.Context, slot types.Slot) ([]iface.ReadOnlyBeaconState, error) {
+func (s *Store) HighestSlotStatesBelow(ctx context.Context, slot types.Slot) ([]interfaces.ReadOnlyBeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotStatesBelow")
 	defer span.End()
 
@@ -304,7 +303,7 @@ func (s *Store) HighestSlotStatesBelow(ctx context.Context, slot types.Slot) ([]
 		return nil, err
 	}
 
-	var st iface.ReadOnlyBeaconState
+	var st interfaces.ReadOnlyBeaconState
 	var err error
 	if best != nil {
 		st, err = s.State(ctx, bytesutil.ToBytes32(best))
@@ -319,7 +318,7 @@ func (s *Store) HighestSlotStatesBelow(ctx context.Context, slot types.Slot) ([]
 		}
 	}
 
-	return []iface.ReadOnlyBeaconState{st}, nil
+	return []interfaces.ReadOnlyBeaconState{st}, nil
 }
 
 // createStateIndicesFromStateSlot takes in a state slot and returns

@@ -9,10 +9,10 @@ import (
 	"github.com/pkg/errors"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -56,7 +56,7 @@ import (
 //
 //    return state
 // This method differs from the spec so as to process deposits beforehand instead of the end of the function.
-func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (iface.BeaconState, error) {
+func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (interfaces.BeaconState, error) {
 	state, err := EmptyGenesisState()
 	if err != nil {
 		return nil, err
@@ -78,7 +78,7 @@ func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisT
 
 // OptimizedGenesisBeaconState is used to create a state that has already processed deposits. This is to efficiently
 // create a mainnet state at chainstart.
-func OptimizedGenesisBeaconState(genesisTime uint64, preState iface.BeaconState, eth1Data *ethpb.Eth1Data) (iface.BeaconState, error) {
+func OptimizedGenesisBeaconState(genesisTime uint64, preState interfaces.BeaconState, eth1Data *ethpb.Eth1Data) (interfaces.BeaconState, error) {
 	if eth1Data == nil {
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
@@ -183,7 +183,7 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState iface.BeaconState,
 }
 
 // EmptyGenesisState returns an empty beacon state object.
-func EmptyGenesisState() (iface.BeaconState, error) {
+func EmptyGenesisState() (interfaces.BeaconState, error) {
 	state := &pb.BeaconState{
 		// Misc fields.
 		Slot: 0,

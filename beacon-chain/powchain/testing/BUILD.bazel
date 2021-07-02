@@ -14,11 +14,11 @@ go_library(
     ],
     deps = [
         "//beacon-chain/powchain/types:go_default_library",
-        "//beacon-chain/state/interface:go_default_library",
         "//beacon-chain/state/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/event:go_default_library",
+        "//shared/interfaces:go_default_library",
         "//shared/trieutil:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi/bind/backends:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",

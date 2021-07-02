@@ -3,15 +3,15 @@ package precompute
 import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // ProcessSlashingsPrecompute processes the slashed validators during epoch processing.
 // This is an optimized version by passing in precomputed total epoch balances.
-func ProcessSlashingsPrecompute(state iface.BeaconState, pBal *Balance) error {
+func ProcessSlashingsPrecompute(state interfaces.BeaconState, pBal *Balance) error {
 	currentEpoch := helpers.CurrentEpoch(state)
 	exitLength := params.BeaconConfig().EpochsPerSlashingsVector
 
@@ -27,7 +27,7 @@ func ProcessSlashingsPrecompute(state iface.BeaconState, pBal *Balance) error {
 
 	var hasSlashing bool
 	// Iterate through validator list in state, stop until a validator satisfies slashing condition of current epoch.
-	err := state.ReadFromEveryValidator(func(idx int, val iface.ReadOnlyValidator) error {
+	err := state.ReadFromEveryValidator(func(idx int, val interfaces.ReadOnlyValidator) error {
 		correctEpoch := epochToWithdraw == val.WithdrawableEpoch()
 		if val.Slashed() && correctEpoch {
 			hasSlashing = true

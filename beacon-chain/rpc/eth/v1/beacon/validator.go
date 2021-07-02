@@ -8,11 +8,11 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -190,7 +190,7 @@ func (bs *Server) ListCommittees(ctx context.Context, req *ethpb.StateCommittees
 
 // This function returns the validator object based on the passed in ID. The validator ID could be its public key,
 // or its index.
-func valContainersByRequestIds(state iface.BeaconState, validatorIds [][]byte) ([]*ethpb.ValidatorContainer, error) {
+func valContainersByRequestIds(state interfaces.BeaconState, validatorIds [][]byte) ([]*ethpb.ValidatorContainer, error) {
 	epoch := helpers.SlotToEpoch(state.Slot())
 	var valContainers []*ethpb.ValidatorContainer
 	if len(validatorIds) == 0 {

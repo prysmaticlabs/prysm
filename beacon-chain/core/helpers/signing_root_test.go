@@ -6,11 +6,11 @@ import (
 
 	fuzz "github.com/google/gofuzz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -47,19 +47,19 @@ func TestSigningRoot_ComputeDomain(t *testing.T) {
 func TestSigningRoot_ComputeDomainAndSign(t *testing.T) {
 	tests := []struct {
 		name       string
-		genState   func(t *testing.T) (iface.BeaconState, []bls.SecretKey)
-		genBlock   func(t *testing.T, st iface.BeaconState, keys []bls.SecretKey) *eth.SignedBeaconBlock
+		genState   func(t *testing.T) (interfaces.BeaconState, []bls.SecretKey)
+		genBlock   func(t *testing.T, st interfaces.BeaconState, keys []bls.SecretKey) *eth.SignedBeaconBlock
 		domainType [4]byte
 		want       []byte
 	}{
 		{
 			name: "block proposer",
-			genState: func(t *testing.T) (iface.BeaconState, []bls.SecretKey) {
+			genState: func(t *testing.T) (interfaces.BeaconState, []bls.SecretKey) {
 				beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 				require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
 				return beaconState, privKeys
 			},
-			genBlock: func(t *testing.T, st iface.BeaconState, keys []bls.SecretKey) *eth.SignedBeaconBlock {
+			genBlock: func(t *testing.T, st interfaces.BeaconState, keys []bls.SecretKey) *eth.SignedBeaconBlock {
 				block, err := testutil.GenerateFullBlock(st, keys, nil, 1)
 				require.NoError(t, err)
 				return block

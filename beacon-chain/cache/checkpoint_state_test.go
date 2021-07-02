@@ -4,11 +4,11 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -27,7 +27,7 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 
 	state, err := cache.StateByCheckpoint(cp1)
 	require.NoError(t, err)
-	assert.Equal(t, iface.BeaconState(nil), state, "Expected state not to exist in empty cache")
+	assert.Equal(t, interfaces.BeaconState(nil), state, "Expected state not to exist in empty cache")
 
 	require.NoError(t, cache.AddCheckpointState(cp1, st))
 

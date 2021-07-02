@@ -1,7 +1,7 @@
 // Package iface defines the actual beacon state interface used
 // by a Prysm beacon node, also containing useful, scoped interfaces such as
 // a ReadOnlyState and WriteOnlyBeaconState.
-package iface
+package interfaces
 
 import (
 	"context"
@@ -215,4 +215,27 @@ type FutureForkStub interface {
 	SetCurrentParticipationBits(val []byte) error
 	NextSyncCommittee() (*pbp2p.SyncCommittee, error)
 	SetNextSyncCommittee(val *pbp2p.SyncCommittee) error
+}
+
+type BeaconStateAltair interface {
+	BeaconState
+
+	// Sync Committee related.
+	CurrentSyncCommittee() (*pbp2p.SyncCommittee, error)
+	NextSyncCommittee() (*pbp2p.SyncCommittee, error)
+	SetCurrentSyncCommittee(val *pbp2p.SyncCommittee) error
+	SetNextSyncCommittee(val *pbp2p.SyncCommittee) error
+
+	// Inactivity scores related.
+	AppendInactivityScore(s uint64) error
+	SetInactivityScores(val []uint64) error
+	InactivityScores() ([]uint64, error)
+
+	// Participation related.
+	CurrentEpochParticipation() ([]byte, error)
+	PreviousEpochParticipation() ([]byte, error)
+	AppendCurrentParticipationBits(val byte) error
+	AppendPreviousParticipationBits(val byte) error
+	SetPreviousParticipationBits(val []byte) error
+	SetCurrentParticipationBits(val []byte) error
 }
