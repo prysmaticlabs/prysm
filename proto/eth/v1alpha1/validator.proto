@@ -220,6 +220,15 @@ service BeaconNodeValidator {
             body: "*"  
         };
     }
+
+    // Checks the beacon node if another instance of the provided validator keys have been
+    // attesting/proposing for you.
+    rpc CheckDoppelGanger(DoppelGangerRequest) returns (DoppelGangerResponse) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/validator/doppelganger"
+        };
+    }
+
 }
 
 message DomainRequest {
@@ -552,4 +561,32 @@ message ValidatorInfo {
     // The validator's current effective balance in GWei.
     // Only valid for states ACTIVE, EXITING, SLASHING.
     uint64 effective_balance = 7;
+}
+
+// DoppelGangerRequest represents the request sent by the validator in order to determine
+// if there is any duplicate instance of it running in the network.
+message DoppelGangerRequest {
+    repeated ValidatorRequest validator_requests = 1;
+
+    // ValidatorRequest data type which represents a request for each validator.
+    message ValidatorRequest {
+        // The validator's 48 byte BLS public key.
+        bytes public_key = 1 [(ethereum.eth.ext.ssz_size) = "48", (ethereum.eth.ext.spec_name) = "pubkey"];
+        // The validator's last recorded epoch to attest.
+        uint64 epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+        // The validator's last recorded signed root.
+        bytes signed_root = 2 [(ethereum.eth.ext.ssz_size) = "32"];
+    }
+}
+
+// DoppelGangerResponse is the response payload sent by the beacon node
+// after it has checked for all duplicate keys in the network.
+message DoppelGangerResponse {
+    message ValidatorResponse {
+        // The validator's 48 byte BLS public key.
+        bytes public_key = 1 [(ethereum.eth.ext.ssz_size) = "48", (ethereum.eth.ext.spec_name) = "pubkey"];
+        // Whether a duplicate of the validator exists.
+        bool duplicate_exists = 2;
+    }
+    repeated ValidatorResponse responses = 1;
 }
