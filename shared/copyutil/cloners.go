@@ -112,6 +112,49 @@ func CopyBeaconBlockBody(body *ethpb.BeaconBlockBody) *ethpb.BeaconBlockBody {
 	}
 }
 
+// CopySignedBeaconBlockAltair copies the provided SignedBeaconBlock.
+func CopySignedBeaconBlockAltair(sigBlock *prysmv2.SignedBeaconBlock) *prysmv2.SignedBeaconBlock {
+	if sigBlock == nil {
+		return nil
+	}
+	return &prysmv2.SignedBeaconBlock{
+		Block:     CopyBeaconBlockAltair(sigBlock.Block),
+		Signature: bytesutil.SafeCopyBytes(sigBlock.Signature),
+	}
+}
+
+// CopyBeaconBlockAltair copies the provided BeaconBlock.
+func CopyBeaconBlockAltair(block *prysmv2.BeaconBlock) *prysmv2.BeaconBlock {
+	if block == nil {
+		return nil
+	}
+	return &prysmv2.BeaconBlock{
+		Slot:          block.Slot,
+		ProposerIndex: block.ProposerIndex,
+		ParentRoot:    bytesutil.SafeCopyBytes(block.ParentRoot),
+		StateRoot:     bytesutil.SafeCopyBytes(block.StateRoot),
+		Body:          CopyBeaconBlockBodyAltair(block.Body),
+	}
+}
+
+// CopyBeaconBlockBodyAltair copies the provided BeaconBlockBody.
+func CopyBeaconBlockBodyAltair(body *prysmv2.BeaconBlockBody) *prysmv2.BeaconBlockBody {
+	if body == nil {
+		return nil
+	}
+	return &prysmv2.BeaconBlockBody{
+		RandaoReveal:      bytesutil.SafeCopyBytes(body.RandaoReveal),
+		Eth1Data:          CopyETH1Data(body.Eth1Data),
+		Graffiti:          bytesutil.SafeCopyBytes(body.Graffiti),
+		ProposerSlashings: CopyProposerSlashings(body.ProposerSlashings),
+		AttesterSlashings: CopyAttesterSlashings(body.AttesterSlashings),
+		Attestations:      CopyAttestations(body.Attestations),
+		Deposits:          CopyDeposits(body.Deposits),
+		VoluntaryExits:    CopySignedVoluntaryExits(body.VoluntaryExits),
+		SyncAggregate:     CopySyncAggregate(body.SyncAggregate),
+	}
+}
+
 // CopyProposerSlashings copies the provided ProposerSlashing array.
 func CopyProposerSlashings(slashings []*ethpb.ProposerSlashing) []*ethpb.ProposerSlashing {
 	if slashings == nil {
@@ -286,6 +329,19 @@ func CopyValidator(val *ethpb.Validator) *ethpb.Validator {
 	}
 }
 
+// CopySyncCommitteeMessage copies the provided sync committee message object.
+func CopySyncCommitteeMessage(s *prysmv2.SyncCommitteeMessage) *prysmv2.SyncCommitteeMessage {
+	if s == nil {
+		return nil
+	}
+	return &prysmv2.SyncCommitteeMessage{
+		Slot:           s.Slot,
+		BlockRoot:      bytesutil.SafeCopyBytes(s.BlockRoot),
+		ValidatorIndex: s.ValidatorIndex,
+		Signature:      bytesutil.SafeCopyBytes(s.Signature),
+	}
+}
+
 // CopySyncCommitteeContribution copies the provided sync committee contribution object.
 func CopySyncCommitteeContribution(c *prysmv2.SyncCommitteeContribution) *prysmv2.SyncCommitteeContribution {
 	if c == nil {
@@ -297,5 +353,16 @@ func CopySyncCommitteeContribution(c *prysmv2.SyncCommitteeContribution) *prysmv
 		SubcommitteeIndex: c.SubcommitteeIndex,
 		AggregationBits:   bytesutil.SafeCopyBytes(c.AggregationBits),
 		Signature:         bytesutil.SafeCopyBytes(c.Signature),
+	}
+}
+
+// CopySyncAggregate copies the provided sync aggregate object.
+func CopySyncAggregate(a *prysmv2.SyncAggregate) *prysmv2.SyncAggregate {
+	if a == nil {
+		return nil
+	}
+	return &prysmv2.SyncAggregate{
+		SyncCommitteeBits:      bytesutil.SafeCopyBytes(a.SyncCommitteeBits),
+		SyncCommitteeSignature: bytesutil.SafeCopyBytes(a.SyncCommitteeSignature),
 	}
 }
