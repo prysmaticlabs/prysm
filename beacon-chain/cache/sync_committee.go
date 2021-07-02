@@ -5,13 +5,28 @@ package cache
 import (
 	"sync"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	types "github.com/prysmaticlabs/eth2-types"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"k8s.io/client-go/tools/cache"
 )
 
-var maxSyncCommitteeSize = uint64(3) // Allows 3 forks to happen around `EPOCHS_PER_SYNC_COMMITTEE_PERIOD` boundary.
+var (
+	maxSyncCommitteeSize = uint64(3) // Allows 3 forks to happen around `EPOCHS_PER_SYNC_COMMITTEE_PERIOD` boundary.
+
+	// SyncCommitteeCacheMiss tracks the number of committee requests that aren't present in the cache.
+	SyncCommitteeCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "sync_committee_index_cache_miss",
+		Help: "The number of committee requests that aren't present in the sync committee index cache.",
+	})
+	// SyncCommitteeCacheHit tracks the number of committee requests that are in the cache.
+	SyncCommitteeCacheHit = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "sync_committee_index_cache_hit",
+		Help: "The number of committee requests that are present in the sync committee index cache.",
+	})
+)
 
 // SyncCommitteeCache utilizes a FIFO cache to sufficiently cache validator position within sync committee.
 // It is thread safe with concurrent read write.
@@ -88,6 +103,7 @@ func (s *SyncCommitteeCache) idxPositionInCommittee(
 		return nil, err
 	}
 	if !exists {
+		SyncCommitteeCacheMiss.Inc()
 		return nil, ErrNonExistingSyncCommitteeKey
 	}
 	item, ok := obj.(*syncCommitteeIndexPosition)
@@ -96,15 +112,17 @@ func (s *SyncCommitteeCache) idxPositionInCommittee(
 	}
 	idxInCommittee, ok := item.vIndexToPositionMap[valIdx]
 	if !ok {
+		SyncCommitteeCacheMiss.Inc()
 		return nil, nil
 	}
+	SyncCommitteeCacheHit.Inc()
 	return idxInCommittee, nil
 }
 
 // UpdatePositionsInCommittee updates caching of validators position in sync committee in respect to
 // current epoch and next epoch. This should be called when `current_sync_committee` and `next_sync_committee`
 // change and that happens every `EPOCHS_PER_SYNC_COMMITTEE_PERIOD`.
-func (s *SyncCommitteeCache) UpdatePositionsInCommittee(state iface.BeaconStateAltair) error {
+func (s *SyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundaryRoot [32]byte, state iface.BeaconStateAltair) error {
 	csc, err := state.CurrentSyncCommittee()
 	if err != nil {
 		return err
@@ -142,16 +160,11 @@ func (s *SyncCommitteeCache) UpdatePositionsInCommittee(state iface.BeaconStateA
 		}
 	}
 
-	r, err := csc.HashTreeRoot()
-	if err != nil {
-		return err
-	}
-
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
 	if err := s.cache.Add(&syncCommitteeIndexPosition{
-		currentSyncCommitteeRoot: r,
+		currentSyncCommitteeRoot: syncCommitteeBoundaryRoot,
 		vIndexToPositionMap:      positionsMap,
 	}); err != nil {
 		return err
