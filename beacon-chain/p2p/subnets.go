@@ -20,7 +20,7 @@ var attestationSubnetCount = params.BeaconNetworkConfig().AttestationSubnetCount
 var syncCommsSubnetCount = params.BeaconConfig().SyncCommitteeSubnetCount
 
 var attSubnetEnrKey = params.BeaconNetworkConfig().AttSubnetKey
-var syncCommsSubnetEnrKey = params.BeaconNetworkConfig().AttSubnetKey
+var syncCommsSubnetEnrKey = params.BeaconNetworkConfig().SyncCommsSubnetKey
 
 // FindPeersWithSubnet performs a network search for peers
 // subscribed to a particular subnet. Then we try to connect

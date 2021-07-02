@@ -595,6 +595,8 @@ func TestService_syncToFinalizedEpoch(t *testing.T) {
 			Epoch: 0,
 			Root:  make([]byte, 32),
 		},
+		Genesis:        time.Now(),
+		ValidatorsRoot: [32]byte{},
 	}
 	s := &Service{
 		ctx:          context.Background(),

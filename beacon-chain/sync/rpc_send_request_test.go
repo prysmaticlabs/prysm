@@ -163,7 +163,8 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 			Count:     128,
 			Step:      1,
 		}
-		blocks, err := SendBeaconBlocksByRangeRequest(ctx, nil, p1, p2.PeerID(), req, nil)
+		chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
+		blocks, err := SendBeaconBlocksByRangeRequest(ctx, chain, p1, p2.PeerID(), req, nil)
 		assert.NoError(t, err)
 		assert.Equal(t, 128, len(blocks))
 
@@ -174,7 +175,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 			cfg.MaxRequestBlocks = maxRequestBlocks
 			params.OverrideBeaconNetworkConfig(cfg)
 		}()
-		blocks, err = SendBeaconBlocksByRangeRequest(ctx, nil, p1, p2.PeerID(), req, func(block interfaces.SignedBeaconBlock) error {
+		blocks, err = SendBeaconBlocksByRangeRequest(ctx, chain, p1, p2.PeerID(), req, func(block interfaces.SignedBeaconBlock) error {
 			// Since ssz checks the boundaries, and doesn't normally allow to send requests bigger than
 			// the max request size, we are updating max request size dynamically. Even when updated dynamically,
 			// no more than max request size of blocks is expected on return.
@@ -205,7 +206,8 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 			Count:     128,
 			Step:      1,
 		}
-		blocks, err := SendBeaconBlocksByRangeRequest(ctx, nil, p1, p2.PeerID(), req, nil)
+		chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
+		blocks, err := SendBeaconBlocksByRangeRequest(ctx, chain, p1, p2.PeerID(), req, nil)
 		assert.ErrorContains(t, expectedErr.Error(), err)
 		assert.Equal(t, 0, len(blocks))
 	})
@@ -233,7 +235,8 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 				if uint64(i) >= uint64(len(knownBlocks)) {
 					break
 				}
-				err = WriteBlockChunk(stream, nil, p2.Encoding(), interfaces.WrappedPhase0SignedBeaconBlock(knownBlocks[i]))
+				chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
+				err = WriteBlockChunk(stream, chain, p2.Encoding(), interfaces.WrappedPhase0SignedBeaconBlock(knownBlocks[i]))
 				if err != nil && err.Error() != mux.ErrReset.Error() {
 					require.NoError(t, err)
 				}
@@ -245,7 +248,8 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 			Count:     128,
 			Step:      1,
 		}
-		blocks, err := SendBeaconBlocksByRangeRequest(ctx, nil, p1, p2.PeerID(), req, nil)
+		chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
+		blocks, err := SendBeaconBlocksByRangeRequest(ctx, chain, p1, p2.PeerID(), req, nil)
 		assert.ErrorContains(t, ErrInvalidFetchedData.Error(), err)
 		assert.Equal(t, 0, len(blocks))
 
@@ -274,7 +278,8 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 				if uint64(i) >= uint64(len(knownBlocks)) {
 					break
 				}
-				err = WriteBlockChunk(stream, nil, p2.Encoding(), interfaces.WrappedPhase0SignedBeaconBlock(knownBlocks[i]))
+				chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
+				err = WriteBlockChunk(stream, chain, p2.Encoding(), interfaces.WrappedPhase0SignedBeaconBlock(knownBlocks[i]))
 				if err != nil && err.Error() != mux.ErrReset.Error() {
 					require.NoError(t, err)
 				}
@@ -286,7 +291,8 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 			Count:     128,
 			Step:      10,
 		}
-		blocks, err := SendBeaconBlocksByRangeRequest(ctx, nil, p1, p2.PeerID(), req, nil)
+		chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
+		blocks, err := SendBeaconBlocksByRangeRequest(ctx, chain, p1, p2.PeerID(), req, nil)
 		assert.ErrorContains(t, ErrInvalidFetchedData.Error(), err)
 		assert.Equal(t, 0, len(blocks))
 
