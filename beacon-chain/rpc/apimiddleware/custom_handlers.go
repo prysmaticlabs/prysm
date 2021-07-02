@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eventsv1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/events"
 	"github.com/prysmaticlabs/prysm/shared/gateway"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/r3labs/sse"
@@ -187,11 +187,11 @@ func receiveEvents(eventChan <-chan *sse.Event, w http.ResponseWriter, req *http
 			var data interface{}
 
 			switch strings.TrimSpace(string(msg.Event)) {
-			case eventsv1.HeadTopic:
+			case events.HeadTopic:
 				data = &eventHeadJson{}
-			case eventsv1.BlockTopic:
+			case events.BlockTopic:
 				data = &receivedBlockDataJson{}
-			case eventsv1.AttestationTopic:
+			case events.AttestationTopic:
 				data = &attestationJson{}
 
 				// Data received in the event does not fit the expected event stream output.
@@ -206,11 +206,11 @@ func receiveEvents(eventChan <-chan *sse.Event, w http.ResponseWriter, req *http
 					return gateway.InternalServerError(err)
 				}
 				msg.Data = attData
-			case eventsv1.VoluntaryExitTopic:
+			case events.VoluntaryExitTopic:
 				data = &signedVoluntaryExitJson{}
-			case eventsv1.FinalizedCheckpointTopic:
+			case events.FinalizedCheckpointTopic:
 				data = &eventFinalizedCheckpointJson{}
-			case eventsv1.ChainReorgTopic:
+			case events.ChainReorgTopic:
 				data = &eventChainReorgJson{}
 			case "error":
 				data = &eventErrorJson{}
