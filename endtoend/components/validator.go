@@ -144,7 +144,10 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		"--" + cmdshared.E2EConfigFlag.Name,
 		"--" + cmdshared.AcceptTosFlag.Name,
 	}
-	args = append(args, featureconfig.E2EValidatorFlags...)
+	// Only apply e2e flags to the current branch. New flags may not exist in previous release.
+	if !v.config.UsePrysmShValidator {
+		args = append(args, featureconfig.E2EValidatorFlags...)
+	}
 	args = append(args, config.ValidatorFlags...)
 
 	if v.config.UsePrysmShValidator {
