@@ -44,6 +44,9 @@ func (mockSignature) AggregateVerify([]bls.PublicKey, [][32]byte) bool {
 func (mockSignature) FastAggregateVerify([]bls.PublicKey, [32]byte) bool {
 	return true
 }
+func (mockSignature) Eth2FastAggregateVerify([]bls.PublicKey, [32]byte) bool {
+	return true
+}
 func (mockSignature) Marshal() []byte {
 	return make([]byte, 32)
 }
