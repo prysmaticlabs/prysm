@@ -763,7 +763,7 @@ func (x *SigningData) GetDomain() github_com_prysmaticlabs_eth2_types.Domain {
 	if x != nil {
 		return x.Domain
 	}
-	return github_com_prysmaticlabs_eth2_types.Domain(nil)
+	return github_com_prysmaticlabs_eth2_types.Domain(*new(([32]byte)))
 }
 
 type ForkData struct {
