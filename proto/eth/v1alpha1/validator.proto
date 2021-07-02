@@ -227,7 +227,7 @@ message DomainRequest {
     uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
 
     // The bytes domain specified by the validator.
-    bytes domain = 2;
+    bytes domain = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Domain"];
 }
 
 message DomainResponse {
