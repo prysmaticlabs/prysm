@@ -30,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	vdb "github.com/prysmaticlabs/prysm/validator/db"
+	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	slashingiface "github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
@@ -367,6 +368,97 @@ func (v *validator) NextSlot() <-chan types.Slot {
 func (v *validator) SlotDeadline(slot types.Slot) time.Time {
 	secs := time.Duration((slot + 1).Mul(params.BeaconConfig().SecondsPerSlot))
 	return time.Unix(int64(v.genesisTime), 0 /*ns*/).Add(secs * time.Second)
+}
+
+// CheckDoppelGanger checks if the current actively provided keys have
+// any duplicates active in the network.
+func (v *validator) CheckDoppelGanger(ctx context.Context) error {
+	if !featureconfig.Get().EnableDoppelGanger {
+		return nil
+	}
+	pubkeys, err := v.keyManager.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		return err
+	}
+	log.WithField("keys", len(pubkeys)).Info("Running doppelganger check")
+	// Exit early if no validating pub keys are found.
+	if len(pubkeys) == 0 {
+		return nil
+	}
+	req := &ethpb.DoppelGangerRequest{ValidatorRequests: []*ethpb.DoppelGangerRequest_ValidatorRequest{}}
+	for _, pkey := range pubkeys {
+		attRec, err := v.db.AttestationHistoryForPubKey(ctx, pkey)
+		if err != nil {
+			return err
+		}
+		if len(attRec) == 0 {
+			// If no history exists we simply send in a zero
+			// value for the request epoch and root.
+			req.ValidatorRequests = append(req.ValidatorRequests,
+				&ethpb.DoppelGangerRequest_ValidatorRequest{
+					PublicKey:  pkey[:],
+					Epoch:      0,
+					SignedRoot: make([]byte, 32),
+				})
+			continue
+		}
+		r := retrieveLatestRecord(attRec)
+		if pkey != r.PubKey {
+			return errors.New("attestation record mismatched public key")
+		}
+		req.ValidatorRequests = append(req.ValidatorRequests,
+			&ethpb.DoppelGangerRequest_ValidatorRequest{
+				PublicKey:  r.PubKey[:],
+				Epoch:      r.Target,
+				SignedRoot: r.SigningRoot[:],
+			})
+	}
+	resp, err := v.validatorClient.CheckDoppelGanger(ctx, req)
+	if err != nil {
+		return err
+	}
+	// If nothing is returned by the beacon node, we return an
+	// error as it is unsafe for us to proceed.
+	if resp == nil || resp.Responses == nil || len(resp.Responses) == 0 {
+		return errors.New("beacon node returned 0 responses for doppelganger check")
+	}
+	return buildDuplicateError(resp.Responses)
+}
+
+func buildDuplicateError(respones []*ethpb.DoppelGangerResponse_ValidatorResponse) error {
+	duplicates := make([][]byte, 0)
+	for _, valRes := range respones {
+		if valRes.DuplicateExists {
+			duplicates = append(duplicates, valRes.PublicKey)
+		}
+	}
+	if len(duplicates) == 0 {
+		return nil
+	}
+	return errors.Errorf("Duplicate instances exists in the network for validator keys: %#x", duplicates)
+}
+
+// Ensures that the latest attestion history is retrieved.
+func retrieveLatestRecord(recs []*kv.AttestationRecord) *kv.AttestationRecord {
+	if len(recs) == 0 {
+		return nil
+	}
+	lastSource := recs[len(recs)-1].Source
+	chosenRec := recs[len(recs)-1]
+	for i := len(recs) - 1; i >= 0; i-- {
+		// Exit if we are now on a different source
+		// as it is assumed that all source records are
+		// byte sorted.
+		if recs[i].Source != lastSource {
+			break
+		}
+		// If we have a smaller target, we do
+		// change our chosen record.
+		if chosenRec.Target < recs[i].Target {
+			chosenRec = recs[i]
+		}
+	}
+	return chosenRec
 }
 
 // UpdateDuties checks the slot number to determine if the validator's
