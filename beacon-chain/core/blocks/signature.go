@@ -12,6 +12,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -78,15 +79,11 @@ func VerifyBlockSignature(beaconState iface.ReadOnlyBeaconState,
 	return helpers.VerifyBlockSigningRoot(proposerPubKey, sig, domain, rootFunc)
 }
 
-// VerifyBlockSignature verifies the proposer signature of a beacon block. This differs
+// VerifyBlockSignatureUsingCurrentFork verifies the proposer signature of a beacon block. This differs
 // from the above method by not using fork data from the state and instead retrieving it
 // via the respective epoch.
-func VerifyBlockSignatureUsingSlot(beaconState iface.ReadOnlyBeaconState,
-	proposerIndex types.ValidatorIndex,
-	wantedSlot types.Slot,
-	sig []byte,
-	rootFunc func() ([32]byte, error)) error {
-	currentEpoch := helpers.SlotToEpoch(wantedSlot)
+func VerifyBlockSignatureUsingCurrentFork(beaconState iface.ReadOnlyBeaconState, blk interfaces.SignedBeaconBlock) error {
+	currentEpoch := helpers.SlotToEpoch(blk.Block().Slot())
 	fork, err := p2putils.Fork(currentEpoch)
 	if err != nil {
 		return err
@@ -95,12 +92,12 @@ func VerifyBlockSignatureUsingSlot(beaconState iface.ReadOnlyBeaconState,
 	if err != nil {
 		return err
 	}
-	proposer, err := beaconState.ValidatorAtIndex(proposerIndex)
+	proposer, err := beaconState.ValidatorAtIndex(blk.Block().ProposerIndex())
 	if err != nil {
 		return err
 	}
 	proposerPubKey := proposer.PublicKey
-	return helpers.VerifyBlockSigningRoot(proposerPubKey, sig, domain, rootFunc)
+	return helpers.VerifyBlockSigningRoot(proposerPubKey, blk.Signature(), domain, blk.Block().HashTreeRoot)
 }
 
 // BlockSignatureSet retrieves the block signature set from the provided block and its corresponding state.

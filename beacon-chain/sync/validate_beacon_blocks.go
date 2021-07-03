@@ -197,8 +197,7 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.Signed
 		return err
 	}
 
-	if err := blocks.VerifyBlockSignatureUsingSlot(parentState, blk.Block().ProposerIndex(), blk.Block().Slot(),
-		blk.Signature(), blk.Block().HashTreeRoot); err != nil {
+	if err := blocks.VerifyBlockSignatureUsingCurrentFork(parentState, blk); err != nil {
 		s.setBadBlock(ctx, blockRoot)
 		return err
 	}
