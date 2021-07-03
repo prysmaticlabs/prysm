@@ -37,7 +37,7 @@ func logStateTransitionData(b interfaces.BeaconBlock) {
 	if b.Version() == version.Altair {
 		agg, err := b.Body().SyncAggregate()
 		if err == nil {
-			log = log.WithField("syncAggParticipants", agg.SyncCommitteeBits.Count())
+			log = log.WithField("syncAggBitsCount", agg.SyncCommitteeBits.Count())
 		}
 	}
 	log.Info("Finished applying state transition")
