@@ -7,7 +7,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb_alpha "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	blockInterface "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -42,7 +42,7 @@ func Test_BlockIfaceToV1BlockHeader(t *testing.T) {
 	alphaBlock.Block.StateRoot = stateRoot
 	alphaBlock.Signature = signature
 
-	v1Header, err := BlockIfaceToV1BlockHeader(blockInterface.WrappedPhase0SignedBeaconBlock(alphaBlock))
+	v1Header, err := BlockIfaceToV1BlockHeader(wrapper.WrappedPhase0SignedBeaconBlock(alphaBlock))
 	require.NoError(t, err)
 	bodyRoot, err := alphaBlock.Block.Body.HashTreeRoot()
 	require.NoError(t, err)
@@ -347,7 +347,7 @@ func Test_BlockInterfaceToV1Block(t *testing.T) {
 	}
 	v1Alpha1Block.Signature = signature
 
-	v1Block, err := SignedBeaconBlock(blockInterface.WrappedPhase0SignedBeaconBlock(v1Alpha1Block))
+	v1Block, err := SignedBeaconBlock(wrapper.WrappedPhase0SignedBeaconBlock(v1Alpha1Block))
 	require.NoError(t, err)
 	v1Root, err := v1Block.HashTreeRoot()
 	require.NoError(t, err)

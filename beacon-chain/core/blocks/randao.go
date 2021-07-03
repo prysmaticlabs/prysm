@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	blockInterface "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -28,7 +28,7 @@ import (
 func ProcessRandao(
 	_ context.Context,
 	beaconState iface.BeaconState,
-	b blockInterface.SignedBeaconBlock,
+	b interfaces.SignedBeaconBlock,
 ) (iface.BeaconState, error) {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err

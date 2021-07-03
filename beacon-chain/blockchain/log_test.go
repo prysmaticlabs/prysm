@@ -4,7 +4,8 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	blockInterface "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -12,41 +13,41 @@ import (
 func Test_logStateTransitionData(t *testing.T) {
 	tests := []struct {
 		name string
-		b    blockInterface.BeaconBlock
+		b    interfaces.BeaconBlock
 		want string
 	}{
 		{name: "empty block body",
-			b:    blockInterface.WrappedPhase0BeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}),
+			b:    wrapper.WrappedPhase0BeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}),
 			want: "\"Finished applying state transition\" prefix=blockchain slot=0",
 		},
 		{name: "has attestation",
-			b:    blockInterface.WrappedPhase0BeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{Attestations: []*ethpb.Attestation{{}}}}),
+			b:    wrapper.WrappedPhase0BeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{Attestations: []*ethpb.Attestation{{}}}}),
 			want: "\"Finished applying state transition\" attestations=1 prefix=blockchain slot=0",
 		},
 		{name: "has deposit",
-			b: blockInterface.WrappedPhase0BeaconBlock(
+			b: wrapper.WrappedPhase0BeaconBlock(
 				&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{
 					Attestations: []*ethpb.Attestation{{}},
 					Deposits:     []*ethpb.Deposit{{}}}}),
 			want: "\"Finished applying state transition\" attestations=1 deposits=1 prefix=blockchain slot=0",
 		},
 		{name: "has attester slashing",
-			b: blockInterface.WrappedPhase0BeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{
+			b: wrapper.WrappedPhase0BeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{
 				AttesterSlashings: []*ethpb.AttesterSlashing{{}}}}),
 			want: "\"Finished applying state transition\" attesterSlashings=1 prefix=blockchain slot=0",
 		},
 		{name: "has proposer slashing",
-			b: blockInterface.WrappedPhase0BeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{
+			b: wrapper.WrappedPhase0BeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{
 				ProposerSlashings: []*ethpb.ProposerSlashing{{}}}}),
 			want: "\"Finished applying state transition\" prefix=blockchain proposerSlashings=1 slot=0",
 		},
 		{name: "has exit",
-			b: blockInterface.WrappedPhase0BeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{
+			b: wrapper.WrappedPhase0BeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{
 				VoluntaryExits: []*ethpb.SignedVoluntaryExit{{}}}}),
 			want: "\"Finished applying state transition\" prefix=blockchain slot=0 voluntaryExits=1",
 		},
 		{name: "has everything",
-			b: blockInterface.WrappedPhase0BeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{
+			b: wrapper.WrappedPhase0BeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{
 				Attestations:      []*ethpb.Attestation{{}},
 				Deposits:          []*ethpb.Deposit{{}},
 				AttesterSlashings: []*ethpb.AttesterSlashing{{}},

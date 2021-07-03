@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	blockInterface "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -65,7 +65,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	})
 	require.NoError(t, err)
 	block := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(ctx, blockInterface.WrappedPhase0SignedBeaconBlock(block)), "Could not save genesis block")
+	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block)), "Could not save genesis block")
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 

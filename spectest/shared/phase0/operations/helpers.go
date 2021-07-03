@@ -14,14 +14,15 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	blockInterface "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"google.golang.org/protobuf/proto"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
-type blockOperation func(context.Context, iface.BeaconState, blockInterface.SignedBeaconBlock) (iface.BeaconState, error)
+type blockOperation func(context.Context, iface.BeaconState, interfaces.SignedBeaconBlock) (iface.BeaconState, error)
 
 // RunBlockOperationTest takes in the prestate and the beacon block body, processes it through the
 // passed in block operation function and checks the post state with the expected post state.
@@ -54,7 +55,7 @@ func RunBlockOperationTest(
 	helpers.ClearCache()
 	b := testutil.NewBeaconBlock()
 	b.Block.Body = body
-	beaconState, err := operationFn(context.Background(), preState, blockInterface.WrappedPhase0SignedBeaconBlock(b))
+	beaconState, err := operationFn(context.Background(), preState, wrapper.WrappedPhase0SignedBeaconBlock(b))
 	if postSSZExists {
 		require.NoError(t, err)
 

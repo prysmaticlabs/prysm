@@ -10,7 +10,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
-	blockInterface "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -27,7 +27,7 @@ func TestRestore(t *testing.T) {
 	require.NoError(t, err)
 	head := testutil.NewBeaconBlock()
 	head.Block.Slot = 5000
-	require.NoError(t, backupDb.SaveBlock(ctx, blockInterface.WrappedPhase0SignedBeaconBlock(head)))
+	require.NoError(t, backupDb.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(head)))
 	root, err := head.Block.HashTreeRoot()
 	require.NoError(t, err)
 	st, err := testutil.NewBeaconState()

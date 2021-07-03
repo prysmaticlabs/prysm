@@ -9,7 +9,7 @@ import (
 	transition "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	blockInterface "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"go.opencensus.io/trace"
 )
@@ -18,7 +18,7 @@ import (
 func (s *State) ReplayBlocks(
 	ctx context.Context,
 	state iface.BeaconState,
-	signed []blockInterface.SignedBeaconBlock,
+	signed []interfaces.SignedBeaconBlock,
 	targetSlot types.Slot,
 ) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.ReplayBlocks")
@@ -58,7 +58,7 @@ func (s *State) ReplayBlocks(
 
 // LoadBlocks loads the blocks between start slot and end slot by recursively fetching from end block root.
 // The Blocks are returned in slot-descending order.
-func (s *State) LoadBlocks(ctx context.Context, startSlot, endSlot types.Slot, endBlockRoot [32]byte) ([]blockInterface.SignedBeaconBlock, error) {
+func (s *State) LoadBlocks(ctx context.Context, startSlot, endSlot types.Slot, endBlockRoot [32]byte) ([]interfaces.SignedBeaconBlock, error) {
 	// Nothing to load for invalid range.
 	if endSlot < startSlot {
 		return nil, fmt.Errorf("start slot %d >= end slot %d", startSlot, endSlot)
@@ -96,7 +96,7 @@ func (s *State) LoadBlocks(ctx context.Context, startSlot, endSlot types.Slot, e
 		return nil, errors.New("end block roots don't match")
 	}
 
-	filteredBlocks := []blockInterface.SignedBeaconBlock{blocks[length-1]}
+	filteredBlocks := []interfaces.SignedBeaconBlock{blocks[length-1]}
 	// Starting from second to last index because the last block is already in the filtered block list.
 	for i := length - 2; i >= 0; i-- {
 		if ctx.Err() != nil {
@@ -119,7 +119,7 @@ func (s *State) LoadBlocks(ctx context.Context, startSlot, endSlot types.Slot, e
 func executeStateTransitionStateGen(
 	ctx context.Context,
 	state iface.BeaconState,
-	signed blockInterface.SignedBeaconBlock,
+	signed interfaces.SignedBeaconBlock,
 ) (iface.BeaconState, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
@@ -264,7 +264,7 @@ func (s *State) genesisRoot(ctx context.Context) ([32]byte, error) {
 
 // Given the start slot and the end slot, this returns the finalized beacon blocks in between.
 // Since hot states don't have finalized blocks, this should ONLY be used for replaying cold state.
-func (s *State) loadFinalizedBlocks(ctx context.Context, startSlot, endSlot types.Slot) ([]blockInterface.SignedBeaconBlock, error) {
+func (s *State) loadFinalizedBlocks(ctx context.Context, startSlot, endSlot types.Slot) ([]interfaces.SignedBeaconBlock, error) {
 	f := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
 	bs, bRoots, err := s.beaconDB.Blocks(ctx, f)
 	if err != nil {
@@ -273,7 +273,7 @@ func (s *State) loadFinalizedBlocks(ctx context.Context, startSlot, endSlot type
 	if len(bs) != len(bRoots) {
 		return nil, errors.New("length of blocks and roots don't match")
 	}
-	fbs := make([]blockInterface.SignedBeaconBlock, 0, len(bs))
+	fbs := make([]interfaces.SignedBeaconBlock, 0, len(bs))
 	for i := len(bs) - 1; i >= 0; i-- {
 		if s.beaconDB.IsFinalizedBlock(ctx, bRoots[i]) {
 			fbs = append(fbs, bs[i])

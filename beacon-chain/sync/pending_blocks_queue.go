@@ -11,7 +11,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	blockInterface "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
@@ -299,7 +299,7 @@ func (s *Service) clearPendingSlots() {
 
 // Delete block from the list from the pending queue using the slot as key.
 // Note: this helper is not thread safe.
-func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b blockInterface.SignedBeaconBlock, r [32]byte) error {
+func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b interfaces.SignedBeaconBlock, r [32]byte) error {
 	mutexasserts.AssertRWMutexLocked(&s.pendingQueueLock)
 
 	blks := s.pendingBlocksInCache(slot)
@@ -307,7 +307,7 @@ func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b blockInterface.
 		return nil
 	}
 
-	newBlks := make([]blockInterface.SignedBeaconBlock, 0, len(blks))
+	newBlks := make([]interfaces.SignedBeaconBlock, 0, len(blks))
 	for _, blk := range blks {
 		if sszutil.DeepEqual(blk, b) {
 			continue
@@ -330,7 +330,7 @@ func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b blockInterface.
 
 // Insert block to the list in the pending queue using the slot as key.
 // Note: this helper is not thread safe.
-func (s *Service) insertBlockToPendingQueue(slot types.Slot, b blockInterface.SignedBeaconBlock, r [32]byte) error {
+func (s *Service) insertBlockToPendingQueue(slot types.Slot, b interfaces.SignedBeaconBlock, r [32]byte) error {
 	mutexasserts.AssertRWMutexLocked(&s.pendingQueueLock)
 
 	if s.seenPendingBlocks[r] {
@@ -346,21 +346,21 @@ func (s *Service) insertBlockToPendingQueue(slot types.Slot, b blockInterface.Si
 }
 
 // This returns signed beacon blocks given input key from slotToPendingBlocks.
-func (s *Service) pendingBlocksInCache(slot types.Slot) []blockInterface.SignedBeaconBlock {
+func (s *Service) pendingBlocksInCache(slot types.Slot) []interfaces.SignedBeaconBlock {
 	k := slotToCacheKey(slot)
 	value, ok := s.slotToPendingBlocks.Get(k)
 	if !ok {
-		return []blockInterface.SignedBeaconBlock{}
+		return []interfaces.SignedBeaconBlock{}
 	}
-	blks, ok := value.([]blockInterface.SignedBeaconBlock)
+	blks, ok := value.([]interfaces.SignedBeaconBlock)
 	if !ok {
-		return []blockInterface.SignedBeaconBlock{}
+		return []interfaces.SignedBeaconBlock{}
 	}
 	return blks
 }
 
 // This adds input signed beacon block to slotToPendingBlocks cache.
-func (s *Service) addPendingBlockToCache(b blockInterface.SignedBeaconBlock) error {
+func (s *Service) addPendingBlockToCache(b interfaces.SignedBeaconBlock) error {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return err
 	}

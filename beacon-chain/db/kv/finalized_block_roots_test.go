@@ -6,7 +6,8 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	blockInterface "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -61,7 +62,7 @@ func TestStore_IsFinalizedBlockGenesis(t *testing.T) {
 	blk.Block.Slot = 0
 	root, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, blockInterface.WrappedPhase0SignedBeaconBlock(blk)))
+	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk)))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 	assert.Equal(t, true, db.IsFinalizedBlock(ctx, root), "Finalized genesis block doesn't exist in db")
 }
@@ -169,15 +170,15 @@ func TestStore_IsFinalizedChildBlock(t *testing.T) {
 	}
 }
 
-func sszRootOrDie(t *testing.T, block blockInterface.SignedBeaconBlock) []byte {
+func sszRootOrDie(t *testing.T, block interfaces.SignedBeaconBlock) []byte {
 	root, err := block.Block().HashTreeRoot()
 	require.NoError(t, err)
 	return root[:]
 }
 
-func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []blockInterface.SignedBeaconBlock {
+func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []interfaces.SignedBeaconBlock {
 	blocks := make([]*ethpb.SignedBeaconBlock, n)
-	ifaceBlocks := make([]blockInterface.SignedBeaconBlock, n)
+	ifaceBlocks := make([]interfaces.SignedBeaconBlock, n)
 	for j := i; j < n+i; j++ {
 		parentRoot := make([]byte, 32)
 		copy(parentRoot, previousRoot[:])
@@ -187,7 +188,7 @@ func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []blockInterfa
 		var err error
 		previousRoot, err = blocks[j-i].Block.HashTreeRoot()
 		require.NoError(t, err)
-		ifaceBlocks[j-i] = blockInterface.WrappedPhase0SignedBeaconBlock(blocks[j-i])
+		ifaceBlocks[j-i] = wrapper.WrappedPhase0SignedBeaconBlock(blocks[j-i])
 	}
 	return ifaceBlocks
 }

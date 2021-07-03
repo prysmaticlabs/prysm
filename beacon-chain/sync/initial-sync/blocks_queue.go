@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
-	blockInterface "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/sirupsen/logrus"
 )
 
@@ -89,7 +89,7 @@ type blocksQueue struct {
 // blocksQueueFetchedData is a data container that is returned from a queue on each step.
 type blocksQueueFetchedData struct {
 	pid    peer.ID
-	blocks []blockInterface.SignedBeaconBlock
+	blocks []interfaces.SignedBeaconBlock
 }
 
 // newBlocksQueue creates initialized priority queue.

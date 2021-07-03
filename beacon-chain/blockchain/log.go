@@ -7,7 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	blockInterface "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/sirupsen/logrus"
@@ -16,7 +16,7 @@ import (
 var log = logrus.WithField("prefix", "blockchain")
 
 // logs state transition related data every slot.
-func logStateTransitionData(b blockInterface.BeaconBlock) {
+func logStateTransitionData(b interfaces.BeaconBlock) {
 	log := log.WithField("slot", b.Slot)
 	if len(b.Body().Attestations()) > 0 {
 		log = log.WithField("attestations", len(b.Body().Attestations()))
@@ -36,7 +36,7 @@ func logStateTransitionData(b blockInterface.BeaconBlock) {
 	log.Info("Finished applying state transition")
 }
 
-func logBlockSyncStatus(block blockInterface.BeaconBlock, blockRoot [32]byte, finalized *ethpb.Checkpoint, receivedTime time.Time, genesisTime uint64) error {
+func logBlockSyncStatus(block interfaces.BeaconBlock, blockRoot [32]byte, finalized *ethpb.Checkpoint, receivedTime time.Time, genesisTime uint64) error {
 	startTime, err := helpers.SlotToTime(genesisTime, block.Slot())
 	if err != nil {
 		return err

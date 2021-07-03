@@ -20,7 +20,7 @@ import (
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	blockInterface "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -152,7 +152,7 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, validators)
 
 	b := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(context.Background(), blockInterface.WrappedPhase0SignedBeaconBlock(b)))
+	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s, err := testutil.NewBeaconState()
@@ -240,7 +240,7 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, validators)
 
 	b := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(context.Background(), blockInterface.WrappedPhase0SignedBeaconBlock(b)))
+	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -308,7 +308,7 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
 	b := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(context.Background(), blockInterface.WrappedPhase0SignedBeaconBlock(b)))
+	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s, err := testutil.NewBeaconState()
@@ -401,7 +401,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
 	b := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(context.Background(), blockInterface.WrappedPhase0SignedBeaconBlock(b)))
+	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s, err := testutil.NewBeaconState()
@@ -604,7 +604,7 @@ func TestValidateAggregateAndProof_RejectWhenAttEpochDoesntEqualTargetEpoch(t *t
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
 	b := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(context.Background(), blockInterface.WrappedPhase0SignedBeaconBlock(b)))
+	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s, err := testutil.NewBeaconState()

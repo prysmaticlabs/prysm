@@ -8,7 +8,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	blockInterface "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	bolt "go.etcd.io/bbolt"
@@ -183,7 +184,7 @@ func (s *Store) IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool {
 // FinalizedChildBlock returns the child block of a provided finalized block. If
 // no finalized block or its respective child block exists we return with a nil
 // block.
-func (s *Store) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (blockInterface.SignedBeaconBlock, error) {
+func (s *Store) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (interfaces.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.FinalizedChildBlock")
 	defer span.End()
 
@@ -209,5 +210,5 @@ func (s *Store) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (bl
 		return decode(ctx, enc, blk)
 	})
 	traceutil.AnnotateError(span, err)
-	return blockInterface.WrappedPhase0SignedBeaconBlock(blk), err
+	return wrapper.WrappedPhase0SignedBeaconBlock(blk), err
 }

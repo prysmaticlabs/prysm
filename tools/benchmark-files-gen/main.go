@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	blockInterface "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/benchutil"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/interop"
@@ -103,7 +103,7 @@ func generateMarshalledFullStateAndBlock() error {
 	if err != nil {
 		return err
 	}
-	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, blockInterface.WrappedPhase0SignedBeaconBlock(block))
+	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 	if err != nil {
 		return err
 	}
@@ -127,7 +127,7 @@ func generateMarshalledFullStateAndBlock() error {
 	}
 	block.Block.Body.Attestations = append(atts, block.Block.Body.Attestations...)
 
-	s, err := state.CalculateStateRoot(context.Background(), beaconState, blockInterface.WrappedPhase0SignedBeaconBlock(block))
+	s, err := state.CalculateStateRoot(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 	if err != nil {
 		return errors.Wrap(err, "could not calculate state root")
 	}
@@ -158,7 +158,7 @@ func generateMarshalledFullStateAndBlock() error {
 	}
 
 	// Running a single state transition to make sure the generated files aren't broken.
-	_, err = state.ExecuteStateTransition(context.Background(), beaconState, blockInterface.WrappedPhase0SignedBeaconBlock(block))
+	_, err = state.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 	if err != nil {
 		return err
 	}
@@ -192,7 +192,7 @@ func generate2FullEpochState() error {
 		if err != nil {
 			return err
 		}
-		beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, blockInterface.WrappedPhase0SignedBeaconBlock(block))
+		beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 		if err != nil {
 			return err
 		}

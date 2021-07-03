@@ -13,7 +13,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb_v1alpha1 "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	blockInterface "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/mock"
@@ -74,7 +74,7 @@ func TestStreamEvents_BlockEvents(t *testing.T) {
 			itemToSend: &feed.Event{
 				Type: blockfeed.ReceivedBlock,
 				Data: &blockfeed.ReceivedBlockData{
-					SignedBlock: blockInterface.WrappedPhase0SignedBeaconBlock(wantedBlock),
+					SignedBlock: wrapper.WrappedPhase0SignedBeaconBlock(wantedBlock),
 				},
 			},
 			feed: srv.BlockNotifier.BlockFeed(),

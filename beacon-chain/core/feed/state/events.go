@@ -7,7 +7,7 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	blockInterface "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 )
 
 const (
@@ -35,7 +35,7 @@ type BlockProcessedData struct {
 	// BlockRoot of the processed block.
 	BlockRoot [32]byte
 	// SignedBlock is the physical processed block.
-	SignedBlock blockInterface.SignedBeaconBlock
+	SignedBlock interfaces.SignedBeaconBlock
 	// Verified is true if the block's BLS contents have been verified.
 	Verified bool
 }
