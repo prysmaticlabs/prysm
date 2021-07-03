@@ -66,7 +66,7 @@ go_fuzz_test(
         "//fuzz/testing:go_default_library",
         "//shared/params:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
-        "//proto/eth/v1alpha1/interfaces:go_default_library",
+        "//proto/interfaces:go_default_library",
         "//beacon-chain/operations/attestations:go_default_library",
         "//beacon-chain/p2p/testing:go_default_library",
         "//beacon-chain/sync:go_default_library",
