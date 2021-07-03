@@ -10,9 +10,9 @@ import (
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	blockInterface "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -43,7 +43,7 @@ type GenesisFetcher interface {
 type HeadFetcher interface {
 	HeadSlot() types.Slot
 	HeadRoot(ctx context.Context) ([]byte, error)
-	HeadBlock(ctx context.Context) (interfaces.SignedBeaconBlock, error)
+	HeadBlock(ctx context.Context) (blockInterface.SignedBeaconBlock, error)
 	HeadState(ctx context.Context) (iface.BeaconState, error)
 	HeadValidatorsIndices(ctx context.Context, epoch types.Epoch) ([]types.ValidatorIndex, error)
 	HeadSeed(ctx context.Context, epoch types.Epoch) ([32]byte, error)
@@ -140,7 +140,7 @@ func (s *Service) HeadRoot(ctx context.Context) ([]byte, error) {
 // HeadBlock returns the head block of the chain.
 // If the head is nil from service struct,
 // it will attempt to get the head block from DB.
-func (s *Service) HeadBlock(ctx context.Context) (interfaces.SignedBeaconBlock, error) {
+func (s *Service) HeadBlock(ctx context.Context) (blockInterface.SignedBeaconBlock, error) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 

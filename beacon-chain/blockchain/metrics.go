@@ -9,8 +9,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	blockInterface "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -228,7 +228,7 @@ func reportEpochMetrics(ctx context.Context, postState, headState iface.BeaconSt
 	return nil
 }
 
-func reportAttestationInclusion(blk interfaces.BeaconBlock) {
+func reportAttestationInclusion(blk blockInterface.BeaconBlock) {
 	for _, att := range blk.Body().Attestations() {
 		attestationInclusionDelay.Observe(float64(blk.Slot() - att.Data.Slot))
 	}

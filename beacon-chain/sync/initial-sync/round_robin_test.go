@@ -11,8 +11,8 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	blockInterface "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/abool"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -282,7 +282,7 @@ func TestService_roundRobinSync(t *testing.T) {
 			genesisRoot := cache.rootCache[0]
 			cache.RUnlock()
 
-			err := beaconDB.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()))
+			err := beaconDB.SaveBlock(context.Background(), blockInterface.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()))
 			require.NoError(t, err)
 
 			st, err := testutil.NewBeaconState()
@@ -323,7 +323,7 @@ func TestService_processBlock(t *testing.T) {
 	genesisBlk := testutil.NewBeaconBlock()
 	genesisBlkRoot, err := genesisBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	err = beaconDB.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(genesisBlk))
+	err = beaconDB.SaveBlock(context.Background(), blockInterface.WrappedPhase0SignedBeaconBlock(genesisBlk))
 	require.NoError(t, err)
 	st, err := testutil.NewBeaconState()
 	require.NoError(t, err)
@@ -354,23 +354,23 @@ func TestService_processBlock(t *testing.T) {
 		blk2.Block.ParentRoot = blk1Root[:]
 
 		// Process block normally.
-		err = s.processBlock(ctx, genesis, interfaces.WrappedPhase0SignedBeaconBlock(blk1), func(
-			ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
+		err = s.processBlock(ctx, genesis, blockInterface.WrappedPhase0SignedBeaconBlock(blk1), func(
+			ctx context.Context, block blockInterface.SignedBeaconBlock, blockRoot [32]byte) error {
 			assert.NoError(t, s.cfg.Chain.ReceiveBlock(ctx, block, blockRoot))
 			return nil
 		})
 		assert.NoError(t, err)
 
 		// Duplicate processing should trigger error.
-		err = s.processBlock(ctx, genesis, interfaces.WrappedPhase0SignedBeaconBlock(blk1), func(
-			ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
+		err = s.processBlock(ctx, genesis, blockInterface.WrappedPhase0SignedBeaconBlock(blk1), func(
+			ctx context.Context, block blockInterface.SignedBeaconBlock, blockRoot [32]byte) error {
 			return nil
 		})
 		assert.ErrorContains(t, errBlockAlreadyProcessed.Error(), err)
 
 		// Continue normal processing, should proceed w/o errors.
-		err = s.processBlock(ctx, genesis, interfaces.WrappedPhase0SignedBeaconBlock(blk2), func(
-			ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
+		err = s.processBlock(ctx, genesis, blockInterface.WrappedPhase0SignedBeaconBlock(blk2), func(
+			ctx context.Context, block blockInterface.SignedBeaconBlock, blockRoot [32]byte) error {
 			assert.NoError(t, s.cfg.Chain.ReceiveBlock(ctx, block, blockRoot))
 			return nil
 		})
@@ -384,7 +384,7 @@ func TestService_processBlockBatch(t *testing.T) {
 	genesisBlk := testutil.NewBeaconBlock()
 	genesisBlkRoot, err := genesisBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	err = beaconDB.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(genesisBlk))
+	err = beaconDB.SaveBlock(context.Background(), blockInterface.WrappedPhase0SignedBeaconBlock(genesisBlk))
 	require.NoError(t, err)
 	st, err := testutil.NewBeaconState()
 	require.NoError(t, err)
@@ -405,7 +405,7 @@ func TestService_processBlockBatch(t *testing.T) {
 	genesis := makeGenesisTime(32)
 
 	t.Run("process non-linear batch", func(t *testing.T) {
-		var batch []interfaces.SignedBeaconBlock
+		var batch []blockInterface.SignedBeaconBlock
 		currBlockRoot := genesisBlkRoot
 		for i := types.Slot(1); i < 10; i++ {
 			parentRoot := currBlockRoot
@@ -414,13 +414,13 @@ func TestService_processBlockBatch(t *testing.T) {
 			blk1.Block.ParentRoot = parentRoot[:]
 			blk1Root, err := blk1.Block.HashTreeRoot()
 			require.NoError(t, err)
-			err = beaconDB.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(blk1))
+			err = beaconDB.SaveBlock(context.Background(), blockInterface.WrappedPhase0SignedBeaconBlock(blk1))
 			require.NoError(t, err)
-			batch = append(batch, interfaces.WrappedPhase0SignedBeaconBlock(blk1))
+			batch = append(batch, blockInterface.WrappedPhase0SignedBeaconBlock(blk1))
 			currBlockRoot = blk1Root
 		}
 
-		var batch2 []interfaces.SignedBeaconBlock
+		var batch2 []blockInterface.SignedBeaconBlock
 		for i := types.Slot(10); i < 20; i++ {
 			parentRoot := currBlockRoot
 			blk1 := testutil.NewBeaconBlock()
@@ -428,15 +428,15 @@ func TestService_processBlockBatch(t *testing.T) {
 			blk1.Block.ParentRoot = parentRoot[:]
 			blk1Root, err := blk1.Block.HashTreeRoot()
 			require.NoError(t, err)
-			err = beaconDB.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(blk1))
+			err = beaconDB.SaveBlock(context.Background(), blockInterface.WrappedPhase0SignedBeaconBlock(blk1))
 			require.NoError(t, err)
-			batch2 = append(batch2, interfaces.WrappedPhase0SignedBeaconBlock(blk1))
+			batch2 = append(batch2, blockInterface.WrappedPhase0SignedBeaconBlock(blk1))
 			currBlockRoot = blk1Root
 		}
 
 		// Process block normally.
 		err = s.processBatchedBlocks(ctx, genesis, batch, func(
-			ctx context.Context, blks []interfaces.SignedBeaconBlock, blockRoots [][32]byte) error {
+			ctx context.Context, blks []blockInterface.SignedBeaconBlock, blockRoots [][32]byte) error {
 			assert.NoError(t, s.cfg.Chain.ReceiveBlockBatch(ctx, blks, blockRoots))
 			return nil
 		})
@@ -444,12 +444,12 @@ func TestService_processBlockBatch(t *testing.T) {
 
 		// Duplicate processing should trigger error.
 		err = s.processBatchedBlocks(ctx, genesis, batch, func(
-			ctx context.Context, blocks []interfaces.SignedBeaconBlock, blockRoots [][32]byte) error {
+			ctx context.Context, blocks []blockInterface.SignedBeaconBlock, blockRoots [][32]byte) error {
 			return nil
 		})
 		assert.ErrorContains(t, "no good blocks in batch", err)
 
-		var badBatch2 []interfaces.SignedBeaconBlock
+		var badBatch2 []blockInterface.SignedBeaconBlock
 		for i, b := range batch2 {
 			// create a non-linear batch
 			if i%3 == 0 && i != 0 {
@@ -460,7 +460,7 @@ func TestService_processBlockBatch(t *testing.T) {
 
 		// Bad batch should fail because it is non linear
 		err = s.processBatchedBlocks(ctx, genesis, badBatch2, func(
-			ctx context.Context, blks []interfaces.SignedBeaconBlock, blockRoots [][32]byte) error {
+			ctx context.Context, blks []blockInterface.SignedBeaconBlock, blockRoots [][32]byte) error {
 			return nil
 		})
 		expectedSubErr := "expected linear block list"
@@ -468,7 +468,7 @@ func TestService_processBlockBatch(t *testing.T) {
 
 		// Continue normal processing, should proceed w/o errors.
 		err = s.processBatchedBlocks(ctx, genesis, batch2, func(
-			ctx context.Context, blks []interfaces.SignedBeaconBlock, blockRoots [][32]byte) error {
+			ctx context.Context, blks []blockInterface.SignedBeaconBlock, blockRoots [][32]byte) error {
 			assert.NoError(t, s.cfg.Chain.ReceiveBlockBatch(ctx, blks, blockRoots))
 			return nil
 		})
@@ -512,7 +512,7 @@ func TestService_blockProviderScoring(t *testing.T) {
 	genesisRoot := cache.rootCache[0]
 	cache.RUnlock()
 
-	err := beaconDB.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()))
+	err := beaconDB.SaveBlock(context.Background(), blockInterface.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()))
 	require.NoError(t, err)
 
 	st, err := testutil.NewBeaconState()
@@ -576,7 +576,7 @@ func TestService_syncToFinalizedEpoch(t *testing.T) {
 	genesisRoot := cache.rootCache[0]
 	cache.RUnlock()
 
-	err := beaconDB.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()))
+	err := beaconDB.SaveBlock(context.Background(), blockInterface.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()))
 	require.NoError(t, err)
 
 	st, err := testutil.NewBeaconState()

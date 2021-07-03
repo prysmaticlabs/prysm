@@ -6,15 +6,15 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	blockInterface "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestSortedObj_SortBlocksRoots(t *testing.T) {
 	source := rand.NewSource(33)
 	randGen := rand.New(source)
-	var blks []interfaces.SignedBeaconBlock
+	var blks []blockInterface.SignedBeaconBlock
 	var roots [][32]byte
 	randFunc := func() int64 {
 		return randGen.Int63n(50)
@@ -22,7 +22,7 @@ func TestSortedObj_SortBlocksRoots(t *testing.T) {
 
 	for i := 0; i < 10; i++ {
 		slot := types.Slot(randFunc())
-		newBlk := interfaces.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: slot}})
+		newBlk := blockInterface.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: slot}})
 		blks = append(blks, newBlk)
 		root := bytesutil.ToBytes32(bytesutil.Bytes32(uint64(slot)))
 		roots = append(roots, root)
@@ -47,7 +47,7 @@ func TestSortedObj_SortBlocksRoots(t *testing.T) {
 func TestSortedObj_NoDuplicates(t *testing.T) {
 	source := rand.NewSource(33)
 	randGen := rand.New(source)
-	var blks []interfaces.SignedBeaconBlock
+	var blks []blockInterface.SignedBeaconBlock
 	var roots [][32]byte
 	randFunc := func() int64 {
 		return randGen.Int63n(50)
@@ -57,7 +57,7 @@ func TestSortedObj_NoDuplicates(t *testing.T) {
 		slot := types.Slot(randFunc())
 		newBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: slot}}
 		// append twice
-		blks = append(blks, interfaces.WrappedPhase0SignedBeaconBlock(newBlk), interfaces.WrappedPhase0SignedBeaconBlock(newBlk))
+		blks = append(blks, blockInterface.WrappedPhase0SignedBeaconBlock(newBlk), blockInterface.WrappedPhase0SignedBeaconBlock(newBlk))
 
 		// append twice
 		root := bytesutil.ToBytes32(bytesutil.Bytes32(uint64(slot)))
