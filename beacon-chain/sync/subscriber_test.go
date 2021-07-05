@@ -189,6 +189,7 @@ func TestSubscribe_HandlesPanic(t *testing.T) {
 			},
 			P2P: p,
 		},
+		subTopicMap:  map[string]*pubsub.Subscription{},
 		chainStarted: abool.New(),
 	}
 	var err error
