@@ -100,18 +100,14 @@ func TestLoadConfigFileMainnet(t *testing.T) {
 	}
 
 	t.Run("mainnet", func(t *testing.T) {
-		mainnetConfigFile := configFilePath(t, "mainnet")
+		mainnetConfigFile := ConfigFilePath(t, "mainnet")
 		LoadChainConfigFile(mainnetConfigFile)
-		mainnetPresetFile := configFilePath(t, "mainnet")
-		LoadChainConfigFile(mainnetPresetFile)
 		assertVals("mainnet", MainnetConfig(), BeaconConfig())
 	})
 
 	t.Run("minimal", func(t *testing.T) {
-		minimalConfigFile := configFilePath(t, "minimal")
+		minimalConfigFile := ConfigFilePath(t, "minimal")
 		LoadChainConfigFile(minimalConfigFile)
-		minimalPresetFile := presetsFilePath(t, "minimal")
-		LoadChainConfigFile(minimalPresetFile)
 		assertVals("minimal", MinimalSpecConfig(), BeaconConfig())
 	})
 }
@@ -205,20 +201,12 @@ func Test_replaceHexStringWithYAMLFormat(t *testing.T) {
 	}
 }
 
-// configFilePath sets the proper config and returns the relevant
+// ConfigFilePath sets the proper config and returns the relevant
 // config file path from eth2-spec-tests directory.
-func configFilePath(t *testing.T, config string) string {
-	filepath, err := bazel.Runfile("external/eth2_spec")
+func ConfigFilePath(t *testing.T, config string) string {
+	configFolderPath := path.Join("tests", config)
+	filepath, err := bazel.Runfile(configFolderPath)
 	require.NoError(t, err)
-	configFilePath := path.Join(filepath, "configs", config+".yaml")
-	return configFilePath
-}
-
-// presetsFilePath sets the proper preset and returns the relevant
-// preset file path from eth2-spec-tests directory.
-func presetsFilePath(t *testing.T, config string) string {
-	filepath, err := bazel.Runfile("external/eth2_spec")
-	require.NoError(t, err)
-	configFilePath := path.Join(filepath, "presets", config, "phase0.yaml")
+	configFilePath := path.Join(filepath, "config", "phase0.yaml")
 	return configFilePath
 }
