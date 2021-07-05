@@ -88,6 +88,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.AltairForkEpoch = math.MaxUint64
 	minimalConfig.SyncCommitteeSize = 32
 	minimalConfig.InactivityScoreBias = 4
+	minimalConfig.EpochsPerSyncCommitteePeriod = 8
 
 	return minimalConfig
 }
