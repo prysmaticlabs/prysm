@@ -235,7 +235,7 @@ func (s *Service) createLocalNode(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not add eth2 fork version entry to enr")
 	}
-	localNode = intializeAttSubnets(localNode)
+	localNode = initializeAttSubnets(localNode)
 	return initializeSyncCommSubnets(localNode), nil
 }
 

@@ -67,6 +67,11 @@ const (
 	RPCMetaDataTopicV2 = protocolPrefix + MetadataMessageName + SchemaVersionV2
 )
 
+// RPC errors for topic parsing.
+const (
+	invalidRPCMessageType = "provided message type doesn't have a registered mapping"
+)
+
 // RPCTopicMappings map the base message type to the rpc request.
 var RPCTopicMappings = map[string]interface{}{
 	// RPC Status Message
@@ -223,7 +228,7 @@ func (r RPCTopic) Version() string {
 // type and epoch.
 func TopicFromMessage(msg string, epoch types.Epoch) (string, error) {
 	if !messageMapping[msg] {
-		return "", errors.Errorf("message type %s doesn't have a registered mapping", msg)
+		return "", errors.Errorf("%s: %s", invalidRPCMessageType, msg)
 	}
 	version := SchemaVersionV1
 	isAltair := epoch >= params.BeaconConfig().AltairForkEpoch

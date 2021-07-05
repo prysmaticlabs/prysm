@@ -1,10 +1,15 @@
 package p2p
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
+	eth2types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -71,5 +76,40 @@ func TestTopicDeconstructor(t *testing.T) {
 				assert.Equal(t, test.output[2], version)
 			}
 		})
+	}
+}
+
+func TestTopicFromMessage_CorrectType(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	bCfg := params.BeaconConfig()
+	forkEpoch := eth2types.Epoch(100)
+	bCfg.AltairForkEpoch = forkEpoch
+	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.AltairForkVersion)] = eth2types.Epoch(100)
+	params.OverrideBeaconConfig(bCfg)
+
+	// Garbage Message
+	badMsg := "wljdjska"
+	_, err := TopicFromMessage(badMsg, 0)
+	assert.ErrorContains(t, fmt.Sprintf("%s: %s", invalidRPCMessageType, badMsg), err)
+	// Before Fork
+	for m, _ := range messageMapping {
+		topic, err := TopicFromMessage(m, 0)
+		assert.NoError(t, err)
+
+		assert.Equal(t, true, strings.Contains(topic, SchemaVersionV1))
+		_, _, version, err := TopicDeconstructor(topic)
+		assert.NoError(t, err)
+		assert.Equal(t, SchemaVersionV1, version)
+	}
+
+	// After Fork
+	for m, _ := range messageMapping {
+		topic, err := TopicFromMessage(m, forkEpoch)
+		assert.NoError(t, err)
+
+		assert.Equal(t, true, strings.Contains(topic, SchemaVersionV2))
+		_, _, version, err := TopicDeconstructor(topic)
+		assert.NoError(t, err)
+		assert.Equal(t, SchemaVersionV2, version)
 	}
 }

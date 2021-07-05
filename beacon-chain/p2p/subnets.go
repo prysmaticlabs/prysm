@@ -2,12 +2,12 @@ package p2p
 
 import (
 	"context"
-	"errors"
 	"strings"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"go.opencensus.io/trace"
@@ -159,7 +159,7 @@ func (s *Service) updateSubnetRecordWithMetadataV2(bitV bitfield.Bitvector64, bi
 
 // Initializes a bitvector of attestation subnets beacon nodes is subscribed to
 // and creates a new ENR entry with its default value.
-func intializeAttSubnets(node *enode.LocalNode) *enode.LocalNode {
+func initializeAttSubnets(node *enode.LocalNode) *enode.LocalNode {
 	bitV := bitfield.NewBitvector64()
 	entry := enr.WithEntry(attSubnetEnrKey, bitV.Bytes())
 	node.Set(entry)
@@ -182,6 +182,9 @@ func attSubnets(record *enr.Record) ([]uint64, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(bitV) != determineSize(int(attestationSubnetCount)) {
+		return []uint64{}, errors.Errorf("invalid bitvector provided, it has a size of %d", len(bitV))
+	}
 	var committeeIdxs []uint64
 	for i := uint64(0); i < attestationSubnetCount; i++ {
 		if bitV.BitAt(i) {
@@ -197,6 +200,9 @@ func syncSubnets(record *enr.Record) ([]uint64, error) {
 	bitV, err := syncBitvector(record)
 	if err != nil {
 		return nil, err
+	}
+	if len(bitV) != determineSize(int(syncCommsSubnetCount)) {
+		return []uint64{}, errors.Errorf("invalid bitvector provided, it has a size of %d", len(bitV))
 	}
 	var committeeIdxs []uint64
 	for i := uint64(0); i < syncCommsSubnetCount; i++ {
@@ -240,4 +246,12 @@ func (s *Service) subnetLocker(i uint64) *sync.RWMutex {
 		s.subnetsLock[i] = l
 	}
 	return l
+}
+
+func determineSize(bitCount int) int {
+	numOfBytes := bitCount / 8
+	if bitCount%8 != 0 {
+		numOfBytes++
+	}
+	return numOfBytes
 }
