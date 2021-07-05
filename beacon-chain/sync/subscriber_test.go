@@ -92,6 +92,7 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 		},
 		seenAttesterSlashingCache: make(map[uint64]bool),
 		chainStarted:              abool.New(),
+		subTopicMap:               map[string]*pubsub.Subscription{},
 	}
 	topic := "/eth2/%x/attester_slashing"
 	var wg sync.WaitGroup
@@ -147,6 +148,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 		},
 		seenProposerSlashingCache: c,
 		chainStarted:              abool.New(),
+		subTopicMap:               map[string]*pubsub.Subscription{},
 	}
 	topic := "/eth2/%x/proposer_slashing"
 	var wg sync.WaitGroup
@@ -262,12 +264,15 @@ func TestStaticSubnets(t *testing.T) {
 			P2P: p,
 		},
 		chainStarted: abool.New(),
+		subTopicMap:  map[string]*pubsub.Subscription{},
 	}
 	defaultTopic := "/eth2/%x/beacon_attestation_%d"
+	d, err := r.currentForkDigest()
+	assert.NoError(t, err)
 	r.subscribeStaticWithSubnets(defaultTopic, r.noopValidator, func(_ context.Context, msg proto.Message) error {
 		// no-op
 		return nil
-	}, [4]byte{})
+	}, d)
 	topics := r.cfg.P2P.PubSub().GetTopics()
 	if uint64(len(topics)) != params.BeaconNetworkConfig().AttestationSubnetCount {
 		t.Errorf("Wanted the number of subnet topics registered to be %d but got %d", params.BeaconNetworkConfig().AttestationSubnetCount, len(topics))
