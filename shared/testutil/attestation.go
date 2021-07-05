@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/interfaces/version"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -247,4 +248,15 @@ func HydrateIndexedAttestation(a *ethpb.IndexedAttestation) *ethpb.IndexedAttest
 	}
 	a.Data = HydrateAttestationData(a.Data)
 	return a
+}
+
+// HydrateSyncCommittee hydrates the provided sync committee message.
+func HydrateSyncCommittee(s *prysmv2.SyncCommitteeMessage) *prysmv2.SyncCommitteeMessage {
+	if s.Signature == nil {
+		s.Signature = make([]byte, 96)
+	}
+	if s.BlockRoot == nil {
+		s.BlockRoot = make([]byte, 32)
+	}
+	return s
 }
