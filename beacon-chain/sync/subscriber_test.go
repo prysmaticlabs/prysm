@@ -45,6 +45,7 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 				Genesis:        time.Now(),
 			},
 		},
+		subTopicMap:  map[string]*pubsub.Subscription{},
 		chainStarted: abool.New(),
 	}
 	var err error
