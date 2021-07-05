@@ -245,7 +245,6 @@ filegroup(
     url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v1.1.0-alpha.3/mainnet.tar.gz",
 )
 
-
 http_archive(
     name = "com_github_bazelbuild_buildtools",
     sha256 = "7a182df18df1debabd9e36ae07c8edfa1378b8424a04561b674d933b965372b3",
