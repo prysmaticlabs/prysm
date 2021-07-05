@@ -1066,8 +1066,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_golang_mock",
         importpath = "github.com/golang/mock",
-        sum = "h1:l75CXGRSwbaYNpl/Z2X1XIIAMSCquvXgpVZDhwEIJsc=",
-        version = "v1.4.4",
+        sum = "h1:ErTB+efbowRARo13NNdxyJji2egdxLGQhRaY+DUumQc=",
+        version = "v1.6.0",
     )
     go_repository(
         name = "com_github_golang_protobuf",
@@ -1374,12 +1374,6 @@ def prysm_deps():
         importpath = "github.com/hashicorp/serf",
         sum = "h1:YZ7UKsJv+hKjqGVUUbtE3HNj79Eln2oQ75tniF6iPt0=",
         version = "v0.8.2",
-    )
-    go_repository(
-        name = "com_github_hashicorp_vault_sdk",
-        importpath = "github.com/hashicorp/vault/sdk",
-        sum = "h1:hvVswvMA9LvXwLBFDJLIoDBXi8hj90Q+gSS7vRYmLvQ=",
-        version = "v0.2.0",
     )
 
     go_repository(
@@ -2313,12 +2307,6 @@ def prysm_deps():
     )
 
     go_repository(
-        name = "com_github_mitchellh_copystructure",
-        importpath = "github.com/mitchellh/copystructure",
-        sum = "h1:vpKXTN4ewci03Vljg/q9QvCGUDttBOGBIa15WveJJGw=",
-        version = "v1.2.0",
-    )
-    go_repository(
         name = "com_github_mitchellh_go_homedir",
         importpath = "github.com/mitchellh/go-homedir",
         sum = "h1:lukF9ziXFxDFPkA1vsr5zpc1XuPDn/wFntq5mG+4E0Y=",
@@ -2350,12 +2338,6 @@ def prysm_deps():
         version = "v1.4.1",
     )
 
-    go_repository(
-        name = "com_github_mitchellh_reflectwalk",
-        importpath = "github.com/mitchellh/reflectwalk",
-        sum = "h1:G2LzWKi524PWgd3mLHV8Y5k7s6XUvT0Gef6zxSIeXaQ=",
-        version = "v1.0.2",
-    )
     go_repository(
         name = "com_github_modern_go_concurrent",
         importpath = "github.com/modern-go/concurrent",
@@ -2779,8 +2761,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",
         importpath = "github.com/prysmaticlabs/go-bitfield",
-        sum = "h1:6A0JbKs1AxIxDpLXnfF1J8ayKQrSM/50eH/nL1vGVnE=",
-        version = "v0.0.0-20210630213502-e40562dd62c4",
+        sum = "h1:3feHotPCE8LiZ12vizC8UPPrguf2FgGmiphi3n2xkPc=",
+        version = "v0.0.0-20210701052645-7ef93542bdc8",
     )
     go_repository(
         name = "com_github_prysmaticlabs_prombbolt",

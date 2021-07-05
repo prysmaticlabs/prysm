@@ -29,11 +29,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/beacon"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/debug"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/events"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/node"
-	beaconv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/beacon"
-	debugv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/debug"
-	nodev1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/node"
-	validatorv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
+	node "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/node"
+	beacon2 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/beacon"
+	debug2 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/debug"
+	node2 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/node"
+	validator2 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
 	validatorv2 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v2/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
@@ -169,7 +169,7 @@ func (s *Service) Start() {
 	}
 	s.grpcServer = grpc.NewServer(opts...)
 
-	validatorServer := &validatorv1alpha1.Server{
+	validatorServer := &validator2.Server{
 		Ctx:                    s.ctx,
 		BeaconDB:               s.cfg.BeaconDB,
 		AttestationCache:       cache.NewAttestationCache(),
@@ -197,6 +197,7 @@ func (s *Service) Start() {
 		SlashingsPool:          s.cfg.SlashingsPool,
 		StateGen:               s.cfg.StateGen,
 	}
+
 	validatorServerV2 := &validatorv2.Server{
 		V1Server:          validatorServer,
 		Ctx:               s.ctx,
@@ -204,7 +205,8 @@ func (s *Service) Start() {
 		P2P:               s.cfg.Broadcaster,
 		SyncCommitteePool: s.cfg.SyncCommitteeObjectPool,
 	}
-	nodeServer := &nodev1alpha1.Server{
+
+	nodeServer := &node2.Server{
 		LogsStreamer:         logutil.NewStreamServer(),
 		StreamLogsBufferSize: 1000, // Enough to handle bursts of beacon node logs for gRPC streaming.
 		BeaconDB:             s.cfg.BeaconDB,
@@ -228,7 +230,7 @@ func (s *Service) Start() {
 		HeadFetcher:        s.cfg.HeadFetcher,
 	}
 
-	beaconChainServer := &beaconv1alpha1.Server{
+	beaconChainServer := &beacon2.Server{
 		Ctx:                         s.ctx,
 		BeaconDB:                    s.cfg.BeaconDB,
 		AttestationsPool:            s.cfg.AttestationsPool,
@@ -281,7 +283,8 @@ func (s *Service) Start() {
 	})
 	if s.cfg.EnableDebugRPCEndpoints {
 		log.Info("Enabled debug gRPC endpoints")
-		debugServer := &debugv1alpha1.Server{
+
+		debugServer := &debug2.Server{
 			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 			BeaconDB:           s.cfg.BeaconDB,
 			StateGen:           s.cfg.StateGen,

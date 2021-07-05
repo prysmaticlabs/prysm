@@ -46,7 +46,7 @@ func TestImportExportSlashingProtectionCli_RoundTrip(t *testing.T) {
 	// Create some mock slashing protection history. and JSON file
 	pubKeys, err := mocks.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
-	attestingHistory, proposalHistory := mocks.MockAttestingAndProposalHistories(numValidators)
+	attestingHistory, proposalHistory := mocks.MockAttestingAndProposalHistories(pubKeys)
 	require.NoError(t, err)
 	mockJSON, err := mocks.MockSlashingProtectionJSON(pubKeys, attestingHistory, proposalHistory)
 	require.NoError(t, err)

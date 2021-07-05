@@ -27,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	grpc "google.golang.org/grpc"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
@@ -133,7 +134,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	m.validatorClient.EXPECT().ProposeAttestation(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.Attestation{}),
-	).Do(func(_ context.Context, att *ethpb.Attestation) {
+	).Do(func(_ context.Context, att *ethpb.Attestation, opts ...grpc.CallOption) {
 		generatedAttestation = att
 	}).Return(&ethpb.AttestResponse{}, nil /* error */)
 
@@ -383,7 +384,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 		BeaconBlockRoot: bytesutil.PadTo([]byte("A"), 32),
 		Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("B"), 32)},
 		Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("C"), 32), Epoch: 3},
-	}, nil).Do(func(arg0, arg1 interface{}) {
+	}, nil).Do(func(arg0, arg1 interface{}, arg2 ...grpc.CallOption) {
 		wg.Done()
 	})
 
@@ -432,7 +433,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 	m.validatorClient.EXPECT().ProposeAttestation(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.Attestation{}),
-	).Do(func(_ context.Context, att *ethpb.Attestation) {
+	).Do(func(_ context.Context, att *ethpb.Attestation, arg2 ...grpc.CallOption) {
 		generatedAttestation = att
 	}).Return(&ethpb.AttestResponse{}, nil /* error */)
 
