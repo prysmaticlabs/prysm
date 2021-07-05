@@ -94,7 +94,6 @@ func TestFastAggregateVerify_ReturnsFalseOnEmptyPubKeyList(t *testing.T) {
 	assert.Equal(t, false, aggSig.FastAggregateVerify(pubkeys, msg), "Expected FastAggregateVerify to return false with empty input ")
 }
 
-
 func TestEth2FastAggregateVerify(t *testing.T) {
 	pubkeys := make([]common.PublicKey, 0, 100)
 	sigs := make([]common.Signature, 0, 100)
