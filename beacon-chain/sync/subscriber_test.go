@@ -472,7 +472,7 @@ func TestExtractDigest(t *testing.T) {
 			topic:   "/eth2/",
 			want:    [4]byte{},
 			wantErr: true,
-			error:   errors.New("topic does not have digest"),
+			error:   errors.New("invalid topic format"),
 		},
 		{
 			name:    "invalid digest in topic",
