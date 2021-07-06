@@ -33,9 +33,6 @@ var (
 	bucketContents = flag.Bool("bucket-contents", false, "Show contents of a given bucket.")
 	bucketName     = flag.String("bucket-name", "", "bucket to show contents.")
 	rowLimit       = flag.Uint64("limit", 10, "limit to rows.")
-
-	stateBucket        = []byte("state")
-	stateSummaryBucket = []byte("state-summary")
 )
 
 func main() {
@@ -180,13 +177,13 @@ func printBucketContents(dbNameWithPath string, rowLimit uint64, bucketName stri
 		case "state":
 			printState(ctx, db, key, rowCount, sizes[index])
 		case "state-summary":
-			printStateSummary(ctx, db, key, rowCount, sizes[index])
+			printStateSummary(ctx, db, key, rowCount)
 		}
 		rowCount++
 	}
 }
 
-func printState(ctx context.Context, db *kv.Store, key []byte, rowCount uint64, valueSize uint64) {
+func printState(ctx context.Context, db *kv.Store, key []byte, rowCount, valueSize uint64) {
 	st, stateErr := db.State(ctx, bytesutil.ToBytes32(key))
 	if stateErr != nil {
 		log.Errorf("could not get state for key : , %v", stateErr)
@@ -228,7 +225,7 @@ func printState(ctx context.Context, db *kv.Store, key []byte, rowCount uint64, 
 	fmt.Println("finalized_checkpoint          : sizeSSZ =  ", humanize.Bytes(uint64(st.FinalizedCheckpoint().SizeSSZ())))
 }
 
-func printStateSummary(ctx context.Context, db *kv.Store, key []byte, rowCount uint64, valueSize uint64) {
+func printStateSummary(ctx context.Context, db *kv.Store, key []byte, rowCount uint64) {
 	ss, ssErr := db.StateSummary(ctx, bytesutil.ToBytes32(key))
 	if ssErr != nil {
 		log.Errorf("could not get state summary for key : , %v", ssErr)
