@@ -6,11 +6,13 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	transition "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	"github.com/prysmaticlabs/prysm/shared/interfaces/version"
 	"go.opencensus.io/trace"
 )
 
@@ -23,7 +25,7 @@ func (s *State) ReplayBlocks(
 ) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.ReplayBlocks")
 	defer span.End()
-
+	log.Infof("replay blocks: %d to %d", signed[0].Block().Slot(), signed[len(signed)-1].Block().Slot())
 	var err error
 	// The input block list is sorted in decreasing slots order.
 	if len(signed) > 0 {
@@ -146,6 +148,16 @@ func executeStateTransitionStateGen(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block")
 	}
+	if signed.Version() == version.Altair {
+		sa, err := signed.Block().Body().SyncAggregate()
+		if err != nil {
+			return nil, err
+		}
+		state, err = altair.ProcessSyncAggregate(state, sa)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	return state, nil
 }
@@ -176,9 +188,19 @@ func processSlotsStateGen(ctx context.Context, state iface.BeaconState, slot typ
 			return nil, errors.Wrap(err, "could not process slot")
 		}
 		if transition.CanProcessEpoch(state) {
-			state, err = transition.ProcessEpochPrecompute(ctx, state)
-			if err != nil {
-				return nil, errors.Wrap(err, "could not process epoch with optimizations")
+			switch state.Version() {
+			case version.Phase0:
+				state, err = transition.ProcessEpochPrecompute(ctx, state)
+				if err != nil {
+					return nil, errors.Wrap(err, "could not process epoch with optimizations")
+				}
+			case version.Altair:
+				state, err = altair.ProcessEpoch(ctx, state)
+				if err != nil {
+					return nil, errors.Wrap(err, "could not process epoch with optimization")
+				}
+			default:
+				return nil, errors.New("beacon state should have a version")
 			}
 		}
 		if err := state.SetSlot(state.Slot() + 1); err != nil {
