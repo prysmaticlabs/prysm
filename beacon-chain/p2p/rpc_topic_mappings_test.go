@@ -92,7 +92,7 @@ func TestTopicFromMessage_CorrectType(t *testing.T) {
 	_, err := TopicFromMessage(badMsg, 0)
 	assert.ErrorContains(t, fmt.Sprintf("%s: %s", invalidRPCMessageType, badMsg), err)
 	// Before Fork
-	for m, _ := range messageMapping {
+	for m := range messageMapping {
 		topic, err := TopicFromMessage(m, 0)
 		assert.NoError(t, err)
 
@@ -103,13 +103,20 @@ func TestTopicFromMessage_CorrectType(t *testing.T) {
 	}
 
 	// After Fork
-	for m, _ := range messageMapping {
+	for m := range messageMapping {
 		topic, err := TopicFromMessage(m, forkEpoch)
 		assert.NoError(t, err)
 
-		assert.Equal(t, true, strings.Contains(topic, SchemaVersionV2))
-		_, _, version, err := TopicDeconstructor(topic)
-		assert.NoError(t, err)
-		assert.Equal(t, SchemaVersionV2, version)
+		if altairMapping[m] {
+			assert.Equal(t, true, strings.Contains(topic, SchemaVersionV2))
+			_, _, version, err := TopicDeconstructor(topic)
+			assert.NoError(t, err)
+			assert.Equal(t, SchemaVersionV2, version)
+		} else {
+			assert.Equal(t, true, strings.Contains(topic, SchemaVersionV1))
+			_, _, version, err := TopicDeconstructor(topic)
+			assert.NoError(t, err)
+			assert.Equal(t, SchemaVersionV1, version)
+		}
 	}
 }

@@ -34,7 +34,7 @@ func (s *Service) forkWatcher() {
 						continue
 					}
 					s.registerSubscribers(nextEpoch, digest)
-					s.registerRPCHandlersV2()
+					s.registerRPCHandlersAltair()
 				}
 			}
 		case <-s.ctx.Done():

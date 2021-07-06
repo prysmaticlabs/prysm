@@ -35,7 +35,19 @@ func (s *Service) registerRPCHandlers() {
 	currEpoch := helpers.SlotToEpoch(s.cfg.Chain.CurrentSlot())
 	// Register V2 handlers if we are past altair fork epoch.
 	if currEpoch >= params.BeaconConfig().AltairForkEpoch {
-		s.registerRPCHandlersV2()
+		s.registerRPC(
+			p2p.RPCStatusTopicV1,
+			s.statusRPCHandler,
+		)
+		s.registerRPC(
+			p2p.RPCGoodByeTopicV1,
+			s.goodbyeRPCHandler,
+		)
+		s.registerRPC(
+			p2p.RPCPingTopicV1,
+			s.pingHandler,
+		)
+		s.registerRPCHandlersAltair()
 		return
 	}
 	s.registerRPC(
@@ -64,16 +76,8 @@ func (s *Service) registerRPCHandlers() {
 	)
 }
 
-// registerRPCHandlers for p2p RPC V2.
-func (s *Service) registerRPCHandlersV2() {
-	s.registerRPC(
-		p2p.RPCStatusTopicV2,
-		s.statusRPCHandler,
-	)
-	s.registerRPC(
-		p2p.RPCGoodByeTopicV2,
-		s.goodbyeRPCHandler,
-	)
+// registerRPCHandlers for altair.
+func (s *Service) registerRPCHandlersAltair() {
 	s.registerRPC(
 		p2p.RPCBlocksByRangeTopicV2,
 		s.beaconBlocksByRangeRPCHandler,
@@ -81,10 +85,6 @@ func (s *Service) registerRPCHandlersV2() {
 	s.registerRPC(
 		p2p.RPCBlocksByRootTopicV2,
 		s.beaconBlocksRootRPCHandler,
-	)
-	s.registerRPC(
-		p2p.RPCPingTopicV2,
-		s.pingHandler,
 	)
 	s.registerRPC(
 		p2p.RPCMetaDataTopicV2,

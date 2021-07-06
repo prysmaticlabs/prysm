@@ -110,6 +110,13 @@ var messageMapping = map[string]bool{
 	MetadataMessageName:            true,
 }
 
+// Maps all the RPC messages which are to updated in altair.
+var altairMapping = map[string]bool{
+	BeaconBlocksByRangeMessageName: true,
+	BeaconBlocksByRootsMessageName: true,
+	MetadataMessageName:            true,
+}
+
 var versionMapping = map[string]bool{
 	SchemaVersionV1: true,
 	SchemaVersionV2: true,
@@ -232,7 +239,7 @@ func TopicFromMessage(msg string, epoch types.Epoch) (string, error) {
 	}
 	version := SchemaVersionV1
 	isAltair := epoch >= params.BeaconConfig().AltairForkEpoch
-	if isAltair {
+	if isAltair && altairMapping[msg] {
 		version = SchemaVersionV2
 	}
 	return protocolPrefix + msg + version, nil
