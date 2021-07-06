@@ -25,15 +25,15 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/beacon"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/beaconv1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/debug"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/debugv1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eventsv1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/node"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/nodev1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/beacon"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/debug"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/events"
+	node "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/node"
+	beacon2 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/beacon"
+	debug2 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/debug"
+	node2 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/node"
+	validator2 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	chainSync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -165,7 +165,7 @@ func (s *Service) Start() {
 	}
 	s.grpcServer = grpc.NewServer(opts...)
 
-	validatorServer := &validator.Server{
+	validatorServer := &validator2.Server{
 		Ctx:                    s.ctx,
 		BeaconDB:               s.cfg.BeaconDB,
 		AttestationCache:       cache.NewAttestationCache(),
@@ -192,7 +192,7 @@ func (s *Service) Start() {
 		SlashingsPool:          s.cfg.SlashingsPool,
 		StateGen:               s.cfg.StateGen,
 	}
-	nodeServer := &node.Server{
+	nodeServer := &node2.Server{
 		LogsStreamer:         logutil.NewStreamServer(),
 		StreamLogsBufferSize: 1000, // Enough to handle bursts of beacon node logs for gRPC streaming.
 		BeaconDB:             s.cfg.BeaconDB,
@@ -205,7 +205,7 @@ func (s *Service) Start() {
 		BeaconMonitoringHost: s.cfg.BeaconMonitoringHost,
 		BeaconMonitoringPort: s.cfg.BeaconMonitoringPort,
 	}
-	nodeServerV1 := &nodev1.Server{
+	nodeServerV1 := &node.Server{
 		BeaconDB:           s.cfg.BeaconDB,
 		Server:             s.grpcServer,
 		SyncChecker:        s.cfg.SyncService,
@@ -216,7 +216,7 @@ func (s *Service) Start() {
 		HeadFetcher:        s.cfg.HeadFetcher,
 	}
 
-	beaconChainServer := &beacon.Server{
+	beaconChainServer := &beacon2.Server{
 		Ctx:                         s.ctx,
 		BeaconDB:                    s.cfg.BeaconDB,
 		AttestationsPool:            s.cfg.AttestationsPool,
@@ -238,7 +238,7 @@ func (s *Service) Start() {
 		ReceivedAttestationsBuffer:  make(chan *ethpb.Attestation, attestationBufferSize),
 		CollectedAttestationsBuffer: make(chan []*ethpb.Attestation, attestationBufferSize),
 	}
-	beaconChainServerV1 := &beaconv1.Server{
+	beaconChainServerV1 := &beacon.Server{
 		BeaconDB:           s.cfg.BeaconDB,
 		AttestationsPool:   s.cfg.AttestationsPool,
 		SlashingsPool:      s.cfg.SlashingsPool,
@@ -261,7 +261,7 @@ func (s *Service) Start() {
 	pbrpc.RegisterHealthServer(s.grpcServer, nodeServer)
 	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
 	ethpbv1.RegisterBeaconChainServer(s.grpcServer, beaconChainServerV1)
-	ethpbv1.RegisterEventsServer(s.grpcServer, &eventsv1.Server{
+	ethpbv1.RegisterEventsServer(s.grpcServer, &events.Server{
 		Ctx:               s.ctx,
 		StateNotifier:     s.cfg.StateNotifier,
 		BlockNotifier:     s.cfg.BlockNotifier,
@@ -269,7 +269,7 @@ func (s *Service) Start() {
 	})
 	if s.cfg.EnableDebugRPCEndpoints {
 		log.Info("Enabled debug gRPC endpoints")
-		debugServer := &debug.Server{
+		debugServer := &debug2.Server{
 			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 			BeaconDB:           s.cfg.BeaconDB,
 			StateGen:           s.cfg.StateGen,
@@ -277,7 +277,7 @@ func (s *Service) Start() {
 			PeerManager:        s.cfg.PeerManager,
 			PeersFetcher:       s.cfg.PeersFetcher,
 		}
-		debugServerV1 := &debugv1.Server{
+		debugServerV1 := &debug.Server{
 			BeaconDB:    s.cfg.BeaconDB,
 			HeadFetcher: s.cfg.HeadFetcher,
 			StateFetcher: &statefetcher.StateProvider{
