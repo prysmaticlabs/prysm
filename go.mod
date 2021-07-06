@@ -34,7 +34,7 @@ require (
 	github.com/go-yaml/yaml v2.1.0+incompatible
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/gddo v0.0.0-20200528160355-8d077c1d8f4c
-	github.com/golang/mock v1.4.4
+	github.com/golang/mock v1.6.0
 	github.com/golang/protobuf v1.5.2
 	github.com/golang/snappy v0.0.3
 	github.com/google/gofuzz v1.2.0
@@ -88,14 +88,14 @@ require (
 	github.com/prometheus/prom2json v1.3.0
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/prysmaticlabs/eth2-types v0.0.0-20210303084904-c9735a06829d
-	github.com/prysmaticlabs/go-bitfield v0.0.0-20210628211147-0d89f726b4c2
+	github.com/prysmaticlabs/go-bitfield v0.0.0-20210701052645-7ef93542bdc8
 	github.com/prysmaticlabs/prombbolt v0.0.0-20210126082820-9b7adba6db7c
 	github.com/prysmaticlabs/protoc-gen-go-cast v0.0.0-20210504233148-1e141af6a0a1
 	github.com/r3labs/sse v0.0.0-20210224172625-26fe804710bc
 	github.com/rs/cors v1.7.0
 	github.com/schollz/progressbar/v3 v3.3.4
 	github.com/sirupsen/logrus v1.6.0
-	github.com/status-im/keycard-go v0.0.0-20200402102358-957c09536969 // indirect
+	github.com/status-im/keycard-go v0.0.0-20200402102358-957c09536969
 	github.com/stretchr/testify v1.7.0
 	github.com/supranational/blst v0.3.4
 	github.com/thomaso-mirodin/intmath v0.0.0-20160323211736-5dc6d854e46e

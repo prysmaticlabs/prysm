@@ -10,8 +10,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	bolt "go.etcd.io/bbolt"
@@ -39,7 +40,7 @@ func (s *Store) Block(ctx context.Context, blockRoot [32]byte) (interfaces.Signe
 		block = &ethpb.SignedBeaconBlock{}
 		return decode(ctx, enc, block)
 	})
-	return interfaces.WrappedPhase0SignedBeaconBlock(block), err
+	return wrapper.WrappedPhase0SignedBeaconBlock(block), err
 }
 
 // HeadBlock returns the latest canonical block in the Ethereum Beacon Chain.
@@ -60,7 +61,7 @@ func (s *Store) HeadBlock(ctx context.Context) (interfaces.SignedBeaconBlock, er
 		headBlock = &ethpb.SignedBeaconBlock{}
 		return decode(ctx, enc, headBlock)
 	})
-	return interfaces.WrappedPhase0SignedBeaconBlock(headBlock), err
+	return wrapper.WrappedPhase0SignedBeaconBlock(headBlock), err
 }
 
 // Blocks retrieves a list of beacon blocks and its respective roots by filter criteria.
@@ -84,7 +85,7 @@ func (s *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]interface
 			if err := decode(ctx, encoded, block); err != nil {
 				return err
 			}
-			blocks = append(blocks, interfaces.WrappedPhase0SignedBeaconBlock(block))
+			blocks = append(blocks, wrapper.WrappedPhase0SignedBeaconBlock(block))
 			blockRoots = append(blockRoots, bytesutil.ToBytes32(keys[i]))
 		}
 		return nil
@@ -156,7 +157,7 @@ func (s *Store) BlocksBySlot(ctx context.Context, slot types.Slot) (bool, []inte
 			if err := decode(ctx, encoded, block); err != nil {
 				return err
 			}
-			blocks = append(blocks, interfaces.WrappedPhase0SignedBeaconBlock(block))
+			blocks = append(blocks, wrapper.WrappedPhase0SignedBeaconBlock(block))
 		}
 		return nil
 	})
@@ -199,7 +200,7 @@ func (s *Store) deleteBlock(ctx context.Context, blockRoot [32]byte) error {
 		if err := decode(ctx, enc, block); err != nil {
 			return err
 		}
-		indicesByBucket := createBlockIndicesFromBlock(ctx, interfaces.WrappedPhase0BeaconBlock(block.Block))
+		indicesByBucket := createBlockIndicesFromBlock(ctx, wrapper.WrappedPhase0BeaconBlock(block.Block))
 		if err := deleteValueForIndices(ctx, indicesByBucket, blockRoot[:], tx); err != nil {
 			return errors.Wrap(err, "could not delete root for DB indices")
 		}
@@ -224,7 +225,7 @@ func (s *Store) deleteBlocks(ctx context.Context, blockRoots [][32]byte) error {
 			if err := decode(ctx, enc, block); err != nil {
 				return err
 			}
-			indicesByBucket := createBlockIndicesFromBlock(ctx, interfaces.WrappedPhase0BeaconBlock(block.Block))
+			indicesByBucket := createBlockIndicesFromBlock(ctx, wrapper.WrappedPhase0BeaconBlock(block.Block))
 			if err := deleteValueForIndices(ctx, indicesByBucket, blockRoot[:], tx); err != nil {
 				return errors.Wrap(err, "could not delete root for DB indices")
 			}
@@ -317,7 +318,7 @@ func (s *Store) GenesisBlock(ctx context.Context) (interfaces.SignedBeaconBlock,
 		block = &ethpb.SignedBeaconBlock{}
 		return decode(ctx, enc, block)
 	})
-	return interfaces.WrappedPhase0SignedBeaconBlock(block), err
+	return wrapper.WrappedPhase0SignedBeaconBlock(block), err
 }
 
 // SaveGenesisBlockRoot to the db.
