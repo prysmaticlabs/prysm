@@ -611,7 +611,7 @@ func TestProposeBlockV2_BroadcastsBlock_WithGraffiti(t *testing.T) {
 	m.validatorClientV2.EXPECT().ProposeBlock(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&prysmv2.SignedBeaconBlock{}),
-	).DoAndReturn(func(ctx context.Context, block *prysmv2.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
+	).DoAndReturn(func(ctx context.Context, block *prysmv2.SignedBeaconBlock, opts ...grpc.CallOption) (*ethpb.ProposeResponse, error) {
 		sentBlock = block
 		return &ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil
 	})
