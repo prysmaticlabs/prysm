@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -21,7 +21,7 @@ func TestStore_Backup(t *testing.T) {
 	head := testutil.NewBeaconBlock()
 	head.Block.Slot = 5000
 
-	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(head)))
+	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(head)))
 	root, err := head.Block.HashTreeRoot()
 	require.NoError(t, err)
 	st, err := testutil.NewBeaconState()
@@ -61,7 +61,7 @@ func TestStore_BackupMultipleBuckets(t *testing.T) {
 	for i := startSlot; i < 5200; i++ {
 		head := testutil.NewBeaconBlock()
 		head.Block.Slot = i
-		require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(head)))
+		require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(head)))
 		root, err := head.Block.HashTreeRoot()
 		require.NoError(t, err)
 		st, err := testutil.NewBeaconState()

@@ -6,8 +6,9 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -61,7 +62,7 @@ func TestStore_IsFinalizedBlockGenesis(t *testing.T) {
 	blk.Block.Slot = 0
 	root, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(blk)))
+	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk)))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 	assert.Equal(t, true, db.IsFinalizedBlock(ctx, root), "Finalized genesis block doesn't exist in db")
 }
@@ -187,7 +188,7 @@ func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []interfaces.S
 		var err error
 		previousRoot, err = blocks[j-i].Block.HashTreeRoot()
 		require.NoError(t, err)
-		ifaceBlocks[j-i] = interfaces.WrappedPhase0SignedBeaconBlock(blocks[j-i])
+		ifaceBlocks[j-i] = wrapper.WrappedPhase0SignedBeaconBlock(blocks[j-i])
 	}
 	return ifaceBlocks
 }
