@@ -11,9 +11,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	wrapperv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/interfaces/version"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
@@ -600,7 +602,7 @@ func unmarshalBlock(ctx context.Context, enc []byte) (interfaces.SignedBeaconBlo
 		if err != nil {
 			return nil, err
 		}
-		return interfaces.WrappedAltairSignedBeaconBlock(rawBlock), nil
+		return wrapperv2.WrappedAltairSignedBeaconBlock(rawBlock), nil
 	default:
 		// Marshal block bytes to phase 0 beacon block.
 		rawBlock := &ethpb.SignedBeaconBlock{}
@@ -608,7 +610,7 @@ func unmarshalBlock(ctx context.Context, enc []byte) (interfaces.SignedBeaconBlo
 		if err != nil {
 			return nil, err
 		}
-		return interfaces.WrappedPhase0SignedBeaconBlock(rawBlock), nil
+		return wrapper.WrappedPhase0SignedBeaconBlock(rawBlock), nil
 	}
 }
 

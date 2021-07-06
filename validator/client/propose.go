@@ -10,11 +10,13 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	wrapperv1 "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	protoInterfaces "github.com/prysmaticlabs/prysm/proto/interfaces"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	wrapperv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/interfaces/version"
 	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -96,7 +98,7 @@ func (v *validator) proposeBlock(ctx context.Context, slot types.Slot, pubKey [4
 	}
 
 	// Sign returned block from beacon node
-	sig, domain, err := v.signBlock(ctx, pubKey, epoch, interfaces.WrappedPhase0BeaconBlock(b))
+	sig, domain, err := v.signBlock(ctx, pubKey, epoch, wrapperv1.WrappedPhase0BeaconBlock(b))
 	if err != nil {
 		log.WithError(err).Error("Failed to sign block")
 		if v.emitAccountMetrics {
@@ -118,16 +120,16 @@ func (v *validator) proposeBlock(ctx context.Context, slot types.Slot, pubKey [4
 		return
 	}
 
-	if err := v.preBlockSignValidations(ctx, pubKey, interfaces.WrappedPhase0BeaconBlock(b), signingRoot); err != nil {
+	if err := v.preBlockSignValidations(ctx, pubKey, wrapperv1.WrappedPhase0BeaconBlock(b), signingRoot); err != nil {
 		log.WithFields(
-			blockLogFields(pubKey, interfaces.WrappedPhase0BeaconBlock(b), nil),
+			blockLogFields(pubKey, wrapperv1.WrappedPhase0BeaconBlock(b), nil),
 		).WithError(err).Error("Failed block slashing protection check")
 		return
 	}
 
-	if err := v.postBlockSignUpdate(ctx, pubKey, interfaces.WrappedPhase0SignedBeaconBlock(blk), signingRoot); err != nil {
+	if err := v.postBlockSignUpdate(ctx, pubKey, wrapperv1.WrappedPhase0SignedBeaconBlock(blk), signingRoot); err != nil {
 		log.WithFields(
-			blockLogFields(pubKey, interfaces.WrappedPhase0BeaconBlock(b), sig),
+			blockLogFields(pubKey, wrapperv1.WrappedPhase0BeaconBlock(b), sig),
 		).WithError(err).Error("Failed block slashing protection check")
 		return
 	}
@@ -212,7 +214,7 @@ func (v *validator) proposeBlockV2(ctx context.Context, slot types.Slot, pubKey 
 	}
 
 	// Sign returned block from beacon node
-	sig, domain, err := v.signBlock(ctx, pubKey, epoch, interfaces.WrappedAltairBeaconBlock(b))
+	sig, domain, err := v.signBlock(ctx, pubKey, epoch, wrapperv2.WrappedAltairBeaconBlock(b))
 	if err != nil {
 		log.WithError(err).Error("Failed to sign block")
 		if v.emitAccountMetrics {
@@ -234,16 +236,16 @@ func (v *validator) proposeBlockV2(ctx context.Context, slot types.Slot, pubKey 
 		return
 	}
 
-	if err := v.preBlockSignValidations(ctx, pubKey, interfaces.WrappedAltairBeaconBlock(b), signingRoot); err != nil {
+	if err := v.preBlockSignValidations(ctx, pubKey, wrapperv2.WrappedAltairBeaconBlock(b), signingRoot); err != nil {
 		log.WithFields(
-			blockLogFields(pubKey, interfaces.WrappedAltairBeaconBlock(b), nil),
+			blockLogFields(pubKey, wrapperv2.WrappedAltairBeaconBlock(b), nil),
 		).WithError(err).Error("Failed block slashing protection check")
 		return
 	}
 
-	if err := v.postBlockSignUpdate(ctx, pubKey, interfaces.WrappedAltairSignedBeaconBlock(blk), signingRoot); err != nil {
+	if err := v.postBlockSignUpdate(ctx, pubKey, wrapperv2.WrappedAltairSignedBeaconBlock(blk), signingRoot); err != nil {
 		log.WithFields(
-			blockLogFields(pubKey, interfaces.WrappedAltairBeaconBlock(b), sig),
+			blockLogFields(pubKey, wrapperv2.WrappedAltairBeaconBlock(b), sig),
 		).WithError(err).Error("Failed block slashing protection check")
 		return
 	}
@@ -350,7 +352,7 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch
 }
 
 // Sign block with proposer domain and private key.
-func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch types.Epoch, b interfaces.BeaconBlock) ([]byte, *ethpb.DomainResponse, error) {
+func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch types.Epoch, b protoInterfaces.BeaconBlock) ([]byte, *ethpb.DomainResponse, error) {
 	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainBeaconProposer[:])
 	if err != nil {
 		return nil, nil, errors.Wrap(err, domainDataErr)

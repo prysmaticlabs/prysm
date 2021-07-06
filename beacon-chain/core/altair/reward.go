@@ -24,15 +24,19 @@ import (
 //    increments = state.validators[index].effective_balance // EFFECTIVE_BALANCE_INCREMENT
 //    return Gwei(increments * get_base_reward_per_increment(state))
 func BaseReward(state iface.ReadOnlyBeaconState, index types.ValidatorIndex) (uint64, error) {
-	val, err := state.ValidatorAtIndexReadOnly(index)
-	if err != nil {
-		return 0, err
-	}
 	totalBalance, err := helpers.TotalActiveBalance(state)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not calculate active balance")
 	}
+	return BaseRewardWithTotalBalance(state, index, totalBalance)
+}
 
+// BaseRewardWithTotalBalance calculates the base reward with the provided total balance.
+func BaseRewardWithTotalBalance(state iface.ReadOnlyBeaconState, index types.ValidatorIndex, totalBalance uint64) (uint64, error) {
+	val, err := state.ValidatorAtIndexReadOnly(index)
+	if err != nil {
+		return 0, err
+	}
 	increments := val.EffectiveBalance() / params.BeaconConfig().EffectiveBalanceIncrement
 	return increments * baseRewardPerIncrement(totalBalance), nil
 }

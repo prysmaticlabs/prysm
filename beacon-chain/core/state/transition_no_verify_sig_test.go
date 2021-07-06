@@ -7,8 +7,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -51,7 +51,7 @@ func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
 	block.Block.Body.RandaoReveal = randaoReveal
 	block.Block.Body.Eth1Data = eth1Data
 
-	stateRoot, err := state.CalculateStateRoot(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(block))
+	stateRoot, err := state.CalculateStateRoot(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 	require.NoError(t, err)
 
 	block.Block.StateRoot = stateRoot[:]
@@ -60,7 +60,7 @@ func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	block.Signature = sig.Marshal()
 
-	set, _, err := state.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(block))
+	set, _, err := state.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 	assert.NoError(t, err)
 	verified, err := set.Verify()
 	assert.NoError(t, err)
@@ -103,7 +103,7 @@ func TestExecuteStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t *test
 	block.Block.Body.RandaoReveal = randaoReveal
 	block.Block.Body.Eth1Data = eth1Data
 
-	stateRoot, err := state.CalculateStateRoot(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(block))
+	stateRoot, err := state.CalculateStateRoot(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 	require.NoError(t, err)
 
 	block.Block.StateRoot = stateRoot[:]
@@ -113,13 +113,13 @@ func TestExecuteStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t *test
 	block.Signature = sig.Marshal()
 
 	block.Block.StateRoot = bytesutil.PadTo([]byte{'a'}, 32)
-	_, _, err = state.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(block))
+	_, _, err = state.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 	require.ErrorContains(t, "could not validate state root", err)
 }
 
 func TestProcessBlockNoVerify_PassesProcessingConditions(t *testing.T) {
 	beaconState, block, _, _, _ := createFullBlockWithOperations(t)
-	set, _, err := state.ProcessBlockNoVerifyAnySig(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(block))
+	set, _, err := state.ProcessBlockNoVerifyAnySig(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 	require.NoError(t, err)
 	// Test Signature set verifies.
 	verified, err := set.Verify()

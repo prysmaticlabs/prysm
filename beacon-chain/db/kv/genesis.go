@@ -13,7 +13,7 @@ import (
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	state "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -28,7 +28,7 @@ func (s *Store) SaveGenesisData(ctx context.Context, genesisState iface.BeaconSt
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block root")
 	}
-	if err := s.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(genesisBlk)); err != nil {
+	if err := s.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesisBlk)); err != nil {
 		return errors.Wrap(err, "could not save genesis block")
 	}
 	if err := s.SaveState(ctx, genesisState, genesisBlkRoot); err != nil {

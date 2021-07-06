@@ -49,7 +49,7 @@ type Flags struct {
 	UpdateHeadTimely                   bool // UpdateHeadTimely updates head right after state transition.
 	ProposerAttsSelectionUsingMaxCover bool // ProposerAttsSelectionUsingMaxCover enables max-cover algorithm when selecting attestations for proposing.
 	EnableOptimizedBalanceUpdate       bool // EnableOptimizedBalanceUpdate uses an updated method of performing balance updates.
-
+	EnableDoppelGanger                 bool // EnableDoppelGanger enables doppelganger protection on startup for the validator.
 	// Logging related toggles.
 	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
 
@@ -238,6 +238,10 @@ func ConfigureValidator(ctx *cli.Context) {
 	if ctx.Bool(enableSlashingProtectionPruning.Name) {
 		log.WithField(enableSlashingProtectionPruning.Name, enableSlashingProtectionPruning.Usage).Warn(enabledFeatureFlag)
 		cfg.EnableSlashingProtectionPruning = true
+	}
+	if ctx.Bool(enableDoppelGangerProtection.Name) {
+		log.WithField(enableDoppelGangerProtection.Name, enableDoppelGangerProtection.Usage).Warn(enabledFeatureFlag)
+		cfg.EnableDoppelGanger = true
 	}
 	cfg.KeystoreImportDebounceInterval = ctx.Duration(dynamicKeyReloadDebounceInterval.Name)
 	Init(cfg)

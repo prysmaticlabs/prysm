@@ -3,7 +3,7 @@ package blockutil
 import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 )
 
 // SignedBeaconBlockHeaderFromBlock function to retrieve signed block header from block.
