@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/spectest/utils"
@@ -61,7 +61,7 @@ func RunFinalityTest(t *testing.T, config string) {
 				require.NoError(t, err, "Failed to decompress")
 				block := &ethpb.SignedBeaconBlock{}
 				require.NoError(t, block.UnmarshalSSZ(blockSSZ), "Failed to unmarshal")
-				processedState, err = state.ExecuteStateTransition(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(block))
+				processedState, err = state.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 				require.NoError(t, err)
 				beaconState, ok = processedState.(*v1.BeaconState)
 				require.Equal(t, true, ok)

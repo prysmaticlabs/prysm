@@ -16,7 +16,7 @@ import (
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/spectest/utils"
@@ -62,7 +62,7 @@ func RunBlockProcessingTest(t *testing.T, config string) {
 				require.NoError(t, err, "Failed to decompress")
 				block := &prysmv2.SignedBeaconBlock{}
 				require.NoError(t, block.UnmarshalSSZ(blockSSZ), "Failed to unmarshal")
-				processedState, transitionError = state.ExecuteStateTransition(context.Background(), beaconState, interfaces.WrappedAltairSignedBeaconBlock(block))
+				processedState, transitionError = state.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedAltairSignedBeaconBlock(block))
 				if transitionError != nil {
 					break
 				}

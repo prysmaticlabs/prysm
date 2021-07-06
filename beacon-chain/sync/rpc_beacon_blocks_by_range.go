@@ -4,8 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
-
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -13,6 +11,7 @@ import (
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"

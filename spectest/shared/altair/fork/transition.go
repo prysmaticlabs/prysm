@@ -15,6 +15,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -103,7 +104,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			}
 			altairState := iface.BeaconStateAltair(beaconState)
 			for _, b := range postforkBlocks {
-				state, err := state.ExecuteStateTransition(ctx, altairState, interfaces.WrappedAltairSignedBeaconBlock(b))
+				state, err := state.ExecuteStateTransition(ctx, altairState, wrapper.WrappedAltairSignedBeaconBlock(b))
 				require.NoError(t, err)
 				altairState, ok = state.(*stateAltair.BeaconState)
 				require.Equal(t, true, ok)

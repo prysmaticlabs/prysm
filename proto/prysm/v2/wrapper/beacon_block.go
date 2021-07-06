@@ -1,9 +1,10 @@
-package interfaces
+package wrapper
 
 import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/interfaces/version"
@@ -29,7 +30,7 @@ func (w AltairSignedBeaconBlock) Signature() []byte {
 }
 
 // Block returns the underlying beacon block object.
-func (w AltairSignedBeaconBlock) Block() BeaconBlock {
+func (w AltairSignedBeaconBlock) Block() interfaces.BeaconBlock {
 	return WrappedAltairBeaconBlock(w.b.Block)
 }
 
@@ -41,7 +42,7 @@ func (w AltairSignedBeaconBlock) IsNil() bool {
 
 // Copy performs a deep copy of the signed beacon block
 // object.
-func (w AltairSignedBeaconBlock) Copy() SignedBeaconBlock {
+func (w AltairSignedBeaconBlock) Copy() interfaces.SignedBeaconBlock {
 	return WrappedAltairSignedBeaconBlock(copyutil.CopySignedBeaconBlockAltair(w.b))
 }
 
@@ -121,7 +122,7 @@ func (w AltairBeaconBlock) StateRoot() []byte {
 }
 
 // Body returns the underlying block body.
-func (w AltairBeaconBlock) Body() BeaconBlockBody {
+func (w AltairBeaconBlock) Body() interfaces.BeaconBlockBody {
 	return WrappedAltairBeaconBlockBody(w.b.Body)
 }
 

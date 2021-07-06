@@ -21,12 +21,14 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	wrapperv1 "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	wrapperv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
@@ -287,9 +289,9 @@ func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel ch
 		var blk interfaces.SignedBeaconBlock
 		switch {
 		case res.GetPhase0Block() != nil:
-			blk = interfaces.WrappedPhase0SignedBeaconBlock(res.GetPhase0Block())
+			blk = wrapperv1.WrappedPhase0SignedBeaconBlock(res.GetPhase0Block())
 		case res.GetAltairBlock() != nil:
-			blk = interfaces.WrappedAltairSignedBeaconBlock(res.GetAltairBlock())
+			blk = wrapperv2.WrappedAltairSignedBeaconBlock(res.GetAltairBlock())
 		}
 		if blk == nil || blk.IsNil() {
 			continue

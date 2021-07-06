@@ -9,8 +9,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -42,6 +42,7 @@ func ReadChunkedBlock(stream libp2pcore.Stream, chain blockchain.ChainInfoFetche
 	if isFirstChunk {
 		return readFirstChunkedBlock(stream, chain, p2p)
 	}
+
 	return readResponseChunk(stream, chain, p2p)
 }
 

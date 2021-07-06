@@ -26,9 +26,9 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -661,9 +661,9 @@ func fillUpBlocksAndState(ctx context.Context, t *testing.T, beaconDB db.Databas
 		require.NoError(t, err)
 		r, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		_, testState, err = state.ExecuteStateTransitionNoVerifyAnySig(ctx, testState, interfaces.WrappedAltairSignedBeaconBlock(blk))
+		_, testState, err = state.ExecuteStateTransitionNoVerifyAnySig(ctx, testState, wrapper.WrappedAltairSignedBeaconBlock(blk))
 		assert.NoError(t, err)
-		assert.NoError(t, beaconDB.SaveBlock(ctx, interfaces.WrappedAltairSignedBeaconBlock(blk)))
+		assert.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedAltairSignedBeaconBlock(blk)))
 		assert.NoError(t, beaconDB.SaveStateSummary(ctx, &p2ppb.StateSummary{Slot: i, Root: r[:]}))
 		assert.NoError(t, beaconDB.SaveState(ctx, testState, r))
 		require.NoError(t, beaconDB.SaveHeadBlockRoot(ctx, r))

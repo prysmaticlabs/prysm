@@ -15,12 +15,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -540,7 +540,7 @@ func TestServer_WaitToSlotOneThird_ReceiveBlockSlot(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		time.Sleep(100 * time.Millisecond)
-		v.blockFeed.Send(interfaces.WrappedPhase0SignedBeaconBlock(
+		v.blockFeed.Send(wrapper.WrappedPhase0SignedBeaconBlock(
 			&ethpb.SignedBeaconBlock{
 				Block: &ethpb.BeaconBlock{Slot: currentSlot},
 			}))

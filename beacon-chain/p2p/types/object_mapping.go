@@ -3,9 +3,12 @@ package types
 import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	wrapperv1 "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	wrapperv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	metaDataInterface "github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/protobuf/proto"
 )
@@ -28,7 +31,7 @@ var (
 	StateMap map[[4]byte]proto.Message
 	// MetaDataMap maps the fork-version to the underlying data type for that
 	// particular fork period.
-	MetaDataMap map[[4]byte]func() interfaces.Metadata
+	MetaDataMap map[[4]byte]func() metaDataInterface.Metadata
 )
 
 // InitializeDataMaps initializes all the relevant object maps. This function is called to
@@ -37,10 +40,10 @@ func InitializeDataMaps() {
 	// Reset our block map.
 	BlockMap = map[[4]byte]func() interfaces.SignedBeaconBlock{
 		bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): func() interfaces.SignedBeaconBlock {
-			return interfaces.WrappedPhase0SignedBeaconBlock(&eth.SignedBeaconBlock{})
+			return wrapperv1.WrappedPhase0SignedBeaconBlock(&eth.SignedBeaconBlock{})
 		},
 		bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion): func() interfaces.SignedBeaconBlock {
-			return interfaces.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlock{})
+			return wrapperv2.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlock{})
 		},
 	}
 
@@ -51,12 +54,12 @@ func InitializeDataMaps() {
 	}
 
 	// Reset our metadata map.
-	MetaDataMap = map[[4]byte]func() interfaces.Metadata{
-		bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): func() interfaces.Metadata {
-			return interfaces.WrappedMetadataV0(&pbp2p.MetaDataV0{})
+	MetaDataMap = map[[4]byte]func() metaDataInterface.Metadata{
+		bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): func() metaDataInterface.Metadata {
+			return metaDataInterface.WrappedMetadataV0(&pbp2p.MetaDataV0{})
 		},
-		bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion): func() interfaces.Metadata {
-			return interfaces.WrappedMetadataV1(&pbp2p.MetaDataV1{})
+		bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion): func() metaDataInterface.Metadata {
+			return metaDataInterface.WrappedMetadataV1(&pbp2p.MetaDataV1{})
 		},
 	}
 }
