@@ -25,7 +25,6 @@ func (s *State) ReplayBlocks(
 ) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.ReplayBlocks")
 	defer span.End()
-	log.Infof("replay blocks: %d to %d", signed[0].Block().Slot(), signed[len(signed)-1].Block().Slot())
 	var err error
 	// The input block list is sorted in decreasing slots order.
 	if len(signed) > 0 {
