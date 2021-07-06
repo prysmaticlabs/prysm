@@ -165,8 +165,12 @@ func ProcessAttestationNoVerifySignature(
 	targetFlagIndex := params.BeaconConfig().TimelyTargetFlagIndex
 	headFlagIndex := params.BeaconConfig().TimelyHeadFlagIndex
 	proposerRewardNumerator := uint64(0)
+	totalBalance, err := helpers.TotalActiveBalance(beaconState)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not calculate active balance")
+	}
 	for _, index := range indices {
-		br, err := BaseReward(beaconState, types.ValidatorIndex(index))
+		br, err := BaseRewardWithTotalBalance(beaconState, types.ValidatorIndex(index), totalBalance)
 		if err != nil {
 			return nil, err
 		}
