@@ -12,7 +12,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -40,7 +40,7 @@ func TestSaveHead_Different(t *testing.T) {
 	service.head = &head{
 		slot: 0,
 		root: oldRoot,
-		block: interfaces.WrappedPhase0SignedBeaconBlock(
+		block: wrapper.WrappedPhase0SignedBeaconBlock(
 			&ethpb.SignedBeaconBlock{
 				Block: &ethpb.BeaconBlock{
 					Slot:      0,
@@ -54,7 +54,7 @@ func TestSaveHead_Different(t *testing.T) {
 	newHeadSignedBlock.Block.Slot = 1
 	newHeadBlock := newHeadSignedBlock.Block
 
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(newHeadSignedBlock)))
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(newHeadSignedBlock)))
 	newRoot, err := newHeadBlock.HashTreeRoot()
 	require.NoError(t, err)
 	headState, err := testutil.NewBeaconState()
@@ -83,7 +83,7 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	service.head = &head{
 		slot: 0,
 		root: oldRoot,
-		block: interfaces.WrappedPhase0SignedBeaconBlock(
+		block: wrapper.WrappedPhase0SignedBeaconBlock(
 			&ethpb.SignedBeaconBlock{
 				Block: &ethpb.BeaconBlock{
 					Slot:      0,
@@ -99,7 +99,7 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	newHeadSignedBlock.Block.ParentRoot = reorgChainParent[:]
 	newHeadBlock := newHeadSignedBlock.Block
 
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(newHeadSignedBlock)))
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(newHeadSignedBlock)))
 	newRoot, err := newHeadBlock.HashTreeRoot()
 	require.NoError(t, err)
 	headState, err := testutil.NewBeaconState()
@@ -138,7 +138,7 @@ func TestUpdateHead_MissingJustifiedRoot(t *testing.T) {
 	service := setupBeaconChain(t, beaconDB)
 
 	b := testutil.NewBeaconBlock()
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(b)))
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 

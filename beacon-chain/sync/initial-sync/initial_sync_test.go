@@ -23,10 +23,10 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -83,7 +83,7 @@ func initializeTestServices(t *testing.T, slots []types.Slot, peers []*peerData)
 	genesisRoot := cache.rootCache[0]
 	cache.RUnlock()
 
-	err := beaconDB.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()))
+	err := beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()))
 	require.NoError(t, err)
 
 	st, err := testutil.NewBeaconState()

@@ -5,9 +5,9 @@ import (
 	"os"
 	"path"
 
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 )
 
 // WriteBlockToDisk as a block ssz. Writes to temp directory. Debug!
