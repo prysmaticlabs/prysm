@@ -101,6 +101,7 @@ func TestAggregateAttestations_Aggregate(t *testing.T) {
 		name   string
 		inputs []bitfield.Bitlist
 		want   []bitfield.Bitlist
+		err    error
 	}{
 		{
 			name:   "empty list",
@@ -208,12 +209,17 @@ func TestAggregateAttestations_Aggregate(t *testing.T) {
 				{0b00000111, 0b100},
 				{0b00000100, 0b1},
 			},
+			err: bitfield.ErrBitlistDifferentLength,
 		},
 	}
 
 	for _, tt := range tests {
 		runner := func() {
 			got, err := Aggregate(aggtesting.MakeAttestationsFromBitlists(tt.inputs))
+			if tt.err != nil {
+				require.ErrorContains(t, tt.err.Error(), err)
+				return
+			}
 			require.NoError(t, err)
 			sort.Slice(got, func(i, j int) bool {
 				return got[i].AggregationBits.Bytes()[0] < got[j].AggregationBits.Bytes()[0]
