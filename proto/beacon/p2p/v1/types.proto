@@ -167,14 +167,14 @@ message DepositMessage {
 
 // SyncCommittee serves as committees to facilitate light client syncing to beacon chain.
 message SyncCommittee {
-  repeated bytes pubkeys = 1  [(ethereum.eth.ext.ssz_size) = "512,48"];
+  repeated bytes pubkeys = 1  [(ethereum.eth.ext.ssz_size) = "sync_committee_bits.size,48"];
   bytes aggregate_pubkey = 2 [(ethereum.eth.ext.ssz_size) = "48"];
 }
 
 // SyncAggregatorSelectionData is used to sign over and then check whether the aggregator is selected within a subcommittee.
 message SyncAggregatorSelectionData {
   // Slot of this signing data.
-  uint64 slot = 1;
+  uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
   // Subcommittee index of this signing data.
   uint64 subcommittee_index = 2;
 }

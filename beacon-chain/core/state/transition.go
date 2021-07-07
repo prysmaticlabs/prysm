@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -46,7 +46,7 @@ var processExitFunc = func(ctx context.Context, s iface.BeaconState, blk interfa
 	return b.ProcessVoluntaryExits(ctx, s, blk.Block().Body().VoluntaryExits())
 }
 
-// This defines the processing block routine as outlined in eth2 spec:
+// This defines the processing block routine as outlined in the Ethereum Beacon Chain spec:
 // https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#block-processing
 var processingPipeline = []processFunc{
 	b.ProcessBlockHeader,

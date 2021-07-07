@@ -15,10 +15,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -60,7 +61,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		log.WithError(errors.New("msg is not ethpb.SignedBeaconBlock")).Debug("Rejected block")
 		return pubsub.ValidationReject
 	}
-	blk := interfaces.WrappedPhase0SignedBeaconBlock(rblk)
+	blk := wrapper.WrappedPhase0SignedBeaconBlock(rblk)
 
 	if blk.IsNil() || blk.Block().IsNil() {
 		log.WithError(errors.New("block.Block is nil")).Debug("Rejected block")

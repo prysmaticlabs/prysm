@@ -2,7 +2,9 @@
 // during the runtime of a beacon node.
 package block
 
-import "github.com/prysmaticlabs/prysm/shared/interfaces"
+import (
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
+)
 
 const (
 	// ReceivedBlock is sent after a block has been received by the beacon node via p2p or RPC.

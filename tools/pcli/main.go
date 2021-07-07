@@ -12,10 +12,10 @@ import (
 	fssz "github.com/ferranbt/fastssz"
 	"github.com/kr/pretty"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	log "github.com/sirupsen/logrus"
@@ -37,7 +37,7 @@ func main() {
 	log.SetFormatter(customFormatter)
 	app := cli.App{}
 	app.Name = "pcli"
-	app.Usage = "A command line utility to run eth2 specific commands"
+	app.Usage = "A command line utility to run Ethereum consensus specific commands"
 	app.Version = version.Version()
 	app.Commands = []*cli.Command{
 		{
@@ -160,7 +160,7 @@ func main() {
 				if err := dataFetcher(preStatePath, preState); err != nil {
 					log.Fatal(err)
 				}
-				stateObj, err := stateV0.InitializeFromProto(preState)
+				stateObj, err := v1.InitializeFromProto(preState)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -176,7 +176,7 @@ func main() {
 					blkRoot,
 					preStateRoot,
 				)
-				postState, err := state.ExecuteStateTransition(context.Background(), stateObj, interfaces.WrappedPhase0SignedBeaconBlock(block))
+				postState, err := state.ExecuteStateTransition(context.Background(), stateObj, wrapper.WrappedPhase0SignedBeaconBlock(block))
 				if err != nil {
 					log.Fatal(err)
 				}
