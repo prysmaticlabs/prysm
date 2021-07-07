@@ -11,6 +11,7 @@ import (
 
 // syncContributionAndProofSubscriber forwards the incoming validated sync contributions and proof to the
 // contribution pool for processing.
+// skipcq: SCT-U1000
 func (s *Service) syncContributionAndProofSubscriber(_ context.Context, msg proto.Message) error {
 	a, ok := msg.(*prysmv2.SignedContributionAndProof)
 	if !ok {
