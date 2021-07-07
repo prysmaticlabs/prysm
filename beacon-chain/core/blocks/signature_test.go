@@ -6,8 +6,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	wrapperv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -34,5 +34,5 @@ func TestVerifyBlockSignatureUsingCurrentFork(t *testing.T) {
 	assert.NoError(t, err)
 	sig := keys[0].Sign(rt[:]).Marshal()
 	altairBlk.Signature = sig
-	assert.NoError(t, blocks.VerifyBlockSignatureUsingCurrentFork(bState, interfaces.WrappedAltairSignedBeaconBlock(altairBlk)))
+	assert.NoError(t, blocks.VerifyBlockSignatureUsingCurrentFork(bState, wrapperv2.WrappedAltairSignedBeaconBlock(altairBlk)))
 }

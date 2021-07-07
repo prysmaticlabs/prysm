@@ -220,7 +220,7 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 
 		mChain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
 		for i := 0; i < len(ret); i++ {
-			assert.NoError(t, beaconsync.WriteBlockChunk(stream, mChain, p.Encoding(), interfaces.WrappedPhase0SignedBeaconBlock(ret[i])))
+			assert.NoError(t, beaconsync.WriteBlockChunk(stream, mChain, p.Encoding(), wrapper.WrappedPhase0SignedBeaconBlock(ret[i])))
 		}
 	})
 
@@ -290,7 +290,7 @@ func connectPeerHavingBlocks(
 				break
 			}
 			chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
-			require.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p.Encoding(), interfaces.WrappedPhase0SignedBeaconBlock(blocks[i])))
+			require.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p.Encoding(), wrapper.WrappedPhase0SignedBeaconBlock(blocks[i])))
 		}
 	})
 

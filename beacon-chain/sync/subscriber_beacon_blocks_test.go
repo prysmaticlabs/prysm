@@ -11,8 +11,10 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	wrapperv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -132,7 +134,7 @@ func TestBlockFromProto(t *testing.T) {
 			msgCreator: func(t *testing.T) proto.Message {
 				return &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 100}}
 			},
-			want:    interfaces.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 100}}),
+			want:    wrapper.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 100}}),
 			wantErr: false,
 		},
 		{
@@ -140,7 +142,7 @@ func TestBlockFromProto(t *testing.T) {
 			msgCreator: func(t *testing.T) proto.Message {
 				return &prysmv2.SignedBeaconBlock{Block: &prysmv2.BeaconBlock{Slot: 100}}
 			},
-			want:    interfaces.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlock{Block: &prysmv2.BeaconBlock{Slot: 100}}),
+			want:    wrapperv2.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlock{Block: &prysmv2.BeaconBlock{Slot: 100}}),
 			wantErr: false,
 		},
 	}
