@@ -140,6 +140,7 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 			checkpointBucket,
 			powchainBucket,
 			stateSummaryBucket,
+			stateValidatorsBucket,
 			// Indices buckets.
 			attestationHeadBlockRootBucket,
 			attestationSourceRootIndicesBucket,
@@ -150,6 +151,7 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 			stateSlotIndicesBucket,
 			blockParentRootIndicesBucket,
 			finalizedBlockRootsIndexBucket,
+			BlockRootValidatorKeysIndexBucket,
 			// State management service bucket.
 			newStateServiceCompatibleBucket,
 			// Migrations
