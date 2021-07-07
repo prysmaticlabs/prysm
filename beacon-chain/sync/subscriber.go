@@ -105,15 +105,15 @@ func (s *Service) registerSubscribers(epoch types.Epoch, digest [4]byte) {
 		if flags.Get().SubscribeToAllSubnets {
 			s.subscribeStaticWithSyncSubnets(
 				p2p.SyncCommitteeSubnetTopicFormat,
-				s.validateSyncCommittee,   /* validator */
-				s.syncCommitteeSubscriber, /* message handler */
+				s.validateSyncCommitteeMessage,   /* validator */
+				s.syncCommitteeMessageSubscriber, /* message handler */
 				digest,
 			)
 		} else {
 			s.subscribeDynamicWithSyncSubnets(
 				p2p.SyncCommitteeSubnetTopicFormat,
-				s.validateSyncCommittee,   /* validator */
-				s.syncCommitteeSubscriber, /* message handler */
+				s.validateSyncCommitteeMessage,   /* validator */
+				s.syncCommitteeMessageSubscriber, /* message handler */
 				digest,
 			)
 		}
