@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"reflect"
+	"runtime/debug"
 	"strings"
 
 	ssz "github.com/ferranbt/fastssz"
@@ -97,6 +98,12 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 	topic := baseTopic + s.cfg.P2P.Encoding().ProtocolSuffix()
 	log := log.WithField("topic", topic)
 	s.cfg.P2P.SetStreamHandler(topic, func(stream network.Stream) {
+		defer func() {
+			if r := recover(); r != nil {
+				log.WithField("error", r).Error("Panic occurred")
+				log.Errorf("%s", debug.Stack())
+			}
+		}()
 		ctx, cancel := context.WithTimeout(s.ctx, ttfbTimeout)
 		defer cancel()
 
