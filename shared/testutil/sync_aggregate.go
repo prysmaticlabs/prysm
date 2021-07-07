@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func generateSyncCommittees(bState iface.BeaconState, privs []bls.SecretKey, parentRoot [32]byte) (*prysmv2.SyncAggregate, error) {
+func generateSyncAggregate(bState iface.BeaconState, privs []bls.SecretKey, parentRoot [32]byte) (*prysmv2.SyncAggregate, error) {
 	st, ok := bState.(iface.BeaconStateAltair)
 	if !ok || bState.Version() == version.Phase0 {
 		return nil, errors.Errorf("state cannot be asserted to altair state")

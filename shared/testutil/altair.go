@@ -369,7 +369,7 @@ func GenerateFullBlockAltair(
 		slot = currentSlot + 1
 	}
 
-	syncAgg, err := generateSyncCommittees(bState, privs, parentRoot)
+	syncAgg, err := generateSyncAggregate(bState, privs, parentRoot)
 	if err != nil {
 		return nil, err
 	}

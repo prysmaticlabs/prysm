@@ -8,8 +8,6 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
@@ -54,15 +52,6 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 	if err := altair.ValidateNilSyncContribution(m); err != nil {
 		return pubsub.ValidationReject
 	}
-
-	// Broadcast the aggregated attestation on a feed to notify other services in the beacon node
-	// of a received aggregated attestation.
-	s.cfg.OperationNotifier.OperationFeed().Send(&feed.Event{
-		Type: operation.SyncContributionReceived,
-		Data: &operation.SyncContributionReceivedData{
-			Contribution: m.Message,
-		},
-	})
 
 	if err := helpers.VerifySlotTime(uint64(s.cfg.Chain.GenesisTime().Unix()), m.Message.Contribution.Slot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 		traceutil.AnnotateError(span, err)
@@ -168,7 +157,7 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 	return pubsub.ValidationAccept
 }
 
-// Returns true if the node has received sync contribution for the aggregator with index,slot and subcommittee index.
+// Returns true if the node has received sync contribution for the aggregator with index, slot and subcommittee index.
 func (s *Service) hasSeenSyncContributionIndexSlot(slot types.Slot, aggregatorIndex types.ValidatorIndex, subComIdx types.CommitteeIndex) bool {
 	s.seenSyncContributionLock.RLock()
 	defer s.seenSyncContributionLock.RUnlock()
