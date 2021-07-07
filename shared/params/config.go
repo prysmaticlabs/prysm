@@ -5,6 +5,7 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 // BeaconChainConfig contains constant configs for node to participate in beacon chain.
@@ -165,4 +166,12 @@ type BeaconChainConfig struct {
 	InactivityPenaltyQuotientAltair      uint64 `yaml:"INACTIVITY_PENALTY_QUOTIENT_ALTAIR" spec:"true"`      // InactivityPenaltyQuotientAltair for penalties during inactivity.
 	MinSlashingPenaltyQuotientAltair     uint64 `yaml:"MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR" spec:"true"`    // MinSlashingPenaltyQuotientAltair for slashing penalties.
 	ProportionalSlashingMultiplierAltair uint64 `yaml:"PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR" spec:"true"` // ProportionalSlashingMultiplierAltair for slashing penalties multiplier.
+}
+
+// InitializeForkSchedule initializes the schedules forks baked into the config.
+func (b *BeaconChainConfig) InitializeForkSchedule() {
+	// Set Genesis fork data.
+	b.ForkVersionSchedule[bytesutil.ToBytes4(b.GenesisForkVersion)] = b.GenesisEpoch
+	// Set Altair fork data.
+	b.ForkVersionSchedule[bytesutil.ToBytes4(b.AltairForkVersion)] = b.AltairForkEpoch
 }
