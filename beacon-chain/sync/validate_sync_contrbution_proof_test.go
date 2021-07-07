@@ -60,6 +60,42 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 		want     pubsub.ValidationResult
 	}{
 		{
+			name: "Is syncing",
+			svc: NewService(context.Background(), &Config{
+				P2P:               mockp2p.NewTestP2P(t),
+				InitialSync:       &mockSync.Sync{IsSyncing: true},
+				Chain:             chainService,
+				StateNotifier:     chainService.StateNotifier(),
+				OperationNotifier: chainService.OperationNotifier(),
+			}),
+			setupSvc: func(s *Service, msg *prysmv2.SignedContributionAndProof) *Service {
+				s.cfg.StateGen = stategen.New(db)
+				msg.Message.Contribution.BlockRoot = headRoot[:]
+				s.cfg.DB = db
+				assert.NoError(t, s.initCaches())
+				return s
+			},
+			args: args{
+				ctx:   context.Background(),
+				pid:   "random",
+				topic: "junk",
+				msg: &prysmv2.SignedContributionAndProof{
+					Message: &prysmv2.ContributionAndProof{
+						AggregatorIndex: 1,
+						Contribution: &prysmv2.SyncCommitteeContribution{
+							Slot:              1,
+							SubcommitteeIndex: 1,
+							BlockRoot:         params.BeaconConfig().ZeroHash[:],
+							AggregationBits:   bitfield.NewBitvector128(),
+							Signature:         emptySig[:],
+						},
+						SelectionProof: emptySig[:],
+					},
+					Signature: emptySig[:],
+				}},
+			want: pubsub.ValidationIgnore,
+		},
+		{
 			name: "Bad Topic",
 			svc: NewService(context.Background(), &Config{
 				P2P:               mockp2p.NewTestP2P(t),

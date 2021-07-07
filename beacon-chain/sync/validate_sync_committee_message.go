@@ -17,22 +17,25 @@ import (
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces/version"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
 
 func (s *Service) validateSyncCommitteeMessage(ctx context.Context, pid peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
+	ctx, span := trace.StartSpan(ctx, "sync.validateSyncCommitteeMessage")
+	defer span.End()
+
+	// Accept the sync committee message if the message came from itself.
 	if pid == s.cfg.P2P.PeerID() {
 		return pubsub.ValidationAccept
 	}
-	// Attestation processing requires the target block to be present in the database, so we'll skip
-	// validating or processing attestations until fully synced.
+
+	// Ignore the sync committee message if the beacon node is syncing.
 	if s.cfg.InitialSync.Syncing() {
 		return pubsub.ValidationIgnore
 	}
-	ctx, span := trace.StartSpan(ctx, "sync.validateSyncCommitteeMessage")
-	defer span.End()
 
 	if msg.Topic == nil {
 		return pubsub.ValidationReject
@@ -43,69 +46,60 @@ func (s *Service) validateSyncCommitteeMessage(ctx context.Context, pid peer.ID,
 	format := p2p.GossipTypeMapping[reflect.TypeOf(&prysmv2.SyncCommitteeMessage{})]
 	msg.Topic = &format
 
-	m, err := s.decodePubsubMessage(msg)
+	raw, err := s.decodePubsubMessage(msg)
 	if err != nil {
 		log.WithError(err).Debug("Could not decode message")
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
+
 	// Restore topic.
 	msg.Topic = originalTopic
 
-	comMsg, ok := m.(*prysmv2.SyncCommitteeMessage)
+	m, ok := raw.(*prysmv2.SyncCommitteeMessage)
 	if !ok {
 		return pubsub.ValidationReject
 	}
-	if comMsg == nil {
+	if m == nil {
 		return pubsub.ValidationReject
 	}
 
-	if err := helpers.VerifySlotTime(uint64(s.cfg.Chain.GenesisTime().Unix()), comMsg.Slot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+	// The message's `slot` is for the current slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
+	if err := helpers.VerifySlotTime(uint64(s.cfg.Chain.GenesisTime().Unix()), m.Slot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
-	// Verify this the first attestation received for the participating validator for the slot.
-	if s.hasSeenSyncMessageIndexSlot(comMsg.Slot, comMsg.ValidatorIndex) {
-		return pubsub.ValidationIgnore
-	}
 
-	// Verify the block being voted and the processed state is in DB and the block has passed validation if it's in the DB.
-	blockRoot := bytesutil.ToBytes32(comMsg.BlockRoot)
-	if !s.hasBlockAndState(ctx, blockRoot) {
-		return pubsub.ValidationIgnore
-	}
-
-	// This could be better, retrieving the state multiple times with copies can
-	// easily lead to higher resource consumption by the node.
+	// The `subnet_id` is valid for the given validator. This implies the validator is part of the broader current sync committee along with the correct subcommittee.
+	// This could be better, retrieving the state multiple times with copies can easily lead to higher resource consumption by the node.
+	blockRoot := bytesutil.ToBytes32(m.BlockRoot)
 	blkState, err := s.cfg.StateGen.StateByRoot(ctx, blockRoot)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
 	bState, ok := blkState.(iface.BeaconStateAltair)
-	if !ok {
-		log.Errorf("Sync contribution referencing non-altair state")
+	if !ok || bState.Version() != version.Altair {
+		log.Errorf("Sync message referencing non-altair state")
 		return pubsub.ValidationReject
 	}
 	// Check for validity of validator index.
-	val, err := bState.ValidatorAtIndexReadOnly(comMsg.ValidatorIndex)
+	val, err := bState.ValidatorAtIndexReadOnly(m.ValidatorIndex)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
-	subs, err := altair.SubnetsForSyncCommittee(bState, comMsg.ValidatorIndex)
+	subs, err := altair.SubnetsForSyncCommittee(bState, m.ValidatorIndex)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
-
 	isValid := false
 	digest, err := s.forkDigest()
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
-	// Validate that the validator is in the correct committee.
 	for _, idx := range subs {
 		if strings.HasPrefix(*msg.Topic, fmt.Sprintf(format, digest, idx)) {
 			isValid = true
@@ -116,6 +110,20 @@ func (s *Service) validateSyncCommitteeMessage(ctx context.Context, pid peer.ID,
 		return pubsub.ValidationReject
 	}
 
+	// There has been no other valid sync committee signature for the declared `slot`, `validator_index` and `subcommittee_index`.
+	// In the event of `validator_index` belongs to multiple subnets, as long as one subnet has not been seen, we should let it in.
+	for _, idx := range subs {
+		if s.hasSeenSyncMessageIndexSlot(m.Slot, m.ValidatorIndex, idx) {
+			isValid = false
+		} else {
+			isValid = true
+		}
+	}
+	if !isValid {
+		return pubsub.ValidationIgnore
+	}
+
+	// The signature is valid for the message `beacon_block_root` for the validator referenced by `validator_index`.
 	d, err := helpers.Domain(bState.Fork(), helpers.SlotToEpoch(bState.Slot()), params.BeaconConfig().DomainSyncCommittee, bState.GenesisValidatorRoot())
 	if err != nil {
 		traceutil.AnnotateError(span, err)
@@ -127,9 +135,8 @@ func (s *Service) validateSyncCommitteeMessage(ctx context.Context, pid peer.ID,
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
-
 	rawKey := val.PublicKey()
-	blsSig, err := bls.SignatureFromBytes(comMsg.Signature)
+	blsSig, err := bls.SignatureFromBytes(m.Signature)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
@@ -144,27 +151,32 @@ func (s *Service) validateSyncCommitteeMessage(ctx context.Context, pid peer.ID,
 		return pubsub.ValidationReject
 	}
 
-	s.setSeenSyncMessageIndexSlot(comMsg.Slot, comMsg.ValidatorIndex)
+	for _, idx := range subs {
+		s.setSeenSyncMessageIndexSlot(m.Slot, m.ValidatorIndex, idx)
+	}
 
-	msg.ValidatorData = comMsg
+	msg.ValidatorData = m
 
 	return pubsub.ValidationAccept
 }
 
 // Returns true if the node has received sync committee for the validator with index and slot.
-func (s *Service) hasSeenSyncMessageIndexSlot(slot types.Slot, valIndex types.ValidatorIndex) bool {
+func (s *Service) hasSeenSyncMessageIndexSlot(slot types.Slot, valIndex types.ValidatorIndex, subCommitteeIndex uint64) bool {
 	s.seenSyncMessageLock.RLock()
 	defer s.seenSyncMessageLock.RUnlock()
 
 	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(uint64(valIndex))...)
+	b = append(b, bytesutil.Bytes32(subCommitteeIndex)...)
 	_, seen := s.seenSyncMessageCache.Get(string(b))
 	return seen
 }
 
 // Set sync committee message validator index and slot as seen.
-func (s *Service) setSeenSyncMessageIndexSlot(slot types.Slot, valIndex types.ValidatorIndex) {
+func (s *Service) setSeenSyncMessageIndexSlot(slot types.Slot, valIndex types.ValidatorIndex, subCommitteeIndex uint64) {
 	s.seenSyncMessageLock.Lock()
 	defer s.seenSyncMessageLock.Unlock()
+
 	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(uint64(valIndex))...)
+	b = append(b, bytesutil.Bytes32(subCommitteeIndex)...)
 	s.seenSyncMessageCache.Add(string(b), true)
 }
