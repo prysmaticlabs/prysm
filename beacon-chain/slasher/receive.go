@@ -76,8 +76,7 @@ func (s *Service) receiveBlocks(ctx context.Context) {
 func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-chan types.Slot) {
 	for {
 		select {
-		case <-slotTicker:
-			currentSlot := s.serviceCfg.HeadStateFetcher.HeadSlot()
+		case currentSlot := <-slotTicker:
 			attestations := s.attsQueue.dequeue()
 			currentEpoch := helpers.SlotToEpoch(currentSlot)
 			// We take all the attestations in the queue and filter out
@@ -135,8 +134,7 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan types.Slot) {
 	for {
 		select {
-		case <-slotTicker:
-			currentSlot := s.serviceCfg.HeadStateFetcher.HeadSlot()
+		case currentSlot := <-slotTicker:
 			blocks := s.blksQueue.dequeue()
 			currentEpoch := helpers.SlotToEpoch(currentSlot)
 

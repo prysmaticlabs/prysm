@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -32,6 +33,7 @@ type ServiceConfig struct {
 	StateGen                stategen.StateManager
 	SlashingPoolInserter    slashings.PoolInserter
 	HeadStateFetcher        blockchain.HeadFetcher
+	SyncChecker             sync.Checker
 }
 
 // SlashingChecker is an interface for defining services that the beacon node may interact with to provide slashing data.
@@ -75,21 +77,21 @@ func New(ctx context.Context, srvCfg *ServiceConfig) (*Service, error) {
 func (s *Service) Start() {
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.serviceCfg.StateNotifier.StateFeed().Subscribe(stateChannel)
-	event := <-stateChannel
+	stateEvent := <-stateChannel
 
 	// Wait for us to receive the genesis time via a chain started notification.
-	if event.Type == statefeed.ChainStarted {
-		data, ok := event.Data.(*statefeed.ChainStartedData)
+	if stateEvent.Type == statefeed.ChainStarted {
+		data, ok := stateEvent.Data.(*statefeed.ChainStartedData)
 		if !ok {
 			log.Error("Could not receive chain start notification, want *statefeed.ChainStartedData")
 			return
 		}
 		s.genesisTime = data.StartTime
 		log.WithField("genesisTime", s.genesisTime).Info("Starting slasher, received chain start event")
-	} else if event.Type == statefeed.Initialized {
+	} else if stateEvent.Type == statefeed.Initialized {
 		// Alternatively, if the chain has already started, we then read the genesis
 		// time value from this data.
-		data, ok := event.Data.(*statefeed.InitializedData)
+		data, ok := stateEvent.Data.(*statefeed.InitializedData)
 		if !ok {
 			log.Error("Could not receive chain start notification, want *statefeed.ChainStartedData")
 			return
@@ -101,10 +103,30 @@ func (s *Service) Start() {
 		log.Error("Could start slasher, could not receive chain start event")
 		return
 	}
+
 	stateSub.Unsubscribe()
 	secondsPerSlot := params.BeaconConfig().SecondsPerSlot
 	s.slotTicker = slotutil.NewSlotTicker(s.genesisTime, secondsPerSlot)
 
+Loop:
+	for {
+		select {
+		case <-s.ctx.Done():
+			break Loop
+		case <-s.slotTicker.C():
+			// If node is still syncing, do not operate slasher.
+			if s.serviceCfg.SyncChecker.Syncing() {
+				continue
+			}
+			break Loop
+		default:
+			// If we are in the first slot or synced, exit the loop.
+			if slotutil.SlotsSinceGenesis(s.genesisTime) == 0 || !s.serviceCfg.SyncChecker.Syncing() {
+				break Loop
+			}
+		}
+	}
+	log.Info("Completed chain sync, starting slashing detection")
 	go s.processQueuedAttestations(s.ctx, s.slotTicker.C())
 	go s.processQueuedBlocks(s.ctx, s.slotTicker.C())
 	go s.receiveAttestations(s.ctx)
