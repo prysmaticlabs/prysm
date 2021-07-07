@@ -10,8 +10,6 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
@@ -24,7 +22,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-func (s *Service) validateSyncCommittee(ctx context.Context, pid peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
+func (s *Service) validateSyncCommitteeMessage(ctx context.Context, pid peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
 	if pid == s.cfg.P2P.PeerID() {
 		return pubsub.ValidationAccept
 	}
@@ -33,7 +31,7 @@ func (s *Service) validateSyncCommittee(ctx context.Context, pid peer.ID, msg *p
 	if s.cfg.InitialSync.Syncing() {
 		return pubsub.ValidationIgnore
 	}
-	ctx, span := trace.StartSpan(ctx, "sync.validateSyncCommittee")
+	ctx, span := trace.StartSpan(ctx, "sync.validateSyncCommitteeMessage")
 	defer span.End()
 
 	if msg.Topic == nil {
@@ -62,15 +60,6 @@ func (s *Service) validateSyncCommittee(ctx context.Context, pid peer.ID, msg *p
 		return pubsub.ValidationReject
 	}
 
-	// Broadcast the sync committee on a feed to notify other services in the beacon node
-	// of a received sync committee.
-	s.cfg.OperationNotifier.OperationFeed().Send(&feed.Event{
-		Type: operation.SyncCommMessageReceived,
-		Data: &operation.SyncCommReceivedData{
-			Message: comMsg,
-		},
-	})
-
 	if err := helpers.VerifySlotTime(uint64(s.cfg.Chain.GenesisTime().Unix()), comMsg.Slot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
@@ -80,7 +69,7 @@ func (s *Service) validateSyncCommittee(ctx context.Context, pid peer.ID, msg *p
 		return pubsub.ValidationIgnore
 	}
 
-	// Verify the block being voted and the processed state is in DB and. The block should have passed validation if it's in the DB.
+	// Verify the block being voted and the processed state is in DB and the block has passed validation if it's in the DB.
 	blockRoot := bytesutil.ToBytes32(comMsg.BlockRoot)
 	if !s.hasBlockAndState(ctx, blockRoot) {
 		return pubsub.ValidationIgnore
@@ -99,7 +88,7 @@ func (s *Service) validateSyncCommittee(ctx context.Context, pid peer.ID, msg *p
 		return pubsub.ValidationReject
 	}
 	// Check for validity of validator index.
-	_, err = bState.ValidatorAtIndexReadOnly(comMsg.ValidatorIndex)
+	val, err := bState.ValidatorAtIndexReadOnly(comMsg.ValidatorIndex)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
@@ -127,11 +116,6 @@ func (s *Service) validateSyncCommittee(ctx context.Context, pid peer.ID, msg *p
 		return pubsub.ValidationReject
 	}
 
-	val, err := bState.ValidatorAtIndexReadOnly(comMsg.ValidatorIndex)
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return pubsub.ValidationIgnore
-	}
 	d, err := helpers.Domain(bState.Fork(), helpers.SlotToEpoch(bState.Slot()), params.BeaconConfig().DomainSyncCommittee, bState.GenesisValidatorRoot())
 	if err != nil {
 		traceutil.AnnotateError(span, err)

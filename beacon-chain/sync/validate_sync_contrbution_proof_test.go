@@ -237,7 +237,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					for _, p := range coms {
 						idx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(p))
 						assert.Equal(t, true, ok)
-						rt, err := altair.SyncCommitteeSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
+						rt, err := altair.SyncSelectionProofSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
 						assert.NoError(t, err)
 						sig := keys[idx].Sign(rt[:])
 						if !altair.IsSyncCommitteeAggregator(sig.Marshal()) {
@@ -289,7 +289,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					for _, p := range coms {
 						idx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(p))
 						assert.Equal(t, true, ok)
-						rt, err := altair.SyncCommitteeSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
+						rt, err := altair.SyncSelectionProofSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
 						assert.NoError(t, err)
 						sig := keys[idx].Sign(rt[:])
 						if altair.IsSyncCommitteeAggregator(sig.Marshal()) {
@@ -347,7 +347,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					for _, p := range coms {
 						idx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(p))
 						assert.Equal(t, true, ok)
-						rt, err := altair.SyncCommitteeSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
+						rt, err := altair.SyncSelectionProofSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
 						assert.NoError(t, err)
 						sig := keys[idx].Sign(rt[:])
 						if altair.IsSyncCommitteeAggregator(sig.Marshal()) {
@@ -413,7 +413,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					for _, p := range coms {
 						idx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(p))
 						assert.Equal(t, true, ok)
-						rt, err := altair.SyncCommitteeSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
+						rt, err := altair.SyncSelectionProofSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
 						assert.NoError(t, err)
 						sig := keys[idx].Sign(rt[:])
 						if altair.IsSyncCommitteeAggregator(sig.Marshal()) {
@@ -489,7 +489,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					for _, p := range coms {
 						idx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(p))
 						assert.Equal(t, true, ok)
-						rt, err := altair.SyncCommitteeSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
+						rt, err := altair.SyncSelectionProofSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
 						assert.NoError(t, err)
 						sig := keys[idx].Sign(rt[:])
 						if altair.IsSyncCommitteeAggregator(sig.Marshal()) {
@@ -561,7 +561,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					for _, p := range coms {
 						idx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(p))
 						assert.Equal(t, true, ok)
-						rt, err := altair.SyncCommitteeSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
+						rt, err := altair.SyncSelectionProofSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
 						assert.NoError(t, err)
 						sig := keys[idx].Sign(rt[:])
 						if altair.IsSyncCommitteeAggregator(sig.Marshal()) {
