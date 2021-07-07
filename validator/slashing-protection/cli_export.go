@@ -20,7 +20,7 @@ const (
 
 // ExportSlashingProtectionJSONCli extracts a validator's slashing protection
 // history from their database and formats it into an EIP-3076 standard JSON
-// file via a CLI entrypoint to make it easy to migrate machines or eth2 clients.
+// file via a CLI entrypoint to make it easy to migrate machines or Ethereum consensus clients.
 //
 // Steps:
 // 1. Parse a path to the validator's datadir from the CLI context.

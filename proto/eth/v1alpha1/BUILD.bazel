@@ -10,6 +10,7 @@ load("@rules_proto//proto:defs.bzl", "proto_library")
 # gazelle:ignore
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
+load("//proto:ssz_proto_library.bzl", "ssz_proto_files")
 load("//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
 
 ##############################################################################
@@ -22,9 +23,7 @@ proto_library(
     srcs = [
         "attestation.proto",
         "beacon_block.proto",
-        "beacon_block_altair.proto",
         "beacon_chain.proto",
-        "sync_committee.proto",
         "node.proto",
         "validator.proto",
 #        ":generated_swagger_proto",
@@ -56,8 +55,6 @@ ssz_gen_marshal(
         "AttestationData",
         "AttesterSlashing",
         "BeaconBlock",
-        "BeaconBlockAltair",
-        "BeaconBlockBodyAltair",
         "BeaconBlockHeader",
         "Checkpoint",
         "Deposit",
@@ -66,13 +63,10 @@ ssz_gen_marshal(
         "ProposerSlashing",
         "SignedAggregateAttestationAndProof",
         "SignedBeaconBlock",
-        "SignedBeaconBlockAltair",
         "SignedBeaconBlockHeader",
         "SignedVoluntaryExit",
         "Validator",
         "VoluntaryExit",
-        "SyncCommitteeSignature",
-        "SyncCommitteeContribution",
         "ContributionAndProof",
         "SignedContributionAndProof",
     ],

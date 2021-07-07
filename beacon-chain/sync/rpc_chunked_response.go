@@ -8,7 +8,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 )
 
 // chunkWriter writes the given message as a chunked response to the given network
@@ -43,7 +44,7 @@ func ReadChunkedBlock(stream libp2pcore.Stream, chain blockchain.ChainInfoFetche
 	if err := readResponseChunk(stream, chain, p2p, blk); err != nil {
 		return nil, err
 	}
-	return interfaces.WrappedPhase0SignedBeaconBlock(blk), nil
+	return wrapper.WrappedPhase0SignedBeaconBlock(blk), nil
 }
 
 // readFirstChunkedBlock reads the first chunked block and applies the appropriate deadlines to
@@ -63,7 +64,7 @@ func readFirstChunkedBlock(stream libp2pcore.Stream, chain blockchain.ChainInfoF
 		return nil, err
 	}
 	err = p2p.Encoding().DecodeWithMaxLength(stream, blk)
-	return interfaces.WrappedPhase0SignedBeaconBlock(blk), err
+	return wrapper.WrappedPhase0SignedBeaconBlock(blk), err
 }
 
 // readResponseChunk reads the response from the stream and decodes it into the

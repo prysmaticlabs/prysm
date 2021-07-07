@@ -9,15 +9,15 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/aggregation"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -47,7 +47,7 @@ func TestProcessAttestations_InclusionDelayFailure(t *testing.T) {
 		params.BeaconConfig().MinAttestationInclusionDelay,
 		beaconState.Slot(),
 	)
-	_, err := blocks.ProcessAttestations(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(b))
+	_, err := blocks.ProcessAttestations(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(b))
 	assert.ErrorContains(t, want, err)
 }
 
@@ -77,7 +77,7 @@ func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 		helpers.PrevEpoch(beaconState),
 		helpers.CurrentEpoch(beaconState),
 	)
-	_, err = blocks.ProcessAttestations(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(b))
+	_, err = blocks.ProcessAttestations(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(b))
 	assert.ErrorContains(t, want, err)
 }
 
@@ -105,11 +105,11 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&pb.PendingAttestation{}))
 
 	want := "source check point not equal to current justified checkpoint"
-	_, err := blocks.ProcessAttestations(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(b))
+	_, err := blocks.ProcessAttestations(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(b))
 	assert.ErrorContains(t, want, err)
 	b.Block.Body.Attestations[0].Data.Source.Epoch = helpers.CurrentEpoch(beaconState)
 	b.Block.Body.Attestations[0].Data.Source.Root = []byte{}
-	_, err = blocks.ProcessAttestations(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(b))
+	_, err = blocks.ProcessAttestations(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(b))
 	assert.ErrorContains(t, want, err)
 }
 
@@ -143,12 +143,12 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	require.NoError(t, beaconState.AppendPreviousEpochAttestations(&pb.PendingAttestation{}))
 
 	want := "source check point not equal to previous justified checkpoint"
-	_, err = blocks.ProcessAttestations(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(b))
+	_, err = blocks.ProcessAttestations(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(b))
 	assert.ErrorContains(t, want, err)
 	b.Block.Body.Attestations[0].Data.Source.Epoch = helpers.PrevEpoch(beaconState)
 	b.Block.Body.Attestations[0].Data.Target.Epoch = helpers.PrevEpoch(beaconState)
 	b.Block.Body.Attestations[0].Data.Source.Root = []byte{}
-	_, err = blocks.ProcessAttestations(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(b))
+	_, err = blocks.ProcessAttestations(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(b))
 	assert.ErrorContains(t, want, err)
 }
 
@@ -179,7 +179,7 @@ func TestProcessAttestations_InvalidAggregationBitsLength(t *testing.T) {
 	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&pb.PendingAttestation{}))
 
 	expected := "failed to verify aggregation bitfield: wanted participants bitfield length 3, got: 4"
-	_, err = blocks.ProcessAttestations(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(b))
+	_, err = blocks.ProcessAttestations(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(b))
 	assert.ErrorContains(t, expected, err)
 }
 
@@ -222,7 +222,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 
 	err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
 	require.NoError(t, err)
-	_, err = blocks.ProcessAttestations(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(block))
+	_, err = blocks.ProcessAttestations(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 	assert.NoError(t, err)
 }
 
@@ -353,7 +353,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
 	require.NoError(t, err)
 
-	_, err = blocks.ProcessAttestations(context.Background(), beaconState, interfaces.WrappedPhase0SignedBeaconBlock(block))
+	_, err = blocks.ProcessAttestations(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 	assert.NoError(t, err)
 }
 
@@ -467,7 +467,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		}
 	}
 
-	state, err := stateV0.InitializeFromProto(&pb.BeaconState{
+	state, err := v1.InitializeFromProto(&pb.BeaconState{
 		Slot:        5,
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
@@ -525,7 +525,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 		}
 	}
 
-	state, err := stateV0.InitializeFromProto(&pb.BeaconState{
+	state, err := v1.InitializeFromProto(&pb.BeaconState{
 		Slot:       5,
 		Validators: validators,
 		Fork: &pb.Fork{
@@ -612,7 +612,7 @@ func TestValidateIndexedAttestation_AboveMaxLength(t *testing.T) {
 	}
 
 	want := "validator indices count exceeds MAX_VALIDATORS_PER_COMMITTEE"
-	err := blocks.VerifyIndexedAttestation(context.Background(), &stateV0.BeaconState{}, indexedAtt1)
+	err := blocks.VerifyIndexedAttestation(context.Background(), &v1.BeaconState{}, indexedAtt1)
 	assert.ErrorContains(t, want, err)
 }
 

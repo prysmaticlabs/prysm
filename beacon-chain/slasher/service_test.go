@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -48,6 +49,7 @@ func TestService_StartStop_ChainStartEvent(t *testing.T) {
 		StateNotifier:           &mock.MockStateNotifier{},
 		Database:                slasherDB,
 		HeadStateFetcher:        mockChain,
+		SyncChecker:             &mockSync.Sync{IsSyncing: false},
 	})
 	require.NoError(t, err)
 	go srv.Start()
@@ -80,6 +82,7 @@ func TestService_StartStop_ChainAlreadyInitialized(t *testing.T) {
 		StateNotifier:           &mock.MockStateNotifier{},
 		Database:                slasherDB,
 		HeadStateFetcher:        mockChain,
+		SyncChecker:             &mockSync.Sync{IsSyncing: false},
 	})
 	require.NoError(t, err)
 	go srv.Start()
