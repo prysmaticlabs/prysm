@@ -29,12 +29,6 @@ func (s *Service) currentForkDigest() ([4]byte, error) {
 	return p2putils.CreateForkDigest(s.genesisTime, s.genesisValidatorsRoot)
 }
 
-// This method retrieves the fork digest 1 epoch ahead. This is
-// to allow any respective services to subscribe early.
-func (s *Service) optimisticForkDigest() ([4]byte, error) {
-	return p2putils.CreateForkDigest(s.genesisTime, s.genesisValidatorsRoot)
-}
-
 // Compares fork ENRs between an incoming peer's record and our node's
 // local record values for current and next fork version/epoch.
 func (s *Service) compareForkENR(record *enr.Record) error {
