@@ -378,7 +378,7 @@ func TestService_ValidateSyncCommittee(t *testing.T) {
 				ReceivedFrom:  "",
 				ValidatorData: nil,
 			}
-			if got := tt.svc.validateSyncCommittee(tt.args.ctx, tt.args.pid, msg); got != tt.want {
+			if got := tt.svc.validateSyncCommitteeMessage(tt.args.ctx, tt.args.pid, msg); got != tt.want {
 				t.Errorf("validateSyncContributionAndProof() = %v, want %v", got, tt.want)
 			}
 		})
