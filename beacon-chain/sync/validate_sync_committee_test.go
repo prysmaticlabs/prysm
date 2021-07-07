@@ -50,6 +50,34 @@ func TestService_ValidateSyncCommittee(t *testing.T) {
 		want     pubsub.ValidationResult
 	}{
 		{
+			name: "Is syncing",
+			svc: NewService(context.Background(), &Config{
+				P2P:               mockp2p.NewTestP2P(t),
+				InitialSync:       &mockSync.Sync{IsSyncing: true},
+				Chain:             chainService,
+				StateNotifier:     chainService.StateNotifier(),
+				OperationNotifier: chainService.OperationNotifier(),
+			}),
+			setupSvc: func(s *Service, msg *prysmv2.SyncCommitteeMessage, topic string) (*Service, string) {
+				s.cfg.StateGen = stategen.New(db)
+				msg.BlockRoot = headRoot[:]
+				s.cfg.DB = db
+				assert.NoError(t, s.initCaches())
+				return s, topic
+			},
+			args: args{
+				ctx:   context.Background(),
+				pid:   "random",
+				topic: "junk",
+				msg: &prysmv2.SyncCommitteeMessage{
+					Slot:           1,
+					ValidatorIndex: 1,
+					BlockRoot:      params.BeaconConfig().ZeroHash[:],
+					Signature:      emptySig[:],
+				}},
+			want: pubsub.ValidationIgnore,
+		},
+		{
 			name: "Bad Topic",
 			svc: NewService(context.Background(), &Config{
 				P2P:               mockp2p.NewTestP2P(t),
@@ -118,7 +146,7 @@ func TestService_ValidateSyncCommittee(t *testing.T) {
 				s.cfg.DB = db
 				assert.NoError(t, s.initCaches())
 
-				s.setSeenSyncMessageIndexSlot(1, 1)
+				s.setSeenSyncMessageIndexSlot(1, 1, 0)
 				return s, topic
 			},
 			args: args{
