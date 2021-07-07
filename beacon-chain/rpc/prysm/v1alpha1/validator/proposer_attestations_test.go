@@ -31,7 +31,10 @@ func TestProposer_ProposerAtts_sortByProfitability(t *testing.T) {
 		testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b11100000}}),
 		testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b11000000}}),
 	})
-	atts = atts.sortByProfitability()
+	atts, err := atts.sortByProfitability()
+	if err != nil {
+		t.Error(err)
+	}
 	require.DeepEqual(t, want, atts)
 }
 
@@ -57,7 +60,10 @@ func TestProposer_ProposerAtts_sortByProfitabilityUsingMaxCover(t *testing.T) {
 	t.Run("no atts", func(t *testing.T) {
 		atts := getAtts([]testData{})
 		want := getAtts([]testData{})
-		atts = atts.sortByProfitability()
+		atts, err := atts.sortByProfitability()
+		if err != nil {
+			t.Error(err)
+		}
 		require.DeepEqual(t, want, atts)
 	})
 
@@ -68,7 +74,10 @@ func TestProposer_ProposerAtts_sortByProfitabilityUsingMaxCover(t *testing.T) {
 		want := getAtts([]testData{
 			{4, bitfield.Bitlist{0b11100000, 0b1}},
 		})
-		atts = atts.sortByProfitability()
+		atts, err := atts.sortByProfitability()
+		if err != nil {
+			t.Error(err)
+		}
 		require.DeepEqual(t, want, atts)
 	})
 
@@ -81,7 +90,10 @@ func TestProposer_ProposerAtts_sortByProfitabilityUsingMaxCover(t *testing.T) {
 			{4, bitfield.Bitlist{0b11100000, 0b1}},
 			{1, bitfield.Bitlist{0b11000000, 0b1}},
 		})
-		atts = atts.sortByProfitability()
+		atts, err := atts.sortByProfitability()
+		if err != nil {
+			t.Error(err)
+		}
 		require.DeepEqual(t, want, atts)
 	})
 
@@ -96,7 +108,10 @@ func TestProposer_ProposerAtts_sortByProfitabilityUsingMaxCover(t *testing.T) {
 			{4, bitfield.Bitlist{0b11100000, 0b1}},
 			{1, bitfield.Bitlist{0b11000000, 0b1}},
 		})
-		atts = atts.sortByProfitability()
+		atts, err := atts.sortByProfitability()
+		if err != nil {
+			t.Error(err)
+		}
 		require.DeepEqual(t, want, atts)
 	})
 
@@ -121,7 +136,10 @@ func TestProposer_ProposerAtts_sortByProfitabilityUsingMaxCover(t *testing.T) {
 				{1, bitfield.Bitlist{0b11001000, 0b1}},
 				{1, bitfield.Bitlist{0b00001100, 0b1}},
 			})
-			atts = atts.sortByProfitability()
+			atts, err := atts.sortByProfitability()
+			if err != nil {
+				t.Error(err)
+			}
 			require.DeepEqual(t, want, atts)
 		})
 		t.Run("max-cover", func(t *testing.T) {
@@ -140,7 +158,10 @@ func TestProposer_ProposerAtts_sortByProfitabilityUsingMaxCover(t *testing.T) {
 				{1, bitfield.Bitlist{0b00001100, 0b1}},
 				{1, bitfield.Bitlist{0b11001000, 0b1}},
 			})
-			atts = atts.sortByProfitability()
+			atts, err := atts.sortByProfitability()
+			if err != nil {
+				t.Error(err)
+			}
 			require.DeepEqual(t, want, atts)
 		})
 	})
@@ -162,7 +183,10 @@ func TestProposer_ProposerAtts_sortByProfitabilityUsingMaxCover(t *testing.T) {
 			{1, bitfield.Bitlist{0b11100000, 0b1}},
 			{1, bitfield.Bitlist{0b11000000, 0b1}},
 		})
-		atts = atts.sortByProfitability()
+		atts, err := atts.sortByProfitability()
+		if err != nil {
+			t.Error(err)
+		}
 		require.DeepEqual(t, want, atts)
 	})
 
@@ -191,7 +215,10 @@ func TestProposer_ProposerAtts_sortByProfitabilityUsingMaxCover(t *testing.T) {
 			{1, bitfield.Bitlist{0b11100000, 0b1}},
 			{1, bitfield.Bitlist{0b11000000, 0b1}},
 		})
-		atts = atts.sortByProfitability()
+		atts, err := atts.sortByProfitability()
+		if err != nil {
+			t.Error(err)
+		}
 		require.DeepEqual(t, want, atts)
 	})
 }
@@ -414,7 +441,10 @@ func TestProposer_ProposerAtts_dedup(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			atts := tt.atts.dedup()
+			atts, err := tt.atts.dedup()
+			if err != nil {
+				t.Error(err)
+			}
 			sort.Slice(atts, func(i, j int) bool {
 				if atts[i].AggregationBits.Count() == atts[j].AggregationBits.Count() {
 					if atts[i].Data.Slot == atts[j].Data.Slot {

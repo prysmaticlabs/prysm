@@ -295,7 +295,11 @@ func TestAggregateAttestations_rearrangeProcessedAttestations(t *testing.T) {
 			candidates := make([]*bitfield.Bitlist64, len(tt.atts))
 			for i := 0; i < len(tt.atts); i++ {
 				if tt.atts[i] != nil {
-					candidates[i] = tt.atts[i].AggregationBits.ToBitlist64()
+					var err error
+					candidates[i], err = tt.atts[i].AggregationBits.ToBitlist64()
+					if err != nil {
+						t.Error(err)
+					}
 				}
 			}
 			rearrangeProcessedAttestations(tt.atts, candidates, tt.keys)
@@ -381,7 +385,13 @@ func TestAggregateAttestations_aggregateAttestations(t *testing.T) {
 			},
 			wantTargetIdx: 0,
 			keys:          []int{0, 1},
-			coverage:      bitfield.NewBitlist64FromBytes(64, []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00000011}),
+			coverage: func() *bitfield.Bitlist64 {
+				b, err := bitfield.NewBitlist64FromBytes(64, []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00000011})
+				if err != nil {
+					t.Fatal(err)
+				}
+				return b
+			}(),
 		},
 		{
 			name: "many attestations, several selected",
@@ -403,7 +413,13 @@ func TestAggregateAttestations_aggregateAttestations(t *testing.T) {
 			},
 			wantTargetIdx: 1,
 			keys:          []int{1, 2, 4},
-			coverage:      bitfield.NewBitlist64FromBytes(64, []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00010110}),
+			coverage: func() *bitfield.Bitlist64 {
+				b, err := bitfield.NewBitlist64FromBytes(64, []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00010110})
+				if err != nil {
+					t.Fatal(err)
+				}
+				return b
+			}(),
 		},
 	}
 	for _, tt := range tests {

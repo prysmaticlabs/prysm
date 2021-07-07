@@ -69,7 +69,11 @@ func AggregatePair(a1, a2 *ethpb.Attestation) (*ethpb.Attestation, error) {
 	if a1.AggregationBits.Len() != a2.AggregationBits.Len() {
 		return nil, aggregation.ErrBitsDifferentLen
 	}
-	if a1.AggregationBits.Overlaps(a2.AggregationBits) {
+	o, err := a1.AggregationBits.Overlaps(a2.AggregationBits)
+	if err != nil {
+		return nil, err
+	}
+	if o {
 		return nil, aggregation.ErrBitsOverlap
 	}
 
@@ -79,11 +83,18 @@ func AggregatePair(a1, a2 *ethpb.Attestation) (*ethpb.Attestation, error) {
 		baseAtt, newAtt = newAtt, baseAtt
 	}
 
-	if baseAtt.AggregationBits.Contains(newAtt.AggregationBits) {
+	c, err := baseAtt.AggregationBits.Contains(newAtt.AggregationBits)
+	if err != nil {
+		return nil, err
+	}
+	if c {
 		return baseAtt, nil
 	}
 
-	newBits := baseAtt.AggregationBits.Or(newAtt.AggregationBits)
+	newBits, err := baseAtt.AggregationBits.Or(newAtt.AggregationBits)
+	if err != nil {
+		return nil, err
+	}
 	newSig, err := signatureFromBytes(newAtt.Signature)
 	if err != nil {
 		return nil, err
