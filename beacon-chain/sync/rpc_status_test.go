@@ -22,6 +22,8 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	interfaces2 "github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -176,7 +178,7 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, genesisState.SetSlot(111))
 	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%uint64(params.BeaconConfig().SlotsPerHistoricalRoot), headRoot))
-	require.NoError(t, db.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(finalized)))
+	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(finalized)))
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), finalizedRoot))
 	finalizedCheckpt := &ethpb.Checkpoint{
 		Epoch: 3,
@@ -266,7 +268,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	require.NoError(t, err)
 	blk := testutil.NewBeaconBlock()
 	blk.Block.Slot = 0
-	require.NoError(t, db.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(blk)))
+	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(blk)))
 	finalizedRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), finalizedRoot))
@@ -478,7 +480,7 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%uint64(params.BeaconConfig().SlotsPerHistoricalRoot), headRoot))
 	blk := testutil.NewBeaconBlock()
 	blk.Block.Slot = blkSlot
-	require.NoError(t, db.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(blk)))
+	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(blk)))
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), finalizedRoot))
 	finalizedCheckpt := &ethpb.Checkpoint{
 		Epoch: 3,
@@ -559,7 +561,7 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 	genRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	require.NoError(t, db.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(blk)))
+	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(blk)))
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), genRoot))
 	blocksTillHead := makeBlocks(t, 1, 1000, genRoot)
 	require.NoError(t, db.SaveBlocks(context.Background(), blocksTillHead))
@@ -926,9 +928,9 @@ func TestShouldResync(t *testing.T) {
 	}
 }
 
-func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []interfaces.SignedBeaconBlock {
+func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []interfaces2.SignedBeaconBlock {
 	blocks := make([]*ethpb.SignedBeaconBlock, n)
-	ifaceBlocks := make([]interfaces.SignedBeaconBlock, n)
+	ifaceBlocks := make([]interfaces2.SignedBeaconBlock, n)
 	for j := i; j < n+i; j++ {
 		parentRoot := make([]byte, 32)
 		copy(parentRoot, previousRoot[:])
@@ -938,7 +940,7 @@ func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []interfaces.S
 		var err error
 		previousRoot, err = blocks[j-i].Block.HashTreeRoot()
 		require.NoError(t, err)
-		ifaceBlocks[j-i] = interfaces.WrappedPhase0SignedBeaconBlock(blocks[j-i])
+		ifaceBlocks[j-i] = wrapper.WrappedPhase0SignedBeaconBlock(blocks[j-i])
 	}
 	return ifaceBlocks
 }
