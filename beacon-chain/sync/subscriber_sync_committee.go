@@ -9,7 +9,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// skipcq: SCT-1000
+// skipcq: SCT-U1000
 func (s *Service) syncCommitteeSubscriber(_ context.Context, msg proto.Message) error {
 	m, ok := msg.(*prysmv2.SyncCommitteeMessage)
 	if !ok {
