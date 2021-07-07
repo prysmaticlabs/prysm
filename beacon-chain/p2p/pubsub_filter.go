@@ -52,8 +52,7 @@ func (s *Service) CanSubscribe(topic string) bool {
 		if parts[2] != fmt.Sprintf("%x", fd) && parts[2] != fmt.Sprintf("%x", digest) {
 			return false
 		}
-	}
-	if !isForkNextEpoch {
+	} else {
 		if parts[2] != fmt.Sprintf("%x", fd) {
 			return false
 		}

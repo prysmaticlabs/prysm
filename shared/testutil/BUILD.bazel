@@ -12,6 +12,7 @@ go_library(
         "helpers.go",
         "state.go",
         "sync_aggregate.go",
+        "sync_committee.go",
         "wait_timeout.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/testutil",
