@@ -7,12 +7,14 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	transition "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/interfaces/version"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
 
@@ -204,6 +206,15 @@ func processSlotsStateGen(ctx context.Context, state iface.BeaconState, slot typ
 		}
 		if err := state.SetSlot(state.Slot() + 1); err != nil {
 			return nil, err
+		}
+		if helpers.IsEpochStart(state.Slot()) && helpers.SlotToEpoch(state.Slot()) == params.BeaconConfig().AltairForkEpoch {
+			state, err = altair.UpgradeToAltair(state)
+			if err != nil {
+				return nil, err
+			}
+			if err := helpers.UpdateSyncCommitteeCache(state); err != nil {
+				return nil, err
+			}
 		}
 	}
 
