@@ -42,6 +42,9 @@ func TestMetaDataRPCHandler_ReceivesMetadata(t *testing.T) {
 		cfg: &Config{
 			DB:  d,
 			P2P: p1,
+			Chain: &mock.ChainService{
+				ValidatorsRoot: [32]byte{},
+			},
 		},
 		rateLimiter: newRateLimiter(p1),
 	}
@@ -89,16 +92,18 @@ func TestMetadataRPCHandler_SendsMetadata(t *testing.T) {
 	d := db.SetupDB(t)
 	r := &Service{
 		cfg: &Config{
-			DB:  d,
-			P2P: p1,
+			DB:    d,
+			P2P:   p1,
+			Chain: &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}},
 		},
 		rateLimiter: newRateLimiter(p1),
 	}
 
 	r2 := &Service{
 		cfg: &Config{
-			DB:  d,
-			P2P: p2,
+			DB:    d,
+			P2P:   p2,
+			Chain: &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}},
 		},
 		rateLimiter: newRateLimiter(p2),
 	}

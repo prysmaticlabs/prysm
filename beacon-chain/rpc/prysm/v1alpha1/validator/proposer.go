@@ -21,11 +21,12 @@ import (
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -40,11 +41,13 @@ var eth1DataNotification bool
 
 const eth1dataTimeout = 2 * time.Second
 
+// skipcq: SCC-U1000
 type eth1DataSingleVote struct {
 	eth1Data    *ethpb.Eth1Data
 	blockHeight *big.Int
 }
 
+// skipcq: SCC-U1000
 type eth1DataAggregatedVote struct {
 	data  eth1DataSingleVote
 	votes int
@@ -97,12 +100,12 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 
 	// Compute state root with the newly constructed block.
 	stateRoot, err = vs.ComputeStateRoot(
-		ctx, interfaces.WrappedPhase0SignedBeaconBlock(
+		ctx, wrapper.WrappedPhase0SignedBeaconBlock(
 			&ethpb.SignedBeaconBlock{Block: blk, Signature: make([]byte, 96)},
 		),
 	)
 	if err != nil {
-		interop.WriteBlockToDisk(interfaces.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: blk}), true /*failed*/)
+		interop.WriteBlockToDisk(wrapper.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: blk}), true /*failed*/)
 		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
 	}
 	blk.StateRoot = stateRoot
@@ -183,7 +186,7 @@ func (vs *Server) BuildBlockData(ctx context.Context, req *ethpb.BlockRequest) (
 // ProposeBlock is called by a proposer during its assigned slot to create a block in an attempt
 // to get it processed by the beacon node as the canonical head.
 func (vs *Server) ProposeBlock(ctx context.Context, rBlk *ethpb.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
-	blk := interfaces.WrappedPhase0SignedBeaconBlock(rBlk)
+	blk := wrapper.WrappedPhase0SignedBeaconBlock(rBlk)
 	return vs.ProposeBlockGeneric(ctx, blk)
 }
 
@@ -299,6 +302,7 @@ func (vs *Server) slotStartTime(slot types.Slot) uint64 {
 	return helpers.VotingPeriodStartTime(startTime, slot)
 }
 
+// skipcq: SCC-U1000
 func (vs *Server) inRangeVotes(ctx context.Context,
 	beaconState iface.ReadOnlyBeaconState,
 	firstValidBlockNumber, lastValidBlockNumber *big.Int) ([]eth1DataSingleVote, error) {
@@ -326,6 +330,7 @@ func (vs *Server) inRangeVotes(ctx context.Context,
 	return inRangeVotes, nil
 }
 
+// skipcq: SCC-U1000
 func chosenEth1DataMajorityVote(votes []eth1DataSingleVote) eth1DataAggregatedVote {
 	var voteCount []eth1DataAggregatedVote
 	for _, singleVote := range votes {

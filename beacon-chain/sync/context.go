@@ -13,7 +13,7 @@ import (
 const digestLength = 4
 
 // writes peer's current context for the expected payload to the stream.
-func writeContextToStream(stream network.Stream, chain blockchain.ChainInfoFetcher) error {
+func writeContextToStream(objCtx []byte, stream network.Stream, chain blockchain.ChainInfoFetcher) error {
 	rpcCtx, err := rpcContext(stream, chain)
 	if err != nil {
 		return err
@@ -21,6 +21,10 @@ func writeContextToStream(stream network.Stream, chain blockchain.ChainInfoFetch
 	// Exit early if there is an empty context.
 	if len(rpcCtx) == 0 {
 		return nil
+	}
+	// Always choose the object's context when writing to the stream.
+	if objCtx != nil {
+		rpcCtx = objCtx
 	}
 	_, err = stream.Write(rpcCtx)
 	return err

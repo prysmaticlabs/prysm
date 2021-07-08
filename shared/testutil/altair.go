@@ -12,10 +12,14 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -29,12 +33,194 @@ func DeterministicGenesisStateAltair(t testing.TB, numValidators uint64) (iface.
 	if err != nil {
 		t.Fatal(errors.Wrapf(err, "failed to get eth1data for %d deposits", numValidators))
 	}
-	beaconState, err := altair.GenesisBeaconState(context.Background(), deposits, uint64(0), eth1Data)
+	beaconState, err := GenesisBeaconState(context.Background(), deposits, uint64(0), eth1Data)
 	if err != nil {
 		t.Fatal(errors.Wrapf(err, "failed to get genesis beacon state of %d validators", numValidators))
 	}
 	resetCache()
 	return beaconState, privKeys
+}
+
+// GenesisBeaconState returns the genesis beacon state.
+func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (iface.BeaconStateAltair, error) {
+	state, err := emptyGenesisState()
+	if err != nil {
+		return nil, err
+	}
+
+	// Process initial deposits.
+	state, err = helpers.UpdateGenesisEth1Data(state, deposits, eth1Data)
+	if err != nil {
+		return nil, err
+	}
+
+	state, err = altair.ProcessPreGenesisDeposits(ctx, state, deposits)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process validator deposits")
+	}
+
+	return buildGenesisBeaconState(genesisTime, state, state.Eth1Data())
+}
+
+func buildGenesisBeaconState(genesisTime uint64, preState iface.BeaconStateAltair, eth1Data *ethpb.Eth1Data) (iface.BeaconStateAltair, error) {
+	if eth1Data == nil {
+		return nil, errors.New("no eth1data provided for genesis state")
+	}
+
+	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	for i := 0; i < len(randaoMixes); i++ {
+		h := make([]byte, 32)
+		copy(h, eth1Data.BlockHash)
+		randaoMixes[i] = h
+	}
+
+	zeroHash := params.BeaconConfig().ZeroHash[:]
+
+	activeIndexRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	for i := 0; i < len(activeIndexRoots); i++ {
+		activeIndexRoots[i] = zeroHash
+	}
+
+	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	for i := 0; i < len(blockRoots); i++ {
+		blockRoots[i] = zeroHash
+	}
+
+	stateRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	for i := 0; i < len(stateRoots); i++ {
+		stateRoots[i] = zeroHash
+	}
+
+	slashings := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
+
+	genesisValidatorsRoot, err := v1.ValidatorRegistryRoot(preState.Validators())
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not hash tree root genesis validators %v", err)
+	}
+
+	prevEpochParticipation, err := preState.PreviousEpochParticipation()
+	if err != nil {
+		return nil, err
+	}
+	currEpochParticipation, err := preState.CurrentEpochParticipation()
+	if err != nil {
+		return nil, err
+	}
+	scores, err := preState.InactivityScores()
+	if err != nil {
+		return nil, err
+	}
+	state := &pb.BeaconStateAltair{
+		// Misc fields.
+		Slot:                  0,
+		GenesisTime:           genesisTime,
+		GenesisValidatorsRoot: genesisValidatorsRoot[:],
+
+		Fork: &pb.Fork{
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			Epoch:           0,
+		},
+
+		// Validator registry fields.
+		Validators:                 preState.Validators(),
+		Balances:                   preState.Balances(),
+		PreviousEpochParticipation: prevEpochParticipation,
+		CurrentEpochParticipation:  currEpochParticipation,
+		InactivityScores:           scores,
+
+		// Randomness and committees.
+		RandaoMixes: randaoMixes,
+
+		// Finality.
+		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  params.BeaconConfig().ZeroHash[:],
+		},
+		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  params.BeaconConfig().ZeroHash[:],
+		},
+		JustificationBits: []byte{0},
+		FinalizedCheckpoint: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  params.BeaconConfig().ZeroHash[:],
+		},
+
+		HistoricalRoots: [][]byte{},
+		BlockRoots:      blockRoots,
+		StateRoots:      stateRoots,
+		Slashings:       slashings,
+
+		// Eth1 data.
+		Eth1Data:         eth1Data,
+		Eth1DataVotes:    []*ethpb.Eth1Data{},
+		Eth1DepositIndex: preState.Eth1DepositIndex(),
+	}
+
+	bodyRoot, err := (&prysmv2.BeaconBlockBody{
+		RandaoReveal: make([]byte, 96),
+		Eth1Data: &ethpb.Eth1Data{
+			DepositRoot: make([]byte, 32),
+			BlockHash:   make([]byte, 32),
+		},
+		Graffiti: make([]byte, 32),
+		SyncAggregate: &prysmv2.SyncAggregate{
+			SyncCommitteeBits:      make([]byte, len(bitfield.NewBitvector512())),
+			SyncCommitteeSignature: make([]byte, 96),
+		},
+	}).HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not hash tree root empty block body")
+	}
+
+	state.LatestBlockHeader = &ethpb.BeaconBlockHeader{
+		ParentRoot: zeroHash,
+		StateRoot:  zeroHash,
+		BodyRoot:   bodyRoot[:],
+	}
+
+	var pubKeys [][]byte
+	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSize; i++ {
+		pubKeys = append(pubKeys, bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength))
+	}
+	state.CurrentSyncCommittee = &pb.SyncCommittee{
+		Pubkeys:         pubKeys,
+		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+	}
+	state.NextSyncCommittee = &pb.SyncCommittee{
+		Pubkeys:         bytesutil.Copy2dBytes(pubKeys),
+		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+	}
+
+	return stateAltair.InitializeFromProto(state)
+}
+
+func emptyGenesisState() (iface.BeaconStateAltair, error) {
+	state := &pb.BeaconStateAltair{
+		// Misc fields.
+		Slot: 0,
+		Fork: &pb.Fork{
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			CurrentVersion:  params.BeaconConfig().AltairForkVersion,
+			Epoch:           0,
+		},
+		// Validator registry fields.
+		Validators:       []*ethpb.Validator{},
+		Balances:         []uint64{},
+		InactivityScores: []uint64{},
+
+		JustificationBits:          []byte{0},
+		HistoricalRoots:            [][]byte{},
+		CurrentEpochParticipation:  []byte{},
+		PreviousEpochParticipation: []byte{},
+
+		// Eth1 data.
+		Eth1Data:         &ethpb.Eth1Data{},
+		Eth1DataVotes:    []*ethpb.Eth1Data{},
+		Eth1DepositIndex: 0,
+	}
+	return stateAltair.InitializeFromProto(state)
 }
 
 // NewBeaconBlockAltair creates a beacon block with minimum marshalable fields.
@@ -73,7 +259,7 @@ func BlockSignatureAltair(
 ) (bls.Signature, error) {
 	var err error
 
-	s, err := state.CalculateStateRoot(context.Background(), bState, interfaces.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlock{Block: block}))
+	s, err := state.CalculateStateRoot(context.Background(), bState, wrapper.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlock{Block: block}))
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +369,7 @@ func GenerateFullBlockAltair(
 		slot = currentSlot + 1
 	}
 
-	syncAgg, err := generateSyncCommittees(bState, privs, parentRoot)
+	syncAgg, err := generateSyncAggregate(bState, privs, parentRoot)
 	if err != nil {
 		return nil, err
 	}

@@ -291,7 +291,7 @@ func IsSyncCommitteeAggregator(sig []byte) bool {
 	return bytesutil.FromBytes8(hashedSig[:8])%modulo == 0
 }
 
-// SyncCommitteeSigningRoot returns the signing root from the relevant provided data.
+// SyncSelectionProofSigningRoot returns the signing root from the relevant provided data.
 //
 // def get_sync_committee_selection_proof(state: BeaconState,
 //                                       slot: Slot,
@@ -304,7 +304,7 @@ func IsSyncCommitteeAggregator(sig []byte) bool {
 //    )
 //    signing_root = compute_signing_root(signing_data, domain)
 //    return bls.Sign(privkey, signing_root)
-func SyncCommitteeSigningRoot(st iface.BeaconState, slot types.Slot, comIdx types.CommitteeIndex) ([32]byte, error) {
+func SyncSelectionProofSigningRoot(st iface.BeaconState, slot types.Slot, comIdx types.CommitteeIndex) ([32]byte, error) {
 	dom, err := helpers.Domain(st.Fork(), helpers.SlotToEpoch(slot), params.BeaconConfig().DomainSyncCommitteeSelectionProof, st.GenesisValidatorRoot())
 	if err != nil {
 		return [32]byte{}, err

@@ -57,7 +57,6 @@ var maxDialTimeout = params.BeaconNetworkConfig().RespTimeout
 type Service struct {
 	started               bool
 	isPreGenesis          bool
-	currentForkDigest     [4]byte
 	pingMethod            func(ctx context.Context, id peer.ID) error
 	cancel                context.CancelFunc
 	cfg                   *Config
@@ -95,7 +94,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		cancel:        cancel,
 		cfg:           cfg,
 		isPreGenesis:  true,
-		joinedTopics:  make(map[string]*pubsub.Topic, len(GossipTopicMappings)),
+		joinedTopics:  make(map[string]*pubsub.Topic, len(gossipTopicMappings)),
 		subnetsLock:   make(map[uint64]*sync.RWMutex),
 	}
 
@@ -254,6 +253,7 @@ func (s *Service) Start() {
 	if p2pHostDNS != "" {
 		logExternalDNSAddr(s.host.ID(), p2pHostDNS, p2pTCPPort)
 	}
+	go s.forkWatcher()
 }
 
 // Stop the p2p service and terminate all peer connections.
@@ -400,7 +400,7 @@ func (s *Service) awaitStateInitialized() {
 				}
 				s.genesisTime = data.StartTime
 				s.genesisValidatorsRoot = data.GenesisValidatorsRoot
-				_, err := s.forkDigest() // initialize fork digest cache
+				_, err := s.currentForkDigest() // initialize fork digest cache
 				if err != nil {
 					log.WithError(err).Error("Could not initialize fork digest")
 				}

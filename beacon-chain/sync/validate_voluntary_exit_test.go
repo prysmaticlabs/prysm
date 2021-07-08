@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"reflect"
 	"testing"
+	"time"
 
 	lru "github.com/hashicorp/golang-lru"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -79,7 +80,8 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 		cfg: &Config{
 			P2P: p,
 			Chain: &mock.ChainService{
-				State: s,
+				State:   s,
+				Genesis: time.Now(),
 			},
 			InitialSync: &mockSync.Sync{IsSyncing: false},
 		},
@@ -90,6 +92,9 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 	_, err = p.Encoding().EncodeGossip(buf, exit)
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(exit)]
+	d, err := r.currentForkDigest()
+	assert.NoError(t, err)
+	topic = r.addDigestToTopic(topic, d)
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data:  buf.Bytes(),

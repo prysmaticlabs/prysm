@@ -65,7 +65,7 @@ type Server struct {
 	Eth1BlockFetcher       powchain.POWBlockFetcher
 	PendingDepositsFetcher depositcache.PendingDepositsFetcher
 	OperationNotifier      opfeed.Notifier
-	StateGen               *stategen.State
+	StateGen               stategen.StateManager
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current
@@ -127,11 +127,11 @@ func (vs *Server) ValidatorIndex(ctx context.Context, req *ethpb.ValidatorIndexR
 
 // DomainData fetches the current domain version information from the beacon state.
 func (vs *Server) DomainData(_ context.Context, request *ethpb.DomainRequest) (*ethpb.DomainResponse, error) {
-	headGenesisValidatorRoot := vs.HeadFetcher.HeadGenesisValidatorRoot()
 	fork, err := p2putils.Fork(request.Epoch)
 	if err != nil {
 		return nil, err
 	}
+	headGenesisValidatorRoot := vs.HeadFetcher.HeadGenesisValidatorRoot()
 	dv, err := helpers.Domain(fork, request.Epoch, bytesutil.ToBytes4(request.Domain), headGenesisValidatorRoot[:])
 	if err != nil {
 		return nil, err

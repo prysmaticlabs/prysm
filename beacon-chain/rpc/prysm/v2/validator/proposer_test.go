@@ -20,9 +20,9 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -40,7 +40,7 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 		t,
 		db.SaveBlock(
 			ctx,
-			interfaces.WrappedAltairSignedBeaconBlock(genesis),
+			wrapper.WrappedAltairSignedBeaconBlock(genesis),
 		),
 		"Could not save genesis block",
 	)
@@ -70,7 +70,7 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 	req := testutil.NewBeaconBlockAltair()
 	req.Block.Slot = 5
 	req.Block.ParentRoot = bsRoot[:]
-	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedAltairSignedBeaconBlock(req)))
+	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedAltairSignedBeaconBlock(req)))
 	_, err = proposerServer.ProposeBlock(context.Background(), req)
 	assert.NoError(t, err, "Could not propose block correctly")
 }
@@ -101,7 +101,7 @@ func TestProposer_GetBlock_OK(t *testing.T) {
 		},
 		Signature: genesis.Signature,
 	}
-	require.NoError(t, db.SaveBlock(ctx, interfaces.WrappedAltairSignedBeaconBlock(genAltair)), "Could not save genesis block")
+	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedAltairSignedBeaconBlock(genAltair)), "Could not save genesis block")
 
 	parentRoot, err := genAltair.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")

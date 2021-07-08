@@ -26,9 +26,9 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -59,6 +59,42 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 		args     args
 		want     pubsub.ValidationResult
 	}{
+		{
+			name: "Is syncing",
+			svc: NewService(context.Background(), &Config{
+				P2P:               mockp2p.NewTestP2P(t),
+				InitialSync:       &mockSync.Sync{IsSyncing: true},
+				Chain:             chainService,
+				StateNotifier:     chainService.StateNotifier(),
+				OperationNotifier: chainService.OperationNotifier(),
+			}),
+			setupSvc: func(s *Service, msg *prysmv2.SignedContributionAndProof) *Service {
+				s.cfg.StateGen = stategen.New(db)
+				msg.Message.Contribution.BlockRoot = headRoot[:]
+				s.cfg.DB = db
+				assert.NoError(t, s.initCaches())
+				return s
+			},
+			args: args{
+				ctx:   context.Background(),
+				pid:   "random",
+				topic: "junk",
+				msg: &prysmv2.SignedContributionAndProof{
+					Message: &prysmv2.ContributionAndProof{
+						AggregatorIndex: 1,
+						Contribution: &prysmv2.SyncCommitteeContribution{
+							Slot:              1,
+							SubcommitteeIndex: 1,
+							BlockRoot:         params.BeaconConfig().ZeroHash[:],
+							AggregationBits:   bitfield.NewBitvector128(),
+							Signature:         emptySig[:],
+						},
+						SelectionProof: emptySig[:],
+					},
+					Signature: emptySig[:],
+				}},
+			want: pubsub.ValidationIgnore,
+		},
 		{
 			name: "Bad Topic",
 			svc: NewService(context.Background(), &Config{
@@ -237,7 +273,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					for _, p := range coms {
 						idx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(p))
 						assert.Equal(t, true, ok)
-						rt, err := altair.SyncCommitteeSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
+						rt, err := altair.SyncSelectionProofSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
 						assert.NoError(t, err)
 						sig := keys[idx].Sign(rt[:])
 						if !altair.IsSyncCommitteeAggregator(sig.Marshal()) {
@@ -289,7 +325,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					for _, p := range coms {
 						idx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(p))
 						assert.Equal(t, true, ok)
-						rt, err := altair.SyncCommitteeSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
+						rt, err := altair.SyncSelectionProofSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
 						assert.NoError(t, err)
 						sig := keys[idx].Sign(rt[:])
 						if altair.IsSyncCommitteeAggregator(sig.Marshal()) {
@@ -347,7 +383,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					for _, p := range coms {
 						idx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(p))
 						assert.Equal(t, true, ok)
-						rt, err := altair.SyncCommitteeSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
+						rt, err := altair.SyncSelectionProofSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
 						assert.NoError(t, err)
 						sig := keys[idx].Sign(rt[:])
 						if altair.IsSyncCommitteeAggregator(sig.Marshal()) {
@@ -413,7 +449,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					for _, p := range coms {
 						idx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(p))
 						assert.Equal(t, true, ok)
-						rt, err := altair.SyncCommitteeSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
+						rt, err := altair.SyncSelectionProofSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
 						assert.NoError(t, err)
 						sig := keys[idx].Sign(rt[:])
 						if altair.IsSyncCommitteeAggregator(sig.Marshal()) {
@@ -489,7 +525,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					for _, p := range coms {
 						idx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(p))
 						assert.Equal(t, true, ok)
-						rt, err := altair.SyncCommitteeSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
+						rt, err := altair.SyncSelectionProofSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
 						assert.NoError(t, err)
 						sig := keys[idx].Sign(rt[:])
 						if altair.IsSyncCommitteeAggregator(sig.Marshal()) {
@@ -561,7 +597,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 					for _, p := range coms {
 						idx, ok := hState.ValidatorIndexByPubkey(bytesutil.ToBytes48(p))
 						assert.Equal(t, true, ok)
-						rt, err := altair.SyncCommitteeSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
+						rt, err := altair.SyncSelectionProofSigningRoot(hState, helpers.PrevSlot(hState.Slot()), types.CommitteeIndex(i))
 						assert.NoError(t, err)
 						sig := keys[idx].Sign(rt[:])
 						if altair.IsSyncCommitteeAggregator(sig.Marshal()) {
@@ -661,9 +697,9 @@ func fillUpBlocksAndState(ctx context.Context, t *testing.T, beaconDB db.Databas
 		require.NoError(t, err)
 		r, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		_, testState, err = state.ExecuteStateTransitionNoVerifyAnySig(ctx, testState, interfaces.WrappedAltairSignedBeaconBlock(blk))
+		_, testState, err = state.ExecuteStateTransitionNoVerifyAnySig(ctx, testState, wrapper.WrappedAltairSignedBeaconBlock(blk))
 		assert.NoError(t, err)
-		assert.NoError(t, beaconDB.SaveBlock(ctx, interfaces.WrappedAltairSignedBeaconBlock(blk)))
+		assert.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedAltairSignedBeaconBlock(blk)))
 		assert.NoError(t, beaconDB.SaveStateSummary(ctx, &p2ppb.StateSummary{Slot: i, Root: r[:]}))
 		assert.NoError(t, beaconDB.SaveState(ctx, testState, r))
 		require.NoError(t, beaconDB.SaveHeadBlockRoot(ctx, r))

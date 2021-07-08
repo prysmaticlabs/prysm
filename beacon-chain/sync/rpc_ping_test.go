@@ -11,6 +11,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	types "github.com/prysmaticlabs/eth2-types"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
@@ -98,8 +99,9 @@ func TestPingRPCHandler_SendsPing(t *testing.T) {
 	d := db.SetupDB(t)
 	r := &Service{
 		cfg: &Config{
-			DB:  d,
-			P2P: p1,
+			DB:    d,
+			P2P:   p1,
+			Chain: &mock.ChainService{ValidatorsRoot: [32]byte{}, Genesis: time.Now()},
 		},
 		rateLimiter: newRateLimiter(p1),
 	}
@@ -112,8 +114,9 @@ func TestPingRPCHandler_SendsPing(t *testing.T) {
 
 	r2 := &Service{
 		cfg: &Config{
-			DB:  d,
-			P2P: p2,
+			DB:    d,
+			P2P:   p2,
+			Chain: &mock.ChainService{ValidatorsRoot: [32]byte{}, Genesis: time.Now()},
 		},
 		rateLimiter: newRateLimiter(p2),
 	}

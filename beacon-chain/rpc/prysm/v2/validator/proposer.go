@@ -8,10 +8,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/aggregation/sync_contribution"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	bytesutil2 "github.com/wealdtech/go-bytesutil"
 	"go.opencensus.io/trace"
@@ -60,13 +60,13 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*prysm
 	// Compute state root with the newly constructed block.
 	stateRoot, err = vs.V1Server.ComputeStateRoot(
 		ctx,
-		interfaces.WrappedAltairSignedBeaconBlock(
+		wrapper.WrappedAltairSignedBeaconBlock(
 			&prysmv2.SignedBeaconBlock{Block: blk, Signature: make([]byte, 96)},
 		),
 	)
 	if err != nil {
 		interop.WriteBlockToDisk(
-			interfaces.WrappedAltairSignedBeaconBlock(
+			wrapper.WrappedAltairSignedBeaconBlock(
 				&prysmv2.SignedBeaconBlock{Block: blk},
 			), true, /*failed*/
 		)
@@ -80,7 +80,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*prysm
 // ProposeBlock is called by a proposer during its assigned slot to create a block in an attempt
 // to get it processed by the beacon node as the canonical head.
 func (vs *Server) ProposeBlock(ctx context.Context, rBlk *prysmv2.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
-	blk := interfaces.WrappedAltairSignedBeaconBlock(rBlk)
+	blk := wrapper.WrappedAltairSignedBeaconBlock(rBlk)
 	return vs.V1Server.ProposeBlockGeneric(ctx, blk)
 }
 

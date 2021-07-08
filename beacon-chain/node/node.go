@@ -97,6 +97,9 @@ func New(cliCtx *cli.Context) (*BeaconNode, error) {
 	configureNetwork(cliCtx)
 	configureInteropConfig(cliCtx)
 
+	// Initializes any forks here.
+	params.BeaconConfig().InitializeForkSchedule()
+
 	registry := shared.NewServiceRegistry()
 
 	ctx, cancel := context.WithCancel(cliCtx.Context)

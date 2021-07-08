@@ -118,7 +118,7 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 	r := &Service{
 		cfg: &Config{
 			P2P:         p,
-			Chain:       &mock.ChainService{State: s},
+			Chain:       &mock.ChainService{State: s, Genesis: time.Now()},
 			InitialSync: &mockSync.Sync{IsSyncing: false},
 		},
 		seenProposerSlashingCache: c,
@@ -128,6 +128,9 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 	_, err = p.Encoding().EncodeGossip(buf, slashing)
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(slashing)]
+	d, err := r.currentForkDigest()
+	assert.NoError(t, err)
+	topic = r.addDigestToTopic(topic, d)
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data:  buf.Bytes(),

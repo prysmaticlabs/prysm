@@ -8,8 +8,11 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	wrapperv1 "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	wrapperv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -37,7 +40,7 @@ func TestExtractBlockDataType(t *testing.T) {
 				digest: []byte{},
 				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
 			},
-			want:    interfaces.WrappedPhase0SignedBeaconBlock(&eth.SignedBeaconBlock{}),
+			want:    wrapper.WrappedPhase0SignedBeaconBlock(&eth.SignedBeaconBlock{}),
 			wantErr: false,
 		},
 		{
@@ -64,7 +67,7 @@ func TestExtractBlockDataType(t *testing.T) {
 				digest: genDigest[:],
 				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
 			},
-			want:    interfaces.WrappedPhase0SignedBeaconBlock(&eth.SignedBeaconBlock{}),
+			want:    wrapperv1.WrappedPhase0SignedBeaconBlock(&eth.SignedBeaconBlock{}),
 			wantErr: false,
 		},
 		{
@@ -73,7 +76,7 @@ func TestExtractBlockDataType(t *testing.T) {
 				digest: altairDigest[:],
 				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
 			},
-			want:    interfaces.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlock{}),
+			want:    wrapperv2.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlock{}),
 			wantErr: false,
 		},
 	}

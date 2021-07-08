@@ -3,12 +3,11 @@ package sync
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
-
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -72,7 +71,7 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 		if blk == nil || blk.IsNil() {
 			continue
 		}
-		if err := s.chunkWriter(stream, blk); err != nil {
+		if err := s.chunkBlockWriter(stream, blk); err != nil {
 			return err
 		}
 	}
