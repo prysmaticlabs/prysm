@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func TestEndToEnd_Slashing_MinimalConfig(t *testing.T) {
+func TestEndToEnd_Slasher_MinimalConfig(t *testing.T) {
 	params.UseE2EConfig()
 	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
 
