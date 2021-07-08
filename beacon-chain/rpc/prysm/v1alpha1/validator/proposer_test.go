@@ -18,7 +18,7 @@ import (
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -1831,12 +1831,6 @@ func TestProposer_FilterAttestation(t *testing.T) {
 	require.NoError(t, db.SaveState(ctx, state, genesisRoot), "Could not save genesis state")
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, genesisRoot), "Could not save genesis state")
 
-	proposerServer := &Server{
-		BeaconDB:    db,
-		AttPool:     attestations.NewPool(),
-		HeadFetcher: &mock.ChainService{State: state, Root: genesisRoot[:]},
-	}
-
 	tests := []struct {
 		name         string
 		wantedErr    string
@@ -1910,6 +1904,11 @@ func TestProposer_FilterAttestation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			proposerServer := &Server{
+				BeaconDB:    db,
+				AttPool:     attestations.NewPool(),
+				HeadFetcher: &mock.ChainService{State: state, Root: genesisRoot[:]},
+			}
 			atts := tt.inputAtts()
 			received, err := proposerServer.filterAttestationsForBlockInclusion(context.Background(), state, atts)
 			if tt.wantedErr != "" {
@@ -2029,8 +2028,8 @@ func TestProposer_DeleteAttsInPool_Aggregated(t *testing.T) {
 		testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b10101}, Signature: sig}),
 		testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b11010}, Signature: sig})}
 	unaggregatedAtts := []*ethpb.Attestation{
-		testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1001}, Signature: sig}),
-		testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b0001}, Signature: sig})}
+		testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b10010}, Signature: sig}),
+		testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b10100}, Signature: sig})}
 
 	require.NoError(t, s.AttPool.SaveAggregatedAttestations(aggregatedAtts))
 	require.NoError(t, s.AttPool.SaveUnaggregatedAttestations(unaggregatedAtts))
