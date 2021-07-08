@@ -16,6 +16,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/status-im/keycard-go/hexutils"
@@ -118,11 +119,35 @@ func (s *Store) SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconSta
 		return errors.New("nil state")
 	}
 	multipleEncs := make([][]byte, len(states))
+	validatorsEntries := make(map[string][]byte) // Its a map to get get rid of duplicates
+	validatorKeys := make([][]byte, len(states)) //  for every state, this stores a compressed list of validator indices
 	for i, st := range states {
 		pbState, err := v1.ProtobufBeaconState(st.InnerStateUnsafe())
 		if err != nil {
 			return err
 		}
+
+		// yank out the validators and store them in separate table to save space.
+		var hashes []byte
+		for _, val := range pbState.Validators {
+			valBytes, encodeErr := encode(ctx, val)
+			if encodeErr != nil {
+				return encodeErr
+			}
+
+			// create the unique hash for that validator entry.
+			hash := hashutil.Hash(valBytes)
+			hashes = append(hashes, hash[:]...)
+
+			// note down the hash and the encoded validator entry
+			hashStr := hexutils.BytesToHex(hash[:])
+			validatorsEntries[hashStr] = valBytes
+		}
+
+		// zero out the validators List from the state.
+		pbState.Validators = nil
+
+		validatorKeys[i] = snappy.Encode(nil, hashes)
 		multipleEncs[i], err = encode(ctx, pbState)
 		if err != nil {
 			return err
@@ -131,12 +156,25 @@ func (s *Store) SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconSta
 
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateBucket)
+		valIdxBkt := tx.Bucket(BlockRootValidatorKeysIndexBucket)
 		for i, rt := range blockRoots {
 			indicesByBucket := createStateIndicesFromStateSlot(ctx, states[i].Slot())
 			if err := updateValueForIndices(ctx, indicesByBucket, rt[:], tx); err != nil {
 				return errors.Wrap(err, "could not update DB indices")
 			}
 			if err := bucket.Put(rt[:], multipleEncs[i]); err != nil {
+				return err
+			}
+			if err := valIdxBkt.Put(rt[:], validatorKeys[i]); err != nil {
+				return err
+			}
+		}
+
+		// store the validator entries separately to save space.
+		valBkt := tx.Bucket(stateValidatorsBucket)
+		for hashStr, validatorEntry := range validatorsEntries {
+			key := hexutils.HexToBytes(hashStr)
+			if err := valBkt.Put(key, validatorEntry); err != nil {
 				return err
 			}
 		}
