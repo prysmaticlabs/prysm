@@ -75,13 +75,13 @@ func TestStore_CheckAttesterDoubleVotes(t *testing.T) {
 	beaconDB := setupDB(t)
 	err := beaconDB.SaveAttestationRecordsForValidators(ctx, []*slashertypes.IndexedAttestationWrapper{
 		createAttestationWrapper(2, 3, []uint64{0, 1}, []byte{1}),
-		createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{1}),
+		createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{3}),
 	})
 	require.NoError(t, err)
 
 	slashableAtts := []*slashertypes.IndexedAttestationWrapper{
 		createAttestationWrapper(2, 3, []uint64{0, 1}, []byte{2}), // Different signing root.
-		createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{2}), // Different signing root.
+		createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{4}), // Different signing root.
 	}
 
 	wanted := []*slashertypes.AttesterDoubleVote{
@@ -100,14 +100,14 @@ func TestStore_CheckAttesterDoubleVotes(t *testing.T) {
 		{
 			ValidatorIndex:         2,
 			Target:                 4,
-			PrevAttestationWrapper: createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{1}),
-			AttestationWrapper:     createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{2}),
+			PrevAttestationWrapper: createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{3}),
+			AttestationWrapper:     createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{4}),
 		},
 		{
 			ValidatorIndex:         3,
 			Target:                 4,
-			PrevAttestationWrapper: createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{1}),
-			AttestationWrapper:     createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{2}),
+			PrevAttestationWrapper: createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{3}),
+			AttestationWrapper:     createAttestationWrapper(3, 4, []uint64{2, 3}, []byte{4}),
 		},
 	}
 	doubleVotes, err := beaconDB.CheckAttesterDoubleVotes(ctx, slashableAtts)
@@ -115,7 +115,13 @@ func TestStore_CheckAttesterDoubleVotes(t *testing.T) {
 	sort.SliceStable(doubleVotes, func(i, j int) bool {
 		return uint64(doubleVotes[i].ValidatorIndex) < uint64(doubleVotes[j].ValidatorIndex)
 	})
-	require.DeepEqual(t, wanted, doubleVotes)
+	require.Equal(t, len(wanted), len(doubleVotes))
+	for i, double := range doubleVotes {
+		require.DeepEqual(t, wanted[i].ValidatorIndex, double.ValidatorIndex)
+		require.DeepEqual(t, wanted[i].Target, double.Target)
+		require.DeepEqual(t, wanted[i].PrevAttestationWrapper, double.PrevAttestationWrapper)
+		require.DeepEqual(t, wanted[i].AttestationWrapper, double.AttestationWrapper)
+	}
 }
 
 func TestStore_SlasherChunk_SaveRetrieve(t *testing.T) {
@@ -339,9 +345,9 @@ func TestStore_HighestAttestations(t *testing.T) {
 			name: "should get highest att for multiple with diff histories",
 			attestationsInDB: []*slashertypes.IndexedAttestationWrapper{
 				createAttestationWrapper(0, 3, []uint64{2}, []byte{1}),
-				createAttestationWrapper(1, 4, []uint64{3}, []byte{1}),
-				createAttestationWrapper(2, 3, []uint64{4}, []byte{1}),
-				createAttestationWrapper(5, 6, []uint64{5}, []byte{1}),
+				createAttestationWrapper(1, 4, []uint64{3}, []byte{2}),
+				createAttestationWrapper(2, 3, []uint64{4}, []byte{3}),
+				createAttestationWrapper(5, 6, []uint64{5}, []byte{4}),
 			},
 			indices: []types.ValidatorIndex{2, 3, 4, 5},
 			expected: []*slashpb.HighestAttestation{
@@ -371,9 +377,9 @@ func TestStore_HighestAttestations(t *testing.T) {
 			name: "should get correct highest att for multiple shared atts with diff histories",
 			attestationsInDB: []*slashertypes.IndexedAttestationWrapper{
 				createAttestationWrapper(1, 4, []uint64{2, 3}, []byte{1}),
-				createAttestationWrapper(2, 5, []uint64{3, 5}, []byte{1}),
-				createAttestationWrapper(4, 5, []uint64{1, 2}, []byte{1}),
-				createAttestationWrapper(6, 7, []uint64{5}, []byte{1}),
+				createAttestationWrapper(2, 5, []uint64{3, 5}, []byte{2}),
+				createAttestationWrapper(4, 5, []uint64{1, 2}, []byte{3}),
+				createAttestationWrapper(6, 7, []uint64{5}, []byte{4}),
 			},
 			indices: []types.ValidatorIndex{2, 3, 4, 5},
 			expected: []*slashpb.HighestAttestation{
