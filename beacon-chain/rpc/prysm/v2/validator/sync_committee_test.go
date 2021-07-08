@@ -30,9 +30,13 @@ func TestGetSyncMessageBlockRoot_OK(t *testing.T) {
 }
 
 func TestSubmitSyncMessage_OK(t *testing.T) {
+	st, _ := testutil.DeterministicGenesisStateAltair(t, 10)
 	server := &Server{
 		SyncCommitteePool: synccommittee.NewStore(),
 		P2P:               &mockp2p.MockBroadcaster{},
+		HeadFetcher: &mock.ChainService{
+			State: st,
+		},
 	}
 	msg := &prysmv2.SyncCommitteeMessage{
 		Slot:           1,

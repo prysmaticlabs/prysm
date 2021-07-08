@@ -42,18 +42,35 @@ func (vs *Server) GetSyncMessageBlockRoot(
 func (vs *Server) SubmitSyncMessage(ctx context.Context, msg *prysmv2.SyncCommitteeMessage) (*emptypb.Empty, error) {
 	errs, ctx := errgroup.WithContext(ctx)
 
+	hState, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return &emptypb.Empty{}, err
+	}
+	val, err := hState.ValidatorAtIndex(msg.ValidatorIndex)
+	if err != nil {
+		return &emptypb.Empty{}, err
+	}
+	idxResp, err := vs.syncSubcommitteeIndex(ctx, bytesutil.ToBytes48(val.PublicKey), msg.Slot)
+	if err != nil {
+		return &emptypb.Empty{}, err
+	}
 	// Broadcasting and saving message into the pool in parallel. As one fail should not affect another.
-	errs.Go(func() error {
-		return vs.P2P.Broadcast(ctx, msg)
-	})
+	// This broadcasts for all subnets.
+	for _, id := range idxResp.Indices {
+		subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
+		subnet := id / subCommitteeSize
+		errs.Go(func() error {
+			return vs.P2P.BroadcastSyncCommitteeMessage(ctx, subnet, msg)
+		})
+	}
 
 	if err := vs.SyncCommitteePool.SaveSyncCommitteeMessage(msg); err != nil {
-		return nil, err
+		return &emptypb.Empty{}, err
 	}
 
 	// Wait for p2p broadcast to complete and return the first error (if any)
-	err := errs.Wait()
-	return nil, err
+	err = errs.Wait()
+	return &emptypb.Empty{}, err
 }
 
 // GetSyncSubcommitteeIndex is called by a sync committee participant to get
@@ -187,13 +204,17 @@ func (vs *Server) GetSyncCommitteeContribution(
 			}
 		}
 	}
-	aggregatedSig := bls.AggregateSignatures(sigs)
+	aggregatedSig := make([]byte, 96)
+	aggregatedSig[0] = 0xC0
+	if len(sigs) != 0 {
+		aggregatedSig = bls.AggregateSignatures(sigs).Marshal()
+	}
 	contribution := &prysmv2.SyncCommitteeContribution{
 		Slot:              headState.Slot(),
 		BlockRoot:         headRoot,
 		SubcommitteeIndex: req.SubnetId,
 		AggregationBits:   bits,
-		Signature:         aggregatedSig.Marshal(),
+		Signature:         aggregatedSig,
 	}
 
 	return contribution, nil
@@ -217,7 +238,7 @@ func (vs *Server) SubmitSignedContributionAndProof(
 
 	// Wait for p2p broadcast to complete and return the first error (if any)
 	err := errs.Wait()
-	return nil, err
+	return &emptypb.Empty{}, err
 }
 
 var syncCommitteeHeadStateCache = newSyncCommitteeHeadState()

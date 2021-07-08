@@ -41,20 +41,12 @@ func (s *Service) validateSyncCommitteeMessage(ctx context.Context, pid peer.ID,
 		return pubsub.ValidationReject
 	}
 
-	// Override topic for decoding.
-	originalTopic := msg.Topic
-	format := p2p.GossipTypeMapping[reflect.TypeOf(&prysmv2.SyncCommitteeMessage{})]
-	msg.Topic = &format
-
 	raw, err := s.decodePubsubMessage(msg)
 	if err != nil {
 		log.WithError(err).Debug("Could not decode message")
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
-
-	// Restore topic.
-	msg.Topic = originalTopic
 
 	m, ok := raw.(*prysmv2.SyncCommitteeMessage)
 	if !ok {
@@ -95,11 +87,14 @@ func (s *Service) validateSyncCommitteeMessage(ctx context.Context, pid peer.ID,
 		return pubsub.ValidationIgnore
 	}
 	isValid := false
-	digest, err := s.forkDigest()
+	digest, err := s.currentForkDigest()
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
+
+	format := p2p.GossipTypeMapping[reflect.TypeOf(&prysmv2.SyncCommitteeMessage{})]
+	// Validate that the validator is in the correct committee.
 	for _, idx := range subs {
 		if strings.HasPrefix(*msg.Topic, fmt.Sprintf(format, digest, idx)) {
 			isValid = true

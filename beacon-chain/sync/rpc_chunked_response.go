@@ -1,7 +1,6 @@
 package sync
 
 import (
-	ssz "github.com/ferranbt/fastssz"
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -11,27 +10,47 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces/version"
+	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// chunkWriter writes the given message as a chunked response to the given network
+// chunkBlockWriter writes the given message as a chunked response to the given network
 // stream.
 // response_chunk  ::= <result> | <context-bytes> | <encoding-dependent-header> | <encoded-payload>
-func (s *Service) chunkWriter(stream libp2pcore.Stream, msg ssz.Marshaler) error {
+func (s *Service) chunkBlockWriter(stream libp2pcore.Stream, blk interfaces.SignedBeaconBlock) error {
 	SetStreamWriteDeadline(stream, defaultWriteDuration)
-	return WriteChunk(stream, s.cfg.Chain, s.cfg.P2P.Encoding(), msg)
+	return WriteBlockChunk(stream, s.cfg.Chain, s.cfg.P2P.Encoding(), blk)
 }
 
 // WriteChunk object to stream.
 // response_chunk  ::= <result> | <context-bytes> | <encoding-dependent-header> | <encoded-payload>
-func WriteChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, encoding encoder.NetworkEncoding, msg ssz.Marshaler) error {
+func WriteBlockChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, encoding encoder.NetworkEncoding, blk interfaces.SignedBeaconBlock) error {
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
 	}
-	if err := writeContextToStream(stream, chain); err != nil {
+	obtainedCtx := []byte{}
+	switch blk.Version() {
+	case version.Phase0:
+		valRoot := chain.GenesisValidatorRoot()
+		digest, err := p2putils.ForkDigestFromEpoch(params.BeaconConfig().GenesisEpoch, valRoot[:])
+		if err != nil {
+			return err
+		}
+		obtainedCtx = digest[:]
+	case version.Altair:
+		valRoot := chain.GenesisValidatorRoot()
+		digest, err := p2putils.ForkDigestFromEpoch(params.BeaconConfig().AltairForkEpoch, valRoot[:])
+		if err != nil {
+			return err
+		}
+		obtainedCtx = digest[:]
+	}
+
+	if err := writeContextToStream(obtainedCtx, stream, chain); err != nil {
 		return err
 	}
-	_, err := encoding.EncodeWithMaxLength(stream, msg)
+	_, err := encoding.EncodeWithMaxLength(stream, blk)
 	return err
 }
 

@@ -152,7 +152,7 @@ func TestService_ValidateSyncCommittee(t *testing.T) {
 			args: args{
 				ctx:   context.Background(),
 				pid:   "random",
-				topic: defaultTopic,
+				topic: fmt.Sprintf(defaultTopic, fakeDigest, 0),
 				msg: &prysmv2.SyncCommitteeMessage{
 					Slot:           1,
 					ValidatorIndex: 1,
@@ -186,7 +186,7 @@ func TestService_ValidateSyncCommittee(t *testing.T) {
 			args: args{
 				ctx:   context.Background(),
 				pid:   "random",
-				topic: defaultTopic,
+				topic: fmt.Sprintf(defaultTopic, fakeDigest, 0),
 				msg: &prysmv2.SyncCommitteeMessage{
 					Slot:           1,
 					ValidatorIndex: 1,
@@ -225,7 +225,7 @@ func TestService_ValidateSyncCommittee(t *testing.T) {
 				msg.Slot = helpers.PrevSlot(hState.Slot())
 
 				// Set Bad Topic and Subnet
-				digest, err := s.forkDigest()
+				digest, err := s.currentForkDigest()
 				assert.NoError(t, err)
 				actualTopic := fmt.Sprintf(defaultTopic, digest, 5)
 
@@ -316,7 +316,7 @@ func TestService_ValidateSyncCommittee(t *testing.T) {
 				msg.Slot = helpers.PrevSlot(hState.Slot())
 
 				// Set Topic and Subnet
-				digest, err := s.forkDigest()
+				digest, err := s.currentForkDigest()
 				assert.NoError(t, err)
 				actualTopic := fmt.Sprintf(defaultTopic, digest, 1)
 
@@ -370,7 +370,7 @@ func TestService_ValidateSyncCommittee(t *testing.T) {
 				msg.Slot = helpers.PrevSlot(hState.Slot())
 
 				// Set Topic and Subnet
-				digest, err := s.forkDigest()
+				digest, err := s.currentForkDigest()
 				assert.NoError(t, err)
 				actualTopic := fmt.Sprintf(defaultTopic, digest, 1)
 

@@ -2,21 +2,23 @@ package sync
 
 import (
 	"context"
-	"errors"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	wrapperv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
 	"google.golang.org/protobuf/proto"
 )
 
 func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) error {
-	rBlock, ok := msg.(*ethpb.SignedBeaconBlock)
-	if !ok {
-		return errors.New("message is not type *ethpb.SignedBeaconBlock")
+	signed, err := blockFromProto(msg)
+	if err != nil {
+		return err
 	}
-	signed := wrapper.WrappedPhase0SignedBeaconBlock(rBlock)
 
 	if signed.IsNil() || signed.Block().IsNil() {
 		return errors.New("nil block")
@@ -62,4 +64,23 @@ func (s *Service) deleteAttsInPool(atts []*ethpb.Attestation) error {
 		}
 	}
 	return nil
+}
+
+func blockFromProto(msg proto.Message) (interfaces.SignedBeaconBlock, error) {
+	switch msg.(type) {
+	case *ethpb.SignedBeaconBlock:
+		blk, ok := msg.(*ethpb.SignedBeaconBlock)
+		if !ok {
+			return nil, errors.Errorf("impossible condition triggered blk is not of *SignedBeaconBlock type.")
+		}
+		return wrapper.WrappedPhase0SignedBeaconBlock(blk), nil
+	case *prysmv2.SignedBeaconBlock:
+		blk, ok := msg.(*prysmv2.SignedBeaconBlock)
+		if !ok {
+			return nil, errors.Errorf("impossible condition triggered blk is not of *SignedBeaconBlockAltair type.")
+		}
+		return wrapperv2.WrappedAltairSignedBeaconBlock(blk), nil
+	default:
+		return nil, errors.Errorf("message has invalid underlying type: %T", msg)
+	}
 }
