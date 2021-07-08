@@ -90,7 +90,7 @@ func TestAggregateAttestations_AggregatePair_DiffLengthFails(t *testing.T) {
 	}
 	for _, tt := range tests {
 		_, err := AggregatePair(tt.a1, tt.a2)
-		require.ErrorContains(t, aggregation.ErrBitsDifferentLen.Error(), err)
+		require.ErrorContains(t, bitfield.ErrBitlistDifferentLength.Error(), err)
 	}
 }
 

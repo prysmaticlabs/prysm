@@ -102,7 +102,7 @@ func TestAggregateAttestations_MaxCover_AttList_validate(t *testing.T) {
 				&ethpb.Attestation{AggregationBits: bitfield.NewBitlist(64)},
 				&ethpb.Attestation{},
 			},
-			wantedErr: aggregation.ErrBitsDifferentLen.Error(),
+			wantedErr: "bitlist cannot be nil or empty",
 		},
 		{
 			name: "first bitlist is empty",
@@ -117,17 +117,7 @@ func TestAggregateAttestations_MaxCover_AttList_validate(t *testing.T) {
 				&ethpb.Attestation{AggregationBits: bitfield.NewBitlist(64)},
 				&ethpb.Attestation{AggregationBits: bitfield.Bitlist{}},
 			},
-			wantedErr: aggregation.ErrBitsDifferentLen.Error(),
-		},
-		{
-			name: "bitlists of non equal length",
-			atts: attList{
-				&ethpb.Attestation{AggregationBits: bitfield.NewBitlist(64)},
-				&ethpb.Attestation{AggregationBits: bitfield.NewBitlist(64)},
-				&ethpb.Attestation{AggregationBits: bitfield.NewBitlist(63)},
-				&ethpb.Attestation{AggregationBits: bitfield.NewBitlist(64)},
-			},
-			wantedErr: aggregation.ErrBitsDifferentLen.Error(),
+			wantedErr: "bitlist cannot be nil or empty",
 		},
 		{
 			name: "valid bitlists",

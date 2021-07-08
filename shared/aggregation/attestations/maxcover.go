@@ -23,9 +23,6 @@ func MaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Attesta
 	unaggregated := attList(atts)
 
 	if err := unaggregated.validate(); err != nil {
-		if errors.Is(err, aggregation.ErrBitsDifferentLen) {
-			return unaggregated, nil
-		}
 		return nil, err
 	}
 
@@ -79,9 +76,6 @@ func optMaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Atte
 	}
 
 	if err := attList(atts).validate(); err != nil {
-		if errors.Is(err, aggregation.ErrBitsDifferentLen) {
-			return atts, nil
-		}
 		return nil, err
 	}
 
@@ -353,10 +347,9 @@ func (al attList) validate() error {
 	if al[0].AggregationBits == nil || al[0].AggregationBits.Len() == 0 {
 		return errors.Wrap(aggregation.ErrInvalidMaxCoverProblem, "bitlist cannot be nil or empty")
 	}
-	bitlistLen := al[0].AggregationBits.Len()
 	for i := 1; i < len(al); i++ {
-		if al[i].AggregationBits == nil || bitlistLen != al[i].AggregationBits.Len() {
-			return aggregation.ErrBitsDifferentLen
+		if al[i].AggregationBits == nil || al[i].AggregationBits.Len() == 0 {
+			return errors.Wrap(aggregation.ErrInvalidMaxCoverProblem, "bitlist cannot be nil or empty")
 		}
 	}
 	return nil
