@@ -16,7 +16,9 @@ func NaiveAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Attestatio
 		}
 		for j := i + 1; j < len(atts); j++ {
 			b := atts[j]
-			if a.AggregationBits.Len() == b.AggregationBits.Len() && !a.AggregationBits.Overlaps(b.AggregationBits) {
+			if o, err := a.AggregationBits.Overlaps(b.AggregationBits); err != nil {
+				return nil, err
+			} else if !o {
 				var err error
 				a, err = AggregatePair(a, b)
 				if err != nil {
@@ -39,11 +41,15 @@ func NaiveAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Attestatio
 				continue
 			}
 
-			if a.AggregationBits.Contains(b.AggregationBits) {
+			if c, err := a.AggregationBits.Contains(b.AggregationBits); err != nil {
+				return nil, err
+			} else if c {
 				// If b is fully contained in a, then b can be removed.
 				atts = append(atts[:j], atts[j+1:]...)
 				j--
-			} else if b.AggregationBits.Contains(a.AggregationBits) {
+			} else if c, err := b.AggregationBits.Contains(a.AggregationBits); err != nil {
+				return nil, err
+			} else if c {
 				// if a is fully contained in b, then a can be removed.
 				atts = append(atts[:i], atts[i+1:]...)
 				break // Stop the inner loop, advance a.
