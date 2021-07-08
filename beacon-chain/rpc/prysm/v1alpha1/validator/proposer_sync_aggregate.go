@@ -35,9 +35,9 @@ func (cs proposerSyncContributions) filterBySubIndex(i uint64) proposerSyncContr
 // dedup removes duplicate sync contributions (ones with the same bits set on).
 // Important: not only exact duplicates are removed, but proper subsets are removed too
 // (their known bits are redundant and are already contained in their supersets).
-func (cs proposerSyncContributions) dedup() proposerSyncContributions {
+func (cs proposerSyncContributions) dedup() (proposerSyncContributions, error) {
 	if len(cs) < 2 {
-		return cs
+		return cs, nil
 	}
 	contributionsBySubIdx := make(map[uint64][]*eth.SyncCommitteeContribution, len(cs))
 	for _, c := range cs {
@@ -50,13 +50,17 @@ func (cs proposerSyncContributions) dedup() proposerSyncContributions {
 			a := cs[i]
 			for j := i + 1; j < len(cs); j++ {
 				b := cs[j]
-				if a.AggregationBits.Contains(b.AggregationBits) {
+				if c, err := a.AggregationBits.Contains(b.AggregationBits); err != nil {
+					return nil, err
+				} else if c {
 					// a contains b, b is redundant.
 					cs[j] = cs[len(cs)-1]
 					cs[len(cs)-1] = nil
 					cs = cs[:len(cs)-1]
 					j--
-				} else if b.AggregationBits.Contains(a.GetAggregationBits()) {
+				} else if c, err := b.AggregationBits.Contains(a.GetAggregationBits()); err != nil {
+					return nil, err
+				} else if c {
 					// b contains a, a is redundant.
 					cs[i] = cs[len(cs)-1]
 					cs[len(cs)-1] = nil
@@ -68,7 +72,7 @@ func (cs proposerSyncContributions) dedup() proposerSyncContributions {
 		}
 		uniqContributions = append(uniqContributions, cs...)
 	}
-	return uniqContributions
+	return uniqContributions, nil
 }
 
 // mostProfitable returns the most profitable sync contribution, the one with the most

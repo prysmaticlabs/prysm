@@ -21,7 +21,9 @@ func (c *AttCaches) insertSeenBit(att *ethpb.Attestation) error {
 		}
 		alreadyExists := false
 		for _, bit := range seenBits {
-			if bit.Len() == att.AggregationBits.Len() && bit.Contains(att.AggregationBits) {
+			if c, err := bit.Contains(att.AggregationBits); err != nil {
+				return err
+			} else if c {
 				alreadyExists = true
 				break
 			}
@@ -50,7 +52,9 @@ func (c *AttCaches) hasSeenBit(att *ethpb.Attestation) (bool, error) {
 			return false, errors.New("could not convert to bitlist type")
 		}
 		for _, bit := range seenBits {
-			if bit.Len() == att.AggregationBits.Len() && bit.Contains(att.AggregationBits) {
+			if c, err := bit.Contains(att.AggregationBits); err != nil {
+				return false, err
+			} else if c {
 				return true, nil
 			}
 		}
