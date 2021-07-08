@@ -52,10 +52,8 @@ func (s *Service) CanSubscribe(topic string) bool {
 		if parts[2] != fmt.Sprintf("%x", fd) && parts[2] != fmt.Sprintf("%x", digest) {
 			return false
 		}
-	} else {
-		if parts[2] != fmt.Sprintf("%x", fd) {
-			return false
-		}
+	} else if parts[2] != fmt.Sprintf("%x", fd) {
+		return false
 	}
 	if parts[4] != encoder.ProtocolSuffixSSZSnappy {
 		return false

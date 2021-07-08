@@ -210,8 +210,7 @@ func reportEpochMetrics(ctx context.Context, postState, headState iface.BeaconSt
 	currentEth1DataDepositCount.Set(float64(postState.Eth1Data().DepositCount))
 
 	b := new(precompute.Balance)
-	v := []*precompute.Validator{}
-	_ = v
+	var v []*precompute.Validator
 	var err error
 	switch headState.Version() {
 	case version.Phase0:

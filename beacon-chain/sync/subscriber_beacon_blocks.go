@@ -67,19 +67,11 @@ func (s *Service) deleteAttsInPool(atts []*ethpb.Attestation) error {
 }
 
 func blockFromProto(msg proto.Message) (interfaces.SignedBeaconBlock, error) {
-	switch msg.(type) {
+	switch t := msg.(type) {
 	case *ethpb.SignedBeaconBlock:
-		blk, ok := msg.(*ethpb.SignedBeaconBlock)
-		if !ok {
-			return nil, errors.Errorf("impossible condition triggered blk is not of *SignedBeaconBlock type.")
-		}
-		return wrapper.WrappedPhase0SignedBeaconBlock(blk), nil
+		return wrapper.WrappedPhase0SignedBeaconBlock(t), nil
 	case *prysmv2.SignedBeaconBlock:
-		blk, ok := msg.(*prysmv2.SignedBeaconBlock)
-		if !ok {
-			return nil, errors.Errorf("impossible condition triggered blk is not of *SignedBeaconBlockAltair type.")
-		}
-		return wrapperv2.WrappedAltairSignedBeaconBlock(blk), nil
+		return wrapperv2.WrappedAltairSignedBeaconBlock(t), nil
 	default:
 		return nil, errors.Errorf("message has invalid underlying type: %T", msg)
 	}
