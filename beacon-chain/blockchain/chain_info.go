@@ -2,12 +2,17 @@ package blockchain
 
 import (
 	"context"
+	"sync"
 	"time"
 
+	lru "github.com/hashicorp/golang-lru"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
@@ -50,6 +55,14 @@ type HeadFetcher interface {
 	HeadSeed(ctx context.Context, epoch types.Epoch) ([32]byte, error)
 	HeadGenesisValidatorRoot() [32]byte
 	HeadETH1Data() *ethpb.Eth1Data
+	HeadCurrentSyncCommitteeIndices(ctx context.Context, index types.ValidatorIndex, slot types.Slot) ([]uint64, error)
+	HeadNextSyncCommitteeIndices(ctx context.Context, index types.ValidatorIndex, slot types.Slot) ([]uint64, error)
+	HeadPublicKeyToValidatorIndex(ctx context.Context, pubKey [48]byte) (types.ValidatorIndex, bool)
+	HeadValidatorIndexToPublicKey(ctx context.Context, index types.ValidatorIndex) ([48]byte, error)
+	HeadSyncCommitteeDomain(ctx context.Context, slot types.Slot) ([]byte, error)
+	HeadSyncSelectionProofDomain(ctx context.Context, slot types.Slot) ([]byte, error)
+	HeadSyncContributionProofDomain(ctx context.Context, slot types.Slot) ([]byte, error)
+	HeadSyncCommitteePubKeys(ctx context.Context, slot types.Slot, committeeIndex types.CommitteeIndex) ([][]byte, error)
 	ProtoArrayStore() *protoarray.Store
 	ChainHeads() ([][32]byte, []types.Slot)
 }
@@ -284,4 +297,146 @@ func (s *Service) ChainHeads() ([][32]byte, []types.Slot) {
 	}
 
 	return headsRoots, headsSlots
+}
+
+func (s *Service) HeadPublicKeyToValidatorIndex(ctx context.Context, pubKey [48]byte) (types.ValidatorIndex, bool) {
+	return s.headState(ctx).ValidatorIndexByPubkey(pubKey)
+}
+
+func (s *Service) HeadValidatorIndexToPublicKey(ctx context.Context, index types.ValidatorIndex) ([48]byte, error) {
+	v, err := s.headState(ctx).ValidatorAtIndexReadOnly(index)
+	if err != nil {
+		return [48]byte{}, err
+	}
+	return v.PublicKey(), nil
+}
+
+func (s *Service) HeadCurrentSyncCommitteeIndices(ctx context.Context, index types.ValidatorIndex, slot types.Slot) ([]uint64, error) {
+	headState, err := s.getSyncCommitteeHeadState(ctx, slot)
+	if err != nil {
+		return nil, err
+	}
+	return helpers.CurrentEpochSyncSubcommitteeIndices(headState, index)
+}
+
+func (s *Service) HeadNextSyncCommitteeIndices(ctx context.Context, index types.ValidatorIndex, slot types.Slot) ([]uint64, error) {
+	headState, err := s.getSyncCommitteeHeadState(ctx, slot)
+	if err != nil {
+		return nil, err
+	}
+	return helpers.NextEpochSyncSubcommitteeIndices(headState, index)
+}
+
+func (s *Service) HeadSyncCommitteeDomain(ctx context.Context, slot types.Slot) ([]byte, error) {
+	headState, err := s.getSyncCommitteeHeadState(ctx, slot)
+	if err != nil {
+		return nil, err
+	}
+	return helpers.Domain(headState.Fork(), helpers.SlotToEpoch(headState.Slot()), params.BeaconConfig().DomainSyncCommittee, headState.GenesisValidatorRoot())
+}
+
+func (s *Service) HeadSyncSelectionProofDomain(ctx context.Context, slot types.Slot) ([]byte, error) {
+	headState, err := s.getSyncCommitteeHeadState(ctx, slot)
+	if err != nil {
+		return nil, err
+	}
+	return helpers.Domain(headState.Fork(), helpers.SlotToEpoch(headState.Slot()), params.BeaconConfig().DomainSyncCommitteeSelectionProof, headState.GenesisValidatorRoot())
+}
+
+func (s *Service) HeadSyncContributionProofDomain(ctx context.Context, slot types.Slot) ([]byte, error) {
+	headState, err := s.getSyncCommitteeHeadState(ctx, slot)
+	if err != nil {
+		return nil, err
+	}
+	return helpers.Domain(headState.Fork(), helpers.SlotToEpoch(headState.Slot()), params.BeaconConfig().DomainContributionAndProof, headState.GenesisValidatorRoot())
+}
+
+func (s *Service) HeadSyncCommitteePubKeys(ctx context.Context, slot types.Slot, committeeIndex types.CommitteeIndex) ([][]byte, error) {
+	headState, err := s.getSyncCommitteeHeadState(ctx, slot)
+	if err != nil {
+		return nil, err
+	}
+
+	nextSlotEpoch := helpers.SlotToEpoch(headState.Slot() + 1)
+	currEpoch := helpers.SlotToEpoch(headState.Slot())
+
+	var syncCommittee *pb.SyncCommittee
+	if helpers.SyncCommitteePeriod(currEpoch) == helpers.SyncCommitteePeriod(nextSlotEpoch) {
+		syncCommittee, err = headState.CurrentSyncCommittee()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		syncCommittee, err = headState.NextSyncCommittee()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return altair.SyncSubCommitteePubkeys(syncCommittee, committeeIndex)
+}
+
+func (s *Service) getSyncCommitteeHeadState(ctx context.Context, slot types.Slot) (iface.BeaconState, error) {
+	var headState iface.BeaconState
+	var err error
+
+	// If there's already a head state exists with the request slot, we don't need to process slots.
+	cachedState := syncCommitteeHeadStateCache.get(slot)
+	if cachedState != nil && !cachedState.IsNil() {
+		syncHeadStateHit.Inc()
+		headState = cachedState
+	} else {
+		headState, err = s.HeadState(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if slot > headState.Slot() {
+			headState, err = state.ProcessSlots(ctx, headState, slot)
+			if err != nil {
+				return nil, err
+			}
+		}
+		syncHeadStateMiss.Inc()
+		syncCommitteeHeadStateCache.add(slot, headState)
+	}
+
+	return headState, nil
+}
+
+var syncCommitteeHeadStateCache = newSyncCommitteeHeadState()
+
+// syncCommitteeHeadState to caches latest head state requested by the sync committee participant.
+type syncCommitteeHeadState struct {
+	cache *lru.Cache
+	lock  sync.RWMutex
+}
+
+// newSyncCommitteeHeadState initializes the lru cache for `syncCommitteeHeadState` with size of 1.
+func newSyncCommitteeHeadState() *syncCommitteeHeadState {
+	c, err := lru.New(1) // only need size of 1 to avoid redundant state copy, HTR, and process slots.
+	if err != nil {
+		panic(err)
+	}
+	return &syncCommitteeHeadState{cache: c}
+}
+
+// add `slot` as key and `state` as value onto the lru cache.
+func (c *syncCommitteeHeadState) add(slot types.Slot, state iface.BeaconState) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.cache.Add(slot, state)
+}
+
+// get `state` using `slot` as key. Return nil if nothing is found.
+func (c *syncCommitteeHeadState) get(slot types.Slot) iface.BeaconState {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	val, exists := c.cache.Get(slot)
+	if !exists {
+		return nil
+	}
+	if val == nil {
+		return nil
+	}
+	return val.(*stateAltair.BeaconState)
 }

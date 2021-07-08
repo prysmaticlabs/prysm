@@ -278,23 +278,6 @@ func TestAssignedToSyncCommittee_IncorrectEpoch(t *testing.T) {
 	require.ErrorContains(t, "epoch period 2 is not current period 0 or next period 1 in state", err)
 }
 
-func TestSubnetsForSyncCommittee(t *testing.T) {
-	s, _ := testutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
-	syncCommittee, err := altair.NextSyncCommittee(s)
-	require.NoError(t, err)
-	require.NoError(t, s.SetCurrentSyncCommittee(syncCommittee))
-
-	positions, err := altair.SubnetsForSyncCommittee(s, 0)
-	require.NoError(t, err)
-	require.DeepEqual(t, []uint64{3}, positions)
-	positions, err = altair.SubnetsForSyncCommittee(s, 1)
-	require.NoError(t, err)
-	require.DeepEqual(t, []uint64{1}, positions)
-	positions, err = altair.SubnetsForSyncCommittee(s, 2)
-	require.NoError(t, err)
-	require.DeepEqual(t, []uint64{2}, positions)
-}
-
 func TestSyncCommitteePeriod(t *testing.T) {
 	tests := []struct {
 		epoch  types.Epoch
