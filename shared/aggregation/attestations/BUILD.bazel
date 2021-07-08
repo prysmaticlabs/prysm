@@ -21,10 +21,10 @@ go_library(
     ],
 )
 
-# gazelle:exclude attestations_bench_test.go
 go_test(
     name = "go_default_test",
     srcs = [
+        "attestations_bench_test.go",
         "attestations_test.go",
         "maxcover_test.go",
     ],
@@ -34,6 +34,7 @@ go_test(
         "//shared/aggregation:go_default_library",
         "//shared/aggregation/testing:go_default_library",
         "//shared/bls:go_default_library",
+        "//shared/copyutil:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/params:go_default_library",
         "//shared/sszutil:go_default_library",
