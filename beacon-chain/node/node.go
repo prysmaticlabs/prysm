@@ -4,6 +4,7 @@
 package node
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -339,12 +340,12 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 			return errors.Wrap(err, "could not save deposit contract")
 		}
 	}
-	//if len(knownContract) > 0 && !bytes.Equal(addr.Bytes(), knownContract) {
-	//	return fmt.Errorf("database contract is %#x but tried to run with %#x. This likely means "+
-	//		"you are trying to run on a different network than what the database contains. You can run once with "+
-	//		"'--clear-db' to wipe the old database or use an alternative data directory with '--datadir'",
-	//		knownContract, addr.Bytes())
-	//}
+	if len(knownContract) > 0 && !bytes.Equal(addr.Bytes(), knownContract) {
+		return fmt.Errorf("database contract is %#x but tried to run with %#x. This likely means "+
+			"you are trying to run on a different network than what the database contains. You can run once with "+
+			"'--clear-db' to wipe the old database or use an alternative data directory with '--datadir'",
+			knownContract, addr.Bytes())
+	}
 	log.Infof("Deposit contract: %#x", addr.Bytes())
 
 	return nil
