@@ -132,7 +132,10 @@ func TestMaxCover_MaxCoverCandidates_filter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := tt.cl.filter(tt.args.covered, tt.args.allowOverlaps)
+			got, err := tt.cl.filter(tt.args.covered, tt.args.allowOverlaps)
+			if err != nil {
+				t.Error(err)
+			}
 			sort.Slice(*got, func(i, j int) bool {
 				return (*got)[i].key < (*got)[j].key
 			})
@@ -272,8 +275,8 @@ func TestMaxCover_MaxCoverCandidates_union(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.cl.union(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("union(), got: %#b, want: %#b", got, tt.want)
+			if got, err := tt.cl.union(); !reflect.DeepEqual(got, tt.want) || err != nil {
+				t.Errorf("union(), got: %#b, %v, want: %#b", got, err, tt.want)
 			}
 		})
 	}
@@ -349,8 +352,8 @@ func TestMaxCover_MaxCoverCandidates_score(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.cl.score(tt.uncovered); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("score() = %v, want %v", got, tt.want)
+			if got, err := tt.cl.score(tt.uncovered); !reflect.DeepEqual(got, tt.want) || err != nil {
+				t.Errorf("score() = %v, %v, want %v", got, err, tt.want)
 			}
 		})
 	}
