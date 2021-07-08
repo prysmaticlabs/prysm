@@ -7,6 +7,7 @@ go_library(
         "error.go",
         "kv.go",
         "message.go",
+        "metric.go",
         "pool.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee",
@@ -16,6 +17,8 @@ go_library(
         "//shared/copyutil:go_default_library",
         "//shared/queue:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
+        "@com_github_prometheus_client_golang//prometheus:go_default_library",
+        "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
     ],
 )

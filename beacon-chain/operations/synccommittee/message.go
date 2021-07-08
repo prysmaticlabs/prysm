@@ -32,6 +32,7 @@ func (s *Store) SaveSyncCommitteeMessage(msg *prysmv2.SyncCommitteeMessage) erro
 		}
 
 		messages = append(messages, copied)
+		savedSyncCommitteeMessageTotal.Inc()
 		return s.messageCache.Push(&queue.Item{
 			Key:      syncCommitteeKey(msg.Slot),
 			Value:    messages,
@@ -47,6 +48,7 @@ func (s *Store) SaveSyncCommitteeMessage(msg *prysmv2.SyncCommitteeMessage) erro
 	}); err != nil {
 		return err
 	}
+	savedSyncCommitteeMessageTotal.Inc()
 
 	// Trim messages in queue down to syncCommitteeMaxQueueSize.
 	if s.messageCache.Len() > syncCommitteeMaxQueueSize {
