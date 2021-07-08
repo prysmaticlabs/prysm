@@ -33,6 +33,7 @@ func (s *Store) SaveSyncCommitteeContribution(cont *prysmv2.SyncCommitteeContrib
 	// Contributions exist in the queue. Append instead of insert new.
 	if contributions != nil {
 		contributions = append(contributions, copied)
+		savedSyncCommitteeContributionTotal.Inc()
 		return s.contributionCache.Push(&queue.Item{
 			Key:      syncCommitteeKey(cont.Slot),
 			Value:    contributions,
@@ -48,6 +49,7 @@ func (s *Store) SaveSyncCommitteeContribution(cont *prysmv2.SyncCommitteeContrib
 	}); err != nil {
 		return err
 	}
+	savedSyncCommitteeContributionTotal.Inc()
 
 	// Trim contributions in queue down to syncCommitteeMaxQueueSize.
 	if s.contributionCache.Len() > syncCommitteeMaxQueueSize {

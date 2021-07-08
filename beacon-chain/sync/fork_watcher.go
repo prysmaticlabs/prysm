@@ -26,8 +26,7 @@ func (s *Service) forkWatcher() {
 			// will subscribe the new topics in advance.
 			if isNextForkEpoch {
 				nextEpoch := currEpoch + 1
-				switch nextEpoch {
-				case params.BeaconConfig().AltairForkEpoch:
+				if nextEpoch == params.BeaconConfig().AltairForkEpoch {
 					digest, err := p2putils.ForkDigestFromEpoch(nextEpoch, genRoot[:])
 					if err != nil {
 						log.WithError(err).Error("Could not retrieve fork digest")
