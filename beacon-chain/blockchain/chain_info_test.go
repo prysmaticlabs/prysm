@@ -311,7 +311,7 @@ func TestService_HeadPublicKeyToValidatorIndex(t *testing.T) {
 
 	i, e := c.HeadPublicKeyToValidatorIndex(context.Background(), bytesutil.ToBytes48(v.PublicKey))
 	require.Equal(t, true, e)
-	require.Equal(t, 0, i)
+	require.Equal(t, types.ValidatorIndex(0), i)
 }
 
 func TestService_HeadValidatorIndexToPublicKey(t *testing.T) {
