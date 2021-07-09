@@ -109,7 +109,11 @@ func (vs *Server) getSyncAggregate(ctx context.Context, slot types.Slot, root [3
 		}
 
 		// Retrieve the most profitable contribution
-		c := proposerSyncContributions(aggregates).dedup().mostProfitable()
+		deduped, err := proposerSyncContributions(aggregates).dedup()
+		if err != nil {
+			return nil, err
+		}
+		c := deduped.mostProfitable()
 		if c == nil {
 			continue
 		}

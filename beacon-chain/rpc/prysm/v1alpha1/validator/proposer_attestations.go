@@ -48,9 +48,9 @@ func (a proposerAtts) filter(ctx context.Context, state iface.BeaconState) (prop
 }
 
 // sortByProfitability orders attestations by highest slot and by highest aggregation bit count.
-func (a proposerAtts) sortByProfitability() proposerAtts {
+func (a proposerAtts) sortByProfitability() (proposerAtts, error) {
 	if len(a) < 2 {
-		return a
+		return a, nil
 	}
 	if featureconfig.Get().ProposerAttsSelectionUsingMaxCover {
 		return a.sortByProfitabilityUsingMaxCover()
@@ -61,12 +61,12 @@ func (a proposerAtts) sortByProfitability() proposerAtts {
 		}
 		return a[i].Data.Slot > a[j].Data.Slot
 	})
-	return a
+	return a, nil
 }
 
 // sortByProfitabilityUsingMaxCover orders attestations by highest slot and by highest aggregation bit count.
 // Duplicate bits are counted only once, using max-cover algorithm.
-func (a proposerAtts) sortByProfitabilityUsingMaxCover() proposerAtts {
+func (a proposerAtts) sortByProfitabilityUsingMaxCover() (proposerAtts, error) {
 	// Separate attestations by slot, as slot number takes higher precedence when sorting.
 	var slots []types.Slot
 	attsBySlot := map[types.Slot]proposerAtts{}
@@ -77,13 +77,17 @@ func (a proposerAtts) sortByProfitabilityUsingMaxCover() proposerAtts {
 		attsBySlot[att.Data.Slot] = append(attsBySlot[att.Data.Slot], att)
 	}
 
-	selectAtts := func(atts proposerAtts) proposerAtts {
+	selectAtts := func(atts proposerAtts) (proposerAtts, error) {
 		if len(atts) < 2 {
-			return atts
+			return atts, nil
 		}
 		candidates := make([]*bitfield.Bitlist64, len(atts))
 		for i := 0; i < len(atts); i++ {
-			candidates[i] = atts[i].AggregationBits.ToBitlist64()
+			var err error
+			candidates[i], err = atts[i].AggregationBits.ToBitlist64()
+			if err != nil {
+				return nil, err
+			}
 		}
 		// Add selected candidates on top, those that are not selected - append at bottom.
 		selectedKeys, _, err := aggregation.MaxCover(candidates, len(candidates), true /* allowOverlaps */)
@@ -104,9 +108,9 @@ func (a proposerAtts) sortByProfitabilityUsingMaxCover() proposerAtts {
 			sort.Slice(leftoverAtts, func(i, j int) bool {
 				return leftoverAtts[i].AggregationBits.Count() > leftoverAtts[j].AggregationBits.Count()
 			})
-			return append(selectedAtts, leftoverAtts...)
+			return append(selectedAtts, leftoverAtts...), nil
 		}
-		return atts
+		return atts, nil
 	}
 
 	// Select attestations. Slots are sorted from higher to lower at this point. Within slots attestations
@@ -117,10 +121,14 @@ func (a proposerAtts) sortByProfitabilityUsingMaxCover() proposerAtts {
 		return slots[i] > slots[j]
 	})
 	for _, slot := range slots {
-		sortedAtts = append(sortedAtts, selectAtts(attsBySlot[slot])...)
+		selected, err := selectAtts(attsBySlot[slot])
+		if err != nil {
+			return nil, err
+		}
+		sortedAtts = append(sortedAtts, selected...)
 	}
 
-	return sortedAtts
+	return sortedAtts, nil
 }
 
 // limitToMaxAttestations limits attestations to maximum attestations per block.
@@ -134,9 +142,9 @@ func (a proposerAtts) limitToMaxAttestations() proposerAtts {
 // dedup removes duplicate attestations (ones with the same bits set on).
 // Important: not only exact duplicates are removed, but proper subsets are removed too
 // (their known bits are redundant and are already contained in their supersets).
-func (a proposerAtts) dedup() proposerAtts {
+func (a proposerAtts) dedup() (proposerAtts, error) {
 	if len(a) < 2 {
-		return a
+		return a, nil
 	}
 	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(a))
 	for _, att := range a {
@@ -153,13 +161,17 @@ func (a proposerAtts) dedup() proposerAtts {
 			a := atts[i]
 			for j := i + 1; j < len(atts); j++ {
 				b := atts[j]
-				if a.AggregationBits.Contains(b.AggregationBits) {
+				if c, err := a.AggregationBits.Contains(b.AggregationBits); err != nil {
+					return nil, err
+				} else if c {
 					// a contains b, b is redundant.
 					atts[j] = atts[len(atts)-1]
 					atts[len(atts)-1] = nil
 					atts = atts[:len(atts)-1]
 					j--
-				} else if b.AggregationBits.Contains(a.AggregationBits) {
+				} else if c, err := b.AggregationBits.Contains(a.AggregationBits); err != nil {
+					return nil, err
+				} else if c {
 					// b contains a, a is redundant.
 					atts[i] = atts[len(atts)-1]
 					atts[len(atts)-1] = nil
@@ -172,5 +184,5 @@ func (a proposerAtts) dedup() proposerAtts {
 		uniqAtts = append(uniqAtts, atts...)
 	}
 
-	return uniqAtts
+	return uniqAtts, nil
 }
