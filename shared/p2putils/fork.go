@@ -137,7 +137,7 @@ func NextForkData(currEpoch types.Epoch) ([4]byte, types.Epoch) {
 		}
 		// In the event the retrieved epoch is less than
 		// our current epoch, we mark the previous
-		// fork's version as the next fork version..
+		// fork's version as the next fork version.
 		if epoch <= currEpoch {
 			// The next fork version is updated to
 			// always include the most current fork version.
