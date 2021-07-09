@@ -590,6 +590,10 @@ func (b *BeaconNode) registerSlasherService() error {
 	if err := b.services.FetchService(&chainService); err != nil {
 		return err
 	}
+	var syncService *initialsync.Service
+	if err := b.services.FetchService(&syncService); err != nil {
+		return err
+	}
 
 	slasherSrv, err := slasher.New(b.ctx, &slasher.ServiceConfig{
 		IndexedAttestationsFeed: b.slasherAttestationsFeed,
@@ -600,6 +604,7 @@ func (b *BeaconNode) registerSlasherService() error {
 		StateGen:                b.stateGen,
 		SlashingPoolInserter:    b.slashingsPool,
 		HeadStateFetcher:        chainService,
+		SyncChecker:             syncService,
 	})
 	if err != nil {
 		return err

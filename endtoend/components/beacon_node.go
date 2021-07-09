@@ -52,7 +52,7 @@ func (s *BeaconNodeSet) Start(ctx context.Context) error {
 	// Create beacon nodes.
 	nodes := make([]e2etypes.ComponentRunner, e2e.TestParams.BeaconNodeCount)
 	for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
-		nodes[i] = NewBeaconNode(s.config, i, s.enr)
+		nodes[i] = NewBeaconNode(s.config, i, s.enr, false)
 	}
 
 	// Wait for all nodes to finish their job (blocking).
@@ -71,19 +71,21 @@ func (s *BeaconNodeSet) Started() <-chan struct{} {
 // BeaconNode represents beacon node.
 type BeaconNode struct {
 	e2etypes.ComponentRunner
-	config  *e2etypes.E2EConfig
-	started chan struct{}
-	index   int
-	enr     string
+	config     *e2etypes.E2EConfig
+	started    chan struct{}
+	index      int
+	enr        string
+	isSyncNode bool
 }
 
 // NewBeaconNode creates and returns a beacon node.
-func NewBeaconNode(config *e2etypes.E2EConfig, index int, enr string) *BeaconNode {
+func NewBeaconNode(config *e2etypes.E2EConfig, index int, enr string, isSyncNode bool) *BeaconNode {
 	return &BeaconNode{
-		config:  config,
-		index:   index,
-		enr:     enr,
-		started: make(chan struct{}, 1),
+		config:     config,
+		index:      index,
+		enr:        enr,
+		started:    make(chan struct{}, 1),
+		isSyncNode: isSyncNode,
 	}
 }
 
@@ -126,6 +128,10 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 	}
 	args = append(args, featureconfig.E2EBeaconChainFlags...)
 	args = append(args, config.BeaconFlags...)
+
+	if node.isSyncNode {
+		args = append(args, config.SyncingBeaconFlags...)
+	}
 
 	cmd := exec.CommandContext(ctx, binaryPath, args...)
 	log.Infof("Starting beacon chain %d with flags: %s", index, strings.Join(args[2:], " "))
