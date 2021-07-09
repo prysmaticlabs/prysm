@@ -27,7 +27,6 @@ func TestEndToEnd_Slasher_Sync_MinimalConfig(t *testing.T) {
 		EpochsToRun:         4,    // Normally run a node for 4 epochs.
 		EpochsToRunPostSync: 3,    // Sync a node, then run that node for 3 more epochs.
 		TestSync:            true, // We want to test a second beacon node with --slasher syncing the chain.
-		TestDeposits:        false,
 		Evaluators: []types.Evaluator{
 			ev.HealthzCheck,
 			ev.ValidatorsAreActive,
@@ -39,9 +38,9 @@ func TestEndToEnd_Slasher_Sync_MinimalConfig(t *testing.T) {
 		PostSyncEvaluators: []types.Evaluator{
 			ev.FinishedSyncing,
 			ev.AllNodesHaveSameHead,
-			ev.ValidatorsParticipatingAtEpoch(6), // Validators should still be participating.
-			ev.ValidatorsSlashedAfterEpoch(5),    // We expect validators are slashed.
-			ev.SlashedValidatorsLoseBalanceAfterEpoch(5),
+			ev.ValidatorsParticipatingAtEpoch(6),         // Validators should still be participating.
+			ev.ValidatorsSlashedAfterEpoch(5),            // We expect validators are slashed.
+			ev.SlashedValidatorsLoseBalanceAfterEpoch(5), // We expect slashed validator will lose balance.
 		},
 	}
 
