@@ -3,7 +3,6 @@ package p2p
 import (
 	"bytes"
 	"fmt"
-	"math"
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
@@ -94,21 +93,10 @@ func addForkEntry(
 	if timeutils.Now().Before(genesisTime) {
 		currentEpoch = 0
 	}
-	fork, err := p2putils.Fork(currentEpoch)
-	if err != nil {
-		return nil, err
-	}
-
-	nextForkEpoch := params.BeaconConfig().NextForkEpoch
-	nextForkVersion := params.BeaconConfig().NextForkVersion
-	// Set to the current fork version if our next fork is not planned.
-	if nextForkEpoch == math.MaxUint64 || nextForkEpoch <= currentEpoch {
-		nextForkVersion = fork.CurrentVersion
-		nextForkEpoch = math.MaxUint64
-	}
+	nextForkVersion, nextForkEpoch := p2putils.NextForkData(currentEpoch)
 	enrForkID := &pb.ENRForkID{
 		CurrentForkDigest: digest[:],
-		NextForkVersion:   nextForkVersion,
+		NextForkVersion:   nextForkVersion[:],
 		NextForkEpoch:     nextForkEpoch,
 	}
 	enc, err := enrForkID.MarshalSSZ()
