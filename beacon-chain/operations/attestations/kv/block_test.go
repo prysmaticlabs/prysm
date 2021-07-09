@@ -17,11 +17,15 @@ func TestKV_BlockAttestation_CanSaveRetrieve(t *testing.T) {
 	att1 := testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101}})
 	att2 := testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1101}})
 	att3 := testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b1101}})
-	att4 := testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b11011}}) // Diff bit length should not panic.
-	atts := []*ethpb.Attestation{att1, att2, att3, att4}
+	atts := []*ethpb.Attestation{att1, att2, att3}
 
 	for _, att := range atts {
 		require.NoError(t, cache.SaveBlockAttestation(att))
+	}
+	// Diff bit length should not panic.
+	att4 := testutil.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b11011}})
+	if err := cache.SaveBlockAttestation(att4); err != bitfield.ErrBitlistDifferentLength {
+		t.Errorf("Unexpected error: wanted %v, got %v", bitfield.ErrBitlistDifferentLength, err)
 	}
 
 	returned := cache.BlockAttestations()
