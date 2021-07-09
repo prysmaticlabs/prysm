@@ -158,6 +158,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 			"blockRoot":         fmt.Sprintf("%#x", bytesutil.Trunc(contributionAndProof.Contribution.BlockRoot)),
 			"subcommitteeIndex": contributionAndProof.Contribution.SubcommitteeIndex,
 			"aggregatorIndex":   contributionAndProof.AggregatorIndex,
+			"bitsCount":         contributionAndProof.Contribution.AggregationBits.Count(),
 		}).Info("Submitted new sync contribution and proof")
 	}
 }
