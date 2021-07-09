@@ -6,9 +6,11 @@ import (
 	"math/rand"
 	"reflect"
 	"testing"
+	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
@@ -385,3 +387,52 @@ func validators(limit int) []*ethpb.Validator {
 	}
 	return vals
 }
+
+func checkStateSaveTime(b *testing.B, saveCount int) {
+	b.StopTimer()
+
+	db := setupDB(b)
+	initialSetOfValidators := validators(100000)
+
+	// Save a state to boot strap the test
+	r := [32]byte{'A'}
+	st, err := testutil.NewBeaconState()
+	require.NoError(b, err)
+	require.NoError(b, st.SetValidators(initialSetOfValidators))
+	require.NoError(b, db.SaveState(context.Background(), st, r))
+
+	// construct the state to save inside benchmark
+	var states []*v1.BeaconState
+	var keys [][32]byte
+	for i := 0; i < saveCount; i++ {
+		key := make([]byte, 32)
+		_, err := rand.Read(key)
+		require.NoError(b, err)
+		st, err = testutil.NewBeaconState()
+		require.NoError(b, err)
+
+		// Add some more new validator to the base validator.
+		validatosToAddInTest := validators(10000)
+		allValidators := append(initialSetOfValidators, validatosToAddInTest...)
+
+		// shuffle validators.
+		rand.Seed(time.Now().UnixNano())
+		rand.Shuffle(len(allValidators), func(i, j int) { allValidators[i], allValidators[j] = allValidators[j], allValidators[i] })
+
+		require.NoError(b, st.SetValidators(allValidators))
+		states = append(states, st)
+		keys = append(keys, bytesutil.ToBytes32(key))
+	}
+
+	b.ReportAllocs()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < len(states) && j < len(keys); j++ {
+			require.NoError(b, db.SaveState(context.Background(), states[j], keys[j]))
+		}
+	}
+}
+
+func BenchmarkState_CheckStateSaveTime_1(b *testing.B)   { checkStateSaveTime(b, 1) }
+func BenchmarkState_CheckStateSaveTime_10(b *testing.B)  { checkStateSaveTime(b, 10) }
+func BenchmarkState_CheckStateSaveTime_100(b *testing.B) { checkStateSaveTime(b, 100) }
