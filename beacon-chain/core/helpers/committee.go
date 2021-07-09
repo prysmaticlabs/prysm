@@ -504,11 +504,20 @@ func NextEpochSyncSubcommitteeIndices(
 
 // UpdateSyncCommitteeCache updates sync committee cache.
 func UpdateSyncCommitteeCache(state iface.BeaconStateAltair) error {
-	r, err := syncPeriodBoundaryRoot(state)
+	nextSlot := state.Slot() + 1
+	if nextSlot%params.BeaconConfig().SlotsPerEpoch != 0 {
+		return errors.New("not at the end of the epoch to update cache")
+	}
+	if SlotToEpoch(nextSlot)%params.BeaconConfig().EpochsPerSyncCommitteePeriod != 0 {
+		return errors.New("not at sync committee period boundary to update cache")
+	}
+
+	prevBlockRoot, err := state.LatestBlockHeader().HashTreeRoot()
 	if err != nil {
 		return err
 	}
-	return syncCommitteeCache.UpdatePositionsInCommittee(bytesutil.ToBytes32(r), state)
+
+	return syncCommitteeCache.UpdatePositionsInCommittee(prevBlockRoot, state)
 }
 
 // Loop through `pubKeys` for matching `pubKey` and get the indices where it matches.
@@ -534,7 +543,17 @@ func syncPeriodBoundaryRoot(state iface.ReadOnlyBeaconState) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return BlockRoot(state, startEpoch)
+	startEpochSlot, err := StartSlot(startEpoch)
+	if err != nil {
+		return nil, err
+	}
+
+	// Prevent underflow
+	if startEpochSlot >= 1 {
+		startEpochSlot--
+	}
+
+	return BlockRootAtSlot(state, startEpochSlot)
 }
 
 // This computes proposer indices of the current epoch and returns a list of proposer indices,
