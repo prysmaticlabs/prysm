@@ -130,8 +130,6 @@ type BeaconChainConfig struct {
 	GenesisForkVersion  []byte                  `yaml:"GENESIS_FORK_VERSION" spec:"true"` // GenesisForkVersion is used to track fork version between state transitions.
 	AltairForkVersion   []byte                  `yaml:"ALTAIR_FORK_VERSION" spec:"true"`  // AltairForkVersion is used to represent the fork version for altair.
 	AltairForkEpoch     types.Epoch             `yaml:"ALTAIR_FORK_EPOCH" spec:"true"`    // AltairForkEpoch is used to represent the assigned fork epoch for altair.
-	NextForkVersion     []byte                  `yaml:"NEXT_FORK_VERSION"`                // NextForkVersion is used to track the upcoming fork version, if any.
-	NextForkEpoch       types.Epoch             `yaml:"NEXT_FORK_EPOCH"`                  // NextForkEpoch is used to track the epoch of the next fork, if any.
 	ForkVersionSchedule map[[4]byte]types.Epoch // Schedule of fork epochs by version.
 
 	// Weak subjectivity values.

@@ -144,7 +144,7 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 
 		c := params.BeaconConfig()
 		nextForkEpoch := types.Epoch(i)
-		c.NextForkEpoch = nextForkEpoch
+		c.ForkVersionSchedule[[4]byte{'A', 'B', 'C', 'D'}] = nextForkEpoch
 		params.OverrideBeaconConfig(c)
 
 		// We give every peer a different genesis validators root, which
@@ -215,8 +215,6 @@ func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 	}
 	nextForkEpoch := types.Epoch(1)
 	nextForkVersion := []byte{0, 0, 0, 1}
-	c.NextForkEpoch = nextForkEpoch
-	c.NextForkVersion = nextForkVersion
 	params.OverrideBeaconConfig(c)
 
 	genesisTime := time.Now()
