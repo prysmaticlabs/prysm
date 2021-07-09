@@ -30,7 +30,6 @@ func TestEndToEnd_Slasher_Sync_MinimalConfig(t *testing.T) {
 		TestDeposits:        false,
 		Evaluators: []types.Evaluator{
 			ev.HealthzCheck,
-			ev.MetricsCheck,
 			ev.ValidatorsAreActive,
 			ev.ValidatorsParticipatingAtEpoch(2),
 			ev.FinalizationOccurs(3),
@@ -42,7 +41,7 @@ func TestEndToEnd_Slasher_Sync_MinimalConfig(t *testing.T) {
 			ev.AllNodesHaveSameHead,
 			ev.ValidatorsParticipatingAtEpoch(6), // Validators should still be participating.
 			ev.ValidatorsSlashedAfterEpoch(5),    // We expect validators are slashed.
-			// ev.SlashedValidatorsLoseBalanceAfterEpoch(5),
+			ev.SlashedValidatorsLoseBalanceAfterEpoch(5),
 		},
 	}
 
