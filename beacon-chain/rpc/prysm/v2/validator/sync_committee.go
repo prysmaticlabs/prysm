@@ -80,8 +80,8 @@ func (vs *Server) syncSubcommitteeIndex(
 	ctx context.Context, index types.ValidatorIndex, slot types.Slot,
 ) (*prysmv2.SyncSubcommitteeIndexResponse, error) {
 
-	nextSlotEpoch := helpers.SlotToEpoch(vs.HeadFetcher.HeadSlot() + 1)
-	currentEpoch := helpers.SlotToEpoch(vs.HeadFetcher.HeadSlot())
+	nextSlotEpoch := helpers.SlotToEpoch(slot + 1)
+	currentEpoch := helpers.SlotToEpoch(slot)
 
 	switch {
 	case helpers.SyncCommitteePeriod(nextSlotEpoch) == helpers.SyncCommitteePeriod(currentEpoch):
