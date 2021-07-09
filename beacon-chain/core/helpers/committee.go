@@ -533,6 +533,7 @@ func findSubCommitteeIndices(pubKey []byte, pubKeys [][]byte) []uint64 {
 
 // Retrieve the current sync period boundary root by calculating sync period start epoch
 // and calling `BlockRoot`.
+// It uses the boundary slot - 1 for block root. (Ex: SlotsPerEpoch * EpochsPerSyncCommitteePeriod - 1)
 func syncPeriodBoundaryRoot(state iface.ReadOnlyBeaconState) ([]byte, error) {
 	// Can't call `BlockRoot` until the first slot.
 	if state.Slot() == params.BeaconConfig().GenesisSlot {
