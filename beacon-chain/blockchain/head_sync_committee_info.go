@@ -36,11 +36,7 @@ func (s *Service) HeadSyncCommitteeDomain(ctx context.Context, slot types.Slot) 
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
-	headState, err := s.getSyncCommitteeHeadState(ctx, slot)
-	if err != nil {
-		return nil, err
-	}
-	return helpers.Domain(headState.Fork(), helpers.SlotToEpoch(headState.Slot()), params.BeaconConfig().DomainSyncCommittee, headState.GenesisValidatorRoot())
+	return s.domainWithHeadState(ctx, slot, params.BeaconConfig().DomainSyncCommittee)
 }
 
 // HeadSyncSelectionProofDomain returns the head sync committee domain using current head state advanced up to `slot`.
@@ -48,11 +44,7 @@ func (s *Service) HeadSyncSelectionProofDomain(ctx context.Context, slot types.S
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
-	headState, err := s.getSyncCommitteeHeadState(ctx, slot)
-	if err != nil {
-		return nil, err
-	}
-	return helpers.Domain(headState.Fork(), helpers.SlotToEpoch(headState.Slot()), params.BeaconConfig().DomainSyncCommitteeSelectionProof, headState.GenesisValidatorRoot())
+	return s.domainWithHeadState(ctx, slot, params.BeaconConfig().DomainSyncCommitteeSelectionProof)
 }
 
 // HeadSyncContributionProofDomain returns the head sync committee domain using current head state advanced up to `slot`.
@@ -60,11 +52,7 @@ func (s *Service) HeadSyncContributionProofDomain(ctx context.Context, slot type
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
-	headState, err := s.getSyncCommitteeHeadState(ctx, slot)
-	if err != nil {
-		return nil, err
-	}
-	return helpers.Domain(headState.Fork(), helpers.SlotToEpoch(headState.Slot()), params.BeaconConfig().DomainContributionAndProof, headState.GenesisValidatorRoot())
+	return s.domainWithHeadState(ctx, slot, params.BeaconConfig().DomainContributionAndProof)
 }
 
 // HeadCurrentSyncCommitteeIndices returns the input validator `index`'s position indices in the current sync committee with respect to `slot`.
@@ -121,6 +109,15 @@ func (s *Service) HeadSyncCommitteePubKeys(ctx context.Context, slot types.Slot,
 	}
 
 	return altair.SyncSubCommitteePubkeys(syncCommittee, committeeIndex)
+}
+
+// returns calculated domain using input `domain` and `slot`.
+func (s *Service) domainWithHeadState(ctx context.Context, slot types.Slot, domain [4]byte) ([]byte, error) {
+	headState, err := s.getSyncCommitteeHeadState(ctx, slot)
+	if err != nil {
+		return nil, err
+	}
+	return helpers.Domain(headState.Fork(), helpers.SlotToEpoch(headState.Slot()), domain, headState.GenesisValidatorRoot())
 }
 
 // returns the head state that is advanced up to `slot`. It utilizes the cache `syncCommitteeHeadState` by retrieving using `slot` as key.
