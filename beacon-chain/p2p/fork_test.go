@@ -253,6 +253,7 @@ func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 }
 
 func TestAddForkEntry_Genesis(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	temp := t.TempDir()
 	randNum := rand.Int()
 	tempPath := path.Join(temp, strconv.Itoa(randNum))
@@ -261,6 +262,11 @@ func TestAddForkEntry_Genesis(t *testing.T) {
 	require.NoError(t, err, "Could not get private key")
 	db, err := enode.OpenDB("")
 	require.NoError(t, err)
+
+	bCfg := params.BeaconConfig()
+	bCfg.ForkVersionSchedule = map[[4]byte]types.Epoch{}
+	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)] = bCfg.GenesisEpoch
+	params.OverrideBeaconConfig(bCfg)
 
 	localNode := enode.NewLocalNode(db, pkey)
 	localNode, err = addForkEntry(localNode, time.Now().Add(10*time.Second), bytesutil.PadTo([]byte{'A', 'B', 'C', 'D'}, 32))
