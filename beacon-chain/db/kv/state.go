@@ -311,7 +311,7 @@ func (s *Store) validatorEntries(ctx context.Context, blockRoot [32]byte) ([]*et
 		for i := 0; i < len(validatorKeys); i += hashLength {
 			key := validatorKeys[i : i+hashLength]
 			encValEntry := valBkt.Get(key)
-			if encValEntry == nil || len(encValEntry) == 0 {
+			if len(encValEntry) == 0 {
 				return errors.New("invalid validator entry key")
 			}
 			valEntry := &ethpb.Validator{}
