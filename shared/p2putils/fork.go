@@ -119,7 +119,8 @@ func RetrieveForkDataFromDigest(digest [4]byte, genesisValidatorsRoot []byte) ([
 	return [4]byte{}, 0, errors.Errorf("no fork exists for a digest of %#x", digest)
 }
 
-// NextForkData retrieves the next fork data.
+// NextForkData retrieves the next fork data according to the
+// provided current epoch.
 func NextForkData(currEpoch types.Epoch) ([4]byte, types.Epoch) {
 	fSchedule := params.BeaconConfig().ForkVersionSchedule
 	sortedForkVersions := SortedForkVersions(fSchedule)
