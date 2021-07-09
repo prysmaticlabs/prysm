@@ -2,6 +2,7 @@
 package p2putils
 
 import (
+	"math"
 	"sort"
 	"time"
 
@@ -116,6 +117,35 @@ func RetrieveForkDataFromDigest(digest [4]byte, genesisValidatorsRoot []byte) ([
 		}
 	}
 	return [4]byte{}, 0, errors.Errorf("no fork exists for a digest of %#x", digest)
+}
+
+// NextForkData retrieves the next fork data according to the
+// provided current epoch.
+func NextForkData(currEpoch types.Epoch) ([4]byte, types.Epoch) {
+	fSchedule := params.BeaconConfig().ForkVersionSchedule
+	sortedForkVersions := SortedForkVersions(fSchedule)
+	nextForkEpoch := types.Epoch(math.MaxUint64)
+	nextForkVersion := [4]byte{}
+	for _, forkVersion := range sortedForkVersions {
+		epoch := fSchedule[forkVersion]
+		// If we get an epoch larger than out current epoch
+		// we set this as our next fork epoch and exit the
+		// loop.
+		if epoch > currEpoch {
+			nextForkEpoch = epoch
+			nextForkVersion = forkVersion
+			break
+		}
+		// In the event the retrieved epoch is less than
+		// our current epoch, we mark the previous
+		// fork's version as the next fork version.
+		if epoch <= currEpoch {
+			// The next fork version is updated to
+			// always include the most current fork version.
+			nextForkVersion = forkVersion
+		}
+	}
+	return nextForkVersion, nextForkEpoch
 }
 
 // SortedForkVersions sorts the provided fork schedule in ascending order

@@ -1,6 +1,7 @@
 package p2putils
 
 import (
+	"math"
 	"reflect"
 	"testing"
 	"time"
@@ -225,4 +226,140 @@ func TestIsForkNextEpoch(t *testing.T) {
 	isFork, err = IsForkNextEpoch(genesisTime, genRoot[:])
 	assert.NoError(t, err)
 	assert.Equal(t, true, isFork)
+}
+
+func TestNextForkData(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	tests := []struct {
+		name              string
+		setConfg          func()
+		currEpoch         types.Epoch
+		wantedForkVerison [4]byte
+		wantedEpoch       types.Epoch
+	}{
+		{
+			name:              "genesis fork",
+			currEpoch:         0,
+			wantedForkVerison: [4]byte{'A', 'B', 'C', 'D'},
+			wantedEpoch:       math.MaxUint64,
+			setConfg: func() {
+				cfg := params.BeaconConfig()
+				cfg.GenesisForkVersion = []byte{'A', 'B', 'C', 'D'}
+				cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{
+					{'A', 'B', 'C', 'D'}: 0,
+				}
+				params.OverrideBeaconConfig(cfg)
+			},
+		},
+		{
+			name:              "altair pre-fork",
+			currEpoch:         5,
+			wantedForkVerison: [4]byte{'A', 'B', 'C', 'F'},
+			wantedEpoch:       10,
+			setConfg: func() {
+				cfg := params.BeaconConfig()
+				cfg.GenesisForkVersion = []byte{'A', 'B', 'C', 'D'}
+				cfg.AltairForkVersion = []byte{'A', 'B', 'C', 'F'}
+				cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{
+					{'A', 'B', 'C', 'D'}: 0,
+					{'A', 'B', 'C', 'F'}: 10,
+				}
+				params.OverrideBeaconConfig(cfg)
+			},
+		},
+		{
+			name:              "altair on fork",
+			currEpoch:         10,
+			wantedForkVerison: [4]byte{'A', 'B', 'C', 'F'},
+			wantedEpoch:       math.MaxUint64,
+			setConfg: func() {
+				cfg := params.BeaconConfig()
+				cfg.GenesisForkVersion = []byte{'A', 'B', 'C', 'D'}
+				cfg.AltairForkVersion = []byte{'A', 'B', 'C', 'F'}
+				cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{
+					{'A', 'B', 'C', 'D'}: 0,
+					{'A', 'B', 'C', 'F'}: 10,
+				}
+				params.OverrideBeaconConfig(cfg)
+			},
+		},
+
+		{
+			name:              "altair post fork",
+			currEpoch:         20,
+			wantedForkVerison: [4]byte{'A', 'B', 'C', 'F'},
+			wantedEpoch:       math.MaxUint64,
+			setConfg: func() {
+				cfg := params.BeaconConfig()
+				cfg.GenesisForkVersion = []byte{'A', 'B', 'C', 'D'}
+				cfg.AltairForkVersion = []byte{'A', 'B', 'C', 'F'}
+				cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{
+					{'A', 'B', 'C', 'D'}: 0,
+					{'A', 'B', 'C', 'F'}: 10,
+				}
+				params.OverrideBeaconConfig(cfg)
+			},
+		},
+
+		{
+			name:              "3 forks, pre-fork, 1st fork",
+			currEpoch:         5,
+			wantedForkVerison: [4]byte{'A', 'B', 'C', 'F'},
+			wantedEpoch:       10,
+			setConfg: func() {
+				cfg := params.BeaconConfig()
+				cfg.GenesisForkVersion = []byte{'A', 'B', 'C', 'D'}
+				cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{
+					{'A', 'B', 'C', 'D'}: 0,
+					{'A', 'B', 'C', 'F'}: 10,
+					{'A', 'B', 'C', 'Z'}: 100,
+				}
+				params.OverrideBeaconConfig(cfg)
+			},
+		},
+		{
+			name:              "3 forks, pre-fork, 2nd fork",
+			currEpoch:         50,
+			wantedForkVerison: [4]byte{'A', 'B', 'C', 'Z'},
+			wantedEpoch:       100,
+			setConfg: func() {
+				cfg := params.BeaconConfig()
+				cfg.GenesisForkVersion = []byte{'A', 'B', 'C', 'D'}
+				cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{
+					{'A', 'B', 'C', 'D'}: 0,
+					{'A', 'B', 'C', 'F'}: 10,
+					{'A', 'B', 'C', 'Z'}: 100,
+				}
+				params.OverrideBeaconConfig(cfg)
+			},
+		},
+		{
+			name:              "3 forks, on fork",
+			currEpoch:         100,
+			wantedForkVerison: [4]byte{'A', 'B', 'C', 'Z'},
+			wantedEpoch:       math.MaxUint64,
+			setConfg: func() {
+				cfg := params.BeaconConfig()
+				cfg.GenesisForkVersion = []byte{'A', 'B', 'C', 'D'}
+				cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{
+					{'A', 'B', 'C', 'D'}: 0,
+					{'A', 'B', 'C', 'F'}: 10,
+					{'A', 'B', 'C', 'Z'}: 100,
+				}
+				params.OverrideBeaconConfig(cfg)
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setConfg()
+			fVersion, fEpoch := NextForkData(tt.currEpoch)
+			if fVersion != tt.wantedForkVerison {
+				t.Errorf("NextForkData() fork version = %v, want %v", fVersion, tt.wantedForkVerison)
+			}
+			if fEpoch != tt.wantedEpoch {
+				t.Errorf("NextForkData() fork epoch = %v, want %v", fEpoch, tt.wantedEpoch)
+			}
+		})
+	}
 }

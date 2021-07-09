@@ -53,16 +53,10 @@ const (
 	RPCMetaDataTopicV1 = protocolPrefix + MetadataMessageName + SchemaVersionV1
 
 	// V2 RPC Topics
-	// RPCStatusTopicV2 defines the v2 topic for the status rpc method.
-	RPCStatusTopicV2 = protocolPrefix + StatusMessageName + SchemaVersionV2
-	// RPCGoodByeTopicV2 defines the v2 topic for the goodbye rpc method.
-	RPCGoodByeTopicV2 = protocolPrefix + GoodbyeMessageName + SchemaVersionV2
 	// RPCBlocksByRangeTopicV2 defines v2 the topic for the blocks by range rpc method.
 	RPCBlocksByRangeTopicV2 = protocolPrefix + BeaconBlocksByRangeMessageName + SchemaVersionV2
 	// RPCBlocksByRootTopicV2 defines the v2 topic for the blocks by root rpc method.
 	RPCBlocksByRootTopicV2 = protocolPrefix + BeaconBlocksByRootsMessageName + SchemaVersionV2
-	// RPCPingTopicV2 defines the v2 topic for the ping rpc method.
-	RPCPingTopicV2 = protocolPrefix + PingMessageName + SchemaVersionV2
 	// RPCMetaDataTopicV2 defines the v2 topic for the metadata rpc method.
 	RPCMetaDataTopicV2 = protocolPrefix + MetadataMessageName + SchemaVersionV2
 )
@@ -76,10 +70,8 @@ const (
 var RPCTopicMappings = map[string]interface{}{
 	// RPC Status Message
 	RPCStatusTopicV1: new(pb.Status),
-	RPCStatusTopicV2: new(pb.Status),
 	// RPC Goodbye Message
 	RPCGoodByeTopicV1: new(types.SSZUint64),
-	RPCGoodByeTopicV2: new(types.SSZUint64),
 	// RPC Block By Range Message
 	RPCBlocksByRangeTopicV1: new(pb.BeaconBlocksByRangeRequest),
 	RPCBlocksByRangeTopicV2: new(pb.BeaconBlocksByRangeRequest),
@@ -88,7 +80,6 @@ var RPCTopicMappings = map[string]interface{}{
 	RPCBlocksByRootTopicV2: new(p2ptypes.BeaconBlockByRootsReq),
 	// RPC Ping Message
 	RPCPingTopicV1: new(types.SSZUint64),
-	RPCPingTopicV2: new(types.SSZUint64),
 	// RPC Metadata Message
 	RPCMetaDataTopicV1: new(interface{}),
 	RPCMetaDataTopicV2: new(interface{}),

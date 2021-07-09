@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
-	"github.com/prysmaticlabs/prysm/shared/interfaces/version"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -27,28 +26,6 @@ func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2
 	s.rateLimiter.add(stream, 1)
 
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
-		return err
-	}
-
-	obtainedCtx := []byte{}
-	switch s.cfg.P2P.Metadata().Version() {
-	case version.Phase0:
-		valRoot := s.cfg.Chain.GenesisValidatorRoot()
-		digest, err := p2putils.ForkDigestFromEpoch(params.BeaconConfig().GenesisEpoch, valRoot[:])
-		if err != nil {
-			return err
-		}
-		obtainedCtx = digest[:]
-	case version.Altair:
-		valRoot := s.cfg.Chain.GenesisValidatorRoot()
-		digest, err := p2putils.ForkDigestFromEpoch(params.BeaconConfig().AltairForkEpoch, valRoot[:])
-		if err != nil {
-			return err
-		}
-		obtainedCtx = digest[:]
-	}
-
-	if err := writeContextToStream(obtainedCtx, stream, s.cfg.Chain); err != nil {
 		return err
 	}
 	if s.cfg.P2P.Metadata() == nil || s.cfg.P2P.Metadata().IsNil() {
@@ -83,12 +60,12 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (interfac
 		s.cfg.P2P.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		return nil, errors.New(errMsg)
 	}
-	// No-op for now with the rpc context.
-	rpcCtx, err := readContextFromStream(stream, s.cfg.Chain)
+	valRoot := s.cfg.Chain.GenesisValidatorRoot()
+	rpcCtx, err := p2putils.ForkDigestFromEpoch(helpers.SlotToEpoch(s.cfg.Chain.CurrentSlot()), valRoot[:])
 	if err != nil {
 		return nil, err
 	}
-	msg, err := extractMetaDataType(rpcCtx, s.cfg.Chain)
+	msg, err := extractMetaDataType(rpcCtx[:], s.cfg.Chain)
 	if err != nil {
 		return nil, err
 	}
