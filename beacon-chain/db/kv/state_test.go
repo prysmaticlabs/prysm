@@ -2,6 +2,8 @@ package kv
 
 import (
 	"context"
+	"encoding/binary"
+	"math/rand"
 	"reflect"
 	"testing"
 
@@ -43,6 +45,27 @@ func TestState_CanSaveRetrieve(t *testing.T) {
 	savedS, err = db.State(context.Background(), [32]byte{'B'})
 	require.NoError(t, err)
 	assert.Equal(t, iface.ReadOnlyBeaconState(nil), savedS, "Unsaved state should've been nil")
+}
+
+func TestState_CanSaveRetrieveValidatorEntries(t *testing.T) {
+	db := setupDB(t)
+
+	r := [32]byte{'A'}
+
+	require.Equal(t, false, db.HasState(context.Background(), r))
+
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, st.SetSlot(100))
+	require.NoError(t, st.SetValidators(validators(10)))
+
+	require.NoError(t, db.SaveState(context.Background(), st, r))
+	assert.Equal(t, true, db.HasState(context.Background(), r))
+
+	savedS, err := db.State(context.Background(), r)
+	require.NoError(t, err)
+
+	require.DeepSSZEqual(t, st.InnerStateUnsafe(), savedS.InnerStateUnsafe(), "saved state with validators and retrieved state are not matching")
 }
 
 func TestGenesisState_CanSaveRetrieve(t *testing.T) {
@@ -341,4 +364,24 @@ func TestStore_CleanUpDirtyStates_DontDeleteNonFinalized(t *testing.T) {
 	for _, rt := range unfinalizedRoots {
 		require.Equal(t, true, db.HasState(context.Background(), rt))
 	}
+}
+
+func validators(limit int) []*ethpb.Validator {
+	var vals []*ethpb.Validator
+	for i := 0; i < limit; i++ {
+		pubKey := make([]byte, params.BeaconConfig().BLSPubkeyLength)
+		binary.LittleEndian.PutUint64(pubKey, rand.Uint64())
+		val := &ethpb.Validator{
+			PublicKey:                  pubKey,
+			WithdrawalCredentials:      bytesutil.ToBytes(rand.Uint64(), 32),
+			EffectiveBalance:           uint64(rand.Uint64()),
+			Slashed:                    i%2 != 0,
+			ActivationEligibilityEpoch: types.Epoch(rand.Uint64()),
+			ActivationEpoch:            types.Epoch(rand.Uint64()),
+			ExitEpoch:                  types.Epoch(rand.Uint64()),
+			WithdrawableEpoch:          types.Epoch(rand.Uint64()),
+		}
+		vals = append(vals, val)
+	}
+	return vals
 }

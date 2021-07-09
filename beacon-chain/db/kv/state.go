@@ -3,7 +3,6 @@ package kv
 import (
 	"bytes"
 	"context"
-	"fmt"
 
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
@@ -119,13 +118,17 @@ func (s *Store) SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconSta
 		return errors.New("nil state")
 	}
 	multipleEncs := make([][]byte, len(states))
-	validatorsEntries := make(map[string][]byte) // Its a map to get get rid of duplicates
-	validatorKeys := make([][]byte, len(states)) //  for every state, this stores a compressed list of validator indices
+	validatorsEntries := make(map[string][]byte)              // Its a map to get get rid of duplicates.
+	validatorKeys := make([][]byte, len(states))              //  for every state, this stores a compressed list of validator indices.
+	realValidators := make([][]*ethpb.Validator, len(states)) // temporary structure to restore state in memory after persisting it.
 	for i, st := range states {
 		pbState, err := v1.ProtobufBeaconState(st.InnerStateUnsafe())
 		if err != nil {
 			return err
 		}
+
+		// store the real validators to restore the in memory state later.
+		realValidators[i] = pbState.Validators
 
 		// yank out the validators and store them in separate table to save space.
 		var hashes []byte
@@ -144,7 +147,7 @@ func (s *Store) SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconSta
 			validatorsEntries[hashStr] = valBytes
 		}
 
-		// zero out the validators List from the state.
+		// zero out the validators List from the state bucket so that it is not stored as part of it.
 		pbState.Validators = nil
 
 		validatorKeys[i] = snappy.Encode(nil, hashes)
@@ -154,7 +157,7 @@ func (s *Store) SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconSta
 		}
 	}
 
-	return s.db.Update(func(tx *bolt.Tx) error {
+	if err := s.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateBucket)
 		valIdxBkt := tx.Bucket(BlockRootValidatorKeysIndexBucket)
 		for i, rt := range blockRoots {
@@ -179,7 +182,19 @@ func (s *Store) SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconSta
 			}
 		}
 		return nil
-	})
+	}); err != nil {
+		return err
+	}
+
+	// restore the state in memory with the original validators
+	for i, vals := range realValidators {
+		pbState, err := v1.ProtobufBeaconState(states[i].InnerStateUnsafe())
+		if err != nil {
+			return err
+		}
+		pbState.Validators = vals
+	}
+	return nil
 }
 
 // HasState checks if a state by root exists in the db.
@@ -261,6 +276,9 @@ func createState(ctx context.Context, enc []byte, validatorEntries []*ethpb.Vali
 	if err := decode(ctx, enc, protoState); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal encoding")
 	}
+	if validatorEntries == nil {
+		validatorEntries = make([]*ethpb.Validator, 0)
+	}
 	protoState.Validators = validatorEntries
 	return protoState, nil
 }
@@ -276,16 +294,16 @@ func (s *Store) validatorEntries(ctx context.Context, blockRoot [32]byte) ([]*et
 		idxBkt := tx.Bucket(BlockRootValidatorKeysIndexBucket)
 		valKey := idxBkt.Get(blockRoot[:])
 		if len(valKey) == 0 {
-			return fmt.Errorf("invalid compressed validator keys length")
+			return errors.Errorf("invalid compressed validator keys length")
 		}
 
 		// decompress the keys and check if they are of proper length.
 		validatorKeys, sErr := snappy.Decode(nil, valKey)
 		if sErr != nil {
-			return sErr
+			return errors.Wrap(sErr, "failed to uncompress validator keys")
 		}
 		if len(validatorKeys)%hashLength != 0 {
-			return fmt.Errorf("invalid validator keys length: %d", len(validatorKeys))
+			return errors.Errorf("invalid validator keys length: %d", len(validatorKeys))
 		}
 
 		// get the corresponding validator entries from the validator bucket.
@@ -293,13 +311,13 @@ func (s *Store) validatorEntries(ctx context.Context, blockRoot [32]byte) ([]*et
 		for i := 0; i < len(validatorKeys); i += hashLength {
 			key := validatorKeys[i : i+hashLength]
 			encValEntry := valBkt.Get(key)
-			if encValEntry != nil {
-				return fmt.Errorf("invalid validator entry for key %s", hexutils.BytesToHex(key))
+			if encValEntry == nil || len(encValEntry) == 0 {
+				return errors.New("invalid validator entry key")
 			}
 			valEntry := &ethpb.Validator{}
 			decodeErr := decode(ctx, encValEntry, valEntry)
 			if decodeErr != nil {
-				return decodeErr
+				return errors.Wrap(decodeErr, "failed to decode validator keys")
 			}
 			validatorEntries = append(validatorEntries, valEntry)
 		}
