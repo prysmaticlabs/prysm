@@ -125,22 +125,20 @@ func NextForkData(currEpoch types.Epoch) ([4]byte, types.Epoch) {
 	sortedForkVersions := SortedForkVersions(fSchedule)
 	nextForkEpoch := types.Epoch(math.MaxUint64)
 	nextForkVersion := [4]byte{}
-	previousForkHappened := false
 	for _, forkVersion := range sortedForkVersions {
 		epoch := fSchedule[forkVersion]
 		// If we get an epoch larger than out current epoch
 		// we set this as our next fork epoch and exit the
 		// loop.
-		if previousForkHappened && epoch > currEpoch {
+		if epoch > currEpoch {
 			nextForkEpoch = epoch
 			nextForkVersion = forkVersion
 			break
 		}
 		// In the event the retrieved epoch is less than
 		// our current epoch, we mark the previous
-		// fork as having happened.
+		// fork's version as the next fork version..
 		if epoch <= currEpoch {
-			previousForkHappened = true
 			// The next fork version is updated to
 			// always include the most current fork version.
 			nextForkVersion = forkVersion
