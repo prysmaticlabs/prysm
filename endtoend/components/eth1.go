@@ -132,6 +132,7 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 		return err
 	}
 	txOpts.Nonce = big.NewInt(int64(nonce))
+	txOpts.Context = context.Background()
 	contractAddr, tx, _, err := contracts.DeployDepositContract(txOpts, web3, txOpts.From)
 	if err != nil {
 		return fmt.Errorf("failed to deploy deposit contract: %w", err)
