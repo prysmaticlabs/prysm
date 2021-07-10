@@ -214,11 +214,6 @@ func (s *Store) HasState(ctx context.Context, blockRoot [32]byte) bool {
 	hasState := false
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(stateBucket)
-		if _, ok := s.validatorEntryCache.Get(blockRoot); ok {
-			validatorEntryCacheHit.Inc()
-			hasState = true
-		}
-		validatorEntryCacheMiss.Inc()
 		stBytes := bkt.Get(blockRoot[:])
 		if len(stBytes) > 0 {
 			hasState = true
