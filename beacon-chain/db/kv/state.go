@@ -334,7 +334,10 @@ func (s *Store) validatorEntries(ctx context.Context, blockRoot [32]byte) ([]*et
 			key := validatorKeys[i : i+hashLength]
 			var encValEntry *ethpb.Validator
 			if v, ok := s.validatorEntryCache.Get(key); ok {
-				encValEntry = v.(*ethpb.Validator)
+				valEntry, vType := v.(*ethpb.Validator)
+				if vType {
+					encValEntry = valEntry
+				}
 				validatorEntryCacheHit.Inc()
 			} else {
 				encValEntryBytes := valBkt.Get(key)
