@@ -467,8 +467,8 @@ func checkStateReadTime(b *testing.B, saveCount int) {
 	}
 }
 
-func BenchmarkState_CheckStateSaveTime_1(b *testing.B)   { checkStateSaveTime(b, 1) }
-func BenchmarkState_CheckStateSaveTime_10(b *testing.B)  { checkStateSaveTime(b, 10) }
+func BenchmarkState_CheckStateSaveTime_1(b *testing.B)  { checkStateSaveTime(b, 1) }
+func BenchmarkState_CheckStateSaveTime_10(b *testing.B) { checkStateSaveTime(b, 10) }
 
-func BenchmarkState_CheckStateReadTime_1(b *testing.B)   { checkStateReadTime(b, 1) }
-func BenchmarkState_CheckStateReadTime_10(b *testing.B)  { checkStateReadTime(b, 10) }
+func BenchmarkState_CheckStateReadTime_1(b *testing.B)  { checkStateReadTime(b, 1) }
+func BenchmarkState_CheckStateReadTime_10(b *testing.B) { checkStateReadTime(b, 10) }
