@@ -135,6 +135,7 @@ func TestGetAltairDuties_SyncCommitteeOK(t *testing.T) {
 		pubKeys[i] = deposits[i].Data.PublicKey
 		indices[i] = uint64(i)
 	}
+	require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch*types.Slot(params.BeaconConfig().EpochsPerSyncCommitteePeriod)-1))
 	require.NoError(t, helpers.UpdateSyncCommitteeCache(bs))
 
 	pubkeysAs48ByteType := make([][48]byte, len(pubKeys))
