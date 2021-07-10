@@ -10,7 +10,6 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
@@ -394,16 +393,53 @@ func checkStateSaveTime(b *testing.B, saveCount int) {
 	db := setupDB(b)
 	initialSetOfValidators := validators(100000)
 
-	// Save a state to boot strap the test
+	// construct some states and save to randomize benchmark.
+	for i := 0; i < saveCount; i++ {
+		key := make([]byte, 32)
+		_, err := rand.Read(key)
+		require.NoError(b, err)
+		st, err := testutil.NewBeaconState()
+		require.NoError(b, err)
+
+		// Add some more new validator to the base validator.
+		validatosToAddInTest := validators(10000)
+		allValidators := append(initialSetOfValidators, validatosToAddInTest...)
+
+		// shuffle validators.
+		rand.Seed(time.Now().UnixNano())
+		rand.Shuffle(len(allValidators), func(i, j int) { allValidators[i], allValidators[j] = allValidators[j], allValidators[i] })
+
+		require.NoError(b, st.SetValidators(allValidators))
+		require.NoError(b, db.SaveState(context.Background(), st, bytesutil.ToBytes32(key)))
+	}
+
+	// create a state to save in benchmark
+	r := [32]byte{'A'}
+	st, err := testutil.NewBeaconState()
+	require.NoError(b, err)
+	require.NoError(b, st.SetValidators(initialSetOfValidators))
+
+	b.ReportAllocs()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		require.NoError(b, db.SaveState(context.Background(), st, r))
+	}
+}
+
+func checkStateReadTime(b *testing.B, saveCount int) {
+	b.StopTimer()
+
+	db := setupDB(b)
+	initialSetOfValidators := validators(100000)
+
+	// Save a state to read in benchmark
 	r := [32]byte{'A'}
 	st, err := testutil.NewBeaconState()
 	require.NoError(b, err)
 	require.NoError(b, st.SetValidators(initialSetOfValidators))
 	require.NoError(b, db.SaveState(context.Background(), st, r))
 
-	// construct the state to save inside benchmark
-	var states []*v1.BeaconState
-	var keys [][32]byte
+	// construct some states and save to randomize benchmark.
 	for i := 0; i < saveCount; i++ {
 		key := make([]byte, 32)
 		_, err := rand.Read(key)
@@ -420,19 +456,21 @@ func checkStateSaveTime(b *testing.B, saveCount int) {
 		rand.Shuffle(len(allValidators), func(i, j int) { allValidators[i], allValidators[j] = allValidators[j], allValidators[i] })
 
 		require.NoError(b, st.SetValidators(allValidators))
-		states = append(states, st)
-		keys = append(keys, bytesutil.ToBytes32(key))
+		require.NoError(b, db.SaveState(context.Background(), st, bytesutil.ToBytes32(key)))
 	}
 
 	b.ReportAllocs()
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		for j := 0; j < len(states) && j < len(keys); j++ {
-			require.NoError(b, db.SaveState(context.Background(), states[j], keys[j]))
-		}
+		_, err := db.State(context.Background(), r)
+		require.NoError(b, err)
 	}
 }
 
 func BenchmarkState_CheckStateSaveTime_1(b *testing.B)   { checkStateSaveTime(b, 1) }
 func BenchmarkState_CheckStateSaveTime_10(b *testing.B)  { checkStateSaveTime(b, 10) }
 func BenchmarkState_CheckStateSaveTime_100(b *testing.B) { checkStateSaveTime(b, 100) }
+
+func BenchmarkState_CheckStateReadTime_1(b *testing.B)   { checkStateReadTime(b, 1) }
+func BenchmarkState_CheckStateReadTime_10(b *testing.B)  { checkStateReadTime(b, 10) }
+func BenchmarkState_CheckStateReadTime_100(b *testing.B) { checkStateReadTime(b, 100) }
