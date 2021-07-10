@@ -23,10 +23,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-const (
-	hashLength = 32
-)
-
 // State returns the saved state using block's signing root,
 // this particular block was used to generate the state.
 func (s *Store) State(ctx context.Context, blockRoot [32]byte) (iface.BeaconState, error) {
@@ -118,7 +114,7 @@ func (s *Store) SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconSta
 		return errors.New("nil state")
 	}
 	multipleEncs := make([][]byte, len(states))
-	validatorsEntries := make(map[string][]byte)              // Its a map to get get rid of duplicates.
+	validatorsEntries := make(map[string]*ethpb.Validator)    // Its a map to get get rid of duplicates.
 	validatorKeys := make([][]byte, len(states))              //  for every state, this stores a compressed list of validator indices.
 	realValidators := make([][]*ethpb.Validator, len(states)) // temporary structure to restore state in memory after persisting it.
 	for i, st := range states {
@@ -144,7 +140,7 @@ func (s *Store) SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconSta
 
 			// note down the hash and the encoded validator entry
 			hashStr := hexutils.BytesToHex(hash[:])
-			validatorsEntries[hashStr] = valBytes
+			validatorsEntries[hashStr] = val
 		}
 
 		// zero out the validators List from the state bucket so that it is not stored as part of it.
@@ -177,8 +173,22 @@ func (s *Store) SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconSta
 		valBkt := tx.Bucket(stateValidatorsBucket)
 		for hashStr, validatorEntry := range validatorsEntries {
 			key := hexutils.HexToBytes(hashStr)
-			if err := valBkt.Put(key, validatorEntry); err != nil {
-				return err
+			// if the entry is not in the cache and not in the DB,
+			// then insert it in the DB and add to the cache.
+			if _, ok := s.validatorEntryCache.Get(key); !ok {
+				validatorEntryCacheMiss.Inc()
+				if valEntry := valBkt.Get(key); valEntry == nil {
+					valBytes, encodeErr := encode(ctx, validatorEntry)
+					if encodeErr != nil {
+						return encodeErr
+					}
+					if err := valBkt.Put(key, valBytes); err != nil {
+						return err
+					}
+					s.validatorEntryCache.Set(key, validatorEntry, int64(len(valBytes)))
+				}
+			} else {
+				validatorEntryCacheHit.Inc()
 			}
 		}
 		return nil
@@ -204,6 +214,11 @@ func (s *Store) HasState(ctx context.Context, blockRoot [32]byte) bool {
 	hasState := false
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(stateBucket)
+		if _, ok := s.validatorEntryCache.Get(blockRoot); ok {
+			validatorEntryCacheHit.Inc()
+			hasState = true
+		}
+		validatorEntryCacheMiss.Inc()
 		stBytes := bkt.Get(blockRoot[:])
 		if len(stBytes) > 0 {
 			hasState = true
@@ -249,6 +264,13 @@ func (s *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 		indicesByBucket := createStateIndicesFromStateSlot(ctx, slot)
 		if err := deleteValueForIndices(ctx, indicesByBucket, blockRoot[:], tx); err != nil {
 			return errors.Wrap(err, "could not delete root for DB indices")
+		}
+
+		// remove the validator entry keys for the co-responding state.
+		idxBkt := tx.Bucket(BlockRootValidatorKeysIndexBucket)
+		err = idxBkt.Delete(blockRoot[:])
+		if err != nil {
+			return err
 		}
 
 		return bkt.Delete(blockRoot[:])
@@ -310,16 +332,20 @@ func (s *Store) validatorEntries(ctx context.Context, blockRoot [32]byte) ([]*et
 		valBkt := tx.Bucket(stateValidatorsBucket)
 		for i := 0; i < len(validatorKeys); i += hashLength {
 			key := validatorKeys[i : i+hashLength]
-			encValEntry := valBkt.Get(key)
-			if len(encValEntry) == 0 {
-				return errors.New("invalid validator entry key")
+			var encValEntry *ethpb.Validator
+			if v, ok := s.validatorEntryCache.Get(key); ok {
+				encValEntry = v.(*ethpb.Validator)
+				validatorEntryCacheHit.Inc()
+			} else {
+				encValEntryBytes := valBkt.Get(key)
+				decodeErr := decode(ctx, encValEntryBytes, encValEntry)
+				if decodeErr != nil {
+					return errors.Wrap(decodeErr, "failed to decode validator keys")
+				}
+				s.validatorEntryCache.Set(key, encValEntry, int64(len(encValEntryBytes)))
+				validatorEntryCacheMiss.Inc()
 			}
-			valEntry := &ethpb.Validator{}
-			decodeErr := decode(ctx, encValEntry, valEntry)
-			if decodeErr != nil {
-				return errors.Wrap(decodeErr, "failed to decode validator keys")
-			}
-			validatorEntries = append(validatorEntries, valEntry)
+			validatorEntries = append(validatorEntries, encValEntry)
 		}
 		return nil
 	})
