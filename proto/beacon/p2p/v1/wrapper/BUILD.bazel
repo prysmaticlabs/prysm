@@ -2,7 +2,7 @@ load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["metadata_wrapper.go"],
+    srcs = ["metadata.go"],
     importpath = "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1/wrapper",
     visibility = ["//visibility:public"],
     deps = [
