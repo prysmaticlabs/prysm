@@ -9,6 +9,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -877,12 +878,17 @@ func TestCurrentEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
+	root, err := syncPeriodBoundaryRoot(state)
+	require.NoError(t, err)
+
+	// Test that cache was empty.
+	_, err = syncCommitteeCache.CurrentEpochIndexPosition(bytesutil.ToBytes32(root), 0)
+	require.Equal(t, cache.ErrNonExistingSyncCommitteeKey, err)
+
+	// Test that helper can retrieve the index given empty cache.
 	index, err := CurrentEpochSyncSubcommitteeIndices(state, 0)
 	require.NoError(t, err)
 	require.DeepEqual(t, []uint64{0}, index)
-
-	root, err := syncPeriodBoundaryRoot(state)
-	require.NoError(t, err)
 
 	// Test that cache was able to fill on miss.
 	time.Sleep(100 * time.Millisecond)
