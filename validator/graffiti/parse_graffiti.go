@@ -32,7 +32,7 @@ func ParseGraffitiFile(f string) (*Graffiti, error) {
 	}
 	g := &Graffiti{}
 	if err := yaml.UnmarshalStrict(yamlFile, g); err != nil {
-		if _, ok := err.(yaml.TypeError); !ok {
+		if _, ok := err.(*yaml.TypeError); !ok {
 			return nil, err
 		} else {
 			log.WithError(err).Error("There were some issues parsing graffiti from a yaml file.")
