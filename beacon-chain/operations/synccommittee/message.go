@@ -63,10 +63,10 @@ func (s *Store) SaveSyncCommitteeMessage(msg *prysmv2.SyncCommitteeMessage) erro
 // SyncCommitteeMessages returns sync committee messages by slot from the priority queue.
 // Upon retrieval, the message is removed from the queue.
 func (s *Store) SyncCommitteeMessages(slot types.Slot) ([]*prysmv2.SyncCommitteeMessage, error) {
-	s.messageLock.Lock()
-	defer s.messageLock.Unlock()
+	s.messageLock.RLock()
+	defer s.messageLock.RUnlock()
 
-	item, err := s.messageCache.PopByKey(syncCommitteeKey(slot))
+	item, err := s.messageCache.RetrieveByKey(syncCommitteeKey(slot))
 	if err != nil {
 		return nil, err
 	}
