@@ -212,9 +212,6 @@ func processSlotsStateGen(ctx context.Context, state iface.BeaconState, slot typ
 			if err != nil {
 				return nil, err
 			}
-			if err := helpers.UpdateSyncCommitteeCache(state); err != nil {
-				return nil, err
-			}
 		}
 	}
 

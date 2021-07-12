@@ -990,3 +990,19 @@ func TestNextEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
 	require.NoError(t, err)
 	require.DeepEqual(t, []uint64(nil), index)
 }
+
+func TestUpdateSyncCommitteeCache_BadSlot(t *testing.T) {
+	state, err := v1.InitializeFromProto(&pb.BeaconState{
+		Slot: 1,
+	})
+	require.NoError(t, err)
+	err = UpdateSyncCommitteeCache(state)
+	require.ErrorContains(t, "not at the end of the epoch to update cache", err)
+
+	state, err = v1.InitializeFromProto(&pb.BeaconState{
+		Slot: params.BeaconConfig().SlotsPerEpoch - 1,
+	})
+	require.NoError(t, err)
+	err = UpdateSyncCommitteeCache(state)
+	require.ErrorContains(t, "not at sync committee period boundary to update cache", err)
+}
