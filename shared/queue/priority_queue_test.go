@@ -184,6 +184,50 @@ func TestPriorityQueue_PopByKey(t *testing.T) {
 	testValidateInternalData(t, pq, len(tc)-len(popKeys)-1, true)
 }
 
+func TestPriorityQueue_RetrieveByKey(t *testing.T) {
+	pq := New()
+
+	tc := testCases()
+	for _, i := range tc {
+		if err := pq.Push(i); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// grab the top priority item, to capture it's value for checking later
+	item, err := pq.Pop()
+	require.NoError(t, err)
+	oldPriority := item.Priority
+	oldKey := item.Key
+
+	// push the item back on, so it gets retrieved with RetrieveByKey and we verify
+	// the top item does not change.
+	require.NoError(t, pq.Push(item))
+
+	popKeys := []int{2, 4, 7, 1, 0}
+	for _, i := range popKeys {
+		item, err := pq.RetrieveByKey(fmt.Sprintf("item-%d", i))
+		if err != nil {
+			t.Fatalf("failed to pop item-%d, \n\terr: %s\n\titem: %#v", i, err, item)
+		}
+	}
+
+	testValidateInternalData(t, pq, len(tc), false)
+
+	// grab the top priority item again, to compare with the top item priority
+	// from above. They should be the same
+	item, err = pq.Pop()
+	require.NoError(t, err)
+	newPriority := item.Priority
+	newKey := item.Key
+
+	if oldPriority != newPriority && oldKey != newKey {
+		t.Fatalf("expected old/new key and priority to be the same, got (%s/%s) and (%d/%d)", oldKey, newKey, oldPriority, newPriority)
+	}
+
+	testValidateInternalData(t, pq, len(tc)-1, true)
+}
+
 // testValidateInternalData checks the internal data structure of the PriorityQueue
 // and verifies that items are in-sync. Use drain only at the end of a test,
 // because it will mutate the input queue
