@@ -52,15 +52,15 @@ func TestSyncCommitteeSignatureCache_RoundTrip(t *testing.T) {
 	msgs, err = store.SyncCommitteeMessages(4)
 	require.NoError(t, err)
 	require.DeepSSZEqual(t, []*prysmv2.SyncCommitteeMessage{
-		{Slot: 3, ValidatorIndex: 0, Signature: []byte{'g'}},
-		{Slot: 3, ValidatorIndex: 1, Signature: []byte{'h'}},
+		{Slot: 4, ValidatorIndex: 0, Signature: []byte{'g'}},
+		{Slot: 4, ValidatorIndex: 1, Signature: []byte{'h'}},
 	}, msgs)
 
 	msgs, err = store.SyncCommitteeMessages(5)
 	require.NoError(t, err)
 	require.DeepSSZEqual(t, []*prysmv2.SyncCommitteeMessage{
-		{Slot: 3, ValidatorIndex: 0, Signature: []byte{'i'}},
-		{Slot: 3, ValidatorIndex: 1, Signature: []byte{'j'}},
+		{Slot: 5, ValidatorIndex: 0, Signature: []byte{'i'}},
+		{Slot: 5, ValidatorIndex: 1, Signature: []byte{'j'}},
 	}, msgs)
 
 	msgs, err = store.SyncCommitteeMessages(6)
@@ -89,15 +89,15 @@ func TestSyncCommitteeSignatureCache_RoundTrip(t *testing.T) {
 	msgs, err = store.SyncCommitteeMessages(4)
 	require.NoError(t, err)
 	require.DeepSSZEqual(t, []*prysmv2.SyncCommitteeMessage{
-		{Slot: 3, ValidatorIndex: 0, Signature: []byte{'g'}},
-		{Slot: 3, ValidatorIndex: 1, Signature: []byte{'h'}},
+		{Slot: 4, ValidatorIndex: 0, Signature: []byte{'g'}},
+		{Slot: 4, ValidatorIndex: 1, Signature: []byte{'h'}},
 	}, msgs)
 
 	msgs, err = store.SyncCommitteeMessages(5)
 	require.NoError(t, err)
 	require.DeepSSZEqual(t, []*prysmv2.SyncCommitteeMessage{
-		{Slot: 3, ValidatorIndex: 0, Signature: []byte{'i'}},
-		{Slot: 3, ValidatorIndex: 1, Signature: []byte{'j'}},
+		{Slot: 5, ValidatorIndex: 0, Signature: []byte{'i'}},
+		{Slot: 5, ValidatorIndex: 1, Signature: []byte{'j'}},
 	}, msgs)
 
 	msgs, err = store.SyncCommitteeMessages(6)
