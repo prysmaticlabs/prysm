@@ -12,7 +12,7 @@ import (
 	"github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
-	p2pInterfaces "github.com/prysmaticlabs/prysm/proto/beacon/p2p/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/beacon/p2p"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"google.golang.org/protobuf/proto"
 )
@@ -92,6 +92,6 @@ type PeersProvider interface {
 
 // MetadataProvider returns the metadata related information for the local peer.
 type MetadataProvider interface {
-	Metadata() p2pInterfaces.Metadata
+	Metadata() p2p.Metadata
 	MetadataSeq() uint64
 }

@@ -49,7 +49,7 @@ go_library(
         "//beacon-chain/p2p/peers/scorers:go_default_library",
         "//beacon-chain/p2p/types:go_default_library",
         "//cmd/beacon-chain/flags:go_default_library",
-        "//proto/beacon/p2p/interfaces:go_default_library",
+        "//proto/beacon/p2p:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/beacon/p2p/v1/wrapper:go_default_library",
         "//proto/beacon/rpc/v1:go_default_library",
