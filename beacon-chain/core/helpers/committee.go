@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	log "github.com/sirupsen/logrus"
 )
 
 var committeeCache = cache.NewCommitteesCache()
@@ -412,6 +413,14 @@ func IsCurrentEpochSyncCommittee(
 		if err != nil {
 			return false, err
 		}
+
+		// Fill in the cache on miss.
+		go func() {
+			if err := syncCommitteeCache.UpdatePositionsInCommittee(bytesutil.ToBytes32(root), st); err != nil {
+				log.Errorf("Could not fill sync committee cache on miss: %v", err)
+			}
+		}()
+
 		return len(findSubCommitteeIndices(val.PublicKey, committee.Pubkeys)) > 0, nil
 	}
 	if err != nil {
@@ -468,6 +477,14 @@ func CurrentEpochSyncSubcommitteeIndices(
 		if err != nil {
 			return nil, err
 		}
+
+		// Fill in the cache on miss.
+		go func() {
+			if err := syncCommitteeCache.UpdatePositionsInCommittee(bytesutil.ToBytes32(root), st); err != nil {
+				log.Errorf("Could not fill sync committee cache on miss: %v", err)
+			}
+		}()
+
 		return findSubCommitteeIndices(val.PublicKey, committee.Pubkeys), nil
 	}
 	if err != nil {
