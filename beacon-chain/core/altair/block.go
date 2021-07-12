@@ -47,30 +47,26 @@ func ProcessSyncAggregate(state iface.BeaconStateAltair, sync *prysmv2.SyncAggre
 		return nil, err
 	}
 	committeeKeys := currentSyncCommittee.Pubkeys
-	committeeIndices := make([]types.ValidatorIndex, params.BeaconConfig().SyncCommitteeSize)
-	for i := 0; i < len(committeeIndices); i++ {
-		vIdx, exists := state.ValidatorIndexByPubkey(bytesutil.ToBytes48(committeeKeys[i]))
-		// Impossible scenario.
-		if !exists {
-			return nil, errors.New("validator public key does not exist in state")
-		}
-		committeeIndices[i] = vIdx
-	}
-
 	votedKeys := make([]bls.PublicKey, 0, len(committeeKeys))
 	votedIndices := make([]types.ValidatorIndex, 0, len(committeeKeys))
 	didntVoteIndices := make([]types.ValidatorIndex, 0, len(committeeKeys))
 	// Verify sync committee signature.
 	for i := uint64(0); i < sync.SyncCommitteeBits.Len(); i++ {
+		vIdx, exists := state.ValidatorIndexByPubkey(bytesutil.ToBytes48(committeeKeys[i]))
+		// Impossible scenario.
+		if !exists {
+			return nil, errors.New("validator public key does not exist in state")
+		}
+
 		if sync.SyncCommitteeBits.BitAt(i) {
 			pubKey, err := bls.PublicKeyFromBytes(committeeKeys[i])
 			if err != nil {
 				return nil, err
 			}
 			votedKeys = append(votedKeys, pubKey)
-			votedIndices = append(votedIndices, committeeIndices[i])
+			votedIndices = append(votedIndices, vIdx)
 		} else {
-			didntVoteIndices = append(didntVoteIndices, committeeIndices[i])
+			didntVoteIndices = append(didntVoteIndices, vIdx)
 		}
 	}
 	ps := helpers.PrevSlot(state.Slot())
