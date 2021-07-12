@@ -42,10 +42,6 @@ import (
 //        else:
 //            decrease_balance(state, participant_index, participant_reward)
 func ProcessSyncAggregate(state iface.BeaconStateAltair, sync *prysmv2.SyncAggregate) (iface.BeaconStateAltair, error) {
-	keyToIndexMap := make(map[[48]byte]types.ValidatorIndex)
-	for i := 0; i < state.NumValidators(); i++ {
-		keyToIndexMap[state.PubkeyAtIndex(types.ValidatorIndex(i))] = types.ValidatorIndex(i)
-	}
 	currentSyncCommittee, err := state.CurrentSyncCommittee()
 	if err != nil {
 		return nil, err
@@ -53,7 +49,12 @@ func ProcessSyncAggregate(state iface.BeaconStateAltair, sync *prysmv2.SyncAggre
 	committeeKeys := currentSyncCommittee.Pubkeys
 	committeeIndices := make([]types.ValidatorIndex, params.BeaconConfig().SyncCommitteeSize)
 	for i := 0; i < len(committeeIndices); i++ {
-		committeeIndices[i] = keyToIndexMap[bytesutil.ToBytes48(committeeKeys[i])]
+		vIdx, exists := state.ValidatorIndexByPubkey(bytesutil.ToBytes48(committeeKeys[i]))
+		// Impossible scenario.
+		if !exists {
+			return nil, errors.New("validator public key does not exist in state")
+		}
+		committeeIndices[i] = vIdx
 	}
 
 	votedKeys := make([]bls.PublicKey, 0, len(committeeKeys))
