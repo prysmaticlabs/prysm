@@ -113,7 +113,7 @@ service BeaconValidator {
     };
   }
 
-  // SubmitBeaconCommitteeSubscription requests the beacon node to search using discv5 for peers related to
+  // SubmitBeaconCommitteeSubscription searches using discv5 for peers related to
   // the provided subnet information and replaces current peers with those ones if necessary.
   //
   // If validator is_aggregator, beacon node must:
