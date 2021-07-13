@@ -14,7 +14,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"google.golang.org/protobuf/proto"
@@ -54,7 +55,7 @@ func RunBlockOperationTest(
 	helpers.ClearCache()
 	b := testutil.NewBeaconBlock()
 	b.Block.Body = body
-	beaconState, err := operationFn(context.Background(), preState, interfaces.WrappedPhase0SignedBeaconBlock(b))
+	beaconState, err := operationFn(context.Background(), preState, wrapper.WrappedPhase0SignedBeaconBlock(b))
 	if postSSZExists {
 		require.NoError(t, err)
 

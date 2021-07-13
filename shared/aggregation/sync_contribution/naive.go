@@ -21,7 +21,9 @@ func naiveSyncContributionAggregation(contributions []*v2.SyncCommitteeContribut
 		}
 		for j := i + 1; j < len(contributions); j++ {
 			b := contributions[j]
-			if a.AggregationBits.Len() == b.AggregationBits.Len() && !a.AggregationBits.Overlaps(b.AggregationBits) {
+			if o, err := a.AggregationBits.Overlaps(b.AggregationBits); err != nil {
+				return nil, err
+			} else if !o {
 				var err error
 				a, err = aggregate(a, b)
 				if err != nil {
@@ -44,11 +46,15 @@ func naiveSyncContributionAggregation(contributions []*v2.SyncCommitteeContribut
 				continue
 			}
 
-			if a.AggregationBits.Contains(b.AggregationBits) {
+			if c, err := a.AggregationBits.Contains(b.AggregationBits); err != nil {
+				return nil, err
+			} else if c {
 				// If b is fully contained in a, then b can be removed.
 				contributions = append(contributions[:j], contributions[j+1:]...)
 				j--
-			} else if b.AggregationBits.Contains(a.AggregationBits) {
+			} else if c, err := b.AggregationBits.Contains(a.AggregationBits); err != nil {
+				return nil, err
+			} else if c {
 				// if a is fully contained in b, then a can be removed.
 				contributions = append(contributions[:i], contributions[i+1:]...)
 				break // Stop the inner loop, advance a.
@@ -61,7 +67,9 @@ func naiveSyncContributionAggregation(contributions []*v2.SyncCommitteeContribut
 
 // aggregates pair of sync contributions c1 and c2 together.
 func aggregate(c1, c2 *v2.SyncCommitteeContribution) (*v2.SyncCommitteeContribution, error) {
-	if c1.AggregationBits.Overlaps(c2.AggregationBits) {
+	if o, err := c1.AggregationBits.Overlaps(c2.AggregationBits); err != nil {
+		return nil, err
+	} else if o {
 		return nil, aggregation.ErrBitsOverlap
 	}
 
@@ -71,11 +79,16 @@ func aggregate(c1, c2 *v2.SyncCommitteeContribution) (*v2.SyncCommitteeContribut
 		baseContribution, newContribution = newContribution, baseContribution
 	}
 
-	if baseContribution.AggregationBits.Contains(newContribution.AggregationBits) {
+	if c, err := baseContribution.AggregationBits.Contains(newContribution.AggregationBits); err != nil {
+		return nil, err
+	} else if c {
 		return baseContribution, nil
 	}
 
-	newBits := baseContribution.AggregationBits.Or(newContribution.AggregationBits)
+	newBits, err := baseContribution.AggregationBits.Or(newContribution.AggregationBits)
+	if err != nil {
+		return nil, err
+	}
 	newSig, err := bls.SignatureFromBytes(newContribution.Signature)
 	if err != nil {
 		return nil, err

@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eventsv1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/events"
 	"github.com/prysmaticlabs/prysm/shared/gateway"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -161,7 +161,7 @@ func TestReceiveEvents(t *testing.T) {
 		require.NoError(t, err)
 		msg := &sse.Event{
 			Data:  bData,
-			Event: []byte(eventsv1.FinalizedCheckpointTopic),
+			Event: []byte(events.FinalizedCheckpointTopic),
 		}
 		ch <- msg
 		time.Sleep(time.Second)

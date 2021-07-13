@@ -144,7 +144,10 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		"--" + cmdshared.E2EConfigFlag.Name,
 		"--" + cmdshared.AcceptTosFlag.Name,
 	}
-	args = append(args, featureconfig.E2EValidatorFlags...)
+	// Only apply e2e flags to the current branch. New flags may not exist in previous release.
+	if !v.config.UsePrysmShValidator {
+		args = append(args, featureconfig.E2EValidatorFlags...)
+	}
 	args = append(args, config.ValidatorFlags...)
 
 	if v.config.UsePrysmShValidator {
@@ -218,11 +221,12 @@ func SendAndMineDeposits(keystorePath string, validatorNum, offset int, partial 
 
 // sendDeposits uses the passed in web3 and keystore bytes to send the requested deposits.
 func sendDeposits(web3 *ethclient.Client, keystoreBytes []byte, num, offset int, partial bool) error {
-	txOps, err := bind.NewTransactor(bytes.NewReader(keystoreBytes), "" /*password*/)
+	txOps, err := bind.NewTransactorWithChainID(bytes.NewReader(keystoreBytes), "" /*password*/, big.NewInt(1337))
 	if err != nil {
 		return err
 	}
 	txOps.GasLimit = depositGasLimit
+	txOps.Context = context.Background()
 	nonce, err := web3.PendingNonceAt(context.Background(), txOps.From)
 	if err != nil {
 		return err

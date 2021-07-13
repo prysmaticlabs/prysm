@@ -26,7 +26,7 @@ func TestImportExport_RoundTrip(t *testing.T) {
 
 	// First we setup some mock attesting and proposal histories and create a mock
 	// standard slashing protection format JSON struct.
-	attestingHistory, proposalHistory := slashtest.MockAttestingAndProposalHistories(numValidators)
+	attestingHistory, proposalHistory := slashtest.MockAttestingAndProposalHistories(publicKeys)
 	require.NoError(t, err)
 	wanted, err := slashtest.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
 	require.NoError(t, err)
@@ -137,7 +137,7 @@ func TestImportInterchangeData_OK(t *testing.T) {
 
 	// First we setup some mock attesting and proposal histories and create a mock
 	// standard slashing protection format JSON struct.
-	attestingHistory, proposalHistory := slashtest.MockAttestingAndProposalHistories(numValidators)
+	attestingHistory, proposalHistory := slashtest.MockAttestingAndProposalHistories(publicKeys)
 	require.NoError(t, err)
 	standardProtectionFormat, err := slashtest.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
 	require.NoError(t, err)
@@ -196,7 +196,7 @@ func TestImportInterchangeData_OK_SavesBlacklistedPublicKeys(t *testing.T) {
 
 	// First we setup some mock attesting and proposal histories and create a mock
 	// standard slashing protection format JSON struct.
-	attestingHistory, proposalHistory := slashtest.MockAttestingAndProposalHistories(numValidators)
+	attestingHistory, proposalHistory := slashtest.MockAttestingAndProposalHistories(publicKeys)
 	require.NoError(t, err)
 
 	standardProtectionFormat, err := slashtest.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
@@ -284,7 +284,7 @@ func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 
 	// First we setup some mock attesting and proposal histories and create a mock
 	// standard slashing protection format JSON struct.
-	attestingHistory, proposalHistory := slashtest.MockAttestingAndProposalHistories(numValidators)
+	attestingHistory, proposalHistory := slashtest.MockAttestingAndProposalHistories(publicKeys)
 	require.NoError(t, err)
 	standardProtectionFormat, err := slashtest.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
 	require.NoError(t, err)

@@ -40,31 +40,63 @@ service BeaconValidator {
   // by validators, for a particular epoch. Duties should only need to be checked once per epoch, however
   // a chain reorganization (of > MIN_SEED_LOOKAHEAD epochs) could occur, resulting in a change of duties.
   // For full safety, you should monitor chain reorganization events.
+  //
+  // HTTP response usage:
+  //  - 200: Successful response
+  //  - 400: Invalid epoch or index
+  //  - 500: Beacon node internal error
+  //  - 503: Beacon node is currently syncing, try again later
   rpc GetAttesterDuties(AttesterDutiesRequest) returns (AttesterDutiesResponse) {
-    option (google.api.http) = { get: "/eth/v1/validator/duties/attester/{epoch}" };
+    option (google.api.http) = {
+      post: "/eth/v1/validator/duties/attester/{epoch}"
+      body: "*"
+    };
   }
 
   // GetProposerDuties requests beacon node to provide all validators that are scheduled to
-  // propose a block in the given epoch
+  // propose a block in the given epoch.
+  //
+  // HTTP response usage:
+  //  - 200: Successful response
+  //  - 400: Invalid epoch
+  //  - 500: Beacon node internal error
+  //  - 503: Beacon node is currently syncing, try again later
   rpc GetProposerDuties(ProposerDutiesRequest) returns (ProposerDutiesResponse) {
     option (google.api.http) = { get: "/eth/v1/validator/duties/proposer/{epoch}" };
   }
 
-  // GetBlock requests the beacon node to produce a valid unsigned beacon block,
+  // ProduceBlock requests the beacon node to produce a valid unsigned beacon block,
   // which can then be signed by a proposer and submitted.
-  rpc GetBlock(ProposerBlockRequest) returns (ProposerBlockResponse) {
+  //
+  // HTTP response usage:
+  //  - 200: Successful response
+  //  - 400: Invalid block production request
+  //  - 500: Beacon node internal error
+  //  - 503: Beacon node is currently syncing, try again later
+  rpc ProduceBlock(ProduceBlockRequest) returns (ProduceBlockResponse) {
     option (google.api.http) = { get: "/eth/v1/validator/blocks/{slot}" };
   }
 
-  // GetAttestationData requests that the beacon node provides the attestation data for
+  // ProduceAttestationData requests that the beacon node produces attestation data for
   // the requested committee index and slot based on the nodes current head.
-  rpc GetAttestationData(AttestationDataRequest) returns (AttestationDataResponse) {
+  //
+  // HTTP response usage:
+  //  - 200: Successful response
+  //  - 400: Invalid request syntax
+  //  - 500: Beacon node internal error
+  //  - 503: Beacon node is currently syncing, try again later
+  rpc ProduceAttestationData(ProduceAttestationDataRequest) returns (ProduceAttestationDataResponse) {
     option (google.api.http) = { get: "/eth/v1/validator/attestation_data" };
   }
 
   // GetAggregateAttestation aggregates all attestations matching the given attestation data root and slot,
   // returning the aggregated result.
-  rpc GetAggregateAttestation(AggregateAttestationRequest) returns (AttestationResponse) {
+  //
+  // HTTP response usage:
+  // - 200: Successful response
+  // - 400: Invalid request syntax
+  // - 500: Beacon node internal error
+  rpc GetAggregateAttestation(AggregateAttestationRequest) returns (AggregateAttestationResponse) {
     option (google.api.http) = { get: "/eth/v1/validator/aggregate_attestation" };
   }
 
@@ -72,18 +104,16 @@ service BeaconValidator {
   //
   // Response usage:
   // - 200: Successful response
-  //
-  // - 400: Invalid request syntax.
-  //
-  // - 500: Beacon node internal error.
-  rpc SubmitAggregateAndProofs(AggregateAndProofsSubmit) returns (google.protobuf.Empty) {
+  // - 400: Invalid request syntax
+  // - 500: Beacon node internal error
+  rpc SubmitAggregateAndProofs(SubmitAggregateAndProofsRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       post: "/eth/v1/validator/aggregate_and_proofs"
-      body: "data"
+      body: "*"
     };
   }
 
-  // SubmitBeaconCommitteeSubscription requests the beacon node to search using discv5 for peers related to
+  // SubmitBeaconCommitteeSubscription searches using discv5 for peers related to
   // the provided subnet information and replaces current peers with those ones if necessary.
   //
   // If validator is_aggregator, beacon node must:
@@ -91,16 +121,15 @@ service BeaconValidator {
   //   - aggregate attestations received on that subnet.
   //
   // Response usage:
-  // - 200: Slot signature is valid and beacon node has prepared the attestation subnet.
-  //   Note that, we cannot be certain Beacon node will find peers for that subnet for various reasons.
-  //
-  // - 500: Beacon node internal error.
-  //
-  // - 503: Beacon node is currently syncing, try again later.
-  rpc SubmitBeaconCommitteeSubscription(BeaconCommitteeSubscribeSubmit) returns (google.protobuf.Empty) {
+  // - 200: Slot signature is valid and beacon node has prepared the attestation subnet
+  //   Note that we cannot be certain Beacon node will find peers for that subnet for various reasons
+  // - 400: Invalid request syntax
+  // - 500: Beacon node internal error
+  // - 503: Beacon node is currently syncing, try again later
+  rpc SubmitBeaconCommitteeSubscription(SubmitBeaconCommitteeSubscriptionsRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       post: "/eth/v1/validator/beacon_committee_subscriptions"
-      body: "data"
+      body: "*"
     };
   }
 }
@@ -162,7 +191,7 @@ message ProposerDuty {
   uint64 slot = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
 }
 
-message ProposerBlockRequest {
+message ProduceBlockRequest {
   // The slot to request a block for.
   uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
 
@@ -171,14 +200,14 @@ message ProposerBlockRequest {
 
   // 32 byte field of arbitrary data. This field may contain any data and
   // is not used for anything other than a fun message.
-  bytes graffiti = 3 [(ethereum.eth.ext.ssz_size) = "32"];
+  optional bytes graffiti = 3 [(ethereum.eth.ext.ssz_size) = "32"];
 }
 
-message ProposerBlockResponse {
+message ProduceBlockResponse {
   BeaconBlock data = 1;
 }
 
-message AttestationDataRequest {
+message ProduceAttestationDataRequest {
   // Slot for which the attestation data should be retrieved for.
   uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
 
@@ -186,7 +215,7 @@ message AttestationDataRequest {
   uint64 committee_index = 2  [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.CommitteeIndex"];
 }
 
-message AttestationDataResponse {
+message ProduceAttestationDataResponse {
   AttestationData data = 1;
 }
 
@@ -198,15 +227,15 @@ message AggregateAttestationRequest {
   uint64 slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
 }
 
-message AttestationResponse {
+message AggregateAttestationResponse {
   Attestation data = 1;
 }
 
-message AggregateAndProofsSubmit {
+message SubmitAggregateAndProofsRequest {
   repeated SignedAggregateAttestationAndProof data = 1;
 }
 
-message BeaconCommitteeSubscribeSubmit {
+message SubmitBeaconCommitteeSubscriptionsRequest {
   repeated BeaconCommitteeSubscribe data = 1;
 }
 
