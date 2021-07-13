@@ -798,7 +798,98 @@ func TestService_processQueuedAttestations(t *testing.T) {
 	assert.LogsContain(t, hook, "New slot, processing queued")
 }
 
-func createAttestationWrapper(t *testing.T, source, target types.Epoch, indices []uint64, signingRoot []byte) *slashertypes.IndexedAttestationWrapper {
+func BenchmarkCheckSlashableAttestations(b *testing.B) {
+	slasherDB := dbtest.SetupSlasherDB(b)
+
+	beaconState, err := testutil.NewBeaconState()
+	require.NoError(b, err)
+	slot := types.Slot(0)
+	mockChain := &mock.ChainService{
+		State: beaconState,
+		Slot:  &slot,
+	}
+
+	s := &Service{
+		params: DefaultParams(),
+		serviceCfg: &ServiceConfig{
+			Database:         slasherDB,
+			StateNotifier:    &mock.MockStateNotifier{},
+			HeadStateFetcher: mockChain,
+		},
+		attsQueue: newAttestationsQueue(),
+	}
+
+	b.Run("1 attestation 1 validator", func(b *testing.B) {
+		b.ResetTimer()
+		runAttestationsBenchmark(b, s, 1, 1 /* validator */)
+	})
+	b.Run("1 attestation 100 validators", func(b *testing.B) {
+		b.ResetTimer()
+		runAttestationsBenchmark(b, s, 1, 100 /* validator */)
+	})
+	b.Run("1 attestation 1000 validators", func(b *testing.B) {
+		b.ResetTimer()
+		runAttestationsBenchmark(b, s, 1, 1000 /* validator */)
+	})
+
+	b.Run("100 attestations 1 validator", func(b *testing.B) {
+		b.ResetTimer()
+		runAttestationsBenchmark(b, s, 100, 1 /* validator */)
+	})
+	b.Run("100 attestations 100 validators", func(b *testing.B) {
+		b.ResetTimer()
+		runAttestationsBenchmark(b, s, 100, 100 /* validator */)
+	})
+	b.Run("100 attestations 1000 validators", func(b *testing.B) {
+		b.ResetTimer()
+		runAttestationsBenchmark(b, s, 100, 1000 /* validator */)
+	})
+
+	b.Run("1000 attestations 1 validator", func(b *testing.B) {
+		b.ResetTimer()
+		runAttestationsBenchmark(b, s, 1000, 1 /* validator */)
+	})
+	b.Run("1000 attestations 100 validators", func(b *testing.B) {
+		b.ResetTimer()
+		runAttestationsBenchmark(b, s, 1000, 100 /* validator */)
+	})
+	b.Run("1000 attestations 1000 validators", func(b *testing.B) {
+		b.ResetTimer()
+		runAttestationsBenchmark(b, s, 1000, 1000 /* validator */)
+	})
+}
+
+func runAttestationsBenchmark(b *testing.B, s *Service, numAtts uint64, numValidators uint64) {
+	indices := make([]uint64, numValidators)
+	for i := uint64(0); i < numValidators; i++ {
+		indices[i] = i
+	}
+	atts := make([]*slashertypes.IndexedAttestationWrapper, numAtts)
+	for i := uint64(0); i < numAtts; i++ {
+		source := types.Epoch(i)
+		target := types.Epoch(i + 1)
+		signingRoot := [32]byte{}
+		copy(signingRoot[:], fmt.Sprintf("%d", i))
+		atts[i] = createAttestationWrapper(
+			b,
+			source,
+			target,         /* target */
+			indices,        /* indices */
+			signingRoot[:], /* signingRoot */
+		)
+	}
+	for i := 0; i < b.N; i++ {
+		numEpochs := numAtts
+		totalSeconds := numEpochs * uint64(params.BeaconConfig().SlotsPerEpoch) * params.BeaconConfig().SecondsPerSlot
+		genesisTime := time.Now().Add(-time.Second * time.Duration(totalSeconds))
+		s.genesisTime = genesisTime
+
+		_, err := s.checkSlashableAttestations(context.Background(), atts)
+		require.NoError(b, err)
+	}
+}
+
+func createAttestationWrapper(t testing.TB, source, target types.Epoch, indices []uint64, signingRoot []byte) *slashertypes.IndexedAttestationWrapper {
 	data := &ethpb.AttestationData{
 		BeaconBlockRoot: bytesutil.PadTo(signingRoot, 32),
 		Source: &ethpb.Checkpoint{
