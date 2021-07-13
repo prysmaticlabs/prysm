@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	log "github.com/sirupsen/logrus"
 )
 
 var committeeCache = cache.NewCommitteesCache()
@@ -412,6 +413,14 @@ func IsCurrentEpochSyncCommittee(
 		if err != nil {
 			return false, err
 		}
+
+		// Fill in the cache on miss.
+		go func() {
+			if err := syncCommitteeCache.UpdatePositionsInCommittee(bytesutil.ToBytes32(root), st); err != nil {
+				log.Errorf("Could not fill sync committee cache on miss: %v", err)
+			}
+		}()
+
 		return len(findSubCommitteeIndices(val.PublicKey, committee.Pubkeys)) > 0, nil
 	}
 	if err != nil {
@@ -468,6 +477,14 @@ func CurrentEpochSyncSubcommitteeIndices(
 		if err != nil {
 			return nil, err
 		}
+
+		// Fill in the cache on miss.
+		go func() {
+			if err := syncCommitteeCache.UpdatePositionsInCommittee(bytesutil.ToBytes32(root), st); err != nil {
+				log.Errorf("Could not fill sync committee cache on miss: %v", err)
+			}
+		}()
+
 		return findSubCommitteeIndices(val.PublicKey, committee.Pubkeys), nil
 	}
 	if err != nil {
@@ -504,11 +521,20 @@ func NextEpochSyncSubcommitteeIndices(
 
 // UpdateSyncCommitteeCache updates sync committee cache.
 func UpdateSyncCommitteeCache(state iface.BeaconStateAltair) error {
-	r, err := syncPeriodBoundaryRoot(state)
+	nextSlot := state.Slot() + 1
+	if nextSlot%params.BeaconConfig().SlotsPerEpoch != 0 {
+		return errors.New("not at the end of the epoch to update cache")
+	}
+	if SlotToEpoch(nextSlot)%params.BeaconConfig().EpochsPerSyncCommitteePeriod != 0 {
+		return errors.New("not at sync committee period boundary to update cache")
+	}
+
+	prevBlockRoot, err := state.LatestBlockHeader().HashTreeRoot()
 	if err != nil {
 		return err
 	}
-	return syncCommitteeCache.UpdatePositionsInCommittee(bytesutil.ToBytes32(r), state)
+
+	return syncCommitteeCache.UpdatePositionsInCommittee(prevBlockRoot, state)
 }
 
 // Loop through `pubKeys` for matching `pubKey` and get the indices where it matches.
@@ -524,6 +550,7 @@ func findSubCommitteeIndices(pubKey []byte, pubKeys [][]byte) []uint64 {
 
 // Retrieve the current sync period boundary root by calculating sync period start epoch
 // and calling `BlockRoot`.
+// It uses the boundary slot - 1 for block root. (Ex: SlotsPerEpoch * EpochsPerSyncCommitteePeriod - 1)
 func syncPeriodBoundaryRoot(state iface.ReadOnlyBeaconState) ([]byte, error) {
 	// Can't call `BlockRoot` until the first slot.
 	if state.Slot() == params.BeaconConfig().GenesisSlot {
@@ -534,7 +561,17 @@ func syncPeriodBoundaryRoot(state iface.ReadOnlyBeaconState) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return BlockRoot(state, startEpoch)
+	startEpochSlot, err := StartSlot(startEpoch)
+	if err != nil {
+		return nil, err
+	}
+
+	// Prevent underflow
+	if startEpochSlot >= 1 {
+		startEpochSlot--
+	}
+
+	return BlockRootAtSlot(state, startEpochSlot)
 }
 
 // This computes proposer indices of the current epoch and returns a list of proposer indices,

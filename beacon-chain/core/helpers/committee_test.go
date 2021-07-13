@@ -5,9 +5,11 @@ import (
 	"reflect"
 	"strconv"
 	"testing"
+	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -876,7 +878,21 @@ func TestCurrentEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
+	root, err := syncPeriodBoundaryRoot(state)
+	require.NoError(t, err)
+
+	// Test that cache was empty.
+	_, err = syncCommitteeCache.CurrentEpochIndexPosition(bytesutil.ToBytes32(root), 0)
+	require.Equal(t, cache.ErrNonExistingSyncCommitteeKey, err)
+
+	// Test that helper can retrieve the index given empty cache.
 	index, err := CurrentEpochSyncSubcommitteeIndices(state, 0)
+	require.NoError(t, err)
+	require.DeepEqual(t, []uint64{0}, index)
+
+	// Test that cache was able to fill on miss.
+	time.Sleep(100 * time.Millisecond)
+	index, err = syncCommitteeCache.CurrentEpochIndexPosition(bytesutil.ToBytes32(root), 0)
 	require.NoError(t, err)
 	require.DeepEqual(t, []uint64{0}, index)
 }
@@ -989,4 +1005,20 @@ func TestNextEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
 	index, err := NextEpochSyncSubcommitteeIndices(state, 21093019)
 	require.NoError(t, err)
 	require.DeepEqual(t, []uint64(nil), index)
+}
+
+func TestUpdateSyncCommitteeCache_BadSlot(t *testing.T) {
+	state, err := v1.InitializeFromProto(&pb.BeaconState{
+		Slot: 1,
+	})
+	require.NoError(t, err)
+	err = UpdateSyncCommitteeCache(state)
+	require.ErrorContains(t, "not at the end of the epoch to update cache", err)
+
+	state, err = v1.InitializeFromProto(&pb.BeaconState{
+		Slot: params.BeaconConfig().SlotsPerEpoch - 1,
+	})
+	require.NoError(t, err)
+	err = UpdateSyncCommitteeCache(state)
+	require.ErrorContains(t, "not at sync committee period boundary to update cache", err)
 }

@@ -7,6 +7,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
@@ -82,6 +83,9 @@ func TestProposer_GetBlock_OK(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	beaconState, privKeys := testutil.DeterministicGenesisStateAltair(t, 64)
+	committee, err := altair.NextSyncCommittee(beaconState)
+	require.NoError(t, err)
+	require.NoError(t, beaconState.SetCurrentSyncCommittee(committee))
 
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err, "Could not hash genesis state")
