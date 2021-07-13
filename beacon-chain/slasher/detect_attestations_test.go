@@ -883,7 +883,7 @@ func runAttestationsBenchmark(b *testing.B, s *Service, numAtts uint64, numValid
 		totalSeconds := numEpochs * uint64(params.BeaconConfig().SlotsPerEpoch) * params.BeaconConfig().SecondsPerSlot
 		genesisTime := time.Now().Add(-time.Second * time.Duration(totalSeconds))
 		s.genesisTime = genesisTime
-		s.checkSlashableAttestations(context.Background(), atts)
+		require.NoError(b, s.checkSlashableAttestations(context.Background(), atts))
 	}
 }
 
