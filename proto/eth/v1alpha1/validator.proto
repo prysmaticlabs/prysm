@@ -233,7 +233,7 @@ message DomainRequest {
 message DomainResponse {
     // The signature domain is a byte array used by validators when
     // signing data related to block proposals and attestations.
-    bytes signature_domain = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Domain"];
+    bytes signature_domain = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Domain", (ethereum.eth.ext.ssz_size) = "96"];
 }
 
 message ValidatorActivationRequest {
