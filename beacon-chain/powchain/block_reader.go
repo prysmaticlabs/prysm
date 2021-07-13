@@ -118,7 +118,8 @@ func (s *Service) BlockByTimestamp(ctx context.Context, time uint64) (*types.Hea
 	latestBlkTime := s.latestEth1Data.BlockTime
 
 	if time > latestBlkTime {
-		return nil, errors.New("provided time is later than the current eth1 head")
+		debugErrMsg := fmt.Errorf("provided time is later than the current eth1 head, latestBlkTime=%v, time=%v, latestBlkHeight=%v", latestBlkTime, time, latestBlkHeight)
+		return nil, debugErrMsg
 	}
 	// Initialize a pointer to eth1 chain's history to start our search
 	// from.

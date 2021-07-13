@@ -22,12 +22,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/pandora"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
+	slashingiface "github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -52,7 +53,6 @@ type ValidatorService struct {
 	emitAccountMetrics    bool
 	logValidatorBalances  bool
 	logDutyCountDown      bool
-	enableVanguardNode    bool // Vanguard: enableVanguardNode is needed for vanguard chain
 	conn                  *grpc.ClientConn
 	grpcRetryDelay        time.Duration
 	grpcRetries           uint
@@ -63,14 +63,14 @@ type ValidatorService struct {
 	dataDir               string
 	withCert              string
 	endpoint              string
-	validator             Validator
-	protector             iface.Protector
+	validator             iface.Validator
+	protector             slashingiface.Protector
 	ctx                   context.Context
 	keyManager            keymanager.IKeymanager
 	grpcHeaders           []string
 	graffiti              []byte
 	graffitiStruct        *graffiti.Graffiti
-	pandoraService        pandora.PandoraService // Vanguard: Pandora service is needed for vanguard chain
+	pandoraService        pandora.PandoraService
 }
 
 // Config for the validator service.
@@ -79,14 +79,13 @@ type Config struct {
 	LogValidatorBalances       bool
 	EmitAccountMetrics         bool
 	LogDutyCountDown           bool
-	EnableVanguardNode         bool // Vanguard: Boolean flag for checking vanguard chain
 	WalletInitializedFeed      *event.Feed
 	GrpcRetriesFlag            uint
 	GrpcRetryDelay             time.Duration
 	GrpcMaxCallRecvMsgSizeFlag int
-	Protector                  iface.Protector
+	Protector                  slashingiface.Protector
 	Endpoint                   string
-	Validator                  Validator
+	Validator                  iface.Validator
 	ValDB                      db.Database
 	KeyManager                 keymanager.IKeymanager
 	GraffitiFlag               string
@@ -94,8 +93,7 @@ type Config struct {
 	DataDir                    string
 	GrpcHeadersFlag            string
 	GraffitiStruct             *graffiti.Graffiti
-	PandoraService             pandora.PandoraService // Vanguard: Pandora service is needed for vanguard chain
-
+	PandoraService             pandora.PandoraService
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -124,7 +122,6 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		graffitiStruct:        cfg.GraffitiStruct,
 		logDutyCountDown:      cfg.LogDutyCountDown,
 		pandoraService:        cfg.PandoraService,
-		enableVanguardNode:    cfg.EnableVanguardNode,
 	}, nil
 }
 
@@ -207,9 +204,7 @@ func (v *ValidatorService) Start() {
 		graffitiOrderedIndex:           graffitiOrderedIndex,
 		eipImportBlacklistedPublicKeys: slashablePublicKeys,
 		logDutyCountDown:               v.logDutyCountDown,
-		// vanguard: initialization for vanguard validator chain
-		pandoraService:     v.pandoraService,
-		enableVanguardNode: v.enableVanguardNode,
+		pandoraService:                 v.pandoraService,
 	}
 	go run(v.ctx, v.validator)
 	go v.recheckKeys(v.ctx)

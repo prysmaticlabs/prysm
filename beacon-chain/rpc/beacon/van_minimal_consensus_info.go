@@ -8,7 +8,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"google.golang.org/grpc/codes"
@@ -121,7 +121,6 @@ func (bs *Server) MinimalConsensusInfoRange(
 	fromEpoch types.Epoch,
 ) (consensusInfos []*ethpb.MinimalConsensusInfo, err error) {
 	consensusInfo, err := bs.MinimalConsensusInfo(ctx, fromEpoch)
-
 	if nil != err {
 		log.WithField("currentEpoch", "unknown").
 			WithField("requestedEpoch", fromEpoch).Error(err.Error())
@@ -131,14 +130,14 @@ func (bs *Server) MinimalConsensusInfoRange(
 
 	consensusInfos = make([]*ethpb.MinimalConsensusInfo, 0)
 	consensusInfos = append(consensusInfos, consensusInfo)
-	tempEpochIndex := consensusInfo.Epoch
 
-	for {
-		tempEpochIndex++
-		minimalConsensusInfo, currentErr := bs.MinimalConsensusInfo(ctx, types.Epoch(tempEpochIndex))
+	currentEpoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
 
+	for tempEpochIndex := consensusInfo.Epoch; tempEpochIndex <= currentEpoch + 1; tempEpochIndex++ {
+		minimalConsensusInfo, currentErr := bs.MinimalConsensusInfo(ctx, tempEpochIndex)
 		if nil != currentErr {
-			log.WithField("currentEpoch", tempEpochIndex).
+			log.WithField("tempEpochIndex", tempEpochIndex).
+				WithField("currentEpoch", currentEpoch).
 				WithField("context", "epochNotFound").
 				WithField("requestedEpoch", fromEpoch).Error(currentErr.Error())
 
@@ -148,7 +147,7 @@ func (bs *Server) MinimalConsensusInfoRange(
 		consensusInfos = append(consensusInfos, minimalConsensusInfo)
 	}
 
-	log.WithField("currentEpoch", tempEpochIndex).
+	log.WithField("currentEpoch", currentEpoch).
 		WithField("gathered", len(consensusInfos)).
 		WithField("requestedEpoch", fromEpoch).Info("I should send epoch list")
 
@@ -237,7 +236,7 @@ func (bs *Server) getProposerListForEpoch(
 ) (*ethpb.ValidatorAssignments, error) {
 	var (
 		res         []*ethpb.ValidatorAssignments_CommitteeAssignment
-		latestState *state.BeaconState
+		latestState iface.BeaconState
 	)
 	startSlot, err := helpers.StartSlot(requestedEpoch)
 
@@ -253,7 +252,7 @@ func (bs *Server) getProposerListForEpoch(
 			codes.Internal, "Could not retrieve endSlot for epoch %d: %v", requestedEpoch, err)
 	}
 
-	states, err := bs.BeaconDB.HighestSlotStatesBelow(bs.Ctx, endSlot)
+	states, err := bs.BeaconDB.VanHighestSlotStatesBelow(bs.Ctx, endSlot)
 
 	if nil != bs.Ctx.Err() {
 		log.Infof("[VAN_SUB] getProposerListForEpoch bs.ctx err = %s", bs.Ctx.Err().Error())
@@ -264,14 +263,26 @@ func (bs *Server) getProposerListForEpoch(
 			codes.Internal, "Could not retrieve archived state for epoch %d: %v", requestedEpoch, err)
 	}
 
-	log.Debugf("[VAN_SUB] HighestSlotStatesBelow states len = %v", len(states))
+	statesCount := len(states)
+	log.Debugf("[VAN_SUB] HighestSlotStatesBelow states len = %v", statesCount)
 
-	// Any state should return same proposer assignments so I pick first in slice
-	for _, currentState := range states {
-		if currentState.Slot() >= startSlot && currentState.Slot() <= endSlot {
-			latestState = currentState
+	if statesCount < 1 {
+		return nil, status.Errorf(
+			codes.Internal, "Could not retrieve any state by HighestSlotStatesBelow for endSlot %v", endSlot)
+	}
 
-			break
+	latestState = states[0]
+
+	if statesCount > 1 {
+		// Any state should return same proposer assignments so I pick first in slice
+		for _, currentState := range states {
+			log.Debugf("[VAN_SUB] Iterating over states, currentState.Slot = %v, startSlot = %v, endSlot = %v", currentState.Slot(), startSlot, endSlot)
+			if currentState.Slot() >= startSlot && currentState.Slot() <= endSlot {
+				latestState = currentState
+				log.Debugf("[VAN_SUB] Iterating over states, currentState = %v, latestState = %v", currentState, latestState)
+
+				break
+			}
 		}
 	}
 
@@ -281,19 +292,9 @@ func (bs *Server) getProposerListForEpoch(
 	}
 
 	// Initialize all committee related data.
-	proposerIndexToSlots, err := helpers.ProposerAssignments(latestState, requestedEpoch)
+	res, err = helpers.ProposerAssignments(latestState, requestedEpoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
-	}
-
-	for index, proposerSlots := range proposerIndexToSlots {
-		pubkey := latestState.PubkeyAtIndex(index)
-		assign := &ethpb.ValidatorAssignments_CommitteeAssignment{
-			ProposerSlots:  proposerSlots,
-			PublicKey:      pubkey[:],
-			ValidatorIndex: index,
-		}
-		res = append(res, assign)
 	}
 
 	maxValidators := params.BeaconConfig().SlotsPerEpoch
