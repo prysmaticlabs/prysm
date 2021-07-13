@@ -69,6 +69,28 @@ func TestState_CanSaveRetrieveValidatorEntries(t *testing.T) {
 	require.DeepSSZEqual(t, st.InnerStateUnsafe(), savedS.InnerStateUnsafe(), "saved state with validators and retrieved state are not matching")
 }
 
+func TestState_CanSaveRetrieveValidatorEntriesWithoutCache(t *testing.T) {
+	db := setupDB(t)
+
+	r := [32]byte{'A'}
+
+	require.Equal(t, false, db.HasState(context.Background(), r))
+
+	st, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, st.SetSlot(100))
+	require.NoError(t, st.SetValidators(validators(10)))
+
+	require.NoError(t, db.SaveState(context.Background(), st, r))
+	assert.Equal(t, true, db.HasState(context.Background(), r))
+	db.validatorEntryCache.Clear()
+
+	savedS, err := db.State(context.Background(), r)
+	require.NoError(t, err)
+
+	require.DeepSSZEqual(t, st.InnerStateUnsafe(), savedS.InnerStateUnsafe(), "saved state with validators and retrieved state are not matching")
+}
+
 func TestGenesisState_CanSaveRetrieve(t *testing.T) {
 	db := setupDB(t)
 

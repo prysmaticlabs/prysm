@@ -177,13 +177,13 @@ func (s *Store) SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconSta
 			// then insert it in the DB and add to the cache.
 			if _, ok := s.validatorEntryCache.Get(key); !ok {
 				validatorEntryCacheMiss.Inc()
-				if valEntry := valBkt.Get(key); valEntry == nil {
+				if valEntry := valBkt.Get(key[:]); valEntry == nil {
 					valBytes, encodeErr := encode(ctx, validatorEntry)
 					if encodeErr != nil {
 						return encodeErr
 					}
-					if err := valBkt.Put(key, valBytes); err != nil {
-						return err
+					if putErr := valBkt.Put(key[:], valBytes); putErr != nil {
+						return putErr
 					}
 					s.validatorEntryCache.Set(key, validatorEntry, int64(len(valBytes)))
 				}
@@ -327,7 +327,7 @@ func (s *Store) validatorEntries(ctx context.Context, blockRoot [32]byte) ([]*et
 		valBkt := tx.Bucket(stateValidatorsBucket)
 		for i := 0; i < len(validatorKeys); i += hashLength {
 			key := validatorKeys[i : i+hashLength]
-			var encValEntry *ethpb.Validator
+			encValEntry := &ethpb.Validator{}
 			if v, ok := s.validatorEntryCache.Get(key); ok {
 				valEntry, vType := v.(*ethpb.Validator)
 				if vType {
