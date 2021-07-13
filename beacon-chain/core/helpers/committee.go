@@ -271,26 +271,21 @@ func VerifyAttestationBitfieldLengths(state iface.ReadOnlyBeaconState, att *ethp
 	return nil
 }
 
-// ShuffledIndices uses input beacon state and returns the shuffled indices of the input epoch,
-// the shuffled indices then can be used to break up into committees.
-func ShuffledIndices(state iface.ReadOnlyBeaconState, epoch types.Epoch) ([]types.ValidatorIndex, error) {
-	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not get seed for epoch %d", epoch)
-	}
-
+// Returns the active indices and the total active balance of the validators in input `state` and during input `epoch`.
+func activeIndicesAndBalance(state iface.ReadOnlyBeaconState, epoch types.Epoch) ([]types.ValidatorIndex, uint64, error) {
+	balances := uint64(0)
 	indices := make([]types.ValidatorIndex, 0, state.NumValidators())
 	if err := state.ReadFromEveryValidator(func(idx int, val iface.ReadOnlyValidator) error {
 		if IsActiveValidatorUsingTrie(val, epoch) {
+			balances += val.EffectiveBalance()
 			indices = append(indices, types.ValidatorIndex(idx))
 		}
 		return nil
 	}); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	// UnshuffleList is used as an optimized implementation for raw speed.
-	return UnshuffleList(indices, seed)
+	return indices, balances, nil
 }
 
 // UpdateCommitteeCache gets called at the beginning of every epoch to cache the committee shuffled indices
@@ -306,7 +301,13 @@ func UpdateCommitteeCache(state iface.ReadOnlyBeaconState, epoch types.Epoch) er
 			return nil
 		}
 
-		shuffledIndices, err := ShuffledIndices(state, e)
+		indices, balance, err := activeIndicesAndBalance(state, e)
+		if err != nil {
+			return err
+		}
+
+		// Get the shuffled indices based on the seed.
+		shuffledIndices, err := UnshuffleList(indices, seed)
 		if err != nil {
 			return err
 		}
@@ -327,6 +328,7 @@ func UpdateCommitteeCache(state iface.ReadOnlyBeaconState, epoch types.Epoch) er
 			CommitteeCount:  uint64(params.BeaconConfig().SlotsPerEpoch.Mul(count)),
 			Seed:            seed,
 			SortedIndices:   sortedIndices,
+			ActiveBalance:   balance,
 		}); err != nil {
 			return err
 		}

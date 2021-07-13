@@ -127,6 +127,27 @@ func (c *CommitteeCache) ActiveIndices(seed [32]byte) ([]types.ValidatorIndex, e
 	return item.SortedIndices, nil
 }
 
+// ActiveBalance returns the total active balance of a given seed stored in cache.
+func (c *CommitteeCache) ActiveBalance(seed [32]byte) (uint64, error) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	obj, exists := c.CommitteeCache.Get(key(seed))
+
+	if exists {
+		CommitteeCacheHit.Inc()
+	} else {
+		CommitteeCacheMiss.Inc()
+		return 0, ErrNonCommitteeKEy
+	}
+
+	item, ok := obj.(*Committees)
+	if !ok {
+		return 0, ErrNotCommittee
+	}
+
+	return item.ActiveBalance, nil
+}
+
 // ActiveIndicesCount returns the active indices count of a given seed stored in cache.
 func (c *CommitteeCache) ActiveIndicesCount(seed [32]byte) (int, error) {
 	c.lock.RLock()
