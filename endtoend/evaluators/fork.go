@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	eth2types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/endtoend/types"
@@ -31,8 +30,6 @@ func forkOccurs(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to get stream")
 	}
-	blockInEpoch := 0
-	blockMax := 10
 	fSlot, err := helpers.StartSlot(params.AltairE2EForkEpoch)
 	if err != nil {
 		return err
@@ -58,14 +55,10 @@ func forkOccurs(conns ...*grpc.ClientConn) error {
 		if blk == nil || blk.IsNil() {
 			return errors.New("nil altair block received from stream")
 		}
-		if blk.Block().Slot() != fSlot+eth2types.Slot(blockInEpoch) {
-			return errors.Errorf("wanted a block slot of %d but received %d", fSlot+eth2types.Slot(blockInEpoch), blk.Block().Slot())
+		if blk.Block().Slot() < fSlot {
+			return errors.Errorf("wanted a block >= %d but received %d", fSlot, blk.Block().Slot())
 		}
-		blockInEpoch++
-		// Exit if we have already validated for the past 10 blocks.
-		if blockInEpoch > blockMax {
-			break
-		}
+		break
 	}
 	return nil
 }
