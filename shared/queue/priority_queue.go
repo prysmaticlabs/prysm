@@ -151,13 +151,13 @@ func (pq *PriorityQueue) PopByKey(key string) (*Item, error) {
 
 // RetrieveByKey searches the queue for an item with the given key and returns it
 // from the queue if found. Returns nil if not found.
-func (pq *PriorityQueue) RetrieveByKey(key string) (*Item, error) {
+func (pq *PriorityQueue) RetrieveByKey(key string) *Item {
 	pq.lock.Lock()
 	defer pq.lock.Unlock()
 
 	item, ok := pq.dataMap[key]
 	if !ok {
-		return nil, nil
+		return nil
 	}
 
 	// Remove the item the heap and then re insert it back.
@@ -166,11 +166,11 @@ func (pq *PriorityQueue) RetrieveByKey(key string) (*Item, error) {
 
 	if itemRaw != nil {
 		if i, ok := itemRaw.(*Item); ok {
-			return i, nil
+			return i
 		}
 	}
 
-	return nil, nil
+	return nil
 }
 
 // Len returns the number of items in the queue data structure. Do not use this

@@ -73,10 +73,7 @@ func (s *Store) SyncCommitteeContributions(slot types.Slot) ([]*prysmv2.SyncComm
 	s.contributionLock.RLock()
 	defer s.contributionLock.RUnlock()
 
-	item, err := s.contributionCache.RetrieveByKey(syncCommitteeKey(slot))
-	if err != nil {
-		return nil, err
-	}
+	item := s.contributionCache.RetrieveByKey(syncCommitteeKey(slot))
 	if item == nil {
 		return nil, nil
 	}

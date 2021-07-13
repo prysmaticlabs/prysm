@@ -66,10 +66,7 @@ func (s *Store) SyncCommitteeMessages(slot types.Slot) ([]*prysmv2.SyncCommittee
 	s.messageLock.RLock()
 	defer s.messageLock.RUnlock()
 
-	item, err := s.messageCache.RetrieveByKey(syncCommitteeKey(slot))
-	if err != nil {
-		return nil, err
-	}
+	item := s.messageCache.RetrieveByKey(syncCommitteeKey(slot))
 	if item == nil {
 		return nil, nil
 	}
