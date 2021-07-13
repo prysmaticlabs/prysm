@@ -161,7 +161,7 @@ message AttesterDuty {
   // The total amount of committees for this slot.
   uint64 committees_at_slot = 5;
 
-  // The index of the committee the validator belongs to.
+  // The index of the of validator in the committee.
   uint64 validator_committee_index = 6  [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.CommitteeIndex"];
 
   // The slot this duty is for.
