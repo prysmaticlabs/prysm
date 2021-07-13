@@ -49,6 +49,56 @@ func TestSyncCommitteeContributionCache_RoundTrip(t *testing.T) {
 		{Slot: 3, SubcommitteeIndex: 1, Signature: []byte{'f'}},
 	}, conts)
 
+	conts, err = store.SyncCommitteeContributions(4)
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, []*prysmv2.SyncCommitteeContribution{
+		{Slot: 4, SubcommitteeIndex: 0, Signature: []byte{'g'}},
+		{Slot: 4, SubcommitteeIndex: 1, Signature: []byte{'h'}},
+	}, conts)
+
+	conts, err = store.SyncCommitteeContributions(5)
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, []*prysmv2.SyncCommitteeContribution{
+		{Slot: 5, SubcommitteeIndex: 0, Signature: []byte{'i'}},
+		{Slot: 5, SubcommitteeIndex: 1, Signature: []byte{'j'}},
+	}, conts)
+
+	conts, err = store.SyncCommitteeContributions(6)
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, []*prysmv2.SyncCommitteeContribution{
+		{Slot: 6, SubcommitteeIndex: 0, Signature: []byte{'k'}},
+		{Slot: 6, SubcommitteeIndex: 1, Signature: []byte{'l'}},
+	}, conts)
+
+	// All the contributions should persist after get.
+	conts, err = store.SyncCommitteeContributions(1)
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, []*prysmv2.SyncCommitteeContribution(nil), conts)
+	conts, err = store.SyncCommitteeContributions(2)
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, []*prysmv2.SyncCommitteeContribution(nil), conts)
+
+	conts, err = store.SyncCommitteeContributions(3)
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, []*prysmv2.SyncCommitteeContribution{
+		{Slot: 3, SubcommitteeIndex: 0, Signature: []byte{'e'}},
+		{Slot: 3, SubcommitteeIndex: 1, Signature: []byte{'f'}},
+	}, conts)
+
+	conts, err = store.SyncCommitteeContributions(4)
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, []*prysmv2.SyncCommitteeContribution{
+		{Slot: 4, SubcommitteeIndex: 0, Signature: []byte{'g'}},
+		{Slot: 4, SubcommitteeIndex: 1, Signature: []byte{'h'}},
+	}, conts)
+
+	conts, err = store.SyncCommitteeContributions(5)
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, []*prysmv2.SyncCommitteeContribution{
+		{Slot: 5, SubcommitteeIndex: 0, Signature: []byte{'i'}},
+		{Slot: 5, SubcommitteeIndex: 1, Signature: []byte{'j'}},
+	}, conts)
+
 	conts, err = store.SyncCommitteeContributions(6)
 	require.NoError(t, err)
 	require.DeepSSZEqual(t, []*prysmv2.SyncCommitteeContribution{

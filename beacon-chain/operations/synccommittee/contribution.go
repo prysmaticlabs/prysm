@@ -21,17 +21,23 @@ func (s *Store) SaveSyncCommitteeContribution(cont *prysmv2.SyncCommitteeContrib
 		return nilContributionErr
 	}
 
-	contributions, err := s.SyncCommitteeContributions(cont.Slot)
+	s.contributionLock.Lock()
+	defer s.contributionLock.Unlock()
+
+	item, err := s.contributionCache.PopByKey(syncCommitteeKey(cont.Slot))
 	if err != nil {
 		return err
 	}
 
-	s.contributionLock.Lock()
-	defer s.contributionLock.Unlock()
 	copied := copyutil.CopySyncCommitteeContribution(cont)
 
 	// Contributions exist in the queue. Append instead of insert new.
-	if contributions != nil {
+	if item != nil {
+		contributions, ok := item.Value.([]*prysmv2.SyncCommitteeContribution)
+		if !ok {
+			return errors.New("not typed []ethpb.SyncCommitteeContribution")
+		}
+
 		contributions = append(contributions, copied)
 		savedSyncCommitteeContributionTotal.Inc()
 		return s.contributionCache.Push(&queue.Item{
@@ -64,13 +70,10 @@ func (s *Store) SaveSyncCommitteeContribution(cont *prysmv2.SyncCommitteeContrib
 // SyncCommitteeContributions returns sync committee contributions by slot from the priority queue.
 // Upon retrieval, the contribution is removed from the queue.
 func (s *Store) SyncCommitteeContributions(slot types.Slot) ([]*prysmv2.SyncCommitteeContribution, error) {
-	s.contributionLock.Lock()
-	defer s.contributionLock.Unlock()
+	s.contributionLock.RLock()
+	defer s.contributionLock.RUnlock()
 
-	item, err := s.contributionCache.PopByKey(syncCommitteeKey(slot))
-	if err != nil {
-		return nil, err
-	}
+	item := s.contributionCache.RetrieveByKey(syncCommitteeKey(slot))
 	if item == nil {
 		return nil, nil
 	}
