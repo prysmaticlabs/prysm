@@ -206,9 +206,9 @@ func TestPriorityQueue_RetrieveByKey(t *testing.T) {
 
 	popKeys := []int{2, 4, 7, 1, 0}
 	for _, i := range popKeys {
-		item, err := pq.RetrieveByKey(fmt.Sprintf("item-%d", i))
-		if err != nil {
-			t.Fatalf("failed to pop item-%d, \n\terr: %s\n\titem: %#v", i, err, item)
+		item := pq.RetrieveByKey(fmt.Sprintf("item-%d", i))
+		if item == nil {
+			t.Fatalf("failed to pop item-%d, \n\titem: %#v", i, item)
 		}
 	}
 
