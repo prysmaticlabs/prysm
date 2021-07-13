@@ -144,6 +144,9 @@ func (c *CommitteeCache) ActiveBalance(seed [32]byte) (uint64, error) {
 	if !ok {
 		return 0, ErrNotCommittee
 	}
+	if item == nil {
+		return 0, errors.New("item is nil")
+	}
 
 	return item.ActiveBalance, nil
 }
