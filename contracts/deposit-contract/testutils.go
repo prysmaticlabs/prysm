@@ -45,7 +45,10 @@ func Setup() (*TestAccount, error) {
 	copy(pubKey, publicKeyBytes)
 
 	addr := crypto.PubkeyToAddress(privKey.PublicKey)
-	txOpts := bind.NewKeyedTransactor(privKey)
+	txOpts, err := bind.NewKeyedTransactorWithChainID(privKey, big.NewInt(1337))
+	if err != nil {
+		return nil, err
+	}
 	startingBalance, _ := new(big.Int).SetString("100000000000000000000000000000000000000", 10)
 	genesis[addr] = core.GenesisAccount{Balance: startingBalance}
 	backend := backends.NewSimulatedBackend(genesis, 210000000000)

@@ -212,7 +212,9 @@ func (c *AttCaches) DeleteAggregatedAttestation(att *ethpb.Attestation) error {
 
 	filtered := make([]*ethpb.Attestation, 0)
 	for _, a := range attList {
-		if att.AggregationBits.Len() == a.AggregationBits.Len() && !att.AggregationBits.Contains(a.AggregationBits) {
+		if c, err := att.AggregationBits.Contains(a.AggregationBits); err != nil {
+			return err
+		} else if !c {
 			filtered = append(filtered, a)
 		}
 	}
@@ -239,7 +241,9 @@ func (c *AttCaches) HasAggregatedAttestation(att *ethpb.Attestation) (bool, erro
 	defer c.aggregatedAttLock.RUnlock()
 	if atts, ok := c.aggregatedAtt[r]; ok {
 		for _, a := range atts {
-			if a.AggregationBits.Len() == att.AggregationBits.Len() && a.AggregationBits.Contains(att.AggregationBits) {
+			if c, err := a.AggregationBits.Contains(att.AggregationBits); err != nil {
+				return false, err
+			} else if c {
 				return true, nil
 			}
 		}
@@ -249,7 +253,9 @@ func (c *AttCaches) HasAggregatedAttestation(att *ethpb.Attestation) (bool, erro
 	defer c.blockAttLock.RUnlock()
 	if atts, ok := c.blockAtt[r]; ok {
 		for _, a := range atts {
-			if a.AggregationBits.Len() == att.AggregationBits.Len() && a.AggregationBits.Contains(att.AggregationBits) {
+			if c, err := a.AggregationBits.Contains(att.AggregationBits); err != nil {
+				return false, err
+			} else if c {
 				return true, nil
 			}
 		}
