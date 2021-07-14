@@ -144,31 +144,6 @@ func TestAttestingBalance_CorrectBalance(t *testing.T) {
 	assert.Equal(t, wanted, balance)
 }
 
-func TestBaseReward_AccurateRewards(t *testing.T) {
-	tests := []struct {
-		a uint64
-		b uint64
-		c uint64
-	}{
-		{params.BeaconConfig().MinDepositAmount, params.BeaconConfig().MinDepositAmount, 505976},
-		{30 * 1e9, 30 * 1e9, 2771282},
-		{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance, 2862174},
-		{40 * 1e9, params.BeaconConfig().MaxEffectiveBalance, 2862174},
-	}
-	for _, tt := range tests {
-		base := &pb.BeaconState{
-			Validators: []*ethpb.Validator{
-				{ExitEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: tt.b}},
-			Balances: []uint64{tt.a},
-		}
-		beaconState, err := v1.InitializeFromProto(base)
-		require.NoError(t, err)
-		c, err := epoch.BaseReward(beaconState, 0)
-		require.NoError(t, err)
-		assert.Equal(t, tt.c, c, "epoch.BaseReward(%d)", tt.a)
-	}
-}
-
 func TestProcessSlashings_NotSlashed(t *testing.T) {
 	base := &pb.BeaconState{
 		Slot:       0,
