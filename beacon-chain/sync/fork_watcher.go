@@ -67,7 +67,7 @@ func (s *Service) forkWatcher() {
 				epochBeforeFork := currFork.Epoch - 1
 				prevDigest, err := p2putils.ForkDigestFromEpoch(epochBeforeFork, genRoot[:])
 				if err != nil {
-					log.WithError(err)
+					log.WithError(err).Error("Failed to determine previous epoch fork digest")
 					continue
 				}
 				// Run through all our current active topics and see
