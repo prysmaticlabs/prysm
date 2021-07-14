@@ -16,9 +16,9 @@ import (
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	wrapperv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces/version"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"github.com/prysmaticlabs/prysm/shared/version"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )

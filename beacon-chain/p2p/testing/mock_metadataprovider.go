@@ -1,16 +1,16 @@
 package testing
 
 import (
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/beacon/p2p"
 )
 
 // MockMetadataProvider is a fake implementation of the MetadataProvider interface.
 type MockMetadataProvider struct {
-	Data interfaces.Metadata
+	Data p2p.Metadata
 }
 
 // Metadata --
-func (m *MockMetadataProvider) Metadata() interfaces.Metadata {
+func (m *MockMetadataProvider) Metadata() p2p.Metadata {
 	return m.Data
 }
 

@@ -10,9 +10,9 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/multiformats/go-multiaddr"
+	"github.com/prysmaticlabs/prysm/proto/beacon/p2p"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
@@ -76,7 +76,7 @@ func (p *FakeP2P) LeaveTopic(_ string) error {
 }
 
 // Metadata -- fake.
-func (p *FakeP2P) Metadata() interfaces.Metadata {
+func (p *FakeP2P) Metadata() p2p.Metadata {
 	return nil
 }
 

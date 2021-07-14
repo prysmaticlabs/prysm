@@ -4,10 +4,12 @@ import (
 	"context"
 	"testing"
 
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -105,7 +107,7 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 
 	attestedIndices := []types.ValidatorIndex{55, 1339, 1746, 1811, 1569}
 	for _, i := range attestedIndices {
-		base, err := epoch.BaseReward(beaconState, i)
+		base, err := baseReward(beaconState, i)
 		require.NoError(t, err, "Could not get base reward")
 
 		// Base rewards for getting source right
@@ -122,7 +124,7 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 	}
 
 	for _, i := range slashedAttestedIndices {
-		base, err := epoch.BaseReward(beaconState, i)
+		base, err := baseReward(beaconState, i)
 		assert.NoError(t, err, "Could not get base reward")
 		assert.Equal(t, uint64(0), rewards[i], "Unexpected slashed indices reward balance")
 		assert.Equal(t, 3*base, penalties[i], "Unexpected slashed indices penalty balance")
@@ -130,7 +132,7 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 
 	nonAttestedIndices := []types.ValidatorIndex{434, 677, 872, 791}
 	for _, i := range nonAttestedIndices {
-		base, err := epoch.BaseReward(beaconState, i)
+		base, err := baseReward(beaconState, i)
 		assert.NoError(t, err, "Could not get base reward")
 		wanted := 3 * base
 		// Since all these validators did not attest, they shouldn't get rewarded.
@@ -246,7 +248,7 @@ func TestProcessRewardsAndPenaltiesPrecompute_SlashedInactivePenalty(t *testing.
 
 	finalityDelay := helpers.PrevEpoch(beaconState) - beaconState.FinalizedCheckpointEpoch()
 	for _, i := range slashedAttestedIndices {
-		base, err := epoch.BaseReward(beaconState, i)
+		base, err := baseReward(beaconState, i)
 		require.NoError(t, err, "Could not get base reward")
 		penalty := 3 * base
 		proposerReward := base / params.BeaconConfig().ProposerRewardQuotient
@@ -349,4 +351,27 @@ func TestProposerDeltaPrecompute_SlashedCase(t *testing.T) {
 	r, err := ProposersDelta(beaconState, b, v)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(0), r[proposerIndex], "Unexpected proposer reward for slashed")
+}
+
+// BaseReward takes state and validator index and calculate
+// individual validator's base reward quotient.
+//
+// Spec pseudocode definition:
+//  def get_base_reward(state: BeaconState, index: ValidatorIndex) -> Gwei:
+//    total_balance = get_total_active_balance(state)
+//    effective_balance = state.validators[index].effective_balance
+//    return Gwei(effective_balance * BASE_REWARD_FACTOR // integer_squareroot(total_balance) // BASE_REWARDS_PER_EPOCH)
+func baseReward(state iface.ReadOnlyBeaconState, index types.ValidatorIndex) (uint64, error) {
+	totalBalance, err := helpers.TotalActiveBalance(state)
+	if err != nil {
+		return 0, errors.Wrap(err, "could not calculate active balance")
+	}
+	val, err := state.ValidatorAtIndexReadOnly(index)
+	if err != nil {
+		return 0, err
+	}
+	effectiveBalance := val.EffectiveBalance()
+	baseReward := effectiveBalance * params.BeaconConfig().BaseRewardFactor /
+		mathutil.IntegerSquareRoot(totalBalance) / params.BeaconConfig().BaseRewardsPerEpoch
+	return baseReward, nil
 }
