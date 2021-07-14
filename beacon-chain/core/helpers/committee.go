@@ -520,6 +520,8 @@ func NextEpochSyncSubcommitteeIndices(
 }
 
 // UpdateSyncCommitteeCache updates sync committee cache.
+// It uses `state`'s latest block header root as key. To avoid miss usage, it disallows
+// block header with state root zeroed out.
 func UpdateSyncCommitteeCache(state iface.BeaconStateAltair) error {
 	nextSlot := state.Slot() + 1
 	if nextSlot%params.BeaconConfig().SlotsPerEpoch != 0 {
@@ -529,7 +531,12 @@ func UpdateSyncCommitteeCache(state iface.BeaconStateAltair) error {
 		return errors.New("not at sync committee period boundary to update cache")
 	}
 
-	prevBlockRoot, err := state.LatestBlockHeader().HashTreeRoot()
+	header := state.LatestBlockHeader()
+	if bytes.Equal(header.StateRoot, params.BeaconConfig().ZeroHash[:]) {
+		return errors.New("zero hash state root can't be used to update cache")
+	}
+
+	prevBlockRoot, err := header.HashTreeRoot()
 	if err != nil {
 		return err
 	}

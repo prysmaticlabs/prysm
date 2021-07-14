@@ -122,6 +122,12 @@ func TestGetAltairDuties_SyncCommitteeOK(t *testing.T) {
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
 	bs, err := testutil.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+	h := &ethpb.BeaconBlockHeader{
+		StateRoot:  bytesutil.PadTo([]byte{'a'}, 32),
+		ParentRoot: bytesutil.PadTo([]byte{'b'}, 32),
+		BodyRoot:   bytesutil.PadTo([]byte{'c'}, 32),
+	}
+	require.NoError(t, bs.SetLatestBlockHeader(h))
 	require.NoError(t, err, "Could not setup genesis bs")
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")

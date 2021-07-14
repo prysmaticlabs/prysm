@@ -1022,3 +1022,13 @@ func TestUpdateSyncCommitteeCache_BadSlot(t *testing.T) {
 	err = UpdateSyncCommitteeCache(state)
 	require.ErrorContains(t, "not at sync committee period boundary to update cache", err)
 }
+
+func TestUpdateSyncCommitteeCache_BadRoot(t *testing.T) {
+	state, err := v1.InitializeFromProto(&pb.BeaconState{
+		Slot:              types.Slot(params.BeaconConfig().EpochsPerSyncCommitteePeriod)*params.BeaconConfig().SlotsPerEpoch - 1,
+		LatestBlockHeader: &ethpb.BeaconBlockHeader{StateRoot: params.BeaconConfig().ZeroHash[:]},
+	})
+	require.NoError(t, err)
+	err = UpdateSyncCommitteeCache(state)
+	require.ErrorContains(t, "zero hash state root can't be used to update cache", err)
+}
