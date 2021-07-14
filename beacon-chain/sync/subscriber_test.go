@@ -228,6 +228,7 @@ func TestRevalidateSubscription_CorrectlyFormatsTopic(t *testing.T) {
 			P2P: p,
 		},
 		chainStarted: abool.New(),
+		subHandler:   newSubTopicHandler(),
 	}
 	digest, err := r.currentForkDigest()
 	require.NoError(t, err)
