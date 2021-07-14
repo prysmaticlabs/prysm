@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/dustin/go-humanize"
@@ -37,14 +38,28 @@ var (
 	rowLimit       = flag.Uint64("limit", 10, "limit to rows.")
 )
 
-type ModifiedState struct {
+// used to parallelize all the bucket stats
+type bucketStat struct {
+	bucketName     string
+	noOfRows       uint64
+	totalKeySize   uint64
+	totalValueSize uint64
+	minKeySize     uint64
+	maxKeySize     uint64
+	minValueSize   uint64
+	maxValueSize   uint64
+}
+
+// used to parallelize state bucket processing
+type modifiedState struct {
 	state     iface.BeaconState
 	key       []byte
 	valueSize uint64
 	rowCount  uint64
 }
 
-type ModifiedStateSummary struct {
+// used to parallelize state summary bucket processing
+type modifiedStateSummary struct {
 	slot      types.Slot
 	root      []byte
 	key       []byte
@@ -71,7 +86,7 @@ func main() {
 
 	// show stats of all the buckets.
 	if *bucketStats {
-		showBucketStats(dbNameWithPath)
+		printBucketStats(dbNameWithPath)
 		return
 	}
 
@@ -86,84 +101,14 @@ func main() {
 	}
 }
 
-func showBucketStats(dbNameWithPath string) {
-	// open the raw database file. If the file is busy, then exit.
-	db, openErr := bolt.Open(dbNameWithPath, 0600, &bolt.Options{Timeout: 1 * time.Second})
-	if openErr != nil {
-		log.Fatalf("could not open db to show bucket stats, %v", openErr)
-	}
-
-	// make sure we close the database before ejecting out of this function.
-	defer func() {
-		closeErr := db.Close()
-		if closeErr != nil {
-			log.Fatalf("could not close db after showing bucket stats, %v", closeErr)
-		}
-	}()
-
-	// get a list of all the existing buckets.
-	var buckets []string
-	if viewErr1 := db.View(func(tx *bolt.Tx) error {
-		return tx.ForEach(func(name []byte, buc *bolt.Bucket) error {
-			buckets = append(buckets, string(name))
-			return nil
-		})
-	}); viewErr1 != nil {
-		log.Fatalf("could not read buckets from db while getting list of buckets: %v", viewErr1)
-	}
-
-	// for every bucket, calculate the stats and display them.
-	// TODO: parallelize the execution
-	for _, bName := range buckets {
-		count := uint64(0)
-		minValueSize := ^uint64(0)
-		maxValueSize := uint64(0)
-		totalValueSize := uint64(0)
-		minKeySize := ^uint64(0)
-		maxKeySize := uint64(0)
-		totalKeySize := uint64(0)
-		if viewErr2 := db.View(func(tx *bolt.Tx) error {
-			b := tx.Bucket([]byte(bName))
-			if forEachErr := b.ForEach(func(k, v []byte) error {
-				count++
-				valueSize := uint64(len(v))
-				if valueSize < minValueSize {
-					minValueSize = valueSize
-				}
-				if valueSize > maxValueSize {
-					maxValueSize = valueSize
-				}
-				totalValueSize += valueSize
-
-				keyize := uint64(len(k))
-				if keyize < minKeySize {
-					minKeySize = keyize
-				}
-				if keyize > maxKeySize {
-					maxKeySize = keyize
-				}
-				totalKeySize += uint64(len(k))
-				return nil
-			}); forEachErr != nil {
-				log.Errorf("could not process row %d for bucket: %s, %v", count, bName, forEachErr)
-				return forEachErr
-			}
-			return nil
-		}); viewErr2 != nil {
-			log.Errorf("could not get stats for bucket: %s, %v", bName, viewErr2)
-			continue
-		}
-
-		if count != 0 {
-			averageValueSize := totalValueSize / count
-			averageKeySize := totalKeySize / count
-			fmt.Println("------ ", bName, " --------")
-			fmt.Println("NumberOfRows     = ", count)
-			fmt.Println("TotalBucketSize  = ", humanize.Bytes(totalValueSize+totalKeySize))
-			fmt.Println("KeySize          = ", humanize.Bytes(totalKeySize), "(min = "+humanize.Bytes(minKeySize)+", avg = "+humanize.Bytes(averageKeySize)+", max = "+humanize.Bytes(maxKeySize)+")")
-			fmt.Println("ValueSize        = ", humanize.Bytes(totalValueSize), "(min = "+humanize.Bytes(minValueSize)+", avg = "+humanize.Bytes(averageValueSize)+", max = "+humanize.Bytes(maxValueSize)+")")
-		}
-	}
+func printBucketStats(dbNameWithPath string) {
+	ctx := context.Background()
+	groupSize := uint64(128)
+	doneC := make(chan bool)
+	statsC := make(chan *bucketStat, groupSize)
+	go readBucketStats(ctx, dbNameWithPath, statsC)
+	go printBucketStates(statsC, doneC)
+	<-doneC
 }
 
 func printBucketContents(dbNameWithPath string, rowLimit uint64, bucketName string) {
@@ -192,25 +137,112 @@ func printBucketContents(dbNameWithPath string, rowLimit uint64, bucketName stri
 	doneC := make(chan bool)
 	switch bucketName {
 	case "state":
-		stateC := make(chan *ModifiedState, groupSize)
+		stateC := make(chan *modifiedState, groupSize)
 		go readStates(ctx, db, stateC, keys, sizes)
 		go printStates(stateC, doneC)
 
 	case "state-summary":
-		stateSummaryC := make(chan *ModifiedStateSummary, groupSize)
+		stateSummaryC := make(chan *modifiedStateSummary, groupSize)
 		go readStateSummary(ctx, db, stateSummaryC, keys, sizes)
 		go printStateSummary(stateSummaryC, doneC)
 	}
 	<-doneC
 }
 
-func readStates(ctx context.Context, db *kv.Store, stateC chan<- *ModifiedState, keys [][]byte, sizes []uint64) {
+func readBucketStats(ctx context.Context, dbNameWithPath string, statsC chan<- *bucketStat) {
+	// open the raw database file. If the file is busy, then exit.
+	db, openErr := bolt.Open(dbNameWithPath, 0600, &bolt.Options{Timeout: 1 * time.Second})
+	if openErr != nil {
+		log.Fatalf("could not open db to show bucket stats, %v", openErr)
+	}
+
+	// make sure we close the database before ejecting out of this function.
+	defer func() {
+		closeErr := db.Close()
+		if closeErr != nil {
+			log.Fatalf("could not close db after showing bucket stats, %v", closeErr)
+		}
+	}()
+
+	// get a list of all the existing buckets.
+	var buckets []string
+	if viewErr1 := db.View(func(tx *bolt.Tx) error {
+		return tx.ForEach(func(name []byte, buc *bolt.Bucket) error {
+			buckets = append(buckets, string(name))
+			return nil
+		})
+	}); viewErr1 != nil {
+		log.Fatalf("could not read buckets from db while getting list of buckets: %v", viewErr1)
+	}
+
+	// for every bucket, calculate the stats and send it for printing.
+	// calculate the state of all the buckets in parallel.
+	var wg sync.WaitGroup
+	for _, bName := range buckets {
+		wg.Add(1)
+		go func(bukName string) {
+			defer wg.Done()
+			count := uint64(0)
+			minValueSize := ^uint64(0)
+			maxValueSize := uint64(0)
+			totalValueSize := uint64(0)
+			minKeySize := ^uint64(0)
+			maxKeySize := uint64(0)
+			totalKeySize := uint64(0)
+			if viewErr2 := db.View(func(tx *bolt.Tx) error {
+				b := tx.Bucket([]byte(bukName))
+				if forEachErr := b.ForEach(func(k, v []byte) error {
+					count++
+					valueSize := uint64(len(v))
+					if valueSize < minValueSize {
+						minValueSize = valueSize
+					}
+					if valueSize > maxValueSize {
+						maxValueSize = valueSize
+					}
+					totalValueSize += valueSize
+
+					keyize := uint64(len(k))
+					if keyize < minKeySize {
+						minKeySize = keyize
+					}
+					if keyize > maxKeySize {
+						maxKeySize = keyize
+					}
+					totalKeySize += uint64(len(k))
+					return nil
+				}); forEachErr != nil {
+					log.Errorf("could not process row %d for bucket: %s, %v", count, bukName, forEachErr)
+					return forEachErr
+				}
+				return nil
+			}); viewErr2 != nil {
+				log.Errorf("could not get stats for bucket: %s, %v", bukName, viewErr2)
+			}
+			stat := &bucketStat{
+				bucketName:     bukName,
+				noOfRows:       count,
+				totalKeySize:   totalKeySize,
+				totalValueSize: totalValueSize,
+				minKeySize:     minKeySize,
+				maxKeySize:     maxKeySize,
+				minValueSize:   minValueSize,
+				maxValueSize:   maxValueSize,
+			}
+			statsC <- stat
+		}(bName)
+	}
+	wg.Wait()
+	close(statsC)
+}
+
+func readStates(ctx context.Context, db *kv.Store, stateC chan<- *modifiedState, keys [][]byte, sizes []uint64) {
 	for rowCount, key := range keys {
 		st, stateErr := db.State(ctx, bytesutil.ToBytes32(key))
 		if stateErr != nil {
 			log.Errorf("could not get state for key : , %v", stateErr)
 		}
-		mst := &ModifiedState{
+		mst := &modifiedState{
 			state:     st,
 			key:       key,
 			valueSize: sizes[rowCount],
@@ -221,13 +253,13 @@ func readStates(ctx context.Context, db *kv.Store, stateC chan<- *ModifiedState,
 	close(stateC)
 }
 
-func readStateSummary(ctx context.Context, db *kv.Store, stateSummaryC chan<- *ModifiedStateSummary, keys [][]byte, sizes []uint64) {
+func readStateSummary(ctx context.Context, db *kv.Store, stateSummaryC chan<- *modifiedStateSummary, keys [][]byte, sizes []uint64) {
 	for rowCount, key := range keys {
 		ss, ssErr := db.StateSummary(ctx, bytesutil.ToBytes32(key))
 		if ssErr != nil {
 			log.Errorf("could not get state summary for key : , %v", ssErr)
 		}
-		mst := &ModifiedStateSummary{
+		mst := &modifiedStateSummary{
 			slot:      ss.Slot,
 			root:      ss.Root,
 			key:       key,
@@ -239,7 +271,22 @@ func readStateSummary(ctx context.Context, db *kv.Store, stateSummaryC chan<- *M
 	close(stateSummaryC)
 }
 
-func printStates(stateC <-chan *ModifiedState, doneC chan<- bool) {
+func printBucketStates(statsC <-chan *bucketStat, doneC chan<- bool) {
+	for stat := range statsC {
+		if stat.noOfRows != 0 {
+			averageValueSize := stat.totalValueSize / stat.noOfRows
+			averageKeySize := stat.totalKeySize / stat.noOfRows
+			fmt.Println("------ ", stat.bucketName, " --------")
+			fmt.Println("NumberOfRows     = ", stat.noOfRows)
+			fmt.Println("TotalBucketSize  = ", humanize.Bytes(stat.totalValueSize+stat.totalKeySize))
+			fmt.Println("KeySize          = ", humanize.Bytes(stat.totalKeySize), "(min = "+humanize.Bytes(stat.minKeySize)+", avg = "+humanize.Bytes(averageKeySize)+", max = "+humanize.Bytes(stat.maxKeySize)+")")
+			fmt.Println("ValueSize        = ", humanize.Bytes(stat.totalValueSize), "(min = "+humanize.Bytes(stat.minValueSize)+", avg = "+humanize.Bytes(averageValueSize)+", max = "+humanize.Bytes(stat.maxValueSize)+")")
+		}
+	}
+	doneC <- true
+}
+
+func printStates(stateC <-chan *modifiedState, doneC chan<- bool) {
 	for mst := range stateC {
 		st := mst.state
 		rowStr := fmt.Sprintf("---- row = %04d ----", mst.rowCount)
@@ -282,11 +329,12 @@ func printStates(stateC <-chan *ModifiedState, doneC chan<- bool) {
 	doneC <- true
 }
 
-func printStateSummary(stateSummaryC <-chan *ModifiedStateSummary, doneC chan<- bool) {
+func printStateSummary(stateSummaryC <-chan *modifiedStateSummary, doneC chan<- bool) {
 	for msts := range stateSummaryC {
 		rowCountStr := fmt.Sprintf("row : %04d, ", msts.rowCount)
 		fmt.Println(rowCountStr, "slot : ", msts.slot, ", root : ", hexutils.BytesToHex(msts.root))
 	}
+	doneC <- true
 }
 
 func keysOfBucket(dbNameWithPath string, bucketName []byte, rowLimit uint64) ([][]byte, []uint64) {
