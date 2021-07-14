@@ -118,12 +118,7 @@ func (s *Signature) FastAggregateVerify(pubKeys []common.PublicKey, msg [32]byte
 	if len(pubKeys) == 0 {
 		return false
 	}
-	rawKeys := make([]*blstPublicKey, len(pubKeys))
-	for i := 0; i < len(pubKeys); i++ {
-		rawKeys[i] = pubKeys[i].(*PublicKey).p
-	}
-
-	return s.s.FastAggregateVerify(true, rawKeys, msg[:], dst)
+	return s.innerFastAggregateVerify(pubKeys, msg)
 }
 
 // Eth2FastAggregateVerify implements a wrapper on top of bls's FastAggregateVerify. It accepts G2_POINT_AT_INFINITY signature
@@ -141,15 +136,17 @@ func (s *Signature) Eth2FastAggregateVerify(pubKeys []common.PublicKey, msg [32]
 	if featureconfig.Get().SkipBLSVerify {
 		return true
 	}
-	g2PointAtInfinity := append([]byte{0xC0}, make([]byte, 95)...)
-	if len(pubKeys) == 0 && bytes.Equal(s.Marshal(), g2PointAtInfinity) {
+	if len(pubKeys) == 0 && bytes.Equal(s.Marshal(), common.InfiniteSignature[:]) {
 		return true
 	}
+	return s.innerFastAggregateVerify(pubKeys, msg)
+}
+
+func (s *Signature) innerFastAggregateVerify(pubKeys []common.PublicKey, msg [32]byte) bool {
 	rawKeys := make([]*blstPublicKey, len(pubKeys))
 	for i := 0; i < len(pubKeys); i++ {
 		rawKeys[i] = pubKeys[i].(*PublicKey).p
 	}
-
 	return s.s.FastAggregateVerify(true, rawKeys, msg[:], dst)
 }
 
