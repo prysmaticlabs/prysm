@@ -162,6 +162,7 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 
 	for i, tt := range tests {
 		t.Run(fmt.Sprint(i), func(t *testing.T) {
+			helpers.ClearCache()
 			original := proto.Clone(tt.state)
 			s, err := stateAltair.InitializeFromProto(tt.state)
 			require.NoError(t, err)
