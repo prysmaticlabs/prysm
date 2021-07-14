@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -33,8 +32,6 @@ func pubKey(i uint64) []byte {
 }
 
 func TestGetDuties_OK(t *testing.T) {
-	db := dbutil.SetupDB(t)
-
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
@@ -62,7 +59,6 @@ func TestGetDuties_OK(t *testing.T) {
 		State: bs, Root: genesisRoot[:], Genesis: time.Now(),
 	}
 	vs := &Server{
-		BeaconDB:    db,
 		HeadFetcher: chain,
 		TimeFetcher: chain,
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
@@ -118,8 +114,6 @@ func TestGetDuties_SlotOutOfUpperBound(t *testing.T) {
 }
 
 func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
-	db := dbutil.SetupDB(t)
-
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
@@ -145,7 +139,6 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 		State: bState, Root: genesisRoot[:], Genesis: time.Now(),
 	}
 	vs := &Server{
-		BeaconDB:    db,
 		HeadFetcher: chain,
 		TimeFetcher: chain,
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
@@ -161,8 +154,6 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 }
 
 func TestGetDuties_MultipleKeys_OK(t *testing.T) {
-	db := dbutil.SetupDB(t)
-
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := uint64(64)
 
@@ -186,7 +177,6 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 		State: bs, Root: genesisRoot[:], Genesis: time.Now(),
 	}
 	vs := &Server{
-		BeaconDB:    db,
 		HeadFetcher: chain,
 		TimeFetcher: chain,
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
@@ -225,8 +215,6 @@ func TestStreamDuties_SyncNotReady(t *testing.T) {
 }
 
 func TestStreamDuties_OK(t *testing.T) {
-	db := dbutil.SetupDB(t)
-
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
@@ -256,7 +244,6 @@ func TestStreamDuties_OK(t *testing.T) {
 	}
 	vs := &Server{
 		Ctx:           ctx,
-		BeaconDB:      db,
 		HeadFetcher:   &mockChain.ChainService{State: bs, Root: genesisRoot[:]},
 		SyncChecker:   &mockSync.Sync{IsSyncing: false},
 		TimeFetcher:   c,
@@ -285,8 +272,6 @@ func TestStreamDuties_OK(t *testing.T) {
 }
 
 func TestStreamDuties_OK_ChainReorg(t *testing.T) {
-	db := dbutil.SetupDB(t)
-
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
@@ -316,7 +301,6 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 	}
 	vs := &Server{
 		Ctx:           ctx,
-		BeaconDB:      db,
 		HeadFetcher:   &mockChain.ChainService{State: bs, Root: genesisRoot[:]},
 		SyncChecker:   &mockSync.Sync{IsSyncing: false},
 		TimeFetcher:   c,
@@ -369,7 +353,6 @@ func TestAssignValidatorToSubnet(t *testing.T) {
 }
 
 func BenchmarkCommitteeAssignment(b *testing.B) {
-	db := dbutil.SetupDB(b)
 
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := uint64(8192 * 2)
@@ -390,7 +373,6 @@ func BenchmarkCommitteeAssignment(b *testing.B) {
 	}
 
 	vs := &Server{
-		BeaconDB:    db,
 		HeadFetcher: &mockChain.ChainService{State: bs, Root: genesisRoot[:]},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 	}

@@ -56,7 +56,6 @@ func TestProposer_GetBlock_OK(t *testing.T) {
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
 	proposerServer := &Server{
-		BeaconDB:          db,
 		HeadFetcher:       &mock.ChainService{State: beaconState, Root: parentRoot[:]},
 		SyncChecker:       &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:     &mock.ChainService{},
@@ -138,7 +137,6 @@ func TestProposer_GetBlock_AddsUnaggregatedAtts(t *testing.T) {
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
 	proposerServer := &Server{
-		BeaconDB:          db,
 		HeadFetcher:       &mock.ChainService{State: beaconState, Root: parentRoot[:]},
 		SyncChecker:       &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:     &mock.ChainService{},
@@ -224,7 +222,6 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 
 	c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
 	proposerServer := &Server{
-		BeaconDB:          db,
 		ChainStartFetcher: &mockPOW.POWChain{},
 		Eth1InfoFetcher:   &mockPOW.POWChain{},
 		Eth1BlockFetcher:  &mockPOW.POWChain{},
@@ -261,7 +258,6 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
 	proposerServer := &Server{
-		BeaconDB:          db,
 		ChainStartFetcher: &mockPOW.POWChain{},
 		Eth1InfoFetcher:   &mockPOW.POWChain{},
 		Eth1BlockFetcher:  &mockPOW.POWChain{},
@@ -1813,13 +1809,9 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 }
 
 func TestProposer_FilterAttestation(t *testing.T) {
-	db := dbutil.SetupDB(t)
-	ctx := context.Background()
-
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	genesis := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(genesis)), "Could not save genesis block")
 
 	numValidators := uint64(64)
 	state, privKeys := testutil.DeterministicGenesisState(t, numValidators)
@@ -1828,8 +1820,6 @@ func TestProposer_FilterAttestation(t *testing.T) {
 
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveState(ctx, state, genesisRoot), "Could not save genesis state")
-	require.NoError(t, db.SaveHeadBlockRoot(ctx, genesisRoot), "Could not save genesis state")
 
 	tests := []struct {
 		name         string
@@ -1905,7 +1895,6 @@ func TestProposer_FilterAttestation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			proposerServer := &Server{
-				BeaconDB:    db,
 				AttPool:     attestations.NewPool(),
 				HeadFetcher: &mock.ChainService{State: state, Root: genesisRoot[:]},
 			}
