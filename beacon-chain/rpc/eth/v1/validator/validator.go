@@ -61,14 +61,18 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpb.AttesterDuti
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}
-	var maxCommitteeIndex types.CommitteeIndex
+	var distinctCommitteeIndexes []types.CommitteeIndex
+assignmentLoop:
 	for _, assignment := range committeeAssignments {
-		if assignment.CommitteeIndex > maxCommitteeIndex {
-			maxCommitteeIndex = assignment.CommitteeIndex
+		for _, index := range distinctCommitteeIndexes {
+			if index == assignment.CommitteeIndex {
+				continue assignmentLoop
+			}
 		}
+		distinctCommitteeIndexes = append(distinctCommitteeIndexes, assignment.CommitteeIndex)
 	}
 
-	duties := make([]*ethpb.AttesterDuty, 0, len(req.Index))
+	duties := make([]*ethpb.AttesterDuty, len(req.Index))
 	for i, index := range req.Index {
 		pubkey := vals[i].PublicKey()
 		committee := committeeAssignments[index]
@@ -76,6 +80,7 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpb.AttesterDuti
 		for cIndex, vIndex := range committee.Committee {
 			if vIndex == index {
 				valIndexInCommittee = types.CommitteeIndex(uint64(cIndex))
+				break
 			}
 		}
 		duties[i] = &ethpb.AttesterDuty{
@@ -83,7 +88,7 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpb.AttesterDuti
 			ValidatorIndex:          index,
 			CommitteeIndex:          committee.CommitteeIndex,
 			CommitteeLength:         uint64(len(committee.Committee)),
-			CommitteesAtSlot:        uint64(maxCommitteeIndex) + 1,
+			CommitteesAtSlot:        uint64(len(distinctCommitteeIndexes)),
 			ValidatorCommitteeIndex: valIndexInCommittee,
 			Slot:                    epochStartSlot,
 		}
