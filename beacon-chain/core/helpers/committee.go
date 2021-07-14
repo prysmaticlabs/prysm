@@ -325,12 +325,23 @@ func UpdateCommitteeCache(state iface.ReadOnlyBeaconState, epoch types.Epoch) er
 			return sortedIndices[i] < sortedIndices[j]
 		})
 
+		// Only update active balance field in cache if it's current epoch.
+		// Using current epoch state to update next epoch field will cause insert an invalid
+		// active balance value.
+		b := &cache.Balance{}
+		if e == epoch {
+			b = &cache.Balance{
+				Exist: true,
+				Total: balance,
+			}
+		}
+
 		if err := committeeCache.AddCommitteeShuffledList(&cache.Committees{
 			ShuffledIndices: shuffledIndices,
 			CommitteeCount:  uint64(params.BeaconConfig().SlotsPerEpoch.Mul(count)),
 			Seed:            seed,
 			SortedIndices:   sortedIndices,
-			ActiveBalance:   balance,
+			ActiveBalance:   b,
 		}); err != nil {
 			return err
 		}

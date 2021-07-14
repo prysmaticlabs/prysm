@@ -51,6 +51,7 @@ func TotalBalance(state iface.ReadOnlyValidators, indices []types.ValidatorIndex
 func TotalActiveBalance(state iface.ReadOnlyBeaconState) (uint64, error) {
 	// Check if the active balance exists in cache.
 	epoch := SlotToEpoch(state.Slot())
+
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not get seed")
@@ -59,7 +60,7 @@ func TotalActiveBalance(state iface.ReadOnlyBeaconState) (uint64, error) {
 	if err == nil {
 		return activeBalance, nil
 	}
-	if err != cache.ErrNonCommitteeKEy {
+	if err != cache.ErrNonCommitteeKey {
 		return 0, errors.Wrap(err, "could not interface with committee cache")
 	}
 
@@ -72,10 +73,6 @@ func TotalActiveBalance(state iface.ReadOnlyBeaconState) (uint64, error) {
 		return nil
 	}); err != nil {
 		return 0, err
-	}
-
-	if err := UpdateCommitteeCache(state, epoch); err != nil {
-		return 0, errors.Wrap(err, "could not update committee cache")
 	}
 
 	return total, nil

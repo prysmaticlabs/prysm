@@ -399,6 +399,8 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 	assert.Equal(t, params.BeaconConfig().TargetCommitteeSize, uint64(len(indices)), "Did not save correct indices lengths")
 
 	// Total active balance should be `MinGenesisActiveValidatorCount` given each validator has effective balance of 1.
+	seed, err = Seed(state, 0, params.BeaconConfig().DomainBeaconAttester)
+	require.NoError(t, err)
 	balance, err := committeeCache.ActiveBalance(seed)
 	require.NoError(t, err)
 	require.Equal(t, validatorCount, balance)

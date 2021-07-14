@@ -61,7 +61,7 @@ func TestTotalActiveBalance_OK(t *testing.T) {
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(t, err)
 	_, err = committeeCache.ActiveBalance(seed)
-	require.Equal(t, cache.ErrNonCommitteeKEy, err)
+	require.Equal(t, cache.ErrNonCommitteeKey, err)
 
 	// Validate manual calculation passes.
 	balance, err := TotalActiveBalance(state)
@@ -69,11 +69,6 @@ func TestTotalActiveBalance_OK(t *testing.T) {
 	wanted := state.Validators()[0].EffectiveBalance + state.Validators()[1].EffectiveBalance +
 		state.Validators()[2].EffectiveBalance + state.Validators()[3].EffectiveBalance
 	assert.Equal(t, wanted, balance, "Incorrect TotalActiveBalance")
-
-	// Validate the cache is populated.
-	balance, err = committeeCache.ActiveBalance(seed)
-	require.NoError(t, err)
-	require.Equal(t, wanted, balance)
 }
 
 func TestGetBalance_OK(t *testing.T) {

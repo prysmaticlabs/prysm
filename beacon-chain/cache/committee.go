@@ -137,7 +137,7 @@ func (c *CommitteeCache) ActiveBalance(seed [32]byte) (uint64, error) {
 		CommitteeCacheHit.Inc()
 	} else {
 		CommitteeCacheMiss.Inc()
-		return 0, ErrNonCommitteeKEy
+		return 0, ErrNonCommitteeKey
 	}
 
 	item, ok := obj.(*Committees)
@@ -148,7 +148,12 @@ func (c *CommitteeCache) ActiveBalance(seed [32]byte) (uint64, error) {
 		return 0, errors.New("item is nil")
 	}
 
-	return item.ActiveBalance, nil
+	// Return `ErrNonCommitteeKey` if active balance field doesnt exist in item.
+	if !item.ActiveBalance.Exist {
+		return 0, ErrNonCommitteeKey
+	}
+
+	return item.ActiveBalance.Total, nil
 }
 
 // ActiveIndicesCount returns the active indices count of a given seed stored in cache.

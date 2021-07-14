@@ -91,16 +91,19 @@ func TestCommitteeCache_ActiveCount(t *testing.T) {
 func TestCommitteeCache_ActiveBalance(t *testing.T) {
 	cache := NewCommitteesCache()
 
-	balances := uint64(10000)
+	balances := &Balance{
+		Exist: true,
+		Total: uint64(10000),
+	}
 	item := &Committees{Seed: [32]byte{'A'}, ActiveBalance: balances}
 	_, err := cache.ActiveBalance(item.Seed)
-	require.Equal(t, ErrNonCommitteeKEy, err)
+	require.Equal(t, ErrNonCommitteeKey, err)
 
 	require.NoError(t, cache.AddCommitteeShuffledList(item))
 
 	got, err := cache.ActiveBalance(item.Seed)
 	require.NoError(t, err)
-	assert.Equal(t, balances, got)
+	assert.Equal(t, balances.Total, got)
 }
 
 func TestCommitteeCache_CanRotate(t *testing.T) {
