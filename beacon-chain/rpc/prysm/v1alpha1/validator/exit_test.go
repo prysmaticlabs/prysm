@@ -11,12 +11,10 @@ import (
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -25,7 +23,6 @@ import (
 )
 
 func TestProposeExit_Notification(t *testing.T) {
-	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	deposits, keys, err := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
@@ -35,7 +32,6 @@ func TestProposeExit_Notification(t *testing.T) {
 	epoch := types.Epoch(2048)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch))))
 	block := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block)), "Could not save genesis block")
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
@@ -44,7 +40,6 @@ func TestProposeExit_Notification(t *testing.T) {
 	genesisTime := time.Now().Add(time.Duration(-100*offset) * time.Second)
 	mockChainService := &mockChain.ChainService{State: beaconState, Root: genesisRoot[:], Genesis: genesisTime}
 	server := &Server{
-		BeaconDB:          db,
 		HeadFetcher:       mockChainService,
 		SyncChecker:       &mockSync.Sync{IsSyncing: false},
 		TimeFetcher:       mockChainService,
@@ -96,7 +91,6 @@ func TestProposeExit_Notification(t *testing.T) {
 }
 
 func TestProposeExit_NoPanic(t *testing.T) {
-	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	deposits, keys, err := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
@@ -106,7 +100,6 @@ func TestProposeExit_NoPanic(t *testing.T) {
 	epoch := types.Epoch(2048)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch))))
 	block := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block)), "Could not save genesis block")
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
@@ -115,7 +108,6 @@ func TestProposeExit_NoPanic(t *testing.T) {
 	genesisTime := time.Now().Add(time.Duration(-100*offset) * time.Second)
 	mockChainService := &mockChain.ChainService{State: beaconState, Root: genesisRoot[:], Genesis: genesisTime}
 	server := &Server{
-		BeaconDB:          db,
 		HeadFetcher:       mockChainService,
 		SyncChecker:       &mockSync.Sync{IsSyncing: false},
 		TimeFetcher:       mockChainService,
