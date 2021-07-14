@@ -128,7 +128,7 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 		return err
 	}
 
-	forkDigest, err := s.forkDigest()
+	forkDigest, err := s.currentForkDigest()
 	if err != nil {
 		return err
 	}
@@ -139,7 +139,11 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 		HeadRoot:       headRoot,
 		HeadSlot:       s.cfg.Chain.HeadSlot(),
 	}
-	stream, err := s.cfg.P2P.Send(ctx, resp, p2p.RPCStatusTopicV1, id)
+	topic, err := p2p.TopicFromMessage(p2p.StatusMessageName, helpers.SlotToEpoch(s.cfg.Chain.CurrentSlot()))
+	if err != nil {
+		return err
+	}
+	stream, err := s.cfg.P2P.Send(ctx, resp, topic, id)
 	if err != nil {
 		return err
 	}
@@ -258,7 +262,7 @@ func (s *Service) respondWithStatus(ctx context.Context, stream network.Stream) 
 		return err
 	}
 
-	forkDigest, err := s.forkDigest()
+	forkDigest, err := s.currentForkDigest()
 	if err != nil {
 		return err
 	}
@@ -273,12 +277,15 @@ func (s *Service) respondWithStatus(ctx context.Context, stream network.Stream) 
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		log.WithError(err).Debug("Could not write to stream")
 	}
+	if err := writeContextToStream(nil, stream, s.cfg.Chain); err != nil {
+		return err
+	}
 	_, err = s.cfg.P2P.Encoding().EncodeWithMaxLength(stream, resp)
 	return err
 }
 
 func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) error {
-	forkDigest, err := s.forkDigest()
+	forkDigest, err := s.currentForkDigest()
 	if err != nil {
 		return err
 	}

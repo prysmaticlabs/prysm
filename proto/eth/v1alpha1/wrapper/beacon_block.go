@@ -1,10 +1,13 @@
 package wrapper
 
 import (
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
+	"github.com/prysmaticlabs/prysm/shared/interfaces/version"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -49,6 +52,23 @@ func (w Phase0SignedBeaconBlock) MarshalSSZ() ([]byte, error) {
 	return w.b.MarshalSSZ()
 }
 
+// MarshalSSZTo marshals the signed beacon block to its relevant ssz
+// form to the provided byte buffer.
+func (w Phase0SignedBeaconBlock) MarshalSSZTo(dst []byte) ([]byte, error) {
+	return w.b.MarshalSSZTo(dst)
+}
+
+// SizeSSZ returns the size of serialized signed block
+func (w Phase0SignedBeaconBlock) SizeSSZ() int {
+	return w.b.SizeSSZ()
+}
+
+// UnmarshalSSZ unmarshalls the signed beacon block from its relevant ssz
+// form.
+func (w Phase0SignedBeaconBlock) UnmarshalSSZ(buf []byte) error {
+	return w.b.UnmarshalSSZ(buf)
+}
+
 // Proto returns the block in its underlying protobuf
 // interface.
 func (w Phase0SignedBeaconBlock) Proto() proto.Message {
@@ -58,6 +78,11 @@ func (w Phase0SignedBeaconBlock) Proto() proto.Message {
 // PbPhase0Block returns the underlying protobuf object.
 func (w Phase0SignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error) {
 	return w.b, nil
+}
+
+// Version of the underlying protobuf object.
+func (w Phase0SignedBeaconBlock) Version() int {
+	return version.Phase0
 }
 
 // Phase0BeaconBlock is the wrapper for the actual block.
@@ -112,10 +137,32 @@ func (w Phase0BeaconBlock) MarshalSSZ() ([]byte, error) {
 	return w.b.MarshalSSZ()
 }
 
+// MarshalSSZTo marshals the beacon block to its relevant ssz
+// form to the provided byte buffer.
+func (w Phase0BeaconBlock) MarshalSSZTo(dst []byte) ([]byte, error) {
+	return w.b.MarshalSSZTo(dst)
+}
+
+// SizeSSZ returns the size of serialized block.
+func (w Phase0BeaconBlock) SizeSSZ() int {
+	return w.b.SizeSSZ()
+}
+
+// UnmarshalSSZ unmarshalls the beacon block from its relevant ssz
+// form.
+func (w Phase0BeaconBlock) UnmarshalSSZ(buf []byte) error {
+	return w.b.UnmarshalSSZ(buf)
+}
+
 // Proto returns the underlying block object in its
 // proto form.
 func (w Phase0BeaconBlock) Proto() proto.Message {
 	return w.b
+}
+
+// Version of the underlying protobuf object.
+func (w Phase0BeaconBlock) Version() int {
+	return version.Phase0
 }
 
 // Phase0BeaconBlockBody is a wrapper of a beacon block body.
@@ -167,6 +214,11 @@ func (w Phase0BeaconBlockBody) Deposits() []*eth.Deposit {
 // VoluntaryExits returns the voluntary exits in the block.
 func (w Phase0BeaconBlockBody) VoluntaryExits() []*eth.SignedVoluntaryExit {
 	return w.b.VoluntaryExits
+}
+
+// SyncAggregate returns the sync aggregate in the block.
+func (w Phase0BeaconBlockBody) SyncAggregate() (*prysmv2.SyncAggregate, error) {
+	return nil, errors.New("Sync aggregate is not supported in phase 0 block")
 }
 
 // IsNil checks if the block body is nil.

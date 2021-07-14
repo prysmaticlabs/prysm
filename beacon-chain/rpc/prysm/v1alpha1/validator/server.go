@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -27,6 +28,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -57,6 +59,7 @@ type Server struct {
 	AttPool                attestations.Pool
 	SlashingsPool          slashings.PoolManager
 	ExitPool               voluntaryexits.PoolManager
+	SyncCommitteePool      synccommittee.Pool
 	BlockReceiver          blockchain.BlockReceiver
 	MockEth1Votes          bool
 	Eth1BlockFetcher       powchain.POWBlockFetcher
@@ -124,7 +127,10 @@ func (vs *Server) ValidatorIndex(ctx context.Context, req *ethpb.ValidatorIndexR
 
 // DomainData fetches the current domain version information from the beacon state.
 func (vs *Server) DomainData(_ context.Context, request *ethpb.DomainRequest) (*ethpb.DomainResponse, error) {
-	fork := vs.ForkFetcher.CurrentFork()
+	fork, err := p2putils.Fork(request.Epoch)
+	if err != nil {
+		return nil, err
+	}
 	headGenesisValidatorRoot := vs.HeadFetcher.HeadGenesisValidatorRoot()
 	dv, err := helpers.Domain(fork, request.Epoch, bytesutil.ToBytes4(request.Domain), headGenesisValidatorRoot[:])
 	if err != nil {

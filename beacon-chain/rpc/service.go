@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -33,6 +34,7 @@ import (
 	debugv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/debug"
 	nodev1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/node"
 	validatorv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
+	validatorv2 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v2/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	chainSync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
@@ -40,6 +42,7 @@ import (
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv1alpha1 "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -93,6 +96,7 @@ type Config struct {
 	AttestationsPool        attestations.Pool
 	ExitPool                voluntaryexits.PoolManager
 	SlashingsPool           slashings.PoolManager
+	SyncCommitteeObjectPool synccommittee.Pool
 	SyncService             chainSync.Checker
 	Broadcaster             p2p.Broadcaster
 	PeersFetcher            p2p.PeersProvider
@@ -171,6 +175,7 @@ func (s *Service) Start() {
 		AttestationCache:       cache.NewAttestationCache(),
 		AttPool:                s.cfg.AttestationsPool,
 		ExitPool:               s.cfg.ExitPool,
+		SyncCommitteePool:      s.cfg.SyncCommitteeObjectPool,
 		HeadFetcher:            s.cfg.HeadFetcher,
 		ForkFetcher:            s.cfg.ForkFetcher,
 		FinalizationFetcher:    s.cfg.FinalizationFetcher,
@@ -192,6 +197,15 @@ func (s *Service) Start() {
 		SlashingsPool:          s.cfg.SlashingsPool,
 		StateGen:               s.cfg.StateGen,
 	}
+
+	validatorServerV2 := &validatorv2.Server{
+		V1Server:          validatorServer,
+		Ctx:               s.ctx,
+		HeadFetcher:       s.cfg.HeadFetcher,
+		P2P:               s.cfg.Broadcaster,
+		SyncCommitteePool: s.cfg.SyncCommitteeObjectPool,
+	}
+
 	nodeServer := &nodev1alpha1.Server{
 		LogsStreamer:         logutil.NewStreamServer(),
 		StreamLogsBufferSize: 1000, // Enough to handle bursts of beacon node logs for gRPC streaming.
@@ -269,6 +283,7 @@ func (s *Service) Start() {
 	})
 	if s.cfg.EnableDebugRPCEndpoints {
 		log.Info("Enabled debug gRPC endpoints")
+
 		debugServer := &debugv1alpha1.Server{
 			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 			BeaconDB:           s.cfg.BeaconDB,
@@ -290,7 +305,9 @@ func (s *Service) Start() {
 		pbrpc.RegisterDebugServer(s.grpcServer, debugServer)
 		ethpbv1.RegisterBeaconDebugServer(s.grpcServer, debugServerV1)
 	}
+
 	ethpbv1alpha1.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServer)
+	prysmv2.RegisterBeaconNodeValidatorAltairServer(s.grpcServer, validatorServerV2)
 
 	// Register reflection service on gRPC server.
 	reflection.Register(s.grpcServer)

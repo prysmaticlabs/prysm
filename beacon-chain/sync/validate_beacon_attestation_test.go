@@ -39,11 +39,11 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 	require.NoError(t, err)
 	s := &Service{
 		cfg: &Config{
-			InitialSync:         &mockSync.Sync{IsSyncing: false},
-			P2P:                 p,
-			DB:                  db,
-			Chain:               chain,
-			AttestationNotifier: (&mockChain.ChainService{}).OperationNotifier(),
+			InitialSync:       &mockSync.Sync{IsSyncing: false},
+			P2P:               p,
+			DB:                db,
+			Chain:             chain,
+			OperationNotifier: (&mockChain.ChainService{}).OperationNotifier(),
 		},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		seenAttestationCache: c,
@@ -54,7 +54,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 	invalidRoot := [32]byte{'A', 'B', 'C', 'D'}
 	s.setBadBlock(ctx, invalidRoot)
 
-	digest, err := s.forkDigest()
+	digest, err := s.currentForkDigest()
 	require.NoError(t, err)
 
 	blk := testutil.NewBeaconBlock()

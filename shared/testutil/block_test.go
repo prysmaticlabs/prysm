@@ -11,6 +11,7 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -191,6 +192,17 @@ func TestHydrateSignedBeaconBlock_NoError(t *testing.T) {
 func TestHydrateV1SignedBeaconBlock_NoError(t *testing.T) {
 	b := &v1.SignedBeaconBlock{}
 	b = HydrateV1SignedBeaconBlock(b)
+	_, err := b.HashTreeRoot()
+	require.NoError(t, err)
+	_, err = b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	_, err = b.Block.Body.HashTreeRoot()
+	require.NoError(t, err)
+}
+
+func TestHydrateSignedBeaconBlockAltair_NoError(t *testing.T) {
+	b := &prysmv2.SignedBeaconBlock{}
+	b = HydrateSignedBeaconBlockAltair(b)
 	_, err := b.HashTreeRoot()
 	require.NoError(t, err)
 	_, err = b.Block.HashTreeRoot()

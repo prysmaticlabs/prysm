@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
@@ -9,11 +10,15 @@ import (
 	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -37,12 +42,15 @@ func TestMetaDataRPCHandler_ReceivesMetadata(t *testing.T) {
 		cfg: &Config{
 			DB:  d,
 			P2P: p1,
+			Chain: &mock.ChainService{
+				ValidatorsRoot: [32]byte{},
+			},
 		},
 		rateLimiter: newRateLimiter(p1),
 	}
 
 	// Setup streams
-	pcl := protocol.ID("/testing")
+	pcl := protocol.ID(p2p.RPCMetaDataTopicV1)
 	topic := string(pcl)
 	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)
 	var wg sync.WaitGroup
@@ -84,16 +92,18 @@ func TestMetadataRPCHandler_SendsMetadata(t *testing.T) {
 	d := db.SetupDB(t)
 	r := &Service{
 		cfg: &Config{
-			DB:  d,
-			P2P: p1,
+			DB:    d,
+			P2P:   p1,
+			Chain: &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}},
 		},
 		rateLimiter: newRateLimiter(p1),
 	}
 
 	r2 := &Service{
 		cfg: &Config{
-			DB:  d,
-			P2P: p2,
+			DB:    d,
+			P2P:   p2,
+			Chain: &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}},
 		},
 		rateLimiter: newRateLimiter(p2),
 	}
@@ -125,5 +135,82 @@ func TestMetadataRPCHandler_SendsMetadata(t *testing.T) {
 	conns := p1.BHost.Network().ConnsToPeer(p2.BHost.ID())
 	if len(conns) == 0 {
 		t.Error("Peer is disconnected despite receiving a valid ping")
+	}
+}
+
+func TestExtractMetaDataType(t *testing.T) {
+	// Precompute digests
+	genDigest, err := helpers.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, params.BeaconConfig().ZeroHash[:])
+	require.NoError(t, err)
+	altairDigest, err := helpers.ComputeForkDigest(params.BeaconConfig().AltairForkVersion, params.BeaconConfig().ZeroHash[:])
+	require.NoError(t, err)
+
+	type args struct {
+		digest []byte
+		chain  blockchain.ChainInfoFetcher
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    interfaces.Metadata
+		wantErr bool
+	}{
+		{
+			name: "no digest",
+			args: args{
+				digest: []byte{},
+				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
+			},
+			want:    interfaces.WrappedMetadataV0(&pb.MetaDataV0{}),
+			wantErr: false,
+		},
+		{
+			name: "invalid digest",
+			args: args{
+				digest: []byte{0x00, 0x01},
+				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "non existent digest",
+			args: args{
+				digest: []byte{0x00, 0x01, 0x02, 0x03},
+				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "genesis fork version",
+			args: args{
+				digest: genDigest[:],
+				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
+			},
+			want:    interfaces.WrappedMetadataV0(&pb.MetaDataV0{}),
+			wantErr: false,
+		},
+		{
+			name: "altair fork version",
+			args: args{
+				digest: altairDigest[:],
+				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
+			},
+			want:    interfaces.WrappedMetadataV1(&pb.MetaDataV1{}),
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := extractMetaDataType(tt.args.digest, tt.args.chain)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("extractMetaDataType() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("extractMetaDataType() got = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

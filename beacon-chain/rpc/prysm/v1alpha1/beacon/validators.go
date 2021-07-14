@@ -7,6 +7,7 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -15,6 +16,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
+	"github.com/prysmaticlabs/prysm/shared/interfaces/version"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
@@ -659,19 +661,41 @@ func (bs *Server) GetValidatorPerformance(
 			return nil, status.Errorf(codes.Internal, "Could not process slots: %v", err)
 		}
 	}
-	vp, bp, err := precompute.New(ctx, headState)
-	if err != nil {
-		return nil, err
+	validatorSummary := []*precompute.Validator{}
+	switch headState.Version() {
+	case version.Phase0:
+		vp, bp, err := precompute.New(ctx, headState)
+		if err != nil {
+			return nil, err
+		}
+		vp, bp, err = precompute.ProcessAttestations(ctx, headState, vp, bp)
+		if err != nil {
+			return nil, err
+		}
+		headState, err = precompute.ProcessRewardsAndPenaltiesPrecompute(headState, bp, vp, precompute.AttestationsDelta, precompute.ProposersDelta)
+		if err != nil {
+			return nil, err
+		}
+		validatorSummary = vp
+	case version.Altair:
+		vp, bp, err := altair.InitializeEpochValidators(ctx, headState)
+		if err != nil {
+			return nil, err
+		}
+		vp, bp, err = altair.ProcessEpochParticipation(ctx, headState, bp, vp)
+		if err != nil {
+			return nil, err
+		}
+		headState, vp, err = altair.ProcessInactivityScores(ctx, headState, vp)
+		if err != nil {
+			return nil, err
+		}
+		headState, err = altair.ProcessRewardsAndPenaltiesPrecompute(headState, bp, vp)
+		if err != nil {
+			return nil, err
+		}
+		validatorSummary = vp
 	}
-	vp, bp, err = precompute.ProcessAttestations(ctx, headState, vp, bp)
-	if err != nil {
-		return nil, err
-	}
-	headState, err = precompute.ProcessRewardsAndPenaltiesPrecompute(headState, bp, vp, precompute.AttestationsDelta, precompute.ProposersDelta)
-	if err != nil {
-		return nil, err
-	}
-	validatorSummary := vp
 
 	responseCap := len(req.Indices) + len(req.PublicKeys)
 	validatorIndices := make([]types.ValidatorIndex, 0, responseCap)
