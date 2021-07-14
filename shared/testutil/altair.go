@@ -9,6 +9,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
@@ -54,12 +55,30 @@ func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisT
 		return nil, err
 	}
 
-	state, err = altair.ProcessPreGenesisDeposits(ctx, state, deposits)
+	state, err = processPreGenesisDeposits(ctx, state, deposits)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process validator deposits")
 	}
 
 	return buildGenesisBeaconState(genesisTime, state, state.Eth1Data())
+}
+
+// processPreGenesisDeposits processes a deposit for the beacon state Altair before chain start.
+func processPreGenesisDeposits(
+	ctx context.Context,
+	beaconState iface.BeaconStateAltair,
+	deposits []*ethpb.Deposit,
+) (iface.BeaconStateAltair, error) {
+	var err error
+	beaconState, err = altair.ProcessDeposits(ctx, beaconState, deposits)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process deposit")
+	}
+	beaconState, err = blocks.ActivateValidatorWithEffectiveBalance(beaconState, deposits)
+	if err != nil {
+		return nil, err
+	}
+	return beaconState, nil
 }
 
 func buildGenesisBeaconState(genesisTime uint64, preState iface.BeaconStateAltair, eth1Data *ethpb.Eth1Data) (iface.BeaconStateAltair, error) {
