@@ -22,6 +22,10 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpb.AttesterDuti
 	ctx, span := trace.StartSpan(ctx, "validatorv1.GetAttesterDuties")
 	defer span.End()
 
+	if vs.SyncChecker.Syncing() {
+		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
+	}
+
 	currentEpoch := helpers.SlotToEpoch(vs.TimeFetcher.CurrentSlot())
 	if req.Epoch > currentEpoch+1 {
 		return nil, status.Errorf(codes.InvalidArgument, "Request epoch %d can not be greater than next epoch %d", req.Epoch, currentEpoch+1)

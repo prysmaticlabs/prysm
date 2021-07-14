@@ -196,6 +196,7 @@ func (s *Service) Start() {
 	validatorServerV1 := &validator.Server{
 		HeadFetcher: s.cfg.HeadFetcher,
 		TimeFetcher: s.cfg.GenesisTimeFetcher,
+		SyncChecker: s.cfg.SyncService,
 	}
 
 	nodeServer := &nodev1alpha1.Server{
