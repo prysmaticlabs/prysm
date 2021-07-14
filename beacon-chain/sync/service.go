@@ -12,7 +12,6 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
-	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	gcache "github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -96,8 +95,7 @@ type Service struct {
 	slotToPendingBlocks       *gcache.Cache
 	seenPendingBlocks         map[[32]byte]bool
 	blkRootToPendingAtts      map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof
-	subTopicMap               map[string]*pubsub.Subscription
-	subLock                   sync.RWMutex
+	subHandler                *subTopicHandler
 	pendingAttsLock           sync.RWMutex
 	pendingQueueLock          sync.RWMutex
 	chainStarted              *abool.AtomicBool
@@ -135,7 +133,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		slotToPendingBlocks:  c,
 		seenPendingBlocks:    make(map[[32]byte]bool),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
-		subTopicMap:          make(map[string]*pubsub.Subscription),
+		subHandler:           newSubTopicHandler(),
 		rateLimiter:          rLimiter,
 	}
 
@@ -183,9 +181,7 @@ func (s *Service) Stop() error {
 		if err := s.cfg.P2P.PubSub().UnregisterTopicValidator(t); err != nil {
 			log.Errorf("Could not successfully unregister for topic %s: %v", t, err)
 		}
-		s.subLock.Lock()
-		delete(s.subTopicMap, t)
-		s.subLock.Unlock()
+		s.subHandler.removeTopic(t)
 	}
 	defer s.cancel()
 	return nil

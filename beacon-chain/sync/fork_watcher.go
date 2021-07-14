@@ -32,8 +32,58 @@ func (s *Service) forkWatcher() {
 						log.WithError(err).Error("Could not retrieve fork digest")
 						continue
 					}
+					digestExists := false
+					for _, t := range s.subHandler.allTopics() {
+						retDigest, err := digestFromTopic(t)
+						if err != nil {
+							log.WithError(err).Error("Could not retrieve digest")
+							continue
+						}
+						if retDigest == digest {
+							digestExists = true
+							break
+						}
+					}
+					if digestExists {
+						continue
+					}
 					s.registerSubscribers(nextEpoch, digest)
 					s.registerRPCHandlersAltair()
+				}
+			}
+			// This routine takes care of the de-registration of
+			// old gossip pubsub handlers. Once we are at the epoch
+			// after the fork, we de-register from all the outdated topics.
+			currFork, err := p2putils.Fork(currEpoch)
+			if err != nil {
+				log.WithError(err)
+				continue
+			}
+			epochAfterFork := currFork.Epoch + 1
+			nonGenesisFork := currFork.Epoch > 1
+			// If we are in the epoch after the fork, we start de-registering.
+			if epochAfterFork == currEpoch && nonGenesisFork {
+				// Look at the previous fork's digest.
+				epochBeforeFork := currFork.Epoch - 1
+				prevDigest, err := p2putils.ForkDigestFromEpoch(epochBeforeFork, genRoot[:])
+				if err != nil {
+					log.WithError(err)
+					continue
+				}
+				// Run through all our current active topics and see
+				// if there are any subscriptions to be removed.
+				for _, t := range s.subHandler.allTopics() {
+					retDigest, err := digestFromTopic(t)
+					if err != nil {
+						log.WithError(err).Error("Could not retrieve digest")
+						continue
+					}
+					if retDigest == prevDigest {
+						if err := s.cfg.P2P.PubSub().UnregisterTopicValidator(t); err != nil {
+							log.WithError(err).Error("Could not unregister topic validator")
+						}
+						s.subHandler.removeTopic(t)
+					}
 				}
 			}
 		case <-s.ctx.Done():

@@ -86,7 +86,7 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 			InitialSync: &mockSync.Sync{IsSyncing: false},
 		},
 		seenAttesterSlashingCache: make(map[uint64]bool),
-		subTopicMap:               map[string]*pubsub.Subscription{},
+		subHandler:                newSubTopicHandler(),
 	}
 
 	buf := new(bytes.Buffer)
@@ -120,7 +120,7 @@ func TestValidateAttesterSlashing_CanFilter(t *testing.T) {
 			Chain:       &mock.ChainService{Genesis: time.Now()},
 		},
 		seenAttesterSlashingCache: make(map[uint64]bool),
-		subTopicMap:               map[string]*pubsub.Subscription{},
+		subHandler:                newSubTopicHandler(),
 	}
 
 	r.setAttesterSlashingIndicesSeen([]uint64{1, 2, 3, 4}, []uint64{3, 4, 5, 6})
