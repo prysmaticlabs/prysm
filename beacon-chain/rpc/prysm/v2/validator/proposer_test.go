@@ -56,7 +56,6 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 
 	c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
 	V1Server := &validatorv1alpha1.Server{
-		BeaconDB:          db,
 		ChainStartFetcher: &mockPOW.POWChain{},
 		Eth1InfoFetcher:   &mockPOW.POWChain{},
 		Eth1BlockFetcher:  &mockPOW.POWChain{},
@@ -117,7 +116,6 @@ func TestProposer_GetBlock_OK(t *testing.T) {
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
 	V1Server := &validatorv1alpha1.Server{
-		BeaconDB:          db,
 		HeadFetcher:       &mock.ChainService{State: beaconState, Root: parentRoot[:]},
 		SyncChecker:       &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:     &mock.ChainService{},

@@ -1,4 +1,4 @@
-package interfaces
+package p2p
 
 import (
 	ssz "github.com/ferranbt/fastssz"

@@ -16,8 +16,9 @@ import (
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	p2p2 "github.com/prysmaticlabs/prysm/proto/beacon/p2p"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -31,7 +32,7 @@ func TestMetaDataRPCHandler_ReceivesMetadata(t *testing.T) {
 	p1.Connect(p2)
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 	bitfield := [8]byte{'A', 'B'}
-	p1.LocalMetadata = interfaces.WrappedMetadataV0(&pb.MetaDataV0{
+	p1.LocalMetadata = wrapper.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   bitfield[:],
 	})
@@ -83,7 +84,7 @@ func TestMetadataRPCHandler_SendsMetadata(t *testing.T) {
 	p1.Connect(p2)
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 	bitfield := [8]byte{'A', 'B'}
-	p2.LocalMetadata = interfaces.WrappedMetadataV0(&pb.MetaDataV0{
+	p2.LocalMetadata = wrapper.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   bitfield[:],
 	})
@@ -152,7 +153,7 @@ func TestExtractMetaDataType(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    interfaces.Metadata
+		want    p2p2.Metadata
 		wantErr bool
 	}{
 		{
@@ -161,7 +162,7 @@ func TestExtractMetaDataType(t *testing.T) {
 				digest: []byte{},
 				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
 			},
-			want:    interfaces.WrappedMetadataV0(&pb.MetaDataV0{}),
+			want:    wrapper.WrappedMetadataV0(&pb.MetaDataV0{}),
 			wantErr: false,
 		},
 		{
@@ -188,7 +189,7 @@ func TestExtractMetaDataType(t *testing.T) {
 				digest: genDigest[:],
 				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
 			},
-			want:    interfaces.WrappedMetadataV0(&pb.MetaDataV0{}),
+			want:    wrapper.WrappedMetadataV0(&pb.MetaDataV0{}),
 			wantErr: false,
 		},
 		{
@@ -197,7 +198,7 @@ func TestExtractMetaDataType(t *testing.T) {
 				digest: altairDigest[:],
 				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
 			},
-			want:    interfaces.WrappedMetadataV1(&pb.MetaDataV1{}),
+			want:    wrapper.WrappedMetadataV1(&pb.MetaDataV1{}),
 			wantErr: false,
 		},
 	}
