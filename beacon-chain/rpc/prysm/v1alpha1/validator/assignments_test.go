@@ -50,11 +50,6 @@ func TestGetDuties_OK(t *testing.T) {
 		indices[i] = uint64(i)
 	}
 
-	pubkeysAs48ByteType := make([][48]byte, len(pubKeys))
-	for i, pk := range pubKeys {
-		pubkeysAs48ByteType[i] = bytesutil.ToBytes48(pk)
-	}
-
 	chain := &mockChain.ChainService{
 		State: bs, Root: genesisRoot[:], Genesis: time.Now(),
 	}
