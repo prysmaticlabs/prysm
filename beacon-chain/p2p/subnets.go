@@ -7,7 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1/wrapper"
 	"go.opencensus.io/trace"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -103,7 +103,7 @@ func (s *Service) hasPeerWithSubnet(topic string) bool {
 func (s *Service) updateSubnetRecordWithMetadata(bitV bitfield.Bitvector64) {
 	entry := enr.WithEntry(attSubnetEnrKey, &bitV)
 	s.dv5Listener.LocalNode().Set(entry)
-	s.metaData = interfaces.WrappedMetadataV0(&pb.MetaDataV0{
+	s.metaData = wrapper.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: s.metaData.SequenceNumber() + 1,
 		Attnets:   bitV,
 	})
