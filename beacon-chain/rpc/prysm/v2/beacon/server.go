@@ -6,15 +6,12 @@ package beacon
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	beaconv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/beacon"
 )
 
 // Server defines a server implementation of the gRPC Beacon Chain service,
 // providing RPC endpoints to access data relevant to the Ethereum beacon chain.
 type Server struct {
-	Ctx              context.Context
-	BeaconDB         db.ReadOnlyDatabase
-	HeadFetcher      blockchain.HeadFetcher
-	CanonicalFetcher blockchain.CanonicalFetcher
+	Ctx      context.Context
+	V1Server *beaconv1alpha1.Server
 }

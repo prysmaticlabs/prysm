@@ -254,10 +254,8 @@ func (s *Service) Start() {
 		CollectedAttestationsBuffer: make(chan []*ethpbv1alpha1.Attestation, attestationBufferSize),
 	}
 	beaconChainServerV2 := &beaconv2.Server{
-		Ctx:              s.ctx,
-		BeaconDB:         s.cfg.BeaconDB,
-		HeadFetcher:      s.cfg.HeadFetcher,
-		CanonicalFetcher: s.cfg.CanonicalFetcher,
+		Ctx:      s.ctx,
+		V1Server: beaconChainServer,
 	}
 	beaconChainServerV1 := &beacon.Server{
 		BeaconDB:           s.cfg.BeaconDB,

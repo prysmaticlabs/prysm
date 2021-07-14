@@ -2,16 +2,13 @@ package beacon
 
 import (
 	"context"
-	"strconv"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	beaconv1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/beacon"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/interfaces/version"
-	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -32,146 +29,77 @@ func (bs *Server) ListBlocks(
 
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListBlocksRequest_Epoch:
-		blks, _, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartEpoch(q.Epoch).SetEndEpoch(q.Epoch))
+		ctrs, numBlks, nextPageToken, err := bs.V1Server.ListBlocksForEpoch(ctx, req, q)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get blocks: %v", err)
+			return nil, err
 		}
-
-		numBlks := len(blks)
-		if numBlks == 0 {
-			return &prysmv2.ListBlocksResponseAltair{
-				BlockContainers: make([]*prysmv2.BeaconBlockContainerAltair, 0),
-				TotalSize:       0,
-				NextPageToken:   strconv.Itoa(0),
-			}, nil
-		}
-
-		start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numBlks)
+		altCtrs, err := convertFromV1Containers(ctrs)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not paginate blocks: %v", err)
+			return nil, err
 		}
-
-		returnedBlks := blks[start:end]
-		containers := make([]*prysmv2.BeaconBlockContainerAltair, len(returnedBlks))
-		for i, b := range returnedBlks {
-			root, err := b.Block().HashTreeRoot()
-			if err != nil {
-				return nil, err
-			}
-			canonical, err := bs.CanonicalFetcher.IsCanonical(ctx, root)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not determine if block is canonical: %v", err)
-			}
-			ctr, err := convertToBlockContainer(b, root, canonical)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not get block container: %v", err)
-			}
-			containers[i] = ctr
-		}
-
 		return &prysmv2.ListBlocksResponseAltair{
-			BlockContainers: containers,
+			BlockContainers: altCtrs,
 			TotalSize:       int32(numBlks),
 			NextPageToken:   nextPageToken,
 		}, nil
 	case *ethpb.ListBlocksRequest_Root:
-		blk, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(q.Root))
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not retrieve block: %v", err)
-		}
-		if blk == nil || blk.IsNil() {
-			return &prysmv2.ListBlocksResponseAltair{
-				BlockContainers: make([]*prysmv2.BeaconBlockContainerAltair, 0),
-				TotalSize:       0,
-				NextPageToken:   strconv.Itoa(0),
-			}, nil
-		}
-		root, err := blk.Block().HashTreeRoot()
+		ctrs, numBlks, nextPageToken, err := bs.V1Server.ListBlocksForRoot(ctx, req, q)
 		if err != nil {
 			return nil, err
 		}
-		canonical, err := bs.CanonicalFetcher.IsCanonical(ctx, root)
+		altCtrs, err := convertFromV1Containers(ctrs)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not determine if block is canonical: %v", err)
-		}
-		ctr, err := convertToBlockContainer(blk, root, canonical)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get block container: %v", err)
+			return nil, err
 		}
 		return &prysmv2.ListBlocksResponseAltair{
-			BlockContainers: []*prysmv2.BeaconBlockContainerAltair{ctr},
-			TotalSize:       1,
+			BlockContainers: altCtrs,
+			TotalSize:       int32(numBlks),
+			NextPageToken:   nextPageToken,
 		}, nil
 
 	case *ethpb.ListBlocksRequest_Slot:
-		hasBlocks, blks, err := bs.BeaconDB.BlocksBySlot(ctx, q.Slot)
+		ctrs, numBlks, nextPageToken, err := bs.V1Server.ListBlocksForSlot(ctx, req, q)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for slot %d: %v", q.Slot, err)
+			return nil, err
 		}
-		if !hasBlocks {
-			return &prysmv2.ListBlocksResponseAltair{
-				BlockContainers: make([]*prysmv2.BeaconBlockContainerAltair, 0),
-				TotalSize:       0,
-				NextPageToken:   strconv.Itoa(0),
-			}, nil
-		}
-
-		numBlks := len(blks)
-
-		start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numBlks)
+		altCtrs, err := convertFromV1Containers(ctrs)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not paginate blocks: %v", err)
+			return nil, err
 		}
-
-		returnedBlks := blks[start:end]
-		containers := make([]*prysmv2.BeaconBlockContainerAltair, len(returnedBlks))
-		for i, b := range returnedBlks {
-			root, err := b.Block().HashTreeRoot()
-			if err != nil {
-				return nil, err
-			}
-			canonical, err := bs.CanonicalFetcher.IsCanonical(ctx, root)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not determine if block is canonical: %v", err)
-			}
-			ctr, err := convertToBlockContainer(b, root, canonical)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not get block container: %v", err)
-			}
-			containers[i] = ctr
-		}
-
 		return &prysmv2.ListBlocksResponseAltair{
-			BlockContainers: containers,
+			BlockContainers: altCtrs,
 			TotalSize:       int32(numBlks),
 			NextPageToken:   nextPageToken,
 		}, nil
 	case *ethpb.ListBlocksRequest_Genesis:
-		genBlk, err := bs.BeaconDB.GenesisBlock(ctx)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for genesis slot: %v", err)
-		}
-		if genBlk == nil || genBlk.IsNil() {
-			return nil, status.Error(codes.Internal, "Could not find genesis block")
-		}
-		root, err := genBlk.Block().HashTreeRoot()
+		ctrs, numBlks, nextPageToken, err := bs.V1Server.ListBlocksForGenesis(ctx, req, q)
 		if err != nil {
 			return nil, err
 		}
-		ctr, err := convertToBlockContainer(genBlk, root, true)
+		altCtrs, err := convertFromV1Containers(ctrs)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get block container: %v", err)
+			return nil, err
 		}
-		containers := []*prysmv2.BeaconBlockContainerAltair{ctr}
-
 		return &prysmv2.ListBlocksResponseAltair{
-			BlockContainers: containers,
-			TotalSize:       int32(1),
-			NextPageToken:   strconv.Itoa(0),
+			BlockContainers: altCtrs,
+			TotalSize:       int32(numBlks),
+			NextPageToken:   nextPageToken,
 		}, nil
 	}
 
 	return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching blocks")
+}
+
+func convertFromV1Containers(ctrs []beaconv1.BlockContainer) ([]*prysmv2.BeaconBlockContainerAltair, error) {
+	protoCtrs := make([]*prysmv2.BeaconBlockContainerAltair, len(ctrs))
+	var err error
+	for i, c := range ctrs {
+		protoCtrs[i], err = convertToBlockContainer(c.Blk, c.Root, c.IsCanonical)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get block container: %v", err)
+		}
+	}
+	return protoCtrs, nil
 }
 
 func convertToBlockContainer(blk interfaces.SignedBeaconBlock, root [32]byte, isCanonical bool) (*prysmv2.BeaconBlockContainerAltair, error) {

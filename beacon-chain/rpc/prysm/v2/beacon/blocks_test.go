@@ -9,6 +9,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	beaconv1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/beacon"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
@@ -26,7 +27,7 @@ func TestServer_ListBlocks_NoResults(t *testing.T) {
 	ctx := context.Background()
 
 	bs := &Server{
-		BeaconDB: db,
+		V1Server: &beaconv1.Server{BeaconDB: db},
 	}
 	wanted := &prysmv2.ListBlocksResponseAltair{
 		BlockContainers: make([]*prysmv2.BeaconBlockContainerAltair, 0),
@@ -67,7 +68,7 @@ func TestServer_ListBlocks_Genesis(t *testing.T) {
 	ctx := context.Background()
 
 	bs := &Server{
-		BeaconDB: db,
+		V1Server: &beaconv1.Server{BeaconDB: db},
 	}
 
 	// Should throw an error if no genesis block is found.
@@ -109,7 +110,7 @@ func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
 	ctx := context.Background()
 
 	bs := &Server{
-		BeaconDB: db,
+		V1Server: &beaconv1.Server{BeaconDB: db},
 	}
 	// Should return the proper genesis block if it exists.
 	parentRoot := [32]byte{1, 2, 3}
@@ -172,8 +173,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(orphanedBlk)))
 
 	bs := &Server{
-		BeaconDB:         db,
-		CanonicalFetcher: chain,
+		V1Server: &beaconv1.Server{BeaconDB: db, CanonicalFetcher: chain},
 	}
 
 	root6, err := blks[6].Block().HashTreeRoot()
@@ -208,7 +208,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 							Slot: 6}})},
 					BlockRoot: blkContainers[6].BlockRoot,
 					Canonical: blkContainers[6].Canonical}},
-				TotalSize: 1}},
+				TotalSize: 1, NextPageToken: strconv.Itoa(0)}},
 		{req: &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Root{Root: root6[:]}},
 			res: &prysmv2.ListBlocksResponseAltair{
 				BlockContainers: []*prysmv2.BeaconBlockContainerAltair{{Block: &prysmv2.BeaconBlockContainerAltair_Phase0Block{
@@ -217,7 +217,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 							Slot: 6}})},
 					BlockRoot: blkContainers[6].BlockRoot,
 					Canonical: blkContainers[6].Canonical}},
-				TotalSize: 1}},
+				TotalSize: 1, NextPageToken: strconv.Itoa(0)}},
 		{req: &ethpb.ListBlocksRequest{
 			PageToken:   strconv.Itoa(0),
 			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 0},
@@ -278,7 +278,9 @@ func TestServer_ListBlocks_Errors(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
-	bs := &Server{BeaconDB: db}
+	bs := &Server{
+		V1Server: &beaconv1.Server{BeaconDB: db},
+	}
 	exceedsMax := int32(cmd.Get().MaxRPCPageSize + 1)
 
 	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, cmd.Get().MaxRPCPageSize)
