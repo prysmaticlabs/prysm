@@ -9,8 +9,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -18,7 +18,7 @@ import (
 
 // GetAttesterDuties requests the beacon node to provide a set of attestation duties,
 // which should be performed by validators, for a particular epoch.
-func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpb.AttesterDutiesRequest) (*ethpb.AttesterDutiesResponse, error) {
+func (vs *Server) GetAttesterDuties(ctx context.Context, req *v1.AttesterDutiesRequest) (*v1.AttesterDutiesResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "validatorv1.GetAttesterDuties")
 	defer span.End()
 
@@ -40,7 +40,7 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpb.AttesterDuti
 	for i, index := range req.Index {
 		val, err := s.ValidatorAtIndexReadOnly(index)
 		if err != nil {
-			if _, ok := err.(*v1.ValidatorIndexOutOfRangeError); ok {
+			if _, ok := err.(*statev1.ValidatorIndexOutOfRangeError); ok {
 				return nil, status.Errorf(codes.InvalidArgument, "Invalid index: %v", err)
 			} else {
 				return nil, status.Errorf(codes.Internal, "Could not get validator: %v", err)
@@ -76,7 +76,7 @@ assignmentLoop:
 		distinctCommitteeIndexes = append(distinctCommitteeIndexes, assignment.CommitteeIndex)
 	}
 
-	duties := make([]*ethpb.AttesterDuty, len(req.Index))
+	duties := make([]*v1.AttesterDuty, len(req.Index))
 	for i, index := range req.Index {
 		pubkey := vals[i].PublicKey()
 		committee := committeeAssignments[index]
@@ -87,7 +87,7 @@ assignmentLoop:
 				break
 			}
 		}
-		duties[i] = &ethpb.AttesterDuty{
+		duties[i] = &v1.AttesterDuty{
 			Pubkey:                  pubkey[:],
 			ValidatorIndex:          index,
 			CommitteeIndex:          committee.CommitteeIndex,
@@ -103,40 +103,40 @@ assignmentLoop:
 		return nil, status.Errorf(codes.Internal, "Could not get block root at slot %d: %v", epochStartSlot, err)
 	}
 
-	return &ethpb.AttesterDutiesResponse{
+	return &v1.AttesterDutiesResponse{
 		DependentRoot: dependentRoot,
 		Data:          duties,
 	}, nil
 }
 
 // GetProposerDuties requests beacon node to provide all validators that are scheduled to propose a block in the given epoch.
-func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpb.ProposerDutiesRequest) (*ethpb.ProposerDutiesResponse, error) {
+func (vs *Server) GetProposerDuties(ctx context.Context, req *v1.ProposerDutiesRequest) (*v1.ProposerDutiesResponse, error) {
 	return nil, errors.New("Unimplemented")
 }
 
 // ProduceBlock requests the beacon node to produce a valid unsigned beacon block, which can then be signed by a proposer and submitted.
-func (vs *Server) ProduceBlock(ctx context.Context, req *ethpb.ProduceBlockRequest) (*ethpb.ProduceBlockResponse, error) {
+func (vs *Server) ProduceBlock(ctx context.Context, req *v1.ProduceBlockRequest) (*v1.ProduceBlockResponse, error) {
 	return nil, errors.New("Unimplemented")
 }
 
 // ProduceAttestationData requests that the beacon node produces attestation data for
 // the requested committee index and slot based on the nodes current head.
-func (vs *Server) ProduceAttestationData(ctx context.Context, req *ethpb.ProduceAttestationDataRequest) (*ethpb.ProduceAttestationDataResponse, error) {
+func (vs *Server) ProduceAttestationData(ctx context.Context, req *v1.ProduceAttestationDataRequest) (*v1.ProduceAttestationDataResponse, error) {
 	return nil, errors.New("Unimplemented")
 }
 
 // GetAggregateAttestation aggregates all attestations matching the given attestation data root and slot, returning the aggregated result.
-func (vs *Server) GetAggregateAttestation(ctx context.Context, req *ethpb.AggregateAttestationRequest) (*ethpb.AggregateAttestationResponse, error) {
+func (vs *Server) GetAggregateAttestation(ctx context.Context, req *v1.AggregateAttestationRequest) (*v1.AggregateAttestationResponse, error) {
 	return nil, errors.New("Unimplemented")
 }
 
 // SubmitAggregateAndProofs verifies given aggregate and proofs and publishes them on appropriate gossipsub topic.
-func (vs *Server) SubmitAggregateAndProofs(ctx context.Context, req *ethpb.SubmitAggregateAndProofsRequest) (*emptypb.Empty, error) {
+func (vs *Server) SubmitAggregateAndProofs(ctx context.Context, req *v1.SubmitAggregateAndProofsRequest) (*emptypb.Empty, error) {
 	return nil, errors.New("Unimplemented")
 }
 
 // SubmitBeaconCommitteeSubscription searches using discv5 for peers related to the provided subnet information
 // and replaces current peers with those ones if necessary.
-func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *ethpb.SubmitBeaconCommitteeSubscriptionsRequest) (*emptypb.Empty, error) {
+func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *v1.SubmitBeaconCommitteeSubscriptionsRequest) (*emptypb.Empty, error) {
 	return nil, errors.New("Unimplemented")
 }
