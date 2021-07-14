@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	gcache "github.com/patrickmn/go-cache"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -136,7 +135,7 @@ func TestSyncHandlers_WaitTillSynced(t *testing.T) {
 			InitialSync:   &mockSync.Sync{IsSyncing: false},
 		},
 		chainStarted: abool.New(),
-		subTopicMap:  map[string]*pubsub.Subscription{},
+		subHandler:   newSubTopicHandler(),
 	}
 
 	topic := "/eth2/%x/beacon_block"
@@ -215,7 +214,7 @@ func TestSyncService_StopCleanly(t *testing.T) {
 			InitialSync:   &mockSync.Sync{IsSyncing: false},
 		},
 		chainStarted: abool.New(),
-		subTopicMap:  map[string]*pubsub.Subscription{},
+		subHandler:   newSubTopicHandler(),
 	}
 
 	go r.registerHandlers()
