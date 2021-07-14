@@ -226,6 +226,19 @@ func TestPriorityQueue_RetrieveByKey(t *testing.T) {
 	}
 
 	testValidateInternalData(t, pq, len(tc)-1, true)
+
+	// ensure the correct item is retrieved when multiple items exist
+	require.NoError(t, pq.Push(&Item{
+		Key:   "baz",
+		Value: "foo",
+	}))
+	require.NoError(t, pq.Push(&Item{
+		Key:   "foo",
+		Value: "bar",
+	}))
+	i := pq.RetrieveByKey("foo")
+	require.Equal(t, "bar", i.Value)
+
 }
 
 // testValidateInternalData checks the internal data structure of the PriorityQueue
