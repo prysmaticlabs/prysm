@@ -50,7 +50,7 @@ func SignedBeaconBlockHeaderFromBlockInterface(block interfaces.SignedBeaconBloc
 	}, nil
 }
 
-// BeaconBlockHeaderFromBlock function to retrieve block header from block.
+// BeaconBlockHeaderFromBlock function to retrieve block header from block.f
 func BeaconBlockHeaderFromBlock(block *ethpb.BeaconBlock) (*ethpb.BeaconBlockHeader, error) {
 	if block.Body == nil {
 		return nil, errors.New("nil block body")
