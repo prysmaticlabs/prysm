@@ -314,8 +314,9 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 
 				d, err := helpers.Domain(hState.Fork(), helpers.SlotToEpoch(hState.Slot()), params.BeaconConfig().DomainSyncCommittee, hState.GenesisValidatorRoot())
 				assert.NoError(t, err)
+				subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 				s.cfg.Chain = &mockChain.ChainService{
-					CurrentSyncCommitteeIndices: []uint64{1},
+					CurrentSyncCommitteeIndices: []uint64{subCommitteeSize},
 					ValidatorsRoot:              [32]byte{'A'},
 					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1)),
 					SyncCommitteeDomain:         d,
@@ -357,11 +358,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				msg.BlockRoot = headRoot[:]
 				hState, err := db.State(context.Background(), headRoot)
 				assert.NoError(t, err)
-				s.cfg.Chain = &mockChain.ChainService{
-					CurrentSyncCommitteeIndices: []uint64{1},
-					ValidatorsRoot:              [32]byte{'A'},
-					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1)),
-				}
+				subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 
 				numOfVals := hState.NumValidators()
 
@@ -373,7 +370,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				assert.NoError(t, err)
 
 				s.cfg.Chain = &mockChain.ChainService{
-					CurrentSyncCommitteeIndices: []uint64{1},
+					CurrentSyncCommitteeIndices: []uint64{subCommitteeSize},
 					ValidatorsRoot:              [32]byte{'A'},
 					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1)),
 					SyncCommitteeDomain:         d,
@@ -423,7 +420,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				ValidatorData: nil,
 			}
 			if got := tt.svc.validateSyncCommitteeMessage(tt.args.ctx, tt.args.pid, msg); got != tt.want {
-				t.Errorf("validateSyncContributionAndProof() = %v, want %v", got, tt.want)
+				t.Errorf("validateSyncCommitteeMessage() = %v, want %v", got, tt.want)
 			}
 		})
 	}
