@@ -12,12 +12,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -32,11 +30,8 @@ import (
 )
 
 func TestValidatorIndex_OK(t *testing.T) {
-	db := dbutil.SetupDB(t)
-	ctx := context.Background()
 	st, err := testutil.NewBeaconState()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveState(ctx, st.Copy(), [32]byte{}))
 
 	pubKey := pubKey(1)
 
@@ -44,7 +39,6 @@ func TestValidatorIndex_OK(t *testing.T) {
 	require.NoError(t, err)
 
 	Server := &Server{
-		BeaconDB:    db,
 		HeadFetcher: &mockChain.ChainService{State: st},
 	}
 
@@ -56,7 +50,6 @@ func TestValidatorIndex_OK(t *testing.T) {
 }
 
 func TestWaitForActivation_ContextClosed(t *testing.T) {
-	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	beaconState, err := v1.InitializeFromProto(&pbp2p.BeaconState{
@@ -65,7 +58,6 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	})
 	require.NoError(t, err)
 	block := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block)), "Could not save genesis block")
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
@@ -74,7 +66,6 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	require.NoError(t, err)
 
 	vs := &Server{
-		BeaconDB:           db,
 		Ctx:                ctx,
 		ChainStartFetcher:  &mockPOW.POWChain{},
 		BlockFetcher:       &mockPOW.POWChain{},
@@ -104,7 +95,6 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 }
 
 func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
-	db := dbutil.SetupDB(t)
 	// This test breaks if it doesnt use mainnet config
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
@@ -155,7 +145,6 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	trie, err := v1.InitializeFromProtoUnsafe(beaconState)
 	require.NoError(t, err)
 	vs := &Server{
-		BeaconDB:           db,
 		Ctx:                context.Background(),
 		CanonicalStateChan: make(chan *pbp2p.BeaconState, 1),
 		ChainStartFetcher:  &mockPOW.POWChain{},
@@ -197,8 +186,6 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 }
 
 func TestWaitForActivation_MultipleStatuses(t *testing.T) {
-	db := dbutil.SetupDB(t)
-
 	priv1, err := bls.RandKey()
 	require.NoError(t, err)
 	priv2, err := bls.RandKey()
@@ -238,7 +225,6 @@ func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 	trie, err := v1.InitializeFromProtoUnsafe(beaconState)
 	require.NoError(t, err)
 	vs := &Server{
-		BeaconDB:           db,
 		Ctx:                context.Background(),
 		CanonicalStateChan: make(chan *pbp2p.BeaconState, 1),
 		ChainStartFetcher:  &mockPOW.POWChain{},
@@ -287,7 +273,6 @@ func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 }
 
 func TestWaitForChainStart_ContextClosed(t *testing.T) {
-	db := dbutil.SetupDB(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	chainService := &mockChain.ChainService{}
 	Server := &Server{
@@ -296,7 +281,6 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 			ChainFeed: new(event.Feed),
 		},
 		StateNotifier: chainService.StateNotifier(),
-		BeaconDB:      db,
 		HeadFetcher:   chainService,
 	}
 
@@ -315,14 +299,9 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 }
 
 func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
-	db := dbutil.SetupDB(t)
-	ctx := context.Background()
-	headBlockRoot := [32]byte{0x01, 0x02}
 	st, err := testutil.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(3))
-	require.NoError(t, db.SaveState(ctx, st, headBlockRoot))
-	require.NoError(t, db.SaveHeadBlockRoot(ctx, headBlockRoot))
 	genesisValidatorsRoot := bytesutil.ToBytes32([]byte("validators"))
 	require.NoError(t, st.SetGenesisValidatorRoot(genesisValidatorsRoot[:]))
 
@@ -332,7 +311,6 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 		ChainStartFetcher: &mockPOW.POWChain{
 			ChainFeed: new(event.Feed),
 		},
-		BeaconDB:      db,
 		StateNotifier: chainService.StateNotifier(),
 		HeadFetcher:   chainService,
 	}
@@ -351,7 +329,6 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 }
 
 func TestWaitForChainStart_HeadStateDoesNotExist(t *testing.T) {
-	db := dbutil.SetupDB(t)
 	genesisValidatorRoot := params.BeaconConfig().ZeroHash
 
 	// Set head state to nil
@@ -362,7 +339,6 @@ func TestWaitForChainStart_HeadStateDoesNotExist(t *testing.T) {
 		ChainStartFetcher: &mockPOW.POWChain{
 			ChainFeed: new(event.Feed),
 		},
-		BeaconDB:      db,
 		StateNotifier: chainService.StateNotifier(),
 		HeadFetcher:   chainService,
 	}
@@ -390,7 +366,6 @@ func TestWaitForChainStart_HeadStateDoesNotExist(t *testing.T) {
 }
 
 func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
-	db := dbutil.SetupDB(t)
 	hook := logTest.NewGlobal()
 
 	genesisValidatorsRoot := bytesutil.ToBytes32([]byte("validators"))
@@ -400,7 +375,6 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 		ChainStartFetcher: &mockPOW.FaultyMockPOWChain{
 			ChainFeed: new(event.Feed),
 		},
-		BeaconDB:      db,
 		StateNotifier: chainService.StateNotifier(),
 		HeadFetcher:   chainService,
 	}

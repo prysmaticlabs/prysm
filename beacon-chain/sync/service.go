@@ -57,17 +57,17 @@ var (
 
 // Config to set up the regular sync service.
 type Config struct {
-	P2P                 p2p.P2P
-	DB                  db.NoHeadAccessDatabase
-	AttPool             attestations.Pool
-	ExitPool            voluntaryexits.PoolManager
-	SlashingPool        slashings.PoolManager
-	Chain               blockchainService
-	InitialSync         Checker
-	StateNotifier       statefeed.Notifier
-	BlockNotifier       blockfeed.Notifier
-	AttestationNotifier operation.Notifier
-	StateGen            *stategen.State
+	P2P               p2p.P2P
+	DB                db.NoHeadAccessDatabase
+	AttPool           attestations.Pool
+	ExitPool          voluntaryexits.PoolManager
+	SlashingPool      slashings.PoolManager
+	Chain             blockchainService
+	InitialSync       Checker
+	StateNotifier     statefeed.Notifier
+	BlockNotifier     blockfeed.Notifier
+	OperationNotifier operation.Notifier
+	StateGen          *stategen.State
 }
 
 // This defines the interface for interacting with block chain service
