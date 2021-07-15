@@ -7,6 +7,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//proto/eth/v1alpha1:go_default_library",
+        "//proto/interfaces:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
     ],
 )
@@ -17,6 +18,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//proto/eth/v1alpha1:go_default_library",
+        "//proto/eth/v1alpha1/wrapper:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil/assert:go_default_library",
