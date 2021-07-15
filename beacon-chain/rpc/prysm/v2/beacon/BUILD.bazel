@@ -14,7 +14,7 @@ go_library(
         "//proto/interfaces:go_default_library",
         "//proto/prysm/v2:go_default_library",
         "//shared/cmd:go_default_library",
-        "//shared/interfaces/version:go_default_library",
+        "//shared/version:go_default_library",
         "@org_golang_google_grpc//codes:go_default_library",
         "@org_golang_google_grpc//status:go_default_library",
     ],
