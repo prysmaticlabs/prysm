@@ -57,7 +57,7 @@ func (s *subTopicHandler) removeTopic(topic string) {
 		delete(s.digestMap, digest)
 		return
 	}
-	s.digestMap[digest] = -1
+	s.digestMap[digest] -= 1
 	if s.digestMap[digest] == 0 {
 		delete(s.digestMap, digest)
 	}
@@ -67,8 +67,8 @@ func (s *subTopicHandler) digestExists(digest [4]byte) bool {
 	s.RLock()
 	defer s.RUnlock()
 
-	_, ok := s.digestMap[digest]
-	return ok
+	count, ok := s.digestMap[digest]
+	return ok && count > 0
 }
 
 func (s *subTopicHandler) allTopics() []string {
