@@ -55,10 +55,10 @@ func init() {
 			FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
 			Fork:                &pb.Fork{CurrentVersion: []byte("foo")},
 		},
-		StateNotifier:       (&mock.ChainService{}).StateNotifier(),
-		AttestationNotifier: (&mock.ChainService{}).OperationNotifier(),
-		InitialSync:         &mockSync.Sync{IsSyncing: false},
-		BlockNotifier:       nil,
+		StateNotifier:     (&mock.ChainService{}).StateNotifier(),
+		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
+		InitialSync:       &mockSync.Sync{IsSyncing: false},
+		BlockNotifier:     nil,
 	})
 }
 
