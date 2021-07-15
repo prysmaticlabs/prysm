@@ -66,12 +66,12 @@ func (s *Service) validateSyncCommitteeMessage(ctx context.Context, pid peer.ID,
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
-	subs, err := s.cfg.Chain.HeadCurrentSyncCommitteeIndices(ctx, m.ValidatorIndex, m.Slot)
+	committeeIndices, err := s.cfg.Chain.HeadCurrentSyncCommitteeIndices(ctx, m.ValidatorIndex, m.Slot)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
-	if len(subs) == 0 {
+	if len(committeeIndices) == 0 {
 		return pubsub.ValidationIgnore
 	}
 
@@ -84,8 +84,10 @@ func (s *Service) validateSyncCommitteeMessage(ctx context.Context, pid peer.ID,
 
 	format := p2p.GossipTypeMapping[reflect.TypeOf(&prysmv2.SyncCommitteeMessage{})]
 	// Validate that the validator is in the correct committee.
-	for _, idx := range subs {
-		if strings.HasPrefix(*msg.Topic, fmt.Sprintf(format, digest, idx)) {
+	subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
+	for _, idx := range committeeIndices {
+		subnet := idx / subCommitteeSize
+		if strings.HasPrefix(*msg.Topic, fmt.Sprintf(format, digest, subnet)) {
 			isValid = true
 			break
 		}
@@ -96,8 +98,9 @@ func (s *Service) validateSyncCommitteeMessage(ctx context.Context, pid peer.ID,
 
 	// There has been no other valid sync committee signature for the declared `slot`, `validator_index` and `subcommittee_index`.
 	// In the event of `validator_index` belongs to multiple subnets, as long as one subnet has not been seen, we should let it in.
-	for _, idx := range subs {
-		if s.hasSeenSyncMessageIndexSlot(m.Slot, m.ValidatorIndex, idx) {
+	for _, idx := range committeeIndices {
+		subnet := idx / subCommitteeSize
+		if s.hasSeenSyncMessageIndexSlot(m.Slot, m.ValidatorIndex, subnet) {
 			isValid = false
 		} else {
 			isValid = true
@@ -135,12 +138,12 @@ func (s *Service) validateSyncCommitteeMessage(ctx context.Context, pid peer.ID,
 		return pubsub.ValidationReject
 	}
 
-	for _, idx := range subs {
-		s.setSeenSyncMessageIndexSlot(m.Slot, m.ValidatorIndex, idx)
+	for _, idx := range committeeIndices {
+		subnet := idx / subCommitteeSize
+		s.setSeenSyncMessageIndexSlot(m.Slot, m.ValidatorIndex, subnet)
 	}
 
 	msg.ValidatorData = m
-
 	return pubsub.ValidationAccept
 }
 
