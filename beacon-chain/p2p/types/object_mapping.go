@@ -1,14 +1,15 @@
 package types
 
 import (
+	"github.com/prysmaticlabs/prysm/proto/beacon/p2p"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1/wrapper"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	wrapperv1 "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	wrapperv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	metaDataInterface "github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/protobuf/proto"
 )
@@ -31,7 +32,7 @@ var (
 	StateMap map[[4]byte]proto.Message
 	// MetaDataMap maps the fork-version to the underlying data type for that
 	// particular fork period.
-	MetaDataMap map[[4]byte]func() metaDataInterface.Metadata
+	MetaDataMap map[[4]byte]func() p2p.Metadata
 )
 
 // InitializeDataMaps initializes all the relevant object maps. This function is called to
@@ -54,12 +55,12 @@ func InitializeDataMaps() {
 	}
 
 	// Reset our metadata map.
-	MetaDataMap = map[[4]byte]func() metaDataInterface.Metadata{
-		bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): func() metaDataInterface.Metadata {
-			return metaDataInterface.WrappedMetadataV0(&pbp2p.MetaDataV0{})
+	MetaDataMap = map[[4]byte]func() p2p.Metadata{
+		bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): func() p2p.Metadata {
+			return wrapper.WrappedMetadataV0(&pbp2p.MetaDataV0{})
 		},
-		bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion): func() metaDataInterface.Metadata {
-			return metaDataInterface.WrappedMetadataV1(&pbp2p.MetaDataV1{})
+		bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion): func() p2p.Metadata {
+			return wrapper.WrappedMetadataV1(&pbp2p.MetaDataV1{})
 		},
 	}
 }

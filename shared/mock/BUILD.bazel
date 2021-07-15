@@ -7,6 +7,8 @@ go_library(
     srcs = [
         "beacon_altair_validator_client_mock.go",
         "beacon_altair_validator_server_mock.go",
+        "beacon_chain_altair_client_mock.go",
+        "beacon_chain_altair_service_mock.go",
         "beacon_chain_service_mock.go",
         "beacon_service_mock.go",
         "beacon_validator_client_mock.go",

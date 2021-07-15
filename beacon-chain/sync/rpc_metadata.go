@@ -10,8 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	p2p2 "github.com/prysmaticlabs/prysm/proto/beacon/p2p"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -39,7 +39,7 @@ func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2
 	return nil
 }
 
-func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (interfaces.Metadata, error) {
+func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (p2p2.Metadata, error) {
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
@@ -75,7 +75,7 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (interfac
 	return msg, nil
 }
 
-func extractMetaDataType(digest []byte, chain blockchain.ChainInfoFetcher) (interfaces.Metadata, error) {
+func extractMetaDataType(digest []byte, chain blockchain.ChainInfoFetcher) (p2p2.Metadata, error) {
 	if len(digest) == 0 {
 		mdFunc, ok := types.MetaDataMap[bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)]
 		if !ok {

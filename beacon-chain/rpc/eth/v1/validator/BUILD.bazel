@@ -1,0 +1,16 @@
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "server.go",
+        "validator.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/validator",
+    visibility = ["//beacon-chain:__subpackages__"],
+    deps = [
+        "//proto/eth/v1:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
+        "@io_bazel_rules_go//proto/wkt:empty_go_proto",
+    ],
+)
