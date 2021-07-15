@@ -173,6 +173,72 @@ func isDeepEqual(expected, actual interface{}) bool {
 	return reflect.DeepEqual(expected, actual)
 }
 
+// NotEmpty asserts that an object's fields are not empty. This function recursively checks each
+// pointer / struct field.
+func NotEmpty(loggerFn assertionLoggerFn, obj interface{}, msg ...interface{}) {
+	_, ignoreFieldsWithoutTags := obj.(proto.Message)
+	notEmpty(loggerFn, obj, ignoreFieldsWithoutTags, []string{} /*fields*/, 0 /*stackSize*/, msg...)
+}
+
+// notEmpty checks all fields are not zero, including pointer field references to other structs.
+// This method has the option to ignore fields without struct tags, which is helpful for checking
+// protobuf messages that have internal fields.
+func notEmpty(loggerFn assertionLoggerFn, obj interface{}, ignoreFieldsWithoutTags bool, fields []string, stackSize int, msg ...interface{}) {
+	var v reflect.Value
+	if vo, ok := obj.(reflect.Value); ok {
+		v = reflect.Indirect(vo)
+	} else {
+		v = reflect.Indirect(reflect.ValueOf(obj))
+	}
+
+	if len(fields) == 0 {
+		fields = []string{v.Type().Name()}
+	}
+
+	fail := func(fields []string) {
+		m := parseMsg("", msg...)
+		errMsg := fmt.Sprintf("empty/zero field: %s", strings.Join(fields, "."))
+		if len(m) > 0 {
+			m = strings.Join([]string{m, errMsg}, ": ")
+		} else {
+			m = errMsg
+		}
+		_, file, line, _ := runtime.Caller(4 + stackSize)
+		loggerFn("%s:%d %s", filepath.Base(file), line, m)
+	}
+
+	if v.Kind() != reflect.Struct {
+		if v.IsZero() {
+			fail(fields)
+		}
+		return
+	}
+
+	for i := 0; i < v.NumField(); i++ {
+		if ignoreFieldsWithoutTags && len(v.Type().Field(i).Tag) == 0 {
+			continue
+		}
+		fields := append(fields, v.Type().Field(i).Name)
+
+		switch k := v.Field(i).Kind(); k {
+		case reflect.Ptr:
+			notEmpty(loggerFn, v.Field(i), ignoreFieldsWithoutTags, fields, stackSize+1, msg...)
+		case reflect.Slice:
+			f := v.Field(i)
+			if f.Len() == 0 {
+				fail(fields)
+			}
+			for i := 0; i < f.Len(); i++ {
+				notEmpty(loggerFn, f.Index(i), ignoreFieldsWithoutTags, fields, stackSize+1, msg...)
+			}
+		default:
+			if v.Field(i).IsZero() {
+				fail(fields)
+			}
+		}
+	}
+}
+
 // TBMock exposes enough testing.TB methods for assertions.
 type TBMock struct {
 	ErrorfMsg string
