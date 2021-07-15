@@ -93,9 +93,8 @@ func (s *Service) registerSubscribers(epoch types.Epoch, digest [4]byte) {
 			digest,
 		)
 	}
-	altairFork := params.BeaconConfig().ForkVersionSchedule[bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion)]
 	// Altair Fork Version
-	if epoch >= altairFork {
+	if epoch >= params.BeaconConfig().AltairForkEpoch {
 		s.subscribe(
 			p2p.SyncContributionAndProofSubnetTopicFormat,
 			s.validateSyncContributionAndProof,
