@@ -17,6 +17,7 @@ type SignedBeaconBlock interface {
 	Copy() SignedBeaconBlock
 	Proto() proto.Message
 	PbPhase0Block() (*ethpb.SignedBeaconBlock, error)
+	PbAltairBlock() (*prysmv2.SignedBeaconBlockAltair, error)
 	ssz.Marshaler
 	ssz.Unmarshaler
 	Version() int

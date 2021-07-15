@@ -3,7 +3,7 @@ package wrapper
 import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
@@ -78,6 +78,11 @@ func (w Phase0SignedBeaconBlock) Proto() proto.Message {
 // PbPhase0Block returns the underlying protobuf object.
 func (w Phase0SignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error) {
 	return w.b, nil
+}
+
+// AltairBlock returns the underlying protobuf object.
+func (w Phase0SignedBeaconBlock) PbAltairBlock() (*prysmv2.SignedBeaconBlockAltair, error) {
+	return nil, errors.New("unsupported altair block")
 }
 
 // Version of the underlying protobuf object.

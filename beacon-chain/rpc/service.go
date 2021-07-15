@@ -29,11 +29,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/beacon"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/debug"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/events"
-	node "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/node"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/node"
 	beaconv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/beacon"
 	debugv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/debug"
 	nodev1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/node"
 	validatorv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
+	beaconv2 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v2/beacon"
 	validatorv2 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v2/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
@@ -251,6 +252,10 @@ func (s *Service) Start() {
 		ReceivedAttestationsBuffer:  make(chan *ethpbv1alpha1.Attestation, attestationBufferSize),
 		CollectedAttestationsBuffer: make(chan []*ethpbv1alpha1.Attestation, attestationBufferSize),
 	}
+	beaconChainServerV2 := &beaconv2.Server{
+		Ctx:      s.ctx,
+		V1Server: beaconChainServer,
+	}
 	beaconChainServerV1 := &beacon.Server{
 		BeaconDB:           s.cfg.BeaconDB,
 		AttestationsPool:   s.cfg.AttestationsPool,
@@ -306,6 +311,7 @@ func (s *Service) Start() {
 	}
 
 	ethpbv1alpha1.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServer)
+	prysmv2.RegisterBeaconChainAltairServer(s.grpcServer, beaconChainServerV2)
 	prysmv2.RegisterBeaconNodeValidatorAltairServer(s.grpcServer, validatorServerV2)
 
 	// Register reflection service on gRPC server.
