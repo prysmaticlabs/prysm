@@ -12,24 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// ProcessPreGenesisDeposits processes a deposit for the beacon state Altair before chain start.
-func ProcessPreGenesisDeposits(
-	ctx context.Context,
-	beaconState iface.BeaconStateAltair,
-	deposits []*ethpb.Deposit,
-) (iface.BeaconStateAltair, error) {
-	var err error
-	beaconState, err = ProcessDeposits(ctx, beaconState, deposits)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process deposit")
-	}
-	beaconState, err = blocks.ActivateValidatorWithEffectiveBalance(beaconState, deposits)
-	if err != nil {
-		return nil, err
-	}
-	return beaconState, nil
-}
-
 // ProcessDeposits processes validator deposits for beacon state Altair.
 func ProcessDeposits(
 	ctx context.Context,

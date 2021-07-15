@@ -2,7 +2,6 @@ package helpers
 
 import (
 	"fmt"
-	"reflect"
 	"strconv"
 	"testing"
 	"time"
@@ -371,38 +370,6 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 	}
 }
 
-func TestShuffledIndices_ShuffleRightLength(t *testing.T) {
-	valiatorCount := 1000
-	validators := make([]*ethpb.Validator, valiatorCount)
-	indices := make([]uint64, valiatorCount)
-	for i := 0; i < valiatorCount; i++ {
-		validators[i] = &ethpb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-		}
-		indices[i] = uint64(i)
-	}
-	state, err := v1.InitializeFromProto(&pb.BeaconState{
-		Validators:  validators,
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	})
-	require.NoError(t, err)
-	// Test for current epoch
-	shuffledIndices, err := ShuffledIndices(state, 0)
-	require.NoError(t, err)
-	assert.Equal(t, valiatorCount, len(shuffledIndices), "Incorrect shuffled indices count")
-	if reflect.DeepEqual(indices, shuffledIndices) {
-		t.Error("Shuffling did not happen")
-	}
-
-	// Test for next epoch
-	shuffledIndices, err = ShuffledIndices(state, 1)
-	require.NoError(t, err)
-	assert.Equal(t, valiatorCount, len(shuffledIndices), "Incorrect shuffled indices count")
-	if reflect.DeepEqual(indices, shuffledIndices) {
-		t.Error("Shuffling did not happen")
-	}
-}
-
 func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 	ClearCache()
 	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount
@@ -410,7 +377,8 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 	indices := make([]types.ValidatorIndex, validatorCount)
 	for i := types.ValidatorIndex(0); uint64(i) < validatorCount; i++ {
 		validators[i] = &ethpb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance: 1,
 		}
 		indices[i] = i
 	}
@@ -429,6 +397,13 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 	indices, err = committeeCache.Committee(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch)), seed, idx)
 	require.NoError(t, err)
 	assert.Equal(t, params.BeaconConfig().TargetCommitteeSize, uint64(len(indices)), "Did not save correct indices lengths")
+
+	// Total active balance should be `MinGenesisActiveValidatorCount` given each validator has effective balance of 1.
+	seed, err = Seed(state, 0, params.BeaconConfig().DomainBeaconAttester)
+	require.NoError(t, err)
+	balance, err := committeeCache.ActiveBalance(seed)
+	require.NoError(t, err)
+	require.Equal(t, validatorCount, balance)
 }
 
 func BenchmarkComputeCommittee300000_WithPreCache(b *testing.B) {

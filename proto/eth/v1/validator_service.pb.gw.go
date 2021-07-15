@@ -37,13 +37,17 @@ var _ = github_com_prysmaticlabs_eth2_types.Epoch(0)
 var _ = emptypb.Empty{}
 var _ = empty.Empty{}
 
-var (
-	filter_BeaconValidator_GetAttesterDuties_0 = &utilities.DoubleArray{Encoding: map[string]int{"epoch": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
-)
-
 func request_BeaconValidator_GetAttesterDuties_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconValidatorClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq AttesterDutiesRequest
 	var metadata runtime.ServerMetadata
+
+	newReader, berr := utilities.IOReaderFactory(req.Body)
+	if berr != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", berr)
+	}
+	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq); err != nil && err != io.EOF {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
 
 	var (
 		val string
@@ -62,13 +66,6 @@ func request_BeaconValidator_GetAttesterDuties_0(ctx context.Context, marshaler 
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "epoch", err)
 	}
 	protoReq.Epoch = github_com_prysmaticlabs_eth2_types.Epoch(epoch)
-
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BeaconValidator_GetAttesterDuties_0); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
 
 	msg, err := client.GetAttesterDuties(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -79,6 +76,14 @@ func local_request_BeaconValidator_GetAttesterDuties_0(ctx context.Context, mars
 	var protoReq AttesterDutiesRequest
 	var metadata runtime.ServerMetadata
 
+	newReader, berr := utilities.IOReaderFactory(req.Body)
+	if berr != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", berr)
+	}
+	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq); err != nil && err != io.EOF {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
 	var (
 		val string
 		ok  bool
@@ -96,13 +101,6 @@ func local_request_BeaconValidator_GetAttesterDuties_0(ctx context.Context, mars
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "epoch", err)
 	}
 	protoReq.Epoch = github_com_prysmaticlabs_eth2_types.Epoch(epoch)
-
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BeaconValidator_GetAttesterDuties_0); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
 
 	msg, err := server.GetAttesterDuties(ctx, &protoReq)
 	return msg, metadata, err
@@ -164,11 +162,11 @@ func local_request_BeaconValidator_GetProposerDuties_0(ctx context.Context, mars
 }
 
 var (
-	filter_BeaconValidator_GetBlock_0 = &utilities.DoubleArray{Encoding: map[string]int{"slot": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
+	filter_BeaconValidator_ProduceBlock_0 = &utilities.DoubleArray{Encoding: map[string]int{"slot": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
 )
 
-func request_BeaconValidator_GetBlock_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconValidatorClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq ProposerBlockRequest
+func request_BeaconValidator_ProduceBlock_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconValidatorClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq ProduceBlockRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -192,17 +190,17 @@ func request_BeaconValidator_GetBlock_0(ctx context.Context, marshaler runtime.M
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BeaconValidator_GetBlock_0); err != nil {
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BeaconValidator_ProduceBlock_0); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 
-	msg, err := client.GetBlock(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	msg, err := client.ProduceBlock(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
 
 }
 
-func local_request_BeaconValidator_GetBlock_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconValidatorServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq ProposerBlockRequest
+func local_request_BeaconValidator_ProduceBlock_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconValidatorServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq ProduceBlockRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -226,47 +224,47 @@ func local_request_BeaconValidator_GetBlock_0(ctx context.Context, marshaler run
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BeaconValidator_GetBlock_0); err != nil {
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BeaconValidator_ProduceBlock_0); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 
-	msg, err := server.GetBlock(ctx, &protoReq)
+	msg, err := server.ProduceBlock(ctx, &protoReq)
 	return msg, metadata, err
 
 }
 
 var (
-	filter_BeaconValidator_GetAttestationData_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
+	filter_BeaconValidator_ProduceAttestationData_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_BeaconValidator_GetAttestationData_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconValidatorClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq AttestationDataRequest
+func request_BeaconValidator_ProduceAttestationData_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconValidatorClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq ProduceAttestationDataRequest
 	var metadata runtime.ServerMetadata
 
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BeaconValidator_GetAttestationData_0); err != nil {
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BeaconValidator_ProduceAttestationData_0); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 
-	msg, err := client.GetAttestationData(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	msg, err := client.ProduceAttestationData(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
 
 }
 
-func local_request_BeaconValidator_GetAttestationData_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconValidatorServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq AttestationDataRequest
+func local_request_BeaconValidator_ProduceAttestationData_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconValidatorServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq ProduceAttestationDataRequest
 	var metadata runtime.ServerMetadata
 
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BeaconValidator_GetAttestationData_0); err != nil {
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BeaconValidator_ProduceAttestationData_0); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 
-	msg, err := server.GetAttestationData(ctx, &protoReq)
+	msg, err := server.ProduceAttestationData(ctx, &protoReq)
 	return msg, metadata, err
 
 }
@@ -308,14 +306,14 @@ func local_request_BeaconValidator_GetAggregateAttestation_0(ctx context.Context
 }
 
 func request_BeaconValidator_SubmitAggregateAndProofs_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconValidatorClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq AggregateAndProofsSubmit
+	var protoReq SubmitAggregateAndProofsRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
 	if berr != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", berr)
 	}
-	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq.Data); err != nil && err != io.EOF {
+	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq); err != nil && err != io.EOF {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 
@@ -325,14 +323,14 @@ func request_BeaconValidator_SubmitAggregateAndProofs_0(ctx context.Context, mar
 }
 
 func local_request_BeaconValidator_SubmitAggregateAndProofs_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconValidatorServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq AggregateAndProofsSubmit
+	var protoReq SubmitAggregateAndProofsRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
 	if berr != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", berr)
 	}
-	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq.Data); err != nil && err != io.EOF {
+	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq); err != nil && err != io.EOF {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 
@@ -342,14 +340,14 @@ func local_request_BeaconValidator_SubmitAggregateAndProofs_0(ctx context.Contex
 }
 
 func request_BeaconValidator_SubmitBeaconCommitteeSubscription_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconValidatorClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq BeaconCommitteeSubscribeSubmit
+	var protoReq SubmitBeaconCommitteeSubscriptionsRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
 	if berr != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", berr)
 	}
-	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq.Data); err != nil && err != io.EOF {
+	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq); err != nil && err != io.EOF {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 
@@ -359,14 +357,14 @@ func request_BeaconValidator_SubmitBeaconCommitteeSubscription_0(ctx context.Con
 }
 
 func local_request_BeaconValidator_SubmitBeaconCommitteeSubscription_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconValidatorServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq BeaconCommitteeSubscribeSubmit
+	var protoReq SubmitBeaconCommitteeSubscriptionsRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
 	if berr != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", berr)
 	}
-	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq.Data); err != nil && err != io.EOF {
+	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq); err != nil && err != io.EOF {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 
@@ -381,7 +379,7 @@ func local_request_BeaconValidator_SubmitBeaconCommitteeSubscription_0(ctx conte
 // Note that using this registration option will cause many gRPC library features to stop working. Consider using RegisterBeaconValidatorHandlerFromEndpoint instead.
 func RegisterBeaconValidatorHandlerServer(ctx context.Context, mux *runtime.ServeMux, server BeaconValidatorServer) error {
 
-	mux.Handle("GET", pattern_BeaconValidator_GetAttesterDuties_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("POST", pattern_BeaconValidator_GetAttesterDuties_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
@@ -427,18 +425,18 @@ func RegisterBeaconValidatorHandlerServer(ctx context.Context, mux *runtime.Serv
 
 	})
 
-	mux.Handle("GET", pattern_BeaconValidator_GetBlock_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_BeaconValidator_ProduceBlock_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/ethereum.eth.v1.BeaconValidator/GetBlock")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/ethereum.eth.v1.BeaconValidator/ProduceBlock")
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_BeaconValidator_GetBlock_0(rctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_BeaconValidator_ProduceBlock_0(rctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -446,22 +444,22 @@ func RegisterBeaconValidatorHandlerServer(ctx context.Context, mux *runtime.Serv
 			return
 		}
 
-		forward_BeaconValidator_GetBlock_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_BeaconValidator_ProduceBlock_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("GET", pattern_BeaconValidator_GetAttestationData_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_BeaconValidator_ProduceAttestationData_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/ethereum.eth.v1.BeaconValidator/GetAttestationData")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/ethereum.eth.v1.BeaconValidator/ProduceAttestationData")
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_BeaconValidator_GetAttestationData_0(rctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_BeaconValidator_ProduceAttestationData_0(rctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -469,7 +467,7 @@ func RegisterBeaconValidatorHandlerServer(ctx context.Context, mux *runtime.Serv
 			return
 		}
 
-		forward_BeaconValidator_GetAttestationData_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_BeaconValidator_ProduceAttestationData_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -583,7 +581,7 @@ func RegisterBeaconValidatorHandler(ctx context.Context, mux *runtime.ServeMux, 
 // "BeaconValidatorClient" to call the correct interceptors.
 func RegisterBeaconValidatorHandlerClient(ctx context.Context, mux *runtime.ServeMux, client BeaconValidatorClient) error {
 
-	mux.Handle("GET", pattern_BeaconValidator_GetAttesterDuties_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("POST", pattern_BeaconValidator_GetAttesterDuties_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
@@ -623,43 +621,43 @@ func RegisterBeaconValidatorHandlerClient(ctx context.Context, mux *runtime.Serv
 
 	})
 
-	mux.Handle("GET", pattern_BeaconValidator_GetBlock_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_BeaconValidator_ProduceBlock_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/ethereum.eth.v1.BeaconValidator/GetBlock")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/ethereum.eth.v1.BeaconValidator/ProduceBlock")
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_BeaconValidator_GetBlock_0(rctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_BeaconValidator_ProduceBlock_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_BeaconValidator_GetBlock_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_BeaconValidator_ProduceBlock_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("GET", pattern_BeaconValidator_GetAttestationData_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_BeaconValidator_ProduceAttestationData_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/ethereum.eth.v1.BeaconValidator/GetAttestationData")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/ethereum.eth.v1.BeaconValidator/ProduceAttestationData")
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_BeaconValidator_GetAttestationData_0(rctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_BeaconValidator_ProduceAttestationData_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_BeaconValidator_GetAttestationData_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_BeaconValidator_ProduceAttestationData_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -731,9 +729,9 @@ var (
 
 	pattern_BeaconValidator_GetProposerDuties_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"eth", "v1", "validator", "duties", "proposer", "epoch"}, ""))
 
-	pattern_BeaconValidator_GetBlock_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"eth", "v1", "validator", "blocks", "slot"}, ""))
+	pattern_BeaconValidator_ProduceBlock_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"eth", "v1", "validator", "blocks", "slot"}, ""))
 
-	pattern_BeaconValidator_GetAttestationData_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1", "validator", "attestation_data"}, ""))
+	pattern_BeaconValidator_ProduceAttestationData_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1", "validator", "attestation_data"}, ""))
 
 	pattern_BeaconValidator_GetAggregateAttestation_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1", "validator", "aggregate_attestation"}, ""))
 
@@ -747,9 +745,9 @@ var (
 
 	forward_BeaconValidator_GetProposerDuties_0 = runtime.ForwardResponseMessage
 
-	forward_BeaconValidator_GetBlock_0 = runtime.ForwardResponseMessage
+	forward_BeaconValidator_ProduceBlock_0 = runtime.ForwardResponseMessage
 
-	forward_BeaconValidator_GetAttestationData_0 = runtime.ForwardResponseMessage
+	forward_BeaconValidator_ProduceAttestationData_0 = runtime.ForwardResponseMessage
 
 	forward_BeaconValidator_GetAggregateAttestation_0 = runtime.ForwardResponseMessage
 

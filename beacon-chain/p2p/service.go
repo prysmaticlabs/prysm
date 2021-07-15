@@ -27,8 +27,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/proto/beacon/p2p"
 	"github.com/prysmaticlabs/prysm/shared"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -64,7 +64,7 @@ type Service struct {
 	addrFilter            *multiaddr.Filters
 	ipLimiter             *leakybucket.Collector
 	privKey               *ecdsa.PrivateKey
-	metaData              interfaces.Metadata
+	metaData              p2p.Metadata
 	pubsub                *pubsub.PubSub
 	joinedTopics          map[string]*pubsub.Topic
 	joinedTopicsLock      sync.Mutex
@@ -345,7 +345,7 @@ func (s *Service) DiscoveryAddresses() ([]multiaddr.Multiaddr, error) {
 }
 
 // Metadata returns a copy of the peer's metadata.
-func (s *Service) Metadata() interfaces.Metadata {
+func (s *Service) Metadata() p2p.Metadata {
 	return s.metaData.Copy()
 }
 

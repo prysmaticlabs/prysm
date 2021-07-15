@@ -1,9 +1,10 @@
-package interfaces
+package wrapper
 
 import (
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/proto/beacon/p2p"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/interfaces/version"
+	"github.com/prysmaticlabs/prysm/shared/version"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -38,7 +39,7 @@ func (m MetadataV0) IsNil() bool {
 }
 
 // Copy performs a full copy of the underlying metadata object.
-func (m MetadataV0) Copy() Metadata {
+func (m MetadataV0) Copy() p2p.Metadata {
 	return WrappedMetadataV0(proto.Clone(m.md).(*pb.MetaDataV0))
 }
 
@@ -113,7 +114,7 @@ func (m MetadataV1) IsNil() bool {
 }
 
 // Copy performs a full copy of the underlying metadata object.
-func (m MetadataV1) Copy() Metadata {
+func (m MetadataV1) Copy() p2p.Metadata {
 	return WrappedMetadataV1(proto.Clone(m.md).(*pb.MetaDataV1))
 }
 

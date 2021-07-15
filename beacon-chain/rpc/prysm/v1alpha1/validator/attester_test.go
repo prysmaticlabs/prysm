@@ -31,13 +31,9 @@ import (
 )
 
 func TestProposeAttestation_OK(t *testing.T) {
-	db := dbutil.SetupDB(t)
-	ctx := context.Background()
-
 	attesterServer := &Server{
 		HeadFetcher:       &mock.ChainService{},
 		P2P:               &mockp2p.MockBroadcaster{},
-		BeaconDB:          db,
 		AttestationCache:  cache.NewAttestationCache(),
 		AttPool:           attestations.NewPool(),
 		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
@@ -45,7 +41,6 @@ func TestProposeAttestation_OK(t *testing.T) {
 	head := testutil.NewBeaconBlock()
 	head.Block.Slot = 999
 	head.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(head)))
 	root, err := head.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -63,8 +58,6 @@ func TestProposeAttestation_OK(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, state.SetSlot(params.BeaconConfig().SlotsPerEpoch+1))
 	require.NoError(t, state.SetValidators(validators))
-	require.NoError(t, db.SaveState(ctx, state, root))
-	require.NoError(t, db.SaveHeadBlockRoot(ctx, root))
 
 	sk, err := bls.RandKey()
 	require.NoError(t, err)
@@ -82,12 +75,9 @@ func TestProposeAttestation_OK(t *testing.T) {
 }
 
 func TestProposeAttestation_IncorrectSignature(t *testing.T) {
-	db := dbutil.SetupDB(t)
-
 	attesterServer := &Server{
 		HeadFetcher:       &mock.ChainService{},
 		P2P:               &mockp2p.MockBroadcaster{},
-		BeaconDB:          db,
 		AttestationCache:  cache.NewAttestationCache(),
 		AttPool:           attestations.NewPool(),
 		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
@@ -100,9 +90,6 @@ func TestProposeAttestation_IncorrectSignature(t *testing.T) {
 }
 
 func TestGetAttestationData_OK(t *testing.T) {
-	ctx := context.Background()
-	db := dbutil.SetupDB(t)
-
 	block := testutil.NewBeaconBlock()
 	block.Block.Slot = 3*params.BeaconConfig().SlotsPerEpoch + 1
 	targetBlock := testutil.NewBeaconBlock()
@@ -135,7 +122,6 @@ func TestGetAttestationData_OK(t *testing.T) {
 	}
 	offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 	attesterServer := &Server{
-		BeaconDB:         db,
 		P2P:              &mockp2p.MockBroadcaster{},
 		SyncChecker:      &mockSync.Sync{IsSyncing: false},
 		AttestationCache: cache.NewAttestationCache(),
@@ -150,9 +136,6 @@ func TestGetAttestationData_OK(t *testing.T) {
 		},
 		StateNotifier: chainService.StateNotifier(),
 	}
-	require.NoError(t, db.SaveState(ctx, beaconState, blockRoot))
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block)))
-	require.NoError(t, db.SaveHeadBlockRoot(ctx, blockRoot))
 
 	req := &ethpb.AttestationDataRequest{
 		CommitteeIndex: 0,
@@ -196,8 +179,7 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 	//
 	// More background: https://github.com/prysmaticlabs/prysm/issues/2153
 	// This test breaks if it doesnt use mainnet config
-	db := dbutil.SetupDB(t)
-	ctx := context.Background()
+
 	// Ensure HistoricalRootsLimit matches scenario
 	params.SetupTestConfigCleanup(t)
 	cfg := params.MainnetConfig()
@@ -240,7 +222,6 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 	}
 	offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 	attesterServer := &Server{
-		BeaconDB:         db,
 		P2P:              &mockp2p.MockBroadcaster{},
 		AttestationCache: cache.NewAttestationCache(),
 		HeadFetcher:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
@@ -251,9 +232,6 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 		TimeFetcher:   &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 		StateNotifier: chainService.StateNotifier(),
 	}
-	require.NoError(t, db.SaveState(ctx, beaconState, blockRoot))
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block)))
-	require.NoError(t, db.SaveHeadBlockRoot(ctx, blockRoot))
 
 	req := &ethpb.AttestationDataRequest{
 		CommitteeIndex: 0,
@@ -406,7 +384,6 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 	}
 	offset = int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 	attesterServer := &Server{
-		BeaconDB:            db,
 		P2P:                 &mockp2p.MockBroadcaster{},
 		SyncChecker:         &mockSync.Sync{IsSyncing: false},
 		AttestationCache:    cache.NewAttestationCache(),
@@ -446,9 +423,6 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 }
 
 func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
-	ctx := context.Background()
-	db := dbutil.SetupDB(t)
-
 	slot := types.Slot(5)
 	block := testutil.NewBeaconBlock()
 	block.Block.Slot = slot
@@ -481,7 +455,6 @@ func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 	}
 	offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 	attesterServer := &Server{
-		BeaconDB:         db,
 		P2P:              &mockp2p.MockBroadcaster{},
 		SyncChecker:      &mockSync.Sync{IsSyncing: false},
 		AttestationCache: cache.NewAttestationCache(),
@@ -494,9 +467,6 @@ func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 		TimeFetcher:   &mock.ChainService{Genesis: timeutils.Now().Add(time.Duration(-1*offset) * time.Second)},
 		StateNotifier: chainService.StateNotifier(),
 	}
-	require.NoError(t, db.SaveState(ctx, beaconState, blockRoot))
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block)))
-	require.NoError(t, db.SaveHeadBlockRoot(ctx, blockRoot))
 
 	req := &ethpb.AttestationDataRequest{
 		CommitteeIndex: 0,
@@ -524,12 +494,9 @@ func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 }
 
 func TestServer_SubscribeCommitteeSubnets_NoSlots(t *testing.T) {
-	db := dbutil.SetupDB(t)
-
 	attesterServer := &Server{
 		HeadFetcher:       &mock.ChainService{},
 		P2P:               &mockp2p.MockBroadcaster{},
-		BeaconDB:          db,
 		AttestationCache:  cache.NewAttestationCache(),
 		AttPool:           attestations.NewPool(),
 		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
@@ -544,8 +511,6 @@ func TestServer_SubscribeCommitteeSubnets_NoSlots(t *testing.T) {
 }
 
 func TestServer_SubscribeCommitteeSubnets_DifferentLengthSlots(t *testing.T) {
-	db := dbutil.SetupDB(t)
-
 	// fixed seed
 	s := rand.NewSource(10)
 	randGen := rand.New(s)
@@ -553,7 +518,6 @@ func TestServer_SubscribeCommitteeSubnets_DifferentLengthSlots(t *testing.T) {
 	attesterServer := &Server{
 		HeadFetcher:       &mock.ChainService{},
 		P2P:               &mockp2p.MockBroadcaster{},
-		BeaconDB:          db,
 		AttestationCache:  cache.NewAttestationCache(),
 		AttPool:           attestations.NewPool(),
 		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
@@ -581,7 +545,6 @@ func TestServer_SubscribeCommitteeSubnets_DifferentLengthSlots(t *testing.T) {
 }
 
 func TestServer_SubscribeCommitteeSubnets_MultipleSlots(t *testing.T) {
-	db := dbutil.SetupDB(t)
 	// fixed seed
 	s := rand.NewSource(10)
 	randGen := rand.New(s)
@@ -601,7 +564,6 @@ func TestServer_SubscribeCommitteeSubnets_MultipleSlots(t *testing.T) {
 	attesterServer := &Server{
 		HeadFetcher:       &mock.ChainService{State: state},
 		P2P:               &mockp2p.MockBroadcaster{},
-		BeaconDB:          db,
 		AttestationCache:  cache.NewAttestationCache(),
 		AttPool:           attestations.NewPool(),
 		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
