@@ -231,6 +231,7 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 			original := proto.Clone(tt.state)
 			s, err := v1.InitializeFromProto(tt.state)
 			require.NoError(t, err)
+			helpers.ClearCache()
 			newState, err := epoch.ProcessSlashings(s)
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, newState.Balances()[0], "ProcessSlashings({%v}) = newState; newState.Balances[0] = %d", original, newState.Balances()[0])
