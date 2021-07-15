@@ -258,7 +258,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "2d76cacafffa97be6f22bd41a5ca791d8ac1b97bc5d8768ae7680b82c27f14a9",
+    sha256 = "16094dad1bab4e8ab3adb60c10e311cd1e294cd7bbf5a89505f24bebd3d0e513",
     strip_prefix = "eth2.0-specs-" + eth2_spec_version[1:],
     url = "https://github.com/ethereum/eth2.0-specs/archive/refs/tags/%s.tar.gz" % eth2_spec_version,
 )
