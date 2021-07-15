@@ -44,7 +44,7 @@ func SignedBeaconBlockHeaderFromBlockInterface(sb interfaces.SignedBeaconBlock) 
 		return nil, errors.Wrap(err, "failed to get block header of block")
 	}
 	return &ethpb.SignedBeaconBlockHeader{
-		Header: h,
+		Header:    h,
 		Signature: sb.Signature(),
 	}, nil
 }
