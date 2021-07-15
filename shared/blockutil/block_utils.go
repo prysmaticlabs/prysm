@@ -35,10 +35,6 @@ func SignedBeaconBlockHeaderFromBlockInterface(sb interfaces.SignedBeaconBlock) 
 		return nil, errors.New("nil block")
 	}
 
-	bodyRoot, err := b.Body().HashTreeRoot()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get body root of block")
-	}
 	h, err := BeaconBlockHeaderFromBlockInterface(b)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get block header of block")
