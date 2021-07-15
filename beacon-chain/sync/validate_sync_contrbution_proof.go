@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"bytes"
 	"context"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -9,12 +10,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	"github.com/prysmaticlabs/prysm/shared/version"
 	"go.opencensus.io/trace"
 )
 
@@ -74,19 +76,31 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 	}
 
 	// The aggregator's validator index is in the declared subcommittee of the current sync committee.
-	committeeIndices, err := s.cfg.Chain.HeadCurrentSyncCommitteeIndices(ctx, m.Message.AggregatorIndex, m.Message.Contribution.Slot)
+	// This could be better, retrieving the state multiple times with copies can easily lead to higher resource consumption by the node.
+	blkState, err := s.cfg.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(m.Message.Contribution.BlockRoot))
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
-	if len(committeeIndices) == 0 {
+	bState, ok := blkState.(iface.BeaconStateAltair)
+	if !ok || bState.Version() != version.Altair {
+		log.Errorf("Sync contribution referencing non-altair state")
+		return pubsub.ValidationReject
+	}
+	syncPubkeys, err := altair.SyncSubCommitteePubkeys(bState, types.CommitteeIndex(m.Message.Contribution.SubcommitteeIndex))
+	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
+	aggregator, err := bState.ValidatorAtIndexReadOnly(m.Message.AggregatorIndex)
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationIgnore
+	}
+	aggPubkey := aggregator.PublicKey()
 	isValid := false
-	subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
-	for _, i := range committeeIndices {
-		if i/subCommitteeSize == m.Message.Contribution.SubcommitteeIndex {
+	for _, pk := range syncPubkeys {
+		if bytes.Equal(pk, aggPubkey[:]) {
 			isValid = true
 			break
 		}
@@ -96,22 +110,18 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 	}
 
 	// The `contribution_and_proof.selection_proof` is a valid signature of the `SyncAggregatorSelectionData`.
-	if err := s.verifySyncSelectionData(ctx, m.Message); err != nil {
+	if err := altair.VerifySyncSelectionData(bState, m.Message); err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
 
 	// The aggregator signature, `signed_contribution_and_proof.signature`, is valid.
-	d, err := s.cfg.Chain.HeadSyncContributionProofDomain(ctx, m.Message.Contribution.Slot)
+	d, err := helpers.Domain(bState.Fork(), helpers.SlotToEpoch(bState.Slot()), params.BeaconConfig().DomainContributionAndProof, bState.GenesisValidatorRoot())
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
-	pubkey, err := s.cfg.Chain.HeadValidatorIndexToPublicKey(ctx, m.Message.AggregatorIndex)
-	if err != nil {
-		return pubsub.ValidationIgnore
-	}
-	if err := helpers.VerifySigningRoot(m.Message, pubkey[:], m.Signature, d); err != nil {
+	if err := helpers.VerifySigningRoot(m.Message, aggPubkey[:], m.Signature, d); err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
@@ -119,10 +129,6 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 	// The aggregate signature is valid for the message `beacon_block_root` and aggregate pubkey
 	// derived from the participation info in `aggregation_bits` for the subcommittee specified by the `contribution.subcommittee_index`.
 	activePubkeys := []bls.PublicKey{}
-	syncPubkeys, err := s.cfg.Chain.HeadSyncCommitteePubKeys(ctx, m.Message.Contribution.Slot, types.CommitteeIndex(m.Message.Contribution.SubcommitteeIndex))
-	if err != nil {
-		return pubsub.ValidationIgnore
-	}
 	bVector := m.Message.Contribution.AggregationBits
 	for i, pk := range syncPubkeys {
 		if bVector.BitAt(uint64(i)) {
@@ -139,7 +145,7 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationReject
 	}
-	d, err = s.cfg.Chain.HeadSyncCommitteeDomain(ctx, m.Message.Contribution.Slot)
+	d, err = helpers.Domain(bState.Fork(), helpers.SlotToEpoch(bState.Slot()), params.BeaconConfig().DomainSyncCommittee, bState.GenesisValidatorRoot())
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
@@ -180,19 +186,4 @@ func (s *Service) setSyncContributionIndexSlotSeen(slot types.Slot, aggregatorIn
 	b := append(bytesutil.Bytes32(uint64(aggregatorIndex)), bytesutil.Bytes32(uint64(slot))...)
 	b = append(b, bytesutil.Bytes32(uint64(subComIdx))...)
 	s.seenSyncContributionCache.Add(string(b), true)
-}
-
-// verifySyncSelectionData verifies that the provided sync contribution has a valid
-// selection proof.
-func (s *Service) verifySyncSelectionData(ctx context.Context, m *prysmv2.ContributionAndProof) error {
-	selectionData := &pb.SyncAggregatorSelectionData{Slot: m.Contribution.Slot, SubcommitteeIndex: uint64(m.Contribution.SubcommitteeIndex)}
-	domain, err := s.cfg.Chain.HeadSyncSelectionProofDomain(ctx, m.Contribution.Slot)
-	if err != nil {
-		return err
-	}
-	pubkey, err := s.cfg.Chain.HeadValidatorIndexToPublicKey(ctx, m.AggregatorIndex)
-	if err != nil {
-		return err
-	}
-	return helpers.VerifySigningRoot(selectionData, pubkey[:], m.SelectionProof, domain)
 }
