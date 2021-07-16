@@ -20,7 +20,7 @@ type Phase0SignedBeaconBlock struct {
 
 // WrappedPhase0SignedBeaconBlock is constructor which wraps a protobuf phase 0 block
 // with the block wrapper.
-func WrappedPhase0SignedBeaconBlock(b *eth.SignedBeaconBlock) Phase0SignedBeaconBlock {
+func WrappedPhase0SignedBeaconBlock(b *eth.SignedBeaconBlock) interfaces.SignedBeaconBlock {
 	return Phase0SignedBeaconBlock{b: b}
 }
 
@@ -97,7 +97,7 @@ type Phase0BeaconBlock struct {
 
 // WrappedPhase0BeaconBlock is constructor which wraps a protobuf phase 0 object
 // with the block wrapper.
-func WrappedPhase0BeaconBlock(b *eth.BeaconBlock) Phase0BeaconBlock {
+func WrappedPhase0BeaconBlock(b *eth.BeaconBlock) interfaces.BeaconBlock {
 	return Phase0BeaconBlock{b: b}
 }
 
@@ -177,7 +177,7 @@ type Phase0BeaconBlockBody struct {
 
 // WrappedPhase0BeaconBlockBody is constructor which wraps a protobuf phase 0 object
 // with the block wrapper.
-func WrappedPhase0BeaconBlockBody(b *eth.BeaconBlockBody) Phase0BeaconBlockBody {
+func WrappedPhase0BeaconBlockBody(b *eth.BeaconBlockBody) interfaces.BeaconBlockBody {
 	return Phase0BeaconBlockBody{b: b}
 }
 
