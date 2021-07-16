@@ -3,6 +3,7 @@ package kv
 import (
 	"bytes"
 	"context"
+
 	"github.com/golang/snappy"
 	v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"

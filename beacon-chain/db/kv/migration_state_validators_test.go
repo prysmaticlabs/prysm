@@ -3,6 +3,8 @@ package kv
 import (
 	"bytes"
 	"context"
+	"testing"
+
 	"github.com/golang/snappy"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -11,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"go.etcd.io/bbolt"
-	"testing"
 )
 
 func Test_migrateStateValidators(t *testing.T) {
