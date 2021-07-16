@@ -118,7 +118,7 @@ func (s *Service) Start() {
 	s.waitForSync(s.genesisTime)
 
 	log.Info("Backfilling any missing data before starting slasher listener")
-	s.waitForDataBackfill()
+	s.waitForDataBackfill(s.params.historyLength)
 
 	log.Info("Completed chain sync, starting slashing detection")
 	go s.processQueuedAttestations(s.ctx, s.slotTicker.C())
@@ -128,14 +128,13 @@ func (s *Service) Start() {
 	go s.pruneSlasherData(s.ctx, s.slotTicker.C())
 }
 
-func (s *Service) waitForDataBackfill() {
+func (s *Service) waitForDataBackfill(wssPeriod tyes.Epoch) {
 	// The lowest epoch we need to backfill for slasher is based on the
 	// head epoch minus the weak subjectivity period.
-	wssPeriod := types.Epoch(4)
 	headSlot := s.serviceCfg.HeadStateFetcher.HeadSlot()
 	headEpoch := helpers.SlotToEpoch(headSlot)
 	lowestEpoch := headEpoch
-	if lowestEpoch > 4 {
+	if lowestEpoch > wssPeriod {
 		lowestEpoch = lowestEpoch - wssPeriod
 	}
 
@@ -171,16 +170,17 @@ func (s *Service) waitForDataBackfill() {
 	}
 }
 
+// Backfill slasher's historical database from blocks in a range of epochs.
+// The max range between start and end is approximately 4096 epochs,
+// so we perform backfilling in chunks of a set size to reduce impact
+// on disk reads and writes during the procedure.
 func (s *Service) backfill(start, end types.Epoch) error {
-	// The max range between start and end is approximately 4096 epochs,
-	// so we perform backfilling in chunks of a set size to reduce impact
-	// on disk reads and writes during the procedure.
 	f := filters.NewFilter().SetStartEpoch(start).SetEndEpoch(end)
 	blocks, roots, err := s.serviceCfg.BeaconDatabase.Blocks(s.ctx, f)
 	if err != nil {
 		return err
 	}
-	headers := make([]*slashertypes.SignedBlockHeaderWrapper, len(blocks))
+	headers := make([]*slashertypes.SignedBlockHeaderWrapper, 0, len(blocks))
 	for i, block := range blocks {
 		header, err := blockutil.SignedBeaconBlockHeaderFromBlock(block)
 		if err != nil {
