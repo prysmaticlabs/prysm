@@ -53,7 +53,6 @@ func e2eMinimal(t *testing.T, usePrysmSh bool) {
 			ev.MetricsCheck,
 			ev.ValidatorsAreActive,
 			ev.ValidatorsParticipating,
-			ev.ValidatorSyncParticipation,
 			ev.FinalizationOccurs,
 			ev.ProcessesDepositsInBlocks,
 			ev.VerifyBlockGraffiti,
