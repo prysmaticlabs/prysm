@@ -34,31 +34,28 @@ func forkOccurs(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return err
 	}
-	for {
-		if ctx.Err() == context.Canceled {
-			return errors.New("context canceled prematurely")
-		}
-		res, err := stream.Recv()
-		if err != nil {
-			return err
-		}
-		if res == nil || res.Block == nil {
-			return errors.New("nil block returned by beacon node")
-		}
-		if res.GetPhase0Block() == nil && res.GetAltairBlock() == nil {
-			return errors.New("nil block returned by beacon node")
-		}
-		if res.GetPhase0Block() != nil {
-			return errors.New("phase 0 block returned after altair fork has occurred")
-		}
-		blk := wrapperv2.WrappedAltairSignedBeaconBlock(res.GetAltairBlock())
-		if blk == nil || blk.IsNil() {
-			return errors.New("nil altair block received from stream")
-		}
-		if blk.Block().Slot() < fSlot {
-			return errors.Errorf("wanted a block >= %d but received %d", fSlot, blk.Block().Slot())
-		}
-		break
+	if ctx.Err() == context.Canceled {
+		return errors.New("context canceled prematurely")
+	}
+	res, err := stream.Recv()
+	if err != nil {
+		return err
+	}
+	if res == nil || res.Block == nil {
+		return errors.New("nil block returned by beacon node")
+	}
+	if res.GetPhase0Block() == nil && res.GetAltairBlock() == nil {
+		return errors.New("nil block returned by beacon node")
+	}
+	if res.GetPhase0Block() != nil {
+		return errors.New("phase 0 block returned after altair fork has occurred")
+	}
+	blk := wrapperv2.WrappedAltairSignedBeaconBlock(res.GetAltairBlock())
+	if blk == nil || blk.IsNil() {
+		return errors.New("nil altair block received from stream")
+	}
+	if blk.Block().Slot() < fSlot {
+		return errors.Errorf("wanted a block >= %d but received %d", fSlot, blk.Block().Slot())
 	}
 	return nil
 }
