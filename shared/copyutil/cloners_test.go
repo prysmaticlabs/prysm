@@ -90,6 +90,36 @@ func TestCopyBeaconBlockBody(t *testing.T) {
 	assert.NotEmpty(t, got, "Copied beacon block body has empty fields")
 }
 
+func TestCopySignedBeaconBlockAltair(t *testing.T) {
+	sbb := genSignedBeaconBlockAltair()
+
+	got := CopySignedBeaconBlockAltair(sbb)
+	if !reflect.DeepEqual(got, sbb) {
+		t.Errorf("CopySignedBeaconBlockAltair() = %v, want %v", got, sbb)
+	}
+	assert.NotEmpty(t, sbb, "Copied signed beacon block altair has empty fields")
+}
+
+func TestCopyBeaconBlockAltair(t *testing.T) {
+	b := genBeaconBlockAltair()
+
+	got := CopyBeaconBlockAltair(b)
+	if !reflect.DeepEqual(got, b) {
+		t.Errorf("CopyBeaconBlockAltair() = %v, want %v", got, b)
+	}
+	assert.NotEmpty(t, b, "Copied beacon block altair has empty fields")
+}
+
+func TestCopyBeaconBlockBodyAltair(t *testing.T) {
+	bb := genBeaconBlockBodyAltair()
+
+	got := CopyBeaconBlockBodyAltair(bb)
+	if !reflect.DeepEqual(got, bb) {
+		t.Errorf("CopyBeaconBlockBodyAltair() = %v, want %v", got, bb)
+	}
+	assert.NotEmpty(t, bb, "Copied beacon block body altair has empty fields")
+}
+
 func TestCopyProposerSlashings(t *testing.T) {
 	ps := genProposerSlashings(10)
 
@@ -220,6 +250,16 @@ func TestCopyValidator(t *testing.T) {
 	assert.NotEmpty(t, got, "Copied validator has empty fields")
 }
 
+func TestCopySyncCommitteeMessage(t *testing.T) {
+	scm := genSyncCommitteeMessage()
+
+	got := CopySyncCommitteeMessage(scm)
+	if !reflect.DeepEqual(got, scm) {
+		t.Errorf("CopySyncCommitteeMessage() = %v, want %v", got, scm)
+	}
+	assert.NotEmpty(t, got, "Copied sync committee message has empty fields")
+}
+
 func TestCopySyncCommitteeContribution(t *testing.T) {
 	scc := genSyncCommitteeContribution()
 
@@ -228,6 +268,16 @@ func TestCopySyncCommitteeContribution(t *testing.T) {
 		t.Errorf("CopySyncCommitteeContribution() = %v, want %v", got, scc)
 	}
 	assert.NotEmpty(t, got, "Copied sync committee contribution has empty fields")
+}
+
+func TestCopySyncAggregate(t *testing.T) {
+	sa := genSyncAggregate()
+
+	got := CopySyncAggregate(sa)
+	if !reflect.DeepEqual(got, sa) {
+		t.Errorf("CopySyncAggregate() = %v, want %v", got, sa)
+	}
+	assert.NotEmpty(t, got, "Copied sync aggregate has empty fields")
 }
 
 func bytes() []byte {
@@ -445,5 +495,52 @@ func genSyncCommitteeContribution() *prysmv2.SyncCommitteeContribution {
 		SubcommitteeIndex: 4444,
 		AggregationBits:   bytes(),
 		Signature:         bytes(),
+	}
+}
+
+func genSyncAggregate() *prysmv2.SyncAggregate {
+	return &prysmv2.SyncAggregate{
+		SyncCommitteeBits:      bytes(),
+		SyncCommitteeSignature: bytes(),
+	}
+}
+
+func genBeaconBlockBodyAltair() *prysmv2.BeaconBlockBodyAltair {
+	return &prysmv2.BeaconBlockBodyAltair{
+		RandaoReveal:      bytes(),
+		Eth1Data:          genEth1Data(),
+		Graffiti:          bytes(),
+		ProposerSlashings: genProposerSlashings(5),
+		AttesterSlashings: genAttesterSlashings(5),
+		Attestations:      genAttestations(10),
+		Deposits:          genDeposits(5),
+		VoluntaryExits:    genSignedVoluntaryExits(12),
+		SyncAggregate:     genSyncAggregate(),
+	}
+}
+
+func genBeaconBlockAltair() *prysmv2.BeaconBlockAltair {
+	return &prysmv2.BeaconBlockAltair{
+		Slot:          123455,
+		ProposerIndex: 55433,
+		ParentRoot:    bytes(),
+		StateRoot:     bytes(),
+		Body:          genBeaconBlockBodyAltair(),
+	}
+}
+
+func genSignedBeaconBlockAltair() *prysmv2.SignedBeaconBlockAltair {
+	return &prysmv2.SignedBeaconBlockAltair{
+		Block:     genBeaconBlockAltair(),
+		Signature: bytes(),
+	}
+}
+
+func genSyncCommitteeMessage() *prysmv2.SyncCommitteeMessage {
+	return &prysmv2.SyncCommitteeMessage{
+		Slot:           424555,
+		BlockRoot:      bytes(),
+		ValidatorIndex: 5443,
+		Signature:      bytes(),
 	}
 }
