@@ -1,461 +1,151 @@
 package copyutil
 
 import (
+	"math/rand"
 	"reflect"
 	"testing"
 
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
 
-func TestCopyAttestation(t *testing.T) {
-	att := genAtt()
-	copiedAtt := CopyAttestation(att)
-
-	v := reflect.ValueOf(copiedAtt).Elem()
-	for i := 0; i < v.NumField(); i++ {
-		if v.Field(i).Kind() == reflect.Slice {
-			// Check length
-		}
-	}
-}
-
-func TestCopyAttestationData(t *testing.T) {
-	type args struct {
-		attData *ethpb.AttestationData
-	}
-	tests := []struct {
-		name string
-		args args
-		want *ethpb.AttestationData
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := CopyAttestationData(tt.args.attData); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("CopyAttestationData() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestCopyAttestations(t *testing.T) {
-	type args struct {
-		attestations []*ethpb.Attestation
-	}
-	tests := []struct {
-		name string
-		args args
-		want []*ethpb.Attestation
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := CopyAttestations(tt.args.attestations); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("CopyAttestations() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
+	atts := genAttestations(10)
 
-func TestCopyAttesterSlashings(t *testing.T) {
-	type args struct {
-		slashings []*ethpb.AttesterSlashing
+	got := CopyAttestations(atts)
+	if !reflect.DeepEqual(got, atts) {
+		t.Errorf("CopyAttestations() = %v, want %v", got, atts)
 	}
-	tests := []struct {
-		name string
-		args args
-		want []*ethpb.AttesterSlashing
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := CopyAttesterSlashings(tt.args.slashings); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("CopyAttesterSlashings() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestCopyBeaconBlock(t *testing.T) {
-	type args struct {
-		block *ethpb.BeaconBlock
-	}
-	tests := []struct {
-		name string
-		args args
-		want *ethpb.BeaconBlock
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := CopyBeaconBlock(tt.args.block); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("CopyBeaconBlock() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestCopyBeaconBlockBody(t *testing.T) {
-	type args struct {
-		body *ethpb.BeaconBlockBody
-	}
-	tests := []struct {
-		name string
-		args args
-		want *ethpb.BeaconBlockBody
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := CopyBeaconBlockBody(tt.args.body); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("CopyBeaconBlockBody() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestCopyBeaconBlockHeader(t *testing.T) {
-	type args struct {
-		header *ethpb.BeaconBlockHeader
-	}
-	tests := []struct {
-		name string
-		args args
-		want *ethpb.BeaconBlockHeader
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := CopyBeaconBlockHeader(tt.args.header); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("CopyBeaconBlockHeader() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestCopyCheckpoint(t *testing.T) {
-	type args struct {
-		cp *ethpb.Checkpoint
-	}
-	tests := []struct {
-		name string
-		args args
-		want *ethpb.Checkpoint
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := CopyCheckpoint(tt.args.cp); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("CopyCheckpoint() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestCopyDeposit(t *testing.T) {
-	type args struct {
-		deposit *ethpb.Deposit
-	}
-	tests := []struct {
-		name string
-		args args
-		want *ethpb.Deposit
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := CopyDeposit(tt.args.deposit); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("CopyDeposit() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestCopyDepositData(t *testing.T) {
-	type args struct {
-		depData *ethpb.Deposit_Data
-	}
-	tests := []struct {
-		name string
-		args args
-		want *ethpb.Deposit_Data
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := CopyDepositData(tt.args.depData); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("CopyDepositData() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestCopyDeposits(t *testing.T) {
-	type args struct {
-		deposits []*ethpb.Deposit
-	}
-	tests := []struct {
-		name string
-		args args
-		want []*ethpb.Deposit
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := CopyDeposits(tt.args.deposits); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("CopyDeposits() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+	assert.NotEmpty(t, got, "Copied attestations have empty fields")
 }
 
 func TestCopyETH1Data(t *testing.T) {
-	type args struct {
-		data *ethpb.Eth1Data
-	}
-	tests := []struct {
-		name string
-		args args
-		want *ethpb.Eth1Data
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := CopyETH1Data(tt.args.data); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("CopyETH1Data() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
+	data := genEth1Data()
 
-func TestCopyIndexedAttestation(t *testing.T) {
-	type args struct {
-		indexedAtt *ethpb.IndexedAttestation
+	got := CopyETH1Data(data)
+	if !reflect.DeepEqual(got, data) {
+		t.Errorf("CopyETH1Data() = %v, want %v", got, data)
 	}
-	tests := []struct {
-		name string
-		args args
-		want *ethpb.IndexedAttestation
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := CopyIndexedAttestation(tt.args.indexedAtt); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("CopyIndexedAttestation() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+	assert.NotEmpty(t, got, "Copied eth1data has empty fields")
 }
 
 func TestCopyPendingAttestation(t *testing.T) {
-	type args struct {
-		att *pbp2p.PendingAttestation
+	pa := genPendingAttestation()
+
+	got := CopyPendingAttestation(pa)
+	if !reflect.DeepEqual(got, pa) {
+		t.Errorf("CopyPendingAttestation() = %v, want %v", got, pa)
 	}
-	tests := []struct {
-		name string
-		args args
-		want *pbp2p.PendingAttestation
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := CopyPendingAttestation(tt.args.att); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("CopyPendingAttestation() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+	assert.NotEmpty(t, got, "Copied pending attestation has empty fields")
 }
 
-func TestCopyProposerSlashing(t *testing.T) {
-	type args struct {
-		slashing *ethpb.ProposerSlashing
+func TestCopyAttestation(t *testing.T) {
+	att := genAttestation()
+
+	got := CopyAttestation(att)
+	if !reflect.DeepEqual(got, att) {
+		t.Errorf("CopyAttestation() = %v, want %v", got, att)
 	}
-	tests := []struct {
-		name string
-		args args
-		want *ethpb.ProposerSlashing
-	}{
-		// TODO: Add test cases.
+	assert.NotEmpty(t, got, "Copied attestation has empty fields")
+}
+func TestCopyAttestationData(t *testing.T) {
+	att := genAttData()
+
+	got := CopyAttestationData(att)
+	if !reflect.DeepEqual(got, att) {
+		t.Errorf("CopyAttestationData() = %v, want %v", got, att)
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := CopyProposerSlashing(tt.args.slashing); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("CopyProposerSlashing() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+	assert.NotEmpty(t, got, "Copied attestation data has empty fields")
 }
 
-func TestCopyProposerSlashings(t *testing.T) {
-	type args struct {
-		slashings []*ethpb.ProposerSlashing
+func TestCopyCheckpoint(t *testing.T) {
+	cp := genCheckpoint()
+
+	got := CopyCheckpoint(cp)
+	if !reflect.DeepEqual(got, cp) {
+		t.Errorf("CopyCheckpoint() = %v, want %v", got, cp)
 	}
-	tests := []struct {
-		name string
-		args args
-		want []*ethpb.ProposerSlashing
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := CopyProposerSlashings(tt.args.slashings); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("CopyProposerSlashings() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+	assert.NotEmpty(t, got, "Copied checkpoint has empty fields")
 }
 
 func TestCopySignedBeaconBlock(t *testing.T) {
-	type args struct {
-		sigBlock *ethpb.SignedBeaconBlock
+	blk := genSignedBeaconBlock()
+
+	got := CopySignedBeaconBlock(blk)
+	if !reflect.DeepEqual(got, blk) {
+		t.Errorf("CopySignedBeaconBlock() = %v, want %v", got, blk)
 	}
-	tests := []struct {
-		name string
-		args args
-		want *ethpb.SignedBeaconBlock
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := CopySignedBeaconBlock(tt.args.sigBlock); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("CopySignedBeaconBlock() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+	assert.NotEmpty(t, got, "Copied signed beacon block has empty fields")
 }
 
-func TestCopySignedBeaconBlockHeader(t *testing.T) {
-	type args struct {
-		header *ethpb.SignedBeaconBlockHeader
+func TestCopyBeaconBlock(t *testing.T) {
+	blk := genBeaconBlock()
+
+	got := CopyBeaconBlock(blk)
+	if !reflect.DeepEqual(got, blk) {
+		t.Errorf("CopyBeaconBlock() = %v, want %v", got, blk)
 	}
-	tests := []struct {
-		name string
-		args args
-		want *ethpb.SignedBeaconBlockHeader
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := CopySignedBeaconBlockHeader(tt.args.header); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("CopySignedBeaconBlockHeader() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+	assert.NotEmpty(t, got, "Copied beacon block has empty fields")
 }
 
-func TestCopySignedVoluntaryExit(t *testing.T) {
-	type args struct {
-		exit *ethpb.SignedVoluntaryExit
+func TestCopyBeaconBlockBody(t *testing.T) {
+	body := genBeaconBlockBody()
+
+	got := CopyBeaconBlockBody(body)
+	if !reflect.DeepEqual(got, body) {
+		t.Errorf("CopyBeaconBlockBody() = %v, want %v", got, body)
 	}
-	tests := []struct {
-		name string
-		args args
-		want *ethpb.SignedVoluntaryExit
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := CopySignedVoluntaryExit(tt.args.exit); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("CopySignedVoluntaryExit() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+	assert.NotEmpty(t, got, "Copied beacon block body has empty fields")
 }
 
-func TestCopySignedVoluntaryExits(t *testing.T) {
-	type args struct {
-		exits []*ethpb.SignedVoluntaryExit
+func TestCopyProposerSlashings(t *testing.T) {
+	ps := genProposerSlashings(10)
+
+	got := CopyProposerSlashings(ps)
+	if !reflect.DeepEqual(got, ps) {
+		t.Errorf("CopyProposerSlashings() = %v, want %v", got, ps)
 	}
-	tests := []struct {
-		name string
-		args args
-		want []*ethpb.SignedVoluntaryExit
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := CopySignedVoluntaryExits(tt.args.exits); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("CopySignedVoluntaryExits() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+	assert.NotEmpty(t, got, "Copied proposer slashings have empty fields")
 }
 
-func TestCopySyncCommitteeContribution(t *testing.T) {
-	type args struct {
-		c *prysmv2.SyncCommitteeContribution
+// TODO: the rest of the copy methods.
+
+func bytes() []byte {
+	b := make([]byte, 32)
+	_, err := rand.Read(b)
+	if err != nil {
+		panic(err)
 	}
-	tests := []struct {
-		name string
-		args args
-		want *prysmv2.SyncCommitteeContribution
-	}{
-		// TODO: Add test cases.
+	for i := 0; i < 32; i++ {
+		if b[i] == 0x00 {
+			b[i] = uint8(rand.Int())
+		}
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := CopySyncCommitteeContribution(tt.args.c); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("CopySyncCommitteeContribution() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+	return b
 }
 
-func TestCopyValidator(t *testing.T) {
-	type args struct {
-		val *ethpb.Validator
-	}
-	tests := []struct {
-		name string
-		args args
-		want *ethpb.Validator
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := CopyValidator(tt.args.val); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("CopyValidator() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-var bytes = []byte{'a'}
-
-func genAtt() *ethpb.Attestation {
+func genAttestation() *ethpb.Attestation {
 	return &ethpb.Attestation{
-		AggregationBits: bytes,
+		AggregationBits: bytes(),
 		Data:            genAttData(),
-		Signature:       bytes,
+		Signature:       bytes(),
 	}
+}
+
+func genAttestations(num int) []*ethpb.Attestation {
+	atts := make([]*ethpb.Attestation, num)
+	for i := 0; i < num; i++ {
+		atts[i] = genAttestation()
+	}
+	return atts
 }
 
 func genAttData() *ethpb.AttestationData {
 	return &ethpb.AttestationData{
 		Slot:            1,
 		CommitteeIndex:  2,
-		BeaconBlockRoot: bytes,
+		BeaconBlockRoot: bytes(),
 		Source:          genCheckpoint(),
 		Target:          genCheckpoint(),
 	}
@@ -464,6 +154,154 @@ func genAttData() *ethpb.AttestationData {
 func genCheckpoint() *ethpb.Checkpoint {
 	return &ethpb.Checkpoint{
 		Epoch: 1,
-		Root:  bytes,
+		Root:  bytes(),
 	}
+}
+
+func genEth1Data() *ethpb.Eth1Data {
+	return &ethpb.Eth1Data{
+		DepositRoot:  bytes(),
+		DepositCount: 4,
+		BlockHash:    bytes(),
+	}
+}
+
+func genPendingAttestation() *pbp2p.PendingAttestation {
+	return &pbp2p.PendingAttestation{
+		AggregationBits: bytes(),
+		Data:            genAttData(),
+		InclusionDelay:  3,
+		ProposerIndex:   5,
+	}
+}
+
+func genSignedBeaconBlock() *ethpb.SignedBeaconBlock {
+	return &ethpb.SignedBeaconBlock{
+		Block:     genBeaconBlock(),
+		Signature: bytes(),
+	}
+}
+
+func genBeaconBlock() *ethpb.BeaconBlock {
+	return &ethpb.BeaconBlock{
+		Slot:          4,
+		ProposerIndex: 5,
+		ParentRoot:    bytes(),
+		StateRoot:     bytes(),
+		Body:          genBeaconBlockBody(),
+	}
+}
+
+func genBeaconBlockBody() *ethpb.BeaconBlockBody {
+	return &ethpb.BeaconBlockBody{
+		RandaoReveal:      bytes(),
+		Eth1Data:          genEth1Data(),
+		Graffiti:          bytes(),
+		ProposerSlashings: genProposerSlashings(5),
+		AttesterSlashings: genAttesterSlashings(5),
+		Attestations:      genAttestations(5),
+		Deposits:          genDeposits(5),
+		VoluntaryExits:    genSignedVoluntaryExits(5),
+	}
+}
+
+func genProposerSlashing() *ethpb.ProposerSlashing {
+	return &ethpb.ProposerSlashing{
+		Header_1: genSignedBeaconBlockHeader(),
+		Header_2: genSignedBeaconBlockHeader(),
+	}
+}
+
+func genProposerSlashings(num int) []*ethpb.ProposerSlashing {
+	ps := make([]*ethpb.ProposerSlashing, num)
+	for i := 0; i < num; i++ {
+		ps[i] = genProposerSlashing()
+	}
+	return ps
+}
+
+func genAttesterSlashing() *ethpb.AttesterSlashing {
+	return &ethpb.AttesterSlashing{
+		Attestation_1: genIndexedAttestation(),
+		Attestation_2: genIndexedAttestation(),
+	}
+}
+
+func genIndexedAttestation() *ethpb.IndexedAttestation {
+	return &ethpb.IndexedAttestation{
+		AttestingIndices: []uint64{1, 2, 3},
+		Data:             genAttData(),
+		Signature:        bytes(),
+	}
+}
+
+func genAttesterSlashings(num int) []*ethpb.AttesterSlashing {
+	as := make([]*ethpb.AttesterSlashing, num)
+	for i := 0; i < num; i++ {
+		as[i] = genAttesterSlashing()
+	}
+	return as
+}
+
+func genBeaconBlockHeader() *ethpb.BeaconBlockHeader {
+	return &ethpb.BeaconBlockHeader{
+		Slot:          10,
+		ProposerIndex: 15,
+		ParentRoot:    bytes(),
+		StateRoot:     bytes(),
+		BodyRoot:      bytes(),
+	}
+}
+
+func genSignedBeaconBlockHeader() *ethpb.SignedBeaconBlockHeader {
+	return &ethpb.SignedBeaconBlockHeader{
+		Header:    genBeaconBlockHeader(),
+		Signature: bytes(),
+	}
+}
+
+func genDepositData() *ethpb.Deposit_Data {
+	return &ethpb.Deposit_Data{
+		PublicKey:             bytes(),
+		WithdrawalCredentials: bytes(),
+		Amount:                20000,
+		Signature:             bytes(),
+	}
+}
+
+func genDeposit() *ethpb.Deposit {
+	return &ethpb.Deposit{
+		Data:  genDepositData(),
+		Proof: [][]byte{bytes(), bytes(), bytes(), bytes()},
+	}
+}
+
+func genDeposits(num int) []*ethpb.Deposit {
+	d := make([]*ethpb.Deposit, num)
+	for i := 0; i < num; i++ {
+		d[i] = genDeposit()
+	}
+	return d
+}
+
+func genVoluntaryExit() *ethpb.VoluntaryExit {
+	return &ethpb.VoluntaryExit{
+		Epoch:          5432,
+		ValidatorIndex: 888888,
+	}
+}
+
+func genSignedVoluntaryExit() *ethpb.SignedVoluntaryExit {
+	return &ethpb.SignedVoluntaryExit{
+		Exit:      genVoluntaryExit(),
+		Signature: bytes(),
+	}
+}
+
+func genSignedVoluntaryExits(num int) []*ethpb.SignedVoluntaryExit {
+	sv := make([]*ethpb.SignedVoluntaryExit, num)
+	for i := 0; i < num; i++ {
+		sv[i] = genSignedVoluntaryExit()
+	}
+	return sv
 }
