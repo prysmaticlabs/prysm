@@ -101,6 +101,25 @@ func TestGetDuties(t *testing.T) {
 	})
 
 	t.Run("Require slot processing", func(t *testing.T) {
+		// We create local variables to not interfere with other tests.
+		// Slot processing might have unexpected side-effects.
+
+		bs, err := state.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+		require.NoError(t, err, "Could not set up genesis state")
+		// Set state to non-epoch start slot.
+		require.NoError(t, bs.SetSlot(5))
+		genesisRoot, err := genesis.Block.HashTreeRoot()
+		require.NoError(t, err, "Could not get signing root")
+		roots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+		roots[0] = genesisRoot[:]
+		require.NoError(t, bs.SetBlockRoots(roots))
+
+		pubKeys := make([][]byte, len(deposits))
+		indices := make([]uint64, len(deposits))
+		for i := 0; i < len(deposits); i++ {
+			pubKeys[i] = deposits[i].Data.PublicKey
+			indices[i] = uint64(i)
+		}
 		chainSlot := params.BeaconConfig().SlotsPerEpoch.Mul(2)
 		chain := &mockChain.ChainService{
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
