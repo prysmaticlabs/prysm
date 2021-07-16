@@ -109,29 +109,13 @@ assignmentLoop:
 		}
 	}
 
-	// The dependent_root value is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch - 1) - 1)
-	// or the genesis block root in the case of underflow.
-	var dependentRootSlot types.Slot
-	if req.Epoch == 0 {
-		dependentRootSlot = 0
-	} else {
-		prevEpochStartSlot, err := helpers.StartSlot(req.Epoch.Sub(1))
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not obtain epoch's start slot: %v", err)
-		}
-		if req.Epoch == 1 {
-			dependentRootSlot = 0
-		} else {
-			dependentRootSlot = prevEpochStartSlot.Sub(1)
-		}
-	}
-	dependentRoot, err := helpers.BlockRootAtSlot(s, dependentRootSlot)
+	root, err := dependentRoot(s, req.Epoch)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get block root at slot %d: %v", epochStartSlot, err)
+		return nil, status.Errorf(codes.Internal, "Could not get dependent root: %v", err)
 	}
 
 	return &v1.AttesterDutiesResponse{
-		DependentRoot: dependentRoot,
+		DependentRoot: root,
 		Data:          duties,
 	}, nil
 }
@@ -166,4 +150,28 @@ func (vs *Server) SubmitAggregateAndProofs(ctx context.Context, req *v1.SubmitAg
 // and replaces current peers with those ones if necessary.
 func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *v1.SubmitBeaconCommitteeSubscriptionsRequest) (*emptypb.Empty, error) {
 	return nil, errors.New("Unimplemented")
+}
+
+func dependentRoot(s iface.BeaconState, epoch types.Epoch) ([]byte, error) {
+	// The dependent_root value is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch - 1) - 1)
+	// or the genesis block root in the case of underflow.
+	var dependentRootSlot types.Slot
+	if epoch == 0 {
+		dependentRootSlot = 0
+	} else {
+		prevEpochStartSlot, err := helpers.StartSlot(epoch.Sub(1))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not obtain epoch's start slot: %v", err)
+		}
+		if epoch == 1 {
+			dependentRootSlot = 0
+		} else {
+			dependentRootSlot = prevEpochStartSlot.Sub(1)
+		}
+	}
+	root, err := helpers.BlockRootAtSlot(s, dependentRootSlot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get block root")
+	}
+	return root, nil
 }
