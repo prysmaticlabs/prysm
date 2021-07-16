@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 )
 
 // This is a subscription topic handler that is used to handle basic
@@ -26,7 +27,7 @@ func (s *subTopicHandler) addTopic(topic string, sub *pubsub.Subscription) {
 	s.Lock()
 	defer s.Unlock()
 	s.subTopics[topic] = sub
-	digest, err := digestFromTopic(topic)
+	digest, err := p2p.ExtractGossipDigest(topic)
 	if err != nil {
 		log.WithError(err).Error("Could not retrieve digest")
 		return
@@ -45,7 +46,7 @@ func (s *subTopicHandler) removeTopic(topic string) {
 	s.Lock()
 	defer s.Unlock()
 	delete(s.subTopics, topic)
-	digest, err := digestFromTopic(topic)
+	digest, err := p2p.ExtractGossipDigest(topic)
 	if err != nil {
 		log.WithError(err).Error("Could not retrieve digest")
 		return
