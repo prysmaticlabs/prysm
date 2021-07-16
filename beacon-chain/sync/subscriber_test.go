@@ -45,7 +45,7 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 				Genesis:        time.Now(),
 			},
 		},
-		subTopicMap:  map[string]*pubsub.Subscription{},
+		subHandler:   newSubTopicHandler(),
 		chainStarted: abool.New(),
 	}
 	var err error
@@ -92,7 +92,7 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 		},
 		seenAttesterSlashingCache: make(map[uint64]bool),
 		chainStarted:              abool.New(),
-		subTopicMap:               map[string]*pubsub.Subscription{},
+		subHandler:                newSubTopicHandler(),
 	}
 	topic := "/eth2/%x/attester_slashing"
 	var wg sync.WaitGroup
@@ -148,7 +148,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 		},
 		seenProposerSlashingCache: c,
 		chainStarted:              abool.New(),
-		subTopicMap:               map[string]*pubsub.Subscription{},
+		subHandler:                newSubTopicHandler(),
 	}
 	topic := "/eth2/%x/proposer_slashing"
 	var wg sync.WaitGroup
@@ -192,7 +192,7 @@ func TestSubscribe_HandlesPanic(t *testing.T) {
 			},
 			P2P: p,
 		},
-		subTopicMap:  map[string]*pubsub.Subscription{},
+		subHandler:   newSubTopicHandler(),
 		chainStarted: abool.New(),
 	}
 	var err error
@@ -228,6 +228,7 @@ func TestRevalidateSubscription_CorrectlyFormatsTopic(t *testing.T) {
 			P2P: p,
 		},
 		chainStarted: abool.New(),
+		subHandler:   newSubTopicHandler(),
 	}
 	digest, err := r.currentForkDigest()
 	require.NoError(t, err)
@@ -264,7 +265,7 @@ func TestStaticSubnets(t *testing.T) {
 			P2P: p,
 		},
 		chainStarted: abool.New(),
-		subTopicMap:  map[string]*pubsub.Subscription{},
+		subHandler:   newSubTopicHandler(),
 	}
 	defaultTopic := "/eth2/%x/beacon_attestation_%d"
 	d, err := r.currentForkDigest()
