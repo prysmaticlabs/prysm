@@ -10,6 +10,7 @@ import (
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -499,6 +500,59 @@ func HydrateV1BeaconBlockBody(b *v1.BeaconBlockBody) *v1.BeaconBlockBody {
 		b.Eth1Data = &v1.Eth1Data{
 			DepositRoot: make([]byte, 32),
 			BlockHash:   make([]byte, 32),
+		}
+	}
+	return b
+}
+
+// HydrateSignedBeaconBlockAltair hydrates a signed beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateSignedBeaconBlockAltair(b *prysmv2.SignedBeaconBlock) *prysmv2.SignedBeaconBlock {
+	if b.Signature == nil {
+		b.Signature = make([]byte, params.BeaconConfig().BLSSignatureLength)
+	}
+	b.Block = HydrateBeaconBlockAltair(b.Block)
+	return b
+}
+
+// HydrateBeaconBlockAltair hydrates a beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateBeaconBlockAltair(b *prysmv2.BeaconBlock) *prysmv2.BeaconBlock {
+	if b == nil {
+		b = &prysmv2.BeaconBlock{}
+	}
+	if b.ParentRoot == nil {
+		b.ParentRoot = make([]byte, 32)
+	}
+	if b.StateRoot == nil {
+		b.StateRoot = make([]byte, 32)
+	}
+	b.Body = HydrateBeaconBlockBodyAltair(b.Body)
+	return b
+}
+
+// HydrateBeaconBlockBodyAltair hydrates a beacon block body with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateBeaconBlockBodyAltair(b *prysmv2.BeaconBlockBody) *prysmv2.BeaconBlockBody {
+	if b == nil {
+		b = &prysmv2.BeaconBlockBody{}
+	}
+	if b.RandaoReveal == nil {
+		b.RandaoReveal = make([]byte, params.BeaconConfig().BLSSignatureLength)
+	}
+	if b.Graffiti == nil {
+		b.Graffiti = make([]byte, 32)
+	}
+	if b.Eth1Data == nil {
+		b.Eth1Data = &ethpb.Eth1Data{
+			DepositRoot: make([]byte, 32),
+			BlockHash:   make([]byte, 32),
+		}
+	}
+	if b.SyncAggregate == nil {
+		b.SyncAggregate = &prysmv2.SyncAggregate{
+			SyncCommitteeBits:      make([]byte, 64),
+			SyncCommitteeSignature: make([]byte, 96),
 		}
 	}
 	return b
