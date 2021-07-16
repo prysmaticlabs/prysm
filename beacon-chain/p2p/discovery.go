@@ -17,8 +17,8 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/version"
 )
 
 // Listener defines the discovery V5 network interface that is used
@@ -54,7 +54,7 @@ func (s *Service) RefreshENR() {
 	}
 	// Compare current epoch with our fork epochs
 	currEpoch := helpers.SlotToEpoch(helpers.CurrentSlot(uint64(s.genesisTime.Unix())))
-	altairForkEpoch := params.BeaconConfig().ForkVersionSchedule[bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion)]
+	altairForkEpoch := params.BeaconConfig().AltairForkEpoch
 	switch {
 	// Altair Behaviour
 	case currEpoch >= altairForkEpoch:
@@ -70,7 +70,8 @@ func (s *Service) RefreshENR() {
 			log.Errorf("Could not retrieve sync bitfield: %v", err)
 			return
 		}
-		if bytes.Equal(bitV, currentBitV) && bytes.Equal(bitS, currentBitS) {
+		if bytes.Equal(bitV, currentBitV) && bytes.Equal(bitS, currentBitS) &&
+			s.Metadata().Version() == version.Altair {
 			// return early if bitfields haven't changed
 			return
 		}

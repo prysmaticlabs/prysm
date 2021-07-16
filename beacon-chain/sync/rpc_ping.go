@@ -39,9 +39,6 @@ func (s *Service) pingHandler(_ context.Context, msg interface{}, stream libp2pc
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
 	}
-	if err := writeContextToStream(nil, stream, s.cfg.Chain); err != nil {
-		return err
-	}
 	sq := types.SSZUint64(s.cfg.P2P.MetadataSeq())
 	if _, err := s.cfg.P2P.Encoding().EncodeWithMaxLength(stream, &sq); err != nil {
 		return err
@@ -102,11 +99,6 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	if code != 0 {
 		s.cfg.P2P.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		return errors.New(errMsg)
-	}
-	// No-op for now with the rpc context.
-	_, err = readContextFromStream(stream, s.cfg.Chain)
-	if err != nil {
-		return err
 	}
 	msg := new(types.SSZUint64)
 	if err := s.cfg.P2P.Encoding().DecodeWithMaxLength(stream, msg); err != nil {

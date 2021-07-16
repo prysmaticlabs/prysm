@@ -158,11 +158,6 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 		s.cfg.P2P.Peers().Scorers().BadResponsesScorer().Increment(id)
 		return errors.New(errMsg)
 	}
-	// No-op for now with the rpc context.
-	_, err = readContextFromStream(stream, s.cfg.Chain)
-	if err != nil {
-		return err
-	}
 	msg := &pb.Status{}
 	if err := s.cfg.P2P.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
 		return err
@@ -276,9 +271,6 @@ func (s *Service) respondWithStatus(ctx context.Context, stream network.Stream) 
 
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		log.WithError(err).Debug("Could not write to stream")
-	}
-	if err := writeContextToStream(nil, stream, s.cfg.Chain); err != nil {
-		return err
 	}
 	_, err = s.cfg.P2P.Encoding().EncodeWithMaxLength(stream, resp)
 	return err

@@ -220,6 +220,9 @@ func (s *Service) Start() {
 		}
 		s.connectWithAllPeers(addrs)
 	}
+	// Initialize metadata according to the
+	// current epoch.
+	s.RefreshENR()
 
 	// Periodic functions.
 	runutil.RunEvery(s.ctx, params.BeaconNetworkConfig().TtfbTimeout, func() {
