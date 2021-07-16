@@ -7,18 +7,9 @@ import (
 
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 )
-
-func TestCopyAttestations(t *testing.T) {
-	atts := genAttestations(10)
-
-	got := CopyAttestations(atts)
-	if !reflect.DeepEqual(got, atts) {
-		t.Errorf("CopyAttestations() = %v, want %v", got, atts)
-	}
-	assert.NotEmpty(t, got, "Copied attestations have empty fields")
-}
 
 func TestCopyETH1Data(t *testing.T) {
 	data := genEth1Data()
@@ -109,7 +100,135 @@ func TestCopyProposerSlashings(t *testing.T) {
 	assert.NotEmpty(t, got, "Copied proposer slashings have empty fields")
 }
 
-// TODO: the rest of the copy methods.
+func TestCopyProposerSlashing(t *testing.T) {
+	ps := genProposerSlashing()
+
+	got := CopyProposerSlashing(ps)
+	if !reflect.DeepEqual(got, ps) {
+		t.Errorf("CopyProposerSlashing() = %v, want %v", got, ps)
+	}
+	assert.NotEmpty(t, got, "Copied proposer slashing has empty fields")
+}
+
+func TestCopySignedBeaconBlockHeader(t *testing.T) {
+	sbh := genSignedBeaconBlockHeader()
+
+	got := CopySignedBeaconBlockHeader(sbh)
+	if !reflect.DeepEqual(got, sbh) {
+		t.Errorf("CopySignedBeaconBlockHeader() = %v, want %v", got, sbh)
+	}
+	assert.NotEmpty(t, got, "Copied signed beacon block header has empty fields")
+}
+
+func TestCopyBeaconBlockHeader(t *testing.T) {
+	bh := genBeaconBlockHeader()
+
+	got := CopyBeaconBlockHeader(bh)
+	if !reflect.DeepEqual(got, bh) {
+		t.Errorf("CopyBeaconBlockHeader() = %v, want %v", got, bh)
+	}
+	assert.NotEmpty(t, got, "Copied beacon block header has empty fields")
+}
+
+func TestCopyAttesterSlashings(t *testing.T) {
+	as := genAttesterSlashings(10)
+
+	got := CopyAttesterSlashings(as)
+	if !reflect.DeepEqual(got, as) {
+		t.Errorf("CopyAttesterSlashings() = %v, want %v", got, as)
+	}
+	assert.NotEmpty(t, got, "Copied attester slashings have empty fields")
+}
+
+func TestCopyIndexedAttestation(t *testing.T) {
+	ia := genIndexedAttestation()
+
+	got := CopyIndexedAttestation(ia)
+	if !reflect.DeepEqual(got, ia) {
+		t.Errorf("CopyIndexedAttestation() = %v, want %v", got, ia)
+	}
+	assert.NotEmpty(t, got, "Copied indexed attestation has empty fields")
+}
+
+func TestCopyAttestations(t *testing.T) {
+	atts := genAttestations(10)
+
+	got := CopyAttestations(atts)
+	if !reflect.DeepEqual(got, atts) {
+		t.Errorf("CopyAttestations() = %v, want %v", got, atts)
+	}
+	assert.NotEmpty(t, got, "Copied attestations have empty fields")
+}
+
+func TestCopyDeposits(t *testing.T) {
+	d := genDeposits(10)
+
+	got := CopyDeposits(d)
+	if !reflect.DeepEqual(got, d) {
+		t.Errorf("CopyDeposits() = %v, want %v", got, d)
+	}
+	assert.NotEmpty(t, got, "Copied deposits have empty fields")
+}
+
+func TestCopyDeposit(t *testing.T) {
+	d := genDeposit()
+
+	got := CopyDeposit(d)
+	if !reflect.DeepEqual(got, d) {
+		t.Errorf("CopyDeposit() = %v, want %v", got, d)
+	}
+	assert.NotEmpty(t, got, "Copied deposit has empty fields")
+}
+
+func TestCopyDepositData(t *testing.T) {
+	dd := genDepositData()
+
+	got := CopyDepositData(dd)
+	if !reflect.DeepEqual(got, dd) {
+		t.Errorf("CopyDepositData() = %v, want %v", got, dd)
+	}
+	assert.NotEmpty(t, got, "Copied deposit data has empty fields")
+}
+
+func TestCopySignedVoluntaryExits(t *testing.T) {
+	sv := genSignedVoluntaryExits(10)
+
+	got := CopySignedVoluntaryExits(sv)
+	if !reflect.DeepEqual(got, sv) {
+		t.Errorf("CopySignedVoluntaryExits() = %v, want %v", got, sv)
+	}
+	assert.NotEmpty(t, got, "Copied signed voluntary exits have empty fields")
+}
+
+func TestCopySignedVoluntaryExit(t *testing.T) {
+	sv := genSignedVoluntaryExit()
+
+	got := CopySignedVoluntaryExit(sv)
+	if !reflect.DeepEqual(got, sv) {
+		t.Errorf("CopySignedVoluntaryExit() = %v, want %v", got, sv)
+	}
+	assert.NotEmpty(t, got, "Copied signed voluntary exit has empty fields")
+}
+
+func TestCopyValidator(t *testing.T) {
+	v := genValidator()
+
+	got := CopyValidator(v)
+	if !reflect.DeepEqual(got, v) {
+		t.Errorf("CopyValidator() = %v, want %v", got, v)
+	}
+	assert.NotEmpty(t, got, "Copied validator has empty fields")
+}
+
+func TestCopySyncCommitteeContribution(t *testing.T) {
+	scc := genSyncCommitteeContribution()
+
+	got := CopySyncCommitteeContribution(scc)
+	if !reflect.DeepEqual(got, scc) {
+		t.Errorf("CopySyncCommitteeContribution() = %v, want %v", got, scc)
+	}
+	assert.NotEmpty(t, got, "Copied sync committee contribution has empty fields")
+}
 
 func bytes() []byte {
 	b := make([]byte, 32)
@@ -304,4 +423,27 @@ func genSignedVoluntaryExits(num int) []*ethpb.SignedVoluntaryExit {
 		sv[i] = genSignedVoluntaryExit()
 	}
 	return sv
+}
+
+func genValidator() *ethpb.Validator {
+	return &ethpb.Validator{
+		PublicKey:                  bytes(),
+		WithdrawalCredentials:      bytes(),
+		EffectiveBalance:           12345,
+		Slashed:                    true,
+		ActivationEligibilityEpoch: 14322,
+		ActivationEpoch:            14325,
+		ExitEpoch:                  23425,
+		WithdrawableEpoch:          30000,
+	}
+}
+
+func genSyncCommitteeContribution() *prysmv2.SyncCommitteeContribution {
+	return &prysmv2.SyncCommitteeContribution{
+		Slot:              12333,
+		BlockRoot:         bytes(),
+		SubcommitteeIndex: 4444,
+		AggregationBits:   bytes(),
+		Signature:         bytes(),
+	}
 }
