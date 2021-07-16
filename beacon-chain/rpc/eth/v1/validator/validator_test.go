@@ -86,7 +86,6 @@ func TestGetDuties(t *testing.T) {
 			Epoch: helpers.SlotToEpoch(bs.Slot()) + 1,
 			Index: []types.ValidatorIndex{0},
 		}
-		_, err := vs.GetAttesterDuties(ctx, req)
 		resp, err := vs.GetAttesterDuties(ctx, req)
 		require.NoError(t, err)
 		assert.DeepEqual(t, genesisRoot[:], resp.DependentRoot)
@@ -118,7 +117,7 @@ func TestGetDuties(t *testing.T) {
 		}
 		resp, err := vs.GetAttesterDuties(ctx, req)
 		require.NoError(t, err)
-		assert.DeepEqual(t, bs.BlockRoots()[31][:], resp.DependentRoot)
+		assert.DeepEqual(t, bs.BlockRoots()[31], resp.DependentRoot)
 		require.Equal(t, 1, len(resp.Data))
 		duty := resp.Data[0]
 		assert.Equal(t, types.CommitteeIndex(1), duty.CommitteeIndex)
