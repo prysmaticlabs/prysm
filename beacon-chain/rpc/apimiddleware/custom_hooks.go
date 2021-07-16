@@ -29,6 +29,24 @@ func wrapAttestationsArray(endpoint gateway.Endpoint, _ http.ResponseWriter, req
 	return nil
 }
 
+// https://ethereum.github.io/eth2.0-APIs/#/Validator/getAttesterDuties expects posting a top-level array.
+// We make it more proto-friendly by wrapping it in a struct with an 'index' field.
+func wrapValidatorIndicesArray(endpoint gateway.Endpoint, _ http.ResponseWriter, req *http.Request) gateway.ErrorJson {
+	if _, ok := endpoint.PostRequest.(*attesterDutiesRequestJson); ok {
+		indices := make([]string, 0)
+		if err := json.NewDecoder(req.Body).Decode(&indices); err != nil {
+			return gateway.InternalServerErrorWithMessage(err, "could not decode attestations array")
+		}
+		j := &attesterDutiesRequestJson{Index: indices}
+		b, err := json.Marshal(j)
+		if err != nil {
+			return gateway.InternalServerErrorWithMessage(err, "could not marshal wrapped validator indices array")
+		}
+		req.Body = ioutil.NopCloser(bytes.NewReader(b))
+	}
+	return nil
+}
+
 // Posted graffiti needs to have length of 32 bytes, but client is allowed to send data of any length.
 func prepareGraffiti(endpoint gateway.Endpoint, _ http.ResponseWriter, _ *http.Request) gateway.ErrorJson {
 	if block, ok := endpoint.PostRequest.(*beaconBlockContainerJson); ok {
