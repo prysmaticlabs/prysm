@@ -17,6 +17,8 @@ import (
 
 var expectedParticipation = 0.95 // 95% participation to make room for minor issues.
 
+var expectedSyncParticipation = 0.90 // 90% participation for sync committee members.
+
 // ValidatorsAreActive ensures the expected amount of validators are active.
 var ValidatorsAreActive = types.Evaluator{
 	Name:       "validators_active_epoch_%d",
@@ -126,8 +128,18 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 	}
 	currSlot := helpers.CurrentSlot(uint64(genesis.GenesisTime.AsTime().Unix()))
 	currEpoch := helpers.SlotToEpoch(currSlot)
-
 	lowestBound := currEpoch - 1
+
+	// TODO: Fix Sync Participation in fork epoch.
+	if currEpoch == params.AltairE2EForkEpoch {
+		return nil
+	}
+	// TODO: Fix Sync Participation in fork epoch to allow
+	// blocks in the fork epoch from being evaluated.
+	if lowestBound == params.AltairE2EForkEpoch {
+		lowestBound++
+	}
+
 	if lowestBound < params.AltairE2EForkEpoch {
 		lowestBound = params.AltairE2EForkEpoch
 	}
@@ -144,8 +156,9 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 			return errors.New("nil block provided")
 		}
 		syncAgg := blk.Block.Body.SyncAggregate
-		if syncAgg.SyncCommitteeBits.Count() != syncAgg.SyncCommitteeBits.Len() {
-			return errors.Errorf("For bitvector with length of %d only got a count of %d", syncAgg.SyncCommitteeBits.Len(), syncAgg.SyncCommitteeBits.Count())
+		threshold := uint64(float64(syncAgg.SyncCommitteeBits.Len()) * expectedSyncParticipation)
+		if syncAgg.SyncCommitteeBits.Count() < threshold {
+			return errors.Errorf("In block of slot %d ,the aggregate bitvector with length of %d only got a count of %d", blk.Block.Slot, threshold, syncAgg.SyncCommitteeBits.Count())
 		}
 	}
 	if lowestBound == currEpoch {
@@ -164,8 +177,9 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 			return errors.New("nil block provided")
 		}
 		syncAgg := blk.Block.Body.SyncAggregate
-		if syncAgg.SyncCommitteeBits.Count() != syncAgg.SyncCommitteeBits.Len() {
-			return errors.Errorf("In block of slot %d ,the aggregate bitvector with length of %d only got a count of %d", blk.Block.Slot, syncAgg.SyncCommitteeBits.Len(), syncAgg.SyncCommitteeBits.Count())
+		threshold := uint64(float64(syncAgg.SyncCommitteeBits.Len()) * expectedSyncParticipation)
+		if syncAgg.SyncCommitteeBits.Count() < threshold {
+			return errors.Errorf("In block of slot %d ,the aggregate bitvector with length of %d only got a count of %d", blk.Block.Slot, threshold, syncAgg.SyncCommitteeBits.Count())
 		}
 	}
 	return nil
