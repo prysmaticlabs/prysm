@@ -149,6 +149,20 @@ func (pq *PriorityQueue) PopByKey(key string) (*Item, error) {
 	return nil, nil
 }
 
+// RetrieveByKey searches the queue for an item with the given key and returns it
+// from the queue if found. Returns nil if not found.
+func (pq *PriorityQueue) RetrieveByKey(key string) *Item {
+	pq.lock.Lock()
+	defer pq.lock.Unlock()
+
+	item, ok := pq.dataMap[key]
+	if !ok {
+		return nil
+	}
+
+	return pq.data[item.index]
+}
+
 // Len returns the number of items in the queue data structure. Do not use this
 // method directly on the queue, use PriorityQueue.Len() instead.
 func (q queue) Len() int { return len(q) }
