@@ -52,6 +52,30 @@ func TestWrapAttestationArray(t *testing.T) {
 	})
 }
 
+func TestWrapValidatorIndicesArray(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
+		endpoint := gateway.Endpoint{
+			PostRequest: &attesterDutiesRequestJson{},
+		}
+		unwrappedIndices := []string{"1", "2"}
+		unwrappedIndicesJson, err := json.Marshal(unwrappedIndices)
+		require.NoError(t, err)
+
+		var body bytes.Buffer
+		_, err = body.Write(unwrappedIndicesJson)
+		require.NoError(t, err)
+		request := httptest.NewRequest("POST", "http://foo.example", &body)
+
+		errJson := wrapValidatorIndicesArray(endpoint, nil, request)
+		require.Equal(t, true, errJson == nil)
+		wrappedIndices := &attesterDutiesRequestJson{}
+		require.NoError(t, json.NewDecoder(request.Body).Decode(wrappedIndices))
+		require.Equal(t, 2, len(wrappedIndices.Index), "wrong number of wrapped validator indices")
+		assert.Equal(t, "1", wrappedIndices.Index[0])
+		assert.Equal(t, "2", wrappedIndices.Index[1])
+	})
+}
+
 func TestPrepareGraffiti(t *testing.T) {
 	endpoint := gateway.Endpoint{
 		PostRequest: &beaconBlockContainerJson{
