@@ -40,12 +40,10 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *v1.AttesterDutiesR
 	vals := make([]iface.ReadOnlyValidator, len(req.Index))
 	for i, index := range req.Index {
 		val, err := s.ValidatorAtIndexReadOnly(index)
-		if err != nil {
-			if _, ok := err.(*statev1.ValidatorIndexOutOfRangeError); ok {
-				return nil, status.Errorf(codes.InvalidArgument, "Invalid index: %v", err)
-			} else {
-				return nil, status.Errorf(codes.Internal, "Could not get validator: %v", err)
-			}
+		if _, ok := err.(*statev1.ValidatorIndexOutOfRangeError); ok {
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid index: %v", err)
+		} else if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get validator: %v", err)
 		}
 		vals[i] = val
 	}
