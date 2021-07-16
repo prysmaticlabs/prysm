@@ -26,6 +26,9 @@ func WrappedAltairSignedBeaconBlock(b *prysmv2.SignedBeaconBlock) interfaces.Sig
 
 // Signature returns the respective block signature.
 func (w AltairSignedBeaconBlock) Signature() []byte {
+	if w.b == nil {
+		return nil
+	}
 	return w.b.Signature
 }
 
