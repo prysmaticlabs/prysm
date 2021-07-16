@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"reflect"
 	"sync"
@@ -19,7 +18,6 @@ import (
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -458,53 +456,4 @@ func createPeer(t *testing.T, topics ...string) *p2ptest.TestP2P {
 		}
 	}
 	return p
-}
-
-func TestExtractDigest(t *testing.T) {
-	tests := []struct {
-		name    string
-		topic   string
-		want    [4]byte
-		wantErr bool
-		error   error
-	}{
-		{
-			name:    "too short topic",
-			topic:   "/eth2/",
-			want:    [4]byte{},
-			wantErr: true,
-			error:   errors.New("invalid topic format"),
-		},
-		{
-			name:    "invalid digest in topic",
-			topic:   "/eth2/zzxxyyaa/beacon_block" + "/" + encoder.ProtocolSuffixSSZSnappy,
-			want:    [4]byte{},
-			wantErr: true,
-			error:   errors.New("encoding/hex: invalid byte"),
-		},
-		{
-			name:    "short digest",
-			topic:   fmt.Sprintf(p2p.BlockSubnetTopicFormat, []byte{0xb5, 0x30, 0x3f}) + "/" + encoder.ProtocolSuffixSSZSnappy,
-			want:    [4]byte{},
-			wantErr: true,
-			error:   errors.New("invalid digest length wanted"),
-		},
-		{
-			name:    "valid topic",
-			topic:   fmt.Sprintf(p2p.BlockSubnetTopicFormat, []byte{0xb5, 0x30, 0x3f, 0x2a}) + "/" + encoder.ProtocolSuffixSSZSnappy,
-			want:    [4]byte{0xb5, 0x30, 0x3f, 0x2a},
-			wantErr: false,
-			error:   nil,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := extractDigest(tt.topic)
-			assert.Equal(t, err != nil, tt.wantErr)
-			if tt.wantErr {
-				assert.ErrorContains(t, tt.error.Error(), err)
-			}
-			assert.DeepEqual(t, tt.want, got)
-		})
-	}
 }
