@@ -203,6 +203,8 @@ func TestHydrateV1SignedBeaconBlock_NoError(t *testing.T) {
 func TestHydrateV2SignedBeaconBlockAltair_NoError(t *testing.T) {
 	b := &v2.SignedBeaconBlockAltair{}
 	b = HydrateSignedBeaconBlockAltair(b)
+
+	// HTR should not error. It errors with incorrect field length sizes.
 	_, err := b.HashTreeRoot()
 	require.NoError(t, err)
 	_, err = b.Block.HashTreeRoot()
