@@ -213,7 +213,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				hState, err := db.State(context.Background(), headRoot)
 				assert.NoError(t, err)
 				s.cfg.Chain = &mockChain.ChainService{
-					CurrentSyncCommitteeIndices: []uint64{0},
+					CurrentSyncCommitteeIndices: []types.CommitteeIndex{0},
 					ValidatorsRoot:              [32]byte{'A'},
 					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1)),
 				}
@@ -316,7 +316,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				assert.NoError(t, err)
 				subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 				s.cfg.Chain = &mockChain.ChainService{
-					CurrentSyncCommitteeIndices: []uint64{subCommitteeSize},
+					CurrentSyncCommitteeIndices: []types.CommitteeIndex{types.CommitteeIndex(subCommitteeSize)},
 					ValidatorsRoot:              [32]byte{'A'},
 					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1)),
 					SyncCommitteeDomain:         d,
@@ -370,7 +370,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				assert.NoError(t, err)
 
 				s.cfg.Chain = &mockChain.ChainService{
-					CurrentSyncCommitteeIndices: []uint64{subCommitteeSize},
+					CurrentSyncCommitteeIndices: []types.CommitteeIndex{types.CommitteeIndex(subCommitteeSize)},
 					ValidatorsRoot:              [32]byte{'A'},
 					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1)),
 					SyncCommitteeDomain:         d,

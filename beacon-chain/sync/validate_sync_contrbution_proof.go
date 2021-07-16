@@ -86,7 +86,7 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 	isValid := false
 	subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 	for _, i := range committeeIndices {
-		if i/subCommitteeSize == m.Message.Contribution.SubcommitteeIndex {
+		if uint64(i)/subCommitteeSize == m.Message.Contribution.SubcommitteeIndex {
 			isValid = true
 			break
 		}

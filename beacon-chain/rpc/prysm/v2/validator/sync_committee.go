@@ -44,7 +44,7 @@ func (vs *Server) SubmitSyncMessage(ctx context.Context, msg *prysmv2.SyncCommit
 	// This broadcasts for all subnets.
 	for _, id := range idxResp.Indices {
 		subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
-		subnet := id / subCommitteeSize
+		subnet := uint64(id) / subCommitteeSize
 		errs.Go(func() error {
 			return vs.P2P.BroadcastSyncCommitteeMessage(ctx, subnet, msg)
 		})
@@ -131,9 +131,10 @@ func (vs *Server) GetSyncCommitteeContribution(
 				return nil, status.Errorf(codes.Internal, "Could not get sync subcommittee index: %v", err)
 			}
 			for _, index := range idxResp.Indices {
-				subnetIndex := index / subCommitteeSize
+				i := uint64(index)
+				subnetIndex := i / subCommitteeSize
 				if subnetIndex == req.SubnetId {
-					bits.SetBitAt(index%subCommitteeSize, true)
+					bits.SetBitAt(i%subCommitteeSize, true)
 					sig, err := bls.SignatureFromBytes(msg.Signature)
 					if err != nil {
 						return nil, status.Errorf(

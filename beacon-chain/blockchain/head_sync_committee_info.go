@@ -18,8 +18,8 @@ import (
 // HeadSyncCommitteeFetcher is the interface that wraps the head sync committee related functions.
 // The head sync committee functions return callers sync committee indices and public keys with respect to current head state.
 type HeadSyncCommitteeFetcher interface {
-	HeadCurrentSyncCommitteeIndices(ctx context.Context, index types.ValidatorIndex, slot types.Slot) ([]uint64, error)
-	HeadNextSyncCommitteeIndices(ctx context.Context, index types.ValidatorIndex, slot types.Slot) ([]uint64, error)
+	HeadCurrentSyncCommitteeIndices(ctx context.Context, index types.ValidatorIndex, slot types.Slot) ([]types.CommitteeIndex, error)
+	HeadNextSyncCommitteeIndices(ctx context.Context, index types.ValidatorIndex, slot types.Slot) ([]types.CommitteeIndex, error)
 	HeadSyncCommitteePubKeys(ctx context.Context, slot types.Slot, committeeIndex types.CommitteeIndex) ([][]byte, error)
 }
 
@@ -57,7 +57,7 @@ func (s *Service) HeadSyncContributionProofDomain(ctx context.Context, slot type
 
 // HeadCurrentSyncCommitteeIndices returns the input validator `index`'s position indices in the current sync committee with respect to `slot`.
 // Head state advanced up to `slot` is used for calculation.
-func (s *Service) HeadCurrentSyncCommitteeIndices(ctx context.Context, index types.ValidatorIndex, slot types.Slot) ([]uint64, error) {
+func (s *Service) HeadCurrentSyncCommitteeIndices(ctx context.Context, index types.ValidatorIndex, slot types.Slot) ([]types.CommitteeIndex, error) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
@@ -70,7 +70,7 @@ func (s *Service) HeadCurrentSyncCommitteeIndices(ctx context.Context, index typ
 
 // HeadNextSyncCommitteeIndices returns the input validator `index`'s position indices in the next sync committee with respect to `slot`.
 // Head state advanced up to `slot` is used for calculation.
-func (s *Service) HeadNextSyncCommitteeIndices(ctx context.Context, index types.ValidatorIndex, slot types.Slot) ([]uint64, error) {
+func (s *Service) HeadNextSyncCommitteeIndices(ctx context.Context, index types.ValidatorIndex, slot types.Slot) ([]types.CommitteeIndex, error) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
