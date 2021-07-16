@@ -240,6 +240,9 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 			PostResponse:       &attesterDutiesResponseJson{},
 			RequestURLLiterals: []string{"epoch"},
 			Err:                &gateway.DefaultErrorJson{},
+			Hooks: gateway.HookCollection{
+				OnPostStart: []gateway.Hook{wrapValidatorIndicesArray},
+			},
 		}
 	default:
 		return nil, errors.New("invalid path")
