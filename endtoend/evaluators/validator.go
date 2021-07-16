@@ -165,7 +165,7 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 		}
 		syncAgg := blk.Block.Body.SyncAggregate
 		if syncAgg.SyncCommitteeBits.Count() != syncAgg.SyncCommitteeBits.Len() {
-			return errors.Errorf("For bitvector with length of %d only got a count of %d", syncAgg.SyncCommitteeBits.Len(), syncAgg.SyncCommitteeBits.Count())
+			return errors.Errorf("In block of slot %d ,the aggregate bitvector with length of %d only got a count of %d", blk.Block.Slot, syncAgg.SyncCommitteeBits.Len(), syncAgg.SyncCommitteeBits.Count())
 		}
 	}
 	return nil
