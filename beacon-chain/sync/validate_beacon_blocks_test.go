@@ -319,7 +319,7 @@ func TestValidateBeaconBlockPubSub_WithLookahead(t *testing.T) {
 		badBlockCache:       c2,
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
-		subTopicMap:         map[string]*pubsub.Subscription{},
+		subHandler:          newSubTopicHandler(),
 	}
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, msg)

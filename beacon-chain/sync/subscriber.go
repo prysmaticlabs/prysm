@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"reflect"
 	"runtime/debug"
@@ -11,7 +10,6 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -19,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	pb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/messagehandler"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -93,9 +90,8 @@ func (s *Service) registerSubscribers(epoch types.Epoch, digest [4]byte) {
 			digest,
 		)
 	}
-	altairFork := params.BeaconConfig().ForkVersionSchedule[bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion)]
 	// Altair Fork Version
-	if epoch >= altairFork {
+	if epoch >= params.BeaconConfig().AltairForkEpoch {
 		s.subscribe(
 			p2p.SyncContributionAndProofSubnetTopicFormat,
 			s.validateSyncContributionAndProof,
@@ -140,14 +136,11 @@ func (s *Service) subscribeWithBase(topic string, validator pubsub.ValidatorEx, 
 	log := log.WithField("topic", topic)
 
 	// Do not resubscribe already seen subscriptions.
-	s.subLock.RLock()
-	topSub, ok := s.subTopicMap[topic]
+	ok := s.subHandler.topicExists(topic)
 	if ok {
-		log.Warnf("Provided topic already has an active subscription running: %s", topic)
-		s.subLock.RUnlock()
-		return topSub
+		log.Debugf("Provided topic already has an active subscription running: %s", topic)
+		return nil
 	}
-	s.subLock.RUnlock()
 
 	if err := s.cfg.P2P.PubSub().RegisterTopicValidator(s.wrapAndReportValidation(topic, validator)); err != nil {
 		log.WithError(err).Error("Could not register validator for topic")
@@ -162,9 +155,7 @@ func (s *Service) subscribeWithBase(topic string, validator pubsub.ValidatorEx, 
 		log.WithError(err).Error("Could not subscribe topic")
 		return nil
 	}
-	s.subLock.Lock()
-	s.subTopicMap[sub.Topic()] = sub
-	s.subLock.Unlock()
+	s.subHandler.addTopic(sub.Topic(), sub)
 
 	// Pipeline decodes the incoming subscription data, runs the validation, and handles the
 	// message.
@@ -279,6 +270,24 @@ func (s *Service) subscribeStaticWithSubnets(topic string, validator pubsub.Vali
 				if s.chainStarted.IsSet() && s.cfg.InitialSync.Syncing() {
 					continue
 				}
+				valid, err := isDigestValid(digest, genesis, genRoot)
+				if err != nil {
+					log.Error(err)
+					continue
+				}
+				if !valid {
+					log.Warnf("Attestation subnets with digest %#x are no longer valid, unsubscribing from all of them.", digest)
+					// Unsubscribes from all our current subnets.
+					for i := uint64(0); i < params.BeaconNetworkConfig().AttestationSubnetCount; i++ {
+						fullTopic := fmt.Sprintf(topic, digest, i) + s.cfg.P2P.Encoding().ProtocolSuffix()
+						if err := s.cfg.P2P.PubSub().UnregisterTopicValidator(fullTopic); err != nil {
+							log.WithError(err).Error("Could not unregister topic validator")
+						}
+						s.subHandler.removeTopic(fullTopic)
+					}
+					ticker.Done()
+					return
+				}
 				// Check every slot that there are enough peers
 				for i := uint64(0); i < params.BeaconNetworkConfig().AttestationSubnetCount; i++ {
 					if !s.validPeersExist(s.addDigestAndIndexToTopic(topic, digest, i)) {
@@ -333,6 +342,18 @@ func (s *Service) subscribeDynamicWithSubnets(
 				if s.chainStarted.IsSet() && s.cfg.InitialSync.Syncing() {
 					continue
 				}
+				valid, err := isDigestValid(digest, genesis, genRoot)
+				if err != nil {
+					log.Error(err)
+					continue
+				}
+				if !valid {
+					log.Warnf("Attestation subnets with digest %#x are no longer valid, unsubscribing from all of them.", digest)
+					// Unsubscribes from all our current subnets.
+					s.reValidateSubscriptions(subscriptions, []uint64{}, topicFormat, digest)
+					ticker.Done()
+					return
+				}
 				wantedSubs := s.retrievePersistentSubs(currentSlot)
 				// Resize as appropriate.
 				s.reValidateSubscriptions(subscriptions, wantedSubs, topicFormat, digest)
@@ -368,9 +389,7 @@ func (s *Service) reValidateSubscriptions(subscriptions map[uint64]*pubsub.Subsc
 			if err := s.cfg.P2P.PubSub().UnregisterTopicValidator(fullTopic); err != nil {
 				log.WithError(err).Error("Could not unregister topic validator")
 			}
-			s.subLock.Lock()
-			delete(s.subTopicMap, fullTopic)
-			s.subLock.Unlock()
+			s.subHandler.removeTopic(fullTopic)
 			delete(subscriptions, k)
 		}
 	}
@@ -456,6 +475,24 @@ func (s *Service) subscribeStaticWithSyncSubnets(topic string, validator pubsub.
 				if s.chainStarted.IsSet() && s.cfg.InitialSync.Syncing() {
 					continue
 				}
+				valid, err := isDigestValid(digest, genesis, genRoot)
+				if err != nil {
+					log.Error(err)
+					continue
+				}
+				if !valid {
+					log.Warnf("Sync subnets with digest %#x are no longer valid, unsubscribing from all of them.", digest)
+					// Unsubscribes from all our current subnets.
+					for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSubnetCount; i++ {
+						fullTopic := fmt.Sprintf(topic, digest, i) + s.cfg.P2P.Encoding().ProtocolSuffix()
+						if err := s.cfg.P2P.PubSub().UnregisterTopicValidator(fullTopic); err != nil {
+							log.WithError(err).Error("Could not unregister topic validator")
+						}
+						s.subHandler.removeTopic(fullTopic)
+					}
+					ticker.Done()
+					return
+				}
 				// Check every slot that there are enough peers
 				for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSubnetCount; i++ {
 					if !s.validPeersExist(s.addDigestAndIndexToTopic(topic, digest, i)) {
@@ -510,6 +547,19 @@ func (s *Service) subscribeDynamicWithSyncSubnets(
 				if s.chainStarted.IsSet() && s.cfg.InitialSync.Syncing() {
 					continue
 				}
+				valid, err := isDigestValid(digest, genesis, genRoot)
+				if err != nil {
+					log.Error(err)
+					continue
+				}
+				if !valid {
+					log.Warnf("Sync subnets with digest %#x are no longer valid, unsubscribing from all of them.", digest)
+					// Unsubscribes from all our current subnets.
+					s.reValidateSubscriptions(subscriptions, []uint64{}, topicFormat, digest)
+					ticker.Done()
+					return
+				}
+
 				wantedSubs := s.retrieveActiveSyncSubnets(helpers.SlotToEpoch(currentSlot))
 				// Resize as appropriate.
 				s.reValidateSubscriptions(subscriptions, wantedSubs, topicFormat, digest)
@@ -629,25 +679,21 @@ func (s *Service) currentForkDigest() ([4]byte, error) {
 	return p2putils.CreateForkDigest(s.cfg.Chain.GenesisTime(), genRoot[:])
 }
 
-func extractDigest(topic string) ([4]byte, error) {
-	splitParts := strings.Split(topic, "/")
-	parts := []string{}
-	for _, p := range splitParts {
-		if p == "" {
-			continue
-		}
-		parts = append(parts, p)
-	}
-	if len(parts) < 2 {
-		return [4]byte{}, errors.Wrapf(errInvalidTopic, "it only has %d parts: %v", len(parts), parts)
-	}
-	strDigest := parts[1]
-	digest, err := hex.DecodeString(strDigest)
+// Checks if the provided digest matches up with the current supposed digest.
+func isDigestValid(digest [4]byte, genesis time.Time, genValRoot [32]byte) (bool, error) {
+	retDigest, err := p2putils.CreateForkDigest(genesis, genValRoot[:])
 	if err != nil {
-		return [4]byte{}, err
+		return false, err
 	}
-	if len(digest) != digestLength {
-		return [4]byte{}, errors.Errorf("invalid digest length wanted %d but got %d", digestLength, len(digest))
+	isNextEpoch, err := p2putils.IsForkNextEpoch(genesis, genValRoot[:])
+	if err != nil {
+		return false, err
 	}
-	return bytesutil.ToBytes4(digest), nil
+	// In the event there is a fork the next epoch,
+	// we skip the check, as we subscribe subnets an
+	// epoch in advance.
+	if isNextEpoch {
+		return true, nil
+	}
+	return retDigest == digest, nil
 }
