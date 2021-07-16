@@ -152,9 +152,9 @@ func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *v1
 	return nil, errors.New("Unimplemented")
 }
 
+// dependentRoot is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch - 1) - 1)
+// or the genesis block root in the case of underflow.
 func dependentRoot(s iface.BeaconState, epoch types.Epoch) ([]byte, error) {
-	// The dependent_root value is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch - 1) - 1)
-	// or the genesis block root in the case of underflow.
 	var dependentRootSlot types.Slot
 	if epoch == 0 {
 		dependentRootSlot = 0
