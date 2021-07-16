@@ -80,6 +80,8 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *v1.AttesterDutiesR
 		pubkey := val.PublicKey()
 		committee := committeeAssignments[index]
 		var valIndexInCommittee types.CommitteeIndex
+		// valIndexInCommittee will be 0 in case we don't get a match. This is a potential false positive,
+		// however it's an impossible condition because every validator must be assigned to a committee.
 		for cIndex, vIndex := range committee.Committee {
 			if vIndex == index {
 				valIndexInCommittee = types.CommitteeIndex(uint64(cIndex))
