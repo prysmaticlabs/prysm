@@ -63,16 +63,11 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *v1.AttesterDutiesR
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}
-	var distinctCommitteeIndexes []types.CommitteeIndex
-assignmentLoop:
-	for _, assignment := range committeeAssignments {
-		for _, index := range distinctCommitteeIndexes {
-			if index == assignment.CommitteeIndex {
-				continue assignmentLoop
-			}
-		}
-		distinctCommitteeIndexes = append(distinctCommitteeIndexes, assignment.CommitteeIndex)
+	activeValidatorCount, err := helpers.ActiveValidatorCount(s, req.Epoch)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
 	}
+	committeesAtSlot := helpers.SlotCommitteeCount(activeValidatorCount)
 
 	duties := make([]*v1.AttesterDuty, len(req.Index))
 	for i, index := range req.Index {
@@ -96,7 +91,7 @@ assignmentLoop:
 			ValidatorIndex:          index,
 			CommitteeIndex:          committee.CommitteeIndex,
 			CommitteeLength:         uint64(len(committee.Committee)),
-			CommitteesAtSlot:        uint64(len(distinctCommitteeIndexes)),
+			CommitteesAtSlot:        committeesAtSlot,
 			ValidatorCommitteeIndex: valIndexInCommittee,
 			Slot:                    committee.AttesterSlot,
 		}
