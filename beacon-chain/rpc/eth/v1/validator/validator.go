@@ -74,7 +74,7 @@ assignmentLoop:
 		distinctCommitteeIndexes = append(distinctCommitteeIndexes, assignment.CommitteeIndex)
 	}
 
-	vals := make([]iface.ReadOnlyValidator, len(req.Index))
+	duties := make([]*v1.AttesterDuty, len(req.Index))
 	for i, index := range req.Index {
 		val, err := s.ValidatorAtIndexReadOnly(index)
 		if _, ok := err.(*statev1.ValidatorIndexOutOfRangeError); ok {
@@ -82,12 +82,7 @@ assignmentLoop:
 		} else if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get validator: %v", err)
 		}
-		vals[i] = val
-	}
-
-	duties := make([]*v1.AttesterDuty, len(req.Index))
-	for i, index := range req.Index {
-		pubkey := vals[i].PublicKey()
+		pubkey := val.PublicKey()
 		committee := committeeAssignments[index]
 		var valIndexInCommittee types.CommitteeIndex
 		for cIndex, vIndex := range committee.Committee {
