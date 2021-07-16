@@ -242,6 +242,7 @@ func convertTopicScores(topicMap map[string]*pubsub.TopicScoreSnapshot) map[stri
 	return newMap
 }
 
+// Extracts the relevant fork digest from the gossip topic.
 func ExtractGossipDigest(topic string) ([4]byte, error) {
 	splitParts := strings.Split(topic, "/")
 	parts := []string{}
