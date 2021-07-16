@@ -37,17 +37,6 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *v1.AttesterDutiesR
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 
-	vals := make([]iface.ReadOnlyValidator, len(req.Index))
-	for i, index := range req.Index {
-		val, err := s.ValidatorAtIndexReadOnly(index)
-		if _, ok := err.(*statev1.ValidatorIndexOutOfRangeError); ok {
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid index: %v", err)
-		} else if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get validator: %v", err)
-		}
-		vals[i] = val
-	}
-
 	// Advance state with empty transitions up to the requested epoch start slot.
 	// In case 1 epoch ahead was requested, we take the start slot of the current epoch.
 	// Taking the start slot of the next epoch would result in an error inside state.ProcessSlots.
@@ -83,6 +72,17 @@ assignmentLoop:
 			}
 		}
 		distinctCommitteeIndexes = append(distinctCommitteeIndexes, assignment.CommitteeIndex)
+	}
+
+	vals := make([]iface.ReadOnlyValidator, len(req.Index))
+	for i, index := range req.Index {
+		val, err := s.ValidatorAtIndexReadOnly(index)
+		if _, ok := err.(*statev1.ValidatorIndexOutOfRangeError); ok {
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid index: %v", err)
+		} else if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get validator: %v", err)
+		}
+		vals[i] = val
 	}
 
 	duties := make([]*v1.AttesterDuty, len(req.Index))
@@ -154,18 +154,14 @@ func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *v1
 // or the genesis block root in the case of underflow.
 func dependentRoot(s iface.BeaconState, epoch types.Epoch) ([]byte, error) {
 	var dependentRootSlot types.Slot
-	if epoch == 0 {
+	if epoch <= 1 {
 		dependentRootSlot = 0
 	} else {
 		prevEpochStartSlot, err := helpers.StartSlot(epoch.Sub(1))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not obtain epoch's start slot: %v", err)
 		}
-		if epoch == 1 {
-			dependentRootSlot = 0
-		} else {
-			dependentRootSlot = prevEpochStartSlot.Sub(1)
-		}
+		dependentRootSlot = prevEpochStartSlot.Sub(1)
 	}
 	root, err := helpers.BlockRootAtSlot(s, dependentRootSlot)
 	if err != nil {
