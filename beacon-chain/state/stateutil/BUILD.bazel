@@ -79,7 +79,6 @@ go_test(
     local = True,
     tags = [
         "benchmark",
-        "manual",
         "no-cache",
     ],
     deps = [
@@ -88,6 +87,6 @@ go_test(
         "//shared/hashutil:go_default_library",
         "//shared/htrutils:go_default_library",
         "//shared/testutil:go_default_library",
-        "@com_github_protolambda_zssz//merkle:go_default_library",
+        "//shared/testutil/require:go_default_library",
     ],
 )
