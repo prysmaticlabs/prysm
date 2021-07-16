@@ -497,29 +497,3 @@ func UnslashedAttestingIndices(state iface.ReadOnlyBeaconState, atts []*pb.Pendi
 
 	return setIndices, nil
 }
-
-// BaseReward takes state and validator index and calculate
-// individual validator's base reward quotient.
-//
-// Note: Adjusted quotient is calculated of base reward because it's too inefficient
-// to repeat the same calculation for every validator versus just doing it once.
-//
-// Spec pseudocode definition:
-//  def get_base_reward(state: BeaconState, index: ValidatorIndex) -> Gwei:
-//    total_balance = get_total_active_balance(state)
-//    effective_balance = state.validators[index].effective_balance
-//    return Gwei(effective_balance * BASE_REWARD_FACTOR // integer_squareroot(total_balance) // BASE_REWARDS_PER_EPOCH)
-func BaseReward(state iface.ReadOnlyBeaconState, index types.ValidatorIndex) (uint64, error) {
-	totalBalance, err := helpers.TotalActiveBalance(state)
-	if err != nil {
-		return 0, errors.Wrap(err, "could not calculate active balance")
-	}
-	val, err := state.ValidatorAtIndexReadOnly(index)
-	if err != nil {
-		return 0, err
-	}
-	effectiveBalance := val.EffectiveBalance()
-	baseReward := effectiveBalance * params.BeaconConfig().BaseRewardFactor /
-		mathutil.IntegerSquareRoot(totalBalance) / params.BeaconConfig().BaseRewardsPerEpoch
-	return baseReward, nil
-}

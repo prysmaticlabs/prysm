@@ -115,11 +115,20 @@ func (s *Service) seen(att *ethpb.Attestation) (bool, error) {
 		}
 		if savedBitlist.Len() == incomingBits.Len() {
 			// Returns true if the node has seen all the bits in the new bit field of the incoming attestation.
-			if bytes.Equal(savedBitlist, incomingBits) || savedBitlist.Contains(incomingBits) {
+			if bytes.Equal(savedBitlist, incomingBits) {
 				return true, nil
 			}
+			if c, err := savedBitlist.Contains(incomingBits); err != nil {
+				return false, err
+			} else if c {
+				return true, nil
+			}
+			var err error
 			// Update the bit fields by Or'ing them with the new ones.
-			incomingBits = incomingBits.Or(savedBitlist)
+			incomingBits, err = incomingBits.Or(savedBitlist)
+			if err != nil {
+				return false, err
+			}
 		}
 	}
 

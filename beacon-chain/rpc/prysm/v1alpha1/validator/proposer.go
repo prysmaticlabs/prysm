@@ -591,7 +591,15 @@ func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, st if
 	if err := vs.deleteAttsInPool(ctx, invalidAtts); err != nil {
 		return nil, err
 	}
-	return validAtts.dedup().sortByProfitability().limitToMaxAttestations(), nil
+	deduped, err := validAtts.dedup()
+	if err != nil {
+		return nil, err
+	}
+	sorted, err := deduped.sortByProfitability()
+	if err != nil {
+		return nil, err
+	}
+	return sorted.limitToMaxAttestations(), nil
 }
 
 // The input attestations are processed and seen by the node, this deletes them from pool
@@ -669,7 +677,15 @@ func (vs *Server) packAttestations(ctx context.Context, latestState iface.Beacon
 			}
 			attsForInclusion = append(attsForInclusion, as...)
 		}
-		atts = attsForInclusion.dedup().sortByProfitability().limitToMaxAttestations()
+		deduped, err := attsForInclusion.dedup()
+		if err != nil {
+			return nil, err
+		}
+		sorted, err := deduped.sortByProfitability()
+		if err != nil {
+			return nil, err
+		}
+		atts = sorted.limitToMaxAttestations()
 	}
 	return atts, nil
 }
