@@ -26,7 +26,8 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *v1.AttesterDutiesR
 		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 
-	currentEpoch := helpers.SlotToEpoch(vs.TimeFetcher.CurrentSlot())
+	cs := vs.TimeFetcher.CurrentSlot()
+	currentEpoch := helpers.SlotToEpoch(cs)
 	if req.Epoch > currentEpoch+1 {
 		return nil, status.Errorf(codes.InvalidArgument, "Request epoch %d can not be greater than next epoch %d", req.Epoch, currentEpoch+1)
 	}
@@ -50,9 +51,19 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *v1.AttesterDutiesR
 	}
 
 	// Advance state with empty transitions up to the requested epoch start slot.
-	epochStartSlot, err := helpers.StartSlot(req.Epoch)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not obtain epoch's start slot: %v", err)
+	// In case 1 epoch ahead was requested, we take the start slot of the current epoch.
+	// Taking the start slot of the next epoch would result in an error inside state.ProcessSlots.
+	var epochStartSlot types.Slot
+	if req.Epoch == currentEpoch+1 {
+		epochStartSlot, err = helpers.StartSlot(req.Epoch.Sub(1))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not obtain epoch's start slot: %v", err)
+		}
+	} else {
+		epochStartSlot, err = helpers.StartSlot(req.Epoch)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not obtain epoch's start slot: %v", err)
+		}
 	}
 	if s.Slot() < epochStartSlot {
 		s, err = state.ProcessSlots(ctx, s, epochStartSlot)
@@ -94,11 +105,27 @@ assignmentLoop:
 			CommitteeLength:         uint64(len(committee.Committee)),
 			CommitteesAtSlot:        uint64(len(distinctCommitteeIndexes)),
 			ValidatorCommitteeIndex: valIndexInCommittee,
-			Slot:                    epochStartSlot,
+			Slot:                    committee.AttesterSlot,
 		}
 	}
 
-	dependentRoot, err := helpers.BlockRootAtSlot(s, epochStartSlot)
+	// The dependent_root value is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch - 1) - 1)
+	// or the genesis block root in the case of underflow.
+	var dependentRootSlot types.Slot
+	if req.Epoch == 0 {
+		dependentRootSlot = 0
+	} else {
+		prevEpochStartSlot, err := helpers.StartSlot(req.Epoch.Sub(1))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not obtain epoch's start slot: %v", err)
+		}
+		if req.Epoch == 1 {
+			dependentRootSlot = 0
+		} else {
+			dependentRootSlot = prevEpochStartSlot.Sub(1)
+		}
+	}
+	dependentRoot, err := helpers.BlockRootAtSlot(s, dependentRootSlot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get block root at slot %d: %v", epochStartSlot, err)
 	}
