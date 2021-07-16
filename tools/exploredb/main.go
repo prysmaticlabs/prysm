@@ -11,7 +11,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -123,7 +122,7 @@ func printBucketContents(dbNameWithPath string, rowLimit uint64, bucketName stri
 		log.Fatalf("could not open db, %v", openErr)
 	}
 
-	// dont forget to close it when ejecting out of this function.
+	// don't forget to close it when ejecting out of this function.
 	defer func() {
 		closeErr := db.Close()
 		if closeErr != nil {
@@ -212,12 +211,13 @@ func readBucketStats(ctx context.Context, dbNameWithPath string, statsC chan<- *
 					totalKeySize += uint64(len(k))
 					return nil
 				}); forEachErr != nil {
-					log.Errorf("could not process row %d for bucket: %s, %v", count, bukName, forEachErr)
+					log.WithError(forEachErr).Errorf("could not process row %d for bucket: %s", count, bukName)
 					return forEachErr
 				}
 				return nil
 			}); viewErr2 != nil {
-				log.Errorf("could not get stats for bucket: %s, %v", bukName, viewErr2)
+				log.WithError(viewErr2).Errorf("could not get stats for bucket: %s", bukName)
+				return
 			}
 			stat := &bucketStat{
 				bucketName:     bukName,
@@ -240,7 +240,8 @@ func readStates(ctx context.Context, db *kv.Store, stateC chan<- *modifiedState,
 	for rowCount, key := range keys {
 		st, stateErr := db.State(ctx, bytesutil.ToBytes32(key))
 		if stateErr != nil {
-			log.Errorf("could not get state for key : , %v", stateErr)
+			log.WithError(stateErr).Errorf("could not get state for key : %s", hexutils.BytesToHex(key))
+			continue
 		}
 		mst := &modifiedState{
 			state:     st,
@@ -257,7 +258,8 @@ func readStateSummary(ctx context.Context, db *kv.Store, stateSummaryC chan<- *m
 	for rowCount, key := range keys {
 		ss, ssErr := db.StateSummary(ctx, bytesutil.ToBytes32(key))
 		if ssErr != nil {
-			log.Errorf("could not get state summary for key : , %v", ssErr)
+			log.WithError(ssErr).Errorf("could not get state summary for key : %s", hexutils.BytesToHex(key))
+			continue
 		}
 		mst := &modifiedStateSummary{
 			slot:      ss.Slot,
@@ -276,11 +278,19 @@ func printBucketStates(statsC <-chan *bucketStat, doneC chan<- bool) {
 		if stat.noOfRows != 0 {
 			averageValueSize := stat.totalValueSize / stat.noOfRows
 			averageKeySize := stat.totalKeySize / stat.noOfRows
-			fmt.Println("------ ", stat.bucketName, " --------")
-			fmt.Println("NumberOfRows     = ", stat.noOfRows)
-			fmt.Println("TotalBucketSize  = ", humanize.Bytes(stat.totalValueSize+stat.totalKeySize))
-			fmt.Println("KeySize          = ", humanize.Bytes(stat.totalKeySize), "(min = "+humanize.Bytes(stat.minKeySize)+", avg = "+humanize.Bytes(averageKeySize)+", max = "+humanize.Bytes(stat.maxKeySize)+")")
-			fmt.Println("ValueSize        = ", humanize.Bytes(stat.totalValueSize), "(min = "+humanize.Bytes(stat.minValueSize)+", avg = "+humanize.Bytes(averageValueSize)+", max = "+humanize.Bytes(stat.maxValueSize)+")")
+			log.Infof("------ %s ---------", stat.bucketName)
+			log.Infof("NumberOfRows     = %d", stat.noOfRows)
+			log.Infof("TotalBucketSize  =  %s", humanize.Bytes(stat.totalValueSize+stat.totalKeySize))
+			log.Infof("KeySize          =  %s, (min = %s, avg = %s, max = %s)",
+				humanize.Bytes(stat.totalKeySize),
+				humanize.Bytes(stat.minKeySize),
+				humanize.Bytes(averageKeySize),
+				humanize.Bytes(stat.maxKeySize))
+			log.Infof("ValueSize        = %s, (min = %s, avg = %s, max = %s)",
+				humanize.Bytes(stat.totalValueSize),
+				humanize.Bytes(stat.minValueSize),
+				humanize.Bytes(averageValueSize),
+				humanize.Bytes(stat.maxValueSize))
 		}
 	}
 	doneC <- true
@@ -289,41 +299,41 @@ func printBucketStates(statsC <-chan *bucketStat, doneC chan<- bool) {
 func printStates(stateC <-chan *modifiedState, doneC chan<- bool) {
 	for mst := range stateC {
 		st := mst.state
-		rowStr := fmt.Sprintf("---- row = %04d ----", mst.rowCount)
-		fmt.Println(rowStr)
-		fmt.Println("key                           :", hexutils.BytesToHex(mst.key))
-		fmt.Println("value                         : compressed size = ", humanize.Bytes(mst.valueSize))
-		fmt.Println("genesis_time                  :", st.GenesisTime())
-		fmt.Println("genesis_validators_root       :", hexutils.BytesToHex(st.GenesisValidatorRoot()))
-		fmt.Println("slot                          :", st.Slot())
-		fmt.Println("fork                          : previous_version: ", st.Fork().PreviousVersion, ",  current_version: ", st.Fork().CurrentVersion)
-		fmt.Println("latest_block_header           : sizeSSZ = ", humanize.Bytes(uint64(st.LatestBlockHeader().SizeSSZ())))
+		log.Infof("---- row = %04d ----", mst.rowCount)
+		log.Infof("key                           : %s", hexutils.BytesToHex(mst.key))
+		log.Infof("value                         : compressed size = %s", humanize.Bytes(mst.valueSize))
+		t := time.Unix(int64(st.GenesisTime()), 0)
+		log.Infof("genesis_time                  : %s", t.Format(time.UnixDate))
+		log.Infof("genesis_validators_root       : %s", hexutils.BytesToHex(st.GenesisValidatorRoot()))
+		log.Infof("slot                          : %d", st.Slot())
+		log.Infof("fork                          : previous_version = %b,  current_version = %b", st.Fork().PreviousVersion, st.Fork().CurrentVersion)
+		log.Infof("latest_block_header           : sizeSSZ = %s", humanize.Bytes(uint64(st.LatestBlockHeader().SizeSSZ())))
 		size, count := sizeAndCountOfByteList(st.BlockRoots())
-		fmt.Println("block_roots                   : size =  ", humanize.Bytes(size), ", count =  ", count)
+		log.Infof("block_roots                   : size = %s, count =  %d", humanize.Bytes(size), count)
 		size, count = sizeAndCountOfByteList(st.StateRoots())
-		fmt.Println("state_roots                   : size =  ", humanize.Bytes(size), ", count =  ", count)
+		log.Infof("state_roots                   : size = %s, count = %d", humanize.Bytes(size), count)
 		size, count = sizeAndCountOfByteList(st.HistoricalRoots())
-		fmt.Println("historical_roots              : size =  ", humanize.Bytes(size), ", count =  ", count)
-		fmt.Println("eth1_data                     : sizeSSZ =  ", humanize.Bytes(uint64(st.Eth1Data().SizeSSZ())))
+		log.Infof("historical_roots              : size = %s, count = %d", humanize.Bytes(size), count)
+		log.Infof("eth1_data                     : sizeSSZ = %s", humanize.Bytes(uint64(st.Eth1Data().SizeSSZ())))
 		size, count = sizeAndCountGeneric(st.Eth1DataVotes(), nil)
-		fmt.Println("eth1_data_votes               : sizeSSZ = ", humanize.Bytes(size), ", count =  ", count)
-		fmt.Println("eth1_deposit_index            :", st.Eth1DepositIndex())
+		log.Infof("eth1_data_votes               : sizeSSZ = %s, count = %d", humanize.Bytes(size), count)
+		log.Infof("eth1_deposit_index            : %d", st.Eth1DepositIndex())
 		size, count = sizeAndCountGeneric(st.Validators(), nil)
-		fmt.Println("validators                    : sizeSSZ = ", humanize.Bytes(size), ", count =  ", count)
+		log.Infof("validators                    : sizeSSZ = %s, count = %d", humanize.Bytes(size), count)
 		size, count = sizeAndCountOfUin64List(st.Balances())
-		fmt.Println("balances                      : size = ", humanize.Bytes(size), ", count =  ", count)
+		log.Infof("balances                      : size = %s, count = %d", humanize.Bytes(size), count)
 		size, count = sizeAndCountOfByteList(st.RandaoMixes())
-		fmt.Println("randao_mixes                  : size = ", humanize.Bytes(size), ", count =  ", count)
+		log.Infof("randao_mixes                  : size = %s, count = %d", humanize.Bytes(size), count)
 		size, count = sizeAndCountOfUin64List(st.Slashings())
-		fmt.Println("slashings                     : size =  ", humanize.Bytes(size), ", count =  ", count)
+		log.Infof("slashings                     : size = %s, count = %d", humanize.Bytes(size), count)
 		size, count = sizeAndCountGeneric(st.PreviousEpochAttestations())
-		fmt.Println("previous_epoch_attestations   : sizeSSZ ", humanize.Bytes(size), ", count =  ", count)
+		log.Infof("previous_epoch_attestations   : sizeSSZ = %s, count = %d", humanize.Bytes(size), count)
 		size, count = sizeAndCountGeneric(st.CurrentEpochAttestations())
-		fmt.Println("current_epoch_attestations    : sizeSSZ =  ", humanize.Bytes(size), ", count =  ", count)
-		fmt.Println("justification_bits            : size =  ", humanize.Bytes(st.JustificationBits().Len()), ", count =  ", st.JustificationBits().Count())
-		fmt.Println("previous_justified_checkpoint : sizeSSZ =  ", humanize.Bytes(uint64(st.PreviousJustifiedCheckpoint().SizeSSZ())))
-		fmt.Println("current_justified_checkpoint  : sizeSSZ =  ", humanize.Bytes(uint64(st.CurrentJustifiedCheckpoint().SizeSSZ())))
-		fmt.Println("finalized_checkpoint          : sizeSSZ =  ", humanize.Bytes(uint64(st.FinalizedCheckpoint().SizeSSZ())))
+		log.Infof("current_epoch_attestations    : sizeSSZ = %s, count = %d", humanize.Bytes(size), count)
+		log.Infof("justification_bits            : size =  %s, count = %d", humanize.Bytes(st.JustificationBits().Len()), st.JustificationBits().Count())
+		log.Infof("previous_justified_checkpoint : sizeSSZ = %s", humanize.Bytes(uint64(st.PreviousJustifiedCheckpoint().SizeSSZ())))
+		log.Infof("current_justified_checkpoint  : sizeSSZ = %s", humanize.Bytes(uint64(st.CurrentJustifiedCheckpoint().SizeSSZ())))
+		log.Infof("finalized_checkpoint          : sizeSSZ = %s", humanize.Bytes(uint64(st.FinalizedCheckpoint().SizeSSZ())))
 
 	}
 	doneC <- true
@@ -331,8 +341,7 @@ func printStates(stateC <-chan *modifiedState, doneC chan<- bool) {
 
 func printStateSummary(stateSummaryC <-chan *modifiedStateSummary, doneC chan<- bool) {
 	for msts := range stateSummaryC {
-		rowCountStr := fmt.Sprintf("row : %04d, ", msts.rowCount)
-		fmt.Println(rowCountStr, "slot : ", msts.slot, ", root : ", hexutils.BytesToHex(msts.root))
+		log.Infof("row : %04d, slot : %d, root = %s", msts.rowCount, msts.slot, hexutils.BytesToHex(msts.root))
 	}
 	doneC <- true
 }
