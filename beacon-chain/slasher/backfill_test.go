@@ -2,19 +2,22 @@ package slasher
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -108,17 +111,13 @@ func setupBackfillTest(tb testing.TB, cfg *backfillTestConfig) *Service {
 
 	// Setup validators in the beacon state for a full test setup.
 	numValidators := numSlots
-	validators, balances, privKeys := setupValidators(tb, numValidators)
+	validators, balances, privKeysByValidator := setupValidators(tb, numValidators)
 	require.NoError(tb, beaconState.SetValidators(validators))
 	require.NoError(tb, beaconState.SetBalances(balances))
-	_ = privKeys
 
 	for i := uint64(0); i < numSlots; i++ {
 		// Create a realistic looking block for the slot.
 		require.NoError(tb, beaconState.SetSlot(types.Slot(i)))
-		sig := make([]byte, 96)
-		copy(sig[:], fmt.Sprintf("%d", i))
-
 		parentRoot := make([]byte, 32)
 		if i == 0 {
 			parentRoot = genesisRoot[:]
@@ -132,9 +131,14 @@ func setupBackfillTest(tb testing.TB, cfg *backfillTestConfig) *Service {
 				ProposerIndex: types.ValidatorIndex(i),
 				ParentRoot:    parentRoot,
 			}),
-			Signature: sig,
 		})
 		wrap := wrapper.WrappedPhase0SignedBeaconBlock(blk)
+		header, err := blockutil.SignedBeaconBlockHeaderFromBlock(wrap)
+		require.NoError(tb, err)
+		sig, err := signBlockHeader(beaconState, header, privKeysByValidator[types.ValidatorIndex(i)])
+		require.NoError(tb, err)
+		blk.Signature = sig.Marshal()
+
 		blocks = append(blocks, wrap)
 
 		// If we specify it, create a slashable block at a certain slot.
@@ -149,9 +153,13 @@ func setupBackfillTest(tb testing.TB, cfg *backfillTestConfig) *Service {
 						Graffiti: slashableGraffiti,
 					}),
 				}),
-				Signature: sig,
 			})
 			wrap := wrapper.WrappedPhase0SignedBeaconBlock(blk)
+			header, err := blockutil.SignedBeaconBlockHeaderFromBlock(wrap)
+			require.NoError(tb, err)
+			sig, err := signBlockHeader(beaconState, header, privKeysByValidator[types.ValidatorIndex(i)])
+			require.NoError(tb, err)
+			blk.Signature = sig.Marshal()
 			blocks = append(blocks, wrap)
 		}
 
@@ -166,14 +174,14 @@ func setupBackfillTest(tb testing.TB, cfg *backfillTestConfig) *Service {
 	return srv
 }
 
-func setupValidators(t testing.TB, count uint64) ([]*ethpb.Validator, []uint64, []bls.SecretKey) {
+func setupValidators(t testing.TB, count uint64) ([]*ethpb.Validator, []uint64, map[types.ValidatorIndex]bls.SecretKey) {
 	balances := make([]uint64, count)
 	validators := make([]*ethpb.Validator, 0, count)
-	secretKeys := make([]bls.SecretKey, 0, count)
-	for i := 0; i < count; i++ {
+	secretKeysByValidator := make(map[types.ValidatorIndex]bls.SecretKey)
+	for i := uint64(0); i < count; i++ {
 		privKey, err := bls.RandKey()
 		require.NoError(t, err)
-		secretKeys[i] = privKey
+		secretKeysByValidator[types.ValidatorIndex(i)] = privKey
 		pubKey := privKey.PublicKey().Marshal()
 		balances[i] = uint64(i)
 		validators = append(validators, &ethpb.Validator{
@@ -181,5 +189,34 @@ func setupValidators(t testing.TB, count uint64) ([]*ethpb.Validator, []uint64, 
 			WithdrawalCredentials: make([]byte, 32),
 		})
 	}
-	return validators, balances, secretKeys
+	return validators, balances, secretKeysByValidator
+}
+
+func signBlockHeader(
+	beaconState iface.BeaconState,
+	header *ethpb.SignedBeaconBlockHeader,
+	privKey bls.SecretKey,
+) (bls.Signature, error) {
+	domain, err := helpers.Domain(
+		beaconState.Fork(),
+		0,
+		params.BeaconConfig().DomainBeaconProposer,
+		beaconState.GenesisValidatorRoot(),
+	)
+	if err != nil {
+		return nil, err
+	}
+	htr, err := header.Header.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	container := &pb.SigningData{
+		ObjectRoot: htr[:],
+		Domain:     domain,
+	}
+	signingRoot, err := container.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	return privKey.Sign(signingRoot[:]), nil
 }
