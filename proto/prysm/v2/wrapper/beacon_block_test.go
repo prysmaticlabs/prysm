@@ -8,6 +8,7 @@ import (
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/version"
 )
 
 var (
@@ -33,12 +34,11 @@ func TestAltairSignedBeaconBlock_Signature(t *testing.T) {
 }
 
 func TestAltairSignedBeaconBlock_Block(t *testing.T) {
-	blk := &prysmv2.BeaconBlockAltair{}
+	blk := &prysmv2.BeaconBlockAltair{Slot: 54}
 	wsb := wrapper.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlock{Block: blk})
 
-	// Wrapped signed block returns a wrapped beacon block.
-	want := wrapper.WrappedAltairBeaconBlock(blk)
-	assert.DeepEqual(t, want, wsb.Block())
+	// Wrapped signed block returns a beacon block.
+	assert.DeepEqual(t, blk, wsb.Block().Proto())
 
 	// Handles nil properly.
 	wsb = wrapper.WrappedAltairSignedBeaconBlock(nil)
@@ -57,35 +57,52 @@ func TestAltairSignedBeaconBlock_Copy(t *testing.T) {
 }
 
 func TestAltairSignedBeaconBlock_Proto(t *testing.T) {
-	t.Fatal("TODO")
+	sb := &prysmv2.SignedBeaconBlockAltair{
+		Block:     &prysmv2.BeaconBlockAltair{Slot: 66},
+		Signature: []byte{0x11, 0x22},
+	}
+	wsb := wrapper.WrappedAltairSignedBeaconBlock(sb)
+	assert.Equal(t, sb, wsb.Proto())
 }
 
 func TestAltairSignedBeaconBlock_PbPhase0Block(t *testing.T) {
-	t.Fatal("TODO")
+	wsb := wrapper.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlockAltair{})
+	if _, err := wsb.PbPhase0Block(); err != wrapper.ErrUnsupportedPhase0Block {
+		t.Errorf("Wrong error returned. Want %v got %v", wrapper.ErrUnsupportedPhase0Block, err)
+	}
 }
 
 func TestAltairSignedBeaconBlock_PbAltairBlock(t *testing.T) {
-	t.Fatal("TODO")
+	sb := &prysmv2.SignedBeaconBlockAltair{
+		Block:     &prysmv2.BeaconBlockAltair{Slot: 66},
+		Signature: []byte{0x11, 0x22},
+	}
+	wsb := wrapper.WrappedAltairSignedBeaconBlock(sb)
+
+	got, err := wsb.PbAltairBlock()
+	assert.NoError(t, err)
+	assert.Equal(t, sb, got)
 }
 
 func TestAltairSignedBeaconBlock_MarshalSSZTo(t *testing.T) {
-	t.Fatal("TODO")
+	t.Skip("TODO: Use altair generators in github.com/prysmaticlabs/prysm/shared/testutil")
 }
 
 func TestAltairSignedBeaconBlock_MarshalSSZ(t *testing.T) {
-	t.Fatal("TODO")
+	t.Skip("TODO: Use altair generators in github.com/prysmaticlabs/prysm/shared/testutil")
 }
 
 func TestAltairSignedBeaconBlock_SizeSSZ(t *testing.T) {
-	t.Fatal("TODO")
+	t.Skip("TODO: Use altair generators in github.com/prysmaticlabs/prysm/shared/testutil")
 }
 
 func TestAltairSignedBeaconBlock_UnmarshalSSZ(t *testing.T) {
-	t.Fatal("TODO")
+	t.Skip("TODO: Use altair generators in github.com/prysmaticlabs/prysm/shared/testutil")
 }
 
 func TestAltairSignedBeaconBlock_Version(t *testing.T) {
-	t.Fatal("TODO")
+	wsb := wrapper.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlockAltair{})
+	assert.Equal(t, version.Altair, wsb.Version())
 }
 
 func TestAltairBeaconBlock_Slot(t *testing.T) {

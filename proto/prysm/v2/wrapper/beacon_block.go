@@ -11,6 +11,10 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+var (
+	ErrUnsupportedPhase0Block = errors.New("unsupported phase0 block")
+)
+
 // AltairSignedBeaconBlock is a convenience wrapper around a altair beacon block
 // object. This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across prysm without issues.
@@ -88,7 +92,7 @@ func (w AltairSignedBeaconBlock) PbAltairBlock() (*prysmv2.SignedBeaconBlock, er
 
 // PbPhase0Block is a stub.
 func (w AltairSignedBeaconBlock) PbPhase0Block() (*ethpb.SignedBeaconBlock, error) {
-	return nil, errors.New("unsupported phase0 block")
+	return nil, ErrUnsupportedPhase0Block
 }
 
 // Version of the underlying protobuf object.

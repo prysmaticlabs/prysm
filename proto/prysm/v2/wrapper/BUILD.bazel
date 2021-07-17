@@ -25,5 +25,6 @@ go_test(
         "//proto/interfaces:go_default_library",
         "//proto/prysm/v2:go_default_library",
         "//shared/testutil/assert:go_default_library",
+        "//shared/version:go_default_library",
     ],
 )
