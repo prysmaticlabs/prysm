@@ -4,7 +4,6 @@ import (
 	"context"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
@@ -97,8 +96,11 @@ func (vs *Server) getSyncAggregate(ctx context.Context, slot types.Slot, root [3
 	}
 	proposerContributions := proposerSyncContributions(contributions).filterByBlockRoot(root)
 
-	// Each sync subcommittee is 128 bits and the sync committee is 512 bits
-	bitsHolder := [][]byte{bitfield.NewBitvector128(), bitfield.NewBitvector128(), bitfield.NewBitvector128(), bitfield.NewBitvector128()}
+	// Each sync subcommittee is 128 bits and the sync committee is 512 bits(mainnet).
+	bitsHolder := [][]byte{}
+	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSubnetCount; i++ {
+		bitsHolder = append(bitsHolder, prysmv2.NewSyncCommitteeAggregationBits())
+	}
 	sigsHolder := make([]bls.Signature, 0, params.BeaconConfig().SyncCommitteeSize/params.BeaconConfig().SyncCommitteeSubnetCount)
 
 	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSubnetCount; i++ {

@@ -21,7 +21,7 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (ssz.Unmarshaler, err
 		return nil, errNilPubsubMessage
 	}
 	topic := *msg.Topic
-	fDigest, err := extractDigest(topic)
+	fDigest, err := p2p.ExtractGossipDigest(topic)
 	if err != nil {
 		return nil, errors.Wrapf(err, "extraction failed for topic: %s", topic)
 	}

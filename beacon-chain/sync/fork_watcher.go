@@ -4,6 +4,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -89,7 +90,7 @@ func (s *Service) checkForPreviousEpochFork(currEpoch types.Epoch) error {
 		// Run through all our current active topics and see
 		// if there are any subscriptions to be removed.
 		for _, t := range s.subHandler.allTopics() {
-			retDigest, err := digestFromTopic(t)
+			retDigest, err := p2p.ExtractGossipDigest(t)
 			if err != nil {
 				log.WithError(err).Error("Could not retrieve digest")
 				continue

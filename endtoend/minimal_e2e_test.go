@@ -44,7 +44,7 @@ func e2eMinimal(t *testing.T, usePrysmSh bool) {
 		EpochsToRun:         uint64(epochsToRun),
 		TestSync:            true,
 		TestDeposits:        true,
-		TestSlasher:         true,
+		TestSlasher:         false,
 		UsePrysmShValidator: usePrysmSh,
 		UsePprof:            !longRunning,
 		Evaluators: []types.Evaluator{
@@ -63,6 +63,7 @@ func e2eMinimal(t *testing.T, usePrysmSh bool) {
 			ev.ValidatorsVoteWithTheMajority,
 			ev.ColdStateCheckpoint,
 			ev.ApiVerifyValidators,
+			ev.ForkTransition,
 		},
 	}
 

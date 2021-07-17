@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"reflect"
 	"runtime/debug"
@@ -11,7 +10,6 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -19,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	pb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/messagehandler"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -682,29 +679,6 @@ func (s *Service) currentForkDigest() ([4]byte, error) {
 	return p2putils.CreateForkDigest(s.cfg.Chain.GenesisTime(), genRoot[:])
 }
 
-func extractDigest(topic string) ([4]byte, error) {
-	splitParts := strings.Split(topic, "/")
-	parts := []string{}
-	for _, p := range splitParts {
-		if p == "" {
-			continue
-		}
-		parts = append(parts, p)
-	}
-	if len(parts) < 2 {
-		return [4]byte{}, errors.Wrapf(errInvalidTopic, "it only has %d parts: %v", len(parts), parts)
-	}
-	strDigest := parts[1]
-	digest, err := hex.DecodeString(strDigest)
-	if err != nil {
-		return [4]byte{}, err
-	}
-	if len(digest) != digestLength {
-		return [4]byte{}, errors.Errorf("invalid digest length wanted %d but got %d", digestLength, len(digest))
-	}
-	return bytesutil.ToBytes4(digest), nil
-}
-
 // Checks if the provided digest matches up with the current supposed digest.
 func isDigestValid(digest [4]byte, genesis time.Time, genValRoot [32]byte) (bool, error) {
 	retDigest, err := p2putils.CreateForkDigest(genesis, genValRoot[:])
@@ -722,16 +696,4 @@ func isDigestValid(digest [4]byte, genesis time.Time, genValRoot [32]byte) (bool
 		return true, nil
 	}
 	return retDigest == digest, nil
-}
-
-func digestFromTopic(topic string) ([4]byte, error) {
-	parts := strings.Split(topic, "/")
-	if len(parts) != 5 {
-		return [4]byte{}, errors.Errorf("only %d parts in topic instead of 5", len(parts))
-	}
-	digest, err := hex.DecodeString(parts[2])
-	if err != nil {
-		return [4]byte{}, err
-	}
-	return bytesutil.ToBytes4(digest), nil
 }

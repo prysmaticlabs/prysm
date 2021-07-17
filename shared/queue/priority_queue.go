@@ -160,17 +160,7 @@ func (pq *PriorityQueue) RetrieveByKey(key string) *Item {
 		return nil
 	}
 
-	// Remove the item the heap and then re insert it back.
-	itemRaw := heap.Remove(&pq.data, item.index)
-	heap.Push(&pq.data, itemRaw)
-
-	if itemRaw != nil {
-		if i, ok := itemRaw.(*Item); ok {
-			return i
-		}
-	}
-
-	return nil
+	return pq.data[item.index]
 }
 
 // Len returns the number of items in the queue data structure. Do not use this

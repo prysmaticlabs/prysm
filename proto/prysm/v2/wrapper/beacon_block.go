@@ -20,7 +20,7 @@ type AltairSignedBeaconBlock struct {
 
 // WrappedAltairSignedBeaconBlock is constructor which wraps a protobuf altair block
 // with the block wrapper.
-func WrappedAltairSignedBeaconBlock(b *prysmv2.SignedBeaconBlock) AltairSignedBeaconBlock {
+func WrappedAltairSignedBeaconBlock(b *prysmv2.SignedBeaconBlock) interfaces.SignedBeaconBlock {
 	return AltairSignedBeaconBlock{b: b}
 }
 
@@ -97,7 +97,7 @@ type AltairBeaconBlock struct {
 
 // WrappedAltairBeaconBlock is constructor which wraps a protobuf altair object
 // with the block wrapper.
-func WrappedAltairBeaconBlock(b *prysmv2.BeaconBlock) AltairBeaconBlock {
+func WrappedAltairBeaconBlock(b *prysmv2.BeaconBlock) interfaces.BeaconBlock {
 	return AltairBeaconBlock{b: b}
 }
 
@@ -177,7 +177,7 @@ type AltairBeaconBlockBody struct {
 
 // WrappedAltairBeaconBlockBody is constructor which wraps a protobuf altair object
 // with the block wrapper.
-func WrappedAltairBeaconBlockBody(b *prysmv2.BeaconBlockBody) AltairBeaconBlockBody {
+func WrappedAltairBeaconBlockBody(b *prysmv2.BeaconBlockBody) interfaces.BeaconBlockBody {
 	return AltairBeaconBlockBody{b: b}
 }
 

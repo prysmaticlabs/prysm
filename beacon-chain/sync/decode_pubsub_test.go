@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/d4l3k/messagediff"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pb "github.com/libp2p/go-libp2p-pubsub/pb"
-	"github.com/pkg/errors"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -88,7 +88,7 @@ func TestService_decodePubsubMessage(t *testing.T) {
 				tt.input.Message.Topic = &tt.topic
 			}
 			got, err := s.decodePubsubMessage(tt.input)
-			if err != tt.wantErr && !errors.Is(err, tt.wantErr) {
+			if err != tt.wantErr && !strings.Contains(err.Error(), tt.wantErr.Error()) {
 				t.Errorf("decodePubsubMessage() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
