@@ -27,7 +27,7 @@ func testSign(t *testing.T) {
 			file, err := testutil.BazelFileBytes(path.Join(testFolderPath, folder.Name(), "data.yaml"))
 			require.NoError(t, err)
 			test := &SignMsgTest{}
-			require.NoError(t, yaml.UnmarshalStrict(file, test))
+			require.NoError(t, yaml.Unmarshal(file, test))
 			pkBytes, err := hex.DecodeString(test.Input.Privkey[2:])
 			require.NoError(t, err)
 			sk, err := bls.SecretKeyFromBytes(pkBytes)

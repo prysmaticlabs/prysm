@@ -26,7 +26,7 @@ func TestKeyGenerator(t *testing.T) {
 	file, err := ioutil.ReadFile(path)
 	require.NoError(t, err)
 	testCases := &KeyTest{}
-	require.NoError(t, yaml.UnmarshalStrict(file, testCases))
+	require.NoError(t, yaml.Unmarshal(file, testCases))
 	priv, _, err := interop.DeterministicallyGenerateKeys(0, 1000)
 	require.NoError(t, err)
 	// cross-check with the first 1000 keys generated from the python spec

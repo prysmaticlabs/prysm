@@ -26,7 +26,7 @@ func testVerify(t *testing.T) {
 			file, err := testutil.BazelFileBytes(path.Join(testFolderPath, folder.Name(), "data.yaml"))
 			require.NoError(t, err)
 			test := &VerifyMsgTest{}
-			require.NoError(t, yaml.UnmarshalStrict(file, test))
+			require.NoError(t, yaml.Unmarshal(file, test))
 
 			pkBytes, err := hex.DecodeString(test.Input.Pubkey[2:])
 			require.NoError(t, err)

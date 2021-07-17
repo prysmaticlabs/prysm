@@ -27,7 +27,7 @@ func RunShuffleTests(t *testing.T, config string) {
 			require.NoError(t, err, "Could not read YAML tests directory")
 
 			testCase := &ShuffleTestCase{}
-			require.NoError(t, yaml.UnmarshalStrict(testCaseFile, testCase), "Could not unmarshal YAML file into test struct")
+			require.NoError(t, yaml.Unmarshal(testCaseFile, testCase), "Could not unmarshal YAML file into test struct")
 			require.NoError(t, runShuffleTest(t, testCase), "Shuffle test failed")
 		})
 	}
