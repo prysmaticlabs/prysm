@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
@@ -106,19 +107,46 @@ func TestAltairSignedBeaconBlock_Version(t *testing.T) {
 }
 
 func TestAltairBeaconBlock_Slot(t *testing.T) {
-	t.Fatal("TODO")
+	slot := types.Slot(546)
+	wb := wrapper.WrappedAltairBeaconBlock(&prysmv2.BeaconBlockAltair{Slot: slot})
+
+	// Returns correct slot.
+	assert.Equal(t, slot, wb.Slot())
+
+	// Handles nil.
+	wb = wrapper.WrappedAltairBeaconBlock(nil)
+	assert.Equal(t, types.Slot(0), wb.Slot())
 }
 
 func TestAltairBeaconBlock_ProposerIndex(t *testing.T) {
-	t.Fatal("TODO")
+	pi := types.ValidatorIndex(555)
+	wb := wrapper.WrappedAltairBeaconBlock(&prysmv2.BeaconBlockAltair{ProposerIndex: pi})
+
+	// Returns correct index.
+	assert.Equal(t, pi, wb.ProposerIndex())
+
+	// Handles nil.
+	wb = wrapper.WrappedAltairBeaconBlock(nil)
+	assert.Equal(t, types.ValidatorIndex(0), wb.ProposerIndex())
 }
 
 func TestAltairBeaconBlock_ParentRoot(t *testing.T) {
-	t.Fatal("TODO")
+	root := []byte{0xAA, 0xBF, 0x33, 0x01}
+	wb := wrapper.WrappedAltairBeaconBlock(&prysmv2.BeaconBlockAltair{ParentRoot: root})
+
+	// Returns correct root.
+	assert.DeepEqual(t, root, wb.ParentRoot())
+
+	// Handles nil.
+	wb = wrapper.WrappedAltairBeaconBlock(nil)
+	assert.Equal(t, nil, wb.ParentRoot())
 }
 
 func TestAltairBeaconBlock_StateRoot(t *testing.T) {
-	t.Fatal("TODO")
+	root := []byte{0xAA, 0xBF, 0x33, 0x01}
+	wb := wrapper.WrappedAltairBeaconBlock(&prysmv2.BeaconBlockAltair{StateRoot: root})
+
+	assert.DeepEqual(t, root, wb.StateRoot())
 }
 
 func TestAltairBeaconBlock_Body(t *testing.T) {
@@ -126,39 +154,51 @@ func TestAltairBeaconBlock_Body(t *testing.T) {
 }
 
 func TestAltairBeaconBlock_IsNil(t *testing.T) {
-	t.Fatal("TODO")
+	wb := wrapper.WrappedAltairBeaconBlock(&prysmv2.BeaconBlockAltair{})
+	assert.Equal(t, false, wb.IsNil())
+
+	wb = wrapper.WrappedAltairBeaconBlock(nil)
+	assert.Equal(t, true, wb.IsNil())
 }
 
 func TestAltairBeaconBlock_HashTreeRoot(t *testing.T) {
-	t.Fatal("TODO")
+	t.Skip("TODO: Use altair generators in github.com/prysmaticlabs/prysm/shared/testutil")
 }
 
 func TestAltairBeaconBlock_Proto(t *testing.T) {
-	t.Fatal("TODO")
+	blk := &prysmv2.BeaconBlockAltair{ProposerIndex: 234}
+	wb := wrapper.WrappedAltairBeaconBlock(blk)
+
+	assert.Equal(t, blk, wb.Proto())
 }
 
 func TestAltairBeaconBlock_MarshalSSZTo(t *testing.T) {
-	t.Fatal("TODO")
+	t.Skip("TODO: Use altair generators in github.com/prysmaticlabs/prysm/shared/testutil")
 }
 
 func TestAltairBeaconBlock_MarshalSSZ(t *testing.T) {
-	t.Fatal("TODO")
+	t.Skip("TODO: Use altair generators in github.com/prysmaticlabs/prysm/shared/testutil")
 }
 
 func TestAltairBeaconBlock_SizeSSZ(t *testing.T) {
-	t.Fatal("TODO")
+	t.Skip("TODO: Use altair generators in github.com/prysmaticlabs/prysm/shared/testutil")
 }
 
 func TestAltairBeaconBlock_UnmarshalSSZ(t *testing.T) {
-	t.Fatal("TODO")
+	t.Skip("TODO: Use altair generators in github.com/prysmaticlabs/prysm/shared/testutil")
 }
 
 func TestAltairBeaconBlock_Version(t *testing.T) {
-	t.Fatal("TODO")
+	wb := wrapper.WrappedAltairBeaconBlock(&prysmv2.BeaconBlockAltair{})
+
+	assert.Equal(t, version.Altair, wb.Version())
 }
 
 func TestAltairBeaconBlockBody_RandaoReveal(t *testing.T) {
-	t.Fatal("TODO")
+	root := []byte{0xAA, 0xBF, 0x33, 0x01}
+	wbb := wrapper.WrappedAltairBeaconBlockBody(&prysmv2.BeaconBlockBodyAltair{RandaoReveal: root})
+
+	assert.DeepEqual(t, root, wbb.RandaoReveal())
 }
 
 func TestAltairBeaconBlockBody_Eth1Data(t *testing.T) {
@@ -166,7 +206,10 @@ func TestAltairBeaconBlockBody_Eth1Data(t *testing.T) {
 }
 
 func TestAltairBeaconBlockBody_Graffiti(t *testing.T) {
-	t.Fatal("TODO")
+	body := &prysmv2.BeaconBlockBodyAltair{Graffiti: []byte{0x66, 0xAA}}
+	wbb := wrapper.WrappedAltairBeaconBlockBody(body)
+
+	assert.DeepEqual(t, body.Graffiti, wbb.Graffiti())
 }
 
 func TestAltairBeaconBlockBody_ProposerSlashings(t *testing.T) {
@@ -190,13 +233,20 @@ func TestAltairBeaconBlockBody_VoluntaryExits(t *testing.T) {
 }
 
 func TestAltairBeaconBlockBody_IsNil(t *testing.T) {
-	t.Fatal("TODO")
+	wbb := wrapper.WrappedAltairBeaconBlockBody(&prysmv2.BeaconBlockBodyAltair{})
+	assert.Equal(t, false, wbb.IsNil())
+
+	wbb = wrapper.WrappedAltairBeaconBlockBody(nil)
+	assert.Equal(t, true, wbb.IsNil())
 }
 
 func TestAltairBeaconBlockBody_HashTreeRoot(t *testing.T) {
-	t.Fatal("TODO")
+	t.Skip("TODO: Use altair generators in github.com/prysmaticlabs/prysm/shared/testutil")
 }
 
 func TestAltairBeaconBlockBody_Proto(t *testing.T) {
-	t.Fatal("TODO")
+	body := &prysmv2.BeaconBlockBodyAltair{Graffiti: []byte{0x66, 0xAA}}
+	wbb := wrapper.WrappedAltairBeaconBlockBody(body)
+
+	assert.Equal(t, body, wbb.Proto())
 }

@@ -25,6 +25,7 @@ type AltairSignedBeaconBlock struct {
 // WrappedAltairSignedBeaconBlock is constructor which wraps a protobuf altair block
 // with the block wrapper.
 func WrappedAltairSignedBeaconBlock(b *prysmv2.SignedBeaconBlock) interfaces.SignedBeaconBlock {
+	// TODO: Should this return an error if b is nil?
 	return AltairSignedBeaconBlock{b: b}
 }
 
@@ -108,21 +109,31 @@ type AltairBeaconBlock struct {
 // WrappedAltairBeaconBlock is constructor which wraps a protobuf altair object
 // with the block wrapper.
 func WrappedAltairBeaconBlock(b *prysmv2.BeaconBlock) interfaces.BeaconBlock {
+	// TODO: Should this return an error if b is nil?
 	return AltairBeaconBlock{b: b}
 }
 
 // Slot returns the respective slot of the block.
 func (w AltairBeaconBlock) Slot() types.Slot {
+	if w.b == nil {
+		return 0
+	}
 	return w.b.Slot
 }
 
 // ProposerIndex returns proposer index of the beacon block.
 func (w AltairBeaconBlock) ProposerIndex() types.ValidatorIndex {
+	if w.b == nil {
+		return 0
+	}
 	return w.b.ProposerIndex
 }
 
 // ParentRoot returns the parent root of beacon block.
 func (w AltairBeaconBlock) ParentRoot() []byte {
+	if w.b == nil {
+		return nil
+	}
 	return w.b.ParentRoot
 }
 
@@ -188,6 +199,7 @@ type AltairBeaconBlockBody struct {
 // WrappedAltairBeaconBlockBody is constructor which wraps a protobuf altair object
 // with the block wrapper.
 func WrappedAltairBeaconBlockBody(b *prysmv2.BeaconBlockBody) interfaces.BeaconBlockBody {
+	// TODO: Should this return an error if b is nil?
 	return AltairBeaconBlockBody{b: b}
 }
 
