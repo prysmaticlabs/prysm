@@ -19,6 +19,7 @@ go_library(
         "//slasher/rpc:__subpackages__",
         "//spectest:__subpackages__",
         "//tools/benchmark-files-gen:__pkg__",
+        "//tools/exploredb:__pkg__",
         "//tools/pcli:__pkg__",
     ],
     deps = [
