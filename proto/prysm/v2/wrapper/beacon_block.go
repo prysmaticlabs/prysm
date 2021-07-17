@@ -34,6 +34,9 @@ func (w AltairSignedBeaconBlock) Signature() []byte {
 
 // Block returns the underlying beacon block object.
 func (w AltairSignedBeaconBlock) Block() interfaces.BeaconBlock {
+	if w.b == nil {
+		return nil
+	}
 	return WrappedAltairBeaconBlock(w.b.Block)
 }
 
