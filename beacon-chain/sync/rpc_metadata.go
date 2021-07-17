@@ -26,11 +26,15 @@ func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2
 	}
 	s.rateLimiter.add(stream, 1)
 
-	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
-		return err
-	}
 	if s.cfg.P2P.Metadata() == nil || s.cfg.P2P.Metadata().IsNil() {
-		return errors.New("nil metadata stored for host")
+		nilErr := errors.New("nil metadata stored for host")
+		resp, err := s.generateErrorResponse(responseCodeServerError, types.ErrGeneric.Error())
+		if err != nil {
+			log.WithError(err).Debug("Could not generate a response error")
+		} else if _, err := stream.Write(resp); err != nil {
+			log.WithError(err).Debug("Could not write to stream")
+		}
+		return nilErr
 	}
 	topicVersion := ""
 	switch s.cfg.P2P.Metadata().Version() {
@@ -40,6 +44,15 @@ func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2
 		topicVersion = p2p.SchemaVersionV2
 	}
 	if err := validateVersion(topicVersion, stream); err != nil {
+		resp, genErr := s.generateErrorResponse(responseCodeServerError, types.ErrGeneric.Error())
+		if genErr != nil {
+			log.WithError(genErr).Debug("Could not generate a response error")
+		} else if _, wErr := stream.Write(resp); wErr != nil {
+			log.WithError(wErr).Debug("Could not write to stream")
+		}
+		return err
+	}
+	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
 	}
 	_, err := s.cfg.P2P.Encoding().EncodeWithMaxLength(stream, s.cfg.P2P.Metadata())
