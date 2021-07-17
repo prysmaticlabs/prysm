@@ -56,15 +56,35 @@ func TestAltairSignedBeaconBlock_Copy(t *testing.T) {
 	t.Skip("TODO: Missing mutation evaluation helpers")
 }
 
-func TestAltairSignedBeaconBlock_MarshalSSZ(t *testing.T) {
-	t.Fatal("TODO")
-}
-
 func TestAltairSignedBeaconBlock_Proto(t *testing.T) {
 	t.Fatal("TODO")
 }
 
 func TestAltairSignedBeaconBlock_PbPhase0Block(t *testing.T) {
+	t.Fatal("TODO")
+}
+
+func TestAltairSignedBeaconBlock_PbAltairBlock(t *testing.T) {
+	t.Fatal("TODO")
+}
+
+func TestAltairSignedBeaconBlock_MarshalSSZTo(t *testing.T) {
+	t.Fatal("TODO")
+}
+
+func TestAltairSignedBeaconBlock_MarshalSSZ(t *testing.T) {
+	t.Fatal("TODO")
+}
+
+func TestAltairSignedBeaconBlock_SizeSSZ(t *testing.T) {
+	t.Fatal("TODO")
+}
+
+func TestAltairSignedBeaconBlock_UnmarshalSSZ(t *testing.T) {
+	t.Fatal("TODO")
+}
+
+func TestAltairSignedBeaconBlock_Version(t *testing.T) {
 	t.Fatal("TODO")
 }
 
@@ -96,11 +116,27 @@ func TestAltairBeaconBlock_HashTreeRoot(t *testing.T) {
 	t.Fatal("TODO")
 }
 
+func TestAltairBeaconBlock_Proto(t *testing.T) {
+	t.Fatal("TODO")
+}
+
+func TestAltairBeaconBlock_MarshalSSZTo(t *testing.T) {
+	t.Fatal("TODO")
+}
+
 func TestAltairBeaconBlock_MarshalSSZ(t *testing.T) {
 	t.Fatal("TODO")
 }
 
-func TestAltairBeaconBlock_Proto(t *testing.T) {
+func TestAltairBeaconBlock_SizeSSZ(t *testing.T) {
+	t.Fatal("TODO")
+}
+
+func TestAltairBeaconBlock_UnmarshalSSZ(t *testing.T) {
+	t.Fatal("TODO")
+}
+
+func TestAltairBeaconBlock_Version(t *testing.T) {
 	t.Fatal("TODO")
 }
 
