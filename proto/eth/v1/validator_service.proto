@@ -37,9 +37,7 @@ option php_namespace = "Ethereum\\Eth\\v1";
 // This service is defined in the upstream Ethereum consensus APIs repository (eth2.0-APIs/apis/validator).
 service BeaconValidator {
   // GetAttesterDuties requests the beacon node to provide a set of attestation duties, which should be performed
-  // by validators, for a particular epoch. Duties should only need to be checked once per epoch, however
-  // a chain reorganization (of > MIN_SEED_LOOKAHEAD epochs) could occur, resulting in a change of duties.
-  // For full safety, you should monitor chain reorganization events.
+  // by validators, for a particular epoch.
   //
   // HTTP response usage:
   //  - 200: Successful response
@@ -163,7 +161,7 @@ message AttesterDuty {
   // The total amount of committees for this slot.
   uint64 committees_at_slot = 5;
 
-  // The index of the committee the validator belongs to.
+  // The index of the validator in the committee.
   uint64 validator_committee_index = 6  [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.CommitteeIndex"];
 
   // The slot this duty is for.
