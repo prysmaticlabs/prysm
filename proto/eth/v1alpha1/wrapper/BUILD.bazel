@@ -2,25 +2,17 @@ load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = [
-        "altair_block_wrapper.go",
-        "block_interface.go",
-        "metadata_interface.go",
-        "metadata_wrapper.go",
-        "phase0_block_wrapper.go",
-    ],
-    importpath = "github.com/prysmaticlabs/prysm/shared/interfaces",
+    srcs = ["beacon_block.go"],
+    importpath = "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper",
     visibility = ["//visibility:public"],
     deps = [
-        "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
-        "//proto/prysm/v2:go_default_library",
+        "//proto/interfaces:go_default_library",
         "//shared/copyutil:go_default_library",
         "//shared/interfaces/version:go_default_library",
         "@com_github_ferranbt_fastssz//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
-        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@org_golang_google_protobuf//proto:go_default_library",
     ],
 )

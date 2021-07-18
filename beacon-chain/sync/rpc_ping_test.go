@@ -16,7 +16,7 @@ import (
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -27,12 +27,12 @@ func TestPingRPCHandler_ReceivesPing(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
-	p1.LocalMetadata = interfaces.WrappedMetadataV0(&pb.MetaDataV0{
+	p1.LocalMetadata = wrapper.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   []byte{'A', 'B'},
 	})
 
-	p2.LocalMetadata = interfaces.WrappedMetadataV0(&pb.MetaDataV0{
+	p2.LocalMetadata = wrapper.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   []byte{'C', 'D'},
 	})
@@ -84,12 +84,12 @@ func TestPingRPCHandler_SendsPing(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
-	p1.LocalMetadata = interfaces.WrappedMetadataV0(&pb.MetaDataV0{
+	p1.LocalMetadata = wrapper.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   []byte{'A', 'B'},
 	})
 
-	p2.LocalMetadata = interfaces.WrappedMetadataV0(&pb.MetaDataV0{
+	p2.LocalMetadata = wrapper.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   []byte{'C', 'D'},
 	})
@@ -149,12 +149,12 @@ func TestPingRPCHandler_BadSequenceNumber(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
-	p1.LocalMetadata = interfaces.WrappedMetadataV0(&pb.MetaDataV0{
+	p1.LocalMetadata = wrapper.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   []byte{'A', 'B'},
 	})
 
-	p2.LocalMetadata = interfaces.WrappedMetadataV0(&pb.MetaDataV0{
+	p2.LocalMetadata = wrapper.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   []byte{'C', 'D'},
 	})
@@ -175,7 +175,7 @@ func TestPingRPCHandler_BadSequenceNumber(t *testing.T) {
 	}
 
 	p1.Peers().Add(new(enr.Record), p2.BHost.ID(), p2.BHost.Addrs()[0], network.DirUnknown)
-	p1.Peers().SetMetadata(p2.BHost.ID(), interfaces.WrappedMetadataV0(badMetadata))
+	p1.Peers().SetMetadata(p2.BHost.ID(), wrapper.WrappedMetadataV0(badMetadata))
 
 	// Setup streams
 	pcl := protocol.ID("/testing")

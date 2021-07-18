@@ -1,10 +1,10 @@
-package interfaces
+package wrapper
 
 import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/interfaces/version"
 	"google.golang.org/protobuf/proto"
@@ -14,12 +14,12 @@ import (
 // object. This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across prysm without issues.
 type Phase0SignedBeaconBlock struct {
-	b *ethpb.SignedBeaconBlock
+	b *eth.SignedBeaconBlock
 }
 
 // WrappedPhase0SignedBeaconBlock is constructor which wraps a protobuf phase 0 block
 // with the block wrapper.
-func WrappedPhase0SignedBeaconBlock(b *ethpb.SignedBeaconBlock) Phase0SignedBeaconBlock {
+func WrappedPhase0SignedBeaconBlock(b *eth.SignedBeaconBlock) Phase0SignedBeaconBlock {
 	return Phase0SignedBeaconBlock{b: b}
 }
 
@@ -29,7 +29,7 @@ func (w Phase0SignedBeaconBlock) Signature() []byte {
 }
 
 // Block returns the underlying beacon block object.
-func (w Phase0SignedBeaconBlock) Block() BeaconBlock {
+func (w Phase0SignedBeaconBlock) Block() interfaces.BeaconBlock {
 	return WrappedPhase0BeaconBlock(w.b.Block)
 }
 
@@ -41,7 +41,7 @@ func (w Phase0SignedBeaconBlock) IsNil() bool {
 
 // Copy performs a deep copy of the signed beacon block
 // object.
-func (w Phase0SignedBeaconBlock) Copy() SignedBeaconBlock {
+func (w Phase0SignedBeaconBlock) Copy() interfaces.SignedBeaconBlock {
 	return WrappedPhase0SignedBeaconBlock(copyutil.CopySignedBeaconBlock(w.b))
 }
 
@@ -75,7 +75,7 @@ func (w Phase0SignedBeaconBlock) Proto() proto.Message {
 }
 
 // PbPhase0Block returns the underlying protobuf object.
-func (w Phase0SignedBeaconBlock) PbPhase0Block() (*ethpb.SignedBeaconBlock, error) {
+func (w Phase0SignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error) {
 	return w.b, nil
 }
 
@@ -86,12 +86,12 @@ func (w Phase0SignedBeaconBlock) Version() int {
 
 // Phase0BeaconBlock is the wrapper for the actual block.
 type Phase0BeaconBlock struct {
-	b *ethpb.BeaconBlock
+	b *eth.BeaconBlock
 }
 
 // WrappedPhase0BeaconBlock is constructor which wraps a protobuf phase 0 object
 // with the block wrapper.
-func WrappedPhase0BeaconBlock(b *ethpb.BeaconBlock) Phase0BeaconBlock {
+func WrappedPhase0BeaconBlock(b *eth.BeaconBlock) Phase0BeaconBlock {
 	return Phase0BeaconBlock{b: b}
 }
 
@@ -116,7 +116,7 @@ func (w Phase0BeaconBlock) StateRoot() []byte {
 }
 
 // Body returns the underlying block body.
-func (w Phase0BeaconBlock) Body() BeaconBlockBody {
+func (w Phase0BeaconBlock) Body() interfaces.BeaconBlockBody {
 	return WrappedPhase0BeaconBlockBody(w.b.Body)
 }
 
@@ -166,12 +166,12 @@ func (w Phase0BeaconBlock) Version() int {
 
 // Phase0BeaconBlockBody is a wrapper of a beacon block body.
 type Phase0BeaconBlockBody struct {
-	b *ethpb.BeaconBlockBody
+	b *eth.BeaconBlockBody
 }
 
 // WrappedPhase0BeaconBlockBody is constructor which wraps a protobuf phase 0 object
 // with the block wrapper.
-func WrappedPhase0BeaconBlockBody(b *ethpb.BeaconBlockBody) Phase0BeaconBlockBody {
+func WrappedPhase0BeaconBlockBody(b *eth.BeaconBlockBody) Phase0BeaconBlockBody {
 	return Phase0BeaconBlockBody{b: b}
 }
 
@@ -181,7 +181,7 @@ func (w Phase0BeaconBlockBody) RandaoReveal() []byte {
 }
 
 // Eth1Data returns the eth1 data in the block.
-func (w Phase0BeaconBlockBody) Eth1Data() *ethpb.Eth1Data {
+func (w Phase0BeaconBlockBody) Eth1Data() *eth.Eth1Data {
 	return w.b.Eth1Data
 }
 
@@ -191,27 +191,27 @@ func (w Phase0BeaconBlockBody) Graffiti() []byte {
 }
 
 // ProposerSlashings returns the proposer slashings in the block.
-func (w Phase0BeaconBlockBody) ProposerSlashings() []*ethpb.ProposerSlashing {
+func (w Phase0BeaconBlockBody) ProposerSlashings() []*eth.ProposerSlashing {
 	return w.b.ProposerSlashings
 }
 
 // AttesterSlashings returns the attester slashings in the block.
-func (w Phase0BeaconBlockBody) AttesterSlashings() []*ethpb.AttesterSlashing {
+func (w Phase0BeaconBlockBody) AttesterSlashings() []*eth.AttesterSlashing {
 	return w.b.AttesterSlashings
 }
 
 // Attestations returns the stored attestations in the block.
-func (w Phase0BeaconBlockBody) Attestations() []*ethpb.Attestation {
+func (w Phase0BeaconBlockBody) Attestations() []*eth.Attestation {
 	return w.b.Attestations
 }
 
 // Deposits returns the stored deposits in the block.
-func (w Phase0BeaconBlockBody) Deposits() []*ethpb.Deposit {
+func (w Phase0BeaconBlockBody) Deposits() []*eth.Deposit {
 	return w.b.Deposits
 }
 
 // VoluntaryExits returns the voluntary exits in the block.
-func (w Phase0BeaconBlockBody) VoluntaryExits() []*ethpb.SignedVoluntaryExit {
+func (w Phase0BeaconBlockBody) VoluntaryExits() []*eth.SignedVoluntaryExit {
 	return w.b.VoluntaryExits
 }
 

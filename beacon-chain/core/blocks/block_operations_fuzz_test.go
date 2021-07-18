@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -42,7 +42,7 @@ func TestFuzzProcessBlockHeader_10000(t *testing.T) {
 
 		s, err := v1.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
-		_, err = ProcessBlockHeader(context.Background(), s, interfaces.WrappedPhase0SignedBeaconBlock(block))
+		_, err = ProcessBlockHeader(context.Background(), s, wrapper.WrappedPhase0SignedBeaconBlock(block))
 		_ = err
 	}
 }
@@ -140,7 +140,7 @@ func TestFuzzProcessRandao_10000(t *testing.T) {
 		fuzzer.Fuzz(b)
 		s, err := v1.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
-		r, err := ProcessRandao(context.Background(), s, interfaces.WrappedPhase0SignedBeaconBlock(b))
+		r, err := ProcessRandao(context.Background(), s, wrapper.WrappedPhase0SignedBeaconBlock(b))
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, b)
 		}
@@ -259,7 +259,7 @@ func TestFuzzProcessAttestations_10000(t *testing.T) {
 		fuzzer.Fuzz(b)
 		s, err := v1.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
-		r, err := ProcessAttestations(ctx, s, interfaces.WrappedPhase0SignedBeaconBlock(b))
+		r, err := ProcessAttestations(ctx, s, wrapper.WrappedPhase0SignedBeaconBlock(b))
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, b)
 		}
@@ -276,7 +276,7 @@ func TestFuzzProcessAttestationsNoVerify_10000(t *testing.T) {
 		fuzzer.Fuzz(b)
 		s, err := v1.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
-		r, err := ProcessAttestationsNoVerifySignature(ctx, s, interfaces.WrappedPhase0SignedBeaconBlock(b))
+		r, err := ProcessAttestationsNoVerifySignature(ctx, s, wrapper.WrappedPhase0SignedBeaconBlock(b))
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, b)
 		}

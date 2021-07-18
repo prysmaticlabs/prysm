@@ -65,7 +65,6 @@ type Config struct {
 	AttPool           attestations.Pool
 	ExitPool          voluntaryexits.PoolManager
 	SlashingPool      slashings.PoolManager
-	SyncCommsPool     synccommittee.Pool
 	Chain             blockchainService
 	InitialSync       Checker
 	StateNotifier     statefeed.Notifier

@@ -9,10 +9,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	p2p2 "github.com/prysmaticlabs/prysm/proto/beacon/p2p"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1/wrapper"
 )
 
 // metaDataHandler reads the incoming metadata rpc request from the peer.
@@ -41,7 +40,7 @@ func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2
 	return nil
 }
 
-func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (interfaces.Metadata, error) {
+func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (p2p2.Metadata, error) {
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
@@ -70,29 +69,5 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (interfac
 	if err := s.cfg.P2P.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
 		return nil, err
 	}
-	return msg, nil
-}
-
-func extractMetaDataType(digest []byte, chain blockchain.ChainInfoFetcher) (interfaces.Metadata, error) {
-	if len(digest) == 0 {
-		mdFunc, ok := types.MetaDataMap[bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)]
-		if !ok {
-			return nil, errors.New("no metadata type exists for the genesis fork version.")
-		}
-		return mdFunc(), nil
-	}
-	if len(digest) != digestLength {
-		return nil, errors.Errorf("invalid digest returned, wanted a length of %d but received %d", digestLength, len(digest))
-	}
-	vRoot := chain.GenesisValidatorRoot()
-	for k, mdFunc := range types.MetaDataMap {
-		rDigest, err := helpers.ComputeForkDigest(k[:], vRoot[:])
-		if err != nil {
-			return nil, err
-		}
-		if rDigest == bytesutil.ToBytes4(digest) {
-			return mdFunc(), nil
-		}
-	}
-	return nil, errors.New("no valid digest matched")
+	return wrapper.WrappedMetadataV0(msg), nil
 }

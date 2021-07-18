@@ -24,8 +24,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
+	"github.com/prysmaticlabs/prysm/proto/beacon/p2p"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 )
@@ -40,7 +40,7 @@ type TestP2P struct {
 	DelaySend       bool
 	Digest          [4]byte
 	peers           *peers.Status
-	LocalMetadata   interfaces.Metadata
+	LocalMetadata   p2p.Metadata
 }
 
 // NewTestP2P initializes a new p2p test service.
@@ -351,7 +351,7 @@ func (p *TestP2P) ForkDigest() ([4]byte, error) {
 }
 
 // Metadata mocks the peer's metadata.
-func (p *TestP2P) Metadata() interfaces.Metadata {
+func (p *TestP2P) Metadata() p2p.Metadata {
 	return p.LocalMetadata.Copy()
 }
 

@@ -7,8 +7,8 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
@@ -18,7 +18,7 @@ func TestService_VerifyWeakSubjectivityRoot(t *testing.T) {
 
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 32
-	require.NoError(t, beaconDB.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(b)))
+	require.NoError(t, beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	tests := []struct {

@@ -51,8 +51,9 @@ func MockSlashingProtectionJSON(
 
 // MockAttestingAndProposalHistories given a number of validators, creates mock attesting
 // and proposing histories within WEAK_SUBJECTIVITY_PERIOD bounds.
-func MockAttestingAndProposalHistories(numValidators int) ([][]*kv.AttestationRecord, []kv.ProposalHistoryForPubkey) {
+func MockAttestingAndProposalHistories(pubkeys [][48]byte) ([][]*kv.AttestationRecord, []kv.ProposalHistoryForPubkey) {
 	// deduplicate and transform them into our internal format.
+	numValidators := len(pubkeys)
 	attData := make([][]*kv.AttestationRecord, numValidators)
 	proposalData := make([]kv.ProposalHistoryForPubkey, numValidators)
 	gen := rand.NewGenerator()
@@ -73,6 +74,7 @@ func MockAttestingAndProposalHistories(numValidators int) ([][]*kv.AttestationRe
 				Source:      i - 1,
 				Target:      i,
 				SigningRoot: signingRoot,
+				PubKey:      pubkeys[v],
 			})
 		}
 		for i := types.Epoch(1); i <= latestTarget; i++ {

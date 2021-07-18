@@ -503,7 +503,6 @@ func (b *BeaconNode) registerSyncService() error {
 		AttPool:           b.attestationPool,
 		ExitPool:          b.exitPool,
 		SlashingPool:      b.slashingsPool,
-		SyncCommsPool:     b.syncCommitteePool,
 		StateGen:          b.stateGen,
 	})
 

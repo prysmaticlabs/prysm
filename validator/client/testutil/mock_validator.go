@@ -216,6 +216,11 @@ func (fv *FakeValidator) GetKeymanager() keymanager.IKeymanager {
 	return fv.Keymanager
 }
 
+// CheckDoppelGanger for mocking
+func (fv *FakeValidator) CheckDoppelGanger(ctx context.Context) error {
+	return nil
+}
+
 // ReceiveBlocks for mocking
 func (fv *FakeValidator) ReceiveBlocks(ctx context.Context, connectionErrorChannel chan<- error) {
 	fv.ReceiveBlocksCalled++

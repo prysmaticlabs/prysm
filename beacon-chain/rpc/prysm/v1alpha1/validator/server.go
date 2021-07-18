@@ -16,7 +16,6 @@ import (
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
@@ -41,7 +40,6 @@ import (
 // and more.
 type Server struct {
 	Ctx                    context.Context
-	BeaconDB               db.NoHeadAccessDatabase
 	AttestationCache       *cache.AttestationCache
 	HeadFetcher            blockchain.HeadFetcher
 	ForkFetcher            blockchain.ForkFetcher
@@ -65,7 +63,7 @@ type Server struct {
 	Eth1BlockFetcher       powchain.POWBlockFetcher
 	PendingDepositsFetcher depositcache.PendingDepositsFetcher
 	OperationNotifier      opfeed.Notifier
-	StateGen               *stategen.State
+	StateGen               stategen.StateManager
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current

@@ -21,11 +21,12 @@ import (
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -167,30 +168,38 @@ func (vs *Server) BuildBlockData(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Errorf(codes.Internal, "Could not calculate proposer index %v", err)
 	}
 
-	return &BlockData{
-		ParentRoot:        parentRoot,
-		Graffiti:          graffiti,
-		ProposerIdx:       idx,
-		Eth1Data:          eth1Data,
-		Deposits:          deposits,
-		Attestations:      atts,
-		ProposerSlashings: vs.SlashingsPool.PendingProposerSlashings(ctx, head, false /*noLimit*/),
-		AttesterSlashings: vs.SlashingsPool.PendingAttesterSlashings(ctx, head, false /*noLimit*/),
-		VoluntaryExits:    vs.ExitPool.PendingExits(head, req.Slot, false /*noLimit*/),
-	}, nil
+	blk := &ethpb.BeaconBlock{
+		Slot:          req.Slot,
+		ParentRoot:    parentRoot,
+		StateRoot:     stateRoot,
+		ProposerIndex: idx,
+		Body: &ethpb.BeaconBlockBody{
+			Eth1Data:          eth1Data,
+			Deposits:          deposits,
+			Attestations:      atts,
+			RandaoReveal:      req.RandaoReveal,
+			ProposerSlashings: vs.SlashingsPool.PendingProposerSlashings(ctx, head, false /*noLimit*/),
+			AttesterSlashings: vs.SlashingsPool.PendingAttesterSlashings(ctx, head, false /*noLimit*/),
+			VoluntaryExits:    vs.ExitPool.PendingExits(head, req.Slot, false /*noLimit*/),
+			Graffiti:          graffiti[:],
+		},
+	}
+
+	// Compute state root with the newly constructed block.
+	stateRoot, err = vs.computeStateRoot(ctx, wrapper.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: blk, Signature: make([]byte, 96)}))
+	if err != nil {
+		interop.WriteBlockToDisk(wrapper.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: blk}), true /*failed*/)
+		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
+	}
+	blk.StateRoot = stateRoot
+
+	return blk, nil
 }
 
 // ProposeBlock is called by a proposer during its assigned slot to create a block in an attempt
 // to get it processed by the beacon node as the canonical head.
 func (vs *Server) ProposeBlock(ctx context.Context, rBlk *ethpb.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
-	blk := interfaces.WrappedPhase0SignedBeaconBlock(rBlk)
-	return vs.ProposeBlockGeneric(ctx, blk)
-}
-
-// ProposeBlockGeneric performs the core post-block creation actions once a block proposal is received.
-func (vs *Server) ProposeBlockGeneric(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.proposeBlock")
-	defer span.End()
+	blk := wrapper.WrappedPhase0SignedBeaconBlock(rBlk)
 	root, err := blk.Block().HashTreeRoot()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not tree hash block: %v", err)
@@ -637,7 +646,15 @@ func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, st if
 	if err := vs.deleteAttsInPool(ctx, invalidAtts); err != nil {
 		return nil, err
 	}
-	return validAtts.dedup().sortByProfitability().limitToMaxAttestations(), nil
+	deduped, err := validAtts.dedup()
+	if err != nil {
+		return nil, err
+	}
+	sorted, err := deduped.sortByProfitability()
+	if err != nil {
+		return nil, err
+	}
+	return sorted.limitToMaxAttestations(), nil
 }
 
 // The input Attestations are processed and seen by the node, this deletes them from pool
@@ -715,7 +732,15 @@ func (vs *Server) packAttestations(ctx context.Context, latestState iface.Beacon
 			}
 			attsForInclusion = append(attsForInclusion, as...)
 		}
-		atts = attsForInclusion.dedup().sortByProfitability().limitToMaxAttestations()
+		deduped, err := attsForInclusion.dedup()
+		if err != nil {
+			return nil, err
+		}
+		sorted, err := deduped.sortByProfitability()
+		if err != nil {
+			return nil, err
+		}
+		atts = sorted.limitToMaxAttestations()
 	}
 	return atts, nil
 }

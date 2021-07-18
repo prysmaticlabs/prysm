@@ -326,7 +326,10 @@ func TestProposerSyncContributions_Dedup(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cs := tt.cs.dedup()
+			cs, err := tt.cs.dedup()
+			if err != nil {
+				t.Error(err)
+			}
 			sort.Slice(cs, func(i, j int) bool {
 				if cs[i].AggregationBits.Count() == cs[j].AggregationBits.Count() {
 					if cs[i].SubcommitteeIndex == cs[j].SubcommitteeIndex {

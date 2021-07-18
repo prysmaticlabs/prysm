@@ -3,7 +3,7 @@ package blockutil
 import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 )
 
 // SignedBeaconBlockHeaderFromBlock function to retrieve signed block header from block.
@@ -29,24 +29,19 @@ func SignedBeaconBlockHeaderFromBlock(block *ethpb.SignedBeaconBlock) (*ethpb.Si
 }
 
 // SignedBeaconBlockHeaderFromBlockInterface function to retrieve signed block header from block.
-func SignedBeaconBlockHeaderFromBlockInterface(block interfaces.SignedBeaconBlock) (*ethpb.SignedBeaconBlockHeader, error) {
-	if block.Block().IsNil() || block.Block().Body().IsNil() {
+func SignedBeaconBlockHeaderFromBlockInterface(sb interfaces.SignedBeaconBlock) (*ethpb.SignedBeaconBlockHeader, error) {
+	b := sb.Block()
+	if b.IsNil() || b.Body().IsNil() {
 		return nil, errors.New("nil block")
 	}
 
-	bodyRoot, err := block.Block().Body().HashTreeRoot()
+	h, err := BeaconBlockHeaderFromBlockInterface(b)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get body root of block")
+		return nil, errors.Wrap(err, "failed to get block header of block")
 	}
 	return &ethpb.SignedBeaconBlockHeader{
-		Header: &ethpb.BeaconBlockHeader{
-			Slot:          block.Block().Slot(),
-			ProposerIndex: block.Block().ProposerIndex(),
-			ParentRoot:    block.Block().ParentRoot(),
-			StateRoot:     block.Block().StateRoot(),
-			BodyRoot:      bodyRoot[:],
-		},
-		Signature: block.Signature(),
+		Header:    h,
+		Signature: sb.Signature(),
 	}, nil
 }
 

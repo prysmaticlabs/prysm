@@ -181,7 +181,11 @@ if [[ $1 == beacon-chain ]]; then
     if [[ ! -x $BEACON_CHAIN_REAL ]]; then
         color "34" "Downloading beacon chain@${prysm_version} to ${BEACON_CHAIN_REAL} (${reason})"
         file=beacon-chain-${prysm_version}-${system}-${arch}
-        curl -L "https://prysmaticlabs.com/releases/${file}" -o "$BEACON_CHAIN_REAL"
+        res=$(curl -w '%{http_code}\n' -f -L "https://prysmaticlabs.com/releases/${file}"  -o "$BEACON_CHAIN_REAL" | ( grep 404 || true ) )
+        if [[ $res == 404 ]];then
+          echo "No prysm beacon chain found for ${prysm_version},(${file}) exit"
+          exit 1
+        fi
         curl --silent -L "https://prysmaticlabs.com/releases/${file}.sha256" -o "${wrapper_dir}/${file}.sha256"
         curl --silent -L "https://prysmaticlabs.com/releases/${file}.sig" -o "${wrapper_dir}/${file}.sig"
         chmod +x "$BEACON_CHAIN_REAL"
@@ -195,7 +199,11 @@ if [[ $1 == validator ]]; then
         color "34" "Downloading validator@${prysm_version} to ${VALIDATOR_REAL} (${reason})"
 
         file=validator-${prysm_version}-${system}-${arch}
-        curl -L "https://prysmaticlabs.com/releases/${file}" -o "$VALIDATOR_REAL"
+        res=$(curl -w '%{http_code}\n' -f -L "https://prysmaticlabs.com/releases/${file}" -o "$VALIDATOR_REAL" | ( grep 404 || true ) )
+        if [[ $res == 404 ]];then
+          echo "No prysm validator found for ${prysm_version}, (${file}) exit"
+          exit 1
+        fi
         curl --silent -L "https://prysmaticlabs.com/releases/${file}.sha256" -o "${wrapper_dir}/${file}.sha256"
         curl --silent -L "https://prysmaticlabs.com/releases/${file}.sig" -o "${wrapper_dir}/${file}.sig"
         chmod +x "$VALIDATOR_REAL"
@@ -209,7 +217,11 @@ if [[ $1 == client-stats ]]; then
         color "34" "Downloading client-stats@${prysm_version} to ${CLIENT_STATS_REAL} (${reason})"
 
         file=client-stats-${prysm_version}-${system}-${arch}
-        curl -L "https://prysmaticlabs.com/releases/${file}" -o "$CLIENT_STATS_REAL"
+        res=$(curl -w '%{http_code}\n' -f -L "https://prysmaticlabs.com/releases/${file}" -o "$CLIENT_STATS_REAL" | ( grep 404 || true ) )
+        if [[ $res == 404 ]];then
+          echo "No prysm client stats found for ${prysm_version},(${file}) exit"
+          exit 1
+        fi
         curl --silent -L "https://prysmaticlabs.com/releases/${file}.sha256" -o "${wrapper_dir}/${file}.sha256"
         curl --silent -L "https://prysmaticlabs.com/releases/${file}.sig" -o "${wrapper_dir}/${file}.sig"
         chmod +x "$CLIENT_STATS_REAL"

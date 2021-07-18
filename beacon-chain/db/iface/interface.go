@@ -15,8 +15,8 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/beacon/db"
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/backuputil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 )
 
 // ReadOnlyDatabase defines a struct which only has read access to database methods.
