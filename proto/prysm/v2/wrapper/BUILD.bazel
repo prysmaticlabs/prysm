@@ -24,6 +24,7 @@ go_test(
         ":go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
         "//proto/prysm/v2:go_default_library",
+        "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
         "//shared/version:go_default_library",

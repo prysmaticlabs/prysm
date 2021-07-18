@@ -8,6 +8,7 @@ import (
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/shared/version"
@@ -79,19 +80,26 @@ func TestAltairSignedBeaconBlock_PbAltairBlock(t *testing.T) {
 }
 
 func TestAltairSignedBeaconBlock_MarshalSSZTo(t *testing.T) {
-	t.Skip("TODO: Use altair generators in github.com/prysmaticlabs/prysm/shared/testutil")
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(testutil.HydrateSignedBeaconBlockAltair(&prysmv2.SignedBeaconBlockAltair{}))
+	assert.NoError(t, err)
+
+	b := []byte{}
+	b, err = wsb.MarshalSSZTo(b)
+	assert.NoError(t, err)
+	assert.NotEqual(t, 0, len(b))
 }
 
-func TestAltairSignedBeaconBlock_MarshalSSZ(t *testing.T) {
-	t.Skip("TODO: Use altair generators in github.com/prysmaticlabs/prysm/shared/testutil")
-}
+func TestAltairSignedBeaconBlock_SSZ(t *testing.T) {
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(testutil.HydrateSignedBeaconBlockAltair(&prysmv2.SignedBeaconBlockAltair{}))
+	assert.NoError(t, err)
 
-func TestAltairSignedBeaconBlock_SizeSSZ(t *testing.T) {
-	t.Skip("TODO: Use altair generators in github.com/prysmaticlabs/prysm/shared/testutil")
-}
+	b, err := wsb.MarshalSSZ()
+	assert.NoError(t, err)
+	assert.NotEqual(t, 0, len(b))
 
-func TestAltairSignedBeaconBlock_UnmarshalSSZ(t *testing.T) {
-	t.Skip("TODO: Use altair generators in github.com/prysmaticlabs/prysm/shared/testutil")
+	assert.NotEqual(t, 0, wsb.SizeSSZ())
+
+	assert.NoError(t, wsb.UnmarshalSSZ(b))
 }
 
 func TestAltairSignedBeaconBlock_Version(t *testing.T) {
@@ -152,7 +160,12 @@ func TestAltairBeaconBlock_IsNil(t *testing.T) {
 }
 
 func TestAltairBeaconBlock_HashTreeRoot(t *testing.T) {
-	t.Skip("TODO: Use altair generators in github.com/prysmaticlabs/prysm/shared/testutil")
+	wb, err := wrapper.WrappedAltairBeaconBlock(testutil.HydrateBeaconBlockAltair(&prysmv2.BeaconBlockAltair{}))
+	require.NoError(t, err)
+
+	rt, err := wb.HashTreeRoot()
+	assert.NoError(t, err)
+	assert.NotEmpty(t, rt)
 }
 
 func TestAltairBeaconBlock_Proto(t *testing.T) {
@@ -163,20 +176,17 @@ func TestAltairBeaconBlock_Proto(t *testing.T) {
 	assert.Equal(t, blk, wb.Proto())
 }
 
-func TestAltairBeaconBlock_MarshalSSZTo(t *testing.T) {
-	t.Skip("TODO: Use altair generators in github.com/prysmaticlabs/prysm/shared/testutil")
-}
+func TestAltairBeaconBlock_SSZ(t *testing.T) {
+	wb, err := wrapper.WrappedAltairBeaconBlock(testutil.HydrateBeaconBlockAltair(&prysmv2.BeaconBlockAltair{}))
+	assert.NoError(t, err)
 
-func TestAltairBeaconBlock_MarshalSSZ(t *testing.T) {
-	t.Skip("TODO: Use altair generators in github.com/prysmaticlabs/prysm/shared/testutil")
-}
+	b, err := wb.MarshalSSZ()
+	assert.NoError(t, err)
+	assert.NotEqual(t, 0, len(b))
 
-func TestAltairBeaconBlock_SizeSSZ(t *testing.T) {
-	t.Skip("TODO: Use altair generators in github.com/prysmaticlabs/prysm/shared/testutil")
-}
+	assert.NotEqual(t, 0, wb.SizeSSZ())
 
-func TestAltairBeaconBlock_UnmarshalSSZ(t *testing.T) {
-	t.Skip("TODO: Use altair generators in github.com/prysmaticlabs/prysm/shared/testutil")
+	assert.NoError(t, wb.UnmarshalSSZ(b))
 }
 
 func TestAltairBeaconBlock_Version(t *testing.T) {
@@ -280,7 +290,12 @@ func TestAltairBeaconBlockBody_IsNil(t *testing.T) {
 }
 
 func TestAltairBeaconBlockBody_HashTreeRoot(t *testing.T) {
-	t.Skip("TODO: Use altair generators in github.com/prysmaticlabs/prysm/shared/testutil")
+	wb, err := wrapper.WrappedAltairBeaconBlockBody(testutil.HydrateBeaconBlockBodyAltair(&prysmv2.BeaconBlockBody{}))
+	assert.NoError(t, err)
+
+	rt, err := wb.HashTreeRoot()
+	assert.NoError(t, err)
+	assert.NotEmpty(t, rt)
 }
 
 func TestAltairBeaconBlockBody_Proto(t *testing.T) {
