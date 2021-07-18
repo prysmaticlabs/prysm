@@ -695,20 +695,6 @@ func TestComputeProposerIndex(t *testing.T) {
 			},
 			want: 7,
 		},
-		{
-			name: "nil_validator",
-			args: args{
-				validators: []*ethpb.Validator{
-					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-				},
-				indices: []types.ValidatorIndex{0, 1, 2, 3, 4},
-				seed:    seed,
-			},
-			want: 4,
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -719,9 +705,8 @@ func TestComputeProposerIndex(t *testing.T) {
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
 				return
-			} else {
-				assert.NoError(t, err, "received unexpected error")
 			}
+			assert.NoError(t, err, "received unexpected error")
 			assert.Equal(t, tt.want, got, "ComputeProposerIndex()")
 		})
 	}
