@@ -1,9 +1,8 @@
 package sync
 
 import (
-	"errors"
-
 	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -68,4 +67,16 @@ func rpcContext(stream network.Stream, chain blockchain.ChainInfoFetcher) ([]byt
 	default:
 		return nil, errors.New("invalid version of %s registered for topic: %s")
 	}
+}
+
+// Validates that the rpc topic matches the provided version.
+func validateVersion(version string, stream network.Stream) error {
+	_, _, streamVersion, err := p2p.TopicDeconstructor(string(stream.Protocol()))
+	if err != nil {
+		return err
+	}
+	if streamVersion != version {
+		return errors.Errorf("stream version of %s doesn't match provided version %s", streamVersion, version)
+	}
+	return nil
 }

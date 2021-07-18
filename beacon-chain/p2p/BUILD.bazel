@@ -155,6 +155,7 @@ go_test(
         "//shared/testutil/assert:go_default_library",
         "//shared/testutil/require:go_default_library",
         "//shared/timeutils:go_default_library",
+        "//shared/version:go_default_library",
         "@com_github_ethereum_go_ethereum//crypto:go_default_library",
         "@com_github_ethereum_go_ethereum//p2p/discover:go_default_library",
         "@com_github_ethereum_go_ethereum//p2p/enode:go_default_library",
