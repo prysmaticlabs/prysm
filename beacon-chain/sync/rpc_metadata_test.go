@@ -193,6 +193,7 @@ func TestMetadataRPCHandler_SendsMetadataAltair(t *testing.T) {
 	})
 
 	metadata, err := r.sendMetaDataRequest(context.Background(), p2.BHost.ID())
+	_ = err
 	assert.ErrorContains(t, types.ErrGeneric.Error(), err)
 
 	if testutil.WaitTimeout(&wg, 1*time.Second) {
