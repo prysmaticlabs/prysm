@@ -79,12 +79,12 @@ func TestNilState_NoPanic(t *testing.T) {
 }
 
 func TestReadOnlyValidator_NoPanic(t *testing.T) {
-	v := &ReadOnlyValidator{}
+	v := NewValidator(nil)
 	assert.Equal(t, false, v.Slashed(), "Expected not slashed")
 }
 
 func TestReadOnlyValidator_ActivationEligibilityEpochNoPanic(t *testing.T) {
-	v := &ReadOnlyValidator{}
+	v := NewValidator(nil)
 	assert.Equal(t, types.Epoch(0), v.ActivationEligibilityEpoch(), "Expected 0 and not panic")
 }
 

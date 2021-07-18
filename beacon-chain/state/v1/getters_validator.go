@@ -120,20 +120,20 @@ func (b *BeaconState) ValidatorAtIndex(idx types.ValidatorIndex) (*ethpb.Validat
 // doesn't clone the validator.
 func (b *BeaconState) ValidatorAtIndexReadOnly(idx types.ValidatorIndex) (iface.ReadOnlyValidator, error) {
 	if !b.hasInnerState() {
-		return ReadOnlyValidator{}, ErrNilInnerState
+		return nil, ErrNilInnerState
 	}
 	if b.state.Validators == nil {
-		return ReadOnlyValidator{}, nil
+		return nil, nil
 	}
 	if uint64(len(b.state.Validators)) <= uint64(idx) {
 		e := NewValidatorIndexOutOfRangeError(idx)
-		return ReadOnlyValidator{}, &e
+		return nil, &e
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return ReadOnlyValidator{b.state.Validators[idx]}, nil
+	return NewValidator(b.state.Validators[idx]), nil
 }
 
 // ValidatorIndexByPubkey returns a given validator by its 48-byte public key.
@@ -195,7 +195,7 @@ func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val iface.ReadOnlyV
 	b.lock.RUnlock()
 
 	for i, v := range validators {
-		err := f(i, ReadOnlyValidator{validator: v})
+		err := f(i, NewValidator(v))
 		if err != nil {
 			return err
 		}
