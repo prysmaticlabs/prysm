@@ -133,7 +133,7 @@ func (b *BeaconState) ValidatorAtIndexReadOnly(idx types.ValidatorIndex) (iface.
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return NewValidator(b.state.Validators[idx]), nil
+	return NewValidator(b.state.Validators[idx])
 }
 
 // ValidatorIndexByPubkey returns a given validator by its 48-byte public key.
@@ -195,8 +195,11 @@ func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val iface.ReadOnlyV
 	b.lock.RUnlock()
 
 	for i, v := range validators {
-		err := f(i, NewValidator(v))
+		v, err := NewValidator(v)
 		if err != nil {
+			return err
+		}
+		if err := f(i, v); err != nil {
 			return err
 		}
 	}

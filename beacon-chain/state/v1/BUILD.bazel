@@ -76,6 +76,7 @@ go_test(
         "field_trie_test.go",
         "getters_test.go",
         "helpers_test.go",
+        "readonly_validator_test.go",
         "references_test.go",
         "setters_attestation_test.go",
         "state_test.go",
