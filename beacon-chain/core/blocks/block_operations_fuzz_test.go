@@ -442,7 +442,7 @@ func TestFuzzVerifyExit_10000(t *testing.T) {
 
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(ve)
-		fuzzer.Fuzz(&val)
+		fuzzer.Fuzz(val)
 		fuzzer.Fuzz(fork)
 		fuzzer.Fuzz(&slot)
 		err := VerifyExitAndSignature(val, slot, fork, ve, params.BeaconConfig().ZeroHash[:])
