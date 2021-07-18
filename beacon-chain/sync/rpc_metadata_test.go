@@ -192,8 +192,7 @@ func TestMetadataRPCHandler_SendsMetadataAltair(t *testing.T) {
 		assert.ErrorContains(t, fmt.Sprintf("stream version of %s doesn't match provided version %s", p2p.SchemaVersionV2, p2p.SchemaVersionV1), err)
 	})
 
-	metadata, err := r.sendMetaDataRequest(context.Background(), p2.BHost.ID())
-	_ = err
+	_, err := r.sendMetaDataRequest(context.Background(), p2.BHost.ID())
 	assert.ErrorContains(t, types.ErrGeneric.Error(), err)
 
 	if testutil.WaitTimeout(&wg, 1*time.Second) {
@@ -213,7 +212,7 @@ func TestMetadataRPCHandler_SendsMetadataAltair(t *testing.T) {
 		assert.NoError(t, r2.metaDataHandler(context.Background(), new(interface{}), stream))
 	})
 
-	metadata, err = r.sendMetaDataRequest(context.Background(), p2.BHost.ID())
+	metadata, err := r.sendMetaDataRequest(context.Background(), p2.BHost.ID())
 	assert.NoError(t, err)
 
 	if !sszutil.DeepEqual(metadata.InnerObject(), p2.LocalMetadata.InnerObject()) {
