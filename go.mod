@@ -21,7 +21,7 @@ require (
 	github.com/emicklei/dot v0.11.0
 	github.com/ethereum/go-ethereum v1.9.25
 	github.com/fatih/color v1.9.0 // indirect
-	github.com/ferranbt/fastssz v0.0.0-20210719183658-b51c008fbfa6
+	github.com/ferranbt/fastssz v0.0.0-20210719200358-90640294cb9c
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5
 	github.com/form3tech-oss/jwt-go v3.2.1+incompatible
 	github.com/fsnotify/fsnotify v1.4.9

@@ -810,8 +810,8 @@ def prysm_deps():
         name = "com_github_ferranbt_fastssz",
         importpath = "github.com/ferranbt/fastssz",
         nofuzz = True,
-        sum = "h1:M5f4RB0OiYha31lvXyc79gHS90JOtGe1gMkLKmo3Bb0=",
-        version = "v0.0.0-20210719183658-b51c008fbfa6",
+        sum = "h1:R8HHtp9wrae6trZA2lgJtOhghKl16lWY4cG0l7hH8CM=",
+        version = "v0.0.0-20210719200358-90640294cb9c",
     )
 
     go_repository(
