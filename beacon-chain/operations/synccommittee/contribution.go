@@ -18,7 +18,7 @@ const syncCommitteeMaxQueueSize = 4
 // The priority queue is capped at syncCommitteeMaxQueueSize contributions.
 func (s *Store) SaveSyncCommitteeContribution(cont *prysmv2.SyncCommitteeContribution) error {
 	if cont == nil {
-		return nilContributionErr
+		return errNilContribution
 	}
 
 	s.contributionLock.Lock()
