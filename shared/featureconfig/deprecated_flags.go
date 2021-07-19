@@ -42,6 +42,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedUpdateHeadTimely = &cli.BoolFlag{
+		Name:   "update-head-timely",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedEnableOptimizedBalanceUpdate = &cli.BoolFlag{
 		Name:   "enable-optimized-balance-update",
 		Usage:  deprecatedUsage,
@@ -58,4 +63,5 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisableBlst,
 	deprecatedProposerAttsSelectionUsingMaxCover,
 	deprecatedEnableOptimizedBalanceUpdate,
+	deprecatedUpdateHeadTimely,
 }
