@@ -192,9 +192,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.WithField(disableProposerAttsSelectionUsingMaxCover.Name, disableProposerAttsSelectionUsingMaxCover.Usage).Warn(enabledFeatureFlag)
 		cfg.ProposerAttsSelectionUsingMaxCover = false
 	}
-	if ctx.Bool(enableOptimizedBalanceUpdate.Name) {
-		log.WithField(enableOptimizedBalanceUpdate.Name, enableOptimizedBalanceUpdate.Usage).Warn(enabledFeatureFlag)
-		cfg.EnableOptimizedBalanceUpdate = true
+	cfg.EnableOptimizedBalanceUpdate = true
+	if ctx.Bool(disableOptimizedBalanceUpdate.Name) {
+		log.WithField(disableOptimizedBalanceUpdate.Name, disableOptimizedBalanceUpdate.Usage).Warn(enabledFeatureFlag)
+		cfg.EnableOptimizedBalanceUpdate = false
 	}
 	Init(cfg)
 }
