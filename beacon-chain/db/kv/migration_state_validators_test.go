@@ -28,7 +28,7 @@ func Test_migrateStateValidators(t *testing.T) {
 				err := dbStore.db.Update(func(tx *bbolt.Tx) error {
 					_, err := tx.CreateBucketIfNotExists(stateValidatorsBucket)
 					assert.NoError(t, err)
-					_, err = tx.CreateBucketIfNotExists(BlockRootValidatorKeysIndexBucket)
+					_, err = tx.CreateBucketIfNotExists(blockRootValidatorKeysIndexBucket)
 					assert.NoError(t, err)
 					return nil
 				})
@@ -49,7 +49,7 @@ func Test_migrateStateValidators(t *testing.T) {
 				err := dbStore.db.View(func(tx *bbolt.Tx) error {
 					valBkt := tx.Bucket(stateValidatorsBucket)
 					assert.NotNil(t, valBkt)
-					idxBkt := tx.Bucket(BlockRootValidatorKeysIndexBucket)
+					idxBkt := tx.Bucket(blockRootValidatorKeysIndexBucket)
 					assert.NotNil(t, idxBkt)
 					return nil
 				})
@@ -75,7 +75,7 @@ func Test_migrateStateValidators(t *testing.T) {
 				err := dbStore.db.Update(func(tx *bbolt.Tx) error {
 					_, err := tx.CreateBucketIfNotExists(stateValidatorsBucket)
 					assert.NoError(t, err)
-					_, err = tx.CreateBucketIfNotExists(BlockRootValidatorKeysIndexBucket)
+					_, err = tx.CreateBucketIfNotExists(blockRootValidatorKeysIndexBucket)
 					assert.NoError(t, err)
 					return nil
 				})
@@ -95,7 +95,7 @@ func Test_migrateStateValidators(t *testing.T) {
 				err := dbStore.db.View(func(tx *bbolt.Tx) error {
 					valBkt := tx.Bucket(stateValidatorsBucket)
 					assert.NotNil(t, valBkt)
-					idxBkt := tx.Bucket(BlockRootValidatorKeysIndexBucket)
+					idxBkt := tx.Bucket(blockRootValidatorKeysIndexBucket)
 					assert.NotNil(t, idxBkt)
 					return nil
 				})
@@ -140,7 +140,7 @@ func Test_migrateStateValidators(t *testing.T) {
 
 				// check if the state validator indexes are stored properly
 				err = dbStore.db.View(func(tx *bbolt.Tx) error {
-					rcvdValhashBytes := tx.Bucket(BlockRootValidatorKeysIndexBucket).Get(blockRoot[:])
+					rcvdValhashBytes := tx.Bucket(blockRootValidatorKeysIndexBucket).Get(blockRoot[:])
 					rcvdValHashes, sErr := snappy.Decode(nil, rcvdValhashBytes)
 					assert.NoError(t, sErr)
 					require.DeepEqual(t, hashes, rcvdValHashes)

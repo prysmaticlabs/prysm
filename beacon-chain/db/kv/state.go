@@ -114,7 +114,7 @@ func (s *Store) SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconSta
 		return errors.New("nil state")
 	}
 	multipleEncs := make([][]byte, len(states))
-	validatorsEntries := make(map[string]*ethpb.Validator)    // It's a map to get get rid of duplicates.
+	validatorsEntries := make(map[string][]byte)              // It's a map to make sure that you store only new validator entries.
 	validatorKeys := make([][]byte, len(states))              // For every state, this stores a compressed list of validator keys.
 	realValidators := make([][]*ethpb.Validator, len(states)) // It's temporary structure to restore state in memory after persisting it.
 	for i, st := range states {
@@ -140,7 +140,7 @@ func (s *Store) SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconSta
 
 			// note down the hash and the encoded validator entry
 			hashStr := hexutils.BytesToHex(hash[:])
-			validatorsEntries[hashStr] = val
+			validatorsEntries[hashStr] = valBytes
 		}
 
 		// zero out the validators List from the state bucket so that it is not stored as part of it.
@@ -178,14 +178,10 @@ func (s *Store) SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconSta
 			if _, ok := s.validatorEntryCache.Get(key); !ok {
 				validatorEntryCacheMiss.Inc()
 				if valEntry := valBkt.Get(key); valEntry == nil {
-					valBytes, encodeErr := encode(ctx, validatorEntry)
-					if encodeErr != nil {
-						return encodeErr
-					}
-					if putErr := valBkt.Put(key, valBytes); putErr != nil {
+					if putErr := valBkt.Put(key, validatorEntry); putErr != nil {
 						return putErr
 					}
-					s.validatorEntryCache.Set(key, validatorEntry, int64(len(valBytes)))
+					s.validatorEntryCache.Set(key, validatorEntry, int64(len(validatorEntry)))
 				}
 			} else {
 				validatorEntryCacheHit.Inc()
@@ -293,9 +289,6 @@ func createState(ctx context.Context, enc []byte, validatorEntries []*ethpb.Vali
 	if err := decode(ctx, enc, protoState); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal encoding")
 	}
-	if validatorEntries == nil {
-		validatorEntries = make([]*ethpb.Validator, 0)
-	}
 	protoState.Validators = validatorEntries
 	return protoState, nil
 }
@@ -327,27 +320,38 @@ func (s *Store) validatorEntries(ctx context.Context, blockRoot [32]byte) ([]*et
 		valBkt := tx.Bucket(stateValidatorsBucket)
 		for i := 0; i < len(validatorKeys); i += hashLength {
 			key := validatorKeys[i : i+hashLength]
-			encValEntry := &ethpb.Validator{}
-			if v, ok := s.validatorEntryCache.Get(key); ok {
-				valEntry, vType := v.(*ethpb.Validator)
+			var valEntryBytes []byte
+			// get the entry bytes from the cache or from the DB.
+			v, ok := s.validatorEntryCache.Get(key)
+			if ok {
+				entryBytes, vType := v.([]byte)
 				if vType {
-					encValEntry = valEntry
+					valEntryBytes = entryBytes
 					validatorEntryCacheHit.Inc()
+				} else {
+					// this should never happen, but anyway it's good to bail out if one happens.
+					return errors.New("validator cache does not have proper object type")
 				}
-				// this should never happen, but anyway it's good to bail out if one happens.
-				return errors.New("validator cache does not have proper object type")
 			} else {
-				encValEntryBytes := valBkt.Get(key)
-				if encValEntryBytes == nil || len(encValEntryBytes) == 0 {
-					return errors.New( "could not find validator entry")
-				}
-				decodeErr := decode(ctx, encValEntryBytes, encValEntry)
-				if decodeErr != nil {
-					return errors.Wrap(decodeErr, "failed to decode validator entry keys")
-				}
-				s.validatorEntryCache.Set(key, encValEntry, int64(len(encValEntryBytes)))
+				valEntryBytes = valBkt.Get(key)
 				validatorEntryCacheMiss.Inc()
 			}
+
+			// decode the bytes to get the validator entry
+			if valEntryBytes == nil || len(valEntryBytes) == 0 {
+				return errors.New("could not find validator entry")
+			}
+			encValEntry := &ethpb.Validator{}
+			decodeErr := decode(ctx, valEntryBytes, encValEntry)
+			if decodeErr != nil {
+				return errors.Wrap(decodeErr, "failed to decode validator entry keys")
+			}
+
+			// add the bytes to the cache if it was picked up from the DB.
+			if !ok {
+				s.validatorEntryCache.Set(key, encValEntry, int64(len(valEntryBytes)))
+			}
+
 			validatorEntries = append(validatorEntries, encValEntry)
 		}
 		return nil
