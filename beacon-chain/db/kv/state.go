@@ -114,9 +114,9 @@ func (s *Store) SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconSta
 		return errors.New("nil state")
 	}
 	multipleEncs := make([][]byte, len(states))
-	validatorsEntries := make(map[string]*ethpb.Validator)    // Its a map to get get rid of duplicates.
-	validatorKeys := make([][]byte, len(states))              //  for every state, this stores a compressed list of validator indices.
-	realValidators := make([][]*ethpb.Validator, len(states)) // temporary structure to restore state in memory after persisting it.
+	validatorsEntries := make(map[string]*ethpb.Validator)    // It's a map to get get rid of duplicates.
+	validatorKeys := make([][]byte, len(states))              // For every state, this stores a compressed list of validator keys.
+	realValidators := make([][]*ethpb.Validator, len(states)) // It's temporary structure to restore state in memory after persisting it.
 	for i, st := range states {
 		pbState, err := v1.ProtobufBeaconState(st.InnerStateUnsafe())
 		if err != nil {
@@ -155,7 +155,7 @@ func (s *Store) SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconSta
 
 	if err := s.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateBucket)
-		valIdxBkt := tx.Bucket(BlockRootValidatorKeysIndexBucket)
+		valIdxBkt := tx.Bucket(blockRootValidatorKeysIndexBucket)
 		for i, rt := range blockRoots {
 			indicesByBucket := createStateIndicesFromStateSlot(ctx, states[i].Slot())
 			if err := updateValueForIndices(ctx, indicesByBucket, rt[:], tx); err != nil {
@@ -261,8 +261,8 @@ func (s *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 			return errors.Wrap(err, "could not delete root for DB indices")
 		}
 
-		// remove the validator entry keys for the co-responding state.
-		idxBkt := tx.Bucket(BlockRootValidatorKeysIndexBucket)
+		// remove the validator entry keys for the corresponding state.
+		idxBkt := tx.Bucket(blockRootValidatorKeysIndexBucket)
 		err = idxBkt.Delete(blockRoot[:])
 		if err != nil {
 			return err
@@ -300,17 +300,17 @@ func createState(ctx context.Context, enc []byte, validatorEntries []*ethpb.Vali
 	return protoState, nil
 }
 
-// retrieve the validator entries for a given bock root. These entries are stored in a
-// separate bucked to save state.
+// Retrieve the validator entries for a given block root. These entries are stored in a
+// separate bucket to reduce state size.
 func (s *Store) validatorEntries(ctx context.Context, blockRoot [32]byte) ([]*ethpb.Validator, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.validaotrEntries")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.validatorEntries")
 	defer span.End()
 	var validatorEntries []*ethpb.Validator
 	err := s.db.View(func(tx *bolt.Tx) error {
 		// get the validator keys from the index bucket
-		idxBkt := tx.Bucket(BlockRootValidatorKeysIndexBucket)
+		idxBkt := tx.Bucket(blockRootValidatorKeysIndexBucket)
 		valKey := idxBkt.Get(blockRoot[:])
-		if len(valKey) == 0 {
+		if valKey == nil || len(valKey) == 0 {
 			return errors.Errorf("invalid compressed validator keys length")
 		}
 
@@ -332,13 +332,18 @@ func (s *Store) validatorEntries(ctx context.Context, blockRoot [32]byte) ([]*et
 				valEntry, vType := v.(*ethpb.Validator)
 				if vType {
 					encValEntry = valEntry
+					validatorEntryCacheHit.Inc()
 				}
-				validatorEntryCacheHit.Inc()
+				// this should never happen, but anyway it's good to bail out if one happens.
+				return errors.New("validator cache does not have proper object type")
 			} else {
 				encValEntryBytes := valBkt.Get(key)
+				if encValEntryBytes == nil || len(encValEntryBytes) == 0 {
+					return errors.New( "could not find validator entry")
+				}
 				decodeErr := decode(ctx, encValEntryBytes, encValEntry)
 				if decodeErr != nil {
-					return errors.Wrap(decodeErr, "failed to decode validator keys")
+					return errors.Wrap(decodeErr, "failed to decode validator entry keys")
 				}
 				s.validatorEntryCache.Set(key, encValEntry, int64(len(encValEntryBytes)))
 				validatorEntryCacheMiss.Inc()

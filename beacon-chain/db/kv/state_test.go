@@ -10,14 +10,18 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	b "github.com/prysmaticlabs/prysm/external/go_sdk/test/fixedbugs/issue33020.dir"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	bolt "go.etcd.io/bbolt"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
@@ -90,6 +94,75 @@ func TestState_CanSaveRetrieveValidatorEntriesWithoutCache(t *testing.T) {
 
 	require.DeepSSZEqual(t, st.InnerStateUnsafe(), savedS.InnerStateUnsafe(), "saved state with validators and retrieved state are not matching")
 }
+
+
+func TestState_DeleteState(t *testing.T) {
+	db := setupDB(t)
+
+	r1 := [32]byte{'A'}
+	r2 := [32]byte{'B'}
+
+	require.Equal(t, false, db.HasState(context.Background(), r1))
+	require.Equal(t, false, db.HasState(context.Background(), r2))
+
+	// create two states with the same set of validators.
+	stateValidators := validators(10)
+	st1, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, st1.SetSlot(100))
+	require.NoError(t, st1.SetValidators(stateValidators))
+
+	st2, err := testutil.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, st2.SetSlot(100))
+	require.NoError(t, st2.SetValidators(stateValidators))
+
+	// save both the states.
+	ctx := context.Background()
+	require.NoError(t, db.SaveState(ctx, st1, r1))
+	require.NoError(t, db.SaveState(ctx, st2, r2))
+
+
+	// delete the first state.
+	var deleteBlockRoots [][32]byte
+	deleteBlockRoots = append(deleteBlockRoots, r1)
+	require.NoError(t, db.DeleteStates(ctx, deleteBlockRoots))
+
+	// check if the index of the first state is deleted.
+	err = db.db.Update(func(tx *bolt.Tx) error {
+		idxBkt := tx.Bucket(blockRootValidatorKeysIndexBucket)
+		data := idxBkt.Get(r1[:])
+		require.Nil(t, data)
+		return nil
+	})
+	require.NoError(t, err)
+
+	// check if the index of the second state is still present.
+	err = db.db.Update(func(tx *bolt.Tx) error {
+		idxBkt := tx.Bucket(blockRootValidatorKeysIndexBucket)
+		data := idxBkt.Get(r2[:])
+		require.Nil(t, data)
+		return nil
+	})
+	require.NoError(t, err)
+
+	// check if all the validator entries are intact.
+	err = db.db.Update(func(tx *bolt.Tx) error {
+		valBkt := tx.Bucket(stateValidatorsBucket)
+		// if any of the original validator entry is not present, then fail the test.
+		for _, val := range stateValidators {
+			valBytes, encodeErr := encode(ctx, val)
+			require.NoError(t, encodeErr)
+			hash := hashutil.Hash(valBytes)
+			data := valBkt.Get(hash[:])
+			require.NotNil(t, data)
+		}
+		return nil
+	})
+	require.NoError(t, err)
+
+}
+
 
 func TestGenesisState_CanSaveRetrieve(t *testing.T) {
 	db := setupDB(t)

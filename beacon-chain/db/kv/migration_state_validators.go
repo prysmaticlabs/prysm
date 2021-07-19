@@ -28,7 +28,7 @@ func migrateStateValidators(tx *bolt.Tx) error {
 	if valBkt == nil {
 		return nil
 	}
-	indexBkt := tx.Bucket(BlockRootValidatorKeysIndexBucket)
+	indexBkt := tx.Bucket(blockRootValidatorKeysIndexBucket)
 	if indexBkt == nil {
 		return nil
 	}

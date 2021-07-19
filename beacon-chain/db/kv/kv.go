@@ -26,10 +26,10 @@ const (
 	VotesCacheSize = 1 << 23
 	// NumOfVotes specifies the vote cache size.
 	NumOfVotes = 1 << 20
-	// NumCounterValidators is set to 1MB since we expect 100K validator entries (10x)
-	NumCounterValidators = 1 << 20
-	// MaxCostValidators is set to ~32Mb so as to allow atleast 100K validators entries.
-	MaxCostValidators = 1 << 25
+	// ValidatorEntryCacheSize is set to 1MB since we expect ~100K validator entries (10 times the expected size)
+	ValidatorEntryCacheSize = 1 << 20
+	// NumOfValidatorEntries is set to ~32Mb so as to allow at least 100K validators entries.
+	NumOfValidatorEntries = 1 << 25
 	// BeaconNodeDbDirName is the name of the directory containing the beacon node database.
 	BeaconNodeDbDirName = "beaconchaindata"
 	// DatabaseFileName is the name of the beacon node database.
@@ -47,7 +47,7 @@ var (
 		Help: "The total number of cache hits on the validator entry cache.",
 	})
 	validatorEntryCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "validators_entry_cache_miss",
+		Name: "validator_entry_cache_miss",
 		Help: "The total number of cache misses on the validator entry cache.",
 	})
 )
@@ -139,9 +139,9 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 	}
 
 	validatorCache, err := ristretto.NewCache(&ristretto.Config{
-		NumCounters: NumCounterValidators, // number of keys to track frequency of (1M).
-		MaxCost:     MaxCostValidators,    // maximum size of cache
-		BufferItems: 64,                   // number of keys per Get buffer.
+		NumCounters: ValidatorEntryCacheSize, // number of keys to track frequency of (1M).
+		MaxCost:     NumOfValidatorEntries,   // maximum size of cache
+		BufferItems: 64,                      // number of keys per Get buffer.
 	})
 	if err != nil {
 		return nil, err
@@ -181,7 +181,7 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 			stateSlotIndicesBucket,
 			blockParentRootIndicesBucket,
 			finalizedBlockRootsIndexBucket,
-			BlockRootValidatorKeysIndexBucket,
+			blockRootValidatorKeysIndexBucket,
 			// State management service bucket.
 			newStateServiceCompatibleBucket,
 			// Migrations
