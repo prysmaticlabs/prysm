@@ -104,8 +104,8 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *v1.ProposerDutiesR
 
 	cs := vs.TimeFetcher.CurrentSlot()
 	currentEpoch := helpers.SlotToEpoch(cs)
-	if req.Epoch > currentEpoch+1 {
-		return nil, status.Errorf(codes.InvalidArgument, "Request epoch %d can not be greater than next epoch %d", req.Epoch, currentEpoch+1)
+	if req.Epoch > currentEpoch {
+		return nil, status.Errorf(codes.InvalidArgument, "Request epoch %d can not be greater than current epoch %d", req.Epoch, currentEpoch)
 	}
 
 	s, err := vs.HeadFetcher.HeadState(ctx)
