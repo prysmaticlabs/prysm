@@ -42,6 +42,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedUpdateHeadTimely = &cli.BoolFlag{
+		Name:   "update-head-timely",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -52,4 +57,5 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisableEth1DataMajorityVote,
 	deprecatedDisableBlst,
 	deprecatedProposerAttsSelectionUsingMaxCover,
+	deprecatedUpdateHeadTimely,
 }

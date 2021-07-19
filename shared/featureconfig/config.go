@@ -187,9 +187,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.WithField(enableNextSlotStateCache.Name, enableNextSlotStateCache.Usage).Warn(enabledFeatureFlag)
 		cfg.EnableNextSlotStateCache = true
 	}
-	if ctx.Bool(updateHeadTimely.Name) {
-		log.WithField(updateHeadTimely.Name, updateHeadTimely.Usage).Warn(enabledFeatureFlag)
-		cfg.UpdateHeadTimely = true
+	cfg.UpdateHeadTimely = true
+	if ctx.Bool(disableUpdateHeadTimely.Name) {
+		log.WithField(disableUpdateHeadTimely.Name, disableUpdateHeadTimely.Usage).Warn(enabledFeatureFlag)
+		cfg.UpdateHeadTimely = false
 	}
 	cfg.ProposerAttsSelectionUsingMaxCover = true
 	if ctx.Bool(disableProposerAttsSelectionUsingMaxCover.Name) {
