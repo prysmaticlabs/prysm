@@ -3,7 +3,6 @@ package kv
 import (
 	"bytes"
 	"context"
-	"fmt"
 
 	"github.com/golang/snappy"
 	v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -20,6 +19,7 @@ func migrateStateValidators(tx *bolt.Tx) error {
 	}
 
 	// get the source and destination buckets.
+	log.Infof("migrating %s. It will take few minutes. Please wait.", stateBucket)
 	stateBkt := tx.Bucket(stateBucket)
 	if stateBkt == nil {
 		return nil
@@ -36,7 +36,6 @@ func migrateStateValidators(tx *bolt.Tx) error {
 	// for each of the state in the stateBucket, do the migration.
 	ctx := context.Background()
 	c := stateBkt.Cursor()
-	fmt.Println("starting to migrate validators")
 	for k, v := c.First(); k != nil; k, v = c.Next() {
 		state := &v1.BeaconState{}
 		if decodeErr := decode(ctx, v, state); decodeErr != nil {

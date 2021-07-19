@@ -65,3 +65,9 @@ func LogsContain(tb assertions.AssertionTestingTB, hook *test.Hook, want string,
 func LogsDoNotContain(tb assertions.AssertionTestingTB, hook *test.Hook, want string, msg ...interface{}) {
 	assertions.LogsContain(tb.Errorf, hook, want, false, msg...)
 }
+
+// NotEmpty checks that the object fields are not empty. This method also checks all of the
+// pointer fields to ensure none of those fields are empty.
+func NotEmpty(tb assertions.AssertionTestingTB, obj interface{}, msg ...interface{}) {
+	assertions.NotEmpty(tb.Errorf, obj, msg...)
+}
