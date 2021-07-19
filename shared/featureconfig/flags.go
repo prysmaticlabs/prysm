@@ -108,7 +108,7 @@ var (
 	}
 	disableUpdateHeadTimely = &cli.BoolFlag{
 		Name:  "disable-update-head-timely",
-		Usage: "Disables updating head time right after state transition",
+		Usage: "Disables updating head right after state transition",
 	}
 	disableProposerAttsSelectionUsingMaxCover = &cli.BoolFlag{
 		Name:  "disable-proposer-atts-selection-using-max-cover",
