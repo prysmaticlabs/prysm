@@ -124,9 +124,9 @@ func TestPrepareRequestForProxying(t *testing.T) {
 	}
 	// We will set some params to make the request more interesting.
 	endpoint := Endpoint{
-		Path:                  "/{url_param}",
-		GetRequestURLLiterals: []string{"url_param"},
-		GetRequestQueryParams: []QueryParam{{Name: "query_param"}},
+		Path:               "/{url_param}",
+		RequestURLLiterals: []string{"url_param"},
+		RequestQueryParams: []QueryParam{{Name: "query_param"}},
 	}
 	var body bytes.Buffer
 	request := httptest.NewRequest("GET", "http://foo.example?query_param=bar", &body)
@@ -348,6 +348,24 @@ func TestWriteMiddlewareResponseHeadersAndBody(t *testing.T) {
 		errJson := WriteMiddlewareResponseHeadersAndBody(request, response, responseJson, writer)
 		require.Equal(t, true, errJson == nil)
 		assert.Equal(t, 204, writer.Code)
+	})
+
+	t.Run("POST_with_response_body", func(t *testing.T) {
+		request := httptest.NewRequest("POST", "http://foo.example", &body)
+		response := &http.Response{
+			Header:     http.Header{},
+			StatusCode: 204,
+		}
+		container := defaultResponseContainer()
+		responseJson, err := json.Marshal(container)
+		require.NoError(t, err)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		errJson := WriteMiddlewareResponseHeadersAndBody(request, response, responseJson, writer)
+		require.Equal(t, true, errJson == nil)
+		assert.Equal(t, 204, writer.Code)
+		assert.DeepEqual(t, responseJson, writer.Body.Bytes())
 	})
 }
 

@@ -174,6 +174,23 @@ type specResponseJson struct {
 	Data interface{} `json:"data"`
 }
 
+// attesterDutiesRequestJson is used in /validator/duties/attester/{epoch} API endpoint.
+type attesterDutiesRequestJson struct {
+	Index []string `json:"index"`
+}
+
+// attesterDutiesResponseJson is used in /validator/duties/attester/{epoch} API endpoint.
+type attesterDutiesResponseJson struct {
+	DependentRoot string              `json:"dependent_root" hex:"true"`
+	Data          []*attesterDutyJson `json:"data"`
+}
+
+// proposerDutiesResponseJson is used in /validator/duties/proposer/{epoch} API endpoint.
+type proposerDutiesResponseJson struct {
+	DependentRoot string              `json:"dependent_root" hex:"true"`
+	Data          []*proposerDutyJson `json:"data"`
+}
+
 //----------------
 // Reusable types.
 //----------------
@@ -431,6 +448,24 @@ type syncInfoJson struct {
 	HeadSlot     string `json:"head_slot"`
 	SyncDistance string `json:"sync_distance"`
 	IsSyncing    bool   `json:"is_syncing"`
+}
+
+// attesterDutyJson is a JSON representation of an attester duty.
+type attesterDutyJson struct {
+	Pubkey                  string `json:"pubkey" hex:"true"`
+	ValidatorIndex          string `json:"validator_index"`
+	CommitteeIndex          string `json:"committee_index"`
+	CommitteeLength         string `json:"committee_length"`
+	CommitteesAtSlot        string `json:"committees_at_slot"`
+	ValidatorCommitteeIndex string `json:"validator_committee_index"`
+	Slot                    string `json:"slot"`
+}
+
+// proposerDutyJson is a JSON representation of a proposer duty.
+type proposerDutyJson struct {
+	Pubkey         string `json:"pubkey" hex:"true"`
+	ValidatorIndex string `json:"validator_index"`
+	Slot           string `json:"slot"`
 }
 
 //----------------
