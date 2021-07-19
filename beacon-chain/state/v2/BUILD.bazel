@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "field_trie.go",
+        "state_trie.go",
         "types.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/v2",
@@ -28,15 +29,20 @@ go_library(
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/params:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
+        "@org_golang_google_protobuf//proto:go_default_library",
     ],
 )
 
 go_test(
     name = "go_default_test",
-    srcs = ["field_trie_test.go"],
+    srcs = [
+        "field_trie_test.go",
+        "state_trie_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/state/v1:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
