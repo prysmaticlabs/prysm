@@ -37,26 +37,9 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *v1.AttesterDutiesR
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 
-	// Advance state with empty transitions up to the requested epoch start slot.
-	// In case 1 epoch ahead was requested, we take the start slot of the current epoch.
-	// Taking the start slot of the next epoch would result in an error inside state.ProcessSlots.
-	var epochStartSlot types.Slot
-	if req.Epoch == currentEpoch+1 {
-		epochStartSlot, err = helpers.StartSlot(req.Epoch.Sub(1))
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not obtain epoch's start slot: %v", err)
-		}
-	} else {
-		epochStartSlot, err = helpers.StartSlot(req.Epoch)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not obtain epoch's start slot: %v", err)
-		}
-	}
-	if s.Slot() < epochStartSlot {
-		s, err = state.ProcessSlots(ctx, s, epochStartSlot)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", epochStartSlot, err)
-		}
+	s, err = advanceState(ctx, s, req.Epoch, currentEpoch)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not advance state to requested epoch start slot: %v", err)
 	}
 
 	committeeAssignments, _, err := helpers.CommitteeAssignments(s, req.Epoch)
@@ -130,26 +113,9 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *v1.ProposerDutiesR
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 
-	// Advance state with empty transitions up to the requested epoch start slot.
-	// In case 1 epoch ahead was requested, we take the start slot of the current epoch.
-	// Taking the start slot of the next epoch would result in an error inside state.ProcessSlots.
-	var epochStartSlot types.Slot
-	if req.Epoch == currentEpoch+1 {
-		epochStartSlot, err = helpers.StartSlot(req.Epoch.Sub(1))
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not obtain epoch's start slot: %v", err)
-		}
-	} else {
-		epochStartSlot, err = helpers.StartSlot(req.Epoch)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not obtain epoch's start slot: %v", err)
-		}
-	}
-	if s.Slot() < epochStartSlot {
-		s, err = state.ProcessSlots(ctx, s, epochStartSlot)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", epochStartSlot, err)
-		}
+	s, err = advanceState(ctx, s, req.Epoch, currentEpoch)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not advance state to requested epoch start slot: %v", err)
 	}
 
 	_, proposals, err := helpers.CommitteeAssignments(s, req.Epoch)
@@ -250,4 +216,31 @@ func proposalDependentRoot(s iface.BeaconState, epoch types.Epoch) ([]byte, erro
 		return nil, errors.Wrap(err, "could not get block root")
 	}
 	return root, nil
+}
+
+// advanceState advances state with empty transitions up to the requested epoch start slot.
+// In case 1 epoch ahead was requested, we take the start slot of the current epoch.
+// Taking the start slot of the next epoch would result in an error inside state.ProcessSlots.
+func advanceState(ctx context.Context, s iface.BeaconState, requestedEpoch types.Epoch, currentEpoch types.Epoch) (iface.BeaconState, error) {
+	var epochStartSlot types.Slot
+	var err error
+	if requestedEpoch == currentEpoch+1 {
+		epochStartSlot, err = helpers.StartSlot(requestedEpoch.Sub(1))
+		if err != nil {
+			return nil, errors.Wrap(err, "Could not obtain epoch's start slot")
+		}
+	} else {
+		epochStartSlot, err = helpers.StartSlot(requestedEpoch)
+		if err != nil {
+			return nil, errors.Wrap(err, "Could not obtain epoch's start slot")
+		}
+	}
+	if s.Slot() < epochStartSlot {
+		s, err = state.ProcessSlots(ctx, s, epochStartSlot)
+		if err != nil {
+			return nil, errors.Wrapf(err, "Could not process slots up to %d", epochStartSlot)
+		}
+	}
+
+	return s, nil
 }
