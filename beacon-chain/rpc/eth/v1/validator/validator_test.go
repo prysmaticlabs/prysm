@@ -277,7 +277,7 @@ func TestGetProposerDuties(t *testing.T) {
 				expectedDuty = duty
 			}
 		}
-		require.NotNil(t, expectedDuty, "Expected duty for slot 11 not found")
+		require.NotNil(t, expectedDuty, "Expected duty for slot 74 not found")
 		assert.Equal(t, types.ValidatorIndex(11741), expectedDuty.ValidatorIndex)
 		assert.DeepEqual(t, pubKeys[11741], expectedDuty.Pubkey)
 	})
