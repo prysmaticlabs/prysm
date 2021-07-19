@@ -6,7 +6,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -695,21 +695,6 @@ func TestComputeProposerIndex(t *testing.T) {
 			},
 			want: 7,
 		},
-		{
-			name: "nil_validator",
-			args: args{
-				validators: []*ethpb.Validator{
-					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					nil, // Should never happen, but would cause a panic when it does happen.
-					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-				},
-				indices: []types.ValidatorIndex{0, 1, 2, 3, 4},
-				seed:    seed,
-			},
-			want: 4,
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -721,6 +706,7 @@ func TestComputeProposerIndex(t *testing.T) {
 				assert.ErrorContains(t, tt.wantedErr, err)
 				return
 			}
+			assert.NoError(t, err, "received unexpected error")
 			assert.Equal(t, tt.want, got, "ComputeProposerIndex()")
 		})
 	}

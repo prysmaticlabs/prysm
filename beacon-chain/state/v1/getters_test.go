@@ -78,16 +78,6 @@ func TestNilState_NoPanic(t *testing.T) {
 	_ = st.FinalizedCheckpoint()
 }
 
-func TestReadOnlyValidator_NoPanic(t *testing.T) {
-	v := &ReadOnlyValidator{}
-	assert.Equal(t, false, v.Slashed(), "Expected not slashed")
-}
-
-func TestReadOnlyValidator_ActivationEligibilityEpochNoPanic(t *testing.T) {
-	v := &ReadOnlyValidator{}
-	assert.Equal(t, types.Epoch(0), v.ActivationEligibilityEpoch(), "Expected 0 and not panic")
-}
-
 func TestBeaconState_MatchCurrentJustifiedCheckpt(t *testing.T) {
 	c1 := &eth.Checkpoint{Epoch: 1}
 	c2 := &eth.Checkpoint{Epoch: 2}

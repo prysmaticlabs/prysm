@@ -183,18 +183,20 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.WithField(enableNextSlotStateCache.Name, enableNextSlotStateCache.Usage).Warn(enabledFeatureFlag)
 		cfg.EnableNextSlotStateCache = true
 	}
-	if ctx.Bool(updateHeadTimely.Name) {
-		log.WithField(updateHeadTimely.Name, updateHeadTimely.Usage).Warn(enabledFeatureFlag)
-		cfg.UpdateHeadTimely = true
+	cfg.UpdateHeadTimely = true
+	if ctx.Bool(disableUpdateHeadTimely.Name) {
+		log.WithField(disableUpdateHeadTimely.Name, disableUpdateHeadTimely.Usage).Warn(enabledFeatureFlag)
+		cfg.UpdateHeadTimely = false
 	}
 	cfg.ProposerAttsSelectionUsingMaxCover = true
 	if ctx.Bool(disableProposerAttsSelectionUsingMaxCover.Name) {
 		log.WithField(disableProposerAttsSelectionUsingMaxCover.Name, disableProposerAttsSelectionUsingMaxCover.Usage).Warn(enabledFeatureFlag)
 		cfg.ProposerAttsSelectionUsingMaxCover = false
 	}
-	if ctx.Bool(enableOptimizedBalanceUpdate.Name) {
-		log.WithField(enableOptimizedBalanceUpdate.Name, enableOptimizedBalanceUpdate.Usage).Warn(enabledFeatureFlag)
-		cfg.EnableOptimizedBalanceUpdate = true
+	cfg.EnableOptimizedBalanceUpdate = true
+	if ctx.Bool(disableOptimizedBalanceUpdate.Name) {
+		log.WithField(disableOptimizedBalanceUpdate.Name, disableOptimizedBalanceUpdate.Usage).Warn(enabledFeatureFlag)
+		cfg.EnableOptimizedBalanceUpdate = false
 	}
 	Init(cfg)
 }
