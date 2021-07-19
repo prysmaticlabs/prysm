@@ -20,7 +20,7 @@ import (
 )
 
 // DepositDataJSON representing a json object of hex string and uint64 values for
-// validators on eth2. This file can be generated using the official eth2.0-deposit-cli.
+// validators on Ethereum. This file can be generated using the official eth2.0-deposit-cli.
 type DepositDataJSON struct {
 	PubKey                string `json:"pubkey"`
 	Amount                uint64 `json:"amount"`

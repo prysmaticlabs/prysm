@@ -1,5 +1,4 @@
-load("@prysm//tools/go:def.bzl", "go_library")
-load("@io_bazel_rules_go//go:def.bzl", "go_test")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
@@ -134,6 +133,7 @@ go_test(
         "@com_github_wealdtech_go_eth2_util//:go_default_library",
         "@in_gopkg_d4l3k_messagediff_v1//:go_default_library",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
+        "@org_golang_google_grpc//:go_default_library",
         "@org_golang_google_grpc//metadata:go_default_library",
         "@org_golang_google_protobuf//types/known/emptypb:go_default_library",
         "@org_golang_google_protobuf//types/known/timestamppb:go_default_library",

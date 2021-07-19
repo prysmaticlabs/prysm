@@ -5,13 +5,12 @@ import (
 	"reflect"
 
 	"github.com/gorilla/mux"
-	"github.com/pkg/errors"
 )
 
-// ApiProxyMiddleware is a proxy between an Eth2 API HTTP client and grpc-gateway.
+// ApiProxyMiddleware is a proxy between an Ethereum consensus API HTTP client and grpc-gateway.
 // The purpose of the proxy is to handle HTTP requests and gRPC responses in such a way that:
-//   - Eth2 API requests can be handled by grpc-gateway correctly
-//   - gRPC responses can be returned as spec-compliant Eth2 API responses
+//   - Ethereum consensus API requests can be handled by grpc-gateway correctly
+//   - gRPC responses can be returned as spec-compliant Ethereum consensus API responses
 type ApiProxyMiddleware struct {
 	GatewayAddress  string
 	ProxyAddress    string
@@ -28,13 +27,14 @@ type EndpointFactory interface {
 
 // Endpoint is a representation of an API HTTP endpoint that should be proxied by the middleware.
 type Endpoint struct {
-	Path                  string         // The path of the HTTP endpoint.
-	PostRequest           interface{}    // The struct corresponding to the JSON structure used in a POST request.
-	GetRequestURLLiterals []string       // Names of URL parameters that should not be base64-encoded.
-	GetRequestQueryParams []QueryParam   // Query parameters of the GET request.
-	GetResponse           interface{}    // The struct corresponding to the JSON structure used in a GET response.
-	Err                   ErrorJson      // The struct corresponding to the error that should be returned in case of a request failure.
-	Hooks                 HookCollection // A collection of functions that can be invoked at various stages of the request/response cycle.
+	Path               string         // The path of the HTTP endpoint.
+	PostRequest        interface{}    // The struct corresponding to the JSON structure used in a POST request.
+	PostResponse       interface{}    // The struct corresponding to the JSON structure used in a POST response.
+	RequestURLLiterals []string       // Names of URL parameters that should not be base64-encoded.
+	RequestQueryParams []QueryParam   // Query parameters of the request.
+	GetResponse        interface{}    // The struct corresponding to the JSON structure used in a GET response.
+	Err                ErrorJson      // The struct corresponding to the error that should be returned in case of a request failure.
+	Hooks              HookCollection // A collection of functions that can be invoked at various stages of the request/response cycle.
 }
 
 // QueryParam represents a single query parameter's metadata.
@@ -79,10 +79,8 @@ func (m *ApiProxyMiddleware) handleApiPath(path string, endpointFactory Endpoint
 	m.router.HandleFunc(path, func(w http.ResponseWriter, req *http.Request) {
 		endpoint, err := endpointFactory.Create(path)
 		if err != nil {
-			WriteError(w, &DefaultErrorJson{
-				Message: errors.Wrapf(err, "could not create endpoint").Error(),
-				Code:    http.StatusInternalServerError,
-			}, nil)
+			errJson := InternalServerErrorWithMessage(err, "could not create endpoint")
+			WriteError(w, errJson, nil)
 		}
 
 		for _, handler := range endpoint.Hooks.CustomHandlers {
@@ -144,16 +142,22 @@ func (m *ApiProxyMiddleware) handleApiPath(path string, endpointFactory Endpoint
 			HandleGrpcResponseError(endpoint.Err, grpcResponse, w)
 			return
 		} else if !GrpcResponseIsStatusCodeOnly(req, endpoint.GetResponse) {
-			if errJson := DeserializeGrpcResponseBodyIntoContainer(grpcResponseBody, endpoint.GetResponse); errJson != nil {
+			var response interface{}
+			if req.Method == "GET" {
+				response = endpoint.GetResponse
+			} else {
+				response = endpoint.PostResponse
+			}
+			if errJson := DeserializeGrpcResponseBodyIntoContainer(grpcResponseBody, response); errJson != nil {
 				WriteError(w, errJson, nil)
 				return
 			}
-			if errJson := ProcessMiddlewareResponseFields(endpoint.GetResponse); errJson != nil {
+			if errJson := ProcessMiddlewareResponseFields(response); errJson != nil {
 				WriteError(w, errJson, nil)
 				return
 			}
 			var errJson ErrorJson
-			responseJson, errJson = SerializeMiddlewareResponseIntoJson(endpoint.GetResponse)
+			responseJson, errJson = SerializeMiddlewareResponseIntoJson(response)
 			if errJson != nil {
 				WriteError(w, errJson, nil)
 				return

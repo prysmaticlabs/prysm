@@ -73,6 +73,11 @@ func (s Signature) FastAggregateVerify(_ []common.PublicKey, _ [32]byte) bool {
 	panic(err)
 }
 
+// Eth2FastAggregateVerify -- stub
+func (s Signature) Eth2FastAggregateVerify(_ []common.PublicKey, _ [32]byte) bool {
+	panic(err)
+}
+
 // Marshal -- stub
 func (s Signature) Marshal() []byte {
 	panic(err)

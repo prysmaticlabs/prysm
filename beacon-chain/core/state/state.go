@@ -1,6 +1,6 @@
 // Package state implements the whole state transition
 // function which consists of per slot, per-epoch transitions, and
-// bootstrapping the genesis state according to the eth2 spec.
+// bootstrapping the genesis state according to the Ethereum Beacon chain spec.
 package state
 
 import (
@@ -10,7 +10,7 @@ import (
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -109,7 +109,7 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState iface.BeaconState,
 
 	slashings := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
 
-	genesisValidatorsRoot, err := stateV0.ValidatorRegistryRoot(preState.Validators())
+	genesisValidatorsRoot, err := v1.ValidatorRegistryRoot(preState.Validators())
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not hash tree root genesis validators %v", err)
 	}
@@ -179,7 +179,7 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState iface.BeaconState,
 		BodyRoot:   bodyRoot[:],
 	}
 
-	return stateV0.InitializeFromProto(state)
+	return v1.InitializeFromProto(state)
 }
 
 // EmptyGenesisState returns an empty beacon state object.
@@ -206,7 +206,7 @@ func EmptyGenesisState() (iface.BeaconState, error) {
 		Eth1DataVotes:    []*ethpb.Eth1Data{},
 		Eth1DepositIndex: 0,
 	}
-	return stateV0.InitializeFromProto(state)
+	return v1.InitializeFromProto(state)
 }
 
 // IsValidGenesisState gets called whenever there's a deposit event,

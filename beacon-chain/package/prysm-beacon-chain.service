@@ -1,5 +1,5 @@
 [Unit]
-Description=Prysm Eth2 Beacon Chain
+Description=Prysm Ethereum Beacon Chain
 Wants=network-online.target
 After=network-online.target
 

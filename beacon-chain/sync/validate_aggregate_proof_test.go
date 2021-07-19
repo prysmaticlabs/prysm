@@ -20,10 +20,10 @@ import (
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -152,7 +152,7 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, validators)
 
 	b := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(b)))
+	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s, err := testutil.NewBeaconState()
@@ -191,8 +191,8 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 				Genesis: time.Now(),
 				State:   beaconState,
 			},
-			AttPool:             attestations.NewPool(),
-			AttestationNotifier: (&mock.ChainService{}).OperationNotifier(),
+			AttPool:           attestations.NewPool(),
+			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
 		seenAttestationCache: c,
 	}
@@ -240,7 +240,7 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, validators)
 
 	b := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(b)))
+	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -274,7 +274,7 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 			InitialSync: &mockSync.Sync{IsSyncing: false},
 			Chain: &mock.ChainService{Genesis: time.Now(),
 				State: beaconState},
-			AttestationNotifier: (&mock.ChainService{}).OperationNotifier(),
+			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
 		seenAttestationCache: c,
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
@@ -308,7 +308,7 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
 	b := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(b)))
+	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s, err := testutil.NewBeaconState()
@@ -369,8 +369,8 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 					Epoch: 0,
 					Root:  att.Data.BeaconBlockRoot,
 				}},
-			AttPool:             attestations.NewPool(),
-			AttestationNotifier: (&mock.ChainService{}).OperationNotifier(),
+			AttPool:           attestations.NewPool(),
+			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
 		seenAttestationCache: c,
 	}
@@ -401,7 +401,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
 	b := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(b)))
+	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s, err := testutil.NewBeaconState()
@@ -463,8 +463,8 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 					Root:  signedAggregateAndProof.Message.Aggregate.Data.BeaconBlockRoot,
 				}},
 
-			AttPool:             attestations.NewPool(),
-			AttestationNotifier: (&mock.ChainService{}).OperationNotifier(),
+			AttPool:           attestations.NewPool(),
+			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
 		seenAttestationCache: c,
 	}
@@ -572,8 +572,8 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 				FinalizedCheckPoint: &ethpb.Checkpoint{
 					Epoch: 0,
 				}},
-			AttPool:             attestations.NewPool(),
-			AttestationNotifier: (&mock.ChainService{}).OperationNotifier(),
+			AttPool:           attestations.NewPool(),
+			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
 		seenAttestationCache: c,
 	}
@@ -604,7 +604,7 @@ func TestValidateAggregateAndProof_RejectWhenAttEpochDoesntEqualTargetEpoch(t *t
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
 	b := testutil.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(context.Background(), interfaces.WrappedPhase0SignedBeaconBlock(b)))
+	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s, err := testutil.NewBeaconState()
@@ -665,8 +665,8 @@ func TestValidateAggregateAndProof_RejectWhenAttEpochDoesntEqualTargetEpoch(t *t
 					Epoch: 0,
 					Root:  att.Data.BeaconBlockRoot,
 				}},
-			AttPool:             attestations.NewPool(),
-			AttestationNotifier: (&mock.ChainService{}).OperationNotifier(),
+			AttPool:           attestations.NewPool(),
+			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
 		seenAttestationCache: c,
 	}

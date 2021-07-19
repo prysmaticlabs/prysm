@@ -7,8 +7,9 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	p2p2 "github.com/prysmaticlabs/prysm/proto/beacon/p2p"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1/wrapper"
 )
 
 // metaDataHandler reads the incoming metadata rpc request from the peer.
@@ -34,7 +35,7 @@ func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2
 	return nil
 }
 
-func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (interfaces.Metadata, error) {
+func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (p2p2.Metadata, error) {
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
@@ -60,5 +61,5 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (interfac
 	if err := s.cfg.P2P.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
 		return nil, err
 	}
-	return interfaces.WrappedMetadataV0(msg), nil
+	return wrapper.WrappedMetadataV0(msg), nil
 }

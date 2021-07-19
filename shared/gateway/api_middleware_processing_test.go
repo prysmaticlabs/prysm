@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gorilla/mux"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -125,9 +124,9 @@ func TestPrepareRequestForProxying(t *testing.T) {
 	}
 	// We will set some params to make the request more interesting.
 	endpoint := Endpoint{
-		Path:                  "/{url_param}",
-		GetRequestURLLiterals: []string{"url_param"},
-		GetRequestQueryParams: []QueryParam{{Name: "query_param"}},
+		Path:               "/{url_param}",
+		RequestURLLiterals: []string{"url_param"},
+		RequestQueryParams: []QueryParam{{Name: "query_param"}},
 	}
 	var body bytes.Buffer
 	request := httptest.NewRequest("GET", "http://foo.example?query_param=bar", &body)
@@ -137,88 +136,6 @@ func TestPrepareRequestForProxying(t *testing.T) {
 	assert.Equal(t, "http", request.URL.Scheme)
 	assert.Equal(t, middleware.GatewayAddress, request.URL.Host)
 	assert.Equal(t, "", request.RequestURI)
-}
-
-func TestHandleURLParameters(t *testing.T) {
-	var body bytes.Buffer
-
-	t.Run("no_params", func(t *testing.T) {
-		request := httptest.NewRequest("GET", "http://foo.example/bar", &body)
-
-		errJson := HandleURLParameters("/not_param", request, []string{})
-		require.Equal(t, true, errJson == nil)
-		assert.Equal(t, "/bar", request.URL.Path)
-	})
-
-	t.Run("with_params", func(t *testing.T) {
-		muxVars := make(map[string]string)
-		muxVars["bar_param"] = "bar"
-		muxVars["quux_param"] = "quux"
-		request := httptest.NewRequest("GET", "http://foo.example/bar/baz/quux", &body)
-		request = mux.SetURLVars(request, muxVars)
-
-		errJson := HandleURLParameters("/{bar_param}/not_param/{quux_param}", request, []string{})
-		require.Equal(t, true, errJson == nil)
-		assert.Equal(t, "/YmFy/baz/cXV1eA==", request.URL.Path)
-	})
-
-	t.Run("with_literal", func(t *testing.T) {
-		muxVars := make(map[string]string)
-		muxVars["bar_param"] = "bar"
-		request := httptest.NewRequest("GET", "http://foo.example/bar/baz", &body)
-		request = mux.SetURLVars(request, muxVars)
-
-		errJson := HandleURLParameters("/{bar_param}/not_param/", request, []string{"bar_param"})
-		require.Equal(t, true, errJson == nil)
-		assert.Equal(t, "/bar/baz", request.URL.Path)
-	})
-
-	t.Run("with_hex", func(t *testing.T) {
-		muxVars := make(map[string]string)
-		muxVars["hex_param"] = "0x626172"
-		request := httptest.NewRequest("GET", "http://foo.example/0x626172/baz", &body)
-		request = mux.SetURLVars(request, muxVars)
-
-		errJson := HandleURLParameters("/{hex_param}/not_param/", request, []string{})
-		require.Equal(t, true, errJson == nil)
-		assert.Equal(t, "/YmFy/baz", request.URL.Path)
-	})
-}
-
-func TestHandleQueryParameters(t *testing.T) {
-	var body bytes.Buffer
-
-	t.Run("regular_params", func(t *testing.T) {
-		request := httptest.NewRequest("GET", "http://foo.example?bar=bar&baz=baz", &body)
-
-		errJson := HandleQueryParameters(request, []QueryParam{{Name: "bar"}, {Name: "baz"}})
-		require.Equal(t, true, errJson == nil)
-		query := request.URL.Query()
-		v, ok := query["bar"]
-		require.Equal(t, true, ok, "query param not found")
-		require.Equal(t, 1, len(v), "wrong number of query param values")
-		assert.Equal(t, "bar", v[0])
-		v, ok = query["baz"]
-		require.Equal(t, true, ok, "query param not found")
-		require.Equal(t, 1, len(v), "wrong number of query param values")
-		assert.Equal(t, "baz", v[0])
-	})
-
-	t.Run("hex_and_enum_params", func(t *testing.T) {
-		request := httptest.NewRequest("GET", "http://foo.example?hex=0x626172&baz=baz", &body)
-
-		errJson := HandleQueryParameters(request, []QueryParam{{Name: "hex", Hex: true}, {Name: "baz", Enum: true}})
-		require.Equal(t, true, errJson == nil)
-		query := request.URL.Query()
-		v, ok := query["hex"]
-		require.Equal(t, true, ok, "query param not found")
-		require.Equal(t, 1, len(v), "wrong number of query param values")
-		assert.Equal(t, "YmFy", v[0])
-		v, ok = query["baz"]
-		require.Equal(t, true, ok, "query param not found")
-		require.Equal(t, 1, len(v), "wrong number of query param values")
-		assert.Equal(t, "BAZ", v[0])
-	})
 }
 
 func TestReadGrpcResponseBody(t *testing.T) {
@@ -432,6 +349,24 @@ func TestWriteMiddlewareResponseHeadersAndBody(t *testing.T) {
 		require.Equal(t, true, errJson == nil)
 		assert.Equal(t, 204, writer.Code)
 	})
+
+	t.Run("POST_with_response_body", func(t *testing.T) {
+		request := httptest.NewRequest("POST", "http://foo.example", &body)
+		response := &http.Response{
+			Header:     http.Header{},
+			StatusCode: 204,
+		}
+		container := defaultResponseContainer()
+		responseJson, err := json.Marshal(container)
+		require.NoError(t, err)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		errJson := WriteMiddlewareResponseHeadersAndBody(request, response, responseJson, writer)
+		require.Equal(t, true, errJson == nil)
+		assert.Equal(t, 204, writer.Code)
+		assert.DeepEqual(t, responseJson, writer.Body.Bytes())
+	})
 }
 
 func TestWriteError(t *testing.T) {
@@ -473,22 +408,4 @@ func TestWriteError(t *testing.T) {
 		WriteError(httptest.NewRecorder(), &testErrorJson{}, responseHeader)
 		assert.LogsContain(t, logHook, "Could not unmarshal custom error message")
 	})
-}
-
-func TestIsRequestParam(t *testing.T) {
-	tests := []struct {
-		s string
-		b bool
-	}{
-		{"", false},
-		{"{", false},
-		{"}", false},
-		{"{}", false},
-		{"{x}", true},
-		{"{very_long_parameter_name_with_underscores}", true},
-	}
-	for _, tt := range tests {
-		b := isRequestParam(tt.s)
-		assert.Equal(t, tt.b, b)
-	}
 }

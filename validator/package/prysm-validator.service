@@ -1,5 +1,5 @@
 [Unit]
-Description=Prysm Eth2 Validator Client
+Description=Prysm Ethereum Validator Client
 Wants=network-online.target
 After=network-online.target
 Requires=prysm-beacon-chain.service

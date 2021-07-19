@@ -29,7 +29,7 @@ option php_namespace = "Ethereum\\Eth\\v1";
 
 // Events API
 //
-// This service is defined in the upstream eth2.0-apis repository (eth2.0-APIs/apis/debug).
+// This service is defined in the upstream Ethereum consensus APIs repository (eth2.0-APIs/apis/debug).
 service Events {
     rpc StreamEvents(StreamEventsRequest) returns (stream gateway.EventSource) {
         option (google.api.http) = {

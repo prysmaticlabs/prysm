@@ -1,5 +1,11 @@
 package gateway
 
+import (
+	"net/http"
+
+	"github.com/pkg/errors"
+)
+
 // ---------------
 // Error handling.
 // ---------------
@@ -15,6 +21,23 @@ type ErrorJson interface {
 type DefaultErrorJson struct {
 	Message string `json:"message"`
 	Code    int    `json:"code"`
+}
+
+// InternalServerErrorWithMessage returns a DefaultErrorJson with 500 code and a custom message.
+func InternalServerErrorWithMessage(err error, message string) *DefaultErrorJson {
+	e := errors.Wrapf(err, message)
+	return &DefaultErrorJson{
+		Message: e.Error(),
+		Code:    http.StatusInternalServerError,
+	}
+}
+
+// InternalServerError returns a DefaultErrorJson with 500 code.
+func InternalServerError(err error) *DefaultErrorJson {
+	return &DefaultErrorJson{
+		Message: err.Error(),
+		Code:    http.StatusInternalServerError,
+	}
 }
 
 // StatusCode returns the error's underlying error code.

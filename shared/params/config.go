@@ -1,4 +1,4 @@
-// Package params defines important constants that are essential to eth2 services.
+// Package params defines important constants that are essential to Prysm services.
 package params
 
 import (
@@ -44,7 +44,7 @@ type BeaconChainConfig struct {
 	ZeroHash                [32]byte // ZeroHash is used to represent a zeroed out 32 byte array.
 
 	// Time parameters constants.
-	GenesisDelay                     uint64      `yaml:"GENESIS_DELAY" spec:"true"`                       // GenesisDelay is the minimum number of seconds to delay starting the ETH2 genesis. Must be at least 1 second.
+	GenesisDelay                     uint64      `yaml:"GENESIS_DELAY" spec:"true"`                       // GenesisDelay is the minimum number of seconds to delay starting the Ethereum Beacon Chain genesis. Must be at least 1 second.
 	MinAttestationInclusionDelay     types.Slot  `yaml:"MIN_ATTESTATION_INCLUSION_DELAY" spec:"true"`     // MinAttestationInclusionDelay defines how many slots validator has to wait to include attestation for beacon block.
 	SecondsPerSlot                   uint64      `yaml:"SECONDS_PER_SLOT" spec:"true"`                    // SecondsPerSlot is how many seconds are in a single slot.
 	SlotsPerEpoch                    types.Slot  `yaml:"SLOTS_PER_EPOCH" spec:"true"`                     // SlotsPerEpoch is the number of slots in an epoch.
@@ -90,29 +90,33 @@ type BeaconChainConfig struct {
 	MaxVoluntaryExits    uint64 `yaml:"MAX_VOLUNTARY_EXITS" spec:"true"`    // MaxVoluntaryExits defines the maximum number of validator exits in a block.
 
 	// BLS domain values.
-	DomainBeaconProposer    [4]byte `yaml:"DOMAIN_BEACON_PROPOSER" spec:"true"`     // DomainBeaconProposer defines the BLS signature domain for beacon proposal verification.
-	DomainRandao            [4]byte `yaml:"DOMAIN_RANDAO" spec:"true"`              // DomainRandao defines the BLS signature domain for randao verification.
-	DomainBeaconAttester    [4]byte `yaml:"DOMAIN_BEACON_ATTESTER" spec:"true"`     // DomainBeaconAttester defines the BLS signature domain for attestation verification.
-	DomainDeposit           [4]byte `yaml:"DOMAIN_DEPOSIT" spec:"true"`             // DomainDeposit defines the BLS signature domain for deposit verification.
-	DomainVoluntaryExit     [4]byte `yaml:"DOMAIN_VOLUNTARY_EXIT" spec:"true"`      // DomainVoluntaryExit defines the BLS signature domain for exit verification.
-	DomainSelectionProof    [4]byte `yaml:"DOMAIN_SELECTION_PROOF" spec:"true"`     // DomainSelectionProof defines the BLS signature domain for selection proof.
-	DomainAggregateAndProof [4]byte `yaml:"DOMAIN_AGGREGATE_AND_PROOF" spec:"true"` // DomainAggregateAndProof defines the BLS signature domain for aggregate and proof.
+	DomainBeaconProposer              [4]byte `yaml:"DOMAIN_BEACON_PROPOSER" spec:"true"`                // DomainBeaconProposer defines the BLS signature domain for beacon proposal verification.
+	DomainRandao                      [4]byte `yaml:"DOMAIN_RANDAO" spec:"true"`                         // DomainRandao defines the BLS signature domain for randao verification.
+	DomainBeaconAttester              [4]byte `yaml:"DOMAIN_BEACON_ATTESTER" spec:"true"`                // DomainBeaconAttester defines the BLS signature domain for attestation verification.
+	DomainDeposit                     [4]byte `yaml:"DOMAIN_DEPOSIT" spec:"true"`                        // DomainDeposit defines the BLS signature domain for deposit verification.
+	DomainVoluntaryExit               [4]byte `yaml:"DOMAIN_VOLUNTARY_EXIT" spec:"true"`                 // DomainVoluntaryExit defines the BLS signature domain for exit verification.
+	DomainSelectionProof              [4]byte `yaml:"DOMAIN_SELECTION_PROOF" spec:"true"`                // DomainSelectionProof defines the BLS signature domain for selection proof.
+	DomainAggregateAndProof           [4]byte `yaml:"DOMAIN_AGGREGATE_AND_PROOF" spec:"true"`            // DomainAggregateAndProof defines the BLS signature domain for aggregate and proof.
+	DomainSyncCommittee               [4]byte `yaml:"DOMAIN_SYNC_COMMITTEE" spec:"true"`                 // DomainVoluntaryExit defines the BLS signature domain for sync committee.
+	DomainSyncCommitteeSelectionProof [4]byte `yaml:"DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF" spec:"true"` // DomainSelectionProof defines the BLS signature domain for sync committee selection proof.
+	DomainContributionAndProof        [4]byte `yaml:"DOMAIN_CONTRIBUTION_AND_PROOF" spec:"true"`         // DomainAggregateAndProof defines the BLS signature domain for contribution and proof.
 
 	// Prysm constants.
-	GweiPerEth                uint64        // GweiPerEth is the amount of gwei corresponding to 1 eth.
-	BLSSecretKeyLength        int           // BLSSecretKeyLength defines the expected length of BLS secret keys in bytes.
-	BLSPubkeyLength           int           // BLSPubkeyLength defines the expected length of BLS public keys in bytes.
-	BLSSignatureLength        int           // BLSSignatureLength defines the expected length of BLS signatures in bytes.
-	DefaultBufferSize         int           // DefaultBufferSize for channels across the Prysm repository.
-	ValidatorPrivkeyFileName  string        // ValidatorPrivKeyFileName specifies the string name of a validator private key file.
-	WithdrawalPrivkeyFileName string        // WithdrawalPrivKeyFileName specifies the string name of a withdrawal private key file.
-	RPCSyncCheck              time.Duration // Number of seconds to query the sync service, to find out if the node is synced or not.
-	EmptySignature            [96]byte      // EmptySignature is used to represent a zeroed out BLS Signature.
-	DefaultPageSize           int           // DefaultPageSize defines the default page size for RPC server request.
-	MaxPeersToSync            int           // MaxPeersToSync describes the limit for number of peers in round robin sync.
-	SlotsPerArchivedPoint     types.Slot    // SlotsPerArchivedPoint defines the number of slots per one archived point.
-	GenesisCountdownInterval  time.Duration // How often to log the countdown until the genesis time is reached.
-	BeaconStateFieldCount     int           // BeaconStateFieldCount defines how many fields are in beacon state.
+	GweiPerEth                  uint64        // GweiPerEth is the amount of gwei corresponding to 1 eth.
+	BLSSecretKeyLength          int           // BLSSecretKeyLength defines the expected length of BLS secret keys in bytes.
+	BLSPubkeyLength             int           // BLSPubkeyLength defines the expected length of BLS public keys in bytes.
+	BLSSignatureLength          int           // BLSSignatureLength defines the expected length of BLS signatures in bytes.
+	DefaultBufferSize           int           // DefaultBufferSize for channels across the Prysm repository.
+	ValidatorPrivkeyFileName    string        // ValidatorPrivKeyFileName specifies the string name of a validator private key file.
+	WithdrawalPrivkeyFileName   string        // WithdrawalPrivKeyFileName specifies the string name of a withdrawal private key file.
+	RPCSyncCheck                time.Duration // Number of seconds to query the sync service, to find out if the node is synced or not.
+	EmptySignature              [96]byte      // EmptySignature is used to represent a zeroed out BLS Signature.
+	DefaultPageSize             int           // DefaultPageSize defines the default page size for RPC server request.
+	MaxPeersToSync              int           // MaxPeersToSync describes the limit for number of peers in round robin sync.
+	SlotsPerArchivedPoint       types.Slot    // SlotsPerArchivedPoint defines the number of slots per one archived point.
+	GenesisCountdownInterval    time.Duration // How often to log the countdown until the genesis time is reached.
+	BeaconStateFieldCount       int           // BeaconStateFieldCount defines how many fields are in beacon state.
+	BeaconStateAltairFieldCount int           // BeaconStateAltairFieldCount defines how many fields are in beacon state hard fork 1.
 
 	// Slasher constants.
 	WeakSubjectivityPeriod    types.Epoch // WeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events.
@@ -123,10 +127,42 @@ type BeaconChainConfig struct {
 
 	// Fork-related values.
 	GenesisForkVersion  []byte                 `yaml:"GENESIS_FORK_VERSION" spec:"true"` // GenesisForkVersion is used to track fork version between state transitions.
+	AltairForkVersion   []byte                 `yaml:"ALTAIR_FORK_VERSION" spec:"true"`  // AltairForkVersion is used to represent the fork version for altair.
+	AltairForkEpoch     types.Epoch            `yaml:"ALTAIR_FORK_EPOCH" spec:"true"`    // AltairForkEpoch is used to represent the assigned fork epoch for altair.
 	NextForkVersion     []byte                 `yaml:"NEXT_FORK_VERSION"`                // NextForkVersion is used to track the upcoming fork version, if any.
 	NextForkEpoch       types.Epoch            `yaml:"NEXT_FORK_EPOCH"`                  // NextForkEpoch is used to track the epoch of the next fork, if any.
 	ForkVersionSchedule map[types.Epoch][]byte // Schedule of fork versions by epoch number.
 
 	// Weak subjectivity values.
 	SafetyDecay uint64 // SafetyDecay is defined as the loss in the 1/3 consensus safety margin of the casper FFG mechanism.
+
+	// New values introduced in Altair hard fork 1.
+	// Participation flag indices.
+	TimelySourceFlagIndex uint8 `yaml:"TIMELY_SOURCE_FLAG_INDEX" spec:"true"` // TimelySourceFlagIndex is the source flag position of the participation bits.
+	TimelyTargetFlagIndex uint8 `yaml:"TIMELY_TARGET_FLAG_INDEX" spec:"true"` // TimelyTargetFlagIndex is the target flag position of the participation bits.
+	TimelyHeadFlagIndex   uint8 `yaml:"TIMELY_HEAD_FLAG_INDEX" spec:"true"`   // TimelyHeadFlagIndex is the head flag position of the participation bits.
+
+	// Incentivization weights.
+	TimelySourceWeight uint64 `yaml:"TIMELY_SOURCE_WEIGHT" spec:"true"` // TimelySourceWeight is the factor of how much source rewards receives.
+	TimelyTargetWeight uint64 `yaml:"TIMELY_TARGET_WEIGHT" spec:"true"` // TimelyTargetWeight is the factor of how much target rewards receives.
+	TimelyHeadWeight   uint64 `yaml:"TIMELY_HEAD_WEIGHT" spec:"true"`   // TimelyHeadWeight is the factor of how much head rewards receives.
+	SyncRewardWeight   uint64 `yaml:"SYNC_REWARD_WEIGHT" spec:"true"`   // SyncRewardWeight is the factor of how much sync committee rewards receives.
+	WeightDenominator  uint64 `yaml:"WEIGHT_DENOMINATOR" spec:"true"`   // WeightDenominator accounts for total rewards denomination.
+	ProposerWeight     uint64 `yaml:"PROPOSER_WEIGHT" spec:"true"`      // ProposerWeight is the factor of how much proposer rewards receives.
+
+	// Validator related.
+	TargetAggregatorsPerSyncSubcommittee uint64 `yaml:"TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE" spec:"true"` // TargetAggregatorsPerSyncSubcommittee for aggregating in sync committee.
+	SyncCommitteeSubnetCount             uint64 `yaml:"SYNC_COMMITTEE_SUBNET_COUNT" spec:"true"`              // SyncCommitteeSubnetCount for sync committee subnet count.
+
+	// Misc.
+	SyncCommitteeSize            uint64      `yaml:"SYNC_COMMITTEE_SIZE" spec:"true"`              // SyncCommitteeSize for light client sync committee size.
+	InactivityScoreBias          uint64      `yaml:"INACTIVITY_SCORE_BIAS" spec:"true"`            // InactivityScoreBias for calculating score bias penalties during inactivity
+	InactivityScoreRecoveryRate  uint64      `yaml:"INACTIVITY_SCORE_RECOVERY_RATE" spec:"true"`   // InactivityScoreRecoveryRate for recovering score bias penalties during inactivity.
+	EpochsPerSyncCommitteePeriod types.Epoch `yaml:"EPOCHS_PER_SYNC_COMMITTEE_PERIOD" spec:"true"` // EpochsPerSyncCommitteePeriod defines how many epochs per sync committee period.
+
+	// Updated penalty values. This moves penalty parameters toward their final, maximum security values.
+	// Note: We do not override previous configuration values but instead creates new values and replaces usage throughout.
+	InactivityPenaltyQuotientAltair      uint64 `yaml:"INACTIVITY_PENALTY_QUOTIENT_ALTAIR" spec:"true"`      // InactivityPenaltyQuotientAltair for penalties during inactivity post Altair hard fork.
+	MinSlashingPenaltyQuotientAltair     uint64 `yaml:"MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR" spec:"true"`    // MinSlashingPenaltyQuotientAltair for slashing penalties post Altair hard fork.
+	ProportionalSlashingMultiplierAltair uint64 `yaml:"PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR" spec:"true"` // ProportionalSlashingMultiplierAltair for slashing penalties multiplier post Alair hard fork.
 }

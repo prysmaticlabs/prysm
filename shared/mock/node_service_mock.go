@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	v1alpha1 "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	grpc "google.golang.org/grpc"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
@@ -38,14 +38,14 @@ func (m *MockNodeClient) EXPECT() *MockNodeClientMockRecorder {
 }
 
 // GetGenesis mocks base method
-func (m *MockNodeClient) GetGenesis(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (*eth.Genesis, error) {
+func (m *MockNodeClient) GetGenesis(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (*v1alpha1.Genesis, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "GetGenesis", varargs...)
-	ret0, _ := ret[0].(*eth.Genesis)
+	ret0, _ := ret[0].(*v1alpha1.Genesis)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -58,14 +58,14 @@ func (mr *MockNodeClientMockRecorder) GetGenesis(arg0, arg1 interface{}, arg2 ..
 }
 
 // GetHost mocks base method
-func (m *MockNodeClient) GetHost(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (*eth.HostData, error) {
+func (m *MockNodeClient) GetHost(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (*v1alpha1.HostData, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "GetHost", varargs...)
-	ret0, _ := ret[0].(*eth.HostData)
+	ret0, _ := ret[0].(*v1alpha1.HostData)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -78,14 +78,14 @@ func (mr *MockNodeClientMockRecorder) GetHost(arg0, arg1 interface{}, arg2 ...in
 }
 
 // GetPeer mocks base method
-func (m *MockNodeClient) GetPeer(arg0 context.Context, arg1 *eth.PeerRequest, arg2 ...grpc.CallOption) (*eth.Peer, error) {
+func (m *MockNodeClient) GetPeer(arg0 context.Context, arg1 *v1alpha1.PeerRequest, arg2 ...grpc.CallOption) (*v1alpha1.Peer, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "GetPeer", varargs...)
-	ret0, _ := ret[0].(*eth.Peer)
+	ret0, _ := ret[0].(*v1alpha1.Peer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -98,14 +98,14 @@ func (mr *MockNodeClientMockRecorder) GetPeer(arg0, arg1 interface{}, arg2 ...in
 }
 
 // GetSyncStatus mocks base method
-func (m *MockNodeClient) GetSyncStatus(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (*eth.SyncStatus, error) {
+func (m *MockNodeClient) GetSyncStatus(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (*v1alpha1.SyncStatus, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "GetSyncStatus", varargs...)
-	ret0, _ := ret[0].(*eth.SyncStatus)
+	ret0, _ := ret[0].(*v1alpha1.SyncStatus)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -118,14 +118,14 @@ func (mr *MockNodeClientMockRecorder) GetSyncStatus(arg0, arg1 interface{}, arg2
 }
 
 // GetVersion mocks base method
-func (m *MockNodeClient) GetVersion(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (*eth.Version, error) {
+func (m *MockNodeClient) GetVersion(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (*v1alpha1.Version, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "GetVersion", varargs...)
-	ret0, _ := ret[0].(*eth.Version)
+	ret0, _ := ret[0].(*v1alpha1.Version)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -138,14 +138,14 @@ func (mr *MockNodeClientMockRecorder) GetVersion(arg0, arg1 interface{}, arg2 ..
 }
 
 // ListImplementedServices mocks base method
-func (m *MockNodeClient) ListImplementedServices(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (*eth.ImplementedServices, error) {
+func (m *MockNodeClient) ListImplementedServices(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (*v1alpha1.ImplementedServices, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "ListImplementedServices", varargs...)
-	ret0, _ := ret[0].(*eth.ImplementedServices)
+	ret0, _ := ret[0].(*v1alpha1.ImplementedServices)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -158,14 +158,14 @@ func (mr *MockNodeClientMockRecorder) ListImplementedServices(arg0, arg1 interfa
 }
 
 // ListPeers mocks base method
-func (m *MockNodeClient) ListPeers(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (*eth.Peers, error) {
+func (m *MockNodeClient) ListPeers(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (*v1alpha1.Peers, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "ListPeers", varargs...)
-	ret0, _ := ret[0].(*eth.Peers)
+	ret0, _ := ret[0].(*v1alpha1.Peers)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

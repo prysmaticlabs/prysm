@@ -19,12 +19,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
@@ -152,7 +152,7 @@ func (mon *MockOperationNotifier) OperationFeed() *event.Feed {
 // ReceiveBlockInitialSync mocks ReceiveBlockInitialSync method in chain service.
 func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block interfaces.SignedBeaconBlock, _ [32]byte) error {
 	if s.State == nil {
-		s.State = &stateV0.BeaconState{}
+		s.State = &v1.BeaconState{}
 	}
 	if !bytes.Equal(s.Root, block.Block().ParentRoot()) {
 		return errors.Errorf("wanted %#x but got %#x", s.Root, block.Block().ParentRoot())
@@ -179,7 +179,7 @@ func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block interf
 // ReceiveBlockBatch processes blocks in batches from initial-sync.
 func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []interfaces.SignedBeaconBlock, _ [][32]byte) error {
 	if s.State == nil {
-		s.State = &stateV0.BeaconState{}
+		s.State = &v1.BeaconState{}
 	}
 	for _, block := range blks {
 		if !bytes.Equal(s.Root, block.Block().ParentRoot()) {
@@ -208,7 +208,7 @@ func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []interfaces.
 // ReceiveBlock mocks ReceiveBlock method in chain service.
 func (s *ChainService) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaconBlock, _ [32]byte) error {
 	if s.State == nil {
-		s.State = &stateV0.BeaconState{}
+		s.State = &v1.BeaconState{}
 	}
 	if !bytes.Equal(s.Root, block.Block().ParentRoot()) {
 		return errors.Errorf("wanted %#x but got %#x", s.Root, block.Block().ParentRoot())

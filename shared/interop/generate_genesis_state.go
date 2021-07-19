@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	coreState "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	// This is the recommended mock eth1 block hash according to the Eth2 interop guidelines.
+	// This is the recommended mock eth1 block hash according to the Ethereum consensus interop guidelines.
 	// https://github.com/ethereum/eth2.0-pm/blob/a085c9870f3956d6228ed2a40cd37f0c6580ecd7/interop/mocked_start/README.md
 	mockEth1BlockHash = []byte{66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66}
 )
@@ -66,7 +66,7 @@ func GenerateGenesisStateFromDepositData(
 		return nil, nil, errors.Wrap(err, "could not generate genesis state")
 	}
 
-	pbState, err := stateV0.ProtobufBeaconState(beaconState.CloneInnerState())
+	pbState, err := v1.ProtobufBeaconState(beaconState.CloneInnerState())
 	if err != nil {
 		return nil, nil, err
 	}

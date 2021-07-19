@@ -26,7 +26,7 @@ option java_outer_classname = "BeaconBlockProto";
 option java_package = "org.ethereum.eth.v1";
 option php_namespace = "Ethereum\\Eth\\v1";
 
-// The Ethereum 2.0 beacon block. The message does not contain a validator signature.
+// The Ethereum consensus beacon block. The message does not contain a validator signature.
 message BeaconBlock {
     // Beacon chain slot that this block represents.
     uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
@@ -44,7 +44,7 @@ message BeaconBlock {
     BeaconBlockBody body = 5;
 }
 
-// The Ethereum 2.0 beacon block for Hard Fork 1. The message does not contain a validator signature.
+// The Ethereum consensus beacon block for Hard Fork 1. The message does not contain a validator signature.
 message BeaconBlockV1 {
     // Beacon chain slot that this block represents.
     uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
@@ -80,7 +80,7 @@ message SignedBeaconBlockV1 {
     bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
-// The block body of an Ethereum 2.0 beacon block.
+// The block body of an Ethereum consensus beacon block.
 message BeaconBlockBody {
     // The validators RANDAO reveal 96 byte value.
     bytes randao_reveal = 1 [(ethereum.eth.ext.ssz_size) = "96"];
@@ -111,7 +111,7 @@ message BeaconBlockBody {
     repeated SignedVoluntaryExit voluntary_exits = 8 [(ethereum.eth.ext.ssz_max) = "16"];
 }
 
-// The block body of an Ethereum 2.0 beacon block for Hard Fork 1.
+// The block body of an Ethereum consensus beacon block for Hard Fork 1.
 message BeaconBlockBodyV1 {
     // The validators RANDAO reveal 96 byte value.
     bytes randao_reveal = 1 [(ethereum.eth.ext.ssz_size) = "96"];
@@ -169,7 +169,7 @@ message AttesterSlashing {
     IndexedAttestation attestation_2 = 2;
 }
 
-// Deposit into the Ethereum 2.0 from the Ethereum 1.x deposit contract.
+// Deposit into the Ethereum consensus from the Ethereum 1.x deposit contract.
 message Deposit {
     message Data {
         // 48 byte BLS public key of the validator.

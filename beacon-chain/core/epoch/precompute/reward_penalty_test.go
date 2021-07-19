@@ -4,11 +4,13 @@ import (
 	"context"
 	"testing"
 
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
@@ -34,7 +36,7 @@ func TestProcessRewardsAndPenaltiesPrecompute(t *testing.T) {
 	}
 	base.PreviousEpochAttestations = atts
 
-	beaconState, err := stateV0.InitializeFromProto(base)
+	beaconState, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
 
 	vp, bp, err := New(context.Background(), beaconState)
@@ -44,7 +46,7 @@ func TestProcessRewardsAndPenaltiesPrecompute(t *testing.T) {
 
 	processedState, err := ProcessRewardsAndPenaltiesPrecompute(beaconState, bp, vp, AttestationsDelta, ProposersDelta)
 	require.NoError(t, err)
-	beaconState, ok := processedState.(*stateV0.BeaconState)
+	beaconState, ok := processedState.(*v1.BeaconState)
 	require.Equal(t, true, ok)
 
 	// Indices that voted everything except for head, lost a bit money
@@ -78,7 +80,7 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 		}
 	}
 	base.PreviousEpochAttestations = atts
-	beaconState, err := stateV0.InitializeFromProto(base)
+	beaconState, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
 	slashedAttestedIndices := []types.ValidatorIndex{1413}
 	for _, i := range slashedAttestedIndices {
@@ -105,7 +107,7 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 
 	attestedIndices := []types.ValidatorIndex{55, 1339, 1746, 1811, 1569}
 	for _, i := range attestedIndices {
-		base, err := epoch.BaseReward(beaconState, i)
+		base, err := baseReward(beaconState, i)
 		require.NoError(t, err, "Could not get base reward")
 
 		// Base rewards for getting source right
@@ -122,7 +124,7 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 	}
 
 	for _, i := range slashedAttestedIndices {
-		base, err := epoch.BaseReward(beaconState, i)
+		base, err := baseReward(beaconState, i)
 		assert.NoError(t, err, "Could not get base reward")
 		assert.Equal(t, uint64(0), rewards[i], "Unexpected slashed indices reward balance")
 		assert.Equal(t, 3*base, penalties[i], "Unexpected slashed indices penalty balance")
@@ -130,7 +132,7 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 
 	nonAttestedIndices := []types.ValidatorIndex{434, 677, 872, 791}
 	for _, i := range nonAttestedIndices {
-		base, err := epoch.BaseReward(beaconState, i)
+		base, err := baseReward(beaconState, i)
 		assert.NoError(t, err, "Could not get base reward")
 		wanted := 3 * base
 		// Since all these validators did not attest, they shouldn't get rewarded.
@@ -162,7 +164,7 @@ func TestAttestationDeltas_ZeroEpoch(t *testing.T) {
 		}
 	}
 	base.PreviousEpochAttestations = atts
-	beaconState, err := stateV0.InitializeFromProto(base)
+	beaconState, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
 
 	pVals, pBal, err := New(context.Background(), beaconState)
@@ -200,7 +202,7 @@ func TestAttestationDeltas_ZeroInclusionDelay(t *testing.T) {
 		}
 	}
 	base.PreviousEpochAttestations = atts
-	beaconState, err := stateV0.InitializeFromProto(base)
+	beaconState, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
 
 	pVals, pBal, err := New(context.Background(), beaconState)
@@ -226,7 +228,7 @@ func TestProcessRewardsAndPenaltiesPrecompute_SlashedInactivePenalty(t *testing.
 	}
 	base.PreviousEpochAttestations = atts
 
-	beaconState, err := stateV0.InitializeFromProto(base)
+	beaconState, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch*10))
 
@@ -246,7 +248,7 @@ func TestProcessRewardsAndPenaltiesPrecompute_SlashedInactivePenalty(t *testing.
 
 	finalityDelay := helpers.PrevEpoch(beaconState) - beaconState.FinalizedCheckpointEpoch()
 	for _, i := range slashedAttestedIndices {
-		base, err := epoch.BaseReward(beaconState, i)
+		base, err := baseReward(beaconState, i)
 		require.NoError(t, err, "Could not get base reward")
 		penalty := 3 * base
 		proposerReward := base / params.BeaconConfig().ProposerRewardQuotient
@@ -300,7 +302,7 @@ func TestProposerDeltaPrecompute_HappyCase(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := uint64(10)
 	base := buildState(e, validatorCount)
-	beaconState, err := stateV0.InitializeFromProto(base)
+	beaconState, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
 
 	proposerIndex := types.ValidatorIndex(1)
@@ -322,7 +324,7 @@ func TestProposerDeltaPrecompute_ValidatorIndexOutOfRange(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := uint64(10)
 	base := buildState(e, validatorCount)
-	beaconState, err := stateV0.InitializeFromProto(base)
+	beaconState, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
 
 	proposerIndex := types.ValidatorIndex(validatorCount)
@@ -338,7 +340,7 @@ func TestProposerDeltaPrecompute_SlashedCase(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := uint64(10)
 	base := buildState(e, validatorCount)
-	beaconState, err := stateV0.InitializeFromProto(base)
+	beaconState, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
 
 	proposerIndex := types.ValidatorIndex(1)
@@ -349,4 +351,27 @@ func TestProposerDeltaPrecompute_SlashedCase(t *testing.T) {
 	r, err := ProposersDelta(beaconState, b, v)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(0), r[proposerIndex], "Unexpected proposer reward for slashed")
+}
+
+// BaseReward takes state and validator index and calculate
+// individual validator's base reward quotient.
+//
+// Spec pseudocode definition:
+//  def get_base_reward(state: BeaconState, index: ValidatorIndex) -> Gwei:
+//    total_balance = get_total_active_balance(state)
+//    effective_balance = state.validators[index].effective_balance
+//    return Gwei(effective_balance * BASE_REWARD_FACTOR // integer_squareroot(total_balance) // BASE_REWARDS_PER_EPOCH)
+func baseReward(state iface.ReadOnlyBeaconState, index types.ValidatorIndex) (uint64, error) {
+	totalBalance, err := helpers.TotalActiveBalance(state)
+	if err != nil {
+		return 0, errors.Wrap(err, "could not calculate active balance")
+	}
+	val, err := state.ValidatorAtIndexReadOnly(index)
+	if err != nil {
+		return 0, err
+	}
+	effectiveBalance := val.EffectiveBalance()
+	baseReward := effectiveBalance * params.BeaconConfig().BaseRewardFactor /
+		mathutil.IntegerSquareRoot(totalBalance) / params.BeaconConfig().BaseRewardsPerEpoch
+	return baseReward, nil
 }

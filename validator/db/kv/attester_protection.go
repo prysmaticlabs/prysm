@@ -114,6 +114,7 @@ func (s *Store) AttestationHistoryForPubKey(ctx context.Context, pubKey [48]byte
 			sourceEpoch := bytesutil.BytesToEpochBigEndian(sourceBytes)
 			for _, targetEpoch := range targetEpochs {
 				record := &AttestationRecord{
+					PubKey: pubKey,
 					Source: sourceEpoch,
 					Target: targetEpoch,
 				}

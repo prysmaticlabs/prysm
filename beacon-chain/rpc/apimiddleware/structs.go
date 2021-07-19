@@ -41,6 +41,11 @@ type stateFinalityCheckpointResponse_StateFinalityCheckpointJson struct {
 	Finalized         *checkpointJson `json:"finalized"`
 }
 
+// stateValidatorResponseJson is used in /beacon/states/{state_id}/validators API endpoint.
+type stateValidatorsResponseJson struct {
+	Data []*validatorContainerJson `json:"data"`
+}
+
 // stateValidatorResponseJson is used in /beacon/states/{state_id}/validators/{validator_id} API endpoint.
 type stateValidatorResponseJson struct {
 	Data *validatorContainerJson `json:"data"`
@@ -167,6 +172,17 @@ type depositContractResponseJson struct {
 // specResponseJson is used in /config/spec API endpoint.
 type specResponseJson struct {
 	Data interface{} `json:"data"`
+}
+
+// attesterDutiesRequestJson is used in /validator/duties/attester/{epoch} API endpoint.
+type attesterDutiesRequestJson struct {
+	Index []string `json:"index"`
+}
+
+// attesterDutiesResponseJson is used in /validator/duties/attester/{epoch} API endpoint.
+type attesterDutiesResponseJson struct {
+	DependentRoot string              `json:"dependent_root" hex:"true"`
+	AttesterDuty  []*attesterDutyJson `json:"data"`
 }
 
 //----------------
@@ -426,6 +442,17 @@ type syncInfoJson struct {
 	HeadSlot     string `json:"head_slot"`
 	SyncDistance string `json:"sync_distance"`
 	IsSyncing    bool   `json:"is_syncing"`
+}
+
+// attesterDutyJson is a JSON representation of an attester duty.
+type attesterDutyJson struct {
+	Pubkey                  string `json:"pubkey" hex:"true"`
+	ValidatorIndex          string `json:"validator_index"`
+	CommitteeIndex          string `json:"committee_index"`
+	CommitteeLength         string `json:"committee_length"`
+	CommitteesAtSlot        string `json:"committees_at_slot"`
+	ValidatorCommitteeIndex string `json:"validator_committee_index"`
+	Slot                    string `json:"slot"`
 }
 
 //----------------

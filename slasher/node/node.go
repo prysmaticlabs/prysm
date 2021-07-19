@@ -35,7 +35,7 @@ import (
 )
 
 // SlasherNode defines a struct that handles the services running a slashing detector
-// for eth2. It handles the lifecycle of the entire system and registers
+// for Ethereum. It handles the lifecycle of the entire system and registers
 // services to a service registry.
 type SlasherNode struct {
 	cliCtx                *cli.Context

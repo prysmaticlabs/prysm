@@ -68,7 +68,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 
 	// Broadcast the unaggregated attestation on a feed to notify other services in the beacon node
 	// of a received unaggregated attestation.
-	s.cfg.AttestationNotifier.OperationFeed().Send(&feed.Event{
+	s.cfg.OperationNotifier.OperationFeed().Send(&feed.Event{
 		Type: operation.UnaggregatedAttReceived,
 		Data: &operation.UnAggregatedAttReceivedData{
 			Attestation: att,
@@ -187,7 +187,7 @@ func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a *eth.A
 	}
 
 	// Attestation must be unaggregated and the bit index must exist in the range of committee indices.
-	// Note: eth2 spec suggests (len(get_attesting_indices(state, attestation.data, attestation.aggregation_bits)) == 1)
+	// Note: The Ethereum Beacon Chain spec suggests (len(get_attesting_indices(state, attestation.data, attestation.aggregation_bits)) == 1)
 	// however this validation can be achieved without use of get_attesting_indices which is an O(n) lookup.
 	if a.AggregationBits.Count() != 1 || a.AggregationBits.BitIndices()[0] >= len(committee) {
 		return pubsub.ValidationReject

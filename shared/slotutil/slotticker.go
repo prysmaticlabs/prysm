@@ -1,4 +1,4 @@
-// Package slotutil includes ticker and timer-related functions for eth2.
+// Package slotutil includes ticker and timer-related functions for Ethereum consensus.
 package slotutil
 
 import (

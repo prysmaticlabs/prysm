@@ -1,7 +1,7 @@
 // This tool allows for simple encrypting and decrypting of EIP-2335 compliant, BLS12-381
 // keystore.json files which as password protected. This is helpful in development to inspect
-// the contents of keystores created by eth2 wallets or to easily produce keystores from a
-// specified secret to move them around in a standard format between eth2 clients.
+// the contents of keystores created by Ethereum validator wallets or to easily produce keystores from a
+// specified secret to move them around in a standard format between Ethereum consensus clients.
 package main
 
 import (

@@ -2,7 +2,10 @@ load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["phase0.go"],
+    srcs = [
+        "altair.go",
+        "phase0.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/interface",
     visibility = [
         "//beacon-chain:__subpackages__",
@@ -15,6 +18,7 @@ go_library(
         "//slasher/rpc:__subpackages__",
         "//spectest:__subpackages__",
         "//tools/benchmark-files-gen:__pkg__",
+        "//tools/exploredb:__pkg__",
         "//tools/pcli:__pkg__",
     ],
     deps = [

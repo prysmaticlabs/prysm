@@ -3,6 +3,7 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
+        "fork.go",
         "metrics.go",
         "version.go",
     ],

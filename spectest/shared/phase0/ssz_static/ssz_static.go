@@ -9,7 +9,7 @@ import (
 
 	fssz "github.com/ferranbt/fastssz"
 	"github.com/golang/snappy"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -50,7 +50,7 @@ func RunSSZStaticTests(t *testing.T, config string) {
 				var htr func(interface{}) ([32]byte, error)
 				if _, ok := object.(*pb.BeaconState); ok {
 					htr = func(s interface{}) ([32]byte, error) {
-						beaconState, err := stateV0.InitializeFromProto(s.(*pb.BeaconState))
+						beaconState, err := v1.InitializeFromProto(s.(*pb.BeaconState))
 						require.NoError(t, err)
 						return beaconState.HashTreeRoot(context.Background())
 					}

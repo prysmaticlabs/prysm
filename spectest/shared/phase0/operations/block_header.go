@@ -9,7 +9,7 @@ import (
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -38,7 +38,7 @@ func RunBlockHeaderTest(t *testing.T, config string) {
 			require.NoError(t, err, "Failed to decompress")
 			preBeaconStateBase := &pb.BeaconState{}
 			require.NoError(t, preBeaconStateBase.UnmarshalSSZ(preBeaconStateSSZ), "Failed to unmarshal")
-			preBeaconState, err := stateV0.InitializeFromProto(preBeaconStateBase)
+			preBeaconState, err := v1.InitializeFromProto(preBeaconStateBase)
 			require.NoError(t, err)
 
 			// If the post.ssz is not present, it means the test should fail on our end.
@@ -64,7 +64,7 @@ func RunBlockHeaderTest(t *testing.T, config string) {
 
 				postBeaconState := &pb.BeaconState{}
 				require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateSSZ), "Failed to unmarshal")
-				pbState, err := stateV0.ProtobufBeaconState(beaconState.CloneInnerState())
+				pbState, err := v1.ProtobufBeaconState(beaconState.CloneInnerState())
 				require.NoError(t, err)
 				if !proto.Equal(pbState, postBeaconState) {
 					diff, _ := messagediff.PrettyDiff(beaconState.CloneInnerState(), postBeaconState)

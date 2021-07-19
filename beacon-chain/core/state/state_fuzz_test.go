@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
@@ -37,7 +37,7 @@ func TestOptimizedGenesisBeaconState_1000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	fuzzer.NilChance(0.1)
 	var genesisTime uint64
-	preState := &stateV0.BeaconState{}
+	preState := &v1.BeaconState{}
 	eth1Data := &ethpb.Eth1Data{}
 	for i := 0; i < 1000; i++ {
 		fuzzer.Fuzz(&genesisTime)

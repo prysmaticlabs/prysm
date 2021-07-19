@@ -24,7 +24,7 @@ const (
 )
 
 // Store defines an implementation of the slasher Database interface
-// using BoltDB as the underlying persistent kv-store for eth2.
+// using BoltDB as the underlying persistent kv-store for Ethereum.
 type Store struct {
 	highestAttCacheEnabled  bool
 	spanCacheEnabled        bool

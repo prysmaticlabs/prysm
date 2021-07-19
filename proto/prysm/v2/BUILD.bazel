@@ -22,7 +22,6 @@ proto_library(
     name = "proto",
     srcs = [
         ":ssz_proto_files",
-        "sync_committee.proto",
         "validator.proto",
     ],
     visibility = ["//visibility:public"],
@@ -111,6 +110,8 @@ go_library(
     name = "go_default_library",
     srcs = [
         "aliases.go",
+        "sync_committee_mainnet.go",
+        "sync_committee_minimal.go",
         ":ssz_generated_files",  # keep
     ],
     embed = [
@@ -144,6 +145,7 @@ ssz_proto_files(
     name = "ssz_proto_files",
     srcs = [
         "beacon_block.proto",
+        "sync_committee.proto",
     ],
     config = select({
         "//conditions:default": "mainnet",

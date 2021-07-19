@@ -490,17 +490,17 @@ func (b *BeaconNode) registerSyncService() error {
 	}
 
 	rs := regularsync.NewService(b.ctx, &regularsync.Config{
-		DB:                  b.db,
-		P2P:                 b.fetchP2P(),
-		Chain:               chainService,
-		InitialSync:         initSync,
-		StateNotifier:       b,
-		BlockNotifier:       b,
-		AttestationNotifier: b,
-		AttPool:             b.attestationPool,
-		ExitPool:            b.exitPool,
-		SlashingPool:        b.slashingsPool,
-		StateGen:            b.stateGen,
+		DB:                b.db,
+		P2P:               b.fetchP2P(),
+		Chain:             chainService,
+		InitialSync:       initSync,
+		StateNotifier:     b,
+		BlockNotifier:     b,
+		OperationNotifier: b,
+		AttPool:           b.attestationPool,
+		ExitPool:          b.exitPool,
+		SlashingPool:      b.slashingsPool,
+		StateGen:          b.stateGen,
 	})
 
 	return b.services.RegisterService(rs)
@@ -645,12 +645,12 @@ func (b *BeaconNode) registerGRPCGateway() error {
 		return nil
 	}
 	gatewayPort := b.cliCtx.Int(flags.GRPCGatewayPort.Name)
-	apiMiddlewarePort := b.cliCtx.Int(flags.ApiMiddlewarePort.Name)
+	ethApiPort := b.cliCtx.Int(flags.EthApiPort.Name)
 	gatewayHost := b.cliCtx.String(flags.GRPCGatewayHost.Name)
 	rpcHost := b.cliCtx.String(flags.RPCHost.Name)
 	selfAddress := fmt.Sprintf("%s:%d", rpcHost, b.cliCtx.Int(flags.RPCPort.Name))
 	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
-	apiMiddlewareAddress := fmt.Sprintf("%s:%d", gatewayHost, apiMiddlewarePort)
+	apiMiddlewareAddress := fmt.Sprintf("%s:%d", gatewayHost, ethApiPort)
 	allowedOrigins := strings.Split(b.cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
 	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
 	selfCert := b.cliCtx.String(flags.CertFlag.Name)

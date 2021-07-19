@@ -1,5 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_test")
-load("@prysm//tools/go:def.bzl", "go_library")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
@@ -9,6 +8,7 @@ go_library(
         "api_middleware_structs.go",
         "gateway.go",
         "log.go",
+        "param_handling.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/gateway",
     visibility = [
@@ -37,6 +37,7 @@ go_test(
     srcs = [
         "api_middleware_processing_test.go",
         "gateway_test.go",
+        "param_handling_test.go",
     ],
     embed = [":go_default_library"],
     deps = [

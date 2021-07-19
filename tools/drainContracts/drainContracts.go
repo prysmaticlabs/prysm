@@ -85,9 +85,13 @@ func main() {
 			if err != nil {
 				return err
 			}
-			txOps = bind.NewKeyedTransactor(privKey)
+			txOps, err = bind.NewKeyedTransactorWithChainID(privKey, big.NewInt(1337))
+			if err != nil {
+				return err
+			}
 			txOps.Value = big.NewInt(0)
 			txOps.GasLimit = 4000000
+			txOps.Context = context.Background()
 			nonce, err := client.NonceAt(context.Background(), crypto.PubkeyToAddress(privKey.PublicKey), nil)
 			if err != nil {
 				return errors.Wrap(err, "could not get account nonce")
@@ -109,9 +113,13 @@ func main() {
 				return err
 			}
 
-			txOps = bind.NewKeyedTransactor(privKey.PrivateKey)
+			txOps, err = bind.NewKeyedTransactorWithChainID(privKey.PrivateKey, big.NewInt(1337))
+			if err != nil {
+				return err
+			}
 			txOps.Value = big.NewInt(0)
 			txOps.GasLimit = 4000000
+			txOps.Context = context.Background()
 			nonce, err := client.NonceAt(context.Background(), privKey.Address, nil)
 			if err != nil {
 				return err

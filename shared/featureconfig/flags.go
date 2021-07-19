@@ -7,17 +7,17 @@ import (
 )
 
 var (
-	// ToledoTestnet flag for the multiclient eth2 testnet.
+	// ToledoTestnet flag for the multiclient Ethereum consensus testnet.
 	ToledoTestnet = &cli.BoolFlag{
 		Name:  "toledo",
 		Usage: "This defines the flag through which we can run on the Toledo Multiclient Testnet",
 	}
-	// PyrmontTestnet flag for the multiclient eth2 testnet.
+	// PyrmontTestnet flag for the multiclient Ethereum consensus testnet.
 	PyrmontTestnet = &cli.BoolFlag{
 		Name:  "pyrmont",
 		Usage: "This defines the flag through which we can run on the Pyrmont Multiclient Testnet",
 	}
-	// PraterTestnet flag for the multiclient eth2 testnet.
+	// PraterTestnet flag for the multiclient Ethereum consensus testnet.
 	PraterTestnet = &cli.BoolFlag{
 		Name:  "prater",
 		Usage: "Run Prysm configured for the Prater test network",
@@ -26,7 +26,7 @@ var (
 	Mainnet = &cli.BoolFlag{
 		Value: true,
 		Name:  "mainnet",
-		Usage: "Run on Ethereum 2.0 Main Net. This is the default and can be omitted.",
+		Usage: "Run on Ethereum Beacon Chain Main Net. This is the default and can be omitted.",
 	}
 	devModeFlag = &cli.BoolFlag{
 		Name:  "dev",
@@ -122,6 +122,12 @@ var (
 		Name:  "enable-optimized-balance-update",
 		Usage: "Enables the optimized method of updating validator balances.",
 	}
+	enableDoppelGangerProtection = &cli.BoolFlag{
+		Name: "enable-doppelganger",
+		Usage: "Enables the validator to perform a doppelganger check. (Warning): This is not " +
+			"a foolproof method to find duplicate instances in the network. Your validator will still be" +
+			" vulnerable if it is being run in unsafe configurations.",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -146,6 +152,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	dynamicKeyReloadDebounceInterval,
 	attestTimely,
 	enableSlashingProtectionPruning,
+	enableDoppelGangerProtection,
 }...)
 
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
@@ -158,7 +165,9 @@ var SlasherFlags = append(deprecatedFlags, []cli.Flag{
 }...)
 
 // E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.
-var E2EValidatorFlags = make([]string, 0)
+var E2EValidatorFlags = []string{
+	"--enable-doppelganger",
+}
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{

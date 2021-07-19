@@ -40,14 +40,14 @@ service Node {
         };
     }
 
-    // Retrieve information about the genesis of Ethereum 2.0.
+    // Retrieve information about the genesis of Ethereum proof of stake.
     rpc GetGenesis(google.protobuf.Empty) returns (Genesis) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/node/genesis"
         };
     }
 
-    // Retrieve information about the running Ethereum 2.0 node.
+    // Retrieve information about the running Ethereum Beacon Node.
     rpc GetVersion(google.protobuf.Empty) returns (Version) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/node/version"
@@ -93,7 +93,7 @@ message SyncStatus {
     bool syncing = 1;
 }
 
-// Information about the genesis of Ethereum 2.0.
+// Information about the genesis of Ethereum proof of stake.
 message Genesis {
     // UTC time specified in the chain start event in the deposit contract.
     google.protobuf.Timestamp genesis_time = 1;

@@ -71,7 +71,7 @@ func IsZero(sKey []byte) bool {
 // Sign(SK, message) -> signature: a signing algorithm that generates
 //      a deterministic signature given a secret key SK and a message.
 //
-// In ETH2.0 specification:
+// In Ethereum proof of stake specification:
 // def Sign(SK: int, message: Bytes) -> BLSSignature
 func (s *bls12SecretKey) Sign(msg []byte) common.Signature {
 	if featureconfig.Get().SkipBLSVerify {

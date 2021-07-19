@@ -1,5 +1,4 @@
-load("@prysm//tools/go:def.bzl", "go_library")
-load("@io_bazel_rules_go//go:def.bzl", "go_test")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
@@ -48,6 +47,7 @@ go_test(
         "//shared/testutil/require:go_default_library",
         "@com_github_ferranbt_fastssz//:go_default_library",
         "@com_github_patrickmn_go_cache//:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],

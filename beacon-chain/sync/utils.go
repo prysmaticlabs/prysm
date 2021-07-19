@@ -4,7 +4,7 @@ import (
 	"errors"
 	"sort"
 
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 )
 
 // A type to represent beacon blocks and roots which have methods

@@ -21,6 +21,7 @@ func (f *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/beacon/states/{state_id}/fork",
 		"/eth/v1/beacon/states/{state_id}/finality_checkpoints",
 		"/eth/v1/beacon/states/{state_id}/validators",
+		"/eth/v1/beacon/states/{state_id}/validators/{validator_id}",
 		"/eth/v1/beacon/states/{state_id}/validator_balances",
 		"/eth/v1/beacon/states/{state_id}/committees",
 		"/eth/v1/beacon/headers",
@@ -46,6 +47,7 @@ func (f *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/config/deposit_contract",
 		"/eth/v1/config/spec",
 		"/eth/v1/events",
+		"/eth/v1/validator/duties/attester/{epoch}",
 	}
 }
 
@@ -75,26 +77,32 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 		}
 	case "/eth/v1/beacon/states/{state_id}/validators":
 		endpoint = gateway.Endpoint{
+			RequestQueryParams: []gateway.QueryParam{{Name: "id", Hex: true}, {Name: "status", Enum: true}},
+			GetResponse:        &stateValidatorsResponseJson{},
+			Err:                &gateway.DefaultErrorJson{},
+		}
+	case "/eth/v1/beacon/states/{state_id}/validators/{validator_id}":
+		endpoint = gateway.Endpoint{
 			GetResponse: &stateValidatorResponseJson{},
 			Err:         &gateway.DefaultErrorJson{},
 		}
 	case "/eth/v1/beacon/states/{state_id}/validator_balances":
 		endpoint = gateway.Endpoint{
-			GetRequestQueryParams: []gateway.QueryParam{{Name: "id", Hex: true}},
-			GetResponse:           &validatorBalancesResponseJson{},
-			Err:                   &gateway.DefaultErrorJson{},
+			RequestQueryParams: []gateway.QueryParam{{Name: "id", Hex: true}},
+			GetResponse:        &validatorBalancesResponseJson{},
+			Err:                &gateway.DefaultErrorJson{},
 		}
 	case "/eth/v1/beacon/states/{state_id}/committees":
 		endpoint = gateway.Endpoint{
-			GetRequestQueryParams: []gateway.QueryParam{{Name: "epoch"}, {Name: "index"}, {Name: "slot"}},
-			GetResponse:           &stateCommitteesResponseJson{},
-			Err:                   &gateway.DefaultErrorJson{},
+			RequestQueryParams: []gateway.QueryParam{{Name: "epoch"}, {Name: "index"}, {Name: "slot"}},
+			GetResponse:        &stateCommitteesResponseJson{},
+			Err:                &gateway.DefaultErrorJson{},
 		}
 	case "/eth/v1/beacon/headers":
 		endpoint = gateway.Endpoint{
-			GetRequestQueryParams: []gateway.QueryParam{{Name: "slot"}, {Name: "parent_root", Hex: true}},
-			GetResponse:           &blockHeadersResponseJson{},
-			Err:                   &gateway.DefaultErrorJson{},
+			RequestQueryParams: []gateway.QueryParam{{Name: "slot"}, {Name: "parent_root", Hex: true}},
+			GetResponse:        &blockHeadersResponseJson{},
+			Err:                &gateway.DefaultErrorJson{},
 		}
 	case "/eth/v1/beacon/headers/{block_id}":
 		endpoint = gateway.Endpoint{
@@ -129,10 +137,10 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 		}
 	case "/eth/v1/beacon/pool/attestations":
 		endpoint = gateway.Endpoint{
-			GetRequestQueryParams: []gateway.QueryParam{{Name: "slot"}, {Name: "committee_index"}},
-			GetResponse:           &attestationsPoolResponseJson{},
-			PostRequest:           &submitAttestationRequestJson{},
-			Err:                   &submitAttestationsErrorJson{},
+			RequestQueryParams: []gateway.QueryParam{{Name: "slot"}, {Name: "committee_index"}},
+			GetResponse:        &attestationsPoolResponseJson{},
+			PostRequest:        &submitAttestationRequestJson{},
+			Err:                &submitAttestationsErrorJson{},
 			Hooks: gateway.HookCollection{
 				OnPostStart: []gateway.Hook{wrapAttestationsArray},
 			},
@@ -162,14 +170,15 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 		}
 	case "/eth/v1/node/peers":
 		endpoint = gateway.Endpoint{
-			GetResponse: &peersResponseJson{},
-			Err:         &gateway.DefaultErrorJson{},
+			RequestQueryParams: []gateway.QueryParam{{Name: "state", Enum: true}, {Name: "direction", Enum: true}},
+			GetResponse:        &peersResponseJson{},
+			Err:                &gateway.DefaultErrorJson{},
 		}
 	case "/eth/v1/node/peers/{peer_id}":
 		endpoint = gateway.Endpoint{
-			GetRequestURLLiterals: []string{"peer_id"},
-			GetResponse:           &peerResponseJson{},
-			Err:                   &gateway.DefaultErrorJson{},
+			RequestURLLiterals: []string{"peer_id"},
+			GetResponse:        &peerResponseJson{},
+			Err:                &gateway.DefaultErrorJson{},
 		}
 	case "/eth/v1/node/peer_count":
 		endpoint = gateway.Endpoint{
@@ -223,6 +232,16 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 			Err: &gateway.DefaultErrorJson{},
 			Hooks: gateway.HookCollection{
 				CustomHandlers: []gateway.CustomHandler{handleEvents},
+			},
+		}
+	case "/eth/v1/validator/duties/attester/{epoch}":
+		endpoint = gateway.Endpoint{
+			PostRequest:        &attesterDutiesRequestJson{},
+			PostResponse:       &attesterDutiesResponseJson{},
+			RequestURLLiterals: []string{"epoch"},
+			Err:                &gateway.DefaultErrorJson{},
+			Hooks: gateway.HookCollection{
+				OnPostStart: []gateway.Hook{wrapValidatorIndicesArray},
 			},
 		}
 	default:

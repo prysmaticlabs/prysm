@@ -23,9 +23,6 @@ func MaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Attesta
 	unaggregated := attList(atts)
 
 	if err := unaggregated.validate(); err != nil {
-		if errors.Is(err, aggregation.ErrBitsDifferentLen) {
-			return unaggregated, nil
-		}
 		return nil, err
 	}
 
@@ -49,7 +46,9 @@ func MaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Attesta
 		}
 
 		// Create aggregated attestation and update solution lists.
-		if !aggregated.hasCoverage(solution.Coverage) {
+		if has, err := aggregated.hasCoverage(solution.Coverage); err != nil {
+			return nil, err
+		} else if !has {
 			att, err := unaggregated.selectUsingKeys(solution.Keys).aggregate(solution.Coverage)
 			if err != nil {
 				return aggregated.merge(unaggregated), err
@@ -59,7 +58,11 @@ func MaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Attesta
 		unaggregated = unaggregated.selectComplementUsingKeys(solution.Keys)
 	}
 
-	return aggregated.merge(unaggregated.filterContained()), nil
+	filtered, err := unaggregated.filterContained()
+	if err != nil {
+		return nil, err
+	}
+	return aggregated.merge(filtered), nil
 }
 
 // optMaxCoverAttestationAggregation relies on Maximum Coverage greedy algorithm for aggregation.
@@ -73,9 +76,6 @@ func optMaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Atte
 	}
 
 	if err := attList(atts).validate(); err != nil {
-		if errors.Is(err, aggregation.ErrBitsDifferentLen) {
-			return atts, nil
-		}
 		return nil, err
 	}
 
@@ -83,7 +83,11 @@ func optMaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Atte
 	// type, so incoming `atts` parameters can be used as candidates list directly.
 	candidates := make([]*bitfield.Bitlist64, len(atts))
 	for i := 0; i < len(atts); i++ {
-		candidates[i] = atts[i].AggregationBits.ToBitlist64()
+		var err error
+		candidates[i], err = atts[i].AggregationBits.ToBitlist64()
+		if err != nil {
+			return nil, err
+		}
 	}
 	coveredBitsSoFar := bitfield.NewBitlist64(candidates[0].Len())
 
@@ -120,7 +124,11 @@ func optMaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Atte
 
 		// Create aggregated attestation and update solution lists. Process aggregates only if they
 		// feature at least one unknown bit i.e. can increase the overall coverage.
-		if coveredBitsSoFar.XorCount(coverage) > 0 {
+		xc, err := coveredBitsSoFar.XorCount(coverage)
+		if err != nil {
+			return nil, err
+		}
+		if xc > 0 {
 			aggIdx, err := aggregateAttestations(atts, keys, coverage)
 			if err != nil {
 				return append(aggregated, unaggregated...), err
@@ -140,7 +148,9 @@ func optMaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Atte
 			unaggregated = unaggregated[1:]
 
 			// Update covered bits map.
-			coveredBitsSoFar.NoAllocOr(coverage, coveredBitsSoFar)
+			if err := coveredBitsSoFar.NoAllocOr(coverage, coveredBitsSoFar); err != nil {
+				return nil, err
+			}
 			keys = keys[1:]
 		}
 
@@ -149,7 +159,11 @@ func optMaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Atte
 		unaggregated = unaggregated[:len(unaggregated)-len(keys)]
 	}
 
-	return append(aggregated, attList(unaggregated).filterContained()...), nil
+	filtered, err := attList(unaggregated).filterContained()
+	if err != nil {
+		return nil, err
+	}
+	return append(aggregated, filtered...), nil
 }
 
 // NewMaxCover returns initialized Maximum Coverage problem for attestations aggregation.
@@ -286,19 +300,23 @@ func (al attList) selectComplementUsingKeys(keys []int) attList {
 }
 
 // hasCoverage returns true if a given coverage is found in attestations list.
-func (al attList) hasCoverage(coverage bitfield.Bitlist) bool {
+func (al attList) hasCoverage(coverage bitfield.Bitlist) (bool, error) {
 	for _, att := range al {
-		if att.AggregationBits.Xor(coverage).Count() == 0 {
-			return true
+		x, err := att.AggregationBits.Xor(coverage)
+		if err != nil {
+			return false, err
+		}
+		if x.Count() == 0 {
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }
 
 // filterContained removes attestations that are contained within other attestations.
-func (al attList) filterContained() attList {
+func (al attList) filterContained() (attList, error) {
 	if len(al) < 2 {
-		return al
+		return al, nil
 	}
 	sort.Slice(al, func(i, j int) bool {
 		return al[i].AggregationBits.Count() > al[j].AggregationBits.Count()
@@ -306,12 +324,16 @@ func (al attList) filterContained() attList {
 	filtered := al[:0]
 	filtered = append(filtered, al[0])
 	for i := 1; i < len(al); i++ {
-		if filtered[len(filtered)-1].AggregationBits.Contains(al[i].AggregationBits) {
+		c, err := filtered[len(filtered)-1].AggregationBits.Contains(al[i].AggregationBits)
+		if err != nil {
+			return nil, err
+		}
+		if c {
 			continue
 		}
 		filtered = append(filtered, al[i])
 	}
-	return filtered
+	return filtered, nil
 }
 
 // validate checks attestation list for validity (equal bitlength, non-nil bitlist etc).
@@ -325,10 +347,9 @@ func (al attList) validate() error {
 	if al[0].AggregationBits == nil || al[0].AggregationBits.Len() == 0 {
 		return errors.Wrap(aggregation.ErrInvalidMaxCoverProblem, "bitlist cannot be nil or empty")
 	}
-	bitlistLen := al[0].AggregationBits.Len()
 	for i := 1; i < len(al); i++ {
-		if al[i].AggregationBits == nil || bitlistLen != al[i].AggregationBits.Len() {
-			return aggregation.ErrBitsDifferentLen
+		if al[i].AggregationBits == nil || al[i].AggregationBits.Len() == 0 {
+			return errors.Wrap(aggregation.ErrInvalidMaxCoverProblem, "bitlist cannot be nil or empty")
 		}
 	}
 	return nil

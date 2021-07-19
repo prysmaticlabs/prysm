@@ -15,7 +15,8 @@ import (
 	p2pTypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -63,7 +64,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 
 			for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += types.Slot(req.Step) {
 				if processor != nil {
-					if processorErr := processor(interfaces.WrappedPhase0SignedBeaconBlock(knownBlocks[i])); processorErr != nil {
+					if processorErr := processor(wrapper.WrappedPhase0SignedBeaconBlock(knownBlocks[i])); processorErr != nil {
 						if errors.Is(processorErr, io.EOF) {
 							// Close stream, w/o any errors written.
 							return
@@ -326,7 +327,7 @@ func TestSendRequest_SendBeaconBlocksByRootRequest(t *testing.T) {
 			for _, root := range *req {
 				if blk, ok := knownBlocks[root]; ok {
 					if processor != nil {
-						if processorErr := processor(interfaces.WrappedPhase0SignedBeaconBlock(blk)); processorErr != nil {
+						if processorErr := processor(wrapper.WrappedPhase0SignedBeaconBlock(blk)); processorErr != nil {
 							if errors.Is(processorErr, io.EOF) {
 								// Close stream, w/o any errors written.
 								return

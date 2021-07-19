@@ -25,10 +25,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	powt "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/shared/interfaces"
+	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -71,7 +71,7 @@ func setupDB() {
 		panic(err)
 	}
 	b := testutil.NewBeaconBlock()
-	if err := db1.SaveBlock(ctx, interfaces.WrappedPhase0SignedBeaconBlock(b)); err != nil {
+	if err := db1.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)); err != nil {
 		panic(err)
 	}
 	br, err := b.HashTreeRoot()
@@ -117,7 +117,7 @@ func BeaconFuzzBlock(b []byte) {
 	if err := input.UnmarshalSSZ(b); err != nil {
 		return
 	}
-	st, err := stateV0.InitializeFromProtoUnsafe(input.State)
+	st, err := v1.InitializeFromProtoUnsafe(input.State)
 	if err != nil {
 		return
 	}
@@ -156,17 +156,17 @@ func BeaconFuzzBlock(b []byte) {
 	chain.Start()
 
 	s := sync.NewRegularSyncFuzz(&sync.Config{
-		DB:                  db1,
-		P2P:                 p2p,
-		Chain:               chain,
-		InitialSync:         fakeChecker{},
-		StateNotifier:       sn,
-		BlockNotifier:       bn,
-		AttestationNotifier: an,
-		AttPool:             ap,
-		ExitPool:            ep,
-		SlashingPool:        sp,
-		StateGen:            sgen,
+		DB:                db1,
+		P2P:               p2p,
+		Chain:             chain,
+		InitialSync:       fakeChecker{},
+		StateNotifier:     sn,
+		BlockNotifier:     bn,
+		OperationNotifier: an,
+		AttPool:           ap,
+		ExitPool:          ep,
+		SlashingPool:      sp,
+		StateGen:          sgen,
 	})
 
 	if err := s.InitCaches(); err != nil {
@@ -199,7 +199,7 @@ func BeaconFuzzBlock(b []byte) {
 		_ = err
 	}
 
-	if _, err := state.ProcessBlock(ctx, st, interfaces.WrappedPhase0SignedBeaconBlock(input.Block)); err != nil {
+	if _, err := state.ProcessBlock(ctx, st, wrapper.WrappedPhase0SignedBeaconBlock(input.Block)); err != nil {
 		_ = err
 	}
 }

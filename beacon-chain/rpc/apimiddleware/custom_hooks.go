@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/gateway"
 )
@@ -18,14 +17,30 @@ func wrapAttestationsArray(endpoint gateway.Endpoint, _ http.ResponseWriter, req
 	if _, ok := endpoint.PostRequest.(*submitAttestationRequestJson); ok {
 		atts := make([]*attestationJson, 0)
 		if err := json.NewDecoder(req.Body).Decode(&atts); err != nil {
-			e := errors.Wrapf(err, "could not decode attestations array")
-			return &gateway.DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+			return gateway.InternalServerErrorWithMessage(err, "could not decode attestations array")
 		}
 		j := &submitAttestationRequestJson{Data: atts}
 		b, err := json.Marshal(j)
 		if err != nil {
-			e := errors.Wrapf(err, "could not marshal wrapped attestations array")
-			return &gateway.DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+			return gateway.InternalServerErrorWithMessage(err, "could not marshal wrapped attestations array")
+		}
+		req.Body = ioutil.NopCloser(bytes.NewReader(b))
+	}
+	return nil
+}
+
+// https://ethereum.github.io/eth2.0-APIs/#/Validator/getAttesterDuties expects posting a top-level array.
+// We make it more proto-friendly by wrapping it in a struct with an 'index' field.
+func wrapValidatorIndicesArray(endpoint gateway.Endpoint, _ http.ResponseWriter, req *http.Request) gateway.ErrorJson {
+	if _, ok := endpoint.PostRequest.(*attesterDutiesRequestJson); ok {
+		indices := make([]string, 0)
+		if err := json.NewDecoder(req.Body).Decode(&indices); err != nil {
+			return gateway.InternalServerErrorWithMessage(err, "could not decode attestations array")
+		}
+		j := &attesterDutiesRequestJson{Index: indices}
+		b, err := json.Marshal(j)
+		if err != nil {
+			return gateway.InternalServerErrorWithMessage(err, "could not marshal wrapped validator indices array")
 		}
 		req.Body = ioutil.NopCloser(bytes.NewReader(b))
 	}

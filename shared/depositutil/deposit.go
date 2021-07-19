@@ -1,5 +1,5 @@
 // Package depositutil contains useful functions for dealing
-// with eth2 deposit inputs.
+// with Ethereum deposit inputs.
 package depositutil
 
 import (

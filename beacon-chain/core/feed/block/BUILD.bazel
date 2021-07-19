@@ -9,7 +9,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
+        "//proto/interfaces:go_default_library",
         "//shared/event:go_default_library",
-        "//shared/interfaces:go_default_library",
     ],
 )

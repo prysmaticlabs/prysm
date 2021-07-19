@@ -1,5 +1,4 @@
-load("@prysm//tools/go:def.bzl", "go_library")
-load("@io_bazel_rules_go//go:def.bzl", "go_test")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 # gazelle:exclude committee_disabled.go
 # gazelle:exclude proposer_indices_disabled.go
@@ -63,7 +62,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/state/interface:go_default_library",
-        "//beacon-chain/state/stateV0:go_default_library",
+        "//beacon-chain/state/v1:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/bytesutil:go_default_library",

@@ -47,8 +47,8 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-// ValidatorClient defines an instance of an eth2 validator that manages
-// the entire lifecycle of services attached to it participating in eth2.
+// ValidatorClient defines an instance of an Ethereum validator that manages
+// the entire lifecycle of services attached to it participating in proof of stake.
 type ValidatorClient struct {
 	cliCtx            *cli.Context
 	ctx               context.Context

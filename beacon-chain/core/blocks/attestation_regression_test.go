@@ -7,7 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -37,7 +37,7 @@ func TestProcessAttestationNoVerifySignature_BeaconFuzzIssue78(t *testing.T) {
 	if err := spb.UnmarshalSSZ(stateData); err != nil {
 		t.Fatal(err)
 	}
-	st, err := stateV0.InitializeFromProtoUnsafe(spb)
+	st, err := v1.InitializeFromProtoUnsafe(spb)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -88,6 +88,8 @@ http_archive(
         # Required until https://github.com/bazelbuild/rules_go/pull/2450 merges otherwise nilness
         # nogo check fails for certain third_party dependencies.
         "//third_party:io_bazel_rules_go.patch",
+        # Expose internals of go_test for custom build transitions.
+        "//third_party:io_bazel_rules_go_test.patch",
     ],
     sha256 = "7c10271940c6bce577d51a075ae77728964db285dac0a46614a7934dc34303e6",
     urls = [
@@ -159,36 +161,6 @@ go_register_toolchains(
     go_version = "1.16.4",
     nogo = "@//:nogo",
 )
-
-load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
-
-gazelle_dependencies()
-
-load("@io_bazel_rules_go//extras:embed_data_deps.bzl", "go_embed_data_dependencies")
-
-go_embed_data_dependencies()
-
-load("@com_github_atlassian_bazel_tools//gometalinter:deps.bzl", "gometalinter_dependencies")
-
-gometalinter_dependencies()
-
-load(
-    "@io_bazel_rules_docker//go:image.bzl",
-    _go_image_repos = "repositories",
-)
-
-# Golang images
-# This is using gcr.io/distroless/base
-_go_image_repos()
-
-# CC images
-# This is using gcr.io/distroless/base
-load(
-    "@io_bazel_rules_docker//cc:image.bzl",
-    _cc_image_repos = "repositories",
-)
-
-_cc_image_repos()
 
 http_archive(
     name = "prysm_testnet_site",
@@ -275,14 +247,10 @@ filegroup(
 
 http_archive(
     name = "com_github_bazelbuild_buildtools",
-    sha256 = "b5d7dbc6832f11b6468328a376de05959a1a9e4e9f5622499d3bab509c26b46a",
-    strip_prefix = "buildtools-bf564b4925ab5876a3f64d8b90fab7f769013d42",
-    url = "https://github.com/bazelbuild/buildtools/archive/bf564b4925ab5876a3f64d8b90fab7f769013d42.zip",
+    sha256 = "7a182df18df1debabd9e36ae07c8edfa1378b8424a04561b674d933b965372b3",
+    strip_prefix = "buildtools-f2aed9ee205d62d45c55cfabbfd26342f8526862",
+    url = "https://github.com/bazelbuild/buildtools/archive/f2aed9ee205d62d45c55cfabbfd26342f8526862.zip",
 )
-
-load("@com_github_bazelbuild_buildtools//buildifier:deps.bzl", "buildifier_dependencies")
-
-buildifier_dependencies()
 
 git_repository(
     name = "com_google_protobuf",
@@ -290,10 +258,6 @@ git_repository(
     remote = "https://github.com/protocolbuffers/protobuf",
     shallow_since = "1617835118 -0700",
 )
-
-load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
-
-protobuf_deps()
 
 # Group the sources of the library so that CMake rule have access to it
 all_content = """filegroup(name = "all", srcs = glob(["**"]), visibility = ["//visibility:public"])"""
@@ -355,8 +319,46 @@ load("@prysm//third_party/herumi:herumi.bzl", "bls_dependencies")
 
 bls_dependencies()
 
+load(
+    "@io_bazel_rules_docker//go:image.bzl",
+    _go_image_repos = "repositories",
+)
+
+# Golang images
+# This is using gcr.io/distroless/base
+_go_image_repos()
+
+# CC images
+# This is using gcr.io/distroless/base
+load(
+    "@io_bazel_rules_docker//cc:image.bzl",
+    _cc_image_repos = "repositories",
+)
+
+_cc_image_repos()
+
 load("@com_github_ethereum_go_ethereum//:deps.bzl", "geth_dependencies")
 
 geth_dependencies()
+
+load("@io_bazel_rules_go//extras:embed_data_deps.bzl", "go_embed_data_dependencies")
+
+go_embed_data_dependencies()
+
+load("@com_github_atlassian_bazel_tools//gometalinter:deps.bzl", "gometalinter_dependencies")
+
+gometalinter_dependencies()
+
+load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
+
+gazelle_dependencies()
+
+load("@com_github_bazelbuild_buildtools//buildifier:deps.bzl", "buildifier_dependencies")
+
+buildifier_dependencies()
+
+load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
+
+protobuf_deps()
 
 # Do NOT add new go dependencies here! Refer to DEPENDENCIES.md!

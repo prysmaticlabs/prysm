@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -43,7 +43,7 @@ func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
-	beaconState, err := stateV0.InitializeFromProto(base)
+	beaconState, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
 
 	indices, err := epoch.UnslashedAttestingIndices(beaconState, atts)
@@ -89,7 +89,7 @@ func TestUnslashedAttestingIndices_DuplicatedAttestations(t *testing.T) {
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
-	beaconState, err := stateV0.InitializeFromProto(base)
+	beaconState, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
 
 	indices, err := epoch.UnslashedAttestingIndices(beaconState, atts)
@@ -135,38 +135,13 @@ func TestAttestingBalance_CorrectBalance(t *testing.T) {
 		Validators: validators,
 		Balances:   balances,
 	}
-	beaconState, err := stateV0.InitializeFromProto(base)
+	beaconState, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
 
 	balance, err := epoch.AttestingBalance(beaconState, atts)
 	require.NoError(t, err)
 	wanted := 256 * params.BeaconConfig().MaxEffectiveBalance
 	assert.Equal(t, wanted, balance)
-}
-
-func TestBaseReward_AccurateRewards(t *testing.T) {
-	tests := []struct {
-		a uint64
-		b uint64
-		c uint64
-	}{
-		{params.BeaconConfig().MinDepositAmount, params.BeaconConfig().MinDepositAmount, 505976},
-		{30 * 1e9, 30 * 1e9, 2771282},
-		{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance, 2862174},
-		{40 * 1e9, params.BeaconConfig().MaxEffectiveBalance, 2862174},
-	}
-	for _, tt := range tests {
-		base := &pb.BeaconState{
-			Validators: []*ethpb.Validator{
-				{ExitEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: tt.b}},
-			Balances: []uint64{tt.a},
-		}
-		beaconState, err := stateV0.InitializeFromProto(base)
-		require.NoError(t, err)
-		c, err := epoch.BaseReward(beaconState, 0)
-		require.NoError(t, err)
-		assert.Equal(t, tt.c, c, "epoch.BaseReward(%d)", tt.a)
-	}
 }
 
 func TestProcessSlashings_NotSlashed(t *testing.T) {
@@ -176,7 +151,7 @@ func TestProcessSlashings_NotSlashed(t *testing.T) {
 		Balances:   []uint64{params.BeaconConfig().MaxEffectiveBalance},
 		Slashings:  []uint64{0, 1e9},
 	}
-	s, err := stateV0.InitializeFromProto(base)
+	s, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
 	newState, err := epoch.ProcessSlashings(s)
 	require.NoError(t, err)
@@ -254,7 +229,7 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 	for i, tt := range tests {
 		t.Run(fmt.Sprint(i), func(t *testing.T) {
 			original := proto.Clone(tt.state)
-			s, err := stateV0.InitializeFromProto(tt.state)
+			s, err := v1.InitializeFromProto(tt.state)
 			require.NoError(t, err)
 			newState, err := epoch.ProcessSlashings(s)
 			require.NoError(t, err)
@@ -314,7 +289,7 @@ func TestProcessRegistryUpdates_NoRotation(t *testing.T) {
 		},
 		FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
 	}
-	beaconState, err := stateV0.InitializeFromProto(base)
+	beaconState, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
 	newState, err := epoch.ProcessRegistryUpdates(beaconState)
 	require.NoError(t, err)
@@ -337,7 +312,7 @@ func TestProcessRegistryUpdates_EligibleToActivate(t *testing.T) {
 			ActivationEpoch:            params.BeaconConfig().FarFutureEpoch,
 		})
 	}
-	beaconState, err := stateV0.InitializeFromProto(base)
+	beaconState, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	newState, err := epoch.ProcessRegistryUpdates(beaconState)
@@ -366,7 +341,7 @@ func TestProcessRegistryUpdates_ActivationCompletes(t *testing.T) {
 		},
 		FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
 	}
-	beaconState, err := stateV0.InitializeFromProto(base)
+	beaconState, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
 	newState, err := epoch.ProcessRegistryUpdates(beaconState)
 	require.NoError(t, err)
@@ -390,7 +365,7 @@ func TestProcessRegistryUpdates_ValidatorsEjected(t *testing.T) {
 		},
 		FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
 	}
-	beaconState, err := stateV0.InitializeFromProto(base)
+	beaconState, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
 	newState, err := epoch.ProcessRegistryUpdates(beaconState)
 	require.NoError(t, err)
@@ -415,7 +390,7 @@ func TestProcessRegistryUpdates_CanExits(t *testing.T) {
 		},
 		FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
 	}
-	beaconState, err := stateV0.InitializeFromProto(base)
+	beaconState, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
 	newState, err := epoch.ProcessRegistryUpdates(beaconState)
 	require.NoError(t, err)

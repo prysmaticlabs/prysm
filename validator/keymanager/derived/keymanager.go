@@ -18,7 +18,7 @@ const (
 	// DerivationPathFormat describes the structure of how keys are derived from a master key.
 	DerivationPathFormat = "m / purpose / coin_type / account_index / withdrawal_key / validating_key"
 	// ValidatingKeyDerivationPathTemplate defining the hierarchical path for validating
-	// keys for Prysm eth2 validators. According to EIP-2334, the format is as follows:
+	// keys for Prysm Ethereum validators. According to EIP-2334, the format is as follows:
 	// m / purpose / coin_type / account_index / withdrawal_key / validating_key
 	ValidatingKeyDerivationPathTemplate = "m/12381/3600/%d/0/0"
 )

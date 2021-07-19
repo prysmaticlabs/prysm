@@ -11,7 +11,7 @@ import (
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -68,7 +68,7 @@ func runPrecomputeRewardsAndPenaltiesTest(t *testing.T, testFolderPath string) {
 	require.NoError(t, err, "Failed to decompress")
 	preBeaconStateBase := &pb.BeaconState{}
 	require.NoError(t, preBeaconStateBase.UnmarshalSSZ(preBeaconStateSSZ), "Failed to unmarshal")
-	preBeaconState, err := stateV0.InitializeFromProto(preBeaconStateBase)
+	preBeaconState, err := v1.InitializeFromProto(preBeaconStateBase)
 	require.NoError(t, err)
 
 	vp, bp, err := precompute.New(ctx, preBeaconState)

@@ -40,3 +40,35 @@ func TestLoadFlagsFromConfig(t *testing.T) {
 	require.NoError(t, command.Run(context))
 	require.NoError(t, os.Remove("flags_test.yaml"))
 }
+
+func TestValidateNoArgs(t *testing.T) {
+	app := &cli.App{
+		Before: ValidateNoArgs,
+		Action: func(c *cli.Context) error {
+			return nil
+		},
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name: "foo",
+			},
+		},
+		Commands: []*cli.Command{
+			{
+				Name: "bar",
+			},
+		},
+	}
+
+	// It should not work with a bogus argument
+	err := app.Run([]string{"command", "foo"})
+	require.ErrorContains(t, "unrecognized argument: foo", err)
+	// It should work with registered flags
+	err = app.Run([]string{"command", "--foo=bar"})
+	require.NoError(t, err)
+	// It should work with subcommands.
+	err = app.Run([]string{"command", "bar"})
+	require.NoError(t, err)
+	// It should fail on unregistered flag (default logic in urfave/cli).
+	err = app.Run([]string{"command", "bar", "--baz"})
+	require.ErrorContains(t, "flag provided but not defined", err)
+}

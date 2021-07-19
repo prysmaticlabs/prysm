@@ -2,18 +2,21 @@
 package cmd
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/urfave/cli/v2"
 	"github.com/urfave/cli/v2/altsrc"
 )
 
 var (
-	// MinimalConfigFlag declares to use the minimal config for running Eth2.0.
+	// MinimalConfigFlag declares to use the minimal config for running Ethereum consensus.
 	MinimalConfigFlag = &cli.BoolFlag{
 		Name:  "minimal-config",
 		Usage: "Use minimal config with parameters as defined in the spec.",
 	}
-	// E2EConfigFlag declares to use a testing specific config for running Eth2.0 in end-to-end testing.
+	// E2EConfigFlag declares to use a testing specific config for running Ethereum consensus in end-to-end testing.
 	E2EConfigFlag = &cli.BoolFlag{
 		Name:  "e2e-config",
 		Usage: "Use the E2E testing config, only for use within end-to-end testing.",
@@ -246,6 +249,20 @@ func LoadFlagsFromConfig(cliCtx *cli.Context, flags []cli.Flag) error {
 	if cliCtx.IsSet(ConfigFileFlag.Name) {
 		if err := altsrc.InitInputSourceWithContext(flags, altsrc.NewYamlSourceFromFlagFunc(ConfigFileFlag.Name))(cliCtx); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+// ValidateNoArgs insures that the application is not run with erroneous arguments or flags.
+// This function should be used in the app.Before, whenever the application supports a default command.
+func ValidateNoArgs(ctx *cli.Context) error {
+	for _, a := range ctx.Args().Slice() {
+		if strings.HasPrefix(a, "-") {
+			continue
+		}
+		if c := ctx.App.Command(a); c == nil {
+			return fmt.Errorf("unrecognized argument: %s", a)
 		}
 	}
 	return nil

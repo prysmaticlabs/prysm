@@ -14,9 +14,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
-	butil "github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/wealdtech/go-bytesutil"
 )
@@ -24,8 +22,7 @@ import (
 // DeserializeRequestBodyIntoContainer deserializes the request's body into an endpoint-specific struct.
 func DeserializeRequestBodyIntoContainer(body io.Reader, requestContainer interface{}) ErrorJson {
 	if err := json.NewDecoder(body).Decode(&requestContainer); err != nil {
-		e := errors.Wrap(err, "could not decode request body")
-		return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+		return InternalServerErrorWithMessage(err, "could not decode request body")
 	}
 	return nil
 }
@@ -38,8 +35,7 @@ func ProcessRequestContainerFields(requestContainer interface{}) ErrorJson {
 			f:   hexToBase64Processor,
 		},
 	}); err != nil {
-		e := errors.Wrapf(err, "could not process request data")
-		return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+		return InternalServerErrorWithMessage(err, "could not process request data")
 	}
 	return nil
 }
@@ -49,8 +45,7 @@ func SetRequestBodyToRequestContainer(requestContainer interface{}, req *http.Re
 	// Serialize the struct, which now includes a base64-encoded value, into JSON.
 	j, err := json.Marshal(requestContainer)
 	if err != nil {
-		e := errors.Wrapf(err, "could not marshal request")
-		return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+		return InternalServerErrorWithMessage(err, "could not marshal request")
 	}
 	// Set the body to the new JSON.
 	req.Body = ioutil.NopCloser(bytes.NewReader(j))
@@ -64,100 +59,19 @@ func (m *ApiProxyMiddleware) PrepareRequestForProxying(endpoint Endpoint, req *h
 	req.URL.Scheme = "http"
 	req.URL.Host = m.GatewayAddress
 	req.RequestURI = ""
-	if errJson := HandleURLParameters(endpoint.Path, req, endpoint.GetRequestURLLiterals); errJson != nil {
+	if errJson := HandleURLParameters(endpoint.Path, req, endpoint.RequestURLLiterals); errJson != nil {
 		return errJson
 	}
-	return HandleQueryParameters(req, endpoint.GetRequestQueryParams)
-}
-
-// HandleURLParameters processes URL parameters, allowing parameterized URLs to be safely and correctly proxied to grpc-gateway.
-func HandleURLParameters(url string, req *http.Request, literals []string) ErrorJson {
-	segments := strings.Split(url, "/")
-
-segmentsLoop:
-	for i, s := range segments {
-		// We only care about segments which are parameterized.
-		if isRequestParam(s) {
-			// Don't do anything with parameters which should be forwarded literally to gRPC.
-			for _, l := range literals {
-				if s == "{"+l+"}" {
-					continue segmentsLoop
-				}
-			}
-
-			routeVar := mux.Vars(req)[s[1:len(s)-1]]
-			bRouteVar := []byte(routeVar)
-			isHex, err := butil.IsHex(bRouteVar)
-			if err != nil {
-				e := errors.Wrapf(err, "could not process URL parameter")
-				return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
-			}
-			if isHex {
-				bRouteVar, err = bytesutil.FromHexString(string(bRouteVar))
-				if err != nil {
-					e := errors.Wrapf(err, "could not process URL parameter")
-					return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
-				}
-			}
-			// Converting hex to base64 may result in a value which malforms the URL.
-			// We use URLEncoding to safely escape such values.
-			base64RouteVar := base64.URLEncoding.EncodeToString(bRouteVar)
-
-			// Merge segments back into the full URL.
-			splitPath := strings.Split(req.URL.Path, "/")
-			splitPath[i] = base64RouteVar
-			req.URL.Path = strings.Join(splitPath, "/")
-		}
-	}
-	return nil
-}
-
-// HandleQueryParameters processes query parameters, allowing them to be safely and correctly proxied to grpc-gateway.
-func HandleQueryParameters(req *http.Request, params []QueryParam) ErrorJson {
-	queryParams := req.URL.Query()
-
-	for key, vals := range queryParams {
-		for _, p := range params {
-			if key == p.Name {
-				if p.Hex {
-					queryParams.Del(key)
-					for _, v := range vals {
-						b := []byte(v)
-						isHex, err := butil.IsHex(b)
-						if err != nil {
-							e := errors.Wrapf(err, "could not process query parameter")
-							return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
-						}
-						if isHex {
-							b, err = bytesutil.FromHexString(v)
-							if err != nil {
-								e := errors.Wrapf(err, "could not process query parameter")
-								return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
-							}
-						}
-						queryParams.Add(key, base64.URLEncoding.EncodeToString(b))
-					}
-				}
-				if p.Enum {
-					queryParams.Del(key)
-					for _, v := range vals {
-						// gRPC expects uppercase enum values.
-						queryParams.Add(key, strings.ToUpper(v))
-					}
-				}
-			}
-		}
-	}
-	req.URL.RawQuery = queryParams.Encode()
-	return nil
+	return HandleQueryParameters(req, endpoint.RequestQueryParams)
 }
 
 // ProxyRequest proxies the request to grpc-gateway.
 func ProxyRequest(req *http.Request) (*http.Response, ErrorJson) {
-	grpcResp, err := http.DefaultClient.Do(req)
+	// We do not use http.DefaultClient because it does not have any timeout.
+	netClient := &http.Client{Timeout: time.Minute * 2}
+	grpcResp, err := netClient.Do(req)
 	if err != nil {
-		e := errors.Wrapf(err, "could not proxy request")
-		return nil, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+		return nil, InternalServerErrorWithMessage(err, "could not proxy request")
 	}
 	if grpcResp == nil {
 		return nil, &DefaultErrorJson{Message: "nil response from gRPC-gateway", Code: http.StatusInternalServerError}
@@ -169,8 +83,7 @@ func ProxyRequest(req *http.Request) (*http.Response, ErrorJson) {
 func ReadGrpcResponseBody(r io.Reader) ([]byte, ErrorJson) {
 	body, err := ioutil.ReadAll(r)
 	if err != nil {
-		e := errors.Wrapf(err, "could not read response body")
-		return nil, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+		return nil, InternalServerErrorWithMessage(err, "could not read response body")
 	}
 	return body, nil
 }
@@ -179,8 +92,7 @@ func ReadGrpcResponseBody(r io.Reader) ([]byte, ErrorJson) {
 // The struct can be later examined to check if the request resulted in an error.
 func DeserializeGrpcResponseBodyIntoErrorJson(errJson ErrorJson, body []byte) ErrorJson {
 	if err := json.Unmarshal(body, errJson); err != nil {
-		e := errors.Wrapf(err, "could not unmarshal error")
-		return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+		return InternalServerErrorWithMessage(err, "could not unmarshal error")
 	}
 	return nil
 }
@@ -206,8 +118,7 @@ func GrpcResponseIsStatusCodeOnly(req *http.Request, responseContainer interface
 // DeserializeGrpcResponseBodyIntoContainer deserializes the grpc-gateway's response body into an endpoint-specific struct.
 func DeserializeGrpcResponseBodyIntoContainer(body []byte, responseContainer interface{}) ErrorJson {
 	if err := json.Unmarshal(body, &responseContainer); err != nil {
-		e := errors.Wrapf(err, "could not unmarshal response")
-		return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+		return InternalServerErrorWithMessage(err, "could not unmarshal response")
 	}
 	return nil
 }
@@ -228,8 +139,7 @@ func ProcessMiddlewareResponseFields(responseContainer interface{}) ErrorJson {
 			f:   timeToUnixProcessor,
 		},
 	}); err != nil {
-		e := errors.Wrapf(err, "could not process response data")
-		return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+		return InternalServerErrorWithMessage(err, "could not process response data")
 	}
 	return nil
 }
@@ -238,8 +148,7 @@ func ProcessMiddlewareResponseFields(responseContainer interface{}) ErrorJson {
 func SerializeMiddlewareResponseIntoJson(responseContainer interface{}) (jsonResponse []byte, errJson ErrorJson) {
 	j, err := json.Marshal(responseContainer)
 	if err != nil {
-		e := errors.Wrapf(err, "could not marshal response")
-		return nil, &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+		return nil, InternalServerErrorWithMessage(err, "could not marshal response")
 	}
 	return j, nil
 }
@@ -259,23 +168,21 @@ func WriteMiddlewareResponseHeadersAndBody(req *http.Request, grpcResp *http.Res
 			}
 		}
 	}
-	if req.Method == "GET" {
+	if responseJson != nil {
 		w.Header().Set("Content-Length", strconv.Itoa(len(responseJson)))
 		if statusCodeHeader != "" {
 			code, err := strconv.Atoi(statusCodeHeader)
 			if err != nil {
-				e := errors.Wrapf(err, "could not parse status code")
-				return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+				return InternalServerErrorWithMessage(err, "could not parse status code")
 			}
 			w.WriteHeader(code)
 		} else {
 			w.WriteHeader(grpcResp.StatusCode)
 		}
 		if _, err := io.Copy(w, ioutil.NopCloser(bytes.NewReader(responseJson))); err != nil {
-			e := errors.Wrapf(err, "could not write response message")
-			return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+			return InternalServerErrorWithMessage(err, "could not write response message")
 		}
-	} else if req.Method == "POST" {
+	} else {
 		w.WriteHeader(grpcResp.StatusCode)
 	}
 	return nil
@@ -312,16 +219,9 @@ func WriteError(w http.ResponseWriter, errJson ErrorJson, responseHeader http.He
 // Cleanup performs final cleanup on the initial response from grpc-gateway.
 func Cleanup(grpcResponseBody io.ReadCloser) ErrorJson {
 	if err := grpcResponseBody.Close(); err != nil {
-		e := errors.Wrapf(err, "could not close response body")
-		return &DefaultErrorJson{Message: e.Error(), Code: http.StatusInternalServerError}
+		return InternalServerErrorWithMessage(err, "could not close response body")
 	}
 	return nil
-}
-
-// isRequestParam verifies whether the passed string is a request parameter.
-// Request parameters are enclosed in { and }.
-func isRequestParam(s string) bool {
-	return len(s) > 2 && s[0] == '{' && s[len(s)-1] == '}'
 }
 
 // processField calls each processor function on any field that has the matching tag set.

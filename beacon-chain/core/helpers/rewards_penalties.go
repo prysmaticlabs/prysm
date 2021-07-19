@@ -48,8 +48,9 @@ func TotalBalance(state iface.ReadOnlyValidators, indices []types.ValidatorIndex
 //    return get_total_balance(state, set(get_active_validator_indices(state, get_current_epoch(state))))
 func TotalActiveBalance(state iface.ReadOnlyBeaconState) (uint64, error) {
 	total := uint64(0)
+	epoch := SlotToEpoch(state.Slot())
 	if err := state.ReadFromEveryValidator(func(idx int, val iface.ReadOnlyValidator) error {
-		if IsActiveValidatorUsingTrie(val, SlotToEpoch(state.Slot())) {
+		if IsActiveValidatorUsingTrie(val, epoch) {
 			total += val.EffectiveBalance()
 		}
 		return nil

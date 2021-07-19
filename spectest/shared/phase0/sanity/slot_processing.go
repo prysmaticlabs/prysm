@@ -7,7 +7,7 @@ import (
 
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -34,7 +34,7 @@ func RunSlotProcessingTests(t *testing.T, config string) {
 			require.NoError(t, err, "Failed to decompress")
 			base := &pb.BeaconState{}
 			require.NoError(t, base.UnmarshalSSZ(preBeaconStateSSZ), "Failed to unmarshal")
-			beaconState, err := stateV0.InitializeFromProto(base)
+			beaconState, err := v1.InitializeFromProto(base)
 			require.NoError(t, err)
 
 			file, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "slots.yaml")
@@ -52,7 +52,7 @@ func RunSlotProcessingTests(t *testing.T, config string) {
 			postState, err := state.ProcessSlots(context.Background(), beaconState, beaconState.Slot().Add(uint64(slotsCount)))
 			require.NoError(t, err)
 
-			pbState, err := stateV0.ProtobufBeaconState(postState.CloneInnerState())
+			pbState, err := v1.ProtobufBeaconState(postState.CloneInnerState())
 			require.NoError(t, err)
 			if !proto.Equal(pbState, postBeaconState) {
 				diff, _ := messagediff.PrettyDiff(beaconState, postBeaconState)

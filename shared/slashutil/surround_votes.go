@@ -3,7 +3,7 @@ package slashutil
 import ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 
 // IsSurround checks if an attestation, a, is surrounding
-// another one, b, based on the eth2 slashing conditions specified
+// another one, b, based on the Ethereum slashing conditions specified
 // by @protolambda https://github.com/protolambda/eth2-surround#definition.
 //
 //  s: source

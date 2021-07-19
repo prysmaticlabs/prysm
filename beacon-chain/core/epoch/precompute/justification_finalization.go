@@ -127,7 +127,7 @@ func weighJustificationAndFinalization(state iface.BeaconState,
 		}
 	}
 
-	// Process finalization according to ETH2.0 specifications.
+	// Process finalization according to Ethereum Beacon Chain specification.
 	justification := state.JustificationBits().Bytes()[0]
 
 	// 2nd/3rd/4th (0b1110) most recent epochs are justified, the 2nd using the 4th as source.

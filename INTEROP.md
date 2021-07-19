@@ -1,6 +1,6 @@
 # Prysm Client Interoperability Guide
 
-This README details how to setup Prysm for interop testing for usage with other Ethereum 2.0 clients.
+This README details how to setup Prysm for interop testing for usage with other Ethereum consensus clients.
 
 ## Installation & Setup
 

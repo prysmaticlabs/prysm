@@ -9,7 +9,7 @@ import (
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/golang/snappy"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateV0"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -34,7 +34,7 @@ func RunEpochOperationTest(
 	if err := preBeaconStateBase.UnmarshalSSZ(preBeaconStateSSZ); err != nil {
 		t.Fatalf("Failed to unmarshal: %v", err)
 	}
-	preBeaconState, err := stateV0.InitializeFromProto(preBeaconStateBase)
+	preBeaconState, err := v1.InitializeFromProto(preBeaconStateBase)
 	require.NoError(t, err)
 
 	// If the post.ssz is not present, it means the test should fail on our end.
@@ -59,7 +59,7 @@ func RunEpochOperationTest(
 			t.Fatalf("Failed to unmarshal: %v", err)
 		}
 
-		pbState, err := stateV0.ProtobufBeaconState(beaconState.InnerStateUnsafe())
+		pbState, err := v1.ProtobufBeaconState(beaconState.InnerStateUnsafe())
 		require.NoError(t, err)
 		if !proto.Equal(pbState, postBeaconState) {
 			diff, _ := messagediff.PrettyDiff(beaconState.InnerStateUnsafe(), postBeaconState)
