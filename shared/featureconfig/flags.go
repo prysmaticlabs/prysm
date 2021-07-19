@@ -106,9 +106,9 @@ var (
 		Name:  "enable-next-slot-state-cache",
 		Usage: "Improves attesting and proposing efficiency by caching the next slot state at the end of the current slot",
 	}
-	updateHeadTimely = &cli.BoolFlag{
-		Name:  "update-head-timely",
-		Usage: "Improves update head time by updating head right after state transition",
+	disableUpdateHeadTimely = &cli.BoolFlag{
+		Name:  "disable-update-head-timely",
+		Usage: "Disables updating head time right after state transition",
 	}
 	disableProposerAttsSelectionUsingMaxCover = &cli.BoolFlag{
 		Name:  "disable-proposer-atts-selection-using-max-cover",
@@ -135,7 +135,6 @@ var devModeFlags = []cli.Flag{
 	enableLargerGossipHistory,
 	enableNextSlotStateCache,
 	forceOptMaxCoverAggregationStategy,
-	updateHeadTimely,
 	enableOptimizedBalanceUpdate,
 }
 
@@ -186,7 +185,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableBroadcastSlashingFlag,
 	enableNextSlotStateCache,
 	forceOptMaxCoverAggregationStategy,
-	updateHeadTimely,
+	disableUpdateHeadTimely,
 	disableProposerAttsSelectionUsingMaxCover,
 	enableOptimizedBalanceUpdate,
 }...)
