@@ -10,6 +10,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	wrapperv1 "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -105,16 +106,16 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [4
 		return
 	}
 
-	if err := v.preBlockSignValidations(ctx, pubKey, b, signingRoot); err != nil {
+	if err := v.preBlockSignValidations(ctx, pubKey, wrapperv1.WrappedPhase0BeaconBlock(b), signingRoot); err != nil {
 		log.WithFields(
-			blockLogFields(pubKey, b, nil),
+			blockLogFields(pubKey, wrapperv1.WrappedPhase0BeaconBlock(b), nil),
 		).WithError(err).Error("Failed block slashing protection check")
 		return
 	}
 
-	if err := v.postBlockSignUpdate(ctx, pubKey, blk, signingRoot); err != nil {
+	if err := v.postBlockSignUpdate(ctx, pubKey, wrapperv1.WrappedPhase0SignedBeaconBlock(blk), signingRoot); err != nil {
 		log.WithFields(
-			blockLogFields(pubKey, b, sig),
+			blockLogFields(pubKey, wrapperv1.WrappedPhase0BeaconBlock(b), sig),
 		).WithError(err).Error("Failed block slashing protection check")
 		return
 	}
