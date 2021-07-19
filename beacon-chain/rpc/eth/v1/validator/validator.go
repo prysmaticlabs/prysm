@@ -99,7 +99,7 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *v1.AttesterDutiesR
 		}
 	}
 
-	root, err := dependentRoot(s, req.Epoch)
+	root, err := attestationDependentRoot(s, req.Epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get dependent root: %v", err)
 	}
@@ -112,7 +112,77 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *v1.AttesterDutiesR
 
 // GetProposerDuties requests beacon node to provide all validators that are scheduled to propose a block in the given epoch.
 func (vs *Server) GetProposerDuties(ctx context.Context, req *v1.ProposerDutiesRequest) (*v1.ProposerDutiesResponse, error) {
-	return nil, errors.New("Unimplemented")
+	ctx, span := trace.StartSpan(ctx, "validatorv1.GetProposerDuties")
+	defer span.End()
+
+	if vs.SyncChecker.Syncing() {
+		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
+	}
+
+	cs := vs.TimeFetcher.CurrentSlot()
+	currentEpoch := helpers.SlotToEpoch(cs)
+	if req.Epoch > currentEpoch+1 {
+		return nil, status.Errorf(codes.InvalidArgument, "Request epoch %d can not be greater than next epoch %d", req.Epoch, currentEpoch+1)
+	}
+
+	s, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	}
+
+	// Advance state with empty transitions up to the requested epoch start slot.
+	// In case 1 epoch ahead was requested, we take the start slot of the current epoch.
+	// Taking the start slot of the next epoch would result in an error inside state.ProcessSlots.
+	var epochStartSlot types.Slot
+	if req.Epoch == currentEpoch+1 {
+		epochStartSlot, err = helpers.StartSlot(req.Epoch.Sub(1))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not obtain epoch's start slot: %v", err)
+		}
+	} else {
+		epochStartSlot, err = helpers.StartSlot(req.Epoch)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not obtain epoch's start slot: %v", err)
+		}
+	}
+	if s.Slot() < epochStartSlot {
+		s, err = state.ProcessSlots(ctx, s, epochStartSlot)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", epochStartSlot, err)
+		}
+	}
+
+	_, proposals, err := helpers.CommitteeAssignments(s, req.Epoch)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
+	}
+
+	duties := make([]*v1.ProposerDuty, 0)
+	for index, slots := range proposals {
+		val, err := s.ValidatorAtIndexReadOnly(index)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get validator: %v", err)
+		}
+		pubkey48 := val.PublicKey()
+		pubkey := pubkey48[:]
+		for _, s := range slots {
+			duties = append(duties, &v1.ProposerDuty{
+				Pubkey:         pubkey,
+				ValidatorIndex: index,
+				Slot:           s,
+			})
+		}
+	}
+
+	root, err := proposalDependentRoot(s, req.Epoch)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get dependent root: %v", err)
+	}
+
+	return &v1.ProposerDutiesResponse{
+		DependentRoot: root,
+		Data:          duties,
+	}, nil
 }
 
 // ProduceBlock requests the beacon node to produce a valid unsigned beacon block, which can then be signed by a proposer and submitted.
@@ -142,9 +212,9 @@ func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *v1
 	return nil, errors.New("Unimplemented")
 }
 
-// dependentRoot is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch - 1) - 1)
+// attestationDependentRoot is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch - 1) - 1)
 // or the genesis block root in the case of underflow.
-func dependentRoot(s iface.BeaconState, epoch types.Epoch) ([]byte, error) {
+func attestationDependentRoot(s iface.BeaconState, epoch types.Epoch) ([]byte, error) {
 	var dependentRootSlot types.Slot
 	if epoch <= 1 {
 		dependentRootSlot = 0
@@ -154,6 +224,26 @@ func dependentRoot(s iface.BeaconState, epoch types.Epoch) ([]byte, error) {
 			return nil, status.Errorf(codes.Internal, "Could not obtain epoch's start slot: %v", err)
 		}
 		dependentRootSlot = prevEpochStartSlot.Sub(1)
+	}
+	root, err := helpers.BlockRootAtSlot(s, dependentRootSlot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get block root")
+	}
+	return root, nil
+}
+
+// proposalDependentRoot is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch) - 1)
+// or the genesis block root in the case of underflow.
+func proposalDependentRoot(s iface.BeaconState, epoch types.Epoch) ([]byte, error) {
+	var dependentRootSlot types.Slot
+	if epoch == 0 {
+		dependentRootSlot = 0
+	} else {
+		epochStartSlot, err := helpers.StartSlot(epoch)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not obtain epoch's start slot: %v", err)
+		}
+		dependentRootSlot = epochStartSlot.Sub(1)
 	}
 	root, err := helpers.BlockRootAtSlot(s, dependentRootSlot)
 	if err != nil {

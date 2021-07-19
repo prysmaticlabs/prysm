@@ -174,7 +174,7 @@ type CommitteeAssignmentContainer struct {
 func CommitteeAssignments(
 	state iface.BeaconState,
 	epoch types.Epoch,
-) (map[types.ValidatorIndex]*CommitteeAssignmentContainer, map[types.ValidatorIndex][]types.Slot, error) {
+) (assignments map[types.ValidatorIndex]*CommitteeAssignmentContainer, proposals map[types.ValidatorIndex][]types.Slot, err error) {
 	nextEpoch := NextEpoch(state)
 	if epoch > nextEpoch {
 		return nil, nil, fmt.Errorf(
