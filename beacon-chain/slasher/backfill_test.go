@@ -117,7 +117,8 @@ func setupBackfillTest(tb testing.TB, cfg *backfillTestConfig) *Service {
 
 	for i := uint64(0); i < numSlots; i++ {
 		// Create a realistic looking block for the slot.
-		require.NoError(tb, beaconState.SetSlot(types.Slot(i)))
+		slot := types.Slot(i)
+		require.NoError(tb, beaconState.SetSlot(slot))
 		parentRoot := make([]byte, 32)
 		if i == 0 {
 			parentRoot = genesisRoot[:]
@@ -125,46 +126,43 @@ func setupBackfillTest(tb testing.TB, cfg *backfillTestConfig) *Service {
 			parentRoot = blocks[i-1].Block().ParentRoot()
 		}
 
-		blk := testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
-			Block: testutil.HydrateBeaconBlock(&ethpb.BeaconBlock{
-				Slot:          types.Slot(i),
-				ProposerIndex: types.ValidatorIndex(i),
-				ParentRoot:    parentRoot,
-			}),
-		})
-		wrap := wrapper.WrappedPhase0SignedBeaconBlock(blk)
-		header, err := blockutil.SignedBeaconBlockHeaderFromBlock(wrap)
+		_, proposerIndexToSlot, err := helpers.CommitteeAssignments(beaconState, helpers.SlotToEpoch(slot))
 		require.NoError(tb, err)
-		sig, err := signBlockHeader(beaconState, header, privKeysByValidator[types.ValidatorIndex(i)])
-		require.NoError(tb, err)
-		blk.Signature = sig.Marshal()
+		slotToProposerIndex := make(map[types.Slot]types.ValidatorIndex)
+		for k, v := range proposerIndexToSlot {
+			for _, assignedSlot := range v {
+				slotToProposerIndex[assignedSlot] = k
+			}
+		}
 
-		blocks = append(blocks, wrap)
+		proposerIdx := slotToProposerIndex[slot]
+		blk := generateBlock(
+			tb,
+			beaconState,
+			privKeysByValidator,
+			slot,
+			proposerIdx,
+			parentRoot,
+			false, /* not slashable */
+		)
+		blocks = append(blocks, blk)
 
 		// If we specify it, create a slashable block at a certain slot.
 		if uint64(cfg.proposerSlashingAtSlot) == i && i != 0 {
-			slashableGraffiti := make([]byte, 32)
-			copy(slashableGraffiti[:], "slashme")
-			blk := testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
-				Block: testutil.HydrateBeaconBlock(&ethpb.BeaconBlock{
-					Slot:          types.Slot(i),
-					ProposerIndex: types.ValidatorIndex(i),
-					Body: testutil.HydrateBeaconBlockBody(&ethpb.BeaconBlockBody{
-						Graffiti: slashableGraffiti,
-					}),
-				}),
-			})
-			wrap := wrapper.WrappedPhase0SignedBeaconBlock(blk)
-			header, err := blockutil.SignedBeaconBlockHeaderFromBlock(wrap)
-			require.NoError(tb, err)
-			sig, err := signBlockHeader(beaconState, header, privKeysByValidator[types.ValidatorIndex(i)])
-			require.NoError(tb, err)
-			blk.Signature = sig.Marshal()
-			blocks = append(blocks, wrap)
+			slashableBlk := generateBlock(
+				tb,
+				beaconState,
+				privKeysByValidator,
+				slot,
+				proposerIdx,
+				parentRoot,
+				true, /* slashable */
+			)
+			blocks = append(blocks, slashableBlk)
 		}
 
 		// Save the state.
-		blockRoot, err := blk.Block.HashTreeRoot()
+		blockRoot, err := blk.Block().HashTreeRoot()
 		require.NoError(tb, err)
 		require.NoError(tb, srv.serviceCfg.StateGen.SaveState(ctx, blockRoot, beaconState))
 		require.NoError(tb, srv.serviceCfg.BeaconDatabase.SaveState(ctx, beaconState, blockRoot))
@@ -185,11 +183,55 @@ func setupValidators(t testing.TB, count uint64) ([]*ethpb.Validator, []uint64, 
 		pubKey := privKey.PublicKey().Marshal()
 		balances[i] = uint64(i)
 		validators = append(validators, &ethpb.Validator{
-			PublicKey:             pubKey,
-			WithdrawalCredentials: make([]byte, 32),
+			PublicKey:                  pubKey,
+			WithdrawalCredentials:      make([]byte, 32),
+			EffectiveBalance:           params.BeaconConfig().MaxEffectiveBalance,
+			ActivationEligibilityEpoch: 0,
+			ActivationEpoch:            0,
+			ExitEpoch:                  params.BeaconConfig().FarFutureEpoch,
 		})
 	}
 	return validators, balances, secretKeysByValidator
+}
+
+func generateBlock(
+	tb testing.TB,
+	beaconState iface.BeaconState,
+	privKeysByValidator map[types.ValidatorIndex]bls.SecretKey,
+	slot types.Slot,
+	valIdx types.ValidatorIndex,
+	parentRoot []byte,
+	slashable bool,
+) wrapper.Phase0SignedBeaconBlock {
+	var blk *ethpb.SignedBeaconBlock
+	if slashable {
+		slashableGraffiti := make([]byte, 32)
+		copy(slashableGraffiti[:], "slashme")
+		blk = testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
+			Block: testutil.HydrateBeaconBlock(&ethpb.BeaconBlock{
+				Slot:          slot,
+				ProposerIndex: valIdx,
+				Body: testutil.HydrateBeaconBlockBody(&ethpb.BeaconBlockBody{
+					Graffiti: slashableGraffiti,
+				}),
+			}),
+		})
+	} else {
+		blk = testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
+			Block: testutil.HydrateBeaconBlock(&ethpb.BeaconBlock{
+				Slot:          slot,
+				ProposerIndex: valIdx,
+				ParentRoot:    parentRoot[:],
+			}),
+		})
+	}
+	wrap := wrapper.WrappedPhase0SignedBeaconBlock(blk)
+	header, err := blockutil.SignedBeaconBlockHeaderFromBlock(wrap)
+	require.NoError(tb, err)
+	sig, err := signBlockHeader(beaconState, header, privKeysByValidator[valIdx])
+	require.NoError(tb, err)
+	blk.Signature = sig.Marshal()
+	return wrapper.WrappedPhase0SignedBeaconBlock(blk)
 }
 
 func signBlockHeader(
