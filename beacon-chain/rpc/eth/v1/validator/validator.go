@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"sort"
 
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
@@ -139,6 +140,9 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *v1.ProposerDutiesR
 			})
 		}
 	}
+	sort.Slice(duties, func(i, j int) bool {
+		return duties[i].Slot < duties[j].Slot
+	})
 
 	root, err := proposalDependentRoot(s, req.Epoch)
 	if err != nil {
