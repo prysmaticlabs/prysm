@@ -303,7 +303,7 @@ func (s *Store) validatorEntries(ctx context.Context, blockRoot [32]byte) ([]*et
 		// get the validator keys from the index bucket
 		idxBkt := tx.Bucket(blockRootValidatorKeysIndexBucket)
 		valKey := idxBkt.Get(blockRoot[:])
-		if valKey == nil || len(valKey) == 0 {
+		if len(valKey) == 0 {
 			return errors.Errorf("invalid compressed validator keys length")
 		}
 
@@ -338,7 +338,7 @@ func (s *Store) validatorEntries(ctx context.Context, blockRoot [32]byte) ([]*et
 			}
 
 			// decode the bytes to get the validator entry
-			if valEntryBytes == nil || len(valEntryBytes) == 0 {
+			if len(valEntryBytes) == 0 {
 				return errors.New("could not find validator entry")
 			}
 			encValEntry := &ethpb.Validator{}
