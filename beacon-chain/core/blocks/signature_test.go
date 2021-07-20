@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestVerifyBlockSignatureUsingCurrentFork(t *testing.T) {
@@ -34,5 +35,7 @@ func TestVerifyBlockSignatureUsingCurrentFork(t *testing.T) {
 	assert.NoError(t, err)
 	sig := keys[0].Sign(rt[:]).Marshal()
 	altairBlk.Signature = sig
-	assert.NoError(t, blocks.VerifyBlockSignatureUsingCurrentFork(bState, wrapperv2.WrappedAltairSignedBeaconBlock(altairBlk)))
+	wsb, err := wrapperv2.WrappedAltairSignedBeaconBlock(altairBlk)
+	require.NoError(t, err)
+	assert.NoError(t, blocks.VerifyBlockSignatureUsingCurrentFork(bState, wsb))
 }

@@ -291,7 +291,11 @@ func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel ch
 		case res.GetPhase0Block() != nil:
 			blk = wrapperv1.WrappedPhase0SignedBeaconBlock(res.GetPhase0Block())
 		case res.GetAltairBlock() != nil:
-			blk = wrapperv2.WrappedAltairSignedBeaconBlock(res.GetAltairBlock())
+			blk, err = wrapperv2.WrappedAltairSignedBeaconBlock(res.GetAltairBlock())
+			if err != nil {
+				log.WithError(err).Error("Failed to wrap altair signed block")
+				continue
+			}
 		}
 		if blk == nil || blk.IsNil() {
 			continue

@@ -104,7 +104,9 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			}
 			altairState := iface.BeaconStateAltair(beaconState)
 			for _, b := range postforkBlocks {
-				state, err := state.ExecuteStateTransition(ctx, altairState, wrapper.WrappedAltairSignedBeaconBlock(b))
+				wsb, err := wrapper.WrappedAltairSignedBeaconBlock(b)
+				require.NoError(t, err)
+				state, err := state.ExecuteStateTransition(ctx, altairState, wsb)
 				require.NoError(t, err)
 				altairState, ok = state.(*stateAltair.BeaconState)
 				require.Equal(t, true, ok)

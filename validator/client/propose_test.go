@@ -860,7 +860,9 @@ func TestSignAltairBlock(t *testing.T) {
 		},
 	}
 	validator.keyManager = km
-	sig, domain, err := validator.signBlock(ctx, pubKey, 0, wrapper.WrappedAltairBeaconBlock(blk.Block))
+	wb, err := wrapper.WrappedAltairBeaconBlock(blk.Block)
+	require.NoError(t, err)
+	sig, domain, err := validator.signBlock(ctx, pubKey, 0, wb)
 	require.NoError(t, err, "%x,%x,%v", sig, domain.SignatureDomain, err)
 	require.DeepEqual(t, proposerDomain, domain.SignatureDomain)
 }

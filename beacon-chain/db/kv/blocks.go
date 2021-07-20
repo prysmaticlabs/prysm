@@ -602,7 +602,7 @@ func unmarshalBlock(ctx context.Context, enc []byte) (interfaces.SignedBeaconBlo
 		if err != nil {
 			return nil, err
 		}
-		return wrapperv2.WrappedAltairSignedBeaconBlock(rawBlock), nil
+		return wrapperv2.WrappedAltairSignedBeaconBlock(rawBlock)
 	default:
 		// Marshal block bytes to phase 0 beacon block.
 		rawBlock := &ethpb.SignedBeaconBlock{}

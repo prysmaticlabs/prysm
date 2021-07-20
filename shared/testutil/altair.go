@@ -277,8 +277,11 @@ func BlockSignatureAltair(
 	privKeys []bls.SecretKey,
 ) (bls.Signature, error) {
 	var err error
-
-	s, err := state.CalculateStateRoot(context.Background(), bState, wrapper.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlock{Block: block}))
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlock{Block: block})
+	if err != nil {
+		return nil, err
+	}
+	s, err := state.CalculateStateRoot(context.Background(), bState, wsb)
 	if err != nil {
 		return nil, err
 	}

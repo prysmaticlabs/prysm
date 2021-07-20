@@ -50,7 +50,10 @@ func forkOccurs(conns ...*grpc.ClientConn) error {
 	if res.GetPhase0Block() != nil {
 		return errors.New("phase 0 block returned after altair fork has occurred")
 	}
-	blk := wrapperv2.WrappedAltairSignedBeaconBlock(res.GetAltairBlock())
+	blk, err := wrapperv2.WrappedAltairSignedBeaconBlock(res.GetAltairBlock())
+	if err != nil {
+		return err
+	}
 	if blk == nil || blk.IsNil() {
 		return errors.New("nil altair block received from stream")
 	}

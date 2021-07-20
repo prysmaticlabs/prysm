@@ -214,7 +214,15 @@ func (v *validator) proposeBlockV2(ctx context.Context, slot types.Slot, pubKey 
 	}
 
 	// Sign returned block from beacon node
-	sig, domain, err := v.signBlock(ctx, pubKey, epoch, wrapperv2.WrappedAltairBeaconBlock(b))
+	wb, err := wrapperv2.WrappedAltairBeaconBlock(b)
+	if err != nil {
+		log.WithError(err).Error("Failed to wrap block")
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return
+	}
+	sig, domain, err := v.signBlock(ctx, pubKey, epoch, wb)
 	if err != nil {
 		log.WithError(err).Error("Failed to sign block")
 		if v.emitAccountMetrics {
@@ -236,16 +244,24 @@ func (v *validator) proposeBlockV2(ctx context.Context, slot types.Slot, pubKey 
 		return
 	}
 
-	if err := v.preBlockSignValidations(ctx, pubKey, wrapperv2.WrappedAltairBeaconBlock(b), signingRoot); err != nil {
+	if err := v.preBlockSignValidations(ctx, pubKey, wb, signingRoot); err != nil {
 		log.WithFields(
-			blockLogFields(pubKey, wrapperv2.WrappedAltairBeaconBlock(b), nil),
+			blockLogFields(pubKey, wb, nil),
 		).WithError(err).Error("Failed block slashing protection check")
 		return
 	}
 
-	if err := v.postBlockSignUpdate(ctx, pubKey, wrapperv2.WrappedAltairSignedBeaconBlock(blk), signingRoot); err != nil {
+	wsb, err := wrapperv2.WrappedAltairSignedBeaconBlock(blk)
+	if err != nil {
+		log.WithError(err).Error("Failed to wrap signed block")
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return
+	}
+	if err := v.postBlockSignUpdate(ctx, pubKey, wsb, signingRoot); err != nil {
 		log.WithFields(
-			blockLogFields(pubKey, wrapperv2.WrappedAltairBeaconBlock(b), sig),
+			blockLogFields(pubKey, wb, sig),
 		).WithError(err).Error("Failed block slashing protection check")
 		return
 	}

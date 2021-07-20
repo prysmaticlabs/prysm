@@ -142,7 +142,11 @@ func TestBlockFromProto(t *testing.T) {
 			msgCreator: func(t *testing.T) proto.Message {
 				return &prysmv2.SignedBeaconBlock{Block: &prysmv2.BeaconBlock{Slot: 100}}
 			},
-			want:    wrapperv2.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlock{Block: &prysmv2.BeaconBlock{Slot: 100}}),
+			want: func() interfaces.SignedBeaconBlock {
+				wsb, err := wrapperv2.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlock{Block: &prysmv2.BeaconBlock{Slot: 100}})
+				require.NoError(t, err)
+				return wsb
+			}(),
 			wantErr: false,
 		},
 	}

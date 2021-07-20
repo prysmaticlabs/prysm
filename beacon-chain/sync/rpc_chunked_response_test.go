@@ -76,7 +76,11 @@ func TestExtractBlockDataType(t *testing.T) {
 				digest: altairDigest[:],
 				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
 			},
-			want:    wrapperv2.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlock{}),
+			want: func() interfaces.SignedBeaconBlock {
+				wsb, err := wrapperv2.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlock{Block: &prysmv2.BeaconBlockAltair{}})
+				require.NoError(t, err)
+				return wsb
+			}(),
 			wantErr: false,
 		},
 	}

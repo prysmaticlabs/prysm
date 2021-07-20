@@ -57,18 +57,18 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*prysm
 		},
 	}
 	// Compute state root with the newly constructed block.
-	stateRoot, err = vs.V1Server.ComputeStateRoot(
-		ctx,
-		wrapper.WrappedAltairSignedBeaconBlock(
-			&prysmv2.SignedBeaconBlock{Block: blk, Signature: make([]byte, 96)},
-		),
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(
+		&prysmv2.SignedBeaconBlock{Block: blk, Signature: make([]byte, 96)},
 	)
 	if err != nil {
-		interop.WriteBlockToDisk(
-			wrapper.WrappedAltairSignedBeaconBlock(
-				&prysmv2.SignedBeaconBlock{Block: blk},
-			), true, /*failed*/
-		)
+		return nil, err
+	}
+	stateRoot, err = vs.V1Server.ComputeStateRoot(
+		ctx,
+		wsb,
+	)
+	if err != nil {
+		interop.WriteBlockToDisk(wsb, true /*failed*/)
 		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
 	}
 	blk.StateRoot = stateRoot
@@ -79,7 +79,10 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*prysm
 // ProposeBlock is called by a proposer during its assigned slot to create a block in an attempt
 // to get it processed by the beacon node as the canonical head.
 func (vs *Server) ProposeBlock(ctx context.Context, rBlk *prysmv2.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
-	blk := wrapper.WrappedAltairSignedBeaconBlock(rBlk)
+	blk, err := wrapper.WrappedAltairSignedBeaconBlock(rBlk)
+	if err != nil {
+		return nil, err
+	}
 	return vs.V1Server.ProposeBlockGeneric(ctx, blk)
 }
 

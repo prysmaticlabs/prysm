@@ -89,8 +89,9 @@ func TestExecuteAltairStateTransitionNoVerify_FullProcess(t *testing.T) {
 		SyncCommitteeSignature: aggregatedSig,
 	}
 	block.Block.Body.SyncAggregate = syncAggregate
-
-	stateRoot, err := state.CalculateStateRoot(context.Background(), beaconState, wrapper.WrappedAltairSignedBeaconBlock(block))
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(block)
+	require.NoError(t, err)
+	stateRoot, err := state.CalculateStateRoot(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
 	block.Block.StateRoot = stateRoot[:]
 
@@ -99,7 +100,9 @@ func TestExecuteAltairStateTransitionNoVerify_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	block.Signature = sig.Marshal()
 
-	set, _, err := state.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wrapper.WrappedAltairSignedBeaconBlock(block))
+	wsb, err = wrapper.WrappedAltairSignedBeaconBlock(block)
+	require.NoError(t, err)
+	set, _, err := state.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
 	verified, err := set.Verify()
 	require.NoError(t, err)
@@ -174,7 +177,9 @@ func TestExecuteAltairStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t
 	}
 	block.Block.Body.SyncAggregate = syncAggregate
 
-	stateRoot, err := state.CalculateStateRoot(context.Background(), beaconState, wrapper.WrappedAltairSignedBeaconBlock(block))
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(block)
+	require.NoError(t, err)
+	stateRoot, err := state.CalculateStateRoot(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
 	block.Block.StateRoot = stateRoot[:]
 
@@ -184,13 +189,17 @@ func TestExecuteAltairStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t
 	block.Signature = sig.Marshal()
 
 	block.Block.StateRoot = bytesutil.PadTo([]byte{'a'}, 32)
-	_, _, err = state.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wrapper.WrappedAltairSignedBeaconBlock(block))
+	wsb, err = wrapper.WrappedAltairSignedBeaconBlock(block)
+	require.NoError(t, err)
+	_, _, err = state.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wsb)
 	require.ErrorContains(t, "could not validate state root", err)
 }
 
 func TestExecuteStateTransitionNoVerifyAnySig_PassesProcessingConditions(t *testing.T) {
 	beaconState, block := createFullAltairBlockWithOperations(t)
-	set, _, err := state.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wrapper.WrappedAltairSignedBeaconBlock(block))
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(block)
+	require.NoError(t, err)
+	set, _, err := state.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
 	// Test Signature set verifies.
 	verified, err := set.Verify()
