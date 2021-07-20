@@ -76,7 +76,7 @@ func TestState_CanSaveRetrieveValidatorEntries(t *testing.T) {
 
 	// check if the index of the second state is still present.
 	err = db.db.Update(func(tx *bolt.Tx) error {
-		idxBkt := tx.Bucket(blockRootValidatorKeysIndexBucket)
+		idxBkt := tx.Bucket(blockRootValidatorHashesBucket)
 		data := idxBkt.Get(r[:])
 		require.NotEqual(t, 0, len(data))
 		return nil
@@ -132,7 +132,7 @@ func TestState_CanSaveRetrieveValidatorEntriesWithoutCache(t *testing.T) {
 
 	// check if the index of the second state is still present.
 	err = db.db.Update(func(tx *bolt.Tx) error {
-		idxBkt := tx.Bucket(blockRootValidatorKeysIndexBucket)
+		idxBkt := tx.Bucket(blockRootValidatorHashesBucket)
 		data := idxBkt.Get(r[:])
 		require.NotEqual(t, 0, len(data))
 		return nil
@@ -196,7 +196,7 @@ func TestState_DeleteState(t *testing.T) {
 
 	// check if the index of the first state is deleted.
 	err = db.db.Update(func(tx *bolt.Tx) error {
-		idxBkt := tx.Bucket(blockRootValidatorKeysIndexBucket)
+		idxBkt := tx.Bucket(blockRootValidatorHashesBucket)
 		data := idxBkt.Get(r1[:])
 		require.Equal(t, 0, len(data))
 		return nil
@@ -205,7 +205,7 @@ func TestState_DeleteState(t *testing.T) {
 
 	// check if the index of the second state is still present.
 	err = db.db.Update(func(tx *bolt.Tx) error {
-		idxBkt := tx.Bucket(blockRootValidatorKeysIndexBucket)
+		idxBkt := tx.Bucket(blockRootValidatorHashesBucket)
 		data := idxBkt.Get(r2[:])
 		require.NotEqual(t, 0, len(data))
 		return nil

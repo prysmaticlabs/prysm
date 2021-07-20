@@ -181,7 +181,7 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 			stateSlotIndicesBucket,
 			blockParentRootIndicesBucket,
 			finalizedBlockRootsIndexBucket,
-			blockRootValidatorKeysIndexBucket,
+			blockRootValidatorHashesBucket,
 			// State management service bucket.
 			newStateServiceCompatibleBucket,
 			// Migrations

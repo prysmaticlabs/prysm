@@ -157,7 +157,7 @@ func (s *Store) SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconSta
 	if err := s.db.Update(func(tx *bolt.Tx) error {
 		if featureconfig.Get().EnableHistoricalSpaceRepresentation {
 			bucket := tx.Bucket(stateBucket)
-			valIdxBkt := tx.Bucket(blockRootValidatorKeysIndexBucket)
+			valIdxBkt := tx.Bucket(blockRootValidatorHashesBucket)
 			for i, rt := range blockRoots {
 				indicesByBucket := createStateIndicesFromStateSlot(ctx, states[i].Slot())
 				if err := updateValueForIndices(ctx, indicesByBucket, rt[:], tx); err != nil {
@@ -277,7 +277,7 @@ func (s *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 		}
 
 		// remove the validator entry keys for the corresponding state.
-		idxBkt := tx.Bucket(blockRootValidatorKeysIndexBucket)
+		idxBkt := tx.Bucket(blockRootValidatorHashesBucket)
 		err = idxBkt.Delete(blockRoot[:])
 		if err != nil {
 			return err
@@ -325,7 +325,7 @@ func (s *Store) validatorEntries(ctx context.Context, blockRoot [32]byte) ([]*et
 	var validatorEntries []*ethpb.Validator
 	err := s.db.View(func(tx *bolt.Tx) error {
 		// get the validator keys from the index bucket
-		idxBkt := tx.Bucket(blockRootValidatorKeysIndexBucket)
+		idxBkt := tx.Bucket(blockRootValidatorHashesBucket)
 		valKey := idxBkt.Get(blockRoot[:])
 		if len(valKey) == 0 {
 			return errors.Errorf("invalid compressed validator keys length")
