@@ -208,7 +208,6 @@ func (s *Store) SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconSta
 		return err
 	}
 
-
 	if featureconfig.Get().EnableHistoricalSpaceRepresentation {
 		// restore the state in memory with the original validators
 		for i, vals := range realValidators {
