@@ -278,9 +278,26 @@ func (s *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 
 		// remove the validator entry keys for the corresponding state.
 		idxBkt := tx.Bucket(blockRootValidatorHashesBucket)
+		compressedValidatorHashes := idxBkt.Get(blockRoot[:])
 		err = idxBkt.Delete(blockRoot[:])
 		if err != nil {
 			return err
+		}
+
+		// remove the respective validator entries from the cache.
+		if len(compressedValidatorHashes) == 0 {
+			return errors.Errorf("invalid compressed validator keys length")
+		}
+		validatorHashes, sErr := snappy.Decode(nil, compressedValidatorHashes)
+		if sErr != nil {
+			return errors.Wrap(sErr, "failed to uncompress validator keys")
+		}
+		if len(validatorHashes)%hashLength != 0 {
+			return errors.Errorf("invalid validator keys length: %d", len(validatorHashes))
+		}
+		for i := 0; i < len(validatorHashes); i += hashLength {
+			key := validatorHashes[i : i+hashLength]
+			s.validatorEntryCache.Del(key)
 		}
 
 		return bkt.Delete(blockRoot[:])

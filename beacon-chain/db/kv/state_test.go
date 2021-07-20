@@ -194,6 +194,16 @@ func TestState_DeleteState(t *testing.T) {
 	deleteBlockRoots = append(deleteBlockRoots, r1)
 	require.NoError(t, db.DeleteStates(ctx, deleteBlockRoots))
 
+	// check if the validator entries of this state is removed from cache.
+	for _, val := range stateValidators {
+		valBytes, encodeErr := encode(ctx, val)
+		require.NoError(t, encodeErr)
+		hash := hashutil.Hash(valBytes)
+		v, found := db.validatorEntryCache.Get(hash[:])
+		require.Equal(t, false, found)
+		require.Equal(t, nil, v)
+	}
+
 	// check if the index of the first state is deleted.
 	err = db.db.Update(func(tx *bolt.Tx) error {
 		idxBkt := tx.Bucket(blockRootValidatorHashesBucket)
