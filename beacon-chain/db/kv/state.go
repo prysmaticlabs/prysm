@@ -15,6 +15,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -67,7 +68,7 @@ func (s *Store) GenesisState(ctx context.Context) (iface.BeaconState, error) {
 	}
 
 	var st *pb.BeaconState
-	err = s.db.View(func(tx *bolt.Tx) error {
+	if err = s.db.View(func(tx *bolt.Tx) error {
 		// Retrieve genesis block's signing root from blocks bucket,
 		// to look up what the genesis state is.
 		bucket := tx.Bucket(blocksBucket)
@@ -85,11 +86,10 @@ func (s *Store) GenesisState(ctx context.Context) (iface.BeaconState, error) {
 			return valErr
 		}
 
-		var err error
-		st, err = createState(ctx, enc, valEntries)
-		return err
-	})
-	if err != nil {
+		var crtErr error
+		st, crtErr = createState(ctx, enc, valEntries)
+		return crtErr
+	}); err != nil {
 		return nil, err
 	}
 	if st == nil {
@@ -122,31 +122,32 @@ func (s *Store) SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconSta
 		if err != nil {
 			return err
 		}
+		if featureconfig.Get().EnableHistoricalSpaceRepresentation {
+			// store the real validators to restore the in memory state later.
+			realValidators[i] = pbState.Validators
 
-		// store the real validators to restore the in memory state later.
-		realValidators[i] = pbState.Validators
+			// yank out the validators and store them in separate table to save space.
+			var hashes []byte
+			for _, val := range pbState.Validators {
+				valBytes, encodeErr := encode(ctx, val)
+				if encodeErr != nil {
+					return encodeErr
+				}
 
-		// yank out the validators and store them in separate table to save space.
-		var hashes []byte
-		for _, val := range pbState.Validators {
-			valBytes, encodeErr := encode(ctx, val)
-			if encodeErr != nil {
-				return encodeErr
+				// create the unique hash for that validator entry.
+				hash := hashutil.Hash(valBytes)
+				hashes = append(hashes, hash[:]...)
+
+				// note down the hash and the encoded validator entry
+				hashStr := hexutils.BytesToHex(hash[:])
+				validatorsEntries[hashStr] = valBytes
 			}
 
-			// create the unique hash for that validator entry.
-			hash := hashutil.Hash(valBytes)
-			hashes = append(hashes, hash[:]...)
+			// zero out the validators List from the state bucket so that it is not stored as part of it.
+			pbState.Validators = nil
 
-			// note down the hash and the encoded validator entry
-			hashStr := hexutils.BytesToHex(hash[:])
-			validatorsEntries[hashStr] = valBytes
+			validatorKeys[i] = snappy.Encode(nil, hashes)
 		}
-
-		// zero out the validators List from the state bucket so that it is not stored as part of it.
-		pbState.Validators = nil
-
-		validatorKeys[i] = snappy.Encode(nil, hashes)
 		multipleEncs[i], err = encode(ctx, pbState)
 		if err != nil {
 			return err
@@ -154,52 +155,71 @@ func (s *Store) SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconSta
 	}
 
 	if err := s.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(stateBucket)
-		valIdxBkt := tx.Bucket(blockRootValidatorKeysIndexBucket)
-		for i, rt := range blockRoots {
-			indicesByBucket := createStateIndicesFromStateSlot(ctx, states[i].Slot())
-			if err := updateValueForIndices(ctx, indicesByBucket, rt[:], tx); err != nil {
-				return errors.Wrap(err, "could not update DB indices")
-			}
-			if err := bucket.Put(rt[:], multipleEncs[i]); err != nil {
-				return err
-			}
-			if err := valIdxBkt.Put(rt[:], validatorKeys[i]); err != nil {
-				return err
-			}
-		}
-
-		// store the validator entries separately to save space.
-		valBkt := tx.Bucket(stateValidatorsBucket)
-		for hashStr, validatorEntry := range validatorsEntries {
-			key := hexutils.HexToBytes(hashStr)
-			// if the entry is not in the cache and not in the DB,
-			// then insert it in the DB and add to the cache.
-			if _, ok := s.validatorEntryCache.Get(key); !ok {
-				validatorEntryCacheMiss.Inc()
-				if valEntry := valBkt.Get(key); valEntry == nil {
-					if putErr := valBkt.Put(key, validatorEntry); putErr != nil {
-						return putErr
-					}
-					s.validatorEntryCache.Set(key, validatorEntry, int64(len(validatorEntry)))
+		if featureconfig.Get().EnableHistoricalSpaceRepresentation {
+			bucket := tx.Bucket(stateBucket)
+			valIdxBkt := tx.Bucket(blockRootValidatorKeysIndexBucket)
+			for i, rt := range blockRoots {
+				indicesByBucket := createStateIndicesFromStateSlot(ctx, states[i].Slot())
+				if err := updateValueForIndices(ctx, indicesByBucket, rt[:], tx); err != nil {
+					return errors.Wrap(err, "could not update DB indices")
 				}
-			} else {
-				validatorEntryCacheHit.Inc()
+				if err := bucket.Put(rt[:], multipleEncs[i]); err != nil {
+					return err
+				}
+				if err := valIdxBkt.Put(rt[:], validatorKeys[i]); err != nil {
+					return err
+				}
 			}
+
+			// store the validator entries separately to save space.
+			valBkt := tx.Bucket(stateValidatorsBucket)
+			for hashStr, validatorEntry := range validatorsEntries {
+				key := hexutils.HexToBytes(hashStr)
+				// if the entry is not in the cache and not in the DB,
+				// then insert it in the DB and add to the cache.
+				if _, ok := s.validatorEntryCache.Get(key); !ok {
+					validatorEntryCacheMiss.Inc()
+					if valEntry := valBkt.Get(key); valEntry == nil {
+						if putErr := valBkt.Put(key, validatorEntry); putErr != nil {
+							return putErr
+						}
+						s.validatorEntryCache.Set(key, validatorEntry, int64(len(validatorEntry)))
+					}
+				} else {
+					validatorEntryCacheHit.Inc()
+				}
+			}
+			return nil
+		} else {
+			bucket := tx.Bucket(stateBucket)
+			for i, rt := range blockRoots {
+				indicesByBucket := createStateIndicesFromStateSlot(ctx, states[i].Slot())
+				if err := updateValueForIndices(ctx, indicesByBucket, rt[:], tx); err != nil {
+					return errors.Wrap(err, "could not update DB indices")
+				}
+				if err := bucket.Put(rt[:], multipleEncs[i]); err != nil {
+					return err
+				}
+			}
+			return nil
+
 		}
-		return nil
 	}); err != nil {
 		return err
 	}
 
-	// restore the state in memory with the original validators
-	for i, vals := range realValidators {
-		pbState, err := v1.ProtobufBeaconState(states[i].InnerStateUnsafe())
-		if err != nil {
-			return err
+
+	if featureconfig.Get().EnableHistoricalSpaceRepresentation {
+		// restore the state in memory with the original validators
+		for i, vals := range realValidators {
+			pbState, err := v1.ProtobufBeaconState(states[i].InnerStateUnsafe())
+			if err != nil {
+				return err
+			}
+			pbState.Validators = vals
 		}
-		pbState.Validators = vals
 	}
+
 	return nil
 }
 
@@ -282,20 +302,25 @@ func (s *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 	return nil
 }
 
-// creates state from marshaled proto state bytes. Also add the validator entries retrieved
+// creates validator state from marshaled proto state bytes. Also add the validator entries retrieved
 // from the validator bucket and complete the state construction.
 func createState(ctx context.Context, enc []byte, validatorEntries []*ethpb.Validator) (*pb.BeaconState, error) {
 	protoState := &pb.BeaconState{}
 	if err := decode(ctx, enc, protoState); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal encoding")
 	}
-	protoState.Validators = validatorEntries
+	if featureconfig.Get().EnableHistoricalSpaceRepresentation {
+		protoState.Validators = validatorEntries
+	}
 	return protoState, nil
 }
 
 // Retrieve the validator entries for a given block root. These entries are stored in a
 // separate bucket to reduce state size.
 func (s *Store) validatorEntries(ctx context.Context, blockRoot [32]byte) ([]*ethpb.Validator, error) {
+	if !featureconfig.Get().EnableHistoricalSpaceRepresentation {
+		return nil, nil
+	}
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.validatorEntries")
 	defer span.End()
 	var validatorEntries []*ethpb.Validator

@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -48,37 +49,77 @@ func TestState_CanSaveRetrieve(t *testing.T) {
 func TestState_CanSaveRetrieveValidatorEntries(t *testing.T) {
 	db := setupDB(t)
 
+	// enable historical state representation flag to test this
+	cfg := &featureconfig.Flags{}
+	cfg.EnableHistoricalSpaceRepresentation = true
+	featureconfig.Init(cfg)
+
 	r := [32]byte{'A'}
 
 	require.Equal(t, false, db.HasState(context.Background(), r))
 
+	stateValidators := validators(10)
 	st, err := testutil.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(100))
-	require.NoError(t, st.SetValidators(validators(10)))
+	require.NoError(t, st.SetValidators(stateValidators))
 
-	require.NoError(t, db.SaveState(context.Background(), st, r))
+	ctx := context.Background()
+	require.NoError(t, db.SaveState(ctx, st, r))
 	assert.Equal(t, true, db.HasState(context.Background(), r))
 
 	savedS, err := db.State(context.Background(), r)
 	require.NoError(t, err)
 
 	require.DeepSSZEqual(t, st.InnerStateUnsafe(), savedS.InnerStateUnsafe(), "saved state with validators and retrieved state are not matching")
+
+	// check if the index of the second state is still present.
+	err = db.db.Update(func(tx *bolt.Tx) error {
+		idxBkt := tx.Bucket(blockRootValidatorKeysIndexBucket)
+		data := idxBkt.Get(r[:])
+		require.NotEqual(t, 0, len(data))
+		return nil
+	})
+	require.NoError(t, err)
+
+	// check if all the validator entries are still intact in the validator entry bucket.
+	err = db.db.Update(func(tx *bolt.Tx) error {
+		valBkt := tx.Bucket(stateValidatorsBucket)
+		// if any of the original validator entry is not present, then fail the test.
+		for _, val := range stateValidators {
+			valBytes, encodeErr := encode(ctx, val)
+			require.NoError(t, encodeErr)
+			hash := hashutil.Hash(valBytes)
+			data := valBkt.Get(hash[:])
+			require.NotNil(t, data)
+			require.NotEqual(t, 0, len(data))
+		}
+		return nil
+	})
+	require.NoError(t, err)
+
 }
 
 func TestState_CanSaveRetrieveValidatorEntriesWithoutCache(t *testing.T) {
 	db := setupDB(t)
 
+	// enable historical state representation flag to test this
+	cfg := &featureconfig.Flags{}
+	cfg.EnableHistoricalSpaceRepresentation = true
+	featureconfig.Init(cfg)
+
 	r := [32]byte{'A'}
 
 	require.Equal(t, false, db.HasState(context.Background(), r))
 
+	stateValidators := validators(10)
 	st, err := testutil.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(100))
-	require.NoError(t, st.SetValidators(validators(10)))
+	require.NoError(t, st.SetValidators(stateValidators))
 
-	require.NoError(t, db.SaveState(context.Background(), st, r))
+	ctx := context.Background()
+	require.NoError(t, db.SaveState(ctx, st, r))
 	assert.Equal(t, true, db.HasState(context.Background(), r))
 	db.validatorEntryCache.Clear()
 
@@ -86,10 +127,41 @@ func TestState_CanSaveRetrieveValidatorEntriesWithoutCache(t *testing.T) {
 	require.NoError(t, err)
 
 	require.DeepSSZEqual(t, st.InnerStateUnsafe(), savedS.InnerStateUnsafe(), "saved state with validators and retrieved state are not matching")
+
+	// check if the index of the second state is still present.
+	err = db.db.Update(func(tx *bolt.Tx) error {
+		idxBkt := tx.Bucket(blockRootValidatorKeysIndexBucket)
+		data := idxBkt.Get(r[:])
+		require.NotEqual(t, 0, len(data))
+		return nil
+	})
+	require.NoError(t, err)
+
+	// check if all the validator entries are still intact in the validator entry bucket.
+	err = db.db.Update(func(tx *bolt.Tx) error {
+		valBkt := tx.Bucket(stateValidatorsBucket)
+		// if any of the original validator entry is not present, then fail the test.
+		for _, val := range stateValidators {
+			valBytes, encodeErr := encode(ctx, val)
+			require.NoError(t, encodeErr)
+			hash := hashutil.Hash(valBytes)
+			data := valBkt.Get(hash[:])
+			require.NotNil(t, data)
+			require.NotEqual(t, 0, len(data))
+		}
+		return nil
+	})
+	require.NoError(t, err)
+
 }
 
 func TestState_DeleteState(t *testing.T) {
 	db := setupDB(t)
+
+	// enable historical state representation flag to test this
+	cfg := &featureconfig.Flags{}
+	cfg.EnableHistoricalSpaceRepresentation = true
+	featureconfig.Init(cfg)
 
 	r1 := [32]byte{'A'}
 	r2 := [32]byte{'B'}

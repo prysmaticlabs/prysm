@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang/snappy"
 	v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	bolt "go.etcd.io/bbolt"
 )
@@ -13,6 +14,9 @@ import (
 var migrationStateValidators0Key = []byte("state_validators_0")
 
 func migrateStateValidators(tx *bolt.Tx) error {
+	if !featureconfig.Get().EnableHistoricalSpaceRepresentation {
+		return nil
+	}
 	mb := tx.Bucket(migrationsBucket)
 	if b := mb.Get(migrationStateValidators0Key); bytes.Equal(b, migrationCompleted) {
 		return nil // Migration already completed.
