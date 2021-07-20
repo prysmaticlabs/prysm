@@ -209,7 +209,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	WeightDenominator:  64,
 
 	// Validator related values.
-	TargetAggregatorsPerSyncSubcommittee: 4,
+	TargetAggregatorsPerSyncSubcommittee: 16,
 	SyncCommitteeSubnetCount:             4,
 
 	// Misc values.
