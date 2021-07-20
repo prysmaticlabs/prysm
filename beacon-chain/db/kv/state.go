@@ -318,7 +318,7 @@ func (s *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 	return nil
 }
 
-// creates validator state from marshaled proto state bytes. Also add the validator entries retrieved
+// creates state from marshaled proto state bytes. Also add the validator entries retrieved
 // from the validator bucket and complete the state construction.
 func createState(ctx context.Context, enc []byte, validatorEntries []*ethpb.Validator) (*pb.BeaconState, error) {
 	protoState := &pb.BeaconState{}

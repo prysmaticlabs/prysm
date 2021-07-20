@@ -132,7 +132,7 @@ var (
 		Name: "enable-historical-state-representation",
 		Usage: "Enables the beacon chain to save historical states in a space efficient manner." +
 			" (Warning): Once enabled, this feature migrates your database in to a new schema and " +
-			"there is not going back. At worst, your entire database might get corrupted.",
+			"there is no going back. At worst, your entire database might get corrupted.",
 	}
 )
 
