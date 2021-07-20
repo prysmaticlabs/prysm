@@ -48,6 +48,7 @@ func (f *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/config/spec",
 		"/eth/v1/events",
 		"/eth/v1/validator/duties/attester/{epoch}",
+		"/eth/v1/validator/duties/proposer/{epoch}",
 	}
 }
 
@@ -243,6 +244,12 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 			Hooks: gateway.HookCollection{
 				OnPostStart: []gateway.Hook{wrapValidatorIndicesArray},
 			},
+		}
+	case "/eth/v1/validator/duties/proposer/{epoch}":
+		endpoint = gateway.Endpoint{
+			GetResponse:        &proposerDutiesResponseJson{},
+			RequestURLLiterals: []string{"epoch"},
+			Err:                &gateway.DefaultErrorJson{},
 		}
 	default:
 		return nil, errors.New("invalid path")

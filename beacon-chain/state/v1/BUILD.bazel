@@ -15,6 +15,7 @@ go_library(
         "getters_randao.go",
         "getters_state.go",
         "getters_validator.go",
+        "readonly_validator.go",
         "setters_attestation.go",
         "setters_block.go",
         "setters_checkpoint.go",
@@ -27,7 +28,6 @@ go_library(
         "types.go",
         "unsupported_getters.go",
         "unsupported_setters.go",
-        "validator_getters.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/v1",
     visibility = [
@@ -75,7 +75,9 @@ go_test(
     srcs = [
         "field_trie_test.go",
         "getters_test.go",
+        "getters_validator_test.go",
         "helpers_test.go",
+        "readonly_validator_test.go",
         "references_test.go",
         "setters_attestation_test.go",
         "state_test.go",
