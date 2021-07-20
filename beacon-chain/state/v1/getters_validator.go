@@ -25,7 +25,13 @@ type ValidatorIndexOutOfRangeError struct {
 	message string
 }
 
-// NewStateNotFoundError creates a new error instance.
+var (
+	// ErrNilValidatorsInState returns when accessing validators in the state while the state has a
+	// nil slice for the validators field.
+	ErrNilValidatorsInState = errors.New("state has nil validator slice")
+)
+
+// NewValidatorIndexOutOfRangeError creates a new error instance.
 func NewValidatorIndexOutOfRangeError(index types.ValidatorIndex) ValidatorIndexOutOfRangeError {
 	return ValidatorIndexOutOfRangeError{
 		message: fmt.Sprintf("index %d out of range", index),
@@ -120,20 +126,20 @@ func (b *BeaconState) ValidatorAtIndex(idx types.ValidatorIndex) (*ethpb.Validat
 // doesn't clone the validator.
 func (b *BeaconState) ValidatorAtIndexReadOnly(idx types.ValidatorIndex) (iface.ReadOnlyValidator, error) {
 	if !b.hasInnerState() {
-		return ReadOnlyValidator{}, ErrNilInnerState
+		return nil, ErrNilInnerState
 	}
 	if b.state.Validators == nil {
-		return ReadOnlyValidator{}, nil
+		return nil, ErrNilValidatorsInState
 	}
 	if uint64(len(b.state.Validators)) <= uint64(idx) {
 		e := NewValidatorIndexOutOfRangeError(idx)
-		return ReadOnlyValidator{}, &e
+		return nil, &e
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return ReadOnlyValidator{b.state.Validators[idx]}, nil
+	return NewValidator(b.state.Validators[idx])
 }
 
 // ValidatorIndexByPubkey returns a given validator by its 48-byte public key.
@@ -195,8 +201,11 @@ func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val iface.ReadOnlyV
 	b.lock.RUnlock()
 
 	for i, v := range validators {
-		err := f(i, ReadOnlyValidator{validator: v})
+		v, err := NewValidator(v)
 		if err != nil {
+			return err
+		}
+		if err := f(i, v); err != nil {
 			return err
 		}
 	}
