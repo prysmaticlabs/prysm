@@ -189,7 +189,7 @@ func TestGetAltairDuties_SyncCommitteeOK(t *testing.T) {
 		assert.Equal(t, res.CurrentEpochDuties[i].IsSyncCommittee, res.NextEpochDuties[i].IsSyncCommittee)
 	}
 
-	// Current epoch and next epoch duties should be equal at the sync period epoch boundary.
+	// Current epoch and next epoch duties should not be equal at the sync period epoch boundary.
 	req = &ethpb.DutiesRequest{
 		PublicKeys: pubKeys,
 		Epoch:      params.BeaconConfig().EpochsPerSyncCommitteePeriod - 1,
