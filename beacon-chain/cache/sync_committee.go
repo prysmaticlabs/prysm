@@ -43,7 +43,7 @@ type syncCommitteeIndexPosition struct {
 	vIndexToPositionMap      map[types.ValidatorIndex]*positionInCommittee
 }
 
-// Index position of individual validator of current period and previous period sync committee.
+// Index position of individual validator of current period and next period sync committee.
 type positionInCommittee struct {
 	currentPeriod []uint64
 	nextPeriod    []uint64
