@@ -50,9 +50,10 @@ func TestState_CanSaveRetrieveValidatorEntries(t *testing.T) {
 	db := setupDB(t)
 
 	// enable historical state representation flag to test this
-	featureconfig.InitWithReset(&featureconfig.Flags{
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
 		EnableHistoricalSpaceRepresentation: true,
 	})
+	defer resetCfg()
 
 	r := [32]byte{'A'}
 
@@ -104,9 +105,10 @@ func TestState_CanSaveRetrieveValidatorEntriesWithoutCache(t *testing.T) {
 	db := setupDB(t)
 
 	// enable historical state representation flag to test this
-	featureconfig.InitWithReset(&featureconfig.Flags{
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
 		EnableHistoricalSpaceRepresentation: true,
 	})
+	defer resetCfg()
 
 	r := [32]byte{'A'}
 
@@ -159,9 +161,10 @@ func TestState_DeleteState(t *testing.T) {
 	db := setupDB(t)
 
 	// enable historical state representation flag to test this
-	featureconfig.InitWithReset(&featureconfig.Flags{
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
 		EnableHistoricalSpaceRepresentation: true,
 	})
+	defer resetCfg()
 
 	r1 := [32]byte{'A'}
 	r2 := [32]byte{'B'}
