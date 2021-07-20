@@ -8,6 +8,7 @@ import (
 	"github.com/golang/snappy"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -153,9 +154,15 @@ func Test_migrateStateValidators(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			dbStore := setupDB(t)
-			vals := validators(10)
+
+			// enable historical state representation flag to test this
+			resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+				EnableHistoricalSpaceRepresentation: true,
+			})
+			defer resetCfg()
 
 			// add a state with the given validators
+			vals := validators(10)
 			blockRoot := [32]byte{'A'}
 			st, err := testutil.NewBeaconState()
 			assert.NoError(t, err)
@@ -168,16 +175,4 @@ func Test_migrateStateValidators(t *testing.T) {
 			tt.eval(t, dbStore, st, vals)
 		})
 	}
-}
-
-func buckets(t *testing.T, db *bbolt.DB) []string {
-	var bucks []string
-	err := db.View(func(tx *bbolt.Tx) error {
-		return tx.ForEach(func(name []byte, buc *bbolt.Bucket) error {
-			bucks = append(bucks, string(name))
-			return nil
-		})
-	})
-	assert.NoError(t, err)
-	return bucks
 }
