@@ -96,6 +96,7 @@ func setupBackfillTest(tb testing.TB, cfg *backfillTestConfig) *Service {
 	require.NoError(tb, err)
 	wrapGenesis := wrapper.WrappedPhase0SignedBeaconBlock(genesisBlock)
 	require.NoError(tb, srv.serviceCfg.BeaconDatabase.SaveBlock(ctx, wrapGenesis))
+	require.NoError(tb, srv.serviceCfg.BeaconDatabase.SaveGenesisBlockRoot(ctx, genesisRoot))
 	require.NoError(tb, srv.serviceCfg.StateGen.SaveState(ctx, genesisRoot, beaconState))
 	require.NoError(tb, srv.serviceCfg.BeaconDatabase.SaveState(ctx, beaconState, genesisRoot))
 
@@ -147,6 +148,12 @@ func setupBackfillTest(tb testing.TB, cfg *backfillTestConfig) *Service {
 		)
 		blocks = append(blocks, blk)
 
+		// Save the state.
+		blockRoot, err := blk.Block().HashTreeRoot()
+		require.NoError(tb, err)
+		require.NoError(tb, srv.serviceCfg.StateGen.SaveState(ctx, blockRoot, beaconState))
+		require.NoError(tb, srv.serviceCfg.BeaconDatabase.SaveState(ctx, beaconState, blockRoot))
+
 		// If we specify it, create a slashable block at a certain slot.
 		if uint64(cfg.proposerSlashingAtSlot) == i && i != 0 {
 			slashableBlk := generateBlock(
@@ -159,13 +166,12 @@ func setupBackfillTest(tb testing.TB, cfg *backfillTestConfig) *Service {
 				true, /* slashable */
 			)
 			blocks = append(blocks, slashableBlk)
+			// Save the state.
+			blockRoot, err := slashableBlk.Block().HashTreeRoot()
+			require.NoError(tb, err)
+			require.NoError(tb, srv.serviceCfg.StateGen.SaveState(ctx, blockRoot, beaconState))
+			require.NoError(tb, srv.serviceCfg.BeaconDatabase.SaveState(ctx, beaconState, blockRoot))
 		}
-
-		// Save the state.
-		blockRoot, err := blk.Block().HashTreeRoot()
-		require.NoError(tb, err)
-		require.NoError(tb, srv.serviceCfg.StateGen.SaveState(ctx, blockRoot, beaconState))
-		require.NoError(tb, srv.serviceCfg.BeaconDatabase.SaveState(ctx, beaconState, blockRoot))
 	}
 	require.NoError(tb, beaconDB.SaveBlocks(ctx, blocks))
 	require.NoError(tb, beaconState.SetSlot(types.Slot(0)))
