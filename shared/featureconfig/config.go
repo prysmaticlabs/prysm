@@ -146,57 +146,57 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	configureTestnet(ctx, cfg)
 
 	if ctx.Bool(writeSSZStateTransitionsFlag.Name) {
-		logBoolEnabled(writeSSZStateTransitionsFlag)
+		logEnabled(writeSSZStateTransitionsFlag)
 		cfg.WriteSSZStateTransitions = true
 	}
 
 	cfg.EnableSSZCache = true
 
 	if ctx.String(kafkaBootstrapServersFlag.Name) != "" {
-		logStringEnabled(kafkaBootstrapServersFlag)
+		logEnabled(kafkaBootstrapServersFlag)
 		cfg.KafkaBootstrapServers = ctx.String(kafkaBootstrapServersFlag.Name)
 	}
 	if ctx.IsSet(disableGRPCConnectionLogging.Name) {
-		logBoolDisabled(disableGRPCConnectionLogging)
+		logDisabled(disableGRPCConnectionLogging)
 		cfg.DisableGRPCConnectionLogs = true
 	}
 	cfg.AttestationAggregationStrategy = ctx.String(attestationAggregationStrategy.Name)
 	if ctx.Bool(forceOptMaxCoverAggregationStategy.Name) {
-		logBoolEnabled(forceOptMaxCoverAggregationStategy)
+		logEnabled(forceOptMaxCoverAggregationStategy)
 		cfg.AttestationAggregationStrategy = "opt_max_cover"
 	}
 	if ctx.Bool(enablePeerScorer.Name) {
-		logBoolEnabled(enablePeerScorer)
+		logEnabled(enablePeerScorer)
 		cfg.EnablePeerScorer = true
 	}
 	if ctx.Bool(checkPtInfoCache.Name) {
 		log.Warn("Advance check point info cache is no longer supported and will soon be deleted")
 	}
 	if ctx.Bool(enableLargerGossipHistory.Name) {
-		logBoolEnabled(enableLargerGossipHistory)
+		logEnabled(enableLargerGossipHistory)
 		cfg.EnableLargerGossipHistory = true
 	}
 	if ctx.Bool(disableBroadcastSlashingFlag.Name) {
-		logBoolDisabled(disableBroadcastSlashingFlag)
+		logDisabled(disableBroadcastSlashingFlag)
 		cfg.DisableBroadcastSlashings = true
 	}
 	if ctx.Bool(enableNextSlotStateCache.Name) {
-		logBoolEnabled(enableNextSlotStateCache)
+		logEnabled(enableNextSlotStateCache)
 		cfg.EnableNextSlotStateCache = true
 	}
 	cfg.UpdateHeadTimely = true
 	if ctx.Bool(disableUpdateHeadTimely.Name) {
-		logBoolDisabled(disableUpdateHeadTimely)
+		logDisabled(disableUpdateHeadTimely)
 		cfg.UpdateHeadTimely = false
 	}
 	cfg.ProposerAttsSelectionUsingMaxCover = true
 	if ctx.Bool(disableProposerAttsSelectionUsingMaxCover.Name) {
-		logBoolDisabled(disableProposerAttsSelectionUsingMaxCover)
+		logDisabled(disableProposerAttsSelectionUsingMaxCover)
 		cfg.ProposerAttsSelectionUsingMaxCover = false
 	}
 	cfg.EnableOptimizedBalanceUpdate = true
 	if ctx.Bool(disableOptimizedBalanceUpdate.Name) {
-		logBoolDisabled(disableOptimizedBalanceUpdate)
+		logDisabled(disableOptimizedBalanceUpdate)
 		cfg.EnableOptimizedBalanceUpdate = false
 	}
 	Init(cfg)
@@ -210,7 +210,7 @@ func ConfigureSlasher(ctx *cli.Context) {
 	configureTestnet(ctx, cfg)
 
 	if ctx.Bool(disableLookbackFlag.Name) {
-		logBoolDisabled(disableLookbackFlag)
+		logDisabled(disableLookbackFlag)
 		cfg.DisableLookback = true
 	}
 	Init(cfg)
@@ -223,27 +223,27 @@ func ConfigureValidator(ctx *cli.Context) {
 	cfg := &Flags{}
 	configureTestnet(ctx, cfg)
 	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
-		logBoolEnabled(enableExternalSlasherProtectionFlag)
+		logEnabled(enableExternalSlasherProtectionFlag)
 		cfg.SlasherProtection = true
 	}
 	if ctx.Bool(writeWalletPasswordOnWebOnboarding.Name) {
-		logBoolEnabled(writeWalletPasswordOnWebOnboarding)
+		logEnabled(writeWalletPasswordOnWebOnboarding)
 		cfg.WriteWalletPasswordOnWebOnboarding = true
 	}
 	if ctx.Bool(disableAttestingHistoryDBCache.Name) {
-		logBoolDisabled(disableAttestingHistoryDBCache)
+		logDisabled(disableAttestingHistoryDBCache)
 		cfg.DisableAttestingHistoryDBCache = true
 	}
 	if ctx.Bool(attestTimely.Name) {
-		logBoolEnabled(attestTimely)
+		logEnabled(attestTimely)
 		cfg.AttestTimely = true
 	}
 	if ctx.Bool(enableSlashingProtectionPruning.Name) {
-		logBoolEnabled(enableSlashingProtectionPruning)
+		logEnabled(enableSlashingProtectionPruning)
 		cfg.EnableSlashingProtectionPruning = true
 	}
 	if ctx.Bool(enableDoppelGangerProtection.Name) {
-		logBoolEnabled(enableDoppelGangerProtection)
+		logEnabled(enableDoppelGangerProtection)
 		cfg.EnableDoppelGanger = true
 	}
 	cfg.KeystoreImportDebounceInterval = ctx.Duration(dynamicKeyReloadDebounceInterval.Name)
@@ -271,14 +271,18 @@ func complainOnDeprecatedFlags(ctx *cli.Context) {
 	}
 }
 
-func logBoolEnabled(flag *cli.BoolFlag) {
-	log.WithField(flag.Name, flag.Usage).Warn(enabledFeatureFlag)
+func logEnabled(flag cli.DocGenerationFlag) {
+	var name string
+	if names := flag.Names(); len(names) > 0 {
+		name = names[0]
+	}
+	log.WithField(name, flag.GetUsage()).Warn(enabledFeatureFlag)
 }
 
-func logStringEnabled(flag *cli.StringFlag) {
-	log.WithField(flag.Name, flag.Usage).Warn(enabledFeatureFlag)
-}
-
-func logBoolDisabled(flag *cli.BoolFlag) {
-	log.WithField(flag.Name, flag.Usage).Warn(disabledFeatureFlag)
+func logDisabled(flag cli.DocGenerationFlag) {
+	var name string
+	if names := flag.Names(); len(names) > 0 {
+		name = names[0]
+	}
+	log.WithField(name, flag.GetUsage()).Warn(disabledFeatureFlag)
 }
