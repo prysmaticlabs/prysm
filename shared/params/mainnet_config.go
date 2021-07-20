@@ -22,7 +22,8 @@ const (
 	// Genesis Fork Epoch for the mainnet config.
 	genesisForkEpoch = 0
 	// Altair Fork Epoch for mainnet config.
-	altairForkEpoch = math.MaxUint64
+	// Placeholder until fork epoch is decided.
+	mainnetAltairForkEpoch = math.MaxUint64
 )
 
 var mainnetNetworkConfig = &NetworkConfig{
@@ -186,10 +187,10 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	// Fork related values.
 	GenesisForkVersion: []byte{0, 0, 0, 0},
 	AltairForkVersion:  []byte{1, 0, 0, 0},
-	AltairForkEpoch:    altairForkEpoch, // Set to Max Uint64 for now.
+	AltairForkEpoch:    mainnetAltairForkEpoch,
 	ForkVersionSchedule: map[[4]byte]types.Epoch{
 		{0, 0, 0, 0}: genesisForkEpoch,
-		{1, 0, 0, 0}: altairForkEpoch,
+		{1, 0, 0, 0}: mainnetAltairForkEpoch,
 		// Any further forks must be specified here by their epoch number.
 	},
 
