@@ -204,6 +204,9 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 			nextSlotEpoch := helpers.SlotToEpoch(s.Slot() + 1)
 			currentEpoch := helpers.CurrentEpoch(s)
 
+			// Next epoch sync committee duty is assigned with next period sync committee only during
+			// sync period epoch boundary (ie. EPOCHS_PER_SYNC_COMMITTEE_PERIOD - 1). Else wise
+			// next epoch sync committee duty is the same as current epoch.
 			if helpers.SyncCommitteePeriod(nextSlotEpoch) == helpers.SyncCommitteePeriod(currentEpoch)+1 {
 				nsc, err := s.NextSyncCommittee()
 				if err != nil {
