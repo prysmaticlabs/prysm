@@ -43,10 +43,10 @@ type syncCommitteeIndexPosition struct {
 	vIndexToPositionMap      map[types.ValidatorIndex]*positionInCommittee
 }
 
-// Index position of individual validator of current epoch and previous epoch sync committee.
+// Index position of individual validator of current period and previous period sync committee.
 type positionInCommittee struct {
-	currentEpoch []uint64
-	nextEpoch    []uint64
+	currentPeriod []uint64
+	nextPeriod    []uint64
 }
 
 // NewSyncCommittee initializes and returns a new SyncCommitteeCache.
@@ -56,11 +56,11 @@ func NewSyncCommittee() *SyncCommitteeCache {
 	}
 }
 
-// CurrentEpochIndexPosition returns current epoch index position of a validator index with respect with
+// CurrentPeriodIndexPosition returns current period index position of a validator index with respect with
 // sync committee. If the input validator index has no assignment, an empty list will be returned.
 // If the input root does not exist in cache, ErrNonExistingSyncCommitteeKey is returned.
 // Then performing manual checking of state for index position in state is recommended.
-func (s *SyncCommitteeCache) CurrentEpochIndexPosition(root [32]byte, valIdx types.ValidatorIndex) ([]uint64, error) {
+func (s *SyncCommitteeCache) CurrentPeriodIndexPosition(root [32]byte, valIdx types.ValidatorIndex) ([]uint64, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -72,14 +72,14 @@ func (s *SyncCommitteeCache) CurrentEpochIndexPosition(root [32]byte, valIdx typ
 		return []uint64{}, nil
 	}
 
-	return pos.currentEpoch, nil
+	return pos.currentPeriod, nil
 }
 
-// NextEpochIndexPosition returns next epoch index position of a validator index in respect with sync committee.
+// NextPeriodIndexPosition returns next period index position of a validator index in respect with sync committee.
 // If the input validator index has no assignment, an empty list will be returned.
 // If the input root does not exist in cache, ErrNonExistingSyncCommitteeKey is returned.
 // Then performing manual checking of state for index position in state is recommended.
-func (s *SyncCommitteeCache) NextEpochIndexPosition(root [32]byte, valIdx types.ValidatorIndex) ([]uint64, error) {
+func (s *SyncCommitteeCache) NextPeriodIndexPosition(root [32]byte, valIdx types.ValidatorIndex) ([]uint64, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -90,10 +90,10 @@ func (s *SyncCommitteeCache) NextEpochIndexPosition(root [32]byte, valIdx types.
 	if pos == nil {
 		return []uint64{}, nil
 	}
-	return pos.nextEpoch, nil
+	return pos.nextPeriod, nil
 }
 
-// Helper function for `CurrentEpochIndexPosition` and `NextEpochIndexPosition` to return a mapping
+// Helper function for `CurrentPeriodIndexPosition` and `NextPeriodIndexPosition` to return a mapping
 // of validator index to its index(s) position in the sync committee.
 func (s *SyncCommitteeCache) idxPositionInCommittee(
 	root [32]byte, valIdx types.ValidatorIndex,
@@ -135,10 +135,10 @@ func (s *SyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundaryRoo
 			continue
 		}
 		if _, ok := positionsMap[validatorIndex]; !ok {
-			m := &positionInCommittee{currentEpoch: []uint64{uint64(i)}, nextEpoch: []uint64{}}
+			m := &positionInCommittee{currentPeriod: []uint64{uint64(i)}, nextPeriod: []uint64{}}
 			positionsMap[validatorIndex] = m
 		} else {
-			positionsMap[validatorIndex].currentEpoch = append(positionsMap[validatorIndex].currentEpoch, uint64(i))
+			positionsMap[validatorIndex].currentPeriod = append(positionsMap[validatorIndex].currentPeriod, uint64(i))
 		}
 	}
 
@@ -153,10 +153,10 @@ func (s *SyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundaryRoo
 			continue
 		}
 		if _, ok := positionsMap[validatorIndex]; !ok {
-			m := &positionInCommittee{nextEpoch: []uint64{uint64(i)}, currentEpoch: []uint64{}}
+			m := &positionInCommittee{nextPeriod: []uint64{uint64(i)}, currentPeriod: []uint64{}}
 			positionsMap[validatorIndex] = m
 		} else {
-			positionsMap[validatorIndex].nextEpoch = append(positionsMap[validatorIndex].nextEpoch, uint64(i))
+			positionsMap[validatorIndex].nextPeriod = append(positionsMap[validatorIndex].nextPeriod, uint64(i))
 		}
 	}
 

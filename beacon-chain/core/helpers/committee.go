@@ -405,18 +405,18 @@ func ClearCache() {
 	syncCommitteeCache = cache.NewSyncCommittee()
 }
 
-// IsCurrentEpochSyncCommittee returns true if the input validator index belongs in the current epoch sync committee
+// IsCurrentPeriodSyncCommittee returns true if the input validator index belongs in the current period sync committee
 // along with the sync committee root.
 // 1.) Checks if the public key exists in the sync committee cache
 // 2.) If 1 fails, checks if the public key exists in the input current sync committee object
-func IsCurrentEpochSyncCommittee(
+func IsCurrentPeriodSyncCommittee(
 	st iface.BeaconStateAltair, valIdx types.ValidatorIndex,
 ) (bool, error) {
 	root, err := syncPeriodBoundaryRoot(st)
 	if err != nil {
 		return false, err
 	}
-	indices, err := syncCommitteeCache.CurrentEpochIndexPosition(bytesutil.ToBytes32(root), valIdx)
+	indices, err := syncCommitteeCache.CurrentPeriodIndexPosition(bytesutil.ToBytes32(root), valIdx)
 	if err == cache.ErrNonExistingSyncCommitteeKey {
 		val, err := st.ValidatorAtIndex(valIdx)
 		if err != nil {
@@ -442,18 +442,18 @@ func IsCurrentEpochSyncCommittee(
 	return len(indices) > 0, nil
 }
 
-// IsNextEpochSyncCommittee returns true if the input validator index belongs in the next epoch sync committee
-// along with the sync committee root.
+// IsNextPeriodSyncCommittee returns true if the input validator index belongs in the next period sync committee
+// along with the sync period boundary root.
 // 1.) Checks if the public key exists in the sync committee cache
 // 2.) If 1 fails, checks if the public key exists in the input next sync committee object
-func IsNextEpochSyncCommittee(
+func IsNextPeriodSyncCommittee(
 	st iface.BeaconStateAltair, valIdx types.ValidatorIndex,
 ) (bool, error) {
 	root, err := syncPeriodBoundaryRoot(st)
 	if err != nil {
 		return false, err
 	}
-	indices, err := syncCommitteeCache.NextEpochIndexPosition(bytesutil.ToBytes32(root), valIdx)
+	indices, err := syncCommitteeCache.NextPeriodIndexPosition(bytesutil.ToBytes32(root), valIdx)
 	if err == cache.ErrNonExistingSyncCommitteeKey {
 		val, err := st.ValidatorAtIndex(valIdx)
 		if err != nil {
@@ -471,16 +471,16 @@ func IsNextEpochSyncCommittee(
 	return len(indices) > 0, nil
 }
 
-// CurrentEpochSyncSubcommitteeIndices returns the subcommittee indices of the
-// current epoch sync committee for input validator.
-func CurrentEpochSyncSubcommitteeIndices(
+// CurrentPeriodSyncSubcommitteeIndices returns the subcommittee indices of the
+// current period sync committee for input validator.
+func CurrentPeriodSyncSubcommitteeIndices(
 	st iface.BeaconStateAltair, valIdx types.ValidatorIndex,
 ) ([]uint64, error) {
 	root, err := syncPeriodBoundaryRoot(st)
 	if err != nil {
 		return nil, err
 	}
-	indices, err := syncCommitteeCache.CurrentEpochIndexPosition(bytesutil.ToBytes32(root), valIdx)
+	indices, err := syncCommitteeCache.CurrentPeriodIndexPosition(bytesutil.ToBytes32(root), valIdx)
 	if err == cache.ErrNonExistingSyncCommitteeKey {
 		val, err := st.ValidatorAtIndex(valIdx)
 		if err != nil {
@@ -506,15 +506,15 @@ func CurrentEpochSyncSubcommitteeIndices(
 	return indices, nil
 }
 
-// NextEpochSyncSubcommitteeIndices returns the subcommittee indices of the next epoch sync committee for input validator.
-func NextEpochSyncSubcommitteeIndices(
+// NextPeriodSyncSubcommitteeIndices returns the subcommittee indices of the next period sync committee for input validator.
+func NextPeriodSyncSubcommitteeIndices(
 	st iface.BeaconStateAltair, valIdx types.ValidatorIndex,
 ) ([]uint64, error) {
 	root, err := syncPeriodBoundaryRoot(st)
 	if err != nil {
 		return nil, err
 	}
-	indices, err := syncCommitteeCache.NextEpochIndexPosition(bytesutil.ToBytes32(root), valIdx)
+	indices, err := syncCommitteeCache.NextPeriodIndexPosition(bytesutil.ToBytes32(root), valIdx)
 	if err == cache.ErrNonExistingSyncCommitteeKey {
 		val, err := st.ValidatorAtIndex(valIdx)
 		if err != nil {
