@@ -9,7 +9,7 @@ import (
 
 func TestSyncCommitteeSignatureCache_Nil(t *testing.T) {
 	store := NewStore()
-	require.Equal(t, nilMessageErr, store.SaveSyncCommitteeMessage(nil))
+	require.Equal(t, errNilMessage, store.SaveSyncCommitteeMessage(nil))
 }
 
 func TestSyncCommitteeSignatureCache_RoundTrip(t *testing.T) {

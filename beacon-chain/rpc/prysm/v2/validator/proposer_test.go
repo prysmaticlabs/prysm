@@ -37,11 +37,13 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 	params.OverrideBeaconConfig(params.MainnetConfig())
 
 	genesis := testutil.NewBeaconBlockAltair()
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(genesis)
+	require.NoError(t, err)
 	require.NoError(
 		t,
 		db.SaveBlock(
 			ctx,
-			wrapper.WrappedAltairSignedBeaconBlock(genesis),
+			wsb,
 		),
 		"Could not save genesis block",
 	)
@@ -70,7 +72,9 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 	req := testutil.NewBeaconBlockAltair()
 	req.Block.Slot = 5
 	req.Block.ParentRoot = bsRoot[:]
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedAltairSignedBeaconBlock(req)))
+	wsb, err = wrapper.WrappedAltairSignedBeaconBlock(req)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, wsb))
 	_, err = proposerServer.ProposeBlock(context.Background(), req)
 	assert.NoError(t, err, "Could not propose block correctly")
 }
@@ -104,7 +108,9 @@ func TestProposer_GetBlock_OK(t *testing.T) {
 		},
 		Signature: genesis.Signature,
 	}
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedAltairSignedBeaconBlock(genAltair)), "Could not save genesis block")
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(genAltair)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")
 
 	parentRoot, err := genAltair.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")

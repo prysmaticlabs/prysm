@@ -119,7 +119,7 @@ func extractBlockDataType(digest []byte, chain blockchain.ChainInfoFetcher) (int
 		if !ok {
 			return nil, errors.New("no block type exists for the genesis fork version.")
 		}
-		return bFunc(), nil
+		return bFunc()
 	}
 	if len(digest) != digestLength {
 		return nil, errors.Errorf("invalid digest returned, wanted a length of %d but received %d", digestLength, len(digest))
@@ -131,7 +131,7 @@ func extractBlockDataType(digest []byte, chain blockchain.ChainInfoFetcher) (int
 			return nil, err
 		}
 		if rDigest == bytesutil.ToBytes4(digest) {
-			return blkFunc(), nil
+			return blkFunc()
 		}
 	}
 	return nil, errors.New("no valid digest matched")

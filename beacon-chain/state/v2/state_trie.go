@@ -57,13 +57,13 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconStateAltair) (*BeaconState, error
 	b.sharedFieldReferences[randaoMixes] = stateutil.NewRef(1)
 	b.sharedFieldReferences[stateRoots] = stateutil.NewRef(1)
 	b.sharedFieldReferences[blockRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[previousEpochParticipationBits] = stateutil.NewRef(1)
-	b.sharedFieldReferences[currentEpochParticipationBits] = stateutil.NewRef(1)
+	b.sharedFieldReferences[previousEpochParticipationBits] = stateutil.NewRef(1) // New in Altair.
+	b.sharedFieldReferences[currentEpochParticipationBits] = stateutil.NewRef(1)  // New in Altair.
 	b.sharedFieldReferences[slashings] = stateutil.NewRef(1)
 	b.sharedFieldReferences[eth1DataVotes] = stateutil.NewRef(1)
 	b.sharedFieldReferences[validators] = stateutil.NewRef(1)
 	b.sharedFieldReferences[balances] = stateutil.NewRef(1)
-	b.sharedFieldReferences[inactivityScores] = stateutil.NewRef(1)
+	b.sharedFieldReferences[inactivityScores] = stateutil.NewRef(1) // New in Altair.
 	b.sharedFieldReferences[historicalRoots] = stateutil.NewRef(1)
 
 	return b, nil

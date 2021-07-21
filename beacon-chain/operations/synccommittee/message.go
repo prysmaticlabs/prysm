@@ -12,7 +12,7 @@ import (
 // The priority queue capped at syncCommitteeMaxQueueSize contributions.
 func (s *Store) SaveSyncCommitteeMessage(msg *prysmv2.SyncCommitteeMessage) error {
 	if msg == nil {
-		return nilMessageErr
+		return errNilMessage
 	}
 
 	s.messageLock.Lock()

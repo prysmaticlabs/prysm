@@ -26,7 +26,7 @@ func init() {
 var (
 	// BlockMap maps the fork-version to the underlying data type for that
 	// particular fork period.
-	BlockMap map[[4]byte]func() interfaces.SignedBeaconBlock
+	BlockMap map[[4]byte]func() (interfaces.SignedBeaconBlock, error)
 	// StateMap maps the fork-version to the underlying data type for that
 	// particular fork period.
 	StateMap map[[4]byte]proto.Message
@@ -39,12 +39,12 @@ var (
 // reset maps and reinitialize them.
 func InitializeDataMaps() {
 	// Reset our block map.
-	BlockMap = map[[4]byte]func() interfaces.SignedBeaconBlock{
-		bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): func() interfaces.SignedBeaconBlock {
-			return wrapperv1.WrappedPhase0SignedBeaconBlock(&eth.SignedBeaconBlock{})
+	BlockMap = map[[4]byte]func() (interfaces.SignedBeaconBlock, error){
+		bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): func() (interfaces.SignedBeaconBlock, error) {
+			return wrapperv1.WrappedPhase0SignedBeaconBlock(&eth.SignedBeaconBlock{}), nil
 		},
-		bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion): func() interfaces.SignedBeaconBlock {
-			return wrapperv2.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlock{})
+		bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion): func() (interfaces.SignedBeaconBlock, error) {
+			return wrapperv2.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlock{Block: &prysmv2.BeaconBlockAltair{}})
 		},
 	}
 

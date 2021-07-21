@@ -29,7 +29,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/beacon"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/debug"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/events"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/node"
+	node "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/node"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/v1/validator"
 	beaconv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/beacon"
 	debugv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/debug"
 	nodev1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/node"
@@ -206,6 +207,12 @@ func (s *Service) Start() {
 		SyncCommitteePool: s.cfg.SyncCommitteeObjectPool,
 	}
 
+	validatorServerV1 := &validator.Server{
+		HeadFetcher: s.cfg.HeadFetcher,
+		TimeFetcher: s.cfg.GenesisTimeFetcher,
+		SyncChecker: s.cfg.SyncService,
+	}
+
 	nodeServer := &nodev1alpha1.Server{
 		LogsStreamer:         logutil.NewStreamServer(),
 		StreamLogsBufferSize: 1000, // Enough to handle bursts of beacon node logs for gRPC streaming.
@@ -313,7 +320,7 @@ func (s *Service) Start() {
 	ethpbv1alpha1.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServer)
 	prysmv2.RegisterBeaconChainAltairServer(s.grpcServer, beaconChainServerV2)
 	prysmv2.RegisterBeaconNodeValidatorAltairServer(s.grpcServer, validatorServerV2)
-
+	ethpbv1.RegisterBeaconValidatorServer(s.grpcServer, validatorServerV1)
 	// Register reflection service on gRPC server.
 	reflection.Register(s.grpcServer)
 

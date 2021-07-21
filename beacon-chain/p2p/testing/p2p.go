@@ -308,7 +308,7 @@ func (p *TestP2P) Send(ctx context.Context, msg interface{}, topic string, pid p
 		return nil, err
 	}
 
-	if topic != "/eth2/beacon_chain/req/metadata/1" {
+	if topic != "/eth2/beacon_chain/req/metadata/1" && topic != "/eth2/beacon_chain/req/metadata/2" {
 		castedMsg, ok := msg.(ssz.Marshaler)
 		if !ok {
 			p.t.Fatalf("%T doesnt support ssz marshaler", msg)

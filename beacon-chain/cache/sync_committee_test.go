@@ -167,12 +167,12 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 			r := [32]byte{'a'}
 			require.NoError(t, cache.UpdatePositionsInCommittee(r, s))
 			for key, indices := range tt.currentSyncMap {
-				pos, err := cache.CurrentEpochIndexPosition(r, key)
+				pos, err := cache.CurrentPeriodIndexPosition(r, key)
 				require.NoError(t, err)
 				require.DeepEqual(t, indices, pos)
 			}
 			for key, indices := range tt.nextSyncMap {
-				pos, err := cache.NextEpochIndexPosition(r, key)
+				pos, err := cache.NextPeriodIndexPosition(r, key)
 				require.NoError(t, err)
 				require.DeepEqual(t, indices, pos)
 			}
@@ -182,7 +182,7 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 
 func TestSyncCommitteeCache_RootDoesNotExist(t *testing.T) {
 	c := cache.NewSyncCommittee()
-	_, err := c.CurrentEpochIndexPosition([32]byte{}, 0)
+	_, err := c.CurrentPeriodIndexPosition([32]byte{}, 0)
 	require.Equal(t, cache.ErrNonExistingSyncCommitteeKey, err)
 }
 
@@ -198,10 +198,10 @@ func TestSyncCommitteeCache_CanRotate(t *testing.T) {
 	require.NoError(t, s.SetCurrentSyncCommittee(convertToCommittee([][]byte{{4}})))
 	require.NoError(t, c.UpdatePositionsInCommittee([32]byte{'d'}, s))
 
-	_, err := c.CurrentEpochIndexPosition([32]byte{'a'}, 0)
+	_, err := c.CurrentPeriodIndexPosition([32]byte{'a'}, 0)
 	require.Equal(t, cache.ErrNonExistingSyncCommitteeKey, err)
 
-	_, err = c.CurrentEpochIndexPosition([32]byte{'c'}, 0)
+	_, err = c.CurrentPeriodIndexPosition([32]byte{'c'}, 0)
 	require.NoError(t, err)
 }
 

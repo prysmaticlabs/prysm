@@ -60,7 +60,9 @@ func RunFinalityTest(t *testing.T, config string) {
 				require.NoError(t, err, "Failed to decompress")
 				block := &prysmv2.SignedBeaconBlock{}
 				require.NoError(t, block.UnmarshalSSZ(blockSSZ), "Failed to unmarshal")
-				processedState, err = state.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedAltairSignedBeaconBlock(block))
+				wsb, err := wrapper.WrappedAltairSignedBeaconBlock(block)
+				require.NoError(t, err)
+				processedState, err = state.ExecuteStateTransition(context.Background(), beaconState, wsb)
 				require.NoError(t, err)
 				beaconState, ok = processedState.(*stateAltair.BeaconState)
 				require.Equal(t, true, ok)

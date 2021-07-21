@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/version"
 )
 
 // metaDataHandler reads the incoming metadata rpc request from the peer.
@@ -25,11 +26,34 @@ func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2
 	}
 	s.rateLimiter.add(stream, 1)
 
-	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
+	if s.cfg.P2P.Metadata() == nil || s.cfg.P2P.Metadata().IsNil() {
+		nilErr := errors.New("nil metadata stored for host")
+		resp, err := s.generateErrorResponse(responseCodeServerError, types.ErrGeneric.Error())
+		if err != nil {
+			log.WithError(err).Debug("Could not generate a response error")
+		} else if _, err := stream.Write(resp); err != nil {
+			log.WithError(err).Debug("Could not write to stream")
+		}
+		return nilErr
+	}
+	topicVersion := ""
+	switch s.cfg.P2P.Metadata().Version() {
+	case version.Phase0:
+		topicVersion = p2p.SchemaVersionV1
+	case version.Altair:
+		topicVersion = p2p.SchemaVersionV2
+	}
+	if err := validateVersion(topicVersion, stream); err != nil {
+		resp, genErr := s.generateErrorResponse(responseCodeServerError, types.ErrGeneric.Error())
+		if genErr != nil {
+			log.WithError(genErr).Debug("Could not generate a response error")
+		} else if _, wErr := stream.Write(resp); wErr != nil {
+			log.WithError(wErr).Debug("Could not write to stream")
+		}
 		return err
 	}
-	if s.cfg.P2P.Metadata() == nil || s.cfg.P2P.Metadata().IsNil() {
-		return errors.New("nil metadata stored for host")
+	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
+		return err
 	}
 	_, err := s.cfg.P2P.Encoding().EncodeWithMaxLength(stream, s.cfg.P2P.Metadata())
 	if err != nil {
@@ -67,6 +91,17 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (p2p2.Met
 	}
 	msg, err := extractMetaDataType(rpcCtx[:], s.cfg.Chain)
 	if err != nil {
+		return nil, err
+	}
+	// Defensive check to ensure valid objects are being sent.
+	topicVersion := ""
+	switch msg.Version() {
+	case version.Phase0:
+		topicVersion = p2p.SchemaVersionV1
+	case version.Altair:
+		topicVersion = p2p.SchemaVersionV2
+	}
+	if err := validateVersion(topicVersion, stream); err != nil {
 		return nil, err
 	}
 	if err := s.cfg.P2P.Encoding().DecodeWithMaxLength(stream, msg); err != nil {

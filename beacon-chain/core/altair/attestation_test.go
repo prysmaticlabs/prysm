@@ -44,7 +44,9 @@ func TestProcessAttestations_InclusionDelayFailure(t *testing.T) {
 		params.BeaconConfig().MinAttestationInclusionDelay,
 		beaconState.Slot(),
 	)
-	_, err := altair.ProcessAttestations(context.Background(), beaconState, wrapper.WrappedAltairSignedBeaconBlock(b))
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(b)
+	require.NoError(t, err)
+	_, err = altair.ProcessAttestations(context.Background(), beaconState, wsb)
 	require.ErrorContains(t, want, err)
 }
 
@@ -73,7 +75,9 @@ func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 		helpers.PrevEpoch(beaconState),
 		helpers.CurrentEpoch(beaconState),
 	)
-	_, err = altair.ProcessAttestations(context.Background(), beaconState, wrapper.WrappedAltairSignedBeaconBlock(b))
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(b)
+	require.NoError(t, err)
+	_, err = altair.ProcessAttestations(context.Background(), beaconState, wsb)
 	require.ErrorContains(t, want, err)
 }
 
@@ -100,11 +104,15 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cfc))
 
 	want := "source check point not equal to current justified checkpoint"
-	_, err := altair.ProcessAttestations(context.Background(), beaconState, wrapper.WrappedAltairSignedBeaconBlock(b))
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(b)
+	require.NoError(t, err)
+	_, err = altair.ProcessAttestations(context.Background(), beaconState, wsb)
 	require.ErrorContains(t, want, err)
 	b.Block.Body.Attestations[0].Data.Source.Epoch = helpers.CurrentEpoch(beaconState)
 	b.Block.Body.Attestations[0].Data.Source.Root = []byte{}
-	_, err = altair.ProcessAttestations(context.Background(), beaconState, wrapper.WrappedAltairSignedBeaconBlock(b))
+	wsb, err = wrapper.WrappedAltairSignedBeaconBlock(b)
+	require.NoError(t, err)
+	_, err = altair.ProcessAttestations(context.Background(), beaconState, wsb)
 	require.ErrorContains(t, want, err)
 }
 
@@ -137,12 +145,16 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	require.NoError(t, beaconState.SetPreviousJustifiedCheckpoint(pfc))
 
 	want := "source check point not equal to previous justified checkpoint"
-	_, err = altair.ProcessAttestations(context.Background(), beaconState, wrapper.WrappedAltairSignedBeaconBlock(b))
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(b)
+	require.NoError(t, err)
+	_, err = altair.ProcessAttestations(context.Background(), beaconState, wsb)
 	require.ErrorContains(t, want, err)
 	b.Block.Body.Attestations[0].Data.Source.Epoch = helpers.PrevEpoch(beaconState)
 	b.Block.Body.Attestations[0].Data.Target.Epoch = helpers.PrevEpoch(beaconState)
 	b.Block.Body.Attestations[0].Data.Source.Root = []byte{}
-	_, err = altair.ProcessAttestations(context.Background(), beaconState, wrapper.WrappedAltairSignedBeaconBlock(b))
+	wsb, err = wrapper.WrappedAltairSignedBeaconBlock(b)
+	require.NoError(t, err)
+	_, err = altair.ProcessAttestations(context.Background(), beaconState, wsb)
 	require.ErrorContains(t, want, err)
 }
 
@@ -172,7 +184,9 @@ func TestProcessAttestations_InvalidAggregationBitsLength(t *testing.T) {
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cfc))
 
 	expected := "failed to verify aggregation bitfield: wanted participants bitfield length 3, got: 4"
-	_, err = altair.ProcessAttestations(context.Background(), beaconState, wrapper.WrappedAltairSignedBeaconBlock(b))
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(b)
+	require.NoError(t, err)
+	_, err = altair.ProcessAttestations(context.Background(), beaconState, wsb)
 	require.ErrorContains(t, expected, err)
 }
 
@@ -214,7 +228,9 @@ func TestProcessAttestations_OK(t *testing.T) {
 
 	err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
 	require.NoError(t, err)
-	_, err = altair.ProcessAttestations(context.Background(), beaconState, wrapper.WrappedAltairSignedBeaconBlock(block))
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(block)
+	require.NoError(t, err)
+	_, err = altair.ProcessAttestations(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
 }
 
@@ -310,14 +326,19 @@ func TestValidatorFlag_AddHas(t *testing.T) {
 func TestFuzzProcessAttestationsNoVerify_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	state := &pb.BeaconStateAltair{}
-	b := &prysmv2.SignedBeaconBlock{}
+	b := &prysmv2.SignedBeaconBlock{Block: &prysmv2.BeaconBlockAltair{}}
 	ctx := context.Background()
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(b)
+		if b.Block == nil {
+			b.Block = &prysmv2.BeaconBlockAltair{}
+		}
 		s, err := stateAltair.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
-		r, err := altair.ProcessAttestationsNoVerifySignature(ctx, s, wrapper.WrappedAltairSignedBeaconBlock(b))
+		wsb, err := wrapper.WrappedAltairSignedBeaconBlock(b)
+		require.NoError(t, err)
+		r, err := altair.ProcessAttestationsNoVerifySignature(ctx, s, wsb)
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, b)
 		}

@@ -43,10 +43,10 @@ type syncCommitteeIndexPosition struct {
 	vIndexToPositionMap      map[types.ValidatorIndex]*positionInCommittee
 }
 
-// Index position of individual validator of current epoch and previous epoch sync committee.
+// Index position of individual validator of current period and next period sync committee.
 type positionInCommittee struct {
-	currentEpoch []types.CommitteeIndex
-	nextEpoch    []types.CommitteeIndex
+	currentPeriod []types.CommitteeIndex
+	nextPeriod    []types.CommitteeIndex
 }
 
 // NewSyncCommittee initializes and returns a new SyncCommitteeCache.
@@ -56,11 +56,11 @@ func NewSyncCommittee() *SyncCommitteeCache {
 	}
 }
 
-// CurrentEpochIndexPosition returns current epoch index position of a validator index with respect with
+// CurrentPeriodIndexPosition returns current period index position of a validator index with respect with
 // sync committee. If the input validator index has no assignment, an empty list will be returned.
 // If the input root does not exist in cache, ErrNonExistingSyncCommitteeKey is returned.
 // Then performing manual checking of state for index position in state is recommended.
-func (s *SyncCommitteeCache) CurrentEpochIndexPosition(root [32]byte, valIdx types.ValidatorIndex) ([]types.CommitteeIndex, error) {
+func (s *SyncCommitteeCache) CurrentPeriodIndexPosition(root [32]byte, valIdx types.ValidatorIndex) ([]types.CommitteeIndex, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -72,14 +72,14 @@ func (s *SyncCommitteeCache) CurrentEpochIndexPosition(root [32]byte, valIdx typ
 		return []types.CommitteeIndex{}, nil
 	}
 
-	return pos.currentEpoch, nil
+	return pos.currentPeriod, nil
 }
 
-// NextEpochIndexPosition returns next epoch index position of a validator index in respect with sync committee.
+// NextPeriodIndexPosition returns next period index position of a validator index in respect with sync committee.
 // If the input validator index has no assignment, an empty list will be returned.
 // If the input root does not exist in cache, ErrNonExistingSyncCommitteeKey is returned.
 // Then performing manual checking of state for index position in state is recommended.
-func (s *SyncCommitteeCache) NextEpochIndexPosition(root [32]byte, valIdx types.ValidatorIndex) ([]types.CommitteeIndex, error) {
+func (s *SyncCommitteeCache) NextPeriodIndexPosition(root [32]byte, valIdx types.ValidatorIndex) ([]types.CommitteeIndex, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -90,10 +90,10 @@ func (s *SyncCommitteeCache) NextEpochIndexPosition(root [32]byte, valIdx types.
 	if pos == nil {
 		return []types.CommitteeIndex{}, nil
 	}
-	return pos.nextEpoch, nil
+	return pos.nextPeriod, nil
 }
 
-// Helper function for `CurrentEpochIndexPosition` and `NextEpochIndexPosition` to return a mapping
+// Helper function for `CurrentPeriodIndexPosition` and `NextPeriodIndexPosition` to return a mapping
 // of validator index to its index(s) position in the sync committee.
 func (s *SyncCommitteeCache) idxPositionInCommittee(
 	root [32]byte, valIdx types.ValidatorIndex,
@@ -135,10 +135,10 @@ func (s *SyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundaryRoo
 			continue
 		}
 		if _, ok := positionsMap[validatorIndex]; !ok {
-			m := &positionInCommittee{currentEpoch: []types.CommitteeIndex{types.CommitteeIndex(i)}, nextEpoch: []types.CommitteeIndex{}}
+			m := &positionInCommittee{currentPeriod: []types.CommitteeIndex{types.CommitteeIndex(i)}, nextPeriod: []types.CommitteeIndex{}}
 			positionsMap[validatorIndex] = m
 		} else {
-			positionsMap[validatorIndex].currentEpoch = append(positionsMap[validatorIndex].currentEpoch, types.CommitteeIndex(i))
+			positionsMap[validatorIndex].currentPeriod = append(positionsMap[validatorIndex].currentPeriod, types.CommitteeIndex(i))
 		}
 	}
 
@@ -153,10 +153,10 @@ func (s *SyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundaryRoo
 			continue
 		}
 		if _, ok := positionsMap[validatorIndex]; !ok {
-			m := &positionInCommittee{nextEpoch: []types.CommitteeIndex{types.CommitteeIndex(i)}, currentEpoch: []types.CommitteeIndex{}}
+			m := &positionInCommittee{nextPeriod: []types.CommitteeIndex{types.CommitteeIndex(i)}, currentPeriod: []types.CommitteeIndex{}}
 			positionsMap[validatorIndex] = m
 		} else {
-			positionsMap[validatorIndex].nextEpoch = append(positionsMap[validatorIndex].nextEpoch, types.CommitteeIndex(i))
+			positionsMap[validatorIndex].nextPeriod = append(positionsMap[validatorIndex].nextPeriod, types.CommitteeIndex(i))
 		}
 	}
 

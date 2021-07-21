@@ -55,7 +55,9 @@ func RunBlockOperationTest(
 	helpers.ClearCache()
 	b := testutil.NewBeaconBlockAltair()
 	b.Block.Body = body
-	beaconState, err := operationFn(context.Background(), preState, wrapper.WrappedAltairSignedBeaconBlock(b))
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(b)
+	require.NoError(t, err)
+	beaconState, err := operationFn(context.Background(), preState, wsb)
 	if postSSZExists {
 		require.NoError(t, err)
 

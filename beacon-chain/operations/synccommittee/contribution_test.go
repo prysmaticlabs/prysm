@@ -9,7 +9,7 @@ import (
 
 func TestSyncCommitteeContributionCache_Nil(t *testing.T) {
 	store := NewStore()
-	require.Equal(t, nilContributionErr, store.SaveSyncCommitteeContribution(nil))
+	require.Equal(t, errNilContribution, store.SaveSyncCommitteeContribution(nil))
 }
 
 func TestSyncCommitteeContributionCache_RoundTrip(t *testing.T) {

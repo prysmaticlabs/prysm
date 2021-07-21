@@ -663,7 +663,7 @@ func TestIsCurrentEpochSyncCommittee_UsingCache(t *testing.T) {
 	r := [32]byte{'a'}
 	require.NoError(t, err, syncCommitteeCache.UpdatePositionsInCommittee(r, state))
 
-	ok, err := IsCurrentEpochSyncCommittee(state, 0)
+	ok, err := IsCurrentPeriodSyncCommittee(state, 0)
 	require.NoError(t, err)
 	require.Equal(t, true, ok)
 }
@@ -689,7 +689,7 @@ func TestIsCurrentEpochSyncCommittee_UsingCommittee(t *testing.T) {
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
-	ok, err := IsCurrentEpochSyncCommittee(state, 0)
+	ok, err := IsCurrentPeriodSyncCommittee(state, 0)
 	require.NoError(t, err)
 	require.Equal(t, true, ok)
 }
@@ -715,7 +715,7 @@ func TestIsCurrentEpochSyncCommittee_DoesNotExist(t *testing.T) {
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
-	ok, err := IsCurrentEpochSyncCommittee(state, 12390192)
+	ok, err := IsCurrentPeriodSyncCommittee(state, 12390192)
 	require.NoError(t, err)
 	require.Equal(t, false, ok)
 }
@@ -745,7 +745,7 @@ func TestIsNextEpochSyncCommittee_UsingCache(t *testing.T) {
 	r := [32]byte{'a'}
 	require.NoError(t, err, syncCommitteeCache.UpdatePositionsInCommittee(r, state))
 
-	ok, err := IsNextEpochSyncCommittee(state, 0)
+	ok, err := IsNextPeriodSyncCommittee(state, 0)
 	require.NoError(t, err)
 	require.Equal(t, true, ok)
 }
@@ -771,7 +771,7 @@ func TestIsNextEpochSyncCommittee_UsingCommittee(t *testing.T) {
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
-	ok, err := IsNextEpochSyncCommittee(state, 0)
+	ok, err := IsNextPeriodSyncCommittee(state, 0)
 	require.NoError(t, err)
 	require.Equal(t, true, ok)
 }
@@ -797,7 +797,7 @@ func TestIsNextEpochSyncCommittee_DoesNotExist(t *testing.T) {
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
-	ok, err := IsNextEpochSyncCommittee(state, 120391029)
+	ok, err := IsNextPeriodSyncCommittee(state, 120391029)
 	require.NoError(t, err)
 	require.Equal(t, false, ok)
 }
@@ -827,7 +827,7 @@ func TestCurrentEpochSyncSubcommitteeIndices_UsingCache(t *testing.T) {
 	r := [32]byte{'a'}
 	require.NoError(t, err, syncCommitteeCache.UpdatePositionsInCommittee(r, state))
 
-	index, err := CurrentEpochSyncSubcommitteeIndices(state, 0)
+	index, err := CurrentPeriodSyncSubcommitteeIndices(state, 0)
 	require.NoError(t, err)
 	require.DeepEqual(t, []types.CommitteeIndex{0}, index)
 }
@@ -857,17 +857,17 @@ func TestCurrentEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test that cache was empty.
-	_, err = syncCommitteeCache.CurrentEpochIndexPosition(bytesutil.ToBytes32(root), 0)
+	_, err = syncCommitteeCache.CurrentPeriodIndexPosition(bytesutil.ToBytes32(root), 0)
 	require.Equal(t, cache.ErrNonExistingSyncCommitteeKey, err)
 
 	// Test that helper can retrieve the index given empty cache.
-	index, err := CurrentEpochSyncSubcommitteeIndices(state, 0)
+	index, err := CurrentPeriodSyncSubcommitteeIndices(state, 0)
 	require.NoError(t, err)
 	require.DeepEqual(t, []types.CommitteeIndex{0}, index)
 
 	// Test that cache was able to fill on miss.
 	time.Sleep(100 * time.Millisecond)
-	index, err = syncCommitteeCache.CurrentEpochIndexPosition(bytesutil.ToBytes32(root), 0)
+	index, err = syncCommitteeCache.CurrentPeriodIndexPosition(bytesutil.ToBytes32(root), 0)
 	require.NoError(t, err)
 	require.DeepEqual(t, []types.CommitteeIndex{0}, index)
 }
@@ -894,7 +894,7 @@ func TestCurrentEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
-	index, err := CurrentEpochSyncSubcommitteeIndices(state, 129301923)
+	index, err := CurrentPeriodSyncSubcommitteeIndices(state, 129301923)
 	require.NoError(t, err)
 	require.DeepEqual(t, []types.CommitteeIndex(nil), index)
 }
@@ -924,7 +924,7 @@ func TestNextEpochSyncSubcommitteeIndices_UsingCache(t *testing.T) {
 	r := [32]byte{'a'}
 	require.NoError(t, err, syncCommitteeCache.UpdatePositionsInCommittee(r, state))
 
-	index, err := NextEpochSyncSubcommitteeIndices(state, 0)
+	index, err := NextPeriodSyncSubcommitteeIndices(state, 0)
 	require.NoError(t, err)
 	require.DeepEqual(t, []types.CommitteeIndex{0}, index)
 }
@@ -950,7 +950,7 @@ func TestNextEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
-	index, err := NextEpochSyncSubcommitteeIndices(state, 0)
+	index, err := NextPeriodSyncSubcommitteeIndices(state, 0)
 	require.NoError(t, err)
 	require.DeepEqual(t, []types.CommitteeIndex{0}, index)
 }
@@ -977,7 +977,7 @@ func TestNextEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
-	index, err := NextEpochSyncSubcommitteeIndices(state, 21093019)
+	index, err := NextPeriodSyncSubcommitteeIndices(state, 21093019)
 	require.NoError(t, err)
 	require.DeepEqual(t, []types.CommitteeIndex(nil), index)
 }

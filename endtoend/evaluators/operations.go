@@ -109,7 +109,10 @@ func processesDepositsInBlocks(conns ...*grpc.ClientConn) error {
 	}
 	var deposits uint64
 	for _, ctr := range blks.BlockContainers {
-		blk := convertToBlockInterface(ctr)
+		blk, err := convertToBlockInterface(ctr)
+		if err != nil {
+			return err
+		}
 		fmt.Printf(
 			"Slot: %d with %d deposits, Eth1 block %#x with %d deposits\n",
 			blk.Block().Slot(),
@@ -140,7 +143,10 @@ func verifyGraffitiInBlocks(conns ...*grpc.ClientConn) error {
 		return errors.Wrap(err, "failed to get blocks from beacon-chain")
 	}
 	for _, ctr := range blks.BlockContainers {
-		blk := convertToBlockInterface(ctr)
+		blk, err := convertToBlockInterface(ctr)
+		if err != nil {
+			return err
+		}
 		var e bool
 		for _, graffiti := range helpers.Graffiti {
 			if bytes.Equal(bytesutil.PadTo([]byte(graffiti), 32), blk.Block().Body().Graffiti()) {
@@ -346,7 +352,10 @@ func validatorsVoteWithTheMajority(conns ...*grpc.ClientConn) error {
 	}
 
 	for _, ctr := range blks.BlockContainers {
-		blk := convertToBlockInterface(ctr)
+		blk, err := convertToBlockInterface(ctr)
+		if err != nil {
+			return err
+		}
 		slot, vote := blk.Block().Slot(), blk.Block().Body().Eth1Data().BlockHash
 		slotsPerVotingPeriod := params.E2ETestConfig().SlotsPerEpoch.Mul(uint64(params.E2ETestConfig().EpochsPerEth1VotingPeriod))
 
@@ -378,12 +387,12 @@ func validatorsVoteWithTheMajority(conns ...*grpc.ClientConn) error {
 
 var expectedEth1DataVote []byte
 
-func convertToBlockInterface(obj *prysmv2.BeaconBlockContainerAltair) interfaces.SignedBeaconBlock {
+func convertToBlockInterface(obj *prysmv2.BeaconBlockContainerAltair) (interfaces.SignedBeaconBlock, error) {
 	if obj.GetPhase0Block() != nil {
-		return wrapper.WrappedPhase0SignedBeaconBlock(obj.GetPhase0Block())
+		return wrapper.WrappedPhase0SignedBeaconBlock(obj.GetPhase0Block()), nil
 	}
 	if obj.GetAltairBlock() != nil {
 		return wrapperv2.WrappedAltairSignedBeaconBlock(obj.GetAltairBlock())
 	}
-	return nil
+	return nil, errors.New("container has no block")
 }

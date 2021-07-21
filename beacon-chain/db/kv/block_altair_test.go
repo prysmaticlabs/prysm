@@ -8,6 +8,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
+	v2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -26,7 +27,9 @@ func TestStore_SaveAltairBlock_NoDuplicates(t *testing.T) {
 	prevBlock := testutil.NewBeaconBlockAltair()
 	prevBlock.Block.Slot = slot - 1
 	prevBlock.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedAltairSignedBeaconBlock(prevBlock)))
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(prevBlock)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, wsb))
 
 	block := testutil.NewBeaconBlockAltair()
 	block.Block.Slot = slot
@@ -34,7 +37,9 @@ func TestStore_SaveAltairBlock_NoDuplicates(t *testing.T) {
 	// Even with a full cache, saving new blocks should not cause
 	// duplicated blocks in the DB.
 	for i := 0; i < 100; i++ {
-		require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedAltairSignedBeaconBlock(block)))
+		wsb, err = wrapper.WrappedAltairSignedBeaconBlock(block)
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(ctx, wsb))
 	}
 	f := filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot)
 	retrieved, _, err := db.Blocks(ctx, f)
@@ -57,7 +62,9 @@ func TestStore_AltairBlocksCRUD(t *testing.T) {
 	retrievedBlock, err := db.Block(ctx, blockRoot)
 	require.NoError(t, err)
 	assert.DeepEqual(t, nil, retrievedBlock, "Expected nil block")
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedAltairSignedBeaconBlock(block)))
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(block)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, wsb))
 	assert.Equal(t, true, db.HasBlock(ctx, blockRoot), "Expected block to exist in the db")
 	retrievedBlock, err = db.Block(ctx, blockRoot)
 	require.NoError(t, err)
@@ -77,7 +84,9 @@ func TestStore_AltairBlocksBatchDelete(t *testing.T) {
 		b := testutil.NewBeaconBlockAltair()
 		b.Block.Slot = types.Slot(i)
 		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
-		totalBlocks[i] = wrapper.WrappedAltairSignedBeaconBlock(b)
+		wb, err := wrapper.WrappedAltairSignedBeaconBlock(b)
+		require.NoError(t, err)
+		totalBlocks[i] = wb
 		if i%2 == 0 {
 			r, err := totalBlocks[i].Block().HashTreeRoot()
 			require.NoError(t, err)
@@ -112,8 +121,10 @@ func TestStore_AltairBlocksHandleZeroCase(t *testing.T) {
 		b := testutil.NewBeaconBlockAltair()
 		b.Block.Slot = types.Slot(i)
 		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
-		totalBlocks[i] = wrapper.WrappedAltairSignedBeaconBlock(b)
-		_, err := totalBlocks[i].Block().HashTreeRoot()
+		wb, err := wrapper.WrappedAltairSignedBeaconBlock(b)
+		require.NoError(t, err)
+		totalBlocks[i] = wb
+		_, err = totalBlocks[i].Block().HashTreeRoot()
 		require.NoError(t, err)
 	}
 	require.NoError(t, db.SaveBlocks(ctx, totalBlocks))
@@ -133,8 +144,10 @@ func TestStore_AltairBlocksHandleInvalidEndSlot(t *testing.T) {
 		b := testutil.NewBeaconBlockAltair()
 		b.Block.Slot = types.Slot(i) + 1
 		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
-		totalBlocks[i] = wrapper.WrappedAltairSignedBeaconBlock(b)
-		_, err := totalBlocks[i].Block().HashTreeRoot()
+		wb, err := wrapper.WrappedAltairSignedBeaconBlock(b)
+		require.NoError(t, err)
+		totalBlocks[i] = wb
+		_, err = totalBlocks[i].Block().HashTreeRoot()
 		require.NoError(t, err)
 	}
 	require.NoError(t, db.SaveBlocks(ctx, totalBlocks))
@@ -159,7 +172,9 @@ func TestStore_AltairBlocksCRUD_NoCache(t *testing.T) {
 	retrievedBlock, err := db.Block(ctx, blockRoot)
 	require.NoError(t, err)
 	require.DeepEqual(t, nil, retrievedBlock, "Expected nil block")
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedAltairSignedBeaconBlock(block)))
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(block)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, wsb))
 	db.blockCache.Del(string(blockRoot[:]))
 	assert.Equal(t, true, db.HasBlock(ctx, blockRoot), "Expected block to exist in the db")
 	retrievedBlock, err = db.Block(ctx, blockRoot)
@@ -186,12 +201,11 @@ func TestStore_AltairBlocks_FiltersCorrectly(t *testing.T) {
 	b8 := testutil.NewBeaconBlockAltair()
 	b8.Block.Slot = 8
 	b8.Block.ParentRoot = bytesutil.PadTo([]byte("parent4"), 32)
-	blocks := []interfaces.SignedBeaconBlock{
-		wrapper.WrappedAltairSignedBeaconBlock(b4),
-		wrapper.WrappedAltairSignedBeaconBlock(b5),
-		wrapper.WrappedAltairSignedBeaconBlock(b6),
-		wrapper.WrappedAltairSignedBeaconBlock(b7),
-		wrapper.WrappedAltairSignedBeaconBlock(b8),
+	blocks := make([]interfaces.SignedBeaconBlock, 0)
+	for _, b := range []*v2.SignedBeaconBlockAltair{b4, b5, b6, b7, b8} {
+		blk, err := wrapper.WrappedAltairSignedBeaconBlock(b)
+		require.NoError(t, err)
+		blocks = append(blocks, blk)
 	}
 	ctx := context.Background()
 	require.NoError(t, db.SaveBlocks(ctx, blocks))
@@ -270,8 +284,11 @@ func TestStore_AltairBlocks_VerifyBlockRoots(t *testing.T) {
 	r2, err := b2.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedAltairSignedBeaconBlock(b1)))
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedAltairSignedBeaconBlock(b2)))
+	for _, b := range []*v2.SignedBeaconBlockAltair{b1, b2} {
+		wsb, err := wrapper.WrappedAltairSignedBeaconBlock(b)
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(ctx, wsb))
+	}
 
 	filter := filters.NewFilter().SetStartSlot(b1.Block.Slot).SetEndSlot(b2.Block.Slot)
 	roots, err := db.BlockRoots(ctx, filter)
@@ -287,7 +304,9 @@ func TestStore_AltairBlocks_Retrieve_SlotRange(t *testing.T) {
 		b := testutil.NewBeaconBlockAltair()
 		b.Block.Slot = types.Slot(i)
 		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
-		totalBlocks[i] = wrapper.WrappedAltairSignedBeaconBlock(b)
+		wb, err := wrapper.WrappedAltairSignedBeaconBlock(b)
+		require.NoError(t, err)
+		totalBlocks[i] = wb
 	}
 	ctx := context.Background()
 	require.NoError(t, db.SaveBlocks(ctx, totalBlocks))
@@ -304,7 +323,9 @@ func TestStore_AltairBlocks_Retrieve_Epoch(t *testing.T) {
 		b := testutil.NewBeaconBlockAltair()
 		b.Block.Slot = i
 		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
-		totalBlocks[i] = wrapper.WrappedAltairSignedBeaconBlock(b)
+		wb, err := wrapper.WrappedAltairSignedBeaconBlock(b)
+		require.NoError(t, err)
+		totalBlocks[i] = wb
 	}
 	ctx := context.Background()
 	require.NoError(t, db.SaveBlocks(ctx, totalBlocks))
@@ -325,7 +346,9 @@ func TestStore_AltairBlocks_Retrieve_SlotRangeWithStep(t *testing.T) {
 		b := testutil.NewBeaconBlockAltair()
 		b.Block.Slot = types.Slot(i)
 		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
-		totalBlocks[i] = wrapper.WrappedAltairSignedBeaconBlock(b)
+		wb, err := wrapper.WrappedAltairSignedBeaconBlock(b)
+		require.NoError(t, err)
+		totalBlocks[i] = wb
 	}
 	const step = 2
 	ctx := context.Background()
@@ -344,13 +367,16 @@ func TestStore_SaveAltairBlock_CanGetHighestAt(t *testing.T) {
 
 	block1 := testutil.NewBeaconBlockAltair()
 	block1.Block.Slot = 1
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedAltairSignedBeaconBlock(block1)))
 	block2 := testutil.NewBeaconBlockAltair()
 	block2.Block.Slot = 10
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedAltairSignedBeaconBlock(block2)))
 	block3 := testutil.NewBeaconBlockAltair()
 	block3.Block.Slot = 100
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedAltairSignedBeaconBlock(block3)))
+
+	for _, b := range []*v2.SignedBeaconBlockAltair{block1, block2, block3} {
+		wsb, err := wrapper.WrappedAltairSignedBeaconBlock(b)
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(ctx, wsb))
+	}
 
 	highestAt, err := db.HighestSlotBlocksBelow(ctx, 2)
 	require.NoError(t, err)
@@ -382,10 +408,14 @@ func TestStore_GenesisAltairBlock_CanGetHighestAt(t *testing.T) {
 	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesisRoot))
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedAltairSignedBeaconBlock(genesisBlock)))
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(genesisBlock)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, wsb))
 	block1 := testutil.NewBeaconBlockAltair()
 	block1.Block.Slot = 1
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedAltairSignedBeaconBlock(block1)))
+	wsb, err = wrapper.WrappedAltairSignedBeaconBlock(block1)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, wsb))
 
 	highestAt, err := db.HighestSlotBlocksBelow(ctx, 2)
 	require.NoError(t, err)
@@ -402,12 +432,14 @@ func TestStore_SaveAltairBlocks_HasCachedBlocks(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
+	var err error
 	b := make([]interfaces.SignedBeaconBlock, 500)
 	for i := 0; i < 500; i++ {
 		blk := testutil.NewBeaconBlockAltair()
 		blk.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
 		blk.Block.Slot = types.Slot(i)
-		b[i] = wrapper.WrappedAltairSignedBeaconBlock(blk)
+		b[i], err = wrapper.WrappedAltairSignedBeaconBlock(blk)
+		require.NoError(t, err)
 	}
 
 	require.NoError(t, db.SaveBlock(ctx, b[0]))
@@ -423,12 +455,14 @@ func TestStore_SaveAltairBlocks_HasRootsMatched(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
+	var err error
 	b := make([]interfaces.SignedBeaconBlock, 500)
 	for i := 0; i < 500; i++ {
 		blk := testutil.NewBeaconBlockAltair()
 		blk.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
 		blk.Block.Slot = types.Slot(i)
-		b[i] = wrapper.WrappedAltairSignedBeaconBlock(blk)
+		b[i], err = wrapper.WrappedAltairSignedBeaconBlock(blk)
+		require.NoError(t, err)
 	}
 
 	require.NoError(t, db.SaveBlocks(ctx, b))
@@ -451,15 +485,18 @@ func TestStore_AltairBlocksBySlot_BlockRootsBySlot(t *testing.T) {
 
 	b1 := testutil.NewBeaconBlockAltair()
 	b1.Block.Slot = 20
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedAltairSignedBeaconBlock(b1)))
 	b2 := testutil.NewBeaconBlockAltair()
 	b2.Block.Slot = 100
 	b2.Block.ParentRoot = bytesutil.PadTo([]byte("parent1"), 32)
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedAltairSignedBeaconBlock(b2)))
 	b3 := testutil.NewBeaconBlockAltair()
 	b3.Block.Slot = 100
 	b3.Block.ParentRoot = bytesutil.PadTo([]byte("parent2"), 32)
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedAltairSignedBeaconBlock(b3)))
+
+	for _, b := range []*v2.SignedBeaconBlockAltair{b1, b2, b3} {
+		wsb, err := wrapper.WrappedAltairSignedBeaconBlock(b)
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(ctx, wsb))
+	}
 
 	r1, err := b1.Block.HashTreeRoot()
 	require.NoError(t, err)
