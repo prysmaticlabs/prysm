@@ -5,5 +5,5 @@ go_library(
     srcs = ["iface.go"],
     importpath = "github.com/prysmaticlabs/prysm/slasher/detection/proposals/iface",
     visibility = ["//visibility:public"],
-    deps = ["//proto/eth/v1alpha1:go_default_library"],
+    deps = ["//proto/prysm/v1alpha1:go_default_library"],
 )

@@ -1,6 +1,6 @@
 package attestations
 
-import ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+import ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 
 // NaiveAttestationAggregation aggregates naively, without any complex algorithms or optimizations.
 // Note: this is currently a naive implementation to the order of O(mn^2).

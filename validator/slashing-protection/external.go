@@ -3,7 +3,7 @@ package slashingprotection
 import (
 	"context"
 
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // CheckBlockSafety this function is part of slashing protection for block proposals it performs

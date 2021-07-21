@@ -4,7 +4,7 @@ package iface
 import (
 	"context"
 
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // ProposalsDetector defines an interface for different implementations.
