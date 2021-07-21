@@ -11,7 +11,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-var migrationStateValidators0Key = []byte("state_validators_0")
+var migrationStateValidators0Key = []byte("migration_state_validator")
 
 func migrateStateValidators(tx *bolt.Tx) error {
 	if !featureconfig.Get().EnableHistoricalSpaceRepresentation {

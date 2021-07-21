@@ -22,10 +22,11 @@ import (
 var _ iface.Database = (*Store)(nil)
 
 const (
-	// ValidatorEntryCacheSize is set to 1MB since we expect ~100K validator entries (10 times the expected size)
-	ValidatorEntryCacheSize = 1 << 20
-	// NumOfValidatorEntries is set to ~32Mb so as to allow at least 100K validators entries.
-	NumOfValidatorEntries = 1 << 25
+	// NumOfValidatorEntries is the size of the validator cache entries.
+	// we expect to hold a max of 200K validators, so setting it to 2 million (10x the capacity).
+	NumOfValidatorEntries = 1 << 21
+	// ValidatorEntryMaxCost is set to ~64Mb to allow 200K validators entries to be cached.
+	ValidatorEntryMaxCost = 1 << 26
 	// BeaconNodeDbDirName is the name of the directory containing the beacon node database.
 	BeaconNodeDbDirName = "beaconchaindata"
 	// DatabaseFileName is the name of the beacon node database.
@@ -125,9 +126,9 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 	}
 
 	validatorCache, err := ristretto.NewCache(&ristretto.Config{
-		NumCounters: ValidatorEntryCacheSize, // number of keys to track frequency of (1M).
-		MaxCost:     NumOfValidatorEntries,   // maximum size of cache
-		BufferItems: 64,                      // number of keys per Get buffer.
+		NumCounters: NumOfValidatorEntries, // number of entries in cache (2 Million).
+		MaxCost:     ValidatorEntryMaxCost, // maximum size of the cache (64Mb)
+		BufferItems: 64,                    // number of keys per Get buffer.
 	})
 	if err != nil {
 		return nil, err
