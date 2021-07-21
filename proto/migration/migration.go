@@ -3,8 +3,8 @@ package migration
 import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	ethpb_alpha "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
+	ethpb_alpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"google.golang.org/protobuf/proto"
 )
 

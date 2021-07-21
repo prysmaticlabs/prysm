@@ -10,7 +10,7 @@ import (
 	pb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptesting "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"google.golang.org/protobuf/proto"
 )

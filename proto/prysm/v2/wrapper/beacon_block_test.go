@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	v1alpha1 "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/testutil"

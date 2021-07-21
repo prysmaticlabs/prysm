@@ -6,7 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // SetLatestBlockHeader in the beacon state.

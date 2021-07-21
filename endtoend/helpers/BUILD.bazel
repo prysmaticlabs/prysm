@@ -12,7 +12,7 @@ go_library(
     deps = [
         "//endtoend/params:go_default_library",
         "//endtoend/types:go_default_library",
-        "//proto/eth/v1alpha1:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
         "//shared/params:go_default_library",
         "//shared/slotutil:go_default_library",
         "//shared/timeutils:go_default_library",

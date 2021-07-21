@@ -5,5 +5,5 @@ go_library(
     srcs = ["protector.go"],
     importpath = "github.com/prysmaticlabs/prysm/validator/slashing-protection/iface",
     visibility = ["//validator:__subpackages__"],
-    deps = ["//proto/eth/v1alpha1:go_default_library"],
+    deps = ["//proto/prysm/v1alpha1:go_default_library"],
 )
