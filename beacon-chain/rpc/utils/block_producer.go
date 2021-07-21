@@ -75,7 +75,7 @@ type BlockProvider struct {
 }
 
 // TODO
-func (p *BlockProvider) ProduceBlock(ctx context.Context, slot types.Slot, randaoReveal []byte, graffiti []byte) (*ethpb.BeaconBlock, error) {
+func (p *BlockProvider) ProduceBlock(ctx context.Context, slot types.Slot, randaoReveal, graffiti []byte) (*ethpb.BeaconBlock, error) {
 	// Retrieve the parent block as the current head of the canonical chain.
 	parentRoot, err := p.HeadFetcher.HeadRoot(ctx)
 	if err != nil {
