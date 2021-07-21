@@ -53,12 +53,12 @@ type eth1DataAggregatedVote struct {
 	votes int
 }
 
-// TODO
+// BlockProducer is responsible for creating beacon blocks.
 type BlockProducer interface {
 	ProduceBlock(ctx context.Context, slot types.Slot, randaoReveal []byte, graffiti []byte) (*ethpb.BeaconBlock, error)
 }
 
-// TODO
+// BlockProvider is a real implementation of BlockProducer
 type BlockProvider struct {
 	HeadFetcher            blockchain.HeadFetcher
 	Eth1InfoFetcher        powchain.ChainInfoFetcher
@@ -74,7 +74,7 @@ type BlockProvider struct {
 	MockEth1Votes          bool
 }
 
-// TODO
+// ProduceBlock creates an unsigned beacon block from the provided arguments.
 func (p *BlockProvider) ProduceBlock(ctx context.Context, slot types.Slot, randaoReveal, graffiti []byte) (*ethpb.BeaconBlock, error) {
 	// Retrieve the parent block as the current head of the canonical chain.
 	parentRoot, err := p.HeadFetcher.HeadRoot(ctx)
