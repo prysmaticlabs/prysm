@@ -34,7 +34,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func TestProducer_GetBlock_OK(t *testing.T) {
+func TestProducer_ProduceBlock_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
@@ -111,7 +111,7 @@ func TestProducer_GetBlock_OK(t *testing.T) {
 	assert.DeepEqual(t, attSlashings, block.Body.AttesterSlashings)
 }
 
-func TestProducer_GetBlock_AddsUnaggregatedAtts(t *testing.T) {
+func TestProducer_ProduceBlock_AddsUnaggregatedAtts(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
