@@ -304,8 +304,7 @@ func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group,
 }
 
 func (r *testRunner) testDoppelGangerProtection(ctx context.Context) error {
-	// Exit if we are running from
-	// the previous release.
+	// Exit if we are running from the previous release.
 	if r.config.UsePrysmShValidator {
 		return nil
 	}
