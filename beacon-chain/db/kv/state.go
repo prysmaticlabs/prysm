@@ -392,7 +392,7 @@ func (s *Store) validatorEntries(ctx context.Context, blockRoot [32]byte) ([]*et
 
 			// add the bytes to the cache if it was picked up from the DB.
 			if !ok {
-				s.validatorEntryCache.Set(key, encValEntry, int64(len(valEntryBytes)))
+				s.validatorEntryCache.Set(key, valEntryBytes, int64(len(valEntryBytes)))
 			}
 
 			validatorEntries = append(validatorEntries, encValEntry)

@@ -22,10 +22,6 @@ import (
 var _ iface.Database = (*Store)(nil)
 
 const (
-	// VotesCacheSize with 1M validators will be 8MB.
-	VotesCacheSize = 1 << 23
-	// NumOfVotes specifies the vote cache size.
-	NumOfVotes = 1 << 20
 	// ValidatorEntryCacheSize is set to 1MB since we expect ~100K validator entries (10 times the expected size)
 	ValidatorEntryCacheSize = 1 << 20
 	// NumOfValidatorEntries is set to ~32Mb so as to allow at least 100K validators entries.
@@ -78,7 +74,6 @@ type Store struct {
 	db                  *bolt.DB
 	databasePath        string
 	blockCache          *ristretto.Cache
-	validatorIndexCache *ristretto.Cache
 	validatorEntryCache *ristretto.Cache
 	stateSummaryCache   *stateSummaryCache
 	ctx                 context.Context
@@ -129,14 +124,6 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 		return nil, err
 	}
 
-	validatorIndexCache, err := ristretto.NewCache(&ristretto.Config{
-		NumCounters: NumOfVotes,     // number of keys to track frequency of (1M).
-		MaxCost:     VotesCacheSize, // maximum cost of cache (8MB).
-		BufferItems: 64,             // number of keys per Get buffer.
-	})
-	if err != nil {
-		return nil, err
-	}
 
 	validatorCache, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: ValidatorEntryCacheSize, // number of keys to track frequency of (1M).
@@ -151,7 +138,6 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 		db:                  boltDB,
 		databasePath:        dirPath,
 		blockCache:          blockCache,
-		validatorIndexCache: validatorIndexCache,
 		validatorEntryCache: validatorCache,
 		stateSummaryCache:   newStateSummaryCache(),
 		ctx:                 ctx,
