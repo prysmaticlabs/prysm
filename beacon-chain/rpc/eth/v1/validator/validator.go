@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"bytes"
 	"context"
 	"sort"
 
@@ -12,6 +13,7 @@ import (
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	"github.com/prysmaticlabs/prysm/proto/migration"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -168,7 +170,25 @@ func (vs *Server) ProduceAttestationData(ctx context.Context, req *v1.ProduceAtt
 
 // GetAggregateAttestation aggregates all attestations matching the given attestation data root and slot, returning the aggregated result.
 func (vs *Server) GetAggregateAttestation(ctx context.Context, req *v1.AggregateAttestationRequest) (*v1.AggregateAttestationResponse, error) {
-	return nil, errors.New("Unimplemented")
+	ctx, span := trace.StartSpan(ctx, "validatorv1.GetAggregateAttestation")
+	defer span.End()
+
+	allAtts := vs.AttestationsPool.AggregatedAttestations()
+	for _, att := range allAtts {
+		if att.Data.Slot == req.Slot {
+			root, err := att.Data.HashTreeRoot()
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not get attestation data root: %v", err)
+			}
+			if bytes.Equal(root[:], req.AttestationDataRoot) {
+				return &v1.AggregateAttestationResponse{
+					Data: migration.V1Alpha1AttestationToV1(att),
+				}, nil
+			}
+		}
+	}
+
+	return nil, status.Error(codes.InvalidArgument, "No matching attestation found")
 }
 
 // SubmitAggregateAndProofs verifies given aggregate and proofs and publishes them on appropriate gossipsub topic.
