@@ -124,7 +124,6 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 		return nil, err
 	}
 
-
 	validatorCache, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: ValidatorEntryCacheSize, // number of keys to track frequency of (1M).
 		MaxCost:     NumOfValidatorEntries,   // maximum size of cache
