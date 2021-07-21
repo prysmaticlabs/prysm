@@ -324,11 +324,11 @@ func RegisterSlasherHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 }
 
 var (
-	pattern_Slasher_IsSlashableAttestation_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"eth", "v1alpha1", "slasher", "attestations", "slashable"}, ""))
+	pattern_Slasher_IsSlashableAttestation_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"prysm", "v1alpha1", "slasher", "attestations", "slashable"}, ""))
 
-	pattern_Slasher_IsSlashableBlock_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"eth", "v1alpha1", "slasher", "blocks", "slashable"}, ""))
+	pattern_Slasher_IsSlashableBlock_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"prysm", "v1alpha1", "slasher", "blocks", "slashable"}, ""))
 
-	pattern_Slasher_HighestAttestations_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"eth", "v1alpha1", "slasher", "attestations", "highest"}, ""))
+	pattern_Slasher_HighestAttestations_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"prysm", "v1alpha1", "slasher", "attestations", "highest"}, ""))
 )
 
 var (
