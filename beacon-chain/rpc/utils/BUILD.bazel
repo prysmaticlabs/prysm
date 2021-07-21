@@ -7,7 +7,7 @@ go_library(
         "producer_attestations.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/utils",
-    visibility = ["//visibility:public"],
+    visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/blockchain:go_default_library",
         "//beacon-chain/cache/depositcache:go_default_library",
