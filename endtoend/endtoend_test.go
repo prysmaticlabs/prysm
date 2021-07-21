@@ -320,7 +320,7 @@ func (r *testRunner) testDoppelGangerProtection(ctx context.Context) error {
 	validatorsPerNode := validatorNum / beaconNodeNum
 	valIndex := beaconNodeNum + 1
 
-	// Replicate starting up validator clien 0 to test doppleganger protection.
+	// Replicate starting up validator client 0 to test doppleganger protection.
 	valNode := components.NewValidatorNode(r.config, validatorsPerNode, valIndex, validatorsPerNode*0)
 	g.Go(func() error {
 		return valNode.Start(ctx)
