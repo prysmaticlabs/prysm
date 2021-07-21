@@ -5,7 +5,7 @@ package ethereum_beacon_p2p_v1
 import (
 	ssz "github.com/ferranbt/fastssz"
 	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/eth2-types"
-	v1alpha1 "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // MarshalSSZ ssz marshals the Status object

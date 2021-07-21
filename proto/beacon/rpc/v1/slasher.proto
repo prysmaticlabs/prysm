@@ -3,7 +3,7 @@ syntax = "proto3";
 package ethereum.beacon.rpc.v1;
 
 import "proto/eth/ext/options.proto";
-import "proto/eth/v1alpha1/beacon_block.proto";
+import "proto/prysm/v1alpha1/beacon_block.proto";
 
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
@@ -15,7 +15,7 @@ service Slasher {
   // Returns any found attester slashings for an input indexed attestation.
   rpc IsSlashableAttestation(ethereum.eth.v1alpha1.IndexedAttestation) returns (AttesterSlashingResponse) {
     option (google.api.http) = {
-      post: "/eth/v1alpha1/slasher/attestations/slashable",
+      post: "/prysm/v1alpha1/slasher/attestations/slashable",
       body: "*"
     };
   }
@@ -23,14 +23,14 @@ service Slasher {
   // Returns any found proposer slashings for an input signed block header.
   rpc IsSlashableBlock(ethereum.eth.v1alpha1.SignedBeaconBlockHeader) returns (ProposerSlashingResponse) {
     option (google.api.http) = {
-      get: "/eth/v1alpha1/slasher/blocks/slashable"
+      get: "/prysm/v1alpha1/slasher/blocks/slashable"
     };
   }
 
   // Returns the highest source and target attestation for validator indices that have been observed by slasher.
   rpc HighestAttestations(HighestAttestationRequest) returns (HighestAttestationResponse) {
     option (google.api.http) = {
-      get: "/eth/v1alpha1/slasher/attestations/highest"
+      get: "/prysm/v1alpha1/slasher/attestations/highest"
     };
   }
 }

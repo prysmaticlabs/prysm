@@ -9,7 +9,7 @@ proto_library(
     srcs = ["slashing.proto"],
     visibility = ["//visibility:public"],
     deps = [
-        "//proto/eth/v1alpha1:proto",
+        "//proto/prysm/v1alpha1:proto",
         "//proto/eth/ext:proto",
         "@com_google_protobuf//:empty_proto",
     ],
@@ -23,7 +23,7 @@ go_proto_library(
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
-        "//proto/eth/v1alpha1:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
         "//proto/eth/ext:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@com_github_golang_protobuf//proto:go_default_library",

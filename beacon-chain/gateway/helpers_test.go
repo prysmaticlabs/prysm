@@ -17,7 +17,7 @@ func TestDefaultConfig(t *testing.T) {
 		assert.Equal(t, 4, len(cfg.V1PbMux.Registrations))
 		assert.NotNil(t, cfg.V1Alpha1PbMux.Mux)
 		require.Equal(t, 1, len(cfg.V1Alpha1PbMux.Patterns))
-		assert.Equal(t, "/eth/v1alpha1/", cfg.V1Alpha1PbMux.Patterns[0])
+		assert.Equal(t, "/prysm/v1alpha1/", cfg.V1Alpha1PbMux.Patterns[0])
 		assert.Equal(t, 4, len(cfg.V1Alpha1PbMux.Registrations))
 	})
 
@@ -30,7 +30,7 @@ func TestDefaultConfig(t *testing.T) {
 		assert.Equal(t, 5, len(cfg.V1PbMux.Registrations))
 		assert.NotNil(t, cfg.V1Alpha1PbMux.Mux)
 		require.Equal(t, 1, len(cfg.V1Alpha1PbMux.Patterns))
-		assert.Equal(t, "/eth/v1alpha1/", cfg.V1Alpha1PbMux.Patterns[0])
+		assert.Equal(t, "/prysm/v1alpha1/", cfg.V1Alpha1PbMux.Patterns[0])
 		assert.Equal(t, 5, len(cfg.V1Alpha1PbMux.Registrations))
 	})
 }

@@ -20,9 +20,9 @@ import "google/protobuf/empty.proto";
 
 import "proto/eth/ext/options.proto";
 
-import "proto/eth/v1alpha1/validator.proto";
-import "proto/eth/v1alpha1/beacon_block.proto";
-import "proto/eth/v1alpha1/beacon_chain.proto";
+import "proto/prysm/v1alpha1/validator.proto";
+import "proto/prysm/v1alpha1/beacon_block.proto";
+import "proto/prysm/v1alpha1/beacon_chain.proto";
 
 import "proto/prysm/v2/beacon_block.proto";
 import "proto/prysm/v2/sync_committee.proto";

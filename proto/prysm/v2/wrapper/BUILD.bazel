@@ -6,8 +6,8 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper",
     visibility = ["//visibility:public"],
     deps = [
-        "//proto/eth/v1alpha1:go_default_library",
         "//proto/interfaces:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v2:go_default_library",
         "//shared/copyutil:go_default_library",
         "//shared/version:go_default_library",
@@ -22,7 +22,7 @@ go_test(
     srcs = ["beacon_block_test.go"],
     deps = [
         ":go_default_library",
-        "//proto/eth/v1alpha1:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v2:go_default_library",
         "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",
