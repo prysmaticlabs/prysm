@@ -298,11 +298,11 @@ func TestService_ReceiveBlockBatch_UpdateFinalizedCheckpoint(t *testing.T) {
 	// Generate 5 epochs worth of blocks.
 	var blks []interfaces.SignedBeaconBlock
 	var roots [][32]byte
-	copy := genesis.Copy()
+	copied := genesis.Copy()
 	for i := types.Slot(1); i < params.BeaconConfig().SlotsPerEpoch*5; i++ {
-		b, err := testutil.GenerateFullBlock(copy, keys, testutil.DefaultBlockGenConfig(), i)
+		b, err := testutil.GenerateFullBlock(copied, keys, testutil.DefaultBlockGenConfig(), i)
 		assert.NoError(t, err)
-		copy, err = state.ExecuteStateTransition(context.Background(), copy, wrapper.WrappedPhase0SignedBeaconBlock(b))
+		copied, err = state.ExecuteStateTransition(context.Background(), copied, wrapper.WrappedPhase0SignedBeaconBlock(b))
 		assert.NoError(t, err)
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
