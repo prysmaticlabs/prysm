@@ -55,6 +55,24 @@ func TestValidateNoArgs(t *testing.T) {
 		Commands: []*cli.Command{
 			{
 				Name: "bar",
+				Subcommands: []*cli.Command{
+					{
+						Name: "subComm1",
+						Subcommands: []*cli.Command{
+							{
+								Name: "subComm3",
+							},
+						},
+					},
+					{
+						Name: "subComm2",
+						Subcommands: []*cli.Command{
+							{
+								Name: "subComm4",
+							},
+						},
+					},
+				},
 			},
 		},
 	}
@@ -71,4 +89,39 @@ func TestValidateNoArgs(t *testing.T) {
 	// It should fail on unregistered flag (default logic in urfave/cli).
 	err = app.Run([]string{"command", "bar", "--baz"})
 	require.ErrorContains(t, "flag provided but not defined", err)
+
+	// Handle Nested Subcommands
+
+	err = app.Run([]string{"command", "bar", "subComm1"})
+	require.NoError(t, err)
+
+	err = app.Run([]string{"command", "bar", "subComm2"})
+	require.NoError(t, err)
+
+	// Should fail from unknown subcommands.
+	err = app.Run([]string{"command", "bar", "subComm3"})
+	require.ErrorContains(t, "unrecognized argument: subComm3", err)
+
+	err = app.Run([]string{"command", "bar", "subComm4"})
+	require.ErrorContains(t, "unrecognized argument: subComm4", err)
+
+	// Should fail with invalid double nested subcommands.
+	err = app.Run([]string{"command", "bar", "subComm1", "subComm2"})
+	require.ErrorContains(t, "unrecognized argument: subComm2", err)
+
+	err = app.Run([]string{"command", "bar", "subComm1", "subComm4"})
+	require.ErrorContains(t, "unrecognized argument: subComm4", err)
+
+	err = app.Run([]string{"command", "bar", "subComm2", "subComm1"})
+	require.ErrorContains(t, "unrecognized argument: subComm1", err)
+
+	err = app.Run([]string{"command", "bar", "subComm2", "subComm3"})
+	require.ErrorContains(t, "unrecognized argument: subComm3", err)
+
+	// Should pass with correct nested double subcommands.
+	err = app.Run([]string{"command", "bar", "subComm1", "subComm3"})
+	require.NoError(t, err)
+
+	err = app.Run([]string{"command", "bar", "subComm2", "subComm4"})
+	require.NoError(t, err)
 }
