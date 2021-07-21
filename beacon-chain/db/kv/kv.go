@@ -21,10 +21,6 @@ import (
 var _ iface.Database = (*Store)(nil)
 
 const (
-	// VotesCacheSize with 1M validators will be 8MB.
-	VotesCacheSize = 1 << 23
-	// NumOfVotes specifies the vote cache size.
-	NumOfVotes = 1 << 20
 	// BeaconNodeDbDirName is the name of the directory containing the beacon node database.
 	BeaconNodeDbDirName = "beaconchaindata"
 	// DatabaseFileName is the name of the beacon node database.
@@ -56,12 +52,11 @@ type Config struct {
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for Ethereum Beacon Nodes.
 type Store struct {
-	db                  *bolt.DB
-	databasePath        string
-	blockCache          *ristretto.Cache
-	validatorIndexCache *ristretto.Cache
-	stateSummaryCache   *stateSummaryCache
-	ctx                 context.Context
+	db                *bolt.DB
+	databasePath      string
+	blockCache        *ristretto.Cache
+	stateSummaryCache *stateSummaryCache
+	ctx               context.Context
 }
 
 // KVStoreDatafilePath is the canonical construction of a full
@@ -109,22 +104,12 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 		return nil, err
 	}
 
-	validatorCache, err := ristretto.NewCache(&ristretto.Config{
-		NumCounters: NumOfVotes,     // number of keys to track frequency of (1M).
-		MaxCost:     VotesCacheSize, // maximum cost of cache (8MB).
-		BufferItems: 64,             // number of keys per Get buffer.
-	})
-	if err != nil {
-		return nil, err
-	}
-
 	kv := &Store{
-		db:                  boltDB,
-		databasePath:        dirPath,
-		blockCache:          blockCache,
-		validatorIndexCache: validatorCache,
-		stateSummaryCache:   newStateSummaryCache(),
-		ctx:                 ctx,
+		db:                boltDB,
+		databasePath:      dirPath,
+		blockCache:        blockCache,
+		stateSummaryCache: newStateSummaryCache(),
+		ctx:               ctx,
 	}
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
