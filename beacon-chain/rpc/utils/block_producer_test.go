@@ -98,7 +98,7 @@ func TestProducer_ProduceBlock_OK(t *testing.T) {
 	graffiti := graffiti32[:]
 	slot := types.Slot(1)
 
-	block, err := producer.ProduceBlock(ctx, 1, randaoReveal, graffiti[:])
+	block, err := producer.ProduceBlock(ctx, 1, randaoReveal, graffiti)
 	require.NoError(t, err)
 
 	assert.Equal(t, slot, block.Slot, "Expected block to have slot of 1")
