@@ -196,10 +196,9 @@ func (s *Service) Start() {
 		BlockProducer:          s.cfg.BlockProducer,
 	}
 	validatorServerV1 := &validator.Server{
-		HeadFetcher:   s.cfg.HeadFetcher,
-		TimeFetcher:   s.cfg.GenesisTimeFetcher,
-		SyncChecker:   s.cfg.SyncService,
-		BlockProducer: s.cfg.BlockProducer,
+		HeadFetcher: s.cfg.HeadFetcher,
+		TimeFetcher: s.cfg.GenesisTimeFetcher,
+		SyncChecker: s.cfg.SyncService,
 	}
 
 	nodeServer := &nodev1alpha1.Server{
