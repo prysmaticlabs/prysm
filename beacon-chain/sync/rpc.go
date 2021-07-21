@@ -9,6 +9,7 @@ import (
 	ssz "github.com/ferranbt/fastssz"
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/libp2p/go-libp2p-core/protocol"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
@@ -91,6 +92,18 @@ func (s *Service) registerRPCHandlersAltair() {
 		p2p.RPCMetaDataTopicV2,
 		s.metaDataHandler,
 	)
+}
+
+// Remove all v1 Stream handlers that are no longer supported
+// from altair onwards.
+func (s *Service) unregisterPhase0Handlers() {
+	fullBlockRangeTopic := p2p.RPCBlocksByRangeTopicV1 + s.cfg.P2P.Encoding().ProtocolSuffix()
+	fullBlockRootTopic := p2p.RPCBlocksByRootTopicV1 + s.cfg.P2P.Encoding().ProtocolSuffix()
+	fullMetadataTopic := p2p.RPCMetaDataTopicV1 + s.cfg.P2P.Encoding().ProtocolSuffix()
+
+	s.cfg.P2P.Host().RemoveStreamHandler(protocol.ID(fullBlockRangeTopic))
+	s.cfg.P2P.Host().RemoveStreamHandler(protocol.ID(fullBlockRootTopic))
+	s.cfg.P2P.Host().RemoveStreamHandler(protocol.ID(fullMetadataTopic))
 }
 
 // registerRPC for a given topic with an expected protobuf message type.
