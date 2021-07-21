@@ -33,10 +33,10 @@ func TestAltairSignedBeaconBlock_Block(t *testing.T) {
 }
 
 func TestAltairSignedBeaconBlock_IsNil(t *testing.T) {
-	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(nil)
+	_, err := wrapper.WrappedAltairSignedBeaconBlock(nil)
 	require.Equal(t, wrapper.ErrNilObjectWrapped, err)
 
-	wsb, err = wrapper.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlock{Block: &prysmv2.BeaconBlockAltair{}})
+	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(&prysmv2.SignedBeaconBlock{Block: &prysmv2.BeaconBlockAltair{}})
 	require.NoError(t, err)
 
 	assert.Equal(t, false, wsb.IsNil())
@@ -150,10 +150,10 @@ func TestAltairBeaconBlock_Body(t *testing.T) {
 }
 
 func TestAltairBeaconBlock_IsNil(t *testing.T) {
-	wb, err := wrapper.WrappedAltairBeaconBlock(nil)
+	_, err := wrapper.WrappedAltairBeaconBlock(nil)
 	require.Equal(t, wrapper.ErrNilObjectWrapped, err)
 
-	wb, err = wrapper.WrappedAltairBeaconBlock(&prysmv2.BeaconBlockAltair{})
+	wb, err := wrapper.WrappedAltairBeaconBlock(&prysmv2.BeaconBlockAltair{})
 	require.NoError(t, err)
 
 	assert.Equal(t, false, wb.IsNil())
@@ -280,10 +280,10 @@ func TestAltairBeaconBlockBody_VoluntaryExits(t *testing.T) {
 }
 
 func TestAltairBeaconBlockBody_IsNil(t *testing.T) {
-	wbb, err := wrapper.WrappedAltairBeaconBlockBody(nil)
+	_, err := wrapper.WrappedAltairBeaconBlockBody(nil)
 	require.Equal(t, wrapper.ErrNilObjectWrapped, err)
 
-	wbb, err = wrapper.WrappedAltairBeaconBlockBody(&prysmv2.BeaconBlockBodyAltair{})
+	wbb, err := wrapper.WrappedAltairBeaconBlockBody(&prysmv2.BeaconBlockBodyAltair{})
 	require.NoError(t, err)
 	assert.Equal(t, false, wbb.IsNil())
 
