@@ -21,7 +21,7 @@ go_test(
     srcs = ["hash_test.go"],
     deps = [
         ":go_default_library",
-        "//proto/eth/v1alpha1:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
         "//proto/testing:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
