@@ -36,8 +36,7 @@ const (
 	// stalled (safety measure for nodes stuck at startup, shouldn't normally happen).
 	allNodesStartTimeout = 5 * time.Minute
 
-	// errGeneralCode is used to represent the string value for all general process
-	// errors.
+	// errGeneralCode is used to represent the string value for all general process errors.
 	errGeneralCode = "exit status 1"
 )
 
