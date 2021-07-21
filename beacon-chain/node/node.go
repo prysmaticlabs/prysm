@@ -33,7 +33,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/apimiddleware"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/utils"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	regularsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
@@ -566,21 +565,6 @@ func (b *BeaconNode) registerRPCService() error {
 	maxMsgSize := b.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 	p2pService := b.fetchP2P()
 
-	blockProducer := &utils.BlockProvider{
-		HeadFetcher:            chainService,
-		Eth1InfoFetcher:        web3Service,
-		Eth1BlockFetcher:       web3Service,
-		DepositFetcher:         depositFetcher,
-		ChainStartFetcher:      chainStartFetcher,
-		BlockFetcher:           web3Service,
-		PendingDepositsFetcher: b.depositCache,
-		AttPool:                b.attestationPool,
-		SlashingsPool:          b.slashingsPool,
-		ExitPool:               b.exitPool,
-		StateGen:               b.stateGen,
-		MockEth1Votes:          mockEth1DataVotes,
-	}
-
 	rpcService := rpc.NewService(b.ctx, &rpc.Config{
 		Host:                    host,
 		Port:                    port,
@@ -617,7 +601,6 @@ func (b *BeaconNode) registerRPCService() error {
 		StateGen:                b.stateGen,
 		EnableDebugRPCEndpoints: enableDebugRPCEndpoints,
 		MaxMsgSize:              maxMsgSize,
-		BlockProducer:           blockProducer,
 	})
 
 	return b.services.RegisterService(rpcService)

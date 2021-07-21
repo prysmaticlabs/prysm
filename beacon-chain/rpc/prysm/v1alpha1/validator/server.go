@@ -17,14 +17,12 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/utils"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -38,31 +36,23 @@ import (
 // and committees in which particular validators need to perform their responsibilities,
 // and more.
 type Server struct {
-	Ctx                    context.Context
-	AttestationCache       *cache.AttestationCache
-	HeadFetcher            blockchain.HeadFetcher
-	ForkFetcher            blockchain.ForkFetcher
-	FinalizationFetcher    blockchain.FinalizationFetcher
-	TimeFetcher            blockchain.TimeFetcher
-	CanonicalStateChan     chan *pbp2p.BeaconState
-	BlockFetcher           powchain.POWBlockFetcher
-	DepositFetcher         depositcache.DepositFetcher
-	ChainStartFetcher      powchain.ChainStartFetcher
-	Eth1InfoFetcher        powchain.ChainInfoFetcher
-	SyncChecker            sync.Checker
-	StateNotifier          statefeed.Notifier
-	BlockNotifier          blockfeed.Notifier
-	P2P                    p2p.Broadcaster
-	AttPool                attestations.Pool
-	SlashingsPool          slashings.PoolManager
-	ExitPool               voluntaryexits.PoolManager
-	BlockReceiver          blockchain.BlockReceiver
-	MockEth1Votes          bool
-	Eth1BlockFetcher       powchain.POWBlockFetcher
-	PendingDepositsFetcher depositcache.PendingDepositsFetcher
-	OperationNotifier      opfeed.Notifier
-	StateGen               stategen.StateManager
-	BlockProducer          utils.BlockProducer
+	Ctx               context.Context
+	AttestationCache  *cache.AttestationCache
+	HeadFetcher       blockchain.HeadFetcher
+	ForkFetcher       blockchain.ForkFetcher
+	TimeFetcher       blockchain.TimeFetcher
+	DepositFetcher    depositcache.DepositFetcher
+	Eth1InfoFetcher   powchain.ChainInfoFetcher
+	SyncChecker       sync.Checker
+	StateNotifier     statefeed.Notifier
+	BlockNotifier     blockfeed.Notifier
+	P2P               p2p.Broadcaster
+	AttPool           attestations.Pool
+	ExitPool          voluntaryexits.PoolManager
+	BlockReceiver     blockchain.BlockReceiver
+	OperationNotifier opfeed.Notifier
+	StateGen          stategen.StateManager
+	BlockProducer     utils.BlockProducer
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current

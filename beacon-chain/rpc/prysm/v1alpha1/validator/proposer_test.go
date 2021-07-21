@@ -56,13 +56,11 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 
 	c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
 	proposerServer := &Server{
-		ChainStartFetcher: &mockPOW.POWChain{},
-		Eth1InfoFetcher:   &mockPOW.POWChain{},
-		Eth1BlockFetcher:  &mockPOW.POWChain{},
-		BlockReceiver:     c,
-		HeadFetcher:       c,
-		BlockNotifier:     c.BlockNotifier(),
-		P2P:               mockp2p.NewTestP2P(t),
+		Eth1InfoFetcher: &mockPOW.POWChain{},
+		BlockReceiver:   c,
+		HeadFetcher:     c,
+		BlockNotifier:   c.BlockNotifier(),
+		P2P:             mockp2p.NewTestP2P(t),
 	}
 	req := testutil.NewBeaconBlock()
 	req.Block.Slot = 5

@@ -107,7 +107,6 @@ type Config struct {
 	OperationNotifier       opfeed.Notifier
 	StateGen                *stategen.State
 	MaxMsgSize              int
-	BlockProducer           utils.BlockProducer
 }
 
 // NewService instantiates a new RPC service instance that will
@@ -168,32 +167,39 @@ func (s *Service) Start() {
 	}
 	s.grpcServer = grpc.NewServer(opts...)
 
-	validatorServer := &validatorv1alpha1.Server{
-		Ctx:                    s.ctx,
-		AttestationCache:       cache.NewAttestationCache(),
-		AttPool:                s.cfg.AttestationsPool,
-		ExitPool:               s.cfg.ExitPool,
+	blockProducer := &utils.BlockProvider{
 		HeadFetcher:            s.cfg.HeadFetcher,
-		ForkFetcher:            s.cfg.ForkFetcher,
-		FinalizationFetcher:    s.cfg.FinalizationFetcher,
-		TimeFetcher:            s.cfg.GenesisTimeFetcher,
-		CanonicalStateChan:     s.canonicalStateChan,
-		BlockFetcher:           s.cfg.POWChainService,
+		Eth1InfoFetcher:        s.cfg.POWChainService,
+		Eth1BlockFetcher:       s.cfg.POWChainService,
 		DepositFetcher:         s.cfg.DepositFetcher,
 		ChainStartFetcher:      s.cfg.ChainStartFetcher,
-		Eth1InfoFetcher:        s.cfg.POWChainService,
-		SyncChecker:            s.cfg.SyncService,
-		StateNotifier:          s.cfg.StateNotifier,
-		BlockNotifier:          s.cfg.BlockNotifier,
-		OperationNotifier:      s.cfg.OperationNotifier,
-		P2P:                    s.cfg.Broadcaster,
-		BlockReceiver:          s.cfg.BlockReceiver,
-		MockEth1Votes:          s.cfg.MockEth1Votes,
-		Eth1BlockFetcher:       s.cfg.POWChainService,
+		BlockFetcher:           s.cfg.POWChainService,
 		PendingDepositsFetcher: s.cfg.PendingDepositFetcher,
+		AttPool:                s.cfg.AttestationsPool,
 		SlashingsPool:          s.cfg.SlashingsPool,
+		ExitPool:               s.cfg.ExitPool,
 		StateGen:               s.cfg.StateGen,
-		BlockProducer:          s.cfg.BlockProducer,
+		MockEth1Votes:          s.cfg.MockEth1Votes,
+	}
+
+	validatorServer := &validatorv1alpha1.Server{
+		Ctx:               s.ctx,
+		AttestationCache:  cache.NewAttestationCache(),
+		AttPool:           s.cfg.AttestationsPool,
+		ExitPool:          s.cfg.ExitPool,
+		HeadFetcher:       s.cfg.HeadFetcher,
+		ForkFetcher:       s.cfg.ForkFetcher,
+		TimeFetcher:       s.cfg.GenesisTimeFetcher,
+		DepositFetcher:    s.cfg.DepositFetcher,
+		Eth1InfoFetcher:   s.cfg.POWChainService,
+		SyncChecker:       s.cfg.SyncService,
+		StateNotifier:     s.cfg.StateNotifier,
+		BlockNotifier:     s.cfg.BlockNotifier,
+		OperationNotifier: s.cfg.OperationNotifier,
+		P2P:               s.cfg.Broadcaster,
+		BlockReceiver:     s.cfg.BlockReceiver,
+		StateGen:          s.cfg.StateGen,
+		BlockProducer:     blockProducer,
 	}
 	validatorServerV1 := &validator.Server{
 		HeadFetcher: s.cfg.HeadFetcher,

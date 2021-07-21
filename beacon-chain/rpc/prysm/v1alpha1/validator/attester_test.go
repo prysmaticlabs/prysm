@@ -128,9 +128,6 @@ func TestGetAttestationData_OK(t *testing.T) {
 		HeadFetcher: &mock.ChainService{
 			State: beaconState, Root: blockRoot[:],
 		},
-		FinalizationFetcher: &mock.ChainService{
-			CurrentJustifiedCheckPoint: beaconState.CurrentJustifiedCheckpoint(),
-		},
 		TimeFetcher: &mock.ChainService{
 			Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second),
 		},
@@ -225,12 +222,9 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 		P2P:              &mockp2p.MockBroadcaster{},
 		AttestationCache: cache.NewAttestationCache(),
 		HeadFetcher:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
-		FinalizationFetcher: &mock.ChainService{
-			CurrentJustifiedCheckPoint: beaconState.CurrentJustifiedCheckpoint(),
-		},
-		SyncChecker:   &mockSync.Sync{IsSyncing: false},
-		TimeFetcher:   &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
-		StateNotifier: chainService.StateNotifier(),
+		SyncChecker:      &mockSync.Sync{IsSyncing: false},
+		TimeFetcher:      &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+		StateNotifier:    chainService.StateNotifier(),
 	}
 
 	req := &ethpb.AttestationDataRequest{
@@ -384,14 +378,13 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 	}
 	offset = int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 	attesterServer := &Server{
-		P2P:                 &mockp2p.MockBroadcaster{},
-		SyncChecker:         &mockSync.Sync{IsSyncing: false},
-		AttestationCache:    cache.NewAttestationCache(),
-		HeadFetcher:         &mock.ChainService{State: beaconState, Root: blockRoot[:]},
-		FinalizationFetcher: &mock.ChainService{CurrentJustifiedCheckPoint: beaconState.CurrentJustifiedCheckpoint()},
-		TimeFetcher:         &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
-		StateNotifier:       chainService.StateNotifier(),
-		StateGen:            stategen.New(db),
+		P2P:              &mockp2p.MockBroadcaster{},
+		SyncChecker:      &mockSync.Sync{IsSyncing: false},
+		AttestationCache: cache.NewAttestationCache(),
+		HeadFetcher:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
+		TimeFetcher:      &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+		StateNotifier:    chainService.StateNotifier(),
+		StateGen:         stategen.New(db),
 	}
 	require.NoError(t, db.SaveState(ctx, beaconState, blockRoot))
 	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block)))
@@ -460,9 +453,6 @@ func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 		AttestationCache: cache.NewAttestationCache(),
 		HeadFetcher: &mock.ChainService{
 			State: beaconState, Root: blockRoot[:],
-		},
-		FinalizationFetcher: &mock.ChainService{
-			CurrentJustifiedCheckPoint: beaconState.CurrentJustifiedCheckpoint(),
 		},
 		TimeFetcher:   &mock.ChainService{Genesis: timeutils.Now().Add(time.Duration(-1*offset) * time.Second)},
 		StateNotifier: chainService.StateNotifier(),
