@@ -65,7 +65,7 @@ func (s *Service) HeadCurrentSyncCommitteeIndices(ctx context.Context, index typ
 	if err != nil {
 		return nil, err
 	}
-	return helpers.CurrentEpochSyncSubcommitteeIndices(headState, index)
+	return helpers.CurrentPeriodSyncSubcommitteeIndices(headState, index)
 }
 
 // HeadNextSyncCommitteeIndices returns the input validator `index`'s position indices in the next sync committee with respect to `slot`.
@@ -78,7 +78,7 @@ func (s *Service) HeadNextSyncCommitteeIndices(ctx context.Context, index types.
 	if err != nil {
 		return nil, err
 	}
-	return helpers.NextEpochSyncSubcommitteeIndices(headState, index)
+	return helpers.NextPeriodSyncSubcommitteeIndices(headState, index)
 }
 
 // HeadSyncCommitteePubKeys returns the head sync committee public keys with respect to `slot` and subcommittee index `committeeIndex`.
