@@ -35,6 +35,10 @@ const (
 	// allNodesStartTimeout defines period after which nodes are considered
 	// stalled (safety measure for nodes stuck at startup, shouldn't normally happen).
 	allNodesStartTimeout = 5 * time.Minute
+
+	// errGeneralCode is used to represent the string value for all general process
+	// errors.
+	errGeneralCode = "exit status 1"
 )
 
 func init() {
@@ -181,7 +185,10 @@ func (r *testRunner) run() {
 		if !config.TestSync {
 			return nil
 		}
-		return r.testBeaconChainSync(ctx, g, conns, tickingStartTime, bootNode.ENR())
+		if err := r.testBeaconChainSync(ctx, g, conns, tickingStartTime, bootNode.ENR()); err != nil {
+			return err
+		}
+		return r.testDoppelGangerProtection(ctx)
 	})
 
 	if err := g.Wait(); err != nil && !errors.Is(err, context.Canceled) {
@@ -294,5 +301,41 @@ func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group,
 		})
 	}
 
+	return nil
+}
+
+func (r *testRunner) testDoppelGangerProtection(ctx context.Context) error {
+	g, ctx := errgroup.WithContext(ctx)
+	// Follow same parameters as older validators.
+	validatorNum := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	beaconNodeNum := e2e.TestParams.BeaconNodeCount
+	if validatorNum%beaconNodeNum != 0 {
+		return errors.New("validator count is not easily divisible by beacon node count")
+	}
+	validatorsPerNode := validatorNum / beaconNodeNum
+	valIndex := beaconNodeNum + 1
+
+	// Replicate starting up validator clien 0 to test doppleganger protection.
+	valNode := components.NewValidatorNode(r.config, validatorsPerNode, valIndex, validatorsPerNode*0)
+	g.Go(func() error {
+		return valNode.Start(ctx)
+	})
+	if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{valNode}); err != nil {
+		return fmt.Errorf("validator not ready: %w", err)
+	}
+	logFile, err := os.Create(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.ValidatorLogFileName, valIndex)))
+	if err != nil {
+		return fmt.Errorf("unable to open log file: %v", err)
+	}
+	r.t.Run("doppelganger found", func(t *testing.T) {
+		assert.NoError(t, helpers.WaitForTextInFile(logFile, "Could not succeed with doppelganger check"), "Failed to carry out doppelganger check")
+	})
+	if r.t.Failed() {
+		return errors.New("cannot perform doppelganger check")
+	}
+	// Expect an abrupt exit for the validator client.
+	if err := g.Wait(); err == nil || strings.Contains(err.Error(), errGeneralCode) {
+		return fmt.Errorf("wanted an error of %s but received %v", errGeneralCode, err)
+	}
 	return nil
 }
