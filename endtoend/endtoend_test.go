@@ -331,13 +331,13 @@ func (r *testRunner) testDoppelGangerProtection(ctx context.Context) error {
 		return fmt.Errorf("unable to open log file: %v", err)
 	}
 	r.t.Run("doppelganger found", func(t *testing.T) {
-		assert.NoError(t, helpers.WaitForTextInFile(logFile, "Could not succeed with doppelganger check"), "Failed to carry out doppelganger check")
+		assert.NoError(t, helpers.WaitForTextInFile(logFile, "Duplicate instances exists in the network for validator keys"), "Failed to carry out doppelganger check correctly")
 	})
 	if r.t.Failed() {
-		return errors.New("cannot perform doppelganger check")
+		return errors.New("doppelganger was unable to be found")
 	}
 	// Expect an abrupt exit for the validator client.
-	if err := g.Wait(); err == nil || strings.Contains(err.Error(), errGeneralCode) {
+	if err := g.Wait(); err == nil || !strings.Contains(err.Error(), errGeneralCode) {
 		return fmt.Errorf("wanted an error of %s but received %v", errGeneralCode, err)
 	}
 	return nil
