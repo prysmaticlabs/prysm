@@ -245,7 +245,7 @@ func proposalDependentRoot(s iface.BeaconState, epoch types.Epoch) ([]byte, erro
 // advanceState advances state with empty transitions up to the requested epoch start slot.
 // In case 1 epoch ahead was requested, we take the start slot of the current epoch.
 // Taking the start slot of the next epoch would result in an error inside state.ProcessSlots.
-func advanceState(ctx context.Context, s iface.BeaconState, requestedEpoch types.Epoch, currentEpoch types.Epoch) (iface.BeaconState, error) {
+func advanceState(ctx context.Context, s iface.BeaconState, requestedEpoch, currentEpoch types.Epoch) (iface.BeaconState, error) {
 	var epochStartSlot types.Slot
 	var err error
 	if requestedEpoch == currentEpoch+1 {
