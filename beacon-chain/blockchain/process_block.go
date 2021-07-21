@@ -309,6 +309,10 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed interf
 		if err := s.updateFinalized(ctx, fCheckpoint); err != nil {
 			return err
 		}
+		if featureconfig.Get().UpdateHeadTimely {
+			s.prevFinalizedCheckpt = s.finalizedCheckpt
+			s.finalizedCheckpt = fCheckpoint
+		}
 	}
 	return nil
 }
