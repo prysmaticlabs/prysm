@@ -39,7 +39,7 @@ var (
 // reset maps and reinitialize them.
 func InitializeDataMaps() {
 	// Reset our block map.
-	BlockMap = map[[4]byte]func() (interfaces.SignedBeaconBlock, error) {
+	BlockMap = map[[4]byte]func() (interfaces.SignedBeaconBlock, error){
 		bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): func() (interfaces.SignedBeaconBlock, error) {
 			return wrapperv1.WrappedPhase0SignedBeaconBlock(&eth.SignedBeaconBlock{}), nil
 		},

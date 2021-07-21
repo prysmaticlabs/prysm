@@ -118,7 +118,7 @@ func (vs *Server) syncSubcommitteeIndex(
 	}
 	switch {
 	case helpers.SyncCommitteePeriod(nextSlotEpoch) == helpers.SyncCommitteePeriod(currentEpoch):
-		indices, err := helpers.CurrentEpochSyncSubcommitteeIndices(headState, valIdx)
+		indices, err := helpers.CurrentPeriodSyncSubcommitteeIndices(headState, valIdx)
 		if err != nil {
 			return nil, err
 		}
@@ -127,7 +127,7 @@ func (vs *Server) syncSubcommitteeIndex(
 		}, nil
 	// At sync committee period boundary, validator should sample the next epoch sync committee.
 	case helpers.SyncCommitteePeriod(nextSlotEpoch) == helpers.SyncCommitteePeriod(currentEpoch)+1:
-		indices, err := helpers.NextEpochSyncSubcommitteeIndices(headState, valIdx)
+		indices, err := helpers.NextPeriodSyncSubcommitteeIndices(headState, valIdx)
 		if err != nil {
 			return nil, err
 		}

@@ -193,23 +193,34 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not get current sync committee: %v", err)
 			}
-			assignment.IsSyncCommittee, err = helpers.IsCurrentEpochSyncCommittee(s, idx)
+			assignment.IsSyncCommittee, err = helpers.IsCurrentPeriodSyncCommittee(s, idx)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not determine current epoch sync committee: %v", err)
 			}
 			if assignment.IsSyncCommittee {
 				assignValidatorToSyncSubnet(req.Epoch, syncCommPeriod, pubKey, csc, assignment.Status)
 			}
-			nsc, err := s.NextSyncCommittee()
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not get next sync committee: %v", err)
-			}
-			nextAssignment.IsSyncCommittee, err = helpers.IsNextEpochSyncCommittee(s, idx)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not determine next epoch sync committee: %v", err)
-			}
-			if nextAssignment.IsSyncCommittee {
-				assignValidatorToSyncSubnet(req.Epoch, syncCommPeriod+1, pubKey, nsc, nextAssignment.Status)
+
+			nextSlotEpoch := helpers.SlotToEpoch(s.Slot() + 1)
+			currentEpoch := helpers.CurrentEpoch(s)
+
+			// Next epoch sync committee duty is assigned with next period sync committee only during
+			// sync period epoch boundary (ie. EPOCHS_PER_SYNC_COMMITTEE_PERIOD - 1). Else wise
+			// next epoch sync committee duty is the same as current epoch.
+			if helpers.SyncCommitteePeriod(nextSlotEpoch) == helpers.SyncCommitteePeriod(currentEpoch)+1 {
+				nsc, err := s.NextSyncCommittee()
+				if err != nil {
+					return nil, status.Errorf(codes.Internal, "Could not get next sync committee: %v", err)
+				}
+				nextAssignment.IsSyncCommittee, err = helpers.IsNextPeriodSyncCommittee(s, idx)
+				if err != nil {
+					return nil, status.Errorf(codes.Internal, "Could not determine next epoch sync committee: %v", err)
+				}
+				if nextAssignment.IsSyncCommittee {
+					assignValidatorToSyncSubnet(req.Epoch, syncCommPeriod+1, pubKey, nsc, nextAssignment.Status)
+				}
+			} else {
+				nextAssignment.IsSyncCommittee = assignment.IsSyncCommittee
 			}
 		}
 

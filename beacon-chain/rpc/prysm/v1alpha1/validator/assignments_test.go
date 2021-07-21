@@ -139,8 +139,9 @@ func TestGetAltairDuties_SyncCommitteeOK(t *testing.T) {
 		pubkeysAs48ByteType[i] = bytesutil.ToBytes48(pk)
 	}
 
+	slot := uint64(params.BeaconConfig().SlotsPerEpoch) * uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod) * params.BeaconConfig().SecondsPerSlot
 	chain := &mockChain.ChainService{
-		State: bs, Root: genesisRoot[:], Genesis: time.Now(),
+		State: bs, Root: genesisRoot[:], Genesis: time.Now().Add(time.Duration(-1*int64(slot-1)) * time.Second),
 	}
 	vs := &Server{
 		HeadFetcher:     chain,
@@ -184,6 +185,19 @@ func TestGetAltairDuties_SyncCommitteeOK(t *testing.T) {
 	}
 	for i := 0; i < len(res.CurrentEpochDuties); i++ {
 		assert.Equal(t, true, res.CurrentEpochDuties[i].IsSyncCommittee)
+		// Current epoch and next epoch duties should be equal before the sync period epoch boundary.
+		assert.Equal(t, res.CurrentEpochDuties[i].IsSyncCommittee, res.NextEpochDuties[i].IsSyncCommittee)
+	}
+
+	// Current epoch and next epoch duties should not be equal at the sync period epoch boundary.
+	req = &ethpb.DutiesRequest{
+		PublicKeys: pubKeys,
+		Epoch:      params.BeaconConfig().EpochsPerSyncCommitteePeriod - 1,
+	}
+	res, err = vs.GetDuties(context.Background(), req)
+	require.NoError(t, err, "Could not call epoch committee assignment")
+	for i := 0; i < len(res.CurrentEpochDuties); i++ {
+		assert.NotEqual(t, res.CurrentEpochDuties[i].IsSyncCommittee, res.NextEpochDuties[i].IsSyncCommittee)
 	}
 }
 
