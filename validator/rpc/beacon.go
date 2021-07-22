@@ -11,7 +11,7 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
 	healthpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/validator/client"
@@ -85,42 +85,42 @@ func (s *Server) GetBeaconStatus(ctx context.Context, _ *empty.Empty) (*pb.Beaco
 	}, nil
 }
 
-// GetValidatorParticipation is a wrapper around the /eth/v1alpha1 endpoint of the same name.
+// GetValidatorParticipation is a wrapper around the /prysm/v1alpha1 endpoint of the same name.
 func (s *Server) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipationResponse, error) {
 	return s.beaconChainClient.GetValidatorParticipation(ctx, req)
 }
 
-// GetValidatorPerformance is a wrapper around the /eth/v1alpha1 endpoint of the same name.
+// GetValidatorPerformance is a wrapper around the /prysm/v1alpha1 endpoint of the same name.
 func (s *Server) GetValidatorPerformance(
 	ctx context.Context, req *ethpb.ValidatorPerformanceRequest,
 ) (*ethpb.ValidatorPerformanceResponse, error) {
 	return s.beaconChainClient.GetValidatorPerformance(ctx, req)
 }
 
-// GetValidatorBalances is a wrapper around the /eth/v1alpha1 endpoint of the same name.
+// GetValidatorBalances is a wrapper around the /prysm/v1alpha1 endpoint of the same name.
 func (s *Server) GetValidatorBalances(
 	ctx context.Context, req *ethpb.ListValidatorBalancesRequest,
 ) (*ethpb.ValidatorBalances, error) {
 	return s.beaconChainClient.ListValidatorBalances(ctx, req)
 }
 
-// GetValidators is a wrapper around the /eth/v1alpha1 endpoint of the same name.
+// GetValidators is a wrapper around the /prysm/v1alpha1 endpoint of the same name.
 func (s *Server) GetValidators(
 	ctx context.Context, req *ethpb.ListValidatorsRequest,
 ) (*ethpb.Validators, error) {
 	return s.beaconChainClient.ListValidators(ctx, req)
 }
 
-// GetValidatorQueue is a wrapper around the /eth/v1alpha1 endpoint of the same name.
+// GetValidatorQueue is a wrapper around the /prysm/v1alpha1 endpoint of the same name.
 func (s *Server) GetValidatorQueue(
 	ctx context.Context, _ *empty.Empty,
 ) (*ethpb.ValidatorQueue, error) {
 	return s.beaconChainClient.GetValidatorQueue(ctx, &emptypb.Empty{})
 }
 
-// GetPeers is a wrapper around the /eth/v1alpha1 endpoint of the same name.
+// GetPeers is a wrapper around the /prysm/v1alpha1 endpoint of the same name.
 func (s *Server) GetPeers(
 	ctx context.Context, _ *empty.Empty,
 ) (*ethpb.Peers, error) {

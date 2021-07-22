@@ -13,8 +13,8 @@ import (
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -304,6 +304,10 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed interf
 	if fCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
 		if err := s.updateFinalized(ctx, fCheckpoint); err != nil {
 			return err
+		}
+		if featureconfig.Get().UpdateHeadTimely {
+			s.prevFinalizedCheckpt = s.finalizedCheckpt
+			s.finalizedCheckpt = fCheckpoint
 		}
 	}
 	return nil

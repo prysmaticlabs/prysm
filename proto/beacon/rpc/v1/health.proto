@@ -12,7 +12,7 @@ import "google/protobuf/empty.proto";
 service Health {
     rpc StreamBeaconLogs(google.protobuf.Empty) returns (stream LogsResponse) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/health/logs/stream"
+            get: "/prysm/v1alpha1/health/logs/stream"
         };
     }
 }

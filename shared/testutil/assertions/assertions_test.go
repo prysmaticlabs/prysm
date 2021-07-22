@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assertions"
@@ -890,12 +890,12 @@ func TestAssert_NotEmpty(t *testing.T) {
 				tb: &assertions.TBMock{},
 				input: &testpb.AddressBook{
 					People: []*testpb.Person{
-						&testpb.Person{
+						{
 							Name:  "Foo",
 							Id:    42,
 							Email: "foo@bar.com",
 							Phones: []*testpb.Person_PhoneNumber{
-								&testpb.Person_PhoneNumber{
+								{
 									Number: "+1 111-111-1111",
 									Type:   testpb.Person_WORK, // Note: zero'th enum value will count as empty.
 								},
@@ -911,7 +911,7 @@ func TestAssert_NotEmpty(t *testing.T) {
 				tb: &assertions.TBMock{},
 				input: &testpb.AddressBook{
 					People: []*testpb.Person{
-						&testpb.Person{
+						{
 							Name:        "Foo",
 							Id:          42,
 							Email:       "foo@bar.com",
@@ -928,12 +928,12 @@ func TestAssert_NotEmpty(t *testing.T) {
 				tb: &assertions.TBMock{},
 				input: &testpb.AddressBook{
 					People: []*testpb.Person{
-						&testpb.Person{
+						{
 							Name:  "Foo",
 							Id:    42,
 							Email: "",
 							Phones: []*testpb.Person_PhoneNumber{
-								&testpb.Person_PhoneNumber{
+								{
 									Number: "+1 111-111-1111",
 									Type:   testpb.Person_WORK, // Note: zero'th enum value will count as empty.
 								},

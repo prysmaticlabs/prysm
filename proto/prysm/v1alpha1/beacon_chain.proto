@@ -19,12 +19,12 @@ import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
 
 import "proto/eth/ext/options.proto";
-import "proto/eth/v1alpha1/attestation.proto";
-import "proto/eth/v1alpha1/beacon_block.proto";
-import "proto/eth/v1alpha1/validator.proto";
+import "proto/prysm/v1alpha1/attestation.proto";
+import "proto/prysm/v1alpha1/beacon_block.proto";
+import "proto/prysm/v1alpha1/validator.proto";
 
 option csharp_namespace = "Ethereum.Eth.v1alpha1";
-option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1;eth";
+option go_package = "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1;eth";
 option java_multiple_files = true;
 option java_outer_classname = "BeaconChainProto";
 option java_package = "org.ethereum.eth.v1alpha1";
@@ -44,7 +44,7 @@ service BeaconChain {
     // information via a boolean query filter.
     rpc ListAttestations(ListAttestationsRequest) returns (ListAttestationsResponse) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/attestations"
+            get: "/prysm/v1alpha1/beacon/attestations"
         };
     }
 
@@ -56,7 +56,7 @@ service BeaconChain {
     // information via a boolean query filter.
     rpc ListIndexedAttestations(ListIndexedAttestationsRequest) returns (ListIndexedAttestationsResponse) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/attestations/indexed"
+            get: "/prysm/v1alpha1/beacon/attestations/indexed"
         };
     }
 
@@ -64,7 +64,7 @@ service BeaconChain {
     // the beacon chain node.
     rpc StreamAttestations(google.protobuf.Empty) returns (stream Attestation) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/attestations/stream"
+            get: "/prysm/v1alpha1/beacon/attestations/stream"
         };
     }
 
@@ -72,7 +72,7 @@ service BeaconChain {
     // the beacon chain node.
     rpc StreamIndexedAttestations(google.protobuf.Empty) returns (stream IndexedAttestation) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/attestations/indexed/stream"
+            get: "/prysm/v1alpha1/beacon/attestations/indexed/stream"
         };
     }
 
@@ -87,7 +87,7 @@ service BeaconChain {
     // https://github.com/ethereum/eth2.0-specs/blob/dev/specs/core/0_beacon-chain.md#attestations
     rpc AttestationPool(AttestationPoolRequest) returns (AttestationPoolResponse) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/attestations/pool"
+            get: "/prysm/v1alpha1/beacon/attestations/pool"
         };
     }
 
@@ -100,7 +100,7 @@ service BeaconChain {
     // allows for retrieval of genesis information via a boolean query filter.
     rpc ListBlocks(ListBlocksRequest) returns (ListBlocksResponse) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/blocks"
+            get: "/prysm/v1alpha1/beacon/blocks"
         };
     }
 
@@ -108,7 +108,7 @@ service BeaconChain {
     // the beacon chain node.
     rpc StreamBlocks(StreamBlocksRequest) returns (stream SignedBeaconBlock) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/blocks/stream"
+            get: "/prysm/v1alpha1/beacon/blocks/stream"
         };
     }
 
@@ -119,7 +119,7 @@ service BeaconChain {
     // the most recent finalized and justified slots.
     rpc StreamChainHead(google.protobuf.Empty) returns (stream ChainHead) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/chainhead/stream"
+            get: "/prysm/v1alpha1/beacon/chainhead/stream"
         };
     }
 
@@ -130,7 +130,7 @@ service BeaconChain {
     // the most recent finalized and justified slots.
     rpc GetChainHead(google.protobuf.Empty) returns (ChainHead) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/chainhead"
+            get: "/prysm/v1alpha1/beacon/chainhead"
         };
     }
 
@@ -140,7 +140,7 @@ service BeaconChain {
     // This includes the weak subjectivity block root, state root and epoch number.
     rpc GetWeakSubjectivityCheckpoint(google.protobuf.Empty) returns (WeakSubjectivityCheckpoint) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/weak_subjectivity_checkpoint"
+            get: "/prysm/v1alpha1/beacon/weak_subjectivity_checkpoint"
         };
     }
 
@@ -151,7 +151,7 @@ service BeaconChain {
     // This endpoint allows for retrieval of genesis information via a boolean query filter.
     rpc ListBeaconCommittees(ListCommitteesRequest) returns (BeaconCommittees) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/committees"
+            get: "/prysm/v1alpha1/beacon/committees"
         };
     }
 
@@ -160,7 +160,7 @@ service BeaconChain {
     // via a boolean query filter.
     rpc ListValidatorBalances(ListValidatorBalancesRequest) returns (ValidatorBalances) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/validators/balances"
+            get: "/prysm/v1alpha1/validators/balances"
         };
     }
 
@@ -171,7 +171,7 @@ service BeaconChain {
     // information via a boolean query filter.
     rpc ListValidators(ListValidatorsRequest) returns (Validators) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/validators"
+            get: "/prysm/v1alpha1/validators"
         };
     }
 
@@ -180,7 +180,7 @@ service BeaconChain {
     // This request may query by validator index or public key.
     rpc GetValidator(GetValidatorRequest) returns (Validator) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/validator"
+            get: "/prysm/v1alpha1/validator"
         };
     }
 
@@ -191,14 +191,14 @@ service BeaconChain {
     // information via a boolean query filter.
     rpc GetValidatorActiveSetChanges(GetValidatorActiveSetChangesRequest) returns (ActiveSetChanges) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/validators/activesetchanges"
+            get: "/prysm/v1alpha1/validators/activesetchanges"
         };
     }
 
     // Retrieve the current validator queue information.
     rpc GetValidatorQueue(google.protobuf.Empty) returns (ValidatorQueue) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/validators/queue"
+            get: "/prysm/v1alpha1/validators/queue"
         };
     }
 
@@ -208,7 +208,7 @@ service BeaconChain {
     // for all of them respectively.
     rpc GetValidatorPerformance(ValidatorPerformanceRequest) returns (ValidatorPerformanceResponse) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/validators/performance"
+            get: "/prysm/v1alpha1/validators/performance"
         };
     }
 
@@ -219,7 +219,7 @@ service BeaconChain {
     // information via a boolean query filter.
     rpc ListValidatorAssignments(ListValidatorAssignmentsRequest) returns (ValidatorAssignments) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/validators/assignments"
+            get: "/prysm/v1alpha1/validators/assignments"
         };
     }
 
@@ -230,42 +230,42 @@ service BeaconChain {
     // information via a boolean query filter.
     rpc GetValidatorParticipation(GetValidatorParticipationRequest) returns (ValidatorParticipationResponse) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/validators/participation"
+            get: "/prysm/v1alpha1/validators/participation"
         };
     }
 
     // Retrieve the current configuration parameters of the beacon chain.
     rpc GetBeaconConfig(google.protobuf.Empty) returns (BeaconConfig) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/config"
+            get: "/prysm/v1alpha1/beacon/config"
         };
     }
 
     // Server-side stream of validator information at each epoch.
     rpc StreamValidatorsInfo(stream ValidatorChangeSet) returns (stream ValidatorInfo) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/validators/info/stream"
+            get: "/prysm/v1alpha1/beacon/validators/info/stream"
         };
     }
 
     // Submit an attester slashing object to the beacon node.
     rpc SubmitAttesterSlashing(AttesterSlashing) returns (SubmitSlashingResponse) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/slashings/attester/submit"
+            get: "/prysm/v1alpha1/beacon/slashings/attester/submit"
         };
     }
 
     // Submit a proposer slashing object to the beacon node.
     rpc SubmitProposerSlashing(ProposerSlashing) returns (SubmitSlashingResponse) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/slashings/proposer/submit"
+            get: "/prysm/v1alpha1/beacon/slashings/proposer/submit"
         };
     }
 
     // Returns a list of validators individual vote status of a given epoch.
     rpc GetIndividualVotes(IndividualVotesRequest) returns (IndividualVotesRespond) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/individual_votes"
+            get: "/prysm/v1alpha1/beacon/individual_votes"
         };
     }
 }
