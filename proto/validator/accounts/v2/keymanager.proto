@@ -2,8 +2,8 @@ syntax = "proto3";
 package ethereum.validator.accounts.v2;
 
 import "proto/eth/ext/options.proto";
-import "proto/eth/v1alpha1/attestation.proto";
-import "proto/eth/v1alpha1/beacon_block.proto";
+import "proto/prysm/v1alpha1/attestation.proto";
+import "proto/prysm/v1alpha1/beacon_block.proto";
 import "proto/prysm/v2/beacon_block.proto";
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";

@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"

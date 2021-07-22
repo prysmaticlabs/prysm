@@ -8,15 +8,17 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	blockchainTesting "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -281,6 +283,62 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestService_ReceiveBlockBatch_UpdateFinalizedCheckpoint(t *testing.T) {
+	// Must enable head timely feature flag to test this.
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+		UpdateHeadTimely: true,
+	})
+	defer resetCfg()
+
+	ctx := context.Background()
+	genesis, keys := testutil.DeterministicGenesisState(t, 64)
+
+	// Generate 5 epochs worth of blocks.
+	var blks []interfaces.SignedBeaconBlock
+	var roots [][32]byte
+	copied := genesis.Copy()
+	for i := types.Slot(1); i < params.BeaconConfig().SlotsPerEpoch*5; i++ {
+		b, err := testutil.GenerateFullBlock(copied, keys, testutil.DefaultBlockGenConfig(), i)
+		assert.NoError(t, err)
+		copied, err = state.ExecuteStateTransition(context.Background(), copied, wrapper.WrappedPhase0SignedBeaconBlock(b))
+		assert.NoError(t, err)
+		r, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		blks = append(blks, wrapper.WrappedPhase0SignedBeaconBlock(b))
+		roots = append(roots, r)
+	}
+
+	beaconDB := testDB.SetupDB(t)
+	genesisBlockRoot, err := genesis.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	cfg := &Config{
+		BeaconDB: beaconDB,
+		ForkChoiceStore: protoarray.New(
+			0, // justifiedEpoch
+			0, // finalizedEpoch
+			genesisBlockRoot,
+		),
+		StateNotifier: &blockchainTesting.MockStateNotifier{RecordEvents: false},
+		StateGen:      stategen.New(beaconDB),
+	}
+	s, err := NewService(ctx, cfg)
+	require.NoError(t, err)
+	err = s.saveGenesisData(ctx, genesis)
+	require.NoError(t, err)
+	gBlk, err := s.cfg.BeaconDB.GenesisBlock(ctx)
+	require.NoError(t, err)
+
+	gRoot, err := gBlk.Block().HashTreeRoot()
+	require.NoError(t, err)
+	s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
+
+	// Process 5 epochs worth of blocks.
+	require.NoError(t, s.ReceiveBlockBatch(ctx, blks, roots))
+
+	// Finalized epoch must be updated.
+	require.Equal(t, types.Epoch(2), s.finalizedCheckpt.Epoch)
 }
 
 func TestService_HasInitSyncBlock(t *testing.T) {

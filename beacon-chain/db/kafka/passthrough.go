@@ -10,8 +10,8 @@ import (
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
+	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // DatabasePath -- passthrough.

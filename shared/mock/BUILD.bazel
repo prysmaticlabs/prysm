@@ -17,7 +17,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//proto/eth/v1:go_default_library",
-        "//proto/eth/v1alpha1:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
         "//proto/validator/accounts/v2:go_default_library",
         "@com_github_golang_mock//gomock:go_default_library",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//proto/gateway:go_default_library",
