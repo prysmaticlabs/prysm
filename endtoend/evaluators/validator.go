@@ -17,7 +17,7 @@ import (
 
 var expectedParticipation = 0.95 // 95% participation to make room for minor issues.
 
-var expectedSyncParticipation = 0.90 // 90% participation for sync committee members.
+var expectedSyncParticipation = 0.95 // 95% participation for sync committee members.
 
 // ValidatorsAreActive ensures the expected amount of validators are active.
 var ValidatorsAreActive = types.Evaluator{
@@ -130,16 +130,6 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 	currEpoch := helpers.SlotToEpoch(currSlot)
 	lowestBound := currEpoch - 1
 
-	// TODO: Fix Sync Participation in fork epoch.
-	if currEpoch == params.AltairE2EForkEpoch {
-		return nil
-	}
-	// TODO: Fix Sync Participation in fork epoch to allow
-	// blocks in the fork epoch from being evaluated.
-	if lowestBound == params.AltairE2EForkEpoch {
-		lowestBound++
-	}
-
 	if lowestBound < params.AltairE2EForkEpoch {
 		lowestBound = params.AltairE2EForkEpoch
 	}
@@ -154,6 +144,14 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 		blk := ctr.GetAltairBlock()
 		if blk.Block == nil || blk.Block.Body == nil || blk.Block.Body.SyncAggregate == nil {
 			return errors.New("nil block provided")
+		}
+		forkSlot, err := helpers.StartSlot(params.AltairE2EForkEpoch)
+		if err != nil {
+			return err
+		}
+		// Skip evaluation of the fork slot.
+		if blk.Block.Slot == forkSlot {
+			continue
 		}
 		syncAgg := blk.Block.Body.SyncAggregate
 		threshold := uint64(float64(syncAgg.SyncCommitteeBits.Len()) * expectedSyncParticipation)
@@ -175,6 +173,14 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 		blk := ctr.GetAltairBlock()
 		if blk.Block == nil || blk.Block.Body == nil || blk.Block.Body.SyncAggregate == nil {
 			return errors.New("nil block provided")
+		}
+		forkSlot, err := helpers.StartSlot(params.AltairE2EForkEpoch)
+		if err != nil {
+			return err
+		}
+		// Skip evaluation of the fork slot.
+		if blk.Block.Slot == forkSlot {
+			continue
 		}
 		syncAgg := blk.Block.Body.SyncAggregate
 		threshold := uint64(float64(syncAgg.SyncCommitteeBits.Len()) * expectedSyncParticipation)

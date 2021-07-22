@@ -829,7 +829,7 @@ func TestCurrentEpochSyncSubcommitteeIndices_UsingCache(t *testing.T) {
 
 	index, err := CurrentPeriodSyncSubcommitteeIndices(state, 0)
 	require.NoError(t, err)
-	require.DeepEqual(t, []uint64{0}, index)
+	require.DeepEqual(t, []types.CommitteeIndex{0}, index)
 }
 
 func TestCurrentEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
@@ -863,13 +863,13 @@ func TestCurrentEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
 	// Test that helper can retrieve the index given empty cache.
 	index, err := CurrentPeriodSyncSubcommitteeIndices(state, 0)
 	require.NoError(t, err)
-	require.DeepEqual(t, []uint64{0}, index)
+	require.DeepEqual(t, []types.CommitteeIndex{0}, index)
 
 	// Test that cache was able to fill on miss.
 	time.Sleep(100 * time.Millisecond)
 	index, err = syncCommitteeCache.CurrentPeriodIndexPosition(bytesutil.ToBytes32(root), 0)
 	require.NoError(t, err)
-	require.DeepEqual(t, []uint64{0}, index)
+	require.DeepEqual(t, []types.CommitteeIndex{0}, index)
 }
 
 func TestCurrentEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
@@ -896,7 +896,7 @@ func TestCurrentEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
 
 	index, err := CurrentPeriodSyncSubcommitteeIndices(state, 129301923)
 	require.NoError(t, err)
-	require.DeepEqual(t, []uint64(nil), index)
+	require.DeepEqual(t, []types.CommitteeIndex(nil), index)
 }
 
 func TestNextEpochSyncSubcommitteeIndices_UsingCache(t *testing.T) {
@@ -926,7 +926,7 @@ func TestNextEpochSyncSubcommitteeIndices_UsingCache(t *testing.T) {
 
 	index, err := NextPeriodSyncSubcommitteeIndices(state, 0)
 	require.NoError(t, err)
-	require.DeepEqual(t, []uint64{0}, index)
+	require.DeepEqual(t, []types.CommitteeIndex{0}, index)
 }
 
 func TestNextEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
@@ -952,7 +952,7 @@ func TestNextEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
 
 	index, err := NextPeriodSyncSubcommitteeIndices(state, 0)
 	require.NoError(t, err)
-	require.DeepEqual(t, []uint64{0}, index)
+	require.DeepEqual(t, []types.CommitteeIndex{0}, index)
 }
 
 func TestNextEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
@@ -979,7 +979,7 @@ func TestNextEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
 
 	index, err := NextPeriodSyncSubcommitteeIndices(state, 21093019)
 	require.NoError(t, err)
-	require.DeepEqual(t, []uint64(nil), index)
+	require.DeepEqual(t, []types.CommitteeIndex(nil), index)
 }
 
 func TestUpdateSyncCommitteeCache_BadSlot(t *testing.T) {
