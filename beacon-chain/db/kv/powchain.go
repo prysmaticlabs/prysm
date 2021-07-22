@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/prysmaticlabs/prysm/proto/beacon/db"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
