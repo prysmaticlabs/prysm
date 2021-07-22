@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	slashpb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 )

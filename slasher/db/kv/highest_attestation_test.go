@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	slashbp "github.com/prysmaticlabs/prysm/proto/slashing"
+	slashbp "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
