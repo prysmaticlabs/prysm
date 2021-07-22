@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
