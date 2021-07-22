@@ -19,7 +19,7 @@ for ((i = 0; i < ${#mocks[@]}; i++)); do
     interfaces=${mocks[i]#* };
     echo "generating $file for interfaces: $interfaces";
     GO11MODULE=on mockgen -package=mock -destination="$file" github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1 "$interfaces"
-    GO11MODULE=on mockgen -package=mock -destination="$file" github.com/prysmaticlabs/prysm/proto/validator/accounts/v2 "$interfaces"
+    GO11MODULE=on mockgen -package=mock -destination="$file" github.com/prysmaticlabs/prysm/proto/prysm/v2 "$interfaces"
 done
 
 goimports -w "$mock_path/."

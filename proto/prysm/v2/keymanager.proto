@@ -1,5 +1,5 @@
 syntax = "proto3";
-package ethereum.validator.accounts.v2;
+package ethereum.prysm.v2;
 
 import "proto/eth/ext/options.proto";
 import "proto/prysm/v1alpha1/attestation.proto";
@@ -7,6 +7,13 @@ import "proto/prysm/v1alpha1/beacon_block.proto";
 import "proto/prysm/v2/beacon_block.proto";
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
+
+option csharp_namespace = "Ethereum.Prysm.V2";
+option go_package = "github.com/prysmaticlabs/prysm/proto/prysm/v2;v2";
+option java_multiple_files = true;
+option java_outer_classname = "KeymanagerProto";
+option java_package = "org.ethereum.prysm.v2";
+option php_namespace = "Ethereum\\Prysm\\v2";
 
 // RemoteSigner service API.
 //
