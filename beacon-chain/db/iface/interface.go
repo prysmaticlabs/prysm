@@ -57,7 +57,7 @@ type ReadOnlyDatabase interface {
 	// Deposit contract related handlers.
 	DepositContractAddress(ctx context.Context) ([]byte, error)
 	// Powchain operations.
-	PowchainData(ctx context.Context) (*db.ETH1ChainData, error)
+	PowchainData(ctx context.Context) (*v2.ETH1ChainData, error)
 }
 
 // NoHeadAccessDatabase defines a struct without access to chain head data.
@@ -86,7 +86,7 @@ type NoHeadAccessDatabase interface {
 	// Deposit contract related handlers.
 	SaveDepositContractAddress(ctx context.Context, addr common.Address) error
 	// Powchain operations.
-	SavePowchainData(ctx context.Context, data *db.ETH1ChainData) error
+	SavePowchainData(ctx context.Context, data *v2.ETH1ChainData) error
 	// Run any required database migrations.
 	RunMigrations(ctx context.Context) error
 
