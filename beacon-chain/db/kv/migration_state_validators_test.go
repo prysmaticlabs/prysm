@@ -41,32 +41,93 @@ func Test_migrateStateValidators(t *testing.T) {
 
 				// set the migration as over
 				err = dbStore.db.Update(func(tx *bbolt.Tx) error {
-					return tx.Bucket(migrationsBucket).Put(migrationArchivedIndex0Key, migrationCompleted)
+					return tx.Bucket(migrationsBucket).Put(migrationStateValidatorsKey, migrationCompleted)
 				})
 				assert.NoError(t, err)
 			},
 			eval: func(t *testing.T, dbStore *Store, state *v1.BeaconState, vals []*eth.Validator) {
-				// check whether the new buckets are present
+				// check if the migration is completed, per migration table.
 				err := dbStore.db.View(func(tx *bbolt.Tx) error {
-					valBkt := tx.Bucket(stateValidatorsBucket)
-					assert.NotNil(t, valBkt)
-					idxBkt := tx.Bucket(blockRootValidatorHashesBucket)
-					assert.NotNil(t, idxBkt)
-					return nil
-				})
-				assert.NoError(t, err)
-
-				// check if the state exists
-				blockRoot := [32]byte{'A'}
-				assert.Equal(t, true, dbStore.HasState(context.Background(), blockRoot))
-
-				// check if the migration is marked as completed
-				err = dbStore.db.View(func(tx *bbolt.Tx) error {
-					migrationCompleteOrNot := tx.Bucket(migrationsBucket).Get(migrationArchivedIndex0Key)
+					migrationCompleteOrNot := tx.Bucket(migrationsBucket).Get(migrationStateValidatorsKey)
 					assert.DeepEqual(t, migrationCompleted, migrationCompleteOrNot, "migration is not complete")
 					return nil
 				})
 				assert.NoError(t, err)
+			},
+		},
+		{
+			name: "once migrated, always enable flag",
+			setup: func(t *testing.T, dbStore *Store, state *v1.BeaconState, vals []*eth.Validator) {
+				// create some new buckets that should be present for this migration
+				err := dbStore.db.Update(func(tx *bbolt.Tx) error {
+					_, err := tx.CreateBucketIfNotExists(stateValidatorsBucket)
+					assert.NoError(t, err)
+					_, err = tx.CreateBucketIfNotExists(blockRootValidatorHashesBucket)
+					assert.NoError(t, err)
+					return nil
+				})
+				assert.NoError(t, err)
+
+				// set the migration as over
+				err = dbStore.db.Update(func(tx *bbolt.Tx) error {
+					return tx.Bucket(migrationsBucket).Put(migrationStateValidatorsKey, migrationCompleted)
+				})
+				assert.NoError(t, err)
+			},
+			eval: func(t *testing.T, dbStore *Store, state *v1.BeaconState, vals []*eth.Validator) {
+				// disable the flag and see if the code mandates that flag.
+				resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+					EnableHistoricalSpaceRepresentation: false,
+				})
+				defer resetCfg()
+
+				// check if the migration is completed, per migration table.
+				err := dbStore.db.View(func(tx *bbolt.Tx) error {
+					migrationCompleteOrNot := tx.Bucket(migrationsBucket).Get(migrationStateValidatorsKey)
+					assert.DeepEqual(t, migrationCompleted, migrationCompleteOrNot, "migration is not complete")
+					return nil
+				})
+				assert.NoError(t, err)
+
+				// create a new state and save it
+				blockRoot := [32]byte{'B'}
+				st, err := testutil.NewBeaconState()
+				newValidators := validators(10)
+				assert.NoError(t, err)
+				assert.NoError(t, st.SetSlot(101))
+				assert.NoError(t, st.SetValidators(newValidators))
+				assert.NoError(t, dbStore.SaveState(context.Background(), st, blockRoot))
+				assert.NoError(t, err)
+
+				// now check if this newly saved state followed the migrated code path
+				// by checking if the new validators are saved in the validator bucket.
+				ctx := context.Background()
+				var hashes []byte
+				var individualHashes [][]byte
+				for _, val := range newValidators {
+					valBytes, encodeErr := encode(ctx, val)
+					assert.NoError(t, encodeErr)
+					hash := hashutil.Hash(valBytes)
+					hashes = append(hashes, hash[:]...)
+					individualHashes = append(individualHashes, hash[:])
+				}
+				pbState, err := v1.ProtobufBeaconState(st.InnerStateUnsafe())
+				assert.NoError(t, err)
+				validatorsFoundCount := 0
+				for _, val := range pbState.Validators {
+					valBytes, encodeErr := encode(ctx, val)
+					assert.NoError(t, encodeErr)
+					hash := hashutil.Hash(valBytes)
+					found := false
+					for _, h := range individualHashes {
+						if bytes.Equal(hash[:], h) {
+							found = true
+						}
+					}
+					require.Equal(t, true, found)
+					validatorsFoundCount++
+				}
+				require.Equal(t, len(vals), validatorsFoundCount)
 			},
 		},
 		{

@@ -122,7 +122,7 @@ func (s *Store) SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconSta
 		if err != nil {
 			return err
 		}
-		if featureconfig.Get().EnableHistoricalSpaceRepresentation {
+		if s.isStateValidatorMigrationOver() {
 			// store the real validators to restore the in memory state later.
 			realValidators[i] = pbState.Validators
 
@@ -144,7 +144,7 @@ func (s *Store) SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconSta
 			}
 
 			// zero out the validators List from the state bucket so that it is not stored as part of it.
-			pbState.Validators = nil
+			pbState.Validators = make([]*ethpb.Validator, 0)
 
 			validatorKeys[i] = snappy.Encode(nil, hashes)
 		}
@@ -155,7 +155,7 @@ func (s *Store) SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconSta
 	}
 
 	if err := s.db.Update(func(tx *bolt.Tx) error {
-		if featureconfig.Get().EnableHistoricalSpaceRepresentation {
+		if s.isStateValidatorMigrationOver() {
 			bucket := tx.Bucket(stateBucket)
 			valIdxBkt := tx.Bucket(blockRootValidatorHashesBucket)
 			for i, rt := range blockRoots {
@@ -208,7 +208,7 @@ func (s *Store) SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconSta
 		return err
 	}
 
-	if featureconfig.Get().EnableHistoricalSpaceRepresentation {
+	if s.isStateValidatorMigrationOver() {
 		// restore the state in memory with the original validators
 		for i, vals := range realValidators {
 			pbState, err := v1.ProtobufBeaconState(states[i].InnerStateUnsafe())
@@ -336,7 +336,7 @@ func createState(ctx context.Context, enc []byte, validatorEntries []*ethpb.Vali
 // Retrieve the validator entries for a given block root. These entries are stored in a
 // separate bucket to reduce state size.
 func (s *Store) validatorEntries(ctx context.Context, blockRoot [32]byte) ([]*ethpb.Validator, error) {
-	if !featureconfig.Get().EnableHistoricalSpaceRepresentation {
+	if !s.isStateValidatorMigrationOver() {
 		return nil, nil
 	}
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.validatorEntries")
@@ -597,4 +597,23 @@ func (s *Store) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint ty
 	}
 
 	return err
+}
+
+func (s *Store) isStateValidatorMigrationOver() bool {
+	// if flag is enabled, then always follow the new code path.
+	if featureconfig.Get().EnableHistoricalSpaceRepresentation {
+		return true
+	} else {
+		returnFlag := false
+		if err := s.db.View(func(tx *bolt.Tx) error {
+			mb := tx.Bucket(migrationsBucket)
+			if b := mb.Get(migrationStateValidatorsKey); bytes.Equal(b, migrationCompleted) {
+				returnFlag = true
+			}
+			return nil
+		}); err != nil {
+			return returnFlag
+		}
+		return returnFlag
+	}
 }

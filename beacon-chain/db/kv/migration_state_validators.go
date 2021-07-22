@@ -6,28 +6,39 @@ import (
 
 	"github.com/golang/snappy"
 	v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/progressutil"
 	bolt "go.etcd.io/bbolt"
 )
 
-var migrationStateValidators0Key = []byte("migration_state_validator")
+var migrationStateValidatorsKey = []byte("migration_state_validator")
 
 func migrateStateValidators(tx *bolt.Tx) error {
 	if !featureconfig.Get().EnableHistoricalSpaceRepresentation {
 		return nil
 	}
+
 	mb := tx.Bucket(migrationsBucket)
-	if b := mb.Get(migrationStateValidators0Key); bytes.Equal(b, migrationCompleted) {
+	if b := mb.Get(migrationStateValidatorsKey); bytes.Equal(b, migrationCompleted) {
 		return nil // Migration already completed.
 	}
-
-	// get the source and destination buckets.
-	log.Infof("migrating %s. It will take few minutes. Please wait.", stateBucket)
 	stateBkt := tx.Bucket(stateBucket)
 	if stateBkt == nil {
 		return nil
 	}
+
+	// get the count of keys in the state bucket for passing it to the progress indicator.
+	count, err := stateCount(stateBkt)
+	if err != nil {
+		return err
+	}
+
+	// get the source and destination buckets.
+	log.Infof("Performing a one-time migration to a more efficient database schema for %s. It will take few minutes", stateBucket)
+	bar := progressutil.InitializeProgressBar(count, "Migrating state validators to new schema.")
+
 	valBkt := tx.Bucket(stateValidatorsBucket)
 	if valBkt == nil {
 		return nil
@@ -76,7 +87,7 @@ func migrateStateValidators(tx *bolt.Tx) error {
 		}
 
 		// zero the validator entries in BeaconState object .
-		state.Validators = nil
+		state.Validators = make([]*ethpb.Validator, 0)
 		stateBytes, encodeErr := encode(ctx, state)
 		if encodeErr != nil {
 			return encodeErr
@@ -84,8 +95,22 @@ func migrateStateValidators(tx *bolt.Tx) error {
 		if stateErr := stateBkt.Put(k, stateBytes); stateErr != nil {
 			return stateErr
 		}
+		if barErr := bar.Add(1); barErr != nil {
+			return barErr
+		}
 	}
 
 	// Mark migration complete.
-	return mb.Put(migrationStateValidators0Key, migrationCompleted)
+	return mb.Put(migrationStateValidatorsKey, migrationCompleted)
+}
+
+func stateCount(stateBucket *bolt.Bucket) (int, error) {
+	count := 0
+	if err := stateBucket.ForEach(func(pubKey, v []byte) error {
+		count++
+		return nil
+	}); err != nil {
+		return 0, nil
+	}
+	return count, nil
 }
