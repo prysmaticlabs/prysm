@@ -184,7 +184,7 @@ func (s *Server) Start() {
 	reflection.Register(s.grpcServer)
 	pb.RegisterAuthServer(s.grpcServer, s)
 	pb.RegisterWalletServer(s.grpcServer, s)
-	pb.RegisterHealthServer(s.grpcServer, s)
+	pb.RegisterValidatorHealthServer(s.grpcServer, s)
 	pb.RegisterBeaconServer(s.grpcServer, s)
 	pb.RegisterAccountsServer(s.grpcServer, s)
 	pb.RegisterSlashingProtectionServer(s.grpcServer, s)
