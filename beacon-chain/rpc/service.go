@@ -193,9 +193,10 @@ func (s *Service) Start() {
 		StateGen:               s.cfg.StateGen,
 	}
 	validatorServerV1 := &validator.Server{
-		HeadFetcher: s.cfg.HeadFetcher,
-		TimeFetcher: s.cfg.GenesisTimeFetcher,
-		SyncChecker: s.cfg.SyncService,
+		HeadFetcher:      s.cfg.HeadFetcher,
+		TimeFetcher:      s.cfg.GenesisTimeFetcher,
+		SyncChecker:      s.cfg.SyncService,
+		AttestationsPool: s.cfg.AttestationsPool,
 	}
 
 	nodeServer := &nodev1alpha1.Server{
