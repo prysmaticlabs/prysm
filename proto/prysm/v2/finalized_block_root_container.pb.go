@@ -2,9 +2,9 @@
 // versions:
 // 	protoc-gen-go v1.25.0
 // 	protoc        v3.15.8
-// source: proto/beacon/db/finalized_block_root_container.proto
+// source: proto/prysm/v2/finalized_block_root_container.proto
 
-package db
+package v2
 
 import (
 	reflect "reflect"
