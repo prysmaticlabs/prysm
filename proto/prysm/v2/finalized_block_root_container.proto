@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package ethereum.prysm.v2;
+
+option csharp_namespace = "Ethereum.Prysm.V2";
+option go_package = "github.com/prysmaticlabs/prysm/proto/prysm/v2;v2";
+option java_multiple_files = true;
+option java_outer_classname = "FinalizedBlockRootContainerProto";
+option java_package = "org.ethereum.prysm.v2";
+option php_namespace = "Ethereum\\Prysm\\v2";
+
+message FinalizedBlockRootContainer {
+    bytes parent_root = 1;
+    bytes child_root = 2;
+}
