@@ -1,9 +1,16 @@
 syntax = "proto3";
 
-package ethereum.beacon.rpc.v1;
+package ethereum.prysm.v2;
 
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
+
+option csharp_namespace = "Ethereum.Prysm.V2";
+option go_package = "github.com/prysmaticlabs/prysm/proto/prysm/v2;v2";
+option java_multiple_files = true;
+option java_outer_classname = "HealthProto";
+option java_package = "org.ethereum.prysm.v2";
+option php_namespace = "Ethereum\\Prysm\\v2";
 
 // Health service API
 //

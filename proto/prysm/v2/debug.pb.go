@@ -4,7 +4,7 @@
 // 	protoc        v3.15.8
 // source: proto/beacon/rpc/v1/debug.proto
 
-package ethereum_beacon_rpc_v1
+package v2
 
 import (
 	context "context"

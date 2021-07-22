@@ -6,7 +6,7 @@ Package ethereum_beacon_rpc_v1 is a reverse proxy.
 
 It translates gRPC into RESTful JSON APIs.
 */
-package ethereum_beacon_rpc_v1
+package v2
 
 import (
 	"context"
