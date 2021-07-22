@@ -12,10 +12,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/proto/beacon/db"
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/backuputil"
 )
 
@@ -57,7 +57,7 @@ type ReadOnlyDatabase interface {
 	// Deposit contract related handlers.
 	DepositContractAddress(ctx context.Context) ([]byte, error)
 	// Powchain operations.
-	PowchainData(ctx context.Context) (*db.ETH1ChainData, error)
+	PowchainData(ctx context.Context) (*v2.ETH1ChainData, error)
 }
 
 // NoHeadAccessDatabase defines a struct without access to chain head data.
@@ -86,7 +86,7 @@ type NoHeadAccessDatabase interface {
 	// Deposit contract related handlers.
 	SaveDepositContractAddress(ctx context.Context, addr common.Address) error
 	// Powchain operations.
-	SavePowchainData(ctx context.Context, data *db.ETH1ChainData) error
+	SavePowchainData(ctx context.Context, data *v2.ETH1ChainData) error
 	// Run any required database migrations.
 	RunMigrations(ctx context.Context) error
 

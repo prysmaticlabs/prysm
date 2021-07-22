@@ -8,10 +8,10 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2"
 )
 
 // DatabasePath -- passthrough.
@@ -220,12 +220,12 @@ func (e Exporter) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (
 }
 
 // PowchainData -- passthrough
-func (e Exporter) PowchainData(ctx context.Context) (*db.ETH1ChainData, error) {
+func (e Exporter) PowchainData(ctx context.Context) (*v2.ETH1ChainData, error) {
 	return e.db.PowchainData(ctx)
 }
 
 // SavePowchainData -- passthrough
-func (e Exporter) SavePowchainData(ctx context.Context, data *db.ETH1ChainData) error {
+func (e Exporter) SavePowchainData(ctx context.Context, data *v2.ETH1ChainData) error {
 	return e.db.SavePowchainData(ctx, data)
 }
 
