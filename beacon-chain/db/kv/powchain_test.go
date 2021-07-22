@@ -9,7 +9,7 @@ import (
 
 func TestStore_SavePowchainData(t *testing.T) {
 	type args struct {
-		data *db.ETH1ChainData
+		data *v2.ETH1ChainData
 	}
 	tests := []struct {
 		name    string
