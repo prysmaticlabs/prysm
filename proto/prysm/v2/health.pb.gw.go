@@ -2,7 +2,7 @@
 // source: proto/prysm/v2/health.proto
 
 /*
-Package ethereum_beacon_rpc_v1 is a reverse proxy.
+Package v2 is a reverse proxy.
 
 It translates gRPC into RESTful JSON APIs.
 */
@@ -112,7 +112,7 @@ func RegisterHealthHandlerClient(ctx context.Context, mux *runtime.ServeMux, cli
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/ethereum.beacon.rpc.v1.Health/StreamBeaconLogs")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/ethereum.prysm.v2.Health/StreamBeaconLogs")
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
