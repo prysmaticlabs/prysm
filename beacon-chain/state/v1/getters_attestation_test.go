@@ -22,7 +22,7 @@ func TestBeaconState_PreviousEpochAttestations(t *testing.T) {
 	require.DeepEqual(t, want, got)
 
 	// Test copy does not mutate.
-	want = []*pbp2p.PendingAttestation{{ProposerIndex: 101}}
+	got[0].ProposerIndex = 101
 	require.DeepNotEqual(t, want, got)
 }
 
@@ -41,6 +41,6 @@ func TestBeaconState_CurrentEpochAttestations(t *testing.T) {
 	require.DeepEqual(t, want, got)
 
 	// Test copy does not mutate.
-	want = []*pbp2p.PendingAttestation{{ProposerIndex: 102}}
+	got[0].ProposerIndex = 102
 	require.DeepNotEqual(t, want, got)
 }

@@ -22,7 +22,7 @@ func TestBeaconState_LatestBlockHeader(t *testing.T) {
 	require.DeepEqual(t, want, got)
 
 	// Test copy does not mutate.
-	got = &v1alpha1.BeaconBlockHeader{Slot: 101}
+	got.Slot = 101
 	require.DeepNotEqual(t, want, got)
 }
 
