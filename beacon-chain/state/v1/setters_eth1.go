@@ -2,7 +2,7 @@ package v1
 
 import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // SetEth1Data for the beacon state.

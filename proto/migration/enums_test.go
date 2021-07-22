@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 func TestV1Alpha1ConnectionStateToV1(t *testing.T) {

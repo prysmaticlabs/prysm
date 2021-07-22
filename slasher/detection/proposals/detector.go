@@ -6,7 +6,7 @@ import (
 	"bytes"
 	"context"
 
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	status "github.com/prysmaticlabs/prysm/slasher/db/types"
 	"go.opencensus.io/trace"
