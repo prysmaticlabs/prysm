@@ -19,7 +19,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -387,7 +387,8 @@ func (v *validator) CheckDoppelGanger(ctx context.Context) error {
 	}
 	req := &ethpb.DoppelGangerRequest{ValidatorRequests: []*ethpb.DoppelGangerRequest_ValidatorRequest{}}
 	for _, pkey := range pubkeys {
-		attRec, err := v.db.AttestationHistoryForPubKey(ctx, pkey)
+		copiedKey := pkey
+		attRec, err := v.db.AttestationHistoryForPubKey(ctx, copiedKey)
 		if err != nil {
 			return err
 		}
@@ -396,14 +397,14 @@ func (v *validator) CheckDoppelGanger(ctx context.Context) error {
 			// value for the request epoch and root.
 			req.ValidatorRequests = append(req.ValidatorRequests,
 				&ethpb.DoppelGangerRequest_ValidatorRequest{
-					PublicKey:  pkey[:],
+					PublicKey:  copiedKey[:],
 					Epoch:      0,
 					SignedRoot: make([]byte, 32),
 				})
 			continue
 		}
 		r := retrieveLatestRecord(attRec)
-		if pkey != r.PubKey {
+		if copiedKey != r.PubKey {
 			return errors.New("attestation record mismatched public key")
 		}
 		req.ValidatorRequests = append(req.ValidatorRequests,
@@ -429,7 +430,9 @@ func buildDuplicateError(respones []*ethpb.DoppelGangerResponse_ValidatorRespons
 	duplicates := make([][]byte, 0)
 	for _, valRes := range respones {
 		if valRes.DuplicateExists {
-			duplicates = append(duplicates, valRes.PublicKey)
+			copiedKey := [48]byte{}
+			copy(copiedKey[:], valRes.PublicKey)
+			duplicates = append(duplicates, copiedKey[:])
 		}
 	}
 	if len(duplicates) == 0 {
