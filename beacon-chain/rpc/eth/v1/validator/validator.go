@@ -12,6 +12,8 @@ import (
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	"github.com/prysmaticlabs/prysm/proto/migration"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -157,7 +159,25 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *v1.ProposerDutiesR
 
 // ProduceBlock requests the beacon node to produce a valid unsigned beacon block, which can then be signed by a proposer and submitted.
 func (vs *Server) ProduceBlock(ctx context.Context, req *v1.ProduceBlockRequest) (*v1.ProduceBlockResponse, error) {
-	return nil, errors.New("Unimplemented")
+	ctx, span := trace.StartSpan(ctx, "validatorv1.ProduceBlock")
+	defer span.End()
+
+	v1alpha1req := &ethpb.BlockRequest{
+		Slot:         req.Slot,
+		RandaoReveal: req.RandaoReveal,
+		Graffiti:     req.Graffiti,
+	}
+	v1alpha1resp, err := vs.V1Alpha1Server.GetBlock(ctx, v1alpha1req)
+	if err != nil {
+		// We simply return err because it's already of a gRPC error type.
+		return nil, err
+	}
+	block, err := migration.V1Alpha1ToV1Block(v1alpha1resp)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+	}
+
+	return &v1.ProduceBlockResponse{Data: block}, nil
 }
 
 // ProduceAttestationData requests that the beacon node produces attestation data for

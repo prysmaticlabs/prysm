@@ -160,7 +160,7 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpb.BeaconBlockContain
 	defer span.End()
 
 	blk := req.Message
-	rBlock, err := migration.V1ToV1Alpha1Block(&ethpb.SignedBeaconBlock{Block: blk, Signature: req.Signature})
+	rBlock, err := migration.V1ToV1Alpha1SignedBlock(&ethpb.SignedBeaconBlock{Block: blk, Signature: req.Signature})
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
 	}
@@ -343,7 +343,7 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpb.BlockReq
 		return nil, status.Errorf(codes.Internal, "Could not get raw block: %v", err)
 	}
 
-	v1Block, err := migration.V1Alpha1ToV1Block(blk)
+	v1Block, err := migration.V1Alpha1ToV1SignedBlock(blk)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not convert block to v1 block")
 	}

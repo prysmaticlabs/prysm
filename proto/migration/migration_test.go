@@ -106,7 +106,7 @@ func Test_V1Alpha1ToV1Block(t *testing.T) {
 	}
 	alphaBlock.Signature = signature
 
-	v1Block, err := V1Alpha1ToV1Block(alphaBlock)
+	v1Block, err := V1Alpha1ToV1SignedBlock(alphaBlock)
 	require.NoError(t, err)
 	alphaRoot, err := alphaBlock.HashTreeRoot()
 	require.NoError(t, err)
@@ -129,7 +129,7 @@ func Test_V1ToV1Alpha1Block(t *testing.T) {
 	}
 	v1Block.Signature = signature
 
-	alphaBlock, err := V1ToV1Alpha1Block(v1Block)
+	alphaBlock, err := V1ToV1Alpha1SignedBlock(v1Block)
 	require.NoError(t, err)
 	alphaRoot, err := alphaBlock.HashTreeRoot()
 	require.NoError(t, err)
