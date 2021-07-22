@@ -23,6 +23,8 @@ proto_library(
     srcs = [
         "beacon_chain.proto",
         "validator.proto",
+        "finalized_block_root_container.proto",
+        "powchain.proto",
         "keymanager.proto",
         "web_api.proto",
         "debug.proto",
@@ -33,8 +35,8 @@ proto_library(
     visibility = ["//visibility:public"],
     deps = [
         "//proto/eth/ext:proto",
-        "//proto/prysm/v1alpha1:proto",
         "//proto/beacon/p2p/v1:v1_proto",
+        "//proto/prysm/v1alpha1:proto",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-openapiv2/options:options_proto",
         "@com_google_protobuf//:any_proto",
         "@com_google_protobuf//:descriptor_proto",
