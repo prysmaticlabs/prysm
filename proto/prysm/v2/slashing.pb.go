@@ -2,9 +2,9 @@
 // versions:
 // 	protoc-gen-go v1.25.0
 // 	protoc        v3.15.8
-// source: proto/slashing/slashing.proto
+// source: proto/prysm/v2/slashing.proto
 
-package ethereum_slashing
+package v2
 
 import (
 	context "context"
@@ -1000,5 +1000,5 @@ var _Slasher_serviceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "proto/slashing/slashing.proto",
+	Metadata: "proto/prysm/v2/slashing.proto",
 }

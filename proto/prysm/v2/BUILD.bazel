@@ -27,6 +27,7 @@ proto_library(
         "powchain.proto",
         "keymanager.proto",
         "web_api.proto",
+		"slashing.proto",
         ":ssz_proto_files",
     ],
     visibility = ["//visibility:public"],
