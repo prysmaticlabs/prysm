@@ -49,6 +49,7 @@ func (f *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/events",
 		"/eth/v1/validator/duties/attester/{epoch}",
 		"/eth/v1/validator/duties/proposer/{epoch}",
+		"/eth/v1/validator/aggregate_attestation",
 	}
 }
 
@@ -249,6 +250,12 @@ func (f *BeaconEndpointFactory) Create(path string) (*gateway.Endpoint, error) {
 		endpoint = gateway.Endpoint{
 			GetResponse:        &proposerDutiesResponseJson{},
 			RequestURLLiterals: []string{"epoch"},
+			Err:                &gateway.DefaultErrorJson{},
+		}
+	case "/eth/v1/validator/aggregate_attestation":
+		endpoint = gateway.Endpoint{
+			GetResponse:        &aggregateAttestationResponseJson{},
+			RequestQueryParams: []gateway.QueryParam{{Name: "attestation_data_root", Hex: true}, {Name: "slot"}},
 			Err:                &gateway.DefaultErrorJson{},
 		}
 	default:
