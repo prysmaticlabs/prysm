@@ -56,7 +56,7 @@ func (s *Server) GetVersion(ctx context.Context, _ *emptypb.Empty) (*pb.VersionR
 }
 
 // StreamBeaconLogs from the beacon node via a gRPC server-side stream.
-func (s *Server) StreamBeaconLogs(req *emptypb.Empty, stream pb.Health_StreamBeaconLogsServer) error {
+func (s *Server) StreamBeaconLogs(req *emptypb.Empty, stream pb.ValidatorHealth_StreamBeaconLogsServer) error {
 	// Wrap service context with a cancel in order to propagate the exiting of
 	// this method properly to the beacon node server.
 	ctx, cancel := context.WithCancel(s.ctx)
@@ -87,7 +87,7 @@ func (s *Server) StreamBeaconLogs(req *emptypb.Empty, stream pb.Health_StreamBea
 }
 
 // StreamValidatorLogs from the validator client via a gRPC server-side stream.
-func (s *Server) StreamValidatorLogs(_ *emptypb.Empty, stream pb.Health_StreamValidatorLogsServer) error {
+func (s *Server) StreamValidatorLogs(_ *emptypb.Empty, stream pb.ValidatorHealth_StreamValidatorLogsServer) error {
 	ch := make(chan []byte, s.streamLogsBufferSize)
 	sub := s.logsStreamer.LogsFeed().Subscribe(ch)
 	defer func() {
