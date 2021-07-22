@@ -1,7 +1,7 @@
 syntax = "proto3";
 package ethereum.prysm.v2;
 
-import "proto/beacon/rpc/v1/health.proto";
+import "proto/prysm/v2/health.proto";
 import "proto/prysm/v1alpha1/beacon_chain.proto";
 import "proto/prysm/v1alpha1/node.proto";
 import "google/api/annotations.proto";

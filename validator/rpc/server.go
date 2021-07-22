@@ -11,7 +11,6 @@ import (
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	healthpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -63,7 +62,7 @@ type Server struct {
 	beaconChainClient         ethpb.BeaconChainClient
 	beaconNodeClient          ethpb.NodeClient
 	beaconNodeValidatorClient ethpb.BeaconNodeValidatorClient
-	beaconNodeHealthClient    healthpb.HealthClient
+	beaconNodeHealthClient    pb.HealthClient
 	valDB                     db.Database
 	ctx                       context.Context
 	cancel                    context.CancelFunc

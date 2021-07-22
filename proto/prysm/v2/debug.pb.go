@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.25.0
 // 	protoc        v3.15.8
-// source: proto/beacon/rpc/v1/debug.proto
+// source: proto/prysm/v2/debug.proto
 
 package v2
 
@@ -1834,5 +1834,5 @@ var _Debug_serviceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "proto/beacon/rpc/v1/debug.proto",
+	Metadata: "proto/prysm/v2/debug.proto",
 }

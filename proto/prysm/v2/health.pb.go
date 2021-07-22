@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.25.0
 // 	protoc        v3.15.8
-// source: proto/beacon/rpc/v1/health.proto
+// source: proto/prysm/v2/health.proto
 
 package v2
 
@@ -273,5 +273,5 @@ var _Health_serviceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 		},
 	},
-	Metadata: "proto/beacon/rpc/v1/health.proto",
+	Metadata: "proto/prysm/v2/health.proto",
 }
