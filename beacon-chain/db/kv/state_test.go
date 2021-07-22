@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -88,9 +87,8 @@ func TestState_CanSaveRetrieveValidatorEntries(t *testing.T) {
 		valBkt := tx.Bucket(stateValidatorsBucket)
 		// if any of the original validator entry is not present, then fail the test.
 		for _, val := range stateValidators {
-			valBytes, encodeErr := encode(ctx, val)
-			require.NoError(t, encodeErr)
-			hash := hashutil.Hash(valBytes)
+			hash, hashErr := val.HashTreeRoot()
+			assert.NoError(t, hashErr)
 			data := valBkt.Get(hash[:])
 			require.NotNil(t, data)
 			require.NotEqual(t, 0, len(data))
@@ -144,9 +142,8 @@ func TestState_CanSaveRetrieveValidatorEntriesWithoutCache(t *testing.T) {
 		valBkt := tx.Bucket(stateValidatorsBucket)
 		// if any of the original validator entry is not present, then fail the test.
 		for _, val := range stateValidators {
-			valBytes, encodeErr := encode(ctx, val)
-			require.NoError(t, encodeErr)
-			hash := hashutil.Hash(valBytes)
+			hash, hashErr := val.HashTreeRoot()
+			assert.NoError(t, hashErr)
 			data := valBkt.Get(hash[:])
 			require.NotNil(t, data)
 			require.NotEqual(t, 0, len(data))
@@ -196,9 +193,8 @@ func TestState_DeleteState(t *testing.T) {
 
 	// check if the validator entries of this state is removed from cache.
 	for _, val := range stateValidators {
-		valBytes, encodeErr := encode(ctx, val)
-		require.NoError(t, encodeErr)
-		hash := hashutil.Hash(valBytes)
+		hash, hashErr := val.HashTreeRoot()
+		assert.NoError(t, hashErr)
 		v, found := db.validatorEntryCache.Get(hash[:])
 		require.Equal(t, false, found)
 		require.Equal(t, nil, v)
@@ -227,9 +223,8 @@ func TestState_DeleteState(t *testing.T) {
 		valBkt := tx.Bucket(stateValidatorsBucket)
 		// if any of the original validator entry is not present, then fail the test.
 		for _, val := range stateValidators {
-			valBytes, encodeErr := encode(ctx, val)
-			require.NoError(t, encodeErr)
-			hash := hashutil.Hash(valBytes)
+			hash, hashErr := val.HashTreeRoot()
+			assert.NoError(t, hashErr)
 			data := valBkt.Get(hash[:])
 			require.NotNil(t, data)
 			require.NotEqual(t, 0, len(data))

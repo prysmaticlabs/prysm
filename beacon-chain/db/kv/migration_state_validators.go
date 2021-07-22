@@ -6,7 +6,7 @@ import (
 
 	"github.com/golang/snappy"
 	v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/progressutil"
@@ -87,7 +87,7 @@ func migrateStateValidators(tx *bolt.Tx) error {
 		}
 
 		// zero the validator entries in BeaconState object .
-		state.Validators = make([]*ethpb.Validator, 0)
+		state.Validators = make([]*v1alpha1.Validator, 0)
 		stateBytes, encodeErr := encode(ctx, state)
 		if encodeErr != nil {
 			return encodeErr
