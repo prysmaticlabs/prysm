@@ -100,12 +100,10 @@ func Test_migrateStateValidators(t *testing.T) {
 
 				// now check if this newly saved state followed the migrated code path
 				// by checking if the new validators are saved in the validator bucket.
-				var hashes []byte
 				var individualHashes [][]byte
 				for _, val := range newValidators {
 					hash, hashErr := val.HashTreeRoot()
 					assert.NoError(t, hashErr)
-					hashes = append(hashes, hash[:]...)
 					individualHashes = append(individualHashes, hash[:])
 				}
 				pbState, err := v1.ProtobufBeaconState(st.InnerStateUnsafe())
