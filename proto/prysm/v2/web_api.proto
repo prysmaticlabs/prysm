@@ -1,11 +1,18 @@
 syntax = "proto3";
-package ethereum.validator.accounts.v2;
+package ethereum.prysm.v2;
 
 import "proto/beacon/rpc/v1/health.proto";
 import "proto/prysm/v1alpha1/beacon_chain.proto";
 import "proto/prysm/v1alpha1/node.proto";
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
+
+option csharp_namespace = "Ethereum.prysm.v2";
+option go_package = "github.com/prysmaticlabs/prysm/proto/prysm/v2;v2";
+option java_multiple_files = true;
+option java_outer_classname = "WebProto";
+option java_package = "org.ethereum.prysm.v2";
+option php_namespace = "Ethereum\\Prysm\\v2";
 
 service Wallet {
     rpc CreateWallet(CreateWalletRequest) returns (CreateWalletResponse) {
