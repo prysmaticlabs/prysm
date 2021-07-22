@@ -220,12 +220,12 @@ func (e Exporter) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (
 }
 
 // PowchainData -- passthrough
-func (e Exporter) PowchainData(ctx context.Context) (*db.ETH1ChainData, error) {
+func (e Exporter) PowchainData(ctx context.Context) (*v2.ETH1ChainData, error) {
 	return e.db.PowchainData(ctx)
 }
 
 // SavePowchainData -- passthrough
-func (e Exporter) SavePowchainData(ctx context.Context, data *db.ETH1ChainData) error {
+func (e Exporter) SavePowchainData(ctx context.Context, data *v2.ETH1ChainData) error {
 	return e.db.SavePowchainData(ctx, data)
 }
 
