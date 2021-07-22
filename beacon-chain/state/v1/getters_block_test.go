@@ -39,7 +39,7 @@ func TestBeaconState_BlockRoots(t *testing.T) {
 	require.DeepEqual(t, want, got)
 
 	// Test copy does not mutate.
-	got = [][]byte{{'b'}}
+	got[0][0] = 'b'
 	require.DeepNotEqual(t, want, got)
 }
 
