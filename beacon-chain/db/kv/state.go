@@ -43,7 +43,7 @@ func (s *Store) State(ctx context.Context, blockRoot [32]byte) (iface.BeaconStat
 		return nil, valErr
 	}
 
-	st, err = createState(ctx, enc, valEntries)
+	st, err = s.createState(ctx, enc, valEntries)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func (s *Store) GenesisState(ctx context.Context) (iface.BeaconState, error) {
 		}
 
 		var crtErr error
-		st, crtErr = createState(ctx, enc, valEntries)
+		st, crtErr = s.createState(ctx, enc, valEntries)
 		return crtErr
 	}); err != nil {
 		return nil, err
@@ -289,7 +289,7 @@ func (s *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 			return errors.New("cannot delete genesis, finalized, or head state")
 		}
 
-		slot, err := slotByBlockRoot(ctx, tx, blockRoot[:])
+		slot, err := s.slotByBlockRoot(ctx, tx, blockRoot[:])
 		if err != nil {
 			return err
 		}
@@ -298,7 +298,7 @@ func (s *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 			return errors.Wrap(err, "could not delete root for DB indices")
 		}
 
-		if featureconfig.Get().EnableHistoricalSpaceRepresentation {
+		if s.isStateValidatorMigrationOver() {
 			// remove the validator entry keys for the corresponding state.
 			idxBkt := tx.Bucket(blockRootValidatorHashesBucket)
 			compressedValidatorHashes := idxBkt.Get(blockRoot[:])
@@ -344,12 +344,12 @@ func (s *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 
 // creates state from marshaled proto state bytes. Also add the validator entries retrieved
 // from the validator bucket and complete the state construction.
-func createState(ctx context.Context, enc []byte, validatorEntries []*v1alpha.Validator) (*pb.BeaconState, error) {
+func (s *Store) createState(ctx context.Context, enc []byte, validatorEntries []*v1alpha.Validator) (*pb.BeaconState, error) {
 	protoState := &pb.BeaconState{}
 	if err := decode(ctx, enc, protoState); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal encoding")
 	}
-	if featureconfig.Get().EnableHistoricalSpaceRepresentation {
+	if s.isStateValidatorMigrationOver() {
 		protoState.Validators = validatorEntries
 	}
 	return protoState, nil
@@ -440,7 +440,7 @@ func (s *Store) stateBytes(ctx context.Context, blockRoot [32]byte) ([]byte, err
 }
 
 // slotByBlockRoot retrieves the corresponding slot of the input block root.
-func slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []byte) (types.Slot, error) {
+func (s *Store) slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []byte) (types.Slot, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.slotByBlockRoot")
 	defer span.End()
 
@@ -460,7 +460,7 @@ func slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []byte) (types.
 				return 0, errors.New("state enc can't be nil")
 			}
 			// no need to construct the validator entries as it is not used here.
-			s, err := createState(ctx, enc, nil)
+			s, err := s.createState(ctx, enc, nil)
 			if err != nil {
 				return 0, err
 			}
