@@ -38,7 +38,6 @@ go_test(
         "//beacon-chain/operations/attestations:go_default_library",
         "//beacon-chain/sync/initial-sync/testing:go_default_library",
         "//proto/eth/v1:go_default_library",
-        "//proto/eth/v1alpha1:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
@@ -46,5 +45,6 @@ go_test(
         "//shared/testutil/require:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+        "@com_github_prysmaticlabs_prysm//proto/eth/v1alpha1:go_default_library",
     ],
 )
