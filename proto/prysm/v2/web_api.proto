@@ -138,7 +138,7 @@ service SlashingProtection {
     }
 }
 
-service Health {
+service ValidatorHealth {
     rpc GetBeaconNodeConnection(google.protobuf.Empty) returns (NodeConnectionResponse) {
         option (google.api.http) = {
             get: "/v2/validator/health/node_connection"
@@ -154,7 +154,7 @@ service Health {
             get: "/v2/validator/health/version"
         };
     }
-    rpc StreamBeaconLogs(google.protobuf.Empty) returns (stream ethereum.beacon.rpc.v1.LogsResponse) {
+    rpc StreamBeaconLogs(google.protobuf.Empty) returns (stream LogsResponse) {
         option (google.api.http) = {
             get: "/v2/validator/health/logs/beacon/stream"
         };
@@ -356,10 +356,6 @@ message ImportKeystoresResponse {
 message HasUsedWebResponse {
     bool has_signed_up = 1;
     bool has_wallet = 2;
-}
-
-message LogsResponse {
-    repeated string logs = 1;
 }
 
 message BeaconStatusResponse {
