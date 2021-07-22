@@ -11,6 +11,7 @@ func TestBeaconState_PreviousEpochAttestations(t *testing.T) {
 	s, err := InitializeFromProto(&pbp2p.BeaconState{})
 	require.NoError(t, err)
 	atts, err := s.PreviousEpochAttestations()
+	require.NoError(t, err)
 	require.DeepEqual(t, []*pbp2p.PendingAttestation(nil), atts)
 
 	want := []*pbp2p.PendingAttestation{{ProposerIndex: 100}}
@@ -29,6 +30,7 @@ func TestBeaconState_CurrentEpochAttestations(t *testing.T) {
 	s, err := InitializeFromProto(&pbp2p.BeaconState{})
 	require.NoError(t, err)
 	atts, err := s.CurrentEpochAttestations()
+	require.NoError(t, err)
 	require.DeepEqual(t, []*pbp2p.PendingAttestation(nil), atts)
 
 	want := []*pbp2p.PendingAttestation{{ProposerIndex: 101}}
