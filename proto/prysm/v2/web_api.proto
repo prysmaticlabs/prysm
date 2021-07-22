@@ -1,11 +1,18 @@
 syntax = "proto3";
-package ethereum.validator.accounts.v2;
+package ethereum.prysm.v2;
 
 import "proto/beacon/rpc/v1/health.proto";
-import "proto/prysm/v1alpha1/beacon_chain.proto";
-import "proto/prysm/v1alpha1/node.proto";
+import "proto/prysm/v2/beacon_chain.proto";
+import "proto/prysm/v2/node.proto";
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
+
+option csharp_namespace = "Ethereum.Prysm.V2";
+option go_package = "github.com/prysmaticlabs/prysm/proto/prysm/v2;v2";
+option java_multiple_files = true;
+option java_outer_classname = "WebProto";
+option java_package = "org.ethereum.prysm.v2";
+option php_namespace = "Ethereum\\Prysm\\v2";
 
 service Wallet {
     rpc CreateWallet(CreateWalletRequest) returns (CreateWalletResponse) {
@@ -77,39 +84,39 @@ service Beacon {
         };
     }
     rpc GetValidatorParticipation(
-        ethereum.eth.v1alpha1.GetValidatorParticipationRequest
-    ) returns (ethereum.eth.v1alpha1.ValidatorParticipationResponse) {
+        ethereum.prysm.v2.GetValidatorParticipationRequest
+    ) returns (ethereum.prysm.v2.ValidatorParticipationResponse) {
         option (google.api.http) = {
             get: "/v2/validator/beacon/participation"
         };
     }
     rpc GetValidatorPerformance(
-        ethereum.eth.v1alpha1.ValidatorPerformanceRequest
-    ) returns (ethereum.eth.v1alpha1.ValidatorPerformanceResponse) {
+        ethereum.prysm.v2.ValidatorPerformanceRequest
+    ) returns (ethereum.prysm.v2.ValidatorPerformanceResponse) {
         option (google.api.http) = {
             get: "/v2/validator/beacon/performance"
         };
     }
     rpc GetValidators(
-        ethereum.eth.v1alpha1.ListValidatorsRequest
-    ) returns (ethereum.eth.v1alpha1.Validators) {
+        ethereum.prysm.v2.ListValidatorsRequest
+    ) returns (ethereum.prysm.v2.Validators) {
         option (google.api.http) = {
             get: "/v2/validator/beacon/validators"
         };
     }
     rpc GetValidatorBalances(
-        ethereum.eth.v1alpha1.ListValidatorBalancesRequest
-    ) returns (ethereum.eth.v1alpha1.ValidatorBalances) {
+        ethereum.prysm.v2.ListValidatorBalancesRequest
+    ) returns (ethereum.prysm.v2.ValidatorBalances) {
         option (google.api.http) = {
             get: "/v2/validator/beacon/balances"
         };
     }
-    rpc GetValidatorQueue(google.protobuf.Empty) returns (ethereum.eth.v1alpha1.ValidatorQueue) {
+    rpc GetValidatorQueue(google.protobuf.Empty) returns (ethereum.prysm.v2.ValidatorQueue) {
         option (google.api.http) = {
             get: "/v2/validator/beacon/queue"
         };
     }
-    rpc GetPeers(google.protobuf.Empty) returns (ethereum.eth.v1alpha1.Peers) {
+    rpc GetPeers(google.protobuf.Empty) returns (ethereum.prysm.v2.Peers) {
         option (google.api.http) = {
             get: "/v2/validator/beacon/peers"
         };
@@ -368,7 +375,7 @@ message BeaconStatusResponse {
     // Address of the validator deposit contract in the eth1 chain.
     bytes deposit_contract_address = 5;
     // The head of the chain from the beacon node.
-    ethereum.eth.v1alpha1.ChainHead chain_head = 6;
+    ethereum.prysm.v2.ChainHead chain_head = 6;
 }
 
 message VoluntaryExitRequest {

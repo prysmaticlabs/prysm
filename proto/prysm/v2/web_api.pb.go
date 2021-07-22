@@ -4,7 +4,7 @@
 // 	protoc        v3.15.8
 // source: proto/validator/accounts/v2/web_api.proto
 
-package ethereum_validator_accounts_v2
+package v2
 
 import (
 	context "context"

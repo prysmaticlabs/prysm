@@ -4,7 +4,7 @@
 // 	protoc        v3.15.8
 // source: proto/validator/accounts/v2/keymanager.proto
 
-package ethereum_validator_accounts_v2
+package v2
 
 import (
 	context "context"
@@ -16,7 +16,6 @@ import (
 	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/eth2-types"
 	_ "github.com/prysmaticlabs/prysm/proto/eth/ext"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	v2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"

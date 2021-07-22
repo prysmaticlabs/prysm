@@ -6,7 +6,7 @@ Package ethereum_validator_accounts_v2 is a reverse proxy.
 
 It translates gRPC into RESTful JSON APIs.
 */
-package ethereum_validator_accounts_v2
+package v2
 
 import (
 	"context"

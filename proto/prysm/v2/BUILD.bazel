@@ -23,6 +23,8 @@ proto_library(
     srcs = [
         "beacon_chain.proto",
         "validator.proto",
+        "keymanager.proto",
+        "web_api.proto",
         ":ssz_proto_files",
     ],
     visibility = ["//visibility:public"],
