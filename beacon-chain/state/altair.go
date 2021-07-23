@@ -1,4 +1,4 @@
-package iface
+package state
 
 import statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 

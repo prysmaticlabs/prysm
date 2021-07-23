@@ -376,9 +376,9 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 	blockRoots[3*params.BeaconConfig().SlotsPerEpoch] = blockRoot2[:]
 	require.NoError(t, beaconState.SetBlockRoots(blockRoots))
 
-	beaconState2 := beaconState.Copy()
-	require.NoError(t, beaconState2.SetSlot(beaconState2.Slot()-1))
-	require.NoError(t, db.SaveState(ctx, beaconState2, blockRoot2))
+	beaconstate := beaconState.Copy()
+	require.NoError(t, beaconstate.SetSlot(beaconstate.Slot()-1))
+	require.NoError(t, db.SaveState(ctx, beaconstate, blockRoot2))
 	chainService := &mock.ChainService{
 		Genesis: time.Now(),
 	}

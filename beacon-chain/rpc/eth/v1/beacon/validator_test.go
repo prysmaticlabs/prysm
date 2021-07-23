@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb_alpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -24,7 +24,7 @@ import (
 func TestGetValidator(t *testing.T) {
 	ctx := context.Background()
 
-	var state iface.BeaconState
+	var state state.BeaconState
 	state, _ = sharedtestutil.DeterministicGenesisState(t, 8192)
 
 	t.Run("Head Get Validator by index", func(t *testing.T) {
@@ -75,7 +75,7 @@ func TestGetValidator(t *testing.T) {
 func TestListValidators(t *testing.T) {
 	ctx := context.Background()
 
-	var state iface.BeaconState
+	var state state.BeaconState
 	state, _ = sharedtestutil.DeterministicGenesisState(t, 8192)
 
 	t.Run("Head List All Validators", func(t *testing.T) {
@@ -204,7 +204,7 @@ func TestListValidators(t *testing.T) {
 func TestListValidators_Status(t *testing.T) {
 	ctx := context.Background()
 
-	var state iface.BeaconState
+	var state state.BeaconState
 	state, _ = sharedtestutil.DeterministicGenesisState(t, 8192)
 
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
@@ -425,7 +425,7 @@ func TestListValidators_Status(t *testing.T) {
 func TestListValidatorBalances(t *testing.T) {
 	ctx := context.Background()
 
-	var state iface.BeaconState
+	var state state.BeaconState
 	state, _ = sharedtestutil.DeterministicGenesisState(t, 8192)
 
 	t.Run("Head List Validators Balance by index", func(t *testing.T) {
@@ -497,7 +497,7 @@ func TestListValidatorBalances(t *testing.T) {
 func TestListCommittees(t *testing.T) {
 	ctx := context.Background()
 
-	var state iface.BeaconState
+	var state state.BeaconState
 	state, _ = sharedtestutil.DeterministicGenesisState(t, 8192)
 	epoch := helpers.SlotToEpoch(state.Slot())
 

@@ -17,7 +17,7 @@ go_library(
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/db/filters:go_default_library",
         "//beacon-chain/p2p:go_default_library",
-        "//beacon-chain/state/interface:go_default_library",
+        "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/stategen:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v2:go_default_library",
