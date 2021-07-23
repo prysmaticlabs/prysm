@@ -197,7 +197,7 @@ func (s *Service) Start() {
 		TimeFetcher:      s.cfg.GenesisTimeFetcher,
 		SyncChecker:      s.cfg.SyncService,
 		AttestationsPool: s.cfg.AttestationsPool,
-		V1Alpha1Server: validatorServer,
+		V1Alpha1Server:   validatorServer,
 	}
 
 	nodeServer := &nodev1alpha1.Server{
