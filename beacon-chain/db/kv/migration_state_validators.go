@@ -16,13 +16,17 @@ import (
 var migrationStateValidatorsKey = []byte("migration_state_validator")
 
 func migrateStateValidators(tx *bolt.Tx) error {
+	mb := tx.Bucket(migrationsBucket)
 	if !featureconfig.Get().EnableHistoricalSpaceRepresentation {
-		return nil
+		if b := mb.Get(migrationStateValidatorsKey); bytes.Equal(b, migrationCompleted) {
+			log.Warning("migration of historical states already completed. The node will work as if --enable-historical-state-representation=true.")
+			return nil // Migration already completed.
+		}
 	}
 
-	mb := tx.Bucket(migrationsBucket)
+	// if the flag is enabled and migration is completed, dont migrate again.
 	if b := mb.Get(migrationStateValidatorsKey); bytes.Equal(b, migrationCompleted) {
-		return nil // Migration already completed.
+		return nil
 	}
 	stateBkt := tx.Bucket(stateBucket)
 	if stateBkt == nil {
