@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -14,7 +14,7 @@ func TestNewBeaconState(t *testing.T) {
 	require.NoError(t, err)
 	b, err := st.MarshalSSZ()
 	require.NoError(t, err)
-	got := &pb.BeaconState{}
+	got := &statepb.BeaconState{}
 	require.NoError(t, got.UnmarshalSSZ(b))
 	if !reflect.DeepEqual(st.InnerStateUnsafe(), got) {
 		t.Fatal("State did not match after round trip marshal")

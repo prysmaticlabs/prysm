@@ -52,7 +52,6 @@ go_library(
         "//proto/interfaces:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v2:go_default_library",
-        "//proto/prysm/v2/state:go_default_library",
         "//proto/prysm/v2/wrapper:go_default_library",
         "//shared:go_default_library",
         "//shared/featureconfig:go_default_library",
