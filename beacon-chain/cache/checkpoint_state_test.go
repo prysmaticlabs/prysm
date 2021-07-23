@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
@@ -25,20 +25,20 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	state, err := cache.StateByCheckpoint(cp1)
+	s, err := cache.StateByCheckpoint(cp1)
 	require.NoError(t, err)
-	assert.Equal(t, iface.BeaconState(nil), state, "Expected state not to exist in empty cache")
+	assert.Equal(t, state.BeaconState(nil), s, "Expected state not to exist in empty cache")
 
 	require.NoError(t, cache.AddCheckpointState(cp1, st))
 
-	state, err = cache.StateByCheckpoint(cp1)
+	s, err = cache.StateByCheckpoint(cp1)
 	require.NoError(t, err)
 
-	pbState1, err := v1.ProtobufBeaconState(state.InnerStateUnsafe())
+	pbState1, err := v1.ProtobufBeaconState(s.InnerStateUnsafe())
 	require.NoError(t, err)
-	pbState2, err := v1.ProtobufBeaconState(st.InnerStateUnsafe())
+	pbstate, err := v1.ProtobufBeaconState(st.InnerStateUnsafe())
 	require.NoError(t, err)
-	if !proto.Equal(pbState1, pbState2) {
+	if !proto.Equal(pbState1, pbstate) {
 		t.Error("incorrectly cached state")
 	}
 
@@ -49,13 +49,13 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, cache.AddCheckpointState(cp2, st2))
 
-	state, err = cache.StateByCheckpoint(cp2)
+	s, err = cache.StateByCheckpoint(cp2)
 	require.NoError(t, err)
-	assert.DeepEqual(t, st2.CloneInnerState(), state.CloneInnerState(), "incorrectly cached state")
+	assert.DeepEqual(t, st2.CloneInnerState(), s.CloneInnerState(), "incorrectly cached state")
 
-	state, err = cache.StateByCheckpoint(cp1)
+	s, err = cache.StateByCheckpoint(cp1)
 	require.NoError(t, err)
-	assert.DeepEqual(t, st.CloneInnerState(), state.CloneInnerState(), "incorrectly cached state")
+	assert.DeepEqual(t, st.CloneInnerState(), s.CloneInnerState(), "incorrectly cached state")
 }
 
 func TestCheckpointStateCache_MaxSize(t *testing.T) {
