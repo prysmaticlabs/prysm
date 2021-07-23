@@ -8,9 +8,9 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
@@ -23,7 +23,7 @@ func signatureSet(signedData, pub, signature, domain []byte) (*bls.SignatureSet,
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert bytes to public key")
 	}
-	signingData := &pb.SigningData{
+	signingData := &statepb.SigningData{
 		ObjectRoot: signedData,
 		Domain:     domain,
 	}

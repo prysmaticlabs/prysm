@@ -10,8 +10,8 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -35,7 +35,7 @@ func (b *BeaconState) CloneInnerState() interface{} {
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
-	return &pbp2p.BeaconStateAltair{
+	return &statepb.BeaconStateAltair{
 		GenesisTime:                 b.genesisTime(),
 		GenesisValidatorsRoot:       b.genesisValidatorRoot(),
 		Slot:                        b.slot(),
@@ -166,7 +166,7 @@ func (b *BeaconState) slot() types.Slot {
 }
 
 // Fork version of the beacon chain.
-func (b *BeaconState) Fork() *pbp2p.Fork {
+func (b *BeaconState) Fork() *statepb.Fork {
 	if !b.hasInnerState() {
 		return nil
 	}
@@ -182,7 +182,7 @@ func (b *BeaconState) Fork() *pbp2p.Fork {
 
 // fork version of the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) fork() *pbp2p.Fork {
+func (b *BeaconState) fork() *statepb.Fork {
 	if !b.hasInnerState() {
 		return nil
 	}
@@ -194,7 +194,7 @@ func (b *BeaconState) fork() *pbp2p.Fork {
 	copy(prevVersion, b.state.Fork.PreviousVersion)
 	currVersion := make([]byte, len(b.state.Fork.CurrentVersion))
 	copy(currVersion, b.state.Fork.CurrentVersion)
-	return &pbp2p.Fork{
+	return &statepb.Fork{
 		PreviousVersion: prevVersion,
 		CurrentVersion:  currVersion,
 		Epoch:           b.state.Fork.Epoch,
@@ -979,7 +979,7 @@ func (b *BeaconState) FinalizedCheckpointEpoch() types.Epoch {
 
 // currentSyncCommittee of the current sync committee in beacon chain state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) currentSyncCommittee() *pbp2p.SyncCommittee {
+func (b *BeaconState) currentSyncCommittee() *statepb.SyncCommittee {
 	if !b.hasInnerState() {
 		return nil
 	}
@@ -989,7 +989,7 @@ func (b *BeaconState) currentSyncCommittee() *pbp2p.SyncCommittee {
 
 // nextSyncCommittee of the next sync committee in beacon chain state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) nextSyncCommittee() *pbp2p.SyncCommittee {
+func (b *BeaconState) nextSyncCommittee() *statepb.SyncCommittee {
 	if !b.hasInnerState() {
 		return nil
 	}
@@ -998,7 +998,7 @@ func (b *BeaconState) nextSyncCommittee() *pbp2p.SyncCommittee {
 }
 
 // CurrentSyncCommittee of the current sync committee in beacon chain state.
-func (b *BeaconState) CurrentSyncCommittee() (*pbp2p.SyncCommittee, error) {
+func (b *BeaconState) CurrentSyncCommittee() (*statepb.SyncCommittee, error) {
 	if !b.hasInnerState() {
 		return nil, nil
 	}
@@ -1014,7 +1014,7 @@ func (b *BeaconState) CurrentSyncCommittee() (*pbp2p.SyncCommittee, error) {
 }
 
 // NextSyncCommittee of the next sync committee in beacon chain state.
-func (b *BeaconState) NextSyncCommittee() (*pbp2p.SyncCommittee, error) {
+func (b *BeaconState) NextSyncCommittee() (*statepb.SyncCommittee, error) {
 	if !b.hasInnerState() {
 		return nil, nil
 	}
@@ -1156,8 +1156,8 @@ func (b *BeaconState) MarshalSSZ() ([]byte, error) {
 
 // ProtobufBeaconState transforms an input into beacon state hard fork 1 in the form of protobuf.
 // Error is returned if the input is not type protobuf beacon state.
-func ProtobufBeaconState(s interface{}) (*pbp2p.BeaconStateAltair, error) {
-	pbState, ok := s.(*pbp2p.BeaconStateAltair)
+func ProtobufBeaconState(s interface{}) (*statepb.BeaconStateAltair, error) {
+	pbState, ok := s.(*statepb.BeaconStateAltair)
 	if !ok {
 		return nil, errors.New("input is not type pb.BeaconStateAltair")
 	}

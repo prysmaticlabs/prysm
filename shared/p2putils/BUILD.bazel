@@ -7,7 +7,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
-        "//proto/beacon/p2p/v1:go_default_library",
+        "//proto/prysm/v2/state:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/params:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
@@ -21,7 +21,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
-        "//proto/beacon/p2p/v1:go_default_library",
+        "//proto/prysm/v2/state:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil/assert:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",

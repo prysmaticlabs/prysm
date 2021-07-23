@@ -7,7 +7,7 @@ import (
 
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -21,7 +21,7 @@ func TestInitializeFromProto(t *testing.T) {
 	require.NoError(t, err)
 	type test struct {
 		name  string
-		state *pb.BeaconStateAltair
+		state *statepb.BeaconStateAltair
 		error string
 	}
 	initTests := []test{
@@ -32,14 +32,14 @@ func TestInitializeFromProto(t *testing.T) {
 		},
 		{
 			name: "nil validators",
-			state: &pb.BeaconStateAltair{
+			state: &statepb.BeaconStateAltair{
 				Slot:       4,
 				Validators: nil,
 			},
 		},
 		{
 			name:  "empty state",
-			state: &pb.BeaconStateAltair{},
+			state: &statepb.BeaconStateAltair{},
 		},
 		{
 			name:  "full state",
@@ -64,7 +64,7 @@ func TestInitializeFromProtoUnsafe(t *testing.T) {
 	require.NoError(t, err)
 	type test struct {
 		name  string
-		state *pb.BeaconStateAltair
+		state *statepb.BeaconStateAltair
 		error string
 	}
 	initTests := []test{
@@ -75,14 +75,14 @@ func TestInitializeFromProtoUnsafe(t *testing.T) {
 		},
 		{
 			name: "nil validators",
-			state: &pb.BeaconStateAltair{
+			state: &statepb.BeaconStateAltair{
 				Slot:       4,
 				Validators: nil,
 			},
 		},
 		{
 			name:  "empty state",
-			state: &pb.BeaconStateAltair{},
+			state: &statepb.BeaconStateAltair{},
 		},
 		{
 			name:  "full state",
@@ -248,8 +248,8 @@ func TestBeaconStateAltair_ProtoBeaconStateCompatibility(t *testing.T) {
 	require.NoError(t, err)
 	customState, err := stateAltair.InitializeFromProto(genesis)
 	require.NoError(t, err)
-	cloned, ok := proto.Clone(genesis).(*pb.BeaconStateAltair)
-	assert.Equal(t, true, ok, "Object is not of type *pb.BeaconStateAltair")
+	cloned, ok := proto.Clone(genesis).(*statepb.BeaconStateAltair)
+	assert.Equal(t, true, ok, "Object is not of type *statepb.BeaconStateAltair")
 	custom := customState.CloneInnerState()
 	assert.DeepSSZEqual(t, cloned, custom)
 	r1, err := customState.HashTreeRoot(ctx)

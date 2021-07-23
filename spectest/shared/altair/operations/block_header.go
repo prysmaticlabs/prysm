@@ -10,8 +10,8 @@ import (
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/spectest/utils"
@@ -35,7 +35,7 @@ func RunBlockHeaderTest(t *testing.T, config string) {
 			require.NoError(t, err)
 			preBeaconStateSSZ, err := snappy.Decode(nil /* dst */, preBeaconStateFile)
 			require.NoError(t, err, "Failed to decompress")
-			preBeaconStateBase := &pb.BeaconStateAltair{}
+			preBeaconStateBase := &statepb.BeaconStateAltair{}
 			require.NoError(t, preBeaconStateBase.UnmarshalSSZ(preBeaconStateSSZ), "Failed to unmarshal")
 			preBeaconState, err := stateAltair.InitializeFromProto(preBeaconStateBase)
 			require.NoError(t, err)
@@ -61,7 +61,7 @@ func RunBlockHeaderTest(t *testing.T, config string) {
 				postBeaconStateSSZ, err := snappy.Decode(nil /* dst */, postBeaconStateFile)
 				require.NoError(t, err, "Failed to decompress")
 
-				postBeaconState := &pb.BeaconStateAltair{}
+				postBeaconState := &statepb.BeaconStateAltair{}
 				require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateSSZ), "Failed to unmarshal")
 				pbState, err := stateAltair.ProtobufBeaconState(beaconState.CloneInnerState())
 				require.NoError(t, err)

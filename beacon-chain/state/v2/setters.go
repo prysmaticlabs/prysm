@@ -7,8 +7,8 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -69,14 +69,14 @@ func (b *BeaconState) SetSlot(val types.Slot) error {
 }
 
 // SetFork version for the beacon chain.
-func (b *BeaconState) SetFork(val *pbp2p.Fork) error {
+func (b *BeaconState) SetFork(val *statepb.Fork) error {
 	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	fk, ok := proto.Clone(val).(*pbp2p.Fork)
+	fk, ok := proto.Clone(val).(*statepb.Fork)
 	if !ok {
 		return errors.New("proto.Clone did not return a fork proto")
 	}
@@ -704,7 +704,7 @@ func (b *BeaconState) SetFinalizedCheckpoint(val *ethpb.Checkpoint) error {
 }
 
 // SetCurrentSyncCommittee for the beacon state.
-func (b *BeaconState) SetCurrentSyncCommittee(val *pbp2p.SyncCommittee) error {
+func (b *BeaconState) SetCurrentSyncCommittee(val *statepb.SyncCommittee) error {
 	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
@@ -717,7 +717,7 @@ func (b *BeaconState) SetCurrentSyncCommittee(val *pbp2p.SyncCommittee) error {
 }
 
 // SetNextSyncCommittee for the beacon state.
-func (b *BeaconState) SetNextSyncCommittee(val *pbp2p.SyncCommittee) error {
+func (b *BeaconState) SetNextSyncCommittee(val *statepb.SyncCommittee) error {
 	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}

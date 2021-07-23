@@ -8,8 +8,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -94,7 +94,7 @@ func TestProcessParticipationFlagUpdates_CanRotate(t *testing.T) {
 }
 
 func TestProcessSlashings_NotSlashed(t *testing.T) {
-	base := &pb.BeaconStateAltair{
+	base := &statepb.BeaconStateAltair{
 		Slot:       0,
 		Validators: []*ethpb.Validator{{Slashed: true}},
 		Balances:   []uint64{params.BeaconConfig().MaxEffectiveBalance},
@@ -110,11 +110,11 @@ func TestProcessSlashings_NotSlashed(t *testing.T) {
 
 func TestProcessSlashings_SlashedLess(t *testing.T) {
 	tests := []struct {
-		state *pb.BeaconStateAltair
+		state *statepb.BeaconStateAltair
 		want  uint64
 	}{
 		{
-			state: &pb.BeaconStateAltair{
+			state: &statepb.BeaconStateAltair{
 				Validators: []*ethpb.Validator{
 					{Slashed: true,
 						WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashingsVector / 2,
@@ -126,7 +126,7 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 			want: uint64(30000000000),
 		},
 		{
-			state: &pb.BeaconStateAltair{
+			state: &statepb.BeaconStateAltair{
 				Validators: []*ethpb.Validator{
 					{Slashed: true,
 						WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashingsVector / 2,
@@ -140,7 +140,7 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 			want: uint64(31000000000),
 		},
 		{
-			state: &pb.BeaconStateAltair{
+			state: &statepb.BeaconStateAltair{
 				Validators: []*ethpb.Validator{
 					{Slashed: true,
 						WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashingsVector / 2,
@@ -154,7 +154,7 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 			want: uint64(30000000000),
 		},
 		{
-			state: &pb.BeaconStateAltair{
+			state: &statepb.BeaconStateAltair{
 				Validators: []*ethpb.Validator{
 					{Slashed: true,
 						WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashingsVector / 2,

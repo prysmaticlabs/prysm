@@ -18,8 +18,8 @@ import (
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -39,9 +39,9 @@ func setupValidExit(t *testing.T) (*ethpb.SignedVoluntaryExit, iface.BeaconState
 			ActivationEpoch: 0,
 		},
 	}
-	state, err := v1.InitializeFromProto(&pb.BeaconState{
+	state, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Validators: registry,
-		Fork: &pb.Fork{
+		Fork: &statepb.Fork{
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 		},

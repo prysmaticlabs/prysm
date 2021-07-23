@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	statealtair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 	"github.com/prysmaticlabs/prysm/spectest/utils"
@@ -31,7 +31,7 @@ func RunUpgradeToAltair(t *testing.T, config string) {
 			require.NoError(t, err)
 			preStateSSZ, err := snappy.Decode(nil /* dst */, preStateFile)
 			require.NoError(t, err, "Failed to decompress")
-			preStateBase := &pb.BeaconState{}
+			preStateBase := &statepb.BeaconState{}
 			if err := preStateBase.UnmarshalSSZ(preStateSSZ); err != nil {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
@@ -46,7 +46,7 @@ func RunUpgradeToAltair(t *testing.T, config string) {
 			require.NoError(t, err)
 			postStateSSZ, err := snappy.Decode(nil /* dst */, postStateFile)
 			require.NoError(t, err, "Failed to decompress")
-			postStateFromFile := &pb.BeaconStateAltair{}
+			postStateFromFile := &statepb.BeaconStateAltair{}
 			if err := postStateFromFile.UnmarshalSSZ(postStateSSZ); err != nil {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}

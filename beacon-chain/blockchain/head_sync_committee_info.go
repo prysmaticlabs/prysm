@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -95,7 +95,7 @@ func (s *Service) HeadSyncCommitteePubKeys(ctx context.Context, slot types.Slot,
 	nextSlotEpoch := helpers.SlotToEpoch(headState.Slot() + 1)
 	currEpoch := helpers.SlotToEpoch(headState.Slot())
 
-	var syncCommittee *pb.SyncCommittee
+	var syncCommittee *statepb.SyncCommittee
 	if helpers.SyncCommitteePeriod(currEpoch) == helpers.SyncCommitteePeriod(nextSlotEpoch) {
 		syncCommittee, err = headState.CurrentSyncCommittee()
 		if err != nil {

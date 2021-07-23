@@ -214,6 +214,7 @@ func SyncCommitteePeriod(epoch types.Epoch) uint64 {
 
 // SyncCommitteePeriodStartEpoch returns the start epoch of a sync committee period.
 func SyncCommitteePeriodStartEpoch(e types.Epoch) (types.Epoch, error) {
+	// Overflow is impossible here because of division of `EPOCHS_PER_SYNC_COMMITTEE_PERIOD`.
 	startEpoch, overflow := math2.SafeMul(SyncCommitteePeriod(e), uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod))
 	if overflow {
 		return 0, errors.New("start epoch calculation overflow")

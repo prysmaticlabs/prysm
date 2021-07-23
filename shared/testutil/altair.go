@@ -15,9 +15,9 @@ import (
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -129,13 +129,13 @@ func buildGenesisBeaconState(genesisTime uint64, preState iface.BeaconStateAltai
 	if err != nil {
 		return nil, err
 	}
-	state := &pb.BeaconStateAltair{
+	state := &statepb.BeaconStateAltair{
 		// Misc fields.
 		Slot:                  0,
 		GenesisTime:           genesisTime,
 		GenesisValidatorsRoot: genesisValidatorsRoot[:],
 
-		Fork: &pb.Fork{
+		Fork: &statepb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			Epoch:           0,
@@ -203,11 +203,11 @@ func buildGenesisBeaconState(genesisTime uint64, preState iface.BeaconStateAltai
 	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSize; i++ {
 		pubKeys = append(pubKeys, bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength))
 	}
-	state.CurrentSyncCommittee = &pb.SyncCommittee{
+	state.CurrentSyncCommittee = &statepb.SyncCommittee{
 		Pubkeys:         pubKeys,
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
-	state.NextSyncCommittee = &pb.SyncCommittee{
+	state.NextSyncCommittee = &statepb.SyncCommittee{
 		Pubkeys:         bytesutil.Copy2dBytes(pubKeys),
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
@@ -216,10 +216,10 @@ func buildGenesisBeaconState(genesisTime uint64, preState iface.BeaconStateAltai
 }
 
 func emptyGenesisState() (iface.BeaconStateAltair, error) {
-	state := &pb.BeaconStateAltair{
+	state := &statepb.BeaconStateAltair{
 		// Misc fields.
 		Slot: 0,
-		Fork: &pb.Fork{
+		Fork: &statepb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().AltairForkVersion,
 			Epoch:           0,

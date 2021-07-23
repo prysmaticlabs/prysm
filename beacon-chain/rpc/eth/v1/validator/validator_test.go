@@ -6,11 +6,15 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/go-bitfield"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -299,4 +303,156 @@ func TestGetProposerDuties_SyncNotReady(t *testing.T) {
 	}
 	_, err := vs.GetProposerDuties(context.Background(), &v1.ProposerDutiesRequest{})
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
+}
+
+func TestGetAggregateAttestation(t *testing.T) {
+	ctx := context.Background()
+	root1 := bytesutil.PadTo([]byte("root1"), 32)
+	sig1 := bytesutil.PadTo([]byte("sig1"), 96)
+	attSlot1 := &ethpb.Attestation{
+		AggregationBits: []byte{0, 1},
+		Data: &ethpb.AttestationData{
+			Slot:            1,
+			CommitteeIndex:  1,
+			BeaconBlockRoot: root1,
+			Source: &ethpb.Checkpoint{
+				Epoch: 1,
+				Root:  root1,
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: 1,
+				Root:  root1,
+			},
+		},
+		Signature: sig1,
+	}
+	root2_1 := bytesutil.PadTo([]byte("root2_1"), 32)
+	sig2_1 := bytesutil.PadTo([]byte("sig2_1"), 96)
+	attSlot2_1 := &ethpb.Attestation{
+		AggregationBits: []byte{0, 1, 1},
+		Data: &ethpb.AttestationData{
+			Slot:            2,
+			CommitteeIndex:  2,
+			BeaconBlockRoot: root2_1,
+			Source: &ethpb.Checkpoint{
+				Epoch: 1,
+				Root:  root2_1,
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: 1,
+				Root:  root2_1,
+			},
+		},
+		Signature: sig2_1,
+	}
+	root2_2 := bytesutil.PadTo([]byte("root2_2"), 32)
+	sig2_2 := bytesutil.PadTo([]byte("sig2_2"), 96)
+	attSlot2_2 := &ethpb.Attestation{
+		AggregationBits: []byte{0, 1, 1, 1},
+		Data: &ethpb.AttestationData{
+			Slot:            2,
+			CommitteeIndex:  3,
+			BeaconBlockRoot: root2_2,
+			Source: &ethpb.Checkpoint{
+				Epoch: 1,
+				Root:  root2_2,
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: 1,
+				Root:  root2_2,
+			},
+		},
+		Signature: sig2_2,
+	}
+	vs := &Server{
+		AttestationsPool: &attestations.PoolMock{AggregatedAtts: []*ethpb.Attestation{attSlot1, attSlot2_1, attSlot2_2}},
+	}
+
+	t.Run("OK", func(t *testing.T) {
+		reqRoot, err := attSlot2_2.Data.HashTreeRoot()
+		require.NoError(t, err)
+		req := &v1.AggregateAttestationRequest{
+			AttestationDataRoot: reqRoot[:],
+			Slot:                2,
+		}
+		att, err := vs.GetAggregateAttestation(ctx, req)
+		require.NoError(t, err)
+		require.NotNil(t, att)
+		require.NotNil(t, att.Data)
+		assert.DeepEqual(t, bitfield.Bitlist{0, 1, 1, 1}, att.Data.AggregationBits)
+		assert.DeepEqual(t, sig2_2, att.Data.Signature)
+		assert.Equal(t, types.Slot(2), att.Data.Data.Slot)
+		assert.Equal(t, types.CommitteeIndex(3), att.Data.Data.Index)
+		assert.DeepEqual(t, root2_2, att.Data.Data.BeaconBlockRoot)
+		require.NotNil(t, att.Data.Data.Source)
+		assert.Equal(t, types.Epoch(1), att.Data.Data.Source.Epoch)
+		assert.DeepEqual(t, root2_2, att.Data.Data.Source.Root)
+		require.NotNil(t, att.Data.Data.Target)
+		assert.Equal(t, types.Epoch(1), att.Data.Data.Target.Epoch)
+		assert.DeepEqual(t, root2_2, att.Data.Data.Target.Root)
+	})
+
+	t.Run("No matching attestation", func(t *testing.T) {
+		req := &v1.AggregateAttestationRequest{
+			AttestationDataRoot: bytesutil.PadTo([]byte("foo"), 32),
+			Slot:                2,
+		}
+		_, err := vs.GetAggregateAttestation(ctx, req)
+		assert.ErrorContains(t, "No matching attestation found", err)
+	})
+}
+
+func TestGetAggregateAttestation_SameSlotAndRoot_ReturnMostAggregationBits(t *testing.T) {
+	ctx := context.Background()
+	root := bytesutil.PadTo([]byte("root"), 32)
+	sig := bytesutil.PadTo([]byte("sig"), 96)
+	att1 := &ethpb.Attestation{
+		AggregationBits: []byte{0, 1},
+		Data: &ethpb.AttestationData{
+			Slot:            1,
+			CommitteeIndex:  1,
+			BeaconBlockRoot: root,
+			Source: &ethpb.Checkpoint{
+				Epoch: 1,
+				Root:  root,
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: 1,
+				Root:  root,
+			},
+		},
+		Signature: sig,
+	}
+	att2 := &ethpb.Attestation{
+		AggregationBits: []byte{0, 1, 1},
+		Data: &ethpb.AttestationData{
+			Slot:            1,
+			CommitteeIndex:  1,
+			BeaconBlockRoot: root,
+			Source: &ethpb.Checkpoint{
+				Epoch: 1,
+				Root:  root,
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: 1,
+				Root:  root,
+			},
+		},
+		Signature: sig,
+	}
+	vs := &Server{
+		AttestationsPool: &attestations.PoolMock{AggregatedAtts: []*ethpb.Attestation{att1, att2}},
+	}
+
+	reqRoot, err := att1.Data.HashTreeRoot()
+	require.NoError(t, err)
+	req := &v1.AggregateAttestationRequest{
+		AttestationDataRoot: reqRoot[:],
+		Slot:                1,
+	}
+	att, err := vs.GetAggregateAttestation(ctx, req)
+	require.NoError(t, err)
+	require.NotNil(t, att)
+	require.NotNil(t, att.Data)
+	assert.DeepEqual(t, bitfield.Bitlist{0, 1, 1}, att.Data.AggregationBits)
 }

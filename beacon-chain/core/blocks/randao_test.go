@@ -8,9 +8,9 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -27,7 +27,7 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	binary.LittleEndian.PutUint64(buf, uint64(epoch))
 	domain, err := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainRandao, beaconState.GenesisValidatorRoot())
 	require.NoError(t, err)
-	root, err := (&pb.SigningData{ObjectRoot: buf, Domain: domain}).HashTreeRoot()
+	root, err := (&statepb.SigningData{ObjectRoot: buf, Domain: domain}).HashTreeRoot()
 	require.NoError(t, err)
 	// We make the previous validator's index sign the message instead of the proposer.
 	epochSignature := privKeys[proposerIdx-1].Sign(root[:])

@@ -1,7 +1,7 @@
 package v2
 
 import (
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 )
@@ -9,7 +9,7 @@ import (
 // syncCommitteeRoot computes the HashTreeRoot Merkleization of a commitee root.
 // a SyncCommitteeRoot struct according to the eth2
 // Simple Serialize specification.
-func syncCommitteeRoot(committee *pb.SyncCommittee) ([32]byte, error) {
+func syncCommitteeRoot(committee *statepb.SyncCommittee) ([32]byte, error) {
 	hasher := hashutil.CustomSHA256Hasher()
 	var fieldRoots [][32]byte
 	if committee == nil {

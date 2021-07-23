@@ -23,12 +23,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -80,20 +79,20 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	bState, _ := testutil.DeterministicGenesisState(t, 10)
 	pbState, err := v1.ProtobufBeaconState(bState.InnerStateUnsafe())
 	require.NoError(t, err)
-	err = beaconDB.SavePowchainData(ctx, &protodb.ETH1ChainData{
+	err = beaconDB.SavePowchainData(ctx, &prysmv2.ETH1ChainData{
 		BeaconState: pbState,
-		Trie:        &protodb.SparseMerkleTrie{},
-		CurrentEth1Data: &protodb.LatestETH1Data{
+		Trie:        &prysmv2.SparseMerkleTrie{},
+		CurrentEth1Data: &prysmv2.LatestETH1Data{
 			BlockHash: make([]byte, 32),
 		},
-		ChainstartData: &protodb.ChainStartData{
+		ChainstartData: &prysmv2.ChainStartData{
 			Eth1Data: &ethpb.Eth1Data{
 				DepositRoot:  make([]byte, 32),
 				DepositCount: 0,
 				BlockHash:    make([]byte, 32),
 			},
 		},
-		DepositContainers: []*protodb.DepositContainer{},
+		DepositContainers: []*prysmv2.DepositContainer{},
 	})
 	require.NoError(t, err)
 	web3Service, err = powchain.NewService(ctx, &powchain.Web3ServiceConfig{
@@ -513,7 +512,7 @@ func BenchmarkHasBlockForkChoiceStore(b *testing.B) {
 	block := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}}
 	r, err := block.Block.HashTreeRoot()
 	require.NoError(b, err)
-	bs := &pb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}, CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}}
+	bs := &statepb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}, CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}}
 	beaconState, err := v1.InitializeFromProto(bs)
 	require.NoError(b, err)
 	require.NoError(b, s.insertBlockAndAttestationsToForkChoiceStore(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block).Block(), r, beaconState))

@@ -8,9 +8,9 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -205,7 +205,7 @@ func ProcessAttestationNoVerifySignature(
 	if err != nil {
 		return nil, err
 	}
-	pendingAtt := &pb.PendingAttestation{
+	pendingAtt := &statepb.PendingAttestation{
 		Data:            data,
 		AggregationBits: att.AggregationBits,
 		InclusionDelay:  beaconState.Slot() - s,

@@ -18,9 +18,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	p2p2 "github.com/prysmaticlabs/prysm/proto/beacon/p2p"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/interfaces"
+	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sszutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -243,7 +243,7 @@ func TestExtractMetaDataType(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    p2p2.Metadata
+		want    interfaces.Metadata
 		wantErr bool
 	}{
 		{

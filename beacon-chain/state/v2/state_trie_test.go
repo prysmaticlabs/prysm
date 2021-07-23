@@ -6,11 +6,12 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
 func TestValidatorMap_DistinctCopy(t *testing.T) {
@@ -41,6 +42,43 @@ func TestValidatorMap_DistinctCopy(t *testing.T) {
 	assert.NotEqual(t, val1, val2, "Values are supposed to be unequal due to copy")
 }
 
+func TestInitializeFromProto(t *testing.T) {
+	type test struct {
+		name  string
+		state *statepb.BeaconStateAltair
+		error string
+	}
+	initTests := []test{
+		{
+			name:  "nil state",
+			state: nil,
+			error: "received nil state",
+		},
+		{
+			name: "nil validators",
+			state: &statepb.BeaconStateAltair{
+				Slot:       4,
+				Validators: nil,
+			},
+		},
+		{
+			name:  "empty state",
+			state: &statepb.BeaconStateAltair{},
+		},
+		// TODO: Add full state. Blocked by testutil migration.
+	}
+	for _, tt := range initTests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := InitializeFromProto(tt.state)
+			if tt.error != "" {
+				require.ErrorContains(t, tt.error, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestBeaconState_NoDeadlock(t *testing.T) {
 	count := uint64(100)
 	vals := make([]*ethpb.Validator, 0, count)
@@ -60,7 +98,7 @@ func TestBeaconState_NoDeadlock(t *testing.T) {
 			WithdrawableEpoch:          1,
 		})
 	}
-	st, err := InitializeFromProtoUnsafe(&pb.BeaconStateAltair{
+	st, err := InitializeFromProtoUnsafe(&statepb.BeaconStateAltair{
 		Validators: vals,
 	})
 	assert.NoError(t, err)
@@ -93,4 +131,32 @@ func TestBeaconState_NoDeadlock(t *testing.T) {
 	}
 	// Test will not terminate in the event of a deadlock.
 	wg.Wait()
+}
+
+func TestInitializeFromProtoUnsafe(t *testing.T) {
+	type test struct {
+		name  string
+		state *statepb.BeaconStateAltair
+		error string
+	}
+	initTests := []test{
+		{
+			name:  "nil state",
+			state: nil,
+			error: "received nil state",
+		},
+		{
+			name: "nil validators",
+			state: &statepb.BeaconStateAltair{
+				Slot:       4,
+				Validators: nil,
+			},
+		},
+		{
+			name:  "empty state",
+			state: &statepb.BeaconStateAltair{},
+		},
+		// TODO: Add full state. Blocked by testutil migration.
+	}
+	_ = initTests
 }

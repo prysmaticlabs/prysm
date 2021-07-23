@@ -5,7 +5,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	wrapperv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -24,7 +24,7 @@ func TestVerifyBlockSignatureUsingCurrentFork(t *testing.T) {
 	altairBlk := testutil.NewBeaconBlockAltair()
 	altairBlk.Block.ProposerIndex = 0
 	altairBlk.Block.Slot = params.BeaconConfig().SlotsPerEpoch * 100
-	fData := &pb.Fork{
+	fData := &statepb.Fork{
 		Epoch:           100,
 		CurrentVersion:  params.BeaconConfig().AltairForkVersion,
 		PreviousVersion: params.BeaconConfig().GenesisForkVersion,

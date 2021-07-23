@@ -7,9 +7,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -24,7 +24,7 @@ func TestSyncCommitteeIndices_CanGet(t *testing.T) {
 				EffectiveBalance: params.BeaconConfig().MinDepositAmount,
 			}
 		}
-		state, err := stateAltair.InitializeFromProto(&pb.BeaconStateAltair{
+		state, err := stateAltair.InitializeFromProto(&statepb.BeaconStateAltair{
 			Validators:  validators,
 			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		})
@@ -99,7 +99,7 @@ func TestSyncCommitteeIndices_DifferentPeriods(t *testing.T) {
 				EffectiveBalance: params.BeaconConfig().MinDepositAmount,
 			}
 		}
-		state, err := stateAltair.InitializeFromProto(&pb.BeaconStateAltair{
+		state, err := stateAltair.InitializeFromProto(&statepb.BeaconStateAltair{
 			Validators:  validators,
 			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		})
@@ -136,7 +136,7 @@ func TestSyncCommittee_CanGet(t *testing.T) {
 				PublicKey:        blsKey.PublicKey().Marshal(),
 			}
 		}
-		state, err := stateAltair.InitializeFromProto(&pb.BeaconStateAltair{
+		state, err := stateAltair.InitializeFromProto(&statepb.BeaconStateAltair{
 			Validators:  validators,
 			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		})

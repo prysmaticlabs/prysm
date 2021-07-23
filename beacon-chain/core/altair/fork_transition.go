@@ -4,7 +4,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	statealtair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -13,11 +13,11 @@ import (
 func UpgradeToAltair(state iface.BeaconState) (iface.BeaconStateAltair, error) {
 	epoch := helpers.CurrentEpoch(state)
 
-	s := &pb.BeaconStateAltair{
+	s := &statepb.BeaconStateAltair{
 		GenesisTime:           state.GenesisTime(),
 		GenesisValidatorsRoot: state.GenesisValidatorRoot(),
 		Slot:                  state.Slot(),
-		Fork: &pb.Fork{
+		Fork: &statepb.Fork{
 			PreviousVersion: state.Fork().CurrentVersion,
 			CurrentVersion:  params.BeaconConfig().AltairForkVersion,
 			Epoch:           epoch,
@@ -71,7 +71,7 @@ func UpgradeToAltair(state iface.BeaconState) (iface.BeaconStateAltair, error) {
 
 // TranslateParticipation translates pending attestations into participation bits, then inserts the bits into beacon state.
 // This is helper function t o convert phase 0 beacon state(pending attestations) to Altair beacon state(participation bits).
-func TranslateParticipation(state *statealtair.BeaconState, atts []*pb.PendingAttestation) (*statealtair.BeaconState, error) {
+func TranslateParticipation(state *statealtair.BeaconState, atts []*statepb.PendingAttestation) (*statealtair.BeaconState, error) {
 	for _, att := range atts {
 		epochParticipation, err := state.PreviousEpochParticipation()
 		if err != nil {

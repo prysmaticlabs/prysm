@@ -8,8 +8,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
@@ -17,7 +17,7 @@ import (
 
 func TestInitializeEpochValidators_Ok(t *testing.T) {
 	ffe := params.BeaconConfig().FarFutureEpoch
-	s, err := stateAltair.InitializeFromProto(&pb.BeaconStateAltair{
+	s, err := stateAltair.InitializeFromProto(&statepb.BeaconStateAltair{
 		Slot: params.BeaconConfig().SlotsPerEpoch,
 		// Validator 0 is slashed
 		// Validator 1 is withdrawable
@@ -64,7 +64,7 @@ func TestInitializeEpochValidators_Ok(t *testing.T) {
 }
 
 func TestInitializeEpochValidators_BadState(t *testing.T) {
-	s, err := stateAltair.InitializeFromProto(&pb.BeaconStateAltair{
+	s, err := stateAltair.InitializeFromProto(&statepb.BeaconStateAltair{
 		Validators:       []*ethpb.Validator{{}},
 		InactivityScores: []uint64{},
 	})
@@ -258,7 +258,7 @@ func testState() (iface.BeaconState, error) {
 		}
 		return b
 	}
-	return stateAltair.InitializeFromProto(&pb.BeaconStateAltair{
+	return stateAltair.InitializeFromProto(&statepb.BeaconStateAltair{
 		Slot: 2 * params.BeaconConfig().SlotsPerEpoch,
 		Validators: []*ethpb.Validator{
 			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance, ExitEpoch: params.BeaconConfig().FarFutureEpoch},

@@ -12,9 +12,9 @@ import (
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -202,14 +202,14 @@ func unmarshalState(ctx context.Context, enc []byte) (iface.BeaconState, error) 
 	switch {
 	case hasAltairKey(enc):
 		// Marshal state bytes to altair beacon state.
-		protoState := &pb.BeaconStateAltair{}
+		protoState := &statepb.BeaconStateAltair{}
 		if err := protoState.UnmarshalSSZ(enc[len(altairKey):]); err != nil {
 			return nil, errors.Wrap(err, "failed to unmarshal encoding for altair")
 		}
 		return v2.InitializeFromProtoUnsafe(protoState)
 	default:
 		// Marshal state bytes to phase 0 beacon state.
-		protoState := &pb.BeaconState{}
+		protoState := &statepb.BeaconState{}
 		if err := protoState.UnmarshalSSZ(enc); err != nil {
 			return nil, errors.Wrap(err, "failed to unmarshal encoding")
 		}
@@ -220,14 +220,14 @@ func unmarshalState(ctx context.Context, enc []byte) (iface.BeaconState, error) 
 // marshal versioned state from struct type down to bytes.
 func marshalState(ctx context.Context, st iface.ReadOnlyBeaconState) ([]byte, error) {
 	switch st.InnerStateUnsafe().(type) {
-	case *pb.BeaconState:
-		rState, ok := st.InnerStateUnsafe().(*pb.BeaconState)
+	case *statepb.BeaconState:
+		rState, ok := st.InnerStateUnsafe().(*statepb.BeaconState)
 		if !ok {
 			return nil, errors.New("non valid inner state")
 		}
 		return encode(ctx, rState)
-	case *pb.BeaconStateAltair:
-		rState, ok := st.InnerStateUnsafe().(*pb.BeaconStateAltair)
+	case *statepb.BeaconStateAltair:
+		rState, ok := st.InnerStateUnsafe().(*statepb.BeaconStateAltair)
 		if !ok {
 			return nil, errors.New("non valid inner state")
 		}
@@ -305,7 +305,7 @@ func slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []byte) (types.
 		}
 		return b.Block.Slot, nil
 	}
-	stateSummary := &pb.StateSummary{}
+	stateSummary := &statepb.StateSummary{}
 	if err := decode(ctx, enc, stateSummary); err != nil {
 		return 0, err
 	}

@@ -8,10 +8,10 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	"github.com/prysmaticlabs/prysm/proto/beacon/db"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	v2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 )
 
 // DatabasePath -- passthrough.
@@ -70,7 +70,7 @@ func (e Exporter) State(ctx context.Context, blockRoot [32]byte) (iface.BeaconSt
 }
 
 // StateSummary -- passthrough.
-func (e Exporter) StateSummary(ctx context.Context, blockRoot [32]byte) (*pb.StateSummary, error) {
+func (e Exporter) StateSummary(ctx context.Context, blockRoot [32]byte) (*statepb.StateSummary, error) {
 	return e.db.StateSummary(ctx, blockRoot)
 }
 
@@ -145,12 +145,12 @@ func (e Exporter) SaveState(ctx context.Context, st iface.ReadOnlyBeaconState, b
 }
 
 // SaveStateSummary -- passthrough.
-func (e Exporter) SaveStateSummary(ctx context.Context, summary *pb.StateSummary) error {
+func (e Exporter) SaveStateSummary(ctx context.Context, summary *statepb.StateSummary) error {
 	return e.db.SaveStateSummary(ctx, summary)
 }
 
 // SaveStateSummaries -- passthrough.
-func (e Exporter) SaveStateSummaries(ctx context.Context, summaries []*pb.StateSummary) error {
+func (e Exporter) SaveStateSummaries(ctx context.Context, summaries []*statepb.StateSummary) error {
 	return e.db.SaveStateSummaries(ctx, summaries)
 }
 
@@ -220,12 +220,12 @@ func (e Exporter) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (
 }
 
 // PowchainData -- passthrough
-func (e Exporter) PowchainData(ctx context.Context) (*db.ETH1ChainData, error) {
+func (e Exporter) PowchainData(ctx context.Context) (*v2.ETH1ChainData, error) {
 	return e.db.PowchainData(ctx)
 }
 
 // SavePowchainData -- passthrough
-func (e Exporter) SavePowchainData(ctx context.Context, data *db.ETH1ChainData) error {
+func (e Exporter) SavePowchainData(ctx context.Context, data *v2.ETH1ChainData) error {
 	return e.db.SavePowchainData(ctx, data)
 }
 

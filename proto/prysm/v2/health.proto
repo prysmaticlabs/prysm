@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package ethereum.prysm.v2;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+option csharp_namespace = "Ethereum.Prysm.V2";
+option go_package = "github.com/prysmaticlabs/prysm/proto/prysm/v2;v2";
+option java_multiple_files = true;
+option java_outer_classname = "HealthProto";
+option java_package = "org.ethereum.prysm.v2";
+option php_namespace = "Ethereum\\Prysm\\v2";
+
+// Health service API
+//
+// The health service is able to return important metadata about a beacon node
+// such being able to stream logs via gRPC.
+service Health {
+    rpc StreamBeaconLogs(google.protobuf.Empty) returns (stream LogsResponse) {
+        option (google.api.http) = {
+            get: "/prysm/v1alpha1/health/logs/stream"
+        };
+    }
+}
+
+message LogsResponse {
+  repeated string logs = 1;
+}

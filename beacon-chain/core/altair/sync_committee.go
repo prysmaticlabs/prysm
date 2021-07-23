@@ -7,8 +7,8 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -45,7 +45,7 @@ func ValidateNilSyncContribution(s *prysmv2.SignedContributionAndProof) error {
 //    pubkeys = [state.validators[index].pubkey for index in indices]
 //    aggregate_pubkey = bls.AggregatePKs(pubkeys)
 //    return SyncCommittee(pubkeys=pubkeys, aggregate_pubkey=aggregate_pubkey)
-func NextSyncCommittee(state iface.BeaconStateAltair) (*pb.SyncCommittee, error) {
+func NextSyncCommittee(state iface.BeaconStateAltair) (*statepb.SyncCommittee, error) {
 	indices, err := NextSyncCommitteeIndices(state)
 	if err != nil {
 		return nil, err
@@ -59,7 +59,7 @@ func NextSyncCommittee(state iface.BeaconStateAltair) (*pb.SyncCommittee, error)
 	if err != nil {
 		return nil, err
 	}
-	return &pb.SyncCommittee{
+	return &statepb.SyncCommittee{
 		Pubkeys:         pubkeys,
 		AggregatePubkey: aggregated.Marshal(),
 	}, nil
@@ -128,7 +128,7 @@ func NextSyncCommitteeIndices(state iface.BeaconStateAltair) ([]types.ValidatorI
 }
 
 // SubnetsFromCommittee retrieves the relevant subnets for the chosen validator.
-func SubnetsFromCommittee(pubkey []byte, comm *pb.SyncCommittee) []uint64 {
+func SubnetsFromCommittee(pubkey []byte, comm *statepb.SyncCommittee) []uint64 {
 	positions := make([]uint64, 0)
 	for i, pkey := range comm.Pubkeys {
 		if bytes.Equal(pubkey, pkey) {
@@ -153,7 +153,7 @@ func SubnetsFromCommittee(pubkey []byte, comm *pb.SyncCommittee) []uint64 {
 //    sync_subcommittee_size = SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT
 //    i = subcommittee_index * sync_subcommittee_size
 //    return sync_committee.pubkeys[i:i + sync_subcommittee_size]
-func SyncSubCommitteePubkeys(syncCommittee *pb.SyncCommittee, subComIdx types.CommitteeIndex) ([][]byte, error) {
+func SyncSubCommitteePubkeys(syncCommittee *statepb.SyncCommittee, subComIdx types.CommitteeIndex) ([][]byte, error) {
 	subCommSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 	i := uint64(subComIdx) * subCommSize
 	endOfSubCom := i + subCommSize

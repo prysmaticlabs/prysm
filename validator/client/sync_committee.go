@@ -8,9 +8,8 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
-	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -51,7 +50,7 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.S
 		log.WithError(err).Error("Could not get sync committee message signing root")
 		return
 	}
-	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
+	sig, err := v.keyManager.Sign(ctx, &prysmv2.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     r[:],
 		SignatureDomain: d.SignatureDomain,
@@ -170,7 +169,7 @@ func (v *validator) signSyncSelectionData(ctx context.Context, pubKey [48]byte, 
 		return nil, err
 	}
 
-	data := &pb.SyncAggregatorSelectionData{
+	data := &statepb.SyncAggregatorSelectionData{
 		Slot:              slot,
 		SubcommitteeIndex: index,
 	}
@@ -178,7 +177,7 @@ func (v *validator) signSyncSelectionData(ctx context.Context, pubKey [48]byte, 
 	if err != nil {
 		return nil, err
 	}
-	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
+	sig, err := v.keyManager.Sign(ctx, &prysmv2.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
 		SignatureDomain: domain.SignatureDomain,
@@ -201,7 +200,7 @@ func (v *validator) signContributionAndProof(ctx context.Context, pubKey [48]byt
 	if err != nil {
 		return nil, err
 	}
-	sig, err = v.keyManager.Sign(ctx, &validatorpb.SignRequest{
+	sig, err = v.keyManager.Sign(ctx, &prysmv2.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
 		SignatureDomain: d.SignatureDomain,

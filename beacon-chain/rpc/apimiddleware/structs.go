@@ -191,6 +191,11 @@ type proposerDutiesResponseJson struct {
 	Data          []*proposerDutyJson `json:"data"`
 }
 
+// aggregateAttestationResponseJson is used in /validator/aggregate_attestation API endpoint.
+type aggregateAttestationResponseJson struct {
+	Data *attestationJson `json:"data"`
+}
+
 //----------------
 // Reusable types.
 //----------------

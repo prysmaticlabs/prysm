@@ -8,8 +8,8 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -71,7 +71,7 @@ func TestEth1DataHasEnoughSupport(t *testing.T) {
 			c.EpochsPerEth1VotingPeriod = tt.votingPeriodLength
 			params.OverrideBeaconConfig(c)
 
-			s, err := v1.InitializeFromProto(&pb.BeaconState{
+			s, err := v1.InitializeFromProto(&statepb.BeaconState{
 				Eth1DataVotes: tt.stateVotes,
 			})
 			require.NoError(t, err)
@@ -161,7 +161,7 @@ func TestAreEth1DataEqual(t *testing.T) {
 }
 
 func TestProcessEth1Data_SetsCorrectly(t *testing.T) {
-	beaconState, err := v1.InitializeFromProto(&pb.BeaconState{
+	beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Eth1DataVotes: []*ethpb.Eth1Data{},
 	})
 	require.NoError(t, err)

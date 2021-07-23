@@ -9,10 +9,10 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
 	"go.opencensus.io/trace"
 
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 

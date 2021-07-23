@@ -6,8 +6,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -22,7 +22,7 @@ func generateSyncAggregate(bState iface.BeaconState, privs []bls.SecretKey, pare
 	nextSlotEpoch := helpers.SlotToEpoch(st.Slot() + 1)
 	currEpoch := helpers.SlotToEpoch(st.Slot())
 
-	var syncCommittee *pb.SyncCommittee
+	var syncCommittee *statepb.SyncCommittee
 	var err error
 	if helpers.SyncCommitteePeriod(currEpoch) == helpers.SyncCommitteePeriod(nextSlotEpoch) {
 		syncCommittee, err = st.CurrentSyncCommittee()

@@ -9,8 +9,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -35,9 +35,9 @@ func TestTranslateParticipation(t *testing.T) {
 	aggBits.SetBitAt(1, true)
 	r, err := helpers.BlockRootAtSlot(s, 0)
 	require.NoError(t, err)
-	var pendingAtts []*pb.PendingAttestation
+	var pendingAtts []*statepb.PendingAttestation
 	for i := 0; i < 3; i++ {
-		pendingAtts = append(pendingAtts, &pb.PendingAttestation{
+		pendingAtts = append(pendingAtts, &statepb.PendingAttestation{
 			Data: &ethpb.AttestationData{
 				CommitteeIndex:  types.CommitteeIndex(i),
 				BeaconBlockRoot: r,
@@ -74,7 +74,7 @@ func TestUpgradeToAltair(t *testing.T) {
 	require.Equal(t, true, ok)
 
 	f := aState.Fork()
-	require.DeepSSZEqual(t, &pb.Fork{
+	require.DeepSSZEqual(t, &statepb.Fork{
 		PreviousVersion: state.Fork().CurrentVersion,
 		CurrentVersion:  params.BeaconConfig().AltairForkVersion,
 		Epoch:           helpers.CurrentEpoch(state),

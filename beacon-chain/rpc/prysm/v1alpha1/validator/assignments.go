@@ -11,9 +11,9 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
@@ -267,7 +267,7 @@ func assignValidatorToSubnet(pubkey []byte, status ethpb.ValidatorStatus) {
 // assignValidatorToSyncSubnet checks the status and pubkey of a particular validator
 // to discern whether persistent subnets need to be registered for them.
 func assignValidatorToSyncSubnet(currEpoch types.Epoch, syncPeriod uint64, pubkey []byte,
-	syncCommittee *pb.SyncCommittee, status ethpb.ValidatorStatus) {
+	syncCommittee *statepb.SyncCommittee, status ethpb.ValidatorStatus) {
 	if status != ethpb.ValidatorStatus_ACTIVE && status != ethpb.ValidatorStatus_EXITING {
 		return
 	}

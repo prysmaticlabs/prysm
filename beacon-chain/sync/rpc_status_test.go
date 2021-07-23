@@ -21,11 +21,12 @@ import (
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	p2pWrapper "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1/wrapper"
 	p2pInterfaces "github.com/prysmaticlabs/prysm/proto/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
+	p2pWrapper "github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -46,7 +47,7 @@ func TestStatusRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 		cfg: &Config{
 			P2P: p1,
 			Chain: &mock.ChainService{
-				Fork: &pb.Fork{
+				Fork: &statepb.Fork{
 					PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 					CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 				},
@@ -114,7 +115,7 @@ func TestStatusRPCHandler_ConnectsOnGenesis(t *testing.T) {
 		cfg: &Config{
 			P2P: p1,
 			Chain: &mock.ChainService{
-				Fork: &pb.Fork{
+				Fork: &statepb.Fork{
 					PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 					CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 				},
@@ -195,7 +196,7 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 				State:               genesisState,
 				FinalizedCheckPoint: finalizedCheckpt,
 				Root:                headRoot[:],
-				Fork: &pb.Fork{
+				Fork: &statepb.Fork{
 					PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 					CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 				},
@@ -263,7 +264,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 		Attnets:   bytesutil.PadTo([]byte{'C', 'D'}, 8),
 	})
 
-	st, err := v1.InitializeFromProto(&pb.BeaconState{
+	st, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Slot: 5,
 	})
 	require.NoError(t, err)
@@ -279,7 +280,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 			Chain: &mock.ChainService{
 				State:               st,
 				FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 0, Root: finalizedRoot[:]},
-				Fork: &pb.Fork{
+				Fork: &statepb.Fork{
 					PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 					CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 				},
@@ -414,7 +415,7 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 				State:               genesisState,
 				FinalizedCheckPoint: finalizedCheckpt,
 				Root:                headRoot[:],
-				Fork: &pb.Fork{
+				Fork: &statepb.Fork{
 					PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 					CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 				},
@@ -496,7 +497,7 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 				State:               genesisState,
 				FinalizedCheckPoint: finalizedCheckpt,
 				Root:                headRoot[:],
-				Fork: &pb.Fork{
+				Fork: &statepb.Fork{
 					PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 					CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 				},
@@ -515,7 +516,7 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 				State:               genesisState,
 				FinalizedCheckPoint: finalizedCheckpt,
 				Root:                headRoot[:],
-				Fork: &pb.Fork{
+				Fork: &statepb.Fork{
 					PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 					CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 				},
@@ -567,11 +568,11 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 	blocksTillHead := makeBlocks(t, 1, 1000, genRoot)
 	require.NoError(t, db.SaveBlocks(context.Background(), blocksTillHead))
 
-	stateSummaries := make([]*pb.StateSummary, len(blocksTillHead))
+	stateSummaries := make([]*statepb.StateSummary, len(blocksTillHead))
 	for i, b := range blocksTillHead {
 		bRoot, err := b.Block().HashTreeRoot()
 		require.NoError(t, err)
-		stateSummaries[i] = &pb.StateSummary{
+		stateSummaries[i] = &statepb.StateSummary{
 			Slot: b.Block().Slot(),
 			Root: bRoot[:],
 		}
@@ -669,7 +670,7 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 					State:               nState,
 					FinalizedCheckPoint: remoteFinalizedChkpt,
 					Root:                rHeadRoot[:],
-					Fork: &pb.Fork{
+					Fork: &statepb.Fork{
 						PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 						CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 					},
@@ -688,7 +689,7 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 					State:               nState,
 					FinalizedCheckPoint: finalizedCheckpt,
 					Root:                headRoot[:],
-					Fork: &pb.Fork{
+					Fork: &statepb.Fork{
 						PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 						CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 					},
@@ -756,7 +757,7 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 				State:               genesisState,
 				FinalizedCheckPoint: finalizedCheckpt,
 				Root:                headRoot[:],
-				Fork: &pb.Fork{
+				Fork: &statepb.Fork{
 					PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 					CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 				},
@@ -835,7 +836,7 @@ func TestStatusRPC_ValidGenesisMessage(t *testing.T) {
 				State:               genesisState,
 				FinalizedCheckPoint: finalizedCheckpt,
 				Root:                headRoot[:],
-				Fork: &pb.Fork{
+				Fork: &statepb.Fork{
 					PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 					CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 				},

@@ -25,8 +25,8 @@ import (
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	prysmv2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v2/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -746,7 +746,7 @@ func fillUpBlocksAndState(ctx context.Context, t *testing.T, beaconDB db.Databas
 		_, testState, err = state.ExecuteStateTransitionNoVerifyAnySig(ctx, testState, wsb)
 		assert.NoError(t, err)
 		assert.NoError(t, beaconDB.SaveBlock(ctx, wsb))
-		assert.NoError(t, beaconDB.SaveStateSummary(ctx, &p2ppb.StateSummary{Slot: i, Root: r[:]}))
+		assert.NoError(t, beaconDB.SaveStateSummary(ctx, &statepb.StateSummary{Slot: i, Root: r[:]}))
 		assert.NoError(t, beaconDB.SaveState(ctx, testState, r))
 		require.NoError(t, beaconDB.SaveHeadBlockRoot(ctx, r))
 		hRoot = r
@@ -759,6 +759,6 @@ func syncSelectionProofSigningRoot(st iface.BeaconState, slot types.Slot, comIdx
 	if err != nil {
 		return [32]byte{}, err
 	}
-	selectionData := &p2ppb.SyncAggregatorSelectionData{Slot: slot, SubcommitteeIndex: uint64(comIdx)}
+	selectionData := &statepb.SyncAggregatorSelectionData{Slot: slot, SubcommitteeIndex: uint64(comIdx)}
 	return helpers.ComputeSigningRoot(selectionData, dom)
 }
