@@ -142,7 +142,7 @@ func (s *Store) SaveStates(ctx context.Context, states []iface.ReadOnlyBeaconSta
 
 // SaveStatesEfficient stores multiple states to the db (new schema) using the provided corresponding roots.
 func (s *Store) SaveStatesEfficient(ctx context.Context, states []iface.ReadOnlyBeaconState, blockRoots [][32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStates")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStatesEfficient")
 	defer span.End()
 	if states == nil {
 		return errors.New("nil state")
@@ -162,11 +162,6 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []iface.ReadOnly
 		// yank out the validators and store them in separate table to save space.
 		var hashes []byte
 		for _, val := range pbState.Validators {
-			//valBytes, encodeErr := encode(ctx, val)
-			//if encodeErr != nil {
-			//	return encodeErr
-			//}
-
 			// create the unique hash for that validator entry.
 			//hash := hashutil.Hash(valBytes)
 			hash, hashErr := val.HashTreeRoot()
@@ -618,17 +613,19 @@ func (s *Store) isStateValidatorMigrationOver() bool {
 	// if flag is enabled, then always follow the new code path.
 	if featureconfig.Get().EnableHistoricalSpaceRepresentation {
 		return true
-	} else {
-		returnFlag := false
-		if err := s.db.View(func(tx *bolt.Tx) error {
-			mb := tx.Bucket(migrationsBucket)
-			if b := mb.Get(migrationStateValidatorsKey); bytes.Equal(b, migrationCompleted) {
-				returnFlag = true
-			}
-			return nil
-		}); err != nil {
-			return returnFlag
-		}
+	}
+
+	// if the flag is not enabled, but the migration is over, then
+	// follow the new code path as if the flag is enabled.
+	returnFlag := false
+	if err := s.db.View(func(tx *bolt.Tx) error {
+		mb := tx.Bucket(migrationsBucket)
+		b := mb.Get(migrationStateValidatorsKey)
+		returnFlag = bytes.Equal(b, migrationCompleted)
+		return nil
+	}); err != nil {
 		return returnFlag
 	}
+	return returnFlag
+
 }
