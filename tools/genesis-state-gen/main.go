@@ -13,7 +13,7 @@ import (
 
 	"github.com/ghodss/yaml"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/fileutil"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -55,7 +55,7 @@ func main() {
 	if !*useMainnetConfig {
 		params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	}
-	var genesisState *pb.BeaconState
+	var genesisState *statepb.BeaconState
 	var err error
 	if *depositJSONFile != "" {
 		inputFile := *depositJSONFile
@@ -131,7 +131,7 @@ func main() {
 	}
 }
 
-func genesisStateFromJSONValidators(r io.Reader, genesisTime uint64) (*pb.BeaconState, error) {
+func genesisStateFromJSONValidators(r io.Reader, genesisTime uint64) (*statepb.BeaconState, error) {
 	enc, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, err
