@@ -38,9 +38,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	chainSync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -193,9 +193,10 @@ func (s *Service) Start() {
 		StateGen:               s.cfg.StateGen,
 	}
 	validatorServerV1 := &validator.Server{
-		HeadFetcher:    s.cfg.HeadFetcher,
-		TimeFetcher:    s.cfg.GenesisTimeFetcher,
-		SyncChecker:    s.cfg.SyncService,
+		HeadFetcher:      s.cfg.HeadFetcher,
+		TimeFetcher:      s.cfg.GenesisTimeFetcher,
+		SyncChecker:      s.cfg.SyncService,
+		AttestationsPool: s.cfg.AttestationsPool,
 		V1Alpha1Server: validatorServer,
 	}
 
