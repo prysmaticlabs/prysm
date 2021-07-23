@@ -2,7 +2,7 @@ load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["block_interface.go"],
+    srcs = ["block.go"],
     importpath = "github.com/prysmaticlabs/prysm/proto/interfaces",
     visibility = ["//visibility:public"],
     deps = [

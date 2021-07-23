@@ -4,7 +4,7 @@
 // 	protoc        v3.15.8
 // source: proto/beacon/p2p/v1/messages.proto
 
-package ethereum_beacon_p2p_v1
+package v2
 
 import (
 	reflect "reflect"

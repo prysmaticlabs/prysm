@@ -66,6 +66,20 @@ ssz_gen_marshal(
         "SyncCommitteeContribution",
         "ContributionAndProof",
         "SignedContributionAndProof",
+        "BeaconBlocksByRangeRequest",
+        "DepositMessage",
+        "ENRForkID",
+        "MetaDataV0",
+        "MetaDataV1",
+        "Fork",
+        "ForkData",
+        "HistoricalBatch",
+        "Status",
+        "BeaconState",
+        "BeaconStateAltair",
+        "SigningData",
+        "SyncCommittee",
+        "SyncAggregatorSelectionData",
     ],
 )
 
@@ -158,6 +172,8 @@ ssz_proto_files(
     srcs = [
         "beacon_block.proto",
         "sync_committee.proto",
+        "beacon_state.proto",
+        "p2p_messages.proto"
     ],
     config = select({
         "//conditions:default": "mainnet",
