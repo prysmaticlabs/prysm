@@ -14,7 +14,7 @@ import (
 )
 
 func TestValidatorIndexMap_OK(t *testing.T) {
-	base := &pb.BeaconState{
+	base := &statepb.BeaconState{
 		Validators: []*ethpb.Validator{
 			{
 				PublicKey: []byte("zero"),

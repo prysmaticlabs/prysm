@@ -1,4 +1,4 @@
-package p2p
+package interfaces
 
 import (
 	"github.com/prysmaticlabs/go-bitfield"

@@ -45,7 +45,7 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, iface.Be
 	}
 
 	currentSlot := types.Slot(0)
-	state, err := v1.InitializeFromProto(&pb.BeaconState{
+	state, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Validators: validators,
 		Slot:       currentSlot,
 		Balances:   validatorBalances,

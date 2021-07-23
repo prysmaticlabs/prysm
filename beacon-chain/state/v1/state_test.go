@@ -60,7 +60,7 @@ func TestBeaconState_NoDeadlock(t *testing.T) {
 			WithdrawableEpoch:          1,
 		})
 	}
-	st, err := InitializeFromProtoUnsafe(&pb.BeaconState{
+	st, err := InitializeFromProtoUnsafe(&statepb.BeaconState{
 		Validators: vals,
 	})
 	assert.NoError(t, err)
@@ -102,6 +102,6 @@ func TestStateTrie_IsNil(t *testing.T) {
 	emptyProto := &BeaconState{state: nil}
 	assert.Equal(t, true, emptyProto.IsNil())
 
-	nonNilState := &BeaconState{state: &pb.BeaconState{}}
+	nonNilState := &BeaconState{state: &statepb.BeaconState{}}
 	assert.Equal(t, false, nonNilState.IsNil())
 }

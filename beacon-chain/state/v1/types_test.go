@@ -24,8 +24,8 @@ func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 	genesis := setupGenesisState(t, 64)
 	customState, err := v1.InitializeFromProto(genesis)
 	require.NoError(t, err)
-	cloned, ok := proto.Clone(genesis).(*pb.BeaconState)
-	assert.Equal(t, true, ok, "Object is not of type *pb.BeaconState")
+	cloned, ok := proto.Clone(genesis).(*statepb.BeaconState)
+	assert.Equal(t, true, ok, "Object is not of type *statepb.BeaconState")
 	custom := customState.CloneInnerState()
 	assert.DeepSSZEqual(t, cloned, custom)
 
@@ -51,7 +51,7 @@ func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 	assert.Equal(t, r1, r2, "Mismatched roots")
 }
 
-func setupGenesisState(tb testing.TB, count uint64) *pb.BeaconState {
+func setupGenesisState(tb testing.TB, count uint64) *statepb.BeaconState {
 	genesisState, _, err := interop.GenerateGenesisState(context.Background(), 0, count)
 	require.NoError(tb, err, "Could not generate genesis beacon state")
 	for i := uint64(1); i < count; i++ {
@@ -126,8 +126,8 @@ func BenchmarkStateClone_Proto(b *testing.B) {
 	genesis := setupGenesisState(b, 64)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		_, ok := proto.Clone(genesis).(*pb.BeaconState)
-		assert.Equal(b, true, ok, "Entity is not of type *pb.BeaconState")
+		_, ok := proto.Clone(genesis).(*statepb.BeaconState)
+		assert.Equal(b, true, ok, "Entity is not of type *statepb.BeaconState")
 	}
 }
 

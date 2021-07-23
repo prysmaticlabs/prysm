@@ -40,7 +40,7 @@ func TestProcessDeposits_SameValidatorMultipleDepositsSameBlock(t *testing.T) {
 		},
 	}
 	balances := []uint64{0}
-	beaconState, err := v1.InitializeFromProto(&pb.BeaconState{
+	beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Validators: registry,
 		Balances:   balances,
 		Eth1Data:   eth1Data,
@@ -80,7 +80,7 @@ func TestProcessDeposits_MerkleBranchFailsVerification(t *testing.T) {
 			Deposits: []*ethpb.Deposit{deposit},
 		},
 	}
-	beaconState, err := v1.InitializeFromProto(&pb.BeaconState{
+	beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
 			DepositRoot: []byte{0},
 			BlockHash:   []byte{1},
@@ -111,7 +111,7 @@ func TestProcessDeposits_AddsNewValidatorDeposit(t *testing.T) {
 		},
 	}
 	balances := []uint64{0}
-	beaconState, err := v1.InitializeFromProto(&pb.BeaconState{
+	beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Validators: registry,
 		Balances:   balances,
 		Eth1Data:   eth1Data,
@@ -174,7 +174,7 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 	}
 	balances := []uint64{0, 50}
 	root := depositTrie.Root()
-	beaconState, err := v1.InitializeFromProto(&pb.BeaconState{
+	beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Validators: registry,
 		Balances:   balances,
 		Eth1Data: &ethpb.Eth1Data{
@@ -202,7 +202,7 @@ func TestProcessDeposit_AddsNewValidatorDeposit(t *testing.T) {
 		},
 	}
 	balances := []uint64{0}
-	beaconState, err := v1.InitializeFromProto(&pb.BeaconState{
+	beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Validators: registry,
 		Balances:   balances,
 		Eth1Data:   eth1Data,
@@ -244,7 +244,7 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 		},
 	}
 	balances := []uint64{0}
-	beaconState, err := v1.InitializeFromProto(&pb.BeaconState{
+	beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Validators: registry,
 		Balances:   balances,
 		Eth1Data:   eth1Data,
@@ -299,7 +299,7 @@ func TestPreGenesisDeposits_SkipInvalidDeposit(t *testing.T) {
 		},
 	}
 	balances := []uint64{0}
-	beaconState, err := v1.InitializeFromProto(&pb.BeaconState{
+	beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Validators: registry,
 		Balances:   balances,
 		Eth1Data:   eth1Data,

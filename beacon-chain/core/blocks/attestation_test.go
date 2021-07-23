@@ -69,7 +69,7 @@ func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 	pfc := beaconState.PreviousJustifiedCheckpoint()
 	pfc.Root = []byte("hello-world")
 	require.NoError(t, beaconState.SetPreviousJustifiedCheckpoint(pfc))
-	require.NoError(t, beaconState.AppendPreviousEpochAttestations(&pb.PendingAttestation{}))
+	require.NoError(t, beaconState.AppendPreviousEpochAttestations(&statepb.PendingAttestation{}))
 
 	want := fmt.Sprintf(
 		"expected target epoch (%d) to be the previous epoch (%d) or the current epoch (%d)",
@@ -102,7 +102,7 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 	cfc := beaconState.CurrentJustifiedCheckpoint()
 	cfc.Root = []byte("hello-world")
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cfc))
-	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&pb.PendingAttestation{}))
+	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&statepb.PendingAttestation{}))
 
 	want := "source check point not equal to current justified checkpoint"
 	_, err := blocks.ProcessAttestations(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(b))
@@ -140,7 +140,7 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	pfc := beaconState.PreviousJustifiedCheckpoint()
 	pfc.Root = []byte("hello-world")
 	require.NoError(t, beaconState.SetPreviousJustifiedCheckpoint(pfc))
-	require.NoError(t, beaconState.AppendPreviousEpochAttestations(&pb.PendingAttestation{}))
+	require.NoError(t, beaconState.AppendPreviousEpochAttestations(&statepb.PendingAttestation{}))
 
 	want := "source check point not equal to previous justified checkpoint"
 	_, err = blocks.ProcessAttestations(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(b))
@@ -176,7 +176,7 @@ func TestProcessAttestations_InvalidAggregationBitsLength(t *testing.T) {
 	cfc := beaconState.CurrentJustifiedCheckpoint()
 	cfc.Root = []byte("hello-world")
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cfc))
-	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&pb.PendingAttestation{}))
+	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&statepb.PendingAttestation{}))
 
 	expected := "failed to verify aggregation bitfield: wanted participants bitfield length 3, got: 4"
 	_, err = blocks.ProcessAttestations(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(b))
@@ -201,7 +201,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 	cfc := beaconState.CurrentJustifiedCheckpoint()
 	cfc.Root = mockRoot[:]
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cfc))
-	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&pb.PendingAttestation{}))
+	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&statepb.PendingAttestation{}))
 
 	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
 	require.NoError(t, err)
@@ -243,7 +243,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	cfc := beaconState.CurrentJustifiedCheckpoint()
 	cfc.Root = bytesutil.PadTo([]byte("hello-world"), 32)
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cfc))
-	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&pb.PendingAttestation{}))
+	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&statepb.PendingAttestation{}))
 
 	committee, err := helpers.BeaconCommitteeFromState(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
 	require.NoError(t, err)
@@ -306,7 +306,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	cfc := beaconState.CurrentJustifiedCheckpoint()
 	cfc.Root = mockRoot[:]
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cfc))
-	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&pb.PendingAttestation{}))
+	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&statepb.PendingAttestation{}))
 
 	committee, err := helpers.BeaconCommitteeFromState(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
 	require.NoError(t, err)
@@ -396,7 +396,7 @@ func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 	ckp := beaconState.CurrentJustifiedCheckpoint()
 	copy(ckp.Root, "hello-world")
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(ckp))
-	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&pb.PendingAttestation{}))
+	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&statepb.PendingAttestation{}))
 
 	_, err = blocks.ProcessAttestationNoVerifySignature(context.TODO(), beaconState, att)
 	assert.NoError(t, err)
@@ -427,7 +427,7 @@ func TestVerifyAttestationNoVerifySignature_OK(t *testing.T) {
 	ckp := beaconState.CurrentJustifiedCheckpoint()
 	copy(ckp.Root, "hello-world")
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(ckp))
-	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&pb.PendingAttestation{}))
+	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&statepb.PendingAttestation{}))
 
 	err = blocks.VerifyAttestationNoVerifySignature(context.TODO(), beaconState, att)
 	assert.NoError(t, err)
@@ -453,7 +453,7 @@ func TestVerifyAttestationNoVerifySignature_BadAttIdx(t *testing.T) {
 	ckp := beaconState.CurrentJustifiedCheckpoint()
 	copy(ckp.Root, "hello-world")
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(ckp))
-	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&pb.PendingAttestation{}))
+	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&statepb.PendingAttestation{}))
 	err := blocks.VerifyAttestationNoVerifySignature(context.TODO(), beaconState, att)
 	require.ErrorContains(t, "committee index 100 >= committee count 1", err)
 }
@@ -467,7 +467,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		}
 	}
 
-	state, err := v1.InitializeFromProto(&pb.BeaconState{
+	state, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Slot:        5,
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
@@ -525,7 +525,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 		}
 	}
 
-	state, err := v1.InitializeFromProto(&pb.BeaconState{
+	state, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Slot:       5,
 		Validators: validators,
 		Fork: &pb.Fork{

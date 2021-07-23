@@ -26,7 +26,7 @@ func TestCorrect_ActiveValidatorsCount(t *testing.T) {
 		ctx: context.Background(),
 		cfg: &Config{DB: db},
 	}
-	bState, err := testutil.NewBeaconState(func(state *pb.BeaconState) error {
+	bState, err := testutil.NewBeaconState(func(state *statepb.BeaconState) error {
 		validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 		for i := 0; i < len(validators); i++ {
 			validators[i] = &ethpb.Validator{

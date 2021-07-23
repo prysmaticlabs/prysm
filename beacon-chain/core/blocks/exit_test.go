@@ -31,7 +31,7 @@ func TestProcessVoluntaryExits_NotActiveLongEnoughToExit(t *testing.T) {
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		},
 	}
-	state, err := v1.InitializeFromProto(&pb.BeaconState{
+	state, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Validators: registry,
 		Slot:       10,
 	})
@@ -61,7 +61,7 @@ func TestProcessVoluntaryExits_ExitAlreadySubmitted(t *testing.T) {
 			ExitEpoch: 10,
 		},
 	}
-	state, err := v1.InitializeFromProto(&pb.BeaconState{
+	state, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Validators: registry,
 		Slot:       0,
 	})
@@ -93,7 +93,7 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 			ActivationEpoch: 0,
 		},
 	}
-	state, err := v1.InitializeFromProto(&pb.BeaconState{
+	state, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Validators: registry,
 		Fork: &pb.Fork{
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,

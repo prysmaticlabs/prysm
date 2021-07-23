@@ -20,7 +20,7 @@ import (
 func TestVerifyProposerSlashing_BeaconFuzzIssue91(t *testing.T) {
 	file, err := ioutil.ReadFile("testdata/beaconfuzz_91_beacon.ssz")
 	require.NoError(t, err)
-	rawState := &pb.BeaconState{}
+	rawState := &statepb.BeaconState{}
 	err = rawState.UnmarshalSSZ(file)
 	require.NoError(t, err)
 

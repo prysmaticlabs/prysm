@@ -16,7 +16,7 @@ import (
 
 func TestState_FieldCount(t *testing.T) {
 	count := params.BeaconConfig().BeaconStateFieldCount
-	typ := reflect.TypeOf(pb.BeaconState{})
+	typ := reflect.TypeOf(statepb.BeaconState{})
 	numFields := 0
 	for i := 0; i < typ.NumField(); i++ {
 		if typ.Field(i).Name == "state" ||
@@ -59,7 +59,7 @@ func BenchmarkHashTreeRoot_Generic_300000(b *testing.B) {
 	}
 }
 
-func setupGenesisState(tb testing.TB, count uint64) *pb.BeaconState {
+func setupGenesisState(tb testing.TB, count uint64) *statepb.BeaconState {
 	genesisState, _, err := interop.GenerateGenesisState(context.Background(), 0, 1)
 	require.NoError(tb, err, "Could not generate genesis beacon state")
 	for i := uint64(1); i < count; i++ {

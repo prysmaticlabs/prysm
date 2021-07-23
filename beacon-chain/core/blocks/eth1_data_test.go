@@ -71,7 +71,7 @@ func TestEth1DataHasEnoughSupport(t *testing.T) {
 			c.EpochsPerEth1VotingPeriod = tt.votingPeriodLength
 			params.OverrideBeaconConfig(c)
 
-			s, err := v1.InitializeFromProto(&pb.BeaconState{
+			s, err := v1.InitializeFromProto(&statepb.BeaconState{
 				Eth1DataVotes: tt.stateVotes,
 			})
 			require.NoError(t, err)
@@ -161,7 +161,7 @@ func TestAreEth1DataEqual(t *testing.T) {
 }
 
 func TestProcessEth1Data_SetsCorrectly(t *testing.T) {
-	beaconState, err := v1.InitializeFromProto(&pb.BeaconState{
+	beaconState, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Eth1DataVotes: []*ethpb.Eth1Data{},
 	})
 	require.NoError(t, err)

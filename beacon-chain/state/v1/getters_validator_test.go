@@ -10,7 +10,7 @@ import (
 )
 
 func TestBeaconState_ValidatorAtIndexReadOnly_HandlesNilSlice(t *testing.T) {
-	st, err := v1.InitializeFromProtoUnsafe(&pb.BeaconState{
+	st, err := v1.InitializeFromProtoUnsafe(&statepb.BeaconState{
 		Validators: nil,
 	})
 	require.NoError(t, err)

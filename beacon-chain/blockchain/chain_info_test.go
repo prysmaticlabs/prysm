@@ -105,7 +105,7 @@ func TestPrevJustifiedCheckpt_GenesisRootOk(t *testing.T) {
 
 func TestHeadSlot_CanRetrieve(t *testing.T) {
 	c := &Service{}
-	s, err := v1.InitializeFromProto(&pb.BeaconState{})
+	s, err := v1.InitializeFromProto(&statepb.BeaconState{})
 	require.NoError(t, err)
 	c.head = &head{slot: 100, state: s}
 	assert.Equal(t, types.Slot(100), c.HeadSlot())
@@ -137,7 +137,7 @@ func TestHeadRoot_UseDB(t *testing.T) {
 func TestHeadBlock_CanRetrieve(t *testing.T) {
 	b := testutil.NewBeaconBlock()
 	b.Block.Slot = 1
-	s, err := v1.InitializeFromProto(&pb.BeaconState{})
+	s, err := v1.InitializeFromProto(&statepb.BeaconState{})
 	require.NoError(t, err)
 	c := &Service{}
 	c.head = &head{block: wrapper.WrappedPhase0SignedBeaconBlock(b), state: s}
@@ -148,7 +148,7 @@ func TestHeadBlock_CanRetrieve(t *testing.T) {
 }
 
 func TestHeadState_CanRetrieve(t *testing.T) {
-	s, err := v1.InitializeFromProto(&pb.BeaconState{Slot: 2, GenesisValidatorsRoot: params.BeaconConfig().ZeroHash[:]})
+	s, err := v1.InitializeFromProto(&statepb.BeaconState{Slot: 2, GenesisValidatorsRoot: params.BeaconConfig().ZeroHash[:]})
 	require.NoError(t, err)
 	c := &Service{}
 	c.head = &head{state: s}
@@ -165,7 +165,7 @@ func TestGenesisTime_CanRetrieve(t *testing.T) {
 
 func TestCurrentFork_CanRetrieve(t *testing.T) {
 	f := &pb.Fork{Epoch: 999}
-	s, err := v1.InitializeFromProto(&pb.BeaconState{Fork: f})
+	s, err := v1.InitializeFromProto(&statepb.BeaconState{Fork: f})
 	require.NoError(t, err)
 	c := &Service{}
 	c.head = &head{state: s}
@@ -190,7 +190,7 @@ func TestGenesisValidatorRoot_CanRetrieve(t *testing.T) {
 	c := &Service{}
 	assert.Equal(t, [32]byte{}, c.GenesisValidatorRoot(), "Did not get correct genesis validator root")
 
-	s, err := v1.InitializeFromProto(&pb.BeaconState{GenesisValidatorsRoot: []byte{'a'}})
+	s, err := v1.InitializeFromProto(&statepb.BeaconState{GenesisValidatorsRoot: []byte{'a'}})
 	require.NoError(t, err)
 	c.head = &head{state: s}
 	assert.Equal(t, [32]byte{'a'}, c.GenesisValidatorRoot(), "Did not get correct genesis validator root")
@@ -204,7 +204,7 @@ func TestHeadETH1Data_Nil(t *testing.T) {
 
 func TestHeadETH1Data_CanRetrieve(t *testing.T) {
 	d := &ethpb.Eth1Data{DepositCount: 999}
-	s, err := v1.InitializeFromProto(&pb.BeaconState{Eth1Data: d})
+	s, err := v1.InitializeFromProto(&statepb.BeaconState{Eth1Data: d})
 	require.NoError(t, err)
 	c := &Service{}
 	c.head = &head{state: s}

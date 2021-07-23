@@ -17,7 +17,7 @@ func TestHotStateCache_RoundTrip(t *testing.T) {
 	assert.Equal(t, iface.BeaconState(nil), state)
 	assert.Equal(t, false, c.has(root), "Empty cache has an object")
 
-	state, err := v1.InitializeFromProto(&pb.BeaconState{
+	state, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Slot: 10,
 	})
 	require.NoError(t, err)

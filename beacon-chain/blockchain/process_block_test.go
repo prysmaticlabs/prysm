@@ -256,7 +256,7 @@ func TestCachedPreState_CanGetFromStateSummary(t *testing.T) {
 	service, err := NewService(ctx, cfg)
 	require.NoError(t, err)
 
-	s, err := v1.InitializeFromProto(&pb.BeaconState{Slot: 1, GenesisValidatorsRoot: params.BeaconConfig().ZeroHash[:]})
+	s, err := v1.InitializeFromProto(&statepb.BeaconState{Slot: 1, GenesisValidatorsRoot: params.BeaconConfig().ZeroHash[:]})
 	require.NoError(t, err)
 
 	genesisStateRoot := [32]byte{}
@@ -308,7 +308,7 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 	assert.ErrorContains(t, wanted, err)
 
 	b.Block.ParentRoot = gRoot[:]
-	s, err := v1.InitializeFromProto(&pb.BeaconState{Slot: 1})
+	s, err := v1.InitializeFromProto(&statepb.BeaconState{Slot: 1})
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: 1, Root: gRoot[:]}))
 	require.NoError(t, service.cfg.StateGen.SaveState(ctx, gRoot, s))

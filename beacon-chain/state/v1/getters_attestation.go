@@ -7,14 +7,14 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // PreviousEpochAttestations corresponding to blocks on the beacon chain.
-func (b *BeaconState) PreviousEpochAttestations() ([]*pbp2p.PendingAttestation, error) {
+func (b *BeaconState) PreviousEpochAttestations() ([]*statepb.PendingAttestation, error) {
 	if !b.hasInnerState() {
 		return nil, nil
 	}
@@ -30,7 +30,7 @@ func (b *BeaconState) PreviousEpochAttestations() ([]*pbp2p.PendingAttestation, 
 
 // previousEpochAttestations corresponding to blocks on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) previousEpochAttestations() []*pbp2p.PendingAttestation {
+func (b *BeaconState) previousEpochAttestations() []*statepb.PendingAttestation {
 	if !b.hasInnerState() {
 		return nil
 	}
@@ -39,7 +39,7 @@ func (b *BeaconState) previousEpochAttestations() []*pbp2p.PendingAttestation {
 }
 
 // CurrentEpochAttestations corresponding to blocks on the beacon chain.
-func (b *BeaconState) CurrentEpochAttestations() ([]*pbp2p.PendingAttestation, error) {
+func (b *BeaconState) CurrentEpochAttestations() ([]*statepb.PendingAttestation, error) {
 	if !b.hasInnerState() {
 		return nil, nil
 	}
@@ -55,7 +55,7 @@ func (b *BeaconState) CurrentEpochAttestations() ([]*pbp2p.PendingAttestation, e
 
 // currentEpochAttestations corresponding to blocks on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) currentEpochAttestations() []*pbp2p.PendingAttestation {
+func (b *BeaconState) currentEpochAttestations() []*statepb.PendingAttestation {
 	if !b.hasInnerState() {
 		return nil
 	}
@@ -63,7 +63,7 @@ func (b *BeaconState) currentEpochAttestations() []*pbp2p.PendingAttestation {
 	return b.safeCopyPendingAttestationSlice(b.state.CurrentEpochAttestations)
 }
 
-func (h *stateRootHasher) epochAttestationsRoot(atts []*pbp2p.PendingAttestation) ([32]byte, error) {
+func (h *stateRootHasher) epochAttestationsRoot(atts []*statepb.PendingAttestation) ([32]byte, error) {
 	max := uint64(params.BeaconConfig().SlotsPerEpoch) * params.BeaconConfig().MaxAttestations
 	if uint64(len(atts)) > max {
 		return [32]byte{}, fmt.Errorf("epoch attestation exceeds max length %d", max)
@@ -99,7 +99,7 @@ func (h *stateRootHasher) epochAttestationsRoot(atts []*pbp2p.PendingAttestation
 	return res, nil
 }
 
-func (h *stateRootHasher) pendingAttestationRoot(hasher htrutils.HashFn, att *pbp2p.PendingAttestation) ([32]byte, error) {
+func (h *stateRootHasher) pendingAttestationRoot(hasher htrutils.HashFn, att *statepb.PendingAttestation) ([32]byte, error) {
 	if att == nil {
 		return [32]byte{}, errors.New("nil pending attestation")
 	}

@@ -20,7 +20,7 @@ func TestRandaoMix_OK(t *testing.T) {
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
 		randaoMixes[i] = intInBytes
 	}
-	state, err := v1.InitializeFromProto(&pb.BeaconState{RandaoMixes: randaoMixes})
+	state, err := v1.InitializeFromProto(&statepb.BeaconState{RandaoMixes: randaoMixes})
 	require.NoError(t, err)
 	tests := []struct {
 		epoch     types.Epoch
@@ -54,7 +54,7 @@ func TestRandaoMix_CopyOK(t *testing.T) {
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
 		randaoMixes[i] = intInBytes
 	}
-	state, err := v1.InitializeFromProto(&pb.BeaconState{RandaoMixes: randaoMixes})
+	state, err := v1.InitializeFromProto(&statepb.BeaconState{RandaoMixes: randaoMixes})
 	require.NoError(t, err)
 	tests := []struct {
 		epoch     types.Epoch
@@ -95,7 +95,7 @@ func TestGenerateSeed_OK(t *testing.T) {
 		randaoMixes[i] = intInBytes
 	}
 	slot := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().MinSeedLookahead * 10))
-	state, err := v1.InitializeFromProto(&pb.BeaconState{
+	state, err := v1.InitializeFromProto(&statepb.BeaconState{
 		RandaoMixes: randaoMixes,
 		Slot:        slot,
 	})

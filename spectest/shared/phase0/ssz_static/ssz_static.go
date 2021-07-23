@@ -128,7 +128,7 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "ForkData":
 		obj = &pb.ForkData{}
 	case "HistoricalBatch":
-		obj = &pb.HistoricalBatch{}
+		obj = &statepb.HistoricalBatch{}
 	case "IndexedAttestation":
 		obj = &ethpb.IndexedAttestation{}
 	case "PendingAttestation":

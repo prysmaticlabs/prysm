@@ -2,7 +2,7 @@ package wrapper
 
 import (
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/proto/beacon/p2p"
+	p2p "github.com/prysmaticlabs/prysm/proto/interfaces"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"google.golang.org/protobuf/proto"
 )

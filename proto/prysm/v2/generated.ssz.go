@@ -6,6 +6,7 @@ import (
 	ssz "github.com/ferranbt/fastssz"
 	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/eth2-types"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 )
 
 // MarshalSSZ ssz marshals the SignedBeaconBlockAltair object
@@ -798,12 +799,12 @@ func (s *SyncAggregate) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 }
 
 // MarshalSSZ ssz marshals the BeaconState object
-func (b *BeaconState) MarshalSSZ() ([]byte, error) {
+func (b *state.BeaconState) MarshalSSZ() ([]byte, error) {
 	return ssz.MarshalSSZ(b)
 }
 
 // MarshalSSZTo ssz marshals the BeaconState object to a target array
-func (b *BeaconState) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+func (b *state.BeaconState) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
 	offset := int(2687377)
 
@@ -822,7 +823,7 @@ func (b *BeaconState) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 
 	// Field (3) 'Fork'
 	if b.Fork == nil {
-		b.Fork = new(Fork)
+		b.Fork = new(state.Fork)
 	}
 	if dst, err = b.Fork.MarshalSSZTo(dst); err != nil {
 		return
@@ -1040,7 +1041,7 @@ func (b *BeaconState) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 }
 
 // UnmarshalSSZ ssz unmarshals the BeaconState object
-func (b *BeaconState) UnmarshalSSZ(buf []byte) error {
+func (b *state.BeaconState) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
 	if size < 2687377 {
@@ -1064,7 +1065,7 @@ func (b *BeaconState) UnmarshalSSZ(buf []byte) error {
 
 	// Field (3) 'Fork'
 	if b.Fork == nil {
-		b.Fork = new(Fork)
+		b.Fork = new(state.Fork)
 	}
 	if err = b.Fork.UnmarshalSSZ(buf[48:64]); err != nil {
 		return err
@@ -1258,10 +1259,10 @@ func (b *BeaconState) UnmarshalSSZ(buf []byte) error {
 		if err != nil {
 			return err
 		}
-		b.PreviousEpochAttestations = make([]*PendingAttestation, num)
+		b.PreviousEpochAttestations = make([]*state.PendingAttestation, num)
 		err = ssz.UnmarshalDynamic(buf, num, func(indx int, buf []byte) (err error) {
 			if b.PreviousEpochAttestations[indx] == nil {
-				b.PreviousEpochAttestations[indx] = new(PendingAttestation)
+				b.PreviousEpochAttestations[indx] = new(state.PendingAttestation)
 			}
 			if err = b.PreviousEpochAttestations[indx].UnmarshalSSZ(buf); err != nil {
 				return err
@@ -1280,10 +1281,10 @@ func (b *BeaconState) UnmarshalSSZ(buf []byte) error {
 		if err != nil {
 			return err
 		}
-		b.CurrentEpochAttestations = make([]*PendingAttestation, num)
+		b.CurrentEpochAttestations = make([]*state.PendingAttestation, num)
 		err = ssz.UnmarshalDynamic(buf, num, func(indx int, buf []byte) (err error) {
 			if b.CurrentEpochAttestations[indx] == nil {
-				b.CurrentEpochAttestations[indx] = new(PendingAttestation)
+				b.CurrentEpochAttestations[indx] = new(state.PendingAttestation)
 			}
 			if err = b.CurrentEpochAttestations[indx].UnmarshalSSZ(buf); err != nil {
 				return err
@@ -1298,7 +1299,7 @@ func (b *BeaconState) UnmarshalSSZ(buf []byte) error {
 }
 
 // SizeSSZ returns the ssz encoded size in bytes for the BeaconState object
-func (b *BeaconState) SizeSSZ() (size int) {
+func (b *state.BeaconState) SizeSSZ() (size int) {
 	size = 2687377
 
 	// Field (7) 'HistoricalRoots'
@@ -1329,12 +1330,12 @@ func (b *BeaconState) SizeSSZ() (size int) {
 }
 
 // HashTreeRoot ssz hashes the BeaconState object
-func (b *BeaconState) HashTreeRoot() ([32]byte, error) {
+func (b *state.BeaconState) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(b)
 }
 
 // HashTreeRootWith ssz hashes the BeaconState object with a hasher
-func (b *BeaconState) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+func (b *state.BeaconState) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
 	// Field (0) 'GenesisTime'
@@ -1556,12 +1557,12 @@ func (b *BeaconState) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 }
 
 // MarshalSSZ ssz marshals the BeaconStateAltair object
-func (b *BeaconStateAltair) MarshalSSZ() ([]byte, error) {
+func (b *state.BeaconStateAltair) MarshalSSZ() ([]byte, error) {
 	return ssz.MarshalSSZ(b)
 }
 
 // MarshalSSZTo ssz marshals the BeaconStateAltair object to a target array
-func (b *BeaconStateAltair) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+func (b *state.BeaconStateAltair) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
 	offset := int(2736629)
 
@@ -1580,7 +1581,7 @@ func (b *BeaconStateAltair) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 
 	// Field (3) 'Fork'
 	if b.Fork == nil {
-		b.Fork = new(Fork)
+		b.Fork = new(state.Fork)
 	}
 	if dst, err = b.Fork.MarshalSSZTo(dst); err != nil {
 		return
@@ -1714,7 +1715,7 @@ func (b *BeaconStateAltair) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 
 	// Field (22) 'CurrentSyncCommittee'
 	if b.CurrentSyncCommittee == nil {
-		b.CurrentSyncCommittee = new(SyncCommittee)
+		b.CurrentSyncCommittee = new(state.SyncCommittee)
 	}
 	if dst, err = b.CurrentSyncCommittee.MarshalSSZTo(dst); err != nil {
 		return
@@ -1722,7 +1723,7 @@ func (b *BeaconStateAltair) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 
 	// Field (23) 'NextSyncCommittee'
 	if b.NextSyncCommittee == nil {
-		b.NextSyncCommittee = new(SyncCommittee)
+		b.NextSyncCommittee = new(state.SyncCommittee)
 	}
 	if dst, err = b.NextSyncCommittee.MarshalSSZTo(dst); err != nil {
 		return
@@ -1799,7 +1800,7 @@ func (b *BeaconStateAltair) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 }
 
 // UnmarshalSSZ ssz unmarshals the BeaconStateAltair object
-func (b *BeaconStateAltair) UnmarshalSSZ(buf []byte) error {
+func (b *state.BeaconStateAltair) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
 	if size < 2736629 {
@@ -1823,7 +1824,7 @@ func (b *BeaconStateAltair) UnmarshalSSZ(buf []byte) error {
 
 	// Field (3) 'Fork'
 	if b.Fork == nil {
-		b.Fork = new(Fork)
+		b.Fork = new(state.Fork)
 	}
 	if err = b.Fork.UnmarshalSSZ(buf[48:64]); err != nil {
 		return err
@@ -1952,7 +1953,7 @@ func (b *BeaconStateAltair) UnmarshalSSZ(buf []byte) error {
 
 	// Field (22) 'CurrentSyncCommittee'
 	if b.CurrentSyncCommittee == nil {
-		b.CurrentSyncCommittee = new(SyncCommittee)
+		b.CurrentSyncCommittee = new(state.SyncCommittee)
 	}
 	if err = b.CurrentSyncCommittee.UnmarshalSSZ(buf[2687381:2712005]); err != nil {
 		return err
@@ -1960,7 +1961,7 @@ func (b *BeaconStateAltair) UnmarshalSSZ(buf []byte) error {
 
 	// Field (23) 'NextSyncCommittee'
 	if b.NextSyncCommittee == nil {
-		b.NextSyncCommittee = new(SyncCommittee)
+		b.NextSyncCommittee = new(state.SyncCommittee)
 	}
 	if err = b.NextSyncCommittee.UnmarshalSSZ(buf[2712005:2736629]); err != nil {
 		return err
@@ -2071,7 +2072,7 @@ func (b *BeaconStateAltair) UnmarshalSSZ(buf []byte) error {
 }
 
 // SizeSSZ returns the ssz encoded size in bytes for the BeaconStateAltair object
-func (b *BeaconStateAltair) SizeSSZ() (size int) {
+func (b *state.BeaconStateAltair) SizeSSZ() (size int) {
 	size = 2736629
 
 	// Field (7) 'HistoricalRoots'
@@ -2099,12 +2100,12 @@ func (b *BeaconStateAltair) SizeSSZ() (size int) {
 }
 
 // HashTreeRoot ssz hashes the BeaconStateAltair object
-func (b *BeaconStateAltair) HashTreeRoot() ([32]byte, error) {
+func (b *state.BeaconStateAltair) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(b)
 }
 
 // HashTreeRootWith ssz hashes the BeaconStateAltair object with a hasher
-func (b *BeaconStateAltair) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+func (b *state.BeaconStateAltair) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
 	// Field (0) 'GenesisTime'
@@ -2333,12 +2334,12 @@ func (b *BeaconStateAltair) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 }
 
 // MarshalSSZ ssz marshals the Fork object
-func (f *Fork) MarshalSSZ() ([]byte, error) {
+func (f *state.Fork) MarshalSSZ() ([]byte, error) {
 	return ssz.MarshalSSZ(f)
 }
 
 // MarshalSSZTo ssz marshals the Fork object to a target array
-func (f *Fork) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+func (f *state.Fork) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
 
 	// Field (0) 'PreviousVersion'
@@ -2362,7 +2363,7 @@ func (f *Fork) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 }
 
 // UnmarshalSSZ ssz unmarshals the Fork object
-func (f *Fork) UnmarshalSSZ(buf []byte) error {
+func (f *state.Fork) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
 	if size != 16 {
@@ -2388,18 +2389,18 @@ func (f *Fork) UnmarshalSSZ(buf []byte) error {
 }
 
 // SizeSSZ returns the ssz encoded size in bytes for the Fork object
-func (f *Fork) SizeSSZ() (size int) {
+func (f *state.Fork) SizeSSZ() (size int) {
 	size = 16
 	return
 }
 
 // HashTreeRoot ssz hashes the Fork object
-func (f *Fork) HashTreeRoot() ([32]byte, error) {
+func (f *state.Fork) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(f)
 }
 
 // HashTreeRootWith ssz hashes the Fork object with a hasher
-func (f *Fork) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+func (f *state.Fork) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
 	// Field (0) 'PreviousVersion'
@@ -2424,12 +2425,12 @@ func (f *Fork) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 }
 
 // MarshalSSZ ssz marshals the PendingAttestation object
-func (p *PendingAttestation) MarshalSSZ() ([]byte, error) {
+func (p *state.PendingAttestation) MarshalSSZ() ([]byte, error) {
 	return ssz.MarshalSSZ(p)
 }
 
 // MarshalSSZTo ssz marshals the PendingAttestation object to a target array
-func (p *PendingAttestation) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+func (p *state.PendingAttestation) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
 	offset := int(148)
 
@@ -2462,7 +2463,7 @@ func (p *PendingAttestation) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 }
 
 // UnmarshalSSZ ssz unmarshals the PendingAttestation object
-func (p *PendingAttestation) UnmarshalSSZ(buf []byte) error {
+func (p *state.PendingAttestation) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
 	if size < 148 {
@@ -2510,7 +2511,7 @@ func (p *PendingAttestation) UnmarshalSSZ(buf []byte) error {
 }
 
 // SizeSSZ returns the ssz encoded size in bytes for the PendingAttestation object
-func (p *PendingAttestation) SizeSSZ() (size int) {
+func (p *state.PendingAttestation) SizeSSZ() (size int) {
 	size = 148
 
 	// Field (0) 'AggregationBits'
@@ -2520,12 +2521,12 @@ func (p *PendingAttestation) SizeSSZ() (size int) {
 }
 
 // HashTreeRoot ssz hashes the PendingAttestation object
-func (p *PendingAttestation) HashTreeRoot() ([32]byte, error) {
+func (p *state.PendingAttestation) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(p)
 }
 
 // HashTreeRootWith ssz hashes the PendingAttestation object with a hasher
-func (p *PendingAttestation) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+func (p *state.PendingAttestation) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
 	// Field (0) 'AggregationBits'
@@ -2551,12 +2552,12 @@ func (p *PendingAttestation) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 }
 
 // MarshalSSZ ssz marshals the HistoricalBatch object
-func (h *HistoricalBatch) MarshalSSZ() ([]byte, error) {
+func (h *state.HistoricalBatch) MarshalSSZ() ([]byte, error) {
 	return ssz.MarshalSSZ(h)
 }
 
 // MarshalSSZTo ssz marshals the HistoricalBatch object to a target array
-func (h *HistoricalBatch) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+func (h *state.HistoricalBatch) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
 
 	// Field (0) 'BlockRoots'
@@ -2589,7 +2590,7 @@ func (h *HistoricalBatch) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 }
 
 // UnmarshalSSZ ssz unmarshals the HistoricalBatch object
-func (h *HistoricalBatch) UnmarshalSSZ(buf []byte) error {
+func (h *state.HistoricalBatch) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
 	if size != 524288 {
@@ -2618,18 +2619,18 @@ func (h *HistoricalBatch) UnmarshalSSZ(buf []byte) error {
 }
 
 // SizeSSZ returns the ssz encoded size in bytes for the HistoricalBatch object
-func (h *HistoricalBatch) SizeSSZ() (size int) {
+func (h *state.HistoricalBatch) SizeSSZ() (size int) {
 	size = 524288
 	return
 }
 
 // HashTreeRoot ssz hashes the HistoricalBatch object
-func (h *HistoricalBatch) HashTreeRoot() ([32]byte, error) {
+func (h *state.HistoricalBatch) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(h)
 }
 
 // HashTreeRootWith ssz hashes the HistoricalBatch object with a hasher
-func (h *HistoricalBatch) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+func (h *state.HistoricalBatch) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
 	// Field (0) 'BlockRoots'
@@ -2671,12 +2672,12 @@ func (h *HistoricalBatch) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 }
 
 // MarshalSSZ ssz marshals the SigningData object
-func (s *SigningData) MarshalSSZ() ([]byte, error) {
+func (s *state.SigningData) MarshalSSZ() ([]byte, error) {
 	return ssz.MarshalSSZ(s)
 }
 
 // MarshalSSZTo ssz marshals the SigningData object to a target array
-func (s *SigningData) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+func (s *state.SigningData) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
 
 	// Field (0) 'ObjectRoot'
@@ -2697,7 +2698,7 @@ func (s *SigningData) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 }
 
 // UnmarshalSSZ ssz unmarshals the SigningData object
-func (s *SigningData) UnmarshalSSZ(buf []byte) error {
+func (s *state.SigningData) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
 	if size != 64 {
@@ -2720,18 +2721,18 @@ func (s *SigningData) UnmarshalSSZ(buf []byte) error {
 }
 
 // SizeSSZ returns the ssz encoded size in bytes for the SigningData object
-func (s *SigningData) SizeSSZ() (size int) {
+func (s *state.SigningData) SizeSSZ() (size int) {
 	size = 64
 	return
 }
 
 // HashTreeRoot ssz hashes the SigningData object
-func (s *SigningData) HashTreeRoot() ([32]byte, error) {
+func (s *state.SigningData) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(s)
 }
 
 // HashTreeRootWith ssz hashes the SigningData object with a hasher
-func (s *SigningData) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+func (s *state.SigningData) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
 	// Field (0) 'ObjectRoot'
@@ -2753,12 +2754,12 @@ func (s *SigningData) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 }
 
 // MarshalSSZ ssz marshals the ForkData object
-func (f *ForkData) MarshalSSZ() ([]byte, error) {
+func (f *state.ForkData) MarshalSSZ() ([]byte, error) {
 	return ssz.MarshalSSZ(f)
 }
 
 // MarshalSSZTo ssz marshals the ForkData object to a target array
-func (f *ForkData) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+func (f *state.ForkData) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
 
 	// Field (0) 'CurrentVersion'
@@ -2779,7 +2780,7 @@ func (f *ForkData) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 }
 
 // UnmarshalSSZ ssz unmarshals the ForkData object
-func (f *ForkData) UnmarshalSSZ(buf []byte) error {
+func (f *state.ForkData) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
 	if size != 36 {
@@ -2802,18 +2803,18 @@ func (f *ForkData) UnmarshalSSZ(buf []byte) error {
 }
 
 // SizeSSZ returns the ssz encoded size in bytes for the ForkData object
-func (f *ForkData) SizeSSZ() (size int) {
+func (f *state.ForkData) SizeSSZ() (size int) {
 	size = 36
 	return
 }
 
 // HashTreeRoot ssz hashes the ForkData object
-func (f *ForkData) HashTreeRoot() ([32]byte, error) {
+func (f *state.ForkData) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(f)
 }
 
 // HashTreeRootWith ssz hashes the ForkData object with a hasher
-func (f *ForkData) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+func (f *state.ForkData) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
 	// Field (0) 'CurrentVersion'
@@ -2835,12 +2836,12 @@ func (f *ForkData) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 }
 
 // MarshalSSZ ssz marshals the DepositMessage object
-func (d *DepositMessage) MarshalSSZ() ([]byte, error) {
+func (d *state.DepositMessage) MarshalSSZ() ([]byte, error) {
 	return ssz.MarshalSSZ(d)
 }
 
 // MarshalSSZTo ssz marshals the DepositMessage object to a target array
-func (d *DepositMessage) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+func (d *state.DepositMessage) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
 
 	// Field (0) 'PublicKey'
@@ -2864,7 +2865,7 @@ func (d *DepositMessage) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 }
 
 // UnmarshalSSZ ssz unmarshals the DepositMessage object
-func (d *DepositMessage) UnmarshalSSZ(buf []byte) error {
+func (d *state.DepositMessage) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
 	if size != 88 {
@@ -2890,18 +2891,18 @@ func (d *DepositMessage) UnmarshalSSZ(buf []byte) error {
 }
 
 // SizeSSZ returns the ssz encoded size in bytes for the DepositMessage object
-func (d *DepositMessage) SizeSSZ() (size int) {
+func (d *state.DepositMessage) SizeSSZ() (size int) {
 	size = 88
 	return
 }
 
 // HashTreeRoot ssz hashes the DepositMessage object
-func (d *DepositMessage) HashTreeRoot() ([32]byte, error) {
+func (d *state.DepositMessage) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(d)
 }
 
 // HashTreeRootWith ssz hashes the DepositMessage object with a hasher
-func (d *DepositMessage) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+func (d *state.DepositMessage) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
 	// Field (0) 'PublicKey'
@@ -2926,12 +2927,12 @@ func (d *DepositMessage) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 }
 
 // MarshalSSZ ssz marshals the SyncCommittee object
-func (s *SyncCommittee) MarshalSSZ() ([]byte, error) {
+func (s *state.SyncCommittee) MarshalSSZ() ([]byte, error) {
 	return ssz.MarshalSSZ(s)
 }
 
 // MarshalSSZTo ssz marshals the SyncCommittee object to a target array
-func (s *SyncCommittee) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+func (s *state.SyncCommittee) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
 
 	// Field (0) 'Pubkeys'
@@ -2958,7 +2959,7 @@ func (s *SyncCommittee) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 }
 
 // UnmarshalSSZ ssz unmarshals the SyncCommittee object
-func (s *SyncCommittee) UnmarshalSSZ(buf []byte) error {
+func (s *state.SyncCommittee) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
 	if size != 24624 {
@@ -2984,18 +2985,18 @@ func (s *SyncCommittee) UnmarshalSSZ(buf []byte) error {
 }
 
 // SizeSSZ returns the ssz encoded size in bytes for the SyncCommittee object
-func (s *SyncCommittee) SizeSSZ() (size int) {
+func (s *state.SyncCommittee) SizeSSZ() (size int) {
 	size = 24624
 	return
 }
 
 // HashTreeRoot ssz hashes the SyncCommittee object
-func (s *SyncCommittee) HashTreeRoot() ([32]byte, error) {
+func (s *state.SyncCommittee) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(s)
 }
 
 // HashTreeRootWith ssz hashes the SyncCommittee object with a hasher
-func (s *SyncCommittee) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+func (s *state.SyncCommittee) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
 	// Field (0) 'Pubkeys'
@@ -3027,12 +3028,12 @@ func (s *SyncCommittee) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 }
 
 // MarshalSSZ ssz marshals the SyncAggregatorSelectionData object
-func (s *SyncAggregatorSelectionData) MarshalSSZ() ([]byte, error) {
+func (s *state.SyncAggregatorSelectionData) MarshalSSZ() ([]byte, error) {
 	return ssz.MarshalSSZ(s)
 }
 
 // MarshalSSZTo ssz marshals the SyncAggregatorSelectionData object to a target array
-func (s *SyncAggregatorSelectionData) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+func (s *state.SyncAggregatorSelectionData) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
 
 	// Field (0) 'Slot'
@@ -3045,7 +3046,7 @@ func (s *SyncAggregatorSelectionData) MarshalSSZTo(buf []byte) (dst []byte, err 
 }
 
 // UnmarshalSSZ ssz unmarshals the SyncAggregatorSelectionData object
-func (s *SyncAggregatorSelectionData) UnmarshalSSZ(buf []byte) error {
+func (s *state.SyncAggregatorSelectionData) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
 	if size != 16 {
@@ -3062,18 +3063,18 @@ func (s *SyncAggregatorSelectionData) UnmarshalSSZ(buf []byte) error {
 }
 
 // SizeSSZ returns the ssz encoded size in bytes for the SyncAggregatorSelectionData object
-func (s *SyncAggregatorSelectionData) SizeSSZ() (size int) {
+func (s *state.SyncAggregatorSelectionData) SizeSSZ() (size int) {
 	size = 16
 	return
 }
 
 // HashTreeRoot ssz hashes the SyncAggregatorSelectionData object
-func (s *SyncAggregatorSelectionData) HashTreeRoot() ([32]byte, error) {
+func (s *state.SyncAggregatorSelectionData) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(s)
 }
 
 // HashTreeRootWith ssz hashes the SyncAggregatorSelectionData object with a hasher
-func (s *SyncAggregatorSelectionData) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+func (s *state.SyncAggregatorSelectionData) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
 	// Field (0) 'Slot'

@@ -25,8 +25,8 @@ go_library(
     deps = [
         "//beacon-chain/state/stateutil:go_default_library",
         "//beacon-chain/state/v1:go_default_library",
-        "//proto/prysm/v2:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
+        "//proto/prysm/v2:go_default_library",
         "//shared/params:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@org_golang_google_protobuf//proto:go_default_library",
@@ -42,8 +42,8 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/state/v1:go_default_library",
-        "//proto/prysm/v2:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
+        "//proto/prysm/v2:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
         "//shared/testutil/assert:go_default_library",

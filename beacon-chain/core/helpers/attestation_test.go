@@ -98,7 +98,7 @@ func TestAttestation_ComputeSubnetForAttestation(t *testing.T) {
 		}
 	}
 
-	state, err := v1.InitializeFromProto(&pb.BeaconState{
+	state, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Validators:  validators,
 		Slot:        200,
 		BlockRoots:  make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),

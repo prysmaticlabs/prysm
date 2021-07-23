@@ -2,7 +2,7 @@ package v1
 
 import (
 	"github.com/pkg/errors"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 )
 
 // AppendCurrentParticipationBits is not supported for phase 0 beacon state.
@@ -21,12 +21,12 @@ func (b *BeaconState) AppendInactivityScore(s uint64) error {
 }
 
 // SetCurrentSyncCommittee is not supported for phase 0 beacon state.
-func (b *BeaconState) SetCurrentSyncCommittee(val *pbp2p.SyncCommittee) error {
+func (b *BeaconState) SetCurrentSyncCommittee(val *statepb.SyncCommittee) error {
 	return errors.New("SetCurrentSyncCommittee is not supported for phase 0 beacon state")
 }
 
 // SetNextSyncCommittee is not supported for phase 0 beacon state.
-func (b *BeaconState) SetNextSyncCommittee(val *pbp2p.SyncCommittee) error {
+func (b *BeaconState) SetNextSyncCommittee(val *statepb.SyncCommittee) error {
 	return errors.New("SetNextSyncCommittee is not supported for phase 0 beacon state")
 }
 

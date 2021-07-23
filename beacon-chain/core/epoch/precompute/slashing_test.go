@@ -15,7 +15,7 @@ import (
 )
 
 func TestProcessSlashingsPrecompute_NotSlashedWithSlashedTrue(t *testing.T) {
-	s, err := v1.InitializeFromProto(&pb.BeaconState{
+	s, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Slot:       0,
 		Validators: []*ethpb.Validator{{Slashed: true}},
 		Balances:   []uint64{params.BeaconConfig().MaxEffectiveBalance},
@@ -30,7 +30,7 @@ func TestProcessSlashingsPrecompute_NotSlashedWithSlashedTrue(t *testing.T) {
 }
 
 func TestProcessSlashingsPrecompute_NotSlashedWithSlashedFalse(t *testing.T) {
-	s, err := v1.InitializeFromProto(&pb.BeaconState{
+	s, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Slot:       0,
 		Validators: []*ethpb.Validator{{}},
 		Balances:   []uint64{params.BeaconConfig().MaxEffectiveBalance},
@@ -46,11 +46,11 @@ func TestProcessSlashingsPrecompute_NotSlashedWithSlashedFalse(t *testing.T) {
 
 func TestProcessSlashingsPrecompute_SlashedLess(t *testing.T) {
 	tests := []struct {
-		state *pb.BeaconState
+		state *statepb.BeaconState
 		want  uint64
 	}{
 		{
-			state: &pb.BeaconState{
+			state: &statepb.BeaconState{
 				Validators: []*ethpb.Validator{
 					{Slashed: true,
 						WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashingsVector / 2,
@@ -64,7 +64,7 @@ func TestProcessSlashingsPrecompute_SlashedLess(t *testing.T) {
 			want: uint64(31000000000), // 32 * 1e9 - 1000000000
 		},
 		{
-			state: &pb.BeaconState{
+			state: &statepb.BeaconState{
 				Validators: []*ethpb.Validator{
 					{Slashed: true,
 						WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashingsVector / 2,
@@ -80,7 +80,7 @@ func TestProcessSlashingsPrecompute_SlashedLess(t *testing.T) {
 			want: uint64(32000000000), // 32 * 1e9 - 500000000
 		},
 		{
-			state: &pb.BeaconState{
+			state: &statepb.BeaconState{
 				Validators: []*ethpb.Validator{
 					{Slashed: true,
 						WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashingsVector / 2,
@@ -96,7 +96,7 @@ func TestProcessSlashingsPrecompute_SlashedLess(t *testing.T) {
 			want: uint64(31000000000), // 32 * 1e9 - 1000000000
 		},
 		{
-			state: &pb.BeaconState{
+			state: &statepb.BeaconState{
 				Validators: []*ethpb.Validator{
 					{Slashed: true,
 						WithdrawableEpoch: params.BeaconConfig().EpochsPerSlashingsVector / 2,

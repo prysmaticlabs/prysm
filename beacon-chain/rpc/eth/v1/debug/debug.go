@@ -12,7 +12,7 @@ import (
 )
 
 // GetBeaconState returns the full beacon state for a given state id.
-func (ds *Server) GetBeaconState(ctx context.Context, req *ethpb.StateRequest) (*ethpb.BeaconStateResponse, error) {
+func (ds *Server) GetBeaconState(ctx context.Context, req *ethpb.StateRequest) (*ethstatepb.BeaconStateResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBeaconState")
 	defer span.End()
 
@@ -31,13 +31,13 @@ func (ds *Server) GetBeaconState(ctx context.Context, req *ethpb.StateRequest) (
 		return nil, status.Errorf(codes.Internal, "Could not convert state to proto: %v", err)
 	}
 
-	return &ethpb.BeaconStateResponse{
+	return &ethstatepb.BeaconStateResponse{
 		Data: protoState,
 	}, nil
 }
 
 // GetBeaconStateSSZ returns the SSZ-serialized version of the full beacon state object for given stateId.
-func (ds *Server) GetBeaconStateSSZ(ctx context.Context, req *ethpb.StateRequest) (*ethpb.BeaconStateSSZResponse, error) {
+func (ds *Server) GetBeaconStateSSZ(ctx context.Context, req *ethpb.StateRequest) (*ethstatepb.BeaconStateSSZResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBeaconStateSSZ")
 	defer span.End()
 
@@ -56,7 +56,7 @@ func (ds *Server) GetBeaconStateSSZ(ctx context.Context, req *ethpb.StateRequest
 		return nil, status.Errorf(codes.Internal, "Could not marshal state into SSZ: %v", err)
 	}
 
-	return &ethpb.BeaconStateSSZResponse{Data: sszState}, nil
+	return &ethstatepb.BeaconStateSSZResponse{Data: sszState}, nil
 }
 
 // ListForkChoiceHeads retrieves the fork choice leaves for the current head.

@@ -26,7 +26,7 @@ func TestGetState(t *testing.T) {
 	ctx := context.Background()
 
 	headSlot := types.Slot(123)
-	fillSlot := func(state *pb.BeaconState) error {
+	fillSlot := func(state *statepb.BeaconState) error {
 		state.Slot = headSlot
 		return nil
 	}
@@ -60,7 +60,7 @@ func TestGetState(t *testing.T) {
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 
-		state, err := testutil.NewBeaconState(func(state *pb.BeaconState) error {
+		state, err := testutil.NewBeaconState(func(state *statepb.BeaconState) error {
 			state.BlockRoots[0] = r[:]
 			return nil
 		})
@@ -188,7 +188,7 @@ func TestGetStateRoot(t *testing.T) {
 	ctx := context.Background()
 
 	headSlot := types.Slot(123)
-	fillSlot := func(state *pb.BeaconState) error {
+	fillSlot := func(state *statepb.BeaconState) error {
 		state.Slot = headSlot
 		return nil
 	}
@@ -219,7 +219,7 @@ func TestGetStateRoot(t *testing.T) {
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 
-		state, err := testutil.NewBeaconState(func(state *pb.BeaconState) error {
+		state, err := testutil.NewBeaconState(func(state *statepb.BeaconState) error {
 			state.BlockRoots[0] = r[:]
 			return nil
 		})

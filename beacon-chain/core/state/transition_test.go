@@ -33,7 +33,7 @@ func init() {
 }
 
 func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
-	base := &pb.BeaconState{
+	base := &statepb.BeaconState{
 		Slot: 5,
 	}
 	beaconState, err := v1.InitializeFromProto(base)
@@ -243,7 +243,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	cp := beaconState.CurrentJustifiedCheckpoint()
 	cp.Root = []byte("hello-world")
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cp))
-	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&pb.PendingAttestation{}))
+	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&statepb.PendingAttestation{}))
 	_, err = state.VerifyOperationLengths(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 	wanted := "number of voluntary exits (17) in block body exceeds allowed threshold of 16"
 	assert.ErrorContains(t, wanted, err)
@@ -269,7 +269,7 @@ func createFullBlockWithOperations(t *testing.T) (iface.BeaconState,
 	copy(mockRoot[:], "hello-world")
 	cp.Root = mockRoot[:]
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cp))
-	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&pb.PendingAttestation{}))
+	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&statepb.PendingAttestation{}))
 
 	proposerSlashIdx := types.ValidatorIndex(3)
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
@@ -445,9 +445,9 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
 	epoch := types.Epoch(1)
 
-	atts := []*pb.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: make([]byte, 32)}}, InclusionDelay: 1}}
+	atts := []*statepb.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: make([]byte, 32)}}, InclusionDelay: 1}}
 	slashing := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
-	base := &pb.BeaconState{
+	base := &statepb.BeaconState{
 		Slot:                       params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch)) + 1,
 		BlockRoots:                 make([][]byte, 128),
 		Slashings:                  slashing,
@@ -489,7 +489,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 		randaoMixes[i] = params.BeaconConfig().ZeroHash[:]
 	}
 
-	base := &pb.BeaconState{
+	base := &statepb.BeaconState{
 		Slot:              20,
 		LatestBlockHeader: &ethpb.BeaconBlockHeader{},
 		BlockRoots:        make([][]byte, 254),
@@ -730,7 +730,7 @@ func TestCanProcessEpoch_TrueOnEpochs(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		b := &pb.BeaconState{Slot: tt.slot}
+		b := &statepb.BeaconState{Slot: tt.slot}
 		s, err := v1.InitializeFromProto(b)
 		require.NoError(t, err)
 		assert.Equal(t, tt.canProcessEpoch, state.CanProcessEpoch(s), "CanProcessEpoch(%d)", tt.slot)
@@ -797,7 +797,7 @@ func TestProcessBlock_OverMaxVoluntaryExits(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectDeposits(t *testing.T) {
-	base := &pb.BeaconState{
+	base := &statepb.BeaconState{
 		Eth1Data:         &ethpb.Eth1Data{DepositCount: 100},
 		Eth1DepositIndex: 98,
 	}
@@ -818,7 +818,7 @@ func TestProcessBlock_IncorrectDeposits(t *testing.T) {
 
 func TestProcessSlots_SameSlotAsParentState(t *testing.T) {
 	slot := types.Slot(2)
-	parentState, err := v1.InitializeFromProto(&pb.BeaconState{Slot: slot})
+	parentState, err := v1.InitializeFromProto(&statepb.BeaconState{Slot: slot})
 	require.NoError(t, err)
 
 	_, err = state.ProcessSlots(context.Background(), parentState, slot)
@@ -827,7 +827,7 @@ func TestProcessSlots_SameSlotAsParentState(t *testing.T) {
 
 func TestProcessSlots_LowerSlotAsParentState(t *testing.T) {
 	slot := types.Slot(2)
-	parentState, err := v1.InitializeFromProto(&pb.BeaconState{Slot: slot})
+	parentState, err := v1.InitializeFromProto(&statepb.BeaconState{Slot: slot})
 	require.NoError(t, err)
 
 	_, err = state.ProcessSlots(context.Background(), parentState, slot-1)

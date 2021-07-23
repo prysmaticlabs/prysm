@@ -4,7 +4,7 @@ package ethereum.prysm.v2;
 
 import "proto/eth/ext/options.proto";
 import "proto/prysm/v1alpha1/node.proto";
-import "proto/prysm/v2/messages.proto";
+import "proto/prysm/v2/p2p_messages.proto";
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
 
@@ -144,8 +144,8 @@ message DebugPeerResponse {
     message PeerInfo {
         // Metadata of the peer, containing their bitfield
         // and sequence number.
-        ethereum.beacon.p2p.v1.MetaDataV0 metadataV0 = 1;
-        ethereum.beacon.p2p.v1.MetaDataV1 metadataV1 = 2;
+        MetaDataV0 metadataV0 = 1;
+        MetaDataV1 metadataV1 = 2;
         // List of protocols the peer supports.
         repeated string protocols = 3;
         // Number of times peer has been penalised.
@@ -170,7 +170,7 @@ message DebugPeerResponse {
     // Peer Info of the peer containing all relevant metadata.
     PeerInfo peer_info = 6;
     // Peer Status of the peer.
-    ethereum.beacon.p2p.v1.Status peer_status = 7;
+    Status peer_status = 7;
     // Last know update time for peer status.
     uint64 last_updated = 8;
     // Score Info of the peer.

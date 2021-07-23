@@ -92,7 +92,7 @@ func TestGetStateRoot(t *testing.T) {
 }
 
 func TestGetStateFork(t *testing.T) {
-	fillFork := func(state *pb.BeaconState) error {
+	fillFork := func(state *statepb.BeaconState) error {
 		state.Fork = &pb.Fork{
 			PreviousVersion: []byte("prev"),
 			CurrentVersion:  []byte("curr"),
@@ -120,7 +120,7 @@ func TestGetStateFork(t *testing.T) {
 }
 
 func TestGetFinalityCheckpoints(t *testing.T) {
-	fillCheckpoints := func(state *pb.BeaconState) error {
+	fillCheckpoints := func(state *statepb.BeaconState) error {
 		state.PreviousJustifiedCheckpoint = &eth.Checkpoint{
 			Root:  bytesutil.PadTo([]byte("previous"), 32),
 			Epoch: 113,

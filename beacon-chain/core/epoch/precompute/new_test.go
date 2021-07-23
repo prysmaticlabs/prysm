@@ -15,7 +15,7 @@ import (
 
 func TestNew(t *testing.T) {
 	ffe := params.BeaconConfig().FarFutureEpoch
-	s, err := v1.InitializeFromProto(&pb.BeaconState{
+	s, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Slot: params.BeaconConfig().SlotsPerEpoch,
 		// Validator 0 is slashed
 		// Validator 1 is withdrawable

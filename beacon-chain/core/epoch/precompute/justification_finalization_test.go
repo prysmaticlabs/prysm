@@ -21,7 +21,7 @@ func TestProcessJustificationAndFinalizationPreCompute_ConsecutiveEpochs(t *test
 	for i := 0; i < len(blockRoots); i++ {
 		blockRoots[i] = []byte{byte(i)}
 	}
-	base := &pb.BeaconState{
+	base := &statepb.BeaconState{
 		Slot: params.BeaconConfig().SlotsPerEpoch*2 + 1,
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{
 			Epoch: 0,
@@ -58,7 +58,7 @@ func TestProcessJustificationAndFinalizationPreCompute_JustifyCurrentEpoch(t *te
 	for i := 0; i < len(blockRoots); i++ {
 		blockRoots[i] = []byte{byte(i)}
 	}
-	base := &pb.BeaconState{
+	base := &statepb.BeaconState{
 		Slot: params.BeaconConfig().SlotsPerEpoch*2 + 1,
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{
 			Epoch: 0,
@@ -95,7 +95,7 @@ func TestProcessJustificationAndFinalizationPreCompute_JustifyPrevEpoch(t *testi
 	for i := 0; i < len(blockRoots); i++ {
 		blockRoots[i] = []byte{byte(i)}
 	}
-	base := &pb.BeaconState{
+	base := &statepb.BeaconState{
 		Slot: params.BeaconConfig().SlotsPerEpoch*2 + 1,
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{
 			Epoch: 0,

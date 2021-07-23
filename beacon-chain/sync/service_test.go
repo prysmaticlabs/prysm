@@ -23,7 +23,7 @@ import (
 )
 
 func TestService_StatusZeroEpoch(t *testing.T) {
-	bState, err := v1.InitializeFromProto(&pb.BeaconState{Slot: 0})
+	bState, err := v1.InitializeFromProto(&statepb.BeaconState{Slot: 0})
 	require.NoError(t, err)
 	r := &Service{
 		cfg: &Config{

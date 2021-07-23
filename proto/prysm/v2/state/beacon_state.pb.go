@@ -4,7 +4,7 @@
 // 	protoc        v3.15.8
 // source: proto/prysm/v2/types.proto
 
-package v2
+package state
 
 import (
 	reflect "reflect"

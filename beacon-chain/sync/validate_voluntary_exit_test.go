@@ -38,7 +38,7 @@ func setupValidExit(t *testing.T) (*ethpb.SignedVoluntaryExit, iface.BeaconState
 			ActivationEpoch: 0,
 		},
 	}
-	state, err := v1.InitializeFromProto(&pb.BeaconState{
+	state, err := v1.InitializeFromProto(&statepb.BeaconState{
 		Validators: registry,
 		Fork: &pb.Fork{
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,

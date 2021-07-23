@@ -121,7 +121,7 @@ func TestSszNetworkEncoder_DecodeWithMultipleFrames(t *testing.T) {
 	if buf.Len() <= 76490 {
 		t.Errorf("buffer smaller than expected, wanted > %d but got %d", 76490, buf.Len())
 	}
-	decoded := new(pb.BeaconState)
+	decoded := new(statepb.BeaconState)
 	err = e.DecodeWithMaxLength(buf, decoded)
 	assert.NoError(t, err)
 }

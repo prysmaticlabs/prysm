@@ -146,7 +146,7 @@ func BenchmarkUnmarshalState_FullState(b *testing.B) {
 		b.ResetTimer()
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			require.NoError(b, proto.Unmarshal(protoObject, &pb.BeaconState{}))
+			require.NoError(b, proto.Unmarshal(protoObject, &statepb.BeaconState{}))
 		}
 	})
 
@@ -154,7 +154,7 @@ func BenchmarkUnmarshalState_FullState(b *testing.B) {
 		b.ResetTimer()
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			sszState := &pb.BeaconState{}
+			sszState := &statepb.BeaconState{}
 			require.NoError(b, sszState.UnmarshalSSZ(sszObject))
 		}
 	})

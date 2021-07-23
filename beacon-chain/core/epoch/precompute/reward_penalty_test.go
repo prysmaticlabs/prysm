@@ -23,9 +23,9 @@ func TestProcessRewardsAndPenaltiesPrecompute(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := uint64(2048)
 	base := buildState(e+3, validatorCount)
-	atts := make([]*pb.PendingAttestation, 3)
+	atts := make([]*statepb.PendingAttestation, 3)
 	for i := 0; i < len(atts); i++ {
-		atts[i] = &pb.PendingAttestation{
+		atts[i] = &statepb.PendingAttestation{
 			Data: &ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{Root: make([]byte, 32)},
 				Source: &ethpb.Checkpoint{Root: make([]byte, 32)},
@@ -62,10 +62,10 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := uint64(2048)
 	base := buildState(e+2, validatorCount)
-	atts := make([]*pb.PendingAttestation, 3)
+	atts := make([]*statepb.PendingAttestation, 3)
 	var emptyRoot [32]byte
 	for i := 0; i < len(atts); i++ {
-		atts[i] = &pb.PendingAttestation{
+		atts[i] = &statepb.PendingAttestation{
 			Data: &ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{
 					Root: emptyRoot[:],
@@ -146,10 +146,10 @@ func TestAttestationDeltas_ZeroEpoch(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := uint64(2048)
 	base := buildState(e+2, validatorCount)
-	atts := make([]*pb.PendingAttestation, 3)
+	atts := make([]*statepb.PendingAttestation, 3)
 	var emptyRoot [32]byte
 	for i := 0; i < len(atts); i++ {
-		atts[i] = &pb.PendingAttestation{
+		atts[i] = &statepb.PendingAttestation{
 			Data: &ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{
 					Root: emptyRoot[:],
@@ -182,10 +182,10 @@ func TestAttestationDeltas_ZeroInclusionDelay(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := uint64(2048)
 	base := buildState(e+2, validatorCount)
-	atts := make([]*pb.PendingAttestation, 3)
+	atts := make([]*statepb.PendingAttestation, 3)
 	var emptyRoot [32]byte
 	for i := 0; i < len(atts); i++ {
-		atts[i] = &pb.PendingAttestation{
+		atts[i] = &statepb.PendingAttestation{
 			Data: &ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{
 					Root: emptyRoot[:],
@@ -215,9 +215,9 @@ func TestProcessRewardsAndPenaltiesPrecompute_SlashedInactivePenalty(t *testing.
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := uint64(2048)
 	base := buildState(e+3, validatorCount)
-	atts := make([]*pb.PendingAttestation, 3)
+	atts := make([]*statepb.PendingAttestation, 3)
 	for i := 0; i < len(atts); i++ {
-		atts[i] = &pb.PendingAttestation{
+		atts[i] = &statepb.PendingAttestation{
 			Data: &ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{Root: make([]byte, 32)},
 				Source: &ethpb.Checkpoint{Root: make([]byte, 32)},
@@ -259,7 +259,7 @@ func TestProcessRewardsAndPenaltiesPrecompute_SlashedInactivePenalty(t *testing.
 	}
 }
 
-func buildState(slot types.Slot, validatorCount uint64) *pb.BeaconState {
+func buildState(slot types.Slot, validatorCount uint64) *statepb.BeaconState {
 	validators := make([]*ethpb.Validator, validatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -285,7 +285,7 @@ func buildState(slot types.Slot, validatorCount uint64) *pb.BeaconState {
 	for i := 0; i < len(latestRandaoMixes); i++ {
 		latestRandaoMixes[i] = params.BeaconConfig().ZeroHash[:]
 	}
-	return &pb.BeaconState{
+	return &statepb.BeaconState{
 		Slot:                        slot,
 		Balances:                    validatorBalances,
 		Validators:                  validators,

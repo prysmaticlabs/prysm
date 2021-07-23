@@ -9,7 +9,7 @@ import (
 )
 
 func Test_handlePendingAttestation_OutOfRange(t *testing.T) {
-	items := make([]*pb.PendingAttestation, 1)
+	items := make([]*statepb.PendingAttestation, 1)
 	indices := []uint64{3}
 	_, err := handlePendingAttestation(items, indices, false)
 	assert.ErrorContains(t, "index 3 greater than number of pending attestations 1", err)

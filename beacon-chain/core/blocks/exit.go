@@ -10,7 +10,7 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -90,7 +90,7 @@ func ProcessVoluntaryExits(
 func VerifyExitAndSignature(
 	validator iface.ReadOnlyValidator,
 	currentSlot types.Slot,
-	fork *pb.Fork,
+	fork *statepb.Fork,
 	signed *ethpb.SignedVoluntaryExit,
 	genesisRoot []byte,
 ) error {

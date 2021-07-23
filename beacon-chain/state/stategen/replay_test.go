@@ -40,7 +40,7 @@ func TestReplayBlocks_AllSkipSlots(t *testing.T) {
 	copy(mockRoot[:], "hello-world")
 	cp.Root = mockRoot[:]
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cp))
-	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&pb.PendingAttestation{}))
+	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&statepb.PendingAttestation{}))
 
 	service := New(beaconDB)
 	targetSlot := params.BeaconConfig().SlotsPerEpoch - 1
@@ -69,7 +69,7 @@ func TestReplayBlocks_SameSlot(t *testing.T) {
 	copy(mockRoot[:], "hello-world")
 	cp.Root = mockRoot[:]
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cp))
-	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&pb.PendingAttestation{}))
+	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&statepb.PendingAttestation{}))
 
 	service := New(beaconDB)
 	targetSlot := beaconState.Slot()
@@ -99,7 +99,7 @@ func TestReplayBlocks_LowerSlotBlock(t *testing.T) {
 	copy(mockRoot[:], "hello-world")
 	cp.Root = mockRoot[:]
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cp))
-	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&pb.PendingAttestation{}))
+	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&statepb.PendingAttestation{}))
 
 	service := New(beaconDB)
 	targetSlot := beaconState.Slot()

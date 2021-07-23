@@ -62,7 +62,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		if err != nil {
 			log.Fatalf("Could not read pre-loaded state: %v", err)
 		}
-		genesisState := &pb.BeaconState{}
+		genesisState := &statepb.BeaconState{}
 		if err := genesisState.UnmarshalSSZ(data); err != nil {
 			log.Fatalf("Could not unmarshal pre-loaded state: %v", err)
 		}

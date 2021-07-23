@@ -33,7 +33,7 @@ func TestProcessAttestationNoVerifySignature_BeaconFuzzIssue78(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	spb := &pb.BeaconState{}
+	spb := &statepb.BeaconState{}
 	if err := spb.UnmarshalSSZ(stateData); err != nil {
 		t.Fatal(err)
 	}
@@ -73,7 +73,7 @@ func TestVerifyAttestationNoVerifySignature_IncorrectSourceEpoch(t *testing.T) {
 	ckp := beaconState.CurrentJustifiedCheckpoint()
 	copy(ckp.Root, "hello-world")
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(ckp))
-	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&pb.PendingAttestation{}))
+	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&statepb.PendingAttestation{}))
 
 	err = blocks.VerifyAttestationNoVerifySignature(context.TODO(), beaconState, att)
 	assert.NotEqual(t, nil, err)

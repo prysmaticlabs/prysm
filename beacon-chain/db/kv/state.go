@@ -25,7 +25,7 @@ import (
 func (s *Store) State(ctx context.Context, blockRoot [32]byte) (iface.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.State")
 	defer span.End()
-	var st *pb.BeaconState
+	var st *statepb.BeaconState
 	enc, err := s.stateBytes(ctx, blockRoot)
 	if err != nil {
 		return nil, err
@@ -57,7 +57,7 @@ func (s *Store) GenesisState(ctx context.Context) (iface.BeaconState, error) {
 		return cached, nil
 	}
 
-	var st *pb.BeaconState
+	var st *statepb.BeaconState
 	err = s.db.View(func(tx *bolt.Tx) error {
 		// Retrieve genesis block's signing root from blocks bucket,
 		// to look up what the genesis state is.
@@ -198,8 +198,8 @@ func (s *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 }
 
 // creates state from marshaled proto state bytes.
-func createState(ctx context.Context, enc []byte) (*pb.BeaconState, error) {
-	protoState := &pb.BeaconState{}
+func createState(ctx context.Context, enc []byte) (*statepb.BeaconState, error) {
+	protoState := &statepb.BeaconState{}
 	if err := decode(ctx, enc, protoState); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal encoding")
 	}
