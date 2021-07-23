@@ -7,8 +7,8 @@ import (
 
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -21,7 +21,7 @@ import (
 )
 
 func init() {
-	state.SkipSlotCache.Disable()
+	core.SkipSlotCache.Disable()
 }
 
 type Config struct {
@@ -51,7 +51,7 @@ func RunFinalityTest(t *testing.T, config string) {
 			metaYaml := &Config{}
 			require.NoError(t, utils.UnmarshalYaml(file, metaYaml), "Failed to Unmarshal")
 
-			var processedState iface.BeaconState
+			var processedState state.BeaconState
 			var ok bool
 			for i := 0; i < metaYaml.BlocksCount; i++ {
 				filename := fmt.Sprintf("blocks_%d.ssz_snappy", i)
@@ -61,7 +61,7 @@ func RunFinalityTest(t *testing.T, config string) {
 				require.NoError(t, err, "Failed to decompress")
 				block := &ethpb.SignedBeaconBlock{}
 				require.NoError(t, block.UnmarshalSSZ(blockSSZ), "Failed to unmarshal")
-				processedState, err = state.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
+				processedState, err = core.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
 				require.NoError(t, err)
 				beaconState, ok = processedState.(*v1.BeaconState)
 				require.Equal(t, true, ok)

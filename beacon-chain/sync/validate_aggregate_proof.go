@@ -12,8 +12,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	core "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -144,7 +144,7 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 		if err != nil {
 			return pubsub.ValidationIgnore
 		}
-		bs, err = state.ProcessSlots(ctx, bs, startSlot)
+		bs, err = core.ProcessSlots(ctx, bs, startSlot)
 		if err != nil {
 			traceutil.AnnotateError(span, err)
 			return pubsub.ValidationIgnore
@@ -221,7 +221,7 @@ func (s *Service) setAggregatorIndexEpochSeen(epoch types.Epoch, aggregatorIndex
 }
 
 // This validates the aggregator's index in state is within the beacon committee.
-func validateIndexInCommittee(ctx context.Context, bs iface.ReadOnlyBeaconState, a *ethpb.Attestation, validatorIndex types.ValidatorIndex) error {
+func validateIndexInCommittee(ctx context.Context, bs state.ReadOnlyBeaconState, a *ethpb.Attestation, validatorIndex types.ValidatorIndex) error {
 	ctx, span := trace.StartSpan(ctx, "sync.validateIndexInCommittee")
 	defer span.End()
 
@@ -247,7 +247,7 @@ func validateIndexInCommittee(ctx context.Context, bs iface.ReadOnlyBeaconState,
 // It does not verify the selection proof, it returns the signature set of selection proof which can be used for batch verify.
 func validateSelectionIndex(
 	ctx context.Context,
-	bs iface.ReadOnlyBeaconState,
+	bs state.ReadOnlyBeaconState,
 	data *ethpb.AttestationData,
 	validatorIndex types.ValidatorIndex,
 	proof []byte,
@@ -296,7 +296,7 @@ func validateSelectionIndex(
 }
 
 // This returns aggregator signature set which can be used to batch verify.
-func aggSigSet(s iface.ReadOnlyBeaconState, a *ethpb.SignedAggregateAttestationAndProof) (*bls.SignatureSet, error) {
+func aggSigSet(s state.ReadOnlyBeaconState, a *ethpb.SignedAggregateAttestationAndProof) (*bls.SignatureSet, error) {
 	v, err := s.ValidatorAtIndex(a.Message.AggregatorIndex)
 	if err != nil {
 		return nil, err
