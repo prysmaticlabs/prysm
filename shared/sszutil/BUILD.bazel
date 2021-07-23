@@ -17,7 +17,7 @@ go_test(
     srcs = ["deep_equal_test.go"],
     deps = [
         ":go_default_library",
-        "//proto/beacon/p2p/v1:go_default_library",
+        "//proto/proto/prysm/v2:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//shared/testutil/assert:go_default_library",
     ],

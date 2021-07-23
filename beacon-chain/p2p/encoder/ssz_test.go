@@ -10,7 +10,7 @@ import (
 
 	gogo "github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"

@@ -3,7 +3,7 @@ package kv
 import (
 	"sync"
 
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/proto/prysm/v2"
 )
 
 const stateSummaryCachePruneCount = 128

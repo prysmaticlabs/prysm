@@ -5,8 +5,8 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
+	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/proto/prysm/v2"
 )
 
 // MockStateManager is a fake implementation of StateManager.

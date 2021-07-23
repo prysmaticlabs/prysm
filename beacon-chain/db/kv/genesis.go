@@ -12,7 +12,7 @@ import (
 	dbIface "github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	state "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )

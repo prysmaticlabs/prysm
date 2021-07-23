@@ -23,7 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/proto/prysm/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"

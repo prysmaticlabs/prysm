@@ -4,7 +4,7 @@ package ethereum.prysm.v2;
 
 import "proto/eth/ext/options.proto";
 import "proto/prysm/v1alpha1/node.proto";
-import "proto/beacon/p2p/v1/messages.proto";
+import "proto/proto/prysm/v2/messages.proto";
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
 

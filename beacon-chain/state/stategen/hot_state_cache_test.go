@@ -5,7 +5,7 @@ import (
 
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )

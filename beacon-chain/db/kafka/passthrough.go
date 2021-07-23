@@ -8,10 +8,10 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
+	pb "github.com/prysmaticlabs/prysm/proto/proto/prysm/v2"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	v2 "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 )
 
 // DatabasePath -- passthrough.

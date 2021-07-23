@@ -7,7 +7,7 @@ import (
 	fuzz "github.com/google/gofuzz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/proto/prysm/v2"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"

@@ -5,7 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/protobuf/proto"
 )

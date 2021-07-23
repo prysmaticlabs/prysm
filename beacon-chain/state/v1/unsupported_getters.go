@@ -2,7 +2,7 @@ package v1
 
 import (
 	"github.com/pkg/errors"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/proto/prysm/v2"
 )
 
 // CurrentEpochParticipation is not supported for phase 0 beacon state.

@@ -8,8 +8,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2p2 "github.com/prysmaticlabs/prysm/proto/beacon/p2p"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1/wrapper"
+	pb "github.com/prysmaticlabs/prysm/proto/proto/prysm/v2"
+	"github.com/prysmaticlabs/prysm/proto/proto/prysm/v2/wrapper"
 )
 
 // metaDataHandler reads the incoming metadata rpc request from the peer.

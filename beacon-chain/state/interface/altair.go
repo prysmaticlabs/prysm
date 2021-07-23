@@ -1,6 +1,6 @@
 package iface
 
-import pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+import pbp2p "github.com/prysmaticlabs/prysm/proto/proto/prysm/v2"
 
 // BeaconStateAltair has read and write access to beacon state methods.
 type BeaconStateAltair interface {

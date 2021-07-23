@@ -17,7 +17,7 @@ import (
 	p2pm "github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	p2ppb "github.com/prysmaticlabs/prysm/proto/proto/prysm/v2"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"

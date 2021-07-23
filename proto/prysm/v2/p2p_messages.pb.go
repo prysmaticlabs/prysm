@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.25.0
 // 	protoc        v3.15.8
-// source: proto/beacon/p2p/v1/messages.proto
+// source: proto/proto/prysm/v2/messages.proto
 
 package v2
 

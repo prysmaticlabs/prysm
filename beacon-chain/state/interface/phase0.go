@@ -8,8 +8,8 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/proto/prysm/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 

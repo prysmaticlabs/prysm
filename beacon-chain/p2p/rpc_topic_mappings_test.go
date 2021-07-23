@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )

@@ -6,7 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/copyutil"
 
 	"github.com/pkg/errors"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/proto/prysm/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 

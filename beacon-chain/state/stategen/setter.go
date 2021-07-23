@@ -6,7 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
