@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/proto/prysm"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/timeutils"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -20,8 +20,8 @@ var epochsSinceFinalitySaveHotStateDB = types.Epoch(100)
 
 // BlockReceiver interface defines the methods of chain service receive and processing new blocks.
 type BlockReceiver interface {
-	ReceiveBlock(ctx context.Context, block prysm.SignedBeaconBlock, blockRoot [32]byte) error
-	ReceiveBlockBatch(ctx context.Context, blocks []prysm.SignedBeaconBlock, blkRoots [][32]byte) error
+	ReceiveBlock(ctx context.Context, block block.SignedBeaconBlock, blockRoot [32]byte) error
+	ReceiveBlockBatch(ctx context.Context, blocks []block.SignedBeaconBlock, blkRoots [][32]byte) error
 	HasInitSyncBlock(root [32]byte) bool
 }
 
@@ -30,7 +30,7 @@ type BlockReceiver interface {
 //   1. Validate block, apply state transition and update check points
 //   2. Apply fork choice to the processed block
 //   3. Save latest head info
-func (s *Service) ReceiveBlock(ctx context.Context, block prysm.SignedBeaconBlock, blockRoot [32]byte) error {
+func (s *Service) ReceiveBlock(ctx context.Context, block block.SignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlock")
 	defer span.End()
 	receivedTime := timeutils.Now()
@@ -86,7 +86,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block prysm.SignedBeaconBloc
 // ReceiveBlockBatch processes the whole block batch at once, assuming the block batch is linear ,transitioning
 // the state, performing batch verification of all collected signatures and then performing the appropriate
 // actions for a block post-transition.
-func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []prysm.SignedBeaconBlock, blkRoots [][32]byte) error {
+func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []block.SignedBeaconBlock, blkRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlockBatch")
 	defer span.End()
 
@@ -134,7 +134,7 @@ func (s *Service) HasInitSyncBlock(root [32]byte) bool {
 	return s.hasInitSyncBlock(root)
 }
 
-func (s *Service) handlePostBlockOperations(b prysm.BeaconBlock) error {
+func (s *Service) handlePostBlockOperations(b block.BeaconBlock) error {
 	// Delete the processed block attestations from attestation pool.
 	if err := s.deletePoolAtts(b.Body().Attestations()); err != nil {
 		return err

@@ -2,8 +2,8 @@ package wrapper
 
 import (
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/proto/prysm"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/metadata"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -38,7 +38,7 @@ func (m MetadataV0) IsNil() bool {
 }
 
 // Copy performs a full copy of the underlying metadata object.
-func (m MetadataV0) Copy() prysm.Metadata {
+func (m MetadataV0) Copy() metadata.Metadata {
 	return WrappedMetadataV0(proto.Clone(m.md).(*pb.MetaDataV0))
 }
 
@@ -85,7 +85,7 @@ func (m MetadataV1) IsNil() bool {
 }
 
 // Copy performs a full copy of the underlying metadata object.
-func (m MetadataV1) Copy() prysm.Metadata {
+func (m MetadataV1) Copy() metadata.Metadata {
 	return WrappedMetadataV1(proto.Clone(m.md).(*pb.MetaDataV1))
 }
 

@@ -5,7 +5,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/proto/prysm"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
 	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 )
 
@@ -42,7 +42,7 @@ func (m *MockStateManager) MigrateToCold(ctx context.Context, fRoot [32]byte) er
 func (m *MockStateManager) ReplayBlocks(
 	ctx context.Context,
 	state state.BeaconState,
-	signed []prysm.SignedBeaconBlock,
+	signed []block.SignedBeaconBlock,
 	targetSlot types.Slot,
 ) (state.BeaconState, error) {
 	panic("implement me")
@@ -53,7 +53,7 @@ func (m *MockStateManager) LoadBlocks(
 	ctx context.Context,
 	startSlot, endSlot types.Slot,
 	endBlockRoot [32]byte,
-) ([]prysm.SignedBeaconBlock, error) {
+) ([]block.SignedBeaconBlock, error) {
 	panic("implement me")
 }
 

@@ -4,14 +4,14 @@ import (
 	"errors"
 	"sort"
 
-	"github.com/prysmaticlabs/prysm/proto/prysm"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
 )
 
 // A type to represent beacon blocks and roots which have methods
 // which satisfy the Interface in `Sort` so that this type can
 // be sorted in ascending order.
 type sortedObj struct {
-	blks  []prysm.SignedBeaconBlock
+	blks  []block.SignedBeaconBlock
 	roots [][32]byte
 }
 
@@ -32,14 +32,14 @@ func (s sortedObj) Len() int {
 }
 
 // removes duplicates from provided blocks and roots.
-func (s *Service) dedupBlocksAndRoots(blks []prysm.SignedBeaconBlock, roots [][32]byte) ([]prysm.SignedBeaconBlock, [][32]byte, error) {
+func (s *Service) dedupBlocksAndRoots(blks []block.SignedBeaconBlock, roots [][32]byte) ([]block.SignedBeaconBlock, [][32]byte, error) {
 	if len(blks) != len(roots) {
 		return nil, nil, errors.New("input blks and roots are diff lengths")
 	}
 
 	// Remove duplicate blocks received
 	rootMap := make(map[[32]byte]bool, len(blks))
-	newBlks := make([]prysm.SignedBeaconBlock, 0, len(blks))
+	newBlks := make([]block.SignedBeaconBlock, 0, len(blks))
 	newRoots := make([][32]byte, 0, len(roots))
 	for i, r := range roots {
 		if rootMap[r] {
@@ -67,7 +67,7 @@ func (s *Service) dedupRoots(roots [][32]byte) [][32]byte {
 
 // sort the provided blocks and roots in ascending order. This method assumes that the size of
 // block slice and root slice is equal.
-func (s *Service) sortBlocksAndRoots(blks []prysm.SignedBeaconBlock, roots [][32]byte) ([]prysm.SignedBeaconBlock, [][32]byte) {
+func (s *Service) sortBlocksAndRoots(blks []block.SignedBeaconBlock, roots [][32]byte) ([]block.SignedBeaconBlock, [][32]byte) {
 	obj := sortedObj{
 		blks:  blks,
 		roots: roots,

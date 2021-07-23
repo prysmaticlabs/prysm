@@ -7,7 +7,7 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/proto/prysm"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
 )
 
 const (
@@ -35,7 +35,7 @@ type BlockProcessedData struct {
 	// BlockRoot of the processed block.
 	BlockRoot [32]byte
 	// SignedBlock is the physical processed block.
-	SignedBlock prysm.SignedBeaconBlock
+	SignedBlock block.SignedBeaconBlock
 	// Verified is true if the block's BLS contents have been verified.
 	Verified bool
 }

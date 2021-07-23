@@ -12,8 +12,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
-	"github.com/prysmaticlabs/prysm/proto/prysm"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -94,7 +94,7 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpb.BlockHeadersR
 	defer span.End()
 
 	var err error
-	var blks []prysm.SignedBeaconBlock
+	var blks []block.SignedBeaconBlock
 	var blkRoots [][32]byte
 	if len(req.ParentRoot) == 32 {
 		blks, blkRoots, err = bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetParentRoot(req.ParentRoot))
@@ -352,9 +352,9 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpb.BlockReq
 	}, nil
 }
 
-func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (prysm.SignedBeaconBlock, error) {
+func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (block.SignedBeaconBlock, error) {
 	var err error
-	var blk prysm.SignedBeaconBlock
+	var blk block.SignedBeaconBlock
 	switch string(blockId) {
 	case "head":
 		blk, err = bs.ChainInfoFetcher.HeadBlock(ctx)

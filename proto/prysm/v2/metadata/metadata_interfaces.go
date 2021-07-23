@@ -1,4 +1,4 @@
-package prysm
+package metadata
 
 import (
 	"github.com/prysmaticlabs/go-bitfield"

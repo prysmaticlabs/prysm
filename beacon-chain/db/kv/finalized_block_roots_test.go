@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/proto/prysm"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -170,15 +170,15 @@ func TestStore_IsFinalizedChildBlock(t *testing.T) {
 	}
 }
 
-func sszRootOrDie(t *testing.T, block prysm.SignedBeaconBlock) []byte {
+func sszRootOrDie(t *testing.T, block block.SignedBeaconBlock) []byte {
 	root, err := block.Block().HashTreeRoot()
 	require.NoError(t, err)
 	return root[:]
 }
 
-func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []prysm.SignedBeaconBlock {
+func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []block.SignedBeaconBlock {
 	blocks := make([]*ethpb.SignedBeaconBlock, n)
-	ifaceBlocks := make([]prysm.SignedBeaconBlock, n)
+	ifaceBlocks := make([]block.SignedBeaconBlock, n)
 	for j := i; j < n+i; j++ {
 		parentRoot := make([]byte, 32)
 		copy(parentRoot, previousRoot[:])

@@ -15,8 +15,8 @@ import (
 	p2pTypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/proto/prysm"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/sirupsen/logrus"
@@ -103,7 +103,7 @@ type fetchRequestResponse struct {
 	pid    peer.ID
 	start  types.Slot
 	count  uint64
-	blocks []prysm.SignedBeaconBlock
+	blocks []block.SignedBeaconBlock
 	err    error
 }
 
@@ -244,7 +244,7 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start types.Slot, cou
 	response := &fetchRequestResponse{
 		start:  start,
 		count:  count,
-		blocks: []prysm.SignedBeaconBlock{},
+		blocks: []block.SignedBeaconBlock{},
 		err:    nil,
 	}
 
@@ -278,7 +278,7 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 	ctx context.Context,
 	start types.Slot, count uint64,
 	peers []peer.ID,
-) ([]prysm.SignedBeaconBlock, peer.ID, error) {
+) ([]block.SignedBeaconBlock, peer.ID, error) {
 	ctx, span := trace.StartSpan(ctx, "initialsync.fetchBlocksFromPeer")
 	defer span.End()
 
@@ -302,7 +302,7 @@ func (f *blocksFetcher) requestBlocks(
 	ctx context.Context,
 	req *p2ppb.BeaconBlocksByRangeRequest,
 	pid peer.ID,
-) ([]prysm.SignedBeaconBlock, error) {
+) ([]block.SignedBeaconBlock, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -331,7 +331,7 @@ func (f *blocksFetcher) requestBlocksByRoot(
 	ctx context.Context,
 	req *p2pTypes.BeaconBlockByRootsReq,
 	pid peer.ID,
-) ([]prysm.SignedBeaconBlock, error) {
+) ([]block.SignedBeaconBlock, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}

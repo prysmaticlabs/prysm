@@ -16,9 +16,9 @@ import (
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	"github.com/prysmaticlabs/prysm/proto/prysm"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v2/block"
 	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -135,7 +135,7 @@ func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
 	count := types.Slot(100)
-	blks := make([]prysm.SignedBeaconBlock, count)
+	blks := make([]block.SignedBeaconBlock, count)
 	for i := types.Slot(0); i < count; i++ {
 		b := testutil.NewBeaconBlock()
 		b.Block.Slot = i
@@ -164,7 +164,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 	ctx := context.Background()
 
 	count := types.Slot(100)
-	blks := make([]prysm.SignedBeaconBlock, count)
+	blks := make([]block.SignedBeaconBlock, count)
 	blkContainers := make([]*ethpb.BeaconBlockContainer, count)
 	for i := types.Slot(0); i < count; i++ {
 		b := testutil.NewBeaconBlock()

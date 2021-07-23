@@ -1,4 +1,4 @@
-package prysm
+package block
 
 import (
 	ssz "github.com/ferranbt/fastssz"
