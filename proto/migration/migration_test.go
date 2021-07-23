@@ -92,7 +92,7 @@ func Test_V1Alpha1BlockToV1BlockHeader(t *testing.T) {
 	assert.DeepEqual(t, signature, v1Header.Signature)
 }
 
-func Test_V1Alpha1ToV1Block(t *testing.T) {
+func Test_V1Alpha1ToV1SignedBlock(t *testing.T) {
 	alphaBlock := testutil.HydrateSignedBeaconBlock(&ethpb_alpha.SignedBeaconBlock{})
 	alphaBlock.Block.Slot = slot
 	alphaBlock.Block.ProposerIndex = validatorIndex
@@ -106,7 +106,7 @@ func Test_V1Alpha1ToV1Block(t *testing.T) {
 	}
 	alphaBlock.Signature = signature
 
-	v1Block, err := V1Alpha1ToV1Block(alphaBlock)
+	v1Block, err := V1Alpha1ToV1SignedBlock(alphaBlock)
 	require.NoError(t, err)
 	alphaRoot, err := alphaBlock.HashTreeRoot()
 	require.NoError(t, err)
@@ -115,7 +115,7 @@ func Test_V1Alpha1ToV1Block(t *testing.T) {
 	assert.DeepEqual(t, alphaRoot, v1Root)
 }
 
-func Test_V1ToV1Alpha1Block(t *testing.T) {
+func Test_V1ToV1Alpha1SignedBlock(t *testing.T) {
 	v1Block := testutil.HydrateV1SignedBeaconBlock(&ethpb.SignedBeaconBlock{})
 	v1Block.Block.Slot = slot
 	v1Block.Block.ProposerIndex = validatorIndex
@@ -129,13 +129,35 @@ func Test_V1ToV1Alpha1Block(t *testing.T) {
 	}
 	v1Block.Signature = signature
 
-	alphaBlock, err := V1ToV1Alpha1Block(v1Block)
+	alphaBlock, err := V1ToV1Alpha1SignedBlock(v1Block)
 	require.NoError(t, err)
 	alphaRoot, err := alphaBlock.HashTreeRoot()
 	require.NoError(t, err)
 	v1Root, err := v1Block.HashTreeRoot()
 	require.NoError(t, err)
 	assert.DeepEqual(t, v1Root, alphaRoot)
+}
+
+func Test_V1ToV1Alpha1Block(t *testing.T) {
+	alphaBlock := testutil.HydrateBeaconBlock(&ethpb_alpha.BeaconBlock{})
+	alphaBlock.Slot = slot
+	alphaBlock.ProposerIndex = validatorIndex
+	alphaBlock.ParentRoot = parentRoot
+	alphaBlock.StateRoot = stateRoot
+	alphaBlock.Body.RandaoReveal = randaoReveal
+	alphaBlock.Body.Eth1Data = &ethpb_alpha.Eth1Data{
+		DepositRoot:  depositRoot,
+		DepositCount: depositCount,
+		BlockHash:    blockHash,
+	}
+
+	v1Block, err := V1Alpha1ToV1Block(alphaBlock)
+	require.NoError(t, err)
+	v1Root, err := v1Block.HashTreeRoot()
+	require.NoError(t, err)
+	alphaRoot, err := alphaBlock.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, alphaRoot, v1Root)
 }
 
 func Test_V1Alpha1AttSlashingToV1(t *testing.T) {

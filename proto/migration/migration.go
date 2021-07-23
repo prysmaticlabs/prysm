@@ -44,8 +44,8 @@ func V1Alpha1BlockToV1BlockHeader(block *ethpb_alpha.SignedBeaconBlock) (*ethpb.
 	}, nil
 }
 
-// V1Alpha1ToV1Block converts a v1alpha1 SignedBeaconBlock proto to a v1 proto.
-func V1Alpha1ToV1Block(alphaBlk *ethpb_alpha.SignedBeaconBlock) (*ethpb.SignedBeaconBlock, error) {
+// V1Alpha1ToV1SignedBlock converts a v1alpha1 SignedBeaconBlock proto to a v1 proto.
+func V1Alpha1ToV1SignedBlock(alphaBlk *ethpb_alpha.SignedBeaconBlock) (*ethpb.SignedBeaconBlock, error) {
 	marshaledBlk, err := proto.Marshal(alphaBlk)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not marshal block")
@@ -57,8 +57,8 @@ func V1Alpha1ToV1Block(alphaBlk *ethpb_alpha.SignedBeaconBlock) (*ethpb.SignedBe
 	return v1Block, nil
 }
 
-// V1ToV1Alpha1Block converts a v1 SignedBeaconBlock proto to a v1alpha1 proto.
-func V1ToV1Alpha1Block(alphaBlk *ethpb.SignedBeaconBlock) (*ethpb_alpha.SignedBeaconBlock, error) {
+// V1ToV1Alpha1SignedBlock converts a v1 SignedBeaconBlock proto to a v1alpha1 proto.
+func V1ToV1Alpha1SignedBlock(alphaBlk *ethpb.SignedBeaconBlock) (*ethpb_alpha.SignedBeaconBlock, error) {
 	marshaledBlk, err := proto.Marshal(alphaBlk)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not marshal block")
@@ -68,6 +68,19 @@ func V1ToV1Alpha1Block(alphaBlk *ethpb.SignedBeaconBlock) (*ethpb_alpha.SignedBe
 		return nil, errors.Wrap(err, "could not unmarshal block")
 	}
 	return v1alpha1Block, nil
+}
+
+// V1Alpha1ToV1Block converts a v1alpha1 BeaconBlock proto to a v1 proto.
+func V1Alpha1ToV1Block(alphaBlk *ethpb_alpha.BeaconBlock) (*ethpb.BeaconBlock, error) {
+	marshaledBlk, err := proto.Marshal(alphaBlk)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not marshal block")
+	}
+	v1Block := &ethpb.BeaconBlock{}
+	if err := proto.Unmarshal(marshaledBlk, v1Block); err != nil {
+		return nil, errors.Wrap(err, "could not unmarshal block")
+	}
+	return v1Block, nil
 }
 
 // V1Alpha1AggregateAttAndProofToV1 converts a v1alpha1 aggregate attestation and proof to v1.
@@ -303,7 +316,7 @@ func SignedBeaconBlock(block interfaces.SignedBeaconBlock) (*ethpb.SignedBeaconB
 		return nil, errors.Wrapf(err, "could not get raw block")
 	}
 
-	v1Block, err := V1Alpha1ToV1Block(blk)
+	v1Block, err := V1Alpha1ToV1SignedBlock(blk)
 	if err != nil {
 		return nil, errors.New("could not convert block to v1 block")
 	}
