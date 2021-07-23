@@ -199,7 +199,7 @@ func (g *Gateway) corsMiddleware(h http.Handler) http.Handler {
 	return c.Handler(h)
 }
 
-const swaggerDir = "proto/beacon/rpc/v1/"
+const swaggerDir = "proto/prysm/v2/"
 
 // SwaggerServer returns swagger specification files located under "/swagger/"
 func SwaggerServer() http.HandlerFunc {

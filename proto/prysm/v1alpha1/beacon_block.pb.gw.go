@@ -1,3 +1,3 @@
 // +build ignore
 
-package eth
+package ignore
