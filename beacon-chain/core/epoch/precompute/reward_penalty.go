@@ -4,23 +4,23 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-type attesterRewardsFunc func(iface.ReadOnlyBeaconState, *Balance, []*Validator) ([]uint64, []uint64, error)
-type proposerRewardsFunc func(iface.ReadOnlyBeaconState, *Balance, []*Validator) ([]uint64, error)
+type attesterRewardsFunc func(state.ReadOnlyBeaconState, *Balance, []*Validator) ([]uint64, []uint64, error)
+type proposerRewardsFunc func(state.ReadOnlyBeaconState, *Balance, []*Validator) ([]uint64, error)
 
 // ProcessRewardsAndPenaltiesPrecompute processes the rewards and penalties of individual validator.
 // This is an optimized version by passing in precomputed validator attesting records and and total epoch balances.
 func ProcessRewardsAndPenaltiesPrecompute(
-	state iface.BeaconState,
+	state state.BeaconState,
 	pBal *Balance,
 	vp []*Validator,
 	attRewardsFunc attesterRewardsFunc,
 	proRewardsFunc proposerRewardsFunc,
-) (iface.BeaconState, error) {
+) (state.BeaconState, error) {
 	// Can't process rewards and penalties in genesis epoch.
 	if helpers.CurrentEpoch(state) == 0 {
 		return state, nil
@@ -61,7 +61,7 @@ func ProcessRewardsAndPenaltiesPrecompute(
 
 // AttestationsDelta computes and returns the rewards and penalties differences for individual validators based on the
 // voting records.
-func AttestationsDelta(state iface.ReadOnlyBeaconState, pBal *Balance, vp []*Validator) ([]uint64, []uint64, error) {
+func AttestationsDelta(state state.ReadOnlyBeaconState, pBal *Balance, vp []*Validator) ([]uint64, []uint64, error) {
 	numOfVals := state.NumValidators()
 	rewards := make([]uint64, numOfVals)
 	penalties := make([]uint64, numOfVals)
@@ -152,7 +152,7 @@ func attestationDelta(pBal *Balance, sqrtActiveCurrentEpoch uint64, v *Validator
 
 // ProposersDelta computes and returns the rewards and penalties differences for individual validators based on the
 // proposer inclusion records.
-func ProposersDelta(state iface.ReadOnlyBeaconState, pBal *Balance, vp []*Validator) ([]uint64, error) {
+func ProposersDelta(state state.ReadOnlyBeaconState, pBal *Balance, vp []*Validator) ([]uint64, error) {
 	numofVals := state.NumValidators()
 	rewards := make([]uint64, numofVals)
 

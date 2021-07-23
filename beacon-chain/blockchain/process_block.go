@@ -10,7 +10,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	state2 "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -228,7 +228,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 		Messages:   [][32]byte{},
 	}
 	var set *bls.SignatureSet
-	boundaries := make(map[[32]byte]iface.BeaconState)
+	boundaries := make(map[[32]byte]state2.BeaconState)
 	for i, b := range blks {
 		set, preState, err = state.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b)
 		if err != nil {
@@ -314,7 +314,7 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed interf
 }
 
 // Epoch boundary bookkeeping such as logging epoch summaries.
-func (s *Service) handleEpochBoundary(ctx context.Context, postState iface.BeaconState) error {
+func (s *Service) handleEpochBoundary(ctx context.Context, postState state2.BeaconState) error {
 	if postState.Slot()+1 == s.nextEpochBoundarySlot {
 		// Update caches for the next epoch at epoch boundary slot - 1.
 		if err := helpers.UpdateCommitteeCache(postState, helpers.NextEpoch(postState)); err != nil {
@@ -354,7 +354,7 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState iface.Beaco
 // This feeds in the block and block's attestations to fork choice store. It's allows fork choice store
 // to gain information on the most current chain.
 func (s *Service) insertBlockAndAttestationsToForkChoiceStore(ctx context.Context, blk interfaces.BeaconBlock, root [32]byte,
-	st iface.BeaconState) error {
+	st state2.BeaconState) error {
 	fCheckpoint := st.FinalizedCheckpoint()
 	jCheckpoint := st.CurrentJustifiedCheckpoint()
 	if err := s.insertBlockToForkChoiceStore(ctx, blk, root, fCheckpoint, jCheckpoint); err != nil {
@@ -392,7 +392,7 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk interfac
 
 // This saves post state info to DB or cache. This also saves post state info to fork choice store.
 // Post state info consists of processed block and state. Do not call this method unless the block and state are verified.
-func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b interfaces.SignedBeaconBlock, st iface.BeaconState, initSync bool) error {
+func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b interfaces.SignedBeaconBlock, st state2.BeaconState, initSync bool) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.savePostStateInfo")
 	defer span.End()
 	if initSync {

@@ -8,7 +8,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	transition "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"go.opencensus.io/trace"
@@ -17,10 +17,10 @@ import (
 // ReplayBlocks replays the input blocks on the input state until the target slot is reached.
 func (s *State) ReplayBlocks(
 	ctx context.Context,
-	state iface.BeaconState,
+	state state.BeaconState,
 	signed []interfaces.SignedBeaconBlock,
 	targetSlot types.Slot,
-) (iface.BeaconState, error) {
+) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.ReplayBlocks")
 	defer span.End()
 
@@ -118,9 +118,9 @@ func (s *State) LoadBlocks(ctx context.Context, startSlot, endSlot types.Slot, e
 // WARNING: This method should not be used on an unverified new block.
 func executeStateTransitionStateGen(
 	ctx context.Context,
-	state iface.BeaconState,
+	state state.BeaconState,
 	signed interfaces.SignedBeaconBlock,
-) (iface.BeaconState, error) {
+) (state.BeaconState, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -153,7 +153,7 @@ func executeStateTransitionStateGen(
 // processSlotsStateGen to process old slots for state gen usages.
 // There's no skip slot cache involved given state gen only works with already stored block and state in DB.
 // WARNING: This method should not be used for future slot.
-func processSlotsStateGen(ctx context.Context, state iface.BeaconState, slot types.Slot) (iface.BeaconState, error) {
+func processSlotsStateGen(ctx context.Context, state state.BeaconState, slot types.Slot) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stategen.ProcessSlotsStateGen")
 	defer span.End()
 	if state == nil || state.IsNil() {
@@ -228,7 +228,7 @@ func (s *State) lastSavedBlock(ctx context.Context, slot types.Slot) ([32]byte, 
 // This finds the last saved state in DB from searching backwards from input slot,
 // it returns the block root of the block which was used to produce the state.
 // This is used by both hot and cold state management.
-func (s *State) lastSavedState(ctx context.Context, slot types.Slot) (iface.ReadOnlyBeaconState, error) {
+func (s *State) lastSavedState(ctx context.Context, slot types.Slot) (state.ReadOnlyBeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.lastSavedState")
 	defer span.End()
 

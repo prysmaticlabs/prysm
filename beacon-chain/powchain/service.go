@@ -29,7 +29,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	state2 "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
@@ -81,7 +81,7 @@ var (
 type ChainStartFetcher interface {
 	ChainStartDeposits() []*ethpb.Deposit
 	ChainStartEth1Data() *ethpb.Eth1Data
-	PreGenesisState() iface.BeaconState
+	PreGenesisState() state2.BeaconState
 	ClearPreGenesisData()
 }
 
@@ -146,7 +146,7 @@ type Service struct {
 	chainStartData          *protodb.ChainStartData
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	runError                error
-	preGenesisState         iface.BeaconState
+	preGenesisState         state2.BeaconState
 	bsUpdater               BeaconNodeStatsUpdater
 }
 
@@ -295,7 +295,7 @@ func (s *Service) ChainStartEth1Data() *ethpb.Eth1Data {
 
 // PreGenesisState returns a state that contains
 // pre-chainstart deposits.
-func (s *Service) PreGenesisState() iface.BeaconState {
+func (s *Service) PreGenesisState() state2.BeaconState {
 	return s.preGenesisState
 }
 

@@ -8,7 +8,7 @@ import (
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	state2 "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -51,7 +51,7 @@ func RunFinalityTest(t *testing.T, config string) {
 			metaYaml := &Config{}
 			require.NoError(t, utils.UnmarshalYaml(file, metaYaml), "Failed to Unmarshal")
 
-			var processedState iface.BeaconState
+			var processedState state2.BeaconState
 			var ok bool
 			for i := 0; i < metaYaml.BlocksCount; i++ {
 				filename := fmt.Sprintf("blocks_%d.ssz_snappy", i)

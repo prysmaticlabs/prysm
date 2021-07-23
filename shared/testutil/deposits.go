@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	state2 "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -247,7 +247,7 @@ func DeterministicEth1Data(size int) (*ethpb.Eth1Data, error) {
 }
 
 // DeterministicGenesisState returns a genesis state made using the deterministic deposits.
-func DeterministicGenesisState(t testing.TB, numValidators uint64) (iface.BeaconState, []bls.SecretKey) {
+func DeterministicGenesisState(t testing.TB, numValidators uint64) (state2.BeaconState, []bls.SecretKey) {
 	resetCache()
 	deposits, privKeys, err := DeterministicDepositsAndKeys(numValidators)
 	if err != nil {

@@ -9,7 +9,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	state2 "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -18,7 +18,7 @@ import (
 )
 
 // RandaoReveal returns a signature of the requested epoch using the beacon proposer private key.
-func RandaoReveal(beaconState iface.ReadOnlyBeaconState, epoch types.Epoch, privKeys []bls.SecretKey) ([]byte, error) {
+func RandaoReveal(beaconState state2.ReadOnlyBeaconState, epoch types.Epoch, privKeys []bls.SecretKey) ([]byte, error) {
 	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
@@ -34,7 +34,7 @@ func RandaoReveal(beaconState iface.ReadOnlyBeaconState, epoch types.Epoch, priv
 
 // BlockSignature calculates the post-state root of the block and returns the signature.
 func BlockSignature(
-	bState iface.BeaconState,
+	bState state2.BeaconState,
 	block *ethpb.BeaconBlock,
 	privKeys []bls.SecretKey,
 ) (bls.Signature, error) {

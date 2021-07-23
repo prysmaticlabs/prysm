@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	state2 "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
@@ -19,7 +19,7 @@ func TestSkipSlotCache_RoundTrip(t *testing.T) {
 	r := [32]byte{'a'}
 	state, err := c.Get(ctx, r)
 	require.NoError(t, err)
-	assert.Equal(t, iface.BeaconState(nil), state, "Empty cache returned an object")
+	assert.Equal(t, state2.BeaconState(nil), state, "Empty cache returned an object")
 
 	require.NoError(t, c.MarkInProgress(r))
 

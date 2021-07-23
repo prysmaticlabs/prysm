@@ -5,7 +5,7 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	state2 "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -76,7 +76,7 @@ func (bs *Server) GetStateFork(ctx context.Context, req *ethpb.StateRequest) (*e
 	defer span.End()
 
 	var (
-		state iface.BeaconState
+		state state2.BeaconState
 		err   error
 	)
 
@@ -107,7 +107,7 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 	defer span.End()
 
 	var (
-		state iface.BeaconState
+		state state2.BeaconState
 		err   error
 	)
 

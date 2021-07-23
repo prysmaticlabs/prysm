@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	state3 "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -63,7 +63,7 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 	require.Equal(t, true, ok)
 
 	// Create two shallow but different forks
-	var state1, state2 iface.BeaconState
+	var state1, state2 state3.BeaconState
 	{
 		blk, err := testutil.GenerateFullBlock(originalState.Copy(), privs, blkCfg, originalState.Slot()+10)
 		require.NoError(t, err)
@@ -99,9 +99,9 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 	}
 
 	// prepare copies for both states
-	var setups []iface.BeaconState
+	var setups []state3.BeaconState
 	for i := uint64(0); i < 300; i++ {
-		var st iface.BeaconState
+		var st state3.BeaconState
 		if i%2 == 0 {
 			st = state1
 		} else {
@@ -136,7 +136,7 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(len(setups))
 
-	step := func(i int, setup iface.BeaconState) {
+	step := func(i int, setup state3.BeaconState) {
 		// go at least 1 past problemSlot, to ensure problem slot state root is available
 		outState, err := state.ProcessSlots(context.Background(), setup, problemSlot.Add(1+uint64(i))) // keep increasing, to hit and extend the cache
 		require.NoError(t, err, "Could not process state transition")

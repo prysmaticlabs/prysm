@@ -12,7 +12,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	state2 "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -206,7 +206,7 @@ func generate2FullEpochState() error {
 	return fileutil.WriteFile(path.Join(*outputDir, benchutil.BState2EpochFileName), beaconBytes)
 }
 
-func genesisBeaconState() (iface.BeaconState, error) {
+func genesisBeaconState() (state2.BeaconState, error) {
 	beaconBytes, err := ioutil.ReadFile(path.Join(*outputDir, benchutil.GenesisFileName))
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot read genesis state file")

@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
-func validAttesterSlashingForValIdx(t *testing.T, beaconState iface.BeaconState, privs []bls.SecretKey, valIdx ...uint64) *ethpb.AttesterSlashing {
+func validAttesterSlashingForValIdx(t *testing.T, beaconState state.BeaconState, privs []bls.SecretKey, valIdx ...uint64) *ethpb.AttesterSlashing {
 	var slashings []*ethpb.AttesterSlashing
 	for _, idx := range valIdx {
 		slashing, err := testutil.GenerateAttesterSlashingForValidator(beaconState, privs[idx], types.ValidatorIndex(idx))

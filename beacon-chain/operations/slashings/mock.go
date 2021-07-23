@@ -3,7 +3,7 @@ package slashings
 import (
 	"context"
 
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -14,23 +14,23 @@ type PoolMock struct {
 }
 
 // PendingAttesterSlashings --
-func (m *PoolMock) PendingAttesterSlashings(_ context.Context, _ iface.ReadOnlyBeaconState, _ bool) []*ethpb.AttesterSlashing {
+func (m *PoolMock) PendingAttesterSlashings(_ context.Context, _ state.ReadOnlyBeaconState, _ bool) []*ethpb.AttesterSlashing {
 	return m.PendingAttSlashings
 }
 
 // PendingProposerSlashings --
-func (m *PoolMock) PendingProposerSlashings(_ context.Context, _ iface.ReadOnlyBeaconState, _ bool) []*ethpb.ProposerSlashing {
+func (m *PoolMock) PendingProposerSlashings(_ context.Context, _ state.ReadOnlyBeaconState, _ bool) []*ethpb.ProposerSlashing {
 	return m.PendingPropSlashings
 }
 
 // InsertAttesterSlashing --
-func (m *PoolMock) InsertAttesterSlashing(_ context.Context, _ iface.ReadOnlyBeaconState, slashing *ethpb.AttesterSlashing) error {
+func (m *PoolMock) InsertAttesterSlashing(_ context.Context, _ state.ReadOnlyBeaconState, slashing *ethpb.AttesterSlashing) error {
 	m.PendingAttSlashings = append(m.PendingAttSlashings, slashing)
 	return nil
 }
 
 // InsertProposerSlashing --
-func (m *PoolMock) InsertProposerSlashing(_ context.Context, _ iface.BeaconState, slashing *ethpb.ProposerSlashing) error {
+func (m *PoolMock) InsertProposerSlashing(_ context.Context, _ state.BeaconState, slashing *ethpb.ProposerSlashing) error {
 	m.PendingPropSlashings = append(m.PendingPropSlashings, slashing)
 	return nil
 }

@@ -6,7 +6,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
@@ -224,7 +224,7 @@ func (vs *Server) activationStatus(
 // validatorStatus searches for the requested validator's state and deposit to retrieve its inclusion estimate. Also returns the validators index.
 func (vs *Server) validatorStatus(
 	ctx context.Context,
-	headState iface.ReadOnlyBeaconState,
+	headState state.ReadOnlyBeaconState,
 	pubKey []byte,
 ) (*ethpb.ValidatorStatusResponse, types.ValidatorIndex) {
 	ctx, span := trace.StartSpan(ctx, "ValidatorServer.validatorStatus")
@@ -317,7 +317,7 @@ func (vs *Server) validatorStatus(
 	}
 }
 
-func statusForPubKey(headState iface.ReadOnlyBeaconState, pubKey []byte) (ethpb.ValidatorStatus, types.ValidatorIndex, error) {
+func statusForPubKey(headState state.ReadOnlyBeaconState, pubKey []byte) (ethpb.ValidatorStatus, types.ValidatorIndex, error) {
 	if headState == nil || headState.IsNil() {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS, 0, errors.New("head state does not exist")
 	}
@@ -328,7 +328,7 @@ func statusForPubKey(headState iface.ReadOnlyBeaconState, pubKey []byte) (ethpb.
 	return assignmentStatus(headState, idx), idx, nil
 }
 
-func assignmentStatus(beaconState iface.ReadOnlyBeaconState, validatorIndex types.ValidatorIndex) ethpb.ValidatorStatus {
+func assignmentStatus(beaconState state.ReadOnlyBeaconState, validatorIndex types.ValidatorIndex) ethpb.ValidatorStatus {
 	validator, err := beaconState.ValidatorAtIndexReadOnly(validatorIndex)
 	if err != nil {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS

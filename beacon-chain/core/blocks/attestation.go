@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/proto/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
@@ -21,9 +21,9 @@ import (
 // records.
 func ProcessAttestations(
 	ctx context.Context,
-	beaconState iface.BeaconState,
+	beaconState state.BeaconState,
 	b interfaces.SignedBeaconBlock,
-) (iface.BeaconState, error) {
+) (state.BeaconState, error) {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err
 	}
@@ -69,9 +69,9 @@ func ProcessAttestations(
 //    assert is_valid_indexed_attestation(state, get_indexed_attestation(state, attestation))
 func ProcessAttestation(
 	ctx context.Context,
-	beaconState iface.BeaconState,
+	beaconState state.BeaconState,
 	att *ethpb.Attestation,
-) (iface.BeaconState, error) {
+) (state.BeaconState, error) {
 	beaconState, err := ProcessAttestationNoVerifySignature(ctx, beaconState, att)
 	if err != nil {
 		return nil, err
@@ -83,9 +83,9 @@ func ProcessAttestation(
 // records. The only difference would be that the attestation signature would not be verified.
 func ProcessAttestationsNoVerifySignature(
 	ctx context.Context,
-	beaconState iface.BeaconState,
+	beaconState state.BeaconState,
 	b interfaces.SignedBeaconBlock,
-) (iface.BeaconState, error) {
+) (state.BeaconState, error) {
 	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func ProcessAttestationsNoVerifySignature(
 // used before processing attestation with the beacon state.
 func VerifyAttestationNoVerifySignature(
 	ctx context.Context,
-	beaconState iface.ReadOnlyBeaconState,
+	beaconState state.ReadOnlyBeaconState,
 	att *ethpb.Attestation,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "core.VerifyAttestationNoVerifySignature")
@@ -188,9 +188,9 @@ func VerifyAttestationNoVerifySignature(
 // method is used to validate attestations whose signatures have already been verified.
 func ProcessAttestationNoVerifySignature(
 	ctx context.Context,
-	beaconState iface.BeaconState,
+	beaconState state.BeaconState,
 	att *ethpb.Attestation,
-) (iface.BeaconState, error) {
+) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.ProcessAttestationNoVerifySignature")
 	defer span.End()
 
@@ -227,7 +227,7 @@ func ProcessAttestationNoVerifySignature(
 
 // VerifyAttestationSignature converts and attestation into an indexed attestation and verifies
 // the signature in that attestation.
-func VerifyAttestationSignature(ctx context.Context, beaconState iface.ReadOnlyBeaconState, att *ethpb.Attestation) error {
+func VerifyAttestationSignature(ctx context.Context, beaconState state.ReadOnlyBeaconState, att *ethpb.Attestation) error {
 	if err := helpers.ValidateNilAttestation(att); err != nil {
 		return err
 	}
@@ -258,7 +258,7 @@ func VerifyAttestationSignature(ctx context.Context, beaconState iface.ReadOnlyB
 //    domain = get_domain(state, DOMAIN_BEACON_ATTESTER, indexed_attestation.data.target.epoch)
 //    signing_root = compute_signing_root(indexed_attestation.data, domain)
 //    return bls.FastAggregateVerify(pubkeys, signing_root, indexed_attestation.signature)
-func VerifyIndexedAttestation(ctx context.Context, beaconState iface.ReadOnlyBeaconState, indexedAtt *ethpb.IndexedAttestation) error {
+func VerifyIndexedAttestation(ctx context.Context, beaconState state.ReadOnlyBeaconState, indexedAtt *ethpb.IndexedAttestation) error {
 	ctx, span := trace.StartSpan(ctx, "core.VerifyIndexedAttestation")
 	defer span.End()
 

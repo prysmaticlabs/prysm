@@ -19,7 +19,7 @@ import (
 	"github.com/dustin/go-humanize"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
-	iface "github.com/prysmaticlabs/prysm/beacon-chain/state/interface"
+	state2 "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	statepb "github.com/prysmaticlabs/prysm/proto/prysm/v2/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -51,7 +51,7 @@ type bucketStat struct {
 
 // used to parallelize state bucket processing
 type modifiedState struct {
-	state     iface.BeaconState
+	state     state2.BeaconState
 	key       []byte
 	valueSize uint64
 	rowCount  uint64
