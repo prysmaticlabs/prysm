@@ -96,6 +96,9 @@ func VerifyBlockSignatureUsingCurrentFork(beaconState state.ReadOnlyBeaconState,
 	if err != nil {
 		return err
 	}
+	if proposer == nil {
+		return errors.New("nil proposer")
+	}
 	proposerPubKey := proposer.PublicKey
 	return helpers.VerifyBlockSigningRoot(proposerPubKey, blk.Signature(), domain, blk.Block().HashTreeRoot)
 }
