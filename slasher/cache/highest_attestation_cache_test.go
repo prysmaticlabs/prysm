@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	ethereum_slashing "github.com/prysmaticlabs/prysm/proto/slashing"
+	ethereum_slashing "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/testutil/require"
 )
 
@@ -14,7 +14,7 @@ func TestStoringAndFetching(t *testing.T) {
 
 	// Cache a test attestation.
 	cache.Set(1, &ethereum_slashing.HighestAttestation{
-		ValidatorId:        1,
+		ValidatorIndex:     1,
 		HighestSourceEpoch: 2,
 		HighestTargetEpoch: 3,
 	})
@@ -25,7 +25,7 @@ func TestStoringAndFetching(t *testing.T) {
 	// fetch
 	res, b := cache.Get(1)
 	require.Equal(t, true, b)
-	require.Equal(t, uint64(1), res[1].ValidatorId)
+	require.Equal(t, uint64(1), res[1].ValidatorIndex)
 	require.Equal(t, types.Epoch(2), res[1].HighestSourceEpoch)
 	require.Equal(t, types.Epoch(3), res[1].HighestTargetEpoch)
 
@@ -47,17 +47,17 @@ func TestPurge(t *testing.T) {
 
 	// Cache several test attestation.
 	cache.Set(1, &ethereum_slashing.HighestAttestation{
-		ValidatorId:        1,
+		ValidatorIndex:     1,
 		HighestSourceEpoch: 2,
 		HighestTargetEpoch: 3,
 	})
 	cache.Set(2, &ethereum_slashing.HighestAttestation{
-		ValidatorId:        4,
+		ValidatorIndex:     4,
 		HighestSourceEpoch: 5,
 		HighestTargetEpoch: 6,
 	})
 	cache.Set(3, &ethereum_slashing.HighestAttestation{
-		ValidatorId:        7,
+		ValidatorIndex:     7,
 		HighestSourceEpoch: 8,
 		HighestTargetEpoch: 9,
 	})
@@ -83,17 +83,17 @@ func TestClear(t *testing.T) {
 
 	// Cache several test attestation.
 	cache.Set(1, &ethereum_slashing.HighestAttestation{
-		ValidatorId:        1,
+		ValidatorIndex:     1,
 		HighestSourceEpoch: 2,
 		HighestTargetEpoch: 3,
 	})
 	cache.Set(2, &ethereum_slashing.HighestAttestation{
-		ValidatorId:        4,
+		ValidatorIndex:     4,
 		HighestSourceEpoch: 5,
 		HighestTargetEpoch: 6,
 	})
 	cache.Set(3, &ethereum_slashing.HighestAttestation{
-		ValidatorId:        7,
+		ValidatorIndex:     7,
 		HighestSourceEpoch: 8,
 		HighestTargetEpoch: 9,
 	})

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 
 	"github.com/pkg/errors"
-	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	slashpb "github.com/prysmaticlabs/prysm/proto/prysm/v2"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
@@ -41,19 +41,19 @@ func (s *Store) EnableHighestAttestationCache(enable bool) {
 	s.highestAttCacheEnabled = enable
 }
 
-// HighestAttestation returns the highest calculated attestation for a validatorID
-func (s *Store) HighestAttestation(ctx context.Context, validatorID uint64) (*slashpb.HighestAttestation, error) {
+// HighestAttestation returns the highest calculated attestation for a ValidatorIndex
+func (s *Store) HighestAttestation(ctx context.Context, ValidatorIndex uint64) (*slashpb.HighestAttestation, error) {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.HighestAttestation")
 	defer span.End()
 
 	if s.highestAttCacheEnabled {
-		h, ok := s.highestAttestationCache.Get(highestAttSetkey(validatorID))
-		if ok && h[validatorID] != nil {
-			return h[validatorID], nil
+		h, ok := s.highestAttestationCache.Get(highestAttSetkey(ValidatorIndex))
+		if ok && h[ValidatorIndex] != nil {
+			return h[ValidatorIndex], nil
 		}
 	}
 
-	key := highestAttSetkeyBytes(validatorID)
+	key := highestAttSetkeyBytes(ValidatorIndex)
 	var highestAtt *slashpb.HighestAttestation
 	err := s.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(highestAttestationBucket)
@@ -63,7 +63,7 @@ func (s *Store) HighestAttestation(ctx context.Context, validatorID uint64) (*sl
 			if err != nil {
 				return err
 			}
-			highestAtt = set[validatorID]
+			highestAtt = set[ValidatorIndex]
 		}
 		return nil
 	})
@@ -71,17 +71,17 @@ func (s *Store) HighestAttestation(ctx context.Context, validatorID uint64) (*sl
 	return highestAtt, err
 }
 
-// SaveHighestAttestation saves highest attestation for a validatorID.
+// SaveHighestAttestation saves highest attestation for a ValidatorIndex.
 func (s *Store) SaveHighestAttestation(ctx context.Context, highest *slashpb.HighestAttestation) error {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.SaveHighestAttestation")
 	defer span.End()
 
 	if s.highestAttCacheEnabled {
-		s.highestAttestationCache.Set(highestAttSetkey(highest.ValidatorId), highest)
+		s.highestAttestationCache.Set(highestAttSetkey(highest.ValidatorIndex), highest)
 		return nil
 	}
 
-	key := highestAttSetkeyBytes(highest.ValidatorId)
+	key := highestAttSetkeyBytes(highest.ValidatorIndex)
 	set := map[uint64]*slashpb.HighestAttestation{}
 	err := s.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(highestAttestationBucket)
@@ -97,7 +97,7 @@ func (s *Store) SaveHighestAttestation(ctx context.Context, highest *slashpb.Hig
 		return err
 	}
 
-	set[highest.ValidatorId] = highest
+	set[highest.ValidatorIndex] = highest
 	enc, err := json.Marshal(set)
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal")
@@ -116,11 +116,11 @@ func (s *Store) SaveHighestAttestation(ctx context.Context, highest *slashpb.Hig
 	return nil
 }
 
-func highestAttSetkeyBytes(validatorID uint64) []byte {
-	return bytesutil.Uint64ToBytesBigEndian(highestAttSetkey(validatorID))
+func highestAttSetkeyBytes(ValidatorIndex uint64) []byte {
+	return bytesutil.Uint64ToBytesBigEndian(highestAttSetkey(ValidatorIndex))
 }
 
 // divide validators by id into 1k-ish buckets (0-1000,1001-1999, etc).
-func highestAttSetkey(validatorID uint64) uint64 {
-	return validatorID / 1000
+func highestAttSetkey(ValidatorIndex uint64) uint64 {
+	return ValidatorIndex / 1000
 }
