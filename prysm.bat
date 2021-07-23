@@ -62,63 +62,66 @@ set BEACON_CHAIN_REAL=%wrapper_dir%\beacon-chain-%prysm_version%-%system%-%arch%
 set VALIDATOR_REAL=%wrapper_dir%\validator-%prysm_version%-%system%-%arch%
 set CLIENT_STATS_REAL=%wrapper_dir%\client-stats-%prysm_version%-%system%-%arch%
 
-if [%1]==[beacon-chain] (
-    if exist %BEACON_CHAIN_REAL% (
+if "%~1"=="beacon-chain" (
+    if exist "%BEACON_CHAIN_REAL%" (
         echo [32mBeacon chain is up to date.[0m
     ) else (
         echo [35mDownloading beacon chain %prysm_version% to %BEACON_CHAIN_REAL% %reason%[0m
-		for /f "delims=" %%i in ('curl --silent -w "%%{http_code}" -L https://prysmaticlabs.com/releases/beacon-chain-%prysm_version%-%system%-%arch% -o %BEACON_CHAIN_REAL%') do set http=%%i
-		if %http%==400 (
+		for /f "delims=" %%i in ('curl --silent -o nul -w "%%{http_code}" https://prysmaticlabs.com/releases/beacon-chain-%prysm_version%-%system%-%arch% ') do set "http=%%i" && echo %%i
+		if "!http!"=="404" (
 			echo [35mNo prysm beacon chain found for %prysm_version%[0m
-			exit \b 1
-		)		
+			exit /b 1
+		)	
+		curl -L https://prysmaticlabs.com/releases/beacon-chain-%prysm_version%-%system%-%arch% -o %BEACON_CHAIN_REAL%
 		curl --silent -L https://prysmaticlabs.com/releases/beacon-chain-%prysm_version%-%system%-%arch%.sha256 -o %wrapper_dir%\beacon-chain-%prysm_version%-%system%-%arch%.sha256
         curl --silent -L https://prysmaticlabs.com/releases/beacon-chain-%prysm_version%-%system%-%arch%.sig -o %wrapper_dir%\beacon-chain-%prysm_version%-%system%-%arch%.sig
     )
 	goto startprocess
 )
 
-if [%1]==[validator] (
-    if exist %VALIDATOR_REAL% (
+if "%~1"=="validator" (
+    if exist "%VALIDATOR_REAL%" (
         echo [32mValidator is up to date.[0m
     ) else (
         echo [35mDownloading validator %prysm_version% to %VALIDATOR_REAL% %reason%[0m
-		for /f "delims=" %%i in ('curl --silent -w "%%{http_code}" -L https://prysmaticlabs.com/releases/validator-%prysm_version%-%system%-%arch% -o %VALIDATOR_REAL%') do set http=%%i
-		if %http%==400 (
+		for /f "delims=" %%i in ('curl --silent -o nul -w "%%{http_code}" https://prysmaticlabs.com/releases/validator-%prysm_version%-%system%-%arch% ') do set "http=%%i" && echo %%i
+		if "!http!"=="404"  (
 			echo [35mNo prysm validator found for %prysm_version%[0m
-			exit \b 1
+			exit /b 1
 		)
+		curl -L https://prysmaticlabs.com/releases/validator-%prysm_version%-%system%-%arch% -o %VALIDATOR_REAL%
         curl --silent -L https://prysmaticlabs.com/releases/validator-%prysm_version%-%system%-%arch%.sha256 -o %wrapper_dir%\validator-%prysm_version%-%system%-%arch%.sha256
         curl --silent -L https://prysmaticlabs.com/releases/validator-%prysm_version%-%system%-%arch%.sig -o %wrapper_dir%\validator-%prysm_version%-%system%-%arch%.sig
     )
 	goto startprocess
 )
 
-if [%1]==[client-stats] (
+if "%~1"=="client-stats" (
     if exist %CLIENT_STATS_REAL% (
         echo [32mClient-stats is up to date.[0m
     ) else (
         echo [35mDownloading client-stats %prysm_version% to %CLIENT_STATS_REAL% %reason%[0m
-		for /f "delims=" %%i in ('curl --silent -w "%%{http_code}" -L https://prysmaticlabs.com/releases/client-stats-%prysm_version%-%system%-%arch% -o %CLIENT_STATS_REAL%') do set http=%%i
-		if %http%==400 (
+		for /f "delims=" %%i in ('curl --silent -o nul -w "%%{http_code}" https://prysmaticlabs.com/releases/client-stats-%prysm_version%-%system%-%arch% ') do set "http=%%i" && echo %%i
+		if "!http!"=="404" (
 			echo [35mNo prysm client stats found for %prysm_version%[0m
-			exit \b 1
+			exit /b 1
 		)
+		curl -L https://prysmaticlabs.com/releases/client-stats-%prysm_version%-%system%-%arch% -o %CLIENT_STATS_REAL%
         curl --silent -L https://prysmaticlabs.com/releases/client-stats-%prysm_version%-%system%-%arch%.sha256 -o %wrapper_dir%\client-stats-%prysm_version%-%system%-%arch%.sha256
         curl --silent -L https://prysmaticlabs.com/releases/client-stats-%prysm_version%-%system%-%arch%.sig -o %wrapper_dir%\client-stats-%prysm_version%-%system%-%arch%.sig
     )
 	goto startprocess
 )
 
-if [%1]==[slasher] (
+if "%~1"=="slasher" (
     echo [31mThe slasher binary is no longer available. Please use the --slasher flag with your beacon node. See: https://docs.prylabs.network/docs/prysm-usage/slasher/[0m
     exit /b 1
 )
 
 :startprocess
-if [%1]==[beacon-chain] ( set process=%BEACON_CHAIN_REAL%)
-if [%1]==[validator] ( set process=%VALIDATOR_REAL%) 
-if [%1]==[client-stats] ( set process=%CLIENT_STATS_REAL%)
+if "%~1"=="beacon-chain" ( set process=%BEACON_CHAIN_REAL%)
+if "%~1"=="validator" ( set process=%VALIDATOR_REAL%) 
+if "%~1"=="client-stats" ( set process=%CLIENT_STATS_REAL%)
 
 REM GPG not natively available on Windows, external module required
 echo [33mWARN GPG verification is not natively available on Windows.[0m
@@ -129,9 +132,9 @@ for /f "delims=" %%A in ('certutil -hashfile %process% SHA256 ^| find /v "hash"'
     set SHA256Hash=%%A
 )
 set /p ExpectedSHA256=<%process%.sha256
-if [%ExpectedSHA256:~0,64%]==[%SHA256Hash%] (
+if "%ExpectedSHA256:~0,64%"=="%SHA256Hash%" (
     echo [32mSHA256 Hash Match![0m
-) else if [%PRYSM_ALLOW_UNVERIFIED_BINARIES%]==[1] (
+) else if "%PRYSM_ALLOW_UNVERIFIED_BINARIES%"=="1" (
     echo [31mWARNING Failed to verify Prysm binary.[0m 
     echo Detected PRYSM_ALLOW_UNVERIFIED_BINARIES=1
     echo Proceeding...
